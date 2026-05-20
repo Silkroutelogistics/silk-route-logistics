@@ -792,7 +792,192 @@
       line-height: 1.6;
     }
 
-    /* ========== WHY SHIPPERS CHOOSE SRL ========== */
+    /* ========== v3.8.ago — PROFILE GRID (Services Detail A2 reframe)
+       Reframed from service-catalog photo cards to shipper-buying-criterion
+       icon-led profiles. 2x2 grid at desktop, single column at mobile.
+       Section 5 wall-tile register: cream-2 bg, white card, gold-dark icon,
+       navy text, deliberate restraint. ========== */
+    .profile-section {
+      padding: 100px 0;
+      background: var(--cream-2, #F5EEE0);
+    }
+    .profile-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 32px;
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+    .profile-card {
+      background: var(--white, #FFFFFF);
+      border-radius: 18px;
+      padding: 36px 34px 32px;
+      box-shadow: 0 10px 28px rgba(10, 37, 64, 0.06);
+      transition: transform 280ms cubic-bezier(0.2,0.6,0.2,1), box-shadow 280ms cubic-bezier(0.2,0.6,0.2,1);
+      border: 1px solid rgba(10, 37, 64, 0.05);
+    }
+    .profile-card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 18px 38px rgba(10, 37, 64, 0.10);
+    }
+    .profile-head {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 18px;
+    }
+    .profile-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      background: var(--gold-tint, #FAEEDA);
+      color: var(--gold-dark, #BA7517);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .profile-icon svg {
+      width: 22px;
+      height: 22px;
+    }
+    .profile-equipment {
+      font-family: var(--font-body, 'DM Sans', sans-serif);
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 1.6px;
+      text-transform: uppercase;
+      color: var(--gold-dark, #BA7517);
+    }
+    .profile-card h3 {
+      font-family: var(--font-headline, 'Playfair Display', Georgia, serif);
+      font-size: 22px;
+      font-weight: 600;
+      line-height: 1.32;
+      color: var(--navy, #0A2540);
+      margin: 0 0 14px 0;
+    }
+    .profile-card p {
+      font-family: var(--font-body, 'DM Sans', sans-serif);
+      font-size: 15px;
+      line-height: 1.7;
+      color: var(--fg-2, #3A4A5F);
+      margin: 0;
+    }
+    @media (max-width: 768px) {
+      .profile-grid { grid-template-columns: 1fr; gap: 20px; }
+      .profile-card { padding: 28px 24px 26px; }
+      .profile-card h3 { font-size: 19px; }
+      .profile-card p { font-size: 14px; }
+    }
+
+    /* ========== v3.8.ago — SYSTEM ASPECTS GRID (replaces 3-Why-block)
+       6-card system aspects matching homepage Section 5 wall-tile register.
+       3x2 desktop grid, 2x3 tablet, 1x6 mobile. Navy text on white tile,
+       gold-dark icon stroke, cream-2 section ground. ========== */
+    .system-aspects-section {
+      padding: 100px 0;
+      background: var(--white, #FFFFFF);
+    }
+    .system-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 28px;
+      max-width: 1180px;
+      margin: 0 auto;
+    }
+    .system-card {
+      background: var(--cream, #FBF7F0);
+      border-radius: 14px;
+      padding: 30px 26px 28px;
+      border: 1px solid rgba(10, 37, 64, 0.06);
+      transition: transform 280ms cubic-bezier(0.2,0.6,0.2,1), box-shadow 280ms cubic-bezier(0.2,0.6,0.2,1), border-color 280ms;
+    }
+    .system-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 14px 30px rgba(10, 37, 64, 0.08);
+      border-color: rgba(186, 117, 23, 0.20);
+    }
+    .system-icon {
+      width: 42px;
+      height: 42px;
+      border-radius: 10px;
+      background: var(--white, #FFFFFF);
+      color: var(--gold-dark, #BA7517);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 18px;
+      box-shadow: 0 4px 10px rgba(186, 117, 23, 0.10);
+    }
+    .system-icon svg {
+      width: 22px;
+      height: 22px;
+    }
+    .system-card h3 {
+      font-family: var(--font-headline, 'Playfair Display', Georgia, serif);
+      font-size: 19px;
+      font-weight: 600;
+      line-height: 1.3;
+      color: var(--navy, #0A2540);
+      margin: 0 0 12px 0;
+    }
+    .system-card p {
+      font-family: var(--font-body, 'DM Sans', sans-serif);
+      font-size: 14.5px;
+      line-height: 1.65;
+      color: var(--fg-2, #3A4A5F);
+      margin: 0;
+    }
+    @media (max-width: 1024px) {
+      .system-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+    @media (max-width: 640px) {
+      .system-grid { grid-template-columns: 1fr; gap: 18px; }
+      .system-card { padding: 24px 22px 22px; }
+      .system-card h3 { font-size: 17px; }
+      .system-card p { font-size: 14px; }
+    }
+
+    /* ========== v3.8.ago — STEPS TIMELINE SVG CONNECTOR
+       Dashed gold-dark line behind the 5 step circles. Draws progressively
+       via stroke-dashoffset animation when .steps-timeline gains the
+       .connector-drawn class (IntersectionObserver wired in shippers.html).
+       Hidden at mobile where steps stack vertically. ========== */
+    .steps-timeline {
+      position: relative;
+    }
+    .steps-connector {
+      position: absolute;
+      top: 26px;
+      left: 0;
+      width: 100%;
+      height: 40px;
+      pointer-events: none;
+      color: var(--gold-dark, #BA7517);
+      opacity: 0.55;
+      z-index: 0;
+    }
+    .steps-connector path {
+      stroke-dasharray: 6 6;
+      stroke-dashoffset: 900;
+      transition: stroke-dashoffset 2.4s cubic-bezier(0.2, 0.6, 0.2, 1);
+    }
+    .steps-timeline.connector-drawn .steps-connector path {
+      stroke-dashoffset: 0;
+    }
+    .steps-timeline .step-item {
+      position: relative;
+      z-index: 1;
+    }
+    @media (max-width: 900px) {
+      .steps-connector { display: none; }
+    }
+
+    /* ========== WHY SHIPPERS CHOOSE SRL (LEGACY — pre-v3.8.ago)
+       The .why-section markup was replaced by .system-aspects-section in
+       v3.8.ago. Selectors retained as orphans in case any other surface
+       references them; HTML no longer renders these classes. ========== */
     .why-section {
       padding: 100px 0;
       background: var(--white);

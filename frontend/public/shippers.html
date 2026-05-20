@@ -131,43 +131,84 @@
     </div>
   </section>
 
-  <!-- ========== SERVICES DETAIL SECTION ========== -->
-  <section class="services-section">
+  <!-- ========== SERVICES DETAIL — A2 differentiated angle (v3.8.ago)
+       Reframed from "what we move" (catalog) to "when you need this"
+       (shipper buying criterion). Profile cards in 2x2 grid, brand-icon-led,
+       no stock photos. Matches Section 5 wall-tile register. ========== -->
+  <section class="profile-section">
     <div class="container">
       <div class="section-header fade-up">
-        <div class="section-label">What We Move</div>
-        <h2 class="section-title">Our Shipping Solutions</h2>
-        <p class="section-subtitle">Freight solutions matched to your supply chain, backed by your dedicated Account Executive and the SRL operations stack.</p>
+        <div class="section-label">Match Your Freight</div>
+        <h2 class="section-title">Find the right capacity</h2>
+        <p class="section-subtitle">Four profiles. One AE. The equipment that fits your freight, the cycle that fits your business.</p>
       </div>
 
-      <div class="services-grid">
-        <!-- Dry Van (FTL) -->
-        <div class="service-card fade-up">
-          <div class="service-img"><img src="https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?w=600&h=280&fit=crop" alt="Semi truck hauling full truckload on highway" loading="lazy"></div>
-          <h3>Dry Van (FTL)</h3>
-          <p>Full truckload capacity nationwide. We match your freight with the right equipment. Standard 53-foot dry vans, swing-door or roll-door configurations, and air-ride suspension for sensitive cargo. Whether it is palletized goods, boxed consumer products, or industrial materials, our vetted carrier network delivers reliably on your schedule.</p>
-        </div>
+      <div class="profile-grid">
+        <!-- Profile 1: Dry Van — palletized / boxed / industrial -->
+        <article class="profile-card fade-up">
+          <div class="profile-head">
+            <div class="profile-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="16.5" y1="9.4" x2="7.5" y2="4.21"/>
+                <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+                <polyline points="3.27 6.96 12 12.01 20.73 6.96"/>
+                <line x1="12" y1="22.08" x2="12" y2="12"/>
+              </svg>
+            </div>
+            <span class="profile-equipment">Dry Van &nbsp;·&nbsp; 53-Foot &nbsp;·&nbsp; FTL</span>
+          </div>
+          <h3>Palletized consumer goods, industrial materials, or boxed product.</h3>
+          <p>Air-ride suspension for sensitive cargo. Swing-door or roll-door, your choice. Single load to ongoing weekly volume on the same lane.</p>
+        </article>
 
-        <!-- Refrigerated / Temperature-Controlled -->
-        <div class="service-card fade-up">
-          <div class="service-img"><img src="https://images.unsplash.com/photo-1601584115197-04ecc0da31d7?w=600&h=280&fit=crop" alt="Refrigerated freight trailer" loading="lazy"></div>
-          <h3>Refrigerated / Temp-Controlled</h3>
-          <p>Reefer capacity for produce, frozen foods, pharmaceutical, and other temperature-sensitive freight. Carriers in the network operate continuous-monitoring trailers with set-point logging at pickup, in-transit, and delivery. Pre-cool verification, temp-recorder validation, and HACCP-compliant chain-of-custody documentation included on every load.</p>
-        </div>
+        <!-- Profile 2: Reefer — temp-controlled / HACCP -->
+        <article class="profile-card fade-up">
+          <div class="profile-head">
+            <div class="profile-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="2" y1="12" x2="22" y2="12"/>
+                <line x1="12" y1="2" x2="12" y2="22"/>
+                <path d="m20 16-4-4 4-4"/>
+                <path d="m4 8 4 4-4 4"/>
+                <path d="m16 4-4 4-4-4"/>
+                <path d="m8 20 4-4 4 4"/>
+              </svg>
+            </div>
+            <span class="profile-equipment">Reefer &nbsp;·&nbsp; Continuous Monitoring &nbsp;·&nbsp; HACCP</span>
+          </div>
+          <h3>Produce, frozen, pharmaceutical, or HACCP-regulated freight.</h3>
+          <p>Pre-cool verification at pickup. Set-point logging in-transit. Temp-recorder validation and chain-of-custody documentation on the POD.</p>
+        </article>
 
-        <!-- Dedicated Capacity -->
-        <div class="service-card fade-up">
-          <div class="service-img"><img src="https://images.unsplash.com/photo-1601584115197-04ecc0da31d7?w=600&h=280&fit=crop" alt="Fleet of dedicated trucks lined up" loading="lazy"></div>
-          <h3>Dedicated Capacity</h3>
-          <p>Consistent truck availability for your highest-volume lanes, eliminating the spot market uncertainty. We assign dedicated drivers who learn your facilities, your freight, and your requirements, reducing load and unload times and damage rates. Ideal for shippers moving 10 or more loads per week on recurring lanes who need guaranteed capacity and pricing stability.</p>
-        </div>
+        <!-- Profile 3: Dedicated — high-volume recurring lanes -->
+        <article class="profile-card fade-up">
+          <div class="profile-head">
+            <div class="profile-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+                <polygon points="12 2 2 7 12 12 22 7 12 2"/>
+                <polyline points="2 17 12 22 22 17"/>
+                <polyline points="2 12 12 17 22 12"/>
+              </svg>
+            </div>
+            <span class="profile-equipment">Dedicated &nbsp;·&nbsp; Same Drivers &nbsp;·&nbsp; Recurring</span>
+          </div>
+          <h3>High-volume recurring lanes where spot-market volatility is killing your numbers.</h3>
+          <p>Assigned drivers learn your facilities, your freight, and your requirements. Predictable pricing instead of weekly bid wars. Ten or more loads per week on a single lane is where this starts paying.</p>
+        </article>
 
-        <!-- Expedited & Time-Critical -->
-        <div class="service-card fade-up">
-          <div class="service-img"><img src="/media/service-expedited.jpg" alt="SRL freight truck in motion at twilight on an interstate corridor" width="600" height="280" loading="lazy"></div>
-          <h3>Expedited &amp; Time-Critical</h3>
-          <p>When your freight cannot wait, we deliver. Hot shots, team drivers, and straight trucks for guaranteed delivery windows, often within hours of dispatch. Our expedited team operates around the clock to cover urgent plant-down shipments, emergency replenishment, trade show freight, and high-value time-sensitive cargo with live tracking and proactive check calls every two hours.</p>
-        </div>
+        <!-- Profile 4: Expedited — plant-down / emergency -->
+        <article class="profile-card fade-up">
+          <div class="profile-head">
+            <div class="profile-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+                <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+              </svg>
+            </div>
+            <span class="profile-equipment">Expedited &nbsp;·&nbsp; Hot Shot &nbsp;·&nbsp; Team Driver</span>
+          </div>
+          <h3>Plant-down, trade show, emergency replenishment, time-critical cargo.</h3>
+          <p>Hot shots, team drivers, straight trucks. Often within hours of dispatch. Check calls every two hours from pickup through delivery.</p>
+        </article>
       </div>
     </div>
   </section>
@@ -181,7 +222,14 @@
         <p class="section-subtitle">A streamlined process designed around your time and your freight.</p>
       </div>
 
-      <div class="steps-timeline">
+      <!-- v3.8.ago — scroll-drawn SVG connector across the 5 steps.
+           stroke-dashoffset animates to 0 when .steps-timeline gains
+           .connector-drawn class via Intersection Observer. -->
+      <div class="steps-timeline" id="stepsTimeline">
+        <svg class="steps-connector" viewBox="0 0 1000 40" preserveAspectRatio="none" aria-hidden="true">
+          <path d="M 80 20 L 920 20" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-dasharray="6 6"/>
+        </svg>
+
         <div class="step-item fade-up">
           <div class="step-number">1</div>
           <div class="step-text">
@@ -202,7 +250,7 @@
           <div class="step-number">3</div>
           <div class="step-text">
             <h4>We Execute</h4>
-            <p>Vetted carriers matched by equipment type, lane expertise, and on-time performance history.</p>
+            <p>Compass Engine surfaces the highest-scoring carrier on your lane. Your AE confirms before tender fires.</p>
           </div>
         </div>
 
@@ -210,7 +258,7 @@
           <div class="step-number">4</div>
           <div class="step-text">
             <h4>You Track</h4>
-            <p>Real-time visibility from pickup to delivery with live GPS updates and automated milestone notifications.</p>
+            <p>Live GPS from pickup to delivery. Milestone alerts the moment they fire. The same tracking link works for you and the customer waiting on the other end.</p>
           </div>
         </div>
 
@@ -225,48 +273,104 @@
     </div>
   </section>
 
-  <!-- ========== WHY SHIPPERS CHOOSE SRL ========== -->
-  <section class="why-section">
+  <!-- ========== SIX SYSTEMS WORKING FOR YOUR FREIGHT (v3.8.ago)
+       Replaces the previous 3-Why-block. Surfaces named SRL system aspects
+       tied to shipper pain points per Wasi 2026-05-20 directive: Lane
+       Optimization, Competitive Rates, Best Service, Shipper Scorecards,
+       No-Chasing Communication, Excellence in Execution, Best Team.
+       Translated to §4 honest-claim canonical (no §5 unverifiable
+       superlatives). Section 5 wall-tile register, gold-dark icon stroke
+       on cream tile, navy text. ========== -->
+  <section class="system-aspects-section">
     <div class="container">
       <div class="section-header fade-up">
-        <div class="section-label">The SRL Difference</div>
-        <h2 class="section-title">Why Shippers Choose SRL</h2>
+        <div class="section-label">What You Get on Every Load</div>
+        <h2 class="section-title">Six systems working for your freight</h2>
+        <p class="section-subtitle">The brokerage layer is humans + AI + a TMS built for shippers. Here is what runs underneath.</p>
       </div>
 
-      <div class="why-grid">
-        <div class="why-block fade-up">
-          <div class="why-icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-              <circle cx="12" cy="7" r="4"></circle>
+      <div class="system-grid">
+        <!-- 1. Lane Optimizer -->
+        <article class="system-card fade-up">
+          <div class="system-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"/>
+              <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/>
             </svg>
           </div>
-          <h3>Your Dedicated AE, Plus Marco Polo AI</h3>
-          <p>Your AE handles business hours: quoting, dispatch, exceptions, judgment calls. Marco Polo AI handles the rest: 24/7 status questions, BOL retrieval, tracking lookups. AI assists. Your AE decides.</p>
-        </div>
+          <h3>Lane Optimizer</h3>
+          <p>Your recurring lanes get watched. Lane Optimizer learns which carriers run them well, what rates prevail this quarter, and which lanes are softening. Your AE quotes with that data already in hand.</p>
+        </article>
 
-        <div class="why-block fade-up">
-          <div class="why-icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-              <circle cx="12" cy="12" r="3"></circle>
+        <!-- 2. AE-Owned, No Call Centers -->
+        <article class="system-card fade-up">
+          <div class="system-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
+              <circle cx="9" cy="7" r="4"/>
+              <polyline points="17 11 19 13 23 9"/>
             </svg>
           </div>
-          <h3>Real-Time Visibility</h3>
-          <p>Track every shipment with live GPS positioning and automated milestone updates. Know exactly where your freight is, and when it will arrive.</p>
-        </div>
+          <h3>AE-Owned Service</h3>
+          <p>One Account Executive owns your freight quote to invoice. No call centers, no ticket queues, no chasing down communication. The same person who quoted your load picks up the phone when you call.</p>
+        </article>
 
-        <div class="why-block fade-up">
-          <div class="why-icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-              <circle cx="12" cy="12" r="10"></circle>
-              <line x1="2" y1="12" x2="22" y2="12"></line>
-              <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
+        <!-- 3. Marco Polo AI 24/7 -->
+        <article class="system-card fade-up">
+          <div class="system-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="11" width="18" height="10" rx="2"/>
+              <circle cx="12" cy="5" r="2"/>
+              <path d="M12 7v4"/>
+              <path d="M8 16h.01"/>
+              <path d="M16 16h.01"/>
             </svg>
           </div>
-          <h3>48-State Coverage</h3>
-          <p>Continental US coverage on every equipment type. Dry van, reefer, flatbed, power-only, hazmat with proper endorsements, and oversize with permits.</p>
-        </div>
+          <h3>Marco Polo AI, 24/7</h3>
+          <p>After-hours status questions, BOL retrieval, tracking lookups, document fetches. Marco Polo handles them so you do not sit on hold. AI assists. Your AE decides.</p>
+        </article>
+
+        <!-- 4. Shipper Scorecards -->
+        <article class="system-card fade-up">
+          <div class="system-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="3" y1="20" x2="21" y2="20"/>
+              <line x1="6" y1="20" x2="6" y2="14"/>
+              <line x1="11" y1="20" x2="11" y2="9"/>
+              <line x1="16" y1="20" x2="16" y2="11"/>
+              <polyline points="3 5 7 9 11 5 15 9 21 3"/>
+            </svg>
+          </div>
+          <h3>Shipper Scorecards</h3>
+          <p>Quarterly service-level scorecards delivered to your inbox. On-time delivery, claims ratio, document timeliness, communication response. The same metrics we hold our carriers to.</p>
+        </article>
+
+        <!-- 5. Itemized Rate Cons + Tier-Graduated FSC -->
+        <article class="system-card fade-up">
+          <div class="system-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M6 2v20l3-2 3 2 3-2 3 2V2z"/>
+              <line x1="9" y1="7" x2="15" y2="7"/>
+              <line x1="9" y1="12" x2="15" y2="12"/>
+              <line x1="9" y1="17" x2="13" y2="17"/>
+            </svg>
+          </div>
+          <h3>Itemized Rates, Tier-Graduated FSC</h3>
+          <p>Every quote itemized. Linehaul, fuel surcharge, accessorials, all visible. No post-booking clipping. Fuel pass-through is tier-graduated, not blanket — the math is on the rate con.</p>
+        </article>
+
+        <!-- 6. Compass-Scored Carriers -->
+        <article class="system-card fade-up">
+          <div class="system-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"/>
+              <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/>
+              <circle cx="12" cy="12" r="1.5" fill="currentColor"/>
+            </svg>
+          </div>
+          <h3>Compass-Scored Carriers</h3>
+          <p>Every carrier scored on 35 points by the Compass Engine before they ever see your load. The same 7-factor Compass standard documented on the carriers page. No mystery vetting.</p>
+        </article>
       </div>
     </div>
   </section>
@@ -503,9 +607,26 @@
         });
       }, observerOptions);
 
-      document.querySelectorAll('.fade-up, .service-card, .step-item, .why-block').forEach(function(el) {
+      document.querySelectorAll('.fade-up, .service-card, .step-item, .why-block, .profile-card, .system-card').forEach(function(el) {
         observer.observe(el);
       });
+
+      /* v3.8.ago — Process timeline connector draw: when .steps-timeline
+         enters viewport, add .connector-drawn class to trigger the SVG
+         path's stroke-dashoffset animation. Separate observer so the
+         draw fires once regardless of step-item fade order. */
+      var stepsTimeline = document.getElementById('stepsTimeline');
+      if (stepsTimeline) {
+        var connectorObserver = new IntersectionObserver(function(entries) {
+          entries.forEach(function(entry) {
+            if (entry.isIntersecting) {
+              stepsTimeline.classList.add('connector-drawn');
+              connectorObserver.unobserve(entry.target);
+            }
+          });
+        }, { threshold: 0.25 });
+        connectorObserver.observe(stepsTimeline);
+      }
 
       /* ===== NAV: Scroll background effect ===== */
       var mainNav = document.getElementById('mainNav');
