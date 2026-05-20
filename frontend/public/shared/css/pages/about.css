@@ -331,165 +331,116 @@
       z-index: 0;
     }
 
-    /* v3.8.aet — live operational terminal panel replaces the v3.8.aes
-       SVG network animation. Concept-A from the "every-page-is-the-
-       same-map" audit: hero now shows the actual TMS/AI doing work
-       as visual proof rather than another constellation/network
-       rendering. Marquee-style vertical scroll, pure CSS, no JS. */
-    .hero-terminal {
+    /* v3.8.aeu — kinetic typography hero replaces the v3.8.aet live
+       operational terminal. The terminal was retired per the new §20.3
+       sub-lens "Architectural Reveal Defense" (Lens 1.5) — its event
+       content was exposing internal system architecture in screenshots.
+
+       Kinetic typography is the cleanest break: pure type-driven
+       hero, zero architectural exposure, distinct visual register
+       from every other page on the site. Each element fades in with
+       a small Y-translate, staggered to read as deliberate sequence
+       rather than instant load. The "Innovation." emphasis gets a
+       gold-dark underline that draws in left-to-right as the final
+       reveal beat. */
+
+    /* All kinetic elements start invisible + slightly translated */
+    .kinetic-eyebrow,
+    .kinetic-line,
+    .kinetic-word,
+    .kinetic-emphasis,
+    .kinetic-sub,
+    .kinetic-divider {
+      opacity: 0;
+      transform: translateY(14px);
+      animation: kinetic-rise 0.9s cubic-bezier(0.2, 0.65, 0.2, 1) forwards;
+    }
+
+    /* Staggered delays — reads as deliberate composition */
+    .kinetic-eyebrow      { animation-delay: 0.2s; }
+    .kinetic-line.line-1  { animation-delay: 0.5s; }
+    .kinetic-word.word-1  { animation-delay: 1.4s; }
+    .kinetic-word.word-2  { animation-delay: 1.7s; }
+    .kinetic-emphasis     { animation-delay: 2.0s; }
+    .kinetic-sub          { animation-delay: 3.0s; }
+    .kinetic-divider      { animation-delay: 3.4s; }
+
+    @keyframes kinetic-rise {
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    /* H1 layout — line-1 and line-2 each block-level so they stack
+       vertically. Within line-2, the words sit inline with natural
+       word-spacing. */
+    .kinetic-headline {
+      display: block;
+    }
+
+    .kinetic-line {
+      display: block;
+    }
+
+    .kinetic-word {
+      display: inline-block;
+      margin-right: 0.3em;
+    }
+
+    /* The "Innovation." emphasis — inherits italic + gold-dark from
+       the existing .hero h1 em rule, plus we wrap the gold-dark
+       underline beneath it that draws in as the final beat. */
+    .kinetic-emphasis {
+      display: inline-block;
+      position: relative;
+    }
+
+    .kinetic-emphasis em {
+      /* keeps existing .hero h1 em styling — italic + gold-dark */
       position: relative;
       z-index: 1;
-      max-width: 920px;
-      margin: 48px auto 0;
-      padding: 0 24px;
     }
 
-    .terminal-pane {
-      position: relative;
-      background: #061629;
-      border-radius: 12px;
-      border: 1px solid rgba(186, 117, 23, 0.25);
-      box-shadow: 0 20px 60px rgba(10, 37, 64, 0.20),
-                  0 4px 16px rgba(10, 37, 64, 0.10);
-      overflow: hidden;
-      height: 280px;
-    }
-
-    .terminal-header {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      padding: 14px 20px;
-      border-bottom: 1px solid rgba(186, 117, 23, 0.18);
-      background: rgba(10, 37, 64, 0.65);
-      position: relative;
-      z-index: 3;
-    }
-
-    .terminal-dot {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      flex-shrink: 0;
-    }
-
-    .terminal-dot.dot-live {
-      background: #4ade80;
-      box-shadow: 0 0 8px rgba(74, 222, 128, 0.55);
-      animation: terminal-pulse 2s ease-in-out infinite;
-    }
-
-    .terminal-label {
-      font-family: 'SF Mono', 'Monaco', 'Cascadia Code', 'Roboto Mono', monospace;
-      font-size: 11px;
-      letter-spacing: 0.12em;
-      text-transform: uppercase;
-      color: rgba(251, 247, 240, 0.55);
-      font-weight: 500;
-    }
-
-    .terminal-fade-top,
-    .terminal-fade-bottom {
+    /* The underline — full-width below the "Innovation." text,
+       draws in left-to-right after the emphasis word reveals.
+       Uses scaleX with transform-origin: left for the wipe effect. */
+    .kinetic-underline {
       position: absolute;
       left: 0;
       right: 0;
-      height: 48px;
-      pointer-events: none;
-      z-index: 2;
+      bottom: -0.08em;
+      height: 0.08em;
+      background: #BA7517;
+      transform: scaleX(0);
+      transform-origin: left center;
+      animation: kinetic-underline-draw 0.85s cubic-bezier(0.65, 0.05, 0.25, 1) 2.5s forwards;
+      border-radius: 1px;
     }
 
-    .terminal-fade-top {
-      top: 47px; /* below the header */
-      background: linear-gradient(180deg, #061629 0%, rgba(6, 22, 41, 0) 100%);
+    @keyframes kinetic-underline-draw {
+      to {
+        transform: scaleX(1);
+      }
     }
 
-    .terminal-fade-bottom {
-      bottom: 0;
-      background: linear-gradient(0deg, #061629 0%, rgba(6, 22, 41, 0) 100%);
-    }
-
-    .terminal-track {
-      padding: 16px 20px 16px;
-      animation: terminal-scroll 60s linear infinite;
-    }
-
-    .terminal-line {
-      display: flex;
-      align-items: baseline;
-      gap: 12px;
-      font-family: 'SF Mono', 'Monaco', 'Cascadia Code', 'Roboto Mono', monospace;
-      font-size: 13px;
-      line-height: 1.7;
-      padding: 1px 0;
-      white-space: nowrap;
-    }
-
-    .terminal-line .ts {
-      color: rgba(251, 247, 240, 0.35);
-      flex-shrink: 0;
-      letter-spacing: 0.02em;
-    }
-
-    .terminal-line .ev {
-      color: #BA7517;
-      flex-shrink: 0;
-      font-weight: 600;
-      letter-spacing: 0.04em;
-      min-width: 168px;
-    }
-
-    .terminal-line .arrow {
-      color: rgba(186, 117, 23, 0.55);
-      flex-shrink: 0;
-    }
-
-    .terminal-line .dt {
-      color: rgba(251, 247, 240, 0.78);
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-
-    .terminal-line .hi {
-      color: #FBF7F0;
-      font-weight: 500;
-    }
-
-    @keyframes terminal-pulse {
-      0%, 100% { opacity: 1; }
-      50%      { opacity: 0.5; }
-    }
-
-    @keyframes terminal-scroll {
-      0%   { transform: translateY(0); }
-      100% { transform: translateY(-50%); } /* track contains 2x content, so -50% moves through one full copy */
-    }
-
-    /* Accessibility — show static state without motion */
+    /* Accessibility — show static end state without motion for users
+       who prefer reduced motion. Per §20.3 Lens 1.5 + the existing
+       feedback_visual_smoke_before_push.md user memory pattern. */
     @media (prefers-reduced-motion: reduce) {
-      .terminal-track {
+      .kinetic-eyebrow,
+      .kinetic-line,
+      .kinetic-word,
+      .kinetic-emphasis,
+      .kinetic-sub,
+      .kinetic-divider {
         animation: none;
+        opacity: 1;
+        transform: translateY(0);
       }
-      .terminal-dot.dot-live {
+      .kinetic-underline {
         animation: none;
-        opacity: 0.7;
-      }
-    }
-
-    /* Mobile — smaller terminal, smaller font */
-    @media (max-width: 640px) {
-      .hero-terminal {
-        margin-top: 32px;
-        padding: 0 16px;
-      }
-      .terminal-pane {
-        height: 220px;
-      }
-      .terminal-line {
-        font-size: 11px;
-        gap: 8px;
-      }
-      .terminal-line .ev {
-        min-width: 130px;
+        transform: scaleX(1);
       }
     }
 

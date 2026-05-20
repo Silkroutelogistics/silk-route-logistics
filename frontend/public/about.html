@@ -101,84 +101,39 @@
          HERO
          ========================================== -->
     <section class="hero" aria-labelledby="hero-heading">
-      <!-- v3.8.aet — live operational terminal replaces the v3.8.aes
-           SVG network animation. Concept-A direction from the
-           "every-page-was-the-same-map" audit: this hero shows the
-           actual TMS/AI doing operational work as the visual proof,
-           rather than another constellation/network rendering.
-           Pure CSS marquee (vertical translate) — no JS, respects
-           prefers-reduced-motion. -->
+      <!-- v3.8.aeu — kinetic typography hero replaces the v3.8.aet
+           live operational terminal. The terminal was retired per
+           CLAUDE.md §20.3 new sub-lens "Architectural Reveal Defense"
+           (Lens 1.5) — its event content was leaking the load state
+           machine, scoring thresholds, automation triggers, batch
+           operational scale, internal performance timing, onboarding
+           workflow, and tier-payment math in one screenshot.
+
+           Kinetic typography is the cleanest break: pure type-driven
+           hero, zero architectural exposure, distinct visual register
+           from every other page on the site. The H1 itself becomes
+           the visual experience via staggered word-by-word reveal +
+           gold-dark underline draw on the "Innovation." emphasis. -->
       <div class="hero-bg" aria-hidden="true"></div>
       <div class="hero-content">
-        <p class="hero-label fade-in">About Silk Route Logistics</p>
-        <h1 id="hero-heading" class="fade-in fade-in-delay-1">Built on Trust. Driven by <em>Innovation.</em></h1>
-        <p class="hero-text fade-in fade-in-delay-2">
+        <p class="hero-label kinetic-eyebrow">About Silk Route Logistics</p>
+        <h1 id="hero-heading" class="kinetic-headline">
+          <span class="kinetic-line line-1">Built on Trust.</span>
+          <span class="kinetic-line line-2">
+            <span class="kinetic-word word-1">Driven</span>
+            <span class="kinetic-word word-2">by</span>
+            <span class="kinetic-emphasis">
+              <em>Innovation.</em>
+              <span class="kinetic-underline" aria-hidden="true"></span>
+            </span>
+          </span>
+        </h1>
+        <p class="hero-text kinetic-sub">
           Silk Route Logistics is rebuilding freight brokerage through
           technology, transparency, and an operational discipline carriers
           and shippers can verify on every load.
         </p>
-        <div class="hero-divider fade-in fade-in-delay-3" aria-hidden="true"></div>
-      </div>
-
-      <!-- Live operational terminal panel — visualization of the actual
-           TMS in motion. Every event type is real backend (auto-RC on
-           tender accept Sprint 59, Compass Score recalc weekly cron,
-           Marco Polo 24/7, POD upload triggers invoicing, etc.).
-           Numbers + city pairs + Compass scores are illustrative
-           placeholders, not real production data. -->
-      <div class="hero-terminal fade-in fade-in-delay-3" aria-hidden="true">
-        <div class="terminal-pane">
-          <div class="terminal-header">
-            <span class="terminal-dot dot-live"></span>
-            <span class="terminal-label">SRL Operations · live stream</span>
-          </div>
-          <div class="terminal-fade-top" aria-hidden="true"></div>
-          <div class="terminal-fade-bottom" aria-hidden="true"></div>
-          <div class="terminal-track">
-            <!-- 20 event lines, then duplicated for seamless loop -->
-            <div class="terminal-line"><span class="ts">14:23:01</span><span class="ev">TENDER OFFERED</span><span class="arrow">→</span><span class="dt">L-2287445 Chicago → Atlanta · <span class="hi">$1,650</span></span></div>
-            <div class="terminal-line"><span class="ts">14:23:02</span><span class="ev">CARRIER ACCEPTED</span><span class="arrow">→</span><span class="dt">Compass Score <span class="hi">94</span> · <span class="hi">GOLD</span> tier</span></div>
-            <div class="terminal-line"><span class="ts">14:23:02</span><span class="ev">RC AUTO-GENERATED</span><span class="arrow">→</span><span class="dt"><span class="hi">1.2s</span> · PDF queued</span></div>
-            <div class="terminal-line"><span class="ts">14:23:05</span><span class="ev">COMPLIANCE CHECK</span><span class="arrow">→</span><span class="dt">FMCSA active · insurance valid</span></div>
-            <div class="terminal-line"><span class="ts">14:23:14</span><span class="ev">TENDER OFFERED</span><span class="arrow">→</span><span class="dt">L-2287446 Indianapolis → Memphis · <span class="hi">$1,150</span></span></div>
-            <div class="terminal-line"><span class="ts">14:23:18</span><span class="ev">POD UPLOADED</span><span class="arrow">→</span><span class="dt">L-2287428 · invoice queued</span></div>
-            <div class="terminal-line"><span class="ts">14:23:24</span><span class="ev">STATUS ADVANCE</span><span class="arrow">→</span><span class="dt">L-2287441 AT_PICKUP → LOADED</span></div>
-            <div class="terminal-line"><span class="ts">14:23:31</span><span class="ev">MARCO POLO</span><span class="arrow">→</span><span class="dt">"Where is L-2287441?" · <span class="hi">7 mi</span> from delivery</span></div>
-            <div class="terminal-line"><span class="ts">14:23:42</span><span class="ev">COMPASS RECALC</span><span class="arrow">→</span><span class="dt"><span class="hi">5,247</span> carriers scored</span></div>
-            <div class="terminal-line"><span class="ts">14:23:51</span><span class="ev">QUICK PAY ELECTED</span><span class="arrow">→</span><span class="dt">L-2287432 · 2% Gold · <span class="hi">$1,127</span> cleared</span></div>
-            <div class="terminal-line"><span class="ts">14:24:03</span><span class="ev">CARRIER ONBOARDING</span><span class="arrow">→</span><span class="dt">MC# verified · W-9 received</span></div>
-            <div class="terminal-line"><span class="ts">14:24:11</span><span class="ev">TENDER OFFERED</span><span class="arrow">→</span><span class="dt">L-2287447 Columbus → Charlotte · <span class="hi">$1,120</span></span></div>
-            <div class="terminal-line"><span class="ts">14:24:18</span><span class="ev">STATUS ADVANCE</span><span class="arrow">→</span><span class="dt">L-2287445 BOOKED → DISPATCHED</span></div>
-            <div class="terminal-line"><span class="ts">14:24:27</span><span class="ev">POD UPLOADED</span><span class="arrow">→</span><span class="dt">L-2287429 · invoice queued</span></div>
-            <div class="terminal-line"><span class="ts">14:24:34</span><span class="ev">CARRIER ACCEPTED</span><span class="arrow">→</span><span class="dt">Compass Score <span class="hi">91</span> · <span class="hi">GOLD</span> tier</span></div>
-            <div class="terminal-line"><span class="ts">14:24:42</span><span class="ev">COMPLIANCE CHECK</span><span class="arrow">→</span><span class="dt">BMC-84 bond on file · clear</span></div>
-            <div class="terminal-line"><span class="ts">14:24:49</span><span class="ev">INVOICE PAID</span><span class="arrow">→</span><span class="dt">L-2287422 · Net-14 settled</span></div>
-            <div class="terminal-line"><span class="ts">14:24:56</span><span class="ev">TENDER OFFERED</span><span class="arrow">→</span><span class="dt">L-2287448 Kansas City → Dallas · <span class="hi">$1,200</span></span></div>
-            <div class="terminal-line"><span class="ts">14:25:03</span><span class="ev">RC AUTO-GENERATED</span><span class="arrow">→</span><span class="dt"><span class="hi">1.4s</span> · PDF queued</span></div>
-            <div class="terminal-line"><span class="ts">14:25:11</span><span class="ev">STATUS ADVANCE</span><span class="arrow">→</span><span class="dt">L-2287445 IN_TRANSIT → AT_DELIVERY</span></div>
-            <!-- Duplicate of the same 20 lines for seamless loop -->
-            <div class="terminal-line"><span class="ts">14:23:01</span><span class="ev">TENDER OFFERED</span><span class="arrow">→</span><span class="dt">L-2287445 Chicago → Atlanta · <span class="hi">$1,650</span></span></div>
-            <div class="terminal-line"><span class="ts">14:23:02</span><span class="ev">CARRIER ACCEPTED</span><span class="arrow">→</span><span class="dt">Compass Score <span class="hi">94</span> · <span class="hi">GOLD</span> tier</span></div>
-            <div class="terminal-line"><span class="ts">14:23:02</span><span class="ev">RC AUTO-GENERATED</span><span class="arrow">→</span><span class="dt"><span class="hi">1.2s</span> · PDF queued</span></div>
-            <div class="terminal-line"><span class="ts">14:23:05</span><span class="ev">COMPLIANCE CHECK</span><span class="arrow">→</span><span class="dt">FMCSA active · insurance valid</span></div>
-            <div class="terminal-line"><span class="ts">14:23:14</span><span class="ev">TENDER OFFERED</span><span class="arrow">→</span><span class="dt">L-2287446 Indianapolis → Memphis · <span class="hi">$1,150</span></span></div>
-            <div class="terminal-line"><span class="ts">14:23:18</span><span class="ev">POD UPLOADED</span><span class="arrow">→</span><span class="dt">L-2287428 · invoice queued</span></div>
-            <div class="terminal-line"><span class="ts">14:23:24</span><span class="ev">STATUS ADVANCE</span><span class="arrow">→</span><span class="dt">L-2287441 AT_PICKUP → LOADED</span></div>
-            <div class="terminal-line"><span class="ts">14:23:31</span><span class="ev">MARCO POLO</span><span class="arrow">→</span><span class="dt">"Where is L-2287441?" · <span class="hi">7 mi</span> from delivery</span></div>
-            <div class="terminal-line"><span class="ts">14:23:42</span><span class="ev">COMPASS RECALC</span><span class="arrow">→</span><span class="dt"><span class="hi">5,247</span> carriers scored</span></div>
-            <div class="terminal-line"><span class="ts">14:23:51</span><span class="ev">QUICK PAY ELECTED</span><span class="arrow">→</span><span class="dt">L-2287432 · 2% Gold · <span class="hi">$1,127</span> cleared</span></div>
-            <div class="terminal-line"><span class="ts">14:24:03</span><span class="ev">CARRIER ONBOARDING</span><span class="arrow">→</span><span class="dt">MC# verified · W-9 received</span></div>
-            <div class="terminal-line"><span class="ts">14:24:11</span><span class="ev">TENDER OFFERED</span><span class="arrow">→</span><span class="dt">L-2287447 Columbus → Charlotte · <span class="hi">$1,120</span></span></div>
-            <div class="terminal-line"><span class="ts">14:24:18</span><span class="ev">STATUS ADVANCE</span><span class="arrow">→</span><span class="dt">L-2287445 BOOKED → DISPATCHED</span></div>
-            <div class="terminal-line"><span class="ts">14:24:27</span><span class="ev">POD UPLOADED</span><span class="arrow">→</span><span class="dt">L-2287429 · invoice queued</span></div>
-            <div class="terminal-line"><span class="ts">14:24:34</span><span class="ev">CARRIER ACCEPTED</span><span class="arrow">→</span><span class="dt">Compass Score <span class="hi">91</span> · <span class="hi">GOLD</span> tier</span></div>
-            <div class="terminal-line"><span class="ts">14:24:42</span><span class="ev">COMPLIANCE CHECK</span><span class="arrow">→</span><span class="dt">BMC-84 bond on file · clear</span></div>
-            <div class="terminal-line"><span class="ts">14:24:49</span><span class="ev">INVOICE PAID</span><span class="arrow">→</span><span class="dt">L-2287422 · Net-14 settled</span></div>
-            <div class="terminal-line"><span class="ts">14:24:56</span><span class="ev">TENDER OFFERED</span><span class="arrow">→</span><span class="dt">L-2287448 Kansas City → Dallas · <span class="hi">$1,200</span></span></div>
-            <div class="terminal-line"><span class="ts">14:25:03</span><span class="ev">RC AUTO-GENERATED</span><span class="arrow">→</span><span class="dt"><span class="hi">1.4s</span> · PDF queued</span></div>
-            <div class="terminal-line"><span class="ts">14:25:11</span><span class="ev">STATUS ADVANCE</span><span class="arrow">→</span><span class="dt">L-2287445 IN_TRANSIT → AT_DELIVERY</span></div>
-          </div>
-        </div>
+        <div class="hero-divider kinetic-divider" aria-hidden="true"></div>
       </div>
     </section>
 
