@@ -560,15 +560,55 @@ export default function OrderBuilderPage() {
   const dispatchPending = dispatchWaterfall.isPending || dispatchLoadboard.isPending || dispatchDat.isPending;
 
   // ─── Validation ───────────────────────────────────────────
+  // Sprint 59.c (v3.8.aev) — gate tightening. Pre-59.c only 7 base
+  // fields + 1 complete line item gated dispatch; a load could be
+  // POSTED to Waterfall/Loadboard/DAT with no contact phones, no
+  // time windows, no ZIP codes, no carrier rate — leading to "0
+  // carrier matches" outcomes because the lane data was too thin
+  // for the scoring engine to find matches. Sprint 59.c enforces
+  // the operational must-haves for ANY dispatch path:
+  //   - Lane completeness: ZIP codes required (not just city/state)
+  //   - Dock contact: contact phone at both origin + destination
+  //     (carriers need a phone for arrival confirmation)
+  //   - Time windows: pickupTimeStart + deliveryTimeStart required
+  //     (window-close is optional; start is the appointment anchor)
+  //   - Pricing: target cost required (waterfall/loadboard advertise
+  //     this; tender uses it as offeredRate seed). Customer rate +
+  //     target cost together gate dispatch.
+  //   - Temperature spec: tempMin + tempMax required when
+  //     temperatureControlled=true (reefer carriers need the range)
   const requiredMissing = useMemo(() => {
     const missing: string[] = [];
     if (!form.customerId) missing.push("Customer");
-    if (!form.originCity || !form.originState) missing.push("Origin");
-    if (!form.destCity || !form.destState) missing.push("Destination");
+
+    // Lane completeness — ZIP required, not just city/state.
+    if (!form.originCity || !form.originState) missing.push("Origin city/state");
+    if (!form.originZip) missing.push("Origin ZIP");
+    if (!form.destCity || !form.destState) missing.push("Destination city/state");
+    if (!form.destZip) missing.push("Destination ZIP");
+
+    // Dock contact — carriers need a phone for arrival confirmation.
+    if (!form.originContactPhone) missing.push("Origin contact phone");
+    if (!form.destContactPhone) missing.push("Destination contact phone");
+
+    // Schedule — date + window start (window-close optional).
     if (!form.pickupDate) missing.push("Pickup date");
+    if (!form.pickupTimeStart) missing.push("Pickup time window start");
     if (!form.deliveryDate) missing.push("Delivery date");
+    if (!form.deliveryTimeStart) missing.push("Delivery time window start");
+
+    // Equipment + temperature spec (reefer-specific).
     if (!form.equipmentType) missing.push("Equipment");
+    if (form.temperatureControlled) {
+      if (!form.tempMin) missing.push("Temperature min °F");
+      if (!form.tempMax) missing.push("Temperature max °F");
+    }
+
+    // Pricing — both customer rate (billing) + target cost (carrier-
+    // facing). Without target cost the waterfall/loadboard/DAT paths
+    // have no rate to advertise; tender path has no offeredRate seed.
     if (!form.customerRate) missing.push("Customer rate");
+    if (!form.targetCost) missing.push("Target cost (carrier rate)");
 
     // v3.8.c LAYER 2 — line-item completeness. At least one row must pass:
     // pieces > 0, weight > 0, description non-empty, packageType valid.
@@ -615,82 +655,14 @@ export default function OrderBuilderPage() {
           </div>
           <p className="text-xs text-slate-500">Create a new load</p>
         </div>
+        {/* Sprint 59.c (v3.8.aev) — header keeps only the auto-save
+            status indicator. The full 6-button action row (Save draft,
+            Send quote, Tender to carrier, Waterfall, Load Board, DAT)
+            moved to a footer below all form sections so AE fills top→
+            bottom and lands on the dispatch CTAs naturally. Matches
+            pre-Sprint-59 Section 5 (Dispatch & tracking) placement. */}
         <div className="flex items-center gap-2">
           <DraftStatus state={saveState} at={lastSavedAt} />
-          <button
-            onClick={() => saveDraft.mutate()}
-            disabled={saveDraft.isPending}
-            className="flex items-center gap-1 px-3 py-1.5 bg-white/5 hover:bg-white/10 border border-white/10 text-xs rounded-lg disabled:opacity-50"
-            style={{ color: "var(--srl-text-secondary)" }}
-          >
-            <Save className="w-3 h-3" /> Save draft
-          </button>
-          <button
-            onClick={() => sendQuote.mutate()}
-            disabled={!form.customerId || sendQuote.isPending}
-            className="flex items-center gap-1 px-3 py-1.5 bg-white/5 hover:bg-white/10 border border-white/10 text-xs rounded-lg disabled:opacity-50"
-            style={{ color: "var(--srl-text-secondary)" }}
-          >
-            <Send className="w-3 h-3" /> {sendQuote.isPending ? "Sending…" : "Send quote"}
-          </button>
-          {/* Sprint 59.b (v3.8.act) Item 176 — 4-button dispatch picker.
-              Restores the pre-Sprint-59 dispatch-method choice that
-              Sprint 59 Decision C moved to a Load Board action menu —
-              AE wants to pick dispatch strategy BEFORE leaving Order
-              Builder. Primary: Tender (opens drawer). Secondary 3:
-              Waterfall / Load Board / DAT (orchestrated client-side
-              against existing POST /api/loads + downstream endpoints).
-              DAT graceful-mock at backend routes/dat.ts:14,64 means
-              button stays enabled even without DAT_API_KEY. */}
-          <button
-            onClick={async () => {
-              if (!isValid) { setShowErrors(true); return; }
-              // Flush the latest draft state (v3.8.c LAYER 1 pattern preserved
-              // — autosave can be up to 30s stale) so the drawer reads current
-              // form data via initialFormData seed.
-              await saveDraft.mutateAsync();
-              setDrawerOpen(true);
-            }}
-            disabled={saveDraft.isPending || dispatchPending || !isValid || !!convertedLoadId}
-            title={
-              convertedLoadId
-                ? "This order has already been converted to a load"
-                : isValid
-                  ? undefined
-                  : `Cannot create load — missing: ${requiredMissing.join(", ")}`
-            }
-            className="flex items-center gap-1 px-4 py-1.5 bg-[#BA7517] hover:bg-[#8f5a11] text-xs font-semibold rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
-            style={{ color: "#FFFFFF" }}
-          >
-            {saveDraft.isPending ? "Saving…" : "Tender to carrier →"}
-          </button>
-          <button
-            onClick={() => dispatchWaterfall.mutate()}
-            disabled={saveDraft.isPending || dispatchPending || !isValid || !!convertedLoadId}
-            title={isValid ? "Build a waterfall and let the scoring engine offer to carriers" : `Cannot create load — missing: ${requiredMissing.join(", ")}`}
-            className="flex items-center gap-1 px-3 py-1.5 bg-white/5 hover:bg-white/10 border border-white/10 text-xs rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
-            style={{ color: "var(--srl-text-secondary)" }}
-          >
-            {dispatchWaterfall.isPending ? "Building…" : "Waterfall"}
-          </button>
-          <button
-            onClick={() => dispatchLoadboard.mutate()}
-            disabled={saveDraft.isPending || dispatchPending || !isValid || !!convertedLoadId}
-            title={isValid ? "Post to internal Load Board for all approved carriers" : `Cannot create load — missing: ${requiredMissing.join(", ")}`}
-            className="flex items-center gap-1 px-3 py-1.5 bg-white/5 hover:bg-white/10 border border-white/10 text-xs rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
-            style={{ color: "var(--srl-text-secondary)" }}
-          >
-            {dispatchLoadboard.isPending ? "Posting…" : "Load Board"}
-          </button>
-          <button
-            onClick={() => dispatchDat.mutate()}
-            disabled={saveDraft.isPending || dispatchPending || !isValid || !!convertedLoadId}
-            title={isValid ? "Post to DAT loadboard (mock mode when DAT API not configured)" : `Cannot create load — missing: ${requiredMissing.join(", ")}`}
-            className="flex items-center gap-1 px-3 py-1.5 bg-white/5 hover:bg-white/10 border border-white/10 text-xs rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
-            style={{ color: "var(--srl-text-secondary)" }}
-          >
-            {dispatchDat.isPending ? "Posting…" : "DAT"}
-          </button>
         </div>
       </div>
 
@@ -1261,6 +1233,95 @@ export default function OrderBuilderPage() {
           onCustomerRateChange={(v) => { setForm((f) => ({ ...f, customerRate: String(v) })); setCustomerRateSource("manual"); }}
           customerRateSource={customerRateSource}
         />
+      </div>
+
+      {/* Sprint 59.c (v3.8.aev) — bottom action footer. Moved from top
+          header per Wasi 2026-05-20: AE fills the form top→bottom and
+          should land on the dispatch CTAs at the end of the page, not
+          have them detached in the header. Layout matches pre-Sprint-59
+          Section 5 (Dispatch & tracking) placement. Validation gate is
+          unchanged structurally (each button still checks isValid +
+          convertedLoadId + dispatchPending); Sprint 59.c tightened the
+          isValid logic itself to require ZIP / contact phones / time
+          windows / target cost / temp range. */}
+      <div className="mt-3 shrink-0 flex flex-wrap items-center justify-end gap-2 p-3 rounded-xl bg-[#161921] border border-white/10">
+        {!isValid && (
+          <div className="mr-auto flex items-center gap-2 text-[11px] text-amber-300">
+            <AlertTriangle className="w-3.5 h-3.5" />
+            <span>Missing {requiredMissing.length} required field{requiredMissing.length === 1 ? "" : "s"} — hover any action to see the list</span>
+          </div>
+        )}
+        <button
+          onClick={() => saveDraft.mutate()}
+          disabled={saveDraft.isPending}
+          className="flex items-center gap-1 px-3 py-1.5 bg-white/5 hover:bg-white/10 border border-white/10 text-xs rounded-lg disabled:opacity-50"
+          style={{ color: "var(--srl-text-secondary)" }}
+        >
+          <Save className="w-3 h-3" /> Save draft
+        </button>
+        <button
+          onClick={() => sendQuote.mutate()}
+          disabled={!form.customerId || sendQuote.isPending}
+          className="flex items-center gap-1 px-3 py-1.5 bg-white/5 hover:bg-white/10 border border-white/10 text-xs rounded-lg disabled:opacity-50"
+          style={{ color: "var(--srl-text-secondary)" }}
+        >
+          <Send className="w-3 h-3" /> {sendQuote.isPending ? "Sending…" : "Send quote"}
+        </button>
+        {/* Sprint 59.b (v3.8.act) Item 176 — 4-button dispatch picker.
+            Primary: Tender to carrier (opens drawer). Secondary 3:
+            Waterfall / Load Board / DAT (orchestrated client-side
+            against existing POST /api/loads + downstream endpoints).
+            DAT graceful-mock at backend routes/dat.ts:14,64 means
+            button stays enabled even without DAT_API_KEY. */}
+        <button
+          onClick={async () => {
+            if (!isValid) { setShowErrors(true); return; }
+            // Flush the latest draft state (v3.8.c LAYER 1 pattern preserved
+            // — autosave can be up to 30s stale) so the drawer reads current
+            // form data via initialFormData seed.
+            await saveDraft.mutateAsync();
+            setDrawerOpen(true);
+          }}
+          disabled={saveDraft.isPending || dispatchPending || !isValid || !!convertedLoadId}
+          title={
+            convertedLoadId
+              ? "This order has already been converted to a load"
+              : isValid
+                ? undefined
+                : `Cannot create load — missing: ${requiredMissing.join(", ")}`
+          }
+          className="flex items-center gap-1 px-4 py-1.5 bg-[#BA7517] hover:bg-[#8f5a11] text-xs font-semibold rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
+          style={{ color: "#FFFFFF" }}
+        >
+          {saveDraft.isPending ? "Saving…" : "Tender to carrier →"}
+        </button>
+        <button
+          onClick={() => dispatchWaterfall.mutate()}
+          disabled={saveDraft.isPending || dispatchPending || !isValid || !!convertedLoadId}
+          title={isValid ? "Build a waterfall and let the scoring engine offer to carriers" : `Cannot create load — missing: ${requiredMissing.join(", ")}`}
+          className="flex items-center gap-1 px-3 py-1.5 bg-white/5 hover:bg-white/10 border border-white/10 text-xs rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
+          style={{ color: "var(--srl-text-secondary)" }}
+        >
+          {dispatchWaterfall.isPending ? "Building…" : "Waterfall"}
+        </button>
+        <button
+          onClick={() => dispatchLoadboard.mutate()}
+          disabled={saveDraft.isPending || dispatchPending || !isValid || !!convertedLoadId}
+          title={isValid ? "Post to internal Load Board for all approved carriers" : `Cannot create load — missing: ${requiredMissing.join(", ")}`}
+          className="flex items-center gap-1 px-3 py-1.5 bg-white/5 hover:bg-white/10 border border-white/10 text-xs rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
+          style={{ color: "var(--srl-text-secondary)" }}
+        >
+          {dispatchLoadboard.isPending ? "Posting…" : "Load Board"}
+        </button>
+        <button
+          onClick={() => dispatchDat.mutate()}
+          disabled={saveDraft.isPending || dispatchPending || !isValid || !!convertedLoadId}
+          title={isValid ? "Post to DAT loadboard (mock mode when DAT API not configured)" : `Cannot create load — missing: ${requiredMissing.join(", ")}`}
+          className="flex items-center gap-1 px-3 py-1.5 bg-white/5 hover:bg-white/10 border border-white/10 text-xs rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
+          style={{ color: "var(--srl-text-secondary)" }}
+        >
+          {dispatchDat.isPending ? "Posting…" : "DAT"}
+        </button>
       </div>
 
       {/* Sprint 59 (v3.8.acj) Item 176 — Carrier Engagement Drawer mount.
