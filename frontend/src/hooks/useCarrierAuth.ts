@@ -135,8 +135,23 @@ export const useCarrierAuth = create<CarrierAuthState>((set) => ({
     try {
       // Cookie sent automatically with withCredentials
       const { data } = await api.get("/carrier-auth/me");
+      // Sprint 67 Phase A diagnostic — surface /me response shape +
+      // role. Reverts in 67.a after root cause locked.
+      // eslint-disable-next-line no-console
+      console.log("[Sprint 67 diag] loadUser /me success", {
+        user_id: data?.id,
+        user_email: data?.email,
+        user_role: data?.role,
+        user_company: data?.company,
+        has_carrier_profile: !!data?.carrierProfile,
+      });
       set({ user: data });
-    } catch {
+    } catch (err: unknown) {
+      // eslint-disable-next-line no-console
+      console.log("[Sprint 67 diag] loadUser /me failed", {
+        status: (err as { response?: { status?: number } })?.response?.status,
+        error: (err as { response?: { data?: { error?: string } } })?.response?.data?.error,
+      });
       set({ user: null, token: null });
     }
   },

@@ -204,6 +204,22 @@ router.post("/verify-otp", otpVerifyLimiter, validateBody(carrierOtpSchema), asy
   registerSession(user.id, token, "CARRIER");
   setTokenCookie(res, token, "CARRIER");
 
+  // Sprint 67 Phase A diagnostic — confirm which cookie name was written
+  // for the carrier OTP verify response. Reverts in 67.a after root cause
+  // locked. Should log "srl_token_carrier" per Sprint 53 portalForRole.
+  log.info(
+    {
+      sprint67_diag: true,
+      handler: "carrier-verify-otp",
+      userId: user.id,
+      userRole: user.role,
+      roleArg: "CARRIER",
+      cookieNameWritten: "srl_token_carrier",
+      mustChangePassword,
+    },
+    "[Sprint 67 diag] verify-otp setTokenCookie",
+  );
+
   await prisma.auditLog.create({
     data: {
       userId: user.id,
@@ -404,6 +420,27 @@ router.get("/me", authenticate, async (req: AuthRequest, res: Response) => {
       },
     },
   });
+
+  // Sprint 67 Phase A diagnostic — surface which user the carrier /me
+  // endpoint resolved. Prime suspect for Mechanism A (session inheritance):
+  // if req.user.role !== "CARRIER" here, the resolveCookieToken fallback
+  // chain returned an AE/SHIPPER cookie because srl_token_carrier was
+  // missing. /me doesn't currently role-gate, so it returns whatever user
+  // the JWT decodes to — including AE users on carrier-portal routes.
+  log.info(
+    {
+      sprint67_diag: true,
+      handler: "carrier-me",
+      req_user_id: req.user?.id,
+      req_user_role: req.user?.role,
+      resolved_user_id: user?.id,
+      resolved_user_role: user?.role,
+      has_carrier_profile: !!user?.carrierProfile,
+      role_is_carrier: req.user?.role === "CARRIER",
+      response_status: user ? 200 : 404,
+    },
+    "[Sprint 67 diag] carrier /me",
+  );
 
   if (!user) {
     res.status(404).json({ error: "User not found" });

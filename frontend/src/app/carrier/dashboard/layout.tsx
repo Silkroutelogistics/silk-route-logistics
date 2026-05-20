@@ -46,9 +46,24 @@ export default function CarrierDashboardLayout({ children }: { children: React.R
   const unreadCount = notifications.filter((n) => !n.read).length;
 
   useEffect(() => {
+    // Sprint 67 Phase A diagnostic — capture auth-check sequence on the
+    // carrier dashboard layout. Reverts in 67.a after root cause locked.
+    // eslint-disable-next-line no-console
+    console.log("[Sprint 67 diag] CarrierDashboardLayout useEffect fired", {
+      user_at_mount: user ? { id: user.id, email: user.email, role: user.role, company: user.company } : null,
+      pathname: typeof window !== "undefined" ? window.location.pathname : "ssr",
+      cookies_visible_to_js: typeof document !== "undefined" ? document.cookie : "ssr",
+    });
     if (!user) {
+      // eslint-disable-next-line no-console
+      console.log("[Sprint 67 diag] user is null → calling loadUser()");
       loadUser().then(() => {
         const currentUser = useCarrierAuth.getState().user;
+        // eslint-disable-next-line no-console
+        console.log("[Sprint 67 diag] loadUser resolved", {
+          currentUser_after_load: currentUser ? { id: currentUser.id, email: currentUser.email, role: currentUser.role, company: currentUser.company } : null,
+          will_redirect: !currentUser,
+        });
         if (!currentUser) {
           // Sprint 66 (v3.8.afu) — preserve deep-link via ?next so the
           // carrier returns to the page they tried to access (e.g. an
@@ -57,12 +72,16 @@ export default function CarrierDashboardLayout({ children }: { children: React.R
           // starting with /carrier/ accepted.
           const current = typeof window !== "undefined" ? window.location.pathname + window.location.search : "";
           const nextParam = current && current !== "/carrier/login" ? `?next=${encodeURIComponent(current)}` : "";
+          // eslint-disable-next-line no-console
+          console.log("[Sprint 67 diag] REDIRECTING to /carrier/login", { nextParam });
           router.replace(`/carrier/login${nextParam}`);
           return;
         }
         setChecking(false);
       });
     } else {
+      // eslint-disable-next-line no-console
+      console.log("[Sprint 67 diag] user already present — skipping loadUser, rendering dashboard");
       setChecking(false);
     }
   }, [user, loadUser, router]);

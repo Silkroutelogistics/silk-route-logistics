@@ -139,7 +139,34 @@ function resolveCookieToken(req: AuthRequest): string | undefined {
   // Legacy single-cookie name read as final fallback so pre-Sprint-53
   // sessions don't bounce mid-deploy. Removed once all browsers have
   // rotated through a fresh login (clearTokenCookie also wipes it).
-  return preferred || fallbacks.find(Boolean) || cookies[LEGACY_COOKIE_NAME];
+  const resolved = preferred || fallbacks.find(Boolean) || cookies[LEGACY_COOKIE_NAME];
+
+  // Sprint 67 Phase A diagnostic — surface which cookie was actually read
+  // for this request. Reverts in 67.a after root cause locked.
+  // Pre-hypothesis: Mechanism A (carrier route falls back to srl_token_ae
+  // when srl_token_carrier is missing → AE user authenticated as if
+  // carrier on /api/carrier-auth/me).
+  log.info(
+    {
+      sprint67_diag: true,
+      baseUrl,
+      isCarrierRoute,
+      isShipperRoute,
+      cookies_present: {
+        srl_token_ae: !!cookies.srl_token_ae,
+        srl_token_carrier: !!cookies.srl_token_carrier,
+        srl_token_shipper: !!cookies.srl_token_shipper,
+        srl_token_legacy: !!cookies[LEGACY_COOKIE_NAME],
+      },
+      preferred_present: !!preferred,
+      fallback_used: !preferred && !!resolved,
+      legacy_used: !preferred && !fallbacks.find(Boolean) && !!cookies[LEGACY_COOKIE_NAME],
+      resolved_present: !!resolved,
+    },
+    "[Sprint 67 diag] resolveCookieToken",
+  );
+
+  return resolved;
 }
 
 export async function authenticate(req: AuthRequest, res: Response, next: NextFunction) {
