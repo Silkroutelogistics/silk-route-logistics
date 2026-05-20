@@ -763,7 +763,7 @@ export default function OrderBuilderPage() {
                 d.originCity && d.originState ? `${d.originCity}, ${d.originState}` : null,
                 d.destCity && d.destState ? `${d.destCity}, ${d.destState}` : null,
               ].filter(Boolean).join(" → ") || "No lane";
-              const edited = d.updatedAt ? new Date(d.updatedAt).toLocaleDateString() : "—";
+              const edited = d.updatedAt ? new Date(d.updatedAt).toLocaleDateString() : "Not saved";
               return (
                 <button
                   key={d.id}
@@ -891,7 +891,7 @@ export default function OrderBuilderPage() {
                   <div className="rounded-lg border border-[#C5A572]/40 bg-[#C5A572]/5 p-3">
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0 flex-1">
-                        <div className="text-sm font-semibold text-white truncate">{form.originCompany || "—"}</div>
+                        <div className="text-sm font-semibold text-white truncate">{form.originCompany || "Unnamed facility"}</div>
                         <div className="text-[11px] text-slate-400 mt-0.5">
                           {[form.originAddress, [form.originCity, form.originState].filter(Boolean).join(", "), form.originZip].filter(Boolean).join(" · ") || "No address on file"}
                         </div>
@@ -954,7 +954,7 @@ export default function OrderBuilderPage() {
                   <div className="rounded-lg border border-[#C5A572]/40 bg-[#C5A572]/5 p-3">
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0 flex-1">
-                        <div className="text-sm font-semibold text-white truncate">{form.destCompany || "—"}</div>
+                        <div className="text-sm font-semibold text-white truncate">{form.destCompany || "Unnamed facility"}</div>
                         <div className="text-[11px] text-slate-400 mt-0.5">
                           {[form.destAddress, [form.destCity, form.destState].filter(Boolean).join(", "), form.destZip].filter(Boolean).join(" · ") || "No address on file"}
                         </div>

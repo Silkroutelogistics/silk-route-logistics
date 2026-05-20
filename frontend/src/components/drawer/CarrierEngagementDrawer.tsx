@@ -193,9 +193,9 @@ export function CarrierEngagementDrawer(props: CarrierEngagementDrawerProps) {
   const { open, mode, initialCustomer, orderId, loadId, initialFormData, lineItemsRest, onClose, onSubmitSuccess } = props;
 
   // Risk 5 — runtime throw guards for un-implemented modes
-  if (mode === "review")    throw new Error("CarrierEngagementDrawer Mode 'review' — implementation deferred to Sprint 60");
-  if (mode === "finalize")  throw new Error("CarrierEngagementDrawer Mode 'finalize' — implementation deferred to Sprint 61");
-  if (mode === "recovery")  throw new Error("CarrierEngagementDrawer Mode 'recovery' — implementation deferred to Sprint 62");
+  if (mode === "review")    throw new Error("CarrierEngagementDrawer Mode 'review' is not yet implemented. Scheduled for Sprint 60.");
+  if (mode === "finalize")  throw new Error("CarrierEngagementDrawer Mode 'finalize' is not yet implemented. Scheduled for Sprint 61.");
+  if (mode === "recovery")  throw new Error("CarrierEngagementDrawer Mode 'recovery' is not yet implemented. Scheduled for Sprint 62.");
 
   const router = useRouter();
   const [section, setSection] = useState<SectionKey>("lane");
@@ -369,7 +369,7 @@ export function CarrierEngagementDrawer(props: CarrierEngagementDrawerProps) {
               <div className="text-xs text-slate-500 mt-0.5">
                 {customer ? customer.name : "No customer selected"}
                 {selectedCarrier && customer && " · "}
-                {selectedCarrier && <span className="text-[#BA7517] font-medium">{selectedCarrier.company ?? "Carrier"} (MC# {selectedCarrier.mcNumber ?? "—"})</span>}
+                {selectedCarrier && <span className="text-[#BA7517] font-medium">{selectedCarrier.company ?? "Carrier"} (MC# {selectedCarrier.mcNumber ?? "not on file"})</span>}
               </div>
             </div>
             <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-600 transition" aria-label="Close">
@@ -676,7 +676,7 @@ function CarrierSection({ selected, onSelect }: CarrierSectionProps) {
               )}
             </div>
             <div className="text-[11px] text-slate-600 mt-0.5">
-              MC# {selected.mcNumber ?? "—"} · DOT# {selected.dotNumber ?? "—"}
+              MC# {selected.mcNumber ?? "n/a"} · DOT# {selected.dotNumber ?? "n/a"}
               {selected.email && ` · ${selected.email}`}
             </div>
           </div>
@@ -716,7 +716,7 @@ function CarrierSection({ selected, onSelect }: CarrierSectionProps) {
                 <div className="flex items-center justify-between gap-2">
                   <div className="min-w-0">
                     <div className="text-sm font-medium text-slate-900 truncate">{c.company ?? "Carrier"}</div>
-                    <div className="text-[11px] text-slate-500">MC# {c.mcNumber ?? "—"} · DOT# {c.dotNumber ?? "—"}</div>
+                    <div className="text-[11px] text-slate-500">MC# {c.mcNumber ?? "n/a"} · DOT# {c.dotNumber ?? "n/a"}</div>
                   </div>
                   {c.tier && (
                     <span className={`px-2 py-0.5 text-[10px] rounded font-medium shrink-0 ${c.tier === "PLATINUM" || c.tier === "GOLD" ? "bg-[#C5A572]/20 text-[#BA7517]" : "bg-slate-100 text-slate-600"}`}>
