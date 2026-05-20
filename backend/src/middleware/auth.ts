@@ -116,124 +116,159 @@ function matchesPortalMount(baseUrl: string, mounts: string[]): boolean {
   return mounts.some((p) => baseUrl === p || baseUrl.startsWith(p + "/"));
 }
 
-function resolveCookieToken(req: AuthRequest): string | undefined {
+/**
+ * Sprint 67.a (v3.8.afz) — Return CANDIDATE token list, not single token.
+ *
+ * Pre-67.a this returned the first PRESENT cookie (preferred || fallback ||
+ * legacy). The problem: if preferred is present but holds an INVALID JWT
+ * (blacklisted, session-replaced, expired), authenticate would decode it,
+ * fail, and 401 — even when a valid fallback cookie was sitting right
+ * there. The Network tab evidence Wasi captured 2026-05-20 showed exactly
+ * this: /api/carrier-auth/me returned 304 (carrier cookie valid) while
+ * /api/notifications returned 401 (AE cookie preferred for non-portal-
+ * mount routes, present but invalid, fallback never tried).
+ *
+ * Now returns an ordered array. authenticate tries each candidate in
+ * order until one decodes + passes session/blacklist gates. First valid
+ * wins. Empty cookies omitted; legacy still tried as final candidate.
+ *
+ * Root architectural fix for the auth-portal-bleed bug class that has
+ * recurred since Sprint 53. Every prior fix addressed a symptom layer;
+ * this fixes the resolver itself.
+ */
+function resolveCookieCandidates(req: AuthRequest): { tokens: string[]; meta: { baseUrl: string; isCarrierRoute: boolean; isShipperRoute: boolean } } {
   const cookies = req.cookies || {};
   const baseUrl = (req.baseUrl || "").toLowerCase();
   const isCarrierRoute = matchesPortalMount(baseUrl, CARRIER_PORTAL_MOUNTS);
   const isShipperRoute = matchesPortalMount(baseUrl, SHIPPER_PORTAL_MOUNTS);
 
-  let preferred: string | undefined;
-  let fallbacks: (string | undefined)[];
+  let ordered: (string | undefined)[];
 
   if (isCarrierRoute) {
-    preferred = cookies.srl_token_carrier;
-    fallbacks = [cookies.srl_token_ae, cookies.srl_token_shipper];
+    ordered = [cookies.srl_token_carrier, cookies.srl_token_ae, cookies.srl_token_shipper];
   } else if (isShipperRoute) {
-    preferred = cookies.srl_token_shipper;
-    fallbacks = [cookies.srl_token_ae, cookies.srl_token_carrier];
+    ordered = [cookies.srl_token_shipper, cookies.srl_token_ae, cookies.srl_token_carrier];
   } else {
-    preferred = cookies.srl_token_ae;
-    fallbacks = [cookies.srl_token_carrier, cookies.srl_token_shipper];
+    ordered = [cookies.srl_token_ae, cookies.srl_token_carrier, cookies.srl_token_shipper];
+  }
+  ordered.push(cookies[LEGACY_COOKIE_NAME]);
+
+  // Dedupe + drop empty. authenticate tries each in order until one validates.
+  const seen = new Set<string>();
+  const tokens: string[] = [];
+  for (const t of ordered) {
+    if (t && !seen.has(t)) {
+      seen.add(t);
+      tokens.push(t);
+    }
   }
 
-  // Legacy single-cookie name read as final fallback so pre-Sprint-53
-  // sessions don't bounce mid-deploy. Removed once all browsers have
-  // rotated through a fresh login (clearTokenCookie also wipes it).
-  const resolved = preferred || fallbacks.find(Boolean) || cookies[LEGACY_COOKIE_NAME];
+  return { tokens, meta: { baseUrl, isCarrierRoute, isShipperRoute } };
+}
 
-  // Sprint 67 Phase A diagnostic — surface which cookie was actually read
-  // for this request. Reverts in 67.a after root cause locked.
-  // Pre-hypothesis: Mechanism A (carrier route falls back to srl_token_ae
-  // when srl_token_carrier is missing → AE user authenticated as if
-  // carrier on /api/carrier-auth/me).
-  log.info(
-    {
-      sprint67_diag: true,
-      baseUrl,
-      isCarrierRoute,
-      isShipperRoute,
-      cookies_present: {
-        srl_token_ae: !!cookies.srl_token_ae,
-        srl_token_carrier: !!cookies.srl_token_carrier,
-        srl_token_shipper: !!cookies.srl_token_shipper,
-        srl_token_legacy: !!cookies[LEGACY_COOKIE_NAME],
-      },
-      preferred_present: !!preferred,
-      fallback_used: !preferred && !!resolved,
-      legacy_used: !preferred && !fallbacks.find(Boolean) && !!cookies[LEGACY_COOKIE_NAME],
-      resolved_present: !!resolved,
-    },
-    "[Sprint 67 diag] resolveCookieToken",
-  );
+/**
+ * Try to authenticate a single token. Returns the resolved user + token
+ * on success, or a typed reason on failure. Used by authenticate() which
+ * iterates through candidate tokens until one passes.
+ */
+type TryAuthResult =
+  | { ok: true; user: NonNullable<AuthRequest["user"]>; token: string }
+  | { ok: false; reason: "invalid_jwt" | "blacklisted" | "user_not_found" | "user_inactive" | "session_replaced" | "session_timeout"; status: number; errorBody: { error: string; code?: string } };
 
-  return resolved;
+async function tryAuthenticateToken(token: string): Promise<TryAuthResult> {
+  let payload: { userId: string };
+  try {
+    payload = jwt.verify(token, env.JWT_SECRET, { algorithms: ["HS256"] }) as { userId: string };
+  } catch {
+    return { ok: false, reason: "invalid_jwt", status: 401, errorBody: { error: "Invalid token" } };
+  }
+
+  const blacklisted = await isTokenBlacklisted(token);
+  if (blacklisted) {
+    return { ok: false, reason: "blacklisted", status: 401, errorBody: { error: "Token has been revoked" } };
+  }
+
+  const user = await prisma.user.findUnique({
+    where: { id: payload.userId },
+    select: { id: true, email: true, role: true, firstName: true, lastName: true, isActive: true },
+  });
+
+  if (!user) return { ok: false, reason: "user_not_found", status: 401, errorBody: { error: "User not found" } };
+  if (!user.isActive) return { ok: false, reason: "user_inactive", status: 403, errorBody: { error: "Account has been deactivated" } };
+
+  const sessions = activeSessions.get(user.id);
+  const tokenHash = getTokenHash(token);
+  if (sessions && sessions.size > 0 && !sessions.has(tokenHash)) {
+    return { ok: false, reason: "session_replaced", status: 401, errorBody: { error: "Session ended — you logged in from another device", code: "SESSION_REPLACED" } };
+  }
+
+  const last = lastActivity.get(user.id);
+  const timeout = getSessionTimeout(user.role);
+  if (last && Date.now() - last > timeout) {
+    lastActivity.delete(user.id);
+    removeSession(user.id, token);
+    return { ok: false, reason: "session_timeout", status: 401, errorBody: { error: "Session expired due to inactivity", code: "SESSION_TIMEOUT" } };
+  }
+
+  return { ok: true, user, token };
 }
 
 export async function authenticate(req: AuthRequest, res: Response, next: NextFunction) {
-  // Check Authorization header first, then fall back to portal-scoped cookie
+  // Check Authorization header first
   const header = req.headers.authorization;
-  const token = header?.startsWith("Bearer ") ? header.split(" ")[1] : resolveCookieToken(req);
+  if (header?.startsWith("Bearer ")) {
+    const token = header.split(" ")[1];
+    const result = await tryAuthenticateToken(token);
+    if (result.ok) {
+      lastActivity.set(result.user.id, Date.now());
+      req.user = result.user;
+      req.token = token;
+      Sentry.setUser({ id: result.user.id, email: result.user.email });
+      Sentry.setTag("user.role", result.user.role);
+      next();
+      return;
+    }
+    res.status(result.status).json(result.errorBody);
+    return;
+  }
 
-  if (!token) {
+  // Sprint 67.a (v3.8.afz) — try candidate cookies in priority order. First
+  // valid one wins. Pre-67.a only the preferred cookie was tried — if it
+  // was present-but-invalid (blacklisted / session-replaced / expired)
+  // the fallback chain was never consulted, producing 401 on routes the
+  // user was legitimately authenticated for via a different portal cookie.
+  const { tokens, meta } = resolveCookieCandidates(req);
+
+  if (tokens.length === 0) {
     res.status(401).json({ error: "No token provided" });
     return;
   }
 
-  try {
-    // Explicit algorithm to prevent algorithm confusion attacks
-    const payload = jwt.verify(token, env.JWT_SECRET, { algorithms: ["HS256"] }) as { userId: string };
-
-    // Check if token has been revoked (logout blacklist)
-    const blacklisted = await isTokenBlacklisted(token);
-    if (blacklisted) {
-      res.status(401).json({ error: "Token has been revoked" });
+  let lastFailure: TryAuthResult | null = null;
+  for (const candidate of tokens) {
+    const result = await tryAuthenticateToken(candidate);
+    if (result.ok) {
+      lastActivity.set(result.user.id, Date.now());
+      req.user = result.user;
+      req.token = candidate;
+      Sentry.setUser({ id: result.user.id, email: result.user.email });
+      Sentry.setTag("user.role", result.user.role);
+      next();
       return;
     }
-
-    const user = await prisma.user.findUnique({
-      where: { id: payload.userId },
-      select: { id: true, email: true, role: true, firstName: true, lastName: true, isActive: true },
-    });
-
-    if (!user) {
-      res.status(401).json({ error: "User not found" });
-      return;
-    }
-
-    // Check if user account is still active
-    if (!user.isActive) {
-      res.status(403).json({ error: "Account has been deactivated" });
-      return;
-    }
-
-    // Concurrent session check — reject if this token was evicted
-    const sessions = activeSessions.get(user.id);
-    const tokenHash = getTokenHash(token);
-    if (sessions && sessions.size > 0 && !sessions.has(tokenHash)) {
-      res.status(401).json({ error: "Session ended — you logged in from another device", code: "SESSION_REPLACED" });
-      return;
-    }
-
-    // Server-side inactivity timeout check
-    const last = lastActivity.get(user.id);
-    const timeout = getSessionTimeout(user.role);
-    if (last && Date.now() - last > timeout) {
-      lastActivity.delete(user.id);
-      removeSession(user.id, token);
-      res.status(401).json({ error: "Session expired due to inactivity", code: "SESSION_TIMEOUT" });
-      return;
-    }
-    // Update last activity timestamp
-    lastActivity.set(user.id, Date.now());
-
-    req.user = user;
-    req.token = token; // Store for logout blacklisting
-    Sentry.setUser({ id: user.id, email: user.email });
-    Sentry.setTag("user.role", user.role);
-    next();
-  } catch {
-    res.status(401).json({ error: "Invalid token" });
+    lastFailure = result;
   }
+
+  // Sprint 67.a — none of the candidate cookies validated. Return the
+  // last failure reason (typically informative for the user agent flow).
+  if (lastFailure && !lastFailure.ok) {
+    res.status(lastFailure.status).json(lastFailure.errorBody);
+    return;
+  }
+
+  res.status(401).json({ error: "Invalid token" });
+  // meta logged via Sentry tag for ops triage
+  Sentry.setTag("auth.portal_meta", JSON.stringify(meta));
 }
 
 // Cleanup stale entries periodically (every 10 min)
