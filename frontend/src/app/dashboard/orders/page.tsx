@@ -899,7 +899,7 @@ export default function OrderBuilderPage() {
                       <button
                         type="button"
                         onClick={() => setForm((f) => ({ ...f, originFacilityId: "" }))}
-                        className="text-[11px] text-[#BA7517] hover:text-[#8f5a11] shrink-0"
+                        className="text-[11px] text-[#BA7517] hover:text-[#8f5a11] shrink-0 focus:outline-none focus:ring-2 focus:ring-[#C5A572]/40 rounded"
                       >
                         Change
                       </button>
@@ -962,7 +962,7 @@ export default function OrderBuilderPage() {
                       <button
                         type="button"
                         onClick={() => setForm((f) => ({ ...f, destFacilityId: "" }))}
-                        className="text-[11px] text-[#BA7517] hover:text-[#8f5a11] shrink-0"
+                        className="text-[11px] text-[#BA7517] hover:text-[#8f5a11] shrink-0 focus:outline-none focus:ring-2 focus:ring-[#C5A572]/40 rounded"
                       >
                         Change
                       </button>
@@ -1326,7 +1326,7 @@ export default function OrderBuilderPage() {
         <button
           onClick={() => saveDraft.mutate()}
           disabled={saveDraft.isPending}
-          className="flex items-center gap-1 px-3 py-1.5 bg-white/5 hover:bg-white/10 border border-white/10 text-xs rounded-lg disabled:opacity-50"
+          className="flex items-center gap-1 px-3 py-1.5 bg-white/5 hover:bg-white/10 border border-white/10 text-xs rounded-lg disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-[#C5A572]/40"
           style={{ color: "var(--srl-text-secondary)" }}
         >
           <Save className="w-3 h-3" /> Save draft
@@ -1334,7 +1334,7 @@ export default function OrderBuilderPage() {
         <button
           onClick={() => sendQuote.mutate()}
           disabled={!form.customerId || sendQuote.isPending}
-          className="flex items-center gap-1 px-3 py-1.5 bg-white/5 hover:bg-white/10 border border-white/10 text-xs rounded-lg disabled:opacity-50"
+          className="flex items-center gap-1 px-3 py-1.5 bg-white/5 hover:bg-white/10 border border-white/10 text-xs rounded-lg disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-[#C5A572]/40"
           style={{ color: "var(--srl-text-secondary)" }}
         >
           <Send className="w-3 h-3" /> {sendQuote.isPending ? "Sending…" : "Send quote"}
@@ -1362,7 +1362,7 @@ export default function OrderBuilderPage() {
                 ? undefined
                 : `Cannot create load — missing: ${requiredMissing.join(", ")}`
           }
-          className="flex items-center gap-1 px-4 py-1.5 bg-[#BA7517] hover:bg-[#8f5a11] text-xs font-semibold rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
+          className="flex items-center gap-1 px-4 py-1.5 bg-[#BA7517] hover:bg-[#8f5a11] text-xs font-semibold rounded-lg disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-[#C5A572]/40"
           style={{ color: "#FFFFFF" }}
         >
           {saveDraft.isPending ? "Saving…" : "Tender to carrier →"}
@@ -1371,7 +1371,7 @@ export default function OrderBuilderPage() {
           onClick={() => dispatchWaterfall.mutate()}
           disabled={saveDraft.isPending || dispatchPending || !isValid || !!convertedLoadId}
           title={isValid ? "Build a waterfall and let the scoring engine offer to carriers" : `Cannot create load — missing: ${requiredMissing.join(", ")}`}
-          className="flex items-center gap-1 px-3 py-1.5 bg-white/5 hover:bg-white/10 border border-white/10 text-xs rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
+          className="flex items-center gap-1 px-3 py-1.5 bg-white/5 hover:bg-white/10 border border-white/10 text-xs rounded-lg disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-[#C5A572]/40"
           style={{ color: "var(--srl-text-secondary)" }}
         >
           {dispatchWaterfall.isPending ? "Building…" : "Waterfall"}
@@ -1380,7 +1380,7 @@ export default function OrderBuilderPage() {
           onClick={() => dispatchLoadboard.mutate()}
           disabled={saveDraft.isPending || dispatchPending || !isValid || !!convertedLoadId}
           title={isValid ? "Post to internal Load Board for all approved carriers" : `Cannot create load — missing: ${requiredMissing.join(", ")}`}
-          className="flex items-center gap-1 px-3 py-1.5 bg-white/5 hover:bg-white/10 border border-white/10 text-xs rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
+          className="flex items-center gap-1 px-3 py-1.5 bg-white/5 hover:bg-white/10 border border-white/10 text-xs rounded-lg disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-[#C5A572]/40"
           style={{ color: "var(--srl-text-secondary)" }}
         >
           {dispatchLoadboard.isPending ? "Posting…" : "Load Board"}
@@ -1389,7 +1389,7 @@ export default function OrderBuilderPage() {
           onClick={() => dispatchDat.mutate()}
           disabled={saveDraft.isPending || dispatchPending || !isValid || !!convertedLoadId}
           title={isValid ? "Post to DAT loadboard (mock mode when DAT API not configured)" : `Cannot create load — missing: ${requiredMissing.join(", ")}`}
-          className="flex items-center gap-1 px-3 py-1.5 bg-white/5 hover:bg-white/10 border border-white/10 text-xs rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
+          className="flex items-center gap-1 px-3 py-1.5 bg-white/5 hover:bg-white/10 border border-white/10 text-xs rounded-lg disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-[#C5A572]/40"
           style={{ color: "var(--srl-text-secondary)" }}
         >
           {dispatchDat.isPending ? "Posting…" : "DAT"}

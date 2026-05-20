@@ -611,7 +611,7 @@ export function CarrierEngagementDrawer(props: CarrierEngagementDrawerProps) {
               <button
                 type="submit"
                 disabled={submitMutation.isPending || !customer || !selectedCarrier}
-                className="px-5 py-2 text-sm font-semibold bg-[#BA7517] hover:bg-[#A0660F] text-white rounded-lg disabled:opacity-50 flex items-center gap-2"
+                className="px-5 py-2 text-sm font-semibold bg-[#BA7517] hover:bg-[#8f5a11] text-white rounded-lg disabled:opacity-50 flex items-center gap-2 focus:outline-none focus:ring-2 focus:ring-[#C5A572]/40"
               >
                 {submitMutation.isPending && <Loader2 className="w-4 h-4 animate-spin" />}
                 Send Tender
