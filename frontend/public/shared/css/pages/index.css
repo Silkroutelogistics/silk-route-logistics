@@ -1144,36 +1144,28 @@
        with auto width so each retains its native composition (shipper
        16:9, carrier 1:1). Soft shadow lifts them off the cream-2 card
        background. */
-    /* v3.8.afb — TMS column icons retired heritage envelope + compass
-       photo-glyphs (failed Lens 1.7 brand modernity). Replaced with
-       Lucide line icons on a navy circle backdrop with gold stroke,
-       which brand-ties to the SRL compass mark + cardinal-star motif
-       without leaning on merchant-nostalgia imagery. */
+    /* v3.8.afi — TMS column icons retired the navy filled circle wrapper
+       (read too heavy on the cream-2 card surface; visually dominated
+       the card chrome). Now ships as iconographic mark only: navy line
+       icon at 36px, no wrapper, no fill. Reads more premium B2B
+       tech-forward (Stripe / Linear / Vercel register) and stays
+       proportional to the executive-register copy below it. */
     .tms-icon-wrap {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      width: 60px;
-      height: 60px;
-      background: var(--navy);
-      border-radius: 50%;
-      margin-bottom: 18px;
-      box-shadow: 0 4px 12px rgba(10, 37, 64, 0.18);
+      display: block;
+      margin-bottom: 22px;
     }
 
     .tms-icon-wrap svg {
-      color: var(--gold);
+      color: var(--navy);
       display: block;
+      width: 36px;
+      height: 36px;
     }
 
     @media (max-width: 760px) {
-      .tms-icon-wrap {
-        width: 52px;
-        height: 52px;
-      }
       .tms-icon-wrap svg {
-        width: 26px;
-        height: 26px;
+        width: 30px;
+        height: 30px;
       }
     }
 
