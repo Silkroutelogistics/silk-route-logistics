@@ -63,7 +63,11 @@ export function OverrideComplianceModal({
     onError: (err: { response?: { data?: { error?: string }; status?: number }; message?: string }) => {
       const data = err.response?.data;
       if (err.response?.status === 429) {
-        setError(data?.error || "Maximum 2 overrides per carrier per month. Contact VP of Operations.");
+        // Server-returned error text includes the canonical quota number;
+        // fallback is generic since the cap is owned by the backend
+        // (Sprint 64 raised 2 → 15; future tuning lives in backend
+        // controllers/complianceController.ts MAX_OVERRIDES_PER_30_DAYS).
+        setError(data?.error || "Override quota exhausted. Contact VP of Operations.");
       } else {
         setError(data?.error || err.message || "Failed to apply override");
       }

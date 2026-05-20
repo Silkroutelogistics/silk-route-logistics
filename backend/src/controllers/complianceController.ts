@@ -14,6 +14,22 @@ const alertQuerySchema = z.object({
   limit: z.coerce.number().default(20),
 });
 
+/**
+ * Compliance override quota — rolling 30-day window per carrier.
+ *
+ * Sprint 40 (Item 58) shipped at 2/carrier/30-days. Sprint 64 (2026-05-20)
+ * raised to 15 per Wasi directive. Rationale: early BKN-era operational
+ * use surfaces many carriers without completed BCA / vetting / insurance
+ * cycles — the 2-cap forced "Contact VP of Operations" escalation for
+ * routine onboarding-in-progress overrides. 15 gives breathing room
+ * without removing the cap entirely. Tracking infrastructure unchanged:
+ *   - ComplianceOverride row per override (24h expiry, reason captured)
+ *   - auditTrail row per override (action="COMPLIANCE_OVERRIDE", full metadata)
+ *   - GET /compliance/carrier/:id/override-status returns recent count + max
+ * If quota is exceeded a 429 still fires and AE must escalate.
+ */
+const MAX_OVERRIDES_PER_30_DAYS = 15;
+
 export async function getAlerts(req: AuthRequest, res: Response) {
   const query = alertQuerySchema.parse(req.query);
   const where: Record<string, unknown> = {};
@@ -442,7 +458,7 @@ export async function getOverrideStatus(req: AuthRequest, res: Response) {
       }),
     ]);
 
-    res.json({ recentOverrideCount, max: 2, activeOverride });
+    res.json({ recentOverrideCount, max: MAX_OVERRIDES_PER_30_DAYS, activeOverride });
   } catch (err) {
     log.error({ err }, "[Compliance] Override status error:");
     res.status(500).json({ error: "Failed to fetch override status" });
@@ -461,7 +477,7 @@ export async function overrideBlock(req: AuthRequest, res: Response) {
     const carrierId = req.params.carrierId;
     const adminId = req.user!.id;
 
-    // Check: max 2 overrides per carrier per month
+    // Check: rolling 30-day quota per carrier (Sprint 64 — raised from 2 to 15)
     const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
     const recentOverrides = await prisma.complianceOverride.count({
       where: {
@@ -470,9 +486,9 @@ export async function overrideBlock(req: AuthRequest, res: Response) {
       },
     });
 
-    if (recentOverrides >= 2) {
+    if (recentOverrides >= MAX_OVERRIDES_PER_30_DAYS) {
       res.status(429).json({
-        error: "Maximum 2 overrides per carrier per month. Contact VP of Operations for additional overrides.",
+        error: `Maximum ${MAX_OVERRIDES_PER_30_DAYS} overrides per carrier per 30 days. Contact VP of Operations for additional overrides.`,
       });
       return;
     }
