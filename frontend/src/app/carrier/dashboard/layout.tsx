@@ -50,7 +50,14 @@ export default function CarrierDashboardLayout({ children }: { children: React.R
       loadUser().then(() => {
         const currentUser = useCarrierAuth.getState().user;
         if (!currentUser) {
-          router.replace("/carrier/login");
+          // Sprint 66 (v3.8.afu) — preserve deep-link via ?next so the
+          // carrier returns to the page they tried to access (e.g. an
+          // emailed tender CTA) after login, not the dashboard root.
+          // Whitelist enforced on the /carrier/login side: only paths
+          // starting with /carrier/ accepted.
+          const current = typeof window !== "undefined" ? window.location.pathname + window.location.search : "";
+          const nextParam = current && current !== "/carrier/login" ? `?next=${encodeURIComponent(current)}` : "";
+          router.replace(`/carrier/login${nextParam}`);
           return;
         }
         setChecking(false);

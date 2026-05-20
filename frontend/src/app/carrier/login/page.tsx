@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Truck, Shield } from "lucide-react";
 import { Logo } from "@/components/ui/Logo";
@@ -46,10 +46,20 @@ export default function CarrierLoginPage() {
   const [currentSlide, setCurrentSlide] = useState(0);
   const { login, verifyOtp, isLoading, error, token, mustChangePassword, pendingOtp, pendingEmail } = useCarrierAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
+
+  // Sprint 66 (v3.8.afu) — ?next param redirect target. Email CTAs
+  // (tender accept, RC re-download, etc.) deep-link via /carrier/login?
+  // next=/carrier/dashboard/tenders so the carrier authenticates as
+  // themselves before landing on the gated dashboard route. Whitelist:
+  // only paths starting with /carrier/ accepted to prevent open-redirect
+  // exploits.
+  const rawNext = searchParams?.get("next") ?? "";
+  const nextPath = rawNext.startsWith("/carrier/") ? rawNext : "/carrier/dashboard";
 
   useEffect(() => {
-    if (token && !mustChangePassword) router.replace("/carrier/dashboard");
-  }, [token, mustChangePassword, router]);
+    if (token && !mustChangePassword) router.replace(nextPath);
+  }, [token, mustChangePassword, router, nextPath]);
 
   useEffect(() => {
     if (pendingOtp && pendingEmail) {
@@ -72,7 +82,7 @@ export default function CarrierLoginPage() {
     e.preventDefault();
     const result = await login(email, password);
     if (result === "success") {
-      window.location.href = "/carrier/dashboard";
+      window.location.href = nextPath;
     } else if (result === "password") {
       router.push("/auth/force-password-change");
     }
@@ -82,7 +92,7 @@ export default function CarrierLoginPage() {
     e.preventDefault();
     const result = await verifyOtp(pendingEmail || email, otpCode);
     if (result === "success") {
-      window.location.href = "/carrier/dashboard";
+      window.location.href = nextPath;
     } else if (result === "password") {
       router.push("/auth/force-password-change");
     }

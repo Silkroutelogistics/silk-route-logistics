@@ -553,7 +553,7 @@ export async function sendTenderOfferedEmail(params: TenderOfferedEmailParams): 
     </table>
     ${dispatchNotesBlock}
     <p>Log in to your carrier portal to accept or decline. If you have questions, reply to this email and our operations team will respond.</p>
-    <a href="https://silkroutelogistics.ai/carrier/dashboard/tenders" style="display:inline-block;background:#BA7517;color:#FFFFFF;padding:12px 24px;text-decoration:none;border-radius:6px;font-weight:bold;margin-top:8px">View Tender</a>
+    <a href="https://silkroutelogistics.ai/carrier/login?next=%2Fcarrier%2Fdashboard%2Ftenders" style="display:inline-block;background:#BA7517;color:#FFFFFF;padding:12px 24px;text-decoration:none;border-radius:6px;font-weight:bold;margin-top:8px">Log in to view tender</a>
   `);
 
   return sendEmail(
