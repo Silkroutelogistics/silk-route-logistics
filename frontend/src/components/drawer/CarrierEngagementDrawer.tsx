@@ -223,9 +223,37 @@ export function CarrierEngagementDrawer(props: CarrierEngagementDrawerProps) {
   const { user } = useAuthStore();
   const isAdminOrCeo = user?.role === "ADMIN" || user?.role === "CEO";
 
-  const { register, handleSubmit, watch, reset, setValue, formState } = useForm<DrawerFormState>({
+  const { register, handleSubmit, watch, reset, setValue } = useForm<DrawerFormState>({
     defaultValues: { ...EMPTY_FORM, ...(initialFormData ?? {}) },
   });
+
+  // Sprint 65.c (v3.8.afs) FIX — customer state sync on drawer open.
+  //
+  // ROOT CAUSE found 2026-05-20 after 65 / 65.a guess-fixes failed + 65.b
+  // instrumentation surfaced zero click events: button was genuinely
+  // disabled (HTML disabled blocks onClick from firing). sendBlocked
+  // term that was true: !customer.
+  //
+  // The customer useState at line ~197 captures initialCustomer ONCE at
+  // mount. Drawer mounts at Order Builder render time when selectedCustomer
+  // is often still null (page hasn't loaded customer yet). useState's
+  // initial value is captured as null and never re-runs even after the
+  // initialCustomer prop populates with the customer object.
+  //
+  // Pre-Sprint-63 the drawer had a CustomerPicker that fired setCustomer
+  // when AE picked a customer in the drawer; Sprint 63 dropped the picker
+  // (customer is implicit in Mode 1) but forgot to add the prop-sync
+  // useEffect. setCustomer is now never called → customer state stuck at
+  // null → !customer → sendBlocked=true → button permanently disabled.
+  //
+  // Sub-pattern 10 fire #2 (hydration-effect-dep-array-audit). Same class
+  // as Sprint 59.b Bug #2 (form reset on open flip). The form-reset
+  // useEffect at line ~220 has a sister concern: customer state also
+  // needs reactive sync to its prop on open or prop change.
+  useEffect(() => {
+    if (open) setCustomer(initialCustomer ?? null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, initialCustomer]);
 
   // Sprint 63 (v3.8.afi) — compliance pre-check. Fires when AE selects
   // a carrier so the blocked_reasons surface BEFORE the AE clicks Send
@@ -286,10 +314,6 @@ export function CarrierEngagementDrawer(props: CarrierEngagementDrawerProps) {
 
   const submitMutation = useMutation({
     mutationFn: async (data: DrawerFormState) => {
-      // Sprint 65.b diagnostic — confirms mutationFn was reached.
-      // Will be removed in 65.c once root cause is captured.
-      // eslint-disable-next-line no-console
-      console.log("[Sprint 65.b diag] mutationFn REACHED. data:", data);
       if (!customer) throw new Error("Select a customer first");
       if (!selectedCarrier) throw new Error("Select a carrier first");
       if (!data.pickupDate || !data.deliveryDate) throw new Error("Pickup and delivery dates required");
@@ -476,49 +500,7 @@ export function CarrierEngagementDrawer(props: CarrierEngagementDrawerProps) {
           poNumbersText={watch("poNumbersText")}
         />
 
-        {/* Sprint 65.b diagnostic — wraps handleSubmit to log form event +
-            sendBlocked terms + formState.errors. Removed in 65.c after root
-            cause captured. Two failed fix attempts (65 z-index, 65.a state
-            relaxation) without click-time evidence. This pass captures the
-            ground truth on a real click. */}
-        <form
-          onSubmit={(e) => {
-            // eslint-disable-next-line no-console
-            console.log("[Sprint 65.b diag] FORM onSubmit fired ────────────────");
-            // eslint-disable-next-line no-console
-            console.log("[Sprint 65.b diag] sendBlocked:", sendBlocked, "reason:", sendBlockedReason);
-            // eslint-disable-next-line no-console
-            console.log("[Sprint 65.b diag]   submitMutation.isPending:", submitMutation.isPending);
-            // eslint-disable-next-line no-console
-            console.log("[Sprint 65.b diag]   !customer:", !customer, "customer:", customer);
-            // eslint-disable-next-line no-console
-            console.log("[Sprint 65.b diag]   !selectedCarrier:", !selectedCarrier, "selectedCarrier:", selectedCarrier);
-            // eslint-disable-next-line no-console
-            console.log("[Sprint 65.b diag]   isCarrierBlocked:", isCarrierBlocked, "compliance:", compliance);
-            // eslint-disable-next-line no-console
-            console.log("[Sprint 65.b diag] formState.errors:", formState.errors);
-            // eslint-disable-next-line no-console
-            console.log("[Sprint 65.b diag] formState.isValid:", formState.isValid);
-            // eslint-disable-next-line no-console
-            console.log("[Sprint 65.b diag] formState.isSubmitting:", formState.isSubmitting);
-            // eslint-disable-next-line no-console
-            console.log("[Sprint 65.b diag] watched offeredRate:", watch("offeredRate"));
-            // eslint-disable-next-line no-console
-            console.log("[Sprint 65.b diag] watched carrierId:", watch("carrierId"));
-            return handleSubmit(
-              (d) => {
-                // eslint-disable-next-line no-console
-                console.log("[Sprint 65.b diag] handleSubmit VALID — invoking mutationFn with data:", d);
-                submitMutation.mutate(d);
-              },
-              (errors) => {
-                // eslint-disable-next-line no-console
-                console.log("[Sprint 65.b diag] handleSubmit INVALID — errors:", errors);
-              }
-            )(e);
-          }}
-          className="flex-1 flex flex-col min-h-0"
-        >
+        <form onSubmit={handleSubmit((d) => submitMutation.mutate(d))} className="flex-1 flex flex-col min-h-0">
           <div className="flex-1 overflow-y-auto px-6 py-5 space-y-6">
 
             {/* ── CARRIER ── */}
@@ -693,13 +675,6 @@ export function CarrierEngagementDrawer(props: CarrierEngagementDrawerProps) {
               <button
                 type="submit"
                 disabled={sendBlocked}
-                onClick={(e) => {
-                  // Sprint 65.b diagnostic — confirms click is reaching the
-                  // button (rules out z-index / overlay interception). Removed
-                  // in 65.c after root cause captured.
-                  // eslint-disable-next-line no-console
-                  console.log("[Sprint 65.b diag] SEND TENDER BUTTON onClick fired. disabled prop:", sendBlocked, "event.defaultPrevented:", e.defaultPrevented);
-                }}
                 className="px-5 py-2 text-sm font-semibold bg-[#BA7517] hover:bg-[#8f5a11] text-white rounded-lg disabled:opacity-50 flex items-center gap-2 focus:outline-none focus:ring-2 focus:ring-[#C5A572]/40"
                 title={sendBlockedReason}
               >
