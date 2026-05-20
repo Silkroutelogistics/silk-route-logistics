@@ -426,7 +426,10 @@ test.describe("Full Load Lifecycle E2E", () => {
     expect(statusResp.ok(), "Item 58: GET /override-status must respond ok").toBeTruthy();
     const statusBody = await statusResp.json();
     expect(statusBody.recentOverrideCount, "quota: 1 override applied").toBeGreaterThanOrEqual(1);
-    expect(statusBody.max, "quota max").toBe(2);
+    // Sprint 64 (v3.8.afk) — quota cap raised 2 → 15 per Wasi directive.
+    // Canonical constant: backend complianceController.ts MAX_OVERRIDES_PER_30_DAYS.
+    // Future tuning changes both backend constant + this assertion.
+    expect(statusBody.max, "quota max").toBe(15);
     expect(statusBody.activeOverride, "active override must be returned").toBeTruthy();
 
     // ─────────────────────────────────────────────────────────────────
