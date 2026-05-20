@@ -60,13 +60,15 @@ These names are part of the brand. Be consistent — consistency is what makes a
 
 | Internal name | What it is | Notes |
 |---|---|---|
-| **Marco Polo** | AI chatbot / agent | external + internal |
+| **Caravansary** | the SRL in-house TMS / operational stack | Umbrella platform containing every other named system below. Named 2026-05-20 (homepage v3.8.afe + /about v3.8.aff). Direct Silk Road heritage — historic trade-route inn where caravans rested, restocked, and dispatched forward. First-mention boilerplate: "Caravansary, our in-house TMS" or "Caravansary, the SRL operational stack". |
+| **Marco Polo AI** | AI chatbot / agent | external + internal. Use "Marco Polo AI" (with AI suffix) for first mention on any page; "Marco Polo" alone OK after first mention. The §4 #12 24/7 claim is reserved exclusively for this system. |
 | **Carvan** | carrier mobile app | proprietary spelling — **NOT "Caravan"** |
 | **The Caravan** | carrier portal / load board | standard spelling for the portal — distinct from the app |
-| **Compass Engine** | carrier vetting tool | scoring system is the **Compass score** |
+| **Compass Engine** | carrier vetting tool | scoring system is the **Compass score** (7-factor, weights published per CLAUDE.md §9) |
+| **Lane Optimizer** | analytics / lane-matching engine | dedicated capacity + backhaul discovery |
 | **Lead Hunter** | Apollo-based prospecting | |
-| **AE Console** | account executive ops hub | |
-| **Shipper Portal** | shipper-side platform | |
+| **AE Console** | account executive ops hub | a surface inside Caravansary |
+| **Shipper Portal** | shipper-side platform | a surface inside Caravansary |
 | **SRAPP** | Quick Pay tier program (legacy name) | Legacy name (renamed 2026-05-02). Caravan Partner Program is the canonical name; tiers are Silver / Gold / Platinum |
 
 The `Carvan` vs `The Caravan` distinction is a real spelling difference — the carrier mobile app drops the second `a` deliberately. Mixing them up reads as inattention.
