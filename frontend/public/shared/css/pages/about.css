@@ -331,90 +331,165 @@
       z-index: 0;
     }
 
-    /* v3.8.aes — animated SVG network constellation in the hero.
-       8 cardinal-star nodes connected by 12 trade-route lines,
-       drawing in with staggered timing over 14s. Brand-anchored
-       tech register, matches the homepage Section 7 cardinal-star
-       motif (shipper wax-seal + carrier compass-rose). */
-    .hero-network {
+    /* v3.8.aet — live operational terminal panel replaces the v3.8.aes
+       SVG network animation. Concept-A from the "every-page-is-the-
+       same-map" audit: hero now shows the actual TMS/AI doing work
+       as visual proof rather than another constellation/network
+       rendering. Marquee-style vertical scroll, pure CSS, no JS. */
+    .hero-terminal {
+      position: relative;
+      z-index: 1;
+      max-width: 920px;
+      margin: 48px auto 0;
+      padding: 0 24px;
+    }
+
+    .terminal-pane {
+      position: relative;
+      background: #061629;
+      border-radius: 12px;
+      border: 1px solid rgba(186, 117, 23, 0.25);
+      box-shadow: 0 20px 60px rgba(10, 37, 64, 0.20),
+                  0 4px 16px rgba(10, 37, 64, 0.10);
+      overflow: hidden;
+      height: 280px;
+    }
+
+    .terminal-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 14px 20px;
+      border-bottom: 1px solid rgba(186, 117, 23, 0.18);
+      background: rgba(10, 37, 64, 0.65);
+      position: relative;
+      z-index: 3;
+    }
+
+    .terminal-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .terminal-dot.dot-live {
+      background: #4ade80;
+      box-shadow: 0 0 8px rgba(74, 222, 128, 0.55);
+      animation: terminal-pulse 2s ease-in-out infinite;
+    }
+
+    .terminal-label {
+      font-family: 'SF Mono', 'Monaco', 'Cascadia Code', 'Roboto Mono', monospace;
+      font-size: 11px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: rgba(251, 247, 240, 0.55);
+      font-weight: 500;
+    }
+
+    .terminal-fade-top,
+    .terminal-fade-bottom {
       position: absolute;
-      inset: 0;
-      width: 100%;
-      height: 100%;
+      left: 0;
+      right: 0;
+      height: 48px;
       pointer-events: none;
+      z-index: 2;
     }
 
-    .network-nodes path {
-      fill: #BA7517;
-      opacity: 0;
-      transform-origin: center;
-      transform-box: fill-box;
-      animation: about-node-pulse 14s ease-in-out infinite;
+    .terminal-fade-top {
+      top: 47px; /* below the header */
+      background: linear-gradient(180deg, #061629 0%, rgba(6, 22, 41, 0) 100%);
     }
 
-    .network-lines line {
-      stroke: #BA7517;
-      stroke-width: 1.25;
-      stroke-linecap: round;
-      opacity: 0;
-      stroke-dasharray: 500;
-      stroke-dashoffset: 500;
-      animation: about-route-trace 14s ease-in-out infinite;
+    .terminal-fade-bottom {
+      bottom: 0;
+      background: linear-gradient(0deg, #061629 0%, rgba(6, 22, 41, 0) 100%);
     }
 
-    /* Route stagger — routes draw in from earlier to later positions */
-    .route-1  { animation-delay: 0.3s; }
-    .route-2  { animation-delay: 0.8s; }
-    .route-3  { animation-delay: 1.3s; }
-    .route-4  { animation-delay: 1.8s; }
-    .route-5  { animation-delay: 2.1s; }
-    .route-6  { animation-delay: 2.4s; }
-    .route-7  { animation-delay: 2.7s; }
-    .route-8  { animation-delay: 3.0s; }
-    .route-9  { animation-delay: 3.3s; }
-    .route-10 { animation-delay: 3.6s; }
-    .route-11 { animation-delay: 3.9s; }
-    .route-12 { animation-delay: 4.2s; }
-
-    /* Node stagger — nodes pulse just before their connecting routes */
-    .node-1 { animation-delay: 0.1s; }
-    .node-2 { animation-delay: 0.6s; }
-    .node-3 { animation-delay: 1.1s; }
-    .node-4 { animation-delay: 1.9s; }
-    .node-5 { animation-delay: 1.6s; }
-    .node-6 { animation-delay: 2.5s; }
-    .node-7 { animation-delay: 2.8s; }
-    .node-8 { animation-delay: 3.4s; }
-
-    @keyframes about-node-pulse {
-      0%   { opacity: 0; transform: scale(0.4); }
-      8%   { opacity: 0.85; transform: scale(1); }
-      40%  { opacity: 0.85; transform: scale(1); }
-      55%  { opacity: 0.55; transform: scale(1); }
-      80%  { opacity: 0.30; transform: scale(0.95); }
-      100% { opacity: 0; transform: scale(0.4); }
+    .terminal-track {
+      padding: 16px 20px 16px;
+      animation: terminal-scroll 60s linear infinite;
     }
 
-    @keyframes about-route-trace {
-      0%   { opacity: 0; stroke-dashoffset: 500; }
-      8%   { opacity: 0.50; stroke-dashoffset: 500; }
-      40%  { opacity: 0.50; stroke-dashoffset: 0; }
-      60%  { opacity: 0.50; stroke-dashoffset: 0; }
-      80%  { opacity: 0.20; stroke-dashoffset: 0; }
-      100% { opacity: 0; stroke-dashoffset: -500; }
+    .terminal-line {
+      display: flex;
+      align-items: baseline;
+      gap: 12px;
+      font-family: 'SF Mono', 'Monaco', 'Cascadia Code', 'Roboto Mono', monospace;
+      font-size: 13px;
+      line-height: 1.7;
+      padding: 1px 0;
+      white-space: nowrap;
     }
 
-    /* Accessibility — show static end state without motion */
+    .terminal-line .ts {
+      color: rgba(251, 247, 240, 0.35);
+      flex-shrink: 0;
+      letter-spacing: 0.02em;
+    }
+
+    .terminal-line .ev {
+      color: #BA7517;
+      flex-shrink: 0;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      min-width: 168px;
+    }
+
+    .terminal-line .arrow {
+      color: rgba(186, 117, 23, 0.55);
+      flex-shrink: 0;
+    }
+
+    .terminal-line .dt {
+      color: rgba(251, 247, 240, 0.78);
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .terminal-line .hi {
+      color: #FBF7F0;
+      font-weight: 500;
+    }
+
+    @keyframes terminal-pulse {
+      0%, 100% { opacity: 1; }
+      50%      { opacity: 0.5; }
+    }
+
+    @keyframes terminal-scroll {
+      0%   { transform: translateY(0); }
+      100% { transform: translateY(-50%); } /* track contains 2x content, so -50% moves through one full copy */
+    }
+
+    /* Accessibility — show static state without motion */
     @media (prefers-reduced-motion: reduce) {
-      .network-nodes path {
+      .terminal-track {
         animation: none;
-        opacity: 0.35;
-        transform: scale(1);
       }
-      .network-lines line {
+      .terminal-dot.dot-live {
         animation: none;
-        opacity: 0.25;
-        stroke-dashoffset: 0;
+        opacity: 0.7;
+      }
+    }
+
+    /* Mobile — smaller terminal, smaller font */
+    @media (max-width: 640px) {
+      .hero-terminal {
+        margin-top: 32px;
+        padding: 0 16px;
+      }
+      .terminal-pane {
+        height: 220px;
+      }
+      .terminal-line {
+        font-size: 11px;
+        gap: 8px;
+      }
+      .terminal-line .ev {
+        min-width: 130px;
       }
     }
 
