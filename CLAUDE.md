@@ -1437,7 +1437,167 @@ When new patterns surface, ship them as a separate methodology meta-commit (no v
 
 ---
 
-## Appendix: Legacy / Custom Sections
+## §20 PAGE AUDIT STANDARD (binding for public marketing surfaces)
+
+Codified 2026-05-19 (Sprint v3.8.aet docs-only commit) after the homepage + /carriers + /about audit arc surfaced repeating patterns that should be a standing standard, not re-derived per page. User-flagged trigger: *"almost all pages had very redundant and repetitive information, which was never reviewed or replaced since the website went live. Gather all the audit manual and your audit findings and add the first one which I mentioned. Make all these as set standard for the audit and improvements also keeping in Tech, AI, Brand Identity and ancient silk road in mind."*
+
+This section is the canonical audit reference for any future public marketing page work. It supersedes ad-hoc per-page audits.
+
+### §20.1 — Scope
+
+Applies to:
+- Public marketing pages: `/`, `/shippers.html`, `/carriers.html`, `/about.html`, `/contact.html`, `/faq.html`, `/blog.html`, `/careers.html`, `/track`
+- Public legal pages (`/terms.html`, `/privacy.html`, `/security-policy.html`) — light-touch audit; legal language has different rules per §3.12
+
+Does NOT apply to:
+- Internal AE Console, Carrier Portal, Shipper Portal surfaces (per §12 EXEMPT SURFACES)
+- Lead Hunter outreach (governed by §18 standing rules — distinct domain)
+- PDF document chrome (governed by `srl-brand-design` skill canonical)
+
+### §20.2 — Workflow (mandatory)
+
+Every page audit follows this sequence:
+
+1. **Phase A — Read-only audit.** Read the page end-to-end. Surface findings as old/new tables per §20.3 lens. No code changes yet.
+2. **Phase B — Surface to user.** Present audit findings with old/new for each action item. Get explicit GO before any source change.
+3. **Phase C — Execute with atomic commits.** Per §3.3, bundle cohesive page-polish into one atomic commit when scope is single-page; split when scope spans multiple pages or distinct concerns (content vs graphics).
+4. **Phase D — Pre-push gates.** `tsc --noEmit` + `npx next build` + visual smoke walkthrough per `feedback_visual_smoke_before_push.md` user memory (covers viewport proportions, layout reflow, contrast across animation phases). Sub-pattern 11 CI parity applies.
+5. **Phase E — Rendered-output verification.** After deploy, verify on the live URL per §3.2 (curl + grep deployed page, not local file). Cloudflare Pages ~2-3 min deploy delay.
+
+Per "one page at a time" user directive (2026-05-19): never audit multiple pages in a single commit. Complete a page (content + graphics + verification) before moving to the next.
+
+### §20.3 — The five audit lenses
+
+Every page is reviewed through five lenses in sequence:
+
+#### Lens 1 — Brand canonical conformance
+
+Cross-check against §4 (honest claims whitelist) + §5 (prohibited claims). Common violations encountered repeatedly:
+
+- **§5 prohibited "24/7"** for human-support contexts (reserved for Marco Polo AI per §4 #12). Pattern hit: /about Leadership Card #3 "around-the-clock operations center" (fixed v3.8.aer).
+- **§5 prohibited fabricated volume** — "From the ports of LA to the warehouses of New Jersey", "12K+ shippers", "$50M+ moved" — implies portfolio that doesn't exist pre-revenue. Pattern hit: /about Card #5 "Nationwide Network" (fixed v3.8.aer).
+- **§5 prohibited "Asset-based" / "our fleet"** — SRL is a broker, not asset.
+- **§5 prohibited blanket "100% FSC pass-through"** / "Full FSC pass-through" — overstated; tier-graduated only. Retired 2026-05-19 v3.8.ads.
+- **§5 prohibited "first load within 48 hours"** / specific onboarding SLAs not operationally enforced. Retired 2026-05-19 v3.8.ads.
+- **Unverifiable superlatives** — "most trusted broker", "world-class", "unmatched service". Pattern hit: /about Mission card (fixed v3.8.aer).
+
+#### Lens 2 — Voice + §18.9 sweep
+
+§18.8 + §18.9 voice rules apply to all customer-facing surfaces, not just outreach. Standard sweep:
+
+- **Em-dashes in body copy** — replace with periods, commas, colons, or restructure. Acceptable only in list-separator context (tier-req labels, milestone headings). Hit at every page touched so far: /carriers v3.8.adu (13 retired), /index v3.8.aek (multiple), /about v3.8.aer (3 retired).
+- **Prohibited consultant-speak**: "leverage", "cutting-edge", "world-class", "best-in-class", "step-change", "synergy", "north star", "unlock value", "AI-powered" when describing capabilities (vs. naming products like Marco Polo).
+- **Marketing softeners**: "unwavering commitment", "relentless focus", "operational excellence", "partner satisfaction" — generic, replace with verifiable specifics.
+- **Honest hours copy** per §6 — "Business hours coverage Monday–Friday, 7:00 AM – 7:00 PM Eastern. After-hours emergency line available for active loads in transit."
+
+#### Lens 3 — Cross-page redundancy + freshness check (NEW, user-flagged)
+
+User observation 2026-05-19: *"almost all pages had very redundant and repetitive information, which was never reviewed or replaced since the website went live."* This is the lens that catches stale boilerplate carried from page to page without review.
+
+For each page, check:
+
+- **Verbatim or near-verbatim repetition** across pages. Specific phrases that have appeared on multiple pages and should be either consolidated (live in ONE place) or rewritten distinctly: "real-time tracking", "transparent pricing", "operational excellence", "48-state coverage", "Compass-vetted carriers". Each page should have a DISTINCT angle on the same fact, not a copy-paste.
+- **Generic enterprise-SaaS phrases** that read identically to every other broker's marketing — "data-driven pricing", "industry-leading", "trusted partner", "end-to-end solution". Replace with operationally specific language.
+- **Identical CTAs across pages** — every page using "Get a Quote" / "Learn More" without varying the context. CTAs should reflect the page's specific role in the conversion flow (operational destination per §3.10 + the v3.8.aef + aek precedent).
+- **Stat repetition** — same number cited on every page ("48 states") without variation. Reserve numerical proofs for the pages where they have the most rhetorical force.
+- **Persona-split sections repeated** — homepage had hero + dual-persona section both running the same Ship/Haul two-track twice (collapsed in v3.8.aeb). Other pages may have similar collapsible redundancy.
+
+When redundancy is found, the disposition options are: (a) consolidate to one canonical page, (b) rewrite each instance with a page-specific angle, or (c) delete the weaker instance entirely.
+
+#### Lens 4 — The four pillar lenses (Tech, AI, Brand Identity, Silk Road heritage)
+
+Every page must visibly carry at least 3 of these 4 brand pillars. Each pillar has a canonical expression:
+
+**Pillar 1 — Tech (in-house TMS)**
+- Operational stack owned by SRL, not licensed from a third-party platform
+- BOL, Rate Confirmation, POD, itemized invoice all generated in SRL chrome
+- Public `/track` URLs branded to silkroutelogistics.ai
+- Portal access: shippers see operational documents + dispute resolution; carriers see Compass Score + Quick Pay + tender flow
+- Verifiable references: §2 architecture, §9 Compass Score backend, Sprint 59 auto-RC
+
+**Pillar 2 — AI (lever, not replacement)**
+- "AI is a lever, not a replacement" is the standing brand framing
+- Named systems: Marco Polo AI (24/7 freight assistant), Compass Engine (carrier vetting), continuous learning cycles (rate intelligence, lane optimizer, compliance forecast)
+- Honest boundaries — what AI does NOT decide alone (the "Where AI Stops" panel canonical pattern on /about v3.8.aer): no AI-only carrier rejection, no autonomous Quick Pay disbursement, no AI-only customer onboarding, human-confirmed dispatch
+- §5 prohibited: "AI-powered" as marketing softener; allowed: AI labels on actual AI products (Marco Polo)
+
+**Pillar 3 — Brand Identity (visual)**
+- Canonical palette: navy `#0A2540`, gold `#C5A572` (structural), gold-dark `#BA7517` (CTA emphasis), cream `#FBF7F0`, cream-2 `#F5EEE0`
+- Four-point cardinal star motif (SRL compass mark abstraction) — used on shipper wax seal (homepage), carrier compass face (homepage), about hero network nodes (v3.8.aes)
+- Heritage editorial photography on walnut surface (homepage Section 4 service icons + Section 7 TMS icons)
+- No European cabs (Cascadia / Peterbilt / Kenworth only)
+- No people in marketing photography (D2 locked decision 2026-05-19)
+- Lucide-style line icons OR heritage photo-icons — never stock photos
+
+**Pillar 4 — Ancient Silk Road heritage**
+- Brand name etymology: "Silk Route Logistics" pays homage to the world's first logistics network
+- Heritage iconography: wax seal, brass compass, leather ledger, merchant correspondence, freight crate, pocket watch — all on walnut, all in the merchant's workshop register
+- "Caravan" Partner Program naming (carriers as caravan members)
+- "Marco Polo" AI naming (Silk Road explorer reference)
+- Trade route metaphor — operational lanes as modern silk routes
+
+If a page expresses fewer than 3 of these pillars, it reads as generic broker SaaS marketing. The audit must surface this gap.
+
+#### Lens 5 — Operational CTAs + destinations
+
+Per the v3.8.aef + aek + aer precedent — CTAs must route to operational destinations, not marketing pages:
+
+- **"Get a Quote"** → `/shippers.html#quote-form` (anchor jump to the quote form), NOT `/shipper/register` (account signup) and NOT `/shippers.html` (page top)
+- **"Join the Caravan Partner Program"** / **"Haul With Us"** → `/onboarding` (carrier application flow), NOT `/carriers.html` (program details marketing)
+- **"Ship With Us"** → `/shippers.html#quote-form` (quote intent) OR `/shipper/register` (account intent) — pick based on CTA context
+- **Anchor link verification** — ensure the anchor exists (`#quote` was broken on /index footer until v3.8.aek; actual anchor is `#quote-form`)
+
+### §20.4 — Graphics audit
+
+Three approaches available per page, ranked by brand-impact:
+
+1. **Heritage photo-icons** — full match to homepage Section 4/7 register (walnut surface, top-down 90° crop, soft daylight, brand palette). Requires Nano Banana generation cycle. Highest brand-impact.
+2. **Lucide-style line icons** with brand-color top accent + hairline divider — type-forward, no asset cycle, CSS-only. Used on homepage Section 4 pre-v3.8.aep.
+3. **Animated SVG** — for hero canvases or tech-positioning sections. Brand-canonical cardinal-star motif + gold-dark trade-route lines. Pattern: `/about` hero v3.8.aes.
+
+Stock photo prohibition: every Unsplash placeholder must be either replaced (with heritage photo-icon or brand-canonical photo) or stripped (type-forward refactor). Pattern hit repeatedly: Scania (European cab) brand-canon violation on /index v3.8.aeh; analytics-charts placeholder on Digital Tools card v3.8.aem.
+
+### §20.5 — Pre-commit gates (mandatory checklist)
+
+Before any commit on a public marketing page:
+
+1. ✓ `npx tsc --noEmit` clean (backend, if touched)
+2. ✓ `npx next build` clean (frontend) — Sub-pattern 11 CI parity
+3. ✓ Visual smoke walkthrough — viewport proportions, layout reflow, contrast across animation phases (`feedback_visual_smoke_before_push.md`)
+4. ✓ §3.2 rendered-output verification deferred to post-deploy (`silkroutelogistics.ai` curl + grep)
+5. ✓ Version bump per §3.1 (unless docs-only per §3.1)
+6. ✓ Commit message documents lens findings + each old/new edit
+
+### §20.6 — Page-level audit log (where each page was last audited)
+
+| Page | Last audit version | Lens coverage | Outstanding |
+|---|---|---|---|
+| `/` (homepage) | v3.8.aeq | All 5 lenses ✓ + 4 pillars ✓ | None — full editorial register locked |
+| `/carriers` | v3.8.aei | Lenses 1-2 ✓; Lens 3 (redundancy) partial; Lens 4 partial; Lens 5 ✓ | Cross-page redundancy check vs /index; heritage photo-icons not applied to tier-card section |
+| `/about` | v3.8.aes | Lenses 1-2 ✓; Lens 3 partial; Lens 4 ✓ (animated SVG hero locks Tech + AI + Brand + Silk Road); Lens 5 ✓ | Heritage photo-icons for Mission/Vision/Promise (Graphic Option C from v3.8.aer audit thread, deferred) |
+| `/shippers` | NOT YET AUDITED under §20 standard | — | Full §20 audit pending |
+| `/contact` | NOT YET AUDITED | — | Full §20 audit pending |
+| `/faq` | NOT YET AUDITED | — | Full §20 audit pending |
+| `/blog` | NOT YET AUDITED | — | Full §20 audit pending |
+| `/careers` | NOT YET AUDITED | — | Full §20 audit pending |
+| `/track` | partial — discussed in v3.8.aae thread | Lens 5 ✓ (BOL QR routing fix) | Full §20 audit pending |
+| Legal pages | NOT YET AUDITED | — | Light-touch audit only per §3.12 |
+
+Update this table at the close of every page audit commit.
+
+### §20.7 — Cross-page redundancy registry (seed entries from this audit arc)
+
+These are confirmed redundancy patterns surfaced during 2026-05-19 audit work. They are seeds for the cross-page sweep when each remaining page is audited:
+
+- **"Real-time tracking"** — verbatim or near-verbatim on /index hero card, /shippers, /about Card #1. Should have a SINGLE canonical home (recommendation: /shippers feature section) and not repeat.
+- **"Compass-vetted carriers"** — used on /index Section 4 Card 1 + /about Card #1 (post-aer) + /carriers M-step cards. Each instance can stand alone but the phrasing repeats. Vary the angle per page.
+- **"48-state coverage"** — used as section title on /index + /about + /carriers Coverage section. Verifiable claim; acceptable to repeat but should not be the ENTIRE rhetorical anchor of more than one page.
+- **"Operational excellence" / "partner satisfaction"** — generic enterprise-SaaS softeners. Should not appear on any page going forward.
+- **Generic "We" sentences** — "We leverage technology", "We deliver", "We move freight". Replace with the specific operational system that does the work.
+
+When auditing the next page, run a verbatim-phrase grep against the already-audited pages to surface fresh redundancies, and add findings to this registry.
+
+---
 
 Preserved from the pre-consolidation CLAUDE.md. These are patterns and roadmap items that didn't fit cleanly into §1–§18 but remain valid tracking material. Time-bound metrics have been stripped (e.g. "currently 21 refs", "Plan for Q2", "Install when doing daily SRL sessions").
 
