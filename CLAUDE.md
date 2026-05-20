@@ -1515,6 +1515,50 @@ This was the THIRD recurrence of the architectural-leak pattern (after v3.8.adw 
 
 **Test before publishing:** if a single screenshot of the section would let a competitor reconstruct your operational pipeline, soften the content. The goal is brand positioning + customer-facing benefit framing, not engineering reference documentation.
 
+#### Lens 1.6 — Semantic Legibility Defense (banked 2026-05-20 v3.8.aep critique)
+
+Banking the user critique on v3.8.aep heritage photo-icons: 3 of 4 (crate / leather ledger / pocket watch) failed the **4-second scan test** despite being brand-aesthetically coherent. Only the brass thermometer passed (thermometer → temperature is a one-step inference).
+
+Before publishing any brand-aesthetic imagery on customer-facing surfaces, run the **4-second scan test**: a typical visitor sees the icon/photo for ~4 seconds while scrolling. Can they identify the service or concept it represents WITHOUT reading the H4 title?
+
+- **One-step inference passes:** thermometer → temperature, lightning → fast, truck → trucking, snowflake → cold.
+- **Two-step inference fails:** leather ledger → "old book?" → "library?" → "dedicated capacity?". A buyer scanning 4 cards in 4 seconds will not perform a metaphor-decode step.
+
+When brand-aesthetic coherence conflicts with semantic legibility on a feature-grid section, **comprehension wins.** Brand-aesthetic register belongs in narrative copy + subtle motifs (palette, name etymology, type), not in feature-grid imagery that must communicate service category at scan speed.
+
+#### Lens 1.7 — Brand Modernity Alignment (banked 2026-05-20 v3.8.aep / v3.8.aen critique)
+
+Brand aesthetic must match brand positioning. SRL positions as in-house TMS + AI-augmented + modern tech-forward broker (Marco Polo AI, Compass Engine, continuous learning cycles per §9, Sprint 59 auto-RC). Imagery that reads as "old / traditional / heritage / nostalgic" creates a positioning mismatch that procurement managers and supply-chain executives read as untrustworthy — they're sourcing optimization, not nostalgia.
+
+The **screenshot test:** does this visual signal *"modern tech-forward operation we can trust with our optimization"* or *"traditional old-school broker"*? If the latter, the visual is fighting the brand positioning and must be replaced regardless of brand-color or heritage-narrative alignment.
+
+**Heritage iconography belongs in:**
+- Narrative copy (the Silk Road etymology, "Caravan" naming, "Marco Polo" naming, Silk Road origin story in /about Our Story section)
+- Subtle brand motifs (palette: navy + gold-dark + cream + cream-2; 4-point cardinal-star derivative of the compass mark; brass + walnut color references)
+- The compass mark logo asset itself (`/logo-compass.png`)
+
+**Heritage iconography does NOT belong in:**
+- Service category imagery (FTL, Reefer, Dedicated, Expedited) where buyers must decode positioning at scan speed
+- Persona cards (For Shippers, For Carriers) where the audience needs to feel tech-augmented trust, not merchant nostalgia
+- Hero compositions on decision-surface pages (/shippers, /carriers) where the buyer is making the buying decision and needs to see modern operational competence
+
+The v3.8.aep heritage photo-icons on /index Section 4 + v3.8.aen heritage photos on Section 7 + my v3.8.aet operational-terminal experiment (architectural leak per Lens 1.5) collectively represent this miss class at scale. Refactor to **tech-forward modern freight imagery with subtle technology overlay elements** (abstract per Lens 1.5 — no real product UIs):
+
+- Modern American-cab freight equipment (Cascadia, Peterbilt, Kenworth, International — never European cabs)
+- Visible technology signal — abstract route lines, data dots, gauge graphics, sensor indicators (overlay on photo or as composition element)
+- Brand-palette accents (navy + gold-dark) where naturally present
+- Service-specific visual semantics (Lens 1.6 compliance — thermometer for reefer, fleet-yard for dedicated, motion-blur for expedited)
+- AI/tech messaging in body copy that NAMES the system (Compass Engine, Marco Polo AI) without revealing how it works (Lens 1.5)
+
+Free stock photography (Pexels, Pixabay, Unsplash) is acceptable when curated against this standard. Per-photo brand-canon checklist:
+- ☐ American cab (or no cab visible if stock can't be verified)
+- ☐ No third-party fleet logos / DOT numbers / license plates legible
+- ☐ No people / no driver faces (per existing D2 locked decision)
+- ☐ No European-cabover styling (Scania, Volvo, Mercedes-Benz, DAF, MAN)
+- ☐ Modern equipment register (not vintage/restored trucks)
+- ☐ Cool blue → neutral → warm-gold color register compatible with brand palette
+- ☐ Composition allows for subtle technology-overlay graphic if needed
+
 #### Lens 2 — Voice + §18.9 sweep
 
 §18.8 + §18.9 voice rules apply to all customer-facing surfaces, not just outreach. Standard sweep:
