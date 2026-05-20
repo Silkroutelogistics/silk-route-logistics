@@ -425,6 +425,56 @@
       object-position: center;
     }
 
+    /* v3.8.agm — Trust strip: thin authority band under hero with §18.8
+       canonical credentials line. Cream-2 ground, navy text, gold-dark
+       leading bullet anchors brand. */
+    .trust-strip {
+      background: var(--cream-2, #F5EEE0);
+      border-top: 1px solid rgba(10, 37, 64, 0.08);
+      border-bottom: 1px solid rgba(10, 37, 64, 0.08);
+      padding: 16px 0;
+    }
+    .trust-strip p {
+      margin: 0;
+      text-align: center;
+      font-family: var(--font-body, 'DM Sans', sans-serif);
+      font-size: 12.5px;
+      font-weight: 500;
+      letter-spacing: 0.4px;
+      color: var(--navy, #0A2540);
+      line-height: 1.5;
+    }
+    .trust-strip p::before {
+      content: '';
+      display: inline-block;
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--gold-dark, #BA7517);
+      margin-right: 12px;
+      vertical-align: middle;
+      transform: translateY(-1px);
+    }
+    @media (max-width: 768px) {
+      .trust-strip p { font-size: 11px; line-height: 1.6; letter-spacing: 0.2px; }
+    }
+
+    /* v3.8.agm — Heritage lead line in ops section: Playfair italic,
+       gold-dark, threads the Silk Road heritage pillar without rebranding
+       the section. */
+    .heritage-line {
+      font-family: var(--font-headline, 'Playfair Display', Georgia, serif);
+      font-style: italic;
+      font-size: 17px;
+      font-weight: 500;
+      line-height: 1.5;
+      color: var(--gold-dark, #BA7517);
+      margin: 0 0 18px 0;
+    }
+    @media (max-width: 768px) {
+      .heritage-line { font-size: 15px; }
+    }
+
     /* Operations section — photo + text two-column */
     .operations-section {
       padding: 100px 0;
