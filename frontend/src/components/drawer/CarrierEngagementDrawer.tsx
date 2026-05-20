@@ -223,7 +223,7 @@ export function CarrierEngagementDrawer(props: CarrierEngagementDrawerProps) {
   const { user } = useAuthStore();
   const isAdminOrCeo = user?.role === "ADMIN" || user?.role === "CEO";
 
-  const { register, handleSubmit, watch, reset, setValue } = useForm<DrawerFormState>({
+  const { register, handleSubmit, watch, reset, setValue, formState } = useForm<DrawerFormState>({
     defaultValues: { ...EMPTY_FORM, ...(initialFormData ?? {}) },
   });
 
@@ -286,6 +286,10 @@ export function CarrierEngagementDrawer(props: CarrierEngagementDrawerProps) {
 
   const submitMutation = useMutation({
     mutationFn: async (data: DrawerFormState) => {
+      // Sprint 65.b diagnostic — confirms mutationFn was reached.
+      // Will be removed in 65.c once root cause is captured.
+      // eslint-disable-next-line no-console
+      console.log("[Sprint 65.b diag] mutationFn REACHED. data:", data);
       if (!customer) throw new Error("Select a customer first");
       if (!selectedCarrier) throw new Error("Select a carrier first");
       if (!data.pickupDate || !data.deliveryDate) throw new Error("Pickup and delivery dates required");
@@ -472,7 +476,49 @@ export function CarrierEngagementDrawer(props: CarrierEngagementDrawerProps) {
           poNumbersText={watch("poNumbersText")}
         />
 
-        <form onSubmit={handleSubmit((d) => submitMutation.mutate(d))} className="flex-1 flex flex-col min-h-0">
+        {/* Sprint 65.b diagnostic — wraps handleSubmit to log form event +
+            sendBlocked terms + formState.errors. Removed in 65.c after root
+            cause captured. Two failed fix attempts (65 z-index, 65.a state
+            relaxation) without click-time evidence. This pass captures the
+            ground truth on a real click. */}
+        <form
+          onSubmit={(e) => {
+            // eslint-disable-next-line no-console
+            console.log("[Sprint 65.b diag] FORM onSubmit fired ────────────────");
+            // eslint-disable-next-line no-console
+            console.log("[Sprint 65.b diag] sendBlocked:", sendBlocked, "reason:", sendBlockedReason);
+            // eslint-disable-next-line no-console
+            console.log("[Sprint 65.b diag]   submitMutation.isPending:", submitMutation.isPending);
+            // eslint-disable-next-line no-console
+            console.log("[Sprint 65.b diag]   !customer:", !customer, "customer:", customer);
+            // eslint-disable-next-line no-console
+            console.log("[Sprint 65.b diag]   !selectedCarrier:", !selectedCarrier, "selectedCarrier:", selectedCarrier);
+            // eslint-disable-next-line no-console
+            console.log("[Sprint 65.b diag]   isCarrierBlocked:", isCarrierBlocked, "compliance:", compliance);
+            // eslint-disable-next-line no-console
+            console.log("[Sprint 65.b diag] formState.errors:", formState.errors);
+            // eslint-disable-next-line no-console
+            console.log("[Sprint 65.b diag] formState.isValid:", formState.isValid);
+            // eslint-disable-next-line no-console
+            console.log("[Sprint 65.b diag] formState.isSubmitting:", formState.isSubmitting);
+            // eslint-disable-next-line no-console
+            console.log("[Sprint 65.b diag] watched offeredRate:", watch("offeredRate"));
+            // eslint-disable-next-line no-console
+            console.log("[Sprint 65.b diag] watched carrierId:", watch("carrierId"));
+            return handleSubmit(
+              (d) => {
+                // eslint-disable-next-line no-console
+                console.log("[Sprint 65.b diag] handleSubmit VALID — invoking mutationFn with data:", d);
+                submitMutation.mutate(d);
+              },
+              (errors) => {
+                // eslint-disable-next-line no-console
+                console.log("[Sprint 65.b diag] handleSubmit INVALID — errors:", errors);
+              }
+            )(e);
+          }}
+          className="flex-1 flex flex-col min-h-0"
+        >
           <div className="flex-1 overflow-y-auto px-6 py-5 space-y-6">
 
             {/* ── CARRIER ── */}
@@ -647,6 +693,13 @@ export function CarrierEngagementDrawer(props: CarrierEngagementDrawerProps) {
               <button
                 type="submit"
                 disabled={sendBlocked}
+                onClick={(e) => {
+                  // Sprint 65.b diagnostic — confirms click is reaching the
+                  // button (rules out z-index / overlay interception). Removed
+                  // in 65.c after root cause captured.
+                  // eslint-disable-next-line no-console
+                  console.log("[Sprint 65.b diag] SEND TENDER BUTTON onClick fired. disabled prop:", sendBlocked, "event.defaultPrevented:", e.defaultPrevented);
+                }}
                 className="px-5 py-2 text-sm font-semibold bg-[#BA7517] hover:bg-[#8f5a11] text-white rounded-lg disabled:opacity-50 flex items-center gap-2 focus:outline-none focus:ring-2 focus:ring-[#C5A572]/40"
                 title={sendBlockedReason}
               >
