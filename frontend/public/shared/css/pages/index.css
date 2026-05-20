@@ -820,9 +820,10 @@
       margin-bottom: 4px;
     }
 
-    /* v3.8.aem — shared glyph + hairline divider styles for service +
-       tms cards. Lucide-style line icons inline-SVG in card-glyph, gold
-       hairline rule between H4 and body via card-divider. */
+    /* v3.8.aem (legacy, retained for safety) — Lucide line-icon support.
+       Section 4 service cards now use .service-icon-photo (v3.8.aep)
+       instead of .card-glyph. Keeping the rules in case any future
+       section reverts to line-icons. */
     .card-glyph {
       display: inline-flex;
       align-items: center;
@@ -844,6 +845,32 @@
       background: var(--gold-dark);
       border: 0;
       margin: 8px 0 14px;
+    }
+
+    /* v3.8.aep — service-card heritage photo-icons matching Section 7
+       (.tms-icon-wrap) register. Editorial photo-glyphs replace the
+       prior Lucide line-icons for brand-rhythm consistency across the
+       homepage. Fixed height + auto width preserves each photo's native
+       composition. Soft navy-tinted shadow lifts photos off the white
+       service-card surface. */
+    .service-icon-photo {
+      display: block;
+      margin-bottom: 16px;
+    }
+
+    .service-icon-photo img {
+      display: block;
+      height: 80px;
+      width: auto;
+      border-radius: 6px;
+      box-shadow: 0 2px 10px rgba(10, 37, 64, 0.12),
+                  0 1px 3px rgba(10, 37, 64, 0.06);
+    }
+
+    @media (max-width: 760px) {
+      .service-icon-photo img {
+        height: 64px;
+      }
     }
 
     .service-card p {
