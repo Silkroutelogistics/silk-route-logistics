@@ -958,21 +958,25 @@
       margin: 0 auto;
     }
 
-    .tech-grid {
+    /* v3.8.ael — Section 7 reworked from "Powered by Intelligence" three-card
+       feature grid into "Built In-House, End to End" two-column shipper/
+       carrier benefit grid + AI lever meta caption. Previous .tech-grid +
+       .tech-card rules retired (§3.7 delete before you add — grep
+       confirmed zero callers post-rework). The .tms-* class family
+       replaces them, paired with top-edge accent strips matching the
+       hero-card / persona-collapse pattern (navy on shipper column,
+       gold-dark on carrier column). */
+    .tms-grid {
       display: grid;
-      grid-template-columns: repeat(3, 1fr);
+      grid-template-columns: 1fr 1fr;
       gap: 28px;
       position: relative;
       z-index: 1;
+      max-width: 1080px;
+      margin: 0 auto;
     }
 
-    /* v3.8.aek — tech cards refactored type-forward (same pattern as
-       v3.8.aeh services grid + v3.8.adz dual-persona collapse).
-       Unsplash stock photos stripped, gold-dark 3px ::before top-edge
-       accent strip provides visual rhythm. Padding tightened from
-       40px 32px to 32px 28px 28px now that the 180px image block is
-       gone. */
-    .tech-card {
+    .tms-column {
       position: relative;
       background: var(--white);
       border: 1px solid rgba(10, 37, 64, 0.10);
@@ -982,22 +986,96 @@
       overflow: hidden;
     }
 
-    .tech-card::before {
+    .tms-column::before {
       content: '';
       position: absolute;
       top: 0;
       left: 0;
       right: 0;
       height: 3px;
+    }
+
+    .tms-column.shipper::before {
+      background: var(--navy);
+    }
+
+    .tms-column.carrier::before {
       background: var(--gold-dark);
     }
 
-    .tech-card:hover {
+    .tms-column:hover {
       box-shadow: var(--shadow-lg);
       border-color: rgba(186, 117, 23, 0.25);
       transform: translateY(-4px);
     }
 
+    .tms-column h4 {
+      font-family: var(--font-headline);
+      font-weight: 700;
+      font-size: 1.25rem;
+      color: var(--navy);
+      margin-bottom: 18px;
+    }
+
+    .tms-features {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+
+    .tms-features li {
+      position: relative;
+      padding: 8px 0 8px 22px;
+      font-size: 0.92rem;
+      line-height: 1.55;
+      color: var(--text-muted);
+    }
+
+    .tms-features li::before {
+      content: '\203A'; /* › */
+      position: absolute;
+      left: 2px;
+      top: 8px;
+      color: var(--gold-dark);
+      font-weight: 700;
+      font-size: 1.05rem;
+      line-height: 1.55;
+    }
+
+    .tms-meta {
+      max-width: 880px;
+      margin: 36px auto 0;
+      text-align: center;
+      position: relative;
+      z-index: 1;
+    }
+
+    .tms-meta p {
+      font-size: 0.92rem;
+      line-height: 1.7;
+      color: var(--text-muted);
+      font-style: italic;
+    }
+
+    @media (max-width: 760px) {
+      .tms-grid {
+        grid-template-columns: 1fr;
+        gap: 18px;
+      }
+      .tms-column {
+        padding: 28px 24px 24px;
+      }
+      .tms-meta {
+        margin-top: 28px;
+      }
+      .tms-meta p {
+        font-size: 0.88rem;
+      }
+    }
+
+    /* Legacy shim: keep .tech-card h4 + p typography in case any external
+       caller still uses the old class names (audit found zero — these are
+       hold-over defensive aliases for safety, will retire on next sweep). */
     .tech-card h4 {
       font-family: var(--font-headline);
       font-weight: 700;
