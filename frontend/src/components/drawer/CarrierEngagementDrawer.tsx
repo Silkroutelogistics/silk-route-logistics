@@ -395,12 +395,27 @@ export function CarrierEngagementDrawer(props: CarrierEngagementDrawerProps) {
 
   // Sprint 63 — block submit when compliance is loaded + blocked. AE must
   // override (or pick a different carrier) before Send Tender enables.
+  // Sprint 65.a (v3.8.afn) — drop complianceQuery.isLoading from sendBlocked.
+  // Over-conservative: the server re-validates compliance on submit, and
+  // TanStack v5.66 keeps isLoading=false after the initial fetch (only
+  // isFetching toggles during refetch). The check was creating a false
+  // disable window post-override-refetch. isCarrierBlocked alone is the
+  // load-bearing gate (compliance.allowed=false → block).
   const sendBlocked =
     submitMutation.isPending ||
     !customer ||
     !selectedCarrier ||
-    complianceQuery.isLoading ||
     isCarrierBlocked;
+
+  // Sprint 65.a — diagnostic tooltip when disabled so AE sees the WHY
+  // (or surfaces a stale-state bug if none of these reasons apply).
+  const sendBlockedReason = (() => {
+    if (submitMutation.isPending) return "Submitting…";
+    if (!customer) return "Customer not selected. Close drawer and pick a customer in Order Builder.";
+    if (!selectedCarrier) return "Select a carrier first.";
+    if (isCarrierBlocked) return "Carrier blocked. Override or pick a different carrier.";
+    return undefined;
+  })();
 
   return (
     // Sprint 65 (v3.8.afm) hotfix — z-[60] so the drawer wrapper stacks
@@ -521,18 +536,46 @@ export function CarrierEngagementDrawer(props: CarrierEngagementDrawerProps) {
             </section>
 
             {/* ── FINANCIALS ── */}
+            {/* Sprint 65.a (v3.8.afn) — Wasi 2026-05-20: drawer "Offered
+                rate to carrier" looked duplicative of Order Builder
+                "Target carrier cost" since both are filled with the
+                same number initially. They ARE conceptually distinct
+                (target = budget set at order build; offer = actual rate
+                sent to THIS specific carrier, may diverge for negotiation
+                purposes), but the labels obscured the relationship.
+                Restructured: show BOTH customer rate + target as read-
+                only context from Order Builder, then the editable offer
+                input clearly labeled with carrier name + delta from
+                target if AE adjusts. */}
             <section>
               <h3 className="text-xs font-semibold uppercase tracking-wider text-[#BA7517] mb-2">Financials</h3>
               <div className="space-y-3">
-                {watch("customerRate") && (
-                  <div className="p-2 rounded-lg bg-slate-50 border border-slate-200 text-xs text-slate-600">
-                    Customer rate (from order): <strong className="text-slate-900">${Number(watch("customerRate")).toLocaleString()}</strong>
-                  </div>
-                )}
+                {/* Context block — Customer rate + Target carrier cost both
+                    pulled from Order Builder. Read-only here; AE who needs to
+                    adjust either closes the drawer and edits in Order Builder. */}
+                <div className="rounded-lg bg-slate-50 border border-slate-200 p-2 text-xs space-y-1">
+                  {watch("customerRate") && (
+                    <div className="flex justify-between text-slate-600">
+                      <span>Customer rate (from order)</span>
+                      <strong className="text-slate-900">${Number(watch("customerRate")).toLocaleString()}</strong>
+                    </div>
+                  )}
+                  {watch("offeredRate") && (
+                    <div className="flex justify-between text-slate-600">
+                      <span>Target carrier cost (from order)</span>
+                      <strong className="text-slate-900">${Number(watch("offeredRate")).toLocaleString()}</strong>
+                    </div>
+                  )}
+                </div>
                 <div className="grid grid-cols-2 gap-2">
                   <div>
-                    <Label>Offered rate to carrier ($)</Label>
+                    <Label>
+                      Offer to {selectedCarrier?.company ? `${selectedCarrier.company.split(" ")[0]}` : "this carrier"} ($)
+                    </Label>
                     <Input type="number" step="0.01" {...register("offeredRate", { required: true })} />
+                    <div className="text-[10px] text-slate-500 mt-0.5">
+                      Defaults to target. Edit to negotiate up or down for this specific carrier.
+                    </div>
                   </div>
                   <div>
                     <Label>Tender expiry (hours)</Label>
@@ -541,7 +584,7 @@ export function CarrierEngagementDrawer(props: CarrierEngagementDrawerProps) {
                 </div>
                 {customer && watch("offeredRate") && watch("customerRate") && (
                   <div className="text-[11px] p-2 rounded bg-slate-50 border border-slate-200 text-slate-600">
-                    Projected margin: ${(Number(watch("customerRate")) - Number(watch("offeredRate"))).toFixed(2)} ·{" "}
+                    Projected margin: <strong className="text-slate-900">${(Number(watch("customerRate")) - Number(watch("offeredRate"))).toFixed(2)}</strong> ·{" "}
                     {((1 - Number(watch("offeredRate")) / Number(watch("customerRate"))) * 100).toFixed(1)}%
                   </div>
                 )}
@@ -605,13 +648,7 @@ export function CarrierEngagementDrawer(props: CarrierEngagementDrawerProps) {
                 type="submit"
                 disabled={sendBlocked}
                 className="px-5 py-2 text-sm font-semibold bg-[#BA7517] hover:bg-[#8f5a11] text-white rounded-lg disabled:opacity-50 flex items-center gap-2 focus:outline-none focus:ring-2 focus:ring-[#C5A572]/40"
-                title={
-                  isCarrierBlocked
-                    ? "Carrier blocked. Override or pick a different carrier."
-                    : !selectedCarrier
-                      ? "Select a carrier first"
-                      : undefined
-                }
+                title={sendBlockedReason}
               >
                 {submitMutation.isPending && <Loader2 className="w-4 h-4 animate-spin" />}
                 Send Tender
