@@ -328,185 +328,274 @@
         <p>Every carrier scored against the same 7-factor Compass standard. Every lane, every load.</p>
       </div>
       <div class="network-map-container reveal">
-        <!-- v3.8.afr — Section 5 map migrated from canvas-rendered network
-             (Day 1 artifact at /js/networkMap.js) to SVG using the Track
-             page's adapted visual language. 10 US cities (added Denver,
-             Detroit, Houston, Miami to Track page's 6) signal homepage
-             network breadth; truck tour remains the 6-city Track loop;
-             4 additional secondary dashed lines weave the new cities into
-             the network mesh. SVG content language sourced from
-             /shared/svg/network-truck.svg + track.html inline block;
-             zero new animation engineering, just data adaptation. -->
+        <!-- v3.8.aft — Section 5 map Path B-3 inverted rebuild. The B-2
+             single-truck-on-route port felt too basic + too similar to the
+             Track page. Redesigned around three sophistication moves:
+             (1) Inverted palette — dark navy gradient background instead
+                 of cream, restoring Section 5's "dark moment" visual
+                 rhythm on the cream-heavy homepage.
+             (2) Multiple simultaneous animated pulses — 10 gold-light
+                 pulses traveling 10 routes on independent loops, reading
+                 as "network alive" instead of "one truck driving a
+                 route". Speeds vary 5-12s for organic flow.
+             (3) Ambient city glow halos — each city has a soft radial
+                 halo pulsing on its own 3.5-4.5s cycle. Creates layered
+                 sense of operational presence without competing with
+                 the route pulses.
+             Plus an SRL compass-mark watermark centered at 5% opacity
+             for brand integration. -->
         <svg viewBox="0 0 900 500" xmlns="http://www.w3.org/2000/svg"
              role="img"
              class="network-map-svg"
-             aria-label="Silk Route Logistics freight network — 48 contiguous United States">
+             aria-label="Silk Route Logistics freight network — 48 contiguous United States, live operational view">
           <title>SRL freight network — 48 contiguous United States</title>
 
           <defs>
-            <linearGradient id="nmSky" x1="0%" y1="0%" x2="0%" y2="100%">
-              <stop offset="0%" stop-color="#FDFBF7"/>
-              <stop offset="100%" stop-color="#F5EEE0"/>
+            <linearGradient id="nmDarkSky" x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" stop-color="#0F1B30"/>
+              <stop offset="50%" stop-color="#0A2540"/>
+              <stop offset="100%" stop-color="#061629"/>
             </linearGradient>
-            <linearGradient id="nmRouteGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-              <stop offset="0%" stop-color="#BA7517"/>
-              <stop offset="100%" stop-color="#C5A572"/>
-            </linearGradient>
-            <pattern id="nmDots" x="0" y="0" width="34" height="34" patternUnits="userSpaceOnUse">
-              <circle cx="2" cy="2" r="0.6" fill="#0A2540" opacity="0.04"/>
+            <pattern id="nmGrid" x="0" y="0" width="34" height="34" patternUnits="userSpaceOnUse">
+              <circle cx="2" cy="2" r="0.5" fill="#C5A572" opacity="0.06"/>
             </pattern>
+            <radialGradient id="nmCityHalo">
+              <stop offset="0%" stop-color="#C5A572" stop-opacity="0.5"/>
+              <stop offset="60%" stop-color="#BA7517" stop-opacity="0.15"/>
+              <stop offset="100%" stop-color="#BA7517" stop-opacity="0"/>
+            </radialGradient>
+            <radialGradient id="nmHubHalo">
+              <stop offset="0%" stop-color="#FFE9B8" stop-opacity="0.65"/>
+              <stop offset="50%" stop-color="#C5A572" stop-opacity="0.3"/>
+              <stop offset="100%" stop-color="#BA7517" stop-opacity="0"/>
+            </radialGradient>
+            <radialGradient id="nmPulse">
+              <stop offset="0%" stop-color="#FFE9B8" stop-opacity="1"/>
+              <stop offset="30%" stop-color="#FFD78A" stop-opacity="0.9"/>
+              <stop offset="70%" stop-color="#C5A572" stop-opacity="0.4"/>
+              <stop offset="100%" stop-color="#BA7517" stop-opacity="0"/>
+            </radialGradient>
+
+            <!-- Route paths defined here for both static rendering + animateMotion mpath references -->
+            <path id="nmR1" d="M 530 195 Q 380 230, 250 290 T 110 350"/>
+            <path id="nmR2" d="M 110 350 Q 270 380, 440 350"/>
+            <path id="nmR3" d="M 440 350 Q 545 360, 660 330"/>
+            <path id="nmR4" d="M 660 330 Q 730 290, 780 215"/>
+            <path id="nmR5" d="M 780 215 Q 700 200, 615 195"/>
+            <path id="nmR6" d="M 615 195 Q 572 192, 530 195"/>
+            <path id="nmR7" d="M 470 410 Q 600 415, 720 410"/>
+            <path id="nmR8" d="M 350 260 Q 240 200, 130 110"/>
+            <path id="nmR9" d="M 530 195 Q 440 230, 350 260"/>
+            <path id="nmR10" d="M 660 330 Q 690 365, 720 410"/>
           </defs>
 
-          <rect width="900" height="500" fill="url(#nmSky)"/>
-          <rect width="900" height="500" fill="url(#nmDots)"/>
+          <rect width="900" height="500" fill="url(#nmDarkSky)"/>
+          <rect width="900" height="500" fill="url(#nmGrid)"/>
 
-          <!-- US silhouette (stylized — same shape as Track page) -->
+          <!-- SRL compass-mark watermark, centered at 5% opacity for brand integration -->
+          <g transform="translate(450 250)" opacity="0.06">
+            <circle r="130" fill="none" stroke="#C5A572" stroke-width="2"/>
+            <circle r="108" fill="none" stroke="#C5A572" stroke-width="1"/>
+            <!-- Four cardinal star points -->
+            <path d="M 0 -130 L 8 -10 L 0 0 L -8 -10 Z" fill="#C5A572"/>
+            <path d="M 130 0 L 10 8 L 0 0 L 10 -8 Z" fill="#C5A572"/>
+            <path d="M 0 130 L -8 10 L 0 0 L 8 10 Z" fill="#C5A572"/>
+            <path d="M -130 0 L -10 -8 L 0 0 L -10 8 Z" fill="#C5A572"/>
+            <!-- Center point -->
+            <circle r="5" fill="#BA7517"/>
+            <!-- Trade route arc -->
+            <path d="M -92 -92 A 130 130 0 0 1 92 92" stroke="#BA7517" stroke-width="1.5" fill="none"/>
+          </g>
+
+          <!-- US silhouette (inverted: gold stroke at low opacity, dark fill blends with bg) -->
           <g>
             <path d="M 78 100 Q 96 72, 190 64 L 360 56 Q 470 60, 540 92 L 670 112 Q 770 108, 830 142 L 868 200 Q 876 268, 854 320 L 830 370 Q 822 402, 808 412 Q 768 405, 720 388 L 595 395 Q 526 415, 466 420 L 376 425 Q 280 423, 198 408 L 130 392 Q 82 358, 78 278 Q 70 198, 78 100 Z"
-                  fill="#0A2540" opacity="0.025" transform="translate(2 3)"/>
+                  fill="#0A2540" opacity="0.5"/>
             <path d="M 78 100 Q 96 72, 190 64 L 360 56 Q 470 60, 540 92 L 670 112 Q 770 108, 830 142 L 868 200 Q 876 268, 854 320 L 830 370 Q 822 402, 808 412 Q 768 405, 720 388 L 595 395 Q 526 415, 466 420 L 376 425 Q 280 423, 198 408 L 130 392 Q 82 358, 78 278 Q 70 198, 78 100 Z"
-                  fill="#FDFBF7" stroke="#0A2540" stroke-width="1.4" opacity="0.85"/>
-            <path d="M 78 220 Q 300 215, 540 210 L 868 220" stroke="#0A2540" stroke-width="0.5" fill="none" opacity="0.08"/>
-            <path d="M 78 300 Q 320 295, 540 295 L 854 300" stroke="#0A2540" stroke-width="0.5" fill="none" opacity="0.08"/>
-            <path d="M 320 56 Q 322 200, 326 420" stroke="#0A2540" stroke-width="0.5" fill="none" opacity="0.08"/>
-            <path d="M 540 92 Q 542 250, 540 420" stroke="#0A2540" stroke-width="0.5" fill="none" opacity="0.08"/>
-            <path d="M 700 110 Q 705 250, 720 388" stroke="#0A2540" stroke-width="0.5" fill="none" opacity="0.08"/>
+                  fill="none" stroke="#C5A572" stroke-width="0.8" opacity="0.45"/>
+            <!-- Lat/lon reference lines -->
+            <path d="M 78 220 Q 300 215, 540 210 L 868 220" stroke="#C5A572" stroke-width="0.5" fill="none" opacity="0.08"/>
+            <path d="M 78 300 Q 320 295, 540 295 L 854 300" stroke="#C5A572" stroke-width="0.5" fill="none" opacity="0.08"/>
+            <path d="M 320 56 Q 322 200, 326 420" stroke="#C5A572" stroke-width="0.5" fill="none" opacity="0.08"/>
+            <path d="M 540 92 Q 542 250, 540 420" stroke="#C5A572" stroke-width="0.5" fill="none" opacity="0.08"/>
+            <path d="M 700 110 Q 705 250, 720 388" stroke="#C5A572" stroke-width="0.5" fill="none" opacity="0.08"/>
           </g>
 
-          <!-- Secondary network lines — 8 from Track page + 4 new for added cities -->
-          <g opacity="0.5">
-            <path d="M 130 110 Q 320 130, 530 195" stroke="#C5A572" stroke-width="1.2" fill="none" stroke-dasharray="1 6" stroke-linecap="round"/>
-            <path d="M 130 110 Q 95 220, 110 350" stroke="#C5A572" stroke-width="1.2" fill="none" stroke-dasharray="1 6" stroke-linecap="round"/>
-            <path d="M 110 350 Q 280 370, 440 350" stroke="#C5A572" stroke-width="1.2" fill="none" stroke-dasharray="1 6" stroke-linecap="round"/>
-            <path d="M 440 350 Q 540 350, 660 330" stroke="#C5A572" stroke-width="1.2" fill="none" stroke-dasharray="1 6" stroke-linecap="round"/>
-            <path d="M 660 330 Q 730 280, 780 215" stroke="#C5A572" stroke-width="1.2" fill="none" stroke-dasharray="1 6" stroke-linecap="round"/>
-            <path d="M 530 195 Q 660 200, 780 215" stroke="#C5A572" stroke-width="1.2" fill="none" stroke-dasharray="1 6" stroke-linecap="round"/>
-            <path d="M 530 195 Q 480 270, 440 350" stroke="#C5A572" stroke-width="1.2" fill="none" stroke-dasharray="1 6" stroke-linecap="round"/>
-            <path d="M 530 195 Q 600 260, 660 330" stroke="#C5A572" stroke-width="1.2" fill="none" stroke-dasharray="1 6" stroke-linecap="round"/>
-            <!-- New for Denver, Detroit, Houston, Miami -->
-            <path d="M 350 260 Q 440 220, 530 195" stroke="#C5A572" stroke-width="1.2" fill="none" stroke-dasharray="1 6" stroke-linecap="round"/>
-            <path d="M 615 195 Q 572 175, 530 195" stroke="#C5A572" stroke-width="1.2" fill="none" stroke-dasharray="1 6" stroke-linecap="round"/>
-            <path d="M 470 410 Q 460 380, 440 350" stroke="#C5A572" stroke-width="1.2" fill="none" stroke-dasharray="1 6" stroke-linecap="round"/>
-            <path d="M 720 410 Q 700 380, 660 330" stroke="#C5A572" stroke-width="1.2" fill="none" stroke-dasharray="1 6" stroke-linecap="round"/>
+          <!-- Static route lines (the visible "network" - same paths the pulses travel) -->
+          <g opacity="0.35">
+            <use href="#nmR1" stroke="#C5A572" stroke-width="1.3" fill="none" stroke-linecap="round"/>
+            <use href="#nmR2" stroke="#C5A572" stroke-width="1.3" fill="none" stroke-linecap="round"/>
+            <use href="#nmR3" stroke="#C5A572" stroke-width="1.3" fill="none" stroke-linecap="round"/>
+            <use href="#nmR4" stroke="#C5A572" stroke-width="1.3" fill="none" stroke-linecap="round"/>
+            <use href="#nmR5" stroke="#C5A572" stroke-width="1.3" fill="none" stroke-linecap="round"/>
+            <use href="#nmR6" stroke="#C5A572" stroke-width="1.3" fill="none" stroke-linecap="round"/>
+            <use href="#nmR7" stroke="#C5A572" stroke-width="1.3" fill="none" stroke-linecap="round"/>
+            <use href="#nmR8" stroke="#C5A572" stroke-width="1.3" fill="none" stroke-linecap="round"/>
+            <use href="#nmR9" stroke="#C5A572" stroke-width="1.3" fill="none" stroke-linecap="round"/>
+            <use href="#nmR10" stroke="#C5A572" stroke-width="1.3" fill="none" stroke-linecap="round"/>
           </g>
 
-          <!-- Primary tour route — Chicago → LA → Dallas → Atlanta → NYC → Seattle → Chicago.
-               Two-phase animation: Phase 1 draws on (5s), Phase 2 erases behind truck (24s loop). -->
-          <path id="nmPrimaryRoute"
-                d="M 530 195 Q 360 220, 250 290 T 110 350 Q 250 380, 440 350 Q 540 360, 660 330 Q 740 290, 780 215 Q 500 100, 130 110 Q 350 140, 530 195"
-                stroke="url(#nmRouteGrad)" stroke-width="3.2" fill="none"
-                stroke-linecap="round" stroke-dasharray="2400" stroke-dashoffset="2400">
-            <animate attributeName="stroke-dashoffset" from="2400" to="0" dur="5s"
-                     begin="0s" fill="freeze"
-                     calcMode="spline" keySplines="0.4 0 0.2 1"/>
-            <animate attributeName="stroke-dashoffset" values="0; -2280"
-                     dur="24s" begin="5s" repeatCount="indefinite"
-                     calcMode="linear"/>
-          </path>
-
-          <!-- City nodes — 6 tour cities (staggered 0.2s–1.2s) + 4 network cities (1.4s–2.0s) -->
+          <!-- City ambient glow halos — each pulses on its own cycle for layered presence -->
           <g>
-            <g transform="translate(130 110)" opacity="0">
-              <animate attributeName="opacity" from="0" to="1" dur="0.4s" begin="0.2s" fill="freeze"/>
-              <circle r="6" fill="#FDFBF7" stroke="#0A2540" stroke-width="1.5"/>
-              <circle r="2.5" fill="#0A2540"/>
-              <text y="-13" text-anchor="middle" font-family="DM Sans, sans-serif"
-                    font-size="9.5" font-weight="700" fill="#0A2540" letter-spacing="1.2">SEATTLE</text>
+            <circle cx="130" cy="110" r="16" fill="url(#nmCityHalo)">
+              <animate attributeName="r" values="14;22;14" dur="4.2s" repeatCount="indefinite" begin="0s"/>
+              <animate attributeName="opacity" values="0.7;1;0.7" dur="4.2s" repeatCount="indefinite" begin="0s"/>
+            </circle>
+            <circle cx="530" cy="195" r="22" fill="url(#nmHubHalo)">
+              <animate attributeName="r" values="20;30;20" dur="3.5s" repeatCount="indefinite" begin="0.5s"/>
+              <animate attributeName="opacity" values="0.8;1;0.8" dur="3.5s" repeatCount="indefinite" begin="0.5s"/>
+            </circle>
+            <circle cx="780" cy="215" r="16" fill="url(#nmCityHalo)">
+              <animate attributeName="r" values="14;22;14" dur="4.0s" repeatCount="indefinite" begin="1.0s"/>
+              <animate attributeName="opacity" values="0.7;1;0.7" dur="4.0s" repeatCount="indefinite" begin="1.0s"/>
+            </circle>
+            <circle cx="440" cy="350" r="16" fill="url(#nmCityHalo)">
+              <animate attributeName="r" values="14;22;14" dur="3.8s" repeatCount="indefinite" begin="1.5s"/>
+              <animate attributeName="opacity" values="0.7;1;0.7" dur="3.8s" repeatCount="indefinite" begin="1.5s"/>
+            </circle>
+            <circle cx="660" cy="330" r="16" fill="url(#nmCityHalo)">
+              <animate attributeName="r" values="14;22;14" dur="4.5s" repeatCount="indefinite" begin="0.8s"/>
+              <animate attributeName="opacity" values="0.7;1;0.7" dur="4.5s" repeatCount="indefinite" begin="0.8s"/>
+            </circle>
+            <circle cx="110" cy="350" r="22" fill="url(#nmHubHalo)">
+              <animate attributeName="r" values="20;30;20" dur="3.6s" repeatCount="indefinite" begin="1.2s"/>
+              <animate attributeName="opacity" values="0.8;1;0.8" dur="3.6s" repeatCount="indefinite" begin="1.2s"/>
+            </circle>
+            <circle cx="350" cy="260" r="14" fill="url(#nmCityHalo)">
+              <animate attributeName="r" values="12;18;12" dur="3.7s" repeatCount="indefinite" begin="2.0s"/>
+              <animate attributeName="opacity" values="0.6;0.9;0.6" dur="3.7s" repeatCount="indefinite" begin="2.0s"/>
+            </circle>
+            <circle cx="615" cy="195" r="14" fill="url(#nmCityHalo)">
+              <animate attributeName="r" values="12;18;12" dur="4.1s" repeatCount="indefinite" begin="0.3s"/>
+              <animate attributeName="opacity" values="0.6;0.9;0.6" dur="4.1s" repeatCount="indefinite" begin="0.3s"/>
+            </circle>
+            <circle cx="470" cy="410" r="14" fill="url(#nmCityHalo)">
+              <animate attributeName="r" values="12;18;12" dur="3.9s" repeatCount="indefinite" begin="2.5s"/>
+              <animate attributeName="opacity" values="0.6;0.9;0.6" dur="3.9s" repeatCount="indefinite" begin="2.5s"/>
+            </circle>
+            <circle cx="720" cy="410" r="14" fill="url(#nmCityHalo)">
+              <animate attributeName="r" values="12;18;12" dur="4.3s" repeatCount="indefinite" begin="1.8s"/>
+              <animate attributeName="opacity" values="0.6;0.9;0.6" dur="4.3s" repeatCount="indefinite" begin="1.8s"/>
+            </circle>
+          </g>
+
+          <!-- City dots + labels (cream on navy palette) -->
+          <g>
+            <g transform="translate(130 110)">
+              <circle r="4.5" fill="#C5A572" stroke="#FDFBF7" stroke-width="1.2"/>
+              <circle r="1.6" fill="#FDFBF7"/>
+              <text y="-12" text-anchor="middle" font-family="DM Sans, sans-serif"
+                    font-size="9.5" font-weight="600" fill="#FDFBF7" letter-spacing="1.2" opacity="0.9">SEATTLE</text>
             </g>
-            <g transform="translate(530 195)" opacity="0">
-              <animate attributeName="opacity" from="0" to="1" dur="0.4s" begin="0.4s" fill="freeze"/>
-              <circle r="8" fill="#FDFBF7" stroke="#0A2540" stroke-width="2"/>
-              <circle r="3.5" fill="#BA7517"/>
-              <text y="-16" text-anchor="middle" font-family="DM Sans, sans-serif"
-                    font-size="10" font-weight="700" fill="#0A2540" letter-spacing="1.5">CHICAGO</text>
+            <g transform="translate(530 195)">
+              <circle r="6" fill="#BA7517" stroke="#FDFBF7" stroke-width="1.5"/>
+              <circle r="2.5" fill="#FDFBF7"/>
+              <text y="-15" text-anchor="middle" font-family="DM Sans, sans-serif"
+                    font-size="10.5" font-weight="700" fill="#FDFBF7" letter-spacing="1.5">CHICAGO</text>
             </g>
-            <g transform="translate(780 215)" opacity="0">
-              <animate attributeName="opacity" from="0" to="1" dur="0.4s" begin="0.6s" fill="freeze"/>
-              <circle r="6" fill="#FDFBF7" stroke="#0A2540" stroke-width="1.5"/>
-              <circle r="2.5" fill="#0A2540"/>
-              <text y="-13" text-anchor="middle" font-family="DM Sans, sans-serif"
-                    font-size="9.5" font-weight="700" fill="#0A2540" letter-spacing="1.2">NEW YORK</text>
+            <g transform="translate(780 215)">
+              <circle r="4.5" fill="#C5A572" stroke="#FDFBF7" stroke-width="1.2"/>
+              <circle r="1.6" fill="#FDFBF7"/>
+              <text y="-12" text-anchor="middle" font-family="DM Sans, sans-serif"
+                    font-size="9.5" font-weight="600" fill="#FDFBF7" letter-spacing="1.2" opacity="0.9">NEW YORK</text>
             </g>
-            <g transform="translate(440 350)" opacity="0">
-              <animate attributeName="opacity" from="0" to="1" dur="0.4s" begin="0.8s" fill="freeze"/>
-              <circle r="6" fill="#FDFBF7" stroke="#0A2540" stroke-width="1.5"/>
-              <circle r="2.5" fill="#0A2540"/>
+            <g transform="translate(440 350)">
+              <circle r="4.5" fill="#C5A572" stroke="#FDFBF7" stroke-width="1.2"/>
+              <circle r="1.6" fill="#FDFBF7"/>
               <text y="18" text-anchor="middle" font-family="DM Sans, sans-serif"
-                    font-size="9.5" font-weight="700" fill="#0A2540" letter-spacing="1.2">DALLAS</text>
+                    font-size="9.5" font-weight="600" fill="#FDFBF7" letter-spacing="1.2" opacity="0.9">DALLAS</text>
             </g>
-            <g transform="translate(660 330)" opacity="0">
-              <animate attributeName="opacity" from="0" to="1" dur="0.4s" begin="1.0s" fill="freeze"/>
-              <circle r="6" fill="#FDFBF7" stroke="#0A2540" stroke-width="1.5"/>
-              <circle r="2.5" fill="#0A2540"/>
+            <g transform="translate(660 330)">
+              <circle r="4.5" fill="#C5A572" stroke="#FDFBF7" stroke-width="1.2"/>
+              <circle r="1.6" fill="#FDFBF7"/>
               <text y="18" text-anchor="middle" font-family="DM Sans, sans-serif"
-                    font-size="9.5" font-weight="700" fill="#0A2540" letter-spacing="1.2">ATLANTA</text>
+                    font-size="9.5" font-weight="600" fill="#FDFBF7" letter-spacing="1.2" opacity="0.9">ATLANTA</text>
             </g>
-            <g transform="translate(110 350)" opacity="0">
-              <animate attributeName="opacity" from="0" to="1" dur="0.4s" begin="1.2s" fill="freeze"/>
-              <circle r="8" fill="#FDFBF7" stroke="#0A2540" stroke-width="2"/>
-              <circle r="3.5" fill="#C5A572"/>
-              <text y="-16" text-anchor="middle" font-family="DM Sans, sans-serif"
-                    font-size="10" font-weight="700" fill="#0A2540" letter-spacing="1.5">LOS ANGELES</text>
+            <g transform="translate(110 350)">
+              <circle r="6" fill="#BA7517" stroke="#FDFBF7" stroke-width="1.5"/>
+              <circle r="2.5" fill="#FDFBF7"/>
+              <text y="-15" text-anchor="middle" font-family="DM Sans, sans-serif"
+                    font-size="10.5" font-weight="700" fill="#FDFBF7" letter-spacing="1.5">LOS ANGELES</text>
             </g>
-            <!-- New network cities — signal homepage network breadth -->
-            <g transform="translate(350 260)" opacity="0">
-              <animate attributeName="opacity" from="0" to="1" dur="0.4s" begin="1.4s" fill="freeze"/>
-              <circle r="6" fill="#FDFBF7" stroke="#0A2540" stroke-width="1.5"/>
-              <circle r="2.5" fill="#0A2540"/>
-              <text y="-13" text-anchor="middle" font-family="DM Sans, sans-serif"
-                    font-size="9.5" font-weight="700" fill="#0A2540" letter-spacing="1.2">DENVER</text>
+            <g transform="translate(350 260)">
+              <circle r="4" fill="#C5A572" stroke="#FDFBF7" stroke-width="1"/>
+              <circle r="1.4" fill="#FDFBF7"/>
+              <text y="-12" text-anchor="middle" font-family="DM Sans, sans-serif"
+                    font-size="9" font-weight="600" fill="#FDFBF7" letter-spacing="1.2" opacity="0.85">DENVER</text>
             </g>
-            <g transform="translate(615 195)" opacity="0">
-              <animate attributeName="opacity" from="0" to="1" dur="0.4s" begin="1.6s" fill="freeze"/>
-              <circle r="6" fill="#FDFBF7" stroke="#0A2540" stroke-width="1.5"/>
-              <circle r="2.5" fill="#0A2540"/>
-              <text y="-13" text-anchor="middle" font-family="DM Sans, sans-serif"
-                    font-size="9.5" font-weight="700" fill="#0A2540" letter-spacing="1.2">DETROIT</text>
+            <g transform="translate(615 195)">
+              <circle r="4" fill="#C5A572" stroke="#FDFBF7" stroke-width="1"/>
+              <circle r="1.4" fill="#FDFBF7"/>
+              <text y="-12" text-anchor="middle" font-family="DM Sans, sans-serif"
+                    font-size="9" font-weight="600" fill="#FDFBF7" letter-spacing="1.2" opacity="0.85">DETROIT</text>
             </g>
-            <g transform="translate(470 410)" opacity="0">
-              <animate attributeName="opacity" from="0" to="1" dur="0.4s" begin="1.8s" fill="freeze"/>
-              <circle r="6" fill="#FDFBF7" stroke="#0A2540" stroke-width="1.5"/>
-              <circle r="2.5" fill="#0A2540"/>
+            <g transform="translate(470 410)">
+              <circle r="4" fill="#C5A572" stroke="#FDFBF7" stroke-width="1"/>
+              <circle r="1.4" fill="#FDFBF7"/>
               <text y="18" text-anchor="middle" font-family="DM Sans, sans-serif"
-                    font-size="9.5" font-weight="700" fill="#0A2540" letter-spacing="1.2">HOUSTON</text>
+                    font-size="9" font-weight="600" fill="#FDFBF7" letter-spacing="1.2" opacity="0.85">HOUSTON</text>
             </g>
-            <g transform="translate(720 410)" opacity="0">
-              <animate attributeName="opacity" from="0" to="1" dur="0.4s" begin="2.0s" fill="freeze"/>
-              <circle r="6" fill="#FDFBF7" stroke="#0A2540" stroke-width="1.5"/>
-              <circle r="2.5" fill="#0A2540"/>
+            <g transform="translate(720 410)">
+              <circle r="4" fill="#C5A572" stroke="#FDFBF7" stroke-width="1"/>
+              <circle r="1.4" fill="#FDFBF7"/>
               <text y="18" text-anchor="middle" font-family="DM Sans, sans-serif"
-                    font-size="9.5" font-weight="700" fill="#0A2540" letter-spacing="1.2">MIAMI</text>
+                    font-size="9" font-weight="600" fill="#FDFBF7" letter-spacing="1.2" opacity="0.85">MIAMI</text>
             </g>
           </g>
 
-          <!-- ANIMATED TRUCK — Chicago → LA → Dallas → Atlanta → NYC → Seattle → Chicago tour via animateMotion. -->
-          <g opacity="0">
-            <animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="5s" fill="freeze"/>
-            <animateMotion dur="24s" begin="5s" repeatCount="indefinite" rotate="auto">
-              <mpath href="#nmPrimaryRoute"/>
-            </animateMotion>
-            <g transform="scale(0.85)">
-              <rect x="-22" y="-6" width="28" height="12" rx="1" fill="#FDFBF7" stroke="#0A2540" stroke-width="1"/>
-              <line x1="-15" y1="-4" x2="-15" y2="4" stroke="#0A2540" stroke-width="0.5" opacity="0.4"/>
-              <line x1="-7" y1="-4" x2="-7" y2="4" stroke="#0A2540" stroke-width="0.5" opacity="0.4"/>
-              <line x1="1" y1="-4" x2="1" y2="4" stroke="#0A2540" stroke-width="0.5" opacity="0.4"/>
-              <text x="-8" y="2.5" text-anchor="middle"
-                    font-family="Playfair Display, Georgia, serif"
-                    font-size="6.5" font-weight="700"
-                    fill="#BA7517" opacity="0.85"
-                    letter-spacing="1.2">SRL</text>
-              <rect x="6" y="-7" width="10" height="13" rx="1" fill="#0A2540"/>
-              <rect x="8" y="-5" width="6" height="4" fill="#BA7517" opacity="0.9"/>
-              <rect x="14" y="-1.5" width="2" height="5" fill="#BA7517"/>
-              <circle cx="16.2" cy="2" r="0.9" fill="#FDFBF7"/>
-              <circle cx="16.2" cy="2" r="0.4" fill="#C5A572"/>
-              <circle cx="-18" cy="7" r="2.2" fill="#0A2540"/>
-              <circle cx="-18" cy="7" r="0.9" fill="#C5A572"/>
-              <circle cx="-5" cy="7" r="2.2" fill="#0A2540"/>
-              <circle cx="-5" cy="7" r="0.9" fill="#C5A572"/>
-              <circle cx="10" cy="7" r="2.2" fill="#0A2540"/>
-              <circle cx="10" cy="7" r="0.9" fill="#C5A572"/>
-            </g>
+          <!-- ANIMATED PULSES — 10 lights traveling 10 routes simultaneously,
+               staggered timing for organic flow. Each pulse loops indefinitely. -->
+          <g>
+            <circle r="5" fill="url(#nmPulse)">
+              <animateMotion dur="12s" begin="0s" repeatCount="indefinite">
+                <mpath href="#nmR1"/>
+              </animateMotion>
+            </circle>
+            <circle r="4.5" fill="url(#nmPulse)">
+              <animateMotion dur="8s" begin="1.5s" repeatCount="indefinite">
+                <mpath href="#nmR2"/>
+              </animateMotion>
+            </circle>
+            <circle r="4.5" fill="url(#nmPulse)">
+              <animateMotion dur="9s" begin="2.5s" repeatCount="indefinite">
+                <mpath href="#nmR3"/>
+              </animateMotion>
+            </circle>
+            <circle r="4.5" fill="url(#nmPulse)">
+              <animateMotion dur="8s" begin="0.5s" repeatCount="indefinite">
+                <mpath href="#nmR4"/>
+              </animateMotion>
+            </circle>
+            <circle r="4" fill="url(#nmPulse)">
+              <animateMotion dur="7s" begin="3s" repeatCount="indefinite">
+                <mpath href="#nmR5"/>
+              </animateMotion>
+            </circle>
+            <circle r="4" fill="url(#nmPulse)">
+              <animateMotion dur="5s" begin="1s" repeatCount="indefinite">
+                <mpath href="#nmR6"/>
+              </animateMotion>
+            </circle>
+            <circle r="4.5" fill="url(#nmPulse)">
+              <animateMotion dur="11s" begin="2s" repeatCount="indefinite">
+                <mpath href="#nmR7"/>
+              </animateMotion>
+            </circle>
+            <circle r="4.5" fill="url(#nmPulse)">
+              <animateMotion dur="10s" begin="0.8s" repeatCount="indefinite">
+                <mpath href="#nmR8"/>
+              </animateMotion>
+            </circle>
+            <circle r="4" fill="url(#nmPulse)">
+              <animateMotion dur="9s" begin="3.5s" repeatCount="indefinite">
+                <mpath href="#nmR9"/>
+              </animateMotion>
+            </circle>
+            <circle r="4" fill="url(#nmPulse)">
+              <animateMotion dur="7s" begin="1.8s" repeatCount="indefinite">
+                <mpath href="#nmR10"/>
+              </animateMotion>
+            </circle>
           </g>
         </svg>
       </div>
