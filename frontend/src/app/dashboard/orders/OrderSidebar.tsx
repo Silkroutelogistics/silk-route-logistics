@@ -147,19 +147,19 @@ export function OrderSidebar({
         {/* Pricing cards */}
         <Section title="Pricing" Icon={DollarSign}>
           {/* Customer rate */}
-          <div className={`rounded-lg p-3 ${customerRateSource === "agreement" ? "border border-[#BA7517] bg-[#FAEEDA]" : "border border-white/10 bg-white/5"}`}>
+          <div className={`rounded-lg p-3 ${customerRateSource === "agreement" ? "border border-[#BA7517] bg-[#FAEEDA]" : "border border-slate-200 bg-white"}`}>
             <div className="flex items-center justify-between">
-              <div className="text-[10px] uppercase text-slate-400">Customer rate</div>
+              <div className="text-[10px] uppercase text-[#6B7685]">Customer rate</div>
               {customerRateSource === "agreement" && (
                 <span className="text-[9px] text-[#C5A572] font-semibold">From agreement</span>
               )}
             </div>
             <div className="mt-1 flex items-baseline gap-1">
-              <span className={`text-lg font-semibold ${customerRateSource === "agreement" ? "text-[#C5A572]" : "text-white"}`}>
+              <span className={`text-lg font-semibold ${customerRateSource === "agreement" ? "text-[#BA7517]" : "text-[#0A2540]"}`}>
                 ${(customerRate ?? 0).toLocaleString()}
               </span>
               {distance && customerRate ? (
-                <span className={`text-[10px] ${customerRateSource === "agreement" ? "text-[#C5A572]" : "text-slate-400"}`}>
+                <span className={`text-[10px] ${customerRateSource === "agreement" ? "text-[#BA7517]" : "text-[#6B7685]"}`}>
                   · ${(customerRate / distance).toFixed(2)}/mi
                 </span>
               ) : null}
@@ -170,69 +170,69 @@ export function OrderSidebar({
                 value={customerRate ?? ""}
                 onChange={(e) => onCustomerRateChange(parseFloat(e.target.value) || 0)}
                 placeholder="Enter rate"
-                className="mt-2 w-full px-2 py-1 bg-white/5 border border-white/10 rounded text-xs text-white"
+                className="mt-2 w-full px-2 py-1 bg-white border border-slate-200 rounded text-xs text-[#0A2540] focus:outline-none focus:ring-2 focus:ring-[#C5A572]/40"
               />
             )}
           </div>
 
           {/* DAT spot rate */}
-          <div className="rounded-lg p-3 border border-white/10 bg-white/5">
-            <div className="text-[10px] uppercase text-slate-400">DAT spot rate</div>
-            {marketQuery.isLoading && <div className="mt-1 text-xs text-slate-500">Loading…</div>}
+          <div className="rounded-lg p-3 border border-slate-200 bg-white">
+            <div className="text-[10px] uppercase text-[#6B7685]">DAT spot rate</div>
+            {marketQuery.isLoading && <div className="mt-1 text-xs text-[#6B7685]">Loading…</div>}
             {spotRate && (
               <>
                 <div className="mt-1 flex items-baseline gap-1">
-                  <span className="text-lg font-semibold text-white">${spotRate.total?.toLocaleString?.() ?? "—"}</span>
-                  {spotRate.perMile && <span className="text-[10px] text-slate-400">· ${spotRate.perMile}/mi</span>}
+                  <span className="text-lg font-semibold text-[#0A2540]">${spotRate.total?.toLocaleString?.() ?? "Not set"}</span>
+                  {spotRate.perMile && <span className="text-[10px] text-[#6B7685]">· ${spotRate.perMile}/mi</span>}
                 </div>
                 {marketQuery.data?.range && (
-                  <div className="text-[10px] text-slate-500 mt-0.5">
+                  <div className="text-[10px] text-[#6B7685] mt-0.5">
                     ${Math.round(marketQuery.data.range.low).toLocaleString()} – ${Math.round(marketQuery.data.range.high).toLocaleString()}
                   </div>
                 )}
               </>
             )}
-            {!laneReady && <div className="mt-1 text-xs text-slate-500">Lane not set</div>}
+            {!laneReady && <div className="mt-1 text-xs text-[#6B7685]">Lane not set</div>}
           </div>
 
           {/* Target carrier cost */}
-          <div className="rounded-lg p-3 border border-white/10 bg-white/5">
-            <div className="text-[10px] uppercase text-slate-400">Target carrier cost</div>
+          <div className="rounded-lg p-3 border border-slate-200 bg-white">
+            <div className="text-[10px] uppercase text-[#6B7685]">Target carrier cost</div>
             <input
               type="number"
               value={targetCost ?? ""}
               onChange={(e) => onTargetCostChange(parseFloat(e.target.value) || 0)}
-              className="mt-1 w-full px-2 py-1 bg-white/5 border border-white/10 rounded text-sm font-semibold text-white"
+              className="mt-1 w-full px-2 py-1 bg-white border border-slate-200 rounded text-sm font-semibold text-[#0A2540] focus:outline-none focus:ring-2 focus:ring-[#C5A572]/40"
               placeholder="0"
             />
             {distance && targetCost ? (
-              <div className="text-[10px] text-slate-500 mt-0.5">${(targetCost / distance).toFixed(2)}/mi</div>
+              <div className="text-[10px] text-[#6B7685] mt-0.5">${(targetCost / distance).toFixed(2)}/mi</div>
             ) : null}
           </div>
 
           {/* Projected margin */}
           <div className={`rounded-lg p-3 border ${
-            marginTone === "green" ? "border-green-500/40 bg-green-500/10"
-            : marginTone === "amber" ? "border-amber-500/40 bg-amber-500/10"
-            : marginTone === "red" ? "border-red-500/40 bg-red-500/10"
-            : "border-white/10 bg-white/5"
+            marginTone === "green" ? "border-[#2F7A4F]/40 bg-[#E6F0E9]"
+            : marginTone === "amber" ? "border-[#B07A1A]/40 bg-[#FBEFD4]"
+            : marginTone === "red" ? "border-[#9B2C2C]/40 bg-[#F6E3E3]"
+            : "border-slate-200 bg-white"
           }`}>
-            <div className="text-[10px] uppercase text-slate-400">Projected margin</div>
+            <div className="text-[10px] uppercase text-[#6B7685]">Projected margin</div>
             <div className="mt-1 flex items-baseline gap-1">
               <span className={`text-lg font-semibold ${
-                marginTone === "green" ? "text-green-400"
-                : marginTone === "amber" ? "text-amber-400"
-                : marginTone === "red" ? "text-red-400"
-                : "text-white"
+                marginTone === "green" ? "text-[#2F7A4F]"
+                : marginTone === "amber" ? "text-[#B07A1A]"
+                : marginTone === "red" ? "text-[#9B2C2C]"
+                : "text-[#0A2540]"
               }`}>
-                {margin !== null ? `$${margin.toLocaleString()}` : "—"}
+                {margin !== null ? `$${margin.toLocaleString()}` : "Not calc'd"}
               </span>
               {marginPct !== null && (
                 <span className={`text-xs ${
-                  marginTone === "green" ? "text-green-400"
-                  : marginTone === "amber" ? "text-amber-400"
-                  : marginTone === "red" ? "text-red-400"
-                  : "text-slate-400"
+                  marginTone === "green" ? "text-[#2F7A4F]"
+                  : marginTone === "amber" ? "text-[#B07A1A]"
+                  : marginTone === "red" ? "text-[#9B2C2C]"
+                  : "text-[#6B7685]"
                 }`}>· {marginPct.toFixed(1)}%</span>
               )}
             </div>
@@ -242,9 +242,9 @@ export function OrderSidebar({
         {/* Lane intelligence */}
         {laneReady && (
           <Section title="Lane intelligence" Icon={BarChart3}>
-            <div className="rounded-lg p-3 border border-white/10 bg-white/5 space-y-1.5 text-xs">
+            <div className="rounded-lg p-3 border border-slate-200 bg-white space-y-1.5 text-xs">
               <Row label="Your loads on this lane" value={laneHistory?.count ?? 0} />
-              {laneHistory && <Row label="Avg rate" value={`$${laneHistory.avgRate?.toLocaleString() ?? "—"}`} />}
+              {laneHistory && <Row label="Avg rate" value={`$${laneHistory.avgRate?.toLocaleString() ?? "Not set"}`} />}
               {marketQuery.data?.loadToTruckRatio !== undefined && (
                 <Row label="Load/truck ratio" value={marketQuery.data.loadToTruckRatio.toFixed(1)} />
               )}
@@ -268,11 +268,11 @@ export function OrderSidebar({
           >
             <div className="space-y-1.5">
               {(carriersPreviewQuery.data?.carriers ?? []).map((c) => (
-                <div key={c.carrierId} className="rounded-lg p-2 border border-white/10 bg-white/5">
+                <div key={c.carrierId} className="rounded-lg p-2 border border-slate-200 bg-white">
                   <div className="flex items-center justify-between gap-2">
                     <div className="min-w-0">
-                      <div className="text-xs text-white truncate">{c.companyName ?? "—"}</div>
-                      <div className="text-[9px] text-slate-500">
+                      <div className="text-xs text-[#0A2540] truncate">{c.companyName ?? "Not set"}</div>
+                      <div className="text-[9px] text-[#6B7685]">
                         {c.tier} · {c.laneRunCount} lane runs · {Math.round(c.onTimePct)}% OT
                       </div>
                     </div>
@@ -283,7 +283,7 @@ export function OrderSidebar({
                       <Star className="w-3 h-3 text-[#BA7517]" />
                     </div>
                   </div>
-                  <div className="mt-1 h-0.5 bg-white/10 rounded overflow-hidden">
+                  <div className="mt-1 h-0.5 bg-slate-200 rounded overflow-hidden">
                     <div
                       className="h-full bg-[#BA7517]"
                       style={{ width: `${Math.min(100, c.matchScore)}%` }}
@@ -292,7 +292,7 @@ export function OrderSidebar({
                 </div>
               ))}
               {(carriersPreviewQuery.data?.carriers?.length ?? 0) === 0 && !carriersPreviewQuery.isLoading && (
-                <div className="text-[11px] text-slate-500 text-center py-2">No eligible matches</div>
+                <div className="text-[11px] text-[#6B7685] text-center py-2">No eligible matches</div>
               )}
             </div>
           </Section>
@@ -303,18 +303,18 @@ export function OrderSidebar({
           <Section title="Tracking recipients" Icon={Zap}>
             <div className="space-y-1.5">
               {(recipientsQuery.data?.contacts ?? []).length === 0 && (
-                <div className="text-[11px] text-slate-500">
+                <div className="text-[11px] text-[#6B7685]">
                   No contacts tagged. Add in CRM → Contacts.
                 </div>
               )}
               {(recipientsQuery.data?.contacts ?? []).map((c: any) => (
-                <div key={c.id} className="flex items-center gap-2 rounded-lg p-2 border border-white/10 bg-white/5">
+                <div key={c.id} className="flex items-center gap-2 rounded-lg p-2 border border-slate-200 bg-white">
                   <div className="w-6 h-6 rounded-full bg-[#FAEEDA] text-[#BA7517] flex items-center justify-center text-[9px] font-bold shrink-0">
                     {(c.name || "?").split(" ").slice(0, 2).map((w: string) => w[0]).join("")}
                   </div>
                   <div className="min-w-0">
-                    <div className="text-xs text-white truncate">{c.name}</div>
-                    <div className="text-[9px] text-slate-500 truncate">{c.email}</div>
+                    <div className="text-xs text-[#0A2540] truncate">{c.name}</div>
+                    <div className="text-[9px] text-[#6B7685] truncate">{c.email}</div>
                   </div>
                 </div>
               ))}
@@ -325,11 +325,11 @@ export function OrderSidebar({
         {/* Customer snapshot */}
         {customerSnapshot && (
           <Section title="Customer" Icon={TrendingUp}>
-            <div className="rounded-lg p-3 border border-white/10 bg-white/5 space-y-1.5 text-xs">
-              <Row label="Status" value={customerSnapshot.status ?? "—"} />
-              <Row label="Pay terms" value={customerSnapshot.paymentTerms ?? "—"} />
+            <div className="rounded-lg p-3 border border-slate-200 bg-white space-y-1.5 text-xs">
+              <Row label="Status" value={customerSnapshot.status ?? "Not set"} />
+              <Row label="Pay terms" value={customerSnapshot.paymentTerms ?? "Not set"} />
               <Row label="Credit limit" value={customerSnapshot.creditLimit ? `$${customerSnapshot.creditLimit.toLocaleString()}` : "—"} />
-              <Row label="Credit status" value={customerSnapshot.creditStatus ?? "—"} />
+              <Row label="Credit status" value={customerSnapshot.creditStatus ?? "Not set"} />
               {customerSnapshot.totalRevenue !== undefined && (
                 <Row label="Revenue YTD" value={`$${Math.round(customerSnapshot.totalRevenue).toLocaleString()}`} />
               )}
@@ -342,14 +342,14 @@ export function OrderSidebar({
 
         {/* Order flow */}
         <Section title="Order flow">
-          <div className="flex items-center gap-1 text-[9px] text-slate-400">
+          <div className="flex items-center gap-1 text-[9px] text-[#6B7685]">
             {["Quote", "Order", "Load", "Dispatch", "T&T", "Invoice"].map((stage, i) => (
               <div key={stage} className="flex items-center flex-1">
-                <div className={`flex-1 h-1.5 rounded ${i === 0 ? "bg-[#BA7517]" : "border border-dashed border-white/20"}`} />
+                <div className={`flex-1 h-1.5 rounded ${i === 0 ? "bg-[#BA7517]" : "border border-dashed border-[#C5A572]/40"}`} />
               </div>
             ))}
           </div>
-          <div className="flex justify-between mt-1 text-[9px] text-slate-500">
+          <div className="flex justify-between mt-1 text-[9px] text-[#6B7685]">
             {["Quote", "Order", "Load", "Dispatch", "T&T", "Invoice"].map((s) => <span key={s}>{s}</span>)}
           </div>
         </Section>
@@ -367,7 +367,7 @@ function Section({
 }) {
   return (
     <div>
-      <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-slate-500 mb-1.5 px-1">
+      <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-[#6B7685] mb-1.5 px-1">
         {Icon && <Icon className="w-3 h-3 text-[#BA7517]" />}
         {title}
       </div>
@@ -383,10 +383,10 @@ function Row({
   value: React.ReactNode;
   tone?: "green" | "red";
 }) {
-  const cls = tone === "green" ? "text-green-400" : tone === "red" ? "text-red-400" : "text-white";
+  const cls = tone === "green" ? "text-[#2F7A4F]" : tone === "red" ? "text-[#9B2C2C]" : "text-[#0A2540]";
   return (
     <div className="flex justify-between">
-      <span className="text-slate-400">{label}</span>
+      <span className="text-[#6B7685]">{label}</span>
       <span className={cls}>{value}</span>
     </div>
   );

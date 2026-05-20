@@ -652,15 +652,15 @@ export default function OrderBuilderPage() {
   // state needed since the drawer's submit is synchronous and atomic.
 
   return (
-    <div className="p-3 lg:h-[calc(100vh-48px)] flex flex-col max-w-[1600px] mx-auto">
+    <div className="p-3 lg:h-[calc(100vh-48px)] flex flex-col max-w-[1600px] mx-auto bg-[#FBF7F0] text-[#0A2540]">
       {/* ─── TOP BAR ──────────────────────────────────────── */}
       <div className="flex flex-wrap items-center justify-between mb-3 shrink-0 gap-2">
         <div>
           <div className="flex items-center gap-2">
-            <ClipboardEdit className="w-5 h-5 text-gold" />
-            <h1 className="text-lg font-bold text-white">Order builder</h1>
+            <ClipboardEdit className="w-5 h-5 text-[#BA7517]" />
+            <h1 className="text-lg font-bold text-[#0A2540]" style={{ fontFamily: "'Playfair Display', Georgia, serif" }}>Order builder</h1>
           </div>
-          <p className="text-xs text-slate-500">Create a new load</p>
+          <p className="text-xs text-[#6B7685]">Create a new load</p>
         </div>
         {/* Sprint 59.c (v3.8.aev) — header keeps only the auto-save
             status indicator. The full 6-button action row (Save draft,
@@ -677,7 +677,7 @@ export default function OrderBuilderPage() {
           Covers the 3 non-tender paths (Tender errors render inline in
           the drawer footer). */}
       {(dispatchWaterfall.isError || dispatchLoadboard.isError || dispatchDat.isError) && (
-        <div className="mb-3 p-2 rounded-lg bg-red-500/10 border border-red-500/30 text-xs text-red-300 flex items-start gap-2">
+        <div className="mb-3 p-2 rounded-lg bg-[#F6E3E3] border border-[#9B2C2C]/30 text-xs text-[#9B2C2C] flex items-start gap-2">
           <AlertTriangle className="w-3 h-3 mt-0.5 shrink-0" />
           <div>
             <div className="font-semibold">Dispatch failed</div>
@@ -697,8 +697,8 @@ export default function OrderBuilderPage() {
           load instead of letting the user re-attempt and hit the
           backend's HTTP 409. */}
       {convertedLoadId && (
-        <div className="mb-3 p-2.5 rounded-lg bg-amber-500/10 border border-amber-500/30 text-xs text-amber-200 flex items-start gap-2">
-          <CheckCircle className="w-3.5 h-3.5 mt-0.5 shrink-0 text-amber-300" />
+        <div className="mb-3 p-2.5 rounded-lg bg-[#FBEFD4] border border-[#B07A1A]/30 text-xs text-[#B07A1A] flex items-start gap-2">
+          <CheckCircle className="w-3.5 h-3.5 mt-0.5 shrink-0 text-[#B07A1A]" />
           <div className="flex-1">
             <div className="font-semibold">This order has already been converted to a load</div>
             <div className="mt-0.5 opacity-90">
@@ -708,7 +708,7 @@ export default function OrderBuilderPage() {
           </div>
           <button
             onClick={() => router.push("/dashboard/loads")}
-            className="px-2 py-1 rounded bg-amber-500/20 hover:bg-amber-500/30 text-amber-100 text-[11px] font-medium"
+            className="px-2 py-1 rounded bg-[#B07A1A]/15 hover:bg-[#B07A1A]/25 text-[#B07A1A] text-[11px] font-medium focus:outline-none focus:ring-2 focus:ring-[#C5A572]/40"
           >
             View loads →
           </button>
@@ -716,12 +716,12 @@ export default function OrderBuilderPage() {
       )}
 
       {quoteResult && (
-        <div className="mb-3 p-2 rounded-lg bg-green-500/10 border border-green-500/30 text-xs text-green-300">
+        <div className="mb-3 p-2 rounded-lg bg-[#E6F0E9] border border-[#2F7A4F]/30 text-xs text-[#2F7A4F]">
           ✓ Quote {quoteResult} sent to customer.
         </div>
       )}
       {showErrors && !isValid && (
-        <div className="mb-3 p-2 rounded-lg bg-red-500/10 border border-red-500/30 text-xs text-red-300 flex items-center gap-1">
+        <div className="mb-3 p-2 rounded-lg bg-[#F6E3E3] border border-[#9B2C2C]/30 text-xs text-[#9B2C2C] flex items-center gap-1">
           <AlertTriangle className="w-3 h-3" /> Missing: {requiredMissing.join(", ")}
         </div>
       )}
@@ -729,7 +729,7 @@ export default function OrderBuilderPage() {
           Drawer's own submitError surface displays POST /loads/with-tender
           errors inline in its footer per drawer Layer α. */}
       {saveDraft.isError && (
-        <div className="mb-3 p-2 rounded-lg bg-red-500/10 border border-red-500/30 text-xs text-red-300 flex items-start gap-2">
+        <div className="mb-3 p-2 rounded-lg bg-[#F6E3E3] border border-[#9B2C2C]/30 text-xs text-[#9B2C2C] flex items-start gap-2">
           <AlertTriangle className="w-3 h-3 mt-0.5 shrink-0" />
           <div>
             <div className="font-semibold">Draft save failed</div>
@@ -744,15 +744,15 @@ export default function OrderBuilderPage() {
         </div>
       )}
       {showDraftBanner && (
-        <div className="mb-3 p-3 rounded-lg bg-[#FAEEDA]/10 border border-[#BA7517]/30">
+        <div className="mb-3 p-3 rounded-lg bg-[#FAEEDA] border border-[#BA7517]/30">
           <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2 text-xs text-[#FAEEDA]">
-              <FileText className="w-3 h-3" />
+            <div className="flex items-center gap-2 text-xs text-[#0A2540]">
+              <FileText className="w-3 h-3 text-[#BA7517]" />
               You have {drafts.length} draft order{drafts.length === 1 ? "" : "s"}
             </div>
             <button
               onClick={() => setDraftBannerDismissed(true)}
-              className="text-[10px] text-slate-400 hover:text-white"
+              className="text-[10px] text-[#6B7685] hover:text-[#0A2540] focus:outline-none focus:ring-2 focus:ring-[#C5A572]/40 rounded"
             >
               Dismiss
             </button>
@@ -768,11 +768,11 @@ export default function OrderBuilderPage() {
                 <button
                   key={d.id}
                   onClick={() => resumeDraft(d.id)}
-                  className="text-left px-2 py-1.5 rounded bg-white/5 border border-white/10 hover:border-[#BA7517] transition"
+                  className="text-left px-2 py-1.5 rounded bg-white border border-slate-200 hover:border-[#BA7517] transition focus:outline-none focus:ring-2 focus:ring-[#C5A572]/40"
                 >
-                  <div className="text-[11px] text-white truncate">{d.customer?.name ?? "No customer"}</div>
-                  <div className="text-[9px] text-slate-700 truncate">{lane}</div>
-                  <div className="text-[9px] text-slate-700">Edited {edited}</div>
+                  <div className="text-[11px] text-[#0A2540] font-medium truncate">{d.customer?.name ?? "No customer"}</div>
+                  <div className="text-[9px] text-[#6B7685] truncate">{lane}</div>
+                  <div className="text-[9px] text-[#6B7685]">Edited {edited}</div>
                 </button>
               );
             })}
@@ -789,36 +789,36 @@ export default function OrderBuilderPage() {
             {!selectedCustomer ? (
               <div className="relative">
                 <div className="relative">
-                  <Search className="absolute left-3 top-2.5 w-4 h-4 text-slate-400" />
+                  <Search className="absolute left-3 top-2.5 w-4 h-4 text-[#6B7685]" />
                   <input
                     type="text"
                     value={customerSearch}
                     onChange={(e) => { setCustomerSearch(e.target.value); setShowCustomerDropdown(true); }}
                     onFocus={() => setShowCustomerDropdown(true)}
                     placeholder="Search customers by name, email, industry…"
-                    className="w-full pl-9 pr-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white"
+                    className="w-full pl-9 pr-3 py-2 bg-white border border-slate-200 rounded-lg text-sm text-[#0A2540] placeholder:text-[#A7AEB8] focus:outline-none focus:ring-2 focus:ring-[#C5A572]/40 focus:border-[#C5A572]"
                   />
                 </div>
                 {showCustomerDropdown && (customerQuery.data?.customers?.length ?? 0) > 0 && (
-                  <div className="absolute z-20 top-full mt-1 w-full bg-[#161921] border border-white/10 rounded-lg shadow-xl max-h-72 overflow-y-auto">
+                  <div className="absolute z-20 top-full mt-1 w-full bg-white border border-slate-200 rounded-lg shadow-lg max-h-72 overflow-y-auto">
                     {customerQuery.data!.customers.map((c) => (
                       <button
                         key={c.id}
                         type="button"
                         onClick={() => selectCustomer(c)}
-                        className="w-full text-left px-3 py-2 hover:bg-white/5 border-b border-white/5"
+                        className="w-full text-left px-3 py-2 hover:bg-[#FAEEDA]/40 border-b border-slate-100 focus:outline-none focus:bg-[#FAEEDA]/40"
                       >
                         <div className="flex items-center justify-between">
                           <div className="min-w-0">
                             <div className="flex items-center gap-2">
-                              <span className="text-sm text-white font-medium truncate">{c.name}</span>
+                              <span className="text-sm text-[#0A2540] font-medium truncate">{c.name}</span>
                               <StatusBadge status={c.status} />
                             </div>
-                            <div className="text-[11px] text-slate-500">
+                            <div className="text-[11px] text-[#6B7685]">
                               {[c.city && c.state ? `${c.city}, ${c.state}` : null, c.industry].filter(Boolean).join(" · ")}
                             </div>
                           </div>
-                          <div className="text-right text-[11px] text-slate-500">
+                          <div className="text-right text-[11px] text-[#6B7685]">
                             {c._count?.loads ?? c._count?.shipments ?? 0} loads
                           </div>
                         </div>
@@ -828,7 +828,7 @@ export default function OrderBuilderPage() {
                 )}
               </div>
             ) : (
-              <div className="rounded-lg border border-[#BA7517] bg-[#FAEEDA]/10 p-3">
+              <div className="rounded-lg border border-[#BA7517] bg-white p-3">
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex items-start gap-3 min-w-0">
                     <div className="w-10 h-10 rounded-lg bg-[#FAEEDA] text-[#BA7517] flex items-center justify-center text-sm font-bold">
@@ -836,10 +836,10 @@ export default function OrderBuilderPage() {
                     </div>
                     <div className="min-w-0">
                       <div className="flex items-center gap-2">
-                        <span className="text-sm font-semibold text-white">{selectedCustomer.name}</span>
+                        <span className="text-sm font-semibold text-[#0A2540]">{selectedCustomer.name}</span>
                         <StatusBadge status={selectedCustomer.status} />
                       </div>
-                      <div className="text-[11px] text-slate-400 mt-0.5">
+                      <div className="text-[11px] text-[#6B7685] mt-0.5">
                         {[selectedCustomer.industry, selectedCustomer.paymentTerms, selectedCustomer.creditLimit ? `Credit $${selectedCustomer.creditLimit.toLocaleString()}` : null]
                           .filter(Boolean).join(" · ")}
                       </div>
@@ -855,7 +855,7 @@ export default function OrderBuilderPage() {
                   </div>
                   <button
                     onClick={clearCustomer}
-                    className="text-[11px] text-slate-400 hover:text-white"
+                    className="text-[11px] text-[#BA7517] hover:text-[#8f5a11] focus:outline-none focus:ring-2 focus:ring-[#C5A572]/40 rounded"
                   >
                     Change
                   </button>
@@ -885,14 +885,14 @@ export default function OrderBuilderPage() {
                       onSelect={(parts) => setForm((f) => ({ ...f, originAddress: parts.address, originCity: parts.city, originState: parts.state, originZip: parts.zip, originFacilityId: "" }))}
                     />
                     <input placeholder="Facility name" value={form.originCompany} onChange={(e) => setForm((f) => ({ ...f, originCompany: e.target.value }))} className={inp} />
-                    <button type="button" onClick={() => setManualOriginMode(false)} className="text-[10px] text-slate-400 hover:text-white">← Back to saved facilities</button>
+                    <button type="button" onClick={() => setManualOriginMode(false)} className="text-[10px] text-[#6B7685] hover:text-[#0A2540] focus:outline-none focus:ring-2 focus:ring-[#C5A572]/40 rounded">← Back to saved facilities</button>
                   </div>
                 ) : form.originFacilityId ? (
-                  <div className="rounded-lg border border-[#C5A572]/40 bg-[#C5A572]/5 p-3">
+                  <div className="rounded-lg border border-[#BA7517] bg-white p-3">
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0 flex-1">
-                        <div className="text-sm font-semibold text-white truncate">{form.originCompany || "Unnamed facility"}</div>
-                        <div className="text-[11px] text-slate-400 mt-0.5">
+                        <div className="text-sm font-semibold text-[#0A2540] truncate">{form.originCompany || "Unnamed facility"}</div>
+                        <div className="text-[11px] text-[#6B7685] mt-0.5">
                           {[form.originAddress, [form.originCity, form.originState].filter(Boolean).join(", "), form.originZip].filter(Boolean).join(" · ") || "No address on file"}
                         </div>
                       </div>
@@ -948,14 +948,14 @@ export default function OrderBuilderPage() {
                       onSelect={(parts) => setForm((f) => ({ ...f, destAddress: parts.address, destCity: parts.city, destState: parts.state, destZip: parts.zip, destFacilityId: "" }))}
                     />
                     <input placeholder="Facility name" value={form.destCompany} onChange={(e) => setForm((f) => ({ ...f, destCompany: e.target.value }))} className={inp} />
-                    <button type="button" onClick={() => setManualDestMode(false)} className="text-[10px] text-slate-400 hover:text-white">← Back to saved facilities</button>
+                    <button type="button" onClick={() => setManualDestMode(false)} className="text-[10px] text-[#6B7685] hover:text-[#0A2540] focus:outline-none focus:ring-2 focus:ring-[#C5A572]/40 rounded">← Back to saved facilities</button>
                   </div>
                 ) : form.destFacilityId ? (
-                  <div className="rounded-lg border border-[#C5A572]/40 bg-[#C5A572]/5 p-3">
+                  <div className="rounded-lg border border-[#BA7517] bg-white p-3">
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0 flex-1">
-                        <div className="text-sm font-semibold text-white truncate">{form.destCompany || "Unnamed facility"}</div>
-                        <div className="text-[11px] text-slate-400 mt-0.5">
+                        <div className="text-sm font-semibold text-[#0A2540] truncate">{form.destCompany || "Unnamed facility"}</div>
+                        <div className="text-[11px] text-[#6B7685] mt-0.5">
                           {[form.destAddress, [form.destCity, form.destState].filter(Boolean).join(", "), form.destZip].filter(Boolean).join(" · ") || "No address on file"}
                         </div>
                       </div>
@@ -1105,7 +1105,7 @@ export default function OrderBuilderPage() {
 
             {/* Load-level checkboxes (temp controlled + customs only — hazmat
                 and stackable moved to per-line in LineItemsSection). */}
-            <div className="flex gap-4 mt-3 text-xs text-slate-300">
+            <div className="flex gap-4 mt-3 text-xs text-[#3A4A5F]">
               <Check label="Temp controlled" checked={form.temperatureControlled} onChange={(v) => setForm((f) => ({ ...f, temperatureControlled: v }))} />
               <Check label="Customs" checked={form.customsRequired} onChange={(v) => setForm((f) => ({ ...f, customsRequired: v }))} />
             </div>
@@ -1128,8 +1128,8 @@ export default function OrderBuilderPage() {
             )}
 
             {/* Shipment line items (v3.8.c) — multi-commodity capture */}
-            <div className="mt-4 pt-4 border-t border-white/5">
-              <div className="text-xs text-slate-400 uppercase tracking-wider font-medium mb-2">
+            <div className="mt-4 pt-4 border-t border-slate-200">
+              <div className="text-xs text-[#6B7685] uppercase tracking-wider font-medium mb-2">
                 Shipment Line Items
               </div>
               <LineItemsSection
@@ -1208,7 +1208,7 @@ export default function OrderBuilderPage() {
                 <button
                   type="button"
                   onClick={() => setForm((f) => ({ ...f, accessorials: [...f.accessorials, { type: "Detention", amount: 0, payer: "Customer" }] }))}
-                  className="flex items-center gap-1 text-[11px] text-[#C5A572] hover:text-white"
+                  className="flex items-center gap-1 text-[11px] text-[#BA7517] hover:text-[#8f5a11] focus:outline-none focus:ring-2 focus:ring-[#C5A572]/40 rounded"
                 >
                   <Plus className="w-3 h-3" /> Add accessorial
                 </button>
@@ -1248,8 +1248,8 @@ export default function OrderBuilderPage() {
                           onClick={() => setInstructionsView(t.key)}
                           className={`flex items-center gap-1.5 px-3 py-1.5 text-[11px] rounded-lg border transition ${
                             isActive
-                              ? "border-[#C5A572] bg-[#C5A572]/10 text-white"
-                              : "border-white/10 bg-white/[0.02] text-slate-400 hover:border-white/20"
+                              ? "border-[#BA7517] bg-[#FAEEDA] text-[#0A2540]"
+                              : "border-slate-200 bg-white text-[#6B7685] hover:border-[#C5A572]/40"
                           }`}
                         >
                           <span>{t.label}</span>
@@ -1316,9 +1316,9 @@ export default function OrderBuilderPage() {
           convertedLoadId + dispatchPending); Sprint 59.c tightened the
           isValid logic itself to require ZIP / contact phones / time
           windows / target cost / temp range. */}
-      <div className="mt-3 shrink-0 flex flex-wrap items-center justify-end gap-2 p-3 rounded-xl bg-[#161921] border border-white/10">
+      <div className="mt-3 shrink-0 flex flex-wrap items-center justify-end gap-2 p-3 rounded-xl bg-white border border-slate-200 shadow-sm">
         {!isValid && (
-          <div className="mr-auto flex items-center gap-2 text-[11px] text-amber-300">
+          <div className="mr-auto flex items-center gap-2 text-[11px] text-[#B07A1A]">
             <AlertTriangle className="w-3.5 h-3.5" />
             <span>Missing {requiredMissing.length} required field{requiredMissing.length === 1 ? "" : "s"} — hover any action to see the list</span>
           </div>
@@ -1326,16 +1326,16 @@ export default function OrderBuilderPage() {
         <button
           onClick={() => saveDraft.mutate()}
           disabled={saveDraft.isPending}
-          className="flex items-center gap-1 px-3 py-1.5 bg-white/5 hover:bg-white/10 border border-white/10 text-xs rounded-lg disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-[#C5A572]/40"
-          style={{ color: "var(--srl-text-secondary)" }}
+          className="flex items-center gap-1 px-3 py-1.5 bg-[#F5EEE0] hover:bg-[#EFE6D3] border border-slate-200 text-xs rounded-lg disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-[#C5A572]/40"
+          style={{ color: "#0A2540" }}
         >
           <Save className="w-3 h-3" /> Save draft
         </button>
         <button
           onClick={() => sendQuote.mutate()}
           disabled={!form.customerId || sendQuote.isPending}
-          className="flex items-center gap-1 px-3 py-1.5 bg-white/5 hover:bg-white/10 border border-white/10 text-xs rounded-lg disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-[#C5A572]/40"
-          style={{ color: "var(--srl-text-secondary)" }}
+          className="flex items-center gap-1 px-3 py-1.5 bg-[#F5EEE0] hover:bg-[#EFE6D3] border border-slate-200 text-xs rounded-lg disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-[#C5A572]/40"
+          style={{ color: "#0A2540" }}
         >
           <Send className="w-3 h-3" /> {sendQuote.isPending ? "Sending…" : "Send quote"}
         </button>
@@ -1371,8 +1371,8 @@ export default function OrderBuilderPage() {
           onClick={() => dispatchWaterfall.mutate()}
           disabled={saveDraft.isPending || dispatchPending || !isValid || !!convertedLoadId}
           title={isValid ? "Build a waterfall and let the scoring engine offer to carriers" : `Cannot create load — missing: ${requiredMissing.join(", ")}`}
-          className="flex items-center gap-1 px-3 py-1.5 bg-white/5 hover:bg-white/10 border border-white/10 text-xs rounded-lg disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-[#C5A572]/40"
-          style={{ color: "var(--srl-text-secondary)" }}
+          className="flex items-center gap-1 px-3 py-1.5 bg-[#F5EEE0] hover:bg-[#EFE6D3] border border-slate-200 text-xs rounded-lg disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-[#C5A572]/40"
+          style={{ color: "#0A2540" }}
         >
           {dispatchWaterfall.isPending ? "Building…" : "Waterfall"}
         </button>
@@ -1380,8 +1380,8 @@ export default function OrderBuilderPage() {
           onClick={() => dispatchLoadboard.mutate()}
           disabled={saveDraft.isPending || dispatchPending || !isValid || !!convertedLoadId}
           title={isValid ? "Post to internal Load Board for all approved carriers" : `Cannot create load — missing: ${requiredMissing.join(", ")}`}
-          className="flex items-center gap-1 px-3 py-1.5 bg-white/5 hover:bg-white/10 border border-white/10 text-xs rounded-lg disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-[#C5A572]/40"
-          style={{ color: "var(--srl-text-secondary)" }}
+          className="flex items-center gap-1 px-3 py-1.5 bg-[#F5EEE0] hover:bg-[#EFE6D3] border border-slate-200 text-xs rounded-lg disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-[#C5A572]/40"
+          style={{ color: "#0A2540" }}
         >
           {dispatchLoadboard.isPending ? "Posting…" : "Load Board"}
         </button>
@@ -1389,8 +1389,8 @@ export default function OrderBuilderPage() {
           onClick={() => dispatchDat.mutate()}
           disabled={saveDraft.isPending || dispatchPending || !isValid || !!convertedLoadId}
           title={isValid ? "Post to DAT loadboard (mock mode when DAT API not configured)" : `Cannot create load — missing: ${requiredMissing.join(", ")}`}
-          className="flex items-center gap-1 px-3 py-1.5 bg-white/5 hover:bg-white/10 border border-white/10 text-xs rounded-lg disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-[#C5A572]/40"
-          style={{ color: "var(--srl-text-secondary)" }}
+          className="flex items-center gap-1 px-3 py-1.5 bg-[#F5EEE0] hover:bg-[#EFE6D3] border border-slate-200 text-xs rounded-lg disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-[#C5A572]/40"
+          style={{ color: "#0A2540" }}
         >
           {dispatchDat.isPending ? "Posting…" : "DAT"}
         </button>
@@ -1486,19 +1486,24 @@ export default function OrderBuilderPage() {
 }
 
 // ─── Small UI helpers ───────────────────────────────────────
+// Sprint 62 Commit 3 (v3.8.afc) — Cream-themed canonical per CLAUDE.md §2.1
+// + tokens.md. Page background flips from dark navy to cream; section cards
+// from #161921 dark panels to white surfaces with subtle navy-tinted borders.
+// Primary text flips from white to --navy #0A2540 per skill SOT. Status
+// pairs (success/warning/danger/info) adopt the skill canonical pairs.
 
-const inp = "w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white focus:outline-none focus:border-gold/50";
-const inpSm = "w-full px-2 py-1.5 bg-white/5 border border-white/10 rounded text-xs text-white";
-const inpAuto = "w-full px-3 py-2 bg-[#FAEEDA]/20 border border-[#BA7517]/40 rounded-lg text-sm text-[#FAEEDA] focus:outline-none";
+const inp = "w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm text-[#0A2540] placeholder:text-[#A7AEB8] focus:outline-none focus:ring-2 focus:ring-[#C5A572]/40 focus:border-[#C5A572]";
+const inpSm = "w-full px-2 py-1.5 bg-white border border-slate-200 rounded text-xs text-[#0A2540] focus:outline-none focus:ring-2 focus:ring-[#C5A572]/40";
+const inpAuto = "w-full px-3 py-2 bg-[#FAEEDA] border border-[#BA7517]/40 rounded-lg text-sm text-[#0A2540] focus:outline-none focus:ring-2 focus:ring-[#C5A572]/40";
 
 function Section({ number, title, children }: { number: number; title: React.ReactNode; children: React.ReactNode }) {
   return (
-    <section className="mb-5 bg-[#161921] border border-white/10 rounded-xl p-4">
-      <div className="flex items-center gap-2 mb-3">
+    <section className="mb-5 bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
+      <div className="flex items-center gap-2 mb-3 pb-2 border-b border-[#C5A572]/40">
         <div className="w-6 h-6 rounded-full bg-[#FAEEDA] text-[#BA7517] flex items-center justify-center text-xs font-bold">
           {number}
         </div>
-        <h2 className="text-sm font-semibold text-white">{title}</h2>
+        <h2 className="text-sm font-semibold text-[#0A2540]">{title}</h2>
       </div>
       {children}
     </section>
@@ -1506,15 +1511,15 @@ function Section({ number, title, children }: { number: number; title: React.Rea
 }
 
 function Label({ children }: { children: React.ReactNode }) {
-  return <div className="text-[10px] text-slate-400 uppercase tracking-wider font-medium mb-1">{children}</div>;
+  return <div className="text-[10px] text-[#6B7685] uppercase tracking-wider font-medium mb-1">{children}</div>;
 }
 
 function Field({ label, tag, children }: { label: string; tag?: string; children: React.ReactNode }) {
   return (
     <div>
-      <div className="flex items-center gap-1 text-[10px] text-slate-400 uppercase tracking-wider font-medium mb-1">
+      <div className="flex items-center gap-1 text-[10px] text-[#6B7685] uppercase tracking-wider font-medium mb-1">
         {label}
-        {tag && <span className="text-[8px] text-[#C5A572] normal-case">· {tag}</span>}
+        {tag && <span className="text-[8px] text-[#BA7517] normal-case">· {tag}</span>}
       </div>
       {children}
     </div>
@@ -1523,8 +1528,8 @@ function Field({ label, tag, children }: { label: string; tag?: string; children
 
 function Check({ label, checked, onChange }: { label: string; checked: boolean; onChange: (v: boolean) => void }) {
   return (
-    <label className="flex items-center gap-1.5 cursor-pointer">
-      <input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} />
+    <label className="flex items-center gap-1.5 cursor-pointer text-[#3A4A5F]">
+      <input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} className="accent-[#BA7517]" />
       <span>{label}</span>
     </label>
   );
@@ -1544,8 +1549,8 @@ function TogglePill({
       onClick={onClick}
       className={`px-3 py-1.5 text-xs rounded-full border transition ${
         active
-          ? activeCls ?? "bg-[#C5A572] text-[#0F1117] border-[#C5A572]"
-          : "bg-white/5 text-slate-400 border-white/10"
+          ? activeCls ?? "bg-[#BA7517] text-white border-[#BA7517]"
+          : "bg-white text-[#6B7685] border-slate-200 hover:border-[#C5A572]/40"
       }`}
     >
       {label}
@@ -1561,32 +1566,32 @@ function DispatchCard({
       type="button"
       onClick={onClick}
       className={`text-left p-3 rounded-lg border transition ${
-        active ? "border-[#C5A572] bg-[#C5A572]/10" : "border-white/10 bg-white/[0.02] hover:border-white/20"
+        active ? "border-[#BA7517] bg-[#FAEEDA]/60" : "border-slate-200 bg-white hover:border-[#C5A572]/40"
       }`}
     >
       <div className="flex items-center gap-2">
-        <span className={`w-3 h-3 rounded-full border ${active ? "bg-[#C5A572] border-[#C5A572]" : "border-white/30"}`} />
-        <span className="text-xs font-semibold text-white">{title}</span>
+        <span className={`w-3 h-3 rounded-full border ${active ? "bg-[#BA7517] border-[#BA7517]" : "border-slate-300"}`} />
+        <span className="text-xs font-semibold text-[#0A2540]">{title}</span>
       </div>
-      <div className="text-[10px] text-slate-400 mt-1 ml-5">{desc}</div>
+      <div className="text-[10px] text-[#6B7685] mt-1 ml-5">{desc}</div>
     </button>
   );
 }
 
 function StatusBadge({ status }: { status: string }) {
   const s = (status || "").toLowerCase();
-  const cls = s.includes("prospect") ? "bg-amber-500/20 text-amber-400"
-            : s.includes("inactive") ? "bg-gray-500/20 text-gray-400"
-            : "bg-green-500/20 text-green-400";
+  const cls = s.includes("prospect") ? "bg-[#FBEFD4] text-[#B07A1A]"
+            : s.includes("inactive") ? "bg-slate-100 text-slate-600"
+            : "bg-[#E6F0E9] text-[#2F7A4F]";
   return <span className={`px-1.5 py-0.5 text-[9px] rounded ${cls}`}>{status || "Active"}</span>;
 }
 
 function DraftStatus({ state, at }: { state: SaveState; at: Date | null }) {
-  if (state === "saving") return <span className="text-[10px] text-slate-400">Saving…</span>;
-  if (state === "error") return <span className="text-[10px] text-red-400">Save failed</span>;
+  if (state === "saving") return <span className="text-[10px] text-[#6B7685]">Saving…</span>;
+  if (state === "error") return <span className="text-[10px] text-[#9B2C2C]">Save failed</span>;
   if (state === "saved" && at) {
     const ago = Math.round((Date.now() - at.getTime()) / 1000);
-    return <span className="text-[10px] text-slate-400">Draft saved {ago < 5 ? "just now" : `${ago}s ago`}</span>;
+    return <span className="text-[10px] text-[#6B7685]">Draft saved {ago < 5 ? "just now" : `${ago}s ago`}</span>;
   }
   return null;
 }
@@ -1608,16 +1613,16 @@ function PoInput({ pos, onChange }: { pos: string[]; onChange: (list: string[]) 
           placeholder="PO#"
           className={inpSm}
         />
-        <button type="button" onClick={add} className="px-2 py-1 bg-white/5 border border-white/10 rounded text-xs text-slate-300">
+        <button type="button" onClick={add} className="px-2 py-1 bg-[#F5EEE0] hover:bg-[#EFE6D3] border border-slate-200 rounded text-xs text-[#0A2540] focus:outline-none focus:ring-2 focus:ring-[#C5A572]/40">
           <Plus className="w-3 h-3" />
         </button>
       </div>
       {pos.length > 0 && (
         <div className="flex flex-wrap gap-1">
           {pos.map((p) => (
-            <span key={p} className="inline-flex items-center gap-1 px-1.5 py-0.5 text-[9px] bg-white/5 rounded">
+            <span key={p} className="inline-flex items-center gap-1 px-1.5 py-0.5 text-[9px] bg-[#FAEEDA] text-[#0A2540] rounded">
               {p}
-              <button onClick={() => onChange(pos.filter((x) => x !== p))} className="text-slate-500 hover:text-white">
+              <button onClick={() => onChange(pos.filter((x) => x !== p))} className="text-[#6B7685] hover:text-[#9B2C2C]">
                 <X className="w-2 h-2" />
               </button>
             </span>

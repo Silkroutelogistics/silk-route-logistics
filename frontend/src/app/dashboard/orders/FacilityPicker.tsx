@@ -51,7 +51,7 @@ export function FacilityPicker({ customerId, side, selectedFacilityId, onSelect,
 
   if (!customerId) {
     return (
-      <div className="p-3 text-[11px] text-slate-500 text-center border border-dashed border-white/10 rounded-lg">
+      <div className="p-3 text-[11px] text-[#6B7685] text-center border border-dashed border-slate-300 rounded-lg bg-white">
         Select a customer to load saved facilities
       </div>
     );
@@ -66,27 +66,27 @@ export function FacilityPicker({ customerId, side, selectedFacilityId, onSelect,
             key={f.id}
             type="button"
             onClick={() => onSelect(f)}
-            className={`w-full text-left p-2.5 rounded-lg border transition ${
+            className={`w-full text-left p-2.5 rounded-lg border transition focus:outline-none focus:ring-2 focus:ring-[#C5A572]/40 ${
               isSelected
-                ? "border-[#C5A572] bg-[#C5A572]/10"
-                : "border-white/10 bg-white/[0.02] hover:border-white/20"
+                ? "border-[#BA7517] bg-[#FAEEDA]"
+                : "border-slate-200 bg-white hover:border-[#C5A572]/40 hover:bg-[#FAEEDA]/30"
             }`}
           >
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0">
                 <div className="flex items-center gap-1 flex-wrap">
-                  <MapPin className={`w-3 h-3 shrink-0 ${isSelected ? "text-[#C5A572]" : "text-slate-400"}`} />
-                  <span className="text-xs font-medium text-white truncate">{f.name}</span>
+                  <MapPin className={`w-3 h-3 shrink-0 ${isSelected ? "text-[#BA7517]" : "text-[#6B7685]"}`} />
+                  <span className="text-xs font-semibold text-[#0A2540] truncate">{f.name}</span>
                   {f.isPrimary && (
                     <span className="inline-flex items-center gap-0.5 px-1 py-0.5 text-[9px] rounded bg-[#FAEEDA] text-[#BA7517]">
                       <Star className="w-2 h-2" /> Primary {side === "pickup" ? "PU" : "DEL"}
                     </span>
                   )}
                 </div>
-                <div className="text-[10px] text-slate-500 mt-0.5 truncate">
+                <div className="text-[10px] text-[#6B7685] mt-0.5 truncate">
                   {f.address ? `${f.address}, ` : ""}{f.city}, {f.state} {f.zip ?? ""}
                 </div>
-                <div className="text-[10px] text-slate-500 mt-0.5 flex gap-2">
+                <div className="text-[10px] text-[#6B7685] mt-0.5 flex gap-2">
                   <span className="uppercase">{f.loadType}</span>
                   {f.estimatedLoadTimeMinutes && <span>· {f.estimatedLoadTimeMinutes}m est</span>}
                   {f.appointmentRequired && <span>· Appt</span>}
@@ -97,14 +97,14 @@ export function FacilityPicker({ customerId, side, selectedFacilityId, onSelect,
         );
       })}
       {facilities.length === 0 && !q.isLoading && (
-        <div className="p-3 text-[11px] text-slate-500 text-center border border-dashed border-white/10 rounded-lg">
+        <div className="p-3 text-[11px] text-[#6B7685] text-center border border-dashed border-slate-300 rounded-lg bg-white">
           No saved {side} facilities for this customer
         </div>
       )}
       <button
         type="button"
         onClick={onAddNew}
-        className="w-full flex items-center justify-center gap-1 p-2 text-[11px] text-[#C5A572] border border-dashed border-[#C5A572]/40 rounded-lg hover:bg-[#C5A572]/5 transition"
+        className="w-full flex items-center justify-center gap-1 p-2 text-[11px] text-[#BA7517] border border-dashed border-[#BA7517]/40 rounded-lg hover:bg-[#FAEEDA]/40 transition focus:outline-none focus:ring-2 focus:ring-[#C5A572]/40"
       >
         <Plus className="w-3 h-3" /> Add new {side}
       </button>
