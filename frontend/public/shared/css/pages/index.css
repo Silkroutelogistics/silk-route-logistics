@@ -782,16 +782,15 @@
       gap: 28px;
     }
 
-    /* v3.8.aeh — service cards refactored to type-forward (matches the
-       v3.8.adz dual-persona collapse pattern). Unsplash stock photos
-       stripped from all 4 cards including the Scania (European cab)
-       brand-canon violation on the Dedicated Capacity card. 3px navy
-       top-accent strip provides visual rhythm without imagery. */
+    /* v3.8.aem — service cards gain Lucide-style line-icons + hairline
+       gold divider for premium visual upgrade (per user feedback that
+       the v3.8.aeh type-forward refactor read too plain). Cards stay
+       white on the cream-2 section bg for elevation pop. */
     .service-card {
       position: relative;
       background: var(--white);
       border-radius: var(--radius);
-      padding: 32px 28px 28px;
+      padding: 28px 28px 28px;
       border: 1px solid rgba(10, 37, 64, 0.10);
       transition: var(--transition);
       overflow: hidden;
@@ -818,7 +817,33 @@
       font-weight: 700;
       font-size: 1.2rem;
       color: var(--navy);
-      margin-bottom: 10px;
+      margin-bottom: 4px;
+    }
+
+    /* v3.8.aem — shared glyph + hairline divider styles for service +
+       tms cards. Lucide-style line icons inline-SVG in card-glyph, gold
+       hairline rule between H4 and body via card-divider. */
+    .card-glyph {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 38px;
+      height: 38px;
+      margin-bottom: 14px;
+    }
+
+    .card-glyph svg {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    .card-divider {
+      width: 36px;
+      height: 1px;
+      background: var(--gold-dark);
+      border: 0;
+      margin: 8px 0 14px;
     }
 
     .service-card p {
@@ -976,12 +1001,16 @@
       margin: 0 auto;
     }
 
+    /* v3.8.aem — tms-column bg flipped from white → cream-2 for an
+       "inset frame" feel on the cream section bg (vs services grid
+       which keeps white-on-cream-2 for pop). Different visual treatment
+       per section using same palette. */
     .tms-column {
       position: relative;
-      background: var(--white);
+      background: var(--cream-2);
       border: 1px solid rgba(10, 37, 64, 0.10);
       border-radius: var(--radius);
-      padding: 32px 28px 28px;
+      padding: 28px 28px 24px;
       transition: var(--transition);
       overflow: hidden;
     }
@@ -1014,7 +1043,7 @@
       font-weight: 700;
       font-size: 1.25rem;
       color: var(--navy);
-      margin-bottom: 18px;
+      margin-bottom: 4px;
     }
 
     .tms-features {
