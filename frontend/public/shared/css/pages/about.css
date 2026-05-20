@@ -648,6 +648,134 @@
     }
 
     /* ========================================
+       HOW AI WORKS AT SRL (v3.8.aer)
+       Deeper-treatment pair to homepage's "AI is a lever" line.
+       3-card grid + Where AI Stops boundaries panel.
+       ======================================== */
+    .ai-section {
+      padding: 100px 0;
+      background: var(--cream, #FBF7F0);
+      position: relative;
+    }
+
+    .ai-header {
+      text-align: center;
+      margin-bottom: 56px;
+    }
+
+    .ai-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 28px;
+      max-width: 1080px;
+      margin: 0 auto 48px;
+    }
+
+    .ai-card {
+      position: relative;
+      background: var(--white, #FFFFFF);
+      border: 1px solid rgba(10, 37, 64, 0.10);
+      border-radius: 16px;
+      padding: 32px 28px 28px;
+      transition: transform 0.4s ease, box-shadow 0.4s ease, border-color 0.4s ease;
+      overflow: hidden;
+    }
+
+    .ai-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: var(--gold-dark, #BA7517);
+    }
+
+    .ai-card:hover {
+      transform: translateY(-4px);
+      border-color: transparent;
+      box-shadow: 0 12px 40px rgba(10, 37, 64, 0.12);
+    }
+
+    .ai-card h3 {
+      font-size: 20px;
+      color: var(--navy, #0A2540);
+      margin-bottom: 12px;
+      font-weight: 700;
+    }
+
+    .ai-card p {
+      font-size: 14px;
+      color: var(--text-muted, #6B7685);
+      line-height: 1.7;
+      margin: 0;
+    }
+
+    /* Where AI Stops — boundaries panel.
+       Visually differentiated from the 3-card grid above. Navy left
+       accent stripe + cream-2 background communicates "honest boundaries"
+       rather than "feature pitch". Rare disclosure in the broker
+       category — the brand-distinctive move. */
+    .ai-boundaries {
+      max-width: 880px;
+      margin: 0 auto;
+      background: var(--cream-2, #F5EEE0);
+      border: 1px solid rgba(10, 37, 64, 0.12);
+      border-left: 4px solid var(--navy, #0A2540);
+      border-radius: 12px;
+      padding: 32px 36px 28px;
+    }
+
+    .ai-boundaries h3 {
+      font-size: 18px;
+      color: var(--navy, #0A2540);
+      margin-bottom: 12px;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+    }
+
+    .ai-boundaries p {
+      font-size: 14px;
+      color: var(--text-muted, #6B7685);
+      line-height: 1.7;
+      margin: 0 0 16px;
+    }
+
+    .ai-boundaries-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+
+    .ai-boundaries-list li {
+      position: relative;
+      padding: 6px 0 6px 22px;
+      font-size: 14px;
+      line-height: 1.6;
+      color: var(--navy, #0A2540);
+    }
+
+    .ai-boundaries-list li::before {
+      content: '\203A';
+      position: absolute;
+      left: 4px;
+      top: 6px;
+      color: var(--gold-dark, #BA7517);
+      font-weight: 700;
+      font-size: 16px;
+    }
+
+    @media (max-width: 768px) {
+      .ai-grid {
+        grid-template-columns: 1fr;
+        gap: 18px;
+      }
+      .ai-boundaries {
+        padding: 24px 24px 22px;
+      }
+    }
+
+    /* ========================================
        LEADERSHIP
        ======================================== */
     .leadership-section {
