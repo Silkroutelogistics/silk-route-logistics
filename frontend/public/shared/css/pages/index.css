@@ -1144,30 +1144,16 @@
        with auto width so each retains its native composition (shipper
        16:9, carrier 1:1). Soft shadow lifts them off the cream-2 card
        background. */
-    /* v3.8.afi — TMS column icons retired the navy filled circle wrapper
-       (read too heavy on the cream-2 card surface; visually dominated
-       the card chrome). Now ships as iconographic mark only: navy line
-       icon at 36px, no wrapper, no fill. Reads more premium B2B
-       tech-forward (Stripe / Linear / Vercel register) and stays
-       proportional to the executive-register copy below it. */
-    .tms-icon-wrap {
-      display: block;
-      margin-bottom: 22px;
-    }
-
-    .tms-icon-wrap svg {
-      color: var(--navy);
-      display: block;
-      width: 36px;
-      height: 36px;
-    }
-
-    @media (max-width: 760px) {
-      .tms-icon-wrap svg {
-        width: 30px;
-        height: 30px;
-      }
-    }
+    /* v3.8.afm — TMS column iconography retired entirely. Audit against
+       the homepage's two-card pattern (hero Shipper/Carrier + Caravan
+       Partner Program section) found both established type-forward
+       with no card icons; Section 7 was the lone exception. Dropping
+       icons brings cross-section conformance to one register and lets
+       the executive-register result line + bullets carry the visual
+       structure. Earlier iterations (heavy navy circle v3.8.afb,
+       gold-stroke v3.8.afd, lighter wrapper v3.8.afg, iconographic
+       mark v3.8.afj) all chased a presence/weight balance that the
+       type-forward layout simply doesn't need. */
 
     .tms-column h4 {
       font-family: var(--font-headline);
