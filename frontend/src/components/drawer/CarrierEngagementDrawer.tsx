@@ -2,12 +2,13 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { X, MapPin, Package, Calendar, FileText, Truck, DollarSign, MessageSquare, AlertCircle, Loader2 } from "lucide-react";
+import { X, AlertCircle, AlertTriangle, ShieldAlert, Loader2 } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { api } from "@/lib/api";
-import { CustomerPicker, type CustomerSummary } from "@/components/shared/CustomerPicker";
-import { IconTabs, type IconTabDef } from "@/components/ui/IconTabs";
+import { useAuthStore } from "@/hooks/useAuthStore";
+import { type CustomerSummary } from "@/components/shared/CustomerPicker";
+import { OverrideComplianceModal } from "@/components/loads/OverrideComplianceModal";
 
 /**
  * Sprint 59 (v3.8.acj) Item 176 — Carrier Engagement Drawer.
@@ -158,22 +159,28 @@ export interface CarrierEngagementDrawerProps {
   onSubmitSuccess?: (result: { loadId: string; tenderId: string; rcId: string | null }) => void;
 }
 
-type SectionKey = "lane" | "freight" | "schedule" | "stops" | "carrier" | "financials" | "instructions";
+// Sprint 63 (v3.8.afi) — SectionKey deprecated. Drawer no longer uses IconTabs.
 
-// Sprint 59.a (v3.8.acn) Bug #1 fix — vertical IconTabs canonical (matches
-// T&T LoadDetailDrawer pattern at frontend/src/app/dashboard/track-trace/
-// LoadDetailDrawer.tsx:108-112). Sprint 59 originally shipped horizontal
-// tabs in the form body; this restructures to match the canonical right-
-// drawer pattern (IconTabs left strip + flex-1 content sibling).
-const SECTIONS: IconTabDef<SectionKey>[] = [
-  { id: "lane",          label: "Lane",         Icon: MapPin },
-  { id: "freight",       label: "Freight",      Icon: Package },
-  { id: "schedule",      label: "Schedule",     Icon: Calendar },
-  { id: "stops",         label: "Refs",         Icon: FileText },
-  { id: "carrier",       label: "Carrier",      Icon: Truck },
-  { id: "financials",    label: "Financials",   Icon: DollarSign },
-  { id: "instructions",  label: "Instructions", Icon: MessageSquare },
-];
+// Strip leading "MC-" / "MC " / "MC#" / "MC# " from carrier.mcNumber so
+// header rendering produces "MC# 596655" not "MC# MC-596655". Some
+// CarrierProfile rows store the prefix verbatim from FMCSA snapshots.
+function cleanMcNumber(raw: string | null | undefined): string {
+  if (!raw) return "not on file";
+  return String(raw).replace(/^MC[#\s-]*/i, "").trim() || "not on file";
+}
+
+type InstructionsAudience = "special" | "pickup" | "delivery";
+
+interface ComplianceResult {
+  allowed: boolean;
+  blocked_reasons: string[];
+  warnings: string[];
+}
+
+// Sprint 63 (v3.8.afi) — IconTabs SECTIONS array deprecated. Drawer
+// collapses to 3 stacked sections (Carrier / Financials / Instructions)
+// + read-only SummaryHeader. AE no longer tabs through order data
+// already entered in Order Builder.
 
 const EMPTY_FORM: DrawerFormState = {
   originCity: "", originState: "", originZip: "", originAddress: "", originCompany: "", originContactName: "", originContactPhone: "",
@@ -198,14 +205,48 @@ export function CarrierEngagementDrawer(props: CarrierEngagementDrawerProps) {
   if (mode === "recovery")  throw new Error("CarrierEngagementDrawer Mode 'recovery' is not yet implemented. Scheduled for Sprint 62.");
 
   const router = useRouter();
-  const [section, setSection] = useState<SectionKey>("lane");
   const [customer, setCustomer] = useState<CustomerSummary | null>(initialCustomer ?? null);
   const [selectedCarrier, setSelectedCarrier] = useState<CarrierSearchResult | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  // Sprint 63 (v3.8.afi) — Instructions audience tabs (mirrors Order
+  // Builder Section 4 Sprint 61 pattern). One textarea binds to the
+  // active audience field; underlying 3 fields (specialInstructions /
+  // pickupInstructions / deliveryInstructions) preserved on submit.
+  const [instructionsAudience, setInstructionsAudience] = useState<InstructionsAudience>("special");
+  // Sprint 63 — compliance override modal state. Mounts the existing
+  // Sprint 40 OverrideComplianceModal (Item 58) when ADMIN/CEO clicks
+  // "Override compliance block" next to the blocked-reasons banner.
+  const [showOverrideModal, setShowOverrideModal] = useState(false);
 
-  const { register, handleSubmit, watch, reset, formState: { errors } } = useForm<DrawerFormState>({
+  // Sprint 63 — role gate for compliance override button. Mirrors
+  // Load Board pattern at loads/page.tsx:144.
+  const { user } = useAuthStore();
+  const isAdminOrCeo = user?.role === "ADMIN" || user?.role === "CEO";
+
+  const { register, handleSubmit, watch, reset, setValue } = useForm<DrawerFormState>({
     defaultValues: { ...EMPTY_FORM, ...(initialFormData ?? {}) },
   });
+
+  // Sprint 63 (v3.8.afi) — compliance pre-check. Fires when AE selects
+  // a carrier so the blocked_reasons surface BEFORE the AE clicks Send
+  // Tender. Mirrors Load Board TenderForm pattern at loads/page.tsx:851.
+  // GET /compliance/carrier/:id/check returns { allowed, blocked_reasons[], warnings[] }
+  // per complianceMonitorService.ts:22-167.
+  const complianceQuery = useQuery<ComplianceResult>({
+    queryKey: ["drawer-compliance", selectedCarrier?.id],
+    queryFn: async () => {
+      // POST per backend signature at routes/compliance.ts:58. Endpoint is
+      // idempotent + read-shaped; POST is the existing contract.
+      const { data } = await api.post(`/compliance/carrier/${selectedCarrier!.id}/check`);
+      return data as ComplianceResult;
+    },
+    enabled: !!selectedCarrier?.id,
+    staleTime: 30_000,
+  });
+
+  const compliance = complianceQuery.data ?? null;
+  const isCarrierBlocked = compliance !== null && !compliance.allowed;
+  const hasComplianceWarnings = compliance !== null && compliance.allowed && compliance.warnings.length > 0;
 
   // Sprint 59.a (v3.8.acn) Bug #2 fix — re-seed form on each `open` flip.
   // react-hook-form's useForm reads defaultValues only once at mount; the
@@ -344,6 +385,23 @@ export function CarrierEngagementDrawer(props: CarrierEngagementDrawerProps) {
 
   if (!open) return null;
 
+  // Instructions audience tab metadata (mirrors Order Builder Section 4 Sprint 61).
+  const INSTR_TABS = [
+    { key: "special" as const,  label: "Carrier (rate con + email)", field: "specialInstructions" as const, hint: "Carrier sees this on the Rate Confirmation PDF and tender email." },
+    { key: "pickup" as const,   label: "Pickup",                     field: "pickupInstructions" as const,  hint: "Pickup-specific notes for the driver." },
+    { key: "delivery" as const, label: "Delivery",                   field: "deliveryInstructions" as const, hint: "Delivery-specific notes for the driver." },
+  ];
+  const activeInstr = INSTR_TABS.find((t) => t.key === instructionsAudience)!;
+
+  // Sprint 63 — block submit when compliance is loaded + blocked. AE must
+  // override (or pick a different carrier) before Send Tender enables.
+  const sendBlocked =
+    submitMutation.isPending ||
+    !customer ||
+    !selectedCarrier ||
+    complianceQuery.isLoading ||
+    isCarrierBlocked;
+
   return (
     <div className="fixed inset-0 z-50">
       <div className="absolute inset-0 bg-black/30" onClick={onClose} />
@@ -351,200 +409,114 @@ export function CarrierEngagementDrawer(props: CarrierEngagementDrawerProps) {
         role="dialog"
         aria-modal="true"
         aria-labelledby="carrier-drawer-title"
-        className="absolute top-0 bottom-0 right-0 w-full max-w-[720px] bg-white shadow-2xl flex animate-slide-in-right"
+        className="absolute top-0 bottom-0 right-0 w-full max-w-[720px] bg-white shadow-2xl flex flex-col animate-slide-in-right"
       >
-        {/* Sprint 59.a (v3.8.acn) Bug #1 — vertical IconTabs strip canonical
-            (matches T&T LoadDetailDrawer.tsx:108-112). Replaces Sprint 59's
-            horizontal tab nav which violated the right-drawer canonical
-            pattern. */}
-        <IconTabs tabs={SECTIONS} active={section} onChange={setSection} />
-
-        <div className="flex-1 flex flex-col min-w-0">
-          {/* Header */}
-          <div className="px-6 py-4 border-b border-slate-200 shrink-0 flex items-center justify-between gap-3">
-            <div>
-              <h2 id="carrier-drawer-title" className="text-lg font-semibold text-slate-900">
-                Carrier Engagement {mode === "build-and-tender" && <span className="text-xs font-normal text-slate-500 ml-2">Build &amp; Tender</span>}
-              </h2>
-              <div className="text-xs text-slate-500 mt-0.5">
-                {customer ? customer.name : "No customer selected"}
-                {selectedCarrier && customer && " · "}
-                {selectedCarrier && <span className="text-[#BA7517] font-medium">{selectedCarrier.company ?? "Carrier"} (MC# {selectedCarrier.mcNumber ?? "not on file"})</span>}
+        {/* Sprint 63 (v3.8.afi) — IconTabs dropped. 3-section drawer scrolls
+            vertically; tabs canonical (§13.3 Item 63) was for ≥5 sections.
+            Customer breadcrumb dropped in Mode 1 — Order Builder already
+            shows it. Carrier line stays since that's the new pick. */}
+        <div className="px-6 py-4 border-b border-slate-200 shrink-0 flex items-center justify-between gap-3">
+          <div>
+            <h2 id="carrier-drawer-title" className="text-lg font-semibold text-slate-900">
+              Carrier Engagement
+              {mode === "build-and-tender" && <span className="text-xs font-normal text-slate-500 ml-2">Build &amp; Tender</span>}
+            </h2>
+            {selectedCarrier && (
+              <div className="text-xs mt-0.5">
+                <span className="text-[#BA7517] font-medium">
+                  {selectedCarrier.company ?? "Carrier"}
+                </span>
+                <span className="text-slate-500"> · MC# {cleanMcNumber(selectedCarrier.mcNumber)}</span>
               </div>
-            </div>
-            <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-600 transition" aria-label="Close">
-              <X className="w-5 h-5" />
-            </button>
+            )}
           </div>
+          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-600 transition focus:outline-none focus:ring-2 focus:ring-[#C5A572]/40" aria-label="Close">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
 
-        {/* Form body */}
+        {/* Sprint 63 — read-only SummaryHeader. Replaces the 4 dropped data-
+            entry tabs (Lane / Freight / Schedule / Refs). AE who needs to
+            edit lane data closes the drawer and edits in Order Builder. */}
+        <SummaryHeader
+          customer={customer}
+          originCity={watch("originCity")} originState={watch("originState")} originCompany={watch("originCompany")}
+          destCity={watch("destCity")} destState={watch("destState")} destCompany={watch("destCompany")}
+          distance={watch("distance")}
+          equipmentType={watch("equipmentType")}
+          pickupDate={watch("pickupDate")} pickupTimeStart={watch("pickupTimeStart")} pickupTimeEnd={watch("pickupTimeEnd")}
+          deliveryDate={watch("deliveryDate")} deliveryTimeStart={watch("deliveryTimeStart")} deliveryTimeEnd={watch("deliveryTimeEnd")}
+          pieces={watch("pieces")} weight={watch("weight")} description={watch("description")}
+          lineItemsRestCount={lineItemsRest?.length ?? 0}
+          poNumbersText={watch("poNumbersText")}
+        />
+
         <form onSubmit={handleSubmit((d) => submitMutation.mutate(d))} className="flex-1 flex flex-col min-h-0">
-          <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4">
-
-            {/* ── LANE ── */}
-            {section === "lane" && (
-              <div className="space-y-3">
-                {!customer && (
-                  <div>
-                    <Label>Customer</Label>
-                    <CustomerPicker value={customer} onChange={setCustomer} />
-                  </div>
-                )}
-                <Label>Origin</Label>
-                <div className="grid grid-cols-2 gap-2">
-                  <Input placeholder="City" {...register("originCity", { required: true })} />
-                  <Input placeholder="State (2-letter)" {...register("originState", { required: true })} />
-                  <Input placeholder="ZIP" {...register("originZip", { required: true })} />
-                  <Input placeholder="Company" {...register("originCompany")} />
-                  <Input placeholder="Address" className="col-span-2" {...register("originAddress")} />
-                  <Input placeholder="Contact name" {...register("originContactName")} />
-                  <Input placeholder="Contact phone" {...register("originContactPhone")} />
-                </div>
-                <Label>Destination</Label>
-                <div className="grid grid-cols-2 gap-2">
-                  <Input placeholder="City" {...register("destCity", { required: true })} />
-                  <Input placeholder="State (2-letter)" {...register("destState", { required: true })} />
-                  <Input placeholder="ZIP" {...register("destZip", { required: true })} />
-                  <Input placeholder="Company" {...register("destCompany")} />
-                  <Input placeholder="Address" className="col-span-2" {...register("destAddress")} />
-                  <Input placeholder="Contact name" {...register("destContactName")} />
-                  <Input placeholder="Contact phone" {...register("destContactPhone")} />
-                </div>
-                <div>
-                  <Label>Distance (mi)</Label>
-                  <Input type="number" placeholder="Auto" {...register("distance")} />
-                </div>
-              </div>
-            )}
-
-            {/* ── FREIGHT ── */}
-            {section === "freight" && (
-              <div className="space-y-3">
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <Label>Equipment</Label>
-                    <Input {...register("equipmentType", { required: true })} />
-                  </div>
-                  <div>
-                    <Label>Commodity</Label>
-                    <Input placeholder="e.g. Wellness Wands" {...register("commodity")} />
-                  </div>
-                </div>
-                {/* Sprint 59.b (v3.8.act) Item 176 — multi-line chip.
-                    When Order Builder draft has >1 line item, primary is
-                    editable in the form; extras pass through on submit. */}
-                {lineItemsRest && lineItemsRest.length > 0 ? (
-                  <div className="flex items-center justify-between gap-2 p-2 rounded-lg bg-[#FAEEDA]/40 border border-[#BA7517]/30">
-                    <div className="text-[11px] text-slate-700">
-                      Primary freight line shown below. <strong>+{lineItemsRest.length} more line{lineItemsRest.length === 1 ? "" : "s"}</strong> from the order draft will be included on the BOL.
-                    </div>
-                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#BA7517] text-white font-medium">+{lineItemsRest.length}</span>
-                  </div>
-                ) : (
-                  <div className="text-[11px] text-slate-500 italic">
-                    Single-line freight. Multi-line edit UI is Sprint 60+.
-                  </div>
-                )}
-                <div className="grid grid-cols-4 gap-2">
-                  <div>
-                    <Label>Pieces</Label>
-                    <Input type="number" {...register("pieces")} />
-                  </div>
-                  <div>
-                    <Label>Pkg type</Label>
-                    <Input {...register("packageType")} />
-                  </div>
-                  <div className="col-span-2">
-                    <Label>Description</Label>
-                    <Input {...register("description")} />
-                  </div>
-                  <div className="col-span-2">
-                    <Label>Weight (lbs)</Label>
-                    <Input type="number" {...register("weight")} />
-                  </div>
-                </div>
-                <div className="flex gap-4 pt-2">
-                  <label className="flex items-center gap-2 text-xs text-slate-700">
-                    <input type="checkbox" {...register("hazmat")} /> Hazmat
-                  </label>
-                  <label className="flex items-center gap-2 text-xs text-slate-700">
-                    <input type="checkbox" {...register("temperatureControlled")} /> Temperature controlled
-                  </label>
-                </div>
-                {watch("temperatureControlled") && (
-                  <div className="grid grid-cols-2 gap-2">
-                    <Input type="number" placeholder="Min °F" {...register("tempMin")} />
-                    <Input type="number" placeholder="Max °F" {...register("tempMax")} />
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* ── SCHEDULE ── */}
-            {section === "schedule" && (
-              <div className="space-y-3">
-                <div>
-                  <Label>Pickup date</Label>
-                  <Input type="date" {...register("pickupDate", { required: true })} />
-                </div>
-                <div className="grid grid-cols-2 gap-2">
-                  <Input type="time" placeholder="Window start" {...register("pickupTimeStart")} />
-                  <Input type="time" placeholder="Window end" {...register("pickupTimeEnd")} />
-                </div>
-                <div>
-                  <Label>Delivery date</Label>
-                  <Input type="date" {...register("deliveryDate", { required: true })} />
-                </div>
-                <div className="grid grid-cols-2 gap-2">
-                  <Input type="time" placeholder="Window start" {...register("deliveryTimeStart")} />
-                  <Input type="time" placeholder="Window end" {...register("deliveryTimeEnd")} />
-                </div>
-              </div>
-            )}
-
-            {/* ── STOPS & REFS ── */}
-            {section === "stops" && (
-              <div className="space-y-3">
-                <div className="text-[11px] text-slate-500 italic">
-                  Multi-stop UX expands in Sprint 60+. Sprint 59 ships single pickup/delivery + references.
-                </div>
-                <div>
-                  <Label>PO numbers (comma-separated)</Label>
-                  <Input placeholder="PO123, PO456" {...register("poNumbersText")} />
-                </div>
-                <div>
-                  <Label>Shipper reference</Label>
-                  <Input {...register("shipperReference")} />
-                </div>
-                <div>
-                  <Label>Delivery reference</Label>
-                  <Input {...register("deliveryReference")} />
-                </div>
-                <div>
-                  <Label>Appointment #</Label>
-                  <Input {...register("appointmentNumber")} />
-                </div>
-              </div>
-            )}
+          <div className="flex-1 overflow-y-auto px-6 py-5 space-y-6">
 
             {/* ── CARRIER ── */}
-            {section === "carrier" && (
-              <CarrierSection
-                selected={selectedCarrier}
-                onSelect={setSelectedCarrier}
-              />
-            )}
+            <section>
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-[#BA7517] mb-2">Carrier</h3>
+              <CarrierSection selected={selectedCarrier} onSelect={setSelectedCarrier} />
+
+              {/* Compliance state — surfaces the specific blocked_reasons
+                  the backend already returns. Pre-Sprint-63 the drawer
+                  hid these behind a generic "Carrier is not eligible for
+                  tender" toast. */}
+              {complianceQuery.isLoading && selectedCarrier && (
+                <div className="mt-3 p-2 rounded-lg bg-slate-50 border border-slate-200 text-xs text-slate-600 flex items-center gap-2">
+                  <Loader2 className="w-3 h-3 animate-spin" /> Checking carrier compliance…
+                </div>
+              )}
+              {isCarrierBlocked && compliance && (
+                <div className="mt-3 p-3 rounded-lg bg-[#F6E3E3] border border-[#9B2C2C]/30">
+                  <div className="flex items-center gap-2 mb-2">
+                    <ShieldAlert className="w-4 h-4 text-[#9B2C2C]" />
+                    <span className="text-sm font-semibold text-[#9B2C2C]">Carrier blocked from tender</span>
+                  </div>
+                  <ul className="space-y-1 pl-1">
+                    {compliance.blocked_reasons.map((r, i) => (
+                      <li key={i} className="text-xs text-[#9B2C2C]">· {r}</li>
+                    ))}
+                  </ul>
+                  {/* Sprint 40 Item 58 — admin override path (mirrored from
+                      Load Board TenderForm). ADMIN/CEO only; modal owns
+                      reason capture + quota check + audit trail. */}
+                  {isAdminOrCeo && (
+                    <button
+                      type="button"
+                      onClick={() => setShowOverrideModal(true)}
+                      className="mt-3 px-3 py-1.5 text-xs font-medium bg-[#BA7517] hover:bg-[#8f5a11] text-white rounded focus:outline-none focus:ring-2 focus:ring-[#C5A572]/40"
+                      data-testid="drawer-override-compliance-btn"
+                    >
+                      Override compliance block
+                    </button>
+                  )}
+                  {!isAdminOrCeo && (
+                    <div className="mt-2 text-[11px] text-[#9B2C2C]/80 italic">
+                      Override requires ADMIN or CEO role. Contact compliance@silkroutelogistics.ai.
+                    </div>
+                  )}
+                </div>
+              )}
+              {hasComplianceWarnings && compliance && (
+                <div className="mt-3 p-3 rounded-lg bg-[#FBEFD4] border border-[#B07A1A]/30">
+                  <div className="flex items-center gap-2 mb-1">
+                    <AlertTriangle className="w-4 h-4 text-[#B07A1A]" />
+                    <span className="text-sm font-semibold text-[#B07A1A]">Compliance warnings</span>
+                  </div>
+                  <ul className="space-y-0.5">
+                    {compliance.warnings.map((w, i) => (
+                      <li key={i} className="text-xs text-[#B07A1A]">· {w}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </section>
 
             {/* ── FINANCIALS ── */}
-            {/* Sprint 59.b (v3.8.act) Item 176 — fuelSurcharge input
-                removed. FSC is an RC-PDF-generation concern, not a
-                tender-creation one. AE sets FSC on the RC modal post-
-                acceptance; autoRateConfirmationService seeds the RC
-                with fuelSurcharge=0 at tender creation. Drawer only
-                captures carrier-facing values: offered rate + tender
-                expiry. Customer rate flows from Order Builder via
-                initialFormData → buildPayload → Load.customerRate. */}
-            {section === "financials" && (
+            <section>
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-[#BA7517] mb-2">Financials</h3>
               <div className="space-y-3">
                 {watch("customerRate") && (
                   <div className="p-2 rounded-lg bg-slate-50 border border-slate-200 text-xs text-slate-600">
@@ -567,51 +539,73 @@ export function CarrierEngagementDrawer(props: CarrierEngagementDrawerProps) {
                     {((1 - Number(watch("offeredRate")) / Number(watch("customerRate"))) * 100).toFixed(1)}%
                   </div>
                 )}
-                <div className="text-[11px] text-slate-500 italic pt-1">
+                <div className="text-[11px] text-slate-500 italic">
                   Fuel surcharge is set on the Rate Confirmation PDF surface after the carrier accepts. Not collected here.
                 </div>
               </div>
-            )}
+            </section>
 
-            {/* ── INSTRUCTIONS ── */}
-            {section === "instructions" && (
-              <div className="space-y-3">
-                <div>
-                  <Label>Special instructions (carrier-facing)</Label>
-                  <textarea
-                    rows={3}
-                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#C5A572]/40"
-                    {...register("specialInstructions")}
-                  />
-                </div>
-                <div>
-                  <Label>Pickup instructions</Label>
-                  <textarea rows={2} className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm" {...register("pickupInstructions")} />
-                </div>
-                <div>
-                  <Label>Delivery instructions</Label>
-                  <textarea rows={2} className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm" {...register("deliveryInstructions")} />
-                </div>
+            {/* ── INSTRUCTIONS ── Sprint 63 (v3.8.afi) syncs to Order Builder
+                Section 4 Sprint 61 canonical: 1 textarea + 3 audience tabs
+                (Carrier / Pickup / Delivery). Underlying 3 form fields
+                preserved on submit for BOL/rate-con/driver separation. */}
+            <section>
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-[#BA7517] mb-2">Instructions</h3>
+              <div className="flex flex-wrap gap-1.5 mb-2">
+                {INSTR_TABS.map((t) => {
+                  const isActive = t.key === instructionsAudience;
+                  const hasContent = !!(watch(t.field) || "").trim();
+                  return (
+                    <button
+                      key={t.key}
+                      type="button"
+                      onClick={() => setInstructionsAudience(t.key)}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 text-[11px] rounded-lg border transition focus:outline-none focus:ring-2 focus:ring-[#C5A572]/40 ${
+                        isActive
+                          ? "border-[#BA7517] bg-[#FAEEDA] text-slate-900"
+                          : "border-slate-200 bg-white text-slate-600 hover:border-[#C5A572]/40"
+                      }`}
+                    >
+                      <span>{t.label}</span>
+                      {hasContent && <span className={`w-1.5 h-1.5 rounded-full ${isActive ? "bg-[#BA7517]" : "bg-green-500"}`} />}
+                    </button>
+                  );
+                })}
               </div>
-            )}
+              <textarea
+                value={watch(activeInstr.field) ?? ""}
+                onChange={(e) => setValue(activeInstr.field, e.target.value)}
+                rows={4}
+                className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#C5A572]/40"
+                placeholder="Add notes…"
+              />
+              <div className="mt-1.5 text-[10px] text-slate-500">{activeInstr.hint}</div>
+            </section>
           </div>
 
           {/* Footer */}
           <div className="px-6 py-4 border-t border-slate-200 shrink-0 bg-slate-50">
-            {submitError && (
+            {submitError && !isCarrierBlocked && (
               <div className="mb-3 px-3 py-2 rounded-lg bg-red-50 border border-red-200 text-red-700 text-xs flex items-start gap-2">
                 <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
                 <div>{submitError}</div>
               </div>
             )}
             <div className="flex items-center justify-end gap-2">
-              <button type="button" onClick={onClose} className="px-4 py-2 text-sm text-slate-700 hover:bg-slate-100 rounded-lg">
+              <button type="button" onClick={onClose} className="px-4 py-2 text-sm text-slate-700 hover:bg-slate-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#C5A572]/40">
                 Cancel
               </button>
               <button
                 type="submit"
-                disabled={submitMutation.isPending || !customer || !selectedCarrier}
+                disabled={sendBlocked}
                 className="px-5 py-2 text-sm font-semibold bg-[#BA7517] hover:bg-[#8f5a11] text-white rounded-lg disabled:opacity-50 flex items-center gap-2 focus:outline-none focus:ring-2 focus:ring-[#C5A572]/40"
+                title={
+                  isCarrierBlocked
+                    ? "Carrier blocked. Override or pick a different carrier."
+                    : !selectedCarrier
+                      ? "Select a carrier first"
+                      : undefined
+                }
               >
                 {submitMutation.isPending && <Loader2 className="w-4 h-4 animate-spin" />}
                 Send Tender
@@ -619,7 +613,87 @@ export function CarrierEngagementDrawer(props: CarrierEngagementDrawerProps) {
             </div>
           </div>
         </form>
-        </div>{/* close flex-1 main content sibling of IconTabs strip */}
+      </div>
+
+      {/* Sprint 63 — Override modal mounts above drawer per Sprint 40 Item
+          58 pattern. On success, re-fetch compliance so the amber "Active
+          compliance override in effect" warning renders + Send Tender
+          enables (override grants 24h pass per backend). */}
+      {showOverrideModal && selectedCarrier && compliance && (
+        <OverrideComplianceModal
+          carrierId={selectedCarrier.id}
+          carrierName={selectedCarrier.company ?? "Carrier"}
+          blockedReasons={compliance.blocked_reasons}
+          onClose={() => setShowOverrideModal(false)}
+          onSuccess={() => {
+            setShowOverrideModal(false);
+            complianceQuery.refetch();
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+// ───────── Sprint 63 SummaryHeader ─────────
+// Read-only summary of order data captured in Order Builder. Replaces the
+// 4 IconTabs (Lane / Freight / Schedule / Refs) that Sprint 59 added.
+// AE who needs to edit any of these closes the drawer and edits in Order
+// Builder. Compact horizontal pill row, ~140px tall.
+
+function SummaryHeader(props: {
+  customer: CustomerSummary | null;
+  originCity: string; originState: string; originCompany: string;
+  destCity: string; destState: string; destCompany: string;
+  distance: string;
+  equipmentType: string;
+  pickupDate: string; pickupTimeStart: string; pickupTimeEnd: string;
+  deliveryDate: string; deliveryTimeStart: string; deliveryTimeEnd: string;
+  pieces: string; weight: string; description: string;
+  lineItemsRestCount: number;
+  poNumbersText: string;
+}) {
+  const lane = (() => {
+    const o = [props.originCity, props.originState].filter(Boolean).join(", ");
+    const d = [props.destCity, props.destState].filter(Boolean).join(", ");
+    if (!o && !d) return null;
+    return `${o || "?"} → ${d || "?"}`;
+  })();
+  const distance = props.distance ? `${Number(props.distance).toLocaleString()} mi` : null;
+  const equipment = props.equipmentType || null;
+  const pickup = props.pickupDate ? `PU ${props.pickupDate}${props.pickupTimeStart ? ` ${props.pickupTimeStart}` : ""}${props.pickupTimeEnd ? `–${props.pickupTimeEnd}` : ""}` : null;
+  const delivery = props.deliveryDate ? `DEL ${props.deliveryDate}${props.deliveryTimeStart ? ` ${props.deliveryTimeStart}` : ""}${props.deliveryTimeEnd ? `–${props.deliveryTimeEnd}` : ""}` : null;
+  const freight = (() => {
+    const parts: string[] = [];
+    const totalLines = 1 + props.lineItemsRestCount;
+    if (totalLines > 1) parts.push(`${totalLines} lines`);
+    if (props.pieces) parts.push(`${props.pieces} pcs`);
+    if (props.weight) parts.push(`${Number(props.weight).toLocaleString()} lb`);
+    if (props.description && totalLines === 1) parts.push(props.description);
+    return parts.length > 0 ? parts.join(" · ") : null;
+  })();
+  const refs = props.poNumbersText
+    ? `PO ${props.poNumbersText.split(",").map((s) => s.trim()).filter(Boolean).join(", ")}`
+    : null;
+
+  const rows: Array<{ label: string; value: string }> = [];
+  if (props.customer) rows.push({ label: "Customer", value: props.customer.name });
+  if (lane) rows.push({ label: "Lane", value: `${lane}${distance ? ` · ${distance}` : ""}${equipment ? ` · ${equipment}` : ""}` });
+  if (pickup || delivery) rows.push({ label: "Schedule", value: [pickup, delivery].filter(Boolean).join(" · ") });
+  if (freight) rows.push({ label: "Freight", value: freight });
+  if (refs) rows.push({ label: "Refs", value: refs });
+
+  if (rows.length === 0) return null;
+
+  return (
+    <div className="px-6 py-3 bg-[#FBF7F0] border-b border-slate-200 shrink-0">
+      <div className="space-y-1">
+        {rows.map((r) => (
+          <div key={r.label} className="flex items-baseline gap-2 text-[11px]">
+            <span className="uppercase tracking-wider text-[#6B7685] font-medium w-16 shrink-0">{r.label}</span>
+            <span className="text-slate-900 truncate">{r.value}</span>
+          </div>
+        ))}
       </div>
     </div>
   );
@@ -676,7 +750,7 @@ function CarrierSection({ selected, onSelect }: CarrierSectionProps) {
               )}
             </div>
             <div className="text-[11px] text-slate-600 mt-0.5">
-              MC# {selected.mcNumber ?? "n/a"} · DOT# {selected.dotNumber ?? "n/a"}
+              MC# {cleanMcNumber(selected.mcNumber)} · DOT# {selected.dotNumber ?? "n/a"}
               {selected.email && ` · ${selected.email}`}
             </div>
           </div>
@@ -716,7 +790,7 @@ function CarrierSection({ selected, onSelect }: CarrierSectionProps) {
                 <div className="flex items-center justify-between gap-2">
                   <div className="min-w-0">
                     <div className="text-sm font-medium text-slate-900 truncate">{c.company ?? "Carrier"}</div>
-                    <div className="text-[11px] text-slate-500">MC# {c.mcNumber ?? "n/a"} · DOT# {c.dotNumber ?? "n/a"}</div>
+                    <div className="text-[11px] text-slate-500">MC# {cleanMcNumber(c.mcNumber)} · DOT# {c.dotNumber ?? "n/a"}</div>
                   </div>
                   {c.tier && (
                     <span className={`px-2 py-0.5 text-[10px] rounded font-medium shrink-0 ${c.tier === "PLATINUM" || c.tier === "GOLD" ? "bg-[#C5A572]/20 text-[#BA7517]" : "bg-slate-100 text-slate-600"}`}>
