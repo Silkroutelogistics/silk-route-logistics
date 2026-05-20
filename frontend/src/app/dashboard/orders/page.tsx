@@ -81,6 +81,13 @@ export default function OrderBuilderPage() {
   const [manualOriginMode, setManualOriginMode] = useState(false);
   const [manualDestMode, setManualDestMode] = useState(false);
   const [draftBannerDismissed, setDraftBannerDismissed] = useState(false);
+  // Sprint 61 (v3.8.aex) Item 180.3 — Instructions section consolidation.
+  // Three textareas (specialInstructions / driverInstructions / internalNotes)
+  // replaced with one textarea + visibility selector. State tracks which
+  // audience the textarea is bound to right now; the underlying 3 form
+  // fields still write separately on save (backward compat with BOL +
+  // rate confirmation + AE-only filters downstream).
+  const [instructionsView, setInstructionsView] = useState<"special" | "driver" | "internal">("special");
   // v3.8.c — commodity→freight-class auto-suggest moved to per-line logic
   // inside LineItemsSection. The old form.commodity → form.freightClass
   // effect is gone with the flat fields.
@@ -863,15 +870,13 @@ export default function OrderBuilderPage() {
               {/* Origin */}
               <div>
                 <Label>Origin facility</Label>
-                {!manualOriginMode ? (
-                  <FacilityPicker
-                    customerId={form.customerId || null}
-                    side="pickup"
-                    selectedFacilityId={form.originFacilityId || null}
-                    onSelect={selectOriginFacility}
-                    onAddNew={() => setManualOriginMode(true)}
-                  />
-                ) : (
+                {/* Sprint 61 (v3.8.aex) Item 180.11 — facility summary block.
+                    After AE picks a facility from the picker list, collapse
+                    to a name-prominent + address-secondary summary card with
+                    "Change" action. Mirrors CarrierEngagementDrawer:608-628
+                    selected-carrier card pattern. Picker list reappears
+                    when AE clicks Change OR when no facility selected. */}
+                {manualOriginMode ? (
                   <div className="space-y-2">
                     <AddressAutocomplete
                       label="Start typing an address…"
@@ -882,6 +887,32 @@ export default function OrderBuilderPage() {
                     <input placeholder="Facility name" value={form.originCompany} onChange={(e) => setForm((f) => ({ ...f, originCompany: e.target.value }))} className={inp} />
                     <button type="button" onClick={() => setManualOriginMode(false)} className="text-[10px] text-slate-400 hover:text-white">← Back to saved facilities</button>
                   </div>
+                ) : form.originFacilityId ? (
+                  <div className="rounded-lg border border-[#C5A572]/40 bg-[#C5A572]/5 p-3">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0 flex-1">
+                        <div className="text-sm font-semibold text-white truncate">{form.originCompany || "—"}</div>
+                        <div className="text-[11px] text-slate-400 mt-0.5">
+                          {[form.originAddress, [form.originCity, form.originState].filter(Boolean).join(", "), form.originZip].filter(Boolean).join(" · ") || "No address on file"}
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setForm((f) => ({ ...f, originFacilityId: "" }))}
+                        className="text-[11px] text-[#BA7517] hover:text-[#8f5a11] shrink-0"
+                      >
+                        Change
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <FacilityPicker
+                    customerId={form.customerId || null}
+                    side="pickup"
+                    selectedFacilityId={form.originFacilityId || null}
+                    onSelect={selectOriginFacility}
+                    onAddNew={() => setManualOriginMode(true)}
+                  />
                 )}
                 {/* v3.8.g — Contact fields. Auto-populated by FacilityPicker
                     when a saved facility with contactName/contactPhone is
@@ -906,15 +937,9 @@ export default function OrderBuilderPage() {
               {/* Destination */}
               <div>
                 <Label>Destination facility</Label>
-                {!manualDestMode ? (
-                  <FacilityPicker
-                    customerId={form.customerId || null}
-                    side="delivery"
-                    selectedFacilityId={form.destFacilityId || null}
-                    onSelect={selectDestFacility}
-                    onAddNew={() => setManualDestMode(true)}
-                  />
-                ) : (
+                {/* Sprint 61 (v3.8.aex) Item 180.11 — facility summary
+                    block, mirrors Origin column above. */}
+                {manualDestMode ? (
                   <div className="space-y-2">
                     <AddressAutocomplete
                       label="Start typing an address…"
@@ -925,6 +950,32 @@ export default function OrderBuilderPage() {
                     <input placeholder="Facility name" value={form.destCompany} onChange={(e) => setForm((f) => ({ ...f, destCompany: e.target.value }))} className={inp} />
                     <button type="button" onClick={() => setManualDestMode(false)} className="text-[10px] text-slate-400 hover:text-white">← Back to saved facilities</button>
                   </div>
+                ) : form.destFacilityId ? (
+                  <div className="rounded-lg border border-[#C5A572]/40 bg-[#C5A572]/5 p-3">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0 flex-1">
+                        <div className="text-sm font-semibold text-white truncate">{form.destCompany || "—"}</div>
+                        <div className="text-[11px] text-slate-400 mt-0.5">
+                          {[form.destAddress, [form.destCity, form.destState].filter(Boolean).join(", "), form.destZip].filter(Boolean).join(" · ") || "No address on file"}
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setForm((f) => ({ ...f, destFacilityId: "" }))}
+                        className="text-[11px] text-[#BA7517] hover:text-[#8f5a11] shrink-0"
+                      >
+                        Change
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <FacilityPicker
+                    customerId={form.customerId || null}
+                    side="delivery"
+                    selectedFacilityId={form.destFacilityId || null}
+                    onSelect={selectDestFacility}
+                    onAddNew={() => setManualDestMode(true)}
+                  />
                 )}
                 {/* v3.8.g — Contact fields. See origin block above. */}
                 <div className="grid grid-cols-2 gap-2 mt-2">
@@ -1166,42 +1217,63 @@ export default function OrderBuilderPage() {
           </Section>
 
           {/* SECTION 4 — Instructions */}
+          {/* Sprint 61 (v3.8.aex) Item 180.3 — Three textareas
+              consolidated to one textarea + visibility selector. AE
+              picks the audience (Special / Driver / Internal) and the
+              textarea binds to the corresponding form field. Underlying
+              3 fields preserved on save (BOL + rate con + AE-only
+              filters downstream still split correctly). Dot indicator
+              on each tab shows which audiences have content authored
+              without forcing AE to click each tab to check. */}
           <Section number={4} title="Instructions">
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <Label>
-                  Special instructions (sent to carrier)
-                  {autoFillBanner && <span className="ml-1 text-[9px] text-[#C5A572]">· Pre-filled from CRM notes + facility</span>}
-                </Label>
-                <textarea
-                  value={form.specialInstructions}
-                  onChange={(e) => setForm((f) => ({ ...f, specialInstructions: e.target.value }))}
-                  rows={5}
-                  className={`${inp} resize-none`}
-                  placeholder="Pickup procedures, handling requirements…"
-                />
-              </div>
-              <div>
-                <Label>Driver instructions (printed on rate con)</Label>
-                <textarea
-                  value={form.driverInstructions}
-                  onChange={(e) => setForm((f) => ({ ...f, driverInstructions: e.target.value }))}
-                  rows={5}
-                  className={`${inp} resize-none`}
-                  placeholder="Check in at guard shack, dock 14…"
-                />
-              </div>
-            </div>
-            <div className="mt-2">
-              <Label>Internal notes (not visible to carrier)</Label>
-              <textarea
-                value={form.internalNotes}
-                onChange={(e) => setForm((f) => ({ ...f, internalNotes: e.target.value }))}
-                rows={3}
-                className={`${inp} resize-none`}
-                placeholder="AE-only notes…"
-              />
-            </div>
+            {(() => {
+              const TABS = [
+                { key: "special" as const, label: "Carrier (rate con + email)", field: "specialInstructions" as const, placeholder: "Pickup procedures, handling requirements…", rows: 5, hint: "Carrier sees this on the Rate Confirmation PDF and tender email." },
+                { key: "driver" as const, label: "Driver (rate con only)", field: "driverInstructions" as const, placeholder: "Check in at guard shack, dock 14…", rows: 5, hint: "Printed on the Rate Confirmation PDF for the driver. Not in the email body." },
+                { key: "internal" as const, label: "Internal (AE only)", field: "internalNotes" as const, placeholder: "AE-only notes…", rows: 3, hint: "Internal only. Never appears on any carrier-facing document." },
+              ];
+              const active = TABS.find((t) => t.key === instructionsView)!;
+              const currentValue = form[active.field];
+              const setCurrentValue = (v: string) => setForm((f) => ({ ...f, [active.field]: v } as OrderForm));
+              return (
+                <>
+                  <div className="flex flex-wrap gap-1.5 mb-2">
+                    {TABS.map((t) => {
+                      const isActive = t.key === instructionsView;
+                      const hasContent = !!(form[t.field] || "").trim();
+                      return (
+                        <button
+                          key={t.key}
+                          type="button"
+                          onClick={() => setInstructionsView(t.key)}
+                          className={`flex items-center gap-1.5 px-3 py-1.5 text-[11px] rounded-lg border transition ${
+                            isActive
+                              ? "border-[#C5A572] bg-[#C5A572]/10 text-white"
+                              : "border-white/10 bg-white/[0.02] text-slate-400 hover:border-white/20"
+                          }`}
+                        >
+                          <span>{t.label}</span>
+                          {hasContent && <span className={`w-1.5 h-1.5 rounded-full ${isActive ? "bg-[#C5A572]" : "bg-green-500"}`} />}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <textarea
+                    value={currentValue}
+                    onChange={(e) => setCurrentValue(e.target.value)}
+                    rows={active.rows}
+                    className={`${inp} resize-none`}
+                    placeholder={active.placeholder}
+                  />
+                  <div className="mt-1.5 text-[10px] text-slate-500 flex items-center gap-2">
+                    <span>{active.hint}</span>
+                    {instructionsView === "special" && autoFillBanner && (
+                      <span className="text-[#C5A572]">· Pre-filled from CRM notes + facility</span>
+                    )}
+                  </div>
+                </>
+              );
+            })()}
           </Section>
 
           {/* SECTION 5 — Dispatch & Tracking */}
