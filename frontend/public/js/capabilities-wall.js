@@ -74,9 +74,12 @@
       shown.add(key);
     });
 
+    // v3.8.agd — switched from window.lucide.createIcons() (broken CDN
+    // resolving to archived lucide@1.16.0) to window.paintWallIcons()
+    // from /js/wall-icons.js — inline SVG library, no CDN dependency.
     function refreshIcons() {
-      if (window.lucide && window.lucide.createIcons) {
-        window.lucide.createIcons();
+      if (window.paintWallIcons) {
+        window.paintWallIcons(wall);
       }
     }
 

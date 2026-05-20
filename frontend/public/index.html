@@ -341,34 +341,14 @@
             <div class="srl-center">
               <div class="srl-ci">
                 <span class="tk tl">+</span><span class="tk tr">+</span><span class="tk bl">+</span><span class="tk br">+</span>
-                <!-- v3.8.agb — inline SVG of the actual SRL brand mark
-                     (icon-only crop of /logo.svg, viewBox cropped to
-                     200..600 x 120..520). Replaces /logo-compass.png img
-                     which rendered as a small silhouette, not the full
-                     compass + cardinal triangles + two-tone S-curve. -->
-                <svg class="srl-mark" viewBox="200 120 400 400" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
-                  <defs>
-                    <clipPath id="srlMarkClipL"><rect x="0" y="0" width="400" height="1000"/></clipPath>
-                    <clipPath id="srlMarkClipR"><rect x="400" y="0" width="400" height="1000"/></clipPath>
-                  </defs>
-                  <!-- Compass ring -->
-                  <circle cx="400" cy="320" r="145" fill="none" stroke="#0F1A22" stroke-width="26" stroke-linecap="round"/>
-                  <!-- Four cardinal triangle markers -->
-                  <polygon points="400,137 378,181 422,181" fill="#0F1A22"/>
-                  <polygon points="400,503 378,459 422,459" fill="#0F1A22"/>
-                  <polygon points="217,320 261,298 261,342" fill="#0F1A22"/>
-                  <polygon points="583,320 539,298 539,342" fill="#0F1A22"/>
-                  <!-- Two-tone S-curve: gold left half + navy right half (clip-paths match logo.svg) -->
-                  <path d="M 380 415 C 325 350, 350 300, 410 275 C 485 245, 510 280, 535 305 C 575 350, 510 390, 445 415 C 390 435, 385 475, 415 505"
-                        fill="none" stroke="#C9A24D" stroke-width="86" stroke-linecap="round" stroke-linejoin="round"
-                        clip-path="url(#srlMarkClipL)"/>
-                  <path d="M 380 415 C 325 350, 350 300, 410 275 C 485 245, 510 280, 535 305 C 575 350, 510 390, 445 415 C 390 435, 385 475, 415 505"
-                        fill="none" stroke="#0F1A22" stroke-width="86" stroke-linecap="round" stroke-linejoin="round"
-                        clip-path="url(#srlMarkClipR)"/>
-                  <!-- White accent stripe down the middle -->
-                  <path d="M 380 415 C 325 350, 350 300, 410 275 C 485 245, 510 280, 535 305 C 575 350, 510 390, 445 415 C 390 435, 385 475, 415 505"
-                        fill="none" stroke="#FFFFFF" stroke-width="24" stroke-linecap="round" stroke-linejoin="round" opacity="0.95"/>
-                </svg>
+                <!-- v3.8.agd — SRL brand mark loaded from /logo-icon-only.svg
+                     (icon-only crop of /logo.svg with the wordmark group
+                     stripped). The previous inline SVG paths produced a
+                     rendering the user said didn't match the OG brand
+                     mark; loading the dedicated asset file guarantees
+                     this is the canonical brand symbol straight from a
+                     file you can open and verify. -->
+                <img class="srl-mark" src="/logo-icon-only.svg" alt="Silk Route Logistics" />
                 <span class="srl-wordmark">Silk Route Logistics</span>
               </div>
             </div>
@@ -815,11 +795,14 @@
     })();
   </script>
 
-<!-- v3.8.aga — Section 5 capabilities-wall scripts. Lucide CDN loaded
-     for the 26-icon fact pool; capabilities-wall.js drives the
-     staggered tile-cycle (3.6-5.4s per tile, 550ms cross-fade,
-     prefers-reduced-motion honored). -->
-<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js" defer></script>
+<!-- v3.8.agd — Section 5 capabilities-wall scripts. Lucide CDN removed
+     (unpkg's "lucide@latest" resolved to the archived v1.16.0 package
+     which has none of the icon names this wall references — that's why
+     every tile was rendering icon-less). Replaced with /js/wall-icons.js
+     — 26 inline SVG icons, no CDN dependency, no version drift.
+     wall-icons.js MUST load before capabilities-wall.js (script order
+     preserved via document order — both defer, executes in order). -->
+<script src="/js/wall-icons.js" defer></script>
 <script src="/js/capabilities-wall.js" defer></script>
 <link rel="stylesheet" href="/shared/css/marco-polo.css">
 <script src="/shared/js/marco-polo.js"></script>

@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- v3.8.agd — SRL brand mark, icon-only crop of /logo.svg #icon group.
+     Compass ring + four cardinal triangles + two-tone gold/navy S-curve
+     trade route + cream accent stripe. No wordmark (rendered separately
+     in Playfair Display on the consuming surface).
+     Source path data copied verbatim from /logo.svg #icon group.
+     ViewBox cropped from source 800x1000 to icon-only 400x400 area. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="200 120 400 400" role="img" aria-label="Silk Route Logistics compass mark">
+  <defs>
+    <clipPath id="srlIconClipL"><rect x="0" y="0" width="400" height="1000"/></clipPath>
+    <clipPath id="srlIconClipR"><rect x="400" y="0" width="400" height="1000"/></clipPath>
+  </defs>
+  <g>
+    <circle cx="400" cy="320" r="145" fill="none" stroke="#0F1A22" stroke-width="26" stroke-linecap="round"/>
+    <polygon points="400,137 378,181 422,181" fill="#0F1A22"/>
+    <polygon points="400,503 378,459 422,459" fill="#0F1A22"/>
+    <polygon points="217,320 261,298 261,342" fill="#0F1A22"/>
+    <polygon points="583,320 539,298 539,342" fill="#0F1A22"/>
+    <path d="M 380 415 C 325 350, 350 300, 410 275 C 485 245, 510 280, 535 305 C 575 350, 510 390, 445 415 C 390 435, 385 475, 415 505"
+          fill="none" stroke="#C9A24D" stroke-width="86" stroke-linecap="round" stroke-linejoin="round" clip-path="url(#srlIconClipL)"/>
+    <path d="M 380 415 C 325 350, 350 300, 410 275 C 485 245, 510 280, 535 305 C 575 350, 510 390, 445 415 C 390 435, 385 475, 415 505"
+          fill="none" stroke="#0F1A22" stroke-width="86" stroke-linecap="round" stroke-linejoin="round" clip-path="url(#srlIconClipR)"/>
+    <path d="M 380 415 C 325 350, 350 300, 410 275 C 485 245, 510 280, 535 305 C 575 350, 510 390, 445 415 C 390 435, 385 475, 415 505"
+          fill="none" stroke="#FFFFFF" stroke-width="24" stroke-linecap="round" stroke-linejoin="round" opacity="0.95"/>
+  </g>
+</svg>
