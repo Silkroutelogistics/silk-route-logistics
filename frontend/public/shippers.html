@@ -236,40 +236,63 @@
           </button>
         </div>
 
-        <!-- Central stage: 3-column = left status cards | chip | right status cards -->
+        <!-- v3.8.ags — central stage restructured: 4 status cards scatter to
+             corners (TL/BL/TR/BR), chip upgraded to homepage Section 5 center-
+             badge register (navy gradient frame + cream interior + corner
+             registration ticks + revolving compass mark + shimmer tagline),
+             SVG connector lines draw gold-dark dashed traces from chip outward
+             to each corner card. OWLERY-inspired circuit composition adapted
+             to SRL brand canon. Mobile collapses to vertical stack. -->
         <div class="ops-loop-stage">
 
-          <!-- Left status column (2 cards, content cycles per phase) -->
-          <div class="ops-status-col ops-status-col-left" aria-live="polite">
-            <article class="ops-status-card" data-slot="left-1">
-              <span class="ops-status-svc"></span>
-              <span class="ops-status-act"></span>
-            </article>
-            <article class="ops-status-card" data-slot="left-2">
-              <span class="ops-status-svc"></span>
-              <span class="ops-status-act"></span>
-            </article>
-          </div>
+          <!-- SVG connector lines (chip center → 4 corner cards) -->
+          <svg class="ops-loop-connectors" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+            <line x1="50" y1="50" x2="18" y2="22" class="ops-connector-line"/>
+            <line x1="50" y1="50" x2="18" y2="78" class="ops-connector-line"/>
+            <line x1="50" y1="50" x2="82" y2="22" class="ops-connector-line"/>
+            <line x1="50" y1="50" x2="82" y2="78" class="ops-connector-line"/>
+          </svg>
 
-          <!-- Center compass chip with pulse glow -->
+          <!-- Top-left status card -->
+          <article class="ops-status-card ops-card-tl" data-slot="left-1" aria-live="polite">
+            <span class="ops-status-svc"></span>
+            <span class="ops-status-act"></span>
+          </article>
+
+          <!-- Bottom-left status card -->
+          <article class="ops-status-card ops-card-bl" data-slot="left-2" aria-live="polite">
+            <span class="ops-status-svc"></span>
+            <span class="ops-status-act"></span>
+          </article>
+
+          <!-- Center compass badge — matches homepage Section 5 .srl-center
+               register (navy gradient frame, cream interior, clip-path notch,
+               4 corner ticks, revolving compass mark, gold shimmer tagline). -->
           <div class="ops-loop-chip" aria-hidden="true">
             <div class="ops-chip-pulse"></div>
             <div class="ops-chip-frame">
-              <img src="/media/srl-logo-1024.png" alt="">
+              <div class="ops-chip-inner">
+                <span class="ops-tk ops-tk-tl">+</span>
+                <span class="ops-tk ops-tk-tr">+</span>
+                <span class="ops-tk ops-tk-bl">+</span>
+                <span class="ops-tk ops-tk-br">+</span>
+                <div class="ops-chip-mark"></div>
+                <span class="ops-chip-tagline">Where Trust Travels</span>
+              </div>
             </div>
           </div>
 
-          <!-- Right status column -->
-          <div class="ops-status-col ops-status-col-right" aria-live="polite">
-            <article class="ops-status-card" data-slot="right-1">
-              <span class="ops-status-svc"></span>
-              <span class="ops-status-act"></span>
-            </article>
-            <article class="ops-status-card" data-slot="right-2">
-              <span class="ops-status-svc"></span>
-              <span class="ops-status-act"></span>
-            </article>
-          </div>
+          <!-- Top-right status card -->
+          <article class="ops-status-card ops-card-tr" data-slot="right-1" aria-live="polite">
+            <span class="ops-status-svc"></span>
+            <span class="ops-status-act"></span>
+          </article>
+
+          <!-- Bottom-right status card -->
+          <article class="ops-status-card ops-card-br" data-slot="right-2" aria-live="polite">
+            <span class="ops-status-svc"></span>
+            <span class="ops-status-act"></span>
+          </article>
         </div>
 
         <!-- Phase narrative below stage (1 narrative per phase, cross-fades) -->
