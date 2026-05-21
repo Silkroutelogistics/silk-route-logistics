@@ -306,23 +306,23 @@
         <div class="ops-loop-narrative">
           <div class="ops-narrative-item is-active" data-phase="0">
             <span class="ops-narrative-tag">Quote</span>
-            <p>Lane Optimizer pulls your lane history. Rate Intelligence compares prevailing market rates. Your AE quotes with the data already in hand, response within 15 minutes during business hours.</p>
+            <p>Lane Optimizer scans your historic lanes. Rate Intelligence reads the prevailing market. Your AE builds the quote with the data already in hand, response within 15 minutes during business hours.</p>
           </div>
           <div class="ops-narrative-item" data-phase="1">
             <span class="ops-narrative-tag">Plan</span>
-            <p>Carrier Intelligence scores eligible carriers on the 7-factor Compass standard. Compliance Forecast clears each candidate. Your AE confirms the top match before anything fires.</p>
+            <p>Carrier Intelligence vets eligible carriers on the 7-factor Compass standard. Each candidate cleared on compliance. Your AE confirms the top match before any tender goes out.</p>
           </div>
           <div class="ops-narrative-item" data-phase="2">
             <span class="ops-narrative-tag">Execute</span>
-            <p>Tender goes to the carrier. Acceptance confirmed. Rate confirmation auto-generated. Pickup window locked. The whole sequence is auditable in your shipper portal.</p>
+            <p>Tender sent to the carrier. Acceptance confirmed. Rate confirmation generated and signed. Pickup window locked. The whole sequence is auditable in your shipper portal.</p>
           </div>
           <div class="ops-narrative-item" data-phase="3">
             <span class="ops-narrative-tag">Track</span>
-            <p>GPS engages at pickup. Milestone alerts fire to your inbox the moment each one triggers. Marco Polo watches for exceptions. The branded tracking link goes to the customer waiting on the other end.</p>
+            <p>GPS engages at pickup. Milestone alerts land in your inbox the moment they happen. Marco Polo monitors for exceptions. The branded tracking link goes to the customer waiting on the other end.</p>
           </div>
           <div class="ops-narrative-item" data-phase="4">
             <span class="ops-narrative-tag">Validate</span>
-            <p>POD uploaded. Invoice auto-generated. Customer Intelligence learns from the outcome. Your quarterly scorecard updates: on-time delivery, claims ratio, document timeliness. The same metrics we hold our carriers to.</p>
+            <p>POD uploaded. Invoice generated and delivered. Outcome fed back to your AE and your quarterly scorecard. On-time delivery, claims ratio, document timeliness. The same metrics we hold our carriers to.</p>
           </div>
         </div>
       </div>
@@ -795,38 +795,38 @@
       if (opsCanvas) {
         var opsPhases = [
           { cards: {
-              'left-1':  { svc: 'Lane Optimizer',        act: 'pulling lane history' },
-              'left-2':  { svc: 'Customer Intelligence', act: 'reading your patterns' },
-              'right-1': { svc: 'Rate Intelligence',     act: 'comparing market' },
-              'right-2': { svc: 'AE',                    act: 'crafting your quote' }
+              'left-1':  { svc: 'Lane Optimizer',     act: 'scanning your historic lanes' },
+              'left-2':  { svc: 'Your Lane History',  act: 'informing the quote' },
+              'right-1': { svc: 'Rate Intelligence',  act: 'reading prevailing market' },
+              'right-2': { svc: 'Your AE',            act: 'building the quote' }
             }
           },
           { cards: {
-              'left-1':  { svc: 'Carrier Intelligence',  act: 'scoring carriers' },
-              'left-2':  { svc: 'Compass Engine',        act: '35 points each' },
-              'right-1': { svc: 'Compliance Forecast',   act: 'clearing candidates' },
-              'right-2': { svc: 'AE',                    act: 'confirming match' }
+              'left-1':  { svc: 'Carrier Intelligence', act: 'vetting candidates' },
+              'left-2':  { svc: 'Compass Engine',       act: '35 points each' },
+              'right-1': { svc: 'Compliance Check',     act: 'candidate clearance' },
+              'right-2': { svc: 'Your AE',              act: 'confirming the match' }
             }
           },
           { cards: {
-              'left-1':  { svc: 'Tender',                act: 'fired to carrier' },
-              'left-2':  { svc: 'Acceptance',            act: 'confirmed' },
-              'right-1': { svc: 'Rate Con',              act: 'auto-generated' },
-              'right-2': { svc: 'Pickup Window',         act: 'locked' }
+              'left-1':  { svc: 'Tender',         act: 'sent to carrier' },
+              'left-2':  { svc: 'Acceptance',     act: 'confirmed' },
+              'right-1': { svc: 'Rate Con',       act: 'generated and signed' },
+              'right-2': { svc: 'Pickup Window',  act: 'locked' }
             }
           },
           { cards: {
-              'left-1':  { svc: 'GPS',                   act: 'engaged at pickup' },
-              'left-2':  { svc: 'Milestone Alerts',      act: 'firing to your inbox' },
-              'right-1': { svc: 'Marco Polo AI',         act: 'watching exceptions' },
-              'right-2': { svc: 'Tracking Link',         act: 'sent to your customer' }
+              'left-1':  { svc: 'GPS',              act: 'engaged at pickup' },
+              'left-2':  { svc: 'Milestone Alerts', act: 'landing in your inbox' },
+              'right-1': { svc: 'Marco Polo AI',    act: 'monitoring exceptions' },
+              'right-2': { svc: 'Tracking Link',    act: 'sent to your customer' }
             }
           },
           { cards: {
-              'left-1':  { svc: 'POD',                   act: 'uploaded' },
-              'left-2':  { svc: 'Invoice',               act: 'auto-generated' },
-              'right-1': { svc: 'Customer Intelligence', act: 'learning the outcome' },
-              'right-2': { svc: 'Scorecard',             act: 'updated for the quarter' }
+              'left-1':  { svc: 'POD',           act: 'uploaded' },
+              'left-2':  { svc: 'Invoice',       act: 'generated and delivered' },
+              'right-1': { svc: 'Load Outcomes', act: 'fed back to your AE' },
+              'right-2': { svc: 'Scorecard',     act: 'updated for the quarter' }
             }
           }
         ];

@@ -938,17 +938,17 @@
     }
     .ops-connector-line {
       stroke: var(--gold-dark, #BA7517);
-      stroke-width: 2.4;
-      stroke-dasharray: 1.4 1.1;
-      stroke-linecap: round;
+      stroke-width: 2.2;
+      stroke-dasharray: 10 6;
+      stroke-linecap: butt;
       opacity: 1;
       vector-effect: non-scaling-stroke;
-      filter: drop-shadow(0 0 2px rgba(186, 117, 23, 0.55));
-      animation: ops-line-flow 1.6s linear infinite;
+      filter: drop-shadow(0 0 2px rgba(186, 117, 23, 0.50));
+      animation: ops-line-flow 1.8s linear infinite;
     }
     @keyframes ops-line-flow {
-      0%   { stroke-dashoffset: 0; }
-      100% { stroke-dashoffset: -5; }
+      0%   { stroke-dashoffset: 0;   }
+      100% { stroke-dashoffset: -32; }
     }
 
     /* Status card (4 absolutely-positioned at corners — content cycles per phase) */
