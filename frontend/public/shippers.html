@@ -212,25 +212,32 @@
 
       <div class="ops-loop-canvas" id="opsLoopCanvas">
 
-        <!-- Phase tabs (top) -->
+        <!-- Phase tabs (top) — v3.8.agv adds gold LED status dot per tab;
+             active phase pulses, inactive phases dim. Matches OWLERY's
+             per-tab status indicator pattern in SRL gold. -->
         <div class="ops-loop-tabs" role="tablist" aria-label="Operational lifecycle phases">
           <button class="ops-tab is-active" data-phase="0" role="tab" aria-selected="true" type="button">
+            <span class="ops-tab-dot" aria-hidden="true"></span>
             <span class="ops-tab-num">01</span>
             <span class="ops-tab-name">Quote</span>
           </button>
           <button class="ops-tab" data-phase="1" role="tab" aria-selected="false" type="button">
+            <span class="ops-tab-dot" aria-hidden="true"></span>
             <span class="ops-tab-num">02</span>
             <span class="ops-tab-name">Plan</span>
           </button>
           <button class="ops-tab" data-phase="2" role="tab" aria-selected="false" type="button">
+            <span class="ops-tab-dot" aria-hidden="true"></span>
             <span class="ops-tab-num">03</span>
             <span class="ops-tab-name">Execute</span>
           </button>
           <button class="ops-tab" data-phase="3" role="tab" aria-selected="false" type="button">
+            <span class="ops-tab-dot" aria-hidden="true"></span>
             <span class="ops-tab-num">04</span>
             <span class="ops-tab-name">Track</span>
           </button>
           <button class="ops-tab" data-phase="4" role="tab" aria-selected="false" type="button">
+            <span class="ops-tab-dot" aria-hidden="true"></span>
             <span class="ops-tab-num">05</span>
             <span class="ops-tab-name">Validate</span>
           </button>

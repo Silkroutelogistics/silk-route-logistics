@@ -833,6 +833,7 @@
       border-bottom: 1px solid rgba(10, 37, 64, 0.08);
     }
     .ops-tab {
+      position: relative;
       background: transparent;
       border: 1px solid rgba(10, 37, 64, 0.10);
       border-radius: 10px;
@@ -844,6 +845,42 @@
       gap: 4px;
       transition: background 240ms ease, border-color 240ms ease, transform 200ms ease;
       font-family: inherit;
+    }
+
+    /* v3.8.agv — Gold LED status dot. Appears ONLY on active tab (the
+       phase whose status cards + narrative are currently displayed below).
+       Inactive tabs have no dot. Blinks/pulses on the active tab to
+       indicate "live now". */
+    .ops-tab-dot {
+      position: absolute;
+      top: 8px;
+      right: 9px;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--gold-dark, #BA7517);
+      opacity: 0;
+      transition: opacity 240ms ease;
+      box-shadow: 0 0 6px rgba(186, 117, 23, 0.55);
+    }
+    .ops-tab.is-active .ops-tab-dot {
+      opacity: 1;
+      animation: ops-tab-dot-blink 1.2s ease-in-out infinite;
+    }
+    @keyframes ops-tab-dot-blink {
+      0%, 100% {
+        opacity: 1;
+        transform: scale(1);
+        box-shadow: 0 0 6px rgba(186, 117, 23, 0.55);
+      }
+      50% {
+        opacity: 0.45;
+        transform: scale(1.25);
+        box-shadow: 0 0 14px rgba(186, 117, 23, 0.90);
+      }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .ops-tab.is-active .ops-tab-dot { animation: none; }
     }
     .ops-tab:hover {
       border-color: rgba(186, 117, 23, 0.30);
