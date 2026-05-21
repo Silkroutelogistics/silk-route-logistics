@@ -289,87 +289,205 @@
         <p class="section-subtitle">The brokerage layer is humans + AI + a TMS built for shippers. Here is what runs underneath.</p>
       </div>
 
+      <!-- v3.8.agq — flip-card pattern. Front face = image-art placeholder
+           with system name overlay; back face = full detail. Click anywhere
+           on card to flip; keyboard Enter/Space when focused. Wasi to
+           provide Nano Banana / Pixabay asset images later — front art
+           swaps from gradient+icon placeholder to <img> as a separate sprint. -->
       <div class="system-grid">
+
         <!-- 1. Lane Optimizer -->
-        <article class="system-card fade-up">
-          <div class="system-icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
-              <circle cx="12" cy="12" r="10"/>
-              <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/>
-            </svg>
+        <article class="system-card system-card-flip fade-up" role="button" tabindex="0" aria-expanded="false" aria-label="Lane Optimizer — click to learn more">
+          <div class="system-card-inner">
+            <div class="system-card-front">
+              <div class="system-card-front-art">
+                <svg class="system-front-icon-lg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <circle cx="12" cy="12" r="10"/>
+                  <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/>
+                </svg>
+              </div>
+              <div class="system-card-front-label">
+                <span class="system-front-eyebrow">System 01</span>
+                <h3>Lane Optimizer</h3>
+                <span class="system-front-cta">Click to learn more &nbsp;→</span>
+              </div>
+            </div>
+            <div class="system-card-back">
+              <div class="system-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="12" r="10"/>
+                  <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/>
+                </svg>
+              </div>
+              <h3>Lane Optimizer</h3>
+              <p>Your recurring lanes get watched. Lane Optimizer learns which carriers run them well, what rates prevail this quarter, and which lanes are softening. Your AE quotes with that data already in hand.</p>
+            </div>
           </div>
-          <h3>Lane Optimizer</h3>
-          <p>Your recurring lanes get watched. Lane Optimizer learns which carriers run them well, what rates prevail this quarter, and which lanes are softening. Your AE quotes with that data already in hand.</p>
         </article>
 
-        <!-- 2. AE-Owned, No Call Centers -->
-        <article class="system-card fade-up">
-          <div class="system-icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
-              <circle cx="9" cy="7" r="4"/>
-              <polyline points="17 11 19 13 23 9"/>
-            </svg>
+        <!-- 2. AE-Owned Service -->
+        <article class="system-card system-card-flip fade-up" role="button" tabindex="0" aria-expanded="false" aria-label="AE-Owned Service — click to learn more">
+          <div class="system-card-inner">
+            <div class="system-card-front">
+              <div class="system-card-front-art">
+                <svg class="system-front-icon-lg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
+                  <circle cx="9" cy="7" r="4"/>
+                  <polyline points="17 11 19 13 23 9"/>
+                </svg>
+              </div>
+              <div class="system-card-front-label">
+                <span class="system-front-eyebrow">System 02</span>
+                <h3>AE-Owned Service</h3>
+                <span class="system-front-cta">Click to learn more &nbsp;→</span>
+              </div>
+            </div>
+            <div class="system-card-back">
+              <div class="system-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
+                  <circle cx="9" cy="7" r="4"/>
+                  <polyline points="17 11 19 13 23 9"/>
+                </svg>
+              </div>
+              <h3>AE-Owned Service</h3>
+              <p>One Account Executive owns your freight quote to invoice. No call centers, no ticket queues, no chasing down communication. The same person who quoted your load picks up the phone when you call.</p>
+            </div>
           </div>
-          <h3>AE-Owned Service</h3>
-          <p>One Account Executive owns your freight quote to invoice. No call centers, no ticket queues, no chasing down communication. The same person who quoted your load picks up the phone when you call.</p>
         </article>
 
-        <!-- 3. Marco Polo AI 24/7 -->
-        <article class="system-card fade-up">
-          <div class="system-icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
-              <rect x="3" y="11" width="18" height="10" rx="2"/>
-              <circle cx="12" cy="5" r="2"/>
-              <path d="M12 7v4"/>
-              <path d="M8 16h.01"/>
-              <path d="M16 16h.01"/>
-            </svg>
+        <!-- 3. Marco Polo AI, 24/7 -->
+        <article class="system-card system-card-flip fade-up" role="button" tabindex="0" aria-expanded="false" aria-label="Marco Polo AI, 24/7 — click to learn more">
+          <div class="system-card-inner">
+            <div class="system-card-front">
+              <div class="system-card-front-art">
+                <svg class="system-front-icon-lg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <rect x="3" y="11" width="18" height="10" rx="2"/>
+                  <circle cx="12" cy="5" r="2"/>
+                  <path d="M12 7v4"/>
+                  <path d="M8 16h.01"/>
+                  <path d="M16 16h.01"/>
+                </svg>
+              </div>
+              <div class="system-card-front-label">
+                <span class="system-front-eyebrow">System 03</span>
+                <h3>Marco Polo AI, 24/7</h3>
+                <span class="system-front-cta">Click to learn more &nbsp;→</span>
+              </div>
+            </div>
+            <div class="system-card-back">
+              <div class="system-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="3" y="11" width="18" height="10" rx="2"/>
+                  <circle cx="12" cy="5" r="2"/>
+                  <path d="M12 7v4"/>
+                  <path d="M8 16h.01"/>
+                  <path d="M16 16h.01"/>
+                </svg>
+              </div>
+              <h3>Marco Polo AI, 24/7</h3>
+              <p>After-hours status questions, BOL retrieval, tracking lookups, document fetches. Marco Polo handles them so you do not sit on hold. AI assists. Your AE decides.</p>
+            </div>
           </div>
-          <h3>Marco Polo AI, 24/7</h3>
-          <p>After-hours status questions, BOL retrieval, tracking lookups, document fetches. Marco Polo handles them so you do not sit on hold. AI assists. Your AE decides.</p>
         </article>
 
         <!-- 4. Shipper Scorecards -->
-        <article class="system-card fade-up">
-          <div class="system-icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
-              <line x1="3" y1="20" x2="21" y2="20"/>
-              <line x1="6" y1="20" x2="6" y2="14"/>
-              <line x1="11" y1="20" x2="11" y2="9"/>
-              <line x1="16" y1="20" x2="16" y2="11"/>
-              <polyline points="3 5 7 9 11 5 15 9 21 3"/>
-            </svg>
+        <article class="system-card system-card-flip fade-up" role="button" tabindex="0" aria-expanded="false" aria-label="Shipper Scorecards — click to learn more">
+          <div class="system-card-inner">
+            <div class="system-card-front">
+              <div class="system-card-front-art">
+                <svg class="system-front-icon-lg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <line x1="3" y1="20" x2="21" y2="20"/>
+                  <line x1="6" y1="20" x2="6" y2="14"/>
+                  <line x1="11" y1="20" x2="11" y2="9"/>
+                  <line x1="16" y1="20" x2="16" y2="11"/>
+                  <polyline points="3 5 7 9 11 5 15 9 21 3"/>
+                </svg>
+              </div>
+              <div class="system-card-front-label">
+                <span class="system-front-eyebrow">System 04</span>
+                <h3>Shipper Scorecards</h3>
+                <span class="system-front-cta">Click to learn more &nbsp;→</span>
+              </div>
+            </div>
+            <div class="system-card-back">
+              <div class="system-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+                  <line x1="3" y1="20" x2="21" y2="20"/>
+                  <line x1="6" y1="20" x2="6" y2="14"/>
+                  <line x1="11" y1="20" x2="11" y2="9"/>
+                  <line x1="16" y1="20" x2="16" y2="11"/>
+                  <polyline points="3 5 7 9 11 5 15 9 21 3"/>
+                </svg>
+              </div>
+              <h3>Shipper Scorecards</h3>
+              <p>Quarterly service-level scorecards delivered to your inbox. On-time delivery, claims ratio, document timeliness, communication response. The same metrics we hold our carriers to.</p>
+            </div>
           </div>
-          <h3>Shipper Scorecards</h3>
-          <p>Quarterly service-level scorecards delivered to your inbox. On-time delivery, claims ratio, document timeliness, communication response. The same metrics we hold our carriers to.</p>
         </article>
 
-        <!-- 5. Itemized Rate Cons + Tier-Graduated FSC -->
-        <article class="system-card fade-up">
-          <div class="system-icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M6 2v20l3-2 3 2 3-2 3 2V2z"/>
-              <line x1="9" y1="7" x2="15" y2="7"/>
-              <line x1="9" y1="12" x2="15" y2="12"/>
-              <line x1="9" y1="17" x2="13" y2="17"/>
-            </svg>
+        <!-- 5. Itemized Rates, Tier-Graduated FSC -->
+        <article class="system-card system-card-flip fade-up" role="button" tabindex="0" aria-expanded="false" aria-label="Itemized Rates, Tier-Graduated FSC — click to learn more">
+          <div class="system-card-inner">
+            <div class="system-card-front">
+              <div class="system-card-front-art">
+                <svg class="system-front-icon-lg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M6 2v20l3-2 3 2 3-2 3 2V2z"/>
+                  <line x1="9" y1="7" x2="15" y2="7"/>
+                  <line x1="9" y1="12" x2="15" y2="12"/>
+                  <line x1="9" y1="17" x2="13" y2="17"/>
+                </svg>
+              </div>
+              <div class="system-card-front-label">
+                <span class="system-front-eyebrow">System 05</span>
+                <h3>Itemized Rates, Tier-Graduated FSC</h3>
+                <span class="system-front-cta">Click to learn more &nbsp;→</span>
+              </div>
+            </div>
+            <div class="system-card-back">
+              <div class="system-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M6 2v20l3-2 3 2 3-2 3 2V2z"/>
+                  <line x1="9" y1="7" x2="15" y2="7"/>
+                  <line x1="9" y1="12" x2="15" y2="12"/>
+                  <line x1="9" y1="17" x2="13" y2="17"/>
+                </svg>
+              </div>
+              <h3>Itemized Rates, Tier-Graduated FSC</h3>
+              <p>Every quote itemized. Linehaul, fuel surcharge, accessorials, all visible. No post-booking clipping. Fuel pass-through is tier-graduated, not blanket. The math is on the rate con.</p>
+            </div>
           </div>
-          <h3>Itemized Rates, Tier-Graduated FSC</h3>
-          <p>Every quote itemized. Linehaul, fuel surcharge, accessorials, all visible. No post-booking clipping. Fuel pass-through is tier-graduated, not blanket — the math is on the rate con.</p>
         </article>
 
         <!-- 6. Compass-Scored Carriers -->
-        <article class="system-card fade-up">
-          <div class="system-icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
-              <circle cx="12" cy="12" r="10"/>
-              <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/>
-              <circle cx="12" cy="12" r="1.5" fill="currentColor"/>
-            </svg>
+        <article class="system-card system-card-flip fade-up" role="button" tabindex="0" aria-expanded="false" aria-label="Compass-Scored Carriers — click to learn more">
+          <div class="system-card-inner">
+            <div class="system-card-front">
+              <div class="system-card-front-art">
+                <svg class="system-front-icon-lg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <circle cx="12" cy="12" r="10"/>
+                  <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/>
+                  <circle cx="12" cy="12" r="1.5" fill="currentColor"/>
+                </svg>
+              </div>
+              <div class="system-card-front-label">
+                <span class="system-front-eyebrow">System 06</span>
+                <h3>Compass-Scored Carriers</h3>
+                <span class="system-front-cta">Click to learn more &nbsp;→</span>
+              </div>
+            </div>
+            <div class="system-card-back">
+              <div class="system-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="12" r="10"/>
+                  <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/>
+                  <circle cx="12" cy="12" r="1.5" fill="currentColor"/>
+                </svg>
+              </div>
+              <h3>Compass-Scored Carriers</h3>
+              <p>Every carrier scored on 35 points by the Compass Engine before they ever see your load. The same 7-factor Compass standard documented on the carriers page. No mystery vetting.</p>
+            </div>
           </div>
-          <h3>Compass-Scored Carriers</h3>
-          <p>Every carrier scored on 35 points by the Compass Engine before they ever see your load. The same 7-factor Compass standard documented on the carriers page. No mystery vetting.</p>
         </article>
       </div>
     </div>
@@ -627,6 +745,24 @@
         }, { threshold: 0.25 });
         connectorObserver.observe(stepsTimeline);
       }
+
+      /* v3.8.agq — System card flip: click anywhere on .system-card-flip
+         OR Enter/Space when focused. Toggles .is-flipped + aria-expanded.
+         Single front↔back state per card; multiple cards can be flipped
+         simultaneously. */
+      document.querySelectorAll('.system-card-flip').forEach(function(card) {
+        var toggleFlip = function() {
+          var flipped = card.classList.toggle('is-flipped');
+          card.setAttribute('aria-expanded', flipped ? 'true' : 'false');
+        };
+        card.addEventListener('click', toggleFlip);
+        card.addEventListener('keydown', function(e) {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            toggleFlip();
+          }
+        });
+      });
 
       /* ===== NAV: Scroll background effect ===== */
       var mainNav = document.getElementById('mainNav');

@@ -939,6 +939,175 @@
       .system-card p { font-size: 14px; }
     }
 
+    /* ========== v3.8.agq — SYSTEM CARD FLIP PATTERN
+       Adds .system-card-flip modifier on top of existing .system-card.
+       Outer container drops padding + bg + border (moved to faces); becomes
+       perspective + click target. Inner is the 3D transform target.
+       Front face = gradient + large icon + system name overlay.
+       Back face = existing icon + headline + description.
+       Click anywhere on card OR Enter/Space when focused to flip.
+       Wasi: Nano Banana / Pixabay image assets later — front art swaps
+       from gradient+icon placeholder to <img> as a separate sprint. ========== */
+    .system-card.system-card-flip {
+      background: transparent;
+      border: none;
+      padding: 0;
+      perspective: 1200px;
+      cursor: pointer;
+      min-height: 320px;
+      position: relative;
+      transform: none;
+      box-shadow: none;
+    }
+    .system-card.system-card-flip:hover {
+      transform: none;
+      box-shadow: none;
+      border-color: transparent;
+    }
+    .system-card.system-card-flip:focus {
+      outline: none;
+    }
+    .system-card.system-card-flip:focus-visible {
+      outline: 3px solid rgba(186, 117, 23, 0.45);
+      outline-offset: 4px;
+      border-radius: 16px;
+    }
+
+    .system-card-inner {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      min-height: 320px;
+      transform-style: preserve-3d;
+      transition: transform 0.75s cubic-bezier(0.2, 0.6, 0.2, 1);
+    }
+    .system-card.system-card-flip.is-flipped .system-card-inner {
+      transform: rotateY(180deg);
+    }
+
+    .system-card-front,
+    .system-card-back {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      min-height: 320px;
+      backface-visibility: hidden;
+      -webkit-backface-visibility: hidden;
+      border-radius: 14px;
+      padding: 28px 26px;
+      display: flex;
+      flex-direction: column;
+      border: 1px solid rgba(10, 37, 64, 0.06);
+      box-shadow: 0 8px 22px rgba(10, 37, 64, 0.06);
+    }
+
+    .system-card-front {
+      background: linear-gradient(155deg, #FBF7F0 0%, #F5EEE0 55%, #FAEEDA 100%);
+      justify-content: space-between;
+      align-items: stretch;
+      overflow: hidden;
+      transition: box-shadow 280ms, border-color 280ms, transform 280ms cubic-bezier(0.2,0.6,0.2,1);
+    }
+    .system-card.system-card-flip:not(.is-flipped):hover .system-card-front {
+      box-shadow: 0 16px 36px rgba(10, 37, 64, 0.12);
+      border-color: rgba(186, 117, 23, 0.22);
+      transform: translateY(-3px);
+    }
+    .system-card-front-art {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--gold-dark, #BA7517);
+      opacity: 0.32;
+      margin-bottom: 8px;
+    }
+    .system-front-icon-lg {
+      width: 92px;
+      height: 92px;
+    }
+    .system-card-front-label {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .system-front-eyebrow {
+      font-family: var(--font-body, 'DM Sans', sans-serif);
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 2.4px;
+      text-transform: uppercase;
+      color: var(--gold-dark, #BA7517);
+    }
+    .system-card-front h3 {
+      font-family: var(--font-headline, 'Playfair Display', Georgia, serif);
+      font-size: 21px;
+      font-weight: 600;
+      color: var(--navy, #0A2540);
+      margin: 0;
+      line-height: 1.25;
+    }
+    .system-front-cta {
+      font-family: var(--font-body, 'DM Sans', sans-serif);
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--navy, #0A2540);
+      opacity: 0.6;
+      margin-top: 4px;
+      letter-spacing: 0.4px;
+    }
+
+    .system-card-back {
+      background: var(--cream, #FBF7F0);
+      transform: rotateY(180deg);
+      justify-content: flex-start;
+    }
+    .system-card-back .system-icon {
+      margin-bottom: 16px;
+    }
+    .system-card-back h3 {
+      font-family: var(--font-headline, 'Playfair Display', Georgia, serif);
+      font-size: 19px;
+      font-weight: 600;
+      line-height: 1.3;
+      color: var(--navy, #0A2540);
+      margin: 0 0 12px 0;
+    }
+    .system-card-back p {
+      font-family: var(--font-body, 'DM Sans', sans-serif);
+      font-size: 14.5px;
+      line-height: 1.65;
+      color: var(--fg-2, #3A4A5F);
+      margin: 0;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .system-card-inner {
+        transition: transform 0.18s ease;
+      }
+      .system-card.system-card-flip:not(.is-flipped):hover .system-card-front {
+        transform: none;
+      }
+    }
+
+    @media (max-width: 1024px) {
+      .system-card.system-card-flip { min-height: 300px; }
+      .system-card-inner { min-height: 300px; }
+      .system-card-front, .system-card-back { min-height: 300px; }
+    }
+    @media (max-width: 640px) {
+      .system-card.system-card-flip { min-height: 280px; }
+      .system-card-inner { min-height: 280px; }
+      .system-card-front, .system-card-back {
+        min-height: 280px;
+        padding: 24px 22px;
+      }
+      .system-card-front h3 { font-size: 18px; }
+      .system-card-back h3 { font-size: 17px; }
+      .system-card-back p { font-size: 14px; }
+      .system-front-icon-lg { width: 76px; height: 76px; }
+    }
+
     /* ========== v3.8.ago — STEPS TIMELINE SVG CONNECTOR
        Dashed gold-dark line behind the 5 step circles. Draws progressively
        via stroke-dashoffset animation when .steps-timeline gains the
