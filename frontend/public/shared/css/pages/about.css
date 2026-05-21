@@ -700,66 +700,6 @@
     }
 
     /* ========================================
-       STATS / BY THE NUMBERS
-       ======================================== */
-    .stats-section {
-      padding: 100px 0;
-      position: relative;
-      background: var(--light-gray, #F5EEE0);
-    }
-
-    .stats-section .section-title {
-      color: var(--navy);
-    }
-
-    .stats-section .section-subtitle {
-      color: #8899AA;
-    }
-
-    .stats-header {
-      text-align: center;
-      margin-bottom: 60px;
-    }
-
-    .stats-grid {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 24px;
-    }
-
-    .stat-card {
-      background: rgba(255, 255, 255, 0.03);
-      border: 1px solid rgba(255, 255, 255, 0.06);
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
-      border-radius: 16px;
-      padding: 36px 28px;
-      text-align: center;
-      transition: transform 0.4s ease, border-color 0.4s ease, box-shadow 0.4s ease;
-    }
-
-    .stat-card:hover {
-      transform: translateY(-4px);
-      border-color: rgba(197,165,114, 0.25);
-      box-shadow: 0 8px 40px rgba(197,165,114, 0.08);
-    }
-
-    .stat-number {
-      font-family: 'Playfair Display', serif;
-      font-size: clamp(36px, 4vw, 48px);
-      color: #BA7517;
-      line-height: 1;
-      margin-bottom: 8px;
-    }
-
-    .stat-label {
-      font-size: 14px;
-      font-weight: 500;
-      color: #8899AA;
-      letter-spacing: 0.5px;
-    }
-
-    /* ========================================
        WHAT SETS US APART
        ======================================== */
     .apart-section {
@@ -789,6 +729,16 @@
       gap: 28px;
       position: relative;
       z-index: 1;
+    }
+
+    /* v3.8.ahi — 3-card variant of apart-grid for the reduced
+       /about commitment set. grid-template-columns inherits from
+       .apart-grid; the modifier exists so future 6-card or 9-card
+       variants of the apart-grid pattern can be added without
+       collision. */
+    .apart-grid-3col {
+      max-width: 1080px;
+      margin: 0 auto;
     }
 
     .apart-card {
@@ -845,52 +795,28 @@
       margin-bottom: 56px;
     }
 
-    .ai-grid {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 28px;
-      max-width: 1080px;
+    /* v3.8.ahi — inline narrative replaces the prior .ai-grid 3-card
+       block. Single readable paragraph naming Marco Polo / Compass
+       Engine / Continuous Learning with bold-emphasis on each system
+       name. The .ai-boundaries panel below now claims section-anchor
+       weight (see .ai-boundaries-anchor). */
+    .ai-narrative {
+      max-width: 880px;
       margin: 0 auto 48px;
+      padding: 0 8px;
     }
 
-    .ai-card {
-      position: relative;
-      background: var(--white, #FFFFFF);
-      border: 1px solid rgba(10, 37, 64, 0.10);
-      border-radius: 16px;
-      padding: 32px 28px 28px;
-      transition: transform 0.4s ease, box-shadow 0.4s ease, border-color 0.4s ease;
-      overflow: hidden;
-    }
-
-    .ai-card::before {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      height: 3px;
-      background: var(--gold-dark, #BA7517);
-    }
-
-    .ai-card:hover {
-      transform: translateY(-4px);
-      border-color: transparent;
-      box-shadow: 0 12px 40px rgba(10, 37, 64, 0.12);
-    }
-
-    .ai-card h3 {
-      font-size: 20px;
-      color: var(--navy, #0A2540);
-      margin-bottom: 12px;
-      font-weight: 700;
-    }
-
-    .ai-card p {
-      font-size: 14px;
+    .ai-narrative p {
+      font-size: 17px;
+      line-height: 1.85;
       color: var(--text-muted, #6B7685);
-      line-height: 1.7;
       margin: 0;
+      text-align: center;
+    }
+
+    .ai-narrative strong {
+      color: var(--navy, #0A2540);
+      font-weight: 700;
     }
 
     /* Where AI Stops — boundaries panel.
@@ -914,6 +840,30 @@
       margin-bottom: 12px;
       font-weight: 700;
       letter-spacing: 0.02em;
+    }
+
+    /* v3.8.ahi — anchor variant. When the boundaries panel is the
+       section's centerpiece (no competing 3-card grid above it), it
+       gets larger padding + larger heading. The list-item type size
+       lifts too so the disclosure reads with the weight it deserves. */
+    .ai-boundaries-anchor {
+      max-width: 920px;
+      padding: 44px 48px 40px;
+    }
+
+    .ai-boundaries-anchor h3 {
+      font-size: 22px;
+      margin-bottom: 16px;
+    }
+
+    .ai-boundaries-anchor p {
+      font-size: 15px;
+      margin-bottom: 20px;
+    }
+
+    .ai-boundaries-anchor .ai-boundaries-list li {
+      font-size: 15px;
+      padding: 8px 0 8px 24px;
     }
 
     .ai-boundaries p {
@@ -1286,15 +1236,14 @@
         grid-template-columns: repeat(2, 1fr);
       }
 
+      /* v3.8.ahi — apart-grid joins mvp + leadership pattern for the
+         orphan-third-card centering when 3 cards reflow to 2 cols. */
       .mvp-grid .mvp-card:last-child,
+      .apart-grid .apart-card:last-child,
       .leadership-grid .leader-card:last-child {
         grid-column: 1 / -1;
         max-width: 500px;
         margin: 0 auto;
-      }
-
-      .stats-grid {
-        grid-template-columns: repeat(3, 1fr);
       }
 
       .footer-grid {
@@ -1326,7 +1275,6 @@
 
       .story-section,
       .mvp-section,
-      .stats-section,
       .apart-section,
       .leadership-section,
       .cta-section {
@@ -1340,12 +1288,9 @@
       }
 
       .mvp-grid .mvp-card:last-child,
+      .apart-grid .apart-card:last-child,
       .leadership-grid .leader-card:last-child {
         max-width: 100%;
-      }
-
-      .stats-grid {
-        grid-template-columns: repeat(2, 1fr);
       }
 
       .cta-box {
@@ -1364,10 +1309,6 @@
     }
 
     @media (max-width: 480px) {
-      .stats-grid {
-        grid-template-columns: 1fr;
-      }
-
       .hero h1 {
         font-size: 34px;
       }
@@ -1417,7 +1358,6 @@
 
       .mvp-card,
       .apart-card,
-      .stat-card,
       .leader-card {
         transition: none;
       }

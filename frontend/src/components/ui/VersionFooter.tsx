@@ -6391,7 +6391,86 @@
 //                advisory lock cleanup; Sprint 52+ candidate)
 //              - All other open items STATUS UNCHANGED per
 //                Sprint 47.b scope discipline
-export const SRL_VERSION = "3.8.ahh";
+//
+// v3.8.ahi — /about Phase A audit fixes (Wasi flags p1/p2/p3/p4/p6).
+//            Single atomic commit per §3.3, no scope creep beyond
+//            the 5 ratified dispositions.
+//
+//            p1 — Stats "By the Numbers" section removed entirely.
+//              Single-stat ("48 / States Licensed") didn't justify
+//              full-section weight when the same fact already lives
+//              on /index hero Section 6 H2 ("48 states wide"),
+//              /shippers H1, /carriers dedicated coverage section,
+//              and /faq three places. Section + .stats-* CSS + JS
+//              counter-animation block all swept per §3.7.
+//
+//            p2 — "What Sets Us Apart" reduced 6 → 3 cards.
+//              Prior 6 pillars (Khotan TMS / Carrier-Centric /
+//              Industry Expertise / Financially Bonded / 48-State /
+//              Compliance) all duplicated content present elsewhere
+//              with stronger rhetorical force. New 3 cards anchor
+//              /about as canonical for what /shippers + /carriers
+//              don't pitch: operational philosophy ("We Own the
+//              Stack"), published-before-asked posture ("Published
+//              Before Asked"), named-AE accountability ("One Name
+//              on Every Load"). Subtitle updated 6→3.
+//
+//            p3 — "How AI Works at SRL" 3-card grid collapsed to
+//              single inline narrative naming the three systems;
+//              "Where AI Stops" boundaries panel elevated as the
+//              section anchor with .ai-boundaries-anchor modifier
+//              (larger padding, larger heading, larger list-item
+//              type). Rare-disclosure pattern gets the visual
+//              weight it deserves; fewer competing card boxes.
+//
+//            p4 — Our Story Para 3 rewrite. Dropped softener
+//              clichés ("strategically positioned", "spirit of
+//              partnership and reliability", "partners can depend
+//              on") and verbatim cross-page repeats ("real-time
+//              visibility, transparent pricing, proactive
+//              communication"). New copy names Khotan, Marco Polo
+//              AI, Compass Engine, the published 7-factor scorecard,
+//              tier-graduated FSC, BMC-84 bond per §18.8.
+//
+//            p6 — Mission/Vision/Promise card bodies rewritten for
+//              §18.8 specificity. Vision was the weakest (pure
+//              generic enterprise vision-statement) — replaced with
+//              SRL operational mechanics. Mission gained published-
+//              metric specificity. Promise tightened from comma list
+//              to three discrete commitments.
+//
+//            CSS hygiene: .stats-section + 6 child selectors removed,
+//            .stats-grid references swept from 1024/768/480
+//            breakpoints + reduced-motion rule. .ai-grid + .ai-card
+//            + ::before + :hover + h3 + p all removed. New
+//            .ai-narrative + .ai-boundaries-anchor + .apart-grid-3col
+//            added. .apart-grid .apart-card:last-child joins mvp +
+//            leadership pattern for tablet/mobile orphan-third-card
+//            centering.
+//
+//            JS hygiene: STAT COUNTER ANIMATION block (75 LOC)
+//            removed from inline script — no .stat-number[data-target]
+//            callers remain on the page.
+//
+//            §18.9 voice-sweep applied to all new copy: no em-dashes,
+//            no "That's where..." openers, no consultant-speak, no
+//            marketing softeners, no repeated close patterns.
+//
+//            Per §3.1 sequence-continuous: v3.8.ahh → v3.8.ahi.
+//
+//            §13.3:
+//              - §20.6 audit log updated (deferred to next docs
+//                meta-commit per §3.3 atomic-commit scope discipline;
+//                §20.6 maintenance bundled with broader §20 housekeeping)
+//              - §20.7 cross-page redundancy registry retroactively
+//                validates the p1 + p2 dispositions: "48-state
+//                coverage" was the textbook stat-repetition case,
+//                and the 6-card "What Sets Us Apart" was the textbook
+//                generic enterprise-SaaS pillar grid the registry
+//                exists to catch
+//              - All other open items STATUS UNCHANGED per §3.3
+//                scope discipline
+export const SRL_VERSION = "3.8.ahi";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
