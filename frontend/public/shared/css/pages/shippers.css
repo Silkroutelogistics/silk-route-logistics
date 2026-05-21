@@ -901,16 +901,16 @@
     }
     .ops-connector-line {
       stroke: var(--gold-dark, #BA7517);
-      stroke-width: 0.4;
-      stroke-dasharray: 1.2 1.6;
+      stroke-width: 1.1;
+      stroke-dasharray: 0.1 2.2;
       stroke-linecap: round;
-      opacity: 0.55;
+      opacity: 0.92;
       vector-effect: non-scaling-stroke;
-      animation: ops-line-flow 3.6s linear infinite;
+      animation: ops-line-flow 1.8s linear infinite;
     }
     @keyframes ops-line-flow {
       0%   { stroke-dashoffset: 0; }
-      100% { stroke-dashoffset: -14; }
+      100% { stroke-dashoffset: -4.6; }
     }
 
     /* Status card (4 absolutely-positioned at corners — content cycles per phase) */
