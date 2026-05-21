@@ -832,18 +832,21 @@
       padding-bottom: 24px;
       border-bottom: 1px solid rgba(10, 37, 64, 0.08);
     }
+    /* v3.8.agy — tabs are non-interactive visual state indicators.
+       Cursor default, no hover/focus interaction. Active state still
+       fires via .is-active class toggled by auto-cycle. */
     .ops-tab {
       position: relative;
       background: transparent;
       border: 1px solid rgba(10, 37, 64, 0.10);
       border-radius: 10px;
       padding: 12px 14px 10px;
-      cursor: pointer;
+      cursor: default;
       display: flex;
       flex-direction: column;
       align-items: center;
       gap: 4px;
-      transition: background 240ms ease, border-color 240ms ease, transform 200ms ease;
+      transition: background 360ms ease, border-color 360ms ease;
       font-family: inherit;
     }
 
@@ -882,10 +885,6 @@
     @media (prefers-reduced-motion: reduce) {
       .ops-tab.is-active .ops-tab-dot { animation: none; }
     }
-    .ops-tab:hover {
-      border-color: rgba(186, 117, 23, 0.30);
-      background: rgba(186, 117, 23, 0.04);
-    }
     .ops-tab.is-active {
       background: var(--navy, #0A2540);
       border-color: var(--navy, #0A2540);
@@ -897,10 +896,6 @@
     }
     .ops-tab.is-active .ops-tab-num {
       color: var(--gold, #C5A572);
-    }
-    .ops-tab:focus-visible {
-      outline: 3px solid rgba(186,117,23,0.45);
-      outline-offset: 2px;
     }
     .ops-tab-num {
       font-family: var(--font-body, 'DM Sans', sans-serif);

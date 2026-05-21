@@ -212,35 +212,36 @@
 
       <div class="ops-loop-canvas" id="opsLoopCanvas">
 
-        <!-- Phase tabs (top) — v3.8.agv adds gold LED status dot per tab;
-             active phase pulses, inactive phases dim. Matches OWLERY's
-             per-tab status indicator pattern in SRL gold. -->
-        <div class="ops-loop-tabs" role="tablist" aria-label="Operational lifecycle phases">
-          <button class="ops-tab is-active" data-phase="0" role="tab" aria-selected="true" type="button">
+        <!-- Phase tabs (top) — v3.8.agy: non-interactive visual state
+             indicators (was clickable buttons in v3.8.agv). The animation
+             tells the story; user doesn't drive. aria-live on status
+             columns + narrative below announces phase changes. -->
+        <div class="ops-loop-tabs" aria-label="Operational lifecycle phases">
+          <div class="ops-tab is-active" data-phase="0" role="status">
             <span class="ops-tab-dot" aria-hidden="true"></span>
             <span class="ops-tab-num">01</span>
             <span class="ops-tab-name">Quote</span>
-          </button>
-          <button class="ops-tab" data-phase="1" role="tab" aria-selected="false" type="button">
+          </div>
+          <div class="ops-tab" data-phase="1" role="status">
             <span class="ops-tab-dot" aria-hidden="true"></span>
             <span class="ops-tab-num">02</span>
             <span class="ops-tab-name">Plan</span>
-          </button>
-          <button class="ops-tab" data-phase="2" role="tab" aria-selected="false" type="button">
+          </div>
+          <div class="ops-tab" data-phase="2" role="status">
             <span class="ops-tab-dot" aria-hidden="true"></span>
             <span class="ops-tab-num">03</span>
             <span class="ops-tab-name">Execute</span>
-          </button>
-          <button class="ops-tab" data-phase="3" role="tab" aria-selected="false" type="button">
+          </div>
+          <div class="ops-tab" data-phase="3" role="status">
             <span class="ops-tab-dot" aria-hidden="true"></span>
             <span class="ops-tab-num">04</span>
             <span class="ops-tab-name">Track</span>
-          </button>
-          <button class="ops-tab" data-phase="4" role="tab" aria-selected="false" type="button">
+          </div>
+          <div class="ops-tab" data-phase="4" role="status">
             <span class="ops-tab-dot" aria-hidden="true"></span>
             <span class="ops-tab-num">05</span>
             <span class="ops-tab-name">Validate</span>
-          </button>
+          </div>
         </div>
 
         <!-- v3.8.ags — central stage restructured: 4 status cards scatter to
@@ -795,38 +796,38 @@
       if (opsCanvas) {
         var opsPhases = [
           { cards: {
-              'left-1':  { svc: 'Lane Optimizer',     act: 'scanning your historic lanes' },
-              'left-2':  { svc: 'Your Lane History',  act: 'informing the quote' },
-              'right-1': { svc: 'Rate Intelligence',  act: 'reading prevailing market' },
-              'right-2': { svc: 'Your AE',            act: 'building the quote' }
+              'left-1':  { svc: 'Lane Optimizer',     act: 'Scanning your historic lanes' },
+              'left-2':  { svc: 'Your Lane History',  act: 'Informing the quote' },
+              'right-1': { svc: 'Rate Intelligence',  act: 'Reading prevailing market' },
+              'right-2': { svc: 'Your AE',            act: 'Building the quote' }
             }
           },
           { cards: {
-              'left-1':  { svc: 'Carrier Intelligence', act: 'vetting candidates' },
+              'left-1':  { svc: 'Carrier Intelligence', act: 'Vetting candidates' },
               'left-2':  { svc: 'Compass Engine',       act: '35 points each' },
-              'right-1': { svc: 'Compliance Check',     act: 'candidate clearance' },
-              'right-2': { svc: 'Your AE',              act: 'confirming the match' }
+              'right-1': { svc: 'Compliance Check',     act: 'Candidate clearance' },
+              'right-2': { svc: 'Your AE',              act: 'Confirming the match' }
             }
           },
           { cards: {
-              'left-1':  { svc: 'Tender',         act: 'sent to carrier' },
-              'left-2':  { svc: 'Acceptance',     act: 'confirmed' },
-              'right-1': { svc: 'Rate Con',       act: 'generated and signed' },
-              'right-2': { svc: 'Pickup Window',  act: 'locked' }
+              'left-1':  { svc: 'Tender',         act: 'Sent to carrier' },
+              'left-2':  { svc: 'Acceptance',     act: 'Confirmed' },
+              'right-1': { svc: 'Rate Con',       act: 'Generated and signed' },
+              'right-2': { svc: 'Pickup Window',  act: 'Locked' }
             }
           },
           { cards: {
-              'left-1':  { svc: 'GPS',              act: 'engaged at pickup' },
-              'left-2':  { svc: 'Milestone Alerts', act: 'landing in your inbox' },
-              'right-1': { svc: 'Marco Polo AI',    act: 'monitoring exceptions' },
-              'right-2': { svc: 'Tracking Link',    act: 'sent to your customer' }
+              'left-1':  { svc: 'GPS',              act: 'Engaged at pickup' },
+              'left-2':  { svc: 'Milestone Alerts', act: 'Landing in your inbox' },
+              'right-1': { svc: 'Marco Polo AI',    act: 'Monitoring exceptions' },
+              'right-2': { svc: 'Tracking Link',    act: 'Sent to your customer' }
             }
           },
           { cards: {
-              'left-1':  { svc: 'POD',           act: 'uploaded' },
-              'left-2':  { svc: 'Invoice',       act: 'generated and delivered' },
-              'right-1': { svc: 'Load Outcomes', act: 'fed back to your AE' },
-              'right-2': { svc: 'Scorecard',     act: 'updated for the quarter' }
+              'left-1':  { svc: 'POD',           act: 'Uploaded' },
+              'left-2':  { svc: 'Invoice',       act: 'Generated and delivered' },
+              'right-1': { svc: 'Load Outcomes', act: 'Fed back to your AE' },
+              'right-2': { svc: 'Scorecard',     act: 'Updated for the quarter' }
             }
           }
         ];
@@ -842,7 +843,6 @@
 
           opsTabs.forEach(function(tab, i) {
             tab.classList.toggle('is-active', i === phaseIdx);
-            tab.setAttribute('aria-selected', i === phaseIdx ? 'true' : 'false');
           });
 
           opsNarratives.forEach(function(n, i) {
@@ -864,30 +864,16 @@
         }
 
         function startOpsAutoPlay() {
-          stopOpsAutoPlay();
-          if (reducedMotion) return;
+          if (autoPlayInterval || reducedMotion) return;
           autoPlayInterval = setInterval(function() {
             setOpsPhase((currentPhase + 1) % opsPhases.length);
           }, 4500);
         }
-        function stopOpsAutoPlay() {
-          if (autoPlayInterval) {
-            clearInterval(autoPlayInterval);
-            autoPlayInterval = null;
-          }
-        }
 
-        opsTabs.forEach(function(tab, i) {
-          tab.addEventListener('click', function() {
-            setOpsPhase(i);
-            stopOpsAutoPlay();
-            setTimeout(startOpsAutoPlay, 8000);
-          });
-        });
-
-        opsCanvas.addEventListener('mouseenter', stopOpsAutoPlay);
-        opsCanvas.addEventListener('mouseleave', startOpsAutoPlay);
-
+        /* v3.8.agy — tabs no longer clickable; auto-cycle is the sole
+           phase driver. Removed: click handlers, hover-pause, 8s resume
+           after manual interaction. The animation runs autonomously
+           once it enters the viewport. */
         var opsViewObserver = new IntersectionObserver(function(entries) {
           entries.forEach(function(entry) {
             if (entry.isIntersecting) {
