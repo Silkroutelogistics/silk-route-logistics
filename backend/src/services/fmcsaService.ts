@@ -539,3 +539,68 @@ export async function getCarrierAuthority(dotNumber: string): Promise<FMCSAAutho
     return fail;
   }
 }
+
+/**
+ * Persist-side wrapper for the authority-age compliance epic
+ * (v3.8.ahk, Item 182 sprint 2 of 5). Used by the two real
+ * carrier-creation paths (`registerCarrier` and
+ * `setupAdminCarrierProfile`) to fetch + return a JS `Date` ready
+ * to write to `CarrierProfile.authorityGrantedDate`.
+ *
+ * Guarantees per Item 182 locked decisions:
+ *
+ *   - **Short-circuit on missing FMCSA_WEB_KEY.** Returns `null`
+ *     with zero FMCSA traffic. Dev and E2E seed paths never hit
+ *     the network because they run without the prod webKey set.
+ *
+ *   - **No fabricated date.** A legitimate no-GRANT result
+ *     (intrastate-only carriers, DOT-without-MC, brand-new filings
+ *     not yet in the FMCSA database) persists as `null`. We never
+ *     return an epoch or far-past date to mean "unknown".
+ *
+ *   - **No sentinel values.** `null` IS the unknown signal — the
+ *     downstream gate (v3.8.ahl) treats it as soft-grandfather
+ *     per the existing-APPROVED-carrier policy in Item 182.
+ *
+ *   - **Distinct logging for transient errors.** FMCSA HTTP
+ *     failures and network timeouts log via `log.warn` (separately
+ *     from the `log.info`-level legit no-GRANT case) so the
+ *     idempotent backfill's summary can spot them, and so an
+ *     operator scanning logs after a registration can tell whether
+ *     the field-stayed-null is a known carrier-side state or a
+ *     fixable infrastructure blip. The backfill script calls
+ *     `getCarrierAuthority` directly (not this helper) so it can
+ *     examine the full result for its three-bucket summary.
+ */
+export async function populateAuthorityGrantedDate(
+  dotNumber: string | null | undefined,
+): Promise<Date | null> {
+  if (!dotNumber) return null;
+  if (!env.FMCSA_WEB_KEY) return null;
+
+  const result = await getCarrierAuthority(dotNumber);
+  if (result.authorityGrantDate) {
+    return new Date(result.authorityGrantDate);
+  }
+
+  // Classify the null case for distinct logging. We split on
+  // transient HTTP/network failures (which the next backfill run
+  // should re-attempt) vs legitimate no-GRANT results (which the
+  // backfill can safely leave null forever).
+  const transientPattern = /endpoint HTTP|endpoint error|abort|ETIMEDOUT|ECONNRESET|fetch failed/i;
+  const hasTransient = result.errors.some((e) => transientPattern.test(e));
+
+  if (hasTransient) {
+    log.warn(
+      { dotNumber, errors: result.errors },
+      "[populateAuthorityGrantedDate] transient FMCSA error — persisting null, backfill will re-attempt",
+    );
+  } else {
+    log.info(
+      { dotNumber, errors: result.errors },
+      "[populateAuthorityGrantedDate] no GRANT in authority history — persisting null",
+    );
+  }
+
+  return null;
+}

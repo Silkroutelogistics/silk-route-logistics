@@ -6562,7 +6562,100 @@
 //                v3.8.ahn close.
 //              - All other open items STATUS UNCHANGED per §3.3
 //                scope discipline
-export const SRL_VERSION = "3.8.ahl";
+//
+// v3.8.ahk — Authority-age compliance epic, sprint 2 of 5 — schema
+//            population during carrier creation + one-time backfill
+//            for the existing carrier base.
+//
+//            Pure data sprint per Phase A ratification. No Prisma
+//            migration — CarrierProfile.authorityGrantedDate already
+//            exists at schema.prisma:880 and authorityAgeDays at
+//            line 881 stays unused per Item 182 locked decision
+//            (age derived on read from the stable grant date).
+//
+//            Ratified Phase A decisions (D1-D6):
+//              D1-α: populate via a single service helper called
+//                    from each create site (explicit, no wrapper).
+//              D2-A + D2-C aspect: persist null on no-GRANT;
+//                    log transient FMCSA HTTP/network errors via
+//                    log.warn DISTINCTLY from log.info-level
+//                    legit no-GRANT cases so the backfill can spot
+//                    them. NEVER fabricate a date or write a
+//                    sentinel — null IS the unknown signal, the
+//                    downstream gate (v3.8.ahl) treats it as
+//                    soft-grandfather.
+//              D3 hybrid (Y for register, X for admin-setup):
+//                    fire-and-forget for self-registration where
+//                    the carrier is PENDING and can't haul anyway,
+//                    sync await for admin-setup where the row is
+//                    immediately-APPROVED and the data must be
+//                    present at row birth.
+//              D4-P + D4-Q: backfill skips populated rows by
+//                    default (idempotent re-run), accepts --force
+//                    to re-pull every row.
+//              D5-M: env-based short-circuit when FMCSA_WEB_KEY is
+//                    absent — dev and E2E seeds never hit the
+//                    network. Seed paths in prisma/seed.ts stay
+//                    untouched.
+//              D6-J: backfill self-throttle at 2s between FMCSA
+//                    calls. Internal calls bypass the HTTP-route
+//                    fmcsaLookupLimiter (per-IP, middleware-only),
+//                    so the script owns its pacing.
+//
+//            Shipped:
+//
+//              - backend/src/services/fmcsaService.ts — new exported
+//                populateAuthorityGrantedDate(dotNumber) helper.
+//                Returns Date | null. Short-circuits on missing
+//                FMCSA_WEB_KEY (zero network traffic). Internally
+//                classifies the null case via a transient-pattern
+//                regex over the errors[] from getCarrierAuthority
+//                and routes through log.warn vs log.info
+//                accordingly.
+//
+//              - backend/src/controllers/carrierController.ts —
+//                imports the helper. registerCarrier gains step 7
+//                in the post-response fire-and-forget chain that
+//                updates authorityGrantedDate on the freshly
+//                created CarrierProfile row a few seconds later.
+//                setupAdminCarrierProfile gains a sync await call
+//                before the prisma.carrierProfile.create with
+//                authorityGrantedDate included in the data object
+//                — the field is set at row birth, not via a
+//                follow-up update, since this path creates
+//                immediately-APPROVED carriers where the
+//                downstream gate needs the anchor present.
+//
+//              - backend/scripts/backfill-authority-dates.ts (new)
+//                — walks CarrierProfile rows where dotNumber is
+//                non-null, skips already-populated by default
+//                (filter on authorityGrantedDate IS NULL), accepts
+//                --force to re-pull all, self-throttles at 2000ms
+//                between FMCSA calls, calls getCarrierAuthority
+//                directly (not via the helper) so it can examine
+//                the full result for its three-bucket summary
+//                (populated / left-null-no-grant / errored).
+//                Aborts cleanly when FMCSA_WEB_KEY is absent.
+//                Re-runnable, safe to interrupt — the next run
+//                bookmarks on the IS NULL filter.
+//
+//            NOT in v3.8.ahk scope (explicit halt boundary):
+//              - No hard gate in complianceCheck(). → v3.8.ahl
+//              - No override UI extensions. → v3.8.ahm
+//              - No /onboarding integration, no WaitingList. → v3.8.ahn
+//              - No Prisma migration. → none needed for the epic.
+//
+//            Per §3.1 sequence-continuous: v3.8.ahj → v3.8.ahk.
+//
+//            §13.3:
+//              - Item 182 v3.8.ahk status — LOGGED + CLOSED in same
+//                commit per Sprint 44b Items 72/73 + Sprint 47 Item
+//                99 + v3.8.ahj precedent. Item 182 v3.8.ahl →
+//                v3.8.ahn status remain LOGGED, awaiting per-sprint
+//                kickoff.
+//              - All other open items STATUS UNCHANGED per §3.3
+//                scope discipline
+export const SRL_VERSION = "3.8.ahk";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

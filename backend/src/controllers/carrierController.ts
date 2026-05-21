@@ -17,6 +17,7 @@ import { vetAndStoreReport } from "../services/carrierVettingService";
 import { sendEmail, wrap } from "../services/emailService";
 import { runIdentityCheck } from "../services/identityVerificationService";
 import { screenCarrier } from "../services/ofacScreeningService";
+import { populateAuthorityGrantedDate } from "../services/fmcsaService";
 
 export async function registerCarrier(req: Request, res: Response) {
   try {
@@ -305,6 +306,27 @@ export async function registerCarrier(req: Request, res: Response) {
     screenCarrier(profileId).catch((e) =>
       log.error({ err: e }, "[Compass OFAC] Auto OFAC screening error:")
     );
+  }
+
+  // 7. Populate authorityGrantedDate from FMCSA (background, v3.8.ahk —
+  //    Item 182 sprint 2 of 5). Fire-and-forget because the carrier is
+  //    PENDING and cannot haul until the team approves them, so
+  //    registration latency stays untouched and the field fills in
+  //    seconds later via FMCSA's authority endpoint. Null grant
+  //    (intrastate-only, DOT-without-MC, brand-new filing) persists as
+  //    null — the downstream gate in v3.8.ahl will soft-grandfather
+  //    unknown values per Item 182 locked decisions.
+  if (profileId && dot) {
+    populateAuthorityGrantedDate(dot)
+      .then((grantDate) => {
+        if (grantDate) {
+          return prisma.carrierProfile.update({
+            where: { id: profileId },
+            data: { authorityGrantedDate: grantDate },
+          });
+        }
+      })
+      .catch((e) => log.error({ err: e }, "[Authority Age] Populate error during registration:"));
   }
   } catch (err: unknown) {
     log.error({ err: err }, "[Carrier Registration] Error:");
@@ -711,6 +733,22 @@ export async function setupAdminCarrierProfile(req: AuthRequest, res: Response) 
     await prisma.user.update({ where: { id: req.user!.id }, data: { company } });
   }
 
+  // v3.8.ahk — Sync populate of authorityGrantedDate before create.
+  // Admin-setup creates immediately-APPROVED carriers, so the authority
+  // grant date must be present at row birth — the downstream gate in
+  // v3.8.ahl needs an anchor to compute age against, and admins
+  // creating carriers manually expect the compliance data to be ready
+  // when they navigate to the carrier detail view. The helper is
+  // defensive-by-design (no-throw, returns null on any error or
+  // missing webKey), so the worst case here is a null persisted date
+  // which the gate treats as soft-grandfather per Item 182.
+  let authorityGrantedDate: Date | null = null;
+  try {
+    authorityGrantedDate = await populateAuthorityGrantedDate(dotNumber || "");
+  } catch (e) {
+    log.error({ err: e }, "[Authority Age] Populate error during admin-setup:");
+  }
+
   const profile = await prisma.carrierProfile.create({
     data: {
       userId: req.user!.id,
@@ -731,6 +769,7 @@ export async function setupAdminCarrierProfile(req: AuthRequest, res: Response) 
       insuranceExpiry: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
       safetyScore: 100,
       tier: "PLATINUM",
+      authorityGrantedDate,
     },
   });
 
