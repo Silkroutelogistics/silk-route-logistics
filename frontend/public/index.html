@@ -217,99 +217,133 @@
         <p>Compass-vetted carriers across every freight category. AI matched, continuously monitored, transparent through delivery.</p>
       </div>
       <div class="services-grid">
-        <article class="service-card service-card-expand reveal">
-          <div class="service-photo-top">
-            <img src="/media/service-photo-ftl.jpg" alt="Modern American freight tractor on an interstate corridor at sunrise, representing dry van full truckload capacity" width="1200" height="800" loading="lazy">
-          </div>
-          <div class="service-card-body">
-            <h4>Dry Van (FTL)</h4>
-            <hr class="card-divider">
-            <p class="service-tagline">Compass-matched FTL across all 48 contiguous states. Every carrier scored before the tender goes out.</p>
-            <button class="service-expand-btn" type="button" aria-expanded="false" aria-controls="mech-ftl" data-mech-target="mech-ftl">
-              <span>How it works</span>
-              <svg class="expand-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <polyline points="6 9 12 15 18 9"></polyline>
-              </svg>
-            </button>
-            <div class="service-mechanism" id="mech-ftl">
+        <!-- v3.8.ahb — flip cards: front = photo + title + tagline, back = numbered
+             How it works steps. Click anywhere on card or Enter/Space to flip. -->
+        <article class="service-card service-card-flip reveal" role="button" tabindex="0" aria-expanded="false" aria-label="Dry Van FTL — click to learn how it works">
+          <div class="service-card-inner">
+            <div class="service-card-front">
+              <div class="service-photo-top">
+                <img src="/media/service-photo-ftl.jpg" alt="Modern American freight tractor on an interstate corridor at sunrise, representing dry van full truckload capacity" width="1200" height="800" loading="lazy">
+              </div>
+              <div class="service-card-body">
+                <h4>Dry Van (FTL)</h4>
+                <hr class="card-divider">
+                <p class="service-tagline">Compass-matched FTL across all 48 contiguous states. Every carrier scored before the tender goes out.</p>
+                <span class="service-flip-cta">
+                  <span>Click to learn more</span>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                </span>
+              </div>
+            </div>
+            <div class="service-card-back">
+              <h4>How it works</h4>
+              <hr class="card-divider">
               <ol class="mechanism-steps">
                 <li><span class="step-num">1</span><span class="step-text">You submit your load through the Shipper Portal or quote form.</span></li>
                 <li><span class="step-num">2</span><span class="step-text">Compass Engine ranks carriers by equipment fit, lane history, and 7-factor scorecard threshold.</span></li>
                 <li><span class="step-num">3</span><span class="step-text">Tender fires to the top match. Rate Confirmation auto-delivers on accept.</span></li>
                 <li><span class="step-num">4</span><span class="step-text">Real-time GPS plus check call status visible in your portal through delivery.</span></li>
               </ol>
+              <span class="service-flip-back-cta">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"></polyline></svg>
+                <span>Back to overview</span>
+              </span>
             </div>
           </div>
         </article>
-        <article class="service-card service-card-expand reveal reveal-delay-1">
-          <div class="service-photo-top">
-            <img src="/media/service-photo-reefer.jpg" alt="Modern refrigerated trailer at a temperature-controlled distribution facility, representing cold chain freight capacity" width="1200" height="843" loading="lazy">
-          </div>
-          <div class="service-card-body">
-            <h4>Temperature-Controlled (Reefer)</h4>
-            <hr class="card-divider">
-            <p class="service-tagline">Cold chain integrity from pickup to delivery. Continuous temperature monitoring with out-of-range alerts in real time.</p>
-            <button class="service-expand-btn" type="button" aria-expanded="false" aria-controls="mech-reefer" data-mech-target="mech-reefer">
-              <span>How it works</span>
-              <svg class="expand-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <polyline points="6 9 12 15 18 9"></polyline>
-              </svg>
-            </button>
-            <div class="service-mechanism" id="mech-reefer">
+        <article class="service-card service-card-flip reveal reveal-delay-1" role="button" tabindex="0" aria-expanded="false" aria-label="Temperature-Controlled Reefer — click to learn how it works">
+          <div class="service-card-inner">
+            <div class="service-card-front">
+              <div class="service-photo-top">
+                <img src="/media/service-photo-reefer.jpg" alt="Modern refrigerated trailer at a temperature-controlled distribution facility, representing cold chain freight capacity" width="1200" height="843" loading="lazy">
+              </div>
+              <div class="service-card-body">
+                <h4>Temperature-Controlled (Reefer)</h4>
+                <hr class="card-divider">
+                <p class="service-tagline">Cold chain integrity from pickup to delivery. Continuous temperature monitoring with out-of-range alerts in real time.</p>
+                <span class="service-flip-cta">
+                  <span>Click to learn more</span>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                </span>
+              </div>
+            </div>
+            <div class="service-card-back">
+              <h4>How it works</h4>
+              <hr class="card-divider">
               <ol class="mechanism-steps">
                 <li><span class="step-num">1</span><span class="step-text">Pre-cool verified before loading. Setpoint locked on Rate Confirmation.</span></li>
                 <li><span class="step-num">2</span><span class="step-text">Continuous sensor monitoring through transit. Setpoint drift triggers alerts.</span></li>
                 <li><span class="step-num">3</span><span class="step-text">Out-of-range events route to the dispatch desk and shipper portal in real time.</span></li>
                 <li><span class="step-num">4</span><span class="step-text">Temperature recorder validated at delivery. Chain of custody attached to the BOL.</span></li>
               </ol>
+              <span class="service-flip-back-cta">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"></polyline></svg>
+                <span>Back to overview</span>
+              </span>
             </div>
           </div>
         </article>
-        <article class="service-card service-card-expand reveal reveal-delay-2">
-          <div class="service-photo-top">
-            <img src="/media/service-photo-dedicated.jpg" alt="Lineup of modern white Freightliner Cascadia tractors at a sunlit distribution yard, representing assured dedicated capacity" width="1200" height="670" loading="lazy">
-          </div>
-          <div class="service-card-body">
-            <h4>Dedicated Capacity</h4>
-            <hr class="card-divider">
-            <p class="service-tagline">Assured trucks for high volume lanes. Drivers who learn your facilities and freight. No spot market roulette.</p>
-            <button class="service-expand-btn" type="button" aria-expanded="false" aria-controls="mech-dedicated" data-mech-target="mech-dedicated">
-              <span>How it works</span>
-              <svg class="expand-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <polyline points="6 9 12 15 18 9"></polyline>
-              </svg>
-            </button>
-            <div class="service-mechanism" id="mech-dedicated">
+        <article class="service-card service-card-flip reveal reveal-delay-2" role="button" tabindex="0" aria-expanded="false" aria-label="Dedicated Capacity — click to learn how it works">
+          <div class="service-card-inner">
+            <div class="service-card-front">
+              <div class="service-photo-top">
+                <img src="/media/service-photo-dedicated.jpg" alt="Lineup of modern white Freightliner Cascadia tractors at a sunlit distribution yard, representing assured dedicated capacity" width="1200" height="670" loading="lazy">
+              </div>
+              <div class="service-card-body">
+                <h4>Dedicated Capacity</h4>
+                <hr class="card-divider">
+                <p class="service-tagline">Assured trucks for high volume lanes. Drivers who learn your facilities and freight. No spot market roulette.</p>
+                <span class="service-flip-cta">
+                  <span>Click to learn more</span>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                </span>
+              </div>
+            </div>
+            <div class="service-card-back">
+              <h4>How it works</h4>
+              <hr class="card-divider">
               <ol class="mechanism-steps">
                 <li><span class="step-num">1</span><span class="step-text">Share your lane pattern, volume, and service requirements.</span></li>
                 <li><span class="step-num">2</span><span class="step-text">Lane Optimizer surfaces carriers with matching equipment and lane familiarity.</span></li>
                 <li><span class="step-num">3</span><span class="step-text">Dedicated assignment cycle begins. Same drivers, same equipment, same lanes.</span></li>
                 <li><span class="step-num">4</span><span class="step-text">Single Account Executive contact. Assured weekly capacity with rate transparency.</span></li>
               </ol>
+              <span class="service-flip-back-cta">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"></polyline></svg>
+                <span>Back to overview</span>
+              </span>
             </div>
           </div>
         </article>
-        <article class="service-card service-card-expand reveal reveal-delay-3">
-          <div class="service-photo-top">
-            <img src="/media/service-expedited.jpg" alt="Modern Freightliner Cascadia tractor on an interstate corridor at twilight, representing same day and next day expedited freight" width="600" height="280" loading="lazy">
-          </div>
-          <div class="service-card-body">
-            <h4>Expedited and Hot Shot</h4>
-            <hr class="card-divider">
-            <p class="service-tagline">Same day, next day, team driver options. Hot-shot tenders fire on submit. Marco Polo updates the ETA continuously.</p>
-            <button class="service-expand-btn" type="button" aria-expanded="false" aria-controls="mech-expedited" data-mech-target="mech-expedited">
-              <span>How it works</span>
-              <svg class="expand-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <polyline points="6 9 12 15 18 9"></polyline>
-              </svg>
-            </button>
-            <div class="service-mechanism" id="mech-expedited">
+        <article class="service-card service-card-flip reveal reveal-delay-3" role="button" tabindex="0" aria-expanded="false" aria-label="Expedited and Hot Shot — click to learn how it works">
+          <div class="service-card-inner">
+            <div class="service-card-front">
+              <div class="service-photo-top">
+                <img src="/media/service-expedited.jpg" alt="Modern Freightliner Cascadia tractor on an interstate corridor at twilight, representing same day and next day expedited freight" width="600" height="280" loading="lazy">
+              </div>
+              <div class="service-card-body">
+                <h4>Expedited and Hot Shot</h4>
+                <hr class="card-divider">
+                <p class="service-tagline">Same day, next day, team driver options. Hot-shot tenders fire on submit. Marco Polo updates the ETA continuously.</p>
+                <span class="service-flip-cta">
+                  <span>Click to learn more</span>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                </span>
+              </div>
+            </div>
+            <div class="service-card-back">
+              <h4>How it works</h4>
+              <hr class="card-divider">
               <ol class="mechanism-steps">
                 <li><span class="step-num">1</span><span class="step-text">Hot-shot tender fires on submission. Expedited carriers notified within minutes.</span></li>
                 <li><span class="step-num">2</span><span class="step-text">Compass Engine filters to carriers rated for expedited service and team driver capacity.</span></li>
                 <li><span class="step-num">3</span><span class="step-text">Carrier accepts or load escalates to the next match automatically.</span></li>
                 <li><span class="step-num">4</span><span class="step-text">Marco Polo runs check calls. ETA pushed to your portal continuously through delivery.</span></li>
               </ol>
+              <span class="service-flip-back-cta">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"></polyline></svg>
+                <span>Back to overview</span>
+              </span>
             </div>
           </div>
         </article>
@@ -779,17 +813,26 @@
       window.addEventListener('scroll', updateActiveNav, { passive: true });
 
       /* ========================================
-         SERVICE CARDS — Foldable "How it works" expand (v3.8.aev)
+         SERVICE CARDS — Flip pattern (v3.8.ahb, replaces v3.8.aev accordion).
+         Click anywhere on card or Enter/Space when focused → flips to
+         reveal "How it works" steps on back face. Click again → flips
+         back. Multiple cards can be flipped simultaneously.
          ======================================== */
-      var expandBtns = document.querySelectorAll('.service-expand-btn');
-      for (var i = 0; i < expandBtns.length; i++) {
-        expandBtns[i].addEventListener('click', function() {
-          var targetId = this.getAttribute('data-mech-target');
-          var panel = document.getElementById(targetId);
-          if (!panel) return;
-          var isOpen = panel.classList.toggle('is-open');
-          this.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
-        });
+      var serviceFlipCards = document.querySelectorAll('.service-card-flip');
+      for (var i = 0; i < serviceFlipCards.length; i++) {
+        (function(card) {
+          var toggleFlip = function() {
+            var flipped = card.classList.toggle('is-flipped');
+            card.setAttribute('aria-expanded', flipped ? 'true' : 'false');
+          };
+          card.addEventListener('click', toggleFlip);
+          card.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              toggleFlip();
+            }
+          });
+        })(serviceFlipCards[i]);
       }
 
       /* ========================================

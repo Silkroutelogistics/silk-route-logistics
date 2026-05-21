@@ -921,6 +921,142 @@
       gap: 10px;
     }
 
+    /* v3.8.ahb — Service-card flip pattern (replaces v3.8.aev accordion).
+       Outer .service-card becomes perspective container + click target;
+       .service-card-inner is the 3D transform target; front + back faces
+       carry the visual styling. Front face = existing photo + body
+       layout. Back face = "How it works" numbered steps.
+       Click anywhere on card or Enter/Space to flip. */
+    .service-card.service-card-flip {
+      background: transparent;
+      border: none;
+      overflow: visible;
+      perspective: 1400px;
+      cursor: pointer;
+      position: relative;
+      transition: none;
+    }
+    .service-card.service-card-flip:hover {
+      transform: none;
+      box-shadow: none;
+    }
+    .service-card.service-card-flip:focus {
+      outline: none;
+    }
+    .service-card.service-card-flip:focus-visible {
+      outline: 3px solid rgba(186, 117, 23, 0.45);
+      outline-offset: 4px;
+      border-radius: var(--radius);
+    }
+
+    .service-card-inner {
+      position: relative;
+      width: 100%;
+      min-height: 100%;
+      transform-style: preserve-3d;
+      transition: transform 0.75s cubic-bezier(0.2, 0.6, 0.2, 1);
+    }
+    .service-card.service-card-flip.is-flipped .service-card-inner {
+      transform: rotateY(180deg);
+    }
+
+    .service-card-front,
+    .service-card-back {
+      width: 100%;
+      backface-visibility: hidden;
+      -webkit-backface-visibility: hidden;
+      background: var(--white);
+      border: 1px solid rgba(10, 37, 64, 0.10);
+      border-radius: var(--radius);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      transition: transform 280ms cubic-bezier(0.2, 0.6, 0.2, 1),
+                  box-shadow 280ms cubic-bezier(0.2, 0.6, 0.2, 1);
+    }
+
+    .service-card-front {
+      position: relative;
+    }
+    .service-card-back {
+      position: absolute;
+      inset: 0;
+      height: 100%;
+      transform: rotateY(180deg);
+      padding: 28px 28px 24px;
+      background: linear-gradient(180deg, var(--white) 0%, var(--cream) 100%);
+    }
+
+    /* Hover lift on front face only when not flipped */
+    .service-card.service-card-flip:not(.is-flipped):hover .service-card-front {
+      transform: translateY(-4px);
+      box-shadow: var(--shadow-lg);
+    }
+    .service-card.service-card-flip:not(.is-flipped):hover .service-photo-top img {
+      transform: scale(1.04);
+    }
+
+    /* Front-face flip CTA — replaces the v3.8.aev .service-expand-btn */
+    .service-flip-cta {
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px solid rgba(10, 37, 64, 0.08);
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-family: inherit;
+      font-size: 0.78rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--gold-dark);
+      width: fit-content;
+    }
+    .service-card.service-card-flip:not(.is-flipped):hover .service-flip-cta {
+      color: var(--navy);
+    }
+
+    /* Back face structure */
+    .service-card-back h4 {
+      font-family: var(--font-headline);
+      font-weight: 700;
+      font-size: 1.1rem;
+      color: var(--navy);
+      margin: 0;
+    }
+    .service-card-back .card-divider {
+      margin: 8px 0 18px;
+    }
+    .service-card-back .mechanism-steps {
+      margin-top: 4px;
+      flex: 1;
+    }
+    .service-flip-back-cta {
+      margin-top: 16px;
+      padding-top: 12px;
+      border-top: 1px solid rgba(10, 37, 64, 0.08);
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-family: inherit;
+      font-size: 0.78rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--gold-dark);
+      width: fit-content;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .service-card-inner { transition: transform 0.18s ease; }
+      .service-card.service-card-flip:not(.is-flipped):hover .service-card-front {
+        transform: none;
+      }
+      .service-card.service-card-flip:not(.is-flipped):hover .service-photo-top img {
+        transform: none;
+      }
+    }
+
     .mechanism-steps li {
       display: flex;
       gap: 12px;
