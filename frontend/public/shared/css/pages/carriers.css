@@ -1708,7 +1708,7 @@
       flex-direction: column;
       align-items: center;
       gap: 1px;
-      margin-bottom: 16px;
+      margin-bottom: 30px;
       transition: transform 420ms cubic-bezier(0.45, 0, 0.15, 1), box-shadow 420ms ease;
     }
     /* Brass cartouche has subtle bevel ornaments at corners */
@@ -1820,29 +1820,35 @@
       line-height: 1;
     }
 
-    /* ----- Compass-mark traveler ----- */
+    /* ----- Caravan camel traveler ----- */
+    /* v3.8.ahk: replaces compass-mark with literal Bactrian camel.
+       transform sets feet at the registered trail-node coord (translate
+       Y -100% lifts entire body above the node). Gait keyframe overrides
+       transform with subtle vertical bob — must restate the base
+       translate inside each keyframe step since `animation` overrides
+       `transform`. */
     .compass-traveler {
       position: absolute;
-      width: 50px;
-      height: 50px;
+      width: 68px;
+      height: 41px;
       left: 12.5%;
       top: 71%;
-      transform: translate(-50%, -50%);
+      transform: translate(-50%, -100%);
       z-index: 4;
       transition:
         left 1.6s cubic-bezier(0.45, 0.05, 0.15, 1),
         top 1.6s cubic-bezier(0.45, 0.05, 0.15, 1);
-      filter: drop-shadow(0 4px 6px rgba(10,37,64,0.30));
-      animation: traveler-breathe 3.2s ease-in-out infinite;
+      filter: drop-shadow(0 4px 4px rgba(10,37,64,0.28));
+      animation: camel-gait 0.85s ease-in-out infinite;
     }
     .compass-traveler svg {
       width: 100%;
       height: 100%;
       display: block;
     }
-    @keyframes traveler-breathe {
-      0%, 100% { transform: translate(-50%, -50%) scale(1); }
-      50% { transform: translate(-50%, -50%) scale(1.06); }
+    @keyframes camel-gait {
+      0%, 100% { transform: translate(-50%, calc(-100% + 0px)); }
+      50%      { transform: translate(-50%, calc(-100% - 1.8px)); }
     }
     .journey-status-panel {
       position: relative;
@@ -1928,7 +1934,11 @@
       box-shadow: 0 4px 10px rgba(186,117,23,0.20);
     }
     @media (prefers-reduced-motion: reduce) {
-      .compass-traveler { transition: left 200ms ease, top 200ms ease; animation: none; }
+      .compass-traveler {
+        transition: left 200ms ease, top 200ms ease;
+        animation: none;
+        transform: translate(-50%, -100%);
+      }
       .journey-tab.is-active .journey-tab-dot { animation: none; }
       .journey-status-card { transition: opacity 0.15s ease, transform 0.15s ease; }
       .caravansary.is-active .caravansary-cartouche,
@@ -1947,7 +1957,7 @@
       .caravansary-cartouche { min-width: 70px; padding: 6px 9px 7px; }
       .cartouche-num { font-size: 7.5px; letter-spacing: 1.2px; }
       .cartouche-tier { font-size: 11.5px; }
-      .compass-traveler { width: 38px; height: 38px; }
+      .compass-traveler { width: 54px; height: 32px; }
       .seal-disc { width: 32px; height: 32px; }
       .seal-tag { font-size: 5.5px; }
       .seal-label { font-size: 6.5px; }
@@ -1973,6 +1983,6 @@
       .caravansary-cartouche { min-width: 60px; padding: 5px 7px 6px; }
       .cartouche-num { font-size: 7px; letter-spacing: 1px; }
       .cartouche-tier { font-size: 10.5px; }
-      .compass-traveler { width: 32px; height: 32px; }
+      .compass-traveler { width: 44px; height: 26px; }
     }
 
