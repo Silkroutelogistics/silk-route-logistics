@@ -1653,10 +1653,6 @@
       position: absolute;
       top: 14px;
       left: 22px;
-      right: 22px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
       z-index: 2;
       pointer-events: none;
     }
@@ -1668,11 +1664,6 @@
       color: rgba(139,106,30,0.70);
       letter-spacing: 1.2px;
     }
-    .trail-compass-rose {
-      width: 52px;
-      height: 52px;
-      opacity: 0.85;
-    }
 
     .trail-svg {
       position: absolute;
@@ -1683,18 +1674,22 @@
       z-index: 1;
     }
 
-    /* ----- Caravansary waypoints ----- */
+    /* ----- Caravansary waypoints -----
+       v3.8.ahl: restructure — anchor IS the .caravansary element (sits at
+       trail node coord); cartouche absolutely positioned ABOVE anchor.
+       Old flex-column had anchor below center, putting it off-trail. */
     .caravansary {
       position: absolute;
       transform: translate(-50%, -50%);
       z-index: 3;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      transition: transform 400ms cubic-bezier(0.45, 0, 0.15, 1);
+      width: 14px;
+      height: 14px;
     }
     .caravansary-cartouche {
-      position: relative;
+      position: absolute;
+      bottom: calc(100% + 14px);
+      left: 50%;
+      transform: translateX(-50%);
       padding: 8px 14px 9px;
       min-width: 96px;
       background: linear-gradient(155deg, #E8D4A8 0%, #C5A572 45%, #A88541 100%);
@@ -1708,8 +1703,8 @@
       flex-direction: column;
       align-items: center;
       gap: 1px;
-      margin-bottom: 30px;
       transition: transform 420ms cubic-bezier(0.45, 0, 0.15, 1), box-shadow 420ms ease;
+      white-space: nowrap;
     }
     /* Brass cartouche has subtle bevel ornaments at corners */
     .caravansary-cartouche::before,
@@ -1753,7 +1748,7 @@
       transition: transform 380ms cubic-bezier(0.45,0,0.15,1), box-shadow 380ms ease;
     }
     .caravansary.is-active .caravansary-cartouche {
-      transform: translateY(-2px);
+      transform: translateX(-50%) translateY(-2px);
       box-shadow:
         0 12px 24px rgba(10,37,64,0.30),
         0 0 0 2px rgba(186,117,23,0.35),
@@ -1765,75 +1760,20 @@
       box-shadow: 0 2px 6px rgba(10,37,64,0.35), 0 0 0 4px rgba(186,117,23,0.22);
     }
 
-    /* M6 navy wax-seal medallion hanging off Platinum cartouche */
-    .cartouche-seal {
-      position: absolute;
-      top: 100%;
-      left: 50%;
-      transform: translateX(-50%) translateY(2px);
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      pointer-events: none;
-    }
-    .seal-ribbon {
-      width: 16px;
-      height: 12px;
-      background: linear-gradient(90deg, #15365A 0%, #0A2540 50%, #061629 100%);
-      clip-path: polygon(0 0, 100% 0, 100% 70%, 50% 100%, 0 70%);
-    }
-    .seal-disc {
-      position: relative;
-      margin-top: -3px;
-      width: 38px;
-      height: 38px;
-      border-radius: 50%;
-      background:
-        radial-gradient(circle at 35% 30%, #234A73 0%, #0A2540 55%, #061629 100%);
-      border: 2px solid #BA7517;
-      box-shadow:
-        0 4px 8px rgba(10,37,64,0.40),
-        inset 0 1px 1px rgba(255,255,255,0.20),
-        inset 0 -1px 2px rgba(0,0,0,0.30),
-        0 0 0 1.5px rgba(251,247,240,0.35);
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 0;
-      transform: rotate(-3deg);
-    }
-    .seal-tag {
-      font-family: 'DM Sans', sans-serif;
-      font-size: 6.5px;
-      font-weight: 700;
-      letter-spacing: 1.2px;
-      color: #C5A572;
-      opacity: 0.95;
-    }
-    .seal-label {
-      font-family: 'Playfair Display', Georgia, serif;
-      font-size: 7.5px;
-      font-weight: 700;
-      letter-spacing: 0.3px;
-      color: #C5A572;
-      line-height: 1;
-    }
-
-    /* ----- Caravan camel traveler ----- */
-    /* v3.8.ahk: replaces compass-mark with literal Bactrian camel.
-       transform sets feet at the registered trail-node coord (translate
-       Y -100% lifts entire body above the node). Gait keyframe overrides
-       transform with subtle vertical bob — must restate the base
-       translate inside each keyframe step since `animation` overrides
-       `transform`. */
+    /* ----- Caravan camel traveler -----
+       v3.8.ahl: camel sits BELOW the cartouche on the trail line itself.
+       Anchor dot (.caravansary-anchor) lives at the registered trail
+       coord; camel center sits ~26px below the trail node so its feet
+       rest on the parchment beside the anchor with the cartouche cleanly
+       above. Gait keyframe restates the full transform since `animation`
+       overrides any base `transform`. */
     .compass-traveler {
       position: absolute;
       width: 68px;
       height: 41px;
       left: 12.5%;
       top: 71%;
-      transform: translate(-50%, -100%);
+      transform: translate(-50%, 8px);
       z-index: 4;
       transition:
         left 1.6s cubic-bezier(0.45, 0.05, 0.15, 1),
@@ -1847,8 +1787,8 @@
       display: block;
     }
     @keyframes camel-gait {
-      0%, 100% { transform: translate(-50%, calc(-100% + 0px)); }
-      50%      { transform: translate(-50%, calc(-100% - 1.8px)); }
+      0%, 100% { transform: translate(-50%, 8px); }
+      50%      { transform: translate(-50%, 6.5px); }
     }
     .journey-status-panel {
       position: relative;
@@ -1937,7 +1877,7 @@
       .compass-traveler {
         transition: left 200ms ease, top 200ms ease;
         animation: none;
-        transform: translate(-50%, -100%);
+        transform: translate(-50%, 8px);
       }
       .journey-tab.is-active .journey-tab-dot { animation: none; }
       .journey-status-card { transition: opacity 0.15s ease, transform 0.15s ease; }
@@ -1953,14 +1893,10 @@
       .journey-tab-name { font-size: 13px; }
       .journey-trail { height: 220px; }
       .trail-route-label { font-size: 11px; letter-spacing: 0.8px; }
-      .trail-compass-rose { width: 40px; height: 40px; }
       .caravansary-cartouche { min-width: 70px; padding: 6px 9px 7px; }
       .cartouche-num { font-size: 7.5px; letter-spacing: 1.2px; }
       .cartouche-tier { font-size: 11.5px; }
       .compass-traveler { width: 54px; height: 32px; }
-      .seal-disc { width: 32px; height: 32px; }
-      .seal-tag { font-size: 5.5px; }
-      .seal-label { font-size: 6.5px; }
       .journey-status-panel { min-height: auto; }
       .journey-status-card {
         position: relative;

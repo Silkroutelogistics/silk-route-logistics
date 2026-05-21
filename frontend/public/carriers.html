@@ -497,19 +497,11 @@
                wax-seal medallion off the Platinum cartouche. -->
           <div class="journey-trail" aria-hidden="true">
 
-            <!-- Heritage flourishes -->
+            <!-- Heritage flourish: italic "Trade Route" label, no compass rose
+                 (v3.8.ahl — compass rose dropped, conflicted visually with the
+                 actual SRL brand compass mark elsewhere on the page). -->
             <div class="trail-flourishes">
               <span class="trail-route-label">Trade Route</span>
-              <svg class="trail-compass-rose" viewBox="0 0 60 60" aria-hidden="true">
-                <g fill="none" stroke="#BA7517" opacity="0.6">
-                  <circle cx="30" cy="30" r="22" stroke-width="0.6"/>
-                  <circle cx="30" cy="30" r="14" stroke-width="0.4"/>
-                </g>
-                <path d="M30 8 L33 30 L30 52 L27 30 Z" fill="#BA7517" opacity="0.75"/>
-                <path d="M8 30 L30 33 L52 30 L30 27 Z" fill="#BA7517" opacity="0.4"/>
-                <circle cx="30" cy="30" r="2" fill="#0A2540"/>
-                <text x="30" y="6.5" text-anchor="middle" font-family="'Playfair Display',Georgia,serif" font-style="italic" font-size="6.5" fill="#0A2540" opacity="0.8">N</text>
-              </svg>
             </div>
 
             <!-- Parchment SVG: topographic contours + sepia trail path -->
@@ -560,16 +552,8 @@
 
             <div class="caravansary is-final" data-phase="3" style="left:87.5%;top:34%">
               <div class="caravansary-cartouche">
-                <span class="cartouche-num">M5</span>
+                <span class="cartouche-num">M5 + M6</span>
                 <span class="cartouche-tier">Platinum</span>
-              </div>
-              <!-- M6 navy wax-seal medallion (sub-state of Platinum, not a 5th tier) -->
-              <div class="cartouche-seal">
-                <div class="seal-ribbon"></div>
-                <div class="seal-disc">
-                  <span class="seal-tag">M6</span>
-                  <span class="seal-label">QP LOCKED</span>
-                </div>
               </div>
               <div class="caravansary-anchor"></div>
             </div>
@@ -581,7 +565,9 @@
                  Subtle gait-bob animation gives walking motion at rest. -->
             <div class="compass-traveler" id="journeyTruck">
               <svg viewBox="0 0 100 60" aria-hidden="true">
-                <g fill="#4A3010">
+                <!-- v3.8.ahl — camel recolored to SRL navy with brass cargo
+                     bundle. Walnut brown was off-palette per §2.1. -->
+                <g fill="#0A2540">
                   <!-- Body trunk between front + back legs -->
                   <path d="M 18 34 L 18 32 Q 22 26 30 26 L 64 26 Q 70 26 72 30 L 72 38 L 18 38 Z"/>
                   <!-- Hump 1 (rear) -->
@@ -605,13 +591,13 @@
                   <!-- Tail (left = rear) -->
                   <path d="M 18 32 L 14 28 L 14 32 Z"/>
                 </g>
-                <!-- Cargo bundle (silk-road trade goods) sitting between humps -->
-                <rect x="44" y="18" width="6" height="7" fill="#8B6A1E"/>
-                <rect x="44" y="18" width="6" height="1.5" fill="#6B5215"/>
-                <line x1="44" y1="21" x2="50" y2="21" stroke="#4A3010" stroke-width="0.4"/>
-                <line x1="47" y1="18" x2="47" y2="25" stroke="#4A3010" stroke-width="0.4"/>
+                <!-- Cargo bundle (silk-road trade goods) — brass on navy -->
+                <rect x="44" y="18" width="6" height="7" fill="#BA7517"/>
+                <rect x="44" y="18" width="6" height="1.5" fill="#8B6A1E"/>
+                <line x1="44" y1="21" x2="50" y2="21" stroke="#0A2540" stroke-width="0.4"/>
+                <line x1="47" y1="18" x2="47" y2="25" stroke="#0A2540" stroke-width="0.4"/>
                 <!-- Eye highlight -->
-                <circle cx="75.5" cy="12.5" r="0.8" fill="#FDF8EC"/>
+                <circle cx="75.5" cy="12.5" r="0.8" fill="#C5A572"/>
               </svg>
             </div>
           </div>
@@ -1050,7 +1036,7 @@
         function startJourneyAutoPlay() {
           if (journeyInterval || reducedMotionJourney) return;
           journeyInterval = setInterval(function () {
-            setJourneyPhase((journeyPhase + 1) % truckPositions.length);
+            setJourneyPhase((journeyPhase + 1) % travelerCoords.length);
           }, 5500);
         }
 
