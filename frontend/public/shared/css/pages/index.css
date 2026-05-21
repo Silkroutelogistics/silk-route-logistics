@@ -1029,22 +1029,66 @@
     }
     .service-card-back .mechanism-steps {
       margin-top: 4px;
-      flex: 1;
     }
+
+    /* v3.8.ahc — Secondary gold quote CTA on back face. Auto-pushed to
+       bottom via margin-top:auto in the flex-column. Service-specific
+       label per card (Get a Dry Van quote / Get a Reefer quote / etc.).
+       Routes to /shippers.html#quote-form. Click handler in index.html
+       JS uses closest() exemption to navigate without flipping back. */
+    .service-back-quote-cta {
+      margin-top: auto;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 12px 22px;
+      background: var(--gold-dark, #BA7517);
+      color: var(--cream, #FBF7F0);
+      text-decoration: none;
+      font-family: inherit;
+      font-size: 0.86rem;
+      font-weight: 600;
+      letter-spacing: 0.6px;
+      border-radius: 26px;
+      align-self: stretch;
+      text-align: center;
+      transition: background 200ms ease, transform 200ms ease, box-shadow 200ms ease;
+      box-shadow: 0 6px 14px rgba(186, 117, 23, 0.20);
+    }
+    .service-back-quote-cta:hover {
+      background: var(--navy, #0A2540);
+      transform: translateY(-1px);
+      box-shadow: 0 10px 20px rgba(10, 37, 64, 0.20);
+    }
+    .service-back-quote-cta:focus-visible {
+      outline: 3px solid rgba(186, 117, 23, 0.55);
+      outline-offset: 3px;
+    }
+    .service-back-quote-cta svg {
+      flex-shrink: 0;
+      transition: transform 200ms ease;
+    }
+    .service-back-quote-cta:hover svg {
+      transform: translateX(3px);
+    }
+
+    /* Tertiary "Back to overview" link — now sits below the gold CTA */
     .service-flip-back-cta {
-      margin-top: 16px;
+      margin-top: 12px;
       padding-top: 12px;
       border-top: 1px solid rgba(10, 37, 64, 0.08);
       display: inline-flex;
       align-items: center;
       gap: 8px;
       font-family: inherit;
-      font-size: 0.78rem;
+      font-size: 0.74rem;
       font-weight: 600;
       text-transform: uppercase;
       letter-spacing: 0.08em;
       color: var(--gold-dark);
       width: fit-content;
+      opacity: 0.75;
     }
 
     @media (prefers-reduced-motion: reduce) {

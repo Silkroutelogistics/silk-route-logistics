@@ -244,6 +244,10 @@
                 <li><span class="step-num">3</span><span class="step-text">Tender fires to the top match. Rate Confirmation auto-delivers on accept.</span></li>
                 <li><span class="step-num">4</span><span class="step-text">Real-time GPS plus check call status visible in your portal through delivery.</span></li>
               </ol>
+              <a href="/shippers.html#quote-form" class="service-back-quote-cta">
+                Get a Dry Van quote
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+              </a>
               <span class="service-flip-back-cta">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"></polyline></svg>
                 <span>Back to overview</span>
@@ -276,6 +280,10 @@
                 <li><span class="step-num">3</span><span class="step-text">Out-of-range events route to the dispatch desk and shipper portal in real time.</span></li>
                 <li><span class="step-num">4</span><span class="step-text">Temperature recorder validated at delivery. Chain of custody attached to the BOL.</span></li>
               </ol>
+              <a href="/shippers.html#quote-form" class="service-back-quote-cta">
+                Get a Reefer quote
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+              </a>
               <span class="service-flip-back-cta">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"></polyline></svg>
                 <span>Back to overview</span>
@@ -308,6 +316,10 @@
                 <li><span class="step-num">3</span><span class="step-text">Dedicated assignment cycle begins. Same drivers, same equipment, same lanes.</span></li>
                 <li><span class="step-num">4</span><span class="step-text">Single Account Executive contact. Assured weekly capacity with rate transparency.</span></li>
               </ol>
+              <a href="/shippers.html#quote-form" class="service-back-quote-cta">
+                Talk to an AE about Dedicated
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+              </a>
               <span class="service-flip-back-cta">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"></polyline></svg>
                 <span>Back to overview</span>
@@ -340,6 +352,10 @@
                 <li><span class="step-num">3</span><span class="step-text">Carrier accepts or load escalates to the next match automatically.</span></li>
                 <li><span class="step-num">4</span><span class="step-text">Marco Polo runs check calls. ETA pushed to your portal continuously through delivery.</span></li>
               </ol>
+              <a href="/shippers.html#quote-form" class="service-back-quote-cta">
+                Get an Expedited quote
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+              </a>
               <span class="service-flip-back-cta">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"></polyline></svg>
                 <span>Back to overview</span>
@@ -825,9 +841,19 @@
             var flipped = card.classList.toggle('is-flipped');
             card.setAttribute('aria-expanded', flipped ? 'true' : 'false');
           };
-          card.addEventListener('click', toggleFlip);
+          card.addEventListener('click', function(e) {
+            /* v3.8.ahc — clicks on the back-face gold quote CTA <a> must
+               navigate to /shippers.html#quote-form WITHOUT first flipping
+               the card back. Use closest() so clicks on the inline SVG
+               inside the link also exempt from flip. */
+            if (e.target.closest('.service-back-quote-cta')) return;
+            toggleFlip();
+          });
           card.addEventListener('keydown', function(e) {
             if (e.key === 'Enter' || e.key === ' ') {
+              /* Don't intercept Enter if a focusable inside back face
+                 (e.g., the gold quote CTA <a>) is the target. */
+              if (e.target.closest('.service-back-quote-cta')) return;
               e.preventDefault();
               toggleFlip();
             }
