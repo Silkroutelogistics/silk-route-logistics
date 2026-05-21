@@ -97,40 +97,41 @@
     <!-- ==========================================
          HERO
          ========================================== -->
-    <section class="hero" aria-labelledby="hero-heading">
-      <!-- v3.8.aeu — kinetic typography hero replaces the v3.8.aet
-           live operational terminal. The terminal was retired per
-           CLAUDE.md §20.3 new sub-lens "Architectural Reveal Defense"
-           (Lens 1.5) — its event content was leaking the load state
-           machine, scoring thresholds, automation triggers, batch
-           operational scale, internal performance timing, onboarding
-           workflow, and tier-payment math in one screenshot.
-
-           Kinetic typography is the cleanest break: pure type-driven
-           hero, zero architectural exposure, distinct visual register
-           from every other page on the site. The H1 itself becomes
-           the visual experience via staggered word-by-word reveal +
-           gold-dark underline draw on the "Innovation." emphasis. -->
+    <section class="hero hero-split" aria-labelledby="hero-heading">
+      <!-- v3.8.ahh — split layout. Kinetic typography text left + SRL Classic
+           brass medallion (Nano Banana editorial, 3/4 angle on walnut) right.
+           Preserves v3.8.aeu kinetic typography animation timing and the
+           Lens 1.5 architectural-reveal-defense posture; ADDS the heritage
+           editorial visual asset to the hero composition instead of
+           replacing the type-driven brand declaration. Mobile (<900px)
+           stacks vertically with text first, medallion below. -->
       <div class="hero-bg" aria-hidden="true"></div>
-      <div class="hero-content">
-        <p class="hero-label kinetic-eyebrow">About Silk Route Logistics</p>
-        <h1 id="hero-heading" class="kinetic-headline">
-          <span class="kinetic-line line-1">Built on Trust.</span>
-          <span class="kinetic-line line-2">
-            <span class="kinetic-word word-1">Driven</span>
-            <span class="kinetic-word word-2">by</span>
-            <span class="kinetic-emphasis">
-              <em>Innovation.</em>
-              <span class="kinetic-underline" aria-hidden="true"></span>
+      <div class="hero-content hero-content-split">
+        <div class="hero-text-block">
+          <p class="hero-label kinetic-eyebrow">About Silk Route Logistics</p>
+          <h1 id="hero-heading" class="kinetic-headline">
+            <span class="kinetic-line line-1">Built on Trust.</span>
+            <span class="kinetic-line line-2">
+              <span class="kinetic-word word-1">Driven</span>
+              <span class="kinetic-word word-2">by</span>
+              <span class="kinetic-emphasis">
+                <em>Innovation.</em>
+                <span class="kinetic-underline" aria-hidden="true"></span>
+              </span>
             </span>
-          </span>
-        </h1>
-        <p class="hero-text kinetic-sub">
-          Silk Route Logistics is rebuilding freight brokerage through
-          technology, transparency, and an operational discipline carriers
-          and shippers can verify on every load.
-        </p>
-        <div class="hero-divider kinetic-divider" aria-hidden="true"></div>
+          </h1>
+          <p class="hero-text kinetic-sub">
+            Silk Route Logistics is rebuilding freight brokerage through
+            technology, transparency, and an operational discipline carriers
+            and shippers can verify on every load.
+          </p>
+          <div class="hero-divider kinetic-divider" aria-hidden="true"></div>
+        </div>
+        <div class="hero-photo kinetic-photo">
+          <img src="/media/srl-logo-classic.png"
+               alt="The Silk Route Logistics compass mark as a brass medallion on a walnut surface, navy and gold detailing in editorial three-quarter angle lighting"
+               width="1200" height="630" loading="eager" fetchpriority="high">
+        </div>
       </div>
     </section>
 
