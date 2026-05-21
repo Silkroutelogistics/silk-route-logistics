@@ -6470,6 +6470,98 @@
 //                exists to catch
 //              - All other open items STATUS UNCHANGED per §3.3
 //                scope discipline
+//
+// v3.8.ahj — Authority-age compliance epic, sprint 1 of 5 — FMCSA
+//            authority data plumbing.
+//
+//            Wasi cross-cutting directive 2026-05-21: carriers whose
+//            FMCSA operating authority is younger than 18 months are
+//            HARD-BLOCKED from hauling SRL loads. Override window
+//            exists for authority age 12-18 months, ADMIN+CEO via the
+//            existing Sprint 40 ComplianceOverride flow. Sub-18 months
+//            authority on the carrier-self-service onboarding flow
+//            captures the carrier to a new WaitingList with an
+//            auto-notify at 18-month maturity. Existing APPROVED
+//            carriers are soft-grandfathered (AE warning, never
+//            auto-blocked).
+//
+//            Full epic decisions banked at CLAUDE.md §13.3 Item 182.
+//            Each subsequent sprint (v3.8.ahk → v3.8.ahn) closes a
+//            discrete layer of the epic with its own atomic commit.
+//
+//            v3.8.ahj scope (this commit) — DATA PLUMBING ONLY:
+//
+//              - New getCarrierAuthority(dotNumber) in fmcsaService
+//                hitting the free FMCSA QCMobile authority endpoint at
+//                /qc/services/carriers/{dot}/authority with the
+//                existing FMCSA_WEB_KEY env var. Parses operating-
+//                authority history, filters for GRANT actions, sorts
+//                ascending by served date, returns the earliest grant
+//                date as the canonical authorityGrantDate plus a
+//                derived authorityAgeMonths computed via calendar-
+//                month diff to today.
+//
+//              - New fmcsaTypes.ts with FMCSAAuthorityResult
+//                interface. Existing inline FMCSACarrierResult in
+//                fmcsaService.ts intentionally NOT moved this sprint
+//                — wider blast radius, scope-deferred per §3.3.
+//
+//              - Parallel authorityCache Map with same 1-hour TTL as
+//                the existing service cache (Pattern 6 sub-rule c:
+//                the epic-design said 24h but the authoritative
+//                source — the existing code — uses 1h; refactor to
+//                per-key TTL is out of v3.8.ahj scope).
+//
+//              - Casing-tolerant parsers: tolerates both
+//                originalServedDate (camelCase, used in some FMCSA
+//                responses) and original_served_date (snake_case,
+//                used per QCMobile docs example). Same for
+//                originalAction / original_action and
+//                authorityType / authority_type.
+//
+//              - Reinstatement-continuity caveat documented inline +
+//                pinned by smoke test: REVOCATION + REINSTATEMENT
+//                entries are explicitly ignored — only GRANT actions
+//                anchor the date. Per Item 182 locked decisions this
+//                is a deliberate v3.8.ahj choice; the reinstated-as-
+//                new-grant edge case is a deferred AE-warning
+//                concern.
+//
+//              - Smoke test at backend/__tests__/unit/services/
+//                fmcsaService.test.ts. Four cases: (1) happy path
+//                single GRANT 2 years ago returns ageMonths ≈ 24;
+//                (2) empty history returns null grant + non-empty
+//                errors; (3) multi-GRANT picks the earliest (COMMON
+//                older than CONTRACT in fixture); (4) REVOCATION +
+//                REINSTATEMENT entries ignored, original GRANT date
+//                is the anchor. fetch is mocked at the global level
+//                per Sub-pattern 11 CI-parity — no live FMCSA calls
+//                in CI.
+//
+//            NOT in v3.8.ahj scope (explicit halt boundary):
+//              - No schema write-path. CarrierProfile.authorityGrantedDate
+//                is not populated by this sprint. Wired in v3.8.ahk.
+//              - No hard gate in complianceCheck(). Wired in v3.8.ahl.
+//              - No override UI extensions. Wired in v3.8.ahm.
+//              - No onboarding integration. Wired in v3.8.ahn.
+//              - No WaitingList Prisma model. Wired in v3.8.ahn.
+//
+//            Per §3.1 sequence-continuous: v3.8.ahi → v3.8.ahj.
+//
+//            §13.3:
+//              - Item 182 — LOGGED. Umbrella epic backlog with locked
+//                decisions + 5-sprint sequence + sub-rule c
+//                verification gates. v3.8.ahj is the in-flight sprint
+//                within this Item; v3.8.ahk → v3.8.ahn awaiting
+//                kickoff with their own Phase A audits.
+//              - Item 8 (Carrier self-service onboarding UI) —
+//                STATUS NOTE: v3.8.ahn within Item 182 materially
+//                extends the carrier-self-service onboarding flow
+//                with MC/DOT lookup verdict + WaitingList capture.
+//                The two items will merge or cross-reference at
+//                v3.8.ahn close.
+//              - All other open items STATUS UNCHANGED per §3.3
+//                scope discipline
 export const SRL_VERSION = "3.8.ahj";
 
 export function VersionFooter({ className }: { className?: string }) {

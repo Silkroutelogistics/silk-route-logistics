@@ -9,6 +9,7 @@
 
 import { env } from "../config/env";
 import { log } from "../lib/logger";
+import type { FMCSAAuthorityResult } from "./fmcsaTypes";
 
 // In-memory cache: DOT/MC → result, expires after 1 hour
 const CACHE_TTL = 60 * 60 * 1000; // 1 hour
@@ -27,6 +28,32 @@ function cacheSet(key: string, data: FMCSACarrierResult) {
   if (cache.size > 500) {
     const now = Date.now();
     for (const [k, v] of cache) { if (now - v.ts > CACHE_TTL) cache.delete(k); }
+  }
+}
+
+// Parallel cache for authority-endpoint results — v3.8.ahj (Item 182,
+// sprint 1 of 5). Reuses the same 1-hour TTL the rest of the service
+// uses for carrier-data lookups. Authority data changes slowly (a GRANT
+// timestamp never moves; only revocation/reinstatement entries are
+// added), so 1h is conservative — under-cache cost is negligible. The
+// epic-design assumption was 24h cache; the existing pattern is 1h, and
+// per §3.3 atomic-commit + Pattern 6 sub-rule c (authoritative-source
+// verification: real code beats intent docs) we inherit the existing
+// TTL rather than introducing a per-key TTL refactor in v3.8.ahj.
+const authorityCache = new Map<string, { data: FMCSAAuthorityResult; ts: number }>();
+
+function authorityCacheGet(dotNumber: string): FMCSAAuthorityResult | null {
+  const entry = authorityCache.get(dotNumber);
+  if (!entry) return null;
+  if (Date.now() - entry.ts > CACHE_TTL) { authorityCache.delete(dotNumber); return null; }
+  return entry.data;
+}
+
+function authorityCacheSet(dotNumber: string, data: FMCSAAuthorityResult) {
+  authorityCache.set(dotNumber, { data, ts: Date.now() });
+  if (authorityCache.size > 500) {
+    const now = Date.now();
+    for (const [k, v] of authorityCache) { if (now - v.ts > CACHE_TTL) authorityCache.delete(k); }
   }
 }
 
@@ -312,4 +339,203 @@ export async function verifyCarrierWithFMCSA(dotNumber: string): Promise<FMCSACa
     crashTotal: null, fatalCrash: null, injCrash: null, towawayCrash: null,
     errors: ["FMCSA API unavailable - verification failed (fail-safe)", ...debugErrors],
   };
+}
+
+// =============================================================================
+// v3.8.ahj — Authority-age compliance epic, sprint 1 of 5 (Item 182).
+// Authority data plumbing. NO schema write, NO gate, NO override UI in this
+// sprint. Just: hit the free QCMobile authority endpoint, parse the earliest
+// `original_served_date` from the carrier's operating-authority history, and
+// derive `authorityAgeMonths` on read.
+// =============================================================================
+
+/**
+ * Pull a date string out of an authority-history record. FMCSA QCMobile
+ * responses are inconsistent on casing — some endpoints return
+ * `originalServedDate`, the docs example shows `original_served_date`.
+ * Tolerate both. Tolerate the alternate `dispositionServedDate` as a
+ * fallback when `originalServedDate` is missing (some pre-2000 entries
+ * omit the original-action date but record the disposition date).
+ */
+function readAuthorityServedDate(item: Record<string, unknown>): string | null {
+  return (
+    (item.originalServedDate as string | undefined) ||
+    (item.original_served_date as string | undefined) ||
+    (item.dispositionServedDate as string | undefined) ||
+    (item.disposition_served_date as string | undefined) ||
+    null
+  );
+}
+
+/**
+ * Read the action field (e.g. "GRANT", "REVOCATION", "REINSTATEMENT") off
+ * an authority-history record. Casing-tolerant. We filter for
+ * action === "GRANT" so revocation/reinstatement entries don't masquerade
+ * as the original grant.
+ */
+function readAuthorityAction(item: Record<string, unknown>): string {
+  return String(
+    (item.originalAction as string | undefined) ||
+      (item.original_action as string | undefined) ||
+      ""
+  ).toUpperCase();
+}
+
+/**
+ * Read the authority-type field off an authority-history record. Casing-
+ * tolerant. Returns e.g. "COMMON", "CONTRACT", "BROKER".
+ */
+function readAuthorityType(item: Record<string, unknown>): string | null {
+  return (
+    (item.authorityType as string | undefined) ||
+      (item.authority_type as string | undefined) ||
+      null
+  );
+}
+
+/**
+ * Calendar-month diff from `start` to `end`. Returns whole months elapsed,
+ * adjusted for day-of-month — e.g. grant 2024-05-22, today 2026-05-21
+ * returns 23 (not yet a full 24 months); grant 2024-05-21, today
+ * 2026-05-21 returns 24. This matches the policy mental model: "the
+ * carrier's authority is N months old" reads as the integer N a layperson
+ * would compute on a calendar.
+ */
+function calendarMonthsBetween(start: Date, end: Date): number {
+  const years = end.getFullYear() - start.getFullYear();
+  const months = end.getMonth() - start.getMonth();
+  const dayAdjust = end.getDate() < start.getDate() ? -1 : 0;
+  return years * 12 + months + dayAdjust;
+}
+
+/**
+ * Fetch a carrier's operating-authority history from the free FMCSA
+ * QCMobile authority endpoint and return the earliest GRANT date plus
+ * a derived calendar-month age.
+ *
+ * Endpoint: `GET /qc/services/carriers/{dotNumber}/authority?webKey={key}`
+ * Auth: existing `FMCSA_WEB_KEY` env var (same one the rest of the
+ * service uses — no new credential needed).
+ *
+ * Returns `{ authorityGrantDate, authorityAgeMonths, ... }`. Never
+ * throws — error states populate `errors[]` and leave date/age as null.
+ * Result is cached for 1 hour in `authorityCache`.
+ *
+ * The eventual hard gate (v3.8.ahl) and override UI (v3.8.ahm) consume
+ * `authorityAgeMonths` directly. v3.8.ahk persists `authorityGrantDate`
+ * on `CarrierProfile` during registration so the gate can derive the
+ * age on read without hitting FMCSA on the tender hot path.
+ *
+ * **Reinstatement-continuity caveat:** when a carrier's authority was
+ * granted, revoked, and later reinstated, this function returns the
+ * ORIGINAL grant date — meaning a freshly-reinstated carrier reads as
+ * authorized for the original tenure. Per Item 182 locked decisions
+ * that's a deferred AE-warning concern, not a v3.8.ahj fix.
+ */
+export async function getCarrierAuthority(dotNumber: string): Promise<FMCSAAuthorityResult> {
+  // Check cache first
+  const cached = authorityCacheGet(dotNumber);
+  if (cached) return cached;
+
+  const webKey = env.FMCSA_WEB_KEY;
+  if (!webKey) {
+    const fail: FMCSAAuthorityResult = {
+      dotNumber,
+      authorityGrantDate: null,
+      authorityAgeMonths: null,
+      authorityType: null,
+      rawHistoryCount: 0,
+      errors: ["No FMCSA_WEB_KEY configured"],
+    };
+    return fail;
+  }
+
+  try {
+    const url = `https://mobile.fmcsa.dot.gov/qc/services/carriers/${dotNumber}/authority?webKey=${webKey}`;
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 6000);
+    const response = await fetch(url, { headers: FMCSA_HEADERS, signal: controller.signal });
+    clearTimeout(timeout);
+
+    if (!response.ok) {
+      const fail: FMCSAAuthorityResult = {
+        dotNumber,
+        authorityGrantDate: null,
+        authorityAgeMonths: null,
+        authorityType: null,
+        rawHistoryCount: 0,
+        errors: [`FMCSA authority endpoint HTTP ${response.status}`],
+      };
+      return fail;
+    }
+
+    const data = (await response.json()) as Record<string, unknown>;
+    const contentRaw = (data?.content as unknown[]) || [];
+    const history: Record<string, unknown>[] = Array.isArray(contentRaw)
+      ? contentRaw.map((entry) => {
+          const rec = entry as Record<string, unknown>;
+          // FMCSA sometimes nests under `carrierAuthority`, sometimes flat.
+          return (rec.carrierAuthority as Record<string, unknown>) || rec;
+        })
+      : [];
+
+    const rawHistoryCount = history.length;
+
+    // Keep only GRANT entries with a parseable served date.
+    type GrantRow = { date: Date; raw: Record<string, unknown> };
+    const grants: GrantRow[] = [];
+    for (const item of history) {
+      if (readAuthorityAction(item) !== "GRANT") continue;
+      const dateStr = readAuthorityServedDate(item);
+      if (!dateStr) continue;
+      const parsed = new Date(dateStr);
+      if (Number.isNaN(parsed.getTime())) continue;
+      grants.push({ date: parsed, raw: item });
+    }
+
+    if (grants.length === 0) {
+      const result: FMCSAAuthorityResult = {
+        dotNumber,
+        authorityGrantDate: null,
+        authorityAgeMonths: null,
+        authorityType: null,
+        rawHistoryCount,
+        errors:
+          rawHistoryCount === 0
+            ? ["No authority history returned for this DOT"]
+            : ["Authority history present but no GRANT entry with parseable served date"],
+      };
+      authorityCacheSet(dotNumber, result);
+      return result;
+    }
+
+    // Earliest GRANT wins — anchor for authority-age computation.
+    grants.sort((a, b) => a.date.getTime() - b.date.getTime());
+    const earliest = grants[0];
+    const grantDateIso = earliest.date.toISOString().slice(0, 10);
+    const ageMonths = calendarMonthsBetween(earliest.date, new Date());
+
+    const result: FMCSAAuthorityResult = {
+      dotNumber,
+      authorityGrantDate: grantDateIso,
+      authorityAgeMonths: ageMonths,
+      authorityType: readAuthorityType(earliest.raw),
+      rawHistoryCount,
+      errors: [],
+    };
+    authorityCacheSet(dotNumber, result);
+    return result;
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    log.error({ err: msg }, `[FMCSA] Authority lookup error for DOT ${dotNumber}:`);
+    const fail: FMCSAAuthorityResult = {
+      dotNumber,
+      authorityGrantDate: null,
+      authorityAgeMonths: null,
+      authorityType: null,
+      rawHistoryCount: 0,
+      errors: [`FMCSA authority endpoint error: ${msg}`],
+    };
+    return fail;
+  }
 }
