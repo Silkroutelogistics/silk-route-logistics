@@ -111,87 +111,19 @@
        Engine narrative) merged into the new .ops-loop-section below.
        Narrative content migrated into phase narratives + status cards. -->
 
-  <!-- ========== SERVICES DETAIL — A2 differentiated angle (v3.8.ago)
-       Reframed from "what we move" (catalog) to "when you need this"
-       (shipper buying criterion). Profile cards in 2x2 grid, brand-icon-led,
-       no stock photos. Matches Section 5 wall-tile register. ========== -->
-  <section class="profile-section">
-    <div class="container">
-      <div class="section-header fade-up">
-        <div class="section-label">Match Your Freight</div>
-        <h2 class="section-title">Find the right capacity</h2>
-        <p class="section-subtitle">Four profiles. One AE. The equipment that fits your freight, the cycle that fits your business.</p>
-      </div>
-
-      <div class="profile-grid">
-        <!-- Profile 1: Dry Van — palletized / boxed / industrial -->
-        <article class="profile-card fade-up">
-          <div class="profile-head">
-            <div class="profile-icon" aria-hidden="true">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
-                <line x1="16.5" y1="9.4" x2="7.5" y2="4.21"/>
-                <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
-                <polyline points="3.27 6.96 12 12.01 20.73 6.96"/>
-                <line x1="12" y1="22.08" x2="12" y2="12"/>
-              </svg>
-            </div>
-            <span class="profile-equipment">Dry Van &nbsp;·&nbsp; 53-Foot &nbsp;·&nbsp; FTL</span>
-          </div>
-          <h3>Palletized consumer goods, industrial materials, or boxed product.</h3>
-          <p>Air-ride suspension for sensitive cargo. Swing-door or roll-door, your choice. Lane Optimizer reads your recurring routes so single loads and weekly volumes both quote tight.</p>
-        </article>
-
-        <!-- Profile 2: Reefer — temp-controlled / HACCP -->
-        <article class="profile-card fade-up">
-          <div class="profile-head">
-            <div class="profile-icon" aria-hidden="true">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
-                <line x1="2" y1="12" x2="22" y2="12"/>
-                <line x1="12" y1="2" x2="12" y2="22"/>
-                <path d="m20 16-4-4 4-4"/>
-                <path d="m4 8 4 4-4 4"/>
-                <path d="m16 4-4 4-4-4"/>
-                <path d="m8 20 4-4 4 4"/>
-              </svg>
-            </div>
-            <span class="profile-equipment">Reefer &nbsp;·&nbsp; Continuous Monitoring &nbsp;·&nbsp; HACCP</span>
-          </div>
-          <h3>Produce, frozen, pharmaceutical, or HACCP-regulated freight.</h3>
-          <p>Pre-cool verification at pickup. Set-point logging in-transit. Temp-recorder validation and chain-of-custody on the POD. Compliance Check clears each carrier before any reefer leaves the dock.</p>
-        </article>
-
-        <!-- Profile 3: Dedicated — high-volume recurring lanes -->
-        <article class="profile-card fade-up">
-          <div class="profile-head">
-            <div class="profile-icon" aria-hidden="true">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
-                <polygon points="12 2 2 7 12 12 22 7 12 2"/>
-                <polyline points="2 17 12 22 22 17"/>
-                <polyline points="2 12 12 17 22 12"/>
-              </svg>
-            </div>
-            <span class="profile-equipment">Dedicated &nbsp;·&nbsp; Same Drivers &nbsp;·&nbsp; Recurring</span>
-          </div>
-          <h3>High-volume recurring lanes where spot-market volatility is killing your numbers.</h3>
-          <p>Assigned drivers learn your facilities, your freight, your routines. Lane Optimizer holds the lane history so pricing stays predictable instead of weekly bid wars. Ten or more loads per week on a single lane is where this starts paying.</p>
-        </article>
-
-        <!-- Profile 4: Expedited — plant-down / emergency -->
-        <article class="profile-card fade-up">
-          <div class="profile-head">
-            <div class="profile-icon" aria-hidden="true">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
-                <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
-              </svg>
-            </div>
-            <span class="profile-equipment">Expedited &nbsp;·&nbsp; Hot Shot &nbsp;·&nbsp; Team Driver</span>
-          </div>
-          <h3>Plant-down, trade show, emergency replenishment, time-critical cargo.</h3>
-          <p>Hot shots, team drivers, straight trucks. Often dispatched within hours. Marco Polo AI monitors the load every two hours from pickup through delivery.</p>
-        </article>
-      </div>
-    </div>
-  </section>
+  <!-- v3.8.aha — .profile-section (Match Your Freight / Find the right
+       capacity / 4 profile cards) RETIRED.
+       Rationale: cross-page redundancy with /index Section 4 (same 4
+       service categories on both pages). §20.7 cross-page registry rule
+       says: when service-category sets appear on multiple pages, exactly
+       ONE page is canonical home. /index Section 4 is the canonical home
+       for service catalog. /shippers becomes conversion-focused (hero →
+       ops-loop → What You Receive → quote form).
+       Equipment categories still surfaced via:
+         - Quote form Freight Type dropdown (Dry Van / Reefer / Flatbed)
+         - Ops-loop status cards naming Lane Optimizer / Compliance Check
+         - Section 3 cards naming Marco Polo / Compass-scored carriers
+       CSS for .profile-section retained as orphan; HTML no longer renders. -->
 
   <!-- ========== THE OPERATIONAL LAYER (v3.8.agr — merges .operations-section
        + .how-section into one animated section).
@@ -782,7 +714,7 @@
         });
       }, observerOptions);
 
-      document.querySelectorAll('.fade-up, .service-card, .step-item, .why-block, .profile-card, .system-card').forEach(function(el) {
+      document.querySelectorAll('.fade-up, .service-card, .step-item, .why-block, .system-card').forEach(function(el) {
         observer.observe(el);
       });
 
