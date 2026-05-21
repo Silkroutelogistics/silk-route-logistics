@@ -489,71 +489,103 @@
             </div>
           </div>
 
-          <!-- The interstate road with mile markers + animated truck -->
-          <div class="journey-road" aria-hidden="true">
-            <!-- Sky gradient + parchment overlay (decorative) -->
-            <div class="journey-sky"></div>
+          <!-- v3.8.ahj — Caravansary Trade Route (parchment map register).
+               Replaces v3.8.ahi Americana highway visual. Sepia-ink trail
+               winds left → right with 4 brass cartouche waypoints rising
+               in elevation (visualizes ascending tier). SRL compass-mark
+               traveler "navigates" between waypoints. M6 hangs as a navy
+               wax-seal medallion off the Platinum cartouche. -->
+          <div class="journey-trail" aria-hidden="true">
 
-            <!-- The road ribbon (asphalt) -->
-            <svg class="journey-road-svg" viewBox="0 0 1200 90" preserveAspectRatio="none">
-              <rect x="0" y="48" width="1200" height="22" fill="#1A1F2E"/>
-              <!-- Center dashed line -->
-              <line x1="0" y1="59" x2="1200" y2="59" stroke="#FBF7F0" stroke-width="1.4" stroke-dasharray="24 18" opacity="0.55"/>
-              <!-- Shoulder edges -->
-              <line x1="0" y1="48" x2="1200" y2="48" stroke="rgba(186,117,23,0.30)" stroke-width="0.6"/>
-              <line x1="0" y1="70" x2="1200" y2="70" stroke="rgba(186,117,23,0.30)" stroke-width="0.6"/>
+            <!-- Heritage flourishes -->
+            <div class="trail-flourishes">
+              <span class="trail-route-label">Trade Route</span>
+              <svg class="trail-compass-rose" viewBox="0 0 60 60" aria-hidden="true">
+                <g fill="none" stroke="#BA7517" opacity="0.6">
+                  <circle cx="30" cy="30" r="22" stroke-width="0.6"/>
+                  <circle cx="30" cy="30" r="14" stroke-width="0.4"/>
+                </g>
+                <path d="M30 8 L33 30 L30 52 L27 30 Z" fill="#BA7517" opacity="0.75"/>
+                <path d="M8 30 L30 33 L52 30 L30 27 Z" fill="#BA7517" opacity="0.4"/>
+                <circle cx="30" cy="30" r="2" fill="#0A2540"/>
+                <text x="30" y="6.5" text-anchor="middle" font-family="'Playfair Display',Georgia,serif" font-style="italic" font-size="6.5" fill="#0A2540" opacity="0.8">N</text>
+              </svg>
+            </div>
+
+            <!-- Parchment SVG: topographic contours + sepia trail path -->
+            <svg class="trail-svg" viewBox="0 0 1200 280" preserveAspectRatio="none">
+              <!-- Subtle topographic contour lines (decorative — caravan crosses terrain) -->
+              <g fill="none" stroke="rgba(186,117,23,0.10)" stroke-width="0.6">
+                <path d="M0 55 Q 300 75 600 65 T 1200 60"/>
+                <path d="M0 100 Q 300 125 600 115 T 1200 105"/>
+                <path d="M0 175 Q 300 195 600 190 T 1200 180"/>
+                <path d="M0 225 Q 300 245 600 240 T 1200 235"/>
+              </g>
+
+              <!-- Trail shadow (deep navy offset 2px down) -->
+              <path d="M 150 200 Q 280 175 450 140 Q 600 120 750 160 Q 880 180 1050 95"
+                    fill="none" stroke="rgba(10,37,64,0.10)" stroke-width="3.2"
+                    stroke-dasharray="11 8" stroke-linecap="round"
+                    transform="translate(0,2)"/>
+              <!-- Trail proper: sepia ink, dashed -->
+              <path d="M 150 200 Q 280 175 450 140 Q 600 120 750 160 Q 880 180 1050 95"
+                    fill="none" stroke="#8B6A1E" stroke-width="2.6"
+                    stroke-dasharray="11 8" stroke-linecap="round" opacity="0.72"/>
             </svg>
 
-            <!-- 4 mile markers along the right shoulder -->
-            <div class="mile-marker" data-phase="0" style="left: 12.5%">
-              <div class="marker-post"></div>
-              <div class="marker-sign">
-                <span class="marker-num">M0</span>
-                <span class="marker-tier">APPLY</span>
+            <!-- 4 caravansary waypoints (brass cartouches sitting on trail nodes) -->
+            <div class="caravansary" data-phase="0" style="left:12.5%;top:71%">
+              <div class="caravansary-cartouche">
+                <span class="cartouche-num">M0</span>
+                <span class="cartouche-tier">Apply</span>
               </div>
-            </div>
-            <div class="mile-marker" data-phase="1" style="left: 37.5%">
-              <div class="marker-post"></div>
-              <div class="marker-sign">
-                <span class="marker-num">M1—3</span>
-                <span class="marker-tier">SILVER</span>
-              </div>
-            </div>
-            <div class="mile-marker" data-phase="2" style="left: 62.5%">
-              <div class="marker-post"></div>
-              <div class="marker-sign">
-                <span class="marker-num">M4</span>
-                <span class="marker-tier">GOLD</span>
-              </div>
-            </div>
-            <div class="mile-marker is-final" data-phase="3" style="left: 87.5%">
-              <div class="marker-post"></div>
-              <div class="marker-sign">
-                <span class="marker-num">M5</span>
-                <span class="marker-tier">PLATINUM</span>
-              </div>
-              <!-- M6 plaque bolted to the post — sub-state, not separate tier -->
-              <div class="marker-plaque">
-                <span class="plaque-tag">M6</span>
-                <span class="plaque-label">QP LOCKED</span>
-              </div>
+              <div class="caravansary-anchor"></div>
             </div>
 
-            <!-- The animated Cascadia silhouette -->
-            <div class="journey-truck" id="journeyTruck">
-              <svg viewBox="0 0 80 30" aria-hidden="true">
-                <!-- Trailer body (white-painted dry-van rectangle with subtle outline) -->
-                <rect x="20" y="6" width="44" height="14" rx="0.5" fill="#FBF7F0" stroke="#0A2540" stroke-width="0.6"/>
-                <!-- Cab roof slope (Cascadia aerodynamic) -->
-                <path d="M2 14 L6 6 L18 6 L20 8 L20 14 Z" fill="#0A2540"/>
-                <!-- Cab body -->
-                <rect x="2" y="14" width="18" height="8" fill="#0A2540"/>
-                <!-- Wheels — cab tandem + trailer tandem -->
-                <circle cx="5" cy="23" r="3" fill="#0A2540"/>
-                <circle cx="11" cy="23" r="3" fill="#0A2540"/>
-                <circle cx="32" cy="23" r="3" fill="#0A2540"/>
-                <circle cx="58" cy="23" r="3" fill="#0A2540"/>
-                <circle cx="64" cy="23" r="3" fill="#0A2540"/>
+            <div class="caravansary" data-phase="1" style="left:37.5%;top:50%">
+              <div class="caravansary-cartouche">
+                <span class="cartouche-num">M1 — M3</span>
+                <span class="cartouche-tier">Silver</span>
+              </div>
+              <div class="caravansary-anchor"></div>
+            </div>
+
+            <div class="caravansary" data-phase="2" style="left:62.5%;top:57%">
+              <div class="caravansary-cartouche">
+                <span class="cartouche-num">M4</span>
+                <span class="cartouche-tier">Gold</span>
+              </div>
+              <div class="caravansary-anchor"></div>
+            </div>
+
+            <div class="caravansary is-final" data-phase="3" style="left:87.5%;top:34%">
+              <div class="caravansary-cartouche">
+                <span class="cartouche-num">M5</span>
+                <span class="cartouche-tier">Platinum</span>
+              </div>
+              <!-- M6 navy wax-seal medallion (sub-state of Platinum, not a 5th tier) -->
+              <div class="cartouche-seal">
+                <div class="seal-ribbon"></div>
+                <div class="seal-disc">
+                  <span class="seal-tag">M6</span>
+                  <span class="seal-label">QP LOCKED</span>
+                </div>
+              </div>
+              <div class="caravansary-anchor"></div>
+            </div>
+
+            <!-- The SRL compass-mark traveler navigates the trail -->
+            <div class="compass-traveler" id="journeyTruck">
+              <svg viewBox="0 0 60 60" aria-hidden="true">
+                <!-- Outer cream disc with brass ring -->
+                <circle cx="30" cy="30" r="26" fill="#FBF7F0" stroke="#BA7517" stroke-width="1.8"/>
+                <circle cx="30" cy="30" r="22" fill="none" stroke="rgba(186,117,23,0.30)" stroke-width="0.6"/>
+                <!-- 4-point compass star (SRL brand mark) -->
+                <path d="M30 6 L33.5 30 L30 54 L26.5 30 Z" fill="#0A2540"/>
+                <path d="M6 30 L30 26.5 L54 30 L30 33.5 Z" fill="#BA7517"/>
+                <!-- Center pin -->
+                <circle cx="30" cy="30" r="2.8" fill="#0A2540"/>
+                <circle cx="30" cy="30" r="1.2" fill="#C5A572"/>
               </svg>
             </div>
           </div>
@@ -952,16 +984,23 @@
       });
 
       /* ========================================
-         v3.8.ahi — Your Caravan Journey cycle driver.
+         v3.8.ahj — Caravansary Trade Route cycle driver.
+         Per-phase coords place the compass-mark traveler ON the trail
+         path (matches the bezier curve waypoint positions in the SVG).
          5.5s per phase, auto-advance, IntersectionObserver-triggered,
          prefers-reduced-motion sets static-phase-0.
          ======================================== */
       var journeyCanvas = document.getElementById('journeyCanvas');
       var journeyTruck = document.getElementById('journeyTruck');
       if (journeyCanvas && journeyTruck) {
-        var truckPositions = ['12.5%', '37.5%', '62.5%', '87.5%'];
+        var travelerCoords = [
+          { left: '12.5%', top: '71%' },
+          { left: '37.5%', top: '50%' },
+          { left: '62.5%', top: '57%' },
+          { left: '87.5%', top: '34%' }
+        ];
         var journeyTabs = journeyCanvas.querySelectorAll('.journey-tab');
-        var mileMarkers = journeyCanvas.querySelectorAll('.mile-marker');
+        var caravansaries = journeyCanvas.querySelectorAll('.caravansary');
         var journeyCards = journeyCanvas.querySelectorAll('.journey-status-card');
         var journeyPhase = 0;
         var journeyInterval = null;
@@ -972,13 +1011,14 @@
           journeyTabs.forEach(function (tab, i) {
             tab.classList.toggle('is-active', i === idx);
           });
-          mileMarkers.forEach(function (m, i) {
-            m.classList.toggle('is-active', i === idx);
+          caravansaries.forEach(function (c, i) {
+            c.classList.toggle('is-active', i === idx);
           });
           journeyCards.forEach(function (c, i) {
             c.classList.toggle('is-active', i === idx);
           });
-          journeyTruck.style.left = truckPositions[idx];
+          journeyTruck.style.left = travelerCoords[idx].left;
+          journeyTruck.style.top = travelerCoords[idx].top;
         }
 
         function startJourneyAutoPlay() {

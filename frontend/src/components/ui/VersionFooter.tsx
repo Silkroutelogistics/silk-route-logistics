@@ -6470,7 +6470,7 @@
 //                exists to catch
 //              - All other open items STATUS UNCHANGED per §3.3
 //                scope discipline
-export const SRL_VERSION = "3.8.ahi";
+export const SRL_VERSION = "3.8.ahj";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
