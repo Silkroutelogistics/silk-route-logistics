@@ -183,27 +183,84 @@
           </p>
         </div>
 
-        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:24px;max-width:1120px;margin:0 auto">
+        <!-- v3.8.ahz — Commitments cards converted to flip pattern matching
+             the /index and /shippers system-card-flip register. Front face
+             shows commitment badge + title + 1-line operational teaser +
+             "Click to learn more" CTA. Back face holds the full enforceable-
+             terms body copy + "Back to overview" CTA. JS handler at the
+             end of this file picks up the new .commitment-card-flip selector. -->
+        <div class="commitments-grid">
           <!-- Commitment 1 -->
-          <div style="background:#fff;border:1px solid #E5E7EB;border-left:3px solid #C8963E;border-radius:12px;padding:32px 28px">
-            <div style="display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:20px;background:rgba(197,165,114,0.1);color:#8B6A1E;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:14px">Commitment 1</div>
-            <h3 style="font-family:'DM Serif Display',serif;font-size:22px;color:#1A1A2E;margin:0 0 12px 0;line-height:1.3">Compass Score, Published and Weighted</h3>
-            <p style="font-size:14px;color:#4B5563;line-height:1.7;margin:0">Every carrier is scored by the Compass Engine on seven measurable factors with published weights: on-time pickup (20%), on-time delivery (20%), GPS compliance (15%), claims ratio (15%), communication (10%), document timeliness (10%), acceptance rate (10%). Tier advancement is mathematical, not opinion. Your score and the inputs driving it are visible in the carrier portal at every recalculation. No broker scoring black box.</p>
-          </div>
+          <article class="commitment-card-flip" role="button" tabindex="0" aria-expanded="false" aria-label="Compass Score, Published and Weighted — click to learn more">
+            <div class="commitment-card-inner">
+              <div class="commitment-card-front">
+                <div class="commitment-badge">Commitment 1</div>
+                <h3>Compass Score, Published and Weighted</h3>
+                <p class="commitment-teaser">Mathematical scoring. No black box.</p>
+                <span class="commitment-flip-cta">
+                  <span>Click to learn more</span>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                </span>
+              </div>
+              <div class="commitment-card-back">
+                <div class="commitment-badge">Commitment 1</div>
+                <h3>Compass Score, Published and Weighted</h3>
+                <p>Every carrier is scored by the Compass Engine on seven measurable factors with published weights: on-time pickup (20%), on-time delivery (20%), GPS compliance (15%), claims ratio (15%), communication (10%), document timeliness (10%), acceptance rate (10%). Tier advancement is mathematical, not opinion. Your score and the inputs driving it are visible in the carrier portal at every recalculation. No broker scoring black box.</p>
+                <span class="commitment-flip-back-cta">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"></polyline></svg>
+                  <span>Back to overview</span>
+                </span>
+              </div>
+            </div>
+          </article>
 
           <!-- Commitment 2 -->
-          <div style="background:#fff;border:1px solid #E5E7EB;border-left:3px solid #C8963E;border-radius:12px;padding:32px 28px">
-            <div style="display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:20px;background:rgba(197,165,114,0.1);color:#8B6A1E;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:14px">Commitment 2</div>
-            <h3 style="font-family:'DM Serif Display',serif;font-size:22px;color:#1A1A2E;margin:0 0 12px 0;line-height:1.3">Itemized Quotes, No Post-Booking Surprises</h3>
-            <p style="font-size:14px;color:#4B5563;line-height:1.7;margin:0">Every rate confirmation lists line-haul, fuel surcharge, and accessorials as separate line items. The total on the rate confirmation is the total on settlement. No mystery deductions between booking and pay. If an accessorial applies post-dispatch (detention, lumper, stop-off), it is added transparently with documentation, not subtracted silently.</p>
-          </div>
+          <article class="commitment-card-flip" role="button" tabindex="0" aria-expanded="false" aria-label="Itemized Quotes, No Post-Booking Surprises — click to learn more">
+            <div class="commitment-card-inner">
+              <div class="commitment-card-front">
+                <div class="commitment-badge">Commitment 2</div>
+                <h3>Itemized Quotes, No Post-Booking Surprises</h3>
+                <p class="commitment-teaser">Rate confirmation equals settlement total.</p>
+                <span class="commitment-flip-cta">
+                  <span>Click to learn more</span>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                </span>
+              </div>
+              <div class="commitment-card-back">
+                <div class="commitment-badge">Commitment 2</div>
+                <h3>Itemized Quotes, No Post-Booking Surprises</h3>
+                <p>Every rate confirmation lists line-haul, fuel surcharge, and accessorials as separate line items. The total on the rate confirmation is the total on settlement. No mystery deductions between booking and pay. If an accessorial applies post-dispatch (detention, lumper, stop-off), it is added transparently with documentation, not subtracted silently.</p>
+                <span class="commitment-flip-back-cta">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"></polyline></svg>
+                  <span>Back to overview</span>
+                </span>
+              </div>
+            </div>
+          </article>
 
           <!-- Commitment 3 -->
-          <div style="background:#fff;border:1px solid #E5E7EB;border-left:3px solid #C8963E;border-radius:12px;padding:32px 28px">
-            <div style="display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:20px;background:rgba(197,165,114,0.1);color:#8B6A1E;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:14px">Commitment 3</div>
-            <h3 style="font-family:'DM Serif Display',serif;font-size:22px;color:#1A1A2E;margin:0 0 12px 0;line-height:1.3">Quick Pay Without a Factoring Contract</h3>
-            <p style="font-size:14px;color:#4B5563;line-height:1.7;margin:0">SRL's Quick Pay is per-load and optional. No 12&ndash;24 month factoring contract. No termination fees. No letter of release required on most invoices (only if you have already factored a specific load with a third party). Use Quick Pay when cash flow matters. Skip it when it doesn't. Standard pay is always free: Silver Net-30, Gold Net-21, Platinum Net-14.</p>
-          </div>
+          <article class="commitment-card-flip" role="button" tabindex="0" aria-expanded="false" aria-label="Quick Pay Without a Factoring Contract — click to learn more">
+            <div class="commitment-card-inner">
+              <div class="commitment-card-front">
+                <div class="commitment-badge">Commitment 3</div>
+                <h3>Quick Pay Without a Factoring Contract</h3>
+                <p class="commitment-teaser">Per-load. Optional. No contract.</p>
+                <span class="commitment-flip-cta">
+                  <span>Click to learn more</span>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                </span>
+              </div>
+              <div class="commitment-card-back">
+                <div class="commitment-badge">Commitment 3</div>
+                <h3>Quick Pay Without a Factoring Contract</h3>
+                <p>SRL's Quick Pay is per-load and optional. No 12&ndash;24 month factoring contract. No termination fees. No letter of release required on most invoices (only if you have already factored a specific load with a third party). Use Quick Pay when cash flow matters. Skip it when it doesn't. Standard pay is always free: Silver Net-30, Gold Net-21, Platinum Net-14.</p>
+                <span class="commitment-flip-back-cta">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"></polyline></svg>
+                  <span>Back to overview</span>
+                </span>
+              </div>
+            </div>
+          </article>
         </div>
       </div>
     </section>
@@ -1088,6 +1145,31 @@
           }, { threshold: 0.30 });
           cjObs.observe(cjCanvas);
         } else { cjStart(); }
+      }
+
+      /* ========================================
+         v3.8.ahz — COMMITMENT CARDS flip handler.
+         Same pattern as /index service-card-flip (index.html:837-862).
+         Click anywhere on card or Enter/Space when focused → flips to
+         reveal full enforceable-terms body copy on back face. Click
+         again → flips back. Independent per-card state; multiple
+         cards can be flipped at once.
+         ======================================== */
+      var commitmentFlipCards = document.querySelectorAll('.commitment-card-flip');
+      for (var ci = 0; ci < commitmentFlipCards.length; ci++) {
+        (function (card) {
+          var toggleFlip = function () {
+            var flipped = card.classList.toggle('is-flipped');
+            card.setAttribute('aria-expanded', flipped ? 'true' : 'false');
+          };
+          card.addEventListener('click', toggleFlip);
+          card.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              toggleFlip();
+            }
+          });
+        })(commitmentFlipCards[ci]);
       }
 
     })();

@@ -7150,7 +7150,18 @@
 //              of /carriers and carried two label errors (M5 wrongly
 //              labeled "Core — Platinum", M6 labeled invented term
 //              "Founding" not in §10).
-export const SRL_VERSION = "3.8.ahy";
+// v3.8.ahz   — Commitment cards on /carriers converted to 3D flip
+//              pattern matching /index service-card-flip + /shippers
+//              system-card-flip register. Front: COMMITMENT badge +
+//              title + 1-line operational teaser ("Mathematical scoring.
+//              No black box." / "Rate confirmation equals settlement
+//              total." / "Per-load. Optional. No contract.") + "Click
+//              to learn more" CTA. Back: full enforceable-terms body
+//              copy + "Back to overview" CTA. Same flip mechanic
+//              (rotateY 600ms cubic-bezier) + click/keyboard toggle
+//              + aria-expanded. Reduced-motion fallback shortens
+//              transition.
+export const SRL_VERSION = "3.8.ahz";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
