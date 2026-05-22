@@ -30,6 +30,18 @@ function pctChange(current: number, previous: number): number | null {
 
 const MONTH_NAMES = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
+function formatScanTimestamp(iso: string | Date | undefined): string {
+  if (!iso) return "—";
+  const d = new Date(iso);
+  const diffMs = Date.now() - d.getTime();
+  const diffMin = Math.floor(diffMs / 60_000);
+  const diffHr = Math.floor(diffMin / 60);
+  if (diffMin < 1) return "just now";
+  if (diffMin < 60) return `${diffMin} min ago`;
+  if (diffHr < 24) return `${diffHr} hr ago`;
+  return d.toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+}
+
 const STATUS_COLORS: Record<string, string> = {
   POSTED: "bg-blue-400",
   BOOKED: "bg-purple-400",
@@ -82,6 +94,38 @@ export function CeoOverview() {
     queryKey: ["ceo-invoices"],
     queryFn: () => api.get("/invoices").then(r => r.data).catch(() => []),
   });
+
+  // ─── FMCSA scan control + last-run summary (Item 188, v3.8.ahz) ────────────
+  const [scanState, setScanState] = useState<"idle" | "starting" | "started" | "error">("idle");
+  const [scanMessage, setScanMessage] = useState<string | null>(null);
+
+  const { data: lastScan, isLoading: lastScanLoading } = useQuery({
+    queryKey: ["ceo-fmcsa-last-scan"],
+    queryFn: () => api.get("/integrations/fmcsa/last-scan").then(r => r.data).catch(() => ({ found: false })),
+    // Poll every 30s while a manual scan is in flight so the card refreshes
+    // when the background scan writes its summary (typically ~2min).
+    refetchInterval: scanState === "started" ? 30_000 : false,
+  });
+
+  const runFmcsaScan = useCallback(async () => {
+    setScanState("starting");
+    setScanMessage(null);
+    try {
+      await api.post("/integrations/fmcsa/bulk-monitor");
+      setScanState("started");
+      setScanMessage("Scan started — results in about two minutes.");
+      setTimeout(() => setScanMessage(null), 6000);
+      // Stop polling after ~3min so the page doesn't poll forever.
+      setTimeout(() => setScanState("idle"), 180_000);
+    } catch {
+      setScanState("error");
+      setScanMessage("Failed to start scan. Please try again.");
+      setTimeout(() => {
+        setScanState("idle");
+        setScanMessage(null);
+      }, 6000);
+    }
+  }, []);
 
   const isLoading = loadsLoading || financeLoading;
 
@@ -364,6 +408,79 @@ export function CeoOverview() {
             <TeamMetricRow label="Pending Tenders" value={String(pendingTenders)} />
             <TeamMetricRow label="Compliance Alerts Active" value={String(complianceAlerts)} valueColor={complianceAlerts > 0 ? "text-red-400" : "text-green-400"} />
           </div>
+        </div>
+      </div>
+
+      {/* ═══════════════════════════════════════════════════════════════════════
+          SECTION 2.5: FMCSA Compliance Scan — Item 188 (v3.8.ahz)
+          Run-button + last-run summary, sitting next to the Compliance Alerts
+          tile above. POST /integrations/fmcsa/bulk-monitor (fire-and-forget,
+          202) + GET /integrations/fmcsa/last-scan for the summary card.
+          Daily 3am Eastern cron writes summaries too — same card reflects both.
+          ═══════════════════════════════════════════════════════════════════════ */}
+      <div className="grid md:grid-cols-3 gap-4">
+        {/* Run-FMCSA-Scan card */}
+        <div className="bg-white/5 rounded-xl border border-white/10 p-5 flex flex-col">
+          <h3 className="font-semibold text-white mb-2 flex items-center gap-2">
+            <Shield className="w-4 h-4 text-gold" />
+            FMCSA Compliance Scan
+          </h3>
+          <p className="text-xs text-slate-400 mb-4 flex-1">
+            Re-check every approved carrier against FMCSA. Runs daily at 3 AM Eastern automatically; manual re-scan anytime.
+          </p>
+          <button
+            type="button"
+            onClick={runFmcsaScan}
+            disabled={scanState === "starting"}
+            className="w-full px-4 py-2 rounded-lg bg-gold/20 hover:bg-gold/30 border border-gold/40 text-gold font-medium text-sm transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {scanState === "starting" ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" /> Starting...
+              </>
+            ) : (
+              <>
+                <Zap className="w-4 h-4" /> Run FMCSA Scan
+              </>
+            )}
+          </button>
+          {scanMessage && (
+            <p className={`text-xs mt-3 ${scanState === "error" ? "text-red-400" : "text-green-400"}`}>
+              {scanMessage}
+            </p>
+          )}
+        </div>
+
+        {/* Last-scan summary card (spans 2 cols on md+) */}
+        <div className="md:col-span-2 bg-white/5 rounded-xl border border-white/10 p-5">
+          <h3 className="font-semibold text-white mb-4 flex items-center gap-2">
+            <Clock className="w-4 h-4 text-gold" />
+            Last FMCSA Scan
+          </h3>
+          {lastScanLoading ? (
+            <div className="text-slate-500 text-sm">Loading...</div>
+          ) : !lastScan?.found ? (
+            <div className="text-slate-500 text-sm">No scans recorded yet. Run a scan or wait for the daily 3 AM ET cron.</div>
+          ) : (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+              <div>
+                <div className="text-slate-500 text-xs uppercase tracking-wide mb-1">When</div>
+                <div className="text-white">{formatScanTimestamp(lastScan.timestamp)}</div>
+              </div>
+              <div>
+                <div className="text-slate-500 text-xs uppercase tracking-wide mb-1">Carriers Scanned</div>
+                <div className="text-white">{lastScan.carriersScanned ?? "—"}</div>
+              </div>
+              <div>
+                <div className="text-slate-500 text-xs uppercase tracking-wide mb-1">Changes Found</div>
+                <div className={(lastScan.alertsCreated ?? 0) > 0 ? "text-yellow-400" : "text-white"}>{lastScan.alertsCreated ?? 0}</div>
+              </div>
+              <div>
+                <div className="text-slate-500 text-xs uppercase tracking-wide mb-1">Auto-Suspended</div>
+                <div className={(lastScan.autoSuspended ?? 0) > 0 ? "text-red-400" : "text-white"}>{lastScan.autoSuspended ?? 0}</div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
