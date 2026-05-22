@@ -7244,7 +7244,72 @@
 //              "letter assigned at Phase A based on what's free"
 //              policy. Sprint B (Terms text honest-claims sweep)
 //              proceeds next per §3.3 after sign-off.
-export const SRL_VERSION = "3.8.aid";
+// v3.8.aie   — Carrier onboarding Sprint B: Terms text honest-claims
+//              sweep. Six edits to Step 3 "Terms & Agreement" body
+//              + Success screen "What Happens Next" panel:
+//              (1) Terms §5 Documentation & Payment — "Net 30 days"
+//              flat rule replaced with tier-graduated Caravan
+//              language: Silver Net-30 / Gold Net-21 / Platinum
+//              Net-14 (per §8 v3 QP Pricing canonical) + new bullet
+//              referencing optional per-load Quick Pay at published
+//              tier fees (3%/2%/1% on 7-day cadence, universal +2%
+//              same-day premium) without factoring contract.
+//              (2) Terms §7 renamed "Performance Tracking & Tier
+//              Program" → "Caravan Partner Program & Performance
+//              Tracking"; drops retired "Guest, Bronze" from tier
+//              list (per v3.7.a BRONZE→SILVER migration + §5
+//              prohibited claims). New bullet introduces Compass
+//              Engine + 7-factor metrics list (per §9). New bullet
+//              references M1–M6 milestone framework (per §10) with
+//              advancement criteria for M4 Gold, M5 Platinum, M6
+//              permanent 1% QP lock.
+//              (3) Terms §10 Governing Law — "binding arbitration
+//              in Kalamazoo, Michigan" → "binding arbitration with
+//              venue in Kalamazoo County, Michigan" (per §1 Galesburg
+//              principal address is inside Kalamazoo County + §14
+//              canonical venue language). Closes the §1 §3.13 legal-
+//              identity verification class.
+//              (4) Terms footer "Last updated" March 2026 → May 2026
+//              + new sentence noting that the standalone Broker-
+//              Carrier Agreement and Caravan Quick Pay Agreement v2
+//              (per §14 + §16 first-carrier blockers #1 + #2) govern
+//              over this onboarding click-through where they conflict.
+//              Reading the §14 attorney-review note: this is honest-
+//              claims alignment of the click-through with already-
+//              published §8 tier structure, NOT a substantive policy
+//              change. Standalone BCA + QP Agreement still require
+//              MI commercial attorney review before first carrier
+//              signs per §16.
+//              (5) Success screen "Compass engine" lowercase e →
+//              "Compass Engine" capital E (per §A.5 canonical proper-
+//              noun). Bullet body expanded to surface the 35-point
+//              vetting framing + authority-age signal (Item 182
+//              hard-floor + override semantics) without exposing
+//              architectural-reveal-banned internals per Lens 1.5.
+//              (6) Success screen amber "Typical review time" panel:
+//              dropped "Most applications are reviewed within 24
+//              hours" (retired 2026-05-19 v3.8.ads §5 prohibited
+//              specific-hour-SLA claim) → "most carriers cleared
+//              within a few business days. Authority age, insurance
+//              verification, and document review drive the timeline."
+//              Aligns with /carriers + /shippers honest framing.
+//              Sprint B scope respected — no chrome touch, no Step 0
+//              redesign, no right-rail, no compass visualization, no
+//              ops-loop. Those land in Sprints C/D/E. Halt for sign-
+//              off before Sprint C per §3.3.
+// v3.8.aif   — Coverage section dropped entirely from /carriers per
+//              Wasi audit follow-up to Sprint 1 (v3.8.aic). Every
+//              element was duplicative: "48 states" + "coast-to-coast
+//              lanes" already on /index Section 5 capability wall;
+//              equipment list overlaps /index Section 4 service cards
+//              with different framing; continental coverage + trust
+//              standard implicit in the page's other sections. The
+//              new "Every Caravan Partner gets" universal-floor
+//              section (v3.8.aic) is now what earns its place on
+//              /carriers. Also dropped 9 orphan .coverage* CSS blocks
+//              + 2 media-query references. Letter coordination:
+//              Authority-age sprint claimed aid + aie; advanced to aif.
+export const SRL_VERSION = "3.8.aif";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

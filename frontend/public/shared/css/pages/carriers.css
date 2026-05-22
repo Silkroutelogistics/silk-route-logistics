@@ -885,65 +885,16 @@
       transform: rotate(45deg);
     }
 
-    /* ===== COVERAGE MAP SECTION ===== */
-    .coverage {
-      background: var(--light-gray);
-    }
-
-    .coverage-layout {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 60px;
-      align-items: start;
-    }
-
-    .coverage-text h2 {
-      font-size: 40px;
-      color: var(--dark-text);
-      margin-bottom: 16px;
-    }
-
-    .coverage-text > p {
-      font-size: 16px;
-      color: var(--text-muted);
-      line-height: 1.7;
-      margin-bottom: 32px;
-    }
-
-    .coverage-highlights {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 16px;
-      margin-bottom: 32px;
-    }
-
-    .coverage-stat {
-      background: var(--white);
-      border: 1px solid #E5E7EB;
-      border-radius: 12px;
-      padding: 20px;
-      text-align: center;
-      transition: transform 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
-    }
-
-    .coverage-stat:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
-    }
-
-    .coverage-stat-num {
-      font-family: 'Playfair Display', serif;
-      font-size: 32px;
-      color: var(--gold);
-      line-height: 1;
-      margin-bottom: 4px;
-    }
-
-    .coverage-stat-label {
-      font-size: 12px;
-      color: var(--text-muted);
-      font-weight: 500;
-    }
+    /* ===== COVERAGE SECTION — REMOVED v3.8.aif =====
+       Coverage section dropped entirely (every element was duplicative
+       with /index Section 5 capability wall + Section 4 service cards).
+       9 orphan .coverage* CSS blocks removed: .coverage / .coverage-
+       layout / .coverage-text h2 / .coverage-text > p / .coverage-
+       highlights / .coverage-stat / .coverage-stat:hover / .coverage-
+       stat-num / .coverage-stat-label. Media-query .coverage-text h2
+       and .coverage-layout / .coverage-highlights rules also removed
+       below. The .coverage class itself is also used on /index but
+       scoped via that page's index.css — no cross-page impact. */
 
     .lanes-grid {
       display: grid;
@@ -1317,7 +1268,6 @@
 
       .section-title,
       .caravan-header h2,
-      .coverage-text h2,
       .requirements-text h2,
       .cta-banner h2 {
         font-size: 34px;
@@ -1325,11 +1275,6 @@
     }
 
     @media (max-width: 900px) {
-      .coverage-layout {
-        grid-template-columns: 1fr;
-        gap: 40px;
-      }
-
       .requirements-layout {
         grid-template-columns: 1fr;
         gap: 40px;
@@ -1399,13 +1344,8 @@
         flex: 1 1 100%;
       }
 
-      .coverage-highlights {
-        grid-template-columns: 1fr 1fr;
-      }
-
       .section-title,
       .caravan-header h2,
-      .coverage-text h2,
       .requirements-text h2,
       .cta-banner h2 {
         font-size: 28px;

@@ -829,48 +829,18 @@
     </section>
 
 
-    <!-- ===== COVERAGE SECTION ===== -->
-    <section class="coverage section-pad" aria-labelledby="coverage-heading">
-      <div class="container">
-        <div class="section-header">
-          <div class="section-label">Coverage</div>
-          <h2 class="section-title" id="coverage-heading">48 contiguous states. Coast to coast.</h2>
-          <p class="section-desc">
-            SRL moves freight across all 48 contiguous United States: coast-to-coast, regional, or short-haul.
-          </p>
-        </div>
-
-        <div class="coverage-layout" style="display:grid;grid-template-columns:1fr 1fr;gap:48px;align-items:center;max-width:1100px;margin:0 auto">
-          <div class="coverage-text">
-            <h3 style="font-family:'Playfair Display',serif;font-size:24px;font-weight:700;color:#0A2540;margin-bottom:16px">Continental coverage</h3>
-            <!-- v3.8.aic — Sprint 1 honesty pass: the "FMCSA-licensed
-                 property broker, USDOT 4526880, MC# 1794414, BMC-84 bond
-                 on file" sentence was removed here because the
-                 CarrierFraudBanner higher on the page already carries the
-                 same authority claim verbatim. The footer also restates
-                 USDOT/MC. Single source of truth on /carriers is the
-                 fraud banner; this section keeps only the scope + trust-
-                 standard line. -->
-            <p style="font-size:14px;color:#3A4A5F;line-height:1.7">
-              From single loads to managed transportation programs, SRL covers the
-              continental US with one trust standard on every lane.
-            </p>
-          </div>
-
-          <div style="background:#FFFFFF;border:1px solid rgba(10,37,64,0.10);border-radius:16px;padding:32px;box-shadow:0 4px 12px rgba(10,37,64,0.06)">
-            <div style="font-family:'Playfair Display',serif;font-size:22px;color:#0A2540;font-weight:700;margin-bottom:16px">Equipment we tender</div>
-            <ul style="list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:12px">
-              <li style="display:flex;align-items:start;gap:10px;font-size:14px;color:#0A2540"><span style="color:#BA7517;font-weight:700">·</span> Dry van (53' standard)</li>
-              <li style="display:flex;align-items:start;gap:10px;font-size:14px;color:#0A2540"><span style="color:#BA7517;font-weight:700">·</span> Refrigerated / temperature-controlled</li>
-              <li style="display:flex;align-items:start;gap:10px;font-size:14px;color:#0A2540"><span style="color:#BA7517;font-weight:700">·</span> Flatbed and step-deck</li>
-              <li style="display:flex;align-items:start;gap:10px;font-size:14px;color:#0A2540"><span style="color:#BA7517;font-weight:700">·</span> Power-only and team driver coverage</li>
-              <li style="display:flex;align-items:start;gap:10px;font-size:14px;color:#0A2540"><span style="color:#BA7517;font-weight:700">·</span> Hazmat with proper endorsements</li>
-              <li style="display:flex;align-items:start;gap:10px;font-size:14px;color:#0A2540"><span style="color:#BA7517;font-weight:700">·</span> Oversize / specialized with permits</li>
-            </ul>
-          </div>
-        </div>
-      </div>
-    </section>
+    <!-- v3.8.aif — Coverage section dropped entirely. Sprint 1 follow-up
+         per Wasi audit: every element here was duplicative with other
+         site surfaces. "48 contiguous states" + "Coast to coast lanes"
+         already live as homepage Section 5 capability-wall tiles; the
+         equipment list (Dry Van / Reefer / Flatbed / Power-only /
+         Hazmat / Oversize) overlaps homepage Section 4 service cards
+         (different audience framing but same equipment categories);
+         "Continental coverage" + trust-standard line are implicit in
+         the existence of the Caravan Partner Program tier structure on
+         this same page. The new "Every Caravan Partner gets" universal-
+         floor section (v3.8.aic) is now what earns its place on
+         /carriers as carrier-specific operational content. -->
 
     <!-- ===== CARRIER REQUIREMENTS ===== -->
     <section class="requirements section-pad" id="requirements" aria-labelledby="requirements-heading">
