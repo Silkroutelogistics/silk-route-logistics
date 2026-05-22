@@ -174,6 +174,14 @@ type InstructionsAudience = "special" | "pickup" | "delivery";
 interface ComplianceResult {
   allowed: boolean;
   blocked_reasons: string[];
+  // v3.8.ahq — structured block-code signal added alongside blocked_reasons.
+  // Optional on the type because pre-ahq deploys won't include the field;
+  // the modal handles undefined gracefully with `blockedCodes ?? []`.
+  blocked_codes?: Array<{
+    code: "AUTHORITY_TOO_YOUNG" | "AUTHORITY_UNVERIFIED";
+    ageMonths?: number;
+    overridable: boolean;
+  }>;
   warnings: string[];
 }
 
@@ -695,6 +703,7 @@ export function CarrierEngagementDrawer(props: CarrierEngagementDrawerProps) {
           carrierId={selectedCarrier.id}
           carrierName={selectedCarrier.company ?? "Carrier"}
           blockedReasons={compliance.blocked_reasons}
+          blockedCodes={compliance.blocked_codes}
           onClose={() => setShowOverrideModal(false)}
           onSuccess={() => {
             setShowOverrideModal(false);

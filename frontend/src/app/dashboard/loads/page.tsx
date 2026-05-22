@@ -146,7 +146,16 @@ export default function LoadsPage() {
   /* ---- Sprint 40 Item 58 — Compliance Override state ---- */
   const [showOverrideModal, setShowOverrideModal] = useState(false);
   const [complianceResult, setComplianceResult] = useState<{
-    allowed: boolean; blocked_reasons: string[]; warnings: string[];
+    allowed: boolean;
+    blocked_reasons: string[];
+    // v3.8.ahq — structured signal for the OverrideComplianceModal.
+    // Optional on the type because pre-ahq deploys won't include it.
+    blocked_codes?: Array<{
+      code: "AUTHORITY_TOO_YOUNG" | "AUTHORITY_UNVERIFIED";
+      ageMonths?: number;
+      overridable: boolean;
+    }>;
+    warnings: string[];
   } | null>(null);
   const [checkingCompliance, setCheckingCompliance] = useState(false);
   const [invoiceToast, setInvoiceToast] = useState<string | null>(null);
@@ -848,7 +857,16 @@ export default function LoadsPage() {
                   setCheckingCompliance(true);
                   try {
                     const res = await api.post(`/compliance/carrier/${tenderCarrierId}/check`);
-                    const result = res.data as { allowed: boolean; blocked_reasons: string[]; warnings: string[] };
+                    const result = res.data as {
+                      allowed: boolean;
+                      blocked_reasons: string[];
+                      blocked_codes?: Array<{
+                        code: "AUTHORITY_TOO_YOUNG" | "AUTHORITY_UNVERIFIED";
+                        ageMonths?: number;
+                        overridable: boolean;
+                      }>;
+                      warnings: string[];
+                    };
                     setComplianceResult(result);
                     if (result.allowed && result.warnings.length === 0) {
                       createTender.mutate({
@@ -915,7 +933,9 @@ export default function LoadsPage() {
         />
       )}
 
-      {/* Sprint 40 Item 58 — Compliance Override modal */}
+      {/* Sprint 40 Item 58 — Compliance Override modal.
+          v3.8.ahq extended to pass blocked_codes so the modal can drive
+          its authority-age render off the structured signal. */}
       {showOverrideModal && tenderCarrierId && complianceResult && !complianceResult.allowed && (
         <OverrideComplianceModal
           carrierId={tenderCarrierId}
@@ -924,11 +944,13 @@ export default function LoadsPage() {
             || "Selected carrier"
           }
           blockedReasons={complianceResult.blocked_reasons}
+          blockedCodes={complianceResult.blocked_codes}
           onClose={() => setShowOverrideModal(false)}
           onSuccess={async () => {
             // Re-trigger compliance check — server now sees active override
-            // and returns allowed:true with "Active compliance override in
-            // effect" warning. Existing amber banner renders the post-state.
+            // (blanket OR scoped, depending on what was minted) and either
+            // returns allowed:true or emits the AUTHORITY_AGE_OVERRIDE
+            // warning. Existing amber banner renders the post-state.
             try {
               const res = await api.post(`/compliance/carrier/${tenderCarrierId}/check`);
               setComplianceResult(res.data);
@@ -1640,7 +1662,18 @@ function TenderForm({
   setTenderCarrierId: (v: string) => void;
   tenderRate: string;
   setTenderRate: (v: string) => void;
-  complianceResult: { allowed: boolean; blocked_reasons: string[]; warnings: string[] } | null;
+  complianceResult: {
+    allowed: boolean;
+    blocked_reasons: string[];
+    // v3.8.ahq — blocked_codes added for the OverrideComplianceModal's
+    // authority-age render conditional. Optional for pre-ahq compatibility.
+    blocked_codes?: Array<{
+      code: "AUTHORITY_TOO_YOUNG" | "AUTHORITY_UNVERIFIED";
+      ageMonths?: number;
+      overridable: boolean;
+    }>;
+    warnings: string[];
+  } | null;
   checkingCompliance: boolean;
   onSubmit: () => void;
   isPending: boolean;

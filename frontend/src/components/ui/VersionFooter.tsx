@@ -6997,7 +6997,113 @@
 //              gold GOLD / platinum PLATINUM) + "Quick Pay at this
 //              tier" panel eyebrow + title rewrite "Freight goes out.
 //              Cash comes back faster." per Wasi-supplied reference.
-export const SRL_VERSION = "3.8.ahr";
+//
+// v3.8.ahs — Authority-age compliance epic, sprint 4 of 5 (commit 2
+//            of 2 in the ahq arc) — AE modal extension consuming
+//            blocked_codes + scoped override flow + Item 182 close.
+//
+//            Paired with v3.8.ahq backend (commit 1) that shipped
+//            the scoped override endpoint + the blocked_codes
+//            structured signal complianceCheck() now emits. This
+//            commit makes the frontend modal consume that signal
+//            and renders the authority-age control accordingly.
+//            Letter sequence: ahr landed mid-arc as an unrelated
+//            Caravan Journey redesign; commit 2 took the next free
+//            letter (ahs) per §3.1.
+//
+//            Phase A ratified decisions applied this commit
+//            (D15 + D16, with D12-A + D13-P + D14-R already
+//            consumed by v3.8.ahq backend):
+//
+//              D15 — submit button disabled when isHardBlocked is
+//                    true (hard floor OR unverified state), with
+//                    HTML title tooltip surfacing "why" without an
+//                    error round-trip.
+//              D16 — helper text ratified as a placeholder switch
+//                    on the reason textarea ("Reason for waiving
+//                    the 18-month minimum, e.g. known carrier or
+//                    prior business history") rather than a
+//                    separate <p> — matches the existing modal's
+//                    styling, no new brand surfaces.
+//
+//            Shipped:
+//
+//              - frontend/src/components/loads/
+//                OverrideComplianceModal.tsx — new exported
+//                BlockedCode interface (mirrors the backend's
+//                BlockedCode from complianceMonitorService.ts).
+//                New optional `blockedCodes` prop. Three derived
+//                states drive the modal's render conditional:
+//                overridableAuthority, hardFloorAuthority,
+//                unverifiedAuthority. Authority-age status panel
+//                renders between blocked_reasons and reason
+//                textarea, color-coded amber for overridable /
+//                slate for non-overridable. Reason textarea
+//                placeholder switches to D16's text when authority
+//                override is the path. Submit button label switches
+//                to "Apply Authority-Age Override" + sends
+//                checkCode="AUTHORITY_TOO_YOUNG" in the mutation
+//                body. canSubmit gated with !isHardBlocked + title
+//                tooltip on the disabled button. 409 error handler
+//                parses the response code and surfaces specific
+//                messages (NO_AUTHORITY_DATE / HARD_FLOOR_NOT_
+//                OVERRIDABLE / OVERRIDE_NOT_NEEDED) instead of
+//                generic. NEVER parses blocked_reasons strings.
+//
+//              - frontend/src/app/dashboard/loads/page.tsx —
+//                complianceResult state type (line 148-150),
+//                useQuery result type (line 851), TenderFormProps
+//                complianceResult type (line 1661) all extended
+//                with optional blocked_codes. Modal mount (line
+//                919-940) passes blockedCodes through.
+//
+//              - frontend/src/components/drawer/
+//                CarrierEngagementDrawer.tsx — ComplianceResult
+//                interface extended with optional blocked_codes.
+//                Drawer modal mount passes blockedCodes through.
+//
+//              - CLAUDE.md Item 182 — full v3.8.ahq + v3.8.ahs arc
+//                close documented as sprint 4 of 5 of the
+//                authority-age epic. Sprint 5 (Onboarding UI +
+//                WaitingList) remains LOGGED awaiting Phase A
+//                kickoff.
+//
+//            Backwards-compatibility verification:
+//              - blockedCodes is optional in the modal prop +
+//                optional in all parent type definitions. Pre-ahq
+//                deploys returning the old shape (no blocked_codes
+//                field) gracefully degrade — modal uses
+//                `blockedCodes ?? []`, no authority panel renders,
+//                blanket-override flow continues to work.
+//              - Existing modal callers passing only blockedReasons
+//                still work — blockedCodes is optional, defaults
+//                to undefined.
+//              - Submit button still defaults to "Apply Override"
+//                (Sprint 40 label) when no authority override is
+//                present. Reason placeholder reverts to the
+//                Sprint 40 default when no authority override is
+//                present.
+//
+//            Pre-push gates per Sub-pattern 11 (CI-parity):
+//              - npx tsc --noEmit (frontend) — clean
+//              - npx next build (frontend) — clean (all routes
+//                prerendered as static content)
+//              - Backend tests untouched in commit 2 (verified
+//                clean in commit 1: 18 vitest passing).
+//
+//            Per §3.1 sequence-continuous: v3.8.ahr → v3.8.ahs.
+//
+//            §13.3:
+//              - Item 182 v3.8.ahq + v3.8.ahs — LOGGED + CLOSED
+//                as the two-commit arc covering sprint 4 of 5
+//                (scoped override endpoint + AE modal extension).
+//              - Item 182 remaining sprint (Onboarding UI +
+//                WaitingList Prisma model) — LOGGED, awaiting
+//                kickoff. Letter assigned at Phase A based on
+//                what's free in the v3.8.* sequence then.
+//              - All other open items STATUS UNCHANGED per §3.3
+//                scope discipline.
+export const SRL_VERSION = "3.8.ahs";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

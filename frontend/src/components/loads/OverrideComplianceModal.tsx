@@ -5,31 +5,64 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 
 /**
- * Sprint 40 (Item 58) — AE compliance override modal.
+ * Machine-readable block-code entry surfaced alongside blocked_reasons by
+ * the v3.8.ahq backend (Item 182 sprint 4). Mirror of the BlockedCode
+ * interface in backend/src/services/complianceMonitorService.ts — kept
+ * locally so the modal isn't coupled to a shared types import.
+ *
+ *   - AUTHORITY_TOO_YOUNG + overridable=true  → 12-18 month band, scoped
+ *     override via POST /override-block with checkCode = "AUTHORITY_TOO_YOUNG"
+ *     is the authorized path.
+ *   - AUTHORITY_TOO_YOUNG + overridable=false → <12 month hard floor;
+ *     submit is disabled with a tooltip explaining the floor.
+ *   - AUTHORITY_UNVERIFIED + overridable=false → null grant ≥24h after
+ *     approval; not overridable through the authority-age path
+ *     (contact compliance).
+ */
+export interface BlockedCode {
+  code: "AUTHORITY_TOO_YOUNG" | "AUTHORITY_UNVERIFIED";
+  ageMonths?: number;
+  overridable: boolean;
+}
+
+/**
+ * Sprint 40 (Item 58) — AE compliance override modal. Sprint v3.8.ahq
+ * extended (commit 2 of the ahq arc): the modal now drives its
+ * authority-age control off the structured blocked_codes signal from
+ * complianceCheck() rather than parsing the AUTHORITY_TOO_YOUNG: coded
+ * string in blocked_reasons. When an overridable=true authority-age
+ * entry is present, submit posts checkCode = "AUTHORITY_TOO_YOUNG"
+ * (scoped override). When overridable=false (hard floor or
+ * unverified), submit is disabled with an explanatory tooltip — the
+ * backend would 409 anyway; the UI prevents the round-trip.
  *
  * Calls POST /api/compliance/carrier/:carrierId/override-block. Backend
  * gates to ADMIN/CEO (Sprint 40 widened from ADMIN-only per Pattern 6
  * cross-sprint precedent audit — symmetric with Sprint 39 acceptOnBehalf).
  *
- * Reason required (min 10 chars, server enforces). Quota: max 2 overrides
- * per carrier per 30 days; server returns 429 on exceed. 24h expiry on
- * the resulting override record. Audit captured to auditTrail under
- * action "COMPLIANCE_OVERRIDE".
+ * Reason required (min 10 chars, server enforces). Quota: max 15
+ * overrides per carrier per 30 days (Sprint 64 raised from 2); server
+ * returns 429 on exceed. 24h expiry on the resulting override record.
+ * Audit captured to auditTrail under action "COMPLIANCE_OVERRIDE",
+ * with checkCode persisted on both the row and the audit changedFields.
  *
  * On success the parent re-runs the compliance check; the existing amber
- * warning banner ("Active compliance override in effect") renders the
+ * warning banner ("Active compliance override in effect" for blanket OR
+ * "AUTHORITY_AGE_OVERRIDE: ..." warning for scoped) renders the
  * post-override state without new UI plumbing.
  */
 export function OverrideComplianceModal({
   carrierId,
   carrierName,
   blockedReasons,
+  blockedCodes,
   onClose,
   onSuccess,
 }: {
   carrierId: string;
   carrierName: string;
   blockedReasons: string[];
+  blockedCodes?: BlockedCode[];
   onClose: () => void;
   onSuccess: () => void;
 }) {
@@ -37,6 +70,30 @@ export function OverrideComplianceModal({
   const [confirmed, setConfirmed] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const queryClient = useQueryClient();
+
+  // Drive the authority-age behavior off blocked_codes — never parse
+  // the blocked_reasons strings. Three cases that affect submit:
+  //   - overridableAuthority: 12-18 mo, scoped override is the path.
+  //   - hardFloorAuthority:   <12 mo, submit blocked with tooltip.
+  //   - unverifiedAuthority:  null grant ≥24h, submit blocked with
+  //                           "contact compliance" message.
+  const codes = blockedCodes ?? [];
+  const overridableAuthority = codes.find(
+    (c) => c.code === "AUTHORITY_TOO_YOUNG" && c.overridable,
+  );
+  const hardFloorAuthority = codes.find(
+    (c) => c.code === "AUTHORITY_TOO_YOUNG" && !c.overridable,
+  );
+  const unverifiedAuthority = codes.find(
+    (c) => c.code === "AUTHORITY_UNVERIFIED",
+  );
+  const isAuthorityOverride = !!overridableAuthority;
+  const isHardBlocked = !!hardFloorAuthority || !!unverifiedAuthority;
+  const disabledTooltip = hardFloorAuthority
+    ? "Authority under 12 months — hard floor, cannot be overridden"
+    : unverifiedAuthority
+      ? "FMCSA authority unverified — contact compliance"
+      : undefined;
 
   const { data: status } = useQuery<{
     recentOverrideCount: number;
@@ -52,7 +109,18 @@ export function OverrideComplianceModal({
 
   const mutation = useMutation({
     mutationFn: async () => {
-      const { data } = await api.post(`/compliance/carrier/${carrierId}/override-block`, { reason });
+      // v3.8.ahq — send checkCode only when an overridable authority-age
+      // block is the surfaced state. Omitting checkCode preserves the
+      // Sprint 40 blanket-override semantic for all other use cases
+      // (mixed blocks, OFAC, insurance, FMCSA status revocation, etc.).
+      const body: { reason: string; checkCode?: string } = { reason };
+      if (isAuthorityOverride) {
+        body.checkCode = "AUTHORITY_TOO_YOUNG";
+      }
+      const { data } = await api.post(
+        `/compliance/carrier/${carrierId}/override-block`,
+        body,
+      );
       return data;
     },
     onSuccess: () => {
@@ -60,7 +128,7 @@ export function OverrideComplianceModal({
       onSuccess();
       onClose();
     },
-    onError: (err: { response?: { data?: { error?: string }; status?: number }; message?: string }) => {
+    onError: (err: { response?: { data?: { error?: string; code?: string }; status?: number }; message?: string }) => {
       const data = err.response?.data;
       if (err.response?.status === 429) {
         // Server-returned error text includes the canonical quota number;
@@ -68,6 +136,20 @@ export function OverrideComplianceModal({
         // (Sprint 64 raised 2 → 15; future tuning lives in backend
         // controllers/complianceController.ts MAX_OVERRIDES_PER_30_DAYS).
         setError(data?.error || "Override quota exhausted. Contact VP of Operations.");
+      } else if (err.response?.status === 409 && data?.code) {
+        // v3.8.ahq — three distinct 409 codes from the scoped
+        // authority-age path. Surface the server's specific message
+        // since each implies a different operational follow-up
+        // (FMCSA scan, hard floor explanation, no-op).
+        const codeLabel =
+          data.code === "NO_AUTHORITY_DATE"
+            ? "No FMCSA grant date on file"
+            : data.code === "HARD_FLOOR_NOT_OVERRIDABLE"
+              ? "Hard floor (under 12 months)"
+              : data.code === "OVERRIDE_NOT_NEEDED"
+                ? "Override not needed"
+                : data.code;
+        setError(`${codeLabel} — ${data.error || "Cannot mint authority-age override"}`);
       } else {
         setError(data?.error || err.message || "Failed to apply override");
       }
@@ -79,7 +161,16 @@ export function OverrideComplianceModal({
 
   const remaining = status ? Math.max(0, status.max - status.recentOverrideCount) : null;
   const quotaExhausted = remaining === 0;
-  const canSubmit = reason.trim().length >= 10 && confirmed && !mutation.isPending && !quotaExhausted;
+  // v3.8.ahq — submit is disabled when an authority-age hard floor or
+  // unverified state is present, even if the AE has filled in a reason.
+  // The backend would 409 anyway; preventing the round-trip surfaces
+  // the "why" via tooltip instead of an error toast.
+  const canSubmit =
+    reason.trim().length >= 10 &&
+    confirmed &&
+    !mutation.isPending &&
+    !quotaExhausted &&
+    !isHardBlocked;
 
   return (
     // Sprint 65 (v3.8.afm) hotfix — z-[70] so the override modal stacks
@@ -108,6 +199,45 @@ export function OverrideComplianceModal({
           </div>
         )}
 
+        {/* v3.8.ahq — authority-age status panel. Renders only when an
+            AUTHORITY_TOO_YOUNG or AUTHORITY_UNVERIFIED blocked_codes
+            entry is present. Drives off the structured signal, never
+            from blocked_reasons string parsing. */}
+        {(overridableAuthority || hardFloorAuthority || unverifiedAuthority) && (
+          <div
+            className={`mb-3 p-2 border-l-4 text-xs rounded ${
+              overridableAuthority
+                ? "bg-amber-50 border-amber-500 text-amber-800"
+                : "bg-slate-50 border-slate-400 text-slate-600"
+            }`}
+            title={disabledTooltip}
+          >
+            <p className="font-medium mb-1">Authority-age status</p>
+            {overridableAuthority && (
+              <p>
+                Carrier authority is{" "}
+                <span className="font-semibold">{overridableAuthority.ageMonths} months</span>{" "}
+                old (12-18 month override window). Applying this override mints a scoped
+                <code className="px-1 mx-0.5 bg-amber-100 rounded">AUTHORITY_TOO_YOUNG</code>
+                waiver. Other compliance checks remain in effect.
+              </p>
+            )}
+            {hardFloorAuthority && (
+              <p>
+                Carrier authority is{" "}
+                <span className="font-semibold">{hardFloorAuthority.ageMonths} months</span>{" "}
+                old — under the 12-month hard floor. No override may be applied.
+              </p>
+            )}
+            {unverifiedAuthority && (
+              <p>
+                FMCSA authority could not be verified — contact compliance.
+                No authority-age override available.
+              </p>
+            )}
+          </div>
+        )}
+
         <label className="block text-xs font-medium text-slate-700 mb-1">
           Reason <span className="text-red-600">*</span>
           <span className="text-slate-500 font-normal"> (min 10 chars, audit-logged)</span>
@@ -116,7 +246,11 @@ export function OverrideComplianceModal({
           value={reason}
           onChange={(e) => setReason(e.target.value)}
           rows={3}
-          placeholder="Why is this override operationally necessary?"
+          placeholder={
+            isAuthorityOverride
+              ? "Reason for waiving the 18-month minimum, e.g. known carrier or prior business history"
+              : "Why is this override operationally necessary?"
+          }
           className="w-full px-3 py-2 text-sm bg-white border border-slate-300 rounded-lg text-[#0A2540] placeholder:text-slate-400 focus:outline-none focus:border-[#BA7517]"
         />
 
@@ -149,10 +283,15 @@ export function OverrideComplianceModal({
           <button
             onClick={() => { setError(null); mutation.mutate(); }}
             disabled={!canSubmit}
+            title={isHardBlocked ? disabledTooltip : undefined}
             className="flex-1 px-4 py-2 text-sm bg-[#BA7517] text-white rounded-lg hover:bg-[#854F0B] disabled:opacity-50 disabled:cursor-not-allowed"
             data-testid="apply-override-btn"
           >
-            {mutation.isPending ? "Applying..." : "Apply Override"}
+            {mutation.isPending
+              ? "Applying..."
+              : isAuthorityOverride
+                ? "Apply Authority-Age Override"
+                : "Apply Override"}
           </button>
         </div>
       </div>
