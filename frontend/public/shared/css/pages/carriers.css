@@ -1553,21 +1553,24 @@
       padding-bottom: 22px;
       border-bottom: 1px solid rgba(10,37,64,0.08);
     }
+    /* v3.8.ahx — tabs are display-only (cursor: default, no hover lift,
+       no focus outline). Auto-loop drives the active state. Gold LED
+       dot indicates "live now" on the active tab — pattern lifted from
+       the /shippers ops-loop (.ops-tab-dot). */
     .cj-tab {
+      position: relative;
       background: transparent;
       border: 1px solid rgba(10,37,64,0.10);
       border-radius: 10px;
       padding: 12px 14px 11px;
-      cursor: pointer;
+      cursor: default;
       display: flex;
       flex-direction: column;
       align-items: center;
       gap: 3px;
       font-family: inherit;
-      transition: background 380ms ease, border-color 380ms ease, transform 200ms ease;
+      transition: background 380ms ease, border-color 380ms ease;
     }
-    .cj-tab:hover { transform: translateY(-1px); border-color: rgba(186,117,23,0.40); }
-    .cj-tab:focus-visible { outline: 2px solid #BA7517; outline-offset: 2px; }
     .cj-tab.is-active {
       background: #0A2540; border-color: #0A2540;
       box-shadow: 0 6px 16px rgba(10,37,64,0.20);
@@ -1582,6 +1585,36 @@
     .cj-tab-name {
       font-family: 'Playfair Display', Georgia, serif; font-size: 16px;
       font-weight: 600; color: #0A2540; transition: color 240ms;
+    }
+    /* Gold LED status dot — top-right of each tab. Invisible on
+       inactive tabs; visible + blinking on the active tab. */
+    .cj-tab-dot {
+      position: absolute;
+      top: 8px;
+      right: 9px;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #BA7517;
+      opacity: 0;
+      transition: opacity 240ms ease;
+      box-shadow: 0 0 6px rgba(186,117,23,0.55);
+    }
+    .cj-tab.is-active .cj-tab-dot {
+      opacity: 1;
+      animation: cj-tab-dot-blink 1.2s ease-in-out infinite;
+    }
+    @keyframes cj-tab-dot-blink {
+      0%, 100% {
+        opacity: 1;
+        transform: scale(1);
+        box-shadow: 0 0 6px rgba(186,117,23,0.55);
+      }
+      50% {
+        opacity: 0.45;
+        transform: scale(1.25);
+        box-shadow: 0 0 14px rgba(186,117,23,0.90);
+      }
     }
 
     /* ----- Navy highway lane -----
@@ -1892,6 +1925,7 @@
       .cj-load-tier-1, .cj-load-tier-2, .cj-load-tier-3 { transition: opacity 150ms ease; }
       .cj-dash { animation: none; }
       .cj-marker.is-active::after { animation: none; }
+      .cj-tab.is-active .cj-tab-dot { animation: none; }
       .cj-card { transition: opacity 0.15s ease, transform 0.15s ease; }
       .cj-plaque { transition: opacity 0.15s ease, transform 0.15s ease; }
     }

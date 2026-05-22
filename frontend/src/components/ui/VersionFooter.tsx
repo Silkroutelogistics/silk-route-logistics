@@ -7133,7 +7133,15 @@
 //              problem (cream-on-gold $ washed out at deployed scale).
 //              Tier-1/2 bags carry navy $ for contrast on lighter brass;
 //              tier-3 bags carry cream $ for contrast on darker brass.
-export const SRL_VERSION = "3.8.ahw";
+// v3.8.ahx   — Caravan Journey tabs: clickable → display-only +
+//              gold LED blink on active. Tabs no longer accept
+//              clicks (cursor:default, no hover lift, no focus
+//              outline). Auto-loop is the sole driver of active
+//              state. Each tab carries a brass `.cj-tab-dot` LED
+//              top-right that pulses on the active phase — pattern
+//              lifted verbatim from /shippers `.ops-tab-dot`.
+//              `<button>` elements → `<div>` for semantic accuracy.
+export const SRL_VERSION = "3.8.ahx";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

@@ -485,19 +485,28 @@
 
         <div class="cj-canvas" id="cjCanvas">
 
-          <div class="cj-tabs" role="tablist" aria-label="Caravan Partner Program tiers">
-            <button class="cj-tab is-active" data-phase="0" role="tab" aria-selected="true" type="button">
+          <!-- v3.8.ahx — tabs are display-only (not clickable). The
+               auto-loop drives the active state; each tab indicates
+               its tier via the gold LED dot (top-right corner) that
+               blinks on the active phase. Pattern lifted from the
+               /shippers ops-loop tabs (.ops-tab-dot in shippers.css). -->
+          <div class="cj-tabs" role="presentation">
+            <div class="cj-tab is-active" data-phase="0">
+              <span class="cj-tab-dot" aria-hidden="true"></span>
               <span class="cj-tab-eyebrow">M0</span><span class="cj-tab-name">Apply</span>
-            </button>
-            <button class="cj-tab" data-phase="1" role="tab" aria-selected="false" type="button">
+            </div>
+            <div class="cj-tab" data-phase="1">
+              <span class="cj-tab-dot" aria-hidden="true"></span>
               <span class="cj-tab-eyebrow">M1 — M3</span><span class="cj-tab-name">Silver</span>
-            </button>
-            <button class="cj-tab" data-phase="2" role="tab" aria-selected="false" type="button">
+            </div>
+            <div class="cj-tab" data-phase="2">
+              <span class="cj-tab-dot" aria-hidden="true"></span>
               <span class="cj-tab-eyebrow">M4</span><span class="cj-tab-name">Gold</span>
-            </button>
-            <button class="cj-tab" data-phase="3" role="tab" aria-selected="false" type="button">
+            </div>
+            <div class="cj-tab" data-phase="3">
+              <span class="cj-tab-dot" aria-hidden="true"></span>
               <span class="cj-tab-eyebrow">M5</span><span class="cj-tab-name">Platinum</span>
-            </button>
+            </div>
           </div>
 
           <!-- Navy highway lane: SRL truck eastbound (freight) above,
@@ -1044,9 +1053,11 @@
 
         function cjSetPhase(idx, stampPlaque) {
           cjPhase = idx;
+          // v3.8.ahx — tabs are display-only now. Only toggling is-active
+          // for visual state (LED dot + navy background). No aria-selected
+          // since tabs are role="presentation", not interactive tablist.
           cjTabs.forEach(function (t, i) {
             t.classList.toggle('is-active', i === idx);
-            t.setAttribute('aria-selected', i === idx ? 'true' : 'false');
           });
           cjMarkers.forEach(function (m, i) { m.classList.toggle('is-active', i === idx); });
           cjCards.forEach(function (c, i) { c.classList.toggle('is-active', i === idx); });
@@ -1096,13 +1107,9 @@
           cjTimer = setTimeout(cjTick, CJ_SEGMENT_MS);
         }
 
-        cjTabs.forEach(function (t, i) {
-          t.addEventListener('click', function () {
-            cjClearTimer();
-            cjSetPhase(i, i === 3);
-            if (!cjReducedMotion) cjTimer = setTimeout(cjStart, CJ_RESUME_AFTER_CLICK_MS);
-          });
-        });
+        // v3.8.ahx — tab click handlers removed. Tabs are now display-only;
+        // truck advances are auto-loop driven. Bidirectional click-to-jump
+        // behavior intentionally dropped per directive.
 
         if (typeof IntersectionObserver !== 'undefined') {
           var cjObs = new IntersectionObserver(function (entries) {
