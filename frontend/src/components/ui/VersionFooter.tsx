@@ -7161,7 +7161,17 @@
 //              (rotateY 600ms cubic-bezier) + click/keyboard toggle
 //              + aria-expanded. Reduced-motion fallback shortens
 //              transition.
-export const SRL_VERSION = "3.8.ahz";
+// v3.8.aia   — Commitment cards converted to homepage parity.
+//              FRONT: editorial Nano-Banana photo (compass+scorecard /
+//              paperweight+RC / hourglass+QP tiers) at top, brass
+//              card-divider line, h3 title, italic brass teaser, flip
+//              CTA. BACK: h4 "How it works" + brass divider + numbered
+//              .mechanism-steps ol + "Back to overview" CTA. Matches
+//              /index .service-card-flip canonical exactly. Per Wasi
+//              directive: all flip cards site-wide standardize on this
+//              numbered-steps back-face pattern (shippers conversion
+//              queued for separate sprint).
+export const SRL_VERSION = "3.8.aia";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

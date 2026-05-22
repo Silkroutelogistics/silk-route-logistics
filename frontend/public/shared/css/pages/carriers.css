@@ -1973,42 +1973,44 @@
     }
 
     /* ==========================================
-       v3.8.ahz — COMMITMENT FLIP CARDS
-       3-card grid in /carriers "What SRL commits to" section, now
-       using the same 3D flip mechanic as the homepage service-card-flip
-       and /shippers system-card-flip patterns. Front face = badge +
-       title + 1-line operational teaser + "Click to learn more" CTA.
-       Back face = full enforceable-terms body copy + "Back to overview"
-       CTA. Both faces share min-height so the layout doesn't jitter on
-       flip.
+       v3.8.aia — COMMITMENT FLIP CARDS (homepage parity)
+       Restructured to match /index .service-card-flip canonical exactly:
+       FRONT: editorial photo top + body section with h3 + brass divider
+       + italic teaser + "Click to learn more" CTA.
+       BACK: h4 "How it works" + brass divider + numbered .mechanism-steps
+       ol + "Back to overview" CTA.
+       Both faces share min-height so flip doesn't jitter.
+       Editorial photography (compass/scorecard, paperweight/rate-conf,
+       hourglass/QP-tiers) generated via Nano Banana, on walnut + brass
+       + cream palette matching pre-v3.8.aep heritage register.
        ========================================== */
     .commitments-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-      gap: 24px;
-      max-width: 1120px;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 28px;
+      max-width: 1180px;
       margin: 0 auto;
     }
     .commitment-card-flip {
-      perspective: 1200px;
+      perspective: 1400px;
       cursor: pointer;
       background: transparent;
       border: none;
       padding: 0;
-      min-height: 460px;
+      min-height: 560px;
       font-family: inherit;
       color: inherit;
     }
     .commitment-card-flip:focus-visible {
       outline: 2px solid #BA7517;
       outline-offset: 4px;
-      border-radius: 12px;
+      border-radius: 14px;
     }
     .commitment-card-inner {
       position: relative;
       width: 100%;
-      min-height: 460px;
-      transition: transform 600ms cubic-bezier(0.4, 0, 0.2, 1);
+      min-height: 560px;
+      transition: transform 700ms cubic-bezier(0.4, 0, 0.2, 1);
       transform-style: preserve-3d;
     }
     .commitment-card-flip.is-flipped .commitment-card-inner {
@@ -2019,78 +2021,138 @@
       position: absolute;
       inset: 0;
       width: 100%;
-      min-height: 460px;
+      min-height: 560px;
       background: #FFFFFF;
-      border: 1px solid #E5E7EB;
-      border-left: 3px solid #BA7517;
-      border-radius: 12px;
-      padding: 32px 28px;
+      border: 1px solid rgba(10, 37, 64, 0.10);
+      border-radius: 14px;
       backface-visibility: hidden;
       -webkit-backface-visibility: hidden;
       display: flex;
       flex-direction: column;
       box-sizing: border-box;
+      overflow: hidden;
+      box-shadow: 0 4px 14px rgba(10, 37, 64, 0.06);
     }
     .commitment-card-back {
       transform: rotateY(180deg);
+      padding: 32px 30px;
     }
-    .commitment-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      padding: 4px 10px;
-      border-radius: 20px;
-      background: rgba(197, 165, 114, 0.10);
-      color: #8B6A1E;
-      font-size: 11px;
-      font-weight: 700;
-      letter-spacing: 1px;
-      text-transform: uppercase;
-      margin-bottom: 14px;
-      align-self: flex-start;
+    /* Photo top — top-of-card editorial image, 16:11 aspect to fit
+       the 4:3 source photos with slight crop. */
+    .commitment-photo-top {
+      width: 100%;
+      aspect-ratio: 16 / 11;
+      overflow: hidden;
+      background: #F5EEE0;
+      border-bottom: 1px solid rgba(186, 117, 23, 0.18);
     }
-    .commitment-card-front h3,
-    .commitment-card-back h3 {
+    .commitment-photo-top img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+    /* Body section under the photo — title + divider + teaser + CTA */
+    .commitment-card-body {
+      flex: 1;
+      padding: 28px 28px 26px;
+      display: flex;
+      flex-direction: column;
+    }
+    .commitment-card-body h3 {
       font-family: 'DM Serif Display', 'Playfair Display', Georgia, serif;
       font-size: 22px;
-      color: #1A1A2E;
+      color: #0A2540;
       margin: 0 0 12px 0;
-      line-height: 1.3;
+      line-height: 1.25;
+      font-weight: 600;
+    }
+    /* Brass divider line — matches homepage .card-divider canonical */
+    .card-divider {
+      width: 48px;
+      height: 2px;
+      background: #BA7517;
+      border: none;
+      margin: 0 0 14px 0;
+    }
+    .commitment-card-back .card-divider {
+      margin: 0 0 18px 0;
     }
     .commitment-teaser {
       font-family: 'DM Serif Display', 'Playfair Display', Georgia, serif;
       font-style: italic;
-      font-size: 17px;
+      font-size: 16px;
       color: #BA7517;
-      line-height: 1.4;
-      margin: 8px 0 0 0;
-    }
-    .commitment-card-back p {
-      font-size: 14px;
-      color: #4B5563;
-      line-height: 1.7;
-      margin: 0;
-      flex: 1;
+      line-height: 1.45;
+      margin: 0 0 20px 0;
+      font-weight: 500;
     }
     .commitment-flip-cta {
       margin-top: auto;
-      padding-top: 24px;
       display: inline-flex;
       align-items: center;
       gap: 6px;
       color: #BA7517;
       font-size: 13px;
       font-weight: 600;
-      letter-spacing: 0.3px;
+      letter-spacing: 0.4px;
+    }
+    /* BACK FACE: h4 + divider + numbered steps + back CTA */
+    .commitment-card-back h4 {
+      font-family: 'DM Serif Display', 'Playfair Display', Georgia, serif;
+      font-size: 22px;
+      color: #0A2540;
+      margin: 0 0 12px 0;
+      line-height: 1.25;
+      font-weight: 600;
+    }
+    /* Numbered mechanism steps — matches homepage .mechanism-steps
+       canonical from /index service-card-flip back face. Per Wasi
+       directive (v3.8.aia): all flip cards site-wide standardize on
+       this numbered-steps back-face pattern. */
+    .commitment-card-back .mechanism-steps {
+      list-style: none;
+      padding: 0;
+      margin: 0 0 18px 0;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      flex: 1;
+    }
+    .commitment-card-back .mechanism-steps li {
+      display: grid;
+      grid-template-columns: 28px 1fr;
+      gap: 12px;
+      align-items: flex-start;
+    }
+    .commitment-card-back .step-num {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: #0A2540;
+      color: #FBF7F0;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 12px;
+      font-weight: 700;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .commitment-card-back .step-text {
+      font-family: 'DM Sans', sans-serif;
+      font-size: 13.5px;
+      color: #3A4A5F;
+      line-height: 1.6;
     }
     .commitment-flip-back-cta {
-      margin-top: 16px;
-      padding-top: 16px;
+      margin-top: auto;
+      padding-top: 14px;
       border-top: 1px solid rgba(186, 117, 23, 0.18);
       display: inline-flex;
       align-items: center;
       gap: 6px;
-      color: #6B7280;
+      color: #6B7685;
       font-size: 12px;
       font-weight: 500;
       align-self: flex-start;
@@ -2099,14 +2161,16 @@
       .commitment-card-inner { transition: transform 150ms ease; }
     }
     @media (max-width: 720px) {
+      .commitments-grid { gap: 22px; }
       .commitment-card-flip,
       .commitment-card-inner,
       .commitment-card-front,
-      .commitment-card-back { min-height: 420px; }
-      .commitment-card-front,
+      .commitment-card-back { min-height: 520px; }
+      .commitment-card-body { padding: 22px 22px 22px; }
       .commitment-card-back { padding: 26px 22px; }
-      .commitment-card-front h3,
-      .commitment-card-back h3 { font-size: 19px; }
-      .commitment-teaser { font-size: 15px; }
+      .commitment-card-body h3,
+      .commitment-card-back h4 { font-size: 19px; }
+      .commitment-teaser { font-size: 14.5px; }
+      .commitment-card-back .step-text { font-size: 13px; }
     }
 

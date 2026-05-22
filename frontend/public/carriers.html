@@ -183,29 +183,43 @@
           </p>
         </div>
 
-        <!-- v3.8.ahz — Commitments cards converted to flip pattern matching
-             the /index and /shippers system-card-flip register. Front face
-             shows commitment badge + title + 1-line operational teaser +
-             "Click to learn more" CTA. Back face holds the full enforceable-
-             terms body copy + "Back to overview" CTA. JS handler at the
-             end of this file picks up the new .commitment-card-flip selector. -->
+        <!-- v3.8.aia — Commitment cards converted to homepage parity:
+             editorial photo at top, brass card-divider line, title +
+             teaser + flip CTA in body. Back face: h4 "How it works" +
+             brass divider + numbered .mechanism-steps ol + back CTA.
+             Matches /index .service-card-flip canonical exactly per
+             Wasi standard. Editorial brand photography generated via
+             Nano Banana shows: compass + scorecard notebook (C1),
+             brass paperweight + rate-confirmation notebook (C2),
+             brass hourglass + Quick Pay tier table notebook (C3). -->
         <div class="commitments-grid">
-          <!-- Commitment 1 -->
-          <article class="commitment-card-flip" role="button" tabindex="0" aria-expanded="false" aria-label="Compass Score, Published and Weighted — click to learn more">
+
+          <!-- Commitment 1 — Compass Score -->
+          <article class="commitment-card-flip" role="button" tabindex="0" aria-expanded="false" aria-label="Compass Score, Published and Weighted — click to learn how it works">
             <div class="commitment-card-inner">
               <div class="commitment-card-front">
-                <div class="commitment-badge">Commitment 1</div>
-                <h3>Compass Score, Published and Weighted</h3>
-                <p class="commitment-teaser">Mathematical scoring. No black box.</p>
-                <span class="commitment-flip-cta">
-                  <span>Click to learn more</span>
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 18 15 12 9 6"></polyline></svg>
-                </span>
+                <div class="commitment-photo-top">
+                  <img src="/media/commitment-compass.jpg" alt="A brass vintage compass beside an open leather notebook showing a Compass Score of 85 with PASS stamp and a seven-factor weighting table — representing SRL's published, mathematical carrier scoring system" width="1200" height="900" loading="lazy">
+                </div>
+                <div class="commitment-card-body">
+                  <h3>Compass Score, Published and Weighted</h3>
+                  <hr class="card-divider">
+                  <p class="commitment-teaser">Mathematical scoring. No black box.</p>
+                  <span class="commitment-flip-cta">
+                    <span>Click to learn more</span>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                  </span>
+                </div>
               </div>
               <div class="commitment-card-back">
-                <div class="commitment-badge">Commitment 1</div>
-                <h3>Compass Score, Published and Weighted</h3>
-                <p>Every carrier is scored by the Compass Engine on seven measurable factors with published weights: on-time pickup (20%), on-time delivery (20%), GPS compliance (15%), claims ratio (15%), communication (10%), document timeliness (10%), acceptance rate (10%). Tier advancement is mathematical, not opinion. Your score and the inputs driving it are visible in the carrier portal at every recalculation. No broker scoring black box.</p>
+                <h4>How it works</h4>
+                <hr class="card-divider">
+                <ol class="mechanism-steps">
+                  <li><span class="step-num">1</span><span class="step-text">Every load you run is scored on seven measurable factors with published weights: pickup 20%, delivery 20%, GPS 15%, claims 15%, communication 10%, documents 10%, acceptance 10%.</span></li>
+                  <li><span class="step-num">2</span><span class="step-text">Compass Engine recalculates your composite score after each delivery and check-call.</span></li>
+                  <li><span class="step-num">3</span><span class="step-text">Your score and the inputs driving it are visible in the carrier portal anytime you log in.</span></li>
+                  <li><span class="step-num">4</span><span class="step-text">Tier advancement is mathematical. No broker opinion, no black box.</span></li>
+                </ol>
                 <span class="commitment-flip-back-cta">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"></polyline></svg>
                   <span>Back to overview</span>
@@ -214,22 +228,32 @@
             </div>
           </article>
 
-          <!-- Commitment 2 -->
-          <article class="commitment-card-flip" role="button" tabindex="0" aria-expanded="false" aria-label="Itemized Quotes, No Post-Booking Surprises — click to learn more">
+          <!-- Commitment 2 — Itemized Quotes -->
+          <article class="commitment-card-flip" role="button" tabindex="0" aria-expanded="false" aria-label="Itemized Quotes, No Post-Booking Surprises — click to learn how it works">
             <div class="commitment-card-inner">
               <div class="commitment-card-front">
-                <div class="commitment-badge">Commitment 2</div>
-                <h3>Itemized Quotes, No Post-Booking Surprises</h3>
-                <p class="commitment-teaser">Rate confirmation equals settlement total.</p>
-                <span class="commitment-flip-cta">
-                  <span>Click to learn more</span>
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 18 15 12 9 6"></polyline></svg>
-                </span>
+                <div class="commitment-photo-top">
+                  <img src="/media/commitment-itemized.jpg" alt="A brass paperweight resting on a rate confirmation document beside an open leather notebook showing a Rate Confirmation total of $1,695 with itemized line items — representing SRL's transparent, itemized rate confirmations" width="1200" height="900" loading="lazy">
+                </div>
+                <div class="commitment-card-body">
+                  <h3>Itemized Quotes, No Post-Booking Surprises</h3>
+                  <hr class="card-divider">
+                  <p class="commitment-teaser">Rate confirmation equals settlement total.</p>
+                  <span class="commitment-flip-cta">
+                    <span>Click to learn more</span>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                  </span>
+                </div>
               </div>
               <div class="commitment-card-back">
-                <div class="commitment-badge">Commitment 2</div>
-                <h3>Itemized Quotes, No Post-Booking Surprises</h3>
-                <p>Every rate confirmation lists line-haul, fuel surcharge, and accessorials as separate line items. The total on the rate confirmation is the total on settlement. No mystery deductions between booking and pay. If an accessorial applies post-dispatch (detention, lumper, stop-off), it is added transparently with documentation, not subtracted silently.</p>
+                <h4>How it works</h4>
+                <hr class="card-divider">
+                <ol class="mechanism-steps">
+                  <li><span class="step-num">1</span><span class="step-text">Every rate confirmation lists line-haul, fuel surcharge, and accessorials as separate line items.</span></li>
+                  <li><span class="step-num">2</span><span class="step-text">The total printed on the rate confirmation is the total you see on settlement. No mystery deductions.</span></li>
+                  <li><span class="step-num">3</span><span class="step-text">Post-dispatch accessorials (detention, lumper, stop-off) are added transparently with documentation.</span></li>
+                  <li><span class="step-num">4</span><span class="step-text">Every adjustment shows the math. Nothing subtracted silently between booking and pay.</span></li>
+                </ol>
                 <span class="commitment-flip-back-cta">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"></polyline></svg>
                   <span>Back to overview</span>
@@ -238,22 +262,32 @@
             </div>
           </article>
 
-          <!-- Commitment 3 -->
-          <article class="commitment-card-flip" role="button" tabindex="0" aria-expanded="false" aria-label="Quick Pay Without a Factoring Contract — click to learn more">
+          <!-- Commitment 3 — Quick Pay -->
+          <article class="commitment-card-flip" role="button" tabindex="0" aria-expanded="false" aria-label="Quick Pay Without a Factoring Contract — click to learn how it works">
             <div class="commitment-card-inner">
               <div class="commitment-card-front">
-                <div class="commitment-badge">Commitment 3</div>
-                <h3>Quick Pay Without a Factoring Contract</h3>
-                <p class="commitment-teaser">Per-load. Optional. No contract.</p>
-                <span class="commitment-flip-cta">
-                  <span>Click to learn more</span>
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 18 15 12 9 6"></polyline></svg>
-                </span>
+                <div class="commitment-photo-top">
+                  <img src="/media/commitment-quickpay.jpg" alt="A brass hourglass and stack of unmarked brass coins beside an open leather notebook showing Quick Pay tier fees of 1 to 3 percent per load — representing SRL's per-load optional Quick Pay program with no factoring contract" width="1200" height="900" loading="lazy">
+                </div>
+                <div class="commitment-card-body">
+                  <h3>Quick Pay Without a Factoring Contract</h3>
+                  <hr class="card-divider">
+                  <p class="commitment-teaser">Per-load. Optional. No contract.</p>
+                  <span class="commitment-flip-cta">
+                    <span>Click to learn more</span>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                  </span>
+                </div>
               </div>
               <div class="commitment-card-back">
-                <div class="commitment-badge">Commitment 3</div>
-                <h3>Quick Pay Without a Factoring Contract</h3>
-                <p>SRL's Quick Pay is per-load and optional. No 12&ndash;24 month factoring contract. No termination fees. No letter of release required on most invoices (only if you have already factored a specific load with a third party). Use Quick Pay when cash flow matters. Skip it when it doesn't. Standard pay is always free: Silver Net-30, Gold Net-21, Platinum Net-14.</p>
+                <h4>How it works</h4>
+                <hr class="card-divider">
+                <ol class="mechanism-steps">
+                  <li><span class="step-num">1</span><span class="step-text">Quick Pay is per-load and optional. Elect it on the invoices that need cash flow, skip it on the ones that don't.</span></li>
+                  <li><span class="step-num">2</span><span class="step-text">No 12&ndash;24 month factoring contract. No termination fees. No letter of release on most invoices.</span></li>
+                  <li><span class="step-num">3</span><span class="step-text">Published tier fees: Silver 3%, Gold 2%, Platinum 1% on 7-day pay. Same-day adds a universal 2%.</span></li>
+                  <li><span class="step-num">4</span><span class="step-text">Standard pay is always free: Silver Net-30, Gold Net-21, Platinum Net-14.</span></li>
+                </ol>
                 <span class="commitment-flip-back-cta">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"></polyline></svg>
                   <span>Back to overview</span>
