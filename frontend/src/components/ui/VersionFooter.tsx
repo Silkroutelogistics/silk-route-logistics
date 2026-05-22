@@ -6844,7 +6844,151 @@
 //              snap uses `.is-resetting` no-transition class so trucks
 //              never visually drive in reverse during the Platinum→
 //              Apply teleport.
-export const SRL_VERSION = "3.8.ahp";
+//
+// v3.8.ahq — Authority-age compliance epic, sprint 4 of 5 (commit 1
+//            of 2 in the ahq arc) — backend extension + blocked_codes
+//            enrichment + tests.
+//
+//            Backend half of the authority-age override sprint. The
+//            frontend modal follows in commit 2 (next available letter
+//            — likely v3.8.ahr unless an unrelated sprint lands first).
+//            v3.8.ahm hard gate already honors checkCode = "AUTHORITY_
+//            TOO_YOUNG" via the lookup at complianceMonitorService:
+//            105-117; this commit wires the endpoint that mints the
+//            override row + the gate-output signal the UI needs.
+//
+//            Note on letter sequence: the epic plan called for ahn,
+//            but ahn/aho/ahp landed first as unrelated Caravan Journey
+//            visual sprints (commits caff938..7dbd5c8 across the
+//            past few sessions). Per §3.1 sequence-continuous, this
+//            sprint takes the next genuinely-available letter — ahq.
+//            Item 182 entry in CLAUDE.md acknowledges this rather than
+//            pre-claiming.
+//
+//            Phase A ratified decisions applied (D12-A + D13-P +
+//            D14-R + D15 + D16):
+//
+//              D12-A — extend the existing POST /override-block
+//                endpoint with an optional checkCode field. Single
+//                endpoint, reuses quota/expiry/audit. NULL preserves
+//                Sprint 40 blanket-override semantic for legacy
+//                callers.
+//              D13-P — three distinct 409 codes for the
+//                non-mintable cases: NO_AUTHORITY_DATE (null grant),
+//                HARD_FLOOR_NOT_OVERRIDABLE (<12mo), OVERRIDE_NOT_
+//                NEEDED (>=18mo). Each has its own response code
+//                string so the UI can surface specific messages.
+//              D14-R — enrich complianceCheck() result with a
+//                blocked_codes field parallel to blocked_reasons.
+//                Additive — the 9 existing callers reading only
+//                allowed/blocked_reasons are unaffected.
+//              D15 — gate-output drives the modal's render
+//                conditional (commit 2 follows).
+//              D16 — helper text + auth-age reason hint (commit 2
+//                follows).
+//
+//            Shipped in this commit:
+//
+//              - backend/src/services/complianceMonitorService.ts —
+//                new `BlockedCode` exported interface. complianceCheck
+//                return type extended with `blocked_codes:
+//                BlockedCode[]`. Populated only for actually-blocked
+//                authority states this sprint:
+//                  • <12mo → { AUTHORITY_TOO_YOUNG, ageMonths,
+//                              overridable: false }
+//                  • 12-18mo (no override) → { AUTHORITY_TOO_YOUNG,
+//                              ageMonths, overridable: true }
+//                  • null + ≥24h since approval → {
+//                              AUTHORITY_UNVERIFIED, overridable:
+//                              false }
+//                  • 12-18mo with active override → no entry (block
+//                              released)
+//                  • ≥18mo → no entry (silent allow)
+//                Single ageMonths derivation feeds both
+//                blocked_reasons and blocked_codes so they cannot
+//                diverge.
+//
+//              - backend/src/controllers/complianceController.ts —
+//                overrideBlock extended with optional `checkCode`
+//                request body field. When checkCode ===
+//                "AUTHORITY_TOO_YOUNG":
+//                  1. Re-derive ageMonths from
+//                     carrier.authorityGrantedDate via
+//                     calendarMonthsBetween (imported from
+//                     fmcsaService — same helper as the gate).
+//                  2. 409 NO_AUTHORITY_DATE if grant date null.
+//                  3. 409 HARD_FLOOR_NOT_OVERRIDABLE if
+//                     ageMonths < 12.
+//                  4. 409 OVERRIDE_NOT_NEEDED if ageMonths >= 18.
+//                  5. Only 12-to-under-18 passes to mint.
+//                checkCode persisted to ComplianceOverride.checkCode
+//                + recorded in auditTrail.changedFields. NULL
+//                preserves Sprint 40 blanket-override behavior.
+//                Quota (15/30d), expiry (24h), and ADMIN/CEO role
+//                gate UNTOUCHED.
+//
+//              - backend/__tests__/unit/services/
+//                complianceMonitorService.test.ts extended with 4
+//                new cases (8-11) covering blocked_codes
+//                overridable=false at <12mo, overridable=true at
+//                12-18mo, empty array at ≥18mo, AUTHORITY_UNVERIFIED
+//                + overridable=false for null+≥24h.
+//
+//              - backend/__tests__/unit/controllers/
+//                complianceController.test.ts (new) — 5 cases:
+//                three 409 rejections (NO_AUTHORITY_DATE,
+//                HARD_FLOOR_NOT_OVERRIDABLE, OVERRIDE_NOT_NEEDED),
+//                successful 12-18mo scoped mint with checkCode
+//                persisted, blanket-compat (no checkCode) mint.
+//                Prisma + fmcsaService + complianceMonitorService
+//                + emailService all mocked at module level.
+//                vi.useFakeTimers + setSystemTime(FIXED_NOW) +
+//                nMonthsAgo helper pattern matches the service test
+//                file for deterministic ageMonths.
+//
+//            NOT in commit 1 scope (commit 2 — next available letter):
+//              - OverrideComplianceModal.tsx extension to consume
+//                blocked_codes and drive the authority-age control.
+//              - Parent component plumbing in loads/page.tsx +
+//                CarrierEngagementDrawer.tsx to pass blocked_codes
+//                through.
+//              - Helper text under the reason textarea for
+//                authority-age overrides.
+//              - Specific 409-code message surfacing in the modal.
+//
+//            Backwards-compatibility verification:
+//              - 9 existing complianceCheck() callers read only
+//                allowed + blocked_reasons; the new blocked_codes
+//                field is silently ignored by them. No per-callsite
+//                changes needed.
+//              - Existing OverrideComplianceModal posts { reason }
+//                only — checkCode is absent → null → Sprint 40
+//                blanket override semantic preserved. Modal
+//                continues to work for blanket use cases until
+//                commit 2 extends it.
+//              - 13 service tests + 5 controller tests + 4 fmcsa
+//                tests + 9 notification tests all passing → 31 unit
+//                tests across the touched service surface, clean.
+//
+//            Pre-push gates per Sub-pattern 11 (CI-parity):
+//              - npx vitest run complianceMonitorService.test.ts +
+//                complianceController.test.ts → 18/18 passed in 17ms
+//              - npx tsc --noEmit (backend) — clean
+//              - npx tsc --noEmit (frontend) — clean
+//
+//            Per §3.1 sequence-continuous: v3.8.ahp → v3.8.ahq
+//            (skipping ahn/aho/ahp consumed by parallel Caravan
+//            Journey visual sprints — those landed between my
+//            v3.8.ahl/ahm and now).
+//
+//            §13.3:
+//              - Item 182 v3.8.ahq status — LOGGED + CLOSED for
+//                commit 1 (backend). The "authority-age override
+//                sprint" full close lands in commit 2 with the
+//                modal + Item 182 update.
+//              - All other open items STATUS UNCHANGED per §3.3
+//                scope discipline.
+export const SRL_VERSION = "3.8.ahq";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

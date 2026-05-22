@@ -44,9 +44,39 @@ export const AUTHORITY_AGE_GATE_LIVE_AT = new Date("2026-05-21T19:00:00Z");
 // complianceCheck — called before carrier assignment
 // ────────────────────────────────────────────────────────────
 
+/**
+ * Machine-readable block-code entry surfaced alongside blocked_reasons.
+ *
+ * Added in v3.8.ahn (Item 182 sprint 4) so the frontend override modal
+ * can drive its authority-age control off a structured signal instead
+ * of parsing the coded prefix in blocked_reasons strings. Additive —
+ * the 9 existing callers reading only `allowed` and `blocked_reasons`
+ * are unaffected; the field is just ignored by them.
+ *
+ * `overridable` is the load-bearing bit for the modal's render logic:
+ *   - AUTHORITY_TOO_YOUNG + true  → 12-18 month window, scoped override
+ *     via POST /override-block with checkCode = "AUTHORITY_TOO_YOUNG"
+ *     is the authorized path.
+ *   - AUTHORITY_TOO_YOUNG + false → <12 month hard floor; the endpoint
+ *     will 409 with HARD_FLOOR_NOT_OVERRIDABLE; modal renders the
+ *     control disabled with a tooltip.
+ *   - AUTHORITY_UNVERIFIED + false → null grant ≥24h after approval;
+ *     not overridable through the authority-age path (contact compliance).
+ *
+ * The same `ageMonths` value drives both the blocked_reasons message
+ * and this struct, derived from a single calendarMonthsBetween call
+ * inside complianceCheck so the two cannot diverge.
+ */
+export interface BlockedCode {
+  code: "AUTHORITY_TOO_YOUNG" | "AUTHORITY_UNVERIFIED";
+  ageMonths?: number;
+  overridable: boolean;
+}
+
 export async function complianceCheck(carrierId: string): Promise<{
   allowed: boolean;
   blocked_reasons: string[];
+  blocked_codes: BlockedCode[];
   warnings: string[];
 }> {
   const carrier = await prisma.carrierProfile.findUnique({
@@ -55,10 +85,11 @@ export async function complianceCheck(carrierId: string): Promise<{
   });
 
   if (!carrier) {
-    return { allowed: false, blocked_reasons: ["Carrier not found"], warnings: [] };
+    return { allowed: false, blocked_reasons: ["Carrier not found"], blocked_codes: [], warnings: [] };
   }
 
   const blocked_reasons: string[] = [];
+  const blocked_codes: BlockedCode[] = [];
   const warnings: string[] = [];
   const now = new Date();
 
@@ -77,7 +108,7 @@ export async function complianceCheck(carrierId: string): Promise<{
   });
 
   if (activeBlanketOverride) {
-    return { allowed: true, blocked_reasons: [], warnings: ["Active compliance override in effect"] };
+    return { allowed: true, blocked_reasons: [], blocked_codes: [], warnings: ["Active compliance override in effect"] };
   }
 
   // HARD BLOCK: carrier suspended or deactivated
@@ -136,6 +167,7 @@ export async function complianceCheck(carrierId: string): Promise<{
       blocked_reasons.push(
         `AUTHORITY_TOO_YOUNG: carrier authority ${ageMonths} months old, minimum 18`,
       );
+      blocked_codes.push({ code: "AUTHORITY_TOO_YOUNG", ageMonths, overridable: false });
     } else if (ageMonths < 18) {
       // Override-eligible window — consult a scoped override before blocking.
       const ageOverride = await prisma.complianceOverride.findFirst({
@@ -150,13 +182,15 @@ export async function complianceCheck(carrierId: string): Promise<{
         warnings.push(
           `AUTHORITY_AGE_OVERRIDE: carrier authority ${ageMonths} months old; override active until ${ageOverride.expiresAt.toISOString()}`,
         );
+        // No blocked_codes entry — the block is released for this run.
       } else {
         blocked_reasons.push(
           `AUTHORITY_TOO_YOUNG: carrier authority ${ageMonths} months old, minimum 18`,
         );
+        blocked_codes.push({ code: "AUTHORITY_TOO_YOUNG", ageMonths, overridable: true });
       }
     }
-    // ageMonths >= 18 → silent allow (no warning, no block).
+    // ageMonths >= 18 → silent allow (no warning, no block, no blocked_codes entry).
   } else {
     // Post-rule carrier with null grant date. Distinguish pending (recent
     // approval, FMCSA callback in flight) from unverified (old enough
@@ -169,6 +203,7 @@ export async function complianceCheck(carrierId: string): Promise<{
       blocked_reasons.push(
         "AUTHORITY_UNVERIFIED: FMCSA authority could not be verified — contact compliance",
       );
+      blocked_codes.push({ code: "AUTHORITY_UNVERIFIED", overridable: false });
     }
   }
 
@@ -266,6 +301,7 @@ export async function complianceCheck(carrierId: string): Promise<{
   return {
     allowed: blocked_reasons.length === 0,
     blocked_reasons,
+    blocked_codes,
     warnings,
   };
 }

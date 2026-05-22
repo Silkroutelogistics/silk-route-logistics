@@ -4,6 +4,7 @@ import { prisma } from "../config/database";
 import { AuthRequest } from "../middleware/auth";
 import * as complianceMonitorService from "../services/complianceMonitorService";
 import { sendEmail } from "../services/emailService";
+import { calendarMonthsBetween } from "../services/fmcsaService";
 import { log } from "../lib/logger";
 
 const alertQuerySchema = z.object({
@@ -466,9 +467,28 @@ export async function getOverrideStatus(req: AuthRequest, res: Response) {
 }
 
 // POST /compliance/carrier/:carrierId/override-block
+//
+// v3.8.ahn — extended to accept optional checkCode for scoped overrides
+// (Item 182 sprint 4). When checkCode is "AUTHORITY_TOO_YOUNG" the
+// endpoint re-derives ageMonths server-side from carrier.authorityGrantedDate
+// and refuses to mint with HTTP 409 + a code in three cases:
+//
+//   - NO_AUTHORITY_DATE — no FMCSA grant date on file; nothing to anchor
+//     the age on, so an authority-age override has no meaning.
+//   - HARD_FLOOR_NOT_OVERRIDABLE — ageMonths < 12; Item 182 locks the
+//     12-month floor as un-overridable to keep brand-new carriers off
+//     the platform regardless of ADMIN/CEO discretion.
+//   - OVERRIDE_NOT_NEEDED — ageMonths ≥ 18; the gate already auto-allows
+//     this carrier, so the override would be a wasted quota slot.
+//
+// Only a 12-to-under-18 carrier gets through to the mint step. The
+// existing quota (15/30 days), 24h expiry, ADMIN/CEO role gate, and
+// auditTrail emission are reused verbatim — null/absent checkCode
+// preserves the Sprint 40 blanket-override semantic for every existing
+// caller (modal still sends `{ reason }` only).
 export async function overrideBlock(req: AuthRequest, res: Response) {
   try {
-    const { reason } = req.body;
+    const { reason, checkCode } = req.body as { reason?: string; checkCode?: string };
     if (!reason || reason.trim().length < 10) {
       res.status(400).json({ error: "Override reason must be at least 10 characters" });
       return;
@@ -503,12 +523,45 @@ export async function overrideBlock(req: AuthRequest, res: Response) {
       return;
     }
 
-    // Create override with 24hr expiry
+    // v3.8.ahn — defense-in-depth guard for scoped AUTHORITY_TOO_YOUNG
+    // overrides. The frontend modal in v3.8.ahn drives off blocked_codes
+    // and only enables the control for the 12-18 band, but the backend
+    // is authoritative — re-derive ageMonths from the stored grant date
+    // and refuse the three non-mintable cases.
+    if (checkCode === "AUTHORITY_TOO_YOUNG") {
+      if (!carrier.authorityGrantedDate) {
+        res.status(409).json({
+          code: "NO_AUTHORITY_DATE",
+          error: "Cannot mint authority-age override — no FMCSA grant date on file for this carrier",
+        });
+        return;
+      }
+      const ageMonths = calendarMonthsBetween(carrier.authorityGrantedDate, new Date());
+      if (ageMonths < 12) {
+        res.status(409).json({
+          code: "HARD_FLOOR_NOT_OVERRIDABLE",
+          error: `Authority is ${ageMonths} months old — the 12-month hard floor blocks all minting`,
+        });
+        return;
+      }
+      if (ageMonths >= 18) {
+        res.status(409).json({
+          code: "OVERRIDE_NOT_NEEDED",
+          error: `Authority is ${ageMonths} months old — already past the 18-month minimum, no override required`,
+        });
+        return;
+      }
+    }
+
+    // Create override with 24hr expiry. checkCode is persisted as null
+    // when absent or empty so the lookup in complianceCheck preserves
+    // the Sprint 40 blanket semantic for legacy callers.
     const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
     const override = await prisma.complianceOverride.create({
       data: {
         carrierId,
         reason: reason.trim(),
+        checkCode: checkCode || null,
         adminId,
         expiresAt,
       },
@@ -523,6 +576,7 @@ export async function overrideBlock(req: AuthRequest, res: Response) {
         performedById: adminId,
         changedFields: {
           reason: reason.trim(),
+          checkCode: checkCode || null,
           overrideId: override.id,
           expiresAt: expiresAt.toISOString(),
           carrierName: carrier.user.company || `${carrier.user.firstName} ${carrier.user.lastName}`,

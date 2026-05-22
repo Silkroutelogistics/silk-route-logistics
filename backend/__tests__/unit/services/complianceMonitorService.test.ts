@@ -295,6 +295,68 @@ describe("complianceCheck — authority-age gate (v3.8.ahm)", () => {
   });
 
   // ─────────────────────────────────────────────────────────────────
+  // v3.8.ahn — blocked_codes overridable flag across the 3 authority bands
+  // ─────────────────────────────────────────────────────────────────
+  it("8. blocked_codes for <12mo has overridable=false (hard floor)", async () => {
+    mockPrisma.carrierProfile.findUnique.mockResolvedValue(
+      makeCarrier({
+        approvedAt: AFTER_CUTOFF,
+        authorityGrantedDate: nMonthsAgo(6),
+      }),
+    );
+    mockPrisma.complianceOverride.findFirst.mockResolvedValueOnce(null);
+
+    const result = await complianceCheck("carrier-1");
+    const ageEntry = result.blocked_codes.find((c) => c.code === "AUTHORITY_TOO_YOUNG");
+    expect(ageEntry).toBeDefined();
+    expect(ageEntry!.overridable).toBe(false);
+    expect(ageEntry!.ageMonths).toBe(6);
+  });
+
+  it("9. blocked_codes for 12-18mo (no override) has overridable=true", async () => {
+    mockPrisma.carrierProfile.findUnique.mockResolvedValue(
+      makeCarrier({
+        approvedAt: AFTER_CUTOFF,
+        authorityGrantedDate: nMonthsAgo(15),
+      }),
+    );
+    mockPrisma.complianceOverride.findFirst.mockResolvedValue(null);
+
+    const result = await complianceCheck("carrier-1");
+    const ageEntry = result.blocked_codes.find((c) => c.code === "AUTHORITY_TOO_YOUNG");
+    expect(ageEntry).toBeDefined();
+    expect(ageEntry!.overridable).toBe(true);
+    expect(ageEntry!.ageMonths).toBe(15);
+  });
+
+  it("10. blocked_codes is empty for ≥18mo (silent allow)", async () => {
+    mockPrisma.carrierProfile.findUnique.mockResolvedValue(
+      makeCarrier({
+        approvedAt: AFTER_CUTOFF,
+        authorityGrantedDate: nMonthsAgo(20),
+      }),
+    );
+
+    const result = await complianceCheck("carrier-1");
+    expect(result.blocked_codes).toEqual([]);
+  });
+
+  it("11. blocked_codes for null grant + ≥24h has AUTHORITY_UNVERIFIED overridable=false", async () => {
+    mockPrisma.carrierProfile.findUnique.mockResolvedValue(
+      makeCarrier({
+        approvedAt: AFTER_CUTOFF,
+        authorityGrantedDate: null,
+      }),
+    );
+
+    const result = await complianceCheck("carrier-1");
+    const unverifiedEntry = result.blocked_codes.find((c) => c.code === "AUTHORITY_UNVERIFIED");
+    expect(unverifiedEntry).toBeDefined();
+    expect(unverifiedEntry!.overridable).toBe(false);
+    expect(unverifiedEntry!.ageMonths).toBeUndefined();
+  });
+
+  // ─────────────────────────────────────────────────────────────────
   // Case 7: CRITICAL — scoped override scope holds across the function
   // ─────────────────────────────────────────────────────────────────
   it("7. scoped AUTHORITY_TOO_YOUNG override does NOT waive a separate insurance-expiry block", async () => {
