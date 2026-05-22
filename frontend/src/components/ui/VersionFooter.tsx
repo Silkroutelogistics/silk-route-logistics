@@ -7171,7 +7171,59 @@
 //              directive: all flip cards site-wide standardize on this
 //              numbered-steps back-face pattern (shippers conversion
 //              queued for separate sprint).
-export const SRL_VERSION = "3.8.aia";
+// v3.8.aib   — Carrier onboarding Sprint A: color + chrome sweep.
+//              §20 §20.8 Phase A audit confirmed /onboarding was never
+//              brought into the Sunday-onward canonical (slate-50 cool
+//              page bg, bg-navy chrome that light-mode-transformed to
+//              cream-on-cream, slate-700 field labels reading bluish
+//              against cream, /auth/login routing on the carrier-portal
+//              Sign-In link, no compass mark in chrome). Sprint A
+//              swaps: page bg → #FBF7F0 (canonical cream §2.1); chrome
+//              → explicit #0A2540 (bypasses globals.css:185 light-mode
+//              transform); /media/srl-logo-1024.png compass mark inline
+//              (per §20.8.3 user-memory + index.html v3.8.agg precedent
+//              — not the legacy /logo.png the Logo component points at);
+//              Playfair italic semibold "Silk Route Logistics" wordmark;
+//              uppercase tracking-wide "Carrier Registration" subtitle
+//              in --fg-on-navy-2 #C9D2DE; step indicator tokens →
+//              completed #2F7A4F (--success), active #BA7517
+//              (--gold-dark emphasis), inactive #E2EAF2/#5B7EA3
+//              (--navy-100/--navy-400); field label sweep text-slate-700
+//              → text-[#0A2540] (--fg-1) on all 47 form labels via
+//              replace_all on the canonical "block text-sm font-medium
+//              text-slate-700 mb-{1,3}" pattern; /auth/login →
+//              /carrier/login (carrier portal per §3.10 + nav.html
+//              canonical line 16); EIN input hardened with
+//              inputMode="numeric" + autoComplete="off" + name=
+//              "ein-federal-tax-id" to prevent the autofill bleed Wasi
+//              caught in the screenshot ("noor@silk" resolved into the
+//              EIN field via Chrome saved-credential collision). Logo
+//              component import dropped from this file (compass mark
+//              now rendered inline; Logo stays canonical for surfaces
+//              that still need /logo.png). Sprint A is one of five
+//              atomic commits closing the §20 onboarding gap: B Terms
+//              honest-claims sweep, C Step 0 Welcome + Caravan intro,
+//              D Compass Engine vetting visualization + right-rail,
+//              E success-screen ops-loop + footer authority strip.
+//              Halt for sign-off before Sprint B per §3.3.
+// v3.8.aic   — Sprint 1 /carriers honesty pass (single atomic). Tier
+//              cards rebuilt with pay-ladder spine (Net-30/21/14 +
+//              3%/2%/1% QP + Day-1/Compass-from-load-1/Priority freight).
+//              Dropped FSC tier-graduation, $250/$500/$750 referral
+//              bonuses, $150/$300/mo safety bonuses, $50/$65/$75/hr
+//              tier-based detention. Gold M4 "1 referral" criterion
+//              removed. New "Every Caravan Partner gets" universal-
+//              floor section (10 tiles mirroring /index Section 5
+//              .srl-wall pattern), each tile verified live per Phase
+//              A audit against CLAUDE.md sources. Coverage section
+//              trimmed (FMCSA sentence dropped — duplicate of
+//              CarrierFraudBanner; "Equipment we move" → "Equipment
+//              we tender"). CLAUDE.md §4/§5/§8/§10 updated. Boundary
+//              respected: no referral build, no Priority Compass/
+//              dedicated lane/QBR/advisory operational additions, no
+//              Sprint 3 icon-vs-photo. Letter coordination: Authority-
+//              age sprint took aib; advanced to aic.
+export const SRL_VERSION = "3.8.aic";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
