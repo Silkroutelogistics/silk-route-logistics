@@ -37,16 +37,21 @@ export async function complianceCheck(carrierId: string): Promise<{
   const warnings: string[] = [];
   const now = new Date();
 
-  // Check active overrides first (not expired)
-  const activeOverride = await prisma.complianceOverride.findFirst({
+  // Check active BLANKET overrides first (not expired, checkCode IS NULL).
+  // v3.8.ahl introduced scoped overrides (checkCode != null) which are
+  // consulted per-check downstream instead of short-circuiting the whole
+  // function. Pre-ahl override rows have checkCode = null and continue to
+  // blanket-allow per the original Sprint 40 semantic — backwards-compatible.
+  const activeBlanketOverride = await prisma.complianceOverride.findFirst({
     where: {
       carrierId,
       expiresAt: { gt: now },
+      checkCode: null,
     },
     orderBy: { createdAt: "desc" },
   });
 
-  if (activeOverride) {
+  if (activeBlanketOverride) {
     return { allowed: true, blocked_reasons: [], warnings: ["Active compliance override in effect"] };
   }
 

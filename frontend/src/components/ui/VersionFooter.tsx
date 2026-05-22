@@ -6655,7 +6655,70 @@
 //                kickoff.
 //              - All other open items STATUS UNCHANGED per §3.3
 //                scope discipline
-export const SRL_VERSION = "3.8.ahm";
+//
+// v3.8.ahl — Authority-age compliance epic, sprint 3 of 5 — commit 1
+//            of 2 in the ahl arc: scoped overrides + override-scoping
+//            migration.
+//
+//            Phase A audit (Item 182 sprint 3) confirmed the critical
+//            load-bearing finding: ComplianceOverride had no scoping
+//            field — every active row blanket-allowed every check. An
+//            "authority-age override" created today would silently
+//            waive insurance expiry, FMCSA status, OFAC, the signed
+//            agreement, COI expiry, chameleon risk, every block. Per
+//            Phase A ratification D7-P: add a nullable checkCode
+//            field, filter the blanket short-circuit on checkCode IS
+//            NULL only, leave scoped overrides for per-check downstream
+//            consultation.
+//
+//            Shipped in this commit:
+//
+//              - backend/prisma/schema.prisma — ComplianceOverride
+//                gains nullable checkCode String? field with full
+//                inline doc on the NULL = blanket semantic. Existing
+//                indexes unchanged; the carrierId index leads the
+//                lookup, the WHERE clause filters checkCode in memory
+//                (per-carrier override cardinality is at most ~15
+//                rows per 30-day window per the Sprint 64 quota).
+//
+//              - backend/prisma/migrations/20260521190000_add_check_
+//                code_to_compliance_override/migration.sql — additive
+//                nullable column add. Existing rows default to NULL
+//                on column creation, preserving the pre-ahl blanket
+//                semantic.
+//
+//              - backend/src/services/complianceMonitorService.ts —
+//                the override short-circuit at lines 41-51 now filters
+//                checkCode: null. Variable renamed to
+//                activeBlanketOverride for clarity. Inline comment
+//                explains the v3.8.ahl scoping introduction.
+//
+//            NOT in commit 1 scope (commit 2 = v3.8.ahm follows):
+//              - The authority-age gate itself.
+//              - AUTHORITY_AGE_GATE_LIVE_AT constant.
+//              - complianceMonitorService.test.ts.
+//              - CLAUDE.md Item 182 close update.
+//
+//            Sprint 40 quota (15 per rolling 30-day window) +
+//            24-hour expiry + ADMIN/CEO role gate left UNTOUCHED per
+//            Phase A directive. No override-creation endpoint changes
+//            in commit 1 — that's commit 2's gate work + ahm's UI.
+//
+//            Per §3.1 sequence-continuous: v3.8.ahk → v3.8.ahl. The
+//            two-commit shape (ahl + ahm for the gate work) shifts
+//            the Item 182 epic plan one letter right — original ahm
+//            (Override flow + AE UI) → ahn, original ahn (Onboarding)
+//            → aho. The re-letter will be documented at v3.8.ahm
+//            close in commit 2 of the arc.
+//
+//            §13.3:
+//              - Item 182 v3.8.ahl status — LOGGED + CLOSED for commit
+//                1 (scoping migration). The "ahl sprint" full close
+//                lands in v3.8.ahm with the gate + tests + CLAUDE.md
+//                update.
+//              - All other open items STATUS UNCHANGED per §3.3
+//                scope discipline
+export const SRL_VERSION = "3.8.ahl";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

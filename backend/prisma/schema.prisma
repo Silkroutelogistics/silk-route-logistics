@@ -2663,6 +2663,16 @@ model ComplianceOverride {
   id        String         @id @default(cuid())
   carrierId String
   reason    String         @db.Text
+  // v3.8.ahl — nullable scoping field. NULL preserves the pre-ahl
+  // semantic (blanket override — waives every check in
+  // complianceCheck for the carrier until expiresAt). A non-null
+  // value binds the override to a specific check code consulted by
+  // its corresponding branch downstream (e.g. "AUTHORITY_TOO_YOUNG"
+  // for the 12-18 month authority-age window introduced in
+  // Sprint 3 of the Item 182 epic). The blanket short-circuit at
+  // complianceMonitorService.ts only fires for NULL rows; scoped
+  // overrides do NOT short-circuit and are looked up per-check.
+  checkCode String?
   adminId   String
   expiresAt DateTime
   createdAt DateTime       @default(now())
