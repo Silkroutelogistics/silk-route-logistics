@@ -11,9 +11,34 @@
  */
 
 import { prisma } from "../config/database";
-import { verifyCarrierWithFMCSA } from "./fmcsaService";
+import { verifyCarrierWithFMCSA, calendarMonthsBetween } from "./fmcsaService";
 import { sendEmail, wrap } from "./emailService";
 import { log } from "../lib/logger";
+
+// ────────────────────────────────────────────────────────────
+// AUTHORITY_AGE_GATE_LIVE_AT — Item 182 sprint 3 (v3.8.ahm)
+// ────────────────────────────────────────────────────────────
+//
+// Single source of truth for the authority-age grandfather cutoff.
+// Carriers with `approvedAt` strictly BEFORE this timestamp are
+// soft-grandfathered (warning, never blocked) regardless of authority
+// age or null grant date. Carriers with `approvedAt` ON OR AFTER this
+// timestamp are subject to the full gate (hard floor at 12 months,
+// override window 12-18 months, hard floor at 18 months for auto-allow).
+//
+// **Wasi: confirm this exact value before push.** Currently set to the
+// planned v3.8.ahm ship window (2026-05-21 19:00 UTC). Adjust to the
+// actual Render deploy completion timestamp if it differs by more than
+// a few hours — the value pins which carriers are pre-rule grandfathered
+// vs subject to the new gate, so a wrong value either auto-blocks
+// legitimately-grandfathered carriers or auto-allows new sub-18 carriers
+// who shouldn't yet be on the platform.
+//
+// NOT env-driven by deliberate Phase A choice (D8-S). Hardcoded constant
+// version-pins the rule with the sprint that introduced it, surfaces the
+// cutoff in code review for any future adjustment, and avoids env-drift
+// risk between local/staging/prod.
+export const AUTHORITY_AGE_GATE_LIVE_AT = new Date("2026-05-21T19:00:00Z");
 
 // ────────────────────────────────────────────────────────────
 // complianceCheck — called before carrier assignment
@@ -71,6 +96,79 @@ export async function complianceCheck(carrierId: string): Promise<{
       warnings.push(`Insurance expired but grace period active (${graceDaysLeft} days remaining)`);
     } else {
       blocked_reasons.push("Insurance has expired");
+    }
+  }
+
+  // HARD BLOCK / WARN: authority-age gate — v3.8.ahm (Item 182 sprint
+  // 3 of 5). Carriers approved before AUTHORITY_AGE_GATE_LIVE_AT are
+  // soft-grandfathered (warning, never blocked). Carriers approved on
+  // or after the cutoff are subject to the full gate: hard floor at
+  // 18 months, override-eligible window 12-18 months (consults a
+  // scoped ComplianceOverride with checkCode = "AUTHORITY_TOO_YOUNG"),
+  // hard floor at 12 months that NO override waives. Null grant date
+  // distinguishes pending-FMCSA-callback (< 24h since approval, warn)
+  // from FMCSA-unverified (≥ 24h since approval, block).
+  //
+  // Slotted between insurance-expiry and FMCSA authority-STATUS so a
+  // too-young authority is rejected even when FMCSA marks the carrier
+  // "AUTHORIZED" — age is checked before status.
+  const isGrandfathered =
+    !!carrier.approvedAt && carrier.approvedAt < AUTHORITY_AGE_GATE_LIVE_AT;
+
+  if (isGrandfathered) {
+    // Pre-rule carrier — soft-grandfather per Item 182 locked decisions.
+    // Push a warning carrying the age when known; never block.
+    if (carrier.authorityGrantedDate) {
+      const ageMonths = calendarMonthsBetween(carrier.authorityGrantedDate, now);
+      warnings.push(
+        `AUTHORITY_AGE_GRANDFATHERED: carrier approved pre-rule, authority is ${ageMonths} months old`,
+      );
+    } else {
+      warnings.push(
+        "AUTHORITY_AGE_GRANDFATHERED: carrier approved pre-rule, authority date unknown",
+      );
+    }
+  } else if (carrier.authorityGrantedDate) {
+    const ageMonths = calendarMonthsBetween(carrier.authorityGrantedDate, now);
+    if (ageMonths < 12) {
+      // HARD FLOOR — no override waives this. Do NOT consult overrides
+      // in this branch per Phase A D9 ratification.
+      blocked_reasons.push(
+        `AUTHORITY_TOO_YOUNG: carrier authority ${ageMonths} months old, minimum 18`,
+      );
+    } else if (ageMonths < 18) {
+      // Override-eligible window — consult a scoped override before blocking.
+      const ageOverride = await prisma.complianceOverride.findFirst({
+        where: {
+          carrierId,
+          checkCode: "AUTHORITY_TOO_YOUNG",
+          expiresAt: { gt: now },
+        },
+        orderBy: { createdAt: "desc" },
+      });
+      if (ageOverride) {
+        warnings.push(
+          `AUTHORITY_AGE_OVERRIDE: carrier authority ${ageMonths} months old; override active until ${ageOverride.expiresAt.toISOString()}`,
+        );
+      } else {
+        blocked_reasons.push(
+          `AUTHORITY_TOO_YOUNG: carrier authority ${ageMonths} months old, minimum 18`,
+        );
+      }
+    }
+    // ageMonths >= 18 → silent allow (no warning, no block).
+  } else {
+    // Post-rule carrier with null grant date. Distinguish pending (recent
+    // approval, FMCSA callback in flight) from unverified (old enough
+    // that FMCSA should have responded by now).
+    const approvalAnchor = carrier.approvedAt || carrier.createdAt;
+    const hoursSinceApproval = (now.getTime() - approvalAnchor.getTime()) / (60 * 60 * 1000);
+    if (hoursSinceApproval < 24) {
+      warnings.push("AUTHORITY_PENDING: FMCSA authority verification still processing");
+    } else {
+      blocked_reasons.push(
+        "AUTHORITY_UNVERIFIED: FMCSA authority could not be verified — contact compliance",
+      );
     }
   }
 

@@ -400,8 +400,12 @@ function readAuthorityType(item: Record<string, unknown>): string | null {
  * 2026-05-21 returns 24. This matches the policy mental model: "the
  * carrier's authority is N months old" reads as the integer N a layperson
  * would compute on a calendar.
+ *
+ * Exported in v3.8.ahm so complianceMonitorService can reuse the same
+ * derivation for the authority-age gate without duplicating the
+ * day-adjust arithmetic.
  */
-function calendarMonthsBetween(start: Date, end: Date): number {
+export function calendarMonthsBetween(start: Date, end: Date): number {
   const years = end.getFullYear() - start.getFullYear();
   const months = end.getMonth() - start.getMonth();
   const dayAdjust = end.getDate() < start.getDate() ? -1 : 0;

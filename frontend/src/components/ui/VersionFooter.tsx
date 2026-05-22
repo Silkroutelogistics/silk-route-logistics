@@ -6718,13 +6718,123 @@
 //                update.
 //              - All other open items STATUS UNCHANGED per §3.3
 //                scope discipline
+//
+// v3.8.ahm — Authority-age compliance epic, sprint 3 of 5 — commit 2
+//            of 2 in the ahl arc: the hard authority-age gate itself
+//            + 9-case vitest harness + Item 182 close.
+//
+//            Phase A ratified decisions applied (D7-P + D8-S + D9-U
+//            + D10-Z + D11-keep):
+//
+//              D7-P (scoped overrides): v3.8.ahl already added the
+//                    checkCode field and filtered the blanket
+//                    short-circuit on NULL. This commit consumes
+//                    that field — the 12-to-18 month override window
+//                    queries ComplianceOverride for
+//                    checkCode = "AUTHORITY_TOO_YOUNG" and releases
+//                    only when present + unexpired.
+//              D8-S (hardcoded grandfather cutoff):
+//                    AUTHORITY_AGE_GATE_LIVE_AT exported as a single-
+//                    source-of-truth constant in
+//                    complianceMonitorService. Currently set to the
+//                    placeholder 2026-05-21T19:00:00Z — Wasi confirms
+//                    the exact value before push. Hardcoded, not
+//                    env-driven, version-pinned with the sprint.
+//              D9-U (brand-new null-date handling): a post-cutoff
+//                    carrier with null authorityGrantedDate gets
+//                    AUTHORITY_PENDING warning if approved <24h ago,
+//                    AUTHORITY_UNVERIFIED hard-block if approved
+//                    ≥24h ago. Brand-new carriers are NEVER
+//                    auto-allowed on a null date.
+//              D10-Z (coded block strings): coded prefixes for
+//                    downstream frontend pattern-matching —
+//                    AUTHORITY_TOO_YOUNG, AUTHORITY_UNVERIFIED,
+//                    AUTHORITY_PENDING, AUTHORITY_AGE_OVERRIDE,
+//                    AUTHORITY_AGE_GRANDFATHERED. Format pinned by
+//                    the test suite so future frontend work can
+//                    match on the prefix safely.
+//              D11-keep: carrierVettingService:249-265 soft <180-day
+//                    deduction left UNCHANGED. Revisit at the
+//                    renumbered onboarding-sprint close.
+//
+//            Shipped in this commit:
+//
+//              - backend/src/services/fmcsaService.ts —
+//                calendarMonthsBetween exported (was private; needed
+//                by the gate for age derivation on read). Same helper,
+//                same arithmetic, single source of truth.
+//
+//              - backend/src/services/complianceMonitorService.ts —
+//                AUTHORITY_AGE_GATE_LIVE_AT constant added near top.
+//                New authority-age check block inserted between
+//                insurance-expiry (lines 62-70) and FMCSA authority-
+//                STATUS (lines 73-81) so a too-young authority is
+//                rejected even when FMCSA marks the carrier
+//                "AUTHORIZED". Six branches: grandfather +
+//                age-with-grant (3 sub-branches: <12 hard floor,
+//                12-18 with override consult, ≥18 silent allow) +
+//                null-grant (2 sub-branches: <24h pending, ≥24h
+//                unverified). No additional DB load — the carrier
+//                row is already in hand at line 27.
+//
+//              - backend/__tests__/unit/services/
+//                complianceMonitorService.test.ts (new) — 9 vitest
+//                cases covering all 7 ratified scenarios plus a 1b
+//                subtest (grandfather-with-young-authority) and a
+//                3a/3b split (block-by-default vs override-released).
+//                vi.useFakeTimers + setSystemTime(FIXED_NOW) pin
+//                "now" to a deterministic 2026-06-15 mid-month
+//                anchor so calendar-month arithmetic produces exact
+//                ages via the nMonthsAgo(N) helper. Defensive
+//                vi.resetAllMocks in beforeEach prevents
+//                mockResolvedValueOnce queue leak between tests
+//                (banked sub-rule c learning: Once-mocks must be
+//                reset, not just cleared, when the same mock is
+//                used across tests).
+//
+//              - CLAUDE.md Item 182 — v3.8.ahl + v3.8.ahm closed as
+//                the two-commit arc. D7-D11 ratified decisions
+//                captured inline. Remaining Item 182 sprints LOGGED
+//                awaiting kickoff; letter assignment deferred to
+//                each sprint's Phase A.
+//
+//            NOT in v3.8.ahm scope (explicit halt per Item 182):
+//              - No override-creation endpoint accepting checkCode.
+//                The existing POST /compliance/carrier/:id/override-block
+//                still creates checkCode=null (blanket) overrides
+//                only. A future sprint will extend the endpoint to
+//                accept checkCode + AE UI for scoped creation.
+//              - No frontend suppression / AE-warning UI.
+//              - No /onboarding MC/DOT verdict integration.
+//              - No WaitingList Prisma model.
+//
+//            Pre-push gates (Sub-pattern 11 CI-parity):
+//              - npx vitest run complianceMonitorService.test.ts —
+//                9/9 passed
+//              - npx vitest run fmcsaService + compliance +
+//                notification — 22/22 passed (no cross-test
+//                pollution from fakeTimers/resetAllMocks)
+//              - npx tsc --noEmit (backend) — clean
+//              - npx tsc --noEmit (frontend) — clean
+//
+//            Per §3.1 sequence-continuous: v3.8.ahl → v3.8.ahm.
+//
+//            §13.3:
+//              - Item 182 v3.8.ahl + v3.8.ahm — LOGGED + CLOSED
+//                (two-commit arc, sprint 3 of 5).
+//              - Remaining Item 182 sprints (Override flow + AE UI,
+//                Onboarding UI + WaitingList) LOGGED awaiting
+//                kickoff. Letter assignment deferred to Phase A.
+//              - All other open items STATUS UNCHANGED per §3.3
+//                scope discipline.
+//
 // v3.8.ahn   — Caravan Journey visual upgrades: competitor truck
 //              (muted slate, no decal, trails by widening gap, never
 //              catches up), active-marker brass pulse ring, faster
 //              dashed-lane flow (2.4s→1.6s), larger SRL truck
 //              (112×38→132×46), lane height 240→260px for clearance.
 //              §5 prohibited claims preserved (no competitor naming).
-export const SRL_VERSION = "3.8.aho";
+export const SRL_VERSION = "3.8.ahm";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
