@@ -6,7 +6,7 @@
  * - getDashboardData: KPIs for the compliance dashboard
  * - getOverviewMatrix: carrier-level compliance matrix
  * - getCarrierCompliance: full detail for a single carrier
- * - runFmcsaScan / weeklyFmcsaScan: FMCSA verification
+ * - runFmcsaScan / fmcsaComplianceScan: FMCSA verification (canonical scheduled scan, runs daily)
  * - dailyComplianceReminders: tiered email reminders
  */
 
@@ -797,10 +797,20 @@ export async function runFmcsaScan(carrierId: string) {
 }
 
 // ────────────────────────────────────────────────────────────
-// weeklyFmcsaScan — scan all active carriers
+// fmcsaComplianceScan — canonical scheduled FMCSA re-monitor
 // ────────────────────────────────────────────────────────────
+// Runs DAILY at 3am via cron (see backend/src/cron/index.ts).
+// Was weeklyFmcsaScan until Item 183 consolidated FMCSA re-monitoring
+// to a single canonical daily path. Manual re-scan is also available
+// via fmcsaBulkMonitorService.runDailyMonitor (on-demand only, not
+// scheduled).
+//
+// TODO(item-183-followup): unify the two suspension-column conventions.
+// runDailyMonitor writes `suspensionReason` + `suspendedAt`; this scan
+// writes `autoSuspendReason` + `autoSuspendedAt`. Pick one in a later
+// cleanup commit.
 
-export async function weeklyFmcsaScan() {
+export async function fmcsaComplianceScan() {
   const carriers = await prisma.carrierProfile.findMany({
     where: {
       onboardingStatus: "APPROVED",
@@ -831,6 +841,12 @@ export async function weeklyFmcsaScan() {
       const previousData = previousScan?.fmcsaData as Record<string, unknown> | null;
       const changesDetected: Record<string, { old: unknown; new: unknown }> = {};
 
+      // INFO-class field changes — recorded in scan history + alert log but
+      // never auto-suspend. Item 183 folded these in from the on-demand
+      // bulk monitor. Critical flips (revoked / insurance missing / OOS) are
+      // handled by the dedicated blocks below.
+      const infoChangesDetected: Record<string, { old: unknown; new: unknown }> = {};
+
       if (previousData) {
         const compareKeys = [
           "operatingStatus",
@@ -843,6 +859,15 @@ export async function weeklyFmcsaScan() {
           const newVal = (fmcsaResult as unknown as Record<string, unknown>)[key];
           if (oldVal !== newVal) {
             changesDetected[key] = { old: oldVal, new: newVal };
+          }
+        }
+
+        const infoCompareKeys = ["verified", "totalDrivers", "totalPowerUnits"];
+        for (const key of infoCompareKeys) {
+          const oldVal = previousData[key];
+          const newVal = (fmcsaResult as unknown as Record<string, unknown>)[key];
+          if (oldVal !== newVal && oldVal !== undefined) {
+            infoChangesDetected[key] = { old: oldVal, new: newVal };
           }
         }
       }
@@ -880,6 +905,27 @@ export async function weeklyFmcsaScan() {
         results.failed++;
       }
 
+      // INFO alerts for fleet-size / verification changes (no auto-suspend)
+      for (const [field, delta] of Object.entries(infoChangesDetected)) {
+        try {
+          await prisma.complianceAlert.create({
+            data: {
+              type: "FMCSA_CHANGE",
+              entityType: "CarrierProfile",
+              entityId: carrier.id,
+              entityName: carrierName,
+              expiryDate: new Date(Date.now() + 30 * 86_400_000),
+              severity: "INFO",
+              status: "ACTIVE",
+            },
+          });
+          results.alerts++;
+          log.info(`[FMCSAScan] INFO change for ${carrierName}: ${field} ${String(delta.old)} → ${String(delta.new)}`);
+        } catch (err) {
+          log.error({ err }, `[FMCSAScan] Failed to create INFO alert for ${carrier.id} ${field}`);
+        }
+      }
+
       // Authority revoked/suspended -> CRITICAL alert + auto-block + email
       if (
         fmcsaResult.operatingStatus &&
@@ -904,11 +950,11 @@ export async function weeklyFmcsaScan() {
 
         // Email carrier about suspension
         sendFmcsaSuspensionEmail(carrier.user.email, carrierName, fmcsaResult.operatingStatus, carrier.dotNumber!, "AUTHORITY_REVOKED")
-          .catch((e) => log.error({ err: e }, `[WeeklyFMCSA] Suspension email error for ${carrierName}:`));
+          .catch((e) => log.error({ err: e }, `[FMCSAScan] Suspension email error for ${carrierName}:`));
 
         // Email admins about critical finding
         sendFmcsaAdminAlert(carrierName, carrier.dotNumber!, fmcsaResult.operatingStatus, "Authority revoked/not authorized")
-          .catch((e) => log.error({ err: e }, `[WeeklyFMCSA] Admin alert email error:`));
+          .catch((e) => log.error({ err: e }, `[FMCSAScan] Admin alert email error:`));
       }
 
       // Insurance not on file -> CRITICAL alert + auto-block + email
@@ -928,11 +974,11 @@ export async function weeklyFmcsaScan() {
 
         // Email carrier about missing insurance
         sendFmcsaSuspensionEmail(carrier.user.email, carrierName, "INSURANCE NOT ON FILE", carrier.dotNumber!, "OUT_OF_SERVICE")
-          .catch((e) => log.error({ err: e }, `[WeeklyFMCSA] Insurance email error for ${carrierName}:`));
+          .catch((e) => log.error({ err: e }, `[FMCSAScan] Insurance email error for ${carrierName}:`));
 
         // Email admins
         sendFmcsaAdminAlert(carrierName, carrier.dotNumber!, "INSURANCE NOT ON FILE", "FMCSA reports no insurance on file for this carrier")
-          .catch((e) => log.error({ err: e }, `[WeeklyFMCSA] Admin insurance alert error:`));
+          .catch((e) => log.error({ err: e }, `[FMCSAScan] Admin insurance alert error:`));
       }
 
       // Safety rating downgraded -> WARNING alert
@@ -1015,14 +1061,14 @@ export async function weeklyFmcsaScan() {
 
         // Email carrier about out-of-service suspension
         sendFmcsaSuspensionEmail(carrier.user.email, carrierName, "OUT OF SERVICE", carrier.dotNumber!, "OUT_OF_SERVICE")
-          .catch((e) => log.error({ err: e }, `[WeeklyFMCSA] OOS email error for ${carrierName}:`));
+          .catch((e) => log.error({ err: e }, `[FMCSAScan] OOS email error for ${carrierName}:`));
 
         // Email admins
         sendFmcsaAdminAlert(carrierName, carrier.dotNumber!, "OUT OF SERVICE", `Out-of-service date: ${fmcsaResult.outOfServiceDate}`)
-          .catch((e) => log.error({ err: e }, `[WeeklyFMCSA] Admin OOS alert error:`));
+          .catch((e) => log.error({ err: e }, `[FMCSAScan] Admin OOS alert error:`));
       }
     } catch (err) {
-      log.error({ err }, `[WeeklyFMCSA] Error scanning carrier ${carrier.id}`);
+      log.error({ err }, `[FMCSAScan] Error scanning carrier ${carrier.id}`);
       results.errors++;
     }
   }

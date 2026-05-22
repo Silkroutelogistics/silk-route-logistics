@@ -309,15 +309,19 @@ export function initCronJobs() {
     }
   }));
 
-  // ─── Weekly (Monday 3 AM): FMCSA compliance scan ─────────
-  cron.schedule("0 3 * * 1", () => withGuard("fmcsa-compliance", async () => {
+  // ─── Daily (3 AM): FMCSA compliance scan ─────────
+  // Item 183 (v3.8.ahv): consolidated FMCSA re-monitoring from weekly to
+  // daily. Single canonical scheduled path. The on-demand
+  // fmcsaBulkMonitorService.runDailyMonitor remains for manual re-scans
+  // via POST /integrations/fmcsa/bulk-monitor but is NOT scheduled.
+  cron.schedule("0 3 * * *", () => withGuard("fmcsa-compliance", async () => {
     try {
-      log.info("[Cron Weekly] Starting FMCSA compliance scan...");
-      const { weeklyFmcsaScan } = require("../services/complianceMonitorService");
-      const result = await weeklyFmcsaScan();
-      log.info({ result }, "[Cron Weekly] FMCSA scan complete");
+      log.info("[Cron Daily] Starting FMCSA compliance scan...");
+      const { fmcsaComplianceScan } = require("../services/complianceMonitorService");
+      const result = await fmcsaComplianceScan();
+      log.info({ result }, "[Cron Daily] FMCSA scan complete");
     } catch (err) {
-      log.error({ err }, "[Cron Weekly] FMCSA scan error:");
+      log.error({ err }, "[Cron Daily] FMCSA scan error:");
     }
   }));
 

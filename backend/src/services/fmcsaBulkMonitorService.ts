@@ -1,5 +1,11 @@
 /**
- * FMCSA Bulk Monitor — Daily automated compliance monitoring for all carriers.
+ * FMCSA Bulk Monitor — On-demand re-scan triggered manually via
+ * POST /integrations/fmcsa/bulk-monitor. NOT SCHEDULED.
+ *
+ * Per Item 183 (v3.8.ahv) the scheduled FMCSA re-monitor is now
+ * complianceMonitorService.fmcsaComplianceScan (daily 3am). Keep this
+ * module for ops-triggered ad-hoc re-scans only. Do not wire to cron.
+ *
  * Snapshots FMCSA data, diffs against previous, triggers alerts / auto-suspension.
  */
 import { prisma } from "../config/database";
