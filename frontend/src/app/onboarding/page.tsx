@@ -4,7 +4,6 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Check, ChevronRight, ChevronLeft, Upload, CheckCircle2, X, FileText, Image as ImageIcon, MapPin } from "lucide-react";
-import { Logo } from "@/components/ui/Logo";
 import { cn } from "@/lib/utils";
 
 const steps = ["Company Info", "Equipment & Regions", "Documents", "Terms", "Review"];
@@ -247,11 +246,11 @@ export default function OnboardingPage() {
 
   if (success) {
     return (
-      <div className="min-h-screen bg-slate-50">
-        <nav className="bg-navy text-white px-6 py-4 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2">
-            <Logo size="sm" />
-            <span className="text-sm font-semibold">Silk Route Logistics</span>
+      <div className="min-h-screen bg-[#FBF7F0]">
+        <nav className="bg-[#0A2540] text-white px-6 py-4 flex items-center justify-between">
+          <Link href="/" className="flex items-center gap-3">
+            <img src="/media/srl-logo-1024.png" alt="SRL compass mark" className="h-8 w-8 object-contain" />
+            <span className="font-serif italic font-semibold text-base">Silk Route Logistics</span>
           </Link>
         </nav>
 
@@ -358,16 +357,16 @@ export default function OnboardingPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <nav className="bg-navy text-white px-6 py-4 flex items-center justify-between">
-        <Link href="/" className="flex items-center gap-2">
-          <Logo size="sm" />
-          <div>
-            <span className="text-sm font-semibold">Silk Route Logistics</span>
-            <span className="block text-[10px] text-slate-400">Carrier Registration</span>
+    <div className="min-h-screen bg-[#FBF7F0]">
+      <nav className="bg-[#0A2540] text-white px-6 py-4 flex items-center justify-between">
+        <Link href="/" className="flex items-center gap-3">
+          <img src="/media/srl-logo-1024.png" alt="SRL compass mark" className="h-9 w-9 object-contain" />
+          <div className="leading-tight">
+            <span className="block font-serif italic font-semibold text-base">Silk Route Logistics</span>
+            <span className="block text-[10px] uppercase tracking-[0.18em] text-[#C9D2DE]">Carrier Registration</span>
           </div>
         </Link>
-        <Link href="/auth/login" className="text-sm text-slate-400 hover:text-white transition">
+        <Link href="/carrier/login" className="text-sm text-[#C9D2DE] hover:text-white transition">
           Already registered? Sign In
         </Link>
       </nav>
@@ -379,12 +378,12 @@ export default function OnboardingPage() {
             <div key={s} className="flex items-center gap-2">
               <div className={cn(
                 "w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold transition",
-                i < step ? "bg-green-500 text-white" : i === step ? "bg-gold text-navy" : "bg-slate-200 text-slate-500"
+                i < step ? "bg-[#2F7A4F] text-white" : i === step ? "bg-[#BA7517] text-white" : "bg-[#E2EAF2] text-[#5B7EA3]"
               )}>
                 {i < step ? <Check className="w-4 h-4" /> : i + 1}
               </div>
-              <span className="hidden sm:inline text-sm text-slate-600">{s}</span>
-              {i < steps.length - 1 && <div className="w-8 md:w-16 h-px bg-slate-200 mx-1" />}
+              <span className="hidden sm:inline text-sm text-[#3A4A5F]">{s}</span>
+              {i < steps.length - 1 && <div className="w-8 md:w-16 h-px bg-[#E2EAF2] mx-1" />}
             </div>
           ))}
         </div>
@@ -403,7 +402,7 @@ export default function OnboardingPage() {
               {/* DOT & MC at the top — triggers FMCSA lookup */}
               <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">DOT Number *</label>
+                  <label className="block text-sm font-medium text-[#0A2540] mb-1">DOT Number *</label>
                   <input value={form.dotNumber} onChange={(e) => { const v = e.target.value.replace(/\D/g, ""); set("dotNumber", v); lookupFmcsa(v); }} className={cn("w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-gold outline-none", form.dotNumber && form.dotNumber.length < 5 ? "border-red-300" : fmcsaResult?.verified ? "border-green-400" : fmcsaResult && !fmcsaResult.verified ? "border-red-400" : "")} placeholder="e.g. 1234567" />
                   {form.dotNumber && form.dotNumber.length < 5 && (
                     <p className="text-xs text-red-500 mt-1">DOT number must be at least 5 digits</p>
@@ -411,21 +410,21 @@ export default function OnboardingPage() {
                   {fmcsaLoading && <p className="text-xs text-slate-500 mt-1 animate-pulse">Verifying with FMCSA...</p>}
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">MC Number *</label>
+                  <label className="block text-sm font-medium text-[#0A2540] mb-1">MC Number *</label>
                   <input value={form.mcNumber} onChange={(e) => { set("mcNumber", e.target.value); lookupByMc(e.target.value); }} className={cn("w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-gold outline-none", fmcsaResult?.verified && form.mcNumber ? "border-green-400" : "")} placeholder="MC-156588" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1"># of Trucks</label>
+                  <label className="block text-sm font-medium text-[#0A2540] mb-1"># of Trucks</label>
                   <input type="number" value={form.numberOfTrucks} onChange={(e) => set("numberOfTrucks", e.target.value)} className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-gold outline-none" placeholder="e.g. 5" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Phone *</label>
+                  <label className="block text-sm font-medium text-[#0A2540] mb-1">Phone *</label>
                   <input type="tel" value={form.phone} onChange={(e) => set("phone", e.target.value)} className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-gold outline-none" placeholder="(555) 123-4567" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">EIN (Federal Tax ID)</label>
-                  <input value={form.ein} onChange={(e) => set("ein", e.target.value.replace(/\D/g, "").slice(0, 9))} className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-gold outline-none" placeholder="XX-XXXXXXX" maxLength={9} />
-                  <p className="text-xs text-slate-700 mt-1">9-digit EIN for business verification</p>
+                  <label className="block text-sm font-medium text-[#0A2540] mb-1">EIN (Federal Tax ID)</label>
+                  <input value={form.ein} onChange={(e) => set("ein", e.target.value.replace(/\D/g, "").slice(0, 9))} className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-gold outline-none" placeholder="XX-XXXXXXX" maxLength={9} inputMode="numeric" autoComplete="off" name="ein-federal-tax-id" />
+                  <p className="text-xs text-[#6B7685] mt-1">9-digit EIN for business verification</p>
                 </div>
               </div>
 
@@ -469,11 +468,11 @@ export default function OnboardingPage() {
 
               {/* Company details — auto-populated from FMCSA */}
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Company Name *</label>
+                <label className="block text-sm font-medium text-[#0A2540] mb-1">Company Name *</label>
                 <input value={form.company} onChange={(e) => set("company", e.target.value)} className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-gold outline-none" />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Address</label>
+                <label className="block text-sm font-medium text-[#0A2540] mb-1">Address</label>
                 <AddressAutocomplete
                   value={form.address}
                   onChange={(v) => set("address", v)}
@@ -506,15 +505,15 @@ export default function OnboardingPage() {
               </div>
               <div className="grid sm:grid-cols-3 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">City</label>
+                  <label className="block text-sm font-medium text-[#0A2540] mb-1">City</label>
                   <input value={form.city} onChange={(e) => set("city", e.target.value)} className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-gold outline-none" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">State / Province</label>
+                  <label className="block text-sm font-medium text-[#0A2540] mb-1">State / Province</label>
                   <input value={form.state} onChange={(e) => set("state", e.target.value)} className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-gold outline-none" placeholder="ON / IL / etc." />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">ZIP / Postal Code</label>
+                  <label className="block text-sm font-medium text-[#0A2540] mb-1">ZIP / Postal Code</label>
                   <input value={form.zip} onChange={(e) => set("zip", e.target.value)} className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-gold outline-none" />
                 </div>
               </div>
@@ -522,21 +521,21 @@ export default function OnboardingPage() {
               {/* Personal / account info */}
               <div className="grid sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">First Name *</label>
+                  <label className="block text-sm font-medium text-[#0A2540] mb-1">First Name *</label>
                   <input value={form.firstName} onChange={(e) => set("firstName", e.target.value)} className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-gold outline-none" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Last Name *</label>
+                  <label className="block text-sm font-medium text-[#0A2540] mb-1">Last Name *</label>
                   <input value={form.lastName} onChange={(e) => set("lastName", e.target.value)} className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-gold outline-none" />
                 </div>
               </div>
               <div className="grid sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Email *</label>
+                  <label className="block text-sm font-medium text-[#0A2540] mb-1">Email *</label>
                   <input type="email" value={form.email} onChange={(e) => set("email", e.target.value)} className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-gold outline-none" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Password * (min 8 chars)</label>
+                  <label className="block text-sm font-medium text-[#0A2540] mb-1">Password * (min 8 chars)</label>
                   <input type="password" value={form.password} onChange={(e) => set("password", e.target.value)} className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-gold outline-none" />
                 </div>
               </div>
@@ -548,7 +547,7 @@ export default function OnboardingPage() {
             <div className="space-y-6">
               <h2 className="text-xl font-bold">Equipment & Operating Regions</h2>
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-3">Equipment Types *</label>
+                <label className="block text-sm font-medium text-[#0A2540] mb-3">Equipment Types *</label>
                 <div className="flex flex-wrap gap-2">
                   {equipmentOptions.map((eq) => (
                     <button key={eq} type="button" onClick={() => toggleArray("equipmentTypes", eq)}
@@ -559,7 +558,7 @@ export default function OnboardingPage() {
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-3">Operating Regions * (US & Canada)</label>
+                <label className="block text-sm font-medium text-[#0A2540] mb-3">Operating Regions * (US & Canada)</label>
                 <div className="flex flex-wrap gap-2">
                   {regionOptions.map((r) => (
                     <button key={r} type="button" onClick={() => toggleArray("operatingRegions", r)}

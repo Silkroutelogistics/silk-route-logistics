@@ -7223,7 +7223,28 @@
 //              dedicated lane/QBR/advisory operational additions, no
 //              Sprint 3 icon-vs-photo. Letter coordination: Authority-
 //              age sprint took aib; advanced to aic.
-export const SRL_VERSION = "3.8.aic";
+// v3.8.aid   — Carrier onboarding Sprint A: actual code-side atomic
+//              commit (page.tsx token sweep). Pattern 6 sub-pattern 6
+//              (concurrent-sprint coordination) fire #2 in same arc:
+//              while Sprint A was in flight, the parallel v3.8.aic
+//              /carriers honesty pass shipped under 0edf2097 and
+//              auto-bundled this file's previously-unstaged Sprint A
+//              VersionFooter edit (the v3.8.aib comment block above,
+//              authored by me and inadvertently committed by Wasi's
+//              git add). The aic block's "Authority-age sprint took
+//              aib" claim contradicts git blame, which shows the aib
+//              block content IS this Sprint A's description (Pattern
+//              6 sub-rule b spatial-contradiction fire). Per Wasi
+//              ratification 2026-05-22, this atomic commit lands the
+//              actual onboarding/page.tsx code change cleanly under
+//              v3.8.aid; the v3.8.aib comment block above remains
+//              intact as the canonical Sprint A description (already
+//              in HEAD). Authority-age compliance epic will claim
+//              the next free letter at its Phase A per Item 182's
+//              "letter assigned at Phase A based on what's free"
+//              policy. Sprint B (Terms text honest-claims sweep)
+//              proceeds next per §3.3 after sign-off.
+export const SRL_VERSION = "3.8.aid";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
