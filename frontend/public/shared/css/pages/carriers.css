@@ -1645,29 +1645,30 @@
     }
     .cj-truck svg { width: 100%; height: 100%; display: block; }
 
-    /* ----- Gold "$" coin (westbound, lower lane) — Quick Pay returning ----- */
-    .cj-coin {
-      position: absolute;
-      top: 111px;
-      left: 90%;
-      width: 34px;
-      height: 34px;
-      transform: translateX(-50%);
-      transition: left 1.8s cubic-bezier(0.45, 0.05, 0.15, 1);
-      z-index: 4;
-      filter: drop-shadow(0 3px 5px rgba(0,0,0,0.30));
-      animation: cj-coin-glow 2.6s ease-in-out infinite;
+    /* v3.8.ahs — Trailer coin payload (inside SRL truck SVG). Cumulative
+       reveal as truck advances through tiers: Apply=empty, Silver=2 coins,
+       Gold=4 coins, Platinum=6 coins (trailer full). JS sets one of
+       `.cj-loaded-1/2/3` on .cj-truck per phase. Replaces the v3.8.ahr
+       westbound lane coin — payment now visualizes as accumulating
+       earnings inside the truck rather than a coin rolling backward. */
+    .cj-load-tier-1,
+    .cj-load-tier-2,
+    .cj-load-tier-3 {
+      opacity: 0;
+      transition: opacity 600ms ease;
     }
-    .cj-coin svg { width: 100%; height: 100%; display: block; }
-    @keyframes cj-coin-glow {
-      0%, 100% { filter: drop-shadow(0 3px 5px rgba(0,0,0,0.30)); }
-      50%      { filter: drop-shadow(0 3px 5px rgba(0,0,0,0.30)) drop-shadow(0 0 8px rgba(197,165,114,0.55)); }
+    .cj-truck.cj-loaded-1 .cj-load-tier-1,
+    .cj-truck.cj-loaded-2 .cj-load-tier-1,
+    .cj-truck.cj-loaded-2 .cj-load-tier-2,
+    .cj-truck.cj-loaded-3 .cj-load-tier-1,
+    .cj-truck.cj-loaded-3 .cj-load-tier-2,
+    .cj-truck.cj-loaded-3 .cj-load-tier-3 {
+      opacity: 1;
     }
 
-    /* No-transition class for the Platinum→Apply teleport (so vehicles
-       never visually drive in reverse during the rewind). */
-    .cj-truck.is-resetting,
-    .cj-coin.is-resetting {
+    /* No-transition class for the Platinum→Apply teleport (so the truck
+       never visibly drives in reverse during the rewind). */
+    .cj-truck.is-resetting {
       transition: none !important;
     }
 
@@ -1872,8 +1873,8 @@
 
     /* ----- Reduced motion ----- */
     @media (prefers-reduced-motion: reduce) {
-      .cj-truck,
-      .cj-coin { transition: left 200ms ease; animation: none; }
+      .cj-truck { transition: left 200ms ease; animation: none; }
+      .cj-load-tier-1, .cj-load-tier-2, .cj-load-tier-3 { transition: opacity 150ms ease; }
       .cj-dash { animation: none; }
       .cj-marker.is-active::after { animation: none; }
       .cj-card { transition: opacity 0.15s ease, transform 0.15s ease; }
@@ -1901,13 +1902,8 @@
         transform: translate(-50%, -50%) rotate(90deg);
       }
       .cj-truck {
-        top: 13%; left: 25%; width: 96px; height: 32px;
+        top: 13%; left: 50%; width: 96px; height: 32px;
         transform: translate(-50%, -50%) rotate(90deg);
-        transition: top 1.8s cubic-bezier(0.45, 0.05, 0.15, 1);
-      }
-      .cj-coin {
-        top: 90%; left: 75%; width: 30px; height: 30px;
-        transform: translate(-50%, -50%);
         transition: top 1.8s cubic-bezier(0.45, 0.05, 0.15, 1);
       }
       .cj-markers-row { height: auto; margin-top: 28px; }

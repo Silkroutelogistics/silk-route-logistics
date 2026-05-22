@@ -513,11 +513,14 @@
             </svg>
 
             <!-- SRL Cascadia tractor-trailer (eastbound, upper lane).
-                 Cab uses navy-700 #15365A + brass stroke outline so it
-                 reads against the navy lane background; trailer + SRL
-                 decal unchanged. Internal flip group keeps silhouette
-                 facing east; SRL text rendered outside group as
-                 non-mirrored layer per the v3.8.ahp design. -->
+                 v3.8.ahs: $ coins ACCUMULATE inside the trailer as the
+                 truck advances through tiers — replaces the v3.8.ahr
+                 westbound lower-lane coin. Each tier reveals 2 more
+                 coins (Apply=0, Silver=2, Gold=4, Platinum=6 = full
+                 trailer). Visualizes "Quick Pay earnings building"
+                 as the carrier climbs. SRL wordmark moved to small
+                 brass placard at trailer bottom edge so it stays
+                 readable while making room for the coin payload. -->
             <div class="cj-truck" id="cjTruck">
               <svg viewBox="0 0 140 50" aria-hidden="true">
                 <g transform="scale(-1, 1) translate(-140, 0)">
@@ -535,27 +538,25 @@
                   <circle cx="98" cy="34" r="1.4" fill="#C5A572"/>
                   <circle cx="108" cy="34" r="1.4" fill="#C5A572"/>
                 </g>
-                <text x="67" y="22" text-anchor="middle" font-family="'Playfair Display',Georgia,serif" font-weight="700" font-size="11" fill="#0A2540" letter-spacing="2">SRL</text>
-              </svg>
-            </div>
-
-            <!-- Gold "$" coin (westbound, lower lane). Represents Quick
-                 Pay returning to the carrier — replaces the v3.8.ahn
-                 anonymous competitor truck with narratively-meaningful
-                 currency iconography. Gentle pulse on filter:drop-shadow
-                 implies "money in motion" without spin rotation. -->
-            <div class="cj-coin" id="cjCoin" aria-hidden="true">
-              <svg viewBox="0 0 40 40">
-                <defs>
-                  <linearGradient id="cj-coin-grad" x1="0%" y1="0%" x2="0%" y2="100%">
-                    <stop offset="0%" stop-color="#E8D4A8"/>
-                    <stop offset="55%" stop-color="#C5A572"/>
-                    <stop offset="100%" stop-color="#BA7517"/>
-                  </linearGradient>
-                </defs>
-                <circle cx="20" cy="20" r="18" fill="url(#cj-coin-grad)" stroke="#8B6A1E" stroke-width="1.2"/>
-                <circle cx="20" cy="20" r="14.5" fill="none" stroke="#8B6A1E" stroke-width="0.5" opacity="0.55"/>
-                <text x="20" y="27" text-anchor="middle" font-family="'DM Sans',sans-serif" font-size="22" font-weight="700" fill="#FBF7F0">$</text>
+                <!-- Trailer coins (outside flip group → visual coords).
+                     6 coins in single row at y=14 (upper half of trailer
+                     interior y=6-28). Tier-pegged visibility classes
+                     `.cj-loaded-N` toggle cumulative opacity. -->
+                <g class="cj-load-tier-1">
+                  <circle cx="47" cy="14" r="2.6" fill="#DAC39C" stroke="#8B6A1E" stroke-width="0.4"/>
+                  <circle cx="87" cy="14" r="2.6" fill="#DAC39C" stroke="#8B6A1E" stroke-width="0.4"/>
+                </g>
+                <g class="cj-load-tier-2">
+                  <circle cx="55" cy="14" r="2.6" fill="#C5A572" stroke="#8B6A1E" stroke-width="0.4"/>
+                  <circle cx="79" cy="14" r="2.6" fill="#C5A572" stroke="#8B6A1E" stroke-width="0.4"/>
+                </g>
+                <g class="cj-load-tier-3">
+                  <circle cx="63" cy="14" r="2.6" fill="#BA7517" stroke="#8B6A1E" stroke-width="0.4"/>
+                  <circle cx="71" cy="14" r="2.6" fill="#BA7517" stroke="#8B6A1E" stroke-width="0.4"/>
+                </g>
+                <!-- SRL placard at trailer bottom — small brass tag,
+                     left-to-right readable, not mirrored. -->
+                <text x="67" y="25" text-anchor="middle" font-family="'Playfair Display',Georgia,serif" font-weight="700" font-size="6" fill="#BA7517" letter-spacing="1.2">SRL</text>
               </svg>
             </div>
           </div>
@@ -979,16 +980,13 @@
          ======================================== */
       var cjCanvas = document.getElementById('cjCanvas');
       var cjTruck = document.getElementById('cjTruck');
-      var cjCoin = document.getElementById('cjCoin');
       var cjPlaque = document.getElementById('cjPlaque');
       if (cjCanvas && cjTruck && cjPlaque) {
         var CJ_WAYPOINTS = ['12.5%', '37.5%', '62.5%', '87.5%'];
-        // v3.8.ahq — Gold $ coin travels WESTBOUND in the LOWER lane,
-        // representing Quick Pay returning to the carrier as SRL freight
-        // (eastbound, upper lane) progresses through the tier journey.
-        // Positions decrease as SRL's increase — the two pass each other
-        // roughly mid-cycle, telling the "freight out / cash back" story.
-        var CJ_COIN_POS = ['90%', '70%', '45%', '20%'];
+        // v3.8.ahs — Quick Pay coins now accumulate INSIDE the SRL
+        // trailer per phase (Apply=0, Silver=2, Gold=4, Platinum=6).
+        // Cumulative reveal via `.cj-loaded-N` class on .cj-truck;
+        // no separate westbound coin element. Single eastbound vehicle.
         var CJ_SEGMENT_MS = 8000;        // ~8s per segment × 3 segments = 24s Apply→Platinum
         var CJ_HOLD_MS = 4000;           // hold at Platinum while plaque stamps
         var CJ_RESET_PAUSE_MS = 900;     // brief beat before snapping back to Apply
@@ -1026,26 +1024,28 @@
           cjCards.forEach(function (c, i) { c.classList.toggle('is-active', i === idx); });
           var axis = cjAxis();
           cjTruck.style[axis] = CJ_WAYPOINTS[idx];
-          if (cjCoin) cjCoin.style[axis] = CJ_COIN_POS[idx];
+          // v3.8.ahs — trailer coin payload: cumulative reveal classes.
+          // idx 0 (Apply) = no class (empty trailer); idx N adds cj-loaded-N
+          // which the CSS chain expands to show tiers 1..N.
+          cjTruck.classList.remove('cj-loaded-1', 'cj-loaded-2', 'cj-loaded-3');
+          if (idx >= 1) cjTruck.classList.add('cj-loaded-' + idx);
           cjPlaque.classList.toggle('is-stamped', idx === 3 && stampPlaque === true);
         }
 
         function cjClearTimer() { if (cjTimer) { clearTimeout(cjTimer); cjTimer = null; } }
 
         // Instant snap on reset (no animated transition during the
-        // Platinum→Apply teleport). Without this, both vehicles would
+        // Platinum→Apply teleport). Without this, the truck would
         // visibly drive in reverse for 1.8s during the rewind. Add
         // `.is-resetting` class to disable transition, snap position
         // via setPhase, then remove the class on the next animation
         // frame so the next forward motion animates normally.
         function cjSnapReset() {
           cjTruck.classList.add('is-resetting');
-          if (cjCoin) cjCoin.classList.add('is-resetting');
           cjSetPhase(0, false);
           requestAnimationFrame(function () {
             requestAnimationFrame(function () {
               cjTruck.classList.remove('is-resetting');
-              if (cjCoin) cjCoin.classList.remove('is-resetting');
             });
           });
         }

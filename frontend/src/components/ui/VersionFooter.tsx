@@ -7103,7 +7103,16 @@
 //                what's free in the v3.8.* sequence then.
 //              - All other open items STATUS UNCHANGED per §3.3
 //                scope discipline.
-export const SRL_VERSION = "3.8.ahs";
+// v3.8.aht   — Caravan Journey trailer-fills-with-coins refactor:
+//              westbound $ coin removed entirely; gold coins now
+//              accumulate INSIDE the SRL trailer per tier (Apply=0,
+//              Silver=2, Gold=4, Platinum=6 = full trailer) via
+//              cumulative `.cj-loaded-N` class on .cj-truck. SRL
+//              wordmark moved to small brass placard at trailer
+//              bottom (addresses "not gold" concern). Replaces the
+//              v3.8.ahr metaphor of money rolling backward on the
+//              highway with a stronger "earnings building" narrative.
+export const SRL_VERSION = "3.8.aht";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
