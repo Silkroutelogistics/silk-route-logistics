@@ -497,6 +497,24 @@
               <line class="cj-dash" x1="0" y1="78" x2="1200" y2="78" stroke="#BA7517" stroke-width="2.5" stroke-dasharray="14 10" stroke-linecap="round"/>
             </svg>
 
+            <!-- v3.8.ahn — Competitor truck. Un-decaled muted-slate Cascadia
+                 silhouette, trails SRL by a widening gap so it never catches
+                 up by design. Lower opacity so SRL reads as the primary
+                 actor. Renders BEFORE SRL truck in DOM so SRL z-stacks on
+                 top if they ever visually overlap. Subtle dust trail behind
+                 it (two opacity-fading circles) implies motion. -->
+            <div class="cj-truck-competitor" id="cjTruckCompetitor" aria-hidden="true">
+              <svg viewBox="0 0 140 50">
+                <rect x="34" y="6" width="78" height="22" fill="#A7AEB8" stroke="#6B7685" stroke-width="1"/>
+                <path d="M2 18 L8 6 L28 6 L34 10 L34 30 L2 30 Z" fill="#6B7685"/>
+                <circle cx="8" cy="34" r="4.5" fill="#3A4A5F"/>
+                <circle cx="20" cy="34" r="4.5" fill="#3A4A5F"/>
+                <circle cx="48" cy="34" r="4.5" fill="#3A4A5F"/>
+                <circle cx="98" cy="34" r="4.5" fill="#3A4A5F"/>
+                <circle cx="108" cy="34" r="4.5" fill="#3A4A5F"/>
+              </svg>
+            </div>
+
             <div class="cj-truck" id="cjTruck">
               <svg viewBox="0 0 140 50" aria-hidden="true">
                 <rect x="34" y="6" width="78" height="22" fill="#FBF7F0" stroke="#0A2540" stroke-width="1"/>
@@ -929,9 +947,15 @@
          ======================================== */
       var cjCanvas = document.getElementById('cjCanvas');
       var cjTruck = document.getElementById('cjTruck');
+      var cjTruckCompetitor = document.getElementById('cjTruckCompetitor');
       var cjPlaque = document.getElementById('cjPlaque');
       if (cjCanvas && cjTruck && cjPlaque) {
         var CJ_WAYPOINTS = ['12.5%', '37.5%', '62.5%', '87.5%'];
+        // v3.8.ahn — Competitor positions. Trails SRL by a widening gap
+        // (12.5% → 29.5%) so it never catches up by design. Visualizes
+        // SRL extending its lead through the journey without naming a
+        // competitor (§5 prohibited claims preserved).
+        var CJ_COMPETITOR_POS = ['0%', '20%', '38%', '58%'];
         var CJ_SEGMENT_MS = 8000;        // ~8s per segment × 3 segments = 24s Apply→Platinum
         var CJ_HOLD_MS = 4000;           // hold at Platinum while plaque stamps
         var CJ_RESET_PAUSE_MS = 900;     // brief beat before snapping back to Apply
@@ -955,6 +979,10 @@
           }).catch(function () { /* old browsers — ignore */ });
         }
 
+        // Mobile (≤720px) uses `top` for vertical lane; desktop uses `left`.
+        // Both trucks move on the same axis matched to viewport.
+        function cjAxis() { return window.innerWidth <= 720 ? 'top' : 'left'; }
+
         function cjSetPhase(idx, stampPlaque) {
           cjPhase = idx;
           cjTabs.forEach(function (t, i) {
@@ -963,7 +991,9 @@
           });
           cjMarkers.forEach(function (m, i) { m.classList.toggle('is-active', i === idx); });
           cjCards.forEach(function (c, i) { c.classList.toggle('is-active', i === idx); });
-          cjTruck.style.left = CJ_WAYPOINTS[idx];
+          var axis = cjAxis();
+          cjTruck.style[axis] = CJ_WAYPOINTS[idx];
+          if (cjTruckCompetitor) cjTruckCompetitor.style[axis] = CJ_COMPETITOR_POS[idx];
           cjPlaque.classList.toggle('is-stamped', idx === 3 && stampPlaque === true);
         }
 

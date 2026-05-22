@@ -6718,7 +6718,13 @@
 //                update.
 //              - All other open items STATUS UNCHANGED per §3.3
 //                scope discipline
-export const SRL_VERSION = "3.8.ahl";
+// v3.8.ahn   — Caravan Journey visual upgrades: competitor truck
+//              (muted slate, no decal, trails by widening gap, never
+//              catches up), active-marker brass pulse ring, faster
+//              dashed-lane flow (2.4s→1.6s), larger SRL truck
+//              (112×38→132×46), lane height 240→260px for clearance.
+//              §5 prohibited claims preserved (no competitor naming).
+export const SRL_VERSION = "3.8.ahn";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
