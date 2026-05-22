@@ -1513,14 +1513,19 @@
     }
 
     /* ==========================================
-       v3.8.ahm — CARAVAN JOURNEY (fresh Path A build)
-       Dual gold-dark dashed lane with stroke-dashoffset flow;
-       4 brass marker cartouches with posts; navy Cascadia truck
-       travels via `left` transition; QP LOCKED plaque stamps onto
-       Platinum post during hold. All values driven by JS state
-       machine — see carriers.html cjSetPhase() driver block.
-       §2.1 tokens only: navy #0A2540, gold #C5A572, gold-dark
-       #BA7517, cream #FBF7F0, cream-2 #F5EEE0, gold-tint #FAEEDA.
+    /* ==========================================
+       v3.8.ahq — CARAVAN JOURNEY comprehensive redesign
+       Dark navy highway lane with cream dashed centerlines; markers
+       moved BELOW the lane with short connector lines and tier-named
+       visual colors (cream APPLY / silver SILVER / gold GOLD / platinum
+       PLATINUM); SRL Cascadia truck (eastbound, upper lane) carries
+       freight while gold "$" coin (westbound, lower lane) represents
+       Quick Pay returning — replaces the v3.8.ahp anonymous competitor.
+       OUTBOUND FREIGHT + QUICK PAY RETURNING labels frame the narrative.
+       Title leads with the Quick Pay value prop.
+       §2.1 tokens only: navy #0A2540, navy-700 #15365A, navy-200
+       #BECEDE, gold #C5A572, gold-dark #BA7517, cream #FBF7F0,
+       cream-2 #F5EEE0, cream-3 #EFE6D3.
        ========================================== */
     .caravan-journey-section {
       padding: 100px 0;
@@ -1534,7 +1539,7 @@
       margin: 48px auto 0;
       background: #FFFFFF;
       border-radius: 22px;
-      padding: 36px 32px 36px;
+      padding: 36px 32px 32px;
       box-shadow: 0 22px 56px rgba(10,37,64,0.10);
       border: 1px solid rgba(10,37,64,0.06);
     }
@@ -1579,111 +1584,177 @@
       font-weight: 600; color: #0A2540; transition: color 240ms;
     }
 
-    /* ----- Lane (dual dashed lines + markers + truck) -----
-       Lane height 240px. Vertical clearance map:
-         · truck row:    top 22px,  height 38px → spans 22-60 from top
-         · dashed lines: y=42 + y=78 in 110px SVG band centered at lane Y 95
-         · markers:      bottom 12px, total ~140px tall (sign 32 + post 100)
-                         → spans bottom 12 to 152 from bottom = 88..228 from top
-       Truck bottom (60) < marker-sign top (88) → 28px clearance, no overlap.
-       Top-tab row sits OUTSIDE the lane container → no possible overlap. */
+    /* ----- Navy highway lane -----
+       Vertical clearance map (lane height 150px):
+         · upper dash:  SVG y=42 → lane y≈57
+         · lower dash:  SVG y=78 → lane y≈106
+         · upper lane:  0..57 (SRL truck rides here, top:9 height:40)
+         · lower lane:  106..150 (gold coin rides here, top:111 height:34)
+       Truck bottom (49) < upper dash (57) → 8px clearance.
+       Lower dash (106) < coin top (111) → 5px clearance. */
     .cj-lane {
       position: relative;
       width: 100%;
-      height: 260px;
-      margin-bottom: 32px;
-      border-radius: 14px;
-      background: linear-gradient(180deg, #FDF8EC 0%, #F5EEE0 100%);
-      border: 1px solid rgba(186,117,23,0.18);
+      height: 150px;
+      border-radius: 12px;
+      background: linear-gradient(180deg, #0A2540 0%, #061629 100%);
+      border: 1px solid rgba(186,117,23,0.35);
+      box-shadow: 0 6px 18px rgba(10,37,64,0.18),
+                  inset 0 0 0 1px rgba(197,165,114,0.10);
       overflow: hidden;
     }
-    /* Subtle radial vignette for lane depth — brass corners suggest desert
-       horizon, parchment center. Decorative only, pointer-events:none. */
-    .cj-lane::before {
-      content: '';
+    .cj-label {
       position: absolute;
-      inset: 0;
-      background:
-        radial-gradient(ellipse 80% 50% at 50% 50%, rgba(186,117,23,0) 0%, rgba(186,117,23,0.08) 100%);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 10.5px;
+      font-weight: 700;
+      letter-spacing: 2.4px;
+      text-transform: uppercase;
+      color: #C5A572;
+      opacity: 0.92;
+      z-index: 2;
+      pointer-events: none;
+    }
+    .cj-label-outbound { top: 10px; left: 18px; }
+    .cj-label-returning { bottom: 10px; right: 18px; }
+    .cj-lane-svg {
+      position: absolute; left: 0; top: 0;
+      width: 100%; height: 100%;
       pointer-events: none;
       z-index: 1;
     }
-    .cj-route-label {
-      position: absolute; top: 12px; left: 22px;
-      font-family: 'Playfair Display', Georgia, serif;
-      font-style: italic; font-weight: 500; font-size: 13px;
-      color: rgba(139,106,30,0.65); letter-spacing: 1.2px;
-      z-index: 2; pointer-events: none;
-    }
-    .cj-lane-svg {
-      position: absolute; left: 0; right: 0;
-      top: 50%; transform: translateY(-50%);
-      width: 100%; height: 110px;
-      pointer-events: none;
-    }
-    /* Dashed flow: dashoffset cycles 24px (dash 14 + gap 10) toward right.
-       v3.8.ahn: faster (2.4s → 1.6s) for more sense of speed. */
+    /* Dashed flow toward east: cream dashes (US highway convention on
+       dark asphalt). Cycle 24px = dash 14 + gap 10. */
     .cj-dash { animation: cj-dash-flow 1.6s linear infinite; }
     @keyframes cj-dash-flow {
       from { stroke-dashoffset: 24; }
       to   { stroke-dashoffset: 0;  }
     }
 
-    /* ----- Markers (brass cartouche + post) ----- */
+    /* ----- SRL truck (eastbound, upper lane) ----- */
+    .cj-truck {
+      position: absolute;
+      top: 9px;
+      left: 12.5%;
+      width: 126px;
+      height: 40px;
+      transform: translateX(-50%);
+      transition: left 1.8s cubic-bezier(0.45, 0.05, 0.15, 1);
+      z-index: 5;
+      filter: drop-shadow(0 4px 6px rgba(0,0,0,0.35));
+    }
+    .cj-truck svg { width: 100%; height: 100%; display: block; }
+
+    /* ----- Gold "$" coin (westbound, lower lane) — Quick Pay returning ----- */
+    .cj-coin {
+      position: absolute;
+      top: 111px;
+      left: 90%;
+      width: 34px;
+      height: 34px;
+      transform: translateX(-50%);
+      transition: left 1.8s cubic-bezier(0.45, 0.05, 0.15, 1);
+      z-index: 4;
+      filter: drop-shadow(0 3px 5px rgba(0,0,0,0.30));
+      animation: cj-coin-glow 2.6s ease-in-out infinite;
+    }
+    .cj-coin svg { width: 100%; height: 100%; display: block; }
+    @keyframes cj-coin-glow {
+      0%, 100% { filter: drop-shadow(0 3px 5px rgba(0,0,0,0.30)); }
+      50%      { filter: drop-shadow(0 3px 5px rgba(0,0,0,0.30)) drop-shadow(0 0 8px rgba(197,165,114,0.55)); }
+    }
+
+    /* No-transition class for the Platinum→Apply teleport (so vehicles
+       never visually drive in reverse during the rewind). */
+    .cj-truck.is-resetting,
+    .cj-coin.is-resetting {
+      transition: none !important;
+    }
+
+    /* ----- Markers row (BELOW the lane with short connector lines) ----- */
+    .cj-markers-row {
+      position: relative;
+      width: 100%;
+      height: 64px;
+      margin-top: 42px;
+      margin-bottom: 26px;
+    }
     .cj-marker {
       position: absolute;
-      bottom: 12px;
+      bottom: 0;
       left: var(--left);
       transform: translateX(-50%);
-      width: 110px;
       display: flex;
-      flex-direction: column-reverse;
+      flex-direction: column;
       align-items: center;
-      z-index: 3;
+    }
+    /* Connector: brass line bridging the gap from each marker top to
+       the lane bottom edge above. 42px height matches markers-row
+       margin-top so connector visually anchors into the lane's lower
+       border. */
+    .cj-connector {
+      position: absolute;
+      bottom: 100%;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 1.6px;
+      height: 42px;
+      background: linear-gradient(180deg, rgba(197,165,114,0.20) 0%, #BA7517 100%);
       pointer-events: none;
     }
+    .cj-marker.is-active .cj-connector {
+      width: 2.4px;
+      background: linear-gradient(180deg, rgba(186,117,23,0.55) 0%, #BA7517 100%);
+      box-shadow: 0 0 8px rgba(186,117,23,0.45);
+    }
+
+    /* ----- Tier-named cartouches ----- */
     .cj-sign {
-      padding: 7px 14px 8px;
-      min-width: 92px;
-      background: linear-gradient(155deg, #C5A572 0%, #BA7517 100%);
-      border: 1.4px solid rgba(10,37,64,0.40);
+      position: relative;
+      padding: 8px 14px 9px;
+      min-width: 96px;
       border-radius: 5px;
-      box-shadow: 0 6px 14px rgba(10,37,64,0.20),
-                  inset 0 1px 1px rgba(255,255,255,0.40),
-                  inset 0 -1px 1px rgba(0,0,0,0.18);
+      border: 1.4px solid rgba(10,37,64,0.32);
+      box-shadow: 0 6px 14px rgba(10,37,64,0.18),
+                  inset 0 1px 1px rgba(255,255,255,0.42),
+                  inset 0 -1px 1px rgba(0,0,0,0.16);
       display: flex; flex-direction: column; align-items: center;
       white-space: nowrap;
-      transition: transform 380ms ease, box-shadow 380ms ease;
+      transition: transform 380ms ease, box-shadow 380ms ease,
+                  filter 380ms ease;
     }
     .cj-num {
       font-family: 'DM Sans', sans-serif; font-size: 8.5px;
       font-weight: 700; letter-spacing: 1.4px;
-      color: rgba(10,37,64,0.78);
+      color: rgba(10,37,64,0.72);
     }
     .cj-tier {
       font-family: 'Playfair Display', Georgia, serif;
-      font-size: 13px; font-weight: 700; color: #0A2540;
-      letter-spacing: 0.8px;
+      font-size: 13px; font-weight: 700;
+      letter-spacing: 0.8px; color: #0A2540;
     }
-    .cj-post {
-      width: 3px;
-      height: 100px;
-      background: linear-gradient(180deg, #C5A572 0%, #BA7517 60%, rgba(186,117,23,0.45) 100%);
-      border-radius: 1px;
-      box-shadow: 0 0 0 1px rgba(10,37,64,0.10);
-      margin-bottom: 4px;
+    /* Tier-name visual colors (drawn from §2.1 token family) */
+    .cj-sign-apply {
+      background: linear-gradient(155deg, #FBF7F0 0%, #EFE6D3 100%);
+    }
+    .cj-sign-apply .cj-tier { color: rgba(10,37,64,0.62); }
+    .cj-sign-silver {
+      background: linear-gradient(155deg, #E2EAF2 0%, #BECEDE 100%);
+    }
+    .cj-sign-gold {
+      background: linear-gradient(155deg, #C5A572 0%, #BA7517 100%);
+    }
+    .cj-sign-platinum {
+      background: linear-gradient(155deg, #F5EEE0 0%, #BECEDE 100%);
     }
     .cj-marker.is-active .cj-sign {
       transform: translateY(-3px);
-      box-shadow: 0 12px 24px rgba(10,37,64,0.30),
-                  0 0 0 2px rgba(186,117,23,0.50),
-                  inset 0 1px 1px rgba(255,255,255,0.55),
-                  inset 0 -1px 1px rgba(0,0,0,0.18);
+      box-shadow: 0 12px 24px rgba(10,37,64,0.28),
+                  0 0 0 2px rgba(186,117,23,0.55),
+                  inset 0 1px 1px rgba(255,255,255,0.55);
     }
-    /* v3.8.ahn — active marker pulse ring. Brass radiation expanding
-       from the cartouche center signals "you are here" without
-       cluttering the visual. ::after pseudo-element on cj-marker
-       so we don't need a 5th HTML element per marker. */
+    .cj-marker.is-active .cj-sign-apply .cj-tier { color: #0A2540; }
+    /* Active-marker pulse ring (kept from v3.8.ahn) */
     .cj-marker::after {
       content: '';
       position: absolute;
@@ -1691,7 +1762,7 @@
       left: 50%;
       width: 0; height: 0;
       border-radius: 50%;
-      background: rgba(186,117,23,0.35);
+      background: rgba(186,117,23,0.32);
       transform: translate(-50%, 50%);
       opacity: 0;
       pointer-events: none;
@@ -1700,25 +1771,26 @@
       animation: cj-marker-pulse 1.8s ease-out infinite;
     }
     @keyframes cj-marker-pulse {
-      0%   { width: 6px;  height: 6px;  opacity: 0.55; }
-      100% { width: 64px; height: 64px; opacity: 0;    }
+      0%   { width: 6px;  height: 6px;  opacity: 0.50; }
+      100% { width: 72px; height: 72px; opacity: 0;    }
     }
 
-    /* ----- QP LOCKED plaque (M6 sub-state, bolts onto Platinum post) ----- */
+    /* ----- M6 QP LOCKED plaque (bolts onto Platinum cartouche) ----- */
     .cj-plaque {
       position: absolute;
-      bottom: 78px;        /* sits midway up the 100px post */
+      top: -16px;
       left: 50%;
       transform: translateX(-50%) scale(0.3) rotate(-4deg);
       opacity: 0;
       padding: 4px 10px;
-      background: linear-gradient(155deg, #BA7517 0%, rgba(139,106,30,1) 100%);
+      background: linear-gradient(155deg, #BA7517 0%, #8B6A1E 100%);
       border: 1px solid rgba(10,37,64,0.45);
       border-radius: 2px;
       box-shadow: 0 3px 6px rgba(10,37,64,0.30);
       display: flex; flex-direction: column; align-items: center;
       white-space: nowrap;
-      transition: transform 560ms cubic-bezier(0.34, 1.56, 0.64, 1), opacity 320ms ease;
+      transition: transform 560ms cubic-bezier(0.34, 1.56, 0.64, 1),
+                  opacity 320ms ease;
       pointer-events: none;
     }
     .cj-plaque.is-stamped {
@@ -1727,64 +1799,27 @@
     }
     .cj-plaque-tag {
       font-family: 'DM Sans', sans-serif; font-size: 7px; font-weight: 700;
-      letter-spacing: 1.2px; color: rgba(251,247,240,0.85);
+      letter-spacing: 1.2px; color: rgba(251,247,240,0.88);
     }
     .cj-plaque-label {
-      font-family: 'Playfair Display', Georgia, serif; font-size: 10px;
-      font-weight: 700; letter-spacing: 0.8px; color: #FBF7F0;
+      font-family: 'Playfair Display', Georgia, serif; font-size: 9.5px;
+      font-weight: 700; letter-spacing: 0.6px; color: #FBF7F0;
     }
 
-    /* ----- Trucks (navy SRL Cascadia + muted-slate competitor) -----
-       v3.8.ahn: SRL truck scaled up 112×38 → 132×46 for stronger
-       on-stage presence; competitor truck is similar size but
-       reduced opacity + muted-slate palette + no decal so SRL reads
-       as primary actor. Vertical clearance preserved (truck bottom
-       at top+46=68 < marker-sign-top at lane_height-148=112 → 44px
-       gap, comfortably safe). */
-    .cj-truck {
-      position: absolute;
-      top: 26px;
-      left: 12.5%;
-      width: 132px;
-      height: 46px;
-      transform: translateX(-50%);
-      transition: left 1.8s cubic-bezier(0.45, 0.05, 0.15, 1);
-      z-index: 5;
-      filter: drop-shadow(0 5px 6px rgba(10,37,64,0.30));
+    /* ----- Panel eyebrow + status cards ----- */
+    .cj-panel-eyebrow {
+      font-family: 'DM Sans', sans-serif;
+      font-size: 10.5px;
+      font-weight: 700;
+      letter-spacing: 2.2px;
+      text-transform: uppercase;
+      color: #BA7517;
+      text-align: center;
+      margin-bottom: 14px;
     }
-    .cj-truck svg { width: 100%; height: 100%; display: block; }
-
-    .cj-truck-competitor {
-      position: absolute;
-      /* v3.8.ahp — moved to LOWER lane below the dashed centerline so
-         the road reads as genuine two-way traffic. Lower-dash sits at
-         lane y≈153px; competitor top:160 spans y=160-198 (below dash,
-         above cartouches at y=218). 20px clearance to cartouche. */
-      top: 160px;
-      left: 90%;
-      width: 108px;
-      height: 38px;
-      transform: translateX(-50%);
-      transition: left 1.8s cubic-bezier(0.45, 0.05, 0.15, 1);
-      z-index: 4;
-      opacity: 0.55;
-      filter: drop-shadow(0 3px 4px rgba(10,37,64,0.18));
-    }
-    .cj-truck-competitor svg { width: 100%; height: 100%; display: block; }
-
-    /* v3.8.ahp — disables transition during the Platinum→Apply teleport
-       so trucks do not visibly drive in reverse during reset. Class is
-       added before snap and removed on next rAF (see cjSnapReset()). */
-    .cj-truck.is-resetting,
-    .cj-truck-competitor.is-resetting {
-      transition: none !important;
-    }
-
-    /* ----- Status panel (cross-fade per phase) ----- */
     .cj-panel {
       position: relative;
       min-height: 200px;
-      margin-top: 8px;
     }
     .cj-card {
       position: absolute; inset: 0;
@@ -1835,21 +1870,20 @@
       white-space: nowrap;
     }
 
-    /* ----- Reduced motion: freeze at Platinum, plaque visible ----- */
+    /* ----- Reduced motion ----- */
     @media (prefers-reduced-motion: reduce) {
       .cj-truck,
-      .cj-truck-competitor { transition: left 200ms ease; }
-      .cj-dash  { animation: none; }
+      .cj-coin { transition: left 200ms ease; animation: none; }
+      .cj-dash { animation: none; }
       .cj-marker.is-active::after { animation: none; }
-      .cj-card  { transition: opacity 0.15s ease, transform 0.15s ease; }
+      .cj-card { transition: opacity 0.15s ease, transform 0.15s ease; }
       .cj-plaque { transition: opacity 0.15s ease, transform 0.15s ease; }
     }
 
-    /* ----- Mobile: vertical lane, truck travels downward ----- */
+    /* ----- Mobile: vertical lane, vehicles travel via top% ----- */
     @media (max-width: 720px) {
       .caravan-journey-section { padding: 70px 0; }
       .cj-canvas { padding: 20px 14px 24px; }
-      /* Tabs: horizontal scroll strip */
       .cj-tabs {
         display: flex; overflow-x: auto;
         scroll-snap-type: x mandatory;
@@ -1859,43 +1893,28 @@
       }
       .cj-tabs::-webkit-scrollbar { display: none; }
       .cj-tab { flex: 0 0 40%; scroll-snap-align: center; }
-      /* Lane: vertical, taller, truck moves top */
-      .cj-lane { height: 520px; }
-      .cj-route-label { font-size: 11px; top: 10px; left: 14px; }
-      /* Dashed lines pivot to vertical via SVG rotation */
+      .cj-lane { height: 380px; }
+      .cj-label { font-size: 9px; letter-spacing: 1.6px; }
       .cj-lane-svg {
-        top: 50%; left: 50%; width: 110px; height: 100%;
+        top: 50%; left: 50%;
+        width: 110px; height: 100%;
         transform: translate(-50%, -50%) rotate(90deg);
       }
-      /* Markers stack vertically; left becomes top via data-phase */
-      .cj-marker {
-        bottom: auto;
-        left: 50%; transform: translate(-50%, -50%);
-        flex-direction: row-reverse; width: 200px;
-      }
-      .cj-marker[data-phase="0"] { top: 13%; }
-      .cj-marker[data-phase="1"] { top: 38%; }
-      .cj-marker[data-phase="2"] { top: 62%; }
-      .cj-marker[data-phase="3"] { top: 87%; }
-      .cj-post { width: 60px; height: 3px; margin-bottom: 0; margin-right: 6px; }
-      .cj-sign { min-width: 88px; padding: 6px 11px 7px; }
-      .cj-num { font-size: 8px; }
-      .cj-tier { font-size: 12px; }
-      /* Plaque: shift to attach horizontally beside Platinum sign */
-      .cj-plaque { bottom: auto; left: -46px; top: 50%; transform: translateY(-50%) scale(0.3) rotate(-4deg); }
-      .cj-plaque.is-stamped { transform: translateY(-50%) scale(1) rotate(-4deg); }
-      /* Truck: pivot 90°, move via top% */
       .cj-truck {
-        top: 13%; left: 50%; width: 100px; height: 34px;
+        top: 13%; left: 25%; width: 96px; height: 32px;
         transform: translate(-50%, -50%) rotate(90deg);
         transition: top 1.8s cubic-bezier(0.45, 0.05, 0.15, 1);
       }
-      .cj-truck-competitor {
-        top: 0%; left: 50%; width: 84px; height: 28px;
-        transform: translate(-50%, -50%) rotate(90deg);
+      .cj-coin {
+        top: 90%; left: 75%; width: 30px; height: 30px;
+        transform: translate(-50%, -50%);
         transition: top 1.8s cubic-bezier(0.45, 0.05, 0.15, 1);
       }
-      /* Status panel: stack, only active visible */
+      .cj-markers-row { height: auto; margin-top: 28px; }
+      .cj-marker { position: relative; left: auto !important; transform: none; margin-bottom: 14px; }
+      .cj-connector { display: none; }
+      .cj-sign { min-width: 140px; }
+      .cj-plaque { top: -18px; }
       .cj-panel { min-height: auto; }
       .cj-card {
         position: relative; inset: auto;

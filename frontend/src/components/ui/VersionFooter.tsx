@@ -6988,7 +6988,16 @@
 //                modal + Item 182 update.
 //              - All other open items STATUS UNCHANGED per §3.3
 //                scope discipline.
-export const SRL_VERSION = "3.8.ahq";
+// v3.8.ahr   — Caravan Journey COMPREHENSIVE redesign: navy highway
+//              lane + cream dashed centerlines + OUTBOUND FREIGHT /
+//              QUICK PAY RETURNING labels + SRL truck (upper east) +
+//              gold $ coin replacing anonymous competitor (lower west)
+//              + markers moved BELOW lane with thin connectors + tier-
+//              named cartouche colors (cream APPLY / silver SILVER /
+//              gold GOLD / platinum PLATINUM) + "Quick Pay at this
+//              tier" panel eyebrow + title rewrite "Freight goes out.
+//              Cash comes back faster." per Wasi-supplied reference.
+export const SRL_VERSION = "3.8.ahr";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

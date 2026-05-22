@@ -464,12 +464,23 @@
          which tab + marker + panel + plaque all derive. Bidirectional
          via tab clicks. Auto-loops Apply → Platinum in ~24s.
          All values from CJ_CONFIG below. -->
+    <!-- v3.8.ahq — Caravan Journey comprehensive redesign.
+         Dark navy highway-style lane with cream dashed centerlines;
+         OUTBOUND FREIGHT (upper) + QUICK PAY RETURNING (lower) lane
+         labels frame the two-way narrative; SRL Cascadia carries
+         freight east in upper lane; gold "$" coin returns west in
+         lower lane representing Quick Pay back to carrier; 4 markers
+         moved BELOW the lane with short connector lines, each in
+         tier-named visual color (cream APPLY / silver SILVER /
+         gold GOLD / platinum PLATINUM); QP LOCKED plaque still
+         stamps onto Platinum during hold. Title leads with the
+         Quick Pay value proposition. -->
     <section class="caravan-journey-section" aria-labelledby="journey-heading">
       <div class="container">
-        <div class="section-header" style="max-width:720px;margin:0 auto 40px;text-align:center">
-          <div class="section-label" style="color:#BA7517">The Journey</div>
-          <h2 class="section-title" id="journey-heading" style="color:#0A2540">Your Caravan Journey</h2>
-          <p class="section-desc" style="color:#3A4A5F">Four markers. One Compass standard. Earn your tier; fleet size does not decide it.</p>
+        <div class="section-header" style="max-width:760px;margin:0 auto 40px;text-align:center">
+          <div class="section-label" style="color:#BA7517">The Caravan Partner Program</div>
+          <h2 class="section-title" id="journey-heading" style="color:#0A2540">Freight goes out. Cash comes back faster.</h2>
+          <p class="section-desc" style="color:#3A4A5F">Climb the tiers and your Quick Pay accelerates. Fleet size does not decide it.</p>
         </div>
 
         <div class="cj-canvas" id="cjCanvas">
@@ -489,83 +500,92 @@
             </button>
           </div>
 
+          <!-- Navy highway lane: SRL truck eastbound (freight) above,
+               gold $ coin westbound (Quick Pay) below. Markers no longer
+               inside this container — they live in .cj-markers-row. -->
           <div class="cj-lane" aria-hidden="true">
-            <span class="cj-route-label">Trade Route</span>
+            <span class="cj-label cj-label-outbound">Outbound Freight</span>
+            <span class="cj-label cj-label-returning">Quick Pay Returning</span>
 
             <svg class="cj-lane-svg" viewBox="0 0 1200 110" preserveAspectRatio="none">
-              <line class="cj-dash" x1="0" y1="42" x2="1200" y2="42" stroke="#BA7517" stroke-width="2.5" stroke-dasharray="14 10" stroke-linecap="round"/>
-              <line class="cj-dash" x1="0" y1="78" x2="1200" y2="78" stroke="#BA7517" stroke-width="2.5" stroke-dasharray="14 10" stroke-linecap="round"/>
+              <line class="cj-dash" x1="0" y1="42" x2="1200" y2="42" stroke="#FBF7F0" stroke-width="2.2" stroke-dasharray="14 10" stroke-linecap="round" opacity="0.78"/>
+              <line class="cj-dash" x1="0" y1="78" x2="1200" y2="78" stroke="#FBF7F0" stroke-width="2.2" stroke-dasharray="14 10" stroke-linecap="round" opacity="0.78"/>
             </svg>
 
-            <!-- v3.8.ahn — Competitor truck. Un-decaled muted-slate Cascadia
-                 silhouette, trails SRL by a widening gap so it never catches
-                 up by design. Lower opacity so SRL reads as the primary
-                 actor. Renders BEFORE SRL truck in DOM so SRL z-stacks on
-                 top if they ever visually overlap. Subtle dust trail behind
-                 it (two opacity-fading circles) implies motion. -->
-            <div class="cj-truck-competitor" id="cjTruckCompetitor" aria-hidden="true">
-              <svg viewBox="0 0 140 50">
-                <rect x="34" y="6" width="78" height="22" fill="#A7AEB8" stroke="#6B7685" stroke-width="1"/>
-                <path d="M2 18 L8 6 L28 6 L34 10 L34 30 L2 30 Z" fill="#6B7685"/>
-                <circle cx="8" cy="34" r="4.5" fill="#3A4A5F"/>
-                <circle cx="20" cy="34" r="4.5" fill="#3A4A5F"/>
-                <circle cx="48" cy="34" r="4.5" fill="#3A4A5F"/>
-                <circle cx="98" cy="34" r="4.5" fill="#3A4A5F"/>
-                <circle cx="108" cy="34" r="4.5" fill="#3A4A5F"/>
-              </svg>
-            </div>
-
+            <!-- SRL Cascadia tractor-trailer (eastbound, upper lane).
+                 Cab uses navy-700 #15365A + brass stroke outline so it
+                 reads against the navy lane background; trailer + SRL
+                 decal unchanged. Internal flip group keeps silhouette
+                 facing east; SRL text rendered outside group as
+                 non-mirrored layer per the v3.8.ahp design. -->
             <div class="cj-truck" id="cjTruck">
               <svg viewBox="0 0 140 50" aria-hidden="true">
-                <!-- v3.8.ahp — silhouette flipped horizontally so it faces
-                     direction of travel (east). Internal <g> transform
-                     scales x by -1 then translates by -140 to keep the
-                     visual within the 0-140 viewBox. SRL text below is
-                     rendered OUTSIDE this group so it does not mirror,
-                     preserving left-to-right readability of the wordmark. -->
                 <g transform="scale(-1, 1) translate(-140, 0)">
                   <rect x="34" y="6" width="78" height="22" fill="#FBF7F0" stroke="#0A2540" stroke-width="1"/>
-                  <path d="M2 18 L8 6 L28 6 L34 10 L34 30 L2 30 Z" fill="#0A2540"/>
+                  <path d="M2 18 L8 6 L28 6 L34 10 L34 30 L2 30 Z" fill="#15365A" stroke="#C5A572" stroke-width="0.7"/>
                   <rect x="0" y="20" width="3" height="10" fill="#BA7517"/>
-                  <circle cx="8" cy="34" r="4.5" fill="#0A2540"/>
-                  <circle cx="20" cy="34" r="4.5" fill="#0A2540"/>
-                  <circle cx="48" cy="34" r="4.5" fill="#0A2540"/>
-                  <circle cx="98" cy="34" r="4.5" fill="#0A2540"/>
-                  <circle cx="108" cy="34" r="4.5" fill="#0A2540"/>
+                  <circle cx="8" cy="34" r="4.5" fill="#0A2540" stroke="#C5A572" stroke-width="0.4"/>
+                  <circle cx="20" cy="34" r="4.5" fill="#0A2540" stroke="#C5A572" stroke-width="0.4"/>
+                  <circle cx="48" cy="34" r="4.5" fill="#0A2540" stroke="#C5A572" stroke-width="0.4"/>
+                  <circle cx="98" cy="34" r="4.5" fill="#0A2540" stroke="#C5A572" stroke-width="0.4"/>
+                  <circle cx="108" cy="34" r="4.5" fill="#0A2540" stroke="#C5A572" stroke-width="0.4"/>
                   <circle cx="8" cy="34" r="1.4" fill="#C5A572"/>
                   <circle cx="20" cy="34" r="1.4" fill="#C5A572"/>
                   <circle cx="48" cy="34" r="1.4" fill="#C5A572"/>
                   <circle cx="98" cy="34" r="1.4" fill="#C5A572"/>
                   <circle cx="108" cy="34" r="1.4" fill="#C5A572"/>
                 </g>
-                <!-- SRL wordmark — separate non-mirrored layer, drawn
-                     after the silhouette group so it sits on top of the
-                     trailer. Center of flipped trailer = x=67 (original
-                     trailer center x=73 mirrors to 140-73=67). -->
                 <text x="67" y="22" text-anchor="middle" font-family="'Playfair Display',Georgia,serif" font-weight="700" font-size="11" fill="#0A2540" letter-spacing="2">SRL</text>
               </svg>
             </div>
 
+            <!-- Gold "$" coin (westbound, lower lane). Represents Quick
+                 Pay returning to the carrier — replaces the v3.8.ahn
+                 anonymous competitor truck with narratively-meaningful
+                 currency iconography. Gentle pulse on filter:drop-shadow
+                 implies "money in motion" without spin rotation. -->
+            <div class="cj-coin" id="cjCoin" aria-hidden="true">
+              <svg viewBox="0 0 40 40">
+                <defs>
+                  <linearGradient id="cj-coin-grad" x1="0%" y1="0%" x2="0%" y2="100%">
+                    <stop offset="0%" stop-color="#E8D4A8"/>
+                    <stop offset="55%" stop-color="#C5A572"/>
+                    <stop offset="100%" stop-color="#BA7517"/>
+                  </linearGradient>
+                </defs>
+                <circle cx="20" cy="20" r="18" fill="url(#cj-coin-grad)" stroke="#8B6A1E" stroke-width="1.2"/>
+                <circle cx="20" cy="20" r="14.5" fill="none" stroke="#8B6A1E" stroke-width="0.5" opacity="0.55"/>
+                <text x="20" y="27" text-anchor="middle" font-family="'DM Sans',sans-serif" font-size="22" font-weight="700" fill="#FBF7F0">$</text>
+              </svg>
+            </div>
+          </div>
+
+          <!-- Markers row BELOW the lane. Thin gold connector lines bridge
+               the gap from each marker up to the lane bottom edge,
+               replacing the v3.8.ahm tall posts that pierced the lane. -->
+          <div class="cj-markers-row">
             <div class="cj-marker" data-phase="0" style="--left:12.5%">
-              <div class="cj-sign"><span class="cj-num">M0</span><span class="cj-tier">APPLY</span></div>
-              <div class="cj-post"></div>
+              <div class="cj-connector"></div>
+              <div class="cj-sign cj-sign-apply"><span class="cj-num">M0</span><span class="cj-tier">APPLY</span></div>
             </div>
             <div class="cj-marker" data-phase="1" style="--left:37.5%">
-              <div class="cj-sign"><span class="cj-num">M1 — M3</span><span class="cj-tier">SILVER</span></div>
-              <div class="cj-post"></div>
+              <div class="cj-connector"></div>
+              <div class="cj-sign cj-sign-silver"><span class="cj-num">M1 — M3</span><span class="cj-tier">SILVER</span></div>
             </div>
             <div class="cj-marker" data-phase="2" style="--left:62.5%">
-              <div class="cj-sign"><span class="cj-num">M4</span><span class="cj-tier">GOLD</span></div>
-              <div class="cj-post"></div>
+              <div class="cj-connector"></div>
+              <div class="cj-sign cj-sign-gold"><span class="cj-num">M4</span><span class="cj-tier">GOLD</span></div>
             </div>
             <div class="cj-marker cj-marker-final" data-phase="3" style="--left:87.5%">
-              <div class="cj-sign"><span class="cj-num">M5</span><span class="cj-tier">PLATINUM</span></div>
-              <div class="cj-post"></div>
+              <div class="cj-connector"></div>
+              <div class="cj-sign cj-sign-platinum"><span class="cj-num">M5</span><span class="cj-tier">PLATINUM</span></div>
               <div class="cj-plaque" id="cjPlaque" aria-hidden="true">
                 <span class="cj-plaque-tag">M6</span><span class="cj-plaque-label">QP LOCKED</span>
               </div>
             </div>
           </div>
+
+          <div class="cj-panel-eyebrow">Quick Pay at this tier</div>
 
           <div class="cj-panel" aria-live="polite">
             <article class="cj-card is-active" data-phase="0">
@@ -959,16 +979,16 @@
          ======================================== */
       var cjCanvas = document.getElementById('cjCanvas');
       var cjTruck = document.getElementById('cjTruck');
-      var cjTruckCompetitor = document.getElementById('cjTruckCompetitor');
+      var cjCoin = document.getElementById('cjCoin');
       var cjPlaque = document.getElementById('cjPlaque');
       if (cjCanvas && cjTruck && cjPlaque) {
         var CJ_WAYPOINTS = ['12.5%', '37.5%', '62.5%', '87.5%'];
-        // v3.8.ahp — Competitor now travels WESTBOUND in the LOWER lane,
-        // opposite direction from SRL. Positions decrease (right→left) as
-        // SRL's eastbound positions increase, so the two pass each other
-        // roughly mid-cycle. Genuine two-way-traffic register. §5 still
-        // preserved — competitor remains unnamed/un-marked.
-        var CJ_COMPETITOR_POS = ['90%', '70%', '45%', '20%'];
+        // v3.8.ahq — Gold $ coin travels WESTBOUND in the LOWER lane,
+        // representing Quick Pay returning to the carrier as SRL freight
+        // (eastbound, upper lane) progresses through the tier journey.
+        // Positions decrease as SRL's increase — the two pass each other
+        // roughly mid-cycle, telling the "freight out / cash back" story.
+        var CJ_COIN_POS = ['90%', '70%', '45%', '20%'];
         var CJ_SEGMENT_MS = 8000;        // ~8s per segment × 3 segments = 24s Apply→Platinum
         var CJ_HOLD_MS = 4000;           // hold at Platinum while plaque stamps
         var CJ_RESET_PAUSE_MS = 900;     // brief beat before snapping back to Apply
@@ -1006,26 +1026,26 @@
           cjCards.forEach(function (c, i) { c.classList.toggle('is-active', i === idx); });
           var axis = cjAxis();
           cjTruck.style[axis] = CJ_WAYPOINTS[idx];
-          if (cjTruckCompetitor) cjTruckCompetitor.style[axis] = CJ_COMPETITOR_POS[idx];
+          if (cjCoin) cjCoin.style[axis] = CJ_COIN_POS[idx];
           cjPlaque.classList.toggle('is-stamped', idx === 3 && stampPlaque === true);
         }
 
         function cjClearTimer() { if (cjTimer) { clearTimeout(cjTimer); cjTimer = null; } }
 
-        // v3.8.ahp — instant snap on reset (no animated transition during
-        // the Platinum→Apply teleport). Without this, both trucks would
+        // Instant snap on reset (no animated transition during the
+        // Platinum→Apply teleport). Without this, both vehicles would
         // visibly drive in reverse for 1.8s during the rewind. Add
-        // `.is-resetting` class to disable transition, snap position via
-        // setPhase, then remove the class on the next animation frame so
-        // the next forward motion animates normally.
+        // `.is-resetting` class to disable transition, snap position
+        // via setPhase, then remove the class on the next animation
+        // frame so the next forward motion animates normally.
         function cjSnapReset() {
           cjTruck.classList.add('is-resetting');
-          if (cjTruckCompetitor) cjTruckCompetitor.classList.add('is-resetting');
+          if (cjCoin) cjCoin.classList.add('is-resetting');
           cjSetPhase(0, false);
           requestAnimationFrame(function () {
             requestAnimationFrame(function () {
               cjTruck.classList.remove('is-resetting');
-              if (cjTruckCompetitor) cjTruckCompetitor.classList.remove('is-resetting');
+              if (cjCoin) cjCoin.classList.remove('is-resetting');
             });
           });
         }
