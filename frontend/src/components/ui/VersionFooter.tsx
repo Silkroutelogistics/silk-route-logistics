@@ -7112,7 +7112,13 @@
 //              bottom (addresses "not gold" concern). Replaces the
 //              v3.8.ahr metaphor of money rolling backward on the
 //              highway with a stronger "earnings building" narrative.
-export const SRL_VERSION = "3.8.aht";
+// v3.8.ahu   — Caravan Journey readability bump: truck container
+//              126×40→168×60 (+33% width, +50% height); lane height
+//              150→200 to maintain dash clearance; SRL wordmark
+//              font-size 6→9 + brass→navy for max contrast on cream
+//              trailer; trailer coin radius 2.6→3.4 and cy 14→13 to
+//              clear larger SRL text below. Mobile truck 96×32→130×46.
+export const SRL_VERSION = "3.8.ahu";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

@@ -539,24 +539,27 @@
                   <circle cx="108" cy="34" r="1.4" fill="#C5A572"/>
                 </g>
                 <!-- Trailer coins (outside flip group → visual coords).
-                     6 coins in single row at y=14 (upper half of trailer
-                     interior y=6-28). Tier-pegged visibility classes
-                     `.cj-loaded-N` toggle cumulative opacity. -->
+                     v3.8.ahu: coin radius 2.6→3.4 + cy 14→13 to clear
+                     the larger SRL text below. 6 coins in single row,
+                     3 tier groups × 2 coins, cumulative reveal via
+                     `.cj-loaded-N` class chain. -->
                 <g class="cj-load-tier-1">
-                  <circle cx="47" cy="14" r="2.6" fill="#DAC39C" stroke="#8B6A1E" stroke-width="0.4"/>
-                  <circle cx="87" cy="14" r="2.6" fill="#DAC39C" stroke="#8B6A1E" stroke-width="0.4"/>
+                  <circle cx="46" cy="13" r="3.4" fill="#DAC39C" stroke="#8B6A1E" stroke-width="0.5"/>
+                  <circle cx="88" cy="13" r="3.4" fill="#DAC39C" stroke="#8B6A1E" stroke-width="0.5"/>
                 </g>
                 <g class="cj-load-tier-2">
-                  <circle cx="55" cy="14" r="2.6" fill="#C5A572" stroke="#8B6A1E" stroke-width="0.4"/>
-                  <circle cx="79" cy="14" r="2.6" fill="#C5A572" stroke="#8B6A1E" stroke-width="0.4"/>
+                  <circle cx="55" cy="13" r="3.4" fill="#C5A572" stroke="#8B6A1E" stroke-width="0.5"/>
+                  <circle cx="79" cy="13" r="3.4" fill="#C5A572" stroke="#8B6A1E" stroke-width="0.5"/>
                 </g>
                 <g class="cj-load-tier-3">
-                  <circle cx="63" cy="14" r="2.6" fill="#BA7517" stroke="#8B6A1E" stroke-width="0.4"/>
-                  <circle cx="71" cy="14" r="2.6" fill="#BA7517" stroke="#8B6A1E" stroke-width="0.4"/>
+                  <circle cx="64" cy="13" r="3.4" fill="#BA7517" stroke="#8B6A1E" stroke-width="0.5"/>
+                  <circle cx="70" cy="13" r="3.4" fill="#BA7517" stroke="#8B6A1E" stroke-width="0.5"/>
                 </g>
-                <!-- SRL placard at trailer bottom — small brass tag,
-                     left-to-right readable, not mirrored. -->
-                <text x="67" y="25" text-anchor="middle" font-family="'Playfair Display',Georgia,serif" font-weight="700" font-size="6" fill="#BA7517" letter-spacing="1.2">SRL</text>
+                <!-- SRL wordmark — v3.8.ahu: enlarged from size 6 brass
+                     (illegible at deployed scale) to size 9 navy for
+                     max contrast on cream trailer. Sits at trailer
+                     bottom below the coin row. -->
+                <text x="67" y="25" text-anchor="middle" font-family="'Playfair Display',Georgia,serif" font-weight="700" font-size="9" fill="#0A2540" letter-spacing="2">SRL</text>
               </svg>
             </div>
           </div>

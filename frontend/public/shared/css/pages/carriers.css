@@ -1585,17 +1585,17 @@
     }
 
     /* ----- Navy highway lane -----
-       Vertical clearance map (lane height 150px):
-         · upper dash:  SVG y=42 → lane y≈57
-         · lower dash:  SVG y=78 → lane y≈106
-         · upper lane:  0..57 (SRL truck rides here, top:9 height:40)
-         · lower lane:  106..150 (gold coin rides here, top:111 height:34)
-       Truck bottom (49) < upper dash (57) → 8px clearance.
-       Lower dash (106) < coin top (111) → 5px clearance. */
+       v3.8.ahu — lane height 150→200 to accommodate enlarged truck.
+       Vertical clearance map (lane height 200px):
+         · upper dash:  SVG y=42 → lane y≈76
+         · lower dash:  SVG y=78 → lane y≈142
+         · upper lane:  0..76 (SRL truck rides here, top:8 height:60)
+         · lower lane:  142..200 (empty — coins accumulate IN the trailer)
+       Truck bottom (68) < upper dash (76) → 8px clearance preserved. */
     .cj-lane {
       position: relative;
       width: 100%;
-      height: 150px;
+      height: 200px;
       border-radius: 12px;
       background: linear-gradient(180deg, #0A2540 0%, #061629 100%);
       border: 1px solid rgba(186,117,23,0.35);
@@ -1631,17 +1631,20 @@
       to   { stroke-dashoffset: 0;  }
     }
 
-    /* ----- SRL truck (eastbound, upper lane) ----- */
+    /* ----- SRL truck (eastbound, upper lane) -----
+       v3.8.ahu — scaled 126×40 → 168×60 (+33% width, +50% height,
+       preserves viewBox 140×50 aspect 2.8:1). Bigger on-stage presence
+       so SRL wordmark + trailer coins are readable at deployed scale. */
     .cj-truck {
       position: absolute;
-      top: 9px;
+      top: 8px;
       left: 12.5%;
-      width: 126px;
-      height: 40px;
+      width: 168px;
+      height: 60px;
       transform: translateX(-50%);
       transition: left 1.8s cubic-bezier(0.45, 0.05, 0.15, 1);
       z-index: 5;
-      filter: drop-shadow(0 4px 6px rgba(0,0,0,0.35));
+      filter: drop-shadow(0 5px 7px rgba(0,0,0,0.35));
     }
     .cj-truck svg { width: 100%; height: 100%; display: block; }
 
@@ -1902,7 +1905,7 @@
         transform: translate(-50%, -50%) rotate(90deg);
       }
       .cj-truck {
-        top: 13%; left: 50%; width: 96px; height: 32px;
+        top: 13%; left: 50%; width: 130px; height: 46px;
         transform: translate(-50%, -50%) rotate(90deg);
         transition: top 1.8s cubic-bezier(0.45, 0.05, 0.15, 1);
       }
