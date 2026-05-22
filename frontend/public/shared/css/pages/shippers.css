@@ -1431,7 +1431,11 @@
       align-items: center;
       justify-content: center;
       color: var(--gold-dark, #BA7517);
-      opacity: 0.32;
+      /* v3.8.aho: 0.32 → 0.55. Previous opacity rendered the icons as
+         pale wash against cream; brass-dark stroke now carries enough
+         weight to register as a section ornament without dominating
+         the H3 + body copy below it. */
+      opacity: 0.55;
       margin-bottom: 8px;
     }
     .system-front-icon-lg {

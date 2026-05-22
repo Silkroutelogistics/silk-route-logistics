@@ -6724,7 +6724,7 @@
 //              dashed-lane flow (2.4s→1.6s), larger SRL truck
 //              (112×38→132×46), lane height 240→260px for clearance.
 //              §5 prohibited claims preserved (no competitor naming).
-export const SRL_VERSION = "3.8.ahn";
+export const SRL_VERSION = "3.8.aho";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
