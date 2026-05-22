@@ -7270,16 +7270,28 @@
 //              canonical venue language). Closes the §1 §3.13 legal-
 //              identity verification class.
 //              (4) Terms footer "Last updated" March 2026 → May 2026
-//              + new sentence noting that the standalone Broker-
-//              Carrier Agreement and Caravan Quick Pay Agreement v2
-//              (per §14 + §16 first-carrier blockers #1 + #2) govern
-//              over this onboarding click-through where they conflict.
-//              Reading the §14 attorney-review note: this is honest-
-//              claims alignment of the click-through with already-
-//              published §8 tier structure, NOT a substantive policy
-//              change. Standalone BCA + QP Agreement still require
-//              MI commercial attorney review before first carrier
-//              signs per §16.
+//              + new future-tense sentence (Path γ per Wasi
+//              ratification 2026-05-22) noting that "When the
+//              standalone Broker-Carrier Agreement and Caravan Quick
+//              Pay Agreement v2 are executed between Broker and
+//              Carrier, those agreements will govern over this
+//              onboarding click-through where they conflict." Initial
+//              Sprint B draft used present-tense "govern over... where
+//              they conflict" which would have ceded precedence to
+//              not-yet-existent documents (§14 BCA "Draft not yet
+//              created as standalone" + §14 QP v2 "REQUIRES MI
+//              commercial attorney review before first carrier
+//              signs"). Wasi Phase D verbatim audit caught this pre-
+//              commit; Path γ rewrite makes precedence trigger
+//              CONDITIONAL on actual execution between Broker and
+//              this specific Carrier — not a blanket forward
+//              reference to documents in finalization. §16 first-
+//              carrier blockers #1 (BCA draft-as-standalone) and #2
+//              (Caravan QP Agreement v2 Michigan commercial attorney
+//              review, $400–$800 budget) REMAIN OPEN. Path γ
+//              language makes the click-through honest about pending
+//              standalones but does NOT retire either blocker. Both
+//              still required before first carrier signs.
 //              (5) Success screen "Compass engine" lowercase e →
 //              "Compass Engine" capital E (per §A.5 canonical proper-
 //              noun). Bullet body expanded to surface the 35-point

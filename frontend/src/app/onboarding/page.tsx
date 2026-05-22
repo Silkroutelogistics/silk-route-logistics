@@ -310,8 +310,8 @@ export default function OnboardingPage() {
               <div className="flex gap-4">
                 <div className="w-8 h-8 bg-green-700 text-white rounded-full flex items-center justify-center text-sm font-bold shrink-0">1</div>
                 <div>
-                  <p className="font-semibold text-sm">Compliance Verification</p>
-                  <p className="text-slate-500 text-sm">Our Compass engine is already verifying your FMCSA authority, insurance, safety record, and OFAC status.</p>
+                  <p className="font-semibold text-sm">Compass Engine Verification</p>
+                  <p className="text-slate-500 text-sm">The Compass Engine is already running its 35-point check against your FMCSA authority, insurance amounts, safety record, authority age, and OFAC status.</p>
                 </div>
               </div>
               <div className="flex gap-4">
@@ -330,7 +330,7 @@ export default function OnboardingPage() {
               </div>
             </div>
             <div className="mt-6 p-4 bg-amber-50 border border-amber-200 rounded-lg text-sm">
-              <p className="text-amber-800"><strong>Typical review time:</strong> 1–2 business days. Most applications are reviewed within 24 hours.</p>
+              <p className="text-amber-800"><strong>Typical review time:</strong> most carriers cleared within a few business days. Authority age, insurance verification, and document review drive the timeline.</p>
             </div>
           </div>
 
@@ -818,7 +818,8 @@ export default function OnboardingPage() {
                 <p className="font-semibold text-slate-800 mt-3">5. Documentation & Payment</p>
                 <ul className="list-disc ml-5 space-y-1">
                   <li>Carrier shall submit all required documentation, including Bill of Lading (BOL), Proof of Delivery (POD), and lumper receipts, within 24 hours of delivery.</li>
-                  <li>Payment terms are Net 30 days from receipt of complete and accurate documentation unless otherwise agreed in writing.</li>
+                  <li>Standard payment terms are tier-graduated per the Caravan Partner Program: Silver Net-30, Gold Net-21, Platinum Net-14, from receipt of complete and accurate documentation unless otherwise agreed in writing.</li>
+                  <li>Optional per-load Quick Pay is available at published tier fees (Silver 3%, Gold 2%, Platinum 1% on the 7-day cadence; universal +2% premium for same-day disbursement) without requiring a factoring contract.</li>
                   <li>Carrier shall submit a completed W-9 form prior to receiving any payment.</li>
                   <li>Rates shall be as agreed upon in each individual rate confirmation/load tender.</li>
                 </ul>
@@ -831,10 +832,11 @@ export default function OnboardingPage() {
                   <li>Carrier shall indemnify and hold Broker harmless from any claims, damages, or liabilities arising from Carrier&apos;s performance or failure to perform under this Agreement.</li>
                 </ul>
 
-                <p className="font-semibold text-slate-800 mt-3">7. Performance Tracking & Tier Program</p>
+                <p className="font-semibold text-slate-800 mt-3">7. Caravan Partner Program & Performance Tracking</p>
                 <ul className="list-disc ml-5 space-y-1">
-                  <li>Carrier acknowledges that Broker tracks performance metrics including on-time pickup/delivery, communication responsiveness, claims ratio, and documentation timeliness.</li>
-                  <li>Performance metrics determine Carrier&apos;s tier placement (Guest, Bronze, Silver, Gold, Platinum), which affects bonus eligibility and load access priority.</li>
+                  <li>Carrier acknowledges that Broker tracks performance metrics through the Compass Engine, including on-time pickup/delivery, communication responsiveness, claims ratio, documentation timeliness, GPS compliance, and acceptance rate.</li>
+                  <li>Performance metrics, fleet size, and Compass Score together determine Carrier&apos;s tier placement (Silver, Gold, Platinum) within the Caravan Partner Program, which affects payment cadence, Quick Pay fees, auto-approve limits, detention pay, and load access priority.</li>
+                  <li>Tier advancement is performance-based via the M1&ndash;M6 milestone framework published on the Carriers page (silkroutelogistics.ai/carriers): M1 first Caravan load activates Silver, M4 (180 days, 75+ loads, 97%+ on-time) advances to Gold, M5 (360 days, 150+ loads, 98%+ on-time, 3 active lanes) advances to Platinum, and M6 (720 days, 300+ loads) locks 1% Quick Pay permanently.</li>
                   <li>Broker reserves the right to modify tier criteria and bonus structures with 30 days&apos; notice.</li>
                 </ul>
 
@@ -854,7 +856,7 @@ export default function OnboardingPage() {
                 <p className="font-semibold text-slate-800 mt-3">10. Governing Law & Dispute Resolution</p>
                 <ul className="list-disc ml-5 space-y-1">
                   <li>This Agreement shall be governed by federal transportation law (49 U.S.C. § 14101(b)) and, to the extent not preempted, the laws of the State of Michigan.</li>
-                  <li>Any dispute arising under this Agreement shall first be subject to mediation. If mediation fails, disputes shall be resolved by binding arbitration in Kalamazoo, Michigan.</li>
+                  <li>Any dispute arising under this Agreement shall first be subject to mediation. If mediation fails, disputes shall be resolved by binding arbitration with venue in Kalamazoo County, Michigan.</li>
                   <li>The prevailing party in any dispute shall be entitled to recover reasonable attorney&apos;s fees and costs.</li>
                 </ul>
 
@@ -865,7 +867,7 @@ export default function OnboardingPage() {
                   <li>Carrier consents to automated FMCSA compliance monitoring, safety scoring, and OFAC screening.</li>
                 </ul>
 
-                <p className="text-xs text-slate-700 mt-4 italic">Last updated: March 2026. Silk Route Logistics Inc. reserves the right to update these terms with 30 days&apos; notice to registered carriers.</p>
+                <p className="text-xs text-slate-700 mt-4 italic">Last updated: May 2026. Silk Route Logistics Inc. reserves the right to update these terms with 30 days&apos; notice to registered carriers. When the standalone Broker-Carrier Agreement and Caravan Quick Pay Agreement v2 are executed between Broker and Carrier, those agreements will govern over this onboarding click-through where they conflict.</p>
               </div>
               <label className="flex items-center gap-3 cursor-pointer">
                 <input type="checkbox" checked={form.agreeTerms}
