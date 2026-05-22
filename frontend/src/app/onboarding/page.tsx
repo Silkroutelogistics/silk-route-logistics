@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Check, ChevronRight, ChevronLeft, Upload, CheckCircle2, X, FileText, Image as ImageIcon, MapPin } from "lucide-react";
+import { Check, ChevronRight, ChevronLeft, Upload, CheckCircle2, X, FileText, Image as ImageIcon, MapPin, Compass } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const steps = ["Company Info", "Equipment & Regions", "Documents", "Terms", "Review"];
@@ -390,6 +390,103 @@ export default function OnboardingPage() {
       </div>
 
       <div className="max-w-3xl mx-auto px-6 pb-12">
+        {/* Sprint C — Step 0 brand-pillar surfacing cards. Rendered only on
+            step === 0 (entry conversion surface) — once carrier progresses
+            past Company Info, the form panel takes over. Card A=cream-2
+            Welcome, Card B=white What You'll Need, Card C=navy Caravan
+            Partner Program at-a-glance. §20.8 4-pillar floor: Card A
+            surfaces Silk Road + Brand Identity, Card B surfaces Tech via
+            operational checklist, Card C surfaces AI (Compass Engine) +
+            Silk Road (Caravan Partner Program + M1-M6). All claims §4
+            honest-claims whitelist; no §5 prohibited content; no Lens 1.5
+            architectural-reveal-banned internals. */}
+        {step === 0 && (
+          <>
+            {/* Card A — Welcome (cream-2 #F5EEE0 + gold-dark top hairline) */}
+            <div className="bg-[#F5EEE0] border-t-2 border-[#BA7517] rounded-2xl shadow-sm border-l border-r border-b border-[#EFE6D3] p-6 mb-5">
+              <p className="text-xs uppercase tracking-[0.2em] font-semibold text-[#BA7517] mb-2">Caravan Partner Program</p>
+              <h2 className="font-serif italic font-semibold text-2xl text-[#0A2540] mb-3">Welcome to the Caravan.</h2>
+              <p className="text-sm text-[#3A4A5F] leading-relaxed">
+                Apply to join Silk Route Logistics as a Caravan Partner. Tier-graduated Quick Pay, performance-based advancement via M1&ndash;M6 milestones, every load run through Compass Engine vetting.
+              </p>
+            </div>
+
+            {/* Card B — What you'll need (white) */}
+            <div className="bg-white rounded-2xl shadow-sm border p-6 mb-5">
+              <h3 className="text-lg font-semibold text-[#0A2540] mb-4">What you&apos;ll need</h3>
+              <div className="grid sm:grid-cols-2 gap-x-6 gap-y-3 mb-4">
+                {[
+                  "DOT# or MC# (auto-populates the rest from FMCSA)",
+                  "EIN (9-digit Federal Tax ID)",
+                  "Insurance: Auto Liability $1M+ / Cargo $100K+ / GL $1M+",
+                  "W-9 form (PDF/JPEG/PNG, max 10MB each)",
+                  "Operating Authority letter (FMCSA)",
+                  "Voided check (for Quick Pay direct deposit setup)",
+                ].map((item, i) => (
+                  <div key={i} className="flex items-start gap-2">
+                    <Check className="w-4 h-4 text-[#2F7A4F] mt-0.5 shrink-0" />
+                    <span className="text-sm text-[#3A4A5F]">{item}</span>
+                  </div>
+                ))}
+              </div>
+              <p className="text-xs text-[#6B7685] italic">
+                Most company-info fields auto-populate from FMCSA when you enter your DOT number. The other documents upload on Step 3.
+              </p>
+            </div>
+
+            {/* Card C — Caravan Partner Program at a glance (navy #0A2540) */}
+            <div className="bg-[#0A2540] text-white rounded-2xl shadow-md p-6 mb-5">
+              <h3 className="font-serif italic font-semibold text-xl mb-4">The Caravan Partner Program at a glance</h3>
+              <div className="grid sm:grid-cols-3 gap-3 mb-5">
+                {/* Silver — Day 1 */}
+                <div className="bg-[#15365A] rounded-lg p-4 border border-[#234A73]">
+                  <p className="text-xs uppercase tracking-wider text-[#C9D2DE] mb-3">Silver &mdash; Day 1</p>
+                  <ul className="space-y-1.5 text-sm">
+                    <li className="flex justify-between gap-2"><span className="text-[#C9D2DE]">Standard pay</span><span>Net-30</span></li>
+                    <li className="flex justify-between gap-2"><span className="text-[#C9D2DE]">7-day QP fee</span><span className="text-[#BA7517] font-semibold">3%</span></li>
+                    <li className="flex justify-between gap-2"><span className="text-[#C9D2DE]">Auto-approve</span><span>$2K/load</span></li>
+                    <li className="flex justify-between gap-2"><span className="text-[#C9D2DE]">Detention</span><span>$50/hr</span></li>
+                    <li className="flex justify-between gap-2"><span className="text-[#C9D2DE]">Safety bonus</span><span className="text-[#C9D2DE]">&mdash;</span></li>
+                  </ul>
+                </div>
+                {/* Gold — M4 */}
+                <div className="bg-[#15365A] rounded-lg p-4 border border-[#BA7517]/40">
+                  <p className="text-xs uppercase tracking-wider text-[#BA7517] mb-3">Gold &mdash; M4</p>
+                  <ul className="space-y-1.5 text-sm">
+                    <li className="flex justify-between gap-2"><span className="text-[#C9D2DE]">Standard pay</span><span>Net-21</span></li>
+                    <li className="flex justify-between gap-2"><span className="text-[#C9D2DE]">7-day QP fee</span><span className="text-[#BA7517] font-semibold">2%</span></li>
+                    <li className="flex justify-between gap-2"><span className="text-[#C9D2DE]">Auto-approve</span><span>$4K/load</span></li>
+                    <li className="flex justify-between gap-2"><span className="text-[#C9D2DE]">Detention</span><span>$65/hr</span></li>
+                    <li className="flex justify-between gap-2"><span className="text-[#C9D2DE]">Safety bonus</span><span>$450/qtr</span></li>
+                  </ul>
+                </div>
+                {/* Platinum — M5 */}
+                <div className="bg-[#15365A] rounded-lg p-4 border border-[#BA7517]/40">
+                  <p className="text-xs uppercase tracking-wider text-[#BA7517] mb-3">Platinum &mdash; M5</p>
+                  <ul className="space-y-1.5 text-sm">
+                    <li className="flex justify-between gap-2"><span className="text-[#C9D2DE]">Standard pay</span><span>Net-14</span></li>
+                    <li className="flex justify-between gap-2"><span className="text-[#C9D2DE]">7-day QP fee</span><span className="text-[#BA7517] font-semibold">1%</span></li>
+                    <li className="flex justify-between gap-2"><span className="text-[#C9D2DE]">Auto-approve</span><span>$6K/load</span></li>
+                    <li className="flex justify-between gap-2"><span className="text-[#C9D2DE]">Detention</span><span>$75/hr</span></li>
+                    <li className="flex justify-between gap-2"><span className="text-[#C9D2DE]">Safety bonus</span><span>$900/qtr</span></li>
+                  </ul>
+                </div>
+              </div>
+              <div className="space-y-3 pt-4 border-t border-[#234A73]">
+                <p className="text-sm text-[#C9D2DE] leading-relaxed">
+                  <span className="font-semibold text-white">Performance-based advancement.</span> Day 1 you&apos;re Silver. Earn into Gold (M4: 180 days / 75+ loads / 97%+ on-time). Earn into Platinum (M5: 360 days / 150+ loads / 98%+ on-time / 3 active lanes). M6 (720 days / 300+ loads) locks 1% Quick Pay permanently.
+                </p>
+                <div className="flex items-start gap-2">
+                  <Compass className="w-4 h-4 text-[#BA7517] mt-0.5 shrink-0" />
+                  <p className="text-sm text-[#C9D2DE] leading-relaxed">
+                    <span className="font-semibold text-white">Compass Engine vetting.</span> Every load run through a 35-point check against FMCSA authority, insurance amounts, safety record, authority age, OFAC, and 7-factor performance metrics.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </>
+        )}
+
         <div className="bg-white rounded-2xl shadow-sm border p-8">
           {error && <div className="mb-6 p-3 bg-red-50 text-red-700 rounded-lg text-sm">{error}</div>}
 

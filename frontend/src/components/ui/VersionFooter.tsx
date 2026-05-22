@@ -7321,7 +7321,129 @@
 //              /carriers. Also dropped 9 orphan .coverage* CSS blocks
 //              + 2 media-query references. Letter coordination:
 //              Authority-age sprint claimed aid + aie; advanced to aif.
-export const SRL_VERSION = "3.8.aif";
+//              [Coordination correction: git blame shows aid was
+//              Carrier onboarding Sprint A and aie was Carrier
+//              onboarding Sprint B, NOT Authority-age epic. The aif
+//              commit author's mental-model misattribution does not
+//              affect actual content, but for accurate cross-sprint
+//              audit trails: aid + aie were the Carrier onboarding
+//              epic's Sprints A + B; Authority-age epic still
+//              claiming letters at its Phase A per Item 182 policy.]
+// v3.8.aig   — Carrier onboarding Sprint C: Step 0 brand-pillar
+//              surfacing. Three cards stacked above the existing
+//              white form panel, conditional on step === 0 (entry
+//              conversion surface only; once carrier progresses past
+//              Company Info the form panel takes over). Closes the
+//              §20.8 4-pillar floor gap — pre-Sprint-C Step 0
+//              surfaced 1 of 4 pillars (Brand Identity chrome from
+//              Sprint A v3.8.aid); post-Sprint-C all 4 pillars surface
+//              before the first DOT digit is typed.
+//
+//              Card A — WELCOME (cream-2 #F5EEE0 + gold-dark #BA7517
+//              top hairline). Eyebrow "CARAVAN PARTNER PROGRAM" gold-
+//              dark uppercase tracking-[0.2em]. H2 "Welcome to the
+//              Caravan." Playfair italic semibold navy #0A2540.
+//              Subtitle: operational-register sentence introducing
+//              tier-graduated Quick Pay + M1-M6 milestones + Compass
+//              Engine vetting in one breath. Surfaces Silk Road
+//              heritage + Brand Identity pillars.
+//
+//              Card B — WHAT YOU'LL NEED (white bg). Six-item 2-col
+//              checklist with Lucide Check icon (gold-dark Wasi D6
+//              boundary respected — no icon-per-tier, no icon-per-
+//              pillar, type-forward register): DOT#/MC# (auto-
+//              populates FMCSA), EIN (9-digit), Insurance ($1M auto /
+//              $100K cargo / $1M GL per §14 minimums), W-9 form,
+//              Operating Authority letter (FMCSA), voided check
+//              (Quick Pay direct deposit). Closing italic line
+//              explains auto-populate from FMCSA + Step 3 document
+//              upload. Surfaces Tech pillar via operational
+//              concreteness.
+//
+//              Card C — CARAVAN PARTNER PROGRAM AT A GLANCE (navy
+//              #0A2540 outer + #15365A navy-700 inner tier panels
+//              per §2.1 canonical navy scale). H3 Playfair italic
+//              semibold. 3-column grid: Silver-Day-1 / Gold-M4 /
+//              Platinum-M5. Per-column rows: Standard pay (Net-
+//              30/21/14), 7-day QP fee (3%/2%/1% gold-dark emphasis),
+//              Auto-approve ($2K/$4K/$6K per load), Detention
+//              ($50/$65/$75 per hr), Safety bonus (em-dash, $450/qtr,
+//              $900/qtr). All §4 honest-claims whitelist values per
+//              §8 v3 QP Pricing canonical. Gold + Platinum tier
+//              panels carry gold-dark/40 border emphasis (Silver
+//              stays neutral navy-600). Below tier grid:
+//              "Performance-based advancement" paragraph with full
+//              M1-M6 criteria mirroring Sprint B Terms §7 language
+//              (M4 Gold 180d/75+/97%+, M5 Platinum 360d/150+/98%+/
+//              3 lanes, M6 720d/300+ locks 1% QP permanently).
+//              Compass Engine line with Lucide Compass icon gold-
+//              dark — 35-point check against FMCSA authority,
+//              insurance amounts, safety record, authority age (Item
+//              182 epic signal), OFAC, 7-factor performance metrics.
+//              Surfaces AI pillar + Silk Road pillar (Caravan +
+//              Compass + M1-M6 program lineage).
+//
+//              Color discipline: all 3 cards use explicit hex tokens
+//              (bg-[#F5EEE0], bg-[#0A2540], bg-[#15365A], text-
+//              [#BA7517], text-[#C9D2DE], text-[#3A4A5F]) NOT Tailwind
+//              theme tokens (no bg-navy, no bg-gold). This bypasses
+//              globals.css:113-180 light-mode global override class
+//              chain that transforms .text-white / .bg-white\\/5 /
+//              .bg-navy / .text-slate-{400,500} — identical to chrome-
+//              bar treatment from Sprint A. text-white retained where
+//              it shipped working in Sprint A chrome (light-mode
+//              global override empirically does NOT fire on this
+//              surface — confirmed via Wasi visual verification of
+//              v3.8.aid chrome in both light + dark mode).
+//
+//              No /carriers external link (Wasi D4 ratification —
+//              Step 0's job is to get the DOT entered; no exit ramps).
+//              Card C delivers the 30-second pitch standalone.
+//
+//              Icons added: Compass to Lucide imports for Card C
+//              Compass Engine line. Check already imported (Card B
+//              checklist + step indicator).
+//
+//              Mobile: 3-col tier grid reflows to 1-col <768px
+//              standard Tailwind responsive. Per Wasi D5 — do NOT
+//              pre-solve scroll-wall; flag at visual gate if Card C
+//              vertical stretch buries the DOT input. If problem
+//              fires, condense Card C tier detail to Net + QP only
+//              on mobile (drop detention + safety rows) in follow-up
+//              hotfix.
+//
+//              Pattern 6 sub-pattern 6 (concurrent-sprint coordination)
+//              fire #3 caught in this arc: aif commit (920b12b)
+//              bundled my unstaged aie WIP same way aic bundled aib.
+//              Option α discipline (letter-at-commit-time) caught the
+//              correct letter for Sprint C (aig) via fresh git log
+//              read at commit moment instead of stale Phase A
+//              assumption. Banking methodology refinement: even
+//              Option α doesn't fully prevent sub-pattern-6 fires
+//              when parallel session runs `git add -A` and captures
+//              unstaged WIP. Stronger discipline would be "stage
+//              VersionFooter edits immediately when made, not at
+//              commit time" — workflow-coordination not methodology.
+//              Quarterly review candidate for §19.
+//
+//              §16 first-carrier blockers #1 (BCA standalone) and #2
+//              (Caravan QP Agreement v2 Michigan commercial attorney
+//              review) REMAIN OPEN. Sprint C surfaces the Caravan
+//              Partner Program at the gate but does NOT retire either
+//              blocker — both still required before first carrier
+//              signs. Path γ footer language from Sprint B v3.8.aie
+//              still governs precedence when standalones execute
+//              between Broker and Carrier.
+//
+//              Item 177 sub-pattern 8 visual-verification gate
+//              REQUIRED post-deploy per Wasi instruction — both-modes
+//              (light + dark) human-eye walkthrough of all 3 cards;
+//              specifically confirm navy Card C cream-text contrast
+//              holds in BOTH modes. tsc + next build green is
+//              necessary but NOT sufficient. Halt after commit for
+//              push greenlight, halt after push for the both-modes
+//              visual gate.
+export const SRL_VERSION = "3.8.aig";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
