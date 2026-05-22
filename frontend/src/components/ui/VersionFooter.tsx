@@ -7141,7 +7141,16 @@
 //              top-right that pulses on the active phase — pattern
 //              lifted verbatim from /shippers `.ops-tab-dot`.
 //              `<button>` elements → `<div>` for semantic accuracy.
-export const SRL_VERSION = "3.8.ahx";
+// v3.8.ahy   — Tier cards fact fix + drop redundant milestone strip.
+//              Platinum subtitle "M5 Core" → "M5" with "3 active
+//              lanes" requirement added per CLAUDE.md §10 M5 spec
+//              (M5 is Platinum entry; M6 is Core/permanent 1% lock).
+//              Milestone Progression dots strip (M1-M6) removed —
+//              redundant with the Caravan Journey animation at top
+//              of /carriers and carried two label errors (M5 wrongly
+//              labeled "Core — Platinum", M6 labeled invented term
+//              "Founding" not in §10).
+export const SRL_VERSION = "3.8.ahy";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
