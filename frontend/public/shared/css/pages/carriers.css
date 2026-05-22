@@ -1756,8 +1756,12 @@
 
     .cj-truck-competitor {
       position: absolute;
-      top: 30px;
-      left: 0%;
+      /* v3.8.ahp — moved to LOWER lane below the dashed centerline so
+         the road reads as genuine two-way traffic. Lower-dash sits at
+         lane y≈153px; competitor top:160 spans y=160-198 (below dash,
+         above cartouches at y=218). 20px clearance to cartouche. */
+      top: 160px;
+      left: 90%;
       width: 108px;
       height: 38px;
       transform: translateX(-50%);
@@ -1767,6 +1771,14 @@
       filter: drop-shadow(0 3px 4px rgba(10,37,64,0.18));
     }
     .cj-truck-competitor svg { width: 100%; height: 100%; display: block; }
+
+    /* v3.8.ahp — disables transition during the Platinum→Apply teleport
+       so trucks do not visibly drive in reverse during reset. Class is
+       added before snap and removed on next rAF (see cjSnapReset()). */
+    .cj-truck.is-resetting,
+    .cj-truck-competitor.is-resetting {
+      transition: none !important;
+    }
 
     /* ----- Status panel (cross-fade per phase) ----- */
     .cj-panel {

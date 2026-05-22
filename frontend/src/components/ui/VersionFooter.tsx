@@ -6834,7 +6834,17 @@
 //              dashed-lane flow (2.4s→1.6s), larger SRL truck
 //              (112×38→132×46), lane height 240→260px for clearance.
 //              §5 prohibited claims preserved (no competitor naming).
-export const SRL_VERSION = "3.8.ahm";
+// v3.8.ahp   — Caravan Journey direction fixes: (1) SRL truck silhouette
+//              flipped to face east (direction of travel) via internal
+//              <g scale(-1,1) translate(-140,0)> with SRL wordmark
+//              rendered in separate non-mirrored layer; (2) competitor
+//              moved to lower lane (top:30→160) traveling westbound
+//              (CJ_COMPETITOR_POS reversed to ['90%','70%','45%','20%'])
+//              so road reads as genuine two-way traffic; (3) reset
+//              snap uses `.is-resetting` no-transition class so trucks
+//              never visually drive in reverse during the Platinum→
+//              Apply teleport.
+export const SRL_VERSION = "3.8.ahp";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
