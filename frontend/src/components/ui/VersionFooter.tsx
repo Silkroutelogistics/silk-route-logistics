@@ -6655,7 +6655,7 @@
 //                kickoff.
 //              - All other open items STATUS UNCHANGED per §3.3
 //                scope discipline
-export const SRL_VERSION = "3.8.ahk";
+export const SRL_VERSION = "3.8.ahm";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

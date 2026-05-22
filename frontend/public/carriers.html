@@ -455,202 +455,124 @@
          Compass Score / Loyalty) plus the unlock outcome (pay terms + QP rate).
          JS driver auto-cycles every 5.5s, IntersectionObserver-triggered,
          prefers-reduced-motion honored. ========== -->
+    <!-- v3.8.ahm — Caravan Journey, fresh build (Path A scope).
+         Dual gold-dark dashed lane with stroke-dashoffset flow animation;
+         4 brass marker cartouches (M0/M1—M3/M4/M5); navy Cascadia
+         tractor-trailer with cream "SRL" decal travels lane between
+         markers; QP LOCKED plaque bolts onto Platinum post during hold.
+         Single source of truth: the truck's currentPhase index, from
+         which tab + marker + panel + plaque all derive. Bidirectional
+         via tab clicks. Auto-loops Apply → Platinum in ~24s.
+         All values from CJ_CONFIG below. -->
     <section class="caravan-journey-section" aria-labelledby="journey-heading">
       <div class="container">
         <div class="section-header" style="max-width:720px;margin:0 auto 40px;text-align:center">
           <div class="section-label" style="color:#BA7517">The Journey</div>
           <h2 class="section-title" id="journey-heading" style="color:#0A2540">Your Caravan Journey</h2>
-          <p class="section-desc" style="color:#3A4A5F">Four mile markers. One Compass standard. The path from your first load to the deepest commitment. Earn your tier; fleet size does not decide it.</p>
+          <p class="section-desc" style="color:#3A4A5F">Four markers. One Compass standard. Earn your tier; fleet size does not decide it.</p>
         </div>
 
-        <div class="journey-canvas" id="journeyCanvas">
+        <div class="cj-canvas" id="cjCanvas">
 
-          <!-- Phase tabs -->
-          <div class="journey-tabs" aria-label="Caravan Partner Program phases">
-            <div class="journey-tab is-active" data-phase="0" role="status">
-              <span class="journey-tab-dot" aria-hidden="true"></span>
-              <span class="journey-tab-eyebrow">M0</span>
-              <span class="journey-tab-name">Apply</span>
-            </div>
-            <div class="journey-tab" data-phase="1" role="status">
-              <span class="journey-tab-dot" aria-hidden="true"></span>
-              <span class="journey-tab-eyebrow">M1 — M3</span>
-              <span class="journey-tab-name">Silver</span>
-            </div>
-            <div class="journey-tab" data-phase="2" role="status">
-              <span class="journey-tab-dot" aria-hidden="true"></span>
-              <span class="journey-tab-eyebrow">M4</span>
-              <span class="journey-tab-name">Gold</span>
-            </div>
-            <div class="journey-tab" data-phase="3" role="status">
-              <span class="journey-tab-dot" aria-hidden="true"></span>
-              <span class="journey-tab-eyebrow">M5 + M6</span>
-              <span class="journey-tab-name">Platinum</span>
-            </div>
+          <div class="cj-tabs" role="tablist" aria-label="Caravan Partner Program tiers">
+            <button class="cj-tab is-active" data-phase="0" role="tab" aria-selected="true" type="button">
+              <span class="cj-tab-eyebrow">M0</span><span class="cj-tab-name">Apply</span>
+            </button>
+            <button class="cj-tab" data-phase="1" role="tab" aria-selected="false" type="button">
+              <span class="cj-tab-eyebrow">M1 — M3</span><span class="cj-tab-name">Silver</span>
+            </button>
+            <button class="cj-tab" data-phase="2" role="tab" aria-selected="false" type="button">
+              <span class="cj-tab-eyebrow">M4</span><span class="cj-tab-name">Gold</span>
+            </button>
+            <button class="cj-tab" data-phase="3" role="tab" aria-selected="false" type="button">
+              <span class="cj-tab-eyebrow">M5</span><span class="cj-tab-name">Platinum</span>
+            </button>
           </div>
 
-          <!-- v3.8.ahj — Caravansary Trade Route (parchment map register).
-               Replaces v3.8.ahi Americana highway visual. Sepia-ink trail
-               winds left → right with 4 brass cartouche waypoints rising
-               in elevation (visualizes ascending tier). SRL compass-mark
-               traveler "navigates" between waypoints. M6 hangs as a navy
-               wax-seal medallion off the Platinum cartouche. -->
-          <div class="journey-trail" aria-hidden="true">
+          <div class="cj-lane" aria-hidden="true">
+            <span class="cj-route-label">Trade Route</span>
 
-            <!-- Heritage flourish: italic "Trade Route" label, no compass rose
-                 (v3.8.ahl — compass rose dropped, conflicted visually with the
-                 actual SRL brand compass mark elsewhere on the page). -->
-            <div class="trail-flourishes">
-              <span class="trail-route-label">Trade Route</span>
-            </div>
-
-            <!-- Parchment SVG: topographic contours + sepia trail path -->
-            <svg class="trail-svg" viewBox="0 0 1200 280" preserveAspectRatio="none">
-              <!-- Subtle topographic contour lines (decorative — caravan crosses terrain) -->
-              <g fill="none" stroke="rgba(186,117,23,0.10)" stroke-width="0.6">
-                <path d="M0 55 Q 300 75 600 65 T 1200 60"/>
-                <path d="M0 100 Q 300 125 600 115 T 1200 105"/>
-                <path d="M0 175 Q 300 195 600 190 T 1200 180"/>
-                <path d="M0 225 Q 300 245 600 240 T 1200 235"/>
-              </g>
-
-              <!-- Trail shadow (deep navy offset 2px down) -->
-              <path d="M 150 200 Q 280 175 450 140 Q 600 120 750 160 Q 880 180 1050 95"
-                    fill="none" stroke="rgba(10,37,64,0.10)" stroke-width="3.2"
-                    stroke-dasharray="11 8" stroke-linecap="round"
-                    transform="translate(0,2)"/>
-              <!-- Trail proper: sepia ink, dashed -->
-              <path d="M 150 200 Q 280 175 450 140 Q 600 120 750 160 Q 880 180 1050 95"
-                    fill="none" stroke="#8B6A1E" stroke-width="2.6"
-                    stroke-dasharray="11 8" stroke-linecap="round" opacity="0.72"/>
+            <svg class="cj-lane-svg" viewBox="0 0 1200 110" preserveAspectRatio="none">
+              <line class="cj-dash" x1="0" y1="42" x2="1200" y2="42" stroke="#BA7517" stroke-width="2.5" stroke-dasharray="14 10" stroke-linecap="round"/>
+              <line class="cj-dash" x1="0" y1="78" x2="1200" y2="78" stroke="#BA7517" stroke-width="2.5" stroke-dasharray="14 10" stroke-linecap="round"/>
             </svg>
 
-            <!-- 4 caravansary waypoints (brass cartouches sitting on trail nodes) -->
-            <div class="caravansary" data-phase="0" style="left:12.5%;top:71%">
-              <div class="caravansary-cartouche">
-                <span class="cartouche-num">M0</span>
-                <span class="cartouche-tier">Apply</span>
-              </div>
-              <div class="caravansary-anchor"></div>
-            </div>
-
-            <div class="caravansary" data-phase="1" style="left:37.5%;top:50%">
-              <div class="caravansary-cartouche">
-                <span class="cartouche-num">M1 — M3</span>
-                <span class="cartouche-tier">Silver</span>
-              </div>
-              <div class="caravansary-anchor"></div>
-            </div>
-
-            <div class="caravansary" data-phase="2" style="left:62.5%;top:57%">
-              <div class="caravansary-cartouche">
-                <span class="cartouche-num">M4</span>
-                <span class="cartouche-tier">Gold</span>
-              </div>
-              <div class="caravansary-anchor"></div>
-            </div>
-
-            <div class="caravansary is-final" data-phase="3" style="left:87.5%;top:34%">
-              <div class="caravansary-cartouche">
-                <span class="cartouche-num">M5 + M6</span>
-                <span class="cartouche-tier">Platinum</span>
-              </div>
-              <div class="caravansary-anchor"></div>
-            </div>
-
-            <!-- v3.8.ahk — Bactrian camel caravan traveler (facing right,
-                 toward Platinum). Replaces the compass-mark traveler with
-                 the literal Silk Road animal — two humps, cargo bundle
-                 between humps (silk/spices/ceramics trade goods register).
-                 Subtle gait-bob animation gives walking motion at rest. -->
-            <div class="compass-traveler" id="journeyTruck">
-              <svg viewBox="0 0 100 60" aria-hidden="true">
-                <!-- v3.8.ahl — camel recolored to SRL navy with brass cargo
-                     bundle. Walnut brown was off-palette per §2.1. -->
-                <g fill="#0A2540">
-                  <!-- Body trunk between front + back legs -->
-                  <path d="M 18 34 L 18 32 Q 22 26 30 26 L 64 26 Q 70 26 72 30 L 72 38 L 18 38 Z"/>
-                  <!-- Hump 1 (rear) -->
-                  <path d="M 28 26 Q 30 11 38 11 Q 44 11 44 26 Z"/>
-                  <!-- Hump 2 (front) -->
-                  <path d="M 46 26 Q 48 11 54 11 Q 60 11 60 26 Z"/>
-                  <!-- Neck rising from front body up to head (facing right) -->
-                  <path d="M 60 26 L 64 13 L 70 15 L 68 28 Z"/>
-                  <!-- Head -->
-                  <ellipse cx="74" cy="13" rx="6.2" ry="4"/>
-                  <!-- Mouth/muzzle -->
-                  <path d="M 78 12 L 85 11 L 85 16 L 78 15.5 Z"/>
-                  <!-- Ear (small triangle pointing back-up) -->
-                  <path d="M 70 9 L 72 5 L 74 9 Z"/>
-                  <!-- Back legs (left in viewBox = rear since camel faces right) -->
-                  <rect x="22" y="36" width="2.8" height="16" rx="0.6"/>
-                  <rect x="28" y="36" width="2.8" height="16" rx="0.6"/>
-                  <!-- Front legs (right in viewBox = front) -->
-                  <rect x="56" y="36" width="2.8" height="16" rx="0.6"/>
-                  <rect x="62" y="36" width="2.8" height="16" rx="0.6"/>
-                  <!-- Tail (left = rear) -->
-                  <path d="M 18 32 L 14 28 L 14 32 Z"/>
-                </g>
-                <!-- Cargo bundle (silk-road trade goods) — brass on navy -->
-                <rect x="44" y="18" width="6" height="7" fill="#BA7517"/>
-                <rect x="44" y="18" width="6" height="1.5" fill="#8B6A1E"/>
-                <line x1="44" y1="21" x2="50" y2="21" stroke="#0A2540" stroke-width="0.4"/>
-                <line x1="47" y1="18" x2="47" y2="25" stroke="#0A2540" stroke-width="0.4"/>
-                <!-- Eye highlight -->
-                <circle cx="75.5" cy="12.5" r="0.8" fill="#C5A572"/>
+            <div class="cj-truck" id="cjTruck">
+              <svg viewBox="0 0 140 50" aria-hidden="true">
+                <rect x="34" y="6" width="78" height="22" fill="#FBF7F0" stroke="#0A2540" stroke-width="1"/>
+                <text x="73" y="22" text-anchor="middle" font-family="'Playfair Display',Georgia,serif" font-weight="700" font-size="11" fill="#0A2540" letter-spacing="2">SRL</text>
+                <path d="M2 18 L8 6 L28 6 L34 10 L34 30 L2 30 Z" fill="#0A2540"/>
+                <rect x="0" y="20" width="3" height="10" fill="#BA7517"/>
+                <circle cx="8" cy="34" r="4.5" fill="#0A2540"/>
+                <circle cx="20" cy="34" r="4.5" fill="#0A2540"/>
+                <circle cx="48" cy="34" r="4.5" fill="#0A2540"/>
+                <circle cx="98" cy="34" r="4.5" fill="#0A2540"/>
+                <circle cx="108" cy="34" r="4.5" fill="#0A2540"/>
+                <circle cx="8" cy="34" r="1.4" fill="#C5A572"/>
+                <circle cx="20" cy="34" r="1.4" fill="#C5A572"/>
+                <circle cx="48" cy="34" r="1.4" fill="#C5A572"/>
+                <circle cx="98" cy="34" r="1.4" fill="#C5A572"/>
+                <circle cx="108" cy="34" r="1.4" fill="#C5A572"/>
               </svg>
+            </div>
+
+            <div class="cj-marker" data-phase="0" style="--left:12.5%">
+              <div class="cj-sign"><span class="cj-num">M0</span><span class="cj-tier">APPLY</span></div>
+              <div class="cj-post"></div>
+            </div>
+            <div class="cj-marker" data-phase="1" style="--left:37.5%">
+              <div class="cj-sign"><span class="cj-num">M1 — M3</span><span class="cj-tier">SILVER</span></div>
+              <div class="cj-post"></div>
+            </div>
+            <div class="cj-marker" data-phase="2" style="--left:62.5%">
+              <div class="cj-sign"><span class="cj-num">M4</span><span class="cj-tier">GOLD</span></div>
+              <div class="cj-post"></div>
+            </div>
+            <div class="cj-marker cj-marker-final" data-phase="3" style="--left:87.5%">
+              <div class="cj-sign"><span class="cj-num">M5</span><span class="cj-tier">PLATINUM</span></div>
+              <div class="cj-post"></div>
+              <div class="cj-plaque" id="cjPlaque" aria-hidden="true">
+                <span class="cj-plaque-tag">M6</span><span class="cj-plaque-label">QP LOCKED</span>
+              </div>
             </div>
           </div>
 
-          <!-- Status panel cycles per phase (4 gates + unlock) -->
-          <div class="journey-status-panel" aria-live="polite">
-            <article class="journey-status-card is-active" data-phase="0">
-              <div class="journey-gates">
-                <div class="gate-row"><span class="gate-state pending">⏳</span><span class="gate-label">Time gate</span><span class="gate-value">Few business days</span></div>
-                <div class="gate-row"><span class="gate-state pending">⏳</span><span class="gate-label">Volume gate</span><span class="gate-value">First load delivered</span></div>
-                <div class="gate-row"><span class="gate-state pending">⏳</span><span class="gate-label">Compass gate</span><span class="gate-value">Vetting in progress</span></div>
-                <div class="gate-row"><span class="gate-state na">—</span><span class="gate-label">Loyalty signal</span><span class="gate-value">—</span></div>
+          <div class="cj-panel" aria-live="polite">
+            <article class="cj-card is-active" data-phase="0">
+              <div class="cj-gates">
+                <div class="cj-gate"><span class="cj-glabel">Volume</span><span class="cj-gval">First load delivered</span></div>
+                <div class="cj-gate"><span class="cj-glabel">Compass</span><span class="cj-gval">80+ vetting score</span></div>
+                <div class="cj-gate"><span class="cj-glabel">Sustained</span><span class="cj-gval">—</span></div>
+                <div class="cj-gate"><span class="cj-glabel">Loyalty</span><span class="cj-gval">—</span></div>
               </div>
-              <div class="journey-unlock">
-                <span class="unlock-label">Apply unlocks</span>
-                <span class="unlock-pill">Silver entry &middot; Net-30 &middot; 3% Quick Pay</span>
-              </div>
+              <div class="cj-unlock"><span class="cj-unlock-eyebrow">Apply unlocks</span><span class="cj-unlock-pill">Silver entry</span></div>
             </article>
-            <article class="journey-status-card" data-phase="1">
-              <div class="journey-gates">
-                <div class="gate-row"><span class="gate-state met">✓</span><span class="gate-label">Time gate</span><span class="gate-value">30 → 90 days active</span></div>
-                <div class="gate-row"><span class="gate-state met">✓</span><span class="gate-label">Volume gate</span><span class="gate-value">10 → 30+ loads in 90-day window</span></div>
-                <div class="gate-row"><span class="gate-state met">✓</span><span class="gate-label">Compass gate</span><span class="gate-value">82+ sustained</span></div>
-                <div class="gate-row"><span class="gate-state pending">⏳</span><span class="gate-label">Loyalty signal</span><span class="gate-value">Referral bonuses unlock at M3</span></div>
+            <article class="cj-card" data-phase="1">
+              <div class="cj-gates">
+                <div class="cj-gate"><span class="cj-glabel">Volume</span><span class="cj-gval">3+ loads in trailing 90 days</span></div>
+                <div class="cj-gate"><span class="cj-glabel">Compass</span><span class="cj-gval">80+ in current quarter</span></div>
+                <div class="cj-gate"><span class="cj-glabel">Sustained</span><span class="cj-gval">Current quarter</span></div>
+                <div class="cj-gate"><span class="cj-glabel">Loyalty</span><span class="cj-gval">—</span></div>
               </div>
-              <div class="journey-unlock">
-                <span class="unlock-label">Silver unlocks</span>
-                <span class="unlock-pill">Net-30 &middot; 3% Quick Pay &middot; FSC loaded miles</span>
-              </div>
+              <div class="cj-unlock"><span class="cj-unlock-eyebrow">Silver unlocks</span><span class="cj-unlock-pill">Net-30 &middot; 3% Quick Pay</span></div>
             </article>
-            <article class="journey-status-card" data-phase="2">
-              <div class="journey-gates">
-                <div class="gate-row"><span class="gate-state met">✓</span><span class="gate-label">Time gate</span><span class="gate-value">180+ days active</span></div>
-                <div class="gate-row"><span class="gate-state met">✓</span><span class="gate-label">Volume gate</span><span class="gate-value">75+ lifetime, 25+ in trailing 90d</span></div>
-                <div class="gate-row"><span class="gate-state met">✓</span><span class="gate-label">Compass gate</span><span class="gate-value">85+ sustained</span></div>
-                <div class="gate-row"><span class="gate-state met">✓</span><span class="gate-label">Loyalty signal</span><span class="gate-value">1 referral OR 2 quarters safety bonus</span></div>
+            <article class="cj-card" data-phase="2">
+              <div class="cj-gates">
+                <div class="cj-gate"><span class="cj-glabel">Volume</span><span class="cj-gval">8+ loads in trailing 90 days</span></div>
+                <div class="cj-gate"><span class="cj-glabel">Compass</span><span class="cj-gval">85+ sustained</span></div>
+                <div class="cj-gate"><span class="cj-glabel">Sustained</span><span class="cj-gval">2 consecutive quarters</span></div>
+                <div class="cj-gate"><span class="cj-glabel">Loyalty</span><span class="cj-gval">1 referral OR consistent acceptance</span></div>
               </div>
-              <div class="journey-unlock">
-                <span class="unlock-label">Gold unlocks</span>
-                <span class="unlock-pill">Net-21 &middot; 2% Quick Pay &middot; FSC empty miles &middot; $150/mo safety bonus</span>
-              </div>
+              <div class="cj-unlock"><span class="cj-unlock-eyebrow">Gold unlocks</span><span class="cj-unlock-pill">Net-21 &middot; 2% Quick Pay</span></div>
             </article>
-            <article class="journey-status-card" data-phase="3">
-              <div class="journey-gates">
-                <div class="gate-row"><span class="gate-state met">✓</span><span class="gate-label">Time gate</span><span class="gate-value">360 → 720+ days active</span></div>
-                <div class="gate-row"><span class="gate-state met">✓</span><span class="gate-label">Volume gate</span><span class="gate-value">150 → 300+ lifetime, 35+ trailing 90d</span></div>
-                <div class="gate-row"><span class="gate-state met">✓</span><span class="gate-label">Compass gate</span><span class="gate-value">90+ sustained · 92+ for M6 sustained 365d</span></div>
-                <div class="gate-row"><span class="gate-state met">✓</span><span class="gate-label">Loyalty signal</span><span class="gate-value">3 active lanes · advisory voice at M6</span></div>
+            <article class="cj-card" data-phase="3">
+              <div class="cj-gates">
+                <div class="cj-gate"><span class="cj-glabel">Volume</span><span class="cj-gval">15+ loads in trailing 90 days</span></div>
+                <div class="cj-gate"><span class="cj-glabel">Compass</span><span class="cj-gval">90+ sustained &middot; 92+ for Core</span></div>
+                <div class="cj-gate"><span class="cj-glabel">Sustained</span><span class="cj-gval">3 quarters &middot; 4 for Core</span></div>
+                <div class="cj-gate"><span class="cj-glabel">Loyalty</span><span class="cj-gval">2+ recurring lanes &middot; advisory voice at Core</span></div>
               </div>
-              <div class="journey-unlock">
-                <span class="unlock-label">Platinum unlocks &middot; M6 locks 1% QP permanently</span>
-                <span class="unlock-pill">Net-14 &middot; 1% Quick Pay &middot; Priority freight &middot; FSC all miles &middot; $300/mo safety bonus</span>
-              </div>
+              <div class="cj-unlock"><span class="cj-unlock-eyebrow">Platinum unlocks &middot; M6 Core locks 1% permanently</span><span class="cj-unlock-pill">Net-14 &middot; 1% Quick Pay</span></div>
             </article>
           </div>
         </div>
@@ -996,60 +918,91 @@
       });
 
       /* ========================================
-         v3.8.ahj — Caravansary Trade Route cycle driver.
-         Per-phase coords place the compass-mark traveler ON the trail
-         path (matches the bezier curve waypoint positions in the SVG).
-         5.5s per phase, auto-advance, IntersectionObserver-triggered,
-         prefers-reduced-motion sets static-phase-0.
+         v3.8.ahm — Caravan Journey driver (Path A fresh build).
+         ONE source of truth: currentPhase (0..3). Tab + marker + panel
+         + truck position + plaque-stamp all derive from it via
+         setPhase(). Auto-loop Apply→Platinum ~24s, hold 4s at Platinum
+         (plaque stamps on), reset to Apply. Bidirectional via tab
+         clicks. Reduced-motion freezes at Platinum with plaque visible.
+         Brand-font check: halts (console.error) if Playfair Display
+         doesn't load so labels don't garble in fallback font.
          ======================================== */
-      var journeyCanvas = document.getElementById('journeyCanvas');
-      var journeyTruck = document.getElementById('journeyTruck');
-      if (journeyCanvas && journeyTruck) {
-        var travelerCoords = [
-          { left: '12.5%', top: '71%' },
-          { left: '37.5%', top: '50%' },
-          { left: '62.5%', top: '57%' },
-          { left: '87.5%', top: '34%' }
-        ];
-        var journeyTabs = journeyCanvas.querySelectorAll('.journey-tab');
-        var caravansaries = journeyCanvas.querySelectorAll('.caravansary');
-        var journeyCards = journeyCanvas.querySelectorAll('.journey-status-card');
-        var journeyPhase = 0;
-        var journeyInterval = null;
-        var reducedMotionJourney = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      var cjCanvas = document.getElementById('cjCanvas');
+      var cjTruck = document.getElementById('cjTruck');
+      var cjPlaque = document.getElementById('cjPlaque');
+      if (cjCanvas && cjTruck && cjPlaque) {
+        var CJ_WAYPOINTS = ['12.5%', '37.5%', '62.5%', '87.5%'];
+        var CJ_SEGMENT_MS = 8000;        // ~8s per segment × 3 segments = 24s Apply→Platinum
+        var CJ_HOLD_MS = 4000;           // hold at Platinum while plaque stamps
+        var CJ_RESET_PAUSE_MS = 900;     // brief beat before snapping back to Apply
+        var CJ_RESUME_AFTER_CLICK_MS = 6000;
 
-        function setJourneyPhase(idx) {
-          journeyPhase = idx;
-          journeyTabs.forEach(function (tab, i) {
-            tab.classList.toggle('is-active', i === idx);
-          });
-          caravansaries.forEach(function (c, i) {
-            c.classList.toggle('is-active', i === idx);
-          });
-          journeyCards.forEach(function (c, i) {
-            c.classList.toggle('is-active', i === idx);
-          });
-          journeyTruck.style.left = travelerCoords[idx].left;
-          journeyTruck.style.top = travelerCoords[idx].top;
-        }
+        var cjTabs = cjCanvas.querySelectorAll('.cj-tab');
+        var cjMarkers = cjCanvas.querySelectorAll('.cj-marker');
+        var cjCards = cjCanvas.querySelectorAll('.cj-card');
+        var cjPhase = 0;
+        var cjTimer = null;
+        var cjReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-        function startJourneyAutoPlay() {
-          if (journeyInterval || reducedMotionJourney) return;
-          journeyInterval = setInterval(function () {
-            setJourneyPhase((journeyPhase + 1) % travelerCoords.length);
-          }, 5500);
-        }
-
-        var journeyViewObs = new IntersectionObserver(function (entries) {
-          entries.forEach(function (entry) {
-            if (entry.isIntersecting) {
-              setJourneyPhase(0);
-              startJourneyAutoPlay();
-              journeyViewObs.unobserve(entry.target);
+        // Font-load halt: if Playfair Display fails, labels (APPLY, QP LOCKED)
+        // will fall back to Georgia and visually misalign. Surface in console
+        // so a regression sweep can catch a font CDN outage.
+        if (document.fonts && document.fonts.load) {
+          document.fonts.load('700 14px "Playfair Display"').then(function (loaded) {
+            if (!loaded || !loaded.length) {
+              console.error('[Caravan Journey] HALT: Playfair Display did not load. Labels may garble in fallback font.');
             }
+          }).catch(function () { /* old browsers — ignore */ });
+        }
+
+        function cjSetPhase(idx, stampPlaque) {
+          cjPhase = idx;
+          cjTabs.forEach(function (t, i) {
+            t.classList.toggle('is-active', i === idx);
+            t.setAttribute('aria-selected', i === idx ? 'true' : 'false');
           });
-        }, { threshold: 0.30 });
-        journeyViewObs.observe(journeyCanvas);
+          cjMarkers.forEach(function (m, i) { m.classList.toggle('is-active', i === idx); });
+          cjCards.forEach(function (c, i) { c.classList.toggle('is-active', i === idx); });
+          cjTruck.style.left = CJ_WAYPOINTS[idx];
+          cjPlaque.classList.toggle('is-stamped', idx === 3 && stampPlaque === true);
+        }
+
+        function cjClearTimer() { if (cjTimer) { clearTimeout(cjTimer); cjTimer = null; } }
+
+        function cjTick() {
+          var next = (cjPhase + 1) % 4;
+          cjSetPhase(next, next === 3);
+          if (next === 3) {
+            cjTimer = setTimeout(function () {
+              cjTimer = setTimeout(function () { cjSetPhase(0, false); cjTimer = setTimeout(cjTick, CJ_SEGMENT_MS); }, CJ_RESET_PAUSE_MS);
+            }, CJ_HOLD_MS);
+          } else {
+            cjTimer = setTimeout(cjTick, CJ_SEGMENT_MS);
+          }
+        }
+
+        function cjStart() {
+          if (cjReducedMotion) { cjSetPhase(3, true); return; }
+          cjSetPhase(0, false);
+          cjTimer = setTimeout(cjTick, CJ_SEGMENT_MS);
+        }
+
+        cjTabs.forEach(function (t, i) {
+          t.addEventListener('click', function () {
+            cjClearTimer();
+            cjSetPhase(i, i === 3);
+            if (!cjReducedMotion) cjTimer = setTimeout(cjStart, CJ_RESUME_AFTER_CLICK_MS);
+          });
+        });
+
+        if (typeof IntersectionObserver !== 'undefined') {
+          var cjObs = new IntersectionObserver(function (entries) {
+            entries.forEach(function (e) {
+              if (e.isIntersecting) { cjStart(); cjObs.unobserve(e.target); }
+            });
+          }, { threshold: 0.30 });
+          cjObs.observe(cjCanvas);
+        } else { cjStart(); }
       }
 
     })();

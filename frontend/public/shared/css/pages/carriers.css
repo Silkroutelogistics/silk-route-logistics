@@ -1513,12 +1513,14 @@
     }
 
     /* ==========================================
-       v3.8.ahj — CARAVANSARY TRADE ROUTE animation
-       Parchment register replaces v3.8.ahi Americana highway.
-       Sepia ink trail winds across aged-paper field; 4 brass cartouche
-       waypoints rise in elevation toward Platinum (ascending tier);
-       SRL compass-mark traveler navigates between waypoints; M6 hangs
-       as a navy wax-seal medallion off the Platinum cartouche.
+       v3.8.ahm — CARAVAN JOURNEY (fresh Path A build)
+       Dual gold-dark dashed lane with stroke-dashoffset flow;
+       4 brass marker cartouches with posts; navy Cascadia truck
+       travels via `left` transition; QP LOCKED plaque stamps onto
+       Platinum post during hold. All values driven by JS state
+       machine — see carriers.html cjSetPhase() driver block.
+       §2.1 tokens only: navy #0A2540, gold #C5A572, gold-dark
+       #BA7517, cream #FBF7F0, cream-2 #F5EEE0, gold-tint #FAEEDA.
        ========================================== */
     .caravan-journey-section {
       padding: 100px 0;
@@ -1526,26 +1528,19 @@
       position: relative;
       overflow: hidden;
     }
-    .caravan-journey-section::before {
-      content: '';
-      position: absolute;
-      inset: 0;
-      background:
-        radial-gradient(circle at 18% 22%, rgba(186,117,23,0.06) 0%, transparent 45%),
-        radial-gradient(circle at 82% 78%, rgba(10,37,64,0.04) 0%, transparent 50%);
-      pointer-events: none;
-    }
-    .journey-canvas {
+    .cj-canvas {
       position: relative;
       max-width: 1180px;
       margin: 48px auto 0;
       background: #FFFFFF;
       border-radius: 22px;
-      padding: 36px 32px 32px;
+      padding: 36px 32px 36px;
       box-shadow: 0 22px 56px rgba(10,37,64,0.10);
       border: 1px solid rgba(10,37,64,0.06);
     }
-    .journey-tabs {
+
+    /* ----- Top tab row ----- */
+    .cj-tabs {
       display: grid;
       grid-template-columns: repeat(4, 1fr);
       gap: 10px;
@@ -1553,372 +1548,289 @@
       padding-bottom: 22px;
       border-bottom: 1px solid rgba(10,37,64,0.08);
     }
-    .journey-tab {
-      position: relative;
+    .cj-tab {
       background: transparent;
       border: 1px solid rgba(10,37,64,0.10);
       border-radius: 10px;
       padding: 12px 14px 11px;
-      cursor: default;
+      cursor: pointer;
       display: flex;
       flex-direction: column;
       align-items: center;
       gap: 3px;
-      transition: background 380ms ease, border-color 380ms ease;
+      font-family: inherit;
+      transition: background 380ms ease, border-color 380ms ease, transform 200ms ease;
     }
-    .journey-tab.is-active {
-      background: #0A2540;
-      border-color: #0A2540;
+    .cj-tab:hover { transform: translateY(-1px); border-color: rgba(186,117,23,0.40); }
+    .cj-tab:focus-visible { outline: 2px solid #BA7517; outline-offset: 2px; }
+    .cj-tab.is-active {
+      background: #0A2540; border-color: #0A2540;
       box-shadow: 0 6px 16px rgba(10,37,64,0.20);
     }
-    .journey-tab.is-active .journey-tab-eyebrow,
-    .journey-tab.is-active .journey-tab-name {
-      color: #FBF7F0;
-    }
-    .journey-tab.is-active .journey-tab-eyebrow {
-      color: #C5A572;
-    }
-    .journey-tab-dot {
-      position: absolute;
-      top: 8px;
-      right: 9px;
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      background: #BA7517;
-      opacity: 0;
-      transition: opacity 240ms;
-      box-shadow: 0 0 6px rgba(186,117,23,0.55);
-    }
-    .journey-tab.is-active .journey-tab-dot {
-      opacity: 1;
-      animation: journey-tab-blink 1.3s ease-in-out infinite;
-    }
-    @keyframes journey-tab-blink {
-      0%, 100% { opacity: 1; transform: scale(1); box-shadow: 0 0 6px rgba(186,117,23,0.55); }
-      50% { opacity: 0.5; transform: scale(1.2); box-shadow: 0 0 14px rgba(186,117,23,0.85); }
-    }
-    .journey-tab-eyebrow {
-      font-family: 'DM Sans', sans-serif;
-      font-size: 9.5px;
-      font-weight: 700;
-      letter-spacing: 1.8px;
-      text-transform: uppercase;
-      color: #BA7517;
+    .cj-tab.is-active .cj-tab-eyebrow { color: #C5A572; }
+    .cj-tab.is-active .cj-tab-name { color: #FBF7F0; }
+    .cj-tab-eyebrow {
+      font-family: 'DM Sans', sans-serif; font-size: 9.5px; font-weight: 700;
+      letter-spacing: 1.8px; text-transform: uppercase; color: #BA7517;
       transition: color 240ms;
     }
-    .journey-tab-name {
-      font-family: 'Playfair Display', Georgia, serif;
-      font-size: 16px;
-      font-weight: 600;
-      color: #0A2540;
-      transition: color 240ms;
+    .cj-tab-name {
+      font-family: 'Playfair Display', Georgia, serif; font-size: 16px;
+      font-weight: 600; color: #0A2540; transition: color 240ms;
     }
 
-    /* ----- Trail canvas (parchment field) ----- */
-    .journey-trail {
+    /* ----- Lane (dual dashed lines + markers + truck) -----
+       Lane height 240px. Vertical clearance map:
+         · truck row:    top 22px,  height 38px → spans 22-60 from top
+         · dashed lines: y=42 + y=78 in 110px SVG band centered at lane Y 95
+         · markers:      bottom 12px, total ~140px tall (sign 32 + post 100)
+                         → spans bottom 12 to 152 from bottom = 88..228 from top
+       Truck bottom (60) < marker-sign top (88) → 28px clearance, no overlap.
+       Top-tab row sits OUTSIDE the lane container → no possible overlap. */
+    .cj-lane {
       position: relative;
       width: 100%;
-      height: 280px;
+      height: 240px;
       margin-bottom: 32px;
       border-radius: 14px;
+      background: linear-gradient(180deg, #FDF8EC 0%, #F5EEE0 100%);
+      border: 1px solid rgba(186,117,23,0.18);
       overflow: hidden;
-      background:
-        radial-gradient(circle at 18% 24%, rgba(186,117,23,0.10) 0%, transparent 50%),
-        radial-gradient(circle at 78% 82%, rgba(186,117,23,0.08) 0%, transparent 55%),
-        radial-gradient(circle at 50% 50%, rgba(245,238,224,0.0) 0%, rgba(186,117,23,0.06) 100%),
-        linear-gradient(180deg, #FDF8EC 0%, #F5EEE0 100%);
-      border: 1px solid rgba(186,117,23,0.22);
-      box-shadow:
-        inset 0 0 60px rgba(186,117,23,0.10),
-        inset 0 2px 6px rgba(255,255,255,0.6),
-        inset 0 -2px 8px rgba(186,117,23,0.10);
     }
-    /* Aged paper grain — diagonal repeating noise */
-    .journey-trail::after {
-      content: '';
-      position: absolute;
-      inset: 0;
-      background-image:
-        repeating-linear-gradient(135deg,
-          rgba(139,106,30,0.025) 0px, rgba(139,106,30,0.025) 1px,
-          transparent 1px, transparent 3px),
-        repeating-linear-gradient(45deg,
-          rgba(186,117,23,0.018) 0px, rgba(186,117,23,0.018) 1px,
-          transparent 1px, transparent 4px);
-      pointer-events: none;
-    }
-
-    .trail-flourishes {
-      position: absolute;
-      top: 14px;
-      left: 22px;
-      z-index: 2;
-      pointer-events: none;
-    }
-    .trail-route-label {
+    .cj-route-label {
+      position: absolute; top: 12px; left: 22px;
       font-family: 'Playfair Display', Georgia, serif;
-      font-style: italic;
-      font-weight: 500;
-      font-size: 13px;
-      color: rgba(139,106,30,0.70);
-      letter-spacing: 1.2px;
+      font-style: italic; font-weight: 500; font-size: 13px;
+      color: rgba(139,106,30,0.65); letter-spacing: 1.2px;
+      z-index: 2; pointer-events: none;
+    }
+    .cj-lane-svg {
+      position: absolute; left: 0; right: 0;
+      top: 50%; transform: translateY(-50%);
+      width: 100%; height: 110px;
+      pointer-events: none;
+    }
+    /* Dashed flow: dashoffset cycles 24px (dash 14 + gap 10) toward right */
+    .cj-dash { animation: cj-dash-flow 2.4s linear infinite; }
+    @keyframes cj-dash-flow {
+      from { stroke-dashoffset: 24; }
+      to   { stroke-dashoffset: 0;  }
     }
 
-    .trail-svg {
+    /* ----- Markers (brass cartouche + post) ----- */
+    .cj-marker {
       position: absolute;
-      inset: 0;
-      width: 100%;
-      height: 100%;
-      display: block;
-      z-index: 1;
-    }
-
-    /* ----- Caravansary waypoints -----
-       v3.8.ahl: restructure — anchor IS the .caravansary element (sits at
-       trail node coord); cartouche absolutely positioned ABOVE anchor.
-       Old flex-column had anchor below center, putting it off-trail. */
-    .caravansary {
-      position: absolute;
-      transform: translate(-50%, -50%);
-      z-index: 3;
-      width: 14px;
-      height: 14px;
-    }
-    .caravansary-cartouche {
-      position: absolute;
-      bottom: calc(100% + 14px);
-      left: 50%;
+      bottom: 12px;
+      left: var(--left);
       transform: translateX(-50%);
-      padding: 8px 14px 9px;
-      min-width: 96px;
-      background: linear-gradient(155deg, #E8D4A8 0%, #C5A572 45%, #A88541 100%);
-      border: 1.4px solid #6B5215;
-      border-radius: 5px;
-      box-shadow:
-        0 8px 18px rgba(10,37,64,0.22),
-        inset 0 1px 1px rgba(255,255,255,0.45),
-        inset 0 -1px 1px rgba(0,0,0,0.18);
+      width: 110px;
       display: flex;
-      flex-direction: column;
+      flex-direction: column-reverse;
       align-items: center;
-      gap: 1px;
-      transition: transform 420ms cubic-bezier(0.45, 0, 0.15, 1), box-shadow 420ms ease;
+      z-index: 3;
+      pointer-events: none;
+    }
+    .cj-sign {
+      padding: 7px 14px 8px;
+      min-width: 92px;
+      background: linear-gradient(155deg, #C5A572 0%, #BA7517 100%);
+      border: 1.4px solid rgba(10,37,64,0.40);
+      border-radius: 5px;
+      box-shadow: 0 6px 14px rgba(10,37,64,0.20),
+                  inset 0 1px 1px rgba(255,255,255,0.40),
+                  inset 0 -1px 1px rgba(0,0,0,0.18);
+      display: flex; flex-direction: column; align-items: center;
       white-space: nowrap;
+      transition: transform 380ms ease, box-shadow 380ms ease;
     }
-    /* Brass cartouche has subtle bevel ornaments at corners */
-    .caravansary-cartouche::before,
-    .caravansary-cartouche::after {
-      content: '';
-      position: absolute;
-      top: 50%;
-      width: 4px;
-      height: 4px;
-      background: radial-gradient(circle, #FBF7F0 0%, #BA7517 70%);
-      border: 0.5px solid #6B5215;
-      border-radius: 50%;
-      transform: translateY(-50%);
-    }
-    .caravansary-cartouche::before { left: -2px; }
-    .caravansary-cartouche::after { right: -2px; }
-
-    .cartouche-num {
-      font-family: 'DM Sans', sans-serif;
-      font-size: 8.5px;
-      font-weight: 700;
-      letter-spacing: 1.6px;
+    .cj-num {
+      font-family: 'DM Sans', sans-serif; font-size: 8.5px;
+      font-weight: 700; letter-spacing: 1.4px;
       color: rgba(10,37,64,0.78);
-      text-transform: uppercase;
     }
-    .cartouche-tier {
+    .cj-tier {
       font-family: 'Playfair Display', Georgia, serif;
-      font-size: 14.5px;
-      font-weight: 700;
-      color: #0A2540;
-      letter-spacing: 0.4px;
+      font-size: 13px; font-weight: 700; color: #0A2540;
+      letter-spacing: 0.8px;
     }
-    /* Anchor: small brass dot stamped on the trail at the waypoint node */
-    .caravansary-anchor {
-      width: 14px;
-      height: 14px;
-      border-radius: 50%;
-      background: radial-gradient(circle at 35% 30%, #E8D4A8 0%, #BA7517 60%, #6B5215 100%);
-      border: 2px solid #FDF8EC;
-      box-shadow: 0 2px 5px rgba(10,37,64,0.32);
-      transition: transform 380ms cubic-bezier(0.45,0,0.15,1), box-shadow 380ms ease;
+    .cj-post {
+      width: 3px;
+      height: 100px;
+      background: linear-gradient(180deg, #C5A572 0%, #BA7517 60%, rgba(186,117,23,0.45) 100%);
+      border-radius: 1px;
+      box-shadow: 0 0 0 1px rgba(10,37,64,0.10);
+      margin-bottom: 4px;
     }
-    .caravansary.is-active .caravansary-cartouche {
-      transform: translateX(-50%) translateY(-2px);
-      box-shadow:
-        0 12px 24px rgba(10,37,64,0.30),
-        0 0 0 2px rgba(186,117,23,0.35),
-        inset 0 1px 1px rgba(255,255,255,0.55),
-        inset 0 -1px 1px rgba(0,0,0,0.18);
-    }
-    .caravansary.is-active .caravansary-anchor {
-      transform: scale(1.35);
-      box-shadow: 0 2px 6px rgba(10,37,64,0.35), 0 0 0 4px rgba(186,117,23,0.22);
+    .cj-marker.is-active .cj-sign {
+      transform: translateY(-3px);
+      box-shadow: 0 12px 24px rgba(10,37,64,0.30),
+                  0 0 0 2px rgba(186,117,23,0.50),
+                  inset 0 1px 1px rgba(255,255,255,0.55),
+                  inset 0 -1px 1px rgba(0,0,0,0.18);
     }
 
-    /* ----- Caravan camel traveler -----
-       v3.8.ahl: camel sits BELOW the cartouche on the trail line itself.
-       Anchor dot (.caravansary-anchor) lives at the registered trail
-       coord; camel center sits ~26px below the trail node so its feet
-       rest on the parchment beside the anchor with the cartouche cleanly
-       above. Gait keyframe restates the full transform since `animation`
-       overrides any base `transform`. */
-    .compass-traveler {
+    /* ----- QP LOCKED plaque (M6 sub-state, bolts onto Platinum post) ----- */
+    .cj-plaque {
       position: absolute;
-      width: 68px;
-      height: 41px;
+      bottom: 78px;        /* sits midway up the 100px post */
+      left: 50%;
+      transform: translateX(-50%) scale(0.3) rotate(-4deg);
+      opacity: 0;
+      padding: 4px 10px;
+      background: linear-gradient(155deg, #BA7517 0%, rgba(139,106,30,1) 100%);
+      border: 1px solid rgba(10,37,64,0.45);
+      border-radius: 2px;
+      box-shadow: 0 3px 6px rgba(10,37,64,0.30);
+      display: flex; flex-direction: column; align-items: center;
+      white-space: nowrap;
+      transition: transform 560ms cubic-bezier(0.34, 1.56, 0.64, 1), opacity 320ms ease;
+      pointer-events: none;
+    }
+    .cj-plaque.is-stamped {
+      opacity: 1;
+      transform: translateX(-50%) scale(1) rotate(-4deg);
+    }
+    .cj-plaque-tag {
+      font-family: 'DM Sans', sans-serif; font-size: 7px; font-weight: 700;
+      letter-spacing: 1.2px; color: rgba(251,247,240,0.85);
+    }
+    .cj-plaque-label {
+      font-family: 'Playfair Display', Georgia, serif; font-size: 10px;
+      font-weight: 700; letter-spacing: 0.8px; color: #FBF7F0;
+    }
+
+    /* ----- Truck (navy Cascadia with cream SRL decal) ----- */
+    .cj-truck {
+      position: absolute;
+      top: 22px;
       left: 12.5%;
-      top: 71%;
-      transform: translate(-50%, 8px);
+      width: 112px;
+      height: 38px;
+      transform: translateX(-50%);
+      transition: left 1.8s cubic-bezier(0.45, 0.05, 0.15, 1);
       z-index: 4;
-      transition:
-        left 1.6s cubic-bezier(0.45, 0.05, 0.15, 1),
-        top 1.6s cubic-bezier(0.45, 0.05, 0.15, 1);
-      filter: drop-shadow(0 4px 4px rgba(10,37,64,0.28));
-      animation: camel-gait 0.85s ease-in-out infinite;
+      filter: drop-shadow(0 4px 5px rgba(10,37,64,0.28));
     }
-    .compass-traveler svg {
-      width: 100%;
-      height: 100%;
-      display: block;
-    }
-    @keyframes camel-gait {
-      0%, 100% { transform: translate(-50%, 8px); }
-      50%      { transform: translate(-50%, 6.5px); }
-    }
-    .journey-status-panel {
+    .cj-truck svg { width: 100%; height: 100%; display: block; }
+
+    /* ----- Status panel (cross-fade per phase) ----- */
+    .cj-panel {
       position: relative;
       min-height: 200px;
       margin-top: 8px;
     }
-    .journey-status-card {
-      position: absolute;
-      inset: 0;
-      opacity: 0;
-      transform: translateY(6px);
+    .cj-card {
+      position: absolute; inset: 0;
+      opacity: 0; transform: translateY(6px);
       transition: opacity 420ms ease, transform 420ms ease;
       pointer-events: none;
       display: grid;
       grid-template-columns: 1fr auto;
       gap: 24px;
       align-items: center;
-      padding: 20px 22px;
+      padding: 22px 24px;
       background: #FBF7F0;
       border-radius: 12px;
       border: 1px solid rgba(186,117,23,0.18);
     }
-    .journey-status-card.is-active {
-      opacity: 1;
-      transform: translateY(0);
-      pointer-events: auto;
-    }
-    .journey-gates {
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-    }
-    .gate-row {
+    .cj-card.is-active { opacity: 1; transform: translateY(0); pointer-events: auto; }
+    .cj-gates { display: flex; flex-direction: column; gap: 10px; }
+    .cj-gate {
       display: grid;
-      grid-template-columns: 24px 110px 1fr;
-      gap: 10px;
-      align-items: center;
+      grid-template-columns: 110px 1fr;
+      gap: 14px;
+      align-items: baseline;
       font-family: 'DM Sans', sans-serif;
-      font-size: 13px;
-      line-height: 1.45;
+      font-size: 13.5px; line-height: 1.45;
     }
-    .gate-state {
-      width: 22px;
-      height: 22px;
-      border-radius: 50%;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 12px;
-      font-weight: 700;
+    .cj-glabel {
+      font-weight: 700; color: #BA7517;
+      font-size: 11px; letter-spacing: 1.2px; text-transform: uppercase;
     }
-    .gate-state.met { background: rgba(47, 122, 79, 0.12); color: #2F7A4F; }
-    .gate-state.pending { background: rgba(186, 117, 23, 0.12); color: #BA7517; }
-    .gate-state.na { background: rgba(107, 118, 133, 0.10); color: #6B7685; }
-    .gate-label { font-weight: 600; color: #0A2540; }
-    .gate-value { color: #3A4A5F; }
-    .journey-unlock {
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
+    .cj-gval { color: #0A2540; font-weight: 500; }
+    .cj-unlock {
+      display: flex; flex-direction: column; gap: 8px;
       max-width: 280px;
-      align-items: flex-end;
-      text-align: right;
+      align-items: flex-end; text-align: right;
     }
-    .unlock-label {
+    .cj-unlock-eyebrow {
+      font-family: 'DM Sans', sans-serif; font-size: 10px;
+      font-weight: 700; letter-spacing: 1.8px;
+      text-transform: uppercase; color: #BA7517;
+    }
+    .cj-unlock-pill {
+      display: inline-block; padding: 10px 18px;
+      background: linear-gradient(155deg, #C5A572 0%, #BA7517 100%);
+      color: #FBF7F0; border-radius: 24px;
       font-family: 'DM Sans', sans-serif;
-      font-size: 10px;
-      font-weight: 700;
-      letter-spacing: 1.8px;
-      text-transform: uppercase;
-      color: #BA7517;
+      font-size: 12.5px; font-weight: 600; letter-spacing: 0.3px;
+      box-shadow: 0 4px 10px rgba(186,117,23,0.22);
+      white-space: nowrap;
     }
-    .unlock-pill {
-      display: inline-block;
-      padding: 10px 18px;
-      background: linear-gradient(155deg, #DAC39C 0%, #BA7517 100%);
-      color: #FBF7F0;
-      border-radius: 24px;
-      font-family: 'DM Sans', sans-serif;
-      font-size: 12.5px;
-      font-weight: 600;
-      letter-spacing: 0.3px;
-      box-shadow: 0 4px 10px rgba(186,117,23,0.20);
-    }
+
+    /* ----- Reduced motion: freeze at Platinum, plaque visible ----- */
     @media (prefers-reduced-motion: reduce) {
-      .compass-traveler {
-        transition: left 200ms ease, top 200ms ease;
-        animation: none;
-        transform: translate(-50%, 8px);
-      }
-      .journey-tab.is-active .journey-tab-dot { animation: none; }
-      .journey-status-card { transition: opacity 0.15s ease, transform 0.15s ease; }
-      .caravansary.is-active .caravansary-cartouche,
-      .caravansary.is-active .caravansary-anchor { transition: none; }
+      .cj-truck { transition: left 200ms ease; }
+      .cj-dash  { animation: none; }
+      .cj-card  { transition: opacity 0.15s ease, transform 0.15s ease; }
+      .cj-plaque { transition: opacity 0.15s ease, transform 0.15s ease; }
     }
-    @media (max-width: 900px) {
+
+    /* ----- Mobile: vertical lane, truck travels downward ----- */
+    @media (max-width: 720px) {
       .caravan-journey-section { padding: 70px 0; }
-      .journey-canvas { padding: 22px 18px 22px; }
-      .journey-tabs { gap: 5px; padding-bottom: 16px; margin-bottom: 22px; }
-      .journey-tab { padding: 9px 6px 8px; }
-      .journey-tab-eyebrow { font-size: 8.5px; letter-spacing: 1.2px; }
-      .journey-tab-name { font-size: 13px; }
-      .journey-trail { height: 220px; }
-      .trail-route-label { font-size: 11px; letter-spacing: 0.8px; }
-      .caravansary-cartouche { min-width: 70px; padding: 6px 9px 7px; }
-      .cartouche-num { font-size: 7.5px; letter-spacing: 1.2px; }
-      .cartouche-tier { font-size: 11.5px; }
-      .compass-traveler { width: 54px; height: 32px; }
-      .journey-status-panel { min-height: auto; }
-      .journey-status-card {
-        position: relative;
-        inset: auto;
-        opacity: 1;
-        transform: none;
-        pointer-events: auto;
-        grid-template-columns: 1fr;
-        display: none;
-        gap: 18px;
+      .cj-canvas { padding: 20px 14px 24px; }
+      /* Tabs: horizontal scroll strip */
+      .cj-tabs {
+        display: flex; overflow-x: auto;
+        scroll-snap-type: x mandatory;
+        gap: 8px; padding-bottom: 14px; margin-bottom: 22px;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
       }
-      .journey-status-card.is-active { display: grid; }
-      .gate-row { grid-template-columns: 22px 1fr; }
-      .gate-value { grid-column: 1 / -1; padding-left: 32px; font-size: 12.5px; }
-      .journey-unlock { max-width: 100%; align-items: flex-start; text-align: left; }
-    }
-    @media (max-width: 520px) {
-      .journey-tab-eyebrow { font-size: 8px; letter-spacing: 0.8px; }
-      .journey-trail { height: 190px; }
-      .caravansary-cartouche { min-width: 60px; padding: 5px 7px 6px; }
-      .cartouche-num { font-size: 7px; letter-spacing: 1px; }
-      .cartouche-tier { font-size: 10.5px; }
-      .compass-traveler { width: 44px; height: 26px; }
+      .cj-tabs::-webkit-scrollbar { display: none; }
+      .cj-tab { flex: 0 0 40%; scroll-snap-align: center; }
+      /* Lane: vertical, taller, truck moves top */
+      .cj-lane { height: 520px; }
+      .cj-route-label { font-size: 11px; top: 10px; left: 14px; }
+      /* Dashed lines pivot to vertical via SVG rotation */
+      .cj-lane-svg {
+        top: 50%; left: 50%; width: 110px; height: 100%;
+        transform: translate(-50%, -50%) rotate(90deg);
+      }
+      /* Markers stack vertically; left becomes top via data-phase */
+      .cj-marker {
+        bottom: auto;
+        left: 50%; transform: translate(-50%, -50%);
+        flex-direction: row-reverse; width: 200px;
+      }
+      .cj-marker[data-phase="0"] { top: 13%; }
+      .cj-marker[data-phase="1"] { top: 38%; }
+      .cj-marker[data-phase="2"] { top: 62%; }
+      .cj-marker[data-phase="3"] { top: 87%; }
+      .cj-post { width: 60px; height: 3px; margin-bottom: 0; margin-right: 6px; }
+      .cj-sign { min-width: 88px; padding: 6px 11px 7px; }
+      .cj-num { font-size: 8px; }
+      .cj-tier { font-size: 12px; }
+      /* Plaque: shift to attach horizontally beside Platinum sign */
+      .cj-plaque { bottom: auto; left: -46px; top: 50%; transform: translateY(-50%) scale(0.3) rotate(-4deg); }
+      .cj-plaque.is-stamped { transform: translateY(-50%) scale(1) rotate(-4deg); }
+      /* Truck: pivot 90°, move via top% */
+      .cj-truck {
+        top: 13%; left: 50%; width: 92px; height: 30px;
+        transform: translate(-50%, -50%) rotate(90deg);
+        transition: top 1.8s cubic-bezier(0.45, 0.05, 0.15, 1);
+      }
+      /* Status panel: stack, only active visible */
+      .cj-panel { min-height: auto; }
+      .cj-card {
+        position: relative; inset: auto;
+        opacity: 1; transform: none; pointer-events: auto;
+        grid-template-columns: 1fr; gap: 18px;
+        display: none;
+      }
+      .cj-card.is-active { display: grid; }
+      .cj-gate { grid-template-columns: 90px 1fr; }
+      .cj-unlock { max-width: 100%; align-items: flex-start; text-align: left; }
     }
 
