@@ -7126,7 +7126,14 @@
 //              motion already shows "outbound" visually; (3) QUICK
 //              PAY RETURNING gains a $ $ $ prefix in brighter brass
 //              (#DAC39C) as the lower-lane money-flow visual anchor.
-export const SRL_VERSION = "3.8.ahv";
+// v3.8.ahw   — Caravan Journey trailer payload: $ in circles → money
+//              bags. Pouch silhouette (narrow tied top + wider rounded
+//              body) reads as "money" at small scale even before the
+//              inner $ glyph is legible — solves the v3.8.ahv contrast
+//              problem (cream-on-gold $ washed out at deployed scale).
+//              Tier-1/2 bags carry navy $ for contrast on lighter brass;
+//              tier-3 bags carry cream $ for contrast on darker brass.
+export const SRL_VERSION = "3.8.ahw";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
