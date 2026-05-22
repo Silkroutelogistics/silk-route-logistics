@@ -501,11 +501,14 @@
           </div>
 
           <!-- Navy highway lane: SRL truck eastbound (freight) above,
-               gold $ coin westbound (Quick Pay) below. Markers no longer
-               inside this container — they live in .cj-markers-row. -->
+               with $ coins accumulating in trailer. Markers live in
+               .cj-markers-row below. v3.8.ahv: OUTBOUND FREIGHT label
+               dropped (truck direction is self-evident + label was
+               overlapping the truck at Apply position); QUICK PAY
+               RETURNING gets brass $ glyph prefix as the lower-lane
+               narrative anchor. -->
           <div class="cj-lane" aria-hidden="true">
-            <span class="cj-label cj-label-outbound">Outbound Freight</span>
-            <span class="cj-label cj-label-returning">Quick Pay Returning</span>
+            <span class="cj-label cj-label-returning"><span class="cj-label-money">$ $ $</span> &middot; Quick Pay Returning</span>
 
             <svg class="cj-lane-svg" viewBox="0 0 1200 110" preserveAspectRatio="none">
               <line class="cj-dash" x1="0" y1="42" x2="1200" y2="42" stroke="#FBF7F0" stroke-width="2.2" stroke-dasharray="14 10" stroke-linecap="round" opacity="0.78"/>
@@ -539,21 +542,27 @@
                   <circle cx="108" cy="34" r="1.4" fill="#C5A572"/>
                 </g>
                 <!-- Trailer coins (outside flip group → visual coords).
-                     v3.8.ahu: coin radius 2.6→3.4 + cy 14→13 to clear
-                     the larger SRL text below. 6 coins in single row,
-                     3 tier groups × 2 coins, cumulative reveal via
-                     `.cj-loaded-N` class chain. -->
+                     v3.8.ahv: each coin now carries a $ glyph so it reads
+                     as actual currency, not abstract dots. 6 coins in
+                     single row, 3 tier groups × 2 coins, cumulative
+                     reveal via `.cj-loaded-N` class chain. -->
                 <g class="cj-load-tier-1">
                   <circle cx="46" cy="13" r="3.4" fill="#DAC39C" stroke="#8B6A1E" stroke-width="0.5"/>
+                  <text x="46" y="14.7" text-anchor="middle" font-family="'DM Sans',sans-serif" font-size="4.5" font-weight="700" fill="#FBF7F0">$</text>
                   <circle cx="88" cy="13" r="3.4" fill="#DAC39C" stroke="#8B6A1E" stroke-width="0.5"/>
+                  <text x="88" y="14.7" text-anchor="middle" font-family="'DM Sans',sans-serif" font-size="4.5" font-weight="700" fill="#FBF7F0">$</text>
                 </g>
                 <g class="cj-load-tier-2">
                   <circle cx="55" cy="13" r="3.4" fill="#C5A572" stroke="#8B6A1E" stroke-width="0.5"/>
+                  <text x="55" y="14.7" text-anchor="middle" font-family="'DM Sans',sans-serif" font-size="4.5" font-weight="700" fill="#FBF7F0">$</text>
                   <circle cx="79" cy="13" r="3.4" fill="#C5A572" stroke="#8B6A1E" stroke-width="0.5"/>
+                  <text x="79" y="14.7" text-anchor="middle" font-family="'DM Sans',sans-serif" font-size="4.5" font-weight="700" fill="#FBF7F0">$</text>
                 </g>
                 <g class="cj-load-tier-3">
                   <circle cx="64" cy="13" r="3.4" fill="#BA7517" stroke="#8B6A1E" stroke-width="0.5"/>
+                  <text x="64" y="14.7" text-anchor="middle" font-family="'DM Sans',sans-serif" font-size="4.5" font-weight="700" fill="#FBF7F0">$</text>
                   <circle cx="70" cy="13" r="3.4" fill="#BA7517" stroke="#8B6A1E" stroke-width="0.5"/>
+                  <text x="70" y="14.7" text-anchor="middle" font-family="'DM Sans',sans-serif" font-size="4.5" font-weight="700" fill="#FBF7F0">$</text>
                 </g>
                 <!-- SRL wordmark — v3.8.ahu: enlarged from size 6 brass
                      (illegible at deployed scale) to size 9 navy for

@@ -7118,7 +7118,15 @@
 //              font-size 6→9 + brass→navy for max contrast on cream
 //              trailer; trailer coin radius 2.6→3.4 and cy 14→13 to
 //              clear larger SRL text below. Mobile truck 96×32→130×46.
-export const SRL_VERSION = "3.8.ahu";
+// v3.8.ahv   — Caravan Journey clarity fixes: (1) trailer coins now
+//              carry $ glyphs so they read as currency instead of
+//              abstract dots; (2) OUTBOUND FREIGHT label dropped —
+//              it sat in the truck's Apply-phase path and got
+//              hidden each loop cycle, and the truck's eastbound
+//              motion already shows "outbound" visually; (3) QUICK
+//              PAY RETURNING gains a $ $ $ prefix in brighter brass
+//              (#DAC39C) as the lower-lane money-flow visual anchor.
+export const SRL_VERSION = "3.8.ahv";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
