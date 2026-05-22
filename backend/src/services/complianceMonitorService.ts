@@ -797,18 +797,27 @@ export async function runFmcsaScan(carrierId: string) {
 }
 
 // ────────────────────────────────────────────────────────────
-// fmcsaComplianceScan — canonical scheduled FMCSA re-monitor
+// fmcsaComplianceScan — canonical FMCSA re-monitor
 // ────────────────────────────────────────────────────────────
-// Runs DAILY at 3am via cron (see backend/src/cron/index.ts).
-// Was weeklyFmcsaScan until Item 183 consolidated FMCSA re-monitoring
-// to a single canonical daily path. Manual re-scan is also available
-// via fmcsaBulkMonitorService.runDailyMonitor (on-demand only, not
-// scheduled).
+// Runs DAILY at 3am via cron (see backend/src/cron/index.ts) AND on demand
+// via POST /integrations/fmcsa/bulk-monitor (single canonical path post
+// Item 184, v3.8.ahw — the deprecated fmcsaBulkMonitorService.runDailyMonitor
+// has been deleted).
 //
-// TODO(item-183-followup): unify the two suspension-column conventions.
-// runDailyMonitor writes `suspensionReason` + `suspendedAt`; this scan
-// writes `autoSuspendReason` + `autoSuspendedAt`. Pick one in a later
-// cleanup commit.
+// TODO(suspension-column-unification): this service writes TWO suspension
+// conventions in different code paths and they should be unified.
+// - autoSuspendReason + autoSuspendedAt: this scan's revoke / insurance-
+//   missing / OOS branches (lines ~947 + ~1058).
+// - suspensionReason + suspendedAt: insurance-expiry handler (~1424),
+//   monthly re-vetting (~1553), FMCSA authority-change watcher (~1662),
+//   FMCSA safety-rating watcher (~1702).
+// Both conventions are live across the canonical service; the gate at
+// complianceCheck() keys off onboardingStatus="SUSPENDED" only, so the
+// reason/timestamp drift is observability noise, not a correctness gap.
+// Pick one convention (recommend autoSuspendReason/autoSuspendedAt — the
+// newer field pair, already used by the FMCSA branches here) in a later
+// cleanup commit; this v3.8.ahw scope correction supersedes the narrower
+// "runDailyMonitor vs canonical" TODO logged at v3.8.ahv.
 
 export async function fmcsaComplianceScan() {
   const carriers = await prisma.carrierProfile.findMany({

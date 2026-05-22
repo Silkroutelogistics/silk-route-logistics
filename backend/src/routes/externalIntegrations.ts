@@ -3,7 +3,7 @@ import { authenticate, authorize, AuthRequest } from "../middleware/auth";
 import { env } from "../config/env";
 import * as carrierOkService from "../services/carrierOkService";
 import { brokerageGateway } from "../services/brokerageGatewayService";
-import { runDailyMonitor } from "../services/fmcsaBulkMonitorService";
+import { fmcsaComplianceScan } from "../services/complianceMonitorService";
 import { creditCheck } from "../services/secEdgarService";
 import * as fmcsaInsurance from "../services/fmcsaInsuranceService";
 import { checkExclusions } from "../services/samGovService";
@@ -143,13 +143,18 @@ router.post("/brokerage/get-rates", async (req: AuthRequest, res: Response) => {
   }
 });
 
-// POST /integrations/fmcsa/bulk-monitor — Trigger manual FMCSA bulk monitoring run
+// POST /integrations/fmcsa/bulk-monitor — Trigger manual FMCSA compliance scan
+// Item 184 (v3.8.ahw): repointed from the dead `runDailyMonitor` (light alert-only
+// snapshot, no carrier-row refresh, no emails) to the canonical `fmcsaComplianceScan`
+// so the manual trigger runs the SAME full scan the daily 3am cron runs —
+// ComplianceScan history + CarrierProfile field refresh + auto-suspend + carrier/admin
+// emails on critical changes.
 router.post("/fmcsa/bulk-monitor", async (req: AuthRequest, res: Response) => {
   try {
-    const result = await runDailyMonitor();
-    res.json({ message: "FMCSA bulk monitoring complete", ...result });
+    const result = await fmcsaComplianceScan();
+    res.json({ message: "FMCSA compliance scan complete", ...result });
   } catch (err) {
-    res.status(500).json({ error: "FMCSA bulk monitoring failed" });
+    res.status(500).json({ error: "FMCSA compliance scan failed" });
   }
 });
 

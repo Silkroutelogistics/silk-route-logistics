@@ -310,10 +310,11 @@ export function initCronJobs() {
   }));
 
   // ─── Daily (3 AM): FMCSA compliance scan ─────────
-  // Item 183 (v3.8.ahv): consolidated FMCSA re-monitoring from weekly to
-  // daily. Single canonical scheduled path. The on-demand
-  // fmcsaBulkMonitorService.runDailyMonitor remains for manual re-scans
-  // via POST /integrations/fmcsa/bulk-monitor but is NOT scheduled.
+  // Item 183 (v3.8.ahv): consolidated FMCSA re-monitoring from weekly to daily.
+  // Item 184 (v3.8.ahw): manual POST /integrations/fmcsa/bulk-monitor now also
+  // routes to this same fmcsaComplianceScan (the deprecated runDailyMonitor +
+  // its fmcsaBulkMonitorService.ts module have been deleted). One canonical
+  // FMCSA re-monitor path, scheduled and on-demand.
   cron.schedule("0 3 * * *", () => withGuard("fmcsa-compliance", async () => {
     try {
       log.info("[Cron Daily] Starting FMCSA compliance scan...");
