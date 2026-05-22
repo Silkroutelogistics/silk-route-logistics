@@ -1,6 +1,7 @@
 import { Router, Response } from "express";
 import { authenticate, authorize, AuthRequest } from "../middleware/auth";
 import { env } from "../config/env";
+import { prisma } from "../config/database";
 import * as carrierOkService from "../services/carrierOkService";
 import { brokerageGateway } from "../services/brokerageGatewayService";
 import { fmcsaComplianceScan } from "../services/complianceMonitorService";
@@ -144,17 +145,51 @@ router.post("/brokerage/get-rates", async (req: AuthRequest, res: Response) => {
 });
 
 // POST /integrations/fmcsa/bulk-monitor — Trigger manual FMCSA compliance scan
-// Item 184 (v3.8.ahw): repointed from the dead `runDailyMonitor` (light alert-only
-// snapshot, no carrier-row refresh, no emails) to the canonical `fmcsaComplianceScan`
-// so the manual trigger runs the SAME full scan the daily 3am cron runs —
-// ComplianceScan history + CarrierProfile field refresh + auto-suspend + carrier/admin
-// emails on critical changes.
-router.post("/fmcsa/bulk-monitor", async (req: AuthRequest, res: Response) => {
+// Item 184 (v3.8.ahw): repointed from the dead `runDailyMonitor` to canonical
+// `fmcsaComplianceScan` so manual trigger runs the same work as the daily 3am cron.
+// Item 188 (v3.8.ahy): kicked off in the BACKGROUND and 202'd immediately —
+// the scan walks ~all APPROVED-with-DOT carriers serially and can run ~2min, so
+// holding the HTTP connection open is wrong for an AE-facing button. The caller
+// polls GET /integrations/fmcsa/last-scan for the result summary.
+router.post("/fmcsa/bulk-monitor", (req: AuthRequest, res: Response) => {
+  // Fire-and-forget — errors persist via SystemLog inside the scan and via
+  // the .catch handler below; do not await.
+  void fmcsaComplianceScan().catch((err) => {
+    log.error({ err }, "[FMCSA] Manual scan failed in background");
+  });
+  res.status(202).json({
+    message: "FMCSA compliance scan started",
+    note: "Results in about two minutes — poll GET /integrations/fmcsa/last-scan",
+  });
+});
+
+// GET /integrations/fmcsa/last-scan — Most recent FMCSA scan summary
+// Item 188 (v3.8.ahy): reads the latest scan-summary row written by
+// fmcsaComplianceScan at the end of each run (daily cron OR manual POST above).
+// Filter by logType=CRON_JOB AND source="fmcsa-compliance-scan" — see service
+// comment for the why-not-add-FMCSA_SCAN_RUN-enum-value choice.
+router.get("/fmcsa/last-scan", async (_req: AuthRequest, res: Response) => {
   try {
-    const result = await fmcsaComplianceScan();
-    res.json({ message: "FMCSA compliance scan complete", ...result });
+    const last = await prisma.systemLog.findFirst({
+      where: { logType: "CRON_JOB", source: "fmcsa-compliance-scan" },
+      orderBy: { createdAt: "desc" },
+      select: { createdAt: true, message: true, details: true, severity: true },
+    });
+    if (!last) {
+      res.json({ found: false });
+      return;
+    }
+    const details = (last.details as Record<string, unknown>) || {};
+    res.json({
+      found: true,
+      timestamp: last.createdAt,
+      message: last.message,
+      severity: last.severity,
+      ...details,
+    });
   } catch (err) {
-    res.status(500).json({ error: "FMCSA compliance scan failed" });
+    log.error({ err }, "[FMCSA] last-scan retrieval failed");
+    res.status(500).json({ error: "Failed to retrieve last scan summary" });
   }
 });
 

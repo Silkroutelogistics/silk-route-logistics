@@ -828,7 +828,8 @@ export async function fmcsaComplianceScan() {
     include: { user: { select: { company: true, firstName: true, lastName: true, email: true } } },
   });
 
-  const results = { scanned: 0, passed: 0, failed: 0, alerts: 0, errors: 0 };
+  const results = { scanned: 0, passed: 0, failed: 0, alerts: 0, suspended: 0, errors: 0 };
+  const scanStartedAt = new Date();
 
   for (const carrier of carriers) {
     try {
@@ -956,6 +957,7 @@ export async function fmcsaComplianceScan() {
           data: { onboardingStatus: "SUSPENDED", autoSuspendedAt: new Date(), autoSuspendReason: "FMCSA auto-suspension" },
         });
         results.alerts++;
+        results.suspended++;
 
         // Email carrier about suspension
         sendFmcsaSuspensionEmail(carrier.user.email, carrierName, fmcsaResult.operatingStatus, carrier.dotNumber!, "AUTHORITY_REVOKED")
@@ -1067,6 +1069,7 @@ export async function fmcsaComplianceScan() {
           data: { onboardingStatus: "SUSPENDED", autoSuspendedAt: new Date(), autoSuspendReason: "FMCSA auto-suspension" },
         });
         results.alerts++;
+        results.suspended++;
 
         // Email carrier about out-of-service suspension
         sendFmcsaSuspensionEmail(carrier.user.email, carrierName, "OUT OF SERVICE", carrier.dotNumber!, "OUT_OF_SERVICE")
@@ -1081,6 +1084,37 @@ export async function fmcsaComplianceScan() {
       results.errors++;
     }
   }
+
+  // Item 188 (v3.8.ahy): single run-summary row to SystemLog so the CEO
+  // dashboard "Last FMCSA scan" card can read the latest result without
+  // walking per-carrier ComplianceScan rows. One row per scan run.
+  // Note on logType: directive asked for a distinct type like
+  // FMCSA_SCAN_RUN, but LogType is a closed Prisma enum (API_CALL / ERROR /
+  // AUTH / SECURITY / PAYMENT / STATUS_CHANGE / CRON_JOB / INTEGRATION /
+  // ALERT). Rather than expand this commit's scope to a schema migration
+  // for one enum value, the canonical filter is logType=CRON_JOB AND
+  // source="fmcsa-compliance-scan" — equivalent isolation with no schema
+  // churn. If a future surface needs FMCSA scan rows to surface at the
+  // enum-filter level, adding FMCSA_SCAN_RUN to the LogType enum is a
+  // small follow-up migration.
+  await prisma.systemLog.create({
+    data: {
+      logType: "CRON_JOB",
+      severity: results.errors > 0 ? "WARNING" : "INFO",
+      source: "fmcsa-compliance-scan",
+      message: `FMCSA scan complete: ${results.scanned} scanned, ${results.alerts} alerts, ${results.suspended} suspended, ${results.errors} errors`,
+      details: {
+        startedAt: scanStartedAt.toISOString(),
+        completedAt: new Date().toISOString(),
+        carriersScanned: results.scanned,
+        passed: results.passed,
+        failed: results.failed,
+        alertsCreated: results.alerts,
+        autoSuspended: results.suspended,
+        errors: results.errors,
+      } as any,
+    },
+  }).catch((err) => log.error({ err }, "[FMCSAScan] Failed to write FMCSA_SCAN_RUN summary"));
 
   return results;
 }

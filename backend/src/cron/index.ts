@@ -6,6 +6,18 @@ import { log } from "../lib/logger";
  * SRL Cron Job System
  * Schedules: 5-min, hourly, daily, weekly, monthly
  * Each job uses an in-memory mutex to prevent overlapping runs.
+ *
+ * Timezone convention (Item 185, v3.8.ahy):
+ * - Human-facing jobs that email / notify / generate digests, reminders, or
+ *   briefings pass `{ timezone: "America/New_York" }` as the third argument
+ *   to cron.schedule so their wall-clock times read as Eastern (Wasi-facing
+ *   operational interpretation).
+ * - Internal recompute / cleanup / validation jobs (FMCSA scan, AI learning
+ *   cycles, OFAC/ELD/TIN/CSA/VIN sweeps, AI cycles, log-purge, etc.) run on
+ *   the node-cron default which uses the host process clock — Render
+ *   containers default to UTC since no TZ env var is set. The container
+ *   timezone is intentionally NOT changed; only the human-facing jobs are
+ *   pinned to Eastern.
  */
 
 // In-memory concurrency guard — prevents overlapping runs of the same job
@@ -28,6 +40,7 @@ export function initCronJobs() {
   log.info("Initializing cron scheduled jobs");
 
   // ─── Every 5 minutes: Check call reminders ───────────────────
+  // Eastern timezone per Item 185 — produces dispatcher Notifications.
   cron.schedule("*/5 * * * *", () => withGuard("check-call-reminders", async () => {
     try {
       const now = new Date();
@@ -69,7 +82,7 @@ export function initCronJobs() {
     } catch (err) {
       log.error({ err }, "[Cron 5min] Check call reminder error:");
     }
-  }));
+  }), { timezone: "America/New_York" });
 
   // ─── Hourly: Sequence advance (Lead Hunter v3.6.c) ────────────
   cron.schedule("15 * * * *", () => withGuard("sequence-advance", async () => {
@@ -100,7 +113,7 @@ export function initCronJobs() {
     } catch (err) {
       log.error({ err }, "[TenderExpiry] Sweep failed:");
     }
-  }));
+  }), { timezone: "America/New_York" });  // Eastern per Item 185 — fans out carrier emails
 
   // ─── Hourly: Invoice aging & overdue detection ───────────────
   cron.schedule("0 * * * *", () => withGuard("invoice-aging", async () => {
@@ -181,7 +194,7 @@ export function initCronJobs() {
     } catch (err) {
       log.error({ err }, "[Cron Daily] Health digest error:");
     }
-  }));
+  }), { timezone: "America/New_York" });  // Eastern per Item 185 — admin digest email
 
   // ─── Weekly (Sunday 11 PM): Compass Score full recalc ────────
   // 7-factor scorecard recalc for every APPROVED carrier per the public
@@ -291,7 +304,7 @@ export function initCronJobs() {
     } catch (err) {
       log.error({ err }, "[Cron Monthly] Invoice reminder error:");
     }
-  }));
+  }), { timezone: "America/New_York" });  // Eastern per Item 185 — reminder flag flips drive email sends
 
   // ─── Monthly (1st, 6:30 AM): Quick Pay override variance report (v3.7.a) ───
   cron.schedule("30 6 1 * *", () => withGuard("monthly-qp-variance", async () => {
@@ -307,7 +320,7 @@ export function initCronJobs() {
     } catch (err) {
       log.error({ err }, "[Cron Monthly] QP override variance error:");
     }
-  }));
+  }), { timezone: "America/New_York" });  // Eastern per Item 185 — sendQpVarianceReport email
 
   // ─── Daily (3 AM): FMCSA compliance scan ─────────
   // Item 183 (v3.8.ahv): consolidated FMCSA re-monitoring from weekly to daily.
@@ -365,7 +378,7 @@ export function initCronJobs() {
     } catch (err) {
       log.error({ err }, "[Cron Daily] Compliance reminder error:");
     }
-  }));
+  }), { timezone: "America/New_York" });  // Eastern per Item 185 — daily reminder emails
 
   // ─── Weekly (Monday 3:30 AM): Full chameleon scan ─────────────
   cron.schedule("30 3 * * 1", () => withGuard("chameleon-scan", async () => {
@@ -492,7 +505,7 @@ export function initCronJobs() {
     } catch (err) {
       log.error({ err }, "[Cron AI] Morning briefing error:");
     }
-  }));
+  }), { timezone: "America/New_York" });  // Eastern per Item 185 — admin morning briefing
 
   // ─── Weekly (Monday 2 AM): OFAC/SDN rescan ──────────────
   cron.schedule("0 2 * * 1", () => withGuard("ofac-rescan", async () => {
