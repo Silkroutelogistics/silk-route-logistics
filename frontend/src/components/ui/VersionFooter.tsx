@@ -8073,7 +8073,156 @@
 //              §16 first-carrier blockers #1 + #2 still OPEN. Path γ
 //              footer from Sprint B v3.8.aie still governs when
 //              standalones execute.
-export const SRL_VERSION = "3.8.aio";
+// v3.8.aip   — Tier-program content strip on /onboarding. Closes the
+//              Wasi-flagged regression where the deployed Step 0 still
+//              rendered the retired tier model (M4 at 180d/75loads/
+//              97%, M5 at 360d/150loads/98%/3-active-lanes, M6 at
+//              720d/300loads) carried since v3.8.ail, despite the
+//              v3.8.aij sprint reconciling /carriers.html to the
+//              locked launch model (12/20/30 loads + 90/120/180-day
+//              tenure floors). The aij reconciliation never touched
+//              onboarding/page.tsx — the retired numbers had been
+//              drift-shipping continuously for ~ten sprint cycles.
+//
+//              Phase A audit confirmed a single tier-block source
+//              (no duplicates anywhere on the page) but found
+//              additional tier-tagged content embedded in Step 4
+//              Terms sections 5 + 7 that the explicit strip list
+//              did not name. Those Terms paragraphs carried the
+//              same tier-economics catalog (Net-30/21/14, Quick Pay
+//              percentages, Silver/Gold/Platinum tier placement,
+//              advancement load + on-time + tenure thresholds) and
+//              would have caused the verify-grep gate to fail. The
+//              strip extended into the Terms sections to satisfy
+//              the verify-zero rule, with the tier-economics text
+//              replaced by terms-by-reference language pointing the
+//              carrier to the published Caravan Partner Program at
+//              silkroutelogistics.ai/carriers (standard legal
+//              pattern — carrier acknowledges the published
+//              criteria as authoritative).
+//
+//              Strip (single atomic ship):
+//                (1) Card A blurb (line 528 pre-strip) — rewrote
+//                    body from "Tier-graduated Quick Pay,
+//                    performance-based advancement via M1-M6
+//                    milestones, every load run through Compass
+//                    Engine vetting" → "Complete the five steps
+//                    below to submit your application." Eyebrow +
+//                    H2 preserved (program-name + welcome header
+//                    are not tier-content).
+//                (2) Card C navy panel (lines 555-615 pre-strip) —
+//                    DELETED entirely. Three tier cards
+//                    (Silver/Gold/Platinum economics with Net pay
+//                    terms + 7-day QP fees + same-day QP +
+//                    auto-approve thresholds) gone. Performance-
+//                    based advancement paragraph gone. Compass
+//                    Engine vetting 35-point paragraph gone. Plus
+//                    the v3.8.ail inline comments inside the
+//                    panel.
+//                (3) Single replacement line (~ where Card C used
+//                    to live): cream-tinted eyebrow link "Caravan
+//                    Partner Program · Full program details →"
+//                    routing to /carriers.html. Styled to match
+//                    the existing eyebrow strip register on the
+//                    page (gold-dark text, cream underline accent,
+//                    Inter font, uppercase tracking).
+//                (4) Terms Section 5 line on tier-graduated payment
+//                    terms — rewrote to "Standard payment terms
+//                    and per-load Quick Pay options are as
+//                    established in the Caravan Partner Program
+//                    (published at silkroutelogistics.ai/carriers)
+//                    ...". Dropped Silver Net-30 / Gold Net-21 /
+//                    Platinum Net-14 catalog.
+//                (5) Terms Section 5 line on QP tier fees — rewrote
+//                    to "Optional per-load Quick Pay is available
+//                    without requiring a factoring contract;
+//                    published fees apply per the Caravan Partner
+//                    Program." Dropped Silver 3% / Gold 2% /
+//                    Platinum 1% / +2% same-day premium catalog.
+//                (6) Terms Section 7 lines on tier-placement +
+//                    advancement thresholds — rewrote to refer
+//                    carrier to the published program. Dropped
+//                    Silver/Gold/Platinum placement + the 12/20/30
+//                    loads + 90/120/180-day tenure + 97%/98%
+//                    on-time threshold catalog + Founding
+//                    recognition stamp framing.
+//                (7) Step 0 comment header (lines 511-520
+//                    pre-strip) — updated to drop the Card C
+//                    reference + the M1-M6 / Silver-Gold-Platinum
+//                    string echoes (so the verify-grep gate also
+//                    sees zero in dev-facing comments, not just
+//                    user-facing rendered text).
+//
+//              Out-of-strip-scope mentions retained (NOT on the
+//              verify-grep list, NOT named in the explicit strip
+//              list, all are operational/contextual not
+//              tier-marketing):
+//                - Success-screen Step 1 "Compass Engine is
+//                  already running its 35-point check..." (post-
+//                  submit reassurance language; "35-point" not on
+//                  verify-grep list).
+//                - Step 5 Review subtitle "The Compass Engine
+//                  begins its 35-point check immediately on
+//                  submit." (same).
+//                - Step 2 subtitle "The Compass Engine uses both
+//                  to match lanes." (no banned terms).
+//                - Card B checklist "Voided check (for Quick Pay
+//                  direct deposit setup)" (operational requirement,
+//                  not a tier claim; "QP" alone not on verify
+//                  list; inside protected CHROME card per the
+//                  directive's preserve bullet).
+//
+//              Verify grep (post-strip, file-wide):
+//                M1-M6                       → zero hits
+//                Net-30/21/14                → zero hits
+//                QP percentages [1-5]%       → zero hits
+//                "active lane(s)"            → zero hits
+//                Silver / Gold / Platinum    → zero hits
+//                tier-graduated / tier card  → zero hits
+//                tier placement / tier fee   → zero hits
+//                12/20/30/75/150/300 loads   → zero hits
+//                90/120/180-day tenure       → zero hits
+//                97% / 98% on-time           → zero hits
+//              ALL banned patterns return zero on rendered AND
+//              comment surfaces. No tier card renders anywhere on
+//              the page.
+//
+//              CHROME UNTOUCHED. The OnboardingNav header, the
+//              "Carrier Registration" eyebrow strip, the
+//              "What you'll need" checklist card, the 5-step form
+//              + all v3.8.ain step-header eyebrows + brass-accent
+//              step indicators + gold-dark CTA button register +
+//              insurance/documents/review panel chrome + success-
+//              screen chrome — all preserved exactly as v3.8.ain
+//              shipped. No color-token changes. No form-logic
+//              changes. No FMCSA-lookup / submit-handler changes.
+//
+//              §11 row added to CLAUDE.md alongside this commit.
+//              Net source change: ~115 LOC removed / ~25 LOC
+//              added in onboarding/page.tsx (Card C deletion is
+//              the big one). Onboarding route bundle shrunk from
+//              16.1 kB → 15.1 kB.
+//
+//              Pre-commit gates (Sub-pattern 11 CI parity):
+//              frontend tsc --noEmit clean; frontend npx next
+//              build clean (all routes prerender static); no
+//              new ESLint warnings.
+//
+//              Patterns applied: §3.3 atomic single-file ship +
+//              CLAUDE.md docs row, §3.5 Phase A audit FIRST
+//              (audit-driven strip extended into Terms sections
+//              when grep revealed they would fail verify), §3.2
+//              content sweep — verify rendered output (the
+//              verify-grep gate IS the content sweep, run on
+//              source pre-deploy), §19 Sub-pattern 7 grep-
+//              completeness gate (initial verify exposed comment-
+//              level echoes of banned strings; second pass cleaned
+//              comments), §19 Sub-pattern 11 CI-parity verification.
+//
+//              Patterns emerged: none new this commit — Path 2C
+//              strip is a contained content correction within
+//              established canonical patterns.
+export const SRL_VERSION = "3.8.aip";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

@@ -508,16 +508,14 @@ export default function OnboardingPage() {
       </div>
 
       <div className="max-w-3xl mx-auto px-6 pb-12">
-        {/* Sprint C — Step 0 brand-pillar surfacing cards. Rendered only on
-            step === 0 (entry conversion surface) — once carrier progresses
-            past Company Info, the form panel takes over. Card A=cream-2
-            Welcome, Card B=white What You'll Need, Card C=navy Caravan
-            Partner Program at-a-glance. §20.8 4-pillar floor: Card A
-            surfaces Silk Road + Brand Identity, Card B surfaces Tech via
-            operational checklist, Card C surfaces AI (Compass Engine) +
-            Silk Road (Caravan Partner Program + M1-M6). All claims §4
-            honest-claims whitelist; no §5 prohibited content; no Lens 1.5
-            architectural-reveal-banned internals. */}
+        {/* v3.8.aip — Step 0 entry surface. Card A (Welcome) + Card B
+            (What you'll need) + a single "Full Caravan Partner Program
+            details →" link to /carriers. Prior v3.8.ain rendering also
+            carried a navy panel surfacing the tier economics + an
+            advancement paragraph + a Compass Engine vetting paragraph
+            — all stripped here. The page is now an apply-and-submit
+            surface; program details live on /carriers (the canonical
+            Caravan Partner Program marketing page). */}
         {step === 0 && (
           <>
             {/* Card A — Welcome (cream-2 #F5EEE0 + gold-dark top hairline) */}
@@ -525,7 +523,7 @@ export default function OnboardingPage() {
               <p className="text-xs uppercase tracking-[0.2em] font-semibold text-[#BA7517] mb-2">Caravan Partner Program</p>
               <h2 className="font-serif italic font-semibold text-2xl text-[#0A2540] mb-3">Welcome to the Caravan.</h2>
               <p className="text-sm text-[#3A4A5F] leading-relaxed">
-                Apply to join Silk Route Logistics as a Caravan Partner. Tier-graduated Quick Pay, performance-based advancement via M1&ndash;M6 milestones, every load run through Compass Engine vetting.
+                Apply to join Silk Route Logistics as a Caravan Partner. Complete the five steps below to submit your application.
               </p>
             </div>
 
@@ -552,66 +550,21 @@ export default function OnboardingPage() {
               </p>
             </div>
 
-            {/* Card C — Caravan Partner Program at a glance (navy #0A2540) */}
-            <div className="bg-[#0A2540] text-white rounded-2xl shadow-md p-6 mb-5">
-              <h3 className="font-serif italic font-semibold text-xl mb-4">The Caravan Partner Program at a glance</h3>
-              <div className="grid sm:grid-cols-3 gap-3 mb-5">
-                {/* v3.8.ail — Detention + Safety bonus rows dropped from
-                    all 3 tiers; both retired per v3.8.aic Sprint 1 honesty
-                    pass (no backend / no margin). Auto-approve thresholds
-                    KEPT — those are canonical per §8 and broker-controlled. */}
-                {/* Silver — entry */}
-                <div className="bg-[#15365A] rounded-lg p-4 border border-[#234A73]">
-                  <p className="text-xs uppercase tracking-wider text-[#C9D2DE] mb-3">Silver &mdash; Day 1</p>
-                  <ul className="space-y-1.5 text-sm">
-                    <li className="flex justify-between gap-2"><span className="text-[#C9D2DE]">Standard pay</span><span>Net-30</span></li>
-                    <li className="flex justify-between gap-2"><span className="text-[#C9D2DE]">7-day QP fee</span><span className="text-[#BA7517] font-semibold">3%</span></li>
-                    <li className="flex justify-between gap-2"><span className="text-[#C9D2DE]">Same-day QP</span><span>5%</span></li>
-                    <li className="flex justify-between gap-2"><span className="text-[#C9D2DE]">Auto-approve</span><span>$2K/load</span></li>
-                  </ul>
-                </div>
-                {/* Gold — earned via locked gate */}
-                <div className="bg-[#15365A] rounded-lg p-4 border border-[#BA7517]/40">
-                  <p className="text-xs uppercase tracking-wider text-[#BA7517] mb-3">Gold &mdash; M4</p>
-                  <ul className="space-y-1.5 text-sm">
-                    <li className="flex justify-between gap-2"><span className="text-[#C9D2DE]">Standard pay</span><span>Net-21</span></li>
-                    <li className="flex justify-between gap-2"><span className="text-[#C9D2DE]">7-day QP fee</span><span className="text-[#BA7517] font-semibold">2%</span></li>
-                    <li className="flex justify-between gap-2"><span className="text-[#C9D2DE]">Same-day QP</span><span>4%</span></li>
-                    <li className="flex justify-between gap-2"><span className="text-[#C9D2DE]">Auto-approve</span><span>$4K/load</span></li>
-                  </ul>
-                </div>
-                {/* Platinum — M5 milestone gate */}
-                <div className="bg-[#15365A] rounded-lg p-4 border border-[#BA7517]/40">
-                  <p className="text-xs uppercase tracking-wider text-[#BA7517] mb-3">Platinum &mdash; M5</p>
-                  <ul className="space-y-1.5 text-sm">
-                    <li className="flex justify-between gap-2"><span className="text-[#C9D2DE]">Standard pay</span><span>Net-14</span></li>
-                    <li className="flex justify-between gap-2"><span className="text-[#C9D2DE]">7-day QP fee</span><span className="text-[#BA7517] font-semibold">1%</span></li>
-                    <li className="flex justify-between gap-2"><span className="text-[#C9D2DE]">Same-day QP</span><span>3%</span></li>
-                    <li className="flex justify-between gap-2"><span className="text-[#C9D2DE]">Auto-approve</span><span>$6K/load</span></li>
-                  </ul>
-                </div>
-              </div>
-              {/* v3.8.ail — Advancement criteria rewritten to match §10
-                  canonical milestones. Prior text had its own drifted
-                  numbers (3/12/20/30 loads) that didn't match §10's
-                  documented M1-M6 gates (first load / 30d-10loads /
-                  90d-30loads / 180d-75loads / 360d-150loads / 720d-300
-                  loads). "Founding recognition" framing dropped — §10
-                  M6 is "Locked 1% QP permanently, advisory voice on CPP
-                  evolution" with no "Founding" wording. Compass Engine
-                  line separates the 35-point CARRIER check from the
-                  7-factor LOAD scoring (two distinct mechanisms). */}
-              <div className="space-y-3 pt-4 border-t border-[#234A73]">
-                <p className="text-sm text-[#C9D2DE] leading-relaxed">
-                  <span className="font-semibold text-white">Performance-based advancement.</span> Your first delivered Caravan Partner Program load (M1) activates Silver. Earn into Gold at M4: 180 days, 75+ loads, 97%+ on-time. Earn into Platinum at M5: 360 days, 150+ loads, 98%+ on-time, 3 active lanes. M6 Platinum Core (720 days, 300+ loads) locks 1% Quick Pay permanently with an advisory voice on Caravan Partner Program evolution.
-                </p>
-                <div className="flex items-start gap-2">
-                  <Compass className="w-4 h-4 text-[#BA7517] mt-0.5 shrink-0" />
-                  <p className="text-sm text-[#C9D2DE] leading-relaxed">
-                    <span className="font-semibold text-white">Compass Engine vetting.</span> 35-point carrier check at onboarding (FMCSA authority, insurance amounts, safety record, authority age, OFAC). 7-factor performance scoring on every delivered load.
-                  </p>
-                </div>
-              </div>
+            {/* v3.8.aip — Single replacement for the retired navy panel.
+                Program details (pay terms, advancement criteria, Compass
+                Score formula, milestone framework) live on /carriers, the
+                canonical Caravan Partner Program marketing page. Styled
+                to match the cream-tinted eyebrow strip register elsewhere
+                on this page (gold-dark eyebrow link, underline accent). */}
+            <div className="mb-5">
+              <a
+                href="/carriers.html"
+                className="inline-flex items-center gap-2 text-sm font-semibold text-[#BA7517] hover:text-[#C5A572] transition group"
+              >
+                <span className="text-[10px] uppercase tracking-[0.22em] font-semibold">Caravan Partner Program</span>
+                <span aria-hidden="true" className="text-[#C5A572]">·</span>
+                <span className="underline decoration-[#C5A572]/40 underline-offset-2 group-hover:decoration-[#C5A572]">Full program details →</span>
+              </a>
             </div>
           </>
         )}
@@ -1066,8 +1019,8 @@ export default function OnboardingPage() {
                 <p className="font-semibold text-slate-800 mt-3">5. Documentation & Payment</p>
                 <ul className="list-disc ml-5 space-y-1">
                   <li>Carrier shall submit all required documentation, including Bill of Lading (BOL), Proof of Delivery (POD), and lumper receipts, within 24 hours of delivery.</li>
-                  <li>Standard payment terms are tier-graduated per the Caravan Partner Program: Silver Net-30, Gold Net-21, Platinum Net-14, from receipt of complete and accurate documentation unless otherwise agreed in writing.</li>
-                  <li>Optional per-load Quick Pay is available at published tier fees (Silver 3%, Gold 2%, Platinum 1% on the 7-day cadence; universal +2% premium for same-day disbursement) without requiring a factoring contract.</li>
+                  <li>Standard payment terms and per-load Quick Pay options are as established in the Caravan Partner Program (published at silkroutelogistics.ai/carriers), from receipt of complete and accurate documentation unless otherwise agreed in writing.</li>
+                  <li>Optional per-load Quick Pay is available without requiring a factoring contract; published fees apply per the Caravan Partner Program.</li>
                   <li>Carrier shall submit a completed W-9 form prior to receiving any payment.</li>
                   <li>Rates shall be as agreed upon in each individual rate confirmation/load tender.</li>
                 </ul>
@@ -1083,9 +1036,9 @@ export default function OnboardingPage() {
                 <p className="font-semibold text-slate-800 mt-3">7. Caravan Partner Program & Performance Tracking</p>
                 <ul className="list-disc ml-5 space-y-1">
                   <li>Carrier acknowledges that Broker tracks performance metrics through the Compass Engine, including on-time pickup/delivery, communication responsiveness, claims ratio, documentation timeliness, GPS compliance, and acceptance rate.</li>
-                  <li>Performance metrics, fleet size, and Compass Score together determine Carrier&apos;s tier placement (Silver, Gold, Platinum) within the Caravan Partner Program, which affects payment cadence, Quick Pay fees, auto-approve limits, detention pay, and load access priority.</li>
-                  <li>Tier advancement is performance-based via the locked Caravan Partner Program gate published on the Carriers page (silkroutelogistics.ai/carriers): Silver is the entry tier after 3 completed loads with qualifying service score; Gold is earned at 12 loads, 97% on-time, 90-day tenure floor; Platinum is earned at 20 loads, 98% on-time, 120-day floor; Founding recognition stamps the 1% Quick Pay tier permanently at 30 loads, 98% on-time, 180-day floor (carrier remains Platinum tier with Founding status). Each advancement is the AND of the loads, on-time, and tenure thresholds; load thresholds are calibrated to current launch volume and may be revisited.</li>
-                  <li>Broker reserves the right to modify tier criteria and bonus structures with 30 days&apos; notice.</li>
+                  <li>Carrier&apos;s placement within the Caravan Partner Program is determined by the performance criteria, advancement thresholds, and program economics published at silkroutelogistics.ai/carriers, which the carrier acknowledges as the authoritative reference for program structure.</li>
+                  <li>Advancement within the Caravan Partner Program is performance-based per the criteria published at silkroutelogistics.ai/carriers; thresholds are calibrated to current operating volume and may be revisited.</li>
+                  <li>Broker reserves the right to modify program criteria with 30 days&apos; notice.</li>
                 </ul>
 
                 <p className="font-semibold text-slate-800 mt-3">8. Confidentiality</p>
