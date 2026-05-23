@@ -438,9 +438,9 @@ export default function OnboardingPage() {
             <div className="bg-[#0A2540] text-white rounded-2xl shadow-md p-6 mb-5">
               <h3 className="font-serif italic font-semibold text-xl mb-4">The Caravan Partner Program at a glance</h3>
               <div className="grid sm:grid-cols-3 gap-3 mb-5">
-                {/* Silver — Day 1 */}
+                {/* Silver — entry */}
                 <div className="bg-[#15365A] rounded-lg p-4 border border-[#234A73]">
-                  <p className="text-xs uppercase tracking-wider text-[#C9D2DE] mb-3">Silver &mdash; Day 1</p>
+                  <p className="text-xs uppercase tracking-wider text-[#C9D2DE] mb-3">Silver &mdash; Entry</p>
                   <ul className="space-y-1.5 text-sm">
                     <li className="flex justify-between gap-2"><span className="text-[#C9D2DE]">Standard pay</span><span>Net-30</span></li>
                     <li className="flex justify-between gap-2"><span className="text-[#C9D2DE]">7-day QP fee</span><span className="text-[#BA7517] font-semibold">3%</span></li>
@@ -449,9 +449,9 @@ export default function OnboardingPage() {
                     <li className="flex justify-between gap-2"><span className="text-[#C9D2DE]">Safety bonus</span><span className="text-[#C9D2DE]">&mdash;</span></li>
                   </ul>
                 </div>
-                {/* Gold — M4 */}
+                {/* Gold — earned via locked gate */}
                 <div className="bg-[#15365A] rounded-lg p-4 border border-[#BA7517]/40">
-                  <p className="text-xs uppercase tracking-wider text-[#BA7517] mb-3">Gold &mdash; M4</p>
+                  <p className="text-xs uppercase tracking-wider text-[#BA7517] mb-3">Gold</p>
                   <ul className="space-y-1.5 text-sm">
                     <li className="flex justify-between gap-2"><span className="text-[#C9D2DE]">Standard pay</span><span>Net-21</span></li>
                     <li className="flex justify-between gap-2"><span className="text-[#C9D2DE]">7-day QP fee</span><span className="text-[#BA7517] font-semibold">2%</span></li>
@@ -460,9 +460,9 @@ export default function OnboardingPage() {
                     <li className="flex justify-between gap-2"><span className="text-[#C9D2DE]">Safety bonus</span><span>$450/qtr</span></li>
                   </ul>
                 </div>
-                {/* Platinum — M5 */}
+                {/* Platinum — earned via locked gate; Founding on top */}
                 <div className="bg-[#15365A] rounded-lg p-4 border border-[#BA7517]/40">
-                  <p className="text-xs uppercase tracking-wider text-[#BA7517] mb-3">Platinum &mdash; M5</p>
+                  <p className="text-xs uppercase tracking-wider text-[#BA7517] mb-3">Platinum</p>
                   <ul className="space-y-1.5 text-sm">
                     <li className="flex justify-between gap-2"><span className="text-[#C9D2DE]">Standard pay</span><span>Net-14</span></li>
                     <li className="flex justify-between gap-2"><span className="text-[#C9D2DE]">7-day QP fee</span><span className="text-[#BA7517] font-semibold">1%</span></li>
@@ -474,7 +474,7 @@ export default function OnboardingPage() {
               </div>
               <div className="space-y-3 pt-4 border-t border-[#234A73]">
                 <p className="text-sm text-[#C9D2DE] leading-relaxed">
-                  <span className="font-semibold text-white">Performance-based advancement.</span> Day 1 you&apos;re Silver. Earn into Gold (M4: 180 days / 75+ loads / 97%+ on-time). Earn into Platinum (M5: 360 days / 150+ loads / 98%+ on-time / 3 active lanes). M6 (720 days / 300+ loads) locks 1% Quick Pay permanently.
+                  <span className="font-semibold text-white">Performance-based advancement.</span> Silver is the entry tier (3 completed loads + qualifying service score). Earn into Gold at 12 loads, 97% on-time, 90-day tenure floor. Earn into Platinum at 20 loads, 98% on-time, 120-day floor. Founding recognition stamps the 1% Quick Pay tier permanently at 30 loads, 98% on-time, 180-day floor &mdash; carrier remains Platinum tier with Founding status.
                 </p>
                 <div className="flex items-start gap-2">
                   <Compass className="w-4 h-4 text-[#BA7517] mt-0.5 shrink-0" />
@@ -933,7 +933,7 @@ export default function OnboardingPage() {
                 <ul className="list-disc ml-5 space-y-1">
                   <li>Carrier acknowledges that Broker tracks performance metrics through the Compass Engine, including on-time pickup/delivery, communication responsiveness, claims ratio, documentation timeliness, GPS compliance, and acceptance rate.</li>
                   <li>Performance metrics, fleet size, and Compass Score together determine Carrier&apos;s tier placement (Silver, Gold, Platinum) within the Caravan Partner Program, which affects payment cadence, Quick Pay fees, auto-approve limits, detention pay, and load access priority.</li>
-                  <li>Tier advancement is performance-based via the M1&ndash;M6 milestone framework published on the Carriers page (silkroutelogistics.ai/carriers): M1 first Caravan load activates Silver, M4 (180 days, 75+ loads, 97%+ on-time) advances to Gold, M5 (360 days, 150+ loads, 98%+ on-time, 3 active lanes) advances to Platinum, and M6 (720 days, 300+ loads) locks 1% Quick Pay permanently.</li>
+                  <li>Tier advancement is performance-based via the locked Caravan Partner Program gate published on the Carriers page (silkroutelogistics.ai/carriers): Silver is the entry tier after 3 completed loads with qualifying service score; Gold is earned at 12 loads, 97% on-time, 90-day tenure floor; Platinum is earned at 20 loads, 98% on-time, 120-day floor; Founding recognition stamps the 1% Quick Pay tier permanently at 30 loads, 98% on-time, 180-day floor (carrier remains Platinum tier with Founding status). Each advancement is the AND of the loads, on-time, and tenure thresholds; load thresholds are calibrated to current launch volume and may be revisited.</li>
                   <li>Broker reserves the right to modify tier criteria and bonus structures with 30 days&apos; notice.</li>
                 </ul>
 

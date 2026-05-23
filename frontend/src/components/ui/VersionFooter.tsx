@@ -7550,7 +7550,104 @@
 //              + bundled cleanly (aih commit landed mid-Sprint via
 //              parallel Authority-age v3.8.ahm requirements-card
 //              update at commit a04ea59).
-export const SRL_VERSION = "3.8.aii";
+// v3.8.aij   — Tier-unlock reconciliation Commit 2 of 2 (page surfaces).
+//              Aligns the carrier-facing surfaces to the locked launch
+//              model committed in v3.8.aii. Every threshold a carrier
+//              sees on a public page now matches code-side
+//              caravanService.MILESTONE_THRESHOLDS exactly.
+//
+//              CLAUDE.md §8: launch-volume calibration note added at
+//              top of the section. Thresholds are calibrated to
+//              current pre-revenue volume, scheduled to revisit at
+//              ~6 months operational baseline OR when monthly volume
+//              materially increases.
+//
+//              CLAUDE.md §10: section renamed from "MILESTONES M1–M6
+//              (performance-based advancement)" to "TIER ADVANCEMENT
+//              GATES (locked launch model, v3.8.aii + v3.8.aij)".
+//              Table rewritten to 4 rows: Silver entry (3 loads +
+//              score >= 70), Gold (12 loads + 97% + 90-day floor →
+//              M4_PARTNER), Platinum (20 loads + 98% + 120-day →
+//              M5_CORE), Founding (30 loads + 98% + 180-day →
+//              M6_FOUNDING recognition on top of Platinum tier).
+//              Each transition is an AND of the loads / on-time /
+//              tenure thresholds. Retired criteria explicitly listed
+//              with reasoning: referral requirement (no field tracks
+//              it), "3 active lanes" (no field exists), score-based
+//              promotion (parallel path retired v3.8.aii), fleet-size
+//              promotion shortcut (dead code deleted v3.8.aii).
+//              Legacy CarrierMilestone enum values M2_PROVEN /
+//              M3_RELIABLE documented as inert post-reconciliation
+//              (normalize to M1_FIRST_LOAD lookup).
+//
+//              CLAUDE.md §11: two new rows added (v3.8.aii + this
+//              commit v3.8.aij) summarizing the reconciliation.
+//
+//              carriers.html tier cards (lines 374 + 408):
+//                Gold tier-req: "M4 Partner — 180 days, 75+ loads,
+//                  97% on-time" → "Gold — 12 loads, 97% on-time,
+//                  90-day tenure floor"
+//                Platinum tier-req: "M5 — 360 days, 150+ loads, 98%
+//                  on-time, 3 active lanes" → "Platinum — 20 loads,
+//                  98% on-time, 120-day tenure floor"
+//                M-numbering dropped from tier-req lines for
+//                carrier-facing simplicity.
+//                New Founding recognition paragraph added below the
+//                tier grid (after the same-day QP caption): "30
+//                loads, 98% on-time, 180-day tenure floor. Carrier
+//                remains Platinum tier; Founding marks the locked
+//                1% Quick Pay tier permanently."
+//                Inline comments at Gold + Platinum card blocks
+//                rewritten to reference v3.8.aij reconciliation +
+//                retired criteria.
+//
+//              onboarding/page.tsx Card C (Sprint C surface):
+//                Tier column labels: "Silver — Day 1" → "Silver —
+//                Entry"; "Gold — M4" → "Gold"; "Platinum — M5" →
+//                "Platinum". M-numbering dropped.
+//                "Performance-based advancement" paragraph rewritten
+//                to surface the 4 locked gates with explicit AND-of-
+//                thresholds framing + Founding recognition note.
+//
+//              onboarding/page.tsx Terms §7 (from Sprint B v3.8.aie):
+//                Milestone-framework reference paragraph rewritten
+//                to match new locked gates verbatim. "M1 / M4 (180d
+//                / 75 loads / 97%) / M5 (360d / 150 loads / 98% /
+//                3 active lanes) / M6 (720d / 300 loads)" framework
+//                replaced with "Silver entry (3 completed loads +
+//                qualifying score) / Gold (12 loads, 97%, 90d) /
+//                Platinum (20 loads, 98%, 120d) / Founding (30
+//                loads, 98%, 180d)". Each advancement is the AND of
+//                the thresholds; load thresholds calibrated to
+//                current launch volume.
+//
+//              carriers.html Caravan Journey animation gates
+//              (`.cj-card` blocks at lines 781-805) NOT touched in
+//              this commit — directive scope was "carriers.html tier
+//              cards" specifically. The Caravan Journey has its own
+//              recency-weighted gate vocabulary (Volume / Compass /
+//              Sustained / Loyalty over trailing 90 days), a
+//              different methodology from the cumulative-since-join
+//              locked model. Carriers.html now has dual-vocabulary
+//              surface — locked tier cards (cumulative-since-join)
+//              + Caravan Journey animation (recency-weighted).
+//              Observation banked at CLAUDE.md §11 v3.8.aij row for
+//              follow-up if Wasi wants the animation reconciled.
+//
+//              §16 first-carrier blockers #1 (BCA standalone) + #2
+//              (Caravan QP Agreement v2 Michigan commercial attorney
+//              review) REMAIN OPEN. Path γ footer from Sprint B
+//              v3.8.aie still governs precedence when standalones
+//              execute between Broker and Carrier.
+//
+//              Pre-commit gates (Sub-pattern 11 CI parity): frontend
+//              tsc + next build clean. Letter assignment per Option
+//              α at commit time: origin HEAD still aih, local HEAD
+//              aii (just committed Commit 1); next-free aij.
+//
+//              Tier-unlock reconciliation 2-commit arc complete.
+//              Halt for push greenlight per cadence.
+export const SRL_VERSION = "3.8.aij";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

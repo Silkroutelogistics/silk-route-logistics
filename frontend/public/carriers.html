@@ -359,9 +359,13 @@
               </div>
             </div>
 
-            <!-- GOLD Tier — v3.8.aic pay-ladder spine. M4 advancement
-                 criterion "1 referral" removed since the referral system
-                 has no backend and dropping the system leaves nothing to
+            <!-- GOLD Tier — Tier-unlock reconciliation v3.8.aij locks
+                 the advancement gate at 12 loads + 97% on-time + 90-day
+                 tenure floor. M-numbering dropped from tier-req for
+                 carrier-facing simplicity; matches code-side
+                 caravanService.MILESTONE_THRESHOLDS exactly. Detention/FSC-
+                 tier/referral/safety lines stay dropped per v3.8.aic
+                 honesty pass. The referral system
                  track it. Advancement now on load count + tenure +
                  on-time-% only. Detention/FSC-tier/referral/safety lines
                  dropped. Pay ladder spine: Net-21 (10 days faster than
@@ -371,7 +375,7 @@
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 15l-2 5 2-2 2 2-2-5z"/><circle cx="12" cy="9" r="6"/></svg>
               </div>
               <div class="tier-name">Gold</div>
-              <div class="tier-req">M4 Partner &mdash; 180 days, 75+ loads, 97% on-time</div>
+              <div class="tier-req">Gold &mdash; 12 loads, 97% on-time, 90-day tenure floor</div>
               <div class="tier-benefits">
                 <div class="tier-benefit-item">
                   <svg viewBox="0 0 24 24" fill="none" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
@@ -392,20 +396,24 @@
               </div>
             </div>
 
-            <!-- PLATINUM Tier — v3.8.aic pay-ladder spine. Detention/
-                 FSC-tier/referral/safety lines dropped. Pay ladder spine:
-                 Net-14 (7 days faster than Gold) + 1% QP (lowest fee).
-                 Priority freight access is broker-controlled per §8 so
-                 kept. Other operational lines (Priority Compass placement
-                 / dedicated lanes / QBR / advisory voice) held until
-                 confirmed operationally real per directive boundary. -->
+            <!-- PLATINUM Tier — Tier-unlock reconciliation v3.8.aij locks
+                 the advancement gate at 20 loads + 98% on-time + 120-day
+                 tenure floor. "3 active lanes" criterion removed (no
+                 field exists). M-numbering dropped from tier-req for
+                 carrier-facing simplicity. Pay ladder + Priority freight
+                 access UNCHANGED. Founding recognition status (30 loads /
+                 98% on-time / 180-day floor) surfaces as a small note
+                 below the tier grid — Founding stays at tier=PLATINUM
+                 per code. Other operational lines (Priority Compass
+                 placement / dedicated lanes / QBR / advisory voice)
+                 held until confirmed operationally real. -->
             <div class="tier-card platinum animate-on-scroll delay-2">
               <div class="tier-popular" aria-label="Top tier">TOP TIER</div>
               <div class="tier-icon" aria-hidden="true">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
               </div>
               <div class="tier-name">Platinum</div>
-              <div class="tier-req">M5 &mdash; 360 days, 150+ loads, 98% on-time, 3 active lanes</div>
+              <div class="tier-req">Platinum &mdash; 20 loads, 98% on-time, 120-day tenure floor</div>
               <div class="tier-benefits">
                 <div class="tier-benefit-item">
                   <svg viewBox="0 0 24 24" fill="none" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
@@ -429,6 +437,9 @@
 
           <p style="font-size:12px;color:#6B7280;text-align:center;margin-top:16px;max-width:640px;margin-left:auto;margin-right:auto">
             Same-day Quick Pay is a universal +2% premium on top of your tier's 7-day rate. Every tier can elect same-day on any load.
+          </p>
+          <p style="font-size:12px;color:#6B7280;text-align:center;margin-top:8px;max-width:640px;margin-left:auto;margin-right:auto">
+            Founding recognition status &mdash; 30 loads, 98% on-time, 180-day tenure floor. Carrier remains Platinum tier; Founding marks the locked 1% Quick Pay tier permanently.
           </p>
 
           <!-- v3.8.ahy — milestone progression dots strip removed.
