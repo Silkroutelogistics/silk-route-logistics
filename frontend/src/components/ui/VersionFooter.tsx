@@ -8332,7 +8332,93 @@
 //              banked at §13.3 Item 10 (which already covers the
 //              broader theme system root fix) + a new explicit
 //              note inline in OnboardingNav code.
-export const SRL_VERSION = "3.8.aiq";
+// v3.8.air   — Step 1 EIN field removal + "Full program details →"
+//              anchor fix. Closes two Wasi-flagged items:
+//
+//              (1) EIN INPUT REMOVAL. Wasi originally raised this
+//                  in the v3.8.ail thread: "EIN number -- is it
+//                  usually on the landing page or it comes later
+//                  for W9?" The implicit intent was REMOVE — the
+//                  W-9 PDF uploaded on Step 3 IS the Federal Tax
+//                  ID source; collecting EIN twice (typed on
+//                  Step 1 + embedded on the W-9 PDF on Step 3)
+//                  is duplicate-capture. I misinterpreted the
+//                  question as a request for clarifying subtitle
+//                  and added explanatory text instead. v3.8.aiq
+//                  flagged that this was the second methodology
+//                  miss in the OnboardingNav arc where I misread
+//                  audit-style questions as "explain" rather
+//                  than "remove". Now removing.
+//
+//                  Removal scope (5 surfaces audited, 3
+//                  rendered surfaces touched):
+//                  - Card B "What you'll need" checklist: deleted
+//                    line "EIN (9-digit Federal Tax ID)".
+//                  - Step 1 Company Info 4-column grid: deleted
+//                    the EIN <div> block (label + input +
+//                    subtitle paragraph).
+//                  - Step 5 Review: deleted the conditional
+//                    "| EIN: XX-XXXXXXX" display from the
+//                    Company summary row.
+//
+//                  Form-state field `ein: ""` retained in the
+//                  CarrierFormData interface and initial state
+//                  for backend payload compatibility — the
+//                  registration POST continues to send the field
+//                  as empty string (its always-empty state for
+//                  most users prior to removal too). No backend
+//                  regression risk. The field is now unreachable
+//                  from the UI but the payload shape is unchanged.
+//
+//              (2) "FULL PROGRAM DETAILS →" ANCHOR FIX. The
+//                  v3.8.aip strip placed a "Caravan Partner
+//                  Program · Full program details →" link to
+//                  /carriers.html (bare path). Wasi flagged this
+//                  lands the carrier near the "Where Carriers
+//                  Come First" hero — they have to scroll past
+//                  hero + Compass Score formula + commitments +
+//                  universals wall to reach the tier system.
+//                  Updated href to /carriers.html#caravan (the
+//                  canonical anchor for the Caravan Partner
+//                  Program section with the three tier cards,
+//                  per carriers.html:310 `<section id="caravan">`).
+//                  Now lands the carrier directly on the tier
+//                  system as the user expects.
+//
+//              Scope: ~14 LOC removed (EIN checklist line + EIN
+//              input block + EIN review display) + ~1 LOC
+//              changed (href anchor) in onboarding/page.tsx.
+//              No other surfaces touched.
+//
+//              Pre-commit gates (Sub-pattern 11 CI parity):
+//              frontend tsc --noEmit clean; frontend npx next
+//              build clean (/onboarding shrunk from 15.1 kB to
+//              14.9 kB — the EIN input + subtitle paragraph was
+//              ~200 bytes of JSX).
+//
+//              Letter: aiq is latest origin/main HEAD; air
+//              sequence-continuous on top.
+//
+//              Patterns applied: §3.5 audit-first (full grep of
+//              "ein\|EIN" across the file before removal — found
+//              all 5 surfaces, classified state-vs-render),
+//              §3.2 content sweep verify (post-removal grep
+//              confirmed only form-state defaults remain, no
+//              rendered EIN surface left), §3.3 atomic
+//              single-file ship + CLAUDE.md docs row,
+//              §19 Sub-pattern 11 CI-parity verification.
+//
+//              Patterns emerged: methodology lesson — Wasi's
+//              "is X usually here or does it come later?"
+//              audit-style questions are typically REMOVE
+//              signals, not explain-it signals. Two consecutive
+//              fires on this misinterpretation (Path 2C chrome
+//              audit + EIN question both misread as "explain").
+//              Going forward: when Wasi questions whether a
+//              field/element belongs on a surface, default-assume
+//              the intent is removal unless they explicitly ask
+//              for explanation.
+export const SRL_VERSION = "3.8.air";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

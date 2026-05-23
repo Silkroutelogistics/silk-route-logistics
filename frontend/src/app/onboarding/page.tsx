@@ -536,7 +536,6 @@ export default function OnboardingPage() {
               <div className="grid sm:grid-cols-2 gap-x-6 gap-y-3 mb-4">
                 {[
                   "DOT# or MC# (auto-populates the rest from FMCSA)",
-                  "EIN (9-digit Federal Tax ID)",
                   "Insurance: Auto Liability $1M+ / Cargo $100K+ / GL $1M+",
                   "W-9 form (PDF/JPEG/PNG, max 10MB each)",
                   "Operating Authority letter (FMCSA)",
@@ -560,8 +559,16 @@ export default function OnboardingPage() {
                 to match the cream-tinted eyebrow strip register elsewhere
                 on this page (gold-dark eyebrow link, underline accent). */}
             <div className="mb-5">
+              {/* v3.8.air — anchor specifically to #caravan (the Caravan
+                  Partner Program section on /carriers.html with the
+                  three tier cards), not the page top. The bare
+                  /carriers.html link in v3.8.aip dropped the carrier
+                  near "Where Carriers Come First" header — they had
+                  to scroll past the hero + commitments + Compass
+                  Score formula to reach the tier system. The fragment
+                  anchor lands them on the actual program details. */}
               <a
-                href="/carriers.html"
+                href="/carriers.html#caravan"
                 className="inline-flex items-center gap-2 text-sm font-semibold text-[#BA7517] hover:text-[#C5A572] transition group"
               >
                 <span className="text-[10px] uppercase tracking-[0.22em] font-semibold">Caravan Partner Program</span>
@@ -609,11 +616,13 @@ export default function OnboardingPage() {
                   <label className="block text-sm font-medium text-[#0A2540] mb-1">Phone *</label>
                   <input type="tel" value={form.phone} onChange={(e) => set("phone", e.target.value)} className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-gold outline-none" placeholder="(555) 123-4567" />
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-[#0A2540] mb-1">EIN (Federal Tax ID)</label>
-                  <input value={form.ein} onChange={(e) => set("ein", e.target.value.replace(/\D/g, "").slice(0, 9))} className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-gold outline-none" placeholder="XX-XXXXXXX" maxLength={9} inputMode="numeric" autoComplete="off" name="ein-federal-tax-id" />
-                  <p className="text-xs text-[#6B7685] mt-1">Used for business pre-screen before document review on Step 3. Your W-9 (uploaded later) will be matched against this.</p>
-                </div>
+                {/* v3.8.air — EIN input removed from Step 1. The W-9
+                    document uploaded on Step 3 is the canonical Federal
+                    Tax ID source — collecting EIN twice (here +
+                    embedded on the W-9 PDF) was a duplicate-capture
+                    UX wart. Form-state field `ein` retained as empty
+                    default for backend payload compatibility (no
+                    regression risk on the registration POST). */}
               </div>
 
               {/* FMCSA Verification Result — shown immediately after DOT/MC */}
@@ -1104,7 +1113,6 @@ export default function OnboardingPage() {
                   </p>
                   <p className="text-sm text-[#3A4A5F] mt-1">
                     DOT: {form.dotNumber}{form.mcNumber && ` | MC: ${form.mcNumber}`}
-                    {form.ein && ` | EIN: ${form.ein.slice(0,2)}-${form.ein.slice(2)}`}
                     {form.numberOfTrucks && ` | Trucks: ${form.numberOfTrucks}`}
                     {fmcsaResult?.verified && <span className="ml-2 text-[#2F7A4F] font-semibold">FMCSA Verified</span>}
                   </p>
