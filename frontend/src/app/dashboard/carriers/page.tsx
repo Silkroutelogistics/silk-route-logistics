@@ -41,6 +41,7 @@ interface Carrier {
   w9Uploaded: boolean;
   insuranceCertUploaded: boolean;
   authorityDocUploaded: boolean;
+  authorityGrantedDate: string | null;
   approvedAt: string | null;
   address: string | null;
   city: string | null;
@@ -299,6 +300,10 @@ export default function CarrierPoolPage() {
   const [uploadDocType, setUploadDocType] = useState("OTHER");
   const [uploadNotes, setUploadNotes] = useState("");
   const [uploadFile, setUploadFile] = useState<File | null>(null);
+  // v3.8.aio — Authority grant date manual-entry form state.
+  const [authorityGrantInput, setAuthorityGrantInput] = useState<string>("");
+  const [authorityGrantReason, setAuthorityGrantReason] = useState<string>("");
+  const [authorityGrantMessage, setAuthorityGrantMessage] = useState<{ tone: "success" | "error"; text: string } | null>(null);
 
   const { data } = useQuery({
     queryKey: ["carrier-all"],
@@ -311,6 +316,37 @@ export default function CarrierPoolPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["carrier-all"] });
       setEditingCarrier(null);
+    },
+  });
+
+  // v3.8.aio — Manual FMCSA authority-grant-date entry. Dedicated,
+  // reason-required, audited endpoint (NOT the silent updateCarrier
+  // PATCH). On success the backend re-runs complianceCheck and returns
+  // the fresh verdict; we invalidate carrier-all so the compliance tab
+  // re-fetches and the new authorityGrantedDate + compliance status
+  // surface immediately.
+  const setAuthorityGrantDate = useMutation({
+    mutationFn: ({ id, grantDate, reason }: { id: string; grantDate: string; reason: string }) =>
+      api.post<{ authorityGrantedDate: string; compliance: { allowed: boolean; blocked_reasons: string[]; warnings: string[] } }>(
+        `/carrier/${id}/authority-grant-date`,
+        { grantDate, reason },
+      ).then((r) => r.data),
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["carrier-all"] });
+      setAuthorityGrantInput("");
+      setAuthorityGrantReason("");
+      const verdict = data.compliance.allowed
+        ? "Carrier now passes the compliance check."
+        : data.compliance.blocked_reasons.length > 0
+        ? `Compliance verdict: ${data.compliance.blocked_reasons[0]}`
+        : "Compliance verdict updated.";
+      setAuthorityGrantMessage({ tone: "success", text: `Grant date saved. ${verdict}` });
+    },
+    onError: (err: unknown) => {
+      const msg = (err && typeof err === "object" && "response" in err
+        ? (err as { response?: { data?: { error?: string } } }).response?.data?.error
+        : undefined) || "Failed to save grant date.";
+      setAuthorityGrantMessage({ tone: "error", text: msg });
     },
   });
 
@@ -944,6 +980,87 @@ export default function CarrierPoolPage() {
                           {selectedCarrier.authorityDocUploaded ? "Uploaded" : "Missing"}
                         </span>
                       </div>
+                    </div>
+
+                    {/* v3.8.aio — FMCSA Authority Grant Date manual entry.
+                        Dedicated, reason-required, audited admin write
+                        path for when the FMCSA QCMobile authority
+                        endpoint doesn't return a parseable GRANT entry
+                        and the carrier sits at AUTHORITY_UNVERIFIED past
+                        the 24h grace despite holding real active
+                        authority. Not extended into the multi-field
+                        updateCarrier PATCH by design. */}
+                    <h3 className="text-xs font-semibold text-gray-600 uppercase tracking-wider">FMCSA Authority Grant Date</h3>
+                    <div className="bg-gray-100 rounded-lg p-4 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs text-gray-600">Current value</span>
+                        <span className={`px-2 py-0.5 rounded text-[10px] font-medium ${selectedCarrier.authorityGrantedDate ? "bg-green-500/20 text-green-400" : "bg-amber-500/20 text-amber-700"}`}>
+                          {selectedCarrier.authorityGrantedDate
+                            ? new Date(selectedCarrier.authorityGrantedDate).toISOString().slice(0, 10)
+                            : "Not set"}
+                        </span>
+                      </div>
+                      {!selectedCarrier.authorityGrantedDate && (
+                        <p className="text-[10px] leading-relaxed text-gray-500">
+                          A missing grant date causes the Item 182 authority-age gate to fire AUTHORITY_UNVERIFIED past the 24-hour grace window, hard-blocking this carrier at tender time. Set the date manually below if the FMCSA QCMobile lookup did not return a parseable GRANT entry.
+                        </p>
+                      )}
+                      {isAdmin && (
+                        <div className="space-y-2 pt-2 border-t border-white/5">
+                          <div>
+                            <label className="block text-[10px] font-medium text-gray-600 mb-1">Grant date</label>
+                            <input
+                              type="date"
+                              value={authorityGrantInput}
+                              max={new Date().toISOString().slice(0, 10)}
+                              onChange={(e) => setAuthorityGrantInput(e.target.value)}
+                              className="w-full text-xs px-2 py-1.5 rounded border border-gray-300 focus:outline-none focus:ring-1 focus:ring-[#C5A572] bg-white"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-[10px] font-medium text-gray-600 mb-1">Reason (required, min 10 characters)</label>
+                            <textarea
+                              value={authorityGrantReason}
+                              onChange={(e) => setAuthorityGrantReason(e.target.value)}
+                              rows={2}
+                              maxLength={500}
+                              placeholder="e.g. Verified on FMCSA SAFER snapshot dated YYYY-MM-DD; QCMobile authority endpoint returned no GRANT entry."
+                              className="w-full text-xs px-2 py-1.5 rounded border border-gray-300 focus:outline-none focus:ring-1 focus:ring-[#C5A572] bg-white resize-none"
+                            />
+                            <p className="text-[10px] text-gray-500 mt-0.5">{authorityGrantReason.trim().length}/500 chars</p>
+                          </div>
+                          {authorityGrantMessage && (
+                            <div className={`text-[11px] px-2 py-1.5 rounded ${authorityGrantMessage.tone === "success" ? "bg-green-50 text-green-700 border border-green-200" : "bg-red-50 text-red-700 border border-red-200"}`}>
+                              {authorityGrantMessage.text}
+                            </div>
+                          )}
+                          <button
+                            type="button"
+                            disabled={
+                              setAuthorityGrantDate.isPending
+                              || !authorityGrantInput
+                              || authorityGrantReason.trim().length < 10
+                            }
+                            onClick={() => {
+                              setAuthorityGrantMessage(null);
+                              setAuthorityGrantDate.mutate({
+                                id: selectedCarrier.id,
+                                grantDate: authorityGrantInput,
+                                reason: authorityGrantReason,
+                              });
+                            }}
+                            className="w-full text-xs px-3 py-1.5 rounded bg-[#C5A572] text-[#0A2540] font-medium hover:bg-[#B8985F] transition disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            {setAuthorityGrantDate.isPending ? "Saving…" : "Save grant date + re-run compliance"}
+                          </button>
+                          <p className="text-[10px] text-gray-500">
+                            Reason and previous + new values are written to the audit trail. The backend re-runs the canonical compliance check after the save; the verdict surfaces in the success message above.
+                          </p>
+                        </div>
+                      )}
+                      {!isAdmin && (
+                        <p className="text-[10px] text-gray-500">ADMIN or CEO role required to set the authority grant date manually.</p>
+                      )}
                     </div>
                   </div>
                 )}

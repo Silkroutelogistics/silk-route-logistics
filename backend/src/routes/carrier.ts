@@ -3,7 +3,7 @@ import rateLimit from "express-rate-limit";
 import {
   registerCarrier, uploadCarrierDocuments, getOnboardingStatus, verifyCarrier,
   getDashboard, getScorecard, getRevenue, getBonuses,
-  getAllCarriers, getCarrierDetail, updateCarrier, setupAdminCarrierProfile,
+  getAllCarriers, getCarrierDetail, updateCarrier, setupAdminCarrierProfile, setAuthorityGrantDate,
 } from "../controllers/carrierController";
 import { authenticate, authorize, AuthRequest } from "../middleware/auth";
 import { prisma } from "../config/database";
@@ -123,6 +123,11 @@ router.post("/admin-setup", authorize("ADMIN", "CEO"), setupAdminCarrierProfile)
 router.get("/all", authorize("ADMIN", "CEO", "BROKER", "DISPATCH", "OPERATIONS"), getAllCarriers);
 router.get("/:id/detail", authorize("ADMIN", "CEO", "BROKER", "DISPATCH", "OPERATIONS"), getCarrierDetail);
 router.patch("/:id", authorize("ADMIN", "CEO"), auditLog("UPDATE", "Carrier"), updateCarrier);
+
+// POST /carrier/:id/authority-grant-date — dedicated, reason-required,
+// audited admin endpoint that sets CarrierProfile.authorityGrantedDate
+// and re-runs complianceCheck. See controller for design rationale.
+router.post("/:id/authority-grant-date", authorize("ADMIN", "CEO"), setAuthorityGrantDate);
 
 // Admin only
 router.post("/verify/:id", authorize("ADMIN", "CEO"), validateBody(verifyCarrierSchema), auditLog("VERIFY", "Carrier"), verifyCarrier);

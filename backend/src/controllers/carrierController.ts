@@ -12,7 +12,7 @@ import { sendInsuranceVerificationEmail, validateInsuranceCoverage } from "../se
 import { log } from "../lib/logger";
 import { onCarrierApproved } from "../services/integrationService";
 import { uploadFile } from "../services/storageService";
-import { runFmcsaScan } from "../services/complianceMonitorService";
+import { runFmcsaScan, complianceCheck } from "../services/complianceMonitorService";
 import { vetAndStoreReport } from "../services/carrierVettingService";
 import { sendEmail, wrap } from "../services/emailService";
 import { runIdentityCheck } from "../services/identityVerificationService";
@@ -833,6 +833,7 @@ export async function getAllCarriers(req: AuthRequest, res: Response) {
         w9Uploaded: c.w9Uploaded,
         insuranceCertUploaded: c.insuranceCertUploaded,
         authorityDocUploaded: c.authorityDocUploaded,
+        authorityGrantedDate: c.authorityGrantedDate,
         approvedAt: c.approvedAt,
         address: c.address,
         city: c.city,
@@ -990,4 +991,118 @@ export async function updateCarrier(req: AuthRequest, res: Response) {
 
   const validation = validateInsuranceCoverage(updated);
   res.json({ ...updated, insuranceValidation: validation });
+}
+
+// POST /carrier/:id/authority-grant-date
+//
+// Dedicated, reason-required, audited endpoint to manually set
+// CarrierProfile.authorityGrantedDate for a carrier whose FMCSA
+// /carrier/{dot}/authority lookup did not yield a parseable GRANT entry
+// (per the 2026-05-23 fmcsaService.getCarrierAuthority audit — the
+// QCMobile endpoint returns current-status fields only, not the
+// historical GRANT events the function's parser targets).
+//
+// Carriers in this state sit at AUTHORITY_UNVERIFIED past the 24h grace
+// per the Item 182 authority-age gate (complianceMonitorService.ts:147
+// branch). Without a manual entry path, every such carrier is
+// hard-blocked at tender time despite holding real active FMCSA
+// authority. This endpoint corrects the data.
+//
+// Deliberately NOT extended into updateCarrier per directive — that
+// path is a multi-field silent PATCH without a required reason, which
+// is wrong shape for a legal-identity-class data write (§3.13). This
+// endpoint mirrors overrideBlock's discipline: reason required + audit
+// trail emitted.
+export async function setAuthorityGrantDate(req: AuthRequest, res: Response) {
+  try {
+    const { grantDate, reason } = req.body as { grantDate?: string; reason?: string };
+
+    if (!grantDate || typeof grantDate !== "string") {
+      res.status(400).json({ error: "grantDate is required (ISO date string or YYYY-MM-DD)" });
+      return;
+    }
+    if (!reason || reason.trim().length < 10) {
+      res.status(400).json({ error: "reason must be at least 10 characters" });
+      return;
+    }
+
+    const parsed = new Date(grantDate);
+    if (Number.isNaN(parsed.getTime())) {
+      res.status(400).json({ error: "grantDate could not be parsed as a date" });
+      return;
+    }
+    // Authority cannot be granted in the future.
+    const now = new Date();
+    if (parsed.getTime() > now.getTime()) {
+      res.status(400).json({ error: "grantDate cannot be in the future" });
+      return;
+    }
+
+    // Per sanitizeInput convention (security middleware): trim + length-cap,
+    // no HTML encoding at write time. Cap at 500 chars — long enough for a
+    // real audit explanation, short enough to defend against pathological
+    // input. Reason flows through React's auto-escaping on every render
+    // surface.
+    const reasonClean = reason.trim().slice(0, 500);
+
+    const carrierId = req.params.id;
+    const adminId = req.user!.id;
+
+    const carrier = await prisma.carrierProfile.findUnique({
+      where: { id: carrierId },
+      include: { user: { select: { company: true, firstName: true, lastName: true } } },
+    });
+
+    if (!carrier) {
+      res.status(404).json({ error: "Carrier not found" });
+      return;
+    }
+
+    const previousGrantDate = carrier.authorityGrantedDate;
+
+    await prisma.carrierProfile.update({
+      where: { id: carrierId },
+      data: { authorityGrantedDate: parsed },
+    });
+
+    // Audit trail — mirrors overrideBlock convention with one
+    // adaptation: AuditAction is a closed Prisma enum and
+    // AUTHORITY_GRANT_DATE_SET is not a member. Per the v3.8.ahy /
+    // Item 188 precedent (CLAUDE.md §11), use the generic UPDATE
+    // action + encode the specific operation in changedFields.actionDetail
+    // so downstream filters can grep on it. Equivalent
+    // independent-filterability without schema migration churn.
+    await prisma.auditTrail.create({
+      data: {
+        action: "UPDATE",
+        entityType: "CarrierProfile",
+        entityId: carrierId,
+        performedById: adminId,
+        changedFields: {
+          actionDetail: "AUTHORITY_GRANT_DATE_SET",
+          previousGrantDate: previousGrantDate ? previousGrantDate.toISOString() : null,
+          newGrantDate: parsed.toISOString(),
+          reason: reasonClean,
+          carrierName: carrier.user?.company || `${carrier.user?.firstName ?? ""} ${carrier.user?.lastName ?? ""}`.trim(),
+        } as any,
+      },
+    });
+
+    // Trigger canonical compliance evaluation so the carrier's status
+    // reflects the new grant date — passing at 18+ months, moving to
+    // overridable 12-18 band, or hard-floored under 12 — instead of
+    // sitting in AUTHORITY_UNVERIFIED.
+    const compliance = await complianceCheck(carrierId);
+
+    res.json({
+      carrierId,
+      authorityGrantedDate: parsed.toISOString(),
+      previousGrantDate: previousGrantDate ? previousGrantDate.toISOString() : null,
+      reason: reasonClean,
+      compliance,
+    });
+  } catch (err) {
+    log.error({ err: err }, "[Carrier] setAuthorityGrantDate error:");
+    res.status(500).json({ error: "Failed to set authority grant date" });
+  }
 }

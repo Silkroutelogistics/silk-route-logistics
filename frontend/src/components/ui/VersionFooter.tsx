@@ -7959,7 +7959,121 @@
 //              + brass-accent step indicator + gold-dark CTA pattern.
 //              No backend changes; backend tsc not required for this
 //              sprint.
-export const SRL_VERSION = "3.8.ain";
+// v3.8.aio   — Build B2: manual authority-grant-date entry. Dedicated,
+//              reason-required, audited admin endpoint + admin UI
+//              control to manually set CarrierProfile.
+//              authorityGrantedDate. Closes the data exposure surfaced
+//              by the 2026-05-23 carrier classification audit: the
+//              FMCSA QCMobile /carriers/{dot}/authority endpoint
+//              returns current-status fields only (`brokerAuthorityStatus`,
+//              `commonAuthorityStatus`, etc.) — not the historical
+//              GRANT events that fmcsaService.getCarrierAuthority's
+//              parser targets (`authorityAction === "GRANT"` +
+//              `originalServedDate`). All three test carriers + every
+//              future post-cutoff carrier resolve to NULL grant date,
+//              causing AUTHORITY_UNVERIFIED past the 24h grace per
+//              Item 182 gate at complianceMonitorService.ts:147 — a
+//              hard block at tender time despite real active FMCSA
+//              authority. Build B2 gives admins a manual data-correction
+//              path.
+//
+//              Backend (new endpoint POST /carrier/:id/authority-grant-date):
+//                Controller: setAuthorityGrantDate in carrierController.ts
+//                  after updateCarrier. Validates grantDate parses + not
+//                  in future. Validates reason >= 10 chars (matches
+//                  overrideBlock convention). Trims + length-caps reason
+//                  at 500 chars per sanitizeInput convention (no HTML
+//                  encoding at write time — React auto-escapes on every
+//                  render surface). Updates CarrierProfile
+//                  .authorityGrantedDate. Emits auditTrail row mirroring
+//                  overrideBlock pattern exactly — adapted via the
+//                  v3.8.ahy / Item 188 precedent because AuditAction is
+//                  a closed Prisma enum and AUTHORITY_GRANT_DATE_SET is
+//                  not a member (CREATE/UPDATE/DELETE/STATUS_CHANGE/
+//                  APPROVE/REJECT/LOGIN/EXPORT/COMPLIANCE_OVERRIDE/
+//                  CARRIER_SUSPENDED/SCAN/DISMISS/RESOLVE). Used the
+//                  generic UPDATE action + encoded the specific
+//                  operation in changedFields.actionDetail =
+//                  "AUTHORITY_GRANT_DATE_SET" so downstream filters
+//                  retain independent grep-ability without a schema
+//                  migration. Then calls the canonical complianceCheck
+//                  per directive ("do not duplicate gate logic") and
+//                  returns the carrier's new compliance verdict so the
+//                  UI can surface immediately whether the new date
+//                  passes the 18+ month silent-allow branch, lands in
+//                  the 12-18 overridable band, or hard-floors under 12.
+//                Route: POST /carrier/:id/authority-grant-date with
+//                  authorize("ADMIN", "CEO") — matches overrideBlock +
+//                  updateCarrier authz exactly. Registered in
+//                  backend/src/routes/carrier.ts right after the
+//                  /:id PATCH (updateCarrier) registration.
+//                Response field add: getAllCarriers now includes
+//                  authorityGrantedDate in the per-carrier payload so
+//                  the admin UI can show the current value.
+//
+//              Frontend (carrier admin detail view, /dashboard/carriers):
+//                Carrier interface extended with authorityGrantedDate:
+//                  string | null.
+//                State + mutation added near the existing updateCarrier
+//                  block: authorityGrantInput / authorityGrantReason /
+//                  authorityGrantMessage. Mutation calls
+//                  POST /carrier/:id/authority-grant-date and on success
+//                  invalidates carrier-all + clears the form + sets a
+//                  success message that includes the compliance verdict
+//                  (e.g. "Carrier now passes the compliance check." or
+//                  "Compliance verdict: Authority is N months old..."
+//                  depending on the new gate evaluation).
+//                UI section added inside the compliance panel tab
+//                  (panelTab === "compliance"), placed after Document
+//                  Completeness and rendered as a third bg-gray-100
+//                  rounded-lg card with title "FMCSA Authority Grant
+//                  Date" matching the existing Compliance Status +
+//                  Document Completeness cards' style. Shows the
+//                  current value with a green pill if set or amber
+//                  "Not set" pill if null + an inline explanation of
+//                  why a missing date triggers AUTHORITY_UNVERIFIED.
+//                  Admin-only form (isAdmin gated client-side; backend
+//                  is authoritative): date input with max=today (mirrors
+//                  the backend "not in future" rule), reason textarea
+//                  with required min-10-chars + 500-char cap + live
+//                  char counter, save button disabled until both
+//                  inputs valid + while mutation pending, inline
+//                  success/error message banner.
+//                Non-admins see a one-line "ADMIN or CEO role required"
+//                  message instead of the form.
+//
+//              The directive explicitly forbade extending updateCarrier
+//              to accept authorityGrantedDate (the silent multi-field
+//              PATCH path) — this commit respects that. Build B2 ships
+//              the dedicated, reason-required, audited route by design.
+//
+//              Halt boundary respected: no block-resolution-modal
+//              surfacing (optional follow-up not in scope), no
+//              automated FMCSA re-point work, no Tier 2/3 fence
+//              extensions (banked at §13.3 Items 189 + 190 from
+//              v3.8.aim).
+//
+//              Pattern 6 sub-pattern 6 fire #6 caught + cleaned via
+//              Option α: parallel v3.8.ain /onboarding Path 2C landed
+//              at e41872d mid-Build-B2. Local ff-pulled (clean
+//              fast-forward, no rebase), all 3 v3.8.ain comment refs
+//              in this build's working tree (frontend page.tsx state
+//              block + mutation block + UI section) bumped to
+//              v3.8.aio before commit. Letter sequence ain (parallel)
+//              → aio (this commit) is contiguous; no §3.1 skip.
+//
+//              Pre-commit gates (Sub-pattern 11 CI parity): backend
+//              tsc --noEmit clean (first run caught the closed-enum
+//              AuditAction issue at the auditTrail.create call —
+//              corrected in-place to action: "UPDATE" with the
+//              specific operation encoded in changedFields.actionDetail
+//              per the v3.8.ahy precedent; second run clean); frontend
+//              tsc --noEmit + npx next build clean.
+//
+//              §16 first-carrier blockers #1 + #2 still OPEN. Path γ
+//              footer from Sprint B v3.8.aie still governs when
+//              standalones execute.
+export const SRL_VERSION = "3.8.aio";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
