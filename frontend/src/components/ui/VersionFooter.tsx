@@ -7647,7 +7647,98 @@
 //
 //              Tier-unlock reconciliation 2-commit arc complete.
 //              Halt for push greenlight per cadence.
-export const SRL_VERSION = "3.8.aij";
+// v3.8.aik   — Caravan Journey animation copy neutralized — closes
+//              the v3.8.aij dual-vocabulary observation on
+//              carriers.html. Temporary neutralization, not
+//              teardown: when the recency-weighted maintenance
+//              signal is built (queued), this copy gets revisited
+//              to describe the actual methodology accurately.
+//
+//              Edit scope: `frontend/public/carriers.html` lines
+//              781-815, the four `.cj-card` blocks for phases 0-3.
+//              Copy-only — no color tokens, no structural changes,
+//              no class re-classification, no Caravan Journey
+//              animation logic touched.
+//
+//              The four pillars (Volume / Compass / Sustained /
+//              Loyalty) preserved as directional program themes
+//              mapping loosely to the real dimensions the locked
+//              gate rewards:
+//                Volume    → loads (cumulative-since-join)
+//                Compass   → service quality (Compass Score)
+//                Sustained → on-time performance
+//                Loyalty   → tenure
+//
+//              Methodology language struck across all four phases:
+//              "trailing 90 days" (phase 1 + 2 + 3 Volume),
+//              "current quarter" (phase 1 Compass + Sustained),
+//              "X consecutive quarters" (phase 2 Sustained),
+//              "3 quarters · 4 for Core" (phase 3 Sustained),
+//              "X+ sustained" (phase 2 + 3 Compass), "1 referral
+//              OR consistent acceptance" (phase 2 Loyalty — the
+//              referral assertion removed since no field tracks
+//              it), "2+ recurring lanes · advisory voice at Core"
+//              (phase 3 Loyalty — "recurring lanes" removed since
+//              no field exists; "advisory voice at Founding"
+//              preserved as outcome perk, not gate criterion).
+//
+//              New directional copy by phase:
+//                Phase 0 (Apply unlocks Silver entry)
+//                  Volume:    "First load on the way"
+//                  Compass:   "Intake vetting passed"
+//                  Sustained: —
+//                  Loyalty:   —
+//                Phase 1 (Silver unlocks Net-30 + 3% QP)
+//                  Volume:    "First loads delivered"
+//                  Compass:   "Compass Score active"
+//                  Sustained: "On-time performance tracked"
+//                  Loyalty:   "Tenure starting"
+//                Phase 2 (Gold unlocks Net-21 + 2% QP)
+//                  Volume:    "Load history accumulated"
+//                  Compass:   "Strong Compass Score"
+//                  Sustained: "Consistent on-time performance"
+//                  Loyalty:   "Tenure earned"
+//                Phase 3 (Platinum unlocks Net-14 + 1% QP)
+//                  Volume:    "Top-tier load history"
+//                  Compass:   "Top-tier Compass Score"
+//                  Sustained: "Sustained on-time performance"
+//                  Loyalty:   "Long-tenure carrier · advisory
+//                              voice at Founding"
+//
+//              cj-unlock pricing pills (Net-30/21/14 + 3%/2%/1%
+//              Quick Pay) NOT touched — they match CLAUDE.md §8
+//              verbatim. Tier cards NOT touched (v3.8.aij locked
+//              them). Terms §7 NOT touched (already aligned in
+//              v3.8.aij). Backend NOT touched (already canonical
+//              in v3.8.aii).
+//
+//              Net effect: carriers.html now presents a single
+//              advancement story. Tier cards state the locked
+//              cumulative-since-join gate (12/20/30 loads, 97/98/98
+//              on-time, 90/120/180-day floors); the Caravan Journey
+//              animation echoes those same dimensions as
+//              directional themes without contradicting the cards.
+//              The v3.8.aij dual-vocabulary surface observation
+//              banked at CLAUDE.md §11 v3.8.aij row is now marked
+//              RESOLVED. Re-visit when the recency-weighted
+//              maintenance signal ships.
+//
+//              §16 first-carrier blockers #1 (BCA standalone) + #2
+//              (Caravan QP Agreement v2 Michigan commercial attorney
+//              review) STILL OPEN. Path γ footer from Sprint B
+//              v3.8.aie still governs precedence when standalones
+//              execute between Broker and Carrier.
+//
+//              Pre-commit gates (Sub-pattern 11 CI parity): frontend
+//              tsc + next build clean (carriers.html is static HTML
+//              served via Cloudflare Pages; Next.js build is a
+//              no-op verification for the docs change).
+//
+//              Letter assignment per Option α at commit time: origin
+//              HEAD aih, local HEAD aij; next-free aik. No Pattern 6
+//              sub-pattern 6 fire this commit — single sequential
+//              advancement after v3.8.aij.
+export const SRL_VERSION = "3.8.aik";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
