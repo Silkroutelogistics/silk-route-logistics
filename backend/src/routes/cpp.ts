@@ -1,7 +1,8 @@
 import { Router, Response } from "express";
 import { prisma } from "../config/database";
 import { authenticate, authorize, AuthRequest } from "../middleware/auth";
-import { calculateTier, getBonusPercentage, calculateOverallScore } from "../services/tierService";
+import { getBonusPercentage, calculateOverallScore } from "../services/tierService";
+import { checkMilestoneAdvancement, calculateTierFromMilestone } from "../services/caravanService";
 
 const router = Router();
 
@@ -63,22 +64,23 @@ router.get("/my-status", authorize("CARRIER"), async (req: AuthRequest, res: Res
   });
 });
 
-// POST /api/cpp/recalculate — Admin: recalculate all carrier tiers
+// POST /api/cpp/recalculate — Admin: run the canonical milestone-gate
+// advancement check across all APPROVED carriers. Replaces the legacy
+// score-based bulk-sync with the locked loads-and-days gate per
+// caravanService.checkMilestoneAdvancement. Tier is derived from the
+// advanced-to milestone (Silver/Gold/Platinum + Founding recognition).
 router.post("/recalculate", authorize("ADMIN", "CEO"), async (req: AuthRequest, res: Response) => {
   const carriers = await prisma.carrierProfile.findMany({
     where: { onboardingStatus: "APPROVED" },
-    include: {
-      scorecards: { orderBy: { calculatedAt: "desc" }, take: 1 },
-      user: { select: { id: true } },
-    },
+    select: { id: true, tier: true, cppTier: true, milestone: true, userId: true, user: { select: { id: true } } },
   });
 
   let updated = 0;
   for (const carrier of carriers) {
-    const latestScore = carrier.scorecards[0];
-    if (!latestScore) continue;
+    const result = await checkMilestoneAdvancement(carrier.id);
+    if (!result.advanced || !result.newMilestone) continue;
 
-    const newTier = calculateTier(latestScore.overallScore);
+    const newTier = calculateTierFromMilestone(result.newMilestone);
     const oldTier = carrier.cppTier !== "NONE" ? carrier.cppTier : carrier.tier;
 
     if (newTier !== oldTier) {
@@ -87,13 +89,12 @@ router.post("/recalculate", authorize("ADMIN", "CEO"), async (req: AuthRequest, 
         data: { tier: newTier, cppTier: newTier },
       });
 
-      // Notify carrier of tier change
       await prisma.notification.create({
         data: {
           userId: carrier.user.id,
           type: "GENERAL",
-          title: "CPP Tier Updated",
-          message: `Your CPP tier has changed from ${oldTier} to ${newTier}.`,
+          title: "Caravan Partner Program — Tier Advancement",
+          message: `Congratulations! You've advanced to ${newTier} tier by meeting the locked loads-and-days gate.`,
           actionUrl: "/carrier/dashboard",
         },
       });

@@ -1,13 +1,20 @@
 import { CarrierTier } from "@prisma/client";
 import { prisma } from "../config/database";
 
-export function calculateTier(overallScore: number): CarrierTier {
-  // Caravan Partner Program 3-tier (v3.7.a): Silver is Day-1 entry.
-  // Score-based promotion: 90+ → GOLD, 95+ → PLATINUM.
-  if (overallScore >= 95) return "PLATINUM";
-  if (overallScore >= 90) return "GOLD";
-  return "SILVER";
-}
+// ───────────────────────────────────────────────────────────────────
+// Tier advancement: SINGLE AUTHORITATIVE PATH is the milestone gate in
+// caravanService.checkMilestoneAdvancement. The legacy score-based
+// promotion functions calculateTier() + recalculateAllTiers() are
+// retired in this commit — a carrier cannot bypass the locked
+// loads-and-days gate via service-score alone.
+//
+// What remains here:
+//   - checkGuestPromotion: 3 loads + score >= 70 → SILVER entry. Still
+//     the canonical Guest→Silver transition.
+//   - calculateOverallScore: composite-score math, used for scorecard
+//     persistence + display (no longer drives tier mutation).
+//   - getBonusPercentage: tier → bonus % lookup for PnL/UI display.
+// ───────────────────────────────────────────────────────────────────
 
 export function getBonusPercentage(tier: CarrierTier): number {
   switch (tier) {
@@ -94,29 +101,6 @@ export function calculateOverallScore(metrics: {
   return Math.round(score * 100) / 100;
 }
 
-export async function recalculateAllTiers() {
-  const carriers = await prisma.carrierProfile.findMany({
-    where: { onboardingStatus: "APPROVED" },
-    include: {
-      scorecards: {
-        orderBy: { calculatedAt: "desc" },
-        take: 1,
-      },
-    },
-  });
-
-  for (const carrier of carriers) {
-    const latestScore = carrier.scorecards[0];
-    if (!latestScore) continue;
-
-    const newTier = calculateTier(latestScore.overallScore);
-    if (newTier !== carrier.tier) {
-      await prisma.carrierProfile.update({
-        where: { id: carrier.id },
-        data: { tier: newTier },
-      });
-    }
-  }
-
-  return { updated: carriers.length };
-}
+// recalculateAllTiers (score-based) retired in this commit. Use
+// checkMilestoneAdvancement per carrier from caravanService for the
+// canonical loads-and-days gate.

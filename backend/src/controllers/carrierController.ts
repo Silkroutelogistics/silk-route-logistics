@@ -7,7 +7,7 @@ import { prisma } from "../config/database";
 import { env } from "../config/env";
 import { AuthRequest } from "../middleware/auth";
 import { carrierRegisterSchema, verifyCarrierSchema } from "../validators/carrier";
-import { calculateTier, getBonusPercentage } from "../services/tierService";
+import { getBonusPercentage } from "../services/tierService";
 import { sendInsuranceVerificationEmail, validateInsuranceCoverage } from "../services/insuranceVerificationService";
 import { log } from "../lib/logger";
 import { onCarrierApproved } from "../services/integrationService";

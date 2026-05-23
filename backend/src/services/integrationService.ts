@@ -1,5 +1,5 @@
 import { prisma } from "../config/database";
-import { calculateTier, calculateOverallScore, getBonusPercentage, checkGuestPromotion } from "./tierService";
+import { calculateOverallScore, getBonusPercentage, checkGuestPromotion } from "./tierService";
 import { createCheckCallSchedule } from "./checkCallAutomation";
 import { notifyMatchedCarriers } from "./carrierOutreachService";
 import { checkMilestoneAdvancement, applyMilestoneRewards } from "./caravanService";
@@ -547,11 +547,12 @@ export async function recalculateCarrierCPP(carrierProfileId: string) {
     gpsCompliancePct,
   });
 
-  const newTier = calculateTier(overallScore);
-  const oldTier = profile.tier;
-
-  // Create new scorecard
-  const bonusPct = getBonusPercentage(newTier);
+  // Tier-from-score auto-promotion retired. Carrier's current tier is the
+  // source of truth for scorecard + bonus calculation; tier advancement
+  // runs through the canonical milestone gate (caravanService
+  // .checkMilestoneAdvancement) on a separate path.
+  const currentTier = profile.tier;
+  const bonusPct = getBonusPercentage(currentTier);
   const recentRevenue = await prisma.invoice.aggregate({
     where: {
       userId: profile.userId,
@@ -574,38 +575,10 @@ export async function recalculateCarrierCPP(carrierProfileId: string) {
       acceptanceRate: Math.round(acceptanceRate * 100) / 100,
       gpsCompliancePct: Math.round(gpsCompliancePct * 100) / 100,
       overallScore,
-      tierAtTime: newTier,
+      tierAtTime: currentTier,
       bonusEarned,
     },
   });
-
-  // Update carrier tier if changed
-  if (newTier !== oldTier) {
-    await prisma.carrierProfile.update({
-      where: { id: profile.id },
-      data: { tier: newTier, cppTier: newTier },
-    });
-
-    // Create tier change notification
-    const tierNames: Record<string, string> = {
-      PLATINUM: "Platinum", GOLD: "Gold", SILVER: "Silver", GUEST: "Guest",
-    };
-    const direction = ["PLATINUM", "GOLD", "SILVER", "GUEST", "NONE"].indexOf(newTier) <
-      ["PLATINUM", "GOLD", "SILVER", "GUEST", "NONE"].indexOf(oldTier)
-      ? "upgraded" : "adjusted";
-
-    await prisma.notification.create({
-      data: {
-        userId: profile.userId,
-        type: "GENERAL",
-        title: `CPP Tier ${direction === "upgraded" ? "Upgrade" : "Change"}: ${tierNames[newTier]}`,
-        message: `Your CPP tier has been ${direction} from ${tierNames[oldTier] || oldTier} to ${tierNames[newTier]}. Score: ${overallScore}. ${direction === "upgraded" ? "Congratulations!" : "Keep improving your performance metrics."}`,
-        actionUrl: "/carrier/dashboard",
-      },
-    });
-
-    log.info(`[Integration] CPP tier change: ${oldTier} → ${newTier} (score: ${overallScore}) for carrier ${profile.id}`);
-  }
 
   // Create bonus if earned
   if (bonusEarned > 0) {
@@ -616,12 +589,12 @@ export async function recalculateCarrierCPP(carrierProfileId: string) {
         amount: bonusEarned,
         period: new Date().toISOString().slice(0, 7),
         status: "PENDING",
-        description: `${bonusPct}% performance bonus (${newTier} tier, score: ${overallScore})`,
+        description: `${bonusPct}% performance bonus (${currentTier} tier, score: ${overallScore})`,
       },
     });
   }
 
-  log.info(`[Integration] CPP recalculated for carrier ${profile.id}: score=${overallScore}, tier=${newTier}`);
+  log.info(`[Integration] CPP scorecard refreshed for carrier ${profile.id}: score=${overallScore}, tier=${currentTier}`);
 }
 
 // ──────────────────────────────────────────────────

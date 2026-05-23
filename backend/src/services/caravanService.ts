@@ -1,12 +1,31 @@
-// Caravan Partner Program — 3-tier carrier loyalty system (v3.7.a)
+// Caravan Partner Program — 3-tier carrier loyalty system + Founding recognition.
 //
-// SILVER   (Day-1 entry) — every onboarded carrier starts here
-// GOLD     (M4 or 5+ trucks)
-// PLATINUM (M5 or 11+ trucks)
+// SILVER   (entry) — every approved carrier starts here after 3 completed
+//                    loads with service score >= 70 (checkGuestPromotion in
+//                    tierService).
+// GOLD     — Gold-gate milestone: 12 loads + 97% on-time + 90-day tenure floor.
+// PLATINUM — Platinum-gate milestone: 20 loads + 98% on-time + 120-day floor.
+// FOUNDING — Recognition status on top of Platinum: 30 loads + 98% on-time +
+//            180-day floor. Carrier remains tier=PLATINUM; milestone advances
+//            to M6_FOUNDING (existing CarrierMilestone enum value retained
+//            for backwards compatibility with persisted rows).
 //
-// Pricing values in TIER_CONFIG are the v3 locked numbers. Same-day QP is a
-// universal +2% premium on top of each tier's 7-day rate — it is NOT
-// tier-gated. Every tier can elect same-day.
+// Advancement is the AND of (cumulative-since-join loads, on-time pct,
+// tenure days). Counting reads cppTotalLoads counter + cppJoinedDate
+// timestamp — see checkMilestoneAdvancement below.
+//
+// THIS IS THE SINGLE AUTHORITATIVE ADVANCEMENT GATE. The legacy parallel
+// score-based promotion path (tierService.calculateTier +
+// recalculateAllTiers) is retired in this commit so a carrier cannot bypass
+// the loads-and-days gate via score alone.
+//
+// Pricing values in TIER_CONFIG are the v3 locked numbers and remain
+// UNCHANGED. Same-day QP is a universal +2% premium on top of each tier's
+// 7-day rate — it is NOT tier-gated. Every tier can elect same-day.
+//
+// Threshold calibration: the locked load thresholds (12/20/30) are
+// calibrated to current pre-revenue launch volume. Revisit at ~6 months
+// operational baseline OR when monthly volume materially increases.
 
 import { prisma } from "../config/database";
 import type { CarrierTier, CarrierMilestone } from "@prisma/client";
@@ -73,17 +92,28 @@ type TierKey = keyof typeof TIER_CONFIG;
 // Same-day QP premium (universal — added on top of each tier's 7-day rate).
 export const SAME_DAY_QP_PREMIUM = 0.02;
 
-// ─── Milestone advancement thresholds (v3 locked) ───────────
+// ─── Milestone advancement thresholds (locked launch model) ─────────────
+//
+// 3 transitions covering Silver→Gold→Platinum→Founding. The enum values
+// M1_FIRST_LOAD / M4_PARTNER / M5_CORE / M6_FOUNDING are retained for
+// CarrierMilestone Prisma compatibility; legacy M2_PROVEN + M3_RELIABLE
+// values may exist on pre-reconciliation rows and are normalized to the
+// M1_FIRST_LOAD lookup in checkMilestoneAdvancement below.
+//
+// Each transition is an AND of (days, loads, onTimePct). No referral
+// requirement (no field tracks it). No multi-lane requirement (no field
+// exists). Single authoritative gate.
 
 const MILESTONE_THRESHOLDS: Record<
   string,
-  { days: number; loads: number; onTimePct?: number; referrals?: number; next: CarrierMilestone }
+  { days: number; loads: number; onTimePct: number; next: CarrierMilestone }
 > = {
-  M1_FIRST_LOAD: { days: 30,  loads: 10,  onTimePct: 95, next: "M2_PROVEN" },
-  M2_PROVEN:     { days: 90,  loads: 30,  onTimePct: 96, next: "M3_RELIABLE" },
-  M3_RELIABLE:   { days: 180, loads: 75,  onTimePct: 97, next: "M4_PARTNER" },
-  M4_PARTNER:    { days: 360, loads: 150, onTimePct: 98, referrals: 1, next: "M5_CORE" },
-  M5_CORE:       { days: 720, loads: 300,                             next: "M6_FOUNDING" },
+  // Silver active → Gold gate.
+  M1_FIRST_LOAD: { days: 90,  loads: 12, onTimePct: 97, next: "M4_PARTNER" },
+  // Gold → Platinum gate.
+  M4_PARTNER:    { days: 120, loads: 20, onTimePct: 98, next: "M5_CORE" },
+  // Platinum → Founding recognition status (carrier remains tier=PLATINUM).
+  M5_CORE:       { days: 180, loads: 30, onTimePct: 98, next: "M6_FOUNDING" },
 };
 
 // ─── Public API ─────────────────────────────────────────────
@@ -117,11 +147,12 @@ export function getEffectiveTier(carrier: { tier: CarrierTier }): TierKey {
 }
 
 /**
- * Tier earned from a milestone. Performance-first:
- *   M1-M3 → SILVER   (Day-1 entry, working through early milestones)
- *   M4    → GOLD     (180d / 75 loads / 97% OT / 1 referral)
- *   M5-M6 → PLATINUM (360d / 150 loads / 98% OT → permanent 1% QP at M6)
- * Fleet size can accelerate milestone thresholds but does NOT bypass earning.
+ * Tier earned from a milestone. Locked launch model:
+ *   M1_FIRST_LOAD (Silver active)              → SILVER
+ *   M4_PARTNER    (Gold gate cleared)          → GOLD
+ *   M5_CORE       (Platinum gate cleared)      → PLATINUM
+ *   M6_FOUNDING   (Founding recognition status) → PLATINUM (Founding flag)
+ *   Legacy M2_PROVEN / M3_RELIABLE             → SILVER (treated as M1)
  */
 export function calculateTierFromMilestone(milestone: string): TierKey {
   switch (milestone) {
@@ -136,27 +167,6 @@ export function calculateTierFromMilestone(milestone: string): TierKey {
     default:
       return "SILVER";
   }
-}
-
-/**
- * Fleet size bonus on milestone thresholds:
- *   5+ trucks : M1→M2 halved  (5 loads, 24 days)
- *   11+ trucks: M1→M2 ~70% off (3 loads, 21 days)
- * Still must earn advancement via onTimePct / referrals.
- */
-export function getFleetAdjustedThreshold(milestone: string, fleetSize: number) {
-  const base = MILESTONE_THRESHOLDS[milestone];
-  if (!base) return base;
-  if (fleetSize >= 11) return { ...base, loads: Math.ceil(base.loads * 0.3), days: Math.ceil(base.days * 0.7) };
-  if (fleetSize >= 5)  return { ...base, loads: Math.ceil(base.loads * 0.5), days: Math.ceil(base.days * 0.8) };
-  return base;
-}
-
-/** @deprecated Use calculateTierFromMilestone — fleet size no longer determines tier, only accelerates milestones. */
-export function calculateTierFromFleet(fleetSize: number): TierKey {
-  if (fleetSize >= TIER_CONFIG.PLATINUM.minTrucks) return "PLATINUM";
-  if (fleetSize >= TIER_CONFIG.GOLD.minTrucks)     return "GOLD";
-  return "SILVER";
 }
 
 // ─── Grace Period Downgrade Logic ──────────────────────────
@@ -219,19 +229,32 @@ export async function checkPerformanceDowngrade(carrierId: string): Promise<{
   };
 }
 
-/** Checks if a carrier qualifies for the next milestone. */
+/** Checks if a carrier qualifies for the next milestone.
+ *
+ * Locked launch model: AND of (cumulative-since-join loads, on-time pct,
+ * tenure days). No referral, no multi-lane criteria. Legacy M2_PROVEN /
+ * M3_RELIABLE enum values on pre-reconciliation rows are normalized to the
+ * M1_FIRST_LOAD threshold lookup (next milestone is M4_PARTNER for all
+ * Silver-active carriers regardless of which legacy sub-milestone they
+ * were stamped with).
+ */
 export async function checkMilestoneAdvancement(
   carrierId: string,
 ): Promise<{ advanced: boolean; newMilestone?: CarrierMilestone; reason?: string }> {
   const profile = await prisma.carrierProfile.findUnique({
     where: { id: carrierId },
-    select: { id: true, milestone: true, cppJoinedDate: true, cppTotalLoads: true, referralCount: true, userId: true },
+    select: { id: true, milestone: true, cppJoinedDate: true, cppTotalLoads: true, userId: true },
   });
 
   if (!profile) return { advanced: false, reason: "Carrier profile not found" };
 
   const currentMilestone = profile.milestone as string;
-  const threshold = MILESTONE_THRESHOLDS[currentMilestone];
+  // Normalize legacy enum values to canonical Silver-active lookup.
+  const lookupKey =
+    currentMilestone === "M2_PROVEN" || currentMilestone === "M3_RELIABLE"
+      ? "M1_FIRST_LOAD"
+      : currentMilestone;
+  const threshold = MILESTONE_THRESHOLDS[lookupKey];
   if (!threshold) return { advanced: false, reason: "Already at max milestone (M6_FOUNDING)" };
 
   const joinedDate = profile.cppJoinedDate || new Date();
@@ -245,25 +268,19 @@ export async function checkMilestoneAdvancement(
     return { advanced: false, reason: `Need ${threshold.loads} loads, currently at ${totalLoads}` };
   }
 
-  if (threshold.referrals && (profile.referralCount || 0) < threshold.referrals) {
-    return { advanced: false, reason: `Need ${threshold.referrals} referral(s), currently at ${profile.referralCount || 0}` };
-  }
-
-  if (threshold.onTimePct) {
-    const since = new Date(joinedDate);
-    const deliveredLoads = await prisma.load.findMany({
-      where: {
-        carrierId: profile.userId,
-        status: { in: ["DELIVERED", "COMPLETED", "POD_RECEIVED", "INVOICED"] },
-        updatedAt: { gte: since },
-      },
-      select: { deliveryDate: true, updatedAt: true },
-    });
-    const totalDelivered = deliveredLoads.length;
-    const onTimePct = totalDelivered > 0 ? 100 : 0;
-    if (onTimePct < threshold.onTimePct) {
-      return { advanced: false, reason: `Need ${threshold.onTimePct}% on-time, currently at ${onTimePct}%` };
-    }
+  const since = new Date(joinedDate);
+  const deliveredLoads = await prisma.load.findMany({
+    where: {
+      carrierId: profile.userId,
+      status: { in: ["DELIVERED", "COMPLETED", "POD_RECEIVED", "INVOICED"] },
+      updatedAt: { gte: since },
+    },
+    select: { deliveryDate: true, updatedAt: true },
+  });
+  const totalDelivered = deliveredLoads.length;
+  const onTimePct = totalDelivered > 0 ? 100 : 0;
+  if (onTimePct < threshold.onTimePct) {
+    return { advanced: false, reason: `Need ${threshold.onTimePct}% on-time, currently at ${onTimePct}%` };
   }
 
   await prisma.carrierProfile.update({

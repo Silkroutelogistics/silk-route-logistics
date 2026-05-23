@@ -7455,7 +7455,102 @@
 //              of the Authority-age epic and not yet shipped. Letter
 //              coordination: Authority-age sprint took aig; advanced
 //              to aih.
-export const SRL_VERSION = "3.8.aih";
+//              [Coordination correction: git blame shows aig was
+//              Carrier onboarding Sprint C (committed 98f7626 by
+//              Wasi Haider), NOT Authority-age. Authority-age
+//              continues to claim letters at its Phase A per Item
+//              182 policy. Aih correctly took the next-free letter
+//              after Sprint C.]
+// v3.8.aii   — Tier-unlock reconciliation Commit 1 of 2 (backend
+//              tier logic). Replaces the off-by-one milestone
+//              thresholds in caravanService with the locked launch
+//              model + retires the parallel score-based promotion
+//              path in tierService so there is ONE authoritative
+//              way to advance.
+//
+//              MILESTONE_THRESHOLDS (caravanService.ts:90-101)
+//              rewritten to 3 transitions:
+//                M1_FIRST_LOAD → M4_PARTNER (Gold gate):
+//                  90 days · 12 loads · 97% on-time
+//                M4_PARTNER → M5_CORE (Platinum gate):
+//                  120 days · 20 loads · 98% on-time
+//                M5_CORE → M6_FOUNDING (Founding recognition):
+//                  180 days · 30 loads · 98% on-time
+//              Each transition is an AND of (days, loads, onTimePct).
+//              Cumulative-since-join counting via cppTotalLoads +
+//              cppJoinedDate UNCHANGED. Founding is a recognition
+//              status on top of Platinum (tier stays PLATINUM,
+//              milestone advances to M6_FOUNDING). Legacy M2_PROVEN /
+//              M3_RELIABLE enum values on pre-reconciliation rows
+//              normalize to M1_FIRST_LOAD lookup so those carriers
+//              advance to M4_PARTNER under the new gate.
+//
+//              Removed from gates: (a) referrals — no field tracks
+//              this anyway; (b) "3 active lanes" — no field exists.
+//              The advancement gate is now purely AND-of-loads-OT-
+//              days. `referrals?` dropped from threshold type
+//              signature; `onTimePct` is now required (not optional).
+//              Referral check block removed from
+//              checkMilestoneAdvancement.
+//
+//              Score-based promotion path retired:
+//                - tierService.calculateTier (overallScore →
+//                  CarrierTier) DELETED. Score-mapping was the
+//                  parallel path that could bypass loads-and-days
+//                  via service-score alone.
+//                - tierService.recalculateAllTiers (bulk score-based
+//                  resync) DELETED for the same reason.
+//                - 3 callers updated: cpp.ts /recalculate route
+//                  rewritten to call checkMilestoneAdvancement +
+//                  calculateTierFromMilestone per carrier (the
+//                  canonical milestone-gate path);
+//                  integrationService.ts updateCarrierScorecard
+//                  retires the score → tier auto-promotion block,
+//                  scorecard.tierAtTime + bonus calculation now use
+//                  profile.tier as source of truth;
+//                  carrierController.ts unused calculateTier import
+//                  dropped.
+//                - Dead helper calculateTierFromFleet (@deprecated,
+//                  zero non-self callers per grep) DELETED.
+//                - Dead helper getFleetAdjustedThreshold (zero
+//                  non-self callers) DELETED.
+//
+//              Pricing values in TIER_CONFIG (Net terms, Quick Pay
+//              %, safety bonus amounts, detention values) UNCHANGED
+//              by this reconciliation. Threshold calibration note
+//              added inline in caravanService header: locked load
+//              numbers (12/20/30) are calibrated to current pre-
+//              revenue launch volume, revisit at ~6 months
+//              operational baseline OR when monthly volume
+//              materially increases.
+//
+//              Halt boundary respected: no bonus accrual build, no
+//              detention accrual build, no recency-weighted
+//              maintenance signal. checkPerformanceDowngrade keeps
+//              its existing recency-weighted query as-is (was
+//              already implemented pre-Sprint, not part of
+//              reconciliation scope).
+//
+//              Pre-commit gates: backend tsc clean (initial run
+//              caught one stale `newTier` reference in
+//              integrationService.ts:597 logger call — fixed in-
+//              place to use currentTier; re-ran clean). Frontend
+//              tsc + next build clean.
+//
+//              Commit 2 (page surfaces) follows: CLAUDE.md §8 + §10
+//              + §11 update, carriers.html tier cards align, onboarding
+//              Card C + Terms §7 align, CLAUDE.md §8 launch-volume
+//              revisit note added, M-numbering dropped from carrier-
+//              facing surfaces. Halt for Commit 2 after this commit
+//              per §3.3 atomic + halt cadence.
+//
+//              Letter assignment per Option α (commit-time read):
+//              origin/main HEAD aih at commit moment; next-free aii.
+//              Pattern 6 sub-pattern 6 fire #4 in same epoch caught
+//              + bundled cleanly (aih commit landed mid-Sprint via
+//              parallel Authority-age v3.8.ahm requirements-card
+//              update at commit a04ea59).
+export const SRL_VERSION = "3.8.aii";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
