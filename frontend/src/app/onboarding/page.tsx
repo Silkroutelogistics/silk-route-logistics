@@ -538,7 +538,7 @@ export default function OnboardingPage() {
                   "DOT# or MC# (auto-populates the rest from FMCSA)",
                   "Insurance: Auto Liability $1M+ / Cargo $100K+ / GL $1M+",
                   "W-9 form (PDF/JPEG/PNG, max 10MB each)",
-                  "Operating Authority letter (FMCSA)",
+                  "Active FMCSA Authority (MC/DOT, 18+ months of operating history)",
                   "Voided check (for Quick Pay direct deposit setup)",
                 ].map((item, i) => (
                   <div key={i} className="flex items-start gap-2">
@@ -898,7 +898,7 @@ export default function OnboardingPage() {
                 {[
                   { key: "w9", label: "W-9 Form", desc: "Required for tax reporting" },
                   { key: "insurance", label: "Insurance Certificate", desc: "Auto liability, cargo, and general liability" },
-                  { key: "authority", label: "Authority Letter / Operating Authority", desc: "FMCSA operating authority" },
+                  { key: "authority", label: "Authority Letter / Operating Authority", desc: "Active FMCSA authority — 18+ months of operating history required" },
                   { key: "safety", label: "Safety Fitness Certificate (Canadian carriers)", desc: "Required for Canadian-based carriers operating interprovincially" },
                 ].map((doc) => {
                   const docFile = files.find((f) => (f as any).__docType === doc.key);

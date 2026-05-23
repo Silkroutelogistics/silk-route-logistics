@@ -8418,7 +8418,67 @@
 //              field/element belongs on a surface, default-assume
 //              the intent is removal unless they explicitly ask
 //              for explanation.
-export const SRL_VERSION = "3.8.air";
+// v3.8.ais   — Surface 18+ months FMCSA authority requirement on
+//              /onboarding. Closes Wasi-flagged "we have made
+//              changes to the 18 months old authority instead of
+//              just fresh" — the Item 182 authority-age compliance
+//              epic is now backend-enforced (<12mo hard-block,
+//              12-18mo override-eligible per Sprint v3.8.ahq +
+//              follow-up, ≥18mo auto-allow) and v3.8.aih already
+//              surfaced it on the canonical /carriers.html
+//              requirements card. /onboarding lagged.
+//
+//              Two surgical edits in onboarding/page.tsx — both
+//              are documents-checklist class wording matches to
+//              the /carriers.html canonical "Active FMCSA
+//              Authority · 18+ months" pattern:
+//
+//                (1) Card B "What you'll need" checklist:
+//                    "Operating Authority letter (FMCSA)"
+//                    -> "Active FMCSA Authority (MC/DOT, 18+
+//                    months of operating history)"
+//
+//                (2) Step 3 documents upload card desc:
+//                    "FMCSA operating authority"
+//                    -> "Active FMCSA authority — 18+ months of
+//                    operating history required"
+//
+//              Step 4 Terms Section 1 ("Carrier shall maintain
+//              valid operating authority (MC/DOT) issued by the
+//              FMCSA at all times during the term...") NOT
+//              touched — that's the legal click-through covenant
+//              language, separate from the age-gate surface
+//              requirement. Adding "18+ months" to the covenant
+//              would be wrong-shape — the covenant is about
+//              maintaining authority during the relationship, not
+//              about the entry gate.
+//
+//              Scope: ~2 LOC swap in onboarding/page.tsx. No
+//              other surfaces touched.
+//
+//              Pre-commit gates (Sub-pattern 11 CI parity):
+//              frontend tsc --noEmit clean; frontend npx next
+//              build clean (/onboarding 14.9 kB to 15.0 kB —
+//              slightly longer label text).
+//
+//              Letter: air is the latest origin/main HEAD; ais
+//              sequence-continuous on top.
+//
+//              Patterns applied: §3.5 audit-first (read the
+//              /carriers.html canonical v3.8.aih wording before
+//              editing /onboarding so the two surfaces stay in
+//              parity), §3.3 atomic single-file ship + CLAUDE.md
+//              docs row, §3.2 cross-page consistency (Pattern 7
+//              design-system conformance — both surfaces now
+//              carry the same 18+ months requirement framing).
+//
+//              Patterns emerged: none new — this is a Pattern 7
+//              cross-surface-consistency follow-through on the
+//              /carriers.html Item 182 surface that v3.8.aih
+//              shipped. /onboarding was the natural sibling
+//              surface that should have been touched in the
+//              same sprint; banked here.
+export const SRL_VERSION = "3.8.ais";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
