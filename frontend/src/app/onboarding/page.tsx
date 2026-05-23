@@ -26,9 +26,12 @@ function OnboardingNav() {
     <>
       <nav className="bg-[#0A2540] border-b border-[#C5A572]/15 sticky top-0 z-50">
         <div className="max-w-[1280px] mx-auto px-6 h-[72px] flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2.5" aria-label="Silk Route Logistics Home">
+          {/* v3.8.aiq — logo-only per canonical _partials/nav.html parity.
+              The "Silk Route Logistics" wordmark span added in v3.8.ain
+              was non-canonical drift — no other public marketing nav
+              carries text next to the logo. Removed entirely. */}
+          <Link href="/" className="flex items-center" aria-label="Silk Route Logistics Home">
             <img src="/logo.png" alt="SRL" className="h-9 w-auto rounded-md" />
-            <span className="hidden md:inline font-serif italic font-semibold text-base text-white tracking-wide">Silk Route Logistics</span>
           </Link>
 
           {/* Desktop nav */}
@@ -399,7 +402,7 @@ export default function OnboardingPage() {
             <h3 className="text-lg font-bold mb-5">What Happens Next</h3>
             <div className="space-y-5">
               <div className="flex gap-4">
-                <div className="w-8 h-8 bg-green-700 text-white rounded-full flex items-center justify-center text-sm font-bold shrink-0">1</div>
+                <div className="w-8 h-8 bg-green-700 text-[#FBF7F0] rounded-full flex items-center justify-center text-sm font-bold shrink-0">1</div>
                 <div>
                   <p className="font-semibold text-sm">Compass Engine Verification</p>
                   <p className="text-slate-500 text-sm">The Compass Engine is already running its 35-point check against your FMCSA authority, insurance amounts, safety record, authority age, and OFAC status.</p>
@@ -484,9 +487,9 @@ export default function OnboardingPage() {
                 <div className={cn(
                   "w-9 h-9 rounded-full flex items-center justify-center text-sm font-semibold transition border-2 shrink-0",
                   i < step
-                    ? "bg-[#2F7A4F] text-white border-[#2F7A4F]"
+                    ? "bg-[#2F7A4F] text-[#FBF7F0] border-[#2F7A4F]"
                     : i === step
-                    ? "bg-[#BA7517] text-white border-[#BA7517] shadow-[0_0_0_4px_rgba(186,117,23,0.12)]"
+                    ? "bg-[#BA7517] text-[#FBF7F0] border-[#BA7517] shadow-[0_0_0_4px_rgba(186,117,23,0.12)]"
                     : "bg-white text-[#A7AEB8] border-[#EFE6D3]"
                 )}>
                   {i < step ? <Check className="w-4 h-4" /> : i + 1}
@@ -620,7 +623,7 @@ export default function OnboardingPage() {
                     {fmcsaResult.verified ? (
                       <CheckCircle2 className="w-5 h-5 text-green-600" />
                     ) : (
-                      <div className="w-5 h-5 rounded-full bg-red-500 flex items-center justify-center text-white text-xs font-bold">!</div>
+                      <div className="w-5 h-5 rounded-full bg-red-500 flex items-center justify-center text-[#FBF7F0] text-xs font-bold">!</div>
                     )}
                     <span className={cn("font-semibold", fmcsaResult.verified ? "text-green-800" : "text-red-800")}>
                       {fmcsaResult.verified ? "FMCSA Verified — Authority Active" : fmcsaResult.errors.length > 0 ? "Carrier Not Found in FMCSA" : "Authority Not Active"}

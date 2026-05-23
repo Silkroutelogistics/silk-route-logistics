@@ -8222,7 +8222,117 @@
 //              Patterns emerged: none new this commit — Path 2C
 //              strip is a contained content correction within
 //              established canonical patterns.
-export const SRL_VERSION = "3.8.aip";
+// v3.8.aiq   — OnboardingNav visibility regression fix + canonical
+//              parity. Closes Wasi-flagged "Can you read anything
+//              next to logo ?????????" — the v3.8.ain Path 2C
+//              OnboardingNav shipped with two compounding problems
+//              against the canonical nav.html:
+//
+//              (1) NON-CANONICAL TEXT WORDMARK: I added
+//                  <span>Silk Route Logistics</span> next to the
+//                  /logo.png image. Canonical _partials/nav.html
+//                  has NO text wordmark — the logo is image-only
+//                  across /, /carriers, /shippers, /about,
+//                  /contact, /track. The span was unilateral drift
+//                  from the canonical chrome.
+//              (2) text-white BACKFIRE per §13.3 Item 10: globals
+//                  .css:162-163 has
+//                    [data-mode="light"] .text-white {
+//                      color: var(--srl-text) !important;
+//                    }
+//                  which remaps the Tailwind text-white utility to
+//                  the dark body-text color in light mode (the
+//                  default for public marketing routes). My
+//                  OnboardingNav span used text-white on
+//                  bg-[#0A2540] (arbitrary hex, NOT in the override
+//                  list, stays navy) → result was DARK TEXT ON
+//                  NAVY → invisible on the live deployed page.
+//                  Same backfire on 4 other badges I introduced
+//                  in ain (step indicator completed/active circles
+//                  + success-screen "1" badge + FMCSA error chip
+//                  "!"): text-white over bg-green-700 / bg-[#BA7517]
+//                  gold-dark / bg-red-500 → dark on bright color =
+//                  muddy/unreadable.
+//
+//              Methodology miss acknowledged: Item 10 was banked
+//              in CLAUDE.md §13.3 PRE-ain. The user-memory
+//              feedback_visual_smoke_before_push.md is explicit
+//              that "for layout/hero/card restructure commits,
+//              build-gate is NOT enough; must mentally walk
+//              viewport proportions before push." I ran tsc +
+//              next build clean and called the gates done, never
+//              opened the rendered page in a viewer. Both pre-
+//              existing warnings would have prevented this if
+//              applied. Banked as a methodology lesson at §19
+//              Sub-pattern 8 alongside the existing fire-candidate
+//              entries — text-white-on-hardcoded-dark-bg is a
+//              specific class of conditional-render-visual-
+//              verification gap that triggers ONLY in deployed
+//              light mode, never in dev tsc/build.
+//
+//              FIX (single atomic, 5 surgical edits):
+//                (1) Removed the <span>Silk Route Logistics</span>
+//                    entirely from OnboardingNav. Logo-only matches
+//                    canonical _partials/nav.html across the public
+//                    marketing surface.
+//                (2) Step indicator completed circle: text-white →
+//                    text-[#FBF7F0] (arbitrary hex bypasses the
+//                    [data-mode="light"] override).
+//                (3) Step indicator active circle: same swap.
+//                (4) Success-screen "1" badge: same swap.
+//                (5) FMCSA error chip "!" badge: same swap.
+//
+//              Pre-existing text-white inside AddressAutocomplete
+//              (lines 1298 + 1307) untouched — its bg-[#0F1117]
+//              IS in the globals.css override list, so bg + text
+//              both swap to light-mode pair (cream bg + dark text)
+//              and remain readable. Pre-existing component, not
+//              introduced by me, works correctly via the override
+//              pair semantic.
+//
+//              Visibility class banked: brand-canonical text-on-
+//              navy is text-[#FBF7F0] (--fg-on-navy per CLAUDE.md
+//              §2.1), NOT Tailwind text-white. The arbitrary hex
+//              bypasses the [data-mode="light"] .text-white
+//              !important override. Going forward, all text on
+//              hardcoded-navy / hardcoded-dark-color backgrounds
+//              must use the arbitrary cream hex, not the Tailwind
+//              white token. Mirrors the rule already implicit in
+//              the canonical chrome partials (which use --cream
+//              CSS var, never .text-white).
+//
+//              Scope: ~4 LOC swap across 4 lines + 5 LOC delete
+//              (span + adjacent flex container simplification) in
+//              onboarding/page.tsx. No other surfaces touched.
+//
+//              Pre-commit gates (Sub-pattern 11 CI parity):
+//              frontend tsc --noEmit clean; frontend npx next
+//              build clean (/onboarding route still 15.1 kB).
+//
+//              Letter: aip was local-only (61efe98, awaiting push);
+//              aiq sequence-continuous on top. Both aip + aiq will
+//              push together to ship the strip + visibility fix in
+//              one Cloudflare deploy cycle, resolving both the
+//              Wasi-flagged Card C visibility AND the logo-text
+//              invisibility in a single live update.
+//
+//              Patterns applied: §3.5 Phase A audit (root-cause
+//              the text-white override against globals.css before
+//              fixing), §3.2 content sweep verify (file-wide
+//              text-white grep before declaring done), §3.3
+//              atomic single-file ship, §13.3 Item 10
+//              acknowledgment (theme override class), §19 Sub-
+//              pattern 8 conditional-render-visual-verification
+//              (the missed gate that let ain ship the regression).
+//
+//              Patterns emerged: methodology lesson — Tailwind
+//              text-white must be treated as a light-mode-aware
+//              utility (its override list semantics), not a
+//              theme-neutral "always white" class. Document
+//              banked at §13.3 Item 10 (which already covers the
+//              broader theme system root fix) + a new explicit
+//              note inline in OnboardingNav code.
+export const SRL_VERSION = "3.8.aiq";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
