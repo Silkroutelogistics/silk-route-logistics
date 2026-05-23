@@ -7443,7 +7443,19 @@
 //              necessary but NOT sufficient. Halt after commit for
 //              push greenlight, halt after push for the both-modes
 //              visual gate.
-export const SRL_VERSION = "3.8.aig";
+// v3.8.aih   — /carriers requirements card surfaces the new 18-month
+//              FMCSA authority-age rule (now operationally enforced
+//              per Item 182 v3.8.ahl + ahm hard-gate ship). "Active
+//              FMCSA Operating Authority" → "Active FMCSA Authority ·
+//              18+ months"; subtitle expanded to "Active MC, 18+
+//              months of operating authority, no revocations." Honest
+//              public-facing alignment with the gate carriers actually
+//              hit at onboarding. WaitingList Option β path NOT yet
+//              claimed since `WaitingList` Prisma model is sprint 5
+//              of the Authority-age epic and not yet shipped. Letter
+//              coordination: Authority-age sprint took aig; advanced
+//              to aih.
+export const SRL_VERSION = "3.8.aih";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
