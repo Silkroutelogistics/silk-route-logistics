@@ -247,9 +247,12 @@ export default function OnboardingPage() {
   if (success) {
     return (
       <div className="min-h-screen bg-[#FBF7F0]">
+        {/* v3.8.ail — same logo framing as main nav (above). */}
         <nav className="bg-[#0A2540] text-white px-6 py-4 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-3">
-            <img src="/media/srl-logo-1024.png" alt="SRL compass mark" className="h-8 w-8 object-contain" />
+            <div className="bg-white rounded-lg p-1.5 flex items-center justify-center shadow-sm">
+              <img src="/media/srl-logo-1024.png" alt="SRL compass mark" className="h-7 w-7 object-contain" />
+            </div>
             <span className="font-serif italic font-semibold text-base">Silk Route Logistics</span>
           </Link>
         </nav>
@@ -358,9 +361,16 @@ export default function OnboardingPage() {
 
   return (
     <div className="min-h-screen bg-[#FBF7F0]">
+      {/* v3.8.ail — Logo framed in a white card per site-standard nav
+          pattern. Prior render had a raw <img> of the cream/gold compass
+          mark on dark navy bg, which faded into invisibility. The white
+          card chip mirrors the canonical nav treatment elsewhere on
+          the site (carriers/shippers chrome). */}
       <nav className="bg-[#0A2540] text-white px-6 py-4 flex items-center justify-between">
         <Link href="/" className="flex items-center gap-3">
-          <img src="/media/srl-logo-1024.png" alt="SRL compass mark" className="h-9 w-9 object-contain" />
+          <div className="bg-white rounded-lg p-1.5 flex items-center justify-center shadow-sm">
+            <img src="/media/srl-logo-1024.png" alt="SRL compass mark" className="h-7 w-7 object-contain" />
+          </div>
           <div className="leading-tight">
             <span className="block font-serif italic font-semibold text-base">Silk Route Logistics</span>
             <span className="block text-[10px] uppercase tracking-[0.18em] text-[#C9D2DE]">Carrier Registration</span>
@@ -438,48 +448,59 @@ export default function OnboardingPage() {
             <div className="bg-[#0A2540] text-white rounded-2xl shadow-md p-6 mb-5">
               <h3 className="font-serif italic font-semibold text-xl mb-4">The Caravan Partner Program at a glance</h3>
               <div className="grid sm:grid-cols-3 gap-3 mb-5">
+                {/* v3.8.ail — Detention + Safety bonus rows dropped from
+                    all 3 tiers; both retired per v3.8.aic Sprint 1 honesty
+                    pass (no backend / no margin). Auto-approve thresholds
+                    KEPT — those are canonical per §8 and broker-controlled. */}
                 {/* Silver — entry */}
                 <div className="bg-[#15365A] rounded-lg p-4 border border-[#234A73]">
-                  <p className="text-xs uppercase tracking-wider text-[#C9D2DE] mb-3">Silver &mdash; Entry</p>
+                  <p className="text-xs uppercase tracking-wider text-[#C9D2DE] mb-3">Silver &mdash; Day 1</p>
                   <ul className="space-y-1.5 text-sm">
                     <li className="flex justify-between gap-2"><span className="text-[#C9D2DE]">Standard pay</span><span>Net-30</span></li>
                     <li className="flex justify-between gap-2"><span className="text-[#C9D2DE]">7-day QP fee</span><span className="text-[#BA7517] font-semibold">3%</span></li>
+                    <li className="flex justify-between gap-2"><span className="text-[#C9D2DE]">Same-day QP</span><span>5%</span></li>
                     <li className="flex justify-between gap-2"><span className="text-[#C9D2DE]">Auto-approve</span><span>$2K/load</span></li>
-                    <li className="flex justify-between gap-2"><span className="text-[#C9D2DE]">Detention</span><span>$50/hr</span></li>
-                    <li className="flex justify-between gap-2"><span className="text-[#C9D2DE]">Safety bonus</span><span className="text-[#C9D2DE]">&mdash;</span></li>
                   </ul>
                 </div>
                 {/* Gold — earned via locked gate */}
                 <div className="bg-[#15365A] rounded-lg p-4 border border-[#BA7517]/40">
-                  <p className="text-xs uppercase tracking-wider text-[#BA7517] mb-3">Gold</p>
+                  <p className="text-xs uppercase tracking-wider text-[#BA7517] mb-3">Gold &mdash; M4</p>
                   <ul className="space-y-1.5 text-sm">
                     <li className="flex justify-between gap-2"><span className="text-[#C9D2DE]">Standard pay</span><span>Net-21</span></li>
                     <li className="flex justify-between gap-2"><span className="text-[#C9D2DE]">7-day QP fee</span><span className="text-[#BA7517] font-semibold">2%</span></li>
+                    <li className="flex justify-between gap-2"><span className="text-[#C9D2DE]">Same-day QP</span><span>4%</span></li>
                     <li className="flex justify-between gap-2"><span className="text-[#C9D2DE]">Auto-approve</span><span>$4K/load</span></li>
-                    <li className="flex justify-between gap-2"><span className="text-[#C9D2DE]">Detention</span><span>$65/hr</span></li>
-                    <li className="flex justify-between gap-2"><span className="text-[#C9D2DE]">Safety bonus</span><span>$450/qtr</span></li>
                   </ul>
                 </div>
-                {/* Platinum — earned via locked gate; Founding on top */}
+                {/* Platinum — M5 milestone gate */}
                 <div className="bg-[#15365A] rounded-lg p-4 border border-[#BA7517]/40">
-                  <p className="text-xs uppercase tracking-wider text-[#BA7517] mb-3">Platinum</p>
+                  <p className="text-xs uppercase tracking-wider text-[#BA7517] mb-3">Platinum &mdash; M5</p>
                   <ul className="space-y-1.5 text-sm">
                     <li className="flex justify-between gap-2"><span className="text-[#C9D2DE]">Standard pay</span><span>Net-14</span></li>
                     <li className="flex justify-between gap-2"><span className="text-[#C9D2DE]">7-day QP fee</span><span className="text-[#BA7517] font-semibold">1%</span></li>
+                    <li className="flex justify-between gap-2"><span className="text-[#C9D2DE]">Same-day QP</span><span>3%</span></li>
                     <li className="flex justify-between gap-2"><span className="text-[#C9D2DE]">Auto-approve</span><span>$6K/load</span></li>
-                    <li className="flex justify-between gap-2"><span className="text-[#C9D2DE]">Detention</span><span>$75/hr</span></li>
-                    <li className="flex justify-between gap-2"><span className="text-[#C9D2DE]">Safety bonus</span><span>$900/qtr</span></li>
                   </ul>
                 </div>
               </div>
+              {/* v3.8.ail — Advancement criteria rewritten to match §10
+                  canonical milestones. Prior text had its own drifted
+                  numbers (3/12/20/30 loads) that didn't match §10's
+                  documented M1-M6 gates (first load / 30d-10loads /
+                  90d-30loads / 180d-75loads / 360d-150loads / 720d-300
+                  loads). "Founding recognition" framing dropped — §10
+                  M6 is "Locked 1% QP permanently, advisory voice on CPP
+                  evolution" with no "Founding" wording. Compass Engine
+                  line separates the 35-point CARRIER check from the
+                  7-factor LOAD scoring (two distinct mechanisms). */}
               <div className="space-y-3 pt-4 border-t border-[#234A73]">
                 <p className="text-sm text-[#C9D2DE] leading-relaxed">
-                  <span className="font-semibold text-white">Performance-based advancement.</span> Silver is the entry tier (3 completed loads + qualifying service score). Earn into Gold at 12 loads, 97% on-time, 90-day tenure floor. Earn into Platinum at 20 loads, 98% on-time, 120-day floor. Founding recognition stamps the 1% Quick Pay tier permanently at 30 loads, 98% on-time, 180-day floor &mdash; carrier remains Platinum tier with Founding status.
+                  <span className="font-semibold text-white">Performance-based advancement.</span> Your first delivered Caravan Partner Program load (M1) activates Silver. Earn into Gold at M4: 180 days, 75+ loads, 97%+ on-time. Earn into Platinum at M5: 360 days, 150+ loads, 98%+ on-time, 3 active lanes. M6 Platinum Core (720 days, 300+ loads) locks 1% Quick Pay permanently with an advisory voice on Caravan Partner Program evolution.
                 </p>
                 <div className="flex items-start gap-2">
                   <Compass className="w-4 h-4 text-[#BA7517] mt-0.5 shrink-0" />
                   <p className="text-sm text-[#C9D2DE] leading-relaxed">
-                    <span className="font-semibold text-white">Compass Engine vetting.</span> Every load run through a 35-point check against FMCSA authority, insurance amounts, safety record, authority age, OFAC, and 7-factor performance metrics.
+                    <span className="font-semibold text-white">Compass Engine vetting.</span> 35-point carrier check at onboarding (FMCSA authority, insurance amounts, safety record, authority age, OFAC). 7-factor performance scoring on every delivered load.
                   </p>
                 </div>
               </div>
@@ -521,7 +542,7 @@ export default function OnboardingPage() {
                 <div>
                   <label className="block text-sm font-medium text-[#0A2540] mb-1">EIN (Federal Tax ID)</label>
                   <input value={form.ein} onChange={(e) => set("ein", e.target.value.replace(/\D/g, "").slice(0, 9))} className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-gold outline-none" placeholder="XX-XXXXXXX" maxLength={9} inputMode="numeric" autoComplete="off" name="ein-federal-tax-id" />
-                  <p className="text-xs text-[#6B7685] mt-1">9-digit EIN for business verification</p>
+                  <p className="text-xs text-[#6B7685] mt-1">Used for business pre-screen before document review on Step 3. Your W-9 (uploaded later) will be matched against this.</p>
                 </div>
               </div>
 

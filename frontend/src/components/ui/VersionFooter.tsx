@@ -7738,7 +7738,31 @@
 //              HEAD aih, local HEAD aij; next-free aik. No Pattern 6
 //              sub-pattern 6 fire this commit — single sequential
 //              advancement after v3.8.aij.
-export const SRL_VERSION = "3.8.aik";
+// v3.8.ail   — /onboarding honesty + chrome pass (Sprint 1 followup
+//              extending v3.8.aic to the React onboarding flow). Step 0
+//              "Caravan Partner Program at a glance" tier card had
+//              RETIRED claims still rendered to every public visitor:
+//              Detention $50/$65/$75/hr + Safety bonus $450/$900/qtr
+//              (all §5 prohibited per v3.8.aic). Also: advancement-
+//              criteria paragraph had its own drifted milestone numbers
+//              (3/12/20/30 loads) instead of §10 canonical M1-M6
+//              (first-load/30d-10loads/90d-30/180d-75/360d-150/720d-300).
+//              "Founding recognition" framing was invented; §10 M6 has
+//              no "Founding" wording. Compass Engine line conflated
+//              35-point CARRIER vetting with 7-factor LOAD scoring.
+//              Plus: custom nav rendered raw cream/gold compass-mark
+//              PNG on dark navy bg — invisible. Plus: EIN field on
+//              Step 1 had cryptic "9-digit EIN for business verification"
+//              subtitle with no context. **Fixes:** dropped 2 retired
+//              rows × 3 tiers from tier card, added "Same-day QP" row
+//              per §8 universal +2% rule, rewrote advancement to match
+//              §10 canonical, separated 35-point + 7-factor in Compass
+//              Engine line, wrapped logo in white card chip (both nav
+//              instances — main + success-screen), clarified EIN
+//              subtitle to explain pre-screen purpose + W-9 match on
+//              Step 3. ~60 LOC net. Letter coordination: Authority-age
+//              sprint took aik; advanced to ail.
+export const SRL_VERSION = "3.8.ail";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
