@@ -3,10 +3,105 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Check, ChevronRight, ChevronLeft, Upload, CheckCircle2, X, FileText, Image as ImageIcon, MapPin, Compass } from "lucide-react";
+import { Check, ChevronRight, ChevronLeft, Upload, CheckCircle2, X, FileText, Image as ImageIcon, MapPin, Compass, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const steps = ["Company Info", "Equipment & Regions", "Documents", "Terms", "Review"];
+
+/* ── v3.8.ain Path 2C — Canonical chrome parity nav for /onboarding ──
+   Mirrors the static-HTML `_partials/nav.html` chrome that's injected on
+   /, /carriers, /shippers, /about, /contact, /track via inject-chrome.mjs
+   (utilities.css `.nav` / `.nav-link` / `.nav-login-btn` rules). The
+   public marketing CSS does NOT load on React routes (only globals.css
+   loads — Tailwind + globals), so the visual match is rebuilt in
+   Tailwind here. Navy `#0A2540` bg + 72px height + gold-dark `#BA7517`
+   CTA Sign In + dropdown to AE/Carrier/Shipper login. "Carriers" link
+   highlighted in gold-light `#DAC39C` since /onboarding is a carrier-
+   path surface. */
+function OnboardingNav() {
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const [loginOpen, setLoginOpen] = useState(false);
+
+  return (
+    <>
+      <nav className="bg-[#0A2540] border-b border-[#C5A572]/15 sticky top-0 z-50">
+        <div className="max-w-[1280px] mx-auto px-6 h-[72px] flex items-center justify-between">
+          <Link href="/" className="flex items-center gap-2.5" aria-label="Silk Route Logistics Home">
+            <img src="/logo.png" alt="SRL" className="h-9 w-auto rounded-md" />
+            <span className="hidden md:inline font-serif italic font-semibold text-base text-white tracking-wide">Silk Route Logistics</span>
+          </Link>
+
+          {/* Desktop nav */}
+          <div className="hidden md:flex items-center gap-8">
+            <Link href="/shippers.html" className="text-sm font-medium text-[#FBF7F0]/90 hover:text-[#DAC39C] transition tracking-wide">Shippers</Link>
+            <Link href="/carriers.html" className="text-sm font-medium text-[#DAC39C] hover:text-[#DAC39C] transition tracking-wide">Carriers</Link>
+            <Link href="/about.html" className="text-sm font-medium text-[#FBF7F0]/90 hover:text-[#DAC39C] transition tracking-wide">About</Link>
+            <Link href="/contact.html" className="text-sm font-medium text-[#FBF7F0]/90 hover:text-[#DAC39C] transition tracking-wide">Contact</Link>
+            <Link href="/track" className="text-sm font-medium text-[#FBF7F0]/90 hover:text-[#DAC39C] transition tracking-wide">Track</Link>
+
+            {/* Sign In dropdown — hover + click toggle, matches canonical */}
+            <div
+              className="relative"
+              onMouseEnter={() => setLoginOpen(true)}
+              onMouseLeave={() => setLoginOpen(false)}
+            >
+              <button
+                type="button"
+                className="bg-[#BA7517] hover:bg-[#C5A572] text-[#FBF7F0] px-5 py-2 rounded-md text-sm font-semibold transition inline-flex items-center gap-1"
+                onClick={() => setLoginOpen((v) => !v)}
+                aria-haspopup="true"
+                aria-expanded={loginOpen}
+              >
+                Sign In
+                <ChevronDown className="w-3.5 h-3.5" />
+              </button>
+              {loginOpen && (
+                <div
+                  className="absolute right-0 top-full mt-2 min-w-[200px] bg-white rounded-md shadow-lg overflow-hidden"
+                  role="menu"
+                >
+                  <Link href="/auth/login" role="menuitem" className="block px-5 py-3.5 text-sm font-medium text-[#0A2540] hover:bg-[#FBF7F0] hover:text-[#BA7517] border-b border-[#F0F0F0] transition">AE Login</Link>
+                  <Link href="/carrier/login" role="menuitem" className="block px-5 py-3.5 text-sm font-medium text-[#0A2540] hover:bg-[#FBF7F0] hover:text-[#BA7517] border-b border-[#F0F0F0] transition">Carrier Login</Link>
+                  <Link href="/shipper/login" role="menuitem" className="block px-5 py-3.5 text-sm font-medium text-[#0A2540] hover:bg-[#FBF7F0] hover:text-[#BA7517] transition">Shipper Login</Link>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Mobile hamburger */}
+          <button
+            type="button"
+            className="md:hidden flex flex-col gap-[5px] p-1 z-50"
+            onClick={() => setMobileOpen((v) => !v)}
+            aria-label="Toggle menu"
+            aria-expanded={mobileOpen}
+          >
+            <span className={cn("block w-6 h-0.5 bg-[#FBF7F0] rounded transition", mobileOpen && "rotate-45 translate-y-[7px]")} />
+            <span className={cn("block w-6 h-0.5 bg-[#FBF7F0] rounded transition", mobileOpen && "opacity-0")} />
+            <span className={cn("block w-6 h-0.5 bg-[#FBF7F0] rounded transition", mobileOpen && "-rotate-45 -translate-y-[7px]")} />
+          </button>
+        </div>
+      </nav>
+
+      {/* Mobile menu — full-screen overlay */}
+      {mobileOpen && (
+        <div className="md:hidden fixed inset-0 top-[72px] bg-[#0A2540] z-40 px-6 py-8 space-y-1 overflow-y-auto">
+          <Link href="/shippers.html" onClick={() => setMobileOpen(false)} className="block px-4 py-3 text-base text-[#FBF7F0] hover:bg-white/5 rounded transition">Shippers</Link>
+          <Link href="/carriers.html" onClick={() => setMobileOpen(false)} className="block px-4 py-3 text-base text-[#DAC39C] hover:bg-white/5 rounded transition">Carriers</Link>
+          <Link href="/about.html" onClick={() => setMobileOpen(false)} className="block px-4 py-3 text-base text-[#FBF7F0] hover:bg-white/5 rounded transition">About</Link>
+          <Link href="/contact.html" onClick={() => setMobileOpen(false)} className="block px-4 py-3 text-base text-[#FBF7F0] hover:bg-white/5 rounded transition">Contact</Link>
+          <Link href="/track" onClick={() => setMobileOpen(false)} className="block px-4 py-3 text-base text-[#FBF7F0] hover:bg-white/5 rounded transition">Track</Link>
+          <div className="pt-4 mt-4 border-t border-white/10">
+            <p className="px-4 text-[10px] uppercase tracking-[0.18em] text-[#C9D2DE] mb-2">Sign In</p>
+            <Link href="/auth/login" onClick={() => setMobileOpen(false)} className="block px-4 py-3 text-base text-[#FBF7F0] hover:bg-white/5 rounded transition">AE Login</Link>
+            <Link href="/carrier/login" onClick={() => setMobileOpen(false)} className="block px-4 py-3 text-base text-[#FBF7F0] hover:bg-white/5 rounded transition">Carrier Login</Link>
+            <Link href="/shipper/login" onClick={() => setMobileOpen(false)} className="block px-4 py-3 text-base text-[#FBF7F0] hover:bg-white/5 rounded transition">Shipper Login</Link>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
 
 const equipmentOptions = ["Dry Van", "Reefer", "Flatbed", "Step Deck", "Tanker", "Intermodal", "Power Only", "Box Truck"];
 const regionOptions = ["Great Lakes", "Upper Midwest", "Southeast", "Northeast", "South Central", "West", "Eastern Canada", "Western Canada", "Central Canada", "Cross-Border"];
@@ -247,15 +342,8 @@ export default function OnboardingPage() {
   if (success) {
     return (
       <div className="min-h-screen bg-[#FBF7F0]">
-        {/* v3.8.ail — same logo framing as main nav (above). */}
-        <nav className="bg-[#0A2540] text-white px-6 py-4 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-3">
-            <div className="bg-white rounded-lg p-1.5 flex items-center justify-center shadow-sm">
-              <img src="/media/srl-logo-1024.png" alt="SRL compass mark" className="h-7 w-7 object-contain" />
-            </div>
-            <span className="font-serif italic font-semibold text-base">Silk Route Logistics</span>
-          </Link>
-        </nav>
+        {/* v3.8.ain Path 2C — Canonical chrome on success screen. */}
+        <OnboardingNav />
 
         <div className="max-w-2xl mx-auto px-6 py-12">
           {/* Success Header */}
@@ -337,19 +425,19 @@ export default function OnboardingPage() {
             </div>
           </div>
 
-          {/* Actions */}
-          <div className="bg-white rounded-2xl shadow-sm border p-8 text-center">
-            <p className="text-slate-500 text-sm mb-5">Questions about your application?</p>
+          {/* Actions — canonical CTA register (gold-dark Call + ghost Email). */}
+          <div className="bg-white border-t-2 border-[#BA7517] rounded-2xl shadow-sm border-l border-r border-b border-[#EFE6D3] p-8 text-center">
+            <p className="text-[#3A4A5F] text-sm mb-5">Questions about your application?</p>
             <div className="flex flex-col sm:flex-row gap-3 justify-center">
-              <a href="tel:+12692206760" className="px-6 py-3 bg-gold text-navy font-semibold rounded-lg hover:bg-gold-light transition text-sm">
+              <a href="tel:+12692206760" className="px-6 py-3 bg-[#BA7517] text-[#FBF7F0] font-semibold rounded-md hover:bg-[#C5A572] transition text-sm shadow-sm">
                 Call (269) 220-6760
               </a>
-              <a href="mailto:operations@silkroutelogistics.ai" className="px-6 py-3 border border-slate-200 rounded-lg hover:bg-slate-50 transition text-sm">
+              <a href="mailto:operations@silkroutelogistics.ai" className="px-6 py-3 border border-[#EFE6D3] text-[#0A2540] font-medium rounded-md hover:bg-[#FBF7F0] hover:border-[#C5A572] transition text-sm">
                 Email Operations Team
               </a>
             </div>
-            <div className="mt-5 pt-5 border-t">
-              <Link href="/" className="text-gold text-sm font-medium hover:underline">
+            <div className="mt-5 pt-5 border-t border-[#EFE6D3]">
+              <Link href="/" className="text-[#BA7517] text-sm font-medium hover:underline">
                 Return to Homepage
               </Link>
             </div>
@@ -361,39 +449,59 @@ export default function OnboardingPage() {
 
   return (
     <div className="min-h-screen bg-[#FBF7F0]">
-      {/* v3.8.ail — Logo framed in a white card per site-standard nav
-          pattern. Prior render had a raw <img> of the cream/gold compass
-          mark on dark navy bg, which faded into invisibility. The white
-          card chip mirrors the canonical nav treatment elsewhere on
-          the site (carriers/shippers chrome). */}
-      <nav className="bg-[#0A2540] text-white px-6 py-4 flex items-center justify-between">
-        <Link href="/" className="flex items-center gap-3">
-          <div className="bg-white rounded-lg p-1.5 flex items-center justify-center shadow-sm">
-            <img src="/media/srl-logo-1024.png" alt="SRL compass mark" className="h-7 w-7 object-contain" />
-          </div>
-          <div className="leading-tight">
-            <span className="block font-serif italic font-semibold text-base">Silk Route Logistics</span>
-            <span className="block text-[10px] uppercase tracking-[0.18em] text-[#C9D2DE]">Carrier Registration</span>
-          </div>
-        </Link>
-        <Link href="/carrier/login" className="text-sm text-[#C9D2DE] hover:text-white transition">
-          Already registered? Sign In
-        </Link>
-      </nav>
+      {/* v3.8.ain Path 2C — Canonical chrome parity (replaces the custom
+          single-link nav from v3.8.ail). Now matches /, /carriers,
+          /shippers, /about, /contact, /track. */}
+      <OnboardingNav />
 
-      {/* Progress */}
+      {/* v3.8.ain Path 2C — Carrier Registration eyebrow header.
+          Surfaces the page-context cue ("you are inside the carrier
+          onboarding flow") that the old custom-nav subtitle carried,
+          but now sits BELOW the canonical chrome instead of inside
+          it. Cream-tinted strip with gold-dark eyebrow + Playfair
+          italic micro-title, paralleling Card A on Step 0. */}
+      <div className="bg-[#F5EEE0] border-b border-[#EFE6D3]">
+        <div className="max-w-3xl mx-auto px-6 py-5 flex items-center justify-between gap-4">
+          <div>
+            <p className="text-[10px] uppercase tracking-[0.22em] font-semibold text-[#BA7517] mb-1">Caravan Partner Program</p>
+            <h1 className="font-serif italic font-semibold text-xl sm:text-2xl text-[#0A2540] leading-tight">Carrier Registration</h1>
+          </div>
+          <Link href="/carrier/login" className="text-xs sm:text-sm text-[#3A4A5F] hover:text-[#BA7517] transition whitespace-nowrap">
+            Already registered? <span className="font-semibold underline decoration-[#C5A572]/40 underline-offset-2">Sign In</span>
+          </Link>
+        </div>
+      </div>
+
+      {/* Progress — brass-accented step indicator. Filled green check
+          rings on completed steps, gold-dark on active, cream-2 hairline
+          ring on pending. Connector dashes use --gold tint for visual
+          continuity with the Caravan Journey animation on /carriers. */}
       <div className="max-w-3xl mx-auto px-6 pt-8">
         <div className="flex items-center justify-between mb-8">
           {steps.map((s, i) => (
-            <div key={s} className="flex items-center gap-2">
-              <div className={cn(
-                "w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold transition",
-                i < step ? "bg-[#2F7A4F] text-white" : i === step ? "bg-[#BA7517] text-white" : "bg-[#E2EAF2] text-[#5B7EA3]"
-              )}>
-                {i < step ? <Check className="w-4 h-4" /> : i + 1}
+            <div key={s} className="flex items-center gap-2 flex-1 last:flex-initial">
+              <div className="flex items-center gap-2 shrink-0">
+                <div className={cn(
+                  "w-9 h-9 rounded-full flex items-center justify-center text-sm font-semibold transition border-2 shrink-0",
+                  i < step
+                    ? "bg-[#2F7A4F] text-white border-[#2F7A4F]"
+                    : i === step
+                    ? "bg-[#BA7517] text-white border-[#BA7517] shadow-[0_0_0_4px_rgba(186,117,23,0.12)]"
+                    : "bg-white text-[#A7AEB8] border-[#EFE6D3]"
+                )}>
+                  {i < step ? <Check className="w-4 h-4" /> : i + 1}
+                </div>
+                <span className={cn(
+                  "hidden sm:inline text-xs font-medium tracking-wide whitespace-nowrap",
+                  i === step ? "text-[#0A2540]" : i < step ? "text-[#3A4A5F]" : "text-[#A7AEB8]"
+                )}>{s}</span>
               </div>
-              <span className="hidden sm:inline text-sm text-[#3A4A5F]">{s}</span>
-              {i < steps.length - 1 && <div className="w-8 md:w-16 h-px bg-[#E2EAF2] mx-1" />}
+              {i < steps.length - 1 && (
+                <div className={cn(
+                  "flex-1 h-px mx-2 transition",
+                  i < step ? "bg-[#2F7A4F]/40" : "bg-[#EFE6D3]"
+                )} />
+              )}
             </div>
           ))}
         </div>
@@ -508,14 +616,20 @@ export default function OnboardingPage() {
           </>
         )}
 
-        <div className="bg-white rounded-2xl shadow-sm border p-8">
-          {error && <div className="mb-6 p-3 bg-red-50 text-red-700 rounded-lg text-sm">{error}</div>}
+        {/* v3.8.ain Path 2C — Form panel with gold-dark top accent
+            matching the Caravan Partner Program / commitment-card-flip
+            register on /carriers. */}
+        <div className="bg-white border-t-2 border-[#BA7517] rounded-2xl shadow-sm border-l border-r border-b border-[#EFE6D3] p-8">
+          {error && <div className="mb-6 p-4 bg-red-50 border-l-4 border-red-500 text-red-700 rounded-lg text-sm">{error}</div>}
 
           {/* Step 0: Company Info */}
           {step === 0 && (
-            <div className="space-y-5">
-              <h2 className="text-xl font-bold">Company Information</h2>
-              <p className="text-sm text-slate-500">Enter your DOT or MC number to auto-populate your company details from FMCSA.</p>
+            <div className="space-y-6">
+              <div className="pb-4 border-b border-[#EFE6D3]">
+                <p className="text-[10px] uppercase tracking-[0.22em] font-semibold text-[#BA7517] mb-1.5">Step 1 of 5</p>
+                <h2 className="font-serif italic font-semibold text-2xl text-[#0A2540] mb-2">Company Information</h2>
+                <p className="text-sm text-[#3A4A5F] leading-relaxed">Enter your DOT or MC number to auto-populate your company details from FMCSA.</p>
+              </div>
 
               {/* DOT & MC at the top — triggers FMCSA lookup */}
               <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -663,25 +777,33 @@ export default function OnboardingPage() {
           {/* Step 1: Equipment & Regions */}
           {step === 1 && (
             <div className="space-y-6">
-              <h2 className="text-xl font-bold">Equipment & Operating Regions</h2>
+              <div className="pb-4 border-b border-[#EFE6D3]">
+                <p className="text-[10px] uppercase tracking-[0.22em] font-semibold text-[#BA7517] mb-1.5">Step 2 of 5</p>
+                <h2 className="font-serif italic font-semibold text-2xl text-[#0A2540] mb-2">Equipment &amp; Operating Regions</h2>
+                <p className="text-sm text-[#3A4A5F] leading-relaxed">Tell us what you haul and where you run. The Compass Engine uses both to match lanes.</p>
+              </div>
               <div>
-                <label className="block text-sm font-medium text-[#0A2540] mb-3">Equipment Types *</label>
+                <label className="block text-sm font-semibold text-[#0A2540] mb-3">Equipment Types <span className="text-[#BA7517]">*</span></label>
                 <div className="flex flex-wrap gap-2">
                   {equipmentOptions.map((eq) => (
                     <button key={eq} type="button" onClick={() => toggleArray("equipmentTypes", eq)}
-                      className={cn("px-4 py-2 rounded-lg text-sm border transition",
-                        form.equipmentTypes.includes(eq) ? "bg-gold/10 border-gold text-gold font-medium" : "border-slate-200 text-slate-600 hover:border-slate-300"
+                      className={cn("px-4 py-2.5 rounded-lg text-sm border transition font-medium",
+                        form.equipmentTypes.includes(eq)
+                          ? "bg-[#FAEEDA] border-[#BA7517] text-[#BA7517]"
+                          : "bg-white border-[#EFE6D3] text-[#3A4A5F] hover:border-[#C5A572] hover:bg-[#FBF7F0]"
                       )}>{eq}</button>
                   ))}
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-[#0A2540] mb-3">Operating Regions * (US & Canada)</label>
+                <label className="block text-sm font-semibold text-[#0A2540] mb-3">Operating Regions <span className="text-[#BA7517]">*</span> <span className="text-[#6B7685] font-normal">(US &amp; Canada)</span></label>
                 <div className="flex flex-wrap gap-2">
                   {regionOptions.map((r) => (
                     <button key={r} type="button" onClick={() => toggleArray("operatingRegions", r)}
-                      className={cn("px-4 py-2 rounded-lg text-sm border transition",
-                        form.operatingRegions.includes(r) ? "bg-gold/10 border-gold text-gold font-medium" : "border-slate-200 text-slate-600 hover:border-slate-300"
+                      className={cn("px-4 py-2.5 rounded-lg text-sm border transition font-medium",
+                        form.operatingRegions.includes(r)
+                          ? "bg-[#FAEEDA] border-[#BA7517] text-[#BA7517]"
+                          : "bg-white border-[#EFE6D3] text-[#3A4A5F] hover:border-[#C5A572] hover:bg-[#FBF7F0]"
                       )}>{r}</button>
                   ))}
                 </div>
@@ -691,12 +813,16 @@ export default function OnboardingPage() {
 
           {/* Step 2: Documents & Insurance */}
           {step === 2 && (
-            <div className="space-y-5">
-              <h2 className="text-xl font-bold">Insurance & Documents</h2>
+            <div className="space-y-6">
+              <div className="pb-4 border-b border-[#EFE6D3]">
+                <p className="text-[10px] uppercase tracking-[0.22em] font-semibold text-[#BA7517] mb-1.5">Step 3 of 5</p>
+                <h2 className="font-serif italic font-semibold text-2xl text-[#0A2540] mb-2">Insurance &amp; Documents</h2>
+                <p className="text-sm text-[#3A4A5F] leading-relaxed">Coverage minimums: Auto Liability $1M, Motor Cargo $100K, General Liability $1M. Workers&apos; Comp as required by law.</p>
+              </div>
 
               {/* Insurance Information Section */}
-              <div className="p-5 rounded-xl border border-slate-200 bg-slate-50/50">
-                <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wide mb-4">Insurance Information</h3>
+              <div className="p-6 rounded-xl border border-[#EFE6D3] bg-[#FBF7F0]">
+                <p className="text-[10px] uppercase tracking-[0.22em] font-semibold text-[#BA7517] mb-4">Insurance Information</p>
 
                 {/* Auto Liability */}
                 <div className="mb-4">
@@ -783,8 +909,8 @@ export default function OnboardingPage() {
                 </div>
 
                 {/* Insurance Agent Contact */}
-                <div className="pt-3 border-t border-slate-200 mt-3">
-                  <h4 className="text-xs font-bold text-slate-600 uppercase tracking-wide mb-3">Insurance Agent Contact (for verification)</h4>
+                <div className="pt-4 border-t border-[#EFE6D3] mt-4">
+                  <p className="text-[10px] uppercase tracking-[0.22em] font-semibold text-[#BA7517] mb-3">Insurance Agent Contact (for verification)</p>
                   <div className="grid sm:grid-cols-2 gap-3">
                     <input placeholder="Agent Name" value={form.insuranceAgentName} onChange={(e) => set("insuranceAgentName", e.target.value)}
                       className="px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-gold outline-none" />
@@ -799,9 +925,9 @@ export default function OnboardingPage() {
               </div>
 
               {/* Document Upload Section */}
-              <div className="border-t pt-5">
-                <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wide mb-1">Upload Documents</h3>
-                <p className="text-sm text-slate-500 mb-4">Upload your carrier documents. PDF, JPEG, or PNG accepted (max 10MB each). Click each card to upload.</p>
+              <div className="pt-2">
+                <p className="text-[10px] uppercase tracking-[0.22em] font-semibold text-[#BA7517] mb-1.5">Upload Documents</p>
+                <p className="text-sm text-[#3A4A5F] mb-4">PDF, JPEG, or PNG accepted (max 10MB each). Click each card to upload.</p>
               </div>
               <div className="grid gap-4">
                 {[
@@ -896,9 +1022,13 @@ export default function OnboardingPage() {
 
           {/* Step 3: Terms */}
           {step === 3 && (
-            <div className="space-y-5">
-              <h2 className="text-xl font-bold">Terms & Agreement</h2>
-              <div className="p-4 rounded-lg bg-slate-50 border max-h-80 overflow-y-auto text-sm text-slate-600 leading-relaxed space-y-4">
+            <div className="space-y-6">
+              <div className="pb-4 border-b border-[#EFE6D3]">
+                <p className="text-[10px] uppercase tracking-[0.22em] font-semibold text-[#BA7517] mb-1.5">Step 4 of 5</p>
+                <h2 className="font-serif italic font-semibold text-2xl text-[#0A2540] mb-2">Terms &amp; Agreement</h2>
+                <p className="text-sm text-[#3A4A5F] leading-relaxed">Click-through onboarding agreement. Standalone Broker-Carrier Agreement + Caravan Quick Pay Agreement v2 supersede where executed.</p>
+              </div>
+              <div className="p-5 rounded-xl bg-[#FBF7F0] border border-[#EFE6D3] max-h-80 overflow-y-auto text-sm text-[#3A4A5F] leading-relaxed space-y-4">
                 <p className="font-bold text-slate-800 text-base">Silk Route Logistics — Carrier Transportation Agreement</p>
                 <p>This Carrier Transportation Agreement (&quot;Agreement&quot;) is entered into between Silk Route Logistics Inc. (&quot;Broker&quot;) and the undersigned motor carrier (&quot;Carrier&quot;). By completing registration, Carrier agrees to the following terms and conditions:</p>
 
@@ -987,50 +1117,54 @@ export default function OnboardingPage() {
 
                 <p className="text-xs text-slate-700 mt-4 italic">Last updated: May 2026. Silk Route Logistics Inc. reserves the right to update these terms with 30 days&apos; notice to registered carriers. When the standalone Broker-Carrier Agreement and Caravan Quick Pay Agreement v2 are executed between Broker and Carrier, those agreements will govern over this onboarding click-through where they conflict.</p>
               </div>
-              <label className="flex items-center gap-3 cursor-pointer">
+              <label className="flex items-center gap-3 cursor-pointer p-4 rounded-lg border border-[#EFE6D3] bg-white hover:bg-[#FBF7F0] transition">
                 <input type="checkbox" checked={form.agreeTerms}
                   onChange={(e) => set("agreeTerms", e.target.checked)}
-                  className="w-5 h-5 rounded border-slate-300 text-gold focus:ring-gold" />
-                <span className="text-sm text-slate-700">I agree to the Carrier Terms & Conditions</span>
+                  className="w-5 h-5 rounded border-[#C5A572] text-[#BA7517] focus:ring-[#BA7517]" />
+                <span className="text-sm font-medium text-[#0A2540]">I agree to the Carrier Terms &amp; Conditions</span>
               </label>
             </div>
           )}
 
           {/* Step 4: Review */}
           {step === 4 && (
-            <div className="space-y-5">
-              <h2 className="text-xl font-bold">Review Your Application</h2>
-              <div className="grid gap-4">
-                <div className="p-4 rounded-lg bg-slate-50 border">
-                  <p className="text-xs text-slate-500 uppercase mb-1">Contact</p>
-                  <p className="font-medium">{form.firstName} {form.lastName}</p>
-                  <p className="text-sm text-slate-600">{form.email} {form.phone && `| ${form.phone}`}</p>
+            <div className="space-y-6">
+              <div className="pb-4 border-b border-[#EFE6D3]">
+                <p className="text-[10px] uppercase tracking-[0.22em] font-semibold text-[#BA7517] mb-1.5">Step 5 of 5</p>
+                <h2 className="font-serif italic font-semibold text-2xl text-[#0A2540] mb-2">Review Your Application</h2>
+                <p className="text-sm text-[#3A4A5F] leading-relaxed">Confirm everything looks right before submission. The Compass Engine begins its 35-point check immediately on submit.</p>
+              </div>
+              <div className="grid gap-3">
+                <div className="p-4 rounded-lg bg-[#FBF7F0] border border-[#EFE6D3]">
+                  <p className="text-[10px] uppercase tracking-[0.22em] font-semibold text-[#BA7517] mb-1.5">Contact</p>
+                  <p className="font-semibold text-[#0A2540]">{form.firstName} {form.lastName}</p>
+                  <p className="text-sm text-[#3A4A5F]">{form.email} {form.phone && `| ${form.phone}`}</p>
                 </div>
-                <div className="p-4 rounded-lg bg-slate-50 border">
-                  <p className="text-xs text-slate-500 uppercase mb-1">Company</p>
-                  <p className="font-medium">{form.company}</p>
-                  <p className="text-sm text-slate-600">
+                <div className="p-4 rounded-lg bg-[#FBF7F0] border border-[#EFE6D3]">
+                  <p className="text-[10px] uppercase tracking-[0.22em] font-semibold text-[#BA7517] mb-1.5">Company</p>
+                  <p className="font-semibold text-[#0A2540]">{form.company}</p>
+                  <p className="text-sm text-[#3A4A5F]">
                     {form.address && `${form.address}, `}{form.unit && `${form.unit}, `}{form.city && `${form.city}, `}{form.state} {form.zip}
                   </p>
-                  <p className="text-sm text-slate-600">
+                  <p className="text-sm text-[#3A4A5F] mt-1">
                     DOT: {form.dotNumber}{form.mcNumber && ` | MC: ${form.mcNumber}`}
                     {form.ein && ` | EIN: ${form.ein.slice(0,2)}-${form.ein.slice(2)}`}
                     {form.numberOfTrucks && ` | Trucks: ${form.numberOfTrucks}`}
-                    {fmcsaResult?.verified && <span className="ml-2 text-green-600 font-medium">FMCSA Verified</span>}
+                    {fmcsaResult?.verified && <span className="ml-2 text-[#2F7A4F] font-semibold">FMCSA Verified</span>}
                   </p>
                 </div>
-                <div className="p-4 rounded-lg bg-slate-50 border">
-                  <p className="text-xs text-slate-500 uppercase mb-1">Equipment</p>
-                  <p className="text-sm">{form.equipmentTypes.join(", ")}</p>
+                <div className="p-4 rounded-lg bg-[#FBF7F0] border border-[#EFE6D3]">
+                  <p className="text-[10px] uppercase tracking-[0.22em] font-semibold text-[#BA7517] mb-1.5">Equipment</p>
+                  <p className="text-sm text-[#0A2540]">{form.equipmentTypes.join(", ")}</p>
                 </div>
-                <div className="p-4 rounded-lg bg-slate-50 border">
-                  <p className="text-xs text-slate-500 uppercase mb-1">Operating Regions</p>
-                  <p className="text-sm">{form.operatingRegions.join(", ")}</p>
+                <div className="p-4 rounded-lg bg-[#FBF7F0] border border-[#EFE6D3]">
+                  <p className="text-[10px] uppercase tracking-[0.22em] font-semibold text-[#BA7517] mb-1.5">Operating Regions</p>
+                  <p className="text-sm text-[#0A2540]">{form.operatingRegions.join(", ")}</p>
                 </div>
                 {/* Insurance Summary in Review */}
                 {(form.autoLiability.provider || form.cargoInsurance.provider || form.generalLiability.provider || form.workersComp.provider) && (
-                  <div className="p-4 rounded-lg bg-slate-50 border">
-                    <p className="text-xs text-slate-500 uppercase mb-2">Insurance</p>
+                  <div className="p-4 rounded-lg bg-[#FBF7F0] border border-[#EFE6D3]">
+                    <p className="text-[10px] uppercase tracking-[0.22em] font-semibold text-[#BA7517] mb-2">Insurance</p>
                     <div className="space-y-1 text-sm">
                       {form.autoLiability.provider && (
                         <p><span className="font-medium">Auto Liability:</span> {form.autoLiability.provider} | {form.autoLiability.policy} | ${Number(form.autoLiability.amount).toLocaleString()} | Exp: {form.autoLiability.expiry}</p>
@@ -1044,47 +1178,48 @@ export default function OnboardingPage() {
                       {form.workersComp.provider && (
                         <p><span className="font-medium">Workers Comp:</span> {form.workersComp.provider} | {form.workersComp.policy} | ${Number(form.workersComp.amount).toLocaleString()} | Exp: {form.workersComp.expiry}</p>
                       )}
-                      <div className="flex flex-wrap gap-3 mt-1 text-xs text-slate-600">
-                        {form.additionalInsuredSRL && <span className="flex items-center gap-1"><CheckCircle2 className="w-3 h-3 text-green-700" /> Additional Insured</span>}
-                        {form.waiverOfSubrogation && <span className="flex items-center gap-1"><CheckCircle2 className="w-3 h-3 text-green-700" /> Waiver of Subrogation</span>}
-                        {form.thirtyDayCancellationNotice && <span className="flex items-center gap-1"><CheckCircle2 className="w-3 h-3 text-green-700" /> 30-Day Notice</span>}
+                      <div className="flex flex-wrap gap-3 mt-2 text-xs text-[#3A4A5F]">
+                        {form.additionalInsuredSRL && <span className="flex items-center gap-1"><CheckCircle2 className="w-3 h-3 text-[#2F7A4F]" /> Additional Insured</span>}
+                        {form.waiverOfSubrogation && <span className="flex items-center gap-1"><CheckCircle2 className="w-3 h-3 text-[#2F7A4F]" /> Waiver of Subrogation</span>}
+                        {form.thirtyDayCancellationNotice && <span className="flex items-center gap-1"><CheckCircle2 className="w-3 h-3 text-[#2F7A4F]" /> 30-Day Notice</span>}
                       </div>
                     </div>
                   </div>
                 )}
-                <div className="p-4 rounded-lg bg-slate-50 border">
-                  <p className="text-xs text-slate-500 uppercase mb-1">Documents</p>
+                <div className="p-4 rounded-lg bg-[#FBF7F0] border border-[#EFE6D3]">
+                  <p className="text-[10px] uppercase tracking-[0.22em] font-semibold text-[#BA7517] mb-1.5">Documents</p>
                   {files.length > 0 ? (
-                    <ul className="text-sm space-y-1">
+                    <ul className="text-sm space-y-1.5">
                       {files.map((f, i) => (
-                        <li key={i} className="flex items-center gap-2">
-                          <CheckCircle2 className="w-3.5 h-3.5 text-green-700" />
+                        <li key={i} className="flex items-center gap-2 text-[#0A2540]">
+                          <CheckCircle2 className="w-3.5 h-3.5 text-[#2F7A4F] shrink-0" />
                           <span>{(f as any).__docType ? `${(f as any).__docType.toUpperCase()}: ` : ""}{f.name}</span>
                         </li>
                       ))}
                     </ul>
                   ) : (
-                    <p className="text-sm text-slate-700">No documents uploaded yet</p>
+                    <p className="text-sm text-[#6B7685] italic">No documents uploaded yet</p>
                   )}
                 </div>
               </div>
             </div>
           )}
 
-          {/* Navigation */}
-          <div className="flex justify-between mt-8 pt-6 border-t">
+          {/* Navigation — gold-dark CTA matching .nav-login-btn canonical
+              and the Sign In button in OnboardingNav above. */}
+          <div className="flex justify-between items-center mt-8 pt-6 border-t border-[#EFE6D3]">
             <button onClick={() => setStep(step - 1)} disabled={step === 0}
-              className="flex items-center gap-1 px-5 py-2 text-slate-600 hover:text-slate-900 disabled:opacity-30 transition">
+              className="flex items-center gap-1.5 px-5 py-2.5 text-sm font-medium text-[#3A4A5F] hover:text-[#0A2540] hover:bg-[#FBF7F0] rounded-lg disabled:opacity-30 disabled:hover:bg-transparent transition">
               <ChevronLeft className="w-4 h-4" /> Back
             </button>
             {step < 4 ? (
               <button onClick={() => setStep(step + 1)} disabled={!canNext()}
-                className="flex items-center gap-1 px-6 py-2 bg-gold text-navy font-semibold rounded-lg hover:bg-gold-light disabled:opacity-40 transition">
+                className="flex items-center gap-1.5 px-6 py-2.5 bg-[#BA7517] text-[#FBF7F0] font-semibold text-sm rounded-md hover:bg-[#C5A572] disabled:opacity-40 disabled:hover:bg-[#BA7517] transition shadow-sm">
                 Next <ChevronRight className="w-4 h-4" />
               </button>
             ) : (
               <button onClick={handleSubmit} disabled={submitting}
-                className="px-8 py-2 bg-gold text-navy font-semibold rounded-lg hover:bg-gold-light disabled:opacity-50 transition">
+                className="px-8 py-2.5 bg-[#BA7517] text-[#FBF7F0] font-semibold text-sm rounded-md hover:bg-[#C5A572] disabled:opacity-50 disabled:hover:bg-[#BA7517] transition shadow-sm">
                 {submitting ? "Submitting..." : "Submit Application"}
               </button>
             )}

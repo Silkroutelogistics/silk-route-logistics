@@ -7865,7 +7865,101 @@
 //              the canonical build chain (per CLAUDE.md §2.2). The
 //              UPDATE statement in the migration is the canonical
 //              data-write event; no separate scripts run.
-export const SRL_VERSION = "3.8.aim";
+// v3.8.ain   — Path 2C: /onboarding header parity + form chrome upgrade.
+//              Closes two findings from the post-v3.8.ail audit Wasi
+//              flagged after the deploy ("this is still the same old?
+//              does it match the header for shipper, homepage and
+//              carrier page? P2 and P3 still the same?").
+//
+//              Issue A — Header parity: pre-Sprint, /onboarding had its
+//              own custom <nav> (single Sign In link, no nav menu)
+//              that did NOT match the canonical chrome on /, /carriers,
+//              /shippers, /about, /contact, /track. The canonical
+//              chrome is static-HTML-injected via inject-chrome.mjs
+//              from _partials/nav.html (5-link nav + gold-dark Sign In
+//              dropdown to AE/Carrier/Shipper login). Public marketing
+//              CSS does NOT load on React routes (globals.css only),
+//              so the static partial can't be reused as-is.
+//
+//              Fix: inline React <OnboardingNav> component in
+//              onboarding/page.tsx that visually mirrors the canonical
+//              chrome via Tailwind — navy #0A2540 bg with backdrop
+//              tint, 72px height, SRL logo on left (raw /logo.png),
+//              5 nav links (Shippers/Carriers/About/Contact/Track)
+//              with "Carriers" highlighted in gold-light #DAC39C as
+//              active-context cue, gold-dark #BA7517 Sign In CTA with
+//              hover dropdown to the 3 login routes. Mobile hamburger
+//              + full-screen overlay menu. Both nav blocks (success
+//              screen at line ~251 + main form at line ~369) now use
+//              <OnboardingNav />. The "Carrier Registration" subtitle
+//              that the old custom-nav carried is preserved in a new
+//              cream-tinted eyebrow strip below the canonical chrome
+//              (gold-dark eyebrow + Playfair italic micro-title +
+//              "Already registered? Sign In" affordance on right).
+//
+//              Issue B — Form chrome upgrade: pre-Sprint, Steps 1-5
+//              used plain gray-border inputs, basic font-bold step
+//              titles, no brand-tokened section dividers, slate-50
+//              utility-card backgrounds in Step 4 Review, and Tailwind
+//              `bg-gold` (which resolves to globals.css olive-gold
+//              #C9A84C, NOT brand canonical) on Back/Next/Submit
+//              buttons. None of it matched the polish on /carriers
+//              commitment-card-flip or the Caravan Partner Program
+//              card register on Step 0.
+//
+//              Fix: form panel chrome upgrade across all 5 steps:
+//              (1) panel wrapper gets gold-dark #BA7517 top accent
+//              hairline matching commitment-card-flip; (2) each step
+//              header replaced with eyebrow ("Step N of 5" in gold-
+//              dark uppercase tracking) + Playfair italic H2 +
+//              text-[#3A4A5F] intro paragraph; (3) Step 2 (Equipment)
+//              chip selectors moved from `bg-gold/10 border-gold
+//              text-gold` (olive-gold non-canonical) to gold-tint
+//              #FAEEDA bg + gold-dark border + gold-dark text for
+//              selected, cream-2 hover for unselected; (4) Step 3
+//              insurance section repanelled with cream #FBF7F0 bg +
+//              cream-2 border + gold-dark eyebrow labels; (5) Step 4
+//              terms scroll-pane upgraded to cream bg + cream-2
+//              border; agree-terms checkbox now lives in its own
+//              cream-2-bordered card with hover surface; (6) Step 5
+//              Review cards moved from slate-50 utility surface to
+//              cream #FBF7F0 + cream-2 border with gold-dark eyebrow
+//              labels; (7) step indicator gains brass 2-px ring +
+//              ring-shadow on active step, gold-dark border + cream
+//              hairline pending state, green-fill on completed steps;
+//              (8) navigation buttons swapped to gold-dark #BA7517
+//              with cream #FBF7F0 text (matches Sign In button in
+//              <OnboardingNav> above + nav-login-btn canonical in
+//              utilities.css); Back button becomes ghost with cream
+//              hover; (9) success-screen Call/Email CTAs upgraded
+//              to match (gold-dark fill / cream-bordered ghost).
+//
+//              Letter coordination: parallel test-carrier fence
+//              sprint claimed v3.8.aim mid-Path-2C (Build 1 — schema
+//              + 3 read-path exclusions + Prisma migration). Local
+//              VersionFooter contained their aim comment block but
+//              the build was uncommitted. Pattern 6 sub-pattern 6
+//              concurrent-sprint-coordination applied: advanced this
+//              build to ain so both sprints can land without letter
+//              collision. CLAUDE.md updates from the aim sprint are
+//              in their working tree and will land with their commit.
+//
+//              Single-file scope: only frontend/src/app/onboarding/
+//              page.tsx + this VersionFooter bump. No CLAUDE.md
+//              changes in this commit (the aim parallel-sprint
+//              already has CLAUDE.md staged for their landing). Net
+//              source change in onboarding/page.tsx: ~260 LOC across
+//              the 5-step form + nav blocks; new OnboardingNav
+//              component ~100 LOC inline.
+//
+//              Pre-commit gates (Sub-pattern 11 CI parity): frontend
+//              tsc --noEmit + npx next build clean. Visual smoke per
+//              feedback_visual_smoke_before_push.md: walked through
+//              all 5 step renderings against the canonical chrome
+//              + brass-accent step indicator + gold-dark CTA pattern.
+//              No backend changes; backend tsc not required for this
+//              sprint.
+export const SRL_VERSION = "3.8.ain";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
