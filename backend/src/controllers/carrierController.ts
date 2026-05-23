@@ -779,7 +779,13 @@ export async function setupAdminCarrierProfile(req: AuthRequest, res: Response) 
 /** Get all carriers with performance data for admin/broker view */
 export async function getAllCarriers(req: AuthRequest, res: Response) {
   const includeDeleted = req.query.include_deleted === "true";
-  const where = includeDeleted ? {} : { deletedAt: null };
+  // v3.8.aim Build 1 test-carrier load-assignment fence: isTestAccount: false
+  // applies unconditionally even when includeDeleted=true. This endpoint
+  // feeds the Tender modal + RC Modal carrier pickers; test carriers must
+  // never appear in those pickers regardless of admin filter flags.
+  const where = includeDeleted
+    ? { isTestAccount: false }
+    : { deletedAt: null, isTestAccount: false };
 
   const carriers = await prisma.carrierProfile.findMany({
     where,

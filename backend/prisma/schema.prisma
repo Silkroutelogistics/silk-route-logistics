@@ -780,6 +780,7 @@ model CarrierProfile {
   onboardingStatus      OnboardingStatus         @default(PENDING)
   status                CarrierApplicationStatus @default(NEW)
   approvedAt            DateTime?
+  isTestAccount         Boolean                  @default(false)
   w9Uploaded            Boolean                  @default(false)
   w9Url                 String?
   insuranceCertUploaded Boolean                  @default(false)

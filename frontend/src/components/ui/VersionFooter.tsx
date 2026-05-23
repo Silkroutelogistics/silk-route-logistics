@@ -7762,7 +7762,110 @@
 //              subtitle to explain pre-screen purpose + W-9 match on
 //              Step 3. ~60 LOC net. Letter coordination: Authority-age
 //              sprint took aik; advanced to ail.
-export const SRL_VERSION = "3.8.ail";
+// v3.8.aim   — Build 1: test-carrier load-assignment fence. Per the
+//              read-only carrier classification audit (2026-05-23),
+//              all three currently-APPROVED prod carriers (C1 SRL
+//              Transport LLC at MC-1794414, C2 BISON TRANSPORT INC at
+//              MC-156588, C3 INTEGRITY EXPRESS LOGISTICS LLC at
+//              MC-596655) are test/seed records, not real onboarded
+//              carriers. This commit retires them from load-assignment
+//              eligibility WITHOUT deleting them — they're kept for
+//              ongoing manual regression testing.
+//
+//              Schema (backend/prisma/schema.prisma:783):
+//                + isTestAccount Boolean @default(false)
+//                Placed on CarrierProfile right after approvedAt,
+//                before the w9Uploaded/insuranceCertUploaded/
+//                authorityDocUploaded boolean cluster. Matches the
+//                existing boolean style on the model.
+//
+//              Migration
+//              (backend/prisma/migrations/
+//                  20260523162527_add_is_test_account_carrier_profile/
+//                  migration.sql):
+//                Manually authored to avoid prisma migrate dev against
+//                a prod-pointed DATABASE_URL per §2.2. Two statements:
+//                (1) ALTER TABLE "public"."carrier_profiles" ADD COLUMN
+//                "isTestAccount" BOOLEAN NOT NULL DEFAULT false;
+//                (2) UPDATE "public"."carrier_profiles" SET
+//                "isTestAccount" = true WHERE "mcNumber" IN
+//                ('MC-1794414', 'MC-156588', 'MC-596655').
+//                The MC# WHERE clause is environment-portable — safe
+//                no-op against dev/E2E DBs that don't have these MC#s.
+//                Render's prisma migrate deploy on next push applies
+//                both statements atomically. deletedAt stays null on
+//                all 3 carriers — isTestAccount is the canonical
+//                "retained for testing" signal; deletedAt is a
+//                separate "no longer a carrier" signal not touched
+//                here.
+//
+//              Read-path exclusions (Tier 1 only per directive
+//              boundary — load assignment / carrier selection):
+//                - backend/src/services/smartMatchService.ts:42
+//                  `matchCarriersForLoad` canonical picker. where
+//                  clause extended { onboardingStatus: "APPROVED",
+//                  status: ["APPROVED", "NEW"], isTestAccount: false }.
+//                  Used by waterfall + carrierOutreach + fallOffRecovery
+//                  transitively — single highest-leverage block.
+//                - backend/src/controllers/carrierController.ts:780
+//                  `getAllCarriers` (GET /api/carrier/all + GET
+//                  /api/carriers). Feeds the Tender modal + RC Modal
+//                  carrier pickers. Extended both the includeDeleted
+//                  and default branches: isTestAccount: false applies
+//                  unconditionally even when admins pass
+//                  ?include_deleted=true. Test carriers must never
+//                  appear in those pickers regardless of admin filter
+//                  flags.
+//                - backend/src/routes/carrier.ts:133
+//                  `/capacity-feed` inline findMany surfacing carrier
+//                  availability posts to AE/Broker/Dispatch/Operations
+//                  for active load matching. where clause extended
+//                  isTestAccount: false.
+//
+//              Read paths intentionally NOT touched per audit + directive
+//              halt-at-boundary:
+//                - waterfallEngineService.ts:179 (findUnique by id, no
+//                  query filter needed — upstream smartMatch
+//                  exclusion covers).
+//                - routes/loadBids.ts:21,187 (carrier-side bid
+//                  endpoints scoped by req.user.id — self-scope).
+//                - All Tier 2 analytics surfaces (analyticsService
+//                  scorecard, cpp.ts leaderboard, marketController,
+//                  carrierIntelligenceService, carrierOutreachService
+//                  outreach lists). Banked in §13.3 for Build 2.
+//                - All Tier 3 compliance surfaces (complianceMonitor
+//                  daily scan + 6 other carrier-iterating sweeps,
+//                  complianceController, complianceForecast,
+//                  chameleonDetection, cron carrier sweeps). Banked
+//                  in §13.3 for Build 3.
+//
+//              The whereActiveProductionCarrier() helper that bundles
+//              onboardingStatus was explicitly NOT adopted per the
+//              directive — several consumers intentionally surface
+//              non-APPROVED carriers (admin review queues, pending
+//              lists, etc.) and would be wrongly constrained. The
+//              only addition this commit makes anywhere is
+//              isTestAccount: false.
+//
+//              Pattern 6 sub-pattern 6 fire #5 caught + cleaned via
+//              Option α (letter-at-commit-time + ff-only pull):
+//              parallel v3.8.ail /onboarding honesty pass landed at
+//              382f573 mid-Build-1. Local ff-pulled, all 4
+//              v3.8.ail comment refs in this build's working tree
+//              (migration header + 3 inline comments) bumped to
+//              v3.8.aim before commit.
+//
+//              Pre-commit gates (Sub-pattern 11 CI parity): backend
+//              tsc --noEmit clean (Prisma client regenerated via
+//              npx prisma generate so the new isTestAccount field is
+//              typed); frontend tsc --noEmit + npx next build clean.
+//
+//              Production data flip happens when Render auto-deploys
+//              this commit and runs prisma migrate deploy as part of
+//              the canonical build chain (per CLAUDE.md §2.2). The
+//              UPDATE statement in the migration is the canonical
+//              data-write event; no separate scripts run.
+export const SRL_VERSION = "3.8.aim";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

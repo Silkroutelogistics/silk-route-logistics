@@ -38,11 +38,15 @@ export async function matchCarriersForLoad(loadId: string): Promise<{
   });
   if (!load) throw new Error("Load not found");
 
-  // Get all approved carriers with valid data
+  // Get all approved carriers with valid data.
+  // isTestAccount: false — v3.8.aim Build 1 test-carrier load-assignment
+  // fence. Test/seed carriers are retained for manual regression but
+  // are excluded from the canonical "who can take this load" picker.
   const carriers = await prisma.carrierProfile.findMany({
     where: {
       onboardingStatus: "APPROVED",
       status: { in: ["APPROVED", "NEW"] },
+      isTestAccount: false,
     },
     include: {
       user: { select: { id: true, firstName: true, lastName: true, company: true, phone: true, email: true } },

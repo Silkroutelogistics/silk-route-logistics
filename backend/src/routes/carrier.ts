@@ -131,7 +131,10 @@ router.post("/verify/:id", authorize("ADMIN", "CEO"), validateBody(verifyCarrier
 router.get("/capacity-feed", authorize("ADMIN", "CEO", "BROKER", "DISPATCH", "OPERATIONS") as any, async (_req: AuthRequest, res: Response) => {
   try {
     const profiles = await prisma.carrierProfile.findMany({
-      where: { preferredLanes: { not: undefined } },
+      // v3.8.aim Build 1 test-carrier load-assignment fence: capacity-feed
+      // surfaces carrier availability posts to AE/Broker/Dispatch/Operations
+      // for active load matching. Test carriers must not appear in the feed.
+      where: { preferredLanes: { not: undefined }, isTestAccount: false },
       select: {
         userId: true, companyName: true, mcNumber: true, equipmentTypes: true,
         operatingRegions: true, preferredLanes: true, activeLoadCount: true,
