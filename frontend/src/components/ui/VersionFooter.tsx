@@ -8837,7 +8837,153 @@
 //                  InsuranceLineData interface + initial state +
 //                  4 new input slots + Review step update.
 //                  ~80 LOC. Banked at §13.3 as Sprint B candidate.
-export const SRL_VERSION = "3.8.aiv";
+// v3.8.aiw   — Sprint B: COI verification via effective+expiry
+//              date pair per insurance. Full-stack atomic ship —
+//              closes the operational gap Wasi flagged mid-aiv.
+//
+//              THE PROBLEM
+//
+//              Pre-aiw, each of the 4 insurance policies on Step 3
+//              (Auto Liability, Motor Cargo, General Liability,
+//              Workers' Comp) captured a single date — the
+//              expiration. This lets the platform verify "policy
+//              not expired yet" but NOT "policy currently in
+//              force." A pre-issued policy with a future
+//              effective date (e.g. carrier hasn't started the
+//              coverage period yet) would be wrongly accepted as
+//              active. Industry-standard COI verification
+//              requires both dates:
+//                effective <= today <= expiry  ->  ACTIVE
+//                today < effective              ->  NOT YET ACTIVE
+//                today > expiry                 ->  EXPIRED
+//
+//              FULL-STACK CHANGES
+//
+//              Backend:
+//                - prisma/schema.prisma: 4 new nullable DateTime?
+//                  fields paired with existing *Expiry on
+//                  CarrierProfile model:
+//                    autoLiabilityEffective
+//                    cargoInsuranceEffective
+//                    generalLiabilityEffective
+//                    workersCompEffective
+//                - prisma/migrations/20260524063259_add_insurance_
+//                  effective_dates/migration.sql: ALTER TABLE
+//                  carrier_profiles ADD 4 nullable TIMESTAMP(3)
+//                  columns. Manually authored per §2.2 (avoid
+//                  `prisma migrate dev` against prod-pointed
+//                  DATABASE_URL). Render's `prisma migrate deploy`
+//                  applies on next push.
+//                - src/validators/carrier.ts: 4 new
+//                  z.string().optional() entries in
+//                  carrierRegisterSchema.
+//                - src/controllers/carrierController.ts:
+//                  registerCarrier writer (line ~77) adds 4 new
+//                  Date conversions matching the existing *Expiry
+//                  pattern; updateCarrier writer (line ~928)
+//                  destructures 4 new fields + conditionally
+//                  writes them via `field !== undefined` guard
+//                  matching existing convention.
+//
+//              Frontend (onboarding/page.tsx):
+//                - InsuranceLineData interface: `effective: string`
+//                  added alongside existing `expiry: string`.
+//                - emptyInsLine const: `effective: ""` added to
+//                  initial state.
+//                - Step 3 UI: each of the 4 insurance rows
+//                  restructured from a single 4-col grid
+//                  (Provider/Policy/Amount/Expiry) to a 2-row
+//                  layout — Row 1 (sm:grid-cols-3): Provider,
+//                  Policy #, Coverage Amount; Row 2 (sm:grid-
+//                  cols-2): Effective Date, Expiration Date.
+//                  Cleaner than a 5-col cramped layout and matches
+//                  the "identity fields above scheduling dates"
+//                  visual hierarchy. Expiry Date label renamed
+//                  Expiration Date for consistency with Effective
+//                  Date.
+//                - handleSubmit payload builder: 4 new
+//                  `if (X.effective) insurancePayload.XEffective =
+//                  X.effective` lines following the existing
+//                  pattern.
+//                - Step 5 Review Insurance Summary: each policy
+//                  summary line extended to show "| Eff: YYYY-MM-DD
+//                  | Exp: YYYY-MM-DD" conditionally when each date
+//                  is filled.
+//
+//              SCHEMA MUTATION DISCIPLINE (CLAUDE.md §2.2)
+//
+//              Migration file authored manually rather than via
+//              `prisma migrate dev` because backend/.env has the
+//              prod Neon DATABASE_URL — running migrate dev
+//              against prod is forbidden per §2.2. Render's
+//              build chain runs `prisma migrate deploy` per the
+//              canonical buildCommand established in Sprint 44b;
+//              the migration applies on next push. Verification
+//              post-deploy: `npx prisma migrate status` against
+//              prod should report "Database schema is up to
+//              date" with the new migration applied.
+//
+//              SCOPE
+//
+//              ~250 LOC across 5 files:
+//                - backend/prisma/schema.prisma (~12 LOC, 4
+//                  field additions + comment)
+//                - backend/prisma/migrations/.../migration.sql
+//                  (NEW, ~24 LOC including header comment)
+//                - backend/src/validators/carrier.ts (~6 LOC, 4
+//                  Zod field additions)
+//                - backend/src/controllers/carrierController.ts
+//                  (~20 LOC, 4 register-writer fields + 4
+//                  destructure entries + 4 update-writer
+//                  conditional assignments)
+//                - frontend/src/app/onboarding/page.tsx (~180
+//                  LOC restructured across the 4 insurance row
+//                  blocks + payload builder + Review step + 2
+//                  interface/initial-state lines)
+//
+//              Pre-commit gates (Sub-pattern 11 CI parity):
+//                - Backend tsc --noEmit clean (Prisma client
+//                  regenerated via `npx prisma generate` so new
+//                  *Effective fields are typed).
+//                - Frontend tsc --noEmit clean.
+//                - Frontend npx next build clean (`/onboarding`
+//                  14.9 kB -> 15.6 kB, expected ~0.7 kB from
+//                  4 new date inputs + Review step echo).
+//
+//              Letter: aiv latest origin/main HEAD; aiw
+//              sequence-continuous on top.
+//
+//              Patterns applied: §3.5 audit-first (banked Effective
+//              Date item in aiv close as Sprint B candidate, then
+//              executed end-to-end this sprint); §3.3 atomic
+//              full-stack ship + CLAUDE.md docs row + 1 Prisma
+//              migration file; §2.2 schema mutation discipline
+//              (manual migration authoring vs migrate-dev against
+//              prod-pointed URL); §19 Sub-pattern 11 CI-parity
+//              verification (both frontend AND backend tsc
+//              gates run).
+//
+//              Patterns emerged: none new — standard 5-file
+//              full-stack pattern (schema + migration + validator
+//              + controller + UI). The decision to ship full-
+//              stack atomic vs frontend-only-then-backend was
+//              driven by the operational verification gap being
+//              the rationale — frontend-only would have captured
+//              the data but not stored it, leaving the gap
+//              open. Atomic close is cleaner.
+//
+//              POST-DEPLOY VERIFICATION REQUIRED
+//
+//              On Render auto-deploy after this push:
+//                1. `prisma migrate deploy` should apply the new
+//                   migration (~1s ALTER TABLE).
+//                2. `prisma migrate status --exit-code` (Sprint
+//                   44b gate) should pass — schema up to date.
+//                3. Smoke test: register a test carrier with
+//                   both Effective + Expiry dates per policy,
+//                   verify CarrierProfile row has the new
+//                   columns populated via SQL or admin UI.
+export const SRL_VERSION = "3.8.aiw";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

@@ -71,21 +71,26 @@ export async function registerCarrier(req: Request, res: Response) {
           zip: data.zip,
           numberOfTrucks: data.numberOfTrucks ?? null,
           // Extended insurance details
+          // v3.8.aiw — Effective date pair (industry-standard COI verification).
           autoLiabilityProvider: data.autoLiabilityProvider,
           autoLiabilityAmount: data.autoLiabilityAmount,
           autoLiabilityPolicy: data.autoLiabilityPolicy,
+          autoLiabilityEffective: data.autoLiabilityEffective ? new Date(data.autoLiabilityEffective) : undefined,
           autoLiabilityExpiry: data.autoLiabilityExpiry ? new Date(data.autoLiabilityExpiry) : undefined,
           cargoInsuranceProvider: data.cargoInsuranceProvider,
           cargoInsuranceAmount: data.cargoInsuranceAmount,
           cargoInsurancePolicy: data.cargoInsurancePolicy,
+          cargoInsuranceEffective: data.cargoInsuranceEffective ? new Date(data.cargoInsuranceEffective) : undefined,
           cargoInsuranceExpiry: data.cargoInsuranceExpiry ? new Date(data.cargoInsuranceExpiry) : undefined,
           generalLiabilityProvider: data.generalLiabilityProvider,
           generalLiabilityAmount: data.generalLiabilityAmount,
           generalLiabilityPolicy: data.generalLiabilityPolicy,
+          generalLiabilityEffective: data.generalLiabilityEffective ? new Date(data.generalLiabilityEffective) : undefined,
           generalLiabilityExpiry: data.generalLiabilityExpiry ? new Date(data.generalLiabilityExpiry) : undefined,
           workersCompProvider: data.workersCompProvider,
           workersCompAmount: data.workersCompAmount,
           workersCompPolicy: data.workersCompPolicy,
+          workersCompEffective: data.workersCompEffective ? new Date(data.workersCompEffective) : undefined,
           workersCompExpiry: data.workersCompExpiry ? new Date(data.workersCompExpiry) : undefined,
           additionalInsuredSRL: data.additionalInsuredSRL ?? false,
           waiverOfSubrogation: data.waiverOfSubrogation ?? false,
@@ -924,11 +929,11 @@ export async function getCarrierDetail(req: AuthRequest, res: Response) {
 export async function updateCarrier(req: AuthRequest, res: Response) {
   const {
     safetyScore, tier, numberOfTrucks, insuranceExpiry, onboardingStatus, status, notes,
-    // Extended insurance fields
-    autoLiabilityProvider, autoLiabilityAmount, autoLiabilityPolicy, autoLiabilityExpiry,
-    cargoInsuranceProvider, cargoInsuranceAmount, cargoInsurancePolicy, cargoInsuranceExpiry,
-    generalLiabilityProvider, generalLiabilityAmount, generalLiabilityPolicy, generalLiabilityExpiry,
-    workersCompProvider, workersCompAmount, workersCompPolicy, workersCompExpiry,
+    // Extended insurance fields (v3.8.aiw — added *Effective pair)
+    autoLiabilityProvider, autoLiabilityAmount, autoLiabilityPolicy, autoLiabilityEffective, autoLiabilityExpiry,
+    cargoInsuranceProvider, cargoInsuranceAmount, cargoInsurancePolicy, cargoInsuranceEffective, cargoInsuranceExpiry,
+    generalLiabilityProvider, generalLiabilityAmount, generalLiabilityPolicy, generalLiabilityEffective, generalLiabilityExpiry,
+    workersCompProvider, workersCompAmount, workersCompPolicy, workersCompEffective, workersCompExpiry,
     additionalInsuredSRL, waiverOfSubrogation, thirtyDayCancellationNotice,
     // Insurance agent contact
     insuranceAgentName, insuranceAgentEmail, insuranceAgentPhone, insuranceAgencyName,
@@ -940,22 +945,26 @@ export async function updateCarrier(req: AuthRequest, res: Response) {
   if (insuranceExpiry !== undefined) data.insuranceExpiry = new Date(insuranceExpiry);
   if (onboardingStatus !== undefined) data.onboardingStatus = onboardingStatus;
 
-  // Extended insurance fields
+  // Extended insurance fields (v3.8.aiw — added *Effective pair)
   if (autoLiabilityProvider !== undefined) data.autoLiabilityProvider = autoLiabilityProvider;
   if (autoLiabilityAmount !== undefined) data.autoLiabilityAmount = autoLiabilityAmount ? parseFloat(autoLiabilityAmount) : null;
   if (autoLiabilityPolicy !== undefined) data.autoLiabilityPolicy = autoLiabilityPolicy;
+  if (autoLiabilityEffective !== undefined) data.autoLiabilityEffective = autoLiabilityEffective ? new Date(autoLiabilityEffective) : null;
   if (autoLiabilityExpiry !== undefined) data.autoLiabilityExpiry = autoLiabilityExpiry ? new Date(autoLiabilityExpiry) : null;
   if (cargoInsuranceProvider !== undefined) data.cargoInsuranceProvider = cargoInsuranceProvider;
   if (cargoInsuranceAmount !== undefined) data.cargoInsuranceAmount = cargoInsuranceAmount ? parseFloat(cargoInsuranceAmount) : null;
   if (cargoInsurancePolicy !== undefined) data.cargoInsurancePolicy = cargoInsurancePolicy;
+  if (cargoInsuranceEffective !== undefined) data.cargoInsuranceEffective = cargoInsuranceEffective ? new Date(cargoInsuranceEffective) : null;
   if (cargoInsuranceExpiry !== undefined) data.cargoInsuranceExpiry = cargoInsuranceExpiry ? new Date(cargoInsuranceExpiry) : null;
   if (generalLiabilityProvider !== undefined) data.generalLiabilityProvider = generalLiabilityProvider;
   if (generalLiabilityAmount !== undefined) data.generalLiabilityAmount = generalLiabilityAmount ? parseFloat(generalLiabilityAmount) : null;
   if (generalLiabilityPolicy !== undefined) data.generalLiabilityPolicy = generalLiabilityPolicy;
+  if (generalLiabilityEffective !== undefined) data.generalLiabilityEffective = generalLiabilityEffective ? new Date(generalLiabilityEffective) : null;
   if (generalLiabilityExpiry !== undefined) data.generalLiabilityExpiry = generalLiabilityExpiry ? new Date(generalLiabilityExpiry) : null;
   if (workersCompProvider !== undefined) data.workersCompProvider = workersCompProvider;
   if (workersCompAmount !== undefined) data.workersCompAmount = workersCompAmount ? parseFloat(workersCompAmount) : null;
   if (workersCompPolicy !== undefined) data.workersCompPolicy = workersCompPolicy;
+  if (workersCompEffective !== undefined) data.workersCompEffective = workersCompEffective ? new Date(workersCompEffective) : null;
   if (workersCompExpiry !== undefined) data.workersCompExpiry = workersCompExpiry ? new Date(workersCompExpiry) : null;
   if (additionalInsuredSRL !== undefined) data.additionalInsuredSRL = additionalInsuredSRL === true || additionalInsuredSRL === "true";
   if (waiverOfSubrogation !== undefined) data.waiverOfSubrogation = waiverOfSubrogation === true || waiverOfSubrogation === "true";

@@ -802,18 +802,28 @@ model CarrierProfile {
   generalLiabilityAmount Float?
 
   // Extended Insurance Details
+  // v3.8.aiw — added *Effective DateTime? fields paired with *Expiry.
+  // Industry-standard COI verification requires BOTH dates to assert
+  // "policy is currently active" (effective <= today <= expiry).
+  // Single-date storage could only verify "not expired yet" — couldn't
+  // catch a pre-issued policy with future effective date being accepted
+  // as in-force.
   autoLiabilityProvider       String?
   autoLiabilityPolicy         String?
+  autoLiabilityEffective      DateTime?
   autoLiabilityExpiry         DateTime?
   cargoInsuranceProvider      String?
   cargoInsurancePolicy        String?
+  cargoInsuranceEffective     DateTime?
   cargoInsuranceExpiry        DateTime?
   generalLiabilityProvider    String?
   generalLiabilityPolicy      String?
+  generalLiabilityEffective   DateTime?
   generalLiabilityExpiry      DateTime?
   workersCompProvider         String?
   workersCompAmount           Float?
   workersCompPolicy           String?
+  workersCompEffective        DateTime?
   workersCompExpiry           DateTime?
   additionalInsuredSRL        Boolean   @default(false)
   waiverOfSubrogation         Boolean   @default(false)

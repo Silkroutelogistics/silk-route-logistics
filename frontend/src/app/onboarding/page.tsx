@@ -138,6 +138,7 @@ interface InsuranceLineData {
   provider: string;
   policy: string;
   amount: string;
+  effective: string;  // v3.8.aiw — paired with expiry for COI verification
   expiry: string;
 }
 
@@ -171,7 +172,7 @@ export default function OnboardingPage() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [showUnit, setShowUnit] = useState(false);
-  const emptyInsLine: InsuranceLineData = { provider: "", policy: "", amount: "", expiry: "" };
+  const emptyInsLine: InsuranceLineData = { provider: "", policy: "", amount: "", effective: "", expiry: "" };
   const [form, setForm] = useState<CarrierFormData>({
     firstName: "", lastName: "", email: "", password: "",
     company: "", phone: "", mcNumber: "", dotNumber: "",
@@ -283,21 +284,26 @@ export default function OnboardingPage() {
         numberOfTrucks: numTrucksStr,
         ...regData } = form;
       const insurancePayload: Record<string, unknown> = {};
+      // v3.8.aiw — Effective Date paired with Expiry per insurance for COI verification.
       if (autoLiability.provider) insurancePayload.autoLiabilityProvider = autoLiability.provider;
       if (autoLiability.amount) insurancePayload.autoLiabilityAmount = parseFloat(autoLiability.amount);
       if (autoLiability.policy) insurancePayload.autoLiabilityPolicy = autoLiability.policy;
+      if (autoLiability.effective) insurancePayload.autoLiabilityEffective = autoLiability.effective;
       if (autoLiability.expiry) insurancePayload.autoLiabilityExpiry = autoLiability.expiry;
       if (cargoInsurance.provider) insurancePayload.cargoInsuranceProvider = cargoInsurance.provider;
       if (cargoInsurance.amount) insurancePayload.cargoInsuranceAmount = parseFloat(cargoInsurance.amount);
       if (cargoInsurance.policy) insurancePayload.cargoInsurancePolicy = cargoInsurance.policy;
+      if (cargoInsurance.effective) insurancePayload.cargoInsuranceEffective = cargoInsurance.effective;
       if (cargoInsurance.expiry) insurancePayload.cargoInsuranceExpiry = cargoInsurance.expiry;
       if (generalLiability.provider) insurancePayload.generalLiabilityProvider = generalLiability.provider;
       if (generalLiability.amount) insurancePayload.generalLiabilityAmount = parseFloat(generalLiability.amount);
       if (generalLiability.policy) insurancePayload.generalLiabilityPolicy = generalLiability.policy;
+      if (generalLiability.effective) insurancePayload.generalLiabilityEffective = generalLiability.effective;
       if (generalLiability.expiry) insurancePayload.generalLiabilityExpiry = generalLiability.expiry;
       if (workersComp.provider) insurancePayload.workersCompProvider = workersComp.provider;
       if (workersComp.amount) insurancePayload.workersCompAmount = parseFloat(workersComp.amount);
       if (workersComp.policy) insurancePayload.workersCompPolicy = workersComp.policy;
+      if (workersComp.effective) insurancePayload.workersCompEffective = workersComp.effective;
       if (workersComp.expiry) insurancePayload.workersCompExpiry = workersComp.expiry;
       insurancePayload.additionalInsuredSRL = additionalInsuredSRL;
       insurancePayload.waiverOfSubrogation = waiverOfSubrogation;
@@ -813,6 +819,13 @@ export default function OnboardingPage() {
               <div className="p-6 rounded-xl border border-[#EFE6D3] bg-[#FBF7F0]">
                 <p className="text-[10px] uppercase tracking-[0.22em] font-semibold text-[#BA7517] mb-4">Insurance Information</p>
 
+                {/* v3.8.aiw — Each insurance row now uses a 2-row layout:
+                    Row 1 (3-col): Provider / Policy # / Coverage Amount.
+                    Row 2 (2-col): Effective Date / Expiration Date.
+                    The Effective Date pair lets us verify policy is
+                    currently active (effective <= today <= expiry), not
+                    just not-yet-expired. Industry-standard COI format. */}
+
                 {/* Auto Liability */}
                 <div className="mb-5">
                   <div className="flex items-center gap-2 mb-2 flex-wrap">
@@ -822,7 +835,7 @@ export default function OnboardingPage() {
                       <span className="text-[10px] text-[#9B2C2C] font-semibold">Below minimum</span>
                     )}
                   </div>
-                  <div className="grid sm:grid-cols-4 gap-3">
+                  <div className="grid sm:grid-cols-3 gap-3 mb-3">
                     <div>
                       <label className="block text-[10px] font-medium text-[#0A2540] mb-1 uppercase tracking-wide">Provider</label>
                       <input placeholder="e.g. Progressive" value={form.autoLiability.provider} onChange={(e) => setForm((p) => ({ ...p, autoLiability: { ...p.autoLiability, provider: e.target.value } }))} className="w-full px-3 py-2 bg-white border border-[#EFE6D3] rounded-lg text-sm text-[#0A2540] focus:border-[#BA7517] focus:ring-2 focus:ring-[#BA7517]/15 outline-none transition placeholder:text-[#A7AEB8]" />
@@ -838,8 +851,14 @@ export default function OnboardingPage() {
                         <p className="text-[10px] text-[#6B7685] mt-1">= ${Number(form.autoLiability.amount).toLocaleString()}</p>
                       )}
                     </div>
+                  </div>
+                  <div className="grid sm:grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-[10px] font-medium text-[#0A2540] mb-1 uppercase tracking-wide">Expiry Date</label>
+                      <label className="block text-[10px] font-medium text-[#0A2540] mb-1 uppercase tracking-wide">Effective Date</label>
+                      <input type="date" value={form.autoLiability.effective} onChange={(e) => setForm((p) => ({ ...p, autoLiability: { ...p.autoLiability, effective: e.target.value } }))} className="w-full px-3 py-2 bg-white border border-[#EFE6D3] rounded-lg text-sm text-[#0A2540] focus:border-[#BA7517] focus:ring-2 focus:ring-[#BA7517]/15 outline-none transition" />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-medium text-[#0A2540] mb-1 uppercase tracking-wide">Expiration Date</label>
                       <input type="date" value={form.autoLiability.expiry} onChange={(e) => setForm((p) => ({ ...p, autoLiability: { ...p.autoLiability, expiry: e.target.value } }))} className="w-full px-3 py-2 bg-white border border-[#EFE6D3] rounded-lg text-sm text-[#0A2540] focus:border-[#BA7517] focus:ring-2 focus:ring-[#BA7517]/15 outline-none transition" />
                     </div>
                   </div>
@@ -854,7 +873,7 @@ export default function OnboardingPage() {
                       <span className="text-[10px] text-[#9B2C2C] font-semibold">Below minimum</span>
                     )}
                   </div>
-                  <div className="grid sm:grid-cols-4 gap-3">
+                  <div className="grid sm:grid-cols-3 gap-3 mb-3">
                     <div>
                       <label className="block text-[10px] font-medium text-[#0A2540] mb-1 uppercase tracking-wide">Provider</label>
                       <input placeholder="e.g. Progressive" value={form.cargoInsurance.provider} onChange={(e) => setForm((p) => ({ ...p, cargoInsurance: { ...p.cargoInsurance, provider: e.target.value } }))} className="w-full px-3 py-2 bg-white border border-[#EFE6D3] rounded-lg text-sm text-[#0A2540] focus:border-[#BA7517] focus:ring-2 focus:ring-[#BA7517]/15 outline-none transition placeholder:text-[#A7AEB8]" />
@@ -870,8 +889,14 @@ export default function OnboardingPage() {
                         <p className="text-[10px] text-[#6B7685] mt-1">= ${Number(form.cargoInsurance.amount).toLocaleString()}</p>
                       )}
                     </div>
+                  </div>
+                  <div className="grid sm:grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-[10px] font-medium text-[#0A2540] mb-1 uppercase tracking-wide">Expiry Date</label>
+                      <label className="block text-[10px] font-medium text-[#0A2540] mb-1 uppercase tracking-wide">Effective Date</label>
+                      <input type="date" value={form.cargoInsurance.effective} onChange={(e) => setForm((p) => ({ ...p, cargoInsurance: { ...p.cargoInsurance, effective: e.target.value } }))} className="w-full px-3 py-2 bg-white border border-[#EFE6D3] rounded-lg text-sm text-[#0A2540] focus:border-[#BA7517] focus:ring-2 focus:ring-[#BA7517]/15 outline-none transition" />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-medium text-[#0A2540] mb-1 uppercase tracking-wide">Expiration Date</label>
                       <input type="date" value={form.cargoInsurance.expiry} onChange={(e) => setForm((p) => ({ ...p, cargoInsurance: { ...p.cargoInsurance, expiry: e.target.value } }))} className="w-full px-3 py-2 bg-white border border-[#EFE6D3] rounded-lg text-sm text-[#0A2540] focus:border-[#BA7517] focus:ring-2 focus:ring-[#BA7517]/15 outline-none transition" />
                     </div>
                   </div>
@@ -886,7 +911,7 @@ export default function OnboardingPage() {
                       <span className="text-[10px] text-[#9B2C2C] font-semibold">Below minimum</span>
                     )}
                   </div>
-                  <div className="grid sm:grid-cols-4 gap-3">
+                  <div className="grid sm:grid-cols-3 gap-3 mb-3">
                     <div>
                       <label className="block text-[10px] font-medium text-[#0A2540] mb-1 uppercase tracking-wide">Provider</label>
                       <input placeholder="e.g. Progressive" value={form.generalLiability.provider} onChange={(e) => setForm((p) => ({ ...p, generalLiability: { ...p.generalLiability, provider: e.target.value } }))} className="w-full px-3 py-2 bg-white border border-[#EFE6D3] rounded-lg text-sm text-[#0A2540] focus:border-[#BA7517] focus:ring-2 focus:ring-[#BA7517]/15 outline-none transition placeholder:text-[#A7AEB8]" />
@@ -902,8 +927,14 @@ export default function OnboardingPage() {
                         <p className="text-[10px] text-[#6B7685] mt-1">= ${Number(form.generalLiability.amount).toLocaleString()}</p>
                       )}
                     </div>
+                  </div>
+                  <div className="grid sm:grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-[10px] font-medium text-[#0A2540] mb-1 uppercase tracking-wide">Expiry Date</label>
+                      <label className="block text-[10px] font-medium text-[#0A2540] mb-1 uppercase tracking-wide">Effective Date</label>
+                      <input type="date" value={form.generalLiability.effective} onChange={(e) => setForm((p) => ({ ...p, generalLiability: { ...p.generalLiability, effective: e.target.value } }))} className="w-full px-3 py-2 bg-white border border-[#EFE6D3] rounded-lg text-sm text-[#0A2540] focus:border-[#BA7517] focus:ring-2 focus:ring-[#BA7517]/15 outline-none transition" />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-medium text-[#0A2540] mb-1 uppercase tracking-wide">Expiration Date</label>
                       <input type="date" value={form.generalLiability.expiry} onChange={(e) => setForm((p) => ({ ...p, generalLiability: { ...p.generalLiability, expiry: e.target.value } }))} className="w-full px-3 py-2 bg-white border border-[#EFE6D3] rounded-lg text-sm text-[#0A2540] focus:border-[#BA7517] focus:ring-2 focus:ring-[#BA7517]/15 outline-none transition" />
                     </div>
                   </div>
@@ -915,7 +946,7 @@ export default function OnboardingPage() {
                     <span className="text-sm font-semibold text-[#0A2540]">Workers&apos; Compensation</span>
                     <span className="text-[10px] text-[#6B7685]">As required by state law</span>
                   </div>
-                  <div className="grid sm:grid-cols-4 gap-3">
+                  <div className="grid sm:grid-cols-3 gap-3 mb-3">
                     <div>
                       <label className="block text-[10px] font-medium text-[#0A2540] mb-1 uppercase tracking-wide">Provider</label>
                       <input placeholder="e.g. State Fund" value={form.workersComp.provider} onChange={(e) => setForm((p) => ({ ...p, workersComp: { ...p.workersComp, provider: e.target.value } }))} className="w-full px-3 py-2 bg-white border border-[#EFE6D3] rounded-lg text-sm text-[#0A2540] focus:border-[#BA7517] focus:ring-2 focus:ring-[#BA7517]/15 outline-none transition placeholder:text-[#A7AEB8]" />
@@ -931,8 +962,14 @@ export default function OnboardingPage() {
                         <p className="text-[10px] text-[#6B7685] mt-1">= ${Number(form.workersComp.amount).toLocaleString()}</p>
                       )}
                     </div>
+                  </div>
+                  <div className="grid sm:grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-[10px] font-medium text-[#0A2540] mb-1 uppercase tracking-wide">Expiry Date</label>
+                      <label className="block text-[10px] font-medium text-[#0A2540] mb-1 uppercase tracking-wide">Effective Date</label>
+                      <input type="date" value={form.workersComp.effective} onChange={(e) => setForm((p) => ({ ...p, workersComp: { ...p.workersComp, effective: e.target.value } }))} className="w-full px-3 py-2 bg-white border border-[#EFE6D3] rounded-lg text-sm text-[#0A2540] focus:border-[#BA7517] focus:ring-2 focus:ring-[#BA7517]/15 outline-none transition" />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-medium text-[#0A2540] mb-1 uppercase tracking-wide">Expiration Date</label>
                       <input type="date" value={form.workersComp.expiry} onChange={(e) => setForm((p) => ({ ...p, workersComp: { ...p.workersComp, expiry: e.target.value } }))} className="w-full px-3 py-2 bg-white border border-[#EFE6D3] rounded-lg text-sm text-[#0A2540] focus:border-[#BA7517] focus:ring-2 focus:ring-[#BA7517]/15 outline-none transition" />
                     </div>
                   </div>
@@ -1237,17 +1274,18 @@ export default function OnboardingPage() {
                   <div className="p-4 rounded-lg bg-[#FBF7F0] border border-[#EFE6D3]">
                     <p className="text-[10px] uppercase tracking-[0.22em] font-semibold text-[#BA7517] mb-2">Insurance</p>
                     <div className="space-y-1 text-sm">
+                      {/* v3.8.aiw — Show both Effective + Expiration per policy */}
                       {form.autoLiability.provider && (
-                        <p><span className="font-medium">Auto Liability:</span> {form.autoLiability.provider} | {form.autoLiability.policy} | ${Number(form.autoLiability.amount).toLocaleString()} | Exp: {form.autoLiability.expiry}</p>
+                        <p><span className="font-medium">Auto Liability:</span> {form.autoLiability.provider} | {form.autoLiability.policy} | ${Number(form.autoLiability.amount).toLocaleString()}{form.autoLiability.effective && ` | Eff: ${form.autoLiability.effective}`}{form.autoLiability.expiry && ` | Exp: ${form.autoLiability.expiry}`}</p>
                       )}
                       {form.cargoInsurance.provider && (
-                        <p><span className="font-medium">Cargo:</span> {form.cargoInsurance.provider} | {form.cargoInsurance.policy} | ${Number(form.cargoInsurance.amount).toLocaleString()} | Exp: {form.cargoInsurance.expiry}</p>
+                        <p><span className="font-medium">Cargo:</span> {form.cargoInsurance.provider} | {form.cargoInsurance.policy} | ${Number(form.cargoInsurance.amount).toLocaleString()}{form.cargoInsurance.effective && ` | Eff: ${form.cargoInsurance.effective}`}{form.cargoInsurance.expiry && ` | Exp: ${form.cargoInsurance.expiry}`}</p>
                       )}
                       {form.generalLiability.provider && (
-                        <p><span className="font-medium">General Liab:</span> {form.generalLiability.provider} | {form.generalLiability.policy} | ${Number(form.generalLiability.amount).toLocaleString()} | Exp: {form.generalLiability.expiry}</p>
+                        <p><span className="font-medium">General Liab:</span> {form.generalLiability.provider} | {form.generalLiability.policy} | ${Number(form.generalLiability.amount).toLocaleString()}{form.generalLiability.effective && ` | Eff: ${form.generalLiability.effective}`}{form.generalLiability.expiry && ` | Exp: ${form.generalLiability.expiry}`}</p>
                       )}
                       {form.workersComp.provider && (
-                        <p><span className="font-medium">Workers Comp:</span> {form.workersComp.provider} | {form.workersComp.policy} | ${Number(form.workersComp.amount).toLocaleString()} | Exp: {form.workersComp.expiry}</p>
+                        <p><span className="font-medium">Workers Comp:</span> {form.workersComp.provider} | {form.workersComp.policy} | ${Number(form.workersComp.amount).toLocaleString()}{form.workersComp.effective && ` | Eff: ${form.workersComp.effective}`}{form.workersComp.expiry && ` | Exp: ${form.workersComp.expiry}`}</p>
                       )}
                       <div className="flex flex-wrap gap-3 mt-2 text-xs text-[#3A4A5F]">
                         {form.additionalInsuredSRL && <span className="flex items-center gap-1"><CheckCircle2 className="w-3 h-3 text-[#2F7A4F]" /> Additional Insured</span>}
