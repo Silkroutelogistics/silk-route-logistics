@@ -206,6 +206,41 @@ export async function sendOtpEmail(email: string, firstName: string, code: strin
   await sendEmail(email, `Your SRL Verification Code: ${code}`, html);
 }
 
+// v3.8.aje — Email verification gate. Sent post-registration with a
+// time-limited token. Click → backend captures click-IP + resolves
+// country via geoip-lite → marks emailVerifiedAt → cross-references
+// against registrationCountry for the country-jump fraud signal.
+// Token lives in OtpCode table with `VERIFY:` prefix (extends the
+// existing `RESET:` pattern at otpService.ts:106 — no new schema for
+// token storage). 24-hour expiry to accommodate carriers who don't
+// check email immediately.
+export async function sendEmailVerificationEmail(
+  email: string,
+  firstName: string,
+  verifyUrl: string,
+) {
+  const html = wrap(`
+    <h2 style="color:#0A2540;margin-bottom:4px">Confirm your email</h2>
+    <p style="color:#3A4A5F;margin-bottom:24px">Hi ${firstName},</p>
+    <p style="color:#3A4A5F">Welcome to the Caravan Partner Program. To complete your application, please confirm this is your email address by clicking the button below.</p>
+
+    <div style="text-align:center;margin:32px 0">
+      <a href="${verifyUrl}" style="display:inline-block;background:#BA7517;color:#FBF7F0;padding:14px 36px;text-decoration:none;border-radius:8px;font-weight:bold;font-size:15px">Verify Email Address</a>
+    </div>
+
+    <p style="color:#6B7685;font-size:13px;margin-top:24px">Or copy and paste this link into your browser:</p>
+    <p style="color:#0A2540;font-size:12px;word-break:break-all;background:#FBF7F0;border:1px solid #EFE6D3;border-radius:6px;padding:10px;font-family:'Courier New',monospace">${verifyUrl}</p>
+
+    <div style="background:#FBEFD4;border:1px solid rgba(176,122,26,0.20);border-radius:8px;padding:14px 16px;margin:24px 0">
+      <p style="color:#B07A1A;font-size:13px;margin:0"><strong>This link expires in 24 hours.</strong> If you didn't submit a carrier application with Silk Route Logistics, you can safely ignore this email.</p>
+    </div>
+
+    <p style="color:#6B7685;font-size:13px;margin-top:24px">Verifying your email is a one-time step that helps protect your application from impersonation and lets us reach you with status updates as your application moves through compliance review.</p>
+  `);
+
+  await sendEmail(email, "Confirm your email — Silk Route Logistics", html);
+}
+
 /**
  * Monthly Quick Pay override variance report (v3.7.a) — sent to Wasi on
  * the 1st of each month. Flags the month with a REVIEW SUGGESTED banner

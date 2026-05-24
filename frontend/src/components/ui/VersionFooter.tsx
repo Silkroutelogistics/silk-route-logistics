@@ -9894,7 +9894,76 @@
 //            session (no PENDING fixture in seed) so visual
 //            smoke deferred to next session when a PENDING
 //            carrier exists in prod.
-export const SRL_VERSION = "3.8.ajd";
+// v3.8.aje — Email verification gate + offline IP geolocation.
+//            Adds an industry-standard email-verification step:
+//            post-registration the carrier receives a 24h
+//            click-link; click → POST to backend → token consumed
+//            + emailVerifiedAt + emailVerifiedFromIp +
+//            emailVerifiedFromCountry written transactionally.
+//            geoip-lite (zero-cost offline DB) resolves country
+//            at both registration time + verify-click time; the
+//            country-mismatch case writes a SystemLog WARNING
+//            for AE forensic review (registered from US,
+//            verified from KR → flagged). Compass A-grade
+//            auto-approve now ALSO gates on emailVerifiedAt —
+//            unverified carriers stay PENDING even when their
+//            FMCSA + insurance + OFAC checks pass. AE manual
+//            approval still has its own discretion.
+//
+//            New backend: services/geoService.ts (resolveGeo,
+//            resolveCountry, extractClientIp wrappers around
+//            geoip-lite), emailService.sendEmailVerificationEmail,
+//            otpService createEmailVerificationToken +
+//            peekEmailVerificationToken +
+//            consumeEmailVerificationToken +
+//            getEmailVerificationResendCooldown (VERIFY: prefix
+//            on existing OtpCode table — no new schema for token
+//            storage). New endpoints: POST /carrier-auth/verify
+//            -email (public — token IS the auth), POST /carrier
+//            -auth/resend-verification (carrier-authenticated,
+//            60s cooldown). Application-status endpoint extended
+//            with emailVerifiedAt field. registerCarrier captures
+//            registrationCountry into CarrierProfile + fires
+//            verification email post-response. Schema migration
+//            20260524103000_email_verification_and_geo adds
+//            User.emailVerifiedAt + emailVerifiedFromIp +
+//            emailVerifiedFromCountry + CarrierProfile.
+//            registrationCountry (all nullable, no backfill).
+//
+//            New frontend: /carrier/verify-email landing page
+//            (Suspense-wrapped; reads ?token=... param; POSTs to
+//            backend; renders success/already-verified/invalid/
+//            error states with brand-canonical chrome).
+//            Application-status page extends with a top-of-card
+//            warning-amber banner when emailVerifiedAt is null;
+//            inline Resend Verification button that surfaces the
+//            429 cooldown message verbatim. TanStack mutation
+//            invalidates the status query on success so the
+//            banner disappears the moment the carrier clicks
+//            the link.
+//
+//            Patterns applied: §3.3 atomic single-sprint ship
+//            (email-verify + geolocation bundled because the
+//            verify-click is exactly where geolocation pays off);
+//            §3.5 audit-first (verified existing isVerified
+//            overload, OpenPhone SMS infra, OtpCode token reuse
+//            pattern, registrationIpHash already wired); §2.2
+//            manual Prisma migration; §3.10 transactional email
+//            via Resend (verification email is not lead-hunter
+//            outreach so reply-to default applies); §19 Pattern 7
+//            design-system conformance (status banner uses
+//            brand-canonical FBEFD4 + B07A1A warning palette);
+//            §19 Sub-pattern 11 CI-parity (backend tsc + frontend
+//            tsc + next build all clean).
+//
+//            Patterns emerged: none. Bundled atomic ship per
+//            user's "email verify + cheapest geolocation" spec.
+//            v3.8.ajf will layer unusual-activity dual-channel
+//            OTP (email + SMS via OpenPhone) on top of this geo
+//            data — the country-tracking introduced here is
+//            exactly what ajf needs to detect "login from
+//            different country than last time".
+export const SRL_VERSION = "3.8.aje";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

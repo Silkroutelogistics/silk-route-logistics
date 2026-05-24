@@ -688,6 +688,23 @@ model User {
   isVerified   Boolean   @default(false)
   isActive     Boolean   @default(true)
   lastLogin    DateTime?
+  // v3.8.aje — Email verification gate.
+  // emailVerifiedAt is the canonical "this carrier proved control of
+  // the inbox" timestamp. Separate from the overloaded `isVerified`
+  // which today means "AE-approved carrier" (set at approval time, not
+  // at email-confirm time). emailVerifiedAt is set when the carrier
+  // clicks the verify link sent post-registration. AE approval gate
+  // does NOT require this flip — but unverified email surfaces in the
+  // AE drawer as a fraud signal and in the carrier's application-status
+  // page as a "please verify your email" call to action.
+  emailVerifiedAt           DateTime?
+  // Raw IP + resolved country at verification-click time. Raw IP retained
+  // for AE forensic inspection (not hashed — chameleon already hashes
+  // registration IP for cross-reference; the verify-click IP is single-
+  // use audit material). Resolved country via geoip-lite offline lookup
+  // (no per-request cost).
+  emailVerifiedFromIp       String?
+  emailVerifiedFromCountry  String? // ISO 3166-1 alpha-2 (e.g. "US", "CA")
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
 
@@ -951,6 +968,13 @@ model CarrierProfile {
   // Registration metadata (for chameleon enhancement)
   registrationIpHash    String? // SHA-256 of registration IP
   registrationUserAgent String? // Browser user-agent at registration
+  // v3.8.aje — Resolved country at registration time via geoip-lite.
+  // Separate from registrationIpHash (which is sha256'd for fingerprint
+  // cross-reference) — the country is plaintext for AE inspection and
+  // geo-mismatch detection at email-verification time. Compared against
+  // User.emailVerifiedFromCountry to surface a country-jump signal:
+  // registered from US, verified from KR → suspicious.
+  registrationCountry   String? // ISO 3166-1 alpha-2 (e.g. "US", "CA")
 
   // IRP / IFTA / BOC-3 / MCS-150
   irpStatus        String? // VERIFIED, EXPIRED, NOT_VERIFIED

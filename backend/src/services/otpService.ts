@@ -167,3 +167,75 @@ export async function getLastOtpCreatedAt(userId: string): Promise<Date | null> 
   });
   return last?.createdAt || null;
 }
+
+// v3.8.aje — Email verification token helpers.
+//
+// Extends the existing `RESET:` token pattern at line 106 — stored in
+// the OtpCode table with a `VERIFY:` prefix. No schema migration for
+// token storage. 24-hour expiry (more lenient than the 5-min OTP login
+// codes since carriers may not check email immediately post-signup).
+//
+// Single-use: the verify endpoint consumes the token atomically inside
+// a transaction with the User.emailVerifiedAt update. Same peek/consume
+// split as resetPassword (v3.7.m) — token is not burned until the
+// update succeeds.
+
+const VERIFY_EXPIRY_MS = 24 * 60 * 60 * 1000; // 24 hours
+const VERIFY_RESEND_COOLDOWN_MS = 60 * 1000;  // 60s between resends
+
+export async function createEmailVerificationToken(userId: string): Promise<string> {
+  // Invalidate any existing unused verify tokens for this user
+  await prisma.otpCode.updateMany({
+    where: { userId, used: false, code: { startsWith: "VERIFY:" } },
+    data: { used: true },
+  });
+
+  const token = crypto.randomBytes(32).toString("hex"); // 64-char hex
+  const expiresAt = new Date(Date.now() + VERIFY_EXPIRY_MS);
+
+  await prisma.otpCode.create({
+    data: { userId, code: `VERIFY:${token}`, expiresAt },
+  });
+
+  return token;
+}
+
+export async function peekEmailVerificationToken(
+  token: string,
+): Promise<{ userId: string; otpId: string } | null> {
+  const otp = await prisma.otpCode.findFirst({
+    where: {
+      code: `VERIFY:${token}`,
+      used: false,
+      expiresAt: { gt: new Date() },
+    },
+    orderBy: { createdAt: "desc" },
+  });
+
+  if (!otp) return null;
+  return { userId: otp.userId, otpId: otp.id };
+}
+
+export async function consumeEmailVerificationToken(otpId: string): Promise<void> {
+  await prisma.otpCode.update({
+    where: { id: otpId },
+    data: { used: true },
+  });
+}
+
+/**
+ * Rate-limit helper for the "resend verification email" carrier-portal
+ * button. Returns ms-until-next-allowed-send, or 0 if a send is allowed
+ * right now. Reads from the latest VERIFY: token's createdAt.
+ */
+export async function getEmailVerificationResendCooldown(userId: string): Promise<number> {
+  const last = await prisma.otpCode.findFirst({
+    where: { userId, code: { startsWith: "VERIFY:" } },
+    orderBy: { createdAt: "desc" },
+    select: { createdAt: true },
+  });
+  if (!last) return 0;
+  const elapsed = Date.now() - last.createdAt.getTime();
+  const remaining = VERIFY_RESEND_COOLDOWN_MS - elapsed;
+  return remaining > 0 ? remaining : 0;
+}

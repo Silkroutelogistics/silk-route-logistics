@@ -8,8 +8,17 @@ import { authenticate, authorize, AuthRequest, registerSession, removeSession } 
 import { validateBody } from "../middleware/validate";
 import { setTokenCookie, clearTokenCookie } from "../utils/cookies";
 import { blacklistToken } from "../utils/tokenBlacklist";
-import { createOtp, verifyOtp as verifyOtpCode, getLastOtpCreatedAt } from "../services/otpService";
-import { sendOtpEmail } from "../services/emailService";
+import {
+  createOtp,
+  verifyOtp as verifyOtpCode,
+  getLastOtpCreatedAt,
+  createEmailVerificationToken,
+  peekEmailVerificationToken,
+  consumeEmailVerificationToken,
+  getEmailVerificationResendCooldown,
+} from "../services/otpService";
+import { sendOtpEmail, sendEmailVerificationEmail } from "../services/emailService";
+import { resolveCountry, extractClientIp } from "../services/geoService";
 import { verifyTotpCode } from "../services/totpService";
 import { z } from "zod";
 import { log } from "../lib/logger";
@@ -440,6 +449,10 @@ router.get("/application-status", authenticate, authorize("CARRIER"), async (req
     where: { id: req.user!.id },
     select: {
       id: true, email: true, firstName: true, lastName: true, company: true,
+      // v3.8.aje — emailVerifiedAt drives the "verify your email" state on
+      // the carrier-portal status page. When null, the page renders a
+      // top-of-card banner with a Resend Verification button.
+      emailVerifiedAt: true,
       carrierProfile: {
         select: {
           id: true,
@@ -477,11 +490,142 @@ router.get("/application-status", authenticate, authorize("CARRIER"), async (req
     onboardingStatus: profile.onboardingStatus,
     submittedAt: profile.createdAt,
     approvedAt: profile.approvedAt,
+    emailVerifiedAt: user.emailVerifiedAt,
     // INFO_REQUESTED.infoRequests + REJECTED.rejectionReason/reapplyEligibleAt
     // wire in here in v3.8.aje once the schema lands. Keep the endpoint
     // shape stable so the frontend status page can add per-state sections
     // without contract churn.
   });
+});
+
+// v3.8.aje Sprint A — Email verification.
+// PUBLIC endpoint (no auth — the token IS the auth). Carrier clicks the
+// link in their verification email which lands on /carrier/verify-email?
+// token=<token>; the frontend page POSTs the token here. Backend:
+//   1. peek the token (validates, doesn't burn yet)
+//   2. resolve click-IP country via geoip-lite
+//   3. transactional update: mark User.emailVerifiedAt + capture
+//      emailVerifiedFromIp + emailVerifiedFromCountry, AND consume the
+//      token. Atomic — if either write fails, both roll back so the
+//      token is still usable for a retry.
+// Returns whether registration country and verification country matched
+// (the AE-visible fraud signal). Frontend just shows "verified" on
+// success; the geo-mismatch lives in the AE drawer.
+const verifyEmailSchema = z.object({ token: z.string().min(1) });
+router.post("/verify-email", validateBody(verifyEmailSchema), async (req: Request, res: Response) => {
+  const { token } = req.body;
+
+  const peek = await peekEmailVerificationToken(token);
+  if (!peek) {
+    res.status(400).json({ error: "This verification link is invalid or has expired. Please request a new one from your application status page." });
+    return;
+  }
+
+  // Idempotent: already-verified user can re-click without error.
+  const existing = await prisma.user.findUnique({
+    where: { id: peek.userId },
+    select: { emailVerifiedAt: true, carrierProfile: { select: { registrationCountry: true } } },
+  });
+  if (!existing) {
+    res.status(404).json({ error: "User not found" });
+    return;
+  }
+  if (existing.emailVerifiedAt) {
+    // Consume the token anyway to clean up
+    await consumeEmailVerificationToken(peek.otpId).catch(() => {});
+    res.json({ verified: true, alreadyVerified: true });
+    return;
+  }
+
+  const clickIp = extractClientIp(req);
+  const clickCountry = resolveCountry(clickIp);
+
+  try {
+    await prisma.$transaction([
+      prisma.user.update({
+        where: { id: peek.userId },
+        data: {
+          emailVerifiedAt: new Date(),
+          emailVerifiedFromIp: clickIp || null,
+          emailVerifiedFromCountry: clickCountry,
+        },
+      }),
+      prisma.otpCode.update({
+        where: { id: peek.otpId },
+        data: { used: true },
+      }),
+    ]);
+  } catch (err) {
+    log.error({ err, userId: peek.userId }, "[Email Verify] Transaction failed");
+    res.status(500).json({ error: "Verification could not be recorded. Please try again." });
+    return;
+  }
+
+  // Surface geo-mismatch as a SystemLog row so AE forensics can find it
+  // alongside the security signal stream. NOT shown to the carrier —
+  // they only see the success state. Surfaces in AE drawer follow-up.
+  const registrationCountry = existing.carrierProfile?.registrationCountry;
+  const geoMismatch =
+    registrationCountry && clickCountry && registrationCountry !== clickCountry;
+  if (geoMismatch) {
+    await prisma.systemLog.create({
+      data: {
+        logType: "SECURITY",
+        severity: "WARNING",
+        source: "emailVerification",
+        message: `Email verified for user ${peek.userId} from ${clickCountry} but registered from ${registrationCountry} — country mismatch flagged for AE review.`,
+        ipAddress: clickIp || null,
+      },
+    }).catch(() => {});
+  }
+
+  res.json({
+    verified: true,
+    alreadyVerified: false,
+    // Frontend doesn't need geo data; this is server-side fraud signal.
+  });
+});
+
+// v3.8.aje — Resend verification email.
+// Carrier-authenticated (carrier must be logged in to request a resend
+// from their application-status page). 60-second cooldown enforced via
+// the latest VERIFY: token's createdAt. SUSPENDED carriers are already
+// blocked at login so they can never reach here.
+router.post("/resend-verification", authenticate, authorize("CARRIER"), async (req: AuthRequest, res: Response) => {
+  const user = await prisma.user.findUnique({
+    where: { id: req.user!.id },
+    select: { id: true, email: true, firstName: true, emailVerifiedAt: true },
+  });
+
+  if (!user) {
+    res.status(404).json({ error: "User not found" });
+    return;
+  }
+
+  if (user.emailVerifiedAt) {
+    res.status(409).json({ error: "Your email is already verified." });
+    return;
+  }
+
+  const cooldown = await getEmailVerificationResendCooldown(user.id);
+  if (cooldown > 0) {
+    res.status(429).json({
+      error: `Please wait ${Math.ceil(cooldown / 1000)} second(s) before requesting another verification email.`,
+      cooldownMs: cooldown,
+    });
+    return;
+  }
+
+  try {
+    const token = await createEmailVerificationToken(user.id);
+    const verifyUrl = `https://silkroutelogistics.ai/carrier/verify-email?token=${token}`;
+    await sendEmailVerificationEmail(user.email, user.firstName, verifyUrl);
+    res.json({ sent: true });
+  } catch (err) {
+    log.error({ err, userId: user.id }, "[Email Verify] Resend failed");
+    res.status(500).json({ error: "Could not send verification email. Please try again in a moment." });
+    return;
+  }
 });
 
 export default router;

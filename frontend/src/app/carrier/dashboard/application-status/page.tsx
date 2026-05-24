@@ -15,11 +15,12 @@
 //   * v3.8.aje: INFO_REQUESTED open requests list + carrier-resolve form,
 //     REJECTED reason + reapply-eligible date + reapply CTA.
 
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
 import { api } from "@/lib/api";
 import { useCarrierAuth } from "@/hooks/useCarrierAuth";
 import { Logo } from "@/components/ui/Logo";
-import { Clock, CheckCircle2, AlertCircle, XCircle, Mail, Phone } from "lucide-react";
+import { Clock, CheckCircle2, AlertCircle, XCircle, Mail, Phone, MailCheck, RefreshCw } from "lucide-react";
 
 interface StatusResponse {
   user: { id: string; email: string; firstName: string; lastName: string; company: string | null };
@@ -27,6 +28,7 @@ interface StatusResponse {
   onboardingStatus: "PENDING" | "REVIEWING" | "INFO_REQUESTED" | "APPROVED" | "REJECTED" | "SUSPENDED";
   submittedAt: string;
   approvedAt: string | null;
+  emailVerifiedAt: string | null; // v3.8.aje
 }
 
 // Brand-canonical status palette per CLAUDE.md §2.1.
@@ -83,12 +85,28 @@ function formatDate(iso: string | null): string {
 
 export default function ApplicationStatusPage() {
   const { user } = useCarrierAuth();
+  const queryClient = useQueryClient();
+  const [resendMessage, setResendMessage] = useState<{ kind: "success" | "error"; text: string } | null>(null);
 
   const { data, isLoading, isError } = useQuery({
     queryKey: ["carrier-application-status"],
     queryFn: () => api.get<StatusResponse>("/carrier-auth/application-status").then((r) => r.data),
     enabled: !!user,
     refetchInterval: 60_000, // 60s — pick up status flips without page reload
+  });
+
+  // v3.8.aje — Resend verification email mutation. 60s cooldown enforced
+  // server-side at otpService.ts — frontend surfaces the 429 message
+  // verbatim (which includes the countdown in seconds).
+  const resendMutation = useMutation({
+    mutationFn: () => api.post("/carrier-auth/resend-verification"),
+    onSuccess: () => {
+      setResendMessage({ kind: "success", text: `Verification email sent to ${data?.user.email}. Check your inbox.` });
+      queryClient.invalidateQueries({ queryKey: ["carrier-application-status"] });
+    },
+    onError: (err: { response?: { data?: { error?: string } } }) => {
+      setResendMessage({ kind: "error", text: err.response?.data?.error || "Could not send verification email. Please try again in a moment." });
+    },
   });
 
   if (isLoading) {
@@ -152,6 +170,50 @@ export default function ApplicationStatusPage() {
           </dl>
         </div>
       </div>
+
+      {/* v3.8.aje — Email verification banner.
+          Renders above the state-specific content when emailVerifiedAt is
+          null. Contains a Resend Verification button (60s cooldown enforced
+          server-side; the 429 message includes the countdown verbatim).
+          Banner disappears the moment the carrier clicks the email link
+          and the 60-second polling refetches. */}
+      {!data.emailVerifiedAt && (
+        <div className="mt-6 bg-[#FBEFD4] border border-[rgba(176,122,26,0.30)] rounded-xl p-5 sm:p-6">
+          <div className="flex items-start gap-3">
+            <div className="w-10 h-10 rounded-full bg-[#FBF7F0] flex items-center justify-center flex-shrink-0">
+              <MailCheck size={20} className="text-[#B07A1A]" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <h2 className="text-sm font-bold text-[#0A2540] mb-1">Verify your email to continue</h2>
+              <p className="text-xs text-[#3A4A5F] leading-relaxed">
+                We sent a verification link to <strong className="font-semibold">{data.user.email}</strong>. Please click the link in that email to confirm this is your address. Your application stays in queue until your email is verified.
+              </p>
+              {resendMessage && (
+                <p className={`mt-2 text-xs font-medium ${resendMessage.kind === "success" ? "text-[#2F7A4F]" : "text-[#9B2C2C]"}`}>
+                  {resendMessage.text}
+                </p>
+              )}
+              <button
+                onClick={() => { setResendMessage(null); resendMutation.mutate(); }}
+                disabled={resendMutation.isPending}
+                className="mt-3 inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#BA7517] text-[#FBF7F0] rounded-md text-xs font-semibold hover:bg-[#854F0B] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {resendMutation.isPending ? (
+                  <>
+                    <RefreshCw size={12} className="animate-spin" />
+                    Sending…
+                  </>
+                ) : (
+                  <>
+                    <Mail size={12} />
+                    Resend verification email
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* State-specific content */}
       <div className="mt-6 bg-white border border-[rgba(10,37,64,0.10)] rounded-xl p-6 sm:p-8 shadow-[0_1px_2px_rgba(10,37,64,0.06)]">

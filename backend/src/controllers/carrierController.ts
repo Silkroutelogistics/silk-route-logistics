@@ -14,10 +14,12 @@ import { onCarrierApproved } from "../services/integrationService";
 import { uploadFile } from "../services/storageService";
 import { runFmcsaScan, complianceCheck } from "../services/complianceMonitorService";
 import { vetAndStoreReport } from "../services/carrierVettingService";
-import { sendEmail, wrap } from "../services/emailService";
+import { sendEmail, sendEmailVerificationEmail, wrap } from "../services/emailService";
 import { runIdentityCheck } from "../services/identityVerificationService";
 import { screenCarrier } from "../services/ofacScreeningService";
 import { populateAuthorityGrantedDate } from "../services/fmcsaService";
+import { createEmailVerificationToken } from "../services/otpService";
+import { resolveCountry, extractClientIp } from "../services/geoService";
 
 export async function registerCarrier(req: Request, res: Response) {
   try {
@@ -44,6 +46,14 @@ export async function registerCarrier(req: Request, res: Response) {
     }
   }
 
+  // v3.8.aje — Capture registration country via offline geoip-lite
+  // BEFORE the prisma.user.create so we can persist it on CarrierProfile
+  // in the same write. Raw IP is also captured for hashing inside
+  // buildFingerprint (chameleon detection) below. extractClientIp
+  // accounts for Render's `trust proxy` setting at server.ts:35.
+  const registrationIp = extractClientIp(req);
+  const registrationCountry = resolveCountry(registrationIp);
+
   const passwordHash = await bcrypt.hash(data.password, 12);
   const user = await prisma.user.create({
     data: {
@@ -61,6 +71,10 @@ export async function registerCarrier(req: Request, res: Response) {
           equipmentTypes: data.equipmentTypes,
           operatingRegions: data.operatingRegions,
           onboardingStatus: "PENDING",
+          // v3.8.aje — Resolved country from registration IP (geoip-lite).
+          // Compared against User.emailVerifiedFromCountry at verify-click
+          // time to surface country-jump fraud signals in the AE drawer.
+          registrationCountry: registrationCountry,
           // Contact + address (for compliance fingerprinting)
           contactName: `${data.firstName} ${data.lastName}`,
           contactPhone: data.phone,
@@ -228,6 +242,20 @@ export async function registerCarrier(req: Request, res: Response) {
     `)
   ).catch((e) => log.error({ err: e }, "[Registration Email] Error:"));
 
+  // 1.5. v3.8.aje — Send email verification link.
+  // Mint a 24h `VERIFY:<token>` row in OtpCode + email the carrier a
+  // click link. The link lands at /carrier/verify-email?token=... where
+  // the frontend POSTs to /api/carrier-auth/verify-email — backend
+  // captures the click IP + resolves country via geoip-lite for the
+  // country-jump fraud signal. Fire-and-forget per the rest of the
+  // post-registration chain.
+  createEmailVerificationToken(user.id)
+    .then((token) => {
+      const verifyUrl = `https://silkroutelogistics.ai/carrier/verify-email?token=${token}`;
+      return sendEmailVerificationEmail(data.email, data.firstName, verifyUrl);
+    })
+    .catch((e) => log.error({ err: e }, "[Email Verification] Send error:"));
+
   // 2. Notify all ADMIN users about the new application
   prisma.user.findMany({ where: { role: "ADMIN" } }).then((admins) => {
     if (admins.length === 0) return;
@@ -296,8 +324,25 @@ export async function registerCarrier(req: Request, res: Response) {
   // 4. Auto-trigger Compass vetting (background)
   if (dot) {
     vetAndStoreReport(dot, profileId, mc, "AUTO_REGISTRATION").then(async (report) => {
-      // Auto-approve A-grade carriers (score >= 90, no instant-fail flags)
+      // Auto-approve A-grade carriers (score >= 90, no instant-fail flags).
+      // v3.8.aje — Additional gate: email must be verified before auto-approve
+      // fires. Compass A-grade without email proof still surfaces in the AE
+      // queue (status stays PENDING) — AE manual approval has its own
+      // discretion; the auto-path is held until the carrier proves inbox
+      // control. Re-checked here via fresh DB read in case the carrier
+      // verified between registration and Compass returning.
       if (report.grade === "A" && report.recommendation === "APPROVE" && profileId) {
+        const freshUser = await prisma.user.findUnique({
+          where: { id: user.id },
+          select: { emailVerifiedAt: true },
+        });
+        if (!freshUser?.emailVerifiedAt) {
+          log.info(
+            { userId: user.id, profileId },
+            "[Compass Auto-Approve] Held — email not yet verified; carrier stays PENDING for AE review.",
+          );
+          return;
+        }
         try {
           await prisma.carrierProfile.update({
             where: { id: profileId },
