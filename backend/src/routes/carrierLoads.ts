@@ -459,14 +459,40 @@ router.post("/:id/documents", upload.single("file"), async (req: AuthRequest, re
 
   // If it's a POD, update the load
   if (docType === "POD") {
+    // v3.8.ajt B3 — POD upload at AT_DELIVERY OR DELIVERED advances to
+    // POD_RECEIVED. Pre-ajt only flipped from DELIVERED, but most carriers
+    // upload POD immediately at delivery before manually marking DELIVERED
+    // in the portal (the POD upload IS their proof of delivery). Result:
+    // the load stayed at AT_DELIVERY with a POD uploaded but no status
+    // signal that the delivery was complete. AT_DELIVERY + LOADED + DELIVERED
+    // all now advance to POD_RECEIVED on POD upload; earlier statuses
+    // (BOOKED/DISPATCHED/AT_PICKUP/IN_TRANSIT) stay unchanged — uploading
+    // POD when you haven't reached the destination is likely an error and
+    // we shouldn't auto-advance through the pipeline.
+    const podAdvancingStatuses = ["AT_DELIVERY", "DELIVERED", "LOADED"];
+    const newStatus = podAdvancingStatuses.includes(load.status) ? "POD_RECEIVED" : load.status;
     await prisma.load.update({
       where: { id: load.id },
       data: {
         podUrl: fileUrl,
         podReceivedAt: new Date(),
-        status: load.status === "DELIVERED" ? "POD_RECEIVED" : load.status,
+        status: newStatus,
       },
     });
+
+    // v3.8.ajt B2 — Trigger autoGenerateInvoice when POD upload advances
+    // the load to POD_RECEIVED. The autoGenerateInvoice service has
+    // existed since pre-ajt but was never called from the POD upload
+    // path — the audit caught it. Fire-and-forget; non-blocking so POD
+    // upload response stays fast. Invoice creation is idempotent
+    // (autoGenerateInvoice checks for existing invoice on this load
+    // before creating).
+    if (newStatus === "POD_RECEIVED") {
+      const { autoGenerateInvoice } = require("../services/invoiceService");
+      autoGenerateInvoice(load.id).catch((e: unknown) =>
+        log.error({ err: e, loadId: load.id }, "[POD Upload] autoGenerateInvoice failed (non-fatal)"),
+      );
+    }
 
     // Notify broker
     if (load.posterId) {

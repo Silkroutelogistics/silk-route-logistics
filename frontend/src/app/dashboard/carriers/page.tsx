@@ -363,9 +363,15 @@ export default function CarrierPoolPage() {
     },
   });
 
+  // v3.8.ajt B5 — Route AE approve action to the new dedicated endpoint
+  // that fires a carrier-facing approval email + in-app notification +
+  // dedicated AuditAction.APPROVE row. Reject path uses RejectCarrierModal
+  // (v3.8.ajk) so this mutation only handles APPROVE now.
   const verifyCarrier = useMutation({
     mutationFn: ({ id, status }: { id: string; status: string }) =>
-      api.post(`/carrier/verify/${id}`, { status }),
+      status === "APPROVED"
+        ? api.post(`/carriers/${id}/approve`, {})
+        : api.post(`/carrier/verify/${id}`, { status }), // legacy fallback for any other path
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["carrier-all"] }),
   });
 

@@ -511,6 +511,31 @@ router.post("/:id/reject", authorize("ADMIN", "CEO"), validateBody(rejectCarrier
   }
 });
 
+// v3.8.ajt B5 — Dedicated AE approval endpoint. Replaces the generic
+// PUT /:id { onboardingStatus: APPROVED } path which (a) didn't fire a
+// carrier-facing approval email, (b) didn't write a dedicated
+// AuditAction.APPROVE row, (c) had no notification fan-out. Service
+// layer at approvalService.ts handles atomic update + email + in-app
+// notification + legacy isVerified field sync.
+const approveCarrierSchema = z.object({
+  note: z.string().max(2000).optional(),
+});
+router.post("/:id/approve", authorize("ADMIN", "CEO"), validateBody(approveCarrierSchema), auditLog("APPROVE", "Carrier"), async (req: AuthRequest, res: Response) => {
+  try {
+    const { approveCarrier } = require("../services/approvalService");
+    const updated = await approveCarrier({
+      carrierId: req.params.id,
+      approvedById: req.user!.id,
+      note: req.body.note,
+    });
+    res.json({ carrier: updated });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : "Failed to approve carrier";
+    const status = msg === "Carrier not found" ? 404 : 400;
+    res.status(status).json({ error: msg });
+  }
+});
+
 // v3.8.ajn — Lift a rejection. Clears all 5 rejection fields + the ajm
 // reminder dedup + flips REJECTED → REVIEWING. Carrier is notified.
 const liftRejectionSchema = z.object({

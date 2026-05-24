@@ -142,6 +142,21 @@ export async function sendRateConfirmation(req: AuthRequest, res: Response) {
     data: { status: "SENT", sentAt: new Date(), sentToEmail: recipientEmail },
   });
 
+  // v3.8.ajt B1 — Wire Load.rateConfirmationPdfUrl on send.
+  // Pre-ajt the schema field existed but was NEVER populated by any write
+  // path, so the carrier-portal RC download link at /carrier/dashboard/
+  // my-loads gated on this field was invisible despite the endpoint
+  // existing. The link points at the existing authenticated GET endpoint
+  // at routes/rateConfirmations.ts; carrier's httpOnly cookie auths it
+  // automatically when the link is clicked from the portal.
+  //
+  // §13.3 Item 170 closed by this change — the endpoint was shipped in
+  // v3.8.aji-era work but the carrier could never reach it.
+  await prisma.load.update({
+    where: { id: rc.loadId },
+    data: { rateConfirmationPdfUrl: `/api/rate-confirmations/${rc.id}/pdf` },
+  });
+
   res.json({ success: true, message: "Rate confirmation sent successfully" });
 }
 
