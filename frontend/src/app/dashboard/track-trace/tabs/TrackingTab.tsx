@@ -116,10 +116,18 @@ export function TrackingTab({ load }: { load: any }) {
         </ol>
       </div>
 
-      {/* Shipper link */}
+      {/* Shipper link — v3.8.aju B4 fix.
+          Pre-aju this displayed `track.silkroutelogistics.ai/s/{token}` which
+          (a) wrong subdomain (track.* doesn't exist; canonical is the apex)
+          and (b) wrong path pattern (`/s/` doesn't match the `_redirects`
+          rule `/track/* /track.html 200`). Canonical URL pattern matches
+          what shipperLoadNotifyService.ts:48 generates for emails +
+          QR codes printed on the BOL PDF: silkroutelogistics.ai/track/{token}.
+          The static /track.html page reads window.location.pathname at
+          load time and fetches /api/tracking/:token. */}
       {token && (
         <div className="p-3 border border-[#FAEEDA] bg-[#FAEEDA]/30 rounded-lg text-xs text-[#BA7517]">
-          Shipper tracking: <code>track.silkroutelogistics.ai/s/{token.token}</code>
+          Shipper tracking: <code>silkroutelogistics.ai/track/{token.token}</code>
           {load.bolNumber && <> · BOL-{load.bolNumber}</>}
         </div>
       )}
