@@ -170,18 +170,23 @@ router.post("/verify-otp", otpVerifyLimiter, validateBody(carrierOtpSchema), asy
     return;
   }
 
-  // Block login if carrier is not approved
+  // v3.8.ajd Sprint 1 — non-APPROVED carriers MAY log in now.
+  // Frontend routes them to /carrier/dashboard/application-status which
+  // renders state-specific content (review status, info requests, rejection
+  // reason + reapply date, suspension notice). Full dashboard access stays
+  // gated to APPROVED carriers — enforced by the layout-level redirect
+  // for non-APPROVED status AND by per-route APPROVED checks at
+  // carrierLoads.ts:31/169 and elsewhere that already key off APPROVED.
+  // The login response carries onboardingStatus so the frontend can
+  // route the user immediately after OTP success.
   const profile = user.carrierProfile!;
-  if (profile.onboardingStatus !== "APPROVED") {
-    const statusMessages: Record<string, string> = {
-      PENDING: "Your application is under review. You will be notified once approved.",
-      DOCUMENTS_SUBMITTED: "Your documents are being reviewed. You will be notified once approved.",
-      UNDER_REVIEW: "Your application is under review. You will be notified once approved.",
-      REJECTED: "Your carrier application has been rejected. Contact support for more information.",
-      SUSPENDED: "Your carrier account has been suspended. Contact support for more information.",
-    };
+  if (profile.onboardingStatus === "SUSPENDED") {
+    // SUSPENDED is the one terminal state where we still block login —
+    // a suspended carrier should contact compliance@, not poke around
+    // the portal. PENDING/REVIEWING/INFO_REQUESTED/REJECTED all let
+    // the carrier in so they can see status or rejection reason.
     res.status(403).json({
-      error: statusMessages[profile.onboardingStatus] || "Your account is not yet approved for access.",
+      error: "Your carrier account has been suspended. Contact compliance@silkroutelogistics.ai for assistance.",
       onboardingStatus: profile.onboardingStatus,
     });
     return;
@@ -260,10 +265,13 @@ router.post("/totp-verify", otpVerifyLimiter, validateBody(carrierTotpSchema), a
     return;
   }
 
-  // Block login if carrier is not approved
-  if (user.carrierProfile.onboardingStatus !== "APPROVED") {
+  // v3.8.ajd Sprint 1 — TOTP path mirrors the OTP path's allow-with-status
+  // semantic. SUSPENDED is the only state that still hard-blocks login;
+  // PENDING/REVIEWING/INFO_REQUESTED/REJECTED route to the application
+  // status page after JWT issuance.
+  if (user.carrierProfile.onboardingStatus === "SUSPENDED") {
     res.status(403).json({
-      error: "Your account is not yet approved for access.",
+      error: "Your carrier account has been suspended. Contact compliance@silkroutelogistics.ai for assistance.",
       onboardingStatus: user.carrierProfile.onboardingStatus,
     });
     return;
@@ -416,6 +424,64 @@ router.get("/me", authenticate, authorize("CARRIER"), async (req: AuthRequest, r
   }
 
   res.json(user);
+});
+
+// v3.8.ajd Sprint 1 — Carrier application status endpoint.
+// Returns state-specific data for /carrier/dashboard/application-status.
+// PENDING / REVIEWING: header context + submittedAt + supportive copy.
+// INFO_REQUESTED: open info requests (v3.8.aje model lands here).
+// APPROVED: approvedAt + cleared-to-operate flag (carrier should rarely
+//   hit this surface — layout routes APPROVED carriers to the regular
+//   dashboard — but kept defensive so a stale browser tab doesn't 404).
+// REJECTED: rejectionReason + reapplyEligibleAt (v3.8.aje fields).
+// SUSPENDED: not reachable here — login is blocked at the OTP/TOTP gate.
+router.get("/application-status", authenticate, authorize("CARRIER"), async (req: AuthRequest, res: Response) => {
+  const user = await prisma.user.findUnique({
+    where: { id: req.user!.id },
+    select: {
+      id: true, email: true, firstName: true, lastName: true, company: true,
+      carrierProfile: {
+        select: {
+          id: true,
+          companyName: true,
+          mcNumber: true,
+          dotNumber: true,
+          onboardingStatus: true,
+          createdAt: true,
+          approvedAt: true,
+        },
+      },
+    },
+  });
+
+  if (!user || !user.carrierProfile) {
+    res.status(404).json({ error: "Carrier profile not found" });
+    return;
+  }
+
+  const profile = user.carrierProfile;
+  res.json({
+    user: {
+      id: user.id,
+      email: user.email,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      company: user.company,
+    },
+    carrier: {
+      id: profile.id,
+      companyName: profile.companyName,
+      mcNumber: profile.mcNumber,
+      dotNumber: profile.dotNumber,
+    },
+    onboardingStatus: profile.onboardingStatus,
+    submittedAt: profile.createdAt,
+    approvedAt: profile.approvedAt,
+    // INFO_REQUESTED.infoRequests + REJECTED.rejectionReason/reapplyEligibleAt
+    // wire in here in v3.8.aje once the schema lands. Keep the endpoint
+    // shape stable so the frontend status page can add per-state sections
+    // without contract churn.
+  });
 });
 
 export default router;

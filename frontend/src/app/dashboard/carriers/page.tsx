@@ -159,12 +159,16 @@ const TIER_COLORS: Record<string, string> = {
   NONE: "bg-gray-100 text-slate-500 border-gray-200",
 };
 
+// v3.8.ajd Sprint 1 — 6-state lifecycle.
+// REVIEWING merges legacy DOCUMENTS_SUBMITTED + UNDER_REVIEW.
+// INFO_REQUESTED added for v3.8.aje workflow.
 const STATUS_COLORS: Record<string, string> = {
   PENDING: "bg-yellow-500/20 text-yellow-400",
-  DOCUMENTS_SUBMITTED: "bg-blue-500/20 text-blue-400",
-  UNDER_REVIEW: "bg-purple-500/20 text-purple-400",
+  REVIEWING: "bg-blue-500/20 text-blue-400",
+  INFO_REQUESTED: "bg-amber-500/20 text-amber-400",
   APPROVED: "bg-green-500/20 text-green-400",
   REJECTED: "bg-red-500/20 text-red-400",
+  SUSPENDED: "bg-gray-500/20 text-gray-400",
 };
 
 function StatCard({ icon, label, value, sub }: { icon: React.ReactNode; label: string; value: string | number; sub?: string }) {
@@ -597,7 +601,7 @@ export default function CarrierPoolPage() {
         <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}
           className="px-3 py-2 bg-gray-100 border border-gray-200 rounded-lg text-sm text-slate-700">
           <option value="" className="bg-[#0F1117] text-white">All Statuses</option>
-          {["PENDING", "DOCUMENTS_SUBMITTED", "UNDER_REVIEW", "APPROVED", "REJECTED"].map((s) => (
+          {["PENDING", "REVIEWING", "INFO_REQUESTED", "APPROVED", "REJECTED", "SUSPENDED"].map((s) => (
             <option key={s} value={s} className="bg-[#0F1117] text-white">{s.replace(/_/g, " ")}</option>
           ))}
         </select>

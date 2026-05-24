@@ -46,7 +46,10 @@ const updateCarrierSchema = z.object({
   safetyScore: z.number().min(0).max(100).optional(),
   tier: z.enum(["PLATINUM", "GOLD", "SILVER", "GUEST", "NONE"]).optional(),
   status: z.enum(["NEW", "REVIEW", "APPROVED", "REJECTED", "SUSPENDED"]).optional(),
-  onboardingStatus: z.enum(["PENDING", "DOCUMENTS_SUBMITTED", "UNDER_REVIEW", "APPROVED", "REJECTED", "SUSPENDED"]).optional(),
+  // v3.8.ajd Sprint 1 — 6-state lifecycle.
+  // REVIEWING merges legacy DOCUMENTS_SUBMITTED + UNDER_REVIEW.
+  // INFO_REQUESTED added for v3.8.aje workflow.
+  onboardingStatus: z.enum(["PENDING", "REVIEWING", "INFO_REQUESTED", "APPROVED", "REJECTED", "SUSPENDED"]).optional(),
   insuranceExpiry: z.string().optional(),
   equipmentTypes: z.array(z.string()).optional(),
   operatingRegions: z.array(z.string()).optional(),
@@ -462,7 +465,7 @@ router.post(
             contactEmail: data.email || null,
             equipmentTypes: [],
             operatingRegions: [],
-            onboardingStatus: "UNDER_REVIEW",
+            onboardingStatus: "REVIEWING",
             status: "REVIEW",
             tier: "GUEST",
             cppTier: "GUEST",

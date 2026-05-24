@@ -91,9 +91,19 @@ enum QuickPayStatus {
 }
 
 enum OnboardingStatus {
+  // v3.8.ajd Sprint 1 — 6-state carrier onboarding lifecycle.
+  // PENDING: submission received, awaiting AE pickup.
+  // REVIEWING: AE actively reviewing (merges legacy DOCUMENTS_SUBMITTED + UNDER_REVIEW).
+  // INFO_REQUESTED: AE has requested additional info from the carrier;
+  //   ball is in carrier's court. v3.8.aje workflow lands here.
+  // APPROVED: cleared to operate. Only state that opens carrier portal fully.
+  // REJECTED: rejected with reason; reapply gated by reapplyEligibleAt.
+  // SUSPENDED: post-approval account action by AE/cron.
+  // Customer (shipper) side reuses PENDING + APPROVED + REJECTED + SUSPENDED;
+  // REVIEWING + INFO_REQUESTED are carrier-only in current usage.
   PENDING
-  DOCUMENTS_SUBMITTED
-  UNDER_REVIEW
+  REVIEWING
+  INFO_REQUESTED
   APPROVED
   REJECTED
   SUSPENDED

@@ -9847,7 +9847,54 @@
 //              CI-parity (backend tsc clean).
 //
 //              Patterns emerged: none.
-export const SRL_VERSION = "3.8.ajc";
+// v3.8.ajd — Sprint 1 of carrier onboarding lifecycle epic.
+//            6-state OnboardingStatus migration (PENDING +
+//            REVIEWING + INFO_REQUESTED + APPROVED + REJECTED
+//            + SUSPENDED; merges legacy DOCUMENTS_SUBMITTED +
+//            UNDER_REVIEW into single REVIEWING state, adds
+//            INFO_REQUESTED for v3.8.aje workflow). Carrier
+//            login refactored — non-APPROVED carriers may log
+//            in and land on new /carrier/dashboard/application
+//            -status page (state-specific copy per onboarding
+//            stage); SUSPENDED remains the only hard-block at
+//            OTP/TOTP gates. Carrier dashboard layout hides
+//            sidebar + search + notifications + Marco Polo for
+//            non-APPROVED carriers and routes them to the
+//            status page; routes APPROVED-on-status-page back
+//            to the dashboard. New GET /carrier-auth/applica
+//            tion-status endpoint returns header context +
+//            submittedAt + approvedAt with stable shape for
+//            v3.8.aje to extend with InfoRequest list +
+//            rejection reason + reapply date. AE-side Tab
+//            filter on /dashboard/carriers updated to new
+//            enum; STATUS_COLORS palette extended.
+//
+//            Manual Prisma migration per §2.2 (enum-swap
+//            pattern: drop defaults → cast both carrier_pro
+//            files and customers columns with CASE remapping
+//            → drop old enum → rename new → restore PENDING
+//            default). Customer.onboardingStatus column rides
+//            through unchanged (shipper side never used the
+//            two retired values).
+//
+//            Patterns applied: §3.3 atomic single-sprint
+//            ship (state machine + login + status page in
+//            one commit; v3.8.aje for InfoRequest workflow);
+//            §3.5 audit-first (verified 27 backend + 16
+//            frontend consumers before migration design);
+//            §2.2 manual migration; §19 Pattern 7 design-
+//            system conformance (status palette extended to
+//            new 6 states); §19 Sub-pattern 11 CI-parity
+//            (backend tsc + frontend tsc + next build all
+//            clean pre-push); §A.1 state machine canonical.
+//
+//            Patterns emerged: none — sub-pattern 8 visual-
+//            verification gate not applicable; non-APPROVED
+//            carriers cannot reach the status page in this
+//            session (no PENDING fixture in seed) so visual
+//            smoke deferred to next session when a PENDING
+//            carrier exists in prod.
+export const SRL_VERSION = "3.8.ajd";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

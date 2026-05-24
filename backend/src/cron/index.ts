@@ -346,7 +346,9 @@ export function initCronJobs() {
       const { runIdentityCheck } = require("../services/identityVerificationService");
       const pendingCarriers = await prisma.carrierProfile.findMany({
         where: {
-          onboardingStatus: { in: ["PENDING", "UNDER_REVIEW", "DOCUMENTS_SUBMITTED"] },
+          // v3.8.ajd Sprint 1 — REVIEWING merges legacy DOCUMENTS_SUBMITTED + UNDER_REVIEW.
+          // INFO_REQUESTED carriers are mid-conversation with AE; identity already validated.
+          onboardingStatus: { in: ["PENDING", "REVIEWING"] },
           deletedAt: null,
         },
         select: { id: true },
