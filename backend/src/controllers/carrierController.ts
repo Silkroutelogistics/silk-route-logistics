@@ -264,6 +264,24 @@ export async function registerCarrier(req: Request, res: Response) {
           </div>
         `)
       ).catch((e) => log.error({ err: e }, `[Admin Notify] Error emailing ${admin.email}:`));
+
+      // v3.8.ajc — In-app notification for the NotificationBell.
+      // Previously admin-side only fired email; the bell at
+      // CeoOverview header polled /api/notifications/unread-count
+      // but never incremented for new carrier registrations because
+      // no Notification row was created server-side. This closes
+      // the gap: every admin now gets both an email + an in-app
+      // notification with a deep-link to /dashboard/carriers
+      // PENDING tab.
+      prisma.notification.create({
+        data: {
+          userId: admin.id,
+          type: "ONBOARDING",
+          title: "New carrier application",
+          message: `${data.company} (DOT: ${dot}) submitted a carrier application — review pending.`,
+          actionUrl: "/dashboard/carriers?status=PENDING",
+        },
+      }).catch((e) => log.error({ err: e }, `[Admin Notify] In-app notification create error for ${admin.email}:`));
     }
   }).catch((e) => log.error({ err: e }, "[Admin Notify] Error fetching admins:"));
 

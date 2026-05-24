@@ -9775,7 +9775,79 @@
 //              while a payload-shape regression sits in the
 //              hot path for many sprints. Banking as an
 //              extension of feedback_visual_smoke_before_push.
-export const SRL_VERSION = "3.8.ajb";
+// v3.8.ajc   — Admin NotificationBell wire-up for new carrier
+//              registrations. Backend-only ~10 LOC change in
+//              registerCarrier controller — after the existing
+//              admin email block, also create a
+//              prisma.notification.create row per admin user
+//              with type=ONBOARDING + deep-link to
+//              /dashboard/carriers?status=PENDING.
+//
+//              Pre-ajc the NotificationBell (CeoOverview header
+//              line 307+804) polled /api/notifications/unread-
+//              count every 30s but NEVER incremented on new
+//              carrier registrations because no Notification
+//              row was created admin-side — only emails fired.
+//              Email was the sole channel. If the admin missed
+//              the email or it landed in a filter, the only
+//              other surfacing was the "Pending Approvals"
+//              count tile on /dashboard/overview (which doesn't
+//              proactively alert).
+//
+//              Post-ajc: admins get THREE redundant signals on
+//              every new application — (1) email to
+//              whaider@silkroutelogistics.ai + any other ADMIN
+//              users, (2) NotificationBell red badge + dropdown
+//              row, (3) "Pending Approvals" count on
+//              /dashboard/overview. Much harder to miss.
+//
+//              SCOPE
+//
+//              ~10 LOC in backend/src/controllers/
+//              carrierController.ts — added after the admin
+//              email block at ~line 268.
+//              No frontend changes (NotificationBell already
+//              polls + renders unread badges).
+//
+//              Pre-commit gates: backend tsc --noEmit clean.
+//              No frontend gates required (no frontend change).
+//
+//              Letter: ajb latest origin/main HEAD; ajc
+//              sequence-continuous on top.
+//
+//              POSSIBLE P1002 ON DEPLOY
+//
+//              No new Prisma migrations in ajc, only a backend
+//              code change. Render deploy will run migrate
+//              deploy as a no-op (5 migrations already applied
+//              from earlier sprints). Low P1002 risk since
+//              there's no concurrent migration writing.
+//
+//              REMAINING ONBOARDING GAPS (banked for brainstorm)
+//
+//              ajc closes 1 of the 4 banked gaps from the
+//              prior walkthrough. The other 3 remain:
+//                - Document review automation (OCR/parse
+//                  W-9/COI/Authority PDFs)
+//                - Carrier-facing application status UI
+//                  (between submit + approve, carrier has no
+//                  portal page showing where they are in the
+//                  pipeline)
+//                - Rejection notification UX (rejection email
+//                  + carrier-portal status page wording)
+//                - DAT load board registration (§16 blocker
+//                  #3)
+//
+//              Brainstorm pending Wasi direction on workflow
+//              shape — full design + atomic ships to follow.
+//
+//              Patterns applied: §3.3 atomic small-surgical
+//              ship; §3.5 audit-first (verified NotificationType
+//              enum value before writing); §19 Sub-pattern 11
+//              CI-parity (backend tsc clean).
+//
+//              Patterns emerged: none.
+export const SRL_VERSION = "3.8.ajc";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
