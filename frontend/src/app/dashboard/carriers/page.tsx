@@ -13,6 +13,7 @@ import {
   MessageCircle,
 } from "lucide-react";
 import { InfoRequestModal } from "@/components/carriers/InfoRequestModal";
+import { InfoRequestThread } from "@/components/carriers/InfoRequestThread";
 
 
 interface CarrierPerformance {
@@ -285,7 +286,7 @@ export default function CarrierPoolPage() {
   const [statusFilter, setStatusFilter] = useState("");
   const [equipFilter, setEquipFilter] = useState("");
   const [selectedCarrierId, setSelectedCarrierId] = useState<string | null>(null);
-  const [panelTab, setPanelTab] = useState<"profile" | "insurance" | "compliance" | "compass" | "inspections" | "performance" | "history" | "documents">("profile");
+  const [panelTab, setPanelTab] = useState<"profile" | "insurance" | "compliance" | "compass" | "inspections" | "performance" | "history" | "documents" | "info-requests">("profile");
   const [editingCarrier, setEditingCarrier] = useState<Carrier | null>(null);
   const [editingTab, setEditingTab] = useState<string | null>(null);
   const [editForm, setEditForm] = useState({
@@ -692,6 +693,9 @@ export default function CarrierPoolPage() {
                 { key: "performance", icon: BarChart3, label: "Perform" },
                 { key: "history", icon: Clock, label: "History" },
                 { key: "documents", icon: FolderOpen, label: "Docs" },
+                // v3.8.ajj — Info Requests thread tab. Unified view of
+                // open + resolved + cancelled requests with attachments.
+                { key: "info-requests", icon: MessageCircle, label: "Info Req" },
               ] as const).map(({ key, icon: Icon, label }) => (
                 <button key={key} onClick={() => { setPanelTab(key); setEditingTab(null); setDocView("list"); setPreviewDoc(null); }} title={label}
                   className="flex flex-col items-center gap-1.5 py-1 transition-all duration-150">
@@ -1503,6 +1507,11 @@ export default function CarrierPoolPage() {
                     </div>
                   );
                 })()}
+
+                {/* ===== v3.8.ajj — INFO REQUESTS THREAD TAB ===== */}
+                {panelTab === "info-requests" && selectedCarrier && (
+                  <InfoRequestThread carrierId={selectedCarrier.id} isAdmin={isAdmin} />
+                )}
 
               </div>
             </div>
