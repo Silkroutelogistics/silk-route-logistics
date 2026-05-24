@@ -9173,7 +9173,142 @@
 //                   → Next button enables.
 //                8. Confirm Password mismatch should block + show
 //                   red border + "Passwords don't match".
-export const SRL_VERSION = "3.8.aix";
+// v3.8.aiy   — Sprint C: brand-register sweep across Steps 1/2/4 +
+//              Card B border. Closes Pattern 7 design-system
+//              conformance gap that v3.8.ain Path 2C never reached
+//              on these surfaces.
+//
+//              Pre-aiy: Step 3 (aiv) + Step 5 Review (ain) had been
+//              swept to brand tokens; Steps 1/2/4 internals still
+//              carried pre-ait border + focus:ring-gold (olive
+//              #C9A84C) + text-slate-* greys + bg-red-50
+//              border-red-500 (Tailwind red) + bg-green-50
+//              border-green-200 (Tailwind green) + text-amber-600
+//              (Tailwind amber for "+ Add Unit/Suite" button).
+//              No P0 functional issues, but visual inconsistency
+//              across steps broke the brand-register continuity
+//              v3.8.ait established.
+//
+//              CHANGES
+//
+//              (1) Step 1 input chrome — replace_all swap on the
+//                  most common input class string (12 occurrences:
+//                  Company Name, Address, City, State, Zip, First,
+//                  Last, Email, Phone, Password, Fleet Size,
+//                  Address inner). All to brand canonical
+//                  border-[#EFE6D3] + focus-ring brand-token.
+//
+//              (2) DOT + MC inputs (conditional cn() classes) —
+//                  targeted edits, validation-state borders
+//                  swapped: border-red-300/400 -> [#9B2C2C],
+//                  border-green-400 -> [#2F7A4F].
+//
+//              (3) Unit/Suite input — targeted (different class
+//                  with text-sm + placeholder:text-gray-400).
+//
+//              (4) "+ Add Unit / Suite #" button — text-amber-600
+//                  hover:text-amber-500 -> text-[#BA7517]
+//                  hover:text-[#C5A572].
+//
+//              (5) Unit label color — text-slate-500 ->
+//                  text-[#6B7685].
+//
+//              (6) Error banner — bg-red-50 border-red-500
+//                  text-red-700 -> bg-[#F6E3E3] border-[#9B2C2C]
+//                  text-[#9B2C2C].
+//
+//              (7) DOT length error text — text-red-500 ->
+//                  text-[#9B2C2C].
+//
+//              (8) FMCSA spinner text — text-slate-500 ->
+//                  text-[#6B7685].
+//
+//              (9) FMCSA result panel — full brand-token swap on
+//                  success + error states (bg + border + icon +
+//                  text colors), out-of-service line, body grid
+//                  text.
+//
+//              (10) "Fields below auto-populated" hint
+//                   text-slate-700 -> text-[#6B7685]; divider
+//                   border-t -> border-t border-[#EFE6D3].
+//
+//              (11) Step 2 Fleet Size input — covered by #1
+//                   replace_all.
+//
+//              (12) Step 4 Terms scroll-pane:
+//                   - Title: font-bold text-slate-800 ->
+//                     font-serif italic font-semibold
+//                     text-[#0A2540].
+//                   - 11 section headings (replace_all):
+//                     font-semibold text-slate-800 ->
+//                     font-semibold text-[#0A2540].
+//                   - "Last updated" footer: text-slate-700 ->
+//                     text-[#6B7685].
+//
+//              (13) Cross-cutting C.6 — Card B "What you'll need"
+//                   outer border default-gray -> border-[#EFE6D3].
+//
+//              NOT TOUCHED (Sprint D scope)
+//
+//              Success screen (lines ~480-560) — 11 P1 items
+//              banked for Sprint D ~50 LOC. Application Summary
+//              cards still bg-slate-50, "What Happens Next"
+//              badges still bg-gold/20 olive on step 2, amber-50
+//              "Typical review time" chip, etc.
+//
+//              SCOPE
+//
+//              ~30 surgical edits across onboarding/page.tsx:
+//              - 1 replace_all (input class, 12 hits)
+//              - 1 replace_all (Step 4 section heading, 11 hits)
+//              - ~14 targeted edits (DOT/MC/Unit + button + hint
+//                + error banner + FMCSA panel + Terms title +
+//                Terms footer + Card B border)
+//
+//              Pre-commit gates: frontend tsc clean; frontend
+//              next build clean (/onboarding 17 kB, no change).
+//
+//              Letter: aix latest origin/main HEAD; aiy
+//              sequence-continuous on top.
+//
+//              P1002 RENDER RETRY MECHANIC
+//
+//              The aix Render deploy hit a Postgres advisory-lock
+//              timeout (P1002) at ~11:01 UTC — Prisma's hardcoded
+//              lock 72707369 was held by a concurrent or stale
+//              migrate process. Same failure class as v3.8.ail
+//              P1002 (resolved by retry).
+//
+//              Diagnostic snapshot at aiy-prep time:
+//                - Backend /api/health: 200, uptime ~23 min
+//                  (consistent with a successful deploy)
+//                - Frontend Cloudflare Pages: aix deployed
+//                - Prisma migrate status: schema up to date,
+//                  5 migrations applied
+//
+//              Pushing aiy naturally retries the deploy. ~30+ min
+//              elapsed since P1002, advisory lock should be
+//              released by Neon's idle connection timeout. aiy
+//              adds no new Prisma migrations (frontend-only),
+//              migrate deploy step is a no-op — minimal lock
+//              contention risk.
+//
+//              Patterns applied: section 3.5 audit-first (the
+//              comprehensive Steps 1-5 audit identified this
+//              sweep as Sprint C); section 3.3 atomic single-file
+//              ship + CLAUDE.md docs row; section 3.2 visual
+//              smoke walkthrough pre-push; section 19 Pattern 7
+//              design-system conformance; section 19 Sub-pattern
+//              11 CI-parity verification.
+//
+//              Patterns emerged: P1002-advisory-lock-retry-via-
+//              next-push as a self-healing pattern — when a
+//              deploy fails on Prisma lock contention, the
+//              NEXT push (even if frontend-only) acts as the
+//              retry mechanism. No special tooling needed.
+//              Banked methodology observation for future P1002
+//              incidents.
+export const SRL_VERSION = "3.8.aiy";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

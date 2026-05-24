@@ -660,8 +660,10 @@ export default function OnboardingPage() {
               </p>
             </div>
 
-            {/* Card B — What you'll need (white) */}
-            <div className="bg-white rounded-2xl shadow-sm border p-6 mb-5">
+            {/* Card B — What you'll need (white)
+                v3.8.aiy — outer border swapped from default gray to
+                brand cream-2 to match the Step 0 cream-2 register. */}
+            <div className="bg-white rounded-2xl shadow-sm border border-[#EFE6D3] p-6 mb-5">
               <h3 className="text-lg font-semibold text-[#0A2540] mb-4">What you&apos;ll need</h3>
               <div className="grid sm:grid-cols-2 gap-x-6 gap-y-3 mb-4">
                 {[
@@ -713,7 +715,7 @@ export default function OnboardingPage() {
             matching the Caravan Partner Program / commitment-card-flip
             register on /carriers. */}
         <div className="bg-white border-t-2 border-[#BA7517] rounded-2xl shadow-sm border-l border-r border-b border-[#EFE6D3] p-8">
-          {error && <div className="mb-6 p-4 bg-red-50 border-l-4 border-red-500 text-red-700 rounded-lg text-sm">{error}</div>}
+          {error && <div className="mb-6 p-4 bg-[#F6E3E3] border-l-4 border-[#9B2C2C] text-[#9B2C2C] rounded-lg text-sm">{error}</div>}
 
           {/* Step 0: Company Info */}
           {step === 0 && (
@@ -734,15 +736,15 @@ export default function OnboardingPage() {
               <div className="grid sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-[#0A2540] mb-1">DOT Number *</label>
-                  <input value={form.dotNumber} onChange={(e) => { const v = e.target.value.replace(/\D/g, ""); set("dotNumber", v); lookupFmcsa(v); }} className={cn("w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-gold outline-none", form.dotNumber && form.dotNumber.length < 5 ? "border-red-300" : fmcsaResult?.verified ? "border-green-400" : fmcsaResult && !fmcsaResult.verified ? "border-red-400" : "")} placeholder="e.g. 1234567" />
+                  <input value={form.dotNumber} onChange={(e) => { const v = e.target.value.replace(/\D/g, ""); set("dotNumber", v); lookupFmcsa(v); }} className={cn("w-full px-3 py-2 bg-white border rounded-lg text-sm text-[#0A2540] focus:ring-2 outline-none transition placeholder:text-[#A7AEB8]", form.dotNumber && form.dotNumber.length < 5 ? "border-[#9B2C2C] focus:ring-[#9B2C2C]/15" : fmcsaResult?.verified ? "border-[#2F7A4F] focus:ring-[#2F7A4F]/15" : fmcsaResult && !fmcsaResult.verified ? "border-[#9B2C2C] focus:ring-[#9B2C2C]/15" : "border-[#EFE6D3] focus:border-[#BA7517] focus:ring-[#BA7517]/15")} placeholder="e.g. 1234567" />
                   {form.dotNumber && form.dotNumber.length < 5 && (
-                    <p className="text-xs text-red-500 mt-1">DOT number must be at least 5 digits</p>
+                    <p className="text-xs text-[#9B2C2C] mt-1">DOT number must be at least 5 digits</p>
                   )}
-                  {fmcsaLoading && <p className="text-xs text-slate-500 mt-1 animate-pulse">Verifying with FMCSA...</p>}
+                  {fmcsaLoading && <p className="text-xs text-[#6B7685] mt-1 animate-pulse">Verifying with FMCSA...</p>}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-[#0A2540] mb-1">MC Number *</label>
-                  <input value={form.mcNumber} onChange={(e) => { set("mcNumber", e.target.value); lookupByMc(e.target.value); }} className={cn("w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-gold outline-none", fmcsaResult?.verified && form.mcNumber ? "border-green-400" : "")} placeholder="MC-156588" />
+                  <input value={form.mcNumber} onChange={(e) => { set("mcNumber", e.target.value); lookupByMc(e.target.value); }} className={cn("w-full px-3 py-2 bg-white border rounded-lg text-sm text-[#0A2540] focus:ring-2 outline-none transition placeholder:text-[#A7AEB8]", fmcsaResult?.verified && form.mcNumber ? "border-[#2F7A4F] focus:ring-[#2F7A4F]/15" : "border-[#EFE6D3] focus:border-[#BA7517] focus:ring-[#BA7517]/15")} placeholder="MC-156588" />
                 </div>
                 {/* v3.8.air — EIN input removed (W-9 PDF is the canonical
                     Federal Tax ID source). Form-state field `ein` retained
@@ -751,19 +753,19 @@ export default function OnboardingPage() {
 
               {/* FMCSA Verification Result — shown immediately after DOT/MC */}
               {fmcsaResult && (
-                <div className={cn("p-4 rounded-lg border text-sm", fmcsaResult.verified ? "bg-green-50 border-green-200" : "bg-red-50 border-red-200")}>
+                <div className={cn("p-4 rounded-lg border text-sm", fmcsaResult.verified ? "bg-[#E6F0E9] border-[#2F7A4F]/40" : "bg-[#F6E3E3] border-[#9B2C2C]/40")}>
                   <div className="flex items-center gap-2 mb-2">
                     {fmcsaResult.verified ? (
-                      <CheckCircle2 className="w-5 h-5 text-green-600" />
+                      <CheckCircle2 className="w-5 h-5 text-[#2F7A4F]" />
                     ) : (
-                      <div className="w-5 h-5 rounded-full bg-red-500 flex items-center justify-center text-[#FBF7F0] text-xs font-bold">!</div>
+                      <div className="w-5 h-5 rounded-full bg-[#9B2C2C] flex items-center justify-center text-[#FBF7F0] text-xs font-bold">!</div>
                     )}
-                    <span className={cn("font-semibold", fmcsaResult.verified ? "text-green-800" : "text-red-800")}>
+                    <span className={cn("font-semibold", fmcsaResult.verified ? "text-[#2F7A4F]" : "text-[#9B2C2C]")}>
                       {fmcsaResult.verified ? "FMCSA Verified — Authority Active" : fmcsaResult.errors.length > 0 ? "Carrier Not Found in FMCSA" : "Authority Not Active"}
                     </span>
                   </div>
                   {fmcsaResult.legalName && (
-                    <div className="grid sm:grid-cols-2 gap-x-6 gap-y-1 ml-7 text-slate-700">
+                    <div className="grid sm:grid-cols-2 gap-x-6 gap-y-1 ml-7 text-[#3A4A5F]">
                       <p><span className="font-medium">Legal Name:</span> {fmcsaResult.legalName}</p>
                       {fmcsaResult.dbaName && <p><span className="font-medium">DBA:</span> {fmcsaResult.dbaName}</p>}
                       {fmcsaResult.mcNumber && <p><span className="font-medium">MC#:</span> {fmcsaResult.mcNumber}</p>}
@@ -777,20 +779,20 @@ export default function OnboardingPage() {
                     </div>
                   )}
                   {!fmcsaResult.verified && fmcsaResult.outOfServiceDate && (
-                    <p className="ml-7 text-red-700 font-medium mt-1">Out of Service: {fmcsaResult.outOfServiceDate}</p>
+                    <p className="ml-7 text-[#9B2C2C] font-medium mt-1">Out of Service: {fmcsaResult.outOfServiceDate}</p>
                   )}
                 </div>
               )}
 
               {/* Divider */}
-              <div className="border-t pt-5">
-                <p className="text-xs text-slate-700 mb-4">{fmcsaResult?.verified ? "Fields below have been auto-populated from FMCSA. You may edit if needed." : "Fill in your company details below."}</p>
+              <div className="border-t border-[#EFE6D3] pt-5">
+                <p className="text-xs text-[#6B7685] mb-4">{fmcsaResult?.verified ? "Fields below have been auto-populated from FMCSA. You may edit if needed." : "Fill in your company details below."}</p>
               </div>
 
               {/* Company details — auto-populated from FMCSA */}
               <div>
                 <label className="block text-sm font-medium text-[#0A2540] mb-1">Company Name *</label>
-                <input value={form.company} onChange={(e) => set("company", e.target.value)} className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-gold outline-none" />
+                <input value={form.company} onChange={(e) => set("company", e.target.value)} className="w-full px-3 py-2 bg-white border border-[#EFE6D3] rounded-lg text-sm text-[#0A2540] focus:border-[#BA7517] focus:ring-2 focus:ring-[#BA7517]/15 outline-none transition placeholder:text-[#A7AEB8]" />
               </div>
               <div>
                 <label className="block text-sm font-medium text-[#0A2540] mb-1">Address</label>
@@ -805,21 +807,21 @@ export default function OnboardingPage() {
                     if (addr.unit) { set("unit", addr.unit); setShowUnit(true); }
                   }}
                   placeholder="Start typing an address..."
-                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-gold outline-none"
+                  className="w-full px-3 py-2 bg-white border border-[#EFE6D3] rounded-lg text-sm text-[#0A2540] focus:border-[#BA7517] focus:ring-2 focus:ring-[#BA7517]/15 outline-none transition placeholder:text-[#A7AEB8]"
                 />
                 {(showUnit || form.unit) ? (
                   <div className="mt-2">
-                    <label className="block text-xs font-medium text-slate-500 mb-1">Unit / Suite #</label>
+                    <label className="block text-xs font-medium text-[#6B7685] mb-1">Unit / Suite #</label>
                     <input
                       value={form.unit}
                       onChange={(e) => set("unit", e.target.value)}
                       placeholder="e.g. Suite 200, Unit 4B, Apt 12"
-                      className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-gold outline-none placeholder:text-gray-400"
+                      className="w-full px-3 py-2 bg-white border border-[#EFE6D3] rounded-lg text-sm text-[#0A2540] focus:border-[#BA7517] focus:ring-2 focus:ring-[#BA7517]/15 outline-none transition placeholder:text-[#A7AEB8]"
                     />
                   </div>
                 ) : (
                   <button type="button" onClick={() => setShowUnit(true)}
-                    className="mt-1.5 text-xs text-amber-600 hover:text-amber-500 font-medium">
+                    className="mt-1.5 text-xs text-[#BA7517] hover:text-[#C5A572] font-medium transition">
                     + Add Unit / Suite #
                   </button>
                 )}
@@ -827,15 +829,15 @@ export default function OnboardingPage() {
               <div className="grid sm:grid-cols-3 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-[#0A2540] mb-1">City</label>
-                  <input value={form.city} onChange={(e) => set("city", e.target.value)} className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-gold outline-none" />
+                  <input value={form.city} onChange={(e) => set("city", e.target.value)} className="w-full px-3 py-2 bg-white border border-[#EFE6D3] rounded-lg text-sm text-[#0A2540] focus:border-[#BA7517] focus:ring-2 focus:ring-[#BA7517]/15 outline-none transition placeholder:text-[#A7AEB8]" />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-[#0A2540] mb-1">State / Province</label>
-                  <input value={form.state} onChange={(e) => set("state", e.target.value)} className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-gold outline-none" placeholder="ON / IL / etc." />
+                  <input value={form.state} onChange={(e) => set("state", e.target.value)} className="w-full px-3 py-2 bg-white border border-[#EFE6D3] rounded-lg text-sm text-[#0A2540] focus:border-[#BA7517] focus:ring-2 focus:ring-[#BA7517]/15 outline-none transition placeholder:text-[#A7AEB8]" placeholder="ON / IL / etc." />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-[#0A2540] mb-1">ZIP / Postal Code</label>
-                  <input value={form.zip} onChange={(e) => set("zip", e.target.value)} className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-gold outline-none" />
+                  <input value={form.zip} onChange={(e) => set("zip", e.target.value)} className="w-full px-3 py-2 bg-white border border-[#EFE6D3] rounded-lg text-sm text-[#0A2540] focus:border-[#BA7517] focus:ring-2 focus:ring-[#BA7517]/15 outline-none transition placeholder:text-[#A7AEB8]" />
                 </div>
               </div>
 
@@ -843,11 +845,11 @@ export default function OnboardingPage() {
               <div className="grid sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-[#0A2540] mb-1">First Name *</label>
-                  <input value={form.firstName} onChange={(e) => set("firstName", e.target.value)} className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-gold outline-none" />
+                  <input value={form.firstName} onChange={(e) => set("firstName", e.target.value)} className="w-full px-3 py-2 bg-white border border-[#EFE6D3] rounded-lg text-sm text-[#0A2540] focus:border-[#BA7517] focus:ring-2 focus:ring-[#BA7517]/15 outline-none transition placeholder:text-[#A7AEB8]" />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-[#0A2540] mb-1">Last Name *</label>
-                  <input value={form.lastName} onChange={(e) => set("lastName", e.target.value)} className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-gold outline-none" />
+                  <input value={form.lastName} onChange={(e) => set("lastName", e.target.value)} className="w-full px-3 py-2 bg-white border border-[#EFE6D3] rounded-lg text-sm text-[#0A2540] focus:border-[#BA7517] focus:ring-2 focus:ring-[#BA7517]/15 outline-none transition placeholder:text-[#A7AEB8]" />
                 </div>
               </div>
               {/* v3.8.ait — Email + Phone paired as contact details
@@ -860,14 +862,14 @@ export default function OnboardingPage() {
               <div className="grid sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-[#0A2540] mb-1">Email *</label>
-                  <input type="email" value={form.email} onChange={(e) => set("email", e.target.value)} className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-gold outline-none" autoComplete="off" name="carrier-registration-email" />
+                  <input type="email" value={form.email} onChange={(e) => set("email", e.target.value)} className="w-full px-3 py-2 bg-white border border-[#EFE6D3] rounded-lg text-sm text-[#0A2540] focus:border-[#BA7517] focus:ring-2 focus:ring-[#BA7517]/15 outline-none transition placeholder:text-[#A7AEB8]" autoComplete="off" name="carrier-registration-email" />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-[#0A2540] mb-1">Phone *</label>
                   {/* v3.8.aix — Phone formatter applied; strips non-digits,
                       drops leading "1" country code on paste, caps at 10
                       digits, formats as (XXX) XXX-XXXX live as user types. */}
-                  <input type="tel" value={form.phone} onChange={(e) => set("phone", formatPhone(e.target.value))} className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-gold outline-none" placeholder="(555) 123-4567" autoComplete="off" name="carrier-registration-phone" />
+                  <input type="tel" value={form.phone} onChange={(e) => set("phone", formatPhone(e.target.value))} className="w-full px-3 py-2 bg-white border border-[#EFE6D3] rounded-lg text-sm text-[#0A2540] focus:border-[#BA7517] focus:ring-2 focus:ring-[#BA7517]/15 outline-none transition placeholder:text-[#A7AEB8]" placeholder="(555) 123-4567" autoComplete="off" name="carrier-registration-phone" />
                 </div>
               </div>
               {/* v3.8.aix — Password block: γ "Very Strong" tier.
@@ -879,7 +881,7 @@ export default function OnboardingPage() {
                 <div className="space-y-3">
                   <div>
                     <label className="block text-sm font-medium text-[#0A2540] mb-1">Password *</label>
-                    <input type="password" value={form.password} onChange={(e) => set("password", e.target.value)} className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-gold outline-none" autoComplete="new-password" name="carrier-registration-password" />
+                    <input type="password" value={form.password} onChange={(e) => set("password", e.target.value)} className="w-full px-3 py-2 bg-white border border-[#EFE6D3] rounded-lg text-sm text-[#0A2540] focus:border-[#BA7517] focus:ring-2 focus:ring-[#BA7517]/15 outline-none transition placeholder:text-[#A7AEB8]" autoComplete="new-password" name="carrier-registration-password" />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-[#0A2540] mb-1">Confirm Password *</label>
@@ -968,7 +970,7 @@ export default function OnboardingPage() {
                   section, not in company identity. */}
               <div className="max-w-xs">
                 <label className="block text-sm font-semibold text-[#0A2540] mb-1.5">Fleet Size <span className="text-[#6B7685] font-normal">(# of Trucks)</span></label>
-                <input type="number" value={form.numberOfTrucks} onChange={(e) => set("numberOfTrucks", e.target.value)} className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-gold outline-none" placeholder="e.g. 5" />
+                <input type="number" value={form.numberOfTrucks} onChange={(e) => set("numberOfTrucks", e.target.value)} className="w-full px-3 py-2 bg-white border border-[#EFE6D3] rounded-lg text-sm text-[#0A2540] focus:border-[#BA7517] focus:ring-2 focus:ring-[#BA7517]/15 outline-none transition placeholder:text-[#A7AEB8]" placeholder="e.g. 5" />
               </div>
               <div>
                 <label className="block text-sm font-semibold text-[#0A2540] mb-3">Equipment Types <span className="text-[#BA7517]">*</span></label>
@@ -1335,10 +1337,10 @@ export default function OnboardingPage() {
                 <p className="text-sm text-[#3A4A5F] leading-relaxed">Click-through onboarding agreement. Standalone Broker-Carrier Agreement + Caravan Quick Pay Agreement v2 supersede where executed.</p>
               </div>
               <div className="p-5 rounded-xl bg-[#FBF7F0] border border-[#EFE6D3] max-h-80 overflow-y-auto text-sm text-[#3A4A5F] leading-relaxed space-y-4">
-                <p className="font-bold text-slate-800 text-base">Silk Route Logistics — Carrier Transportation Agreement</p>
+                <p className="font-serif italic font-semibold text-[#0A2540] text-base">Silk Route Logistics — Carrier Transportation Agreement</p>
                 <p>This Carrier Transportation Agreement (&quot;Agreement&quot;) is entered into between Silk Route Logistics Inc. (&quot;Broker&quot;) and the undersigned motor carrier (&quot;Carrier&quot;). By completing registration, Carrier agrees to the following terms and conditions:</p>
 
-                <p className="font-semibold text-slate-800 mt-3">1. Authority & Compliance</p>
+                <p className="font-semibold text-[#0A2540] mt-3">1. Authority & Compliance</p>
                 <ul className="list-disc ml-5 space-y-1">
                   <li>Carrier shall maintain valid operating authority (MC/DOT) issued by the FMCSA at all times during the term of this Agreement.</li>
                   <li>Carrier shall comply with all applicable federal, state, provincial, and local laws, including FMCSA regulations, DOT requirements, FMCSA safety regulations (49 CFR Parts 382-399), and applicable Canadian provincial/territorial regulations.</li>
@@ -1346,7 +1348,7 @@ export default function OnboardingPage() {
                   <li>Carrier shall maintain valid Safety Fitness Certificate for Canadian interprovincial operations where applicable.</li>
                 </ul>
 
-                <p className="font-semibold text-slate-800 mt-3">2. Insurance Requirements</p>
+                <p className="font-semibold text-[#0A2540] mt-3">2. Insurance Requirements</p>
                 <ul className="list-disc ml-5 space-y-1">
                   <li>Carrier shall maintain at minimum: (a) Commercial Auto Liability — $1,000,000 per occurrence; (b) Motor Cargo/Freight Insurance — $100,000 per occurrence; (c) General Liability — $1,000,000 per occurrence; (d) Workers&apos; Compensation — as required by applicable law.</li>
                   <li>Carrier shall name Silk Route Logistics Inc. as an additional insured and certificate holder on all policies.</li>
@@ -1354,14 +1356,14 @@ export default function OnboardingPage() {
                   <li>Carrier shall provide Broker with 30 days&apos; written notice prior to cancellation, non-renewal, or material modification of any insurance policy.</li>
                 </ul>
 
-                <p className="font-semibold text-slate-800 mt-3">3. Independent Contractor Relationship</p>
+                <p className="font-semibold text-[#0A2540] mt-3">3. Independent Contractor Relationship</p>
                 <ul className="list-disc ml-5 space-y-1">
                   <li>Carrier is an independent contractor and not an employee, agent, or partner of Broker. Nothing in this Agreement creates an employer-employee relationship.</li>
                   <li>Carrier retains full control over drivers, equipment, routes, and methods of transportation, subject to shipper requirements.</li>
                   <li>Carrier is solely responsible for all taxes, including self-employment tax, income tax withholding, and unemployment insurance for its employees and drivers.</li>
                 </ul>
 
-                <p className="font-semibold text-slate-800 mt-3">4. Load Acceptance & Transportation</p>
+                <p className="font-semibold text-[#0A2540] mt-3">4. Load Acceptance & Transportation</p>
                 <ul className="list-disc ml-5 space-y-1">
                   <li>Carrier has the right to accept or reject any load tendered by Broker. Once accepted, Carrier is obligated to complete the transportation as agreed.</li>
                   <li>Carrier shall not double-broker, co-broker, or assign any load to a third party without prior written consent from Broker.</li>
@@ -1369,7 +1371,7 @@ export default function OnboardingPage() {
                   <li>Carrier shall comply with ELD mandates and GPS tracking requirements while transporting loads arranged by Broker.</li>
                 </ul>
 
-                <p className="font-semibold text-slate-800 mt-3">5. Documentation & Payment</p>
+                <p className="font-semibold text-[#0A2540] mt-3">5. Documentation & Payment</p>
                 <ul className="list-disc ml-5 space-y-1">
                   <li>Carrier shall submit all required documentation, including Bill of Lading (BOL), Proof of Delivery (POD), and lumper receipts, within 24 hours of delivery.</li>
                   <li>Standard payment terms and per-load Quick Pay options are as established in the Caravan Partner Program (published at silkroutelogistics.ai/carriers), from receipt of complete and accurate documentation unless otherwise agreed in writing.</li>
@@ -1378,7 +1380,7 @@ export default function OnboardingPage() {
                   <li>Rates shall be as agreed upon in each individual rate confirmation/load tender.</li>
                 </ul>
 
-                <p className="font-semibold text-slate-800 mt-3">6. Cargo Claims & Liability</p>
+                <p className="font-semibold text-[#0A2540] mt-3">6. Cargo Claims & Liability</p>
                 <ul className="list-disc ml-5 space-y-1">
                   <li>Carrier assumes full liability for loss, damage, or delay to cargo from the time of pickup to delivery, pursuant to the Carmack Amendment (49 U.S.C. § 14706) for domestic shipments.</li>
                   <li>Carrier shall notify Broker immediately upon discovery of any cargo loss, damage, shortage, or delay.</li>
@@ -1386,7 +1388,7 @@ export default function OnboardingPage() {
                   <li>Carrier shall indemnify and hold Broker harmless from any claims, damages, or liabilities arising from Carrier&apos;s performance or failure to perform under this Agreement.</li>
                 </ul>
 
-                <p className="font-semibold text-slate-800 mt-3">7. Caravan Partner Program & Performance Tracking</p>
+                <p className="font-semibold text-[#0A2540] mt-3">7. Caravan Partner Program & Performance Tracking</p>
                 <ul className="list-disc ml-5 space-y-1">
                   <li>Carrier acknowledges that Broker tracks performance metrics through the Compass Engine, including on-time pickup/delivery, communication responsiveness, claims ratio, documentation timeliness, GPS compliance, and acceptance rate.</li>
                   <li>Carrier&apos;s placement within the Caravan Partner Program is determined by the performance criteria, advancement thresholds, and program economics published at silkroutelogistics.ai/carriers, which the carrier acknowledges as the authoritative reference for program structure.</li>
@@ -1394,34 +1396,34 @@ export default function OnboardingPage() {
                   <li>Broker reserves the right to modify program criteria with 30 days&apos; notice.</li>
                 </ul>
 
-                <p className="font-semibold text-slate-800 mt-3">8. Confidentiality</p>
+                <p className="font-semibold text-[#0A2540] mt-3">8. Confidentiality</p>
                 <ul className="list-disc ml-5 space-y-1">
                   <li>Carrier shall not disclose Broker&apos;s customer information, rates, or business practices to any third party.</li>
                   <li>Carrier shall not solicit or conduct business directly with any shipper/customer introduced through Broker for a period of 12 months after the last load transported.</li>
                 </ul>
 
-                <p className="font-semibold text-slate-800 mt-3">9. Termination</p>
+                <p className="font-semibold text-[#0A2540] mt-3">9. Termination</p>
                 <ul className="list-disc ml-5 space-y-1">
                   <li>Either party may terminate this Agreement with 30 days&apos; written notice.</li>
                   <li>Broker may terminate immediately if Carrier&apos;s operating authority is revoked, insurance lapses, or Carrier breaches any material term of this Agreement.</li>
                   <li>Termination does not relieve Carrier of obligations for loads already in transit or payment obligations already incurred.</li>
                 </ul>
 
-                <p className="font-semibold text-slate-800 mt-3">10. Governing Law & Dispute Resolution</p>
+                <p className="font-semibold text-[#0A2540] mt-3">10. Governing Law & Dispute Resolution</p>
                 <ul className="list-disc ml-5 space-y-1">
                   <li>This Agreement shall be governed by federal transportation law (49 U.S.C. § 14101(b)) and, to the extent not preempted, the laws of the State of Michigan.</li>
                   <li>Any dispute arising under this Agreement shall first be subject to mediation. If mediation fails, disputes shall be resolved by binding arbitration with venue in Kalamazoo County, Michigan.</li>
                   <li>The prevailing party in any dispute shall be entitled to recover reasonable attorney&apos;s fees and costs.</li>
                 </ul>
 
-                <p className="font-semibold text-slate-800 mt-3">11. Data Privacy & Consent</p>
+                <p className="font-semibold text-[#0A2540] mt-3">11. Data Privacy & Consent</p>
                 <ul className="list-disc ml-5 space-y-1">
                   <li>Carrier consents to Broker collecting, storing, and processing Carrier&apos;s business information, FMCSA data, insurance records, and performance data for operational purposes.</li>
                   <li>Broker shall handle Carrier&apos;s data in accordance with its Privacy Policy and applicable data protection laws.</li>
                   <li>Carrier consents to automated FMCSA compliance monitoring, safety scoring, and OFAC screening.</li>
                 </ul>
 
-                <p className="text-xs text-slate-700 mt-4 italic">Last updated: May 2026. Silk Route Logistics Inc. reserves the right to update these terms with 30 days&apos; notice to registered carriers. When the standalone Broker-Carrier Agreement and Caravan Quick Pay Agreement v2 are executed between Broker and Carrier, those agreements will govern over this onboarding click-through where they conflict.</p>
+                <p className="text-xs text-[#6B7685] mt-4 italic">Last updated: May 2026. Silk Route Logistics Inc. reserves the right to update these terms with 30 days&apos; notice to registered carriers. When the standalone Broker-Carrier Agreement and Caravan Quick Pay Agreement v2 are executed between Broker and Carrier, those agreements will govern over this onboarding click-through where they conflict.</p>
               </div>
               <label className="flex items-center gap-3 cursor-pointer p-4 rounded-lg border border-[#EFE6D3] bg-white hover:bg-[#FBF7F0] transition">
                 <input type="checkbox" checked={form.agreeTerms}
