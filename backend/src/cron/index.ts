@@ -179,6 +179,31 @@ export function initCronJobs() {
       if (deleted.count > 0) {
         log.info(`[Cron Daily] Cleaned ${deleted.count} old system logs`);
       }
+
+      // v3.8.ajw C10 — Notification cleanup. Bell-icon dropdown shows the
+      // user's notification stack indefinitely today; over months that
+      // stack grows to thousands per active user (~250 rows/week typical
+      // for active AE). Cleanup policy: read >30 days (user acknowledged
+      // they saw it; no need to keep), unread >90 days (stale beyond
+      // operational relevance; if user hasn't read it in 3 months it's
+      // unlikely to matter). Both bounds match Notification model
+      // indexes (userId+read+readAt, createdAt) so the deletes are
+      // index-driven, not full-scans.
+      const readCutoff = new Date(Date.now() - 30 * 86_400_000);
+      const unreadCutoff = new Date(Date.now() - 90 * 86_400_000);
+      const deletedReadNotifications = await prisma.notification.deleteMany({
+        where: { read: true, readAt: { lt: readCutoff } },
+      });
+      const deletedUnreadNotifications = await prisma.notification.deleteMany({
+        where: { read: false, createdAt: { lt: unreadCutoff } },
+      });
+      const totalNotificationCleanup = deletedReadNotifications.count + deletedUnreadNotifications.count;
+      if (totalNotificationCleanup > 0) {
+        log.info(
+          `[Cron Daily] Cleaned ${totalNotificationCleanup} stale notifications ` +
+          `(${deletedReadNotifications.count} read >30d, ${deletedUnreadNotifications.count} unread >90d)`,
+        );
+      }
     } catch (err) {
       log.error({ err }, "[Cron Daily] Error:");
     }

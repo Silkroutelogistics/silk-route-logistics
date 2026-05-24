@@ -92,7 +92,33 @@ export async function approveCarrier(args: ApproveCarrierArgs) {
       firstName: carrier.user.firstName || "there",
       companyName: carrier.companyName,
       note: args.note,
-    }).catch((err) => log.error({ err, carrierId: args.carrierId }, "[Approval] Carrier email failed"));
+    }).catch((err) => {
+      log.error({ err, carrierId: args.carrierId }, "[Approval] Carrier email failed");
+      // v3.8.ajw H4 — Write a queryable SystemLog WARNING so ops can find
+      // approvals that didn't deliver an email. log.error above is
+      // transient (Render stdout); SystemLog row survives + is queryable
+      // from AE dashboards. In-app notification at lines 100-108 still
+      // fires separately and IS the operational fallback — carrier sees
+      // the approval the next time they log in. This row enables a
+      // future "re-send approval email" ops tool to find the affected
+      // carriers via a single query: source="approval-email", severity=WARNING.
+      prisma.systemLog.create({
+        data: {
+          logType: "INTEGRATION",
+          severity: "WARNING",
+          source: "approval-email",
+          message: `Approval email delivery failed for carrier ${args.carrierId} — in-app notification still fired`,
+          details: {
+            carrierId: args.carrierId,
+            carrierUserId: carrier.userId,
+            carrierEmail: carrier.user.email,
+            companyName: carrier.companyName,
+            approvedById: args.approvedById,
+            err: err instanceof Error ? err.message : String(err),
+          },
+        },
+      }).catch(() => { /* logging-table contention swallowed */ });
+    });
   }
 
   // In-app notification — surfaces on the NotificationBell when the

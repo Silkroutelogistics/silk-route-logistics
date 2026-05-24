@@ -10128,7 +10128,31 @@
 //            at routes/carriers.ts:335 + multer config + S3
 //            uploadFile signature); §2.2 manual migration; §19
 //            Sub-pattern 11 CI-parity. Patterns emerged: none.
-export const SRL_VERSION = "3.8.ajv";
+// v3.8.ajw — State-machine integrity bundle (C3 + C8 + H3 + H4 + C10).
+//   C3: Central loadStateMachine.ts validator wired into POST
+//   /carrier-loads/:id/status. Pre-ajw any of {AT_PICKUP, LOADED,
+//   IN_TRANSIT, AT_DELIVERY, DELIVERED} was accepted regardless of current
+//   load state — driver tapping "Mark Delivered" on a BOOKED load would
+//   flip straight to DELIVERED, breaking downstream invoice/POD flow.
+//   Validator returns 422 with structured reason on illegitimate transitions.
+//   Full Item 159 13-write-site refactor stays banked for Sprint 53+.
+//   C8: Auto-RC generation failure in acceptTender + acceptTenderOnBehalf
+//   now writes a queryable SystemLog WARNING (source=auto-rc-generation)
+//   so ops can find tenders that need a manual RC follow-up. AE
+//   notification still fires; falls back to /dashboard/track-trace URL.
+//   H3: declineTender + counterTender now write AuditLog rows
+//   (TENDER_DECLINED + TENDER_COUNTERED). Closes the gap where carrier
+//   decline/counter events were untrackable for analytics.
+//   H4: approvalService.ts wraps email send failure with a queryable
+//   SystemLog WARNING (source=approval-email). In-app notification at
+//   carrier next-login is still the operational fallback; the WARNING
+//   row enables a future "re-send approval email" ops tool.
+//   C10: Daily cleanup cron extended with Notification table — read >30
+//   days deleted, unread >90 days deleted. Bell-icon dropdown stack stays
+//   operationally relevant; the indexes on Notification model are already
+//   tuned for this query (userId+read+readAt, createdAt).
+//   ~120 LOC net across 5 files (1 new lib + 4 edits). No schema migration.
+export const SRL_VERSION = "3.8.ajw";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

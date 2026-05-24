@@ -14,6 +14,7 @@ import { logLoadActivity } from "../services/loadActivityService";
 import { isValidExceptionCode, getExceptionReason } from "../services/exceptionTaxonomy";
 import { broadcastSSE } from "./trackTraceSSE";
 import { log } from "../lib/logger";
+import { validateLoadStatusTransition } from "../lib/loadStateMachine";
 
 const router = Router();
 
@@ -350,6 +351,25 @@ router.post("/:id/status", validateBody(statusUpdateSchema), async (req: AuthReq
   }
 
   const { status, note } = req.body;
+  const oldStatus = load.status;
+
+  // v3.8.ajw C3 — Reject illegitimate transitions (BOOKED→DELIVERED skip,
+  // backwards jumps, etc.). Carrier-side state machine canonicalized in
+  // src/lib/loadStateMachine.ts. Returns 422 with the structured reason so
+  // the carrier portal can surface a useful message ("Cannot jump from
+  // BOOKED to DELIVERED. Next allowed: AT_PICKUP.") instead of a generic
+  // 500 from downstream code that assumed the state machine was honored.
+  const transition = validateLoadStatusTransition(oldStatus, status, "CARRIER");
+  if (!transition.allowed) {
+    res.status(422).json({
+      error: transition.reason ?? "Invalid status transition",
+      code: transition.code,
+      from: oldStatus,
+      to: status,
+    });
+    return;
+  }
+
   const data: Record<string, unknown> = { status };
 
   if (status === "DELIVERED") {
@@ -359,7 +379,6 @@ router.post("/:id/status", validateBody(statusUpdateSchema), async (req: AuthReq
     data.actualPickupDatetime = new Date();
   }
 
-  const oldStatus = load.status;
   const updated = await prisma.load.update({ where: { id: load.id }, data });
 
   // T&T activity + real-time board push

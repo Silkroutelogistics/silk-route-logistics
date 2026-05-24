@@ -139,6 +139,25 @@ export async function acceptTender(req: AuthRequest, res: Response) {
     autoRcId = rc?.id;
   } catch (err) {
     log.error({ err, tenderId: tender.id, loadId: load.id }, "[Tender] auto-RC generation failed");
+    // v3.8.ajw C8 — Write a queryable SystemLog WARNING so ops can find
+    // tenders that need a manual RC follow-up. log.error above goes to
+    // stdout/Render logs (transient); SystemLog row survives + is
+    // queryable from AE dashboards. Non-blocking (.catch swallow) so the
+    // accept flow never breaks on logging-table contention.
+    prisma.systemLog.create({
+      data: {
+        logType: "INTEGRATION",
+        severity: "WARNING",
+        source: "auto-rc-generation",
+        message: `Auto-RC generation failed for tender ${tender.id} on load ${load.id} — manual RC required`,
+        details: {
+          tenderId: tender.id,
+          loadId: load.id,
+          loadReferenceNumber: load.referenceNumber,
+          err: err instanceof Error ? err.message : String(err),
+        },
+      },
+    }).catch(() => { /* logging-table contention swallowed */ });
   }
 
   // Sprint 38 (Item 51) — wire notifyTenderAction. Was manually creating
@@ -147,7 +166,10 @@ export async function acceptTender(req: AuthRequest, res: Response) {
   // notifyTenderAction emits the correct "TENDER_ACCEPTED" type and
   // formats the lane string consistently with offered/declined/countered.
   // Sprint Phase 2 — rcId option deep-links AE notification to the
-  // auto-draft RC review surface when auto-generation succeeded.
+  // auto-draft RC review surface when auto-generation succeeded; when
+  // C8's SystemLog WARNING fires, autoRcId stays undefined and
+  // notifyTenderAction falls back to /dashboard/track-trace (validated
+  // shape at notificationService.ts:237).
   await notifyTenderAction(tender.id, "ACCEPTED", { rcId: autoRcId });
 
   // Sprint 38 (Item 52) — CRM tracking-link fan-out on direct accept.
@@ -283,6 +305,24 @@ export async function acceptTenderOnBehalf(req: AuthRequest, res: Response) {
     autoRcId = rc?.id;
   } catch (err) {
     log.error({ err, tenderId: tender.id, loadId: load.id }, "[Tender] auto-RC generation failed (on-behalf)");
+    // v3.8.ajw C8 — Mirror direct-accept SystemLog WARNING. Same queryable
+    // shape so the ops query can pick up both paths from a single
+    // source filter.
+    prisma.systemLog.create({
+      data: {
+        logType: "INTEGRATION",
+        severity: "WARNING",
+        source: "auto-rc-generation",
+        message: `Auto-RC generation failed for tender ${tender.id} on load ${load.id} (on-behalf path) — manual RC required`,
+        details: {
+          tenderId: tender.id,
+          loadId: load.id,
+          loadReferenceNumber: load.referenceNumber,
+          onBehalf: true,
+          err: err instanceof Error ? err.message : String(err),
+        },
+      },
+    }).catch(() => { /* swallow */ });
   }
 
   // Notification (Sprint 38 Item 51 pattern + Sprint Phase 2 rcId deep-link).
@@ -319,6 +359,26 @@ export async function counterTender(req: AuthRequest, res: Response) {
     data: { status: "COUNTERED", counterRate, respondedAt: new Date() },
   });
 
+  // v3.8.ajw H3 — Audit row so carrier counter-offers are queryable for
+  // dispute resolution + carrier-behavior analytics. Mirrors the
+  // acceptTenderOnBehalf shape (action + entity + changes JSON-serialized).
+  // Non-blocking (.catch swallow) so the response never breaks on
+  // audit-table contention.
+  prisma.auditLog.create({
+    data: {
+      userId: req.user!.id,
+      action: "TENDER_COUNTERED",
+      entity: "LoadTender",
+      entityId: tender.id,
+      changes: JSON.stringify({
+        loadId: tender.loadId,
+        carrierProfileId: tender.carrierId,
+        offeredRate: tender.offeredRate,
+        counterRate,
+      }),
+    },
+  }).catch((err) => log.error({ err, tenderId: tender.id }, "[Tender] auditLog counter failed"));
+
   // Notify the broker/poster about the counter-offer
   if (tender.load.posterId) {
     const carrierName = tender.carrier.companyName || `Carrier #${tender.carrierId.slice(-6)}`;
@@ -350,6 +410,24 @@ export async function declineTender(req: AuthRequest, res: Response) {
     where: { id: tender.id },
     data: { status: "DECLINED", respondedAt: new Date() },
   });
+
+  // v3.8.ajw H3 — Audit row mirrors counterTender pattern. Closes the
+  // gap where carrier decline events were untrackable for analytics
+  // (decline rate by carrier, decline reasons distribution per Item
+  // 87.b when that lands, lane decline patterns). Non-blocking.
+  prisma.auditLog.create({
+    data: {
+      userId: req.user!.id,
+      action: "TENDER_DECLINED",
+      entity: "LoadTender",
+      entityId: tender.id,
+      changes: JSON.stringify({
+        loadId: tender.loadId,
+        carrierProfileId: tender.carrierId,
+        offeredRate: tender.offeredRate,
+      }),
+    },
+  }).catch((err) => log.error({ err, tenderId: tender.id }, "[Tender] auditLog decline failed"));
 
   // Check if all tenders for this load are now declined
   const remainingActive = await prisma.loadTender.count({
