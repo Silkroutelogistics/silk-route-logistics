@@ -15,6 +15,14 @@ jobs:
         working-directory: backend
     env:
       DATABASE_URL: postgresql://ci:ci@localhost:5432/ci
+      # v3.8.ajg added `directUrl = env("DIRECT_URL")` to schema.prisma.
+      # CI doesn't run a pooler — both URLs can point at the same plain
+      # Postgres container. The variable just needs to exist so prisma
+      # validate doesn't fail with P1012 ("Environment variable not
+      # found: DIRECT_URL"). Sub-pattern 11 (CI-parity) fire: this env
+      # block was missed in ajg; CI exposed the gap on the first push
+      # after ajh shipped.
+      DIRECT_URL: postgresql://ci:ci@localhost:5432/ci
       JWT_SECRET: ci-test-secret
       ENCRYPTION_KEY: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
 
@@ -80,6 +88,11 @@ jobs:
 
     env:
       DATABASE_URL: postgresql://ci:ci@localhost:5432/ci
+      # v3.8.ajg added `directUrl = env("DIRECT_URL")` to schema.prisma.
+      # Same as backend job above — CI has no pooler so both URLs point
+      # at the same Postgres container. Required for `prisma db push`
+      # at line 126 to not fail with P1012.
+      DIRECT_URL: postgresql://ci:ci@localhost:5432/ci
       JWT_SECRET: ci-test-secret
       JWT_EXPIRES_IN: 24h
       ENCRYPTION_KEY: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
