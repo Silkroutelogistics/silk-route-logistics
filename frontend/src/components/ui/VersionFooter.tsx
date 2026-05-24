@@ -10050,7 +10050,49 @@
 //            Patterns applied: §3.3 atomic ship; §3.5 audit-
 //            first (three-fire P1002 banked first); §19 Sub-
 //            pattern 11 CI-parity. Patterns emerged: none.
-export const SRL_VERSION = "3.8.ajg";
+// v3.8.ajh — INFO_REQUESTED workflow (Sprint 4 of onboarding
+//            lifecycle epic). AE creates InfoRequest against
+//            a carrier with industry-standard category +
+//            free-form message; carrier responds from portal;
+//            auto-flip onboardingStatus PENDING/REVIEWING →
+//            INFO_REQUESTED on create, INFO_REQUESTED →
+//            REVIEWING on last-open resolution/cancellation.
+//            Dual email triggers (AE→carrier on create,
+//            carrier→AE on resolve). Industry-standard
+//            templates surface in AE modal dropdown with
+//            pre-filled message body (COI / W-9 / Authority
+//            Letter / Safety / EIN / Voided Check / Address
+//            Proof / References / Other) — text-only
+//            resolution in v3.8.ajh; file uploads banked for
+//            v3.8.aji as separate atomic.
+//
+//            New: InfoRequest Prisma model + InfoRequestCategory
+//            + InfoRequestStatus enums + 1 migration.
+//            services/infoRequestService.ts encapsulates
+//            create/resolve/cancel + auto-flip + emails.
+//            routes/infoRequests.ts (AE: create/list/cancel).
+//            carrierAuth.ts +2 endpoints (list-open/resolve).
+//            components/carriers/InfoRequestModal.tsx (AE
+//            create modal with category template auto-fill).
+//            application-status/page.tsx InfoRequestedSection
+//            rewritten with real list + per-request resolve
+//            forms + TanStack mutation that invalidates both
+//            queries on success (the section re-renders into
+//            REVIEWING state automatically when the last open
+//            request is resolved).
+//
+//            Patterns applied: §3.3 atomic ship; §3.5 audit-
+//            first (verified NotificationType.type is String
+//            not enum so "INFO_REQUEST" strings are valid;
+//            confirmed sendEmail + wrap signature);
+//            §2.2 manual migration; §A.1 state machine
+//            canonical (status auto-flip encoded in service);
+//            §19 Pattern 7 design-system conformance (modal
+//            chrome matches §2.1 brand tokens — cream surface
+//            + gold-dark CTA + warning-amber for requested
+//            state); §19 Sub-pattern 11 CI-parity.
+//            Patterns emerged: none.
+export const SRL_VERSION = "3.8.ajh";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

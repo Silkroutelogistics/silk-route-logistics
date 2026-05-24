@@ -746,6 +746,11 @@ model User {
   receivedMessages    Message[]          @relation("MessageReceiver")
   notifications       Notification[]
   auditLogs           AuditLog[]
+  // v3.8.ajh — InfoRequest workflow. AE-side relation: every info-request
+  // an AE creates against a carrier records the AE as createdBy. Cancellation
+  // tracked separately via cancelledById nullable field on the model.
+  createdInfoRequests   InfoRequest[]    @relation("InfoRequestCreatedBy")
+  cancelledInfoRequests InfoRequest[]    @relation("InfoRequestCancelledBy")
   preferredTheme      String             @default("silk-route-classic")
   darkMode            Boolean            @default(false)
   // Free-form user preferences JSON (v3.4.u). First consumer: waterfall
@@ -1044,6 +1049,11 @@ model CarrierProfile {
   routingGuideEntries RoutingGuideEntry[] @relation("RoutingGuideCarrier")
   dockSchedules       DockSchedule[]      @relation("DockCarrier")
   carrierCallLogs     CarrierCallLog[]    @relation("CallLogCarrier")
+
+  // v3.8.ajh — InfoRequest workflow. AE creates info-requests against
+  // this carrier when REVIEWING surfaces a gap (missing/expired COI,
+  // unclear safety record, etc.); carrier resolves from their portal.
+  infoRequests InfoRequest[]
 
   @@index([mcNumber])
   @@index([dotNumber])
@@ -4515,4 +4525,65 @@ model WebhookEndpoint {
   @@index([userId])
   @@index([isEnabled, deletedAt])
   @@map("webhook_endpoints")
+}
+
+
+// ─── v3.8.ajh — InfoRequest workflow ─────────────────────────
+//
+// AE creates an InfoRequest against a carrier when REVIEWING surfaces
+// a gap that needs the carrier's input — updated COI, clarification
+// on a recent OOS event, voided check for Quick Pay setup, etc.
+// Carrier resolves from /carrier/dashboard/application-status by
+// typing a response (file uploads land in v3.8.aji as a separate
+// sprint — text-only resolution in this commit).
+//
+// Status auto-flip side effects (enforced at controller layer, not
+// schema):
+//   * AE creates first OPEN request → carrier onboardingStatus flips
+//     PENDING/REVIEWING → INFO_REQUESTED
+//   * Carrier resolves last OPEN request → INFO_REQUESTED → REVIEWING
+//   * AE cancels last OPEN request → INFO_REQUESTED → REVIEWING
+
+model InfoRequest {
+  id              String              @id @default(cuid())
+  carrierId       String
+  carrier         CarrierProfile      @relation(fields: [carrierId], references: [id], onDelete: Cascade)
+
+  createdById     String
+  createdBy       User                @relation("InfoRequestCreatedBy", fields: [createdById], references: [id])
+  cancelledById   String?
+  cancelledBy     User?               @relation("InfoRequestCancelledBy", fields: [cancelledById], references: [id])
+
+  category        InfoRequestCategory @default(OTHER)
+  message         String              @db.Text
+  status          InfoRequestStatus   @default(OPEN)
+
+  resolvedNote    String?             @db.Text
+  resolvedAt      DateTime?
+  cancelledAt     DateTime?
+
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+
+  @@index([carrierId, status])
+  @@index([createdAt])
+  @@map("info_requests")
+}
+
+enum InfoRequestCategory {
+  COI_UPDATE
+  W9_UPDATE
+  AUTHORITY_LETTER
+  SAFETY_CLARIFICATION
+  EIN_VERIFICATION
+  VOIDED_CHECK
+  ADDRESS_PROOF
+  REFERENCES
+  OTHER
+}
+
+enum InfoRequestStatus {
+  OPEN
+  RESOLVED
+  CANCELLED
 }

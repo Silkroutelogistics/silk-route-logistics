@@ -10,7 +10,9 @@ import {
   TrendingUp, TrendingDown, DollarSign, Package, Award, ShieldAlert, Calendar,
   BarChart3, Percent, Hash, Compass, RefreshCw, ExternalLink, AlertTriangle, Download,
   User, CheckSquare, ClipboardList, Upload, Eye, ArrowLeft, FolderOpen,
+  MessageCircle,
 } from "lucide-react";
+import { InfoRequestModal } from "@/components/carriers/InfoRequestModal";
 
 
 interface CarrierPerformance {
@@ -296,6 +298,8 @@ export default function CarrierPoolPage() {
     insuranceAgentName: "", insuranceAgentEmail: "", insuranceAgentPhone: "", insuranceAgencyName: "",
   });
   const [confirmAction, setConfirmAction] = useState<{ id: string; status: string; company: string } | null>(null);
+  // v3.8.ajh — Request Info modal open state for the action bar button.
+  const [infoRequestModalOpen, setInfoRequestModalOpen] = useState(false);
   const [compassResult, setCompassResult] = useState<CompassResult | null>(null);
   const [compassCarrierId, setCompassCarrierId] = useState<string | null>(null);
   const [compassLoading, setCompassLoading] = useState<string | null>(null);
@@ -777,6 +781,17 @@ export default function CarrierPoolPage() {
                         <button onClick={() => setConfirmAction({ id: selectedCarrier.id, status: "REJECTED", company: selectedCarrier.company })}
                           className="flex items-center gap-1.5 px-3 py-1.5 bg-red-500/20 text-red-400 rounded-lg text-xs hover:bg-red-500/30 transition">
                           <AlertCircle className="w-3.5 h-3.5" /> Reject
+                        </button>
+                      )}
+                      {/* v3.8.ajh — Request Info button. Only shown for carriers
+                          in a state where requesting more info is meaningful:
+                          not APPROVED (already cleared) and not REJECTED
+                          (terminal). SUSPENDED carriers also excluded — they
+                          shouldn't be receiving info requests while suspended. */}
+                      {isAdmin && selectedCarrier.onboardingStatus !== "APPROVED" && selectedCarrier.onboardingStatus !== "REJECTED" && selectedCarrier.onboardingStatus !== "SUSPENDED" && (
+                        <button onClick={() => setInfoRequestModalOpen(true)}
+                          className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-500/20 text-amber-400 rounded-lg text-xs hover:bg-amber-500/30 transition">
+                          <MessageCircle className="w-3.5 h-3.5" /> Request Info
                         </button>
                       )}
                       {isAdmin && editingTab !== "profile" && (
@@ -1531,6 +1546,17 @@ export default function CarrierPoolPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* v3.8.ajh — Request Info modal. Mounted at root so the fixed-position
+          overlay doesn't clip against the side panel's overflow:auto chrome. */}
+      {selectedCarrier && (
+        <InfoRequestModal
+          carrierId={selectedCarrier.id}
+          carrierCompany={selectedCarrier.company}
+          open={infoRequestModalOpen}
+          onClose={() => setInfoRequestModalOpen(false)}
+        />
       )}
     </div>
   );

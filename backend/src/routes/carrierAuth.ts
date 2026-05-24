@@ -20,6 +20,7 @@ import {
 import { sendOtpEmail, sendEmailVerificationEmail } from "../services/emailService";
 import { resolveCountry, extractClientIp, detectUnusualActivity } from "../services/geoService";
 import { sendOtpSms } from "../services/openPhoneService";
+import { resolveInfoRequest, getCategoryLabel } from "../services/infoRequestService";
 import { verifyTotpCode } from "../services/totpService";
 import { z } from "zod";
 import { log } from "../lib/logger";
@@ -692,5 +693,75 @@ router.post("/resend-verification", authenticate, authorize("CARRIER"), async (r
     return;
   }
 });
+
+// v3.8.ajh — Carrier-side InfoRequest endpoints.
+//
+// List OPEN requests for the authenticated carrier. Used by the
+// application-status page to render the InfoRequestedSection list.
+// Resolved + cancelled requests omitted by default — carrier only
+// sees what they need to act on (avoids confusion with historical
+// resolved requests). AE-side list endpoint sees all statuses.
+router.get("/info-requests", authenticate, authorize("CARRIER"), async (req: AuthRequest, res: Response) => {
+  const carrier = await prisma.carrierProfile.findUnique({
+    where: { userId: req.user!.id },
+    select: { id: true },
+  });
+
+  if (!carrier) {
+    res.status(404).json({ error: "Carrier profile not found" });
+    return;
+  }
+
+  const requests = await prisma.infoRequest.findMany({
+    where: { carrierId: carrier.id, status: "OPEN" },
+    orderBy: { createdAt: "asc" }, // oldest first so carrier resolves in order
+    select: {
+      id: true,
+      category: true,
+      message: true,
+      createdAt: true,
+    },
+  });
+
+  res.json({
+    requests: requests.map((r) => ({
+      ...r,
+      categoryLabel: getCategoryLabel(r.category),
+    })),
+  });
+});
+
+// Resolve an OPEN info request. Service layer validates carrier
+// ownership + auto-flips onboardingStatus back to REVIEWING if this
+// is the last open request. Email send to AE is fire-and-forget.
+const resolveInfoRequestSchema = z.object({
+  resolvedNote: z.string().min(1, "Please provide a response").max(5000, "Response must be 5000 characters or less"),
+});
+
+router.post(
+  "/info-requests/:id/resolve",
+  authenticate,
+  authorize("CARRIER"),
+  validateBody(resolveInfoRequestSchema),
+  async (req: AuthRequest, res: Response) => {
+    try {
+      const updated = await resolveInfoRequest({
+        requestId: req.params.id,
+        carrierUserId: req.user!.id,
+        resolvedNote: req.body.resolvedNote,
+      });
+      res.json({ request: updated });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Failed to resolve info request";
+      log.error({ err, requestId: req.params.id, userId: req.user!.id }, "[InfoRequest] Carrier resolve failed");
+      const status =
+        msg === "Info request not found" ? 404 :
+        msg === "Not authorized to resolve this request" ? 403 :
+        msg === "This request has already been resolved or cancelled" ? 409 :
+        500;
+      res.status(status).json({ error: msg });
+    }
+  },
+);
 
 export default router;

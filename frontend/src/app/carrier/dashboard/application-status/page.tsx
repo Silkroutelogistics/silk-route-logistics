@@ -289,28 +289,144 @@ function ReviewingSection() {
   );
 }
 
+interface InfoRequest {
+  id: string;
+  category: string;
+  categoryLabel: string;
+  message: string;
+  createdAt: string;
+}
+
 function InfoRequestedSection() {
-  // v3.8.aje wires the actual InfoRequest list + resolve form here.
-  // For v3.8.ajd we show defensive copy explaining the state.
+  // v3.8.ajh — Real InfoRequest workflow.
+  // Lists all OPEN requests with per-request resolve forms. Each carrier
+  // response POSTs to /carrier-auth/info-requests/:id/resolve which:
+  //   (a) records the resolvedNote + flips status to RESOLVED
+  //   (b) auto-flips onboardingStatus INFO_REQUESTED → REVIEWING when this
+  //       was the last open request (the parent status query refetches
+  //       every 60s + on mutation success, so the section re-renders
+  //       into the REVIEWING state automatically without page reload)
+  //   (c) emails the AE who created the request with the response
+  const queryClient = useQueryClient();
+  const { data, isLoading, isError } = useQuery({
+    queryKey: ["carrier-info-requests"],
+    queryFn: () => api.get<{ requests: InfoRequest[] }>("/carrier-auth/info-requests").then((r) => r.data),
+    refetchInterval: 60_000,
+  });
+
   return (
     <div>
       <h2 className="text-lg font-bold text-[#0A2540] mb-3" style={{ fontFamily: "Playfair Display, Georgia, serif" }}>
         We need a little more from you
       </h2>
       <p className="text-sm text-[#3A4A5F] leading-relaxed">
-        Our compliance team has requested additional information to complete your application. Please check the email we
-        sent you for specifics, and reply with the requested documents or details. Once we have what we need, your
-        application returns to active review.
+        Our compliance team has requested additional information to complete your application. Respond to each item below.
+        Once you respond to all open requests, your application returns to active review.
       </p>
-      <div className="mt-5 bg-[#FBEFD4] border border-[rgba(176,122,26,0.20)] rounded-lg p-4">
-        <p className="text-xs text-[#B07A1A] leading-relaxed">
-          <strong className="font-semibold">In-app request resolution is coming soon.</strong> For now, please reply
-          directly to the compliance email or write to{" "}
-          <a href="mailto:compliance@silkroutelogistics.ai" className="font-semibold hover:underline">
-            compliance@silkroutelogistics.ai
-          </a>
-          .
-        </p>
+
+      {isLoading && (
+        <div className="mt-5 text-center py-6">
+          <p className="text-sm text-[#6B7685] animate-pulse">Loading your open requests…</p>
+        </div>
+      )}
+
+      {isError && (
+        <div className="mt-5 bg-[#F6E3E3] border border-[#9B2C2C]/40 rounded-lg p-4">
+          <p className="text-xs text-[#9B2C2C]">
+            We couldn&apos;t load your open requests right now. Please refresh the page in a moment, or email{" "}
+            <a href="mailto:compliance@silkroutelogistics.ai" className="font-semibold hover:underline">
+              compliance@silkroutelogistics.ai
+            </a>
+            .
+          </p>
+        </div>
+      )}
+
+      {data && data.requests.length === 0 && (
+        <div className="mt-5 bg-[#E6F0E9] border border-[#2F7A4F]/40 rounded-lg p-4">
+          <p className="text-xs text-[#2F7A4F]">
+            <strong className="font-semibold">All caught up.</strong> You&apos;ve responded to every open request. Your
+            application is back in active review — we&apos;ll email you when the status changes.
+          </p>
+        </div>
+      )}
+
+      {data && data.requests.length > 0 && (
+        <div className="mt-5 space-y-4">
+          {data.requests.map((request) => (
+            <InfoRequestCard
+              key={request.id}
+              request={request}
+              onResolved={() => {
+                queryClient.invalidateQueries({ queryKey: ["carrier-info-requests"] });
+                queryClient.invalidateQueries({ queryKey: ["carrier-application-status"] });
+              }}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function InfoRequestCard({ request, onResolved }: { request: InfoRequest; onResolved: () => void }) {
+  const [resolvedNote, setResolvedNote] = useState("");
+  const [error, setError] = useState<string | null>(null);
+
+  const mutation = useMutation({
+    mutationFn: () => api.post(`/carrier-auth/info-requests/${request.id}/resolve`, { resolvedNote }),
+    onSuccess: () => {
+      setError(null);
+      setResolvedNote("");
+      onResolved();
+    },
+    onError: (err: { response?: { data?: { error?: string } } }) => {
+      setError(err.response?.data?.error || "Could not send your response. Please try again.");
+    },
+  });
+
+  const canSubmit = resolvedNote.trim().length >= 1 && !mutation.isPending;
+
+  return (
+    <div className="bg-[#FBF7F0] border border-[rgba(176,122,26,0.30)] rounded-lg p-4">
+      <p className="text-[11px] font-semibold tracking-widest text-[#BA7517] uppercase mb-1">{request.categoryLabel}</p>
+      <p className="text-sm text-[#0A2540] leading-relaxed mb-3 whitespace-pre-wrap">{request.message}</p>
+      <p className="text-[11px] text-[#6B7685] mb-3">
+        Requested {formatDate(request.createdAt)}
+      </p>
+
+      <div className="bg-white border border-[#EFE6D3] rounded-md p-3">
+        <label className="block text-xs font-semibold text-[#3A4A5F] uppercase tracking-wider mb-1.5">
+          Your response
+        </label>
+        <textarea
+          value={resolvedNote}
+          onChange={(e) => { setResolvedNote(e.target.value); if (error) setError(null); }}
+          rows={4}
+          maxLength={5000}
+          placeholder="Type your response here, or describe an attachment you'll email to compliance@silkroutelogistics.ai..."
+          className="w-full px-3 py-2 bg-white border border-[#EFE6D3] rounded text-sm text-[#0A2540] focus:outline-none focus:border-[#BA7517] resize-y"
+        />
+        <div className="mt-2 flex items-center justify-between">
+          <p className="text-[11px] text-[#6B7685]">{resolvedNote.length}/5000</p>
+          <button
+            onClick={() => mutation.mutate()}
+            disabled={!canSubmit}
+            className="px-4 py-1.5 bg-[#BA7517] text-[#FBF7F0] rounded-md text-xs font-semibold hover:bg-[#854F0B] disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center gap-1.5"
+          >
+            {mutation.isPending ? (
+              <>
+                <RefreshCw size={11} className="animate-spin" />
+                Sending…
+              </>
+            ) : (
+              "Send Response"
+            )}
+          </button>
+        </div>
+        {error && (
+          <p className="mt-2 text-[11px] text-[#9B2C2C]">{error}</p>
+        )}
       </div>
     </div>
   );
