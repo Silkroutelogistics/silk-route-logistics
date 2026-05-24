@@ -19,7 +19,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { api } from "@/lib/api";
-import { Globe, AlertTriangle, ShieldCheck, MapPin, Clock, FileText, KeyRound } from "lucide-react";
+import { Globe, AlertTriangle, ShieldCheck, MapPin, Clock, FileText, KeyRound, UserX } from "lucide-react";
 
 interface SecuritySignals {
   geo: {
@@ -43,6 +43,20 @@ interface SecuritySignals {
     message: string;
     ipAddress: string | null;
     createdAt: string;
+  }>;
+  chameleonMatches: Array<{
+    id: string;
+    matchType: string;
+    riskScore: number;
+    status: string;
+    createdAt: string;
+    matchedCarrier: {
+      id: string;
+      companyName: string | null;
+      mcNumber: string | null;
+      dotNumber: string | null;
+      onboardingStatus: string;
+    };
   }>;
 }
 
@@ -101,10 +115,55 @@ export function SecuritySignalsCard({ carrierId, isAdmin }: { carrierId: string;
     );
   }
 
-  const { geo, events } = data;
+  const { geo, events, chameleonMatches } = data;
 
   return (
     <div className="space-y-3">
+      {/* v3.8.ajp — Chameleon match alert. Highest-priority signal —
+          renders ABOVE the geo-mismatch since identity-cluster fraud
+          is more serious than country-jump. Each match shows the
+          matchType (PHONE/EMAIL/ADDRESS/EIN/IP/DOT/MULTI) + risk score
+          + matched carrier identity + status. Bordered red for OPEN
+          (unreviewed), gray for REVIEWED. */}
+      {chameleonMatches.length > 0 && (
+        <div className="bg-red-50 border border-red-300 rounded-lg p-3">
+          <div className="flex items-start gap-2 mb-2">
+            <UserX size={16} className="text-red-600 mt-0.5 flex-shrink-0" />
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-semibold text-red-900">
+                {chameleonMatches.length} chameleon match{chameleonMatches.length === 1 ? "" : "es"} flagged
+              </p>
+              <p className="text-xs text-red-800 mt-0.5">
+                This carrier&apos;s fingerprint overlaps with {chameleonMatches.length === 1 ? "another carrier" : "other carriers"} (phone, email, address, EIN, or IP). Triage in the chameleon detection UI before approving.
+              </p>
+            </div>
+          </div>
+          <ul className="space-y-1.5 mt-2">
+            {chameleonMatches.map((m) => (
+              <li key={m.id} className="bg-white border border-red-200 rounded-md p-2 flex items-center justify-between gap-2 text-xs">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-1.5 mb-0.5">
+                    <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-red-100 text-red-700">
+                      {m.matchType}
+                    </span>
+                    <span className="text-[10px] text-gray-500">risk {m.riskScore}/100</span>
+                    {m.status === "OPEN" && (
+                      <span className="text-[10px] text-red-600 font-semibold">UNREVIEWED</span>
+                    )}
+                  </div>
+                  <p className="text-[11px] text-gray-700 truncate">
+                    Matches <strong>{m.matchedCarrier.companyName || "—"}</strong>
+                    {m.matchedCarrier.mcNumber && <span className="text-gray-500"> · MC# {m.matchedCarrier.mcNumber.replace(/^MC-?/i, "")}</span>}
+                    <span className="text-gray-500"> · {m.matchedCarrier.onboardingStatus}</span>
+                  </p>
+                </div>
+                <span className="text-[10px] text-gray-400 whitespace-nowrap">{formatDate(m.createdAt)}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
       {/* Geo-mismatch alert pill — suppressed when AE has overridden. */}
       {geo.geoMismatch && (
         <div className="bg-amber-50 border border-amber-300 rounded-lg p-3">

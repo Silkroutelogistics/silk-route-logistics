@@ -407,6 +407,33 @@ router.get("/:id/security-signals", authorize("ADMIN", "CEO", "BROKER", "OPERATI
   );
   const geoMismatch = rawMismatch && !carrier.geoMismatchOverriddenAt;
 
+  // v3.8.ajp — Chameleon matches scoped to this carrier. OPEN status
+  // = unreviewed alert; surfaces inline at the top of SecuritySignalsCard
+  // as a danger pill with match details. AE can navigate to the
+  // chameleonDetectionService UI for full triage; this just surfaces
+  // the existence of the match alongside other security context.
+  const chameleonMatches = await prisma.chameleonMatch.findMany({
+    where: { carrierId: carrier.id, status: { in: ["OPEN", "REVIEWED"] } },
+    orderBy: { createdAt: "desc" },
+    take: 10,
+    select: {
+      id: true,
+      matchType: true,
+      riskScore: true,
+      status: true,
+      createdAt: true,
+      matchedCarrier: {
+        select: {
+          id: true,
+          companyName: true,
+          mcNumber: true,
+          dotNumber: true,
+          onboardingStatus: true,
+        },
+      },
+    },
+  });
+
   res.json({
     geo: {
       registrationCountry: carrier.registrationCountry,
@@ -421,6 +448,7 @@ router.get("/:id/security-signals", authorize("ADMIN", "CEO", "BROKER", "OPERATI
       overriddenAt: carrier.geoMismatchOverriddenAt,
       overrideNote: carrier.geoMismatchOverrideNote,
     },
+    chameleonMatches,
     events: timeline,
   });
 });
