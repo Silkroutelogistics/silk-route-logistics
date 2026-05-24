@@ -463,20 +463,48 @@ export default function OnboardingPage() {
       if (form.insuranceAgentEmail) insurancePayload.insuranceAgentEmail = form.insuranceAgentEmail;
       if (form.insuranceAgentPhone) insurancePayload.insuranceAgentPhone = form.insuranceAgentPhone;
       if (form.insuranceAgencyName) insurancePayload.insuranceAgencyName = form.insuranceAgencyName;
+      // v3.8.ajr — Switched from JSON.stringify body to multipart FormData
+      // so Step 3 staged documents come WITH the registration POST instead
+      // of being lost to the broken `Bearer ${data.token}` post-register
+      // upload pre-ajr. Backend route /api/carrier/register already had
+      // multer.fields() configured for photoId/articlesOfInc; ajr extended
+      // it with a `files` field accepting up to 10 carrier docs + a
+      // `docTypes` parallel array tagging each file by index.
+      //
+      // Numeric + boolean fields come as strings via FormData; backend
+      // middleware coerces them before Zod validation (carrier.ts:107-127).
+      // Arrays (equipmentTypes, operatingRegions) sent as repeated keys —
+      // backend already normalizes via existing middleware.
+      const fd = new FormData();
+      const flatPayload: Record<string, unknown> = {
+        ...regData,
+        ...insurancePayload,
+        ...(numTrucksStr ? { numberOfTrucks: numTrucksStr } : {}),
+        ...(einFromForm ? { ein: einFromForm } : {}),
+        bcaVersion: BCA_VERSION,
+      };
+      for (const [key, value] of Object.entries(flatPayload)) {
+        if (value === undefined || value === null) continue;
+        if (Array.isArray(value)) {
+          // Repeated keys for array fields (multer parses into array)
+          value.forEach((v) => fd.append(key, String(v)));
+        } else if (typeof value === "boolean") {
+          fd.append(key, value ? "true" : "false");
+        } else {
+          fd.append(key, String(value));
+        }
+      }
+      // Step 3 staged documents — paired files[i] ↔ docTypes[i]
+      files.forEach((f) => {
+        fd.append("files", f, f.name);
+        fd.append("docTypes", String((f as unknown as { __docType?: string }).__docType || "other"));
+      });
+
       const res = await fetch(`${apiUrl}/carrier/register`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...regData,
-          ...insurancePayload,
-          ...(numTrucksStr ? { numberOfTrucks: parseInt(numTrucksStr) } : {}),
-          // v3.8.ajb — include ein only if user actually entered one.
-          // Backend Zod rejects empty-string ein at the regex check.
-          ...(einFromForm ? { ein: einFromForm } : {}),
-          // v3.8.aja — BCA click-wrap version. Backend writes this +
-          // server-captured agreedAt/IP/userAgent into CarrierProfile.
-          bcaVersion: BCA_VERSION,
-        }),
+        // No Content-Type header — browser sets multipart/form-data with
+        // the boundary automatically when body is a FormData instance.
+        body: fd,
       });
 
       if (!res.ok) {

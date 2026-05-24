@@ -160,6 +160,56 @@ export async function registerCarrier(req: Request, res: Response) {
       );
     }
 
+    // v3.8.ajr — Step 3 staged documents from /onboarding file picker.
+    // Pre-ajr these silently 401'd on a post-register authenticated
+    // upload attempt. Now bundled with the registration POST as `files[]`
+    // paired by index with `docTypes[]`. DOC_TYPE_MAP translates the
+    // frontend __docType tag (w9/insurance/authority/safety) into the
+    // canonical Document.docType value + the CarrierProfile boolean
+    // flag to flip (so the carrier-detail UI Document Completeness
+    // section reflects them).
+    const stagedFiles = (files.files || []) as Express.Multer.File[];
+    const docTypesArr: string[] = Array.isArray((req.body as any).docTypes)
+      ? (req.body as any).docTypes
+      : ((req.body as any).docTypes ? [(req.body as any).docTypes] : []);
+    const DOC_TYPE_MAP: Record<string, { docType: string; flagField: "w9Uploaded" | "insuranceCertUploaded" | "authorityDocUploaded" | null }> = {
+      w9:        { docType: "W9",        flagField: "w9Uploaded" },
+      insurance: { docType: "COI",       flagField: "insuranceCertUploaded" },
+      authority: { docType: "AUTHORITY", flagField: "authorityDocUploaded" },
+      safety:    { docType: "OTHER",     flagField: null }, // SAFETY_CERT not in Document.docType enum comment; classified OTHER + named in filename
+    };
+    for (let i = 0; i < stagedFiles.length; i++) {
+      const file = stagedFiles[i];
+      const tagKey = (docTypesArr[i] || "").toLowerCase();
+      const mapped = DOC_TYPE_MAP[tagKey] || { docType: "OTHER", flagField: null };
+      const ext = path.extname(file.originalname).toLowerCase();
+      const storagePath = `carrier-docs/${profileId}/${tagKey || "other"}-${Date.now()}-${Math.random().toString(36).slice(2)}${ext}`;
+      uploadPromises.push(
+        uploadFile(file.buffer, storagePath, file.mimetype).then(async (url) => {
+          await prisma.document.create({
+            data: {
+              fileName: file.originalname,
+              fileUrl: url,
+              fileType: file.mimetype,
+              fileSize: file.size,
+              entityType: "CARRIER",
+              entityId: profileId,
+              docType: mapped.docType,
+              status: "PENDING",
+              uploadSource: "CARRIER_PORTAL",
+              userId: user.id,
+            },
+          });
+          if (mapped.flagField) {
+            await prisma.carrierProfile.update({
+              where: { id: profileId },
+              data: { [mapped.flagField]: true },
+            });
+          }
+        })
+      );
+    }
+
     // Fire and forget — don't block response
     Promise.all(uploadPromises).catch((e) => log.error({ err: e }, "[Registration Files] Upload error:"));
   }

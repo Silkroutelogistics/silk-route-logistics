@@ -96,11 +96,44 @@ router.get("/fmcsa-mc-lookup/:mcNumber", fmcsaLookupLimiter, async (req: Request
 
 // Public: carrier self-registration (multipart/form-data for file uploads)
 router.post("/register",
-  upload.fields([{ name: "photoId", maxCount: 1 }, { name: "articlesOfInc", maxCount: 1 }]),
+  upload.fields([
+    { name: "photoId", maxCount: 1 },
+    { name: "articlesOfInc", maxCount: 1 },
+    // v3.8.ajr — Step 3 staged documents (W-9, COI, Authority, Safety
+    // Cert when Canadian). Pre-ajr the frontend tried a post-register
+    // authenticated upload with `Bearer ${data.token}` where data.token
+    // was undefined since the v3.8.ajd login refactor (no JWT issued
+    // at registration). Files silently 401'd. Now they come bundled
+    // with the registration POST as `files[]` paired by index with
+    // `docTypes[]` form-field arrays.
+    { name: "files", maxCount: 10 },
+  ]),
   (req: any, _res: any, next: any) => {
     // Normalize FormData array fields (equipmentTypes, operatingRegions come as repeated fields)
     if (typeof req.body.equipmentTypes === "string") req.body.equipmentTypes = [req.body.equipmentTypes];
     if (typeof req.body.operatingRegions === "string") req.body.operatingRegions = [req.body.operatingRegions];
+    if (typeof req.body.docTypes === "string") req.body.docTypes = [req.body.docTypes];
+
+    // v3.8.ajr — Coerce numeric strings to numbers. FormData fields are
+    // always strings; Zod schema expects z.number() on these. Pre-ajr
+    // the frontend sent JSON.stringify with native types so coercion
+    // wasn't needed. Switching to FormData for file upload requires it.
+    for (const k of ["numberOfTrucks", "autoLiabilityAmount", "cargoInsuranceAmount", "generalLiabilityAmount", "workersCompAmount"]) {
+      if (typeof req.body[k] === "string" && req.body[k] !== "") {
+        const n = Number(req.body[k]);
+        if (!isNaN(n)) req.body[k] = n;
+      } else if (req.body[k] === "") {
+        delete req.body[k];
+      }
+    }
+
+    // v3.8.ajr — Coerce boolean strings. Same FormData artifact.
+    for (const k of ["additionalInsuredSRL", "waiverOfSubrogation", "thirtyDayCancellationNotice"]) {
+      if (req.body[k] === "true") req.body[k] = true;
+      else if (req.body[k] === "false") req.body[k] = false;
+      else if (req.body[k] === "") delete req.body[k];
+    }
+
     next();
   },
   validateBody(carrierRegisterSchema),
