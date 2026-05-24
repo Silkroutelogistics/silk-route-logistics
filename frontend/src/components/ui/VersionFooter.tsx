@@ -8574,7 +8574,85 @@
 //              wrong. Banked as a clarification of feedback_
 //              visual_smoke_before_push — visual smoke includes
 //              IA review, not just pixel-level layout.
-export const SRL_VERSION = "3.8.ait";
+// v3.8.aiu   — Two onboarding/page.tsx bugs Wasi flagged on
+//              deployed v3.8.ait. Single atomic ship.
+//
+//              (1) ADDRESS AUTO-FILL FROM FMCSA WAS BROKEN.
+//                  AddressAutocomplete (line 1232+) had a
+//                  one-way useEffect at line 1262: `if (!value)
+//                  setQuery("")` — clears the input when value
+//                  becomes empty, does NOT push new non-empty
+//                  values from the parent into the input's
+//                  display state. So when FMCSA lookup populated
+//                  form.address via applyFmcsaData (set("address",
+//                  data.phyStreet)), the prop updated but query
+//                  stayed empty — Address field appeared blank
+//                  despite City/State/Zip auto-populating from
+//                  the same FMCSA response.
+//
+//                  Fix: `useEffect(() => { setQuery(value || "");
+//                  }, [value]);` — bidirectional sync. React
+//                  short-circuits if value === query so the
+//                  user-type path (handleChange → setQuery →
+//                  onChange → parent set → prop update → effect
+//                  fires → setQuery(same)) doesn't cause
+//                  infinite re-renders.
+//
+//              (2) EMAIL + PASSWORD PRE-FILLED BY BROWSER
+//                  AUTOFILL. Chrome was aggressively populating
+//                  both fields from saved password-manager
+//                  credentials before the user typed anything.
+//                  Inputs had no autoComplete attribute or
+//                  non-standard name to opt out.
+//
+//                  Fix: applied the EIN-field opt-out pattern
+//                  to Email + Phone + Password:
+//                    - Email:    autoComplete="off" +
+//                                name="carrier-registration-email"
+//                    - Phone:    autoComplete="off" +
+//                                name="carrier-registration-phone"
+//                    - Password: autoComplete="new-password" +
+//                                name="carrier-registration-
+//                                password"
+//                  `new-password` is the W3C-recommended attribute
+//                  for new-account password fields and signals to
+//                  the browser not to suggest existing passwords;
+//                  it also prevents triggering saved-password
+//                  autofill. Non-standard `name` values avoid
+//                  Chrome's pattern-matching against common
+//                  field names (email/username/password) that
+//                  often overrides `autoComplete="off"`.
+//
+//              Scope: ~5 LOC changed in onboarding/page.tsx (1
+//              useEffect rewrite + 3 input attribute additions).
+//              No other surfaces touched.
+//
+//              Pre-commit gates (Sub-pattern 11 CI parity):
+//              frontend tsc --noEmit clean; frontend npx next
+//              build clean (/onboarding 14.9 kB, no change).
+//
+//              Letter: ait latest origin/main HEAD; aiu
+//              sequence-continuous on top.
+//
+//              Patterns applied: §3.5 audit-first (read
+//              AddressAutocomplete value-prop sync logic + Email/
+//              Password input attributes before fixing — the bug
+//              was in the useEffect dependency-handling, NOT in
+//              the applyFmcsaData callback); §3.3 atomic single-
+//              file ship + CLAUDE.md docs row; §3.2 visual smoke
+//              walkthrough pre-push (mentally walked the
+//              auto-fill flow start-to-finish + browser-autofill
+//              opt-out semantics for both fixes); §19 Sub-pattern
+//              11 CI-parity verification.
+//
+//              Patterns emerged: none new — both bugs are
+//              well-known React patterns (prop-to-state sync
+//              + browser autofill opt-out). Banking the
+//              AddressAutocomplete sync fix as a reference for
+//              any other prop-driven uncontrolled-input
+//              components that may have the same one-way
+//              clear-only effect pattern.
+export const SRL_VERSION = "3.8.aiu";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

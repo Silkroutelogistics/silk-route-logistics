@@ -729,20 +729,25 @@ export default function OnboardingPage() {
                 </div>
               </div>
               {/* v3.8.ait — Email + Phone paired as contact details
-                  (phone moved from the Step 1 top grid per directive). */}
+                  (phone moved from the Step 1 top grid per directive).
+                  v3.8.aiu — autoComplete + non-standard `name` on
+                  email/password to opt out of browser autofill (Chrome
+                  was aggressively populating both from saved credentials,
+                  pre-filling fields before user input). Matches the
+                  existing EIN-field opt-out pattern. */}
               <div className="grid sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-[#0A2540] mb-1">Email *</label>
-                  <input type="email" value={form.email} onChange={(e) => set("email", e.target.value)} className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-gold outline-none" />
+                  <input type="email" value={form.email} onChange={(e) => set("email", e.target.value)} className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-gold outline-none" autoComplete="off" name="carrier-registration-email" />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-[#0A2540] mb-1">Phone *</label>
-                  <input type="tel" value={form.phone} onChange={(e) => set("phone", e.target.value)} className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-gold outline-none" placeholder="(555) 123-4567" />
+                  <input type="tel" value={form.phone} onChange={(e) => set("phone", e.target.value)} className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-gold outline-none" placeholder="(555) 123-4567" autoComplete="off" name="carrier-registration-phone" />
                 </div>
               </div>
               <div>
                 <label className="block text-sm font-medium text-[#0A2540] mb-1">Password * (min 8 chars)</label>
-                <input type="password" value={form.password} onChange={(e) => set("password", e.target.value)} className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-gold outline-none" />
+                <input type="password" value={form.password} onChange={(e) => set("password", e.target.value)} className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-gold outline-none" autoComplete="new-password" name="carrier-registration-password" />
               </div>
             </div>
           )}
@@ -1259,7 +1264,17 @@ function AddressAutocomplete({ value, onChange, onSelect, placeholder, className
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
-  useEffect(() => { if (!value) setQuery(""); }, [value]);
+  // v3.8.aiu — bidirectional sync. Prior `if (!value) setQuery("")` only
+  // cleared the input when value became empty; it did NOT push new
+  // non-empty values into the input's display state. So when FMCSA
+  // lookup auto-populated form.address via the parent's applyFmcsaData
+  // callback (set("address", data.phyStreet)), the prop updated but
+  // query stayed empty — Address field appeared blank despite City/
+  // State/Zip showing the auto-populated values. Full sync resolves
+  // this; React short-circuits if value === query so user-type path
+  // (handleChange → setQuery → onChange → parent → prop update →
+  // effect fires → setQuery(same)) doesn't cause infinite re-renders.
+  useEffect(() => { setQuery(value || ""); }, [value]);
 
   const search = useCallback((q: string) => {
     if (q.length < 3 || !autocompleteRef.current) { setResults([]); return; }
