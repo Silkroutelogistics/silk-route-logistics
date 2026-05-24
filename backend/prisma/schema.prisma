@@ -1461,18 +1461,26 @@ model Load {
 }
 
 model LoadTender {
-  id          String         @id @default(cuid())
-  loadId      String
-  load        Load           @relation(fields: [loadId], references: [id], onDelete: Cascade)
-  carrierId   String
-  carrier     CarrierProfile @relation(fields: [carrierId], references: [id], onDelete: Cascade)
-  status      TenderStatus   @default(OFFERED)
-  offeredRate Float
-  counterRate Float?
-  respondedAt DateTime?
-  expiresAt   DateTime
-  createdAt   DateTime       @default(now())
-  deletedAt   DateTime?
+  id            String         @id @default(cuid())
+  loadId        String
+  load          Load           @relation(fields: [loadId], references: [id], onDelete: Cascade)
+  carrierId     String
+  carrier       CarrierProfile @relation(fields: [carrierId], references: [id], onDelete: Cascade)
+  status        TenderStatus   @default(OFFERED)
+  offeredRate   Float
+  counterRate   Float?
+  respondedAt   DateTime?
+  expiresAt     DateTime
+  // v3.8.ajz Item 90 — Decline reason captured at carrier-portal decline
+  // time. Carrier-side UI already has the categorized dropdown (No
+  // capacity / Rate too low / Lane / Equipment / Dates / Already
+  // committed / Other) at carrier/dashboard/tenders/page.tsx:16-24 and
+  // already POSTs `{ reason }` to /tenders/:id/decline since v3.8.aap.
+  // Pre-ajz the backend silently dropped the field. Now persisted +
+  // surfaced in AE-facing decline email + AuditLog changes blob.
+  declineReason String?
+  createdAt     DateTime       @default(now())
+  deletedAt     DateTime?
 
   // Waterfall linkage (v3.4.d) — when a tender originated from a cascade position
   waterfallPositionId String?            @map("waterfall_position_id")

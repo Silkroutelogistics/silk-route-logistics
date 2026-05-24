@@ -1,7 +1,7 @@
 import { Response } from "express";
 import { prisma } from "../config/database";
 import { AuthRequest } from "../middleware/auth";
-import { createTenderSchema, counterTenderSchema } from "../validators/tender";
+import { createTenderSchema, counterTenderSchema, declineTenderSchema } from "../validators/tender";
 import { nextShipmentNumber } from "./shipmentController";
 import { complianceCheck } from "../services/complianceMonitorService";
 import { notifyTenderAction } from "../services/notificationService";
@@ -401,6 +401,15 @@ export async function declineTender(req: AuthRequest, res: Response) {
   if (!tender) { res.status(404).json({ error: "Tender not found" }); return; }
   if (tender.carrier.userId !== req.user!.id) { res.status(403).json({ error: "Not authorized" }); return; }
 
+  // v3.8.ajz Item 90 — Parse optional decline reason. Frontend has been
+  // POSTing { reason } since v3.8.aap (carrier portal decline modal at
+  // carrier/dashboard/tenders/page.tsx:117). Backend pre-ajz dropped it
+  // silently. Empty/whitespace strings normalize to undefined so a
+  // carrier hitting Decline without picking a dropdown value still
+  // produces a clean null in DB rather than an empty-string artifact.
+  const { reason: rawReason } = declineTenderSchema.parse(req.body ?? {});
+  const declineReason = rawReason && rawReason.length > 0 ? rawReason : undefined;
+
   // Already expired — just mark it
   if (tender.expiresAt && new Date() > tender.expiresAt) {
     await prisma.loadTender.update({ where: { id: tender.id }, data: { status: "EXPIRED" } });
@@ -408,13 +417,18 @@ export async function declineTender(req: AuthRequest, res: Response) {
 
   const updated = await prisma.loadTender.update({
     where: { id: tender.id },
-    data: { status: "DECLINED", respondedAt: new Date() },
+    data: {
+      status: "DECLINED",
+      respondedAt: new Date(),
+      declineReason: declineReason ?? null,
+    },
   });
 
-  // v3.8.ajw H3 — Audit row mirrors counterTender pattern. Closes the
-  // gap where carrier decline events were untrackable for analytics
-  // (decline rate by carrier, decline reasons distribution per Item
-  // 87.b when that lands, lane decline patterns). Non-blocking.
+  // v3.8.ajw H3 + v3.8.ajz Item 90 — Audit row now includes the decline
+  // reason in the changes blob. Closes the gap where carrier decline
+  // events were untrackable for analytics (decline rate by carrier,
+  // decline reasons distribution per Sprint 145 candidate, lane decline
+  // patterns). Non-blocking on audit-table contention.
   prisma.auditLog.create({
     data: {
       userId: req.user!.id,
@@ -425,6 +439,7 @@ export async function declineTender(req: AuthRequest, res: Response) {
         loadId: tender.loadId,
         carrierProfileId: tender.carrierId,
         offeredRate: tender.offeredRate,
+        declineReason: declineReason ?? null,
       }),
     },
   }).catch((err) => log.error({ err, tenderId: tender.id }, "[Tender] auditLog decline failed"));

@@ -10206,7 +10206,33 @@
 //   ~140 LOC net across 3 files (carrierAuth + carriers route +
 //   SecuritySignalsCard) + version bump. No schema migration —
 //   inheritance from ComplianceOverride is the cleanest pattern.
-export const SRL_VERSION = "3.8.ajy";
+// v3.8.ajz — §13.3 Item 90 LoadTender.declineReason persistence + capture.
+//   Closes the Sub-pattern 5 (audit-both-ends-of-data-flow) gap surfaced
+//   pre-ajz: carrier portal /carrier/dashboard/tenders has been POSTing
+//   { reason } to /tenders/:id/decline since v3.8.aap (decline modal at
+//   carrier/dashboard/tenders/page.tsx lines 16-24 with 7 categorized
+//   dropdown values: No capacity / Rate too low / Lane / Equipment /
+//   Dates / Already committed / Other), but the backend silently
+//   discarded the field at the validator boundary because the LoadTender
+//   model had no declineReason column. Decline analytics + AE-facing
+//   email context have been undefined-as-default since the carrier
+//   portal shipped the dropdown.
+//   Backend changes:
+//   * LoadTender model + migration adds declineReason String? nullable
+//     column (manual migration per §2.2; will apply via Render's
+//     prisma migrate deploy on this push).
+//   * New declineTenderSchema in validators/tender.ts — optional reason
+//     trimmed + max 500 chars. Free-text vocabulary so future UI
+//     iterations don't require validator changes.
+//   * declineTender controller parses + persists reason on the
+//     LoadTender row + includes in v3.8.ajw H3 AuditLog changes blob.
+//   * notifyTenderAction reads tender.declineReason and forwards to
+//     sendTenderDeclinedEmail (template already conditionally renders
+//     the reason row per Sprint 45a D4 ratification).
+//   No frontend changes — the carrier UI already captures + sends the
+//   field. Backend was the lone gap.
+//   ~50 LOC net across 4 backend edits + 1 migration + version bump.
+export const SRL_VERSION = "3.8.ajz";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

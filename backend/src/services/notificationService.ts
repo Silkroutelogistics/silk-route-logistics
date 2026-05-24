@@ -294,10 +294,13 @@ export async function notifyTenderAction(
             destName,
             carrierName,
             rate: tender.offeredRate,
-            // Item 90 LOG OPEN: LoadTender.declineReason field doesn't exist;
-            // declineTender controller doesn't capture reason. Always undefined
-            // until schema + controller both add it.
-            declineReason: undefined,
+            // v3.8.ajz Item 90 CLOSED — LoadTender.declineReason now persisted
+            // by declineTender controller from the carrier-portal categorized
+            // dropdown (carrier/dashboard/tenders/page.tsx:16-24). Email
+            // template at sendTenderDeclinedEmail conditionally renders the
+            // reason row per D4 ratification — undefined gracefully omits it
+            // for pre-ajz declines that have null in the column.
+            declineReason: tender.declineReason ?? undefined,
           });
         } catch (err) {
           log.error({ err, tenderId, aeEmail }, "[NotificationService] sendTenderDeclinedEmail failed");
