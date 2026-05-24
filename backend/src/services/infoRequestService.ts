@@ -125,6 +125,12 @@ interface ResolveInfoRequestArgs {
   requestId: string;
   carrierUserId: string; // carrier User.id from authenticate middleware
   resolvedNote: string;
+  // v3.8.aji — Optional attachment count for the AE notification email.
+  // Document rows are created in the route handler BEFORE this service
+  // is called (so they're recoverable even if the service throws on a
+  // stale already-resolved check). The service just needs the count
+  // for the email body — no document IDs needed at this layer.
+  attachmentCount?: number;
 }
 
 // Returns the resolved request. Auth check: the request must belong to
@@ -193,6 +199,7 @@ export async function resolveInfoRequest(args: ResolveInfoRequestArgs) {
       carrierDot: request.carrier.dotNumber,
       categoryLabel: getCategoryLabel(request.category),
       resolvedNote: args.resolvedNote,
+      attachmentCount: args.attachmentCount || 0,
     }).catch((err) => log.error({ err, requestId: result.id }, "[InfoRequest] AE resolved-email failed"));
   }
 
@@ -290,11 +297,22 @@ interface InfoRequestResolvedEmailArgs {
   carrierDot: string | null;
   categoryLabel: string;
   resolvedNote: string;
+  attachmentCount: number;
 }
 
 async function sendInfoRequestResolvedEmail(args: InfoRequestResolvedEmailArgs) {
   const dashboardUrl = "https://silkroutelogistics.ai/dashboard/carriers";
   const carrierRef = [args.carrierMc && `MC# ${args.carrierMc.replace(/^MC-?/i, "")}`, args.carrierDot && `DOT# ${args.carrierDot}`].filter(Boolean).join(" · ");
+
+  // v3.8.aji — Attachment count summary in the email body.
+  // Carrier-uploaded files surface via the existing /dashboard/carriers
+  // documents tab (entityType=CARRIER + entityId=carrierProfileId);
+  // the email just signals their presence + count so the AE knows to
+  // check the documents tab in addition to reading the response text.
+  const attachmentLine = args.attachmentCount > 0
+    ? `<p style="font-size:11px;color:#BA7517;text-transform:uppercase;letter-spacing:2px;margin:16px 0 8px;font-weight:600">Attachments</p>
+       <p style="color:#3A4A5F;font-size:14px;margin:0">${args.attachmentCount} file${args.attachmentCount === 1 ? "" : "s"} uploaded. View them in the carrier's Documents tab.</p>`
+    : "";
 
   const html = wrap(`
     <h2 style="color:#0A2540;margin-bottom:4px">Info request resolved</h2>
@@ -307,6 +325,7 @@ async function sendInfoRequestResolvedEmail(args: InfoRequestResolvedEmailArgs) 
 
       <p style="font-size:11px;color:#2F7A4F;text-transform:uppercase;letter-spacing:2px;margin:0 0 8px;font-weight:600">Carrier response</p>
       <p style="color:#3A4A5F;font-size:14px;line-height:1.5;margin:0;white-space:pre-wrap">${args.resolvedNote}</p>
+      ${attachmentLine}
     </div>
 
     <div style="text-align:center;margin:32px 0">

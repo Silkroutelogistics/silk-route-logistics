@@ -21,6 +21,9 @@ import { sendOtpEmail, sendEmailVerificationEmail } from "../services/emailServi
 import { resolveCountry, extractClientIp, detectUnusualActivity } from "../services/geoService";
 import { sendOtpSms } from "../services/openPhoneService";
 import { resolveInfoRequest, getCategoryLabel } from "../services/infoRequestService";
+import { upload } from "../config/upload";
+import { uploadFile } from "../services/storageService";
+import path from "path";
 import { verifyTotpCode } from "../services/totpService";
 import { z } from "zod";
 import { log } from "../lib/logger";
@@ -731,26 +734,94 @@ router.get("/info-requests", authenticate, authorize("CARRIER"), async (req: Aut
   });
 });
 
-// Resolve an OPEN info request. Service layer validates carrier
-// ownership + auto-flips onboardingStatus back to REVIEWING if this
-// is the last open request. Email send to AE is fire-and-forget.
-const resolveInfoRequestSchema = z.object({
-  resolvedNote: z.string().min(1, "Please provide a response").max(5000, "Response must be 5000 characters or less"),
-});
-
+// v3.8.aji — Resolve an OPEN info request with optional file attachments.
+// Switched from JSON body to multipart/form-data. resolvedNote comes as
+// a form field; files come as the `files[]` array (max 5). multer parses
+// both before this handler runs.
+//
+// Flow: (1) carrier auth + ownership verified upfront by re-fetching
+// the request with carrier scope (defense — service does this too but
+// we want to gate file upload before doing any S3 writes). (2) Files
+// uploaded to S3 + Document rows created with infoRequestId linkage.
+// (3) Service called to mark RESOLVED + flip status + send AE email
+// with attachment count. If service throws (e.g. request was already
+// resolved by a concurrent click), uploaded docs are tied to the same
+// request via infoRequestId — they're recoverable rather than lost.
 router.post(
   "/info-requests/:id/resolve",
   authenticate,
   authorize("CARRIER"),
-  validateBody(resolveInfoRequestSchema),
+  upload.array("files", 5),
   async (req: AuthRequest, res: Response) => {
     try {
+      const resolvedNote = (req.body?.resolvedNote || "").toString().trim();
+      if (resolvedNote.length < 1) {
+        res.status(400).json({ error: "Please provide a response" });
+        return;
+      }
+      if (resolvedNote.length > 5000) {
+        res.status(400).json({ error: "Response must be 5000 characters or less" });
+        return;
+      }
+
+      // Verify request exists + belongs to this carrier + is OPEN before
+      // burning S3 storage on uploads.
+      const request = await prisma.infoRequest.findUnique({
+        where: { id: req.params.id },
+        select: {
+          id: true,
+          status: true,
+          carrier: { select: { id: true, userId: true } },
+        },
+      });
+      if (!request) {
+        res.status(404).json({ error: "Info request not found" });
+        return;
+      }
+      if (request.carrier.userId !== req.user!.id) {
+        res.status(403).json({ error: "Not authorized to resolve this request" });
+        return;
+      }
+      if (request.status !== "OPEN") {
+        res.status(409).json({ error: "This request has already been resolved or cancelled" });
+        return;
+      }
+
+      // Upload attachments + create Document rows linking back to this
+      // info request. Sequential rather than parallel to keep S3 calls
+      // ordered + simplify error handling on partial-upload failures.
+      const files = (req.files as Express.Multer.File[] | undefined) || [];
+      const uploadedDocs: Array<{ id: string; fileName: string; fileUrl: string }> = [];
+      for (const file of files) {
+        const ext = path.extname(file.originalname).toLowerCase();
+        const storagePath = `carrier-docs/${request.carrier.id}/info-request-${request.id}-${Date.now()}-${Math.random().toString(36).slice(2)}${ext}`;
+        const fileUrl = await uploadFile(file.buffer, storagePath, file.mimetype);
+        const doc = await prisma.document.create({
+          data: {
+            fileName: file.originalname,
+            fileUrl,
+            fileType: file.mimetype,
+            fileSize: file.size,
+            entityType: "CARRIER",
+            entityId: request.carrier.id,
+            docType: "INFO_REQUEST_RESPONSE",
+            status: "PENDING",
+            uploadSource: "CARRIER_PORTAL",
+            userId: req.user!.id,
+            infoRequestId: request.id,
+          },
+        });
+        uploadedDocs.push({ id: doc.id, fileName: doc.fileName, fileUrl: doc.fileUrl });
+      }
+
       const updated = await resolveInfoRequest({
         requestId: req.params.id,
         carrierUserId: req.user!.id,
-        resolvedNote: req.body.resolvedNote,
+        resolvedNote,
+        attachmentCount: uploadedDocs.length,
       });
-      res.json({ request: updated });
+
+      res.json({ request: updated, attachments: uploadedDocs });
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Failed to resolve info request";
       log.error({ err, requestId: req.params.id, userId: req.user!.id }, "[InfoRequest] Carrier resolve failed");

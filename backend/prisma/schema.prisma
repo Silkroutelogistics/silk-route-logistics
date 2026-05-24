@@ -1959,9 +1959,19 @@ model Document {
   invoice     Invoice?       @relation(fields: [invoiceId], references: [id])
   exceptionId String?        @map("exception_id")
   exception   LoadException? @relation("ExceptionDocs", fields: [exceptionId], references: [id], onDelete: SetNull)
+  // v3.8.aji — Attachment linkage to InfoRequest. When a carrier resolves
+  // an info request with file uploads (COI scan, voided check, etc.) each
+  // file lands as a Document row with this FK set + docType=
+  // "INFO_REQUEST_RESPONSE" + entityType=CARRIER. ON DELETE SET NULL so
+  // that deleting an InfoRequest doesn't cascade-delete the doc — the
+  // attachment stays in the carrier's document history under the regular
+  // documents tab even if the info-request thread is cleaned up.
+  infoRequestId String?      @map("info_request_id")
+  infoRequest   InfoRequest? @relation(fields: [infoRequestId], references: [id], onDelete: SetNull)
 
   @@index([entityType, entityId])
   @@index([loadId, docType])
+  @@index([infoRequestId])
   @@map("documents")
 }
 
@@ -4561,6 +4571,13 @@ model InfoRequest {
   resolvedNote    String?             @db.Text
   resolvedAt      DateTime?
   cancelledAt     DateTime?
+
+  // v3.8.aji — File attachments uploaded by carrier during resolution.
+  // Documents are created with docType="INFO_REQUEST_RESPONSE",
+  // entityType="CARRIER", entityId=carrierProfileId, infoRequestId=this.id.
+  // They surface in both the AE info-request list (this relation) AND the
+  // carrier's regular documents tab (entityType/entityId lookup).
+  attachments     Document[]
 
   createdAt       DateTime            @default(now())
   updatedAt       DateTime            @updatedAt

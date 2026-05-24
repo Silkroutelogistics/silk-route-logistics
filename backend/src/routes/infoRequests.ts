@@ -86,6 +86,20 @@ router.get("/", validateQuery(listSchema), async (req: AuthRequest, res: Respons
     include: {
       createdBy: { select: { id: true, firstName: true, lastName: true, email: true } },
       cancelledBy: { select: { id: true, firstName: true, lastName: true } },
+      // v3.8.aji — Include attachments inline so the AE UI can render
+      // file links without a second round-trip. Each Document carries
+      // fileName + fileUrl + fileType + fileSize for display + download.
+      attachments: {
+        select: {
+          id: true,
+          fileName: true,
+          fileUrl: true,
+          fileType: true,
+          fileSize: true,
+          createdAt: true,
+        },
+        orderBy: { createdAt: "asc" },
+      },
     },
   });
 

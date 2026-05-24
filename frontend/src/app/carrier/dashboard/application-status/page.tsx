@@ -20,7 +20,7 @@ import { useState } from "react";
 import { api } from "@/lib/api";
 import { useCarrierAuth } from "@/hooks/useCarrierAuth";
 import { Logo } from "@/components/ui/Logo";
-import { Clock, CheckCircle2, AlertCircle, XCircle, Mail, Phone, MailCheck, RefreshCw } from "lucide-react";
+import { Clock, CheckCircle2, AlertCircle, XCircle, Mail, Phone, MailCheck, RefreshCw, Paperclip, X as XIcon } from "lucide-react";
 
 interface StatusResponse {
   user: { id: string; email: string; firstName: string; lastName: string; company: string | null };
@@ -372,12 +372,59 @@ function InfoRequestedSection() {
 function InfoRequestCard({ request, onResolved }: { request: InfoRequest; onResolved: () => void }) {
   const [resolvedNote, setResolvedNote] = useState("");
   const [error, setError] = useState<string | null>(null);
+  // v3.8.aji — Staged file attachments. Max 5 files, max 25MB each
+  // (matches backend MAX_FILE_SIZE default), MIME-validated client-side
+  // against the same set the multer fileFilter accepts on the backend.
+  const [files, setFiles] = useState<File[]>([]);
+
+  const ALLOWED_TYPES = ["application/pdf", "image/jpeg", "image/png", "application/msword", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"];
+  const MAX_FILE_BYTES = 25 * 1024 * 1024; // 25MB
+  const MAX_FILES = 5;
+
+  function addFiles(incoming: FileList | File[]) {
+    const list = Array.from(incoming);
+    const errors: string[] = [];
+    const ok: File[] = [];
+    for (const f of list) {
+      if (files.length + ok.length >= MAX_FILES) {
+        errors.push(`Maximum ${MAX_FILES} files per response`);
+        break;
+      }
+      if (!ALLOWED_TYPES.includes(f.type)) {
+        errors.push(`${f.name}: only PDF, JPEG, PNG, DOC, DOCX allowed`);
+        continue;
+      }
+      if (f.size > MAX_FILE_BYTES) {
+        errors.push(`${f.name}: file exceeds 25MB`);
+        continue;
+      }
+      ok.push(f);
+    }
+    if (errors.length > 0) setError(errors.join(" · "));
+    else setError(null);
+    setFiles((prev) => [...prev, ...ok]);
+  }
+
+  function removeFile(idx: number) {
+    setFiles((prev) => prev.filter((_, i) => i !== idx));
+  }
 
   const mutation = useMutation({
-    mutationFn: () => api.post(`/carrier-auth/info-requests/${request.id}/resolve`, { resolvedNote }),
+    mutationFn: () => {
+      // v3.8.aji — Multipart body for the upgraded endpoint. axios sets
+      // Content-Type to multipart/form-data automatically when a FormData
+      // object is passed.
+      const fd = new FormData();
+      fd.append("resolvedNote", resolvedNote);
+      for (const f of files) {
+        fd.append("files", f, f.name);
+      }
+      return api.post(`/carrier-auth/info-requests/${request.id}/resolve`, fd);
+    },
     onSuccess: () => {
       setError(null);
       setResolvedNote("");
+      setFiles([]);
       onResolved();
     },
     onError: (err: { response?: { data?: { error?: string } } }) => {
@@ -386,6 +433,12 @@ function InfoRequestCard({ request, onResolved }: { request: InfoRequest; onReso
   });
 
   const canSubmit = resolvedNote.trim().length >= 1 && !mutation.isPending;
+
+  function formatBytes(bytes: number): string {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+  }
 
   return (
     <div className="bg-[#FBF7F0] border border-[rgba(176,122,26,0.30)] rounded-lg p-4">
@@ -404,11 +457,57 @@ function InfoRequestCard({ request, onResolved }: { request: InfoRequest; onReso
           onChange={(e) => { setResolvedNote(e.target.value); if (error) setError(null); }}
           rows={4}
           maxLength={5000}
-          placeholder="Type your response here, or describe an attachment you'll email to compliance@silkroutelogistics.ai..."
+          placeholder="Type your response here. Attach any supporting documents below."
           className="w-full px-3 py-2 bg-white border border-[#EFE6D3] rounded text-sm text-[#0A2540] focus:outline-none focus:border-[#BA7517] resize-y"
         />
-        <div className="mt-2 flex items-center justify-between">
-          <p className="text-[11px] text-[#6B7685]">{resolvedNote.length}/5000</p>
+        <p className="mt-1 text-[11px] text-[#6B7685]">{resolvedNote.length}/5000</p>
+
+        {/* v3.8.aji — File attachments. Up to 5 files, 25MB each.
+            Same MIME set the backend multer fileFilter accepts. */}
+        <div className="mt-3">
+          <label className="block text-xs font-semibold text-[#3A4A5F] uppercase tracking-wider mb-1.5">
+            Attach documents <span className="font-normal normal-case text-[#6B7685]">(optional, up to {MAX_FILES} files, 25 MB each)</span>
+          </label>
+          <div className="flex items-center gap-2">
+            <label className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#FBF7F0] border border-[#EFE6D3] rounded-md text-xs font-semibold text-[#BA7517] hover:bg-[#F5EEE0] cursor-pointer">
+              <Paperclip size={12} />
+              Choose files
+              <input
+                type="file"
+                multiple
+                accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,application/pdf,image/jpeg,image/png,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                onChange={(e) => { if (e.target.files) addFiles(e.target.files); e.target.value = ""; }}
+                className="hidden"
+                disabled={mutation.isPending || files.length >= MAX_FILES}
+              />
+            </label>
+            <span className="text-[11px] text-[#6B7685]">PDF, JPG, PNG, DOC, DOCX</span>
+          </div>
+
+          {files.length > 0 && (
+            <ul className="mt-2 space-y-1">
+              {files.map((f, idx) => (
+                <li key={`${f.name}-${idx}`} className="flex items-center justify-between gap-2 px-2 py-1.5 bg-[#FBF7F0] border border-[#EFE6D3] rounded-md text-xs">
+                  <span className="flex items-center gap-1.5 min-w-0 flex-1">
+                    <Paperclip size={11} className="text-[#BA7517] flex-shrink-0" />
+                    <span className="text-[#0A2540] truncate">{f.name}</span>
+                    <span className="text-[#6B7685] flex-shrink-0">· {formatBytes(f.size)}</span>
+                  </span>
+                  <button
+                    onClick={() => removeFile(idx)}
+                    disabled={mutation.isPending}
+                    className="text-[#6B7685] hover:text-[#9B2C2C] disabled:opacity-50"
+                    aria-label={`Remove ${f.name}`}
+                  >
+                    <XIcon size={12} />
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+
+        <div className="mt-3 flex items-center justify-end">
           <button
             onClick={() => mutation.mutate()}
             disabled={!canSubmit}
@@ -424,6 +523,7 @@ function InfoRequestCard({ request, onResolved }: { request: InfoRequest; onReso
             )}
           </button>
         </div>
+
         {error && (
           <p className="mt-2 text-[11px] text-[#9B2C2C]">{error}</p>
         )}

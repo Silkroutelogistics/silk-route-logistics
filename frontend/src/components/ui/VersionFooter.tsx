@@ -10092,7 +10092,43 @@
 //            + gold-dark CTA + warning-amber for requested
 //            state); §19 Sub-pattern 11 CI-parity.
 //            Patterns emerged: none.
-export const SRL_VERSION = "3.8.ajh";
+// v3.8.aji — InfoRequest file-upload attachments (Sprint 5 of
+//            onboarding lifecycle epic). Carrier-portal resolve
+//            form gains an optional multi-file picker; uploads
+//            land in S3 via existing storageService.uploadFile
+//            + create Document rows with infoRequestId FK +
+//            docType="INFO_REQUEST_RESPONSE" + entityType=CARRIER.
+//            Backend resolve endpoint switched from JSON to
+//            multipart via upload.array("files", 5) middleware.
+//            Service layer extended with attachmentCount param
+//            for AE notification email body. AE list endpoint
+//            includes attachments[] inline (id/fileName/fileUrl
+//            /fileType/fileSize/createdAt). Carrier-side file
+//            picker validates client-side against the same MIME
+//            set + 25MB max the backend multer fileFilter
+//            enforces (PDF, JPG, PNG, DOC, DOCX). Staged-file
+//            list with per-row remove button + drag-drop ready.
+//
+//            Schema migration 20260524133000 adds
+//            documents.info_request_id (nullable, ON DELETE
+//            SET NULL so InfoRequest deletes don't cascade-
+//            delete carrier docs). Attachments stay in the
+//            carrier's regular doc history (entityType+
+//            entityId lookup) AND surface via infoRequest.
+//            attachments inline for AE thread context.
+//
+//            AE Console drawer that surfaces full info-request
+//            thread (open + resolved with attachments) banked
+//            for v3.8.ajj. For now, AE finds uploads via the
+//            existing /dashboard/carriers documents tab
+//            (entityType=CARRIER lookup) — no extra UI surface.
+//
+//            Patterns applied: §3.3 atomic single-sprint ship;
+//            §3.5 audit-first (verified existing upload pattern
+//            at routes/carriers.ts:335 + multer config + S3
+//            uploadFile signature); §2.2 manual migration; §19
+//            Sub-pattern 11 CI-parity. Patterns emerged: none.
+export const SRL_VERSION = "3.8.aji";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
