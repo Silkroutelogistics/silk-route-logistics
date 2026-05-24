@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { InfoRequestModal } from "@/components/carriers/InfoRequestModal";
 import { InfoRequestThread } from "@/components/carriers/InfoRequestThread";
+import { RejectCarrierModal } from "@/components/carriers/RejectCarrierModal";
 
 
 interface CarrierPerformance {
@@ -301,6 +302,8 @@ export default function CarrierPoolPage() {
   const [confirmAction, setConfirmAction] = useState<{ id: string; status: string; company: string } | null>(null);
   // v3.8.ajh — Request Info modal open state for the action bar button.
   const [infoRequestModalOpen, setInfoRequestModalOpen] = useState(false);
+  // v3.8.ajk — Reject modal replaces the bare confirm dialog for REJECTED.
+  const [rejectModalOpen, setRejectModalOpen] = useState(false);
   const [compassResult, setCompassResult] = useState<CompassResult | null>(null);
   const [compassCarrierId, setCompassCarrierId] = useState<string | null>(null);
   const [compassLoading, setCompassLoading] = useState<string | null>(null);
@@ -782,7 +785,7 @@ export default function CarrierPoolPage() {
                         </button>
                       )}
                       {isAdmin && selectedCarrier.onboardingStatus !== "REJECTED" && (
-                        <button onClick={() => setConfirmAction({ id: selectedCarrier.id, status: "REJECTED", company: selectedCarrier.company })}
+                        <button onClick={() => setRejectModalOpen(true)}
                           className="flex items-center gap-1.5 px-3 py-1.5 bg-red-500/20 text-red-400 rounded-lg text-xs hover:bg-red-500/30 transition">
                           <AlertCircle className="w-3.5 h-3.5" /> Reject
                         </button>
@@ -1565,6 +1568,15 @@ export default function CarrierPoolPage() {
           carrierCompany={selectedCarrier.company}
           open={infoRequestModalOpen}
           onClose={() => setInfoRequestModalOpen(false)}
+        />
+      )}
+      {/* v3.8.ajk — Reject modal with structured reason + reapply window preview. */}
+      {selectedCarrier && (
+        <RejectCarrierModal
+          carrierId={selectedCarrier.id}
+          carrierCompany={selectedCarrier.company}
+          open={rejectModalOpen}
+          onClose={() => setRejectModalOpen(false)}
         />
       )}
     </div>

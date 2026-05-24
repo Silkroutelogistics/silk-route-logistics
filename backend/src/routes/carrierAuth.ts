@@ -531,6 +531,13 @@ router.get("/application-status", authenticate, authorize("CARRIER"), async (req
           onboardingStatus: true,
           createdAt: true,
           approvedAt: true,
+          // v3.8.ajk — Rejection fields surfaced on the carrier portal
+          // RejectedSection (reason badge + AE note + reapply date with
+          // countdown + reapply CTA when eligible).
+          rejectionReason: true,
+          rejectedAt: true,
+          rejectionNote: true,
+          reapplyEligibleAt: true,
         },
       },
     },
@@ -560,10 +567,11 @@ router.get("/application-status", authenticate, authorize("CARRIER"), async (req
     submittedAt: profile.createdAt,
     approvedAt: profile.approvedAt,
     emailVerifiedAt: user.emailVerifiedAt,
-    // INFO_REQUESTED.infoRequests + REJECTED.rejectionReason/reapplyEligibleAt
-    // wire in here in v3.8.aje once the schema lands. Keep the endpoint
-    // shape stable so the frontend status page can add per-state sections
-    // without contract churn.
+    // v3.8.ajk — Rejection metadata for RejectedSection rendering.
+    rejectionReason: profile.rejectionReason,
+    rejectedAt: profile.rejectedAt,
+    rejectionNote: profile.rejectionNote,
+    reapplyEligibleAt: profile.reapplyEligibleAt,
   });
 });
 

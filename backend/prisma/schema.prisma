@@ -993,6 +993,20 @@ model CarrierProfile {
   suspensionReason String?
   suspendedAt      DateTime?
 
+  // v3.8.ajk — Rejection tracking with per-reason reapply windows.
+  // Set when AE flips onboardingStatus to REJECTED. rejectionReason
+  // drives the carrier-facing reapplyEligibleAt date (e.g. fraud →
+  // null/never, missing docs → 7 days, insurance expired → 30 days)
+  // and the rejection email body. rejectionNote is optional free-form
+  // AE context. rejectedById tracks the AE who made the call for
+  // audit. reapplyEligibleAt nullable — null means "no reapply" (fraud,
+  // permanent disqualification).
+  rejectionReason       RejectionReason?
+  rejectedAt            DateTime?
+  rejectedById          String?
+  rejectionNote         String?
+  reapplyEligibleAt     DateTime?
+
   // Document expiry enforcement
   coiExpiryDate          DateTime? // Certificate of Insurance expiry
   w9ExpiryDate           DateTime? // W-9 annual expiry
@@ -4603,4 +4617,22 @@ enum InfoRequestStatus {
   OPEN
   RESOLVED
   CANCELLED
+}
+
+// ─── v3.8.ajk — Rejection reasons (drives reapply-window logic) ───
+//
+// Each reason maps to a specific reapply window per
+// REAPPLY_WINDOWS_DAYS in backend/src/services/rejectionService.ts.
+// Null/never reasons (FRAUD_DETECTED, IDENTITY_FRAUD) cannot reapply.
+
+enum RejectionReason {
+  MISSING_DOCUMENTS         // 7 days
+  EXPIRED_INSURANCE         // 30 days
+  AUTHORITY_NOT_ACTIVE      // 60 days
+  SAFETY_RATING_UNSATISFACTORY // 90 days
+  COMPLIANCE_VIOLATION      // 60 days
+  FRAUD_DETECTED            // never (permanent)
+  IDENTITY_FRAUD            // never (permanent)
+  DUPLICATE_APPLICATION     // 30 days
+  OTHER                     // 30 days (default)
 }

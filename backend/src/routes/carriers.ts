@@ -286,6 +286,42 @@ router.put("/chameleon-matches/:matchId/review", authorize("ADMIN", "CEO"), revi
 // Admin verification
 router.post("/:id/verify", authorize("ADMIN", "CEO"), validateBody(verifyCarrierSchema), auditLog("VERIFY", "Carrier"), verifyCarrier);
 
+// v3.8.ajk — Dedicated reject endpoint with reason capture + per-reason
+// reapply window computation. Replaces the bare PUT /:id with status:
+// "REJECTED" which lost the reason context. Old PUT path still works
+// for backwards compat — AE UI now routes rejection through this
+// endpoint for the new schema fields to populate.
+const rejectCarrierSchema = z.object({
+  reason: z.enum([
+    "MISSING_DOCUMENTS",
+    "EXPIRED_INSURANCE",
+    "AUTHORITY_NOT_ACTIVE",
+    "SAFETY_RATING_UNSATISFACTORY",
+    "COMPLIANCE_VIOLATION",
+    "FRAUD_DETECTED",
+    "IDENTITY_FRAUD",
+    "DUPLICATE_APPLICATION",
+    "OTHER",
+  ]),
+  note: z.string().max(2000, "Note must be 2000 characters or less").optional(),
+});
+router.post("/:id/reject", authorize("ADMIN", "CEO"), validateBody(rejectCarrierSchema), auditLog("REJECT", "Carrier"), async (req: AuthRequest, res: Response) => {
+  try {
+    const { rejectCarrier } = require("../services/rejectionService");
+    const updated = await rejectCarrier({
+      carrierId: req.params.id,
+      rejectedById: req.user!.id,
+      reason: req.body.reason,
+      note: req.body.note,
+    });
+    res.json({ carrier: updated });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : "Failed to reject carrier";
+    const status = msg === "Carrier not found" ? 404 : 400;
+    res.status(status).json({ error: msg });
+  }
+});
+
 // DELETE /api/carriers/:id — Soft delete carrier profile
 router.delete("/:id", authorize("ADMIN", "CEO"), async (req: AuthRequest, res: Response) => {
   const carrier = await prisma.carrierProfile.findUnique({ where: { id: req.params.id } });

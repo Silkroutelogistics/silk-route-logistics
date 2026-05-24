@@ -29,6 +29,11 @@ interface StatusResponse {
   submittedAt: string;
   approvedAt: string | null;
   emailVerifiedAt: string | null; // v3.8.aje
+  // v3.8.ajk — Rejection fields surfaced on RejectedSection.
+  rejectionReason: string | null;
+  rejectedAt: string | null;
+  rejectionNote: string | null;
+  reapplyEligibleAt: string | null;
 }
 
 // Brand-canonical status palette per CLAUDE.md §2.1.
@@ -220,7 +225,7 @@ export default function ApplicationStatusPage() {
         {data.onboardingStatus === "PENDING" && <PendingSection />}
         {data.onboardingStatus === "REVIEWING" && <ReviewingSection />}
         {data.onboardingStatus === "INFO_REQUESTED" && <InfoRequestedSection />}
-        {data.onboardingStatus === "REJECTED" && <RejectedSection />}
+        {data.onboardingStatus === "REJECTED" && <RejectedSection data={data} />}
         {data.onboardingStatus === "APPROVED" && <ApprovedSection />}
       </div>
 
@@ -532,19 +537,100 @@ function InfoRequestCard({ request, onResolved }: { request: InfoRequest; onReso
   );
 }
 
-function RejectedSection() {
-  // v3.8.aje wires rejection reason + reapplyEligibleAt + reapply CTA here.
-  // For v3.8.ajd we show defensive copy.
+// v3.8.ajk — Real RejectedSection. Renders reason + AE note + reapply
+// date countdown + reapply CTA when eligibility passes. Permanent
+// rejections (FRAUD_DETECTED / IDENTITY_FRAUD per backend service) have
+// null reapplyEligibleAt → show "decision is final" copy without CTA.
+const REJECTION_REASON_LABELS: Record<string, string> = {
+  MISSING_DOCUMENTS: "Missing required documents",
+  EXPIRED_INSURANCE: "Insurance coverage expired or insufficient",
+  AUTHORITY_NOT_ACTIVE: "FMCSA operating authority not active",
+  SAFETY_RATING_UNSATISFACTORY: "Safety rating unsatisfactory",
+  COMPLIANCE_VIOLATION: "Compliance violation",
+  FRAUD_DETECTED: "Application could not be approved",
+  IDENTITY_FRAUD: "Identity verification could not be completed",
+  DUPLICATE_APPLICATION: "Duplicate application detected",
+  OTHER: "Other",
+};
+
+function RejectedSection({ data }: { data: StatusResponse }) {
+  const reasonLabel = data.rejectionReason ? (REJECTION_REASON_LABELS[data.rejectionReason] || data.rejectionReason) : null;
+
+  // Reapply eligibility logic: null → permanent; future date → not yet
+  // eligible (show countdown); past/now → reapply CTA active.
+  const reapplyDate = data.reapplyEligibleAt ? new Date(data.reapplyEligibleAt) : null;
+  const now = new Date();
+  const isPermanent = !reapplyDate;
+  const isEligibleNow = reapplyDate && reapplyDate <= now;
+  const daysUntilReapply = reapplyDate && reapplyDate > now
+    ? Math.ceil((reapplyDate.getTime() - now.getTime()) / 86400000)
+    : 0;
+
   return (
     <div>
       <h2 className="text-lg font-bold text-[#0A2540] mb-3" style={{ fontFamily: "Playfair Display, Georgia, serif" }}>
         Application closed
       </h2>
       <p className="text-sm text-[#3A4A5F] leading-relaxed">
-        Your application wasn&apos;t approved at this time. Our compliance team should have emailed you with the specific
-        reason and, where applicable, a date when you can reapply. If you didn&apos;t receive that email or believe the
-        decision was made in error, please reach out to our compliance team directly.
+        After review, we were unable to approve your carrier application at this time.
       </p>
+
+      {reasonLabel && (
+        <div className="mt-4 bg-[#F6E3E3] border border-[#9B2C2C]/30 rounded-lg p-4">
+          <p className="text-[11px] font-semibold tracking-widest text-[#9B2C2C] uppercase mb-1">Reason</p>
+          <p className="text-sm font-semibold text-[#0A2540]">{reasonLabel}</p>
+          {data.rejectionNote && (
+            <div className="mt-3 pt-3 border-t border-[#9B2C2C]/15">
+              <p className="text-[11px] font-semibold tracking-widest text-[#9B2C2C] uppercase mb-1">Additional context</p>
+              <p className="text-sm text-[#3A4A5F] leading-relaxed whitespace-pre-wrap">{data.rejectionNote}</p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {!reasonLabel && (
+        <div className="mt-4 bg-[#FBEFD4] border border-[#B07A1A]/30 rounded-lg p-4">
+          <p className="text-xs text-[#B07A1A]">
+            No reason was recorded with this decision. Please contact our compliance team for clarification.
+          </p>
+        </div>
+      )}
+
+      {isPermanent && (
+        <div className="mt-4 bg-[#FBF7F0] border border-[#EFE6D3] rounded-lg p-4">
+          <p className="text-sm text-[#3A4A5F]">
+            This decision is final. If you believe it was made in error, contact our compliance team directly.
+          </p>
+        </div>
+      )}
+
+      {!isPermanent && reapplyDate && !isEligibleNow && (
+        <div className="mt-4 bg-[#FBF7F0] border border-[#EFE6D3] rounded-lg p-4">
+          <p className="text-[11px] font-semibold tracking-widest text-[#BA7517] uppercase mb-1">Reapply eligibility</p>
+          <p className="text-sm text-[#0A2540]">
+            You can reapply after <strong>{reapplyDate.toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}</strong>
+            <span className="text-[#6B7685]"> ({daysUntilReapply} day{daysUntilReapply === 1 ? "" : "s"} from now)</span>.
+          </p>
+          <p className="mt-2 text-xs text-[#6B7685]">
+            We&apos;ll send you a reminder email when you&apos;re eligible to reapply.
+          </p>
+        </div>
+      )}
+
+      {!isPermanent && isEligibleNow && (
+        <div className="mt-4 bg-[#E6F0E9] border border-[#2F7A4F]/30 rounded-lg p-4">
+          <p className="text-[11px] font-semibold tracking-widest text-[#2F7A4F] uppercase mb-1">Eligible to reapply</p>
+          <p className="text-sm text-[#0A2540] mb-3">
+            Your reapply window opened on <strong>{reapplyDate.toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}</strong>. Start a new application below.
+          </p>
+          <a
+            href="/onboarding"
+            className="inline-block bg-[#BA7517] text-[#FBF7F0] px-5 py-2 rounded-md text-sm font-semibold hover:bg-[#854F0B]"
+          >
+            Start New Application
+          </a>
+        </div>
+      )}
     </div>
   );
 }
