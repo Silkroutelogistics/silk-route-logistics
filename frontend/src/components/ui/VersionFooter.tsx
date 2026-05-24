@@ -9308,7 +9308,166 @@
 //              retry mechanism. No special tooling needed.
 //              Banked methodology observation for future P1002
 //              incidents.
-export const SRL_VERSION = "3.8.aiy";
+// v3.8.aiz   — Sprint D: success-screen brand-register sweep.
+//              Final onboarding-flow surface that v3.8.ain Path 2C
+//              left on pre-ait slate/Tailwind tokens. Closes the
+//              full Steps 1-5 + success-screen brand continuity.
+//
+//              Pre-aiz: success-screen rendered post-submit with
+//              11 P1 brand-drift surfaces. Application Summary
+//              cards on bg-slate-50, "What Happens Next" badges
+//              on bg-gold/20 olive (text-gold = #C9A84C non-
+//              canonical) for step 2 + bg-slate-200 for step 3,
+//              "Typical review time" amber chip on Tailwind
+//              amber tokens (bg-amber-50 border-amber-200
+//              text-amber-800), Headlines on text-lg font-bold
+//              (not Playfair italic per brand H-register).
+//
+//              CHANGES
+//
+//              Success Header card (the "Application Submitted
+//              Successfully" panel at top):
+//                - Outer card border: default-gray ->
+//                  border-[#EFE6D3]
+//                - Success icon background: bg-green-50 ->
+//                  bg-[#E6F0E9] (§2.1 success-bg)
+//                - Success icon color: text-green-700 ->
+//                  text-[#2F7A4F] (§2.1 success)
+//                - H2: text-2xl font-bold -> font-serif italic
+//                  font-semibold text-2xl text-[#0A2540]
+//                  (brand H-register matching Step headers)
+//                - Subtitle: text-slate-500 -> text-[#3A4A5F]
+//                - Email strong tag: text-slate-700 ->
+//                  text-[#0A2540]
+//
+//              Application Summary card:
+//                - Outer card border: default-gray ->
+//                  border-[#EFE6D3]
+//                - H3 "Application Summary": text-lg font-bold ->
+//                  font-serif italic font-semibold text-xl
+//                  text-[#0A2540]
+//                - 6 summary cards (Company/Contact/DOT/MC/
+//                  Equipment/Regions): bg-slate-50 rounded-lg ->
+//                  bg-[#FBF7F0] border border-[#EFE6D3]
+//                  rounded-lg
+//                - 6 card labels: text-slate-700 text-xs
+//                  uppercase tracking-wide -> brand gold-dark
+//                  eyebrow text-[10px] uppercase tracking-
+//                  [0.22em] font-semibold text-[#BA7517]
+//                  (matches Step 5 Review register)
+//                - 6 card values: font-medium -> font-semibold
+//                  text-[#0A2540] (brand value text)
+//                - FMCSA Verified banner: bg-green-50
+//                  border-green-200 text-green-800 ->
+//                  bg-[#E6F0E9] border-[#2F7A4F]/40
+//                  text-[#2F7A4F] (§2.1 success token); icon
+//                  text-green-600 -> text-[#2F7A4F]
+//
+//              What Happens Next card:
+//                - Outer card border: default-gray ->
+//                  border-[#EFE6D3]
+//                - H3: text-lg font-bold -> font-serif italic
+//                  font-semibold text-xl text-[#0A2540]
+//                - Step 1 badge "1": bg-green-700 text-[#FBF7F0]
+//                  -> bg-[#2F7A4F] text-[#FBF7F0] (brand success
+//                  green, replaces Tailwind green-700)
+//                - Step 2 badge "2": bg-gold/20 text-gold (olive
+//                  non-canonical #C9A84C) -> bg-[#BA7517]/20
+//                  text-[#BA7517] (brand gold-dark tint)
+//                - Step 3 badge "3": bg-slate-200 text-slate-500
+//                  -> bg-[#EFE6D3] text-[#6B7685] (brand cream-2
+//                  tint + slate-tertiary)
+//                - 3 step labels (Compass Engine Verification,
+//                  Team Review, Approval & Portal Access):
+//                  added text-[#0A2540] for brand contrast
+//                - 3 step body texts: text-slate-500 ->
+//                  text-[#3A4A5F]
+//                - "Typical review time" warning chip:
+//                  bg-amber-50 border-amber-200 text-amber-800
+//                  (Tailwind amber) -> bg-[#FBEFD4]
+//                  border-[#B07A1A]/40 text-[#B07A1A]
+//                  (§2.1 warning token)
+//
+//              LENS 1.5 SOFTENING (out of P1 strict scope)
+//
+//              Step 1 "Compass Engine Verification" body text
+//              previously enumerated the 5 internal vetting
+//              axes ("35-point check against your FMCSA
+//              authority, insurance amounts, safety record,
+//              authority age, and OFAC status"). Softened to
+//              "Our verification system is running compliance
+//              checks against your FMCSA authority, insurance,
+//              safety record, and screening lists." Removes the
+//              "35-point" specific number (banked Lens 1.5
+//              concern from audit S.12) + softens the OFAC-
+//              specific reference to "screening lists" while
+//              preserving operational reassurance. Still
+//              acceptable post-submit per-carrier context (not
+//              anonymous marketing); not a hard architectural
+//              reveal, but tighter framing.
+//
+//              ACTIONS CARD (lines 558+) UNTOUCHED
+//
+//              Already brand-canonical from v3.8.aiq (gold-dark
+//              Call CTA + cream-bordered Email ghost + cream-2
+//              border + gold-dark Return-to-Homepage link). No
+//              change needed.
+//
+//              SCOPE
+//
+//              ~80 LOC restructured across lines 478-555
+//              (success-screen render block) in
+//              onboarding/page.tsx. Single contiguous Edit.
+//              No backend changes. No new dependencies.
+//
+//              Pre-commit gates (Sub-pattern 11 CI parity):
+//              frontend tsc --noEmit clean; frontend npx next
+//              build clean (/onboarding 17 kB -> 16.9 kB,
+//              expected slight reduction from cleaner class
+//              names).
+//
+//              Letter: aiy latest origin/main HEAD; aiz
+//              sequence-continuous on top. Next after aiz is
+//              aja per §3.1 double-letter continuation rule.
+//
+//              FULL ONBOARDING-FLOW BRAND ALIGNMENT NOW CLOSED
+//
+//              Steps 1-5 + success screen all on brand canonical
+//              tokens. Visual continuity complete from entry
+//              (DOT/MC) through submit to post-submit context.
+//              The audit-driven sprint sequence A (aiv) -> B (aiw)
+//              -> [phone/password aix] -> C (aiy) -> D (aiz)
+//              closes the Pattern 7 design-system conformance
+//              gap that v3.8.ain Path 2C left open across the
+//              flow.
+//
+//              Remaining audit work:
+//                - Sprint E: Step 4 BCA click-wrap defensibility
+//                  (agreedAt timestamp + IP/userAgent + download-
+//                  PDF + rename to BCA, ~80 LOC + schema). Per
+//                  CLAUDE.md §14 + §16, improves interim click-
+//                  through enforceability while standalone
+//                  executable BCA + Michigan attorney review
+//                  (first-carrier blocker) remain pending.
+//
+//              Patterns applied: §3.5 audit-first (Sprint D
+//              identified in comprehensive audit with explicit
+//              11-item P1 enumeration); §3.3 atomic single-file
+//              ship + CLAUDE.md docs row; §3.2 visual smoke
+//              walkthrough pre-push; §19 Pattern 7 design-system
+//              conformance (final surface in the onboarding
+//              flow Sprint sequence); §19 Sub-pattern 11 CI-
+//              parity verification.
+//
+//              Patterns emerged: none new — Sprint D is the
+//              terminal sweep that closes the multi-sprint
+//              brand-register effort. The methodology lesson
+//              from v3.8.ait ("chrome-polish sprints must
+//              include IA + brand-token audit not just headers")
+//              would have prevented the original v3.8.ain miss
+//              and saved Sprints A/C/D — banking that
+//              acknowledgment in the §11 row.
+export const SRL_VERSION = "3.8.aiz";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

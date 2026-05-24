@@ -475,82 +475,92 @@ export default function OnboardingPage() {
         <OnboardingNav />
 
         <div className="max-w-2xl mx-auto px-6 py-12">
-          {/* Success Header */}
-          <div className="bg-white rounded-2xl shadow-sm border p-8 text-center mb-6">
-            <div className="w-20 h-20 bg-green-50 rounded-full flex items-center justify-center mx-auto mb-5">
-              <CheckCircle2 className="w-10 h-10 text-green-700" />
+          {/* v3.8.aiz Sprint D — Success Header. Brand-canonical tokens:
+              cream-2 border, brand success bg/icon, Playfair italic H2,
+              brand body text. */}
+          <div className="bg-white rounded-2xl shadow-sm border border-[#EFE6D3] p-8 text-center mb-6">
+            <div className="w-20 h-20 bg-[#E6F0E9] rounded-full flex items-center justify-center mx-auto mb-5">
+              <CheckCircle2 className="w-10 h-10 text-[#2F7A4F]" />
             </div>
-            <h2 className="text-2xl font-bold mb-2">Application Submitted Successfully</h2>
-            <p className="text-slate-500 text-sm">
-              A confirmation email has been sent to <strong className="text-slate-700">{form.email}</strong>
+            <h2 className="font-serif italic font-semibold text-2xl text-[#0A2540] mb-2">Application Submitted Successfully</h2>
+            <p className="text-[#3A4A5F] text-sm">
+              A confirmation email has been sent to <strong className="text-[#0A2540]">{form.email}</strong>
             </p>
           </div>
 
-          {/* Application Summary */}
-          <div className="bg-white rounded-2xl shadow-sm border p-8 mb-6">
-            <h3 className="text-lg font-bold mb-4">Application Summary</h3>
+          {/* v3.8.aiz Sprint D — Application Summary. Card eyebrows
+              upgraded to gold-dark tracked tracking matching Step 5
+              Review register. Summary cards use brand cream + cream-2
+              border. */}
+          <div className="bg-white rounded-2xl shadow-sm border border-[#EFE6D3] p-8 mb-6">
+            <h3 className="font-serif italic font-semibold text-xl text-[#0A2540] mb-4">Application Summary</h3>
             <div className="grid sm:grid-cols-2 gap-4 text-sm">
-              <div className="p-3 bg-slate-50 rounded-lg">
-                <p className="text-slate-700 text-xs uppercase tracking-wide mb-1">Company</p>
-                <p className="font-medium">{form.company}</p>
+              <div className="p-3 bg-[#FBF7F0] border border-[#EFE6D3] rounded-lg">
+                <p className="text-[10px] uppercase tracking-[0.22em] font-semibold text-[#BA7517] mb-1">Company</p>
+                <p className="font-semibold text-[#0A2540]">{form.company}</p>
               </div>
-              <div className="p-3 bg-slate-50 rounded-lg">
-                <p className="text-slate-700 text-xs uppercase tracking-wide mb-1">Contact</p>
-                <p className="font-medium">{form.firstName} {form.lastName}</p>
+              <div className="p-3 bg-[#FBF7F0] border border-[#EFE6D3] rounded-lg">
+                <p className="text-[10px] uppercase tracking-[0.22em] font-semibold text-[#BA7517] mb-1">Contact</p>
+                <p className="font-semibold text-[#0A2540]">{form.firstName} {form.lastName}</p>
               </div>
-              <div className="p-3 bg-slate-50 rounded-lg">
-                <p className="text-slate-700 text-xs uppercase tracking-wide mb-1">DOT Number</p>
-                <p className="font-medium">{form.dotNumber}</p>
+              <div className="p-3 bg-[#FBF7F0] border border-[#EFE6D3] rounded-lg">
+                <p className="text-[10px] uppercase tracking-[0.22em] font-semibold text-[#BA7517] mb-1">DOT Number</p>
+                <p className="font-semibold text-[#0A2540]">{form.dotNumber}</p>
               </div>
-              <div className="p-3 bg-slate-50 rounded-lg">
-                <p className="text-slate-700 text-xs uppercase tracking-wide mb-1">MC Number</p>
-                <p className="font-medium">{form.mcNumber || "—"}</p>
+              <div className="p-3 bg-[#FBF7F0] border border-[#EFE6D3] rounded-lg">
+                <p className="text-[10px] uppercase tracking-[0.22em] font-semibold text-[#BA7517] mb-1">MC Number</p>
+                <p className="font-semibold text-[#0A2540]">{form.mcNumber || "—"}</p>
               </div>
-              <div className="p-3 bg-slate-50 rounded-lg">
-                <p className="text-slate-700 text-xs uppercase tracking-wide mb-1">Equipment</p>
-                <p className="font-medium">{form.equipmentTypes.join(", ")}</p>
+              <div className="p-3 bg-[#FBF7F0] border border-[#EFE6D3] rounded-lg">
+                <p className="text-[10px] uppercase tracking-[0.22em] font-semibold text-[#BA7517] mb-1">Equipment</p>
+                <p className="font-semibold text-[#0A2540]">{form.equipmentTypes.join(", ")}</p>
               </div>
-              <div className="p-3 bg-slate-50 rounded-lg">
-                <p className="text-slate-700 text-xs uppercase tracking-wide mb-1">Regions</p>
-                <p className="font-medium">{form.operatingRegions.join(", ")}</p>
+              <div className="p-3 bg-[#FBF7F0] border border-[#EFE6D3] rounded-lg">
+                <p className="text-[10px] uppercase tracking-[0.22em] font-semibold text-[#BA7517] mb-1">Regions</p>
+                <p className="font-semibold text-[#0A2540]">{form.operatingRegions.join(", ")}</p>
               </div>
             </div>
             {fmcsaResult?.verified && (
-              <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg flex items-center gap-2 text-sm">
-                <CheckCircle2 className="w-4 h-4 text-green-600 shrink-0" />
-                <span className="text-green-800">FMCSA Authority Verified — {fmcsaResult.operatingStatus}</span>
+              <div className="mt-4 p-3 bg-[#E6F0E9] border border-[#2F7A4F]/40 rounded-lg flex items-center gap-2 text-sm">
+                <CheckCircle2 className="w-4 h-4 text-[#2F7A4F] shrink-0" />
+                <span className="text-[#2F7A4F] font-medium">FMCSA Authority Verified — {fmcsaResult.operatingStatus}</span>
               </div>
             )}
           </div>
 
-          {/* What Happens Next */}
-          <div className="bg-white rounded-2xl shadow-sm border p-8 mb-6">
-            <h3 className="text-lg font-bold mb-5">What Happens Next</h3>
+          {/* v3.8.aiz Sprint D — What Happens Next. Step badges
+              brand-canonicalized: step 1 success-green (kept), step 2
+              gold-dark tint (was olive `text-gold`), step 3 cream-2
+              tint (was slate-200). Step labels gain brand navy.
+              "Typical review time" warning chip swapped from Tailwind
+              amber to §2.1 warning token. */}
+          <div className="bg-white rounded-2xl shadow-sm border border-[#EFE6D3] p-8 mb-6">
+            <h3 className="font-serif italic font-semibold text-xl text-[#0A2540] mb-5">What Happens Next</h3>
             <div className="space-y-5">
               <div className="flex gap-4">
-                <div className="w-8 h-8 bg-green-700 text-[#FBF7F0] rounded-full flex items-center justify-center text-sm font-bold shrink-0">1</div>
+                <div className="w-8 h-8 bg-[#2F7A4F] text-[#FBF7F0] rounded-full flex items-center justify-center text-sm font-bold shrink-0">1</div>
                 <div>
-                  <p className="font-semibold text-sm">Compass Engine Verification</p>
-                  <p className="text-slate-500 text-sm">The Compass Engine is already running its 35-point check against your FMCSA authority, insurance amounts, safety record, authority age, and OFAC status.</p>
+                  <p className="font-semibold text-sm text-[#0A2540]">Compass Engine Verification</p>
+                  <p className="text-[#3A4A5F] text-sm">Our verification system is running compliance checks against your FMCSA authority, insurance, safety record, and screening lists.</p>
                 </div>
               </div>
               <div className="flex gap-4">
-                <div className="w-8 h-8 bg-gold/20 text-gold rounded-full flex items-center justify-center text-sm font-bold shrink-0">2</div>
+                <div className="w-8 h-8 bg-[#BA7517]/20 text-[#BA7517] rounded-full flex items-center justify-center text-sm font-bold shrink-0">2</div>
                 <div>
-                  <p className="font-semibold text-sm">Team Review</p>
-                  <p className="text-slate-500 text-sm">A carrier relations specialist will review your application. We may reach out for additional documentation.</p>
+                  <p className="font-semibold text-sm text-[#0A2540]">Team Review</p>
+                  <p className="text-[#3A4A5F] text-sm">A carrier relations specialist will review your application. We may reach out for additional documentation.</p>
                 </div>
               </div>
               <div className="flex gap-4">
-                <div className="w-8 h-8 bg-slate-200 text-slate-500 rounded-full flex items-center justify-center text-sm font-bold shrink-0">3</div>
+                <div className="w-8 h-8 bg-[#EFE6D3] text-[#6B7685] rounded-full flex items-center justify-center text-sm font-bold shrink-0">3</div>
                 <div>
-                  <p className="font-semibold text-sm">Approval &amp; Portal Access</p>
-                  <p className="text-slate-500 text-sm">Once approved, you&#39;ll receive login credentials and can start browsing available loads immediately.</p>
+                  <p className="font-semibold text-sm text-[#0A2540]">Approval &amp; Portal Access</p>
+                  <p className="text-[#3A4A5F] text-sm">Once approved, you&#39;ll receive login credentials and can start browsing available loads immediately.</p>
                 </div>
               </div>
             </div>
-            <div className="mt-6 p-4 bg-amber-50 border border-amber-200 rounded-lg text-sm">
-              <p className="text-amber-800"><strong>Typical review time:</strong> most carriers cleared within a few business days. Authority age, insurance verification, and document review drive the timeline.</p>
+            <div className="mt-6 p-4 bg-[#FBEFD4] border border-[#B07A1A]/40 rounded-lg text-sm">
+              <p className="text-[#B07A1A]"><strong>Typical review time:</strong> most carriers cleared within a few business days. Authority age, insurance verification, and document review drive the timeline.</p>
             </div>
           </div>
 
