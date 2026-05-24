@@ -21,6 +21,39 @@ const router = Router();
 router.use(authenticate);
 router.use(authorize("CARRIER"));
 
+// v3.8.ajx H1+C4 — SUSPENDED gate for carrier-side mutation endpoints.
+//
+// Pre-ajx the 5 write endpoints (/:id/status, /:id/documents, /:id/check-call,
+// /:id/exceptions, /:id/exceptions/:excId/receipt) only checked load ownership
+// (`load.carrierId !== req.user!.id` → 403). A carrier whose onboarding flipped
+// to SUSPENDED mid-flight (insurance expired, FMCSA authority revoked, manual
+// AE suspension via OverrideComplianceModal/admin) could still continue to
+// mutate their active loads — upload POD, mark IN_TRANSIT, fire check calls —
+// because the gate fired upstream on TENDER but not on per-load mutation.
+//
+// complianceMonitorService.ts auto-suspends in 4 branches (insurance-expiry
+// L1424, monthly re-vetting L1553, authority-change L1662, safety-rating
+// L1702). C4 closes the gap by enforcing the gate at carrier-action time:
+// SUSPENDED → 403 with structured code so the carrier portal can surface
+// "Your account is suspended. Contact compliance@silkroutelogistics.ai."
+//
+// Returns `false` when blocked (response already sent). Returns `true` when
+// the carrier may proceed.
+async function checkCarrierNotSuspended(req: AuthRequest, res: Response): Promise<boolean> {
+  const profile = await prisma.carrierProfile.findUnique({
+    where: { userId: req.user!.id },
+    select: { onboardingStatus: true },
+  });
+  if (profile?.onboardingStatus === "SUSPENDED") {
+    res.status(403).json({
+      error: "Your account is suspended. Contact compliance@silkroutelogistics.ai.",
+      code: "CARRIER_SUSPENDED",
+    });
+    return false;
+  }
+  return true;
+}
+
 // GET /api/carrier-loads/available — Loads matching carrier's equipment/regions
 router.get("/available", async (req: AuthRequest, res: Response) => {
   const profile = await prisma.carrierProfile.findUnique({ where: { userId: req.user!.id } });
@@ -349,6 +382,7 @@ router.post("/:id/status", validateBody(statusUpdateSchema), async (req: AuthReq
     res.status(403).json({ error: "Not your load" });
     return;
   }
+  if (!(await checkCarrierNotSuspended(req, res))) return;
 
   const { status, note } = req.body;
   const oldStatus = load.status;
@@ -439,6 +473,7 @@ router.post("/:id/documents", upload.single("file"), async (req: AuthRequest, re
     res.status(403).json({ error: "Not your load" });
     return;
   }
+  if (!(await checkCarrierNotSuspended(req, res))) return;
   if (!req.file) {
     res.status(400).json({ error: "No file uploaded" });
     return;
@@ -551,6 +586,7 @@ router.post("/:id/check-call", validateBody(checkCallSchema), async (req: AuthRe
     res.status(403).json({ error: "Not your load" });
     return;
   }
+  if (!(await checkCarrierNotSuspended(req, res))) return;
 
   const { city: ccCity, state: ccState, etaHours, notes } = req.body;
   const location = ccCity && ccState ? `${ccCity}, ${ccState}` : (ccCity || ccState || "");
@@ -659,6 +695,7 @@ router.post("/:id/exceptions", validateBody(carrierExceptionSchema), async (req:
   const load = await prisma.load.findUnique({ where: { id: req.params.id } });
   if (!load) { res.status(404).json({ error: "Load not found" }); return; }
   if (load.carrierId !== req.user!.id) { res.status(403).json({ error: "Not your load" }); return; }
+  if (!(await checkCarrierNotSuspended(req, res))) return;
 
   const { category, unitType, description, locationText, locationLat, locationLng } = req.body;
   if (!isValidExceptionCode(category)) {
@@ -713,6 +750,7 @@ router.post("/:id/exceptions/:excId/receipt", upload.single("file"), async (req:
   const load = await prisma.load.findUnique({ where: { id: req.params.id } });
   if (!load) { res.status(404).json({ error: "Load not found" }); return; }
   if (load.carrierId !== req.user!.id) { res.status(403).json({ error: "Not your load" }); return; }
+  if (!(await checkCarrierNotSuspended(req, res))) return;
   if (!req.file) { res.status(400).json({ error: "No file uploaded" }); return; }
 
   const exc = await prisma.loadException.findUnique({ where: { id: req.params.excId } });

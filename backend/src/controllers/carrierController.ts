@@ -424,23 +424,77 @@ export async function registerCarrier(req: Request, res: Response) {
           log.error({ err: e }, "[Compass Auto-Approve] Error:");
         }
       }
-    }).catch((e) =>
-      log.error({ err: e }, "[Compass Auto-Vet] Registration vetting error:")
-    );
+    }).catch((e) => {
+      log.error({ err: e }, "[Compass Auto-Vet] Registration vetting error:");
+      // v3.8.ajx C9 — Persist a queryable SystemLog WARNING so ops can find
+      // carriers whose registration auto-vetting failed entirely (FMCSA
+      // timeout, network blip, downstream service degradation). log.error
+      // above goes to Render stdout (transient); this row survives + is
+      // queryable from AE dashboards via source filter.
+      prisma.systemLog.create({
+        data: {
+          logType: "INTEGRATION",
+          severity: "WARNING",
+          source: "compass-auto-vet",
+          message: `Auto-vetting failed during carrier registration (DOT: ${dot}, MC: ${mc || "n/a"}) — manual re-vet required`,
+          details: {
+            carrierProfileId: profileId,
+            userId: user.id,
+            company: data.company,
+            dot,
+            mc,
+            err: e instanceof Error ? e.message : String(e),
+          },
+        },
+      }).catch(() => { /* logging-table contention swallowed */ });
+    });
   }
 
   // 5. Auto-trigger identity verification (background)
   if (profileId) {
-    runIdentityCheck(profileId).catch((e) =>
-      log.error({ err: e }, "[Compass Identity] Auto identity check error:")
-    );
+    runIdentityCheck(profileId).catch((e) => {
+      log.error({ err: e }, "[Compass Identity] Auto identity check error:");
+      // v3.8.ajx C9 — Persist same WARNING shape for identity check failures.
+      prisma.systemLog.create({
+        data: {
+          logType: "INTEGRATION",
+          severity: "WARNING",
+          source: "compass-identity-check",
+          message: `Auto identity-check failed during carrier registration (profileId: ${profileId}) — manual re-run required`,
+          details: {
+            carrierProfileId: profileId,
+            userId: user.id,
+            company: data.company,
+            err: e instanceof Error ? e.message : String(e),
+          },
+        },
+      }).catch(() => { /* swallow */ });
+    });
   }
 
   // 6. Auto-trigger OFAC screening (background)
   if (profileId) {
-    screenCarrier(profileId).catch((e) =>
-      log.error({ err: e }, "[Compass OFAC] Auto OFAC screening error:")
-    );
+    screenCarrier(profileId).catch((e) => {
+      log.error({ err: e }, "[Compass OFAC] Auto OFAC screening error:");
+      // v3.8.ajx C9 — Persist same WARNING shape for OFAC screening failures.
+      // OFAC failures are P0 from a compliance-posture standpoint — carriers
+      // CANNOT proceed past PENDING without a clean OFAC screen per §14, so
+      // ops needs immediate visibility on missed screenings.
+      prisma.systemLog.create({
+        data: {
+          logType: "INTEGRATION",
+          severity: "WARNING",
+          source: "compass-ofac-screen",
+          message: `Auto OFAC screening failed during carrier registration (profileId: ${profileId}) — manual re-screen required before approval`,
+          details: {
+            carrierProfileId: profileId,
+            userId: user.id,
+            company: data.company,
+            err: e instanceof Error ? e.message : String(e),
+          },
+        },
+      }).catch(() => { /* swallow */ });
+    });
   }
 
   // 7. Populate authorityGrantedDate from FMCSA (background, v3.8.ahk —

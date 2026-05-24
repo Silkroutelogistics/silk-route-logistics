@@ -10152,7 +10152,38 @@
 //   operationally relevant; the indexes on Notification model are already
 //   tuned for this query (userId+read+readAt, createdAt).
 //   ~120 LOC net across 5 files (1 new lib + 4 edits). No schema migration.
-export const SRL_VERSION = "3.8.ajw";
+// v3.8.ajx — Operational compliance bundle (H1+C4 + C5 + C9). C7 deferred.
+//   H1+C4: Single SUSPENDED gate helper (checkCarrierNotSuspended) wired
+//   into 5 carrier-side write endpoints — /:id/status, /:id/documents,
+//   /:id/check-call, /:id/exceptions, /:id/exceptions/:excId/receipt.
+//   Pre-ajx a carrier auto-suspended mid-flight by complianceMonitorService
+//   (insurance expiry / authority revoked / safety rating / monthly re-vet)
+//   could still mutate active loads — upload POD, mark IN_TRANSIT, fire
+//   check calls — because ownership gates fired but onboardingStatus did
+//   not. Returns 403 + code "CARRIER_SUSPENDED" so the carrier portal can
+//   surface "Your account is suspended. Contact compliance@."
+//   C5: QP monthly limit hard block on POST /carrier-payments/:id/
+//   request-quickpay. Tier limits per §8: Silver $15K/mo, Gold $40K/mo,
+//   Platinum $80K/mo. Aggregate this carrier's QUICKPAY-method
+//   CarrierPay rows for the calendar month; if this request would push
+//   over the tier limit, refuse with 422 + structured cycle-resets
+//   message. Per-load auto-approve threshold (Silver $2K / Gold $4K /
+//   Platinum $6K) flagged in response as advisory (overAutoApprove
+//   boolean); hard enforcement deferred to C5b once AE approval-state
+//   machine stabilizes.
+//   C9: Three new SystemLog WARNING rows on the registerCarrier
+//   fire-and-forget background tasks — Compass vetting, identity check,
+//   OFAC screening. Pre-ajx all three failure paths only fired log.error
+//   to Render stdout (transient); now ops can query by source filter
+//   (compass-auto-vet, compass-identity-check, compass-ofac-screen) to
+//   find carriers needing manual re-runs. OFAC failures explicitly
+//   tagged as compliance-blocking ("must re-screen before approval").
+//   C7 (OTP unusual-activity admin override) deferred to v3.8.ajy —
+//   requires User schema field + migration + admin UI endpoint, cleaner
+//   as standalone atomic.
+//   ~160 LOC net across 4 files (3 backend edits + version bump). No
+//   schema migration. Migrate-deploy step will no-op.
+export const SRL_VERSION = "3.8.ajx";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
