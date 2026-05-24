@@ -388,6 +388,20 @@ export default function OnboardingPage() {
     // verification to complete.
     if (step === 0) return form.firstName && form.lastName && form.email && passwordMeetsCriteria(form.password) && confirmPassword === form.password && hibpStatus === "safe" && form.company && form.phone.replace(/\D/g, "").length === 10 && form.mcNumber.trim() && form.dotNumber.length >= 5 && /^\d+$/.test(form.dotNumber) && form.address && form.city && form.state && form.zip;
     if (step === 1) return form.equipmentTypes.length > 0 && form.operatingRegions.length > 0;
+    // v3.8.ajb — Step 3 (Insurance & Documents) gate. W-9, Insurance
+    // Certificate, and Authority Letter are universally required.
+    // Safety Fitness Certificate is conditionally required only when
+    // the carrier selected a Canadian operating region in Step 2.
+    if (step === 2) {
+      const hasDoc = (key: string) => files.some((f) => (f as any).__docType === key);
+      const CANADIAN_REGIONS = ["Eastern Canada", "Western Canada", "Central Canada", "Cross-Border"];
+      const hasCanadianOps = form.operatingRegions.some((r) => CANADIAN_REGIONS.includes(r));
+      if (!hasDoc("w9")) return false;
+      if (!hasDoc("insurance")) return false;
+      if (!hasDoc("authority")) return false;
+      if (hasCanadianOps && !hasDoc("safety")) return false;
+      return true;
+    }
     if (step === 3) return form.agreeTerms;
     return true;
   };
@@ -402,7 +416,16 @@ export default function OnboardingPage() {
         return;
       }
 
-      const { agreeTerms: _, unit: _u,
+      // v3.8.ajb — `ein` peeled out of regData and conditionally
+      // included only when non-empty. Backend Zod is
+      // `z.string().regex(/^\d{9}$/).optional()` — `.optional()` accepts
+      // ABSENT, but PRESENT-with-empty-string fails the regex.
+      // v3.8.air removed the EIN input from Step 1 but kept `ein: ""`
+      // in form state, which had been silently regressing registration
+      // ever since (every carrier hit "Validation failed" on submit).
+      // Caught when Wasi tried to register a real test carrier on
+      // deployed v3.8.aja.
+      const { agreeTerms: _, unit: _u, ein: einFromForm,
         autoLiability, cargoInsurance, generalLiability, workersComp,
         additionalInsuredSRL, waiverOfSubrogation, thirtyDayCancellationNotice,
         numberOfTrucks: numTrucksStr,
@@ -443,6 +466,9 @@ export default function OnboardingPage() {
           ...regData,
           ...insurancePayload,
           ...(numTrucksStr ? { numberOfTrucks: parseInt(numTrucksStr) } : {}),
+          // v3.8.ajb — include ein only if user actually entered one.
+          // Backend Zod rejects empty-string ein at the regex check.
+          ...(einFromForm ? { ein: einFromForm } : {}),
           // v3.8.aja — BCA click-wrap version. Backend writes this +
           // server-captured agreedAt/IP/userAgent into CarrierProfile.
           bcaVersion: BCA_VERSION,
@@ -1246,45 +1272,67 @@ export default function OnboardingPage() {
               </div>
 
               {/* Document Upload Section
-                  v3.8.aiv — Safety Fitness Certificate now conditionally
-                  rendered only when carrier selected at least one Canadian
-                  operating region in Step 2. US-only carriers no longer
-                  see this irrelevant upload slot. Brand-token sweep
-                  applied to all card states (default/hover/uploaded) +
-                  drop zone + additional-files list. */}
+                  v3.8.aiv — Safety Fitness Certificate conditional on
+                  Canadian regions.
+                  v3.8.ajb — All visible documents now marked REQUIRED
+                  (red asterisk + missing-state amber ring until uploaded).
+                  canNext gate at step===2 blocks Next until W-9 +
+                  Insurance Certificate + Authority Letter uploaded
+                  (+ Safety Fitness Certificate if Canadian ops). Count
+                  banner shows X of Y required documents uploaded. */}
               <div className="pt-2">
-                <p className="text-[10px] uppercase tracking-[0.22em] font-semibold text-[#BA7517] mb-1.5">Upload Documents</p>
-                <p className="text-sm text-[#3A4A5F] mb-4">PDF, JPEG, or PNG accepted (max 10MB each). Click each card to upload.</p>
+                <div className="flex items-center justify-between gap-3 mb-1.5 flex-wrap">
+                  <p className="text-[10px] uppercase tracking-[0.22em] font-semibold text-[#BA7517]">Upload Documents</p>
+                  {(() => {
+                    const CANADIAN_REGIONS = ["Eastern Canada", "Western Canada", "Central Canada", "Cross-Border"];
+                    const hasCanadianOps = form.operatingRegions.some((r) => CANADIAN_REGIONS.includes(r));
+                    const required = ["w9", "insurance", "authority", ...(hasCanadianOps ? ["safety"] : [])];
+                    const uploaded = required.filter((k) => files.some((f) => (f as any).__docType === k)).length;
+                    const allGood = uploaded === required.length;
+                    return (
+                      <span className={cn("text-[10px] uppercase tracking-[0.18em] font-semibold", allGood ? "text-[#2F7A4F]" : "text-[#B07A1A]")}>
+                        {uploaded} of {required.length} required uploaded
+                      </span>
+                    );
+                  })()}
+                </div>
+                <p className="text-sm text-[#3A4A5F] mb-4">PDF, JPEG, or PNG accepted (max 10MB each). Click each card to upload. <span className="text-[#9B2C2C] font-medium">All marked with <span aria-hidden="true">*</span> are required to submit.</span></p>
               </div>
               <div className="grid gap-4">
                 {(() => {
                   const CANADIAN_REGIONS = ["Eastern Canada", "Western Canada", "Central Canada", "Cross-Border"];
                   const hasCanadianOperations = form.operatingRegions.some((r) => CANADIAN_REGIONS.includes(r));
                   const docs = [
-                    { key: "w9", label: "W-9 Form", desc: "Required for tax reporting (your EIN is extracted from this)" },
-                    { key: "insurance", label: "Insurance Certificate (COI)", desc: "Auto liability, cargo, general liability, and workers' comp" },
-                    { key: "authority", label: "Authority Letter / Operating Authority", desc: "Active FMCSA authority — 18+ months of operating history required" },
-                    ...(hasCanadianOperations ? [{ key: "safety", label: "Safety Fitness Certificate", desc: "Required for Canadian-based carriers operating interprovincially" }] : []),
+                    { key: "w9", label: "W-9 Form", desc: "Required for tax reporting (your EIN is extracted from this)", required: true },
+                    { key: "insurance", label: "Insurance Certificate (COI)", desc: "Auto liability, cargo, general liability, and workers' comp", required: true },
+                    { key: "authority", label: "Authority Letter / Operating Authority", desc: "Active FMCSA authority — 18+ months of operating history required", required: true },
+                    ...(hasCanadianOperations ? [{ key: "safety", label: "Safety Fitness Certificate", desc: "Required for Canadian-based carriers operating interprovincially", required: true }] : []),
                   ];
                   return docs.map((doc) => {
                     const docFile = files.find((f) => (f as any).__docType === doc.key);
+                    const isMissingRequired = doc.required && !docFile;
                     return (
                       <label key={doc.key} className={cn(
                         "p-4 rounded-lg border cursor-pointer transition hover:border-[#C5A572] hover:bg-[#FAEEDA]",
-                        docFile ? "bg-[#E6F0E9] border-[#2F7A4F]/40" : "bg-[#FBF7F0] border-[#EFE6D3]"
+                        docFile ? "bg-[#E6F0E9] border-[#2F7A4F]/40" : isMissingRequired ? "bg-[#FBEFD4] border-[#B07A1A]/40" : "bg-[#FBF7F0] border-[#EFE6D3]"
                       )}>
                         <div className="flex items-center gap-3">
                           {docFile ? (
                             <CheckCircle2 className="w-5 h-5 text-[#2F7A4F] shrink-0" />
                           ) : (
-                            <Upload className="w-5 h-5 text-[#BA7517] shrink-0" />
+                            <Upload className={cn("w-5 h-5 shrink-0", isMissingRequired ? "text-[#B07A1A]" : "text-[#BA7517]")} />
                           )}
                           <div className="flex-1 min-w-0">
-                            <span className="text-sm font-medium block text-[#0A2540]">{doc.label}</span>
+                            <span className="text-sm font-medium block text-[#0A2540]">
+                              {doc.label}
+                              {doc.required && <span className="text-[#9B2C2C] ml-1" aria-label="required">*</span>}
+                            </span>
                             {docFile ? (
                               <span className="text-xs text-[#2F7A4F] truncate block">{docFile.name} ({(docFile.size / 1024).toFixed(0)} KB)</span>
                             ) : (
-                              <span className="text-xs text-[#6B7685] block">{doc.desc}</span>
+                              <span className={cn("text-xs block", isMissingRequired ? "text-[#B07A1A]" : "text-[#6B7685]")}>
+                                {isMissingRequired ? `${doc.desc} — required` : doc.desc}
+                              </span>
                             )}
                           </div>
                           {docFile && (

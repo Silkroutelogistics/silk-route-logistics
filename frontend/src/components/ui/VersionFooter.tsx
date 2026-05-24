@@ -9605,7 +9605,177 @@
 //              100kb). Browser-native "Save as PDF" via print
 //              dialog is the universal fallback. Banked as UX
 //              pattern for future document-export affordances.
-export const SRL_VERSION = "3.8.aja";
+// v3.8.ajb   — Sprint F + EIN registration hotfix (atomic bundle).
+//              Two related Step 3 / submit-path fixes shipped
+//              together since both touch onboarding/page.tsx +
+//              both block carrier onboarding.
+//
+//              CRITICAL BUG FIX (regression from v3.8.air)
+//
+//              Reproduced via curl against deployed prod:
+//                POST /api/carrier/register with ein:""
+//                -> 400 {"error":"Validation failed",
+//                       "details":[{"field":"ein",
+//                                   "message":"EIN must be 9 digits"}]}
+//
+//              In v3.8.air I removed the EIN input from Step 1
+//              but kept `ein: ""` in form state with the comment
+//              "retained as empty default for backend payload
+//              compatibility — backend will gracefully accept
+//              empty string." That assumption was wrong.
+//
+//              Backend Zod is
+//                ein: z.string().regex(/^\d{9}$/, "EIN must be
+//                  9 digits").optional()
+//              `.optional()` allows the field to be ABSENT.
+//              But if PRESENT (including as empty string), the
+//              regex must match. Empty string fails the regex
+//              (zero digits, not nine).
+//
+//              regData spread in handleSubmit included `ein: ""`,
+//              so every carrier registration since v3.8.air had
+//              been silently failing at Step 5 Submit with
+//              "Validation failed". Wasi caught it when actually
+//              trying to register through to Step 5 on deployed
+//              v3.8.aja — first end-to-end submit smoke since
+//              the air regression.
+//
+//              Fix: 3-line frontend change.
+//                (1) Peel `ein` out of the regData destructure
+//                    via `ein: einFromForm`.
+//                (2) In the fetch body, conditionally include
+//                    ein only if non-empty:
+//                      ...(einFromForm ? { ein: einFromForm } : {})
+//              Frontend now sends ein only when user actually
+//              entered one (today: never, since the input is
+//              removed). Backend `.optional()` accepts the
+//              absent field cleanly.
+//
+//              METHODOLOGY LESSON
+//
+//              Smoke verification on form sprints must include
+//              the FULL submit path, not just step-level visual
+//              checks. The user-memory
+//              feedback_visual_smoke_before_push.md covers
+//              layout/chrome but doesn't enumerate end-to-end
+//              submit verification. Banking as an extension:
+//              for any sprint that touches handleSubmit payload
+//              shape OR backend Zod schema, the smoke MUST
+//              include a real curl-or-browser submit through to
+//              200/400 + response body inspection.
+//
+//              SPRINT F (required documents enforcement)
+//
+//              Step 3 documents (W-9, Insurance Certificate,
+//              Authority Letter, + Safety Fitness Certificate
+//              if Canadian) were UI-visible but completely
+//              optional at the canNext gate. Carriers could
+//              proceed to Step 4/5 + submit registration
+//              without uploading any of them.
+//
+//              Changes:
+//                (1) canNext extended for step === 2:
+//                      const hasDoc = (key) =>
+//                        files.some(f => f.__docType === key);
+//                      const hasCanadianOps =
+//                        form.operatingRegions.some(
+//                          r => CANADIAN_REGIONS.includes(r));
+//                      if (!hasDoc("w9")) return false;
+//                      if (!hasDoc("insurance")) return false;
+//                      if (!hasDoc("authority")) return false;
+//                      if (hasCanadianOps && !hasDoc("safety"))
+//                        return false;
+//                      return true;
+//
+//                (2) Document data extended with `required:
+//                    true` flag on all visible docs (Safety
+//                    Cert already conditional per v3.8.aiv).
+//
+//                (3) Visual indicators:
+//                    - Red asterisk after each required doc
+//                      label: text-[#9B2C2C].
+//                    - Missing-state styling: warning-amber
+//                      bg + border (bg-[#FBEFD4]
+//                      border-[#B07A1A]/40) for required docs
+//                      not yet uploaded; upload icon also
+//                      switches to amber.
+//                    - Description text appends " — required"
+//                      when missing.
+//
+//                (4) Count banner above the doc list:
+//                    "X of Y required uploaded" — green when
+//                    all met, amber otherwise.
+//
+//                (5) Section intro extended with explicit note:
+//                    "All marked with * are required to submit."
+//
+//              UX: carrier sees the required-state visually +
+//              gets blocked at Next until all required uploads
+//              present. Submit on Step 5 still passes the EIN
+//              hotfix above.
+//
+//              SCOPE
+//
+//              ~50 LOC in onboarding/page.tsx (3 LOC EIN +
+//              ~45 LOC required-docs UI + canNext block).
+//              No backend changes. No CSP changes. No new
+//              dependencies.
+//
+//              Pre-commit gates (Sub-pattern 11 CI parity):
+//              frontend tsc --noEmit clean; frontend npx next
+//              build clean (/onboarding 17.2 kB -> 17.5 kB,
+//              expected ~0.3 kB from count banner + required
+//              asterisks + missing-state styling).
+//
+//              Letter: aja latest origin/main HEAD; ajb
+//              sequence-continuous on top. Cloudflare deploy
+//              only — no backend changes, Render path-filter
+//              skips this push (which is fine per aiy retry
+//              mechanic learning).
+//
+//              POST-DEPLOY VERIFICATION REQUIRED
+//
+//              On Cloudflare rebuild:
+//                1. EIN hotfix: register a test carrier
+//                   through full flow to Step 5 + Submit.
+//                   Should now succeed (no more "Validation
+//                   failed" banner). CarrierProfile row
+//                   created with bca* fields populated per
+//                   v3.8.aja.
+//                2. Required docs: in Step 3, try clicking
+//                   Next without uploading any documents.
+//                   Next button should stay disabled. Upload
+//                   W-9 only -> still disabled. Upload
+//                   Insurance Certificate -> still disabled.
+//                   Upload Authority Letter -> Next enables
+//                   (assuming no Canadian region selected).
+//                   If carrier had Canadian region selected
+//                   in Step 2, Safety Cert also required
+//                   before Next enables.
+//                3. Count banner should update live as each
+//                   doc uploads ("1 of 3" -> "2 of 3" ->
+//                   "3 of 3" with color flip from amber
+//                   to green).
+//
+//              Patterns applied: §3.5 audit-first (curl-
+//              reproduced the EIN regression before fixing);
+//              §3.3 atomic single-file ship with bundled
+//              fixes (both touch onboarding/page.tsx + both
+//              are registration-flow gates); §3.4 halt > ship
+//              (paused Sprint F push to diagnose the EIN
+//              error first instead of pushing on top); §3.2
+//              visual smoke (mentally walked Step 3 empty/
+//              partial/full doc states); §19 Sub-pattern 11
+//              CI-parity verification.
+//
+//              Patterns emerged: methodology lesson —
+//              submit-path-smoke as required gate for any
+//              sprint touching handleSubmit / Zod schema.
+//              The visual chrome can pass eye-test perfectly
+//              while a payload-shape regression sits in the
+//              hot path for many sprints. Banking as an
+//              extension of feedback_visual_smoke_before_push.
+export const SRL_VERSION = "3.8.ajb";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
