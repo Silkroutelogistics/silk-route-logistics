@@ -55,6 +55,12 @@ export const carrierRegisterSchema = z.object({
   additionalInsuredSRL: z.boolean().optional(),
   waiverOfSubrogation: z.boolean().optional(),
   thirtyDayCancellationNotice: z.boolean().optional(),
+  // v3.8.aja — BCA click-wrap version. Frontend sends the content
+  // version that was rendered + acknowledged; backend writes alongside
+  // server-captured agreedAt + IP + userAgent. Other 3 click-wrap
+  // audit fields are NOT in the validator because they're captured
+  // server-side from req.* (authoritative), not accepted from client.
+  bcaVersion: z.string().optional(),
   // Insurance Agent Contact
   insuranceAgentName: z.string().optional(),
   insuranceAgentEmail: z.string().email().optional().or(z.literal("")),

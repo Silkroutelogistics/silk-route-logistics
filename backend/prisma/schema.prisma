@@ -829,6 +829,18 @@ model CarrierProfile {
   waiverOfSubrogation         Boolean   @default(false)
   thirtyDayCancellationNotice Boolean   @default(false)
 
+  // v3.8.aja — BCA click-wrap audit trail (Sprint E). Captures the
+  // legal evidence required to defend the click-through agreement
+  // against later challenge: server-side timestamp, source IP,
+  // user-agent string, and the BCA content version that was shown.
+  // Per CLAUDE.md §14 + §16, this improves the interim click-through
+  // enforceability while the standalone executable BCA + Michigan
+  // attorney review remain as first-carrier blockers.
+  bcaAgreedAt              DateTime?
+  bcaAgreedFromIp          String?
+  bcaAgreedFromUserAgent   String?
+  bcaVersion               String?
+
   // Insurance Agent Contact
   insuranceAgentName  String?
   insuranceAgentEmail String?

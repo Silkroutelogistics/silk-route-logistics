@@ -9467,7 +9467,145 @@
 //              would have prevented the original v3.8.ain miss
 //              and saved Sprints A/C/D — banking that
 //              acknowledgment in the §11 row.
-export const SRL_VERSION = "3.8.aiz";
+// v3.8.aja   — Sprint E: BCA click-wrap defensibility. Full-stack
+//              atomic (schema + migration + Zod + controller +
+//              frontend rename + Print/PDF). Closes the last audit
+//              item — full Sprints A→E sequence done.
+//
+//              CRITICAL CAVEAT (§16): Sprint E does NOT close the
+//              first-carrier blocker. §16 #1 (standalone executable
+//              BCA .docx) + #2 (Michigan attorney review) remain.
+//              aja only upgrades the INTERIM click-through that
+//              bridges until the standalone executed document
+//              lands.
+//
+//              BACKEND
+//
+//              (1) prisma/schema.prisma — 4 new nullable fields on
+//                  CarrierProfile (before Insurance Agent block):
+//                    bcaAgreedAt            DateTime?
+//                    bcaAgreedFromIp        String?
+//                    bcaAgreedFromUserAgent String?
+//                    bcaVersion             String?
+//
+//              (2) prisma/migrations/20260524073652_add_bca_
+//                  clickwrap_audit_fields/migration.sql NEW —
+//                  manual ALTER TABLE (TIMESTAMP(3) + 3 TEXT), per
+//                  §2.2 (no migrate-dev against prod-pointed URL).
+//
+//              (3) src/validators/carrier.ts — 1 new
+//                  z.string().optional() for bcaVersion. Other 3
+//                  audit fields NOT in validator (agreedAt =
+//                  server-now, IP from req.ip, UA from
+//                  req.headers — authoritative, not client-
+//                  supplied).
+//
+//              (4) src/controllers/carrierController.ts —
+//                  registerCarrier writer captures all 4 fields
+//                  server-side on every successful registration
+//                  (canNext requires agreeTerms=true so any
+//                  successful POST = accepted click-wrap).
+//
+//              FRONTEND (onboarding/page.tsx)
+//
+//              (1) New BCA_VERSION = "2026-05-24-v1" constant.
+//                  Bump on any Step 4 text revision.
+//
+//              (2) Step 4 H2: "Terms & Agreement" -> "Broker-
+//                  Carrier Agreement". §14 canonical alignment.
+//
+//              (3) Step 4 intro tightened.
+//
+//              (4) In-pane title: "Carrier Transportation
+//                  Agreement" -> "Broker-Carrier Agreement
+//                  (Click-Through)". Opening paragraph renamed
+//                  accordingly.
+//
+//              (5) Print / Save-as-PDF affordance — flex row
+//                  above the agreement scroll-pane with version
+//                  eyebrow on left, FileText-icon outlined button
+//                  on right. onClick triggers window.print().
+//                  Browser's native dialog offers "Save as PDF"
+//                  destination — no PDF library needed.
+//
+//              (6) Hidden print-only header (print:block) shows
+//                  in printed PDF only: "Silk Route Logistics
+//                  Inc. — Broker-Carrier Agreement (Click-
+//                  Through) — Version {BCA_VERSION} — Printed
+//                  {date}".
+//
+//              (7) Tailwind print: modifiers strip surrounding
+//                  chrome: OnboardingNav, eyebrow strip "Carrier
+//                  Registration", step indicator, Step 4 header,
+//                  Version+Print button row, agree-terms
+//                  checkbox, Back/Next buttons — all
+//                  print:hidden. Form panel border/shadow/padding
+//                  stripped via print:border-0
+//                  print:shadow-none print:rounded-none
+//                  print:p-0. Agreement scroll-pane expanded via
+//                  print:max-h-none print:overflow-visible
+//                  print:bg-white print:border-0 print:p-0.
+//                  Net effect: printed PDF shows just print-only
+//                  header + full BCA body.
+//
+//              (8) Agree-terms label: "I agree to the Carrier
+//                  Terms & Conditions" -> "I agree to the
+//                  Broker-Carrier Agreement above".
+//
+//              (9) handleSubmit payload: body extended with
+//                  bcaVersion: BCA_VERSION.
+//
+//              POSSIBLE P1002 ON DEPLOY
+//
+//              aja adds the 6th Prisma migration (5th was aiw's
+//              Effective Date pair). aix and aiw both hit P1002
+//              on migration-bearing deploys. Same retry pattern
+//              applies if aja fails: wait ~30 min for Neon idle
+//              timeout to release advisory lock 72707369, then
+//              Render dashboard -> Manual Deploy -> Deploy
+//              latest commit. Sprint C aiy row has the full
+//              runbook.
+//
+//              SCOPE
+//
+//              ~140 LOC across 6 files. Onboarding bundle 16.9 kB
+//              -> 17.2 kB.
+//
+//              Pre-commit gates (Sub-pattern 11 CI parity):
+//              backend tsc clean (Prisma client regenerated);
+//              frontend tsc clean; frontend next build clean.
+//
+//              Letter: aiz latest origin/main HEAD; aja
+//              sequence-continuous on top per §3.1 double-letter
+//              continuation (after aiz comes aja since "a-i-z"
+//              is the v3.8 minor's z; continuing pre + j + a).
+//
+//              FULL AUDIT SEQUENCE CLOSED
+//
+//              A (aiv) Step 3 P0+P1 -> B (aiw) Effective Dates ->
+//              [aix phone+password gamma tier] -> C (aiy) Steps
+//              1/2/4 + Card B brand sweep -> D (aiz) success
+//              screen -> E (aja) BCA defensibility. Onboarding
+//              flow is brand-canonical, IA-correct, defensibility-
+//              upgraded, ready for first-carrier onboarding once
+//              §16 blockers #1 (standalone executable BCA) + #2
+//              (Michigan attorney review) clear.
+//
+//              Patterns applied: §3.5 audit-first; §3.3 atomic
+//              full-stack ship; §2.2 schema mutation discipline;
+//              §3.2 visual smoke walkthrough pre-push; §19
+//              Sub-pattern 11 CI-parity verification (both
+//              backend AND frontend tsc gates).
+//
+//              Patterns emerged: methodology lesson — Tailwind
+//              print: modifier system is a clean client-only
+//              PDF-export mechanism for legal documents.
+//              Avoids server-side PDF endpoint complexity AND
+//              client-side PDF library bundle bloat (jsPDF ~50-
+//              100kb). Browser-native "Save as PDF" via print
+//              dialog is the universal fallback. Banked as UX
+//              pattern for future document-export affordances.
+export const SRL_VERSION = "3.8.aja";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

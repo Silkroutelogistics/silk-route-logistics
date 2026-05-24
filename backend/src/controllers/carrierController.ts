@@ -99,6 +99,16 @@ export async function registerCarrier(req: Request, res: Response) {
           insuranceAgentEmail: data.insuranceAgentEmail || undefined,
           insuranceAgentPhone: data.insuranceAgentPhone,
           insuranceAgencyName: data.insuranceAgencyName,
+          // v3.8.aja — BCA click-wrap audit trail captured server-side.
+          // agreedAt = server-now (authoritative — not client-supplied).
+          // IP from req.ip (Render forwards x-forwarded-for via Express
+          // 'trust proxy' setting). UA from req.headers. Version from
+          // client (the frontend constant that identifies which BCA
+          // text was rendered + acknowledged).
+          bcaAgreedAt: new Date(),
+          bcaAgreedFromIp: req.ip || (req.headers["x-forwarded-for"] as string)?.split(",")[0]?.trim() || null,
+          bcaAgreedFromUserAgent: (req.headers["user-agent"] as string) || null,
+          bcaVersion: data.bcaVersion || null,
         },
       },
     },

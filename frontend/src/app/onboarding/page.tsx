@@ -8,6 +8,14 @@ import { cn } from "@/lib/utils";
 
 const steps = ["Company Info", "Equipment & Regions", "Documents", "Terms", "Review"];
 
+// v3.8.aja — BCA click-wrap version identifier. Sent with the
+// registration payload + stored on CarrierProfile.bcaVersion so we
+// can correlate a carrier's accepted text to a specific revision.
+// Bump this constant any time the Step 4 agreement body changes.
+// Format: YYYY-MM-DD-vN (date of revision + revision counter for
+// same-day multi-edits).
+const BCA_VERSION = "2026-05-24-v1";
+
 /* ── v3.8.ain Path 2C — Canonical chrome parity nav for /onboarding ──
    Mirrors the static-HTML `_partials/nav.html` chrome that's injected on
    /, /carriers, /shippers, /about, /contact, /track via inject-chrome.mjs
@@ -24,7 +32,7 @@ function OnboardingNav() {
 
   return (
     <>
-      <nav className="bg-[#0A2540] border-b border-[#C5A572]/15 sticky top-0 z-50">
+      <nav className="bg-[#0A2540] border-b border-[#C5A572]/15 sticky top-0 z-50 print:hidden">
         <div className="max-w-[1280px] mx-auto px-6 h-[72px] flex items-center justify-between">
           {/* v3.8.aiq — logo-only per canonical _partials/nav.html parity.
               The "Silk Route Logistics" wordmark span added in v3.8.ain
@@ -435,6 +443,9 @@ export default function OnboardingPage() {
           ...regData,
           ...insurancePayload,
           ...(numTrucksStr ? { numberOfTrucks: parseInt(numTrucksStr) } : {}),
+          // v3.8.aja — BCA click-wrap version. Backend writes this +
+          // server-captured agreedAt/IP/userAgent into CarrierProfile.
+          bcaVersion: BCA_VERSION,
         }),
       });
 
@@ -608,7 +619,7 @@ export default function OnboardingPage() {
           visual inconsistency. Removed entirely; the eyebrow strip
           now carries only the page-context cue (program eyebrow +
           Carrier Registration H1). */}
-      <div className="bg-[#F5EEE0] border-b border-[#EFE6D3]">
+      <div className="bg-[#F5EEE0] border-b border-[#EFE6D3] print:hidden">
         <div className="max-w-3xl mx-auto px-6 py-5">
           <p className="text-[10px] uppercase tracking-[0.22em] font-semibold text-[#BA7517] mb-1">Caravan Partner Program</p>
           <h1 className="font-serif italic font-semibold text-xl sm:text-2xl text-[#0A2540] leading-tight">Carrier Registration</h1>
@@ -619,7 +630,7 @@ export default function OnboardingPage() {
           rings on completed steps, gold-dark on active, cream-2 hairline
           ring on pending. Connector dashes use --gold tint for visual
           continuity with the Caravan Journey animation on /carriers. */}
-      <div className="max-w-3xl mx-auto px-6 pt-8">
+      <div className="max-w-3xl mx-auto px-6 pt-8 print:hidden">
         <div className="flex items-center justify-between mb-8">
           {steps.map((s, i) => (
             <div key={s} className="flex items-center gap-2 flex-1 last:flex-initial">
@@ -723,8 +734,11 @@ export default function OnboardingPage() {
 
         {/* v3.8.ain Path 2C — Form panel with gold-dark top accent
             matching the Caravan Partner Program / commitment-card-flip
-            register on /carriers. */}
-        <div className="bg-white border-t-2 border-[#BA7517] rounded-2xl shadow-sm border-l border-r border-b border-[#EFE6D3] p-8">
+            register on /carriers.
+            v3.8.aja — print: modifiers strip the panel chrome on
+            print so Step 4 prints as clean text without the brand
+            top-accent border + cream-2 frame. */}
+        <div className="bg-white border-t-2 border-[#BA7517] rounded-2xl shadow-sm border-l border-r border-b border-[#EFE6D3] p-8 print:border-0 print:shadow-none print:rounded-none print:p-0">
           {error && <div className="mb-6 p-4 bg-[#F6E3E3] border-l-4 border-[#9B2C2C] text-[#9B2C2C] rounded-lg text-sm">{error}</div>}
 
           {/* Step 0: Company Info */}
@@ -1338,17 +1352,44 @@ export default function OnboardingPage() {
             </div>
           )}
 
-          {/* Step 3: Terms */}
+          {/* Step 3: Terms (Broker-Carrier Agreement click-through) */}
           {step === 3 && (
             <div className="space-y-6">
-              <div className="pb-4 border-b border-[#EFE6D3]">
+              <div className="pb-4 border-b border-[#EFE6D3] print:hidden">
                 <p className="text-[10px] uppercase tracking-[0.22em] font-semibold text-[#BA7517] mb-1.5">Step 4 of 5</p>
-                <h2 className="font-serif italic font-semibold text-2xl text-[#0A2540] mb-2">Terms &amp; Agreement</h2>
-                <p className="text-sm text-[#3A4A5F] leading-relaxed">Click-through onboarding agreement. Standalone Broker-Carrier Agreement + Caravan Quick Pay Agreement v2 supersede where executed.</p>
+                <h2 className="font-serif italic font-semibold text-2xl text-[#0A2540] mb-2">Broker-Carrier Agreement</h2>
+                <p className="text-sm text-[#3A4A5F] leading-relaxed">Click-through agreement. The standalone executed Broker-Carrier Agreement + Caravan Quick Pay Agreement v2 supersede where signed separately.</p>
               </div>
-              <div className="p-5 rounded-xl bg-[#FBF7F0] border border-[#EFE6D3] max-h-80 overflow-y-auto text-sm text-[#3A4A5F] leading-relaxed space-y-4">
-                <p className="font-serif italic font-semibold text-[#0A2540] text-base">Silk Route Logistics — Carrier Transportation Agreement</p>
-                <p>This Carrier Transportation Agreement (&quot;Agreement&quot;) is entered into between Silk Route Logistics Inc. (&quot;Broker&quot;) and the undersigned motor carrier (&quot;Carrier&quot;). By completing registration, Carrier agrees to the following terms and conditions:</p>
+              {/* v3.8.aja Sprint E — Print / Download PDF affordance.
+                  Uses window.print() with Tailwind print: modifiers
+                  to hide nav/eyebrow/step indicator/buttons + expand
+                  the scroll-pane to full agreement on print. User's
+                  browser print dialog offers "Save as PDF" as a
+                  destination — no PDF library needed. */}
+              <div className="flex items-center justify-between gap-3 print:hidden">
+                <div className="text-xs text-[#6B7685]">
+                  <span className="uppercase tracking-[0.18em] font-semibold text-[#BA7517]">Version</span> {BCA_VERSION}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => window.print()}
+                  className="inline-flex items-center gap-1.5 px-4 py-2 border border-[#EFE6D3] hover:border-[#C5A572] hover:bg-[#FBF7F0] rounded-md text-sm font-medium text-[#0A2540] transition"
+                >
+                  <FileText className="w-4 h-4 text-[#BA7517]" />
+                  Print / Save as PDF
+                </button>
+              </div>
+              {/* Hidden print-only header — appears in the printed
+                  PDF only, not on screen. Captures the version + agreed-at
+                  timestamp at print time for the carrier's records. */}
+              <div className="hidden print:block mb-4 pb-3 border-b border-[#EFE6D3]">
+                <p className="text-xs text-[#6B7685]">
+                  Silk Route Logistics Inc. — Broker-Carrier Agreement (Click-Through) — Version {BCA_VERSION} — Printed {new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}
+                </p>
+              </div>
+              <div className="p-5 rounded-xl bg-[#FBF7F0] border border-[#EFE6D3] max-h-80 overflow-y-auto text-sm text-[#3A4A5F] leading-relaxed space-y-4 print:max-h-none print:overflow-visible print:bg-white print:border-0 print:p-0">
+                <p className="font-serif italic font-semibold text-[#0A2540] text-base">Silk Route Logistics — Broker-Carrier Agreement (Click-Through)</p>
+                <p>This Broker-Carrier Agreement (&quot;Agreement&quot;) is entered into between Silk Route Logistics Inc. (&quot;Broker&quot;) and the undersigned motor carrier (&quot;Carrier&quot;). By completing registration, Carrier agrees to the following terms and conditions:</p>
 
                 <p className="font-semibold text-[#0A2540] mt-3">1. Authority & Compliance</p>
                 <ul className="list-disc ml-5 space-y-1">
@@ -1435,11 +1476,11 @@ export default function OnboardingPage() {
 
                 <p className="text-xs text-[#6B7685] mt-4 italic">Last updated: May 2026. Silk Route Logistics Inc. reserves the right to update these terms with 30 days&apos; notice to registered carriers. When the standalone Broker-Carrier Agreement and Caravan Quick Pay Agreement v2 are executed between Broker and Carrier, those agreements will govern over this onboarding click-through where they conflict.</p>
               </div>
-              <label className="flex items-center gap-3 cursor-pointer p-4 rounded-lg border border-[#EFE6D3] bg-white hover:bg-[#FBF7F0] transition">
+              <label className="flex items-center gap-3 cursor-pointer p-4 rounded-lg border border-[#EFE6D3] bg-white hover:bg-[#FBF7F0] transition print:hidden">
                 <input type="checkbox" checked={form.agreeTerms}
                   onChange={(e) => set("agreeTerms", e.target.checked)}
                   className="w-5 h-5 rounded border-[#C5A572] text-[#BA7517] focus:ring-[#BA7517]" />
-                <span className="text-sm font-medium text-[#0A2540]">I agree to the Carrier Terms &amp; Conditions</span>
+                <span className="text-sm font-medium text-[#0A2540]">I agree to the Broker-Carrier Agreement above</span>
               </label>
             </div>
           )}
@@ -1524,8 +1565,10 @@ export default function OnboardingPage() {
           )}
 
           {/* Navigation — gold-dark CTA matching .nav-login-btn canonical
-              and the Sign In button in OnboardingNav above. */}
-          <div className="flex justify-between items-center mt-8 pt-6 border-t border-[#EFE6D3]">
+              and the Sign In button in OnboardingNav above.
+              v3.8.aja — print:hidden so Back/Next don't appear in
+              the printed BCA. */}
+          <div className="flex justify-between items-center mt-8 pt-6 border-t border-[#EFE6D3] print:hidden">
             <button onClick={() => setStep(step - 1)} disabled={step === 0}
               className="flex items-center gap-1.5 px-5 py-2.5 text-sm font-medium text-[#3A4A5F] hover:text-[#0A2540] hover:bg-[#FBF7F0] rounded-lg disabled:opacity-30 disabled:hover:bg-transparent transition">
               <ChevronLeft className="w-4 h-4" /> Back
