@@ -8478,7 +8478,103 @@
 //              shipped. /onboarding was the natural sibling
 //              surface that should have been touched in the
 //              same sprint; banked here.
-export const SRL_VERSION = "3.8.ais";
+// v3.8.ait   — Step 1/2 field-placement IA fix + OnboardingNav Sign
+//              In canonical parity. Closes Wasi-flagged "# of trucks
+//              is showing here on company information already and
+//              phone number is showing on top part" + "sign in on
+//              top left doesn't exactly match the sign in CTA of
+//              other pages".
+//
+//              Methodology miss (third in two days). The v3.8.ain
+//              Path 2C chrome upgrade preserved the inherited
+//              pre-ain field placement without questioning whether
+//              the grouping made operational sense. Fleet size
+//              (# of Trucks) belongs with equipment/fleet info,
+//              not with company identity. Phone belongs with
+//              contact details (Email), not with regulatory IDs
+//              (DOT/MC). Both should have been caught during the
+//              ain visual smoke that I skipped.
+//
+//              FIX (single atomic ship, 5 surgical changes):
+//
+//              (1) Step 1 top grid restructured from 4-col
+//                  (DOT/MC/Trucks/Phone) to 2-col (DOT/MC only).
+//                  The remaining 2 fields both trigger FMCSA
+//                  auto-lookup that bidirectionally populates the
+//                  other — keeping them as 2 distinct inputs
+//                  rather than a dropdown type-picker preserves
+//                  the bidirectional fill UX.
+//
+//              (2) Phone * moved from Step 1 top grid into the
+//                  bottom contact block, paired with Email as
+//                  sm:grid-cols-2. Password split into its own
+//                  full-width row below. Operational grouping:
+//                  identity (name) → contact (email+phone) →
+//                  auth (password).
+//
+//              (3) # of Trucks moved from Step 1 → Step 2
+//                  (Equipment & Operating Regions). Placed at the
+//                  top of Step 2 as the first field, max-w-xs
+//                  single column. Renamed label to "Fleet Size
+//                  (# of Trucks)". Step 2 intro updated to
+//                  reflect the new field.
+//
+//              (4) OnboardingNav Sign In button canonical parity:
+//                  dropped ChevronDown icon (canonical
+//                  `.nav-login-btn` has no chevron); tightened
+//                  padding from `px-5 py-2` to `py-[9px]
+//                  px-[22px]` matching utilities.css canonical
+//                  exactly. Removed unused ChevronDown lucide-
+//                  react import.
+//
+//              (5) Eyebrow strip "Already registered? Sign In"
+//                  link removed entirely. The canonical nav above
+//                  already provides Sign In via the gold-dark CTA
+//                  dropdown. The eyebrow strip link was a second
+//                  Sign In affordance in a different visual
+//                  register from the nav CTA (creating visual
+//                  inconsistency) AND non-canonical drift. Eyebrow
+//                  now carries only the page-context cue (program
+//                  eyebrow + Carrier Registration H1).
+//
+//              METHODOLOGY ACKNOWLEDGMENT. Three consecutive
+//              sprints have shipped layout-audit gaps Wasi caught
+//              post-deploy: ail (EIN should-have-been-removed
+//              misread as "explain"), ain (text-white invisible +
+//              non-canonical wordmark), ait (Trucks/Phone wrong-
+//              category placement + mismatched Sign In CTA). The
+//              user-memory feedback_visual_smoke_before_push.md
+//              explicitly covers this class. Going forward: must
+//              run a step-by-step IA + visual walkthrough of
+//              every chrome/layout sprint before declaring gates
+//              passed. Build-clean is necessary, not sufficient.
+//
+//              Scope: ~25 LOC restructured across 4 surfaces in
+//              onboarding/page.tsx.
+//
+//              Pre-commit gates (Sub-pattern 11 CI parity):
+//              frontend tsc --noEmit clean; frontend npx next
+//              build clean (/onboarding 15.0 kB → 14.9 kB).
+//
+//              Letter: ais latest origin/main HEAD; ait sequence-
+//              continuous on top.
+//
+//              Patterns applied: §3.5 audit-first; §3.3 atomic
+//              single-file ship + CLAUDE.md docs row; §3.2 visual
+//              smoke walkthrough pre-push (applied this time,
+//              missed in the prior three sprints); §19 Pattern 7
+//              design-system conformance (OnboardingNav Sign In
+//              now exact-match to canonical `.nav-login-btn`).
+//
+//              Patterns emerged: methodology lesson — chrome-
+//              polish sprints that touch existing layouts MUST
+//              include an IA audit, not just a styling audit.
+//              The pre-ain layout grouped fields by tab-order
+//              convenience but the categorical grouping was
+//              wrong. Banked as a clarification of feedback_
+//              visual_smoke_before_push — visual smoke includes
+//              IA review, not just pixel-level layout.
+export const SRL_VERSION = "3.8.ait";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

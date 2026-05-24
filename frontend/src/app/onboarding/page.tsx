@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Check, ChevronRight, ChevronLeft, Upload, CheckCircle2, X, FileText, Image as ImageIcon, MapPin, Compass, ChevronDown } from "lucide-react";
+import { Check, ChevronRight, ChevronLeft, Upload, CheckCircle2, X, FileText, Image as ImageIcon, MapPin, Compass } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const steps = ["Company Info", "Equipment & Regions", "Documents", "Terms", "Review"];
@@ -48,15 +48,19 @@ function OnboardingNav() {
               onMouseEnter={() => setLoginOpen(true)}
               onMouseLeave={() => setLoginOpen(false)}
             >
+              {/* v3.8.ait — canonical parity with `.nav-login-btn`
+                  in utilities.css: padding 9px 22px, no chevron icon,
+                  hover-to-reveal dropdown (no click toggle visual cue
+                  on the button itself). Matches /, /carriers, /shippers,
+                  /about, /contact, /track nav buttons exactly. */}
               <button
                 type="button"
-                className="bg-[#BA7517] hover:bg-[#C5A572] text-[#FBF7F0] px-5 py-2 rounded-md text-sm font-semibold transition inline-flex items-center gap-1"
+                className="bg-[#BA7517] hover:bg-[#C5A572] text-[#FBF7F0] py-[9px] px-[22px] rounded-md text-sm font-semibold transition"
                 onClick={() => setLoginOpen((v) => !v)}
                 aria-haspopup="true"
                 aria-expanded={loginOpen}
               >
                 Sign In
-                <ChevronDown className="w-3.5 h-3.5" />
               </button>
               {loginOpen && (
                 <div
@@ -463,15 +467,19 @@ export default function OnboardingPage() {
           but now sits BELOW the canonical chrome instead of inside
           it. Cream-tinted strip with gold-dark eyebrow + Playfair
           italic micro-title, paralleling Card A on Step 0. */}
+      {/* v3.8.ait — eyebrow strip Sign In affordance removed.
+          The canonical nav above already provides Sign In via the
+          gold-dark CTA dropdown (AE/Carrier/Shipper). The eyebrow
+          strip's "Already registered? Sign In" link was a second
+          Sign In affordance in a different visual register (plain
+          underlined text vs the canonical CTA button), creating
+          visual inconsistency. Removed entirely; the eyebrow strip
+          now carries only the page-context cue (program eyebrow +
+          Carrier Registration H1). */}
       <div className="bg-[#F5EEE0] border-b border-[#EFE6D3]">
-        <div className="max-w-3xl mx-auto px-6 py-5 flex items-center justify-between gap-4">
-          <div>
-            <p className="text-[10px] uppercase tracking-[0.22em] font-semibold text-[#BA7517] mb-1">Caravan Partner Program</p>
-            <h1 className="font-serif italic font-semibold text-xl sm:text-2xl text-[#0A2540] leading-tight">Carrier Registration</h1>
-          </div>
-          <Link href="/carrier/login" className="text-xs sm:text-sm text-[#3A4A5F] hover:text-[#BA7517] transition whitespace-nowrap">
-            Already registered? <span className="font-semibold underline decoration-[#C5A572]/40 underline-offset-2">Sign In</span>
-          </Link>
+        <div className="max-w-3xl mx-auto px-6 py-5">
+          <p className="text-[10px] uppercase tracking-[0.22em] font-semibold text-[#BA7517] mb-1">Caravan Partner Program</p>
+          <h1 className="font-serif italic font-semibold text-xl sm:text-2xl text-[#0A2540] leading-tight">Carrier Registration</h1>
         </div>
       </div>
 
@@ -594,8 +602,14 @@ export default function OnboardingPage() {
                 <p className="text-sm text-[#3A4A5F] leading-relaxed">Enter your DOT or MC number to auto-populate your company details from FMCSA.</p>
               </div>
 
-              {/* DOT & MC at the top — triggers FMCSA lookup */}
-              <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              {/* v3.8.ait — DOT + MC only at the top (2-col). # of Trucks
+                  moved to Step 2 (Equipment & Regions); Phone * moved
+                  to the bottom contact block alongside Email. Both
+                  fields trigger FMCSA auto-lookup that bidirectionally
+                  populates the other — keeping them as 2 distinct
+                  inputs (rather than a dropdown) preserves the
+                  bidirectional fill UX. */}
+              <div className="grid sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-[#0A2540] mb-1">DOT Number *</label>
                   <input value={form.dotNumber} onChange={(e) => { const v = e.target.value.replace(/\D/g, ""); set("dotNumber", v); lookupFmcsa(v); }} className={cn("w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-gold outline-none", form.dotNumber && form.dotNumber.length < 5 ? "border-red-300" : fmcsaResult?.verified ? "border-green-400" : fmcsaResult && !fmcsaResult.verified ? "border-red-400" : "")} placeholder="e.g. 1234567" />
@@ -608,21 +622,9 @@ export default function OnboardingPage() {
                   <label className="block text-sm font-medium text-[#0A2540] mb-1">MC Number *</label>
                   <input value={form.mcNumber} onChange={(e) => { set("mcNumber", e.target.value); lookupByMc(e.target.value); }} className={cn("w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-gold outline-none", fmcsaResult?.verified && form.mcNumber ? "border-green-400" : "")} placeholder="MC-156588" />
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-[#0A2540] mb-1"># of Trucks</label>
-                  <input type="number" value={form.numberOfTrucks} onChange={(e) => set("numberOfTrucks", e.target.value)} className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-gold outline-none" placeholder="e.g. 5" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-[#0A2540] mb-1">Phone *</label>
-                  <input type="tel" value={form.phone} onChange={(e) => set("phone", e.target.value)} className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-gold outline-none" placeholder="(555) 123-4567" />
-                </div>
-                {/* v3.8.air — EIN input removed from Step 1. The W-9
-                    document uploaded on Step 3 is the canonical Federal
-                    Tax ID source — collecting EIN twice (here +
-                    embedded on the W-9 PDF) was a duplicate-capture
-                    UX wart. Form-state field `ein` retained as empty
-                    default for backend payload compatibility (no
-                    regression risk on the registration POST). */}
+                {/* v3.8.air — EIN input removed (W-9 PDF is the canonical
+                    Federal Tax ID source). Form-state field `ein` retained
+                    as empty default for backend payload compatibility. */}
               </div>
 
               {/* FMCSA Verification Result — shown immediately after DOT/MC */}
@@ -726,15 +728,21 @@ export default function OnboardingPage() {
                   <input value={form.lastName} onChange={(e) => set("lastName", e.target.value)} className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-gold outline-none" />
                 </div>
               </div>
+              {/* v3.8.ait — Email + Phone paired as contact details
+                  (phone moved from the Step 1 top grid per directive). */}
               <div className="grid sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-[#0A2540] mb-1">Email *</label>
                   <input type="email" value={form.email} onChange={(e) => set("email", e.target.value)} className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-gold outline-none" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-[#0A2540] mb-1">Password * (min 8 chars)</label>
-                  <input type="password" value={form.password} onChange={(e) => set("password", e.target.value)} className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-gold outline-none" />
+                  <label className="block text-sm font-medium text-[#0A2540] mb-1">Phone *</label>
+                  <input type="tel" value={form.phone} onChange={(e) => set("phone", e.target.value)} className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-gold outline-none" placeholder="(555) 123-4567" />
                 </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-[#0A2540] mb-1">Password * (min 8 chars)</label>
+                <input type="password" value={form.password} onChange={(e) => set("password", e.target.value)} className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-gold outline-none" />
               </div>
             </div>
           )}
@@ -745,7 +753,14 @@ export default function OnboardingPage() {
               <div className="pb-4 border-b border-[#EFE6D3]">
                 <p className="text-[10px] uppercase tracking-[0.22em] font-semibold text-[#BA7517] mb-1.5">Step 2 of 5</p>
                 <h2 className="font-serif italic font-semibold text-2xl text-[#0A2540] mb-2">Equipment &amp; Operating Regions</h2>
-                <p className="text-sm text-[#3A4A5F] leading-relaxed">Tell us what you haul and where you run. The Compass Engine uses both to match lanes.</p>
+                <p className="text-sm text-[#3A4A5F] leading-relaxed">Tell us your fleet size, what you haul, and where you run. The Compass Engine uses all three to match lanes.</p>
+              </div>
+              {/* v3.8.ait — # of Trucks moved here from Step 1 top grid.
+                  Fleet size is fleet info; it belongs in the equipment
+                  section, not in company identity. */}
+              <div className="max-w-xs">
+                <label className="block text-sm font-semibold text-[#0A2540] mb-1.5">Fleet Size <span className="text-[#6B7685] font-normal">(# of Trucks)</span></label>
+                <input type="number" value={form.numberOfTrucks} onChange={(e) => set("numberOfTrucks", e.target.value)} className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-gold outline-none" placeholder="e.g. 5" />
               </div>
               <div>
                 <label className="block text-sm font-semibold text-[#0A2540] mb-3">Equipment Types <span className="text-[#BA7517]">*</span></label>
