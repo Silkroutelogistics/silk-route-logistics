@@ -16,9 +16,10 @@
 // document-completeness section — natural placement since
 // AE checks both during the review pass.
 
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
 import { api } from "@/lib/api";
-import { Globe, AlertTriangle, ShieldCheck, MapPin, Clock } from "lucide-react";
+import { Globe, AlertTriangle, ShieldCheck, MapPin, Clock, FileText, KeyRound } from "lucide-react";
 
 interface SecuritySignals {
   geo: {
@@ -30,9 +31,13 @@ interface SecuritySignals {
     lastLoginIp: string | null;
     lastLoginCountry: string | null;
     geoMismatch: boolean;
+    rawMismatch: boolean;
+    overriddenAt: string | null;
+    overrideNote: string | null;
   };
   events: Array<{
     id: string;
+    type: "SYSTEM_LOG" | "DOCUMENT_UPLOAD" | "OTP_FAILURE";
     severity: string;
     source: string;
     message: string;
@@ -55,11 +60,29 @@ const SEVERITY_COLORS: Record<string, { bg: string; text: string }> = {
   CRITICAL:{ bg: "bg-red-100", text: "text-red-800" },
 };
 
-export function SecuritySignalsCard({ carrierId }: { carrierId: string }) {
+export function SecuritySignalsCard({ carrierId, isAdmin }: { carrierId: string; isAdmin?: boolean }) {
+  const queryClient = useQueryClient();
+  const [overrideOpen, setOverrideOpen] = useState(false);
+  const [overrideNote, setOverrideNote] = useState("");
+  const [overrideError, setOverrideError] = useState<string | null>(null);
+
   const { data, isLoading, isError } = useQuery({
     queryKey: ["carrier-security-signals", carrierId],
     queryFn: () => api.get<SecuritySignals>(`/carriers/${carrierId}/security-signals`).then((r) => r.data),
     enabled: !!carrierId,
+  });
+
+  const overrideMutation = useMutation({
+    mutationFn: () => api.post(`/carriers/${carrierId}/override-mismatch`, { note: overrideNote }),
+    onSuccess: () => {
+      setOverrideOpen(false);
+      setOverrideNote("");
+      setOverrideError(null);
+      queryClient.invalidateQueries({ queryKey: ["carrier-security-signals", carrierId] });
+    },
+    onError: (err: { response?: { data?: { error?: string } } }) => {
+      setOverrideError(err.response?.data?.error || "Could not override mismatch");
+    },
   });
 
   if (isLoading) {
@@ -82,15 +105,60 @@ export function SecuritySignalsCard({ carrierId }: { carrierId: string }) {
 
   return (
     <div className="space-y-3">
-      {/* Geo-mismatch alert pill */}
+      {/* Geo-mismatch alert pill — suppressed when AE has overridden. */}
       {geo.geoMismatch && (
-        <div className="bg-amber-50 border border-amber-300 rounded-lg p-3 flex items-start gap-2">
-          <AlertTriangle size={16} className="text-amber-600 mt-0.5 flex-shrink-0" />
-          <div>
-            <p className="text-xs font-semibold text-amber-900">Country mismatch detected</p>
-            <p className="text-xs text-amber-800 mt-0.5">
-              Registered from <strong>{geo.registrationCountry}</strong> but verified email from <strong>{geo.emailVerifiedFromCountry}</strong>. Review carefully before approving.
-            </p>
+        <div className="bg-amber-50 border border-amber-300 rounded-lg p-3">
+          <div className="flex items-start gap-2">
+            <AlertTriangle size={16} className="text-amber-600 mt-0.5 flex-shrink-0" />
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-semibold text-amber-900">Country mismatch detected</p>
+              <p className="text-xs text-amber-800 mt-0.5">
+                Registered from <strong>{geo.registrationCountry}</strong> but verified email from <strong>{geo.emailVerifiedFromCountry}</strong>. Review carefully before approving.
+              </p>
+            </div>
+            {isAdmin && !overrideOpen && (
+              <button onClick={() => setOverrideOpen(true)} className="text-[10px] font-semibold text-amber-700 hover:text-amber-900 underline whitespace-nowrap">
+                Override
+              </button>
+            )}
+          </div>
+          {overrideOpen && (
+            <div className="mt-3 pl-6">
+              <label className="block text-[10px] font-semibold text-amber-900 uppercase tracking-wider mb-1">Justification (required)</label>
+              <textarea
+                value={overrideNote}
+                onChange={(e) => setOverrideNote(e.target.value)}
+                rows={2}
+                maxLength={1000}
+                placeholder="e.g. carrier confirmed they were traveling; or VPN used for ops..."
+                className="w-full px-2 py-1.5 bg-white border border-amber-300 rounded text-xs focus:outline-none focus:border-amber-500"
+              />
+              <div className="mt-2 flex items-center justify-end gap-2">
+                <button onClick={() => { setOverrideOpen(false); setOverrideNote(""); setOverrideError(null); }} className="text-[10px] text-amber-700 hover:text-amber-900">
+                  Cancel
+                </button>
+                <button
+                  onClick={() => overrideMutation.mutate()}
+                  disabled={overrideNote.trim().length < 5 || overrideMutation.isPending}
+                  className="px-3 py-1 bg-amber-600 text-white text-[10px] font-semibold rounded hover:bg-amber-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {overrideMutation.isPending ? "Saving…" : "Confirm Override"}
+                </button>
+              </div>
+              {overrideError && <p className="mt-1 text-[10px] text-red-600">{overrideError}</p>}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* v3.8.ajo — Override-active note (suppressed alert with AE context). */}
+      {!geo.geoMismatch && geo.rawMismatch && geo.overriddenAt && (
+        <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 flex items-start gap-2">
+          <ShieldCheck size={14} className="text-gray-500 mt-0.5 flex-shrink-0" />
+          <div className="flex-1 min-w-0">
+            <p className="text-[11px] font-semibold text-gray-700">Country mismatch overridden by AE</p>
+            {geo.overrideNote && <p className="text-[11px] text-gray-600 mt-0.5 italic whitespace-pre-wrap">&ldquo;{geo.overrideNote}&rdquo;</p>}
+            <p className="text-[10px] text-gray-400 mt-0.5">{formatDate(geo.overriddenAt)}</p>
           </div>
         </div>
       )}
@@ -137,11 +205,20 @@ export function SecuritySignalsCard({ carrierId }: { carrierId: string }) {
           <ul className="space-y-2 max-h-72 overflow-auto">
             {events.map((e) => {
               const severity = SEVERITY_COLORS[e.severity] || SEVERITY_COLORS.INFO;
+              // v3.8.ajo — Type-tag icon mapping for the extended timeline.
+              const typeIcon = e.type === "DOCUMENT_UPLOAD"
+                ? <FileText size={11} className="text-gray-500" />
+                : e.type === "OTP_FAILURE"
+                ? <KeyRound size={11} className="text-amber-600" />
+                : null;
               return (
                 <li key={e.id} className="bg-white border border-gray-200 rounded-md p-2">
                   <div className="flex items-center justify-between gap-2 mb-1">
-                    <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold ${severity.bg} ${severity.text}`}>
-                      {e.severity}
+                    <span className="flex items-center gap-1.5">
+                      {typeIcon}
+                      <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold ${severity.bg} ${severity.text}`}>
+                        {e.severity}
+                      </span>
                     </span>
                     <span className="text-[10px] text-gray-400">{formatDate(e.createdAt)}</span>
                   </div>

@@ -301,6 +301,9 @@ router.get("/:id/security-signals", authorize("ADMIN", "CEO", "BROKER", "OPERATI
     select: {
       id: true,
       registrationCountry: true,
+      // v3.8.ajo — Override fields for the geo-mismatch alert suppression.
+      geoMismatchOverriddenAt: true,
+      geoMismatchOverrideNote: true,
       user: {
         select: {
           id: true,
@@ -323,7 +326,7 @@ router.get("/:id/security-signals", authorize("ADMIN", "CEO", "BROKER", "OPERATI
   // Pull recent SystemLog rows scoped to the two carrier-onboarding
   // sources. Limit 50 — anything older than that the AE can query DB
   // directly. Newest first.
-  const events = await prisma.systemLog.findMany({
+  const sysEvents = await prisma.systemLog.findMany({
     where: {
       OR: [
         { source: "emailVerification", message: { contains: carrier.user.id } },
@@ -342,15 +345,67 @@ router.get("/:id/security-signals", authorize("ADMIN", "CEO", "BROKER", "OPERATI
     },
   });
 
+  // v3.8.ajo — Extended timeline: include recent carrier document uploads
+  // and failed OTP attempts. Caps at 10 each to keep the timeline scannable.
+  const recentDocs = await prisma.document.findMany({
+    where: { userId: carrier.user.id, uploadSource: "CARRIER_PORTAL" },
+    orderBy: { createdAt: "desc" },
+    take: 10,
+    select: { id: true, fileName: true, docType: true, createdAt: true },
+  });
+  const recentFailedOtps = await prisma.otpCode.findMany({
+    where: {
+      userId: carrier.user.id,
+      failedAttempts: { gt: 0 },
+    },
+    orderBy: { createdAt: "desc" },
+    take: 10,
+    select: { id: true, failedAttempts: true, createdAt: true, code: true },
+  });
+
+  // Normalize all three sources into a unified timeline entry shape.
+  // Type tag drives the icon + color on the frontend.
+  type TimelineEntry = {
+    id: string;
+    type: "SYSTEM_LOG" | "DOCUMENT_UPLOAD" | "OTP_FAILURE";
+    severity: string;
+    source: string;
+    message: string;
+    ipAddress: string | null;
+    createdAt: Date;
+  };
+  const timeline: TimelineEntry[] = [
+    ...sysEvents.map((e) => ({ ...e, type: "SYSTEM_LOG" as const })),
+    ...recentDocs.map((d) => ({
+      id: d.id,
+      type: "DOCUMENT_UPLOAD" as const,
+      severity: "INFO",
+      source: "documentUpload",
+      message: `Document uploaded: ${d.fileName} (${d.docType || "OTHER"})`,
+      ipAddress: null,
+      createdAt: d.createdAt,
+    })),
+    ...recentFailedOtps.map((o) => ({
+      id: o.id,
+      type: "OTP_FAILURE" as const,
+      severity: o.failedAttempts >= 5 ? "ERROR" : "WARNING",
+      source: "otpFailure",
+      message: `OTP verification failed (${o.failedAttempts} attempt${o.failedAttempts === 1 ? "" : "s"}${o.code.startsWith("RESET:") ? " — reset token" : o.code.startsWith("VERIFY:") ? " — verify token" : ""})`,
+      ipAddress: null,
+      createdAt: o.createdAt,
+    })),
+  ].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime()).slice(0, 50);
+
   // Derived signal: country mismatch between registration + verify-click.
-  // The aje email-verify endpoint writes a SystemLog row when these
-  // differ, but rendering the derived flag inline saves the AE a scan
-  // through the event list.
-  const geoMismatch = !!(
+  // v3.8.ajo — Suppressed when geoMismatchOverriddenAt is set (AE confirmed
+  // false positive). Override note surfaces alongside the dampened state
+  // so the AE who sees the carrier later understands why it's not flagged.
+  const rawMismatch = !!(
     carrier.registrationCountry &&
     carrier.user.emailVerifiedFromCountry &&
     carrier.registrationCountry !== carrier.user.emailVerifiedFromCountry
   );
+  const geoMismatch = rawMismatch && !carrier.geoMismatchOverriddenAt;
 
   res.json({
     geo: {
@@ -362,9 +417,34 @@ router.get("/:id/security-signals", authorize("ADMIN", "CEO", "BROKER", "OPERATI
       lastLoginIp: carrier.user.lastLoginIp,
       lastLoginCountry: carrier.user.lastLoginCountry,
       geoMismatch,
+      rawMismatch,
+      overriddenAt: carrier.geoMismatchOverriddenAt,
+      overrideNote: carrier.geoMismatchOverrideNote,
     },
-    events,
+    events: timeline,
   });
+});
+
+// v3.8.ajo — Geo-mismatch override action. Suppresses the alert pill on
+// confirmed false positives. Note required for audit purposes.
+const overrideMismatchSchema = z.object({
+  note: z.string().min(5, "Please provide a brief justification (min 5 chars)").max(1000),
+});
+router.post("/:id/override-mismatch", authorize("ADMIN", "CEO"), validateBody(overrideMismatchSchema), auditLog("UPDATE", "Carrier"), async (req: AuthRequest, res: Response) => {
+  const carrier = await prisma.carrierProfile.findUnique({ where: { id: req.params.id }, select: { id: true } });
+  if (!carrier) {
+    res.status(404).json({ error: "Carrier not found" });
+    return;
+  }
+  await prisma.carrierProfile.update({
+    where: { id: req.params.id },
+    data: {
+      geoMismatchOverriddenAt: new Date(),
+      geoMismatchOverriddenById: req.user!.id,
+      geoMismatchOverrideNote: req.body.note,
+    },
+  });
+  res.json({ ok: true });
 });
 
 // v3.8.ajk — Dedicated reject endpoint with reason capture + per-reason

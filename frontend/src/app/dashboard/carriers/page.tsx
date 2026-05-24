@@ -1110,7 +1110,7 @@ export default function CarrierPoolPage() {
 
                     {/* ===== v3.8.ajl — SECURITY SIGNALS ===== */}
                     <h3 className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Security Signals</h3>
-                    <SecuritySignalsCard carrierId={selectedCarrier.id} />
+                    <SecuritySignalsCard carrierId={selectedCarrier.id} isAdmin={isAdmin} />
                   </div>
                 )}
 

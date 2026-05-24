@@ -1013,6 +1013,16 @@ model CarrierProfile {
   // re-rejection's reminder still fires.
   reapplyReminderSentAt DateTime?
 
+  // v3.8.ajo — Geo-mismatch override. When AE confirms a country-jump
+  // alert is a false positive (e.g. carrier traveling, on VPN for ops
+  // reasons), they click "Override" and the alert pill is suppressed.
+  // Override is per-carrier; resets implicitly when a new login from
+  // ANOTHER different country fires (the next v3.8.aje verify-click
+  // or v3.8.ajf login-time SystemLog warning surfaces normally).
+  geoMismatchOverriddenAt    DateTime?
+  geoMismatchOverriddenById  String?
+  geoMismatchOverrideNote    String?
+
   // Document expiry enforcement
   coiExpiryDate          DateTime? // Certificate of Insurance expiry
   w9ExpiryDate           DateTime? // W-9 annual expiry
