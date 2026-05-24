@@ -286,6 +286,87 @@ router.put("/chameleon-matches/:matchId/review", authorize("ADMIN", "CEO"), revi
 // Admin verification
 router.post("/:id/verify", authorize("ADMIN", "CEO"), validateBody(verifyCarrierSchema), auditLog("VERIFY", "Carrier"), verifyCarrier);
 
+// v3.8.ajl — Security signals for a carrier.
+// Returns the three-point geo baseline (registration → email-verify →
+// last login) + recent SystemLog forensic events scoped to this
+// carrier's user. AE uses this to spot the country-jump fraud signal
+// surfaced inline at v3.8.aje (registered from US, verified from KR
+// writes a SystemLog WARNING) + the v3.8.ajf unusual-activity OTP
+// trigger (login from different country writes a separate WARNING).
+// Pre-ajl these signals existed in SystemLog rows but had no AE-visible
+// surface; this endpoint closes that visibility gap.
+router.get("/:id/security-signals", authorize("ADMIN", "CEO", "BROKER", "OPERATIONS"), async (req: AuthRequest, res: Response) => {
+  const carrier = await prisma.carrierProfile.findUnique({
+    where: { id: req.params.id },
+    select: {
+      id: true,
+      registrationCountry: true,
+      user: {
+        select: {
+          id: true,
+          email: true,
+          emailVerifiedAt: true,
+          emailVerifiedFromIp: true,
+          emailVerifiedFromCountry: true,
+          lastLoginIp: true,
+          lastLoginCountry: true,
+          lastLogin: true,
+        },
+      },
+    },
+  });
+  if (!carrier) {
+    res.status(404).json({ error: "Carrier not found" });
+    return;
+  }
+
+  // Pull recent SystemLog rows scoped to the two carrier-onboarding
+  // sources. Limit 50 — anything older than that the AE can query DB
+  // directly. Newest first.
+  const events = await prisma.systemLog.findMany({
+    where: {
+      OR: [
+        { source: "emailVerification", message: { contains: carrier.user.id } },
+        { source: "carrierAuth-unusual-activity", message: { contains: carrier.user.email } },
+      ],
+    },
+    orderBy: { createdAt: "desc" },
+    take: 50,
+    select: {
+      id: true,
+      severity: true,
+      source: true,
+      message: true,
+      ipAddress: true,
+      createdAt: true,
+    },
+  });
+
+  // Derived signal: country mismatch between registration + verify-click.
+  // The aje email-verify endpoint writes a SystemLog row when these
+  // differ, but rendering the derived flag inline saves the AE a scan
+  // through the event list.
+  const geoMismatch = !!(
+    carrier.registrationCountry &&
+    carrier.user.emailVerifiedFromCountry &&
+    carrier.registrationCountry !== carrier.user.emailVerifiedFromCountry
+  );
+
+  res.json({
+    geo: {
+      registrationCountry: carrier.registrationCountry,
+      emailVerifiedAt: carrier.user.emailVerifiedAt,
+      emailVerifiedFromIp: carrier.user.emailVerifiedFromIp,
+      emailVerifiedFromCountry: carrier.user.emailVerifiedFromCountry,
+      lastLoginAt: carrier.user.lastLogin,
+      lastLoginIp: carrier.user.lastLoginIp,
+      lastLoginCountry: carrier.user.lastLoginCountry,
+      geoMismatch,
+    },
+    events,
+  });
+});
+
 // v3.8.ajk — Dedicated reject endpoint with reason capture + per-reason
 // reapply window computation. Replaces the bare PUT /:id with status:
 // "REJECTED" which lost the reason context. Old PUT path still works

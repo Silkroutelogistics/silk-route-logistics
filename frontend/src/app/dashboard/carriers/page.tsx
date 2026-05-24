@@ -15,6 +15,7 @@ import {
 import { InfoRequestModal } from "@/components/carriers/InfoRequestModal";
 import { InfoRequestThread } from "@/components/carriers/InfoRequestThread";
 import { RejectCarrierModal } from "@/components/carriers/RejectCarrierModal";
+import { SecuritySignalsCard } from "@/components/carriers/SecuritySignalsCard";
 
 
 interface CarrierPerformance {
@@ -1088,6 +1089,10 @@ export default function CarrierPoolPage() {
                         <p className="text-[10px] text-gray-500">ADMIN or CEO role required to set the authority grant date manually.</p>
                       )}
                     </div>
+
+                    {/* ===== v3.8.ajl — SECURITY SIGNALS ===== */}
+                    <h3 className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Security Signals</h3>
+                    <SecuritySignalsCard carrierId={selectedCarrier.id} />
                   </div>
                 )}
 
