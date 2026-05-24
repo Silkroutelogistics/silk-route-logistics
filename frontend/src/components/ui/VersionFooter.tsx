@@ -9963,7 +9963,68 @@
 //            data — the country-tracking introduced here is
 //            exactly what ajf needs to detect "login from
 //            different country than last time".
-export const SRL_VERSION = "3.8.aje";
+// v3.8.ajf — Unusual-activity dual-channel OTP.
+//            Carrier login OTP step now classifies each attempt
+//            against the user's last-known login country. When
+//            current country differs from User.lastLoginCountry,
+//            the OTP is sent via BOTH email AND SMS (OpenPhone
+//            sendOtpSms helper added) — defense-in-depth on the
+//            assumption that account compromise typically
+//            captures password + email but not phone. When they
+//            match (or no prior data exists for first-login
+//            users), email-only as before. After successful OTP
+//            or TOTP verification, lastLoginIp + lastLoginCountry
+//            are written so the next attempt has a current
+//            baseline. First-login behavior is intentionally
+//            permissive — we don't flag every pre-ajf carrier
+//            as "unusual" the day this ships; baseline starts
+//            from their first successful post-deploy login.
+//
+//            Detection lens (v1, deferred extensions noted):
+//              * Different country than lastLoginCountry — covered
+//              * Same country, different city far away (1500+mi
+//                US jump) — deferred (Haversine + lat/lon needed)
+//              * VPN/datacenter exit nodes — deferred (paid IP
+//                reputation API needed)
+//              * Time-of-day anomalies — deferred (per-user
+//                login histogram needed)
+//
+//            New backend: services/geoService.detectUnusualActivity
+//            (compares current resolveCountry to lastLoginCountry
+//            with first-login + unresolvable-IP guards); services/
+//            openPhoneService.sendOtpSms wraps existing sendSMS
+//            with brand-identified body (single SMS segment).
+//            carrierAuth: /login step detects unusual + dispatches
+//            dual-channel + writes SystemLog WARNING with reason
+//            (carrier-facing response unchanged — fraudster
+//            doesn't learn we detected); /verify-otp + /totp-verify
+//            success paths write lastLoginIp + lastLoginCountry +
+//            lastLogin via prisma.user.update. Schema migration
+//            20260524113000_user_last_login_geo adds two nullable
+//            TEXT columns on users (lastLoginIp + lastLoginCountry).
+//            SMS failure is non-fatal — email is primary channel,
+//            SMS is enhancement, carrier still receives email OTP
+//            and can complete login normally.
+//
+//            No frontend changes — same OTP flow from the
+//            carrier's perspective; they may simply also receive
+//            a text alongside the email when unusual.
+//
+//            Patterns applied: §3.3 atomic single-sprint ship;
+//            §3.5 audit-first (verified OpenPhone sendSMS exists,
+//            confirmed geoip-lite resolveCountry from aje is
+//            reusable, found OTP-verify + TOTP-verify success
+//            paths to write lastLogin* in both); §2.2 manual
+//            Prisma migration; §19 Sub-pattern 11 CI-parity
+//            (backend tsc + frontend tsc + next build all clean);
+//            defensive non-fatal SMS dispatch per email-primary
+//            channel design.
+//
+//            Patterns emerged: none. Direct continuation of aje's
+//            geolocation foundation — the country fields written
+//            at registration + verify-click + login time form a
+//            three-point baseline going forward.
+export const SRL_VERSION = "3.8.ajf";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

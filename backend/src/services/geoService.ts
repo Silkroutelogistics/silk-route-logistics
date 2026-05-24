@@ -89,3 +89,66 @@ export function extractClientIp(req: {
   if (Array.isArray(xff) && xff[0]) return xff[0].split(",")[0]?.trim() || "";
   return req.socket?.remoteAddress || "";
 }
+
+// v3.8.ajf — Unusual-activity detection for login attempts.
+//
+// Returns `isUnusual: true` when the current attempt's resolved country
+// differs from the user's last-known login country. This is the "the
+// account is suddenly being used from somewhere new" signal.
+//
+// First-login behavior is intentionally permissive — when `lastLoginCountry`
+// is null (existing pre-ajf user logging in for the first time post-deploy,
+// or a fresh registration logging in for the first time) we do NOT flag
+// as unusual. Flipping every existing user to "unusual" the day this
+// ships would be a poor UX. From the first successful login forward,
+// the comparison data exists and the gate is live.
+//
+// Cases NOT covered by this v1 detection (deferred):
+//   * Same country, different city far away (1500+mi jump within US)
+//     — requires lat/lon comparison + Haversine; punted until BKN
+//     onboarding produces a case
+//   * VPN/datacenter exit nodes — requires paid IP-reputation API
+//   * Time-of-day anomalies — requires login-time histogram per user
+//
+// `reason` is a human-readable string for SystemLog ingestion. NOT
+// surfaced to the carrier — they only see the dual-channel OTP delivery,
+// not the underlying reason, to avoid cluing in a fraudster.
+export interface UnusualActivityResult {
+  isUnusual: boolean;
+  reason: string | null;
+  currentCountry: string | null;
+  lastKnownCountry: string | null;
+}
+
+export function detectUnusualActivity(args: {
+  currentIp: string | null | undefined;
+  lastLoginCountry: string | null | undefined;
+}): UnusualActivityResult {
+  const currentCountry = resolveCountry(args.currentIp);
+  const lastKnownCountry = args.lastLoginCountry || null;
+
+  // No prior login geo recorded — first login post-ajf for this user.
+  // Treat as not-unusual; baseline starts now.
+  if (!lastKnownCountry) {
+    return { isUnusual: false, reason: null, currentCountry, lastKnownCountry: null };
+  }
+
+  // Current country couldn't be resolved (private-network IP, localhost,
+  // or a public IP geoip-lite has no entry for). Defensive: don't flag
+  // as unusual since we can't establish a comparison. Local-dev sessions
+  // would otherwise fire every login.
+  if (!currentCountry) {
+    return { isUnusual: false, reason: null, currentCountry: null, lastKnownCountry };
+  }
+
+  if (currentCountry !== lastKnownCountry) {
+    return {
+      isUnusual: true,
+      reason: `Login from ${currentCountry}, last known from ${lastKnownCountry}`,
+      currentCountry,
+      lastKnownCountry,
+    };
+  }
+
+  return { isUnusual: false, reason: null, currentCountry, lastKnownCountry };
+}

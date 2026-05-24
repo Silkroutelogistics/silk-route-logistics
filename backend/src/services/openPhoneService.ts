@@ -80,6 +80,20 @@ export async function listMessages(params: { phoneNumberId?: string; after?: str
   return res.json();
 }
 
+// v3.8.ajf — Unusual-activity dual-channel OTP.
+// Sends a short SMS with the OTP code when a login attempt is classified
+// "unusual" (different country than last known login). Used as a
+// defense-in-depth signal alongside the email OTP that always fires.
+// Body is intentionally minimal — code + brand identifier + expiry
+// hint — to fit in a single SMS segment (~160 chars). Throws on
+// OpenPhone API failures; carrierAuth catches + logs but does not
+// block the login flow on SMS failure (email OTP is the primary
+// channel; SMS is enhancement).
+export async function sendOtpSms(phone: string, code: string) {
+  const content = `Silk Route Logistics security code: ${code}. We detected this login from a new location. Code expires in 5 minutes. If this wasn't you, reset your password.`;
+  return sendSMS(phone, content);
+}
+
 // ─── Contacts ───────────────────────────────────────────
 
 export async function createContact(data: {

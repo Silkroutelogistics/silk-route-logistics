@@ -18,7 +18,8 @@ import {
   getEmailVerificationResendCooldown,
 } from "../services/otpService";
 import { sendOtpEmail, sendEmailVerificationEmail } from "../services/emailService";
-import { resolveCountry, extractClientIp } from "../services/geoService";
+import { resolveCountry, extractClientIp, detectUnusualActivity } from "../services/geoService";
+import { sendOtpSms } from "../services/openPhoneService";
 import { verifyTotpCode } from "../services/totpService";
 import { z } from "zod";
 import { log } from "../lib/logger";
@@ -141,11 +142,46 @@ router.post("/login", loginLimiter, validateBody(carrierLoginSchema), async (req
     return;
   }
 
+  // v3.8.ajf — Unusual-activity detection at OTP-send time.
+  // Compare current login IP's country against the user's last-known
+  // login country. If they differ, send the OTP via BOTH email AND SMS
+  // (defense-in-depth — account compromise typically captures password
+  // + email but not phone). If they match (or no prior login data),
+  // email-only as before.
+  const currentIp = extractClientIp(req);
+  const unusualResult = detectUnusualActivity({
+    currentIp,
+    lastLoginCountry: user.lastLoginCountry,
+  });
+
   // Send OTP instead of issuing JWT directly
   const code = await createOtp(user.id);
   sendOtpEmail(user.email, user.firstName, code).catch((err) =>
     log.error({ err: err }, "[Carrier OTP Email] Failed to send:"),
   );
+
+  // Dual-channel: also send SMS when unusual + user has a phone on file.
+  // SMS failure is non-fatal — email is the primary channel; SMS is
+  // enhancement. Carrier still receives the email OTP and can complete
+  // login normally. Failure is logged for AE forensics.
+  if (unusualResult.isUnusual && user.phone) {
+    sendOtpSms(user.phone, code).catch((err) =>
+      log.error({ err, userId: user.id }, "[Carrier OTP SMS] Failed to send (unusual activity):"),
+    );
+
+    // SystemLog the detection for AE forensic review. NOT shown to
+    // the carrier in the login response — avoid cluing in a fraudster
+    // about the detection logic.
+    prisma.systemLog.create({
+      data: {
+        logType: "SECURITY",
+        severity: "WARNING",
+        source: "carrierAuth-unusual-activity",
+        message: `Unusual login attempt for ${user.email}: ${unusualResult.reason}. Dual-channel OTP dispatched (email + SMS).`,
+        ipAddress: currentIp || null,
+      },
+    }).catch(() => {});
+  }
 
   res.json({ pendingOtp: true, email: user.email });
 });
@@ -217,6 +253,21 @@ router.post("/verify-otp", otpVerifyLimiter, validateBody(carrierOtpSchema), asy
   const token = jwt.sign({ userId: user.id }, env.JWT_SECRET, { algorithm: "HS256", expiresIn: env.JWT_EXPIRES_IN } as jwt.SignOptions);
   registerSession(user.id, token, "CARRIER");
   setTokenCookie(res, token, "CARRIER");
+
+  // v3.8.ajf — Update lastLoginIp + lastLoginCountry on successful OTP
+  // verify so the NEXT login attempt has a current baseline to compare
+  // against. Existing `lastLogin DateTime?` field is set elsewhere via
+  // middleware; we only write the two new geo fields here.
+  const currentLoginIp = extractClientIp(req);
+  const currentLoginCountry = resolveCountry(currentLoginIp);
+  await prisma.user.update({
+    where: { id: user.id },
+    data: {
+      lastLoginIp: currentLoginIp || null,
+      lastLoginCountry: currentLoginCountry,
+      lastLogin: new Date(),
+    },
+  }).catch((err) => log.error({ err, userId: user.id }, "[Carrier OTP] lastLogin geo update failed"));
 
   await prisma.auditLog.create({
     data: {
@@ -291,6 +342,20 @@ router.post("/totp-verify", otpVerifyLimiter, validateBody(carrierTotpSchema), a
   const token = jwt.sign({ userId: user.id }, env.JWT_SECRET, { algorithm: "HS256", expiresIn: env.JWT_EXPIRES_IN } as jwt.SignOptions);
   registerSession(user.id, token, "CARRIER");
   setTokenCookie(res, token, "CARRIER");
+
+  // v3.8.ajf — Same last-login geo update as the OTP-verify path. TOTP
+  // is the terminal success step for 2FA-enabled users, so the baseline
+  // for next-login comparison must be written here.
+  const totpLoginIp = extractClientIp(req);
+  const totpLoginCountry = resolveCountry(totpLoginIp);
+  await prisma.user.update({
+    where: { id: user.id },
+    data: {
+      lastLoginIp: totpLoginIp || null,
+      lastLoginCountry: totpLoginCountry,
+      lastLogin: new Date(),
+    },
+  }).catch((err) => log.error({ err, userId: user.id }, "[Carrier TOTP] lastLogin geo update failed"));
 
   await prisma.auditLog.create({
     data: {
