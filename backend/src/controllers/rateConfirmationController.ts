@@ -183,6 +183,23 @@ export async function downloadRateConfirmationPdf(req: AuthRequest, res: Respons
 
   if (!rc) { res.status(404).json({ error: "Rate confirmation not found" }); return; }
 
+  // v3.8.ajv C1 — Carrier ownership gate. Pre-ajv the endpoint was
+  // authorized to CARRIER role (per routes/rateConfirmations.ts:24) but
+  // had no per-record check that the logged-in CARRIER actually owns
+  // the load. Result: any logged-in carrier could enumerate RC IDs
+  // (cuid format) and download any other carrier's full RC PDF —
+  // including carrier cost, fuel surcharge, accessorials, and margin.
+  // Direct financial-espionage vector.
+  //
+  // Fix: when req.user.role === "CARRIER", require rc.load.carrierId
+  // matches the requester. AE-side roles (BROKER/ADMIN/CEO/DISPATCH/
+  // OPERATIONS/ACCOUNTING) bypass — they need to download any carrier's
+  // RC during normal review workflow.
+  if (req.user!.role === "CARRIER" && rc.load.carrierId !== req.user!.id) {
+    res.status(403).json({ error: "Not authorized to download this rate confirmation" });
+    return;
+  }
+
   const doc = generateEnhancedRateConfirmation(rc.load, rc.formData as Record<string, any>);
   const filename = `RC-${rc.load.referenceNumber}.pdf`;
 
@@ -197,9 +214,27 @@ export async function downloadRateConfirmationPdf(req: AuthRequest, res: Respons
 export async function signRateConfirmation(req: AuthRequest, res: Response) {
   const { signerName, signerTitle, ipAddress } = signRateConfirmationSchema.parse(req.body);
 
-  const rc = await prisma.rateConfirmation.findUnique({ where: { id: req.params.id } });
+  // v3.8.ajv C2 — Include load.carrierId in the lookup so we can verify
+  // ownership before allowing sign. Pre-ajv the endpoint was authorized
+  // to CARRIER role (per routes/rateConfirmations.ts:25) but had no
+  // per-record check that the logged-in CARRIER actually owns the load.
+  // Result: any logged-in carrier could sign any other carrier's RC,
+  // falsifying commitment + corrupting audit trail (carrierSignature
+  // field stores the wrong signer name).
+  const rc = await prisma.rateConfirmation.findUnique({
+    where: { id: req.params.id },
+    include: { load: { select: { carrierId: true } } },
+  });
   if (!rc) { res.status(404).json({ error: "Rate confirmation not found" }); return; }
   if (rc.signed) { res.status(400).json({ error: "Rate confirmation already signed" }); return; }
+
+  // Carrier-only ownership gate. AE roles bypass — AE may need to
+  // "mark as signed on behalf" for operational cases (carrier emailed
+  // a wet signature outside the portal). Carrier role MUST own.
+  if (req.user!.role === "CARRIER" && rc.load.carrierId !== req.user!.id) {
+    res.status(403).json({ error: "Not authorized to sign this rate confirmation" });
+    return;
+  }
 
   const existingFormData = (rc.formData as Record<string, any>) || {};
   const updatedFormData = {

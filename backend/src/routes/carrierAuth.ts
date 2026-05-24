@@ -43,13 +43,29 @@ const carrierLoginSchema = z.object({
   password: z.string().min(1),
 });
 
+// v3.8.ajv C6 — Strong-password Zod chain mirrors the registration
+// validator at validators/carrier.ts:10-15 (γ "Very Strong" tier from
+// v3.8.aix). Pre-ajv the change-password + force-change-password schemas
+// accepted `min(8)` only, allowing a carrier to downgrade from a strong
+// registration password to `12345678`. Account-takeover path: attacker
+// who briefly gets in via credential stuffing downgrades to weak value,
+// retains access after legitimate carrier resets to a new strong pw.
+// HIBP not re-checked server-side per the registration's same precedent
+// (frontend handles that check; backend enforces composition rules).
+const STRONG_PASSWORD = z.string()
+  .min(14, "Password must be at least 14 characters")
+  .regex(/[A-Z]/, "Password must contain at least one uppercase letter")
+  .regex(/[a-z]/, "Password must contain at least one lowercase letter")
+  .regex(/[0-9]/, "Password must contain at least one digit")
+  .regex(/[^A-Za-z0-9]/, "Password must contain at least one special character");
+
 const changePasswordSchema = z.object({
   currentPassword: z.string().min(1),
-  newPassword: z.string().min(8),
+  newPassword: STRONG_PASSWORD,
 });
 
 const forceChangePasswordSchema = z.object({
-  newPassword: z.string().min(8),
+  newPassword: STRONG_PASSWORD,
 });
 
 const carrierOtpSchema = z.object({
