@@ -10024,7 +10024,33 @@
 //            geolocation foundation — the country fields written
 //            at registration + verify-click + login time form a
 //            three-point baseline going forward.
-export const SRL_VERSION = "3.8.ajf";
+// v3.8.ajg — Prisma + Neon DIRECT_URL split (permanent P1002 fix).
+//            Adds `directUrl = env("DIRECT_URL")` to schema's
+//            datasource db block. Prisma auto-uses DIRECT_URL
+//            for ALL migrate operations; DATABASE_URL stays
+//            pooled for runtime queries. Direct connection has
+//            no pooler caching layer, so the advisory lock
+//            pg_advisory_lock(72707369) releases the moment
+//            migrate exits — no more pooler-cached stale lock-
+//            holder PIDs. Permanent fix for the P1002 class
+//            that fired three times across v3.8.ail / aix / ajf.
+//
+//            Wasi added DIRECT_URL env var on Render dashboard
+//            pre-deploy (Neon direct endpoint, no -pooler in
+//            hostname). PRISMA_MIGRATE_LOCK_TIMEOUT=60000
+//            recommended as belt-and-suspenders alongside.
+//
+//            CLAUDE.md §2.2 updated with canonical env var
+//            list. §13.3 Item 191 closed by this sprint.
+//
+//            Side benefits: deterministic prisma migrate
+//            status, reliable Sprint 44b post-deploy gate,
+//            safer future destructive migrations.
+//
+//            Patterns applied: §3.3 atomic ship; §3.5 audit-
+//            first (three-fire P1002 banked first); §19 Sub-
+//            pattern 11 CI-parity. Patterns emerged: none.
+export const SRL_VERSION = "3.8.ajg";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

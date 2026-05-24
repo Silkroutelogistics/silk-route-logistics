@@ -3,8 +3,28 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  // v3.8.ajg — Prisma + Neon DIRECT_URL split.
+  //
+  // url       — pooled Neon endpoint (hostname contains `-pooler`).
+  //             Used by the runtime backend for normal queries.
+  //             Pooler manages connection limits + idle reuse.
+  //
+  // directUrl — direct Neon endpoint (hostname does NOT contain
+  //             `-pooler`). Used by Prisma for ALL migrate
+  //             operations: migrate deploy, migrate dev,
+  //             migrate status, migrate resolve, db push.
+  //             Direct connection releases the advisory lock
+  //             (pg_advisory_lock(72707369)) the moment migrate
+  //             exits — no pooler caching layer keeping a stale
+  //             lock-holder PID alive. Permanent fix for the
+  //             P1002 advisory-lock contention class that fired
+  //             three times in the v3.8.a* session arc
+  //             (v3.8.ail, v3.8.aix, v3.8.ajf).
+  //
+  // See CLAUDE.md §2.2 + §11 v3.8.ajg row for full rationale.
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 // ─── Enums ───────────────────────────────────────────
