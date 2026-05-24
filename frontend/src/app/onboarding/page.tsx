@@ -249,6 +249,10 @@ export default function OnboardingPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  // v3.8.ajq — Application reference number returned from backend on
+  // successful registration. Surfaced prominently on the success screen
+  // so carriers have a stable identifier to reference in support emails.
+  const [applicationReference, setApplicationReference] = useState<string | null>(null);
   const [showUnit, setShowUnit] = useState(false);
   // v3.8.aix — confirm-password + HIBP state. confirmPassword is a UI-only
   // field (not sent to backend); equality check at canNext gate.
@@ -481,18 +485,22 @@ export default function OnboardingPage() {
       }
 
       const data = await res.json();
-      // Token is set as httpOnly cookie by backend — no localStorage needed
 
-      if (files.length > 0) {
-        const fd = new FormData();
-        files.forEach((f) => fd.append("files", f));
-        await fetch(`${apiUrl}/carrier/documents`, {
-          method: "POST",
-          headers: { Authorization: `Bearer ${data.token}` },
-          body: fd,
-        });
-      }
-      router.push("/dashboard/overview");
+      // v3.8.ajq — Show success screen (was pushing user to /dashboard/overview
+      // which is the AE Console root — wrong for a carrier who isn't even
+      // logged in yet). Per v3.8.ajd architecture, no JWT is issued at
+      // registration; carrier must verify email (v3.8.aje gate) AND log in
+      // via /carrier/login to track progress. Success screen now surfaces
+      // the reference # + email-verify instruction + login CTA.
+      //
+      // NOTE: The legacy doc-upload block here (Bearer ${data.token}) is
+      // removed because (a) backend doesn't return a token at registration
+      // and (b) the doc-upload endpoint requires auth. Step 3 staged files
+      // currently fail silently post-v3.8.ajd. Banked as v3.8.ajr — proper
+      // fix is to accept multipart on /api/carrier/register OR to upload
+      // attachments via the verification-link flow.
+      setApplicationReference(data.applicationReference || null);
+      setSuccess(true);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Registration failed";
       if (msg.includes("fetch") || msg.includes("network") || msg.includes("Failed")) {
@@ -519,10 +527,55 @@ export default function OnboardingPage() {
             <div className="w-20 h-20 bg-[#E6F0E9] rounded-full flex items-center justify-center mx-auto mb-5">
               <CheckCircle2 className="w-10 h-10 text-[#2F7A4F]" />
             </div>
-            <h2 className="font-serif italic font-semibold text-2xl text-[#0A2540] mb-2">Application Submitted Successfully</h2>
-            <p className="text-[#3A4A5F] text-sm">
-              A confirmation email has been sent to <strong className="text-[#0A2540]">{form.email}</strong>
+            <h2 className="font-serif italic font-semibold text-2xl text-[#0A2540] mb-2">Application Received</h2>
+            <p className="text-[#3A4A5F] text-sm mb-4">
+              Thank you, {form.firstName}. We&apos;ve sent a confirmation email to <strong className="text-[#0A2540]">{form.email}</strong>.
             </p>
+
+            {/* v3.8.ajq — Reference number prominently displayed. Carriers
+                save this for support correspondence; AE looks carriers up
+                via email/MC/DOT search on /dashboard/carriers. */}
+            {applicationReference && (
+              <div className="inline-block bg-[#FBF7F0] border border-[#EFE6D3] rounded-lg px-5 py-3">
+                <p className="text-[10px] uppercase tracking-[0.22em] font-semibold text-[#BA7517] mb-1">Application Reference</p>
+                <p className="font-mono font-semibold text-lg text-[#0A2540]">{applicationReference}</p>
+              </div>
+            )}
+          </div>
+
+          {/* v3.8.ajq — Email verification + login CTA card. Two-step
+              call to action: verify email FIRST (link in inbox), then
+              log in to /carrier/login to track progress. This is the
+              ONLY path forward for a non-APPROVED carrier per v3.8.ajd
+              login architecture — the dashboard layout redirects them
+              to /carrier/dashboard/application-status anyway, but giving
+              them /carrier/login as the entry point is the canonical
+              flow.
+
+              Email-verify state surfaces in /carrier/dashboard/
+              application-status as a top-of-page warning banner until
+              the carrier clicks the link in their inbox. */}
+          <div className="bg-white rounded-2xl shadow-sm border-2 border-[#BA7517]/30 p-8 mb-6">
+            <h3 className="font-serif italic font-semibold text-xl text-[#0A2540] mb-4">Next Steps to Begin Your Caravan Journey</h3>
+            <div className="space-y-4">
+              <div className="flex gap-3 items-start">
+                <div className="w-8 h-8 bg-[#BA7517] text-[#FBF7F0] rounded-full flex items-center justify-center text-sm font-bold shrink-0">1</div>
+                <div className="flex-1">
+                  <p className="font-semibold text-sm text-[#0A2540] mb-1">Verify your email address</p>
+                  <p className="text-[#3A4A5F] text-sm">Check your inbox for an email titled <strong>&ldquo;Confirm your email — Silk Route Logistics&rdquo;</strong> and click the verification link. This confirms you control the address you registered with.</p>
+                </div>
+              </div>
+              <div className="flex gap-3 items-start">
+                <div className="w-8 h-8 bg-[#BA7517] text-[#FBF7F0] rounded-full flex items-center justify-center text-sm font-bold shrink-0">2</div>
+                <div className="flex-1">
+                  <p className="font-semibold text-sm text-[#0A2540] mb-1">Log in to track your application</p>
+                  <p className="text-[#3A4A5F] text-sm mb-3">Sign in to your carrier portal to see real-time status updates, respond to any information requests from our compliance team, and prepare for your first load.</p>
+                  <Link href="/carrier/login" className="inline-block px-5 py-2.5 bg-[#BA7517] text-[#FBF7F0] font-semibold rounded-md hover:bg-[#854F0B] transition text-sm shadow-sm">
+                    Go to Carrier Login →
+                  </Link>
+                </div>
+              </div>
+            </div>
           </div>
 
           {/* v3.8.aiz Sprint D — Application Summary. Card eyebrows

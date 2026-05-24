@@ -180,9 +180,16 @@ export async function registerCarrier(req: Request, res: Response) {
     });
   }
 
-  // No JWT issued at registration — carrier must be approved first
+  // No JWT issued at registration — carrier must be approved first.
+  // v3.8.ajq — Add applicationReference for the carrier-facing
+  // confirmation screen. Derived from user.id last 8 chars uppercased
+  // (cuid format → mostly alphanumeric, stable, no schema change).
+  // Carrier saves it for future reference; AE lookup still works via
+  // email/MC/DOT search on /dashboard/carriers.
+  const applicationReference = `APP-${user.id.slice(-8).toUpperCase()}`;
   res.status(201).json({
     message: "Carrier application submitted successfully. Your application is under review.",
+    applicationReference,
     user: { id: user.id, email: user.email, firstName: user.firstName, lastName: user.lastName, role: user.role },
     carrierProfile: user.carrierProfile,
   });
