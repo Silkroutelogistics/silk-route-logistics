@@ -19,7 +19,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { api } from "@/lib/api";
-import { Globe, AlertTriangle, ShieldCheck, MapPin, Clock, FileText, KeyRound, UserX } from "lucide-react";
+import { Globe, AlertTriangle, ShieldCheck, MapPin, Clock, FileText, KeyRound, UserX, Smartphone } from "lucide-react";
 
 interface SecuritySignals {
   geo: {
@@ -58,6 +58,15 @@ interface SecuritySignals {
       onboardingStatus: string;
     };
   }>;
+  // v3.8.ajy C7 — Active unusual-OTP SMS suppression override (if any).
+  // Null when no active override. AE applies via the button below the
+  // override card. 24h expiry inherited from Sprint 40 ComplianceOverride.
+  unusualOtpSmsOverride: {
+    id: string;
+    reason: string;
+    expiresAt: string;
+    createdAt: string;
+  } | null;
 }
 
 function formatDate(iso: string | null): string {
@@ -79,6 +88,10 @@ export function SecuritySignalsCard({ carrierId, isAdmin }: { carrierId: string;
   const [overrideOpen, setOverrideOpen] = useState(false);
   const [overrideNote, setOverrideNote] = useState("");
   const [overrideError, setOverrideError] = useState<string | null>(null);
+  // v3.8.ajy C7 — Inline state for the SMS suppression override action.
+  const [smsOverrideOpen, setSmsOverrideOpen] = useState(false);
+  const [smsOverrideReason, setSmsOverrideReason] = useState("");
+  const [smsOverrideError, setSmsOverrideError] = useState<string | null>(null);
 
   const { data, isLoading, isError } = useQuery({
     queryKey: ["carrier-security-signals", carrierId],
@@ -99,6 +112,27 @@ export function SecuritySignalsCard({ carrierId, isAdmin }: { carrierId: string;
     },
   });
 
+  // v3.8.ajy C7 — Reuses the Sprint 40 ComplianceOverride endpoint with
+  // checkCode=UNUSUAL_OTP_SMS_DISABLE. Inherits 24h expiry + 15/30-day
+  // per-carrier quota + audit trail. Backend's carrierAuth login handler
+  // consults this row before firing the SMS dispatch.
+  const smsOverrideMutation = useMutation({
+    mutationFn: () =>
+      api.post(`/compliance/carrier/${carrierId}/override-block`, {
+        reason: smsOverrideReason,
+        checkCode: "UNUSUAL_OTP_SMS_DISABLE",
+      }),
+    onSuccess: () => {
+      setSmsOverrideOpen(false);
+      setSmsOverrideReason("");
+      setSmsOverrideError(null);
+      queryClient.invalidateQueries({ queryKey: ["carrier-security-signals", carrierId] });
+    },
+    onError: (err: { response?: { data?: { error?: string } } }) => {
+      setSmsOverrideError(err.response?.data?.error || "Could not apply SMS suppression override");
+    },
+  });
+
   if (isLoading) {
     return (
       <div className="bg-gray-100 rounded-lg p-4 text-center">
@@ -115,7 +149,7 @@ export function SecuritySignalsCard({ carrierId, isAdmin }: { carrierId: string;
     );
   }
 
-  const { geo, events, chameleonMatches } = data;
+  const { geo, events, chameleonMatches, unusualOtpSmsOverride } = data;
 
   return (
     <div className="space-y-3">
@@ -220,6 +254,71 @@ export function SecuritySignalsCard({ carrierId, isAdmin }: { carrierId: string;
             <p className="text-[10px] text-gray-400 mt-0.5">{formatDate(geo.overriddenAt)}</p>
           </div>
         </div>
+      )}
+
+      {/* v3.8.ajy C7 — Unusual-activity SMS suppression override.
+          Cross-border owner-ops + carriers logging in from multiple
+          countries hit the dual-channel SMS gate every login until AE
+          marks them as "trusted multi-country." Override is 24h
+          (Sprint 40 inheritance) — AE re-applies if the carrier is on
+          a multi-day cross-border trip. Active state shows the reason
+          + expiry; idle state shows the apply button (ADMIN/CEO only). */}
+      {unusualOtpSmsOverride ? (
+        <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 flex items-start gap-2">
+          <Smartphone size={14} className="text-gray-500 mt-0.5 flex-shrink-0" />
+          <div className="flex-1 min-w-0">
+            <p className="text-[11px] font-semibold text-gray-700">Unusual-activity SMS suppressed</p>
+            <p className="text-[11px] text-gray-600 mt-0.5 italic whitespace-pre-wrap">&ldquo;{unusualOtpSmsOverride.reason}&rdquo;</p>
+            <p className="text-[10px] text-gray-400 mt-0.5">
+              Expires {formatDate(unusualOtpSmsOverride.expiresAt)}
+            </p>
+          </div>
+        </div>
+      ) : (
+        isAdmin && (
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+            <div className="flex items-start gap-2">
+              <Smartphone size={14} className="text-blue-600 mt-0.5 flex-shrink-0" />
+              <div className="flex-1 min-w-0">
+                <p className="text-[11px] font-semibold text-blue-900">Unusual-activity SMS gate</p>
+                <p className="text-[11px] text-blue-800 mt-0.5">
+                  Dual-channel SMS fires on logins from a new country. Suppress for trusted multi-country carriers (24h).
+                </p>
+              </div>
+              {!smsOverrideOpen && (
+                <button onClick={() => setSmsOverrideOpen(true)} className="text-[10px] font-semibold text-blue-700 hover:text-blue-900 underline whitespace-nowrap">
+                  Suppress (24h)
+                </button>
+              )}
+            </div>
+            {smsOverrideOpen && (
+              <div className="mt-3 pl-6">
+                <label className="block text-[10px] font-semibold text-blue-900 uppercase tracking-wider mb-1">Justification (required, min 10 chars)</label>
+                <textarea
+                  value={smsOverrideReason}
+                  onChange={(e) => setSmsOverrideReason(e.target.value)}
+                  rows={2}
+                  maxLength={1000}
+                  placeholder="e.g. carrier confirmed multi-country owner-op route, cross-border weekly..."
+                  className="w-full px-2 py-1.5 bg-white border border-blue-300 rounded text-xs focus:outline-none focus:border-blue-500"
+                />
+                <div className="mt-2 flex items-center justify-end gap-2">
+                  <button onClick={() => { setSmsOverrideOpen(false); setSmsOverrideReason(""); setSmsOverrideError(null); }} className="text-[10px] text-blue-700 hover:text-blue-900">
+                    Cancel
+                  </button>
+                  <button
+                    onClick={() => smsOverrideMutation.mutate()}
+                    disabled={smsOverrideReason.trim().length < 10 || smsOverrideMutation.isPending}
+                    className="px-3 py-1 bg-blue-600 text-white text-[10px] font-semibold rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {smsOverrideMutation.isPending ? "Saving…" : "Apply Suppression"}
+                  </button>
+                </div>
+                {smsOverrideError && <p className="mt-1 text-[10px] text-red-600">{smsOverrideError}</p>}
+              </div>
+            )}
+          </div>
+        )
       )}
 
       {/* Three-point geo grid */}

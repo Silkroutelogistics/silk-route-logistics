@@ -434,6 +434,20 @@ router.get("/:id/security-signals", authorize("ADMIN", "CEO", "BROKER", "OPERATI
     },
   });
 
+  // v3.8.ajy C7 — Surface active unusual-activity SMS suppression override
+  // (if any). Reuses Sprint 40 ComplianceOverride table with
+  // checkCode="UNUSUAL_OTP_SMS_DISABLE" — 24h expiry inherited; AE
+  // re-applies via the SecuritySignalsCard button.
+  const unusualOtpSmsOverride = await prisma.complianceOverride.findFirst({
+    where: {
+      carrierId: carrier.id,
+      checkCode: "UNUSUAL_OTP_SMS_DISABLE",
+      expiresAt: { gt: new Date() },
+    },
+    orderBy: { createdAt: "desc" },
+    select: { id: true, reason: true, expiresAt: true, createdAt: true },
+  });
+
   res.json({
     geo: {
       registrationCountry: carrier.registrationCountry,
@@ -450,6 +464,7 @@ router.get("/:id/security-signals", authorize("ADMIN", "CEO", "BROKER", "OPERATI
     },
     chameleonMatches,
     events: timeline,
+    unusualOtpSmsOverride,
   });
 });
 

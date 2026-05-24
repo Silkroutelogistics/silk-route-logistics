@@ -10183,7 +10183,30 @@
 //   as standalone atomic.
 //   ~160 LOC net across 4 files (3 backend edits + version bump). No
 //   schema migration. Migrate-deploy step will no-op.
-export const SRL_VERSION = "3.8.ajx";
+// v3.8.ajy — C7 OTP unusual-activity SMS suppression override.
+//   Cross-border owner-ops + carriers logging in from multiple countries
+//   hit the v3.8.ajf dual-channel SMS gate every login until AE marks
+//   them as trusted multi-country. C7 adds the override path without
+//   any new schema by reusing Sprint 40's ComplianceOverride table with
+//   checkCode="UNUSUAL_OTP_SMS_DISABLE" — inherits 24h expiry +
+//   15/30-day per-carrier quota + audit trail + ADMIN/CEO role gate.
+//   Backend: carrierAuth.ts login handler checks for active override
+//   before firing the SMS dispatch; SystemLog INFO row when
+//   suppression activates (vs. carrier-facing silence to avoid cluing
+//   in a fraudster). /security-signals endpoint surfaces the active
+//   override (if any) so the AE UI can render the suppression-active
+//   state.
+//   Frontend: SecuritySignalsCard gets a new SMS-suppression panel.
+//   Active state shows the reason + expiry. Idle state shows the
+//   apply button (ADMIN/CEO only, inline reason textarea with min-10-
+//   char gate). POSTs to /compliance/carrier/:id/override-block with
+//   the new checkCode body. No new endpoint — Sprint 40's
+//   override-block endpoint already accepts arbitrary checkCode since
+//   v3.8.ahn (Item 182 sprint 4).
+//   ~140 LOC net across 3 files (carrierAuth + carriers route +
+//   SecuritySignalsCard) + version bump. No schema migration —
+//   inheritance from ComplianceOverride is the cleanest pattern.
+export const SRL_VERSION = "3.8.ajy";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

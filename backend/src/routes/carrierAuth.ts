@@ -180,11 +180,47 @@ router.post("/login", loginLimiter, validateBody(carrierLoginSchema), async (req
     log.error({ err: err }, "[Carrier OTP Email] Failed to send:"),
   );
 
-  // Dual-channel: also send SMS when unusual + user has a phone on file.
-  // SMS failure is non-fatal — email is the primary channel; SMS is
-  // enhancement. Carrier still receives the email OTP and can complete
-  // login normally. Failure is logged for AE forensics.
-  if (unusualResult.isUnusual && user.phone) {
+  // v3.8.ajy C7 — Honor active admin override that suppresses unusual-
+  // activity SMS dispatch for this carrier. Cross-border owner-ops +
+  // carriers that legitimately log in from multiple countries hit the
+  // SMS gate every login until AE marks them as "trusted multi-country."
+  // Override reuses Sprint 40's ComplianceOverride table with
+  // checkCode=UNUSUAL_OTP_SMS_DISABLE — inherits 24h expiry + 15/30-day
+  // quota + audit trail without new schema. AE applies via the
+  // SecuritySignalsCard button on /dashboard/carriers carrier detail.
+  let unusualOtpSmsOverrideActive = false;
+  if (unusualResult.isUnusual) {
+    const override = await prisma.complianceOverride.findFirst({
+      where: {
+        carrierId: profile.id,
+        checkCode: "UNUSUAL_OTP_SMS_DISABLE",
+        expiresAt: { gt: new Date() },
+      },
+      select: { id: true, expiresAt: true },
+    });
+    if (override) {
+      unusualOtpSmsOverrideActive = true;
+      // INFO-severity log so AE forensic timeline shows the suppression
+      // happened (vs. a missing-event mystery). Carrier-facing response
+      // unchanged — fraudster shouldn't learn from this either way.
+      prisma.systemLog.create({
+        data: {
+          logType: "SECURITY",
+          severity: "INFO",
+          source: "carrierAuth-unusual-activity-override",
+          message: `Unusual login for ${user.email} (${unusualResult.reason}) — SMS dispatch suppressed by active AE override (id: ${override.id}, expires: ${override.expiresAt.toISOString()}).`,
+          ipAddress: currentIp || null,
+        },
+      }).catch(() => {});
+    }
+  }
+
+  // Dual-channel: also send SMS when unusual + user has a phone on file
+  // AND no active suppression override. SMS failure is non-fatal — email
+  // is the primary channel; SMS is enhancement. Carrier still receives
+  // the email OTP and can complete login normally. Failure is logged
+  // for AE forensics.
+  if (unusualResult.isUnusual && user.phone && !unusualOtpSmsOverrideActive) {
     sendOtpSms(user.phone, code).catch((err) =>
       log.error({ err, userId: user.id }, "[Carrier OTP SMS] Failed to send (unusual activity):"),
     );
