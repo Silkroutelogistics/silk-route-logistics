@@ -8983,7 +8983,197 @@
 //                   both Effective + Expiry dates per policy,
 //                   verify CarrierProfile row has the new
 //                   columns populated via SQL or admin UI.
-export const SRL_VERSION = "3.8.aiw";
+// v3.8.aix   — Step 1 phone formatter + γ "Very Strong" password
+//              tier (14+ chars + 4 char classes + HIBP breach check)
+//              + live strength meter + confirm-password field. Two
+//              Wasi-flagged items + the cascade of γ requirements
+//              shipped as a single atomic.
+//
+//              ITEM 1 — PHONE FORMATTER
+//
+//              Pre-aix: phone input accepted raw digits / any text
+//              up to whatever Tailwind autoComplete didn't strip.
+//              Live deploy showed "269220676000" (12 digits) which
+//              is ugly + can be wrong length. Industry-standard
+//              new-account flows format on-the-fly as user types.
+//
+//              Fix: new `formatPhone(raw)` utility. Strips all
+//              non-digits, drops leading "1" country code on paste,
+//              caps at 10 digits, formats progressively:
+//                "" / 0 digits  -> ""
+//                "2"            -> "(2"
+//                "269"          -> "(269"
+//                "26922"        -> "(269) 22"
+//                "2692206"      -> "(269) 220-6"
+//                "2692206760"   -> "(269) 220-6760"
+//              Applied to Step 1 Phone input + Step 3 Insurance
+//              Agent Phone input. canNext counts digits (>=10)
+//              rather than total chars since formatted value is
+//              14 chars.
+//
+//              ITEM 2 — PASSWORD γ TIER (Very Strong)
+//
+//              Pre-aix: single password input, label "(min 8
+//              chars)", canNext check `form.password.length >= 8`,
+//              backend Zod `z.string().min(8)`. Wasi asked if 12
+//              + 1 upper + 1 special would be "strong" — I
+//              answered honestly that it's "Good" tier, not
+//              "Strong" by modern industry standards, and
+//              recommended Option β (add lowercase + digit).
+//              Wasi chose γ (max strict): 14 + all 4 char classes
+//              + HIBP breach check + confirm-password.
+//
+//              Frontend implementation:
+//
+//              (1) New helpers at file top:
+//                  - passwordCriteria(pw): returns {length,
+//                    uppercase, lowercase, digit, special} booleans.
+//                  - passwordMeetsCriteria(pw): aggregate, returns
+//                    true iff all 5 met.
+//                  - checkPasswordPwned(pw): async — computes SHA-1
+//                    via crypto.subtle.digest, takes first 5 chars
+//                    of hex, fetches
+//                    https://api.pwnedpasswords.com/range/{prefix},
+//                    parses response (lines of SUFFIX:count),
+//                    returns the breach count (0 = safe, >0 = pwned).
+//                    Throws on network/CSP/CORS errors so caller
+//                    can distinguish "verified safe" from "couldn't
+//                    verify."
+//                  - passwordStrength(pw, hibpStatus): returns
+//                    null | "WEAK" | "STRONG" | "VERY_STRONG"
+//                    based on criteria + HIBP state.
+//
+//              (2) New form state:
+//                  - confirmPassword: string — UI-only, not sent
+//                    to backend.
+//                  - hibpStatus: "unknown" | "checking" | "safe" |
+//                    "pwned" | "error".
+//                  - hibpCount: number — breach count when pwned.
+//                  - hibpTimer: ref for debounce cleanup.
+//
+//              (3) New debounced useEffect:
+//                  - Watches form.password.
+//                  - Resets to "unknown" if password doesn't meet
+//                    composition criteria (no point HIBP-checking
+//                    a weak password — user must fix composition
+//                    first).
+//                  - Otherwise sets "checking", waits 600ms after
+//                    last keystroke, fires checkPasswordPwned,
+//                    sets "safe" / "pwned" / "error" based on
+//                    result.
+//
+//              (4) Password UI replacement:
+//                  - 2-col layout (sm:grid-cols-[1fr_320px]):
+//                    Left: Password input + Confirm Password input
+//                    Right: persistent Requirements card (cream
+//                    panel with cream-2 border, gold-dark eyebrow
+//                    label, 5-row checklist + strength meter)
+//                  - Each requirement row shows ✓ (green-filled
+//                    circle) when met, empty (cream-2 circle)
+//                    when not.
+//                  - Confirm password input border + bg react to
+//                    match state: cream-2 default → red on mismatch
+//                    → green on match. Inline "✓ Passwords match"
+//                    / "✗ Passwords don't match" cue.
+//                  - Strength meter (renders only after user types):
+//                    3-segment colored bar + text label "Strength:
+//                    Weak | Strong | Very Strong" + HIBP status
+//                    line ("Checking…" / "✓ Not found in known
+//                    breaches" / "⚠ Appears in N known breaches" /
+//                    "Could not verify").
+//
+//              (5) canNext updated: requires (a) all 5 composition
+//                  criteria, (b) confirmPassword === password,
+//                  (c) hibpStatus === "safe". "Checking" /
+//                  "unknown" / "error" / "pwned" all block
+//                  progression.
+//
+//              Backend implementation:
+//
+//              src/validators/carrier.ts — password Zod chain
+//              extended:
+//                z.string()
+//                  .min(14, ...)
+//                  .regex(/[A-Z]/, ...)
+//                  .regex(/[a-z]/, ...)
+//                  .regex(/[0-9]/, ...)
+//                  .regex(/[^A-Za-z0-9]/, ...)
+//              Defense-in-depth: even if frontend is bypassed,
+//              backend rejects weak passwords. HIBP not re-checked
+//              server-side (frontend handles it).
+//
+//              CSP UPDATE
+//
+//              frontend/public/_headers — connect-src extended
+//              with https://api.pwnedpasswords.com. HIBP k-anonymity
+//              API requires direct browser fetch. Without this CSP
+//              allowance the fetch would be blocked at the browser
+//              security layer + checkPasswordPwned would throw,
+//              setting hibpStatus = "error" and blocking
+//              canNext indefinitely.
+//
+//              SCOPE
+//
+//              ~280 LOC across 4 files:
+//                - frontend/src/app/onboarding/page.tsx (~250
+//                  LOC — phone formatter + 4 password helpers +
+//                  state + effect + canNext + Password UI block)
+//                - backend/src/validators/carrier.ts (~10 LOC,
+//                  password chain)
+//                - frontend/public/_headers (~1 LOC, CSP additive)
+//                - VersionFooter.tsx + CLAUDE.md (docs)
+//
+//              Pre-commit gates (Sub-pattern 11 CI parity):
+//                - Frontend tsc --noEmit clean.
+//                - Frontend npx next build clean (/onboarding
+//                  15.6 kB -> 17 kB, expected ~1.4 kB from
+//                  password block JSX + helpers).
+//                - Backend tsc --noEmit clean.
+//
+//              Letter: aiw latest origin/main HEAD; aix
+//              sequence-continuous on top.
+//
+//              Patterns applied: §3.5 audit-first (paused mid-
+//              sprint to clarify password tier with user before
+//              shipping spec γ vs β); §3.3 atomic full-stack
+//              ship (frontend + backend + CSP + docs); §3.2
+//              visual smoke walkthrough pre-push (mentally
+//              walked password input empty → typing → weak →
+//              strong → very-strong → mismatch → match
+//              transitions); §19 Sub-pattern 11 CI-parity
+//              verification (frontend AND backend tsc gates).
+//
+//              Patterns emerged: methodology lesson — when user
+//              proposes a security-class spec with a strength
+//              label ("strong"), pause and validate the spec
+//              against industry-standard tiering BEFORE shipping.
+//              The "good vs strong vs very strong" classification
+//              has explicit reference frameworks (NIST SP 800-63B,
+//              OWASP); asking the user "which tier" with a
+//              comparison table is faster than shipping and
+//              re-shipping. Banked as feedback-loop optimization.
+//
+//              POST-DEPLOY VERIFICATION REQUIRED
+//
+//              On Render auto-deploy + Cloudflare rebuild:
+//                1. Open /onboarding in incognito.
+//                2. Type a phone — should format live as
+//                   (XXX) XXX-XXXX, cap at 10 digits.
+//                3. Type a password — should show live criteria
+//                   checklist + 3-bar strength meter.
+//                4. Try "password" — should show WEAK + HIBP
+//                   should not fire (criteria unmet).
+//                5. Try "Password123!" — 12 chars, WEAK (length
+//                   < 14).
+//                6. Try "Password1234!!" — 14 chars, all classes
+//                   met → STRONG, then HIBP fires after 600ms
+//                   → "Appears in N breaches" → can't proceed.
+//                7. Try a unique 14+ char password → STRONG →
+//                   "Not found in known breaches" → VERY_STRONG
+//                   → Next button enables.
+//                8. Confirm Password mismatch should block + show
+//                   red border + "Passwords don't match".
+export const SRL_VERSION = "3.8.aix";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

@@ -134,6 +134,76 @@ interface FmcsaResult {
   errors: string[];
 }
 
+// v3.8.aix — Phone formatter. Strips all non-digits, drops leading "1"
+// country code on paste, caps at 10 digits, formats as (XXX) XXX-XXXX
+// based on how many digits have been typed. Backspace works because we
+// reformat from raw digits each keystroke.
+function formatPhone(raw: string): string {
+  let digits = raw.replace(/\D/g, "");
+  if (digits.length === 11 && digits.startsWith("1")) digits = digits.slice(1);
+  digits = digits.slice(0, 10);
+  if (digits.length === 0) return "";
+  if (digits.length <= 3) return `(${digits}`;
+  if (digits.length <= 6) return `(${digits.slice(0, 3)}) ${digits.slice(3)}`;
+  return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`;
+}
+
+// v3.8.aix — Password strength: γ "Very Strong" tier.
+// All 5 criteria required: ≥14 chars, ≥1 uppercase, ≥1 lowercase,
+// ≥1 digit, ≥1 special character. Plus HIBP (haveibeenpwned) k-anonymity
+// check via api.pwnedpasswords.com — pre-existing-breach passwords are
+// blocked even if they technically meet the composition rules. Returns
+// per-criterion booleans for the live UI checklist + aggregate
+// isValid for the canNext gate.
+function passwordCriteria(pw: string) {
+  return {
+    length: pw.length >= 14,
+    uppercase: /[A-Z]/.test(pw),
+    lowercase: /[a-z]/.test(pw),
+    digit: /[0-9]/.test(pw),
+    special: /[^A-Za-z0-9]/.test(pw),
+  };
+}
+function passwordMeetsCriteria(pw: string): boolean {
+  const c = passwordCriteria(pw);
+  return c.length && c.uppercase && c.lowercase && c.digit && c.special;
+}
+
+// HIBP k-anonymity check: SHA-1(password), send first 5 chars of hex to
+// api.pwnedpasswords.com/range/{prefix}, parse response (lines of
+// "SUFFIX:count"), check if our hash suffix is in the list. Returns
+// the breach count (0 = safe; >0 = pwned). Throws on network/CSP errors;
+// caller treats throw as "could not verify" rather than implicit safe.
+async function checkPasswordPwned(pw: string): Promise<number> {
+  const encoded = new TextEncoder().encode(pw);
+  const hashBuffer = await crypto.subtle.digest("SHA-1", encoded);
+  const hashHex = Array.from(new Uint8Array(hashBuffer))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("")
+    .toUpperCase();
+  const prefix = hashHex.slice(0, 5);
+  const suffix = hashHex.slice(5);
+  const res = await fetch(`https://api.pwnedpasswords.com/range/${prefix}`);
+  if (!res.ok) throw new Error(`HIBP API ${res.status}`);
+  const body = await res.text();
+  for (const line of body.split(/\r?\n/)) {
+    const [s, c] = line.split(":");
+    if (s?.trim() === suffix) return parseInt(c?.trim() || "0", 10);
+  }
+  return 0;
+}
+
+// Strength tier: WEAK = doesn't hit all 5 criteria; STRONG = all 5
+// criteria met but HIBP status not yet verified or check failed;
+// VERY_STRONG = all 5 + HIBP confirmed 0 breaches. NULL = empty input.
+type PasswordStrength = null | "WEAK" | "STRONG" | "VERY_STRONG";
+function passwordStrength(pw: string, hibpStatus: "unknown" | "checking" | "safe" | "pwned" | "error"): PasswordStrength {
+  if (!pw) return null;
+  if (!passwordMeetsCriteria(pw)) return "WEAK";
+  if (hibpStatus === "safe") return "VERY_STRONG";
+  return "STRONG";
+}
+
 interface InsuranceLineData {
   provider: string;
   policy: string;
@@ -172,6 +242,14 @@ export default function OnboardingPage() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [showUnit, setShowUnit] = useState(false);
+  // v3.8.aix — confirm-password + HIBP state. confirmPassword is a UI-only
+  // field (not sent to backend); equality check at canNext gate.
+  // hibpStatus tracks the haveibeenpwned k-anonymity check lifecycle for
+  // the strength meter (WEAK / STRONG / VERY_STRONG).
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [hibpStatus, setHibpStatus] = useState<"unknown" | "checking" | "safe" | "pwned" | "error">("unknown");
+  const [hibpCount, setHibpCount] = useState(0);
+  const hibpTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const emptyInsLine: InsuranceLineData = { provider: "", policy: "", amount: "", effective: "", expiry: "" };
   const [form, setForm] = useState<CarrierFormData>({
     firstName: "", lastName: "", email: "", password: "",
@@ -261,8 +339,46 @@ export default function OnboardingPage() {
     set(field, arr.includes(val) ? arr.filter((v) => v !== val) : [...arr, val]);
   };
 
+  // v3.8.aix — Debounced HIBP check. Fires 600ms after the user stops
+  // typing AND password meets all 5 composition criteria. Reset to
+  // "unknown" while criteria are unmet (no point checking until we have
+  // a fully-valid password). On error (network/CSP/CORS), set "error"
+  // status — UI treats this as "could not verify" rather than implicit
+  // safe; canNext requires hibpStatus === "safe" so user can't proceed
+  // without verification.
+  useEffect(() => {
+    if (hibpTimer.current) clearTimeout(hibpTimer.current);
+    if (!form.password || !passwordMeetsCriteria(form.password)) {
+      setHibpStatus("unknown");
+      setHibpCount(0);
+      return;
+    }
+    setHibpStatus("checking");
+    hibpTimer.current = setTimeout(async () => {
+      try {
+        const count = await checkPasswordPwned(form.password);
+        if (count > 0) {
+          setHibpStatus("pwned");
+          setHibpCount(count);
+        } else {
+          setHibpStatus("safe");
+          setHibpCount(0);
+        }
+      } catch {
+        setHibpStatus("error");
+        setHibpCount(0);
+      }
+    }, 600);
+  }, [form.password]);
+
   const canNext = () => {
-    if (step === 0) return form.firstName && form.lastName && form.email && form.password.length >= 8 && form.company && form.phone.length >= 10 && form.mcNumber.trim() && form.dotNumber.length >= 5 && /^\d+$/.test(form.dotNumber) && form.address && form.city && form.state && form.zip;
+    // v3.8.aix — phone validation counts digits (10) since formatPhone wraps
+    // as "(XXX) XXX-XXXX" (14 chars). Password γ "Very Strong" tier requires
+    // ALL of: (a) 5 composition criteria met, (b) confirmPassword matches,
+    // (c) HIBP returns "safe" (verified not in known breaches). HIBP "error"
+    // or "unknown" or "checking" blocks the gate — user must wait for
+    // verification to complete.
+    if (step === 0) return form.firstName && form.lastName && form.email && passwordMeetsCriteria(form.password) && confirmPassword === form.password && hibpStatus === "safe" && form.company && form.phone.replace(/\D/g, "").length === 10 && form.mcNumber.trim() && form.dotNumber.length >= 5 && /^\d+$/.test(form.dotNumber) && form.address && form.city && form.state && form.zip;
     if (step === 1) return form.equipmentTypes.length > 0 && form.operatingRegions.length > 0;
     if (step === 3) return form.agreeTerms;
     return true;
@@ -748,12 +864,93 @@ export default function OnboardingPage() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-[#0A2540] mb-1">Phone *</label>
-                  <input type="tel" value={form.phone} onChange={(e) => set("phone", e.target.value)} className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-gold outline-none" placeholder="(555) 123-4567" autoComplete="off" name="carrier-registration-phone" />
+                  {/* v3.8.aix — Phone formatter applied; strips non-digits,
+                      drops leading "1" country code on paste, caps at 10
+                      digits, formats as (XXX) XXX-XXXX live as user types. */}
+                  <input type="tel" value={form.phone} onChange={(e) => set("phone", formatPhone(e.target.value))} className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-gold outline-none" placeholder="(555) 123-4567" autoComplete="off" name="carrier-registration-phone" />
                 </div>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-[#0A2540] mb-1">Password * (min 8 chars)</label>
-                <input type="password" value={form.password} onChange={(e) => set("password", e.target.value)} className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-gold outline-none" autoComplete="new-password" name="carrier-registration-password" />
+              {/* v3.8.aix — Password block: γ "Very Strong" tier.
+                  Input + 5-criterion checklist + strength meter (WEAK /
+                  STRONG / VERY_STRONG with HIBP confirmation) + confirm-
+                  password field with match feedback. Mirrors industry-
+                  standard new-account flows (Google, Apple, Microsoft). */}
+              <div className="grid sm:grid-cols-[1fr_320px] gap-4 items-start">
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-sm font-medium text-[#0A2540] mb-1">Password *</label>
+                    <input type="password" value={form.password} onChange={(e) => set("password", e.target.value)} className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-gold outline-none" autoComplete="new-password" name="carrier-registration-password" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-[#0A2540] mb-1">Confirm Password *</label>
+                    <input type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} className={cn("w-full px-3 py-2 border rounded-lg focus:ring-2 outline-none transition", confirmPassword && confirmPassword !== form.password ? "border-[#9B2C2C] bg-[#F6E3E3] focus:ring-[#9B2C2C]/15" : confirmPassword && confirmPassword === form.password ? "border-[#2F7A4F] focus:ring-[#2F7A4F]/15" : "border-[#EFE6D3] focus:border-[#BA7517] focus:ring-[#BA7517]/15")} autoComplete="new-password" name="carrier-registration-password-confirm" />
+                    {confirmPassword && (
+                      <p className={cn("text-[10px] mt-1", confirmPassword === form.password ? "text-[#2F7A4F]" : "text-[#9B2C2C]")}>
+                        {confirmPassword === form.password ? "✓ Passwords match" : "✗ Passwords don't match"}
+                      </p>
+                    )}
+                  </div>
+                </div>
+                {/* Criteria checklist + strength meter — always visible
+                    next to the password input as live guidance. */}
+                <div className="bg-[#FBF7F0] border border-[#EFE6D3] rounded-lg p-3 text-xs space-y-1.5">
+                  <p className="text-[10px] uppercase tracking-[0.18em] font-semibold text-[#BA7517] mb-1">Password Requirements</p>
+                  {(() => {
+                    const c = passwordCriteria(form.password);
+                    const items: { label: string; met: boolean }[] = [
+                      { label: "At least 14 characters", met: c.length },
+                      { label: "One uppercase letter (A-Z)", met: c.uppercase },
+                      { label: "One lowercase letter (a-z)", met: c.lowercase },
+                      { label: "One digit (0-9)", met: c.digit },
+                      { label: "One special character (!@#$...)", met: c.special },
+                    ];
+                    return items.map((it) => (
+                      <p key={it.label} className={cn("flex items-center gap-1.5", it.met ? "text-[#2F7A4F]" : "text-[#6B7685]")}>
+                        <span className={cn("inline-flex w-3.5 h-3.5 items-center justify-center rounded-full text-[8px] font-bold", it.met ? "bg-[#2F7A4F] text-[#FBF7F0]" : "bg-[#EFE6D3] text-[#A7AEB8]")}>
+                          {it.met ? "✓" : ""}
+                        </span>
+                        {it.label}
+                      </p>
+                    ));
+                  })()}
+                  {/* Strength meter — only render once user starts typing */}
+                  {form.password && (
+                    <div className="pt-2 mt-2 border-t border-[#EFE6D3]">
+                      {(() => {
+                        const tier = passwordStrength(form.password, hibpStatus);
+                        const tierLabel = tier === "VERY_STRONG" ? "Very Strong" : tier === "STRONG" ? "Strong" : "Weak";
+                        const tierColor = tier === "VERY_STRONG" ? "text-[#2F7A4F]" : tier === "STRONG" ? "text-[#B07A1A]" : "text-[#9B2C2C]";
+                        const bar1 = tier ? (tier === "WEAK" ? "bg-[#9B2C2C]" : "bg-[#2F7A4F]") : "bg-[#EFE6D3]";
+                        const bar2 = tier === "STRONG" || tier === "VERY_STRONG" ? (tier === "VERY_STRONG" ? "bg-[#2F7A4F]" : "bg-[#B07A1A]") : "bg-[#EFE6D3]";
+                        const bar3 = tier === "VERY_STRONG" ? "bg-[#2F7A4F]" : "bg-[#EFE6D3]";
+                        return (
+                          <>
+                            <div className="flex gap-1 mb-1.5">
+                              <div className={cn("h-1.5 flex-1 rounded-full transition", bar1)} />
+                              <div className={cn("h-1.5 flex-1 rounded-full transition", bar2)} />
+                              <div className={cn("h-1.5 flex-1 rounded-full transition", bar3)} />
+                            </div>
+                            <p className={cn("text-[11px] font-semibold", tierColor)}>
+                              Strength: {tierLabel}
+                            </p>
+                            {hibpStatus === "checking" && (
+                              <p className="text-[10px] text-[#6B7685] mt-0.5 italic">Checking against known breaches…</p>
+                            )}
+                            {hibpStatus === "safe" && (
+                              <p className="text-[10px] text-[#2F7A4F] mt-0.5">✓ Not found in known breaches</p>
+                            )}
+                            {hibpStatus === "pwned" && (
+                              <p className="text-[10px] text-[#9B2C2C] mt-0.5 font-semibold">⚠ Appears in {hibpCount.toLocaleString()} known breach{hibpCount === 1 ? "" : "es"} — choose a different password</p>
+                            )}
+                            {hibpStatus === "error" && (
+                              <p className="text-[10px] text-[#B07A1A] mt-0.5 italic">Could not verify against breach database — try again</p>
+                            )}
+                          </>
+                        );
+                      })()}
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           )}
@@ -1010,7 +1207,7 @@ export default function OnboardingPage() {
                     </div>
                     <div>
                       <label className="block text-[10px] font-medium text-[#0A2540] mb-1 uppercase tracking-wide">Agent Phone</label>
-                      <input placeholder="(555) 123-4567" value={form.insuranceAgentPhone} onChange={(e) => set("insuranceAgentPhone", e.target.value)}
+                      <input placeholder="(555) 123-4567" value={form.insuranceAgentPhone} onChange={(e) => set("insuranceAgentPhone", formatPhone(e.target.value))}
                         className="w-full px-3 py-2 bg-white border border-[#EFE6D3] rounded-lg text-sm text-[#0A2540] focus:border-[#BA7517] focus:ring-2 focus:ring-[#BA7517]/15 outline-none transition placeholder:text-[#A7AEB8]" />
                     </div>
                     <div>

@@ -2,7 +2,17 @@ import { z } from "zod";
 
 export const carrierRegisterSchema = z.object({
   email: z.string().email(),
-  password: z.string().min(8),
+  // v3.8.aix — γ "Very Strong" tier per frontend onboarding gate.
+  // 14+ chars + 1 uppercase + 1 lowercase + 1 digit + 1 special.
+  // Backend re-enforces composition rules as defense-in-depth (frontend
+  // can be bypassed; backend is authoritative). HIBP not re-checked
+  // server-side — frontend handles it.
+  password: z.string()
+    .min(14, "Password must be at least 14 characters")
+    .regex(/[A-Z]/, "Password must contain at least one uppercase letter")
+    .regex(/[a-z]/, "Password must contain at least one lowercase letter")
+    .regex(/[0-9]/, "Password must contain at least one digit")
+    .regex(/[^A-Za-z0-9]/, "Password must contain at least one special character"),
   firstName: z.string().min(1),
   lastName: z.string().min(1),
   company: z.string().min(1),
