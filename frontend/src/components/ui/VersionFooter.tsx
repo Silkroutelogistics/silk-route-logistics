@@ -8652,7 +8652,192 @@
 //              any other prop-driven uncontrolled-input
 //              components that may have the same one-way
 //              clear-only effect pattern.
-export const SRL_VERSION = "3.8.aiu";
+// v3.8.aiv   — Step 3 Sprint A: P0 + P1 from the comprehensive
+//              audit. Closes (a) UX correctness gaps (no input
+//              labels, Safety Cert shown to US-only carriers,
+//              raw-integer coverage amounts) + (b) brand register
+//              drift across all Step 3 internals that v3.8.ain
+//              Path 2C never reached.
+//
+//              P0 FIXES
+//
+//              (1) Added field labels above every input in Step 3.
+//                  Before: 16 insurance inputs + 4 agent inputs
+//                  relied entirely on placeholders for context —
+//                  placeholders disappear when user clicks, leaving
+//                  no visible cue for "which field am I in?". Now
+//                  each input has a small uppercase-tracked
+//                  brand-eyebrow label above (Provider / Policy # /
+//                  Coverage Amount / Expiry Date for insurance
+//                  rows; Agent Name / Agent Email / Agent Phone /
+//                  Agency Name for the verification block).
+//
+//              (2) Safety Fitness Certificate upload card now
+//                  conditionally rendered ONLY when the carrier
+//                  selected at least one Canadian operating region
+//                  in Step 2 (CANADIAN_REGIONS = ["Eastern Canada",
+//                  "Western Canada", "Central Canada", "Cross-
+//                  Border"]). US-only carriers no longer see the
+//                  irrelevant Canadian-specific upload slot.
+//                  Implementation: IIFE-wrapped docs array filter
+//                  inside the .map render — clean, no schema
+//                  change, no separate state field needed.
+//
+//              (3) Coverage Amount inputs now show a formatted
+//                  echo below: "= $1,000,000" when user types
+//                  "1000000". Closes the "is that 7 zeros or 6?"
+//                  verification gap. Storage shape unchanged
+//                  (raw integer string), so backend payload is
+//                  identical.
+//
+//              (4) "Required: $X minimum" hint copy rewritten to
+//                  "Minimum: $X" — tighter, less repetitive (the
+//                  step intro already establishes these are
+//                  required).
+//
+//              P1 BRAND-REGISTER SWEEP (Step 3 internals)
+//
+//              Replaced pre-ait slate/Tailwind-gold tokens with
+//              brand-canonical hex across 17 surfaces:
+//                - All 16 insurance row inputs + 4 agent inputs:
+//                  `border + focus:ring-gold` →
+//                  `border-[#EFE6D3] + focus:border-[#BA7517]
+//                  focus:ring-[#BA7517]/15`
+//                - All inputs gain `bg-white` (was inheriting from
+//                  panel cream) for crisp form-element contrast
+//                - All inputs gain `placeholder:text-[#A7AEB8]`
+//                  for consistent placeholder muting
+//                - All inputs gain `text-[#0A2540]` for typed-
+//                  value contrast
+//                - Insurance row titles: `text-slate-700` →
+//                  `text-[#0A2540]`
+//                - "Minimum: $X" hint: `text-slate-700` →
+//                  `text-[#6B7685]`
+//                - "Below minimum" error: `text-red-500` →
+//                  `text-[#9B2C2C]` (§2.1 danger token)
+//                - Amount-below-minimum input state:
+//                  `border-red-300 bg-red-50` →
+//                  `border-[#9B2C2C] bg-[#F6E3E3]`
+//                - 3 insurance checkboxes: `border-slate-300
+//                  text-gold focus:ring-gold` →
+//                  `border-[#C5A572] text-[#BA7517]
+//                  focus:ring-[#BA7517]`
+//                - Checkbox label text: `text-xs text-slate-700` →
+//                  `text-sm text-[#3A4A5F]` (readability bump)
+//                - Insurance Checkboxes divider:
+//                  `border-t border-slate-200` →
+//                  `border-t border-[#EFE6D3]`
+//                - Document upload card default state:
+//                  `bg-slate-50 border-slate-200` →
+//                  `bg-[#FBF7F0] border-[#EFE6D3]`
+//                - Document upload card hover:
+//                  `hover:border-gold/50 hover:bg-gold/5` (olive
+//                  non-canonical) →
+//                  `hover:border-[#C5A572] hover:bg-[#FAEEDA]`
+//                - Document card uploaded state:
+//                  `bg-green-50 border-green-300` →
+//                  `bg-[#E6F0E9] border-[#2F7A4F]/40` (§2.1
+//                  success token)
+//                - Document card upload icon: `text-gold` →
+//                  `text-[#BA7517]`
+//                - Drop additional files zone:
+//                  `border-slate-200 hover:border-gold/40
+//                  hover:bg-gold/5` →
+//                  `border-[#EFE6D3] hover:border-[#C5A572]
+//                  hover:bg-[#FAEEDA]`
+//                - Drop zone icon: `text-slate-700` →
+//                  `text-[#BA7517]`
+//                - Drop zone body text: `text-slate-600 /
+//                  text-slate-700` → `text-[#3A4A5F] /
+//                  text-[#6B7685]`
+//                - Additional files list item:
+//                  `bg-slate-50 border-slate-200` →
+//                  `bg-[#FBF7F0] border-[#EFE6D3]`
+//                - PDF icon: `text-red-700` →
+//                  `text-[#9B2C2C]`
+//                - Image icon: `text-blue-700` →
+//                  `text-[#2A5B8B]` (§2.1 info token)
+//                - File X-remove button hover:
+//                  `hover:bg-red-50` → `hover:bg-[#F6E3E3]`
+//                - X icon: `text-red-700` → `text-[#9B2C2C]`
+//
+//              COPY UPDATES
+//
+//              - W-9 description: "Required for tax reporting"
+//                → "Required for tax reporting (your EIN is
+//                extracted from this)" — closes the loop with
+//                v3.8.air EIN-removal so carriers understand
+//                why we don't ask for EIN separately.
+//              - Insurance Certificate label: "Insurance
+//                Certificate" → "Insurance Certificate (COI)"
+//                + description extended to "Auto liability,
+//                cargo, general liability, and workers' comp"
+//                (was missing workers' comp).
+//              - Workers' Comp "Required by law" subtitle →
+//                "As required by state law" (more accurate —
+//                state-regulated, not federal).
+//              - Workers' Comp placeholder amount: "Coverage
+//                Amount $" → "Per state minimum" (acknowledges
+//                amount is state-variable, not a fixed dollar
+//                target).
+//              - Provider placeholders: "Provider Name" → "e.g.
+//                Progressive" (Auto/Cargo/GL) / "e.g. State Fund"
+//                (Workers' Comp) — operationally realistic
+//                example carriers.
+//              - Agent inputs: generic "Agent Name" / "Agent
+//                Email" / etc → "Full name" / "agent@agency.com"
+//                / "(555) 123-4567" / "Agency / brokerage" —
+//                meaningful examples vs label-repetition.
+//
+//              SCOPE
+//
+//              ~200 LOC restructured across the 4 insurance rows
+//              + checkboxes + agent contact block + document
+//              upload cards + drop zone + additional files list
+//              in onboarding/page.tsx.
+//
+//              Pre-commit gates (Sub-pattern 11 CI parity):
+//              frontend tsc --noEmit clean; frontend npx next
+//              build clean (/onboarding 14.9 kB → 15.4 kB —
+//              expected ~0.5 kB from added field labels +
+//              currency-echo helper text).
+//
+//              Letter: aiu latest origin/main HEAD; aiv
+//              sequence-continuous on top.
+//
+//              Patterns applied: §3.5 audit-first (full Step 3
+//              audit message before editing — found 25 issues,
+//              prioritized P0/P1/P2/P3, this commit closes the
+//              17 P0+P1 items); §3.3 atomic single-file ship +
+//              CLAUDE.md docs row; §3.2 visual smoke walkthrough
+//              pre-push (mentally walked each insurance row
+//              before/after, drop zone empty + populated states,
+//              document card upload + uploaded states); §19
+//              Pattern 7 design-system conformance (brand token
+//              sweep matches the Step 1/2 register established
+//              by v3.8.ait); §19 Sub-pattern 11 CI-parity
+//              verification.
+//
+//              Patterns emerged: none new this commit — Sprint A
+//              is the audit-driven follow-through I committed to
+//              after the ait methodology acknowledgment. Closes
+//              the brand-register drift that v3.8.ain Path 2C
+//              missed by only touching section headers. P2 + P3
+//              banked for a later sprint (Workers' Comp shape
+//              decision, info tooltips, FMCSA-verified insurance
+//              trust cue, file preview).
+//
+//              QUEUED FOR NEXT SPRINT (Wasi flagged mid-aiv):
+//                - 2 dates per insurance (Effective Date +
+//                  Expiration Date) — current single date is
+//                  expiration only; effective date would let us
+//                  verify policy is currently active (not just
+//                  not-yet-expired). Industry-standard on COIs.
+//                  Schema change: add `effective: string` to
+//                  InsuranceLineData interface + initial state +
+//                  4 new input slots + Review step update.
+//                  ~80 LOC. Banked at §13.3 as Sprint B candidate.
+export const SRL_VERSION = "3.8.aiv";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

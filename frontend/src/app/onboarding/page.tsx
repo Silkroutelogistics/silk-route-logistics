@@ -805,91 +805,155 @@ export default function OnboardingPage() {
                 <p className="text-sm text-[#3A4A5F] leading-relaxed">Coverage minimums: Auto Liability $1M, Motor Cargo $100K, General Liability $1M. Workers&apos; Comp as required by law.</p>
               </div>
 
-              {/* Insurance Information Section */}
+              {/* Insurance Information Section
+                  v3.8.aiv — added field labels per input (Provider/Policy#/
+                  Coverage Amount/Expiry Date), brand-token sweep across all
+                  inputs + checkboxes, formatted-currency echo below
+                  Coverage Amount when filled. */}
               <div className="p-6 rounded-xl border border-[#EFE6D3] bg-[#FBF7F0]">
                 <p className="text-[10px] uppercase tracking-[0.22em] font-semibold text-[#BA7517] mb-4">Insurance Information</p>
 
                 {/* Auto Liability */}
-                <div className="mb-4">
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="text-sm font-semibold text-slate-700">Auto Liability</span>
-                    <span className="text-[10px] text-slate-700">Required: $1,000,000 minimum</span>
+                <div className="mb-5">
+                  <div className="flex items-center gap-2 mb-2 flex-wrap">
+                    <span className="text-sm font-semibold text-[#0A2540]">Auto Liability</span>
+                    <span className="text-[10px] text-[#6B7685]">Minimum: $1,000,000</span>
                     {form.autoLiability.amount && parseFloat(form.autoLiability.amount) < 1000000 && (
-                      <span className="text-[10px] text-red-500 font-semibold">Below minimum</span>
+                      <span className="text-[10px] text-[#9B2C2C] font-semibold">Below minimum</span>
                     )}
                   </div>
                   <div className="grid sm:grid-cols-4 gap-3">
-                    <input placeholder="Provider Name" value={form.autoLiability.provider} onChange={(e) => setForm((p) => ({ ...p, autoLiability: { ...p.autoLiability, provider: e.target.value } }))} className="px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-gold outline-none" />
-                    <input placeholder="Policy Number" value={form.autoLiability.policy} onChange={(e) => setForm((p) => ({ ...p, autoLiability: { ...p.autoLiability, policy: e.target.value } }))} className="px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-gold outline-none" />
-                    <input type="number" placeholder="Coverage Amount $" value={form.autoLiability.amount} onChange={(e) => setForm((p) => ({ ...p, autoLiability: { ...p.autoLiability, amount: e.target.value } }))} className={cn("px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-gold outline-none", form.autoLiability.amount && parseFloat(form.autoLiability.amount) < 1000000 ? "border-red-300 bg-red-50" : "")} />
-                    <input type="date" value={form.autoLiability.expiry} onChange={(e) => setForm((p) => ({ ...p, autoLiability: { ...p.autoLiability, expiry: e.target.value } }))} className="px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-gold outline-none" />
+                    <div>
+                      <label className="block text-[10px] font-medium text-[#0A2540] mb-1 uppercase tracking-wide">Provider</label>
+                      <input placeholder="e.g. Progressive" value={form.autoLiability.provider} onChange={(e) => setForm((p) => ({ ...p, autoLiability: { ...p.autoLiability, provider: e.target.value } }))} className="w-full px-3 py-2 bg-white border border-[#EFE6D3] rounded-lg text-sm text-[#0A2540] focus:border-[#BA7517] focus:ring-2 focus:ring-[#BA7517]/15 outline-none transition placeholder:text-[#A7AEB8]" />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-medium text-[#0A2540] mb-1 uppercase tracking-wide">Policy #</label>
+                      <input placeholder="Policy number" value={form.autoLiability.policy} onChange={(e) => setForm((p) => ({ ...p, autoLiability: { ...p.autoLiability, policy: e.target.value } }))} className="w-full px-3 py-2 bg-white border border-[#EFE6D3] rounded-lg text-sm text-[#0A2540] focus:border-[#BA7517] focus:ring-2 focus:ring-[#BA7517]/15 outline-none transition placeholder:text-[#A7AEB8]" />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-medium text-[#0A2540] mb-1 uppercase tracking-wide">Coverage Amount</label>
+                      <input type="number" placeholder="1000000" value={form.autoLiability.amount} onChange={(e) => setForm((p) => ({ ...p, autoLiability: { ...p.autoLiability, amount: e.target.value } }))} className={cn("w-full px-3 py-2 bg-white border rounded-lg text-sm text-[#0A2540] focus:ring-2 outline-none transition placeholder:text-[#A7AEB8]", form.autoLiability.amount && parseFloat(form.autoLiability.amount) < 1000000 ? "border-[#9B2C2C] bg-[#F6E3E3] focus:ring-[#9B2C2C]/15" : "border-[#EFE6D3] focus:border-[#BA7517] focus:ring-[#BA7517]/15")} />
+                      {form.autoLiability.amount && (
+                        <p className="text-[10px] text-[#6B7685] mt-1">= ${Number(form.autoLiability.amount).toLocaleString()}</p>
+                      )}
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-medium text-[#0A2540] mb-1 uppercase tracking-wide">Expiry Date</label>
+                      <input type="date" value={form.autoLiability.expiry} onChange={(e) => setForm((p) => ({ ...p, autoLiability: { ...p.autoLiability, expiry: e.target.value } }))} className="w-full px-3 py-2 bg-white border border-[#EFE6D3] rounded-lg text-sm text-[#0A2540] focus:border-[#BA7517] focus:ring-2 focus:ring-[#BA7517]/15 outline-none transition" />
+                    </div>
                   </div>
                 </div>
 
                 {/* Motor Cargo Insurance */}
-                <div className="mb-4">
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="text-sm font-semibold text-slate-700">Motor Cargo Insurance</span>
-                    <span className="text-[10px] text-slate-700">Required: $100,000 minimum</span>
+                <div className="mb-5">
+                  <div className="flex items-center gap-2 mb-2 flex-wrap">
+                    <span className="text-sm font-semibold text-[#0A2540]">Motor Cargo Insurance</span>
+                    <span className="text-[10px] text-[#6B7685]">Minimum: $100,000</span>
                     {form.cargoInsurance.amount && parseFloat(form.cargoInsurance.amount) < 100000 && (
-                      <span className="text-[10px] text-red-500 font-semibold">Below minimum</span>
+                      <span className="text-[10px] text-[#9B2C2C] font-semibold">Below minimum</span>
                     )}
                   </div>
                   <div className="grid sm:grid-cols-4 gap-3">
-                    <input placeholder="Provider Name" value={form.cargoInsurance.provider} onChange={(e) => setForm((p) => ({ ...p, cargoInsurance: { ...p.cargoInsurance, provider: e.target.value } }))} className="px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-gold outline-none" />
-                    <input placeholder="Policy Number" value={form.cargoInsurance.policy} onChange={(e) => setForm((p) => ({ ...p, cargoInsurance: { ...p.cargoInsurance, policy: e.target.value } }))} className="px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-gold outline-none" />
-                    <input type="number" placeholder="Coverage Amount $" value={form.cargoInsurance.amount} onChange={(e) => setForm((p) => ({ ...p, cargoInsurance: { ...p.cargoInsurance, amount: e.target.value } }))} className={cn("px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-gold outline-none", form.cargoInsurance.amount && parseFloat(form.cargoInsurance.amount) < 100000 ? "border-red-300 bg-red-50" : "")} />
-                    <input type="date" value={form.cargoInsurance.expiry} onChange={(e) => setForm((p) => ({ ...p, cargoInsurance: { ...p.cargoInsurance, expiry: e.target.value } }))} className="px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-gold outline-none" />
+                    <div>
+                      <label className="block text-[10px] font-medium text-[#0A2540] mb-1 uppercase tracking-wide">Provider</label>
+                      <input placeholder="e.g. Progressive" value={form.cargoInsurance.provider} onChange={(e) => setForm((p) => ({ ...p, cargoInsurance: { ...p.cargoInsurance, provider: e.target.value } }))} className="w-full px-3 py-2 bg-white border border-[#EFE6D3] rounded-lg text-sm text-[#0A2540] focus:border-[#BA7517] focus:ring-2 focus:ring-[#BA7517]/15 outline-none transition placeholder:text-[#A7AEB8]" />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-medium text-[#0A2540] mb-1 uppercase tracking-wide">Policy #</label>
+                      <input placeholder="Policy number" value={form.cargoInsurance.policy} onChange={(e) => setForm((p) => ({ ...p, cargoInsurance: { ...p.cargoInsurance, policy: e.target.value } }))} className="w-full px-3 py-2 bg-white border border-[#EFE6D3] rounded-lg text-sm text-[#0A2540] focus:border-[#BA7517] focus:ring-2 focus:ring-[#BA7517]/15 outline-none transition placeholder:text-[#A7AEB8]" />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-medium text-[#0A2540] mb-1 uppercase tracking-wide">Coverage Amount</label>
+                      <input type="number" placeholder="100000" value={form.cargoInsurance.amount} onChange={(e) => setForm((p) => ({ ...p, cargoInsurance: { ...p.cargoInsurance, amount: e.target.value } }))} className={cn("w-full px-3 py-2 bg-white border rounded-lg text-sm text-[#0A2540] focus:ring-2 outline-none transition placeholder:text-[#A7AEB8]", form.cargoInsurance.amount && parseFloat(form.cargoInsurance.amount) < 100000 ? "border-[#9B2C2C] bg-[#F6E3E3] focus:ring-[#9B2C2C]/15" : "border-[#EFE6D3] focus:border-[#BA7517] focus:ring-[#BA7517]/15")} />
+                      {form.cargoInsurance.amount && (
+                        <p className="text-[10px] text-[#6B7685] mt-1">= ${Number(form.cargoInsurance.amount).toLocaleString()}</p>
+                      )}
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-medium text-[#0A2540] mb-1 uppercase tracking-wide">Expiry Date</label>
+                      <input type="date" value={form.cargoInsurance.expiry} onChange={(e) => setForm((p) => ({ ...p, cargoInsurance: { ...p.cargoInsurance, expiry: e.target.value } }))} className="w-full px-3 py-2 bg-white border border-[#EFE6D3] rounded-lg text-sm text-[#0A2540] focus:border-[#BA7517] focus:ring-2 focus:ring-[#BA7517]/15 outline-none transition" />
+                    </div>
                   </div>
                 </div>
 
                 {/* General Liability */}
-                <div className="mb-4">
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="text-sm font-semibold text-slate-700">General Liability</span>
-                    <span className="text-[10px] text-slate-700">Required: $1,000,000 minimum</span>
+                <div className="mb-5">
+                  <div className="flex items-center gap-2 mb-2 flex-wrap">
+                    <span className="text-sm font-semibold text-[#0A2540]">General Liability</span>
+                    <span className="text-[10px] text-[#6B7685]">Minimum: $1,000,000</span>
                     {form.generalLiability.amount && parseFloat(form.generalLiability.amount) < 1000000 && (
-                      <span className="text-[10px] text-red-500 font-semibold">Below minimum</span>
+                      <span className="text-[10px] text-[#9B2C2C] font-semibold">Below minimum</span>
                     )}
                   </div>
                   <div className="grid sm:grid-cols-4 gap-3">
-                    <input placeholder="Provider Name" value={form.generalLiability.provider} onChange={(e) => setForm((p) => ({ ...p, generalLiability: { ...p.generalLiability, provider: e.target.value } }))} className="px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-gold outline-none" />
-                    <input placeholder="Policy Number" value={form.generalLiability.policy} onChange={(e) => setForm((p) => ({ ...p, generalLiability: { ...p.generalLiability, policy: e.target.value } }))} className="px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-gold outline-none" />
-                    <input type="number" placeholder="Coverage Amount $" value={form.generalLiability.amount} onChange={(e) => setForm((p) => ({ ...p, generalLiability: { ...p.generalLiability, amount: e.target.value } }))} className={cn("px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-gold outline-none", form.generalLiability.amount && parseFloat(form.generalLiability.amount) < 1000000 ? "border-red-300 bg-red-50" : "")} />
-                    <input type="date" value={form.generalLiability.expiry} onChange={(e) => setForm((p) => ({ ...p, generalLiability: { ...p.generalLiability, expiry: e.target.value } }))} className="px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-gold outline-none" />
+                    <div>
+                      <label className="block text-[10px] font-medium text-[#0A2540] mb-1 uppercase tracking-wide">Provider</label>
+                      <input placeholder="e.g. Progressive" value={form.generalLiability.provider} onChange={(e) => setForm((p) => ({ ...p, generalLiability: { ...p.generalLiability, provider: e.target.value } }))} className="w-full px-3 py-2 bg-white border border-[#EFE6D3] rounded-lg text-sm text-[#0A2540] focus:border-[#BA7517] focus:ring-2 focus:ring-[#BA7517]/15 outline-none transition placeholder:text-[#A7AEB8]" />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-medium text-[#0A2540] mb-1 uppercase tracking-wide">Policy #</label>
+                      <input placeholder="Policy number" value={form.generalLiability.policy} onChange={(e) => setForm((p) => ({ ...p, generalLiability: { ...p.generalLiability, policy: e.target.value } }))} className="w-full px-3 py-2 bg-white border border-[#EFE6D3] rounded-lg text-sm text-[#0A2540] focus:border-[#BA7517] focus:ring-2 focus:ring-[#BA7517]/15 outline-none transition placeholder:text-[#A7AEB8]" />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-medium text-[#0A2540] mb-1 uppercase tracking-wide">Coverage Amount</label>
+                      <input type="number" placeholder="1000000" value={form.generalLiability.amount} onChange={(e) => setForm((p) => ({ ...p, generalLiability: { ...p.generalLiability, amount: e.target.value } }))} className={cn("w-full px-3 py-2 bg-white border rounded-lg text-sm text-[#0A2540] focus:ring-2 outline-none transition placeholder:text-[#A7AEB8]", form.generalLiability.amount && parseFloat(form.generalLiability.amount) < 1000000 ? "border-[#9B2C2C] bg-[#F6E3E3] focus:ring-[#9B2C2C]/15" : "border-[#EFE6D3] focus:border-[#BA7517] focus:ring-[#BA7517]/15")} />
+                      {form.generalLiability.amount && (
+                        <p className="text-[10px] text-[#6B7685] mt-1">= ${Number(form.generalLiability.amount).toLocaleString()}</p>
+                      )}
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-medium text-[#0A2540] mb-1 uppercase tracking-wide">Expiry Date</label>
+                      <input type="date" value={form.generalLiability.expiry} onChange={(e) => setForm((p) => ({ ...p, generalLiability: { ...p.generalLiability, expiry: e.target.value } }))} className="w-full px-3 py-2 bg-white border border-[#EFE6D3] rounded-lg text-sm text-[#0A2540] focus:border-[#BA7517] focus:ring-2 focus:ring-[#BA7517]/15 outline-none transition" />
+                    </div>
                   </div>
                 </div>
 
                 {/* Workers' Compensation */}
-                <div className="mb-4">
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="text-sm font-semibold text-slate-700">Workers&#39; Compensation</span>
-                    <span className="text-[10px] text-slate-700">Required by law</span>
+                <div className="mb-5">
+                  <div className="flex items-center gap-2 mb-2 flex-wrap">
+                    <span className="text-sm font-semibold text-[#0A2540]">Workers&apos; Compensation</span>
+                    <span className="text-[10px] text-[#6B7685]">As required by state law</span>
                   </div>
                   <div className="grid sm:grid-cols-4 gap-3">
-                    <input placeholder="Provider Name" value={form.workersComp.provider} onChange={(e) => setForm((p) => ({ ...p, workersComp: { ...p.workersComp, provider: e.target.value } }))} className="px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-gold outline-none" />
-                    <input placeholder="Policy Number" value={form.workersComp.policy} onChange={(e) => setForm((p) => ({ ...p, workersComp: { ...p.workersComp, policy: e.target.value } }))} className="px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-gold outline-none" />
-                    <input type="number" placeholder="Coverage Amount $" value={form.workersComp.amount} onChange={(e) => setForm((p) => ({ ...p, workersComp: { ...p.workersComp, amount: e.target.value } }))} className="px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-gold outline-none" />
-                    <input type="date" value={form.workersComp.expiry} onChange={(e) => setForm((p) => ({ ...p, workersComp: { ...p.workersComp, expiry: e.target.value } }))} className="px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-gold outline-none" />
+                    <div>
+                      <label className="block text-[10px] font-medium text-[#0A2540] mb-1 uppercase tracking-wide">Provider</label>
+                      <input placeholder="e.g. State Fund" value={form.workersComp.provider} onChange={(e) => setForm((p) => ({ ...p, workersComp: { ...p.workersComp, provider: e.target.value } }))} className="w-full px-3 py-2 bg-white border border-[#EFE6D3] rounded-lg text-sm text-[#0A2540] focus:border-[#BA7517] focus:ring-2 focus:ring-[#BA7517]/15 outline-none transition placeholder:text-[#A7AEB8]" />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-medium text-[#0A2540] mb-1 uppercase tracking-wide">Policy #</label>
+                      <input placeholder="Policy number" value={form.workersComp.policy} onChange={(e) => setForm((p) => ({ ...p, workersComp: { ...p.workersComp, policy: e.target.value } }))} className="w-full px-3 py-2 bg-white border border-[#EFE6D3] rounded-lg text-sm text-[#0A2540] focus:border-[#BA7517] focus:ring-2 focus:ring-[#BA7517]/15 outline-none transition placeholder:text-[#A7AEB8]" />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-medium text-[#0A2540] mb-1 uppercase tracking-wide">Coverage Amount</label>
+                      <input type="number" placeholder="Per state minimum" value={form.workersComp.amount} onChange={(e) => setForm((p) => ({ ...p, workersComp: { ...p.workersComp, amount: e.target.value } }))} className="w-full px-3 py-2 bg-white border border-[#EFE6D3] rounded-lg text-sm text-[#0A2540] focus:border-[#BA7517] focus:ring-2 focus:ring-[#BA7517]/15 outline-none transition placeholder:text-[#A7AEB8]" />
+                      {form.workersComp.amount && (
+                        <p className="text-[10px] text-[#6B7685] mt-1">= ${Number(form.workersComp.amount).toLocaleString()}</p>
+                      )}
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-medium text-[#0A2540] mb-1 uppercase tracking-wide">Expiry Date</label>
+                      <input type="date" value={form.workersComp.expiry} onChange={(e) => setForm((p) => ({ ...p, workersComp: { ...p.workersComp, expiry: e.target.value } }))} className="w-full px-3 py-2 bg-white border border-[#EFE6D3] rounded-lg text-sm text-[#0A2540] focus:border-[#BA7517] focus:ring-2 focus:ring-[#BA7517]/15 outline-none transition" />
+                    </div>
                   </div>
                 </div>
 
                 {/* Insurance Checkboxes */}
-                <div className="flex flex-wrap gap-6 pt-3 border-t border-slate-200">
+                <div className="flex flex-wrap gap-6 pt-4 border-t border-[#EFE6D3]">
                   <label className="flex items-center gap-2 cursor-pointer">
                     <input type="checkbox" checked={form.additionalInsuredSRL} onChange={(e) => set("additionalInsuredSRL", e.target.checked)}
-                      className="w-4 h-4 rounded border-slate-300 text-gold focus:ring-gold" />
-                    <span className="text-xs text-slate-700">Silk Route Logistics Inc. is listed as Additional Insured</span>
+                      className="w-4 h-4 rounded border-[#C5A572] text-[#BA7517] focus:ring-[#BA7517]" />
+                    <span className="text-sm text-[#3A4A5F]">Silk Route Logistics Inc. is listed as Additional Insured</span>
                   </label>
                   <label className="flex items-center gap-2 cursor-pointer">
                     <input type="checkbox" checked={form.waiverOfSubrogation} onChange={(e) => set("waiverOfSubrogation", e.target.checked)}
-                      className="w-4 h-4 rounded border-slate-300 text-gold focus:ring-gold" />
-                    <span className="text-xs text-slate-700">Waiver of Subrogation is included</span>
+                      className="w-4 h-4 rounded border-[#C5A572] text-[#BA7517] focus:ring-[#BA7517]" />
+                    <span className="text-sm text-[#3A4A5F]">Waiver of Subrogation is included</span>
                   </label>
                   <label className="flex items-center gap-2 cursor-pointer">
                     <input type="checkbox" checked={form.thirtyDayCancellationNotice} onChange={(e) => set("thirtyDayCancellationNotice", e.target.checked)}
-                      className="w-4 h-4 rounded border-slate-300 text-gold focus:ring-gold" />
-                    <span className="text-xs text-slate-700">30-day cancellation notice provision included</span>
+                      className="w-4 h-4 rounded border-[#C5A572] text-[#BA7517] focus:ring-[#BA7517]" />
+                    <span className="text-sm text-[#3A4A5F]">30-day cancellation notice provision included</span>
                   </label>
                 </div>
 
@@ -897,79 +961,102 @@ export default function OnboardingPage() {
                 <div className="pt-4 border-t border-[#EFE6D3] mt-4">
                   <p className="text-[10px] uppercase tracking-[0.22em] font-semibold text-[#BA7517] mb-3">Insurance Agent Contact (for verification)</p>
                   <div className="grid sm:grid-cols-2 gap-3">
-                    <input placeholder="Agent Name" value={form.insuranceAgentName} onChange={(e) => set("insuranceAgentName", e.target.value)}
-                      className="px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-gold outline-none" />
-                    <input placeholder="Agent Email" type="email" value={form.insuranceAgentEmail} onChange={(e) => set("insuranceAgentEmail", e.target.value)}
-                      className="px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-gold outline-none" />
-                    <input placeholder="Agent Phone" value={form.insuranceAgentPhone} onChange={(e) => set("insuranceAgentPhone", e.target.value)}
-                      className="px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-gold outline-none" />
-                    <input placeholder="Agency Name" value={form.insuranceAgencyName} onChange={(e) => set("insuranceAgencyName", e.target.value)}
-                      className="px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-gold outline-none" />
+                    <div>
+                      <label className="block text-[10px] font-medium text-[#0A2540] mb-1 uppercase tracking-wide">Agent Name</label>
+                      <input placeholder="Full name" value={form.insuranceAgentName} onChange={(e) => set("insuranceAgentName", e.target.value)}
+                        className="w-full px-3 py-2 bg-white border border-[#EFE6D3] rounded-lg text-sm text-[#0A2540] focus:border-[#BA7517] focus:ring-2 focus:ring-[#BA7517]/15 outline-none transition placeholder:text-[#A7AEB8]" />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-medium text-[#0A2540] mb-1 uppercase tracking-wide">Agent Email</label>
+                      <input placeholder="agent@agency.com" type="email" value={form.insuranceAgentEmail} onChange={(e) => set("insuranceAgentEmail", e.target.value)}
+                        className="w-full px-3 py-2 bg-white border border-[#EFE6D3] rounded-lg text-sm text-[#0A2540] focus:border-[#BA7517] focus:ring-2 focus:ring-[#BA7517]/15 outline-none transition placeholder:text-[#A7AEB8]" />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-medium text-[#0A2540] mb-1 uppercase tracking-wide">Agent Phone</label>
+                      <input placeholder="(555) 123-4567" value={form.insuranceAgentPhone} onChange={(e) => set("insuranceAgentPhone", e.target.value)}
+                        className="w-full px-3 py-2 bg-white border border-[#EFE6D3] rounded-lg text-sm text-[#0A2540] focus:border-[#BA7517] focus:ring-2 focus:ring-[#BA7517]/15 outline-none transition placeholder:text-[#A7AEB8]" />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-medium text-[#0A2540] mb-1 uppercase tracking-wide">Agency Name</label>
+                      <input placeholder="Agency / brokerage" value={form.insuranceAgencyName} onChange={(e) => set("insuranceAgencyName", e.target.value)}
+                        className="w-full px-3 py-2 bg-white border border-[#EFE6D3] rounded-lg text-sm text-[#0A2540] focus:border-[#BA7517] focus:ring-2 focus:ring-[#BA7517]/15 outline-none transition placeholder:text-[#A7AEB8]" />
+                    </div>
                   </div>
                 </div>
               </div>
 
-              {/* Document Upload Section */}
+              {/* Document Upload Section
+                  v3.8.aiv — Safety Fitness Certificate now conditionally
+                  rendered only when carrier selected at least one Canadian
+                  operating region in Step 2. US-only carriers no longer
+                  see this irrelevant upload slot. Brand-token sweep
+                  applied to all card states (default/hover/uploaded) +
+                  drop zone + additional-files list. */}
               <div className="pt-2">
                 <p className="text-[10px] uppercase tracking-[0.22em] font-semibold text-[#BA7517] mb-1.5">Upload Documents</p>
                 <p className="text-sm text-[#3A4A5F] mb-4">PDF, JPEG, or PNG accepted (max 10MB each). Click each card to upload.</p>
               </div>
               <div className="grid gap-4">
-                {[
-                  { key: "w9", label: "W-9 Form", desc: "Required for tax reporting" },
-                  { key: "insurance", label: "Insurance Certificate", desc: "Auto liability, cargo, and general liability" },
-                  { key: "authority", label: "Authority Letter / Operating Authority", desc: "Active FMCSA authority — 18+ months of operating history required" },
-                  { key: "safety", label: "Safety Fitness Certificate (Canadian carriers)", desc: "Required for Canadian-based carriers operating interprovincially" },
-                ].map((doc) => {
-                  const docFile = files.find((f) => (f as any).__docType === doc.key);
-                  return (
-                    <label key={doc.key} className={cn(
-                      "p-4 rounded-lg border cursor-pointer transition hover:border-gold/50 hover:bg-gold/5",
-                      docFile ? "bg-green-50 border-green-300" : "bg-slate-50 border-slate-200"
-                    )}>
-                      <div className="flex items-center gap-3">
-                        {docFile ? (
-                          <CheckCircle2 className="w-5 h-5 text-green-700 shrink-0" />
-                        ) : (
-                          <Upload className="w-5 h-5 text-gold shrink-0" />
-                        )}
-                        <div className="flex-1 min-w-0">
-                          <span className="text-sm font-medium block">{doc.label}</span>
+                {(() => {
+                  const CANADIAN_REGIONS = ["Eastern Canada", "Western Canada", "Central Canada", "Cross-Border"];
+                  const hasCanadianOperations = form.operatingRegions.some((r) => CANADIAN_REGIONS.includes(r));
+                  const docs = [
+                    { key: "w9", label: "W-9 Form", desc: "Required for tax reporting (your EIN is extracted from this)" },
+                    { key: "insurance", label: "Insurance Certificate (COI)", desc: "Auto liability, cargo, general liability, and workers' comp" },
+                    { key: "authority", label: "Authority Letter / Operating Authority", desc: "Active FMCSA authority — 18+ months of operating history required" },
+                    ...(hasCanadianOperations ? [{ key: "safety", label: "Safety Fitness Certificate", desc: "Required for Canadian-based carriers operating interprovincially" }] : []),
+                  ];
+                  return docs.map((doc) => {
+                    const docFile = files.find((f) => (f as any).__docType === doc.key);
+                    return (
+                      <label key={doc.key} className={cn(
+                        "p-4 rounded-lg border cursor-pointer transition hover:border-[#C5A572] hover:bg-[#FAEEDA]",
+                        docFile ? "bg-[#E6F0E9] border-[#2F7A4F]/40" : "bg-[#FBF7F0] border-[#EFE6D3]"
+                      )}>
+                        <div className="flex items-center gap-3">
                           {docFile ? (
-                            <span className="text-xs text-green-600 truncate block">{docFile.name} ({(docFile.size / 1024).toFixed(0)} KB)</span>
+                            <CheckCircle2 className="w-5 h-5 text-[#2F7A4F] shrink-0" />
                           ) : (
-                            <span className="text-xs text-slate-700 block">{doc.desc}</span>
+                            <Upload className="w-5 h-5 text-[#BA7517] shrink-0" />
+                          )}
+                          <div className="flex-1 min-w-0">
+                            <span className="text-sm font-medium block text-[#0A2540]">{doc.label}</span>
+                            {docFile ? (
+                              <span className="text-xs text-[#2F7A4F] truncate block">{docFile.name} ({(docFile.size / 1024).toFixed(0)} KB)</span>
+                            ) : (
+                              <span className="text-xs text-[#6B7685] block">{doc.desc}</span>
+                            )}
+                          </div>
+                          {docFile && (
+                            <button type="button" onClick={(e) => { e.preventDefault(); setFiles(files.filter((f) => (f as any).__docType !== doc.key)); }}
+                              className="p-1 hover:bg-[#F6E3E3] rounded transition shrink-0">
+                              <X className="w-4 h-4 text-[#9B2C2C]" />
+                            </button>
                           )}
                         </div>
-                        {docFile && (
-                          <button type="button" onClick={(e) => { e.preventDefault(); setFiles(files.filter((f) => (f as any).__docType !== doc.key)); }}
-                            className="p-1 hover:bg-red-50 rounded transition shrink-0">
-                            <X className="w-4 h-4 text-red-700" />
-                          </button>
-                        )}
-                      </div>
-                      <input type="file" accept=".pdf,.jpg,.jpeg,.png" className="hidden" onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        if (!file) return;
-                        if (file.size > 10 * 1024 * 1024) { setError("File must be under 10 MB"); return; }
-                        if (!["application/pdf", "image/jpeg", "image/png"].includes(file.type)) { setError("Only PDF, JPEG, and PNG files are allowed"); return; }
-                        setError(null);
-                        Object.defineProperty(file, "__docType", { value: doc.key, writable: false });
-                        setFiles((prev) => [...prev.filter((f) => (f as any).__docType !== doc.key), file]);
-                        e.target.value = "";
-                      }} />
-                    </label>
-                  );
-                })}
+                        <input type="file" accept=".pdf,.jpg,.jpeg,.png" className="hidden" onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (!file) return;
+                          if (file.size > 10 * 1024 * 1024) { setError("File must be under 10 MB"); return; }
+                          if (!["application/pdf", "image/jpeg", "image/png"].includes(file.type)) { setError("Only PDF, JPEG, and PNG files are allowed"); return; }
+                          setError(null);
+                          Object.defineProperty(file, "__docType", { value: doc.key, writable: false });
+                          setFiles((prev) => [...prev.filter((f) => (f as any).__docType !== doc.key), file]);
+                          e.target.value = "";
+                        }} />
+                      </label>
+                    );
+                  });
+                })()}
               </div>
               {/* Additional documents drop zone */}
               <div
-                className="border-2 border-dashed rounded-xl p-6 text-center transition cursor-pointer border-slate-200 hover:border-gold/40 hover:bg-gold/5"
+                className="border-2 border-dashed rounded-xl p-6 text-center transition cursor-pointer border-[#EFE6D3] hover:border-[#C5A572] hover:bg-[#FAEEDA]"
                 onClick={() => document.getElementById("extra-file-input")?.click()}
               >
-                <Upload className="w-6 h-6 text-slate-700 mx-auto mb-2" />
-                <p className="text-sm font-medium text-slate-600">Drop additional files here or click to browse</p>
-                <p className="text-xs text-slate-700 mt-1">Any other supporting documents</p>
+                <Upload className="w-6 h-6 text-[#BA7517] mx-auto mb-2" />
+                <p className="text-sm font-medium text-[#3A4A5F]">Drop additional files here or click to browse</p>
+                <p className="text-xs text-[#6B7685] mt-1">Any other supporting documents</p>
                 <input id="extra-file-input" type="file" multiple accept=".pdf,.jpg,.jpeg,.png" className="hidden"
                   onChange={(e) => {
                     if (!e.target.files) return;
@@ -988,15 +1075,15 @@ export default function OnboardingPage() {
               {files.filter((f) => !(f as any).__docType).length > 0 && (
                 <ul className="space-y-2">
                   {files.filter((f) => !(f as any).__docType).map((file, i) => (
-                    <li key={`${file.name}-${i}`} className="flex items-center gap-3 p-3 bg-slate-50 border border-slate-200 rounded-lg">
-                      {file.type === "application/pdf" ? <FileText className="w-5 h-5 text-red-700 shrink-0" /> : <ImageIcon className="w-5 h-5 text-blue-700 shrink-0" />}
+                    <li key={`${file.name}-${i}`} className="flex items-center gap-3 p-3 bg-[#FBF7F0] border border-[#EFE6D3] rounded-lg">
+                      {file.type === "application/pdf" ? <FileText className="w-5 h-5 text-[#9B2C2C] shrink-0" /> : <ImageIcon className="w-5 h-5 text-[#2A5B8B] shrink-0" />}
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-slate-700 truncate">{file.name}</p>
-                        <p className="text-xs text-slate-700">{(file.size / 1024).toFixed(0)} KB</p>
+                        <p className="text-sm font-medium text-[#0A2540] truncate">{file.name}</p>
+                        <p className="text-xs text-[#6B7685]">{(file.size / 1024).toFixed(0)} KB</p>
                       </div>
                       <button type="button" onClick={() => setFiles(files.filter((_, j) => j !== files.indexOf(file)))}
-                        className="p-1 hover:bg-red-50 rounded transition">
-                        <X className="w-4 h-4 text-red-700" />
+                        className="p-1 hover:bg-[#F6E3E3] rounded transition">
+                        <X className="w-4 h-4 text-[#9B2C2C]" />
                       </button>
                     </li>
                   ))}
