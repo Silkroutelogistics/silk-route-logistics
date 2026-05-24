@@ -1006,6 +1006,12 @@ model CarrierProfile {
   rejectedById          String?
   rejectionNote         String?
   reapplyEligibleAt     DateTime?
+  // v3.8.ajm — Reapply-eligibility reminder dedup. Set when the daily
+  // cron fires the "you can reapply now" email so subsequent ticks skip
+  // the same carrier. Null = no reminder sent yet; non-null = sent at
+  // that timestamp. Cleared by Lift Rejection (v3.8.ajn) so a future
+  // re-rejection's reminder still fires.
+  reapplyReminderSentAt DateTime?
 
   // Document expiry enforcement
   coiExpiryDate          DateTime? // Certificate of Insurance expiry

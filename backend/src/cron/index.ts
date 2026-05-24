@@ -612,6 +612,68 @@ export function initCronJobs() {
     }
   }));
 
+  // v3.8.ajm — Reapply-eligibility reminder cron.
+  // Fires once per day at 8am Eastern (human-facing per Item 185
+  // convention — carriers receive the email during US business hours).
+  // Finds REJECTED carriers whose reapply window has opened AND no
+  // reminder has been sent yet, emails them with reapply CTA, marks
+  // reapplyReminderSentAt to dedup. Permanent rejections (null
+  // reapplyEligibleAt) are skipped by the `lte: now` filter.
+  cron.schedule("0 8 * * *", () => withGuard("reapply-eligibility-reminder", async () => {
+    try {
+      const { prisma } = require("../config/database");
+      const { sendEmail, wrap } = require("../services/emailService");
+      const now = new Date();
+      const eligibleCarriers = await prisma.carrierProfile.findMany({
+        where: {
+          onboardingStatus: "REJECTED",
+          reapplyEligibleAt: { lte: now, not: null },
+          reapplyReminderSentAt: null,
+          deletedAt: null,
+        },
+        select: {
+          id: true,
+          reapplyEligibleAt: true,
+          user: { select: { id: true, email: true, firstName: true } },
+        },
+        take: 100, // safety cap
+      });
+
+      if (eligibleCarriers.length === 0) return;
+
+      let sent = 0;
+      for (const c of eligibleCarriers) {
+        if (!c.user.email) continue;
+        const portalUrl = "https://silkroutelogistics.ai/carrier/dashboard/application-status";
+        const html = wrap(`
+          <h2 style="color:#0A2540;margin-bottom:4px">You can reapply now</h2>
+          <p style="color:#3A4A5F;margin-bottom:24px">Hi ${c.user.firstName || "there"},</p>
+          <p style="color:#3A4A5F">Your reapply window for the Caravan Partner Program has opened. If you'd like to submit a new carrier application, you can do so any time from your portal.</p>
+          <div style="text-align:center;margin:32px 0">
+            <a href="https://silkroutelogistics.ai/onboarding" style="display:inline-block;background:#BA7517;color:#FBF7F0;padding:14px 36px;text-decoration:none;border-radius:8px;font-weight:bold;font-size:15px">Start New Application</a>
+          </div>
+          <p style="color:#6B7685;font-size:13px">Or visit <a href="${portalUrl}" style="color:#BA7517">your application status page</a>.</p>
+        `);
+        try {
+          await sendEmail(c.user.email, "You can reapply to Silk Route Logistics", html, undefined, {
+            replyTo: "compliance@silkroutelogistics.ai",
+          });
+          await prisma.carrierProfile.update({
+            where: { id: c.id },
+            data: { reapplyReminderSentAt: now },
+          });
+          sent++;
+        } catch (err) {
+          log.error({ err, carrierId: c.id }, "[Cron Daily] Reapply reminder send failed for one carrier");
+        }
+      }
+
+      log.info(`[Cron Daily] Reapply eligibility reminders: ${sent}/${eligibleCarriers.length} sent`);
+    } catch (err) {
+      log.error({ err }, "[Cron Daily] Reapply eligibility reminder error:");
+    }
+  }), { timezone: "America/New_York" });
+
   // Seed news sources on startup
   try {
     const { seedNewsSources } = require("../services/newsAggregatorService");
