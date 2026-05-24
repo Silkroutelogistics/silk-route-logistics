@@ -10128,7 +10128,7 @@
 //            at routes/carriers.ts:335 + multer config + S3
 //            uploadFile signature); §2.2 manual migration; §19
 //            Sub-pattern 11 CI-parity. Patterns emerged: none.
-export const SRL_VERSION = "3.8.ajm";
+export const SRL_VERSION = "3.8.ajn";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

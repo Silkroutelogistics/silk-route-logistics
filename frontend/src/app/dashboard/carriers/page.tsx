@@ -802,6 +802,24 @@ export default function CarrierPoolPage() {
                           <MessageCircle className="w-3.5 h-3.5" /> Request Info
                         </button>
                       )}
+                      {/* v3.8.ajn — Lift Rejection. Only shown for REJECTED carriers.
+                          Restores to REVIEWING + clears all 5 rejection fields +
+                          notifies carrier their application is back under review. */}
+                      {isAdmin && selectedCarrier.onboardingStatus === "REJECTED" && (
+                        <button onClick={async () => {
+                          if (!confirm(`Lift rejection for ${selectedCarrier.company}? The carrier will be notified and their application returns to REVIEWING.`)) return;
+                          try {
+                            await api.post(`/carriers/${selectedCarrier.id}/lift-rejection`, {});
+                            queryClient.invalidateQueries({ queryKey: ["carriers"] });
+                          } catch (err: unknown) {
+                            const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error || "Could not lift rejection";
+                            alert(msg);
+                          }
+                        }}
+                          className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-500/20 text-blue-400 rounded-lg text-xs hover:bg-blue-500/30 transition">
+                          <RefreshCw className="w-3.5 h-3.5" /> Lift Rejection
+                        </button>
+                      )}
                       {isAdmin && editingTab !== "profile" && (
                         <button onClick={() => { openEdit(selectedCarrier); setEditingTab("profile"); }}
                           className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-500/20 text-blue-400 rounded-lg text-xs hover:bg-blue-500/30 transition">

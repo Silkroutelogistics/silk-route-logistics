@@ -61,6 +61,57 @@ export function computeReapplyEligibleAt(reason: string): Date | null {
   return d;
 }
 
+// v3.8.ajn — Lift a rejection. Clears all 5 rejection fields + the ajm
+// reminder dedup field + flips onboardingStatus REJECTED → REVIEWING.
+// Used when an AE picked wrong reason or new info means rejection is
+// no longer warranted. Audit-logged at the controller layer.
+export async function liftCarrierRejection(args: { carrierId: string; liftedById: string; note?: string }) {
+  const carrier = await prisma.carrierProfile.findUnique({
+    where: { id: args.carrierId },
+    select: { id: true, onboardingStatus: true, companyName: true, user: { select: { email: true, firstName: true } } },
+  });
+  if (!carrier) throw new Error("Carrier not found");
+  if (carrier.onboardingStatus !== "REJECTED") {
+    throw new Error("Only REJECTED carriers can have their rejection lifted");
+  }
+
+  const updated = await prisma.carrierProfile.update({
+    where: { id: args.carrierId },
+    data: {
+      onboardingStatus: "REVIEWING",
+      rejectionReason: null,
+      rejectedAt: null,
+      rejectedById: null,
+      rejectionNote: null,
+      reapplyEligibleAt: null,
+      reapplyReminderSentAt: null,
+    },
+  });
+
+  // Notify carrier their application is back under review.
+  if (carrier.user.email) {
+    const noteSection = args.note
+      ? `<div style="background:#FBF7F0;border:1px solid #EFE6D3;border-radius:8px;padding:16px 18px;margin:20px 0">
+           <p style="font-size:11px;color:#BA7517;text-transform:uppercase;letter-spacing:2px;margin:0 0 8px;font-weight:600">Note from our team</p>
+           <p style="color:#3A4A5F;font-size:14px;line-height:1.5;margin:0;white-space:pre-wrap">${args.note}</p>
+         </div>`
+      : "";
+    sendEmail(carrier.user.email, "Your application is back under review — Silk Route Logistics", wrap(`
+      <h2 style="color:#0A2540;margin-bottom:4px">Good news — your application is back under review</h2>
+      <p style="color:#3A4A5F;margin-bottom:24px">Hi ${carrier.user.firstName || "there"},</p>
+      <p style="color:#3A4A5F">Our compliance team has reopened your carrier application. There&apos;s nothing you need to do — we&apos;ll email you when there&apos;s a status change.</p>
+      ${noteSection}
+      <div style="text-align:center;margin:32px 0">
+        <a href="https://silkroutelogistics.ai/carrier/dashboard/application-status" style="display:inline-block;background:#BA7517;color:#FBF7F0;padding:14px 36px;text-decoration:none;border-radius:8px;font-weight:bold;font-size:15px">View Status</a>
+      </div>
+    `), undefined, { replyTo: "compliance@silkroutelogistics.ai" }).catch((err) =>
+      log.error({ err, carrierId: args.carrierId }, "[LiftRejection] Email failed"),
+    );
+  }
+
+  return updated;
+}
+
 interface RejectCarrierArgs {
   carrierId: string;
   rejectedById: string;

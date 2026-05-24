@@ -403,6 +403,27 @@ router.post("/:id/reject", authorize("ADMIN", "CEO"), validateBody(rejectCarrier
   }
 });
 
+// v3.8.ajn — Lift a rejection. Clears all 5 rejection fields + the ajm
+// reminder dedup + flips REJECTED → REVIEWING. Carrier is notified.
+const liftRejectionSchema = z.object({
+  note: z.string().max(2000).optional(),
+});
+router.post("/:id/lift-rejection", authorize("ADMIN", "CEO"), validateBody(liftRejectionSchema), auditLog("UPDATE", "Carrier"), async (req: AuthRequest, res: Response) => {
+  try {
+    const { liftCarrierRejection } = require("../services/rejectionService");
+    const updated = await liftCarrierRejection({
+      carrierId: req.params.id,
+      liftedById: req.user!.id,
+      note: req.body.note,
+    });
+    res.json({ carrier: updated });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : "Failed to lift rejection";
+    const status = msg === "Carrier not found" ? 404 : 400;
+    res.status(status).json({ error: msg });
+  }
+});
+
 // DELETE /api/carriers/:id — Soft delete carrier profile
 router.delete("/:id", authorize("ADMIN", "CEO"), async (req: AuthRequest, res: Response) => {
   const carrier = await prisma.carrierProfile.findUnique({ where: { id: req.params.id } });
