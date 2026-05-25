@@ -10759,7 +10759,108 @@
 //   + 1 new React page + 1 _redirects rule + 2 mount lines + version
 //   bump). No schema migration; no test changes needed.
 //   §13.3 Item 180.4 LOG OPEN → CLOSED.
-export const SRL_VERSION = "3.8.akn";
+// v3.8.ako — §13.3 Items 180.6 + 180.7 revenue-protect bundle.
+//   Two related customer-level pricing controls that protect SRL margin
+//   on negotiated lanes — both add a nullable column to Customer + a
+//   read-only consumer in Order Builder. Admin edit UI banked as a
+//   follow-up (AE sets via DB or future CRM edit tool until then).
+//   Schema:
+//   * NEW Customer.defaultAccessorialRates JSON? — map of negotiated
+//     rates per accessorial type, e.g. { "Detention": 50, "Lumper":
+//     150 }. Order Builder auto-fills the amount input when AE picks
+//     a type that matches a key in the map.
+//   * NEW Customer.minMarginPercent Float? — per-customer override of
+//     the global 10% margin-floor default. OrderSidebar uses this as
+//     the red-alert boundary so AE knows when target carrier cost
+//     produces too thin a margin for this customer.
+//   * NEW migration 20260525093000_customer_accessorials_and_margin_floor
+//     (manual per §2.2; DIRECT_URL split per v3.8.ajg makes the migration
+//     P1002-risk-free).
+//   Backend:
+//   * validators/customer.ts updateCustomerSchema extended with
+//     defaultAccessorialRates (z.record() of nonnegative numbers) +
+//     minMarginPercent (z.number() 0-100, nullable). Existing PATCH
+//     /customers/:id path picks the fields up via the Zod-partial
+//     mechanism so admin can set them once the edit UI lands.
+//   * Customer endpoints (default Prisma scalar selection) auto-include
+//     the new fields on read — no controller change needed.
+//   Frontend (orders/page.tsx):
+//   * Customer interface extended with defaultAccessorialRates +
+//     minMarginPercent.
+//   * Section 3 accessorial picker: on type-change handler reads
+//     selectedCustomer?.defaultAccessorialRates?.[newType] and
+//     auto-fills the amount input. Rows with auto-filled rates get
+//     a subtle gold tint background to distinguish "from agreement"
+//     vs "AE-typed manual" entries. New accessorial-row default
+//     pre-fills from Detention rate if present. Hint copy beneath
+//     the picker explains the auto-fill when customer has rates.
+//   * Customer snapshot passed to OrderSidebar extended with
+//     minMarginPercent.
+//   Frontend (OrderSidebar.tsx):
+//   * Margin tone calculation now uses per-customer floor (falls back
+//     to 10% global). Red tone when margin < floor. New "Below margin
+//     floor (X.X% · customer override)" alert text surfaces beneath
+//     the margin number when triggered so AE knows what threshold
+//     fired the warning.
+//   ~210 LOC net across 1 schema model + 1 migration + 1 validator
+//   extension + 2 frontend file edits + version bump. CRM admin edit
+//   UI for setting these per customer banked as Item 180.6.b
+//   follow-up (~50 LOC in CRM ProfileTab/EditProfileForm).
+//   §13.3 Item 180.6 LOG OPEN → CLOSED.
+//   §13.3 Item 180.7 LOG OPEN → CLOSED.
+//   §13.3 Item 180.x cluster fully closed (180.1+180.2+180.4+180.5+
+//   180.6+180.7+180.8+180.9+180.10+180.11 done; 180.3 closed-by-
+//   discovery; banked 180.6.b CRM admin edit UI for the new fields).
+//
+// v3.8.akp — Item 191 / Sprint 65 Phase 1: EIA fuel-index feed foundation.
+//   Adds the upstream-feed scaffolding (env + schema + region map) that will
+//   supply this week's diesel price to the EXISTING fuelSurchargeTableService
+//   .lookupFuelSurcharge pipeline. Phase 1 ships storage + config + taxonomy
+//   ONLY; the fetcher + cron + on-demand trigger land in v3.8.akq (Phase 2).
+//   No change to quote computation, autoQuoteService, contract-rate path,
+//   Load.fuelSurcharge read/write sites, or marketDataService in either
+//   phase — this is a parallel upstream feed, not a quote-engine change.
+//   Env (backend/src/config/env.ts):
+//   * NEW EIA_API_KEY (optional string) — mirrors the FMCSA_WEB_KEY
+//     short-circuit pattern; key value lives in Render dashboard.
+//   * NEW FSC_INDEX_PROVIDER enum ("eia" | "manual"), default "eia".
+//     "manual" short-circuits the EIA fetch so an operator can override
+//     a region via direct DB write when EIA is unavailable.
+//   Env documentation (backend/.env.example): both names added (no values).
+//   Schema (backend/prisma/schema.prisma):
+//   * NEW model FuelIndexCache — region (@id), indexPrice, indexDate,
+//     source (default "EIA_DOE"), fetchedAt, expiresAt. Upsert-by-region
+//     keeps the table at ~7 rows (NATIONAL + PADD1..PADD5 + CA). Index
+//     on expiresAt for cleanup. Mirrors MileageCache conventions.
+//   * NEW migration 20260525130000_add_fuel_index_cache — hand-authored
+//     per §2.2 canonical + v3.8.aim/aio precedent (avoids prisma migrate
+//     dev against prod-pointed DATABASE_URL). Render's migrate deploy
+//     applies on next push.
+//   Region map (backend/src/services/eiaRegionMap.ts NEW):
+//   * NEW EiaRegion type + EIA_REGIONS array + stateToEiaRegion(state)
+//     covering all 50 states + DC. CA maps to a dedicated CA region (not
+//     PADD5) per EIA convention — CARB diesel runs $0.50-$1.00/gal higher
+//     than national so non-CA West Coast states (AK, AZ, HI, NV, OR, WA)
+//     map to PADD5 separately. Unknown / missing state → NATIONAL.
+//   * Taxonomy-drift note: this is the third state-to-region helper in
+//     the codebase (alongside constants/regions.ts US_REGIONS and
+//     services/regionMap.ts UI groups). Neither matches EIA PADD, so
+//     this new helper is the canonical EIA mapping. Reconciliation of
+//     the three taxonomies is out of scope for this sprint (Pattern 7
+//     spatial drift banked at §13.3 Item 7).
+//   Sprint coordination note: latest VersionFooter at session start was
+//   v3.8.ako (six letters past v3.8.aio that CLAUDE.md §11 last logged).
+//   Per §3.1 sequence-continuous, next-free letter is akp — Sub-pattern 6
+//   concurrent-sprint-coordination fire caught during pre-commit when
+//   VersionFooter was read as canonical source instead of CLAUDE.md §11.
+//   ~124 LOC across 6 files (env.ts +2, .env.example +7, schema.prisma
+//   +14, migration.sql +18 new, eiaRegionMap.ts +83 new, this footer
+//   block + version bump). Pre-commit gates: prisma generate clean,
+//   backend tsc --noEmit clean on changed files (pre-existing tsc error
+//   in untracked WIP backend/src/routes/quoteApprove.ts left in place
+//   per user direction — committed by explicit path only, not staged).
+//   §13.3 Item 191 LOG OPEN; closed at v3.8.akq when Phase 2 ships.
+export const SRL_VERSION = "3.8.akp";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

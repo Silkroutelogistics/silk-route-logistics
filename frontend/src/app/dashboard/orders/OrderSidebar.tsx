@@ -32,6 +32,9 @@ interface Props {
     creditStatus: string | null;
     totalRevenue?: number;
     totalShipments?: number;
+    // v3.8.ako §13.3 Item 180.7 — per-customer margin floor override.
+    // Null falls back to the global 10% default.
+    minMarginPercent?: number | null;
   } | null;
   originState: string;
   destState: string;
@@ -133,11 +136,19 @@ export function OrderSidebar({
 
   const margin = customerRate !== null && targetCost !== null ? customerRate - targetCost : null;
   const marginPct = margin !== null && customerRate && customerRate > 0 ? (margin / customerRate) * 100 : null;
+  // v3.8.ako §13.3 Item 180.7 — per-customer margin floor with global
+  // 10% default. Tone thresholds: green ≥ 15%, amber 10-15%, red below.
+  // Per-customer floor (when set) is the red boundary — falls below it
+  // → red regardless of the global default. This lets AE configure a
+  // higher floor for premium customers (e.g. 18%) while keeping the
+  // standard 10% for the default population.
+  const marginFloor = customerSnapshot?.minMarginPercent ?? 10;
   const marginTone =
     marginPct === null ? "neutral"
+  : marginPct < marginFloor ? "red"
   : marginPct >= 15 ? "green"
-  : marginPct >= 10 ? "amber"
-  : "red";
+  : "amber";
+  const marginBelowFloor = marginPct !== null && marginPct < marginFloor;
 
   const spotRate = marketQuery.data?.spotRate;
 
@@ -236,6 +247,17 @@ export function OrderSidebar({
                 }`}>· {marginPct.toFixed(1)}%</span>
               )}
             </div>
+            {/* v3.8.ako §13.3 Item 180.7 — explicit "below floor" alert
+                copy when margin is below the configured threshold.
+                Floor surfaces in the chip text so AE knows what they're
+                being warned against (vs just seeing the red color and
+                wondering what number triggered it). */}
+            {marginBelowFloor && (
+              <div className="mt-1.5 text-[10px] text-[#9B2C2C] font-semibold">
+                ⚠ Below margin floor ({marginFloor.toFixed(1)}%
+                {customerSnapshot?.minMarginPercent != null && " · customer override"})
+              </div>
+            )}
           </div>
         </Section>
 

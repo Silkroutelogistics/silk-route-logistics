@@ -56,6 +56,13 @@ interface Customer {
   totalRevenue?: number;
   totalShipments?: number;
   _count?: { shipments?: number; loads?: number };
+  // v3.8.ako §13.3 Items 180.6 + 180.7 — revenue-protect fields.
+  // defaultAccessorialRates: map of negotiated rates the Order Builder
+  // accessorial picker auto-fills from on type-change.
+  // minMarginPercent: per-customer margin floor for the OrderSidebar
+  // red alert chip (null = global 10% default).
+  defaultAccessorialRates?: Record<string, number> | null;
+  minMarginPercent?: number | null;
 }
 
 type SaveState = "idle" | "saving" | "saved" | "error";
@@ -1297,59 +1304,98 @@ export default function OrderBuilderPage() {
             <div className="mt-3">
               <Label>Accessorials</Label>
               <div className="space-y-1.5">
-                {form.accessorials.map((a, i) => (
-                  <div key={i} className="grid grid-cols-[1fr_100px_100px_30px] gap-1 items-center">
-                    <select
-                      value={a.type}
-                      onChange={(e) => {
-                        const next = [...form.accessorials];
-                        next[i] = { ...next[i], type: e.target.value };
-                        setForm((f) => ({ ...f, accessorials: next }));
-                      }}
-                      className={inp}
-                    >
-                      {ACCESSORIAL_TYPES.map((t) => <option key={t}>{t}</option>)}
-                    </select>
-                    <input
-                      type="number"
-                      value={a.amount}
-                      onChange={(e) => {
-                        const next = [...form.accessorials];
-                        next[i] = { ...next[i], amount: parseFloat(e.target.value) || 0 };
-                        setForm((f) => ({ ...f, accessorials: next }));
-                      }}
-                      className={inp}
-                      placeholder="$"
-                    />
-                    <select
-                      value={a.payer}
-                      onChange={(e) => {
-                        const next = [...form.accessorials];
-                        next[i] = { ...next[i], payer: e.target.value as Accessorial["payer"] };
-                        setForm((f) => ({ ...f, accessorials: next }));
-                      }}
-                      className={inp}
-                    >
-                      <option>Customer</option>
-                      <option>Carrier</option>
-                      <option>SRL</option>
-                    </select>
-                    <button
-                      type="button"
-                      onClick={() => setForm((f) => ({ ...f, accessorials: f.accessorials.filter((_, j) => j !== i) }))}
-                      className="text-red-400"
-                    >
-                      <X className="w-3 h-3" />
-                    </button>
-                  </div>
-                ))}
+                {/* v3.8.ako §13.3 Item 180.6 — Negotiated accessorial rates.
+                    When selectedCustomer.defaultAccessorialRates has an
+                    entry for the picked type, auto-fill the amount AND
+                    show a "from customer agreement" hint. AE can still
+                    override the amount manually. The Detention default
+                    of $0 on a NEW accessorial row also pre-fills from
+                    rates if the customer has one set. */}
+                {form.accessorials.map((a, i) => {
+                  const negotiatedRate = selectedCustomer?.defaultAccessorialRates?.[a.type];
+                  const isNegotiated = negotiatedRate != null && Number(a.amount) === negotiatedRate;
+                  return (
+                    <div key={i} className={`grid grid-cols-[1fr_100px_100px_30px] gap-1 items-center ${isNegotiated ? "bg-[#FAEEDA]/40 rounded px-1 py-0.5" : ""}`}>
+                      <select
+                        value={a.type}
+                        onChange={(e) => {
+                          const newType = e.target.value;
+                          const next = [...form.accessorials];
+                          // v3.8.ako Item 180.6 — auto-fill amount from
+                          // customer's saved rate map if available.
+                          // Falls back to existing amount if no rate
+                          // saved for this type (manual entry preserved).
+                          const rate = selectedCustomer?.defaultAccessorialRates?.[newType];
+                          next[i] = {
+                            ...next[i],
+                            type: newType,
+                            amount: rate != null ? rate : next[i].amount,
+                          };
+                          setForm((f) => ({ ...f, accessorials: next }));
+                        }}
+                        className={inp}
+                      >
+                        {ACCESSORIAL_TYPES.map((t) => <option key={t}>{t}</option>)}
+                      </select>
+                      <input
+                        type="number"
+                        value={a.amount}
+                        onChange={(e) => {
+                          const next = [...form.accessorials];
+                          next[i] = { ...next[i], amount: parseFloat(e.target.value) || 0 };
+                          setForm((f) => ({ ...f, accessorials: next }));
+                        }}
+                        className={inp}
+                        placeholder="$"
+                        title={negotiatedRate != null ? `Customer agreement rate: $${negotiatedRate}` : undefined}
+                      />
+                      <select
+                        value={a.payer}
+                        onChange={(e) => {
+                          const next = [...form.accessorials];
+                          next[i] = { ...next[i], payer: e.target.value as Accessorial["payer"] };
+                          setForm((f) => ({ ...f, accessorials: next }));
+                        }}
+                        className={inp}
+                      >
+                        <option>Customer</option>
+                        <option>Carrier</option>
+                        <option>SRL</option>
+                      </select>
+                      <button
+                        type="button"
+                        onClick={() => setForm((f) => ({ ...f, accessorials: f.accessorials.filter((_, j) => j !== i) }))}
+                        className="text-red-400"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </div>
+                  );
+                })}
                 <button
                   type="button"
-                  onClick={() => setForm((f) => ({ ...f, accessorials: [...f.accessorials, { type: "Detention", amount: 0, payer: "Customer" }] }))}
+                  onClick={() => {
+                    // v3.8.ako Item 180.6 — new row pre-fills from saved
+                    // Detention rate if customer has one; otherwise $0
+                    // (the existing pre-akl default).
+                    const defaultRate = selectedCustomer?.defaultAccessorialRates?.["Detention"];
+                    setForm((f) => ({
+                      ...f,
+                      accessorials: [...f.accessorials, { type: "Detention", amount: defaultRate ?? 0, payer: "Customer" }],
+                    }));
+                  }}
                   className="flex items-center gap-1 text-[11px] text-[#BA7517] hover:text-[#8f5a11] focus:outline-none focus:ring-2 focus:ring-[#C5A572]/40 rounded"
                 >
                   <Plus className="w-3 h-3" /> Add accessorial
                 </button>
+                {/* v3.8.ako §13.3 Item 180.6 — hint surface when customer
+                    has saved rates configured (helps AE understand why
+                    amounts auto-fill on type-change). */}
+                {selectedCustomer?.defaultAccessorialRates && Object.keys(selectedCustomer.defaultAccessorialRates).length > 0 && (
+                  <div className="text-[10px] text-[#6B7685] italic mt-0.5">
+                    {Object.keys(selectedCustomer.defaultAccessorialRates).length} negotiated rate(s) on file for {selectedCustomer.name} — auto-fills on type pick.
+                  </div>
+                )}
               </div>
             </div>
           </Section>
@@ -1430,6 +1476,8 @@ export default function OrderBuilderPage() {
             creditStatus: selectedCustomer.creditStatus,
             totalRevenue: selectedCustomer.totalRevenue,
             totalShipments: selectedCustomer.totalShipments ?? selectedCustomer._count?.loads ?? selectedCustomer._count?.shipments,
+            // v3.8.ako §13.3 Item 180.7 — per-customer margin floor.
+            minMarginPercent: selectedCustomer.minMarginPercent ?? null,
           } : null}
           originState={form.originState}
           destState={form.destState}

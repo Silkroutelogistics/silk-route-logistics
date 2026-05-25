@@ -2125,6 +2125,19 @@ model Customer {
   origins            Json?
   destinations       Json?
 
+  // v3.8.ako §13.3 Item 180.6 — per-customer negotiated accessorial rates.
+  // JSON shape: { [accessorialType: string]: number } e.g.
+  // { "Detention": 50, "Layover": 250, "Lumper": 150 }. Order Builder
+  // auto-fills the accessorial amount input when AE picks a type that
+  // exists in this map; falls back to manual entry otherwise.
+  defaultAccessorialRates Json? @map("default_accessorial_rates")
+
+  // v3.8.ako §13.3 Item 180.7 — minimum margin floor for this customer.
+  // OrderSidebar shows a red alert chip when target carrier cost
+  // produces margin% below this floor. Per-customer override of the
+  // global 10% default. Stored as a percent (e.g. 12.5 = 12.5%).
+  minMarginPercent   Float?  @map("min_margin_percent")
+
   // Approval-event metadata (Phase 6.2 Lead Hunter / CRM separation)
   approvedAt   DateTime? @map("approved_at")
   approvedById String?   @map("approved_by_id")
@@ -3162,6 +3175,20 @@ model MileageCache {
   @@index([originHash, destinationHash])
   @@index([expiresAt])
   @@map("mileage_cache")
+}
+
+// ─── Fuel Index Cache (weekly EIA diesel feed; feeds existing FuelSurchargeTable.lookupFuelSurcharge) ───
+
+model FuelIndexCache {
+  region     String   @id // NATIONAL | PADD1 | PADD2 | PADD3 | PADD4 | PADD5 | CA (EIA taxonomy)
+  indexPrice Float    @map("index_price") // $/gallon, weekly U.S. on-highway No. 2 diesel retail
+  indexDate  DateTime @map("index_date")  // EIA week-ending date
+  source     String   @default("EIA_DOE") // EIA_DOE | MANUAL (operator override when EIA unavailable)
+  fetchedAt  DateTime @default(now()) @map("fetched_at")
+  expiresAt  DateTime @map("expires_at")
+
+  @@index([expiresAt])
+  @@map("fuel_index_cache")
 }
 
 // ─── AI Auto-Learning Models ───

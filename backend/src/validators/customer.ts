@@ -32,6 +32,17 @@ export const updateCustomerSchema = createCustomerSchema.partial().extend({
   // documentController.uploadDocuments. Note: onboardingStatus stays
   // off this schema — only the dedicated /approve endpoint can flip it.
   contractUrl: z.string().url().nullable().optional(),
+  // v3.8.ako §13.3 Items 180.6 + 180.7 — revenue-protect fields.
+  // defaultAccessorialRates: map of negotiated rates the Order Builder
+  // accessorial picker reads on customer-select to auto-fill amounts.
+  // Shape: { [accessorialType: string]: number }. z.record() allows
+  // arbitrary keys (the type strings come from a frontend ACCESSORIAL_TYPES
+  // constant that could expand without validator churn).
+  defaultAccessorialRates: z.record(z.string(), z.number().nonnegative()).nullable().optional(),
+  // minMarginPercent: per-customer margin floor override (0-100). Below
+  // this, OrderSidebar surfaces a red alert chip. Null = use the global
+  // 10% default fallback.
+  minMarginPercent: z.number().min(0).max(100).nullable().optional(),
 });
 
 // v3.8.oo Gap 1 — manual credit review now sets customer.creditStatus
