@@ -611,9 +611,23 @@ export async function processExpiredTenders() {
       where: { loadId, status: { in: ["OFFERED", "COUNTERED"] }, deletedAt: null },
     });
     if (remaining === 0) {
-      // Revert load to POSTED so it's back on the board
+      // Revert load to POSTED so it's back on the board.
+      // v3.8.ake Item 159 Sprint 3 — defense-in-depth validator. The
+      // upstream `if (load.status === "TENDERED")` guard already
+      // restricts the flip; validator confirms TENDERED → POSTED is
+      // canonical (it is — TENDERED's allowed[] includes POSTED for
+      // un-tender per AE_ALLOWED_TRANSITIONS). On rejection log +
+      // skip; cron-driven path, no HTTP caller.
       const load = await prisma.load.findUnique({ where: { id: loadId } });
       if (load && load.status === "TENDERED") {
+        const transition = validateLoadStatusTransition(load.status, "POSTED", "AE");
+        if (!transition.allowed) {
+          log.warn(
+            { loadId, from: load.status, code: transition.code, reason: transition.reason },
+            "[TenderExpiry] TENDERED → POSTED transition unexpectedly rejected by state machine — load left at TENDERED.",
+          );
+          continue;
+        }
         await prisma.load.update({ where: { id: loadId }, data: { status: "POSTED" } });
         await hooks.run("PostLoadStateChange", { loadId, from: "TENDERED", to: "POSTED", actor: "system" });
         loadsReverted++;

@@ -2,6 +2,8 @@ import { prisma } from "../config/database";
 import { env } from "../config/env";
 import { autoGenerateInvoice } from "./invoiceService";
 import { log } from "../lib/logger";
+import { validateLoadStatusTransition } from "../lib/loadStateMachine";
+import { LoadStatus } from "@prisma/client";
 
 /**
  * C.2 — Check-Call Automation
@@ -298,17 +300,50 @@ export async function handleCheckCallResponse(fromPhone: string, responseText: s
     },
   });
 
-  // Update load status if appropriate
-  const currentStatus = schedule.load.status;
-  const statusOrder = ["POSTED", "TENDERED", "BOOKED", "CONFIRMED", "DISPATCHED", "AT_PICKUP", "LOADED", "IN_TRANSIT", "AT_DELIVERY", "DELIVERED"];
-  const currentIdx = statusOrder.indexOf(currentStatus);
-  const newIdx = statusOrder.indexOf(mapping.status);
-
-  if (newIdx > currentIdx) {
+  // v3.8.ake Item 159 Sprint 3 — Replace the inline statusOrder forward-
+  // only check with the canonical validator. Pre-ake forward-only logic
+  // allowed status SKIPS (e.g., from BOOKED directly to DELIVERED if the
+  // automated SMS mapping returned DELIVERED, skipping AT_PICKUP +
+  // LOADED + IN_TRANSIT + AT_DELIVERY). The canonical validator
+  // enforces single-step progression so an auto check-call can't
+  // accidentally jump multiple states. On rejection log + skip the
+  // load.update (cron-driven path; no HTTP caller to 4xx).
+  const transition = validateLoadStatusTransition(
+    schedule.load.status as LoadStatus,
+    mapping.status as LoadStatus,
+    "AE",
+  );
+  if (transition.allowed) {
     await prisma.load.update({
       where: { id: schedule.loadId },
-      data: { status: mapping.status as any, statusUpdatedAt: new Date() },
+      data: { status: mapping.status as LoadStatus, statusUpdatedAt: new Date() },
     });
+  } else {
+    log.warn(
+      {
+        loadId: schedule.loadId,
+        from: schedule.load.status,
+        to: mapping.status,
+        code: transition.code,
+        reason: transition.reason,
+      },
+      "[CheckCall Auto] Derived status flip rejected by state machine; load.status preserved.",
+    );
+    prisma.systemLog.create({
+      data: {
+        logType: "STATUS_CHANGE",
+        severity: "WARNING",
+        source: "checkCallAuto-derived-status",
+        message: `Auto check-call SMS response would advance load ${schedule.loadId} from ${schedule.load.status} to ${mapping.status} but the transition is invalid — load.status preserved.`,
+        details: {
+          loadId: schedule.loadId,
+          from: schedule.load.status,
+          attemptedTo: mapping.status,
+          code: transition.code,
+          reason: transition.reason,
+        },
+      },
+    }).catch(() => { /* swallow logging-table contention */ });
   }
 
   log.info(`[CheckCall] Response received for load ${schedule.load.referenceNumber}: ${mapping.label}`);

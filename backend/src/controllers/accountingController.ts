@@ -2,6 +2,7 @@ import { Response } from "express";
 import { prisma } from "../config/database";
 import { AuthRequest } from "../middleware/auth";
 import { log } from "../lib/logger";
+import { validateLoadStatusTransition } from "../lib/loadStateMachine";
 
 // ============================================================
 // HELPERS
@@ -480,12 +481,41 @@ export async function markInvoicePaid(req: AuthRequest, res: Response) {
       },
     });
 
-    // Update the load status to COMPLETED if fully paid
+    // Update the load status to COMPLETED if fully paid.
+    // v3.8.ake Item 159 Sprint 3 — updateMany's `where: { status: "INVOICED" }`
+    // is already validator-equivalent (only flips loads currently at INVOICED;
+    // INVOICED → COMPLETED is allowed per AE map). Defense-in-depth: explicit
+    // validator call before the updateMany surfaces a SystemLog WARNING if
+    // the upstream invariant ever drifts (loadId exists but status is no
+    // longer INVOICED — would silently be a no-op updateMany). Doesn't
+    // block payment recording.
     if (!isPartial) {
-      await prisma.load.updateMany({
-        where: { id: existing.loadId, status: "INVOICED" },
-        data: { status: "COMPLETED" },
+      const loadForCheck = await prisma.load.findUnique({
+        where: { id: existing.loadId },
+        select: { status: true, referenceNumber: true },
       });
+      if (loadForCheck && loadForCheck.status === "INVOICED") {
+        const transition = validateLoadStatusTransition(loadForCheck.status, "COMPLETED", "AE");
+        if (transition.allowed) {
+          await prisma.load.updateMany({
+            where: { id: existing.loadId, status: "INVOICED" },
+            data: { status: "COMPLETED" },
+          });
+        } else {
+          log.warn(
+            { loadId: existing.loadId, from: loadForCheck.status, code: transition.code },
+            "[Invoice Paid] INVOICED → COMPLETED transition unexpectedly rejected by state machine.",
+          );
+        }
+      } else if (loadForCheck) {
+        // Load is no longer at INVOICED — invoice was paid but the load
+        // was already moved past it via another codepath. Log for AE
+        // visibility without blocking the payment recording.
+        log.info(
+          { loadId: existing.loadId, currentStatus: loadForCheck.status, referenceNumber: loadForCheck.referenceNumber },
+          "[Invoice Paid] Load no longer at INVOICED — skipping COMPLETED transition.",
+        );
+      }
     }
 
     // Integration: credit factoring fund + release shipper credit

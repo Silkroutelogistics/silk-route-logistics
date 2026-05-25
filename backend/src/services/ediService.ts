@@ -1,4 +1,7 @@
 import { prisma } from "../config/database";
+import { validateLoadStatusTransition } from "../lib/loadStateMachine";
+import { log } from "../lib/logger";
+import { LoadStatus } from "@prisma/client";
 
 interface LoadData {
   id: string;
@@ -99,9 +102,39 @@ export async function parse990(payload: string) {
     },
   });
 
-  // Auto-process response
+  // v3.8.ake Item 159 Sprint 3 — Validate the BOOKED transition before
+  // applying. EDI 990 inbound is async (no HTTP caller waiting for a
+  // 4xx); on an illegitimate transition log a SystemLog WARNING + skip
+  // the load.update. The EDI transaction itself was already persisted
+  // above so the carrier's accept signal is recorded for audit even
+  // when the load isn't moved.
   if (response === "A") {
-    await prisma.load.update({ where: { id: load.id }, data: { status: "BOOKED" } });
+    const transition = validateLoadStatusTransition(load.status as LoadStatus, "BOOKED", "AE");
+    if (transition.allowed) {
+      await prisma.load.update({ where: { id: load.id }, data: { status: "BOOKED" } });
+    } else {
+      log.warn(
+        { loadId: load.id, from: load.status, to: "BOOKED", code: transition.code, reason: transition.reason },
+        "[EDI 990] Carrier accept signal received but load status transition rejected — load not advanced.",
+      );
+      prisma.systemLog.create({
+        data: {
+          logType: "INTEGRATION",
+          severity: "WARNING",
+          source: "edi-990-accept",
+          message: `EDI 990 accept on load ${load.id} (${load.referenceNumber}) — transition from ${load.status} to BOOKED rejected. Carrier signal recorded; load.status preserved.`,
+          details: {
+            loadId: load.id,
+            transactionId: transaction.id,
+            referenceNumber: load.referenceNumber,
+            from: load.status,
+            attemptedTo: "BOOKED",
+            code: transition.code,
+            reason: transition.reason,
+          },
+        },
+      }).catch(() => { /* swallow logging-table contention */ });
+    }
   } else if (response === "D") {
     // Decline — notification only
   }

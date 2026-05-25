@@ -61,7 +61,15 @@ describe("ediService", () => {
 
   // ── parse990 ────────────────────────────────────────────
   it("parse990 — parses acceptance response and books load", async () => {
-    mockPrisma.load.findUnique.mockResolvedValue({ id: "load-1", referenceNumber: "SRL-100" } as any);
+    // v3.8.ake Item 159 Sprint 3 — mock now includes load.status because
+    // the canonical state-machine validator gates the BOOKED transition.
+    // Real EDI 990 inbound is preceded by an EDI 204 outbound that puts
+    // the load in TENDERED; mock matches that pre-state.
+    mockPrisma.load.findUnique.mockResolvedValue({
+      id: "load-1",
+      referenceNumber: "SRL-100",
+      status: "TENDERED",
+    } as any);
     mockPrisma.eDITransaction.create.mockResolvedValue({
       id: "edi-2",
       transactionSet: "990",
@@ -80,7 +88,7 @@ describe("ediService", () => {
 
     expect(result.accepted).toBe(true);
     expect(mockPrisma.load.update).toHaveBeenCalledWith(
-      expect.objectContaining({ data: { status: "BOOKED" } })
+      expect.objectContaining({ where: { id: "load-1" }, data: { status: "BOOKED" } })
     );
   });
 

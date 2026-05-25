@@ -10362,7 +10362,48 @@
 //   TENDERED → POSTED. ~6 more sites; next sprint slot.
 //   ~150 LOC net across 4 backend files + 1 test file + version
 //   bump. No schema migration.
-export const SRL_VERSION = "3.8.akd";
+// v3.8.ake — Item 159 Sprint 3 — final 6 AE write sites wired to canonical
+//   loadStateMachine validator. Completes the Item 159 epic; every
+//   AE-side load.status flip in the codebase now routes through
+//   validateLoadStatusTransition.
+//   * broadcastTenderService.launchBroadcast POSTED|TENDERED → TENDERED
+//     — throws on rejection (service function, caller route handles).
+//   * ediService.process990 → BOOKED — async EDI inbound; on rejection
+//     SystemLog WARNING + skip load.update (EDI transaction itself is
+//     persisted regardless for audit).
+//   * checkCallAutomation.handleCheckCallResponse derived-status flip
+//     — replaces inline forward-only statusOrder check that allowed
+//     skips. Validator enforces single-step progression. SystemLog
+//     WARNING + skip on rejection.
+//   * customerController.deleteCustomer cascade CANCELLED flip — per
+//     active load. Upstream WHERE filter already constrains to
+//     {POSTED, TENDERED, BOOKED, DISPATCHED}; validator is defense-
+//     in-depth. SystemLog WARNING + skip on rejection.
+//   * accountingController.markInvoicePaid INVOICED → COMPLETED —
+//     explicit pre-check via findUnique, fully-paid invoices on
+//     INVOICED loads flip cleanly. Info-log when load is no longer
+//     at INVOICED (out-of-band advance via another codepath).
+//   * tenderController.processExpiredTenders TENDERED → POSTED —
+//     cron-driven un-tender when all tenders expire. Validator
+//     confirms the un-tender transition is canonical; log + skip on
+//     rejection.
+//   Item 159 Sprint 3 completes the multi-day epic:
+//   * Sprint 1 (akb) consolidated the inline AE map into
+//     loadStateMachine.ts canonical.
+//   * Sprint 2 (akd) wired 4 critical sites (createTender,
+//     acceptTender, acceptTenderOnBehalf, checkCallController).
+//   * Sprint 3 (ake) wires the final 6 (broadcastTender, ediService,
+//     checkCallAutomation, customerController, accountingController,
+//     processExpiredTenders).
+//   Total ~11 AE-side write sites now canonical-conformant. Sub-pattern
+//   12 (write-read-dataflow-audit) + Pattern 7 (design-system
+//   conformance — every load.status writer goes through the same
+//   gate now) both satisfied across the load lifecycle.
+//   ~250 LOC net across 6 backend files + version bump. No schema
+//   migration. Pre-commit gates: full 4-gate set per Sub-pattern 11
+//   second-fire canonical (backend tsc + backend vitest + frontend
+//   tsc + frontend next build).
+export const SRL_VERSION = "3.8.ake";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

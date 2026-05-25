@@ -1,5 +1,7 @@
 import { prisma } from "../config/database";
 import { log } from "../lib/logger";
+import { validateLoadStatusTransition } from "../lib/loadStateMachine";
+import { LoadStatus } from "@prisma/client";
 
 export interface BroadcastCandidate {
   carrierId: string;
@@ -45,6 +47,18 @@ export async function launchBroadcast(input: LaunchBroadcastInput) {
       })
     )
   );
+
+  // v3.8.ake Item 159 Sprint 3 — defense-in-depth validator. Upstream
+  // guard at line 28 already restricts to POSTED|TENDERED so this
+  // branch only fires from those two; calling the validator here
+  // makes the canonical helper authoritative on the broadcast launch
+  // path. Throws (not 4xx) because this is a service function called
+  // from routes/tenders.ts which already does Zod-validate + 400 on
+  // failures via the standard error pipeline.
+  const transition = validateLoadStatusTransition(load.status as LoadStatus, "TENDERED", "AE");
+  if (!transition.allowed) {
+    throw new Error(transition.reason ?? `Invalid status transition: ${load.status} → TENDERED`);
+  }
 
   // Update load status
   await prisma.load.update({

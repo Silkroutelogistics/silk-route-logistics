@@ -8,6 +8,9 @@ import { buildEmailSync, GMAIL_SIGNATURE, CEO_NAME, CEO_EMAIL } from "../email/b
 import { VALID_PIPELINE_STATUSES } from "../../../shared/constants/pipelineStatus";
 import { markProspectNotInterested } from "../services/prospectStatusService";
 import { logCustomerActivity } from "../services/customerActivityService";
+import { validateLoadStatusTransition } from "../lib/loadStateMachine";
+import { log } from "../lib/logger";
+import { LoadStatus } from "@prisma/client";
 
 // Required-checks gate for customer onboarding approval. Each entry is
 // surfaced inline by the AE Console approve UI when a 422 fires.
@@ -573,10 +576,51 @@ export async function deleteCustomer(req: AuthRequest, res: Response) {
       status: { in: ["POSTED", "TENDERED", "BOOKED", "DISPATCHED"] },
       deletedAt: null,
     },
-    select: { id: true, referenceNumber: true, carrierId: true },
+    select: { id: true, referenceNumber: true, carrierId: true, status: true },
   });
 
   for (const load of activeLoads) {
+    // v3.8.ake Item 159 Sprint 3 — Validate CANCELLED transition per
+    // load. Upstream WHERE clause already filtered to {POSTED, TENDERED,
+    // BOOKED, DISPATCHED} — all four allow CANCELLED per the AE map —
+    // so the validator should always pass. Defense-in-depth: if the
+    // upstream filter is ever weakened, the validator will refuse +
+    // SystemLog WARNING + skip the soft-delete for the affected load
+    // rather than silently corrupting state (a CANCELLED transition
+    // from DELIVERED or COMPLETED would be a meaningful error).
+    const transition = validateLoadStatusTransition(load.status as LoadStatus, "CANCELLED", "AE");
+    if (!transition.allowed) {
+      log.warn(
+        {
+          loadId: load.id,
+          referenceNumber: load.referenceNumber,
+          from: load.status,
+          customerId: customer.id,
+          code: transition.code,
+          reason: transition.reason,
+        },
+        "[CustomerDelete] CANCELLED transition rejected by state machine; load skipped.",
+      );
+      prisma.systemLog.create({
+        data: {
+          logType: "STATUS_CHANGE",
+          severity: "WARNING",
+          source: "customerDelete-cancel-load",
+          message: `Customer delete cascade would CANCEL load ${load.referenceNumber} but transition from ${load.status} is invalid — load not cancelled.`,
+          details: {
+            loadId: load.id,
+            referenceNumber: load.referenceNumber,
+            customerId: customer.id,
+            customerName: customer.name,
+            from: load.status,
+            attemptedTo: "CANCELLED",
+            code: transition.code,
+            reason: transition.reason,
+          },
+        },
+      }).catch(() => { /* swallow logging-table contention */ });
+      continue;
+    }
     await prisma.load.update({
       where: { id: load.id },
       data: {
