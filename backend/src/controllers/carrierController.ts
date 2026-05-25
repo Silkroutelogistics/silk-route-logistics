@@ -8,7 +8,7 @@ import { env } from "../config/env";
 import { AuthRequest } from "../middleware/auth";
 import { carrierRegisterSchema, verifyCarrierSchema } from "../validators/carrier";
 import { getBonusPercentage } from "../services/tierService";
-import { sendInsuranceVerificationEmail, validateInsuranceCoverage } from "../services/insuranceVerificationService";
+import { sendInsuranceVerificationEmail, validateInsuranceCoverage, maybeSendInsuranceVerificationEmail, didInsuranceFieldsChange } from "../services/insuranceVerificationService";
 import { log } from "../lib/logger";
 import { onCarrierApproved } from "../services/integrationService";
 import { uploadFile } from "../services/storageService";
@@ -375,6 +375,33 @@ export async function registerCarrier(req: Request, res: Response) {
       }).catch((e) => log.error({ err: e }, `[Admin Notify] In-app notification create error for ${admin.email}:`));
     }
   }).catch((e) => log.error({ err: e }, "[Admin Notify] Error fetching admins:"));
+
+  // 2.5. v3.8.akz Item 1 Path β — Insurance-agent verification email.
+  // Original design intent was: when the registration payload includes
+  // insurance data + all 4 agent fields are populated, the platform
+  // emails the agent for verification that the policy is real. The
+  // sender + recipient logic in insuranceVerificationService has been
+  // healthy since pre-aky, but registerCarrier never invoked it — only
+  // updateCarrier (admin) + the carrier-compliance route + the
+  // expiry-reminder cron fired it. Wired here via the unified
+  // maybeSendInsuranceVerificationEmail gate. For registration, change-
+  // condition is computed off the request body (carrier may have skipped
+  // Step 3 Insurance — though canNext now requires it). Completeness-
+  // condition (all 4 agent fields) is enforced inside the helper via a
+  // post-write CarrierProfile read. Fire-and-forget per the rest of the
+  // post-registration chain.
+  if (profileId) {
+    const insuranceFieldsInRegistration = didInsuranceFieldsChange(req.body as Record<string, unknown>);
+    maybeSendInsuranceVerificationEmail(profileId, insuranceFieldsInRegistration)
+      .then((result) => {
+        if (!result.sent && result.reason) {
+          log.info({ carrierId: profileId, reason: result.reason }, "[InsVerify] Skipped after registration");
+        }
+      })
+      .catch((err) => {
+        log.error({ err, carrierId: profileId }, "[InsVerify] Registration auto-send failed");
+      });
+  }
 
   // 3. Build chameleon fingerprint (needs address, phone, EIN stored first)
   if (profileId) {
@@ -1175,17 +1202,25 @@ export async function updateCarrier(req: AuthRequest, res: Response) {
     data,
   });
 
-  // If insurance fields were updated, validate and auto-send verification
-  const insuranceFieldsUpdated = [
-    "autoLiabilityProvider", "autoLiabilityAmount", "cargoInsuranceProvider",
-    "cargoInsuranceAmount", "generalLiabilityProvider", "generalLiabilityAmount",
-    "insuranceAgentEmail",
-  ].some((f) => data[f] !== undefined);
-
-  if (insuranceFieldsUpdated && updated.insuranceAgentEmail) {
-    sendInsuranceVerificationEmail(updated.id).catch((err) => {
-      log.error({ err, carrierId: updated.id }, "[InsVerify] Auto-send failed after admin update");
-    });
+  // v3.8.akz Item 1 Path β — unified insurance-agent verification gate.
+  // Replaces the prior single-field check (`updated.insuranceAgentEmail`
+  // alone) with the two-condition gate that lives in insurance
+  // VerificationService.maybeSendInsuranceVerificationEmail: (a) change-
+  // condition via didInsuranceFieldsChange on the request payload, and
+  // (b) completeness-condition on all 4 agent fields read from the post-
+  // write CarrierProfile record. Fire-and-forget, non-blocking. Skip-
+  // reasons logged at info level for AE forensic visibility.
+  const insuranceFieldsUpdated = didInsuranceFieldsChange(data as Record<string, unknown>);
+  if (insuranceFieldsUpdated) {
+    maybeSendInsuranceVerificationEmail(updated.id, insuranceFieldsUpdated)
+      .then((result) => {
+        if (!result.sent && result.reason) {
+          log.info({ carrierId: updated.id, reason: result.reason }, "[InsVerify] Skipped after admin update");
+        }
+      })
+      .catch((err) => {
+        log.error({ err, carrierId: updated.id }, "[InsVerify] Auto-send failed after admin update");
+      });
   }
 
   const validation = validateInsuranceCoverage(updated);

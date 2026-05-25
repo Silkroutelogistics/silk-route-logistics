@@ -3,7 +3,7 @@ import { prisma } from "../config/database";
 import { authenticate, authorize, AuthRequest } from "../middleware/auth";
 import { z } from "zod";
 import { validateBody } from "../middleware/validate";
-import { sendInsuranceVerificationEmail, validateInsuranceCoverage } from "../services/insuranceVerificationService";
+import { sendInsuranceVerificationEmail, validateInsuranceCoverage, maybeSendInsuranceVerificationEmail } from "../services/insuranceVerificationService";
 import { log } from "../lib/logger";
 
 const router = Router();
@@ -282,12 +282,21 @@ router.patch("/insurance", async (req: AuthRequest, res: Response) => {
   // Validate coverage against minimums
   const validation = validateInsuranceCoverage(updated);
 
-  // Auto-send verification email to insurance agent if agent email exists
-  if (updated.insuranceAgentEmail) {
-    sendInsuranceVerificationEmail(updated.id).catch((err) => {
+  // v3.8.akz Item 1 Path β — unified insurance-agent verification gate.
+  // This route's PATCH semantic is "carrier updated their insurance
+  // record"; by routing definition the write touches insurance fields,
+  // so insuranceFieldsChanged is trivially true. The completeness gate
+  // (all 4 agent fields populated on the post-write record) still
+  // applies — the helper enforces it via DB read.
+  maybeSendInsuranceVerificationEmail(updated.id, true)
+    .then((result) => {
+      if (!result.sent && result.reason) {
+        log.info({ carrierId: updated.id, reason: result.reason }, "[InsVerify] Skipped after insurance update");
+      }
+    })
+    .catch((err) => {
       log.error({ err, carrierId: updated.id }, "[InsVerify] Auto-send failed after insurance update");
     });
-  }
 
   res.json({ message: "Insurance details updated", updated, validation });
 });

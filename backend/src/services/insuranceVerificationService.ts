@@ -78,6 +78,82 @@ export function validateInsuranceCoverage(carrier: {
   return { isCompliant: issues.length === 0, issues, warnings };
 }
 
+// ─── Unified Gate: Maybe Send Verification Email ────────
+//
+// v3.8.akz Item 1 Path β — single source of truth for the
+// register + updateCarrier trigger logic. Two-condition gate:
+//
+//   (a) CHANGE-CONDITION — `insuranceFieldsChanged` MUST be true.
+//       Caller knows whether their write touched any insurance-
+//       relevant field. Prevents re-sends on unrelated PATCHes
+//       (e.g. status flip, address-only update, scorecard refresh)
+//       that happen to touch the carrier row but not insurance.
+//
+//   (b) COMPLETENESS-CONDITION — all 4 agent fields populated on
+//       the RESULTING persisted record. Reads the post-write row
+//       from DB (not the request payload) so a PATCH touching one
+//       agent field still evaluates correctly against the union of
+//       prior + new state. A registration that only sets agent
+//       name still doesn't fire if the other 3 fields are empty;
+//       a follow-up PATCH that sets the 4th field DOES fire.
+//
+// Cron expiry-reminder path (`checkExpiringInsurance` below) calls
+// `sendInsuranceVerificationEmail` directly — different semantic
+// (periodic reminder, NOT a "fields changed" event). Cron gate is
+// the `daysUntil === 60/30/7` threshold; cron keeps its own gate.
+//
+// Returns { sent, reason? } for caller logging. Non-blocking on
+// the caller's response chain — wrap with .catch() at the callsite.
+
+const INSURANCE_RELEVANT_FIELDS = [
+  "autoLiabilityProvider", "autoLiabilityAmount",
+  "cargoInsuranceProvider", "cargoInsuranceAmount",
+  "generalLiabilityProvider", "generalLiabilityAmount",
+  "workersCompProvider", "workersCompAmount",
+  "insuranceAgentName", "insuranceAgentEmail",
+  "insuranceAgentPhone", "insuranceAgencyName",
+] as const;
+
+export function didInsuranceFieldsChange(data: Record<string, unknown>): boolean {
+  return INSURANCE_RELEVANT_FIELDS.some((f) => data[f] !== undefined);
+}
+
+export async function maybeSendInsuranceVerificationEmail(
+  carrierId: string,
+  insuranceFieldsChanged: boolean,
+): Promise<{ sent: boolean; reason?: string }> {
+  if (!insuranceFieldsChanged) {
+    return { sent: false, reason: "no insurance-relevant fields changed in this write" };
+  }
+
+  const carrier = await prisma.carrierProfile.findUnique({
+    where: { id: carrierId },
+    select: {
+      insuranceAgentName: true,
+      insuranceAgentEmail: true,
+      insuranceAgentPhone: true,
+      insuranceAgencyName: true,
+    },
+  });
+  if (!carrier) {
+    return { sent: false, reason: "carrier not found" };
+  }
+
+  const isPresent = (v: string | null | undefined) =>
+    typeof v === "string" && v.trim().length > 0;
+  const missing: string[] = [];
+  if (!isPresent(carrier.insuranceAgentName)) missing.push("name");
+  if (!isPresent(carrier.insuranceAgentEmail)) missing.push("email");
+  if (!isPresent(carrier.insuranceAgentPhone)) missing.push("phone");
+  if (!isPresent(carrier.insuranceAgencyName)) missing.push("agency");
+  if (missing.length > 0) {
+    return { sent: false, reason: `agent fields missing on post-write record: ${missing.join(", ")}` };
+  }
+
+  await sendInsuranceVerificationEmail(carrierId);
+  return { sent: true };
+}
+
 // ─── Send Verification Email to Insurance Agent ─────────
 
 export async function sendInsuranceVerificationEmail(carrierId: string) {

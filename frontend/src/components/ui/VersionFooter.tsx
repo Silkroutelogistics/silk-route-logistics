@@ -11692,7 +11692,105 @@
 //   CLAUDE.md §11 row). Pre-commit gates per Sub-pattern 11:
 //   backend tsc --noEmit clean, frontend tsc --noEmit clean,
 //   frontend npx next build clean. No Prisma migration.
-export const SRL_VERSION = "3.8.aky";
+//
+// v3.8.akz — Item 1 (insurance-agent verification flow, Path β):
+//   wire `sendInsuranceVerificationEmail()` into the `registerCarrier`
+//   post-response fire-and-forget chain, AND unify the trigger gate
+//   in `insuranceVerificationService` so register + updateCarrier +
+//   carrierCompliance share one source of truth. Pre-akz state per
+//   the v3.8.aky audit: the email sender at insuranceVerificationService
+//   .ts:83-243 was healthy + sending to `carrier.insuranceAgentEmail`,
+//   but `registerCarrier` never invoked it. Only `updateCarrier`
+//   (admin endpoint, carrierController.ts:1185), the carrier-compliance
+//   PATCH route (carrierCompliance.ts:286), and the expiry-reminder
+//   cron (insuranceVerificationService.ts:285) called it. Original
+//   "all 4 agent fields populated" design intent never landed — the
+//   existing gates were single-field (`updated.insuranceAgentEmail`
+//   only). Net pre-akz behavior: carrier completes onboarding with
+//   all 4 agent fields populated → agent receives nothing.
+//
+//   Path β implementation (unified gate via new helper):
+//   New `maybeSendInsuranceVerificationEmail(carrierId,
+//   insuranceFieldsChanged: boolean)` exported from
+//   insuranceVerificationService.ts. Two-condition gate:
+//   (a) CHANGE-CONDITION — `insuranceFieldsChanged` must be true;
+//       caller knows whether their write touched any insurance-
+//       relevant field. Prevents re-sends on unrelated PATCHes
+//       (status flip, address-only update, scorecard refresh) that
+//       happen to touch the carrier row but not insurance.
+//   (b) COMPLETENESS-CONDITION — all 4 agent fields (name, email,
+//       phone, agency) populated on the RESULTING persisted record.
+//       Helper reads `prisma.carrierProfile.findUnique` AFTER the
+//       caller's write completed (not the request payload), so a
+//       PATCH touching one agent field still evaluates correctly
+//       against the union of prior + new state.
+//   Returns `{ sent: boolean, reason?: string }` so callsites can
+//   log skip-reasons at info level for AE forensic visibility.
+//
+//   Also exported: `didInsuranceFieldsChange(data)` helper that
+//   inventories the 12 insurance-relevant fields (4 coverage
+//   provider/amount pairs + 4 agent fields) and returns true if
+//   any are present in the write payload. Used by `updateCarrier`
+//   + `registerCarrier` to compute the change-condition uniformly.
+//
+//   Three callsite changes:
+//   (1) `registerCarrier` (carrierController.ts:387, between admin-
+//       notify Step 2 and chameleon-fingerprint Step 3): NEW call.
+//       Step 2.5 in the post-response fire-and-forget chain. Skip-
+//       reason logged if either gate fails (e.g. carrier skipped
+//       Step 3 Insurance entirely, or agent fields incomplete).
+//       For a brand new record where the carrier filled all agent
+//       fields per the Step 3 canNext gate, this fires the
+//       verification email at registration time.
+//   (2) `updateCarrier` (carrierController.ts:1185): replaces the
+//       prior `insuranceFieldsUpdated && updated.insuranceAgentEmail`
+//       single-field check. Inline `insuranceFieldsUpdated` array
+//       removed — replaced with `didInsuranceFieldsChange(data)`
+//       helper call for single-source-of-truth on the change-
+//       condition inventory.
+//   (3) `carrierCompliance.ts:286`: replaces the prior `if
+//       (updated.insuranceAgentEmail)` single-field check. Change-
+//       condition is trivially true (this route's PATCH semantic
+//       is "carrier updated their insurance record" by routing
+//       definition); completeness-condition still applies via the
+//       helper's post-write DB read.
+//
+//   Cron path (`checkExpiringInsurance` in insuranceVerificationService
+//   .ts:285) UNCHANGED — different semantic (periodic reminder, not
+//   a "fields changed" event). Cron's existing `daysUntil === 60 ||
+//   30 || 7` gate is correct for the reminder loop. Routing the
+//   cron through the unified gate would incorrectly skip reminders
+//   whenever insurance fields hadn't changed in the most recent
+//   write.
+//
+//   Architectural pattern banked (consistent with v3.8.akw notify
+//   TenderAction fan-out at all five accept surfaces): when multiple
+//   callsites share a common gate + side effect, the gate logic
+//   lives in the service layer alongside the side effect. Controllers
+//   + route handlers pass authoritative inputs (post-write record
+//   reads + change-condition booleans); they don't reimplement gate
+//   logic. Future sprints adding a 5th callsite (e.g. AE bulk
+//   insurance import, third-party COI sync webhook) inherit the gate
+//   automatically.
+//
+//   Files: 4 (insuranceVerificationService.ts +60/0 LOC unified gate
+//   helper + INSURANCE_RELEVANT_FIELDS constant + didInsurance
+//   FieldsChange helper, carrierController.ts +30/-12 LOC unified
+//   gate wiring at updateCarrier + new registerCarrier Step 2.5
+//   call, carrierCompliance.ts +12/-5 LOC unified gate wiring at
+//   PATCH /insurance endpoint, this footer block + version bump,
+//   CLAUDE.md §11 row). Pre-commit gates per Sub-pattern 11: backend
+//   tsc --noEmit clean, frontend tsc --noEmit + npx next build clean
+//   (no frontend source changes; gates run defensively). No Prisma
+//   migration. No new env vars. No new dependencies.
+//
+//   §13.3 Item closure: the insurance-agent verification flow gap
+//   audited in v3.8.aky Phase A as "NOT FIRING TODAY" is now LIVE
+//   on the registration path. Future polish: AE-facing UI to view
+//   sent verification emails per carrier (banked but not in akz
+//   scope), agent-side reply tracking (out of scope, no inbound
+//   webhook). Per §3.1: v3.8.aky → v3.8.akz sequence-continuous.
+export const SRL_VERSION = "3.8.akz";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
