@@ -9,12 +9,14 @@ import {
   Search, MapPin, Truck, Calendar, DollarSign, Download, Package,
   Thermometer, Shield, Phone, FileText, X, Users, Send, ChevronRight,
   ClipboardCheck, Globe, Info, Clock, AlertTriangle, Trash2,
+  Tag as TagIcon,
 } from "lucide-react";
 
 import { RateConfirmationModal } from "@/components/loads/RateConfirmationModal";
 import { CreateLoadModal } from "@/components/loads/CreateLoadModal";
 import { AcceptOnBehalfModal } from "@/components/loads/AcceptOnBehalfModal";
 import { OverrideComplianceModal } from "@/components/loads/OverrideComplianceModal";
+import { TagManagementPanel } from "@/components/loads/TagManagementPanel";
 import { SlideDrawer } from "@/components/ui/SlideDrawer";
 import { downloadCSV } from "@/lib/csvExport";
 import { NEXT_STATUS, STATUS_ACTIONS } from "@/lib/loadStatusActions";
@@ -69,7 +71,7 @@ const TENDER_COLORS: Record<string, string> = {
 const MARGIN_ROLES = ["ADMIN", "CEO", "BROKER", "ACCOUNTING"];
 
 type StatusTab = "attention" | "DRAFT" | "POSTED" | "TENDERED" | "BOOKED" | "all";
-type PanelTab = "details" | "tracking" | "invoice" | "documents" | "history" | "carrier" | "exceptions";
+type PanelTab = "details" | "tracking" | "invoice" | "documents" | "history" | "carrier" | "exceptions" | "tags";
 
 const PANEL_TABS: { key: PanelTab; icon: typeof Info; label: string }[] = [
   { key: "details", icon: Info, label: "Details" },
@@ -79,6 +81,10 @@ const PANEL_TABS: { key: PanelTab; icon: typeof Info; label: string }[] = [
   { key: "history", icon: Clock, label: "History" },
   { key: "carrier", icon: Truck, label: "Carrier" },
   { key: "exceptions", icon: AlertTriangle, label: "Exceptions" },
+  // v3.8.akj §13.3 Item 8.7 — manual tag-management UI. Per-load
+  // panel showing applied tags + add/remove via the previously-
+  // orphan POST + DELETE /tags/assign endpoints.
+  { key: "tags", icon: TagIcon, label: "Tags" },
 ];
 
 const STATUS_PIPELINE = [
@@ -448,6 +454,19 @@ export default function LoadsPage() {
         );
       case "exceptions":
         return <PanelExceptions load={load} />;
+      case "tags":
+        // v3.8.akj §13.3 Item 8.7 — manual tag-management panel.
+        // canEdit gated to roles backend POST/DELETE /tags/assign
+        // accepts (ADMIN/CEO/BROKER/DISPATCH/OPERATIONS — DISPATCH
+        // can remove but not add per the route definitions, so this
+        // is a permissive gate for the UI; backend is authoritative).
+        return (
+          <TagManagementPanel
+            entityType="LOAD"
+            entityId={load.id}
+            canEdit={canCreate || isAdminOrCeo}
+          />
+        );
       default:
         return null;
     }

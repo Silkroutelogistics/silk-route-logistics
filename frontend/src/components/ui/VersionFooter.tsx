@@ -10560,7 +10560,52 @@
 //   migration; no test changes needed.
 //   §13.3 Item 8.6 LOG OPEN → CLOSED.
 //   §13.3 Item 8.5 banking-revised — defer to dead-model decision sprint.
-export const SRL_VERSION = "3.8.aki";
+// v3.8.akj — §13.3 Item 8.7 manual tag-management UI.
+//   Pre-akj the HTTP endpoints POST + DELETE /tags/assign had ZERO
+//   frontend callers despite being defined since the tag system
+//   shipped. The auto-tagger at services/tagService.autoTagEntity
+//   uses the underlying service function assignTag() directly
+//   (bypassing HTTP); the HTTP endpoint pair was specifically for the
+//   manual override path that never had a UI. akj ships the missing
+//   UI on the Load Board side panel as a new "Tags" tab.
+//   Phase A schema constraint finding: tag.entityTypes is a
+//   String[] filter defaulting to ["LOAD"] (enumerated as
+//   LOAD/QUOTE/ORDER/INVOICE per schema comment). The §13.3 Item 8.7
+//   banking suggested 3 surfaces (carrier/customer/load) but only
+//   the Load Board surface matches the schema. Carrier + customer
+//   tagging would require widening the entityTypes enum + adjacent
+//   schema work — scoped out of akj.
+//   New component:
+//   * frontend/src/components/loads/TagManagementPanel.tsx —
+//     reusable component with entityType + entityId props. Pulls
+//     applied assignments via GET /tags/entity/:entityType/:entityId.
+//     Picker shows eligible tags (entityTypes.includes(currentType)
+//     + not already assigned). Add via POST /tags/assign; remove via
+//     DELETE /tags/assign. canEdit prop gates the buttons for
+//     read-only viewers; backend remains authoritative.
+//   * Tag pills colored using tag.color hex with alpha tints for
+//     bg/border so each tag visually distinct without overwhelming.
+//     Auto-tagger-applied vs manually-applied tags render
+//     identically (both came from the same assignTag service).
+//     Tooltip on each pill shows description + assignedBy + assignedAt.
+//   Wiring:
+//   * app/dashboard/loads/page.tsx — PanelTab union extended with
+//     "tags". New PANEL_TABS entry uses Tag icon from lucide-react.
+//     Render branch mounts TagManagementPanel with entityType="LOAD".
+//     canEdit gated to canCreate||isAdminOrCeo (DISPATCH+OPERATIONS
+//     also have backend write access; the panel is permissive
+//     client-side and backend authz holds the line).
+//   Sub-pattern 6 sub-rule c reminder applied: did NOT remove the
+//   service functions assignTag + removeTagAssignment even though the
+//   HTTP endpoints were orphan; the auto-tagger depends on the
+//   service functions internally. akj adds HTTP callers, not removes
+//   service functions.
+//   ~260 LOC net (1 new component + 4 edits) + version bump. No
+//   schema migration; no test changes needed.
+//   §13.3 Item 8.7 LOG OPEN → CLOSED (LOAD surface only).
+//   Carrier + customer tagging banked for separate sprint (requires
+//   schema widening of Tag.entityTypes enum).
+export const SRL_VERSION = "3.8.akj";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
