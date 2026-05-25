@@ -131,10 +131,16 @@ async function fetchEiaPrice(region: EiaRegion): Promise<{ price: number; date: 
   }
   const json: any = await res.json();
   const row = json?.response?.data?.[0];
-  if (!row || typeof row.value !== "number" || !row.period) {
-    throw new Error(`EIA returned no data for ${region} (duoarea=${duoarea}); response shape unexpected`);
+  // EIA v2 returns numeric values as STRINGS (e.g. "5.596"), not numbers.
+  // Coerce + validate via Number.isFinite rather than typeof === "number"
+  // (which would always fail because the field is a string).
+  const parsed = row ? parseFloat(row.value) : NaN;
+  if (!row || !Number.isFinite(parsed) || !row.period) {
+    throw new Error(
+      `EIA returned no data for ${region} (duoarea=${duoarea}); shape unexpected (value=${JSON.stringify(row?.value)}, period=${JSON.stringify(row?.period)})`,
+    );
   }
-  return { price: row.value, date: new Date(row.period) };
+  return { price: parsed, date: new Date(row.period) };
 }
 
 async function upsertCache(

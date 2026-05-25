@@ -11327,7 +11327,66 @@
 //   as a separate small follow-on commit after live data lands.
 //   §13.3 Item 191 ships code-complete. Live verification + docs are
 //   the next ratification cycle (no version bump expected for docs).
-export const SRL_VERSION = "3.8.akv";
+//
+// v3.8.akw — EIA fuel-index live-verification fix: parser type-check
+//   bug caught + corrected against real EIA v2 response (the keyed
+//   request the akt sprint skipped per Sub-pattern 6 fire #3
+//   methodology debt — VERIFY-on-first-fetch deferred to live-run,
+//   live-run surfaced the bug, fix shipped same cycle).
+//   Scope: surgical, two-line change inside fetchEiaPrice in
+//   backend/src/services/fuelIndexService.ts. Nothing else touched.
+//   The bug: my akt parser checked typeof row.value !== "number".
+//   EIA v2 returns numeric values as STRINGS ("5.596", not 5.596),
+//   so the type-check rejected every successful response and threw
+//   "EIA returned no data; response shape unexpected" for all 7
+//   regions. The shape (json.response.data[0]) was correct — only
+//   the value-type assumption was wrong.
+//   Fix: parseFloat the value, validate via Number.isFinite, return
+//   the parsed number to upsertCache. Error message extended to
+//   include the actual value + period for future debugging.
+//   Live verification (run from local with key from .env, parsed-only
+//   output, no raw response printed to avoid re-leaking the key that
+//   EIA v2 echoes at request.params.api_key):
+//     NATIONAL (NUS)   = $5.596/gal  week-ending 2026-05-18
+//     PADD1    (R10)   = $5.420/gal  week-ending 2026-05-18
+//     PADD2    (R20)   = $5.749/gal  week-ending 2026-05-18
+//     PADD3    (R30)   = $5.122/gal  week-ending 2026-05-18
+//     PADD4    (R40)   = $5.549/gal  week-ending 2026-05-18
+//     PADD5    (R5XCA) = $5.920/gal  week-ending 2026-05-18  ← West Coast LESS California
+//     CA       (SCA)   = $7.222/gal  week-ending 2026-05-18
+//   All 7 match WebFetch-confirmed expected values exactly.
+//   Spread CA-vs-PADD5 = $1.302/gal — confirms the akp sprint decision
+//   to keep CA + West-Coast-less-CA as separate regions was load-
+//   bearing (a single aggregate PADD5 series would have inflated non-
+//   CA West Coast pricing by ~$1.30/gal).
+//   Security flag — EIA_API_KEY rotation recommended:
+//   During diagnosis the raw EIA response body was dumped to inspect
+//   shape. EIA v2 echoes api_key back at request.params.api_key in the
+//   response, which means any raw response print leaks the key. The
+//   leaked value is in the akw-sprint session's chat history + harness
+//   logs. Production code does NOT log raw response (only the parsed
+//   price + date) so the leak was diagnostic-only, but the value
+//   should be rotated before the next live cycle. Methodology
+//   footgun banked: when printing API responses for debugging, pre-
+//   redact known credential fields (api_key, authorization tokens,
+//   bearer headers). Extension to Sub-pattern 9 (text-extraction-
+//   pre-push-smoke): when smoke-printing external API responses,
+//   credential-redact pre-print, not post-print.
+//   Item-number collision flagged (NOT fixed here — docs scope):
+//   Prior commit 4d88d3b5 marked an OLDER §13.3 Item 191 (DIRECT_URL
+//   split shipped in v3.8.ajg/ajs) as CLOSED. My EIA fuel-index work
+//   has been mis-numbered against that older item since akp. The
+//   docs commit (regression-log + CLAUDE.md §11) will surface the
+//   collision + propose a renumber (likely Item 192 for EIA) or
+//   annotate both items in §13.3.
+//   §13.3 EIA-fuel-index item ship-status: code is now live-verified
+//   for all 7 regions and ready for the docs commit. The docs commit
+//   ships with no version bump per §3.1 docs-only convention.
+//   Files: 2 (fuelIndexService.ts +9/-3 = +12 LOC net, this footer
+//   block + version bump). Pre-commit gates per Sub-pattern 11:
+//   prisma generate clean (no schema change), backend tsc --noEmit
+//   clean, frontend tsc --noEmit clean.
+export const SRL_VERSION = "3.8.akw";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
