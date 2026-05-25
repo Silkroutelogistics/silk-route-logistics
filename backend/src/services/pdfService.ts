@@ -45,15 +45,32 @@ import { rcVerifyToken } from "../controllers/verifyController";
 
 type PDFDoc = InstanceType<typeof PDFDocument>;
 
+// v3.8.akg §13.3 Item 8.9 — sourced from canonical authority module.
+// Pre-akg: hardcoded MC# 01794414 typo + whaider@ email (wrong per
+// §3.10 for shipping documents which should use operations@). akg
+// fixes both atomically.
+import {
+  ENTITY_NAME,
+  PRINCIPAL_ADDRESS_ONE_LINE,
+  PRINCIPAL_ADDRESS_CITY,
+  PRINCIPAL_ADDRESS_STATE,
+  PRINCIPAL_ADDRESS_ZIP,
+  PHONE,
+  OPERATIONS_EMAIL,
+  DOMAIN,
+  MC_NUMBER,
+  DOT_NUMBER,
+} from "../config/authority";
+
 const COMPANY = {
-  name: "Silk Route Logistics Inc.",
-  address: "2317 S 35th St, Galesburg, MI 49053",
-  cityStateZip: "Galesburg, MI 49053",
-  phone: "+1 (269) 220-6760",
-  email: "whaider@silkroutelogistics.ai",
-  website: "silkroutelogistics.ai",
-  mc: "01794414",
-  dot: "4526880",
+  name: ENTITY_NAME,
+  address: PRINCIPAL_ADDRESS_ONE_LINE,
+  cityStateZip: `${PRINCIPAL_ADDRESS_CITY}, ${PRINCIPAL_ADDRESS_STATE} ${PRINCIPAL_ADDRESS_ZIP}`,
+  phone: `+1 ${PHONE}`,
+  email: OPERATIONS_EMAIL,
+  website: DOMAIN,
+  mc: MC_NUMBER,
+  dot: DOT_NUMBER,
 };
 
 const LOGO_PATH = path.resolve(__dirname, "../assets/logo.png");
@@ -431,7 +448,7 @@ export async function generateBOLFromLoad(
   doc.font("DMSans-Regular").fontSize(8).fillColor(FG_2)
     .text(COMPANY.address, companyX, 34, { lineBreak: false });
   doc.text(
-    `${COMPANY.phone}  |  operations@silkroutelogistics.ai  |  ${COMPANY.website}`,
+    `${COMPANY.phone}  |  ${COMPANY.email}  |  ${COMPANY.website}`,
     companyX, 46, { lineBreak: false },
   );
   doc.font("DMSans-Medium").fontSize(8).fillColor(NAVY)

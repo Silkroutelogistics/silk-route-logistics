@@ -54,16 +54,36 @@ export const TOKENS = {
   borderStrong:'#0A254052',
 } as const;
 
+// v3.8.akg §13.3 Item 8.9 — BRAND values sourced from canonical
+// authority module instead of hardcoded literals. Pre-akg the `mc`
+// field carried the leading-zero typo "01794414" that propagated
+// through every PDF surface consuming BRAND (BOL via pdfService,
+// RC via generateEnhancedRateConfirmation, Compass PDF, SOP PDF).
+// Now sourced from MC_NUMBER which is the no-leading-zero canonical.
+// `mc` keyed without "MC#" prefix preserves call-site string-concat
+// patterns at L393 + L718 (`MC# ${BRAND.mc}`) so consumers don't need
+// updating beyond the source.
+import {
+  ENTITY_NAME,
+  TAGLINE,
+  DOMAIN,
+  PRINCIPAL_ADDRESS_ONE_LINE,
+  PHONE,
+  OPERATIONS_EMAIL,
+  MC_NUMBER,
+  DOT_NUMBER,
+} from "../config/authority";
+
 export const BRAND = {
-  legalName:          'SILK ROUTE LOGISTICS INC.',
-  tagline:            'Where Trust Travels.',
+  legalName:          ENTITY_NAME.toUpperCase(),
+  tagline:            TAGLINE,
   operationalTagline: 'First Call. Last Update. Every Mile In Between.',
-  domain:             'silkroutelogistics.ai',
-  address:            '2317 S 35th St, Galesburg, MI 49053',
-  phone:              '+1 (269) 220-6760',
-  email:              'operations@silkroutelogistics.ai',
-  mc:                 '01794414',
-  dot:                '4526880',
+  domain:             DOMAIN,
+  address:            PRINCIPAL_ADDRESS_ONE_LINE,
+  phone:              `+1 ${PHONE}`,
+  email:              OPERATIONS_EMAIL,
+  mc:                 MC_NUMBER,
+  dot:                DOT_NUMBER,
 } as const;
 
 // US Letter, 0.5" margins (PDFKit uses points: 1pt = 1/72 inch)

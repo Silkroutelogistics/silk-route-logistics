@@ -10,7 +10,7 @@ Last consolidated: Phase 6.2 close (v3.8.ee, sprint span `7c74bb1`–`df3545f`).
 
 - **Legal entity:** Silk Route Logistics Inc. (Michigan C-Corp)
 - **Principal address:** 2317 S 35th St, Galesburg, MI 49053. Filed with FMCSA, listed on BMC-84 bond paperwork, and appears on the filed Bill of Lading. Galesburg is inside Kalamazoo County, so county-level venue references (§14 and Caravan Quick Pay Agreement v2 Article 18) remain correct as "Kalamazoo County". Correction history: earlier CLAUDE.md revisions listed Kalamazoo as principal city — that was a session-memory error corrected in v3.7.i; see §3.13 for the rule it codified.
-- **FMCSA authority:** USDOT 4526880, MC 01794414, active property broker
+- **FMCSA authority:** USDOT 4526880, MC# 1794414, active property broker
 - **BMC-84 surety bond:** $75,000, filed with FMCSA, surety PFA Protects (CA# 0M18074), completed February 19, 2026. BOC-3 process agent designation also on file.
 - **Domain:** silkroutelogistics.ai
 - **Tagline:** "Where Trust Travels."
@@ -407,7 +407,7 @@ Only these claims may appear on public marketing pages:
 7. ~~Tier-based quarterly safety bonuses at Gold ($450/qtr) and Platinum ($900/qtr)~~ — **RETIRED v3.8.aib Sprint 1.** No SafetyScore tracking + monthly payout backend. Cannot honor claim until built. Moved to §5 prohibited.
 8. ~~Tier-based referral bonuses ($250 / $500 / $750)~~ — **RETIRED v3.8.aib Sprint 1.** No ReferralCode/Referral Prisma schema, no attribution mechanism at first-load-delivered, no payout workflow. First referrer would have no way to be paid. Moved to §5 prohibited.
 9. ~~Tier-based detention pay~~ — **RETIRED v3.8.aib Sprint 1.** Industry research (TQL, C.H. Robinson, Echo, Coyote, RXO, Landstar) shows uniform-rate or shipper-pass-through detention models; NONE differentiate by carrier tier. Moved to §5 prohibited.
-10. Property broker registered under FMCSA authority (USDOT 4526880, MC 01794414), BMC-84 bond on file
+10. Property broker registered under FMCSA authority (USDOT 4526880, MC# 1794414), BMC-84 bond on file
 11. 7-factor transparent Compass Score (published on /carriers)
 12. Marco Polo AI assistant is 24/7 (AI software is always on)
 13. **Pay-ladder tier differentiation** (added v3.8.aib Sprint 1) — Silver Net-30 + 3% QP, Gold Net-21 + 2% QP (10 days faster + 1 point lower than Silver), Platinum Net-14 + 1% QP (7 days faster than Gold, lowest fee). This is the canonical tier-cards spine since pay terms + QP fees are broker-controlled and verifiable; all other tier-based claims (FSC tier-graduation, safety, referral, detention) retired per items 7-9 + 1.

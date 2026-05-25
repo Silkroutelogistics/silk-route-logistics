@@ -1,4 +1,5 @@
 import PDFDocument from "pdfkit";
+import { MC_LABEL, DOT_LABEL, PHONE, DOMAIN } from "../config/authority";
 
 /**
  * Generate a branded SOP PDF — Google Docs style with SRL branding.
@@ -55,8 +56,9 @@ export function generateSOPPdf(sop: {
 
     // Right side: MC# and DOT#
     doc.font("Helvetica").fontSize(7).fillColor(gray);
-    doc.text("MC# 01794414  |  DOT# 4526880", 60, y, { width: contentWidth, align: "right" });
-    doc.text("(269) 220-6760  |  silkroutelogistics.ai", 60, y + 10, { width: contentWidth, align: "right" });
+    // v3.8.akg §13.3 Item 8.9 — sourced from canonical authority module.
+    doc.text(`${MC_LABEL}  |  ${DOT_LABEL}`, 60, y, { width: contentWidth, align: "right" });
+    doc.text(`${PHONE}  |  ${DOMAIN}`, 60, y + 10, { width: contentWidth, align: "right" });
 
     // Divider line
     doc.moveTo(60, y + 28).lineTo(pageWidth - 60, y + 28).strokeColor(lightGray).lineWidth(0.5).stroke();

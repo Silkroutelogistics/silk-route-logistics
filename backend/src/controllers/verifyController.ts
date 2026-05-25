@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import crypto from "crypto";
 import { prisma } from "../config/database";
+import { ENTITY_NAME, MC_NUMBER, DOT_NUMBER, OPERATIONS_EMAIL } from "../config/authority";
 
 /**
  * Sprint 51 (Item 129) — RC verification token + public verifier endpoint.
@@ -69,10 +70,11 @@ export async function verifyRC(req: Request, res: Response) {
   res.json({
     valid: true,
     broker: {
-      name: "Silk Route Logistics Inc.",
-      mc: "01794414",
-      dot: "4526880",
-      contact: "operations@silkroutelogistics.ai",
+      // v3.8.akg §13.3 Item 8.9 — sourced from canonical authority module.
+      name: ENTITY_NAME,
+      mc: MC_NUMBER,
+      dot: DOT_NUMBER,
+      contact: OPERATIONS_EMAIL,
     },
     load: {
       ref: match.referenceNumber,

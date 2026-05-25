@@ -2,6 +2,11 @@
 
 import { useRef } from "react";
 import { Printer, X, Info } from "lucide-react";
+// v3.8.akg §13.3 Item 8.9 — canonical authority block constants.
+// Pre-akg the BOL React template hardcoded "MC# 01794414" (typo) at
+// two locations. Now sourced from frontend/src/lib/authority.ts which
+// stays value-identical to backend/src/config/authority.ts.
+import { ENTITY_NAME, MC_LABEL, DOT_LABEL, DOMAIN } from "@/lib/authority";
 
 /* ═══════════════════════════════════════════════════════════
    BILL OF LADING — Industry-Standard Printable Template
@@ -193,7 +198,7 @@ export function BOLTemplate({ data, onClose }: BOLTemplateProps) {
                   <div className="bol-company-name">SILK ROUTE LOGISTICS INC.</div>
                   <div className="bol-company-sub">2317 S 35th St, Galesburg, MI 49053</div>
                   <div className="bol-company-sub">(269) 220-6760 &nbsp;|&nbsp; whaider@silkroutelogistics.ai</div>
-                  <div className="bol-company-sub">MC# 01794414 &nbsp;|&nbsp; DOT# 4526880</div>
+                  <div className="bol-company-sub">{MC_LABEL} &nbsp;|&nbsp; {DOT_LABEL}</div>
                 </div>
               </div>
               <div className="bol-title-block">
@@ -369,7 +374,7 @@ export function BOLTemplate({ data, onClose }: BOLTemplateProps) {
 
             {/* ═══ FOOTER ═══ */}
             <div className="bol-footer">
-              <span>Silk Route Logistics Inc. &nbsp;|&nbsp; silkroutelogistics.ai &nbsp;|&nbsp; MC# 01794414 &nbsp;|&nbsp; DOT# 4526880</span>
+              <span>{ENTITY_NAME} &nbsp;|&nbsp; {DOMAIN} &nbsp;|&nbsp; {MC_LABEL} &nbsp;|&nbsp; {DOT_LABEL}</span>
             </div>
           </div>
         </div>

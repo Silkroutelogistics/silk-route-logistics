@@ -10,11 +10,20 @@ import type { CarrierVettingReport, VettingCheck, CheckResult, DataSource } from
 
 type PDFDoc = InstanceType<typeof PDFDocument>;
 
+// v3.8.akg §13.3 Item 8.9 — sourced from canonical authority module.
+import {
+  ENTITY_NAME,
+  PRINCIPAL_ADDRESS_CITY,
+  PRINCIPAL_ADDRESS_STATE,
+  MC_LABEL,
+  DOT_LABEL,
+} from "../config/authority";
+
 const COMPANY = {
-  name: "Silk Route Logistics Inc.",
-  location: "Galesburg, MI",
-  mc: "MC# 01794414",
-  dot: "DOT# 4526880",
+  name: ENTITY_NAME,
+  location: `${PRINCIPAL_ADDRESS_CITY}, ${PRINCIPAL_ADDRESS_STATE}`,
+  mc: MC_LABEL,
+  dot: DOT_LABEL,
 };
 
 const LOGO_PATH = path.resolve(__dirname, "../assets/logo.png");

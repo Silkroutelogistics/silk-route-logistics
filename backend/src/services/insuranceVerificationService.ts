@@ -1,8 +1,17 @@
 import { prisma } from "../config/database";
 import { log } from "../lib/logger";
+import {
+  ENTITY_NAME,
+  MC_LABEL,
+  DOT_LABEL,
+  PHONE,
+  DOMAIN,
+  COMPLIANCE_EMAIL as AUTHORITY_COMPLIANCE_EMAIL,
+} from "../config/authority";
 
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
-const COMPLIANCE_EMAIL = "compliance@silkroutelogistics.ai";
+// v3.8.akg §13.3 Item 8.9 — sourced from canonical authority module.
+const COMPLIANCE_EMAIL = AUTHORITY_COMPLIANCE_EMAIL;
 const SENDER_EMAIL = "compliance@silkroutelogistics.ai";
 
 // ─── Minimum Coverage Requirements ─────────────────────
@@ -168,10 +177,10 @@ export async function sendInsuranceVerificationEmail(carrierId: string) {
         <div style="border-top:1px solid #E5E7EB;margin-top:24px;padding-top:16px;font-size:12px;color:#6B7280;line-height:1.6">
           <strong style="color:#374151">Wasi Haider</strong><br/>
           Compliance Department<br/>
-          Silk Route Logistics Inc.<br/>
-          MC# 01794414 | DOT# 4526880<br/>
-          (269) 220-6760 | ${COMPLIANCE_EMAIL}<br/>
-          silkroutelogistics.ai
+          ${ENTITY_NAME}<br/>
+          ${MC_LABEL} | ${DOT_LABEL}<br/>
+          ${PHONE} | ${COMPLIANCE_EMAIL}<br/>
+          ${DOMAIN}
         </div>
       </div>
     </div>

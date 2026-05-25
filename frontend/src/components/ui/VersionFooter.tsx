@@ -10434,7 +10434,63 @@
 //   ~60 LOC net across 2 backend files + version bump. No schema
 //   migration; no behavior change beyond brand token alignment + 1
 //   footer copy update.
-export const SRL_VERSION = "3.8.akf";
+// v3.8.akg — §13.3 Item 8.9 authority block centralization + Item 8.8
+//   MC# leading-zero correction (paired atomic per §13.3 banking).
+//   Pre-akg every PDF + email + AE Console surface that printed
+//   legal-identity fields (MC#/DOT#/bond/address/phone/contact)
+//   hardcoded them inline, which produced the propagated typo
+//   `MC# 01794414` (leading zero, vs canonical `MC# 1794414` per
+//   skill voice.md:98). akg consolidates everything into two
+//   canonical modules + migrates 7 consumers in one atomic.
+//   New modules:
+//   * backend/src/config/authority.ts — full canonical block
+//     (ENTITY_NAME, TAGLINE, DOMAIN, MC_NUMBER, DOT_NUMBER,
+//     BOND_AMOUNT, BOND_SURETY, CONTINGENT_CARGO_*, PRINCIPAL_
+//     ADDRESS_*, GOVERNING_LAW, VENUE, PHONE, OPERATIONS_EMAIL,
+//     COMPLIANCE_EMAIL, ACCOUNTING_EMAIL, SALES_EMAIL,
+//     CARRIERS_EMAIL, NOREPLY_EMAIL, OPERATIONS_HOURS_LONG,
+//     OPERATIONS_HOURS_SHORT, AUTHORITY_LINE_OUTREACH,
+//     AUTHORITY_LINE_PUBLIC).
+//   * frontend/src/lib/authority.ts — client mirror (ENTITY_NAME,
+//     TAGLINE, DOMAIN, MC_NUMBER/LABEL, DOT_NUMBER/LABEL,
+//     BOND_TYPE/AMOUNT, PRINCIPAL_ADDRESS_*, PHONE,
+//     OPERATIONS_EMAIL). Value-identical to backend module.
+//   Backend consumers migrated (6 files):
+//   * src/lib/srl-chrome.ts — BRAND block sourced from authority.
+//   * src/services/pdfService.ts — COMPANY block sourced from
+//     authority + the inline operations@ hardcode at L451 dropped
+//     in favor of COMPANY.email.
+//   * src/services/compassPdfService.ts — COMPANY block sourced.
+//   * src/services/sopPdfService.ts — inline header text sourced.
+//   * src/services/insuranceVerificationService.ts — email body
+//     identity block sourced (carrier-fraud-banner verification
+//     emails); COMPLIANCE_EMAIL still local but re-exported from
+//     authority via aliased import.
+//   * src/controllers/verifyController.ts — RC public verifier
+//     broker block sourced.
+//   Frontend consumers migrated (1 file):
+//   * src/components/templates/BOLTemplate.tsx — header + footer
+//     MC#/DOT# sourced from authority.
+//   Side-effect behavior change: pdfService.ts COMPANY.email
+//   flipped from `whaider@` to `operations@` per §3.10 canonical
+//   for shipping documents. Pre-akg drift: BOL/RC/Invoice/Settlement
+//   PDFs displayed whaider@ in the footer of every printout.
+//   Skipped surfaces (intentional):
+//   * 10 public HTML pages — re-injected from site-chrome.json +
+//     _partials/footer.html via inject-chrome.mjs build step.
+//     Both chrome SOTs already canonical (verified Phase A grep).
+//   * Lead Hunter outreach signature (backend/src/config/signatures/
+//     whaider.html) + emailSequenceService.ts — already canonical.
+//   * VersionFooter.tsx historical changelog comments — §3.12
+//     retention rule (factual record of past state, NOT current claim).
+//   * CLAUDE.md §13.3 Item 8.8 + Item 48 row body text — historical
+//     records describing the typo, must reference it verbatim.
+//   CLAUDE.md self-references corrected (§1 + §4 line 410).
+//   ~150 LOC net across 2 new files + 7 migrated consumers + 2
+//   CLAUDE.md edits + version bump. No schema migration; no test
+//   changes needed (existing tests don't assert on these values).
+//   §13.3 Item 8.8 LOG OPEN → CLOSED. Item 8.9 LOG OPEN → CLOSED.
+export const SRL_VERSION = "3.8.akg";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
