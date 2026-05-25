@@ -7,6 +7,8 @@ import { api } from "@/lib/api";
 import {
   Search, ClipboardEdit, AlertTriangle, CheckCircle,
   Plus, X, Send, Save, Flame, FileText,
+  // v3.8.akl §13.3 Items 180.1 + 180.5 — Duplicate button + Preview button.
+  Copy, Eye,
 } from "lucide-react";
 import { AddressAutocomplete } from "@/components/ui/AddressAutocomplete";
 import { CarrierEngagementDrawer } from "@/components/drawer/CarrierEngagementDrawer";
@@ -167,6 +169,25 @@ export default function OrderBuilderPage() {
       // non-blocking
     }
   };
+
+  // v3.8.akl §13.3 Item 180.8 — URL deep-link to resume a draft.
+  // Reads ?resume=<orderId> on mount and fires resumeDraft once.
+  // AE can paste a draft URL into Slack/email + a teammate opens it
+  // directly into that draft. Pre-akl the drafts banner was the only
+  // entry point — required scrolling + clicking the right card.
+  // The dependency-empty array fires once on initial mount; the
+  // resumeDraft closure captures the current api + setters.
+  // searchParams already declared at the top of the component (line 65).
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    const resumeId = searchParams?.get("resume");
+    if (resumeId && !orderId) {
+      resumeDraft(resumeId);
+    }
+    // Intentionally empty deps — fire-once-on-mount semantic. The
+    // closure over resumeDraft + searchParams is fine because both
+    // are stable for the lifetime of the page.
+  }, []);
 
   // ─── BOL preview on mount (v3.5.b) ────────────────────────
   useQuery<{ bolNumber: string }>({
@@ -407,6 +428,43 @@ export default function OrderBuilderPage() {
     },
     onSuccess: (data) => {
       setQuoteResult(data?.order?.orderNumber ?? "Quote sent");
+    },
+  });
+
+  // v3.8.akl §13.3 Item 180.5 — Quote preview. Fetches the exact HTML
+  // + subject the send-quote endpoint would dispatch, without sending
+  // or mutating order.status. AE opens preview in a modal before
+  // clicking Send to catch typos / rate errors before they reach the
+  // customer inbox. Flushes draft first so preview reflects latest
+  // edits, same pattern as sendQuote above.
+  const [quotePreview, setQuotePreview] = useState<{ subject: string; html: string; lane: string; recipientEmail: string | null; recipientName: string | null; orderNumber: string } | null>(null);
+  const previewQuote = useMutation({
+    mutationFn: async () => {
+      const saveRes = await saveDraft.mutateAsync();
+      const targetId = orderId ?? saveRes?.order?.id ?? null;
+      if (!targetId) throw new Error("Could not create order");
+      return (await api.get(`/orders/${targetId}/quote-preview`)).data;
+    },
+    onSuccess: (data) => {
+      setQuotePreview(data);
+    },
+  });
+
+  // v3.8.akl §13.3 Item 180.1 — Duplicate this order. Clones the
+  // source order's customerId + scalar fields + formData JSONB into
+  // a new draft row + resumes that new draft. AE running repeat
+  // lanes (weekly BKN Detroit → Chicago) was re-keying 30+ fields
+  // per draft; now one-click on a drafts-banner card spawns the
+  // pre-filled new draft ready to adjust dated fields.
+  const duplicateOrder = useMutation({
+    mutationFn: async (sourceId: string) => {
+      return (await api.post(`/orders/${sourceId}/duplicate`)).data as { order: { id: string } };
+    },
+    onSuccess: (data) => {
+      if (data?.order?.id) {
+        resumeDraft(data.order.id);
+        draftsQuery.refetch();
+      }
     },
   });
 
@@ -753,15 +811,33 @@ export default function OrderBuilderPage() {
               ].filter(Boolean).join(" → ") || "No lane";
               const edited = d.updatedAt ? new Date(d.updatedAt).toLocaleDateString() : "Not saved";
               return (
-                <button
+                <div
                   key={d.id}
-                  onClick={() => resumeDraft(d.id)}
-                  className="text-left px-2 py-1.5 rounded bg-white border border-slate-200 hover:border-[#BA7517] transition focus:outline-none focus:ring-2 focus:ring-[#C5A572]/40"
+                  className="group relative px-2 py-1.5 rounded bg-white border border-slate-200 hover:border-[#BA7517] transition"
                 >
-                  <div className="text-[11px] text-[#0A2540] font-medium truncate">{d.customer?.name ?? "No customer"}</div>
-                  <div className="text-[9px] text-[#6B7685] truncate">{lane}</div>
-                  <div className="text-[9px] text-[#6B7685]">Edited {edited}</div>
-                </button>
+                  <button
+                    onClick={() => resumeDraft(d.id)}
+                    className="block w-full text-left pr-8 focus:outline-none"
+                  >
+                    <div className="text-[11px] text-[#0A2540] font-medium truncate">{d.customer?.name ?? "No customer"}</div>
+                    <div className="text-[9px] text-[#6B7685] truncate">{lane}</div>
+                    <div className="text-[9px] text-[#6B7685]">Edited {edited}</div>
+                  </button>
+                  {/* v3.8.akl §13.3 Item 180.1 — Duplicate this draft.
+                      One-click clone for repeat-lane workflows. */}
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      duplicateOrder.mutate(d.id);
+                    }}
+                    disabled={duplicateOrder.isPending}
+                    title="Duplicate this draft"
+                    aria-label={`Duplicate draft ${d.customer?.name ?? d.id}`}
+                    className="absolute top-1 right-1 p-1 rounded text-[#6B7685] opacity-0 group-hover:opacity-100 hover:text-[#BA7517] hover:bg-[#FAEEDA] transition disabled:opacity-30 focus:outline-none focus:ring-2 focus:ring-[#C5A572]/40 focus:opacity-100"
+                  >
+                    <Copy className="w-3 h-3" />
+                  </button>
+                </div>
               );
             })}
           </div>
@@ -1351,6 +1427,18 @@ export default function OrderBuilderPage() {
         >
           <Save className="w-3 h-3" /> Save draft
         </button>
+        {/* v3.8.akl §13.3 Item 180.5 — Quote preview before send. Opens a
+            modal with the exact HTML the customer will receive so AE can
+            catch typos / rate errors before clicking Send. */}
+        <button
+          onClick={() => previewQuote.mutate()}
+          disabled={!form.customerId || previewQuote.isPending}
+          title={form.customerId ? "Preview the quote email before sending" : "Pick a customer first"}
+          className="flex items-center gap-1 px-3 py-1.5 bg-[#F5EEE0] hover:bg-[#EFE6D3] border border-slate-200 text-xs rounded-lg disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-[#C5A572]/40"
+          style={{ color: "#0A2540" }}
+        >
+          <Eye className="w-3 h-3" /> {previewQuote.isPending ? "Loading…" : "Preview quote"}
+        </button>
         <button
           onClick={() => sendQuote.mutate()}
           disabled={!form.customerId || sendQuote.isPending}
@@ -1501,6 +1589,77 @@ export default function OrderBuilderPage() {
         }))}
         onClose={() => setDrawerOpen(false)}
       />
+
+      {/* v3.8.akl §13.3 Item 180.5 — Quote preview modal. Renders the
+          exact HTML the customer will receive in their inbox. AE reviews
+          + closes; then separately clicks Send quote to actually
+          dispatch. Iframe sandbox isolates the email HTML from the page
+          styles so the preview reads as a customer would see it. */}
+      {quotePreview && (
+        <div
+          className="fixed inset-0 z-[100] bg-black/40 flex items-center justify-center p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Quote preview"
+          onClick={() => setQuotePreview(null)}
+        >
+          <div
+            className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[85vh] flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-start justify-between gap-4 px-5 py-4 border-b border-slate-200">
+              <div className="min-w-0">
+                <h2 className="text-base font-semibold text-[#0A2540]">Quote preview</h2>
+                <p className="text-[11px] text-[#6B7685] mt-0.5 truncate">
+                  To: {quotePreview.recipientName ?? "—"}
+                  {quotePreview.recipientEmail && (
+                    <span className="text-[#A7AEB8]"> &lt;{quotePreview.recipientEmail}&gt;</span>
+                  )}
+                  {!quotePreview.recipientEmail && (
+                    <span className="text-[#B07A1A]"> · No email on customer — send will be a no-op</span>
+                  )}
+                </p>
+                <p className="text-[11px] text-[#6B7685] mt-0.5">
+                  Subject: <span className="text-[#0A2540]">{quotePreview.subject}</span>
+                </p>
+              </div>
+              <button
+                onClick={() => setQuotePreview(null)}
+                className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-600 transition focus:outline-none focus:ring-2 focus:ring-[#C5A572]/40"
+                aria-label="Close preview"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="flex-1 overflow-hidden bg-slate-50 p-3">
+              <iframe
+                title="Quote email preview"
+                srcDoc={quotePreview.html}
+                sandbox=""
+                className="w-full h-full min-h-[420px] bg-white rounded border border-slate-200"
+              />
+            </div>
+            <div className="px-5 py-3 border-t border-slate-200 flex items-center justify-end gap-2">
+              <button
+                onClick={() => setQuotePreview(null)}
+                className="px-4 py-1.5 text-xs text-slate-700 hover:bg-slate-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#C5A572]/40"
+              >
+                Close
+              </button>
+              <button
+                onClick={() => {
+                  setQuotePreview(null);
+                  sendQuote.mutate();
+                }}
+                disabled={sendQuote.isPending}
+                className="flex items-center gap-1 px-4 py-1.5 text-xs font-semibold text-white bg-[#BA7517] hover:bg-[#8f5a11] rounded-lg disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-[#C5A572]/40"
+              >
+                <Send className="w-3 h-3" /> Send now
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -10641,7 +10641,47 @@
 //   §13.3 Item 180.10 LOG OPEN → CLOSED.
 //   §13.3 Item 178 deferred (Sprint 63 made the original banking
 //   architecturally non-applicable).
-export const SRL_VERSION = "3.8.akk";
+// v3.8.akl — §13.3 Items 180.1 + 180.5 + 180.8 (Order Builder workflow bundle).
+//   Backend changes (routes/orders.ts):
+//   * NEW buildQuoteEmail() helper extracted from the inline send-quote
+//     HTML builder so both send-quote AND the new preview endpoint can
+//     call it. Pre-akl the HTML was built inline with no preview path.
+//     Brand-chrome canonical note: helper preserves the existing
+//     pre-akf hex literals (#0f172a / #e2e8f0) + whaider@ reply-target
+//     verbatim. Item 87's akf sweep didn't reach this builder; banking
+//     a Item-87-followup for the brand-chrome migration. The akl atomic
+//     stays scope-tight on send-vs-preview equivalence.
+//   * NEW GET /:id/quote-preview endpoint. Returns the exact subject +
+//     HTML + lane + recipient info that send-quote would dispatch,
+//     WITHOUT sending or mutating order.status. AE_ROLES gated.
+//   * NEW POST /:id/duplicate endpoint. Clones the source order's
+//     customerId + scalar fields + formData JSONB into a new draft row.
+//     orderNumber auto-generates via Prisma cuid() default; workflow
+//     timestamps + loadId reset so the new draft starts fresh.
+//     logCustomerActivity emits an "order_duplicated" event for audit.
+//   Frontend changes (app/dashboard/orders/page.tsx):
+//   * 180.8 — useSearchParams() useEffect on mount reads ?resume=<id>
+//     and fires resumeDraft once. AE can paste a draft URL into
+//     Slack/email and a teammate opens it directly into that draft.
+//   * 180.5 — previewQuote mutation + quotePreview state + modal.
+//     Modal uses sandboxed iframe (srcDoc + sandbox="") so the email
+//     HTML renders isolated from page styles. "Send now" button in
+//     modal fires the normal sendQuote mutation; closes-and-cancel
+//     keeps the draft unchanged. Preview button added to footer
+//     button row next to Send quote with Eye icon.
+//   * 180.1 — duplicateOrder mutation + Duplicate button on each
+//     drafts-banner card. Button (Copy icon) renders top-right with
+//     opacity-0 group-hover:opacity-100 transition so it doesn't
+//     visually clutter the card stack. On click: stopPropagation
+//     (so the card's main resume click doesn't fire), mutate, then
+//     resumeDraft(newId) + drafts query refetch.
+//   ~270 LOC net (2 new backend endpoints + 1 extracted helper +
+//   3 frontend mutations + 1 modal + 2 button additions + version
+//   bump). No schema migration; no test changes needed.
+//   §13.3 Item 180.1 LOG OPEN → CLOSED.
+//   §13.3 Item 180.5 LOG OPEN → CLOSED.
+//   §13.3 Item 180.8 LOG OPEN → CLOSED.
+export const SRL_VERSION = "3.8.akl";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

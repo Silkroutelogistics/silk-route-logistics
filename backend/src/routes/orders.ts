@@ -148,6 +148,55 @@ router.patch("/:id", authorize(...AE_ROLES) as any, async (req: AuthRequest, res
 
 // ─── Quote send ────────────────────────────────────────────
 
+/**
+ * v3.8.akl §13.3 Item 180.5 — Quote email HTML builder extracted from
+ * the inline send-quote handler so both the send endpoint AND the new
+ * GET /:id/quote-preview endpoint can call it. Pre-akl the HTML was
+ * built inline in the send handler with no preview path — AE had to
+ * click Send to see what landed in the customer's inbox.
+ *
+ * Brand-chrome canonical note: this builder still uses the pre-akf
+ * navy `#0f172a` + slate `#e2e8f0` + whaider@ reply-target. Item 87
+ * sweep at v3.8.akf covered emailTemplates.ts + routes/email.ts but
+ * did NOT reach this inline orders.ts builder. Migration to skill
+ * canonical (`#0A2540` + `#E2EAF2` + operations@) banked as a separate
+ * follow-up. The akl atomic explicitly preserves the existing HTML
+ * verbatim so the preview === send equivalence test passes; refactor
+ * for accuracy now, brand-sweep later.
+ */
+async function buildQuoteEmail(order: {
+  orderNumber: string;
+  originCity: string | null;
+  originState: string | null;
+  destCity: string | null;
+  destState: string | null;
+  equipmentType: string | null;
+  pickupDate: Date | null;
+  deliveryDate: Date | null;
+  customerRate: number | null;
+  customer: { name: string | null; contactName: string | null; email: string | null } | null;
+}): Promise<{ subject: string; html: string; lane: string }> {
+  const { wrap } = await import("../services/emailService");
+  const lane = `${order.originCity ?? "—"}, ${order.originState ?? ""} → ${order.destCity ?? "—"}, ${order.destState ?? ""}`;
+  const html = wrap(`
+    <h2 style="color:#0f172a;margin-top:0">Freight Quote · ${order.orderNumber}</h2>
+    <p>Hello ${order.customer?.contactName ?? order.customer?.name ?? "there"},</p>
+    <p>Thank you for the opportunity. Please find our quote below.</p>
+    <table style="width:100%;border-collapse:collapse;margin:16px 0">
+      <tr><td style="padding:8px 12px;border-bottom:1px solid #e2e8f0;color:#64748b;width:160px">Lane</td><td style="padding:8px 12px;border-bottom:1px solid #e2e8f0">${lane}</td></tr>
+      <tr><td style="padding:8px 12px;border-bottom:1px solid #e2e8f0;color:#64748b">Equipment</td><td style="padding:8px 12px;border-bottom:1px solid #e2e8f0">${order.equipmentType ?? "—"}</td></tr>
+      <tr><td style="padding:8px 12px;border-bottom:1px solid #e2e8f0;color:#64748b">Pickup</td><td style="padding:8px 12px;border-bottom:1px solid #e2e8f0">${order.pickupDate ? new Date(order.pickupDate).toLocaleDateString() : "TBD"}</td></tr>
+      <tr><td style="padding:8px 12px;border-bottom:1px solid #e2e8f0;color:#64748b">Delivery</td><td style="padding:8px 12px;border-bottom:1px solid #e2e8f0">${order.deliveryDate ? new Date(order.deliveryDate).toLocaleDateString() : "TBD"}</td></tr>
+      <tr><td style="padding:8px 12px;border-bottom:1px solid #e2e8f0;color:#64748b">Rate</td><td style="padding:8px 12px;border-bottom:1px solid #e2e8f0"><strong style="color:#BA7517">$${(order.customerRate ?? 0).toLocaleString()}</strong></td></tr>
+    </table>
+    <p>Reply to this email to approve, or contact us at <a href="mailto:whaider@silkroutelogistics.ai">whaider@silkroutelogistics.ai</a> with any questions.</p>
+    <p style="color:#94a3b8;font-size:12px;margin-top:20px">
+      Silk Route Logistics · MC# 1794414 · USDOT# 4526880
+    </p>
+  `);
+  return { subject: `Quote ${order.orderNumber} · ${lane}`, html, lane };
+}
+
 router.post("/:id/send-quote", authorize(...AE_ROLES) as any, async (req: AuthRequest, res: Response) => {
   try {
     const order = await prisma.order.findUnique({
@@ -165,26 +214,10 @@ router.post("/:id/send-quote", authorize(...AE_ROLES) as any, async (req: AuthRe
 
     // Email the customer contact (best-effort)
     try {
-      const { sendEmail, wrap } = await import("../services/emailService");
+      const { sendEmail } = await import("../services/emailService");
       if (order.customer?.email) {
-        const lane = `${order.originCity ?? "—"}, ${order.originState ?? ""} → ${order.destCity ?? "—"}, ${order.destState ?? ""}`;
-        const html = wrap(`
-          <h2 style="color:#0f172a;margin-top:0">Freight Quote · ${order.orderNumber}</h2>
-          <p>Hello ${order.customer.contactName ?? order.customer.name ?? "there"},</p>
-          <p>Thank you for the opportunity. Please find our quote below.</p>
-          <table style="width:100%;border-collapse:collapse;margin:16px 0">
-            <tr><td style="padding:8px 12px;border-bottom:1px solid #e2e8f0;color:#64748b;width:160px">Lane</td><td style="padding:8px 12px;border-bottom:1px solid #e2e8f0">${lane}</td></tr>
-            <tr><td style="padding:8px 12px;border-bottom:1px solid #e2e8f0;color:#64748b">Equipment</td><td style="padding:8px 12px;border-bottom:1px solid #e2e8f0">${order.equipmentType ?? "—"}</td></tr>
-            <tr><td style="padding:8px 12px;border-bottom:1px solid #e2e8f0;color:#64748b">Pickup</td><td style="padding:8px 12px;border-bottom:1px solid #e2e8f0">${order.pickupDate ? new Date(order.pickupDate).toLocaleDateString() : "TBD"}</td></tr>
-            <tr><td style="padding:8px 12px;border-bottom:1px solid #e2e8f0;color:#64748b">Delivery</td><td style="padding:8px 12px;border-bottom:1px solid #e2e8f0">${order.deliveryDate ? new Date(order.deliveryDate).toLocaleDateString() : "TBD"}</td></tr>
-            <tr><td style="padding:8px 12px;border-bottom:1px solid #e2e8f0;color:#64748b">Rate</td><td style="padding:8px 12px;border-bottom:1px solid #e2e8f0"><strong style="color:#BA7517">$${(order.customerRate ?? 0).toLocaleString()}</strong></td></tr>
-          </table>
-          <p>Reply to this email to approve, or contact us at <a href="mailto:whaider@silkroutelogistics.ai">whaider@silkroutelogistics.ai</a> with any questions.</p>
-          <p style="color:#94a3b8;font-size:12px;margin-top:20px">
-            Silk Route Logistics · MC# 1794414 · USDOT# 4526880
-          </p>
-        `);
-        await sendEmail(order.customer.email, `Quote ${order.orderNumber} · ${lane}`, html);
+        const { subject, html } = await buildQuoteEmail(order);
+        await sendEmail(order.customer.email, subject, html);
       }
     } catch (err) {
       log.error({ err, orderId: order.id }, "[Orders] quote email failed");
@@ -204,6 +237,91 @@ router.post("/:id/send-quote", authorize(...AE_ROLES) as any, async (req: AuthRe
   } catch (err) {
     log.error({ err }, "[Orders] send-quote error");
     res.status(500).json({ error: "Failed to send quote" });
+  }
+});
+
+// v3.8.akl §13.3 Item 180.5 — Quote preview endpoint. Returns the
+// exact HTML + subject that send-quote would dispatch, without
+// actually sending or mutating order.status. AE opens this in a
+// modal before clicking Send so they can catch typos / rate errors
+// before they reach the customer inbox.
+router.get("/:id/quote-preview", authorize(...AE_ROLES) as any, async (req: AuthRequest, res: Response) => {
+  try {
+    const order = await prisma.order.findUnique({
+      where: { id: req.params.id },
+      include: { customer: { select: { id: true, name: true, email: true, contactName: true } } },
+    });
+    if (!order) return res.status(404).json({ error: "Order not found" });
+    if (!order.customerId) return res.status(400).json({ error: "Order has no customer — set customer before previewing quote" });
+
+    const { subject, html, lane } = await buildQuoteEmail(order);
+    res.json({
+      subject,
+      html,
+      lane,
+      recipientEmail: order.customer?.email ?? null,
+      recipientName: order.customer?.contactName ?? order.customer?.name ?? null,
+      orderNumber: order.orderNumber,
+    });
+  } catch (err) {
+    log.error({ err }, "[Orders] quote-preview error");
+    res.status(500).json({ error: "Failed to build quote preview" });
+  }
+});
+
+// v3.8.akl §13.3 Item 180.1 — Duplicate this order action. AE running
+// repeat lanes (weekly BKN Detroit → Chicago) was re-keying 30+ fields
+// per draft. This endpoint clones the source order's customerId + full
+// formData snapshot into a brand-new draft row with a fresh
+// orderNumber + cleared loadId/status + reset quote timestamps. AE
+// then resumes the new draft + adjusts the dated fields (pickup,
+// delivery, rate) without rebuilding the lane + freight + refs.
+router.post("/:id/duplicate", authorize(...AE_ROLES) as any, async (req: AuthRequest, res: Response) => {
+  try {
+    const source = await prisma.order.findUnique({ where: { id: req.params.id } });
+    if (!source) return res.status(404).json({ error: "Source order not found" });
+
+    // orderNumber auto-generates via Prisma schema default (cuid()),
+    // matching the canonical POST / create path. Top-level scalar
+    // fields cloned from source; formData JSONB cloned verbatim
+    // (carries line items, special instructions, PO numbers, etc).
+    // Reset workflow timestamps + load linkage on the duplicate so
+    // the new draft starts fresh (quote not sent, load not created).
+    const duplicate = await prisma.order.create({
+      data: {
+        customerId: source.customerId,
+        status: "draft",
+        originCity: source.originCity,
+        originState: source.originState,
+        destCity: source.destCity,
+        destState: source.destState,
+        equipmentType: source.equipmentType,
+        pickupDate: source.pickupDate,
+        deliveryDate: source.deliveryDate,
+        customerRate: source.customerRate,
+        targetCost: source.targetCost,
+        dispatchMethod: source.dispatchMethod,
+        formData: (source.formData ?? {}) as any,
+        createdById: req.user!.id,
+      },
+    });
+
+    if (source.customerId) {
+      await logCustomerActivity({
+        customerId: source.customerId,
+        eventType: "order_duplicated",
+        description: `Duplicated order ${source.orderNumber} → ${duplicate.orderNumber}`,
+        actorType: "USER",
+        actorId: req.user?.id,
+        actorName: req.user?.email,
+        metadata: { sourceOrderId: source.id, duplicateOrderId: duplicate.id },
+      });
+    }
+
+    res.status(201).json({ order: duplicate });
+  } catch (err) {
+    log.error({ err, sourceId: req.params.id }, "[Orders] duplicate error");
+    res.status(500).json({ error: "Failed to duplicate order" });
   }
 });
 
