@@ -29,6 +29,8 @@ const envSchema = z.object({
   MILEMAKER_CLIENT_ID: z.string().optional(),
   MILEMAKER_CLIENT_SECRET: z.string().optional(),
   PCMILER_API_KEY: z.string().optional(),
+  EIA_API_KEY: z.string().optional(),
+  FSC_INDEX_PROVIDER: z.enum(["eia", "manual"]).default("eia"),
   // AWS S3
   AWS_ACCESS_KEY_ID: z.string().optional(),
   AWS_SECRET_ACCESS_KEY: z.string().optional(),
