@@ -10605,7 +10605,43 @@
 //   §13.3 Item 8.7 LOG OPEN → CLOSED (LOAD surface only).
 //   Carrier + customer tagging banked for separate sprint (requires
 //   schema widening of Tag.entityTypes enum).
-export const SRL_VERSION = "3.8.akj";
+// v3.8.akk — §13.3 Items 180.9 + 180.10 Order Builder polish.
+//   Phase A audit revealed half the originally-planned bundle was
+//   already shipped: 180.3 (3-textarea confusion) closed by Sprint 61
+//   v3.8.aex via audience-tab pattern at orders/page.tsx:1228-1234;
+//   180.11 (facility name visual hierarchy) closed by Sprint 61
+//   v3.8.aex via the explicit name-prominent + address-secondary card
+//   at lines 873-907 (own comment block credits Sprint 61). Only
+//   180.9 + 180.10 remain.
+//   Changes (both in orders/page.tsx):
+//   * 180.9 — DraftStatus chip MIRRORED into the footer button row,
+//     pinned left via mr-auto wrapper. AE working at the bottom of
+//     the form sees save state alongside the dispatch CTAs without
+//     scrolling back to the top header. The top-header DraftStatus
+//     stays in place; this is an additional surface, not a relocation.
+//     ~12 LOC.
+//   * 180.10 — Dispatch-mutation error banner RELOCATED from above
+//     the form columns (line 679 pre-akk) to be a sibling above the
+//     footer button row. AE sees errors directly above the buttons
+//     that triggered them; no scroll-back-to-top required. ~18 LOC
+//     net (12-LOC block deleted + 12-LOC block re-inserted at footer
+//     adjacent + 3-LOC explanatory replacement at original location).
+//   Item 178 (multi-line freight edit in Carrier Engagement Drawer)
+//   audited + deferred — banking is post-Sprint-63 stale. Sprint 63
+//   (v3.8.afi) deleted the entire editable freight section from the
+//   drawer; the drawer body now has only Carrier/Financials/
+//   Instructions sections per Sprint 63 design intent ("AE who needs
+//   to edit freight closes the drawer and edits in Order Builder").
+//   Multi-line freight edit belongs in Order Builder (which already
+//   has LineItemsSection.tsx) or in EditLoadModal (§13.3 Item 3).
+//   ~30 LOC net across 1 source file + version bump. No schema
+//   migration; no test changes needed.
+//   §13.3 Items 180.3 + 180.11 closed-by-discovery (Sprint 61).
+//   §13.3 Item 180.9 LOG OPEN → CLOSED.
+//   §13.3 Item 180.10 LOG OPEN → CLOSED.
+//   §13.3 Item 178 deferred (Sprint 63 made the original banking
+//   architecturally non-applicable).
+export const SRL_VERSION = "3.8.akk";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

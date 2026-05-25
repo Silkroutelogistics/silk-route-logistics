@@ -673,24 +673,12 @@ export default function OrderBuilderPage() {
         </div>
       </div>
 
-      {/* Sprint 59.b (v3.8.act) Item 176 — dispatch-mutation error banner.
-          Covers the 3 non-tender paths (Tender errors render inline in
-          the drawer footer). */}
-      {(dispatchWaterfall.isError || dispatchLoadboard.isError || dispatchDat.isError) && (
-        <div className="mb-3 p-2 rounded-lg bg-[#F6E3E3] border border-[#9B2C2C]/30 text-xs text-[#9B2C2C] flex items-start gap-2">
-          <AlertTriangle className="w-3 h-3 mt-0.5 shrink-0" />
-          <div>
-            <div className="font-semibold">Dispatch failed</div>
-            <div className="mt-0.5 opacity-90">
-              {(() => {
-                const err = (dispatchWaterfall.error ?? dispatchLoadboard.error ?? dispatchDat.error) as { response?: { data?: { error?: string; message?: string } }; message?: string } | null;
-                const apiData = err?.response?.data;
-                return apiData?.message ?? apiData?.error ?? err?.message ?? "Unknown error.";
-              })()}
-            </div>
-          </div>
-        </div>
-      )}
+      {/* v3.8.akk §13.3 Item 180.10 — Dispatch error banner RELOCATED to
+          be a sibling of the footer button row (line 1319+). Pre-akk
+          this banner rendered above the form columns near the top of
+          the page; AE dispatching from the footer had to scroll back
+          to the top to see the error. Now sits directly above the
+          buttons that triggered the error. */}
 
       {/* v3.8.d.3 — Already-converted gate. Resumed drafts whose order
           already has a loadId surface a banner with a deep-link to the
@@ -1316,13 +1304,45 @@ export default function OrderBuilderPage() {
           convertedLoadId + dispatchPending); Sprint 59.c tightened the
           isValid logic itself to require ZIP / contact phones / time
           windows / target cost / temp range. */}
-      <div className="mt-3 shrink-0 flex flex-wrap items-center justify-end gap-2 p-3 rounded-xl bg-white border border-slate-200 shadow-sm">
-        {!isValid && (
-          <div className="mr-auto flex items-center gap-2 text-[11px] text-[#B07A1A]">
-            <AlertTriangle className="w-3.5 h-3.5" />
-            <span>Missing {requiredMissing.length} required field{requiredMissing.length === 1 ? "" : "s"} — hover any action to see the list</span>
+      {/* v3.8.akk §13.3 Item 180.10 — Dispatch-mutation error banner.
+          Relocated here from above the form columns so AE sees the
+          error directly above the buttons that triggered it; no
+          scroll-back-to-top required. Covers the 3 non-tender paths
+          (Tender errors render inline in the drawer footer). */}
+      {(dispatchWaterfall.isError || dispatchLoadboard.isError || dispatchDat.isError) && (
+        <div className="mt-3 mb-1 p-2 rounded-lg bg-[#F6E3E3] border border-[#9B2C2C]/30 text-xs text-[#9B2C2C] flex items-start gap-2">
+          <AlertTriangle className="w-3 h-3 mt-0.5 shrink-0" />
+          <div>
+            <div className="font-semibold">Dispatch failed</div>
+            <div className="mt-0.5 opacity-90">
+              {(() => {
+                const err = (dispatchWaterfall.error ?? dispatchLoadboard.error ?? dispatchDat.error) as { response?: { data?: { error?: string; message?: string } }; message?: string } | null;
+                const apiData = err?.response?.data;
+                return apiData?.message ?? apiData?.error ?? err?.message ?? "Unknown error.";
+              })()}
+            </div>
           </div>
-        )}
+        </div>
+      )}
+
+      <div className="mt-3 shrink-0 flex flex-wrap items-center justify-end gap-2 p-3 rounded-xl bg-white border border-slate-200 shadow-sm">
+        {/* v3.8.akk §13.3 Item 180.9 — Autosave indicator MIRRORED into the
+            footer button row. AE working at the bottom of the form sees
+            save state alongside the dispatch CTAs without scrolling to
+            the top header. The top-header DraftStatus stays as-is for
+            AE working at the top; this is an additional surface, not a
+            relocation. Pinned left via mr-auto wrapper so the chip
+            anchors at the row's left edge regardless of whether the
+            "Missing X required fields" notice is rendering. */}
+        <div className="mr-auto flex items-center gap-3 flex-wrap">
+          <DraftStatus state={saveState} at={lastSavedAt} />
+          {!isValid && (
+            <div className="flex items-center gap-2 text-[11px] text-[#B07A1A]">
+              <AlertTriangle className="w-3.5 h-3.5" />
+              <span>Missing {requiredMissing.length} required field{requiredMissing.length === 1 ? "" : "s"} — hover any action to see the list</span>
+            </div>
+          )}
+        </div>
         <button
           onClick={() => saveDraft.mutate()}
           disabled={saveDraft.isPending}
