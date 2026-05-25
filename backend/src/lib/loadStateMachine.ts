@@ -47,10 +47,49 @@ const CARRIER_ALLOWED_TRANSITIONS: Partial<Record<LoadStatus, LoadStatus[]>> = {
   AT_DELIVERY: ["DELIVERED"],
 };
 
+/**
+ * v3.8.akb Item 159 Sprint 1 — AE-side transitions, consolidated from the
+ * pre-existing inline VALID_TRANSITIONS map in loadController.ts (lines
+ * 425-444 pre-akb). AE actor can move loads through more states than
+ * carrier (early DRAFT/PLANNED authoring, terminal aborts TONU/CANCELLED,
+ * accounting flow DELIVERED → POD_RECEIVED → INVOICED → COMPLETED).
+ *
+ * Same forward-bias as carrier-side: most transitions are progress;
+ * documented backward step is TENDERED → POSTED (un-tender by the AE).
+ * Other backward jumps banked as Item 159 Sprint 2 (selective unblock).
+ *
+ * PICKED_UP retained as a legacy alias — pre-PICKED_UP loads can advance
+ * to IN_TRANSIT, but new flows should land at LOADED + IN_TRANSIT instead.
+ */
+const AE_ALLOWED_TRANSITIONS: Partial<Record<LoadStatus, LoadStatus[]>> = {
+  DRAFT: ["PLANNED", "POSTED", "CANCELLED"],
+  PLANNED: ["POSTED", "CANCELLED"],
+  POSTED: ["TENDERED", "BOOKED", "CANCELLED"],
+  TENDERED: ["CONFIRMED", "BOOKED", "POSTED", "CANCELLED"],
+  CONFIRMED: ["BOOKED", "DISPATCHED", "CANCELLED"],
+  BOOKED: ["DISPATCHED", "CANCELLED", "TONU"],
+  DISPATCHED: ["AT_PICKUP", "CANCELLED", "TONU"],
+  AT_PICKUP: ["LOADED", "PICKED_UP", "CANCELLED", "TONU"],
+  LOADED: ["IN_TRANSIT", "PICKED_UP"],
+  PICKED_UP: ["IN_TRANSIT"],
+  IN_TRANSIT: ["AT_DELIVERY"],
+  AT_DELIVERY: ["DELIVERED"],
+  DELIVERED: ["POD_RECEIVED", "INVOICED", "COMPLETED"],
+  POD_RECEIVED: ["INVOICED", "COMPLETED"],
+  INVOICED: ["COMPLETED"],
+  COMPLETED: [],
+  TONU: [],
+  CANCELLED: [],
+};
+
 export interface TransitionResult {
   allowed: boolean;
   reason?: string;
   code?: "BACKWARDS_NOT_ALLOWED" | "SKIP_NOT_ALLOWED" | "WRONG_STARTING_STATE" | "TERMINAL_NOT_ALLOWED" | "UNKNOWN_TRANSITION";
+  /** v3.8.akb — emit the allowed-next list on failure so callers can echo
+   * it in the response payload (preserves loadController.ts:462 contract
+   * where the 400 body carried `allowed: VALID_TRANSITIONS[from] || []`). */
+  allowedNext?: LoadStatus[];
 }
 
 /**
@@ -60,10 +99,14 @@ export interface TransitionResult {
  * `{ allowed: true }` — callers can use this as a no-op safety net rather
  * than special-casing the equal case before invocation.
  *
- * For CARRIER actor: enforces the carrier-side subset above. For AE actor:
- * currently permissive (returns allowed=true for any transition) — Item 159
- * full enforcement deferred. Including the AE param here so callers don't
- * need to refactor their signatures later when full enforcement lands.
+ * For CARRIER actor: enforces the carrier-side subset.
+ * For AE actor: enforces the AE-side superset (v3.8.akb Item 159 Sprint 1).
+ *
+ * Item 159 Sprint 2+ scope (banked): refactor the 12 other AE-side write
+ * sites currently doing prisma.load.update({ status }) without invoking
+ * this validator (tenderController, waterfallEngineService,
+ * carrierController.advance, settlementController, invoiceController,
+ * shipperPortalController, ediService, checkCallAutomation, etc.).
  */
 export function validateLoadStatusTransition(
   from: LoadStatus,
@@ -74,18 +117,28 @@ export function validateLoadStatusTransition(
     return { allowed: true };
   }
 
-  if (actor === "AE") {
-    return { allowed: true };
-  }
-
-  // Carrier-side enforcement.
-  const allowedNext = CARRIER_ALLOWED_TRANSITIONS[from];
+  // Pick the right transition map by actor.
+  const map = actor === "AE" ? AE_ALLOWED_TRANSITIONS : CARRIER_ALLOWED_TRANSITIONS;
+  const allowedNext = map[from];
 
   if (!allowedNext) {
     return {
       allowed: false,
       code: "WRONG_STARTING_STATE",
-      reason: `Cannot update status from ${from}. Carrier status updates are only available after the load is BOOKED.`,
+      reason: actor === "CARRIER"
+        ? `Cannot update status from ${from}. Carrier status updates are only available after the load is BOOKED.`
+        : `Cannot transition from terminal/unknown state ${from}.`,
+      allowedNext: [],
+    };
+  }
+
+  if (allowedNext.length === 0) {
+    // Terminal state (COMPLETED, TONU, CANCELLED). No further transitions.
+    return {
+      allowed: false,
+      code: "TERMINAL_NOT_ALLOWED",
+      reason: `${from} is a terminal state. No further transitions allowed.`,
+      allowedNext: [],
     };
   }
 
@@ -93,7 +146,8 @@ export function validateLoadStatusTransition(
     return {
       allowed: false,
       code: "SKIP_NOT_ALLOWED",
-      reason: `Cannot jump from ${from} to ${to}. Next allowed: ${allowedNext.join(", ")}.`,
+      reason: `Cannot transition from ${from} to ${to}. Next allowed: ${allowedNext.join(", ")}.`,
+      allowedNext,
     };
   }
 
@@ -103,11 +157,10 @@ export function validateLoadStatusTransition(
 /**
  * Returns the next allowed status(es) for the given current status + actor.
  * Useful for UI dropdowns: carrier portal can show only the legitimate
- * next-state option(s) instead of the full enum.
+ * next-state option(s) instead of the full enum; AE Console can do the
+ * same for its status-advance picker.
  */
 export function getAllowedNextStatuses(from: LoadStatus, actor: ActorRole): LoadStatus[] {
-  if (actor === "AE") {
-    return [];
-  }
-  return CARRIER_ALLOWED_TRANSITIONS[from] ?? [];
+  const map = actor === "AE" ? AE_ALLOWED_TRANSITIONS : CARRIER_ALLOWED_TRANSITIONS;
+  return map[from] ?? [];
 }

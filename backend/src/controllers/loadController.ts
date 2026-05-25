@@ -17,6 +17,7 @@ import { notifyLoadStatusChange } from "../services/notificationService";
 import { logLoadCreation, diffLoadChanges, logLoadChanges, logStatusChange, getLoadAuditHistory } from "../services/loadAuditService";
 import { onLoadStatusChange as aiOnLoadStatusChange } from "../services/aiLearningLoop/feedbackCollector";
 import { log } from "../lib/logger";
+import { validateLoadStatusTransition, getAllowedNextStatuses } from "../lib/loadStateMachine";
 
 async function generateLoadNumber(): Promise<string> {
   // Ensure sequence exists (idempotent) — safe static SQL, no user input
@@ -421,32 +422,20 @@ export async function getLoadById(req: AuthRequest, res: Response) {
   res.json(load);
 }
 
-// Valid load status transitions — state machine enforcement
-const VALID_TRANSITIONS: Record<string, string[]> = {
-  DRAFT: ["PLANNED", "POSTED", "CANCELLED"],
-  PLANNED: ["POSTED", "CANCELLED"],
-  POSTED: ["TENDERED", "BOOKED", "CANCELLED"],
-  TENDERED: ["CONFIRMED", "BOOKED", "POSTED", "CANCELLED"],
-  CONFIRMED: ["BOOKED", "DISPATCHED", "CANCELLED"],
-  BOOKED: ["DISPATCHED", "CANCELLED", "TONU"],
-  DISPATCHED: ["AT_PICKUP", "CANCELLED", "TONU"],
-  AT_PICKUP: ["LOADED", "PICKED_UP", "CANCELLED", "TONU"],
-  LOADED: ["IN_TRANSIT", "PICKED_UP"],
-  PICKED_UP: ["IN_TRANSIT"],
-  IN_TRANSIT: ["AT_DELIVERY"],
-  AT_DELIVERY: ["DELIVERED"],
-  DELIVERED: ["POD_RECEIVED", "INVOICED", "COMPLETED"],
-  POD_RECEIVED: ["INVOICED", "COMPLETED"],
-  INVOICED: ["COMPLETED"],
-  COMPLETED: [],
-  TONU: [],
-  CANCELLED: [],
-};
-
-function isValidTransition(from: string, to: string): boolean {
-  const allowed = VALID_TRANSITIONS[from];
-  return allowed ? allowed.includes(to) : false;
-}
+// v3.8.akb Item 159 Sprint 1 — AE-side transition map MOVED to
+// backend/src/lib/loadStateMachine.ts as the canonical single source of
+// truth for both CARRIER and AE actors. Pre-akb this inline VALID_TRANSITIONS
+// duplicated what loadStateMachine.ts was supposed to canonical-own; v3.8.ajw
+// shipped the carrier-side validator only, leaving this duplication open
+// (Sub-pattern 5 audit-both-ends would have caught at Sprint v3.8.ajw if
+// the Phase A had checked AE-side write sites in addition to the carrier
+// endpoint).
+//
+// Item 159 Sprint 2+ (banked): refactor the 12 other AE-side write sites
+// currently doing prisma.load.update({ status }) without invoking the
+// validator (tenderController, waterfallEngineService,
+// carrierController.advance, settlementController, invoiceController,
+// shipperPortalController, ediService, checkCallAutomation, etc.).
 
 export async function updateLoadStatus(req: AuthRequest, res: Response) {
   const { status } = updateLoadStatusSchema.parse(req.body);
@@ -455,11 +444,18 @@ export async function updateLoadStatus(req: AuthRequest, res: Response) {
   const existing = await prisma.load.findUnique({ where: { id: req.params.id, deletedAt: null } });
   if (!existing) { res.status(404).json({ error: "Load not found" }); return; }
 
-  // Validate status transition
-  if (!isValidTransition(existing.status, status)) {
+  // v3.8.akb — canonical validator. Same 400 response shape as the
+  // pre-akb inline implementation (error message + allowed array) so
+  // no consumer-side breakage. The validator extends the surface with
+  // a code field (BACKWARDS_NOT_ALLOWED / SKIP_NOT_ALLOWED /
+  // WRONG_STARTING_STATE / TERMINAL_NOT_ALLOWED) for any future client
+  // that wants to discriminate on the failure mode.
+  const transition = validateLoadStatusTransition(existing.status, status, "AE");
+  if (!transition.allowed) {
     res.status(400).json({
-      error: `Invalid status transition: ${existing.status} → ${status}`,
-      allowed: VALID_TRANSITIONS[existing.status] || [],
+      error: transition.reason ?? `Invalid status transition: ${existing.status} → ${status}`,
+      code: transition.code,
+      allowed: transition.allowedNext ?? getAllowedNextStatuses(existing.status, "AE"),
     });
     return;
   }

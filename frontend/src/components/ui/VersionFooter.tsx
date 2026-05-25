@@ -10256,7 +10256,41 @@
 //   AE workflow end-to-end on day 1.
 //   ~110 LOC net across 3 backend files + version bump. No schema
 //   migration.
-export const SRL_VERSION = "3.8.aka";
+// v3.8.akb — Item 159 Sprint 1 — consolidate AE-side load status state
+//   machine into loadStateMachine.ts. Pre-akb (and pre-ajw):
+//   * carrier-side endpoint had NO state-machine enforcement (closed v3.8.ajw)
+//   * AE-side endpoint HAD enforcement via an inline VALID_TRANSITIONS map
+//     in loadController.ts:425-444 — but that map duplicated what
+//     loadStateMachine.ts was supposed to canonical-own.
+//   v3.8.ajw shipped the carrier-side validator only because Phase A
+//   didn't audit AE-side write sites. Sub-pattern 5 audit-both-ends
+//   caught the duplication during akb Phase A — scope pivoted from
+//   "ship AE validator" to "consolidate inline AE map into canonical
+//   loadStateMachine.ts" (smaller scope, single source of truth).
+//   Changes:
+//   * loadStateMachine.ts gains AE_ALLOWED_TRANSITIONS map (lifted
+//     verbatim from loadController.ts:425-444).
+//   * validateLoadStatusTransition() now enforces both actor maps;
+//     AE actor path was previously permissive (returned allowed=true
+//     for any transition).
+//   * TransitionResult extended with allowedNext + TERMINAL_NOT_ALLOWED
+//     code so the 400 response shape preserves the pre-akb contract
+//     (error message + allowed array) AND extends it with a code
+//     field for future client discrimination.
+//   * loadController.updateLoadStatus deletes the inline
+//     VALID_TRANSITIONS + isValidTransition + calls the canonical
+//     validator. Response shape preserved for backward compat.
+//   Item 159 Sprint 2+ banked: refactor the 12 other AE-side write
+//   sites (tenderController / waterfallEngineService /
+//   carrierController.advance / settlementController /
+//   invoiceController / shipperPortalController / ediService /
+//   checkCallAutomation) to call the canonical validator. Multi-day
+//   epic scope per the original Item 159 banking. Sprint 1 establishes
+//   the canonical helper + the highest-traffic surface migration; the
+//   remaining sites follow incrementally.
+//   ~100 LOC net across 2 backend files + version bump. No schema
+//   migration; deploy is a no-op on migrate.
+export const SRL_VERSION = "3.8.akb";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
