@@ -10524,7 +10524,43 @@
 //   §13.3 Item 63 P3-3 LOG OPEN → CLOSED.
 //   §13.3 Item 63 P3-1 closed-by-design.
 //   §13.3 Item 63 P3-2 still banked.
-export const SRL_VERSION = "3.8.akh";
+// v3.8.aki — §13.3 Item 8.6 carrier preference manual override admin UI.
+//   Pre-aki the backend endpoint PUT /ai/preferences/:carrierId existed
+//   (added pre-Sprint-44 audit-completeness Tier A reclassification) but
+//   had ZERO frontend callers — operations had no way to manually
+//   correct an auto-learned preference or seed initial preferences
+//   before the auto-learner had data. aki ships the missing admin UI.
+//   Backend changes:
+//   * routes/ai.ts — PUT /preferences/:carrierId now ADMIN/CEO only
+//     (pre-aki was just `authenticate`); GET /preferences/:carrierId
+//     widened to ADMIN/CEO/BROKER/OPERATIONS so AE Console reads work.
+//   * services/carrierPreferenceService.ts — PreferencesInput type
+//     extended with optional lastUpdatedBy field; defaults to "CARRIER"
+//     on create + update (preserves carrier-portal write semantic) but
+//     admin override path passes "ADMIN" for audit attribution.
+//   Frontend changes:
+//   * NEW components/carriers/CarrierPreferencesPanel.tsx — form for all
+//     12 preference fields (lanes / regions / avoid / load types / rate
+//     floor / deadhead cap / radius / pay terms / notify method +
+//     frequency). Auto-learned signals surface read-only above the form
+//     so admin sees both auto signal AND the manual override they're
+//     applying. "Re-run auto-learn" button calls existing POST
+//     /preferences/:carrierId/auto-learn (ADMIN+OPERATIONS gated).
+//     lastUpdatedBy attribution badge surfaces SYSTEM/CARRIER/ADMIN
+//     visually so AE knows where the current row came from.
+//   * dashboard/carriers/page.tsx — new "Prefs" tab in side panel icon
+//     strip (Sliders icon). panelTab union extended with "preferences".
+//   Item 8.5 (frequent-addresses) audit revealed the AddressBook
+//   Prisma model has ZERO consumers anywhere — neither picker exists
+//   nor any other backend code writes to it. Reframed as a
+//   dead-model decision (delete vs build a real picker), banked for
+//   separate audit cycle. Not a 30-LOC wire-up as the §13.3 banking
+//   suggested.
+//   ~370 LOC net (1 new component + 4 edits) + version bump. No schema
+//   migration; no test changes needed.
+//   §13.3 Item 8.6 LOG OPEN → CLOSED.
+//   §13.3 Item 8.5 banking-revised — defer to dead-model decision sprint.
+export const SRL_VERSION = "3.8.aki";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

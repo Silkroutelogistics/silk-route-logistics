@@ -10,12 +10,13 @@ import {
   TrendingUp, TrendingDown, DollarSign, Package, Award, ShieldAlert, Calendar,
   BarChart3, Percent, Hash, Compass, RefreshCw, ExternalLink, AlertTriangle, Download,
   User, CheckSquare, ClipboardList, Upload, Eye, ArrowLeft, FolderOpen,
-  MessageCircle,
+  MessageCircle, Sliders,
 } from "lucide-react";
 import { InfoRequestModal } from "@/components/carriers/InfoRequestModal";
 import { InfoRequestThread } from "@/components/carriers/InfoRequestThread";
 import { RejectCarrierModal } from "@/components/carriers/RejectCarrierModal";
 import { SecuritySignalsCard } from "@/components/carriers/SecuritySignalsCard";
+import { CarrierPreferencesPanel } from "@/components/carriers/CarrierPreferencesPanel";
 
 
 interface CarrierPerformance {
@@ -288,7 +289,7 @@ export default function CarrierPoolPage() {
   const [statusFilter, setStatusFilter] = useState("");
   const [equipFilter, setEquipFilter] = useState("");
   const [selectedCarrierId, setSelectedCarrierId] = useState<string | null>(null);
-  const [panelTab, setPanelTab] = useState<"profile" | "insurance" | "compliance" | "compass" | "inspections" | "performance" | "history" | "documents" | "info-requests">("profile");
+  const [panelTab, setPanelTab] = useState<"profile" | "insurance" | "compliance" | "compass" | "inspections" | "performance" | "history" | "documents" | "info-requests" | "preferences">("profile");
   const [editingCarrier, setEditingCarrier] = useState<Carrier | null>(null);
   const [editingTab, setEditingTab] = useState<string | null>(null);
   const [editForm, setEditForm] = useState({
@@ -709,6 +710,12 @@ export default function CarrierPoolPage() {
                 // v3.8.ajj — Info Requests thread tab. Unified view of
                 // open + resolved + cancelled requests with attachments.
                 { key: "info-requests", icon: MessageCircle, label: "Info Req" },
+                // v3.8.aki §13.3 Item 8.6 — Carrier preferences manual
+                // override admin UI. ADMIN/CEO write gate enforced
+                // server-side at routes/ai.ts PUT /preferences/:carrierId;
+                // panel itself is visible to all panel viewers but the
+                // form is read-only for non-admins.
+                { key: "preferences", icon: Sliders, label: "Prefs" },
               ] as const).map(({ key, icon: Icon, label }) => (
                 <button key={key} onClick={() => { setPanelTab(key); setEditingTab(null); setDocView("list"); setPreviewDoc(null); }} title={label}
                   className="flex flex-col items-center gap-1.5 py-1 transition-all duration-150">
@@ -1546,6 +1553,12 @@ export default function CarrierPoolPage() {
                 {/* ===== v3.8.ajj — INFO REQUESTS THREAD TAB ===== */}
                 {panelTab === "info-requests" && selectedCarrier && (
                   <InfoRequestThread carrierId={selectedCarrier.id} isAdmin={isAdmin} />
+                )}
+
+                {/* v3.8.aki §13.3 Item 8.6 — Carrier preferences manual
+                    override admin UI. */}
+                {panelTab === "preferences" && selectedCarrier && (
+                  <CarrierPreferencesPanel carrierId={selectedCarrier.id} isAdmin={isAdmin} />
                 )}
 
               </div>

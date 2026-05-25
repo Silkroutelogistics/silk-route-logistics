@@ -323,7 +323,18 @@ router.get("/facilities/search", authenticate, async (req: AuthRequest, res: Res
 });
 
 // ─── Carrier Preferences ────────────────────────────────────────
-router.get("/preferences/:carrierId", authenticate, async (req: AuthRequest, res: Response) => {
+// v3.8.aki §13.3 Item 8.6 — authz tightening on PUT endpoint. Pre-aki
+// the manual-override path was just `authenticate` (any logged-in user
+// could write any carrier's preference row). Now ADMIN+CEO only —
+// matches the "manual override" semantic banked in §13.3 Item 8.6 and
+// pairs with the auto-learn endpoint at line 344 which is already
+// ADMIN+OPERATIONS gated.
+//
+// GET endpoint widened to the standard AE Console read roles
+// (ADMIN/CEO/BROKER/OPERATIONS) so the AE Console preferences tab
+// can fetch + display. router.use(authenticate) at line 26 still
+// holds the overall auth baseline.
+router.get("/preferences/:carrierId", authorize("ADMIN", "CEO", "BROKER", "OPERATIONS") as any, async (req: AuthRequest, res: Response) => {
   try {
     const prefs = await getCarrierPreferences(req.params.carrierId);
     res.json(prefs);
@@ -332,9 +343,9 @@ router.get("/preferences/:carrierId", authenticate, async (req: AuthRequest, res
   }
 });
 
-router.put("/preferences/:carrierId", authenticate, async (req: AuthRequest, res: Response) => {
+router.put("/preferences/:carrierId", authorize("ADMIN", "CEO") as any, async (req: AuthRequest, res: Response) => {
   try {
-    const result = await updateCarrierPreferences({ carrierId: req.params.carrierId, ...req.body });
+    const result = await updateCarrierPreferences({ carrierId: req.params.carrierId, ...req.body, lastUpdatedBy: "ADMIN" });
     res.json(result);
   } catch (err) {
     res.status(500).json({ error: "Failed to update preferences", ...(process.env.NODE_ENV !== "production" ? { details: String(err) } : {}) });

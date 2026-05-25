@@ -27,6 +27,12 @@ interface PreferencesInput {
   typicalRadiusMiles?: number;
   notifyMethod?: string;
   notifyFrequency?: string;
+  // v3.8.aki §13.3 Item 8.6 — caller-supplied attribution for the
+  // lastUpdatedBy column. Defaults to "CARRIER" on create + falls back
+  // to no-op on update so the existing carrier-portal write path
+  // (which doesn't supply this) keeps its semantic; admin override
+  // path passes "ADMIN" from routes/ai.ts PUT handler.
+  lastUpdatedBy?: string;
 }
 
 // ─── Get Preferences ─────────────────────────────────────────────────────────
@@ -86,7 +92,11 @@ export async function updateCarrierPreferences(input: PreferencesInput) {
       typicalRadiusMiles: input.typicalRadiusMiles ?? 500,
       notifyMethod: input.notifyMethod ?? "EMAIL",
       notifyFrequency: input.notifyFrequency ?? "IMMEDIATE",
-      lastUpdatedBy: "CARRIER",
+      // v3.8.aki §13.3 Item 8.6 — attribution defaults to "CARRIER" on
+      // first write (carrier-portal self-edit canonical), overridden to
+      // "ADMIN" when AE Console admin-override path calls in via
+      // routes/ai.ts PUT handler.
+      lastUpdatedBy: input.lastUpdatedBy ?? "CARRIER",
     },
     update: {
       ...(input.preferredLanes ? { preferredLanes: toJson(input.preferredLanes) } : {}),
@@ -101,7 +111,7 @@ export async function updateCarrierPreferences(input: PreferencesInput) {
       ...(input.typicalRadiusMiles !== undefined ? { typicalRadiusMiles: input.typicalRadiusMiles } : {}),
       ...(input.notifyMethod ? { notifyMethod: input.notifyMethod } : {}),
       ...(input.notifyFrequency ? { notifyFrequency: input.notifyFrequency } : {}),
-      lastUpdatedBy: "CARRIER",
+      lastUpdatedBy: input.lastUpdatedBy ?? "CARRIER",
     },
   });
 }
