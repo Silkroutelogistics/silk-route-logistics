@@ -431,6 +431,26 @@ export function initCronJobs() {
     }
   }));
 
+  // ─── Weekly (Monday 22:00 UTC): EIA fuel-index refresh ──
+  // Internal data refresh — UTC default per Item 185 (Eastern reserved for
+  // human-facing emails / notifications / digests). EIA publishes the weekly
+  // retail diesel report Monday afternoons U.S. Eastern (~16:00 ET); 22:00
+  // UTC = 18:00 ET catches the just-published week's data. Refreshes all
+  // 7 regions in FuelIndexCache (NATIONAL + PADD1..PADD5 + CA) via the
+  // EIA Open Data API v2 weekly No. 2 diesel retail series. Per-region
+  // failure preserves the last cached value (stale OK for weekly data).
+  cron.schedule("0 22 * * 1", () => withGuard("weekly-fuel-index", async () => {
+    try {
+      log.info("[Cron Weekly] EIA fuel-index refresh starting...");
+      const { refreshAllRegions } = require("../services/fuelIndexService");
+      const outcomes = await refreshAllRegions();
+      const succeeded = outcomes.filter((o: any) => o.ok).length;
+      log.info({ succeeded, total: outcomes.length }, "[Cron Weekly] EIA fuel-index refresh complete");
+    } catch (err) {
+      log.error({ err }, "[Cron Weekly] EIA fuel-index refresh error:");
+    }
+  }));
+
   // ─── AI Learning Cycles ─────────────────────────────────────────
 
   // Daily at 4:00 AM: Rate Intelligence learning

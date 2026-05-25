@@ -11043,7 +11043,85 @@
 //   in untracked WIP backend/src/routes/quoteApprove.ts left in place
 //   per user direction — committed by explicit path only, not staged).
 //   §13.3 Item 191 LOG OPEN; closed at v3.8.akq when Phase 2 ships.
-export const SRL_VERSION = "3.8.aks";
+//   [Updated at v3.8.akt: Phase 2 actually shipped as akt, not akq —
+//   three parallel sprints (akq Item 87+63, akr Item 8.5, aks Item
+//   178+180.6.b) took the letters in between. Item 191 LOG OPEN
+//   continues; closes at akt below.]
+//
+// v3.8.akt — Item 191 / Sprint 65 Phase 2: EIA fuel-index feed code +
+//   cron + on-demand trigger. Builds the fetcher + scheduling on top
+//   of the v3.8.akp foundation. Live verification (running the on-demand
+//   script + reporting 7 prices back to chat + docs entries) happens
+//   immediately AFTER this commit ships per the user's Phase 2 plan.
+//   Boundary discipline held: no change to autoQuoteService,
+//   fuelSurchargeTableService.lookupFuelSurcharge, contract-rate path,
+//   Load.fuelSurcharge read/write sites, or marketDataService.
+//   Service (backend/src/services/fuelIndexService.ts NEW, ~204 LOC):
+//   * getFuelIndex(region) cache-only reader — returns null if region
+//     never written; returns stale rows with stale:true flag so callers
+//     can decide whether to use or fall back further. Does NOT trigger
+//     a fetch — keeps per-quote read load at zero EIA calls.
+//   * refreshAllRegions() serial sweep of all 7 EiaRegion values
+//     (NATIONAL + PADD1..PADD5 + CA). Per-region failure preserves
+//     last cached value + logs; loop continues to next region.
+//   * Provider toggle via env.FSC_INDEX_PROVIDER: "eia" (default) hits
+//     EIA Open Data API v2; "manual" short-circuits the fetch entirely
+//     so an operator can override a region via direct DB upsert when
+//     EIA is unavailable.
+//   * HTTP shape mirrors mileageService: native fetch +
+//     AbortSignal.timeout(10_000) + throw on non-200/timeout + no
+//     retry. EIA_API_KEY short-circuit mirrors fmcsaService FMCSA_WEB_KEY.
+//   * EIA v2 facet IDs (VERIFIED via WebFetch against EIA's published
+//     series-ID pattern EMD_EPD2D_PTE_<REGION>_DPG at eia.gov/dnav/pet,
+//     not guessed): product=EPD2D, process=PTE, duoarea = NUS / R10 /
+//     R20 / R30 / R40 / R5XCA (West Coast LESS California per akp
+//     sprint decision — non-CA West Coast should not carry CA's CARB-
+//     diesel premium) / SCA (California).
+//   * RefreshOutcome.note (renamed from .error per review sign-off) is
+//     a free-text annotation used for BOTH success and failure paths;
+//     consumers decide outcome via the .ok boolean.
+//   Cron (backend/src/cron/index.ts +20 LOC):
+//   * NEW weekly-fuel-index job at "0 22 * * 1" UTC (Monday 18:00 ET,
+//     after EIA's Monday-afternoon Eastern publish ~16:00 ET). UTC
+//     default per Item 185 internal-data-refresh convention. Slotted
+//     next to auto-reversal at line 422; standard withGuard pattern +
+//     lazy require() of the service per file convention.
+//   On-demand trigger (backend/scripts/refresh-fuel-index.ts NEW, ~50 LOC):
+//   * Run via `cd backend && npx ts-node scripts/refresh-fuel-index.ts`
+//     for manual seeding / verification. Outputs console.table with
+//     region / label / price / week-ending date / note per region.
+//     Exit code 0 if every outcome ok=true, else 1. No string-matching
+//     on the note field (per review sign-off — manual provider returns
+//     ok=true uniformly, so no special-case needed).
+//   Sprint accounting — Sub-pattern 6 (concurrent-sprint-coordination)
+//   fired THREE times during this Phase 2 build:
+//   * Fire 1 (akq parallel): Item 87 followup + Item 63 P3-2 chrome +
+//     vocab bundle landed mid-build as commit 16534005. Phase 2 paused
+//     per user's Y1 ratification, awaited akq to ship before resuming.
+//   * Fire 2 (akr parallel): Item 8.5 AddressBook deletion landed as
+//     commit d5899f6f shortly after akq. Hold continued.
+//   * Fire 3 (aks parallel): Item 178 + Item 180.6.b CRM admin edit
+//     UI landed as commit dc65ef37. Hold continued until working tree
+//     fully clear.
+//   Net cost of the three-fire wait: ~2 letters slipped (planned akq →
+//   actual akt). The user's Y1 protocol prevented any version-history
+//   collision or commit race. Pattern 6 sub-rule c gate held across
+//   the entire session: every committed letter matched VersionFooter's
+//   canonical state at commit time, never CLAUDE.md §11 or any stale
+//   chat assumption.
+//   Pre-commit gates per Sub-pattern 11 (CI parity): prisma generate
+//   clean (FuelIndexCache type still resolves), backend tsc --noEmit
+//   clean (0 errors across the working tree — the pre-existing
+//   quoteApprove.ts ActorType error from earlier in this session was
+//   resolved by one of the parallel sprints between akp and akt).
+//   Live verification (run on-demand script against prod, report 7
+//   regional prices from FuelIndexCache after first successful refresh)
+//   + docs entries (regression-log.md, CLAUDE.md §11 row, §13.3 Item
+//   191 close marker, Item 7 region-taxonomy-drift cross-link) ship
+//   as a separate small follow-on commit after live data lands.
+//   §13.3 Item 191 ships code-complete. Live verification + docs are
+//   the next ratification cycle (no version bump expected for docs).
+export const SRL_VERSION = "3.8.akt";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
