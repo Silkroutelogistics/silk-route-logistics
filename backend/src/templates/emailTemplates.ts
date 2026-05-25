@@ -1,6 +1,15 @@
 /**
  * SRL Branded Email Templates
- * Navy #0D1B2A header, Gold #C8963E accents
+ *
+ * v3.8.akf Item 87 — brand chrome aligned to skill canonical
+ * (navy #0A2540, gold-dark #BA7517, divider #E2EAF2). Footer text
+ * updated to operations@ contact line; the pre-akf "Please do not
+ * reply directly" copy contradicted the Q1 reply-to ratification
+ * (Sprint 45a) where operations@ is the canonical reply target for
+ * shipping-document + notification class emails. Lead Hunter
+ * outreach has its own send pipeline + sendEmail() per-call replyTo
+ * override so context-specific reply targets are preserved; this
+ * footer just stops actively telling recipients NOT to reply.
  */
 
 function wrapper(content: string): string {
@@ -13,8 +22,8 @@ function wrapper(content: string): string {
       <table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.08)">
         <!-- Header -->
         <tr>
-          <td style="background:#0D1B2A;padding:24px 32px;text-align:center">
-            <h1 style="margin:0;color:#C8963E;font-size:22px;font-weight:700;letter-spacing:0.5px">Silk Route Logistics</h1>
+          <td style="background:#0A2540;padding:24px 32px;text-align:center">
+            <h1 style="margin:0;color:#BA7517;font-size:22px;font-weight:700;letter-spacing:0.5px">Silk Route Logistics</h1>
           </td>
         </tr>
         <!-- Body -->
@@ -25,9 +34,9 @@ function wrapper(content: string): string {
         </tr>
         <!-- Footer -->
         <tr>
-          <td style="background:#f8fafc;padding:20px 32px;border-top:1px solid #e2e8f0;text-align:center">
-            <p style="margin:0;font-size:12px;color:#94a3b8">Silk Route Logistics &middot; Moving Freight, Building Futures</p>
-            <p style="margin:4px 0 0;font-size:11px;color:#cbd5e1">This is an automated message. Please do not reply directly.</p>
+          <td style="background:#f8fafc;padding:20px 32px;border-top:1px solid #E2EAF2;text-align:center">
+            <p style="margin:0;font-size:12px;color:#94a3b8">Silk Route Logistics &middot; Where Trust Travels.</p>
+            <p style="margin:4px 0 0;font-size:11px;color:#cbd5e1">Questions? Reach us at <a href="mailto:operations@silkroutelogistics.ai" style="color:#BA7517;text-decoration:none">operations@silkroutelogistics.ai</a></p>
           </td>
         </tr>
       </table>
@@ -39,13 +48,13 @@ function wrapper(content: string): string {
 
 function button(text: string, url: string): string {
   return `<table cellpadding="0" cellspacing="0" style="margin:24px 0"><tr><td>
-    <a href="${url}" style="display:inline-block;padding:12px 28px;background:#C8963E;color:#ffffff;text-decoration:none;border-radius:6px;font-weight:600;font-size:14px">${text}</a>
+    <a href="${url}" style="display:inline-block;padding:12px 28px;background:#BA7517;color:#ffffff;text-decoration:none;border-radius:6px;font-weight:600;font-size:14px">${text}</a>
   </td></tr></table>`;
 }
 
 export function introductionEmail(recipientName: string, senderName: string, companyName: string): string {
   return wrapper(`
-    <h2 style="margin:0 0 16px;color:#0D1B2A;font-size:20px">Hello ${recipientName},</h2>
+    <h2 style="margin:0 0 16px;color:#0A2540;font-size:20px">Hello ${recipientName},</h2>
     <p style="color:#475569;font-size:15px;line-height:1.6;margin:0 0 16px">
       My name is <strong>${senderName}</strong> and I'm an Account Executive at <strong>Silk Route Logistics</strong>.
       I wanted to introduce myself and share how we can support <strong>${companyName}</strong>'s freight needs.
@@ -58,7 +67,7 @@ export function introductionEmail(recipientName: string, senderName: string, com
       I'd love to schedule a quick call to learn more about your shipping requirements. Would you have 15 minutes this week?
     </p>
     <p style="color:#475569;font-size:15px;line-height:1.6;margin:24px 0 0">
-      Best regards,<br><strong style="color:#0D1B2A">${senderName}</strong><br>
+      Best regards,<br><strong style="color:#0A2540">${senderName}</strong><br>
       <span style="color:#94a3b8;font-size:13px">Account Executive, Silk Route Logistics</span>
     </p>
   `);
@@ -66,7 +75,7 @@ export function introductionEmail(recipientName: string, senderName: string, com
 
 export function followUpEmail(recipientName: string, senderName: string, context: string): string {
   return wrapper(`
-    <h2 style="margin:0 0 16px;color:#0D1B2A;font-size:20px">Hi ${recipientName},</h2>
+    <h2 style="margin:0 0 16px;color:#0A2540;font-size:20px">Hi ${recipientName},</h2>
     <p style="color:#475569;font-size:15px;line-height:1.6;margin:0 0 16px">
       I wanted to follow up on our previous conversation${context ? ' regarding ' + context : ''}. I hope all is going well.
     </p>
@@ -78,7 +87,7 @@ export function followUpEmail(recipientName: string, senderName: string, context
       Please don't hesitate to reach out — I'm here to help.
     </p>
     <p style="color:#475569;font-size:15px;line-height:1.6;margin:24px 0 0">
-      Regards,<br><strong style="color:#0D1B2A">${senderName}</strong><br>
+      Regards,<br><strong style="color:#0A2540">${senderName}</strong><br>
       <span style="color:#94a3b8;font-size:13px">Account Executive, Silk Route Logistics</span>
     </p>
   `);
@@ -86,25 +95,25 @@ export function followUpEmail(recipientName: string, senderName: string, context
 
 export function rateQuoteEmail(recipientName: string, senderName: string, lanes: string, rate: string): string {
   return wrapper(`
-    <h2 style="margin:0 0 16px;color:#0D1B2A;font-size:20px">Rate Quote for ${recipientName}</h2>
+    <h2 style="margin:0 0 16px;color:#0A2540;font-size:20px">Rate Quote for ${recipientName}</h2>
     <p style="color:#475569;font-size:15px;line-height:1.6;margin:0 0 16px">
       Thank you for the opportunity to quote on your freight. Here are the details:
     </p>
-    <table width="100%" cellpadding="12" cellspacing="0" style="background:#f8fafc;border-radius:8px;border:1px solid #e2e8f0;margin:16px 0">
+    <table width="100%" cellpadding="12" cellspacing="0" style="background:#f8fafc;border-radius:8px;border:1px solid #E2EAF2;margin:16px 0">
       <tr>
-        <td style="font-size:13px;color:#64748b;border-bottom:1px solid #e2e8f0"><strong>Lane(s)</strong></td>
-        <td style="font-size:14px;color:#0D1B2A;border-bottom:1px solid #e2e8f0;font-weight:600">${lanes}</td>
+        <td style="font-size:13px;color:#64748b;border-bottom:1px solid #E2EAF2"><strong>Lane(s)</strong></td>
+        <td style="font-size:14px;color:#0A2540;border-bottom:1px solid #E2EAF2;font-weight:600">${lanes}</td>
       </tr>
       <tr>
         <td style="font-size:13px;color:#64748b"><strong>Rate</strong></td>
-        <td style="font-size:18px;color:#C8963E;font-weight:700">${rate}</td>
+        <td style="font-size:18px;color:#BA7517;font-weight:700">${rate}</td>
       </tr>
     </table>
     <p style="color:#475569;font-size:15px;line-height:1.6;margin:0 0 16px">
       This quote is valid for 48 hours. Rates may vary based on market conditions, equipment availability, and specific load requirements.
     </p>
     <p style="color:#475569;font-size:15px;line-height:1.6;margin:24px 0 0">
-      <strong style="color:#0D1B2A">${senderName}</strong><br>
+      <strong style="color:#0A2540">${senderName}</strong><br>
       <span style="color:#94a3b8;font-size:13px">Account Executive, Silk Route Logistics</span>
     </p>
   `);
@@ -112,17 +121,17 @@ export function rateQuoteEmail(recipientName: string, senderName: string, lanes:
 
 export function loadConfirmationEmail(recipientName: string, loadRef: string, origin: string, dest: string, pickup: string, delivery: string, rate: string): string {
   return wrapper(`
-    <h2 style="margin:0 0 16px;color:#0D1B2A;font-size:20px">Load Confirmation</h2>
+    <h2 style="margin:0 0 16px;color:#0A2540;font-size:20px">Load Confirmation</h2>
     <p style="color:#475569;font-size:15px;line-height:1.6;margin:0 0 16px">
       Hi ${recipientName}, your load has been confirmed. Here are the details:
     </p>
-    <table width="100%" cellpadding="10" cellspacing="0" style="background:#f8fafc;border-radius:8px;border:1px solid #e2e8f0;margin:16px 0;font-size:14px">
-      <tr><td style="color:#64748b;border-bottom:1px solid #e2e8f0;width:120px"><strong>Reference</strong></td><td style="color:#0D1B2A;border-bottom:1px solid #e2e8f0;font-weight:700">${loadRef}</td></tr>
-      <tr><td style="color:#64748b;border-bottom:1px solid #e2e8f0"><strong>Origin</strong></td><td style="color:#0D1B2A;border-bottom:1px solid #e2e8f0">${origin}</td></tr>
-      <tr><td style="color:#64748b;border-bottom:1px solid #e2e8f0"><strong>Destination</strong></td><td style="color:#0D1B2A;border-bottom:1px solid #e2e8f0">${dest}</td></tr>
-      <tr><td style="color:#64748b;border-bottom:1px solid #e2e8f0"><strong>Pickup</strong></td><td style="color:#0D1B2A;border-bottom:1px solid #e2e8f0">${pickup}</td></tr>
-      <tr><td style="color:#64748b;border-bottom:1px solid #e2e8f0"><strong>Delivery</strong></td><td style="color:#0D1B2A;border-bottom:1px solid #e2e8f0">${delivery}</td></tr>
-      <tr><td style="color:#64748b"><strong>Rate</strong></td><td style="color:#C8963E;font-weight:700;font-size:16px">${rate}</td></tr>
+    <table width="100%" cellpadding="10" cellspacing="0" style="background:#f8fafc;border-radius:8px;border:1px solid #E2EAF2;margin:16px 0;font-size:14px">
+      <tr><td style="color:#64748b;border-bottom:1px solid #E2EAF2;width:120px"><strong>Reference</strong></td><td style="color:#0A2540;border-bottom:1px solid #E2EAF2;font-weight:700">${loadRef}</td></tr>
+      <tr><td style="color:#64748b;border-bottom:1px solid #E2EAF2"><strong>Origin</strong></td><td style="color:#0A2540;border-bottom:1px solid #E2EAF2">${origin}</td></tr>
+      <tr><td style="color:#64748b;border-bottom:1px solid #E2EAF2"><strong>Destination</strong></td><td style="color:#0A2540;border-bottom:1px solid #E2EAF2">${dest}</td></tr>
+      <tr><td style="color:#64748b;border-bottom:1px solid #E2EAF2"><strong>Pickup</strong></td><td style="color:#0A2540;border-bottom:1px solid #E2EAF2">${pickup}</td></tr>
+      <tr><td style="color:#64748b;border-bottom:1px solid #E2EAF2"><strong>Delivery</strong></td><td style="color:#0A2540;border-bottom:1px solid #E2EAF2">${delivery}</td></tr>
+      <tr><td style="color:#64748b"><strong>Rate</strong></td><td style="color:#BA7517;font-weight:700;font-size:16px">${rate}</td></tr>
     </table>
     ${button("View Load Details", "https://silkroutelogistics.ai/ae/loads.html")}
   `);
@@ -130,14 +139,14 @@ export function loadConfirmationEmail(recipientName: string, loadRef: string, or
 
 export function invoiceEmail(recipientName: string, invoiceNumber: string, amount: string, dueDate: string): string {
   return wrapper(`
-    <h2 style="margin:0 0 16px;color:#0D1B2A;font-size:20px">Invoice ${invoiceNumber}</h2>
+    <h2 style="margin:0 0 16px;color:#0A2540;font-size:20px">Invoice ${invoiceNumber}</h2>
     <p style="color:#475569;font-size:15px;line-height:1.6;margin:0 0 16px">
       Hi ${recipientName}, please find your invoice details below:
     </p>
-    <table width="100%" cellpadding="12" cellspacing="0" style="background:#f8fafc;border-radius:8px;border:1px solid #e2e8f0;margin:16px 0">
-      <tr><td style="color:#64748b;border-bottom:1px solid #e2e8f0"><strong>Invoice #</strong></td><td style="color:#0D1B2A;border-bottom:1px solid #e2e8f0;font-weight:700">${invoiceNumber}</td></tr>
-      <tr><td style="color:#64748b;border-bottom:1px solid #e2e8f0"><strong>Amount</strong></td><td style="color:#C8963E;font-weight:700;font-size:18px">${amount}</td></tr>
-      <tr><td style="color:#64748b"><strong>Due Date</strong></td><td style="color:#0D1B2A;font-weight:600">${dueDate}</td></tr>
+    <table width="100%" cellpadding="12" cellspacing="0" style="background:#f8fafc;border-radius:8px;border:1px solid #E2EAF2;margin:16px 0">
+      <tr><td style="color:#64748b;border-bottom:1px solid #E2EAF2"><strong>Invoice #</strong></td><td style="color:#0A2540;border-bottom:1px solid #E2EAF2;font-weight:700">${invoiceNumber}</td></tr>
+      <tr><td style="color:#64748b;border-bottom:1px solid #E2EAF2"><strong>Amount</strong></td><td style="color:#BA7517;font-weight:700;font-size:18px">${amount}</td></tr>
+      <tr><td style="color:#64748b"><strong>Due Date</strong></td><td style="color:#0A2540;font-weight:600">${dueDate}</td></tr>
     </table>
     <p style="color:#475569;font-size:15px;line-height:1.6;margin:0 0 8px">
       Please remit payment by the due date. Contact us if you have any questions.
@@ -148,7 +157,7 @@ export function invoiceEmail(recipientName: string, invoiceNumber: string, amoun
 
 export function thankYouEmail(recipientName: string, senderName: string, reason: string): string {
   return wrapper(`
-    <h2 style="margin:0 0 16px;color:#0D1B2A;font-size:20px">Thank You, ${recipientName}!</h2>
+    <h2 style="margin:0 0 16px;color:#0A2540;font-size:20px">Thank You, ${recipientName}!</h2>
     <p style="color:#475569;font-size:15px;line-height:1.6;margin:0 0 16px">
       ${reason || 'Thank you for your business with Silk Route Logistics. We truly value our partnership.'}
     </p>
@@ -156,7 +165,7 @@ export function thankYouEmail(recipientName: string, senderName: string, reason:
       We look forward to continuing to serve your freight needs and building a long-term relationship.
     </p>
     <p style="color:#475569;font-size:15px;line-height:1.6;margin:24px 0 0">
-      Warm regards,<br><strong style="color:#0D1B2A">${senderName}</strong><br>
+      Warm regards,<br><strong style="color:#0A2540">${senderName}</strong><br>
       <span style="color:#94a3b8;font-size:13px">Silk Route Logistics</span>
     </p>
   `);
@@ -164,17 +173,17 @@ export function thankYouEmail(recipientName: string, senderName: string, reason:
 
 export function tenderOfferEmail(carrierName: string, loadRef: string, origin: string, dest: string, pickup: string, delivery: string, rate: string, expiresAt: string): string {
   return wrapper(`
-    <h2 style="margin:0 0 16px;color:#0D1B2A;font-size:20px">Rate Confirmation Tender</h2>
+    <h2 style="margin:0 0 16px;color:#0A2540;font-size:20px">Rate Confirmation Tender</h2>
     <p style="color:#475569;font-size:15px;line-height:1.6;margin:0 0 16px">
       Hi ${carrierName}, Silk Route Logistics is pleased to offer you the following load tender. Please review the details below and confirm your acceptance.
     </p>
-    <table width="100%" cellpadding="10" cellspacing="0" style="background:#f8fafc;border-radius:8px;border:1px solid #e2e8f0;margin:16px 0;font-size:14px">
-      <tr><td style="color:#64748b;border-bottom:1px solid #e2e8f0;width:120px"><strong>Reference</strong></td><td style="color:#0D1B2A;border-bottom:1px solid #e2e8f0;font-weight:700">${loadRef}</td></tr>
-      <tr><td style="color:#64748b;border-bottom:1px solid #e2e8f0"><strong>Origin</strong></td><td style="color:#0D1B2A;border-bottom:1px solid #e2e8f0">${origin}</td></tr>
-      <tr><td style="color:#64748b;border-bottom:1px solid #e2e8f0"><strong>Destination</strong></td><td style="color:#0D1B2A;border-bottom:1px solid #e2e8f0">${dest}</td></tr>
-      <tr><td style="color:#64748b;border-bottom:1px solid #e2e8f0"><strong>Pickup</strong></td><td style="color:#0D1B2A;border-bottom:1px solid #e2e8f0">${pickup}</td></tr>
-      <tr><td style="color:#64748b;border-bottom:1px solid #e2e8f0"><strong>Delivery</strong></td><td style="color:#0D1B2A;border-bottom:1px solid #e2e8f0">${delivery}</td></tr>
-      <tr><td style="color:#64748b"><strong>Rate</strong></td><td style="color:#C8963E;font-weight:700;font-size:16px">${rate}</td></tr>
+    <table width="100%" cellpadding="10" cellspacing="0" style="background:#f8fafc;border-radius:8px;border:1px solid #E2EAF2;margin:16px 0;font-size:14px">
+      <tr><td style="color:#64748b;border-bottom:1px solid #E2EAF2;width:120px"><strong>Reference</strong></td><td style="color:#0A2540;border-bottom:1px solid #E2EAF2;font-weight:700">${loadRef}</td></tr>
+      <tr><td style="color:#64748b;border-bottom:1px solid #E2EAF2"><strong>Origin</strong></td><td style="color:#0A2540;border-bottom:1px solid #E2EAF2">${origin}</td></tr>
+      <tr><td style="color:#64748b;border-bottom:1px solid #E2EAF2"><strong>Destination</strong></td><td style="color:#0A2540;border-bottom:1px solid #E2EAF2">${dest}</td></tr>
+      <tr><td style="color:#64748b;border-bottom:1px solid #E2EAF2"><strong>Pickup</strong></td><td style="color:#0A2540;border-bottom:1px solid #E2EAF2">${pickup}</td></tr>
+      <tr><td style="color:#64748b;border-bottom:1px solid #E2EAF2"><strong>Delivery</strong></td><td style="color:#0A2540;border-bottom:1px solid #E2EAF2">${delivery}</td></tr>
+      <tr><td style="color:#64748b"><strong>Rate</strong></td><td style="color:#BA7517;font-weight:700;font-size:16px">${rate}</td></tr>
     </table>
     <p style="color:#dc2626;font-size:14px;line-height:1.6;margin:0 0 16px;font-weight:600">
       This tender expires on ${expiresAt}. Please respond before the deadline to secure this load.
@@ -185,15 +194,15 @@ export function tenderOfferEmail(carrierName: string, loadRef: string, origin: s
 
 export function tenderAcceptedEmail(brokerName: string, carrierName: string, loadRef: string, origin: string, dest: string): string {
   return wrapper(`
-    <h2 style="margin:0 0 16px;color:#0D1B2A;font-size:20px">Tender Accepted</h2>
+    <h2 style="margin:0 0 16px;color:#0A2540;font-size:20px">Tender Accepted</h2>
     <p style="color:#475569;font-size:15px;line-height:1.6;margin:0 0 16px">
       Hi ${brokerName}, great news! <strong>${carrierName}</strong> has accepted the tender for the following load.
     </p>
-    <table width="100%" cellpadding="10" cellspacing="0" style="background:#f8fafc;border-radius:8px;border:1px solid #e2e8f0;margin:16px 0;font-size:14px">
-      <tr><td style="color:#64748b;border-bottom:1px solid #e2e8f0;width:120px"><strong>Reference</strong></td><td style="color:#0D1B2A;border-bottom:1px solid #e2e8f0;font-weight:700">${loadRef}</td></tr>
-      <tr><td style="color:#64748b;border-bottom:1px solid #e2e8f0"><strong>Carrier</strong></td><td style="color:#0D1B2A;border-bottom:1px solid #e2e8f0;font-weight:600">${carrierName}</td></tr>
-      <tr><td style="color:#64748b;border-bottom:1px solid #e2e8f0"><strong>Origin</strong></td><td style="color:#0D1B2A;border-bottom:1px solid #e2e8f0">${origin}</td></tr>
-      <tr><td style="color:#64748b"><strong>Destination</strong></td><td style="color:#0D1B2A">${dest}</td></tr>
+    <table width="100%" cellpadding="10" cellspacing="0" style="background:#f8fafc;border-radius:8px;border:1px solid #E2EAF2;margin:16px 0;font-size:14px">
+      <tr><td style="color:#64748b;border-bottom:1px solid #E2EAF2;width:120px"><strong>Reference</strong></td><td style="color:#0A2540;border-bottom:1px solid #E2EAF2;font-weight:700">${loadRef}</td></tr>
+      <tr><td style="color:#64748b;border-bottom:1px solid #E2EAF2"><strong>Carrier</strong></td><td style="color:#0A2540;border-bottom:1px solid #E2EAF2;font-weight:600">${carrierName}</td></tr>
+      <tr><td style="color:#64748b;border-bottom:1px solid #E2EAF2"><strong>Origin</strong></td><td style="color:#0A2540;border-bottom:1px solid #E2EAF2">${origin}</td></tr>
+      <tr><td style="color:#64748b"><strong>Destination</strong></td><td style="color:#0A2540">${dest}</td></tr>
     </table>
     <p style="color:#475569;font-size:15px;line-height:1.6;margin:0 0 8px">
       The rate confirmation is now active. You can view the full load details in your dashboard.
@@ -204,15 +213,15 @@ export function tenderAcceptedEmail(brokerName: string, carrierName: string, loa
 
 export function checkCallRequestEmail(carrierName: string, loadRef: string, origin: string, dest: string, dueTime: string): string {
   return wrapper(`
-    <h2 style="margin:0 0 16px;color:#0D1B2A;font-size:20px">Check Call Request</h2>
+    <h2 style="margin:0 0 16px;color:#0A2540;font-size:20px">Check Call Request</h2>
     <p style="color:#475569;font-size:15px;line-height:1.6;margin:0 0 16px">
-      Hi ${carrierName}, please provide a location update for load <strong style="color:#0D1B2A">${loadRef}</strong>.
+      Hi ${carrierName}, please provide a location update for load <strong style="color:#0A2540">${loadRef}</strong>.
     </p>
-    <table width="100%" cellpadding="10" cellspacing="0" style="background:#f8fafc;border-radius:8px;border:1px solid #e2e8f0;margin:16px 0;font-size:14px">
-      <tr><td style="color:#64748b;border-bottom:1px solid #e2e8f0;width:120px"><strong>Reference</strong></td><td style="color:#0D1B2A;border-bottom:1px solid #e2e8f0;font-weight:700">${loadRef}</td></tr>
-      <tr><td style="color:#64748b;border-bottom:1px solid #e2e8f0"><strong>Origin</strong></td><td style="color:#0D1B2A;border-bottom:1px solid #e2e8f0">${origin}</td></tr>
-      <tr><td style="color:#64748b;border-bottom:1px solid #e2e8f0"><strong>Destination</strong></td><td style="color:#0D1B2A;border-bottom:1px solid #e2e8f0">${dest}</td></tr>
-      <tr><td style="color:#64748b"><strong>Due By</strong></td><td style="color:#0D1B2A;font-weight:600">${dueTime}</td></tr>
+    <table width="100%" cellpadding="10" cellspacing="0" style="background:#f8fafc;border-radius:8px;border:1px solid #E2EAF2;margin:16px 0;font-size:14px">
+      <tr><td style="color:#64748b;border-bottom:1px solid #E2EAF2;width:120px"><strong>Reference</strong></td><td style="color:#0A2540;border-bottom:1px solid #E2EAF2;font-weight:700">${loadRef}</td></tr>
+      <tr><td style="color:#64748b;border-bottom:1px solid #E2EAF2"><strong>Origin</strong></td><td style="color:#0A2540;border-bottom:1px solid #E2EAF2">${origin}</td></tr>
+      <tr><td style="color:#64748b;border-bottom:1px solid #E2EAF2"><strong>Destination</strong></td><td style="color:#0A2540;border-bottom:1px solid #E2EAF2">${dest}</td></tr>
+      <tr><td style="color:#64748b"><strong>Due By</strong></td><td style="color:#0A2540;font-weight:600">${dueTime}</td></tr>
     </table>
     <p style="color:#475569;font-size:15px;line-height:1.6;margin:0 0 8px">
       Timely check calls help us ensure smooth delivery and keep all parties informed. Thank you for your cooperation.
@@ -223,13 +232,13 @@ export function checkCallRequestEmail(carrierName: string, loadRef: string, orig
 
 export function checkCallOverdueEmail(brokerName: string, loadRef: string, carrierName: string, lastCallTime: string): string {
   return wrapper(`
-    <h2 style="margin:0 0 16px;color:#0D1B2A;font-size:20px">Check Call Overdue</h2>
+    <h2 style="margin:0 0 16px;color:#0A2540;font-size:20px">Check Call Overdue</h2>
     <p style="color:#dc2626;font-size:15px;line-height:1.6;margin:0 0 16px;font-weight:600">
       Attention ${brokerName}: A check call for load <strong>${loadRef}</strong> is overdue and requires immediate attention.
     </p>
-    <table width="100%" cellpadding="10" cellspacing="0" style="background:#f8fafc;border-radius:8px;border:1px solid #e2e8f0;margin:16px 0;font-size:14px">
-      <tr><td style="color:#64748b;border-bottom:1px solid #e2e8f0;width:120px"><strong>Reference</strong></td><td style="color:#0D1B2A;border-bottom:1px solid #e2e8f0;font-weight:700">${loadRef}</td></tr>
-      <tr><td style="color:#64748b;border-bottom:1px solid #e2e8f0"><strong>Carrier</strong></td><td style="color:#0D1B2A;border-bottom:1px solid #e2e8f0;font-weight:600">${carrierName}</td></tr>
+    <table width="100%" cellpadding="10" cellspacing="0" style="background:#f8fafc;border-radius:8px;border:1px solid #E2EAF2;margin:16px 0;font-size:14px">
+      <tr><td style="color:#64748b;border-bottom:1px solid #E2EAF2;width:120px"><strong>Reference</strong></td><td style="color:#0A2540;border-bottom:1px solid #E2EAF2;font-weight:700">${loadRef}</td></tr>
+      <tr><td style="color:#64748b;border-bottom:1px solid #E2EAF2"><strong>Carrier</strong></td><td style="color:#0A2540;border-bottom:1px solid #E2EAF2;font-weight:600">${carrierName}</td></tr>
       <tr><td style="color:#64748b"><strong>Last Check Call</strong></td><td style="color:#dc2626;font-weight:600">${lastCallTime}</td></tr>
     </table>
     <p style="color:#475569;font-size:15px;line-height:1.6;margin:0 0 8px">
@@ -241,14 +250,14 @@ export function checkCallOverdueEmail(brokerName: string, loadRef: string, carri
 
 export function podRequestEmail(carrierName: string, loadRef: string, origin: string, dest: string): string {
   return wrapper(`
-    <h2 style="margin:0 0 16px;color:#0D1B2A;font-size:20px">POD Required</h2>
+    <h2 style="margin:0 0 16px;color:#0A2540;font-size:20px">POD Required</h2>
     <p style="color:#475569;font-size:15px;line-height:1.6;margin:0 0 16px">
-      Hi ${carrierName}, our records indicate that load <strong style="color:#0D1B2A">${loadRef}</strong> has been delivered. Please upload your Proof of Delivery documents at your earliest convenience.
+      Hi ${carrierName}, our records indicate that load <strong style="color:#0A2540">${loadRef}</strong> has been delivered. Please upload your Proof of Delivery documents at your earliest convenience.
     </p>
-    <table width="100%" cellpadding="10" cellspacing="0" style="background:#f8fafc;border-radius:8px;border:1px solid #e2e8f0;margin:16px 0;font-size:14px">
-      <tr><td style="color:#64748b;border-bottom:1px solid #e2e8f0;width:120px"><strong>Reference</strong></td><td style="color:#0D1B2A;border-bottom:1px solid #e2e8f0;font-weight:700">${loadRef}</td></tr>
-      <tr><td style="color:#64748b;border-bottom:1px solid #e2e8f0"><strong>Origin</strong></td><td style="color:#0D1B2A;border-bottom:1px solid #e2e8f0">${origin}</td></tr>
-      <tr><td style="color:#64748b"><strong>Destination</strong></td><td style="color:#0D1B2A">${dest}</td></tr>
+    <table width="100%" cellpadding="10" cellspacing="0" style="background:#f8fafc;border-radius:8px;border:1px solid #E2EAF2;margin:16px 0;font-size:14px">
+      <tr><td style="color:#64748b;border-bottom:1px solid #E2EAF2;width:120px"><strong>Reference</strong></td><td style="color:#0A2540;border-bottom:1px solid #E2EAF2;font-weight:700">${loadRef}</td></tr>
+      <tr><td style="color:#64748b;border-bottom:1px solid #E2EAF2"><strong>Origin</strong></td><td style="color:#0A2540;border-bottom:1px solid #E2EAF2">${origin}</td></tr>
+      <tr><td style="color:#64748b"><strong>Destination</strong></td><td style="color:#0A2540">${dest}</td></tr>
     </table>
     <p style="color:#475569;font-size:15px;line-height:1.6;margin:0 0 8px">
       Prompt submission of POD documents ensures timely invoice processing and payment. Thank you.
@@ -259,16 +268,16 @@ export function podRequestEmail(carrierName: string, loadRef: string, origin: st
 
 export function deliveryConfirmationEmail(recipientName: string, loadRef: string, origin: string, dest: string, deliveredAt: string, signedBy: string): string {
   return wrapper(`
-    <h2 style="margin:0 0 16px;color:#0D1B2A;font-size:20px">Delivery Confirmation</h2>
+    <h2 style="margin:0 0 16px;color:#0A2540;font-size:20px">Delivery Confirmation</h2>
     <p style="color:#475569;font-size:15px;line-height:1.6;margin:0 0 16px">
       Hi ${recipientName}, we are pleased to confirm that your shipment has been successfully delivered.
     </p>
-    <table width="100%" cellpadding="10" cellspacing="0" style="background:#f8fafc;border-radius:8px;border:1px solid #e2e8f0;margin:16px 0;font-size:14px">
-      <tr><td style="color:#64748b;border-bottom:1px solid #e2e8f0;width:120px"><strong>Reference</strong></td><td style="color:#0D1B2A;border-bottom:1px solid #e2e8f0;font-weight:700">${loadRef}</td></tr>
-      <tr><td style="color:#64748b;border-bottom:1px solid #e2e8f0"><strong>Origin</strong></td><td style="color:#0D1B2A;border-bottom:1px solid #e2e8f0">${origin}</td></tr>
-      <tr><td style="color:#64748b;border-bottom:1px solid #e2e8f0"><strong>Destination</strong></td><td style="color:#0D1B2A;border-bottom:1px solid #e2e8f0">${dest}</td></tr>
-      <tr><td style="color:#64748b;border-bottom:1px solid #e2e8f0"><strong>Delivered At</strong></td><td style="color:#0D1B2A;border-bottom:1px solid #e2e8f0;font-weight:600">${deliveredAt}</td></tr>
-      <tr><td style="color:#64748b"><strong>Signed By</strong></td><td style="color:#C8963E;font-weight:700">${signedBy}</td></tr>
+    <table width="100%" cellpadding="10" cellspacing="0" style="background:#f8fafc;border-radius:8px;border:1px solid #E2EAF2;margin:16px 0;font-size:14px">
+      <tr><td style="color:#64748b;border-bottom:1px solid #E2EAF2;width:120px"><strong>Reference</strong></td><td style="color:#0A2540;border-bottom:1px solid #E2EAF2;font-weight:700">${loadRef}</td></tr>
+      <tr><td style="color:#64748b;border-bottom:1px solid #E2EAF2"><strong>Origin</strong></td><td style="color:#0A2540;border-bottom:1px solid #E2EAF2">${origin}</td></tr>
+      <tr><td style="color:#64748b;border-bottom:1px solid #E2EAF2"><strong>Destination</strong></td><td style="color:#0A2540;border-bottom:1px solid #E2EAF2">${dest}</td></tr>
+      <tr><td style="color:#64748b;border-bottom:1px solid #E2EAF2"><strong>Delivered At</strong></td><td style="color:#0A2540;border-bottom:1px solid #E2EAF2;font-weight:600">${deliveredAt}</td></tr>
+      <tr><td style="color:#64748b"><strong>Signed By</strong></td><td style="color:#BA7517;font-weight:700">${signedBy}</td></tr>
     </table>
     <p style="color:#475569;font-size:15px;line-height:1.6;margin:0 0 8px">
       Thank you for choosing Silk Route Logistics. If you have any questions about this delivery, please don't hesitate to reach out.
@@ -279,15 +288,15 @@ export function deliveryConfirmationEmail(recipientName: string, loadRef: string
 
 export function carrierLocationUpdateEmail(brokerName: string, loadRef: string, carrierName: string, city: string, state: string, etaHours: string): string {
   return wrapper(`
-    <h2 style="margin:0 0 16px;color:#0D1B2A;font-size:20px">Carrier Location Update</h2>
+    <h2 style="margin:0 0 16px;color:#0A2540;font-size:20px">Carrier Location Update</h2>
     <p style="color:#475569;font-size:15px;line-height:1.6;margin:0 0 16px">
-      Hi ${brokerName}, a location update has been received for load <strong style="color:#0D1B2A">${loadRef}</strong>.
+      Hi ${brokerName}, a location update has been received for load <strong style="color:#0A2540">${loadRef}</strong>.
     </p>
-    <table width="100%" cellpadding="10" cellspacing="0" style="background:#f8fafc;border-radius:8px;border:1px solid #e2e8f0;margin:16px 0;font-size:14px">
-      <tr><td style="color:#64748b;border-bottom:1px solid #e2e8f0;width:120px"><strong>Reference</strong></td><td style="color:#0D1B2A;border-bottom:1px solid #e2e8f0;font-weight:700">${loadRef}</td></tr>
-      <tr><td style="color:#64748b;border-bottom:1px solid #e2e8f0"><strong>Carrier</strong></td><td style="color:#0D1B2A;border-bottom:1px solid #e2e8f0;font-weight:600">${carrierName}</td></tr>
-      <tr><td style="color:#64748b;border-bottom:1px solid #e2e8f0"><strong>Current Location</strong></td><td style="color:#C8963E;border-bottom:1px solid #e2e8f0;font-weight:700">${city}, ${state}</td></tr>
-      <tr><td style="color:#64748b"><strong>ETA</strong></td><td style="color:#0D1B2A;font-weight:600">${etaHours} hours</td></tr>
+    <table width="100%" cellpadding="10" cellspacing="0" style="background:#f8fafc;border-radius:8px;border:1px solid #E2EAF2;margin:16px 0;font-size:14px">
+      <tr><td style="color:#64748b;border-bottom:1px solid #E2EAF2;width:120px"><strong>Reference</strong></td><td style="color:#0A2540;border-bottom:1px solid #E2EAF2;font-weight:700">${loadRef}</td></tr>
+      <tr><td style="color:#64748b;border-bottom:1px solid #E2EAF2"><strong>Carrier</strong></td><td style="color:#0A2540;border-bottom:1px solid #E2EAF2;font-weight:600">${carrierName}</td></tr>
+      <tr><td style="color:#64748b;border-bottom:1px solid #E2EAF2"><strong>Current Location</strong></td><td style="color:#BA7517;border-bottom:1px solid #E2EAF2;font-weight:700">${city}, ${state}</td></tr>
+      <tr><td style="color:#64748b"><strong>ETA</strong></td><td style="color:#0A2540;font-weight:600">${etaHours} hours</td></tr>
     </table>
     <p style="color:#475569;font-size:15px;line-height:1.6;margin:0 0 8px">
       You can track this load in real time from your dashboard.
@@ -298,17 +307,17 @@ export function carrierLocationUpdateEmail(brokerName: string, loadRef: string, 
 
 export function loadOpportunityEmail(carrierName: string, loadRef: string, origin: string, dest: string, pickup: string, rate: string, equipmentType: string): string {
   return wrapper(`
-    <h2 style="margin:0 0 16px;color:#0D1B2A;font-size:20px">New Load Opportunity</h2>
+    <h2 style="margin:0 0 16px;color:#0A2540;font-size:20px">New Load Opportunity</h2>
     <p style="color:#475569;font-size:15px;line-height:1.6;margin:0 0 16px">
       Hi ${carrierName}, a new load matching your lane preferences is available on the Silk Route Logistics Caravan board. Act fast to secure this opportunity.
     </p>
-    <table width="100%" cellpadding="10" cellspacing="0" style="background:#f8fafc;border-radius:8px;border:1px solid #e2e8f0;margin:16px 0;font-size:14px">
-      <tr><td style="color:#64748b;border-bottom:1px solid #e2e8f0;width:120px"><strong>Reference</strong></td><td style="color:#0D1B2A;border-bottom:1px solid #e2e8f0;font-weight:700">${loadRef}</td></tr>
-      <tr><td style="color:#64748b;border-bottom:1px solid #e2e8f0"><strong>Origin</strong></td><td style="color:#0D1B2A;border-bottom:1px solid #e2e8f0">${origin}</td></tr>
-      <tr><td style="color:#64748b;border-bottom:1px solid #e2e8f0"><strong>Destination</strong></td><td style="color:#0D1B2A;border-bottom:1px solid #e2e8f0">${dest}</td></tr>
-      <tr><td style="color:#64748b;border-bottom:1px solid #e2e8f0"><strong>Pickup</strong></td><td style="color:#0D1B2A;border-bottom:1px solid #e2e8f0">${pickup}</td></tr>
-      <tr><td style="color:#64748b;border-bottom:1px solid #e2e8f0"><strong>Equipment</strong></td><td style="color:#0D1B2A;border-bottom:1px solid #e2e8f0;font-weight:600">${equipmentType}</td></tr>
-      <tr><td style="color:#64748b"><strong>Rate</strong></td><td style="color:#C8963E;font-weight:700;font-size:16px">${rate}</td></tr>
+    <table width="100%" cellpadding="10" cellspacing="0" style="background:#f8fafc;border-radius:8px;border:1px solid #E2EAF2;margin:16px 0;font-size:14px">
+      <tr><td style="color:#64748b;border-bottom:1px solid #E2EAF2;width:120px"><strong>Reference</strong></td><td style="color:#0A2540;border-bottom:1px solid #E2EAF2;font-weight:700">${loadRef}</td></tr>
+      <tr><td style="color:#64748b;border-bottom:1px solid #E2EAF2"><strong>Origin</strong></td><td style="color:#0A2540;border-bottom:1px solid #E2EAF2">${origin}</td></tr>
+      <tr><td style="color:#64748b;border-bottom:1px solid #E2EAF2"><strong>Destination</strong></td><td style="color:#0A2540;border-bottom:1px solid #E2EAF2">${dest}</td></tr>
+      <tr><td style="color:#64748b;border-bottom:1px solid #E2EAF2"><strong>Pickup</strong></td><td style="color:#0A2540;border-bottom:1px solid #E2EAF2">${pickup}</td></tr>
+      <tr><td style="color:#64748b;border-bottom:1px solid #E2EAF2"><strong>Equipment</strong></td><td style="color:#0A2540;border-bottom:1px solid #E2EAF2;font-weight:600">${equipmentType}</td></tr>
+      <tr><td style="color:#64748b"><strong>Rate</strong></td><td style="color:#BA7517;font-weight:700;font-size:16px">${rate}</td></tr>
     </table>
     ${button("View Load Details", "https://silkroutelogistics.ai/carrier/load-board")}
   `);

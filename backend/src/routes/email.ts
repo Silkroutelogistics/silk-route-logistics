@@ -47,12 +47,12 @@ router.post("/send", async (req: any, res: Response) => {
 
   // Email signature block
   const signatureHtml = `
-    <table cellpadding="0" cellspacing="0" style="margin-top:24px;border-top:1px solid #e2e8f0;padding-top:16px">
+    <table cellpadding="0" cellspacing="0" style="margin-top:24px;border-top:1px solid #E2EAF2;padding-top:16px">
       <tr><td style="font-size:14px;color:#475569;line-height:1.6">
         <div style="color:#475569;font-size:14px">Thanks,</div>
-        <div style="color:#0D1B2A;font-size:15px;font-weight:700;margin-top:4px">${senderFullName}</div>
-        <div style="color:#C8963E;font-size:13px;font-weight:600">Account Executive</div>
-        <div style="color:#0D1B2A;font-size:13px;font-weight:600;margin-top:2px">Silk Route Logistics</div>
+        <div style="color:#0A2540;font-size:15px;font-weight:700;margin-top:4px">${senderFullName}</div>
+        <div style="color:#BA7517;font-size:13px;font-weight:600">Account Executive</div>
+        <div style="color:#0A2540;font-size:13px;font-weight:600;margin-top:2px">Silk Route Logistics</div>
         ${senderPhone ? `<div style="color:#64748B;font-size:12px;margin-top:4px">&#128222; ${senderPhone}</div>` : ""}
         <div style="color:#64748B;font-size:12px">&#9993; ${senderEmail}</div>
         <div style="margin-top:10px"><img src="${logoUrl}" alt="Silk Route Logistics" width="120" style="border-radius:6px"></div>
@@ -81,15 +81,16 @@ router.post("/send", async (req: any, res: Response) => {
   <table width="100%" cellpadding="0" cellspacing="0" style="background:#f1f5f9;padding:24px 0">
     <tr><td align="center">
       <table width="600" cellpadding="0" cellspacing="0" style="background:#fff;border-radius:8px;overflow:hidden">
-        <tr><td style="background:#0D1B2A;padding:24px 32px;text-align:center">
-          <h1 style="margin:0;color:#C8963E;font-size:22px;font-weight:700">Silk Route Logistics</h1>
+        <tr><td style="background:#0A2540;padding:24px 32px;text-align:center">
+          <h1 style="margin:0;color:#BA7517;font-size:22px;font-weight:700">Silk Route Logistics</h1>
         </td></tr>
         <tr><td style="padding:32px;color:#475569;font-size:15px;line-height:1.6">
           ${customBody}
           ${signatureHtml}
         </td></tr>
-        <tr><td style="background:#f8fafc;padding:20px 32px;border-top:1px solid #e2e8f0;text-align:center;font-size:12px;color:#94a3b8">
-          Silk Route Logistics &middot; Moving Freight, Building Futures
+        <tr><td style="background:#f8fafc;padding:20px 32px;border-top:1px solid #E2EAF2;text-align:center">
+          <p style="margin:0;font-size:12px;color:#94a3b8">Silk Route Logistics &middot; Where Trust Travels.</p>
+          <p style="margin:4px 0 0;font-size:11px;color:#cbd5e1">Questions? Reach us at <a href="mailto:operations@silkroutelogistics.ai" style="color:#BA7517;text-decoration:none">operations@silkroutelogistics.ai</a></p>
         </td></tr>
       </table>
     </td></tr>

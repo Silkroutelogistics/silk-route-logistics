@@ -10403,7 +10403,38 @@
 //   migration. Pre-commit gates: full 4-gate set per Sub-pattern 11
 //   second-fire canonical (backend tsc + backend vitest + frontend
 //   tsc + frontend next build).
-export const SRL_VERSION = "3.8.ake";
+// v3.8.akf — §13.3 Item 87 brand chrome consolidation +
+//   tagline + reply-to fix on templates/emailTemplates.ts +
+//   routes/email.ts inline signature/wrapper. Pairs with
+//   v3.8.abc Sprint 45-RC-PRE Path α that closed Item 88
+//   (emailService.ts body chrome). This is the sibling work
+//   that wasn't bundled at the time.
+//   Three sweep-replacements (same canonical as Sprint 45-RC-PRE D2):
+//   * #0D1B2A → #0A2540 (navy) — 23 occurrences across both files.
+//   * #C8963E → #BA7517 (gold-dark CTA emphasis) — 18 occurrences.
+//   * #e2e8f0 → #E2EAF2 (border/divider) — 14 occurrences.
+//   Footer text fixes:
+//   * "This is an automated message. Please do not reply directly."
+//     replaced with "Questions? Reach us at operations@silkroutelogistics.ai".
+//     Pre-akf footer contradicted Q1 reply-to ratification (Sprint 45a)
+//     where operations@ is the canonical reply target. Each caller's
+//     replyTo override (sendEmail() options) still controls
+//     per-context routing — Lead Hunter outreach still sets
+//     replyTo=whaider@ per §3.10, this footer just stops actively
+//     telling recipients not to reply at all.
+//   * Tagline "Moving Freight, Building Futures" replaced with
+//     "Where Trust Travels." (§1 canonical). The retired tagline
+//     appeared on both the templates/emailTemplates.ts shared
+//     footer and the routes/email.ts custom-body wrapper footer.
+//   Status colors (red/green/amber tailwind) deliberately preserved
+//   per Sprint 45-RC-PRE D2 ratification — functional legibility of
+//   alert signals beats brand-token consistency on status semantics.
+//   Slate scale (#475569, #64748b, #94a3b8, #cbd5e1, #f1f5f9, #f8fafc)
+//   also preserved — not in Sprint 45-RC-PRE's canonical sweep list.
+//   ~60 LOC net across 2 backend files + version bump. No schema
+//   migration; no behavior change beyond brand token alignment + 1
+//   footer copy update.
+export const SRL_VERSION = "3.8.akf";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
