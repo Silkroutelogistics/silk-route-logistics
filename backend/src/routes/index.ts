@@ -71,7 +71,6 @@ import quoteApproveRoutes from "./quoteApprove"; // v3.8.akn Item 180.4 — PUBL
 import externalIntegrations from "./externalIntegrations";
 import contractRateRoutes from "./contractRates";
 import rfpRoutes from "./rfp";
-import addressBookRoutes from "./addressBook";
 import routingGuideRoutes from "./routingGuide";
 import exceptionConfigRoutes from "./exceptionConfig";
 import dockScheduleRoutes from "./dockSchedule";
@@ -246,7 +245,6 @@ router.use("/", loadBidsRoutes); // /loadboard, /loads/:id/bids, /loads/:id/note
 router.use("/external-integrations", externalIntegrations);
 router.use("/contract-rates", contractRateRoutes);
 router.use("/rfps", rfpRoutes);
-router.use("/address-book", addressBookRoutes);
 router.use("/routing-guides", routingGuideRoutes);
 router.use("/exceptions", exceptionConfigRoutes);
 router.use("/dock-schedules", dockScheduleRoutes);

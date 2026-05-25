@@ -10812,6 +10812,52 @@
 //   180.6+180.7+180.8+180.9+180.10+180.11 done; 180.3 closed-by-
 //   discovery; banked 180.6.b CRM admin edit UI for the new fields).
 //
+// v3.8.akr — §13.3 Item 8.5 close: AddressBook dead-model deletion.
+//   Phase A audit confirmed the model is structurally orphaned — zero
+//   frontend consumers (grep frontend/src/ returned only 2 VersionFooter
+//   comment mentions), zero backend service/controller consumers (grep
+//   backend/src/ returned only the route file's own internal refs),
+//   zero seed/script references, zero FKs from other models. Mounted at
+//   /api/address-book/* with ADMIN/CEO/BROKER/DISPATCH/OPERATIONS authz
+//   but never wired into any picker. usageCount + lastUsedAt fields
+//   stayed at zero forever because nothing called PATCH /:id/use.
+//   CustomerFacility (via FacilityPicker) is the active canonical
+//   address primitive — §13.3 Items 8.2.2 + 8.2.3 closures (v3.8.uu/vv)
+//   shipped operatingHours + edit + contactEmail; Order Builder
+//   Section 2 (per Item 4 retroactive closure) auto-fills from
+//   CustomerFacility.contactName/contactPhone on facility selection.
+//   Wiring AddressBook into Order Builder origin/dest would create the
+//   exact parallel-endpoint class banked at Items 40 + 158.
+//   Per default-assume-removal posture when no consumers (user-memory
+//   feedback_dead_model_removal precedent) + Sub-pattern 6 sub-rule c
+//   verification (audits-can-be-wrong gate cleared: 13 surface refs
+//   all classified as either route-self / schema-self / version-history
+//   comments / archived-wiki docs — no active consumers anywhere).
+//   Changes (atomic per §3.3):
+//   * DELETED backend/src/routes/addressBook.ts (147 LOC, 6 endpoints
+//     GET / POST / POST bulk / PATCH / PATCH /:id/use / DELETE).
+//   * REMOVED import addressBookRoutes from routes/index.ts:74 +
+//     router.use("/address-book", ...) mount at routes/index.ts:248.
+//   * REMOVED model AddressBook { ... } block from schema.prisma
+//     (29 lines including section divider). Indexes auto-drop with
+//     the table.
+//   * NEW migration prisma/migrations/20260525150000_drop_address_book
+//     _dead_model/migration.sql — single DROP TABLE IF EXISTS
+//     "public"."address_book" CASCADE; statement. Manual-authored per
+//     §2.2 (avoid prisma migrate dev against prod-pointed
+//     DATABASE_URL). Render's migrate deploy applies on next push.
+//   ~180 LOC removed across 3 files + 1 small migration + version bump.
+//   Pre-commit gates per Sub-pattern 11 (CI parity): prisma generate
+//   clean (model removal regenerates client without AddressBook type),
+//   backend tsc --noEmit clean, backend npm test clean, frontend tsc
+//   + next build clean.
+//   §13.3 Item 8.5 LOG OPEN → CLOSED (dead-model deletion path chosen
+//   over wire-up-the-picker path).
+//   2 banked items remain from the 5-item verified-pending list:
+//   Item 178 (drawer multi-line freight edit — architectural decision
+//   pending) + Item 180.6.b (CRM admin edit UI for
+//   defaultAccessorialRates + minMarginPercent, ~80-100 LOC).
+//
 // v3.8.akq — §13.3 Item 87 followup + Item 63 P3-2 (vocab + chrome
 //   consistency bundle). Two tiny token+vocabulary sweeps that share
 //   the "consistency across surfaces" theme; bundled in one atomic.
@@ -10906,7 +10952,7 @@
 //   in untracked WIP backend/src/routes/quoteApprove.ts left in place
 //   per user direction — committed by explicit path only, not staged).
 //   §13.3 Item 191 LOG OPEN; closed at v3.8.akq when Phase 2 ships.
-export const SRL_VERSION = "3.8.akq";
+export const SRL_VERSION = "3.8.akr";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
