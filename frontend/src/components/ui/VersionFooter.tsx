@@ -10681,7 +10681,45 @@
 //   §13.3 Item 180.1 LOG OPEN → CLOSED.
 //   §13.3 Item 180.5 LOG OPEN → CLOSED.
 //   §13.3 Item 180.8 LOG OPEN → CLOSED.
-export const SRL_VERSION = "3.8.akl";
+// v3.8.akm — §13.3 Item 180.2 Save-as-template for recurring lanes.
+//   Different from akl Item 180.1 duplicate-this-order (one-shot
+//   clone): templates are NAMED + reusable indefinitely. AE creates a
+//   template from a current draft (e.g. "BKN — Detroit→Chicago
+//   weekly"), then future drafts can prefill from any saved template.
+//   Schema:
+//   * NEW OrderTemplate model: id, name (varchar 120), customerId,
+//     formData JSONB, createdById, createdAt, updatedAt. Unique
+//     (customerId, name). ON DELETE CASCADE on Customer relation.
+//   * NEW migration 20260525083000_add_order_template/migration.sql
+//     (manual per §2.2; DIRECT_URL split per v3.8.ajg makes migration
+//     P1002-risk-free).
+//   Backend (routes/orders.ts):
+//   * NEW GET /orders/templates — list templates, optional
+//     ?customerId filter.
+//   * NEW POST /orders/templates — create from current formData.
+//     Unique-constraint P2002 surfaced as 409 with friendly message.
+//   * NEW DELETE /orders/templates/:id — remove.
+//   * IMPORTANT — registered ABOVE the dynamic /:id route so
+//     /orders/templates doesn't get shadowed by /:id matching
+//     :id="templates". Express resolves in registration order.
+//   Frontend (app/dashboard/orders/page.tsx):
+//   * NEW TemplatePicker subcomponent surfaces customer-scoped
+//     templates beneath the selected customer card in Section 1.
+//     Click template → applyTemplate(formData) prefills form minus
+//     dated fields (pickup/delivery, rate) which are per-use values.
+//     Hover any template to reveal Trash icon for delete.
+//   * NEW templatesQuery TanStack hook + applyTemplate state setter
+//     + saveAsTemplate mutation.
+//   * NEW Save-as-template button in footer button row (BookmarkPlus
+//     icon) opens a modal for naming the new template.
+//   * Save-as-template modal — sandboxed input with Enter-to-submit,
+//     P2002 409 error surfacing for duplicate names.
+//   ~310 LOC net (1 new schema model + 1 migration + 3 new endpoints
+//   + 1 frontend subcomponent + 2 new mutations + 1 modal + 1 button
+//   + version bump). Migration-bearing deploy (6th in the streak: ajv
+//   ajw ajx ajy ajz ajh-class + akm).
+//   §13.3 Item 180.2 LOG OPEN → CLOSED.
+export const SRL_VERSION = "3.8.akm";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

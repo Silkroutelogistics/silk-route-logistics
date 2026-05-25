@@ -1499,6 +1499,32 @@ model LoadTender {
 //   draft → quote_sent → quote_approved → order_created → load_created
 //   cancelled (from any)
 
+// v3.8.akm §13.3 Item 180.2 — Named, reusable Order templates.
+// Different from Item 180.1 duplicate-this-order (one-shot clone):
+// templates are NAMED + reusable indefinitely. AE creates a template
+// from a current draft (e.g. "BKN — Detroit→Chicago weekly"), then
+// future drafts can prefill from any saved template. Stores the same
+// formData JSONB shape that Order persists so prefill is a 1:1 copy
+// minus dated fields (pickup/delivery, rate) which AE adjusts per use.
+//
+// customerId is REQUIRED because a template's value is per-customer
+// (BKN's lane setup ≠ Acme's lane setup). ON DELETE CASCADE on the
+// Customer relation so deleting a customer cleans up their templates.
+model OrderTemplate {
+  id          String    @id @default(cuid())
+  name        String    @db.VarChar(120)
+  customerId  String    @map("customer_id")
+  customer    Customer  @relation("CustomerOrderTemplates", fields: [customerId], references: [id], onDelete: Cascade)
+  formData    Json      @default("{}") @map("form_data")
+  createdById String?   @map("created_by_id")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  @@unique([customerId, name])
+  @@index([customerId])
+  @@map("order_templates")
+}
+
 model Order {
   id              String    @id @default(cuid())
   orderNumber     String    @unique @default(cuid()) @map("order_number")
@@ -2148,6 +2174,9 @@ model Customer {
 
   // Order Builder v3.5
   orders Order[]
+
+  // v3.8.akm §13.3 Item 180.2 — Named, reusable Order templates per customer.
+  orderTemplates OrderTemplate[] @relation("CustomerOrderTemplates")
 
   // AI Learning
   aiIntelligence CustomerIntelligence? @relation("CustomerIntelligence")

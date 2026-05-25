@@ -48,6 +48,88 @@ router.get("/", authorize(...AE_ROLES) as any, async (req: AuthRequest, res: Res
   res.json({ orders });
 });
 
+// ─── Order Templates (v3.8.akm §13.3 Item 180.2) ──────────
+// Named + reusable formData presets per customer for repeat-lane
+// workflows. Different from POST /:id/duplicate (one-shot clone):
+// templates persist indefinitely + show up in the Section 1 picker.
+// IMPORTANT — these routes are registered BEFORE the dynamic /:id
+// route below because Express resolves in registration order; if
+// /templates landed AFTER /:id, GET /orders/templates would match
+// /:id with :id="templates" and 404.
+
+// GET /orders/templates — list templates. Optional ?customerId filter.
+router.get("/templates", authorize(...AE_ROLES) as any, async (req: AuthRequest, res: Response) => {
+  try {
+    const customerId = (req.query.customerId as string | undefined) || undefined;
+    const templates = await prisma.orderTemplate.findMany({
+      where: customerId ? { customerId } : undefined,
+      include: { customer: { select: { id: true, name: true } } },
+      orderBy: [{ customer: { name: "asc" } }, { name: "asc" }],
+      take: 200,
+    });
+    res.json({ templates });
+  } catch (err) {
+    log.error({ err }, "[OrderTemplates] list error");
+    res.status(500).json({ error: "Failed to list templates" });
+  }
+});
+
+// POST /orders/templates — create a template from current formData snapshot.
+router.post("/templates", authorize(...AE_ROLES) as any, async (req: AuthRequest, res: Response) => {
+  try {
+    const { name, customerId, formData } = req.body ?? {};
+    if (!name || typeof name !== "string" || !name.trim()) {
+      return res.status(400).json({ error: "Template name required" });
+    }
+    if (!customerId || typeof customerId !== "string") {
+      return res.status(400).json({ error: "customerId required" });
+    }
+    const trimmedName = name.trim().slice(0, 120);
+
+    // Verify customer exists. Schema CASCADE handles future delete cleanup
+    // but a 404-shape error is friendlier than a P2003 FK violation.
+    const customer = await prisma.customer.findUnique({ where: { id: customerId }, select: { id: true } });
+    if (!customer) return res.status(404).json({ error: "Customer not found" });
+
+    // Unique (customerId, name) constraint per schema — surface P2002 as
+    // a friendly 409 so the UI can prompt for a different name instead
+    // of showing a 500.
+    try {
+      const tpl = await prisma.orderTemplate.create({
+        data: {
+          name: trimmedName,
+          customerId,
+          formData: (formData ?? {}) as any,
+          createdById: req.user!.id,
+        },
+      });
+      res.status(201).json({ template: tpl });
+    } catch (err: any) {
+      if (err?.code === "P2002") {
+        return res.status(409).json({ error: `A template named "${trimmedName}" already exists for this customer. Pick a different name.` });
+      }
+      throw err;
+    }
+  } catch (err) {
+    log.error({ err }, "[OrderTemplates] create error");
+    res.status(500).json({ error: "Failed to create template" });
+  }
+});
+
+// DELETE /orders/templates/:id — remove a template.
+router.delete("/templates/:id", authorize(...AE_ROLES) as any, async (req: AuthRequest, res: Response) => {
+  try {
+    await prisma.orderTemplate.delete({ where: { id: req.params.id } });
+    res.json({ success: true });
+  } catch (err: any) {
+    if (err?.code === "P2025") {
+      return res.status(404).json({ error: "Template not found" });
+    }
+    log.error({ err, id: req.params.id }, "[OrderTemplates] delete error");
+    res.status(500).json({ error: "Failed to delete template" });
+  }
+});
+
 router.get("/:id", authorize(...AE_ROLES) as any, async (req: AuthRequest, res: Response) => {
   const order = await prisma.order.findUnique({
     where: { id: req.params.id },

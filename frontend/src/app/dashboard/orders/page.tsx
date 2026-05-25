@@ -9,6 +9,8 @@ import {
   Plus, X, Send, Save, Flame, FileText,
   // v3.8.akl §13.3 Items 180.1 + 180.5 — Duplicate button + Preview button.
   Copy, Eye,
+  // v3.8.akm §13.3 Item 180.2 — Save-as-template + Template picker icons.
+  BookmarkPlus, Bookmark, Trash2,
 } from "lucide-react";
 import { AddressAutocomplete } from "@/components/ui/AddressAutocomplete";
 import { CarrierEngagementDrawer } from "@/components/drawer/CarrierEngagementDrawer";
@@ -447,6 +449,69 @@ export default function OrderBuilderPage() {
     },
     onSuccess: (data) => {
       setQuotePreview(data);
+    },
+  });
+
+  // v3.8.akm §13.3 Item 180.2 — Named, reusable Order templates.
+  // Templates persist indefinitely (different from Item 180.1
+  // duplicate-this-order which is a one-shot clone). AE picks a saved
+  // template from the Section 1 picker → form prefills from
+  // template.formData minus dated fields. "Save as template…" action
+  // in the footer button row creates a new template from the current
+  // formData snapshot.
+  const templatesQuery = useQuery<{ templates: Array<{ id: string; name: string; customerId: string; formData: Partial<OrderForm>; customer?: { id: string; name: string } | null }> }>({
+    queryKey: ["order-templates", selectedCustomer?.id],
+    queryFn: async () => {
+      const qs = selectedCustomer?.id ? `?customerId=${selectedCustomer.id}` : "";
+      return (await api.get(`/orders/templates${qs}`)).data;
+    },
+    enabled: !!selectedCustomer?.id,
+  });
+
+  const applyTemplate = (formData: Partial<OrderForm>) => {
+    setForm((f) => {
+      const merged: OrderForm = {
+        ...f,
+        ...formData,
+        // Always reset dated fields — template carries the structural
+        // shape (lane, freight, refs, instructions) but never the
+        // operational dates / rates which are per-use values. AE
+        // re-enters these for the current load.
+        pickupDate: "",
+        deliveryDate: "",
+        pickupTimeStart: "",
+        pickupTimeEnd: "",
+        deliveryTimeStart: "",
+        deliveryTimeEnd: "",
+        customerRate: "",
+        targetCost: "",
+        bolNumber: f.bolNumber, // keep the previewed-next-BOL number; template doesn't carry one
+      };
+      // Customer linkage was set when AE picked the customer; template
+      // doesn't change it. lineItems comes from formData if present.
+      if (!Array.isArray(merged.lineItems) || merged.lineItems.length === 0) {
+        merged.lineItems = [emptyLineItem()];
+      }
+      return merged;
+    });
+  };
+
+  const [showSaveTemplateModal, setShowSaveTemplateModal] = useState(false);
+  const [templateNameInput, setTemplateNameInput] = useState("");
+  const saveAsTemplate = useMutation({
+    mutationFn: async () => {
+      if (!selectedCustomer?.id) throw new Error("Pick a customer first");
+      if (!templateNameInput.trim()) throw new Error("Template name required");
+      return (await api.post(`/orders/templates`, {
+        name: templateNameInput.trim(),
+        customerId: selectedCustomer.id,
+        formData: form,
+      })).data;
+    },
+    onSuccess: () => {
+      setShowSaveTemplateModal(false);
+      setTemplateNameInput("");
+      templatesQuery.refetch();
     },
   });
 
@@ -924,6 +989,15 @@ export default function OrderBuilderPage() {
                     Change
                   </button>
                 </div>
+                {/* v3.8.akm §13.3 Item 180.2 — Template picker. Surfaces
+                    saved templates scoped to this customer so AE can
+                    prefill a repeat lane in one click. */}
+                <TemplatePicker
+                  customerId={selectedCustomer.id}
+                  onApply={(formData) => applyTemplate(formData)}
+                  templates={templatesQuery.data?.templates ?? []}
+                  onTemplatesChanged={() => templatesQuery.refetch()}
+                />
               </div>
             )}
           </Section>
@@ -1427,6 +1501,20 @@ export default function OrderBuilderPage() {
         >
           <Save className="w-3 h-3" /> Save draft
         </button>
+        {/* v3.8.akm §13.3 Item 180.2 — Save current formData as a named
+            template. Only shown when a customer is selected (templates
+            are per-customer). */}
+        {selectedCustomer && (
+          <button
+            onClick={() => setShowSaveTemplateModal(true)}
+            disabled={!form.customerId}
+            title="Save this order setup as a reusable template for this customer"
+            className="flex items-center gap-1 px-3 py-1.5 bg-[#F5EEE0] hover:bg-[#EFE6D3] border border-slate-200 text-xs rounded-lg disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-[#C5A572]/40"
+            style={{ color: "#0A2540" }}
+          >
+            <BookmarkPlus className="w-3 h-3" /> Save as template
+          </button>
+        )}
         {/* v3.8.akl §13.3 Item 180.5 — Quote preview before send. Opens a
             modal with the exact HTML the customer will receive so AE can
             catch typos / rate errors before clicking Send. */}
@@ -1660,6 +1748,138 @@ export default function OrderBuilderPage() {
           </div>
         </div>
       )}
+
+      {/* v3.8.akm §13.3 Item 180.2 — Save-as-template modal. AE names
+          the template + confirms; backend creates the row scoped to the
+          current customer; template picker in Section 1 picks it up on
+          refetch. */}
+      {showSaveTemplateModal && selectedCustomer && (
+        <div
+          className="fixed inset-0 z-[100] bg-black/40 flex items-center justify-center p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Save as template"
+          onClick={() => setShowSaveTemplateModal(false)}
+        >
+          <div
+            className="bg-white rounded-xl shadow-2xl w-full max-w-md"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="px-5 py-4 border-b border-slate-200">
+              <h2 className="text-base font-semibold text-[#0A2540]">Save as template</h2>
+              <p className="text-[11px] text-[#6B7685] mt-0.5">
+                Scoped to <strong className="text-[#0A2540]">{selectedCustomer.name}</strong>. Saved templates appear in the picker below the customer card on future drafts.
+              </p>
+            </div>
+            <div className="px-5 py-4">
+              <label className="block text-[11px] font-semibold text-[#0A2540] uppercase tracking-wider mb-1">Template name</label>
+              <input
+                type="text"
+                value={templateNameInput}
+                onChange={(e) => setTemplateNameInput(e.target.value)}
+                placeholder="e.g. Detroit → Chicago weekly"
+                maxLength={120}
+                autoFocus
+                className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm text-[#0A2540] placeholder:text-[#A7AEB8] focus:outline-none focus:ring-2 focus:ring-[#C5A572]/40 focus:border-[#C5A572]"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && templateNameInput.trim() && !saveAsTemplate.isPending) {
+                    saveAsTemplate.mutate();
+                  }
+                }}
+              />
+              <p className="text-[10px] text-[#6B7685] mt-1">
+                Stores lane, freight, refs, accessorials, and instructions. Pickup/delivery dates + rate are reset on apply (per-use values).
+              </p>
+              {saveAsTemplate.isError && (
+                <div className="mt-2 px-2 py-1 rounded bg-red-50 border border-red-200 text-[11px] text-red-700">
+                  {(saveAsTemplate.error as { response?: { data?: { error?: string } } })?.response?.data?.error || "Could not save template"}
+                </div>
+              )}
+            </div>
+            <div className="px-5 py-3 border-t border-slate-200 flex items-center justify-end gap-2">
+              <button
+                onClick={() => { setShowSaveTemplateModal(false); setTemplateNameInput(""); }}
+                className="px-4 py-1.5 text-xs text-slate-700 hover:bg-slate-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#C5A572]/40"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => saveAsTemplate.mutate()}
+                disabled={!templateNameInput.trim() || saveAsTemplate.isPending}
+                className="flex items-center gap-1 px-4 py-1.5 text-xs font-semibold text-white bg-[#BA7517] hover:bg-[#8f5a11] rounded-lg disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-[#C5A572]/40"
+              >
+                <BookmarkPlus className="w-3 h-3" /> {saveAsTemplate.isPending ? "Saving…" : "Save template"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// v3.8.akm §13.3 Item 180.2 — Template picker subcomponent. Surfaces
+// the saved templates scoped to the current customer. Click a template
+// → applyTemplate(template.formData) prefills the form (minus dated
+// fields). Delete-on-hover via the Trash icon; confirmation via the
+// native confirm() dialog (simple — these are per-AE templates and
+// the action is reversible by re-saving the template if needed).
+function TemplatePicker({
+  customerId,
+  onApply,
+  templates,
+  onTemplatesChanged,
+}: {
+  customerId: string;
+  onApply: (formData: Partial<OrderForm>) => void;
+  templates: Array<{ id: string; name: string; customerId: string; formData: Partial<OrderForm> }>;
+  onTemplatesChanged: () => void;
+}) {
+  const customerTemplates = templates.filter((t) => t.customerId === customerId);
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => api.delete(`/orders/templates/${id}`),
+    onSuccess: () => onTemplatesChanged(),
+  });
+
+  if (customerTemplates.length === 0) {
+    return (
+      <div className="mt-3 pt-3 border-t border-slate-100 text-[10px] text-[#6B7685]">
+        <Bookmark className="w-3 h-3 inline mr-1 text-[#C5A572]" />
+        No saved templates for this customer. Use <strong>Save as template</strong> in the footer to save the current setup.
+      </div>
+    );
+  }
+
+  return (
+    <div className="mt-3 pt-3 border-t border-slate-100">
+      <div className="flex items-center gap-1.5 mb-1.5">
+        <Bookmark className="w-3 h-3 text-[#C5A572]" />
+        <span className="text-[10px] uppercase tracking-wider text-[#6B7685] font-semibold">Saved templates</span>
+      </div>
+      <div className="flex flex-wrap gap-1.5">
+        {customerTemplates.map((t) => (
+          <div key={t.id} className="group inline-flex items-center gap-1 px-2 py-1 rounded bg-[#FBF7F0] border border-slate-200 hover:border-[#BA7517] text-[11px] text-[#0A2540] transition">
+            <button
+              onClick={() => onApply(t.formData)}
+              className="focus:outline-none"
+              title={`Apply template "${t.name}"`}
+            >
+              {t.name}
+            </button>
+            <button
+              onClick={() => {
+                if (confirm(`Delete template "${t.name}"?`)) deleteMutation.mutate(t.id);
+              }}
+              disabled={deleteMutation.isPending}
+              className="opacity-0 group-hover:opacity-100 text-[#6B7685] hover:text-red-600 transition disabled:opacity-30 focus:outline-none focus:ring-2 focus:ring-[#C5A572]/40 focus:opacity-100 rounded"
+              title="Delete template"
+              aria-label={`Delete template ${t.name}`}
+            >
+              <Trash2 className="w-3 h-3" />
+            </button>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
