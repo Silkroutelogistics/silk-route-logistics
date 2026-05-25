@@ -10232,7 +10232,31 @@
 //   No frontend changes — the carrier UI already captures + sends the
 //   field. Backend was the lone gap.
 //   ~50 LOC net across 4 backend edits + 1 migration + version bump.
-export const SRL_VERSION = "3.8.ajz";
+// v3.8.aka — §13.3 Item 89 counter-tender email.
+//   Pre-aka the COUNTERED branch of notifyTenderAction only wrote an
+//   in-app Notification — AEs only saw the counter if they happened to
+//   be in the dashboard. counterTender controller (carrier-side) also
+//   used the old manual prisma.notification.create pattern instead of
+//   notifyTenderAction (last holdout from the Sprint 38 Item 51
+//   refactor that already migrated OFFERED/ACCEPTED/DECLINED/EXPIRED).
+//   aka closes both gaps in one atomic:
+//   * New sendTenderCounteredEmail in emailService.ts — AE-facing,
+//     mirrors sendTenderDeclinedEmail shape (Sprint 45a D4). Surfaces
+//     offered vs counter rate + delta + delta-% with amber-for-upward /
+//     green-for-downward color tag. reply-to operations@, gold-dark CTA.
+//   * notifyTenderAction COUNTERED case extended to fire the new email
+//     after the in-app Notification. Defensive guards for missing
+//     aeEmail or null counterRate; both log warnings + skip email,
+//     in-app notification still fires.
+//   * counterTender controller refactored to call notifyTenderAction
+//     ("COUNTERED") instead of the manual prisma.notification.create.
+//     Last Sprint 38 Item 51 holdout.
+//   Carrier portal counter UI doesn't exist today (banked as §13.3
+//   Item 144). When it ships, the email path will already be live —
+//   AE workflow end-to-end on day 1.
+//   ~110 LOC net across 3 backend files + version bump. No schema
+//   migration.
+export const SRL_VERSION = "3.8.aka";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

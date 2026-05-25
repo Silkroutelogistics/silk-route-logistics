@@ -5,6 +5,7 @@ import {
   sendTenderAcceptedEmail,
   sendTenderAcceptedConfirmationEmail,
   sendTenderDeclinedEmail,
+  sendTenderCounteredEmail,
   sendTenderExpiredEmail,
 } from "./emailService";
 
@@ -334,8 +335,13 @@ export async function notifyTenderAction(
       break;
 
     case "COUNTERED":
-      // Sprint 45a — counter-tender email deferred to §13.3 Item 89 (Sprint
-      // 45b). In-app notification preserved.
+      // v3.8.aka Item 89 CLOSED — Counter-tender email now fires alongside
+      // the in-app Notification. AE-facing (poster of the tender), shows
+      // offered vs countered with delta + delta-percent context so the
+      // AE can decide inbox-side whether to accept, re-counter, or
+      // decline. Counter UI on carrier side doesn't exist today (Item
+      // 144 banked); when it ships, this email path will already be
+      // wired so the AE workflow is end-to-end on day 1.
       await createNotification(
         posterId,
         "TENDER_RECEIVED",
@@ -343,6 +349,30 @@ export async function notifyTenderAction(
         `The carrier has countered your tender for load ${ref} (${lane}) with a rate of $${(tender.counterRate ?? tender.offeredRate).toLocaleString()}.`,
         { actionUrl: "/dashboard/tenders" }
       );
+      if (aeEmail && tender.counterRate != null) {
+        try {
+          await sendTenderCounteredEmail({
+            to: aeEmail,
+            ref,
+            loadId: tender.load.id,
+            originName,
+            destName,
+            carrierName,
+            offeredRate: tender.offeredRate,
+            counterRate: tender.counterRate,
+          });
+        } catch (err) {
+          log.error({ err, tenderId, aeEmail }, "[NotificationService] sendTenderCounteredEmail failed");
+        }
+      } else if (!aeEmail) {
+        log.warn({ tenderId, posterId }, "[NotificationService] COUNTERED: no AE email available; in-app only");
+      } else {
+        // counterRate null — defensive; counterTender controller validates
+        // counterRate via counterTenderSchema (positive number required)
+        // before this fires, so this branch is unreachable from the live
+        // path. Logged in case a future code path skips validation.
+        log.warn({ tenderId, posterId }, "[NotificationService] COUNTERED: counterRate is null; email skipped");
+      }
       break;
   }
 }

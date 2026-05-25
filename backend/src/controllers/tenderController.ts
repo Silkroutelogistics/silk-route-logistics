@@ -379,19 +379,21 @@ export async function counterTender(req: AuthRequest, res: Response) {
     },
   }).catch((err) => log.error({ err, tenderId: tender.id }, "[Tender] auditLog counter failed"));
 
-  // Notify the broker/poster about the counter-offer
-  if (tender.load.posterId) {
-    const carrierName = tender.carrier.companyName || `Carrier #${tender.carrierId.slice(-6)}`;
-    await prisma.notification.create({
-      data: {
-        userId: tender.load.posterId,
-        type: "TENDER",
-        title: "Counter-Offer Received",
-        message: `${carrierName} countered load ${tender.load.referenceNumber} at $${counterRate} (offered: $${tender.offeredRate}).`,
-        actionUrl: "/dashboard/loads",
-      },
-    });
-  }
+  // v3.8.aka Item 89 — notifyTenderAction("COUNTERED") replaces the manual
+  // prisma.notification.create that pre-aka was the entire notification
+  // surface. Same Sprint 38 Item 51 refactor that ACCEPTED + DECLINED +
+  // EXPIRED + OFFERED already went through — counterTender was the lone
+  // holdout. The helper does BOTH the in-app Notification row AND the new
+  // sendTenderCounteredEmail fan-out to the AE poster with offered vs
+  // counterRate + delta context. Manual call had type="TENDER" which
+  // isn't a NotificationType enum value (matched Item 51's pre-fix bug
+  // on the OFFERED branch); notifyTenderAction uses "TENDER_RECEIVED"
+  // for the carrier-side type and routes the in-app + email properly.
+  // Non-blocking on email-delivery failure — counter is already
+  // persisted at this point and the in-app Notification still fires
+  // inside the helper, so AE sees the counter in the bell-icon
+  // dropdown even if Resend is degraded.
+  await notifyTenderAction(tender.id, "COUNTERED");
 
   res.json(updated);
 }

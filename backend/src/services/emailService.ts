@@ -733,6 +733,58 @@ export async function sendTenderDeclinedEmail(params: TenderDeclinedEmailParams)
   );
 }
 
+// v3.8.aka Item 89 — Counter-tender email surfaces the carrier's counter-
+// offer to the AE poster. Pre-aka the COUNTERED branch of
+// notifyTenderAction only wrote an in-app Notification — AEs only saw
+// the counter if they happened to be in the dashboard. Now also fires
+// the AE-facing email with offered/countered/delta context so the AE
+// can act inbox-side. Pattern mirrors sendTenderDeclinedEmail (Sprint
+// 45a D4) — AE-facing, reply-to operations@, gold-dark CTA.
+export interface TenderCounteredEmailParams {
+  to: string;
+  ref: string;
+  loadId: string;
+  originName: string;
+  destName: string;
+  carrierName: string;
+  offeredRate: number;
+  counterRate: number;
+}
+
+export async function sendTenderCounteredEmail(params: TenderCounteredEmailParams): Promise<string | undefined> {
+  const offeredFmt = `$${params.offeredRate.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
+  const counterFmt = `$${params.counterRate.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
+  const delta = params.counterRate - params.offeredRate;
+  const deltaPct = params.offeredRate > 0 ? (delta / params.offeredRate) * 100 : 0;
+  const deltaSign = delta >= 0 ? "+" : "";
+  const deltaFmt = `${deltaSign}$${Math.abs(delta).toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 })} (${deltaSign}${deltaPct.toFixed(1)}%)`;
+  // Counter is almost always upward — color the delta amber for "review"
+  // unless it happens to be downward (rare but possible for negotiated lanes).
+  const deltaColor = delta >= 0 ? "#B07A1A" : "#2F7A4F";
+
+  const html = wrap(`
+    <h2 style="color:#0A2540;margin:0 0 16px">Counter-offer from ${params.carrierName}</h2>
+    <p>The carrier countered your tender. Review the rate change and re-tender at the new rate, decline, or counter back.</p>
+    <table style="width:100%;border-collapse:collapse;margin:16px 0">
+      <tr><td style="padding:8px;border:1px solid #E2EAF2;font-weight:bold">Reference</td><td style="padding:8px;border:1px solid #E2EAF2">${params.ref}</td></tr>
+      <tr><td style="padding:8px;border:1px solid #E2EAF2;font-weight:bold">Lane</td><td style="padding:8px;border:1px solid #E2EAF2">${params.originName} &rarr; ${params.destName}</td></tr>
+      <tr><td style="padding:8px;border:1px solid #E2EAF2;font-weight:bold">Carrier</td><td style="padding:8px;border:1px solid #E2EAF2">${params.carrierName}</td></tr>
+      <tr><td style="padding:8px;border:1px solid #E2EAF2;font-weight:bold">Your offer</td><td style="padding:8px;border:1px solid #E2EAF2">${offeredFmt}</td></tr>
+      <tr><td style="padding:8px;border:1px solid #E2EAF2;font-weight:bold">Carrier counter</td><td style="padding:8px;border:1px solid #E2EAF2;font-weight:bold;color:#0A2540">${counterFmt}</td></tr>
+      <tr><td style="padding:8px;border:1px solid #E2EAF2;font-weight:bold">Delta</td><td style="padding:8px;border:1px solid #E2EAF2;color:${deltaColor};font-weight:bold">${deltaFmt}</td></tr>
+    </table>
+    <a href="https://silkroutelogistics.ai/dashboard/loads" style="display:inline-block;background:#BA7517;color:#FFFFFF;padding:12px 24px;text-decoration:none;border-radius:6px;font-weight:bold;margin-top:8px">Review in Dashboard</a>
+  `);
+
+  return sendEmail(
+    params.to,
+    `Counter Offer: ${params.ref} (${counterFmt} from ${params.carrierName})`,
+    html,
+    undefined,
+    { replyTo: "operations@silkroutelogistics.ai" },
+  );
+}
+
 export interface TenderExpiredEmailParams {
   to: string;
   ref: string;
