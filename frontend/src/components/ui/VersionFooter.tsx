@@ -10812,6 +10812,140 @@
 //   180.6+180.7+180.8+180.9+180.10+180.11 done; 180.3 closed-by-
 //   discovery; banked 180.6.b CRM admin edit UI for the new fields).
 //
+// v3.8.akx — Marco Polo chatbot canonical refresh. The homepage
+//   chatbot's PUBLIC_SYSTEM_PROMPT at backend/src/controllers/
+//   chatController.ts:63-79 was last touched pre-v3.8.aib
+//   (so pre-2026-05-21 Sprint 1 honesty pass) and had been leaking
+//   retired claims to live prospects on /index for ~14 days:
+//   "Caravan Loyalty Program" (§7 prohibited variant), "Guest →
+//   Silver → Gold → Platinum" tier structure (Guest retired in
+//   v3.8.aii/aij locked launch model), LTL + EDI + US-Mexico
+//   cross-border services (none on deployed pages), "Quick Pay
+//   small fee" vague framing (vs published Silver 3% / Gold 2% /
+//   Platinum 1% on /carriers). Prompt also had zero reveal-defense
+//   or fabrication-prevention guardrails — no ban on vendor-stack
+//   reveal, no ban on invented metrics, no §6 honest-hours
+//   qualifier on "24/7", no §20.1.5 architectural-reveal-defense
+//   guardrails. Wasi noticed the chatbot referencing old
+//   information during live conversations on /index 2026-05-25.
+//
+//   Audit-first (Sub-pattern 15 going-forward gate applied):
+//   sub-agent Explore audited the three deployed public pages
+//   (index.html, carriers.html, shippers.html) verbatim and
+//   extracted the disclosure ceiling — what the chatbot is
+//   ALLOWED to say. Two-source binding established as canonical:
+//   CLAUDE.md governs whether a statement is TRUE; deployed pages
+//   govern whether the chatbot is ALLOWED to say it. The chatbot
+//   may never state a number, threshold, percentage, rate, weight,
+//   tenure, or vendor name that does not already appear on a
+//   deployed public page — even when correct per CLAUDE.md.
+//
+//   PFA conflict resolution: directive author requested "PFA
+//   surety" in the chatbot authority chain; Phase A audit
+//   confirmed PFA Protects appears NOWHERE on any deployed page
+//   (only mention in entire codebase is an internal development
+//   comment on /index.html line 438 explaining WHY the surety name
+//   was REMOVED per v3.8.aga directive's public-disclosure rule).
+//   §20.1.5 explicitly bans named-underwriter reveal as a
+//   vendor-stack reveal class. The directive's own articulated
+//   rules ("never reveal... the vendor stack", "never state a
+//   figure not present on a deployed public page") contradicted
+//   the literal "PFA surety" text mention. Sub-pattern 13
+//   workflow-first ratification resolved to exclude PFA from the
+//   chatbot prompt per the directive's own canonical-rule intent.
+//   If actual intent was to first-disclose PFA via the chatbot,
+//   that requires explicit user direction since it would also
+//   need a sibling addition to /carriers public-page footer for
+//   consistency (the chatbot is downstream of public-page
+//   canonical, not upstream of it).
+//
+//   Source change ~340 LOC across 1 file (chatController.ts):
+//   * PUBLIC_SYSTEM_PROMPT rewritten in full (~200 LOC). Services
+//     whitelist: Dry Van + Reefer + Dedicated + Expedited + Flatbed
+//     only (drops LTL + EDI integration + US-Mexico cross-border +
+//     intermodal + drayage + parcel + international). Full §8
+//     Quick Pay verbatim quotation (Silver Net-30 + 3% 7-day QP,
+//     Gold Net-21 + 2%, Platinum Net-14 + 1%, +2% same-day
+//     universal, "Per-load. Optional. No contract."). Full §9
+//     Compass Score 7-factor formula verbatim (20/20/15/15/10/10/10
+//     with weekly recalc note). All 10 §4 #15 universal floor
+//     benefits verbatim from /carriers lines 486-540. §6 honest
+//     hours (24/7 only for Marco Polo, M-F 7am-7pm ET for human
+//     support, after-hours emergency on active loads — never "24/7"
+//     for human channels). §1 authority chain (USDOT 4526880 + MC#
+//     1794414 + BMC-84 $75K + $1M auto liability + $100K cargo +
+//     18+ months FMCSA authority requirement; surety name PFA
+//     deliberately excluded per §20.1.5).
+//   * 12 hard guardrails: no invented metrics; no services off
+//     whitelist; no §7-prohibited program names; no tier-
+//     advancement gate values (even when /carriers publishes them
+//     — §20.1.5 reveal-defense carve-out specifically for the
+//     chatbot's continuous-query surface vs /carriers' one-time
+//     read surface); no vendor-stack reveal; no internal state-
+//     machine names; no "asset-based" framing; no testimonials
+//     without provenance; no consultant-speak; retired-fact bans
+//     enumerated on safety/referral/detention bonuses + Guest
+//     tier + tier-graduated FSC + 48-hour onboarding SLAs.
+//   * Routing rules per §3.10: /shippers.html#quote-form for
+//     quotes, /onboarding for carrier applications, /carriers.html
+//     for program details beyond what's stated,
+//     compliance@silkroutelogistics.ai for fraud/double-brokering/
+//     BMC-84 claims, operations@silkroutelogistics.ai for active-
+//     load issues.
+//   * SYSTEM_PROMPT (authenticated path) hardened with retired-
+//     fact ban + vendor-stack reveal ban + §7 program-naming ban +
+//     asset-based ban + no-fabricated-metrics + honest-hours
+//     guardrail (~140 LOC rewrite). Tool access preserved; data
+//     accuracy unchanged.
+//
+//   Widget verification (per directive halt threshold — §7 + retired-
+//   tier scan only):
+//   * grep on frontend/public/shared/js/marco-polo.js welcome
+//     (lines 64-79) + proactive (lines 82-99) returned zero §7
+//     violations and zero retired-tier language. No edits needed.
+//   * Adjacent observations noted out of directive scope (banked
+//     for future small-polish sprint): (a) carrier welcome line 70
+//     uses "Compass score" lowercase s vs canonical "Compass Score"
+//     capitalization on /carriers; (b) public welcome line 77
+//     promises "type compliance and I will route you direct" but no
+//     keyword router exists in widget code — the LLM smart-routes
+//     via new PUBLIC_SYSTEM_PROMPT routing rules anyway, so
+//     functionally works but phrasing is misleading.
+//
+//   §20.8.5 Marco Polo chatbot canonical added to CLAUDE.md:
+//   establishes the two-source binding (CLAUDE.md = accuracy
+//   source, deployed pages = disclosure ceiling) and the §20.1.5
+//   reveal-defense carve-out for tier-advancement gate values
+//   (banned on chatbot even though /carriers publishes them) and
+//   internal state-machine names (banned on public chatbot,
+//   allowed on authenticated SYSTEM_PROMPT). Going-forward gate:
+//   any future chatbot system-prompt edit must include a Phase A
+//   audit of the three deployed public pages alongside the
+//   CLAUDE.md sections. Adding a new fact to the chatbot prompt
+//   requires either: (a) the fact already appears on a deployed
+//   page, OR (b) the fact is added to a deployed page in the
+//   SAME atomic sprint.
+//
+//   Sub-pattern 15 fire #5 banked: "directive-vs-canonical-rule
+//   conflict where directive's own articulated principles forbid
+//   the literal text" — the PFA Protects scenario. Cumulative
+//   fire count for §19 review now 29 → 30. Sub-pattern 15 was
+//   canonically promoted in v3.8.akw earlier today; this is the
+//   first post-promotion fire, validating the going-forward gate
+//   is in active operational use.
+//
+//   Pre-commit gates per Sub-pattern 11 CI parity (all clean):
+//   * backend tsc --noEmit clean (chatController is pure constant-
+//     string changes — no type cascade)
+//   * backend vitest 224/224 pass
+//   * frontend tsc --noEmit clean (defensive — no frontend source
+//     changes)
+//   * frontend npx next build clean
+//
+//   Scope: ~340 LOC source (chatController.ts) + ~250 LOC docs
+//   across CLAUDE.md §20.8.5 + §11 row + this footer narrative +
+//   version bump.
+//
 // v3.8.akw — §13.3 Items 51 + 52 + 53 closures (tender-flow micro-
 //   cleanup bundle). Sub-pattern 15 canonical promotion: "Backlog-row-
 //   drift vs §11-history-row" — three-fire validated within ~24h
@@ -11505,7 +11639,7 @@
 //   block + version bump). Pre-commit gates per Sub-pattern 11:
 //   prisma generate clean (no schema change), backend tsc --noEmit
 //   clean, frontend tsc --noEmit clean.
-export const SRL_VERSION = "3.8.akw";
+export const SRL_VERSION = "3.8.akx";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
