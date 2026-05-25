@@ -11639,7 +11639,60 @@
 //   block + version bump). Pre-commit gates per Sub-pattern 11:
 //   prisma generate clean (no schema change), backend tsc --noEmit
 //   clean, frontend tsc --noEmit clean.
-export const SRL_VERSION = "3.8.akx";
+//
+// v3.8.aky — Carrier onboarding hardening: (Item 2) browser-autofill
+//   opt-out on First Name + Last Name inputs at onboarding/page.tsx
+//   :979/983 — Chrome had been injecting saved address-profile
+//   values (city → First Name "Skokie", state → Last Name "IL") on
+//   pageload because the inputs carried default `name="firstName"`/
+//   `"lastName"` matching Chrome's address-card heuristic. Live
+//   repro hypothesized FMCSA mapping bug; sub-pattern 14 (diff-
+//   disproves-hypothesis halt) caught the wrong root cause — read
+//   `applyFmcsaData` at onboarding/page.tsx:291-302 verbatim,
+//   confirmed zero mapping writes to firstName/lastName. Actual
+//   cause: browser autofill cross-contamination. Fix matches v3.8.aiu
+//   pattern (email/phone/password): autoComplete="off" + non-standard
+//   `name="carrier-registration-firstname"` / `"-lastname"`. NO
+//   pattern validator added — would red-border legitimate accented
+//   and non-Latin names (José, Nguyễn) common in the owner-operator
+//   base. (Item 3) Workers' Compensation Coverage promoted from
+//   mention-inside-COI to dedicated 4th required document card.
+//   Accepts WC certificate OR signed exemption affidavit (single-
+//   driver operators with no employees are exempt in some states;
+//   the affidavit IS acceptable proof, do NOT hard-block them).
+//   Frontend: 4th doc card in `docs` array at onboarding/page.tsx
+//   :1386-1391, `canNext` step===2 gate extended with `wc` check at
+//   :399-409, required-count banner array extended at :1370. Backend
+//   `DOC_TYPE_MAP` at carrierController.ts:175-180 maps wc →
+//   "WORKERS_COMP" string. Path γ canonical adopted per sub-rule c
+//   fire #31: Document.docType is a free-form String? column, NOT
+//   a Prisma enum — initial directive specified "add enum value
+//   WORKERS_COMP with its migration" but authoritative-source check
+//   on schema.prisma:2009 confirmed no `enum DocType { ... }` block
+//   exists (the "enum" was the documented value list in the column
+//   comment). Path γ = add WORKERS_COMP as canonical string value +
+//   update the comment list; NO migration, NO enum block, NO Neon-
+//   direct verification step. Queries WHERE docType = 'WORKERS_COMP'
+//   work today. Sub-rule c also fired #30 on the Item 2 diff-
+//   disproves-hypothesis halt — two sub-rule c fires within a
+//   single sprint Phase B; cumulative §19 registry advances 29 →
+//   31. Carry-forward: schedulerService.ts cron disable from the
+//   prior session (post-v3.8.akx) was orphaned uncommitted when
+//   v3.8.akx Marco Polo selectively included only the §13.3 Item
+//   192 docs row but not the code change. Bundled into v3.8.aky
+//   to ship the operational change behind the documented banking.
+//   Per-user opt-out + threshold tuning + test-load exclusion is
+//   the proper Item 192 sprint, deferred. NO backend required-doc
+//   validation gate added in this sprint (pre-existing gap, kept
+//   atomic per §3.3). NO duplicate-detection or OTP work (next
+//   sprint, pending SMS-path decision). Files: 4 (onboarding/page
+//   .tsx +24/-3 LOC net, carrierController.ts +7/-4 LOC net,
+//   schema.prisma column comment +1 line edit, schedulerService.ts
+//   +8/-4 LOC carry-forward, this footer block + version bump,
+//   CLAUDE.md §11 row). Pre-commit gates per Sub-pattern 11:
+//   backend tsc --noEmit clean, frontend tsc --noEmit clean,
+//   frontend npx next build clean. No Prisma migration.
+export const SRL_VERSION = "3.8.aky";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

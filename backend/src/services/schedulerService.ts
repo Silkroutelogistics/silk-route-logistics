@@ -339,10 +339,14 @@ export function startSchedulers() {
   });
 
   // Phase C: Risk flagging: every 30 minutes at :05 and :35
-  cron.schedule("5,35 * * * *", async () => {
-    log.info("[Scheduler] Running risk flagging engine...");
-    await withLock("risk-flagging", 10 * 60 * 1000, runRiskFlagging);
-  });
+  // DISABLED 2026-05-25 — generates noisy "RISK RED" email floods on
+  // test/seed loads with no preference gate. Re-enable once §13.3 Item
+  // 192 ships (per-user opt-out + threshold tuning + test-load
+  // exclusion). See riskEngine.ts:96 runRiskFlagging.
+  // cron.schedule("5,35 * * * *", async () => {
+  //   log.info("[Scheduler] Running risk flagging engine...");
+  //   await withLock("risk-flagging", 10 * 60 * 1000, runRiskFlagging);
+  // });
 
   // Phase C: Email sequence processor: every hour at :10
   cron.schedule("10 * * * *", async () => {

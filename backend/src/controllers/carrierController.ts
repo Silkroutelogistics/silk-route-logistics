@@ -173,10 +173,16 @@ export async function registerCarrier(req: Request, res: Response) {
       ? (req.body as any).docTypes
       : ((req.body as any).docTypes ? [(req.body as any).docTypes] : []);
     const DOC_TYPE_MAP: Record<string, { docType: string; flagField: "w9Uploaded" | "insuranceCertUploaded" | "authorityDocUploaded" | null }> = {
-      w9:        { docType: "W9",        flagField: "w9Uploaded" },
-      insurance: { docType: "COI",       flagField: "insuranceCertUploaded" },
-      authority: { docType: "AUTHORITY", flagField: "authorityDocUploaded" },
-      safety:    { docType: "OTHER",     flagField: null }, // SAFETY_CERT not in Document.docType enum comment; classified OTHER + named in filename
+      w9:        { docType: "W9",          flagField: "w9Uploaded" },
+      insurance: { docType: "COI",         flagField: "insuranceCertUploaded" },
+      authority: { docType: "AUTHORITY",   flagField: "authorityDocUploaded" },
+      // v3.8.aky — Workers' Comp added as canonical string docType value.
+      // Document.docType is a free-form String? column (NOT a Prisma enum);
+      // see schema.prisma:2009 documented enumeration. Queries can filter
+      // WHERE docType = 'WORKERS_COMP' directly without an enum migration.
+      // Path γ canonical per v3.8.aky directive (no enum, no migration).
+      wc:        { docType: "WORKERS_COMP", flagField: null },
+      safety:    { docType: "OTHER",       flagField: null }, // SAFETY_CERT not in Document.docType enum comment; classified OTHER + named in filename
     };
     for (let i = 0; i < stagedFiles.length; i++) {
       const file = stagedFiles[i];

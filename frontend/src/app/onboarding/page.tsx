@@ -396,6 +396,11 @@ export default function OnboardingPage() {
     // Certificate, and Authority Letter are universally required.
     // Safety Fitness Certificate is conditionally required only when
     // the carrier selected a Canadian operating region in Step 2.
+    // v3.8.aky — Workers' Compensation Coverage added as a 4th
+    // universally-required document. Accepts EITHER a WC certificate
+    // OR a signed exemption affidavit (single-driver authorities with
+    // no employees are exempt in some states — the affidavit IS
+    // acceptable proof; do NOT hard-block them).
     if (step === 2) {
       const hasDoc = (key: string) => files.some((f) => (f as any).__docType === key);
       const CANADIAN_REGIONS = ["Eastern Canada", "Western Canada", "Central Canada", "Cross-Border"];
@@ -403,6 +408,7 @@ export default function OnboardingPage() {
       if (!hasDoc("w9")) return false;
       if (!hasDoc("insurance")) return false;
       if (!hasDoc("authority")) return false;
+      if (!hasDoc("wc")) return false;
       if (hasCanadianOps && !hasDoc("safety")) return false;
       return true;
     }
@@ -972,15 +978,27 @@ export default function OnboardingPage() {
                 </div>
               </div>
 
-              {/* Personal / account info */}
+              {/* Personal / account info.
+                  v3.8.aky — autoComplete + non-standard `name` on
+                  firstName/lastName to opt out of browser autofill
+                  (Chrome was injecting saved address-profile values —
+                  e.g. city "Skokie" into First Name, state "IL" into
+                  Last Name — when the FMCSA lookup populated the
+                  address fields, because the firstName/lastName inputs
+                  carried default `name="firstName"`/`"lastName"` that
+                  matched Chrome's saved-profile heuristic). Matches
+                  the v3.8.aiu pattern used on email/phone/password
+                  above. No pattern validator — would red-border legit
+                  accented + non-Latin names (José, Nguyễn) common in
+                  the owner-operator base. */}
               <div className="grid sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-[#0A2540] mb-1">First Name *</label>
-                  <input value={form.firstName} onChange={(e) => set("firstName", e.target.value)} className="w-full px-3 py-2 bg-white border border-[#EFE6D3] rounded-lg text-sm text-[#0A2540] focus:border-[#BA7517] focus:ring-2 focus:ring-[#BA7517]/15 outline-none transition placeholder:text-[#A7AEB8]" />
+                  <input value={form.firstName} onChange={(e) => set("firstName", e.target.value)} className="w-full px-3 py-2 bg-white border border-[#EFE6D3] rounded-lg text-sm text-[#0A2540] focus:border-[#BA7517] focus:ring-2 focus:ring-[#BA7517]/15 outline-none transition placeholder:text-[#A7AEB8]" autoComplete="off" name="carrier-registration-firstname" />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-[#0A2540] mb-1">Last Name *</label>
-                  <input value={form.lastName} onChange={(e) => set("lastName", e.target.value)} className="w-full px-3 py-2 bg-white border border-[#EFE6D3] rounded-lg text-sm text-[#0A2540] focus:border-[#BA7517] focus:ring-2 focus:ring-[#BA7517]/15 outline-none transition placeholder:text-[#A7AEB8]" />
+                  <input value={form.lastName} onChange={(e) => set("lastName", e.target.value)} className="w-full px-3 py-2 bg-white border border-[#EFE6D3] rounded-lg text-sm text-[#0A2540] focus:border-[#BA7517] focus:ring-2 focus:ring-[#BA7517]/15 outline-none transition placeholder:text-[#A7AEB8]" autoComplete="off" name="carrier-registration-lastname" />
                 </div>
               </div>
               {/* v3.8.ait — Email + Phone paired as contact details
@@ -1367,7 +1385,10 @@ export default function OnboardingPage() {
                   {(() => {
                     const CANADIAN_REGIONS = ["Eastern Canada", "Western Canada", "Central Canada", "Cross-Border"];
                     const hasCanadianOps = form.operatingRegions.some((r) => CANADIAN_REGIONS.includes(r));
-                    const required = ["w9", "insurance", "authority", ...(hasCanadianOps ? ["safety"] : [])];
+                    // v3.8.aky — Workers' Comp (wc) is the 4th universally-
+                    // required document. Banner counts 4 of 4 (or 5 of 5
+                    // with Canadian ops + Safety Cert).
+                    const required = ["w9", "insurance", "authority", "wc", ...(hasCanadianOps ? ["safety"] : [])];
                     const uploaded = required.filter((k) => files.some((f) => (f as any).__docType === k)).length;
                     const allGood = uploaded === required.length;
                     return (
@@ -1385,8 +1406,15 @@ export default function OnboardingPage() {
                   const hasCanadianOperations = form.operatingRegions.some((r) => CANADIAN_REGIONS.includes(r));
                   const docs = [
                     { key: "w9", label: "W-9 Form", desc: "Required for tax reporting (your EIN is extracted from this)", required: true },
-                    { key: "insurance", label: "Insurance Certificate (COI)", desc: "Auto liability, cargo, general liability, and workers' comp", required: true },
+                    { key: "insurance", label: "Insurance Certificate (COI)", desc: "Auto liability, cargo, and general liability coverage", required: true },
                     { key: "authority", label: "Authority Letter / Operating Authority", desc: "Active FMCSA authority — 18+ months of operating history required", required: true },
+                    // v3.8.aky — Workers' Comp promoted from mention-inside-COI
+                    // to dedicated 4th required card. Accepts WC certificate
+                    // OR signed exemption affidavit (single-driver authorities
+                    // with no employees are exempt in some states; the
+                    // affidavit IS acceptable proof — see canNext + DOC_TYPE_MAP
+                    // wc → WORKERS_COMP).
+                    { key: "wc", label: "Workers' Compensation Coverage", desc: "Certificate of WC insurance OR signed exemption affidavit (single-driver operators with no employees may submit exemption per state law)", required: true },
                     ...(hasCanadianOperations ? [{ key: "safety", label: "Safety Fitness Certificate", desc: "Required for Canadian-based carriers operating interprovincially", required: true }] : []),
                   ];
                   return docs.map((doc) => {

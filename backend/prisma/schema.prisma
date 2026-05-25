@@ -2006,7 +2006,7 @@ model Document {
   fileSize     Int
   entityType   String? // LOAD, CARRIER, SHIPPER, INVOICE
   entityId     String?
-  docType      String? // BOL, POD, RATE_CON, SIGNED_BOL_PU, SIGNED_BOL_DEL, INVOICE, PHOTO_LOADED, PHOTO_SEAL, PHOTO_EMPTY, PHOTO_DAMAGE, RECEIPT_MECHANICAL, RECEIPT_LUMPER, RECEIPT_SCALE, W9, COI, AUTHORITY, BOC3, CDL, MEDICAL_CARD, MVR, REGISTRATION, INSPECTION, OTHER
+  docType      String? // BOL, POD, RATE_CON, SIGNED_BOL_PU, SIGNED_BOL_DEL, INVOICE, PHOTO_LOADED, PHOTO_SEAL, PHOTO_EMPTY, PHOTO_DAMAGE, RECEIPT_MECHANICAL, RECEIPT_LUMPER, RECEIPT_SCALE, W9, COI, AUTHORITY, WORKERS_COMP, BOC3, CDL, MEDICAL_CARD, MVR, REGISTRATION, INSPECTION, OTHER (v3.8.aky — WORKERS_COMP added as Path γ canonical: this column is a free-form String?, NOT a Prisma enum; queries filter by `WHERE docType = 'WORKERS_COMP'` directly with no schema migration required.)
   category     String? // Track & Trace grouping: PRE_DISPATCH, IN_TRANSIT, POST_DELIVERY, PHOTO_PICKUP, PHOTO_DELIVERY, RECEIPT
   status       String    @default("PENDING") // PENDING, VERIFIED, REJECTED
   uploadSource String    @default("AE_CONSOLE") @map("upload_source") // AE_CONSOLE, CARRIER_PORTAL, SYSTEM
