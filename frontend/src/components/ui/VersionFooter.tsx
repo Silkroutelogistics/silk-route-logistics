@@ -10812,6 +10812,125 @@
 //   180.6+180.7+180.8+180.9+180.10+180.11 done; 180.3 closed-by-
 //   discovery; banked 180.6.b CRM admin edit UI for the new fields).
 //
+// v3.8.akw — §13.3 Items 51 + 52 + 53 closures (tender-flow micro-
+//   cleanup bundle). Sub-pattern 15 canonical promotion: "Backlog-row-
+//   drift vs §11-history-row" — three-fire validated within ~24h
+//   across v3.8.akr (Item 8.5 close fire 1), Item 191 backlog
+//   correction (fire 2), and this commit (fire 3).
+//
+//   Audit findings (delegated to Explore sub-agent + verbatim code
+//   reads): of the three items proposed for atomic bundling, TWO were
+//   already closed by Sprint 38/39 (v3.8.acd 2026-05-13) but never
+//   marked CLOSED in §13.3. Only one genuine gap remained.
+//
+//   Item 51 — `notifyTenderAction` wiring on accept paths. Split
+//   closure timeline: Sprint 45a (v3.8.abb, 2026-05-10) wired
+//   notifyTenderAction("OFFERED") into createTender. Sprint 38
+//   (v3.8.acd, 2026-05-13) wired notifyTenderAction("ACCEPTED") into
+//   tenderController.acceptTender:205 + acceptTenderOnBehalf:375.
+//   v3.8.akw closes the remaining waterfall accept path gap:
+//   * NEW findFirst at waterfallEngineService.acceptPosition (before
+//     the existing updateMany flip) captures the accepted tender's
+//     id. updateMany doesn't return rows, so this separate read is
+//     required to fire notifyTenderAction with the correct tender id.
+//   * NEW non-blocking try/catch block between the check-call
+//     schedule (lines 509-515) and tracking-link fan-out (lines
+//     519-524). Pattern matches the existing Sprint 38 fan-out
+//     convention verbatim. Failure logs at log.error but does not
+//     block the dispatch flow. acceptedTender may be null in rare
+//     race conditions (tender declined externally between position
+//     lookup and updateMany); the conditional skip handles that
+//     gracefully.
+//   * Loadboard bid accept path is NOT in scope — uses LoadBid
+//     model (not LoadTender), so notifyTenderAction(tenderId, ...)
+//     doesn't apply. Banked as new Item 51.b: parallel notifyBidAction
+//     helper required (~100-120 LOC, separate sprint).
+//
+//   Item 52 — `sendTrackingLinkToCrmContacts` on tender accept paths.
+//   ALREADY FIXED retroactively in Sprint 38/39. Audit confirmed
+//   the helper is wired at all five accept surfaces:
+//   tenderController.acceptTender:212-217 (direct),
+//   acceptTenderOnBehalf:380-385 (on-behalf),
+//   waterfallEngineService.acceptPosition:519-524 (waterfall),
+//   loadBids.ts:247-253 (loadboard bid),
+//   withTenderController.createLoadWithTender:237-241 (drawer mode).
+//   CLAUDE.md §2's "Sprint 39 α resolution: tracking-link fan-out
+//   fires at the accept moment on all three paths" statement is
+//   accurate as of post-Sprint-38/39 state. §13.3 row updated to
+//   reflect CLOSED status retroactively. No source change needed.
+//
+//   Item 53 — Direct accept race condition (Promise.all → $transaction).
+//   ALREADY FIXED retroactively in Sprint 38. Audit confirmed
+//   tenderController.acceptTender:119-132 uses prisma.$transaction([
+//   ...]) wrapping the three writes (loadTender.update → ACCEPTED,
+//   load.update → BOOKED + carrierId, loadTender.updateMany → DECLINED
+//   siblings) atomically. acceptTenderOnBehalf:285-298 mirrors the
+//   same pattern. Loadboard bid accept at loadBids.ts:202-211 uses
+//   two serial updates (not wrapped) — banked as potential future
+//   gap if a regression surfaces, lower risk (single load state, no
+//   tender siblings). §13.3 row updated to reflect CLOSED status
+//   retroactively. No source change needed.
+//
+//   Sub-pattern 15 — "Backlog-row-drift vs §11-history-row" CANONICAL
+//   PROMOTION 2026-05-25. Three independent fires within ~24h:
+//   * Fire 1 (v3.8.akr Item 8.5 close, morning): 13 AddressBook
+//     references in grep but 0 active consumers after classification.
+//     Banked as "match-count is not consumer-count" case-study
+//     extension.
+//   * Fire 2 (Item 191 backlog correction, mid-morning): §13.3 Item
+//     191 row claimed "Priority: ELEVATED" + "every future schema
+//     migration is at risk" but the DIRECT_URL P1002 fix had already
+//     shipped 24h prior in v3.8.ajg (2026-05-24). Wasi caught the
+//     staleness when I surfaced Item 191 as top-priority. Banked
+//     as "backlog-row-drift vs §11-history-row".
+//   * Fire 3 (this commit, afternoon): §13.3 Items 52 + 53 row
+//     text was 12 days stale relative to Sprint 38/39 actual
+//     code. Of three "bundled cleanup" items, only Item 51's
+//     waterfall path was a genuine gap.
+//   §19 sub-pattern 15 entry added inline at CLAUDE.md §19 with
+//   the three-fire registry entries (cumulative fire count
+//   26 → 29). Sub-pattern 15 is the methodology library's first
+//   **audit-layer** sub-pattern — operating above the execution
+//   layer (sub-patterns 1-12 + 14 + 8.a) and the ratification
+//   layer (sub-pattern 13). Three layers now stack: audit →
+//   ratification → execution. A miss at the audit layer corrupts
+//   the ratification + execution layers downstream.
+//   Going-forward gate canonical: Sprint Phase A audits that
+//   consult §13.3 backlog row text MUST cross-reference each item
+//   against §11 history rows (grep for "closes.*Item N" or
+//   "§13\.3 Item N.*CLOSED") AND verbatim against the file:line
+//   references in the row's text, BEFORE relying on the row's
+//   "Fix shape" or "Sprint shape" framing. Going-forward
+//   maintenance: when shipping a closure, update both the §11
+//   history row AND the §13.3 backlog row in the SAME commit.
+//
+//   Pre-commit gates (Sub-pattern 11 CI parity, 4 gates all clean):
+//   * prisma generate clean
+//   * backend tsc --noEmit clean
+//   * backend vitest: 224/224 pass
+//   * frontend tsc --noEmit clean
+//   * frontend npx next build clean
+//
+//   Methodology: §3.5 audit-first (sub-agent Explore + verbatim
+//   code reads before any source change — caught 2/3 items stale),
+//   §3.3 atomic single-feature ship (only Item 51 waterfall fix is
+//   source; 52 + 53 + 51.b banking are docs-only consequences of the
+//   audit), §19 Sub-pattern 5 audit-both-ends-of-data-flow (verified
+//   tender accept paths' notification + tracking-link wiring across
+//   all 5 surfaces), §19 Sub-pattern 11 CI parity, §19 Sub-pattern 15
+//   canonical promotion (this commit).
+//
+//   New §13.3 Item 51.b banked: loadboard bid accept notification
+//   gap (~100-120 LOC follow-up — needs parallel notifyBidAction
+//   helper since bids use LoadBid model, not LoadTender; not
+//   BKN-blocking since loadboard bid is the secondary dispatch path).
+//
+//   §13.3 Items 51 + 52 + 53 LOG OPEN → CLOSED.
+//   §19 Sub-pattern 15 banked + canonically promoted.
+//   Net source change: ~15 LOC in waterfallEngineService.ts
+//   (findFirst + non-blocking try/catch fan-out block) +
+//   ~150 LOC docs across CLAUDE.md §13.3 + §19 + this footer.
+//
 // v3.8.akv — §13.3 Item 182 sprint 5 SURGICAL ROLLBACK. v3.8.aku
 //   shipped onboarding-side verdict surfaces built on the
 //   fmcsaService.getCarrierAuthority function that the 2026-05-23 audit

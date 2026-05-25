@@ -445,6 +445,15 @@ export async function acceptPosition(positionId: string, actorId?: string | null
 
   const now = new Date();
 
+  // v3.8.akw §13.3 Item 51 — capture the tender id BEFORE the updateMany
+  // flip so the post-write notifyTenderAction call (further down) can
+  // fan out the in-app + email notification. updateMany doesn't return
+  // updated rows, so this separate findFirst is required.
+  const acceptedTender = await prisma.loadTender.findFirst({
+    where: { waterfallPositionId: positionId, status: "OFFERED" },
+    select: { id: true },
+  });
+
   // Mark position + tender accepted
   await prisma.waterfallPosition.update({
     where: { id: positionId },
@@ -512,6 +521,22 @@ export async function acceptPosition(positionId: string, actorId?: string | null
     await createCheckCallSchedule(pos.waterfall.loadId);
   } catch (err) {
     log.error({ err }, "[Waterfall] check-call schedule failed");
+  }
+
+  // v3.8.akw §13.3 Item 51 — fire tender accept notification (carrier
+  // in-app + email). Direct path wires this at tenderController:205,
+  // on-behalf path at :375; waterfall was the remaining gap (Sprint 36
+  // G2 banked finding). Non-blocking try/catch per Sprint 38 fan-out
+  // pattern. acceptedTender may be null in rare race conditions (e.g.
+  // tender declined externally between position lookup and updateMany);
+  // skip the notification gracefully in that case.
+  if (acceptedTender) {
+    try {
+      const { notifyTenderAction } = await import("./notificationService");
+      await notifyTenderAction(acceptedTender.id, "ACCEPTED");
+    } catch (err) {
+      log.error({ err, tenderId: acceptedTender.id }, "[Waterfall] notifyTenderAction failed (non-blocking)");
+    }
   }
 
   // CRM tracking-link fan-out: email tracking URL to any customer
