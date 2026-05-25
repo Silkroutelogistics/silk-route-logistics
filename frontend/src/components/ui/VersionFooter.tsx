@@ -10490,7 +10490,41 @@
 //   CLAUDE.md edits + version bump. No schema migration; no test
 //   changes needed (existing tests don't assert on these values).
 //   §13.3 Item 8.8 LOG OPEN → CLOSED. Item 8.9 LOG OPEN → CLOSED.
-export const SRL_VERSION = "3.8.akg";
+// v3.8.akh — §13.3 Item 63 P3-3 drawer vocabulary normalization
+//   ("Docs" → "Documents"). Surgical 3-surface sweep across the AE
+//   Console drawer tab strips + the carriers page side panel.
+//   Surfaces:
+//   * frontend/src/app/dashboard/crm/IconTabs.tsx — CustomerDrawer
+//     tab strip label "Docs" → "Documents".
+//   * frontend/src/app/dashboard/track-trace/IconTabs.tsx —
+//     LoadDetailDrawer tab strip label "Docs" → "Documents".
+//   * frontend/src/app/dashboard/carriers/page.tsx side panel tab
+//     label "Docs" → "Documents". Key "documents" was already
+//     canonical here pre-akh; only the visible label was using the
+//     abbreviated form.
+//   Tab ids/keys preserved everywhere (id="docs" + key="documents"
+//   unchanged) so consumer call sites and popstate history-state
+//   keys stay untouched.
+//   P3-1 (Profile vs Details) — closed-by-design during Phase A
+//   audit. ProspectDrawer + CustomerDrawer use "Profile" because
+//   they're entity drawers (carrier/customer/prospect identity);
+//   LoadDetailDrawer + WaterfallDrawer use "Details" because
+//   they're object drawers (load operational attributes — origin,
+//   dest, rate, weight). Intentional semantic differentiation, NOT
+//   drift. No change needed.
+//   P3-2 (Activity vs History) — banked for separate semantic
+//   ratification. 4 right-drawers all use "Activity"; 3 AE Console
+//   side panels (carriers/loads/routing-guide) use "History". Both
+//   terms semantically valid in context; consolidation requires a
+//   ratification decision (Activity = recent-events feed; History =
+//   audit log over time) that's better done as a deliberate Sub-
+//   pattern 13 (literal-vs-intent) ratification than baked into a
+//   sweep commit. Banked for future Phase A audit.
+//   ~9 LOC net across 3 source files + version bump.
+//   §13.3 Item 63 P3-3 LOG OPEN → CLOSED.
+//   §13.3 Item 63 P3-1 closed-by-design.
+//   §13.3 Item 63 P3-2 still banked.
+export const SRL_VERSION = "3.8.akh";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

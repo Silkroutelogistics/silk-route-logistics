@@ -10,7 +10,9 @@ import type { DrawerTab } from "./drawer-types";
 const TABS: IconTabDef<DrawerTab>[] = [
   { id: "details",     label: "Details",     Icon: FileText },
   { id: "tracking",    label: "Tracking",    Icon: MapPin },
-  { id: "docs",        label: "Docs",        Icon: FileUp },
+  // v3.8.akh §13.3 Item 63 P3-3 — "Docs" → "Documents". Tab id stays
+  // "docs" to preserve consumer call sites; only the label changes.
+  { id: "docs",        label: "Documents",   Icon: FileUp },
   { id: "check_calls", label: "Calls",       Icon: PhoneCall },
   { id: "exceptions",  label: "Exceptions",  Icon: AlertTriangle },
   { id: "finance",     label: "Finance",     Icon: CreditCard },

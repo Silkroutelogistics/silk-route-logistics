@@ -702,7 +702,10 @@ export default function CarrierPoolPage() {
                 { key: "inspections", icon: ClipboardList, label: "Inspect" },
                 { key: "performance", icon: BarChart3, label: "Perform" },
                 { key: "history", icon: Clock, label: "History" },
-                { key: "documents", icon: FolderOpen, label: "Docs" },
+                // v3.8.akh §13.3 Item 63 P3-3 — "Docs" → "Documents". Key
+                // stays "documents" (already canonical); only the label
+                // changes to match the canonical drawer vocabulary.
+                { key: "documents", icon: FolderOpen, label: "Documents" },
                 // v3.8.ajj — Info Requests thread tab. Unified view of
                 // open + resolved + cancelled requests with attachments.
                 { key: "info-requests", icon: MessageCircle, label: "Info Req" },

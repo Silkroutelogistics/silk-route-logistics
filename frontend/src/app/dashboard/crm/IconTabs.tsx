@@ -14,7 +14,10 @@ const TABS: IconTabDef<CrmTab>[] = [
   { id: "rates",      label: "Rates",      Icon: DollarSign },
   { id: "facilities", label: "Facilities", Icon: MapPin },
   { id: "notes",      label: "Notes",      Icon: MessageSquare },
-  { id: "docs",       label: "Docs",       Icon: FileUp },
+  // v3.8.akh §13.3 Item 63 P3-3 — "Docs" → "Documents". Tab id stays
+  // "docs" to preserve consumer call sites (setTab("docs") + popstate
+  // history-state keys); only the user-visible label changes.
+  { id: "docs",       label: "Documents",  Icon: FileUp },
   { id: "orders",     label: "Orders",     Icon: ShoppingBag },
   { id: "activity",   label: "Activity",   Icon: Clock },
 ];
