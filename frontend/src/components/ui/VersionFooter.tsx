@@ -10812,6 +10812,97 @@
 //   180.6+180.7+180.8+180.9+180.10+180.11 done; 180.3 closed-by-
 //   discovery; banked 180.6.b CRM admin edit UI for the new fields).
 //
+// v3.8.aks — §13.3 Item 178 close (superseded by Sprint 63) + Item
+//   180.6.b close (CRM admin edit UI for the new Customer fields).
+//   Two banked items closed in one atomic per §3.3 because both are
+//   pure cleanup of the post-akr "remaining banked items" list and
+//   neither blocks the other. Net: ~95 LOC frontend add + 2 docs
+//   updates.
+//   Item 178 — post-Sprint-63 reframing → CLOSED AS SUPERSEDED.
+//   Phase A audit (sub-agent Explore) confirmed Sprint 63 deliberately
+//   reduced Carrier Engagement Drawer scope from Sprint 59.b's 7
+//   sections to a focused 3-editable-sections shape (Carrier picker +
+//   Financials + Instructions) with a read-only SummaryHeader showing
+//   Lane / Equipment / Schedule / Freight summary / References. The
+//   original Item 178 sprint shape ("widen drawer Freight section to
+//   an editable table") is structurally invalid — there's no Freight
+//   section to widen. Post-Sprint-63 canon: freight editing lives in
+//   Order Builder via LineItemsSection.tsx (full multi-line UI with
+//   pieces/packageType/weight/description/freightClass/nmfcCode/
+//   hazmat/hazmatUnNumber/hazmatClass per row); the drawer consumes
+//   the already-finalized line array and round-trips it unchanged
+//   through `POST /api/loads/with-tender` (primary line from form
+//   state + rest from `lineItemsRest` prop). The "+N more lines"
+//   SummaryHeader chip is read-only by design, not a UX gap. AE who
+//   needs to edit line 2+ closes the drawer → edits in Order Builder
+//   → reopens. Post-creation freight edits (after the Load row
+//   exists) are §13.3 Item 3 territory (EditLoadModal). No source
+//   change in the drawer; CLAUDE.md §13.3 Item 178 marked superseded
+//   with the architectural reasoning preserved for posterity.
+//   Item 180.6.b — CRM admin edit UI shipped.
+//   Backend was already done in v3.8.ako (Items 180.6 + 180.7 schema
+//   + validator + Order Builder consumer wiring) — `Customer
+//   .defaultAccessorialRates` (Json, map of accessorial-type → rate)
+//   + `Customer.minMarginPercent` (Float, 0-100 floor). Validator
+//   at backend/src/validators/customer.ts:41+45 already accepts both
+//   via `PATCH /customers/:id`. OrderSidebar at
+//   frontend/src/app/dashboard/orders/OrderSidebar.tsx:145+258
+//   already reads minMarginPercent via customerSnapshot for the
+//   margin-floor alert. The missing piece was the write-side admin
+//   UI letting AE actually set these per customer.
+//   Changes:
+//   * frontend/src/app/dashboard/crm/types.ts — added
+//     `defaultAccessorialRates: Record<string,number> | null` +
+//     `minMarginPercent: number | null` to the `CrmCustomer`
+//     interface so EditProfileForm can hydrate from existing values.
+//   * frontend/src/app/dashboard/crm/tabs/ProfileTab.tsx — extended
+//     the `EditProfileForm` component (lines 286-363 pre-aks):
+//       - New `AccessorialRow = { type: string; rate: number }`
+//         type capturing the flat-array UI shape; flattened to
+//         `Record<string, number>` on save to match the validator's
+//         `z.record(z.string(), z.number().nonnegative())` shape.
+//       - New `accessorials: AccessorialRow[]` state hydrated from
+//         `Object.entries(customer.defaultAccessorialRates ?? {})`.
+//       - `minMarginPercent` added to existing `form` state.
+//       - Save mutation payload extended with both fields; empty
+//         accessorial list serializes to `null` (cleaner than `{}`
+//         in DB); empty min-margin serializes to `null` to fall back
+//         to the global 10% default.
+//       - UI: number input 0-100 step 0.1 for min-margin floor with
+//         "blank uses 10% global default" hint label; editable
+//         table block for accessorials with type-text input
+//         (placeholder "e.g. Detention, Layover, TONU") + rate
+//         number input ($/hr) + remove button (×) per row + "+ Add"
+//         button. Empty state shows italic "No customer-specific
+//         rates set" placeholder. Uses existing chrome (gray-50
+//         surface + gray-200 borders) for visual continuity with
+//         the surrounding form.
+//   Design rationale — open-ended type strings vs fixed dropdown:
+//   `defaultAccessorialRates` validator accepts any string key (no
+//   enum), and Order Builder's accessorial picker matches by string,
+//   so free-text type input is the canonical shape. AE typing
+//   "Detention" here will match Order Builder's "Detention" picker
+//   entry on the next load. Future Item 180.6.c (out of scope) could
+//   add a dropdown of common types if AE finds the free-text input
+//   produces drift across loads.
+//   Pre-commit gates per Sub-pattern 11 (CI parity):
+//   * Backend tsc --noEmit clean on staged set (1 pre-existing tsc
+//     error in untracked WIP backend/src/services/fuelIndexService.ts
+//     unchanged from v3.8.akr — outside aks staged set).
+//   * Backend npm test: 224/224 pass.
+//   * Frontend tsc --noEmit clean.
+//   * Frontend `npx next build` clean (all routes prerendered as
+//     static; `/dashboard/crm` bundle absorbed the small UI add).
+//   Methodology — Pattern 1 (audit-first via sub-agent) + Sub-pattern
+//   5 (audit-both-ends-of-data-flow — verified write side (validator
+//   accepts) + read side (OrderSidebar consumes) before adding the
+//   admin UI in between).
+//   §13.3 Item 178 LOG OPEN → CLOSED AS SUPERSEDED.
+//   §13.3 Item 180.6.b LOG OPEN → CLOSED.
+//   5-item verified-pending list (post-akq) now fully closed: Item
+//   8.5 (akr), Item 87 followup (akq), Item 63 P3-2 (akq), Item 178
+//   (this commit), Item 180.6.b (this commit).
+//
 // v3.8.akr — §13.3 Item 8.5 close: AddressBook dead-model deletion.
 //   Phase A audit confirmed the model is structurally orphaned — zero
 //   frontend consumers (grep frontend/src/ returned only 2 VersionFooter
@@ -10952,7 +11043,7 @@
 //   in untracked WIP backend/src/routes/quoteApprove.ts left in place
 //   per user direction — committed by explicit path only, not staged).
 //   §13.3 Item 191 LOG OPEN; closed at v3.8.akq when Phase 2 ships.
-export const SRL_VERSION = "3.8.akr";
+export const SRL_VERSION = "3.8.aks";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

@@ -41,6 +41,8 @@ export interface CrmCustomer {
   billingState: string | null;
   billingZip: string | null;
   notes: string | null;
+  defaultAccessorialRates: Record<string, number> | null;
+  minMarginPercent: number | null;
   createdAt: string;
   totalRevenue?: number;
   totalLoads?: number;

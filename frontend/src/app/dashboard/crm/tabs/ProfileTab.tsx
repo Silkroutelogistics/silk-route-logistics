@@ -283,6 +283,14 @@ interface RepOption {
   role: string;
 }
 
+// v3.8.aks §13.3 Item 180.6.b — accessorial rate row shape for the
+// per-customer negotiated rates editor. Free-text type name (matches
+// Order Builder's accessorial picker by string) + nonnegative number
+// rate. UI maintains an ordered array for stable React keys; on save
+// it flattens to the Record<string, number> shape the backend
+// updateCustomerSchema validator at validators/customer.ts:41 expects.
+type AccessorialRow = { type: string; rate: number };
+
 function EditProfileForm({
   customer, onCancel, onSaved,
 }: { customer: CrmCustomer; onCancel: () => void; onSaved: () => void }) {
@@ -299,7 +307,14 @@ function EditProfileForm({
     paymentTerms: customer.paymentTerms ?? "Net 30",
     taxId: customer.taxId ?? "",
     accountRepId: customer.accountRepId ?? "",
+    minMarginPercent: customer.minMarginPercent,
   });
+
+  const [accessorials, setAccessorials] = useState<AccessorialRow[]>(() =>
+    customer.defaultAccessorialRates
+      ? Object.entries(customer.defaultAccessorialRates).map(([type, rate]) => ({ type, rate }))
+      : []
+  );
 
   const repOptions = useQuery<{ users: RepOption[] }>({
     queryKey: ["crm-rep-options"],
@@ -308,11 +323,21 @@ function EditProfileForm({
   });
 
   const save = useMutation({
-    mutationFn: async () =>
-      (await api.patch(`/customers/${customer.id}`, {
+    mutationFn: async () => {
+      // Flatten AccessorialRow[] → Record<string,number>; drop empty type names
+      // and dedupe by last-wins so the validator's z.record() shape is clean.
+      const ratesRecord: Record<string, number> = {};
+      for (const row of accessorials) {
+        const type = row.type.trim();
+        if (type) ratesRecord[type] = Number.isFinite(row.rate) ? row.rate : 0;
+      }
+      return (await api.patch(`/customers/${customer.id}`, {
         ...form,
         accountRepId: form.accountRepId || null,
-      })).data,
+        minMarginPercent: form.minMarginPercent ?? null,
+        defaultAccessorialRates: Object.keys(ratesRecord).length > 0 ? ratesRecord : null,
+      })).data;
+    },
     onSuccess: onSaved,
   });
 
@@ -347,6 +372,81 @@ function EditProfileForm({
       <Input label="Credit limit" value={String(form.creditLimit)} onChange={(v) => setForm({ ...form, creditLimit: Number(v) || 0 })} />
       <Input label="Payment terms" value={form.paymentTerms} onChange={(v) => setForm({ ...form, paymentTerms: v })} />
       <Input label="Tax ID"       value={form.taxId} onChange={(v) => setForm({ ...form, taxId: v })} />
+
+      <label className="block">
+        <span className="text-[11px] text-gray-500">
+          Min margin floor (%) — blank uses 10% global default
+        </span>
+        <input
+          type="number"
+          min={0}
+          max={100}
+          step={0.1}
+          value={form.minMarginPercent ?? ""}
+          onChange={(e) => {
+            const v = e.target.value;
+            setForm({
+              ...form,
+              minMarginPercent: v === "" ? null : Math.max(0, Math.min(100, Number(v) || 0)),
+            });
+          }}
+          placeholder="e.g. 12.5"
+          className="w-full mt-0.5 px-3 py-1.5 text-sm border border-gray-200 rounded bg-white"
+        />
+      </label>
+
+      <div className="border border-gray-200 rounded p-3 space-y-2 bg-gray-50">
+        <div className="flex items-center justify-between">
+          <span className="text-[11px] text-gray-500">Negotiated accessorial rates</span>
+          <button
+            type="button"
+            onClick={() => setAccessorials([...accessorials, { type: "", rate: 0 }])}
+            className="text-[11px] text-[#BA7517] hover:text-[#8f5a11]"
+          >
+            + Add
+          </button>
+        </div>
+        {accessorials.length === 0 && (
+          <p className="text-[11px] text-gray-400 italic">
+            No customer-specific rates set. Order Builder will use the global defaults.
+          </p>
+        )}
+        {accessorials.map((row, i) => (
+          <div key={i} className="grid grid-cols-[1fr_100px_auto] gap-2 items-center">
+            <input
+              value={row.type}
+              onChange={(e) => {
+                const next = [...accessorials];
+                next[i] = { ...next[i], type: e.target.value };
+                setAccessorials(next);
+              }}
+              placeholder="e.g. Detention, Layover, TONU"
+              className="px-2 py-1 text-sm border border-gray-200 rounded bg-white"
+            />
+            <input
+              type="number"
+              min={0}
+              step={0.01}
+              value={row.rate}
+              onChange={(e) => {
+                const next = [...accessorials];
+                next[i] = { ...next[i], rate: Number(e.target.value) || 0 };
+                setAccessorials(next);
+              }}
+              placeholder="$/hr"
+              className="px-2 py-1 text-sm border border-gray-200 rounded bg-white"
+            />
+            <button
+              type="button"
+              onClick={() => setAccessorials(accessorials.filter((_, j) => j !== i))}
+              className="text-gray-400 hover:text-red-600 text-xs px-1"
+              aria-label="Remove accessorial row"
+            >
+              ×
+            </button>
+          </div>
+        ))}
+      </div>
 
       <div className="flex gap-2">
         <button
