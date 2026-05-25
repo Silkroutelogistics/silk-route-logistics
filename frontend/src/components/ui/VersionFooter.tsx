@@ -10325,7 +10325,44 @@
 //   production were silently losing the cascade before akc.
 //   ~200 LOC net (added side effects to canonical, deleted ~150 LOC dead
 //   code across 4 files) + version bump. No schema migration.
-export const SRL_VERSION = "3.8.akc";
+// v3.8.akd — Item 159 Sprint 2 + CI hotfix bundle.
+//   Two-fer atomic: (a) CI hotfix for the 2 vitest failures left by
+//   v3.8.akb + v3.8.akc, and (b) the in-flight Sprint 2 wire-up to 4
+//   critical AE-side load.status write sites.
+//   CI hotfix:
+//   * __tests__/unit/controllers/loadController.test.ts — test
+//     expectation updated from "Invalid status transition" string
+//     match to the canonical validator's "POSTED ... DELIVERED" +
+//     code SKIP_NOT_ALLOWED + allowed array shape (akb error
+//     message change).
+//   * Same file — carrierUpdateStatus test block + import REMOVED
+//     (akc deleted the function; the dead test was the second CI
+//     failure).
+//   * Sub-pattern 11 second fire — local pre-commit gate set
+//     (tsc + next build) was a STRICT SUBSET of CI (which ALSO
+//     runs vitest via npm test). akd extends the local pre-commit
+//     discipline canonical to include `npm test` from backend/.
+//   Sprint 2 (Item 159 continued):
+//   * tenderController.createTender POSTED → TENDERED flip —
+//     defense-in-depth validator (upstream guard at line 18 already
+//     restricts to POSTED|TENDERED).
+//   * tenderController.acceptTender load → BOOKED flip — validator
+//     runs BEFORE prisma.$transaction so a refusal aborts cleanly.
+//     422 + structured reason on illegitimate transitions.
+//   * tenderController.acceptTenderOnBehalf load → BOOKED flip —
+//     same pattern as acceptTender on the AE override path.
+//   * checkCallController.createCheckCall derived-status flip —
+//     pre-akd had a bare `status: newLoadStatus as any` type
+//     assertion with NO transition check. akd logs a SystemLog
+//     WARNING + skips load.update when the derived status would
+//     produce an invalid transition; check call still records.
+//   Remaining Sprint 2+ work (banked): broadcastTenderService,
+//   ediService, checkCallAutomation, customerController CANCELLED
+//   flip, accountingController INVOICED → COMPLETED, processExpiredTenders
+//   TENDERED → POSTED. ~6 more sites; next sprint slot.
+//   ~150 LOC net across 4 backend files + 1 test file + version
+//   bump. No schema migration.
+export const SRL_VERSION = "3.8.akd";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

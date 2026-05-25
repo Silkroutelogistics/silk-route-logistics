@@ -8,6 +8,7 @@ import { notifyTenderAction } from "../services/notificationService";
 import { autoGenerateRateConfirmation } from "../services/autoRateConfirmationService";
 import { hooks } from "../lib/hooks";
 import { log } from "../lib/logger";
+import { validateLoadStatusTransition } from "../lib/loadStateMachine";
 
 export async function createTender(req: AuthRequest, res: Response) {
   const { carrierId, offeredRate, expiresAt } = createTenderSchema.parse(req.body);
@@ -36,6 +37,21 @@ export async function createTender(req: AuthRequest, res: Response) {
 
   // Auto-advance load to TENDERED on first tender (if currently POSTED)
   if (load.status === "POSTED") {
+    // v3.8.akd Item 159 Sprint 2 — defense-in-depth validator.
+    // Upstream guard at line 18 already restricts entry to POSTED|TENDERED,
+    // so this branch only fires from POSTED. Calling the validator here
+    // makes the canonical helper authoritative on every AE-side status
+    // flip; cheap and produces a structured 400 if some future caller
+    // weakens the upstream guard.
+    const transition = validateLoadStatusTransition(load.status, "TENDERED", "AE");
+    if (!transition.allowed) {
+      res.status(400).json({
+        error: transition.reason ?? `Invalid status transition: ${load.status} → TENDERED`,
+        code: transition.code,
+        allowed: transition.allowedNext ?? [],
+      });
+      return;
+    }
     await prisma.load.update({
       where: { id: load.id },
       data: { status: "TENDERED", tenderedAt: new Date(), tenderedById: req.user!.id },
@@ -77,6 +93,22 @@ export async function acceptTender(req: AuthRequest, res: Response) {
   // Fetch full load details for shipment creation
   const load = await prisma.load.findUnique({ where: { id: tender.loadId } });
   if (!load) { res.status(404).json({ error: "Load not found" }); return; }
+
+  // v3.8.akd Item 159 Sprint 2 — validate load.status → BOOKED transition
+  // BEFORE the atomic transaction. A load with status DISPATCHED or
+  // beyond should never accept a tender (it's already past tender-stage);
+  // pre-akd this codepath would happily flip any non-terminal state to
+  // BOOKED with no safeguard. The validator returns 422 on illegitimate
+  // transitions; load + tender stay untouched.
+  const loadTransition = validateLoadStatusTransition(load.status, "BOOKED", "AE");
+  if (!loadTransition.allowed) {
+    res.status(422).json({
+      error: loadTransition.reason ?? `Cannot accept tender — load is in status ${load.status} which doesn't accept BOOKED transition.`,
+      code: loadTransition.code,
+      allowed: loadTransition.allowedNext ?? [],
+    });
+    return;
+  }
 
   // Sprint 38 (Item 53) — atomic accept. Was Promise.all (concurrent, NOT
   // atomic). On partial failure (e.g., load update succeeds, tender update
@@ -232,6 +264,20 @@ export async function acceptTenderOnBehalf(req: AuthRequest, res: Response) {
 
   const load = await prisma.load.findUnique({ where: { id: tender.loadId } });
   if (!load) { res.status(404).json({ error: "Load not found" }); return; }
+
+  // v3.8.akd Item 159 Sprint 2 — validate load.status → BOOKED transition
+  // BEFORE the atomic transaction. Same defense-in-depth as the
+  // acceptTender wiring; on-behalf endpoint is an AE override and the
+  // validator's AE actor map is the appropriate authority gate.
+  const onBehalfTransition = validateLoadStatusTransition(load.status, "BOOKED", "AE");
+  if (!onBehalfTransition.allowed) {
+    res.status(422).json({
+      error: onBehalfTransition.reason ?? `Cannot accept tender on-behalf — load is in status ${load.status} which doesn't accept BOOKED transition.`,
+      code: onBehalfTransition.code,
+      allowed: onBehalfTransition.allowedNext ?? [],
+    });
+    return;
+  }
 
   // Atomic txn (Sprint 38 Item 53 pattern). Same three operations as
   // acceptTender — tender→ACCEPTED, load→BOOKED+carrierId, sibling

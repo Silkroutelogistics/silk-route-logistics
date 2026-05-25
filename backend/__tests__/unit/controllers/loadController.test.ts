@@ -31,10 +31,11 @@ import {
   getLoads,
   getLoadById,
   updateLoadStatus,
-  carrierUpdateStatus,
   deleteLoad,
   restoreLoad,
 } from "../../../src/controllers/loadController";
+// v3.8.akc Item 158 — carrierUpdateStatus DELETED (dead AE-side route).
+// Side effects migrated to canonical POST /api/carrier-loads/:id/status.
 
 const mockPrisma = vi.mocked(prisma);
 
@@ -197,8 +198,17 @@ describe("loadController", () => {
     await updateLoadStatus(req, res);
 
     expect(res.status).toHaveBeenCalledWith(400);
+    // v3.8.akb — error message changed from inline "Invalid status
+    // transition: POSTED → DELIVERED" to canonical validator output
+    // "Cannot transition from POSTED to DELIVERED. Next allowed: ...".
+    // Test asserts on the meaningful semantic — "POSTED" + "DELIVERED"
+    // appear in the message — and the new code field is present.
     expect(res.json).toHaveBeenCalledWith(
-      expect.objectContaining({ error: expect.stringContaining("Invalid status transition") })
+      expect.objectContaining({
+        error: expect.stringMatching(/POSTED.*DELIVERED/),
+        code: "SKIP_NOT_ALLOWED",
+        allowed: expect.arrayContaining(["TENDERED", "BOOKED", "CANCELLED"]),
+      })
     );
   });
 
@@ -221,32 +231,16 @@ describe("loadController", () => {
     expect(res.status).toHaveBeenCalledWith(403);
   });
 
-  // ── carrierUpdateStatus ─────────────────────────────────
-  it("carrierUpdateStatus — carrier updates assigned load", async () => {
-    mockPrisma.load.findUnique.mockResolvedValue({
-      id: "load-1",
-      status: "DISPATCHED",
-      carrierId: "carrier-1",
-      posterId: "broker-1",
-      referenceNumber: "SRL-100",
-    } as any);
-    mockPrisma.load.update.mockResolvedValue({
-      id: "load-1",
-      status: "AT_PICKUP",
-    } as any);
-    mockPrisma.shipment.findFirst.mockResolvedValue(null);
-    mockPrisma.notification.create.mockResolvedValue({} as any);
-
-    const { req, res } = mockReqRes(
-      { status: "AT_PICKUP" },
-      { id: "carrier-1", role: "CARRIER" },
-      { id: "load-1" }
-    );
-
-    await carrierUpdateStatus(req, res);
-
-    expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ status: "AT_PICKUP" }));
-  });
+  // ── carrierUpdateStatus block DELETED in v3.8.akc Item 158.
+  // The controller function it exercised (carrierUpdateStatus) was the
+  // handler for the dead PATCH /api/loads/:id/carrier-status route.
+  // Side effects (Shipment sync + auto-invoice + shipper email cascade
+  // + onLoadDelivered integration) migrated to the canonical carrier-
+  // portal endpoint POST /api/carrier-loads/:id/status. Equivalent
+  // integration coverage now belongs in a routes/carrierLoads.ts test
+  // (banked as small follow-up since the file currently has no test
+  // coverage — Sub-pattern 11 second-class fire would benefit from
+  // explicit coverage of the migrated side effects).
 
   // ── deleteLoad ──────────────────────────────────────────
   it("deleteLoad — soft-deletes load and related records", async () => {

@@ -2,6 +2,9 @@ import { Response } from "express";
 import { prisma } from "../config/database";
 import { AuthRequest } from "../middleware/auth";
 import { createCheckCallSchema } from "../validators/checkCall";
+import { validateLoadStatusTransition } from "../lib/loadStateMachine";
+import { log } from "../lib/logger";
+import { LoadStatus } from "@prisma/client";
 
 export async function createCheckCall(req: AuthRequest, res: Response) {
   const data = createCheckCallSchema.parse(req.body);
@@ -34,10 +37,54 @@ export async function createCheckCall(req: AuthRequest, res: Response) {
 
   const newLoadStatus = checkCallToLoadStatus[data.status];
   if (newLoadStatus) {
-    await prisma.load.update({
-      where: { id: data.loadId },
-      data: { status: newLoadStatus as any },
-    });
+    // v3.8.akd Item 159 Sprint 2 — validate derived status flip against
+    // the canonical state machine. Pre-akd this codepath used a bare
+    // `status: newLoadStatus as any` type-assertion with NO transition
+    // check — a check call recorded at AT_DELIVERY against a load
+    // currently at AT_PICKUP would silently flip the load forward,
+    // skipping LOADED + IN_TRANSIT. Now the validator gates the flip;
+    // an illegitimate transition logs a SystemLog WARNING + skips the
+    // load.update (the check call itself was created at line 12-24 and
+    // remains in DB for audit, just doesn't pull the load along with
+    // a state-machine violation).
+    const transition = validateLoadStatusTransition(
+      load.status as LoadStatus,
+      newLoadStatus as LoadStatus,
+      "AE",
+    );
+    if (transition.allowed) {
+      await prisma.load.update({
+        where: { id: data.loadId },
+        data: { status: newLoadStatus as LoadStatus },
+      });
+    } else {
+      log.warn(
+        {
+          loadId: data.loadId,
+          from: load.status,
+          to: newLoadStatus,
+          code: transition.code,
+          reason: transition.reason,
+        },
+        "[CheckCall] Derived status flip rejected by state machine; check call recorded but load.status not advanced.",
+      );
+      prisma.systemLog.create({
+        data: {
+          logType: "STATUS_CHANGE",
+          severity: "WARNING",
+          source: "checkCall-derived-status",
+          message: `Check call would advance load ${data.loadId} from ${load.status} to ${newLoadStatus} but the transition is invalid — load.status preserved.`,
+          details: {
+            loadId: data.loadId,
+            checkCallId: checkCall.id,
+            from: load.status,
+            attemptedTo: newLoadStatus,
+            code: transition.code,
+            reason: transition.reason,
+          },
+        },
+      }).catch(() => { /* swallow logging-table contention */ });
+    }
   }
 
   // Update last location on linked shipment
