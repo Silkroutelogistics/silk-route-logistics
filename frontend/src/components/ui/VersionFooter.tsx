@@ -10812,6 +10812,127 @@
 //   180.6+180.7+180.8+180.9+180.10+180.11 done; 180.3 closed-by-
 //   discovery; banked 180.6.b CRM admin edit UI for the new fields).
 //
+// v3.8.akv — §13.3 Item 182 sprint 5 SURGICAL ROLLBACK. v3.8.aku
+//   shipped onboarding-side verdict surfaces built on the
+//   fmcsaService.getCarrierAuthority function that the 2026-05-23 audit
+//   already documented as broken — the FMCSA QCMobile /authority
+//   endpoint returns CURRENT-STATUS fields only (brokerAuthorityStatus
+//   / commonAuthorityStatus), NOT historical GRANT events. The parser's
+//   filter for originalAction === "GRANT" matches zero entries on every
+//   real response, so getCarrierAuthority resolves to null for every
+//   carrier. v3.8.aio shipped a manual AE-side workaround (POST
+//   /carrier/:id/authority-grant-date) but never fixed the underlying
+//   function. v3.8.aku built on the broken function despite the prior
+//   audit comment at carrierController.ts:1193-1196; Phase A
+//   sub-agent audit verified getCarrierAuthority's SIGNATURE +
+//   exports + cache TTL but did not grep for prior source-comment
+//   audits of the function's behavior — a Sub-pattern 5
+//   audit-both-ends-of-data-flow miss EXTENDED (function-signature
+//   audit ≠ function-behavior audit). Live deploy smoke caught the
+//   regression: established 17-year-old motor carriers like INTEGRITY
+//   EXPRESS LOGISTICS LLC (DOT 1911857) resolved to
+//   authorityVerdict: "WAITING_LIST" and would have been blocked at
+//   /onboarding and steered to the waitlist capture form.
+//
+//   REMOVED (the harmful verdict surfaces):
+//   * backend/src/routes/carrier.ts — AuthorityVerdict type +
+//     buildAuthorityVerdict() helper deleted; getCarrierAuthority +
+//     calendarMonthsBetween + z imports removed (no other callers in
+//     this file); the try/catch authority enrichment removed from
+//     GET /fmcsa-lookup/:dotNumber and GET /fmcsa-mc-lookup/:mcNumber
+//     — both endpoints now return the same response shape they did
+//     pre-aku (current FMCSA carrier-identity data only); POST
+//     /carrier/waitlist endpoint + waitlistSchema deleted (only
+//     caller was the verdict-driven submitToWaitlist hook).
+//   * frontend/src/app/onboarding/page.tsx — AuthorityVerdict type
+//     + 4 enrichment fields stripped from FmcsaResult interface;
+//     waitlistSubmitting/Submitted/Error state + submitToWaitlist()
+//     mutation hook deleted; canNext() Step 1 gate reverted to
+//     pre-aku single-line return (no longer blocks on
+//     WAITING_LIST verdict); three verdict pill render branches +
+//     waitlist confirmation card deleted from the FMCSA result
+//     block. The /onboarding flow now matches its pre-aku behavior:
+//     a carrier proceeds through registration without an
+//     authority-age verdict gating them.
+//
+//   RETAINED (intentional preservation per directive):
+//   * backend/prisma/schema.prisma — `model WaitingList` STAYS.
+//     Migration 20260525160000_add_waiting_list/migration.sql STAYS.
+//     The migration already applied to prod on the v3.8.aku deploy
+//     2026-05-25; deleting the migration file would create schema
+//     drift. The WaitingList table is intentionally retained (empty)
+//     for the future Highway-backed reimplementation when a working
+//     authority data source lands. WaitingList rows continue to be
+//     writeable via Prisma directly (no public HTTP endpoint exists
+//     post-rollback).
+//
+//   NOT TOUCHED (safety net stays intact, per directive):
+//   * Tender-time authority-age gate at complianceMonitorService.ts
+//     (v3.8.ahl/ahm) — continues to block at tender time for
+//     post-cutoff carriers with null authorityGrantedDate;
+//     AUTHORITY_UNVERIFIED branch fires past the 24h grace window.
+//   * Manual AE authority-grant-date entry endpoint
+//     (POST /carrier/:id/authority-grant-date, v3.8.aio) — only
+//     working data path for populating CarrierProfile
+//     .authorityGrantedDate today; AE provides reason + date,
+//     auditTrail row emitted, gate then passes.
+//   * Soft-grandfathering of pre-cutoff APPROVED carriers via
+//     AUTHORITY_AGE_GATE_LIVE_AT constant in
+//     complianceMonitorService.ts — existing carriers with
+//     approvedAt < cutoff get a warning, never blocked.
+//   * fmcsaService.getCarrierAuthority function itself + its
+//     null-writing callers (populateAuthorityGrantedDate +
+//     registerCarrier + setupAdminCarrierProfile fire-and-forget
+//     post-registration calls) — these stay as the Highway
+//     reimplementation site. The function still resolves to null
+//     for every carrier post-rollback; that's the documented
+//     status quo since 2026-05-23. The frontend OverrideComplianceModal
+//     (v3.8.ahq) consuming blocked_codes and the
+//     complianceCheck() AUTHORITY_TOO_YOUNG/AUTHORITY_UNVERIFIED
+//     branches continue to work; AE has the existing override path
+//     via OverrideComplianceModal (reason + 24h scoped override
+//     limited to 15 per carrier per rolling 30 days).
+//
+//   Methodology bank (new sub-pattern candidate fire #1):
+//   "audit-prior-audit-findings before depending on a function" —
+//   when a sprint extends or depends on an existing function, the
+//   Phase A audit must grep the codebase for inline source-comment
+//   audits + commit-message audits of that function before
+//   declaring it usable. v3.8.aku's Phase A sub-agent prompt
+//   verified getCarrierAuthority's signature + return shape but
+//   did not surface the 2026-05-23 audit comment at
+//   carrierController.ts:1193 that documented the function returns
+//   null for every carrier. Banking for §19 sub-rule c three-fire
+//   validation lineage. Two more independent fires of the same
+//   methodology gap class needed before §19 canonical promotion.
+//
+//   Path forward (banked, no firm slot):
+//   * Investigation sprint — direct keyed request to FMCSA
+//     /authority endpoint with the Render env webKey to capture
+//     actual response shape; determine whether a different FMCSA
+//     endpoint (L&I licensing system, SAFER) exposes historical
+//     GRANT events.
+//   * If no free FMCSA path: evaluate paid Highway-backed
+//     reimplementation (Carrier Assure, RMIS, Highway.com — all
+//     wrap FMCSA L&I data with authority history).
+//   * Once a working data source lands, restore the verdict UI on
+//     top of it + activate the WaitingList table for real use.
+//
+//   Net source change: ~210 LOC removed across 2 files (carrier.ts
+//   -110 LOC: AuthorityVerdict type + helper + endpoint enrichment
+//   + waitlist endpoint; onboarding/page.tsx -100 LOC: state +
+//   mutation + canNext gate extension + 3 verdict render branches +
+//   confirmation card). Net change after this footer comment block
+//   + docs updates: ~+50 LOC docs. WaitingList schema model + its
+//   migration preserved verbatim. No prisma migration changes; no
+//   data-layer touches; Render's next deploy is a no-op against
+//   the existing schema.
+//   §13.3 Item 182 sprint 5 LOG CLOSED → LOG OPEN (re-opened for
+//   Highway-backed reimplementation; epic stays at 4/5 sprints
+//   shipped). §13.3 Item 182 sprint 5-original implementation
+//   details preserved in §13.3 Item 182 closure narrative for
+//   the Highway-reimplementation reference.
+//
 // v3.8.aku — §13.3 Item 182 sprint 5/5 close (Authority-age epic
 //   complete). Onboarding UI + WaitingList Prisma model — the final
 //   sprint of the 5-sprint Authority-age compliance epic that started
@@ -11206,7 +11327,7 @@
 //   as a separate small follow-on commit after live data lands.
 //   §13.3 Item 191 ships code-complete. Live verification + docs are
 //   the next ratification cycle (no version bump expected for docs).
-export const SRL_VERSION = "3.8.aku";
+export const SRL_VERSION = "3.8.akv";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

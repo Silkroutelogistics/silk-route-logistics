@@ -13,6 +13,19 @@ so it's searchable and never lost.
 
 ---
 
+## Resolved — 2026-05-25 (v3.8.aku → v3.8.akv surgical rollback)
+
+### P0 — `/onboarding` verdict UI mis-classifies every legitimate carrier as <12-month / WAITING_LIST
+- Surface: [`frontend/src/app/onboarding/page.tsx`](frontend/src/app/onboarding/page.tsx) verdict pills + waitlist capture form, [`backend/src/routes/carrier.ts`](backend/src/routes/carrier.ts) `GET /fmcsa-lookup/:dot` + `GET /fmcsa-mc-lookup/:mc` `authorityVerdict` enrichment, `POST /carrier/waitlist` endpoint
+- Symptom: v3.8.aku post-deploy smoke against the live FMCSA endpoint returned `authorityVerdict: "WAITING_LIST"` + `authorityGrantDate: null` for every real DOT/MC tested, including established 17-year-old motor carrier INTEGRITY EXPRESS LOGISTICS LLC (DOT 1911857). The /onboarding flow would have blocked Step 1 → Next on the WAITING_LIST verdict and steered every legitimate carrier to the waitlist capture form.
+- Root cause: `fmcsaService.getCarrierAuthority(dot)` was implemented in v3.8.ahj (2026-05-21) assuming the FMCSA QCMobile `/carriers/{dot}/authority` endpoint returns a historical GRANT events log. The actual endpoint returns CURRENT-STATUS fields only (`brokerAuthorityStatus`, `commonAuthorityStatus`), so the parser's filter for `originalAction === "GRANT"` matches zero entries on every real response → function resolves to null for every carrier. This was documented as a known issue in the 2026-05-23 audit comment at [`carrierController.ts:1193-1196`](backend/src/controllers/carrierController.ts#L1193); v3.8.aio shipped a manual AE-side workaround (`POST /carrier/:id/authority-grant-date`) but never fixed the function. v3.8.aku's Phase A audit verified `getCarrierAuthority` SIGNATURES + exports + cache TTL but did not grep for prior source-comment audits documenting the function's behavior — a Sub-pattern 5 audit-both-ends-of-data-flow miss EXTENDED (function-signature audit ≠ function-behavior audit).
+- Severity: P0 — would block 100% of carrier onboarding traffic. No live traffic existed at the v3.8.aku deploy window (pre-revenue), so blast radius was contained.
+- Status: **Fixed in v3.8.akv.** Surgical rollback of v3.8.aku's verdict surfaces while preserving the `WaitingList` schema model + migration (already applied to prod; deletion would create schema drift; retained for the future Highway-backed reimplementation). The tender-time authority-age gate (v3.8.ahl/ahm), the manual AE authority-grant-date entry endpoint (v3.8.aio), the soft-grandfathering of pre-cutoff APPROVED carriers, and `getCarrierAuthority` itself + its null-writing callers remain in place as the working interim path and the future reimplementation site.
+- Methodology bank: sub-pattern candidate fire #1 — "audit-prior-audit-findings before depending on a function" — Phase A audit must grep the codebase for inline source-comment audits + commit-message audits of any function the sprint extends or depends on, BEFORE declaring it usable. Awaits two more independent fires for §19 sub-rule c canonical promotion per three-fire convention.
+- Date noted: 2026-05-25
+
+---
+
 ## Open — discovered 2026-05-06 (Sprint 24 smoke)
 
 ### P1 — `/accounting/analytics` crashes with null-toFixed error
