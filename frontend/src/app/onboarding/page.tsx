@@ -121,6 +121,12 @@ function OnboardingNav() {
 const equipmentOptions = ["Dry Van", "Reefer", "Flatbed", "Step Deck", "Tanker", "Intermodal", "Power Only", "Box Truck"];
 const regionOptions = ["Great Lakes", "Upper Midwest", "Southeast", "Northeast", "South Central", "West", "Eastern Canada", "Western Canada", "Central Canada", "Cross-Border"];
 
+// v3.8.aku §13.3 Item 182 sprint 5 — authority age verdict surfaced
+// alongside FMCSA carrier identity data. Backend computes verdict from
+// `getCarrierAuthority(dot)` + `calendarMonthsBetween()` in
+// routes/carrier.ts buildAuthorityVerdict() helper.
+type AuthorityVerdict = "AUTO_ALLOW" | "OVERRIDE_ELIGIBLE" | "WAITING_LIST";
+
 interface FmcsaResult {
   verified: boolean;
   legalName: string | null;
@@ -139,6 +145,11 @@ interface FmcsaResult {
   phyState: string | null;
   phyZipcode: string | null;
   phone: string | null;
+  // v3.8.aku — authority age enrichment for verdict pill rendering
+  authorityGrantDate: string | null;
+  authorityAgeMonths: number | null;
+  authorityVerdict: AuthorityVerdict | null;
+  authorityEligibilityDate: string | null;
   errors: string[];
 }
 
@@ -383,6 +394,55 @@ export default function OnboardingPage() {
     }, 600);
   }, [form.password]);
 
+  // v3.8.aku §13.3 Item 182 sprint 5 — waiting-list state. Carriers whose
+  // FMCSA authority is younger than 12 months (or has no resolvable grant
+  // date) cannot proceed past Step 1 — instead they're offered the waitlist
+  // capture form. `waitlistSubmitted` flips true on successful POST to
+  // /api/carrier/waitlist; the page then shows a confirmation card in
+  // place of the registration form.
+  const [waitlistSubmitting, setWaitlistSubmitting] = useState(false);
+  const [waitlistSubmitted, setWaitlistSubmitted] = useState(false);
+  const [waitlistError, setWaitlistError] = useState<string | null>(null);
+
+  const submitToWaitlist = useCallback(async () => {
+    if (!fmcsaResult?.dotNumber || !form.email) {
+      setWaitlistError("Email and DOT number are required to join the waitlist.");
+      return;
+    }
+    setWaitlistSubmitting(true);
+    setWaitlistError(null);
+    try {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+      if (!apiUrl) {
+        setWaitlistError("Could not reach the server. Try again shortly.");
+        setWaitlistSubmitting(false);
+        return;
+      }
+      const res = await fetch(`${apiUrl}/carrier/waitlist`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: form.email,
+          dotNumber: fmcsaResult.dotNumber,
+          mcNumber: fmcsaResult.mcNumber ?? undefined,
+          authorityGrantDate: fmcsaResult.authorityGrantDate,
+          eligibilityDate: fmcsaResult.authorityEligibilityDate,
+        }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setWaitlistError(data.error ?? "Could not add you to the waitlist. Try again.");
+        setWaitlistSubmitting(false);
+        return;
+      }
+      setWaitlistSubmitted(true);
+    } catch {
+      setWaitlistError("Network error. Please try again.");
+    } finally {
+      setWaitlistSubmitting(false);
+    }
+  }, [fmcsaResult, form.email]);
+
   const canNext = () => {
     // v3.8.aix — phone validation counts digits (10) since formatPhone wraps
     // as "(XXX) XXX-XXXX" (14 chars). Password γ "Very Strong" tier requires
@@ -390,7 +450,16 @@ export default function OnboardingPage() {
     // (c) HIBP returns "safe" (verified not in known breaches). HIBP "error"
     // or "unknown" or "checking" blocks the gate — user must wait for
     // verification to complete.
-    if (step === 0) return form.firstName && form.lastName && form.email && passwordMeetsCriteria(form.password) && confirmPassword === form.password && hibpStatus === "safe" && form.company && form.phone.replace(/\D/g, "").length === 10 && form.mcNumber.trim() && form.dotNumber.length >= 5 && /^\d+$/.test(form.dotNumber) && form.address && form.city && form.state && form.zip;
+    // v3.8.aku §13.3 Item 182 sprint 5 — also block Step 1 → Next when
+    // authority verdict is WAITING_LIST (carrier authority < 12 months OR
+    // no resolvable grant date). Carrier must use the waitlist capture
+    // form instead of proceeding to registration. OVERRIDE_ELIGIBLE
+    // (12-18mo) does NOT block — carrier proceeds; AE applies the
+    // ComplianceOverride during the approval review.
+    if (step === 0) {
+      if (fmcsaResult?.authorityVerdict === "WAITING_LIST") return false;
+      return form.firstName && form.lastName && form.email && passwordMeetsCriteria(form.password) && confirmPassword === form.password && hibpStatus === "safe" && form.company && form.phone.replace(/\D/g, "").length === 10 && form.mcNumber.trim() && form.dotNumber.length >= 5 && /^\d+$/.test(form.dotNumber) && form.address && form.city && form.state && form.zip;
+    }
     if (step === 1) return form.equipmentTypes.length > 0 && form.operatingRegions.length > 0;
     // v3.8.ajb — Step 3 (Insurance & Documents) gate. W-9, Insurance
     // Certificate, and Authority Letter are universally required.
@@ -912,6 +981,103 @@ export default function OnboardingPage() {
                   {!fmcsaResult.verified && fmcsaResult.outOfServiceDate && (
                     <p className="ml-7 text-[#9B2C2C] font-medium mt-1">Out of Service: {fmcsaResult.outOfServiceDate}</p>
                   )}
+                </div>
+              )}
+
+              {/* v3.8.aku §13.3 Item 182 sprint 5 — Authority-age verdict pill.
+                  AUTO_ALLOW (≥18mo) renders silent green confirmation; this
+                  is the happy path and doesn't need a callout — carriers
+                  proceed with no additional friction.
+                  OVERRIDE_ELIGIBLE (12-18mo) renders amber warning; carrier
+                  proceeds but is told their application may require manual
+                  review.
+                  WAITING_LIST (<12mo OR no grant date) renders the capture
+                  form; registration is blocked at canNext until carrier
+                  joins the waitlist. */}
+              {fmcsaResult?.authorityVerdict === "AUTO_ALLOW" && fmcsaResult.authorityAgeMonths != null && (
+                <div className="p-3 rounded-lg bg-[#E6F0E9] border border-[#2F7A4F]/40 text-sm">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-[#2F7A4F]" />
+                    <span className="text-[#2F7A4F] font-medium">
+                      Authority active {fmcsaResult.authorityAgeMonths} months · You can proceed
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              {fmcsaResult?.authorityVerdict === "OVERRIDE_ELIGIBLE" && fmcsaResult.authorityAgeMonths != null && (
+                <div className="p-4 rounded-lg bg-[#FBEFD4] border border-[#B07A1A]/40 text-sm">
+                  <div className="flex items-start gap-2">
+                    <div className="w-5 h-5 rounded-full bg-[#B07A1A] flex items-center justify-center text-[#FBF7F0] text-xs font-bold flex-shrink-0 mt-0.5">!</div>
+                    <div>
+                      <p className="text-[#B07A1A] font-semibold">
+                        Authority active {fmcsaResult.authorityAgeMonths} months · Manual review required
+                      </p>
+                      <p className="text-[#6B7685] mt-1 text-xs">
+                        SRL onboards carriers with 18+ months of operating history by default. Your application can still proceed — our compliance team will review it manually. You may experience a longer approval window.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {fmcsaResult?.authorityVerdict === "WAITING_LIST" && !waitlistSubmitted && (
+                <div className="p-4 rounded-lg bg-[#F6E3E3] border border-[#9B2C2C]/40 text-sm space-y-3">
+                  <div className="flex items-start gap-2">
+                    <div className="w-5 h-5 rounded-full bg-[#9B2C2C] flex items-center justify-center text-[#FBF7F0] text-xs font-bold flex-shrink-0 mt-0.5">!</div>
+                    <div className="flex-1">
+                      <p className="text-[#9B2C2C] font-semibold">
+                        {fmcsaResult.authorityAgeMonths != null
+                          ? `Authority active ${fmcsaResult.authorityAgeMonths} months · Eligible at 18 months`
+                          : "Authority dates could not be verified"}
+                      </p>
+                      <p className="text-[#6B7685] mt-1 text-xs">
+                        SRL requires carriers to have 18+ months of FMCSA operating history before joining the network. Leave your email and we&apos;ll notify you the moment you cross the threshold
+                        {fmcsaResult.authorityEligibilityDate
+                          ? ` (projected ${new Date(fmcsaResult.authorityEligibilityDate).toLocaleDateString("en-US", { month: "long", year: "numeric" })})`
+                          : ""}
+                        .
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex gap-2 ml-7">
+                    <input
+                      type="email"
+                      value={form.email}
+                      onChange={(e) => set("email", e.target.value)}
+                      placeholder="dispatch@yourcompany.com"
+                      className="flex-1 px-3 py-2 bg-white border border-[#EFE6D3] rounded-lg text-sm text-[#0A2540] focus:border-[#BA7517] focus:ring-2 focus:ring-[#BA7517]/15 outline-none transition placeholder:text-[#A7AEB8]"
+                    />
+                    <button
+                      type="button"
+                      onClick={submitToWaitlist}
+                      disabled={waitlistSubmitting || !form.email}
+                      className="px-4 py-2 bg-[#BA7517] hover:bg-[#8f5a11] text-[#FBF7F0] text-sm font-medium rounded-lg disabled:opacity-40 disabled:cursor-not-allowed transition"
+                    >
+                      {waitlistSubmitting ? "Saving…" : "Notify me"}
+                    </button>
+                  </div>
+                  {waitlistError && (
+                    <p className="text-xs text-[#9B2C2C] ml-7">{waitlistError}</p>
+                  )}
+                </div>
+              )}
+
+              {fmcsaResult?.authorityVerdict === "WAITING_LIST" && waitlistSubmitted && (
+                <div className="p-4 rounded-lg bg-[#E6F0E9] border border-[#2F7A4F]/40 text-sm">
+                  <div className="flex items-start gap-2">
+                    <CheckCircle2 className="w-5 h-5 text-[#2F7A4F] flex-shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-[#2F7A4F] font-semibold">You&apos;re on the list</p>
+                      <p className="text-[#6B7685] mt-1 text-xs">
+                        We&apos;ll email <span className="font-medium text-[#0A2540]">{form.email}</span> the moment your FMCSA authority crosses 18 months
+                        {fmcsaResult.authorityEligibilityDate
+                          ? ` (projected ${new Date(fmcsaResult.authorityEligibilityDate).toLocaleDateString("en-US", { month: "long", year: "numeric" })})`
+                          : ""}
+                        . You can close this tab; we&apos;ll handle the follow-up.
+                      </p>
+                    </div>
+                  </div>
                 </div>
               )}
 

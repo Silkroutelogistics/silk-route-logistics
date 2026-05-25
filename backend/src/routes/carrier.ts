@@ -11,7 +11,8 @@ import { upload } from "../config/upload";
 import { auditLog } from "../middleware/audit";
 import { validateBody } from "../middleware/validate";
 import { carrierRegisterSchema, verifyCarrierSchema } from "../validators/carrier";
-import { verifyCarrierWithFMCSA, lookupByMcNumber } from "../services/fmcsaService";
+import { verifyCarrierWithFMCSA, lookupByMcNumber, getCarrierAuthority, calendarMonthsBetween } from "../services/fmcsaService";
+import { z } from "zod";
 import { log } from "../lib/logger";
 
 const router = Router();
@@ -25,6 +26,37 @@ const fmcsaLookupLimiter = rateLimit({
   message: { error: "Too many FMCSA lookup requests, please try again later" },
 });
 
+// v3.8.aku §13.3 Item 182 sprint 5 — authority age verdict shape returned
+// alongside FMCSA lookup data. Frontend /onboarding renders verdict pill
+// based on `verdict` enum: AUTO_ALLOW (≥18mo), OVERRIDE_ELIGIBLE (12-18mo),
+// WAITING_LIST (<12mo OR null grant date). Computed from
+// `getCarrierAuthority()` + `calendarMonthsBetween()` — same primitives the
+// post-approval gate uses in complianceMonitorService.complianceCheck.
+type AuthorityVerdict = "AUTO_ALLOW" | "OVERRIDE_ELIGIBLE" | "WAITING_LIST";
+
+function buildAuthorityVerdict(grantDate: Date | null): {
+  verdict: AuthorityVerdict;
+  authorityAgeMonths: number | null;
+  eligibilityDate: Date | null;
+} {
+  if (!grantDate) {
+    return { verdict: "WAITING_LIST", authorityAgeMonths: null, eligibilityDate: null };
+  }
+  const months = calendarMonthsBetween(grantDate, new Date());
+  // Projected 18-month threshold (grantDate + 18 months) — used for
+  // WaitingList row's eligibilityDate so Sprint 6 cron can notify the
+  // carrier when they cross the threshold.
+  const projected = new Date(grantDate);
+  projected.setMonth(projected.getMonth() + 18);
+  if (months >= 18) {
+    return { verdict: "AUTO_ALLOW", authorityAgeMonths: months, eligibilityDate: projected };
+  }
+  if (months >= 12) {
+    return { verdict: "OVERRIDE_ELIGIBLE", authorityAgeMonths: months, eligibilityDate: projected };
+  }
+  return { verdict: "WAITING_LIST", authorityAgeMonths: months, eligibilityDate: projected };
+}
+
 // Public: FMCSA DOT lookup for onboarding form auto-verification
 router.get("/fmcsa-lookup/:dotNumber", fmcsaLookupLimiter, async (req: Request, res: Response) => {
   const dot = String(req.params.dotNumber);
@@ -34,6 +66,24 @@ router.get("/fmcsa-lookup/:dotNumber", fmcsaLookupLimiter, async (req: Request, 
   }
   try {
     const result = await verifyCarrierWithFMCSA(dot);
+    // v3.8.aku Item 182 sprint 5 — enrich response with authority-age
+    // verdict so the /onboarding page can surface auto-allow / override-
+    // eligible / waiting-list pill inline at DOT-blur time. Failure here
+    // is non-fatal: lookup still returns the rest of the carrier data
+    // with `verdict: WAITING_LIST` + `authorityAgeMonths: null` (treats
+    // unresolvable authority as waiting-list per the locked Option β
+    // decision in Item 182).
+    let authorityGrantDate: string | null = null;
+    let verdictBlock = buildAuthorityVerdict(null);
+    try {
+      const authResult = await getCarrierAuthority(dot);
+      if (authResult.authorityGrantDate) {
+        authorityGrantDate = authResult.authorityGrantDate;
+        verdictBlock = buildAuthorityVerdict(new Date(authResult.authorityGrantDate));
+      }
+    } catch (authErr) {
+      log.warn({ err: authErr, dot }, "[FMCSA Lookup] Authority lookup failed; defaulting to WAITING_LIST verdict");
+    }
     res.json({
       verified: result.verified,
       legalName: result.legalName,
@@ -51,6 +101,11 @@ router.get("/fmcsa-lookup/:dotNumber", fmcsaLookupLimiter, async (req: Request, 
       phyState: result.phyState,
       phyZipcode: result.phyZipcode,
       phone: result.phone,
+      // v3.8.aku Item 182 sprint 5 enrichment
+      authorityGrantDate,
+      authorityAgeMonths: verdictBlock.authorityAgeMonths,
+      authorityVerdict: verdictBlock.verdict,
+      authorityEligibilityDate: verdictBlock.eligibilityDate?.toISOString() ?? null,
       errors: result.errors,
     });
   } catch (err) {
@@ -68,6 +123,24 @@ router.get("/fmcsa-mc-lookup/:mcNumber", fmcsaLookupLimiter, async (req: Request
   }
   try {
     const result = await lookupByMcNumber(mc);
+    // v3.8.aku Item 182 sprint 5 — enrich with authority verdict. MC lookup
+    // returns the DOT number which we then feed to getCarrierAuthority(dot)
+    // — authority is keyed by DOT in QCMobile. Same defensive fallback as
+    // the DOT endpoint: if authority lookup fails, default verdict to
+    // WAITING_LIST (Option β locked decision).
+    let authorityGrantDate: string | null = null;
+    let verdictBlock = buildAuthorityVerdict(null);
+    if (result.dotNumber) {
+      try {
+        const authResult = await getCarrierAuthority(result.dotNumber);
+        if (authResult.authorityGrantDate) {
+          authorityGrantDate = authResult.authorityGrantDate;
+          verdictBlock = buildAuthorityVerdict(new Date(authResult.authorityGrantDate));
+        }
+      } catch (authErr) {
+        log.warn({ err: authErr, mc, dot: result.dotNumber }, "[FMCSA MC Lookup] Authority lookup failed; defaulting to WAITING_LIST verdict");
+      }
+    }
     res.json({
       verified: result.verified,
       legalName: result.legalName,
@@ -86,11 +159,78 @@ router.get("/fmcsa-mc-lookup/:mcNumber", fmcsaLookupLimiter, async (req: Request
       phyState: result.phyState,
       phyZipcode: result.phyZipcode,
       phone: result.phone,
+      // v3.8.aku Item 182 sprint 5 enrichment
+      authorityGrantDate,
+      authorityAgeMonths: verdictBlock.authorityAgeMonths,
+      authorityVerdict: verdictBlock.verdict,
+      authorityEligibilityDate: verdictBlock.eligibilityDate?.toISOString() ?? null,
       errors: result.errors,
     });
   } catch (err) {
     log.error({ err: err }, "[FMCSA MC Lookup] Error:");
     res.status(500).json({ error: "FMCSA MC lookup failed. Please try again." });
+  }
+});
+
+// v3.8.aku §13.3 Item 182 sprint 5/5 — waitlist write endpoint for carriers
+// with authority age < 12 months. Public (no auth) per the same shape as
+// the FMCSA lookup endpoints + carrier registration — these all serve
+// pre-registration carriers. Upsert on (email, dotNumber) so the same
+// carrier filling the form twice updates rather than duplicates. Sprint 6
+// will add a cron job that queries WHERE eligibilityDate <= NOW() AND
+// notifiedAt IS NULL and emails the carrier.
+const waitlistSchema = z.object({
+  email: z.string().email(),
+  dotNumber: z.string().min(5).regex(/^\d+$/, "DOT number must be digits only"),
+  mcNumber: z.string().optional(),
+  // ISO date strings — client computes via the FMCSA-lookup response shape,
+  // server validates + persists. authorityGrantDate is nullable (when null
+  // grant carriers hit waiting-list because authority couldn't be resolved).
+  authorityGrantDate: z.string().datetime().nullable().optional(),
+  eligibilityDate: z.string().datetime().nullable().optional(),
+});
+
+router.post("/waitlist", fmcsaLookupLimiter, async (req: Request, res: Response) => {
+  try {
+    const data = waitlistSchema.parse(req.body);
+    const entry = await prisma.waitingList.upsert({
+      where: {
+        email_dotNumber: {
+          email: data.email,
+          dotNumber: data.dotNumber,
+        },
+      },
+      create: {
+        email: data.email,
+        dotNumber: data.dotNumber,
+        mcNumber: data.mcNumber ?? null,
+        authorityGrantedDate: data.authorityGrantDate ? new Date(data.authorityGrantDate) : null,
+        eligibilityDate: data.eligibilityDate ? new Date(data.eligibilityDate) : null,
+      },
+      update: {
+        mcNumber: data.mcNumber ?? null,
+        authorityGrantedDate: data.authorityGrantDate ? new Date(data.authorityGrantDate) : null,
+        eligibilityDate: data.eligibilityDate ? new Date(data.eligibilityDate) : null,
+        // Don't reset notifiedAt on re-add — if Sprint 6 cron already
+        // notified them once, don't re-notify.
+      },
+      select: { id: true, eligibilityDate: true, createdAt: true },
+    });
+    res.status(201).json({
+      success: true,
+      id: entry.id,
+      eligibilityDate: entry.eligibilityDate?.toISOString() ?? null,
+      message: data.eligibilityDate
+        ? "You're on the list. We'll email you the moment your authority crosses 18 months."
+        : "You're on the list. We'll re-check your authority status periodically.",
+    });
+  } catch (err) {
+    if (err instanceof z.ZodError) {
+      res.status(400).json({ error: "Invalid waitlist payload", details: err.issues });
+      return;
+    }
+    log.error({ err }, "[Waitlist] Error:");
+    res.status(500).json({ error: "Failed to save waitlist entry. Please try again." });
   }
 });
 

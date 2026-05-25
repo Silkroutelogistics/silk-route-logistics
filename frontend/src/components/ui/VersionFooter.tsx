@@ -10812,6 +10812,91 @@
 //   180.6+180.7+180.8+180.9+180.10+180.11 done; 180.3 closed-by-
 //   discovery; banked 180.6.b CRM admin edit UI for the new fields).
 //
+// v3.8.aku — §13.3 Item 182 sprint 5/5 close (Authority-age epic
+//   complete). Onboarding UI + WaitingList Prisma model — the final
+//   sprint of the 5-sprint Authority-age compliance epic that started
+//   2026-05-21 with v3.8.ahj's FMCSA authority data plumbing.
+//   The epic's locked behavior (do not re-litigate per Item 182 §13.3
+//   directive): carriers with FMCSA authority age <12 months are
+//   HARD-BLOCKED from /onboarding; 12-18 months are OVERRIDE_ELIGIBLE
+//   (proceed to registration, AE applies post-approval override);
+//   ≥18 months auto-allow. Sprint 5 closes the user-facing surface
+//   that captures the <12-month carriers into a waitlist instead of
+//   the original "hard rejection" framing.
+//   Schema (backend/prisma/schema.prisma):
+//   * NEW model WaitingList { id, email, dotNumber, mcNumber?,
+//     authorityGrantedDate, eligibilityDate, notifiedAt?, createdAt }
+//     + @@unique([email, dotNumber]) dedup + @@index on eligibilityDate
+//     (for the Sprint 6 cron-notify query) + @@index on notifiedAt
+//     (for the dedup-don't-renotify check). Manual migration at
+//     prisma/migrations/20260525160000_add_waiting_list/migration.sql
+//     per §2.2 (avoid prisma migrate dev against prod-pointed
+//     DATABASE_URL). Render's migrate deploy applies on next push.
+//   Backend (backend/src/routes/carrier.ts):
+//   * NEW AuthorityVerdict type + buildAuthorityVerdict() helper.
+//     Verdict thresholds match Item 182 locked decisions verbatim
+//     (≥18mo → AUTO_ALLOW, 12-18mo → OVERRIDE_ELIGIBLE, <12mo OR
+//     null → WAITING_LIST). Reuses calendarMonthsBetween() from
+//     fmcsaService.ts — same primitive the post-approval
+//     complianceCheck() gate uses, so onboarding-time + post-approval
+//     verdicts stay architecturally in lockstep.
+//   * EXTENDED GET /carrier/fmcsa-lookup/:dotNumber + GET /carrier/
+//     fmcsa-mc-lookup/:mcNumber endpoints with authority enrichment
+//     via getCarrierAuthority(dot) inside a try/catch (Option β:
+//     defensive fallback to WAITING_LIST verdict on lookup failure
+//     rather than silent pass-through). Response shape gains
+//     { authorityGrantDate, authorityAgeMonths, authorityVerdict,
+//     authorityEligibilityDate }.
+//   * NEW POST /carrier/waitlist endpoint (public, no auth — same
+//     shape as fmcsa-lookup endpoints + carrier registration, all
+//     three serve pre-registration carriers). Zod-validated payload
+//     { email, dotNumber, mcNumber?, authorityGrantDate?,
+//     eligibilityDate? }. Upsert on (email, dotNumber) so a carrier
+//     filling the form twice updates rather than duplicates. Does NOT
+//     reset notifiedAt on re-add.
+//   Frontend (frontend/src/app/onboarding/page.tsx):
+//   * NEW AuthorityVerdict type + extended FmcsaResult interface
+//     with the 4 enrichment fields.
+//   * NEW state: waitlistSubmitting + waitlistSubmitted + waitlistError
+//     + submitToWaitlist() mutation hook calling POST /carrier/waitlist.
+//   * canNext() Step 1 gate EXTENDED — when
+//     fmcsaResult.authorityVerdict === "WAITING_LIST", returns false.
+//     Carrier cannot proceed to Step 2 until they submit the waitlist
+//     form. OVERRIDE_ELIGIBLE (12-18mo) does NOT block — carrier
+//     proceeds normally; AE applies ComplianceOverride post-registration
+//     during approval review per the v3.8.ahq + frontend modal
+//     extension that closed sprint 4.
+//   * Three verdict-pill render branches inline in the FMCSA result
+//     block (palette matches existing v3.8.aix surface):
+//       - AUTO_ALLOW → silent green (#E6F0E9 bg, #2F7A4F text +
+//         CheckCircle2 icon). "Authority active X months · You can
+//         proceed".
+//       - OVERRIDE_ELIGIBLE → amber warning (#FBEFD4 bg, #B07A1A text
+//         + "!" badge). Explanatory paragraph about manual review
+//         path + longer approval window.
+//       - WAITING_LIST → red blocking surface (#F6E3E3 bg, #9B2C2C
+//         text + "!" badge). Inline email input (defaults to
+//         form.email) + "Notify me" button + projected eligibility
+//         date ("projected June 2027" format). On submit success,
+//         transitions to green "You're on the list" confirmation
+//         card showing the email + eligibility month.
+//   Methodology:
+//   * Pattern 1 (audit-first via sub-agent Explore) — 9-question Phase A
+//     audit before any code change.
+//   * Sub-pattern 5 (audit-both-ends-of-data-flow) — verified backend
+//     getCarrierAuthority + calendarMonthsBetween signatures BEFORE
+//     extending lookup endpoints; verified existing applyFmcsaData()
+//     flow BEFORE injecting verdict UI.
+//   * Sub-pattern 11 (CI parity) — prisma generate + backend tsc +
+//     backend npm test + frontend tsc + next build all clean pre-push.
+//   ~270 LOC net across 4 files (schema.prisma + 1 migration +
+//   routes/carrier.ts + onboarding/page.tsx + CLAUDE.md §13.3 epic
+//   closure narrative + this footer block + version bump).
+//   §13.3 Item 182 LOG OPEN → CLOSED (5 sprints across 5 days
+//   2026-05-21 → 2026-05-25, zero rollbacks). Sprint 6 (auto-notify
+//   cron — query WHERE eligibilityDate <= NOW() AND notifiedAt IS
+//   NULL) banked as separate follow-up, no firm slot.
+//
 // v3.8.aks — §13.3 Item 178 close (superseded by Sprint 63) + Item
 //   180.6.b close (CRM admin edit UI for the new Customer fields).
 //   Two banked items closed in one atomic per §3.3 because both are
@@ -11121,7 +11206,7 @@
 //   as a separate small follow-on commit after live data lands.
 //   §13.3 Item 191 ships code-complete. Live verification + docs are
 //   the next ratification cycle (no version bump expected for docs).
-export const SRL_VERSION = "3.8.akt";
+export const SRL_VERSION = "3.8.aku";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

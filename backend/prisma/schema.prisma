@@ -3541,6 +3541,32 @@ model FacilityProfile {
   @@map("facility_profiles")
 }
 
+// v3.8.aku §13.3 Item 182 sprint 5 — Authority-age waiting list. Carriers
+// who hit the /onboarding MC/DOT lookup with authority < 12 months OR with
+// no FMCSA grant date are captured here for later notification when they
+// cross the 18-month eligibility threshold. Auto-notify cron is a separate
+// follow-up sprint (Sprint 6); this model is write-only in Sprint 5.
+model WaitingList {
+  id                   String    @id @default(cuid())
+  email                String
+  dotNumber            String
+  mcNumber             String?
+  authorityGrantedDate DateTime?
+  // Projected date the carrier crosses the 18-month threshold. Null if the
+  // FMCSA lookup couldn't resolve a grant date (in that case we still
+  // capture the row so the carrier can be re-checked when they retry).
+  eligibilityDate      DateTime?
+  notifiedAt           DateTime?
+  createdAt            DateTime  @default(now())
+
+  // Dedup on (email, dotNumber) — same carrier filling the form twice
+  // should update the existing row, not create duplicates.
+  @@unique([email, dotNumber])
+  @@index([eligibilityDate])
+  @@index([notifiedAt])
+  @@map("waiting_list")
+}
+
 model CarrierPreferences {
   id                 String   @id @default(uuid())
   carrierId          String   @unique
