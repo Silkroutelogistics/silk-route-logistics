@@ -7,7 +7,10 @@ import { validateBody } from "../middleware/validate";
 import { upload } from "../config/upload";
 import { uploadFile } from "../services/storageService";
 import { nextShipmentNumber } from "../controllers/shipmentController";
-import { sendPODToContact } from "../services/shipperLoadNotifyService";
+import { sendPODToContact, sendPickupNotification, sendInTransitUpdate, sendArrivedAtDelivery, sendDeliveredWithPOD } from "../services/shipperLoadNotifyService";
+import { sendShipperPickupEmail, sendShipperDeliveryEmail, sendShipperMilestoneEmail } from "../services/shipperNotificationService";
+import { autoGenerateInvoice } from "../services/invoiceService";
+import { onLoadDelivered } from "../services/integrationService";
 import { onLoadStatusChange as aiOnLoadStatusChange, onCarrierResponse } from "../services/aiLearningLoop/feedbackCollector";
 import { processGpsUpdate } from "../services/geofenceService";
 import { logLoadActivity } from "../services/loadActivityService";
@@ -457,6 +460,66 @@ router.post("/:id/status", validateBody(statusUpdateSchema), async (req: AuthReq
         actionUrl: "/dashboard/loads",
       },
     });
+  }
+
+  // v3.8.akc Item 158 — Shipment + shipper fan-out, MIGRATED from the
+  // pre-akc dead route loadController.carrierUpdateStatus (PATCH
+  // /api/loads/:id/carrier-status). That route was authorize("CARRIER")
+  // only, had richer side effects (Shipment sync + shipper email cascade
+  // + auto-invoice on DELIVERED + onLoadDelivered integration), and was
+  // wired to a frontend mutation on /dashboard/loads that never fired in
+  // production (the CarrierActions conditional render gates on
+  // isCarrier(user?.role) but carriers route to /carrier/dashboard, not
+  // /dashboard). Net effect pre-akc: carrier portal status updates went
+  // through the canonical POST /api/carrier-loads/:id/status but missed
+  // the shipper-notification + auto-invoice fan-outs that the dead route
+  // was doing. akc merges the side effects into the canonical, then
+  // deletes the dead route + dead controller + dead frontend mutation.
+
+  // Shipment status sync — maps load statuses to ShipmentStatus enum.
+  const linkedShipment = await prisma.shipment.findFirst({ where: { loadId: load.id } });
+  if (linkedShipment) {
+    const loadToShipmentStatus: Record<string, string> = {
+      AT_PICKUP: "PICKED_UP", LOADED: "PICKED_UP",
+      IN_TRANSIT: "IN_TRANSIT", AT_DELIVERY: "DELIVERED", DELIVERED: "DELIVERED",
+    };
+    const mappedStatus = loadToShipmentStatus[status] || status;
+    const shipmentUpdate: Record<string, unknown> = { status: mappedStatus };
+    if (["AT_PICKUP", "LOADED"].includes(status)) shipmentUpdate.actualPickup = new Date();
+    if (status === "IN_TRANSIT") shipmentUpdate.lastLocationAt = new Date();
+    if (["AT_DELIVERY", "DELIVERED"].includes(status)) shipmentUpdate.actualDelivery = new Date();
+    await prisma.shipment.update({ where: { id: linkedShipment.id }, data: shipmentUpdate });
+  }
+
+  // Auto-invoice + integration + delivery email on DELIVERED.
+  if (status === "DELIVERED") {
+    await autoGenerateInvoice(load.id);
+    sendShipperDeliveryEmail(load.id).catch((e) => log.error({ err: e }, "[ShipperNotify] delivery email error:"));
+    onLoadDelivered(load.id).catch((e) => log.error({ err: e }, "[Integration] onLoadDelivered error:"));
+  }
+
+  // Pickup email on LOADED (single-event shipper notification).
+  if (status === "LOADED") {
+    sendShipperPickupEmail(load.id).catch((e) => log.error({ err: e }, "[ShipperNotify] pickup email error:"));
+  }
+
+  // Milestone email — fires for every status change, batched-aware on receiver side.
+  sendShipperMilestoneEmail(load.id, status).catch((e) => log.error({ err: e }, "[ShipperNotify] milestone email error:"));
+
+  // CRM contact-email cascade per status — pickup arrival, in-transit,
+  // delivery arrival, POD delivery. Each surfaces to the contact list
+  // configured per customer (CRM CustomerContact[] with role tags).
+  if (["AT_PICKUP", "LOADED"].includes(status)) {
+    sendPickupNotification(load.id).catch((e) => log.error({ err: e }, "[ShipperNotify]"));
+  }
+  if (status === "IN_TRANSIT") {
+    sendInTransitUpdate(load.id).catch((e) => log.error({ err: e }, "[ShipperNotify]"));
+  }
+  if (status === "AT_DELIVERY") {
+    sendArrivedAtDelivery(load.id).catch((e) => log.error({ err: e }, "[ShipperNotify]"));
+  }
+  if (status === "DELIVERED") {
+    sendDeliveredWithPOD(load.id).catch((e) => log.error({ err: e }, "[ShipperNotify]"));
   }
 
   res.json(updated);

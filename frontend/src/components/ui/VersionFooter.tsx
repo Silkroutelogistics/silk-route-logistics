@@ -10290,7 +10290,42 @@
 //   remaining sites follow incrementally.
 //   ~100 LOC net across 2 backend files + version bump. No schema
 //   migration; deploy is a no-op on migrate.
-export const SRL_VERSION = "3.8.akb";
+// v3.8.akc — §13.3 Item 158 — Parallel carrier-status endpoint consolidation
+//   with side-effect migration. Pre-akc TWO parallel endpoints existed for
+//   carrier-side load status updates:
+//   * POST /api/carrier-loads/:id/status — canonical, actively used by
+//     /carrier/dashboard/my-loads. Had v3.8.ajw C3 state-machine validator
+//     + v3.8.ajx SUSPENDED gate + basic broker notification + checkCall
+//     create. MISSING shipper email cascade + auto-invoice + Shipment sync.
+//   * PATCH /api/loads/:id/carrier-status — DEAD. authorize("CARRIER")
+//     only. CarrierActions frontend component referenced it but the
+//     conditional render gated on isCarrier(user?.role) AND CARRIER users
+//     route to /carrier/dashboard not /dashboard/loads — unreachable in
+//     production. HAD shipper email cascade + auto-invoice + Shipment sync.
+//   akc scope: MIGRATE the richer side effects from the dead route into
+//   the canonical, then DELETE all three layers (route + controller +
+//   frontend mutation + component).
+//   Changes:
+//   * routes/carrierLoads.ts POST /:id/status — adds Shipment status
+//     sync (ShipmentStatus enum mapping table from old controller),
+//     autoGenerateInvoice on DELIVERED, sendShipperPickupEmail on LOADED,
+//     sendShipperDeliveryEmail + onLoadDelivered integration on DELIVERED,
+//     sendShipperMilestoneEmail every status, CRM contact-email cascade
+//     (sendPickupNotification / sendInTransitUpdate / sendArrivedAtDelivery
+//     / sendDeliveredWithPOD).
+//   * routes/loads.ts — PATCH /:id/carrier-status route DELETED.
+//   * controllers/loadController.ts — carrierUpdateStatus function DELETED
+//     (~80 LOC removed).
+//   * dashboard/loads/page.tsx — carrierUpdateStatus mutation DELETED +
+//     CarrierActions render site DELETED + CarrierActions component
+//     DELETED.
+//   Operational impact: carrier portal status updates now fire the
+//   shipper-notification + auto-invoice fan-outs that the dead route was
+//   doing. This is a NET-POSITIVE behavior change — carriers in
+//   production were silently losing the cascade before akc.
+//   ~200 LOC net (added side effects to canonical, deleted ~150 LOC dead
+//   code across 4 files) + version bump. No schema migration.
+export const SRL_VERSION = "3.8.akc";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

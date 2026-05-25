@@ -1,5 +1,5 @@
 import { Router, Response } from "express";
-import { createLoad, getLoads, getLoadById, updateLoad, updateLoadStatus, deleteLoad, restoreLoad, carrierUpdateStatus, getDistance, getLoadAudit } from "../controllers/loadController";
+import { createLoad, getLoads, getLoadById, updateLoad, updateLoadStatus, deleteLoad, restoreLoad, getDistance, getLoadAudit } from "../controllers/loadController";
 import { createLoadWithTender } from "../controllers/withTenderController";
 import { authenticate, authorize, AuthRequest } from "../middleware/auth";
 import { auditLog } from "../middleware/audit";
@@ -44,7 +44,12 @@ router.get("/", validateQuery(loadQuerySchema), getLoads);
 router.get("/:id", getLoadById);
 router.put("/:id", authorize("BROKER", "ADMIN", "CEO", "DISPATCH"), validateBody(updateLoadSchema), auditLog("UPDATE", "Load"), updateLoad);
 router.patch("/:id/status", authorize("BROKER", "ADMIN", "CEO", "DISPATCH", "OPERATIONS"), validateBody(updateLoadStatusSchema), auditLog("UPDATE_STATUS", "Load"), updateLoadStatus);
-router.patch("/:id/carrier-status", authorize("CARRIER"), validateBody(updateLoadStatusSchema), auditLog("UPDATE_STATUS", "Load"), carrierUpdateStatus);
+// v3.8.akc Item 158 — PATCH /:id/carrier-status DELETED. Was dead surface
+// (no frontend caller despite the CarrierActions component referencing it —
+// the conditional render gated on isCarrier(user?.role) AND CARRIER users
+// route to /carrier/dashboard, not /dashboard/loads). Side effects
+// (shipment sync + auto-invoice + shipper email cascade + onLoadDelivered)
+// migrated into canonical POST /api/carrier-loads/:id/status.
 router.delete("/:id", authorize("ADMIN", "CEO", "BROKER", "DISPATCH", "OPERATIONS"), auditLog("DELETE", "Load"), deleteLoad);
 router.put("/:id/restore", authorize("ADMIN", "BROKER", "DISPATCH", "OPERATIONS"), auditLog("UPDATE", "Load"), restoreLoad);
 

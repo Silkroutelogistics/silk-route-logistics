@@ -264,11 +264,12 @@ export default function LoadsPage() {
     onSuccess: invalidateLoadQueries,
   });
 
-  const carrierUpdateStatus = useMutation({
-    mutationFn: ({ loadId, status }: { loadId: string; status: string }) =>
-      api.patch(`/loads/${loadId}/carrier-status`, { status }),
-    onSuccess: invalidateLoadQueries,
-  });
+  // v3.8.akc Item 158 — carrierUpdateStatus mutation DELETED. Wired to
+  // dead route PATCH /api/loads/:id/carrier-status (removed in akc). The
+  // CarrierActions component that consumed it is also unreachable —
+  // conditional render gated on isCarrier(user?.role), and CARRIER role
+  // users route to /carrier/dashboard, never to /dashboard/loads. Dead
+  // code on both sides; deletion reduces the audit surface.
 
   const createTender = useMutation({
     mutationFn: ({ loadId, carrierId, offeredRate }: { loadId: string; carrierId: string; offeredRate: number }) =>
@@ -806,10 +807,12 @@ export default function LoadsPage() {
                         <Trash2 className="w-3 h-3" /> Delete
                       </button>
                     )}
-                    {/* Carrier actions */}
-                    {isCarrier(user?.role) && load.carrier?.firstName === user?.firstName && (
-                      <CarrierActions load={load} carrierUpdateStatus={carrierUpdateStatus} />
-                    )}
+                    {/* v3.8.akc Item 158 — CarrierActions render removed.
+                        Conditional always false in production (CARRIER users
+                        route to /carrier/dashboard, not /dashboard/loads).
+                        Carrier-side status updates flow through the dedicated
+                        carrier portal at /carrier/dashboard/my-loads which
+                        POSTs to /api/carrier-loads/:id/status. */}
                     {/* Close */}
                     <button
                       onClick={() => setSelectedLoadId(null)}
@@ -1601,38 +1604,13 @@ function PanelExceptions({ load }: { load: Load }) {
   );
 }
 
-/* ---- Carrier Actions (for carrier role) ---- */
-function CarrierActions({
-  load,
-  carrierUpdateStatus,
-}: {
-  load: Load;
-  carrierUpdateStatus: { mutate: (v: { loadId: string; status: string }) => void; isPending: boolean };
-}) {
-  const btn = (status: string, label: string, cls: string, Icon: typeof MapPin) => (
-    <button
-      onClick={() => carrierUpdateStatus.mutate({ loadId: load.id, status })}
-      disabled={carrierUpdateStatus.isPending}
-      className={`px-3 py-1.5 ${cls} rounded-lg text-xs disabled:opacity-50`}
-    >
-      <Icon className="w-3 h-3 inline mr-1" />{label}
-    </button>
-  );
-  return (
-    <>
-      {["BOOKED", "DISPATCHED"].includes(load.status) &&
-        btn("AT_PICKUP", "At Pickup", "bg-amber-500/20 text-amber-400 hover:bg-amber-500/30", MapPin)}
-      {load.status === "AT_PICKUP" &&
-        btn("LOADED", "Mark Loaded", "bg-yellow-500/20 text-yellow-400 hover:bg-yellow-500/30", Truck)}
-      {["LOADED", "PICKED_UP"].includes(load.status) &&
-        btn("IN_TRANSIT", "In Transit", "bg-cyan-500/20 text-cyan-400 hover:bg-cyan-500/30", Truck)}
-      {load.status === "IN_TRANSIT" &&
-        btn("AT_DELIVERY", "At Delivery", "bg-teal-500/20 text-teal-400 hover:bg-teal-500/30", MapPin)}
-      {load.status === "AT_DELIVERY" &&
-        btn("DELIVERED", "Delivered", "bg-green-500/20 text-green-400 hover:bg-green-500/30", Package)}
-    </>
-  );
-}
+/* v3.8.akc Item 158 — CarrierActions component DELETED. Was wired to the
+   carrierUpdateStatus mutation that targeted the dead route
+   PATCH /api/loads/:id/carrier-status. The component's conditional render
+   on the consumer side gated on isCarrier(user?.role) AND CARRIER role
+   users route to /carrier/dashboard, not /dashboard/loads — so the
+   render call was unreachable in production. Carrier-side status updates
+   flow through /carrier/dashboard/my-loads → POST /api/carrier-loads/:id/status. */
 
 /* ================================================================== */
 /*  Sub-components: Forms                                              */

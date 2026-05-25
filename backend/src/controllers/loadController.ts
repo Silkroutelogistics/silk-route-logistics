@@ -644,87 +644,16 @@ export async function updateLoadStatus(req: AuthRequest, res: Response) {
   res.json(load);
 }
 
-export async function carrierUpdateStatus(req: AuthRequest, res: Response) {
-  const { status } = updateLoadStatusSchema.parse(req.body);
-  const allowedStatuses = ["AT_PICKUP", "LOADED", "PICKED_UP", "IN_TRANSIT", "AT_DELIVERY", "DELIVERED"];
-  if (!allowedStatuses.includes(status)) {
-    res.status(400).json({ error: "Carriers can only update to: AT_PICKUP, LOADED, PICKED_UP, IN_TRANSIT, AT_DELIVERY, DELIVERED" });
-    return;
-  }
-
-  const load = await prisma.load.findUnique({ where: { id: req.params.id, deletedAt: null } });
-  if (!load) { res.status(404).json({ error: "Load not found" }); return; }
-  if (load.carrierId !== req.user!.id) {
-    res.status(403).json({ error: "Not authorized — this load is not assigned to you" });
-    return;
-  }
-
-  const updated = await prisma.load.update({
-    where: { id: req.params.id },
-    data: { status, statusUpdatedAt: new Date(), statusUpdatedById: req.user!.id },
-  });
-
-  // Sync linked shipment
-  const linkedShipment = await prisma.shipment.findFirst({ where: { loadId: load.id } });
-  if (linkedShipment) {
-    // Map load statuses to shipment statuses
-    const loadToShipmentStatus: Record<string, string> = {
-      AT_PICKUP: "PICKED_UP", LOADED: "PICKED_UP", PICKED_UP: "PICKED_UP",
-      IN_TRANSIT: "IN_TRANSIT", AT_DELIVERY: "DELIVERED", DELIVERED: "DELIVERED",
-    };
-    const mappedStatus = loadToShipmentStatus[status] || status;
-    const shipmentUpdate: Record<string, unknown> = { status: mappedStatus };
-    if (["AT_PICKUP", "LOADED", "PICKED_UP"].includes(status)) shipmentUpdate.actualPickup = new Date();
-    if (status === "IN_TRANSIT") shipmentUpdate.lastLocationAt = new Date();
-    if (["AT_DELIVERY", "DELIVERED"].includes(status)) shipmentUpdate.actualDelivery = new Date();
-    await prisma.shipment.update({ where: { id: linkedShipment.id }, data: shipmentUpdate });
-  }
-
-  // Notify broker
-  if (load.posterId) {
-    await prisma.notification.create({
-      data: {
-        userId: load.posterId,
-        type: "LOAD_UPDATE",
-        title: `Load ${status.replace("_", " ")}`,
-        message: `Carrier updated load ${load.referenceNumber} to ${status}.`,
-        actionUrl: "/dashboard/tracking",
-      },
-    });
-  }
-
-  // If delivered, trigger auto-invoice + shipper email + integration
-  if (status === "DELIVERED") {
-    await autoGenerateInvoice(load.id);
-    sendShipperDeliveryEmail(load.id).catch((e) => log.error({ err: e }, "[ShipperNotify] delivery email error:"));
-    // Integration: create AP, update shipper credit, recalc CPP
-    onLoadDelivered(load.id).catch((e) => log.error({ err: e }, "[Integration] onLoadDelivered error:"));
-  }
-
-  // Shipper pickup notification on LOADED
-  if (status === "LOADED") {
-    sendShipperPickupEmail(load.id).catch((e) => log.error({ err: e }, "[ShipperNotify] pickup email error:"));
-  }
-
-  // Shipper milestone tracking email
-  sendShipperMilestoneEmail(load.id, status).catch((e) => log.error({ err: e }, "[ShipperNotify] milestone email error:"));
-
-  // Contact email load milestone notifications
-  if (["AT_PICKUP", "LOADED", "PICKED_UP"].includes(status)) {
-    sendPickupNotification(load.id).catch((e) => log.error({ err: e }, "[ShipperNotify]"));
-  }
-  if (status === "IN_TRANSIT") {
-    sendInTransitUpdate(load.id).catch((e) => log.error({ err: e }, "[ShipperNotify]"));
-  }
-  if (status === "AT_DELIVERY") {
-    sendArrivedAtDelivery(load.id).catch((e) => log.error({ err: e }, "[ShipperNotify]"));
-  }
-  if (status === "DELIVERED") {
-    sendDeliveredWithPOD(load.id).catch((e) => log.error({ err: e }, "[ShipperNotify]"));
-  }
-
-  res.json(updated);
-}
+// v3.8.akc Item 158 — carrierUpdateStatus DELETED. Was the dead AE-side
+// handler for PATCH /api/loads/:id/carrier-status. Its side effects
+// (shipment sync + auto-invoice + shipper email cascade + onLoadDelivered
+// integration) were richer than the canonical carrier-portal endpoint
+// (POST /api/carrier-loads/:id/status) but the route was unreachable in
+// production — CarrierActions component conditional render gated on
+// isCarrier(user?.role) AND carriers route to /carrier/dashboard, not
+// /dashboard/loads. The side effects have been migrated into the
+// canonical endpoint at routes/carrierLoads.ts so no shipper-notification
+// regression on the carrier-portal flow.
 
 export async function updateLoad(req: AuthRequest, res: Response) {
   const existing = await prisma.load.findUnique({ where: { id: req.params.id, deletedAt: null } });
