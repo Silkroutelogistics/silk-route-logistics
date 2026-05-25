@@ -55,3 +55,13 @@
 # (/track/<token> → /track.html); bare paths fall through to Cloudflare's
 # native .html extension fallback, which is what we want.
 /verify/*      /verify.html    200
+
+# v3.8.akn §13.3 Item 180.4 — magic-link quote approval.
+# /quote/approve/<token> → /quote/approve (status 200, URL preserved).
+# Customer clicks the "Approve this quote" button in the quote email;
+# the React page at /quote/approve reads the token from
+# window.location.pathname + POSTs to /api/quote-approve. Same SPA-rewrite
+# pattern as /track/* and /verify/* — Next.js static export can't
+# pre-render arbitrary token paths, so all token-bearing URLs land on
+# the same single static page and runtime-extract the token from URL.
+/quote/approve/*  /quote/approve  200

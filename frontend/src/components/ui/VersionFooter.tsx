@@ -10719,7 +10719,47 @@
 //   + version bump). Migration-bearing deploy (6th in the streak: ajv
 //   ajw ajx ajy ajz ajh-class + akm).
 //   §13.3 Item 180.2 LOG OPEN → CLOSED.
-export const SRL_VERSION = "3.8.akm";
+// v3.8.akn — §13.3 Item 180.4 Customer-facing quote approve magic-link.
+//   Pre-akn the quote email said "Reply to this email to approve" —
+//   customer reply landed in whaider@ inbox, AE then manually clicked
+//   the AE Console "Mark Approved" button. Several manual hops. Magic-
+//   link compresses this into a single customer click → automated
+//   backend flip to quote_approved.
+//   Backend changes:
+//   * NEW routes/quoteApprove.ts — public router (no authenticate
+//     middleware; JWT IS the auth). signQuoteApprovalToken(orderId)
+//     + buildQuoteApprovalUrl(orderId) helpers used by the quote
+//     email builder. POST /api/quote-approve verifies JWT (HS256,
+//     7-day expiry), flips order.status to "quote_approved", emits
+//     a logCustomerActivity row with actorType=CUSTOMER (vs AE-side
+//     mark-approved which is actorType=USER). Idempotent: re-clicks
+//     return alreadyApproved: true without mutating state.
+//   * routes/orders.ts buildQuoteEmail() now embeds a gold-dark CTA
+//     button linking to the magic-link URL above the existing
+//     reply-to-this-email fallback. "Link expires in 7 days" note
+//     beneath the button sets expiry expectation.
+//   * routes/index.ts mounts the new public router at /quote-approve
+//     BEFORE the catch-all websiteRoutes registration so it doesn't
+//     get shadowed.
+//   Frontend changes:
+//   * NEW src/app/quote/approve/page.tsx — public React page that
+//     reads the token from window.location.pathname (NOT from
+//     useSearchParams + NOT a Next.js dynamic route, because static
+//     export can't pre-render arbitrary token paths). POSTs token
+//     to /api/quote-approve + renders one of 5 states: loading /
+//     missing-token / success-fresh / success-already-approved /
+//     error (with sub-codes for TOKEN_EXPIRED, ORDER_NOT_FOUND,
+//     TOKEN_INVALID). Brand-canonical cream surface with SRL
+//     wordmark + tagline.
+//   * frontend/public/_redirects — SPA-rewrite rule
+//     /quote/approve/* → /quote/approve (status 200, URL preserved).
+//     Same pattern as the v3.8.aae /track/* and v3.8.add /verify/*
+//     SPA-rewrite tricks.
+//   ~360 LOC net (1 new public router + extension to buildQuoteEmail
+//   + 1 new React page + 1 _redirects rule + 2 mount lines + version
+//   bump). No schema migration; no test changes needed.
+//   §13.3 Item 180.4 LOG OPEN → CLOSED.
+export const SRL_VERSION = "3.8.akn";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

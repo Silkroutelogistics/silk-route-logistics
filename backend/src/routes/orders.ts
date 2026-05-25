@@ -15,6 +15,7 @@ import { buildWaterfall, startWaterfall } from "../services/waterfallEngineServi
 import { createCheckCallSchedule } from "../services/checkCallAutomation";
 import { buildLineItems, LineItemCreateInput } from "../controllers/loadController";
 import { log } from "../lib/logger";
+import { buildQuoteApprovalUrl } from "./quoteApprove"; // v3.8.akn §13.3 Item 180.4
 
 const router = Router();
 router.use(authenticate);
@@ -247,6 +248,7 @@ router.patch("/:id", authorize(...AE_ROLES) as any, async (req: AuthRequest, res
  * for accuracy now, brand-sweep later.
  */
 async function buildQuoteEmail(order: {
+  id: string;
   orderNumber: string;
   originCity: string | null;
   originState: string | null;
@@ -260,6 +262,11 @@ async function buildQuoteEmail(order: {
 }): Promise<{ subject: string; html: string; lane: string }> {
   const { wrap } = await import("../services/emailService");
   const lane = `${order.originCity ?? "—"}, ${order.originState ?? ""} → ${order.destCity ?? "—"}, ${order.destState ?? ""}`;
+  // v3.8.akn §13.3 Item 180.4 — Magic-link approval URL. JWT-signed,
+  // 7-day expiry. Customer clicks → public /quote/approve/[token] page
+  // → POST /api/quote-approve → order.status = "quote_approved".
+  // Idempotent on the backend so re-clicks are safe.
+  const approvalUrl = buildQuoteApprovalUrl(order.id);
   const html = wrap(`
     <h2 style="color:#0f172a;margin-top:0">Freight Quote · ${order.orderNumber}</h2>
     <p>Hello ${order.customer?.contactName ?? order.customer?.name ?? "there"},</p>
@@ -271,7 +278,11 @@ async function buildQuoteEmail(order: {
       <tr><td style="padding:8px 12px;border-bottom:1px solid #e2e8f0;color:#64748b">Delivery</td><td style="padding:8px 12px;border-bottom:1px solid #e2e8f0">${order.deliveryDate ? new Date(order.deliveryDate).toLocaleDateString() : "TBD"}</td></tr>
       <tr><td style="padding:8px 12px;border-bottom:1px solid #e2e8f0;color:#64748b">Rate</td><td style="padding:8px 12px;border-bottom:1px solid #e2e8f0"><strong style="color:#BA7517">$${(order.customerRate ?? 0).toLocaleString()}</strong></td></tr>
     </table>
-    <p>Reply to this email to approve, or contact us at <a href="mailto:whaider@silkroutelogistics.ai">whaider@silkroutelogistics.ai</a> with any questions.</p>
+    <div style="text-align:center;margin:24px 0">
+      <a href="${approvalUrl}" style="display:inline-block;background:#BA7517;color:#FFFFFF;padding:14px 32px;text-decoration:none;border-radius:6px;font-weight:bold;font-size:15px">Approve this quote</a>
+      <p style="font-size:11px;color:#94a3b8;margin-top:8px">Link expires in 7 days.</p>
+    </div>
+    <p>Or reply to this email to approve, or contact us at <a href="mailto:whaider@silkroutelogistics.ai">whaider@silkroutelogistics.ai</a> with any questions.</p>
     <p style="color:#94a3b8;font-size:12px;margin-top:20px">
       Silk Route Logistics · MC# 1794414 · USDOT# 4526880
     </p>
