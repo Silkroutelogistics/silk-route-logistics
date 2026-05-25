@@ -702,7 +702,13 @@ export default function CarrierPoolPage() {
                 { key: "compass", icon: Compass, label: "Compass" },
                 { key: "inspections", icon: ClipboardList, label: "Inspect" },
                 { key: "performance", icon: BarChart3, label: "Perform" },
-                { key: "history", icon: Clock, label: "History" },
+                // v3.8.akq §13.3 Item 63 P3-2 — "History" → "Activity".
+                // Aligns with the 4 right-drawers (ProspectDrawer +
+                // CustomerDrawer + LoadDetailDrawer + WaterfallDrawer)
+                // which all use "Activity". Key "history" preserved so
+                // existing consumer call sites + render branches stay
+                // untouched; only the user-facing label changes.
+                { key: "history", icon: Clock, label: "Activity" },
                 // v3.8.akh §13.3 Item 63 P3-3 — "Docs" → "Documents". Key
                 // stays "documents" (already canonical); only the label
                 // changes to match the canonical drawer vocabulary.

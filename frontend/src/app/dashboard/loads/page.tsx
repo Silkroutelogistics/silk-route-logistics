@@ -78,7 +78,9 @@ const PANEL_TABS: { key: PanelTab; icon: typeof Info; label: string }[] = [
   { key: "tracking", icon: MapPin, label: "Tracking" },
   { key: "invoice", icon: DollarSign, label: "Invoice" },
   { key: "documents", icon: FileText, label: "Documents" },
-  { key: "history", icon: Clock, label: "History" },
+  // v3.8.akq §13.3 Item 63 P3-2 — "History" → "Activity" to match
+  // the 4 right-drawers. Key preserved.
+  { key: "history", icon: Clock, label: "Activity" },
   { key: "carrier", icon: Truck, label: "Carrier" },
   { key: "exceptions", icon: AlertTriangle, label: "Exceptions" },
   // v3.8.akj §13.3 Item 8.7 — manual tag-management UI. Per-load

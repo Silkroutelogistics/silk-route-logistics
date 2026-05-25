@@ -10812,6 +10812,52 @@
 //   180.6+180.7+180.8+180.9+180.10+180.11 done; 180.3 closed-by-
 //   discovery; banked 180.6.b CRM admin edit UI for the new fields).
 //
+// v3.8.akq — §13.3 Item 87 followup + Item 63 P3-2 (vocab + chrome
+//   consistency bundle). Two tiny token+vocabulary sweeps that share
+//   the "consistency across surfaces" theme; bundled in one atomic.
+//   Sub-pattern 6 fire (concurrent-sprint-coordination): parallel
+//   v3.8.akp commit `b9de2a25` (Item 191 EIA fuel-index feed) landed
+//   while this work was in WIP; akq sequence-continuous on top per
+//   §3.1 + Sub-rule c re-verify-scope-against-latest-production-state
+//   convention. Bumped 4 inline source comments + this footer block
+//   from akp → akq during pre-commit.
+//   Item 87 followup — buildQuoteEmail brand chrome migration:
+//   * routes/orders.ts:buildQuoteEmail() three sweep-replacements
+//     matching Sprint 45-RC-PRE Path α + v3.8.akf precedent: #0f172a
+//     → #0A2540 (navy) on the H2 heading, #e2e8f0 → #E2EAF2 (divider)
+//     on 5 table-cell borders, whaider@silkroutelogistics.ai →
+//     operations@silkroutelogistics.ai (reply-target) on the
+//     contact-us line. Customer-facing transactional emails now
+//     correctly route through operations@ per §3.10. The pre-akq
+//     hex literals + whaider@ were artifacts of the v3.8.akl
+//     extract-without-migrate scope discipline; akq closes the
+//     deferred chrome migration.
+//   * Other slate-scale tokens (#64748b, #94a3b8) deliberately
+//     preserved per Sprint 45-RC-PRE D2 ratification.
+//   Item 63 P3-2 — vocabulary ratification:
+//   * Ratified canonical: "Activity" (over "History"). Reasoning:
+//     both surfaces (4 right-drawers + 3 AE Console panels) show
+//     entity-scoped event feeds, not audit logs. Drawers shipped in
+//     the more recent design wave and use "Activity"; AE Console
+//     panels are older and use "History". Industry pattern check
+//     (Salesforce, HubSpot, Front, Linear) uses "Activity" for
+//     entity-scoped feeds. Pattern 7 design-system conformance:
+//     same content should have the same label.
+//   * Surface sweep: carriers/page.tsx:705 + loads/page.tsx:81 +
+//     routing-guide/page.tsx:101 — all 3 "label: History" entries
+//     swapped to "label: Activity". Tab keys (key="history") and
+//     render-branch consumers preserved; only the visible label
+//     changed.
+//   ~12 LOC net across 4 source files + version bump. No schema
+//   migration; no test changes needed.
+//   §13.3 Item 87 followup LOG OPEN → CLOSED.
+//   §13.3 Item 63 P3-2 LOG OPEN → CLOSED (ratification: Activity
+//   canonical).
+//   3 banked items remain from the 5-item verified-pending list:
+//   Item 8.5 (AddressBook dead-model decision sprint), Item 178
+//   (drawer multi-line freight edit — Sprint 63 reframing needed),
+//   Item 180.6.b (CRM admin edit UI for the new Customer fields).
+//
 // v3.8.akp — Item 191 / Sprint 65 Phase 1: EIA fuel-index feed foundation.
 //   Adds the upstream-feed scaffolding (env + schema + region map) that will
 //   supply this week's diesel price to the EXISTING fuelSurchargeTableService
@@ -10860,7 +10906,7 @@
 //   in untracked WIP backend/src/routes/quoteApprove.ts left in place
 //   per user direction — committed by explicit path only, not staged).
 //   §13.3 Item 191 LOG OPEN; closed at v3.8.akq when Phase 2 ships.
-export const SRL_VERSION = "3.8.akp";
+export const SRL_VERSION = "3.8.akq";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

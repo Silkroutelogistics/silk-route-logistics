@@ -98,7 +98,9 @@ const PANEL_TABS: { key: PanelTab; icon: typeof Info; label: string }[] = [
   { key: "details", icon: Info, label: "Details" },
   { key: "carriers", icon: Truck, label: "Carriers" },
   { key: "performance", icon: BarChart3, label: "Performance" },
-  { key: "history", icon: Clock, label: "History" },
+  // v3.8.akq §13.3 Item 63 P3-2 — "History" → "Activity" to match
+  // the 4 right-drawers. Key preserved.
+  { key: "history", icon: Clock, label: "Activity" },
   { key: "notes", icon: FileText, label: "Notes" },
 ];
 

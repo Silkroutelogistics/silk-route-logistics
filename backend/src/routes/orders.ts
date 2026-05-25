@@ -238,14 +238,14 @@ router.patch("/:id", authorize(...AE_ROLES) as any, async (req: AuthRequest, res
  * built inline in the send handler with no preview path — AE had to
  * click Send to see what landed in the customer's inbox.
  *
- * Brand-chrome canonical note: this builder still uses the pre-akf
- * navy `#0f172a` + slate `#e2e8f0` + whaider@ reply-target. Item 87
- * sweep at v3.8.akf covered emailTemplates.ts + routes/email.ts but
- * did NOT reach this inline orders.ts builder. Migration to skill
- * canonical (`#0A2540` + `#E2EAF2` + operations@) banked as a separate
- * follow-up. The akl atomic explicitly preserves the existing HTML
- * verbatim so the preview === send equivalence test passes; refactor
- * for accuracy now, brand-sweep later.
+ * v3.8.akq Item 87 followup — brand chrome migrated to skill canonical
+ * + reply-target swap from whaider@ to operations@ per §3.10 (customer-
+ * facing transactional emails canonical-route through operations@,
+ * NOT through Lead Hunter outreach inbox). Three sweep-replacements
+ * matching Sprint 45-RC-PRE Path α + akf precedent: `#0f172a` →
+ * `#0A2540` (navy), `#e2e8f0` → `#E2EAF2` (divider), `whaider@` →
+ * `operations@` (reply target). Other slate-scale tokens (#64748b,
+ * #94a3b8) deliberately preserved per Sprint 45-RC-PRE D2 ratification.
  */
 async function buildQuoteEmail(order: {
   id: string;
@@ -268,21 +268,21 @@ async function buildQuoteEmail(order: {
   // Idempotent on the backend so re-clicks are safe.
   const approvalUrl = buildQuoteApprovalUrl(order.id);
   const html = wrap(`
-    <h2 style="color:#0f172a;margin-top:0">Freight Quote · ${order.orderNumber}</h2>
+    <h2 style="color:#0A2540;margin-top:0">Freight Quote · ${order.orderNumber}</h2>
     <p>Hello ${order.customer?.contactName ?? order.customer?.name ?? "there"},</p>
     <p>Thank you for the opportunity. Please find our quote below.</p>
     <table style="width:100%;border-collapse:collapse;margin:16px 0">
-      <tr><td style="padding:8px 12px;border-bottom:1px solid #e2e8f0;color:#64748b;width:160px">Lane</td><td style="padding:8px 12px;border-bottom:1px solid #e2e8f0">${lane}</td></tr>
-      <tr><td style="padding:8px 12px;border-bottom:1px solid #e2e8f0;color:#64748b">Equipment</td><td style="padding:8px 12px;border-bottom:1px solid #e2e8f0">${order.equipmentType ?? "—"}</td></tr>
-      <tr><td style="padding:8px 12px;border-bottom:1px solid #e2e8f0;color:#64748b">Pickup</td><td style="padding:8px 12px;border-bottom:1px solid #e2e8f0">${order.pickupDate ? new Date(order.pickupDate).toLocaleDateString() : "TBD"}</td></tr>
-      <tr><td style="padding:8px 12px;border-bottom:1px solid #e2e8f0;color:#64748b">Delivery</td><td style="padding:8px 12px;border-bottom:1px solid #e2e8f0">${order.deliveryDate ? new Date(order.deliveryDate).toLocaleDateString() : "TBD"}</td></tr>
-      <tr><td style="padding:8px 12px;border-bottom:1px solid #e2e8f0;color:#64748b">Rate</td><td style="padding:8px 12px;border-bottom:1px solid #e2e8f0"><strong style="color:#BA7517">$${(order.customerRate ?? 0).toLocaleString()}</strong></td></tr>
+      <tr><td style="padding:8px 12px;border-bottom:1px solid #E2EAF2;color:#64748b;width:160px">Lane</td><td style="padding:8px 12px;border-bottom:1px solid #E2EAF2">${lane}</td></tr>
+      <tr><td style="padding:8px 12px;border-bottom:1px solid #E2EAF2;color:#64748b">Equipment</td><td style="padding:8px 12px;border-bottom:1px solid #E2EAF2">${order.equipmentType ?? "—"}</td></tr>
+      <tr><td style="padding:8px 12px;border-bottom:1px solid #E2EAF2;color:#64748b">Pickup</td><td style="padding:8px 12px;border-bottom:1px solid #E2EAF2">${order.pickupDate ? new Date(order.pickupDate).toLocaleDateString() : "TBD"}</td></tr>
+      <tr><td style="padding:8px 12px;border-bottom:1px solid #E2EAF2;color:#64748b">Delivery</td><td style="padding:8px 12px;border-bottom:1px solid #E2EAF2">${order.deliveryDate ? new Date(order.deliveryDate).toLocaleDateString() : "TBD"}</td></tr>
+      <tr><td style="padding:8px 12px;border-bottom:1px solid #E2EAF2;color:#64748b">Rate</td><td style="padding:8px 12px;border-bottom:1px solid #E2EAF2"><strong style="color:#BA7517">$${(order.customerRate ?? 0).toLocaleString()}</strong></td></tr>
     </table>
     <div style="text-align:center;margin:24px 0">
       <a href="${approvalUrl}" style="display:inline-block;background:#BA7517;color:#FFFFFF;padding:14px 32px;text-decoration:none;border-radius:6px;font-weight:bold;font-size:15px">Approve this quote</a>
       <p style="font-size:11px;color:#94a3b8;margin-top:8px">Link expires in 7 days.</p>
     </div>
-    <p>Or reply to this email to approve, or contact us at <a href="mailto:whaider@silkroutelogistics.ai">whaider@silkroutelogistics.ai</a> with any questions.</p>
+    <p>Or reply to this email to approve, or contact us at <a href="mailto:operations@silkroutelogistics.ai">operations@silkroutelogistics.ai</a> with any questions.</p>
     <p style="color:#94a3b8;font-size:12px;margin-top:20px">
       Silk Route Logistics · MC# 1794414 · USDOT# 4526880
     </p>
