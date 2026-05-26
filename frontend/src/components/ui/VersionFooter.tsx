@@ -11892,7 +11892,13 @@
 //   Prisma migration. No new env vars. express-rate-limit
 //   already in deps — no new package install. Per §3.1:
 //   v3.8.akz → v3.8.ala sequence-continuous.
-export const SRL_VERSION = "3.8.ala";
+// v3.8.alb — Registration-endpoint hardening, two defense-in-depth gaps.
+//   Item A: email case-insensitivity on the duplicate-check (closes
+//   live bypass shipped in v3.8.ala). Item C: backend required-doc
+//   gate on the /api/carrier/register submission (frontend canNext
+//   becomes UX guide; backend is authoritative). See CLAUDE.md §11
+//   row for full narrative + scope boundary.
+export const SRL_VERSION = "3.8.alb";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

@@ -98,14 +98,18 @@ export async function registerCarrier(req: Request, res: Response) {
   try {
   const data = carrierRegisterSchema.parse(req.body);
 
+  // v3.8.alb Item A — close case-sensitivity bypass on the email
+  // duplicate-check (live since v3.8.ala). See §11 for full context.
+  data.email = data.email.toLowerCase().trim();
+
   // v3.8.ala — Capture registration IP + country early so duplicate-hit
-  // compliance flag dispatch (below) carries forensic context. Previously
-  // these were captured after the duplicate checks; v3.8.ala moves the
-  // capture up so the compliance flag has them.
+  // compliance flag dispatch (below) carries forensic context.
   const registrationIp = extractClientIp(req);
   const registrationCountry = resolveCountry(registrationIp);
 
-  const existing = await prisma.user.findUnique({ where: { email: data.email } });
+  // v3.8.alb Item A — `mode: "insensitive"` defends against any pre-
+  // existing mixed-case stored rows (~0 expected pre-revenue, but cheap).
+  const existing = await prisma.user.findFirst({ where: { email: { equals: data.email, mode: "insensitive" } } });
   if (existing) {
     // v3.8.ala — Fire-and-forget compliance flag on email collision per
     // no-double-brokering posture. Generic 409 to the attacker; full
@@ -165,6 +169,21 @@ export async function registerCarrier(req: Request, res: Response) {
       res.status(409).json({ error: `MC number ${data.mcNumber} is already registered with another carrier` });
       return;
     }
+  }
+
+  // v3.8.alb Item C — backend required-doc gate (defense-in-depth).
+  // Frontend canNext step===2 stays as UX guide; this is the API-bypass
+  // catch. Mirrors the frontend required set + the Canadian Safety Cert
+  // conditional. Scoped to registration only — existing carriers never
+  // re-hit this endpoint, so no backfill / no pre-existing blast radius.
+  const CANADIAN_REGIONS = ["Eastern Canada", "Western Canada", "Central Canada", "Cross-Border"];
+  const hasCanadianOps = Array.isArray(data.operatingRegions) && data.operatingRegions.some((r: string) => CANADIAN_REGIONS.includes(r));
+  const requiredDocs = ["w9", "insurance", "authority", "wc", ...(hasCanadianOps ? ["safety"] : [])];
+  const submittedDocTypes = (Array.isArray((req.body as any).docTypes) ? (req.body as any).docTypes : []).map((d: unknown) => (typeof d === "string" ? d.toLowerCase() : ""));
+  const missingDocs = requiredDocs.filter((k) => !submittedDocTypes.includes(k));
+  if (missingDocs.length > 0) {
+    res.status(422).json({ error: "Missing required documents", missing: missingDocs });
+    return;
   }
 
   const passwordHash = await bcrypt.hash(data.password, 12);
