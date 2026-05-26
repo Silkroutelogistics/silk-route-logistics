@@ -171,16 +171,23 @@ export async function registerCarrier(req: Request, res: Response) {
     }
   }
 
-  // v3.8.alb Item C — backend required-doc gate (defense-in-depth).
-  // Frontend canNext step===2 stays as UX guide; this is the API-bypass
-  // catch. Mirrors the frontend required set + the Canadian Safety Cert
-  // conditional. Scoped to registration only — existing carriers never
-  // re-hit this endpoint, so no backfill / no pre-existing blast radius.
+  // v3.8.alc — required-doc gate hardened against client-asserted spoofing.
+  // alb read req.body.docTypes directly; a curl POST with docTypes set
+  // but no `files` would pass. Now derives presence from req.files.files
+  // (multer payload) — a tag only counts as "present" if the file at
+  // the same index actually exists. Same 422 + missing[] response.
   const CANADIAN_REGIONS = ["Eastern Canada", "Western Canada", "Central Canada", "Cross-Border"];
   const hasCanadianOps = Array.isArray(data.operatingRegions) && data.operatingRegions.some((r: string) => CANADIAN_REGIONS.includes(r));
   const requiredDocs = ["w9", "insurance", "authority", "wc", ...(hasCanadianOps ? ["safety"] : [])];
-  const submittedDocTypes = (Array.isArray((req.body as any).docTypes) ? (req.body as any).docTypes : []).map((d: unknown) => (typeof d === "string" ? d.toLowerCase() : ""));
-  const missingDocs = requiredDocs.filter((k) => !submittedDocTypes.includes(k));
+  const reqFiles = (req as any).files;
+  const uploadedFiles: Express.Multer.File[] = Array.isArray(reqFiles?.files) ? reqFiles.files : [];
+  const clientTags: unknown[] = Array.isArray((req.body as any).docTypes) ? (req.body as any).docTypes : [];
+  const presentDocTypes = new Set<string>();
+  for (let i = 0; i < uploadedFiles.length; i++) {
+    const tag = typeof clientTags[i] === "string" ? (clientTags[i] as string).toLowerCase() : "";
+    if (tag) presentDocTypes.add(tag);
+  }
+  const missingDocs = requiredDocs.filter((k) => !presentDocTypes.has(k));
   if (missingDocs.length > 0) {
     res.status(422).json({ error: "Missing required documents", missing: missingDocs });
     return;

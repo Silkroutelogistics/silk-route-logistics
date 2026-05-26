@@ -11898,7 +11898,12 @@
 //   gate on the /api/carrier/register submission (frontend canNext
 //   becomes UX guide; backend is authoritative). See CLAUDE.md §11
 //   row for full narrative + scope boundary.
-export const SRL_VERSION = "3.8.alb";
+//
+// v3.8.alc — alb required-doc gate hardened against client-asserted
+//   spoofing. Gate now derives doc-type presence from req.files.files
+//   (multer payload), not req.body.docTypes (client array). Closes
+//   the curl-with-empty-files API bypass. See §11 row.
+export const SRL_VERSION = "3.8.alc";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
