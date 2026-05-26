@@ -20,14 +20,135 @@ import { screenCarrier } from "../services/ofacScreeningService";
 import { populateAuthorityGrantedDate } from "../services/fmcsaService";
 import { createEmailVerificationToken } from "../services/otpService";
 import { resolveCountry, extractClientIp } from "../services/geoService";
+import { normalizePhoneE164 } from "../lib/phoneNormalization";
+import { COMPLIANCE_EMAIL } from "../config/authority";
+import * as crypto from "crypto";
+
+// v3.8.ala — Fire-and-forget compliance flag dispatch on registration
+// duplicate hits. Sends a brief alert to COMPLIANCE_EMAIL +
+// writes a SystemLog WARNING row for queryable forensic visibility.
+// Hashes the colliding value (email or phone E.164) into the email
+// body + log details so the destination + log table never carry
+// plaintext PII of the attempted submission. Recipient resolution
+// uses the COMPLIANCE_EMAIL constant per the directive "flag the
+// attempt to compliance@"; the role-based dispatch pattern from
+// chameleonDetectionService.ts is intentionally NOT used here —
+// the directive specifies the single canonical inbox.
+//
+// Non-blocking: caller fires + forgets. Timing-side-channel guard:
+// dispatch happens AFTER the 409 response is already sent, so a
+// duplicate-hit response is indistinguishable from a non-collision
+// response from the attacker's clock.
+function flagRegistrationDuplicate(opts: {
+  collidedField: "email" | "phone";
+  attemptedValue: string;
+  attemptIp: string | null;
+  attemptCountry: string | null;
+}): void {
+  const valueHash = crypto.createHash("sha256").update(opts.attemptedValue).digest("hex").slice(0, 16);
+  const subject = `[SRL Possible Impersonation] Registration attempt against existing identity`;
+  const html = wrap(`
+    <h2 style="color:#0A2540;margin-bottom:4px">Registration duplicate — possible impersonation signal</h2>
+    <p style="color:#3A4A5F;font-size:14px;line-height:1.6">
+      A carrier registration attempt collided with an existing account on the
+      <strong>${opts.collidedField}</strong> field. Per the no-double-brokering
+      posture, every duplicate hit is surfaced to compliance for review.
+    </p>
+    <div style="background:#FBF7F0;border:1px solid #EFE6D3;border-radius:8px;padding:16px;margin:16px 0">
+      <table style="width:100%;border-collapse:collapse;font-size:13px">
+        <tr><td style="color:#6B7685;padding:4px 0;width:40%">Collided field</td><td style="color:#0A2540;font-weight:600">${opts.collidedField}</td></tr>
+        <tr><td style="color:#6B7685;padding:4px 0">Attempted value SHA-256 (first 16)</td><td style="color:#0A2540;font-family:monospace">${valueHash}</td></tr>
+        <tr><td style="color:#6B7685;padding:4px 0">Attempt IP</td><td style="color:#0A2540;font-family:monospace">${opts.attemptIp || "—"}</td></tr>
+        <tr><td style="color:#6B7685;padding:4px 0">Attempt country (geoip)</td><td style="color:#0A2540;font-family:monospace">${opts.attemptCountry || "—"}</td></tr>
+        <tr><td style="color:#6B7685;padding:4px 0">Timestamp</td><td style="color:#0A2540;font-family:monospace">${new Date().toISOString()}</td></tr>
+      </table>
+    </div>
+    <p style="color:#3A4A5F;font-size:13px;line-height:1.6">
+      The attempt was rejected with a generic 409. No PII of the attempted
+      value is included above — only the SHA-256 prefix, sufficient for
+      cross-referencing repeat attempts without exposing the value itself.
+    </p>
+    <p style="color:#6B7685;font-size:12px;margin-top:24px">
+      Source: <code>registration-duplicate</code> · See SystemLog WARNING
+      rows with this source for the full event stream.
+    </p>
+  `);
+  sendEmail(COMPLIANCE_EMAIL, subject, html).catch((err) =>
+    log.error({ err, valueHash, collidedField: opts.collidedField }, "[Reg Duplicate Flag] Email send failed"),
+  );
+  prisma.systemLog.create({
+    data: {
+      logType: "SECURITY",
+      severity: "WARNING",
+      source: "registration-duplicate",
+      message: `Registration duplicate (${opts.collidedField}) — possible impersonation signal`,
+      details: {
+        collidedField: opts.collidedField,
+        attemptedValueHash: valueHash,
+        attemptIp: opts.attemptIp,
+        attemptCountry: opts.attemptCountry,
+      } as any,
+    },
+  }).catch((err) =>
+    log.error({ err, valueHash, collidedField: opts.collidedField }, "[Reg Duplicate Flag] SystemLog write failed"),
+  );
+}
 
 export async function registerCarrier(req: Request, res: Response) {
   try {
   const data = carrierRegisterSchema.parse(req.body);
+
+  // v3.8.ala — Capture registration IP + country early so duplicate-hit
+  // compliance flag dispatch (below) carries forensic context. Previously
+  // these were captured after the duplicate checks; v3.8.ala moves the
+  // capture up so the compliance flag has them.
+  const registrationIp = extractClientIp(req);
+  const registrationCountry = resolveCountry(registrationIp);
+
   const existing = await prisma.user.findUnique({ where: { email: data.email } });
   if (existing) {
+    // v3.8.ala — Fire-and-forget compliance flag on email collision per
+    // no-double-brokering posture. Generic 409 to the attacker; full
+    // forensic event to compliance@ + SystemLog. Dispatch is non-
+    // blocking — the response goes out first, the flag fires after.
     res.status(409).json({ error: "Email already registered" });
+    flagRegistrationDuplicate({
+      collidedField: "email",
+      attemptedValue: data.email,
+      attemptIp: registrationIp,
+      attemptCountry: registrationCountry,
+    });
     return;
+  }
+
+  // v3.8.ala — Phone duplicate check mirroring the email check above.
+  // Both stored and submitted numbers are normalized to E.164 before
+  // comparison so formatting differences (display-format "(269) 220-
+  // 6760" vs digit-strip "2692206760" vs prefixed "+12692206760")
+  // don't create false negatives. Storage stays as-typed; this check
+  // is normalize-on-the-fly. Light scan at pre-revenue volumes; the
+  // indexed `phoneNormalized` column refactor is banked for the
+  // ~10K+ row threshold as a separate sprint. See backend/src/lib/
+  // phoneNormalization.ts for the normalizer.
+  const normalizedIncomingPhone = normalizePhoneE164(data.phone);
+  if (normalizedIncomingPhone) {
+    const existingPhones = await prisma.user.findMany({
+      where: { phone: { not: null } },
+      select: { id: true, phone: true },
+    });
+    const phoneCollision = existingPhones.find((u) =>
+      normalizePhoneE164(u.phone) === normalizedIncomingPhone,
+    );
+    if (phoneCollision) {
+      res.status(409).json({ error: "Phone number already registered" });
+      flagRegistrationDuplicate({
+        collidedField: "phone",
+        attemptedValue: normalizedIncomingPhone,
+        attemptIp: registrationIp,
+        attemptCountry: registrationCountry,
+      });
+      return;
+    }
   }
 
   // Check for existing DOT/MC before attempting create
@@ -45,14 +166,6 @@ export async function registerCarrier(req: Request, res: Response) {
       return;
     }
   }
-
-  // v3.8.aje — Capture registration country via offline geoip-lite
-  // BEFORE the prisma.user.create so we can persist it on CarrierProfile
-  // in the same write. Raw IP is also captured for hashing inside
-  // buildFingerprint (chameleon detection) below. extractClientIp
-  // accounts for Render's `trust proxy` setting at server.ts:35.
-  const registrationIp = extractClientIp(req);
-  const registrationCountry = resolveCountry(registrationIp);
 
   const passwordHash = await bcrypt.hash(data.password, 12);
   const user = await prisma.user.create({

@@ -25,6 +25,55 @@ const fmcsaLookupLimiter = rateLimit({
   message: { error: "Too many FMCSA lookup requests, please try again later" },
 });
 
+// v3.8.ala — Two rate limiters for the public /register endpoint per the
+// no-double-brokering posture. Pre-ala this endpoint was wide open to
+// enumeration scraping (no limiter mounted; multipart-only gated).
+//
+//   (a) IP-keyed: 10 attempts / 15 min per req.ip. Mirrors loginLimiter
+//       cadence. Stops a single source enumerating against many
+//       emails/phones.
+//   (b) Contact-keyed: 3 attempts / 60 min keyed by email+phone from
+//       req.body (lowercase + non-digit-stripped composite key).
+//       Prevents repeated attempts against the same identity from
+//       different IPs (e.g. an attacker rotating through proxies).
+//
+// Mount order in router.post("/register", ...) below:
+//   registerIpLimiter (no body needed, fires before multer)
+//   → upload.fields([...]) multer
+//   → FormData normalization middleware (line 113+ below)
+//   → registerContactLimiter (needs body parsed, fires after multer)
+//   → validateBody(carrierRegisterSchema)
+//   → registerCarrier
+//
+// Skip-handler responses are generic per enumeration hygiene — no echo
+// of which limiter fired or against which key.
+const registerIpLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Too many registration attempts. Please try again later." },
+});
+
+const registerContactLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 3,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Too many registration attempts. Please try again later." },
+  keyGenerator: (req: any) => {
+    // Composite key: lowercased email + digit-stripped phone. If both
+    // are absent (malformed request), fall back to IP so the limiter
+    // still bounds the request — never returns empty string, which
+    // express-rate-limit would treat as a global counter.
+    const email = typeof req.body?.email === "string" ? req.body.email.toLowerCase().trim() : "";
+    const phoneDigits = typeof req.body?.phone === "string" ? req.body.phone.replace(/\D/g, "") : "";
+    const composite = `${email}|${phoneDigits}`;
+    if (composite === "|") return `ip:${req.ip || "unknown"}`;
+    return composite;
+  },
+});
+
 // Public: FMCSA DOT lookup for onboarding form auto-verification
 router.get("/fmcsa-lookup/:dotNumber", fmcsaLookupLimiter, async (req: Request, res: Response) => {
   const dot = String(req.params.dotNumber);
@@ -94,8 +143,13 @@ router.get("/fmcsa-mc-lookup/:mcNumber", fmcsaLookupLimiter, async (req: Request
   }
 });
 
-// Public: carrier self-registration (multipart/form-data for file uploads)
+// Public: carrier self-registration (multipart/form-data for file uploads).
+// v3.8.ala — registerIpLimiter mounted FIRST (no body needed, gates raw
+// connection rate) before multer + body normalization + contact-keyed
+// limiter. Contact limiter mounted after normalization so it can read
+// req.body.email + req.body.phone from the parsed form fields.
 router.post("/register",
+  registerIpLimiter,
   upload.fields([
     { name: "photoId", maxCount: 1 },
     { name: "articlesOfInc", maxCount: 1 },
@@ -136,6 +190,10 @@ router.post("/register",
 
     next();
   },
+  // v3.8.ala — contact-keyed limiter fires AFTER multer + body
+  // normalization so req.body.email + req.body.phone are populated.
+  // Composite key prevents same-identity retry storm across IPs.
+  registerContactLimiter,
   validateBody(carrierRegisterSchema),
   registerCarrier
 );

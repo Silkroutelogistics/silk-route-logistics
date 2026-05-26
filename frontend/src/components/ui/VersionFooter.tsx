@@ -11790,7 +11790,109 @@
 //   sent verification emails per carrier (banked but not in akz
 //   scope), agent-side reply tracking (out of scope, no inbound
 //   webhook). Per §3.1: v3.8.aky → v3.8.akz sequence-continuous.
-export const SRL_VERSION = "3.8.akz";
+//
+// v3.8.ala — Onboarding contact-security: phone duplicate detection +
+//   per-IP + per-contact rate limiting on /api/carrier/register +
+//   compliance@ flag on every duplicate hit + enumeration hygiene.
+//   NO SMS path. NO OTP verification. NO A2P dependency. Closes the
+//   phone/email duplicate-check asymmetry: pre-ala `registerCarrier`
+//   rejected duplicate emails (`User.email` unique constraint +
+//   findUnique at carrierController.ts:27-30 → 409 "Email already
+//   registered") but had no phone duplicate check at all. Same
+//   endpoint had zero rate limiter — wide open to enumeration
+//   scraping. No compliance signal on collision today.
+//
+//   Phase A audit confirmed: (a) `express-rate-limit ^7.5.0` already
+//   in backend/package.json — no new dep; (b) phone stored as-typed
+//   on User.phone (e.g. "(269) 220-6760"); two local 10-digit strip
+//   helpers exist in chameleonDetectionService + crossReferenceService
+//   for fingerprint hashing but neither feeds duplicate-checks; no
+//   E.164 normalizer; (c) registration is US-only — no country
+//   picker, frontend assumes +1; (d) compliance flag pattern: two
+//   shapes exist (chameleon → role-based dispatch; insuranceVerify
+//   → COMPLIANCE_EMAIL constant from config/authority.ts). Directive
+//   says "flag to compliance@" — using COMPLIANCE_EMAIL constant
+//   pattern.
+//
+//   Five files touched:
+//   (1) NEW `backend/src/lib/phoneNormalization.ts` — `normalizePhone
+//       E164(raw)` + `phoneNumbersMatch(a, b)` helpers. ~25 LOC.
+//       Strips non-digits + handles leading "1" country code +
+//       prepends "+1" to 10-digit US national number; returns null
+//       on any input that doesn't normalize to exactly 10 US digits.
+//       Header comment documents the swap target for libphonenumber-
+//       js when/if international registration ships — every caller
+//       inherits the upgrade transparently.
+//   (2) `backend/src/controllers/carrierController.ts` — phone
+//       duplicate check inserted between email check and DOT/MC
+//       checks. Both stored + submitted numbers normalized to E.164
+//       before comparison (light scan at pre-revenue volumes; the
+//       indexed `phoneNormalized` column refactor is banked at
+//       ~10K+ rows). Also new `flagRegistrationDuplicate(opts)`
+//       helper (~50 LOC) — fires a brief alert to COMPLIANCE_EMAIL
+//       + writes SystemLog WARNING row with logType=SECURITY +
+//       source="registration-duplicate". Both wrapped in .catch()
+//       so neither blocks the 409 response. Email body + SystemLog
+//       details carry SHA-256 hash (first 16 chars) of the
+//       colliding value — never plaintext PII. registrationIp +
+//       registrationCountry capture moved earlier in the function
+//       so the compliance flag has forensic context (was previously
+//       captured after duplicate checks; pre-ala duplicate hits
+//       had no IP/country signal because the variables didn't
+//       exist yet). Email + phone collision branches both fire
+//       the flag before returning.
+//   (3) `backend/src/routes/carrier.ts` — two new rate limiters
+//       mounted on POST /register: (a) registerIpLimiter — 10
+//       attempts / 15 min keyed by req.ip, fires BEFORE multer
+//       (no body needed); (b) registerContactLimiter — 3 attempts
+//       / 60 min keyed by composite `${lowercaseEmail}|${digitOnly
+//       Phone}`, fires AFTER multer + body normalization
+//       middleware so req.body.email + req.body.phone are
+//       populated. Composite-key fallback to `ip:${req.ip}` if
+//       both email + phone absent (malformed request) — never
+//       returns empty string which express-rate-limit would treat
+//       as a global counter. Skip-handler returns 429 "Too many
+//       registration attempts. Please try again later." — generic
+//       per enumeration hygiene (no echo of which limiter fired
+//       or against which key).
+//   (4) `frontend/src/components/ui/VersionFooter.tsx` — version
+//       bump + this comment block.
+//   (5) `CLAUDE.md` — §11 row.
+//
+//   Enumeration hygiene (directive §4): duplicate error responses
+//   carry NO name / MC / agency echo. Email collide → 409 "Email
+//   already registered" (unchanged from today). Phone collide →
+//   409 "Phone number already registered" (mirrors). Rate-limit
+//   hit → 429 with generic message. Compliance flag dispatch
+//   happens AFTER the 409 response is sent, so duplicate-hit
+//   response time is indistinguishable from non-collision response
+//   from the attacker's clock — closes the timing-side-channel.
+//
+//   Banked for future sprints (out of v3.8.ala scope):
+//   - Email lowercase-on-lookup to close the case-sensitivity
+//     enumeration vector (`Test@example.com` ≠ `test@example.com`
+//     today on Postgres + Prisma findUnique). Pre-existing gap.
+//   - `User.phone @unique` schema constraint + backfill — race
+//     window stays today since the duplicate check is application-
+//     level only. Pre-revenue volumes make this acceptable for
+//     now; race window closes via DB constraint when N grows.
+//   - libphonenumber-js adoption — only when international
+//     registration ships. Current DIY normalizer is sufficient
+//     for US-only scope.
+//   - Indexed `phoneNormalized` column on User — refactor when
+//     N > ~10K carriers. Today's full scan over phone-bearing
+//     users is light at pre-revenue volumes.
+//   - OTP verification path / SMS verification — next sprint
+//     pending Wasi's SMS-path decision per directive.
+//   - Backend required-doc validation gate — pre-existing gap
+//     from v3.8.aky banking. Continues to defer.
+//
+//   Pre-commit gates per Sub-pattern 11: backend tsc --noEmit
+//   clean, frontend tsc --noEmit + npx next build clean. No
+//   Prisma migration. No new env vars. express-rate-limit
+//   already in deps — no new package install. Per §3.1:
+//   v3.8.akz → v3.8.ala sequence-continuous.
+export const SRL_VERSION = "3.8.ala";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
