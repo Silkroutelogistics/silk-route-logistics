@@ -34,6 +34,23 @@ services:
         value: production
       - key: DATABASE_URL
         sync: false
+      # v3.8.alf — DIRECT_URL added to docs (was missing from envVars
+      # block since v3.8.ajg/ajs shipped the Prisma + Neon DIRECT_URL
+      # split). The actual env var IS set on the Render dashboard since
+      # 2026-05-24 (otherwise check-direct-url.js in the buildCommand
+      # would fail-fast on every deploy + builds have been succeeding).
+      # Listing here closes the documentation gap surfaced during
+      # v3.8.alf ledger reconciliation. Hostname must NOT contain
+      # "-pooler" — the build chain's scripts/check-direct-url.js
+      # guard rejects pooled URLs explicitly. See CLAUDE.md §2.2
+      # canonical + §11 v3.8.ajg/ajs rows.
+      - key: DIRECT_URL
+        sync: false
+      # v3.8.alf — PRISMA_MIGRATE_LOCK_TIMEOUT added to docs per §2.2
+      # canonical (belt-and-suspenders alongside DIRECT_URL — bumps
+      # Prisma's advisory-lock acquisition from 10s default to 60s).
+      - key: PRISMA_MIGRATE_LOCK_TIMEOUT
+        value: "60000"
       - key: JWT_SECRET
         sync: false
       - key: CORS_ORIGIN

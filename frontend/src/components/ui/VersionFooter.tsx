@@ -11923,7 +11923,24 @@
 //   confirms citext v1.6 enabled, users.email udt_name=citext,
 //   users_email_key UNIQUE INDEX present, behavioral case-insensitive
 //   equality + Prisma round-trip working. See §11 row.
-export const SRL_VERSION = "3.8.ale";
+//
+// v3.8.alf — Ledger reconciliation for the ale citext migration BEFORE
+//   the next Render deploy. State-verified ale migration file +
+//   schema + DB all aligned; only the _prisma_migrations ledger row
+//   was missing (the ale apply path used $executeRawUnsafe which
+//   bypassed Prisma's ledger machinery). Added DIRECT_URL to local
+//   backend/.env per §2.2 canonical (derived from DATABASE_URL by
+//   stripping `-pooler`), then ran `prisma migrate resolve --applied
+//   20260526164943_email_citext` to record the ledger row with
+//   applied_steps_count=0 (no SQL re-run). prisma migrate status
+//   now reports "Database schema is up to date!" — Render's next
+//   migrate deploy will skip the migration cleanly. Also closes the
+//   render.yaml docs gap surfaced during state verification: the
+//   envVars block didn't list DIRECT_URL or PRISMA_MIGRATE_LOCK_TIMEOUT
+//   despite both being canonical since v3.8.ajg/ajs. Render dashboard
+//   IS set correctly (otherwise check-direct-url.js would fail every
+//   build since 2026-05-24); only the docs file lagged. See §11 row.
+export const SRL_VERSION = "3.8.alf";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
