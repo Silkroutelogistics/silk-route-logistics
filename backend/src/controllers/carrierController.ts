@@ -21,6 +21,7 @@ import { populateAuthorityGrantedDate } from "../services/fmcsaService";
 import { createEmailVerificationToken } from "../services/otpService";
 import { resolveCountry, extractClientIp } from "../services/geoService";
 import { normalizePhoneE164 } from "../lib/phoneNormalization";
+import { normalizeEmail, caseInsensitiveEmailFilter } from "../lib/emailNormalization";
 import { COMPLIANCE_EMAIL } from "../config/authority";
 import * as crypto from "crypto";
 
@@ -98,18 +99,24 @@ export async function registerCarrier(req: Request, res: Response) {
   try {
   const data = carrierRegisterSchema.parse(req.body);
 
-  // v3.8.alb Item A — close case-sensitivity bypass on the email
-  // duplicate-check (live since v3.8.ala). See §11 for full context.
-  data.email = data.email.toLowerCase().trim();
+  // v3.8.ald — Registration write site routes through normalizeEmail()
+  // helper. Replaces alb's inline `.toLowerCase().trim()`. Single
+  // source of truth for the canonical form across all email-touching
+  // paths. See backend/src/lib/emailNormalization.ts.
+  const normalizedEmail = normalizeEmail(data.email);
+  if (!normalizedEmail) {
+    res.status(400).json({ error: "Invalid email" });
+    return;
+  }
+  data.email = normalizedEmail;
 
   // v3.8.ala — Capture registration IP + country early so duplicate-hit
   // compliance flag dispatch (below) carries forensic context.
   const registrationIp = extractClientIp(req);
   const registrationCountry = resolveCountry(registrationIp);
 
-  // v3.8.alb Item A — `mode: "insensitive"` defends against any pre-
-  // existing mixed-case stored rows (~0 expected pre-revenue, but cheap).
-  const existing = await prisma.user.findFirst({ where: { email: { equals: data.email, mode: "insensitive" } } });
+  // v3.8.ald — case-insensitive filter from the shared helper.
+  const existing = await prisma.user.findFirst({ where: caseInsensitiveEmailFilter(data.email) });
   if (existing) {
     // v3.8.ala — Fire-and-forget compliance flag on email collision per
     // no-double-brokering posture. Generic 409 to the attacker; full

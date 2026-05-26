@@ -3,6 +3,7 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import rateLimit from "express-rate-limit";
 import { prisma } from "../config/database";
+import { caseInsensitiveEmailFilter } from "../lib/emailNormalization";
 import { env } from "../config/env";
 import { authenticate, authorize, AuthRequest, registerSession, removeSession } from "../middleware/auth";
 import { validateBody } from "../middleware/validate";
@@ -92,8 +93,9 @@ const otpVerifyLimiter = rateLimit({
 router.post("/login", loginLimiter, validateBody(carrierLoginSchema), async (req: Request, res: Response) => {
   const { email, password } = req.body;
 
-  const user = await prisma.user.findUnique({
-    where: { email },
+  // v3.8.ald — case-insensitive lookup.
+  const user = await prisma.user.findFirst({
+    where: caseInsensitiveEmailFilter(email),
     include: { carrierProfile: true },
   });
 
@@ -439,7 +441,8 @@ router.post("/totp-verify", otpVerifyLimiter, validateBody(carrierTotpSchema), a
 // POST /api/carrier-auth/resend-otp — Resend OTP for carrier login
 router.post("/resend-otp", loginLimiter, validateBody(carrierResendOtpSchema), async (req: Request, res: Response) => {
   const { email } = req.body;
-  const user = await prisma.user.findUnique({ where: { email } });
+  // v3.8.ald — case-insensitive lookup.
+  const user = await prisma.user.findFirst({ where: caseInsensitiveEmailFilter(email) });
   if (!user || user.role !== "CARRIER") {
     res.json({ message: "If an account exists, a new code has been sent" });
     return;

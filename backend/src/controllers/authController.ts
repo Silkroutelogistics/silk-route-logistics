@@ -13,6 +13,7 @@ import { validatePassword } from "../utils/passwordPolicy";
 import { verifyTotpCode } from "../services/totpService";
 import { registerSession, removeSession } from "../middleware/auth";
 import { log } from "../lib/logger";
+import { caseInsensitiveEmailFilter } from "../lib/emailNormalization";
 
 const PASSWORD_EXPIRY_DAYS = 60;
 function signToken(userId: string): string {
@@ -120,7 +121,9 @@ export async function register(req: Request, res: Response) {
     return;
   }
 
-  const existing = await prisma.user.findUnique({ where: { email: data.email } });
+  // v3.8.ald — case-insensitive email lookup catches both lowercased
+  // (new) and any pre-existing mixed-case stored rows.
+  const existing = await prisma.user.findFirst({ where: caseInsensitiveEmailFilter(data.email) });
   if (existing) {
     res.status(409).json({ error: "Email already registered" });
     return;
@@ -162,7 +165,8 @@ const LOCKOUT_DURATION_MS = 30 * 60 * 1000; // 30 minutes
 
 export async function login(req: Request, res: Response) {
   const { email, password, expectedRole } = loginSchema.parse(req.body);
-  const user = await prisma.user.findUnique({ where: { email } });
+  // v3.8.ald — case-insensitive lookup resolves both lowercased + mixed-case rows.
+  const user = await prisma.user.findFirst({ where: caseInsensitiveEmailFilter(email) });
   if (!user) {
     res.status(401).json({ error: "Invalid credentials" });
     return;
@@ -250,7 +254,8 @@ export async function handleVerifyOtp(req: Request, res: Response) {
     return;
   }
 
-  const user = await prisma.user.findUnique({ where: { email } });
+  // v3.8.ald — case-insensitive lookup.
+  const user = await prisma.user.findFirst({ where: caseInsensitiveEmailFilter(email) });
   if (!user) {
     res.status(401).json({ error: "Invalid credentials" });
     return;
@@ -368,7 +373,8 @@ export async function handleResendOtp(req: Request, res: Response) {
     return;
   }
 
-  const user = await prisma.user.findUnique({ where: { email } });
+  // v3.8.ald — case-insensitive lookup.
+  const user = await prisma.user.findFirst({ where: caseInsensitiveEmailFilter(email) });
   if (!user) {
     // Don't reveal whether user exists
     res.json({ message: "If an account exists, a new code has been sent" });
@@ -578,7 +584,8 @@ export async function forgotPassword(req: Request, res: Response) {
   }
 
   // Always return generic message to prevent user enumeration
-  const user = await prisma.user.findUnique({ where: { email } });
+  // v3.8.ald — case-insensitive lookup.
+  const user = await prisma.user.findFirst({ where: caseInsensitiveEmailFilter(email) });
   if (user) {
     const token = await createPasswordResetToken(user.id);
     const frontendUrl = env.CORS_ORIGIN.split(",")[0].trim();

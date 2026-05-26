@@ -11903,7 +11903,16 @@
 //   spoofing. Gate now derives doc-type presence from req.files.files
 //   (multer payload), not req.body.docTypes (client array). Closes
 //   the curl-with-empty-files API bypass. See §11 row.
-export const SRL_VERSION = "3.8.alc";
+//
+// v3.8.ald — Email read-path case-insensitivity across all 8 lookup
+//   sites. Extracts normalizeEmail + caseInsensitiveEmailFilter
+//   helpers (mirroring phoneNormalization), routes the carrier
+//   registration write through normalizeEmail, and applies Prisma
+//   mode: "insensitive" to login + OTP-verify + forgot-password +
+//   reset-password + AE-register-duplicate + carrier-login + carrier-
+//   resend-otp + admin-token-mint. Resolves both lowercased (post-alb)
+//   and pre-existing mixed-case stored rows. See §11 row.
+export const SRL_VERSION = "3.8.ald";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

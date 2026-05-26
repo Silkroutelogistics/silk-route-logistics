@@ -10,6 +10,7 @@ import { validateBody } from "../middleware/validate";
 import { registerSchema, loginSchema } from "../validators/auth";
 import { env } from "../config/env";
 import { prisma } from "../config/database";
+import { caseInsensitiveEmailFilter } from "../lib/emailNormalization";
 import { setTokenCookie } from "../utils/cookies";
 import { z } from "zod";
 import { log } from "../lib/logger";
@@ -79,7 +80,9 @@ router.post("/e2e-token", async (req, res) => {
     res.status(400).json({ error: "email required" });
     return;
   }
-  const user = await prisma.user.findUnique({ where: { email } });
+  // v3.8.ald — keeps the existing pre-lowercase + adds mode: insensitive
+  // for any pre-existing mixed-case stored rows.
+  const user = await prisma.user.findFirst({ where: caseInsensitiveEmailFilter(email) });
   if (!user) {
     res.status(404).json({ error: "User not found" });
     return;
