@@ -698,7 +698,14 @@ enum PackageType {
 
 model User {
   id           String    @id @default(cuid())
-  email        String    @unique
+  // v3.8.ale — citext type for native case-insensitive uniqueness. The
+  // @unique constraint is the same `users_email_key` B-tree as before;
+  // citext shifts the operator class to citext_ops so equality is
+  // case-insensitive. findUnique({ where: { email } }) now matches
+  // case-insensitively without mode: "insensitive". v3.8.ald callers
+  // (findFirst + caseInsensitiveEmailFilter) stay working — mode:
+  // insensitive becomes redundant but harmless on citext.
+  email        String    @unique @db.Citext
   passwordHash String
   firstName    String
   lastName     String

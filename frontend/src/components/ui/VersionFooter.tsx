@@ -11912,7 +11912,18 @@
 //   reset-password + AE-register-duplicate + carrier-login + carrier-
 //   resend-otp + admin-token-mint. Resolves both lowercased (post-alb)
 //   and pre-existing mixed-case stored rows. See §11 row.
-export const SRL_VERSION = "3.8.ald";
+//
+// v3.8.ale — Email DB-level case-insensitive uniqueness via citext.
+//   Closes the auth-ambiguity ald's findFirst-with-mode-insensitive
+//   was working around. Dedupe-scan ran first against Neon prod (0
+//   case-duplicate rows in 10-user table); migration applied directly
+//   via $executeRawUnsafe (DIRECT_URL not set in local .env so
+//   prisma migrate CLI couldn't run; raw SQL via runtime client
+//   bypasses that requirement). Five-check verification on Neon
+//   confirms citext v1.6 enabled, users.email udt_name=citext,
+//   users_email_key UNIQUE INDEX present, behavioral case-insensitive
+//   equality + Prisma round-trip working. See §11 row.
+export const SRL_VERSION = "3.8.ale";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
