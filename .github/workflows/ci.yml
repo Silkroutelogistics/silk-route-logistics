@@ -135,7 +135,30 @@ jobs:
         # to-prod drift was caught (Item 8.10). `db push` against
         # production is now deprecated — see §2.2 schema mutation
         # paths section.
+        #
+        # The `CREATE EXTENSION citext` pre-step is required because
+        # v3.8.ale converted `User.email` to `@db.Citext` for
+        # DB-level case-insensitive uniqueness. The citext extension
+        # is a Postgres contrib module (not in base install) that
+        # must be explicitly enabled before any column can use the
+        # citext type. The v3.8.ale migration file at
+        # prisma/migrations/20260526164943_email_citext/migration.sql
+        # includes `CREATE EXTENSION IF NOT EXISTS citext;` as its
+        # first statement — that path works on prod where Render
+        # runs `prisma migrate deploy`. But CI uses `prisma db push`
+        # which bypasses migrations entirely + pushes schema
+        # directly, so the extension never gets created. Without
+        # this pre-step, db push fails with `ERROR: type "citext"
+        # does not exist`. Sub-pattern 11 CI-parity fire #4
+        # (schema-side change broke CI without pre-push parity
+        # check): fires #1 JSX/ESLint Sprint 51, #2 env() ref
+        # ajg/ci-hotfix, #3 Render DIRECT_URL value ajr/ajs, now
+        # #4 Postgres extension ale/this-hotfix. Going-forward
+        # extension to the canonical: when adding a custom Postgres
+        # type (citext, hstore, postgis, etc.) to schema.prisma,
+        # verify the CI workflow's schema-setup step can handle it.
         run: |
+          psql "$DATABASE_URL" -c "CREATE EXTENSION IF NOT EXISTS citext;"
           npx prisma db push --skip-generate
           npx prisma db seed
 
