@@ -15,7 +15,7 @@
     "prisma:seed": "npx ts-node prisma/seed.ts"
   },
   "engines": {
-    "node": ">=18.0.0"
+    "node": "^24.0.0"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.74.0",

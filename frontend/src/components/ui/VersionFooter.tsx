@@ -11940,7 +11940,26 @@
 //   despite both being canonical since v3.8.ajg/ajs. Render dashboard
 //   IS set correctly (otherwise check-direct-url.js would fail every
 //   build since 2026-05-24); only the docs file lagged. See §11 row.
-export const SRL_VERSION = "3.8.alf";
+//
+// v3.8.alg — Node.js engines bump + Item 8.10 lineage closure
+//   annotation. (1) backend/package.json engines.node: ">=18.0.0"
+//   → "^24.0.0". Floor was Node 18 (EOL since April 2025, 13 months
+//   past EOL); Render auto-picked Node 26.2.0 (Current, not LTS).
+//   Pinning to ^24 lineage = Node 24 Active LTS (supported through
+//   Apr 2027) for production stability. (2) §13.3 Item 8.10 lineage
+//   status annotated CLOSED-and-EMPIRICALLY-VALIDATED via the v3.8.alf
+//   push + Render build log evidence — check-direct-url.js guard
+//   fired correctly, prisma migrate deploy reported "No pending
+//   migrations to apply" with 21 migrations found, post-deploy
+//   migrate status reported "Database schema is up to date!".
+//   Full deploy-chain investigation arc (8.10 → 191 → ale → alf)
+//   now structurally complete. (3) Prisma 7 upgrade attempted but
+//   reverted to Prisma 6.19.3 status quo — Phase A revealed a
+//   13-callsite refactor requirement (PrismaClient adapter pattern
+//   + url/directUrl moved out of schema.prisma datasource) past
+//   the atomic threshold. Banked for a dedicated future sprint when
+//   prioritized. See §11 row.
+export const SRL_VERSION = "3.8.alg";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
