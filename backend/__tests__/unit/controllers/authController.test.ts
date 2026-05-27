@@ -63,7 +63,9 @@ describe("authController", () => {
     });
 
     it("returns 409 for duplicate email", async () => {
-      mockPrisma.user.findUnique.mockResolvedValue({ id: "existing" } as any);
+      // v3.8.alh — controller swapped findUnique → findFirst in v3.8.ald
+      // (authController.ts:126, case-insensitive email lookup).
+      mockPrisma.user.findFirst.mockResolvedValue({ id: "existing" } as any);
 
       const { req, res } = mockReqRes({
         email: "test@test.com",
@@ -83,7 +85,9 @@ describe("authController", () => {
   describe("login", () => {
     it("sends OTP for valid credentials", async () => {
       const hash = await bcrypt.hash("Password123!", 10);
-      mockPrisma.user.findUnique.mockResolvedValue({
+      // v3.8.alh — controller swapped findUnique → findFirst in v3.8.ald
+      // (authController.ts:169, case-insensitive email lookup).
+      mockPrisma.user.findFirst.mockResolvedValue({
         id: "user-1",
         email: "test@test.com",
         firstName: "John",
@@ -154,7 +158,9 @@ describe("authController", () => {
         createdAt: new Date(),
         totpEnabled: false,
       };
-      mockPrisma.user.findUnique.mockResolvedValue(user as any);
+      // v3.8.alh — controller swapped findUnique → findFirst in v3.8.ald
+      // (authController.ts:258, case-insensitive email lookup).
+      mockPrisma.user.findFirst.mockResolvedValue(user as any);
       // verifyOtp calls count first for lockout check
       mockPrisma.otpCode.count.mockResolvedValue(0);
       // verifyOtp will call findFirst
@@ -195,7 +201,8 @@ describe("authController", () => {
         createdAt: oldDate,
         totpEnabled: false,
       };
-      mockPrisma.user.findUnique.mockResolvedValue(user as any);
+      // v3.8.alh — same swap as the valid-OTP case above.
+      mockPrisma.user.findFirst.mockResolvedValue(user as any);
       mockPrisma.otpCode.count.mockResolvedValue(0);
       mockPrisma.otpCode.findFirst.mockResolvedValue({
         id: "otp-1",
@@ -238,7 +245,9 @@ describe("authController", () => {
 
   describe("handleResendOtp", () => {
     it("sends a new code on success", async () => {
-      mockPrisma.user.findUnique.mockResolvedValue({
+      // v3.8.alh — controller swapped findUnique → findFirst in v3.8.ald
+      // (authController.ts:374, case-insensitive email lookup).
+      mockPrisma.user.findFirst.mockResolvedValue({
         id: "user-1",
         email: "test@test.com",
         firstName: "John",
@@ -266,7 +275,8 @@ describe("authController", () => {
     });
 
     it("returns 429 when rate limited", async () => {
-      mockPrisma.user.findUnique.mockResolvedValue({
+      // v3.8.alh — same swap as the success case above.
+      mockPrisma.user.findFirst.mockResolvedValue({
         id: "user-1",
         email: "test@test.com",
         firstName: "John",
@@ -283,7 +293,12 @@ describe("authController", () => {
     });
 
     it("returns generic message for unknown user", async () => {
-      mockPrisma.user.findUnique.mockResolvedValue(null);
+      // v3.8.alh — same swap; also load-bearing because vitest
+      // clearAllMocks resets call history but NOT mockResolvedValue,
+      // so without an explicit null here the truthy user from the
+      // prior "returns 429" test leaks across and rate-limit fires
+      // before the "no user" branch.
+      mockPrisma.user.findFirst.mockResolvedValue(null);
 
       const { req, res } = mockReqRes({ email: "unknown@test.com" });
 

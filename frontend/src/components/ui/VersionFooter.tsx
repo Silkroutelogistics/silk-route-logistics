@@ -11959,7 +11959,23 @@
 //   + url/directUrl moved out of schema.prisma datasource) past
 //   the atomic threshold. Banked for a dedicated future sprint when
 //   prioritized. See §11 row.
-export const SRL_VERSION = "3.8.alg";
+//
+// v3.8.alh — ald test-mock regression fix (Sub-pattern 11 third
+//   fire). CI red across ald → alf → alg (~24h, 3 commits) on
+//   the GitHub Actions backend job; production unaffected because
+//   Render's build chain doesn't run vitest. v3.8.ald swapped 5
+//   callsites in authController.ts from findUnique → findFirst for
+//   case-insensitive email lookup; __tests__/setup.ts prisma.user
+//   mock had findUnique but not findFirst → TypeError at every
+//   test exercising those paths (10 failures). Fix: added
+//   findFirst: vi.fn() to the user mock + re-pointed 7 test mocks
+//   in authController.test.ts from findUnique.mockResolvedValue
+//   → findFirst.mockResolvedValue. Suite now 224/224 green.
+//   npm test added to canonical pre-commit gate at CLAUDE.md §3.3.
+//   Sub-rule c registry advances 32 → 33. Banked observation:
+//   Render-vs-CI gate divergence — passing Render deploy is NOT
+//   evidence of passing test suite. See §11 row.
+export const SRL_VERSION = "3.8.alh";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
