@@ -1450,6 +1450,17 @@ model Load {
   deletedBy          String?
   cancellationReason String?
 
+  // v3.8.ali §13.3 Item 192 — per-load risk-email kill switch. When
+  // riskEmailMuted=true the risk engine still writes RiskLog + still
+  // creates the in-app notification (so the portal RED/AMBER badge +
+  // teammates' view are unaffected), but skips the external
+  // sendRiskAlertEmail. Email-only mute, permanent toggle (cleared by
+  // the AE or rendered moot when the load reaches a terminal status
+  // and stops being scored). Audit fields capture who/when.
+  riskEmailMuted     Boolean   @default(false)
+  riskEmailMutedAt   DateTime?
+  riskEmailMutedById String?
+
   @@index([status])
   @@index([loadNumber])
   @@index([originState])

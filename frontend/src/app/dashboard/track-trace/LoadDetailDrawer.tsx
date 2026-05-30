@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { X, ChevronRight } from "lucide-react";
+import { X, ChevronRight, BellOff, Bell } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { getNextStatusAction } from "@/lib/loadStatusActions";
@@ -78,6 +78,20 @@ export function LoadDetailDrawer({ loadId, onClose }: Props) {
     },
   });
 
+  // v3.8.ali §13.3 Item 192 — per-load risk-email kill switch. Toggles
+  // the external risk-alert email for THIS load. Email-only: the in-app
+  // RED/AMBER notification + RiskLog are unaffected; only the Gmail-bound
+  // alert is silenced. Optimistically refetches the drawer so the button
+  // state flips immediately.
+  const toggleRiskMute = useMutation({
+    mutationFn: async (vars: { loadId: string; muted: boolean }) =>
+      (await api.patch(`/loads/${vars.loadId}/risk-email-mute`, { muted: vars.muted })).data,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["tt-load-detail", loadId] });
+      queryClient.invalidateQueries({ queryKey: ["loads"] });
+    },
+  });
+
   if (!loadId) return null;
   const load = query.data?.load;
   const statusAction = load ? getNextStatusAction(load.status) : null;
@@ -143,6 +157,33 @@ export function LoadDetailDrawer({ loadId, onClose }: Props) {
                 )}
               </div>
               <div className="flex items-center gap-2 shrink-0">
+                {/* v3.8.ali §13.3 Item 192 — per-load risk-email kill
+                    switch. Email-only mute: silences the external
+                    risk-alert email for this load while keeping the
+                    in-app RED/AMBER notification + RiskLog intact. Muted
+                    state shows BellOff in amber; active state shows Bell
+                    in muted gray. Tooltip surfaces who/when when muted. */}
+                {load && (
+                  <button
+                    onClick={() =>
+                      toggleRiskMute.mutate({ loadId: load.id, muted: !load.riskEmailMuted })
+                    }
+                    disabled={toggleRiskMute.isPending}
+                    className={`p-1.5 rounded-lg border text-xs font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1 ${
+                      load.riskEmailMuted
+                        ? "bg-amber-500/10 text-amber-700 border-amber-500/30 hover:bg-amber-500/20"
+                        : "bg-gray-100 text-gray-500 border-gray-200 hover:bg-gray-200"
+                    }`}
+                    title={
+                      load.riskEmailMuted
+                        ? `Risk emails muted${load.riskEmailMutedAt ? ` since ${new Date(load.riskEmailMutedAt).toLocaleDateString()}` : ""} — click to resume`
+                        : "Mute risk-alert emails for this load (in-app alerts stay on)"
+                    }
+                  >
+                    {load.riskEmailMuted ? <BellOff className="w-3.5 h-3.5" /> : <Bell className="w-3.5 h-3.5" />}
+                    {load.riskEmailMuted ? "Muted" : "Risk email"}
+                  </button>
+                )}
                 {/* v3.8.e — status advancement button. Shown only when the
                     current status has a next-status entry (i.e. not terminal).
                     Same affordance as Load Board, same backend mutation. */}

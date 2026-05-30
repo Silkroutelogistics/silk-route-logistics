@@ -10812,6 +10812,95 @@
 //   180.6+180.7+180.8+180.9+180.10+180.11 done; 180.3 closed-by-
 //   discovery; banked 180.6.b CRM admin edit UI for the new fields).
 //
+// v3.8.ali — Risk-flagging working mechanism + per-load email kill
+//   switch (§13.3 Item 192 partial close). Design-first per Wasi
+//   directive 2026-05-30; all 4 mechanism forks ratified to the
+//   recommended options via AskUserQuestion (email-only mute,
+//   permanent toggle, once-per-load-per-level cadence, AMBER
+//   in-app-only). The cron stays DISABLED this sprint — re-enable
+//   is the deliberate go-live flip gated on test-load exclusion +
+//   per-user preference (§3.4 halt > ship on outward-facing email).
+//
+//   THE FLOOD ROOT CAUSE (verified): runRiskFlagging ran every 30
+//   min; the old dedup checked "any notification in the last 30
+//   min". Since the cron interval == the dedup window, a
+//   persistently-RED load's notification aged past 30 min by the
+//   next tick → re-fired the email → ~1 email/hour/load forever.
+//   4 stale unassigned test loads = 4 emails/hour into Gmail.
+//
+//   MECHANISM REDESIGN (backend/src/services/riskEngine.ts
+//   runRiskFlagging):
+//   * Once-per-load-per-level cadence. Reads the PRIOR RiskLog level
+//     BEFORE writing the new one; alerts ONLY on a level CROSSING
+//     (risk.level !== prevLevel). A load that sits at RED never
+//     re-emails — it fires once on the crossing into RED and goes
+//     silent until the level actually changes. RiskLog still writes
+//     every tick (dashboard history intact); the `notified` flag now
+//     means "this tick alerted" (level-crossing into non-GREEN),
+//     not merely "non-GREEN".
+//   * Email gate: sendRiskAlertEmail fires only when
+//     RED && levelChanged && !load.riskEmailMuted. AMBER is in-app
+//     only (reserved external channel for RED urgency). In-app
+//     notification ALWAYS fires on a level crossing regardless of
+//     mute — the kill switch is email-only.
+//   * Run-summary log now reports emails sent vs muted.
+//
+//   PER-LOAD KILL SWITCH:
+//   * Schema (backend/prisma/schema.prisma Load model): new
+//     riskEmailMuted Boolean @default(false) + riskEmailMutedAt
+//     DateTime? + riskEmailMutedById String?. Manual migration
+//     20260530120000_add_load_risk_email_mute per §2.2 (additive,
+//     no lock risk at pre-revenue volume).
+//   * Backend (backend/src/routes/loads.ts): new
+//     PATCH /api/loads/:id/risk-email-mute — AE-role-gated
+//     (BROKER/ADMIN/CEO/DISPATCH/OPERATIONS), validateBody({ muted:
+//     boolean }), auditLog("UPDATE","Load"). Sets the 3 fields
+//     (muted → stamps At + ById; unmuted → nulls them). 404 on
+//     unknown load. Serializer needs no change — the T&T
+//     /load/:loadId detail endpoint uses findUnique+include (no
+//     top-level select) so the 3 new scalars flow to the drawer
+//     automatically.
+//   * Frontend (LoadDetailDrawer.tsx): Bell/BellOff toggle button
+//     in the drawer header next to the status-advance button.
+//     Muted = amber BellOff "Muted" + who/when tooltip; active =
+//     gray Bell "Risk email". TanStack mutation invalidates the
+//     drawer + Load Board queries so the button flips immediately.
+//
+//   WHY EMAIL-ONLY + IN-APP-ALWAYS: "limit the emails being sent
+//   outside" — in-app notifications live INSIDE the portal (cheap,
+//   teammates see them, always on); email is the external/noisy
+//   channel. The kill switch targets the external channel: an AE
+//   working a risky load they already know about silences their
+//   Gmail while the portal RED badge stays visible to the team.
+//
+//   CRON RE-ENABLE — DELIBERATELY DEFERRED. Even with once-per-level
+//   cadence, re-enabling today means the 4 known stale test loads
+//   each fire ONE email on first tick (first crossing into RED),
+//   because there's still no test-load exclusion (flood loads were
+//   unassigned → no carrier.carrierProfile.isTestAccount to read;
+//   no Customer.isTestAccount; no Load-level test flag). That's a
+//   one-time 4-email burst, not a flood, but still noise about fake
+//   loads. Re-enable bundles with: (a) test-load marking strategy +
+//   exclusion, (b) per-user preference gate (preferencesSchema +
+//   Settings toggle + email gate), (c) uncomment the cron at
+//   schedulerService.ts:346-349. Tracked in §13.3 Item 192
+//   "Remaining for re-enable".
+//
+//   Pre-commit gates per Sub-pattern 11 (CI parity, all clean):
+//   prisma generate, backend tsc --noEmit, backend vitest (no risk-
+//   engine unit test exists — engine change verified by tsc +
+//   logic review; banked a follow-up test as optional), frontend
+//   tsc --noEmit, frontend next build. CI E2E: add the citext
+//   CREATE EXTENSION pre-step already in place since the prior CI
+//   hotfix; the new migration is additive + applied via db push.
+//
+//   Scope: ~130 LOC across 5 files (schema +13, migration +9 new,
+//   riskEngine ~+55/-40 restructure, loads.ts +40 endpoint,
+//   LoadDetailDrawer +35 toggle) + CLAUDE.md §13.3 Item 192
+//   partial-close + this footer + version bump.
+//   §13.3 Item 192 LOG OPEN → PARTIAL CLOSE (mechanism + kill
+//   switch live; cron re-enable gated).
+//
 // v3.8.akx — Marco Polo chatbot canonical refresh. The homepage
 //   chatbot's PUBLIC_SYSTEM_PROMPT at backend/src/controllers/
 //   chatController.ts:63-79 was last touched pre-v3.8.aib
@@ -11975,7 +12064,7 @@
 //   Sub-rule c registry advances 32 → 33. Banked observation:
 //   Render-vs-CI gate divergence — passing Render deploy is NOT
 //   evidence of passing test suite. See §11 row.
-export const SRL_VERSION = "3.8.alh";
+export const SRL_VERSION = "3.8.ali";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

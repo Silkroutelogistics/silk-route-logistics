@@ -50,6 +50,44 @@ router.patch("/:id/status", authorize("BROKER", "ADMIN", "CEO", "DISPATCH", "OPE
 // route to /carrier/dashboard, not /dashboard/loads). Side effects
 // (shipment sync + auto-invoice + shipper email cascade + onLoadDelivered)
 // migrated into canonical POST /api/carrier-loads/:id/status.
+// v3.8.ali §13.3 Item 192 — per-load risk-email kill switch. AE toggles
+// the external risk-alert email on/off for a specific load they are
+// actively handling. Email-only mute: the risk engine still writes
+// RiskLog + still fires the in-app notification; only sendRiskAlertEmail
+// is skipped when muted. Audit fields capture who/when. Same AE-role
+// gate as the status + quickpay-override mutations.
+router.patch(
+  "/:id/risk-email-mute",
+  authorize("BROKER", "ADMIN", "CEO", "DISPATCH", "OPERATIONS"),
+  validateBody(z.object({ muted: z.boolean() })),
+  auditLog("UPDATE", "Load"),
+  async (req: AuthRequest, res: Response) => {
+    try {
+      const { muted } = req.body as { muted: boolean };
+      const existing = await prisma.load.findUnique({
+        where: { id: req.params.id },
+        select: { id: true },
+      });
+      if (!existing) {
+        res.status(404).json({ error: "Load not found" });
+        return;
+      }
+      const updated = await prisma.load.update({
+        where: { id: req.params.id },
+        data: {
+          riskEmailMuted: muted,
+          riskEmailMutedAt: muted ? new Date() : null,
+          riskEmailMutedById: muted ? req.user!.id : null,
+        },
+        select: { id: true, riskEmailMuted: true, riskEmailMutedAt: true, riskEmailMutedById: true },
+      });
+      res.json(updated);
+    } catch (err) {
+      res.status(500).json({ error: "Failed to update risk-email mute" });
+    }
+  }
+);
+
 router.delete("/:id", authorize("ADMIN", "CEO", "BROKER", "DISPATCH", "OPERATIONS"), auditLog("DELETE", "Load"), deleteLoad);
 router.put("/:id/restore", authorize("ADMIN", "BROKER", "DISPATCH", "OPERATIONS"), auditLog("UPDATE", "Load"), restoreLoad);
 

@@ -97,85 +97,106 @@ export async function runRiskFlagging() {
   const activeStatuses = ["POSTED", "TENDERED", "BOOKED", "CONFIRMED", "DISPATCHED", "AT_PICKUP", "LOADED", "IN_TRANSIT", "AT_DELIVERY"];
   const loads = await prisma.load.findMany({
     where: { status: { in: activeStatuses as any[] } },
-    select: { id: true, referenceNumber: true, posterId: true },
+    // v3.8.ali §13.3 Item 192 — select riskEmailMuted so the email gate
+    // below can honor the per-load kill switch without a second query.
+    select: { id: true, referenceNumber: true, posterId: true, riskEmailMuted: true },
   });
 
   let redCount = 0;
   let amberCount = 0;
+  let emailsSent = 0;
+  let emailsMuted = 0;
 
   for (const load of loads) {
     try {
       const risk = await calculateLoadRisk(load.id);
 
-      // Store risk log
+      // v3.8.ali §13.3 Item 192 — once-per-load-per-level cadence.
+      // Read the PRIOR RiskLog level BEFORE writing the new one, so we
+      // can detect a level CROSSING. The old 30-min-window dedup re-fired
+      // hourly on a persistently-RED load (cron every 30 min, dedup
+      // window 30 min → notification ages out → re-fires) which is what
+      // produced the 2026-05-25 email flood. Now we alert only when the
+      // load crosses INTO a new level. A load that sits at RED never
+      // re-emails; it fires once on the GREEN/AMBER → RED crossing and
+      // stays quiet until the level actually changes again.
+      const prevLog = await prisma.riskLog.findFirst({
+        where: { loadId: load.id },
+        orderBy: { createdAt: "desc" },
+        select: { level: true },
+      });
+      const prevLevel = prevLog?.level ?? "GREEN";
+      const levelChanged = risk.level !== prevLevel;
+
+      // Store risk log (every tick — keeps the dashboard risk history +
+      // audit trail complete regardless of whether we alert).
       await prisma.riskLog.create({
         data: {
           loadId: load.id,
           score: risk.score,
           level: risk.level,
           factors: risk.factors as any,
-          notified: risk.level !== "GREEN",
+          // notified reflects whether THIS tick alerted (level crossing
+          // into a non-GREEN level), not merely non-GREEN.
+          notified: levelChanged && risk.level !== "GREEN",
         },
       });
 
+      // No level crossing → no alert of any kind this tick. This is the
+      // core flood-killer: persistent RED/AMBER stays silent.
+      if (!levelChanged) continue;
+
       if (risk.level === "AMBER") {
         amberCount++;
-        // In-console alert (dedup: only if no amber alert in last 30min)
-        const recentAlert = await prisma.notification.findFirst({
-          where: {
+        // AMBER is IN-APP ONLY (never email) per Item 192 locked
+        // decision. The external channel is reserved for RED urgency.
+        await prisma.notification.create({
+          data: {
             userId: load.posterId,
-            title: { contains: `Risk AMBER: Load #${load.referenceNumber}` },
-            createdAt: { gte: new Date(Date.now() - 30 * 60 * 1000) },
+            type: "LOAD_UPDATE",
+            title: `Risk AMBER: Load #${load.referenceNumber}`,
+            message: risk.factors.map((f) => f.description).join("; "),
+            actionUrl: `/dashboard/tracking`,
           },
         });
-        if (!recentAlert) {
-          await prisma.notification.create({
-            data: {
-              userId: load.posterId,
-              type: "LOAD_UPDATE",
-              title: `Risk AMBER: Load #${load.referenceNumber}`,
-              message: risk.factors.map((f) => f.description).join("; "),
-              actionUrl: `/dashboard/tracking`,
-            },
-          });
-        }
       }
 
       if (risk.level === "RED") {
         redCount++;
-        // In-console + email + push notification
-        const recentAlert = await prisma.notification.findFirst({
-          where: {
+        // In-app notification ALWAYS fires on the RED crossing — the
+        // kill switch is email-only, so the portal badge + teammates'
+        // view are never suppressed.
+        await prisma.notification.create({
+          data: {
             userId: load.posterId,
-            title: { contains: `RISK RED: Load #${load.referenceNumber}` },
-            createdAt: { gte: new Date(Date.now() - 30 * 60 * 1000) },
+            type: "LOAD_UPDATE",
+            title: `RISK RED: Load #${load.referenceNumber}`,
+            message: `URGENT — ${risk.factors.map((f) => f.description).join("; ")}`,
+            actionUrl: `/dashboard/tracking`,
           },
         });
-        if (!recentAlert) {
-          await prisma.notification.create({
-            data: {
-              userId: load.posterId,
-              type: "LOAD_UPDATE",
-              title: `RISK RED: Load #${load.referenceNumber}`,
-              message: `URGENT — ${risk.factors.map((f) => f.description).join("; ")}`,
-              actionUrl: `/dashboard/tracking`,
-            },
-          });
 
-          // Email the AE
+        // v3.8.ali §13.3 Item 192 — the per-load kill switch. The
+        // external email is the only channel the AE can silence per
+        // load (riskEmailMuted). When muted, the in-app notification
+        // above still fired; we just skip the Gmail-bound email.
+        if (load.riskEmailMuted) {
+          emailsMuted++;
+        } else {
           const poster = await prisma.user.findUnique({ where: { id: load.posterId }, select: { email: true, firstName: true } });
           if (poster) {
             try {
               const { sendRiskAlertEmail } = await import("./emailService");
               await sendRiskAlertEmail(poster.email, poster.firstName, load.referenceNumber, risk);
+              emailsSent++;
             } catch { /* non-blocking */ }
           }
+        }
 
-          // If RED + unassigned, trigger fall-off recovery
-          const hasUnassigned = risk.factors.some((f) => f.factor.startsWith("UNASSIGNED"));
-          if (hasUnassigned) {
-            log.info(`[Risk] RED + unassigned: Load ${load.referenceNumber} — consider fall-off recovery`);
-          }
+        // If RED + unassigned, trigger fall-off recovery
+        const hasUnassigned = risk.factors.some((f) => f.factor.startsWith("UNASSIGNED"));
+        if (hasUnassigned) {
+          log.info(`[Risk] RED + unassigned: Load ${load.referenceNumber} — consider fall-off recovery`);
         }
       }
     } catch (err) {
@@ -183,5 +204,5 @@ export async function runRiskFlagging() {
     }
   }
 
-  log.info(`[Risk] Flagging complete: ${loads.length} loads, ${redCount} RED, ${amberCount} AMBER`);
+  log.info(`[Risk] Flagging complete: ${loads.length} loads, ${redCount} RED, ${amberCount} AMBER (level-crossings only); emails sent ${emailsSent}, muted ${emailsMuted}`);
 }
