@@ -91,7 +91,7 @@ export default function SettingsPage() {
   });
 
   const { toast } = useToast();
-  const [notifications, setNotifications] = useState({ loads: true, payments: true, scorecard: true, announcements: true });
+  const [notifications, setNotifications] = useState({ loads: true, payments: true, scorecard: true, announcements: true, riskAlerts: true });
   const notifDebounce = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Persist notification preferences to backend with debounce
@@ -324,6 +324,7 @@ export default function SettingsPage() {
             { key: "payments", label: "Payment updates" },
             { key: "scorecard", label: "Scorecard reports" },
             { key: "announcements", label: "Platform announcements" },
+            { key: "riskAlerts", label: "Load risk alerts (email)" },
           ].map((pref) => (
             <label key={pref.key} className="flex items-center justify-between p-3 bg-white/5 rounded-lg cursor-pointer">
               <span className="text-sm text-slate-300">{pref.label}</span>

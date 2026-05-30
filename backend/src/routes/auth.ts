@@ -50,6 +50,10 @@ const preferencesSchema = z.object({
     payments: z.boolean().optional(),
     scorecard: z.boolean().optional(),
     announcements: z.boolean().optional(),
+    // v3.8.alj §13.3 Item 192 — per-user opt-out for risk-alert emails.
+    // Default-on: only an explicit false suppresses the external email
+    // (riskEngine reads notifications.riskAlerts === false).
+    riskAlerts: z.boolean().optional(),
   }).optional(),
   // Free-form preferences JSON (v3.4.u). Merged into User.preferences
   // on the server so partial patches only touch the specified keys.

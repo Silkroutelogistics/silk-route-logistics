@@ -95,8 +95,27 @@ export async function calculateLoadRisk(loadId: string): Promise<RiskResult> {
  */
 export async function runRiskFlagging() {
   const activeStatuses = ["POSTED", "TENDERED", "BOOKED", "CONFIRMED", "DISPATCHED", "AT_PICKUP", "LOADED", "IN_TRANSIT", "AT_DELIVERY"];
+
+  // v3.8.alj §13.3 Item 192 full close — staleness guard. A load whose
+  // pickupDate is more than 14 days in the past and is still in a
+  // pre-delivery active status is dead data (data-hygiene issue), not a
+  // fresh dispatch risk worth alerting on. This cleanly excludes the
+  // existing prod stale-seed flood loads (Feb-2026 pickup dates, 3+ months
+  // past) WITHOUT needing to identify them individually — no risky prod
+  // backfill. Real loads resolve well within 14 days; a future-pickup
+  // unassigned load still scores normally (guard only excludes PAST
+  // pickups). Paired with isTestAccount exclusion below for explicit
+  // seed/E2E test loads.
+  const staleCutoff = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000);
+
   const loads = await prisma.load.findMany({
-    where: { status: { in: activeStatuses as any[] } },
+    where: {
+      status: { in: activeStatuses as any[] },
+      // v3.8.alj §13.3 Item 192 — exclude explicit test/seed/E2E loads.
+      isTestAccount: false,
+      // v3.8.alj §13.3 Item 192 — staleness guard (see above).
+      pickupDate: { gte: staleCutoff },
+    },
     // v3.8.ali §13.3 Item 192 — select riskEmailMuted so the email gate
     // below can honor the per-load kill switch without a second query.
     select: { id: true, referenceNumber: true, posterId: true, riskEmailMuted: true },
@@ -183,13 +202,24 @@ export async function runRiskFlagging() {
         if (load.riskEmailMuted) {
           emailsMuted++;
         } else {
-          const poster = await prisma.user.findUnique({ where: { id: load.posterId }, select: { email: true, firstName: true } });
-          if (poster) {
+          // v3.8.alj §13.3 Item 192 — per-user preference gate. Read the
+          // poster's notifications.riskAlerts preference; skip the email
+          // when explicitly false. Default-on: undefined/true → send,
+          // only an explicit false opts out. The in-app notification
+          // above is NOT gated (it's the low-cost inside-portal channel);
+          // the preference governs the external email only, same as the
+          // per-load kill switch.
+          const poster = await prisma.user.findUnique({ where: { id: load.posterId }, select: { email: true, firstName: true, preferences: true } });
+          const prefs = (poster?.preferences as { notifications?: { riskAlerts?: boolean } } | null) ?? null;
+          const riskAlertsOptedOut = prefs?.notifications?.riskAlerts === false;
+          if (poster && !riskAlertsOptedOut) {
             try {
               const { sendRiskAlertEmail } = await import("./emailService");
               await sendRiskAlertEmail(poster.email, poster.firstName, load.referenceNumber, risk);
               emailsSent++;
             } catch { /* non-blocking */ }
+          } else if (riskAlertsOptedOut) {
+            emailsMuted++;
           }
         }
 

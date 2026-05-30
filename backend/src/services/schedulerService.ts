@@ -338,15 +338,20 @@ export function startSchedulers() {
     await withLock("check-call-automation", 5 * 60 * 1000, processDueCheckCalls);
   });
 
-  // Phase C: Risk flagging: every 30 minutes at :05 and :35
-  // DISABLED 2026-05-25 — generates noisy "RISK RED" email floods on
-  // test/seed loads with no preference gate. Re-enable once §13.3 Item
-  // 192 ships (per-user opt-out + threshold tuning + test-load
-  // exclusion). See riskEngine.ts:96 runRiskFlagging.
-  // cron.schedule("5,35 * * * *", async () => {
-  //   log.info("[Scheduler] Running risk flagging engine...");
-  //   await withLock("risk-flagging", 10 * 60 * 1000, runRiskFlagging);
-  // });
+  // Phase C: Risk flagging: every 30 minutes at :05 and :35.
+  // RE-ENABLED 2026-05-30 in v3.8.alj — §13.3 Item 192 full close. The
+  // 2026-05-25 flood is fixed by three layered guards now in
+  // runRiskFlagging: (1) once-per-load-per-level cadence (no hourly
+  // re-fire on a persistently-RED load — v3.8.ali); (2) test-load
+  // exclusion (isTestAccount=false) + 14-day pickupDate staleness guard
+  // (catches the stale Feb-dated seed loads that flooded — v3.8.alj);
+  // (3) per-user preference gate (notifications.riskAlerts) + per-load
+  // email kill switch (riskEmailMuted). AMBER is in-app only; only RED
+  // reaches email.
+  cron.schedule("5,35 * * * *", async () => {
+    log.info("[Scheduler] Running risk flagging engine...");
+    await withLock("risk-flagging", 10 * 60 * 1000, runRiskFlagging);
+  });
 
   // Phase C: Email sequence processor: every hour at :10
   cron.schedule("10 * * * *", async () => {

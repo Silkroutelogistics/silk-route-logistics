@@ -10812,6 +10812,81 @@
 //   180.6+180.7+180.8+180.9+180.10+180.11 done; 180.3 closed-by-
 //   discovery; banked 180.6.b CRM admin edit UI for the new fields).
 //
+// v3.8.alj — §13.3 Item 192 FULL CLOSE (risk-flagging cron re-enabled).
+//   Completes the re-enable gate that v3.8.ali left open: test-load
+//   exclusion + per-user preference + the cron flip. The risk cron is
+//   LIVE again (every 30 min :05/:35) for the first time since the
+//   2026-05-25 disable.
+//
+//   FOUR LAYERED GUARDS now make the cron safe:
+//   (a) once-per-load-per-level cadence (v3.8.ali) — a persistently-RED
+//       load never re-emails; fires once on the crossing into RED.
+//   (b) test-load exclusion + staleness guard (THIS sprint) — dead seed
+//       data is never scored.
+//   (c) per-load email kill switch riskEmailMuted (v3.8.ali) — AE
+//       silences a specific load's external email.
+//   (d) per-user preference gate (THIS sprint) — AE opts out entirely.
+//   AMBER stays in-app only; only RED reaches email.
+//
+//   TEST-LOAD EXCLUSION:
+//   * Schema: new Load.isTestAccount Boolean @default(false) (migration
+//     20260530140000_add_load_is_test_account, additive, no backfill).
+//     Mirrors CarrierProfile.isTestAccount (v3.8.aim).
+//   * Seed script + all 3 E2E fixture loads (waterfall/loadbid/shipper)
+//     set isTestAccount: true.
+//   * riskEngine runRiskFlagging findMany filters isTestAccount: false.
+//   * NO prod backfill of the column: the seed users overlap with real
+//     identities (whaider@silkroutelogistics.ai is BOTH the seed broker
+//     AND the real founder), so a poster-based backfill would wrongly
+//     mark real loads. The existing stale prod seed loads are caught by
+//     the staleness guard instead.
+//
+//   STALENESS GUARD:
+//   * riskEngine runRiskFlagging findMany also filters
+//     pickupDate: { gte: now - 14 days }. A load whose pickup was 2+
+//     weeks ago and is still pre-delivery is dead data, not a fresh
+//     dispatch risk. Cleanly excludes the existing prod flood loads
+//     (SRL-20260211/03/16-dated seed loads, Feb 2026 pickups, 3+ months
+//     past) WITHOUT identifying them individually — no risky prod
+//     backfill. Future-pickup unassigned loads still score normally
+//     (guard only excludes PAST pickups).
+//
+//   PER-USER PREFERENCE GATE:
+//   * preferencesSchema (backend/src/routes/auth.ts notifications object)
+//     gains riskAlerts: z.boolean().optional().
+//   * Settings panel (frontend/src/app/dashboard/settings/page.tsx) gains
+//     a "Load risk alerts (email)" toggle as the 5th notification pref.
+//   * riskEngine reads poster.preferences.notifications.riskAlerts at the
+//     email step; skips the email when explicitly false (default-on:
+//     undefined/true → send). In-app notification NOT gated — preference
+//     governs the external email only, same as the per-load kill switch.
+//
+//   CRON RE-ENABLED: schedulerService.ts:341-353 uncommented. runRisk
+//   Flagging import was already present (line 6). Every 30 min :05/:35
+//   with the existing 10-min withLock.
+//
+//   WHY SAFE TO RE-ENABLE NOW: the 2026-05-25 flood was stale unassigned
+//   seed loads re-emailing hourly. All four guards above address it: the
+//   Feb-dated seed loads are excluded (staleness + isTestAccount), and
+//   even if a real load goes RED it fires ONE email on the crossing
+//   (cadence), which the AE can silence per-load (kill switch) or per-user
+//   (preference). First live cron tick will score only real, recent,
+//   non-test loads.
+//
+//   Pre-commit gates per Sub-pattern 11 (CI parity, all clean):
+//   prisma generate, backend tsc --noEmit, backend vitest 224/224,
+//   frontend tsc --noEmit, frontend next build. New migration additive,
+//   applied via Render migrate deploy + CI db push (citext pre-step
+//   already in place).
+//
+//   Scope: ~70 LOC across 6 files (schema +9, migration +9 new, seed +4
+//   loads marked, riskEngine findMany filters + email preference gate,
+//   auth.ts preferencesSchema +4, settings page +2) + CLAUDE.md Item 192
+//   full-close + this footer + version bump.
+//   §13.3 Item 192 LOG OPEN → FULLY CLOSED. Cron is live.
+//   Banked (out of scope, dropped per ratification): escalation ladder
+//   (over-engineered for pre-revenue volume; the 4 guards suffice).
+//
 // v3.8.ali — Risk-flagging working mechanism + per-load email kill
 //   switch (§13.3 Item 192 partial close). Design-first per Wasi
 //   directive 2026-05-30; all 4 mechanism forks ratified to the
@@ -12064,7 +12139,7 @@
 //   Sub-rule c registry advances 32 → 33. Banked observation:
 //   Render-vs-CI gate divergence — passing Render deploy is NOT
 //   evidence of passing test suite. See §11 row.
-export const SRL_VERSION = "3.8.ali";
+export const SRL_VERSION = "3.8.alj";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

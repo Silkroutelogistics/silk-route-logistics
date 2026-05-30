@@ -681,6 +681,10 @@ async function main() {
       commodity: ld.commodity,
       weight: ld.weight,
       posterId: broker.id,
+      // v3.8.alj §13.3 Item 192 — all seed loads are test loads; the risk
+      // engine excludes isTestAccount=true so demo data can't trigger
+      // alert emails when the cron is live.
+      isTestAccount: true,
     };
 
     if (ld.customerIndex !== undefined && ld.customerIndex !== null) {
@@ -1767,6 +1771,7 @@ Seed complete:
         destCity: "Salt Lake City", destState: "UT", destZip: "84101",
         equipmentType: "Dry Van",
         commodity: "E2E-WATERFALL-FIXTURE",
+        isTestAccount: true, // v3.8.alj §13.3 Item 192 — risk engine excludes
         weight: 20000, pieces: 20,
         rate: 3000, distance: 340,
         pickupDate: new Date(Date.now() + 1 * day),
@@ -1805,6 +1810,7 @@ Seed complete:
         destCity: "Albuquerque", destState: "NM", destZip: "87101",
         equipmentType: "Dry Van",
         commodity: "E2E-LOADBID-FIXTURE",
+        isTestAccount: true, // v3.8.alj §13.3 Item 192 — risk engine excludes
         weight: 18000, pieces: 15,
         rate: 2500, distance: 421,
         pickupDate: new Date(Date.now() + 1 * day),
@@ -1844,6 +1850,7 @@ Seed complete:
           destCity: "Chicago", destState: "IL", destZip: "60601",
           equipmentType: "Dry Van",
           commodity: "E2E-SHIPPER-FIXTURE",
+          isTestAccount: true, // v3.8.alj §13.3 Item 192 — risk engine excludes
           weight: 22000, pieces: 18,
           rate: 1800, distance: 282,
           pickupDate: new Date(Date.now() - 2 * day),
