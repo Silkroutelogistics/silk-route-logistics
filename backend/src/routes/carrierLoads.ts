@@ -18,6 +18,7 @@ import { isValidExceptionCode, getExceptionReason } from "../services/exceptionT
 import { broadcastSSE } from "./trackTraceSSE";
 import { log } from "../lib/logger";
 import { validateLoadStatusTransition } from "../lib/loadStateMachine";
+import { actualEventStamps } from "../lib/loadEventStamps";
 
 const router = Router();
 
@@ -407,14 +408,11 @@ router.post("/:id/status", validateBody(statusUpdateSchema), async (req: AuthReq
     return;
   }
 
-  const data: Record<string, unknown> = { status };
-
-  if (status === "DELIVERED") {
-    data.actualDeliveryDatetime = new Date();
-  }
-  if (status === "LOADED" || status === "IN_TRANSIT") {
-    data.actualPickupDatetime = new Date();
-  }
+  // Build B (2026-05-30): AT_PICKUP is now the PRIMARY pickup-time signal
+  // (arrival at shipper = the on-time-pickup moment); LOADED/IN_TRANSIT remain
+  // fallbacks, never overwriting an earlier AT_PICKUP stamp. Replaces the prior
+  // unconditional LOADED/IN_TRANSIT overwrite. See lib/loadEventStamps.ts.
+  const data: Record<string, unknown> = { status, ...actualEventStamps(status, load) };
 
   const updated = await prisma.load.update({ where: { id: load.id }, data });
 
@@ -594,6 +592,10 @@ router.post("/:id/documents", upload.single("file"), async (req: AuthRequest, re
         podUrl: fileUrl,
         podReceivedAt: new Date(),
         status: newStatus,
+        // Build B: if the carrier uploads POD (advancing to POD_RECEIVED)
+        // without having flipped DELIVERED, the POD-upload time is a delivery
+        // fallback for the on-time score. Never overwrites an existing stamp.
+        ...actualEventStamps(newStatus, load),
       },
     });
 

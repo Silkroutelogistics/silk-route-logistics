@@ -6,6 +6,7 @@ import { AuthRequest } from "../middleware/auth";
 import { createLoadSchema, updateLoadStatusSchema, loadQuerySchema } from "../validators/load";
 import { autoGenerateInvoice } from "../services/invoiceService";
 import { calculateMileage } from "../services/mileageService";
+import { actualEventStamps } from "../lib/loadEventStamps";
 import { sendShipperPickupEmail, sendShipperDeliveryEmail, sendShipperMilestoneEmail } from "../services/shipperNotificationService";
 import { sendPickupNotification, sendInTransitUpdate, sendArrivedAtDelivery, sendDeliveredWithPOD } from "../services/shipperLoadNotifyService";
 import { onLoadDelivered, onLoadDispatched, enforceShipperCredit, onLoadCancelledOrTONU } from "../services/integrationService";
@@ -506,7 +507,11 @@ export async function updateLoadStatus(req: AuthRequest, res: Response) {
   // tenderController.acceptTender.
   const load = await prisma.load.update({
     where: { id: req.params.id },
-    data: { status, statusUpdatedAt: new Date(), statusUpdatedById: req.user!.id },
+    // Build B (2026-05-30): the AE status-advance path never stamped actual
+    // pickup/delivery timestamps — only the carrier portal did. Stamp them here
+    // too (AT_PICKUP primary, never overwriting) so AE-driven loads feed the
+    // Compass on-time score. See lib/loadEventStamps.ts.
+    data: { status, statusUpdatedAt: new Date(), statusUpdatedById: req.user!.id, ...actualEventStamps(status, existing) },
   });
 
   // Field-level audit: log status transition

@@ -12456,7 +12456,17 @@
 //   measurable; the advancement GATE requires measurable proof (won't
 //   advance to Gold/Platinum on zero measurable on-time history). Build B
 //   widens coverage (AE-path stamping + AT_PICKUP trigger + backfill).
-export const SRL_VERSION = "3.8.alw";
+// v3.8.alx — Compass Score Build B: widen on-time data capture. New shared
+//   lib/loadEventStamps.ts stamps Load.actualPickupDatetime /
+//   actualDeliveryDatetime on status change — (a) AT_PICKUP is now the
+//   PRIMARY pickup signal (was LOADED/IN_TRANSIT only), (b) POD_RECEIVED is
+//   a delivery fallback, (c) the AE-console status path now stamps them too
+//   (carrierLoads already did; loadController never did). Never overwrites.
+//   New backfill script scripts/backfill-actual-event-timestamps.ts derives
+//   historical timestamps from Shipment.actualPickup/actualDelivery +
+//   podReceivedAt (dry-run default, --commit to apply). No migration. Pairs
+//   with Build A (alw) which READS these columns for the on-time score.
+export const SRL_VERSION = "3.8.alx";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
