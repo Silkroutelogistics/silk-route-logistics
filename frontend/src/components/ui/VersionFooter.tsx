@@ -12236,7 +12236,17 @@
 //   NOTE banked: /index line 427 "Tier-graduated FSC" tile (§5, Item 182)
 //   + 4 decorative #C8963E (hero SVG L105-107 + JS L822) left for a
 //   dedicated /index brand-cleanup pass.
-export const SRL_VERSION = "3.8.alm";
+// v3.8.aln — /carriers tier-card icons: refined brass treatment (§20
+//   Commit 3, Option 3 — no new assets). Flat tier-icon fills → struck-
+//   medallion metallic gradients: Silver cool brushed silver (navy
+//   100/200/300), Gold warm brushed brass (gold-light/gold/gold-dark),
+//   Platinum deep navy premium (navy-700/navy/navy-900) + gold icon +
+//   gold ring. Base .tier-icon gains inset highlight + drop shadow +
+//   hairline ring. Lucide line-icons kept per skill "Lucide icons only".
+//   carriers.css only. Heritage photo-icon paths (emblems / full photos)
+//   held pending eval — swap if Option 3 doesn't land. Letter: parallel
+//   v3.8.alm (test-fence Items 189/190) landed post-push; aln continues.
+export const SRL_VERSION = "3.8.aln";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

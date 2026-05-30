@@ -819,13 +819,24 @@
       justify-content: center;
       margin: 0 auto 16px;
       font-size: 22px;
+      /* v3.8.alm — struck-medallion depth: top inset highlight + soft
+         drop shadow + hairline ring. Per-tier metallic gradient fills
+         below. Lucide line-icons kept per skill "Lucide icons only". */
+      border: 1px solid rgba(10, 37, 64, 0.10);
+      box-shadow: inset 0 1.5px 1px rgba(255, 255, 255, 0.35), 0 4px 10px rgba(10, 37, 64, 0.16);
     }
 
     /* v3.8.aab Sprint 24: canonical icon palette. Bronze rule
        removed (tier retired pre-v3.7.a). */
-    .tier-card.silver .tier-icon { background: rgba(138, 165, 192, 0.18); color: #5B7EA3; }
-    .tier-card.gold .tier-icon { background: rgba(197, 165, 114, 0.18); color: #BA7517; }
-    .tier-card.platinum .tier-icon { background: rgba(10, 37, 64, 0.85); color: #C5A572; }
+    /* v3.8.alm — refined per-tier metallic gradients (canonical tokens):
+       Silver = cool brushed silver (navy-100 -> navy-200 -> navy-300),
+       Gold = warm brushed brass (gold-light -> gold -> gold-dark),
+       Platinum = deep navy premium (navy-700 -> navy -> navy-900) with
+       gold icon + gold ring. Icon stroke (currentColor) retuned for
+       contrast on each gradient. */
+    .tier-card.silver .tier-icon { background: linear-gradient(145deg, #E2EAF2 0%, #BECEDE 48%, #8AA5C0 100%); color: #355E8A; border-color: rgba(138, 165, 192, 0.55); }
+    .tier-card.gold .tier-icon { background: linear-gradient(145deg, #DAC39C 0%, #C5A572 48%, #BA7517 100%); color: #0A2540; border-color: rgba(186, 117, 23, 0.45); }
+    .tier-card.platinum .tier-icon { background: linear-gradient(145deg, #15365A 0%, #0A2540 60%, #061629 100%); color: #C5A572; border-color: rgba(197, 165, 114, 0.45); }
 
     .tier-name {
       font-family: 'DM Sans', sans-serif;
