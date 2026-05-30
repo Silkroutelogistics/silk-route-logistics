@@ -12466,7 +12466,14 @@
 //   historical timestamps from Shipment.actualPickup/actualDelivery +
 //   podReceivedAt (dry-run default, --commit to apply). No migration. Pairs
 //   with Build A (alw) which READS these columns for the on-time score.
-export const SRL_VERSION = "3.8.alx";
+// v3.8.aly — Compass Score Build D: real document timeliness. POD now scored
+//   on whether it was uploaded within 24h of the actual delivery timestamp
+//   (populated by Builds A/B), measured per load that has both an actual
+//   delivery time + a POD on file. Replaces the "any upload = timely"
+//   simplification in integrationService.recalculateCarrierCPP. Neutral 100
+//   until measurable. No migration. 6 of 7 Compass factors now genuinely
+//   measured; GPS/tracking (Build C — rename + ELD-ready) is the last stub.
+export const SRL_VERSION = "3.8.aly";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
