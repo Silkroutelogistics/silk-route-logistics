@@ -12491,7 +12491,19 @@
 //   parallel Compass-Score Builds A/B/D took alw/alx/aly mid-build; bumped
 //   to alz (Sub-pattern 6). Gates: backend tsc + vitest 235/235 + frontend
 //   tsc + next build all clean.
-export const SRL_VERSION = "3.8.alz";
+// v3.8.ama — Compass Score Build C: real Tracking compliance + ELD-ready.
+//   De-aliased the GPS factor (was mirroring the check-call response rate) to
+//   read real location visibility from LoadTrackingEvent.latitude — unifies
+//   carrier-portal / geofence / check-call-email AND ELD pings (motiveService /
+//   samsaraService already write LoadTrackingEvent with locationSource=ELD), so
+//   connecting telematics raises the score with no rework. Renamed public factor
+//   "GPS compliance" -> "Tracking compliance" (/carriers + CLAUDE.md §9; DB
+//   column gpsCompliancePct unchanged). New per-carrier ELD credential fields on
+//   CarrierProfile (eldApiKeyEncrypted / eldExternalAccountId / eldEnabled /
+//   eldConnectedAt) + migration — storage ready for when a carrier shares keys.
+//   ALL 7 Compass factors now genuinely measured (Builds A/B/D/C). Existing
+//   EldEvent / ELDDeviceMapping / eldService infra reused (no duplicate build).
+export const SRL_VERSION = "3.8.ama";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

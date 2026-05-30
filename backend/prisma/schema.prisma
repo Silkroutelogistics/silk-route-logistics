@@ -916,7 +916,19 @@ model CarrierProfile {
 
   // Payment preferences
   paymentPreference PaymentTier?
-  eldProvider       String?
+
+  // ELD / telematics integration (Compass "Tracking compliance" factor, Build C
+  // 2026-05-30). eldProvider already existed; these complete the per-carrier
+  // credential storage so that when a carrier shares their telematics API key
+  // the existing motiveService / samsaraService / eldService adapters can pull
+  // live pings (which already write LoadTrackingEvent with locationSource=ELD,
+  // feeding the same tracking-compliance metric — no rework). eldApiKeyEncrypted
+  // MUST be encrypted at the write path when the connect flow is built.
+  eldProvider          String?
+  eldApiKeyEncrypted   String?
+  eldExternalAccountId String?
+  eldEnabled           Boolean   @default(false)
+  eldConnectedAt       DateTime?
 
   // CPP Loyalty
   cppTier       CarrierTier @default(NONE)

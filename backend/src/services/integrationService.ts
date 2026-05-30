@@ -559,8 +559,21 @@ export async function recalculateCarrierCPP(carrierProfileId: string) {
   const acceptedTenders = tenders.filter((t) => t.status === "ACCEPTED").length;
   const acceptanceRate = (acceptedTenders / totalTenders) * 100;
 
-  // GPS compliance (check-call response rate as proxy)
-  const gpsCompliancePct = communicationScore;
+  // Tracking compliance (Build C 2026-05-30) — % of the carrier's loads that had
+  // captured location visibility, read from LoadTrackingEvent (latitude set).
+  // This unifies every location source via the locationSource enum: carrier
+  // portal, geofence, check-call-email, AND ELD pings (motiveService /
+  // samsaraService write LoadTrackingEvent with locationSource=ELD), so the day a
+  // carrier connects telematics their tracking score rises with no rework.
+  // Replaces the prior alias to the check-call response rate. The CarrierScorecard
+  // column stays `gpsCompliancePct` (no migration churn); the public-facing factor
+  // is renamed "Tracking compliance" on /carriers. Neutral 100 until measurable.
+  const trackedLoads = await prisma.loadTrackingEvent.findMany({
+    where: { loadId: { in: loads.map((l) => l.id) }, latitude: { not: null } },
+    select: { loadId: true },
+    distinct: ["loadId"],
+  });
+  const gpsCompliancePct = loads.length > 0 ? (trackedLoads.length / loads.length) * 100 : 100;
 
   const overallScore = calculateOverallScore({
     onTimePickupPct,
