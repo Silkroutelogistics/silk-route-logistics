@@ -549,6 +549,11 @@ export interface TenderOfferedEmailParams {
   transitDays?: number | null;
   dollarsPerMile?: number | null;
   dispatchNotes?: string | null;
+  // v3.8.als Item 142 — magic-link accept/decline (no login). When both are
+  // present the email renders one-click Accept/Decline buttons; the
+  // log-in-to-portal link stays as a fallback below them.
+  acceptUrl?: string;
+  declineUrl?: string;
 }
 
 export async function sendTenderOfferedEmail(params: TenderOfferedEmailParams): Promise<string | undefined> {
@@ -587,8 +592,17 @@ export async function sendTenderOfferedEmail(params: TenderOfferedEmailParams): 
       <tr><td style="padding:8px;border:1px solid #E2EAF2;font-weight:bold">Expires</td><td style="padding:8px;border:1px solid #E2EAF2">${expiryLabel} ET</td></tr>
     </table>
     ${dispatchNotesBlock}
+    ${params.acceptUrl && params.declineUrl ? `
+    <p>Respond in one click — no login required:</p>
+    <table role="presentation" style="margin:8px 0 16px"><tr>
+      <td style="padding-right:10px"><a href="${params.acceptUrl}" style="display:inline-block;background:#2F7A4F;color:#FFFFFF;padding:12px 28px;text-decoration:none;border-radius:6px;font-weight:bold">Accept load</a></td>
+      <td><a href="${params.declineUrl}" style="display:inline-block;background:#FFFFFF;color:#9B2C2C;border:1px solid #9B2C2C;padding:11px 24px;text-decoration:none;border-radius:6px;font-weight:bold">Decline</a></td>
+    </tr></table>
+    <p style="font-size:13px;color:#6B7685">Prefer the portal? <a href="https://silkroutelogistics.ai/carrier/login?next=%2Fcarrier%2Fdashboard%2Ftenders" style="color:#BA7517">Log in to view this tender</a>. Questions? Reply to this email.</p>
+    ` : `
     <p>Log in to your carrier portal to accept or decline. If you have questions, reply to this email and our operations team will respond.</p>
     <a href="https://silkroutelogistics.ai/carrier/login?next=%2Fcarrier%2Fdashboard%2Ftenders" style="display:inline-block;background:#BA7517;color:#FFFFFF;padding:12px 24px;text-decoration:none;border-radius:6px;font-weight:bold;margin-top:8px">Log in to view tender</a>
+    `}
   `);
 
   return sendEmail(

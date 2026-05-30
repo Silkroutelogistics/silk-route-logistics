@@ -68,6 +68,7 @@ import carrierTendersRoutes from "./carrierTenders";
 import crmCustomerRoutes from "./crmCustomer";
 import ordersRoutes from "./orders";
 import quoteApproveRoutes from "./quoteApprove"; // v3.8.akn Item 180.4 — PUBLIC magic-link approval endpoint
+import tenderActionRoutes from "./tenderAction"; // v3.8.als Item 142 — PUBLIC magic-link tender accept/decline endpoint
 import externalIntegrations from "./externalIntegrations";
 import contractRateRoutes from "./contractRates";
 import rfpRoutes from "./rfp";
@@ -178,6 +179,7 @@ router.use("/webhooks", webhookRoutes);
 router.use("/webhook-subscriptions", webhookSubscriptionRoutes);
 router.use("/email-tracking", emailTrackingRoutes); // Resend webhook (public)
 router.use("/quote-approve", quoteApproveRoutes); // v3.8.akn Item 180.4 — magic-link approval (public; JWT IS the auth)
+router.use("/tender-action", tenderActionRoutes); // v3.8.als Item 142 — magic-link tender accept/decline (public; JWT IS the auth)
 router.use("/", websiteRoutes);
 
 // --- API Routes ---

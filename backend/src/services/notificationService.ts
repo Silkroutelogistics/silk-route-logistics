@@ -10,6 +10,7 @@ import {
   sendBidAcceptedEmail,
   sendBidDeclinedEmail,
 } from "./emailService";
+import { mintTenderActionToken, tenderActionUrl } from "../lib/tenderActionToken";
 
 // Sprint 54 (v3.8.acc) Item 7 — operations@ alias is CC'd on every
 // AE-facing tender-accept email so the team has a shared audit trail
@@ -203,6 +204,16 @@ export async function notifyTenderAction(
         { actionUrl: "/carrier/dashboard/tenders" }
       );
       if (carrierEmail) {
+        // v3.8.als Item 142 — mint magic-link accept/decline tokens so the
+        // carrier can act from the email without logging in. Only when the
+        // carrier has a linked User.id (the token embeds it as the actor);
+        // absent → email falls back to the log-in button.
+        let acceptUrl: string | undefined;
+        let declineUrl: string | undefined;
+        if (carrierUserId) {
+          acceptUrl = tenderActionUrl(mintTenderActionToken({ tenderId: tender.id, action: "accept", carrierUserId }));
+          declineUrl = tenderActionUrl(mintTenderActionToken({ tenderId: tender.id, action: "decline", carrierUserId }));
+        }
         try {
           await sendTenderOfferedEmail({
             to: carrierEmail,
@@ -217,6 +228,8 @@ export async function notifyTenderAction(
             milesEstimate: miles,
             transitDays,
             dollarsPerMile,
+            acceptUrl,
+            declineUrl,
           });
         } catch (err) {
           log.error({ err, tenderId, carrierEmail }, "[NotificationService] sendTenderOfferedEmail failed");

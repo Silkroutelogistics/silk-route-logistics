@@ -10812,6 +10812,34 @@
 //   180.6+180.7+180.8+180.9+180.10+180.11 done; 180.3 closed-by-
 //   discovery; banked 180.6.b CRM admin edit UI for the new fields).
 //
+// v3.8.als — §13.3 Item 142: magic-link tender accept/decline (no login).
+//   The tender-offered email previously had a single "Log in to view
+//   tender" CTA — carriers had to authenticate before acting. Now the
+//   email carries one-click Accept (green) + Decline buttons. New signed
+//   token (lib/tenderActionToken.ts, JWT_SECRET HS256, embeds tenderId +
+//   action + carrierUserId, 7-day expiry) is the authorization. New PUBLIC
+//   endpoint GET /api/tender-action/:token (routes/tenderAction.ts, mounted
+//   WITHOUT authenticate — same pattern as the v3.8.akn quote-approve
+//   magic link) verifies the token, then delegates to the existing
+//   acceptTender/declineTender controllers via a response-capturing shim +
+//   a synthetic carrier actor (id = embedded carrierUserId, which satisfies
+//   the controllers' carrier-userId ownership gate). ZERO duplication of
+//   the battle-tested accept path — compliance re-check, atomic
+//   transaction, shipment creation, auto-RC, notifications, tracking-link
+//   fan-out all reused. Renders a self-contained branded HTML
+//   acknowledgment page (accepted / declined / already-handled / expired /
+//   invalid) — no frontend route needed since carriers click from email on
+//   any device. notifyTenderAction("OFFERED") mints the two tokens (only
+//   when the carrier has a linked User.id; else falls back to the login
+//   button) and passes acceptUrl/declineUrl to sendTenderOfferedEmail.
+//   Server-side expiry + status gates in the delegated controllers mean a
+//   stale token can't double-act: a non-OFFERED tender renders "already
+//   handled," an expired one renders the controller's expiry message.
+//   ~250 LOC across 5 backend files (token lib + public router + index
+//   mount + emailService CTAs + notificationService wiring). No schema, no
+//   migration. Gates: backend tsc + vitest 224/224 + frontend tsc + next
+//   build all clean.
+//
 // v3.8.alr — §13.3 Item 8.1: Customer inactivation workflow. Closes the
 //   gap where four orthogonal status-like fields existed on Customer
 //   (status / onboardingStatus / creditStatus / User.isActive) but none
@@ -12357,7 +12385,7 @@
 //   carriers.css only. Heritage photo-icon paths (emblems / full photos)
 //   held pending eval — swap if Option 3 doesn't land. Letter: parallel
 //   v3.8.alm (test-fence Items 189/190) landed post-push; aln continues.
-export const SRL_VERSION = "3.8.alr";
+export const SRL_VERSION = "3.8.als";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
