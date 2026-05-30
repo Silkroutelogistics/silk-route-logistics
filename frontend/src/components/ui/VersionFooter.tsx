@@ -12512,7 +12512,15 @@
 //   live ("Tracking compliance" rename deployed). Open design item surfaced:
 //   tracking-compliance returns 0% when loads exist but no location captured,
 //   vs neutral-100 for on-time/doc — a fairness asymmetry for Wasi to rule on.
-export const SRL_VERSION = "3.8.amb";
+// v3.8.amc — Compass Score Build F: tracking compliance telematics-activated
+//   (Wasi decision, option 2). The tracking factor now stays NEUTRAL (100)
+//   until a carrier connects ELD (CarrierProfile.eldEnabled) — consistent with
+//   the neutral-default on-time/doc factors — so no carrier is penalized for
+//   SRL's pre-ELD location-capture gap. Once ELD is connected the SAME
+//   LoadTrackingEvent query measures real coverage (no rework). Resolves the
+//   only open finding from the A/B/C/D/E adversarial audit. integrationService
+//   1-block change + CLAUDE.md §9 note. No migration.
+export const SRL_VERSION = "3.8.amc";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

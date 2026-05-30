@@ -551,21 +551,29 @@ export async function recalculateCarrierCPP(carrierProfileId: string) {
   const acceptedTenders = tenders.filter((t) => t.status === "ACCEPTED").length;
   const acceptanceRate = (acceptedTenders / totalTenders) * 100;
 
-  // Tracking compliance (Build C 2026-05-30) — % of the carrier's loads that had
-  // captured location visibility, read from LoadTrackingEvent (latitude set).
+  // Tracking compliance (Build C + F 2026-05-30) — % of the carrier's loads that
+  // had captured location visibility, read from LoadTrackingEvent (latitude set).
   // This unifies every location source via the locationSource enum: carrier
   // portal, geofence, check-call-email, AND ELD pings (motiveService /
-  // samsaraService write LoadTrackingEvent with locationSource=ELD), so the day a
-  // carrier connects telematics their tracking score rises with no rework.
-  // Replaces the prior alias to the check-call response rate. The CarrierScorecard
-  // column stays `gpsCompliancePct` (no migration churn); the public-facing factor
-  // is renamed "Tracking compliance" on /carriers. Neutral 100 until measurable.
-  const trackedLoads = await prisma.loadTrackingEvent.findMany({
-    where: { loadId: { in: loads.map((l) => l.id) }, latitude: { not: null } },
-    select: { loadId: true },
-    distinct: ["loadId"],
-  });
-  const gpsCompliancePct = loads.length > 0 ? (trackedLoads.length / loads.length) * 100 : 100;
+  // samsaraService write LoadTrackingEvent with locationSource=ELD).
+  //
+  // Build F (Wasi decision 2026-05-30, option 2): tracking compliance is
+  // TELEMATICS-ACTIVATED. Until a carrier connects ELD (eldEnabled), SRL doesn't
+  // systematically capture location, so scoring real coverage would penalize the
+  // carrier for our integration gap — it stays NEUTRAL (100), consistent with the
+  // neutral-default on-time/doc factors. Once ELD is connected the SAME query
+  // measures real coverage with no rework (ELD pings already write
+  // LoadTrackingEvent). The CarrierScorecard column stays `gpsCompliancePct` (no
+  // migration churn); the public factor is "Tracking compliance" on /carriers.
+  let gpsCompliancePct = 100; // neutral until telematics-activated
+  if (profile.eldEnabled) {
+    const trackedLoads = await prisma.loadTrackingEvent.findMany({
+      where: { loadId: { in: loads.map((l) => l.id) }, latitude: { not: null } },
+      select: { loadId: true },
+      distinct: ["loadId"],
+    });
+    gpsCompliancePct = loads.length > 0 ? (trackedLoads.length / loads.length) * 100 : 100;
+  }
 
   const overallScore = calculateOverallScore({
     onTimePickupPct,
