@@ -12139,7 +12139,17 @@
 //   Sub-rule c registry advances 32 → 33. Banked observation:
 //   Render-vs-CI gate divergence — passing Render deploy is NOT
 //   evidence of passing test suite. See §11 row.
-export const SRL_VERSION = "3.8.alj";
+// v3.8.alk — /carriers §20 audit polish (Lens 1 + 2 + 4). Removed 5
+//   body em-dashes from tier-req / Founding / universals copy (Lens 2,
+//   tier-name redundancy dropped, "Unlocks at" clarifies requirement);
+//   non-canonical gold #C8963E ×5 → #C5A572 (dark fraud banner, matches
+//   its rgba border) + #BA7517 (light-bg section-label + subhead) (Lens
+//   4 brand drift, §13.3 Item 30 class); "Six milestones" → "One
+//   ladder" (stale M1-M6 framing, retired in locked model §10); legacy
+//   canvas #faf9f7 → #FBF7F0; arithmetic "10 days faster" → "9 days
+//   faster" (Net-30 → Net-21 = 9; §4 #13 canonical already correct at
+//   HEAD). carriers.html only; next build gate green.
+export const SRL_VERSION = "3.8.alk";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
