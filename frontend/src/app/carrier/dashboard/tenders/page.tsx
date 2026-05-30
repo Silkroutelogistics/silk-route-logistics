@@ -11,7 +11,7 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
-import { Clock, MapPin, AlertTriangle, CheckCircle2 } from "lucide-react";
+import { Clock, MapPin, AlertTriangle, CheckCircle2, Repeat2 } from "lucide-react";
 
 const DECLINE_REASONS = [
   "No capacity / all trucks committed",
@@ -87,6 +87,9 @@ export default function CarrierTendersPage() {
   const queryClient = useQueryClient();
   const [declining, setDeclining] = useState<string | null>(null);
   const [reason, setReason] = useState("");
+  // v3.8.alt §13.3 Item 144 — carrier counter-offer
+  const [countering, setCountering] = useState<string | null>(null);
+  const [counterRate, setCounterRate] = useState("");
 
   // Sprint 52.hotfix.b — consume canonical /api/carrier/tenders.
   // Backend filters status=OFFERED + expiresAt > now + deletedAt: null
@@ -122,6 +125,22 @@ export default function CarrierTendersPage() {
     },
   });
 
+  // v3.8.alt §13.3 Item 144 — carrier counter-offer. Backend counterTender
+  // (POST /tenders/:id/counter) was fully wired since v3.8.aka (status →
+  // COUNTERED + counterRate + audit + notifyTenderAction("COUNTERED") email
+  // to the AE) but had NO carrier-facing UI to submit one. Once countered
+  // the tender drops off this OFFERED-filtered list — the ball is in the
+  // AE's court (same disappear-on-action UX as decline).
+  const counter = useMutation({
+    mutationFn: async ({ tenderId, counterRate }: { tenderId: string; counterRate: number }) =>
+      (await api.post(`/tenders/${tenderId}/counter`, { counterRate })).data,
+    onSuccess: () => {
+      setCountering(null);
+      setCounterRate("");
+      queryClient.invalidateQueries({ queryKey: ["carrier-tenders"] });
+    },
+  });
+
   const tenders = tendersQuery.data ?? [];
 
   return (
@@ -141,7 +160,10 @@ export default function CarrierTendersPage() {
 
       {tenders.map((t) => {
         const isDeclining = declining === t.id;
+        const isCountering = countering === t.id;
         const isCascade = t.waterfallPositionId !== null;
+        const counterNum = parseFloat(counterRate);
+        const counterValid = !isNaN(counterNum) && counterNum > 0;
         return (
           <div key={t.id} className="bg-white/5 border border-white/10 rounded-xl p-6">
             <div className="flex items-start justify-between gap-4">
@@ -190,7 +212,7 @@ export default function CarrierTendersPage() {
               </div>
             </div>
 
-            {!isDeclining && (
+            {!isDeclining && !isCountering && (
               <div className="mt-5 flex gap-2">
                 <button
                   onClick={() => accept.mutate(t.id)}
@@ -200,11 +222,52 @@ export default function CarrierTendersPage() {
                   <CheckCircle2 className="w-4 h-4" /> Accept
                 </button>
                 <button
+                  onClick={() => { setCountering(t.id); setCounterRate(String(Math.round(Number(t.offeredRate)))); }}
+                  className="flex-1 flex items-center justify-center gap-2 py-3 bg-[#FAEEDA] hover:bg-[#f3e3c4] text-[#854F0B] font-semibold rounded border border-[#BA7517]/40"
+                >
+                  <Repeat2 className="w-4 h-4" /> Counter
+                </button>
+                <button
                   onClick={() => setDeclining(t.id)}
                   className="flex-1 flex items-center justify-center gap-2 py-3 bg-white/5 hover:bg-white/10 text-slate-700 font-semibold rounded border border-white/10"
                 >
                   <AlertTriangle className="w-4 h-4" /> Decline
                 </button>
+              </div>
+            )}
+
+            {isCountering && (
+              <div className="mt-5 space-y-2">
+                <label className="block text-xs text-slate-700">
+                  Your counter rate (offered: ${Number(t.offeredRate).toLocaleString("en-US", { maximumFractionDigits: 0 })})
+                </label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-sm">$</span>
+                  <input
+                    type="number"
+                    min="1"
+                    step="1"
+                    value={counterRate}
+                    onChange={(e) => setCounterRate(e.target.value)}
+                    className="w-full pl-7 pr-3 py-2 bg-white border border-slate-300 rounded text-sm text-slate-900"
+                    placeholder="Enter your rate"
+                  />
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => counter.mutate({ tenderId: t.id, counterRate: counterNum })}
+                    disabled={!counterValid || counter.isPending}
+                    className="flex-1 py-2 bg-[#BA7517] hover:bg-[#8f5a11] text-white text-sm font-medium rounded disabled:opacity-40"
+                  >
+                    {counter.isPending ? "Sending…" : "Send counter offer"}
+                  </button>
+                  <button
+                    onClick={() => { setCountering(null); setCounterRate(""); }}
+                    className="flex-1 py-2 bg-white/5 text-slate-700 text-sm font-medium rounded border border-slate-300"
+                  >
+                    Back
+                  </button>
+                </div>
               </div>
             )}
 

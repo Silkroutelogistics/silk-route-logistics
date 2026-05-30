@@ -10812,6 +10812,22 @@
 //   180.6+180.7+180.8+180.9+180.10+180.11 done; 180.3 closed-by-
 //   discovery; banked 180.6.b CRM admin edit UI for the new fields).
 //
+// v3.8.alt — §13.3 Item 144: carrier counter-offer UI. The backend
+//   counterTender (POST /tenders/:id/counter) was fully wired since
+//   v3.8.aka — flips tender → COUNTERED + counterRate, writes an audit
+//   row, fires notifyTenderAction("COUNTERED") which emails the AE poster
+//   with offered-vs-counter delta context. But the carrier portal
+//   /carrier/dashboard/tenders page had only Accept + Decline — NO way to
+//   submit a counter. Frontend-only close: added a gold "Counter" button
+//   (Repeat2 icon) in the action row + a counter-rate input panel
+//   (pre-filled with the offered rate, $ prefix, positive-number guard)
+//   that POSTs { counterRate } to the existing endpoint. On success the
+//   tender drops off this OFFERED-filtered list — the ball is now in the
+//   AE's court (same disappear-on-action UX as decline). Mirrors the
+//   existing decline-panel pattern exactly. ~55 LOC in one file. No
+//   backend change, no schema. Gates: frontend tsc + next build clean
+//   (backend tsc defensively clean — untouched).
+//
 // v3.8.als — §13.3 Item 142: magic-link tender accept/decline (no login).
 //   The tender-offered email previously had a single "Log in to view
 //   tender" CTA — carriers had to authenticate before acting. Now the
@@ -12385,7 +12401,7 @@
 //   carriers.css only. Heritage photo-icon paths (emblems / full photos)
 //   held pending eval — swap if Option 3 doesn't land. Letter: parallel
 //   v3.8.alm (test-fence Items 189/190) landed post-push; aln continues.
-export const SRL_VERSION = "3.8.als";
+export const SRL_VERSION = "3.8.alt";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
