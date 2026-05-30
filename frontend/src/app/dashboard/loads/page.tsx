@@ -148,6 +148,7 @@ export default function LoadsPage() {
   const [showRateConf, setShowRateConf] = useState(false);
   const [tenderCarrierId, setTenderCarrierId] = useState("");
   const [tenderRate, setTenderRate] = useState("");
+  const [tenderExpiryHours, setTenderExpiryHours] = useState(24); // v3.8.alv §13.3 Item 144 — tiered expiry preset
 
   /* ---- Sprint 39 Item 54 — Accept on Behalf state ---- */
   const [onBehalfTender, setOnBehalfTender] = useState<{ id: string; carrierName: string } | null>(null);
@@ -282,7 +283,7 @@ export default function LoadsPage() {
   // code on both sides; deletion reduces the audit surface.
 
   const createTender = useMutation({
-    mutationFn: ({ loadId, carrierId, offeredRate }: { loadId: string; carrierId: string; offeredRate: number }) =>
+    mutationFn: ({ loadId, carrierId, offeredRate, expiresInHours }: { loadId: string; carrierId: string; offeredRate: number; expiresInHours?: number }) =>
       // Sprint 44c (v3.8.aaz) Item 74 — Sprint 37f canonical is singular
       // (POST = "create a tender" verb form; GET /loads/:id/tenders = noun
       // list form). This caller had drifted to plural, producing 404 in
@@ -291,21 +292,23 @@ export default function LoadsPage() {
       //
       // Sprint 44d (v3.8.aba) Item 78 — `expiresAt` is REQUIRED by
       // backend/src/validators/tender.ts createTenderSchema (z.string().transform).
-      // Frontend caller had drifted to a 2-field shape, producing 400 in
-      // production once Sprint 44c routed the request to the validator.
-      // Match E2E canonical (full-lifecycle.spec.ts:155): 24h window from now
-      // as the broker-default tender expiry. Item 77 tracks broker-configurable
-      // tender-expiry UX as a future surface — until then 24h hardcoded.
+      //
+      // v3.8.alv §13.3 Item 144 — broker-configurable expiry. The AE Tender
+      // modal now exposes 4h/24h/48h presets (+ custom); the chosen window
+      // is passed as expiresInHours and converted to an ISO expiresAt here.
+      // Defaults to 24h (the prior hardcoded broker-default + E2E canonical
+      // at full-lifecycle.spec.ts:155) when the caller omits it.
       api.post(`/loads/${loadId}/tender`, {
         carrierId,
         offeredRate,
-        expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+        expiresAt: new Date(Date.now() + (expiresInHours ?? 24) * 60 * 60 * 1000).toISOString(),
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["load", selectedLoadId] });
       setShowTender(false);
       setTenderCarrierId("");
       setTenderRate("");
+      setTenderExpiryHours(24);
     },
   });
 
@@ -885,6 +888,8 @@ export default function LoadsPage() {
               setTenderCarrierId={(v) => { setTenderCarrierId(v); setComplianceResult(null); }}
               tenderRate={tenderRate}
               setTenderRate={setTenderRate}
+              expiryHours={tenderExpiryHours}
+              setExpiryHours={setTenderExpiryHours}
               complianceResult={complianceResult}
               checkingCompliance={checkingCompliance}
               onSubmit={async () => {
@@ -909,6 +914,7 @@ export default function LoadsPage() {
                         loadId: load.id,
                         carrierId: tenderCarrierId,
                         offeredRate: parseFloat(tenderRate),
+                      expiresInHours: tenderExpiryHours,
                       });
                     }
                   } catch {
@@ -916,6 +922,7 @@ export default function LoadsPage() {
                       loadId: load.id,
                       carrierId: tenderCarrierId,
                       offeredRate: parseFloat(tenderRate),
+                      expiresInHours: tenderExpiryHours,
                     });
                   } finally {
                     setCheckingCompliance(false);
@@ -927,6 +934,7 @@ export default function LoadsPage() {
                     loadId: load.id,
                     carrierId: tenderCarrierId,
                     offeredRate: parseFloat(tenderRate),
+                      expiresInHours: tenderExpiryHours,
                   });
                 }
               }}
@@ -1663,6 +1671,8 @@ function TenderForm({
   setTenderCarrierId,
   tenderRate,
   setTenderRate,
+  expiryHours,
+  setExpiryHours,
   complianceResult,
   checkingCompliance,
   onSubmit,
@@ -1677,6 +1687,8 @@ function TenderForm({
   setTenderCarrierId: (v: string) => void;
   tenderRate: string;
   setTenderRate: (v: string) => void;
+  expiryHours: number;
+  setExpiryHours: (v: number) => void;
   complianceResult: {
     allowed: boolean;
     blocked_reasons: string[];
@@ -1879,6 +1891,44 @@ function TenderForm({
           <p className="text-xs text-gray-500">Carrier rate is set by your broker or admin.</p>
         </div>
       )}
+      {/* v3.8.alv §13.3 Item 144 — tender expiry preset (4h / 24h / 48h + custom) */}
+      <div>
+        <label className="block text-xs text-gray-500 mb-1">Tender expires in</label>
+        <div className="flex gap-2">
+          {[4, 24, 48].map((h) => (
+            <button
+              key={h}
+              type="button"
+              onClick={() => setExpiryHours(h)}
+              className={`flex-1 py-2 rounded-lg text-sm font-medium border transition ${
+                expiryHours === h
+                  ? "bg-[#BA7517] text-white border-[#BA7517]"
+                  : "bg-gray-50 text-gray-700 border-gray-200 hover:border-[#BA7517]/40"
+              }`}
+            >
+              {h}h
+            </button>
+          ))}
+          <div className="flex items-center gap-1 flex-1">
+            <input
+              type="number"
+              min={1}
+              max={168}
+              value={![4, 24, 48].includes(expiryHours) ? expiryHours : ""}
+              placeholder="Custom"
+              onChange={(e) => {
+                const n = parseInt(e.target.value, 10);
+                if (!isNaN(n) && n >= 1 && n <= 168) setExpiryHours(n);
+              }}
+              className="w-full px-2 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-[#BA7517]/50"
+            />
+            <span className="text-xs text-gray-400">h</span>
+          </div>
+        </div>
+        <p className="mt-1 text-[11px] text-gray-400">
+          Carrier must accept before this window closes; the hourly sweep auto-expires it otherwise.
+        </p>
+      </div>
       {complianceResult && !complianceResult.allowed && (
         <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-lg">
           <p className="text-sm font-medium text-red-400 mb-1">Carrier Blocked</p>

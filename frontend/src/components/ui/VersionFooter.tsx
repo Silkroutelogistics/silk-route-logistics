@@ -10812,6 +10812,23 @@
 //   180.6+180.7+180.8+180.9+180.10+180.11 done; 180.3 closed-by-
 //   discovery; banked 180.6.b CRM admin edit UI for the new fields).
 //
+// v3.8.alv — §13.3 Item 144 (literal): tiered tender-expiry preset UX.
+//   The AE Tender modal hardcoded a 24h expiry (the v3.8.aix/aba
+//   broker-default + E2E canonical) with no UI to change it — AEs couldn't
+//   tighten to 4h for an urgent load or extend to 48h for a flexible
+//   window. Added a preset toggle (4h / 24h / 48h) + a custom hours input
+//   (1-168) in TenderForm, below the rate field. The chosen window flows
+//   as `expiresInHours` through the createTender mutation (all 3 compliance
+//   branches) → converted to ISO `expiresAt` (defaults to 24h when
+//   omitted, preserving the E2E canonical + any non-modal caller). Backend
+//   createTenderSchema already accepts arbitrary `expiresAt` (no schema
+//   change). Pairs with the v3.8.abw expiry-sweep cron (Item 141) which
+//   auto-expires the tender when the chosen window closes. ~55 LOC,
+//   frontend-only, one file. Gates: frontend tsc + next build clean.
+//   Closes the literal §13.3 row 144 (distinct from the carrier
+//   counter-offer UI shipped under Item 143/v3.8.alt — see that row's
+//   numbering-drift note).
+//
 // v3.8.alu — §13.3 Item 3: EditLoadModal (post-conversion load edit UI).
 //   The backend PUT /loads/:id (loadController.updateLoad) has had full
 //   capability all along — auth (poster/employee), status guard blocking
@@ -12426,7 +12443,7 @@
 //   carriers.css only. Heritage photo-icon paths (emblems / full photos)
 //   held pending eval — swap if Option 3 doesn't land. Letter: parallel
 //   v3.8.alm (test-fence Items 189/190) landed post-push; aln continues.
-export const SRL_VERSION = "3.8.alu";
+export const SRL_VERSION = "3.8.alv";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
