@@ -7,6 +7,8 @@ import {
   sendTenderDeclinedEmail,
   sendTenderCounteredEmail,
   sendTenderExpiredEmail,
+  sendBidAcceptedEmail,
+  sendBidDeclinedEmail,
 } from "./emailService";
 
 // Sprint 54 (v3.8.acc) Item 7 — operations@ alias is CC'd on every
@@ -374,6 +376,126 @@ export async function notifyTenderAction(
         log.warn({ tenderId, posterId }, "[NotificationService] COUNTERED: counterRate is null; email skipped");
       }
       break;
+  }
+}
+
+/**
+ * v3.8.alp Item 51.b — loadboard-bid accept/decline fan-out.
+ *
+ * Parallel to notifyTenderAction but keyed on LoadBid (the carrier's own
+ * offer on an open loadboard load) rather than LoadTender. Recommendation
+ * (a) from §13.3 Item 51.b: a dedicated helper rather than overloading
+ * notifyTenderAction with a polymorphic { tenderId | bidId } arg, so the
+ * two model shapes stay cleanly separated.
+ *
+ * Note: LoadBid.carrierId is a User.id (per the submission convention at
+ * routes/loadBids.ts), NOT a CarrierProfile.id — so the carrier user is
+ * looked up directly by id. Acceptance DISPATCHES the load (loadboard is
+ * the auto-pilot path per CLAUDE.md §2 dispatch divergence table), which
+ * is reflected in the carrier-facing email copy.
+ */
+export async function notifyBidAction(
+  bidId: string,
+  action: "ACCEPTED" | "DECLINED",
+) {
+  const bid = await prisma.loadBid.findUnique({
+    where: { id: bidId },
+    include: {
+      load: {
+        select: {
+          referenceNumber: true,
+          originCity: true,
+          originState: true,
+          destCity: true,
+          destState: true,
+          pickupDate: true,
+          deliveryDate: true,
+        },
+      },
+    },
+  });
+
+  if (!bid) {
+    log.warn(`[NotificationService] Bid ${bidId} not found`);
+    return;
+  }
+
+  const carrierUser = await prisma.user.findUnique({
+    where: { id: bid.carrierId },
+    select: {
+      email: true,
+      firstName: true,
+      lastName: true,
+      company: true,
+      carrierProfile: { select: { contactEmail: true, companyName: true } },
+    },
+  });
+
+  if (!carrierUser) {
+    log.warn(`[NotificationService] Bid ${bidId} carrier user ${bid.carrierId} not found`);
+    return;
+  }
+
+  const ref = bid.load.referenceNumber;
+  const lane = `${bid.load.originCity}, ${bid.load.originState} → ${bid.load.destCity}, ${bid.load.destState}`;
+  const originName = `${bid.load.originCity}, ${bid.load.originState}`;
+  const destName = `${bid.load.destCity}, ${bid.load.destState}`;
+  const carrierEmail = carrierUser.carrierProfile?.contactEmail ?? carrierUser.email;
+  const carrierName =
+    carrierUser.carrierProfile?.companyName ??
+    carrierUser.company ??
+    `${carrierUser.firstName} ${carrierUser.lastName}`.trim();
+  const bidRate = Number(bid.bidRate);
+
+  if (action === "ACCEPTED") {
+    await createNotification(
+      bid.carrierId,
+      "TENDER_ACCEPTED",
+      "Bid Accepted — Load Dispatched",
+      `Your bid for load ${ref} (${lane}) was accepted at $${bidRate.toLocaleString()}. The load is dispatched in your name.`,
+      { actionUrl: "/carrier/dashboard/my-loads" }
+    );
+    if (carrierEmail) {
+      try {
+        await sendBidAcceptedEmail({
+          to: carrierEmail,
+          ref,
+          originName,
+          destName,
+          carrierName,
+          rate: bidRate,
+          pickupDate: bid.load.pickupDate ? new Date(bid.load.pickupDate).toLocaleDateString() : null,
+          deliveryDate: bid.load.deliveryDate ? new Date(bid.load.deliveryDate).toLocaleDateString() : null,
+        });
+      } catch (err) {
+        log.error({ err, bidId, carrierEmail }, "[NotificationService] sendBidAcceptedEmail failed");
+      }
+    } else {
+      log.warn({ bidId, carrierUserId: bid.carrierId }, "[NotificationService] bid ACCEPTED: no carrier email; in-app only");
+    }
+  } else {
+    await createNotification(
+      bid.carrierId,
+      "LOAD_UPDATE",
+      "Bid Not Selected",
+      `Your bid for load ${ref} (${lane}) was not selected this time.`,
+      { actionUrl: "/carrier/dashboard/loadboard" }
+    );
+    if (carrierEmail) {
+      try {
+        await sendBidDeclinedEmail({
+          to: carrierEmail,
+          ref,
+          originName,
+          destName,
+          carrierName,
+        });
+      } catch (err) {
+        log.error({ err, bidId, carrierEmail }, "[NotificationService] sendBidDeclinedEmail failed");
+      }
+    } else {
+      log.warn({ bidId, carrierUserId: bid.carrierId }, "[NotificationService] bid DECLINED: no carrier email; in-app only");
+    }
   }
 }
 

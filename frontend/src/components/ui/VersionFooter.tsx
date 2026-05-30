@@ -10812,6 +10812,27 @@
 //   180.6+180.7+180.8+180.9+180.10+180.11 done; 180.3 closed-by-
 //   discovery; banked 180.6.b CRM admin edit UI for the new fields).
 //
+// v3.8.alp — §13.3 Item 51.b: loadboard-bid carrier notification.
+//   Pre-alp the loadboard bid accept/reject handlers (routes/loadBids.ts)
+//   fired ZERO carrier notification — direct + on-behalf + waterfall
+//   accept paths all notified the winning carrier (notifyTenderAction),
+//   but a carrier who won an open-loadboard bid got nothing. New
+//   notifyBidAction(bidId, "ACCEPTED" | "DECLINED") helper in
+//   notificationService (recommendation (a) — parallel to
+//   notifyTenderAction, keyed on LoadBid not LoadTender so the model
+//   shapes stay separated). Two new carrier-facing emails in
+//   emailService: sendBidAcceptedEmail ("your bid won — load dispatched",
+//   loadboard is the auto-pilot DISPATCHED path per §2) +
+//   sendBidDeclinedEmail ("not selected this time"). Both fire-and-forget
+//   (non-blocking try/catch) wired into the accept + reject handlers,
+//   mirroring the existing tracking-link fan-out pattern. LoadBid.carrierId
+//   is a User.id per the submission convention, so the carrier user is
+//   looked up directly by id (NOT CarrierProfile.id). Closes the
+//   notification-matrix gap left open at the v3.8.akw Item 51 close.
+//   Backend-only — ~120 LOC across emailService + notificationService +
+//   loadBids. No schema, no migration. Gates: backend tsc + vitest
+//   224/224 + frontend tsc + next build all clean.
+//
 // v3.8.alo — §13.3 Item 189.b: admin self-serve toggle for
 //   CarrierProfile.isTestAccount. Surfaced when Wasi asked "how can I
 //   use the test-carrier mechanism right now" — the fence (v3.8.aim/alm)
@@ -12303,7 +12324,7 @@
 //   carriers.css only. Heritage photo-icon paths (emblems / full photos)
 //   held pending eval — swap if Option 3 doesn't land. Letter: parallel
 //   v3.8.alm (test-fence Items 189/190) landed post-push; aln continues.
-export const SRL_VERSION = "3.8.alo";
+export const SRL_VERSION = "3.8.alp";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

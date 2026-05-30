@@ -175,6 +175,13 @@ router.patch(
           actorName: req.user?.email,
           metadata: { bidId },
         });
+        // v3.8.alp Item 51.b — notify the carrier their bid was not selected.
+        try {
+          const { notifyBidAction } = await import("../services/notificationService");
+          await notifyBidAction(bidId, "DECLINED");
+        } catch (err) {
+          log.error({ err, bidId }, "[Bids] reject notification failed");
+        }
         return res.json({ bid: updated });
       }
 
@@ -250,6 +257,17 @@ router.patch(
           await sendTrackingLinkToCrmContacts(loadId);
         } catch (err) {
           log.error({ err }, "[Bids] tracking-link fan-out failed");
+        }
+
+        // v3.8.alp Item 51.b — notify the winning carrier (in-app + email).
+        // Closes the loadboard-bid notification gap: direct/on-behalf/waterfall
+        // accept paths all notified the carrier; the bid-accept path fired
+        // zero carrier notification pre-v3.8.alp.
+        try {
+          const { notifyBidAction } = await import("../services/notificationService");
+          await notifyBidAction(bidId, "ACCEPTED");
+        } catch (err) {
+          log.error({ err, bidId }, "[Bids] accept notification failed");
         }
 
         return res.json({ bid: updated });

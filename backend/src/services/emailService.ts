@@ -693,6 +693,83 @@ export async function sendTenderAcceptedConfirmationEmail(params: TenderAccepted
   );
 }
 
+// v3.8.alp Item 51.b — loadboard-bid lifecycle emails (carrier-facing).
+// Distinct from the tender emails: a bid is the carrier's own offer on an
+// open loadboard load, and acceptance DISPATCHES the load (not BOOKED — the
+// loadboard path is auto-pilot per CLAUDE.md §2 dispatch divergence table).
+// Pre-v3.8.alp the loadboard accept/reject handlers fired zero carrier
+// notification; only the tender paths did. These close that gap.
+export interface BidAcceptedEmailParams {
+  to: string;
+  ref: string;
+  originName: string;
+  destName: string;
+  carrierName: string;
+  rate: number;
+  pickupDate?: string | null;
+  deliveryDate?: string | null;
+}
+
+export async function sendBidAcceptedEmail(params: BidAcceptedEmailParams): Promise<string | undefined> {
+  const rateFmt = `$${params.rate.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
+  const pickupRow = params.pickupDate
+    ? `<tr><td style="padding:8px;border:1px solid #E2EAF2;font-weight:bold">Pickup</td><td style="padding:8px;border:1px solid #E2EAF2">${params.pickupDate}</td></tr>`
+    : "";
+  const deliveryRow = params.deliveryDate
+    ? `<tr><td style="padding:8px;border:1px solid #E2EAF2;font-weight:bold">Delivery</td><td style="padding:8px;border:1px solid #E2EAF2">${params.deliveryDate}</td></tr>`
+    : "";
+
+  const html = wrap(`
+    <h2 style="color:#0A2540;margin:0 0 16px">Your bid won &mdash; load dispatched</h2>
+    <p>Congratulations ${params.carrierName}. Your bid was accepted and the load is now <strong>DISPATCHED</strong> in your name. Watch your inbox for the Rate Confirmation and dispatch instructions.</p>
+    <table style="width:100%;border-collapse:collapse;margin:16px 0">
+      <tr><td style="padding:8px;border:1px solid #E2EAF2;font-weight:bold">Reference</td><td style="padding:8px;border:1px solid #E2EAF2">${params.ref}</td></tr>
+      <tr><td style="padding:8px;border:1px solid #E2EAF2;font-weight:bold">Lane</td><td style="padding:8px;border:1px solid #E2EAF2">${params.originName} &rarr; ${params.destName}</td></tr>
+      ${pickupRow}
+      ${deliveryRow}
+      <tr style="background:#FAEEDA"><td style="padding:8px;border:1px solid #C5A572;font-weight:bold;color:#BA7517">Winning bid</td><td style="padding:8px;border:1px solid #C5A572;font-weight:bold;font-size:16px;color:#0A2540">${rateFmt}</td></tr>
+    </table>
+    <p>Questions before pickup? Reply to this email and our operations team will respond.</p>
+    <a href="https://silkroutelogistics.ai/carrier/dashboard/my-loads" style="display:inline-block;background:#BA7517;color:#FFFFFF;padding:12px 24px;text-decoration:none;border-radius:6px;font-weight:bold;margin-top:8px">View My Loads</a>
+  `);
+
+  return sendEmail(
+    params.to,
+    `Bid accepted: ${params.ref} (${params.originName} → ${params.destName})`,
+    html,
+    undefined,
+    { replyTo: "operations@silkroutelogistics.ai" },
+  );
+}
+
+export interface BidDeclinedEmailParams {
+  to: string;
+  ref: string;
+  originName: string;
+  destName: string;
+  carrierName: string;
+}
+
+export async function sendBidDeclinedEmail(params: BidDeclinedEmailParams): Promise<string | undefined> {
+  const html = wrap(`
+    <h2 style="color:#0A2540;margin:0 0 16px">Bid update</h2>
+    <p>Thanks for bidding, ${params.carrierName}. Your bid on this load was not selected this time. The lane stays in our network and we run loads like it regularly, so keep an eye on the loadboard.</p>
+    <table style="width:100%;border-collapse:collapse;margin:16px 0">
+      <tr><td style="padding:8px;border:1px solid #E2EAF2;font-weight:bold">Reference</td><td style="padding:8px;border:1px solid #E2EAF2">${params.ref}</td></tr>
+      <tr><td style="padding:8px;border:1px solid #E2EAF2;font-weight:bold">Lane</td><td style="padding:8px;border:1px solid #E2EAF2">${params.originName} &rarr; ${params.destName}</td></tr>
+    </table>
+    <a href="https://silkroutelogistics.ai/carrier/dashboard/loadboard" style="display:inline-block;background:#BA7517;color:#FFFFFF;padding:12px 24px;text-decoration:none;border-radius:6px;font-weight:bold;margin-top:8px">View Open Loads</a>
+  `);
+
+  return sendEmail(
+    params.to,
+    `Bid not selected: ${params.ref} (${params.originName} → ${params.destName})`,
+    html,
+    undefined,
+    { replyTo: "operations@silkroutelogistics.ai" },
+  );
+}
+
 export interface TenderDeclinedEmailParams {
   to: string;
   ref: string;
