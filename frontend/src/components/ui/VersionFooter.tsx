@@ -10812,6 +10812,63 @@
 //   180.6+180.7+180.8+180.9+180.10+180.11 done; 180.3 closed-by-
 //   discovery; banked 180.6.b CRM admin edit UI for the new fields).
 //
+// v3.8.alo — §13.3 Item 189.b: admin self-serve toggle for
+//   CarrierProfile.isTestAccount. Surfaced when Wasi asked "how can I
+//   use the test-carrier mechanism right now" — the fence (v3.8.aim/alm)
+//   was complete but the only WRITE paths for isTestAccount were the
+//   seed script (dev/CI) + the v3.8.aim migration (3 prod carriers by
+//   MC#). No in-app control to flag a NEW carrier as test or un-flag
+//   one — required manual SQL.
+//
+//   DESIGN WRINKLE (Phase A): getAllCarriers itself filters
+//   isTestAccount:false AND feeds the Tender/RC pickers — so a flagged
+//   carrier vanishes from the admin list too, making un-flag a one-way
+//   door. Solved with an opt-in param the admin page passes but pickers
+//   never do.
+//
+//   BACKEND:
+//   * getAllCarriers gains ?include_test=true. where rebuilt:
+//     isTestAccount:false applies UNLESS include_test is set. Pickers
+//     (Tender/RC modal) never pass it → stay fenced per v3.8.aim
+//     contract. Admin carriers page passes it only when "Show test
+//     accounts" is on.
+//   * NEW PATCH /api/carriers/:id/test-account — ADMIN/CEO,
+//     validateBody({ isTestAccount: boolean }), auditLog("UPDATE",
+//     "Carrier"), 404 on unknown. Mirrors the per-load risk-email
+//     kill-switch endpoint (v3.8.ali).
+//
+//   FRONTEND (/dashboard/carriers):
+//   * Carrier.isTestAccount added to the interface.
+//   * List query: ?include_test=true appended when showTestAccounts on;
+//     showTestAccounts in the queryKey so toggling refetches.
+//   * Admin-only "Show test accounts" header toggle (amber when on) —
+//     reveals flagged carriers so they can be un-flagged.
+//   * "Mark as test" / "Test account" toggle button in the carrier
+//     detail action row (FlaskConical icon, confirm dialog, TanStack
+//     mutation invalidating ["carrier-all"]). Gray when real, amber
+//     when flagged.
+//   * Amber TEST badge on flagged carrier rows in the list.
+//
+//   USAGE: AE/admin opens a carrier → "Mark as test" → it drops out of
+//   pickers/analytics/compliance/risk-flagging (kept for testing, not
+//   deleted). To un-flag: header "Show test accounts" on → flagged
+//   carriers reappear with TEST badge → open one → "Test account"
+//   (amber) → restore. The 3 pre-flagged prod carriers (SRL Transport
+//   MC-1794414, BISON MC-156588, INTEGRITY EXPRESS MC-596655) are now
+//   visible + manageable via the show-test toggle.
+//
+//   No schema migration (isTestAccount exists since v3.8.aim). No new
+//   deps. Pre-commit gates per Sub-pattern 11 (all clean): backend tsc,
+//   backend vitest 224/224, frontend tsc, next build.
+//
+//   SUB-PATTERN 6 concurrent-sprint-coordination fire: Wasi shipped
+//   v3.8.aln (public carriers tier-card icons, §20 Commit 3) on top of
+//   my v3.8.alm mid-sprint. Bumped my work alm→alo per §3.1 sequence-
+//   continuous; swapped my "v3.8.aln" inline refs → "v3.8.alo" across
+//   the 3 source files + CLAUDE.md Item 189.b, leaving Wasi's committed
+//   aln VersionFooter block untouched.
+//   §13.3 Item 189.b LOG OPEN → CLOSED.
+//
 // v3.8.alm — §13.3 Items 189 + 190 CLOSE (isTestAccount fence, Tier 2 +
 //   Tier 3). One atomic commit fencing test carriers out of every
 //   analytics/compliance/intelligence carrier-list query. 37
@@ -12246,7 +12303,7 @@
 //   carriers.css only. Heritage photo-icon paths (emblems / full photos)
 //   held pending eval — swap if Option 3 doesn't land. Letter: parallel
 //   v3.8.alm (test-fence Items 189/190) landed post-push; aln continues.
-export const SRL_VERSION = "3.8.aln";
+export const SRL_VERSION = "3.8.alo";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

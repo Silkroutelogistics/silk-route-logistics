@@ -10,7 +10,7 @@ import {
   TrendingUp, TrendingDown, DollarSign, Package, Award, ShieldAlert, Calendar,
   BarChart3, Percent, Hash, Compass, RefreshCw, ExternalLink, AlertTriangle, Download,
   User, CheckSquare, ClipboardList, Upload, Eye, ArrowLeft, FolderOpen,
-  MessageCircle, Sliders,
+  MessageCircle, Sliders, FlaskConical,
 } from "lucide-react";
 import { InfoRequestModal } from "@/components/carriers/InfoRequestModal";
 import { InfoRequestThread } from "@/components/carriers/InfoRequestThread";
@@ -49,6 +49,7 @@ interface Carrier {
   authorityDocUploaded: boolean;
   authorityGrantedDate: string | null;
   approvedAt: string | null;
+  isTestAccount?: boolean; // v3.8.alo §13.3 Item 189.b — test-carrier flag
   address: string | null;
   city: string | null;
   state: string | null;
@@ -318,10 +319,28 @@ export default function CarrierPoolPage() {
   const [authorityGrantInput, setAuthorityGrantInput] = useState<string>("");
   const [authorityGrantReason, setAuthorityGrantReason] = useState<string>("");
   const [authorityGrantMessage, setAuthorityGrantMessage] = useState<{ tone: "success" | "error"; text: string } | null>(null);
+  // v3.8.alo §13.3 Item 189.b — admin-only "Show test accounts" toggle.
+  // Default off → getAllCarriers fences isTestAccount:false (matches every
+  // picker). On → passes ?include_test=true so flagged test carriers appear
+  // (with a TEST badge) and can be un-flagged. Param is in the queryKey so
+  // toggling refetches.
+  const [showTestAccounts, setShowTestAccounts] = useState(false);
 
   const { data } = useQuery({
-    queryKey: ["carrier-all"],
-    queryFn: () => api.get<{ carriers: Carrier[]; total: number }>("/carrier/all").then((r) => r.data),
+    queryKey: ["carrier-all", showTestAccounts],
+    queryFn: () =>
+      api
+        .get<{ carriers: Carrier[]; total: number }>(`/carrier/all${showTestAccounts ? "?include_test=true" : ""}`)
+        .then((r) => r.data),
+  });
+
+  // v3.8.alo §13.3 Item 189.b — toggle a carrier's isTestAccount flag.
+  const toggleTestAccount = useMutation({
+    mutationFn: (vars: { id: string; isTestAccount: boolean }) =>
+      api.patch(`/carriers/${vars.id}/test-account`, { isTestAccount: vars.isTestAccount }).then((r) => r.data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["carrier-all"] });
+    },
   });
 
   const updateCarrier = useMutation({
@@ -628,6 +647,24 @@ export default function CarrierPoolPage() {
             <option key={t} value={t} className="bg-[#0F1117] text-white">{t}</option>
           ))}
         </select>
+        {/* v3.8.alo §13.3 Item 189.b — admin-only "Show test accounts" toggle.
+            Off (default): list fences test carriers, matching the pickers. On:
+            passes ?include_test=true so flagged carriers appear (TEST badge) and
+            can be un-flagged. */}
+        {isAdmin && (
+          <button
+            onClick={() => setShowTestAccounts((v) => !v)}
+            className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm border transition ${
+              showTestAccounts
+                ? "bg-amber-500/20 text-amber-600 border-amber-500/40"
+                : "bg-gray-100 text-slate-500 border-gray-200 hover:bg-gray-200"
+            }`}
+            title={showTestAccounts ? "Hiding test accounts from this list" : "Show test accounts so they can be un-flagged"}
+          >
+            <FlaskConical className="w-4 h-4" />
+            {showTestAccounts ? "Showing test accounts" : "Show test accounts"}
+          </button>
+        )}
       </div>
 
       {/* Carrier List + Panel */}
@@ -644,6 +681,14 @@ export default function CarrierPoolPage() {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
                     <p className="font-semibold text-white text-sm truncate">{carrier.company}</p>
+                    {/* v3.8.alo §13.3 Item 189.b — TEST badge (only visible when
+                        "Show test accounts" is on, since flagged carriers are
+                        otherwise filtered out of this list). */}
+                    {carrier.isTestAccount && (
+                      <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-500/20 text-amber-500 border border-amber-500/40 flex items-center gap-0.5">
+                        <FlaskConical className="w-2.5 h-2.5" /> TEST
+                      </span>
+                    )}
                     <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${TIER_COLORS[carrier.tier] || ""}`}>{carrier.tier}</span>
                     {carrier.lastVettingScore != null && (
                       <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-[#C5A572]/10 text-[#C5A572] border border-[#C5A572]/20 flex items-center gap-0.5">
@@ -846,6 +891,35 @@ export default function CarrierPoolPage() {
                         <button onClick={() => { openEdit(selectedCarrier); setEditingTab("profile"); }}
                           className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-500/20 text-blue-400 rounded-lg text-xs hover:bg-blue-500/30 transition">
                           <BarChart3 className="w-3.5 h-3.5" /> Edit Profile
+                        </button>
+                      )}
+                      {/* v3.8.alo §13.3 Item 189.b — test-account toggle. Marking a
+                          carrier as a test account excludes it from every
+                          analytics/compliance/picker surface + FMCSA/OFAC/CSA/ELD
+                          scans + risk-flagging (retained for manual regression
+                          testing, NOT deleted). Once flagged, it only reappears in
+                          this list when "Show test accounts" is on. */}
+                      {isAdmin && (
+                        <button
+                          onClick={() => {
+                            const next = !selectedCarrier.isTestAccount;
+                            if (!confirm(
+                              next
+                                ? `Mark ${selectedCarrier.company} as a TEST account? It will be hidden from carrier pickers, analytics, compliance scans, and risk alerts (kept for testing, not deleted).`
+                                : `Restore ${selectedCarrier.company} to a real carrier? It will reappear in pickers, analytics, and compliance scans.`
+                            )) return;
+                            toggleTestAccount.mutate({ id: selectedCarrier.id, isTestAccount: next });
+                          }}
+                          disabled={toggleTestAccount.isPending}
+                          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs transition disabled:opacity-50 ${
+                            selectedCarrier.isTestAccount
+                              ? "bg-amber-500/20 text-amber-400 hover:bg-amber-500/30"
+                              : "bg-white/10 text-gray-400 hover:bg-white/20"
+                          }`}
+                          title={selectedCarrier.isTestAccount ? "Currently a test account — click to restore to a real carrier" : "Mark as a test account (hides from pickers, analytics, compliance, risk alerts)"}
+                        >
+                          <FlaskConical className="w-3.5 h-3.5" />
+                          {selectedCarrier.isTestAccount ? "Test account" : "Mark as test"}
                         </button>
                       )}
                     </div>

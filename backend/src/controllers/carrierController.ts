@@ -1147,13 +1147,18 @@ export async function setupAdminCarrierProfile(req: AuthRequest, res: Response) 
 /** Get all carriers with performance data for admin/broker view */
 export async function getAllCarriers(req: AuthRequest, res: Response) {
   const includeDeleted = req.query.include_deleted === "true";
-  // v3.8.aim Build 1 test-carrier load-assignment fence: isTestAccount: false
-  // applies unconditionally even when includeDeleted=true. This endpoint
-  // feeds the Tender modal + RC Modal carrier pickers; test carriers must
-  // never appear in those pickers regardless of admin filter flags.
-  const where = includeDeleted
-    ? { isTestAccount: false }
-    : { deletedAt: null, isTestAccount: false };
+  // v3.8.alo §13.3 Item 189.b — opt-in test-carrier visibility for the
+  // admin carriers page ONLY. Default (and EVERY picker caller) omits the
+  // param → isTestAccount: false fence stays. The /dashboard/carriers admin
+  // page passes ?include_test=true when its "Show test accounts" toggle is
+  // on, so an admin can SEE flagged test carriers to un-flag them (without
+  // it, a flagged carrier vanishes from this list = one-way door). The
+  // Tender/RC pickers never pass the param, so they remain fenced per the
+  // v3.8.aim Build 1 contract.
+  const includeTest = req.query.include_test === "true";
+  // isTestAccount: false applies unconditionally UNLESS include_test is set.
+  const base: Record<string, unknown> = includeDeleted ? {} : { deletedAt: null };
+  const where = includeTest ? base : { ...base, isTestAccount: false };
 
   const carriers = await prisma.carrierProfile.findMany({
     where,

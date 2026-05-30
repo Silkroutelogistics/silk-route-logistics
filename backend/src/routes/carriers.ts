@@ -572,6 +572,42 @@ router.post("/:id/lift-rejection", authorize("ADMIN", "CEO"), validateBody(liftR
   }
 });
 
+// PATCH /api/carriers/:id/test-account — v3.8.alo §13.3 Item 189.b.
+// Admin toggle for the isTestAccount flag (the self-serve control for the
+// test-carrier fence shipped across v3.8.aim/alm). When flagged true, the
+// carrier is excluded from every analytics/compliance/picker surface +
+// the FMCSA/OFAC/CSA/ELD scans + risk-flagging, but retained for manual
+// regression testing (NOT deleted). ADMIN/CEO only, audit-logged. The
+// admin carriers page surfaces flagged carriers via getAllCarriers
+// ?include_test=true so they can be un-flagged.
+router.patch(
+  "/:id/test-account",
+  authorize("ADMIN", "CEO"),
+  validateBody(z.object({ isTestAccount: z.boolean() })),
+  auditLog("UPDATE", "Carrier"),
+  async (req: AuthRequest, res: Response) => {
+    try {
+      const { isTestAccount } = req.body as { isTestAccount: boolean };
+      const existing = await prisma.carrierProfile.findUnique({
+        where: { id: req.params.id },
+        select: { id: true },
+      });
+      if (!existing) {
+        res.status(404).json({ error: "Carrier not found" });
+        return;
+      }
+      const updated = await prisma.carrierProfile.update({
+        where: { id: req.params.id },
+        data: { isTestAccount },
+        select: { id: true, isTestAccount: true },
+      });
+      res.json(updated);
+    } catch (err) {
+      res.status(500).json({ error: "Failed to update test-account flag" });
+    }
+  }
+);
+
 // DELETE /api/carriers/:id — Soft delete carrier profile
 router.delete("/:id", authorize("ADMIN", "CEO"), async (req: AuthRequest, res: Response) => {
   const carrier = await prisma.carrierProfile.findUnique({ where: { id: req.params.id } });
