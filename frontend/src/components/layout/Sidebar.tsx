@@ -138,6 +138,7 @@ const aeViewGroups: NavGroup[] = [
       { href: "/dashboard/lead-hunter", label: "Lead Hunter", icon: Target },
       { href: "/dashboard/lane-analytics", label: "Lane Analytics", icon: Route },
       { href: "/dashboard/variance-reports", label: "Variance Reports", icon: Layers },
+      { href: "/dashboard/tender-analytics", label: "Tender Analytics", icon: Activity },
       { href: "/dashboard/geo-spend", label: "Spend Heatmap", icon: Map },
       { href: "/dashboard/backhaul-discovery", label: "Backhaul Discovery", icon: Compass },
       { href: "/dashboard/loads-calendar", label: "Load Calendar", icon: Calendar },

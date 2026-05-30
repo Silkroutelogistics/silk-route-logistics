@@ -363,4 +363,102 @@ router.get("/backhaul-discovery", authorize("ADMIN", "CEO", "BROKER", "DISPATCH"
   }
 });
 
+// ─── Tender Funnel + Decline Taxonomy (v3.8.alz §13.3 Item 145) ─────
+// Engagement signals over the tender lifecycle: funnel (offered → accepted /
+// declined / countered / expired / pending), conversion + response-time
+// stats, decline-reason distribution, and breakdowns by equipment, carrier
+// tier, and the chosen expiry window (4h/24h/48h preset effectiveness, Item
+// 144). Single fetch of tenders in the window + JS aggregation (pre-revenue
+// volume is small; capped at 5000 defensively). Needs meaningful volume to
+// be statistically useful — surfaces honestly at low N.
+router.get("/tender-funnel", authorize("ADMIN", "CEO", "BROKER", "OPERATIONS") as any, async (req: AuthRequest, res: Response) => {
+  try {
+    const days = parseInt(req.query.days as string) || 90;
+    const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+
+    const tenders = await prisma.loadTender.findMany({
+      where: { deletedAt: null, createdAt: { gte: since } },
+      select: {
+        status: true, declineReason: true, offeredRate: true, counterRate: true,
+        createdAt: true, respondedAt: true, expiresAt: true,
+        load: { select: { equipmentType: true } },
+        carrier: { select: { cppTier: true } },
+      },
+      take: 5000,
+      orderBy: { createdAt: "desc" },
+    });
+
+    const total = tenders.length;
+    const by = (s: string) => tenders.filter((t) => t.status === s).length;
+    const accepted = by("ACCEPTED");
+    const declined = by("DECLINED");
+    const countered = by("COUNTERED");
+    const expired = by("EXPIRED");
+    const pending = by("OFFERED");
+    const responded = accepted + declined + countered;
+
+    // Response time (minutes) for tenders that got a response.
+    const respTimes = tenders
+      .filter((t) => t.respondedAt)
+      .map((t) => (new Date(t.respondedAt!).getTime() - new Date(t.createdAt).getTime()) / 60000)
+      .filter((m) => m >= 0);
+    const avgResponseMinutes = respTimes.length
+      ? Math.round(respTimes.reduce((s, m) => s + m, 0) / respTimes.length)
+      : null;
+
+    // Decline-reason distribution.
+    const declineReasons: Record<string, number> = {};
+    tenders.filter((t) => t.status === "DECLINED").forEach((t) => {
+      const r = t.declineReason || "Unspecified";
+      declineReasons[r] = (declineReasons[r] || 0) + 1;
+    });
+
+    // Generic group-accumulator → {offered(total), accepted, declined, expired, acceptanceRate}.
+    type Bucket = { key: string; total: number; accepted: number; declined: number; expired: number; acceptanceRate: number };
+    const groupBy = (keyFn: (t: (typeof tenders)[number]) => string) => {
+      const m: Record<string, Bucket> = {};
+      tenders.forEach((t) => {
+        const k = keyFn(t) || "Unknown";
+        if (!m[k]) m[k] = { key: k, total: 0, accepted: 0, declined: 0, expired: 0, acceptanceRate: 0 };
+        m[k].total++;
+        if (t.status === "ACCEPTED") m[k].accepted++;
+        else if (t.status === "DECLINED") m[k].declined++;
+        else if (t.status === "EXPIRED") m[k].expired++;
+      });
+      return Object.values(m).map((b) => ({ ...b, acceptanceRate: b.total ? Math.round((b.accepted / b.total) * 100) : 0 }))
+        .sort((a, b) => b.total - a.total);
+    };
+
+    // Expiry-window bucket: round (expiresAt - createdAt) to nearest hour,
+    // map to the 4h/24h/48h presets (Item 144) else "Other".
+    const windowKey = (t: (typeof tenders)[number]) => {
+      const h = Math.round((new Date(t.expiresAt).getTime() - new Date(t.createdAt).getTime()) / 3600000);
+      if (h <= 6) return "4h";
+      if (h <= 36) return "24h";
+      if (h <= 72) return "48h";
+      return "Other";
+    };
+
+    res.json({
+      periodDays: days,
+      funnel: { total, accepted, declined, countered, expired, pending, responded },
+      conversion: {
+        acceptanceRateOfTotal: total ? Math.round((accepted / total) * 100) : 0,
+        acceptanceRateOfResponded: responded ? Math.round((accepted / responded) * 100) : 0,
+        responseRate: total ? Math.round((responded / total) * 100) : 0,
+      },
+      avgResponseMinutes,
+      declineReasons: Object.entries(declineReasons)
+        .map(([reason, count]) => ({ reason, count }))
+        .sort((a, b) => b.count - a.count),
+      byEquipment: groupBy((t) => t.load?.equipmentType ?? "Unknown"),
+      byTier: groupBy((t) => t.carrier?.cppTier ?? "Unknown"),
+      byExpiryWindow: groupBy(windowKey),
+    });
+  } catch (err) {
+    log.error({ err }, "[Analytics] Tender funnel error:");
+    res.status(500).json({ error: "Failed to generate tender funnel data" });
+  }
+});
+
 export default router;

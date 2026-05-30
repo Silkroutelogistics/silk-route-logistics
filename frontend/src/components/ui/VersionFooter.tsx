@@ -12473,7 +12473,25 @@
 //   simplification in integrationService.recalculateCarrierCPP. Neutral 100
 //   until measurable. No migration. 6 of 7 Compass factors now genuinely
 //   measured; GPS/tracking (Build C — rename + ELD-ready) is the last stub.
-export const SRL_VERSION = "3.8.aly";
+//
+// v3.8.alz — §13.3 Item 145: tender funnel + decline-taxonomy analytics.
+//   New GET /analytics/tender-funnel (ADMIN/CEO/BROKER/OPERATIONS) — single
+//   windowed fetch of LoadTender (with load.equipmentType + carrier.cppTier)
+//   + JS aggregation: funnel (offered → accepted/declined/countered/expired/
+//   pending), conversion (acceptance-of-total, acceptance-of-responded,
+//   response rate), avg response time, decline-reason distribution, and
+//   breakdowns by equipment / carrier tier / expiry-window (4h/24h/48h
+//   preset effectiveness, pairing with Item 144). New
+//   /dashboard/tender-analytics page (Intelligence cluster) — funnel stat
+//   cards + conversion bars + decline-reason bar list + 3 acceptance-rate
+//   tables, all with honest empty-states (the data needs ~50+ tenders/wk to
+//   be statistically meaningful — surfaces "no tenders yet" at low N).
+//   Closes the last tender-lifecycle backlog item. ~250 LOC across the
+//   endpoint + page + 1 sidebar line. No schema, no migration. Letter:
+//   parallel Compass-Score Builds A/B/D took alw/alx/aly mid-build; bumped
+//   to alz (Sub-pattern 6). Gates: backend tsc + vitest 235/235 + frontend
+//   tsc + next build all clean.
+export const SRL_VERSION = "3.8.alz";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
