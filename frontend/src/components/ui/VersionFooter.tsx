@@ -12503,7 +12503,16 @@
 //   eldConnectedAt) + migration — storage ready for when a carrier shares keys.
 //   ALL 7 Compass factors now genuinely measured (Builds A/B/D/C). Existing
 //   EldEvent / ELDDeviceMapping / eldService infra reused (no duplicate build).
-export const SRL_VERSION = "3.8.ama";
+// v3.8.amb — Compass Score Build E: finalize + verification. Extracted POD
+//   doc-timeliness into a pure, unit-tested lib/docTimeliness helper (mirrors
+//   lib/onTimePerformance) — behavior-neutral, +8 vitest cases (243 total).
+//   Closes the A/B/C/D/E arc: all 7 Compass factors genuinely measured +
+//   correctly combined (claimRatio inverted, weights sum 1.0); scorer wired
+//   (onLoadDelivered + weekly Sunday-23:00 cron); page claims verified honest
+//   live ("Tracking compliance" rename deployed). Open design item surfaced:
+//   tracking-compliance returns 0% when loads exist but no location captured,
+//   vs neutral-100 for on-time/doc — a fairness asymmetry for Wasi to rule on.
+export const SRL_VERSION = "3.8.amb";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

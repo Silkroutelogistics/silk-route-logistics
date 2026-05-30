@@ -4,6 +4,7 @@ import { createCheckCallSchedule } from "./checkCallAutomation";
 import { notifyMatchedCarriers } from "./carrierOutreachService";
 import { checkMilestoneAdvancement, applyMilestoneRewards } from "./caravanService";
 import { calcOnTimePerformance } from "../lib/onTimePerformance";
+import { calcDocTimeliness } from "../lib/docTimeliness";
 import { log } from "../lib/logger";
 
 /**
@@ -523,29 +524,20 @@ export async function recalculateCarrierCPP(carrierProfileId: string) {
     },
     select: { createdAt: true, loadId: true },
   });
-  // Build D (2026-05-30): real POD timeliness — POD uploaded within 24h of the
-  // actual delivery timestamp (now populated by Builds A/B). Measures only loads
-  // that have BOTH an actual delivery time AND a POD on file; loads missing
-  // either are excluded (can't measure timeliness of a doc that doesn't exist /
-  // a delivery we never timestamped). Replaces the prior "any upload = timely"
-  // simplification. Neutral 100 until measurable.
-  const DOC_GRACE_MS = 24 * 60 * 60 * 1000;
+  // Build D/E (2026-05-30): real POD timeliness — POD uploaded within 24h of the
+  // actual delivery timestamp (populated by Builds A/B), via the pure
+  // lib/docTimeliness helper. Build the earliest-POD-per-load map (the join),
+  // then measure. Loads missing an actual delivery time OR a POD are excluded;
+  // neutral 100 until measurable.
   const podByLoad = new Map<string, Date>();
   for (const d of docs) {
     if (!d.loadId) continue;
     const prev = podByLoad.get(d.loadId);
     if (!prev || d.createdAt < prev) podByLoad.set(d.loadId, d.createdAt); // earliest POD per load
   }
-  let docMeasurable = 0;
-  let docTimely = 0;
-  for (const l of loads) {
-    if (!l.actualDeliveryDatetime) continue; // no delivery time → unmeasurable
-    const pod = podByLoad.get(l.id);
-    if (!pod) continue; // no POD on file → excluded from timeliness
-    docMeasurable++;
-    if (pod.getTime() <= new Date(l.actualDeliveryDatetime).getTime() + DOC_GRACE_MS) docTimely++;
-  }
-  const docTimeliness = docMeasurable > 0 ? (docTimely / docMeasurable) * 100 : 100;
+  const docTimeliness = calcDocTimeliness(
+    loads.map((l) => ({ actualDelivery: l.actualDeliveryDatetime, podUploadedAt: podByLoad.get(l.id) ?? null }))
+  ).pct;
 
   // Tender acceptance rate
   const tenders = await prisma.loadTender.findMany({
