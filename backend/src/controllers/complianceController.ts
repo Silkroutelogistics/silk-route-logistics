@@ -173,6 +173,7 @@ export async function scanCompliance(req: AuthRequest, res: Response) {
   const carriers = await prisma.carrierProfile.findMany({
     where: {
       onboardingStatus: "APPROVED",
+      isTestAccount: false, // v3.8.alm §13.3 Item 190 — admin compliance scan
     },
     include: {
       user: { select: { company: true, firstName: true, lastName: true } },

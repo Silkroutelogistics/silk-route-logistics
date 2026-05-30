@@ -238,6 +238,7 @@ export async function batchUpdateCsaScores(): Promise<{ updated: number; failed:
     const carriers = await prisma.carrierProfile.findMany({
       where: {
         status: "APPROVED",
+        isTestAccount: false, // v3.8.alm §13.3 Item 190 — CSA BASIC scan
         dotNumber: { not: null },
       },
       select: { id: true, dotNumber: true },

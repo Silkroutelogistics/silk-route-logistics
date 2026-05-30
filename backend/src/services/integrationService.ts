@@ -741,6 +741,7 @@ export async function processAllCPPRecalculations() {
   const carriers = await prisma.carrierProfile.findMany({
     where: {
       onboardingStatus: "APPROVED",
+      isTestAccount: false, // v3.8.alm §13.3 Item 189 — CPP recalc sweep
       tier: { notIn: ["NONE"] },
     },
     select: { id: true },

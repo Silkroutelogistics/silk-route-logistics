@@ -79,7 +79,7 @@ export async function getRegions(req: AuthRequest, res: Response) {
     const [loadCount, avgRate, carrierCount] = await Promise.all([
       prisma.load.count({ where: { OR: [{ originState: { in: states } }, { destState: { in: states } }] } }),
       prisma.load.aggregate({ where: { OR: [{ originState: { in: states } }, { destState: { in: states } }] }, _avg: { rate: true, distance: true } }),
-      prisma.carrierProfile.count({ where: { operatingRegions: { hasSome: states } } }),
+      prisma.carrierProfile.count({ where: { operatingRegions: { hasSome: states }, isTestAccount: false } }), // v3.8.alm §13.3 Item 189 — market heatmap carrier count
     ]);
     const avgRateVal = avgRate._avg.rate || 0;
     const avgDist = avgRate._avg.distance || 1;
@@ -142,7 +142,10 @@ export async function getTrends(req: AuthRequest, res: Response) {
 
 export async function getCapacity(req: AuthRequest, res: Response) {
   const query = capacityQuerySchema.parse(req.query);
-  const where: Record<string, unknown> = {};
+  // v3.8.alm §13.3 Item 189 — exclude test carriers from market-capacity
+  // intelligence (this query has no onboardingStatus filter, so isTestAccount
+  // is the sole production-carrier guard here).
+  const where: Record<string, unknown> = { isTestAccount: false };
 
   if (query.region) {
     const states = getStatesForRegion(query.region);

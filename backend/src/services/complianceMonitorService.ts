@@ -315,14 +315,18 @@ export async function getDashboardData() {
   const thirtyDays = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
 
   // Total active carriers
+  // v3.8.alm §13.3 Item 190 — all compliance dashboard counts + scans
+  // below exclude test carriers (isTestAccount: false) so demo/seed data
+  // never inflates compliance metrics or gets scanned by the FMCSA cron.
   const totalCarriers = await prisma.carrierProfile.count({
-    where: { onboardingStatus: "APPROVED" },
+    where: { onboardingStatus: "APPROVED", isTestAccount: false },
   });
 
   // Fully compliant: approved, insurance not expired, has W9 + COI + authority doc
   const fullyCompliant = await prisma.carrierProfile.count({
     where: {
       onboardingStatus: "APPROVED",
+      isTestAccount: false,
       insuranceExpiry: { gt: now },
       w9Uploaded: true,
       insuranceCertUploaded: true,
@@ -334,6 +338,7 @@ export async function getDashboardData() {
   const expiringSoon = await prisma.carrierProfile.count({
     where: {
       onboardingStatus: "APPROVED",
+      isTestAccount: false,
       insuranceExpiry: { gt: now, lte: thirtyDays },
     },
   });
@@ -342,6 +347,7 @@ export async function getDashboardData() {
   const nonCompliant = await prisma.carrierProfile.count({
     where: {
       onboardingStatus: "APPROVED",
+      isTestAccount: false,
       OR: [
         { insuranceExpiry: { lte: now } },
         { insuranceExpiry: null },
@@ -366,6 +372,7 @@ export async function getDashboardData() {
   const expiringSoonItems = await prisma.carrierProfile.findMany({
     where: {
       onboardingStatus: "APPROVED",
+      isTestAccount: false,
       insuranceExpiry: { gt: now, lte: thirtyDays },
     },
     include: {
@@ -455,7 +462,8 @@ export async function getOverviewMatrix(filters?: {
   const now = new Date();
   const thirtyDays = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
 
-  const where: Record<string, unknown> = { onboardingStatus: "APPROVED" };
+  // v3.8.alm §13.3 Item 190 — exclude test carriers from the compliance overview matrix.
+  const where: Record<string, unknown> = { onboardingStatus: "APPROVED", isTestAccount: false };
   if (filters?.tier) where.cppTier = filters.tier;
 
   const carriers = await prisma.carrierProfile.findMany({
@@ -823,6 +831,10 @@ export async function fmcsaComplianceScan() {
   const carriers = await prisma.carrierProfile.findMany({
     where: {
       onboardingStatus: "APPROVED",
+      // v3.8.alm §13.3 Item 190 — the daily 3am FMCSA scan must not
+      // process test carriers (no live FMCSA calls + no auto-suspend
+      // decisions on seed/demo data). Highest-volume fence site.
+      isTestAccount: false,
       dotNumber: { not: null },
     },
     include: { user: { select: { company: true, firstName: true, lastName: true, email: true } } },
@@ -1130,6 +1142,7 @@ export async function dailyComplianceReminders() {
   const carriers = await prisma.carrierProfile.findMany({
     where: {
       onboardingStatus: "APPROVED",
+      isTestAccount: false, // v3.8.alm §13.3 Item 190
       insuranceExpiry: { not: null },
     },
     include: {
@@ -1241,6 +1254,7 @@ export async function checkAutoReversal() {
     where: {
       autoSuspendedAt: { not: null },
       onboardingStatus: "SUSPENDED",
+      isTestAccount: false, // v3.8.alm §13.3 Item 190
       dotNumber: { not: null },
     },
     include: {
@@ -1437,6 +1451,7 @@ export async function processInsuranceExpiryEnforcement() {
   const expiredCarriers = await prisma.carrierProfile.findMany({
     where: {
       onboardingStatus: "APPROVED",
+      isTestAccount: false, // v3.8.alm §13.3 Item 190
       insuranceExpiry: { lt: now },
       insuranceGracePeriodEnd: { lt: now }, // Grace period also expired or null
     },
@@ -1447,6 +1462,7 @@ export async function processInsuranceExpiryEnforcement() {
   const expiredNoGrace = await prisma.carrierProfile.findMany({
     where: {
       onboardingStatus: "APPROVED",
+      isTestAccount: false, // v3.8.alm §13.3 Item 190
       insuranceExpiry: { lt: now },
       insuranceGracePeriodEnd: null,
     },
@@ -1503,6 +1519,7 @@ export async function processInsuranceExpiryEnforcement() {
     const expiringCarriers = await prisma.carrierProfile.findMany({
       where: {
         onboardingStatus: "APPROVED",
+        isTestAccount: false, // v3.8.alm §13.3 Item 190
         insuranceExpiry: { gte: windowStart, lt: windowEnd },
       },
       include: { user: { select: { id: true, email: true, firstName: true } } },
@@ -1568,6 +1585,7 @@ export async function monthlyCarrierReVetting() {
   const carriers = await prisma.carrierProfile.findMany({
     where: {
       onboardingStatus: "APPROVED",
+      isTestAccount: false, // v3.8.alm §13.3 Item 190 — monthly re-vetting
       dotNumber: { not: null },
     },
     select: { id: true, dotNumber: true, mcNumber: true, companyName: true, userId: true },
@@ -1645,6 +1663,7 @@ export async function detectFmcsaAuthorityChanges() {
   const carriers = await prisma.carrierProfile.findMany({
     where: {
       onboardingStatus: "APPROVED",
+      isTestAccount: false, // v3.8.alm §13.3 Item 190 — FMCSA authority-change watch
       dotNumber: { not: null },
     },
     select: {
@@ -1784,6 +1803,7 @@ export async function processDocumentExpiryAlerts() {
       const carriers = await prisma.carrierProfile.findMany({
         where: {
           onboardingStatus: "APPROVED",
+          isTestAccount: false, // v3.8.alm §13.3 Item 190 — doc-expiry warnings
           [docType.field]: { gte: windowStart, lt: windowEnd },
         },
         include: { user: { select: { id: true, email: true, firstName: true } } },

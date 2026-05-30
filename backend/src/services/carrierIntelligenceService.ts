@@ -89,7 +89,9 @@ export async function runCarrierLearningCycle(): Promise<{
   log.info("[CarrierIntelligence] Starting learning cycle...");
 
   const carriers = await prisma.carrierProfile.findMany({
-    where: { onboardingStatus: "APPROVED" },
+    // v3.8.alm §13.3 Item 189 — exclude test carriers from the AI
+    // carrier-intelligence learning cycle.
+    where: { onboardingStatus: "APPROVED", isTestAccount: false },
     select: {
       id: true,
       companyName: true,

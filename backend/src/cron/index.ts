@@ -141,7 +141,10 @@ export function initCronJobs() {
   cron.schedule("0 6 * * *", () => withGuard("daily-cpp-cleanup", async () => {
     try {
       // Update CPP tiers based on total loads completed
+      // v3.8.alm §13.3 Item 190 — exclude test carriers from the daily
+      // tier-update sweep (was previously unfiltered — all carriers).
       const carriers = await prisma.carrierProfile.findMany({
+        where: { isTestAccount: false },
         select: { id: true, cppTotalLoads: true, cppTier: true },
       });
 
@@ -374,6 +377,7 @@ export function initCronJobs() {
           // v3.8.ajd Sprint 1 — REVIEWING merges legacy DOCUMENTS_SUBMITTED + UNDER_REVIEW.
           // INFO_REQUESTED carriers are mid-conversation with AE; identity already validated.
           onboardingStatus: { in: ["PENDING", "REVIEWING"] },
+          isTestAccount: false, // v3.8.alm §13.3 Item 190 — don't identity-validate test carriers
           deletedAt: null,
         },
         select: { id: true },
@@ -672,6 +676,7 @@ export function initCronJobs() {
       const eligibleCarriers = await prisma.carrierProfile.findMany({
         where: {
           onboardingStatus: "REJECTED",
+          isTestAccount: false, // v3.8.alm §13.3 Item 190 — don't email reapply reminders to test carriers
           reapplyEligibleAt: { lte: now, not: null },
           reapplyReminderSentAt: null,
           deletedAt: null,

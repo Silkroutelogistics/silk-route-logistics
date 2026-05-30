@@ -140,7 +140,8 @@ export async function screenCarrier(carrierId: string) {
 
 export async function weeklyOfacRescan() {
   const carriers = await prisma.carrierProfile.findMany({
-    where: { status: "APPROVED" },
+    // v3.8.alm §13.3 Item 190 — exclude test carriers from the weekly OFAC rescan.
+    where: { status: "APPROVED", isTestAccount: false },
     select: { id: true, companyName: true, contactName: true },
   });
 

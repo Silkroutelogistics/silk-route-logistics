@@ -174,6 +174,8 @@ export async function notifyMatchedCarriers(
     const matchingCarriers = await prisma.carrierProfile.findMany({
       where: {
         onboardingStatus: "APPROVED",
+        // v3.8.alm §13.3 Item 189 — don't send proactive outreach to test carriers.
+        isTestAccount: false,
         equipmentTypes: { hasSome: [load.equipmentType] },
       },
       include: {

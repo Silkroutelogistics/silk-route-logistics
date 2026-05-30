@@ -121,8 +121,11 @@ async function fetchContentData() {
   });
 
   // Active carrier count with compliance checks
+  // v3.8.alm §13.3 Item 189 — exclude test carriers from the marketing-stat
+  // active-carrier count (this figure feeds generated content; test/seed
+  // carriers must not inflate a public-facing number).
   const activeCarriers = await prisma.carrierProfile.count({
-    where: { status: "APPROVED" as any },
+    where: { status: "APPROVED" as any, isTestAccount: false },
   });
 
   // Compliance check count (use carrier profile count as proxy)

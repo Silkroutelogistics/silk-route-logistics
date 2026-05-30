@@ -71,7 +71,8 @@ router.get("/my-status", authorize("CARRIER"), async (req: AuthRequest, res: Res
 // advanced-to milestone (Silver/Gold/Platinum + Founding recognition).
 router.post("/recalculate", authorize("ADMIN", "CEO"), async (req: AuthRequest, res: Response) => {
   const carriers = await prisma.carrierProfile.findMany({
-    where: { onboardingStatus: "APPROVED" },
+    // v3.8.alm §13.3 Item 189 — exclude test carriers from milestone recalc.
+    where: { onboardingStatus: "APPROVED", isTestAccount: false },
     select: { id: true, tier: true, cppTier: true, milestone: true, userId: true, user: { select: { id: true } } },
   });
 
@@ -111,7 +112,8 @@ router.get("/leaderboard", authorize("ADMIN", "CEO", "BROKER", "DISPATCH", "OPER
   const limit = Math.min(50, parseInt(req.query.limit as string) || 20);
 
   const carriers = await prisma.carrierProfile.findMany({
-    where: { onboardingStatus: "APPROVED" },
+    // v3.8.alm §13.3 Item 189 — exclude test carriers from the leaderboard.
+    where: { onboardingStatus: "APPROVED", isTestAccount: false },
     include: {
       user: { select: { firstName: true, lastName: true, company: true } },
       scorecards: { orderBy: { calculatedAt: "desc" }, take: 1 },

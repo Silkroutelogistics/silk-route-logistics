@@ -174,7 +174,8 @@ export async function validateAllCarrierElds(): Promise<{
   errors: string[];
 }> {
   const carriers = await prisma.carrierProfile.findMany({
-    where: { status: "APPROVED" },
+    // v3.8.alm §13.3 Item 190 — exclude test carriers from ELD validation sweep.
+    where: { status: "APPROVED", isTestAccount: false },
     select: { id: true },
   });
 

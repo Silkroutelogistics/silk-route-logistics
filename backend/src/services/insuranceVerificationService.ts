@@ -330,6 +330,7 @@ export async function checkExpiringInsurance() {
   const expiring = await prisma.carrierProfile.findMany({
     where: {
       deletedAt: null,
+      isTestAccount: false, // v3.8.alm §13.3 Item 190 — insurance-expiry sweep
       status: "APPROVED",
       OR: [
         { autoLiabilityExpiry: { lte: days60, gte: now } },

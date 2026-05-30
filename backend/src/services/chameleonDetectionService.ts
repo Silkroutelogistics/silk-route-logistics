@@ -106,10 +106,16 @@ export async function checkChameleon(carrierId: string): Promise<ChameleonResult
   }
 
   // Find matching fingerprints (excluding self)
+  // v3.8.alm §13.3 Item 190 — filter the MATCH side: a carrier must not
+  // be flagged as a chameleon for overlapping with a TEST carrier's
+  // fingerprint. Combined with the isTestAccount filter on the bulk-scan
+  // subject side (runFullChameleonScan), test accounts are neither matched
+  // against real carriers nor each other ("both sides" per Item 190).
   const matchingFps = await prisma.carrierFingerprint.findMany({
     where: {
       AND: [
         { carrierId: { not: carrierId } },
+        { carrier: { isTestAccount: false } },
         { OR: orConditions },
       ],
     },
@@ -216,7 +222,9 @@ export async function runFullChameleonScan(): Promise<{
   errors: number;
 }> {
   const carriers = await prisma.carrierProfile.findMany({
-    where: { deletedAt: null },
+    // v3.8.alm §13.3 Item 190 — exclude test carriers from the bulk
+    // chameleon scan (subject side). Match side filtered in checkChameleon.
+    where: { deletedAt: null, isTestAccount: false },
     select: { id: true },
   });
 

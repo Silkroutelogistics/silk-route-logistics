@@ -154,6 +154,9 @@ export async function getOnTimeMetrics(range: DateRange, filters: AnalyticsFilte
   const where: any = {
     deliveryDate: { gte: range.start, lte: range.end },
     status: { in: ["DELIVERED", "POD_RECEIVED", "INVOICED", "COMPLETED"] },
+    // v3.8.alm §13.3 Item 189 — exclude test carriers from per-carrier
+    // on-time analytics. Nested relation filter at the load JOIN level.
+    carrier: { carrierProfile: { isTestAccount: false } },
   };
   if (filters.carrierId) where.carrierId = filters.carrierId;
   if (filters.userId && filters.userRole === "BROKER") where.posterId = filters.userId;
@@ -278,6 +281,9 @@ export async function getCarrierScorecard(range: DateRange, filters: AnalyticsFi
     pickupDate: { gte: range.start, lte: range.end },
     carrierId: { not: null },
     status: { notIn: ["DRAFT", "CANCELLED"] },
+    // v3.8.alm §13.3 Item 189 — exclude test carriers from the carrier
+    // scorecard/leaderboard. Nested relation filter at the load JOIN level.
+    carrier: { carrierProfile: { isTestAccount: false } },
   };
   if (filters.carrierId) where.carrierId = filters.carrierId;
 

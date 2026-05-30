@@ -10812,6 +10812,82 @@
 //   180.6+180.7+180.8+180.9+180.10+180.11 done; 180.3 closed-by-
 //   discovery; banked 180.6.b CRM admin edit UI for the new fields).
 //
+// v3.8.alm — §13.3 Items 189 + 190 CLOSE (isTestAccount fence, Tier 2 +
+//   Tier 3). One atomic commit fencing test carriers out of every
+//   analytics/compliance/intelligence carrier-list query. 37
+//   `isTestAccount: false` additions across 14 backend files. No schema
+//   migration (Load.isTestAccount v3.8.alj + CarrierProfile.isTestAccount
+//   v3.8.aim both already exist). No frontend source change.
+//
+//   PATTERN-7 GREP-COMPLETENESS FIRE: banked 189+190 named ~7 sites; the
+//   sub-agent Phase A audit's own "completeness check" claimed ~18
+//   accounted-for + no extras — WRONG. Orchestrator-level
+//   `grep -rn carrierProfile.(findMany|count|aggregate)` across
+//   backend/src/ surfaced an entire missed tier: csaBasicService,
+//   eldValidationService, ofacScreeningService, insuranceVerificationService,
+//   integrationService (CPP recalc), contentEngineService (marketing stat),
+//   + 2 cron sweeps + marketController region-heatmap count. Same class as
+//   Sprint 41's marginPercent grep (documented 2, actual 4).
+//
+//   TIER 2 (Item 189) fenced — analytics/intelligence/marketing:
+//   analyticsService getOnTimeMetrics + getCarrierScorecard (nested
+//   carrier:{carrierProfile:{isTestAccount:false}} at the load JOIN level
+//   — Load-keyed aggregations), cpp.ts leaderboard + recalculate,
+//   marketController getCapacity + region-heatmap count,
+//   carrierIntelligenceService learning cycle, carrierOutreachService
+//   matchingCarriers fallback, integrationService processAllCPP
+//   Recalculations, contentEngineService active-carrier marketing-stat.
+//
+//   TIER 3 (Item 190) fenced — compliance/screening: all 15 carrierProfile
+//   list/count sites in complianceMonitorService (4 dashboard counts +
+//   expiringSoonItems + overview matrix + fmcsaComplianceScan daily 3am
+//   [highest-priority] + dailyComplianceReminders + checkAutoReversal +
+//   expiredCarriers + expiredNoGrace + expiringCarriers loop +
+//   monthlyCarrierReVetting + detectFmcsaAuthorityChanges + doc-expiry
+//   loop), complianceController admin scan, complianceForecastService AI
+//   forecast, csaBasicService CSA-BASIC, eldValidationService ELD sweep,
+//   ofacScreeningService weekly rescan, insuranceVerificationService
+//   expiry sweep, cron pending-identity-validation + rejected-reapply.
+//
+//   CHAMELEON — BOTH SIDES (per Item 190 directive): subject side
+//   (runFullChameleonScan bulk findMany gains isTestAccount:false) + match
+//   side (checkChameleon fingerprint cross-ref gains
+//   {carrier:{isTestAccount:false}} in its AND) — a real carrier is never
+//   flagged as a chameleon for overlapping with a test carrier's
+//   fingerprint; test accounts aren't matched against each other either.
+//
+//   SKIPS (correct as-is): carrierOutreach smartCarrierProfiles:155 +
+//   overbookingService:149 (by-userId-set follow-ups, not lists),
+//   marcoPoloService:995 (AE interactive search — test carriers legit for
+//   admin review), carrier.ts capacity-feed + carrierController
+//   getAllCarriers (already fenced Build 1 v3.8.aim). TRIVIAL FOLLOW-UP
+//   BANKED: monitoringController:66 + healthDigestService:84 gross
+//   carrierProfile.count() infra/health row-counts — fence only if
+//   admin-digest accuracy matters (~2 LOC).
+//
+//   HELPER DECISION: Item 190 floated whereActiveProductionCarrier() "IF
+//   Build 2+3 reveal sufficient drift risk." 37 sites would justify it,
+//   but where-clauses are heterogeneous (APPROVED vs SUSPENDED vs
+//   PENDING/REVIEWING vs REJECTED + varied date/doc filters) so a uniform
+//   helper carries only the single isTestAccount key — marginal value
+//   over inline, and inline stays greppable for the next completeness
+//   audit. Inline per Build 1's "only addition is isTestAccount: false".
+//
+//   METHODOLOGY EMERGED — sub-agent-audit-undercount: a delegated Phase A
+//   audit's self-asserted "completeness check, no extras" is NOT a
+//   substitute for the orchestrator running the canonical grep itself.
+//   The orchestrator's broad grep found ~2x the sites the sub-agent's
+//   narrower check reported. Banked as Pattern 7 / Sub-pattern 6 sub-rule
+//   c extension: when a sub-agent claims grep-completeness, re-run the
+//   completeness grep at the orchestrator level before trusting "no
+//   extras."
+//
+//   Pre-commit gates per Sub-pattern 11 (all clean): backend tsc --noEmit,
+//   backend vitest 224/224, frontend tsc --noEmit, frontend next build.
+//   §13.3 Items 189 + 190 LOG OPEN → CLOSED. Test-carrier fence now
+//   complete across Tier 1 (load assignment, v3.8.aim) + Tier 2
+//   (analytics, this commit) + Tier 3 (compliance, this commit).
+//
 // v3.8.alj — §13.3 Item 192 FULL CLOSE (risk-flagging cron re-enabled).
 //   Completes the re-enable gate that v3.8.ali left open: test-load
 //   exclusion + per-user preference + the cron flip. The risk cron is
@@ -12139,7 +12215,7 @@
 //   Sub-rule c registry advances 32 → 33. Banked observation:
 //   Render-vs-CI gate divergence — passing Render deploy is NOT
 //   evidence of passing test suite. See §11 row.
-// v3.8.alk — /carriers §20 audit polish (Lens 1 + 2 + 4). Removed 5
+// v3.8.alm — /carriers §20 audit polish (Lens 1 + 2 + 4). Removed 5
 //   body em-dashes from tier-req / Founding / universals copy (Lens 2,
 //   tier-name redundancy dropped, "Unlocks at" clarifies requirement);
 //   non-canonical gold #C8963E ×5 → #C5A572 (dark fraud banner, matches
@@ -12160,7 +12236,7 @@
 //   NOTE banked: /index line 427 "Tier-graduated FSC" tile (§5, Item 182)
 //   + 4 decorative #C8963E (hero SVG L105-107 + JS L822) left for a
 //   dedicated /index brand-cleanup pass.
-export const SRL_VERSION = "3.8.all";
+export const SRL_VERSION = "3.8.alm";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
