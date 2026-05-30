@@ -10812,6 +10812,31 @@
 //   180.6+180.7+180.8+180.9+180.10+180.11 done; 180.3 closed-by-
 //   discovery; banked 180.6.b CRM admin edit UI for the new fields).
 //
+// v3.8.alu — §13.3 Item 3: EditLoadModal (post-conversion load edit UI).
+//   The backend PUT /loads/:id (loadController.updateLoad) has had full
+//   capability all along — auth (poster/employee), status guard blocking
+//   COMPLETED/CANCELLED/TONU, customerId-lock on INVOICED, ~30 editable
+//   fields — but ZERO frontend callers. When a customer changed a PO /
+//   weight / window / commodity post-conversion, AEs had no UI path: only
+//   cancel+recreate, a raw API call, or a DB edit. New focused FLAT
+//   EditLoadModal (NOT the 4-step CreateLoadModal wizard — too heavy to
+//   mirror) over the commonly-edited fields: route (origin/dest
+//   city/state/zip/company), schedule (PU/DEL dates + windows), freight
+//   (weight/pieces/equipment/commodity/freight-class), financials
+//   (customer/carrier rate — gated to canSeeMargin), special instructions.
+//   Pre-fills from the selected load, builds a createLoadSchema.partial()-
+//   compatible payload (numbers coerced, dates → ISO, empty strings omitted
+//   so an untouched field is never blanked), PUTs /loads/:id. Edit button
+//   added to the Load Board detail-panel action cluster, gated to canCreate
+//   && non-terminal status (mirrors the backend gate so AE doesn't hit a
+//   400). Backend stays authoritative on per-field locks (e.g. customerId
+//   on INVOICED). ~250 LOC new component + ~15 LOC page wiring. No backend
+//   change, no schema. Gates: frontend tsc + next build clean (backend tsc
+//   defensively clean). Banked: per-field status-locking matrix beyond the
+//   backend's customerId-on-INVOICED rule (the backlog's "scoping" item) —
+//   not enforced today, so the modal keeps it simple and lets the backend
+//   reject edge cases.
+//
 // v3.8.alt — §13.3 Item 144: carrier counter-offer UI. The backend
 //   counterTender (POST /tenders/:id/counter) was fully wired since
 //   v3.8.aka — flips tender → COUNTERED + counterRate, writes an audit
@@ -12401,7 +12426,7 @@
 //   carriers.css only. Heritage photo-icon paths (emblems / full photos)
 //   held pending eval — swap if Option 3 doesn't land. Letter: parallel
 //   v3.8.alm (test-fence Items 189/190) landed post-push; aln continues.
-export const SRL_VERSION = "3.8.alt";
+export const SRL_VERSION = "3.8.alu";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

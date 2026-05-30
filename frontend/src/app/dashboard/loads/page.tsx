@@ -9,11 +9,12 @@ import {
   Search, MapPin, Truck, Calendar, DollarSign, Download, Package,
   Thermometer, Shield, Phone, FileText, X, Users, Send, ChevronRight,
   ClipboardCheck, Globe, Info, Clock, AlertTriangle, Trash2,
-  Tag as TagIcon,
+  Tag as TagIcon, Pencil,
 } from "lucide-react";
 
 import { RateConfirmationModal } from "@/components/loads/RateConfirmationModal";
 import { CreateLoadModal } from "@/components/loads/CreateLoadModal";
+import { EditLoadModal } from "@/components/loads/EditLoadModal";
 import { AcceptOnBehalfModal } from "@/components/loads/AcceptOnBehalfModal";
 import { OverrideComplianceModal } from "@/components/loads/OverrideComplianceModal";
 import { TagManagementPanel } from "@/components/loads/TagManagementPanel";
@@ -139,6 +140,7 @@ export default function LoadsPage() {
 
   /* ---- Clone / Create state ---- */
   const [showCreate, setShowCreate] = useState(false);
+  const [showEdit, setShowEdit] = useState(false); // v3.8.alu §13.3 Item 3 — EditLoadModal
   const [cloneData, setCloneData] = useState<Record<string, unknown> | null>(null);
 
   /* ---- Tender / Compliance state ---- */
@@ -834,6 +836,16 @@ export default function LoadsPage() {
                         Carrier-side status updates flow through the dedicated
                         carrier portal at /carrier/dashboard/my-loads which
                         POSTs to /api/carrier-loads/:id/status. */}
+                    {/* Edit — v3.8.alu §13.3 Item 3. Mirrors backend gate
+                        (updateLoad blocks COMPLETED/CANCELLED/TONU). */}
+                    {canCreate && !["COMPLETED", "CANCELLED", "TONU"].includes(load.status) && (
+                      <button
+                        onClick={() => setShowEdit(true)}
+                        className="flex items-center gap-1 px-2.5 py-1.5 bg-[#BA7517]/15 text-[#BA7517] rounded text-xs hover:bg-[#BA7517]/25"
+                      >
+                        <Pencil className="w-3 h-3" /> Edit
+                      </button>
+                    )}
                     {/* Close */}
                     <button
                       onClick={() => setSelectedLoadId(null)}
@@ -943,6 +955,10 @@ export default function LoadsPage() {
           open for "new load" flows when no load is selected. Modal handles
           its own open/closed state via props. */}
       <CreateLoadModal open={showCreate} onClose={() => { setShowCreate(false); setCloneData(null); }} cloneFrom={cloneData} />
+      {/* v3.8.alu §13.3 Item 3 — EditLoadModal. Mounts only when a load is selected. */}
+      {loadDetail && (
+        <EditLoadModal open={showEdit} onClose={() => setShowEdit(false)} load={loadDetail as any} canSeeMargin={canSeeMargin} />
+      )}
 
       {/* Sprint 39 Item 54 — Accept on Behalf modal */}
       {onBehalfTender && (
