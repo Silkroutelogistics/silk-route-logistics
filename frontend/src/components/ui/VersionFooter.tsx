@@ -10812,6 +10812,15 @@
 //   180.6+180.7+180.8+180.9+180.10+180.11 done; 180.3 closed-by-
 //   discovery; banked 180.6.b CRM admin edit UI for the new fields).
 //
+// v3.8.alq — Marco Polo chatbot model bump. Both Anthropic call sites in
+//   chatController.ts (authenticated SYSTEM_PROMPT path + public
+//   PUBLIC_SYSTEM_PROMPT path) were pinned to claude-sonnet-4-5-20250929,
+//   a generation old. Bumped both to claude-sonnet-4-6 (current Sonnet —
+//   the right tier for a fast, cost-effective customer-facing chatbot).
+//   Banked during v3.8.akx (prompt refresh) as a follow-up; the prompt
+//   was made fresh but the model behind it lagged. 2-LOC backend change,
+//   no prompt change. Backend tsc clean.
+//
 // v3.8.alp — §13.3 Item 51.b: loadboard-bid carrier notification.
 //   Pre-alp the loadboard bid accept/reject handlers (routes/loadBids.ts)
 //   fired ZERO carrier notification — direct + on-behalf + waterfall
@@ -12324,7 +12333,7 @@
 //   carriers.css only. Heritage photo-icon paths (emblems / full photos)
 //   held pending eval — swap if Option 3 doesn't land. Letter: parallel
 //   v3.8.alm (test-fence Items 189/190) landed post-push; aln continues.
-export const SRL_VERSION = "3.8.alp";
+export const SRL_VERSION = "3.8.alq";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
