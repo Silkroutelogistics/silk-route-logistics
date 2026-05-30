@@ -12149,7 +12149,18 @@
 //   canvas #faf9f7 → #FBF7F0; arithmetic "10 days faster" → "9 days
 //   faster" (Net-30 → Net-21 = 9; §4 #13 canonical already correct at
 //   HEAD). carriers.html only; next build gate green.
-export const SRL_VERSION = "3.8.alk";
+// v3.8.all — /index Caravan teaser: §20 Lens 3 redundancy (Option A) +
+//   §5 cleanup. Demoted homepage tier pills to qualitative teasers
+//   (Silver "Day-1 entry" / Gold "Faster pay" / Platinum "Lowest fees");
+//   pay-term specifics (Net-30/21/14, 3/2/1% QP) now live only on
+//   /carriers#caravan (redundancy closed). Removed §5 prohibited "safety
+//   bonuses" (retired v3.8.aib) + stale "Six milestones" + M4/M5 framing;
+//   pill gold rgba(200,150,62)/#B8862E → canonical #C5A572/#BA7517; CTA
+//   → /carriers.html#caravan deep link. index.html only; build gate green.
+//   NOTE banked: /index line 427 "Tier-graduated FSC" tile (§5, Item 182)
+//   + 4 decorative #C8963E (hero SVG L105-107 + JS L822) left for a
+//   dedicated /index brand-cleanup pass.
+export const SRL_VERSION = "3.8.all";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
