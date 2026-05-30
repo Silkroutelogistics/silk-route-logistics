@@ -9,6 +9,7 @@ import { calculateMileage } from "../services/mileageService";
 import { sendShipperPickupEmail, sendShipperDeliveryEmail, sendShipperMilestoneEmail } from "../services/shipperNotificationService";
 import { sendPickupNotification, sendInTransitUpdate, sendArrivedAtDelivery, sendDeliveredWithPOD } from "../services/shipperLoadNotifyService";
 import { onLoadDelivered, onLoadDispatched, enforceShipperCredit, onLoadCancelledOrTONU } from "../services/integrationService";
+import { checkCustomerActive } from "../lib/customerActive";
 import { refreshBOLTrackingTokenExpiry } from "../services/shipperTrackingTokenService";
 import { complianceCheck } from "../services/complianceMonitorService";
 import { onLoadAssigned } from "../services/loadComplianceService";
@@ -174,6 +175,14 @@ export async function createLoad(req: AuthRequest, res: Response) {
       res.status(403).json({ error: `Shipper credit blocked: ${creditCheck.reason}` });
       return;
     }
+  }
+
+  // v3.8.alr §13.3 Item 8.1 — block new loads against an inactive customer
+  // (ADMIN/CEO override). Orthogonal to the credit gate above.
+  const activeCheck = await checkCustomerActive(raw.customerId, req.user?.role);
+  if (!activeCheck.allowed) {
+    res.status(403).json({ error: activeCheck.reason });
+    return;
   }
 
   // Map frontend field names → Prisma schema field names

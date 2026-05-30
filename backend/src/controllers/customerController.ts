@@ -498,6 +498,95 @@ export async function approveCustomer(req: AuthRequest, res: Response) {
   res.status(200).json({ customer: updated });
 }
 
+// v3.8.alr §13.3 Item 8.1 — Customer inactivation workflow.
+// isActive is the canonical "can be tendered new loads" gate, orthogonal to
+// onboardingStatus + the free-form `status` label. Inactivating sets the
+// flag + reason + actor + timestamp and blocks new load creation for
+// non-admins (loadController.createLoad + withTenderController via the
+// checkCustomerActive helper). ADMIN/CEO only. Idempotent on already-inactive.
+export async function inactivateCustomer(req: AuthRequest, res: Response) {
+  const { reason } = req.body as { reason?: string };
+  if (!reason || reason.trim().length < 5) {
+    res.status(400).json({ error: "A reason of at least 5 characters is required to inactivate a customer." });
+    return;
+  }
+
+  const customer = await prisma.customer.findFirst({
+    where: { id: req.params.id, deletedAt: null },
+    select: { id: true, name: true, isActive: true },
+  });
+  if (!customer) {
+    res.status(404).json({ error: "Customer not found" });
+    return;
+  }
+
+  if (!customer.isActive) {
+    res.status(200).json({ customer, alreadyInactive: true });
+    return;
+  }
+
+  const updated = await prisma.customer.update({
+    where: { id: customer.id },
+    data: {
+      isActive: false,
+      inactivationReason: reason.trim().slice(0, 500),
+      inactivatedAt: new Date(),
+      inactivatedById: req.user!.id,
+    },
+  });
+
+  await logCustomerActivity({
+    customerId: customer.id,
+    eventType: "customer_inactivated",
+    description: `Customer inactivated by ${req.user!.email}: ${reason.trim().slice(0, 200)}`,
+    actorType: "USER",
+    actorId: req.user!.id,
+    actorName: req.user!.email,
+  });
+
+  res.status(200).json({ customer: updated });
+}
+
+// v3.8.alr §13.3 Item 8.1 — reactivate a previously-inactivated customer.
+// Clears the inactivation metadata + flips isActive back to true. ADMIN/CEO
+// only. Idempotent on already-active.
+export async function reactivateCustomer(req: AuthRequest, res: Response) {
+  const customer = await prisma.customer.findFirst({
+    where: { id: req.params.id, deletedAt: null },
+    select: { id: true, name: true, isActive: true },
+  });
+  if (!customer) {
+    res.status(404).json({ error: "Customer not found" });
+    return;
+  }
+
+  if (customer.isActive) {
+    res.status(200).json({ customer, alreadyActive: true });
+    return;
+  }
+
+  const updated = await prisma.customer.update({
+    where: { id: customer.id },
+    data: {
+      isActive: true,
+      inactivationReason: null,
+      inactivatedAt: null,
+      inactivatedById: null,
+    },
+  });
+
+  await logCustomerActivity({
+    customerId: customer.id,
+    eventType: "customer_reactivated",
+    description: `Customer reactivated by ${req.user!.email}`,
+    actorType: "USER",
+    actorId: req.user!.id,
+    actorName: req.user!.email,
+  });
+
+  res.status(200).json({ customer: updated });
+}
+
 // v3.8.oo Gap 1 — manual credit review now writes creditStatus alongside
 // creditCheckDate, source, result, and notes. Closes the private-company
 // gap surfaced by audit f939aa1: previously this endpoint set the date

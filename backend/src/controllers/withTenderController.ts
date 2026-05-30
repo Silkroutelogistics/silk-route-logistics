@@ -6,6 +6,7 @@ import { complianceCheck } from "../services/complianceMonitorService";
 import { notifyTenderAction } from "../services/notificationService";
 import { autoGenerateRateConfirmation } from "../services/autoRateConfirmationService";
 import { logLoadActivity } from "../services/loadActivityService";
+import { checkCustomerActive } from "../lib/customerActive";
 import { log } from "../lib/logger";
 
 /**
@@ -63,6 +64,14 @@ export async function createLoadWithTender(req: AuthRequest, res: Response) {
       message: "Carrier is not eligible for tender",
       blocked_reasons: compliance.blocked_reasons,
     });
+    return;
+  }
+
+  // v3.8.alr §13.3 Item 8.1 — block new loads against an inactive customer
+  // (ADMIN/CEO override).
+  const activeCheck = await checkCustomerActive(loadFields.customerId, req.user?.role);
+  if (!activeCheck.allowed) {
+    res.status(403).json({ error: "CUSTOMER_INACTIVE", message: activeCheck.reason });
     return;
   }
 

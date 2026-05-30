@@ -10812,6 +10812,30 @@
 //   180.6+180.7+180.8+180.9+180.10+180.11 done; 180.3 closed-by-
 //   discovery; banked 180.6.b CRM admin edit UI for the new fields).
 //
+// v3.8.alr — §13.3 Item 8.1: Customer inactivation workflow. Closes the
+//   gap where four orthogonal status-like fields existed on Customer
+//   (status / onboardingStatus / creditStatus / User.isActive) but none
+//   combined into a canonical "inactivate," and NOTHING stopped an AE
+//   creating loads against an inactive customer. New isActive +
+//   inactivationReason + inactivatedAt + inactivatedById on Customer
+//   (additive migration, default true → no backfill). New
+//   checkCustomerActive(customerId, role) gate helper wired into BOTH
+//   load-creation paths — loadController.createLoad (Load Board + New
+//   Load modal, after the credit gate) + withTenderController (Carrier
+//   Engagement Drawer Mode 1, after compliance) — 403 for non-admins,
+//   ADMIN/CEO override per spec. Two endpoints: POST /customers/:id/
+//   inactivate (reason ≥5 chars required, audit-logged) + /reactivate.
+//   CRM OnboardingActionBar rewired — the prior "Suspend" TODO modal is
+//   now a real Inactivate flow (reason capture) + a red Inactive banner
+//   with reason + Reactivate button when isActive=false; "Reject" stays
+//   a banked TODO (distinct onboarding-stage concern). SKIPPED per §3.3
+//   atomic scope (optional in the spec): notification silencing +
+//   cascade to User.isActive/onboardingStatus=SUSPENDED — banked.
+//   ~200 LOC across schema + 1 migration + 4 backend files + 2 frontend
+//   files. Gates: backend tsc + vitest 224/224 + frontend tsc + next
+//   build all clean. POST-DEPLOY: Render runs prisma migrate deploy on
+//   the new migration (~1s additive ALTER); verify migrate status clean.
+//
 // v3.8.alq — Marco Polo chatbot model bump. Both Anthropic call sites in
 //   chatController.ts (authenticated SYSTEM_PROMPT path + public
 //   PUBLIC_SYSTEM_PROMPT path) were pinned to claude-sonnet-4-5-20250929,
@@ -12333,7 +12357,7 @@
 //   carriers.css only. Heritage photo-icon paths (emblems / full photos)
 //   held pending eval — swap if Option 3 doesn't land. Letter: parallel
 //   v3.8.alm (test-fence Items 189/190) landed post-push; aln continues.
-export const SRL_VERSION = "3.8.alq";
+export const SRL_VERSION = "3.8.alr";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

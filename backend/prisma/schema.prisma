@@ -2168,6 +2168,18 @@ model Customer {
   approvedAt   DateTime? @map("approved_at")
   approvedById String?   @map("approved_by_id")
 
+  // v3.8.alr §13.3 Item 8.1 — Customer inactivation workflow. isActive is
+  // the canonical "this customer can be tendered new loads" gate, orthogonal
+  // to onboardingStatus (which is the Lead-Hunter→CRM enum partition) and to
+  // the free-form `status` label. An inactive customer is hard-blocked from
+  // new load creation (loadController.createLoad + withTenderController) for
+  // non-admins; ADMIN/CEO can override. Default true so all existing rows
+  // stay active post-migration (additive, no backfill).
+  isActive           Boolean   @default(true) @map("is_active")
+  inactivationReason String?   @map("inactivation_reason")
+  inactivatedAt      DateTime? @map("inactivated_at")
+  inactivatedById    String?   @map("inactivated_by_id")
+
   // Lead Hunter — Personalization (v3.6.c)
   personalizedHook      String?   @map("personalized_hook")
   personalizedRelevance String?   @map("personalized_relevance")

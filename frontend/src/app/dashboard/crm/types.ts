@@ -15,6 +15,10 @@ export interface CrmCustomer {
   type: string;
   status: string;
   onboardingStatus?: string;
+  // v3.8.alr §13.3 Item 8.1 — Customer inactivation
+  isActive?: boolean;
+  inactivationReason?: string | null;
+  inactivatedAt?: string | null;
   industry: string | null;
   industryType: string | null;
   city: string | null;
