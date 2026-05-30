@@ -12443,7 +12443,20 @@
 //   carriers.css only. Heritage photo-icon paths (emblems / full photos)
 //   held pending eval — swap if Option 3 doesn't land. Letter: parallel
 //   v3.8.alm (test-fence Items 189/190) landed post-push; aln continues.
-export const SRL_VERSION = "3.8.alv";
+// v3.8.alw — Compass Score Build A: real on-time pickup/delivery. Wired
+//   the carrier scorecard (integrationService.recalculateCarrierCPP) + the
+//   Caravan advancement gate (caravanService.checkMilestoneAdvancement) to
+//   read the actual event timestamps the carrier portal already captures
+//   (Load.actualPickupDatetime / actualDeliveryDatetime) vs the scheduled
+//   appointment window + 2h grace — replacing the always-100% stubs that
+//   made the published Compass Score outrun the backend. New shared
+//   lib/onTimePerformance.ts (11 vitest cases). NO migration (columns
+//   already exist + are stamped by carrierLoads.ts). Locked decisions: 2h
+//   grace, exclude no-window + no-actual loads, neutral 100 until
+//   measurable; the advancement GATE requires measurable proof (won't
+//   advance to Gold/Platinum on zero measurable on-time history). Build B
+//   widens coverage (AE-path stamping + AT_PICKUP trigger + backfill).
+export const SRL_VERSION = "3.8.alw";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

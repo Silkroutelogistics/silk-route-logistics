@@ -29,6 +29,7 @@
 
 import { prisma } from "../config/database";
 import type { CarrierTier, CarrierMilestone } from "@prisma/client";
+import { calcOnTimePerformance } from "../lib/onTimePerformance";
 import { log } from "../lib/logger";
 
 // ─── Tier Configuration (v3 Final) ──────────────────────────
@@ -275,10 +276,22 @@ export async function checkMilestoneAdvancement(
       status: { in: ["DELIVERED", "COMPLETED", "POD_RECEIVED", "INVOICED"] },
       updatedAt: { gte: since },
     },
-    select: { deliveryDate: true, updatedAt: true },
+    select: { deliveryDate: true, deliveryTimeEnd: true, actualDeliveryDatetime: true, updatedAt: true },
   });
-  const totalDelivered = deliveredLoads.length;
-  const onTimePct = totalDelivered > 0 ? 100 : 0;
+  // Build A (2026-05-30): real on-time % from actual delivery timestamps vs the
+  // scheduled appointment window + 2h grace (was hardcoded `total > 0 ? 100 : 0`).
+  // Advancement is a GATE, so it requires PROOF: if no delivered loads are
+  // measurable (no appointment window or no actual timestamp), we do NOT advance
+  // — a carrier can't clear the 97/98% on-time bar without measurable on-time
+  // history. See lib/onTimePerformance.ts. Measurable coverage widens with
+  // Build B (AE-path stamping + trackingEvents backfill).
+  const otd = calcOnTimePerformance(
+    deliveredLoads.map((l) => ({ scheduledDate: l.deliveryDate, timeEnd: l.deliveryTimeEnd, actual: l.actualDeliveryDatetime }))
+  );
+  if (otd.measurable === 0) {
+    return { advanced: false, reason: `Need ${threshold.onTimePct}% on-time, but no measurable on-time history yet` };
+  }
+  const onTimePct = Math.round(otd.pct);
   if (onTimePct < threshold.onTimePct) {
     return { advanced: false, reason: `Need ${threshold.onTimePct}% on-time, currently at ${onTimePct}%` };
   }

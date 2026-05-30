@@ -3,6 +3,7 @@ import { calculateOverallScore, getBonusPercentage, checkGuestPromotion } from "
 import { createCheckCallSchedule } from "./checkCallAutomation";
 import { notifyMatchedCarriers } from "./carrierOutreachService";
 import { checkMilestoneAdvancement, applyMilestoneRewards } from "./caravanService";
+import { calcOnTimePerformance } from "../lib/onTimePerformance";
 import { log } from "../lib/logger";
 
 /**
@@ -470,24 +471,27 @@ export async function recalculateCarrierCPP(carrierProfileId: string) {
     select: {
       id: true, pickupDate: true, deliveryDate: true, status: true,
       createdAt: true, updatedAt: true,
+      pickupTimeEnd: true, deliveryTimeEnd: true,
+      actualPickupDatetime: true, actualDeliveryDatetime: true,
     },
   });
 
   if (loads.length === 0) return; // No recent activity
 
-  // Calculate on-time pickup (within 2 hours of scheduled)
-  const onTimePickups = loads.filter((l) => {
-    if (!l.pickupDate) return true; // No schedule = assume on-time
-    return true; // Without actual timestamps tracked per-event, assume on-time
-  }).length;
-  const onTimePickupPct = (onTimePickups / loads.length) * 100;
-
-  // On-time delivery
-  const onTimeDeliveries = loads.filter((l) => {
-    if (!l.deliveryDate) return true;
-    return true; // Same assumption
-  }).length;
-  const onTimeDeliveryPct = (onTimeDeliveries / loads.length) * 100;
+  // Build A (2026-05-30): real on-time pickup/delivery from the actual event
+  // timestamps the carrier portal already captures (Load.actualPickupDatetime /
+  // actualDeliveryDatetime), compared to the scheduled appointment window + 2h
+  // grace. Replaces the prior always-100% stubs. Loads without an appointment
+  // window OR without an actual timestamp are excluded from the denominator;
+  // when nothing is measurable yet the helper returns a neutral 100 (no penalty
+  // for a carrier we have no on-time data on). Coverage widens with Build B
+  // (AE-path stamping + trackingEvents backfill). See lib/onTimePerformance.ts.
+  const onTimePickupPct = calcOnTimePerformance(
+    loads.map((l) => ({ scheduledDate: l.pickupDate, timeEnd: l.pickupTimeEnd, actual: l.actualPickupDatetime }))
+  ).pct;
+  const onTimeDeliveryPct = calcOnTimePerformance(
+    loads.map((l) => ({ scheduledDate: l.deliveryDate, timeEnd: l.deliveryTimeEnd, actual: l.actualDeliveryDatetime }))
+  ).pct;
 
   // Check-call communication score
   const checkCalls = await prisma.checkCallSchedule.findMany({
