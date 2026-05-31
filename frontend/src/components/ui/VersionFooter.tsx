@@ -12546,7 +12546,16 @@
 //   so "by AI" + "daily" both overclaimed. LTL confirmed dropped (no /faq change
 //   needed). §20.6: /blog closed; only /careers + /track + legal remain (+ /about
 //   partial). Per §3.1: v3.8.ame → amf.
-export const SRL_VERSION = "3.8.amf";
+// v3.8.amg — /careers §20 audit. Mostly honest already. Rewrote "Tech-Forward
+//   Environment" card: dropped "EDI systems" (not operational), "machine
+//   learning" (unconfirmed), "cutting-edge" (consultant-speak), "changing the
+//   industry" (hyperbole) → real systems (Marco Polo AI, Compass Engine, in-house
+//   TMS). Gold #C8963E→#BA7517 ×7. careers@ alias kept (Wasi directive) +
+//   documented in §1. §20.6: /careers closed; /track + legal remain (+/about
+//   partial). NEXT: Wasi flagged the /track "How updates reach you" section as
+//   over-disclosing internal tracking architecture (EDI 214 / 15-min ELD / geofence
+//   / ops processing) — Lens 1.5 reveal + EDI/ELD overclaim; to be genericized.
+export const SRL_VERSION = "3.8.amg";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
