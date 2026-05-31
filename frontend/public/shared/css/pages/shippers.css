@@ -1496,6 +1496,34 @@
       color: var(--fg-2, #3A4A5F);
       margin: 0;
     }
+    /* v3.8.ami — card backs as scannable bullets (Wasi directive: bullet the
+       backs for site-wide symmetry). ›-marker matches the /index "Ship With
+       Confidence" + /track explainer-sources style. */
+    .system-card-back ul.card-bullets {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      text-align: left;
+      display: flex;
+      flex-direction: column;
+      gap: 9px;
+    }
+    .system-card-back ul.card-bullets li {
+      position: relative;
+      padding-left: 18px;
+      font-family: var(--font-body, 'DM Sans', sans-serif);
+      font-size: 14.5px;
+      line-height: 1.5;
+      color: var(--fg-2, #3A4A5F);
+    }
+    .system-card-back ul.card-bullets li::before {
+      content: "\203A";
+      position: absolute;
+      left: 0;
+      top: 0;
+      color: var(--gold-dark, #BA7517);
+      font-weight: 700;
+    }
 
     @media (prefers-reduced-motion: reduce) {
       .system-card-inner {

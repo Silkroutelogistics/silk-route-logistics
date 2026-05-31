@@ -239,7 +239,7 @@
         <div class="ops-loop-narrative">
           <div class="ops-narrative-item is-active" data-phase="0">
             <span class="ops-narrative-tag">Quote</span>
-            <p>Lane Optimizer scans your historic lanes. Rate Intelligence reads the prevailing market. Your AE builds the quote with the data already in hand, response within 15 minutes during business hours.</p>
+            <p>Lane Optimizer scans your historic lanes. Rate Intelligence reads the prevailing market. Your AE builds the quote with the data already in hand, with a fast response during business hours.</p>
           </div>
           <div class="ops-narrative-item" data-phase="1">
             <span class="ops-narrative-tag">Plan</span>
@@ -317,7 +317,11 @@
                 </svg>
               </div>
               <h3>Your lane history</h3>
-              <p>Every load you ship feeds a private record of who ran the lane well, what the market paid, and where the lane is softening. Your next quote arrives with that data already in hand.</p>
+              <ul class="card-bullets">
+                <li>A private record of who ran each lane well and what the market paid</li>
+                <li>Visibility into where a lane is softening</li>
+                <li>Your next quote arrives with that data already in hand</li>
+              </ul>
             </div>
           </div>
         </article>
@@ -348,7 +352,11 @@
                 </svg>
               </div>
               <h3>Your dedicated AE</h3>
-              <p>One person. Knows your business, your freight, your priorities. Picks up the phone when you call. No call centers, no ticket queues, no chasing down communication.</p>
+              <ul class="card-bullets">
+                <li>One person who knows your business, freight, and priorities</li>
+                <li>Picks up the phone when you call</li>
+                <li>No call centers, no ticket queues, no chasing communication</li>
+              </ul>
             </div>
           </div>
         </article>
@@ -381,7 +389,11 @@
                 </svg>
               </div>
               <h3>Your 24/7 freight assistant</h3>
-              <p>Marco Polo answers status questions, retrieves BOLs, and looks up tracking. Overnight, weekends, holidays. AI assists. Your AE decides.</p>
+              <ul class="card-bullets">
+                <li>Marco Polo AI answers status questions, retrieves BOLs, looks up tracking</li>
+                <li>Overnight, weekends, and holidays</li>
+                <li>AI assists; your AE decides</li>
+              </ul>
             </div>
           </div>
         </article>
@@ -412,7 +424,11 @@
                 </svg>
               </div>
               <h3>Your quarterly scorecard</h3>
-              <p>On-time delivery, claims ratio, document timeliness, communication response. The same metrics we hold our carriers to, mailed to you every quarter.</p>
+              <ul class="card-bullets">
+                <li>On-time delivery, claims ratio, document timeliness, communication response</li>
+                <li>The same metrics we hold our carriers to</li>
+                <li>Mailed to you every quarter</li>
+              </ul>
             </div>
           </div>
         </article>
@@ -445,7 +461,11 @@
                 </svg>
               </div>
               <h3>Your itemized rate con</h3>
-              <p>Linehaul, fuel surcharge, accessorials, all visible. No post-booking clipping. Fuel pass-through tier-graduated, not blanket. The math is on the document.</p>
+              <ul class="card-bullets">
+                <li>Line-haul, fuel surcharge, and accessorials all itemized</li>
+                <li>No post-booking clipping</li>
+                <li>The math is on the document, rate con equals settlement</li>
+              </ul>
             </div>
           </div>
         </article>
@@ -474,7 +494,11 @@
                 </svg>
               </div>
               <h3>Your Compass-vetted carrier list</h3>
-              <p>Every carrier on your load scored on 35 points by the Compass Engine. The same 7-factor standard we publish on the carriers page. No mystery vetting.</p>
+              <ul class="card-bullets">
+                <li>Every carrier scored on 35 points by the Compass Engine</li>
+                <li>The same 7-factor standard we publish on the carriers page</li>
+                <li>No mystery vetting</li>
+              </ul>
             </div>
           </div>
         </article>
@@ -488,7 +512,7 @@
       <div class="quote-header">
         <div class="section-label" style="color: rgba(200,150,62,0.8);">Start Shipping</div>
         <h2>Get Your Quote</h2>
-        <p>Fill out the form below and your dedicated Account Executive will respond within 15 minutes.</p>
+        <p>Fill out the form below and your dedicated Account Executive will respond fast during business hours.</p>
       </div>
 
       <div class="quote-card">
@@ -943,7 +967,7 @@
         .then(function(res) {
           if (res.ok || res.status === 201) {
             formMessage.className = 'form-message success';
-            formMessage.textContent = 'Thank you! Your quote request has been received. A dedicated Account Executive will contact you within 15 minutes during business hours.';
+            formMessage.textContent = 'Thank you! Your quote request has been received. A dedicated Account Executive will contact you during business hours.';
             formMessage.style.display = 'block';
             quoteForm.reset();
           } else {

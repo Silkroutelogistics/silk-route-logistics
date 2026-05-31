@@ -12565,7 +12565,15 @@
 //   gone + no duplicates on other pages. Minor residual: client-side JS status→
 //   label map (588-589) lists standard freight-status names (low concern, std
 //   industry terms). Per §3.1: v3.8.amg → amh.
-export const SRL_VERSION = "3.8.amh";
+// v3.8.ami — bullet-symmetry pass 1/2 (Wasi directive: "keep cards, bullet the
+//   backs"). /track "How updates reach you" prose → ›-bullets (reused
+//   .explainer-sources). /shippers 6 system-card-flip backs: paragraphs →
+//   .card-bullets ›-lists (new CSS, matches /index "Ship With Confidence" +
+//   /track marker). Bonus honesty fixes on /shippers: dropped retired "Fuel
+//   pass-through tier-graduated" (§5) on the rate-con card → "FSC itemized";
+//   softened 3× "within 15 minutes" quote SLA → "fast during business hours".
+//   Pass 2/2 = /carriers commitment-card "How it works" backs → bullets (next).
+export const SRL_VERSION = "3.8.ami";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
