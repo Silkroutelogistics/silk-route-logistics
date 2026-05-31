@@ -12538,7 +12538,15 @@
 //   billing@→accounting@. Gold #C8963E→#BA7517 ×~20 + em-dash sweep. Kept the
 //   honest answers (double-brokering, factoring, 7-day-vs-2-day). /contact (amd)
 //   verified live + clean. §20.6 updated; /carriers + /contact + /faq now closed.
-export const SRL_VERSION = "3.8.ame";
+// v3.8.amf — /blog §20 audit. News-aggregator shell ("The Freight Insider"),
+//   aggregated articles are third-party RSS (exempt). Shell already clean (no
+//   gold drift / em-dashes / stale claims). One fix: hero "curated daily by AI"
+//   → "from across the industry, updated throughout the day" — newsAggregator
+//   Service is RSS + keyword categorization (no AI/LLM), 4-hour cron not daily,
+//   so "by AI" + "daily" both overclaimed. LTL confirmed dropped (no /faq change
+//   needed). §20.6: /blog closed; only /careers + /track + legal remain (+ /about
+//   partial). Per §3.1: v3.8.ame → amf.
+export const SRL_VERSION = "3.8.amf";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
