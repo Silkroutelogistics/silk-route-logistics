@@ -12,14 +12,14 @@
   <link rel="icon" type="image/x-icon" href="/favicon.ico">
   <link rel="apple-touch-icon" href="/apple-touch-icon.png">
   <link rel="manifest" href="/manifest.json">
-  
+
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://silkroutelogistics.ai/security-policy.html">
   <meta property="og:title" content="Information Security Policy — Silk Route Logistics">
   <meta property="og:description" content="Silk Route Logistics security commitment summary. Detailed implementation documentation available under NDA for procurement security review.">
   <meta property="og:image" content="https://silkroutelogistics.ai/logo.png">
   <meta property="og:site_name" content="Silk Route Logistics">
-  
+
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="Information Security Policy — Silk Route Logistics">
   <meta name="twitter:description" content="Silk Route Logistics security commitment summary. Detailed implementation documentation available under NDA for procurement security review.">
@@ -34,20 +34,57 @@
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=DM+Sans:wght@400;500;600;700&display=swap">
   <link rel="stylesheet" href="/shared/css/srl-tokens.css">
   <!-- END INCLUDE:design-system -->
+  <link rel="stylesheet" href="/shared/css/srl-logo.css">
   <link rel="stylesheet" href="/shared/css/utilities.css">
   <link rel="stylesheet" href="/shared/css/pages/security-policy.css">
 </head>
 <body>
-  <div class="nav-bar">
-    <div class="nav-logo">
-      <a href="/" aria-label="Silk Route Logistics home" style="display:inline-flex;align-items:center;gap:8px;text-decoration:none;color:inherit;">
-        <img src="/logo.png" alt="SRL">
-        <span>Silk Route Logistics</span>
-      </a>
-    </div>
-    <a href="/">← Back to Home</a>
-  </div>
 
+  <a href="#main-content" class="skip-link">Skip to main content</a>
+
+  <!-- INCLUDE:nav -->
+  <nav class="nav navbar" id="mainNav" role="navigation" aria-label="Main">
+    <div class="nav-inner navbar-inner">
+      <a href="/" class="srl-logo-wrap" aria-label="Silk Route Logistics Inc. Home">
+        <img src="/logo.png" alt="SRL" class="srl-logo-img">
+      </a>
+      <div class="nav-links navbar-links">
+        <a href="/shippers.html" class="nav-link">Shippers</a>
+        <a href="/carriers.html" class="nav-link">Carriers</a>
+        <a href="/about.html" class="nav-link">About</a>
+        <a href="/contact.html" class="nav-link">Contact</a>
+        <a href="/track" class="nav-link">Track</a>
+        <div class="nav-login-wrap" id="loginWrap">
+          <button type="button" class="nav-login-btn" id="loginBtn" aria-haspopup="true" aria-expanded="false">Sign In</button>
+          <div class="nav-login-dropdown" role="menu">
+            <a href="/auth/login" role="menuitem">AE Login</a>
+            <a href="/carrier/login" role="menuitem">Carrier Login</a>
+            <a href="/shipper/login" role="menuitem">Shipper Login</a>
+          </div>
+        </div>
+      </div>
+      <button type="button" class="hamburger" id="hamburger" aria-label="Toggle menu" aria-expanded="false">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+  </nav>
+  <div class="mobile-overlay" id="mobileOverlay"></div>
+  <div class="mobile-menu" id="mobileMenu">
+    <a href="/shippers.html" class="mobile-nav-link">Shippers</a>
+    <a href="/carriers.html" class="mobile-nav-link">Carriers</a>
+    <a href="/about.html" class="mobile-nav-link">About</a>
+    <a href="/contact.html" class="mobile-nav-link">Contact</a>
+    <a href="/track" class="mobile-nav-link">Track</a>
+    <div class="mobile-login-section">
+      <div class="label">Sign In</div>
+      <a href="/auth/login" class="mobile-nav-link">AE Login</a>
+      <a href="/carrier/login" class="mobile-nav-link">Carrier Login</a>
+      <a href="/shipper/login" class="mobile-nav-link">Shipper Login</a>
+    </div>
+  </div>
+  <!-- END INCLUDE:nav -->
+
+  <main id="main-content">
   <div class="doc-container">
     <div class="doc-header">
       <h1>Information <span class="gold">Security Policy</span></h1>
@@ -105,11 +142,136 @@
         <li><strong>Privacy-specific concerns:</strong> <a href="mailto:compliance@silkroutelogistics.ai">compliance@silkroutelogistics.ai</a></li>
       </ul>
     </div>
-
-    <div class="back-link">
-      <a href="/">← Back to Home</a>
-    </div>
   </div>
-<script src="/js/cookie-consent.js"></script>
+  </main>
+
+  <!-- INCLUDE:footer -->
+  <footer class="footer" id="footer" role="contentinfo">
+    <div class="container">
+      <div class="footer-grid">
+        <div class="footer-brand">
+          <div class="footer-logo">
+            <a href="/" aria-label="Silk Route Logistics Inc. home" style="display:inline-block;line-height:0;">
+              <img src="/logo.png" alt="SRL" style="height:36px;width:auto;border-radius:6px;">
+            </a>
+          </div>
+          <p class="srl-tagline">Where Trust Travels.</p>
+          <p style="margin-top:12px">
+            Galesburg, MI<br>
+            <a href="tel:+12692206760">(269) 220-6760</a><br>
+            <a href="mailto:sales@silkroutelogistics.ai">sales@silkroutelogistics.ai</a>
+          </p>
+        </div>
+        <div class="footer-col">
+          <h5>Company</h5>
+          <a href="/about.html">About</a>
+          <a href="/contact.html">Contact</a>
+          <a href="/blog.html">Industry Insights</a>
+          <a href="/careers.html">Careers</a>
+        </div>
+        <div class="footer-col">
+          <h5>Shippers</h5>
+          <a href="/shippers.html">Services</a>
+          <a href="/shippers.html#quote">Get a Quote</a>
+          <a href="/track">Track Shipment</a>
+          <a href="/shipper/login">Shipper Portal</a>
+        </div>
+        <div class="footer-col">
+          <h5>Carriers</h5>
+          <a href="/carriers.html">Caravan Partner Program</a>
+          <a href="/carriers.html#quickpay">Quick Pay</a>
+          <a href="/carrier/login">Carrier Portal</a>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <p>&copy; 2026 Silk Route Logistics Inc. &nbsp;|&nbsp; MC# 1794414 &nbsp;|&nbsp; DOT# 4526880</p>
+        <div class="footer-bottom-links">
+          <a href="/privacy.html">Privacy Policy</a>
+          <a href="/terms.html">Terms of Service</a>
+          <a href="/security-policy.html">Security Policy</a>
+        </div>
+      </div>
+    </div>
+  </footer>
+  <!-- END INCLUDE:footer -->
+
+  <script>
+    (function() {
+      'use strict';
+
+      var navbar = document.querySelector('.navbar');
+      function handleNavScroll() {
+        if ((window.scrollY || window.pageYOffset) > 50) {
+          navbar.classList.add('scrolled');
+        } else {
+          navbar.classList.remove('scrolled');
+        }
+      }
+      window.addEventListener('scroll', handleNavScroll, { passive: true });
+
+      var hamburger = document.querySelector('.hamburger');
+      var mobileMenu = document.querySelector('.mobile-menu');
+      if (hamburger && mobileMenu) {
+        hamburger.addEventListener('click', function() {
+          var isOpen = mobileMenu.classList.toggle('open');
+          hamburger.classList.toggle('open');
+          hamburger.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+          document.body.style.overflow = isOpen ? 'hidden' : '';
+        });
+        mobileMenu.querySelectorAll('a').forEach(function(link) {
+          link.addEventListener('click', function() {
+            mobileMenu.classList.remove('open');
+            hamburger.classList.remove('open');
+            hamburger.setAttribute('aria-expanded', 'false');
+            document.body.style.overflow = '';
+          });
+        });
+      }
+
+      var prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      if (!prefersReducedMotion && 'IntersectionObserver' in window) {
+        var fadeObserver = new IntersectionObserver(function(entries) {
+          entries.forEach(function(entry) {
+            if (entry.isIntersecting) {
+              entry.target.classList.add('visible');
+              fadeObserver.unobserve(entry.target);
+            }
+          });
+        }, { root: null, rootMargin: '0px 0px -60px 0px', threshold: 0.1 });
+        document.querySelectorAll('.fade-in').forEach(function(el) {
+          fadeObserver.observe(el);
+        });
+      } else {
+        document.querySelectorAll('.fade-in').forEach(function(el) {
+          el.classList.add('visible');
+        });
+      }
+
+      window.addEventListener('resize', function() {
+        if (window.innerWidth > 768 && mobileMenu && mobileMenu.classList.contains('open')) {
+          mobileMenu.classList.remove('open');
+          hamburger.classList.remove('open');
+          hamburger.setAttribute('aria-expanded', 'false');
+          document.body.style.overflow = '';
+        }
+      });
+
+      if (mobileMenu) {
+        mobileMenu.addEventListener('keydown', function(e) {
+          if (e.key === 'Escape') {
+            mobileMenu.classList.remove('open');
+            hamburger.classList.remove('open');
+            hamburger.setAttribute('aria-expanded', 'false');
+            document.body.style.overflow = '';
+            hamburger.focus();
+          }
+        });
+      }
+    })();
+  </script>
+
+  <link rel="stylesheet" href="/shared/css/marco-polo.css">
+  <script src="/shared/js/marco-polo.js"></script>
+  <script src="/js/cookie-consent.js"></script>
 </body>
 </html>

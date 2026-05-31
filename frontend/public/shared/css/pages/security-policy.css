@@ -1,6 +1,4 @@
 
-    @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600&family=DM+Sans:wght@300;400;500;600;700&display=swap');
-
     *{margin:0;padding:0;box-sizing:border-box}
 
     body{
@@ -9,10 +7,62 @@
       line-height:1.8;font-size:15px;
     }
 
+    /* ========================================
+       CANONICAL CHROME
+       Nav layout lives here (page-CSS convention, matches privacy/terms).
+       Footer + mobile-login + nav-login dropdown come from utilities.css.
+       Golds hardcoded canonical (#C5A572 / #BA7517) — independent of the
+       site-wide --gold drift in utilities.css.
+       ======================================== */
+    .container{max-width:1200px;margin:0 auto;padding:0 24px}
+
+    .skip-link{
+      position:absolute;top:-100%;left:16px;
+      background:#C5A572;color:#0A2540;padding:12px 24px;border-radius:8px;
+      font-weight:600;z-index:10000;transition:top .3s ease;
+    }
+    .skip-link:focus{top:16px}
+
+    .navbar{
+      position:fixed;top:0;left:0;right:0;z-index:1000;
+      background:rgba(10,37,64,0.85);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+      border-bottom:1px solid rgba(255,255,255,0.06);
+      transition:background .3s ease,box-shadow .3s ease;color:var(--fg-on-navy,#FBF7F0);
+    }
+    .navbar.scrolled{background:rgba(10,37,64,0.95);box-shadow:0 4px 30px rgba(0,0,0,0.3)}
+    .navbar-inner{
+      max-width:1200px;margin:0 auto;padding:0 24px;
+      display:flex;align-items:center;justify-content:space-between;height:72px;
+    }
+    .navbar-links{display:flex;align-items:center;gap:36px}
+    .navbar-links a{font-size:14px;font-weight:500;color:#8899AA;transition:color .3s ease;position:relative}
+    .navbar-links a::after{
+      content:'';position:absolute;bottom:-4px;left:0;width:0;height:2px;
+      background:#C5A572;transition:width .3s ease;
+    }
+    .navbar-links a:hover,.navbar-links a.active{color:#FFFFFF}
+    .navbar-links a:hover::after,.navbar-links a.active::after{width:100%}
+    .navbar-links a:focus-visible{outline:2px solid #C5A572;outline-offset:4px;border-radius:2px}
+
+    .hamburger{display:none;flex-direction:column;gap:5px;background:none;border:none;cursor:pointer;padding:8px;z-index:1001}
+    .hamburger span{display:block;width:24px;height:2px;background:#E0E7EE;border-radius:2px;transition:all .3s ease}
+    .hamburger.open span:nth-child(1){transform:rotate(45deg) translate(5px,5px)}
+    .hamburger.open span:nth-child(2){opacity:0}
+    .hamburger.open span:nth-child(3){transform:rotate(-45deg) translate(5px,-5px)}
+
+    .mobile-menu{
+      display:none;position:fixed;top:72px;left:0;right:0;bottom:0;
+      background:rgba(10,37,64,0.98);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+      z-index:999;padding:40px 24px;flex-direction:column;gap:8px;overflow-y:auto;color:var(--fg-on-navy,#FBF7F0);
+    }
+    .mobile-menu.open{display:flex}
+    .mobile-menu a{font-size:20px;font-weight:500;color:#8899AA;padding:16px 0;border-bottom:1px solid rgba(255,255,255,0.06);transition:color .3s ease}
+    .mobile-menu a:hover,.mobile-menu a.active{color:#FFFFFF}
+
     /* Print styles */
     @media print{
       body{background:#fff;color:#222;font-size:12px;line-height:1.6}
-      .nav-bar,.download-bar,.back-link{display:none!important}
+      .navbar,.mobile-menu,.mobile-overlay,.footer,.skip-link{display:none!important}
       .doc-container{max-width:100%;padding:0;margin:0}
       .doc-header{background:#f8f6f0!important;border:2px solid #333!important;color:#222!important}
       .doc-header h1,.doc-header .doc-subtitle{color:#222!important}
@@ -20,56 +70,23 @@
       h2{color:#1a3a5c!important;border-color:#ccc!important}
       h3{color:#333!important}
       .section{background:transparent!important;border:1px solid #ddd!important}
-      .highlight-box{background:#f5f5f5!important;border-color:#999!important;color:#222!important}
-      .toc a{color:#1a3a5c!important}
       table{border:1px solid #999!important}
       th{background:#e8e8e8!important;color:#222!important;border:1px solid #999!important}
       td{border:1px solid #ccc!important;color:#222!important}
     }
 
-    .nav-bar{
-      position:sticky;top:0;z-index:100;
-      background:rgba(6,22,41,0.95);backdrop-filter:blur(10px);
-      border-bottom:1px solid rgba(197,165,114,0.15);
-      padding:14px 40px;display:flex;align-items:center;justify-content:space-between;
-    }
-    .nav-bar a{color:#c8a951;text-decoration:none;font-size:14px;font-weight:500}
-    .nav-bar a:hover{opacity:.8}
-    .nav-logo{display:flex;align-items:center;gap:12px}
-    .nav-logo img{height:32px;border-radius:6px}
-    .nav-logo span{font-size:13px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:#c8a951}
-
-    .doc-container{max-width:860px;margin:0 auto;padding:40px 24px 80px}
+    .doc-container{max-width:860px;margin:0 auto;padding:112px 24px 80px}
 
     .doc-header{
       text-align:center;padding:50px 40px;margin-bottom:40px;
-      background:linear-gradient(135deg,#0A2540 0%,#1a2d45 100%);
+      background:linear-gradient(135deg,#0A2540 0%,#15365A 100%);
       border:1px solid rgba(197,165,114,0.2);border-radius:16px;
     }
-    .doc-header h1{font-family:'Playfair Display',serif;font-weight:600;font-size:32px;color:#f0f4f8;margin-bottom:8px}
-    .doc-header .gold{color:#c8a951}
-    .doc-header .doc-subtitle{font-size:14px;color:#7a9bb8;margin-bottom:20px}
-    .doc-meta{display:flex;justify-content:center;gap:32px;flex-wrap:wrap;font-size:12px;color:#8a9db0}
+    .doc-header h1{font-family:'Playfair Display',serif;font-weight:600;font-size:32px;color:#FBF7F0;margin-bottom:8px}
+    .doc-header .gold{color:#C5A572}
+    .doc-header .doc-subtitle{font-size:14px;color:#C9D2DE;margin-bottom:20px}
+    .doc-meta{display:flex;justify-content:center;gap:32px;flex-wrap:wrap;font-size:12px;color:#8AA5C0}
     .doc-meta span{display:flex;align-items:center;gap:6px}
-
-    .download-bar{text-align:center;margin-bottom:40px}
-    .download-bar button{
-      padding:10px 24px;font-size:13px;font-weight:600;font-family:'DM Sans',sans-serif;
-      background:linear-gradient(135deg,#c8a951,#b8963e);color:#0A2540;
-      border:none;border-radius:8px;cursor:pointer;transition:all .25s;
-    }
-    .download-bar button:hover{transform:translateY(-1px);box-shadow:0 4px 16px rgba(197,165,114,0.25)}
-
-    /* TOC */
-    .toc{
-      background:#FFFFFF;border:1px solid #E5E7EB;
-      border-radius:12px;padding:28px 32px;margin-bottom:40px;
-    }
-    .toc h2{font-size:16px;color:#0A2540;margin-bottom:16px;border:none;padding:0;font-weight:700}
-    .toc ol{padding-left:20px;counter-reset:toc}
-    .toc li{margin-bottom:8px;font-size:14px;color:#3A4A5F}
-    .toc a{color:#BA7517;text-decoration:none;transition:color .2s}
-    .toc a:hover{color:#b8862e}
 
     h2{
       font-family:'DM Sans',sans-serif;font-weight:600;font-size:22px;color:#0A2540;
@@ -87,34 +104,27 @@
     ul,ol{margin:0 0 16px 20px}
     li{margin-bottom:6px;color:#3A4A5F}
 
-    .highlight-box{
-      background:#FFFBEB;border-left:3px solid #c8a951;
-      padding:16px 20px;border-radius:0 8px 8px 0;margin:20px 0;
-      font-size:14px;color:#0A2540;
-    }
+    .section a{color:#BA7517;text-decoration:underline;text-decoration-color:rgba(186,117,23,0.4);transition:text-decoration-color .2s}
+    .section a:hover{text-decoration-color:#BA7517}
 
     table{width:100%;border-collapse:collapse;margin:16px 0;font-size:13px}
     th{background:#F9FAFB;color:#0A2540;text-align:left;padding:10px 14px;font-weight:600;border:1px solid #E5E7EB}
     td{padding:10px 14px;border:1px solid #E5E7EB;color:#3A4A5F}
 
-    .back-link{text-align:center;margin-top:40px}
-    .back-link a{color:#c8a951;text-decoration:none;font-size:14px;font-weight:500}
-
     @media(max-width:768px){
-      .nav-bar{padding:12px 16px}
-      .nav-bar a{font-size:13px}
-      .nav-logo span{font-size:11px;letter-spacing:1px}
+      .navbar-links{display:none}
+      .hamburger{display:flex}
       .doc-header{padding:30px 20px}
       .doc-header h1{font-size:24px}
       table{display:block;overflow-x:auto;-webkit-overflow-scrolling:touch}
       .section{padding:20px 16px}
-      .toc{padding:20px 18px}
       h2{font-size:19px;margin:36px 0 16px}
       h3{font-size:15px}
     }
 
     @media(max-width:600px){
-      .doc-container{padding:20px 16px 60px}
+      .navbar-inner{padding:0 16px}
+      .doc-container{padding:96px 16px 60px}
       .doc-header{padding:24px 16px}
       .doc-header h1{font-size:22px}
       .section{padding:16px 14px}

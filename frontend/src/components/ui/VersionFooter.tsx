@@ -12601,7 +12601,25 @@
 //   no infra/server detail, no employee names, no schema/API) — Security Policy is
 //   the model, kept as-is except the email. Per scope decision: Security Policy
 //   nav/footer/navy chrome rework deferred (content-only pass). Per §3.1: amj → amk.
-export const SRL_VERSION = "3.8.amk";
+// v3.8.aml — Security Policy chrome aligned to canonical (deferred amk item).
+//   Replaced the one-off `.nav-bar` (custom sticky bar + non-canonical text
+//   wordmark "Silk Route Logistics" + gold #c8a951) with the canonical
+//   logo-only INCLUDE:nav (5 links + Sign In dropdown + mobile menu) and added
+//   the canonical INCLUDE:footer — the page had no footer before. Wrapped doc in
+//   <main id="main-content"> + skip-link; added nav-scroll/hamburger JS + Marco
+//   Polo widget (parity with privacy/terms). HEAD now links srl-logo.css. CSS:
+//   added the canonical .navbar/.hamburger/.mobile-menu layout block (hardcoded
+//   #C5A572/#BA7517, immune to the site-wide --gold #C8963E drift in
+//   utilities.css); footer + mobile-login resolve from utilities.css. Bumped
+//   .doc-container padding-top 40px→112px to clear the fixed 72px nav (96px on
+//   mobile). Recolored doc-header gold #c8a951→#C5A572, h1 #f0f4f8→#FBF7F0,
+//   subtitle/meta → canonical on-navy tones, gradient #1a2d45→#15365A; added
+//   .section a gold-dark link styling (links were defaulting to browser-blue).
+//   Removed dead .nav-bar/.nav-logo/.toc/.download-bar/.highlight-box/.back-link
+//   rules (§3.7). Content untouched (the NDA-gated capabilities copy is the model
+//   per amk audit). NOTE: utilities.css --gold #C8963E + 8 footer-hover drifts are
+//   site-wide pre-existing — left for a separate scoped pass. Per §3.1: amk → aml.
+export const SRL_VERSION = "3.8.aml";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
