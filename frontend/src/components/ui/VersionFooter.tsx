@@ -12573,7 +12573,14 @@
 //   pass-through tier-graduated" (§5) on the rate-con card → "FSC itemized";
 //   softened 3× "within 15 minutes" quote SLA → "fast during business hours".
 //   Pass 2/2 = /carriers commitment-card "How it works" backs → bullets (next).
-export const SRL_VERSION = "3.8.ami";
+// v3.8.amj — bullet-symmetry pass 2/2: /carriers commitment-card "How it works"
+//   backs converted from numbered <ol class="mechanism-steps"> (step-num circles)
+//   to ›-bulleted <ul> — matches /shippers .card-bullets + /track + /index. CSS
+//   reworked (.commitment-card-back .mechanism-steps li::before ›); supersedes
+//   the v3.8.aia numbered-steps standardization. Heritage-photo flip-card fronts
+//   untouched. All flip-card / explainer backs site-wide now use the same
+//   ›-bullet style. Pass 1 (ami) did /shippers + /track.
+export const SRL_VERSION = "3.8.amj";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
