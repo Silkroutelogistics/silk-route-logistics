@@ -12555,7 +12555,17 @@
 //   partial). NEXT: Wasi flagged the /track "How updates reach you" section as
 //   over-disclosing internal tracking architecture (EDI 214 / 15-min ELD / geofence
 //   / ops processing) — Lens 1.5 reveal + EDI/ELD overclaim; to be genericized.
-export const SRL_VERSION = "3.8.amg";
+// v3.8.amh — /track "How updates reach you" reveal genericized (Wasi flag).
+//   The section spelled out the full internal tracking pipeline as marketing
+//   copy (EDI 214 auto-mapping, 15-min ELD cadence, geofence mechanics, the ops
+//   "logs it / tags source / recomputes ETA" processing, a 60-second internal
+//   SLA) — a competitor blueprint per Lens 1.5, and EDI/live-ELD aren't even
+//   operational. Replaced with customer-benefit-only copy (latest status, source
+//   + timestamp shown, no-login, portal for PODs/exports). Reveal terms confirmed
+//   gone + no duplicates on other pages. Minor residual: client-side JS status→
+//   label map (588-589) lists standard freight-status names (low concern, std
+//   industry terms). Per §3.1: v3.8.amg → amh.
+export const SRL_VERSION = "3.8.amh";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
