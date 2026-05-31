@@ -18,10 +18,10 @@
     '<div style="display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap">' +
       '<p style="margin:0;font-size:13px;color:#c8d4de;line-height:1.6;flex:1;min-width:200px">' +
         'We use essential cookies to keep you logged in and ensure our platform works properly. ' +
-        '<a href="/privacy.html" style="color:#c8a951;text-decoration:underline">Privacy Policy</a>' +
+        '<a href="/privacy.html" style="color:#C5A572;text-decoration:underline">Privacy Policy</a>' +
       '</p>' +
       '<div style="display:flex;gap:8px;flex-shrink:0">' +
-        '<button id="srl-cookie-accept" style="padding:8px 20px;font-size:12px;font-weight:600;background:linear-gradient(135deg,#c8a951,#b8963e);color:#0D1B2A;border:none;border-radius:6px;cursor:pointer;font-family:inherit;transition:opacity .2s">Accept</button>' +
+        '<button id="srl-cookie-accept" style="padding:8px 20px;font-size:12px;font-weight:600;background:linear-gradient(135deg,#C5A572,#BA7517);color:#0A2540;border:none;border-radius:6px;cursor:pointer;font-family:inherit;transition:opacity .2s">Accept</button>' +
         '<button id="srl-cookie-dismiss" style="padding:8px 16px;font-size:12px;font-weight:500;background:transparent;color:#6a8090;border:1px solid #243447;border-radius:6px;cursor:pointer;font-family:inherit;transition:opacity .2s">Dismiss</button>' +
       '</div>' +
     '</div>';
@@ -35,7 +35,7 @@
   s.zIndex = "99998";
   s.padding = "16px 24px";
   s.background = "rgba(10,22,40,0.97)";
-  s.borderTop = "1px solid rgba(200,150,62,0.15)";
+  s.borderTop = "1px solid rgba(197,165,114,0.18)";
   s.backdropFilter = "blur(10px)";
   s.fontFamily = "'Inter','Plus Jakarta Sans',system-ui,sans-serif";
   s.transform = "translateY(100%)";

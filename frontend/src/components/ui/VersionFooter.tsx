@@ -12580,7 +12580,28 @@
 //   the v3.8.aia numbered-steps standardization. Heritage-photo flip-card fronts
 //   untouched. All flip-card / explainer backs site-wide now use the same
 //   ›-bullet style. Pass 1 (ami) did /shippers + /track.
-export const SRL_VERSION = "3.8.amj";
+// v3.8.amk — legal-pages over-disclosure audit (Wasi: "too much public info about
+//   the company / what MUST NOT be public"). Surgical content fixes across the 3
+//   legal surfaces + cookie layer; every legally-required disclosure kept. PRIVACY:
+//   removed the "secure data centers" FALSEHOOD (SRL is cloud-hosted, runs none) +
+//   collapsed §3's detailed security checklist to a 1-line summary + link to the
+//   Security Policy (which correctly NDA-gates implementation detail); fixed §1
+//   "credit card numbers" (contradicted Security Policy §3 "no card data stored")
+//   → "payment & banking info via our payment partners"; trimmed §4 Cookies +
+//   §1/§5 to essential-only (grep confirmed ZERO analytics tooling site-wide — no
+//   GA/Plausible/Mixpanel/Segment/etc.; the banner already says essential-only, so
+//   §4 was over-claiming analytics + preference cookies that don't exist). TERMS:
+//   dropped "less-than-truckload (LTL)" from §2 services (SRL doesn't broker LTL,
+//   matches the shippers/faq sweep); tidied "AI-powered tools…Marco Polo platform"
+//   → "AI tools…Marco Polo, our freight assistant". EMAILS: privacy@ + legal@ were
+//   non-routed aliases (not in canonical §1 list) → repointed to compliance@ across
+//   Privacy §8, Terms §11, Security Policy §5 (zero risk of a bounced legal/data
+//   request). COOKIE-CONSENT.JS: non-canonical gold #c8a951/#b8963e + navy #0D1B2A
+//   → canonical #C5A572/#BA7517 + #0A2540. NO leaks found anywhere (no vendor names,
+//   no infra/server detail, no employee names, no schema/API) — Security Policy is
+//   the model, kept as-is except the email. Per scope decision: Security Policy
+//   nav/footer/navy chrome rework deferred (content-only pass). Per §3.1: amj → amk.
+export const SRL_VERSION = "3.8.amk";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
