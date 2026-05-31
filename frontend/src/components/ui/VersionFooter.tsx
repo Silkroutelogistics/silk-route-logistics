@@ -12529,7 +12529,16 @@
 //   /shippers.html#quote-form + Join-Network→/onboarding. §20.6 audit-log updated:
 //   /carriers marked FULL (Compass arc closed), /contact recorded. Minor optional
 //   left: quick-link icons, FAQ-vs-/faq.html overlap, /tracking.html→/track.
-export const SRL_VERSION = "3.8.amd";
+// v3.8.ame — /faq §20 MAJOR honesty correction. Page was pre-v3.7 stale with
+//   live retired claims. Rewrote Carriers + Technology sections to §8/§10/§4
+//   canonical: killed retired tier model (180d/75-loads, 360d/150-loads, $150/
+//   $300-mo safety bonuses, referral + "3 lanes" gates), "24-48 hour" onboarding
+//   SLA, "live GPS"/ELD-live/EDI(204/990/214/210) overclaims, "GPS compliance"→
+//   "tracking compliance", LTL (not in whitelist), "15-minute" quote SLA ×3,
+//   billing@→accounting@. Gold #C8963E→#BA7517 ×~20 + em-dash sweep. Kept the
+//   honest answers (double-brokering, factoring, 7-day-vs-2-day). /contact (amd)
+//   verified live + clean. §20.6 updated; /carriers + /contact + /faq now closed.
+export const SRL_VERSION = "3.8.ame";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
