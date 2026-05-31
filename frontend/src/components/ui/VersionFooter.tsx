@@ -12520,7 +12520,16 @@
 //   LoadTrackingEvent query measures real coverage (no rework). Resolves the
 //   only open finding from the A/B/C/D/E adversarial audit. integrationService
 //   1-block change + CLAUDE.md §9 note. No migration.
-export const SRL_VERSION = "3.8.amc";
+// v3.8.amd — /contact §20 audit sweep. Softened "15-minute quote" SLA →
+//   "fast quotes during business hours, one click or email" (§5 unenforced-SLA
+//   class); "transit twice daily"→"daily" (matched shipperLoadNotifyService);
+//   added "18+ months" FMCSA authority (Item 182 parity); #C8963E→#BA7517 gold
+//   drift ×2; body em-dash sweep (title/meta + comments left per Lens 2); added
+//   Marco Polo AI contact channel (closes AI pillar → 4/4); CTAs Get-a-Quote→
+//   /shippers.html#quote-form + Join-Network→/onboarding. §20.6 audit-log updated:
+//   /carriers marked FULL (Compass arc closed), /contact recorded. Minor optional
+//   left: quick-link icons, FAQ-vs-/faq.html overlap, /tracking.html→/track.
+export const SRL_VERSION = "3.8.amd";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
