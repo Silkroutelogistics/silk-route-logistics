@@ -201,7 +201,7 @@
       transition: var(--transition);
     }
     .search-btn:hover:not(:disabled) {
-      background: #8f5a11;
+      background: #854F0B;
       transform: translateY(-1px);
     }
     .search-btn:disabled { opacity: 0.5; cursor: not-allowed; }
@@ -353,13 +353,13 @@
       position: relative;
     }
     .explainer-sources li::before {
-      content: '·';
+      content: '\203A';
       position: absolute;
       left: 0;
-      top: -2px;
+      top: 0;
       color: var(--gold-dark);
       font-weight: 700;
-      font-size: 18px;
+      font-size: 14px;
     }
     .explainer-sources strong {
       color: var(--navy);

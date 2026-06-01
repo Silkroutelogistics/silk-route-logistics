@@ -12659,7 +12659,20 @@
 //   rewritten to the legal template (hero + legal-block + global Playfair h1–h4),
 //   keeping the aml canonical nav chrome; footer still resolves from utilities.css.
 //   Now visually identical register to privacy/terms. Per §3.1: amn → amo.
-export const SRL_VERSION = "3.8.amo";
+// v3.8.amp — /track full §20 sweep (hero/UI/voice + AI pillar + bullet symmetry).
+//   (1) Lens 1 honesty: hero-sub "Real-time status on every load" → "The latest
+//   status on every load SRL moves"; meta description (×3: name/og/twitter) dropped
+//   "in real time" + "live status" → "current status" — the page's own genericized
+//   reveal shows updates come from carrier check-ins + SRL check calls + telematics
+//   WHERE AVAILABLE, so "real-time on every load" overclaimed. (2) Lens 4: /track was
+//   the only public page missing the Marco Polo widget — added marco-polo.css/js
+//   (AI pillar + chrome parity). (3) Lens 5: explainer-fineprint "sign in to the
+//   shipper portal above" (vague) → direct <a href="/shipper/login">. (4) Bullet
+//   symmetry: .explainer-sources li::before '·' → '\203A' (›) matching every other
+//   page. (5) Lens 1.5: JS publicStatusLabel fallback `replace(/_/g,' ')` (echoed raw
+//   internal enum) → generic 'In progress'. (6) .search-btn:hover #8f5a11 → canonical
+//   #854F0B. track.css already canonical (#C5A572 tokens, no #C8963E). Per §3.1: amo → amp.
+export const SRL_VERSION = "3.8.amp";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

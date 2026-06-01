@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <!-- INCLUDE:meta -->
-  <meta name="description" content="Track your Silk Route Logistics shipment in real time. Enter your BOL number or reference to see live status, last known location, and delivery ETA.">
+  <meta name="description" content="Track your Silk Route Logistics shipment. Enter your BOL number or reference to see current status, last known location, and delivery ETA.">
   <link rel="canonical" href="https://silkroutelogistics.ai/track.html">
   <meta name="theme-color" content="#0A2540">
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
@@ -15,13 +15,13 @@
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://silkroutelogistics.ai/track.html">
   <meta property="og:title" content="Track Your Shipment — Silk Route Logistics">
-  <meta property="og:description" content="Track your Silk Route Logistics shipment in real time. Enter your BOL number or reference to see live status, last known location, and delivery ETA.">
+  <meta property="og:description" content="Track your Silk Route Logistics shipment. Enter your BOL number or reference to see current status, last known location, and delivery ETA.">
   <meta property="og:image" content="https://silkroutelogistics.ai/logo.png">
   <meta property="og:site_name" content="Silk Route Logistics">
   
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="Track Your Shipment — Silk Route Logistics">
-  <meta name="twitter:description" content="Track your Silk Route Logistics shipment in real time. Enter your BOL number or reference to see live status, last known location, and delivery ETA.">
+  <meta name="twitter:description" content="Track your Silk Route Logistics shipment. Enter your BOL number or reference to see current status, last known location, and delivery ETA.">
   <meta name="twitter:image" content="https://silkroutelogistics.ai/logo.png">
   <!-- END INCLUDE:meta -->
   <meta name="keywords" content="track freight shipment, BOL tracking, shipment status, freight delivery status, Silk Route Logistics tracking">
@@ -92,7 +92,7 @@
       <div class="container">
         <div class="hero-badge">Track</div>
         <h1>Track your <span class="gold-line">shipment.</span></h1>
-        <p class="hero-sub">Real-time status on every load SRL moves.</p>
+        <p class="hero-sub">The latest status on every load SRL moves.</p>
 
         <!-- Search card (shown when no token in URL) -->
         <div class="search-card" id="searchCard">
@@ -344,8 +344,8 @@
             <li><strong>No login required</strong> to view with your BOL or reference number</li>
           </ul>
           <p class="explainer-fineprint">
-            For signed PODs, multi-load views, and exports, sign in to the shipper
-            portal above.
+            For signed PODs, multi-load views, and exports,
+            <a href="/shipper/login">sign in to the shipper portal</a>.
           </p>
         </div>
       </div>
@@ -594,7 +594,10 @@
       };
 
       function publicStatusLabel(s) {
-        return STATUS_LABEL[s] || (s || '').replace(/_/g, ' ');
+        // Map internal status to a customer-facing label. Unknown/unmapped
+        // statuses fall back to a generic label so a raw internal enum is
+        // never rendered to the public page (Lens 1.5 reveal defense).
+        return STATUS_LABEL[s] || 'In progress';
       }
 
       function fmtDate(iso) {
@@ -784,5 +787,9 @@
       })();
     })();
   </script>
+
+  <!-- Marco Polo AI assistant widget (parity with the other public pages) -->
+  <link rel="stylesheet" href="/shared/css/marco-polo.css">
+  <script src="/shared/js/marco-polo.js"></script>
 </body>
 </html>
