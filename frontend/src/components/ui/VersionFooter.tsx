@@ -12672,7 +12672,20 @@
 //   page. (5) Lens 1.5: JS publicStatusLabel fallback `replace(/_/g,' ')` (echoed raw
 //   internal enum) → generic 'In progress'. (6) .search-btn:hover #8f5a11 → canonical
 //   #854F0B. track.css already canonical (#C5A572 tokens, no #C8963E). Per §3.1: amo → amp.
-export const SRL_VERSION = "3.8.amp";
+// v3.8.amq — /about full §20 sweep (closes the last partial page). (1) §5 PROHIBITED
+//   FIX: the retired "tier-graduated FSC pass-through" claim was live in 3 places
+//   (Our Story §3, Mission card, "Published Before Asked" card) — retired site-wide in
+//   v3.8.aib but /about never updated. All 3 → "fuel surcharge itemized on every rate
+//   confirmation" (§4 #1 canonical). (2) #C8963E gold drift in 6 inline SVG icon strokes
+//   (Mission/Vision/Promise + the 3 What-Sets-Us-Apart icons) → #BA7517. (3) Meta
+//   description em-dash (×3 name/og/twitter) "Logistics — a technology-driven" → comma
+//   (§18.9). (4) "Records stay on SRL servers" → "under SRL's control" (cloud-hosted, not
+//   physical servers — same fix class as the privacy data-center line). Deferred
+//   "heritage photo-icons for Mission/Vision/Promise" CLOSED as keep-Lucide — per Lens
+//   1.6/1.7 the Lucide icons are the correct register (heritage photo-icons failed the
+//   4-second-scan + brand-modernity tests on /index). about.css already canonical. All 12
+//   public surfaces now §20-clean. Per §3.1: amp → amq.
+export const SRL_VERSION = "3.8.amq";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
