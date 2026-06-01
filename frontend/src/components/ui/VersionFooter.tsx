@@ -12694,7 +12694,20 @@
 //   footer text rendered on the cream page background and was nearly invisible. Added
 //   `.footer { background: var(--navy); color: var(--fg-on-navy); padding: 80px 0 40px }`.
 //   Footer now matches privacy/terms. Per §3.1: amq → amr.
-export const SRL_VERSION = "3.8.amr";
+// v3.8.ams — final §20 completion cleanup (surfaced by a full clean-bill sweep when
+//   Wasi asked "is the website upgrade complete"). TWO residuals caught: (1) the footer
+//   "Get a Quote" link pointed at /shippers.html#quote, but /shippers' anchor is
+//   id="quote-form" (bare #quote doesn't exist → jumped to page top). Fixed across the
+//   shared _partials/footer.html source + the 10 pages with the expanded footer
+//   (carriers/about/contact/faq/blog/careers/track/privacy/terms/security-policy);
+//   index + shippers already used #quote-form. (2) Last #C8963E gold drift on public
+//   surfaces: index.html .srl-penguin mascot SVG (3× fill, beak+feet) → #BA7517 +
+//   scroll-spy active-nav JS color → #C5A572 (lighter gold for the navy nav); srl-logo.css
+//   .srl-logo-text-gold (wordmark gold "for light backgrounds") → #BA7517. NOT touched:
+//   themes.css --theme-primary #C8963E — that's the APP/dashboard theme, not linked on any
+//   public page (§12 exempt; tracked separately as §13.3 Item 10). All public marketing
+//   surfaces now 0 #C8963E + 0 broken footer anchors. Per §3.1: amr → ams.
+export const SRL_VERSION = "3.8.ams";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
