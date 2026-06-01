@@ -12646,7 +12646,20 @@
 //   glow tints. Left #0D1B2A — it's these pages' legacy --navy used consistently
 //   as body bg, a separate non-gold migration (§2.1). All public/app gold now
 //   canonical; 0 #C8963E across the codebase's rendered CSS. Per §3.1: amm → amn.
-export const SRL_VERSION = "3.8.amn";
+// v3.8.amo — legal-page consistency (Wasi: privacy/terms still showed Feb 1; "Security
+//   policy page is totally different"). (1) Privacy + Terms "Last Updated: February 1,
+//   2026" → "June 1, 2026" (reflects the amk content edits). (2) Security Policy body
+//   rebuilt from the bespoke navy doc-header/doc-container/section register to the
+//   CANONICAL legal-page template shared by privacy/terms: cream `.hero` ("Legal"
+//   eyebrow + Playfair `Information <em>Security Policy</em>` italic-gold + hero-text +
+//   gold divider) → `.legal-section` > `.legal-content` > `.legal-updated` +
+//   `.legal-block`s. Procurement metadata (Document SRL-ISP-2026-001 · Version 2.0 ·
+//   Effective May 3 2026 · Classification: Public) preserved in the `.legal-updated`
+//   line. Sections 1–5 → legal-blocks; §1 em-dash → colon (§18.9). security-policy.css
+//   rewritten to the legal template (hero + legal-block + global Playfair h1–h4),
+//   keeping the aml canonical nav chrome; footer still resolves from utilities.css.
+//   Now visually identical register to privacy/terms. Per §3.1: amn → amo.
+export const SRL_VERSION = "3.8.amo";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
