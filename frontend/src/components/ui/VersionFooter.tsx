@@ -12619,7 +12619,24 @@
 //   rules (§3.7). Content untouched (the NDA-gated capabilities copy is the model
 //   per amk audit). NOTE: utilities.css --gold #C8963E + 8 footer-hover drifts are
 //   site-wide pre-existing — left for a separate scoped pass. Per §3.1: amk → aml.
-export const SRL_VERSION = "3.8.aml";
+// v3.8.amm — shared-CSS gold drift fix (utilities.css, site-wide footer chrome).
+//   utilities.css was the lone shared file holding `--gold: #C8963E` (non-canonical
+//   olive) + `--gold-light: #D4A84E` + 6 hardcoded #C8963E footer/mobile-login
+//   instances. Cascade audit: every marketing page-CSS already defines
+//   `--gold: #C5A572` (canonical) and loads AFTER utilities.css, so they override
+//   it — meaning the drift only actually RENDERED on pages with no page-CSS --gold
+//   override, i.e. the /security-policy footer I just added in aml. Fix: --gold
+//   #C8963E→#C5A572 + --gold-light #D4A84E→#DAC39C (now matches srl-tokens.css +
+//   all page-CSS); 6 hardcoded #C8963E → var(--gold); DELETED the dead
+//   `.login-dropdown` block (§13.3 Item 26, grep-confirmed 0 HTML refs — it held
+//   the last #B8862E/rgba(200,150,62)/#0D1B2A/#0F1E30 legacy values; superseded by
+//   the canonical .nav-login-* dropdown which is RETAINED). utilities.css now 0
+//   non-canonical gold/navy literals. Footer golds on every page resolve to
+//   canonical #C5A572 (better contrast on navy than the olive too). Banked, NOT
+//   touched (separate surfaces): tracking.css (1 legacy public page, --gold
+//   #C8963E) + auth/root-login|root-register.css (app pages, 9 hardcoded #C8963E).
+//   Per §3.1: aml → amm.
+export const SRL_VERSION = "3.8.amm";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
