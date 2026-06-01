@@ -119,26 +119,46 @@ export async function createContactSubmission(req: Request, res: Response) {
       },
     });
 
-    // Notify admin (fire-and-forget)
+    // Friendly inquiry number derived from the persisted record (no schema change;
+    // mirrors the carrier APP-XXXXXXXX reference pattern). Shown to the submitter
+    // on-screen + in their confirmation email, and carried in the operations notice.
+    const inquiryNumber = "INQ-" + lead.id.slice(-8).toUpperCase();
+    const inquiryTypeLabel = data.inquiryType.replace(/_/g, " ");
+
+    // Notify operations (fire-and-forget) — leads with the inquiry number + sender email
     sendEmail(
-      "info@silkroutelogistics.ai",
-      `Website Contact: ${data.inquiryType.replace(/_/g, " ")} — ${data.name}`,
+      "operations@silkroutelogistics.ai",
+      `[${inquiryNumber}] Website Contact: ${inquiryTypeLabel} — ${data.name}`,
       wrap(`
         <h2 style="color:#0f172a">New Contact Form Submission</h2>
+        <p style="font-size:15px;margin:0 0 16px"><strong>Inquiry number:</strong> ${inquiryNumber}</p>
         <table style="width:100%;border-collapse:collapse;margin:16px 0">
+          <tr><td style="padding:8px;border:1px solid #e2e8f0;font-weight:bold">Inquiry #</td><td style="padding:8px;border:1px solid #e2e8f0">${inquiryNumber}</td></tr>
           <tr><td style="padding:8px;border:1px solid #e2e8f0;font-weight:bold">Name</td><td style="padding:8px;border:1px solid #e2e8f0">${data.name}</td></tr>
           <tr><td style="padding:8px;border:1px solid #e2e8f0;font-weight:bold">Company</td><td style="padding:8px;border:1px solid #e2e8f0">${data.company}</td></tr>
           <tr><td style="padding:8px;border:1px solid #e2e8f0;font-weight:bold">Email</td><td style="padding:8px;border:1px solid #e2e8f0"><a href="mailto:${data.email}">${data.email}</a></td></tr>
           <tr><td style="padding:8px;border:1px solid #e2e8f0;font-weight:bold">Phone</td><td style="padding:8px;border:1px solid #e2e8f0">${data.phone || "—"}</td></tr>
-          <tr><td style="padding:8px;border:1px solid #e2e8f0;font-weight:bold">Type</td><td style="padding:8px;border:1px solid #e2e8f0">${data.inquiryType.replace(/_/g, " ")}</td></tr>
+          <tr><td style="padding:8px;border:1px solid #e2e8f0;font-weight:bold">Type</td><td style="padding:8px;border:1px solid #e2e8f0">${inquiryTypeLabel}</td></tr>
           <tr><td style="padding:8px;border:1px solid #e2e8f0;font-weight:bold">Message</td><td style="padding:8px;border:1px solid #e2e8f0">${data.message}</td></tr>
         </table>
-        <p>Reply directly to this email or contact the sender at ${data.email}.</p>
+        <p>Reply directly to ${data.email}, referencing ${inquiryNumber}.</p>
       `),
     ).catch((e) => log.error({ err: e }, "[Website] Failed to send contact notification:"));
 
-    log.info(`[Website] Contact submission: ${lead.id} — ${data.inquiryType} — ${data.name}`);
-    res.status(201).json({ success: true, id: lead.id });
+    // Confirmation to the submitter (fire-and-forget) — gives them the inquiry number in writing
+    sendEmail(
+      data.email,
+      `We received your message — ${inquiryNumber} — Silk Route Logistics`,
+      wrap(`
+        <h2 style="color:#0f172a">Thank you for contacting us, ${data.name}.</h2>
+        <p>We've received your message and a member of our team will get back to you during business hours (Monday&ndash;Friday, 7:00 AM &ndash; 7:00 PM Eastern).</p>
+        <p style="font-size:15px"><strong>Your inquiry number is ${inquiryNumber}.</strong> Please reference it in any follow-up.</p>
+        <p>If it's urgent, call us at <strong>(269) 220-6760</strong>.</p>
+      `),
+    ).catch((e) => log.error({ err: e }, "[Website] Failed to send contact confirmation:"));
+
+    log.info(`[Website] Contact submission: ${lead.id} (${inquiryNumber}) — ${data.inquiryType} — ${data.name}`);
+    res.status(201).json({ success: true, id: lead.id, inquiryNumber });
   } catch (err: any) {
     if (err instanceof z.ZodError) {
       return res.status(400).json({ error: "Validation failed", details: err.errors });

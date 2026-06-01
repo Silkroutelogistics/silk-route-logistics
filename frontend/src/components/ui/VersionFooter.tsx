@@ -12707,7 +12707,19 @@
 //   themes.css --theme-primary #C8963E — that's the APP/dashboard theme, not linked on any
 //   public page (§12 exempt; tracked separately as §13.3 Item 10). All public marketing
 //   surfaces now 0 #C8963E + 0 broken footer anchors. Per §3.1: amr → ams.
-export const SRL_VERSION = "3.8.ams";
+// v3.8.amt — contact-form confirmation + inquiry number (Wasi request: on submit, show a
+//   thank-you + inquiry number on screen, and email operations@ with the inquiry number +
+//   sender email). Backend `createContactSubmission` (websiteController.ts): derives
+//   `INQ-XXXXXXXX` from the saved WebsiteLead id (no schema change; mirrors the carrier
+//   APP-XXXXXXXX pattern); notification recipient changed info@ → operations@ (info@ isn't
+//   a canonical alias per §1) with the inquiry number + sender email front-and-center;
+//   ADDED a submitter confirmation email carrying the inquiry number (parity with the quote
+//   flow); response now returns `inquiryNumber`. Frontend contact.html success handler reads
+//   `data.inquiryNumber` and renders "Thank you for contacting us. Your inquiry number is
+//   INQ-… We'll get back to you during business hours, and a copy is on its way to your
+//   email." — replaces the prior unenforced "respond within 2 business hours" SLA with the
+//   §6 honest "during business hours". Per §3.1: ams → amt.
+export const SRL_VERSION = "3.8.amt";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
