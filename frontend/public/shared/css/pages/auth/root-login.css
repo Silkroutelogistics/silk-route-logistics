@@ -35,18 +35,18 @@
     }
     .navbar-links a::after {
       content: ''; position: absolute; bottom: -4px; left: 0;
-      width: 0; height: 2px; background: #C8963E; transition: width 0.3s ease;
+      width: 0; height: 2px; background: #BA7517; transition: width 0.3s ease;
     }
     .navbar-links a:hover { color: #FFFFFF; }
     .navbar-links a:hover::after { width: 100%; }
     .navbar-cta {
       display: inline-flex; align-items: center; gap: 8px;
-      padding: 10px 24px; background: #C8963E; color: #0D1B2A;
+      padding: 10px 24px; background: #BA7517; color: #0D1B2A;
       font-size: 14px; font-weight: 600; border-radius: 8px;
       transition: background 0.3s ease, transform 0.2s ease;
       border: none; cursor: pointer;
     }
-    .navbar-cta:hover { background: #B8862E; transform: translateY(-1px); }
+    .navbar-cta:hover { background: #854F0B; transform: translateY(-1px); }
     .hamburger {
       display: none; flex-direction: column; gap: 5px;
       background: none; border: none; cursor: pointer; padding: 8px; z-index: 1001;
@@ -83,7 +83,7 @@
     }
     .hero-bg {
       position: absolute; top: 0; left: 0; right: 0; bottom: 0;
-      background: radial-gradient(ellipse at 50% 0%, rgba(200,150,62,0.08) 0%, transparent 60%);
+      background: radial-gradient(ellipse at 50% 0%, rgba(197,165,114,0.08) 0%, transparent 60%);
     }
     .hero-content { position: relative; z-index: 1; }
     .hero-label {
@@ -116,19 +116,19 @@
     }
     .portal-card::before {
       content: ''; position: absolute; top: 0; left: 0; right: 0;
-      height: 3px; background: linear-gradient(90deg, transparent, #C8963E, transparent);
+      height: 3px; background: linear-gradient(90deg, transparent, #BA7517, transparent);
       opacity: 0; transition: opacity 0.3s ease;
     }
     .portal-card:hover {
       background: rgba(255,255,255,0.06);
-      border-color: rgba(200,150,62,0.3);
+      border-color: rgba(197,165,114,0.3);
       transform: translateY(-4px);
       box-shadow: 0 16px 48px rgba(0,0,0,0.3);
     }
     .portal-card:hover::before { opacity: 1; }
     .portal-icon {
       width: 64px; height: 64px; margin: 0 auto 24px;
-      background: rgba(200,150,62,0.1); border-radius: 16px;
+      background: rgba(197,165,114,0.1); border-radius: 16px;
       display: flex; align-items: center; justify-content: center;
       font-size: 28px;
     }
@@ -140,13 +140,13 @@
     }
     .portal-btn {
       display: inline-flex; align-items: center; gap: 8px;
-      padding: 12px 28px; background: #C8963E; color: #0D1B2A;
+      padding: 12px 28px; background: #BA7517; color: #0D1B2A;
       font-family: 'Plus Jakarta Sans', sans-serif;
       font-size: 14px; font-weight: 600; border-radius: 8px;
       transition: background 0.3s ease, transform 0.2s ease;
     }
     .portal-btn:hover {
-      background: #B8862E; transform: translateY(-1px);
+      background: #854F0B; transform: translateY(-1px);
     }
     .portal-btn svg {
       width: 16px; height: 16px; transition: transform 0.2s ease;

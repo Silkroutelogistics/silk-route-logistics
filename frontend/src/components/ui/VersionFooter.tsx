@@ -12636,7 +12636,17 @@
 //   touched (separate surfaces): tracking.css (1 legacy public page, --gold
 //   #C8963E) + auth/root-login|root-register.css (app pages, 9 hardcoded #C8963E).
 //   Per §3.1: aml → amm.
-export const SRL_VERSION = "3.8.amm";
+// v3.8.amn — residual #C8963E mop-up (the 3 remaining drift surfaces after amm).
+//   tracking.css (legacy /tracking.html): :root --gold #C8963E→#C5A572 +
+//   --gold-light #D4A84E→#DAC39C (cascades to all var(--gold) uses) + 2 rgba glow
+//   tints rgba(200,150,62)→rgba(197,165,114); now matches its canonical sibling
+//   track.css. auth/root-login.css + auth/root-register.css (app-login surface):
+//   #C8963E→#BA7517 (CTAs/underline/gradient/dot), #B8862E→#854F0B (CTA hover,
+//   already used elsewhere on these pages), rgba(200,150,62)→rgba(197,165,114)
+//   glow tints. Left #0D1B2A — it's these pages' legacy --navy used consistently
+//   as body bg, a separate non-gold migration (§2.1). All public/app gold now
+//   canonical; 0 #C8963E across the codebase's rendered CSS. Per §3.1: amm → amn.
+export const SRL_VERSION = "3.8.amn";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
