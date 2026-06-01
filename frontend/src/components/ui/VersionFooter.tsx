@@ -12685,7 +12685,16 @@
 //   1.6/1.7 the Lucide icons are the correct register (heritage photo-icons failed the
 //   4-second-scan + brand-modernity tests on /index). about.css already canonical. All 12
 //   public surfaces now §20-clean. Per §3.1: amp → amq.
-export const SRL_VERSION = "3.8.amq";
+// v3.8.amr — Security Policy footer navy-background fix (Wasi flag: "footer is still
+//   not updated for Security policy page"). Root cause: utilities.css supplies the
+//   footer grid + link colors (which assume a DARK bg) but NOT the background itself;
+//   each page-CSS sets `.footer { background: var(--navy) }` (privacy.css/terms.css do).
+//   When security-policy.css was rewritten to the legal template (amo) it relied on
+//   utilities.css for the whole footer and never added the navy bg — so the light
+//   footer text rendered on the cream page background and was nearly invisible. Added
+//   `.footer { background: var(--navy); color: var(--fg-on-navy); padding: 80px 0 40px }`.
+//   Footer now matches privacy/terms. Per §3.1: amq → amr.
+export const SRL_VERSION = "3.8.amr";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
