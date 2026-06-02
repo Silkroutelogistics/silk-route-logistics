@@ -4,19 +4,23 @@ import { prisma } from "../config/database";
 import { sendEmail, wrap } from "../services/emailService";
 import { log } from "../lib/logger";
 
+// Field names match what the public /shippers quote form actually sends
+// (companyName / contactName, combined "City, State" origin + destination free-text,
+// freightType / estimatedWeight / specialRequirements). The prior schema required
+// name/company/originState/destCity/destState and rejected every real submission with
+// a 400 — the quote form was silently broken. v3.8.amu realigns the contract.
 const quoteRequestSchema = z.object({
-  name: z.string().min(1).max(200),
-  company: z.string().min(1).max(200),
+  companyName: z.string().min(1).max(200),
+  contactName: z.string().min(1).max(200),
   email: z.string().email().max(200),
   phone: z.string().max(30).optional(),
-  originCity: z.string().min(1).max(100),
-  originState: z.string().min(1).max(50),
-  destCity: z.string().min(1).max(100),
-  destState: z.string().min(1).max(50),
-  equipment: z.string().max(50).optional(),
-  weight: z.string().max(50).optional(),
+  originCity: z.string().min(1).max(200),
+  destinationCity: z.string().min(1).max(200),
+  freightType: z.string().max(50).optional(),
+  estimatedWeight: z.string().max(50).optional(),
   pickupDate: z.string().max(30).optional(),
-  details: z.string().max(2000).optional(),
+  specialRequirements: z.string().max(2000).optional(),
+  source: z.string().max(50).optional(),
 });
 
 const contactSchema = z.object({
@@ -38,59 +42,66 @@ export async function createWebsiteLead(req: Request, res: Response) {
     const lead = await prisma.websiteLead.create({
       data: {
         type: "quote_request",
-        name: data.name,
-        company: data.company,
+        name: data.contactName,
+        company: data.companyName,
         email: data.email,
         phone: data.phone,
+        // The form collects origin/destination as combined "City, State" free text,
+        // so they land in the city columns; state columns stay null.
         originCity: data.originCity,
-        originState: data.originState,
-        destCity: data.destCity,
-        destState: data.destState,
-        equipment: data.equipment,
-        weight: data.weight,
+        destCity: data.destinationCity,
+        equipment: data.freightType,
+        weight: data.estimatedWeight,
         pickupDate: data.pickupDate,
-        details: data.details,
+        details: data.specialRequirements,
       },
     });
 
-    // Notify sales team (fire-and-forget)
+    // Quote reference derived from the persisted record (mirrors the contact INQ- pattern)
+    const referenceNumber = "QTE-" + lead.id.slice(-8).toUpperCase();
+    const lane = `${data.originCity} → ${data.destinationCity}`;
+
+    // Notify the lead inbox (fire-and-forget) — sales@ is the canonical lead-intake alias (§1)
     sendEmail(
       "sales@silkroutelogistics.ai",
-      `New Quote Request: ${data.originCity}, ${data.originState} → ${data.destCity}, ${data.destState}`,
+      `[${referenceNumber}] New Quote Request: ${lane}`,
       wrap(`
         <h2 style="color:#0f172a">New Quote Request</h2>
+        <p style="font-size:15px;margin:0 0 16px"><strong>Reference:</strong> ${referenceNumber}</p>
         <table style="width:100%;border-collapse:collapse;margin:16px 0">
-          <tr><td style="padding:8px;border:1px solid #e2e8f0;font-weight:bold">Name</td><td style="padding:8px;border:1px solid #e2e8f0">${data.name}</td></tr>
-          <tr><td style="padding:8px;border:1px solid #e2e8f0;font-weight:bold">Company</td><td style="padding:8px;border:1px solid #e2e8f0">${data.company}</td></tr>
-          <tr><td style="padding:8px;border:1px solid #e2e8f0;font-weight:bold">Email</td><td style="padding:8px;border:1px solid #e2e8f0">${data.email}</td></tr>
+          <tr><td style="padding:8px;border:1px solid #e2e8f0;font-weight:bold">Reference</td><td style="padding:8px;border:1px solid #e2e8f0">${referenceNumber}</td></tr>
+          <tr><td style="padding:8px;border:1px solid #e2e8f0;font-weight:bold">Contact</td><td style="padding:8px;border:1px solid #e2e8f0">${data.contactName}</td></tr>
+          <tr><td style="padding:8px;border:1px solid #e2e8f0;font-weight:bold">Company</td><td style="padding:8px;border:1px solid #e2e8f0">${data.companyName}</td></tr>
+          <tr><td style="padding:8px;border:1px solid #e2e8f0;font-weight:bold">Email</td><td style="padding:8px;border:1px solid #e2e8f0"><a href="mailto:${data.email}">${data.email}</a></td></tr>
           <tr><td style="padding:8px;border:1px solid #e2e8f0;font-weight:bold">Phone</td><td style="padding:8px;border:1px solid #e2e8f0">${data.phone || "—"}</td></tr>
-          <tr><td style="padding:8px;border:1px solid #e2e8f0;font-weight:bold">Route</td><td style="padding:8px;border:1px solid #e2e8f0">${data.originCity}, ${data.originState} → ${data.destCity}, ${data.destState}</td></tr>
-          <tr><td style="padding:8px;border:1px solid #e2e8f0;font-weight:bold">Equipment</td><td style="padding:8px;border:1px solid #e2e8f0">${data.equipment || "—"}</td></tr>
-          <tr><td style="padding:8px;border:1px solid #e2e8f0;font-weight:bold">Weight</td><td style="padding:8px;border:1px solid #e2e8f0">${data.weight || "—"}</td></tr>
-          <tr><td style="padding:8px;border:1px solid #e2e8f0;font-weight:bold">Pickup Date</td><td style="padding:8px;border:1px solid #e2e8f0">${data.pickupDate || "—"}</td></tr>
-          <tr><td style="padding:8px;border:1px solid #e2e8f0;font-weight:bold">Details</td><td style="padding:8px;border:1px solid #e2e8f0">${data.details || "—"}</td></tr>
+          <tr><td style="padding:8px;border:1px solid #e2e8f0;font-weight:bold">Lane</td><td style="padding:8px;border:1px solid #e2e8f0">${lane}</td></tr>
+          <tr><td style="padding:8px;border:1px solid #e2e8f0;font-weight:bold">Freight type</td><td style="padding:8px;border:1px solid #e2e8f0">${data.freightType || "—"}</td></tr>
+          <tr><td style="padding:8px;border:1px solid #e2e8f0;font-weight:bold">Weight</td><td style="padding:8px;border:1px solid #e2e8f0">${data.estimatedWeight || "—"}</td></tr>
+          <tr><td style="padding:8px;border:1px solid #e2e8f0;font-weight:bold">Pickup date</td><td style="padding:8px;border:1px solid #e2e8f0">${data.pickupDate || "—"}</td></tr>
+          <tr><td style="padding:8px;border:1px solid #e2e8f0;font-weight:bold">Special requirements</td><td style="padding:8px;border:1px solid #e2e8f0">${data.specialRequirements || "—"}</td></tr>
         </table>
         <p><a href="https://silkroutelogistics.ai/ae/crm.html" style="display:inline-block;background:#d4a574;color:#0f172a;padding:12px 24px;text-decoration:none;border-radius:6px;font-weight:bold">View in CRM</a></p>
       `),
     ).catch((e) => log.error({ err: e }, "[Website] Failed to send lead notification:"));
 
-    // Send confirmation to shipper (fire-and-forget)
+    // Confirmation to the shipper (fire-and-forget) — carries the quote reference
     sendEmail(
       data.email,
-      "We received your quote request — Silk Route Logistics",
+      `We received your quote request — ${referenceNumber} — Silk Route Logistics`,
       wrap(`
-        <h2 style="color:#0f172a">Thank You, ${data.name}!</h2>
-        <p>We've received your freight quote request and our team is on it. You'll hear from us within 15 minutes during business hours.</p>
+        <h2 style="color:#0f172a">Thank you, ${data.contactName}.</h2>
+        <p>We've received your freight quote request and a dedicated Account Executive will get back to you during business hours (Monday&ndash;Friday, 7:00 AM &ndash; 7:00 PM Eastern).</p>
+        <p style="font-size:15px"><strong>Your quote reference is ${referenceNumber}.</strong> Please reference it in any follow-up.</p>
         <table style="width:100%;border-collapse:collapse;margin:16px 0">
-          <tr><td style="padding:8px;border:1px solid #e2e8f0;font-weight:bold">Route</td><td style="padding:8px;border:1px solid #e2e8f0">${data.originCity}, ${data.originState} → ${data.destCity}, ${data.destState}</td></tr>
-          <tr><td style="padding:8px;border:1px solid #e2e8f0;font-weight:bold">Equipment</td><td style="padding:8px;border:1px solid #e2e8f0">${data.equipment || "Any"}</td></tr>
+          <tr><td style="padding:8px;border:1px solid #e2e8f0;font-weight:bold">Lane</td><td style="padding:8px;border:1px solid #e2e8f0">${lane}</td></tr>
+          <tr><td style="padding:8px;border:1px solid #e2e8f0;font-weight:bold">Freight type</td><td style="padding:8px;border:1px solid #e2e8f0">${data.freightType || "Any"}</td></tr>
         </table>
-        <p>In the meantime, feel free to call us at <strong>(269) 220-6760</strong> for immediate assistance.</p>
+        <p>If it's urgent, call us at <strong>(269) 220-6760</strong>.</p>
       `),
     ).catch((e) => log.error({ err: e }, "[Website] Failed to send lead confirmation:"));
 
-    log.info(`[Website] New quote request: ${lead.id} — ${data.company} — ${data.originCity},${data.originState} → ${data.destCity},${data.destState}`);
-    res.status(201).json({ success: true, id: lead.id });
+    log.info(`[Website] New quote request: ${lead.id} (${referenceNumber}) — ${data.companyName} — ${lane}`);
+    res.status(201).json({ success: true, id: lead.id, referenceNumber });
   } catch (err: any) {
     if (err instanceof z.ZodError) {
       return res.status(400).json({ error: "Validation failed", details: err.errors });

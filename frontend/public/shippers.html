@@ -966,15 +966,20 @@
         })
         .then(function(res) {
           if (res.ok || res.status === 201) {
-            formMessage.className = 'form-message success';
-            formMessage.textContent = 'Thank you! Your quote request has been received. A dedicated Account Executive will contact you during business hours.';
-            formMessage.style.display = 'block';
-            quoteForm.reset();
-          } else {
-            return res.json().then(function(errData) {
-              throw new Error(errData.message || 'Something went wrong. Please try again.');
-            });
+            return res.json().catch(function () { return {}; });
           }
+          return res.json().then(function(errData) {
+            throw new Error(errData.message || errData.error || 'Something went wrong. Please try again.');
+          });
+        })
+        .then(function(respData) {
+          var ref = (respData && respData.referenceNumber) ? respData.referenceNumber : '';
+          formMessage.className = 'form-message success';
+          formMessage.innerHTML = ref
+            ? 'Thank you! Your quote reference is <strong>' + ref + '</strong>. A dedicated Account Executive will contact you during business hours, and a copy is on its way to your email.'
+            : 'Thank you! Your quote request has been received. A dedicated Account Executive will contact you during business hours.';
+          formMessage.style.display = 'block';
+          quoteForm.reset();
         })
         .catch(function(err) {
           formMessage.className = 'form-message error';

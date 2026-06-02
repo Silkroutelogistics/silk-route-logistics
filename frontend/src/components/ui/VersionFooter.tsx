@@ -12719,7 +12719,22 @@
 //   INQ-… We'll get back to you during business hours, and a copy is on its way to your
 //   email." — replaces the prior unenforced "respond within 2 business hours" SLA with the
 //   §6 honest "during business hours". Per §3.1: ams → amt.
-export const SRL_VERSION = "3.8.amt";
+// v3.8.amu — quote-request flow: same treatment as contact + UNBREAK the form (P0).
+//   DISCOVERY: the /shippers "Get a Quote" form was silently broken — it POSTs
+//   {companyName, contactName, originCity, destinationCity (combined "City, State"
+//   free-text), freightType, estimatedWeight, specialRequirements}, but the backend
+//   quoteRequestSchema required {name, company, originState, destCity, destState} and
+//   rejected EVERY submission with 400 (confirmed via live POST). No lead was created,
+//   no email fired. FIX: realigned quoteRequestSchema + createWebsiteLead to the form's
+//   actual fields (companyName→company, contactName→name, destinationCity→destCity,
+//   freightType→equipment, estimatedWeight→weight, specialRequirements→details; state
+//   columns left null since the form combines city/state). THEN the requested treatment:
+//   QTE-XXXXXXXX reference derived from the lead id; sales@ notification (canonical lead
+//   inbox per §1) + submitter confirmation now both carry the reference; "you'll hear
+//   from us within 15 minutes during business hours" → honest "during business hours
+//   (Mon–Fri 7am–7pm ET)"; response returns referenceNumber. Frontend shippers.html
+//   reads data.referenceNumber and shows "Your quote reference is QTE-…". Per §3.1: amt → amu.
+export const SRL_VERSION = "3.8.amu";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
