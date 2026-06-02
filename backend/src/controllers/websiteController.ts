@@ -61,9 +61,13 @@ export async function createWebsiteLead(req: Request, res: Response) {
     const referenceNumber = "QTE-" + lead.id.slice(-8).toUpperCase();
     const lane = `${data.originCity} → ${data.destinationCity}`;
 
-    // Notify the lead inbox (fire-and-forget) — sales@ is the canonical lead-intake alias (§1)
+    // Notify the lead inbox (fire-and-forget). Sent directly to operations@ — the real
+    // shared mailbox the user monitors — rather than the sales@ alias. sales@ aliases TO
+    // operations@ anyway, and Resend had auto-suppressed sales@ after early hard bounces
+    // (before the alias existed), silently dropping every notification. operations@ is the
+    // non-suppressed real mailbox + the single inbox the user wants all leads in. (v3.8.amv)
     sendEmail(
-      "sales@silkroutelogistics.ai",
+      "operations@silkroutelogistics.ai",
       `[${referenceNumber}] New Quote Request: ${lane}`,
       wrap(`
         <h2 style="color:#0f172a">New Quote Request</h2>

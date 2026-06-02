@@ -12734,7 +12734,20 @@
 //   from us within 15 minutes during business hours" → honest "during business hours
 //   (Mon–Fri 7am–7pm ET)"; response returns referenceNumber. Frontend shippers.html
 //   reads data.referenceNumber and shows "Your quote reference is QTE-…". Per §3.1: amt → amu.
-export const SRL_VERSION = "3.8.amu";
+// v3.8.amv — quote notification recipient sales@ → operations@ (fixes "leads not arriving").
+//   ROOT CAUSE (found via Resend dashboard): Resend had AUTO-SUPPRESSED
+//   sales@silkroutelogistics.ai after the early hard bounces (my amu verification tests
+//   fired before the user set up the sales@→operations@ alias, so they bounced "user
+//   unknown"; Resend blocklists an address after a hard bounce). Every subsequent quote
+//   notification to sales@ showed "Suppressed" in Resend and was never sent — which is why
+//   Google's Email Log Search returned 0 (Resend never delivered it; not a Google
+//   spam/quarantine issue). Resend has no easy self-serve UI to clear a suppression. FIX:
+//   send the notification directly to operations@silkroutelogistics.ai — the real shared
+//   mailbox (created 2026-05-28, not suppressed) that sales@ aliases to anyway. This
+//   bypasses the suppression AND consolidates everything in the single operations@ inbox
+//   the user wants (contact form already notifies operations@). Submitter confirmation
+//   unchanged (delivers fine to external addresses). §1 sales@ note updated. Per §3.1: amu → amv.
+export const SRL_VERSION = "3.8.amv";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
