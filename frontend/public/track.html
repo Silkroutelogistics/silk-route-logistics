@@ -791,5 +791,31 @@
   <!-- Marco Polo AI assistant widget (parity with the other public pages) -->
   <link rel="stylesheet" href="/shared/css/marco-polo.css">
   <script src="/shared/js/marco-polo.js"></script>
+
+  <!-- v3.8.amx — mobile nav wiring. This page shipped the chrome nav markup
+       (hamburger + mobileMenu + mobileOverlay) with no nav JS at all, so the
+       hamburger was dead on mobile. Canonical wiring from contact.html. -->
+  <script>
+    (function () {
+      var hamburger = document.getElementById('hamburger');
+      var mobileMenu = document.getElementById('mobileMenu');
+      var overlay = document.getElementById('mobileOverlay');
+      if (!hamburger || !mobileMenu) return;
+      function toggleMobile() {
+        var isOpen = mobileMenu.classList.contains('open');
+        mobileMenu.classList.toggle('open');
+        if (overlay) overlay.classList.toggle('show');
+        hamburger.classList.toggle('open');
+        hamburger.setAttribute('aria-expanded', String(!isOpen));
+      }
+      hamburger.addEventListener('click', toggleMobile);
+      if (overlay) overlay.addEventListener('click', toggleMobile);
+      document.querySelectorAll('.mobile-nav-link').forEach(function (link) {
+        link.addEventListener('click', function () {
+          if (mobileMenu.classList.contains('open')) toggleMobile();
+        });
+      });
+    })();
+  </script>
 </body>
 </html>

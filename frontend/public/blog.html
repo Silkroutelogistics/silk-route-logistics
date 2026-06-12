@@ -449,10 +449,15 @@
         state.isLoading = true;
 
         if (!append) {
+          // v3.8.amx P0 — grid/empty/loadMore ship with the .d-none class.
+          // Setting style.display = '' never removes that class, so the
+          // empty state and Load More could NEVER appear (the grid only
+          // escaped via its own .articles-grid display rule). Toggle the
+          // class itself; skeleton has no .d-none so inline display is fine.
           loadingSkeleton.style.display = '';
-          articlesGrid.style.display = 'none';
-          emptyState.style.display = 'none';
-          loadMoreWrapper.style.display = 'none';
+          articlesGrid.classList.add('d-none');
+          emptyState.classList.add('d-none');
+          loadMoreWrapper.classList.add('d-none');
         } else {
           loadMoreBtn.classList.add('loading');
           loadMoreBtn.disabled = true;
@@ -476,9 +481,9 @@
 
             if (!data.articles || data.articles.length === 0) {
               if (!append) {
-                emptyState.style.display = '';
-                articlesGrid.style.display = 'none';
-                loadMoreWrapper.style.display = 'none';
+                emptyState.classList.remove('d-none');
+                articlesGrid.classList.add('d-none');
+                loadMoreWrapper.classList.add('d-none');
                 resultCount.textContent = '';
               }
               loadMoreBtn.classList.remove('loading');
@@ -486,8 +491,8 @@
               return;
             }
 
-            emptyState.style.display = 'none';
-            articlesGrid.style.display = '';
+            emptyState.classList.add('d-none');
+            articlesGrid.classList.remove('d-none');
 
             // Update result count
             resultCount.textContent = state.totalArticles + ' article' + (state.totalArticles !== 1 ? 's' : '');
@@ -507,9 +512,9 @@
 
             // Show/hide Load More
             if (state.currentPage < state.totalPages) {
-              loadMoreWrapper.style.display = '';
+              loadMoreWrapper.classList.remove('d-none');
             } else {
-              loadMoreWrapper.style.display = 'none';
+              loadMoreWrapper.classList.add('d-none');
             }
 
             loadMoreBtn.classList.remove('loading');
@@ -520,7 +525,7 @@
             state.isLoading = false;
             loadingSkeleton.style.display = 'none';
             if (!append && state.articles.length === 0) {
-              emptyState.style.display = '';
+              emptyState.classList.remove('d-none');
             }
             loadMoreBtn.classList.remove('loading');
             loadMoreBtn.disabled = false;

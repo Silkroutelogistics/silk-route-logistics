@@ -34,11 +34,21 @@
 # the static page's vanilla JS reads window.location.pathname and fetches.
 # /tracking/* legacy splat: redirects historical email links to consolidated
 # /track/<token> URL pattern (status 301, browser URL updates).
-# /track/* SPA-rewrite splat: serves /track.html for QR/bookmark deep-links.
+# /track/* SPA-rewrite splat: serves the track page for QR/bookmark deep-links.
 # Status 200 preserves the URL so customers can bookmark.
 # Closes CLAUDE.md §13.3 Item 31.
+#
+# 2026-06-12 v3.8.amx P0 — rewrite TARGET must be the extensionless path.
+# With `/track.html` as the target, Cloudflare Pages normalizes the .html
+# rewrite into a 308 redirect to /track, which DROPS the token splat:
+# every BOL QR scan and email tracking link landed on the empty search
+# page (verified live: /track/<token> → 308 → bare /track). Extensionless
+# target `/track` serves track.html via Cloudflare's native fallback with
+# the URL (and token) preserved — same proven pattern as /quote/approve/*
+# below (verified live: 200, URL preserved). Bare /track never matches the
+# splat, so the v3.8.ade redirect-loop class cannot fire.
 /tracking/*    /track/:splat   301
-/track/*       /track.html     200
+/track/*       /track          200
 
 # 2026-05-16 v3.8.abo — Sprint 51 Item 129 RC verification anti-fraud.
 # 2026-05-18 v3.8.add — converted to static HTML mirroring /track pattern.
@@ -54,7 +64,11 @@
 # v3.8.add deploy. Splat rules below handle the deep-link token case
 # (/track/<token> → /track.html); bare paths fall through to Cloudflare's
 # native .html extension fallback, which is what we want.
-/verify/*      /verify.html    200
+#
+# 2026-06-12 v3.8.amx P0 — same extensionless-target fix as /track/* above:
+# the /verify.html target was 308-normalized and dropped the RC-PDF
+# verification token.
+/verify/*      /verify         200
 
 # v3.8.akn §13.3 Item 180.4 — magic-link quote approval.
 # /quote/approve/<token> → /quote/approve (status 200, URL preserved).

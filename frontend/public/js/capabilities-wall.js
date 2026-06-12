@@ -25,6 +25,12 @@
   // v3.8.agc — `c` field carries icon color category for visual brand
   // rhythm: "warm" = gold-dark stroke (capability/operational/financial
   // facts), "cool" = navy stroke (authority/identity/legal/trust facts).
+  // v3.8.amx — P0 audit catch: "Tier-graduated FSC" → "Day-1 Silver entry".
+  // The tier-graduated FSC framing was itself retired in v3.8.aib (§5);
+  // the v3.8.agb swap above predates that retirement. Replacement is
+  // §4 #14 (Day-1 Silver entry, fleet-size-independent) rather than the
+  // §4 #1 FSC-itemized line because "Itemized rate cons" already sits in
+  // this pool and would have made a near-duplicate tile.
   var facts = [
     { t: 'Cold-chain capable',        i: 'thermometer-snowflake', c: 'warm' },
     { t: 'Quick Pay, day one',        i: 'banknote',              c: 'warm' },
@@ -38,7 +44,7 @@
     { t: 'Coast to coast lanes',      i: 'compass',               c: 'warm' },
     { t: 'Reefer capable',            i: 'snowflake',             c: 'warm' },
     { t: 'Marco Polo 24/7',           i: 'bot',                   c: 'warm' },
-    { t: 'Tier-graduated FSC',        i: 'trending-up',           c: 'warm' },
+    { t: 'Day-1 Silver entry',        i: 'trending-up',           c: 'warm' },
     { t: 'Dedicated AE',              i: 'user-check',            c: 'cool' },
     { t: 'USDOT 4526880',             i: 'badge',                 c: 'cool' },
     { t: 'MC 1794414',                i: 'shield',                c: 'cool' },

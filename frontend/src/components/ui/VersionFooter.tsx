@@ -12763,7 +12763,26 @@
 //   <30d) on license + med card, inline error banners (Item 43 lesson), Academy teaser
 //   strip; (4) "Drivers" sidebar entry (Users icon) between My Loads and Compliance.
 //   Epic plan + T2-T7 banked at CLAUDE.md §13.3 Item 193. Per §3.1: amv → amw.
-export const SRL_VERSION = "3.8.amw";
+// v3.8.amx — P0 hotfix bundle from the 2026-06-10/12 public-site enhancement audit
+//   (19-batch workflow, 173 adversarially-verified findings; Wasi GO on the 5 P0s).
+//   (1) _redirects: /track/* + /verify/* rewrite targets .html → extensionless. The
+//   .html target was 308-normalized by Cloudflare and DROPPED the token splat, so
+//   every BOL QR scan + email tracking link landed on the empty /track search page
+//   (verified live pre-fix; /quote/approve/* extensionless pattern verified working).
+//   (2) Mobile nav un-broken on /shippers (shippers.css styled .nav-hamburger while
+//   chrome renders .hamburger — 6-selector rename) and /track (no nav JS at all +
+//   .mobile-menu hard-hidden with no .open state — canonical wiring + slide-in CSS
+//   ported from contact.html/contact.css). (3) /blog Load More + empty state could
+//   never render: elements ship .d-none, show-path set style.display='' which left
+//   the class applied — toggled via classList at all 5 sites; archive past 12
+//   articles now reachable. (4) §5-prohibited "Tier-graduated FSC" (retired v3.8.aib)
+//   still live on the homepage capabilities wall — swapped to "Day-1 Silver entry"
+//   (§4 #14) in index.html tile + capabilities-wall.js pool; FSC-itemized text not
+//   used because "Itemized rate cons" already sits in the pool (near-dupe).
+//   (5) /carriers hero stat "2-Day Quick Pay Option" → "Same-Day" (§8 offers 7-day +
+//   same-day only; 2-day is the competitor framing /faq itself rebuts).
+//   Per §3.1: amw → amx. Bundle precedent: v3.8.ajt/ajv critical-bug bundles.
+export const SRL_VERSION = "3.8.amx";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
