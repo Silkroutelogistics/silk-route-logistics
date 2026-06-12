@@ -12782,7 +12782,30 @@
 //   (5) /carriers hero stat "2-Day Quick Pay Option" → "Same-Day" (§8 offers 7-day +
 //   same-day only; 2-day is the competitor framing /faq itself rebuts).
 //   Per §3.1: amw → amx. Bundle precedent: v3.8.ajt/ajv critical-bug bundles.
-export const SRL_VERSION = "3.8.amx";
+// v3.8.amy — Sprint 2 of the audit roadmap: injector + head hygiene (Wasi GO).
+//   THE INJECTOR WAS THE REGRESSION SOURCE: inject-chrome.mjs re-clobbered page
+//   fixes on every Cloudflare build (prebuild hook; local `npx next build` skips
+//   it which is why amx gates never saw it). Fixed at the source: (1) PENGUIN_SVG
+//   gold #C8963E → #BA7517 (v3.8.ams fix kept reverting); (2) pathToCanonical
+//   emits extensionless URLs (was .html → 308 canonical-to-redirect chain on 11
+//   pages, mirrored into og:url); (3) renderMeta supports per-page og-image via
+//   marker attr (was hardcoded logo.png, clobbering /shippers hero card) +
+//   replaceMeta now PRESERVES marker attrs on rewrite + parseAttrs accepts
+//   hyphenated names; (4) chrome now ships /shared/js/nav-login.js (click toggle
+//   + aria-expanded + outside-click + Escape; double-bind guarded) — Sign In
+//   dropdown was keyboard/touch-dead on 11 of 12 pages (only index wired it; six
+//   pages shipped dead #loginDropdown blocks, all deleted; index inline wiring
+//   retired); utilities.css adds :focus-within fallback. HEAD HYGIENE: legacy
+//   duplicate OG/Twitter blocks deleted on index/contact/faq/blog/careers/
+//   privacy/terms (retired tagline "Your Freight. Our Legacy.", www og:urls,
+//   MC 01794414 — SAFER-verified 1794414 per §3.13 before correcting); stray
+//   /logo.svg + /logo.png + dup favicon.ico icon links and dup preconnect pairs
+//   removed on 10 pages; keywords metas dropped site-wide; /blog metas no longer
+//   claim "curated daily by AI" (amf parity); index/contact/blog/shippers meta
+//   descriptions de-em-dashed; /faq retitled "Freight Brokerage FAQ | Silk Route
+//   Logistics"; /shippers title shortened 77→59 chars. sitemap.xml → extensionless
+//   locs + lastmod + /verify dropped (noindex utility). Per §3.1: amx → amy.
+export const SRL_VERSION = "3.8.amy";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

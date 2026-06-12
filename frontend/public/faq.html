@@ -3,10 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>FAQ — Silk Route Logistics | Frequently Asked Questions</title>
+  <title>Freight Brokerage FAQ | Silk Route Logistics</title>
   <!-- INCLUDE:meta -->
   <meta name="description" content="Find answers to frequently asked questions about Silk Route Logistics freight brokerage services for shippers, carriers, technology, and billing.">
-  <link rel="canonical" href="https://silkroutelogistics.ai/faq.html">
+  <link rel="canonical" href="https://silkroutelogistics.ai/faq">
   <meta name="theme-color" content="#0A2540">
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
   <link rel="icon" type="image/x-icon" href="/favicon.ico">
@@ -14,27 +14,18 @@
   <link rel="manifest" href="/manifest.json">
   
   <meta property="og:type" content="website">
-  <meta property="og:url" content="https://silkroutelogistics.ai/faq.html">
-  <meta property="og:title" content="FAQ — Silk Route Logistics | Frequently Asked Questions">
+  <meta property="og:url" content="https://silkroutelogistics.ai/faq">
+  <meta property="og:title" content="Freight Brokerage FAQ | Silk Route Logistics">
   <meta property="og:description" content="Find answers to frequently asked questions about Silk Route Logistics freight brokerage services for shippers, carriers, technology, and billing.">
   <meta property="og:image" content="https://silkroutelogistics.ai/logo.png">
   <meta property="og:site_name" content="Silk Route Logistics">
   
   <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="FAQ — Silk Route Logistics | Frequently Asked Questions">
+  <meta name="twitter:title" content="Freight Brokerage FAQ | Silk Route Logistics">
   <meta name="twitter:description" content="Find answers to frequently asked questions about Silk Route Logistics freight brokerage services for shippers, carriers, technology, and billing.">
   <meta name="twitter:image" content="https://silkroutelogistics.ai/logo.png">
   <!-- END INCLUDE:meta -->
-  <meta name="keywords" content="freight brokerage FAQ, logistics questions, shipper FAQ, carrier FAQ, Silk Route Logistics">
   <meta name="author" content="Silk Route Logistics Inc.">
-  <meta property="og:title" content="FAQ — Silk Route Logistics">
-  <meta property="og:description" content="Answers to common questions about our freight brokerage services.">
-  <meta property="og:type" content="website">
-  <link rel="icon" type="image/svg+xml" href="/logo.svg">
-  <link rel="icon" href="/favicon.ico" type="image/x-icon">
-  <link rel="icon" href="/logo.png" type="image/png">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <!-- INCLUDE:design-system -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -89,6 +80,7 @@
       <a href="/shipper/login" class="mobile-nav-link">Shipper Login</a>
     </div>
   </div>
+  <script src="/shared/js/nav-login.js" defer></script>
   <!-- END INCLUDE:nav --><main id="main-content">
 
     <section class="hero" aria-labelledby="hero-heading">
@@ -443,20 +435,9 @@
     (function() {
       'use strict';
 
-      /* Login Dropdown Toggle */
-      var loginDropdown = document.getElementById('loginDropdown');
-      if (loginDropdown) {
-        var loginBtn = loginDropdown.querySelector('.login-dropdown-btn');
-        loginBtn.addEventListener('click', function (e) {
-          e.stopPropagation();
-          loginDropdown.classList.toggle('open');
-          loginBtn.setAttribute('aria-expanded', loginDropdown.classList.contains('open').toString());
-        });
-        document.addEventListener('click', function () {
-          loginDropdown.classList.remove('open');
-          loginBtn.setAttribute('aria-expanded', 'false');
-        });
-      }
+      /* Login dropdown wiring lives in /shared/js/nav-login.js (v3.8.amy);
+         the dead #loginDropdown block that was here targeted an element
+         that does not exist in the injected chrome. */
 
       /* Navbar scroll */
       var navbar = document.querySelector('.navbar');

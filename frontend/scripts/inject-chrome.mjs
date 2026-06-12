@@ -83,7 +83,10 @@ function extractDescription(html) {
 
 function pathToCanonical(filename) {
   if (filename === "index.html") return "https://silkroutelogistics.ai/";
-  return `https://silkroutelogistics.ai/${filename}`;
+  // v3.8.amy — extensionless canonical. Cloudflare Pages 308-redirects the
+  // .html form to the extensionless path, so a .html canonical/og:url is a
+  // canonical-to-redirect chain on every page.
+  return `https://silkroutelogistics.ai/${filename.replace(/\.html$/, "")}`;
 }
 
 // JSON-LD Organization schema — home page only. Uses ONLY facts in CLAUDE.md
@@ -112,11 +115,16 @@ function organizationSchema() {
   }, null, 2);
 }
 
-function renderMeta(html, filename) {
+function renderMeta(html, filename, attrs = {}) {
   const title = extractTitle(html);
   const description = extractDescription(html);
   const canonical = pathToCanonical(filename);
   const isHome = filename === "index.html";
+  // v3.8.amy — per-page social image via marker attribute, e.g.
+  // <!-- INCLUDE:meta og-image="https://silkroutelogistics.ai/media/shipper-hero.jpg" -->
+  // Pre-amy this was hardcoded to logo.png and silently clobbered any
+  // page-level og:image hand-edit on every build.
+  const ogImage = attrs["og-image"] || "https://silkroutelogistics.ai/logo.png";
 
   const lines = [
     `<meta name="description" content="${escapeAttr(description)}">`,
@@ -131,13 +139,13 @@ function renderMeta(html, filename) {
     `<meta property="og:url" content="${canonical}">`,
     `<meta property="og:title" content="${escapeAttr(title)}">`,
     `<meta property="og:description" content="${escapeAttr(description)}">`,
-    `<meta property="og:image" content="https://silkroutelogistics.ai/logo.png">`,
+    `<meta property="og:image" content="${escapeAttr(ogImage)}">`,
     `<meta property="og:site_name" content="Silk Route Logistics">`,
     ``,
     `<meta name="twitter:card" content="summary_large_image">`,
     `<meta name="twitter:title" content="${escapeAttr(title)}">`,
     `<meta name="twitter:description" content="${escapeAttr(description)}">`,
-    `<meta name="twitter:image" content="https://silkroutelogistics.ai/logo.png">`,
+    `<meta name="twitter:image" content="${escapeAttr(ogImage)}">`,
   ];
 
   if (isHome) {
@@ -151,12 +159,20 @@ function renderMeta(html, filename) {
 }
 
 function replaceMeta(html, filename) {
-  const block = `<!-- INCLUDE:meta -->\n  ${renderMeta(html, filename)}\n  <!-- END INCLUDE:meta -->`;
-  const markerRe = /<!-- INCLUDE:meta(?:\s+[^>]*?)?\s*-->[\s\S]*?<!-- END INCLUDE:meta -->/g;
+  // v3.8.amy — marker attributes (e.g. og-image="...") are parsed and
+  // PRESERVED on rewrite. Pre-amy the rewrite emitted a bare marker,
+  // silently dropping any attributes on the next run.
+  const markerRe = /<!-- INCLUDE:meta(?:\s+([^>]*?))?\s*-->[\s\S]*?<!-- END INCLUDE:meta -->/g;
   if (markerRe.test(html)) {
-    return { html: html.replace(markerRe, block), touched: true };
+    markerRe.lastIndex = 0;
+    const out = html.replace(markerRe, (_match, attrs) => {
+      const attrStr = attrs ? ` ${attrs.trim()}` : "";
+      return `<!-- INCLUDE:meta${attrStr} -->\n  ${renderMeta(html, filename, parseAttrs(attrs))}\n  <!-- END INCLUDE:meta -->`;
+    });
+    return { html: out, touched: true };
   }
   if (OLD_DESCRIPTION_RE.test(html)) {
+    const block = `<!-- INCLUDE:meta -->\n  ${renderMeta(html, filename)}\n  <!-- END INCLUDE:meta -->`;
     return { html: html.replace(OLD_DESCRIPTION_RE, block), touched: true };
   }
   return { html, touched: false };
@@ -188,15 +204,18 @@ function replaceDesignSystem(html, content) {
 // (commit 36e5636, frontend/public/index.html lines 47-56). Animated via
 // srl-logo.css (@keyframes penguin-north + waddle) which is already loaded
 // on every marketing page that opts into this variant.
+// v3.8.amy — beak/feet gold corrected #C8963E → #BA7517 (canonical
+// gold-dark). The v3.8.ams page-level fix was silently reverted on every
+// Cloudflare build because this constant is the source of truth.
 const PENGUIN_SVG = `<svg viewBox="0 0 24 28" fill="none" xmlns="http://www.w3.org/2000/svg">
               <ellipse cx="12" cy="17" rx="7" ry="9" fill="#1a1a2e"/>
               <ellipse cx="12" cy="18" rx="4.5" ry="6" fill="#e8e8e8"/>
               <circle cx="12" cy="8" r="5.5" fill="#1a1a2e"/>
               <circle cx="10" cy="7" r="1.1" fill="white"/><circle cx="14" cy="7" r="1.1" fill="white"/>
               <circle cx="10.4" cy="7.2" r="0.5" fill="#111"/><circle cx="14.4" cy="7.2" r="0.5" fill="#111"/>
-              <polygon points="12,9.5 10.5,11.5 13.5,11.5" fill="#C8963E"/>
-              <ellipse cx="9" cy="26" rx="3" ry="1.3" fill="#C8963E"/>
-              <ellipse cx="15" cy="26" rx="3" ry="1.3" fill="#C8963E"/>
+              <polygon points="12,9.5 10.5,11.5 13.5,11.5" fill="#BA7517"/>
+              <ellipse cx="9" cy="26" rx="3" ry="1.3" fill="#BA7517"/>
+              <ellipse cx="15" cy="26" rx="3" ry="1.3" fill="#BA7517"/>
             </svg>`;
 
 function renderNav(variant) {
@@ -230,11 +249,18 @@ function renderNav(variant) {
   //
   // IDs are intentionally the LEGACY names (mainNav, loginBtn, loginWrap,
   // hamburger, mobileMenu, mobileOverlay) because each page already has an
-  // inline <script> that wires these IDs for scroll effects, dropdown toggles,
-  // and mobile-menu behavior. Renaming them would null-deref the pre-existing
-  // scripts and break layout (v3.6.f/g regression). The injected chrome does
-  // NOT ship its own wiring script — each page's existing JS is the source of
-  // truth for behavior.
+  // inline <script> that wires these IDs for scroll effects and mobile-menu
+  // behavior. Renaming them would null-deref the pre-existing scripts and
+  // break layout (v3.6.f/g regression).
+  //
+  // v3.8.amy — the SIGN-IN DROPDOWN wiring is now shipped BY the chrome
+  // (/shared/js/nav-login.js, emitted below). Pre-amy the "each page wires
+  // its own" design left the dropdown keyboard/touch-dead on 11 of 12 pages:
+  // only index.html had working #loginBtn wiring; six pages shipped a dead
+  // #loginDropdown block targeting elements that don't exist. nav-login.js
+  // guards against double-binding, and the page-local blocks were deleted.
+  // Hamburger/scroll wiring REMAINS page-local — several pages already bind
+  // #hamburger and a chrome-shipped duplicate would toggle twice (no-op).
   return `<nav class="nav navbar" id="mainNav" role="navigation" aria-label="Main">
     <div class="nav-inner navbar-inner">
       <a href="/" class="srl-logo-wrap" aria-label="${escape(chrome.company)} Home">
@@ -261,7 +287,8 @@ ${mobileLinks}
       <div class="label">Sign In</div>
 ${mobileLogin}
     </div>
-  </div>`;
+  </div>
+  <script src="/shared/js/nav-login.js" defer></script>`;
 }
 
 function renderFooter() {
@@ -365,7 +392,9 @@ function replaceMarked(html, tag, renderer) {
 function parseAttrs(s) {
   const out = {};
   if (!s) return out;
-  const re = /(\w+)="([^"]*)"/g;
+  // v3.8.amy — [\w-] so hyphenated attr names (og-image) parse; the prior
+  // \w+ silently matched only the segment after the hyphen ("image").
+  const re = /([\w-]+)="([^"]*)"/g;
   let m;
   while ((m = re.exec(s)) !== null) out[m[1]] = m[2];
   return out;

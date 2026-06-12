@@ -1,67 +1,77 @@
 <?xml version="1.0" encoding="UTF-8"?>
+<!-- v3.8.amy: locs flipped from .html (which 308-redirect on Cloudflare
+     Pages) to the extensionless final URLs; /verify dropped (token-bearing
+     utility page, noindex); lastmod added. -->
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
     <loc>https://silkroutelogistics.ai/</loc>
+    <lastmod>2026-06-12</lastmod>
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
   </url>
   <url>
-    <loc>https://silkroutelogistics.ai/about.html</loc>
+    <loc>https://silkroutelogistics.ai/about</loc>
+    <lastmod>2026-06-12</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://silkroutelogistics.ai/shippers.html</loc>
+    <loc>https://silkroutelogistics.ai/shippers</loc>
+    <lastmod>2026-06-12</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://silkroutelogistics.ai/carriers.html</loc>
+    <loc>https://silkroutelogistics.ai/carriers</loc>
+    <lastmod>2026-06-12</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://silkroutelogistics.ai/contact.html</loc>
+    <loc>https://silkroutelogistics.ai/contact</loc>
+    <lastmod>2026-06-12</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://silkroutelogistics.ai/faq.html</loc>
+    <loc>https://silkroutelogistics.ai/faq</loc>
+    <lastmod>2026-06-12</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://silkroutelogistics.ai/blog.html</loc>
+    <loc>https://silkroutelogistics.ai/blog</loc>
+    <lastmod>2026-06-12</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://silkroutelogistics.ai/careers.html</loc>
+    <loc>https://silkroutelogistics.ai/careers</loc>
+    <lastmod>2026-06-12</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
     <loc>https://silkroutelogistics.ai/track</loc>
+    <lastmod>2026-06-12</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://silkroutelogistics.ai/verify</loc>
-    <changefreq>monthly</changefreq>
-    <priority>0.5</priority>
-  </url>
-  <url>
-    <loc>https://silkroutelogistics.ai/privacy.html</loc>
+    <loc>https://silkroutelogistics.ai/privacy</loc>
+    <lastmod>2026-06-12</lastmod>
     <changefreq>yearly</changefreq>
     <priority>0.3</priority>
   </url>
   <url>
-    <loc>https://silkroutelogistics.ai/terms.html</loc>
+    <loc>https://silkroutelogistics.ai/terms</loc>
+    <lastmod>2026-06-12</lastmod>
     <changefreq>yearly</changefreq>
     <priority>0.3</priority>
   </url>
   <url>
-    <loc>https://silkroutelogistics.ai/security-policy.html</loc>
+    <loc>https://silkroutelogistics.ai/security-policy</loc>
+    <lastmod>2026-06-12</lastmod>
     <changefreq>yearly</changefreq>
     <priority>0.3</priority>
   </url>

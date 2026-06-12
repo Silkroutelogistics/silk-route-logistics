@@ -6,7 +6,7 @@
   <title>About Us — Silk Route Logistics | Our Story</title>
   <!-- INCLUDE:meta -->
   <meta name="description" content="Learn about Silk Route Logistics, a technology-driven freight brokerage headquartered in Galesburg, Michigan, connecting shippers and carriers across the 48 contiguous United States with transparency, innovation, and trust.">
-  <link rel="canonical" href="https://silkroutelogistics.ai/about.html">
+  <link rel="canonical" href="https://silkroutelogistics.ai/about">
   <meta name="theme-color" content="#0A2540">
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
   <link rel="icon" type="image/x-icon" href="/favicon.ico">
@@ -14,23 +14,18 @@
   <link rel="manifest" href="/manifest.json">
   
   <meta property="og:type" content="website">
-  <meta property="og:url" content="https://silkroutelogistics.ai/about.html">
+  <meta property="og:url" content="https://silkroutelogistics.ai/about">
   <meta property="og:title" content="About Us — Silk Route Logistics | Our Story">
   <meta property="og:description" content="Learn about Silk Route Logistics, a technology-driven freight brokerage headquartered in Galesburg, Michigan, connecting shippers and carriers across the 48 contiguous United States with transparency, innovation, and trust.">
-  <meta property="og:image" content="https://silkroutelogistics.ai/media/shipper-hero.jpg">
+  <meta property="og:image" content="https://silkroutelogistics.ai/logo.png">
   <meta property="og:site_name" content="Silk Route Logistics">
   
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="About Us — Silk Route Logistics | Our Story">
   <meta name="twitter:description" content="Learn about Silk Route Logistics, a technology-driven freight brokerage headquartered in Galesburg, Michigan, connecting shippers and carriers across the 48 contiguous United States with transparency, innovation, and trust.">
-  <meta name="twitter:image" content="https://silkroutelogistics.ai/media/shipper-hero.jpg">
+  <meta name="twitter:image" content="https://silkroutelogistics.ai/logo.png">
   <!-- END INCLUDE:meta -->
-  <meta name="keywords" content="freight brokerage, logistics company, about Silk Route Logistics, Galesburg freight, Michigan logistics, supply chain technology">
   <meta name="author" content="Silk Route Logistics Inc.">
-  <link rel="icon" href="/favicon.ico" type="image/x-icon">
-  <link rel="icon" href="/logo.png" type="image/png">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <!-- INCLUDE:design-system -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -89,6 +84,7 @@
       <a href="/shipper/login" class="mobile-nav-link">Shipper Login</a>
     </div>
   </div>
+  <script src="/shared/js/nav-login.js" defer></script>
   <!-- END INCLUDE:nav --><!-- ==========================================
        MAIN CONTENT
        ========================================== -->
@@ -495,22 +491,9 @@
     (function() {
       'use strict';
 
-      /* ========================================
-         LOGIN DROPDOWN TOGGLE
-         ======================================== */
-      var loginDropdown = document.getElementById('loginDropdown');
-      if (loginDropdown) {
-        var loginBtn = loginDropdown.querySelector('.login-dropdown-btn');
-        loginBtn.addEventListener('click', function (e) {
-          e.stopPropagation();
-          loginDropdown.classList.toggle('open');
-          loginBtn.setAttribute('aria-expanded', loginDropdown.classList.contains('open').toString());
-        });
-        document.addEventListener('click', function () {
-          loginDropdown.classList.remove('open');
-          loginBtn.setAttribute('aria-expanded', 'false');
-        });
-      }
+      /* Login dropdown wiring lives in /shared/js/nav-login.js (v3.8.amy).
+         The block that was here targeted a #loginDropdown element that does
+         not exist in the injected chrome — dead since the chrome migration. */
 
       /* ========================================
          NAVBAR SCROLL EFFECT

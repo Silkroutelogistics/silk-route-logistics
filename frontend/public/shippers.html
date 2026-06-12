@@ -3,10 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Ship With Silk Route Logistics — Freight Brokerage Across the United States</title>
-  <!-- INCLUDE:meta -->
-  <meta name="description" content="From single loads to full managed transportation programs — Silk Route Logistics moves your freight across the 48 contiguous United States with precision. Dry van, refrigerated, expedited, and dedicated capacity solutions.">
-  <link rel="canonical" href="https://silkroutelogistics.ai/shippers.html">
+  <title>Ship With Silk Route Logistics | 48-State Freight Brokerage</title>
+  <!-- INCLUDE:meta og-image="https://silkroutelogistics.ai/media/shipper-hero.jpg" -->
+  <meta name="description" content="From single loads to full managed transportation programs, Silk Route Logistics moves your freight across the 48 contiguous United States. Dry van, refrigerated, expedited, and dedicated capacity.">
+  <link rel="canonical" href="https://silkroutelogistics.ai/shippers">
   <meta name="theme-color" content="#0A2540">
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
   <link rel="icon" type="image/x-icon" href="/favicon.ico">
@@ -14,20 +14,17 @@
   <link rel="manifest" href="/manifest.json">
   
   <meta property="og:type" content="website">
-  <meta property="og:url" content="https://silkroutelogistics.ai/shippers.html">
-  <meta property="og:title" content="Ship With Silk Route Logistics — Freight Brokerage Across the United States">
-  <meta property="og:description" content="From single loads to full managed transportation programs — Silk Route Logistics moves your freight across the 48 contiguous United States with precision. Dry van, refrigerated, expedited, and dedicated capacity solutions.">
+  <meta property="og:url" content="https://silkroutelogistics.ai/shippers">
+  <meta property="og:title" content="Ship With Silk Route Logistics | 48-State Freight Brokerage">
+  <meta property="og:description" content="From single loads to full managed transportation programs, Silk Route Logistics moves your freight across the 48 contiguous United States. Dry van, refrigerated, expedited, and dedicated capacity.">
   <meta property="og:image" content="https://silkroutelogistics.ai/media/shipper-hero.jpg">
   <meta property="og:site_name" content="Silk Route Logistics">
   
   <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="Ship With Silk Route Logistics — Freight Brokerage Across the United States">
-  <meta name="twitter:description" content="From single loads to full managed transportation programs — Silk Route Logistics moves your freight across the 48 contiguous United States with precision. Dry van, refrigerated, expedited, and dedicated capacity solutions.">
+  <meta name="twitter:title" content="Ship With Silk Route Logistics | 48-State Freight Brokerage">
+  <meta name="twitter:description" content="From single loads to full managed transportation programs, Silk Route Logistics moves your freight across the 48 contiguous United States. Dry van, refrigerated, expedited, and dedicated capacity.">
   <meta name="twitter:image" content="https://silkroutelogistics.ai/media/shipper-hero.jpg">
   <!-- END INCLUDE:meta -->
-  <meta name="keywords" content="freight brokerage, shipping, trucking, dry van, FTL, refrigerated, reefer, expedited shipping, 48 states logistics">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <!-- INCLUDE:design-system -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -81,6 +78,7 @@
       <a href="/shipper/login" class="mobile-nav-link">Shipper Login</a>
     </div>
   </div>
+  <script src="/shared/js/nav-login.js" defer></script>
   <!-- END INCLUDE:nav -->
 
   <!-- ========== HERO SECTION ========== -->
@@ -671,23 +669,9 @@
         ? 'http://localhost:4000'
         : 'https://api.silkroutelogistics.ai';
 
-      /* ===== NAVIGATION: Login Dropdown ===== */
-      var loginDropdown = document.getElementById('loginDropdown');
-      if (loginDropdown) {
-        var ddBtn = loginDropdown.querySelector('.login-dropdown-btn');
-        ddBtn.addEventListener('click', function(e) {
-          e.stopPropagation();
-          loginDropdown.classList.toggle('open');
-          ddBtn.setAttribute('aria-expanded', loginDropdown.classList.contains('open'));
-        });
-        document.addEventListener('click', function() {
-          loginDropdown.classList.remove('open');
-          ddBtn.setAttribute('aria-expanded', 'false');
-        });
-        loginDropdown.querySelector('.login-dropdown-menu').addEventListener('click', function(e) {
-          e.stopPropagation();
-        });
-      }
+      /* Login dropdown wiring lives in /shared/js/nav-login.js (v3.8.amy).
+         The block that was here targeted a #loginDropdown element that does
+         not exist in the injected chrome — dead since the chrome migration. */
 
       /* ===== NAVIGATION: Mobile Hamburger ===== */
       var hamburgerBtn = document.getElementById('hamburger');

@@ -64,8 +64,11 @@
       overflow: hidden;
     }
 
+    /* v3.8.amy — :focus-within added so keyboard users can reach the
+       dropdown links even if /shared/js/nav-login.js fails to load. */
     .nav-login-wrap:hover .nav-login-dropdown,
-    .nav-login-wrap.active .nav-login-dropdown {
+    .nav-login-wrap.active .nav-login-dropdown,
+    .nav-login-wrap:focus-within .nav-login-dropdown {
       opacity: 1;
       visibility: visible;
       transform: translateY(0);

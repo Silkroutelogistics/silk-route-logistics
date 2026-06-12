@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <!-- INCLUDE:meta -->
-  <meta name="description" content="Silk Route Logistics — Freight brokerage across the United States. FMCSA-licensed property broker (USDOT 4526880, MC 01794414) with transparent pricing and BMC-84 bond on file.">
+  <meta name="description" content="Silk Route Logistics: freight brokerage across the United States. FMCSA-licensed property broker (USDOT 4526880, MC 1794414) with transparent pricing and BMC-84 bond on file.">
   <link rel="canonical" href="https://silkroutelogistics.ai/">
   <meta name="theme-color" content="#0A2540">
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
@@ -15,13 +15,13 @@
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://silkroutelogistics.ai/">
   <meta property="og:title" content="Silk Route Logistics | Freight Brokerage">
-  <meta property="og:description" content="Silk Route Logistics — Freight brokerage across the United States. FMCSA-licensed property broker (USDOT 4526880, MC 01794414) with transparent pricing and BMC-84 bond on file.">
+  <meta property="og:description" content="Silk Route Logistics: freight brokerage across the United States. FMCSA-licensed property broker (USDOT 4526880, MC 1794414) with transparent pricing and BMC-84 bond on file.">
   <meta property="og:image" content="https://silkroutelogistics.ai/logo.png">
   <meta property="og:site_name" content="Silk Route Logistics">
   
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="Silk Route Logistics | Freight Brokerage">
-  <meta name="twitter:description" content="Silk Route Logistics — Freight brokerage across the United States. FMCSA-licensed property broker (USDOT 4526880, MC 01794414) with transparent pricing and BMC-84 bond on file.">
+  <meta name="twitter:description" content="Silk Route Logistics: freight brokerage across the United States. FMCSA-licensed property broker (USDOT 4526880, MC 1794414) with transparent pricing and BMC-84 bond on file.">
   <meta name="twitter:image" content="https://silkroutelogistics.ai/logo.png">
   
   <script type="application/ld+json">
@@ -50,29 +50,10 @@
 }
   </script>
   <!-- END INCLUDE:meta -->
-  <meta name="keywords" content="freight brokerage, trucking, logistics, FTL, refrigerated, reefer, expedited, carrier, shipper, 48 states freight">
   <meta name="author" content="Silk Route Logistics Inc.">
   <meta name="robots" content="index, follow">
 
-  <!-- Open Graph -->
-  <meta property="og:title" content="Silk Route Logistics — Your Freight. Our Legacy.">
-  <meta property="og:description" content="Freight brokerage across the United States. FMCSA-licensed property broker (USDOT 4526880, MC 01794414) with transparent pricing and BMC-84 bond on file.">
-  <meta property="og:type" content="website">
-  <meta property="og:url" content="https://www.silkroutelogistics.ai">
-  <meta property="og:image" content="https://www.silkroutelogistics.ai/logo.png">
-  <meta property="og:site_name" content="Silk Route Logistics">
-
-  <!-- Twitter Card -->
-  <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="Silk Route Logistics — Your Freight. Our Legacy.">
-  <meta name="twitter:description" content="Freight brokerage across the United States. FMCSA-licensed property broker (USDOT 4526880, MC 01794414) with transparent pricing and BMC-84 bond on file.">
-  <meta name="twitter:image" content="https://www.silkroutelogistics.ai/logo.png">
-
   <title>Silk Route Logistics | Freight Brokerage</title>
-
-  <link rel="icon" type="image/svg+xml" href="/logo.svg">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <!-- INCLUDE:design-system -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -143,6 +124,7 @@
       <a href="/shipper/login" class="mobile-nav-link">Shipper Login</a>
     </div>
   </div>
+  <script src="/shared/js/nav-login.js" defer></script>
   <!-- END INCLUDE:nav -->
 
 
@@ -615,26 +597,9 @@
       window.addEventListener('scroll', handleNavScroll, { passive: true });
       handleNavScroll();
 
-      /* ========================================
-         NAVIGATION — Login Dropdown (click toggle for mobile)
-         ======================================== */
-      var loginWrap = document.getElementById('loginWrap');
-      var loginBtn = document.getElementById('loginBtn');
-
-      if (loginBtn && loginWrap) {
-        loginBtn.addEventListener('click', function(e) {
-          e.stopPropagation();
-          var isActive = loginWrap.classList.toggle('active');
-          loginBtn.setAttribute('aria-expanded', isActive);
-        });
-
-        document.addEventListener('click', function(e) {
-          if (!loginWrap.contains(e.target)) {
-            loginWrap.classList.remove('active');
-            loginBtn.setAttribute('aria-expanded', 'false');
-          }
-        });
-      }
+      /* Login dropdown wiring moved to /shared/js/nav-login.js (v3.8.amy)
+         — shipped by the chrome injector on every marketing page so the
+         dropdown is no longer index-only. */
 
       /* ========================================
          MOBILE MENU

@@ -6,7 +6,7 @@
   <title>Careers — Silk Route Logistics | Join Our Team</title>
   <!-- INCLUDE:meta -->
   <meta name="description" content="Join the Silk Route Logistics team. We're building the future of freight brokerage with technology, transparency, and trust.">
-  <link rel="canonical" href="https://silkroutelogistics.ai/careers.html">
+  <link rel="canonical" href="https://silkroutelogistics.ai/careers">
   <meta name="theme-color" content="#0A2540">
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
   <link rel="icon" type="image/x-icon" href="/favicon.ico">
@@ -14,7 +14,7 @@
   <link rel="manifest" href="/manifest.json">
   
   <meta property="og:type" content="website">
-  <meta property="og:url" content="https://silkroutelogistics.ai/careers.html">
+  <meta property="og:url" content="https://silkroutelogistics.ai/careers">
   <meta property="og:title" content="Careers — Silk Route Logistics | Join Our Team">
   <meta property="og:description" content="Join the Silk Route Logistics team. We're building the future of freight brokerage with technology, transparency, and trust.">
   <meta property="og:image" content="https://silkroutelogistics.ai/logo.png">
@@ -25,16 +25,7 @@
   <meta name="twitter:description" content="Join the Silk Route Logistics team. We're building the future of freight brokerage with technology, transparency, and trust.">
   <meta name="twitter:image" content="https://silkroutelogistics.ai/logo.png">
   <!-- END INCLUDE:meta -->
-  <meta name="keywords" content="freight brokerage careers, logistics jobs, Silk Route Logistics careers, Galesburg jobs">
   <meta name="author" content="Silk Route Logistics Inc.">
-  <meta property="og:title" content="Careers — Silk Route Logistics">
-  <meta property="og:description" content="We're growing. Discover what it's like to work at Silk Route Logistics.">
-  <meta property="og:type" content="website">
-  <link rel="icon" type="image/svg+xml" href="/logo.svg">
-  <link rel="icon" href="/favicon.ico" type="image/x-icon">
-  <link rel="icon" href="/logo.png" type="image/png">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <!-- INCLUDE:design-system -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -89,6 +80,7 @@
       <a href="/shipper/login" class="mobile-nav-link">Shipper Login</a>
     </div>
   </div>
+  <script src="/shared/js/nav-login.js" defer></script>
   <!-- END INCLUDE:nav --><main id="main-content">
 
     <!-- HERO -->
@@ -281,20 +273,9 @@
     (function() {
       'use strict';
 
-      /* Login Dropdown Toggle */
-      var loginDropdown = document.getElementById('loginDropdown');
-      if (loginDropdown) {
-        var loginBtn = loginDropdown.querySelector('.login-dropdown-btn');
-        loginBtn.addEventListener('click', function (e) {
-          e.stopPropagation();
-          loginDropdown.classList.toggle('open');
-          loginBtn.setAttribute('aria-expanded', loginDropdown.classList.contains('open').toString());
-        });
-        document.addEventListener('click', function () {
-          loginDropdown.classList.remove('open');
-          loginBtn.setAttribute('aria-expanded', 'false');
-        });
-      }
+      /* Login dropdown wiring lives in /shared/js/nav-login.js (v3.8.amy);
+         the dead #loginDropdown block that was here targeted an element
+         that does not exist in the injected chrome. */
 
       var navbar = document.querySelector('.navbar');
       function handleNavScroll() {
