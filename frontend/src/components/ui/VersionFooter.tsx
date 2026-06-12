@@ -12747,7 +12747,23 @@
 //   bypasses the suppression AND consolidates everything in the single operations@ inbox
 //   the user wants (contact form already notifies operations@). Submitter confirmation
 //   unchanged (delivers fine to external addresses). §1 sales@ note updated. Per §3.1: amu → amv.
-export const SRL_VERSION = "3.8.amv";
+// v3.8.amw — SRL Driver Academy Sprint T1: carrier-managed driver roster (epic foundation).
+//   Closes the structural gap surfaced by the 2026-06-12 carrier-portal audit: the Driver
+//   model (schema:2452) had NO relation to CarrierProfile or User — pure AE-console fleet
+//   scaffolding — so no carrier-owned roster could exist, and the Academy's per-driver
+//   training logins (T2, phone + PIN per ratified decisions) had nothing to attach to.
+//   SHIPPED: (1) Driver.carrierProfileId nullable FK + CarrierProfile.drivers relation +
+//   manual migration (additive; legacy NULL rows stay AE-only); (2) /api/carrier-drivers
+//   (authenticate + authorize CARRIER + APPROVED gate): GET roster / POST add (phone
+//   REQUIRED + normalizePhoneE164 + per-carrier dupe 409) / PATCH edit / deactivate /
+//   reactivate (no hard delete — training records must survive roster churn); mounted in
+//   index.ts BEFORE /carrier + added to CARRIER_PORTAL_MOUNTS (Sprint 53.a cookie lesson);
+//   (3) /carrier/dashboard/drivers roster page (documents-page idiom: CarrierCard, gold
+//   gradient CTA, TanStack) with add/edit form, expiry-tone warnings (red past / amber
+//   <30d) on license + med card, inline error banners (Item 43 lesson), Academy teaser
+//   strip; (4) "Drivers" sidebar entry (Users icon) between My Loads and Compliance.
+//   Epic plan + T2-T7 banked at CLAUDE.md §13.3 Item 193. Per §3.1: amv → amw.
+export const SRL_VERSION = "3.8.amw";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

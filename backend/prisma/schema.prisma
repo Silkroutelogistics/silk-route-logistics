@@ -1104,6 +1104,11 @@ model CarrierProfile {
   // unclear safety record, etc.); carrier resolves from their portal.
   infoRequests InfoRequest[]
 
+  // v3.8.amw — SRL Driver Academy Sprint T1: carrier-owned driver roster.
+  // Drivers added via the carrier portal carry carrierProfileId; legacy
+  // AE-console fleet rows keep it NULL and stay invisible to carriers.
+  drivers Driver[] @relation("CarrierDrivers")
+
   @@index([mcNumber])
   @@index([dotNumber])
   @@index([status])
@@ -2494,12 +2499,19 @@ model Driver {
   assignedEquipmentId String?    @unique
   assignedEquipment   Equipment? @relation("DriverEquipment", fields: [assignedEquipmentId], references: [id])
 
+  // v3.8.amw — SRL Driver Academy Sprint T1: carrier-owned roster linkage.
+  // Nullable so pre-existing AE-console fleet rows stay valid; carrier
+  // portal roster queries always scope on carrierProfileId.
+  carrierProfileId String?
+  carrierProfile   CarrierProfile? @relation("CarrierDrivers", fields: [carrierProfileId], references: [id])
+
   shipments Shipment[]
   loads     Load[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  @@index([carrierProfileId])
   @@map("drivers")
 }
 

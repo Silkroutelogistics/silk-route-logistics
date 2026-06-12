@@ -107,6 +107,7 @@ const CARRIER_PORTAL_MOUNTS = [
   "/api/carrier-compliance",
   "/api/carrier-payments",
   "/api/carrier-tenders",
+  "/api/carrier-drivers", // v3.8.amw — Driver Academy T1 roster
 ];
 const SHIPPER_PORTAL_MOUNTS = [
   "/api/shipper-portal",
