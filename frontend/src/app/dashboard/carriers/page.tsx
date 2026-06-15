@@ -10,13 +10,14 @@ import {
   TrendingUp, TrendingDown, DollarSign, Package, Award, ShieldAlert, Calendar,
   BarChart3, Percent, Hash, Compass, RefreshCw, ExternalLink, AlertTriangle, Download,
   User, CheckSquare, ClipboardList, Upload, Eye, ArrowLeft, FolderOpen,
-  MessageCircle, Sliders, FlaskConical,
+  MessageCircle, Sliders, FlaskConical, GraduationCap,
 } from "lucide-react";
 import { InfoRequestModal } from "@/components/carriers/InfoRequestModal";
 import { InfoRequestThread } from "@/components/carriers/InfoRequestThread";
 import { RejectCarrierModal } from "@/components/carriers/RejectCarrierModal";
 import { SecuritySignalsCard } from "@/components/carriers/SecuritySignalsCard";
 import { CarrierPreferencesPanel } from "@/components/carriers/CarrierPreferencesPanel";
+import { TrainingTab } from "@/components/carriers/TrainingTab";
 
 
 interface CarrierPerformance {
@@ -290,7 +291,7 @@ export default function CarrierPoolPage() {
   const [statusFilter, setStatusFilter] = useState("");
   const [equipFilter, setEquipFilter] = useState("");
   const [selectedCarrierId, setSelectedCarrierId] = useState<string | null>(null);
-  const [panelTab, setPanelTab] = useState<"profile" | "insurance" | "compliance" | "compass" | "inspections" | "performance" | "history" | "documents" | "info-requests" | "preferences">("profile");
+  const [panelTab, setPanelTab] = useState<"profile" | "insurance" | "compliance" | "compass" | "inspections" | "performance" | "history" | "documents" | "info-requests" | "preferences" | "training">("profile");
   const [editingCarrier, setEditingCarrier] = useState<Carrier | null>(null);
   const [editingTab, setEditingTab] = useState<string | null>(null);
   const [editForm, setEditForm] = useState({
@@ -767,6 +768,9 @@ export default function CarrierPoolPage() {
                 // panel itself is visible to all panel viewers but the
                 // form is read-only for non-admins.
                 { key: "preferences", icon: Sliders, label: "Prefs" },
+                // v3.8.and (T6) — SRL Driver Academy training visibility.
+                // Read-only roster × course completion matrix + expiry flags.
+                { key: "training", icon: GraduationCap, label: "Training" },
               ] as const).map(({ key, icon: Icon, label }) => (
                 <button key={key} onClick={() => { setPanelTab(key); setEditingTab(null); setDocView("list"); setPreviewDoc(null); }} title={label}
                   className="flex flex-col items-center gap-1.5 py-1 transition-all duration-150">
@@ -1639,6 +1643,11 @@ export default function CarrierPoolPage() {
                     override admin UI. */}
                 {panelTab === "preferences" && selectedCarrier && (
                   <CarrierPreferencesPanel carrierId={selectedCarrier.id} isAdmin={isAdmin} />
+                )}
+
+                {/* ===== v3.8.and (T6) — SRL DRIVER ACADEMY TRAINING TAB ===== */}
+                {panelTab === "training" && selectedCarrier && (
+                  <TrainingTab carrierId={selectedCarrier.id} />
                 )}
 
               </div>

@@ -8,6 +8,7 @@ import { normalizePhoneE164 } from "../lib/phoneNormalization";
 import { mintDriverInviteToken, driverInviteUrl } from "../lib/driverToken";
 import { sendSMS } from "../services/openPhoneService";
 import { generateTrainingCertificate, buildCertificateData } from "../services/certificatePdfService";
+import { buildCarrierTrainingSummary } from "../services/trainingService";
 import { log } from "../lib/logger";
 
 // v3.8.amz (review fix) — cap invite/re-invite churn. The invite response
@@ -340,39 +341,15 @@ router.post("/:id/invite", inviteLimiter, validateBody(inviteSchema), async (req
 
 // GET /api/carrier-drivers/training-summary — roster × course completion matrix
 // + % trained, scoped to this carrier. Powers the carrier Training dashboard.
+// v3.8.and (T6) — logic extracted to trainingService.buildCarrierTrainingSummary
+// so the AE carrier-detail Training tab (/api/carriers/:id/training-summary)
+// shares one source. Response shape preserved; T6 adds isExpired/daysUntilExpiry
+// per cell + expiredCells/expiringCells in summary (additive).
 router.get("/training-summary", async (req: AuthRequest, res: Response) => {
   const profile = await getApprovedProfile(req, res);
   if (!profile) return;
-
-  const courses = await prisma.trainingCourse.findMany({
-    where: { status: "PUBLISHED" },
-    orderBy: { sortOrder: "asc" },
-    select: { id: true, slug: true, title: true, category: true },
-  });
-
-  const drivers = await prisma.driver.findMany({
-    where: { carrierProfileId: profile.id, status: { notIn: ["INACTIVE", "TERMINATED"] } },
-    orderBy: [{ lastName: "asc" }, { firstName: "asc" }],
-    select: {
-      id: true, firstName: true, lastName: true, trainingPinSetAt: true,
-      courseProgress: { select: { courseId: true, status: true, bestScorePct: true, completedAt: true, expiresAt: true } },
-    },
-  });
-
-  const rows = drivers.map((d) => {
-    const progress: Record<string, { status: string; bestScorePct: number | null; completedAt: Date | null; expiresAt: Date | null }> = {};
-    for (const p of d.courseProgress) {
-      progress[p.courseId] = { status: p.status, bestScorePct: p.bestScorePct, completedAt: p.completedAt, expiresAt: p.expiresAt };
-    }
-    const passedCount = courses.filter((c) => progress[c.id]?.status === "PASSED").length;
-    return { id: d.id, firstName: d.firstName, lastName: d.lastName, activated: !!d.trainingPinSetAt, passedCount, progress };
-  });
-
-  const totalCells = rows.length * courses.length;
-  const passedCells = rows.reduce((acc, r) => acc + r.passedCount, 0);
-  const pctTrained = totalCells ? Math.round((passedCells / totalCells) * 100) : 0;
-
-  res.json({ courses, drivers: rows, summary: { driverCount: rows.length, courseCount: courses.length, passedCells, totalCells, pctTrained } });
+  const summary = await buildCarrierTrainingSummary(profile.id);
+  res.json(summary);
 });
 
 // GET /api/carrier-drivers/:id/certificate/:slug — download a roster driver's

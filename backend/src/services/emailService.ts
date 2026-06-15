@@ -647,6 +647,55 @@ export async function sendCarrierTrainingCompletionEmail(to: string, params: Car
   return sendEmail(to, `Training completed: ${params.courseTitle} — ${params.driverName}`, html, undefined, { replyTo: "operations@silkroutelogistics.ai" });
 }
 
+// v3.8.and — SRL Driver Academy T6: carrier-facing refresher reminder. Fired by
+// the daily training-expiry cron at the 30/14/7/0-day thresholds. Carrier-facing
+// (the employer manages the roster), so it names the driver + course; reply-to
+// operations@ per the completion-email convention. Warning-amber chrome while
+// approaching, danger-red once expired.
+export interface CarrierTrainingRefresherParams {
+  driverName: string;
+  courseTitle: string;
+  completedAt: Date | null;
+  expiresAt: Date;
+  daysUntilExpiry: number;
+  carrierName: string | null;
+  isExpired: boolean;
+}
+
+export async function sendCarrierTrainingRefresherEmail(to: string, params: CarrierTrainingRefresherParams): Promise<string | undefined> {
+  const fmt = (d: Date) => d.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
+  const accent = params.isExpired ? "#9B2C2C" : "#B07A1A"; // §2.1 danger / warning
+  const bg = params.isExpired ? "#F6E3E3" : "#FBEFD4";
+  const today = !params.isExpired && params.daysUntilExpiry <= 0;
+  const headline = params.isExpired
+    ? "Driver training certification expired"
+    : today
+      ? "Driver training certification expires today"
+      : "Driver training certification expiring soon";
+  const windowLabel = params.isExpired
+    ? `expired on ${fmt(params.expiresAt)}`
+    : today
+      ? `expires today (${fmt(params.expiresAt)})`
+      : `expires in ${params.daysUntilExpiry} day${params.daysUntilExpiry === 1 ? "" : "s"} (${fmt(params.expiresAt)})`;
+  const html = wrap(`
+    <h2 style="color:${accent};margin:0 0 16px">${headline}</h2>
+    <p><strong>${params.driverName}</strong>'s SRL Driver Academy certification ${windowLabel}.</p>
+    <table style="width:100%;border-collapse:collapse;margin:16px 0">
+      <tr><td style="padding:8px;border:1px solid #E2EAF2;font-weight:bold">Course</td><td style="padding:8px;border:1px solid #E2EAF2">${params.courseTitle}</td></tr>
+      <tr><td style="padding:8px;border:1px solid #E2EAF2;font-weight:bold">Driver</td><td style="padding:8px;border:1px solid #E2EAF2">${params.driverName}</td></tr>
+      <tr style="background:${bg}"><td style="padding:8px;border:1px solid ${accent};font-weight:bold;color:${accent}">${params.isExpired ? "Expired" : "Expires"}</td><td style="padding:8px;border:1px solid ${accent};font-weight:bold;color:#0A2540">${fmt(params.expiresAt)}</td></tr>
+    </table>
+    <p>Have ${params.driverName} re-take the course in the SRL Driver Academy to renew the certification. You can track your team's training status and download current certificates in the carrier portal.</p>
+    <a href="https://silkroutelogistics.ai/carrier/dashboard/training" style="display:inline-block;background:#BA7517;color:#FFFFFF;padding:12px 24px;text-decoration:none;border-radius:6px;font-weight:bold;margin-top:8px">View training dashboard</a>
+  `);
+  const subject = params.isExpired
+    ? `Training expired: ${params.courseTitle} — ${params.driverName}`
+    : today
+      ? `Training expires today: ${params.courseTitle} — ${params.driverName}`
+      : `Training expiring in ${params.daysUntilExpiry}d: ${params.courseTitle} — ${params.driverName}`;
+  return sendEmail(to, subject, html, undefined, { replyTo: "operations@silkroutelogistics.ai" });
+}
+
 export interface TenderAcceptedEmailParams {
   to: string;
   cc?: string | string[];

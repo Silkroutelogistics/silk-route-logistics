@@ -13,7 +13,7 @@ import { downloadFromApi } from "@/lib/download";
 import { CarrierCard } from "@/components/carrier";
 
 interface Course { id: string; slug: string; title: string; category: string }
-interface CellProgress { status: "NOT_STARTED" | "IN_PROGRESS" | "PASSED" | "FAILED"; bestScorePct: number | null; completedAt: string | null; expiresAt: string | null }
+interface CellProgress { status: "NOT_STARTED" | "IN_PROGRESS" | "PASSED" | "FAILED"; bestScorePct: number | null; completedAt: string | null; expiresAt: string | null; isExpired?: boolean; daysUntilExpiry?: number | null }
 interface DriverRow {
   id: string;
   firstName: string;
@@ -22,7 +22,7 @@ interface DriverRow {
   passedCount: number;
   progress: Record<string, CellProgress>;
 }
-interface Summary { driverCount: number; courseCount: number; passedCells: number; totalCells: number; pctTrained: number }
+interface Summary { driverCount: number; courseCount: number; passedCells: number; totalCells: number; pctTrained: number; expiredCells?: number; expiringCells?: number }
 
 function StatCard({ label, value, sub }: { label: string; value: string; sub?: string }) {
   return (
@@ -87,6 +87,14 @@ export default function CarrierTrainingPage() {
             </div>
           )}
 
+          {/* Refresher nudge — certs due/expired (T6 v3.8.and) */}
+          {summary && (summary.expiredCells || summary.expiringCells) ? (
+            <div className="mb-4 px-3 py-2.5 bg-[#FBEFD4] border-l-4 border-[#B07A1A] rounded text-[13px] text-[#0A2540]">
+              {summary.expiredCells ? <><span className="font-semibold text-[#9B2C2C]">{summary.expiredCells} certification{summary.expiredCells === 1 ? "" : "s"} expired</span>{summary.expiringCells ? " · " : ". Have the driver re-take in the Academy to renew."}</> : null}
+              {summary.expiringCells ? <><span className="font-semibold text-[#B07A1A]">{summary.expiringCells} expiring within 30 days</span>. Plan a refresher before they lapse.</> : null}
+            </div>
+          ) : null}
+
           {drivers.length === 0 ? (
             <CarrierCard padding="p-10">
               <div className="text-center">
@@ -130,6 +138,11 @@ export default function CarrierTrainingPage() {
                                   <span className="inline-flex items-center gap-1 text-[12px] font-semibold text-green-700">
                                     <CheckCircle2 size={13} /> {p?.bestScorePct ?? 0}%
                                   </span>
+                                  {p?.isExpired ? (
+                                    <span className="text-[10px] font-semibold text-[#9B2C2C]">Expired</span>
+                                  ) : p && p.daysUntilExpiry != null && p.daysUntilExpiry <= 30 ? (
+                                    <span className="text-[10px] font-semibold text-[#B07A1A]">{p.daysUntilExpiry}d left</span>
+                                  ) : null}
                                   <span className="inline-flex items-center gap-0.5 text-[10px] text-[#BA7517] group-hover:underline">
                                     <Download size={10} /> cert
                                   </span>

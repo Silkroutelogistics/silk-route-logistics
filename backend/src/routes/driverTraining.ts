@@ -20,10 +20,19 @@ import { log } from "../lib/logger";
 const router = Router();
 router.use(authenticateDriver);
 
+// v3.8.and (T6 review fix) — UTC-safe + day-clamped. The prior local-time
+// setMonth() form was (a) timezone-fragile (Jan 31 expiry would shift if the
+// container TZ ever moved off UTC) and (b) day-overflowed on month-end (Jan 31
+// + 1mo rolled to Mar 3, not Feb 28). expiresAt feeds the whole T6 expiry
+// lifecycle, so it must be correct: clamp the day to the target month's last
+// day and compute in UTC.
 function addMonths(d: Date, n: number): Date {
-  const r = new Date(d);
-  r.setMonth(r.getMonth() + n);
-  return r;
+  const m = d.getUTCMonth() + n;
+  const targetYear = d.getUTCFullYear() + Math.floor(m / 12);
+  const targetMonth = ((m % 12) + 12) % 12;
+  const lastDayOfTarget = new Date(Date.UTC(targetYear, targetMonth + 1, 0)).getUTCDate();
+  const day = Math.min(d.getUTCDate(), lastDayOfTarget);
+  return new Date(Date.UTC(targetYear, targetMonth, day, d.getUTCHours(), d.getUTCMinutes(), d.getUTCSeconds(), d.getUTCMilliseconds()));
 }
 
 // GET /api/driver-training/courses — catalog + this driver's progress per course.

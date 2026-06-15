@@ -411,6 +411,23 @@ export function initCronJobs() {
     }
   }), { timezone: "America/New_York" });  // Eastern per Item 185 — daily reminder emails
 
+  // ─── Daily (5:10 AM): Driver Academy certification expiry reminders ──
+  // T6 (v3.8.and). Emails carriers when a roster driver's training cert
+  // approaches/crosses its validity window (30/14/7/0-day thresholds). Staggered
+  // 10 min after compliance-reminders. Eastern per Item 185 (carrier-facing
+  // reminder emails). Excludes test carriers + inactive drivers; capped at 4
+  // emails per cert so it can't flood (Item 192 lesson).
+  cron.schedule("10 5 * * *", () => withGuard("training-expiry-reminders", async () => {
+    try {
+      log.info("[Cron Daily] Sending Driver Academy expiry reminders...");
+      const { sendTrainingExpiryReminders } = require("../services/trainingService");
+      const result = await sendTrainingExpiryReminders();
+      log.info({ result }, "[Cron Daily] Training expiry reminders sent");
+    } catch (err) {
+      log.error({ err }, "[Cron Daily] Training expiry reminder error:");
+    }
+  }), { timezone: "America/New_York" });
+
   // ─── Weekly (Monday 3:30 AM): Full chameleon scan ─────────────
   cron.schedule("30 3 * * 1", () => withGuard("chameleon-scan", async () => {
     try {

@@ -28,6 +28,7 @@ import { generateCompassReport } from "../services/compassPdfService";
 import { getFullInspectionData } from "../services/fmcsaInspectionService";
 import { extractCOIData } from "../services/coiReaderService";
 import { verifyCarrierWithFMCSA } from "../services/fmcsaService";
+import { buildCarrierTrainingSummary } from "../services/trainingService";
 import { log } from "../lib/logger";
 
 const router = Router();
@@ -466,6 +467,22 @@ router.get("/:id/security-signals", authorize("ADMIN", "CEO", "BROKER", "OPERATI
     events: timeline,
     unusualOtpSmsOverride,
   });
+});
+
+// v3.8.and — SRL Driver Academy T6: AE-facing training visibility. Returns the
+// carrier's roster × published-course completion matrix (the same shape the
+// carrier sees at /api/carrier-drivers/training-summary, via the shared
+// trainingService helper). Read-only; AE-cookie authenticated — NOT a
+// carrier-portal mount, so it is intentionally absent from CARRIER_PORTAL_MOUNTS.
+// :id is the CarrierProfile.id (same identifier as every other /:id route here).
+router.get("/:id/training-summary", authorize("ADMIN", "CEO", "BROKER", "DISPATCH", "OPERATIONS"), async (req: AuthRequest, res: Response) => {
+  const carrier = await prisma.carrierProfile.findUnique({ where: { id: req.params.id }, select: { id: true } });
+  if (!carrier) {
+    res.status(404).json({ error: "Carrier not found" });
+    return;
+  }
+  const summary = await buildCarrierTrainingSummary(carrier.id);
+  res.json(summary);
 });
 
 // v3.8.ajo — Geo-mismatch override action. Suppresses the alert pill on

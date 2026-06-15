@@ -1,5 +1,6 @@
 import { prisma } from "../config/database";
 import { sendEmail } from "./emailService";
+import { getTrainingDigestMetrics } from "./trainingService";
 import * as Sentry from "@sentry/node";
 import { log } from "../lib/logger";
 
@@ -94,6 +95,9 @@ export async function sendHealthDigest() {
     prisma.load.count({ where: { status: { in: ["DELIVERED", "COMPLETED", "POD_RECEIVED"] }, updatedAt: { gte: oneDayAgo } } }).catch(() => 0),
   ]);
 
+  // ── Driver Academy (T6, v3.8.and) ──
+  const training = await getTrainingDigestMetrics().catch(() => ({ driversTrained: 0, carriersWithTraining: 0, certsExpiring30: 0 }));
+
   // ── Sentry Status ──
   const sentryEnabled = !!process.env.SENTRY_DSN;
   components.push({
@@ -171,6 +175,15 @@ export async function sendHealthDigest() {
           <div><span style="color:#4ade80;font-weight:700;">${deliveredLoads}</span> <span style="color:#8899AA;font-size:12px;">delivered</span></div>
           <div><span style="color:#4ade80;font-weight:700;">${newUsers}</span> <span style="color:#8899AA;font-size:12px;">new users</span></div>
           <div><span style="color:${errors24h > 10 ? "#f87171" : "#4ade80"};font-weight:700;">${errors24h}</span> <span style="color:#8899AA;font-size:12px;">errors</span></div>
+        </div>
+      </div>
+
+      <div style="background:#162236;border-radius:8px;padding:14px;margin-bottom:16px;">
+        <h3 style="color:#C8963E;font-size:13px;margin:0 0 10px;text-transform:uppercase;letter-spacing:1px;">Driver Academy</h3>
+        <div style="display:flex;gap:16px;">
+          <div><span style="color:#4ade80;font-weight:700;">${training.driversTrained}</span> <span style="color:#8899AA;font-size:12px;">drivers trained</span></div>
+          <div><span style="color:#4ade80;font-weight:700;">${training.carriersWithTraining}</span> <span style="color:#8899AA;font-size:12px;">carriers</span></div>
+          <div><span style="color:${training.certsExpiring30 > 0 ? "#fbbf24" : "#4ade80"};font-weight:700;">${training.certsExpiring30}</span> <span style="color:#8899AA;font-size:12px;">certs expiring (30d)</span></div>
         </div>
       </div>
 

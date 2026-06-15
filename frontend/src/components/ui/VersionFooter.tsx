@@ -12897,7 +12897,38 @@
 //   (optional) → §13.3 Item 193. No migration (uses T3 models). Gates: backend
 //   tsc + vitest 243/243 + frontend tsc + next build (114 pages) clean.
 //   Per §3.1: anb → anc.
-export const SRL_VERSION = "3.8.anc";
+//
+// v3.8.and — SRL Driver Academy Sprint T6: AE training visibility + lifecycle.
+//   Answers "is this carrier's roster trained?" for the AE, and keeps certs
+//   current via an expiry/refresher loop. NO migration (expiry is a computed
+//   property — status stays PASSED, expired = expiresAt past). BACKEND: new
+//   trainingService.ts — buildCarrierTrainingSummary (SHARED helper; the T5
+//   carrier endpoint + the new AE endpoint both call it, so they never drift)
+//   + sendTrainingExpiryReminders (daily cron fn) + getTrainingDigestMetrics.
+//   New AE endpoint GET /api/carriers/:id/training-summary (ADMIN/CEO/BROKER/
+//   DISPATCH/OPERATIONS, AE-cookie — not a CARRIER_PORTAL_MOUNT). carrierDrivers
+//   training-summary refactored onto the shared helper (response shape
+//   preserved; adds isExpired/daysUntilExpiry per cell + expired/expiring
+//   counts). New sendCarrierTrainingRefresherEmail (warning→danger chrome, CTA
+//   to /carrier/dashboard/training). New daily 5:10 AM ET cron
+//   "training-expiry-reminders" — emails carriers at the 30/14/7/0-day
+//   thresholds (caps at 4/cert, no daily nag — Item 192 lesson), excludes test
+//   carriers + inactive drivers. Daily health digest gains a "Driver Academy"
+//   box (drivers trained / carriers / certs expiring 30d). FRONTEND: new AE
+//   TrainingTab (read-only roster × course matrix + %-trained + expired/expiring
+//   stats; no cert download — carrier owns distribution) wired as the 11th
+//   carrier-detail tab; carrier T5 training page gains per-cell expiry badges +
+//   a refresher banner. SECURITY/CORRECTNESS (adversarial review, 4 dims → 6
+//   findings, 5 confirmed = 4 distinct): FIXED in-scope — isExpired unified on
+//   calendar-day across dashboard + cron + email (was wall-clock vs calendar
+//   mismatch); addMonths made UTC-safe + day-clamped (Jan-31 + 1mo → Feb-28,
+//   not Mar-3 — feeds every expiresAt). BANKED → §13.3 Item 193: getAllCarriers
+//   missing isTestAccount in response (pre-existing v3.8.alo TEST-badge bug,
+//   unrelated to training); robust banded dedup surviving a missed cron day
+//   (needs a migration — out of T6's no-migration scope; matches the
+//   insurance-reminder precedent). No migration. Gates: backend tsc + vitest
+//   243/243 + frontend tsc + next build (114 pages) clean. Per §3.1: anc → and.
+export const SRL_VERSION = "3.8.and";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
