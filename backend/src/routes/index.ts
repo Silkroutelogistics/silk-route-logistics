@@ -43,6 +43,7 @@ import carrierComplianceRoutes from "./carrierCompliance";
 import carrierPaymentRoutes from "./carrierPayments";
 import carrierDriversRoutes from "./carrierDrivers";
 import driverAuthRoutes from "./driverAuth";
+import driverTrainingRoutes from "./driverTraining";
 import datRoutes from "./dat";
 import automationRoutes from "./automation";
 import trackingRoutes from "./tracking";
@@ -200,6 +201,9 @@ router.use("/carrier-drivers", carrierDriversRoutes);
 // set-pin/login + authenticated me/logout. Drivers are not Users; this mount
 // uses authenticateDriver, not the shared authenticate.
 router.use("/driver-auth", driverAuthRoutes);
+// v3.8.anb — SRL Driver Academy T4: the training player API (course catalog,
+// lesson progress, server-graded quiz). authenticateDriver, PUBLISHED-only.
+router.use("/driver-training", driverTrainingRoutes);
 router.use("/carrier-pay", carrierPayRoutes);
 router.use("/carrier", carrierRoutes);
 router.use("/dat", datRoutes);

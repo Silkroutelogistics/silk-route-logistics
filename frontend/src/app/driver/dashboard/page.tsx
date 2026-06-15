@@ -1,24 +1,76 @@
 "use client";
 
-// v3.8.amz — SRL Driver Academy Sprint T2: driver portal landing (placeholder).
-// The driver is authenticated (phone + PIN). Real course list + lessons +
-// quizzes land in Sprint T4; this honest placeholder previews the curriculum
-// as locked cards so the driver sees what's coming.
+// v3.8.anb — SRL Driver Academy Sprint T4: real course list (replaces the T2
+// placeholder). Fetches the catalog + this driver's progress and links each
+// course into the player at /driver/dashboard/course?slug=...
 
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { GraduationCap, Loader2, BookOpen, CheckCircle2, Clock } from "lucide-react";
+import { api } from "@/lib/api";
+import { CarrierCard } from "@/components/carrier";
 import { useDriverAuth } from "@/hooks/useDriverAuth";
-import { GraduationCap, Lock, Clock } from "lucide-react";
 
-const COMING_COURSES = [
-  { title: "ELD & Hours of Service", topic: "11/14/70 limits, malfunctions, logs" },
-  { title: "IFTA Fundamentals", topic: "Quarterly filing, trip & fuel records" },
-  { title: "IRP Apportioned Plates", topic: "Cab cards, jurisdictions, renewals" },
-  { title: "Roadside Inspections & CSA", topic: "Levels 1–8, DataQs, BASICs" },
-  { title: "Detention & Documentation", topic: "BOL/POD, accessorials, check calls" },
-  { title: "Fraud & Double-Brokering Awareness", topic: "Spotting scams, protecting loads" },
-];
+interface CourseProgress {
+  status: "NOT_STARTED" | "IN_PROGRESS" | "PASSED" | "FAILED";
+  lessonsCompleted: number;
+  bestScorePct: number | null;
+  completedAt: string | null;
+  expiresAt: string | null;
+}
+interface CourseCard {
+  id: string;
+  slug: string;
+  title: string;
+  category: string;
+  summary: string | null;
+  estMinutes: number;
+  passThreshold: number;
+  lessonCount: number;
+  questionCount: number;
+  progress: CourseProgress | null;
+}
 
-export default function DriverDashboardPage() {
+function fmtDate(s: string | null): string {
+  if (!s) return "";
+  return new Date(s).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+}
+
+function StatusPill({ p }: { p: CourseProgress | null }) {
+  const status = p?.status || "NOT_STARTED";
+  const cls =
+    status === "PASSED"
+      ? "bg-green-50 text-green-700 border border-green-200"
+      : status === "IN_PROGRESS"
+        ? "bg-amber-50 text-amber-700 border border-amber-200"
+        : status === "FAILED"
+          ? "bg-red-50 text-red-600 border border-red-200"
+          : "bg-gray-100 text-gray-500";
+  const label =
+    status === "PASSED" ? `Passed${p?.bestScorePct != null ? ` · ${p.bestScorePct}%` : ""}`
+      : status === "IN_PROGRESS" ? "In progress"
+        : status === "FAILED" ? "Try again"
+          : "Not started";
+  return <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wide ${cls}`}>{label}</span>;
+}
+
+export default function DriverCoursesPage() {
+  const router = useRouter();
   const { driver } = useDriverAuth();
+  const [courses, setCourses] = useState<CourseCard[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    api
+      .get("/driver-training/courses")
+      .then((r) => { if (active) { setCourses(r.data.courses || []); setLoading(false); } })
+      .catch(() => { if (active) { setError("Could not load your courses. Pull to refresh or try again."); setLoading(false); } });
+    return () => { active = false; };
+  }, []);
+
+  const passedCount = courses.filter((c) => c.progress?.status === "PASSED").length;
 
   return (
     <div>
@@ -26,38 +78,61 @@ export default function DriverDashboardPage() {
         <h1 className="font-serif text-2xl text-[#0F1117] mb-1">
           Welcome{driver ? `, ${driver.firstName}` : ""}
         </h1>
-        <p className="text-[13px] text-gray-500">Your driver training courses will appear here.</p>
+        <p className="text-[13px] text-gray-500">
+          Work through each course at your own pace. Pass the quiz to complete it.
+          {courses.length > 0 && <> You&apos;ve completed <span className="font-semibold text-[#0F1117]">{passedCount} of {courses.length}</span>.</>}
+        </p>
       </div>
 
-      {/* Coming-soon banner */}
-      <div className="mb-6 px-4 py-4 bg-[#C9A84C]/8 border border-[#C9A84C]/25 rounded-xl flex items-start gap-3">
-        <GraduationCap size={20} className="text-[#BA7517] shrink-0 mt-0.5" />
-        <div>
-          <div className="text-sm font-semibold text-[#0F1117]">Your account is active. Courses are launching soon.</div>
-          <p className="text-[13px] text-gray-600 mt-0.5">
-            You&apos;re all set up. When your carrier&apos;s training goes live, you&apos;ll work through the
-            courses below at your own pace and earn a completion certificate for each.
-          </p>
-        </div>
-      </div>
-
-      {/* Curriculum preview */}
-      <div className="grid sm:grid-cols-2 gap-3">
-        {COMING_COURSES.map((c) => (
-          <div key={c.title} className="bg-white border border-gray-100 rounded-xl p-4 flex items-start gap-3 opacity-90">
-            <div className="w-9 h-9 rounded-lg bg-gray-100 flex items-center justify-center shrink-0">
-              <Lock size={15} className="text-gray-400" />
-            </div>
-            <div className="min-w-0">
-              <div className="text-[13px] font-semibold text-[#0F1117]">{c.title}</div>
-              <div className="text-[12px] text-gray-500">{c.topic}</div>
-              <div className="mt-1.5 inline-flex items-center gap-1 text-[10px] font-medium text-gray-400 uppercase tracking-wide">
-                <Clock size={11} /> Coming soon
-              </div>
-            </div>
+      {loading ? (
+        <CarrierCard padding="p-8">
+          <div className="flex items-center justify-center gap-2 text-gray-400 text-sm">
+            <Loader2 size={16} className="animate-spin" /> Loading your courses...
           </div>
-        ))}
-      </div>
+        </CarrierCard>
+      ) : error ? (
+        <CarrierCard padding="p-8">
+          <p className="text-center text-sm text-red-600">{error}</p>
+        </CarrierCard>
+      ) : courses.length === 0 ? (
+        <CarrierCard padding="p-10">
+          <div className="text-center">
+            <GraduationCap size={32} className="mx-auto text-[#C9A84C] mb-3" />
+            <h3 className="text-sm font-bold text-[#0F1117] mb-1">No courses available yet</h3>
+            <p className="text-xs text-gray-500">Your training courses will appear here once your carrier&apos;s program is live.</p>
+          </div>
+        </CarrierCard>
+      ) : (
+        <div className="grid sm:grid-cols-2 gap-3">
+          {courses.map((c) => {
+            const passed = c.progress?.status === "PASSED";
+            const inProgress = c.progress?.status === "IN_PROGRESS" || c.progress?.status === "FAILED";
+            const cta = passed ? "Review" : inProgress ? "Continue" : "Start";
+            return (
+              <CarrierCard key={c.id} padding="p-5" hover onClick={() => router.push(`/driver/dashboard/course?slug=${c.slug}`)}>
+                <div className="flex items-start justify-between gap-2 mb-2">
+                  <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#BA7517]">{c.category}</span>
+                  <StatusPill p={c.progress} />
+                </div>
+                <h3 className="font-semibold text-[15px] text-[#0F1117] mb-1 flex items-center gap-1.5">
+                  {passed ? <CheckCircle2 size={15} className="text-green-600 shrink-0" /> : <BookOpen size={15} className="text-[#C9A84C] shrink-0" />}
+                  {c.title}
+                </h3>
+                {c.summary && <p className="text-[12px] text-gray-500 leading-relaxed mb-3">{c.summary}</p>}
+                <div className="flex items-center justify-between">
+                  <span className="flex items-center gap-1 text-[11px] text-gray-400">
+                    <Clock size={11} /> {c.lessonCount} lessons · {c.questionCount} questions · ~{c.estMinutes} min
+                  </span>
+                  <span className="text-[12px] font-semibold text-[#BA7517]">{cta} →</span>
+                </div>
+                {passed && c.progress?.expiresAt && (
+                  <div className="mt-2 text-[10px] text-gray-400">Valid until {fmtDate(c.progress.expiresAt)}</div>
+                )}
+              </CarrierCard>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

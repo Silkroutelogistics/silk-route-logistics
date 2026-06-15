@@ -1,0 +1,218 @@
+import { Router, Response } from "express";
+import { z } from "zod";
+import { prisma } from "../config/database";
+import { authenticateDriver, DriverRequest } from "../middleware/driverAuth";
+import { validateBody } from "../middleware/validate";
+
+/**
+ * v3.8.anb — SRL Driver Academy Sprint T4: the training player API.
+ *
+ * Driver-facing, behind authenticateDriver (Driver lookup, srl_token_driver
+ * cookie). Only PUBLISHED courses are visible. Quiz answers are graded
+ * SERVER-SIDE: the course-detail endpoint never returns correctIndex /
+ * explanation, and the score is computed from the DB, never trusted from the
+ * client. All progress + attempts are scoped to req.driver.id.
+ */
+
+const router = Router();
+router.use(authenticateDriver);
+
+function addMonths(d: Date, n: number): Date {
+  const r = new Date(d);
+  r.setMonth(r.getMonth() + n);
+  return r;
+}
+
+// GET /api/driver-training/courses — catalog + this driver's progress per course.
+// NOTE: all PUBLISHED courses are globally visible to every authenticated driver
+// regardless of carrier — courses are platform-shared educational content, not
+// per-carrier variants (locked design, §13.3 Item 193). If carrier-specific
+// courses are ever needed, add a nullable carrierProfileId to TrainingCourse and
+// filter here + in GET /:slug + the quiz/lesson-progress endpoints.
+router.get("/courses", async (req: DriverRequest, res: Response) => {
+  const driverId = req.driver!.id;
+
+  const courses = await prisma.trainingCourse.findMany({
+    where: { status: "PUBLISHED" },
+    orderBy: { sortOrder: "asc" },
+    select: {
+      id: true, slug: true, title: true, category: true, summary: true,
+      estMinutes: true, passThreshold: true,
+      _count: { select: { lessons: true, questions: true } },
+    },
+  });
+
+  const progress = await prisma.driverCourseProgress.findMany({
+    where: { driverId },
+    select: { courseId: true, status: true, lessonsCompleted: true, lastLessonOrder: true, bestScorePct: true, attemptCount: true, completedAt: true, expiresAt: true },
+  });
+  const pMap = new Map(progress.map((p) => [p.courseId, p]));
+
+  res.json({
+    courses: courses.map((c) => {
+      const { _count, ...rest } = c;
+      return { ...rest, lessonCount: _count.lessons, questionCount: _count.questions, progress: pMap.get(c.id) || null };
+    }),
+  });
+});
+
+// GET /api/driver-training/courses/:slug — full lessons + quiz questions WITHOUT
+// the correct answers (correctIndex/explanation are never sent to the client).
+router.get("/courses/:slug", async (req: DriverRequest, res: Response) => {
+  const driverId = req.driver!.id;
+
+  const course = await prisma.trainingCourse.findFirst({
+    where: { slug: req.params.slug, status: "PUBLISHED" },
+    select: {
+      id: true, slug: true, title: true, category: true, summary: true,
+      version: true, estMinutes: true, passThreshold: true, validityMonths: true, disclaimer: true,
+      lessons: { orderBy: { order: "asc" }, select: { id: true, order: true, title: true, bodyMarkdown: true, estMinutes: true } },
+      questions: { orderBy: { order: "asc" }, select: { id: true, order: true, question: true, options: true } },
+    },
+  });
+  if (!course) {
+    res.status(404).json({ error: "Course not found" });
+    return;
+  }
+
+  const progress = await prisma.driverCourseProgress.findUnique({
+    where: { driverId_courseId: { driverId, courseId: course.id } },
+  });
+
+  res.json({ course, progress: progress || null });
+});
+
+// POST /api/driver-training/courses/:slug/lesson-progress — mark reading progress.
+// Low-stakes / self-reported; never regresses, never overrides a PASSED status.
+// No upper bound here — the handler clamps lastLessonOrder to the course's
+// actual lesson count, so a hardcoded cap would only reject valid progress on
+// a future long course (review fix).
+const lessonProgressSchema = z.object({ lastLessonOrder: z.number().int().min(0) });
+router.post("/courses/:slug/lesson-progress", validateBody(lessonProgressSchema), async (req: DriverRequest, res: Response) => {
+  const driverId = req.driver!.id;
+  const course = await prisma.trainingCourse.findFirst({
+    where: { slug: req.params.slug, status: "PUBLISHED" },
+    select: { id: true, _count: { select: { lessons: true } } },
+  });
+  if (!course) {
+    res.status(404).json({ error: "Course not found" });
+    return;
+  }
+
+  const { lastLessonOrder } = req.body as z.infer<typeof lessonProgressSchema>;
+  const existing = await prisma.driverCourseProgress.findUnique({
+    where: { driverId_courseId: { driverId, courseId: course.id } },
+  });
+
+  const lessonsCompleted = Math.max(existing?.lessonsCompleted ?? 0, Math.min(lastLessonOrder, course._count.lessons));
+  const data = {
+    status: existing?.status === "PASSED" ? ("PASSED" as const) : ("IN_PROGRESS" as const),
+    lessonsCompleted,
+    lastLessonOrder: Math.max(existing?.lastLessonOrder ?? 0, lastLessonOrder),
+    startedAt: existing?.startedAt ?? new Date(),
+  };
+
+  const progress = await prisma.driverCourseProgress.upsert({
+    where: { driverId_courseId: { driverId, courseId: course.id } },
+    create: { driverId, courseId: course.id, ...data },
+    update: data,
+  });
+  res.json({ progress });
+});
+
+// POST /api/driver-training/courses/:slug/quiz — server-graded quiz submission.
+// answers is { [questionId]: selectedOptionIndex }. Score is computed from the
+// DB; an unanswered question is wrong. Once PASSED, the course stays PASSED.
+const quizSchema = z.object({ answers: z.record(z.string(), z.number().int().min(0).max(3)) });
+router.post("/courses/:slug/quiz", validateBody(quizSchema), async (req: DriverRequest, res: Response) => {
+  const driverId = req.driver!.id;
+  const course = await prisma.trainingCourse.findFirst({
+    where: { slug: req.params.slug, status: "PUBLISHED" },
+    select: {
+      id: true, passThreshold: true, validityMonths: true,
+      questions: { orderBy: { order: "asc" }, select: { id: true, order: true, correctIndex: true, explanation: true } },
+    },
+  });
+  if (!course) {
+    res.status(404).json({ error: "Course not found" });
+    return;
+  }
+  if (course.questions.length === 0) {
+    res.status(400).json({ error: "This course has no quiz." });
+    return;
+  }
+
+  const { answers } = req.body as z.infer<typeof quizSchema>;
+
+  // Defense-in-depth (the client also gates this): reject unknown question ids
+  // (audit-trail hygiene) and require every question answered, so a direct or
+  // truncated POST gets a clear 400 instead of a silent low score.
+  const validIds = new Set(course.questions.map((q) => q.id));
+  if (Object.keys(answers).some((id) => !validIds.has(id))) {
+    res.status(400).json({ error: "Invalid quiz submission." });
+    return;
+  }
+  const missing = course.questions.filter((q) => !Object.prototype.hasOwnProperty.call(answers, q.id));
+  if (missing.length > 0) {
+    res.status(400).json({ error: "Please answer all questions before submitting." });
+    return;
+  }
+
+  const total = course.questions.length;
+  let correct = 0;
+  const review = course.questions.map((q) => {
+    const given = Object.prototype.hasOwnProperty.call(answers, q.id) ? answers[q.id] : null;
+    const isCorrect = given === q.correctIndex;
+    if (isCorrect) correct++;
+    return { questionId: q.id, order: q.order, correctIndex: q.correctIndex, given, isCorrect, explanation: q.explanation };
+  });
+  const scorePct = Math.round((correct / total) * 100);
+  const passed = scorePct >= course.passThreshold;
+
+  const now = new Date();
+  // Attempt + progress written atomically so an attempt can't be recorded
+  // without its progress update (or vice versa). The bestScorePct read-modify-
+  // write is a theoretical race only under concurrent same-driver submits,
+  // which the single-submit UI prevents; not worth Serializable here.
+  const progress = await prisma.$transaction(async (tx) => {
+    await tx.trainingAttempt.create({
+      data: { driverId, courseId: course.id, scorePct, passed, answers },
+    });
+
+    const existing = await tx.driverCourseProgress.findUnique({
+      where: { driverId_courseId: { driverId, courseId: course.id } },
+    });
+    const wasPassed = existing?.status === "PASSED";
+    const nowPassed = wasPassed || passed;
+    // completedAt + expiresAt are stamped on the FIRST pass and preserved after.
+    // (A later change to the course's validityMonths does NOT retroactively move
+    // an already-passed driver's expiresAt — that's a deliberate immutability.)
+    const completedAt = wasPassed ? existing!.completedAt : passed ? now : existing?.completedAt ?? null;
+    const expiresAt = wasPassed
+      ? existing!.expiresAt
+      : passed
+        ? course.validityMonths
+          ? addMonths(now, course.validityMonths)
+          : null
+        : existing?.expiresAt ?? null;
+
+    const data = {
+      status: nowPassed ? ("PASSED" as const) : ("FAILED" as const),
+      attemptCount: (existing?.attemptCount ?? 0) + 1,
+      bestScorePct: Math.max(existing?.bestScorePct ?? 0, scorePct),
+      startedAt: existing?.startedAt ?? now,
+      completedAt,
+      expiresAt,
+    };
+
+    return tx.driverCourseProgress.upsert({
+      where: { driverId_courseId: { driverId, courseId: course.id } },
+      create: { driverId, courseId: course.id, lessonsCompleted: existing?.lessonsCompleted ?? 0, lastLessonOrder: existing?.lastLessonOrder ?? 0, ...data },
+      update: data,
+    });
+  });
+
+  res.json({ scorePct, passed, passThreshold: course.passThreshold, correct, total, review, progress });
+});
+
+export default router;

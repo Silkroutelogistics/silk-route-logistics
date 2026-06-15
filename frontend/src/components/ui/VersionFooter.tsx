@@ -12845,7 +12845,32 @@
 //   transiently server-rate-limited, so the curriculum was authored inline
 //   (stable regulatory fundamentals, conservative, disclaimer'd) — Wasi review
 //   is the accuracy gate. Per §3.1: amz → ana.
-export const SRL_VERSION = "3.8.ana";
+// v3.8.anb — SRL Driver Academy Sprint T4: the lesson player + quiz. The driver
+//   portal becomes functional — read lessons → take quiz → server-graded pass →
+//   progress recorded. BACKEND: new routes/driverTraining.ts (authenticateDriver,
+//   PUBLISHED-only) — GET /courses (catalog + this driver's progress), GET
+//   /courses/:slug (lessons + questions WITHOUT correctIndex/explanation — no
+//   answer leak), POST /courses/:slug/lesson-progress (monotonic reading
+//   progress), POST /courses/:slug/quiz (SERVER-graded vs DB correctIndex, writes
+//   TrainingAttempt + DriverCourseProgress atomically in a $transaction; once
+//   PASSED stays PASSED, bestScorePct max, completedAt/expiresAt stamped on first
+//   pass). FRONTEND: real /driver/dashboard course list (replaces the T2
+//   placeholder) + new /driver/dashboard/course player (lesson stepper → quiz →
+//   results with per-question review + retake; Suspense+useSearchParams) +
+//   dependency-free LessonMarkdown renderer (XSS-safe by construction). SECURITY
+//   (adversarial review, 4 dimensions → 27 findings, 25 confirmed, triaged):
+//   FIXED in-scope — server-side answer-completeness + valid-question-id 400,
+//   option-index Zod bound 10→3, atomic attempt+progress transaction, dropped the
+//   brittle lastLessonOrder max(100) cap (handler clamps), empty-quiz UI guard,
+//   client submit guard, correctIndex bounds-guard in review, global-courses +
+//   expiresAt-immutability comments. Core props HELD (per-driver authz scoping,
+//   PUBLISHED gating on all 4 endpoints, server-grading, no answer leak — all
+//   confirmed). BANKED (out of T4 scope, build is green): pre-existing
+//   useSearchParams-without-Suspense in /carrier/login + /dashboard/orders →
+//   §13.3 Item 193. Backend-only schema (no migration — uses T3 models). Gates:
+//   backend tsc + vitest 243/243 + frontend tsc + next build (113 pages) clean.
+//   Per §3.1: ana → anb.
+export const SRL_VERSION = "3.8.anb";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
