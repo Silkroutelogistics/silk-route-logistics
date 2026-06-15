@@ -2505,6 +2505,19 @@ model Driver {
   carrierProfileId String?
   carrierProfile   CarrierProfile? @relation("CarrierDrivers", fields: [carrierProfileId], references: [id])
 
+  // v3.8.amz — SRL Driver Academy Sprint T2: training-portal credentials.
+  // Phone + PIN auth scoped to the training portal ONLY — drivers are NOT
+  // platform Users (no User row, no UserRole). trainingPinHash is
+  // bcrypt(cost 12). Invite/lockout/login state lives inline on the driver
+  // record (otpService precedent). See backend/src/lib/driverToken.ts,
+  // backend/src/middleware/driverAuth.ts, backend/src/routes/driverAuth.ts.
+  trainingPinHash        String?
+  trainingPinSetAt       DateTime?
+  trainingInviteSentAt   DateTime?
+  trainingFailedAttempts Int       @default(0)
+  trainingLockedUntil    DateTime?
+  trainingLastLoginAt    DateTime?
+
   shipments Shipment[]
   loads     Load[]
 

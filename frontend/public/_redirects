@@ -21,6 +21,12 @@
 
 /carrier/* /carrier/:splat 200
 
+# v3.8.amz — SRL Driver Academy portal SPA rewrite. /driver/login,
+# /driver/set-pin (token via ?query, preserved), /driver/dashboard all serve
+# their static export pages with the URL preserved (status 200), same pattern
+# as /carrier/* above.
+/driver/* /driver/:splat 200
+
 # 2026-05-03 v3.8.q routing consolidation
 /shipper       /shippers.html  301
 /tracking.html /track          301

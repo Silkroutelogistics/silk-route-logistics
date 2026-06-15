@@ -50,7 +50,9 @@ api.interceptors.response.use(
           ? "/carrier/login"
           : path.startsWith("/shipper/")
             ? "/shipper/login"
-            : "/auth/login";
+            : path.startsWith("/driver/")
+              ? "/driver/login" // v3.8.amz — Driver Academy portal
+              : "/auth/login";
         window.location.href = code === "SESSION_TIMEOUT" ? `${portalLogin}?reason=timeout` : portalLogin;
       }
     }

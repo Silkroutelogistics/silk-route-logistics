@@ -177,12 +177,24 @@ type TryAuthResult =
   | { ok: false; reason: "invalid_jwt" | "blacklisted" | "user_not_found" | "user_inactive" | "session_replaced" | "session_timeout"; status: number; errorBody: { error: string; code?: string } };
 
 async function tryAuthenticateToken(token: string): Promise<TryAuthResult> {
-  let payload: { userId: string };
+  let payload: { userId?: unknown; purpose?: unknown };
   try {
-    payload = jwt.verify(token, env.JWT_SECRET, { algorithms: ["HS256"] }) as { userId: string };
+    payload = jwt.verify(token, env.JWT_SECRET, { algorithms: ["HS256"] }) as { userId?: unknown; purpose?: unknown };
   } catch {
     return { ok: false, reason: "invalid_jwt", status: 401, errorBody: { error: "Invalid token" } };
   }
+
+  // v3.8.amz (review fix) — explicit cross-token-class isolation. Driver
+  // invite/session tokens (and any future purpose-scoped token) carry a
+  // `purpose` claim and NO userId; reject them here so they can never be
+  // honored on a User-authenticated route, even if a future refactor adds
+  // an early payload-read before the DB lookup. Today they already fail at
+  // the user lookup (id: undefined → null) — this makes the boundary
+  // explicit rather than implicit.
+  if (typeof payload.purpose === "string" || typeof payload.userId !== "string") {
+    return { ok: false, reason: "invalid_jwt", status: 401, errorBody: { error: "Invalid token" } };
+  }
+  const userId = payload.userId;
 
   const blacklisted = await isTokenBlacklisted(token);
   if (blacklisted) {
@@ -190,7 +202,7 @@ async function tryAuthenticateToken(token: string): Promise<TryAuthResult> {
   }
 
   const user = await prisma.user.findUnique({
-    where: { id: payload.userId },
+    where: { id: userId },
     select: { id: true, email: true, role: true, firstName: true, lastName: true, isActive: true },
   });
 

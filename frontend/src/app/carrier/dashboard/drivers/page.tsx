@@ -7,10 +7,11 @@
 // documents-page idiom (CarrierCard panels, gold gradient CTA, TanStack
 // Query + api client). No hard delete — deactivate keeps training history.
 
-import { useState } from "react";
+import { useState, Fragment } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Users, Plus, X, Pencil, UserX, UserCheck, GraduationCap, Loader2, Phone, IdCard,
+  Send, Copy, Check, KeyRound,
 } from "lucide-react";
 import { api } from "@/lib/api";
 import { CarrierCard } from "@/components/carrier";
@@ -28,6 +29,17 @@ interface RosterDriver {
   medicalCardExpiry: string | null;
   status: string;
   createdAt: string;
+  // v3.8.amz — Driver Academy T2 invite/activation state.
+  trainingPinSetAt: string | null;
+  trainingInviteSentAt: string | null;
+}
+
+// "activated" = driver set their PIN; "invited" = link sent, not yet used;
+// "none" = no invite sent yet.
+function trainingState(d: RosterDriver): "activated" | "invited" | "none" {
+  if (d.trainingPinSetAt) return "activated";
+  if (d.trainingInviteSentAt) return "invited";
+  return "none";
 }
 
 const LICENSE_TYPES = ["CDL-A", "CDL-B", "CDL-C", "Non-CDL"];
@@ -137,6 +149,33 @@ export default function CarrierDriversPage() {
     },
     onError: (err) => setRowError(extractError(err, "Could not update the driver's status.")),
   });
+
+  // v3.8.amz — Training invite. Always returns the invite URL (copy-link
+  // fallback) alongside the SMS-sent flag, so the carrier has a working
+  // path even when OpenPhone is unavailable.
+  const [inviteResult, setInviteResult] = useState<Record<string, { url: string; smsSent: boolean; smsError: string | null }>>({});
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+
+  const inviteMutation = useMutation({
+    mutationFn: ({ id, reset }: { id: string; reset?: boolean }) =>
+      api.post(`/carrier-drivers/${id}/invite`, { reset: !!reset }).then((r) => r.data),
+    onSuccess: (data, vars) => {
+      setRowError(null);
+      setInviteResult((prev) => ({ ...prev, [vars.id]: { url: data.inviteUrl, smsSent: data.smsSent, smsError: data.smsError } }));
+      queryClient.invalidateQueries({ queryKey: ["carrier-drivers"] });
+    },
+    onError: (err) => setRowError(extractError(err, "Could not send the training invite.")),
+  });
+
+  const copyLink = async (id: string, url: string) => {
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopiedId(id);
+      setTimeout(() => setCopiedId((c) => (c === id ? null : c)), 2000);
+    } catch {
+      setRowError("Couldn't copy automatically — select and copy the link manually.");
+    }
+  };
 
   const startEdit = (d: RosterDriver) => {
     setEditingId(d.id);
@@ -302,6 +341,7 @@ export default function CarrierDriversPage() {
                   <th className="px-4 py-3 font-medium">License</th>
                   <th className="px-4 py-3 font-medium">License Expiry</th>
                   <th className="px-4 py-3 font-medium">Med Card</th>
+                  <th className="px-4 py-3 font-medium">Training</th>
                   <th className="px-4 py-3 font-medium">Status</th>
                   <th className="px-4 py-3 font-medium text-right">Actions</th>
                 </tr>
@@ -309,8 +349,11 @@ export default function CarrierDriversPage() {
               <tbody>
                 {drivers.map((d) => {
                   const inactive = INACTIVE_STATUSES.includes(d.status);
+                  const tState = trainingState(d);
+                  const result = inviteResult[d.id];
                   return (
-                    <tr key={d.id} className={`border-b border-gray-50 last:border-0 ${inactive ? "opacity-50" : ""}`}>
+                    <Fragment key={d.id}>
+                    <tr className={`border-b border-gray-50 ${result ? "" : "last:border-0"} ${inactive ? "opacity-50" : ""}`}>
                       <td className="px-4 py-3">
                         <div className="text-[13px] font-semibold text-[#0F1117]">
                           {d.firstName} {d.lastName}
@@ -335,6 +378,19 @@ export default function CarrierDriversPage() {
                       <td className="px-4 py-3">
                         <span
                           className={`px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wide ${
+                            tState === "activated"
+                              ? "bg-green-50 text-green-700 border border-green-200"
+                              : tState === "invited"
+                                ? "bg-amber-50 text-amber-700 border border-amber-200"
+                                : "bg-gray-100 text-gray-500"
+                          }`}
+                        >
+                          {tState === "activated" ? "Activated" : tState === "invited" ? "Invited" : "Not invited"}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <span
+                          className={`px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wide ${
                             inactive
                               ? "bg-gray-100 text-gray-500"
                               : "bg-green-50 text-green-700 border border-green-200"
@@ -345,6 +401,31 @@ export default function CarrierDriversPage() {
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex items-center justify-end gap-1">
+                          {/* Training invite — only for active drivers */}
+                          {!inactive && tState !== "activated" && (
+                            <button
+                              onClick={() => inviteMutation.mutate({ id: d.id })}
+                              disabled={inviteMutation.isPending}
+                              title={tState === "invited" ? "Resend training invite" : "Send training invite"}
+                              className="px-2 py-1.5 flex items-center gap-1 text-[11px] font-medium text-[#BA7517] hover:bg-[#C9A84C]/10 rounded transition-colors"
+                            >
+                              <Send size={13} /> {tState === "invited" ? "Resend" : "Invite"}
+                            </button>
+                          )}
+                          {!inactive && tState === "activated" && (
+                            <button
+                              onClick={() => {
+                                if (confirm(`Reset ${d.firstName}'s training PIN? They'll get a fresh setup link and must choose a new PIN.`)) {
+                                  inviteMutation.mutate({ id: d.id, reset: true });
+                                }
+                              }}
+                              disabled={inviteMutation.isPending}
+                              title="Reset PIN & re-invite"
+                              className="p-1.5 text-gray-400 hover:text-[#BA7517] hover:bg-[#C9A84C]/10 rounded transition-colors"
+                            >
+                              <KeyRound size={14} />
+                            </button>
+                          )}
                           <button
                             onClick={() => startEdit(d)}
                             title="Edit driver"
@@ -378,6 +459,30 @@ export default function CarrierDriversPage() {
                         </div>
                       </td>
                     </tr>
+                    {result && (
+                      <tr className="border-b border-gray-50 last:border-0 bg-[#C9A84C]/5">
+                        <td colSpan={8} className="px-4 py-3">
+                          <div className="flex flex-wrap items-center gap-3">
+                            <span className="text-[11px] font-semibold text-[#0F1117]">
+                              {result.smsSent ? "✓ Texted the setup link to the driver." : "Setup link ready — text or share it with the driver:"}
+                            </span>
+                            <code className="flex-1 min-w-[200px] text-[11px] text-gray-600 bg-white border border-gray-200 rounded px-2 py-1 truncate">
+                              {result.url}
+                            </code>
+                            <button
+                              onClick={() => copyLink(d.id, result.url)}
+                              className="px-2.5 py-1 flex items-center gap-1 text-[11px] font-medium text-[#BA7517] border border-[#C9A84C]/40 hover:bg-[#C9A84C]/10 rounded transition-colors"
+                            >
+                              {copiedId === d.id ? <><Check size={12} /> Copied</> : <><Copy size={12} /> Copy link</>}
+                            </button>
+                          </div>
+                          {!result.smsSent && result.smsError && (
+                            <p className="text-[10px] text-gray-400 mt-1.5">SMS unavailable right now — the copy link above works.</p>
+                          )}
+                        </td>
+                      </tr>
+                    )}
+                    </Fragment>
                   );
                 })}
               </tbody>
@@ -386,15 +491,15 @@ export default function CarrierDriversPage() {
         </CarrierCard>
       )}
 
-      {/* Academy teaser strip — replaced by the real training dashboard in Sprint T5 */}
+      {/* Academy strip — invites are live (T2); course content lands in T4. */}
       {drivers.length > 0 && (
         <div className="mt-5 px-4 py-3 bg-[#C9A84C]/5 border border-[#C9A84C]/20 rounded-lg flex items-center gap-3">
           <GraduationCap size={18} className="text-[#BA7517] shrink-0" />
           <p className="text-xs text-gray-600">
-            <span className="font-semibold text-[#0F1117]">SRL Driver Academy is coming.</span>{" "}
-            Every driver on your roster will get a personal training login covering IRP, IFTA,
-            ELD &amp; HOS, inspections, detention documentation, and more — with certificates and
-            completion tracking right here.
+            <span className="font-semibold text-[#0F1117]">Invite your drivers to SRL Driver Academy.</span>{" "}
+            Send each driver a training login (they set a 6-digit PIN on their phone). Courses
+            covering IRP, IFTA, ELD &amp; HOS, inspections, detention documentation, and more — with
+            certificates and completion tracking — are launching soon.
           </p>
         </div>
       )}

@@ -14,12 +14,19 @@ const isProduction = process.env.NODE_ENV === "production";
  * prefix with fallback chain for shared endpoints. Legacy `srl_token`
  * cookie still read by middleware as one-deploy migration grace.
  */
-export type Portal = "ae" | "carrier" | "shipper";
+// v3.8.amz — "driver" portal added for the SRL Driver Academy. The driver
+// session cookie (srl_token_driver) is fully isolated from the AE/carrier/
+// shipper cookies: driver routes use authenticateDriver (Driver lookup, NOT
+// User lookup), and the shared authenticate() cookie resolver never lists
+// srl_token_driver, so it can neither pollute nor be polluted by the other
+// portals' resolution.
+export type Portal = "ae" | "carrier" | "shipper" | "driver";
 
 export const COOKIE_NAMES: Record<Portal, string> = {
   ae: "srl_token_ae",
   carrier: "srl_token_carrier",
   shipper: "srl_token_shipper",
+  driver: "srl_token_driver",
 };
 
 export const LEGACY_COOKIE_NAME = "srl_token";
@@ -27,6 +34,7 @@ export const LEGACY_COOKIE_NAME = "srl_token";
 export function portalForRole(role: string): Portal {
   if (role === "CARRIER") return "carrier";
   if (role === "SHIPPER") return "shipper";
+  if (role === "DRIVER") return "driver";
   return "ae";
 }
 

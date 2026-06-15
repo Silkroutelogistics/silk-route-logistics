@@ -12805,7 +12805,26 @@
 //   descriptions de-em-dashed; /faq retitled "Freight Brokerage FAQ | Silk Route
 //   Logistics"; /shippers title shortened 77→59 chars. sitemap.xml → extensionless
 //   locs + lastmod + /verify dropped (noindex utility). Per §3.1: amx → amy.
-export const SRL_VERSION = "3.8.amy";
+// v3.8.amz — SRL Driver Academy Sprint T2: driver authentication (phone + PIN).
+//   Drivers (NOT platform Users — no User row, no role) get a training-portal
+//   login. Carrier invites a roster driver → SMS magic-link (+ copy-link
+//   fallback) → driver sets a 6-digit PIN at /driver/set-pin → /driver/login
+//   (phone + PIN) → /driver/dashboard (placeholder until T4 content). SHIPPED:
+//   (schema) Driver.trainingPinHash/PinSetAt/InviteSentAt/FailedAttempts/
+//   LockedUntil/LastLoginAt + migration; (token) lib/driverToken.ts invite +
+//   session JWTs (purpose-claim isolated, single-source 7d lifetime);
+//   (middleware) authenticateDriver (Driver lookup, srl_token_driver cookie,
+//   never the shared User resolver); (routes) /api/driver-auth set-pin/login/
+//   me/logout + carrier /carrier-drivers/:id/invite (SMS + copy-link); cookies
+//   gains a 'driver' portal. SECURITY (post adversarial-review, 27 findings
+//   triaged): enumeration-safe login (constant-time dummy bcrypt + unified
+//   generic 401; 423 only on correct-PIN-locked), multi-carrier same-phone
+//   resolved by PIN-match-across-candidates, atomic set-pin (updateMany WHERE
+//   trainingPinHash NULL), single-use invite (blacklist on consume), set-pin +
+//   invite rate limiters, weak-PIN rejection, shared-auth hardened to reject
+//   purpose-bearing/non-userId tokens, isTokenBlacklisted now respects expiry.
+//   Banked platform-wide follow-ups at §13.3 Item 193. Per §3.1: amy → amz.
+export const SRL_VERSION = "3.8.amz";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

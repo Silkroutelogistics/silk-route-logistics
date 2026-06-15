@@ -42,6 +42,7 @@ import cppRoutes from "./cpp";
 import carrierComplianceRoutes from "./carrierCompliance";
 import carrierPaymentRoutes from "./carrierPayments";
 import carrierDriversRoutes from "./carrierDrivers";
+import driverAuthRoutes from "./driverAuth";
 import datRoutes from "./dat";
 import automationRoutes from "./automation";
 import trackingRoutes from "./tracking";
@@ -195,6 +196,10 @@ router.use("/carrier-loads", carrierLoadRoutes);
 router.use("/carrier-compliance", carrierComplianceRoutes);
 router.use("/carrier-payments", carrierPaymentRoutes);
 router.use("/carrier-drivers", carrierDriversRoutes);
+// v3.8.amz — SRL Driver Academy T2: driver-portal auth (phone + PIN). Public
+// set-pin/login + authenticated me/logout. Drivers are not Users; this mount
+// uses authenticateDriver, not the shared authenticate.
+router.use("/driver-auth", driverAuthRoutes);
 router.use("/carrier-pay", carrierPayRoutes);
 router.use("/carrier", carrierRoutes);
 router.use("/dat", datRoutes);

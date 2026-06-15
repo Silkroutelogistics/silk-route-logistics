@@ -1,9 +1,24 @@
 import { Router, Response } from "express";
+import rateLimit from "express-rate-limit";
 import { z } from "zod";
 import { prisma } from "../config/database";
 import { authenticate, authorize, AuthRequest } from "../middleware/auth";
 import { validateBody } from "../middleware/validate";
 import { normalizePhoneE164 } from "../lib/phoneNormalization";
+import { mintDriverInviteToken, driverInviteUrl } from "../lib/driverToken";
+import { sendSMS } from "../services/openPhoneService";
+import { log } from "../lib/logger";
+
+// v3.8.amz (review fix) — cap invite/re-invite churn. The invite response
+// returns a signed setup link (the deliberate copy-link fallback); rate
+// limiting bounds how fast that token-bearing URL can be re-minted.
+const inviteLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 30,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Too many invite requests. Please try again shortly." },
+});
 
 /**
  * v3.8.amw — SRL Driver Academy Sprint T1: carrier-managed driver roster.
@@ -69,6 +84,9 @@ const ROSTER_SELECT = {
   medicalCardExpiry: true,
   status: true,
   createdAt: true,
+  // v3.8.amz — Driver Academy T2 invite/activation state for the roster UI.
+  trainingPinSetAt: true,
+  trainingInviteSentAt: true,
 } as const;
 
 // ISO date string (yyyy-mm-dd or full ISO) — converted to Date in handlers.
@@ -253,6 +271,70 @@ router.patch("/:id/reactivate", async (req: AuthRequest, res: Response) => {
     select: ROSTER_SELECT,
   });
   res.json({ driver });
+});
+
+// POST /api/carrier-drivers/:id/invite — send (or re-send) the SRL Driver
+// Academy training-login invite. Mints a 7-day invite token, fires an SMS
+// to the driver's phone (graceful — never blocks on OpenPhone), and ALWAYS
+// returns the invite URL so the carrier can copy + share it directly even
+// when SMS is unavailable. `reset: true` clears an existing PIN so the new
+// link can re-activate a driver who forgot their PIN (UI gates this behind
+// a confirm).
+const inviteSchema = z.object({ reset: z.boolean().optional() });
+router.post("/:id/invite", inviteLimiter, validateBody(inviteSchema), async (req: AuthRequest, res: Response) => {
+  const profile = await getApprovedProfile(req, res);
+  if (!profile) return;
+
+  const driver = await prisma.driver.findFirst({
+    where: { id: req.params.id, carrierProfileId: profile.id },
+    select: { id: true, firstName: true, lastName: true, phone: true, status: true, trainingPinHash: true },
+  });
+  if (!driver) {
+    res.status(404).json({ error: "Driver not found" });
+    return;
+  }
+  if (driver.status === "INACTIVE" || driver.status === "TERMINATED") {
+    res.status(409).json({ error: "Reactivate this driver before sending a training invite." });
+    return;
+  }
+  if (!driver.phone) {
+    res.status(400).json({ error: "This driver has no phone number on file." });
+    return;
+  }
+
+  const reset = (req.body as z.infer<typeof inviteSchema>).reset === true;
+  if (driver.trainingPinHash && !reset) {
+    res.status(409).json({
+      error: "This driver has already set up their training login. Use \"Reset PIN\" to send a fresh invite.",
+      code: "ALREADY_ACTIVATED",
+    });
+    return;
+  }
+
+  // reset=true clears the existing PIN state so the new invite can re-activate.
+  await prisma.driver.update({
+    where: { id: driver.id },
+    data: {
+      trainingInviteSentAt: new Date(),
+      ...(reset ? { trainingPinHash: null, trainingPinSetAt: null, trainingFailedAttempts: 0, trainingLockedUntil: null } : {}),
+    },
+  });
+
+  const token = mintDriverInviteToken(driver.id, profile.id);
+  const inviteUrl = driverInviteUrl(token);
+
+  let smsSent = false;
+  let smsError: string | null = null;
+  const message = `${driver.firstName}, your carrier invited you to SRL Driver Academy training. Set your 6-digit PIN here: ${inviteUrl} (link expires in 7 days)`;
+  try {
+    await sendSMS(driver.phone, message);
+    smsSent = true;
+  } catch (e) {
+    smsError = e instanceof Error ? e.message : "SMS could not be sent";
+    log.warn({ driverId: driver.id, err: smsError }, "[DriverAcademy] invite SMS failed — copy-link fallback returned");
+  }
+
+  res.json({ inviteUrl, smsSent, smsError, reset });
 });
 
 export default router;

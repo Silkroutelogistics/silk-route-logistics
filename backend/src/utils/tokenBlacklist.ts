@@ -27,7 +27,13 @@ export async function isTokenBlacklisted(token: string): Promise<boolean> {
   const entry = await prisma.tokenBlacklist.findUnique({
     where: { tokenHash },
   });
-  return !!entry;
+  if (!entry) return false;
+  // v3.8.amz (review fix) — respect the entry's own expiry. A blacklist row
+  // past expiresAt is stale (the JWT it revoked has itself expired); the
+  // daily cleanup cron may not have purged it yet. Treat as not-blacklisted
+  // so the row's lifetime, not the cron cadence, bounds revocation.
+  if (entry.expiresAt <= new Date()) return false;
+  return true;
 }
 
 /**
