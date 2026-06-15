@@ -12824,7 +12824,28 @@
 //   invite rate limiters, weak-PIN rejection, shared-auth hardened to reject
 //   purpose-bearing/non-userId tokens, isTokenBlacklisted now respects expiry.
 //   Banked platform-wide follow-ups at §13.3 Item 193. Per §3.1: amy → amz.
-export const SRL_VERSION = "3.8.amz";
+// v3.8.ana — SRL Driver Academy Sprint T3: course content models + seeded
+//   starter curriculum (data layer; the lesson player + quizzes are T4).
+//   SCHEMA (manual migration `20260615170000_add_training_curriculum`, all new
+//   tables): TrainingCourse / TrainingLesson / TrainingQuestion (content) +
+//   DriverCourseProgress / TrainingAttempt (per-driver, FK to Driver) + 2 enums
+//   (TrainingCourseStatus, DriverCourseStatus); Driver gains courseProgress +
+//   trainingAttempts inverse relations. DriverCourseProgress carries
+//   certificateDocumentId (soft ref, T5) + expiresAt (validityMonths refresher,
+//   T6). CONTENT: backend/src/data/trainingCurriculum.ts — 5 courses / 20
+//   lessons / 26 quiz questions (ELD&HOS, IFTA, IRP, Detention & Documentation,
+//   Fraud & Double-Brokering Awareness), each with the educational-not-legal
+//   disclaimer + reg citations (49 CFR 395, etc.). FIRST DRAFT pending Wasi
+//   content review per the Item 193 locked decision. SEED:
+//   scripts/seed-training-courses.ts — idempotent upsert by slug (+ prunes
+//   removed lessons/questions); `--dry-run` validates content (verified: 5/20/26)
+//   without a DB connection. Tables ship EMPTY on deploy; content is seeded as a
+//   deliberate post-review step (`npx tsx scripts/seed-training-courses.ts`).
+//   Note: the parallel content-authoring + adversarial-fact-check workflow was
+//   transiently server-rate-limited, so the curriculum was authored inline
+//   (stable regulatory fundamentals, conservative, disclaimer'd) — Wasi review
+//   is the accuracy gate. Per §3.1: amz → ana.
+export const SRL_VERSION = "3.8.ana";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

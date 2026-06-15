@@ -2521,6 +2521,10 @@ model Driver {
   shipments Shipment[]
   loads     Load[]
 
+  // v3.8.ana — SRL Driver Academy Sprint T3: per-driver course progress + quiz attempts.
+  courseProgress   DriverCourseProgress[]
+  trainingAttempts TrainingAttempt[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -2620,6 +2624,126 @@ model SOP {
 
   @@index([category])
   @@map("sops")
+}
+
+// ─── SRL Driver Academy (v3.8.ana — Sprint T3) ──────────────
+// Course content models. Content is seeded from
+// backend/src/data/trainingCurriculum.ts via scripts/seed-training-courses.ts
+// (idempotent upsert by slug). The T7 authoring UI edits these rows directly;
+// the seed module is the initial source of truth. Per-driver progress +
+// quiz attempts are separate (DriverCourseProgress / TrainingAttempt).
+
+enum TrainingCourseStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum DriverCourseStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  PASSED
+  FAILED
+}
+
+model TrainingCourse {
+  id             String               @id @default(cuid())
+  slug           String               @unique
+  title          String
+  category       String
+  summary        String?
+  version        String               @default("1")
+  estMinutes     Int                  @default(0)
+  passThreshold  Int                  @default(80) // percent correct required to pass the quiz
+  validityMonths Int? // null = no expiry; e.g. 12 for an annual refresher (T6)
+  status         TrainingCourseStatus @default(PUBLISHED)
+  sortOrder      Int                  @default(0)
+  disclaimer     String?
+  lessons        TrainingLesson[]
+  questions      TrainingQuestion[]
+  progress       DriverCourseProgress[]
+  attempts       TrainingAttempt[]
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
+
+  @@index([status])
+  @@index([category])
+  @@map("training_courses")
+}
+
+model TrainingLesson {
+  id           String         @id @default(cuid())
+  courseId     String
+  course       TrainingCourse @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  order        Int
+  title        String
+  bodyMarkdown String
+  estMinutes   Int            @default(0)
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  @@unique([courseId, order])
+  @@index([courseId])
+  @@map("training_lessons")
+}
+
+model TrainingQuestion {
+  id           String         @id @default(cuid())
+  courseId     String
+  course       TrainingCourse @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  order        Int
+  question     String
+  options      String[] // multiple-choice options (4)
+  correctIndex Int
+  explanation  String?
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  @@unique([courseId, order])
+  @@index([courseId])
+  @@map("training_questions")
+}
+
+model DriverCourseProgress {
+  id               String             @id @default(cuid())
+  driverId         String
+  driver           Driver             @relation(fields: [driverId], references: [id], onDelete: Cascade)
+  courseId         String
+  course           TrainingCourse     @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  status           DriverCourseStatus @default(NOT_STARTED)
+  lessonsCompleted Int                @default(0)
+  lastLessonOrder  Int                @default(0)
+  bestScorePct     Int?
+  attemptCount     Int                @default(0)
+  startedAt        DateTime?
+  completedAt      DateTime?
+  expiresAt        DateTime? // completedAt + validityMonths — drives the T6 refresher cron
+  // Document.id of the issued completion certificate (T5). Soft reference
+  // (no FK relation) to avoid coupling to the heavily-related Document model.
+  certificateDocumentId String?
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+
+  @@unique([driverId, courseId])
+  @@index([driverId])
+  @@index([courseId])
+  @@index([expiresAt])
+  @@map("driver_course_progress")
+}
+
+model TrainingAttempt {
+  id        String         @id @default(cuid())
+  driverId  String
+  driver    Driver         @relation(fields: [driverId], references: [id], onDelete: Cascade)
+  courseId  String
+  course    TrainingCourse @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  scorePct  Int
+  passed    Boolean
+  answers   Json? // captured per-question answers for review
+  createdAt DateTime       @default(now())
+
+  @@index([driverId, courseId])
+  @@map("training_attempts")
 }
 
 // ─── Integration & EDI ──────────────────────────────────
