@@ -337,7 +337,11 @@ function resolveCompassPng(targetSize: number): string | null {
   return fs.existsSync(fallback) ? fallback : null;
 }
 
-function drawCompassMark(doc: PDFDoc, x: number, y: number, size: number = 50): void {
+// v3.8.anc — exported for the SRL Driver Academy completion certificate
+// (certificatePdfService.ts), which hand-builds a centered ceremonial layout
+// rather than using drawHeaderFirstPage's document-style header. Additive
+// export only; behavior unchanged. Mirror upstream to the skill on next sync.
+export function drawCompassMark(doc: PDFDoc, x: number, y: number, size: number = 50): void {
   const pngPath = resolveCompassPng(size);
 
   if (pngPath) {

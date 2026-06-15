@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  Home, Package, Send, Truck, Users, Shield, DollarSign, FileText, MessageSquare, Settings, ExternalLink, Menu, X,
+  Home, Package, Send, Truck, Users, GraduationCap, Shield, DollarSign, FileText, MessageSquare, Settings, ExternalLink, Menu, X,
 } from "lucide-react";
 
 // Sprint 52.hotfix.b — Tenders nav entry added at position 3 between
@@ -20,6 +20,8 @@ const nav = [
   // v3.8.amw — Driver Academy T1: roster entry between operational loads
   // and compliance (drivers are the people side of compliance).
   { id: "drivers", href: "/carrier/dashboard/drivers", icon: Users, label: "Drivers" },
+  // v3.8.anc — Driver Academy T5: training completion dashboard.
+  { id: "training", href: "/carrier/dashboard/training", icon: GraduationCap, label: "Training" },
   { id: "compliance", href: "/carrier/dashboard/compliance", icon: Shield, label: "Compliance" },
   { id: "payments", href: "/carrier/dashboard/payments", icon: DollarSign, label: "Payments" },
   { id: "documents", href: "/carrier/dashboard/documents", icon: FileText, label: "Documents" },

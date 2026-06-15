@@ -491,17 +491,18 @@ export default function CarrierDriversPage() {
         </CarrierCard>
       )}
 
-      {/* Academy strip — invites are live (T2); course content lands in T4. */}
+      {/* Academy strip — links to the live Training dashboard (T5). */}
       {drivers.length > 0 && (
-        <div className="mt-5 px-4 py-3 bg-[#C9A84C]/5 border border-[#C9A84C]/20 rounded-lg flex items-center gap-3">
+        <a href="/carrier/dashboard/training"
+          className="mt-5 px-4 py-3 bg-[#C9A84C]/5 border border-[#C9A84C]/20 rounded-lg flex items-center gap-3 hover:bg-[#C9A84C]/10 transition-colors">
           <GraduationCap size={18} className="text-[#BA7517] shrink-0" />
           <p className="text-xs text-gray-600">
-            <span className="font-semibold text-[#0F1117]">Invite your drivers to SRL Driver Academy.</span>{" "}
-            Send each driver a training login (they set a 6-digit PIN on their phone). Courses
-            covering IRP, IFTA, ELD &amp; HOS, inspections, detention documentation, and more — with
-            certificates and completion tracking — are launching soon.
+            <span className="font-semibold text-[#0F1117]">SRL Driver Academy is live.</span>{" "}
+            Invite drivers above, then track completion across IRP, IFTA, ELD &amp; HOS, inspections,
+            detention documentation, and fraud awareness — with downloadable certificates.{" "}
+            <span className="font-semibold text-[#BA7517]">View the Training dashboard →</span>
           </p>
-        </div>
+        </a>
       )}
     </div>
   );

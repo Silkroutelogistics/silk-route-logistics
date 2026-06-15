@@ -617,6 +617,36 @@ export async function sendTenderOfferedEmail(params: TenderOfferedEmailParams): 
   );
 }
 
+// v3.8.anc — SRL Driver Academy T5: carrier-facing completion notice (fired on
+// a driver's first pass of a course). Carrier-facing, so it names the driver +
+// course; reply-to operations@ per the tender-email convention.
+export interface CarrierTrainingCompletionParams {
+  driverName: string;
+  courseTitle: string;
+  scorePct: number;
+  completedAt: Date;
+  expiresAt: Date | null;
+  carrierName: string | null;
+}
+
+export async function sendCarrierTrainingCompletionEmail(to: string, params: CarrierTrainingCompletionParams): Promise<string | undefined> {
+  const fmt = (d: Date) => d.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
+  const validity = params.expiresAt ? ` &middot; valid through ${fmt(params.expiresAt)}` : "";
+  const html = wrap(`
+    <h2 style="color:#0A2540;margin:0 0 16px">Driver training completed</h2>
+    <p><strong>${params.driverName}</strong> has completed an SRL Driver Academy course.</p>
+    <table style="width:100%;border-collapse:collapse;margin:16px 0">
+      <tr><td style="padding:8px;border:1px solid #E2EAF2;font-weight:bold">Course</td><td style="padding:8px;border:1px solid #E2EAF2">${params.courseTitle}</td></tr>
+      <tr><td style="padding:8px;border:1px solid #E2EAF2;font-weight:bold">Driver</td><td style="padding:8px;border:1px solid #E2EAF2">${params.driverName}</td></tr>
+      <tr style="background:#FAEEDA"><td style="padding:8px;border:1px solid #C5A572;font-weight:bold;color:#BA7517">Score</td><td style="padding:8px;border:1px solid #C5A572;font-weight:bold;color:#0A2540">${params.scorePct}%</td></tr>
+      <tr><td style="padding:8px;border:1px solid #E2EAF2;font-weight:bold">Completed</td><td style="padding:8px;border:1px solid #E2EAF2">${fmt(params.completedAt)}${validity}</td></tr>
+    </table>
+    <p>View your team's training progress and download completion certificates in the carrier portal.</p>
+    <a href="https://silkroutelogistics.ai/carrier/dashboard/training" style="display:inline-block;background:#BA7517;color:#FFFFFF;padding:12px 24px;text-decoration:none;border-radius:6px;font-weight:bold;margin-top:8px">View training dashboard</a>
+  `);
+  return sendEmail(to, `Training completed: ${params.courseTitle} — ${params.driverName}`, html, undefined, { replyTo: "operations@silkroutelogistics.ai" });
+}
+
 export interface TenderAcceptedEmailParams {
   to: string;
   cc?: string | string[];

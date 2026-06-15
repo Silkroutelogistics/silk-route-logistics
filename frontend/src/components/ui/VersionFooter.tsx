@@ -12870,7 +12870,34 @@
 //   §13.3 Item 193. Backend-only schema (no migration — uses T3 models). Gates:
 //   backend tsc + vitest 243/243 + frontend tsc + next build (113 pages) clean.
 //   Per §3.1: ana → anb.
-export const SRL_VERSION = "3.8.anb";
+//
+// v3.8.anc — SRL Driver Academy Sprint T5: completion certificates + carrier
+//   training-progress dashboard. Closes the loop the whole module was for —
+//   "how many of my drivers have been trained?" BACKEND: new
+//   certificatePdfService.ts (buildCertificateData + generateTrainingCertificate
+//   — ceremonial single-page cert from srl-chrome primitives: drawCompassMark +
+//   double gold border + TOKENS/FONT_*; generated ON-DEMAND, no storage,
+//   certificateDocumentId stays null; slug-format guard before DB). Two download
+//   endpoints — GET /driver-training/courses/:slug/certificate (driver, scoped
+//   to req.driver.id) + GET /carrier-drivers/:id/certificate/:slug (carrier,
+//   double-gated getApprovedProfile + getOwnedDriver). New GET
+//   /carrier-drivers/training-summary (roster × course matrix + % trained,
+//   carrier-scoped). Completion email on first pass
+//   (sendCarrierTrainingCompletionEmail, wrap() + operations@ replyTo). srl-chrome
+//   drawCompassMark gained `export`. FRONTEND: new /carrier/dashboard/training
+//   (matrix + %-trained StatCards + per-cell cert downloads) + "Training" sidebar
+//   entry; cert-download buttons on driver dashboard + course results; drivers
+//   teaser → Training page. New lib/download.ts (downloadFromApi — fetch+blob via
+//   api client, the codebase's PDF-download convention, sends httpOnly cookie +
+//   surfaces 401/404). SECURITY (adversarial review, 4 dims → confirmed authz:
+//   no cross-carrier cert leak, PUBLISHED+PASSED gating, no answer leak): FIXED
+//   in-scope — cert downloads bare <a href> → fetch+blob w/ error banners (3
+//   sites), slug-format guard. BANKED: completion-email PUBLISHED re-check race
+//   (low reachability), PDF length validation (T7), cert audit logging
+//   (optional) → §13.3 Item 193. No migration (uses T3 models). Gates: backend
+//   tsc + vitest 243/243 + frontend tsc + next build (114 pages) clean.
+//   Per §3.1: anb → anc.
+export const SRL_VERSION = "3.8.anc";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

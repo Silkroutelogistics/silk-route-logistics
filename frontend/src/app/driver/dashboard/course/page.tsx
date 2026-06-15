@@ -9,9 +9,10 @@
 import { Suspense, useEffect, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import {
-  Loader2, ChevronLeft, ChevronRight, ArrowLeft, CheckCircle2, XCircle, GraduationCap, RotateCcw,
+  Loader2, ChevronLeft, ChevronRight, ArrowLeft, CheckCircle2, XCircle, GraduationCap, RotateCcw, Download,
 } from "lucide-react";
 import { api } from "@/lib/api";
+import { downloadFromApi } from "@/lib/download";
 import { CarrierCard } from "@/components/carrier";
 import { LessonMarkdown } from "@/components/driver/LessonMarkdown";
 
@@ -92,6 +93,15 @@ function CourseContent() {
   };
 
   const retake = () => { setAnswers({}); setResult(null); setPhase("quiz"); window.scrollTo({ top: 0 }); };
+
+  const downloadCert = async () => {
+    setError(null);
+    try {
+      await downloadFromApi(`/driver-training/courses/${slug}/certificate`, `SRL-Certificate-${slug}.pdf`);
+    } catch {
+      setError("Couldn't download your certificate. Try again in a moment.");
+    }
+  };
 
   // ── Header (shared) ───────────────────────────────────────
   const header = (
@@ -256,10 +266,16 @@ function CourseContent() {
           <ChevronLeft size={16} /> Review lessons
         </button>
         {r.passed ? (
-          <button onClick={() => router.push("/driver/dashboard")}
-            className="px-5 py-2 bg-gradient-to-br from-[#C9A84C] to-[#A88535] text-[#0A2540] text-[13px] font-semibold rounded-md hover:shadow-lg transition-shadow">
-            Back to courses
-          </button>
+          <div className="flex items-center gap-2">
+            <button type="button" onClick={downloadCert}
+              className="flex items-center gap-1.5 px-4 py-2 border border-[#C9A84C]/50 text-[#BA7517] text-[13px] font-semibold rounded-md hover:bg-[#C9A84C]/10 transition-colors">
+              <Download size={14} /> Certificate
+            </button>
+            <button onClick={() => router.push("/driver/dashboard")}
+              className="px-5 py-2 bg-gradient-to-br from-[#C9A84C] to-[#A88535] text-[#0A2540] text-[13px] font-semibold rounded-md hover:shadow-lg transition-shadow">
+              Back to courses
+            </button>
+          </div>
         ) : (
           <button onClick={retake}
             className="flex items-center gap-1.5 px-5 py-2 bg-gradient-to-br from-[#C9A84C] to-[#A88535] text-[#0A2540] text-[13px] font-semibold rounded-md hover:shadow-lg transition-shadow">

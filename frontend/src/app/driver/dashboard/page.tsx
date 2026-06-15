@@ -6,8 +6,9 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { GraduationCap, Loader2, BookOpen, CheckCircle2, Clock } from "lucide-react";
+import { GraduationCap, Loader2, BookOpen, CheckCircle2, Clock, Download } from "lucide-react";
 import { api } from "@/lib/api";
+import { downloadFromApi } from "@/lib/download";
 import { CarrierCard } from "@/components/carrier";
 import { useDriverAuth } from "@/hooks/useDriverAuth";
 
@@ -60,6 +61,16 @@ export default function DriverCoursesPage() {
   const [courses, setCourses] = useState<CourseCard[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [certError, setCertError] = useState<string | null>(null);
+
+  const downloadCert = async (slug: string) => {
+    setCertError(null);
+    try {
+      await downloadFromApi(`/driver-training/courses/${slug}/certificate`, `SRL-Certificate-${slug}.pdf`);
+    } catch {
+      setCertError("Couldn't download that certificate. Try again in a moment.");
+    }
+  };
 
   useEffect(() => {
     let active = true;
@@ -83,6 +94,10 @@ export default function DriverCoursesPage() {
           {courses.length > 0 && <> You&apos;ve completed <span className="font-semibold text-[#0F1117]">{passedCount} of {courses.length}</span>.</>}
         </p>
       </div>
+
+      {certError && (
+        <div className="mb-4 px-3 py-2 bg-red-50 border-l-4 border-red-500 text-red-700 text-xs rounded">{certError}</div>
+      )}
 
       {loading ? (
         <CarrierCard padding="p-8">
@@ -125,8 +140,17 @@ export default function DriverCoursesPage() {
                   </span>
                   <span className="text-[12px] font-semibold text-[#BA7517]">{cta} →</span>
                 </div>
-                {passed && c.progress?.expiresAt && (
-                  <div className="mt-2 text-[10px] text-gray-400">Valid until {fmtDate(c.progress.expiresAt)}</div>
+                {passed && (
+                  <div className="mt-2 flex items-center justify-between">
+                    {c.progress?.expiresAt
+                      ? <span className="text-[10px] text-gray-400">Valid until {fmtDate(c.progress.expiresAt)}</span>
+                      : <span />}
+                    <button type="button"
+                      onClick={(e) => { e.stopPropagation(); downloadCert(c.slug); }}
+                      className="inline-flex items-center gap-1 text-[11px] font-medium text-[#BA7517] hover:underline">
+                      <Download size={11} /> Certificate
+                    </button>
+                  </div>
                 )}
               </CarrierCard>
             );

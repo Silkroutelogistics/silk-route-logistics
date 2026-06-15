@@ -3,6 +3,9 @@ import { z } from "zod";
 import { prisma } from "../config/database";
 import { authenticateDriver, DriverRequest } from "../middleware/driverAuth";
 import { validateBody } from "../middleware/validate";
+import { generateTrainingCertificate, buildCertificateData } from "../services/certificatePdfService";
+import { sendCarrierTrainingCompletionEmail } from "../services/emailService";
+import { log } from "../lib/logger";
 
 /**
  * v3.8.anb — SRL Driver Academy Sprint T4: the training player API.
@@ -129,7 +132,7 @@ router.post("/courses/:slug/quiz", validateBody(quizSchema), async (req: DriverR
   const course = await prisma.trainingCourse.findFirst({
     where: { slug: req.params.slug, status: "PUBLISHED" },
     select: {
-      id: true, passThreshold: true, validityMonths: true,
+      id: true, title: true, passThreshold: true, validityMonths: true,
       questions: { orderBy: { order: "asc" }, select: { id: true, order: true, correctIndex: true, explanation: true } },
     },
   });
@@ -174,7 +177,7 @@ router.post("/courses/:slug/quiz", validateBody(quizSchema), async (req: DriverR
   // without its progress update (or vice versa). The bestScorePct read-modify-
   // write is a theoretical race only under concurrent same-driver submits,
   // which the single-submit UI prevents; not worth Serializable here.
-  const progress = await prisma.$transaction(async (tx) => {
+  const { progress, firstPass } = await prisma.$transaction(async (tx) => {
     await tx.trainingAttempt.create({
       data: { driverId, courseId: course.id, scorePct, passed, answers },
     });
@@ -205,14 +208,54 @@ router.post("/courses/:slug/quiz", validateBody(quizSchema), async (req: DriverR
       expiresAt,
     };
 
-    return tx.driverCourseProgress.upsert({
+    const upserted = await tx.driverCourseProgress.upsert({
       where: { driverId_courseId: { driverId, courseId: course.id } },
       create: { driverId, courseId: course.id, lessonsCompleted: existing?.lessonsCompleted ?? 0, lastLessonOrder: existing?.lastLessonOrder ?? 0, ...data },
       update: data,
     });
+    return { progress: upserted, firstPass: passed && !wasPassed };
   });
 
+  // On the FIRST pass only, notify the carrier (fire-and-forget; never blocks
+  // the quiz response). Carrier email = contactEmail ?? linked user.email.
+  if (firstPass) {
+    void (async () => {
+      const d = await prisma.driver.findUnique({
+        where: { id: driverId },
+        select: {
+          firstName: true, lastName: true,
+          carrierProfile: { select: { companyName: true, contactEmail: true, user: { select: { email: true } } } },
+        },
+      });
+      const carrierEmail = d?.carrierProfile?.contactEmail || d?.carrierProfile?.user?.email;
+      if (carrierEmail && d) {
+        await sendCarrierTrainingCompletionEmail(carrierEmail, {
+          driverName: `${d.firstName} ${d.lastName}`.trim(),
+          courseTitle: course.title,
+          scorePct,
+          completedAt: progress.completedAt ?? now,
+          expiresAt: progress.expiresAt,
+          carrierName: d.carrierProfile?.companyName ?? null,
+        });
+      }
+    })().catch((e) => log.warn({ err: e, driverId }, "[DriverAcademy] completion email failed"));
+  }
+
   res.json({ scorePct, passed, passThreshold: course.passThreshold, correct, total, review, progress });
+});
+
+// GET /api/driver-training/courses/:slug/certificate — the driver's own
+// completion certificate PDF (404 unless they have PASSED this course).
+router.get("/courses/:slug/certificate", async (req: DriverRequest, res: Response) => {
+  const data = await buildCertificateData(req.driver!.id, req.params.slug);
+  if (!data) {
+    res.status(404).json({ error: "No certificate available — you haven't completed this course yet." });
+    return;
+  }
+  const doc = generateTrainingCertificate(data);
+  res.setHeader("Content-Type", "application/pdf");
+  res.setHeader("Content-Disposition", `attachment; filename="SRL-Certificate-${req.params.slug}.pdf"`);
+  doc.pipe(res);
 });
 
 export default router;
