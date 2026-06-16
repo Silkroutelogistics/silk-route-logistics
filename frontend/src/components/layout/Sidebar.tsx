@@ -11,7 +11,7 @@ import {
   AlertTriangle, Mail, Target, Plug, Container, Landmark,
   ChevronDown, ChevronRight, ChevronsLeft, ChevronsRight,
   ScrollText, Gavel, Route, Crosshair, Fuel, Calendar, Tag,
-  Compass, Clock, Phone, Map, Layers,
+  Compass, Clock, Phone, Map, Layers, GraduationCap,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Logo } from "@/components/ui/Logo";
@@ -159,6 +159,7 @@ const aeViewGroups: NavGroup[] = [
     items: [
       { href: "/dashboard/claims", label: "Claims", icon: Shield },
       { href: "/dashboard/sops", label: "SOPs", icon: BookOpen },
+      { href: "/dashboard/training-courses", label: "Academy", icon: GraduationCap },
       { href: "/dashboard/edi", label: "EDI", icon: Zap },
       { href: "/dashboard/audit", label: "Audit Log", icon: ClipboardList },
       { href: "/dashboard/integrations", label: "Integrations", icon: Plug },

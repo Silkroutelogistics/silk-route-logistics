@@ -159,9 +159,13 @@ router.post("/courses/:slug/quiz", validateBody(quizSchema), async (req: DriverR
   // Defense-in-depth (the client also gates this): reject unknown question ids
   // (audit-trail hygiene) and require every question answered, so a direct or
   // truncated POST gets a clear 400 instead of a silent low score.
+  // Unknown question ids mean the answer set is stale — most commonly because an
+  // admin re-saved (re-authored) the course while the driver was mid-quiz (T7
+  // delete-and-recreates questions, so the ids change). 409 + a clear message so
+  // the player can tell the driver to reload, rather than a cryptic 400.
   const validIds = new Set(course.questions.map((q) => q.id));
   if (Object.keys(answers).some((id) => !validIds.has(id))) {
-    res.status(400).json({ error: "Invalid quiz submission." });
+    res.status(409).json({ error: "This course was updated while you were taking it. Please reload the course and start the quiz again." });
     return;
   }
   const missing = course.questions.filter((q) => !Object.prototype.hasOwnProperty.call(answers, q.id));

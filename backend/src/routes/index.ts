@@ -44,6 +44,7 @@ import carrierPaymentRoutes from "./carrierPayments";
 import carrierDriversRoutes from "./carrierDrivers";
 import driverAuthRoutes from "./driverAuth";
 import driverTrainingRoutes from "./driverTraining";
+import trainingAdminRoutes from "./trainingAdmin";
 import datRoutes from "./dat";
 import automationRoutes from "./automation";
 import trackingRoutes from "./tracking";
@@ -204,6 +205,10 @@ router.use("/driver-auth", driverAuthRoutes);
 // v3.8.anb — SRL Driver Academy T4: the training player API (course catalog,
 // lesson progress, server-graded quiz). authenticateDriver, PUBLISHED-only.
 router.use("/driver-training", driverTrainingRoutes);
+// v3.8.ane — SRL Driver Academy T7: AE course-authoring API (course/lesson/
+// question CRUD + transactional save + publish/archive). AE-cookie (authenticate),
+// ADMIN/CEO writes; distinct from the driver-side /driver-training above.
+router.use("/training-admin", trainingAdminRoutes);
 router.use("/carrier-pay", carrierPayRoutes);
 router.use("/carrier", carrierRoutes);
 router.use("/dat", datRoutes);

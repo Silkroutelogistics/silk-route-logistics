@@ -12928,7 +12928,36 @@
 //   (needs a migration — out of T6's no-migration scope; matches the
 //   insurance-reminder precedent). No migration. Gates: backend tsc + vitest
 //   243/243 + frontend tsc + next build (114 pages) clean. Per §3.1: anc → and.
-export const SRL_VERSION = "3.8.and";
+//
+// v3.8.ane — SRL Driver Academy Sprint T7: AE course-authoring UI (epic close).
+//   Replaces the seed-script-only content model — admins now create/edit courses,
+//   lessons, and quiz questions and drive DRAFT→PUBLISHED→ARCHIVED from the AE
+//   Console. NO migration (uses the T3 models). BACKEND: new /api/training-admin
+//   (authenticate; ADMIN/CEO writes, +OPERATIONS reads; NOT a CARRIER_PORTAL_MOUNT)
+//   — list / get-full (answers included) / create (DRAFT, slug-unique) / PUT save
+//   (TRANSACTIONAL delete-and-recreate of lessons + questions — the reorder-safe
+//   path past @@unique([courseId,order]); confirmed safe in Phase A since no FK
+//   from attempts/progress to lesson/question ids) / PATCH status (publish requires
+//   ≥1 lesson + ≥1 question) / DELETE (only when no driver has touched it, else
+//   409 → archive). Zod validators mirror the seed rules (4-option quizzes,
+//   correctIndex 0-3, passThreshold 1-100). FRONTEND: new /dashboard/training-courses
+//   (list + new-course drawer + INLINE editor toggle — no dynamic [id] route, which
+//   static export can't enumerate) with CourseEditor + LessonsSection (markdown +
+//   driver-accurate LessonMarkdown preview) + QuestionsSection (4 options + correct
+//   radio + explanation); reorder via move up/down; "Academy" sidebar entry
+//   (GraduationCap, ADMIN cluster). Guard rules: slug immutable after create;
+//   archive warns (hides course + breaks cert downloads until restored); editing a
+//   published quiz answer warns (future grading only). SECURITY/CORRECTNESS
+//   (adversarial review, 4 dims → 7 findings, 5 confirmed; refuted: React-19
+//   unmount "leak" + the by-design archive warning): FIXED in-scope — deleteCourse
+//   count-check + delete wrapped in one $transaction (closed a cascade-delete
+//   race); React keys + preview + radio-group name moved to stable `order` (fixed
+//   a reorder display bug); driver mid-quiz stale-id submit now 409 + "course was
+//   updated, reload" (T7 enables published-course edits); Zod .trim() on
+//   title/body/options + explanation empty→null. No migration. Gates: backend tsc
+//   + vitest 243/243 + frontend tsc + next build (115 pages) clean. Per §3.1:
+//   and → ane. Closes the SRL Driver Academy epic (§13.3 Item 193) — T1→T7.
+export const SRL_VERSION = "3.8.ane";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
