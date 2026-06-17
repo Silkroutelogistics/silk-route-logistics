@@ -522,4 +522,355 @@ export const EXPANSION: CurriculumCourse[] = [
       { order: 5, question: "Keeping your load visible on an SRL load:", options: ["Has no real effect", "Raises your carrier's Compass score and access to better freight", "Only matters for reefer loads", "Lowers your pay"], correctIndex: 1, explanation: "Visibility feeds the Compass score (tracking is 15%), and a higher score earns access to better freight." },
     ],
   },
+
+  // ═════════════════════════════════════════════════════════
+  // v3.8.ang — research-driven additions (ELDT-theory + insurer
+  // loss-prevention + TAT gaps the first batch did not cover).
+  // Same inline-authored FIRST-DRAFT posture; verify on the
+  // fact-check pass when the throttle clears.
+  // ═════════════════════════════════════════════════════════
+
+  {
+    slug: "backing-docking-coupling",
+    title: "Backing, Docking & Coupling",
+    category: "Vehicle & Cargo Safety",
+    summary: "The maneuver that causes the most preventable accidents, how to set up and back to a dock, and how to couple and uncouple a trailer without dropping it.",
+    version: "1",
+    estMinutes: 14,
+    passThreshold: 80,
+    validityMonths: 12,
+    sortOrder: 15,
+    disclaimer: DISCLAIMER,
+    lessons: [
+      {
+        order: 1,
+        title: "Backing is where accidents happen",
+        estMinutes: 5,
+        bodyMarkdown:
+          "Backing causes more preventable accidents than any other maneuver. Most are low-speed property damage, but they are almost all avoidable.\n\n**G.O.A.L. — Get Out And Look.** Before you back, and again partway through if anything changed, stop, get out, and walk the path. Clearance overhead, behind, and on both sides changes by the foot.\n\n**Back to the driver's side when you can.** A driver-side (left) back lets you see down the length of the trailer out your window. A blind-side (right) back hides the danger zone — avoid it, or get a spotter.\n\n**Signal and go slow.** Sound the horn before backing, use four-ways, idle speed only, and keep steering corrections small. When backing, the trailer goes the opposite way you turn the wheel — small input, then straighten.\n\n**Use a spotter** when one is available, agree on hand signals first, and stop the instant you lose sight of them.\n\n> " + DISCLAIMER,
+      },
+      {
+        order: 2,
+        title: "Setting up and working the dock",
+        estMinutes: 4,
+        bodyMarkdown:
+          "A good back starts with a good setup. For a 45° or 90° alley dock, position the truck so the trailer can swing into the hole with room to straighten; pull forward to reset if the angle goes wrong rather than forcing it.\n\nUse your mirrors constantly and make small corrections. If you can't see, stop and G.O.A.L. again.\n\n**At the dock:** set the trailer brakes, chock the wheels, and engage the dock lock or wheel restraint if the facility has one — this stops trailer creep and a truck pulling away early while a forklift is still inside. Watch the dock plate gap. Follow the facility's red-light / green-light signals and their staff's direction. You are a guest at their dock — their rules win.",
+      },
+      {
+        order: 3,
+        title: "Coupling and uncoupling",
+        estMinutes: 4,
+        bodyMarkdown:
+          "**Coupling:** line up the tractor squarely, back slowly until the fifth wheel just contacts the trailer, then under the kingpin until it locks. Confirm the lock three ways — a **tug test** (pull forward gently against the locked trailer), a **visual check** that the fifth-wheel jaws are fully closed around the kingpin with no gap, and that the trailer rode up onto the fifth wheel (no gap between them). Connect the glad-hand air lines and the electrical cord, then raise the landing gear all the way and stow the handle.\n\n**Uncoupling:** park on solid, level ground, set the brakes, and chock the wheels. Lower the landing gear until it just takes the weight (don't overcrank and lift the tractor). Disconnect the lines, pull the fifth-wheel release handle, and ease forward slowly. A dropped trailer or an unlocked fifth wheel that lets the trailer come off in transit is a catastrophic, career-defining failure — never skip the tug test.",
+      },
+    ],
+    questions: [
+      { order: 1, question: "Which maneuver causes the most preventable truck accidents?", options: ["Head-on", "Backing", "Highway merging", "Rear-end"], correctIndex: 1, explanation: "Low-speed backing accidents are the most common preventable incident — and nearly all are avoidable with G.O.A.L. and a spotter." },
+      { order: 2, question: "\"G.O.A.L.\" means:", options: ["Go Or Aim Low", "Get Out And Look", "Gear, Oil, Air, Lights", "Grip On And Lean"], correctIndex: 1, explanation: "Get Out And Look — walk the path before and during a back; clearance changes by the foot." },
+      { order: 3, question: "When you have a choice, you should back toward:", options: ["The blind (right) side", "The driver's (left) side so you can see", "Whichever is faster", "Downhill"], correctIndex: 1, explanation: "A driver-side back lets you see down the trailer; a blind-side back hides the danger zone — avoid it or use a spotter." },
+      { order: 4, question: "After coupling, you confirm the fifth wheel is locked by:", options: ["Honking twice", "A tug test plus a visual check that the jaws are closed around the kingpin", "Weighing the trailer", "Nothing — the sound is enough"], correctIndex: 1, explanation: "Tug test against the locked trailer and visually confirm the jaws are fully closed with no gap." },
+      { order: 5, question: "Before pulling the fifth-wheel release to uncouple, you should:", options: ["Just pull the pin and go", "Park on solid level ground, chock the wheels, and lower the landing gear to take the weight first", "Leave the engine running in gear", "Fully raise the landing gear"], correctIndex: 1, explanation: "Level ground, chocks, and landing gear taking the weight prevent a dropped trailer." },
+    ],
+  },
+
+  {
+    slug: "distracted-fatigued-driving",
+    title: "Distracted & Fatigued Driving",
+    category: "On-Road Safety",
+    summary: "The federal phone rules, the three kinds of distraction, and why fatigue is an impairment that only sleep fixes.",
+    version: "1",
+    estMinutes: 13,
+    passThreshold: 80,
+    validityMonths: 12,
+    sortOrder: 16,
+    disclaimer: DISCLAIMER,
+    lessons: [
+      {
+        order: 1,
+        title: "The phone rules",
+        estMinutes: 4,
+        bodyMarkdown:
+          "Federal rules ban texting (49 CFR 392.80) and hand-held phone use (49 CFR 392.82) while driving a commercial vehicle. Hands-free only, with the phone mounted, reachable in a single touch, dialed before you roll.\n\nThe stakes are not just a ticket. Violations carry fines, hit your record, and feed the CSA Unsafe Driving BASIC — the same data carriers and insurers watch.\n\nThe physics: at 55 mph, taking your eyes off the road for about **5 seconds** means you travel roughly the length of a **football field** essentially blind. No message is worth that.\n\n> " + DISCLAIMER,
+      },
+      {
+        order: 2,
+        title: "The three kinds of distraction",
+        estMinutes: 4,
+        bodyMarkdown:
+          "Distraction comes in three forms, and the worst tasks combine all three:\n\n- **Visual** — eyes off the road (reading a message, a GPS screen, paperwork).\n- **Manual** — hands off the wheel (eating, reaching, handling a device).\n- **Cognitive** — mind off the drive (a stressful call, daydreaming).\n\nProgramming the GPS, reviewing dispatch instructions, and eating are all things to do **stopped**, not rolling. Pre-program your route and read your messages before you put it in gear. If something needs your attention on the road, find a safe place and stop.",
+      },
+      {
+        order: 3,
+        title: "Fatigue is an impairment",
+        estMinutes: 4,
+        bodyMarkdown:
+          "Drowsy driving impairs reaction and judgment much like alcohol. Hours-of-Service gives you the legal framework, but **you** manage your rest inside it.\n\n**Warning signs:** heavy eyelids, drifting in the lane, missing exits or signs, repeated yawning, can't-remember-the-last-few-miles. These mean stop now.\n\n**Only sleep fixes fatigue.** Coffee, loud music, an open window, and cranking the AC buy minutes, not safety. If you're fighting to stay awake, get to a safe place and rest — a late load beats a crash.\n\nWatch your circadian lows (roughly midnight–6 a.m. and mid-afternoon), eat and hydrate sensibly, and take untreated sleep apnea seriously — it's a common, fixable cause of chronic driver fatigue.",
+      },
+    ],
+    questions: [
+      { order: 1, question: "Federal rules on a hand-held phone while driving a CMV:", options: ["Allow it anytime", "Prohibit hand-held use and texting (hands-free only)", "Allow texting at red lights", "Have no rule for trucks"], correctIndex: 1, explanation: "392.80 bans texting and 392.82 bans hand-held use — hands-free, mounted, one-touch only." },
+      { order: 2, question: "The three types of driving distraction are:", options: ["Visual, manual, cognitive", "Loud, bright, cold", "Phone, food, radio", "Day, night, dusk"], correctIndex: 0, explanation: "Visual (eyes off), manual (hands off), and cognitive (mind off) — the worst tasks combine all three." },
+      { order: 3, question: "At 55 mph, looking away for about 5 seconds means traveling roughly:", options: ["10 feet", "The length of a football field", "One mile", "Half a block"], correctIndex: 1, explanation: "About a football field, essentially blind — no message is worth it." },
+      { order: 4, question: "The only real cure for fatigue is:", options: ["Coffee", "Fresh air", "Sleep", "Loud music"], correctIndex: 2, explanation: "Stimulants and air buy minutes, not safety; only sleep restores you." },
+      { order: 5, question: "You feel yourself nodding off mid-shift. The right move is:", options: ["Push to the next planned stop", "Get to a safe place and rest", "Open the window and speed up", "Drink an energy drink and continue"], correctIndex: 1, explanation: "Stop and rest — a late delivery is recoverable; a fatigue crash is not." },
+    ],
+  },
+
+  {
+    slug: "railroad-crossings-emergencies",
+    title: "Railroad Crossings & Emergency Maneuvers",
+    category: "On-Road Safety",
+    summary: "Crossing tracks safely, what to do if you stall on them, and how to handle brake failure, blowouts, and skids.",
+    version: "1",
+    estMinutes: 14,
+    passThreshold: 80,
+    validityMonths: 12,
+    sortOrder: 17,
+    disclaimer: DISCLAIMER,
+    lessons: [
+      {
+        order: 1,
+        title: "Railroad crossings",
+        estMinutes: 5,
+        bodyMarkdown:
+          "A loaded truck against a train is never a contest you win.\n\n**Never start across until you can clear.** Make sure there is room for your **entire** vehicle on the far side before you enter — never stop on the tracks waiting for traffic ahead.\n\n**Don't shift on the tracks.** A missed gear can leave you stalled on the rails — pick your gear before you cross and hold it.\n\n**Know who must stop.** Placarded hazmat loads and certain vehicles are required to stop at crossings; most other CMVs do not stop unless signed or signaled — know your load and obey the signs.\n\n**Mind your clearance.** Long-wheelbase and low-clearance combinations can hang up on a raised crossing — if in doubt, find another route.\n\n**If you stall on the tracks with a train coming:** get out and away immediately. Move toward the train at an angle (so flying debris from the impact goes away from you), and call the **emergency number posted at the crossing** or 911. Your life is worth more than the truck.\n\n> " + DISCLAIMER,
+      },
+      {
+        order: 2,
+        title: "Emergency maneuvers",
+        estMinutes: 5,
+        bodyMarkdown:
+          "When something goes wrong, trained responses beat panic.\n\n**Steer, don't always brake.** It usually takes less distance to steer around a hazard than to stop for it. Counter-steer — turn to miss, then turn back — and stay off hard braking that could put you into a skid.\n\n**Brake failure:** downshift, use the engine brake / retarder, pump hydraulic brakes to build pressure if equipped, and look for a runaway-truck **escape ramp**. On a long grade, the time to manage your speed is at the **top**, not halfway down.\n\n**Tire blowout:** hold the wheel firmly with both hands, **stay off the brake**, ease off the throttle, let the rig slow on its own, then steer gently to the shoulder. Braking hard on a blowout is how you lose control.",
+      },
+      {
+        order: 3,
+        title: "Skid control and recovery",
+        estMinutes: 4,
+        bodyMarkdown:
+          "Skids come from doing too much — too much brake, steering, throttle, or speed for the conditions.\n\n**Drive-wheel skid** (rear tires spin/slide): ease off the accelerator and counter-steer in the direction you want to go.\n\n**Front-wheel skid:** you can't steer until the front tires regain grip — ease off and let them slow.\n\n**Trailer skid / jackknife:** watch your mirrors for the trailer swinging out; ease off the brake and throttle so the trailer can fall back in line.\n\n**ABS:** in a hard stop, keep firm, steady pressure — the system pulses the brakes for you. Don't pump an ABS pedal.\n\nThe best skid is the one you prevent: slow down for rain, ice, curves, and grades before they force the issue.",
+      },
+    ],
+    questions: [
+      { order: 1, question: "Before crossing railroad tracks you must be sure:", options: ["The gate is painted", "There is room for your whole vehicle to clear the far side", "A train isn't scheduled", "Nothing — just go"], correctIndex: 1, explanation: "Never enter unless your entire vehicle can clear; never stop on the tracks for traffic ahead." },
+      { order: 2, question: "Your truck stalls on the tracks and a train is coming. You should:", options: ["Stay and try to restart", "Get out and move away at an angle toward the train, then call for help", "Push the truck off", "Wait in the cab"], correctIndex: 1, explanation: "Get out, move toward the train at an angle to avoid debris, and call the posted emergency number or 911." },
+      { order: 3, question: "With a tire blowout, you should:", options: ["Brake hard immediately", "Hold the wheel firmly, stay off the brake, ease off the throttle, then steer to the shoulder", "Swerve sharply to the shoulder", "Accelerate through it"], correctIndex: 1, explanation: "Hard braking on a blowout causes loss of control — hold firm, stay off the brake, let it slow." },
+      { order: 4, question: "To avoid a sudden hazard it is usually:", options: ["Always better to hard-brake", "Safer to steer around it than to hard-brake", "Best to close the gap", "Best to speed up"], correctIndex: 1, explanation: "Steering around a hazard usually takes less distance than stopping for it; counter-steer and recover." },
+      { order: 5, question: "In a hard stop with ABS you should:", options: ["Pump the pedal", "Keep firm, steady pressure on the brake", "Brake then fully release", "Use only the trailer brake"], correctIndex: 1, explanation: "Hold steady pressure — ABS pulses the brakes for you; pumping defeats it." },
+    ],
+  },
+
+  {
+    slug: "trip-planning-routing",
+    title: "Trip Planning & Truck-Legal Routing",
+    category: "On-Road Safety",
+    summary: "Planning a truck-legal route before you roll, avoiding low bridges and restrictions, and mapping the trip against your hours and fuel.",
+    version: "1",
+    estMinutes: 13,
+    passThreshold: 80,
+    validityMonths: 12,
+    sortOrder: 18,
+    disclaimer: DISCLAIMER,
+    lessons: [
+      {
+        order: 1,
+        title: "Plan the route before you roll",
+        estMinutes: 4,
+        bodyMarkdown:
+          "A few minutes of planning prevents the worst days.\n\nUse a **truck-specific** GPS or map — one that accounts for your height, weight, length, and width — not a passenger-car app that will route you under a 12-foot bridge or down a no-truck parkway.\n\nKnow your numbers: a standard dry van/reefer stands about **13 feet 6 inches** tall; know your gross weight and length. Check the route for low bridges, weight-limited bridges, restricted or prohibited truck routes, and city no-truck zones.\n\nLay out fuel, scales, and rest stops along the way, and line the trip up against your appointment times so you aren't forced into a bad decision late.\n\n> " + DISCLAIMER,
+      },
+      {
+        order: 2,
+        title: "Low clearance, restrictions, and permits",
+        estMinutes: 4,
+        bodyMarkdown:
+          "Bridge strikes are among the most expensive and most preventable incidents in trucking — and they are always the driver's responsibility.\n\n**Know your height and verify posted clearances.** If a posted clearance is anywhere near your height, or there's no posted sign and you're unsure, **stop and verify** — do not guess and do not \"try it slow.\"\n\n**Oversize / overweight loads** move under a permit that specifies the **route and the times** you may travel. Follow the permit exactly; deviating voids it.\n\n**Hazmat** has its own routing — required routes, and prohibited tunnels and city cores. If you carry it, you route for it.",
+      },
+      {
+        order: 3,
+        title: "Hours, fuel, and rest planning",
+        estMinutes: 4,
+        bodyMarkdown:
+          "Map the trip against your **Hours-of-Service clock**, not just the miles: your remaining drive time, your 14-hour window, your 30-minute break, and your available on-duty hours.\n\n**Plan parking before you need it.** Running out of legal hours with no safe place to park is a common, avoidable trap — identify parking ahead of your limit, not at the last minute.\n\nPlan fuel stops where it's legal and economical, and keep the receipt (your carrier's fuel-tax records depend on it). Build slack for weather and traffic so a delay doesn't push you into an hours or parking violation.",
+      },
+    ],
+    questions: [
+      { order: 1, question: "For routing a truck you should use:", options: ["Any passenger-car GPS", "A truck-specific routing tool that knows your height, weight, and length", "Memory only", "Whatever the shipper used"], correctIndex: 1, explanation: "A car app will route you under low bridges and down no-truck roads — use truck-specific routing." },
+      { order: 2, question: "A standard dry van/reefer height to plan clearances around is about:", options: ["11 feet 0 inches", "13 feet 6 inches", "15 feet 0 inches", "10 feet 0 inches"], correctIndex: 1, explanation: "About 13'6\" — know your actual height and verify posted clearances against it." },
+      { order: 3, question: "You're unsure a bridge has enough clearance. You should:", options: ["Take it slowly", "Stop and verify — do not guess", "Follow the car ahead", "Let some air out of the tires"], correctIndex: 1, explanation: "Bridge strikes are preventable and on you — verify, never guess." },
+      { order: 4, question: "Safe parking should be planned:", options: ["At the last minute", "Before you run out of hours (ahead of your 11/14-hour limits)", "Only at familiar truck stops", "Never — just keep driving"], correctIndex: 1, explanation: "Running out of hours with nowhere legal to park is an avoidable trap — plan ahead of the limit." },
+      { order: 5, question: "An oversize/overweight permit typically comes with:", options: ["No conditions", "Specific route and time-of-travel restrictions you must follow", "A higher speed limit", "Only a fee"], correctIndex: 1, explanation: "The permit dictates route and travel times; deviating voids it." },
+    ],
+  },
+
+  {
+    slug: "cargo-theft-security",
+    title: "Cargo Theft & Security Awareness",
+    category: "SRL Operational Excellence",
+    summary: "Why your load is a target, how to park and lock to protect it, and how thieves use fictitious pickups — and what to do if a load is stolen.",
+    version: "1",
+    estMinutes: 14,
+    passThreshold: 80,
+    validityMonths: null,
+    sortOrder: 19,
+    disclaimer: DISCLAIMER,
+    lessons: [
+      {
+        order: 1,
+        title: "Why your load is a target",
+        estMinutes: 4,
+        bodyMarkdown:
+          "Cargo theft is a multi-billion-dollar problem, and thieves are professionals who study freight.\n\n**High-value, high-demand goods are targeted** — food and beverage, household and consumer-packaged goods, electronics, and pharmaceuticals top the lists. A lot of SRL freight (refrigerated CPG, wellness products) is exactly what thieves want, because it's easy to resell and hard to trace.\n\n**The risky window is right after pickup.** A large share of thefts happen at unsecured parking and within the first hours and roughly first 200 miles after pickup — the \"red zone\" — when a tired driver stops close to the origin.\n\nKnowing you're a target is the first defense.\n\n> " + DISCLAIMER,
+      },
+      {
+        order: 2,
+        title: "Park and protect",
+        estMinutes: 4,
+        bodyMarkdown:
+          "Most theft is opportunity. Remove the opportunity:\n\n- **Get out of the red zone before your first long stop** — fuel and stage so you aren't parking a fresh load right next to the shipper.\n- **Park in secure, well-lit, reputable locations.** Back up to a wall or another trailer so the doors can't be opened.\n- **Lock it.** A kingpin lock, glad-hand/air-cuff lock, and a high-security rear door lock all raise the effort for a thief.\n- **Never leave the truck running and unattended.** A running, loaded, unlocked truck is the easiest theft there is.\n- **Keep your load quiet.** Don't post what you're hauling or your route on social media, and don't broadcast it on an open CB. Information is what lets a theft be planned.",
+      },
+      {
+        order: 3,
+        title: "Fictitious pickups and what to do if it's stolen",
+        estMinutes: 4,
+        bodyMarkdown:
+          "Not all theft is a broken lock. In a **fictitious** or **strategic** pickup, a thief poses as a legitimate carrier or driver — using a stolen or fake identity — and simply drives the load away from the shipper. It's the same identity-fraud and double-brokering problem you learned about, aimed at the cargo.\n\n**Protect against it:** confirm the load is really yours — your dispatch details and SRL paperwork should match what the shipper has; be suspicious of last-minute changes to the pickup, the destination, or who's collecting. If anything feels off, **stop and report it to SRL compliance@silkroutelogistics.ai before you move the freight.**\n\n**If a load is stolen:** report it **immediately** — police, SRL, and the broker. Recovery odds drop sharply by the hour, so speed matters more than anything else.",
+      },
+    ],
+    questions: [
+      { order: 1, question: "The highest-risk window for cargo theft is often:", options: ["At delivery", "The first hours / roughly first 200 miles after pickup (the \"red zone\")", "Only overnight on weekends", "There is no pattern"], correctIndex: 1, explanation: "A large share of thefts happen close to origin soon after pickup — clear the red zone before a long stop." },
+      { order: 2, question: "Which freight is a common theft target?", options: ["Gravel and sand", "High-value, high-demand goods like food, CPG, electronics, and pharma", "Empty trailers", "Mail only"], correctIndex: 1, explanation: "Easy-to-resell, hard-to-trace goods — exactly what a lot of SRL freight is." },
+      { order: 3, question: "A good anti-theft practice is:", options: ["Leave it running to deter thieves", "Park in secure, lit locations and use a kingpin / high-security lock", "Post your route online so people can find you", "Hide a key on the tire"], correctIndex: 1, explanation: "Secure lit parking plus locks removes the opportunity most thefts depend on." },
+      { order: 4, question: "A \"fictitious pickup\" is when:", options: ["The shipper cancels", "A thief poses as a legitimate carrier/driver to take the load at pickup", "The receiver is closed", "The BOL has a typo"], correctIndex: 1, explanation: "It's identity fraud aimed at the cargo — verify the pickup is really yours before moving freight." },
+      { order: 5, question: "If your loaded trailer is stolen, you should:", options: ["Wait a day to see if it turns up", "Report it immediately to police, SRL, and the broker", "Handle it yourself", "Only tell the receiver"], correctIndex: 1, explanation: "Recovery odds drop by the hour — report immediately to everyone." },
+    ],
+  },
+
+  {
+    slug: "human-trafficking-awareness",
+    title: "Human Trafficking Awareness",
+    category: "Driver Qualification & Health",
+    summary: "What trafficking is, why drivers are a key line of defense, how to recognize the signs, and how to report safely without intervening.",
+    version: "1",
+    estMinutes: 11,
+    passThreshold: 80,
+    validityMonths: null,
+    sortOrder: 20,
+    disclaimer: DISCLAIMER,
+    lessons: [
+      {
+        order: 1,
+        title: "What it is and why drivers matter",
+        estMinutes: 3,
+        bodyMarkdown:
+          "Human trafficking — forced labor and sex trafficking — happens along the same highways, truck stops, motels, and rest areas drivers use every day. Victims are often hidden in plain sight.\n\nDrivers are the **eyes of the highway** and a recognized line of defense; the organization **Truckers Against Trafficking (TAT)** trains drivers exactly for this. Your role is not to be a hero or run a rescue — it is to **recognize and report**. A single call has freed people.\n\n> " + DISCLAIMER,
+      },
+      {
+        order: 2,
+        title: "Recognizing the signs",
+        estMinutes: 4,
+        bodyMarkdown:
+          "No single sign proves trafficking, but patterns matter. Watch for someone who:\n\n- **Is not free to come and go** or is clearly controlled by another person.\n- **Lacks their own ID or documents** — someone else holds them.\n- **Appears coached, fearful, or isn't allowed to speak** for themselves.\n- Shows signs of abuse, malnourishment, or branding tattoos.\n- Is a **minor** involved in commercial sex (always trafficking).\n\nAt truck stops, watch for activity around the trucks — CB chatter offering \"commercial company,\" people moving between trucks at night, or knocks on cab doors. Trust your instincts; if it feels wrong, it may be.",
+      },
+      {
+        order: 3,
+        title: "Report — don't engage",
+        estMinutes: 3,
+        bodyMarkdown:
+          "**Do not confront a trafficker or attempt a rescue** — it's dangerous for you and for the victim.\n\nInstead, quietly note what you can — descriptions, a vehicle and plate, the location and time — and call:\n\n- **National Human Trafficking Hotline: 1-888-373-7888** (or text **233733**), or\n- **911** if someone is in immediate danger.\n\nYou can also report to SRL. Make the call from a safe spot, and let trained responders take it from there. Recognizing and reporting is the whole job.",
+      },
+    ],
+    questions: [
+      { order: 1, question: "A truck driver's role against human trafficking is to:", options: ["Run a rescue", "Recognize the signs and report — not physically intervene", "Ignore it", "Question the trafficker directly"], correctIndex: 1, explanation: "Recognize and report; confronting traffickers is dangerous for you and the victim." },
+      { order: 2, question: "A warning sign of trafficking is:", options: ["A driver who looks tired", "A person who isn't free to leave, lacks their own ID, or appears coached and fearful", "A busy truck stop", "A closed dock"], correctIndex: 1, explanation: "Control, lack of documents, and coached/fearful behavior are classic indicators." },
+      { order: 3, question: "The National Human Trafficking Hotline number is:", options: ["411", "1-888-373-7888", "CHEMTREC", "Your dispatcher only"], correctIndex: 1, explanation: "1-888-373-7888 (text 233733), or 911 for immediate danger." },
+      { order: 4, question: "If you suspect trafficking, you should:", options: ["Confront the people involved", "Note details and call the hotline or 911 — do not confront anyone", "Follow the vehicle", "Post it online"], correctIndex: 1, explanation: "Observe, note details, and call trained responders; don't engage." },
+      { order: 5, question: "The organization that trains drivers to spot trafficking is:", options: ["FMCSA", "Truckers Against Trafficking (TAT)", "CHEMTREC", "OSHA"], correctIndex: 1, explanation: "Truckers Against Trafficking (TAT) trains drivers to recognize and report." },
+    ],
+  },
+
+  {
+    slug: "workplace-dock-safety",
+    title: "Workplace & Dock Safety",
+    category: "Vehicle & Cargo Safety",
+    summary: "Three-point contact and the falls that injure drivers, safe lifting and material handling, and staying safe around the dock and forklifts.",
+    version: "1",
+    estMinutes: 12,
+    passThreshold: 80,
+    validityMonths: 12,
+    sortOrder: 21,
+    disclaimer: DISCLAIMER,
+    lessons: [
+      {
+        order: 1,
+        title: "Slips, trips, falls, and three-point contact",
+        estMinutes: 4,
+        bodyMarkdown:
+          "Falls getting into and out of the cab and trailer are a leading cause of driver injury — and they end with a wrenched knee, a broken wrist, or worse.\n\n**Always use three points of contact:** two hands and one foot, or two feet and one hand, in contact with the truck at all times when climbing in or out. **Face the equipment** — climb down like a ladder, never step off facing out, and **never jump down.** Jumping loads your knees, ankles, and back with your full weight plus momentum.\n\nKeep steps and grab handles clean and clear, and watch your footing for ice, fuel and oil spills, hoses, and uneven dock surfaces.\n\n> " + DISCLAIMER,
+      },
+      {
+        order: 2,
+        title: "Lifting and material handling",
+        estMinutes: 4,
+        bodyMarkdown:
+          "Back injuries from poor lifting end careers slowly.\n\n**Lift with your legs, not your back:** feet planted, squat down, keep the load close to your body, and stand up with your legs. **Don't twist** while lifting — turn your feet instead. For anything heavy, awkward, or high, get help or use equipment (pallet jack, hand truck, or a lumper where that's the arrangement).\n\nKnow the basics of a pallet jack and hand truck, don't overreach or overload them, and pace repetitive handling so you don't grind down your back and shoulders. If touching the freight isn't your job, don't let yourself get talked into it unsafely.",
+      },
+      {
+        order: 3,
+        title: "On the dock",
+        estMinutes: 4,
+        bodyMarkdown:
+          "The dock is someone else's workplace full of moving equipment.\n\n**Trailer can't move while it's worked:** chock the wheels and use the dock lock / wheel restraint so the trailer can't creep or get pulled away with a forklift inside — early departure and trailer creep have killed people.\n\n**Forklifts:** stay out of their path, make eye contact with the operator, and never assume they see you. Watch the dock-plate gap, and be aware of carbon-monoxide buildup in enclosed docks.\n\n**Wear the required PPE** — high-visibility vest, steel-toe boots, hard hat where the facility requires — and follow their rules. You're a guest; their safety program governs while you're on site.",
+      },
+    ],
+    questions: [
+      { order: 1, question: "Getting into or out of the cab, you should always use:", options: ["One hand on the wheel", "Three points of contact", "A quick jump down", "The door handle only"], correctIndex: 1, explanation: "Two hands and a foot (or two feet and a hand) at all times — face the equipment, never jump." },
+      { order: 2, question: "The correct way to lift a heavy object is:", options: ["Bend at the back and pull", "With your legs, load held close, without twisting", "As fast as possible", "One-handed to save time"], correctIndex: 1, explanation: "Legs, load close, no twisting — get help or equipment for heavy or awkward loads." },
+      { order: 3, question: "To keep a trailer from pulling away from the dock during loading, use:", options: ["The parking brake alone", "Wheel chocks and/or a dock lock / wheel restraint", "Nothing — the forklift weight holds it", "The trailer marker lights"], correctIndex: 1, explanation: "Chocks and a dock restraint prevent trailer creep and early departure while it's being worked." },
+      { order: 4, question: "Around a forklift on the dock you should:", options: ["Assume the operator sees you", "Stay out of its path and make eye contact with the operator", "Walk close behind it", "Stand in the main aisle"], correctIndex: 1, explanation: "Never assume you're seen — stay clear and make eye contact." },
+      { order: 5, question: "Falls from the cab or trailer are:", options: ["Rare and unavoidable", "A leading cause of driver injury (use three points, never jump)", "Only a winter problem", "Not your responsibility"], correctIndex: 1, explanation: "Among the most common driver injuries, and almost entirely preventable with three-point contact." },
+    ],
+  },
+
+  {
+    slug: "coercion-professional-conduct",
+    title: "Coercion, Whistleblower Protection & Professional Conduct",
+    category: "SRL Operational Excellence",
+    summary: "Your right to refuse unsafe or illegal driving, the protection that backs that right, and the professionalism that earns repeat freight.",
+    version: "1",
+    estMinutes: 12,
+    passThreshold: 80,
+    validityMonths: null,
+    sortOrder: 22,
+    disclaimer: DISCLAIMER,
+    lessons: [
+      {
+        order: 1,
+        title: "The coercion rule",
+        estMinutes: 4,
+        bodyMarkdown:
+          "Federal law protects your right to drive legally. The FMCSA **coercion rule (49 CFR 390.6)** prohibits motor carriers, shippers, receivers, and brokers from coercing a driver to violate the safety regulations — Hours-of-Service, CDL rules, drug & alcohol rules, hazmat, and securement among them.\n\nIf anyone threatens your pay, your job, or your future loads to push you to drive over your hours or operate unsafely, that's **coercion** — and it's illegal. You may file a complaint with FMCSA, generally **within 90 days** of the incident.\n\nYou have the right to refuse to break the law, and SRL backs that right.\n\n> " + DISCLAIMER,
+      },
+      {
+        order: 2,
+        title: "Whistleblower protection",
+        estMinutes: 3,
+        bodyMarkdown:
+          "Your refusal is protected. Under the **Surface Transportation Assistance Act (STAA)**, you cannot lawfully be fired, disciplined, or retaliated against for refusing to operate a vehicle that would violate a safety regulation, or for reporting a safety violation.\n\nThat means a threat like \"run these hours or lose the account\" has no legal teeth — the law is on the side of the driver who refuses to drive illegally. Knowing your protection is what lets you hold the line when you're pressured. If you face retaliation, you can file with OSHA, which administers STAA complaints.",
+      },
+      {
+        order: 3,
+        title: "Professional conduct on an SRL load",
+        estMinutes: 4,
+        bodyMarkdown:
+          "On an SRL load you represent both your carrier and SRL to the shipper and receiver. Professionalism is what turns one load into a lane.\n\n**Be on time, communicate, and be courteous.** Show up clean, follow each facility's rules, and don't argue at the dock — if there's a problem, work it through **dispatch and SRL**, not a confrontation with the staff in front of you.\n\n**Integrity:** accurate logs, honest paperwork, no shortcuts. The freight world is small and your record follows you.\n\nYour professionalism — and your tracked, Compass-scored performance — is what earns you access to repeat, better freight. Drivers who are easy to work with and consistently deliver get called first.",
+      },
+    ],
+    questions: [
+      { order: 1, question: "The FMCSA coercion rule (49 CFR 390.6) prohibits:", options: ["Speeding tickets", "Carriers, shippers, receivers, or brokers forcing a driver to violate safety rules under threat", "Parking at a rest area", "Using a fuel card"], correctIndex: 1, explanation: "390.6 bans coercing a driver to break the safety regulations (HOS, CDL, drug/alcohol, hazmat, securement)." },
+      { order: 2, question: "A broker threatens to pull your loads unless you drive past your legal hours. That is:", options: ["Normal business", "Coercion — you can file an FMCSA complaint (generally within 90 days)", "Your problem to solve", "Required of you"], correctIndex: 1, explanation: "Threatening your livelihood to force a violation is coercion under 390.6 and is reportable to FMCSA." },
+      { order: 3, question: "You refuse to drive over your legal hours and are threatened with firing. You are:", options: ["Out of luck", "Protected from retaliation under the STAA whistleblower law", "Required to comply", "Subject to a fine"], correctIndex: 1, explanation: "STAA protects you from retaliation for refusing to violate safety regs or for reporting them." },
+      { order: 4, question: "A problem with facility staff at the dock should be handled by:", options: ["Arguing it out on the spot", "Contacting dispatch and SRL, not confronting the staff", "Leaving without telling anyone", "Posting about it online"], correctIndex: 1, explanation: "Work problems through dispatch/SRL — don't confront facility staff." },
+      { order: 5, question: "Your professionalism and tracked performance most directly affect:", options: ["Nothing measurable", "Your access to repeat, better freight", "Only the weather", "The fuel price"], correctIndex: 1, explanation: "Carriers who are reliable and easy to work with — and who score well — get called first for the better loads." },
+    ],
+  },
 ];

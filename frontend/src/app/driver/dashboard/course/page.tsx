@@ -82,7 +82,19 @@ function CourseContent() {
         setHydrated(true);
         setLoading(false);
       })
-      .catch(() => { if (active) { setError("Could not load this course."); setLoading(false); } });
+      .catch((e) => {
+        if (!active) return;
+        // 403 CDL_REQUIRED = the driver's roster record has no valid CDL on file.
+        // The dashboard already blocks the course CTAs; this covers direct
+        // navigation to the player with a friendly, carrier-fixable message.
+        const resp = (e as { response?: { status?: number; data?: { code?: string; error?: string } } })?.response;
+        if (resp?.status === 403 && resp.data?.code === "CDL_REQUIRED") {
+          setError(resp.data.error || "A valid CDL on file is required to start training. Ask your carrier to update your driver record, then refresh.");
+        } else {
+          setError("Could not load this course.");
+        }
+        setLoading(false);
+      });
     return () => { active = false; };
   }, [slug]);
 

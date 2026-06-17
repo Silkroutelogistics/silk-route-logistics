@@ -6,7 +6,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { GraduationCap, Loader2, BookOpen, CheckCircle2, Clock, Download } from "lucide-react";
+import { GraduationCap, Loader2, BookOpen, CheckCircle2, Clock, Download, ShieldAlert } from "lucide-react";
 import { api } from "@/lib/api";
 import { downloadFromApi } from "@/lib/download";
 import { CarrierCard } from "@/components/carrier";
@@ -30,6 +30,12 @@ interface CourseCard {
   lessonCount: number;
   questionCount: number;
   progress: CourseProgress | null;
+}
+
+interface Eligibility {
+  eligible: boolean;
+  reason: "CDL_MISSING" | "CDL_EXPIRED" | null;
+  licenseExpiry: string | null;
 }
 
 function fmtDate(s: string | null): string {
@@ -59,6 +65,7 @@ export default function DriverCoursesPage() {
   const router = useRouter();
   const { driver } = useDriverAuth();
   const [courses, setCourses] = useState<CourseCard[]>([]);
+  const [eligibility, setEligibility] = useState<Eligibility | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [certError, setCertError] = useState<string | null>(null);
@@ -76,12 +83,13 @@ export default function DriverCoursesPage() {
     let active = true;
     api
       .get("/driver-training/courses")
-      .then((r) => { if (active) { setCourses(r.data.courses || []); setLoading(false); } })
+      .then((r) => { if (active) { setCourses(r.data.courses || []); setEligibility(r.data.eligibility ?? null); setLoading(false); } })
       .catch(() => { if (active) { setError("Could not load your courses. Pull to refresh or try again."); setLoading(false); } });
     return () => { active = false; };
   }, []);
 
   const passedCount = courses.filter((c) => c.progress?.status === "PASSED").length;
+  const cdlBlocked = !!eligibility && !eligibility.eligible;
 
   return (
     <div>
@@ -108,6 +116,21 @@ export default function DriverCoursesPage() {
       ) : error ? (
         <CarrierCard padding="p-8">
           <p className="text-center text-sm text-red-600">{error}</p>
+        </CarrierCard>
+      ) : cdlBlocked ? (
+        <CarrierCard padding="p-8">
+          <div className="text-center max-w-md mx-auto">
+            <ShieldAlert size={32} className="mx-auto text-[#BA7517] mb-3" />
+            <h3 className="text-sm font-bold text-[#0F1117] mb-2">
+              {eligibility?.reason === "CDL_EXPIRED" ? "Your CDL on file has expired" : "A valid CDL is needed to start training"}
+            </h3>
+            <p className="text-xs text-gray-500 leading-relaxed mb-3">
+              {eligibility?.reason === "CDL_EXPIRED"
+                ? <>The CDL on your driver profile expired{eligibility?.licenseExpiry ? <> on {fmtDate(eligibility.licenseExpiry)}</> : ""}. Ask your carrier to update it in your Drivers roster, then refresh this page.</>
+                : <>The SRL Driver Academy is for licensed CDL drivers. Ask your carrier to add your CDL to your driver record in their Drivers roster, then refresh this page.</>}
+            </p>
+            <p className="text-[11px] text-gray-400">Once your carrier updates your record, your courses will appear here automatically.</p>
+          </div>
         </CarrierCard>
       ) : courses.length === 0 ? (
         <CarrierCard padding="p-10">

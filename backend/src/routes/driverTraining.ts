@@ -35,6 +35,50 @@ function addMonths(d: Date, n: number): Date {
   return new Date(Date.UTC(targetYear, targetMonth, day, d.getUTCHours(), d.getUTCMinutes(), d.getUTCSeconds(), d.getUTCMilliseconds()));
 }
 
+// v3.8.ang — CDL eligibility gate. The Academy is for working CDL drivers, so
+// training requires a CDL on the driver's roster record (present, and not past
+// its expiry if an expiry is on file). There is NO free CDL-verification API a
+// broker can lawfully use (CDLIS/AAMVA is DPPA-restricted; real verification is a
+// paid MVR vendor + driver consent, and the CARRIER owns driver qualification) —
+// so we gate on the CDL data the carrier already captures at roster-add rather
+// than an external check. Computed on read (no migration, no backfill): a driver
+// whose carrier hasn't entered a CDL sees a clear, fixable blocker, not a crash;
+// the carrier fills it in the Drivers roster and the driver is in. Expiry uses a
+// calendar-day floor (valid THROUGH the expiry day). A null expiry with a number
+// on file is allowed (number present is the signal; expiry may be unknown).
+type CdlEligibility = { eligible: boolean; reason: "CDL_MISSING" | "CDL_EXPIRED" | null; licenseExpiry: Date | null };
+
+async function getCdlEligibility(driverId: string): Promise<CdlEligibility> {
+  const d = await prisma.driver.findUnique({
+    where: { id: driverId },
+    select: { licenseNumber: true, licenseExpiry: true },
+  });
+  const num = (d?.licenseNumber ?? "").trim();
+  const expiry = d?.licenseExpiry ?? null;
+  if (!num) return { eligible: false, reason: "CDL_MISSING", licenseExpiry: expiry };
+  if (expiry) {
+    const now = new Date();
+    const startOfTodayUtc = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
+    if (expiry.getTime() < startOfTodayUtc) return { eligible: false, reason: "CDL_EXPIRED", licenseExpiry: expiry };
+  }
+  return { eligible: true, reason: null, licenseExpiry: expiry };
+}
+
+// Returns true if eligible; otherwise writes a 403 CDL_REQUIRED and returns false.
+async function assertCdlEligible(driverId: string, res: Response): Promise<boolean> {
+  const e = await getCdlEligibility(driverId);
+  if (e.eligible) return true;
+  res.status(403).json({
+    error:
+      e.reason === "CDL_EXPIRED"
+        ? "The CDL on your driver profile has expired. Ask your carrier to update it in your roster before continuing training."
+        : "Your driver profile needs a valid CDL on file. Ask your carrier to add it in your roster before you can start training.",
+    code: "CDL_REQUIRED",
+    reason: e.reason,
+  });
+  return false;
+}
+
 // GET /api/driver-training/courses — catalog + this driver's progress per course.
 // NOTE: all PUBLISHED courses are globally visible to every authenticated driver
 // regardless of carrier — courses are platform-shared educational content, not
@@ -60,7 +104,13 @@ router.get("/courses", async (req: DriverRequest, res: Response) => {
   });
   const pMap = new Map(progress.map((p) => [p.courseId, p]));
 
+  // The list endpoint never 403s on CDL — the dashboard must still render so it
+  // can show the friendly "ask your carrier to add your CDL" blocker. The actual
+  // training endpoints (detail / lesson-progress / quiz) enforce the gate.
+  const eligibility = await getCdlEligibility(driverId);
+
   res.json({
+    eligibility,
     courses: courses.map((c) => {
       const { _count, ...rest } = c;
       return { ...rest, lessonCount: _count.lessons, questionCount: _count.questions, progress: pMap.get(c.id) || null };
@@ -72,6 +122,7 @@ router.get("/courses", async (req: DriverRequest, res: Response) => {
 // the correct answers (correctIndex/explanation are never sent to the client).
 router.get("/courses/:slug", async (req: DriverRequest, res: Response) => {
   const driverId = req.driver!.id;
+  if (!(await assertCdlEligible(driverId, res))) return;
 
   const course = await prisma.trainingCourse.findFirst({
     where: { slug: req.params.slug, status: "PUBLISHED" },
@@ -102,6 +153,7 @@ router.get("/courses/:slug", async (req: DriverRequest, res: Response) => {
 const lessonProgressSchema = z.object({ lastLessonOrder: z.number().int().min(0) });
 router.post("/courses/:slug/lesson-progress", validateBody(lessonProgressSchema), async (req: DriverRequest, res: Response) => {
   const driverId = req.driver!.id;
+  if (!(await assertCdlEligible(driverId, res))) return;
   const course = await prisma.trainingCourse.findFirst({
     where: { slug: req.params.slug, status: "PUBLISHED" },
     select: { id: true, _count: { select: { lessons: true } } },
@@ -138,6 +190,7 @@ router.post("/courses/:slug/lesson-progress", validateBody(lessonProgressSchema)
 const quizSchema = z.object({ answers: z.record(z.string(), z.number().int().min(0).max(3)) });
 router.post("/courses/:slug/quiz", validateBody(quizSchema), async (req: DriverRequest, res: Response) => {
   const driverId = req.driver!.id;
+  if (!(await assertCdlEligible(driverId, res))) return;
   const course = await prisma.trainingCourse.findFirst({
     where: { slug: req.params.slug, status: "PUBLISHED" },
     select: {

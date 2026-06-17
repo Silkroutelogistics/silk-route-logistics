@@ -12981,7 +12981,23 @@
 //   cited; the adversarial regulatory fact-check runs over it as a verification
 //   pass once the throttle clears. Gates: backend tsc + vitest 243/243 + frontend
 //   tsc + next build (115 pages) clean. Per §3.1: ane → anf.
-export const SRL_VERSION = "3.8.anf";
+// v3.8.ang — SRL Driver Academy: 8 research-driven addition courses + CDL gate.
+//   (1) 8 NEW driver courses authored inline + seeded live (backing-docking-
+//   coupling / distracted-fatigued-driving / railroad-crossings-emergencies /
+//   trip-planning-routing / cargo-theft-security / human-trafficking-awareness /
+//   workplace-dock-safety / coercion-professional-conduct) — closes the ELDT-theory
+//   + insurer-loss-prevention + TAT gaps the first batch missed. Prod now: 22
+//   published courses, 2 archived (IFTA/IRP). (2) CDL ELIGIBILITY GATE — training
+//   requires a CDL on the driver's roster record (present, not past expiry if an
+//   expiry is on file). No external CDL API (CDLIS is DPPA-restricted; the carrier
+//   owns driver qualification) — gates on the captured roster CDL, computed on read
+//   (no migration/backfill). Missing/expired CDL → a friendly, carrier-fixable
+//   blocker on the driver dashboard (not a crash) + server 403 CDL_REQUIRED on the
+//   detail/lesson-progress/quiz endpoints (defense-in-depth); the certificate
+//   endpoint is NOT gated (a past-completion record). Content remains FIRST DRAFT
+//   pending the fact-check verification pass. Gates: backend tsc + vitest 243/243 +
+//   frontend tsc + next build clean. Per §3.1: anf → ang.
+export const SRL_VERSION = "3.8.ang";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
