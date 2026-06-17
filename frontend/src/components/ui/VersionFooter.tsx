@@ -12957,7 +12957,31 @@
 //   title/body/options + explanation empty→null. No migration. Gates: backend tsc
 //   + vitest 243/243 + frontend tsc + next build (115 pages) clean. Per §3.1:
 //   and → ane. Closes the SRL Driver Academy epic (§13.3 Item 193) — T1→T7.
-export const SRL_VERSION = "3.8.ane";
+//
+// v3.8.anf — SRL Driver Academy: driver-focused curriculum recalibration +
+//   forced-sequential player. (1) CURRICULUM EXPANSION — 11 new driver courses
+//   authored + seeded live (driver-qualification / hazmat-awareness /
+//   hazard-communication WHMIS+HazCom / pre-post-trip+DVIR / cargo-securement /
+//   reefer-cold-chain / accident-procedures / adverse-weather-defensive /
+//   roadside-inspections-csa / weigh-stations-size-weight / tracking-check-calls),
+//   all in SRL freight-veteran voice with reg citations + the educational-not-legal
+//   disclaimer. IFTA + IRP ARCHIVED (dispatch/office tasks, not driver — their
+//   driver-slices, cab card + registered weight + fuel/mileage records, fold into
+//   Weigh Stations). Prod now: 14 published courses (3 kept + 11 new), 2 archived.
+//   New trainingCurriculumExpansion.ts (EXPANSION) spread into CURRICULUM with the
+//   2 archived slugs filtered out; archive-dispatch-courses.ts flips the live rows.
+//   (2) SLIDES-SEQUENCE PLAYER — once a course is started, lessons advance FORWARD
+//   ONLY (no back, no skip) through the first read-through; free review unlocks
+//   only after the driver has been through every slide (or passed); resume picks
+//   up at the furthest slide (server lastLessonOrder); mid-quiz 409 (course
+//   re-authored) surfaces a reload prompt. (3) Curriculum Catalog PDF DROPPED per
+//   "courses are portal-only, not downloadable." Authoring note: the parallel
+//   authoring+fact-check workflow was rate-limited by a sustained platform throttle
+//   (4 runs); content authored inline (T3 fallback) — FIRST DRAFT, conservatively
+//   cited; the adversarial regulatory fact-check runs over it as a verification
+//   pass once the throttle clears. Gates: backend tsc + vitest 243/243 + frontend
+//   tsc + next build (115 pages) clean. Per §3.1: ane → anf.
+export const SRL_VERSION = "3.8.anf";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

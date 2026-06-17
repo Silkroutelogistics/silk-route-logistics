@@ -12,6 +12,8 @@
 // per-course disclaimer is shown by the player. Re-running the seed after any
 // edit re-applies it (idempotent).
 
+import { EXPANSION } from "./trainingCurriculumExpansion";
+
 export interface CurriculumQuestion {
   order: number;
   question: string;
@@ -43,9 +45,14 @@ export interface CurriculumCourse {
 }
 
 export const TRAINING_DISCLAIMER =
-  "This course is general educational guidance, not legal or compliance advice. Regulations change. Always verify against current FMCSA, IRP, and IFTA rules and your carrier's policies.";
+  "This course is general educational guidance, not legal or compliance advice. Regulations change and vary by jurisdiction. Always verify against current FMCSA, OSHA, Transport Canada, and your carrier's policies before you rely on it.";
 
-export const CURRICULUM: CurriculumCourse[] = [
+// v3.8.anf — the original 5 starter courses. IFTA + IRP are retained here as the
+// record of what was authored, but EXCLUDED from the seeded CURRICULUM below
+// (they are dispatch/office tasks, not driver — their driver-slices fold into the
+// new "Weigh Stations, Size & Weight" course). ELD/HOS, Detention, and Fraud are
+// kept and re-sorted into the recalibrated driver-track ordering.
+const BASE_CURRICULUM: CurriculumCourse[] = [
   // ─────────────────────────────────────────────────────────
   {
     slug: "eld-hos",
@@ -356,7 +363,7 @@ export const CURRICULUM: CurriculumCourse[] = [
     estMinutes: 14,
     passThreshold: 80,
     validityMonths: null,
-    sortOrder: 4,
+    sortOrder: 12,
     disclaimer: TRAINING_DISCLAIMER,
     lessons: [
       {
@@ -452,7 +459,7 @@ export const CURRICULUM: CurriculumCourse[] = [
     estMinutes: 14,
     passThreshold: 80,
     validityMonths: null,
-    sortOrder: 5,
+    sortOrder: 14,
     disclaimer: TRAINING_DISCLAIMER,
     lessons: [
       {
@@ -547,4 +554,14 @@ export const CURRICULUM: CurriculumCourse[] = [
       },
     ],
   },
+];
+
+// The seeded curriculum: the kept starter courses (IFTA + IRP excluded — archived
+// as dispatch tasks) plus the v3.8.anf driver-focused expansion. Ordered by
+// sortOrder. The live IFTA/IRP rows are flipped to ARCHIVED by
+// scripts/archive-dispatch-courses.ts so re-seeding never re-publishes them.
+const ARCHIVED_SLUGS = new Set(["ifta-fundamentals", "irp-apportioned"]);
+export const CURRICULUM: CurriculumCourse[] = [
+  ...BASE_CURRICULUM.filter((c) => !ARCHIVED_SLUGS.has(c.slug)),
+  ...EXPANSION,
 ];

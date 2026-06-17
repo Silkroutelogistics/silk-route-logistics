@@ -1,15 +1,22 @@
 "use client";
 
-// v3.8.anb — SRL Driver Academy Sprint T4: the lesson player + quiz.
-// Reads ?slug=... (Suspense + useSearchParams, static-export pattern). Lessons
-// stepper → quiz (all questions, server-graded on submit) → results with
-// per-question review + retake. Lives under /driver/dashboard so it inherits
-// the layout's auth gate + header.
+// v3.8.anf — SRL Driver Academy: forced-sequential "slides" player.
+//
+// Product rule (Wasi): once a course is started, lessons advance FORWARD ONLY —
+// no going back, no skipping ahead — during the first read-through. The driver
+// works through the slides in order. Free review (back/jump) unlocks only once
+// they have been through every slide (or already passed). Resume picks up at the
+// furthest slide reached (server lastLessonOrder / lessonsCompleted), so the lock
+// holds across sessions too.
+//
+// Reads ?slug=... (Suspense + useSearchParams, static-export pattern). Lessons →
+// quiz (server-graded) → results with per-question review + retake. Lives under
+// /driver/dashboard so it inherits the layout's auth gate + header.
 
 import { Suspense, useEffect, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import {
-  Loader2, ChevronLeft, ChevronRight, ArrowLeft, CheckCircle2, XCircle, GraduationCap, RotateCcw, Download,
+  Loader2, ChevronLeft, ChevronRight, ArrowLeft, CheckCircle2, XCircle, GraduationCap, RotateCcw, Download, Lock,
 } from "lucide-react";
 import { api } from "@/lib/api";
 import { downloadFromApi } from "@/lib/download";
@@ -23,6 +30,7 @@ interface Course {
   estMinutes: number; passThreshold: number; validityMonths: number | null; disclaimer: string | null;
   lessons: Lesson[]; questions: Question[];
 }
+interface Progress { status: "NOT_STARTED" | "IN_PROGRESS" | "PASSED" | "FAILED"; lessonsCompleted: number; lastLessonOrder: number }
 interface ReviewItem { questionId: string; order: number; correctIndex: number; given: number | null; isCorrect: boolean; explanation: string | null }
 interface QuizResult { scorePct: number; passed: boolean; passThreshold: number; correct: number; total: number; review: ReviewItem[] }
 
@@ -36,27 +44,52 @@ function CourseContent() {
   const [course, setCourse] = useState<Course | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [hydrated, setHydrated] = useState(false);
 
   const [phase, setPhase] = useState<Phase>("lessons");
   const [lessonIdx, setLessonIdx] = useState(0);
+  const [furthestReached, setFurthestReached] = useState(0); // max lesson index the driver has reached
+  const [passed, setPassed] = useState(false);
   const [answers, setAnswers] = useState<Record<string, number>>({});
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState<QuizResult | null>(null);
+  const [staleReload, setStaleReload] = useState(false);
 
   useEffect(() => {
     if (!slug) { setError("No course specified."); setLoading(false); return; }
     let active = true;
     api
       .get(`/driver-training/courses/${slug}`)
-      .then((r) => { if (active) { setCourse(r.data.course); setLoading(false); } })
+      .then((r) => {
+        if (!active) return;
+        const c: Course = r.data.course;
+        const p: Progress | null = r.data.progress;
+        setCourse(c);
+        // Hydrate once (Sub-pattern 10) — set the resume point + review state from
+        // server progress without clobbering on any later re-render.
+        const total = c.lessons.length;
+        const didPass = p?.status === "PASSED";
+        const completed = p?.lessonsCompleted ?? 0;
+        const readThrough = didPass || completed >= total;
+        setPassed(!!didPass);
+        setFurthestReached(readThrough ? Math.max(0, total - 1) : Math.min(Math.max(0, completed - 1), Math.max(0, total - 1)));
+        if (!didPass && !readThrough && total > 0) {
+          // Resume at the next unread slide (forward-only continues from here).
+          setLessonIdx(Math.min(completed, total - 1));
+        } else {
+          setLessonIdx(0);
+        }
+        setHydrated(true);
+        setLoading(false);
+      })
       .catch(() => { if (active) { setError("Could not load this course."); setLoading(false); } });
     return () => { active = false; };
   }, [slug]);
 
-  if (loading) {
+  if (loading || !hydrated) {
     return <div className="flex items-center justify-center py-16"><Loader2 size={28} className="text-[#BA7517] animate-spin" /></div>;
   }
-  if (error || !course) {
+  if (error && !course) {
     return (
       <CarrierCard padding="p-8">
         <p className="text-center text-sm text-red-600 mb-4">{error || "Course not found."}</p>
@@ -64,15 +97,33 @@ function CourseContent() {
       </CarrierCard>
     );
   }
+  if (!course) return null;
 
   const lessons = course.lessons;
   const questions = course.questions;
   const hasQuiz = questions.length > 0;
   const allAnswered = hasQuiz && questions.every((q) => answers[q.id] !== undefined);
 
-  const goToQuiz = async () => {
-    // Mark reading progress (best-effort; never blocks the quiz).
-    api.post(`/driver-training/courses/${slug}/lesson-progress`, { lastLessonOrder: lessons.length }).catch(() => {});
+  // Review (free navigation) unlocks once the driver has been through every slide
+  // (read-through complete) OR already passed. Until then the lessons are
+  // forward-only — no Back, no jumping ahead.
+  const reviewMode = passed || furthestReached >= lessons.length - 1;
+
+  const recordProgress = (orderViewed: number) => {
+    api.post(`/driver-training/courses/${slug}/lesson-progress`, { lastLessonOrder: orderViewed }).catch(() => {});
+  };
+
+  const advance = () => {
+    const next = Math.min(lessons.length - 1, lessonIdx + 1);
+    setLessonIdx(next);
+    setFurthestReached((f) => Math.max(f, next));
+    recordProgress(next + 1); // 1-based count of slides the driver has now viewed
+    window.scrollTo({ top: 0 });
+  };
+
+  const goToQuiz = () => {
+    recordProgress(lessons.length); // full read-through
+    setFurthestReached(lessons.length - 1);
     setPhase("quiz");
     window.scrollTo({ top: 0 });
   };
@@ -80,13 +131,20 @@ function CourseContent() {
   const submitQuiz = async () => {
     if (!allAnswered) { setError("Please answer all questions before submitting."); return; }
     setSubmitting(true);
+    setError(null);
+    setStaleReload(false);
     try {
       const r = await api.post(`/driver-training/courses/${slug}/quiz`, { answers });
       setResult(r.data);
+      if (r.data?.passed) setPassed(true);
       setPhase("results");
       window.scrollTo({ top: 0 });
-    } catch {
-      setError("Could not submit your quiz. Try again.");
+    } catch (e) {
+      // 409 = the course was re-authored while the driver was mid-quiz (stale
+      // question ids). Tell them to reload rather than show a cryptic error.
+      const status = (e as { response?: { status?: number } })?.response?.status;
+      if (status === 409) { setError("This course was updated while you were taking it. Reload to get the latest version."); setStaleReload(true); }
+      else setError("Could not submit your quiz. Try again.");
     } finally {
       setSubmitting(false);
     }
@@ -121,13 +179,23 @@ function CourseContent() {
     return (
       <div>
         {header}
-        {/* step dots */}
-        <div className="flex items-center gap-1.5 mb-4">
-          {lessons.map((l, i) => (
-            <button key={l.id} onClick={() => setLessonIdx(i)} aria-label={`Lesson ${i + 1}`}
-              className={`h-1.5 rounded-full transition-all ${i === lessonIdx ? "w-6 bg-[#C9A84C]" : i < lessonIdx ? "w-3 bg-[#C9A84C]/50" : "w-3 bg-gray-200"}`} />
-          ))}
+        {/* step dots — clickable only in review mode */}
+        <div className="flex items-center gap-1.5 mb-2">
+          {lessons.map((l, i) => {
+            const done = i < furthestReached || (reviewMode && i <= furthestReached);
+            const dot = (
+              <span className={`h-1.5 rounded-full transition-all ${i === lessonIdx ? "w-6 bg-[#C9A84C]" : done ? "w-3 bg-[#C9A84C]/50" : "w-3 bg-gray-200"}`} />
+            );
+            return reviewMode
+              ? <button key={l.id} onClick={() => setLessonIdx(i)} aria-label={`Lesson ${i + 1}`}>{dot}</button>
+              : <span key={l.id} aria-label={`Lesson ${i + 1}`}>{dot}</span>;
+          })}
         </div>
+        {!reviewMode && (
+          <p className="flex items-center gap-1.5 text-[11px] text-gray-400 mb-3">
+            <Lock size={11} /> Work through each lesson in order. You can review freely once you complete the course.
+          </p>
+        )}
         <CarrierCard padding="p-5">
           <div className="text-[11px] text-gray-400 mb-1">Lesson {lesson.order} of {lessons.length} · ~{lesson.estMinutes} min</div>
           <h2 className="font-serif text-lg text-[#0F1117] mb-3">{lesson.title}</h2>
@@ -135,10 +203,13 @@ function CourseContent() {
         </CarrierCard>
 
         <div className="flex items-center justify-between mt-4">
-          <button onClick={() => setLessonIdx((i) => Math.max(0, i - 1))} disabled={lessonIdx === 0}
-            className="flex items-center gap-1 px-3 py-2 text-[13px] text-gray-500 hover:text-gray-800 disabled:opacity-30 disabled:cursor-not-allowed">
-            <ChevronLeft size={16} /> Back
-          </button>
+          {/* Back — only in review mode; forward-only during the first read-through */}
+          {reviewMode ? (
+            <button onClick={() => setLessonIdx((i) => Math.max(0, i - 1))} disabled={lessonIdx === 0}
+              className="flex items-center gap-1 px-3 py-2 text-[13px] text-gray-500 hover:text-gray-800 disabled:opacity-30 disabled:cursor-not-allowed">
+              <ChevronLeft size={16} /> Back
+            </button>
+          ) : <span />}
           {isLast ? (
             hasQuiz ? (
               <button onClick={goToQuiz}
@@ -146,13 +217,13 @@ function CourseContent() {
                 Go to quiz <ChevronRight size={16} />
               </button>
             ) : (
-              <button onClick={() => { api.post(`/driver-training/courses/${slug}/lesson-progress`, { lastLessonOrder: lessons.length }).catch(() => {}); router.push("/driver/dashboard"); }}
+              <button onClick={() => { recordProgress(lessons.length); router.push("/driver/dashboard"); }}
                 className="flex items-center gap-1.5 px-4 py-2 bg-gradient-to-br from-[#C9A84C] to-[#A88535] text-[#0A2540] text-[13px] font-semibold rounded-md hover:shadow-lg transition-shadow">
                 Finish <ChevronRight size={16} />
               </button>
             )
           ) : (
-            <button onClick={() => setLessonIdx((i) => Math.min(lessons.length - 1, i + 1))}
+            <button onClick={advance}
               className="flex items-center gap-1.5 px-4 py-2 bg-gradient-to-br from-[#C9A84C] to-[#A88535] text-[#0A2540] text-[13px] font-semibold rounded-md hover:shadow-lg transition-shadow">
               Next <ChevronRight size={16} />
             </button>
@@ -195,12 +266,20 @@ function CourseContent() {
           ))}
         </div>
 
-        {error && <div className="mt-3 px-3 py-2 bg-red-50 border-l-4 border-red-500 text-red-700 text-xs rounded">{error}</div>}
+        {error && (
+          <div className="mt-3 px-3 py-2 bg-red-50 border-l-4 border-red-500 text-red-700 text-xs rounded flex items-center justify-between gap-3">
+            <span>{error}</span>
+            {staleReload && <button onClick={() => window.location.reload()} className="shrink-0 font-semibold underline">Reload</button>}
+          </div>
+        )}
 
         <div className="flex items-center justify-between mt-4">
-          <button onClick={() => setPhase("lessons")} className="flex items-center gap-1 px-3 py-2 text-[13px] text-gray-500 hover:text-gray-800">
-            <ChevronLeft size={16} /> Review lessons
-          </button>
+          {/* Review-lessons only once the read-through is complete (it is, by quiz time) */}
+          {reviewMode ? (
+            <button onClick={() => setPhase("lessons")} className="flex items-center gap-1 px-3 py-2 text-[13px] text-gray-500 hover:text-gray-800">
+              <ChevronLeft size={16} /> Review lessons
+            </button>
+          ) : <span />}
           <button onClick={submitQuiz} disabled={!allAnswered || submitting}
             className="flex items-center gap-1.5 px-5 py-2 bg-gradient-to-br from-[#C9A84C] to-[#A88535] text-[#0A2540] text-[13px] font-semibold rounded-md hover:shadow-lg transition-shadow disabled:opacity-40 disabled:cursor-not-allowed">
             {submitting && <Loader2 size={14} className="animate-spin" />} Submit quiz
@@ -243,7 +322,6 @@ function CourseContent() {
               </div>
               <div className="space-y-1.5 ml-6">
                 {q.options.map((opt, oi) => {
-                  // bounds-guard the server-sent indices so a corrupted response degrades gracefully
                   const isCorrect = rv.correctIndex >= 0 && rv.correctIndex < q.options.length && oi === rv.correctIndex;
                   const isGiven = rv.given != null && oi === rv.given;
                   return (
@@ -262,6 +340,7 @@ function CourseContent() {
       </div>
 
       <div className="flex items-center justify-between mt-5">
+        {/* Review unlocks after the read-through (which is complete by results) */}
         <button onClick={() => { setPhase("lessons"); setLessonIdx(0); }} className="flex items-center gap-1 px-3 py-2 text-[13px] text-gray-500 hover:text-gray-800">
           <ChevronLeft size={16} /> Review lessons
         </button>
