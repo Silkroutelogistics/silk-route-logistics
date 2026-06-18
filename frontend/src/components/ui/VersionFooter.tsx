@@ -12997,7 +12997,22 @@
 //   endpoint is NOT gated (a past-completion record). Content remains FIRST DRAFT
 //   pending the fact-check verification pass. Gates: backend tsc + vitest 243/243 +
 //   frontend tsc + next build clean. Per §3.1: anf → ang.
-export const SRL_VERSION = "3.8.ang";
+// v3.8.anh — Project-audit response (safe quick-wins from the 9-dimension audit;
+//   the larger sprints are surfaced in CLAUDE.md §13.3 for greenlight, not
+//   auto-applied). (1) SECURITY — /auth/e2e-token now also hard-404s when
+//   NODE_ENV==="production" (defense-in-depth over the existing E2E_BYPASS_OTP
+//   env gate; a future env misconfig can't expose an OTP-bypass mint on prod).
+//   (2) BRAND — Marco Polo PUBLIC_SYSTEM_PROMPT gains an explicit retired-claim
+//   line banning score-to-tier mappings (Bronze 0-89/Silver/Gold/Platinum 98+);
+//   tiers advance by loads+on-time+tenure, never a score threshold. (3) ACADEMY UX
+//   — carrier roster CDL field relabeled from "(optional)" to a required-for-
+//   training hint (+ expiry-blocks-training note), closing the v3.8.ang gate's
+//   carrier-coherence gap. (4) TESTS — new loadStateMachine unit suite (16 cases)
+//   covering the CARRIER/AE transition maps, the canonical BOOKED→DELIVERED skip
+//   block, terminal/backwards/wrong-start guards, and getAllowedNextStatuses;
+//   de-risks the banked Item 159 Sprint-2 AE-side wiring. Gates: backend tsc +
+//   vitest 259/259 + frontend tsc + next build clean. Per §3.1: ang → anh.
+export const SRL_VERSION = "3.8.anh";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

@@ -266,8 +266,9 @@ export default function CarrierDriversPage() {
               </select>
             </div>
             <div>
-              <label className={labelCls}>CDL Number (optional)</label>
+              <label className={labelCls}>CDL Number</label>
               <input className={inputCls} value={form.licenseNumber} onChange={(e) => setForm({ ...form, licenseNumber: e.target.value })} placeholder="S530-1234-5678" />
+              <p className="mt-1 text-[11px] text-amber-700">Required before this driver can start SRL Driver Academy training.</p>
             </div>
             <div>
               <label className={labelCls}>License State</label>
@@ -276,6 +277,7 @@ export default function CarrierDriversPage() {
             <div>
               <label className={labelCls}>License Expiry</label>
               <input className={inputCls} type="date" value={form.licenseExpiry} onChange={(e) => setForm({ ...form, licenseExpiry: e.target.value })} />
+              <p className="mt-1 text-[11px] text-slate-500">An expired CDL also blocks Academy training.</p>
             </div>
             <div>
               <label className={labelCls}>Medical Card Expiry</label>

@@ -75,7 +75,10 @@ router.post("/totp/login-verify", otpVerifyLimiter, validateBody(z.object({ totp
 // Returns 404 in any environment where the env var is absent (safe-by-
 // default — production fails-closed). Test-only.
 router.post("/e2e-token", async (req, res) => {
-  if (process.env.E2E_BYPASS_OTP !== "true") {
+  // Defense-in-depth (audit 2026-06-18): already env-gated below, but ALSO
+  // hard-404 in production regardless — a future env misconfiguration can then
+  // never expose an OTP/TOTP-bypass token mint on prod.
+  if (process.env.NODE_ENV === "production" || process.env.E2E_BYPASS_OTP !== "true") {
     res.status(404).json({ error: "Not found" });
     return;
   }
