@@ -72,6 +72,18 @@ vi.mock("../src/config/database", () => ({
       update: vi.fn(),
       count: vi.fn(),
     },
+    settlement: {
+      findFirst: vi.fn(),
+      findUnique: vi.fn(),
+      findMany: vi.fn(),
+      create: vi.fn(),
+      update: vi.fn(),
+      count: vi.fn(),
+    },
+    carrierPay: {
+      findMany: vi.fn(),
+      updateMany: vi.fn(),
+    },
     notification: {
       create: vi.fn(),
       findMany: vi.fn(),
