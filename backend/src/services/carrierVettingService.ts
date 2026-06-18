@@ -73,14 +73,14 @@ export interface CarrierVettingReport {
 
 // ── Scoring Logic ────────────────────────────────────────
 
-function getRiskLevel(score: number): RiskLevel {
+export function getRiskLevel(score: number): RiskLevel {
   if (score >= 80) return "LOW";
   if (score >= 60) return "MEDIUM";
   if (score >= 40) return "HIGH";
   return "CRITICAL";
 }
 
-function getGrade(score: number): VettingGrade {
+export function getGrade(score: number): VettingGrade {
   if (score >= 90) return "A";
   if (score >= 75) return "B";
   if (score >= 60) return "C";
@@ -88,7 +88,7 @@ function getGrade(score: number): VettingGrade {
   return "F";
 }
 
-function getRecommendation(riskLevel: RiskLevel): Recommendation {
+export function getRecommendation(riskLevel: RiskLevel): Recommendation {
   if (riskLevel === "LOW") return "APPROVE";
   if (riskLevel === "CRITICAL") return "REJECT";
   return "REVIEW";
