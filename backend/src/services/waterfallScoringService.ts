@@ -203,11 +203,11 @@ async function filterDoubleBooked<T extends { userId: string }>(
 
 // ────────── Scoring ──────────
 
-function normalizeEquipment(type: string): string {
+export function normalizeEquipment(type: string): string {
   return (type || "").toUpperCase().replace(/[\s_-]/g, "");
 }
 
-function classifyEquipmentMatch(
+export function classifyEquipmentMatch(
   loadKey: string,
   carrierType: string
 ): "exact" | "compatible" | null {
@@ -260,14 +260,14 @@ async function latestOnTimePct(carrierId: string): Promise<number> {
   return card?.onTimeDeliveryPct ?? 0;
 }
 
-function laneHistoryFactor(runCount: number): number {
+export function laneHistoryFactor(runCount: number): number {
   if (runCount >= 3) return 100;
   if (runCount === 2) return 60;
   if (runCount === 1) return 40;
   return 0;
 }
 
-function tierFactor(tier: EligibleTier): number {
+export function tierFactor(tier: EligibleTier): number {
   switch (tier) {
     case "PLATINUM": return 100;
     case "GOLD":     return 75;
@@ -275,7 +275,7 @@ function tierFactor(tier: EligibleTier): number {
   }
 }
 
-function rateFactor(estimatedRate: number | null, targetRate: number | null): number {
+export function rateFactor(estimatedRate: number | null, targetRate: number | null): number {
   if (estimatedRate === null || targetRate === null || targetRate <= 0) return 50; // neutral when unknown
   if (estimatedRate <= targetRate) return 100;
   const overshoot = (estimatedRate - targetRate) / targetRate;
@@ -283,14 +283,14 @@ function rateFactor(estimatedRate: number | null, targetRate: number | null): nu
   return 0;
 }
 
-function onTimeFactor(pct: number): number {
+export function onTimeFactor(pct: number): number {
   if (pct >= 95) return 100;
   if (pct >= 90) return 75;
   if (pct >= 85) return 50;
   return 25;
 }
 
-function equipmentFactor(match: "exact" | "compatible" | "none"): number {
+export function equipmentFactor(match: "exact" | "compatible" | "none"): number {
   return match === "exact" ? 100 : match === "compatible" ? 50 : 0;
 }
 
