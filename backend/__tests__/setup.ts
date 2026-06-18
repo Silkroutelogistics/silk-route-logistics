@@ -84,6 +84,20 @@ vi.mock("../src/config/database", () => ({
       findMany: vi.fn(),
       updateMany: vi.fn(),
     },
+    trainingCourse: {
+      findMany: vi.fn(),
+      findFirst: vi.fn(),
+      findUnique: vi.fn(),
+    },
+    driver: {
+      findMany: vi.fn(),
+      findUnique: vi.fn(),
+      count: vi.fn(),
+    },
+    driverCourseProgress: {
+      findMany: vi.fn(),
+      count: vi.fn(),
+    },
     notification: {
       create: vi.fn(),
       findMany: vi.fn(),

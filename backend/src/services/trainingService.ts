@@ -36,7 +36,7 @@ const REMINDER_THRESHOLDS = [30, 14, 7, 0];
 
 // Whole-calendar-day count to expiry (UTC date-only diff, so the 5 AM cron
 // firing time doesn't shift the threshold). Negative = already expired.
-function calendarDaysUntil(target: Date, from: Date): number {
+export function calendarDaysUntil(target: Date, from: Date): number {
   const t = Date.UTC(target.getUTCFullYear(), target.getUTCMonth(), target.getUTCDate());
   const f = Date.UTC(from.getUTCFullYear(), from.getUTCMonth(), from.getUTCDate());
   return Math.round((t - f) / DAY_MS);
