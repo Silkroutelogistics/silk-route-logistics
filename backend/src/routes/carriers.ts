@@ -267,7 +267,12 @@ router.post("/:id/tin-verify", authorize("ADMIN", "CEO", "OPERATIONS"), runTinVe
 router.get("/:id/fraud-reports", authorize("ADMIN", "CEO", "OPERATIONS", "BROKER"), getFraudReports);
 router.post("/:id/fraud-reports", authorize("ADMIN", "CEO", "OPERATIONS", "BROKER", "DISPATCH"), fileFraudReport);
 router.patch("/fraud-reports/:reportId/review", authorize("ADMIN", "CEO"), reviewFraudReport);
-router.post("/fraud-reports/:reportId/respond", respondToFraudReport);
+// v3.8.ani (audit F1) — was behind authenticate but missing role authz, so any
+// authenticated user (carrier/shipper included) could write a response to any
+// fraud report by id. No frontend caller today; the fraud flow is AE-managed
+// (siblings above are ADMIN/CEO/OPERATIONS/BROKER). Gate to AE roles. A future
+// carrier-self-response feature would get its own carrier-scoped + owned endpoint.
+router.post("/fraud-reports/:reportId/respond", authorize("ADMIN", "CEO", "OPERATIONS"), respondToFraudReport);
 
 // Carrier-broker agreements
 router.get("/:id/agreements", authorize("ADMIN", "CEO", "OPERATIONS", "BROKER"), getCarrierAgreements);

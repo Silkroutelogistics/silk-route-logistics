@@ -13012,7 +13012,23 @@
 //   block, terminal/backwards/wrong-start guards, and getAllowedNextStatuses;
 //   de-risks the banked Item 159 Sprint-2 AE-side wiring. Gates: backend tsc +
 //   vitest 259/259 + frontend tsc + next build clean. Per §3.1: ang → anh.
-export const SRL_VERSION = "3.8.anh";
+// v3.8.ani — Audit sequence Sprint 1 (quick-wins). (1) BRAND — deleted the 10
+//   legacy frontend/public/carrier/*.html scaffolding files (dashboard / login /
+//   forgot-password / register / help / loads / payments / analytics / compliance
+//   / tools). Unreferenced (nav points to the React /carrier/login; zero inbound
+//   links), superseded by the React /carrier/* + /carrier/dashboard/* routes, and
+//   several were reachable by direct URL carrying §5-prohibited/STALE tier claims
+//   (payments.html "Bronze 3%" retired tier + wrong %s; help/dashboard/loads
+//   retired bonuses + Bronze/Silver/Gold/Platinum score ranges). Build verified:
+//   React still emits out/carrier/{login,dashboard,forgot-password}.html; the dead
+//   claim pages are gone from out/. robots.txt already disallowed /carrier/ + /ae/
+//   (v3.8.m) so search-indexing was already blocked; this removes direct-URL reach.
+//   (2) SECURITY (audit F1) — POST /carriers/fraud-reports/:id/respond was behind
+//   authenticate but missing role authz (any authenticated user could write a
+//   fraud-report response by id). No frontend caller; AE-managed flow. Gated to
+//   ADMIN/CEO/OPERATIONS. Gates: backend tsc + frontend next build clean. Per
+//   §3.1: anh → ani.
+export const SRL_VERSION = "3.8.ani";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
