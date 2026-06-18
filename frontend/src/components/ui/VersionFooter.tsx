@@ -13041,7 +13041,20 @@
 //   courses. Closes the "CDL gate is server-enforced but the read-through is not"
 //   asymmetry. Gates: backend tsc + vitest 295/295 + frontend tsc + next build (115)
 //   clean. Per §3.1: ani → anj.
-export const SRL_VERSION = "3.8.anj";
+// v3.8.ank — Audit gap-closure: D2 suspension-reason convention unified (§13.3
+//   Item 187). loadComplianceService (the load gate) + waterfallScoring READ
+//   autoSuspendReason/autoSuspendedAt, but 5 auto-suspend writers (insurance-expiry,
+//   monthly re-vetting, FMCSA authority, FMCSA safety, OFAC) wrote the LEGACY
+//   suspensionReason/suspendedAt pair instead — carriers were still blocked (every
+//   writer also sets onboardingStatus=SUSPENDED, the load-bearing gate) but the
+//   specific auto-suspend reason + the waterfall autoSuspendedAt signal didn't fire
+//   for them. All 5 writers now write the canonical pair; backfill migration
+//   20260618170000 copies historical legacy-pair suspensions onto the canonical pair
+//   (data-only, idempotent). Legacy columns retained (no remaining reader/writer);
+//   a later migration may drop them. NOT a gating bug — confirmed onboardingStatus
+//   is the real gate. Gates: prisma validate + backend tsc + vitest 295/295 clean.
+//   Per §3.1: anj → ank.
+export const SRL_VERSION = "3.8.ank";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

@@ -183,8 +183,8 @@ export async function weeklyOfacRescan() {
             where: { id: carrier.id },
             data: {
               onboardingStatus: "SUSPENDED",
-              suspensionReason: `Auto-suspended: OFAC/SDN match detected (score: ${topScore}). Immediate review required.`,
-              suspendedAt: new Date(),
+              autoSuspendReason: `Auto-suspended: OFAC/SDN match detected (score: ${topScore}). Immediate review required.`,
+              autoSuspendedAt: new Date(),
             },
           });
 

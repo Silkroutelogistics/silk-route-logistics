@@ -812,20 +812,16 @@ export async function runFmcsaScan(carrierId: string) {
 // Item 184, v3.8.ahw — the deprecated fmcsaBulkMonitorService.runDailyMonitor
 // has been deleted).
 //
-// TODO(suspension-column-unification): this service writes TWO suspension
-// conventions in different code paths and they should be unified.
-// - autoSuspendReason + autoSuspendedAt: this scan's revoke / insurance-
-//   missing / OOS branches (lines ~947 + ~1058).
-// - suspensionReason + suspendedAt: insurance-expiry handler (~1424),
-//   monthly re-vetting (~1553), FMCSA authority-change watcher (~1662),
-//   FMCSA safety-rating watcher (~1702).
-// Both conventions are live across the canonical service; the gate at
-// complianceCheck() keys off onboardingStatus="SUSPENDED" only, so the
-// reason/timestamp drift is observability noise, not a correctness gap.
-// Pick one convention (recommend autoSuspendReason/autoSuspendedAt — the
-// newer field pair, already used by the FMCSA branches here) in a later
-// cleanup commit; this v3.8.ahw scope correction supersedes the narrower
-// "runDailyMonitor vs canonical" TODO logged at v3.8.ahv.
+// RESOLVED v3.8.ank (audit D2 / §13.3 Item 187) — the suspension-reason
+// convention is now unified on autoSuspendReason / autoSuspendedAt (the pair
+// loadComplianceService + waterfallScoring already READ). All five auto-suspend
+// writers — insurance-expiry, monthly re-vetting, FMCSA authority-change, FMCSA
+// safety-rating (this service) + OFAC (ofacScreeningService) — write the canonical
+// pair; the legacy suspensionReason / suspendedAt columns have NO remaining writer
+// or reader and were backfilled by migration 20260618170000_backfill_suspension_
+// reason. Each writer still sets onboardingStatus="SUSPENDED" (the load-bearing
+// gate at complianceCheck() + loadComplianceService:166). The legacy columns are
+// retained for now; a later migration may drop them after a verification window.
 
 export async function fmcsaComplianceScan() {
   const carriers = await prisma.carrierProfile.findMany({
@@ -1480,8 +1476,8 @@ export async function processInsuranceExpiryEnforcement() {
       where: { id: carrier.id },
       data: {
         onboardingStatus: "SUSPENDED",
-        suspensionReason: `Auto-suspended: Insurance expired on ${carrier.insuranceExpiry?.toISOString().split("T")[0]}`,
-        suspendedAt: now,
+        autoSuspendReason: `Auto-suspended: Insurance expired on ${carrier.insuranceExpiry?.toISOString().split("T")[0]}`,
+        autoSuspendedAt: now,
       },
     });
 
@@ -1611,8 +1607,8 @@ export async function monthlyCarrierReVetting() {
           where: { id: carrier.id },
           data: {
             onboardingStatus: "SUSPENDED",
-            suspensionReason: `Auto-suspended by monthly re-vetting: score ${report.score}/100 (CRITICAL). Flags: ${report.flags.slice(0, 3).join(", ")}`,
-            suspendedAt: new Date(),
+            autoSuspendReason: `Auto-suspended by monthly re-vetting: score ${report.score}/100 (CRITICAL). Flags: ${report.flags.slice(0, 3).join(", ")}`,
+            autoSuspendedAt: new Date(),
           },
         });
 
@@ -1721,8 +1717,8 @@ export async function detectFmcsaAuthorityChanges() {
             where: { id: carrier.id },
             data: {
               onboardingStatus: "SUSPENDED",
-              suspensionReason: `Auto-suspended: FMCSA authority changed from ${previousStatus} to ${currentStatus}`,
-              suspendedAt: new Date(),
+              autoSuspendReason: `Auto-suspended: FMCSA authority changed from ${previousStatus} to ${currentStatus}`,
+              autoSuspendedAt: new Date(),
             },
           });
 
@@ -1761,8 +1757,8 @@ export async function detectFmcsaAuthorityChanges() {
             where: { id: carrier.id },
             data: {
               onboardingStatus: "SUSPENDED",
-              suspensionReason: `Auto-suspended: FMCSA safety rating changed to UNSATISFACTORY`,
-              suspendedAt: new Date(),
+              autoSuspendReason: `Auto-suspended: FMCSA safety rating changed to UNSATISFACTORY`,
+              autoSuspendedAt: new Date(),
               safetyRating: "UNSATISFACTORY",
             },
           });
