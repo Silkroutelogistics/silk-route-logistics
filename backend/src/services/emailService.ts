@@ -1,6 +1,7 @@
 import { Resend } from "resend";
 import { env } from "../config/env";
 import { log } from "../lib/logger";
+import { prisma } from "../config/database";
 
 const resend = env.RESEND_API_KEY ? new Resend(env.RESEND_API_KEY) : null;
 const fromEmail = env.EMAIL_FROM;
@@ -11,6 +12,18 @@ interface EmailAttachment {
   filename: string;
   content: Buffer;
   contentType?: string;
+}
+
+// audit E1 (§13.3 Item 194 E1) — email failure tracking. Records every send
+// outcome (SENT / FAILED) to email_logs so a silently-failing send is visible +
+// queryable, instead of vanishing into a fire-and-forget log line (the class that
+// hid the v3.8.amv sales@ Resend-suppression). Non-blocking + optional-chained:
+// it must NEVER affect the actual send (a logging failure can't break email), and
+// it no-ops cleanly if the model is absent (e.g. an un-migrated test DB).
+function recordEmailLog(to: string, subject: string, status: "SENT" | "FAILED", resendId?: string, error?: string): void {
+  void prisma.emailLog
+    ?.create({ data: { to: to.slice(0, 500), subject: subject.slice(0, 300), status, resendId: resendId ?? null, error: error ? error.slice(0, 500) : null } })
+    .catch(() => { /* best-effort; never throw from the email path */ });
 }
 
 export async function sendEmail(to: string, subject: string, html: string, attachments?: EmailAttachment[], options?: { replyTo?: string; fromName?: string; cc?: string | string[] }): Promise<string | undefined> {
@@ -43,6 +56,7 @@ export async function sendEmail(to: string, subject: string, html: string, attac
           throw new Error(error.message);
         }
         log.info(`[Email] Sent to ${to}: ${subject} (id: ${data?.id})`);
+        recordEmailLog(to, subject, "SENT", data?.id); // audit E1 — track outcome
         return data?.id; // Return Resend email ID for tracking
       } catch (err: any) {
         if (err.message?.includes("rate limit") && attempt < 2) {
@@ -50,6 +64,7 @@ export async function sendEmail(to: string, subject: string, html: string, attac
           continue;
         }
         log.error(`[Email] FAILED to send to ${to}: ${err.message}`);
+        recordEmailLog(to, subject, "FAILED", undefined, err.message); // audit E1 — track failure
         throw err;
       }
     }

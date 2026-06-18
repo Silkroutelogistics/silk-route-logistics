@@ -13054,7 +13054,21 @@
 //   a later migration may drop them. NOT a gating bug — confirmed onboardingStatus
 //   is the real gate. Gates: prisma validate + backend tsc + vitest 295/295 clean.
 //   Per §3.1: anj → ank.
-export const SRL_VERSION = "3.8.ank";
+// v3.8.anl — Audit gap-closure: E1 (email failure tracking) + D1 (dual-status
+//   documented). (E1) New EmailLog model + migration 20260618180000; emailService
+//   .sendEmail now records every send outcome (SENT w/ Resend id, or FAILED w/
+//   error) non-blocking + optional-chained so it can NEVER affect the actual send —
+//   a silently-failing transactional email is now visible/queryable instead of
+//   vanishing into a log line (the class that hid the v3.8.amv sales@ Resend-
+//   suppression). Auto-retry/requeue on FAILED is a banked follow-up; this is the
+//   tracking core. (D1) Dual-status documented in schema.prisma: onboardingStatus is
+//   the CANONICAL carrier lifecycle gate, CarrierProfile.status (CarrierApplication
+//   Status) is a parallel field ALSO gated in smartMatch:48 that can drift — the
+//   merge (drop the status filter + migrate) is a dedicated migration sprint (changes
+//   matching behavior), banked; ShipmentStatus documented as a narrow billing
+//   projection (Load.status = operational SoT). Gates: prisma generate + validate +
+//   backend tsc + vitest 295/295 clean. Per §3.1: ank → anl.
+export const SRL_VERSION = "3.8.anl";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

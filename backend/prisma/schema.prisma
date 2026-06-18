@@ -224,6 +224,14 @@ enum IntegrationStatus {
   ERROR
 }
 
+// audit D1 (§13.3 Item 194 / Item 160) — ShipmentStatus is a NARROW 8-value
+// billing/financial-cycle projection; Load.status (LoadStatus, 18 values) is the
+// OPERATIONAL source of truth. ShipmentStatus deliberately omits the granular
+// operational states (AT_PICKUP / LOADED / AT_DELIVERY / POD_RECEIVED / INVOICED /
+// TONU). No current code path writes a LoadStatus value to Shipment.status (the
+// only writer sets BOOKED on tender accept), so the gap is latent; if a future
+// flow ever needs to mirror Load.status onto Shipment.status, expand this enum
+// first. Do NOT treat Shipment.status as the operational status.
 enum ShipmentStatus {
   PENDING
   BOOKED
@@ -844,6 +852,18 @@ model CarrierProfile {
   equipmentTypes        String[]
   operatingRegions      String[]
   preferredLanes        Json?
+  // audit D1 (§13.3 Item 194 D1) — DUAL STATUS. `onboardingStatus` is the CANONICAL
+  // carrier lifecycle gate: it drives auth (carrierAuth login), the compliance gate
+  // (loadComplianceService:166), tier/approval flows, and is the single field every
+  // load/auth/compliance check keys off. `status` (CarrierApplicationStatus:
+  // NEW/REVIEW/APPROVED/REJECTED/SUSPENDED) is a PARALLEL application-pipeline field
+  // that OVERLAPS onboardingStatus on APPROVED/REJECTED/SUSPENDED and is ALSO gated
+  // in smartMatchService:48 (`status IN [APPROVED, NEW]`) — so the two can DRIFT and
+  // a carrier's matchability is the AND of both. Canonical = onboardingStatus.
+  // The clean fix (make onboardingStatus the sole gate: drop the smartMatch status
+  // filter + migrate/deprecate `status` after auditing all readers/writers) is a
+  // dedicated migration sprint — NOT done here because it changes matching behavior;
+  // banked at §13.3 Item 194 D1. Until then: when one is set, set the other to match.
   onboardingStatus      OnboardingStatus         @default(PENDING)
   status                CarrierApplicationStatus @default(NEW)
   approvedAt            DateTime?
@@ -3603,6 +3623,24 @@ model ErrorLog {
   @@index([createdAt])
   @@index([userId])
   @@map("error_logs")
+}
+
+// audit E1 (§13.3 Item 194 E1) — outcome log for every transactional email send,
+// written non-blocking by emailService.sendEmail. Makes a silently-failing send
+// visible/queryable instead of vanishing into a log line (the class that hid the
+// v3.8.amv sales@ Resend-suppression). status = SENT | FAILED. The auto-retry /
+// dead-letter REQUEUE on FAILED is a banked follow-up; this is the tracking core.
+model EmailLog {
+  id        String   @id @default(cuid())
+  to        String
+  subject   String
+  status    String // SENT | FAILED
+  resendId  String?
+  error     String?
+  createdAt DateTime @default(now())
+
+  @@index([status, createdAt])
+  @@map("email_logs")
 }
 
 // ─── Website Leads & Contact Submissions ──────────────────────────

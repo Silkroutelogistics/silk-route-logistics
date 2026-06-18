@@ -136,6 +136,9 @@ vi.mock("../src/config/database", () => ({
     systemLog: {
       create: vi.fn().mockResolvedValue({}),
     },
+    emailLog: {
+      create: vi.fn().mockResolvedValue({}),
+    },
     tokenBlacklist: {
       upsert: vi.fn().mockResolvedValue({}),
       findUnique: vi.fn().mockResolvedValue(null),
