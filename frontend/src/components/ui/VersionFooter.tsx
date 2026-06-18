@@ -13028,7 +13028,20 @@
 //   fraud-report response by id). No frontend caller; AE-managed flow. Gated to
 //   ADMIN/CEO/OPERATIONS. Gates: backend tsc + frontend next build clean. Per
 //   §3.1: anh → ani.
-export const SRL_VERSION = "3.8.ani";
+// v3.8.anj — Audit gap-closure: F2 + F3. (F2) Carrier portal idle-logout unified
+//   45→60 min to match the shipper portal + the useSessionTimeout default (was an
+//   undocumented divergence; one inactivity policy across portals). (F3) Forced-
+//   sequential lesson rule now ENFORCED server-side: POST /driver-training/courses/
+//   :slug/quiz rejects (400 LESSONS_INCOMPLETE) unless the driver has completed all
+//   lessons (lessonsCompleted >= lessonCount), skipped once PASSED so a T7 re-author
+//   that adds a lesson can't re-block an already-certified driver. The slides player
+//   now AWAITS its read-through progress POST before loading the quiz (with a retry
+//   on failure) so a legit driver never trips the gate; multi-lesson courses were
+//   already covered by the last advance()'s POST, so this matters most for 1-lesson
+//   courses. Closes the "CDL gate is server-enforced but the read-through is not"
+//   asymmetry. Gates: backend tsc + vitest 295/295 + frontend tsc + next build (115)
+//   clean. Per §3.1: ani → anj.
+export const SRL_VERSION = "3.8.anj";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

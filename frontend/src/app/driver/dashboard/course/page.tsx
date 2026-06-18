@@ -133,8 +133,19 @@ function CourseContent() {
     window.scrollTo({ top: 0 });
   };
 
-  const goToQuiz = () => {
-    recordProgress(lessons.length); // full read-through
+  const goToQuiz = async () => {
+    // audit F3 — record the full read-through server-side and AWAIT it before the
+    // quiz, so the backend's "complete all lessons" gate never blocks a legit
+    // driver. On failure, stay on the lessons + surface a retry rather than entering
+    // a quiz the server would reject. (Multi-lesson courses are already covered by
+    // the last advance()'s progress POST; this matters most for 1-lesson courses.)
+    try {
+      await api.post(`/driver-training/courses/${slug}/lesson-progress`, { lastLessonOrder: lessons.length });
+    } catch {
+      setError("Couldn't save your progress. Check your connection and tap Go to quiz again.");
+      return;
+    }
+    setError(null);
     setFurthestReached(lessons.length - 1);
     setPhase("quiz");
     window.scrollTo({ top: 0 });
@@ -213,6 +224,10 @@ function CourseContent() {
           <h2 className="font-serif text-lg text-[#0F1117] mb-3">{lesson.title}</h2>
           <LessonMarkdown text={lesson.bodyMarkdown} />
         </CarrierCard>
+
+        {error && (
+          <div className="mt-3 px-3 py-2 bg-red-50 border-l-4 border-red-500 text-red-700 text-xs rounded">{error}</div>
+        )}
 
         <div className="flex items-center justify-between mt-4">
           {/* Back — only in review mode; forward-only during the first read-through */}

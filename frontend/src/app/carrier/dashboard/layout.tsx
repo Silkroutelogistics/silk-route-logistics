@@ -38,7 +38,9 @@ export default function CarrierDashboardLayout({ children }: { children: React.R
   const router = useRouter();
   const pathname = usePathname();
   const { showWarning, countdown, extendSession } = useSessionTimeout({
-    timeoutMs: 45 * 60 * 1000,
+    // audit F2 — unified to 60 min (was an undocumented 45) to match the shipper
+    // portal + the useSessionTimeout default: one inactivity policy across portals.
+    timeoutMs: 60 * 60 * 1000,
     warningBeforeMs: 2 * 60 * 1000,
     loginPath: "/carrier/login",
     onLogout: logout,

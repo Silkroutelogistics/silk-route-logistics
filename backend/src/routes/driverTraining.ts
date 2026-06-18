@@ -195,6 +195,7 @@ router.post("/courses/:slug/quiz", validateBody(quizSchema), async (req: DriverR
     where: { slug: req.params.slug, status: "PUBLISHED" },
     select: {
       id: true, title: true, passThreshold: true, validityMonths: true,
+      _count: { select: { lessons: true } },
       questions: { orderBy: { order: "asc" }, select: { id: true, order: true, correctIndex: true, explanation: true } },
     },
   });
@@ -204,6 +205,20 @@ router.post("/courses/:slug/quiz", validateBody(quizSchema), async (req: DriverR
   }
   if (course.questions.length === 0) {
     res.status(400).json({ error: "This course has no quiz." });
+    return;
+  }
+
+  // audit F3 — server-side enforcement of the forced-sequential rule (was client-
+  // only). A driver must have worked through all lessons before the quiz is graded;
+  // the slides player awaits its read-through progress POST before loading the quiz,
+  // so a legit driver always satisfies this. Skipped once PASSED so a later T7
+  // re-author that adds a lesson can't re-block a carrier's already-certified driver.
+  const quizGateProgress = await prisma.driverCourseProgress.findUnique({
+    where: { driverId_courseId: { driverId, courseId: course.id } },
+    select: { status: true, lessonsCompleted: true },
+  });
+  if (quizGateProgress?.status !== "PASSED" && (quizGateProgress?.lessonsCompleted ?? 0) < course._count.lessons) {
+    res.status(400).json({ error: "Complete all lessons before taking the quiz.", code: "LESSONS_INCOMPLETE" });
     return;
   }
 
