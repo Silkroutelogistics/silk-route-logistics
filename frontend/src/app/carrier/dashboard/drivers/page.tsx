@@ -478,8 +478,10 @@ export default function CarrierDriversPage() {
                               {copiedId === d.id ? <><Check size={12} /> Copied</> : <><Copy size={12} /> Copy link</>}
                             </button>
                           </div>
-                          {!result.smsSent && result.smsError && (
-                            <p className="text-[10px] text-gray-400 mt-1.5">SMS unavailable right now — the copy link above works.</p>
+                          {!result.smsSent && (
+                            <p className="text-[10px] text-amber-700 mt-1.5">
+                              Text couldn&apos;t send to this number{result.smsError ? <> — <span className="text-gray-500">{result.smsError}</span></> : ""}. The copy link above still works — share it with the driver.
+                            </p>
                           )}
                         </td>
                       </tr>

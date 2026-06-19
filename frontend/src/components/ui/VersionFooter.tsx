@@ -13068,7 +13068,15 @@
 //   matching behavior), banked; ShipmentStatus documented as a narrow billing
 //   projection (Load.status = operational SoT). Gates: prisma generate + validate +
 //   backend tsc + vitest 295/295 clean. Per §3.1: ank → anl.
-export const SRL_VERSION = "3.8.anl";
+// v3.8.anm — Driver invite SMS-failure now self-diagnosing. When the OpenPhone
+//   SMS send fails, the carrier Drivers page previously showed a generic "SMS
+//   unavailable" line + the copy-link fallback. It now surfaces the actual
+//   `smsError` reason (the literal OpenPhone API message, already returned by
+//   POST /carrier-drivers/:id/invite — e.g. "to and from cannot be the same" when
+//   the driver phone == SRL's own OpenPhone line, or an A2P-registration error) so
+//   the carrier sees WHY without DevTools. The copy-link remains the working
+//   fallback. Frontend-only; gates: tsc + next build (115) clean. Per §3.1: anl → anm.
+export const SRL_VERSION = "3.8.anm";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
