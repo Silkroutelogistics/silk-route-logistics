@@ -13076,7 +13076,17 @@
 //   the driver phone == SRL's own OpenPhone line, or an A2P-registration error) so
 //   the carrier sees WHY without DevTools. The copy-link remains the working
 //   fallback. Frontend-only; gates: tsc + next build (115) clean. Per §3.1: anl → anm.
-export const SRL_VERSION = "3.8.anm";
+// v3.8.ann — Fix OpenPhone SMS 401 Unauthorized (driver-invite texts never sent).
+//   The on-screen smsError (surfaced by anm) showed `OpenPhone SMS error: 401 —
+//   {"error":{"message":"Unauthorized"}}`. Root cause: openPhoneService.getHeaders
+//   sent `Authorization: Bearer <key>`, but the OpenPhone API expects the RAW api
+//   key with NO "Bearer " prefix (documented gotcha) — the prefix returns 401.
+//   Fixed to `Authorization: <key>`. Single chokepoint (getHeaders feeds every
+//   OpenPhone call — SMS, calls, listing), so this also un-breaks any other
+//   OpenPhone API use. A2P brand+campaign+STIR/SHAKEN were already Approved; the
+//   number is messaging-enabled — auth was the only blocker. Gates: backend tsc +
+//   vitest 295/295 clean. Per §3.1: anm → ann.
+export const SRL_VERSION = "3.8.ann";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

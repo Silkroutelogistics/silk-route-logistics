@@ -7,7 +7,11 @@ function getHeaders() {
   const key = process.env.OPENPHONE_API_KEY;
   if (!key) throw new Error("OPENPHONE_API_KEY is not configured");
   return {
-    Authorization: `Bearer ${key}`,
+    // v3.8.ann — OpenPhone API auth uses the RAW api key in the Authorization
+    // header, with NO "Bearer " prefix (a documented OpenPhone gotcha). The
+    // Bearer prefix returns 401 Unauthorized — which is exactly what the driver-
+    // invite SMS hit ({"error":{"message":"Unauthorized"}}). Raw key is correct.
+    Authorization: key,
     "Content-Type": "application/json",
   };
 }
