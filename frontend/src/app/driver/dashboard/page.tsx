@@ -1,15 +1,16 @@
 "use client";
 
-// v3.8.anb — SRL Driver Academy Sprint T4: real course list (replaces the T2
-// placeholder). Fetches the catalog + this driver's progress and links each
-// course into the player at /driver/dashboard/course?slug=...
+// v3.8.anp — SRL Driver Academy course list (canonical brand + designed cards).
+// Per-course icon chip, in-progress bar, completion summary. Fetches the
+// catalog + this driver's progress; links each course into the slide player.
+// CDL gate (v3.8.ang) + cert download preserved. Canonical §2.1 tokens.
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { GraduationCap, Loader2, BookOpen, CheckCircle2, Clock, Download, ShieldAlert } from "lucide-react";
+import { GraduationCap, Loader2, CheckCircle2, Clock, Download, ShieldAlert, ChevronRight } from "lucide-react";
 import { api } from "@/lib/api";
 import { downloadFromApi } from "@/lib/download";
-import { CarrierCard } from "@/components/carrier";
+import { courseIcon } from "@/components/driver/courseIcon";
 import { useDriverAuth } from "@/hooks/useDriverAuth";
 
 interface CourseProgress {
@@ -20,23 +21,11 @@ interface CourseProgress {
   expiresAt: string | null;
 }
 interface CourseCard {
-  id: string;
-  slug: string;
-  title: string;
-  category: string;
-  summary: string | null;
-  estMinutes: number;
-  passThreshold: number;
-  lessonCount: number;
-  questionCount: number;
+  id: string; slug: string; title: string; category: string; summary: string | null;
+  estMinutes: number; passThreshold: number; lessonCount: number; questionCount: number;
   progress: CourseProgress | null;
 }
-
-interface Eligibility {
-  eligible: boolean;
-  reason: "CDL_MISSING" | "CDL_EXPIRED" | null;
-  licenseExpiry: string | null;
-}
+interface Eligibility { eligible: boolean; reason: "CDL_MISSING" | "CDL_EXPIRED" | null; licenseExpiry: string | null }
 
 function fmtDate(s: string | null): string {
   if (!s) return "";
@@ -46,19 +35,15 @@ function fmtDate(s: string | null): string {
 function StatusPill({ p }: { p: CourseProgress | null }) {
   const status = p?.status || "NOT_STARTED";
   const cls =
-    status === "PASSED"
-      ? "bg-green-50 text-green-700 border border-green-200"
-      : status === "IN_PROGRESS"
-        ? "bg-amber-50 text-amber-700 border border-amber-200"
-        : status === "FAILED"
-          ? "bg-red-50 text-red-600 border border-red-200"
-          : "bg-gray-100 text-gray-500";
+    status === "PASSED" ? "bg-[#E6F0E9] text-[#2F7A4F] border border-[#2F7A4F]/25"
+      : status === "IN_PROGRESS" ? "bg-[#FBEFD4] text-[#B07A1A] border border-[#B07A1A]/25"
+        : status === "FAILED" ? "bg-[#F6E3E3] text-[#9B2C2C] border border-[#9B2C2C]/25"
+          : "bg-[#F5EEE0] text-[#6B7685]";
   const label =
     status === "PASSED" ? `Passed${p?.bestScorePct != null ? ` · ${p.bestScorePct}%` : ""}`
       : status === "IN_PROGRESS" ? "In progress"
-        : status === "FAILED" ? "Try again"
-          : "Not started";
-  return <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wide ${cls}`}>{label}</span>;
+        : status === "FAILED" ? "Try again" : "Not started";
+  return <span className={`shrink-0 rounded-full px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${cls}`}>{label}</span>;
 }
 
 export default function DriverCoursesPage() {
@@ -72,110 +57,121 @@ export default function DriverCoursesPage() {
 
   const downloadCert = async (slug: string) => {
     setCertError(null);
-    try {
-      await downloadFromApi(`/driver-training/courses/${slug}/certificate`, `SRL-Certificate-${slug}.pdf`);
-    } catch {
-      setCertError("Couldn't download that certificate. Try again in a moment.");
-    }
+    try { await downloadFromApi(`/driver-training/courses/${slug}/certificate`, `SRL-Certificate-${slug}.pdf`); }
+    catch { setCertError("Couldn't download that certificate. Try again in a moment."); }
   };
 
   useEffect(() => {
     let active = true;
-    api
-      .get("/driver-training/courses")
+    api.get("/driver-training/courses")
       .then((r) => { if (active) { setCourses(r.data.courses || []); setEligibility(r.data.eligibility ?? null); setLoading(false); } })
       .catch(() => { if (active) { setError("Could not load your courses. Pull to refresh or try again."); setLoading(false); } });
     return () => { active = false; };
   }, []);
 
   const passedCount = courses.filter((c) => c.progress?.status === "PASSED").length;
+  const overallPct = courses.length ? Math.round((passedCount / courses.length) * 100) : 0;
   const cdlBlocked = !!eligibility && !eligibility.eligible;
+
+  const card = "rounded-2xl border border-[rgba(10,37,64,0.08)] bg-white p-8 shadow-[0_1px_3px_rgba(10,37,64,0.04)]";
 
   return (
     <div>
-      <div className="mb-6">
-        <h1 className="font-serif text-2xl text-[#0F1117] mb-1">
-          Welcome{driver ? `, ${driver.firstName}` : ""}
-        </h1>
-        <p className="text-[13px] text-gray-500">
-          Work through each course at your own pace. Pass the quiz to complete it.
-          {courses.length > 0 && <> You&apos;ve completed <span className="font-semibold text-[#0F1117]">{passedCount} of {courses.length}</span>.</>}
-        </p>
+      <div className="mb-5">
+        <h1 className="mb-1 font-serif text-[26px] leading-tight text-[#0A2540]">Welcome{driver ? `, ${driver.firstName}` : ""}</h1>
+        <p className="text-[13px] text-[#6B7685]">Work through each course at your own pace. Pass the quiz to earn your certificate.</p>
       </div>
 
-      {certError && (
-        <div className="mb-4 px-3 py-2 bg-red-50 border-l-4 border-red-500 text-red-700 text-xs rounded">{certError}</div>
+      {!loading && !error && !cdlBlocked && courses.length > 0 && (
+        <div className="mb-5 rounded-2xl border border-[rgba(10,37,64,0.08)] bg-white p-4 shadow-[0_1px_3px_rgba(10,37,64,0.04)]">
+          <div className="mb-2 flex items-center justify-between">
+            <span className="text-[12px] font-semibold text-[#0A2540]">Your progress</span>
+            <span className="text-[12px] text-[#6B7685]"><span className="font-semibold text-[#0A2540]">{passedCount}</span> of {courses.length} complete</span>
+          </div>
+          <div className="h-2 overflow-hidden rounded-full bg-[#EFE6D3]">
+            <div className="h-full rounded-full bg-gradient-to-r from-[#C5A572] to-[#BA7517] transition-all duration-500" style={{ width: `${overallPct}%` }} />
+          </div>
+        </div>
       )}
 
+      {certError && <div className="mb-4 rounded-lg border-l-4 border-[#9B2C2C] bg-[#F6E3E3] px-3 py-2 text-xs text-[#9B2C2C]">{certError}</div>}
+
       {loading ? (
-        <CarrierCard padding="p-8">
-          <div className="flex items-center justify-center gap-2 text-gray-400 text-sm">
-            <Loader2 size={16} className="animate-spin" /> Loading your courses...
-          </div>
-        </CarrierCard>
+        <div className={card}><div className="flex items-center justify-center gap-2 text-sm text-[#6B7685]"><Loader2 size={16} className="animate-spin" /> Loading your courses…</div></div>
       ) : error ? (
-        <CarrierCard padding="p-8">
-          <p className="text-center text-sm text-red-600">{error}</p>
-        </CarrierCard>
+        <div className={card}><p className="text-center text-sm text-[#9B2C2C]">{error}</p></div>
       ) : cdlBlocked ? (
-        <CarrierCard padding="p-8">
-          <div className="text-center max-w-md mx-auto">
-            <ShieldAlert size={32} className="mx-auto text-[#BA7517] mb-3" />
-            <h3 className="text-sm font-bold text-[#0F1117] mb-2">
+        <div className={card}>
+          <div className="mx-auto max-w-md text-center">
+            <ShieldAlert size={32} className="mx-auto mb-3 text-[#BA7517]" />
+            <h3 className="mb-2 text-sm font-bold text-[#0A2540]">
               {eligibility?.reason === "CDL_EXPIRED" ? "Your CDL on file has expired" : "A valid CDL is needed to start training"}
             </h3>
-            <p className="text-xs text-gray-500 leading-relaxed mb-3">
+            <p className="mb-3 text-xs leading-relaxed text-[#6B7685]">
               {eligibility?.reason === "CDL_EXPIRED"
                 ? <>The CDL on your driver profile expired{eligibility?.licenseExpiry ? <> on {fmtDate(eligibility.licenseExpiry)}</> : ""}. Ask your carrier to update it in your Drivers roster, then refresh this page.</>
                 : <>The SRL Driver Academy is for licensed CDL drivers. Ask your carrier to add your CDL to your driver record in their Drivers roster, then refresh this page.</>}
             </p>
-            <p className="text-[11px] text-gray-400">Once your carrier updates your record, your courses will appear here automatically.</p>
+            <p className="text-[11px] text-[#A7AEB8]">Once your carrier updates your record, your courses appear here automatically.</p>
           </div>
-        </CarrierCard>
+        </div>
       ) : courses.length === 0 ? (
-        <CarrierCard padding="p-10">
+        <div className={card}>
           <div className="text-center">
-            <GraduationCap size={32} className="mx-auto text-[#C9A84C] mb-3" />
-            <h3 className="text-sm font-bold text-[#0F1117] mb-1">No courses available yet</h3>
-            <p className="text-xs text-gray-500">Your training courses will appear here once your carrier&apos;s program is live.</p>
+            <GraduationCap size={32} className="mx-auto mb-3 text-[#C5A572]" />
+            <h3 className="mb-1 text-sm font-bold text-[#0A2540]">No courses available yet</h3>
+            <p className="text-xs text-[#6B7685]">Your training courses appear here once your carrier&apos;s program is live.</p>
           </div>
-        </CarrierCard>
+        </div>
       ) : (
-        <div className="grid sm:grid-cols-2 gap-3">
+        <div className="grid gap-3 sm:grid-cols-2">
           {courses.map((c) => {
-            const passed = c.progress?.status === "PASSED";
-            const inProgress = c.progress?.status === "IN_PROGRESS" || c.progress?.status === "FAILED";
+            const Icon = courseIcon(c.slug, c.category);
+            const status = c.progress?.status;
+            const passed = status === "PASSED";
+            const inProgress = status === "IN_PROGRESS" || status === "FAILED";
             const cta = passed ? "Review" : inProgress ? "Continue" : "Start";
+            const donePct = c.lessonCount > 0 ? Math.min(100, Math.round(((c.progress?.lessonsCompleted ?? 0) / c.lessonCount) * 100)) : 0;
             return (
-              <CarrierCard key={c.id} padding="p-5" hover onClick={() => router.push(`/driver/dashboard/course?slug=${c.slug}`)}>
-                <div className="flex items-start justify-between gap-2 mb-2">
-                  <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#BA7517]">{c.category}</span>
-                  <StatusPill p={c.progress} />
-                </div>
-                <h3 className="font-semibold text-[15px] text-[#0F1117] mb-1 flex items-center gap-1.5">
-                  {passed ? <CheckCircle2 size={15} className="text-green-600 shrink-0" /> : <BookOpen size={15} className="text-[#C9A84C] shrink-0" />}
-                  {c.title}
-                </h3>
-                {c.summary && <p className="text-[12px] text-gray-500 leading-relaxed mb-3">{c.summary}</p>}
-                <div className="flex items-center justify-between">
-                  <span className="flex items-center gap-1 text-[11px] text-gray-400">
-                    <Clock size={11} /> {c.lessonCount} lessons · {c.questionCount} questions · ~{c.estMinutes} min
+              <div key={c.id} role="button" tabIndex={0}
+                onClick={() => router.push(`/driver/dashboard/course?slug=${c.slug}`)}
+                onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") router.push(`/driver/dashboard/course?slug=${c.slug}`); }}
+                className="group flex cursor-pointer flex-col rounded-2xl border border-[rgba(10,37,64,0.08)] bg-white p-5 shadow-[0_1px_3px_rgba(10,37,64,0.04)] transition-all hover:border-[#C5A572] hover:shadow-[0_8px_28px_rgba(10,37,64,0.08)]">
+                <div className="mb-3 flex items-start justify-between gap-2">
+                  <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${passed ? "bg-[#E6F0E9] text-[#2F7A4F]" : "bg-[#0A2540] text-[#C5A572]"}`}>
+                    {passed ? <CheckCircle2 size={20} /> : <Icon size={19} />}
                   </span>
-                  <span className="text-[12px] font-semibold text-[#BA7517]">{cta} →</span>
+                  <StatusPill p={c.progress ?? null} />
                 </div>
+                <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#BA7517]">{c.category}</div>
+                <h3 className="mb-1 mt-0.5 font-serif text-[16px] leading-tight text-[#0A2540]">{c.title}</h3>
+                {c.summary && <p className="mb-3 line-clamp-2 text-[12px] leading-relaxed text-[#6B7685]">{c.summary}</p>}
+
+                {inProgress && (
+                  <div className="mb-3">
+                    <div className="h-1.5 overflow-hidden rounded-full bg-[#EFE6D3]">
+                      <div className="h-full rounded-full bg-gradient-to-r from-[#C5A572] to-[#BA7517]" style={{ width: `${donePct}%` }} />
+                    </div>
+                  </div>
+                )}
+
+                <div className="mt-auto flex items-center justify-between pt-1">
+                  <span className="flex items-center gap-1 text-[11px] text-[#6B7685]">
+                    <Clock size={11} /> {c.lessonCount} lessons · ~{c.estMinutes} min
+                  </span>
+                  <span className="flex items-center gap-0.5 text-[12px] font-semibold text-[#BA7517]">{cta} <ChevronRight size={14} className="transition-transform group-hover:translate-x-0.5" /></span>
+                </div>
+
                 {passed && (
-                  <div className="mt-2 flex items-center justify-between">
-                    {c.progress?.expiresAt
-                      ? <span className="text-[10px] text-gray-400">Valid until {fmtDate(c.progress.expiresAt)}</span>
-                      : <span />}
-                    <button type="button"
-                      onClick={(e) => { e.stopPropagation(); downloadCert(c.slug); }}
+                  <div className="mt-3 flex items-center justify-between border-t border-[rgba(10,37,64,0.06)] pt-3">
+                    {c.progress?.expiresAt ? <span className="text-[10px] text-[#A7AEB8]">Valid until {fmtDate(c.progress.expiresAt)}</span> : <span />}
+                    <button type="button" onClick={(e) => { e.stopPropagation(); downloadCert(c.slug); }}
                       className="inline-flex items-center gap-1 text-[11px] font-medium text-[#BA7517] hover:underline">
                       <Download size={11} /> Certificate
                     </button>
                   </div>
                 )}
-              </CarrierCard>
+              </div>
             );
           })}
         </div>

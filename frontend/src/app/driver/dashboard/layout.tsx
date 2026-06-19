@@ -34,7 +34,7 @@ export default function DriverDashboardLayout({ children }: { children: React.Re
 
   if (checking || !driver) {
     return (
-      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: "#faf9f7" }}>
+      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: "#FBF7F0" }}>
         <Loader2 size={32} className="text-[#BA7517] animate-spin" />
       </div>
     );
@@ -46,23 +46,23 @@ export default function DriverDashboardLayout({ children }: { children: React.Re
   };
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor: "#faf9f7" }}>
-      <header className="bg-white border-b border-gray-100 sticky top-0 z-30">
+    <div className="min-h-screen" style={{ backgroundColor: "#FBF7F0" }}>
+      <header className="bg-white border-b border-[rgba(10,37,64,0.08)] sticky top-0 z-30">
         <div className="max-w-3xl mx-auto px-4 h-14 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#C9A84C] to-[#A88535] flex items-center justify-center">
-              <GraduationCap size={17} className="text-[#0F1117]" />
+            <div className="w-8 h-8 rounded-lg bg-[#0A2540] flex items-center justify-center">
+              <GraduationCap size={17} className="text-[#C5A572]" />
             </div>
             <div className="leading-tight">
-              <div className="text-[12px] font-bold text-[#0F1117] tracking-wide">SRL DRIVER ACADEMY</div>
-              {carrierName && <div className="text-[10px] text-gray-400">{carrierName}</div>}
+              <div className="text-[12px] font-bold text-[#0A2540] tracking-wide">SRL DRIVER ACADEMY</div>
+              {carrierName && <div className="text-[10px] text-[#6B7685]">{carrierName}</div>}
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <span className="text-[13px] text-gray-600 hidden sm:inline">{driver.firstName} {driver.lastName}</span>
+            <span className="text-[13px] text-[#3A4A5F] hidden sm:inline">{driver.firstName} {driver.lastName}</span>
             <button
               onClick={handleLogout}
-              className="flex items-center gap-1.5 text-[12px] text-gray-500 hover:text-gray-800 transition-colors"
+              className="flex items-center gap-1.5 text-[12px] text-[#6B7685] hover:text-[#0A2540] transition-colors"
             >
               <LogOut size={15} /> Sign out
             </button>

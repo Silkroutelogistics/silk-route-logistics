@@ -1,27 +1,24 @@
 "use client";
 
-// v3.8.anf — SRL Driver Academy: forced-sequential "slides" player.
+// v3.8.anp — SRL Driver Academy lesson player (slide-deck redesign).
 //
-// Product rule (Wasi): once a course is started, lessons advance FORWARD ONLY —
-// no going back, no skipping ahead — during the first read-through. The driver
-// works through the slides in order. Free review (back/jump) unlocks only once
-// they have been through every slide (or already passed). Resume picks up at the
-// furthest slide reached (server lastLessonOrder / lessonsCompleted), so the lock
-// holds across sessions too.
+// One lesson = one slide (LessonSlide), one quiz question = one slide
+// (QuizSlide) — replaces the flat markdown + all-questions-stacked "exam"
+// layout. The orchestration is unchanged: forced-sequential first read-through
+// (v3.8.anf), CDL gate (403 CDL_REQUIRED, v3.8.ang), server-graded quiz with
+// 409 stale-reload handling, hydrate-once resume (Sub-pattern 10), cert
+// download. Canonical §2.1 tokens throughout.
 //
-// Reads ?slug=... (Suspense + useSearchParams, static-export pattern). Lessons →
-// quiz (server-graded) → results with per-question review + retake. Lives under
-// /driver/dashboard so it inherits the layout's auth gate + header.
+// Reads ?slug=... (Suspense + useSearchParams, static-export pattern). Lives
+// under /driver/dashboard so it inherits the layout's auth gate + header.
 
 import { Suspense, useEffect, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import {
-  Loader2, ChevronLeft, ChevronRight, ArrowLeft, CheckCircle2, XCircle, GraduationCap, RotateCcw, Download, Lock,
-} from "lucide-react";
+import { Loader2, ChevronLeft, ArrowLeft, CheckCircle2, XCircle, GraduationCap, RotateCcw, Download } from "lucide-react";
 import { api } from "@/lib/api";
 import { downloadFromApi } from "@/lib/download";
-import { CarrierCard } from "@/components/carrier";
-import { LessonMarkdown } from "@/components/driver/LessonMarkdown";
+import { LessonSlide } from "@/components/driver/LessonSlide";
+import { QuizSlide } from "@/components/driver/QuizSlide";
 
 interface Lesson { id: string; order: number; title: string; bodyMarkdown: string; estMinutes: number }
 interface Question { id: string; order: number; question: string; options: string[] }
@@ -36,6 +33,9 @@ interface QuizResult { scorePct: number; passed: boolean; passThreshold: number;
 
 type Phase = "lessons" | "quiz" | "results";
 
+const PRIMARY =
+  "inline-flex items-center gap-1.5 rounded-lg bg-[#BA7517] px-5 py-2.5 text-[13.5px] font-semibold text-[#FBF7F0] shadow-[0_2px_8px_rgba(186,117,23,0.28)] transition-all hover:bg-[#a3650f] active:scale-[0.98]";
+
 function CourseContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -48,8 +48,9 @@ function CourseContent() {
 
   const [phase, setPhase] = useState<Phase>("lessons");
   const [lessonIdx, setLessonIdx] = useState(0);
-  const [furthestReached, setFurthestReached] = useState(0); // max lesson index the driver has reached
+  const [furthestReached, setFurthestReached] = useState(0);
   const [passed, setPassed] = useState(false);
+  const [quizIdx, setQuizIdx] = useState(0);
   const [answers, setAnswers] = useState<Record<string, number>>({});
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState<QuizResult | null>(null);
@@ -63,30 +64,21 @@ function CourseContent() {
       .then((r) => {
         if (!active) return;
         const c: Course = r.data.course;
-        const p: Progress | null = r.data.progress;
+        const pr: Progress | null = r.data.progress;
         setCourse(c);
-        // Hydrate once (Sub-pattern 10) — set the resume point + review state from
-        // server progress without clobbering on any later re-render.
+        // Hydrate once (Sub-pattern 10) — resume point + review state from server.
         const total = c.lessons.length;
-        const didPass = p?.status === "PASSED";
-        const completed = p?.lessonsCompleted ?? 0;
+        const didPass = pr?.status === "PASSED";
+        const completed = pr?.lessonsCompleted ?? 0;
         const readThrough = didPass || completed >= total;
         setPassed(!!didPass);
         setFurthestReached(readThrough ? Math.max(0, total - 1) : Math.min(Math.max(0, completed - 1), Math.max(0, total - 1)));
-        if (!didPass && !readThrough && total > 0) {
-          // Resume at the next unread slide (forward-only continues from here).
-          setLessonIdx(Math.min(completed, total - 1));
-        } else {
-          setLessonIdx(0);
-        }
+        setLessonIdx(!didPass && !readThrough && total > 0 ? Math.min(completed, total - 1) : 0);
         setHydrated(true);
         setLoading(false);
       })
       .catch((e) => {
         if (!active) return;
-        // 403 CDL_REQUIRED = the driver's roster record has no valid CDL on file.
-        // The dashboard already blocks the course CTAs; this covers direct
-        // navigation to the player with a friendly, carrier-fixable message.
         const resp = (e as { response?: { status?: number; data?: { code?: string; error?: string } } })?.response;
         if (resp?.status === 403 && resp.data?.code === "CDL_REQUIRED") {
           setError(resp.data.error || "A valid CDL on file is required to start training. Ask your carrier to update your driver record, then refresh.");
@@ -99,14 +91,14 @@ function CourseContent() {
   }, [slug]);
 
   if (loading || !hydrated) {
-    return <div className="flex items-center justify-center py-16"><Loader2 size={28} className="text-[#BA7517] animate-spin" /></div>;
+    return <div className="flex items-center justify-center py-20"><Loader2 size={28} className="animate-spin text-[#BA7517]" /></div>;
   }
   if (error && !course) {
     return (
-      <CarrierCard padding="p-8">
-        <p className="text-center text-sm text-red-600 mb-4">{error || "Course not found."}</p>
-        <div className="text-center"><button onClick={() => router.push("/driver/dashboard")} className="text-[13px] font-medium text-[#BA7517]">← Back to courses</button></div>
-      </CarrierCard>
+      <div className="rounded-2xl border border-[rgba(10,37,64,0.08)] bg-white p-8 shadow-[0_4px_24px_rgba(10,37,64,0.07)]">
+        <p className="mb-4 text-center text-sm text-[#9B2C2C]">{error || "Course not found."}</p>
+        <div className="text-center"><button onClick={() => router.push("/driver/dashboard")} className="text-[13px] font-semibold text-[#BA7517]">← Back to courses</button></div>
+      </div>
     );
   }
   if (!course) return null;
@@ -115,10 +107,6 @@ function CourseContent() {
   const questions = course.questions;
   const hasQuiz = questions.length > 0;
   const allAnswered = hasQuiz && questions.every((q) => answers[q.id] !== undefined);
-
-  // Review (free navigation) unlocks once the driver has been through every slide
-  // (read-through complete) OR already passed. Until then the lessons are
-  // forward-only — no Back, no jumping ahead.
   const reviewMode = passed || furthestReached >= lessons.length - 1;
 
   const recordProgress = (orderViewed: number) => {
@@ -129,30 +117,30 @@ function CourseContent() {
     const next = Math.min(lessons.length - 1, lessonIdx + 1);
     setLessonIdx(next);
     setFurthestReached((f) => Math.max(f, next));
-    recordProgress(next + 1); // 1-based count of slides the driver has now viewed
+    recordProgress(next + 1);
     window.scrollTo({ top: 0 });
   };
 
   const goToQuiz = async () => {
-    // audit F3 — record the full read-through server-side and AWAIT it before the
-    // quiz, so the backend's "complete all lessons" gate never blocks a legit
-    // driver. On failure, stay on the lessons + surface a retry rather than entering
-    // a quiz the server would reject. (Multi-lesson courses are already covered by
-    // the last advance()'s progress POST; this matters most for 1-lesson courses.)
+    // audit F3 — record full read-through server-side AND await it before the
+    // quiz so the backend "complete all lessons" gate never blocks a legit driver.
     try {
       await api.post(`/driver-training/courses/${slug}/lesson-progress`, { lastLessonOrder: lessons.length });
     } catch {
-      setError("Couldn't save your progress. Check your connection and tap Go to quiz again.");
+      setError("Couldn't save your progress. Check your connection and tap again.");
       return;
     }
     setError(null);
     setFurthestReached(lessons.length - 1);
+    setQuizIdx(0);
     setPhase("quiz");
     window.scrollTo({ top: 0 });
   };
 
+  const finishNoQuiz = () => { recordProgress(lessons.length); router.push("/driver/dashboard"); };
+
   const submitQuiz = async () => {
-    if (!allAnswered) { setError("Please answer all questions before submitting."); return; }
+    if (!allAnswered) { setError("Please answer every question before submitting."); return; }
     setSubmitting(true);
     setError(null);
     setStaleReload(false);
@@ -163,8 +151,6 @@ function CourseContent() {
       setPhase("results");
       window.scrollTo({ top: 0 });
     } catch (e) {
-      // 409 = the course was re-authored while the driver was mid-quiz (stale
-      // question ids). Tell them to reload rather than show a cryptic error.
       const status = (e as { response?: { status?: number } })?.response?.status;
       if (status === 409) { setError("This course was updated while you were taking it. Reload to get the latest version."); setStaleReload(true); }
       else setError("Could not submit your quiz. Try again.");
@@ -173,7 +159,7 @@ function CourseContent() {
     }
   };
 
-  const retake = () => { setAnswers({}); setResult(null); setPhase("quiz"); window.scrollTo({ top: 0 }); };
+  const retake = () => { setAnswers({}); setResult(null); setQuizIdx(0); setPhase("quiz"); window.scrollTo({ top: 0 }); };
 
   const downloadCert = async () => {
     setError(null);
@@ -184,209 +170,144 @@ function CourseContent() {
     }
   };
 
-  // ── Header (shared) ───────────────────────────────────────
+  // shared slim header
   const header = (
     <div className="mb-4">
-      <button onClick={() => router.push("/driver/dashboard")} className="flex items-center gap-1 text-[12px] text-gray-500 hover:text-gray-800 mb-3">
+      <button onClick={() => router.push("/driver/dashboard")} className="mb-2 flex items-center gap-1 text-[12px] text-[#6B7685] transition-colors hover:text-[#0A2540]">
         <ArrowLeft size={14} /> All courses
       </button>
-      <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#BA7517]">{course.category}</span>
-      <h1 className="font-serif text-2xl text-[#0F1117]">{course.title}</h1>
+      <h1 className="font-serif text-[17px] leading-tight text-[#0A2540]">{course.title}</h1>
     </div>
   );
 
-  // ── Lessons phase ─────────────────────────────────────────
+  // ── Lessons ───────────────────────────────────────────────
   if (phase === "lessons") {
     const lesson = lessons[lessonIdx];
     const isLast = lessonIdx === lessons.length - 1;
+    const primaryLabel = isLast ? (hasQuiz ? "Go to quiz" : "Finish") : "Next";
+    const onPrimary = isLast ? (hasQuiz ? goToQuiz : finishNoQuiz) : advance;
     return (
       <div>
         {header}
-        {/* step dots — clickable only in review mode */}
-        <div className="flex items-center gap-1.5 mb-2">
-          {lessons.map((l, i) => {
-            const done = i < furthestReached || (reviewMode && i <= furthestReached);
-            const dot = (
-              <span className={`h-1.5 rounded-full transition-all ${i === lessonIdx ? "w-6 bg-[#C9A84C]" : done ? "w-3 bg-[#C9A84C]/50" : "w-3 bg-gray-200"}`} />
-            );
-            return reviewMode
-              ? <button key={l.id} onClick={() => setLessonIdx(i)} aria-label={`Lesson ${i + 1}`}>{dot}</button>
-              : <span key={l.id} aria-label={`Lesson ${i + 1}`}>{dot}</span>;
-          })}
-        </div>
-        {!reviewMode && (
-          <p className="flex items-center gap-1.5 text-[11px] text-gray-400 mb-3">
-            <Lock size={11} /> Work through each lesson in order. You can review freely once you complete the course.
-          </p>
-        )}
-        <CarrierCard padding="p-5">
-          <div className="text-[11px] text-gray-400 mb-1">Lesson {lesson.order} of {lessons.length} · ~{lesson.estMinutes} min</div>
-          <h2 className="font-serif text-lg text-[#0F1117] mb-3">{lesson.title}</h2>
-          <LessonMarkdown text={lesson.bodyMarkdown} />
-        </CarrierCard>
-
-        {error && (
-          <div className="mt-3 px-3 py-2 bg-red-50 border-l-4 border-red-500 text-red-700 text-xs rounded">{error}</div>
-        )}
-
-        <div className="flex items-center justify-between mt-4">
-          {/* Back — only in review mode; forward-only during the first read-through */}
-          {reviewMode ? (
-            <button onClick={() => setLessonIdx((i) => Math.max(0, i - 1))} disabled={lessonIdx === 0}
-              className="flex items-center gap-1 px-3 py-2 text-[13px] text-gray-500 hover:text-gray-800 disabled:opacity-30 disabled:cursor-not-allowed">
-              <ChevronLeft size={16} /> Back
-            </button>
-          ) : <span />}
-          {isLast ? (
-            hasQuiz ? (
-              <button onClick={goToQuiz}
-                className="flex items-center gap-1.5 px-4 py-2 bg-gradient-to-br from-[#C9A84C] to-[#A88535] text-[#0A2540] text-[13px] font-semibold rounded-md hover:shadow-lg transition-shadow">
-                Go to quiz <ChevronRight size={16} />
-              </button>
-            ) : (
-              <button onClick={() => { recordProgress(lessons.length); router.push("/driver/dashboard"); }}
-                className="flex items-center gap-1.5 px-4 py-2 bg-gradient-to-br from-[#C9A84C] to-[#A88535] text-[#0A2540] text-[13px] font-semibold rounded-md hover:shadow-lg transition-shadow">
-                Finish <ChevronRight size={16} />
-              </button>
-            )
-          ) : (
-            <button onClick={advance}
-              className="flex items-center gap-1.5 px-4 py-2 bg-gradient-to-br from-[#C9A84C] to-[#A88535] text-[#0A2540] text-[13px] font-semibold rounded-md hover:shadow-lg transition-shadow">
-              Next <ChevronRight size={16} />
-            </button>
-          )}
-        </div>
-
-        {course.disclaimer && <p className="mt-5 text-[10px] text-gray-400 italic leading-relaxed">{course.disclaimer}</p>}
+        <LessonSlide
+          key={lessonIdx}
+          category={course.category}
+          slug={course.slug}
+          lessonOrder={lesson.order}
+          lessonTitle={lesson.title}
+          bodyMarkdown={lesson.bodyMarkdown}
+          estMinutes={lesson.estMinutes}
+          index={lessonIdx}
+          total={lessons.length}
+          furthestReached={furthestReached}
+          reviewMode={reviewMode}
+          onJump={(i) => { setLessonIdx(i); window.scrollTo({ top: 0 }); }}
+          onBack={() => { setLessonIdx((i) => Math.max(0, i - 1)); window.scrollTo({ top: 0 }); }}
+          onPrimary={onPrimary}
+          primaryLabel={primaryLabel}
+          error={error}
+          disclaimer={course.disclaimer}
+        />
       </div>
     );
   }
 
-  // ── Quiz phase ────────────────────────────────────────────
+  // ── Quiz (one question per slide) ─────────────────────────
   if (phase === "quiz") {
+    const q = questions[Math.min(quizIdx, questions.length - 1)];
+    const answeredCount = questions.filter((qq) => answers[qq.id] !== undefined).length;
     return (
       <div>
         {header}
-        <div className="mb-4 px-3 py-2 bg-[#C9A84C]/5 border border-[#C9A84C]/20 rounded-lg text-[12px] text-gray-600">
-          Answer all {questions.length} questions. You need <span className="font-semibold text-[#0F1117]">{course.passThreshold}%</span> to pass. You can retake it as many times as you need.
-        </div>
-        <div className="space-y-3">
-          {questions.map((q, qi) => (
-            <CarrierCard key={q.id} padding="p-5">
-              <div className="text-[11px] text-gray-400 mb-1">Question {qi + 1} of {questions.length}</div>
-              <p className="text-[14px] font-medium text-[#0F1117] mb-3">{q.question}</p>
-              <div className="space-y-2">
-                {q.options.map((opt, oi) => {
-                  const selected = answers[q.id] === oi;
-                  return (
-                    <button key={oi} onClick={() => setAnswers((a) => ({ ...a, [q.id]: oi }))}
-                      className={`w-full text-left px-3 py-2.5 rounded-lg border text-[13px] transition-colors ${selected ? "border-[#C9A84C] bg-[#C9A84C]/10 text-[#0F1117] font-medium" : "border-gray-200 text-gray-600 hover:border-gray-300 hover:bg-gray-50"}`}>
-                      <span className={`inline-flex items-center justify-center w-5 h-5 rounded-full border mr-2 text-[10px] font-semibold ${selected ? "border-[#C9A84C] bg-[#C9A84C] text-white" : "border-gray-300 text-gray-400"}`}>
-                        {String.fromCharCode(65 + oi)}
-                      </span>
-                      {opt}
-                    </button>
-                  );
-                })}
-              </div>
-            </CarrierCard>
-          ))}
-        </div>
-
-        {error && (
-          <div className="mt-3 px-3 py-2 bg-red-50 border-l-4 border-red-500 text-red-700 text-xs rounded flex items-center justify-between gap-3">
-            <span>{error}</span>
-            {staleReload && <button onClick={() => window.location.reload()} className="shrink-0 font-semibold underline">Reload</button>}
-          </div>
-        )}
-
-        <div className="flex items-center justify-between mt-4">
-          {/* Review-lessons only once the read-through is complete (it is, by quiz time) */}
-          {reviewMode ? (
-            <button onClick={() => setPhase("lessons")} className="flex items-center gap-1 px-3 py-2 text-[13px] text-gray-500 hover:text-gray-800">
-              <ChevronLeft size={16} /> Review lessons
-            </button>
-          ) : <span />}
-          <button onClick={submitQuiz} disabled={!allAnswered || submitting}
-            className="flex items-center gap-1.5 px-5 py-2 bg-gradient-to-br from-[#C9A84C] to-[#A88535] text-[#0A2540] text-[13px] font-semibold rounded-md hover:shadow-lg transition-shadow disabled:opacity-40 disabled:cursor-not-allowed">
-            {submitting && <Loader2 size={14} className="animate-spin" />} Submit quiz
-          </button>
-        </div>
-        {!allAnswered && <p className="text-right text-[11px] text-gray-400 mt-1">Answer all questions to submit</p>}
+        <QuizSlide
+          key={q.id}
+          question={q}
+          index={quizIdx}
+          total={questions.length}
+          selected={answers[q.id] ?? null}
+          onSelect={(oi) => setAnswers((a) => ({ ...a, [q.id]: oi }))}
+          onBack={() => {
+            if (quizIdx === 0) { setPhase("lessons"); setLessonIdx(0); window.scrollTo({ top: 0 }); }
+            else { setQuizIdx((i) => Math.max(0, i - 1)); window.scrollTo({ top: 0 }); }
+          }}
+          onNext={() => { setQuizIdx((i) => Math.min(questions.length - 1, i + 1)); window.scrollTo({ top: 0 }); }}
+          onSubmit={submitQuiz}
+          submitting={submitting}
+          passThreshold={course.passThreshold}
+          answeredCount={answeredCount}
+          error={error}
+          staleReload={staleReload}
+          onReload={() => window.location.reload()}
+        />
       </div>
     );
   }
 
-  // ── Results phase ─────────────────────────────────────────
-  const r = result!;
-  const byId = new Map(r.review.map((x) => [x.questionId, x]));
+  // ── Results ───────────────────────────────────────────────
+  const res = result!;
+  const byId = new Map(res.review.map((x) => [x.questionId, x]));
   return (
     <div>
       {header}
-      <CarrierCard padding="p-6" className={r.passed ? "border-green-200" : "border-amber-200"}>
-        <div className="text-center">
-          {r.passed
-            ? <CheckCircle2 size={40} className="mx-auto text-green-600 mb-2" />
-            : <GraduationCap size={40} className="mx-auto text-[#BA7517] mb-2" />}
-          <div className="font-serif text-3xl text-[#0F1117]">{r.scorePct}%</div>
-          <div className={`text-sm font-semibold mt-1 ${r.passed ? "text-green-700" : "text-amber-700"}`}>
-            {r.passed ? "Passed — course complete" : `Not quite — you need ${r.passThreshold}%`}
+      <div className={`srl-slide-in overflow-hidden rounded-2xl border bg-white shadow-[0_4px_24px_rgba(10,37,64,0.07)] ${res.passed ? "border-[#2F7A4F]/30" : "border-[#B07A1A]/30"}`}>
+        <div className={`px-6 py-7 text-center ${res.passed ? "bg-[#E6F0E9]" : "bg-[#FBEFD4]"}`}>
+          {res.passed
+            ? <CheckCircle2 size={42} className="mx-auto mb-2 text-[#2F7A4F]" />
+            : <GraduationCap size={42} className="mx-auto mb-2 text-[#B07A1A]" />}
+          <div className="font-serif text-[40px] leading-none text-[#0A2540]">{res.scorePct}%</div>
+          <div className={`mt-1.5 text-sm font-semibold ${res.passed ? "text-[#2F7A4F]" : "text-[#B07A1A]"}`}>
+            {res.passed ? "Passed — course complete" : `Not quite — you need ${res.passThreshold}%`}
           </div>
-          <div className="text-[12px] text-gray-500 mt-1">{r.correct} of {r.total} correct</div>
+          <div className="mt-1 text-[12px] text-[#6B7685]">{res.correct} of {res.total} correct</div>
         </div>
-      </CarrierCard>
+      </div>
 
-      {/* per-question review */}
-      <div className="space-y-3 mt-4">
+      <h3 className="mb-2 mt-5 text-[11px] font-semibold uppercase tracking-[0.16em] text-[#BA7517]">Review</h3>
+      <div className="space-y-3">
         {questions.map((q, qi) => {
           const rv = byId.get(q.id);
           if (!rv) return null;
           return (
-            <CarrierCard key={q.id} padding="p-5">
-              <div className="flex items-start gap-2 mb-2">
-                {rv.isCorrect ? <CheckCircle2 size={16} className="text-green-600 shrink-0 mt-0.5" /> : <XCircle size={16} className="text-red-500 shrink-0 mt-0.5" />}
-                <p className="text-[14px] font-medium text-[#0F1117]">Q{qi + 1}. {q.question}</p>
+            <article key={q.id} className="rounded-xl border border-[rgba(10,37,64,0.08)] bg-white p-4 shadow-[0_1px_3px_rgba(10,37,64,0.04)]">
+              <div className="mb-2 flex items-start gap-2">
+                {rv.isCorrect ? <CheckCircle2 size={16} className="mt-0.5 shrink-0 text-[#2F7A4F]" /> : <XCircle size={16} className="mt-0.5 shrink-0 text-[#9B2C2C]" />}
+                <p className="text-[14px] font-medium text-[#0A2540]">Q{qi + 1}. {q.question}</p>
               </div>
-              <div className="space-y-1.5 ml-6">
+              <div className="ml-6 space-y-1.5">
                 {q.options.map((opt, oi) => {
                   const isCorrect = rv.correctIndex >= 0 && rv.correctIndex < q.options.length && oi === rv.correctIndex;
                   const isGiven = rv.given != null && oi === rv.given;
                   return (
-                    <div key={oi} className={`px-3 py-1.5 rounded-md text-[12px] border ${isCorrect ? "border-green-300 bg-green-50 text-green-800" : isGiven ? "border-red-300 bg-red-50 text-red-700" : "border-transparent text-gray-500"}`}>
-                      <span className="font-semibold mr-1">{String.fromCharCode(65 + oi)}.</span>{opt}
+                    <div key={oi} className={`rounded-md border px-3 py-1.5 text-[12px] ${isCorrect ? "border-[#2F7A4F]/40 bg-[#E6F0E9] text-[#2F7A4F]" : isGiven ? "border-[#9B2C2C]/40 bg-[#F6E3E3] text-[#9B2C2C]" : "border-transparent text-[#6B7685]"}`}>
+                      <span className="mr-1 font-semibold">{String.fromCharCode(65 + oi)}.</span>{opt}
                       {isCorrect && <span className="ml-1 text-[10px] font-semibold uppercase">✓ correct</span>}
                       {isGiven && !isCorrect && <span className="ml-1 text-[10px] font-semibold uppercase">your answer</span>}
                     </div>
                   );
                 })}
               </div>
-              {rv.explanation && <p className="ml-6 mt-2 text-[12px] text-gray-500 italic">{rv.explanation}</p>}
-            </CarrierCard>
+              {rv.explanation && <p className="ml-6 mt-2 text-[12px] italic text-[#6B7685]">{rv.explanation}</p>}
+            </article>
           );
         })}
       </div>
 
-      <div className="flex items-center justify-between mt-5">
-        {/* Review unlocks after the read-through (which is complete by results) */}
-        <button onClick={() => { setPhase("lessons"); setLessonIdx(0); }} className="flex items-center gap-1 px-3 py-2 text-[13px] text-gray-500 hover:text-gray-800">
+      {error && <div className="mt-3 rounded-lg border-l-4 border-[#9B2C2C] bg-[#F6E3E3] px-3 py-2 text-xs text-[#9B2C2C]">{error}</div>}
+
+      <div className="mt-5 flex items-center justify-between">
+        <button onClick={() => { setPhase("lessons"); setLessonIdx(0); window.scrollTo({ top: 0 }); }} className="flex items-center gap-1 rounded-lg px-3 py-2.5 text-[13px] text-[#6B7685] transition-colors hover:bg-[#F5EEE0]">
           <ChevronLeft size={16} /> Review lessons
         </button>
-        {r.passed ? (
+        {res.passed ? (
           <div className="flex items-center gap-2">
             <button type="button" onClick={downloadCert}
-              className="flex items-center gap-1.5 px-4 py-2 border border-[#C9A84C]/50 text-[#BA7517] text-[13px] font-semibold rounded-md hover:bg-[#C9A84C]/10 transition-colors">
+              className="flex items-center gap-1.5 rounded-lg border border-[#C5A572] px-4 py-2.5 text-[13px] font-semibold text-[#BA7517] transition-colors hover:bg-[#FAEEDA]">
               <Download size={14} /> Certificate
             </button>
-            <button onClick={() => router.push("/driver/dashboard")}
-              className="px-5 py-2 bg-gradient-to-br from-[#C9A84C] to-[#A88535] text-[#0A2540] text-[13px] font-semibold rounded-md hover:shadow-lg transition-shadow">
-              Back to courses
-            </button>
+            <button onClick={() => router.push("/driver/dashboard")} className={PRIMARY}>Back to courses</button>
           </div>
         ) : (
-          <button onClick={retake}
-            className="flex items-center gap-1.5 px-5 py-2 bg-gradient-to-br from-[#C9A84C] to-[#A88535] text-[#0A2540] text-[13px] font-semibold rounded-md hover:shadow-lg transition-shadow">
-            <RotateCcw size={14} /> Retake quiz
-          </button>
+          <button onClick={retake} className={PRIMARY}><RotateCcw size={14} /> Retake quiz</button>
         )}
       </div>
     </div>
@@ -395,7 +316,7 @@ function CourseContent() {
 
 export default function DriverCoursePage() {
   return (
-    <Suspense fallback={<div className="flex items-center justify-center py-16"><Loader2 size={28} className="text-[#BA7517] animate-spin" /></div>}>
+    <Suspense fallback={<div className="flex items-center justify-center py-20"><Loader2 size={28} className="animate-spin text-[#BA7517]" /></div>}>
       <CourseContent />
     </Suspense>
   );

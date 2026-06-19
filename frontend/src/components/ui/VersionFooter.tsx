@@ -13095,7 +13095,22 @@
 //   survive posture). New Trash2 button in the roster action cell with a confirm +
 //   the 409 reason surfaced via the existing rowError. Gates: backend tsc + vitest
 //   295/295 + frontend tsc + next build (115) clean. Per §3.1: ann → ano.
-export const SRL_VERSION = "3.8.ano";
+// v3.8.anp — SRL Driver Academy lesson player redesign (slide deck). The flat
+//   markdown-in-a-card lessons + all-questions-stacked "exam" quiz are replaced
+//   by one-lesson-per-slide + one-question-per-slide. New rich content renderer
+//   (LessonMarkdown rewrite): "**Lead.** body" paragraphs → gold-accent rule
+//   cards, "- " bullets → gold-check list, "> " → muted disclaimer callout,
+//   inline **bold** + *italic*. New LessonSlide + QuizSlide presentational
+//   components + courseIcon map + srl-slide-in entrance keyframe (globals.css,
+//   prefers-reduced-motion safe). Course list redesigned (icon chips, progress
+//   bars, completion summary). Whole driver portal (player, list, layout, login,
+//   set-pin) migrated legacy olive-gold #C9A84C/#A88535 + #0F1117 + #faf9f7 →
+//   canonical §2.1 (navy #0A2540, gold #C5A572 / gold-dark #BA7517, cream
+//   #FBF7F0). All player behavior preserved: forced-sequential first read-through
+//   (anf), CDL 403 gate (ang), server-graded quiz + 409 stale-reload, hydrate-once
+//   resume, F3 read-through await, cert download. Previewed live via temp harness
+//   (removed). Per §3.1: ano → anp.
+export const SRL_VERSION = "3.8.anp";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

@@ -45,7 +45,7 @@ function SetPinContent() {
     return (
       <div className="w-full max-w-md text-center">
         <div className="bg-white border border-gray-100 rounded-2xl p-8 shadow-sm">
-          <h1 className="font-serif text-xl text-[#0F1117] mb-2">Invalid setup link</h1>
+          <h1 className="font-serif text-xl text-[#0A2540] mb-2">Invalid setup link</h1>
           <p className="text-sm text-gray-500">
             This link is missing its setup code. Ask your carrier to send you a fresh SRL Driver Academy invite.
           </p>
@@ -59,7 +59,7 @@ function SetPinContent() {
       <div className="w-full max-w-md text-center">
         <div className="bg-white border border-gray-100 rounded-2xl p-8 shadow-sm">
           <CheckCircle2 size={40} className="mx-auto text-[#2F7A4F] mb-3" />
-          <h1 className="font-serif text-xl text-[#0F1117] mb-1">You&apos;re all set</h1>
+          <h1 className="font-serif text-xl text-[#0A2540] mb-1">You&apos;re all set</h1>
           <p className="text-sm text-gray-500">Taking you to your training portal…</p>
         </div>
       </div>
@@ -69,10 +69,10 @@ function SetPinContent() {
   return (
     <div className="w-full max-w-md">
       <div className="text-center mb-8">
-        <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-br from-[#C9A84C] to-[#A88535] mb-4">
-          <GraduationCap size={28} className="text-[#0F1117]" />
+        <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-[#0A2540] mb-4">
+          <GraduationCap size={28} className="text-[#C5A572]" />
         </div>
-        <h1 className="font-serif text-2xl text-[#0F1117]">Set your PIN</h1>
+        <h1 className="font-serif text-2xl text-[#0A2540]">Set your PIN</h1>
         <p className="text-sm text-gray-500 mt-1">Create a 6-digit PIN to access your driver training</p>
       </div>
 
@@ -86,7 +86,7 @@ function SetPinContent() {
             value={pin}
             onChange={(e) => { setPin(e.target.value.replace(/\D/g, "").slice(0, 6)); if (error) setError(null); }}
             placeholder="••••••"
-            className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3.5 text-sm text-gray-900 tracking-[0.4em] outline-none transition-all placeholder:text-gray-400 placeholder:tracking-normal focus:border-[#C9A84C] focus:shadow-[0_0_0_3px_rgba(201,168,76,0.1)]"
+            className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3.5 text-sm text-gray-900 tracking-[0.4em] outline-none transition-all placeholder:text-gray-400 placeholder:tracking-normal focus:border-[#BA7517] focus:shadow-[0_0_0_3px_rgba(197,165,114,0.4)]"
           />
         </div>
 
@@ -99,7 +99,7 @@ function SetPinContent() {
             value={confirm}
             onChange={(e) => { setConfirm(e.target.value.replace(/\D/g, "").slice(0, 6)); if (error) setError(null); }}
             placeholder="••••••"
-            className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3.5 text-sm text-gray-900 tracking-[0.4em] outline-none transition-all placeholder:text-gray-400 placeholder:tracking-normal focus:border-[#C9A84C] focus:shadow-[0_0_0_3px_rgba(201,168,76,0.1)]"
+            className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3.5 text-sm text-gray-900 tracking-[0.4em] outline-none transition-all placeholder:text-gray-400 placeholder:tracking-normal focus:border-[#BA7517] focus:shadow-[0_0_0_3px_rgba(197,165,114,0.4)]"
           />
           {confirm.length > 0 && !matches && (
             <p className="text-[11px] text-red-600 mt-1">PINs don&apos;t match</p>
@@ -113,7 +113,7 @@ function SetPinContent() {
         <button
           type="submit"
           disabled={!canSubmit || submitting}
-          className="w-full py-3.5 text-[15px] font-semibold rounded-xl border-none cursor-pointer transition-all duration-200 bg-gradient-to-r from-[#C9A84C] to-[#d4b85e] text-[#0F1117] shadow-[0_4px_12px_rgba(201,168,76,0.25)] hover:-translate-y-0.5 hover:shadow-[0_6px_20px_rgba(201,168,76,0.35)] disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:translate-y-0 flex items-center justify-center gap-2"
+          className="w-full py-3.5 text-[15px] font-semibold rounded-xl border-none cursor-pointer transition-all duration-200 bg-[#BA7517] text-[#FBF7F0] shadow-[0_4px_12px_rgba(186,117,23,0.28)] hover:-translate-y-0.5 hover:bg-[#a3650f] hover:shadow-[0_6px_20px_rgba(186,117,23,0.35)] disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:translate-y-0 flex items-center justify-center gap-2"
         >
           {submitting && <Loader2 size={16} className="animate-spin" />}
           Activate My Account
@@ -129,7 +129,7 @@ function SetPinContent() {
 
 export default function SetPinPage() {
   return (
-    <div className="min-h-screen flex items-center justify-center px-4" style={{ backgroundColor: "#faf9f7" }}>
+    <div className="min-h-screen flex items-center justify-center px-4" style={{ backgroundColor: "#FBF7F0" }}>
       <Suspense fallback={<Loader2 size={36} className="text-[#BA7517] animate-spin" />}>
         <SetPinContent />
       </Suspense>
