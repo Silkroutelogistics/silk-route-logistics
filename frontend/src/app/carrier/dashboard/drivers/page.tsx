@@ -11,7 +11,7 @@ import { useState, Fragment } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Users, Plus, X, Pencil, UserX, UserCheck, GraduationCap, Loader2, Phone, IdCard,
-  Send, Copy, Check, KeyRound,
+  Send, Copy, Check, KeyRound, Trash2,
 } from "lucide-react";
 import { api } from "@/lib/api";
 import { CarrierCard } from "@/components/carrier";
@@ -148,6 +148,18 @@ export default function CarrierDriversPage() {
       queryClient.invalidateQueries({ queryKey: ["carrier-drivers"] });
     },
     onError: (err) => setRowError(extractError(err, "Could not update the driver's status.")),
+  });
+
+  // Permanent delete — backend hard-deletes only when the driver has no history
+  // (training/loads/shipments); otherwise it 409s with "deactivate instead" which
+  // extractError surfaces as the row error.
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => api.delete(`/carrier-drivers/${id}`),
+    onSuccess: () => {
+      setRowError(null);
+      queryClient.invalidateQueries({ queryKey: ["carrier-drivers"] });
+    },
+    onError: (err) => setRowError(extractError(err, "Could not delete the driver.")),
   });
 
   // v3.8.amz — Training invite. Always returns the invite URL (copy-link
@@ -458,6 +470,18 @@ export default function CarrierDriversPage() {
                               <UserX size={14} />
                             </button>
                           )}
+                          <button
+                            onClick={() => {
+                              if (confirm(`Delete ${d.firstName} ${d.lastName} from your roster? This permanently removes the driver. It only works if they have no training or load history — otherwise deactivate them instead.`)) {
+                                deleteMutation.mutate(d.id);
+                              }
+                            }}
+                            disabled={deleteMutation.isPending}
+                            title="Delete driver"
+                            className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+                          >
+                            <Trash2 size={14} />
+                          </button>
                         </div>
                       </td>
                     </tr>

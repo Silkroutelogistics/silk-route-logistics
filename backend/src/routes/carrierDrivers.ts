@@ -275,6 +275,43 @@ router.patch("/:id/reactivate", async (req: AuthRequest, res: Response) => {
   res.json({ driver });
 });
 
+// DELETE /api/carrier-drivers/:id — permanently remove a roster driver.
+// v3.8.* (carrier request) — available to every carrier for their OWN roster
+// (getApprovedProfile + getOwnedDriver scope it). Allowed ONLY when the driver
+// has NO history: no training progress/attempts, no loads, no shipments — i.e. a
+// mistaken or duplicate add. A driver WITH any history must be DEACTIVATED instead
+// (409 DRIVER_HAS_HISTORY) so training/load records can never be silently destroyed
+// (T1 "records must survive roster churn"). The hard delete is safe here precisely
+// because the no-history guard guarantees nothing references the row.
+router.delete("/:id", async (req: AuthRequest, res: Response) => {
+  const profile = await getApprovedProfile(req, res);
+  if (!profile) return;
+
+  const owned = await getOwnedDriver(profile.id, req.params.id);
+  if (!owned) {
+    res.status(404).json({ error: "Driver not found" });
+    return;
+  }
+
+  const [courseProgress, attempts, loads, shipments] = await Promise.all([
+    prisma.driverCourseProgress.count({ where: { driverId: owned.id } }),
+    prisma.trainingAttempt.count({ where: { driverId: owned.id } }),
+    prisma.load.count({ where: { driverId: owned.id } }),
+    prisma.shipment.count({ where: { driverId: owned.id } }),
+  ]);
+
+  if (courseProgress > 0 || attempts > 0 || loads > 0 || shipments > 0) {
+    res.status(409).json({
+      error: "This driver has training or load history and can't be deleted. Deactivate them instead — their records stay intact and they can be reactivated anytime.",
+      code: "DRIVER_HAS_HISTORY",
+    });
+    return;
+  }
+
+  await prisma.driver.delete({ where: { id: owned.id } });
+  res.json({ deleted: true, id: owned.id });
+});
+
 // POST /api/carrier-drivers/:id/invite — send (or re-send) the SRL Driver
 // Academy training-login invite. Mints a 7-day invite token, fires an SMS
 // to the driver's phone (graceful — never blocks on OpenPhone), and ALWAYS

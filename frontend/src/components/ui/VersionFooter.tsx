@@ -13086,7 +13086,16 @@
 //   OpenPhone API use. A2P brand+campaign+STIR/SHAKEN were already Approved; the
 //   number is messaging-enabled — auth was the only blocker. Gates: backend tsc +
 //   vitest 295/295 clean. Per §3.1: anm → ann.
-export const SRL_VERSION = "3.8.ann";
+// v3.8.ano — Delete-driver CTA on the carrier roster (all carriers). New
+//   DELETE /api/carrier-drivers/:id (carrier-owned via getApprovedProfile +
+//   getOwnedDriver) hard-deletes a roster driver ONLY when they have no history
+//   (no training progress/attempts, no loads, no shipments) — a mistaken/duplicate
+//   add; a driver WITH any history returns 409 DRIVER_HAS_HISTORY ("deactivate
+//   instead") so training/load records are never silently destroyed (T1 records-
+//   survive posture). New Trash2 button in the roster action cell with a confirm +
+//   the 409 reason surfaced via the existing rowError. Gates: backend tsc + vitest
+//   295/295 + frontend tsc + next build (115) clean. Per §3.1: ann → ano.
+export const SRL_VERSION = "3.8.ano";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
