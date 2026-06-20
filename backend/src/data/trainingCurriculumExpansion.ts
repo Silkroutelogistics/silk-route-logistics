@@ -23,9 +23,9 @@ export const EXPANSION: CurriculumCourse[] = [
     slug: "driver-qualification",
     title: "CDL, Medical Card & the Clearinghouse",
     category: "Driver Qualification & Health",
-    summary: "Keeping your CDL and medical card valid, the notifications you owe your employer, and how the drug & alcohol program and Clearinghouse work.",
-    version: "1",
-    estMinutes: 16,
+    summary: "Keeping your CDL and medical card valid, the notifications you owe your employer, how the drug & alcohol program and Clearinghouse work, and the offenses that disqualify you.",
+    version: "2",
+    estMinutes: 17,
     passThreshold: 80,
     validityMonths: 12,
     sortOrder: 2,
@@ -55,17 +55,27 @@ export const EXPANSION: CurriculumCourse[] = [
       {
         order: 4,
         title: "Disqualifying offenses (awareness)",
-        estMinutes: 3,
-        bodyMarkdown:
-          "Some offenses cost you the CDL.\n\n**Major offenses** (DUI in any vehicle, leaving the scene of an accident, using a CMV in a felony, driving a CMV with a revoked CDL, causing a fatality through negligent operation) bring at least a **1-year disqualification** (3 years if carrying placarded hazmat). A **second** major offense is a **lifetime** disqualification.\n\n**Serious traffic violations** (excessive speeding 15+ mph over, reckless driving, improper or erratic lane changes, following too closely, texting or hand-held phone use while driving a CMV, violating a CMV traffic law in connection with a fatal accident) bring a **60-day** disqualification for a second within 3 years, **120 days** for a third.\n\n**Railroad-crossing** and **out-of-service-order** violations carry their own disqualification periods. The takeaway: your driving record on and off the clock is your livelihood.",
+        estMinutes: 4,
+        bodyMarkdown: `Some offenses cost you the CDL. The disqualification periods are set in **49 CFR 383.51**.
+
+**Major offenses** (DUI in any vehicle, refusing a test, leaving the scene, using a CMV in a felony, driving a CMV on a revoked/suspended CDL, causing a fatality by negligent operation): at least a **1-year disqualification** — **3 years** if you were hauling placarded hazmat. A **second** major offense is a **lifetime** disqualification.
+
+**Serious traffic violations** (15+ mph over, reckless driving, erratic lane changes, following too closely, texting or hand-held phone use in a CMV, no CDL in your possession, a traffic violation tied to a fatal accident): a **single** one is not disqualifying, but a **second within 3 years = 60 days**, and a **third within 3 years = 120 days**.
+
+**Out-of-service-order violations:** a first conviction is **90 days to 1 year** (longer — 180 days to 2 years — if you were hauling hazmat or 15+ passengers); repeat violations run into multiple years.
+
+**Railroad-grade-crossing violations:** **at least 60 days** for a first, **at least 120 days** for a second within 3 years, and **at least 1 year** for a third within 3 years.
+
+The takeaway: your driving record, on and off the clock, is your livelihood.`,
       },
     ],
     questions: [
-      { order: 1, question: "Within how long must you notify your employer of a traffic conviction (any vehicle, any state)?", options: ["30 days", "60 days", "90 days", "Only if it was in the CMV"], correctIndex: 0, explanation: "49 CFR 383.31 requires notice to your employer within 30 days of a conviction for any traffic violation except parking." },
+      { order: 1, question: "Within how long must you notify your employer of a traffic conviction?", options: ["by the end of the next business day", "within 30 days", "within 90 days", "only if the conviction was in your CMV"], correctIndex: 1, explanation: "49 CFR 383.31 requires notifying your employer within 30 days of a conviction for any traffic violation in ANY vehicle, in any state, except parking. (A license suspension or disqualification is a faster notice — by the next business day.)" },
       { order: 2, question: "What is the maximum blood alcohol concentration allowed while performing safety-sensitive functions?", options: ["0.02", "0.04", "0.08", "Anything under 0.10"], correctIndex: 1, explanation: "Part 382 prohibits performing safety-sensitive functions at 0.04 BAC or higher." },
       { order: 3, question: "Refusing a required DOT drug or alcohol test is treated as:", options: ["No consequence", "A positive test / violation", "A warning only", "Allowed once per year"], correctIndex: 1, explanation: "Under Part 382 a refusal is treated the same as a positive result." },
       { order: 4, question: "A driver with an unresolved Clearinghouse drug/alcohol violation may:", options: ["Keep driving normally", "Not perform safety-sensitive functions until return-to-duty is complete", "Drive only locally", "Drive with a co-driver"], correctIndex: 1, explanation: "A recorded violation bars safety-sensitive functions until the return-to-duty process is completed." },
       { order: 5, question: "Your DOT medical certificate has expired with no valid card on file. You:", options: ["Can drive 30 more days", "Are not medically qualified to drive a CMV until you recertify", "Only need it for hazmat", "Are fine for short hauls"], correctIndex: 1, explanation: "Without a current medical certificate you are not medically qualified, and your CDL can be downgraded until you recertify." },
+      { order: 6, question: "A first conviction for violating an out-of-service order disqualifies a driver for:", options: ["a written warning only", "90 days to 1 year", "exactly 30 days", "a lifetime"], correctIndex: 1, explanation: "Per 49 CFR 383.51, a first out-of-service-order violation is 90 days to 1 year (longer if hauling hazmat or 15+ passengers). A lifetime ban is reserved for a second major offense such as DUI." },
     ],
   },
 
@@ -199,7 +209,7 @@ To haul a **placarded** amount you need a **hazmat (H) endorsement** on your CDL
     title: "Pre-Trip & Post-Trip Inspection + DVIR",
     category: "Vehicle & Cargo Safety",
     summary: "The legal duty to inspect, a systematic pre-trip walk-around, and the post-trip Driver Vehicle Inspection Report when you find a defect.",
-    version: "1",
+    version: "2",
     estMinutes: 16,
     passThreshold: 80,
     validityMonths: 12,
@@ -229,11 +239,11 @@ To haul a **placarded** amount you need a **hazmat (H) endorsement** on your CDL
       },
     ],
     questions: [
-      { order: 1, question: "Before driving, 49 CFR 396.13 requires you to:", options: ["Nothing", "Review the last DVIR and confirm noted defects were corrected", "Call dispatch", "Weigh the truck"], correctIndex: 1, explanation: "396.13 requires the driver to review the previous DVIR and be satisfied any noted defects were repaired before driving." },
-      { order: 2, question: "The in-cab air-brake portion of a pre-trip includes:", options: ["Only honking the horn", "Low-air warning, governor cut-in/out, leak-down, and parking-brake checks", "Checking the radio", "Nothing — air brakes are automatic"], correctIndex: 1, explanation: "The air-brake check covers the low-air warning, governor cut-in/out, applied-pressure leak-down, and the parking/tractor-protection function." },
-      { order: 3, question: "You find a steer-axle tire with exposed cord. You should:", options: ["Drive carefully to the shop", "Not drive until it is corrected — it is an out-of-service condition", "Air it up and go", "Note it next week"], correctIndex: 1, explanation: "A tire with exposed cord (or below minimum tread on a steer axle) is an out-of-service condition; the truck does not roll until it's fixed." },
-      { order: 4, question: "The post-trip Driver Vehicle Inspection Report (DVIR) is required when:", options: ["Every fuel stop", "A defect or deficiency affecting safe operation is found", "Only monthly", "Never"], correctIndex: 1, explanation: "Under 396.11 a DVIR must document any defect or deficiency that would affect safe operation." },
-      { order: 5, question: "Your duty to be satisfied the vehicle is safe before driving comes from:", options: ["State law only", "49 CFR 392.7", "The bill of lading", "Nowhere in particular"], correctIndex: 1, explanation: "49 CFR 392.7 prohibits driving unless the driver is satisfied the vehicle is in safe operating condition." },
+      { order: 1, question: "Before you drive, 49 CFR 396.13 requires you to:", options: ["review the previous DVIR and confirm any noted defects were repaired", "complete a fresh post-trip DVIR for the last driver", "weigh the truck at the nearest certified scale", "re-torque all the wheel lug nuts"], correctIndex: 0, explanation: "396.13 requires reviewing the LAST driver's DVIR and being satisfied any noted defects were corrected before driving. The post-trip DVIR (396.11) is a separate, end-of-day duty." },
+      { order: 2, question: "The in-cab air-brake portion of a pre-trip checks the:", options: ["low-air warning, governor cut-in/out, leak-down, and parking brake", "engine oil, coolant, and belt tension", "trailer weight and axle distribution", "ELD, GPS, and dash-cam connections"], correctIndex: 0, explanation: "The air-brake check confirms the low-air warning activates, the governor cuts in/out in range, the applied-pressure leak-down is within limits, and the parking/tractor-protection holds." },
+      { order: 3, question: "On your walk-around you find a steer-axle tire with exposed cord. You:", options: ["air it up to spec and drive to the next shop", "do not drive — exposed cord is an out-of-service condition", "log it on tonight's DVIR and finish the run", "move it to a trailer position and roll"], correctIndex: 1, explanation: "A steer tire with exposed cord (or below-minimum tread) is an out-of-service condition — the truck does not move until it's corrected. Steer-tire failures are especially dangerous." },
+      { order: 4, question: "A post-trip Driver Vehicle Inspection Report (DVIR) must be completed when:", options: ["the truck is refueled at the end of a shift", "a defect affecting safe operation is found", "the odometer reaches a scheduled service interval", "a different trailer is hooked for the next load"], correctIndex: 1, explanation: "Under 49 CFR 396.11 the post-trip DVIR documents any defect or deficiency affecting safe operation. Many fleets also log a no-defect report by policy." },
+      { order: 5, question: "Your legal duty to be satisfied the vehicle is safe before driving comes from:", options: ["the shipper's bill of lading", "49 CFR 392.7", "the truck's owner's manual", "your dispatcher's instructions"], correctIndex: 1, explanation: "49 CFR 392.7 prohibits driving unless the driver is satisfied the vehicle and its equipment are in safe operating condition." },
     ],
   },
 

@@ -13165,7 +13165,19 @@
 //   400+ ft at 55 mph, FMCSA), the empty-truck-needs-more point, and the CDL following
 //   rule; quiz adds two real stopping-distance items. Content files only — live via
 //   prod re-seed. Per §3.1: ant → anu.
-export const SRL_VERSION = "3.8.anu";
+// v3.8.anv — SRL Driver Academy quiz/content overhaul, batch 3a (3 more courses).
+//   (1) driver-qualification — deepened lesson 4 with the verified 49 CFR 383.51
+//   disqualification periods that were name-dropped but missing (major 1yr/3yr-hazmat/
+//   lifetime; serious 2nd-in-3yr=60d / 3rd=120d with a single one NOT disqualifying;
+//   OOS-order 90d-1yr web-verified — NOT 180d, which is the hazmat/passenger case;
+//   railroad-crossing 60/120d/1yr); Q1 stem-cue removed + added a disqualification
+//   question. (2) pre-post-trip-inspection — quiz fully recalibrated (it was the worst
+//   "longest-option-is-correct" leak: every distractor a one-word throwaway); now
+//   near-neighbor distractors, balanced lengths, some correct answers the shortest.
+//   (3) fraud-awareness — quiz distractors changed to real false-comfort traps (high
+//   rate / nice website / on a load board) instead of absurd one-liners. Content files
+//   only — live via prod re-seed. 8 of 22 courses now overhauled. Per §3.1: anu → anv.
+export const SRL_VERSION = "3.8.anv";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
