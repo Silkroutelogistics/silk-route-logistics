@@ -19,6 +19,7 @@
 import QRCode from 'qrcode';
 
 const TRACK_BASE_URL = 'https://silkroutelogistics.ai/track';
+const VERIFY_CERT_BASE_URL = 'https://silkroutelogistics.ai/verify-cert';
 
 export async function generateBOLQRBuffer(token: string): Promise<Buffer> {
   const url = `${TRACK_BASE_URL}/${token}`;
@@ -28,5 +29,22 @@ export async function generateBOLQRBuffer(token: string): Promise<Buffer> {
     width: 240,
     margin: 1,
     color: { dark: '#0A2540', light: '#FBF7F0' },
+  });
+}
+
+/**
+ * v3.8.aob (Sprint E1) — QR for the public certificate-verification URL
+ * (`/verify-cert/<code>`) printed on SRL Driver Academy completion certificates.
+ * A shipper/auditor/insurer scans it to confirm the cert is genuine. White field
+ * so it reads cleanly on the cert's cream/white page.
+ */
+export async function generateCertVerifyQRBuffer(code: string): Promise<Buffer> {
+  const url = `${VERIFY_CERT_BASE_URL}/${code}`;
+  return QRCode.toBuffer(url, {
+    errorCorrectionLevel: 'M',
+    type: 'png',
+    width: 240,
+    margin: 1,
+    color: { dark: '#0A2540', light: '#FFFFFF' },
   });
 }

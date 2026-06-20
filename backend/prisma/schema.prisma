@@ -2743,6 +2743,11 @@ model DriverCourseProgress {
   // Document.id of the issued completion certificate (T5). Soft reference
   // (no FK relation) to avoid coupling to the heavily-related Document model.
   certificateDocumentId String?
+  // v3.8.aob (Sprint E1) — public certificate-verification code. Lazily minted
+  // the first time a cert is generated for this completion; printed (+ QR) on the
+  // cert PDF so a shipper/auditor/insurer can confirm it at /verify-cert/<code>.
+  // Unique + indexed for O(1) public lookup (no scan, unlike the RC verifier).
+  verifyCode       String?            @unique
   createdAt        DateTime           @default(now())
   updatedAt        DateTime           @updatedAt
 

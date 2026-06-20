@@ -76,6 +76,12 @@
 # verification token.
 /verify/*      /verify         200
 
+# v3.8.aob Sprint E1 — Driver Academy certificate verifier. /verify-cert/<code>
+# lands on /verify-cert.html which reads the code from window.location.pathname
+# and fetches /api/verify-cert/:code. Extensionless target (same 308-drop-splat
+# avoidance as /track/* and /verify/*).
+/verify-cert/* /verify-cert    200
+
 # v3.8.akn §13.3 Item 180.4 — magic-link quote approval.
 # /quote/approve/<token> → /quote/approve (status 200, URL preserved).
 # Customer clicks the "Approve this quote" button in the quote email;

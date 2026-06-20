@@ -1,5 +1,7 @@
 import PDFDocument from "pdfkit";
+import crypto from "crypto";
 import { prisma } from "../config/database";
+import { generateCertVerifyQRBuffer } from "../utils/qrGenerator";
 import {
   registerSkillFonts, drawCompassMark, drawFooter, TOKENS,
   FONT_BODY, FONT_BODY_BOLD, FONT_BODY_ITALIC, FONT_DISPLAY_BOLD, FONT_DISPLAY_ITALIC, FONT_MONO_BOLD,
@@ -25,10 +27,43 @@ export interface CertificateData {
   expiresAt: Date | null;
   carrierName: string | null;
   certId: string;
+  // v3.8.aob (Sprint E1) — public verification code + its QR (rendered on the
+  // cert so a third party can confirm it at /verify-cert/<code>).
+  verifyCode: string;
+  verifyQrPng: Buffer | null;
 }
 
 function fmtLongDate(d: Date): string {
   return d.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
+}
+
+/**
+ * v3.8.aob — lazily mint + persist a public verifyCode for this completion the
+ * first time a cert is generated. Concurrency-safe: the updateMany guards on
+ * `verifyCode: null` so a parallel request can't double-set; if we lose the race
+ * we re-read the winner's code. The unique index makes a candidate collision
+ * throw (negligible at 64 bits) — we retry with a fresh candidate.
+ */
+async function ensureVerifyCode(progressId: string, existing: string | null): Promise<string | null> {
+  if (existing) return existing;
+  for (let i = 0; i < 4; i++) {
+    const candidate = crypto.randomBytes(8).toString("hex"); // 16 hex chars
+    try {
+      const upd = await prisma.driverCourseProgress.updateMany({
+        where: { id: progressId, verifyCode: null },
+        data: { verifyCode: candidate },
+      });
+      if (upd.count === 1) return candidate;
+      // Lost the race (someone set it concurrently) — read the winner's code.
+      const fresh = await prisma.driverCourseProgress.findUnique({
+        where: { id: progressId }, select: { verifyCode: true },
+      });
+      if (fresh?.verifyCode) return fresh.verifyCode;
+    } catch {
+      // candidate collided with another row's code — loop retries with a new one.
+    }
+  }
+  return null;
 }
 
 /**
@@ -43,12 +78,20 @@ export async function buildCertificateData(driverId: string, slug: string): Prom
   const progress = await prisma.driverCourseProgress.findFirst({
     where: { driverId, status: "PASSED", course: { slug, status: "PUBLISHED" } },
     select: {
+      id: true, verifyCode: true,
       bestScorePct: true, completedAt: true, expiresAt: true,
       driver: { select: { firstName: true, lastName: true, carrierProfile: { select: { companyName: true } } } },
       course: { select: { title: true, category: true } },
     },
   });
   if (!progress || !progress.completedAt) return null;
+
+  const verifyCode = await ensureVerifyCode(progress.id, progress.verifyCode);
+  let verifyQrPng: Buffer | null = null;
+  if (verifyCode) {
+    try { verifyQrPng = await generateCertVerifyQRBuffer(verifyCode); } catch { verifyQrPng = null; }
+  }
+
   return {
     driverName: `${progress.driver.firstName} ${progress.driver.lastName}`.trim(),
     courseTitle: progress.course.title,
@@ -58,6 +101,8 @@ export async function buildCertificateData(driverId: string, slug: string): Prom
     expiresAt: progress.expiresAt,
     carrierName: progress.driver.carrierProfile?.companyName ?? null,
     certId: `${driverId.slice(-6)}-${slug}`.toUpperCase(),
+    verifyCode: verifyCode ?? "",
+    verifyQrPng,
   };
 }
 
@@ -121,15 +166,30 @@ export function generateTrainingCertificate(data: CertificateData): PDFKit.PDFDo
       .text(`Carrier: ${data.carrierName}`, left, y, { width: CONTENT_W, align: "center" });
   }
 
-  // Disclaimer + reference near the bottom (above the brand footer).
-  const by = PAGE_H - 132;
+  // Disclaimer near the bottom (above the QR + brand footer).
+  const by = PAGE_H - 176;
   doc.font(FONT_BODY_ITALIC).fontSize(7.5).fillColor(TOKENS.fg3)
     .text(
       "This certificate reflects completion of an educational training module within SRL Driver Academy. It is not a government-issued credential or proof of regulatory compliance.",
       left + 60, by, { width: CONTENT_W - 120, align: "center" },
     );
+
+  // v3.8.aob — verification QR + code, centered. A shipper/auditor/insurer scans
+  // (or types the code at silkroutelogistics.ai/verify-cert) to confirm the cert.
+  const qrSize = 50;
+  const qy = by + 26;
+  if (data.verifyQrPng) {
+    doc.image(data.verifyQrPng, cx - qrSize / 2, qy, { width: qrSize, height: qrSize });
+  }
+  doc.font(FONT_BODY_BOLD).fontSize(7).fillColor(TOKENS.goldDark)
+    .text("SCAN TO VERIFY", left, qy + qrSize + 4, { width: CONTENT_W, align: "center", characterSpacing: 1.2 });
   doc.font(FONT_MONO_BOLD).fontSize(7).fillColor(TOKENS.fg3)
-    .text(`Certificate ID: ${data.certId}`, left, by + 26, { width: CONTENT_W, align: "center" });
+    .text(
+      `silkroutelogistics.ai/verify-cert${data.verifyCode ? "  ·  " + data.verifyCode : ""}`,
+      left, qy + qrSize + 14, { width: CONTENT_W, align: "center" },
+    );
+  doc.font(FONT_BODY).fontSize(6.5).fillColor(TOKENS.fg3)
+    .text(`Certificate ID: ${data.certId}`, left, qy + qrSize + 24, { width: CONTENT_W, align: "center" });
 
   drawFooter(doc, { pageNum: 1, totalPages: 1 });
   doc.end();

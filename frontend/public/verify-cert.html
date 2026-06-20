@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- INCLUDE:meta -->
+  <meta name="description" content="Verify an SRL Driver Academy training certificate. Confirms a driver completed a course, the date, and validity.">
+  <link rel="canonical" href="https://silkroutelogistics.ai/verify-cert">
+  <meta name="theme-color" content="#0A2540">
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="icon" type="image/x-icon" href="/favicon.ico">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <link rel="manifest" href="/manifest.json">
+  
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://silkroutelogistics.ai/verify-cert">
+  <meta property="og:title" content="Verify Training Certificate — Silk Route Logistics">
+  <meta property="og:description" content="Verify an SRL Driver Academy training certificate. Confirms a driver completed a course, the date, and validity.">
+  <meta property="og:image" content="https://silkroutelogistics.ai/logo.png">
+  <meta property="og:site_name" content="Silk Route Logistics">
+  
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Verify Training Certificate — Silk Route Logistics">
+  <meta name="twitter:description" content="Verify an SRL Driver Academy training certificate. Confirms a driver completed a course, the date, and validity.">
+  <meta name="twitter:image" content="https://silkroutelogistics.ai/logo.png">
+  <!-- END INCLUDE:meta -->
+  <meta name="robots" content="noindex, follow">
+
+  <title>Verify Training Certificate — Silk Route Logistics</title>
+
+  <!-- INCLUDE:design-system -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=DM+Sans:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet" href="/shared/css/srl-tokens.css">
+  <!-- END INCLUDE:design-system -->
+  <link rel="stylesheet" href="/shared/css/srl-logo.css">
+
+  <link rel="stylesheet" href="/shared/css/utilities.css">
+  <link rel="stylesheet" href="/shared/css/pages/verify.css">
+  <style>
+    .cert-badge-expired { display:inline-block; margin-left:8px; padding:2px 8px; border-radius:999px; background:#F6E3E3; color:#9B2C2C; font-size:11px; font-weight:700; letter-spacing:.04em; text-transform:uppercase; vertical-align:middle; }
+    .verify-banner.is-expired { background:#FBEFD4; }
+    .verify-banner.is-expired .verify-icon-success { color:#B07A1A; }
+  </style>
+</head>
+<body>
+
+  <!-- NAV -->
+  <!-- INCLUDE:nav -->
+  <nav class="nav navbar" id="mainNav" role="navigation" aria-label="Main">
+    <div class="nav-inner navbar-inner">
+      <a href="/" class="srl-logo-wrap" aria-label="Silk Route Logistics Inc. Home">
+        <img src="/logo.png" alt="SRL" class="srl-logo-img">
+      </a>
+      <div class="nav-links navbar-links">
+        <a href="/shippers.html" class="nav-link">Shippers</a>
+        <a href="/carriers.html" class="nav-link">Carriers</a>
+        <a href="/about.html" class="nav-link">About</a>
+        <a href="/contact.html" class="nav-link">Contact</a>
+        <a href="/track" class="nav-link">Track</a>
+        <div class="nav-login-wrap" id="loginWrap">
+          <button type="button" class="nav-login-btn" id="loginBtn" aria-haspopup="true" aria-expanded="false">Sign In</button>
+          <div class="nav-login-dropdown" role="menu">
+            <a href="/auth/login" role="menuitem">AE Login</a>
+            <a href="/carrier/login" role="menuitem">Carrier Login</a>
+            <a href="/shipper/login" role="menuitem">Shipper Login</a>
+          </div>
+        </div>
+      </div>
+      <button type="button" class="hamburger" id="hamburger" aria-label="Toggle menu" aria-expanded="false">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+  </nav>
+  <div class="mobile-overlay" id="mobileOverlay"></div>
+  <div class="mobile-menu" id="mobileMenu">
+    <a href="/shippers.html" class="mobile-nav-link">Shippers</a>
+    <a href="/carriers.html" class="mobile-nav-link">Carriers</a>
+    <a href="/about.html" class="mobile-nav-link">About</a>
+    <a href="/contact.html" class="mobile-nav-link">Contact</a>
+    <a href="/track" class="mobile-nav-link">Track</a>
+    <div class="mobile-login-section">
+      <div class="label">Sign In</div>
+      <a href="/auth/login" class="mobile-nav-link">AE Login</a>
+      <a href="/carrier/login" class="mobile-nav-link">Carrier Login</a>
+      <a href="/shipper/login" class="mobile-nav-link">Shipper Login</a>
+    </div>
+  </div>
+  <script src="/shared/js/nav-login.js" defer></script>
+  <!-- END INCLUDE:nav -->
+
+  <main>
+    <div class="verify-wrap">
+      <a href="/" class="back-link">← silkroutelogistics.ai</a>
+
+      <!-- Loading -->
+      <div class="loading-row" id="loadingRow">
+        <span class="loading-spinner"></span>
+        <span>Verifying training certificate…</span>
+      </div>
+
+      <!-- Error -->
+      <div class="error-card hidden" id="errorCard">
+        <div class="error-head">
+          <svg class="error-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+          </svg>
+          <div>
+            <h1>Certificate not found</h1>
+            <p id="errorMsg">This certificate could not be verified.</p>
+          </div>
+        </div>
+        <div class="error-foot">
+          <strong>Questions about a certificate?</strong>
+          <p>Email <a href="mailto:operations@silkroutelogistics.ai">operations@silkroutelogistics.ai</a>. Silk Route Logistics Inc. — MC# 1794414 · DOT# 4526880.</p>
+        </div>
+      </div>
+
+      <!-- Valid -->
+      <div class="hidden" id="validBlock">
+        <div class="verify-banner" id="verifyBanner">
+          <div class="verify-banner-head">
+            <svg class="verify-icon-success" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>
+            </svg>
+            <h1 id="bannerTitle">Verified</h1>
+          </div>
+          <p id="bannerSub">This is a genuine SRL Driver Academy completion certificate.</p>
+        </div>
+
+        <div class="verify-details">
+          <div class="verify-section">
+            <div class="verify-section-label">Driver</div>
+            <div class="name" id="driverName">—</div>
+            <div class="meta" id="carrierLine"></div>
+          </div>
+
+          <div class="verify-section">
+            <div class="verify-section-label">Training</div>
+            <div class="verify-grid">
+              <div class="verify-grid-item">
+                <div class="lbl">Course</div>
+                <div class="val" id="courseName">—</div>
+              </div>
+              <div class="verify-grid-item">
+                <div class="lbl">Category</div>
+                <div class="val" id="courseCategory">—</div>
+              </div>
+              <div class="verify-grid-item">
+                <div class="lbl">Completed</div>
+                <div class="val" id="completedAt">—</div>
+              </div>
+              <div class="verify-grid-item">
+                <div class="lbl">Valid through</div>
+                <div class="val" id="validThrough">—</div>
+              </div>
+              <div class="verify-grid-item">
+                <div class="lbl">Score</div>
+                <div class="val" id="scorePct">—</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="verify-fraud-note">
+          This page confirms an SRL Driver Academy completion record. The training is educational; an SRL certificate is not a government-issued credential or proof of regulatory compliance. Questions: <a href="mailto:operations@silkroutelogistics.ai">operations@silkroutelogistics.ai</a>.
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- FOOTER -->
+  <!-- INCLUDE:footer -->
+  <footer class="footer" id="footer" role="contentinfo">
+    <div class="container">
+      <div class="footer-grid">
+        <div class="footer-brand">
+          <div class="footer-logo">
+            <a href="/" aria-label="Silk Route Logistics Inc. home" style="display:inline-block;line-height:0;">
+              <img src="/logo.png" alt="SRL" style="height:36px;width:auto;border-radius:6px;">
+            </a>
+          </div>
+          <p class="srl-tagline">Where Trust Travels.</p>
+          <p style="margin-top:12px">
+            Galesburg, MI<br>
+            <a href="tel:+12692206760">(269) 220-6760</a><br>
+            <a href="mailto:sales@silkroutelogistics.ai">sales@silkroutelogistics.ai</a>
+          </p>
+        </div>
+        <div class="footer-col">
+          <h5>Company</h5>
+          <a href="/about.html">About</a>
+          <a href="/contact.html">Contact</a>
+          <a href="/blog.html">Industry Insights</a>
+          <a href="/careers.html">Careers</a>
+        </div>
+        <div class="footer-col">
+          <h5>Shippers</h5>
+          <a href="/shippers.html">Services</a>
+          <a href="/shippers.html#quote-form">Get a Quote</a>
+          <a href="/track">Track Shipment</a>
+          <a href="/shipper/login">Shipper Portal</a>
+        </div>
+        <div class="footer-col">
+          <h5>Carriers</h5>
+          <a href="/carriers.html">Caravan Partner Program</a>
+          <a href="/carriers.html#quickpay">Quick Pay</a>
+          <a href="/carrier/login">Carrier Portal</a>
+          <a href="/driver/login">Driver Login</a>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <p>&copy; 2026 Silk Route Logistics Inc. &nbsp;|&nbsp; MC# 1794414 &nbsp;|&nbsp; DOT# 4526880</p>
+        <div class="footer-bottom-links">
+          <a href="/privacy.html">Privacy Policy</a>
+          <a href="/terms.html">Terms of Service</a>
+          <a href="/security-policy.html">Security Policy</a>
+        </div>
+      </div>
+    </div>
+  </footer>
+  <!-- END INCLUDE:footer -->
+
+  <script>
+    (function () {
+      'use strict';
+      var API_BASE = 'https://api.silkroutelogistics.ai/api';
+
+      var els = {
+        loadingRow:  document.getElementById('loadingRow'),
+        errorCard:   document.getElementById('errorCard'),
+        errorMsg:    document.getElementById('errorMsg'),
+        validBlock:  document.getElementById('validBlock'),
+        banner:      document.getElementById('verifyBanner'),
+        bannerTitle: document.getElementById('bannerTitle'),
+        bannerSub:   document.getElementById('bannerSub'),
+        driverName:  document.getElementById('driverName'),
+        carrierLine: document.getElementById('carrierLine'),
+        courseName:  document.getElementById('courseName'),
+        courseCategory: document.getElementById('courseCategory'),
+        completedAt: document.getElementById('completedAt'),
+        validThrough: document.getElementById('validThrough'),
+        scorePct:    document.getElementById('scorePct'),
+      };
+
+      function fmtDate(iso) {
+        if (!iso) return '—';
+        try {
+          return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+        } catch (e) { return iso; }
+      }
+
+      function showError(msg) {
+        els.loadingRow.classList.add('hidden');
+        els.validBlock.classList.add('hidden');
+        els.errorCard.classList.remove('hidden');
+        els.errorMsg.textContent = msg;
+      }
+
+      function showValid(d) {
+        els.loadingRow.classList.add('hidden');
+        els.errorCard.classList.add('hidden');
+        els.validBlock.classList.remove('hidden');
+
+        els.driverName.textContent = d.driverName || '—';
+        if (d.carrierName) { els.carrierLine.textContent = 'Carrier: ' + d.carrierName; }
+        els.courseName.textContent = d.course || '—';
+        els.courseCategory.textContent = d.category || '—';
+        els.completedAt.textContent = fmtDate(d.completedAt);
+        els.scorePct.textContent = (d.scorePct != null) ? (d.scorePct + '%') : '—';
+
+        if (d.expiresAt) {
+          var vt = fmtDate(d.expiresAt);
+          if (d.expired) {
+            els.validThrough.innerHTML = vt + '<span class="cert-badge-expired">Expired</span>';
+            els.banner.classList.add('is-expired');
+            els.bannerTitle.textContent = 'Completed — certification lapsed';
+            els.bannerSub.textContent = 'This is a genuine completion record, but the certification has expired and should be renewed.';
+          } else {
+            els.validThrough.textContent = vt;
+          }
+        } else {
+          els.validThrough.textContent = 'No expiry';
+        }
+      }
+
+      // ── Boot ────────────────────────────────────────────────────
+      var match = window.location.pathname.match(/^\/verify-cert\/([a-f0-9]{16})\/?$/);
+      if (!match) {
+        showError('Verification URL missing or malformed. Expected /verify-cert/<code>.');
+        return;
+      }
+      var code = match[1];
+
+      fetch(API_BASE + '/verify-cert/' + code, { method: 'GET', headers: { 'Accept': 'application/json' } })
+        .then(function (res) {
+          if (res.status === 404) throw new Error('Certificate not found.');
+          if (!res.ok) throw new Error('Could not verify this certificate. Please try again or contact operations@silkroutelogistics.ai.');
+          return res.json();
+        })
+        .then(function (data) {
+          if (!data || !data.valid) { showError((data && data.error) || 'Certificate not found.'); return; }
+          showValid(data);
+        })
+        .catch(function (err) { showError((err && err.message) || 'Could not verify this certificate.'); });
+    })();
+  </script>
+</body>
+</html>

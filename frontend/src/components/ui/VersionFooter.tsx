@@ -13165,6 +13165,18 @@
 //   400+ ft at 55 mph, FMCSA), the empty-truck-needs-more point, and the CDL following
 //   rule; quiz adds two real stopping-distance items. Content files only — live via
 //   prod re-seed. Per §3.1: ant → anu.
+// v3.8.aob — SRL Driver Academy Sprint E1: public certificate-verification URL.
+//   A shipper/auditor/insurer can now confirm a completion cert is genuine. New
+//   lazily-minted, unique-indexed verifyCode on DriverCourseProgress (additive
+//   migration) is printed (+ QR) on the cert PDF; scanning it lands on a public
+//   /verify-cert/<code> page that shows the driver (first name + last initial only,
+//   PII-scoped), course, completion date, and validity (red EXPIRED badge if lapsed).
+//   Backend: GET /api/verify-cert/:code (no auth — the code is the key; O(1) unique
+//   lookup, not the RC verifier's scan). QR generated in the already-async
+//   buildCertificateData so the sync PDF renderer stays sync; cert bottom band
+//   restructured (disclaimer → QR → "SCAN TO VERIFY" → URL+code → cert ID).
+//   VISUALLY VERIFIED via headless-Chrome PDF screenshot (Item 177). Migration
+//   applies via Render. Per §3.1: aoa → aob.
 // v3.8.aoa — SRL Driver Academy Sprint D: carrier required-course set + audit transcript.
 //   Turns the academy from "courses a driver can take" into "a program a carrier runs."
 //   New CarrierTrainingRequirement table (additive migration) — a carrier picks the
@@ -13240,7 +13252,7 @@
 //   (3) fraud-awareness — quiz distractors changed to real false-comfort traps (high
 //   rate / nice website / on a load board) instead of absurd one-liners. Content files
 //   only — live via prod re-seed. 8 of 22 courses now overhauled. Per §3.1: anu → anv.
-export const SRL_VERSION = "3.8.aoa";
+export const SRL_VERSION = "3.8.aob";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

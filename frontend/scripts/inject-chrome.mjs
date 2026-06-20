@@ -411,6 +411,8 @@ const MARKETING_PAGES = new Set([
   // INCLUDE:footer markers; prior to this they were skipped, leaving the
   // footer marker as an empty placeholder in the build output.
   "track.html", "verify.html",
+  // v3.8.aob (Sprint E1) — public Driver Academy certificate verifier.
+  "verify-cert.html",
 ]);
 
 async function walkHtml(dir) {
