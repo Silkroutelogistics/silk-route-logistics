@@ -1128,6 +1128,7 @@ model CarrierProfile {
   // Drivers added via the carrier portal carry carrierProfileId; legacy
   // AE-console fleet rows keep it NULL and stay invisible to carriers.
   drivers Driver[] @relation("CarrierDrivers")
+  trainingRequirements CarrierTrainingRequirement[]
 
   @@index([mcNumber])
   @@index([dotNumber])
@@ -2683,6 +2684,7 @@ model TrainingCourse {
   questions      TrainingQuestion[]
   progress       DriverCourseProgress[]
   attempts       TrainingAttempt[]
+  requirements   CarrierTrainingRequirement[]
   createdAt      DateTime             @default(now())
   updatedAt      DateTime             @updatedAt
 
@@ -2764,6 +2766,29 @@ model TrainingAttempt {
 
   @@index([driverId, courseId])
   @@map("training_attempts")
+}
+
+// v3.8.aoa — Driver Academy Sprint D: carrier-wide required-course set.
+// One row per (carrier, course) the carrier requires of EVERY driver on its
+// roster, with a due window (dueDays). Compliance is NOT stored here — it's
+// computed by joining against DriverCourseProgress (a driver is compliant on a
+// required course when a non-expired PASSED progress row exists). The per-driver
+// due date = (later of driver.createdAt, this requirement's createdAt) + dueDays,
+// so adding a requirement never retroactively makes an existing driver "overdue".
+model CarrierTrainingRequirement {
+  id               String         @id @default(cuid())
+  carrierProfileId String
+  carrierProfile   CarrierProfile @relation(fields: [carrierProfileId], references: [id], onDelete: Cascade)
+  courseId         String
+  course           TrainingCourse @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  dueDays          Int            @default(30)
+  createdById      String? // carrier user who set it (audit; no FK)
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  @@unique([carrierProfileId, courseId])
+  @@index([carrierProfileId])
+  @@map("carrier_training_requirements")
 }
 
 // ─── Integration & EDI ──────────────────────────────────

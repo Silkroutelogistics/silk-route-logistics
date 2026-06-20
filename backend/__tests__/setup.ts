@@ -98,6 +98,12 @@ vi.mock("../src/config/database", () => ({
       findMany: vi.fn(),
       count: vi.fn(),
     },
+    carrierTrainingRequirement: {
+      findMany: vi.fn().mockResolvedValue([]),
+      deleteMany: vi.fn(),
+      upsert: vi.fn(),
+      count: vi.fn(),
+    },
     notification: {
       create: vi.fn(),
       findMany: vi.fn(),

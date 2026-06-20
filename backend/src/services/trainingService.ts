@@ -52,7 +52,9 @@ export interface TrainingCell {
 }
 
 export interface TrainingSummary {
-  courses: { id: string; slug: string; title: string; category: string }[];
+  // v3.8.aoa — `required` + `dueDays` carry the carrier-wide required-course set
+  // (Sprint D). Optional courses have required=false, dueDays=null.
+  courses: { id: string; slug: string; title: string; category: string; required: boolean; dueDays: number | null }[];
   drivers: {
     id: string;
     firstName: string;
@@ -60,6 +62,12 @@ export interface TrainingSummary {
     activated: boolean;
     passedCount: number;
     progress: Record<string, TrainingCell>;
+    // v3.8.aoa — per-driver required-course due dates (ISO) + the subset that's
+    // overdue (required, not compliant, past the due date). Only required courses
+    // appear here; a required course the driver hasn't started still gets a due
+    // date + may be overdue even with no progress cell.
+    requiredDue: Record<string, string>;
+    requiredOverdueCourseIds: string[];
   }[];
   summary: {
     driverCount: number;
@@ -69,6 +77,8 @@ export interface TrainingSummary {
     pctTrained: number;
     expiredCells: number;
     expiringCells: number; // PASSED, not expired, within 30 days of expiry
+    requiredCourseCount: number; // v3.8.aoa
+    overdueCells: number; // v3.8.aoa — required-and-overdue across the roster
   };
 }
 
@@ -82,23 +92,43 @@ export interface TrainingSummary {
 export async function buildCarrierTrainingSummary(carrierProfileId: string): Promise<TrainingSummary> {
   const now = new Date();
 
-  const courses = await prisma.trainingCourse.findMany({
+  const courseRows = await prisma.trainingCourse.findMany({
     where: { status: "PUBLISHED" },
     orderBy: { sortOrder: "asc" },
     select: { id: true, slug: true, title: true, category: true },
+  });
+
+  // v3.8.aoa — carrier-wide required-course set. Map courseId → {dueDays,
+  // createdAt}; the due date for a given driver is computed per-row below.
+  // Filter to requirements whose course is still PUBLISHED: a course archived
+  // AFTER a carrier required it would otherwise be invisible in the matrix yet
+  // still count toward overdueCells (a phantom). The requirement row persists
+  // (no cascade on archive) but stops being enforced until the course returns.
+  const publishedIds = new Set(courseRows.map((c) => c.id));
+  const allRequirements = await prisma.carrierTrainingRequirement.findMany({
+    where: { carrierProfileId },
+    select: { courseId: true, dueDays: true, createdAt: true },
+  });
+  const requirements = allRequirements.filter((r) => publishedIds.has(r.courseId));
+  const reqByCourse = new Map(requirements.map((r) => [r.courseId, r]));
+
+  const courses = courseRows.map((c) => {
+    const req = reqByCourse.get(c.id);
+    return { ...c, required: !!req, dueDays: req ? req.dueDays : null };
   });
 
   const drivers = await prisma.driver.findMany({
     where: { carrierProfileId, status: { notIn: ["INACTIVE", "TERMINATED"] } },
     orderBy: [{ lastName: "asc" }, { firstName: "asc" }],
     select: {
-      id: true, firstName: true, lastName: true, trainingPinSetAt: true,
+      id: true, firstName: true, lastName: true, trainingPinSetAt: true, createdAt: true,
       courseProgress: { select: { courseId: true, status: true, bestScorePct: true, completedAt: true, expiresAt: true } },
     },
   });
 
   let expiredCells = 0;
   let expiringCells = 0;
+  let overdueCells = 0;
 
   const rows = drivers.map((d) => {
     const progress: Record<string, TrainingCell> = {};
@@ -118,8 +148,31 @@ export async function buildCarrierTrainingSummary(carrierProfileId: string): Pro
         completedAt: p.completedAt, expiresAt: p.expiresAt, isExpired, daysUntilExpiry,
       };
     }
+
+    // v3.8.aoa — required-course due dates + overdue. The due date is anchored to
+    // the LATER of the driver's roster-add date and when the requirement was set,
+    // so a newly-added requirement never makes an existing driver instantly
+    // overdue. Overdue = required AND not (PASSED & not-expired) AND now > due.
+    const requiredDue: Record<string, string> = {};
+    const requiredOverdueCourseIds: string[] = [];
+    for (const req of requirements) {
+      const anchor = Math.max(d.createdAt.getTime(), req.createdAt.getTime());
+      const due = new Date(anchor + req.dueDays * DAY_MS);
+      requiredDue[req.courseId] = due.toISOString();
+      const cell = progress[req.courseId];
+      const compliant = cell?.status === "PASSED" && !cell.isExpired;
+      if (!compliant && now.getTime() > due.getTime()) {
+        requiredOverdueCourseIds.push(req.courseId);
+        overdueCells++;
+      }
+    }
+
     const passedCount = courses.filter((c) => progress[c.id]?.status === "PASSED").length;
-    return { id: d.id, firstName: d.firstName, lastName: d.lastName, activated: !!d.trainingPinSetAt, passedCount, progress };
+    return {
+      id: d.id, firstName: d.firstName, lastName: d.lastName,
+      activated: !!d.trainingPinSetAt, passedCount, progress,
+      requiredDue, requiredOverdueCourseIds,
+    };
   });
 
   const totalCells = rows.length * courses.length;
@@ -129,7 +182,10 @@ export async function buildCarrierTrainingSummary(carrierProfileId: string): Pro
   return {
     courses,
     drivers: rows,
-    summary: { driverCount: rows.length, courseCount: courses.length, passedCells, totalCells, pctTrained, expiredCells, expiringCells },
+    summary: {
+      driverCount: rows.length, courseCount: courses.length, passedCells, totalCells, pctTrained,
+      expiredCells, expiringCells, requiredCourseCount: requirements.length, overdueCells,
+    },
   };
 }
 

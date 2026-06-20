@@ -389,6 +389,143 @@ router.get("/training-summary", async (req: AuthRequest, res: Response) => {
   res.json(summary);
 });
 
+// ── Sprint D (v3.8.aoa): carrier-wide required-course set ────────────────
+
+// GET /api/carrier-drivers/requirements — the published-course catalog + this
+// carrier's current required set (courseId → dueDays). Powers the "manage
+// required courses" UI.
+router.get("/requirements", async (req: AuthRequest, res: Response) => {
+  const profile = await getApprovedProfile(req, res);
+  if (!profile) return;
+
+  const [courses, requirements] = await Promise.all([
+    prisma.trainingCourse.findMany({
+      where: { status: "PUBLISHED" },
+      orderBy: { sortOrder: "asc" },
+      select: { id: true, slug: true, title: true, category: true, estMinutes: true },
+    }),
+    prisma.carrierTrainingRequirement.findMany({
+      where: { carrierProfileId: profile.id },
+      select: { courseId: true, dueDays: true },
+    }),
+  ]);
+
+  res.json({ courses, requirements });
+});
+
+// PUT /api/carrier-drivers/requirements — replace the carrier's required set.
+// Upsert semantics preserve each requirement's createdAt (so tweaking a dueDays
+// never resets the due-date anchor); requirements not in the new list are removed.
+const requirementsSchema = z.object({
+  requirements: z
+    .array(
+      z.object({
+        courseId: z.string().min(1),
+        dueDays: z.number().int().min(1).max(365),
+      }),
+    )
+    .max(100),
+});
+router.put("/requirements", validateBody(requirementsSchema), async (req: AuthRequest, res: Response) => {
+  const profile = await getApprovedProfile(req, res);
+  if (!profile) return;
+
+  const { requirements } = req.body as z.infer<typeof requirementsSchema>;
+
+  // De-dupe by courseId (last write wins) so a malformed payload can't create
+  // two rows that would trip the @@unique constraint mid-transaction.
+  const byCourse = new Map(requirements.map((r) => [r.courseId, r.dueDays]));
+  const courseIds = [...byCourse.keys()];
+
+  // Validate every courseId is a real PUBLISHED course before writing — avoids
+  // FK errors and stops a carrier requiring an archived/unknown course.
+  if (courseIds.length) {
+    const valid = await prisma.trainingCourse.count({
+      where: { id: { in: courseIds }, status: "PUBLISHED" },
+    });
+    if (valid !== courseIds.length) {
+      res.status(400).json({ error: "One or more selected courses are not available." });
+      return;
+    }
+  }
+
+  await prisma.$transaction([
+    prisma.carrierTrainingRequirement.deleteMany({
+      where: { carrierProfileId: profile.id, courseId: { notIn: courseIds.length ? courseIds : ["__none__"] } },
+    }),
+    ...[...byCourse.entries()].map(([courseId, dueDays]) =>
+      prisma.carrierTrainingRequirement.upsert({
+        where: { carrierProfileId_courseId: { carrierProfileId: profile.id, courseId } },
+        // update touches ONLY dueDays — createdAt + createdById stay immutable so
+        // (a) the due-date anchor (createdAt) doesn't reset when a carrier just
+        // tweaks the window, and (b) the audit trail of who ORIGINALLY set the
+        // requirement is preserved (review fix — don't overwrite createdById).
+        update: { dueDays },
+        create: { carrierProfileId: profile.id, courseId, dueDays, createdById: req.user!.id },
+      }),
+    ),
+  ]);
+
+  res.json({ ok: true, count: courseIds.length });
+});
+
+// GET /api/carrier-drivers/compliance-export — audit-ready training transcript
+// as CSV: one row per (active driver × published course) with status, score,
+// completion/expiry dates, and required/due/overdue. Built off the shared
+// summary so it never drifts from the dashboard.
+function csvCell(v: string | number | null | undefined): string {
+  const s = v == null ? "" : String(v);
+  return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+}
+// Audit-export dates are rendered in UTC (calendar date), intentionally — an
+// audit transcript should be timezone-stable, not shift by the viewer's locale.
+function ymd(iso: string | Date | null): string {
+  if (!iso) return "";
+  const d = typeof iso === "string" ? new Date(iso) : iso;
+  if (isNaN(d.getTime())) return "";
+  return d.toISOString().slice(0, 10);
+}
+router.get("/compliance-export", async (req: AuthRequest, res: Response) => {
+  const profile = await getApprovedProfile(req, res);
+  if (!profile) return;
+
+  const summary = await buildCarrierTrainingSummary(profile.id);
+  const header = ["Driver", "Course", "Category", "Required", "Status", "Best Score %", "Completed", "Expires", "Due", "Overdue"];
+  const lines = [header.join(",")];
+
+  for (const d of summary.drivers) {
+    const name = `${d.lastName}, ${d.firstName}`.trim();
+    for (const c of summary.courses) {
+      const cell = d.progress[c.id];
+      let status = "NOT STARTED";
+      if (cell) {
+        status = cell.status === "PASSED" ? (cell.isExpired ? "PASSED (EXPIRED)" : "PASSED")
+          : cell.status === "IN_PROGRESS" ? "IN PROGRESS"
+            : cell.status === "FAILED" ? "FAILED" : "NOT STARTED";
+      }
+      const overdue = d.requiredOverdueCourseIds.includes(c.id);
+      lines.push([
+        csvCell(name),
+        csvCell(c.title),
+        csvCell(c.category),
+        csvCell(c.required ? "Yes" : "No"),
+        csvCell(status),
+        csvCell(cell?.bestScorePct ?? ""),
+        csvCell(ymd(cell?.completedAt ?? null)),
+        csvCell(ymd(cell?.expiresAt ?? null)),
+        csvCell(c.required ? ymd(d.requiredDue[c.id] ?? null) : ""),
+        csvCell(c.required ? (overdue ? "Yes" : "No") : ""),
+      ].join(","));
+    }
+  }
+
+  const csv = lines.join("\r\n");
+  const today = ymd(new Date());
+  res.setHeader("Content-Type", "text/csv; charset=utf-8");
+  res.setHeader("Content-Disposition", `attachment; filename="SRL-training-transcript-${today}.csv"`);
+  res.send(csv);
+});
+
 // GET /api/carrier-drivers/:id/certificate/:slug — download a roster driver's
 // completion certificate. getOwnedDriver gates to THIS carrier's roster (404
 // otherwise, no cross-carrier enumeration). buildCertificateData returns null

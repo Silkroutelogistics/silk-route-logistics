@@ -30,6 +30,9 @@ describe("trainingService.buildCarrierTrainingSummary", () => {
     vi.clearAllMocks();
     vi.useFakeTimers();
     vi.setSystemTime(d("2026-06-18T12:00:00Z")); // pins `now` inside the service
+    // v3.8.aoa — default: no carrier-wide required courses (tests that exercise
+    // the required/overdue path override this).
+    (mockPrisma.carrierTrainingRequirement.findMany as any).mockResolvedValue([]);
   });
   afterEach(() => vi.useRealTimers());
 
@@ -104,5 +107,39 @@ describe("trainingService.buildCarrierTrainingSummary", () => {
     expect(s.summary.expiredCells).toBe(0);
     expect(s.summary.expiringCells).toBe(0);
     expect(s.drivers[0].progress["c1"].daysUntilExpiry).toBeNull();
+  });
+
+  // v3.8.aoa — Sprint D required-set + overdue. now is pinned to 2026-06-18.
+  it("flags required-course overdue, anchors due dates to the later of join/requirement, and exempts the compliant", async () => {
+    (mockPrisma.trainingCourse.findMany as any).mockResolvedValue([courses[0]]); // c1 only
+    (mockPrisma.carrierTrainingRequirement.findMany as any).mockResolvedValue([
+      { courseId: "c1", dueDays: 30, createdAt: d("2026-01-01T00:00:00Z") },
+    ]);
+    (mockPrisma.driver.findMany as any).mockResolvedValue([
+      // A: joined long ago, never started → due Jan-31, now Jun-18 → OVERDUE
+      { id: "drvA", firstName: "Ann", lastName: "Adams", trainingPinSetAt: d("2026-01-01"), createdAt: d("2026-01-01T00:00:00Z"), courseProgress: [] },
+      // B: joined Jun-10 → due anchors to the LATER join date → Jul-10 (future) → NOT overdue
+      { id: "drvB", firstName: "Bo", lastName: "Brown", trainingPinSetAt: d("2026-06-10"), createdAt: d("2026-06-10T00:00:00Z"), courseProgress: [] },
+      // C: joined long ago but PASSED + not expired → compliant → NOT overdue despite past due date
+      { id: "drvC", firstName: "Cy", lastName: "Clark", trainingPinSetAt: d("2026-01-01"), createdAt: d("2026-01-01T00:00:00Z"), courseProgress: [{ courseId: "c1", status: "PASSED", bestScorePct: 88, completedAt: d("2026-02-01"), expiresAt: d("2027-02-01T00:00:00Z") }] },
+    ]);
+
+    const s = await buildCarrierTrainingSummary("carrier-req");
+
+    expect(s.courses[0].required).toBe(true);
+    expect(s.courses[0].dueDays).toBe(30);
+    expect(s.summary.requiredCourseCount).toBe(1);
+    expect(s.summary.overdueCells).toBe(1); // only driver A
+
+    const a = s.drivers.find((x) => x.id === "drvA")!;
+    expect(a.requiredOverdueCourseIds).toContain("c1");
+    expect(a.requiredDue["c1"]).toBe(new Date(Date.UTC(2026, 0, 31)).toISOString()); // Jan-01 + 30d
+
+    const b = s.drivers.find((x) => x.id === "drvB")!;
+    expect(b.requiredOverdueCourseIds).toHaveLength(0);
+    expect(b.requiredDue["c1"]).toBe(new Date(Date.UTC(2026, 6, 10)).toISOString()); // Jun-10 + 30d, anchored to join
+
+    const c = s.drivers.find((x) => x.id === "drvC")!;
+    expect(c.requiredOverdueCourseIds).toHaveLength(0); // compliant
   });
 });

@@ -13165,6 +13165,24 @@
 //   400+ ft at 55 mph, FMCSA), the empty-truck-needs-more point, and the CDL following
 //   rule; quiz adds two real stopping-distance items. Content files only — live via
 //   prod re-seed. Per §3.1: ant → anu.
+// v3.8.aoa — SRL Driver Academy Sprint D: carrier required-course set + audit transcript.
+//   Turns the academy from "courses a driver can take" into "a program a carrier runs."
+//   New CarrierTrainingRequirement table (additive migration) — a carrier picks the
+//   courses EVERY roster driver must complete, each with a due window (dueDays).
+//   Compliance is COMPUTED (not stored): a driver is compliant on a required course
+//   when a non-expired PASSED progress row exists. Per-driver due = (later of
+//   driver-added / requirement-set) + dueDays, so a new requirement never makes an
+//   existing driver instantly overdue. Overdue is a flag/dashboard signal only — it
+//   does NOT block the driver from loads (per the locked decision). New endpoints on
+//   /api/carrier-drivers: GET/PUT /requirements (replace-all upsert preserving
+//   createdAt+createdById) + GET /compliance-export (audit-ready CSV transcript).
+//   buildCarrierTrainingSummary (shared by carrier page + AE tab) now marks required
+//   courses + computes due/overdue, filtering out requirements whose course was later
+//   archived (no phantom overdue). Carrier /training page gains a required-set manager,
+//   a "Download transcript (CSV)" button, an Overdue stat + nudge, and per-cell overdue
+//   badges. ADVERSARIALLY REVIEWED (23-agent workflow, 19 findings → fixed the real
+//   one: upsert was overwriting createdById on update, corrupting the audit trail).
+//   Per §3.1: anz → aoa.
 // v3.8.anz — SRL Driver Academy Sprint C: inline-SVG figure system (visuals).
 //   Closes the "courses are all text, no visual reference like WHMIS/hazmat" concern.
 //   New TrainingFigure.tsx renders self-contained inline-SVG regulatory charts (no
@@ -13222,7 +13240,7 @@
 //   (3) fraud-awareness — quiz distractors changed to real false-comfort traps (high
 //   rate / nice website / on a load board) instead of absurd one-liners. Content files
 //   only — live via prod re-seed. 8 of 22 courses now overhauled. Per §3.1: anu → anv.
-export const SRL_VERSION = "3.8.anz";
+export const SRL_VERSION = "3.8.aoa";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
