@@ -13152,7 +13152,20 @@
 //   the quiz (recognition/threshold/segregation/spill) with near-neighbor
 //   distractors, removing the "411"/"how many classes" leaks. Content files only;
 //   goes live via the prod re-seed (seed-training-courses.ts). Per §3.1: ans → ant.
-export const SRL_VERSION = "3.8.ant";
+// v3.8.anu — SRL Driver Academy content overhaul, batch 2 (Sprint A+B, fact-checked).
+//   (1) hazard-communication — quiz rewritten: dropped the non-GHS "Caution/Notice"
+//   filler (Q4) and the True/False-with-rationale leak (Q5); 6 calibrated questions
+//   testing signal-word ranking, pictogram recognition (flame-over-circle =
+//   oxidizer), and an SDS-section application. (2) eld-hos — deepened the short-haul
+//   exception (49 CFR 395.1(e)(1): 150 air-mi / 14 hr / return-to-base / time records
+//   6 mo / 30-min-break exempt / 11-hr still applies, web-verified) + converted Q1 and
+//   Q5 to application scenarios (Q5 no longer states "34-hour" in its own stem).
+//   (3) adverse-weather-defensive — deepened "Space and stopping" with verified
+//   stopping-distance components (perception ~140 + reaction ~60 + braking 200+ ≈
+//   400+ ft at 55 mph, FMCSA), the empty-truck-needs-more point, and the CDL following
+//   rule; quiz adds two real stopping-distance items. Content files only — live via
+//   prod re-seed. Per §3.1: ant → anu.
+export const SRL_VERSION = "3.8.anu";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

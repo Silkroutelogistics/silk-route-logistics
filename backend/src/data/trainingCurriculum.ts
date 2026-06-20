@@ -58,9 +58,9 @@ const BASE_CURRICULUM: CurriculumCourse[] = [
     slug: "eld-hos",
     title: "ELD & Hours of Service",
     category: "Hours & Electronic Logs",
-    summary: "The federal Hours of Service limits, how your ELD records duty status, sleeper-berth splits, and what to do when the device fails.",
-    version: "1",
-    estMinutes: 22,
+    summary: "The federal Hours of Service limits, the short-haul exception, how your ELD records duty status, sleeper-berth splits, and what to do when the device fails.",
+    version: "2",
+    estMinutes: 23,
     passThreshold: 80,
     validityMonths: 12,
     sortOrder: 1,
@@ -90,9 +90,12 @@ const BASE_CURRICULUM: CurriculumCourse[] = [
       {
         order: 4,
         title: "How the ELD records your day",
-        estMinutes: 4,
-        bodyMarkdown:
-          "An Electronic Logging Device (ELD) connects to the engine and automatically records driving time, so duty status is harder to falsify than paper logs. Most drivers who are required to keep records of duty status (RODS) must use a registered ELD.\n\nThere are exceptions, including the short-haul exemption (operating within a 150 air-mile radius and returning to the work-reporting location, using time records instead of RODS), pre-2000 engine vehicles, driveaway-towaway operations, and drivers who keep RODS no more than 8 days in any 30-day period. Confirm whether any exemption actually applies to you before relying on it.\n\nYou are responsible for selecting the correct duty status: off duty, sleeper berth, driving, or on-duty-not-driving. The device records the driving; you annotate the rest. Review and certify your logs daily.",
+        estMinutes: 5,
+        bodyMarkdown: `An Electronic Logging Device (ELD) connects to the engine and automatically records driving time, so duty status is harder to falsify than paper logs. Most drivers who must keep records of duty status (RODS) have to use a registered ELD.
+
+**The short-haul exception (49 CFR 395.1(e)(1)).** This is the big one. If you operate within a **150 air-mile radius** of your normal work-reporting location and **return there within 14 hours**, you may use a simple **time record** (time in, time out, total hours) instead of RODS or an ELD, and you are **not required to take the 30-minute break**. The **11-hour driving limit still applies**, and the carrier keeps the time records for **6 months**. Other ELD exemptions include pre-2000 engine vehicles, driveaway-towaway operations, and drivers who keep RODS no more than 8 days in any 30-day period. Confirm an exemption actually applies before you rely on it — misusing short-haul is a common violation.
+
+You are responsible for selecting the correct duty status: off duty, sleeper berth, driving, or on-duty-not-driving. The device records the driving; you annotate the rest. Review and certify your logs daily.`,
       },
       {
         order: 5,
@@ -105,10 +108,10 @@ const BASE_CURRICULUM: CurriculumCourse[] = [
     questions: [
       {
         order: 1,
-        question: "After 10 consecutive hours off duty, what is the maximum driving time allowed?",
-        options: ["8 hours", "10 hours", "11 hours", "14 hours"],
-        correctIndex: 2,
-        explanation: "The 11-hour driving limit applies after 10 consecutive hours off duty (49 CFR 395.3).",
+        question: "You've driven 11 hours since your last 10-hour break and you're still 2 hours inside your 14-hour window. Can you keep driving?",
+        options: ["Yes — you still have time left in the 14-hour window", "No — you've hit the 11-hour driving limit", "Yes, if you switch to on-duty-not-driving", "Yes, for one more hour only"],
+        correctIndex: 1,
+        explanation: "The 11-hour driving limit and the 14-hour window are separate limits. Even with window time left, once you have driven 11 hours you cannot drive again until you take another 10 consecutive hours off (49 CFR 395.3).",
       },
       {
         order: 2,
@@ -143,10 +146,10 @@ const BASE_CURRICULUM: CurriculumCourse[] = [
       },
       {
         order: 5,
-        question: "How long does the 34-hour restart require off duty to reset the 60/70-hour clock?",
-        options: ["24 consecutive hours", "30 consecutive hours", "34 consecutive hours", "48 consecutive hours"],
-        correctIndex: 2,
-        explanation: "At least 34 consecutive hours off duty (off-duty and/or sleeper) resets the weekly 60/70-hour clock. The restart is optional.",
+        question: "You took 31 consecutive hours off duty. Has your weekly 60/70-hour clock reset?",
+        options: ["Yes — any 24+ hours off resets it", "No — a restart needs at least 34 consecutive hours off", "Yes, but only the 70-hour clock", "Only if all 31 hours were in the sleeper berth"],
+        correctIndex: 1,
+        explanation: "The optional restart needs at least 34 consecutive hours off duty (off-duty and/or sleeper) to reset the 60/70-hour clock. 31 hours is not enough, so you resume with your accumulated hours (49 CFR 395.3).",
       },
       {
         order: 6,

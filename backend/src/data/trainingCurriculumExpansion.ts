@@ -147,7 +147,7 @@ To haul a **placarded** amount you need a **hazmat (H) endorsement** on your CDL
     title: "Hazard Communication: WHMIS & HazCom",
     category: "Hazardous Materials",
     summary: "Workplace chemical safety on the dock and in the warehouse: the GHS labels and pictograms, the Safety Data Sheet, and your right to know. (Not the transport placards.)",
-    version: "1",
+    version: "2",
     estMinutes: 15,
     passThreshold: 80,
     validityMonths: 12,
@@ -184,11 +184,12 @@ To haul a **placarded** amount you need a **hazmat (H) endorsement** on your CDL
       },
     ],
     questions: [
-      { order: 1, question: "WHMIS (Canada) and HazCom (US) are about:", options: ["Trailer placards", "Workplace chemical safety (chemicals you handle)", "IFTA fuel tax", "CDL endorsements"], correctIndex: 1, explanation: "WHMIS and OSHA HazCom govern workplace chemical hazard communication, not transport placarding." },
-      { order: 2, question: "Which document gives detailed handling, first-aid, and spill information for a workplace chemical?", options: ["The bill of lading", "The Safety Data Sheet (SDS)", "The ERG", "The rate confirmation"], correctIndex: 1, explanation: "The SDS provides standardized handling, first-aid, and accidental-release information." },
-      { order: 3, question: "How many sections does a standardized (GHS) Safety Data Sheet have?", options: ["8", "12", "16", "20"], correctIndex: 2, explanation: "A GHS-aligned SDS has 16 standardized sections in a fixed order." },
-      { order: 4, question: "On a GHS label, which signal word indicates the MORE severe hazard?", options: ["Warning", "Caution", "Danger", "Notice"], correctIndex: 2, explanation: "GHS uses two signal words: Danger (more severe) and Warning (less severe)." },
-      { order: 5, question: "The GHS pictograms on a drum are the same as the placards on the trailer.", options: ["True", "False — they are different systems (workplace vs transport)", "True, only in Canada", "True, only for flammables"], correctIndex: 1, explanation: "Workplace GHS labels (WHMIS/HazCom) are a separate system from transport placards (HMR/TDG)." },
+      { order: 1, question: "WHMIS (Canada) and OSHA HazCom (US) govern:", options: ["the placards and shipping papers on a dangerous-goods trailer", "the safe handling of chemicals you work around at a dock, shop, or warehouse", "the apportioned registration of the truck", "the driver's hours-of-service limits"], correctIndex: 1, explanation: "WHMIS and HazCom are WORKPLACE chemical hazard communication — the chemicals you handle on the dock or in the shop. The trailer's placards and papers are a separate transport system (HMR/TDG)." },
+      { order: 2, question: "You're asked to handle a cleaning solvent you don't know. Where do you find its hazards, first-aid, and spill steps?", options: ["its Safety Data Sheet (SDS)", "the Emergency Response Guidebook (ERG)", "the bill of lading", "the product's sales brochure"], correctIndex: 0, explanation: "The Safety Data Sheet gives standardized hazard, first-aid, handling, and spill information for a workplace chemical. The ERG is for transport emergencies — a different system." },
+      { order: 3, question: "A label reads the signal word \"Warning.\" Compared with a label reading \"Danger,\" this product's hazard is:", options: ["more severe", "less severe", "exactly the same", "not regulated"], correctIndex: 1, explanation: "GHS uses exactly two signal words: Danger (more severe) and Warning (less severe). \"Warning\" signals the lower hazard level." },
+      { order: 4, question: "A red-bordered diamond with a flame-over-a-circle symbol on a drum marks:", options: ["a flammable liquid", "an oxidizer", "a corrosive", "an environmental hazard"], correctIndex: 1, explanation: "The flame-over-circle pictogram means an OXIDIZER (it makes fires burn hotter). A plain flame is flammable; a liquid eating a hand/surface is corrosion; a dead tree and fish is the environment pictogram." },
+      { order: 5, question: "A solvent splashes in a coworker's eyes. Which SDS section do you go to first?", options: ["Section 1, Identification", "Section 4, First-aid measures", "Section 9, Physical properties", "Section 14, Transport information"], correctIndex: 1, explanation: "Section 4 (First-aid measures) gives the immediate steps for eye, skin, inhalation, and ingestion exposure. The 16 SDS sections sit in a fixed order so you can find first-aid fast." },
+      { order: 6, question: "A drum on a warehouse rack shows a GHS pictogram diamond. That labeling is governed by:", options: ["the DOT Hazardous Materials Regulations (transport placarding)", "the OSHA HazCom / WHMIS workplace standard", "the rate confirmation", "the IFTA agreement"], correctIndex: 1, explanation: "A drum sitting in a workplace is governed by OSHA HazCom (US) / WHMIS (Canada). The same drum, once placarded on a trailer, falls under the DOT transport rules — two different systems." },
     ],
   },
 
@@ -414,8 +415,8 @@ So two straps **pass** the weight rule but **fail** the count. You need **at lea
     slug: "adverse-weather-defensive",
     title: "Adverse-Weather & Defensive Driving",
     category: "On-Road Safety",
-    summary: "The hazardous-conditions rule, space and stopping distance for a loaded truck, and handling ice, fog, wind, grades, and work zones.",
-    version: "1",
+    summary: "The hazardous-conditions rule, real stopping-distance numbers for a loaded truck, following distance, and handling ice, fog, wind, grades, and work zones.",
+    version: "2",
     estMinutes: 15,
     passThreshold: 80,
     validityMonths: 12,
@@ -432,9 +433,18 @@ So two straps **pass** the weight rule but **fail** the count. You need **at lea
       {
         order: 2,
         title: "Space and stopping",
-        estMinutes: 5,
-        bodyMarkdown:
-          "A loaded combination is heavy and does not stop like a car.\n\n**Following distance:** a common rule is **one second for every 10 ft of vehicle length** at speeds under 40 mph, and **add one second** above 40 mph. A 70-75 ft combination needs roughly **7-8 seconds** in good conditions, and **more** in rain, snow, or fog.\n\n**Total stopping distance** is perception distance + reaction distance + braking distance. At highway speed a loaded truck can need **the length of a football field or more** to stop, and far more on a slick surface.\n\nLook **far ahead**, keep an **escape path** to the side, and never let a four-wheeler crowd you into having no room. Space is the cushion that turns an emergency into a near miss.",
+        estMinutes: 6,
+        bodyMarkdown: `A loaded combination is heavy and does not stop like a car. Three things add up to your **total stopping distance**:
+
+- **Perception distance** — how far you roll while you notice the hazard (about **1.75 seconds**, roughly **140 ft at 55 mph**).
+- **Reaction distance** — how far you roll while your foot moves to the brake (about **0.75-1 second**, roughly **60 ft at 55 mph**).
+- **Braking distance** — how far the truck travels once the brakes grab (over **200 ft** for a loaded rig at 55 mph).
+
+Add them up: a loaded truck at **55 mph needs about 400+ feet to stop** — **longer than a football field** — and at higher highway speed a fully loaded rig can take **nearly two football fields**. Here is the part that surprises new drivers: **an empty truck needs MORE braking distance, not less**, because there is less weight pushing the tires into the road for traction.
+
+**Following distance (CDL-manual rule of thumb).** Leave **one second for every 10 ft of vehicle length below 40 mph, plus one more second above 40 mph**. A 70-75 ft combination needs about **7-8 seconds** in good conditions — and **more** in rain, snow, or fog. Treat it as a floor, not a target.
+
+Look **far ahead**, keep an **escape path** to the side, and never let a four-wheeler crowd you into having no room. Space is the cushion that turns an emergency into a near miss.`,
       },
       {
         order: 3,
@@ -445,11 +455,12 @@ So two straps **pass** the weight rule but **fail** the count. You need **at lea
       },
     ],
     questions: [
-      { order: 1, question: "Under 49 CFR 392.14, when conditions become sufficiently dangerous you must:", options: ["Keep your schedule", "Reduce speed, and discontinue (stop) when it is too dangerous", "Speed up to get through it", "Only slow down at night"], correctIndex: 1, explanation: "392.14 requires extreme caution and reduced speed, and stopping when conditions become sufficiently dangerous." },
-      { order: 2, question: "Posted speed limits are set for:", options: ["All conditions", "Ideal conditions — you must slow for weather and traction", "Heavy trucks specifically", "Night driving only"], correctIndex: 1, explanation: "Limits assume ideal conditions; you are responsible for reducing speed in rain, snow, ice, or fog." },
-      { order: 3, question: "Which surface freezes first and is the classic black-ice risk?", options: ["Valleys", "Bridges and overpasses", "Tunnels", "On-ramps only"], correctIndex: 1, explanation: "Bridges and overpasses lose heat from above and below and freeze before the surrounding road." },
-      { order: 4, question: "In high wind, rollover risk is greatest with:", options: ["A fully loaded trailer", "A light or empty trailer", "A reefer only", "There is no difference"], correctIndex: 1, explanation: "A light or empty high-sided trailer is most prone to wind rollover; slow down for gusts." },
-      { order: 5, question: "Before a long downgrade you should:", options: ["Ride the brakes all the way down", "Select a safe low gear before descending and use engine braking", "Coast in neutral", "Speed up to get it over with"], correctIndex: 1, explanation: "Choose a safe gear before the descent and use engine braking to avoid overheating the service brakes." },
+      { order: 1, question: "Under 49 CFR 392.14, when weather makes the road sufficiently dangerous you must:", options: ["hold the posted limit to stay with traffic", "reduce speed, and stop driving until it is safe again", "turn on your flashers and keep rolling", "move to the shoulder and continue slowly"], correctIndex: 1, explanation: "392.14 requires extreme caution and reduced speed in hazardous conditions, and discontinuing driving until conditions are safe when they become sufficiently dangerous." },
+      { order: 2, question: "A loaded truck at 55 mph on dry pavement needs roughly how much total distance to stop?", options: ["about 100 feet", "about 200 feet", "about 400 feet", "about 1,000 feet"], correctIndex: 2, explanation: "Total stopping distance = perception (~140 ft) + reaction (~60 ft) + braking (200+ ft) ≈ 400+ ft at 55 mph for a loaded rig — longer than a football field, and far more on a slick surface." },
+      { order: 3, question: "Compared with a loaded truck, an empty truck's braking distance is generally:", options: ["shorter, because it weighs less", "longer, because less weight means less tire traction", "the same in every condition", "shorter only on dry roads"], correctIndex: 1, explanation: "Empty trucks often need MORE braking distance — less weight pressing the tires into the road means less traction, and brakes lock more easily. Don't assume an empty truck stops quicker." },
+      { order: 4, question: "Your combination is about 70 ft long and you're running 55 mph in clear weather. The rule-of-thumb minimum following distance is about:", options: ["3 seconds", "5 seconds", "8 seconds", "12 seconds"], correctIndex: 2, explanation: "The CDL-manual rule of thumb: 1 second per 10 ft of length below 40 mph (70 ft = 7 seconds), plus 1 more above 40 mph = about 8 seconds. Add more in rain, snow, or fog." },
+      { order: 5, question: "Which surface freezes first and is the classic black-ice trap?", options: ["the middle of a long straightaway", "bridges and overpasses", "freshly paved asphalt", "the inside of a tunnel"], correctIndex: 1, explanation: "Bridges and overpasses lose heat from above and below, so they freeze before the surrounding road. Suspect ice near 32°F even when the road just looks wet." },
+      { order: 6, question: "Before a long, steep downgrade, the right move is to:", options: ["build speed early so you can coast the bottom", "select a safe low gear before you start down and use engine braking", "ride the service brakes steadily the whole way", "shift to neutral to save fuel"], correctIndex: 1, explanation: "Pick a safe low gear BEFORE the descent and use engine braking; riding the service brakes overheats and fades them, and coasting in neutral is unsafe and illegal for a CMV on a downgrade." },
     ],
   },
 
