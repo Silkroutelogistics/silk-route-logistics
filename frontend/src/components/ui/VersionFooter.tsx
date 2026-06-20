@@ -13128,7 +13128,19 @@
 //   Return-URL reminder ("log in at silkroutelogistics.ai/driver/login") added
 //   to the set-pin "You're all set" screen + the invite SMS, so drivers always
 //   know where to return after first setup. Per §3.1: anq → anr.
-export const SRL_VERSION = "3.8.anr";
+// v3.8.ans — SRL Driver Academy: exit-lock + categorized catalog (audit fast-wins).
+//   (1) Exit-lock — while a course is actively in progress (reading/quiz, not passed,
+//   not on results), the player now adds a beforeunload native leave-warning + a
+//   pushState/popstate Back-button trap so the browser Back resumes in-course instead
+//   of dropping out. (Honest limit: a browser cannot truly prevent a tab close —
+//   this warns + resumes; progress is always saved.) Released once passed / on
+//   results / in review. (2) Categorized course list — the flat 22-course grid is now
+//   grouped into labeled category sections (Hours&ELD → Driver Qualification → Vehicle
+//   & Cargo → On-Road → Hazmat → SRL Operational), foundational/compliance first;
+//   frontend-only, API already returns category+sortOrder; per-card category eyebrow
+//   dropped (section header carries it). From the 6-lens Academy value audit (48
+//   findings). Per §3.1: anr → ans.
+export const SRL_VERSION = "3.8.ans";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

@@ -90,6 +90,28 @@ function CourseContent() {
     return () => { active = false; };
   }, [slug]);
 
+  // v3.8.ans — exit-lock while a course is ACTIVELY in progress (reading lessons or
+  // taking the quiz, not yet passed, not on the results screen). Browser-level:
+  // (a) beforeunload fires the browser's NATIVE "Leave site?" dialog on tab-close /
+  // refresh / external navigation (the text is browser-controlled and can't be
+  // customized); (b) a pushState + popstate trap so the browser Back button resumes
+  // in-course instead of dropping out mid-read-through. A browser cannot truly
+  // prevent a tab close — this strongly discourages leaving, and progress always
+  // resumes (hydrate-once). Released once passed / on results / in review.
+  const lockActive = !!course && phase !== "results" && !passed;
+  useEffect(() => {
+    if (!lockActive) return;
+    const onBeforeUnload = (e: BeforeUnloadEvent) => { e.preventDefault(); e.returnValue = ""; };
+    const onPopState = () => { window.history.pushState(null, "", window.location.href); };
+    window.history.pushState(null, "", window.location.href);
+    window.addEventListener("beforeunload", onBeforeUnload);
+    window.addEventListener("popstate", onPopState);
+    return () => {
+      window.removeEventListener("beforeunload", onBeforeUnload);
+      window.removeEventListener("popstate", onPopState);
+    };
+  }, [lockActive]);
+
   if (loading || !hydrated) {
     return <div className="flex items-center justify-center py-20"><Loader2 size={28} className="animate-spin text-[#BA7517]" /></div>;
   }

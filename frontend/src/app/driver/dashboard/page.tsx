@@ -124,56 +124,78 @@ export default function DriverCoursesPage() {
           </div>
         </div>
       ) : (
-        <div className="grid gap-3 sm:grid-cols-2">
-          {courses.map((c) => {
-            const Icon = courseIcon(c.slug, c.category);
-            const status = c.progress?.status;
-            const passed = status === "PASSED";
-            const inProgress = status === "IN_PROGRESS" || status === "FAILED";
-            const cta = passed ? "Review" : inProgress ? "Continue" : "Start";
-            const donePct = c.lessonCount > 0 ? Math.min(100, Math.round(((c.progress?.lessonsCompleted ?? 0) / c.lessonCount) * 100)) : 0;
-            return (
-              <div key={c.id} role="button" tabIndex={0}
-                onClick={() => router.push(`/driver/dashboard/course?slug=${c.slug}`)}
-                onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") router.push(`/driver/dashboard/course?slug=${c.slug}`); }}
-                className="group flex cursor-pointer flex-col rounded-2xl border border-[rgba(10,37,64,0.08)] bg-white p-5 shadow-[0_1px_3px_rgba(10,37,64,0.04)] transition-all hover:border-[#C5A572] hover:shadow-[0_8px_28px_rgba(10,37,64,0.08)]">
-                <div className="mb-3 flex items-start justify-between gap-2">
-                  <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${passed ? "bg-[#E6F0E9] text-[#2F7A4F]" : "bg-[#0A2540] text-[#C5A572]"}`}>
-                    {passed ? <CheckCircle2 size={20} /> : <Icon size={19} />}
-                  </span>
-                  <StatusPill p={c.progress ?? null} />
+        // v3.8.ans — group the catalog by category (foundational/compliance first,
+        // SRL-specific last). Frontend-only; the API already returns category +
+        // sortOrder. Unknown/new categories append last (defensive).
+        <div className="space-y-7">
+          {(() => {
+            const order = ["Hours & Electronic Logs", "Driver Qualification & Health", "Vehicle & Cargo Safety", "On-Road Safety", "Hazardous Materials", "SRL Operational Excellence"];
+            const groups = new Map<string, CourseCard[]>();
+            for (const c of courses) {
+              const k = c.category || "Other";
+              if (!groups.has(k)) groups.set(k, []);
+              groups.get(k)!.push(c);
+            }
+            const cats = [...order.filter((k) => groups.has(k)), ...[...groups.keys()].filter((k) => !order.includes(k))];
+            return cats.map((cat) => (
+              <section key={cat}>
+                <div className="mb-2.5 flex items-baseline gap-2">
+                  <h2 className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#BA7517]">{cat}</h2>
+                  <span className="text-[11px] text-[#A7AEB8]">{groups.get(cat)!.length}</span>
                 </div>
-                <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#BA7517]">{c.category}</div>
-                <h3 className="mb-1 mt-0.5 font-serif text-[16px] leading-tight text-[#0A2540]">{c.title}</h3>
-                {c.summary && <p className="mb-3 line-clamp-2 text-[12px] leading-relaxed text-[#6B7685]">{c.summary}</p>}
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {groups.get(cat)!.map((c) => {
+                    const Icon = courseIcon(c.slug, c.category);
+                    const status = c.progress?.status;
+                    const passed = status === "PASSED";
+                    const inProgress = status === "IN_PROGRESS" || status === "FAILED";
+                    const cta = passed ? "Review" : inProgress ? "Continue" : "Start";
+                    const donePct = c.lessonCount > 0 ? Math.min(100, Math.round(((c.progress?.lessonsCompleted ?? 0) / c.lessonCount) * 100)) : 0;
+                    return (
+                      <div key={c.id} role="button" tabIndex={0}
+                        onClick={() => router.push(`/driver/dashboard/course?slug=${c.slug}`)}
+                        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") router.push(`/driver/dashboard/course?slug=${c.slug}`); }}
+                        className="group flex cursor-pointer flex-col rounded-2xl border border-[rgba(10,37,64,0.08)] bg-white p-5 shadow-[0_1px_3px_rgba(10,37,64,0.04)] transition-all hover:border-[#C5A572] hover:shadow-[0_8px_28px_rgba(10,37,64,0.08)]">
+                        <div className="mb-3 flex items-start justify-between gap-2">
+                          <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${passed ? "bg-[#E6F0E9] text-[#2F7A4F]" : "bg-[#0A2540] text-[#C5A572]"}`}>
+                            {passed ? <CheckCircle2 size={20} /> : <Icon size={19} />}
+                          </span>
+                          <StatusPill p={c.progress ?? null} />
+                        </div>
+                        <h3 className="mb-1 font-serif text-[16px] leading-tight text-[#0A2540]">{c.title}</h3>
+                        {c.summary && <p className="mb-3 line-clamp-2 text-[12px] leading-relaxed text-[#6B7685]">{c.summary}</p>}
 
-                {inProgress && (
-                  <div className="mb-3">
-                    <div className="h-1.5 overflow-hidden rounded-full bg-[#EFE6D3]">
-                      <div className="h-full rounded-full bg-gradient-to-r from-[#C5A572] to-[#BA7517]" style={{ width: `${donePct}%` }} />
-                    </div>
-                  </div>
-                )}
+                        {inProgress && (
+                          <div className="mb-3">
+                            <div className="h-1.5 overflow-hidden rounded-full bg-[#EFE6D3]">
+                              <div className="h-full rounded-full bg-gradient-to-r from-[#C5A572] to-[#BA7517]" style={{ width: `${donePct}%` }} />
+                            </div>
+                          </div>
+                        )}
 
-                <div className="mt-auto flex items-center justify-between pt-1">
-                  <span className="flex items-center gap-1 text-[11px] text-[#6B7685]">
-                    <Clock size={11} /> {c.lessonCount} lessons · ~{c.estMinutes} min
-                  </span>
-                  <span className="flex items-center gap-0.5 text-[12px] font-semibold text-[#BA7517]">{cta} <ChevronRight size={14} className="transition-transform group-hover:translate-x-0.5" /></span>
+                        <div className="mt-auto flex items-center justify-between pt-1">
+                          <span className="flex items-center gap-1 text-[11px] text-[#6B7685]">
+                            <Clock size={11} /> {c.lessonCount} lessons · ~{c.estMinutes} min
+                          </span>
+                          <span className="flex items-center gap-0.5 text-[12px] font-semibold text-[#BA7517]">{cta} <ChevronRight size={14} className="transition-transform group-hover:translate-x-0.5" /></span>
+                        </div>
+
+                        {passed && (
+                          <div className="mt-3 flex items-center justify-between border-t border-[rgba(10,37,64,0.06)] pt-3">
+                            {c.progress?.expiresAt ? <span className="text-[10px] text-[#A7AEB8]">Valid until {fmtDate(c.progress.expiresAt)}</span> : <span />}
+                            <button type="button" onClick={(e) => { e.stopPropagation(); downloadCert(c.slug); }}
+                              className="inline-flex items-center gap-1 text-[11px] font-medium text-[#BA7517] hover:underline">
+                              <Download size={11} /> Certificate
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
-
-                {passed && (
-                  <div className="mt-3 flex items-center justify-between border-t border-[rgba(10,37,64,0.06)] pt-3">
-                    {c.progress?.expiresAt ? <span className="text-[10px] text-[#A7AEB8]">Valid until {fmtDate(c.progress.expiresAt)}</span> : <span />}
-                    <button type="button" onClick={(e) => { e.stopPropagation(); downloadCert(c.slug); }}
-                      className="inline-flex items-center gap-1 text-[11px] font-medium text-[#BA7517] hover:underline">
-                      <Download size={11} /> Certificate
-                    </button>
-                  </div>
-                )}
-              </div>
-            );
-          })}
+              </section>
+            ));
+          })()}
         </div>
       )}
     </div>
