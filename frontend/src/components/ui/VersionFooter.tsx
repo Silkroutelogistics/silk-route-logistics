@@ -13121,7 +13121,14 @@
 //   "key likely from a different OpenPhone workspace" and falls back to the
 //   configured id. Backend-only (openPhoneService.ts). Gates: backend tsc +
 //   vitest. Per §3.1: anp → anq.
-export const SRL_VERSION = "3.8.anq";
+// v3.8.anr — SRL Driver Academy access + email-required (Phase 1). "Driver
+//   Login" added to the site footer (Carriers column, all pages via the chrome
+//   injector). Driver-roster email made REQUIRED (backend createDriverSchema +
+//   frontend canSave/label) — it becomes the login-OTP + recovery channel.
+//   Return-URL reminder ("log in at silkroutelogistics.ai/driver/login") added
+//   to the set-pin "You're all set" screen + the invite SMS, so drivers always
+//   know where to return after first setup. Per §3.1: anq → anr.
+export const SRL_VERSION = "3.8.anr";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

@@ -61,6 +61,11 @@ function SetPinContent() {
           <CheckCircle2 size={40} className="mx-auto text-[#2F7A4F] mb-3" />
           <h1 className="font-serif text-xl text-[#0A2540] mb-1">You&apos;re all set</h1>
           <p className="text-sm text-gray-500">Taking you to your training portal…</p>
+          <div className="mt-4 rounded-lg bg-[#FBF7F0] border border-[#EFE6D3] px-3 py-2.5">
+            <p className="text-[11px] text-[#6B7685]">Next time, log in any time at</p>
+            <p className="text-[12px] font-semibold text-[#BA7517]">silkroutelogistics.ai/driver/login</p>
+            <p className="text-[11px] text-[#6B7685] mt-0.5">with your phone number and PIN.</p>
+          </div>
         </div>
       </div>
     );

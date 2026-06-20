@@ -206,7 +206,9 @@ export default function CarrierDriversPage() {
     setShowForm(true);
   };
 
-  const canSave = form.firstName.trim() && form.lastName.trim() && form.phone.replace(/\D/g, "").length >= 10;
+  // v3.8.anr — email is required (login-OTP + recovery channel).
+  const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim());
+  const canSave = !!form.firstName.trim() && !!form.lastName.trim() && form.phone.replace(/\D/g, "").length >= 10 && emailValid;
 
   const inputCls = "w-full px-3 py-2 border border-gray-200 rounded text-xs focus:border-[#C9A84C] focus:outline-none bg-white";
   const labelCls = "text-xs text-gray-700 block mb-1";
@@ -266,8 +268,9 @@ export default function CarrierDriversPage() {
               <p className="text-[10px] text-gray-400 mt-0.5">Training login invites go to this number</p>
             </div>
             <div>
-              <label className={labelCls}>Email (optional)</label>
+              <label className={labelCls}>Email *</label>
               <input className={inputCls} type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="driver@email.com" />
+              <p className="text-[10px] text-gray-400 mt-0.5">Used to verify the driver at login</p>
             </div>
             <div>
               <label className={labelCls}>License Type</label>

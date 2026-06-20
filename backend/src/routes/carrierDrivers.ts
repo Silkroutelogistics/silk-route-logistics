@@ -100,7 +100,7 @@ const createDriverSchema = z.object({
   firstName: z.string().trim().min(1).max(100),
   lastName: z.string().trim().min(1).max(100),
   phone: z.string().min(10).max(20),
-  email: z.string().trim().email().max(255).optional(),
+  email: z.string().trim().email("Enter a valid email address").max(255), // v3.8.anr — required: login-OTP + recovery channel (updateDriverSchema.partial() keeps it optional for partial edits)
   licenseType: z.string().trim().min(1).max(30).default("CDL-A"),
   licenseNumber: z.string().trim().max(40).optional(),
   licenseState: z.string().trim().max(2).optional(),
@@ -364,7 +364,7 @@ router.post("/:id/invite", inviteLimiter, validateBody(inviteSchema), async (req
 
   let smsSent = false;
   let smsError: string | null = null;
-  const message = `${driver.firstName}, your carrier invited you to SRL Driver Academy training. Set your 6-digit PIN here: ${inviteUrl} (link expires in 7 days)`;
+  const message = `${driver.firstName}, your carrier invited you to SRL Driver Academy training. Set your 6-digit PIN here: ${inviteUrl} (link expires in 7 days). After that, log in any time at silkroutelogistics.ai/driver/login`;
   try {
     await sendSMS(driver.phone, message);
     smsSent = true;

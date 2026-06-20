@@ -46,7 +46,8 @@
       "links": [
         { "label": "Caravan Partner Program", "href": "/carriers.html" },
         { "label": "Quick Pay", "href": "/carriers.html#quickpay" },
-        { "label": "Carrier Portal", "href": "/carrier/login" }
+        { "label": "Carrier Portal", "href": "/carrier/login" },
+        { "label": "Driver Login", "href": "/driver/login" }
       ]
     }
   ],
