@@ -46,9 +46,58 @@ export async function getCall(callId: string) {
 
 // ─── Messages (SMS/MMS) ─────────────────────────────────
 
-export async function sendSMS(to: string, content: string, fromPhoneNumberId?: string) {
-  const phoneNumberId = fromPhoneNumberId || process.env.OPENPHONE_PHONE_NUMBER_ID;
-  if (!phoneNumberId) throw new Error("OPENPHONE_PHONE_NUMBER_ID not configured");
+// v3.8.anq — resolve the SENDING number from the live account rather than
+// trusting a hand-set OPENPHONE_PHONE_NUMBER_ID env var. OpenPhone's 404
+// "Phone number not found when getting by ID" fires whenever the value we send
+// as `from` can't be resolved in the API key's workspace — a stale/wrong id, an
+// id from a DIFFERENT OpenPhone workspace than the key, or the messages endpoint
+// not accepting that id form. We ask the API which numbers this key can actually
+// see (logged, so the cause is provable), pick the configured one (by id, or by
+// the optional OPENPHONE_PHONE_NUMBER E.164, or the only one in a single-number
+// account), and send using its E.164 number — the most compatible `from`. Cached
+// after first success.
+let cachedFromNumber: string | null = null;
+
+async function resolveFromNumber(): Promise<string> {
+  if (cachedFromNumber) return cachedFromNumber;
+  const configuredId = process.env.OPENPHONE_PHONE_NUMBER_ID;
+  const configuredE164 = process.env.OPENPHONE_PHONE_NUMBER;
+  try {
+    const res = await fetch(`${OPENPHONE_BASE}/phone-numbers`, { headers: getHeaders() });
+    if (res.ok) {
+      const data: any = await res.json();
+      const nums: any[] = data?.data ?? [];
+      log.info(
+        { count: nums.length, numbers: nums.map((n) => ({ id: n.id, number: n.phoneNumber ?? n.number, name: n.name })) },
+        "[OpenPhone] phone numbers visible to this API key",
+      );
+      const match =
+        nums.find((n) => n.id === configuredId) ||
+        (configuredE164 ? nums.find((n) => (n.phoneNumber ?? n.number) === configuredE164) : undefined) ||
+        (nums.length === 1 ? nums[0] : undefined);
+      if (match) {
+        cachedFromNumber = match.phoneNumber ?? match.number ?? match.id;
+        return cachedFromNumber as string;
+      }
+      log.error(
+        { configuredId, configuredE164, visibleIds: nums.map((n) => n.id) },
+        "[OpenPhone] configured sending number is NOT visible to this API key — the key likely belongs to a different OpenPhone workspace than the one that owns the number. Regenerate the API key from the correct workspace.",
+      );
+    } else {
+      const body = await res.text();
+      log.error({ status: res.status, body }, "[OpenPhone] could not list phone numbers to resolve the sender");
+    }
+  } catch (e) {
+    log.error({ err: (e as Error).message }, "[OpenPhone] sender-number resolution failed");
+  }
+  // Last resort: preserve prior behavior (send by the configured id). If that id
+  // is wrong/invisible this still 404s, but the logs above now say exactly why.
+  if (configuredId) return configuredId;
+  throw new Error("OPENPHONE_PHONE_NUMBER_ID not configured");
+}
+
+export async function sendSMS(to: string, content: string, fromOverride?: string) {
+  const from = fromOverride || (await resolveFromNumber());
 
   const normalizedTo = to.startsWith("+1") ? to : `+1${to.replace(/\D/g, "")}`;
 
@@ -56,7 +105,7 @@ export async function sendSMS(to: string, content: string, fromPhoneNumberId?: s
     method: "POST",
     headers: getHeaders(),
     body: JSON.stringify({
-      from: phoneNumberId,
+      from,
       to: [normalizedTo],
       content,
     }),
@@ -64,12 +113,12 @@ export async function sendSMS(to: string, content: string, fromPhoneNumberId?: s
 
   if (!res.ok) {
     const err = await res.text();
-    log.error({ to, status: res.status, err }, "[OpenPhone] SMS send failed");
+    log.error({ to, from, status: res.status, err }, "[OpenPhone] SMS send failed");
     throw new Error(`OpenPhone SMS error: ${res.status} — ${err}`);
   }
 
   const data: any = await res.json();
-  log.info({ to, messageId: data.data?.id }, "[OpenPhone] SMS sent");
+  log.info({ to, from, messageId: data.data?.id }, "[OpenPhone] SMS sent");
   return data;
 }
 

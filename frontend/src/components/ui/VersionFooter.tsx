@@ -13110,7 +13110,18 @@
 //   (anf), CDL 403 gate (ang), server-graded quiz + 409 stale-reload, hydrate-once
 //   resume, F3 read-through await, cert download. Previewed live via temp harness
 //   (removed). Per §3.1: ano → anp.
-export const SRL_VERSION = "3.8.anp";
+// v3.8.anq — OpenPhone SMS sender-number resolution (driver-invite 404 fix).
+//   The persistent 404 "Phone number not found when getting by ID" on driver-
+//   invite SMS came from sending a hand-set OPENPHONE_PHONE_NUMBER_ID as `from`
+//   that the API key's workspace can't resolve. sendSMS now lists the numbers
+//   the key can actually see (logged for diagnosis), picks the configured one
+//   (by id / optional OPENPHONE_PHONE_NUMBER E.164 / the only number in a
+//   single-number account), and sends using its E.164 number — the most
+//   compatible `from`. If nothing matches it logs the visible-number list +
+//   "key likely from a different OpenPhone workspace" and falls back to the
+//   configured id. Backend-only (openPhoneService.ts). Gates: backend tsc +
+//   vitest. Per §3.1: anp → anq.
+export const SRL_VERSION = "3.8.anq";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
