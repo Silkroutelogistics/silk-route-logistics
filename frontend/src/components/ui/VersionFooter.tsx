@@ -13165,6 +13165,16 @@
 //   400+ ft at 55 mph, FMCSA), the empty-truck-needs-more point, and the CDL following
 //   rule; quiz adds two real stopping-distance items. Content files only — live via
 //   prod re-seed. Per §3.1: ant → anu.
+// v3.8.aod — SRL Driver Academy Sprint E3: lesson audio narration.
+//   A "Listen" control on every lesson slide reads the visible lesson aloud via the
+//   browser-native Web Speech API (SpeechSynthesis) — zero cost, zero storage, no
+//   backend, no TTS pipeline. Play / Pause / Resume + a 1×/1.25×/1.5× speed cycle.
+//   The lesson markdown is stripped to clean prose before speaking (no asterisks /
+//   bullets / figure directives read aloud). Supplemental only — the lesson text
+//   stays on screen, so it's not an accessibility substitute; the control hides
+//   itself where SpeechSynthesis is unavailable. Re-mounts per slide so switching
+//   lessons cancels in-flight speech. Closes Sprint E (E1+E2+E3 bundle; E4
+//   multi-language + E5 offline deferred per Wasi). Per §3.1: aoc → aod.
 // v3.8.aoc — SRL Driver Academy Sprint E2: driver-facing expiry reminders.
 //   The T6 cron emails the CARRIER when a cert nears expiry; the driver who must
 //   retake got nothing. Now: (1) a new daily 5:20 AM ET cron texts the DRIVER
@@ -13261,7 +13271,7 @@
 //   (3) fraud-awareness — quiz distractors changed to real false-comfort traps (high
 //   rate / nice website / on a load board) instead of absurd one-liners. Content files
 //   only — live via prod re-seed. 8 of 22 courses now overhauled. Per §3.1: anu → anv.
-export const SRL_VERSION = "3.8.aoc";
+export const SRL_VERSION = "3.8.aod";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
