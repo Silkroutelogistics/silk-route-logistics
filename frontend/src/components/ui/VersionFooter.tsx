@@ -13165,6 +13165,15 @@
 //   400+ ft at 55 mph, FMCSA), the empty-truck-needs-more point, and the CDL following
 //   rule; quiz adds two real stopping-distance items. Content files only — live via
 //   prod re-seed. Per §3.1: ant → anu.
+// v3.8.anw — SRL Driver Academy quiz overhaul, batch 4 (4 more courses → 12 of 22 done).
+//   detention-documentation, reefer-cold-chain, accident-procedures,
+//   roadside-inspections-csa — all carried the same systemic "longest option is the
+//   answer / distractors are throwaways" leak. Recalibrated every quiz: balanced option
+//   lengths, varied correct positions, near-neighbor distractors (reefer Q3 traps
+//   trailer-air-temp vs product pulp temp; roadside Q1/Q5 trap Level I/II/III by what's
+//   actually inspected; accident Q4/Q5 use false-comfort traps). Reg cites moved out of
+//   answer options into explanations to kill the recall/length tell. Lessons already at
+//   adequate depth — quiz-only pass. Content files; live via prod re-seed. Per §3.1: anv → anw.
 // v3.8.anv — SRL Driver Academy quiz/content overhaul, batch 3a (3 more courses).
 //   (1) driver-qualification — deepened lesson 4 with the verified 49 CFR 383.51
 //   disqualification periods that were name-dropped but missing (major 1yr/3yr-hazmat/
@@ -13177,7 +13186,7 @@
 //   (3) fraud-awareness — quiz distractors changed to real false-comfort traps (high
 //   rate / nice website / on a load board) instead of absurd one-liners. Content files
 //   only — live via prod re-seed. 8 of 22 courses now overhauled. Per §3.1: anu → anv.
-export const SRL_VERSION = "3.8.anv";
+export const SRL_VERSION = "3.8.anw";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
