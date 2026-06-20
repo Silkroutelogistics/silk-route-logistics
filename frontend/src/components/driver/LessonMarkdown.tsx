@@ -16,6 +16,10 @@
 
 import React from "react";
 import { Check, ShieldCheck } from "lucide-react";
+import { TrainingFigure, FIGURE_KEYS } from "./TrainingFigure";
+
+// "[[figure:key]]" or "[[figure:key|caption]]" on its own line → an inline-SVG figure.
+const FIGURE_RE = /^\[\[figure:\s*([a-z0-9-]+)\s*(?:\|\s*([\s\S]+?))?\]\]$/;
 
 // Inline tokenizer: **bold** then *italic* within the remaining text.
 function renderInline(text: string, keyBase: string): React.ReactNode[] {
@@ -101,6 +105,12 @@ export function LessonMarkdown({ text }: { text: string }) {
   for (const raw of lines) {
     const line = raw.trimEnd();
     if (!line.trim()) { flushPara(); flushBullets(); flushQuote(); continue; }
+    const fig = line.trim().match(FIGURE_RE);
+    if (fig && FIGURE_KEYS.has(fig[1])) {
+      flushPara(); flushBullets(); flushQuote();
+      blocks.push(<TrainingFigure key={`f${k++}`} figureKey={fig[1]} caption={fig[2]?.trim()} />);
+      continue;
+    }
     if (line.startsWith("> ")) { flushPara(); flushBullets(); quote.push(line.slice(2)); continue; }
     if (line.startsWith("- ")) { flushPara(); flushQuote(); bullets.push(line.slice(2)); continue; }
     if (line.startsWith("### ")) {

@@ -13165,6 +13165,19 @@
 //   400+ ft at 55 mph, FMCSA), the empty-truck-needs-more point, and the CDL following
 //   rule; quiz adds two real stopping-distance items. Content files only — live via
 //   prod re-seed. Per §3.1: ant → anu.
+// v3.8.anz — SRL Driver Academy Sprint C: inline-SVG figure system (visuals).
+//   Closes the "courses are all text, no visual reference like WHMIS/hazmat" concern.
+//   New TrainingFigure.tsx renders self-contained inline-SVG regulatory charts (no
+//   external assets, no <img>, XSS-safe) using the REAL regulatory colors (§3.12
+//   technical-accuracy exception — a driver must see the actual GHS red diamond + DOT
+//   class colors, not brand gold). LessonMarkdown gains a [[figure:KEY]] block directive.
+//   Three figures shipped: ghs-pictograms (the 9 WHMIS/GHS diamonds), dot-placard-classes
+//   (the 9 DOT hazard classes by color+symbol+number), placard-anatomy (annotated
+//   diamond). Wired into hazmat-awareness (placard chart + anatomy) + hazard-communication
+//   (GHS chart); both bumped to v3. VISUALLY VERIFIED via headless-Chrome screenshot of
+//   the real component (Item 177) — caught + fixed 4 render bugs pre-ship: class-4/9
+//   stripes were white-on-white (invisible), class-8 "8" was black-on-black, anatomy
+//   callouts overlapped. Per §3.1: any → anz.
 // v3.8.any — SRL Driver Academy quiz overhaul, batch 6 — FINAL (5 courses → ALL 22 done).
 //   trip-planning-routing, cargo-theft-security, human-trafficking-awareness,
 //   workplace-dock-safety, coercion-professional-conduct — same length-tell leak
@@ -13209,7 +13222,7 @@
 //   (3) fraud-awareness — quiz distractors changed to real false-comfort traps (high
 //   rate / nice website / on a load board) instead of absurd one-liners. Content files
 //   only — live via prod re-seed. 8 of 22 courses now overhauled. Per §3.1: anu → anv.
-export const SRL_VERSION = "3.8.any";
+export const SRL_VERSION = "3.8.anz";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

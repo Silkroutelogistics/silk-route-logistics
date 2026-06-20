@@ -85,7 +85,7 @@ The takeaway: your driving record, on and off the clock, is your livelihood.`,
     title: "Hazmat & Dangerous Goods Awareness",
     category: "Hazardous Materials",
     summary: "Recognize the 9 hazard classes and their placards, read the shipping paper, keep incompatible loads apart, know what an H endorsement covers, and what to do at a spill.",
-    version: "2",
+    version: "3",
     estMinutes: 19,
     passThreshold: 80,
     validityMonths: 12,
@@ -112,6 +112,8 @@ The takeaway: your driving record, on and off the clock, is your livelihood.`,
 
 **What a placard looks like.** A placard is a **diamond** (a square on its point), **color-coded** to the hazard — **red** = flammable, **green** = non-flammable gas, **orange** = explosive, **yellow** = oxidizer, **white** = poison, **blue** = dangerous when wet, **black and white** = corrosive. The **hazard-class number sits in the bottom corner**, a **symbol sits at the top**, and a **four-digit UN ID number** shows either across the center of the placard or on an **orange panel** beside it. Read the color, the class number, and the UN ID at a glance.
 
+[[figure:dot-placard-classes]]
+
 If the paperwork and the placards do not match the freight, **stop and ask** before you move.`,
       },
       {
@@ -119,6 +121,8 @@ If the paperwork and the placards do not match the freight, **stop and ask** bef
         title: "Placards, papers, and keeping loads apart",
         estMinutes: 6,
         bodyMarkdown: `**When placards are required (49 CFR 172.504).** Most hazmat must be placarded once the aggregate gross weight reaches **1,001 lb** (the Table 2 threshold). The most dangerous materials — **Table 1** (certain explosives, poison gas, and the like) — require placards in **any amount**. A material with a second hazard may also carry a **subsidiary placard** (the same diamond, with no class number).
+
+[[figure:placard-anatomy]]
 
 **The shipping paper and the basic description.** It must be within reach while you drive and easy to find in an emergency (on top of other papers, or tabbed). The **basic description** lists, in order, the **UN ID number, proper shipping name, hazard class, and packing group**, plus the quantity, an emergency-response phone number, and the **shipper's certification** that the load is correctly classified, packed, marked, and labeled. The **Emergency Response Guidebook (ERG)** rides in the cab and gives isolation and protective actions by UN number.
 
@@ -157,7 +161,7 @@ To haul a **placarded** amount you need a **hazmat (H) endorsement** on your CDL
     title: "Hazard Communication: WHMIS & HazCom",
     category: "Hazardous Materials",
     summary: "Workplace chemical safety on the dock and in the warehouse: the GHS labels and pictograms, the Safety Data Sheet, and your right to know. (Not the transport placards.)",
-    version: "2",
+    version: "3",
     estMinutes: 15,
     passThreshold: 80,
     validityMonths: 12,
@@ -176,7 +180,7 @@ To haul a **placarded** amount you need a **hazmat (H) endorsement** on your CDL
         title: "Labels and pictograms",
         estMinutes: 4,
         bodyMarkdown:
-          "A **GHS supplier label** carries: the product identifier, a **signal word**, hazard and precautionary statements, the **pictograms**, and the supplier's information.\n\nThe **signal word** ranks severity: **Danger** is the more severe hazard, **Warning** the less severe.\n\nThe **GHS pictograms** are red-bordered diamonds: flame (flammable), corrosion (corrosives), exclamation mark (irritant/harmful), health hazard (serious/long-term health effects), skull and crossbones (acute toxicity), gas cylinder (gases under pressure), exploding bomb (explosives), flame over circle (oxidizers), and the environment pictogram.\n\nInside a facility you may also see a simpler **workplace label** on a container a worker filled. Learn to read both, and never use product from an unlabeled container; report it.",
+          "A **GHS supplier label** carries: the product identifier, a **signal word**, hazard and precautionary statements, the **pictograms**, and the supplier's information.\n\nThe **signal word** ranks severity: **Danger** is the more severe hazard, **Warning** the less severe.\n\nThe **GHS pictograms** are red-bordered diamonds: flame (flammable), corrosion (corrosives), exclamation mark (irritant/harmful), health hazard (serious/long-term health effects), skull and crossbones (acute toxicity), gas cylinder (gases under pressure), exploding bomb (explosives), flame over circle (oxidizers), and the environment pictogram.\n\n[[figure:ghs-pictograms]]\n\nInside a facility you may also see a simpler **workplace label** on a container a worker filled. Learn to read both, and never use product from an unlabeled container; report it.",
       },
       {
         order: 3,
