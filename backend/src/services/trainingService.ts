@@ -1,6 +1,7 @@
 import { prisma } from "../config/database";
 import { log } from "../lib/logger";
 import { sendCarrierTrainingRefresherEmail } from "./emailService";
+import { sendSMS } from "./openPhoneService";
 
 /**
  * v3.8.and — SRL Driver Academy Sprint T6: training visibility + lifecycle.
@@ -266,6 +267,69 @@ export async function sendTrainingExpiryReminders(): Promise<{ scanned: number; 
     } catch (e) {
       errors++;
       log.warn({ err: e }, "[DriverAcademy] training expiry reminder email failed");
+    }
+  }
+
+  return { scanned, sent, skipped, errors };
+}
+
+/**
+ * v3.8.aoc (Sprint E2) — DRIVER-facing expiry reminder SMS.
+ *
+ * The T6 cron emails the CARRIER; this one texts the DRIVER directly (drivers
+ * often log in days late — the carrier email tells the employer, not the person
+ * who must retake). Same exact-calendar-day threshold scheme as the carrier path
+ * (30/14/7/0), which is its own dedup: each threshold is hit on exactly one day,
+ * so a daily cron fires at most 4 SMS per cert with no stored dedup field (same
+ * banked missed-cron-day limitation as the carrier reminder — the in-portal
+ * banner carries the persistent signal). Skips test carriers, inactive drivers,
+ * and drivers with no phone on file. SMS is fire-and-forget (a failed text never
+ * blocks the batch).
+ */
+export async function sendDriverExpiryReminders(): Promise<{ scanned: number; sent: number; skipped: number; errors: number }> {
+  const now = new Date();
+  const horizon = new Date(now.getTime() + 31 * DAY_MS);
+  const LOGIN_URL = "silkroutelogistics.ai/driver/login";
+
+  const rows = await prisma.driverCourseProgress.findMany({
+    where: {
+      status: "PASSED",
+      expiresAt: { not: null, lte: horizon },
+      course: { status: "PUBLISHED" },
+      driver: {
+        status: { notIn: ["INACTIVE", "TERMINATED"] },
+        phone: { not: null },
+        carrierProfileId: { not: null },
+        carrierProfile: { isTestAccount: false },
+      },
+    },
+    select: {
+      expiresAt: true,
+      driver: { select: { firstName: true, phone: true } },
+      course: { select: { title: true } },
+    },
+  });
+
+  let scanned = 0, sent = 0, skipped = 0, errors = 0;
+
+  for (const r of rows) {
+    scanned++;
+    if (!r.expiresAt || !r.driver.phone) { skipped++; continue; }
+    const days = calendarDaysUntil(r.expiresAt, now);
+    // Fire only on the exact threshold days; days<0 (already lapsed before today)
+    // got its day-0 text when it crossed — don't re-text on every later scan.
+    if (days < 0 || !REMINDER_THRESHOLDS.includes(days)) { skipped++; continue; }
+
+    const first = (r.driver.firstName || "").trim() || "Driver";
+    const when = days === 0 ? "expires today" : `expires in ${days} day${days === 1 ? "" : "s"}`;
+    const msg = `${first}, your "${r.course.title}" training certificate ${when}. Renew it in SRL Driver Academy: ${LOGIN_URL}`;
+
+    try {
+      await sendSMS(r.driver.phone, msg);
+      sent++;
+    } catch (e) {
+      errors++;
+      log.warn({ err: e }, "[DriverAcademy] driver expiry reminder SMS failed");
     }
   }
 

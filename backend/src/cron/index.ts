@@ -428,6 +428,21 @@ export function initCronJobs() {
     }
   }), { timezone: "America/New_York" });
 
+  // ─── Daily (5:20 AM Eastern): DRIVER-facing training expiry SMS ───
+  // v3.8.aoc Sprint E2 — texts the driver directly (the 5:10 job emails the
+  // carrier). Same exact-threshold scheme; excludes test carriers + drivers
+  // without a phone. Eastern per Item 185 (human-facing reminder).
+  cron.schedule("20 5 * * *", () => withGuard("driver-training-expiry-sms", async () => {
+    try {
+      log.info("[Cron Daily] Sending driver-facing training expiry SMS...");
+      const { sendDriverExpiryReminders } = require("../services/trainingService");
+      const result = await sendDriverExpiryReminders();
+      log.info({ result }, "[Cron Daily] Driver training expiry SMS sent");
+    } catch (err) {
+      log.error({ err }, "[Cron Daily] Driver training expiry SMS error:");
+    }
+  }), { timezone: "America/New_York" });
+
   // ─── Weekly (Monday 3:30 AM): Full chameleon scan ─────────────
   cron.schedule("30 3 * * 1", () => withGuard("chameleon-scan", async () => {
     try {

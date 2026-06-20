@@ -73,6 +73,17 @@ export default function DriverCoursesPage() {
   const overallPct = courses.length ? Math.round((passedCount / courses.length) * 100) : 0;
   const cdlBlocked = !!eligibility && !eligibility.eligible;
 
+  // v3.8.aoc (Sprint E2) — in-portal expiry nudge: certs that have lapsed or are
+  // within 30 days. Pairs with the SMS reminder so an engaged driver sees it
+  // immediately on login.
+  const DAY = 86_400_000;
+  const expiringCerts = courses
+    .filter((c) => c.progress?.status === "PASSED" && c.progress.expiresAt)
+    .map((c) => ({ title: c.title, days: Math.ceil((new Date(c.progress!.expiresAt!).getTime() - Date.now()) / DAY) }))
+    .filter((c) => c.days <= 30);
+  const expiredCount = expiringCerts.filter((c) => c.days < 0).length;
+  const soonCount = expiringCerts.length - expiredCount;
+
   const card = "rounded-2xl border border-[rgba(10,37,64,0.08)] bg-white p-8 shadow-[0_1px_3px_rgba(10,37,64,0.04)]";
 
   return (
@@ -90,6 +101,18 @@ export default function DriverCoursesPage() {
           </div>
           <div className="h-2 overflow-hidden rounded-full bg-[#EFE6D3]">
             <div className="h-full rounded-full bg-gradient-to-r from-[#C5A572] to-[#BA7517] transition-all duration-500" style={{ width: `${overallPct}%` }} />
+          </div>
+        </div>
+      )}
+
+      {!loading && !error && !cdlBlocked && expiringCerts.length > 0 && (
+        <div className={`mb-5 flex items-start gap-2.5 rounded-2xl border-l-4 px-4 py-3 ${expiredCount > 0 ? "border-[#9B2C2C] bg-[#F6E3E3]" : "border-[#B07A1A] bg-[#FBEFD4]"}`}>
+          <Clock size={16} className={`mt-0.5 shrink-0 ${expiredCount > 0 ? "text-[#9B2C2C]" : "text-[#B07A1A]"}`} />
+          <div className="text-[13px] leading-relaxed text-[#0A2540]">
+            {expiredCount > 0 && <span className="font-semibold text-[#9B2C2C]">{expiredCount} certificate{expiredCount === 1 ? "" : "s"} expired</span>}
+            {expiredCount > 0 && soonCount > 0 && " · "}
+            {soonCount > 0 && <span className="font-semibold text-[#B07A1A]">{soonCount} expiring within 30 days</span>}
+            . Open the course below and retake the quiz to renew your certificate.
           </div>
         </div>
       )}

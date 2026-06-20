@@ -13165,6 +13165,15 @@
 //   400+ ft at 55 mph, FMCSA), the empty-truck-needs-more point, and the CDL following
 //   rule; quiz adds two real stopping-distance items. Content files only — live via
 //   prod re-seed. Per §3.1: ant → anu.
+// v3.8.aoc — SRL Driver Academy Sprint E2: driver-facing expiry reminders.
+//   The T6 cron emails the CARRIER when a cert nears expiry; the driver who must
+//   retake got nothing. Now: (1) a new daily 5:20 AM ET cron texts the DRIVER
+//   directly via OpenPhone at the same 30/14/7/0-day thresholds (the exact-day
+//   match IS the dedup — at most 4 texts/cert, no new field; mirrors the carrier
+//   path), excluding test carriers + inactive + phone-less drivers; (2) an
+//   in-portal banner on the driver dashboard flags lapsed / within-30-day certs
+//   on login (red if any expired, amber otherwise) with a retake nudge. No
+//   migration. Per §3.1: aob → aoc.
 // v3.8.aob — SRL Driver Academy Sprint E1: public certificate-verification URL.
 //   A shipper/auditor/insurer can now confirm a completion cert is genuine. New
 //   lazily-minted, unique-indexed verifyCode on DriverCourseProgress (additive
@@ -13252,7 +13261,7 @@
 //   (3) fraud-awareness — quiz distractors changed to real false-comfort traps (high
 //   rate / nice website / on a load board) instead of absurd one-liners. Content files
 //   only — live via prod re-seed. 8 of 22 courses now overhauled. Per §3.1: anu → anv.
-export const SRL_VERSION = "3.8.aob";
+export const SRL_VERSION = "3.8.aoc";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
