@@ -74,9 +74,9 @@ export const EXPANSION: CurriculumCourse[] = [
     slug: "hazmat-awareness",
     title: "Hazmat & Dangerous Goods Awareness",
     category: "Hazardous Materials",
-    summary: "How to recognize regulated dangerous goods, what the placards and papers mean, what an H endorsement covers, and what to do at a spill.",
-    version: "1",
-    estMinutes: 18,
+    summary: "Recognize the 9 hazard classes and their placards, read the shipping paper, keep incompatible loads apart, know what an H endorsement covers, and what to do at a spill.",
+    version: "2",
+    estMinutes: 19,
     passThreshold: 80,
     validityMonths: 12,
     sortOrder: 3,
@@ -86,15 +86,35 @@ export const EXPANSION: CurriculumCourse[] = [
         order: 1,
         title: "Recognizing dangerous goods",
         estMinutes: 5,
-        bodyMarkdown:
-          "Hazardous materials (hazmat in the US, dangerous goods in Canada) are substances that can harm people, property, or the environment in transport. The US rules are the Hazardous Materials Regulations, **49 CFR Parts 100-185**.\n\nMaterials are grouped into **9 UN hazard classes**: 1 Explosives, 2 Gases, 3 Flammable liquids, 4 Flammable solids, 5 Oxidizers and organic peroxides, 6 Toxic and infectious substances, 7 Radioactive, 8 Corrosives, 9 Miscellaneous.\n\nAs a driver you do not classify the material; the shipper does. Your job is to **recognize** it: the **placards** on the trailer, the **labels and markings** on the packages, and the **shipping paper** (the description with the UN number, proper shipping name, hazard class, and packing group). If the paperwork and the placards do not match the freight, stop and ask.\n\n> " + DISCLAIMER,
+        bodyMarkdown: `Hazardous materials (hazmat in the US, dangerous goods in Canada) are substances that can harm people, property, or the environment in transport. The US rules are the Hazardous Materials Regulations, **49 CFR Parts 100-185**.
+
+**The 9 hazard classes — and their divisions.** The shipper classifies the material; your job is to recognize it. The classes split into divisions you will see on placards:
+
+- **1** Explosives (divisions 1.1-1.6 by blast hazard)
+- **2** Gases: **2.1** flammable, **2.2** non-flammable, **2.3** poison/toxic
+- **3** Flammable liquids
+- **4** Flammable solids: **4.1** flammable solid, **4.2** spontaneously combustible, **4.3** dangerous when wet
+- **5** **5.1** oxidizers, **5.2** organic peroxides
+- **6** **6.1** toxic, **6.2** infectious substances
+- **7** Radioactive
+- **8** Corrosives
+- **9** Miscellaneous
+
+**What a placard looks like.** A placard is a **diamond** (a square on its point), **color-coded** to the hazard — **red** = flammable, **green** = non-flammable gas, **orange** = explosive, **yellow** = oxidizer, **white** = poison, **blue** = dangerous when wet, **black and white** = corrosive. The **hazard-class number sits in the bottom corner**, a **symbol sits at the top**, and a **four-digit UN ID number** shows either across the center of the placard or on an **orange panel** beside it. Read the color, the class number, and the UN ID at a glance.
+
+If the paperwork and the placards do not match the freight, **stop and ask** before you move.`,
       },
       {
         order: 2,
-        title: "Placards, papers, and the ERG",
-        estMinutes: 5,
-        bodyMarkdown:
-          "**Placards.** Most hazmat requires placards once the aggregate gross weight reaches **1,001 lb** (the Table 2 threshold). The most dangerous materials (Table 1: certain explosives, poison gas, and the like) require placards in **any amount**. The placard tells everyone on the road what class is aboard.\n\n**Shipping papers.** They must be within your reach while driving and easily found in an emergency, kept on top of other papers or tabbed. They include the emergency response information.\n\n**The Emergency Response Guidebook (ERG)** is carried in the cab and gives first responders (and you) the initial isolation and protective actions for the material by its UN number or name.\n\nTo haul a **placarded** amount you need a **hazmat (H) endorsement** on your CDL, and the carrier needs to be registered with PHMSA. Hauling hazmat without the endorsement is a serious violation.",
+        title: "Placards, papers, and keeping loads apart",
+        estMinutes: 6,
+        bodyMarkdown: `**When placards are required (49 CFR 172.504).** Most hazmat must be placarded once the aggregate gross weight reaches **1,001 lb** (the Table 2 threshold). The most dangerous materials — **Table 1** (certain explosives, poison gas, and the like) — require placards in **any amount**. A material with a second hazard may also carry a **subsidiary placard** (the same diamond, with no class number).
+
+**The shipping paper and the basic description.** It must be within reach while you drive and easy to find in an emergency (on top of other papers, or tabbed). The **basic description** lists, in order, the **UN ID number, proper shipping name, hazard class, and packing group**, plus the quantity, an emergency-response phone number, and the **shipper's certification** that the load is correctly classified, packed, marked, and labeled. The **Emergency Response Guidebook (ERG)** rides in the cab and gives isolation and protective actions by UN number.
+
+**Do not load incompatible hazards together.** The **segregation table (49 CFR 177.848)** forbids loading certain classes in the same vehicle — oxidizers away from flammables, acids away from cyanides, and so on. If a shipper hands you two classes that don't mix, that is a stop-and-verify.
+
+To haul a **placarded** amount you need a **hazmat (H) endorsement** on your CDL (with a TSA security threat assessment), and the carrier must be **registered with PHMSA**. Hauling a placardable load without the endorsement is a serious violation.`,
       },
       {
         order: 3,
@@ -112,11 +132,12 @@ export const EXPANSION: CurriculumCourse[] = [
       },
     ],
     questions: [
-      { order: 1, question: "How many UN hazard classes are there?", options: ["6", "7", "9", "12"], correctIndex: 2, explanation: "There are 9 UN hazard classes, from explosives (1) through miscellaneous (9)." },
-      { order: 2, question: "Which document gives a driver and first responders immediate emergency guidance for a hazmat load?", options: ["The bill of lading", "The Emergency Response Guidebook (ERG)", "The IFTA license", "The cab card"], correctIndex: 1, explanation: "The ERG, carried in the cab, gives initial isolation and protective actions by UN number or name." },
-      { order: 3, question: "To haul a placarded amount of hazardous material, a driver needs:", options: ["Nothing extra", "A hazmat (H) endorsement on the CDL", "A passenger endorsement", "Only a TWIC card"], correctIndex: 1, explanation: "An H endorsement is required to transport placardable quantities of hazmat." },
-      { order: 4, question: "At a hazmat spill, your first priority is to:", options: ["Clean it up yourself", "Protect yourself and isolate the area, then call 911 / CHEMTREC", "Drive to the nearest exit", "Hide the shipping papers"], correctIndex: 1, explanation: "Protect yourself (stop, stay upwind/uphill, do not contact the material), isolate, then call for help." },
-      { order: 5, question: "The US emergency hotline for a chemical incident is:", options: ["411", "CHEMTREC, 1-800-424-9300", "The DOT main line", "Your dispatcher only"], correctIndex: 1, explanation: "CHEMTREC (1-800-424-9300) provides 24/7 chemical emergency response information; call 911 first for life safety." },
+      { order: 1, question: "A green diamond placard with a 2 in the bottom corner tells you the trailer is carrying:", options: ["a flammable liquid", "a non-flammable gas", "a corrosive", "an oxidizer"], correctIndex: 1, explanation: "Green = Class 2.2, a non-flammable, non-toxic gas. Red is flammable, white is poison, yellow is oxidizer — the color plus the class number identify the hazard at a glance." },
+      { order: 2, question: "A load has 400 lb of a Table 2 hazmat plus 1 lb of a Table 1 material. Placards are required because:", options: ["the combined weight is over 1,001 lb", "the Table 1 material must be placarded in any amount", "all hazmat is always placarded", "no placards are needed under 1,001 lb"], correctIndex: 1, explanation: "Table 2 materials only need a placard at 1,001 lb aggregate (172.504), so the 400 lb alone would not. But Table 1 materials require placards in ANY amount — the 1 lb triggers it." },
+      { order: 3, question: "To drive a placarded load of hazmat, the driver must hold:", options: ["a clean CDL with no endorsements", "a hazmat (H) endorsement plus a TSA security threat assessment", "a tanker (N) endorsement", "a doubles/triples (T) endorsement"], correctIndex: 1, explanation: "A placardable quantity requires the hazmat (H) endorsement, which includes a TSA background check; the carrier must also be PHMSA-registered. Tanker and doubles/triples are different endorsements." },
+      { order: 4, question: "A shipper wants you to load an oxidizer (5.1) and a flammable liquid (3) together in one trailer. You should:", options: ["load them — any classes can ride together", "check the segregation table (177.848); these may be incompatible", "load them only if both are placarded", "load the heavier one toward the nose"], correctIndex: 1, explanation: "The segregation table in 49 CFR 177.848 prohibits loading certain hazard classes together. Oxidizers and flammables are a classic do-not-mix pair — verify before you load." },
+      { order: 5, question: "At a hazmat leak, your first action is to:", options: ["start cleaning up the spilled material", "stop, stay upwind and uphill, and keep clear of the vapor", "drive the load away from the scene", "open the trailer to inspect the packages"], correctIndex: 1, explanation: "Protect yourself first — stop, stay upwind and uphill, and avoid contact with the material or vapor. You cannot help anyone if you go down. Then isolate and call 911 / CHEMTREC." },
+      { order: 6, question: "For chemical-emergency guidance during a hazmat incident, you call:", options: ["the National Response Center for response advice", "CHEMTREC at 1-800-424-9300", "your insurance company", "the shipper's sales line"], correctIndex: 1, explanation: "CHEMTREC (1-800-424-9300) gives 24/7 chemical emergency response information. Call 911 first for life safety; the National Response Center (1-800-424-8802) is for required federal spill reporting, a different purpose." },
     ],
   },
 
@@ -220,9 +241,9 @@ export const EXPANSION: CurriculumCourse[] = [
     slug: "cargo-securement",
     title: "Cargo Securement",
     category: "Vehicle & Cargo Safety",
-    summary: "The FMCSA securement rules: the forces your system must hold, the working-load-limit 50% rule, minimum tiedowns, and when to re-check.",
-    version: "1",
-    estMinutes: 16,
+    summary: "The FMCSA securement rules: the forces your system must hold, the working-load-limit 50% rule, the minimum-tiedown count, a worked example you can run at the dock, and when to re-check.",
+    version: "2",
+    estMinutes: 18,
     passThreshold: 80,
     validityMonths: 12,
     sortOrder: 6,
@@ -232,30 +253,71 @@ export const EXPANSION: CurriculumCourse[] = [
         order: 1,
         title: "The rules and the goal",
         estMinutes: 4,
-        bodyMarkdown:
-          "Cargo securement is governed by **49 CFR 393, Subpart I (393.100-393.136)**. The goal is simple: cargo must not shift, spill, leak, blow off, or fall during normal driving, including hard braking and evasive steering.\n\nThe rules set **performance criteria** the securement system must withstand (verify current values): about **0.8 g** of force forward (a hard stop), **0.5 g** rearward, and **0.5 g** to each side. In plain terms, the freight has to stay put when you brake hard or swerve.\n\nYou, the driver, are responsible for knowing the cargo is properly distributed and secured before you move and for keeping it that way en route. \"The shipper loaded it\" is not a defense if it comes loose on your truck.\n\n> " + DISCLAIMER,
+        bodyMarkdown: `Cargo securement is governed by **49 CFR 393, Subpart I**. The goal: cargo must not shift, spill, leak, blow off, or fall during normal driving, including hard braking and hard steering.
+
+**The forces your system must hold (49 CFR 393.102).** Your securement must withstand at least **0.8 g forward** (a hard stop), **0.5 g rearward**, **0.5 g to each side**, and **0.2 g vertical** (upward). In plain terms: the freight has to stay put when you brake hard, accelerate, swerve, or hit a bump.
+
+**It is on you.** The driver is responsible for knowing the cargo is properly distributed and secured before moving, and for keeping it that way en route. "The shipper loaded it" is not a defense if the load comes loose on your truck.`,
       },
       {
         order: 2,
         title: "Working load limit and the 50% rule",
         estMinutes: 5,
-        bodyMarkdown:
-          "**Working Load Limit (WLL)** is the maximum load a tiedown or anchor point is rated to secure. It is marked on the device, or you use the FMCSA default values. Never load a tiedown past its WLL.\n\n**The aggregate rule:** the combined WLL of all the tiedowns on an article must be **at least 50% of the weight of that article**.\n\n**Minimum number of tiedowns** (verify current):\n\n- An article **5 ft or shorter** and **1,100 lb or lighter**: at least **1** tiedown.\n- An article **over 5 ft**, or **over 1,100 lb**: at least **2** tiedowns.\n- Longer articles: generally **2 tiedowns for the first 10 ft**, plus **1 more for each additional 10 ft** or fraction.\n\nUse **edge protectors** so straps are not cut on sharp corners, and add **blocking, bracing, or friction mats** so the load cannot slide.",
+        bodyMarkdown: `**Working Load Limit (WLL)** is the maximum load a strap, chain, or anchor point is rated to hold. Use the **WLL marked on the device**; if it is unmarked, use the FMCSA default values in **49 CFR 393.108**. A tiedown's real WLL is its **lowest-rated part** — the strap, the hook, the winch, and the anchor point all count, and the weakest one wins.
+
+**The 50% aggregate rule (393.106).** The combined WLL of all the tiedowns on an article must be **at least one-half (50%) of the weight of that article**.
+
+**Minimum number of tiedowns (393.110)** — a separate rule you must ALSO meet:
+
+- **5 ft or shorter AND 1,100 lb or lighter:** at least **1** tiedown.
+- **5 ft or shorter but over 1,100 lb:** at least **2** tiedowns.
+- **Longer than 5 ft, up to 10 ft** (any weight): at least **2** tiedowns.
+- **Longer than 10 ft:** **2 tiedowns for the first 10 ft, plus 1 more for each additional 10 ft** or part of it.
+
+You must satisfy **both** the 50% rule and the tiedown count — whichever requires more straps is the one you follow.`,
       },
       {
         order: 3,
         title: "Securing it and keeping it secure",
         estMinutes: 4,
-        bodyMarkdown:
-          "Match the method to the freight: **chains and binders** for steel and heavy machinery, **straps** for palletized and general freight, with **dunnage, blocking, and bracing** to fill voids and stop movement. A **headboard or bulkhead** protects you from a forward shift.\n\nSecurement is not set-and-forget. Re-check it:\n\n- Within the **first 50 miles** after loading,\n- Then at least every **150 miles, every 3 hours, or at each change of duty status**, whichever comes first.\n\nStraps loosen and loads settle, so the early check matters most.\n\nSome commodities have **their own rules** in Subpart I: logs, metal coils, paper rolls, concrete pipe, intermodal containers, vehicles, and large boulders. If you haul one of these, learn its specific requirements before you load.",
+        bodyMarkdown: `Match the method to the freight: **chains and binders** for steel and heavy machinery, **straps** for palletized and general freight, with **dunnage, blocking, and bracing** to fill voids and stop movement. Use **edge protectors** so straps are not cut on sharp corners, **friction mats** to keep the load from sliding, and a **headboard or bulkhead** to protect you from a forward shift.
+
+**Securement is not set-and-forget (49 CFR 392.9).** Re-check the load and its securement:
+
+- Within the **first 50 miles** after you begin the trip, and
+- After that, at least every **150 miles, every 3 hours, or each change of duty status** — whichever comes first.
+
+Straps loosen and loads settle, so that first 50-mile check catches the most problems.
+
+**Some commodities have their own rules** in Subpart I — logs, metal coils, paper rolls, concrete pipe, intermodal containers, vehicles, and large boulders each have specific tiedown requirements. If you haul one, learn its section before you load.`,
+      },
+      {
+        order: 4,
+        title: "Doing the math at the dock",
+        estMinutes: 5,
+        bodyMarkdown: `Run both rules every time, then follow whichever is stricter.
+
+**Step 1 — the 50% rule.** Halve the article weight. That is the minimum **aggregate WLL** your straps must add up to.
+
+**Step 2 — the tiedown count.** Measure the article and apply 393.110.
+
+**Worked example.** A **9,000 lb** steel rack, **12 ft** long, not blocked against forward movement. Each strap is marked **WLL 3,335 lb**.
+
+- 50% rule: half of 9,000 = **4,500 lb** of aggregate WLL needed. Two straps give 6,670 lb, which clears it.
+- Tiedown count: a 12-ft article needs **2 tiedowns for the first 10 ft, plus 1 more** for the extra 2 ft = **3 tiedowns**.
+
+So two straps **pass** the weight rule but **fail** the count. You need **at least 3 straps** here. Three straps give 10,005 lb of aggregate WLL — well over the 4,500 lb minimum — and meet the count.
+
+**The takeaway:** never stop at the 50% math. Count tiedowns by length too, and add edge protection and blocking so nothing slides.`,
       },
     ],
     questions: [
-      { order: 1, question: "The combined working load limit of your tiedowns must be at least what percent of the article's weight?", options: ["25%", "50%", "80%", "100%"], correctIndex: 1, explanation: "Subpart I requires aggregate WLL of at least 50% of the weight of the secured article." },
-      { order: 2, question: "After loading, you must re-check cargo securement within the first:", options: ["25 miles", "50 miles", "100 miles", "150 miles"], correctIndex: 1, explanation: "The first re-check is required within 50 miles, when loads settle and straps loosen most." },
-      { order: 3, question: "After the first check, securement must be re-examined at least every:", options: ["500 miles", "150 miles, 3 hours, or duty-status change — whichever is first", "Only at delivery", "Never again"], correctIndex: 1, explanation: "Re-check at least every 150 miles, 3 hours, or change of duty status, whichever occurs first." },
-      { order: 4, question: "Working Load Limit (WLL) is:", options: ["The cargo's weight", "The maximum load a tiedown/anchor is rated to secure", "The truck's GVWR", "The axle weight limit"], correctIndex: 1, explanation: "WLL is the rated capacity of the tiedown or anchor point; aggregate WLL must meet the 50% rule." },
-      { order: 5, question: "An article over 5 ft long and over 1,100 lb requires at minimum:", options: ["1 tiedown", "2 tiedowns", "4 tiedowns", "No tiedowns"], correctIndex: 1, explanation: "Articles longer than 5 ft or heavier than 1,100 lb require at least 2 tiedowns (more as length/weight increase)." },
+      { order: 1, question: "The combined working load limit of the tiedowns on an article must be at least:", options: ["one-quarter of the article's weight", "one-half of the article's weight", "equal to the article's weight", "twice the article's weight"], correctIndex: 1, explanation: "49 CFR 393.106 requires the aggregate WLL of the tiedowns to be at least 50% (one-half) of the weight of the secured article." },
+      { order: 2, question: "After starting a trip with a freshly loaded trailer, you must first re-check securement within:", options: ["25 miles or 1 hour", "50 miles", "150 miles or 3 hours", "the first fuel stop"], correctIndex: 1, explanation: "Per 49 CFR 392.9, the first securement check is required within the first 50 miles, where loads settle and straps loosen most." },
+      { order: 3, question: "After the first check, securement must be re-examined at least every:", options: ["600 miles or once per shift", "150 miles, 3 hours, or change of duty status", "300 miles or 6 hours", "state line you cross"], correctIndex: 1, explanation: "After the first 50-mile check, 49 CFR 392.9 requires re-examining the load at least every 150 miles, every 3 hours, or at each change of duty status — whichever comes first." },
+      { order: 4, question: "A 12-ft article weighs 9,000 lb and is not blocked against forward movement. Each strap is rated WLL 3,335 lb. The minimum that legally secures it is:", options: ["two straps — that meets the 50% weight rule", "three straps — to meet both the 50% rule and the 393.110 count for a 12-ft article", "one strap rated over 4,500 lb", "four straps, one at each corner"], correctIndex: 1, explanation: "Half of 9,000 lb = 4,500 lb aggregate WLL, which two straps clear. But 393.110 needs 2 tiedowns for the first 10 ft plus 1 for the extra 2 ft = 3 for a 12-ft article. You must meet both rules, so the count governs: at least three straps." },
+      { order: 5, question: "A tiedown assembly's working load limit is governed by:", options: ["the heaviest load it has ever held", "its lowest-rated part — strap, hook, winch, or anchor point", "the trailer's gross weight rating", "how tightly you ratchet it"], correctIndex: 1, explanation: "A tiedown's WLL is set by its weakest link — the lowest-rated of the strap/chain, the hardware, and the anchor point. Use the marked value, or the 393.108 defaults if it is unmarked." },
+      { order: 6, question: "An 8-ft article weighing 1,400 lb (not blocked forward) requires at minimum:", options: ["1 tiedown", "2 tiedowns", "3 tiedowns", "no tiedowns if it is centered"], correctIndex: 1, explanation: "Under 393.110, an article longer than 5 ft (or heavier than 1,100 lb) needs at least 2 tiedowns. An 8-ft, 1,400-lb article exceeds both thresholds, so 2 is the minimum." },
     ],
   },
 

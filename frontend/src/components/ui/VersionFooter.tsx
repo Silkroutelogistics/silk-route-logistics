@@ -13140,7 +13140,19 @@
 //   frontend-only, API already returns category+sortOrder; per-card category eyebrow
 //   dropped (section header carries it). From the 6-lens Academy value audit (48
 //   findings). Per §3.1: anr → ans.
-export const SRL_VERSION = "3.8.ans";
+// v3.8.ant — SRL Driver Academy content overhaul, batch 1 (Sprint A+B, fact-checked).
+//   Two highest-severity courses rebuilt with every regulatory figure verified
+//   against eCFR/FMCSA/PHMSA: (1) cargo-securement — added a 4th "Doing the math
+//   at the dock" lesson with a worked WLL + tiedown-count example (49 CFR 393.106
+//   50% rule + 393.110 counts + 392.9 re-checks), deepened the WLL lesson, and
+//   replaced the 5 leaky questions with 6 calibrated ones incl. two real
+//   calculations. (2) hazmat-awareness — deepened placard RECOGNITION (9 classes +
+//   divisions, placard color/number/UN-ID-panel, 172.504 Table 1/2 thresholds) +
+//   added segregation (177.848) + basic-description + subsidiary placards; rewrote
+//   the quiz (recognition/threshold/segregation/spill) with near-neighbor
+//   distractors, removing the "411"/"how many classes" leaks. Content files only;
+//   goes live via the prod re-seed (seed-training-courses.ts). Per §3.1: ans → ant.
+export const SRL_VERSION = "3.8.ant";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
