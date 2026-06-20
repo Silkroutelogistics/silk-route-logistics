@@ -13165,6 +13165,16 @@
 //   400+ ft at 55 mph, FMCSA), the empty-truck-needs-more point, and the CDL following
 //   rule; quiz adds two real stopping-distance items. Content files only — live via
 //   prod re-seed. Per §3.1: ant → anu.
+// v3.8.anx — SRL Driver Academy quiz overhaul, batch 5 (5 more courses → 17 of 22 done).
+//   weigh-stations-size-weight, tracking-check-calls, backing-docking-coupling,
+//   distracted-fatigued-driving, railroad-crossings-emergencies — same length-tell leak
+//   recalibrated. Numeric/brand-recall items (weigh-station limits, Carvan app, 15%
+//   tracking weight, football-field 5s) kept; the prose items rebalanced with
+//   near-neighbor distractors (weigh Q4 traps cab-card vs HOS/IFTA/med-card; backing Q5
+//   traps "raise the gear" vs "set gear on the weight"; railroad Q2 traps "push it
+//   clear" vs "move toward the train at an angle"). Correct positions shuffled off the
+//   all-index-1 pattern. Lessons already adequate — quiz-only pass + version bumps (→2).
+//   Content files; live via prod re-seed. Per §3.1: anw → anx.
 // v3.8.anw — SRL Driver Academy quiz overhaul, batch 4 (4 more courses → 12 of 22 done).
 //   detention-documentation, reefer-cold-chain, accident-procedures,
 //   roadside-inspections-csa — all carried the same systemic "longest option is the
@@ -13186,7 +13196,7 @@
 //   (3) fraud-awareness — quiz distractors changed to real false-comfort traps (high
 //   rate / nice website / on a load board) instead of absurd one-liners. Content files
 //   only — live via prod re-seed. 8 of 22 courses now overhauled. Per §3.1: anu → anv.
-export const SRL_VERSION = "3.8.anw";
+export const SRL_VERSION = "3.8.anx";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
