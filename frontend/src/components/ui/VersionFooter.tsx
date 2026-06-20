@@ -13165,6 +13165,19 @@
 //   400+ ft at 55 mph, FMCSA), the empty-truck-needs-more point, and the CDL following
 //   rule; quiz adds two real stopping-distance items. Content files only — live via
 //   prod re-seed. Per §3.1: ant → anu.
+// v3.8.any — SRL Driver Academy quiz overhaul, batch 6 — FINAL (5 courses → ALL 22 done).
+//   trip-planning-routing, cargo-theft-security, human-trafficking-awareness,
+//   workplace-dock-safety, coercion-professional-conduct — same length-tell leak
+//   recalibrated; correct positions shuffled off the all-index-1 pattern. Numeric/recall
+//   items (13'6" clearance, 1-888-373-7888 hotline, TAT) kept. cargo-theft was fully
+//   leaked (all 5 longest-correct) — rewrote all 5 with concrete false-comfort
+//   distractors. DEEPENED coercion lesson 2: added the STAA whistleblower deadline that
+//   was missing — file with OSHA within 180 DAYS of retaliation (web-verified
+//   osha.gov/whistleblowers.gov), and the two-clock distinction vs the FMCSA coercion
+//   complaint's 90 days; Q2/Q3 now test both deadlines. Closes the user's "whistleblower
+//   STAA deadline thin" flag. **Sprint A+B (quiz answer-leak overhaul across all 22
+//   courses + thin-lesson deepening) COMPLETE.** Content files; live via prod re-seed.
+//   Per §3.1: anx → any.
 // v3.8.anx — SRL Driver Academy quiz overhaul, batch 5 (5 more courses → 17 of 22 done).
 //   weigh-stations-size-weight, tracking-check-calls, backing-docking-coupling,
 //   distracted-fatigued-driving, railroad-crossings-emergencies — same length-tell leak
@@ -13196,7 +13209,7 @@
 //   (3) fraud-awareness — quiz distractors changed to real false-comfort traps (high
 //   rate / nice website / on a load board) instead of absurd one-liners. Content files
 //   only — live via prod re-seed. 8 of 22 courses now overhauled. Per §3.1: anu → anv.
-export const SRL_VERSION = "3.8.anx";
+export const SRL_VERSION = "3.8.any";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
