@@ -759,6 +759,17 @@ const STRUCTURED: Record<string, { caption: string; body: React.ReactNode }> = {
       </div>
     ),
   },
+  "adverse-weather-speed-reduction": {
+    caption: "A CDL rule of thumb for cutting speed as the road gets worse: wet, reduce about a third; packed snow, cut by half or more; ice, slow to a crawl and stop as soon as you safely can. (Shown from a 55 mph baseline.)",
+    body: (
+      <Bars items={[
+        { label: "Dry (baseline)", value: 55, max: 55, valueLabel: "55 mph" },
+        { label: "Wet — cut ~1/3", value: 37, max: 55, valueLabel: "~37 mph" },
+        { label: "Packed snow — cut ~1/2", value: 27, max: 55, valueLabel: "~27 mph" },
+        { label: "Ice", value: 5, max: 55, valueLabel: "crawl / stop", highlight: true },
+      ]} />
+    ),
+  },
   "visibility-speed-matching-fog": {
     caption: "Match your speed to what you can SEE. Your stopping distance has to fit inside your sight distance. At 55 mph you need ~400+ ft to stop — so if fog cuts your view to a couple hundred feet, you cannot safely run that speed. Slow until you could stop within what you can see.",
     body: (

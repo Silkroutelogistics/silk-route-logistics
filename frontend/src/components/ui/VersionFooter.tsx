@@ -13165,6 +13165,15 @@
 //   400+ ft at 55 mph, FMCSA), the empty-truck-needs-more point, and the CDL following
 //   rule; quiz adds two real stopping-distance items. Content files only — live via
 //   prod re-seed. Per §3.1: ant → anu.
+// v3.8.aov — SRL Driver Academy FINAL audit, Course 9/22: adverse-weather-defensive v3 -> v4.
+//   Inline primary-source audit (49 CFR 392.14/392.16 + CDL manual adverse-conditions section).
+//   Existing facts verified accurate (400+ ft stopping distance breakdown, empty-truck-needs-more,
+//   7-8 sec following, black ice on bridges, fog low-beams, brake fade, runaway ramps, high-wind
+//   empty trailer). Completeness adds: the CDL speed-reduction rule of thumb (wet cut ~1/3, packed
+//   snow cut ~1/2, ice crawl/stop) in Lesson 1 + a new adverse-weather-speed-reduction Bars figure
+//   + new quiz Q9; jackknife (hard-brake skid) + tire-chain / chain-law awareness in Lesson 3.
+//   Course now 3 lessons / 9 questions / 3 figures. Gates: backend tsc + seed dry-run (22 courses /
+//   170 q, valid) + frontend tsc + next build clean. Live via prod re-seed. Per §3.1: aou -> aov.
 // v3.8.aou — SRL Driver Academy FINAL audit, Course 8/22: accident-procedures v3 -> v4. Inline
 //   primary-source audit (49 CFR 392.22, 393.95, 382.303, 382.209, 390.15, NRC 1-800-424-8802).
 //   Existing facts verified accurate (10-min device placement, triangle 10/100/100 two-way vs
@@ -13497,7 +13506,7 @@
 //   (3) fraud-awareness — quiz distractors changed to real false-comfort traps (high
 //   rate / nice website / on a load board) instead of absurd one-liners. Content files
 //   only — live via prod re-seed. 8 of 22 courses now overhauled. Per §3.1: anu → anv.
-export const SRL_VERSION = "3.8.aou";
+export const SRL_VERSION = "3.8.aov";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
