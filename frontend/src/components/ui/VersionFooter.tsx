@@ -13165,6 +13165,19 @@
 //   400+ ft at 55 mph, FMCSA), the empty-truck-needs-more point, and the CDL following
 //   rule; quiz adds two real stopping-distance items. Content files only — live via
 //   prod re-seed. Per §3.1: ant → anu.
+// v3.8.aoi — SRL Driver Academy Batch 4 (Registration/weights/routing) content enhancement.
+//   weigh-stations-size-weight v3 (0 truth flags; +CAT-ticket reading steer/drive/trailer/
+//   gross vs limits, web-verified slide mechanics — tandems forward=off drives onto tandems
+//   ~250-400 lb/hole, 5th wheel forward=more steer ~500 lb/hole, re-check bridge formula;
+//   registered-weight-vs-legal-weight trap; overweight-en-route; IFTA receipt detail; +2 Q).
+//   trip-planning-routing v3 (CORRECTED two flags: height is state-variable 13'6\"-14' not
+//   fixed [federal sets width 8'6\" only], and bridge-strikes 'always driver' -> primary duty
+//   + SHARED liability with dispatch/shipper -> escalate don't obey; +49 CFR 392.7/397 cites,
+//   find-your-real-height, at-the-bridge stop decision, 30-min-break-after-8hr-driving
+//   precision, impossible-window escalation + never-falsify-log, mid-trip reroute; +2 Q).
+//   NOTE: the audit agent's 'Montgomery v. Caribe Transport' SCOTUS citation was a
+//   hallucination — not in the course, not added. Content only; live via prod re-seed.
+//   Per §3.1: aoh -> aoi.
 // v3.8.aoh — SRL Driver Academy Batch 3 (On-road safety) content enhancement.
 //   accident-procedures v3 (CORRECTED two truth flags: 'two-lane'->'two-way' triangle
 //   placement per 392.22; post-accident testing — triggers are IDENTICAL for alcohol &
@@ -13324,7 +13337,7 @@
 //   (3) fraud-awareness — quiz distractors changed to real false-comfort traps (high
 //   rate / nice website / on a load board) instead of absurd one-liners. Content files
 //   only — live via prod re-seed. 8 of 22 courses now overhauled. Per §3.1: anu → anv.
-export const SRL_VERSION = "3.8.aoh";
+export const SRL_VERSION = "3.8.aoi";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
