@@ -24,8 +24,8 @@ export const EXPANSION: CurriculumCourse[] = [
     title: "CDL, Medical Card & the Clearinghouse",
     category: "Driver Qualification & Health",
     summary: "Keeping your CDL and medical card valid, the notifications you owe your employer, how the drug & alcohol program and Clearinghouse work, and the offenses that disqualify you.",
-    version: "2",
-    estMinutes: 17,
+    version: "3",
+    estMinutes: 22,
     passThreshold: 80,
     validityMonths: 12,
     sortOrder: 2,
@@ -43,14 +43,14 @@ export const EXPANSION: CurriculumCourse[] = [
         title: "Your DOT medical card",
         estMinutes: 4,
         bodyMarkdown:
-          "To drive a commercial vehicle in interstate commerce you must be medically certified. A certified medical examiner from the FMCSA National Registry performs the DOT physical and issues the **medical examiner's certificate** (your \"med card\").\n\nKeep it **current** and carry it (or, depending on your state, ensure your self-certification and the electronic record are on file with your licensing agency). A typical certificate is valid up to 24 months, less if a condition needs monitoring (verify your own expiration).\n\nIf your med card **lapses**, you are not medically qualified to drive a CMV, and your CDL can be downgraded by your state until you recertify. Track the expiration the same way you track your CDL and registration; do not let it surprise you on the road.",
+          "To drive a commercial vehicle in interstate commerce you must be medically certified. A certified medical examiner from the FMCSA National Registry performs the DOT physical and issues the **medical examiner's certificate** (your \"med card\"). A typical certificate is valid up to 24 months, less if a condition needs monitoring (verify your own expiration).\n\n**Self-certification: which of the four categories you operate in.** When you get or renew your CDL you tell your state licensing agency how you operate, and that decides whether you must keep a med card on file:\n\n- **Non-excepted interstate (NI)** — you cross state lines or haul interstate freight under the full federal safety rules. **You must keep a current med card on file with your state.** Most SRL drivers are here.\n- **Excepted interstate (EI)** — interstate, but only certain excepted operations the FMCSA exempts from the medical rules. No med card filed.\n- **Non-excepted intrastate (NA)** — you drive only within one state and must meet **that state's** medical rules.\n- **Excepted intrastate (EA)** — intrastate operations your state has excepted from its medical rules.\n\nDriving in a category other than the one you self-certified to can get your commercial privileges **suspended or revoked** — so certify honestly and update it if your operation changes.\n\nIf your med card **lapses**, you are not medically qualified to drive a CMV, and your CDL can be **downgraded** by your state until you recertify. Track the expiration the same way you track your CDL and registration; do not let it surprise you on the road.",
       },
       {
         order: 3,
         title: "Drugs, alcohol, and the Clearinghouse",
         estMinutes: 5,
         bodyMarkdown:
-          "The federal drug & alcohol program (49 CFR Part 382) sets hard rules for safety-sensitive (driving) functions.\n\n**Prohibited conduct** includes a blood alcohol concentration of **0.04 or higher**, using alcohol within 4 hours of going on duty, and any prohibited-drug use. **Refusing a required test counts as a positive.**\n\n**Six test types:** pre-employment, random, reasonable-suspicion, post-accident, return-to-duty, and follow-up.\n\n**The FMCSA Drug & Alcohol Clearinghouse** is the federal database of violations. You consent to a query, and a recorded violation **bars you from driving** until you complete the return-to-duty process with a Substance Abuse Professional. A violation does not quietly disappear; it is resolved through the process.",
+          "The federal drug & alcohol program (49 CFR Part 382) sets hard rules for safety-sensitive (driving) functions.\n\n**Prohibited conduct** includes a blood alcohol concentration of **0.04 or higher**, using alcohol within 4 hours of going on duty, and any prohibited-drug use. **Refusing a required test counts as a positive.**\n\n**Six test types:** pre-employment, random, reasonable-suspicion, post-accident, return-to-duty, and follow-up.\n\n**The FMCSA Drug & Alcohol Clearinghouse** is the federal database of violations. You consent to a query, and a recorded violation **bars you from driving** until you complete the return-to-duty process. A violation does not quietly disappear.\n\n**What return-to-duty actually involves:**\n\n1. The violation is recorded and you are **prohibited** from safety-sensitive (driving) functions.\n2. You are evaluated by a **Substance Abuse Professional (SAP)**, who prescribes education and/or treatment.\n3. You complete what the SAP prescribes, and the SAP reassesses you.\n4. You take and **pass a return-to-duty test** (a negative result). At that point you are **no longer prohibited** and may drive again.\n5. The SAP sets a **follow-up testing plan** — a minimum of **6 unannounced tests in the first 12 months**, which can run up to **5 years**. Your violation stays **unresolved** in the Clearinghouse until you finish that follow-up plan.\n\nThe process is generally at your expense. The point: a violation is recoverable, but only by doing the SAP / return-to-duty work — there is no shortcut and no waiting it out.",
       },
       {
         order: 4,
@@ -68,6 +68,13 @@ export const EXPANSION: CurriculumCourse[] = [
 
 The takeaway: your driving record, on and off the clock, is your livelihood.`,
       },
+      {
+        order: 5,
+        title: "Three ways you can lose the wheel — and how each comes back",
+        estMinutes: 5,
+        bodyMarkdown:
+          "Not every \"you can't drive\" is the same thing, and each one comes back a different way. Know which is which.\n\n**1. Medical downgrade — administrative, reversible.** If your med card lapses and you're in a category that needs one, your state **downgrades** your CDL to a regular license. This is not a punishment, it's a status. You fix it by getting a new DOT physical and **submitting the current med card to your state**, and your CDL is restored. Fast to fix — if you don't let it lapse in the first place.\n\n**2. Disqualification — a penalty for an offense.** A 49 CFR 383.51 offense (DUI, repeat serious violations, an out-of-service violation, and so on) **disqualifies** you for a set period: 90 days, a year, three years, or life. When the period ends, reinstatement is **not automatic** — you go through your state to reinstate, pay any fees, and meet its conditions, and a long disqualification may require **retaking the CDL tests**.\n\n**3. Clearinghouse prohibition — a drug/alcohol stop.** A recorded drug or alcohol violation puts you in **prohibited** status until you complete the return-to-duty process with a SAP (previous lesson). This is separate from a medical downgrade and from a 383.51 disqualification: different cause, different fix.\n\nThe practical takeaway: keep your med card current (avoids #1), protect your driving record on and off the clock (avoids #2), and stay clean (avoids #3). Each one is recoverable, but each costs you time and money you would rather keep.",
+      },
     ],
     questions: [
       { order: 1, question: "Within how long must you notify your employer of a traffic conviction?", options: ["by the end of the next business day", "within 30 days", "within 90 days", "only if the conviction was in your CMV"], correctIndex: 1, explanation: "49 CFR 383.31 requires notifying your employer within 30 days of a conviction for any traffic violation in ANY vehicle, in any state, except parking. (A license suspension or disqualification is a faster notice — by the next business day.)" },
@@ -76,6 +83,8 @@ The takeaway: your driving record, on and off the clock, is your livelihood.`,
       { order: 4, question: "A driver with an unresolved Clearinghouse drug/alcohol violation may:", options: ["Keep driving normally", "Not perform safety-sensitive functions until return-to-duty is complete", "Drive only locally", "Drive with a co-driver"], correctIndex: 1, explanation: "A recorded violation bars safety-sensitive functions until the return-to-duty process is completed." },
       { order: 5, question: "Your DOT medical certificate has expired with no valid card on file. You:", options: ["Can drive 30 more days", "Are not medically qualified to drive a CMV until you recertify", "Only need it for hazmat", "Are fine for short hauls"], correctIndex: 1, explanation: "Without a current medical certificate you are not medically qualified, and your CDL can be downgraded until you recertify." },
       { order: 6, question: "A first conviction for violating an out-of-service order disqualifies a driver for:", options: ["a written warning only", "90 days to 1 year", "exactly 30 days", "a lifetime"], correctIndex: 1, explanation: "Per 49 CFR 383.51, a first out-of-service-order violation is 90 days to 1 year (longer if hauling hazmat or 15+ passengers). A lifetime ban is reserved for a second major offense such as DUI." },
+      { order: 7, question: "You run interstate freight under the full federal safety rules. You self-certify as:", options: ["excepted interstate — no med card needed", "non-excepted interstate, and keep a current med card on file with your state", "non-excepted intrastate", "whichever category is easiest"], correctIndex: 1, explanation: "Crossing state lines under the full federal rules is non-excepted interstate (NI) — you must keep a current med card on file with your state licensing agency. Driving in a category other than the one you self-certified to can suspend or revoke your commercial privileges." },
+      { order: 8, question: "Your med card lapsed and your state downgraded your CDL. To restore it you:", options: ["wait out a disqualification period", "get a new DOT physical and submit the med card to your state", "complete a return-to-duty test with a SAP", "reapply for a brand-new CDL from scratch"], correctIndex: 1, explanation: "A medical downgrade is administrative, not a penalty — recertify (new DOT physical) and submit the med card to your state and your CDL is restored. That's different from a 383.51 disqualification (an offense penalty) and from a Clearinghouse return-to-duty test (a drug/alcohol stop)." },
     ],
   },
 
@@ -837,8 +846,8 @@ Look **far ahead**, keep an **escape path** to the side, and never let a four-wh
     title: "Human Trafficking Awareness",
     category: "Driver Qualification & Health",
     summary: "What trafficking is, why drivers are a key line of defense, how to recognize the signs, and how to report safely without intervening.",
-    version: "2",
-    estMinutes: 11,
+    version: "3",
+    estMinutes: 16,
     passThreshold: 80,
     validityMonths: null,
     sortOrder: 20,
@@ -849,29 +858,38 @@ Look **far ahead**, keep an **escape path** to the side, and never let a four-wh
         title: "What it is and why drivers matter",
         estMinutes: 3,
         bodyMarkdown:
-          "Human trafficking — forced labor and sex trafficking — happens along the same highways, truck stops, motels, and rest areas drivers use every day. Victims are often hidden in plain sight.\n\nDrivers are the **eyes of the highway** and a recognized line of defense; the organization **Truckers Against Trafficking (TAT)** trains drivers exactly for this. Your role is not to be a hero or run a rescue — it is to **recognize and report**. A single call has freed people.\n\n> " + DISCLAIMER,
+          "Human trafficking — forced labor and sex trafficking — happens along the same highways, truck stops, motels, and rest areas drivers use every day. Victims are often hidden in plain sight.\n\nDrivers are the **eyes of the highway** and a recognized line of defense; the organization **Truckers Against Trafficking (TAT)** trains drivers exactly for this. Your role is not to be a hero or run a rescue — it is to **recognize and report**. A single call has freed people.\n\nThis training is increasingly **expected**: a number of states now require human-trafficking awareness for CDL drivers, and major carriers train to the TAT standard. More important than any mandate, you are often the only person positioned to notice. You do **not** have to be certain — your job is to notice and report, and let trained responders sort out the rest.\n\n> " + DISCLAIMER,
       },
       {
         order: 2,
         title: "Recognizing the signs",
         estMinutes: 4,
         bodyMarkdown:
-          "No single sign proves trafficking, but patterns matter. Watch for someone who:\n\n- **Is not free to come and go** or is clearly controlled by another person.\n- **Lacks their own ID or documents** — someone else holds them.\n- **Appears coached, fearful, or isn't allowed to speak** for themselves.\n- Shows signs of abuse, malnourishment, or branding tattoos.\n- Is a **minor** involved in commercial sex (always trafficking).\n\nAt truck stops, watch for activity around the trucks — CB chatter offering \"commercial company,\" people moving between trucks at night, or knocks on cab doors. Trust your instincts; if it feels wrong, it may be.",
+          "No single sign proves trafficking, but patterns matter. Watch for someone who:\n\n- **Is not free to come and go** or is clearly controlled by another person.\n- **Lacks their own ID or documents** — someone else holds them.\n- **Appears coached, fearful, or isn't allowed to speak** for themselves.\n- Shows signs of abuse, malnourishment, or branding tattoos.\n- Is a **minor** involved in commercial sex (always trafficking).\n\nAt truck stops, watch for activity around the trucks — CB chatter offering \"commercial company,\" people moving between trucks at night, or knocks on cab doors. Trust your instincts; if it feels wrong, it may be.\n\n**\"Controlled by another person\" — what that really looks like.** A couple or family traveling together is normal. Control is different: one person **answers for** another, holds **all** their documents and money, and won't let them speak, be alone, or leave; the other looks fearful, coached, or is watched constantly. A minor involved in commercial sex is **always** trafficking.\n\n**When you're not sure, you still report.** You are not the investigator and you don't need proof. If the pattern feels wrong, make the call and let trained responders assess it. A wrong hunch costs a phone call; a missed one can cost a life.",
       },
       {
         order: 3,
         title: "Report — don't engage",
         estMinutes: 3,
         bodyMarkdown:
-          "**Do not confront a trafficker or attempt a rescue** — it's dangerous for you and for the victim.\n\nInstead, quietly note what you can — descriptions, a vehicle and plate, the location and time — and call:\n\n- **National Human Trafficking Hotline: 1-888-373-7888** (or text **233733**), or\n- **911** if someone is in immediate danger.\n\nYou can also report to SRL. Make the call from a safe spot, and let trained responders take it from there. Recognizing and reporting is the whole job.",
+          "**Do not confront a trafficker or attempt a rescue.** It's dangerous for you and for the victim.\n\n**Know what \"don't engage\" means.** Reporting is your job; *intervening* is not. Trying to talk to the victim, offering them a ride, food, or money, confronting the controller, taking close-up photos, or following the vehicle are all **intervening** — they can tip off a trafficker, put the victim in worse danger, and put you at risk. Stay back, stay safe, and let the professionals act.\n\nInstead, quietly note what you can — descriptions, a vehicle and plate, the location and time — and call:\n\n- **National Human Trafficking Hotline: 1-888-373-7888**, or **text HELP to 233733** (texting the number alone does not reach a responder — include the keyword), or\n- **911** if someone is in immediate danger.\n\nMake the call from a safe spot, and let trained responders take it from there. Recognizing and reporting is the whole job.",
+      },
+      {
+        order: 4,
+        title: "Reporting on an SRL load",
+        estMinutes: 4,
+        bodyMarkdown:
+          "You might spot trafficking anywhere you run — a truck stop or rest area, but also at a **shipper or receiver, during a detention wait, or at a motel** on a layover. The rule is the same everywhere: note it, report it, don't engage.\n\n**On an SRL load, here is the path:**\n\n1. If someone is in immediate danger, call **911** first.\n2. Call or text the **National Human Trafficking Hotline — 1-888-373-7888, or text HELP to 233733**.\n3. Then notify SRL: **call dispatch / operations**, and **email both compliance@silkroutelogistics.ai and operations@silkroutelogistics.ai** with what you saw.\n\n**SRL has your back on this.** SRL supports drivers who report, and you will **not** be penalized for a delay caused by doing the right thing. SRL takes the necessary measures under the law and communicates with the authorities. Reporting is never the wrong call.\n\n> " + DISCLAIMER,
       },
     ],
     questions: [
       { order: 1, question: "A truck driver's role against human trafficking is to:", options: ["recognize the signs and report — not intervene", "run a rescue yourself", "question the trafficker directly", "ignore it and move on"], correctIndex: 0, explanation: "Recognize and report. Confronting traffickers or attempting a rescue is dangerous for you and the victim — your job is the call." },
       { order: 2, question: "A warning sign of trafficking is someone who:", options: ["looks tired after a long shift", "isn't free to leave or lacks their own ID", "is shopping at a busy truck stop", "is waiting at a closed dock"], correctIndex: 1, explanation: "Being controlled, lacking documents, and appearing coached or fearful are classic indicators — ordinary fatigue or a busy stop is not." },
-      { order: 3, question: "The National Human Trafficking Hotline number is:", options: ["411", "1-888-373-7888", "CHEMTREC", "your dispatcher only"], correctIndex: 1, explanation: "1-888-373-7888 (text 233733), or 911 for immediate danger." },
+      { order: 3, question: "The National Human Trafficking Hotline number is:", options: ["411", "1-888-373-7888", "CHEMTREC", "your dispatcher only"], correctIndex: 1, explanation: "Call 1-888-373-7888, or text HELP to 233733 (the keyword is required — texting the number alone won't reach a responder), or 911 for immediate danger." },
       { order: 4, question: "If you suspect trafficking, you:", options: ["confront the people involved", "follow the vehicle to get more detail", "note details and call the hotline or 911 — don't confront anyone", "post what you saw online"], correctIndex: 2, explanation: "Quietly note descriptions, vehicle, plate, location, and time, then call trained responders. Don't engage or follow." },
       { order: 5, question: "The organization that trains drivers to spot trafficking is:", options: ["FMCSA", "Truckers Against Trafficking (TAT)", "CHEMTREC", "OSHA"], correctIndex: 1, explanation: "Truckers Against Trafficking (TAT) trains drivers to recognize and report." },
+      { order: 6, question: "You suspect a victim at a truck stop. Offering them a ride or some money to help is:", options: ["the right way to help", "still intervening — it can be dangerous; note it and report instead", "fine as long as you call afterward", "required by TAT"], correctIndex: 1, explanation: "Offering a ride, food, or money, talking to the victim, or following the vehicle are all intervening — they can tip off a trafficker and put you and the victim in danger. Stay back, note details, and report." },
+      { order: 7, question: "On an SRL load, after calling 911 or the hotline, you also:", options: ["keep it to yourself", "call SRL dispatch/operations and email compliance@ and operations@", "wait until the load delivers", "post it on a driver forum"], correctIndex: 1, explanation: "Notify SRL — call dispatch/operations and email compliance@silkroutelogistics.ai and operations@silkroutelogistics.ai. SRL supports reporting and won't penalize a delay from doing the right thing." },
     ],
   },
 

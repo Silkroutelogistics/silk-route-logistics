@@ -13165,6 +13165,21 @@
 //   400+ ft at 55 mph, FMCSA), the empty-truck-needs-more point, and the CDL following
 //   rule; quiz adds two real stopping-distance items. Content files only — live via
 //   prod re-seed. Per §3.1: ant → anu.
+// v3.8.aoe — SRL Driver Academy content audit + enhancement (3 courses, web-verified).
+//   Ran a 6-agent truth/quality/blanks/blind-spots audit of ELD-HOS, CDL/Medical/
+//   Clearinghouse, and Trafficking, then VERIFIED the workflow's output against eCFR/
+//   FMCSA/the hotline myself — caught 2 false-positive "errors" (0.8g cargo securement IS
+//   correct per 393.102(a)(1) breaking-strength; ~400ft total stopping matches the CDL
+//   manual) and confirmed the 1 real fix. Additions (all web-verified): ELD-HOS —
+//   sleeper-berth worked example, 6/4 & 5/5 pilot-program awareness (FMCSA pre-test 2026,
+//   not legal yet), short-haul daily-confirm checklist, multi-day reset, +2 Q. CDL — the
+//   4 self-cert categories (NI/EI/NA/EA), the Clearinghouse return-to-duty lifecycle
+//   (SAP → RTD test → follow-up 6-in-12mo up to 5yr), a new downgrade-vs-disqualification-
+//   vs-prohibition lesson, +2 Q. Trafficking — REAL FIX: "text HELP to 233733" (keyword
+//   required); rescue-vs-intervention, "controlled by another" examples + report-when-
+//   unsure, a new "Reporting on an SRL load" lesson (911 → hotline → dispatch +
+//   compliance@/operations@; SRL won't penalize doing the right thing), +2 Q. 76 lessons
+//   / 122 questions. Content-only; live via prod re-seed. Per §3.1: aod → aoe.
 // v3.8.aod — SRL Driver Academy Sprint E3: lesson audio narration.
 //   A "Listen" control on every lesson slide reads the visible lesson aloud via the
 //   browser-native Web Speech API (SpeechSynthesis) — zero cost, zero storage, no
@@ -13271,7 +13286,7 @@
 //   (3) fraud-awareness — quiz distractors changed to real false-comfort traps (high
 //   rate / nice website / on a load board) instead of absurd one-liners. Content files
 //   only — live via prod re-seed. 8 of 22 courses now overhauled. Per §3.1: anu → anv.
-export const SRL_VERSION = "3.8.aod";
+export const SRL_VERSION = "3.8.aoe";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

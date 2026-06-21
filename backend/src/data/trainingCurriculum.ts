@@ -59,8 +59,8 @@ const BASE_CURRICULUM: CurriculumCourse[] = [
     title: "ELD & Hours of Service",
     category: "Hours & Electronic Logs",
     summary: "The federal Hours of Service limits, the short-haul exception, how your ELD records duty status, sleeper-berth splits, and what to do when the device fails.",
-    version: "2",
-    estMinutes: 23,
+    version: "3",
+    estMinutes: 26,
     passThreshold: 80,
     validityMonths: 12,
     sortOrder: 1,
@@ -71,7 +71,7 @@ const BASE_CURRICULUM: CurriculumCourse[] = [
         title: "The core driving limits",
         estMinutes: 5,
         bodyMarkdown:
-          "Hours of Service (HOS) rules are set by the FMCSA under 49 CFR Part 395. They exist to keep tired drivers off the road. Three limits sit at the center of property-carrying HOS.\n\n**11-hour driving limit.** After 10 consecutive hours off duty, you may drive a maximum of 11 hours.\n\n**14-hour window.** You cannot drive after the 14th consecutive hour following the start of your shift. Off-duty time during the day (a lunch break, for example) does *not* stop or extend this 14-hour clock. Only the sleeper-berth provision (covered later) can pause it.\n\n**30-minute break.** You must take a 30-minute break once you have driven 8 cumulative hours without at least a 30-minute interruption. The break can be off-duty, sleeper, or on-duty-not-driving time.\n\n> " + TRAINING_DISCLAIMER,
+          "Hours of Service (HOS) rules are set by the FMCSA under 49 CFR Part 395. They exist to keep tired drivers off the road. Three limits sit at the center of property-carrying HOS.\n\n**11-hour driving limit.** After 10 consecutive hours off duty, you may drive a maximum of 11 hours.\n\n**14-hour window.** You cannot drive after the 14th consecutive hour following the start of your shift. Off-duty time during the day (a lunch break, for example) does *not* stop or extend this 14-hour clock. Only the sleeper-berth provision (covered later) can pause it.\n\n**30-minute break.** You must take a 30-minute break once you have driven 8 cumulative hours without at least a 30-minute interruption. The break can be off-duty, sleeper, or on-duty-not-driving time.\n\n**Each day resets — the week does not.** On a multi-day trip, every time you take **10 consecutive hours off duty** (or a valid sleeper split) you start the next day with a **fresh 11-hour driving limit and a fresh 14-hour window**. What does *not* reset that easily is your weekly 60/70-hour total, which keeps adding up day over day until you take a 34-hour restart (next lesson).\n\n> " + TRAINING_DISCLAIMER,
       },
       {
         order: 2,
@@ -85,7 +85,7 @@ const BASE_CURRICULUM: CurriculumCourse[] = [
         title: "Sleeper-berth splits",
         estMinutes: 5,
         bodyMarkdown:
-          "The sleeper-berth provision lets you split your required off-duty time into two periods, and the qualifying periods do not count against your 14-hour window.\n\nYou may split the 10 hours as **7/3** or **8/2**:\n\n- One period of **at least 7 hours** in the sleeper berth, paired with\n- A second period of **at least 2 hours** off duty or in the sleeper berth\n- The two periods must add up to at least 10 hours\n\nWhen paired correctly, neither period counts against your 14-hour driving window, which effectively extends how long you can work across a day. The math gets tricky, so let your ELD calculate it and confirm before you rely on it.\n\nSleeper-berth use is a skill. New drivers should practice the math with a dispatcher or trainer before depending on it to make a delivery window.",
+          "The sleeper-berth provision lets you split your required off-duty time into two periods, and the qualifying periods do not count against your 14-hour window.\n\nYou may split the 10 hours as **7/3** or **8/2**:\n\n- One period of **at least 7 consecutive hours in the sleeper berth**, paired with\n- A second period of **at least 2 consecutive hours** off duty or in the sleeper berth\n- The two periods must add up to **at least 10 hours**\n\n**Why it matters: neither qualifying period counts against your 14-hour window.** That effectively recalculates your window and lets you keep working later into the day than a straight 14 would allow.\n\n**A simple example.** You come on duty at 6:00 a.m. and drive through the morning. At noon you take a qualifying **7-hour sleeper break** (noon to 7:00 p.m.). Because that 7 hours is excluded from the window, you are not forced to stop at the 8:00 p.m. cutoff a straight 14 would give you. You can drive again that evening, then take a **3-hour** off-duty or sleeper period to complete the pairing. The 7 and the 3 add up to your 10.\n\nThe exact recalculation is genuinely tricky, and when more than one pairing is possible the rule is to use the pairing with the **fewest violations**. **Let your ELD do the math and confirm it before you rely on it.** New drivers should walk a split through with a dispatcher or trainer before depending on it to make a delivery window.\n\n**About 6/4 and 5/5 splits.** You may hear about more flexible splits (6/4, 5/5) or pausing the 14-hour window for a few hours. As of 2026 those are **FMCSA pilot programs still in testing, not legal for general use.** Only **8/2 and 7/3** are valid today, unless your carrier is an approved pilot participant and has authorized you. Never run a 6/4 or 5/5 split, or pause your 14, based on something you heard at a truck stop.",
       },
       {
         order: 4,
@@ -94,6 +94,15 @@ const BASE_CURRICULUM: CurriculumCourse[] = [
         bodyMarkdown: `An Electronic Logging Device (ELD) connects to the engine and automatically records driving time, so duty status is harder to falsify than paper logs. Most drivers who must keep records of duty status (RODS) have to use a registered ELD.
 
 **The short-haul exception (49 CFR 395.1(e)(1)).** This is the big one. If you operate within a **150 air-mile radius** of your normal work-reporting location and **return there within 14 hours**, you may use a simple **time record** (time in, time out, total hours) instead of RODS or an ELD, and you are **not required to take the 30-minute break**. The **11-hour driving limit still applies**, and the carrier keeps the time records for **6 months**. Other ELD exemptions include pre-2000 engine vehicles, driveaway-towaway operations, and drivers who keep RODS no more than 8 days in any 30-day period. Confirm an exemption actually applies before you rely on it — misusing short-haul is a common violation.
+
+**How to confirm short-haul actually applies — today, this shift.** It is a daily test, not a permanent status. Before you lean on it, check ALL of these for THIS shift:
+
+- You start and **return to your normal work-reporting location** (the same place you began).
+- You stay within the **150 air-mile radius** (air miles are straight-line distance, not odometer miles).
+- You are **released from duty within 14 hours** of coming on.
+- You take at least **10 consecutive hours off** between shifts, and the **11-hour driving limit still applies**.
+
+If even one of these fails on a given day — a load runs you 160 air-miles out, or your shift stretches past 14 hours — you are **not short-haul that day** and you owe a full RODS/ELD record and the 30-minute break for that day. The exception is decided shift by shift.
 
 You are responsible for selecting the correct duty status: off duty, sleeper berth, driving, or on-duty-not-driving. The device records the driving; you annotate the rest. Review and certify your logs daily.`,
       },
@@ -163,6 +172,18 @@ You are responsible for selecting the correct duty status: off duty, sleeper ber
         correctIndex: 2,
         explanation: "On malfunction you note it, may run paper logs for up to 8 days, reconstruct the current day plus prior 7 days, and notify the carrier, who must repair within 8 days.",
       },
+      {
+        order: 7,
+        question: "You normally run short-haul, but today's load takes you 160 air-miles from your terminal. For today, you:",
+        options: ["are still short-haul — it's your normal route", "need a full RODS/ELD record and the 30-minute break for that day", "lose your CDL short-haul status permanently", "can use short-haul if you make it back by midnight"],
+        correctIndex: 1,
+        explanation: "The short-haul exception is a DAILY test (49 CFR 395.1(e)(1)). Go outside the 150 air-mile radius or past the 14-hour return on a given day and you're not short-haul that day — you owe full logs and the 30-minute break. It's decided shift by shift, not once and for all." },
+      {
+        order: 8,
+        question: "It's day 3 of an over-the-road run. After your 10-hour break, how much driving time do you have?",
+        options: ["whatever was left from yesterday", "a fresh 11 hours, but watch your weekly 60/70-hour total", "unlimited until your next restart", "only 8 hours on the third day"],
+        correctIndex: 1,
+        explanation: "Ten consecutive hours off resets your daily clocks — a fresh 11-hour driving limit and 14-hour window each day. What keeps accumulating is the weekly 60/70-hour total, until you take a 34-hour restart." },
     ],
   },
 
