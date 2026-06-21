@@ -94,8 +94,8 @@ The takeaway: your driving record, on and off the clock, is your livelihood.`,
     title: "Hazmat & Dangerous Goods Awareness",
     category: "Hazardous Materials",
     summary: "Recognize the 9 hazard classes and their placards, read the shipping paper, keep incompatible loads apart, know what an H endorsement covers, and what to do at a spill.",
-    version: "3",
-    estMinutes: 19,
+    version: "4",
+    estMinutes: 22,
     passThreshold: 80,
     validityMonths: 12,
     sortOrder: 3,
@@ -110,7 +110,7 @@ The takeaway: your driving record, on and off the clock, is your livelihood.`,
 **The 9 hazard classes — and their divisions.** The shipper classifies the material; your job is to recognize it. The classes split into divisions you will see on placards:
 
 - **1** Explosives (divisions 1.1-1.6 by blast hazard)
-- **2** Gases: **2.1** flammable, **2.2** non-flammable, **2.3** poison/toxic
+- **2** Gases: **2.1** flammable, **2.2** non-flammable, **2.3** gas poisonous by inhalation (a PIH/TIH gas, deadly to breathe, placarded in **any amount**)
 - **3** Flammable liquids
 - **4** Flammable solids: **4.1** flammable solid, **4.2** spontaneously combustible, **4.3** dangerous when wet
 - **5** **5.1** oxidizers, **5.2** organic peroxides
@@ -135,16 +135,22 @@ If the paperwork and the placards do not match the freight, **stop and ask** bef
 
 **The shipping paper and the basic description.** It must be within reach while you drive and easy to find in an emergency (on top of other papers, or tabbed). The **basic description** lists, in order, the **UN ID number, proper shipping name, hazard class, and packing group**, plus the quantity, an emergency-response phone number, and the **shipper's certification** that the load is correctly classified, packed, marked, and labeled. The **Emergency Response Guidebook (ERG)** rides in the cab and gives isolation and protective actions by UN number.
 
+**Read the UN ID and packing group — they are not decoration.** The **four-digit UN ID** (for example, *UN 1203* gasoline, *UN 1830* sulfuric acid) is the **key to every hazmat resource**: look the number up in the orange-bordered section of the ERG and it gives you the response guide, the isolation distances, and the evacuation actions for exactly that material. The **packing group** ranks how dangerous the material is: **PG I** = high danger, **PG II** = medium, **PG III** = low. Higher danger means stricter packaging and handling. When you read a shipping paper, find the UN number first — it is what you will quote to 911, CHEMTREC, and responders.
+
 **Do not load incompatible hazards together.** The **segregation table (49 CFR 177.848)** forbids loading certain classes in the same vehicle — oxidizers away from flammables, acids away from cyanides, and so on. If a shipper hands you two classes that don't mix, that is a stop-and-verify.
 
-To haul a **placarded** amount you need a **hazmat (H) endorsement** on your CDL (with a TSA security threat assessment), and the carrier must be **registered with PHMSA**. Hauling a placardable load without the endorsement is a serious violation.`,
+To haul a **placarded** amount you need a **hazmat (H) endorsement** on your CDL (with a TSA security threat assessment), and the carrier must be **registered with PHMSA**. Hauling a placardable load without the endorsement is a serious violation.
+
+**This awareness course is not your hazmat training.** Federal law (**49 CFR 172.704**) requires every hazmat employee — including the driver — to complete documented hazmat training, and to **renew it at least every 3 years**. The carrier keeps the training record as a DOT compliance item. If your hazmat training has lapsed, you cannot legally haul hazmat until you re-train.
+
+**You can refuse a load that doesn't add up.** If the placards, the shipping paper, and the freight don't match — or the paperwork is missing — you have the right and the duty to **refuse the load** and tell dispatch why. Refusing an unsafe or improperly documented hazmat load is not grounds for discipline; it protects you, the carrier, and the public. Accepting it puts the violation on your CDL.`,
       },
       {
         order: 3,
         title: "If something goes wrong",
         estMinutes: 4,
         bodyMarkdown:
-          "At a leak, spill, or crash involving hazmat, the order is **protect, isolate, call**.\n\n**Protect yourself first.** Stop, stay **upwind and uphill**, and do not walk through or touch spilled material or vapor. You cannot help anyone if you are down.\n\n**Isolate.** Keep people away and use the ERG to find the initial isolation distance for the material.\n\n**Call.** Dial **911** and **CHEMTREC at 1-800-424-9300** for chemical emergency guidance, then notify your carrier and SRL.\n\nHazmat also carries a **security awareness** duty: watch for and report tampering, theft, or anyone showing unusual interest in your load. A hazmat load is a target.",
+          "At a leak, spill, or crash involving hazmat, the order is **protect, isolate, call**.\n\n**Protect yourself first.** Stop, stay **upwind** (if upwind and uphill conflict, *upwind wins* — vapor travels with the wind), and do not walk through or touch spilled material or vapor. You cannot help anyone if you are down.\n\n**Isolate.** Keep people back and look the **UN number** up in the orange section of the ERG. It gives you two distances: the **initial isolation distance** (a circle around the spill that *nobody* enters) and the **protective-action distance** (how far downwind people must **evacuate or shelter in place**). For a small spill these are tens of feet; for a large spill or a PIH gas they can be hundreds of feet to over a mile. Quote the UN number to responders so they pull the right guide.\n\n**Call.** Dial **911** and **CHEMTREC at 1-800-424-9300** for chemical emergency guidance, then notify your carrier and SRL. You are not the cleanup crew — your job is to protect yourself, keep others back, and get the experts moving. Let trained responders handle containment.\n\nHazmat also carries a **security awareness** duty: watch for and report tampering, theft, or anyone showing unusual interest in your load. A hazmat load is a target.",
       },
       {
         order: 4,
@@ -161,6 +167,8 @@ To haul a **placarded** amount you need a **hazmat (H) endorsement** on your CDL
       { order: 4, question: "A shipper wants you to load an oxidizer (5.1) and a flammable liquid (3) together in one trailer. You should:", options: ["load them — any classes can ride together", "check the segregation table (177.848); these may be incompatible", "load them only if both are placarded", "load the heavier one toward the nose"], correctIndex: 1, explanation: "The segregation table in 49 CFR 177.848 prohibits loading certain hazard classes together. Oxidizers and flammables are a classic do-not-mix pair — verify before you load." },
       { order: 5, question: "At a hazmat leak, your first action is to:", options: ["start cleaning up the spilled material", "stop, stay upwind and uphill, and keep clear of the vapor", "drive the load away from the scene", "open the trailer to inspect the packages"], correctIndex: 1, explanation: "Protect yourself first — stop, stay upwind and uphill, and avoid contact with the material or vapor. You cannot help anyone if you go down. Then isolate and call 911 / CHEMTREC." },
       { order: 6, question: "For chemical-emergency guidance during a hazmat incident, you call:", options: ["the National Response Center for response advice", "CHEMTREC at 1-800-424-9300", "your insurance company", "the shipper's sales line"], correctIndex: 1, explanation: "CHEMTREC (1-800-424-9300) gives 24/7 chemical emergency response information. Call 911 first for life safety; the National Response Center (1-800-424-8802) is for required federal spill reporting, a different purpose." },
+      { order: 7, question: "Dispatch asks you to take a placardable load of Class 3 (flammable liquid), but you don't hold a hazmat (H) endorsement. You should:", options: ["load it but stay off populated routes", "refuse the load and tell dispatch why", "get trained on the way to the shipper", "load it if the shipper signs a waiver"], correctIndex: 1, explanation: "Hauling a placardable load without the H endorsement is a serious violation that lands on YOUR CDL — no waiver or careful routing makes it legal. Refusing and reporting to dispatch is the right and protected call." },
+      { order: 8, question: "At a spill, the fastest way to get the correct isolation and evacuation distances is to:", options: ["guess based on how the chemical smells", "look up the four-digit UN ID number in the ERG", "wait for the shipper to call back", "read the back of the placard"], correctIndex: 1, explanation: "The UN ID number is the key to the ERG — look it up in the orange-bordered section and it gives you the response guide plus the initial isolation distance and the downwind protective-action distance. Quote that number to 911 and CHEMTREC." },
     ],
   },
 
@@ -170,8 +178,8 @@ To haul a **placarded** amount you need a **hazmat (H) endorsement** on your CDL
     title: "Hazard Communication: WHMIS & HazCom",
     category: "Hazardous Materials",
     summary: "Workplace chemical safety on the dock and in the warehouse: the GHS labels and pictograms, the Safety Data Sheet, and your right to know. (Not the transport placards.)",
-    version: "3",
-    estMinutes: 15,
+    version: "4",
+    estMinutes: 18,
     passThreshold: 80,
     validityMonths: 12,
     sortOrder: 4,
@@ -189,21 +197,21 @@ To haul a **placarded** amount you need a **hazmat (H) endorsement** on your CDL
         title: "Labels and pictograms",
         estMinutes: 4,
         bodyMarkdown:
-          "A **GHS supplier label** carries: the product identifier, a **signal word**, hazard and precautionary statements, the **pictograms**, and the supplier's information.\n\nThe **signal word** ranks severity: **Danger** is the more severe hazard, **Warning** the less severe.\n\nThe **GHS pictograms** are red-bordered diamonds: flame (flammable), corrosion (corrosives), exclamation mark (irritant/harmful), health hazard (serious/long-term health effects), skull and crossbones (acute toxicity), gas cylinder (gases under pressure), exploding bomb (explosives), flame over circle (oxidizers), and the environment pictogram.\n\n[[figure:ghs-pictograms]]\n\nInside a facility you may also see a simpler **workplace label** on a container a worker filled. Learn to read both, and never use product from an unlabeled container; report it.",
+          "A **GHS supplier label** (placed on the container by the manufacturer) carries: the product identifier, a **signal word**, hazard and precautionary statements, the **pictograms**, and the supplier's information.\n\nThe **signal word** ranks severity: **Danger** is the more severe hazard, **Warning** the less severe. Only **one** signal word appears on a label.\n\n**OSHA requires 8 pictograms** on US workplace labels — red-bordered diamonds: flame (flammable), corrosion (corrosives), exclamation mark (irritant/harmful), health hazard (serious/long-term effects), skull and crossbones (acute toxicity), gas cylinder (gases under pressure), exploding bomb (explosives), and flame over circle (oxidizers). The full GHS has a **9th** — the **environmental** pictogram (a dead fish and tree) — but **OSHA does not require it**, because environmental hazards are outside OSHA's scope. Canada's **WHMIS 2015 uses the same 8** for workplace labels (you may still see the environmental one on a full-GHS or Canadian label).\n\n[[figure:ghs-pictograms]]\n\n**Labels on containers you fill.** You may also see a simpler **workplace label** on a container a worker filled. If you pour a chemical into another container, it must be labeled too — the only exception is a container for **your own immediate use** that never leaves your hands. Filling an unlabeled container for someone else is a violation. And never use product from an unlabeled container; report it.",
       },
       {
         order: 3,
         title: "The Safety Data Sheet (SDS)",
         estMinutes: 4,
         bodyMarkdown:
-          "Every hazardous workplace chemical has a **Safety Data Sheet (SDS)** with a standardized **16 sections** in a fixed order.\n\nThe sections a driver or dock worker reaches for first:\n\n- **Section 1 Identification** (what it is, supplier, emergency phone)\n- **Section 2 Hazards** (what it can do)\n- **Section 4 First-aid measures** (skin, eye, inhalation, ingestion)\n- **Section 6 Accidental release** (what to do for a spill)\n- **Section 7 Handling and storage**\n- **Section 8 Exposure controls / PPE**\n\nThe facility must keep SDSs accessible to workers. If you are asked to handle a chemical you do not know, find its SDS first.",
+          "Every hazardous workplace chemical has a **Safety Data Sheet (SDS)** with a standardized **16 sections** in a fixed order.\n\nThe sections a driver or dock worker reaches for first:\n\n- **Section 1 Identification** (what it is, supplier, emergency phone)\n- **Section 2 Hazards** (what it can do)\n- **Section 4 First-aid measures** (skin, eye, inhalation, ingestion)\n- **Section 6 Accidental release** (what to do for a spill)\n- **Section 7 Handling and storage**\n- **Section 8 Exposure controls / PPE**\n\nThe facility must keep SDSs accessible to workers. If you are asked to handle a chemical you do not know, find its SDS first.\n\n**Finding it fast matters in an emergency.** SDSs live in a binder, a posted sheet, or an electronic system (a computer, a QR code on the label, or a facility app). At an unfamiliar dock the quickest path is to **ask the supervisor or safety officer where the SDS station is** — know where to look before you need it, not during a spill.",
       },
       {
         order: 4,
         title: "Your rights and what to do",
         estMinutes: 3,
         bodyMarkdown:
-          "Hazard communication gives you concrete rights: to be **trained**, to **access** the labels and SDSs, and (especially under Canadian WHMIS) to **refuse unsafe work**.\n\nIf a chemical contacts your skin or eyes, go to the **SDS first-aid section** and act on it (most call for flushing with water); get medical help for anything serious. Report a leaking, damaged, or unlabeled container rather than handling it.\n\nAnd keep the two systems straight: the GHS pictograms on a drum are **workplace** hazard communication. They are **not** the transport placards on the trailer. Knowing the difference keeps you from misreading a load or a dock.",
+          "Hazard communication gives you concrete rights: to be **trained** (your employer is legally required to train you on the chemicals you work around, 29 CFR 1910.1200(h)), and to **access** the labels and SDSs. Canada's WHMIS pairs with a **right to refuse unsafe work** — though that right actually comes from the **Canada Labour Code Part II**, not WHMIS itself. In the US the right to refuse varies by state and employer.\n\nIf a chemical contacts your skin or eyes, go to the **SDS first-aid section** and act on it (most call for flushing with water); get medical help for anything serious.\n\nA **damaged, worn, or missing container label** is the facility's legal duty to fix — don't guess at what's inside or move it unsafely. **Report it to the supervisor** and let them restore the label.\n\nKeep the two systems straight: the GHS pictograms on a drum are **workplace** hazard communication, **not** the transport placards on the trailer. Knowing the difference keeps you from misreading a load or a dock.",
       },
     ],
     questions: [
@@ -213,6 +221,8 @@ To haul a **placarded** amount you need a **hazmat (H) endorsement** on your CDL
       { order: 4, question: "A red-bordered diamond with a flame-over-a-circle symbol on a drum marks:", options: ["a flammable liquid", "an oxidizer", "a corrosive", "an environmental hazard"], correctIndex: 1, explanation: "The flame-over-circle pictogram means an OXIDIZER (it makes fires burn hotter). A plain flame is flammable; a liquid eating a hand/surface is corrosion; a dead tree and fish is the environment pictogram." },
       { order: 5, question: "A solvent splashes in a coworker's eyes. Which SDS section do you go to first?", options: ["Section 1, Identification", "Section 4, First-aid measures", "Section 9, Physical properties", "Section 14, Transport information"], correctIndex: 1, explanation: "Section 4 (First-aid measures) gives the immediate steps for eye, skin, inhalation, and ingestion exposure. The 16 SDS sections sit in a fixed order so you can find first-aid fast." },
       { order: 6, question: "A drum on a warehouse rack shows a GHS pictogram diamond. That labeling is governed by:", options: ["the DOT Hazardous Materials Regulations (transport placarding)", "the OSHA HazCom / WHMIS workplace standard", "the rate confirmation", "the IFTA agreement"], correctIndex: 1, explanation: "A drum sitting in a workplace is governed by OSHA HazCom (US) / WHMIS (Canada). The same drum, once placarded on a trailer, falls under the DOT transport rules — two different systems." },
+      { order: 7, question: "How many hazard pictograms does OSHA require on US workplace labels?", options: ["7", "8 — the environmental pictogram is the 9th in full GHS but not OSHA-required", "9", "as many as the chemical has"], correctIndex: 1, explanation: "OSHA HazCom (29 CFR 1910.1200) mandates 8 pictograms; the environmental/aquatic pictogram is the 9th in the full GHS (and appears on some Canadian/WHMIS labels) but is outside OSHA's jurisdiction. WHMIS 2015 also uses the same 8 for workplace labels." },
+      { order: 8, question: "At an unfamiliar dock you need the SDS for a cleaner to check the PPE, but it isn't where you expect. You:", options: ["use it without checking PPE", "ask the warehouse supervisor where the SDS station is", "assume the label tells you everything", "skip the job entirely"], correctIndex: 1, explanation: "The facility must keep SDSs accessible — ask the supervisor or safety officer where the SDS station is. The label alone doesn't give the full PPE, first-aid, and spill guidance the SDS does." },
     ],
   },
 

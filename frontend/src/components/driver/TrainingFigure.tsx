@@ -124,7 +124,7 @@ const GHS: { symbol: React.ReactNode; label: string }[] = [
   { symbol: skull, label: "Acute toxicity" },
   { symbol: healthHazard, label: "Health hazard" },
   { symbol: exclamation, label: "Irritant / warning" },
-  { symbol: environment, label: "Environmental hazard" },
+  { symbol: environment, label: "Environmental (GHS, not OSHA)" },
 ];
 
 // ── DOT hazard-class placard (colored diamond + symbol + class number) ───
@@ -209,7 +209,7 @@ export function TrainingFigure({ figureKey, caption }: { figureKey: string; capt
   let defaultCaption = "";
 
   if (figureKey === "ghs-pictograms") {
-    defaultCaption = "The 9 GHS / WHMIS 2015 hazard pictograms — red-bordered white diamonds you'll see on containers and Safety Data Sheets.";
+    defaultCaption = "The GHS hazard pictograms (red-bordered diamonds). OSHA requires the first 8 on US workplace labels; the environmental pictogram is the 9th in the full GHS — seen on some Canadian/WHMIS labels but not OSHA-required.";
     body = (
       <div className="grid grid-cols-3 gap-x-2 gap-y-3 sm:grid-cols-5">
         {GHS.map((g) => <GhsDiamond key={g.label} symbol={g.symbol} label={g.label} />)}

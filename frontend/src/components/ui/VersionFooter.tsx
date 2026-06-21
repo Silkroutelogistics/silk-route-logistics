@@ -13165,6 +13165,14 @@
 //   400+ ft at 55 mph, FMCSA), the empty-truck-needs-more point, and the CDL following
 //   rule; quiz adds two real stopping-distance items. Content files only — live via
 //   prod re-seed. Per §3.1: ant → anu.
+// v3.8.aof — SRL Driver Academy Batch 1 (Hazmat & DG) content enhancement.
+//   hazmat-awareness v4 (+UN-ID/packing-group literacy, 49 CFR 172.704 3-yr recurrent
+//   training + right-to-refuse, ERG isolation/protective-action distances, Class 2.3
+//   PIH precision; +2 Q). hazard-communication v4 (OSHA-8-pictogram CRITICAL fix,
+//   secondary-container labeling, SDS-in-field, right-to-refuse source = Canada Labour
+//   Code Part II not WHMIS, damaged-label protocol; +2 Q). TrainingFigure ghs-pictograms
+//   caption fixed (OSHA requires 8, environmental is the 9th non-OSHA). Web-verified
+//   172.704 = 3 yr (digest said 2). Content + figure; live via prod re-seed. Per §3.1: aoe → aof.
 // v3.8.aoe — SRL Driver Academy content audit + enhancement (3 courses, web-verified).
 //   Ran a 6-agent truth/quality/blanks/blind-spots audit of ELD-HOS, CDL/Medical/
 //   Clearinghouse, and Trafficking, then VERIFIED the workflow's output against eCFR/
@@ -13286,7 +13294,7 @@
 //   (3) fraud-awareness — quiz distractors changed to real false-comfort traps (high
 //   rate / nice website / on a load board) instead of absurd one-liners. Content files
 //   only — live via prod re-seed. 8 of 22 courses now overhauled. Per §3.1: anu → anv.
-export const SRL_VERSION = "3.8.aoe";
+export const SRL_VERSION = "3.8.aof";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
