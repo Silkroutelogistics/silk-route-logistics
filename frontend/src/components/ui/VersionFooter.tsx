@@ -13165,6 +13165,14 @@
 //   400+ ft at 55 mph, FMCSA), the empty-truck-needs-more point, and the CDL following
 //   rule; quiz adds two real stopping-distance items. Content files only — live via
 //   prod re-seed. Per §3.1: ant → anu.
+// v3.8.aoz — SRL Driver Academy FINAL audit, Course 13/22: tracking-check-calls v3 -> v4 (SRL
+//   Operational Excellence). Inline audit against CLAUDE.md §9 — Compass Score is SRL's own 7-factor
+//   CARRIER rating (not FMCSA/CSA), tracking compliance 15%, Carvan app / The Caravan portal naming
+//   all verified correct. Completeness add aligned with §9's telematics-activated tracking factor:
+//   connecting the carrier's ELD/telematics gives automatic, continuous location (the strongest
+//   visibility, vs relying on manual check calls), added to Lesson 2 + new quiz Q8. Course now 3
+//   lessons / 8 questions / 2 figures. Gates: backend tsc + seed dry-run (22 courses / 175 q, valid)
+//   + frontend tsc + next build clean. Live via prod re-seed. Per §3.1: aoy -> aoz.
 // v3.8.aoy — SRL Driver Academy FINAL audit, Course 12/22: detention-documentation v3 -> v4
 //   (base-file course). Inline audit (Carmack 49 U.S.C. § 14706 — matches the srl-brand-design
 //   canonical, NOT the obsolete 49 CFR 1035) + operational best-practice review. Existing facts
@@ -13534,7 +13542,7 @@
 //   (3) fraud-awareness — quiz distractors changed to real false-comfort traps (high
 //   rate / nice website / on a load board) instead of absurd one-liners. Content files
 //   only — live via prod re-seed. 8 of 22 courses now overhauled. Per §3.1: anu → anv.
-export const SRL_VERSION = "3.8.aoy";
+export const SRL_VERSION = "3.8.aoz";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
