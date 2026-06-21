@@ -632,9 +632,9 @@ Look **far ahead**, keep an **escape path** to the side, and never let a four-wh
     slug: "tracking-check-calls",
     title: "Tracking & Check-Call Compliance",
     category: "SRL Operational Excellence",
-    summary: "Why load visibility is part of the job, how to stay visible on an SRL load, and how tracking and check calls feed your carrier's Compass score.",
-    version: "2",
-    estMinutes: 11,
+    summary: "Why load visibility is part of the job, how to stay visible on an SRL load, what to do when tracking drops, and how tracking and check calls feed your carrier's SRL Compass Score.",
+    version: "3",
+    estMinutes: 15,
     passThreshold: 80,
     validityMonths: null,
     sortOrder: 13,
@@ -652,14 +652,14 @@ Look **far ahead**, keep an **escape path** to the side, and never let a four-wh
         title: "How to stay visible on an SRL load",
         estMinutes: 4,
         bodyMarkdown:
-          "Two habits keep a load visible.\n\n**Let the technology see you.** Accept **tracking** when you take the load, use the **Carvan** mobile app and **The Caravan** carrier portal, and allow location sharing (ELD or geofence updates) where it is available. (Note the spelling: **Carvan** is the app, **The Caravan** is the portal.)\n\n**Make the check calls.** Confirm at **pickup**, give a **daily** update while in transit, confirm at **delivery**, and call **immediately** on any delay, breakdown, detention, or exception. A good check call gives three things: your **location**, your **ETA**, and the **issue** if there is one.\n\nIf you need help at any hour, **Marco Polo AI** is available 24/7 in the app.",
+          "Two habits keep a load visible.\n\n**Let the technology see you.** Accept **tracking** when you take the load, use the **Carvan** mobile app and **The Caravan** carrier portal, and allow location sharing (ELD or geofence updates) where it is available. (Note the spelling: **Carvan** is the app, **The Caravan** is the portal.)\n\n**Make the check calls.** Confirm at **pickup**, give a **daily** update while in transit, confirm at **delivery**, and call **immediately** on any delay, breakdown, detention, or exception. A good check call gives three things: your **location**, your **ETA**, and the **issue** if there is one. **While waiting at a dock** for a long load/unload, a quick call at the start and again when you're released keeps the picture clear — you don't need to call every hour unless dispatch asks.\n\n**If the load goes dark, don't wait for dispatch to chase you.** Dead zones, an ELD glitch, or the app crashing can stop your location from updating even when you're rolling fine. The moment you notice (or come back into signal), **reopen the app and make a manual check call** — your location, ETA, and that tracking dropped. A proactive 'I lost signal in the mountains, here's where I am' protects the record; going silent reads as a problem even when nothing's wrong.\n\nIf you need help at any hour, **Marco Polo AI** is available 24/7 in the app.",
       },
       {
         order: 3,
         title: "Tracking, on-time, and your Compass score",
         estMinutes: 4,
         bodyMarkdown:
-          "SRL rates every carrier with the **Compass score**, a 7-factor measure of how a carrier performs. **Tracking compliance is 15%** of that score, sitting right alongside on-time pickup, on-time delivery, and communication.\n\nThat means visibility is not just courtesy, it is **measured**. A driver who keeps the load visible and reports early **raises their carrier's Compass score**, and a stronger Compass score earns the carrier access to **better, higher-paying freight**.\n\nThe single best habit: **report a delay early.** A heads-up two hours out lets SRL manage the customer; a silent late delivery damages the carrier's record. Early and visible is how a professional driver protects the load, the customer relationship, and the carrier's standing.",
+          "SRL rates every carrier with the **Compass Score** — **SRL's own 7-factor carrier rating**, not a federal or FMCSA score. (Don't confuse it with the government's CSA/Safety Measurement System; Compass is how *Silk Route Logistics* grades the carriers it works with.) **Tracking compliance is 15%** of that score, sitting right alongside on-time pickup, on-time delivery, and communication.\n\nIt's a **carrier-level** score, and the way you run feeds it: keep the load visible and report early, and you **raise your carrier's Compass Score** — which earns the carrier access to **better, higher-paying freight**. Run dark and silent, and you drag it down for everyone under that authority.\n\nThe single best habit: **report a delay early.** A heads-up two hours out lets SRL manage the customer (and a pre-notified customer is far more forgiving of a late arrival); a silent late delivery damages the carrier's record. Early and visible is how a professional driver protects the load, the customer relationship, and the carrier's standing.",
       },
     ],
     questions: [
@@ -668,6 +668,8 @@ Look **far ahead**, keep an **escape path** to the side, and never let a four-wh
       { order: 3, question: "Tracking compliance is what share of the Compass score?", options: ["5%", "10%", "15%", "50%"], correctIndex: 2, explanation: "Tracking compliance is 15% of SRL's 7-factor Compass score." },
       { order: 4, question: "When you hit a delay, the right move is to:", options: ["wait and explain it after delivery", "stay quiet if you can still make the window", "report it early with your location, ETA, and the issue", "tell only the receiver"], correctIndex: 2, explanation: "Report it early — a heads-up lets SRL manage the customer; a silent late delivery hurts the carrier's record." },
       { order: 5, question: "Keeping your SRL load visible:", options: ["has no real effect on you", "raises your carrier's Compass score and freight access", "matters only on reefer loads", "lowers your settlement"], correctIndex: 1, explanation: "Visibility feeds the Compass score (tracking is 15%), and a higher score earns the carrier access to better, higher-paying freight." },
+      { order: 6, question: "You roll through a long dead zone and your location stops updating. You should:", options: ["do nothing — dispatch will figure it out", "reopen the app and make a manual check call (location, ETA, that tracking dropped) as soon as you can", "turn off tracking for the rest of the trip", "wait until delivery to mention it"], correctIndex: 1, explanation: "A dropped signal makes the load look dark even when you're fine. Proactively reopen the app and call in your location and ETA — 'lost signal in the mountains, here's where I am' protects the record; silence reads as a problem." },
+      { order: 7, question: "The SRL Compass Score is:", options: ["a federal FMCSA safety score for drivers", "SRL's own 7-factor rating of the carriers it works with", "the same as the government's CSA system", "your personal credit score"], correctIndex: 1, explanation: "Compass is Silk Route Logistics' proprietary 7-factor CARRIER rating — not a federal/FMCSA score and not the CSA system. Your performance feeds the carrier's Compass Score, which drives the carrier's access to better freight." },
     ],
   },
 
@@ -868,9 +870,9 @@ Look **far ahead**, keep an **escape path** to the side, and never let a four-wh
     slug: "cargo-theft-security",
     title: "Cargo Theft & Security Awareness",
     category: "SRL Operational Excellence",
-    summary: "Why your load is a target, how to park and lock to protect it, and how thieves use fictitious pickups — and what to do if a load is stolen.",
-    version: "2",
-    estMinutes: 14,
+    summary: "Why your load is a target, how to park and lock to protect it, how seals catch tampering, how thieves use fictitious pickups, and exactly what to do if a load is stolen.",
+    version: "3",
+    estMinutes: 18,
     passThreshold: 80,
     validityMonths: null,
     sortOrder: 19,
@@ -892,10 +894,17 @@ Look **far ahead**, keep an **escape path** to the side, and never let a four-wh
       },
       {
         order: 3,
+        title: "Seals: your tamper-evident proof",
+        estMinutes: 4,
+        bodyMarkdown:
+          "A **seal** is a numbered, single-use lock the shipper puts on the trailer doors after loading. It's your tamper-evident proof that no one got into the load between pickup and delivery.\n\n**At pickup:** confirm the doors are sealed, **read the seal number, and check it matches the number written on the BOL.** If they don't match — or the load went out unsealed when it should have been sealed — note it on the BOL before you sign. You're attesting to the seal; don't attest to one you didn't verify.\n\n**On the road:** check the seal is intact and the number unchanged at every stop, and again right before you back into the receiver. A seal that's **broken, cut, missing, or showing a different number** means possible tampering.\n\n**If the seal is compromised:** do **not** keep delivering as if nothing happened. **Stop, photograph the seal and doors, note it on the paperwork, and call dispatch / SRL** before the load is opened or signed for. A documented seal break is what protects you and supports any recovery or claim; an unreported one makes the loss look like it happened on your watch.",
+      },
+      {
+        order: 4,
         title: "Fictitious pickups and what to do if it's stolen",
         estMinutes: 4,
         bodyMarkdown:
-          "Not all theft is a broken lock. In a **fictitious** or **strategic** pickup, a thief poses as a legitimate carrier or driver — using a stolen or fake identity — and simply drives the load away from the shipper. It's the same identity-fraud and double-brokering problem you learned about, aimed at the cargo.\n\n**Protect against it:** confirm the load is really yours — your dispatch details and SRL paperwork should match what the shipper has; be suspicious of last-minute changes to the pickup, the destination, or who's collecting. If anything feels off, **stop and report it to SRL compliance@silkroutelogistics.ai before you move the freight.**\n\n**If a load is stolen:** report it **immediately** — police, SRL, and the broker. Recovery odds drop sharply by the hour, so speed matters more than anything else.",
+          "Not all theft is a broken lock. In a **fictitious** or **strategic** pickup, a thief poses as a legitimate carrier or driver — using a stolen or fake identity — and simply drives the load away from the shipper. It's the same identity-fraud and double-brokering problem you learned about, aimed at the cargo.\n\n**Verify before the freight moves.** Confirm the load is really yours: your **dispatch reference and SRL paperwork should match** what the shipper has on the manifest, and the **broker/carrier authority** on the rate con should check out on **FMCSA SAFER** (the same verify-the-authority habit from the fraud course). Good questions at the dock: *'Is this load on your manifest under [my carrier / dispatch ref]? Who verified this BOL?'* **Watch the red flags:** last-minute changes to the pickup, destination, or who's collecting; a BOL that doesn't match your dispatch; pressure to hurry. If anything feels off, **stop and document it, and contact SRL at compliance@silkroutelogistics.ai (and dispatch) before you move the freight.**\n\n**If a load is stolen:** report it **immediately** — call **police (911 / local) first**, then **SRL (dispatch + compliance@silkroutelogistics.ai)** and the **broker**. Gather what you have — last-seen location and time, photos, the BOL, descriptions — because recovery odds drop sharply by the hour. Speed matters more than anything else.",
       },
     ],
     questions: [
@@ -903,7 +912,9 @@ Look **far ahead**, keep an **escape path** to the side, and never let a four-wh
       { order: 2, question: "A common cargo-theft target is:", options: ["gravel and sand", "empty trailers", "high-value goods — food, CPG, electronics, pharma", "outbound mail only"], correctIndex: 2, explanation: "Easy-to-resell, hard-to-trace goods — exactly what a lot of SRL freight (reefer CPG, wellness) is." },
       { order: 3, question: "A good anti-theft practice is to:", options: ["park in secure lit lots and use a kingpin / high-security lock", "leave it running to deter thieves", "post your route so people can find you", "hide a spare key on a tire"], correctIndex: 0, explanation: "Secure, lit parking plus real locks removes the opportunity most thefts depend on. Leaving it running or broadcasting your route does the opposite." },
       { order: 4, question: "A \"fictitious pickup\" is when:", options: ["the shipper cancels the load", "a thief poses as a legit carrier to take the load at pickup", "the receiver is closed on arrival", "the BOL has a typo"], correctIndex: 1, explanation: "It's identity fraud aimed at the cargo — confirm the pickup is really yours and watch for last-minute changes before you move freight." },
-      { order: 5, question: "If your loaded trailer is stolen, you:", options: ["report it immediately to police, SRL, and the broker", "wait a day to see if it turns up", "handle it quietly yourself", "tell only the receiver"], correctIndex: 0, explanation: "Recovery odds drop sharply by the hour — report it immediately to everyone." },
+      { order: 5, question: "If your loaded trailer is stolen, you:", options: ["report it immediately to police, SRL, and the broker", "wait a day to see if it turns up", "handle it quietly yourself", "tell only the receiver"], correctIndex: 0, explanation: "Recovery odds drop sharply by the hour — call police (911) first, then SRL (dispatch + compliance@) and the broker, and gather last-seen location, time, and photos." },
+      { order: 6, question: "At pickup you read the seal number and it doesn't match the number on the BOL. You:", options: ["sign anyway — the doors are closed", "note the mismatch on the BOL before signing and confirm with the shipper/dispatch", "swap in your own lock and go", "ignore it; seal numbers don't matter"], correctIndex: 1, explanation: "The seal number on the trailer must match the BOL — a mismatch (or an unsealed load that should be sealed) is a tampering/loading flag. Note it before you sign; don't attest to a seal you didn't verify." },
+      { order: 7, question: "Before a load leaves the shipper, the best defense against a fictitious pickup is to:", options: ["trust whoever hands you the paperwork", "confirm your dispatch ref + SRL paperwork match the shipper's manifest and the authority checks out on FMCSA SAFER", "skip verification to save time on a tight window", "only worry about it at delivery"], correctIndex: 1, explanation: "Fictitious pickups are identity fraud aimed at the cargo. Match your dispatch reference and paperwork to the shipper's manifest, verify the authority on SAFER, and treat last-minute changes or pressure as red flags — verify before the freight moves." },
     ],
   },
 
@@ -963,9 +974,9 @@ Look **far ahead**, keep an **escape path** to the side, and never let a four-wh
     slug: "workplace-dock-safety",
     title: "Workplace & Dock Safety",
     category: "Vehicle & Cargo Safety",
-    summary: "Three-point contact and the falls that injure drivers, safe lifting and material handling, and staying safe around the dock and forklifts.",
-    version: "2",
-    estMinutes: 12,
+    summary: "Three-point contact and the falls that injure drivers, the overexertion injuries that end careers, and staying safe around the dock, forklifts, doors, and engine exhaust.",
+    version: "3",
+    estMinutes: 16,
     passThreshold: 80,
     validityMonths: 12,
     sortOrder: 21,
@@ -976,7 +987,7 @@ Look **far ahead**, keep an **escape path** to the side, and never let a four-wh
         title: "Slips, trips, falls, and three-point contact",
         estMinutes: 4,
         bodyMarkdown:
-          "Falls getting into and out of the cab and trailer are a leading cause of driver injury — and they end with a wrenched knee, a broken wrist, or worse.\n\n**Always use three points of contact:** two hands and one foot, or two feet and one hand, in contact with the truck at all times when climbing in or out. **Face the equipment** — climb down like a ladder, never step off facing out, and **never jump down.** Jumping loads your knees, ankles, and back with your full weight plus momentum.\n\nKeep steps and grab handles clean and clear, and watch your footing for ice, fuel and oil spills, hoses, and uneven dock surfaces.\n\n> " + DISCLAIMER,
+          "Driver injuries cluster in two places: **overexertion** from lifting and handling (the single largest category — covered in the next lesson) and **slips, trips, and falls** getting into and out of the cab and trailer (one of the most common injuries, and one of the most preventable). A bad fall ends with a wrenched knee, a broken wrist, or worse.\n\n**Always use three points of contact:** two hands and one foot, or two feet and one hand, in contact with the truck at all times when climbing in or out. **Face the equipment** — climb down like a ladder, never step off facing out, and **never jump down.** Jumping loads your knees, ankles, and back with your full weight plus momentum.\n\nKeep steps and grab handles clean and clear, and watch your footing for ice, fuel and oil spills, hoses, and uneven dock surfaces.\n\n> " + DISCLAIMER,
       },
       {
         order: 2,
@@ -990,7 +1001,7 @@ Look **far ahead**, keep an **escape path** to the side, and never let a four-wh
         title: "On the dock",
         estMinutes: 4,
         bodyMarkdown:
-          "The dock is someone else's workplace full of moving equipment.\n\n**Trailer can't move while it's worked:** chock the wheels and use the dock lock / wheel restraint so the trailer can't creep or get pulled away with a forklift inside — early departure and trailer creep have killed people.\n\n**Forklifts:** stay out of their path, make eye contact with the operator, and never assume they see you. Watch the dock-plate gap, and be aware of carbon-monoxide buildup in enclosed docks.\n\n**Wear the required PPE** — high-visibility vest, steel-toe boots, hard hat where the facility requires — and follow their rules. You're a guest; their safety program governs while you're on site.",
+          "The dock is someone else's workplace full of moving equipment.\n\n**Stop the trailer from moving while it's worked.** Set the brakes, **chock the wheels**, and engage the **dock lock / wheel restraint.** Two things have killed people here: a truck **pulled away early** while a forklift was still inside, and **trailer creep** — each time a heavy forklift drives in and slams its load down, it nudges the trailer a fraction forward, until a gap opens between the trailer and the dock and the forklift drops into it. **Verify the dock lock is actually engaged** — a green light isn't proof; the restraint has to be on the bumper. Glad-hands stay connected, keys in your pocket, and don't pull until the dock signals you're clear.\n\n**Forklifts:** stay out of their path and **make eye contact with the operator before you cross** — never assume they see you. A **raised or oversized load blocks the operator's view**, so the front is a blind spot; give a lifted load a wide berth. Watch the dock-plate gap.\n\n**Watch the air and the doors.** In an **enclosed or underground dock**, idling trucks, reefer units, and propane forklifts build up **carbon monoxide** — a colorless, odorless gas. Headache, dizziness, or nausea on a closed dock means **get to fresh air**; don't let your truck or reefer idle in a sealed space. And never stand or walk **under a moving overhead dock door** — sensors and interlocks fail.\n\n**Wear the required PPE** — high-visibility vest, steel-toe boots, hard hat where the facility requires — and follow their rules. You're a guest; their safety program governs while you're on site.",
       },
     ],
     questions: [
@@ -998,7 +1009,9 @@ Look **far ahead**, keep an **escape path** to the side, and never let a four-wh
       { order: 2, question: "The correct way to lift a heavy object is:", options: ["bend at the back and pull", "with your legs, load held close, no twisting", "as fast as possible", "one-handed to save time"], correctIndex: 1, explanation: "Squat, keep the load close, stand with your legs, and turn your feet instead of twisting. Get help or equipment for anything heavy or awkward." },
       { order: 3, question: "To keep a trailer from pulling away from the dock during loading, use:", options: ["wheel chocks and a dock lock / wheel restraint", "the parking brake alone", "nothing — the forklift weight holds it", "the trailer marker lights"], correctIndex: 0, explanation: "Chocks plus a dock restraint stop trailer creep and an early pull-away while a forklift is still inside — that scenario has killed people." },
       { order: 4, question: "Around a forklift on the dock you:", options: ["assume the operator sees you", "stay out of its path and make eye contact", "walk close behind it", "stand in the main aisle"], correctIndex: 1, explanation: "Never assume you're seen — stay clear of its path and make eye contact with the operator." },
-      { order: 5, question: "Falls from the cab or trailer are:", options: ["rare and unavoidable", "only a winter problem", "a leading cause of driver injury", "not your responsibility"], correctIndex: 2, explanation: "Among the most common driver injuries, and almost entirely preventable with three-point contact and never jumping down." },
+      { order: 5, question: "Falls from the cab or trailer are:", options: ["rare and unavoidable", "only a winter problem", "one of the most common driver injuries, and highly preventable", "not your responsibility"], correctIndex: 2, explanation: "Slips, trips, and falls are among the top driver injuries (overexertion from lifting/handling is the single largest category) — and falls are almost entirely preventable with three-point contact and never jumping down." },
+      { order: 6, question: "\"Trailer creep\" at a dock is when:", options: ["the trailer rusts over time", "repeated forklift entries nudge the trailer forward until a gap opens at the dock", "the reefer cycles on and off", "the driver naps in the sleeper"], correctIndex: 1, explanation: "Each forklift entry shoves the trailer a fraction forward; without a dock lock and chocks a gap opens and the forklift can drop into it. Verify the restraint is actually engaged — a green light isn't proof." },
+      { order: 7, question: "On an enclosed dock you start to feel a headache and dizziness. The likely hazard and right move:", options: ["low blood sugar — keep working", "carbon-monoxide buildup from idling engines/forklifts — get to fresh air", "the load is too cold — ignore it", "normal dock fatigue — push through"], correctIndex: 1, explanation: "Idling trucks, reefers, and propane forklifts build colorless, odorless carbon monoxide in an enclosed space. Headache, dizziness, or nausea means get to fresh air and don't idle in a sealed dock." },
     ],
   },
 
@@ -1006,9 +1019,9 @@ Look **far ahead**, keep an **escape path** to the side, and never let a four-wh
     slug: "coercion-professional-conduct",
     title: "Coercion, Whistleblower Protection & Professional Conduct",
     category: "SRL Operational Excellence",
-    summary: "Your right to refuse unsafe or illegal driving, the protection that backs that right, and the professionalism that earns repeat freight.",
-    version: "2",
-    estMinutes: 12,
+    summary: "How to recognize coercion when you hear it, your right to refuse unsafe or illegal driving, how and where to file, the whistleblower protection that backs you, and the professionalism that earns repeat freight.",
+    version: "3",
+    estMinutes: 17,
     passThreshold: 80,
     validityMonths: null,
     sortOrder: 22,
@@ -1019,21 +1032,21 @@ Look **far ahead**, keep an **escape path** to the side, and never let a four-wh
         title: "The coercion rule",
         estMinutes: 4,
         bodyMarkdown:
-          "Federal law protects your right to drive legally. The FMCSA **coercion rule (49 CFR 390.6)** prohibits motor carriers, shippers, receivers, and brokers from coercing a driver to violate the safety regulations — Hours-of-Service, CDL rules, drug & alcohol rules, hazmat, and securement among them.\n\nIf anyone threatens your pay, your job, or your future loads to push you to drive over your hours or operate unsafely, that's **coercion** — and it's illegal. You may file a complaint with FMCSA, generally **within 90 days** of the incident.\n\nYou have the right to refuse to break the law, and SRL backs that right.\n\n> " + DISCLAIMER,
+          "Federal law protects your right to drive legally. The FMCSA **coercion rule (49 CFR 390.6)** prohibits motor carriers, shippers, receivers, and brokers from coercing a driver to violate the safety regulations — Hours-of-Service, CDL rules, drug & alcohol rules, hazmat, and securement among them.\n\n**Learn to recognize it — coercion has a sound.** It's rarely the word 'coercion.' It's:\n\n- *\"You won't get another load from us if you don't roll tonight.\"*\n- *\"Other drivers make this run, what's your problem?\"*\n- *\"If you log it that way, we lose the customer.\"*\n- *\"Just tell them you're empty so we can load you again faster.\"*\n\nIf anyone threatens your pay, your job, or your future loads to push you to drive over your hours or operate unsafely, that's **coercion** — and it's illegal.\n\n**How to file.** You file a coercion complaint with FMCSA through the **National Consumer Complaint Database (nccdb.fmcsa.dot.gov)**, generally **within 90 days** of the incident. Include **your name and contact info, the name and contact of whoever coerced you, the specific regulation they pushed you to violate, and what was said** — so write it down while it's fresh. You have the right to refuse to break the law, and SRL backs that right.\n\n> " + DISCLAIMER,
       },
       {
         order: 2,
         title: "Whistleblower protection",
         estMinutes: 3,
         bodyMarkdown:
-          "Your refusal is protected. Under the **Surface Transportation Assistance Act (STAA)**, you cannot lawfully be fired, disciplined, or retaliated against for refusing to operate a vehicle that would violate a safety regulation, or for reporting a safety violation.\n\nA threat like \"run these hours or lose the account\" has no legal teeth. The law is on the side of the driver who refuses to drive illegally.\n\n**If you face retaliation, file with OSHA, which administers STAA complaints, within 180 days of the retaliatory act.** Keep the two clocks straight:\n\n- The **coercion** complaint (someone pressuring you to violate the rules) goes to **FMCSA within 90 days**.\n- The **STAA retaliation** complaint (being fired, disciplined, or punished after you refused or reported) goes to **OSHA within 180 days**.\n\nOSHA can order you reinstated with back pay. Knowing your protection, and the clock on it, is what lets you hold the line when you're pressured.",
+          "Your refusal is protected. Under the **Surface Transportation Assistance Act (STAA)**, you cannot lawfully be fired, disciplined, or retaliated against for **refusing to operate** a vehicle when (a) doing so would **actually violate a safety regulation**, or (b) you have a **reasonable apprehension of serious injury** from an unsafe condition — or for **reporting** a safety violation. You don't have to refuse in writing, but **document it** (what you were asked, what you said, when) so the refusal is on record.\n\nA threat like \"run these hours or lose the account\" has no legal teeth. The law is on the side of the driver who refuses to drive illegally.\n\n**Retaliation isn't always getting fired.** Being given worse lanes, longer waits at shippers, or quietly cut out of the good freight after you refused or reported is also retaliation — it's just harder to see and to prove, which is why documentation matters.\n\n**If you face retaliation, file with OSHA, which administers STAA complaints, within 180 days of the retaliatory act.** Keep the two clocks straight — they're **separate, not a sequence**:\n\n- The **coercion** complaint (someone pressuring you to violate the rules) goes to **FMCSA within 90 days** of the pressure.\n- The **STAA retaliation** complaint (being fired, disciplined, or punished after you refused or reported) goes to **OSHA within 180 days of the retaliatory act** — that clock starts from the discipline, not from the original coercion.\n\n**After you file,** OSHA investigates (it takes time, not days) and can order you **reinstated with back pay** if retaliation is found. Internally, raise coercion or retaliation with **SRL operations/compliance** first — SRL would rather fix it than have you carry it alone. Knowing your protection, and the clock on it, is what lets you hold the line when you're pressured.",
       },
       {
         order: 3,
         title: "Professional conduct on an SRL load",
         estMinutes: 4,
         bodyMarkdown:
-          "On an SRL load you represent both your carrier and SRL to the shipper and receiver. Professionalism is what turns one load into a lane.\n\n**Be on time, communicate, and be courteous.** Show up clean, follow each facility's rules, and don't argue at the dock — if there's a problem, work it through **dispatch and SRL**, not a confrontation with the staff in front of you.\n\n**Integrity:** accurate logs, honest paperwork, no shortcuts. The freight world is small and your record follows you.\n\nYour professionalism — and your tracked, Compass-scored performance — is what earns you access to repeat, better freight. Drivers who are easy to work with and consistently deliver get called first.",
+          "On an SRL load you represent both your carrier and SRL to the shipper and receiver. Professionalism is what turns one load into a lane.\n\n**Be on time, communicate, and be courteous.** Show up clean, follow each facility's rules, and don't argue at the dock — if there's a problem, work it through **dispatch and SRL**, not a confrontation with the staff in front of you.\n\n**Integrity:** accurate logs, honest paperwork, no shortcuts. The freight world is small and your record follows you.\n\nYour professionalism — and how it feeds your carrier's **SRL Compass Score** (SRL's own 7-factor carrier rating, not a federal score) — is what earns access to repeat, better freight. Drivers who are easy to work with and consistently deliver lift that score, and the carriers who score well get called first.",
       },
     ],
     questions: [
@@ -1041,7 +1054,9 @@ Look **far ahead**, keep an **escape path** to the side, and never let a four-wh
       { order: 2, question: "A broker threatens to pull your loads unless you run past your legal hours. That is:", options: ["normal business", "your problem to solve", "coercion — reportable to FMCSA within 90 days", "required of you"], correctIndex: 2, explanation: "Threatening your livelihood to force a violation is coercion under 390.6 — file the coercion complaint with FMCSA within 90 days." },
       { order: 3, question: "You refuse to drive over your hours and are threatened with firing. You are:", options: ["out of luck", "protected from retaliation under the STAA (file with OSHA within 180 days)", "required to comply", "subject to a fine"], correctIndex: 1, explanation: "STAA protects you from retaliation for refusing to violate safety regs or for reporting them — the OSHA complaint deadline is 180 days (vs. 90 days for the FMCSA coercion complaint)." },
       { order: 4, question: "A problem with facility staff at the dock is handled by:", options: ["arguing it out on the spot", "contacting dispatch and SRL, not confronting staff", "leaving without telling anyone", "posting about it online"], correctIndex: 1, explanation: "Work problems through dispatch and SRL — don't confront facility staff in front of the dock." },
-      { order: 5, question: "Your professionalism and tracked performance most directly affect:", options: ["nothing measurable", "your access to repeat, better freight", "only the weather", "the fuel price"], correctIndex: 1, explanation: "Carriers who are reliable, easy to work with, and who score well on Compass get called first for the better loads." },
+      { order: 5, question: "Your professionalism and tracked performance most directly affect:", options: ["nothing measurable", "your carrier's SRL Compass Score and its access to repeat, better freight", "only the weather", "the fuel price"], correctIndex: 1, explanation: "Compass is SRL's own 7-factor carrier rating (not a federal score). Reliable, easy-to-work-with carriers who score well get called first for the better loads." },
+      { order: 6, question: "A dispatcher says 'other drivers make this run, what's your problem?' to push you past your hours. To report the coercion you:", options: ["post about it on social media", "file with FMCSA's National Consumer Complaint Database (nccdb.fmcsa.dot.gov) within 90 days, with the names, the rule, and what was said", "just run the load", "wait 6 months and see if it happens again"], correctIndex: 1, explanation: "That's coercion under 390.6. File through FMCSA's NCCDB within 90 days; include your info, the coercer's info, the specific regulation, and what was said — so document it while it's fresh." },
+      { order: 7, question: "After you refuse an unsafe load you're not fired, but you start getting only the worst lanes and longest waits. This is:", options: ["just bad luck, nothing to do", "possible retaliation under STAA — document it; the OSHA complaint window is 180 days from the retaliatory act", "perfectly legal punishment", "a reason to quit quietly"], correctIndex: 1, explanation: "Retaliation isn't only firing — worse lanes, longer waits, or being cut out of good freight after a protected refusal can count. Document it and know the STAA/OSHA clock is 180 days from the retaliatory act (separate from the 90-day FMCSA coercion clock)." },
     ],
   },
 ];

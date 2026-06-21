@@ -13165,6 +13165,24 @@
 //   400+ ft at 55 mph, FMCSA), the empty-truck-needs-more point, and the CDL following
 //   rule; quiz adds two real stopping-distance items. Content files only — live via
 //   prod re-seed. Per §3.1: ant → anu.
+// v3.8.aoj — SRL Driver Academy Batch 5 (SRL operational, 6 courses) content enhancement.
+//   detention-documentation v3 (base file): CORRECTED lumper truth flag (pre-authorization
+//   required, receipt alone insufficient); +Carmack Amendment 49 U.S.C. 14706 grounding,
+//   sign-clean-pressure/OS&D-refusal protocol, billable-vs-non-billable time, count-by-type,
+//   screenshot-upload; split OS&D + accessorials into own lessons; +2 Q. fraud-awareness v3
+//   (base file): +chameleon carriers, COI/insurance fraud, verify-before-commit gate, sub-
+//   brokering payer-trace, FMCSA 1-800-832-5660/IC3 report channels, no-penalty; +2 Q.
+//   tracking-check-calls v3: Compass clarified as SRL-PROPRIETARY carrier score (not FMCSA/
+//   CSA), signal-drop/dark-load manual-call protocol, detention check-call cadence; +2 Q.
+//   cargo-theft-security v3: +seals/tamper-evident lesson (number must match BOL), SAFER
+//   handoff verification, concrete report path (911->SRL->broker); +2 Q. workplace-dock-
+//   safety v3: CORRECTED 'falls are THE leading cause' -> overexertion is largest, falls
+//   among most common; +trailer-creep mechanics, dock-lock verify, forklift blind spots,
+//   CO in enclosed docks, door entrapment; +2 Q. coercion-professional-conduct v3: the
+//   'Compass-scored' flag was a FALSE POSITIVE (it's SRL's own §9 score, not FMCSA's) —
+//   clarified as SRL carrier score; +concrete coercion phrases, NCCDB filing, STAA protected-
+//   activity specifics, subtle retaliation, separate 90/180-day clocks; +2 Q. Content only
+//   (both base + expansion files); live via prod re-seed. Per §3.1: aoi -> aoj.
 // v3.8.aoi — SRL Driver Academy Batch 4 (Registration/weights/routing) content enhancement.
 //   weigh-stations-size-weight v3 (0 truth flags; +CAT-ticket reading steer/drive/trailer/
 //   gross vs limits, web-verified slide mechanics — tandems forward=off drives onto tandems
@@ -13337,7 +13355,7 @@
 //   (3) fraud-awareness — quiz distractors changed to real false-comfort traps (high
 //   rate / nice website / on a load board) instead of absurd one-liners. Content files
 //   only — live via prod re-seed. 8 of 22 courses now overhauled. Per §3.1: anu → anv.
-export const SRL_VERSION = "3.8.aoi";
+export const SRL_VERSION = "3.8.aoj";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
