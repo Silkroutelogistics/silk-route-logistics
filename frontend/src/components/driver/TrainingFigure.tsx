@@ -948,6 +948,20 @@ const STRUCTURED: Record<string, { caption: string; body: React.ReactNode }> = {
       />
     ),
   },
+  "csa-7-basics": {
+    caption: "The 7 CSA BASICs — the categories your roadside violations are scored under. Two (HazMat Compliance and Crash Indicator) are not shown publicly, but all 7 affect your carrier's safety standing.",
+    body: (
+      <IconGrid items={[
+        { glyph: "1", label: "Unsafe Driving — speeding, reckless, phone use" },
+        { glyph: "2", label: "HOS Compliance — log + hours violations" },
+        { glyph: "3", label: "Driver Fitness — license, med card, qualification" },
+        { glyph: "4", label: "Controlled Substances / Alcohol" },
+        { glyph: "5", label: "Vehicle Maintenance — brakes, tires, lights" },
+        { glyph: "6", label: "HazMat Compliance" },
+        { glyph: "7", label: "Crash Indicator" },
+      ]} />
+    ),
+  },
   "bridge-clearance-decision-tree": {
     caption: "At a low bridge, don't ease into it and don't 'try it slow.' You hold the primary duty to verify — and if a route puts you under a posted clearance near your height, escalate instead of obey.",
     body: (

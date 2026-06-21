@@ -13165,6 +13165,15 @@
 //   400+ ft at 55 mph, FMCSA), the empty-truck-needs-more point, and the CDL following
 //   rule; quiz adds two real stopping-distance items. Content files only — live via
 //   prod re-seed. Per §3.1: ant → anu.
+// v3.8.aow — SRL Driver Academy FINAL audit, Course 10/22: roadside-inspections-csa v3 -> v4.
+//   Inline primary-source audit (CVSA North American Standard levels, CSA SMS 7 BASICs, FMCSA PSP,
+//   DataQs). Existing facts verified accurate (Levels I-VIII, 20%-brakes OOS, 7 BASICs, 24-72hr/
+//   monthly SMS, signing-is-not-admission, OOS-can't-move). Completeness add: the FMCSA Pre-
+//   Employment Screening Program (PSP) — your own 3-year inspection + 5-year crash history follows
+//   YOU to the next carrier (with your written consent), personalizing why clean inspections matter;
+//   added to Lesson 2 + new quiz Q8 + a new csa-7-basics IconGrid recall figure. Course now 4
+//   lessons / 8 questions / 2 figures. Gates: backend tsc + seed dry-run (22 courses / 171 q, valid)
+//   + frontend tsc + next build clean. Live via prod re-seed. Per §3.1: aov -> aow.
 // v3.8.aov — SRL Driver Academy FINAL audit, Course 9/22: adverse-weather-defensive v3 -> v4.
 //   Inline primary-source audit (49 CFR 392.14/392.16 + CDL manual adverse-conditions section).
 //   Existing facts verified accurate (400+ ft stopping distance breakdown, empty-truck-needs-more,
@@ -13506,7 +13515,7 @@
 //   (3) fraud-awareness — quiz distractors changed to real false-comfort traps (high
 //   rate / nice website / on a load board) instead of absurd one-liners. Content files
 //   only — live via prod re-seed. 8 of 22 courses now overhauled. Per §3.1: anu → anv.
-export const SRL_VERSION = "3.8.aov";
+export const SRL_VERSION = "3.8.aow";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

@@ -577,9 +577,9 @@ Look **far ahead**, keep an **escape path** to the side, and never let a four-wh
     slug: "roadside-inspections-csa",
     title: "Roadside Inspections & CSA",
     category: "On-Road Safety",
-    summary: "The CVSA inspection levels, out-of-service criteria, the 7 CSA BASICs, your obligations and rights at an inspection, and how a clean inspection (or a DataQs challenge) protects the carrier's score.",
-    version: "3",
-    estMinutes: 18,
+    summary: "The CVSA inspection levels, out-of-service criteria, the 7 CSA BASICs, how your record follows you through the PSP, your obligations and rights at an inspection, and how a clean inspection (or a DataQs challenge) protects the carrier's score.",
+    version: "4",
+    estMinutes: 20,
     passThreshold: 80,
     validityMonths: 12,
     sortOrder: 10,
@@ -595,9 +595,9 @@ Look **far ahead**, keep an **escape path** to the side, and never let a four-wh
       {
         order: 2,
         title: "Out-of-service and the BASICs",
-        estMinutes: 5,
+        estMinutes: 6,
         bodyMarkdown:
-          "An inspection can place a **driver** out of service (an HOS violation, no valid license or medical card, or **signs of impairment** — bloodshot or glassy eyes, an odor of alcohol, slurred speech, poor balance, slow responses) or the **vehicle** out of service. Vehicle out-of-service examples from the CVSA criteria: **20% or more of the brakes defective**, a **flat or worn tire** (below the 2/32\\\" / 4/32\\\"-steer minimums), steering play beyond limits, or inoperative required lights. An out-of-service order **stops the truck until the problem is fixed** — it cannot move under its own power until then.\n\nViolations feed the carrier's **CSA Safety Measurement System**, scored across **7 BASICs**:\n\n- **Unsafe Driving**\n- **Hours-of-Service Compliance**\n- **Driver Fitness**\n- **Controlled Substances / Alcohol**\n- **Vehicle Maintenance**\n- **Hazardous Materials Compliance**\n- **Crash Indicator**\n\nViolations land in the FMCSA database within about **24-72 hours**, and CSA scores are **recalculated monthly**. Your conduct and your truck's condition score against the **carrier you run under**, affecting its inspection odds, insurance rates, and freight access — so one driver's bad stop touches the whole operation.",
+          "An inspection can place a **driver** out of service (an HOS violation, no valid license or medical card, or **signs of impairment** — bloodshot or glassy eyes, an odor of alcohol, slurred speech, poor balance, slow responses) or the **vehicle** out of service. Vehicle out-of-service examples from the CVSA criteria: **20% or more of the brakes defective**, a **flat or worn tire** (below the 2/32\\\" / 4/32\\\"-steer minimums), steering play beyond limits, or inoperative required lights. An out-of-service order **stops the truck until the problem is fixed** — it cannot move under its own power until then.\n\nViolations feed the carrier's **CSA Safety Measurement System**, scored across **7 BASICs**:\n\n- **Unsafe Driving**\n- **Hours-of-Service Compliance**\n- **Driver Fitness**\n- **Controlled Substances / Alcohol**\n- **Vehicle Maintenance**\n- **Hazardous Materials Compliance**\n- **Crash Indicator**\n\n[[figure:csa-7-basics]]\n\nViolations land in the FMCSA database within about **24-72 hours**, and CSA scores are **recalculated monthly**. Your conduct and your truck's condition score against the **carrier you run under**, affecting its inspection odds, insurance rates, and freight access — so one driver's bad stop touches the whole operation.\n\n**And it follows you, too.** Your own roadside record — a **3-year inspection history and 5-year crash history** — lives in the FMCSA **Pre-Employment Screening Program (PSP)**, which your next prospective employer can pull (with your written consent) when you apply. A clean record is your own career asset, not just the carrier's.",
       },
       {
         order: 3,
@@ -621,6 +621,7 @@ Look **far ahead**, keep an **escape path** to the side, and never let a four-wh
       { order: 5, question: "A CVSA Level I inspection is:", options: ["a driver-credentials check only", "a walk-around without going underneath", "the full driver-and-vehicle inspection, including underneath", "a hazmat-only inspection"], correctIndex: 2, explanation: "Level I is the complete inspection of both driver credentials and the full vehicle, including underneath. (A walk-around without going under is Level II.)" },
       { order: 6, question: "You're placed out of service for a brake defect 30 miles from the nearest shop. You:", options: ["drive carefully to the shop since it's close", "the truck cannot move under its own power — call dispatch for repair, a tow, or a trailer swap", "drive only on surface streets to avoid the interstate", "wait until dark and then drive in"], correctIndex: 1, explanation: "An out-of-service vehicle cannot move under its own power until the defect is fixed — distance to the shop doesn't change that. Call dispatch to arrange roadside repair, a tow, or a trailer swap. Driving an OOS truck is a serious violation and a liability trap." },
       { order: 7, question: "An officer cites you for a defect you're sure you fixed. The right move at the roadside is:", options: ["argue until the officer changes it", "refuse to sign the report", "stay professional, accept the report, document it with photos and notes, and challenge it later via DataQs", "ignore it and don't tell your carrier"], correctIndex: 2, explanation: "Don't argue and don't refuse to sign — signing is acknowledgment, not an admission. Take your copy, photograph/note what you dispute, get it to the office promptly, and let them file a DataQs Request for Data Review with the evidence." },
+      { order: 8, question: "Beyond your current carrier's CSA score, your own roadside inspection record:", options: ["disappears when you change employers", "follows you in the FMCSA PSP — a 3-year inspection and 5-year crash history a prospective employer can pull with your consent", "is sealed and never shared", "only matters for hazmat drivers"], correctIndex: 1, explanation: "The FMCSA Pre-Employment Screening Program (PSP) holds your 3-year inspection history and 5-year crash history. A prospective carrier can request it (with your written consent) when you apply — so a clean record is your own career asset." },
     ],
   },
 
