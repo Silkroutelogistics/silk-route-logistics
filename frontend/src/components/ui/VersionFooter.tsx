@@ -13165,6 +13165,17 @@
 //   400+ ft at 55 mph, FMCSA), the empty-truck-needs-more point, and the CDL following
 //   rule; quiz adds two real stopping-distance items. Content files only — live via
 //   prod re-seed. Per §3.1: ant → anu.
+// v3.8.aor — SRL Driver Academy FINAL audit, Course 5/22: pre-post-trip-inspection (Pre-Trip &
+//   Post-Trip + DVIR) v3 -> v4. Inline primary-source audit (49 CFR 392.7/392.9/393.75/396.11/
+//   396.13 + CDL air-brake test standard). Existing facts verified accurate (static/applied leak-
+//   down 2/3 & 3/4 psi-min, low-air ~60 psi, spring pop-out 20-45, governor 100-125, steer 4/32 /
+//   other 2/32 tread, 50-mi + 3hr/150mi cargo re-check, DVIR each day). Completeness add (matches
+//   the CDL 7-step method): the under-the-hood engine-off check (fluids, belts, hoses, steering box,
+//   leaks) and the in-cab start-up check (gauges rise, ABS lamp flashes-then-out, horn/wipers/
+//   defroster, steering free-play ~10 deg / 2 in) were thin — added to Lesson 2 + new quiz Q8 (ABS
+//   lamp stays lit = fault). No new figure (existing air-brake-gauges + walk-sequence cover it).
+//   Course now 3 lessons / 8 questions / 2 figures. Gates: backend tsc + seed dry-run (22 courses /
+//   165 q, valid) + frontend tsc + next build clean. Live via prod re-seed. Per §3.1: aoq -> aor.
 // v3.8.aoq — SRL Driver Academy FINAL audit, Course 4/22: hazard-communication (WHMIS & HazCom)
 //   v4 -> v5. Inline primary-source audit (OSHA 29 CFR 1910.1200, WHMIS 2015, GHS, NFPA 704).
 //   Existing facts verified accurate (8 OSHA pictograms + 9th-environmental-not-required, Danger/
@@ -13456,7 +13467,7 @@
 //   (3) fraud-awareness — quiz distractors changed to real false-comfort traps (high
 //   rate / nice website / on a load board) instead of absurd one-liners. Content files
 //   only — live via prod re-seed. 8 of 22 courses now overhauled. Per §3.1: anu → anv.
-export const SRL_VERSION = "3.8.aoq";
+export const SRL_VERSION = "3.8.aor";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
