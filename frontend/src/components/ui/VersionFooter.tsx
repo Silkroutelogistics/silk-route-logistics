@@ -13165,6 +13165,22 @@
 //   400+ ft at 55 mph, FMCSA), the empty-truck-needs-more point, and the CDL following
 //   rule; quiz adds two real stopping-distance items. Content files only — live via
 //   prod re-seed. Per §3.1: ant → anu.
+// v3.8.aoh — SRL Driver Academy Batch 3 (On-road safety) content enhancement.
+//   accident-procedures v3 (CORRECTED two truth flags: 'two-lane'->'two-way' triangle
+//   placement per 392.22; post-accident testing — triggers are IDENTICAL for alcohol &
+//   drugs, web-verified, alcohol 8hr/drugs 32hr, refusal=positive->Clearinghouse; +high-
+//   speed-highway egress safety, evidence preservation, hazmat NRC 1-800-424-8802,
+//   390.15 register threshold; +2 Q). adverse-weather v3 (brake-fade recognition, runaway-
+//   ramp use, 392.14 stop-vs-slow + dispatch backing, visibility-speed matching, traction-
+//   loss recovery, fog low-beam mechanism; +2 Q; 419ft verified correct). railroad-crossings
+//   v3 (45-deg toward-train escape per FRA/OL, rear-overhang clearance scan, brake-vs-jammed-
+//   transmission, ENS blue-sign #, retarder-not-on-ice, jackknife counterintuitive brake;
+//   +2 Q). distracted-fatigued v3 (CORRECTED disqualification: 2nd serious=60d/3rd=120d per
+//   383.51 web-verified, digest said '3=60'; reg-vs-best-practice phone clarity, check-call-
+//   vs-392.82, medication drowsiness, OSA screening, HOS-legal!=rested; +2 Q). roadside-
+//   inspections-csa v3 (+lesson 4 obligations/rights: stop+submit, get+deliver report, OOS
+//   can't move, cited-incorrectly->DataQs w/ roadside evidence; full CVSA level list, signs
+//   of impairment, CSA timing; +2 Q). Content only; live via prod re-seed. Per §3.1: aog -> aoh.
 // v3.8.aog — SRL Driver Academy Batch 2 (Vehicle & cargo) content enhancement.
 //   pre-post-trip-inspection v3 (air-brake test BY THE NUMBERS — web-verified CDL-manual
 //   leak-down rates 2/3 released, 3/4 applied; low-air warn ~60 psi; governor 100/120-125;
@@ -13308,7 +13324,7 @@
 //   (3) fraud-awareness — quiz distractors changed to real false-comfort traps (high
 //   rate / nice website / on a load board) instead of absurd one-liners. Content files
 //   only — live via prod re-seed. 8 of 22 courses now overhauled. Per §3.1: anu → anv.
-export const SRL_VERSION = "3.8.aog";
+export const SRL_VERSION = "3.8.aoh";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
