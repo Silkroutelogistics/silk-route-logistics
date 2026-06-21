@@ -625,6 +625,20 @@ const STRUCTURED: Record<string, { caption: string; body: React.ReactNode }> = {
       ]} />
     ),
   },
+  "hazmat-parking-distances": {
+    caption: "The setback distances a placarded hazmat load keeps on the road (49 CFR Part 397). The 300-ft rule covers explosives near bridges, tunnels, and dwellings — and any hazmat near an open fire.",
+    body: (
+      <div className="flex flex-col gap-2.5">
+        <Bars items={[
+          { label: "Off the traveled road", value: 5, max: 300, valueLabel: "5 ft" },
+          { label: "No smoking within", value: 25, max: 300, valueLabel: "25 ft" },
+          { label: "Explosives from bridges / tunnels / dwellings", value: 300, max: 300, valueLabel: "300 ft", highlight: true },
+          { label: "Any hazmat from an open fire", value: 300, max: 300, valueLabel: "300 ft", highlight: true },
+        ]} />
+        <Note tone="warning"><strong>Attend explosives at all times.</strong> A Division 1.1/1.2/1.3 load is never left unattended. Mark a stop near explosives or flammables with reflective triangles, never burning flares or fusees.</Note>
+      </div>
+    ),
+  },
   "hazmat-shipping-paper-anatomy": {
     caption: "The hazmat shipping paper's basic description, in order: UN ID number, proper shipping name, hazard class, and packing group — plus quantity, an emergency phone, and the shipper's certification. Find the UN number first; it's your key to the ERG.",
     body: (

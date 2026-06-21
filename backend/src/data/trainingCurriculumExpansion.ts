@@ -96,9 +96,9 @@ The takeaway: your driving record, on and off the clock, is your livelihood.
     slug: "hazmat-awareness",
     title: "Hazmat & Dangerous Goods Awareness",
     category: "Hazardous Materials",
-    summary: "Recognize the 9 hazard classes and their placards, read the shipping paper, keep incompatible loads apart, know what an H endorsement covers, and what to do at a spill.",
-    version: "4",
-    estMinutes: 22,
+    summary: "Recognize the 9 hazard classes and their placards, read the shipping paper, keep incompatible loads apart, follow the on-road route and parking rules, know what an H endorsement covers, and what to do at a spill.",
+    version: "5",
+    estMinutes: 26,
     passThreshold: 80,
     validityMonths: 12,
     sortOrder: 3,
@@ -154,13 +154,29 @@ To haul a **placarded** amount you need a **hazmat (H) endorsement** on your CDL
       },
       {
         order: 3,
+        title: "On the road with a hazmat load",
+        estMinutes: 4,
+        bodyMarkdown: `Once the load is on, the driving and parking rules in **49 CFR Part 397** apply for the whole trip.
+
+**Routes and tunnels.** Operate over routes that avoid heavily populated areas, crowds, tunnels, narrow streets, and alleys unless there is no practical alternative. Many states and cities post **designated hazmat routes** and **tunnel restrictions** — follow them. Explosives in Division 1.1, 1.2, or 1.3 require a **written route plan**.
+
+**Attendance and parking (397.5, 397.7).** A placarded vehicle carrying **Division 1.1/1.2/1.3 explosives must be attended at all times.** No placarded hazmat parks on or within **5 feet** of the traveled part of the road except for brief operational needs. Explosives must not park within **300 feet** of a bridge, tunnel, dwelling, or a place where people gather, except briefly when the job requires it. **No hazmat** parks within **300 feet of an open fire.**
+
+**Smoking, flares, and fueling.** No smoking within **25 feet** of a vehicle carrying explosives, oxidizers, or flammables. To mark a stop near explosives or flammables, use **reflective triangles**, never burning flares or fusees. Shut the engine off and stay at the nozzle while fueling.
+
+[[figure:hazmat-parking-distances]]
+
+These are awareness points; your full hazmat training and the ERG carry the details. When in doubt, slow down and verify before you pick a route or park.`,
+      },
+      {
+        order: 4,
         title: "If something goes wrong",
         estMinutes: 4,
         bodyMarkdown:
           "At a leak, spill, or crash involving hazmat, the order is **protect, isolate, call**.\n\n**Protect yourself first.** Stop, stay **upwind** (if upwind and uphill conflict, *upwind wins* — vapor travels with the wind), and do not walk through or touch spilled material or vapor. You cannot help anyone if you are down.\n\n**Isolate.** Keep people back and look the **UN number** up in the orange section of the ERG. It gives you two distances: the **initial isolation distance** (a circle around the spill that *nobody* enters) and the **protective-action distance** (how far downwind people must **evacuate or shelter in place**). For a small spill these are tens of feet; for a large spill or a PIH gas they can be hundreds of feet to over a mile. Quote the UN number to responders so they pull the right guide.\n\n**Call.** Dial **911** and **CHEMTREC at 1-800-424-9300** for chemical emergency guidance, then notify your carrier and SRL. You are not the cleanup crew — your job is to protect yourself, keep others back, and get the experts moving. Let trained responders handle containment.\n\nHazmat also carries a **security awareness** duty: watch for and report tampering, theft, or anyone showing unusual interest in your load. A hazmat load is a target.",
       },
       {
-        order: 4,
+        order: 5,
         title: "Crossing into Canada: TDG basics",
         estMinutes: 4,
         bodyMarkdown:
@@ -176,6 +192,7 @@ To haul a **placarded** amount you need a **hazmat (H) endorsement** on your CDL
       { order: 6, question: "For chemical-emergency guidance during a hazmat incident, you call:", options: ["the National Response Center for response advice", "CHEMTREC at 1-800-424-9300", "your insurance company", "the shipper's sales line"], correctIndex: 1, explanation: "CHEMTREC (1-800-424-9300) gives 24/7 chemical emergency response information. Call 911 first for life safety; the National Response Center (1-800-424-8802) is for required federal spill reporting, a different purpose." },
       { order: 7, question: "Dispatch asks you to take a placardable load of Class 3 (flammable liquid), but you don't hold a hazmat (H) endorsement. You should:", options: ["load it but stay off populated routes", "refuse the load and tell dispatch why", "get trained on the way to the shipper", "load it if the shipper signs a waiver"], correctIndex: 1, explanation: "Hauling a placardable load without the H endorsement is a serious violation that lands on YOUR CDL — no waiver or careful routing makes it legal. Refusing and reporting to dispatch is the right and protected call." },
       { order: 8, question: "At a spill, the fastest way to get the correct isolation and evacuation distances is to:", options: ["guess based on how the chemical smells", "look up the four-digit UN ID number in the ERG", "wait for the shipper to call back", "read the back of the placard"], correctIndex: 1, explanation: "The UN ID number is the key to the ERG — look it up in the orange-bordered section and it gives you the response guide plus the initial isolation distance and the downwind protective-action distance. Quote that number to 911 and CHEMTREC." },
+      { order: 9, question: "You're hauling a placarded load of Division 1.1 explosives and need to stop. Under 49 CFR Part 397 you must:", options: ["leave it at a rest area and grab a meal", "keep it attended at all times and away from bridges, tunnels, and dwellings", "park within 5 feet of the road so it stays visible", "mark the truck with a lit flare"], correctIndex: 1, explanation: "Division 1.1/1.2/1.3 explosives must be attended at all times (397.5) and may not park within 300 feet of a bridge, tunnel, dwelling, or crowd except briefly for operational needs (397.7). Mark a stop with reflective triangles, never burning flares (397.15)." },
     ],
   },
 

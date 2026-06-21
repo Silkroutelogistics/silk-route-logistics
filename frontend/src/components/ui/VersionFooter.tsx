@@ -13165,6 +13165,18 @@
 //   400+ ft at 55 mph, FMCSA), the empty-truck-needs-more point, and the CDL following
 //   rule; quiz adds two real stopping-distance items. Content files only — live via
 //   prod re-seed. Per §3.1: ant → anu.
+// v3.8.aop — SRL Driver Academy FINAL audit, Course 3/22: hazmat-awareness (Hazmat & Dangerous
+//   Goods Awareness) v4 -> v5. Inline primary-source audit (eCFR 49 CFR 100-185, 172.504/172.202/
+//   172.704, 177.848, Part 397). Existing facts verified accurate (9 classes + divisions, placard
+//   colors, 1,001-lb Table 2 / Table 1 any-amount, basic-description order, PG I/II/III, ERG +
+//   CHEMTREC 1-800-424-9300, 3-yr training, TDG/ERAP). MAJOR completeness gap closed: the en-route
+//   driving + parking rules (49 CFR Part 397) were absent — added a new Lesson 3 "On the road with
+//   a hazmat load" (designated routes / tunnels, attend Div 1.1-1.3 at all times, 5-ft-off-road,
+//   300-ft from bridges/tunnels/dwellings + open fire, no smoking within 25 ft, reflective triangles
+//   not flares, engine-off fueling) with a new hazmat-parking-distances figure + new quiz Q9.
+//   Lessons renumbered (emergencies 3->4, TDG 4->5). Course now 5 lessons / 9 questions / 5 figures.
+//   Gates: backend tsc + seed dry-run (22 courses / 82 lessons / 163 q, valid, unique-order check
+//   held) + frontend tsc + next build clean. Live via prod re-seed. Per §3.1: aoo -> aop.
 // v3.8.aoo — SRL Driver Academy FINAL audit, Course 2/22: driver-qualification (CDL, Medical Card
 //   & the Clearinghouse) v3 -> v4. Inline primary-source audit (eCFR 49 CFR 383/382/391, DOT Part
 //   40, FMCSA National Registry II). Existing facts verified accurate (383.31 30-day notice, 383.51
@@ -13433,7 +13445,7 @@
 //   (3) fraud-awareness — quiz distractors changed to real false-comfort traps (high
 //   rate / nice website / on a load board) instead of absurd one-liners. Content files
 //   only — live via prod re-seed. 8 of 22 courses now overhauled. Per §3.1: anu → anv.
-export const SRL_VERSION = "3.8.aoo";
+export const SRL_VERSION = "3.8.aop";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
