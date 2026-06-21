@@ -13165,6 +13165,25 @@
 //   400+ ft at 55 mph, FMCSA), the empty-truck-needs-more point, and the CDL following
 //   rule; quiz adds two real stopping-distance items. Content files only — live via
 //   prod re-seed. Per §3.1: ant → anu.
+// v3.8.aok — SRL Driver Academy figure layer Ship A: schematic visual engine + 31 figures.
+//   New reusable brand-tokened layout primitives in TrainingFigure.tsx (Track/Steps/FlowDown/
+//   Checklist/Compare/Matrix/Bars/IconGrid) driving 31 structured figures across 19 courses:
+//   HOS daily-clock + sleeper-split + short-haul test, Clearinghouse RTD cycle, 383.51
+//   disqualification matrix, 3-ways-to-lose-the-wheel, trafficking pattern + reporting flow,
+//   Table-1/2 placard tree + shipping-paper anatomy, HazCom-vs-DOT systems, 16 SDS sections,
+//   void-space, pre-cool, stopping-distance breakdown, visibility-vs-sight-distance, brake-vs-
+//   transmission, registered-vs-legal weight, bridge-formula spacing, fraud SAFER flow,
+//   real-vs-spoofed broker, detention timeline, accessorial pre-auth, red-zone, check-call
+//   cadence, coercion red-flags, Compass 7-factor, CVSA levels, bridge-clearance tree, state-
+//   height range, truck-vs-consumer GPS. 31 [[figure:KEY]] directives wired into the matching
+//   lessons (all keys resolve; tsc + next build + seed dry-run clean). FIGURES VERIFIED:
+//   6-agent adversarial pass (figure data vs lesson + reg, WebSearch-backed) — 22 clean,
+//   3 real faithfulness fixes applied (added SDS Section 7; dropped the L3-only 40-140F danger
+//   zone from the reefer-L1 figure; aligned state-height to the lesson's 13'6\"-14' range), the
+//   other flags were false positives (agents read the stale spec file) or accurate §9/quiz
+//   elaboration. Figure data is faithful to the live lessons — no figure-only fabricated
+//   precision. Frontend (TrainingFigure) deploys on push; the directives go live via re-seed.
+//   Per §3.1: aoj -> aok.
 // v3.8.aoj — SRL Driver Academy Batch 5 (SRL operational, 6 courses) content enhancement.
 //   detention-documentation v3 (base file): CORRECTED lumper truth flag (pre-authorization
 //   required, receipt alone insufficient); +Carmack Amendment 49 U.S.C. 14706 grounding,
@@ -13355,7 +13374,7 @@
 //   (3) fraud-awareness — quiz distractors changed to real false-comfort traps (high
 //   rate / nice website / on a load board) instead of absurd one-liners. Content files
 //   only — live via prod re-seed. 8 of 22 courses now overhauled. Per §3.1: anu → anv.
-export const SRL_VERSION = "3.8.aoj";
+export const SRL_VERSION = "3.8.aok";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
