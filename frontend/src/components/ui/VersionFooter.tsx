@@ -13165,6 +13165,17 @@
 //   400+ ft at 55 mph, FMCSA), the empty-truck-needs-more point, and the CDL following
 //   rule; quiz adds two real stopping-distance items. Content files only — live via
 //   prod re-seed. Per §3.1: ant → anu.
+// v3.8.apa — SRL Driver Academy FINAL audit, Course 14/22: fraud-awareness v3 -> v4 (base-file
+//   course). Inline primary-source audit (FMCSA SAFER, BMC-84 $75K, FMCSA NCCDB fraud channel).
+//   Existing facts verified accurate (double-brokering mechanics, USDOT-first SAFER verification,
+//   authority-age + chameleon red flags, fake-COI verify-with-insurer, compliance@ reporting per
+//   §3.10, IC3). ACCURACY FIX: the FMCSA fraud-report number was the general line 1-800-832-5660 —
+//   the official double-brokering / broker-carrier-fraud channel is the National Consumer Complaint
+//   Database (nccdb.fmcsa.dot.gov, 1-888-368-7238); corrected in Lesson 4. Completeness add: carrier
+//   IDENTITY THEFT (fraudster uses your MC/DOT + name + COI to grab loads / redirect pay; guard your
+//   credentials) in Lesson 1 + new quiz Q8. Course now 4 lessons / 8 questions / 2 figures. Gates:
+//   backend tsc + seed dry-run (22 courses / 176 q, valid) + frontend tsc + next build clean. Live
+//   via prod re-seed. Per §3.1 (after aoz comes apa): aoz -> apa.
 // v3.8.aoz — SRL Driver Academy FINAL audit, Course 13/22: tracking-check-calls v3 -> v4 (SRL
 //   Operational Excellence). Inline audit against CLAUDE.md §9 — Compass Score is SRL's own 7-factor
 //   CARRIER rating (not FMCSA/CSA), tracking compliance 15%, Carvan app / The Caravan portal naming
@@ -13542,7 +13553,7 @@
 //   (3) fraud-awareness — quiz distractors changed to real false-comfort traps (high
 //   rate / nice website / on a load board) instead of absurd one-liners. Content files
 //   only — live via prod re-seed. 8 of 22 courses now overhauled. Per §3.1: anu → anv.
-export const SRL_VERSION = "3.8.aoz";
+export const SRL_VERSION = "3.8.apa";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
