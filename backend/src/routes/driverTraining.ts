@@ -184,6 +184,29 @@ router.post("/courses/:slug/lesson-progress", validateBody(lessonProgressSchema)
   res.json({ progress });
 });
 
+// POST /api/driver-training/courses/:slug/quiz/check — instant per-question feedback
+// (Duolingo-style). Validates ONE answer server-side and returns whether it's correct,
+// the correct option index, and the explanation. STATELESS: it does NOT touch progress
+// or the pass — the final /quiz submission stays the sole pass authority (re-graded from
+// the DB), so revealing the answer here can't game the pass. CDL gate applies for
+// consistency with the rest of the training surface.
+const quizCheckSchema = z.object({ questionId: z.string().min(1), answer: z.number().int().min(0).max(3) });
+router.post("/courses/:slug/quiz/check", validateBody(quizCheckSchema), async (req: DriverRequest, res: Response) => {
+  const driverId = req.driver!.id;
+  if (!(await assertCdlEligible(driverId, res))) return;
+  const { questionId, answer } = req.body as z.infer<typeof quizCheckSchema>;
+  const q = await prisma.trainingQuestion.findFirst({
+    where: { id: questionId, course: { slug: req.params.slug, status: "PUBLISHED" } },
+    select: { id: true, correctIndex: true, explanation: true },
+  });
+  if (!q) {
+    // Stale id — most often a T7 re-author changed the question ids mid-quiz.
+    res.status(409).json({ error: "This course was updated. Reload and start the quiz again.", code: "STALE_QUESTION" });
+    return;
+  }
+  res.json({ correct: answer === q.correctIndex, correctIndex: q.correctIndex, explanation: q.explanation });
+});
+
 // POST /api/driver-training/courses/:slug/quiz — server-graded quiz submission.
 // answers is { [questionId]: selectedOptionIndex }. Score is computed from the
 // DB; an unanswered question is wrong. Once PASSED, the course stays PASSED.

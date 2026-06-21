@@ -13165,6 +13165,23 @@
 //   400+ ft at 55 mph, FMCSA), the empty-truck-needs-more point, and the CDL following
 //   rule; quiz adds two real stopping-distance items. Content files only — live via
 //   prod re-seed. Per §3.1: ant → anu.
+// v3.8.aom — SRL Driver Academy Duolingo-style interactivity (frontend-only, no schema).
+//   (1) Instant per-answer feedback: new stateless POST /driver-training/courses/:slug/quiz/check
+//   (server stays the answer authority — returns correct/correctIndex/explanation; CDL-gated,
+//   PUBLISHED-scoped, 409 STALE_QUESTION if the question was re-authored). QuizSlide rewritten to
+//   select -> Check -> reveal (right option green, wrong pick red, explanation banner) -> Continue;
+//   options lock after check. Final submit still server-grades the whole quiz for pass/cert.
+//   (2) Client gamification (localStorage only, per-device, MOTIVATIONAL — never gates training,
+//   deliberately NO hearts/lives that lock a driver out of safety content): driverGamify.ts
+//   (XP + consecutive-day streak + daily-goal roll, DST-safe day math) + GamifyBar (streak/XP/
+//   daily-goal ring) shown on the player header and the dashboard. +10 XP per correct check,
+//   +25 on a passed quiz. Server pass/fail + certificate stay authoritative.
+//   (3) Visual skill-path map on the driver dashboard: SkillPath.tsx renders the course
+//   categories as a connected node-path with per-category progress rings; first not-yet-complete
+//   category is the "you are here" highlight; tapping a node smooth-scrolls to that section
+//   (sections now carry catAnchor ids). Built on the existing questions/courses — no new exercise
+//   data, no new tables. Frontend deploys on push; no re-seed (no lesson content changed).
+//   Gates: frontend tsc + next build clean, backend tsc + vitest 296 clean. Per §3.1: aol -> aom.
 // v3.8.aol — SRL Driver Academy figure layer Ship B: 16 bespoke geometric SVG schematics.
 //   Completes the figure layer (47 figures total, all 22 courses). Adds the diagrams where
 //   geometry carries meaning, in TrainingFigure.tsx: warning-triangle placement (two-way
@@ -13389,7 +13406,7 @@
 //   (3) fraud-awareness — quiz distractors changed to real false-comfort traps (high
 //   rate / nice website / on a load board) instead of absurd one-liners. Content files
 //   only — live via prod re-seed. 8 of 22 courses now overhauled. Per §3.1: anu → anv.
-export const SRL_VERSION = "3.8.aol";
+export const SRL_VERSION = "3.8.aom";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

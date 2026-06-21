@@ -18,7 +18,8 @@ import { Loader2, ChevronLeft, ArrowLeft, CheckCircle2, XCircle, GraduationCap, 
 import { api } from "@/lib/api";
 import { downloadFromApi } from "@/lib/download";
 import { LessonSlide } from "@/components/driver/LessonSlide";
-import { QuizSlide } from "@/components/driver/QuizSlide";
+import { QuizSlide, type CheckedResult } from "@/components/driver/QuizSlide";
+import { GamifyBar, useGamify } from "@/components/driver/GamifyBar";
 
 interface Lesson { id: string; order: number; title: string; bodyMarkdown: string; estMinutes: number }
 interface Question { id: string; order: number; question: string; options: string[] }
@@ -55,6 +56,9 @@ function CourseContent() {
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState<QuizResult | null>(null);
   const [staleReload, setStaleReload] = useState(false);
+  const [checked, setChecked] = useState<Record<string, CheckedResult>>({});
+  const [checking, setChecking] = useState(false);
+  const gamify = useGamify();
 
   useEffect(() => {
     if (!slug) { setError("No course specified."); setLoading(false); return; }
@@ -161,6 +165,28 @@ function CourseContent() {
 
   const finishNoQuiz = () => { recordProgress(lessons.length); router.push("/driver/dashboard"); };
 
+  // Duolingo-style instant check (v3.8.aom): validate ONE answer server-side and
+  // reveal the result + explanation. Stateless on the server — the final submit
+  // re-grades from the DB, so this can't game the pass.
+  const checkAnswer = async (q: Question) => {
+    const ans = answers[q.id];
+    if (ans === undefined || checked[q.id] || checking) return;
+    setChecking(true);
+    setError(null);
+    try {
+      const r = await api.post(`/driver-training/courses/${slug}/quiz/check`, { questionId: q.id, answer: ans });
+      const correct = !!r.data?.correct;
+      setChecked((c) => ({ ...c, [q.id]: { correct, correctIndex: r.data?.correctIndex ?? -1, explanation: r.data?.explanation ?? null, xp: correct ? 10 : 0 } }));
+      if (correct) gamify.award(10);
+    } catch (e) {
+      const status = (e as { response?: { status?: number } })?.response?.status;
+      if (status === 409) { setError("This course was updated while you were taking it. Reload to get the latest version."); setStaleReload(true); }
+      else setError("Couldn't check your answer. Try again.");
+    } finally {
+      setChecking(false);
+    }
+  };
+
   const submitQuiz = async () => {
     if (!allAnswered) { setError("Please answer every question before submitting."); return; }
     setSubmitting(true);
@@ -169,7 +195,7 @@ function CourseContent() {
     try {
       const r = await api.post(`/driver-training/courses/${slug}/quiz`, { answers });
       setResult(r.data);
-      if (r.data?.passed) setPassed(true);
+      if (r.data?.passed) { setPassed(true); gamify.award(25); } // course-pass XP bonus
       setPhase("results");
       window.scrollTo({ top: 0 });
     } catch (e) {
@@ -181,7 +207,7 @@ function CourseContent() {
     }
   };
 
-  const retake = () => { setAnswers({}); setResult(null); setQuizIdx(0); setPhase("quiz"); window.scrollTo({ top: 0 }); };
+  const retake = () => { setAnswers({}); setChecked({}); setResult(null); setQuizIdx(0); setPhase("quiz"); window.scrollTo({ top: 0 }); };
 
   const downloadCert = async () => {
     setError(null);
@@ -198,7 +224,10 @@ function CourseContent() {
       <button onClick={() => router.push("/driver/dashboard")} className="mb-2 flex items-center gap-1 text-[12px] text-[#6B7685] transition-colors hover:text-[#0A2540]">
         <ArrowLeft size={14} /> All courses
       </button>
-      <h1 className="font-serif text-[17px] leading-tight text-[#0A2540]">{course.title}</h1>
+      <div className="flex items-center justify-between gap-3">
+        <h1 className="font-serif text-[17px] leading-tight text-[#0A2540]">{course.title}</h1>
+        <GamifyBar xp={gamify.xp} streak={gamify.streak} todayXp={gamify.todayXp} className="shrink-0" />
+      </div>
     </div>
   );
 
@@ -237,7 +266,7 @@ function CourseContent() {
   // ── Quiz (one question per slide) ─────────────────────────
   if (phase === "quiz") {
     const q = questions[Math.min(quizIdx, questions.length - 1)];
-    const answeredCount = questions.filter((qq) => answers[qq.id] !== undefined).length;
+    const checkedCount = questions.filter((qq) => checked[qq.id]).length;
     return (
       <div>
         {header}
@@ -248,15 +277,19 @@ function CourseContent() {
           total={questions.length}
           selected={answers[q.id] ?? null}
           onSelect={(oi) => setAnswers((a) => ({ ...a, [q.id]: oi }))}
+          checkedResult={checked[q.id] ?? null}
+          onCheck={() => checkAnswer(q)}
+          checking={checking}
           onBack={() => {
+            setError(null); setStaleReload(false);
             if (quizIdx === 0) { setPhase("lessons"); setLessonIdx(0); window.scrollTo({ top: 0 }); }
             else { setQuizIdx((i) => Math.max(0, i - 1)); window.scrollTo({ top: 0 }); }
           }}
-          onNext={() => { setQuizIdx((i) => Math.min(questions.length - 1, i + 1)); window.scrollTo({ top: 0 }); }}
+          onNext={() => { setError(null); setQuizIdx((i) => Math.min(questions.length - 1, i + 1)); window.scrollTo({ top: 0 }); }}
           onSubmit={submitQuiz}
           submitting={submitting}
           passThreshold={course.passThreshold}
-          answeredCount={answeredCount}
+          answeredCount={checkedCount}
           error={error}
           staleReload={staleReload}
           onReload={() => window.location.reload()}

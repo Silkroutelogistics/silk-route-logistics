@@ -11,6 +11,8 @@ import { GraduationCap, Loader2, CheckCircle2, Clock, Download, ShieldAlert, Che
 import { api } from "@/lib/api";
 import { downloadFromApi } from "@/lib/download";
 import { courseIcon } from "@/components/driver/courseIcon";
+import { GamifyBar, useGamify } from "@/components/driver/GamifyBar";
+import { SkillPath, type PathNode } from "@/components/driver/SkillPath";
 import { useDriverAuth } from "@/hooks/useDriverAuth";
 
 interface CourseProgress {
@@ -46,9 +48,17 @@ function StatusPill({ p }: { p: CourseProgress | null }) {
   return <span className={`shrink-0 rounded-full px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${cls}`}>{label}</span>;
 }
 
+const CAT_ORDER = ["Hours & Electronic Logs", "Driver Qualification & Health", "Vehicle & Cargo Safety", "On-Road Safety", "Hazardous Materials", "SRL Operational Excellence"];
+const catAnchor = (name: string) => `cat-${name.replace(/[^a-z0-9]+/gi, "-").toLowerCase()}`;
+function orderedCats(courses: CourseCard[]): string[] {
+  const present = new Set(courses.map((c) => c.category || "Other"));
+  return [...CAT_ORDER.filter((k) => present.has(k)), ...[...present].filter((k) => !CAT_ORDER.includes(k))];
+}
+
 export default function DriverCoursesPage() {
   const router = useRouter();
   const { driver } = useDriverAuth();
+  const gamify = useGamify();
   const [courses, setCourses] = useState<CourseCard[]>([]);
   const [eligibility, setEligibility] = useState<Eligibility | null>(null);
   const [loading, setLoading] = useState(true);
@@ -86,11 +96,26 @@ export default function DriverCoursesPage() {
 
   const card = "rounded-2xl border border-[rgba(10,37,64,0.08)] bg-white p-8 shadow-[0_1px_3px_rgba(10,37,64,0.04)]";
 
+  // Skill-path nodes: one per category, with the first not-yet-complete one marked "current".
+  let currentSet = false;
+  const pathNodes: PathNode[] = orderedCats(courses).map((name) => {
+    const list = courses.filter((c) => (c.category || "Other") === name);
+    const passed = list.filter((c) => c.progress?.status === "PASSED").length;
+    const total = list.length;
+    const complete = total > 0 && passed >= total;
+    const current = !complete && !currentSet;
+    if (current) currentSet = true;
+    return { name, passed, total, current, anchor: catAnchor(name) };
+  });
+
   return (
     <div>
-      <div className="mb-5">
-        <h1 className="mb-1 font-serif text-[26px] leading-tight text-[#0A2540]">Welcome{driver ? `, ${driver.firstName}` : ""}</h1>
-        <p className="text-[13px] text-[#6B7685]">Work through each course at your own pace. Pass the quiz to earn your certificate.</p>
+      <div className="mb-5 flex items-start justify-between gap-3">
+        <div>
+          <h1 className="mb-1 font-serif text-[26px] leading-tight text-[#0A2540]">Welcome{driver ? `, ${driver.firstName}` : ""}</h1>
+          <p className="text-[13px] text-[#6B7685]">Work through each course at your own pace. Pass the quiz to earn your certificate.</p>
+        </div>
+        <GamifyBar xp={gamify.xp} streak={gamify.streak} todayXp={gamify.todayXp} className="mt-1 shrink-0" />
       </div>
 
       {!loading && !error && !cdlBlocked && courses.length > 0 && (
@@ -102,6 +127,13 @@ export default function DriverCoursesPage() {
           <div className="h-2 overflow-hidden rounded-full bg-[#EFE6D3]">
             <div className="h-full rounded-full bg-gradient-to-r from-[#C5A572] to-[#BA7517] transition-all duration-500" style={{ width: `${overallPct}%` }} />
           </div>
+
+          {pathNodes.length > 1 && (
+            <div className="mt-4 border-t border-[rgba(10,37,64,0.06)] pt-3">
+              <div className="mb-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-[#A7AEB8]">Your training path</div>
+              <SkillPath nodes={pathNodes} />
+            </div>
+          )}
         </div>
       )}
 
@@ -152,16 +184,15 @@ export default function DriverCoursesPage() {
         // sortOrder. Unknown/new categories append last (defensive).
         <div className="space-y-7">
           {(() => {
-            const order = ["Hours & Electronic Logs", "Driver Qualification & Health", "Vehicle & Cargo Safety", "On-Road Safety", "Hazardous Materials", "SRL Operational Excellence"];
             const groups = new Map<string, CourseCard[]>();
             for (const c of courses) {
               const k = c.category || "Other";
               if (!groups.has(k)) groups.set(k, []);
               groups.get(k)!.push(c);
             }
-            const cats = [...order.filter((k) => groups.has(k)), ...[...groups.keys()].filter((k) => !order.includes(k))];
+            const cats = orderedCats(courses);
             return cats.map((cat) => (
-              <section key={cat}>
+              <section key={cat} id={catAnchor(cat)} className="scroll-mt-6">
                 <div className="mb-2.5 flex items-baseline gap-2">
                   <h2 className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#BA7517]">{cat}</h2>
                   <span className="text-[11px] text-[#A7AEB8]">{groups.get(cat)!.length}</span>
