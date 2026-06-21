@@ -13165,6 +13165,16 @@
 //   400+ ft at 55 mph, FMCSA), the empty-truck-needs-more point, and the CDL following
 //   rule; quiz adds two real stopping-distance items. Content files only — live via
 //   prod re-seed. Per §3.1: ant → anu.
+// v3.8.aou — SRL Driver Academy FINAL audit, Course 8/22: accident-procedures v3 -> v4. Inline
+//   primary-source audit (49 CFR 392.22, 393.95, 382.303, 382.209, 390.15, NRC 1-800-424-8802).
+//   Existing facts verified accurate (10-min device placement, triangle 10/100/100 two-way vs
+//   10/100/200 one-way, 382.303 fatality-always / citation+injury-or-tow, alcohol 8 hr / drugs 32
+//   hr, refusal=positive, accident register). Completeness add: the no-alcohol-after-accident rule
+//   (49 CFR 382.209 — no alcohol for 8 hr after a qualifying crash or until tested) was absent;
+//   added to Lesson 3 + new quiz Q8 + a new post-accident-test-decision-tree FlowDown figure for the
+//   confusing 382.303 trigger logic. Course now 3 lessons / 8 questions / 2 figures. Gates: backend
+//   tsc + seed dry-run (22 courses / 169 q, valid) + frontend tsc + next build clean. Live via prod
+//   re-seed. Per §3.1: aot -> aou.
 // v3.8.aot — SRL Driver Academy FINAL audit, Course 7/22: reefer-cold-chain v3 -> v4. Inline
 //   primary-source audit (FDA FSMA Sanitary Transportation rule 21 CFR Part 1 Subpart O: 1.906/
 //   1.908/1.910). Existing facts verified accurate (pre-cool, shipper-spec setpoint, pulping,
@@ -13487,7 +13497,7 @@
 //   (3) fraud-awareness — quiz distractors changed to real false-comfort traps (high
 //   rate / nice website / on a load board) instead of absurd one-liners. Content files
 //   only — live via prod re-seed. 8 of 22 courses now overhauled. Per §3.1: anu → anv.
-export const SRL_VERSION = "3.8.aot";
+export const SRL_VERSION = "3.8.aou";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

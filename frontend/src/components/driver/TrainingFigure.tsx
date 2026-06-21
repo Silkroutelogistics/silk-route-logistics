@@ -1132,6 +1132,18 @@ const STRUCTURED: Record<string, { caption: string; body: React.ReactNode }> = {
       </div>
     ),
   },
+  "post-accident-test-decision-tree": {
+    caption: "When a DOT post-accident drug + alcohol test is required (49 CFR 382.303). A fatality always triggers it; otherwise it takes a citation for a moving violation PLUS an injury treated away from the scene or a vehicle towed for disabling damage.",
+    body: (
+      <FlowDown nodes={[
+        { kind: "start", text: "You were in a crash while operating the CMV" },
+        { kind: "decision", text: "Was there a fatality?", failText: "No — check the conditions below" },
+        { kind: "go", text: "TEST: alcohol + drugs — always, regardless of any citation" },
+        { kind: "decision", text: "Citation for a moving violation AND (someone treated away from the scene OR a vehicle towed for disabling damage)?", failText: "No — no DOT post-accident test required" },
+        { kind: "go", text: "TEST: alcohol within 8 hr, drugs within 32 hr" },
+      ]} />
+    ),
+  },
   "warning-device-placement-highway": {
     caption: "Put out your three warning triangles within 10 minutes (49 CFR 392.22). On a TWO-WAY highway: ~10 ft toward approaching traffic, ~100 ft behind, ~100 ft ahead. On a ONE-WAY or divided highway: ~10, 100, and 200 ft, all to the rear toward approaching traffic.",
     body: (
