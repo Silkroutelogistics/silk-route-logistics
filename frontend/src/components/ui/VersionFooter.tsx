@@ -13165,6 +13165,21 @@
 //   400+ ft at 55 mph, FMCSA), the empty-truck-needs-more point, and the CDL following
 //   rule; quiz adds two real stopping-distance items. Content files only — live via
 //   prod re-seed. Per §3.1: ant → anu.
+// v3.8.aol — SRL Driver Academy figure layer Ship B: 16 bespoke geometric SVG schematics.
+//   Completes the figure layer (47 figures total, all 22 courses). Adds the diagrams where
+//   geometry carries meaning, in TrainingFigure.tsx: warning-triangle placement (two-way
+//   10/100/100 vs one-way 10/100/200, 392.22), driver-vs-blind-side backing wedges, spotter
+//   hand signals, fifth-wheel coupling sequence, air-brake gauge thresholds (low-air ~60 /
+//   governor 100-125 / pop-out 20-45, CDL-manual numbers), systematic walk-around path, the
+//   45-degree toward-the-train rail escape, CAT-ticket axle limits (20k/34k/34k/80k), tandem-
+//   slider weight-shift directions (web-verified: fwd->tandems, back->drives), reefer airflow
+//   clear-vs-blocked, HOS-constrained trip window, WLL weakest-link, BOL field map, OS&D
+//   before/after, dock-hazard cards, the visual/manual/cognitive distraction Venn. 16
+//   [[figure:KEY]] directives wired (50 directives total across the courses, all resolve).
+//   VERIFIED: 3-agent adversarial pass on the bespoke set (faithfulness + reg accuracy,
+//   WebSearch-backed) — 15 clean, the 1 flag was a non-defect 'could label clearer' note
+//   (faithful + reg-accurate both true). Numbers match the live lessons; no figure-only
+//   fabrication. Frontend deploys on push; directives go live via re-seed. Per §3.1: aok -> aol.
 // v3.8.aok — SRL Driver Academy figure layer Ship A: schematic visual engine + 31 figures.
 //   New reusable brand-tokened layout primitives in TrainingFigure.tsx (Track/Steps/FlowDown/
 //   Checklist/Compare/Matrix/Bars/IconGrid) driving 31 structured figures across 19 courses:
@@ -13374,7 +13389,7 @@
 //   (3) fraud-awareness — quiz distractors changed to real false-comfort traps (high
 //   rate / nice website / on a load board) instead of absurd one-liners. Content files
 //   only — live via prod re-seed. 8 of 22 courses now overhauled. Per §3.1: anu → anv.
-export const SRL_VERSION = "3.8.aok";
+export const SRL_VERSION = "3.8.aol";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

@@ -890,6 +890,286 @@ const STRUCTURED: Record<string, { caption: string; body: React.ReactNode }> = {
       ]} />
     ),
   },
+
+  // ════ Ship B: bespoke schematics where geometry carries meaning ════
+  "hos-constrained-trip-timeline": {
+    caption: "Plan the trip against your HOS clock, not just the miles. The 14-hour window holds everything — driving, fueling, waiting, the 30-minute break — and your 11 hours of driving live inside it. Find your parking before the clock runs out, not at the last minute.",
+    body: (
+      <div className="flex flex-col gap-2.5">
+        <Track title="14-hour ON-DUTY window — everything counts against it" segments={[
+          { w: 5, label: "Driving", fill: C.navy700 },
+          { w: 1, label: "Fuel", fill: C.gold, fg: C.navy },
+          { w: 0.7, label: "30-min", sub: "break", fill: C.goldDark },
+          { w: 3, label: "Driving", fill: C.navy700 },
+          { w: 2, label: "Detention", sub: "still on the clock", fill: C.cream3, fg: C.fg },
+          { w: 2.3, label: "Window closes", fill: C.cream2, fg: C.muted },
+        ]} />
+        <Note tone="warning">Identify parking BEFORE your 11-hour driving limit (and your 14-hour window) run out — running out of hours with nowhere safe to park is the avoidable trap.</Note>
+      </div>
+    ),
+  },
+  "backing-fifth-wheel-coupling": {
+    caption: "Couple in order — mechanical first, then the lines. Confirm the lock three ways before you trust it: a tug test, the jaws closed on the kingpin shank, and the trailer fully ridden up onto the plate with no gap.",
+    body: (
+      <Steps items={[
+        { title: "Set trailer height + line up square", sub: "the kingpin enters the middle; the trailer rides UP onto the plate, never down" },
+        { title: "Back slowly under the kingpin until it locks" },
+        { title: "Tug test", sub: "low gear, pull forward against set trailer brakes — it must not separate", tone: "gold" },
+        { title: "Visual check: jaws fully closed on the shank, full ride-up, no gap", tone: "gold" },
+        { title: "NOW connect the glad-hands + electrical", sub: "after the mechanical lock, so loose lines can't catch or tear" },
+        { title: "Raise the landing gear all the way + stow the handle" },
+      ]} />
+    ),
+  },
+  "cargo-wll-weakest-link": {
+    caption: "A tiedown's real working load limit is its LOWEST-rated part. The strap, the hook, the winch, and the anchor point all count — the weakest one sets the WLL for the whole assembly. Use the marked value, or the 49 CFR 393.108 defaults if it's unmarked.",
+    body: (
+      <div className="flex flex-col items-stretch gap-1.5 sm:flex-row sm:items-center sm:gap-1">
+        {[
+          { n: "Strap / chain", weak: false },
+          { n: "Hook / hardware", weak: false },
+          { n: "Winch", weak: false },
+          { n: "Anchor point", weak: true },
+        ].map((c, i, arr) => (
+          <React.Fragment key={i}>
+            <div className="flex-1 rounded-lg border px-2 py-2 text-center" style={c.weak ? { borderColor: C.danger, background: C.dangerBg } : { borderColor: "rgba(10,37,64,0.14)", background: "#fff" }}>
+              <div className="text-[11.5px] font-semibold" style={{ color: c.weak ? C.danger : C.navy }}>{c.n}</div>
+              {c.weak && <div className="text-[10px] font-bold uppercase text-[#9B2C2C]">weakest = the WLL</div>}
+            </div>
+            {i < arr.length - 1 && <span className="hidden text-[#A7AEB8] sm:block">—</span>}
+          </React.Fragment>
+        ))}
+      </div>
+    ),
+  },
+  "bol-fields-checklist": {
+    caption: "A clean Bill of Lading shows the shipper and consignee, the commodity, the piece + weight count, and signatures with dates and times. Verify the count yourself before you sign — physically count pallets, or note 'per shipper count' on sealed freight.",
+    body: (
+      <div className="overflow-hidden rounded-lg border border-[rgba(10,37,64,0.14)] bg-white text-[11px]">
+        <div className="bg-[#0A2540] px-3 py-1.5 text-center text-[12px] font-bold uppercase tracking-wide text-[#C5A572]">Bill of Lading</div>
+        <div className="grid grid-cols-2 divide-x divide-[rgba(10,37,64,0.10)]">
+          <div className="px-3 py-2"><div className="text-[10px] font-bold uppercase text-[#BA7517]">Shipper</div><div className="text-[#3A4A5F]">name · address · phone</div></div>
+          <div className="px-3 py-2"><div className="text-[10px] font-bold uppercase text-[#BA7517]">Consignee</div><div className="text-[#3A4A5F]">name · address · phone</div></div>
+        </div>
+        <div className="border-t border-[rgba(10,37,64,0.10)] px-3 py-2"><div className="text-[10px] font-bold uppercase text-[#BA7517]">Commodity</div><div className="text-[#3A4A5F]">description · <strong>pieces + weight</strong> · class <span className="text-[#9B2C2C]">← verify the count before signing</span></div></div>
+        <div className="grid grid-cols-2 divide-x divide-[rgba(10,37,64,0.10)] border-t border-[rgba(10,37,64,0.10)]">
+          <div className="px-3 py-2"><div className="text-[10px] font-bold uppercase text-[#BA7517]">Pickup signature</div><div className="text-[#3A4A5F]">signed · date · time</div></div>
+          <div className="px-3 py-2"><div className="text-[10px] font-bold uppercase text-[#BA7517]">Delivery (POD)</div><div className="text-[#3A4A5F]">signed · date · time · OS&amp;D notes</div></div>
+        </div>
+      </div>
+    ),
+  },
+  "osd-notation-workflow": {
+    caption: "Your signature attests to the load's condition. Sign clean over a problem and the law presumes it arrived perfect — so note the over/short/damage on the receipt, have the receiver acknowledge it, and photograph it BEFORE you sign.",
+    body: (
+      <Compare columns={[
+        { title: "Sign CLEAN over a problem", tone: "bad", items: ["No exception noted", "Receiver doesn't acknowledge", "Law presumes the load arrived in good order", "The claim can land on the carrier (Carmack)"] },
+        { title: "NOTE the OS&D, then sign", tone: "good", items: ["Write the over/short/damage on the receipt", "Receiver acknowledges / initials it", "Photograph the issue", "You and the carrier are protected"] },
+      ]} />
+    ),
+  },
+  "cat-scale-ticket-reading": {
+    caption: "A CAT scale ticket gives three platform weights — steer, drive, trailer-tandem — plus the gross. Check each against its limit before you trust your axle weights.",
+    body: (
+      <div className="overflow-hidden rounded-lg border border-[rgba(10,37,64,0.14)] bg-white">
+        <div className="bg-[#0A2540] px-3 py-1.5 text-center text-[12px] font-bold uppercase tracking-wide text-[#C5A572]">CAT Scale Ticket</div>
+        {[
+          ["Steer axle", "≤ 20,000 lb"],
+          ["Drive axles (tandem)", "≤ 34,000 lb"],
+          ["Trailer tandems", "≤ 34,000 lb"],
+          ["GROSS", "≤ 80,000 lb"],
+        ].map(([k, v], i) => (
+          <div key={i} className={`flex items-center justify-between px-3 py-1.5 text-[12px] ${i === 3 ? "border-t-2 border-[#0A2540] font-bold" : "border-t border-[rgba(10,37,64,0.08)]"}`}>
+            <span className="font-semibold text-[#0A2540]">{k}</span>
+            <span className="rounded bg-[#F5EEE0] px-2 py-0.5 font-mono text-[11px] text-[#0A2540]">{v}</span>
+          </div>
+        ))}
+      </div>
+    ),
+  },
+  "distraction-three-types-venn": {
+    caption: "Distraction comes in three forms — and the worst tasks hit all three at once. Texting while anxious about a delivery is visual (eyes off), manual (hands off), and cognitive (mind off) together.",
+    body: (
+      <svg viewBox="0 0 260 200" className="mx-auto h-auto w-full max-w-[320px]" role="img" aria-label="Three overlapping types of distraction: visual, manual, cognitive">
+        <circle cx="100" cy="80" r="62" fill="rgba(10,37,64,0.12)" stroke="#0A2540" strokeWidth="1.5" />
+        <circle cx="160" cy="80" r="62" fill="rgba(186,117,23,0.12)" stroke="#BA7517" strokeWidth="1.5" />
+        <circle cx="130" cy="130" r="62" fill="rgba(47,122,79,0.12)" stroke="#2F7A4F" strokeWidth="1.5" />
+        <text x="74" y="58" textAnchor="middle" fontSize="11" fontWeight="700" fill="#0A2540" fontFamily="Arial, sans-serif">VISUAL</text>
+        <text x="74" y="70" textAnchor="middle" fontSize="7.5" fill="#3A4A5F" fontFamily="Arial, sans-serif">eyes off road</text>
+        <text x="186" y="58" textAnchor="middle" fontSize="11" fontWeight="700" fill="#BA7517" fontFamily="Arial, sans-serif">MANUAL</text>
+        <text x="186" y="70" textAnchor="middle" fontSize="7.5" fill="#3A4A5F" fontFamily="Arial, sans-serif">hands off wheel</text>
+        <text x="130" y="162" textAnchor="middle" fontSize="11" fontWeight="700" fill="#2F7A4F" fontFamily="Arial, sans-serif">COGNITIVE</text>
+        <text x="130" y="174" textAnchor="middle" fontSize="7.5" fill="#3A4A5F" fontFamily="Arial, sans-serif">mind off drive</text>
+        <text x="130" y="100" textAnchor="middle" fontSize="9" fontWeight="700" fill="#9B2C2C" fontFamily="Arial, sans-serif">texting</text>
+        <text x="130" y="111" textAnchor="middle" fontSize="7" fill="#9B2C2C" fontFamily="Arial, sans-serif">= all three</text>
+      </svg>
+    ),
+  },
+  "dock-safety-hazards": {
+    caption: "The dock is someone else's workplace full of moving equipment. The hazards that hurt drivers — and how to beat each one.",
+    body: (
+      <div className="flex flex-col gap-1.5">
+        {[
+          ["Falls from the cab / trailer", "Three points of contact, face the equipment, never jump down"],
+          ["Trailer creep + early pull-away", "Chock the wheels, engage the dock lock — verify it's on the bumper (a green light isn't proof)"],
+          ["Forklift blind spots", "A raised load blocks the operator's view — make eye contact before you cross"],
+          ["Carbon monoxide in enclosed docks", "Headache or dizziness = get to fresh air; don't idle in a sealed space"],
+          ["Overhead dock doors", "Never stand or walk under a moving door — sensors fail"],
+        ].map(([h, f], i) => (
+          <div key={i} className="rounded-lg border-l-[3px] border-l-[#BA7517] bg-[#FBF7F0] px-3 py-1.5">
+            <div className="text-[12px] font-semibold text-[#9B2C2C]">{h}</div>
+            <div className="text-[11.5px] leading-snug text-[#3A4A5F]">{f}</div>
+          </div>
+        ))}
+      </div>
+    ),
+  },
+  "warning-device-placement-highway": {
+    caption: "Put out your three warning triangles within 10 minutes (49 CFR 392.22). On a TWO-WAY highway: ~10 ft toward approaching traffic, ~100 ft behind, ~100 ft ahead. On a ONE-WAY or divided highway: ~10, 100, and 200 ft, all to the rear toward approaching traffic.",
+    body: (
+      <svg viewBox="0 0 320 184" className="mx-auto h-auto w-full max-w-[360px]" role="img" aria-label="Warning triangle placement on two-way vs one-way highways">
+        <text x="6" y="13" fontSize="10" fontWeight="700" fill="#0A2540" fontFamily="Arial, sans-serif">Two-way highway</text>
+        <line x1="10" y1="42" x2="312" y2="42" stroke="#C5A572" strokeWidth="1" strokeDasharray="6 5" />
+        <rect x="150" y="34" width="34" height="14" rx="2" fill="#0A2540" />
+        <text x="167" y="44" textAnchor="middle" fontSize="7" fill="#FBF7F0" fontFamily="Arial, sans-serif">TRUCK</text>
+        <g fill="#9B2C2C">
+          <polygon points="136,33 142,44 130,44" /><text x="136" y="57" textAnchor="middle" fontSize="7.5" fill="#3A4A5F" fontFamily="Arial, sans-serif">10 ft</text>
+          <polygon points="82,33 88,44 76,44" /><text x="82" y="57" textAnchor="middle" fontSize="7.5" fill="#3A4A5F" fontFamily="Arial, sans-serif">100 ft</text>
+          <polygon points="252,33 258,44 246,44" /><text x="252" y="57" textAnchor="middle" fontSize="7.5" fill="#3A4A5F" fontFamily="Arial, sans-serif">100 ft ahead</text>
+        </g>
+        <text x="6" y="100" fontSize="10" fontWeight="700" fill="#0A2540" fontFamily="Arial, sans-serif">One-way / divided highway</text>
+        <line x1="10" y1="130" x2="312" y2="130" stroke="#C5A572" strokeWidth="1" strokeDasharray="6 5" />
+        <rect x="244" y="122" width="34" height="14" rx="2" fill="#0A2540" />
+        <text x="261" y="132" textAnchor="middle" fontSize="7" fill="#FBF7F0" fontFamily="Arial, sans-serif">TRUCK</text>
+        <g fill="#9B2C2C">
+          <polygon points="226,121 232,132 220,132" /><text x="226" y="145" textAnchor="middle" fontSize="7.5" fill="#3A4A5F" fontFamily="Arial, sans-serif">10 ft</text>
+          <polygon points="150,121 156,132 144,132" /><text x="150" y="145" textAnchor="middle" fontSize="7.5" fill="#3A4A5F" fontFamily="Arial, sans-serif">100 ft</text>
+          <polygon points="70,121 76,132 64,132" /><text x="70" y="145" textAnchor="middle" fontSize="7.5" fill="#3A4A5F" fontFamily="Arial, sans-serif">200 ft</text>
+        </g>
+        <text x="160" y="172" textAnchor="middle" fontSize="8" fill="#6B7685" fontFamily="Arial, sans-serif">red triangles placed toward approaching traffic</text>
+      </svg>
+    ),
+  },
+  "backing-driver-vs-blind-side": {
+    caption: "Back toward the DRIVER's (left) side whenever you can — you can see down the length of the trailer out your window. A blind-side (right) back hides the danger zone behind the trailer; avoid it, or use a spotter. G.O.A.L. — Get Out And Look — on every back.",
+    body: (
+      <svg viewBox="0 0 320 158" className="mx-auto h-auto w-full max-w-[360px]" role="img" aria-label="Driver-side versus blind-side backing visibility">
+        <text x="80" y="14" textAnchor="middle" fontSize="10" fontWeight="700" fill="#2F7A4F" fontFamily="Arial, sans-serif">Driver-side (LEFT) back ✓</text>
+        <polygon points="20,72 62,42 62,102" fill="rgba(47,122,79,0.14)" stroke="#2F7A4F" strokeWidth="1" />
+        <rect x="62" y="57" width="58" height="30" rx="2" fill="#15365A" /><rect x="120" y="62" width="22" height="20" rx="2" fill="#0A2540" />
+        <text x="86" y="122" textAnchor="middle" fontSize="8" fill="#2F7A4F" fontFamily="Arial, sans-serif">trailer-rear visible</text>
+        <text x="240" y="14" textAnchor="middle" fontSize="10" fontWeight="700" fill="#9B2C2C" fontFamily="Arial, sans-serif">Blind-side (RIGHT) back ✕</text>
+        <polygon points="300,72 258,42 258,102" fill="rgba(155,44,44,0.14)" stroke="#9B2C2C" strokeWidth="1" strokeDasharray="4 3" />
+        <rect x="200" y="57" width="58" height="30" rx="2" fill="#15365A" /><rect x="178" y="62" width="22" height="20" rx="2" fill="#0A2540" />
+        <text x="280" y="122" textAnchor="middle" fontSize="8" fill="#9B2C2C" fontFamily="Arial, sans-serif">hidden zone</text>
+        <text x="160" y="150" textAnchor="middle" fontSize="8" fill="#6B7685" fontFamily="Arial, sans-serif">the shaded wedge is what the driver can see from the cab</text>
+      </svg>
+    ),
+  },
+  "pre-trip-air-brake-gauges": {
+    caption: "The in-cab air-brake test by the numbers (per the CDL manual): the low-air warning must come on before about 60 psi, the spring brakes pop out around 20-45 psi, and the governor cuts in around 100 and cuts out around 120-125 psi.",
+    body: (
+      <svg viewBox="0 0 320 112" className="mx-auto h-auto w-full max-w-[360px]" role="img" aria-label="Air-brake pressure thresholds">
+        <rect x="20" y="52" width="56" height="16" fill="#9B2C2C" />
+        <rect x="76" y="52" width="111" height="16" fill="#FBEFD4" />
+        <rect x="187" y="52" width="113" height="16" fill="#E6F0E9" />
+        <line x1="20" y1="52" x2="300" y2="52" stroke="#0A2540" strokeWidth="1" />
+        {([["0", 20], ["30", 76], ["60", 132], ["100", 207], ["125", 254], ["150", 300]] as [string, number][]).map(([n, x], i) => (
+          <g key={i}><line x1={x} y1="68" x2={x} y2="74" stroke="#3A4A5F" strokeWidth="1" /><text x={x} y="86" textAnchor="middle" fontSize="8" fill="#3A4A5F" fontFamily="Arial, sans-serif">{n}</text></g>
+        ))}
+        <text x="48" y="46" textAnchor="middle" fontSize="7.5" fontWeight="700" fill="#9B2C2C" fontFamily="Arial, sans-serif">pop-out 20-45</text>
+        <text x="132" y="44" textAnchor="middle" fontSize="8" fontWeight="700" fill="#B07A1A" fontFamily="Arial, sans-serif">low-air warn ~60</text>
+        <text x="232" y="46" textAnchor="middle" fontSize="8" fontWeight="700" fill="#2F7A4F" fontFamily="Arial, sans-serif">governor 100 to 125</text>
+        <text x="160" y="104" textAnchor="middle" fontSize="8" fill="#6B7685" fontFamily="Arial, sans-serif">PSI · leak-down: under 2/3 psi/min released, 3/4 applied</text>
+      </svg>
+    ),
+  },
+  "pre-trip-walk-sequence": {
+    caption: "Walk the truck the same direction every time so you never skip a side: start at the driver's door, work forward and down that side, around the back and the trailer, up the passenger side, then into the cab for the brake and gauge checks.",
+    body: (
+      <svg viewBox="0 0 300 150" className="mx-auto h-auto w-full max-w-[340px]" role="img" aria-label="Systematic pre-trip walk-around sequence">
+        <rect x="62" y="50" width="178" height="50" rx="4" fill="none" stroke="#15365A" strokeWidth="2" />
+        <rect x="40" y="58" width="24" height="34" rx="3" fill="#0A2540" />
+        <path d="M52 44 H150 V32 M150 100 V112 H52 V100 M255 50 V100" fill="none" stroke="#C5A572" strokeWidth="1.2" strokeDasharray="5 4" />
+        {([["1", 50, 46], ["2", 100, 42], ["3", 160, 42], ["4", 255, 75], ["5", 160, 112], ["6", 100, 112], ["7", 64, 112], ["8", 52, 75]] as [string, number, number][]).map(([n, x, y], i) => (
+          <g key={i}><circle cx={x} cy={y} r="9" fill="#BA7517" /><text x={x} y={y + 3} textAnchor="middle" fontSize="9" fontWeight="700" fill="#FBF7F0" fontFamily="Arial, sans-serif">{n}</text></g>
+        ))}
+        <text x="150" y="138" textAnchor="middle" fontSize="8" fill="#6B7685" fontFamily="Arial, sans-serif">driver door → front → around back → passenger side → cab</text>
+      </svg>
+    ),
+  },
+  "railroad-crossing-45-degree-evacuation": {
+    caption: "If you stall on the tracks with a train coming, run TOWARD the oncoming train at about 45 degrees, away from the tracks. Debris flies the way the train is traveling, so running away from the train puts you in its path — 45° toward it keeps you behind the debris.",
+    body: (
+      <svg viewBox="0 0 300 160" className="mx-auto h-auto w-full max-w-[340px]" role="img" aria-label="45-degree evacuation toward the oncoming train">
+        <line x1="10" y1="92" x2="290" y2="92" stroke="#6B7685" strokeWidth="2" />
+        <line x1="10" y1="102" x2="290" y2="102" stroke="#6B7685" strokeWidth="2" />
+        {[...Array(14)].map((_, i) => (<line key={i} x1={22 + i * 19} y1="88" x2={22 + i * 19} y2="106" stroke="#A7AEB8" strokeWidth="2" />))}
+        <rect x="250" y="80" width="40" height="24" rx="3" fill="#0A2540" />
+        <text x="270" y="95" textAnchor="middle" fontSize="7" fill="#FBF7F0" fontFamily="Arial, sans-serif">TRAIN</text>
+        <path d="M248 92 H232 M238 87 L232 92 L238 97" fill="none" stroke="#9B2C2C" strokeWidth="2" />
+        <rect x="120" y="84" width="30" height="16" rx="2" fill="#9B2C2C" />
+        <text x="135" y="78" textAnchor="middle" fontSize="7" fill="#9B2C2C" fontFamily="Arial, sans-serif">stalled</text>
+        <path d="M132 84 L178 42 M171 44 L178 42 L177 49" fill="none" stroke="#2F7A4F" strokeWidth="3" />
+        <text x="182" y="40" fontSize="9" fontWeight="700" fill="#2F7A4F" fontFamily="Arial, sans-serif">45° toward the train</text>
+        <text x="150" y="150" textAnchor="middle" fontSize="8" fill="#6B7685" fontFamily="Arial, sans-serif">debris flies the way the train travels — stay behind it</text>
+      </svg>
+    ),
+  },
+  "tandem-slider-weight-shift": {
+    caption: "Sliding the trailer tandems shifts weight between the drives and the trailer tandems. Tandems too heavy? Slide them BACK to load the drives. Drives too heavy? Slide them FORWARD onto the tandems (~250-400 lb per hole). Sliding the fifth wheel forward loads the steer. Re-check the bridge formula after any slide.",
+    body: (
+      <svg viewBox="0 0 320 150" className="mx-auto h-auto w-full max-w-[360px]" role="img" aria-label="Trailer tandem slider and fifth-wheel weight shift">
+        <rect x="70" y="40" width="220" height="36" rx="3" fill="none" stroke="#15365A" strokeWidth="2" />
+        <rect x="20" y="48" width="40" height="28" rx="3" fill="#0A2540" />
+        <circle cx="40" cy="86" r="8" fill="#3A4A5F" /><circle cx="58" cy="86" r="8" fill="#3A4A5F" />
+        <circle cx="240" cy="86" r="8" fill="#3A4A5F" /><circle cx="262" cy="86" r="8" fill="#3A4A5F" />
+        <text x="49" y="110" textAnchor="middle" fontSize="8" fill="#0A2540" fontFamily="Arial, sans-serif">drives</text>
+        <text x="251" y="110" textAnchor="middle" fontSize="8" fill="#0A2540" fontFamily="Arial, sans-serif">trailer tandems</text>
+        <path d="M232 126 H210 M216 122 L210 126 L216 130" fill="none" stroke="#BA7517" strokeWidth="2" />
+        <text x="150" y="130" fontSize="7.5" fill="#BA7517" fontFamily="Arial, sans-serif">forward → weight onto the tandems</text>
+        <path d="M276 126 H298 M292 122 L298 126 L292 130" fill="none" stroke="#BA7517" strokeWidth="2" />
+        <text x="252" y="142" fontSize="7.5" fill="#BA7517" fontFamily="Arial, sans-serif">back → onto the drives</text>
+        <text x="40" y="30" textAnchor="middle" fontSize="7.5" fill="#2F7A4F" fontFamily="Arial, sans-serif">5th wheel fwd → steer</text>
+      </svg>
+    ),
+  },
+  "backing-spotter-signals": {
+    caption: "Agree on signals before you back, and stop the instant you lose sight of the spotter. A flat raised palm means STOP; hands held apart show how much room is left; a directional point shows which way to bring the trailer.",
+    body: (
+      <div className="grid grid-cols-3 gap-2">
+        {[
+          { t: "STOP", d: "flat raised palm", svg: (<g><line x1="20" y1="46" x2="20" y2="22" stroke="#0A2540" strokeWidth="3" /><rect x="13" y="8" width="14" height="13" rx="3" fill="#9B2C2C" /></g>) },
+          { t: "ROOM LEFT", d: "hands apart", svg: (<g><line x1="8" y1="28" x2="20" y2="28" stroke="#0A2540" strokeWidth="3" /><line x1="20" y1="28" x2="32" y2="28" stroke="#0A2540" strokeWidth="3" /><line x1="8" y1="22" x2="8" y2="34" stroke="#BA7517" strokeWidth="3" /><line x1="32" y1="22" x2="32" y2="34" stroke="#BA7517" strokeWidth="3" /></g>) },
+          { t: "DIRECTION", d: "point the way", svg: (<g><line x1="8" y1="28" x2="30" y2="28" stroke="#0A2540" strokeWidth="3" /><path d="M24 22 L32 28 L24 34" fill="none" stroke="#2F7A4F" strokeWidth="3" /></g>) },
+        ].map((s, i) => (
+          <div key={i} className="flex flex-col items-center rounded-lg border border-[rgba(10,37,64,0.10)] bg-white px-2 py-2">
+            <svg viewBox="0 0 40 52" className="h-12 w-12" role="img" aria-label={s.t}>{s.svg}</svg>
+            <div className="text-[11px] font-bold text-[#0A2540]">{s.t}</div>
+            <div className="text-center text-[9.5px] text-[#6B7685]">{s.d}</div>
+          </div>
+        ))}
+      </div>
+    ),
+  },
+  "reefer-airflow-circulation": {
+    caption: "Airflow keeps the whole load in spec. Keep the return-air bulkhead at the front CLEAR and use the floor channels — don't floor-load solid product over the air chute. Block the bulkhead and you starve the cargo of cold air and create warm hot spots.",
+    body: (
+      <svg viewBox="0 0 320 134" className="mx-auto h-auto w-full max-w-[360px]" role="img" aria-label="Reefer airflow: clear bulkhead versus blocked">
+        <text x="80" y="13" textAnchor="middle" fontSize="9.5" fontWeight="700" fill="#2F7A4F" fontFamily="Arial, sans-serif">Clear bulkhead ✓</text>
+        <rect x="20" y="22" width="120" height="80" rx="3" fill="none" stroke="#15365A" strokeWidth="1.5" />
+        <rect x="22" y="24" width="14" height="76" fill="#E2EAF2" />
+        <rect x="50" y="34" width="86" height="56" fill="rgba(197,165,114,0.22)" />
+        <path d="M40 30 H132 M132 30 V92 M132 92 H40 M40 92 V30" fill="none" stroke="#2F7A4F" strokeWidth="1.5" strokeDasharray="4 3" />
+        <text x="60" y="116" textAnchor="middle" fontSize="7.5" fill="#2F7A4F" fontFamily="Arial, sans-serif">air circulates around the load</text>
+        <text x="240" y="13" textAnchor="middle" fontSize="9.5" fontWeight="700" fill="#9B2C2C" fontFamily="Arial, sans-serif">Blocked ✕</text>
+        <rect x="180" y="22" width="120" height="80" rx="3" fill="none" stroke="#15365A" strokeWidth="1.5" />
+        <rect x="182" y="24" width="116" height="76" fill="rgba(197,165,114,0.22)" />
+        <circle cx="202" cy="42" r="10" fill="rgba(155,44,44,0.5)" /><circle cx="282" cy="84" r="10" fill="rgba(155,44,44,0.5)" />
+        <text x="240" y="116" textAnchor="middle" fontSize="7.5" fill="#9B2C2C" fontFamily="Arial, sans-serif">hot spots — air cannot move</text>
+      </svg>
+    ),
+  },
 };
 
 // ── Public renderer ─────────────────────────────────────────────────────
