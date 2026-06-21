@@ -13165,6 +13165,20 @@
 //   400+ ft at 55 mph, FMCSA), the empty-truck-needs-more point, and the CDL following
 //   rule; quiz adds two real stopping-distance items. Content files only — live via
 //   prod re-seed. Per §3.1: ant → anu.
+// v3.8.aon — SRL Driver Academy FINAL comprehensive audit, Course 1/22: eld-hos (ELD & Hours
+//   of Service) v3 -> v4. All-agent audit was rate-limited (platform throttle), so the audit ran
+//   inline with primary-source verification (eCFR/law.cornell.edu 49 CFR 395.1, FMCSA HOS final-
+//   rule fact sheets) — every existing fact re-verified accurate (7/3 & 8/2 neither-counts-vs-14,
+//   34-hr restart no 1am-5am, short-haul 150/14, 30-min after 8 driving hrs). MAJOR completeness
+//   gap closed: the ADVERSE DRIVING CONDITIONS exception (395.1(b)(1)) was entirely missing —
+//   added to Lesson 1 (extends BOTH the 11-hr drive limit to 13 AND the 14-hr window to 16, up to
+//   2 hrs, unforeseen only) with a new brand-tokened figure (adverse-driving-extension) + a new
+//   quiz Q9. Lesson 4 gains the 16-hr "big day" exception (395.1(o)) + log certification / driver
+//   edits / Unidentified-Driver attribution. Lesson 5 gains the out-of-service + CSA consequence
+//   of blowing a limit. Course now 5 lessons / 9 questions / 4 figures. Em-dash sweep deliberately
+//   NOT applied (§18.9 is outreach-canonical; Academy training prose is a different context —
+//   cross-canonical-migration trap per §19). Gates: backend tsc + seed dry-run (22 courses / 161 q,
+//   content valid) + frontend tsc + next build all clean. Live via prod re-seed. Per §3.1: aom -> aon.
 // v3.8.aom — SRL Driver Academy Duolingo-style interactivity (frontend-only, no schema).
 //   (1) Instant per-answer feedback: new stateless POST /driver-training/courses/:slug/quiz/check
 //   (server stays the answer authority — returns correct/correctIndex/explanation; CDL-gated,
@@ -13406,7 +13420,7 @@
 //   (3) fraud-awareness — quiz distractors changed to real false-comfort traps (high
 //   rate / nice website / on a load board) instead of absurd one-liners. Content files
 //   only — live via prod re-seed. 8 of 22 courses now overhauled. Per §3.1: anu → anv.
-export const SRL_VERSION = "3.8.aom";
+export const SRL_VERSION = "3.8.aon";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

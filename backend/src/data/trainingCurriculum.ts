@@ -58,9 +58,9 @@ const BASE_CURRICULUM: CurriculumCourse[] = [
     slug: "eld-hos",
     title: "ELD & Hours of Service",
     category: "Hours & Electronic Logs",
-    summary: "The federal Hours of Service limits, the short-haul exception, how your ELD records duty status, sleeper-berth splits, and what to do when the device fails.",
-    version: "3",
-    estMinutes: 26,
+    summary: "The federal Hours of Service limits, the short-haul and 16-hour exceptions, the adverse-driving exception, how your ELD records duty status, sleeper-berth splits, and what to do when the device fails.",
+    version: "4",
+    estMinutes: 30,
     passThreshold: 80,
     validityMonths: 12,
     sortOrder: 1,
@@ -69,9 +69,9 @@ const BASE_CURRICULUM: CurriculumCourse[] = [
       {
         order: 1,
         title: "The core driving limits",
-        estMinutes: 5,
+        estMinutes: 7,
         bodyMarkdown:
-          "Hours of Service (HOS) rules are set by the FMCSA under 49 CFR Part 395. They exist to keep tired drivers off the road. Three limits sit at the center of property-carrying HOS.\n\n**11-hour driving limit.** After 10 consecutive hours off duty, you may drive a maximum of 11 hours.\n\n**14-hour window.** You cannot drive after the 14th consecutive hour following the start of your shift. Off-duty time during the day (a lunch break, for example) does *not* stop or extend this 14-hour clock. Only the sleeper-berth provision (covered later) can pause it.\n\n**30-minute break.** You must take a 30-minute break once you have driven 8 cumulative hours without at least a 30-minute interruption. The break can be off-duty, sleeper, or on-duty-not-driving time.\n\n**Each day resets — the week does not.** On a multi-day trip, every time you take **10 consecutive hours off duty** (or a valid sleeper split) you start the next day with a **fresh 11-hour driving limit and a fresh 14-hour window**. What does *not* reset that easily is your weekly 60/70-hour total, which keeps adding up day over day until you take a 34-hour restart (next lesson).\n\n[[figure:hos-daily-clock]]\n\n> " + TRAINING_DISCLAIMER,
+          "Hours of Service (HOS) rules are set by the FMCSA under 49 CFR Part 395. They exist to keep tired drivers off the road. Three limits sit at the center of property-carrying HOS.\n\n**11-hour driving limit.** After 10 consecutive hours off duty, you may drive a maximum of 11 hours.\n\n**14-hour window.** You cannot drive after the 14th consecutive hour following the start of your shift. Off-duty time during the day (a lunch break, for example) does *not* stop or extend this 14-hour clock. Only the sleeper-berth provision (covered later) can pause it.\n\n**30-minute break.** You must take a 30-minute break once you have driven 8 cumulative hours without at least a 30-minute interruption. The break can be off-duty, sleeper, or on-duty-not-driving time.\n\n**Adverse driving conditions.** If unforeseen conditions (a sudden snow squall, dense fog, a crash that closes the road) keep you from safely finishing a run you could normally complete, you may drive up to **2 extra hours**. Under the current rule this stretches **both** the 11-hour driving limit (to 13) **and** the 14-hour window (to 16). It applies only to conditions you did *not* know and could not reasonably have known about when you were dispatched. Traffic you already knew was heavy, a closure that was on the map, or a slow shipper do *not* count. Use only the extra time you actually need, and it never extends your 30-minute break or your weekly 60/70-hour limit.\n\n[[figure:adverse-driving-extension]]\n\n**Each day resets — the week does not.** On a multi-day trip, every time you take **10 consecutive hours off duty** (or a valid sleeper split) you start the next day with a **fresh 11-hour driving limit and a fresh 14-hour window**. What does *not* reset that easily is your weekly 60/70-hour total, which keeps adding up day over day until you take a 34-hour restart (next lesson).\n\n[[figure:hos-daily-clock]]\n\n> " + TRAINING_DISCLAIMER,
       },
       {
         order: 2,
@@ -90,7 +90,7 @@ const BASE_CURRICULUM: CurriculumCourse[] = [
       {
         order: 4,
         title: "How the ELD records your day",
-        estMinutes: 5,
+        estMinutes: 7,
         bodyMarkdown: `An Electronic Logging Device (ELD) connects to the engine and automatically records driving time, so duty status is harder to falsify than paper logs. Most drivers who must keep records of duty status (RODS) have to use a registered ELD.
 
 **The short-haul exception (49 CFR 395.1(e)(1)).** This is the big one. If you operate within a **150 air-mile radius** of your normal work-reporting location and **return there within 14 hours**, you may use a simple **time record** (time in, time out, total hours) instead of RODS or an ELD, and you are **not required to take the 30-minute break**. The **11-hour driving limit still applies**, and the carrier keeps the time records for **6 months**. Other ELD exemptions include pre-2000 engine vehicles, driveaway-towaway operations, and drivers who keep RODS no more than 8 days in any 30-day period. Confirm an exemption actually applies before you rely on it — misusing short-haul is a common violation.
@@ -106,14 +106,16 @@ If even one of these fails on a given day — a load runs you 160 air-miles out,
 
 [[figure:short-haul-daily-test]]
 
-You are responsible for selecting the correct duty status: off duty, sleeper berth, driving, or on-duty-not-driving. The device records the driving; you annotate the rest. Review and certify your logs daily.`,
+**The 16-hour "big day" exception (49 CFR 395.1(o)).** Once every 7 days, a driver who returns to the same normal work-reporting location and is released there may extend the 14-hour window to 16 hours. It is narrow: the carrier must have released you at that location on your previous five shifts, you must be released within 16 hours of coming on duty, and you cannot have used the exception in the last six days. It extends the window only. Your 11-hour driving limit does not change. Treat it as an occasional tool, not an everyday plan.
+
+You are responsible for selecting the correct duty status: off duty, sleeper berth, driving, or on-duty-not-driving. The device records the driving; you annotate the rest. Review and certify your logs every day. Driving the truck without logging in shows up as Unidentified Driver time that you must review and accept or reject. You, not the carrier, approve any edits to your record, and a carrier may never push you to certify a log you know is false. Uncertified logs and unassigned driving time are easy roadside findings.`,
       },
       {
         order: 5,
         title: "Malfunctions, personal conveyance, and yard moves",
-        estMinutes: 4,
+        estMinutes: 5,
         bodyMarkdown:
-          "**ELD malfunction.** If your ELD fails, note the malfunction, and you may keep paper logs for up to 8 days. Reconstruct your record of duty status for the current 24-hour period and the prior 7 days. Notify your carrier (generally within 24 hours); the carrier must repair or replace the device within 8 days.\n\n**Personal conveyance (PC).** This is off-duty movement of the truck for your own personal purpose, not advancing the load (for example, driving to a restaurant or a safe place to rest after being loaded). It does not consume driving hours, but it must be genuinely personal. Misusing PC to make up driving time is a common violation.\n\n**Yard moves.** Moving the truck within a private yard or terminal is recorded as on-duty-not-driving (a special driving category), not as line-haul driving.\n\nThe most common roadside HOS violations are exceeding the 11 or 14-hour limits, missing the 30-minute break, false logs, and form-and-manner errors. Clean, certified logs are your best defense.",
+          "**ELD malfunction.** If your ELD fails, note the malfunction, and you may keep paper logs for up to 8 days. Reconstruct your record of duty status for the current 24-hour period and the prior 7 days. Notify your carrier (generally within 24 hours); the carrier must repair or replace the device within 8 days.\n\n**Personal conveyance (PC).** This is off-duty movement of the truck for your own personal purpose, not advancing the load (for example, driving to a restaurant or a safe place to rest after being loaded). It does not consume driving hours, but it must be genuinely personal. Misusing PC to make up driving time is a common violation.\n\n**Yard moves.** Moving the truck within a private yard or terminal is recorded as on-duty-not-driving (a special driving category), not as line-haul driving.\n\nThe most common roadside HOS violations are exceeding the 11 or 14-hour limits, missing the 30-minute break, false logs, and form-and-manner errors. Exceeding the 11-hour, 14-hour, or 60/70-hour limit is an out-of-service violation: the inspector parks you and the truck until you have the hours to be legal again, and it puts CSA points on both you and your carrier. A false log is treated as a serious offense, not a paperwork slip. Clean, certified logs are your best defense.",
       },
     ],
     questions: [
@@ -186,6 +188,12 @@ You are responsible for selecting the correct duty status: off duty, sleeper ber
         options: ["whatever was left from yesterday", "a fresh 11 hours, but watch your weekly 60/70-hour total", "unlimited until your next restart", "only 8 hours on the third day"],
         correctIndex: 1,
         explanation: "Ten consecutive hours off resets your daily clocks — a fresh 11-hour driving limit and 14-hour window each day. What keeps accumulating is the weekly 60/70-hour total, until you take a 34-hour restart." },
+      {
+        order: 9,
+        question: "Halfway through your run an unexpected blizzard slows you to a crawl and you are about to hit your 14-hour window. Under the adverse driving conditions exception you may:",
+        options: ["drive up to 2 extra hours, which extends both the 11-hour limit and the 14-hour window", "ignore the 14-hour limit until you arrive", "drive 2 extra hours, but the 14-hour window still forces you to stop", "use it only if you skip your 30-minute break"],
+        correctIndex: 0,
+        explanation: "Unforeseen adverse conditions let you drive up to 2 additional hours, and under the current rule that extends BOTH the 11-hour driving limit (to 13) and the 14-hour window (to 16). It applies only to conditions you could not have known about at dispatch, and it never changes your weekly 60/70-hour total (49 CFR 395.1(b)(1))." },
     ],
   },
 

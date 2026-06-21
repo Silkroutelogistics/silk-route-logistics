@@ -515,6 +515,24 @@ const STRUCTURED: Record<string, { caption: string; body: React.ReactNode }> = {
       />
     ),
   },
+  "adverse-driving-extension": {
+    caption: "When UNFORESEEN adverse conditions keep you from safely finishing a run, you may drive up to 2 extra hours — and under the current rule that stretches BOTH the 11-hour driving limit (to 13) and the 14-hour window (to 16).",
+    body: (
+      <div className="flex flex-col gap-2.5">
+        <Track title="Normal day" segments={[
+          { w: 11, label: "11 h driving", fill: C.gold, fg: C.navy },
+          { w: 3, label: "rest of 14-h window", fill: C.cream3, fg: C.muted },
+          { w: 2, label: "past 14 h: must stop", fill: C.cream2, fg: C.disabled },
+        ]} />
+        <Track title="Adverse driving conditions (unforeseen only)" segments={[
+          { w: 11, label: "11 h driving", fill: C.gold, fg: C.navy },
+          { w: 2, label: "+2 h drive", sub: "to 13 h", fill: C.goldDark },
+          { w: 3, label: "window also +2 h", sub: "to 16 h", fill: C.goldTint, fg: C.navy },
+        ]} />
+        <Note tone="warning"><strong>Unforeseen only.</strong> Conditions you knew or could have known at dispatch (rush-hour traffic, a closure already on the map, a slow shipper) do NOT qualify. Use only the extra time you actually need. It never extends your 30-minute break or your weekly 60/70-hour limit.</Note>
+      </div>
+    ),
+  },
 
   // ── CDL / MEDICAL / CLEARINGHOUSE ─────────────────────────────────────
   "clearinghouse-return-to-duty-cycle": {
