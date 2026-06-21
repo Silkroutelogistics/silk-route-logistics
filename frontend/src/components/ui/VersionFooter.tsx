@@ -13165,6 +13165,15 @@
 //   400+ ft at 55 mph, FMCSA), the empty-truck-needs-more point, and the CDL following
 //   rule; quiz adds two real stopping-distance items. Content files only — live via
 //   prod re-seed. Per §3.1: ant → anu.
+// v3.8.aox — SRL Driver Academy FINAL audit, Course 11/22: weigh-stations-size-weight v3 -> v4.
+//   Inline primary-source audit (federal 80k/20k/34k + bridge formula, IRP cab card, IFTA records,
+//   MDOT spring weight restrictions). Existing facts verified accurate (slider direction 250-400/
+//   hole, fifth-wheel 500/hole, registered-weight trap, 8'6 width / 13'6 height, PrePass/Drivewyze).
+//   Completeness add: seasonal frost-law weight restrictions — northern states + Michigan post
+//   reduced limits (commonly 25-35%) during spring thaw, so a summer-legal load can be overweight
+//   on a frost-law road; added to Lesson 1 + new quiz Q8. No new figure (4 existing cover it).
+//   Course now 3 lessons / 8 questions / 4 figures. Gates: backend tsc + seed dry-run (22 courses /
+//   172 q, valid) + frontend tsc + next build clean. Live via prod re-seed. Per §3.1: aow -> aox.
 // v3.8.aow — SRL Driver Academy FINAL audit, Course 10/22: roadside-inspections-csa v3 -> v4.
 //   Inline primary-source audit (CVSA North American Standard levels, CSA SMS 7 BASICs, FMCSA PSP,
 //   DataQs). Existing facts verified accurate (Levels I-VIII, 20%-brakes OOS, 7 BASICs, 24-72hr/
@@ -13515,7 +13524,7 @@
 //   (3) fraud-awareness — quiz distractors changed to real false-comfort traps (high
 //   rate / nice website / on a load board) instead of absurd one-liners. Content files
 //   only — live via prod re-seed. 8 of 22 courses now overhauled. Per §3.1: anu → anv.
-export const SRL_VERSION = "3.8.aow";
+export const SRL_VERSION = "3.8.aox";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

@@ -630,9 +630,9 @@ Look **far ahead**, keep an **escape path** to the side, and never let a four-wh
     slug: "weigh-stations-size-weight",
     title: "Weigh Stations, Size & Weight & Your Registration",
     category: "On-Road Safety",
-    summary: "Federal weight limits and the bridge formula, reading a CAT ticket and sliding tandems the right way, the registered-weight trap, plus the cab card and the fuel-and-mileage records you keep so the office can file.",
-    version: "3",
-    estMinutes: 18,
+    summary: "Federal weight limits and the bridge formula, seasonal frost-law restrictions, reading a CAT ticket and sliding tandems the right way, the registered-weight trap, plus the cab card and the fuel-and-mileage records you keep so the office can file.",
+    version: "4",
+    estMinutes: 20,
     passThreshold: 80,
     validityMonths: 12,
     sortOrder: 11,
@@ -641,9 +641,9 @@ Look **far ahead**, keep an **escape path** to the side, and never let a four-wh
       {
         order: 1,
         title: "Federal weight limits and the bridge formula",
-        estMinutes: 5,
+        estMinutes: 6,
         bodyMarkdown:
-          "On the Interstate system the federal limits are **80,000 lb** gross weight, **20,000 lb** on a single axle, and **34,000 lb** on a tandem-axle group, all subject to the **Federal Bridge Formula**, which limits how much weight you can carry based on the **spacing between axles** (axles closer together can carry less). Verify state-specific limits, which can differ.\n\nStates also set **size** limits: width is generally **8 feet 6 inches**, and height commonly around **13 feet 6 inches** (it varies by state, so check your route).\n\nIf you are **over** a legal weight or dimension, you need an **oversize/overweight permit**, and you must **carry it** and follow its route and time restrictions. Running overweight without a permit means fines and a stop.\n\n[[figure:bridge-formula-axle-spacing]]\n\n> " + DISCLAIMER,
+          "On the Interstate system the federal limits are **80,000 lb** gross weight, **20,000 lb** on a single axle, and **34,000 lb** on a tandem-axle group, all subject to the **Federal Bridge Formula**, which limits how much weight you can carry based on the **spacing between axles** (axles closer together can carry less). Verify state-specific limits, which can differ.\n\nStates also set **size** limits: width is generally **8 feet 6 inches**, and height commonly around **13 feet 6 inches** (it varies by state, so check your route).\n\nIf you are **over** a legal weight or dimension, you need an **oversize/overweight permit**, and you must **carry it** and follow its route and time restrictions. Running overweight without a permit means fines and a stop.\n\n**Seasonal weight restrictions (frost laws).** In northern states and provinces — including Michigan — roads soften during the spring thaw, so highway and county agencies post **reduced weight limits** for weeks at a time (commonly a 25 to 35 percent cut on posted routes). A load that is perfectly legal in July can be **overweight on a frost-law road in March**. Watch for posted seasonal-restriction signs and check the state's current restrictions before you run a heavy load north in late winter or spring.\n\n[[figure:bridge-formula-axle-spacing]]\n\n> " + DISCLAIMER,
       },
       {
         order: 2,
@@ -668,6 +668,7 @@ Look **far ahead**, keep an **escape path** to the side, and never let a four-wh
       { order: 5, question: "Filing the quarterly IFTA fuel-tax return is:", options: ["the driver's job each quarter", "the carrier office's job", "fully automatic from the ELD", "not required if you stay in one state"], correctIndex: 1, explanation: "The office files IFTA and IRP. The driver's role is to carry the cab card, obey the registered weight, and keep the fuel receipts and mileage records the office files from." },
       { order: 6, question: "Your CAT ticket shows the drive axles over 34,000 lb but the trailer tandems light. To get legal you slide the:", options: ["trailer tandems forward to pull weight back onto them", "trailer tandems back to put more on the drives", "fifth wheel back to load the drives more", "steer axle"], correctIndex: 0, explanation: "Sliding the trailer tandems FORWARD shifts weight off the drives and onto the trailer tandems (~250-400 lb per hole). Re-check the bridge formula afterward, since sliding the tandems also changes your axle spacing." },
       { order: 7, question: "You scale at 78,000 lb gross with every axle in limits, but your cab card's registered weight is 76,000 lb. You are:", options: ["legal — you're under 80,000 lb", "over your IRP registered weight and subject to a citation", "fine as long as no axle is over", "only a problem if a permit is required"], correctIndex: 1, explanation: "Registered weight is a separate limit from the federal 80,000 lb ceiling. You can be legal on the scale and still be over your cab-card registered weight — a common and expensive small-carrier citation." },
+      { order: 8, question: "It's late March and your normally-legal load is routed over posted seasonal roads in a northern state. You should expect:", options: ["the same 80,000 lb limits as any other month", "reduced weight limits (frost laws) — your summer-legal load may be overweight", "no scales operating in spring", "weight limits that apply only to hazmat"], correctIndex: 1, explanation: "Northern states and counties post spring weight restrictions ('frost laws') during the thaw, cutting legal weights (commonly 25-35%) to protect softened roads. A load that's legal in summer can be overweight on a frost-law route in spring — check the current restrictions before you run." },
     ],
   },
 
