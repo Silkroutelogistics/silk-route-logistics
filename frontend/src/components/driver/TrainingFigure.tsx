@@ -734,6 +734,16 @@ const STRUCTURED: Record<string, { caption: string; body: React.ReactNode }> = {
       ]} />
     ),
   },
+  "reefer-danger-zone": {
+    caption: "The FDA danger zone: refrigerated food held between 40°F and 140°F grows bacteria fast. Once a fresh load climbs above its spec into that band, every minute counts — which is why a reefer breakdown is a call-dispatch-now event, not a wait-and-see.",
+    body: (
+      <Track height={52} segments={[
+        { w: 4, label: "Cold / frozen", sub: "below 40°F", fill: C.navy700 },
+        { w: 10, label: "DANGER ZONE", sub: "40°F – 140°F: bacteria multiply fast", fill: C.danger },
+        { w: 3, label: "Hot-held", sub: "above 140°F", fill: C.warning },
+      ]} />
+    ),
+  },
 
   // ── ON-ROAD SAFETY ────────────────────────────────────────────────────
   "stopping-distance-55mph-breakdown": {

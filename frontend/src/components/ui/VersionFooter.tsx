@@ -13165,6 +13165,16 @@
 //   400+ ft at 55 mph, FMCSA), the empty-truck-needs-more point, and the CDL following
 //   rule; quiz adds two real stopping-distance items. Content files only — live via
 //   prod re-seed. Per §3.1: ant → anu.
+// v3.8.aot — SRL Driver Academy FINAL audit, Course 7/22: reefer-cold-chain v3 -> v4. Inline
+//   primary-source audit (FDA FSMA Sanitary Transportation rule 21 CFR Part 1 Subpart O: 1.906/
+//   1.908/1.910). Existing facts verified accurate (pre-cool, shipper-spec setpoint, pulping,
+//   continuous-vs-cycle, 40-140F danger zone, receiver right-to-reject, carrier training/records).
+//   Completeness adds: pre-trip the reefer UNIT (fuel level / alarm codes / mode / defrost — a
+//   reefer that runs dry mid-route is a breakdown) in Lesson 1; sanitation / washout between loads
+//   (21 CFR 1.906 clean-equipment) in Lesson 3 + a new reefer-danger-zone Track figure; new quiz Q8
+//   (reefer-unit pre-trip) + Q9 (clean box). Course now 3 lessons / 9 questions / 3 figures. Gates:
+//   backend tsc + seed dry-run (22 courses / 168 q, valid) + frontend tsc + next build clean. Live
+//   via prod re-seed. Per §3.1: aos -> aot.
 // v3.8.aos — SRL Driver Academy FINAL audit, Course 6/22: cargo-securement v3 -> v4. Inline
 //   primary-source audit (49 CFR 393 Subpart I: 393.102 forces, 393.106, 393.108, 393.110). Existing
 //   facts verified accurate (0.8/0.5/0.5/0.2 g, 50% aggregate rule, tiedown-count thresholds, the
@@ -13477,7 +13487,7 @@
 //   (3) fraud-awareness — quiz distractors changed to real false-comfort traps (high
 //   rate / nice website / on a load board) instead of absurd one-liners. Content files
 //   only — live via prod re-seed. 8 of 22 courses now overhauled. Per §3.1: anu → anv.
-export const SRL_VERSION = "3.8.aos";
+export const SRL_VERSION = "3.8.aot";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
