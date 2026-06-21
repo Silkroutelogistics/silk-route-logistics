@@ -1013,6 +1013,33 @@ const STRUCTURED: Record<string, { caption: string; body: React.ReactNode }> = {
       </div>
     ),
   },
+  "tiedown-wll-counting": {
+    caption: "How a tiedown counts toward the 50% aggregate WLL (49 CFR 393.106(d)): a strap anchored across to the OPPOSITE side counts its full rating; a strap to a point on the cargo, or back to the same side, counts only half.",
+    body: (
+      <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+        <div className="flex flex-col items-center gap-1.5 rounded-xl border border-[rgba(10,37,64,0.10)] bg-white p-2.5">
+          <svg viewBox="0 0 120 70" className="h-[78px] w-full" role="img" aria-label="Strap crossing to the opposite anchor counts full WLL">
+            <line x1="6" y1="60" x2="114" y2="60" stroke="#6B7685" strokeWidth="2" />
+            <rect x="42" y="30" width="36" height="30" fill="#E2EAF2" stroke="#15365A" strokeWidth="1.5" />
+            <polyline points="12,60 12,52 42,30 78,30 108,52 108,60" fill="none" stroke="#BA7517" strokeWidth="3" strokeLinejoin="round" />
+            <circle cx="12" cy="60" r="3" fill="#0A2540" />
+            <circle cx="108" cy="60" r="3" fill="#0A2540" />
+          </svg>
+          <span className="text-center text-[11.5px] font-semibold text-[#2F7A4F]">Anchor to opposite anchor &rarr; FULL WLL</span>
+        </div>
+        <div className="flex flex-col items-center gap-1.5 rounded-xl border border-[rgba(10,37,64,0.10)] bg-white p-2.5">
+          <svg viewBox="0 0 120 70" className="h-[78px] w-full" role="img" aria-label="Strap to a point on the cargo or back to the same side counts half WLL">
+            <line x1="6" y1="60" x2="114" y2="60" stroke="#6B7685" strokeWidth="2" />
+            <rect x="42" y="30" width="36" height="30" fill="#E2EAF2" stroke="#15365A" strokeWidth="1.5" />
+            <polyline points="12,60 12,52 50,32" fill="none" stroke="#BA7517" strokeWidth="3" strokeLinejoin="round" />
+            <circle cx="12" cy="60" r="3" fill="#0A2540" />
+            <circle cx="50" cy="32" r="3" fill="#9B2C2C" />
+          </svg>
+          <span className="text-center text-[11.5px] font-semibold text-[#B07A1A]">To cargo / same side &rarr; HALF WLL</span>
+        </div>
+      </div>
+    ),
+  },
   "bol-fields-checklist": {
     caption: "A clean Bill of Lading shows the shipper and consignee, the commodity, the piece + weight count, and signatures with dates and times. Verify the count yourself before you sign — physically count pallets, or note 'per shipper count' on sealed freight.",
     body: (

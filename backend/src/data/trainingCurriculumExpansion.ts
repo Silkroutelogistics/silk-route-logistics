@@ -303,9 +303,9 @@ These are awareness points; your full hazmat training and the ERG carry the deta
     slug: "cargo-securement",
     title: "Cargo Securement",
     category: "Vehicle & Cargo Safety",
-    summary: "The FMCSA securement rules: the forces your system must hold, the working-load-limit 50% rule, the minimum-tiedown count, a worked example you can run at the dock, spotting weak securement, and when to re-check.",
-    version: "3",
-    estMinutes: 22,
+    summary: "The FMCSA securement rules: the forces your system must hold, the working-load-limit 50% rule and how each tiedown counts, the minimum-tiedown count, a worked example you can run at the dock, spotting weak securement, and when to re-check.",
+    version: "4",
+    estMinutes: 24,
     passThreshold: 80,
     validityMonths: 12,
     sortOrder: 6,
@@ -324,12 +324,16 @@ These are awareness points; your full hazmat training and the ERG carry the deta
       {
         order: 2,
         title: "Working load limit and the 50% rule",
-        estMinutes: 5,
+        estMinutes: 6,
         bodyMarkdown: `**Working Load Limit (WLL)** is the maximum load a strap, chain, or anchor point is rated to hold. Use the **WLL marked on the device**; if it is unmarked, use the FMCSA default values in **49 CFR 393.108**. A tiedown's real WLL is its **lowest-rated part** — the strap, the hook, the winch, and the anchor point all count, and the weakest one wins.
 
 [[figure:cargo-wll-weakest-link]]
 
 **The 50% aggregate rule (393.106).** The combined WLL of all the tiedowns on an article must be **at least one-half (50%) of the weight of that article**.
+
+**How a tiedown counts toward that 50% (393.106(d)).** A strap or chain thrown over the load from an anchor on **one side to an anchor on the opposite side** counts its **full** WLL. One that runs from a vehicle anchor to a point **on the cargo**, or over the load and back to an anchor on the **same** side, counts only **half**. The everyday over-the-top strap, rub-rail to opposite rub-rail, is a full-WLL tiedown — know the difference when you add up your aggregate WLL.
+
+[[figure:tiedown-wll-counting]]
 
 **Minimum number of tiedowns (393.110)** — a separate rule you must ALSO meet:
 
@@ -365,7 +369,7 @@ Straps loosen and loads settle, so that first 50-mile check catches the most pro
 
 **Step 2 — the tiedown count.** Measure the article and apply 393.110.
 
-**Worked example.** A **9,000 lb** steel rack, **12 ft** long, not blocked against forward movement. Each strap is marked **WLL 3,335 lb**.
+**Worked example.** A **9,000 lb** steel rack, **12 ft** long, not blocked against forward movement. Each strap is marked **WLL 3,335 lb** and is thrown rub-rail to opposite rub-rail, so each counts its full WLL.
 
 - 50% rule: half of 9,000 = **4,500 lb** of aggregate WLL needed. Two straps give 6,670 lb, which clears it.
 - Tiedown count: a 12-ft article needs **2 tiedowns for the first 10 ft, plus 1 more** for the extra 2 ft = **3 tiedowns**.
@@ -406,6 +410,7 @@ So two straps **pass** the weight rule but **fail** the count. You need **at lea
       { order: 6, question: "An 8-ft article weighing 1,400 lb (not blocked forward) requires at minimum:", options: ["1 tiedown", "2 tiedowns", "3 tiedowns", "no tiedowns if it is centered"], correctIndex: 1, explanation: "Under 393.110, an article longer than 5 ft (or heavier than 1,100 lb) needs at least 2 tiedowns. An 8-ft, 1,400-lb article exceeds both thresholds, so 2 is the minimum." },
       { order: 7, question: "You notice one of the straps over the load has a twist in it. You should:", options: ["leave it — a twist makes a strap grip better", "straighten it so the strap lies flat; a twisted tiedown is weakened", "add two more twists to tighten it", "ignore it if the ratchet is tight"], correctIndex: 1, explanation: "A twisted strap or chain loses strength, and tightening it gives false confidence in the securement. Keep every tiedown flat and straight so it carries its full rated working load limit." },
       { order: 8, question: "A pallet is strapped but sits two feet behind the headboard with an open gap in front of it. The danger is:", options: ["nothing — the straps are all that matter", "in a hard stop it slides through the gap, building force before the straps catch it, and can break through", "the gap improves airflow", "the load is too far back to need straps"], correctIndex: 1, explanation: "Void space lets the freight accelerate forward in a panic stop and hit the straps (and headboard) with far more energy than they're rated for. Fill the gap with dunnage and block tight against forward movement — straps alone don't stop a sliding load." },
+      { order: 9, question: "A strap runs from the left rub rail, over the load, to a fitting bolted on top of the cargo — it does not cross to the right side. Toward the 50% aggregate WLL it counts:", options: ["its full working load limit", "one-half of its working load limit", "double its working load limit", "nothing at all"], correctIndex: 1, explanation: "Under 393.106(d), a tiedown from a vehicle anchor to a point on the cargo (or over the load and back to the same side) counts only HALF its WLL. Only a tiedown that crosses to an anchor on the opposite side counts its full WLL." },
     ],
   },
 
