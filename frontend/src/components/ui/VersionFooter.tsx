@@ -13165,6 +13165,16 @@
 //   400+ ft at 55 mph, FMCSA), the empty-truck-needs-more point, and the CDL following
 //   rule; quiz adds two real stopping-distance items. Content files only — live via
 //   prod re-seed. Per §3.1: ant → anu.
+// v3.8.aoy — SRL Driver Academy FINAL audit, Course 12/22: detention-documentation v3 -> v4
+//   (base-file course). Inline audit (Carmack 49 U.S.C. § 14706 — matches the srl-brand-design
+//   canonical, NOT the obsolete 49 CFR 1035) + operational best-practice review. Existing facts
+//   verified accurate (detention timestamps, free time on the rate con, OS&D-before-signing,
+//   clean-signature-Carmack-presumption, accessorial pre-authorization). Completeness adds: trailer
+//   SEAL verification (seal # on the BOL, verify at pickup + intact at delivery before unloading;
+//   broken/mismatched seal = note + photo + dispatch) in Lesson 2; lumper payment via Comchek/EFS/
+//   fuel card rather than cash-out-of-pocket in Lesson 4; new quiz Q8 (seal) + Q9 (lumper payment).
+//   Course now 5 lessons / 9 questions / 4 figures. Gates: backend tsc + seed dry-run (22 courses /
+//   174 q, valid) + frontend tsc + next build clean. Live via prod re-seed. Per §3.1: aox -> aoy.
 // v3.8.aox — SRL Driver Academy FINAL audit, Course 11/22: weigh-stations-size-weight v3 -> v4.
 //   Inline primary-source audit (federal 80k/20k/34k + bridge formula, IRP cab card, IFTA records,
 //   MDOT spring weight restrictions). Existing facts verified accurate (slider direction 250-400/
@@ -13524,7 +13534,7 @@
 //   (3) fraud-awareness — quiz distractors changed to real false-comfort traps (high
 //   rate / nice website / on a load board) instead of absurd one-liners. Content files
 //   only — live via prod re-seed. 8 of 22 courses now overhauled. Per §3.1: anu → anv.
-export const SRL_VERSION = "3.8.aox";
+export const SRL_VERSION = "3.8.aoy";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
