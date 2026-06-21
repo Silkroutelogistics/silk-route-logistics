@@ -13165,6 +13165,20 @@
 //   400+ ft at 55 mph, FMCSA), the empty-truck-needs-more point, and the CDL following
 //   rule; quiz adds two real stopping-distance items. Content files only — live via
 //   prod re-seed. Per §3.1: ant → anu.
+// v3.8.aog — SRL Driver Academy Batch 2 (Vehicle & cargo) content enhancement.
+//   pre-post-trip-inspection v3 (air-brake test BY THE NUMBERS — web-verified CDL-manual
+//   leak-down rates 2/3 released, 3/4 applied; low-air warn ~60 psi; governor 100/120-125;
+//   tire 4/32 steer / 2/32 other; systematic walk-around; en-route duty 392.7/392.9;
+//   DVIR liability + right-to-refuse; stop-vs-drive-to-repair; +2 Q). Caught digest false
+//   facts: '70 psi leak-down' (FMVSS-121 conflation), '55 psi warn' (it's 60), '396.9
+//   driver duty' (396.9 is enforcement, not driver). cargo-securement v3 (+lesson 5 dock
+//   acceptance: void-space physics, twisted-tiedown weakening, hardware inspection, right-
+//   to-refuse; +2 Q). reefer-cold-chain v3 (breakdown decision tree + FDA danger zone
+//   40-140F, receiver FSMA 1.908 assessment duty, suspect-spec->call dispatch, pulp-vs-log
+//   hierarchy, BOL spell-out; +2 Q). backing-docking-coupling v3 (softened unverified '#1
+//   accident' ranking; +lesson 4 kingpin-won't-lock troubleshooting + damaged-gear refusal;
+//   coupling sequence mechanical-first; ride-up verify; dock-plate gap; +2 Q). Content only;
+//   live via prod re-seed. Per §3.1: aof -> aog.
 // v3.8.aof — SRL Driver Academy Batch 1 (Hazmat & DG) content enhancement.
 //   hazmat-awareness v4 (+UN-ID/packing-group literacy, 49 CFR 172.704 3-yr recurrent
 //   training + right-to-refuse, ERG isolation/protective-action distances, Class 2.3
@@ -13294,7 +13308,7 @@
 //   (3) fraud-awareness — quiz distractors changed to real false-comfort traps (high
 //   rate / nice website / on a load board) instead of absurd one-liners. Content files
 //   only — live via prod re-seed. 8 of 22 courses now overhauled. Per §3.1: anu → anv.
-export const SRL_VERSION = "3.8.aof";
+export const SRL_VERSION = "3.8.aog";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
