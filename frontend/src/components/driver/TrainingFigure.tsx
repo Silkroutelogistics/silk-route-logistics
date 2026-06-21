@@ -675,6 +675,32 @@ const STRUCTURED: Record<string, { caption: string; body: React.ReactNode }> = {
       ]} />
     ),
   },
+  "nfpa-704-diamond": {
+    caption: "The NFPA 704 fire diamond on a tank, building, or storage room rates a chemical for emergency responders: blue health, red flammability, yellow instability, each 0 (minimal) to 4 (severe); the white box flags special hazards (OX oxidizer, W water-reactive). It is a fixed-facility marking, not a GHS workplace label and not a DOT transport placard.",
+    body: (
+      <div className="flex flex-wrap items-center justify-center gap-5 py-1">
+        <svg viewBox="0 0 100 100" className="h-[124px] w-[124px]" role="img" aria-label="NFPA 704 fire diamond: blue health, red flammability, yellow instability, white special hazard">
+          <polygon points="50,3 73,26 50,49 27,26" fill="#D32F2F" />
+          <polygon points="3,50 26,27 49,50 26,73" fill="#1450A0" />
+          <polygon points="97,50 74,27 51,50 74,73" fill="#F2C200" />
+          <polygon points="50,97 73,74 50,51 27,74" fill="#FFFFFF" />
+          <polygon points="50,3 97,50 50,97 3,50" fill="none" stroke="#0A2540" strokeWidth="1.6" />
+          <line x1="26.5" y1="26.5" x2="73.5" y2="73.5" stroke="#0A2540" strokeWidth="0.6" />
+          <line x1="73.5" y1="26.5" x2="26.5" y2="73.5" stroke="#0A2540" strokeWidth="0.6" />
+          <text x="50" y="31" textAnchor="middle" fontSize="15" fontWeight="bold" fill="#FFFFFF">3</text>
+          <text x="25" y="55" textAnchor="middle" fontSize="15" fontWeight="bold" fill="#FFFFFF">2</text>
+          <text x="75" y="55" textAnchor="middle" fontSize="15" fontWeight="bold" fill="#0A2540">0</text>
+          <text x="50" y="80" textAnchor="middle" fontSize="10" fontWeight="bold" fill="#0A2540">OX</text>
+        </svg>
+        <div className="flex flex-col gap-1.5 text-[11.5px] text-[#3A4A5F]">
+          <span className="flex items-center gap-1.5"><span className="inline-block h-3 w-3 rounded-sm" style={{ background: "#1450A0" }} /> <strong>Blue</strong> — health (0&ndash;4)</span>
+          <span className="flex items-center gap-1.5"><span className="inline-block h-3 w-3 rounded-sm" style={{ background: "#D32F2F" }} /> <strong>Red</strong> — flammability (0&ndash;4)</span>
+          <span className="flex items-center gap-1.5"><span className="inline-block h-3 w-3 rounded-sm" style={{ background: "#F2C200" }} /> <strong>Yellow</strong> — instability (0&ndash;4)</span>
+          <span className="flex items-center gap-1.5"><span className="inline-block h-3 w-3 rounded-sm border border-[#0A2540]" style={{ background: "#FFFFFF" }} /> <strong>White</strong> — special: OX, W</span>
+        </div>
+      </div>
+    ),
+  },
   "sds-sections-quick-reference": {
     caption: "Every Safety Data Sheet has 16 sections in a fixed order — so you can find what you need fast. The ones a driver or dock worker reaches for first:",
     body: (

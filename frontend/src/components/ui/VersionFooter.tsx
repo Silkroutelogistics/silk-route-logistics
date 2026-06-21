@@ -13165,6 +13165,17 @@
 //   400+ ft at 55 mph, FMCSA), the empty-truck-needs-more point, and the CDL following
 //   rule; quiz adds two real stopping-distance items. Content files only — live via
 //   prod re-seed. Per §3.1: ant → anu.
+// v3.8.aoq — SRL Driver Academy FINAL audit, Course 4/22: hazard-communication (WHMIS & HazCom)
+//   v4 -> v5. Inline primary-source audit (OSHA 29 CFR 1910.1200, WHMIS 2015, GHS, NFPA 704).
+//   Existing facts verified accurate (8 OSHA pictograms + 9th-environmental-not-required, Danger/
+//   Warning signal words, 16 SDS sections, immediate-use label exception, right-to-refuse from
+//   Canada Labour Code Part II not WHMIS). Completeness add: NFPA 704 fire diamond — the third
+//   marking drivers see at fixed facilities (blue health / red flammability / yellow instability
+//   0-4, white special OX/W, + HMIS cousin), added to Lesson 4 with a new real-color nfpa-704-diamond
+//   recognition figure (§3.12) + new quiz Q9; Lesson 3 gains the SDS sections-9-16 + OSHA-enforces-
+//   1-11-and-16 nuance. Course now 4 lessons / 9 questions / 4 figures. Gates: backend tsc + seed
+//   dry-run (22 courses / 164 q, valid) + frontend tsc + next build clean. Live via prod re-seed.
+//   Per §3.1: aop -> aoq.
 // v3.8.aop — SRL Driver Academy FINAL audit, Course 3/22: hazmat-awareness (Hazmat & Dangerous
 //   Goods Awareness) v4 -> v5. Inline primary-source audit (eCFR 49 CFR 100-185, 172.504/172.202/
 //   172.704, 177.848, Part 397). Existing facts verified accurate (9 classes + divisions, placard
@@ -13445,7 +13456,7 @@
 //   (3) fraud-awareness — quiz distractors changed to real false-comfort traps (high
 //   rate / nice website / on a load board) instead of absurd one-liners. Content files
 //   only — live via prod re-seed. 8 of 22 courses now overhauled. Per §3.1: anu → anv.
-export const SRL_VERSION = "3.8.aop";
+export const SRL_VERSION = "3.8.aoq";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
