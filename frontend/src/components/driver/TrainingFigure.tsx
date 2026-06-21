@@ -535,6 +535,19 @@ const STRUCTURED: Record<string, { caption: string; body: React.ReactNode }> = {
   },
 
   // ── CDL / MEDICAL / CLEARINGHOUSE ─────────────────────────────────────
+  "cdl-classes-endorsements": {
+    caption: "Three CDL classes by vehicle weight and use, plus the endorsement letters that add privileges. Carry only what your operation needs, and only haul what your endorsements cover.",
+    body: (
+      <div className="flex flex-col gap-2.5">
+        <Compare columns={[
+          { title: "Class A", sub: "most over-the-road freight", tone: "navy", items: ["Combination over 26,001 lb GCWR", "Towing a unit over 10,000 lb", "Tractor-trailers, doubles, tankers"] },
+          { title: "Class B", tone: "neutral", items: ["Single vehicle 26,001 lb or more", "Or towing a unit under 10,000 lb", "Straight trucks, large buses"] },
+          { title: "Class C", tone: "neutral", items: ["Smaller vehicle, under A/B weights", "Placarded hazmat, or 16+ passengers"] },
+        ]} />
+        <Note tone="info"><strong>Endorsements:</strong> H hazmat · N tank · X tank + hazmat · T doubles/triples · P passenger · S school bus. You may hold only one CDL, from your home state.</Note>
+      </div>
+    ),
+  },
   "clearinghouse-return-to-duty-cycle": {
     caption: "The return-to-duty process after a drug/alcohol violation is a fixed sequence. You stay prohibited from safety-sensitive driving until the whole chain is complete.",
     body: (

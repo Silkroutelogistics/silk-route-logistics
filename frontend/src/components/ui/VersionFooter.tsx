@@ -13165,6 +13165,19 @@
 //   400+ ft at 55 mph, FMCSA), the empty-truck-needs-more point, and the CDL following
 //   rule; quiz adds two real stopping-distance items. Content files only — live via
 //   prod re-seed. Per §3.1: ant → anu.
+// v3.8.aoo — SRL Driver Academy FINAL audit, Course 2/22: driver-qualification (CDL, Medical Card
+//   & the Clearinghouse) v3 -> v4. Inline primary-source audit (eCFR 49 CFR 383/382/391, DOT Part
+//   40, FMCSA National Registry II). Existing facts verified accurate (383.31 30-day notice, 383.51
+//   disqualification periods, 0.04 BAC, SAP/return-to-duty 6-tests-in-12-mo-up-to-5-yr, self-cert
+//   NI/EI/NA/EA). VERIFY-BEFORE-ACTING caught a false candidate add: the annual driver list of
+//   violations (49 CFR 391.27) is RESERVED/eliminated — NOT added. CURRENCY FIX: the paper-med-card-
+//   to-state step is outdated — under National Registry II (effective June 23, 2025) the examiner
+//   now transmits the result to the state electronically; Lessons 2 + 5 updated. Real adds: drug
+//   5-panel (marijuana/cocaine/amphetamines/opioids/PCP) + MRO/prescription handling + marijuana-
+//   never-compatible (Lesson 3, new quiz Q9); CDL Class B/C + a new cdl-classes-endorsements figure
+//   on the previously figure-less Lesson 1; what the DOT physical checks (20/40 vision etc.). Course
+//   now 5 lessons / 9 questions / 4 figures. Gates: backend tsc + seed dry-run (22 courses / 162 q,
+//   valid) + frontend tsc + next build clean. Live via prod re-seed. Per §3.1: aon -> aoo.
 // v3.8.aon — SRL Driver Academy FINAL comprehensive audit, Course 1/22: eld-hos (ELD & Hours
 //   of Service) v3 -> v4. All-agent audit was rate-limited (platform throttle), so the audit ran
 //   inline with primary-source verification (eCFR/law.cornell.edu 49 CFR 395.1, FMCSA HOS final-
@@ -13420,7 +13433,7 @@
 //   (3) fraud-awareness — quiz distractors changed to real false-comfort traps (high
 //   rate / nice website / on a load board) instead of absurd one-liners. Content files
 //   only — live via prod re-seed. 8 of 22 courses now overhauled. Per §3.1: anu → anv.
-export const SRL_VERSION = "3.8.aon";
+export const SRL_VERSION = "3.8.aoo";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
