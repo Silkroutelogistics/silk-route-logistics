@@ -13165,6 +13165,15 @@
 //   400+ ft at 55 mph, FMCSA), the empty-truck-needs-more point, and the CDL following
 //   rule; quiz adds two real stopping-distance items. Content files only — live via
 //   prod re-seed. Per §3.1: ant → anu.
+// v3.8.apb — SRL Driver Academy FINAL audit, Course 15/22: backing-docking-coupling v3 -> v4.
+//   Inline audit (CDL coupling/uncoupling sequence + dock-safety best practice). Existing facts
+//   verified accurate (G.O.A.L., driver-side vs blind-side, spotter signals, mechanical-first
+//   coupling + 3-way tug/jaw/ride-up check, lines-after, uncouple order, kingpin-won't-lock = repair
+//   not workaround). Completeness adds: soft-ground landing gear (board/dunnage under the feet so a
+//   sinking leg doesn't drop the trailer) in Lesson 3 + new quiz Q8; backup-camera-aids-but-doesn't-
+//   replace-G.O.A.L. in Lesson 1. Course now 4 lessons / 8 questions / 3 figures. Gates: backend tsc
+//   + seed dry-run (22 courses / 177 q, valid) + frontend tsc + next build clean. Live via prod
+//   re-seed. Per §3.1: apa -> apb.
 // v3.8.apa — SRL Driver Academy FINAL audit, Course 14/22: fraud-awareness v3 -> v4 (base-file
 //   course). Inline primary-source audit (FMCSA SAFER, BMC-84 $75K, FMCSA NCCDB fraud channel).
 //   Existing facts verified accurate (double-brokering mechanics, USDOT-first SAFER verification,
@@ -13553,7 +13562,7 @@
 //   (3) fraud-awareness — quiz distractors changed to real false-comfort traps (high
 //   rate / nice website / on a load board) instead of absurd one-liners. Content files
 //   only — live via prod re-seed. 8 of 22 courses now overhauled. Per §3.1: anu → anv.
-export const SRL_VERSION = "3.8.apa";
+export const SRL_VERSION = "3.8.apb";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
