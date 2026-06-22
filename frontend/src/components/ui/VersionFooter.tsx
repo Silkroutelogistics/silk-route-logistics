@@ -13165,6 +13165,16 @@
 //   400+ ft at 55 mph, FMCSA), the empty-truck-needs-more point, and the CDL following
 //   rule; quiz adds two real stopping-distance items. Content files only — live via
 //   prod re-seed. Per §3.1: ant → anu.
+// v3.8.apd — SRL Driver Academy FINAL audit, Course 17/22: railroad-crossings-emergencies v3 -> v4.
+//   Inline primary-source audit (49 CFR 392.10 who-must-stop, Operation Lifesaver crossing guidance,
+//   CDL emergency-maneuver standards). Existing facts verified accurate (clear-the-far-side + rear
+//   overhang, don't-shift-on-tracks, 45-degree-toward-the-train escape + ENS blue-sign number,
+//   brake-failure/jammed-transmission/blowout responses, drive/front/trailer skid recovery, ABS).
+//   Completeness add: the "expect a SECOND train" rule (look both ways again after one clears — a
+//   second train can be on a parallel track or the other direction; a deadly classic mistake) +
+//   392.10 who-must-stop cite, both in Lesson 1 + new quiz Q8. Course now 3 lessons / 8 questions /
+//   2 figures. Gates: backend tsc + seed dry-run (22 courses / 179 q, valid) + frontend tsc + next
+//   build clean. Live via prod re-seed. Per §3.1: apc -> apd.
 // v3.8.apc — SRL Driver Academy FINAL audit, Course 16/22: distracted-fatigued-driving v3 -> v4.
 //   Inline primary-source audit (49 CFR 392.80/392.82 phone rules, 383.51 serious-violation DQ,
 //   390.6 coercion). Existing facts verified accurate (texting + hand-held ban, 60/120-day DQ on
@@ -13571,7 +13581,7 @@
 //   (3) fraud-awareness — quiz distractors changed to real false-comfort traps (high
 //   rate / nice website / on a load board) instead of absurd one-liners. Content files
 //   only — live via prod re-seed. 8 of 22 courses now overhauled. Per §3.1: anu → anv.
-export const SRL_VERSION = "3.8.apc";
+export const SRL_VERSION = "3.8.apd";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
