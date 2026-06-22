@@ -13165,6 +13165,16 @@
 //   400+ ft at 55 mph, FMCSA), the empty-truck-needs-more point, and the CDL following
 //   rule; quiz adds two real stopping-distance items. Content files only — live via
 //   prod re-seed. Per §3.1: ant → anu.
+// v3.8.apg — SRL Driver Academy FINAL audit, Course 20/22: human-trafficking-awareness v3 -> v4.
+//   Inline audit (Truckers Against Trafficking standard, National Human Trafficking Hotline). Existing
+//   facts verified accurate (drivers as eyes-of-the-highway, TAT, recognize-not-intervene, control/
+//   no-ID/coached signs, minor-in-commercial-sex-always-trafficking, hotline 1-888-373-7888 / text
+//   HELP to 233733 keyword-required, don't-engage definition, SRL compliance@+operations@ path).
+//   Completeness add: LABOR trafficking as a distinct form (forced work under threat/debt/coercion —
+//   workers who can't leave, guarded on-site, pay/documents withheld; seen at shippers/farms/plants)
+//   in Lesson 2 + new quiz Q8. Course now 4 lessons / 8 questions / 2 figures. Gates: backend tsc +
+//   seed dry-run (22 courses / 182 q, valid) + frontend tsc + next build clean. Live via prod
+//   re-seed. Per §3.1: apf -> apg.
 // v3.8.apf — SRL Driver Academy FINAL audit, Course 19/22: cargo-theft-security v3 -> v4 (SRL
 //   Operational Excellence). Inline audit (FMCSA SAFER verify, CargoNet/insurer loss-prevention
 //   patterns). Existing facts verified accurate (red zone ~200 mi after pickup, high-value targets,
@@ -13599,7 +13609,7 @@
 //   (3) fraud-awareness — quiz distractors changed to real false-comfort traps (high
 //   rate / nice website / on a load board) instead of absurd one-liners. Content files
 //   only — live via prod re-seed. 8 of 22 courses now overhauled. Per §3.1: anu → anv.
-export const SRL_VERSION = "3.8.apf";
+export const SRL_VERSION = "3.8.apg";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

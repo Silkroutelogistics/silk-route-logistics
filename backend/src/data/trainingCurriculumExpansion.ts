@@ -973,9 +973,9 @@ Look **far ahead**, keep an **escape path** to the side, and never let a four-wh
     slug: "human-trafficking-awareness",
     title: "Human Trafficking Awareness",
     category: "Driver Qualification & Health",
-    summary: "What trafficking is, why drivers are a key line of defense, how to recognize the signs, and how to report safely without intervening.",
-    version: "3",
-    estMinutes: 16,
+    summary: "What trafficking is (both sex and labor trafficking), why drivers are a key line of defense, how to recognize the signs, and how to report safely without intervening.",
+    version: "4",
+    estMinutes: 18,
     passThreshold: 80,
     validityMonths: null,
     sortOrder: 20,
@@ -991,9 +991,9 @@ Look **far ahead**, keep an **escape path** to the side, and never let a four-wh
       {
         order: 2,
         title: "Recognizing the signs",
-        estMinutes: 4,
+        estMinutes: 5,
         bodyMarkdown:
-          "No single sign proves trafficking, but patterns matter. Watch for someone who:\n\n- **Is not free to come and go** or is clearly controlled by another person.\n- **Lacks their own ID or documents** — someone else holds them.\n- **Appears coached, fearful, or isn't allowed to speak** for themselves.\n- Shows signs of abuse, malnourishment, or branding tattoos.\n- Is a **minor** involved in commercial sex (always trafficking).\n\n[[figure:trafficking-warning-signs-pattern]]\n\nAt truck stops, watch for activity around the trucks — CB chatter offering \"commercial company,\" people moving between trucks at night, or knocks on cab doors. Trust your instincts; if it feels wrong, it may be.\n\n**\"Controlled by another person\" — what that really looks like.** A couple or family traveling together is normal. Control is different: one person **answers for** another, holds **all** their documents and money, and won't let them speak, be alone, or leave; the other looks fearful, coached, or is watched constantly. A minor involved in commercial sex is **always** trafficking.\n\n**When you're not sure, you still report.** You are not the investigator and you don't need proof. If the pattern feels wrong, make the call and let trained responders assess it. A wrong hunch costs a phone call; a missed one can cost a life.",
+          "No single sign proves trafficking, but patterns matter. Watch for someone who:\n\n- **Is not free to come and go** or is clearly controlled by another person.\n- **Lacks their own ID or documents** — someone else holds them.\n- **Appears coached, fearful, or isn't allowed to speak** for themselves.\n- Shows signs of abuse, malnourishment, or branding tattoos.\n- Is a **minor** involved in commercial sex (always trafficking).\n\n[[figure:trafficking-warning-signs-pattern]]\n\nAt truck stops, watch for activity around the trucks — CB chatter offering \"commercial company,\" people moving between trucks at night, or knocks on cab doors. Trust your instincts; if it feels wrong, it may be.\n\n**\"Controlled by another person\" — what that really looks like.** A couple or family traveling together is normal. Control is different: one person **answers for** another, holds **all** their documents and money, and won't let them speak, be alone, or leave; the other looks fearful, coached, or is watched constantly. A minor involved in commercial sex is **always** trafficking.\n\n**Labor trafficking looks different from sex trafficking.** It's forced work under threat, debt, or coercion, and you might see it at a **shipper, farm, plant, or even another trucking operation**: workers who can't leave, are housed and guarded on-site, had their pay or documents withheld, or are 'working off a debt' they can never clear. Same rule: recognize the pattern, don't engage, and report it.\n\n**When you're not sure, you still report.** You are not the investigator and you don't need proof. If the pattern feels wrong, make the call and let trained responders assess it. A wrong hunch costs a phone call; a missed one can cost a life.",
       },
       {
         order: 3,
@@ -1018,6 +1018,7 @@ Look **far ahead**, keep an **escape path** to the side, and never let a four-wh
       { order: 5, question: "The organization that trains drivers to spot trafficking is:", options: ["FMCSA", "Truckers Against Trafficking (TAT)", "CHEMTREC", "OSHA"], correctIndex: 1, explanation: "Truckers Against Trafficking (TAT) trains drivers to recognize and report." },
       { order: 6, question: "You suspect a victim at a truck stop. Offering them a ride or some money to help is:", options: ["the right way to help", "still intervening — it can be dangerous; note it and report instead", "fine as long as you call afterward", "required by TAT"], correctIndex: 1, explanation: "Offering a ride, food, or money, talking to the victim, or following the vehicle are all intervening — they can tip off a trafficker and put you and the victim in danger. Stay back, note details, and report." },
       { order: 7, question: "On an SRL load, after calling 911 or the hotline, you also:", options: ["keep it to yourself", "call SRL dispatch/operations and email compliance@ and operations@", "wait until the load delivers", "post it on a driver forum"], correctIndex: 1, explanation: "Notify SRL — call dispatch/operations and email compliance@silkroutelogistics.ai and operations@silkroutelogistics.ai. SRL supports reporting and won't penalize a delay from doing the right thing." },
+      { order: 8, question: "Human trafficking includes:", options: ["only sex trafficking at truck stops", "both sex trafficking and labor trafficking (forced work under threat, debt, or coercion) — which you might see at a shipper, farm, or plant", "only crimes involving minors", "only situations with physical restraints"], correctIndex: 1, explanation: "Trafficking is forced sex OR forced labor. Labor trafficking — workers who can't leave, are guarded, had pay or documents withheld, or are 'working off a debt' — can appear at facilities you visit. Same rule: recognize, don't engage, report." },
     ],
   },
 
