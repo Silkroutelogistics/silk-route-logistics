@@ -13165,6 +13165,15 @@
 //   400+ ft at 55 mph, FMCSA), the empty-truck-needs-more point, and the CDL following
 //   rule; quiz adds two real stopping-distance items. Content files only — live via
 //   prod re-seed. Per §3.1: ant → anu.
+// v3.8.ape — SRL Driver Academy FINAL audit, Course 18/22: trip-planning-routing v3 -> v4. Inline
+//   audit (49 CFR 392.7 safe-vehicle duty, 397 hazmat routing, height/width facts, oversize-permit
+//   conditions). Existing facts verified accurate (truck-GPS vs consumer, real height ~13'6-14' +
+//   state-limit nuance / federal width 8'6 no national height, escalate-not-obey + shared liability,
+//   permit route/time, never-falsify-log, HOS-constrained planning, parking-ahead-of-limit).
+//   Completeness add: check 511 / the state DOT road-conditions site (closures, construction, chain
+//   laws, weather) before rolling + again if conditions change, in Lesson 1 + new quiz Q8. Course
+//   now 3 lessons / 8 questions / 4 figures. Gates: backend tsc + seed dry-run (22 courses / 180 q,
+//   valid) + frontend tsc + next build clean. Live via prod re-seed. Per §3.1: apd -> ape.
 // v3.8.apd — SRL Driver Academy FINAL audit, Course 17/22: railroad-crossings-emergencies v3 -> v4.
 //   Inline primary-source audit (49 CFR 392.10 who-must-stop, Operation Lifesaver crossing guidance,
 //   CDL emergency-maneuver standards). Existing facts verified accurate (clear-the-far-side + rear
@@ -13581,7 +13590,7 @@
 //   (3) fraud-awareness — quiz distractors changed to real false-comfort traps (high
 //   rate / nice website / on a load board) instead of absurd one-liners. Content files
 //   only — live via prod re-seed. 8 of 22 courses now overhauled. Per §3.1: anu → anv.
-export const SRL_VERSION = "3.8.apd";
+export const SRL_VERSION = "3.8.ape";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

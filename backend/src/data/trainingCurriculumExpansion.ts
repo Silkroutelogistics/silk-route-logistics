@@ -874,9 +874,9 @@ Look **far ahead**, keep an **escape path** to the side, and never let a four-wh
     slug: "trip-planning-routing",
     title: "Trip Planning & Truck-Legal Routing",
     category: "On-Road Safety",
-    summary: "Planning a truck-legal route before you roll, finding your real height, avoiding low bridges and restrictions, who shares the liability, and mapping the trip against your hours and fuel.",
-    version: "3",
-    estMinutes: 18,
+    summary: "Planning a truck-legal route before you roll, finding your real height, checking 511 road conditions, avoiding low bridges and restrictions, who shares the liability, and mapping the trip against your hours and fuel.",
+    version: "4",
+    estMinutes: 20,
     passThreshold: 80,
     validityMonths: 12,
     sortOrder: 18,
@@ -885,9 +885,9 @@ Look **far ahead**, keep an **escape path** to the side, and never let a four-wh
       {
         order: 1,
         title: "Plan the route before you roll",
-        estMinutes: 4,
+        estMinutes: 5,
         bodyMarkdown:
-          "A few minutes of planning prevents the worst days.\n\n**Federal law requires you to operate only a safe vehicle (49 CFR 392.7)** — and meeting that duty means using a **truck-specific** GPS or map (CoPilot, Trucker Path, your fleet's Samsara/Verizon routing) that accounts for your **height, weight, length, and width.** A consumer app (Google Maps, Waze, Apple Maps) does **not** know your truck and will route you under a 12-foot bridge or down a no-truck parkway. Truck-routing isn't a legal mandate by itself; it's how you satisfy the legal duty.\n\n[[figure:truck-vs-consumer-gps-routing]]\n\n**Know your real numbers — don't guess your height.** A standard dry van/reefer runs about **13'6\\\", but it varies (roughly 13'6\\\" to 14')** with the trailer and the tractor under it, and **state height limits differ** (federal law sets width at 8'6\\\" but does NOT set a national height limit). Look up your **actual** height — the door placard, the dispatch/equipment sheet, or by measuring — and know your gross weight and length. Check the route for low bridges, weight-limited bridges, restricted or prohibited truck routes, and city no-truck zones.\n\n[[figure:state-height-limits-variance]]\n\nLay out fuel, scales, and rest stops along the way, and line the trip up against your appointment times so you aren't forced into a bad decision late.\n\n> " + DISCLAIMER,
+          "A few minutes of planning prevents the worst days.\n\n**Federal law requires you to operate only a safe vehicle (49 CFR 392.7)** — and meeting that duty means using a **truck-specific** GPS or map (CoPilot, Trucker Path, your fleet's Samsara/Verizon routing) that accounts for your **height, weight, length, and width.** A consumer app (Google Maps, Waze, Apple Maps) does **not** know your truck and will route you under a 12-foot bridge or down a no-truck parkway. Truck-routing isn't a legal mandate by itself; it's how you satisfy the legal duty.\n\n[[figure:truck-vs-consumer-gps-routing]]\n\n**Know your real numbers — don't guess your height.** A standard dry van/reefer runs about **13'6\\\", but it varies (roughly 13'6\\\" to 14')** with the trailer and the tractor under it, and **state height limits differ** (federal law sets width at 8'6\\\" but does NOT set a national height limit). Look up your **actual** height — the door placard, the dispatch/equipment sheet, or by measuring — and know your gross weight and length. Check the route for low bridges, weight-limited bridges, restricted or prohibited truck routes, and city no-truck zones. **Check road conditions before you roll** — dial **511** or pull up the state DOT site for closures, construction, chain laws, and weather along your route, and check again if conditions change.\n\n[[figure:state-height-limits-variance]]\n\nLay out fuel, scales, and rest stops along the way, and line the trip up against your appointment times so you aren't forced into a bad decision late.\n\n> " + DISCLAIMER,
       },
       {
         order: 2,
@@ -912,6 +912,7 @@ Look **far ahead**, keep an **escape path** to the side, and never let a four-wh
       { order: 5, question: "An oversize/overweight permit typically comes with:", options: ["no conditions", "a higher speed limit", "specific route and travel-time restrictions you must follow", "only a fee"], correctIndex: 2, explanation: "The permit dictates the route and the times you may travel; deviating from it voids the permit." },
       { order: 6, question: "Dispatch routes you under a bridge posted at 13'4\" and your truck is 13'6\". You:", options: ["follow dispatch — it's their route", "do not proceed; notify SRL and reroute — escalating beats a strike", "try it slowly since it's only 2 inches", "let air out of the tires to lower the trailer"], correctIndex: 1, explanation: "A posted clearance below your height means you do NOT cross, even on a dispatcher's instruction. You hold the primary duty; notify SRL and get a safe reroute. Dispatch shares liability for a bad route, but the strike still lands on your truck." },
       { order: 7, question: "Your 2 p.m. appointment can't be made legally on your remaining hours. You:", options: ["drive over your hours and fix the log later", "contact SRL before you roll to adjust the window — you never falsify the log to make an appointment", "skip the 30-minute break to save time", "speed to make up the difference"], correctIndex: 1, explanation: "The log is the legal record and is never manipulated to meet a window. An impossible appointment is a conversation with SRL in advance — a late load is recoverable; an HOS violation or a fatigue crash is not." },
+      { order: 8, question: "Before a winter run over a mountain route, a quick way to check for closures, chain laws, and construction is:", options: ["assume the road is open", "dial 511 or check the state DOT road-conditions site", "ask the next driver you pass", "only check if it's already snowing where you are"], correctIndex: 1, explanation: "511 (the national traveler-information line) and the state DOT road-conditions site show closures, construction, chain laws, and weather along your route. Check before you roll and again if conditions change — it's part of planning a truck-legal trip." },
     ],
   },
 
