@@ -920,9 +920,9 @@ Look **far ahead**, keep an **escape path** to the side, and never let a four-wh
     slug: "cargo-theft-security",
     title: "Cargo Theft & Security Awareness",
     category: "SRL Operational Excellence",
-    summary: "Why your load is a target, how to park and lock to protect it, how seals catch tampering, how thieves use fictitious pickups, and exactly what to do if a load is stolen.",
-    version: "3",
-    estMinutes: 18,
+    summary: "Why your load is a target (and the holiday spike), how to park and lock to protect it, how seals catch tampering, how thieves use fictitious pickups, and exactly what to do if a load is stolen (without confronting anyone).",
+    version: "4",
+    estMinutes: 20,
     passThreshold: 80,
     validityMonths: null,
     sortOrder: 19,
@@ -931,9 +931,9 @@ Look **far ahead**, keep an **escape path** to the side, and never let a four-wh
       {
         order: 1,
         title: "Why your load is a target",
-        estMinutes: 4,
+        estMinutes: 5,
         bodyMarkdown:
-          "Cargo theft is a multi-billion-dollar problem, and thieves are professionals who study freight.\n\n**High-value, high-demand goods are targeted** — food and beverage, household and consumer-packaged goods, electronics, and pharmaceuticals top the lists. A lot of SRL freight (refrigerated CPG, wellness products) is exactly what thieves want, because it's easy to resell and hard to trace.\n\n**The risky window is right after pickup.** A large share of thefts happen at unsecured parking and within the first hours and roughly first 200 miles after pickup — the \"red zone\" — when a tired driver stops close to the origin.\n\nKnowing you're a target is the first defense.\n\n[[figure:cargo-theft-red-zone]]\n\n> " + DISCLAIMER,
+          "Cargo theft is a multi-billion-dollar problem, and thieves are professionals who study freight.\n\n**High-value, high-demand goods are targeted** — food and beverage, household and consumer-packaged goods, electronics, and pharmaceuticals top the lists. A lot of SRL freight (refrigerated CPG, wellness products) is exactly what thieves want, because it's easy to resell and hard to trace.\n\n**The risky window is right after pickup.** A large share of thefts happen at unsecured parking and within the first hours and roughly first 200 miles after pickup — the \"red zone\" — when a tired driver stops close to the origin.\n\n**Long weekends and holidays spike the risk.** Freight left sitting in a yard or a lot over a three-day weekend or a holiday is a prime target. Plan deliveries and secure parking around those breaks instead of leaving a loaded trailer unattended.\n\nKnowing you're a target is the first defense.\n\n[[figure:cargo-theft-red-zone]]\n\n> " + DISCLAIMER,
       },
       {
         order: 2,
@@ -952,9 +952,9 @@ Look **far ahead**, keep an **escape path** to the side, and never let a four-wh
       {
         order: 4,
         title: "Fictitious pickups and what to do if it's stolen",
-        estMinutes: 4,
+        estMinutes: 5,
         bodyMarkdown:
-          "Not all theft is a broken lock. In a **fictitious** or **strategic** pickup, a thief poses as a legitimate carrier or driver — using a stolen or fake identity — and simply drives the load away from the shipper. It's the same identity-fraud and double-brokering problem you learned about, aimed at the cargo.\n\n**Verify before the freight moves.** Confirm the load is really yours: your **dispatch reference and SRL paperwork should match** what the shipper has on the manifest, and the **broker/carrier authority** on the rate con should check out on **FMCSA SAFER** (the same verify-the-authority habit from the fraud course). Good questions at the dock: *'Is this load on your manifest under [my carrier / dispatch ref]? Who verified this BOL?'* **Watch the red flags:** last-minute changes to the pickup, destination, or who's collecting; a BOL that doesn't match your dispatch; pressure to hurry. If anything feels off, **stop and document it, and contact SRL at compliance@silkroutelogistics.ai (and dispatch) before you move the freight.**\n\n**If a load is stolen:** report it **immediately** — call **police (911 / local) first**, then **SRL (dispatch + compliance@silkroutelogistics.ai)** and the **broker**. Gather what you have — last-seen location and time, photos, the BOL, descriptions — because recovery odds drop sharply by the hour. Speed matters more than anything else.",
+          "Not all theft is a broken lock. In a **fictitious** or **strategic** pickup, a thief poses as a legitimate carrier or driver — using a stolen or fake identity — and simply drives the load away from the shipper. It's the same identity-fraud and double-brokering problem you learned about, aimed at the cargo.\n\n**Verify before the freight moves.** Confirm the load is really yours: your **dispatch reference and SRL paperwork should match** what the shipper has on the manifest, and the **broker/carrier authority** on the rate con should check out on **FMCSA SAFER** (the same verify-the-authority habit from the fraud course). Good questions at the dock: *'Is this load on your manifest under [my carrier / dispatch ref]? Who verified this BOL?'* **Watch the red flags:** last-minute changes to the pickup, destination, or who's collecting; a BOL that doesn't match your dispatch; pressure to hurry. If anything feels off, **stop and document it, and contact SRL at compliance@silkroutelogistics.ai (and dispatch) before you move the freight.**\n\n**If a load is stolen:** report it **immediately** — call **police (911 / local) first**, then **SRL (dispatch + compliance@silkroutelogistics.ai)** and the **broker**. Gather what you have — last-seen location and time, photos, the BOL, descriptions — because recovery odds drop sharply by the hour. Speed matters more than anything else.\n\n**Never confront or chase a thief.** If you catch a theft in progress, your safety comes first — do **not** try to stop them, block them in, or follow them. Get to a safe place, be a good witness (descriptions, plate, direction of travel), and call **911**. Cargo is replaceable; you are not.",
       },
     ],
     questions: [
@@ -965,6 +965,7 @@ Look **far ahead**, keep an **escape path** to the side, and never let a four-wh
       { order: 5, question: "If your loaded trailer is stolen, you:", options: ["report it immediately to police, SRL, and the broker", "wait a day to see if it turns up", "handle it quietly yourself", "tell only the receiver"], correctIndex: 0, explanation: "Recovery odds drop sharply by the hour — call police (911) first, then SRL (dispatch + compliance@) and the broker, and gather last-seen location, time, and photos." },
       { order: 6, question: "At pickup you read the seal number and it doesn't match the number on the BOL. You:", options: ["sign anyway — the doors are closed", "note the mismatch on the BOL before signing and confirm with the shipper/dispatch", "swap in your own lock and go", "ignore it; seal numbers don't matter"], correctIndex: 1, explanation: "The seal number on the trailer must match the BOL — a mismatch (or an unsealed load that should be sealed) is a tampering/loading flag. Note it before you sign; don't attest to a seal you didn't verify." },
       { order: 7, question: "Before a load leaves the shipper, the best defense against a fictitious pickup is to:", options: ["trust whoever hands you the paperwork", "confirm your dispatch ref + SRL paperwork match the shipper's manifest and the authority checks out on FMCSA SAFER", "skip verification to save time on a tight window", "only worry about it at delivery"], correctIndex: 1, explanation: "Fictitious pickups are identity fraud aimed at the cargo. Match your dispatch reference and paperwork to the shipper's manifest, verify the authority on SAFER, and treat last-minute changes or pressure as red flags — verify before the freight moves." },
+      { order: 8, question: "You return to your truck and catch someone breaking into your loaded trailer. You:", options: ["confront them and try to stop the theft", "block them in with your truck and hold them", "stay safe, be a good witness (descriptions, plate, direction), and call 911", "chase them to recover the load"], correctIndex: 2, explanation: "Never confront or chase a cargo thief — your safety comes first. Get to a safe place, note descriptions, the plate, and direction of travel, and call 911. Cargo is replaceable; you are not." },
     ],
   },
 

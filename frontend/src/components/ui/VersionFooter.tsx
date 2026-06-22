@@ -13165,6 +13165,15 @@
 //   400+ ft at 55 mph, FMCSA), the empty-truck-needs-more point, and the CDL following
 //   rule; quiz adds two real stopping-distance items. Content files only — live via
 //   prod re-seed. Per §3.1: ant → anu.
+// v3.8.apf — SRL Driver Academy FINAL audit, Course 19/22: cargo-theft-security v3 -> v4 (SRL
+//   Operational Excellence). Inline audit (FMCSA SAFER verify, CargoNet/insurer loss-prevention
+//   patterns). Existing facts verified accurate (red zone ~200 mi after pickup, high-value targets,
+//   secure-lit parking + kingpin/glad-hand/door locks, never-leave-running, don't-broadcast, seal #
+//   matches BOL + check every stop, fictitious/strategic pickup + SAFER verify, 911-first reporting
+//   to police+SRL+broker). Completeness adds: NEVER confront or chase a thief (be a witness, call
+//   911 — your safety first) in Lesson 4 + new quiz Q8; long-weekend/holiday theft spike in Lesson 1.
+//   Course now 4 lessons / 8 questions / 1 figure. Gates: backend tsc + seed dry-run (22 courses /
+//   181 q, valid) + frontend tsc + next build clean. Live via prod re-seed. Per §3.1: ape -> apf.
 // v3.8.ape — SRL Driver Academy FINAL audit, Course 18/22: trip-planning-routing v3 -> v4. Inline
 //   audit (49 CFR 392.7 safe-vehicle duty, 397 hazmat routing, height/width facts, oversize-permit
 //   conditions). Existing facts verified accurate (truck-GPS vs consumer, real height ~13'6-14' +
@@ -13590,7 +13599,7 @@
 //   (3) fraud-awareness — quiz distractors changed to real false-comfort traps (high
 //   rate / nice website / on a load board) instead of absurd one-liners. Content files
 //   only — live via prod re-seed. 8 of 22 courses now overhauled. Per §3.1: anu → anv.
-export const SRL_VERSION = "3.8.ape";
+export const SRL_VERSION = "3.8.apf";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
