@@ -13165,6 +13165,18 @@
 //   400+ ft at 55 mph, FMCSA), the empty-truck-needs-more point, and the CDL following
 //   rule; quiz adds two real stopping-distance items. Content files only — live via
 //   prod re-seed. Per §3.1: ant → anu.
+// v3.8.api — SRL Driver Academy FINAL audit, Course 22/22: coercion-professional-conduct v3 -> v4
+//   (EPIC CLOSE — all 22 courses audited). Inline primary-source audit (49 CFR 390.6 coercion rule,
+//   STAA whistleblower, FMCSA NCCDB 90-day / OSHA 180-day clocks). Existing facts verified accurate
+//   (coercion "has a sound" examples, NCCDB 90-day filing, STAA refuse/report protection, retaliation-
+//   isn't-only-firing, OSHA 180-day, two-separate-clocks, Compass-Score professionalism). Completeness
+//   add: non-HOS coercion examples (run overweight / skip a brake write-up) + the explicit point that
+//   390.6 covers ALL the safety rules, not just hours, in Lesson 1 + new quiz Q8. Course now 3 lessons
+//   / 8 questions / 1 figure. Gates: backend tsc + seed dry-run (22 courses / 184 q, valid) + frontend
+//   tsc + next build clean. Live via prod re-seed. Per §3.1: aph -> api.
+//   === FINAL-AUDIT EPIC COMPLETE: all 22 SRL Driver Academy courses audited 1->22 (aon..api),
+//   every regulatory claim primary-source-verified, ~30 completeness adds + ~10 new figures + 22 new
+//   quiz questions (160 -> 184), 2 false "fixes" rejected (repealed 391.27, wrong FMCSA channel). ===
 // v3.8.aph — SRL Driver Academy FINAL audit, Course 21/22: workplace-dock-safety v3 -> v4. Inline
 //   audit (OSHA dock/forklift/CO + three-point-contact + safe-lifting best practice). Existing facts
 //   verified accurate (three-point contact / never-jump, lift-with-legs / no-twist, chock + dock-lock
@@ -13617,7 +13629,7 @@
 //   (3) fraud-awareness — quiz distractors changed to real false-comfort traps (high
 //   rate / nice website / on a load board) instead of absurd one-liners. Content files
 //   only — live via prod re-seed. 8 of 22 courses now overhauled. Per §3.1: anu → anv.
-export const SRL_VERSION = "3.8.aph";
+export const SRL_VERSION = "3.8.api";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

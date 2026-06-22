@@ -1072,9 +1072,9 @@ Look **far ahead**, keep an **escape path** to the side, and never let a four-wh
     slug: "coercion-professional-conduct",
     title: "Coercion, Whistleblower Protection & Professional Conduct",
     category: "SRL Operational Excellence",
-    summary: "How to recognize coercion when you hear it, your right to refuse unsafe or illegal driving, how and where to file, the whistleblower protection that backs you, and the professionalism that earns repeat freight.",
-    version: "3",
-    estMinutes: 17,
+    summary: "How to recognize coercion when you hear it (across all the safety rules, not just hours), your right to refuse unsafe or illegal driving, how and where to file, the whistleblower protection that backs you, and the professionalism that earns repeat freight.",
+    version: "4",
+    estMinutes: 19,
     passThreshold: 80,
     validityMonths: null,
     sortOrder: 22,
@@ -1083,9 +1083,9 @@ Look **far ahead**, keep an **escape path** to the side, and never let a four-wh
       {
         order: 1,
         title: "The coercion rule",
-        estMinutes: 4,
+        estMinutes: 5,
         bodyMarkdown:
-          "Federal law protects your right to drive legally. The FMCSA **coercion rule (49 CFR 390.6)** prohibits motor carriers, shippers, receivers, and brokers from coercing a driver to violate the safety regulations — Hours-of-Service, CDL rules, drug & alcohol rules, hazmat, and securement among them.\n\n**Learn to recognize it — coercion has a sound.** It's rarely the word 'coercion.' It's:\n\n- *\"You won't get another load from us if you don't roll tonight.\"*\n- *\"Other drivers make this run, what's your problem?\"*\n- *\"If you log it that way, we lose the customer.\"*\n- *\"Just tell them you're empty so we can load you again faster.\"*\n\nIf anyone threatens your pay, your job, or your future loads to push you to drive over your hours or operate unsafely, that's **coercion** — and it's illegal.\n\n**How to file.** You file a coercion complaint with FMCSA through the **National Consumer Complaint Database (nccdb.fmcsa.dot.gov)**, generally **within 90 days** of the incident. Include **your name and contact info, the name and contact of whoever coerced you, the specific regulation they pushed you to violate, and what was said** — so write it down while it's fresh. You have the right to refuse to break the law, and SRL backs that right.\n\n[[figure:coercion-recognition]]\n\n> " + DISCLAIMER,
+          "Federal law protects your right to drive legally. The FMCSA **coercion rule (49 CFR 390.6)** prohibits motor carriers, shippers, receivers, and brokers from coercing a driver to violate the safety regulations — Hours-of-Service, CDL rules, drug & alcohol rules, hazmat, and securement among them.\n\n**Learn to recognize it — coercion has a sound.** It's rarely the word 'coercion.' It's:\n\n- *\"You won't get another load from us if you don't roll tonight.\"*\n- *\"Other drivers make this run, what's your problem?\"*\n- *\"If you log it that way, we lose the customer.\"*\n- *\"Just tell them you're empty so we can load you again faster.\"*\n- *\"It's only a little overweight, just take the back roads around the scale.\"*\n- *\"Skip the brake write-up and run it, you're already late.\"*\n\nIf anyone threatens your pay, your job, or your future loads to push you to drive over your hours or operate unsafely — overweight, unsecured, with a known defect, or off your hazmat route — that's **coercion**, and it's illegal. It covers **all** the safety rules, not just your hours.\n\n**How to file.** You file a coercion complaint with FMCSA through the **National Consumer Complaint Database (nccdb.fmcsa.dot.gov)**, generally **within 90 days** of the incident. Include **your name and contact info, the name and contact of whoever coerced you, the specific regulation they pushed you to violate, and what was said** — so write it down while it's fresh. You have the right to refuse to break the law, and SRL backs that right.\n\n[[figure:coercion-recognition]]\n\n> " + DISCLAIMER,
       },
       {
         order: 2,
@@ -1110,6 +1110,7 @@ Look **far ahead**, keep an **escape path** to the side, and never let a four-wh
       { order: 5, question: "Your professionalism and tracked performance most directly affect:", options: ["nothing measurable", "your carrier's SRL Compass Score and its access to repeat, better freight", "only the weather", "the fuel price"], correctIndex: 1, explanation: "Compass is SRL's own 7-factor carrier rating (not a federal score). Reliable, easy-to-work-with carriers who score well get called first for the better loads." },
       { order: 6, question: "A dispatcher says 'other drivers make this run, what's your problem?' to push you past your hours. To report the coercion you:", options: ["post about it on social media", "file with FMCSA's National Consumer Complaint Database (nccdb.fmcsa.dot.gov) within 90 days, with the names, the rule, and what was said", "just run the load", "wait 6 months and see if it happens again"], correctIndex: 1, explanation: "That's coercion under 390.6. File through FMCSA's NCCDB within 90 days; include your info, the coercer's info, the specific regulation, and what was said — so document it while it's fresh." },
       { order: 7, question: "After you refuse an unsafe load you're not fired, but you start getting only the worst lanes and longest waits. This is:", options: ["just bad luck, nothing to do", "possible retaliation under STAA — document it; the OSHA complaint window is 180 days from the retaliatory act", "perfectly legal punishment", "a reason to quit quietly"], correctIndex: 1, explanation: "Retaliation isn't only firing — worse lanes, longer waits, or being cut out of good freight after a protected refusal can count. Document it and know the STAA/OSHA clock is 180 days from the retaliatory act (separate from the 90-day FMCSA coercion clock)." },
+      { order: 8, question: "A shipper says 'it's only a little overweight, just avoid the scales.' This is:", options: ["smart routing advice", "coercion to violate the rules — the same protections apply as being pushed past your hours", "fine as long as you don't get caught", "only the shipper's problem, not yours"], correctIndex: 1, explanation: "Coercion under 390.6 isn't only about hours — being pushed to run overweight, skip a securement or brake check, or drive a truck with a known defect counts too. The same right to refuse and the same reporting protections apply." },
     ],
   },
 ];
