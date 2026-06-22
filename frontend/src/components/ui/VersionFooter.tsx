@@ -13165,6 +13165,14 @@
 //   400+ ft at 55 mph, FMCSA), the empty-truck-needs-more point, and the CDL following
 //   rule; quiz adds two real stopping-distance items. Content files only — live via
 //   prod re-seed. Per §3.1: ant → anu.
+// v3.8.aph — SRL Driver Academy FINAL audit, Course 21/22: workplace-dock-safety v3 -> v4. Inline
+//   audit (OSHA dock/forklift/CO + three-point-contact + safe-lifting best practice). Existing facts
+//   verified accurate (three-point contact / never-jump, lift-with-legs / no-twist, chock + dock-lock
+//   + trailer-creep, forklift eye-contact + blind spot, enclosed-dock carbon-monoxide, overhead-door
+//   hazard, PPE). Completeness add: heat and cold stress (heat-exhaustion vs heat-stroke signs,
+//   hydrate-before-thirsty, cold layering / numbness) in Lesson 1 + new quiz Q8. Course now 3 lessons
+//   / 8 questions / 1 figure. Gates: backend tsc + seed dry-run (22 courses / 183 q, valid) +
+//   frontend tsc + next build clean. Live via prod re-seed. Per §3.1: apg -> aph.
 // v3.8.apg — SRL Driver Academy FINAL audit, Course 20/22: human-trafficking-awareness v3 -> v4.
 //   Inline audit (Truckers Against Trafficking standard, National Human Trafficking Hotline). Existing
 //   facts verified accurate (drivers as eyes-of-the-highway, TAT, recognize-not-intervene, control/
@@ -13609,7 +13617,7 @@
 //   (3) fraud-awareness — quiz distractors changed to real false-comfort traps (high
 //   rate / nice website / on a load board) instead of absurd one-liners. Content files
 //   only — live via prod re-seed. 8 of 22 courses now overhauled. Per §3.1: anu → anv.
-export const SRL_VERSION = "3.8.apg";
+export const SRL_VERSION = "3.8.aph";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

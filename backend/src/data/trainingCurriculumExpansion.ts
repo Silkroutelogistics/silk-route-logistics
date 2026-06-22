@@ -1026,9 +1026,9 @@ Look **far ahead**, keep an **escape path** to the side, and never let a four-wh
     slug: "workplace-dock-safety",
     title: "Workplace & Dock Safety",
     category: "Vehicle & Cargo Safety",
-    summary: "Three-point contact and the falls that injure drivers, the overexertion injuries that end careers, and staying safe around the dock, forklifts, doors, and engine exhaust.",
-    version: "3",
-    estMinutes: 16,
+    summary: "Three-point contact and the falls that injure drivers, the overexertion injuries that end careers, heat and cold stress, and staying safe around the dock, forklifts, doors, and engine exhaust.",
+    version: "4",
+    estMinutes: 18,
     passThreshold: 80,
     validityMonths: 12,
     sortOrder: 21,
@@ -1037,9 +1037,9 @@ Look **far ahead**, keep an **escape path** to the side, and never let a four-wh
       {
         order: 1,
         title: "Slips, trips, falls, and three-point contact",
-        estMinutes: 4,
+        estMinutes: 5,
         bodyMarkdown:
-          "Driver injuries cluster in two places: **overexertion** from lifting and handling (the single largest category — covered in the next lesson) and **slips, trips, and falls** getting into and out of the cab and trailer (one of the most common injuries, and one of the most preventable). A bad fall ends with a wrenched knee, a broken wrist, or worse.\n\n**Always use three points of contact:** two hands and one foot, or two feet and one hand, in contact with the truck at all times when climbing in or out. **Face the equipment** — climb down like a ladder, never step off facing out, and **never jump down.** Jumping loads your knees, ankles, and back with your full weight plus momentum.\n\nKeep steps and grab handles clean and clear, and watch your footing for ice, fuel and oil spills, hoses, and uneven dock surfaces.\n\n> " + DISCLAIMER,
+          "Driver injuries cluster in two places: **overexertion** from lifting and handling (the single largest category — covered in the next lesson) and **slips, trips, and falls** getting into and out of the cab and trailer (one of the most common injuries, and one of the most preventable). A bad fall ends with a wrenched knee, a broken wrist, or worse.\n\n**Always use three points of contact:** two hands and one foot, or two feet and one hand, in contact with the truck at all times when climbing in or out. **Face the equipment** — climb down like a ladder, never step off facing out, and **never jump down.** Jumping loads your knees, ankles, and back with your full weight plus momentum.\n\nKeep steps and grab handles clean and clear, and watch your footing for ice, fuel and oil spills, hoses, and uneven dock surfaces.\n\n**Mind heat and cold.** Loading, unloading, tarping, or inspecting in extreme weather is real physical work. In **heat**, drink water before you're thirsty, take shade breaks, and know the signs of heat exhaustion (heavy sweating, dizziness, nausea) and heat stroke (confusion, hot dry skin — a 911 emergency). In **cold**, layer up, keep dry, and watch for numbness or shivering you can't stop. Don't power through either one.\n\n> " + DISCLAIMER,
       },
       {
         order: 2,
@@ -1064,6 +1064,7 @@ Look **far ahead**, keep an **escape path** to the side, and never let a four-wh
       { order: 5, question: "Falls from the cab or trailer are:", options: ["rare and unavoidable", "only a winter problem", "one of the most common driver injuries, and highly preventable", "not your responsibility"], correctIndex: 2, explanation: "Slips, trips, and falls are among the top driver injuries (overexertion from lifting/handling is the single largest category) — and falls are almost entirely preventable with three-point contact and never jumping down." },
       { order: 6, question: "\"Trailer creep\" at a dock is when:", options: ["the trailer rusts over time", "repeated forklift entries nudge the trailer forward until a gap opens at the dock", "the reefer cycles on and off", "the driver naps in the sleeper"], correctIndex: 1, explanation: "Each forklift entry shoves the trailer a fraction forward; without a dock lock and chocks a gap opens and the forklift can drop into it. Verify the restraint is actually engaged — a green light isn't proof." },
       { order: 7, question: "On an enclosed dock you start to feel a headache and dizziness. The likely hazard and right move:", options: ["low blood sugar — keep working", "carbon-monoxide buildup from idling engines/forklifts — get to fresh air", "the load is too cold — ignore it", "normal dock fatigue — push through"], correctIndex: 1, explanation: "Idling trucks, reefers, and propane forklifts build colorless, odorless carbon monoxide in an enclosed space. Headache, dizziness, or nausea means get to fresh air and don't idle in a sealed dock." },
+      { order: 8, question: "Tarping a flatbed on a 98-degree afternoon, you feel dizzy and nauseated with heavy sweating. This is:", options: ["normal — push through to finish", "a sign of heat exhaustion — stop, get to shade or AC, and drink water", "a reason to skip your next break", "only a problem for new drivers"], correctIndex: 1, explanation: "Heavy sweating, dizziness, and nausea are heat exhaustion. Stop, get to shade or AC, and rehydrate. If it progresses to confusion or hot, dry skin (heat stroke), that's a 911 emergency. Hydrate before you're thirsty and take breaks in extreme heat or cold." },
     ],
   },
 
