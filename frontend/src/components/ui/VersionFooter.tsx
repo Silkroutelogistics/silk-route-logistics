@@ -13165,6 +13165,15 @@
 //   400+ ft at 55 mph, FMCSA), the empty-truck-needs-more point, and the CDL following
 //   rule; quiz adds two real stopping-distance items. Content files only — live via
 //   prod re-seed. Per §3.1: ant → anu.
+// v3.8.apc — SRL Driver Academy FINAL audit, Course 16/22: distracted-fatigued-driving v3 -> v4.
+//   Inline primary-source audit (49 CFR 392.80/392.82 phone rules, 383.51 serious-violation DQ,
+//   390.6 coercion). Existing facts verified accurate (texting + hand-held ban, 60/120-day DQ on
+//   2nd/3rd serious in 3 yr, 5-sec/400-ft, three distractions, fatigue=impairment, OSA screening,
+//   coercion tie-in). Completeness adds: hands-free is legal but still COGNITIVELY distracting (keep
+//   work calls short, skip in heavy traffic/weather) in Lesson 2 + new quiz Q8; circadian low points
+//   (pre-dawn 2-6 a.m. + mid-afternoon dip) in Lesson 3. Course now 3 lessons / 8 questions / 1
+//   figure. Gates: backend tsc + seed dry-run (22 courses / 178 q, valid) + frontend tsc + next
+//   build clean. Live via prod re-seed. Per §3.1: apb -> apc.
 // v3.8.apb — SRL Driver Academy FINAL audit, Course 15/22: backing-docking-coupling v3 -> v4.
 //   Inline audit (CDL coupling/uncoupling sequence + dock-safety best practice). Existing facts
 //   verified accurate (G.O.A.L., driver-side vs blind-side, spotter signals, mechanical-first
@@ -13562,7 +13571,7 @@
 //   (3) fraud-awareness — quiz distractors changed to real false-comfort traps (high
 //   rate / nice website / on a load board) instead of absurd one-liners. Content files
 //   only — live via prod re-seed. 8 of 22 courses now overhauled. Per §3.1: anu → anv.
-export const SRL_VERSION = "3.8.apb";
+export const SRL_VERSION = "3.8.apc";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
