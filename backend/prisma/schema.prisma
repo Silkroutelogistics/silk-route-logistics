@@ -928,6 +928,24 @@ model CarrierProfile {
   bcaAgreedFromUserAgent   String?
   bcaVersion               String?
 
+  // Post-approval activation (Track 1, 2026-06-24). The binding BCA
+  // signature is recorded as a CarrierAgreement{status:SIGNED} row (the
+  // existing model + the complianceMonitorService gate), NOT here. These
+  // columns track the OPTIONAL, reversible account-level Quick Pay opt-in
+  // (consent to the Caravan Quick Pay Agreement) plus the timestamp when the
+  // carrier completed activation. quickPayEnabled gates account-level QP
+  // AVAILABILITY only — per-load QP election (Load.quickPayFeePercent,
+  // LoadQuickPayOverride) is unchanged. Quick Pay is NEVER a hauling gate;
+  // only the signed BCA blocks tendering. Default false = the opt-out state,
+  // so a carrier who never elects QP is fully operational on standard Net
+  // terms with zero extra steps.
+  quickPayEnabled             Boolean   @default(false)
+  quickPayAgreedAt            DateTime?
+  quickPayAgreedFromIp        String?
+  quickPayAgreedFromUserAgent String?
+  quickPayVersion             String?
+  activatedAt                 DateTime?
+
   // Insurance Agent Contact
   insuranceAgentName  String?
   insuranceAgentEmail String?

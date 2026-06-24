@@ -13165,6 +13165,20 @@
 //   400+ ft at 55 mph, FMCSA), the empty-truck-needs-more point, and the CDL following
 //   rule; quiz adds two real stopping-distance items. Content files only — live via
 //   prod re-seed. Per §3.1: ant → anu.
+// v3.8.apj — Track 1 Sprint 1a: post-approval carrier activation backend. Carriers sign the
+//   Broker-Carrier Agreement + (optionally, reversibly) elect account-level Quick Pay AFTER
+//   approval, as the gate before their first load. New /api/carrier-auth endpoints: GET
+//   /activation-status, POST /sign-bca (creates the CarrierAgreement{status:"SIGNED"} row the
+//   complianceMonitorService gate + carrierVettingService already hard-gate on — reusing
+//   carrierVettingController.signAgreement's write shape + extractClientIp audit capture), POST
+//   /quickpay-election (quickPayEnabled default false = opt-out state = standard Net terms, fully
+//   operational; opt-in records Caravan QP Agreement consent + IP/UA/version audit; reversible;
+//   NEVER a hauling gate — only the signed BCA blocks tendering). All three require APPROVED +
+//   resolve only the caller's own profile. Schema: 6 additive CarrierProfile columns
+//   (quickPayEnabled + 4 QP-consent audit fields + activatedAt); BCA side needed zero schema
+//   change (CarrierAgreement already has the full e-signature field set). Per-load QP untouched.
+//   Migration 20260624120000_add_quickpay_election_and_activation (additive, applies on deploy).
+//   Gates: prisma generate + backend tsc + 296/296 tests clean. Per §3.1: api -> apj.
 // v3.8.api — SRL Driver Academy FINAL audit, Course 22/22: coercion-professional-conduct v3 -> v4
 //   (EPIC CLOSE — all 22 courses audited). Inline primary-source audit (49 CFR 390.6 coercion rule,
 //   STAA whistleblower, FMCSA NCCDB 90-day / OSHA 180-day clocks). Existing facts verified accurate
@@ -13629,7 +13643,7 @@
 //   (3) fraud-awareness — quiz distractors changed to real false-comfort traps (high
 //   rate / nice website / on a load board) instead of absurd one-liners. Content files
 //   only — live via prod re-seed. 8 of 22 courses now overhauled. Per §3.1: anu → anv.
-export const SRL_VERSION = "3.8.api";
+export const SRL_VERSION = "3.8.apj";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

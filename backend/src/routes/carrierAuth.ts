@@ -630,6 +630,241 @@ router.get("/application-status", authenticate, authorize("CARRIER"), async (req
   });
 });
 
+// ─────────────────────────────────────────────────────────────
+// Track 1 (2026-06-24) — Post-approval carrier activation.
+//
+// After an AE approves a carrier, the carrier completes a short activation
+// step in their own portal:
+//   • Sign the Broker-Carrier Agreement  (REQUIRED — creates the
+//     CarrierAgreement{status:"SIGNED"} row that
+//     complianceMonitorService.complianceCheck() hard-gates on, which is
+//     what actually unlocks tendering. A typed legal name + checkbox is an
+//     enforceable B2B e-signature under ESIGN/UETA; the full audit trail is
+//     persisted on the agreement row.)
+//   • Elect Quick Pay  (OPTIONAL + reversible — consent to the Caravan Quick
+//     Pay Agreement. NEVER a hauling gate. Default off = standard Net terms.)
+//
+// All three endpoints require onboardingStatus === "APPROVED" (you do not
+// put a binding contract in front of an applicant you might still reject).
+// Per CLAUDE.md §16, the BCA/QP TEXT shown still needs Michigan attorney
+// sign-off before go-live; this mechanism records the signature/consent
+// against whatever the attorney-final document version is (bcaVersion /
+// qpVersion), so the document can be swapped without a rebuild.
+// ─────────────────────────────────────────────────────────────
+
+// Resolve the calling carrier's CarrierProfile (mirrors /me +
+// /application-status). Returns null -> caller responds 404.
+async function loadActivationProfile(userId: string) {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: {
+      carrierProfile: {
+        select: {
+          id: true,
+          onboardingStatus: true,
+          activatedAt: true,
+          quickPayEnabled: true,
+          quickPayAgreedAt: true,
+          quickPayVersion: true,
+        },
+      },
+    },
+  });
+  return user?.carrierProfile ?? null;
+}
+
+// GET /api/carrier-auth/activation-status — what the carrier still needs to
+// do post-approval. bcaSigned reads the SAME query the compliance gate +
+// vetting use (carrierAgreement findFirst status SIGNED, latest by signedAt),
+// so the portal can never disagree with the gate.
+router.get("/activation-status", authenticate, authorize("CARRIER"), async (req: AuthRequest, res: Response) => {
+  const profile = await loadActivationProfile(req.user!.id);
+  if (!profile) {
+    res.status(404).json({ error: "Carrier profile not found" });
+    return;
+  }
+
+  const agreement = await prisma.carrierAgreement.findFirst({
+    where: { carrierId: profile.id, status: "SIGNED" },
+    orderBy: { signedAt: "desc" },
+    select: { id: true, version: true, signedAt: true, signedByName: true, expiresAt: true },
+  });
+  const now = new Date();
+  const bcaSigned = !!agreement && (!agreement.expiresAt || agreement.expiresAt > now);
+
+  res.json({
+    onboardingStatus: profile.onboardingStatus,
+    // requiresActivation: approved, but the gate-satisfying BCA isn't signed yet.
+    requiresActivation: profile.onboardingStatus === "APPROVED" && !bcaSigned,
+    bca: {
+      signed: bcaSigned,
+      signedAt: agreement?.signedAt ?? null,
+      signedByName: agreement?.signedByName ?? null,
+      version: agreement?.version ?? null,
+    },
+    quickPay: {
+      enabled: profile.quickPayEnabled,
+      agreedAt: profile.quickPayAgreedAt,
+      version: profile.quickPayVersion,
+    },
+    activatedAt: profile.activatedAt,
+  });
+});
+
+// POST /api/carrier-auth/sign-bca — carrier e-signs the Broker-Carrier
+// Agreement at activation. Creates a CarrierAgreement{status:"SIGNED"}
+// (evergreen — BCAs terminate via clause, not an expiry date, so expiresAt
+// stays null and the gate never trips on expiry), which unblocks the
+// complianceCheck hard-gate. Idempotent on the same version.
+const signBcaSchema = z.object({
+  signedByName: z.string().trim().min(2, "Enter your full legal name").max(120),
+  signedByTitle: z.string().trim().max(120).optional(),
+  agreed: z.boolean().refine((v) => v === true, {
+    message: "You must agree to the Broker-Carrier Agreement to sign.",
+  }),
+  bcaVersion: z.string().trim().min(1).max(60),
+});
+router.post("/sign-bca", authenticate, authorize("CARRIER"), validateBody(signBcaSchema), async (req: AuthRequest, res: Response) => {
+  const profile = await loadActivationProfile(req.user!.id);
+  if (!profile) {
+    res.status(404).json({ error: "Carrier profile not found" });
+    return;
+  }
+  if (profile.onboardingStatus !== "APPROVED") {
+    res.status(403).json({
+      error: "Your application must be approved before you can sign the Broker-Carrier Agreement.",
+      code: "NOT_APPROVED",
+    });
+    return;
+  }
+
+  const { signedByName, signedByTitle, bcaVersion } = req.body as {
+    signedByName: string;
+    signedByTitle?: string;
+    bcaVersion: string;
+  };
+  const now = new Date();
+
+  // Idempotent: a current SIGNED, non-expired agreement of THIS version means
+  // already-signed (return it). A different version (attorney updated the
+  // doc) falls through and re-records consent to the new version.
+  const existing = await prisma.carrierAgreement.findFirst({
+    where: { carrierId: profile.id, status: "SIGNED" },
+    orderBy: { signedAt: "desc" },
+  });
+  if (existing && existing.version === bcaVersion && (!existing.expiresAt || existing.expiresAt > now)) {
+    res.json({ signed: true, alreadySigned: true, agreement: existing });
+    return;
+  }
+
+  const ip = extractClientIp(req);
+  const userAgent = (req.headers["user-agent"] as string) || "";
+
+  const agreement = await prisma.carrierAgreement.create({
+    data: {
+      carrierId: profile.id,
+      version: bcaVersion,
+      templateName: "broker-carrier",
+      status: "SIGNED",
+      signedAt: now,
+      signedByName,
+      signedByTitle: signedByTitle || null,
+      signatureData: signedByName, // typed-name e-signature
+      signerIp: ip || "",
+      signerUserAgent: userAgent,
+      expiresAt: null, // evergreen — terminates via clause, not a date
+      createdById: req.user!.id,
+    },
+  });
+
+  // Refresh the click-wrap audit fields + mark activation complete (the BCA
+  // is the load-bearing activation step; QP is optional and separate).
+  await prisma.carrierProfile.update({
+    where: { id: profile.id },
+    data: {
+      bcaAgreedAt: now,
+      bcaAgreedFromIp: ip || null,
+      bcaAgreedFromUserAgent: userAgent || null,
+      bcaVersion,
+      activatedAt: profile.activatedAt ?? now,
+    },
+  });
+
+  // Notify AE that a carrier signed (mirrors carrierVettingController.signAgreement).
+  prisma.user
+    .findMany({ where: { role: "ADMIN" }, select: { id: true } })
+    .then((admins) =>
+      prisma.notification.createMany({
+        data: admins.map((a) => ({
+          userId: a.id,
+          type: "AGREEMENT_SIGNED",
+          title: "Carrier Agreement Signed",
+          message: `${signedByName} signed the Broker-Carrier Agreement (carrier ${profile.id}).`,
+          link: `/dashboard/carriers`,
+        })),
+      }),
+    )
+    .catch(() => {});
+
+  res.status(201).json({ signed: true, agreement });
+});
+
+// POST /api/carrier-auth/quickpay-election — opt in / out of account-level
+// Quick Pay. Opt-in records consent to the Caravan Quick Pay Agreement
+// (audit trail). REVERSIBLE and NOT a hauling gate. Opting out flips the
+// flag but preserves the last-consent audit fields as history. A carrier who
+// never calls this stays quickPayEnabled=false (standard Net terms) and is
+// fully operational once the BCA is signed.
+const quickPayElectionSchema = z
+  .object({
+    enabled: z.boolean(),
+    agreedToQpTerms: z.boolean().optional(),
+    qpVersion: z.string().trim().max(60).optional(),
+  })
+  .refine((d) => !d.enabled || (d.agreedToQpTerms === true && !!d.qpVersion), {
+    message: "To enable Quick Pay you must agree to the Quick Pay Agreement.",
+    path: ["agreedToQpTerms"],
+  });
+router.post("/quickpay-election", authenticate, authorize("CARRIER"), validateBody(quickPayElectionSchema), async (req: AuthRequest, res: Response) => {
+  const profile = await loadActivationProfile(req.user!.id);
+  if (!profile) {
+    res.status(404).json({ error: "Carrier profile not found" });
+    return;
+  }
+  if (profile.onboardingStatus !== "APPROVED") {
+    res.status(403).json({
+      error: "Your application must be approved before you can elect Quick Pay.",
+      code: "NOT_APPROVED",
+    });
+    return;
+  }
+
+  const { enabled, qpVersion } = req.body as { enabled: boolean; qpVersion?: string };
+  const now = new Date();
+  const ip = extractClientIp(req);
+  const userAgent = (req.headers["user-agent"] as string) || "";
+
+  const updated = await prisma.carrierProfile.update({
+    where: { id: profile.id },
+    data: enabled
+      ? {
+          quickPayEnabled: true,
+          quickPayAgreedAt: now,
+          quickPayAgreedFromIp: ip || null,
+          quickPayAgreedFromUserAgent: userAgent || null,
+          quickPayVersion: qpVersion || null,
+        }
+      : { quickPayEnabled: false },
+    select: { quickPayEnabled: true, quickPayAgreedAt: true, quickPayVersion: true },
+  });
+
+  res.json({
+    quickPayEnabled: updated.quickPayEnabled,
+    quickPayAgreedAt: updated.quickPayAgreedAt,
+    quickPayVersion: updated.quickPayVersion,
+  });
+});
+
 // v3.8.aje Sprint A — Email verification.
 // PUBLIC endpoint (no auth — the token IS the auth). Carrier clicks the
 // link in their verification email which lands on /carrier/verify-email?
