@@ -13165,6 +13165,19 @@
 //   400+ ft at 55 mph, FMCSA), the empty-truck-needs-more point, and the CDL following
 //   rule; quiz adds two real stopping-distance items. Content files only — live via
 //   prod re-seed. Per §3.1: ant → anu.
+// v3.8.apk — Track 1 Sprint 1b: post-approval Activation SCREEN (carrier portal UI).
+//   New /carrier/dashboard/activation page: Step 1 Broker-Carrier Agreement review pane +
+//   typed-name e-signature + checkbox -> POST /carrier-auth/sign-bca (creates the gate-
+//   satisfying CarrierAgreement{SIGNED}); Step 2 Quick Pay tier table + opt-in consent OR skip
+//   (reversible toggle once enabled). Carrier dashboard layout gains a persistent amber
+//   "complete your activation" soft-gate banner for APPROVED-but-unsigned carriers (shares the
+//   page query key so signing clears it instantly; the compliance gate is the real enforcement).
+//   New lib/carrierAgreements.ts is the single source of the BCA articles + QP terms + versions
+//   (Carmack cited 49 U.S.C. § 14706 per brand skill). Matched the carrier portal's own palette
+//   (#C9A84C gold-gradient CTA / #0F1117 ink / CarrierCard), not the marketing cream set, so the
+//   screen reads native to the portal; cream-2 #F5EEE0 only on the document-review panes. Gates:
+//   frontend tsc + next build clean; out/carrier/dashboard/activation.html confirmed in export.
+//   Per §3.1: apj -> apk.
 // v3.8.apj — Track 1 Sprint 1a: post-approval carrier activation backend. Carriers sign the
 //   Broker-Carrier Agreement + (optionally, reversibly) elect account-level Quick Pay AFTER
 //   approval, as the gate before their first load. New /api/carrier-auth endpoints: GET
@@ -13643,7 +13656,7 @@
 //   (3) fraud-awareness — quiz distractors changed to real false-comfort traps (high
 //   rate / nice website / on a load board) instead of absurd one-liners. Content files
 //   only — live via prod re-seed. 8 of 22 courses now overhauled. Per §3.1: anu → anv.
-export const SRL_VERSION = "3.8.apj";
+export const SRL_VERSION = "3.8.apk";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

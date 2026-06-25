@@ -5,7 +5,7 @@ import { useRouter, usePathname } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { CarrierSidebar } from "@/components/carrier";
-import { Search, Bell, X, LogOut, Clock } from "lucide-react";
+import { Search, Bell, X, LogOut, Clock, FileSignature, ChevronRight } from "lucide-react";
 import { useCarrierAuth } from "@/hooks/useCarrierAuth";
 import { useSessionTimeout } from "@/hooks/useSessionTimeout";
 import { Logo } from "@/components/ui/Logo";
@@ -54,6 +54,17 @@ export default function CarrierDashboardLayout({ children }: { children: React.R
     queryFn: () => api.get<{ notifications: Notification[] }>("/notifications").then((r) => r.data),
     enabled: !!user && user.carrierProfile?.onboardingStatus === "APPROVED",
     refetchInterval: 120000,
+  });
+
+  // Track 1.1b — Activation gate. APPROVED carriers who haven't signed the
+  // Broker-Carrier Agreement get a persistent banner driving them to the
+  // activation step. Shares the activation page's query key, so signing there
+  // clears the banner immediately. Tendering is independently hard-gated by
+  // complianceMonitorService — this banner is a UX nudge, not the enforcement.
+  const { data: activationData } = useQuery({
+    queryKey: ["carrier-activation"],
+    queryFn: () => api.get<{ requiresActivation: boolean }>("/carrier-auth/activation-status").then((r) => r.data),
+    enabled: !!user && user.carrierProfile?.onboardingStatus === "APPROVED",
   });
 
   const notifications = notifData?.notifications || [];
@@ -112,6 +123,7 @@ export default function CarrierDashboardLayout({ children }: { children: React.R
   const initials = user ? `${user.firstName?.[0] || ""}${user.lastName?.[0] || ""}` : "C";
   const companyName = user?.carrierProfile?.companyName || user?.company || "";
   const isApproved = user?.carrierProfile?.onboardingStatus === "APPROVED";
+  const needsActivation = !!activationData?.requiresActivation && pathname !== "/carrier/dashboard/activation";
 
   return (
     <div className="flex h-screen bg-[#F7F8FA] overflow-hidden">
@@ -184,6 +196,25 @@ export default function CarrierDashboardLayout({ children }: { children: React.R
 
         {/* Post-Sprint-53 auth refresh banner (auto-expires 24h post-deploy) */}
         <AuthRefreshBanner />
+
+        {/* Track 1.1b — Activation banner: APPROVED but Broker-Carrier
+            Agreement not yet signed. Soft-gate UX nudge; tendering is
+            independently blocked by the compliance gate until signed. */}
+        {isApproved && needsActivation && (
+          <a
+            href="/carrier/dashboard/activation"
+            className="flex items-center gap-3 px-4 sm:px-6 py-2.5 bg-amber-50 border-b border-amber-200 hover:bg-amber-100 transition-colors"
+          >
+            <FileSignature size={16} className="text-amber-700 shrink-0" />
+            <p className="text-[13px] text-amber-900 flex-1 min-w-0">
+              <span className="font-semibold">Complete your activation to start hauling.</span>{" "}
+              Sign your Broker-Carrier Agreement and choose Quick Pay.
+            </p>
+            <span className="text-[13px] font-semibold text-amber-800 flex items-center gap-1 shrink-0">
+              Activate <ChevronRight size={14} />
+            </span>
+          </a>
+        )}
 
         {/* Content */}
         <main className="flex-1 overflow-auto p-4 sm:p-6">{children}</main>
