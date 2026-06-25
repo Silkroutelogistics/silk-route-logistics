@@ -111,7 +111,7 @@ export default function CarrierDashboardLayout({ children }: { children: React.R
 
   if (checking) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#F7F8FA]">
+      <div className="min-h-screen flex items-center justify-center bg-[#FBF7F0]">
         <div className="text-center">
           <Logo size="lg" />
           <p className="mt-4 text-sm text-gray-400 animate-pulse">Loading...</p>
@@ -126,14 +126,14 @@ export default function CarrierDashboardLayout({ children }: { children: React.R
   const needsActivation = !!activationData?.requiresActivation && pathname !== "/carrier/dashboard/activation";
 
   return (
-    <div className="flex h-screen bg-[#F7F8FA] overflow-hidden">
+    <div className="flex h-screen bg-[#FBF7F0] overflow-hidden">
       {/* v3.8.ajd Sprint 1 — Sidebar hidden for non-APPROVED carriers.
           They only have one accessible route (application-status) so there's
           no nav to surface. Approved carriers see the full sidebar. */}
       {isApproved && <CarrierSidebar />}
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Top Bar */}
-        <header className="h-14 bg-white border-b border-gray-200 flex items-center justify-between px-4 sm:px-6 flex-shrink-0">
+        <header className="h-14 bg-white border-b border-[#EFE6D3] flex items-center justify-between px-4 sm:px-6 flex-shrink-0">
           <div className="flex items-center gap-3 flex-1 min-w-0">
             {isApproved ? (
               <>
@@ -159,22 +159,22 @@ export default function CarrierDashboardLayout({ children }: { children: React.R
                 <button onClick={() => setNotifOpen(!notifOpen)} className="relative">
                   <Bell size={19} className="text-gray-500" />
                   {unreadCount > 0 && (
-                    <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-red-500 text-white text-[9px] font-bold flex items-center justify-center">
+                    <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-[#9B2C2C] text-[#FBF7F0] text-[9px] font-bold flex items-center justify-center">
                       {unreadCount > 9 ? "9+" : unreadCount}
                     </span>
                   )}
                 </button>
                 {notifOpen && (
-                  <div className="absolute top-8 right-0 w-[calc(100vw-2rem)] sm:w-80 bg-white rounded-lg shadow-[0_12px_40px_rgba(13,27,42,0.15)] border border-gray-200 z-[100]">
-                    <div className="flex justify-between items-center px-3 py-2 border-b border-gray-100">
-                      <span className="text-[13px] font-bold text-[#0F1117]">Notifications</span>
+                  <div className="absolute top-8 right-0 w-[calc(100vw-2rem)] sm:w-80 bg-white rounded-lg shadow-[0_12px_40px_rgba(10,37,64,0.15)] border border-[#EFE6D3] z-[100]">
+                    <div className="flex justify-between items-center px-3 py-2 border-b border-[#EFE6D3]">
+                      <span className="text-[13px] font-bold text-[#0A2540]">Notifications</span>
                       <button onClick={() => setNotifOpen(false)}><X size={14} className="text-gray-400" /></button>
                     </div>
                     {notifications.length === 0 ? (
                       <div className="px-3 py-6 text-center text-xs text-gray-400">No notifications</div>
                     ) : (
                       notifications.slice(0, 10).map((n) => (
-                        <div key={n.id} className={`px-3 py-2.5 border-b border-gray-50 cursor-pointer hover:bg-gray-50 ${!n.read ? "bg-blue-50/50" : ""}`}>
+                        <div key={n.id} className={`px-3 py-2.5 border-b border-[#F5EEE0] cursor-pointer hover:bg-[#FBF7F0] ${!n.read ? "bg-[#E2EAF2]/60" : ""}`}>
                           <div className="text-xs text-gray-700 leading-snug">{n.message || n.title}</div>
                           <div className="text-[10px] text-gray-400 mt-1">{timeAgo(n.createdAt)}</div>
                         </div>
@@ -185,10 +185,10 @@ export default function CarrierDashboardLayout({ children }: { children: React.R
               </div>
             )}
             {/* Avatar + Logout */}
-            <div className="w-[34px] h-[34px] rounded-full bg-gradient-to-br from-[#C9A84C] to-[#A88535] flex items-center justify-center text-xs font-bold text-[#0F1117] border-2 border-[#C9A84C]/30 cursor-pointer">
+            <div className="w-[34px] h-[34px] rounded-full bg-[#C5A572] flex items-center justify-center text-xs font-bold text-[#0A2540] border-2 border-[#C5A572]/40 cursor-pointer">
               {initials}
             </div>
-            <button onClick={logout} className="text-gray-400 hover:text-red-500" title="Logout">
+            <button onClick={logout} className="text-gray-400 hover:text-[#9B2C2C]" title="Logout">
               <LogOut size={17} />
             </button>
           </div>
@@ -203,14 +203,14 @@ export default function CarrierDashboardLayout({ children }: { children: React.R
         {isApproved && needsActivation && (
           <a
             href="/carrier/dashboard/activation"
-            className="flex items-center gap-3 px-4 sm:px-6 py-2.5 bg-amber-50 border-b border-amber-200 hover:bg-amber-100 transition-colors"
+            className="flex items-center gap-3 px-4 sm:px-6 py-2.5 bg-[#FBEFD4] border-b border-[#B07A1A]/30 hover:bg-[#FAEEDA] transition-colors"
           >
-            <FileSignature size={16} className="text-amber-700 shrink-0" />
-            <p className="text-[13px] text-amber-900 flex-1 min-w-0">
+            <FileSignature size={16} className="text-[#B07A1A] shrink-0" />
+            <p className="text-[13px] text-[#0A2540] flex-1 min-w-0">
               <span className="font-semibold">Complete your activation to start hauling.</span>{" "}
               Sign your Broker-Carrier Agreement and choose Quick Pay.
             </p>
-            <span className="text-[13px] font-semibold text-amber-800 flex items-center gap-1 shrink-0">
+            <span className="text-[13px] font-semibold text-[#B07A1A] flex items-center gap-1 shrink-0">
               Activate <ChevronRight size={14} />
             </span>
           </a>
@@ -230,22 +230,22 @@ export default function CarrierDashboardLayout({ children }: { children: React.R
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[9999]">
           <div className="bg-white rounded-xl p-6 max-w-sm w-full mx-4 shadow-2xl">
             <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center">
-                <Clock size={20} className="text-amber-600" />
+              <div className="w-10 h-10 rounded-full bg-[#FBEFD4] flex items-center justify-center">
+                <Clock size={20} className="text-[#B07A1A]" />
               </div>
               <div>
-                <h3 className="text-sm font-bold text-gray-900">Session Expiring</h3>
+                <h3 className="text-sm font-bold text-[#0A2540]">Session Expiring</h3>
                 <p className="text-xs text-gray-500">Your session will expire due to inactivity</p>
               </div>
             </div>
             <div className="text-center py-3">
-              <span className="text-2xl font-mono font-bold text-red-600">{countdown}</span>
+              <span className="text-2xl font-mono font-bold text-[#9B2C2C]">{countdown}</span>
             </div>
             <div className="flex gap-3">
-              <button onClick={logout} className="flex-1 px-4 py-2 text-sm border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">
+              <button onClick={logout} className="flex-1 px-4 py-2 text-sm border border-[#EFE6D3] rounded-lg text-[#3A4A5F] hover:bg-[#FBF7F0]">
                 Logout
               </button>
-              <button onClick={extendSession} className="flex-1 px-4 py-2 text-sm bg-[#C9A84C] text-[#0F1117] rounded-lg font-semibold hover:bg-[#B8973F]">
+              <button onClick={extendSession} className="flex-1 px-4 py-2 text-sm bg-[#BA7517] text-[#FBF7F0] rounded-lg font-semibold hover:bg-[#854F0B]">
                 Stay Logged In
               </button>
             </div>

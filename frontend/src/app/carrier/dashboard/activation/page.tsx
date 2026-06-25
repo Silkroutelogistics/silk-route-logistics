@@ -41,11 +41,11 @@ function fmtDate(dateStr: string | null): string {
   return new Date(dateStr).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 }
 
-const inputCls = "w-full px-3 py-2 border border-gray-200 rounded text-xs focus:border-[#C9A84C] focus:outline-none bg-white";
+const inputCls = "w-full px-3 py-2 border border-[#EFE6D3] rounded text-xs focus:border-[#BA7517] focus:ring-[#BA7517]/15 focus:outline-none bg-white";
 const labelCls = "text-xs text-gray-700 block mb-1";
-const errorBox = "mb-3 px-3 py-2 bg-red-50 border-l-4 border-red-500 text-red-700 text-xs rounded";
+const errorBox = "mb-3 px-3 py-2 bg-[#F6E3E3] border-l-4 border-[#9B2C2C] text-[#9B2C2C] text-xs rounded";
 const goldCta =
-  "flex items-center gap-1.5 px-5 py-2.5 bg-gradient-to-br from-[#C9A84C] to-[#A88535] text-[#0A2540] text-xs font-semibold rounded-md hover:shadow-lg transition-shadow disabled:opacity-40 disabled:cursor-not-allowed";
+  "flex items-center gap-1.5 px-5 py-2.5 bg-[#BA7517] text-[#FBF7F0] text-xs font-semibold rounded-md hover:shadow-lg transition-shadow disabled:opacity-40 disabled:cursor-not-allowed";
 
 export default function CarrierActivationPage() {
   const queryClient = useQueryClient();
@@ -114,7 +114,7 @@ export default function CarrierActivationPage() {
     <div className="max-w-3xl">
       {/* Header */}
       <div className="mb-6">
-        <h1 className="font-serif text-2xl text-[#0F1117] mb-1">Activate your account</h1>
+        <h1 className="font-serif text-2xl text-[#0A2540] mb-1">Activate your account</h1>
         <p className="text-[13px] text-gray-500">
           You&apos;re approved. Sign your Broker-Carrier Agreement to start hauling, and choose whether you want Quick Pay.
         </p>
@@ -122,10 +122,10 @@ export default function CarrierActivationPage() {
 
       {/* Fully-activated banner */}
       {bcaSigned && (
-        <CarrierCard padding="p-4" className="mb-5 border-green-200 bg-green-50/40">
+        <CarrierCard padding="p-4" className="mb-5 border-[#2F7A4F]/30 bg-[#E6F0E9]/40">
           <div className="flex items-center gap-2.5">
-            <CheckCircle2 size={18} className="text-green-600 shrink-0" />
-            <p className="text-[13px] text-[#0F1117]">
+            <CheckCircle2 size={18} className="text-[#2F7A4F] shrink-0" />
+            <p className="text-[13px] text-[#0A2540]">
               <span className="font-semibold">You&apos;re activated and cleared to haul.</span> Your dashboard is open and you can receive load tenders.
             </p>
           </div>
@@ -137,18 +137,18 @@ export default function CarrierActivationPage() {
         <div className="flex items-center justify-between mb-1">
           <span className="text-[10px] uppercase tracking-wide font-semibold text-[#BA7517]">Step 1 · Required</span>
           {bcaSigned && (
-            <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wide bg-green-50 text-green-700 border border-green-200">
+            <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wide bg-[#E6F0E9] text-[#2F7A4F] border border-[#2F7A4F]/30">
               Signed
             </span>
           )}
         </div>
-        <h2 className="font-serif text-lg text-[#0F1117] mb-1 flex items-center gap-2">
+        <h2 className="font-serif text-lg text-[#0A2540] mb-1 flex items-center gap-2">
           <FileSignature size={18} className="text-[#BA7517]" /> Broker-Carrier Agreement
         </h2>
 
         {bcaSigned ? (
           <p className="text-[13px] text-gray-600">
-            Signed by <span className="font-semibold text-[#0F1117]">{data.bca.signedByName}</span> on {fmtDate(data.bca.signedAt)}
+            Signed by <span className="font-semibold text-[#0A2540]">{data.bca.signedByName}</span> on {fmtDate(data.bca.signedAt)}
             {data.bca.version ? <> (version {data.bca.version})</> : null}.
           </p>
         ) : (
@@ -158,10 +158,10 @@ export default function CarrierActivationPage() {
             </p>
 
             {/* Review pane */}
-            <div className="max-h-72 overflow-auto rounded-lg border border-gray-200 bg-[#F5EEE0] p-4 mb-4">
+            <div className="max-h-72 overflow-auto rounded-lg border border-[#EFE6D3] bg-[#F5EEE0] p-4 mb-4">
               {BCA_ARTICLES.map((a) => (
                 <div key={a.title} className="mb-3 last:mb-0">
-                  <p className="text-xs font-bold text-[#0F1117] mb-0.5">{a.title}</p>
+                  <p className="text-xs font-bold text-[#0A2540] mb-0.5">{a.title}</p>
                   <p className="text-[11px] text-gray-600 leading-relaxed">{a.body}</p>
                 </div>
               ))}
@@ -202,26 +202,26 @@ export default function CarrierActivationPage() {
         <div className="flex items-center justify-between mb-1">
           <span className="text-[10px] uppercase tracking-wide font-semibold text-[#BA7517]">Step 2 · Optional</span>
           {qpEnabled && (
-            <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wide bg-green-50 text-green-700 border border-green-200">
+            <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wide bg-[#E6F0E9] text-[#2F7A4F] border border-[#2F7A4F]/30">
               Enabled
             </span>
           )}
         </div>
-        <h2 className="font-serif text-lg text-[#0F1117] mb-1 flex items-center gap-2">
+        <h2 className="font-serif text-lg text-[#0A2540] mb-1 flex items-center gap-2">
           <Zap size={18} className="text-[#BA7517]" /> Quick Pay
         </h2>
 
         {qpEnabled ? (
           <>
             <p className="text-[13px] text-gray-600 mb-3">
-              Quick Pay is <span className="font-semibold text-green-700">enabled</span>
+              Quick Pay is <span className="font-semibold text-[#2F7A4F]">enabled</span>
               {data.quickPay.agreedAt ? <> since {fmtDate(data.quickPay.agreedAt)}</> : null}. You can elect Quick Pay on completed loads.
             </p>
             {qpError && <div className={errorBox}>{qpError}</div>}
             <button
               onClick={() => qpMutation.mutate(false)}
               disabled={qpMutation.isPending}
-              className="flex items-center gap-1.5 px-4 py-2 text-xs text-gray-600 border border-gray-200 rounded-md hover:bg-gray-50 disabled:opacity-40"
+              className="flex items-center gap-1.5 px-4 py-2 text-xs text-gray-600 border border-[#EFE6D3] rounded-md hover:bg-gray-50 disabled:opacity-40"
             >
               {qpMutation.isPending && <Loader2 size={13} className="animate-spin" />} Switch to standard terms
             </button>
@@ -230,7 +230,7 @@ export default function CarrierActivationPage() {
           <>
             <p className="text-[13px] text-gray-500 mb-3">{QP_SUMMARY}</p>
 
-            <div className="rounded-lg border border-gray-200 overflow-hidden mb-3">
+            <div className="rounded-lg border border-[#EFE6D3] overflow-hidden mb-3">
               <table className="w-full text-left text-xs">
                 <thead>
                   <tr className="bg-gray-50 text-[10px] uppercase tracking-wide text-gray-400">
@@ -241,8 +241,8 @@ export default function CarrierActivationPage() {
                 </thead>
                 <tbody>
                   {QP_TIER_TERMS.map((t) => (
-                    <tr key={t.tier} className="border-t border-gray-100">
-                      <td className="px-3 py-2 font-semibold text-[#0F1117]">{t.tier}</td>
+                    <tr key={t.tier} className="border-t border-[#F5EEE0]">
+                      <td className="px-3 py-2 font-semibold text-[#0A2540]">{t.tier}</td>
                       <td className="px-3 py-2 text-gray-600">{t.standard}</td>
                       <td className="px-3 py-2 text-gray-600">{t.sevenDay}</td>
                     </tr>
@@ -261,8 +261,8 @@ export default function CarrierActivationPage() {
               </div>
             ) : (
               <>
-                <div className="max-h-48 overflow-auto rounded-lg border border-gray-200 bg-[#F5EEE0] p-4 mb-3 text-[11px] text-gray-600 leading-relaxed">
-                  <p className="font-bold text-[#0F1117] mb-1 text-xs">Caravan Quick Pay Agreement v{QP_VERSION}</p>
+                <div className="max-h-48 overflow-auto rounded-lg border border-[#EFE6D3] bg-[#F5EEE0] p-4 mb-3 text-[11px] text-gray-600 leading-relaxed">
+                  <p className="font-bold text-[#0A2540] mb-1 text-xs">Caravan Quick Pay Agreement v{QP_VERSION}</p>
                   <p>
                     By enabling Quick Pay you agree to the Caravan Quick Pay Agreement: SRL advances payment on eligible completed loads after a clean proof of delivery, less the flat Quick Pay fee for your tier shown above. Quick Pay does not require a factoring contract, is applied per load at your election, and can be turned off at any time. The full Caravan Quick Pay Agreement governs.
                   </p>

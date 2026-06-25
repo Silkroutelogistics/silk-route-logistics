@@ -15,8 +15,8 @@ export function ShipperCard({
 }) {
   return (
     <div
-      className={`bg-white rounded-md border border-gray-200 shadow-[0_1px_3px_rgba(0,0,0,0.04)] transition-all duration-300 ${
-        hover ? "hover:border-[#C9A84C]/30 hover:shadow-[0_8px_30px_rgba(0,0,0,0.06)]" : ""
+      className={`bg-white rounded-lg border border-[#EFE6D3] shadow-[0_1px_3px_rgba(10,37,64,0.04)] transition-all duration-300 ${
+        hover ? "hover:border-[#C5A572]/50 hover:shadow-[0_8px_30px_rgba(10,37,64,0.08)]" : ""
       } ${onClick ? "cursor-pointer" : ""} ${padding} ${className}`}
       onClick={onClick}
     >

@@ -5,7 +5,7 @@ import { ShipperCard, QuoteForm } from "@/components/shipper";
 export default function ShipperQuotePage() {
   return (
     <div>
-      <h1 className="font-serif text-2xl text-[#0F1117] mb-1">Request a Freight Quote</h1>
+      <h1 className="font-serif text-2xl text-[#0A2540] mb-1">Request a Freight Quote</h1>
       <p className="text-[13px] text-gray-500 mb-6">Fill in your shipment details and receive competitive truckload rates within minutes.</p>
       <div className="grid grid-cols-[2fr_1fr] gap-6">
         <ShipperCard padding="p-7">
@@ -13,21 +13,21 @@ export default function ShipperQuotePage() {
         </ShipperCard>
         <div>
           <ShipperCard padding="p-5" className="mb-4">
-            <h4 className="text-[13px] font-bold text-[#0F1117] mb-3">Quick Templates</h4>
+            <h4 className="text-[13px] font-bold text-[#0A2540] mb-3">Quick Templates</h4>
             {[
               { name: "Kalamazoo → Chicago (Weekly)", equip: "Dry Van" },
               { name: "Detroit → Indianapolis", equip: "Reefer" },
             ].map((t, i) => (
-              <div key={i} className="p-3 rounded-md border border-gray-200 cursor-pointer mb-2 hover:border-[#C9A84C]/30 transition-colors">
-                <div className="text-xs font-semibold text-[#0F1117]">{t.name}</div>
+              <div key={i} className="p-3 rounded-md border border-[#EFE6D3] cursor-pointer mb-2 hover:border-[#C5A572] transition-colors">
+                <div className="text-xs font-semibold text-[#0A2540]">{t.name}</div>
                 <div className="text-[11px] text-gray-700">{t.equip}</div>
               </div>
             ))}
           </ShipperCard>
-          <ShipperCard padding="p-5" className="!bg-[#0F1117] !border-transparent">
+          <ShipperCard padding="p-5" className="!bg-[#0A2540] !border-transparent">
             <h4 className="text-[13px] font-bold text-[#BA7517] mb-3">Market Rate Insight</h4>
             <div className="text-xs text-gray-500 leading-relaxed">
-              Midwest dry van spot rates are trending <span className="text-emerald-700 font-semibold">↑ 3.2%</span> this week. Reefer capacity tightening on MI→IL lanes.
+              Midwest dry van spot rates are trending <span className="text-[#2F7A4F] font-semibold">↑ 3.2%</span> this week. Reefer capacity tightening on MI→IL lanes.
             </div>
             <div className="mt-3 text-[11px] text-gray-700">
               Source: DAT RateView · Updated 2h ago

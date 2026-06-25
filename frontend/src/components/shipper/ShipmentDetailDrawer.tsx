@@ -43,8 +43,8 @@ export function ShipmentDetailDrawer({
 
   const progressBg =
     shipment.status === "At Risk"
-      ? "bg-gradient-to-r from-emerald-500 to-red-500"
-      : "bg-gradient-to-r from-emerald-500 to-blue-500";
+      ? "bg-gradient-to-r from-[#2F7A4F] to-[#9B2C2C]"
+      : "bg-gradient-to-r from-[#2F7A4F] to-[#2A5B8B]";
 
   const downloadPdf = async (
     url: string,
@@ -95,14 +95,14 @@ export function ShipmentDetailDrawer({
       <div className="absolute inset-0 bg-black/20" onClick={onClose} aria-hidden="true" />
       <div className="absolute top-0 right-0 bottom-0 w-[420px] bg-white shadow-[-8px_0_30px_rgba(13,27,42,0.15)] overflow-y-auto p-6">
       <div className="flex justify-between items-center mb-6">
-        <h2 className="font-serif text-xl text-[#0F1117]">Shipment Details</h2>
+        <h2 className="font-serif text-xl text-[#0A2540]">Shipment Details</h2>
         <button onClick={onClose} className="text-gray-700 hover:text-gray-600" aria-label="Close">
           <X size={20} />
         </button>
       </div>
 
       <div className="flex justify-between items-center mb-5">
-        <span className="font-mono text-sm font-bold text-[#0F1117]">{shipment.id}</span>
+        <span className="font-mono text-sm font-bold text-[#0A2540]">{shipment.id}</span>
         <ShipperBadge status={shipment.status} size="md" />
       </div>
 
@@ -133,7 +133,7 @@ export function ShipmentDetailDrawer({
       ].map(([k, v]) => (
         <div key={k} className="flex justify-between py-2.5 border-b border-gray-100">
           <span className="text-[13px] text-gray-500">{k}</span>
-          <span className={`text-[13px] font-semibold ${v === "Delayed" ? "text-red-500" : "text-[#0F1117]"}`}>{v}</span>
+          <span className={`text-[13px] font-semibold ${v === "Delayed" ? "text-[#9B2C2C]" : "text-[#0A2540]"}`}>{v}</span>
         </div>
       ))}
 
@@ -141,14 +141,14 @@ export function ShipmentDetailDrawer({
         <button
           onClick={handleViewBol}
           disabled={bolLoading}
-          className="inline-flex items-center gap-1.5 px-4 py-2 bg-gradient-to-br from-[#C9A84C] to-[#A88535] text-[#0F1117] text-[11px] font-semibold uppercase tracking-wider rounded disabled:opacity-50"
+          className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#BA7517] text-[#FBF7F0] text-[11px] font-semibold uppercase tracking-wider rounded disabled:opacity-50"
         >
           {bolLoading ? <Loader2 size={14} className="animate-spin" /> : <FileText size={14} />} View BOL
         </button>
         <button
           onClick={handleDownloadPod}
           disabled={podLoading}
-          className="inline-flex items-center gap-1.5 px-4 py-2 border border-white/20 text-gray-500 text-[11px] font-semibold uppercase tracking-wider rounded hover:text-[#BA7517] hover:border-[#C9A84C] disabled:opacity-50"
+          className="inline-flex items-center gap-1.5 px-4 py-2 border border-[#EFE6D3] text-gray-500 text-[11px] font-semibold uppercase tracking-wider rounded hover:text-[#BA7517] hover:border-[#C5A572] disabled:opacity-50"
         >
           {podLoading ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />} Download POD
         </button>

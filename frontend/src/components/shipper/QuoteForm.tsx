@@ -110,7 +110,7 @@ function AddressInput({ label, value, onSelect, required }: {
   return (
     <div className="mb-4" ref={wrapRef}>
       <label className="block text-xs font-semibold text-gray-500 mb-1.5 tracking-wide">
-        {label} {required && <span className="text-red-500">*</span>}
+        {label} {required && <span className="text-[#9B2C2C]">*</span>}
       </label>
       <div className="relative">
         <MapPin size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
@@ -119,14 +119,14 @@ function AddressInput({ label, value, onSelect, required }: {
           onChange={(e) => handleChange(e.target.value)}
           onFocus={() => results.length > 0 && setOpen(true)}
           placeholder="Start typing an address..."
-          className="w-full py-2.5 pl-10 pr-3.5 border border-gray-200 rounded-md text-[13px] text-gray-700 outline-none focus:border-[#C9A84C] transition-colors"
+          className="w-full py-2.5 pl-10 pr-3.5 border border-[#EFE6D3] rounded-md text-[13px] text-gray-700 outline-none focus:border-[#BA7517] focus:ring-[#BA7517]/15 transition-colors"
         />
         {loading && <Loader2 size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 animate-spin" />}
         {open && results.length > 0 && (
-          <div className="absolute z-50 left-0 right-0 top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-56 overflow-y-auto">
+          <div className="absolute z-50 left-0 right-0 top-full mt-1 bg-white border border-[#EFE6D3] rounded-lg shadow-lg max-h-56 overflow-y-auto">
             {results.map((r) => (
               <button key={r.placeId} type="button" onClick={() => handleSelect(r)}
-                className="w-full text-left px-4 py-2.5 text-[13px] text-gray-700 hover:bg-[#C9A84C]/8 hover:text-[#0F1117] transition-colors border-b border-gray-100 last:border-0">
+                className="w-full text-left px-4 py-2.5 text-[13px] text-gray-700 hover:bg-[#BA7517]/8 hover:text-[#0A2540] transition-colors border-b border-[#F5EEE0] last:border-0">
                 <MapPin size={12} className="inline mr-2 text-gray-700" />{r.description}
               </button>
             ))}
@@ -137,13 +137,13 @@ function AddressInput({ label, value, onSelect, required }: {
       {/* Auto-populated fields (read-only display) */}
       {value.city && (
         <div className="grid grid-cols-3 gap-2 mt-2">
-          <div className="px-3 py-1.5 bg-gray-50 rounded text-xs text-gray-600 border border-gray-100">
+          <div className="px-3 py-1.5 bg-[#F5EEE0] rounded text-xs text-gray-600 border border-[#F5EEE0]">
             <span className="text-[10px] text-gray-700 block">City</span>{value.city}
           </div>
-          <div className="px-3 py-1.5 bg-gray-50 rounded text-xs text-gray-600 border border-gray-100">
+          <div className="px-3 py-1.5 bg-[#F5EEE0] rounded text-xs text-gray-600 border border-[#F5EEE0]">
             <span className="text-[10px] text-gray-700 block">State</span>{value.state}
           </div>
-          <div className="px-3 py-1.5 bg-gray-50 rounded text-xs text-gray-600 border border-gray-100">
+          <div className="px-3 py-1.5 bg-[#F5EEE0] rounded text-xs text-gray-600 border border-[#F5EEE0]">
             <span className="text-[10px] text-gray-700 block">ZIP</span>{value.zip || "—"}
           </div>
         </div>
@@ -211,10 +211,10 @@ export function QuoteForm() {
   if (success) {
     return (
       <div className="text-center py-12">
-        <div className="w-16 h-16 rounded-full bg-emerald-100 flex items-center justify-center mx-auto mb-4">
-          <Check size={32} className="text-emerald-600" />
+        <div className="w-16 h-16 rounded-full bg-[#E6F0E9] flex items-center justify-center mx-auto mb-4">
+          <Check size={32} className="text-[#2F7A4F]" />
         </div>
-        <h3 className="text-lg font-bold text-[#0F1117] mb-2">Quote Request Submitted!</h3>
+        <h3 className="text-lg font-bold text-[#0A2540] mb-2">Quote Request Submitted!</h3>
         <p className="text-sm text-gray-500 max-w-md mx-auto">
           Your freight quote request has been received. Our team will review your shipment details
           and provide competitive rates within minutes.
@@ -225,10 +225,10 @@ export function QuoteForm() {
 
   return (
     <div>
-      <h3 className="text-base font-bold text-[#0F1117] mb-5">Shipment Details</h3>
+      <h3 className="text-base font-serif font-bold text-[#0A2540] mb-5">Shipment Details</h3>
 
       {error && (
-        <div className="mb-4 px-4 py-3 bg-red-50 border border-red-200 rounded-md text-sm text-red-700">
+        <div className="mb-4 px-4 py-3 bg-[#F6E3E3] border border-[#9B2C2C] rounded-md text-sm text-[#9B2C2C]">
           {error}
         </div>
       )}
@@ -248,7 +248,7 @@ export function QuoteForm() {
         <button
           onClick={handleSubmit}
           disabled={submitting}
-          className="inline-flex items-center gap-2 px-9 py-4 bg-gradient-to-br from-[#C9A84C] to-[#A88535] text-[#0F1117] text-[13px] font-semibold uppercase tracking-[2px] rounded shadow-[0_4px_20px_rgba(201,168,76,0.3)] hover:shadow-[0_6px_30px_rgba(201,168,76,0.45)] hover:-translate-y-0.5 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0"
+          className="inline-flex items-center gap-2 px-9 py-4 bg-[#BA7517] text-[#FBF7F0] text-[13px] font-semibold uppercase tracking-[2px] rounded shadow-[0_4px_20px_rgba(186,117,23,0.3)] hover:shadow-[0_6px_30px_rgba(186,117,23,0.45)] hover:-translate-y-0.5 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0"
         >
           {submitting ? <Loader2 size={16} className="animate-spin" /> : <Zap size={16} />}
           {submitting ? "Submitting..." : "Get Instant Quote"}
@@ -268,20 +268,20 @@ function FormField({
   return (
     <div className="mb-4">
       <label className="block text-xs font-semibold text-gray-500 mb-1.5 tracking-wide">
-        {label} {required && <span className="text-red-500">*</span>}
+        {label} {required && <span className="text-[#9B2C2C]">*</span>}
       </label>
       {options ? (
         <select value={value} onChange={(e) => onChange(e.target.value)}
-          className="w-full py-2.5 pl-3.5 pr-3.5 border border-gray-200 rounded-md text-[13px] text-gray-700 outline-none focus:border-[#C9A84C] transition-colors appearance-none bg-white">
+          className="w-full py-2.5 pl-3.5 pr-3.5 border border-[#EFE6D3] rounded-md text-[13px] text-gray-700 outline-none focus:border-[#BA7517] focus:ring-[#BA7517]/15 transition-colors appearance-none bg-white">
           <option value="">Select...</option>
           {options.map((o) => <option key={o} value={o}>{o}</option>)}
         </select>
       ) : type === "textarea" ? (
         <textarea value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} rows={4}
-          className="w-full py-2.5 px-3.5 border border-gray-200 rounded-md text-[13px] text-gray-700 outline-none focus:border-[#C9A84C] transition-colors resize-y" />
+          className="w-full py-2.5 px-3.5 border border-[#EFE6D3] rounded-md text-[13px] text-gray-700 outline-none focus:border-[#BA7517] focus:ring-[#BA7517]/15 transition-colors resize-y" />
       ) : (
         <input type={type} value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} min={min}
-          className="w-full py-2.5 pl-3.5 pr-3.5 border border-gray-200 rounded-md text-[13px] text-gray-700 outline-none focus:border-[#C9A84C] transition-colors" />
+          className="w-full py-2.5 pl-3.5 pr-3.5 border border-[#EFE6D3] rounded-md text-[13px] text-gray-700 outline-none focus:border-[#BA7517] focus:ring-[#BA7517]/15 transition-colors" />
       )}
     </div>
   );

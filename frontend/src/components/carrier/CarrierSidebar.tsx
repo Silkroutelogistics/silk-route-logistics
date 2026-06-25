@@ -41,13 +41,13 @@ export function CarrierSidebar() {
   const sidebarContent = (
     <>
       {/* Logo */}
-      <div className="flex items-center gap-2.5 px-4 h-14 border-b border-white/5">
-        <div className="w-8 h-8 rounded-md bg-gradient-to-br from-[#C9A84C] to-[#A88535] flex items-center justify-center text-[#0F1117] text-[11px] font-black tracking-tight">
+      <div className="flex items-center gap-2.5 px-4 h-14 border-b border-[#15365A]">
+        <div className="w-8 h-8 rounded-md bg-[#C5A572] flex items-center justify-center text-[#0A2540] text-[11px] font-black tracking-tight">
           SR
         </div>
         <div>
-          <div className="text-[11px] font-bold text-white tracking-[2px]">SILK ROUTE</div>
-          <div className="text-[9px] text-[#C9A84C] tracking-[3px] -mt-0.5">CARRIER PORTAL</div>
+          <div className="text-[11px] font-bold text-[#FBF7F0] tracking-[2px]">SILK ROUTE</div>
+          <div className="text-[9px] text-[#C5A572] tracking-[3px] -mt-0.5">CARRIER PORTAL</div>
         </div>
       </div>
 
@@ -60,8 +60,8 @@ export function CarrierSidebar() {
               <div
                 className={`flex items-center gap-2.5 px-2.5 py-2 rounded-md text-[13px] font-medium transition-colors ${
                   active
-                    ? "bg-[#C9A84C]/10 text-[#C9A84C]"
-                    : "text-gray-400 hover:bg-white/5 hover:text-gray-200"
+                    ? "bg-[#C5A572]/15 text-[#DAC39C]"
+                    : "text-[#C9D2DE] hover:bg-[#FBF7F0]/5 hover:text-[#FBF7F0]"
                 }`}
               >
                 <item.icon size={18} strokeWidth={active ? 2.2 : 1.8} />
@@ -74,7 +74,7 @@ export function CarrierSidebar() {
 
       {/* Bottom */}
       <div className="px-2 pb-3 space-y-1">
-        <Link href="/" className="flex items-center gap-2.5 px-2.5 py-2 rounded-md text-gray-500 hover:bg-white/5 hover:text-gray-300 text-[13px]">
+        <Link href="/" className="flex items-center gap-2.5 px-2.5 py-2 rounded-md text-[#8AA5C0] hover:bg-[#FBF7F0]/5 hover:text-[#FBF7F0] text-[13px]">
           <ExternalLink size={16} />
           <span>Back to Website</span>
         </Link>
@@ -85,16 +85,16 @@ export function CarrierSidebar() {
   return (
     <>
       {/* Mobile header bar */}
-      <div className="lg:hidden fixed top-0 left-0 right-0 z-40 bg-[#0F1117] border-b border-white/5 px-4 py-3 flex items-center justify-between">
+      <div className="lg:hidden fixed top-0 left-0 right-0 z-40 bg-[#0A2540] border-b border-[#15365A] px-4 py-3 flex items-center justify-between">
         <div className="flex items-center gap-2.5">
-          <div className="w-7 h-7 rounded-md bg-gradient-to-br from-[#C9A84C] to-[#A88535] flex items-center justify-center text-[#0F1117] text-[10px] font-black tracking-tight">
+          <div className="w-7 h-7 rounded-md bg-[#C5A572] flex items-center justify-center text-[#0A2540] text-[10px] font-black tracking-tight">
             SR
           </div>
-          <span className="text-[11px] font-bold text-white tracking-[2px]">SILK ROUTE</span>
+          <span className="text-[11px] font-bold text-[#FBF7F0] tracking-[2px]">SILK ROUTE</span>
         </div>
         <button
           onClick={() => setMobileOpen(!mobileOpen)}
-          className="p-2 text-white/60 hover:text-white hover:bg-white/5 rounded-lg transition"
+          className="p-2 text-[#FBF7F0]/60 hover:text-[#FBF7F0] hover:bg-[#FBF7F0]/5 rounded-lg transition"
         >
           {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
         </button>
@@ -108,14 +108,17 @@ export function CarrierSidebar() {
         />
       )}
 
-      {/* Sidebar */}
-      <aside
-        className={`w-[220px] bg-[#080C18] border-r border-[#2A2F42] flex flex-col h-screen flex-shrink-0 transition-transform duration-200 fixed lg:sticky top-0 z-50 lg:z-auto ${
+      {/* Sidebar — explicit canonical navy rail (div, not <aside>, to escape
+          the globals.css [data-mode="light"] aside warm-stone !important remap) */}
+      <div
+        role="navigation"
+        aria-label="Carrier portal"
+        className={`w-[220px] bg-[#0A2540] border-r border-[#15365A] flex flex-col h-screen flex-shrink-0 transition-transform duration-200 fixed lg:sticky top-0 z-50 lg:z-auto ${
           mobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
         }`}
       >
         {sidebarContent}
-      </aside>
+      </div>
 
       {/* Spacer for mobile top bar */}
       <div className="lg:hidden h-14 shrink-0" />

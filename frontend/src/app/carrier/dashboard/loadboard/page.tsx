@@ -54,30 +54,30 @@ export default function LoadboardPage() {
   return (
     <div className="p-6 space-y-4">
       <div>
-        <h1 className="text-2xl font-semibold text-[#0A2540]">Load Board</h1>
+        <h1 className="text-2xl font-serif font-semibold text-[#0A2540]">Load Board</h1>
         <p className="text-sm text-slate-700 mt-1">
           Browse available loads from The Caravan. Submit a bid to book.
         </p>
       </div>
 
       {loads.length === 0 && !loadsQuery.isLoading && (
-        <div className="p-12 text-center text-slate-500 bg-white/5 border border-white/10 rounded-xl">
+        <div className="p-12 text-center text-slate-500 bg-[#F5EEE0] border border-[#EFE6D3] rounded-xl">
           No loads available right now.
         </div>
       )}
 
       <div className="space-y-2">
         {loads.map((l) => (
-          <div key={l.id} className="bg-white/5 border border-white/10 rounded-lg p-4 flex items-center justify-between gap-4">
+          <div key={l.id} className="bg-white border border-[#EFE6D3] rounded-lg p-4 flex items-center justify-between gap-4">
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2">
                 <span className="font-semibold text-[#0A2540]">{l.loadNumber ?? l.referenceNumber}</span>
                 {l.visibility === "reserved" && (
-                  <span className="px-1.5 py-0.5 text-[10px] rounded bg-indigo-500/20 text-indigo-300">Reserved</span>
+                  <span className="px-1.5 py-0.5 text-[10px] rounded bg-[#E2EAF2] text-[#2A5B8B]">Reserved</span>
                 )}
               </div>
               <div className="mt-1 text-sm text-slate-500 flex items-center gap-1">
-                <MapPin className="w-3 h-3 text-gold" />
+                <MapPin className="w-3 h-3 text-[#BA7517]" />
                 {l.originCity}, {l.originState} → {l.destCity}, {l.destState}
                 {l.distance && ` · ${Math.round(l.distance).toLocaleString()} mi`}
               </div>
@@ -90,12 +90,12 @@ export default function LoadboardPage() {
             </div>
             <div className="text-right shrink-0">
               <div className="text-[10px] text-slate-500 uppercase">Posted rate</div>
-              <div className="text-lg font-semibold text-gold">
+              <div className="text-lg font-semibold text-[#BA7517]">
                 ${Number(l.carrierRate ?? l.rate ?? 0).toLocaleString()}
               </div>
               <button
                 onClick={() => { setBidFor(l); setBidRate(String(l.carrierRate ?? l.rate ?? "")); }}
-                className="mt-1 px-3 py-1 text-xs bg-[#C9A84C] text-[#0F1117] font-semibold rounded hover:bg-[#C9A84C]/90"
+                className="mt-1 px-3 py-1 text-xs bg-[#BA7517] text-[#FBF7F0] font-semibold rounded hover:bg-[#854F0B]"
               >
                 Bid
               </button>
@@ -107,15 +107,15 @@ export default function LoadboardPage() {
       {/* Bid modal */}
       {bidFor && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
-          <div className="bg-[#161921] border border-white/10 rounded-xl p-6 w-full max-w-md">
+          <div className="bg-white border border-[#EFE6D3] rounded-xl p-6 w-full max-w-md">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-white">Submit bid</h2>
-              <button onClick={() => setBidFor(null)} className="p-1 hover:bg-white/10 rounded">
+              <h2 className="text-lg font-semibold text-[#0A2540]">Submit bid</h2>
+              <button onClick={() => setBidFor(null)} className="p-1 hover:bg-[#F5EEE0] rounded">
                 <X className="w-4 h-4 text-slate-400" />
               </button>
             </div>
 
-            <div className="text-sm text-slate-300 mb-4">
+            <div className="text-sm text-slate-700 mb-4">
               Load {bidFor.loadNumber ?? bidFor.referenceNumber}
               <div className="text-xs text-slate-500 mt-0.5">
                 {bidFor.originCity}, {bidFor.originState} → {bidFor.destCity}, {bidFor.destState}
@@ -129,7 +129,7 @@ export default function LoadboardPage() {
                 type="number"
                 value={bidRate}
                 onChange={(e) => setBidRate(e.target.value)}
-                className="w-full pl-9 pr-3 py-2 bg-white/5 border border-white/10 rounded text-white"
+                className="w-full pl-9 pr-3 py-2 bg-white border border-[#EFE6D3] rounded text-[#0A2540] focus:border-[#BA7517] focus:ring-[#BA7517]/15 focus:outline-none"
               />
             </div>
 
@@ -138,20 +138,20 @@ export default function LoadboardPage() {
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               rows={3}
-              className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded text-white text-sm"
+              className="w-full px-3 py-2 bg-white border border-[#EFE6D3] rounded text-[#0A2540] text-sm focus:border-[#BA7517] focus:ring-[#BA7517]/15 focus:outline-none"
             />
 
             <div className="mt-4 flex gap-2">
               <button
                 onClick={() => submitBid.mutate()}
                 disabled={!bidRate || submitBid.isPending}
-                className="flex-1 py-2 bg-[#C9A84C] text-[#0F1117] font-semibold rounded disabled:opacity-40"
+                className="flex-1 py-2 bg-[#BA7517] text-[#FBF7F0] font-semibold rounded disabled:opacity-40"
               >
                 {submitBid.isPending ? "Submitting…" : "Submit bid"}
               </button>
               <button
                 onClick={() => setBidFor(null)}
-                className="flex-1 py-2 bg-white/5 text-slate-300 rounded border border-white/10"
+                className="flex-1 py-2 bg-[#F5EEE0] text-slate-700 rounded border border-[#EFE6D3]"
               >
                 Cancel
               </button>

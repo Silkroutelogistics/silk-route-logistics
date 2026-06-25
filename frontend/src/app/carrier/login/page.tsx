@@ -98,7 +98,7 @@ export default function CarrierLoginPage() {
     }
   };
 
-  const inputClass = "w-full bg-white border border-gray-200 rounded-xl px-4 py-3.5 text-sm text-gray-900 outline-none transition-all placeholder:text-gray-400 focus:border-[#C9A84C] focus:shadow-[0_0_0_3px_rgba(201,168,76,0.1)]";
+  const inputClass = "w-full bg-white border border-[#EFE6D3] rounded-xl px-4 py-3.5 text-sm text-[#0A2540] outline-none transition-all placeholder:text-gray-400 focus:border-[#BA7517] focus:ring-[#BA7517]/15 focus:shadow-[0_0_0_3px_rgba(186,117,23,0.1)]";
   const labelClass = "block text-xs font-medium text-gray-600 uppercase tracking-wider mb-1.5";
 
   return (
@@ -154,11 +154,11 @@ export default function CarrierLoginPage() {
             <animate attributeName="stroke-dashoffset" values="0;-8" dur="1.3s" repeatCount="indefinite" />
           </line>
           {/* Moving truck dot */}
-          <circle r="4" fill="#C9A84C" opacity="0.8">
+          <circle r="4" fill="#BA7517" opacity="0.8">
             <animateMotion dur="12s" repeatCount="indefinite"
               path="M200,220 L280,200 L350,250 L420,280 L500,300 L600,250 L650,200" />
           </circle>
-          <circle r="4" fill="#C9A84C" opacity="0.6">
+          <circle r="4" fill="#BA7517" opacity="0.6">
             <animateMotion dur="15s" repeatCount="indefinite" begin="3s"
               path="M150,300 L240,280 L300,300 L380,320 L450,360 L520,350" />
           </circle>
@@ -173,7 +173,7 @@ export default function CarrierLoginPage() {
           {/* Feature pills */}
           <div className="grid grid-cols-2 gap-2 mb-8 w-full max-w-[360px]">
             {FEATURE_PILLS.map((f) => (
-              <div key={f.label} className="flex items-center justify-center gap-1.5 border border-white/25 text-white bg-white/10 rounded-lg px-3 py-2.5 text-xs font-medium cursor-default">
+              <div key={f.label} className="flex items-center justify-center gap-1.5 border border-white/25 text-[#FBF7F0] bg-white/10 rounded-lg px-3 py-2.5 text-xs font-medium cursor-default">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d={f.icon} /></svg>
                 {f.label}
               </div>
@@ -202,10 +202,10 @@ export default function CarrierLoginPage() {
 
           {/* Daily insight — LARGER, WHITE */}
           <div className="relative pl-5 max-w-[440px]">
-            <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-[#C9A84C] to-[#C9A84C]/20 rounded-full" />
+            <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-[#BA7517] to-[#BA7517]/20 rounded-full" />
             <div className="text-[#E8D48B] text-[11px] tracking-[2px] uppercase font-semibold mb-2">{insight.cat}</div>
-            <p className="text-white text-[16px] italic leading-relaxed m-0 font-light">{insight.text}</p>
-            <p className="text-white/70 text-[13px] mt-2 m-0">&mdash; {insight.src}</p>
+            <p className="text-[#FBF7F0] text-[16px] italic leading-relaxed m-0 font-light">{insight.text}</p>
+            <p className="text-[#FBF7F0]/70 text-[13px] mt-2 m-0">&mdash; {insight.src}</p>
           </div>
         </div>
 
@@ -216,7 +216,7 @@ export default function CarrierLoginPage() {
       </div>
 
       {/* RIGHT PANEL — Form (45%) */}
-      <div className="w-full lg:w-[45%] flex items-center justify-center overflow-y-auto relative" style={{ backgroundColor: "#faf9f7" }}>
+      <div className="w-full lg:w-[45%] flex items-center justify-center overflow-y-auto relative" style={{ backgroundColor: "#FBF7F0" }}>
         <div className="absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-black/5 to-transparent pointer-events-none hidden lg:block" />
         <div className="w-full max-w-[400px] mx-auto px-8 py-12">
           {/* Mobile-only logo */}
@@ -226,17 +226,17 @@ export default function CarrierLoginPage() {
             </Link>
           </div>
 
-          <h2 className="font-serif text-2xl text-gray-900">Carrier Sign In</h2>
+          <h2 className="font-serif text-2xl text-[#0A2540]">Carrier Sign In</h2>
           <p className="text-gray-500 text-sm mt-1.5 mb-8">Access your loads, payments, and performance</p>
 
           {error && (
-            <div className="mb-5 px-4 py-3 rounded-xl text-[13px] text-center leading-relaxed bg-red-50 border border-red-200 text-red-600">
+            <div className="mb-5 px-4 py-3 rounded-xl text-[13px] text-center leading-relaxed bg-[#F6E3E3] border border-[#9B2C2C]/30 text-[#9B2C2C]">
               {error}
             </div>
           )}
 
           {otpSuccess && !error && (
-            <div className="mb-5 px-4 py-3 rounded-xl text-[13px] text-center leading-relaxed bg-green-50 border border-green-200 text-green-600">
+            <div className="mb-5 px-4 py-3 rounded-xl text-[13px] text-center leading-relaxed bg-[#E6F0E9] border border-[#2F7A4F]/30 text-[#2F7A4F]">
               {otpSuccess}
             </div>
           )}
@@ -267,12 +267,12 @@ export default function CarrierLoginPage() {
               </div>
               <div className="flex items-center justify-between mb-6">
                 <label className="flex items-center gap-2 text-[13px] text-gray-500 cursor-pointer">
-                  <input type="checkbox" className="accent-[#C9A84C]" style={{ width: 15, height: 15 }} /> Remember me
+                  <input type="checkbox" className="accent-[#BA7517]" style={{ width: 15, height: 15 }} /> Remember me
                 </label>
-                <Link href="/carrier/forgot-password" className="text-[13px] text-[#C9A84C] font-medium hover:opacity-80 transition-opacity">Forgot password?</Link>
+                <Link href="/carrier/forgot-password" className="text-[13px] text-[#BA7517] font-medium hover:opacity-80 transition-opacity">Forgot password?</Link>
               </div>
               <button type="submit" disabled={isLoading}
-                className="w-full py-3.5 text-[15px] font-semibold rounded-xl border-none cursor-pointer transition-all duration-200 bg-gradient-to-r from-[#C9A84C] to-[#d4b85e] text-[#0F1117] shadow-[0_4px_12px_rgba(201,168,76,0.25)] hover:-translate-y-0.5 hover:shadow-[0_6px_20px_rgba(201,168,76,0.35)] disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:translate-y-0">
+                className="w-full py-3.5 text-[15px] font-semibold rounded-xl border-none cursor-pointer transition-all duration-200 bg-[#BA7517] text-[#FBF7F0] shadow-[0_4px_12px_rgba(186,117,23,0.25)] hover:-translate-y-0.5 hover:shadow-[0_6px_20px_rgba(186,117,23,0.35)] disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:translate-y-0">
                 {isLoading ? "Signing in..." : "Sign In"}
               </button>
             </form>
@@ -288,11 +288,11 @@ export default function CarrierLoginPage() {
                 <p className="text-[11px] text-gray-400 mt-2 text-center">Check your email for the verification code</p>
               </div>
               <button type="submit" disabled={isLoading || otpCode.length < 6}
-                className="w-full py-3.5 text-[15px] font-semibold rounded-xl border-none cursor-pointer transition-all duration-200 bg-gradient-to-r from-[#C9A84C] to-[#d4b85e] text-[#0F1117] shadow-[0_4px_12px_rgba(201,168,76,0.25)] hover:-translate-y-0.5 hover:shadow-[0_6px_20px_rgba(201,168,76,0.35)] disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:translate-y-0">
+                className="w-full py-3.5 text-[15px] font-semibold rounded-xl border-none cursor-pointer transition-all duration-200 bg-[#BA7517] text-[#FBF7F0] shadow-[0_4px_12px_rgba(186,117,23,0.25)] hover:-translate-y-0.5 hover:shadow-[0_6px_20px_rgba(186,117,23,0.35)] disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:translate-y-0">
                 {isLoading ? "Verifying..." : "Verify Code"}
               </button>
               <button type="button" onClick={() => { setOtpStep(false); setOtpCode(""); setOtpSuccess(""); }}
-                className="w-full mt-3 py-2.5 text-[13px] font-medium text-gray-500 bg-transparent border border-gray-200 rounded-xl cursor-pointer hover:border-[#C9A84C] transition-all">
+                className="w-full mt-3 py-2.5 text-[13px] font-medium text-gray-500 bg-transparent border border-[#EFE6D3] rounded-xl cursor-pointer hover:border-[#C5A572] transition-all">
                 Back to Sign In
               </button>
             </form>
@@ -305,7 +305,7 @@ export default function CarrierLoginPage() {
           </div>
 
           <Link href="/onboarding"
-            className="flex items-center justify-center gap-2 w-full py-3 text-sm font-medium text-[#C9A84C] rounded-xl border border-[#C9A84C]/30 transition-all hover:bg-[#C9A84C]/5 no-underline">
+            className="flex items-center justify-center gap-2 w-full py-3 text-sm font-medium text-[#BA7517] rounded-xl border border-[#C5A572]/30 transition-all hover:bg-[#BA7517]/5 no-underline">
             <Truck size={16} /> Register as New Carrier
           </Link>
 
@@ -315,11 +315,11 @@ export default function CarrierLoginPage() {
           </div>
 
           <div className="flex items-center justify-center gap-4">
-            <Link href="/shipper/login" className="text-xs font-medium text-[#C9A84C] hover:opacity-80 transition-opacity no-underline">
+            <Link href="/shipper/login" className="text-xs font-medium text-[#BA7517] hover:opacity-80 transition-opacity no-underline">
               Shipper Login
             </Link>
             <span className="text-gray-300">&middot;</span>
-            <Link href="/auth/login" className="text-xs font-medium text-[#C9A84C] hover:opacity-80 transition-opacity no-underline">
+            <Link href="/auth/login" className="text-xs font-medium text-[#BA7517] hover:opacity-80 transition-opacity no-underline">
               Employee Login
             </Link>
           </div>

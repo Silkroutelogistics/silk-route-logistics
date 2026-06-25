@@ -1,6 +1,6 @@
 export default function ShipperDashboardLoading() {
   return (
-    <div className="flex-1 p-6 space-y-6 animate-pulse bg-[#FAFBFC]">
+    <div className="flex-1 p-6 space-y-6 animate-pulse bg-[#FBF7F0]">
       {/* Header skeleton */}
       <div className="flex items-center justify-between">
         <div>
@@ -13,7 +13,7 @@ export default function ShipperDashboardLoading() {
       {/* Stats cards skeleton */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {[...Array(4)].map((_, i) => (
-          <div key={i} className="bg-white border border-gray-100 rounded-xl p-5 shadow-sm">
+          <div key={i} className="bg-white border border-[#EFE6D3] rounded-xl p-5 shadow-sm">
             <div className="h-4 w-24 bg-gray-100 rounded mb-3" />
             <div className="h-8 w-20 bg-gray-100 rounded" />
           </div>
@@ -21,7 +21,7 @@ export default function ShipperDashboardLoading() {
       </div>
 
       {/* Table skeleton */}
-      <div className="bg-white border border-gray-100 rounded-xl p-5 shadow-sm">
+      <div className="bg-white border border-[#EFE6D3] rounded-xl p-5 shadow-sm">
         <div className="h-5 w-40 bg-gray-100 rounded mb-4" />
         <div className="space-y-3">
           {[...Array(5)].map((_, i) => (

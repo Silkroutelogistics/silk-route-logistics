@@ -81,7 +81,7 @@ export default function MyLoadsPage() {
   return (
     <div>
       <div className="mb-6">
-        <h1 className="font-serif text-2xl text-[#0F1117] mb-1">My Loads</h1>
+        <h1 className="font-serif text-2xl text-[#0A2540] mb-1">My Loads</h1>
         <p className="text-[13px] text-gray-500">Manage your assigned loads and update shipment status</p>
       </div>
 
@@ -93,7 +93,7 @@ export default function MyLoadsPage() {
               key={f}
               onClick={() => { setActiveFilter(f); setPage(1); }}
               className={`px-3 py-1.5 rounded-full text-[11px] font-medium ${
-                f === activeFilter ? "bg-[#0F1117] text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                f === activeFilter ? "bg-[#0A2540] text-[#FBF7F0]" : "bg-gray-100 text-gray-600 hover:bg-gray-200"
               }`}
             >{f === "All" ? "All" : f.replace(/_/g, " ")}</button>
           ))}
@@ -118,12 +118,12 @@ export default function MyLoadsPage() {
                 hover
                 padding="p-4"
                 onClick={() => setSelectedId(load.id)}
-                className={selectedId === load.id ? "!border-[#C9A84C]" : ""}
+                className={selectedId === load.id ? "!border-[#C5A572]" : ""}
               >
                 <div className="flex justify-between items-center">
                   <div>
                     <div className="flex items-center gap-2 mb-1">
-                      <span className="font-mono text-xs font-bold text-[#0F1117]">{load.referenceNumber}</span>
+                      <span className="font-mono text-xs font-bold text-[#0A2540]">{load.referenceNumber}</span>
                       <CarrierBadge status={load.status} />
                     </div>
                     <div className="text-xs text-gray-600">
@@ -133,7 +133,7 @@ export default function MyLoadsPage() {
                       {load.equipmentType} &middot; Pick: {new Date(load.pickupDate).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
                     </div>
                   </div>
-                  <span className="text-sm font-bold text-[#0F1117]">${(load.carrierRate || load.rate || 0).toLocaleString()}</span>
+                  <span className="text-sm font-bold text-[#0A2540]">${(load.carrierRate || load.rate || 0).toLocaleString()}</span>
                 </div>
               </CarrierCard>
             ))
@@ -154,7 +154,7 @@ export default function MyLoadsPage() {
               {/* Load info */}
               <CarrierCard padding="p-5">
                 <div className="flex justify-between items-start mb-4">
-                  <h3 className="text-sm font-bold text-[#0F1117]">{detail.referenceNumber}</h3>
+                  <h3 className="text-sm font-bold text-[#0A2540]">{detail.referenceNumber}</h3>
                   <CarrierBadge status={detail.status} size="md" />
                 </div>
                 <div className="space-y-2 text-xs">
@@ -198,7 +198,7 @@ export default function MyLoadsPage() {
               {/* Status Update */}
               {nextStatuses.length > 0 && (
                 <CarrierCard padding="p-4">
-                  <h4 className="text-xs font-bold text-[#0F1117] mb-3 flex items-center gap-1.5">
+                  <h4 className="text-xs font-bold text-[#0A2540] mb-3 flex items-center gap-1.5">
                     <CheckCircle size={14} className="text-[#BA7517]" /> Update Status
                   </h4>
                   <div className="flex gap-2">
@@ -207,14 +207,14 @@ export default function MyLoadsPage() {
                         key={ns}
                         onClick={() => statusMutation.mutate({ loadId: selectedId, status: ns })}
                         disabled={statusMutation.isPending}
-                        className="px-4 py-2 bg-gradient-to-br from-[#C9A84C] to-[#A88535] text-[#0A2540] text-xs font-semibold rounded-md disabled:opacity-60"
+                        className="px-4 py-2 bg-[#BA7517] text-[#FBF7F0] text-xs font-semibold rounded-md disabled:opacity-60"
                       >
                         {ns.replace(/_/g, " ")}
                       </button>
                     ))}
                   </div>
                   {statusMutation.isError && (
-                    <p className="text-xs text-red-500 mt-2">{(statusMutation.error as any)?.response?.data?.error || "Update failed"}</p>
+                    <p className="text-xs text-[#9B2C2C] mt-2">{(statusMutation.error as any)?.response?.data?.error || "Update failed"}</p>
                   )}
                 </CarrierCard>
               )}
@@ -223,16 +223,16 @@ export default function MyLoadsPage() {
               {["DELIVERED", "AT_DELIVERY"].includes(detail.status) && (
                 <CarrierCard padding="p-4" className="mt-3">
                   <h4 className="text-xs font-semibold text-gray-700 mb-3 flex items-center gap-1.5">
-                    <Camera size={14} className="text-green-600" /> Upload Proof of Delivery
+                    <Camera size={14} className="text-[#2F7A4F]" /> Upload Proof of Delivery
                   </h4>
                   {detail.podUrl ? (
-                    <div className="flex items-center gap-2 p-3 bg-green-50 rounded-lg">
-                      <CheckCircle size={16} className="text-green-600" />
-                      <span className="text-xs text-green-700 font-medium">POD uploaded</span>
-                      <a href={detail.podUrl} target="_blank" rel="noreferrer" className="text-xs text-blue-600 underline ml-auto">View</a>
+                    <div className="flex items-center gap-2 p-3 bg-[#E6F0E9] rounded-lg">
+                      <CheckCircle size={16} className="text-[#2F7A4F]" />
+                      <span className="text-xs text-[#2F7A4F] font-medium">POD uploaded</span>
+                      <a href={detail.podUrl} target="_blank" rel="noreferrer" className="text-xs text-[#2A5B8B] underline ml-auto">View</a>
                     </div>
                   ) : (
-                    <label className="flex flex-col items-center justify-center gap-2 p-6 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-gray-400 hover:bg-gray-50 transition">
+                    <label className="flex flex-col items-center justify-center gap-2 p-6 border-2 border-dashed border-[#EFE6D3] rounded-lg cursor-pointer hover:border-[#C5A572] hover:bg-gray-50 transition">
                       <Upload size={24} className="text-gray-700" />
                       <span className="text-xs text-gray-500">{podUploadMutation.isPending ? "Uploading..." : "Tap to upload photo or PDF"}</span>
                       <span className="text-[10px] text-gray-700">JPG, PNG, or PDF — max 10MB</span>
@@ -249,7 +249,7 @@ export default function MyLoadsPage() {
                     </label>
                   )}
                   {podUploadMutation.isError && (
-                    <p className="text-xs text-red-500 mt-2 flex items-center gap-1">
+                    <p className="text-xs text-[#9B2C2C] mt-2 flex items-center gap-1">
                       <AlertCircle size={12} /> Upload failed. Please try again.
                     </p>
                   )}
@@ -259,34 +259,34 @@ export default function MyLoadsPage() {
               {/* Check Call */}
               {!["DELIVERED", "POD_RECEIVED", "COMPLETED", "CANCELLED"].includes(detail.status) && (
                 <CarrierCard padding="p-4">
-                  <h4 className="text-xs font-bold text-[#0F1117] mb-3 flex items-center gap-1.5">
-                    <Clock size={14} className="text-amber-700" /> Submit Check Call
+                  <h4 className="text-xs font-bold text-[#0A2540] mb-3 flex items-center gap-1.5">
+                    <Clock size={14} className="text-[#B07A1A]" /> Submit Check Call
                   </h4>
                   <div className="grid grid-cols-2 gap-2 mb-2">
                     <input
                       placeholder="City"
                       value={checkCallForm.city}
                       onChange={(e) => setCheckCallForm({ ...checkCallForm, city: e.target.value })}
-                      className="px-3 py-2 border border-gray-200 rounded text-xs focus:border-[#C9A84C] focus:outline-none"
+                      className="px-3 py-2 border border-[#EFE6D3] rounded text-xs focus:border-[#BA7517] focus:ring-[#BA7517]/15 focus:outline-none"
                     />
                     <input
                       placeholder="State"
                       value={checkCallForm.state}
                       onChange={(e) => setCheckCallForm({ ...checkCallForm, state: e.target.value })}
-                      className="px-3 py-2 border border-gray-200 rounded text-xs focus:border-[#C9A84C] focus:outline-none"
+                      className="px-3 py-2 border border-[#EFE6D3] rounded text-xs focus:border-[#BA7517] focus:ring-[#BA7517]/15 focus:outline-none"
                     />
                   </div>
                   <textarea
                     placeholder="Notes (optional)"
                     value={checkCallForm.notes}
                     onChange={(e) => setCheckCallForm({ ...checkCallForm, notes: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-200 rounded text-xs mb-2 focus:border-[#C9A84C] focus:outline-none resize-none"
+                    className="w-full px-3 py-2 border border-[#EFE6D3] rounded text-xs mb-2 focus:border-[#BA7517] focus:ring-[#BA7517]/15 focus:outline-none resize-none"
                     rows={2}
                   />
                   <button
                     onClick={() => checkCallMutation.mutate({ loadId: selectedId, data: checkCallForm })}
                     disabled={checkCallMutation.isPending}
-                    className="px-4 py-2 bg-[#0F1117] text-white text-xs font-semibold rounded-md disabled:opacity-60"
+                    className="px-4 py-2 bg-[#BA7517] text-[#FBF7F0] text-xs font-semibold rounded-md disabled:opacity-60"
                   >
                     {checkCallMutation.isPending ? "Submitting..." : "Submit Check Call"}
                   </button>

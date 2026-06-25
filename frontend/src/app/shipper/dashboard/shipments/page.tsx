@@ -51,7 +51,7 @@ export default function ShipperShipmentsPage() {
     <div>
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 className="font-serif text-2xl text-[#0F1117] mb-1">Freight Shipments</h1>
+          <h1 className="font-serif text-2xl text-[#0A2540] mb-1">Freight Shipments</h1>
           <p className="text-[13px] text-gray-500">Manage and monitor all your truckload and LTL shipments</p>
         </div>
         <div className="flex gap-2">
@@ -59,7 +59,7 @@ export default function ShipperShipmentsPage() {
             className="inline-flex items-center gap-1.5 px-4 py-2 text-gray-500 text-[11px] font-semibold uppercase tracking-wider hover:text-[#BA7517]">
             <Download size={14} /> Export CSV
           </button>
-          <Link href="/shipper/dashboard/quote" className="inline-flex items-center gap-1.5 px-4 py-2 bg-gradient-to-br from-[#C9A84C] to-[#A88535] text-[#0F1117] text-[11px] font-semibold uppercase tracking-[2px] rounded shadow-[0_4px_20px_rgba(201,168,76,0.3)]">
+          <Link href="/shipper/dashboard/quote" className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#BA7517] text-[#FBF7F0] text-[11px] font-semibold uppercase tracking-[2px] rounded shadow-[0_4px_20px_rgba(186,117,23,0.3)]">
             <Plus size={14} /> New Shipment
           </Link>
         </div>
@@ -73,16 +73,16 @@ export default function ShipperShipmentsPage() {
               key={f}
               onClick={() => { setActiveFilter(f); setPage(1); }}
               className={`px-3.5 py-1.5 rounded-full text-xs font-medium ${
-                f === activeFilter ? "bg-[#0F1117] text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                f === activeFilter ? "bg-[#0A2540] text-[#FBF7F0]" : "bg-gray-100 text-gray-600 hover:bg-gray-200"
               }`}
             >{f}</button>
           ))}
           <div className="flex-1" />
-          <div className="flex items-center gap-1.5 px-3 py-1.5 border border-gray-200 rounded-md">
+          <div className="flex items-center gap-1.5 px-3 py-1.5 border border-[#EFE6D3] rounded-md focus-within:border-[#BA7517] focus-within:ring-1 focus-within:ring-[#BA7517]/15">
             <Search size={14} className="text-gray-700" />
             <input
               placeholder="Search by ID, route, carrier..."
-              className="border-none outline-none text-xs w-[180px]"
+              className="border-none outline-none text-xs w-[180px] bg-transparent"
               value={search}
               onChange={(e) => { setSearch(e.target.value); setPage(1); }}
             />
@@ -104,7 +104,7 @@ export default function ShipperShipmentsPage() {
             <tbody>
               {isLoading ? (
                 [...Array(5)].map((_, i) => (
-                  <tr key={i} className="border-b border-gray-100">
+                  <tr key={i} className="border-b border-[#F5EEE0]">
                     {[...Array(10)].map((_, j) => (
                       <td key={j} className="px-3.5 py-3"><div className="h-4 bg-gray-200 rounded animate-pulse w-16" /></td>
                     ))}
@@ -114,8 +114,8 @@ export default function ShipperShipmentsPage() {
                 <tr><td colSpan={10} className="px-4 py-12 text-center text-sm text-gray-700">No shipments found</td></tr>
               ) : (
                 shipments.map((s) => (
-                  <tr key={s.id} className="border-b border-gray-100 hover:bg-gray-50 cursor-pointer" onClick={() => setSelected(s)}>
-                    <td className="px-3.5 py-3 font-semibold text-[#0F1117] font-mono text-[11px]">{s.id}</td>
+                  <tr key={s.id} className="border-b border-[#F5EEE0] hover:bg-gray-50 cursor-pointer" onClick={() => setSelected(s)}>
+                    <td className="px-3.5 py-3 font-semibold text-[#0A2540] font-mono text-[11px]">{s.id}</td>
                     <td className="px-3.5 py-3">
                       <div className="text-xs text-gray-700">{s.origin}</div>
                       <div className="text-[11px] text-gray-700">&rarr; {s.dest}</div>
@@ -124,13 +124,13 @@ export default function ShipperShipmentsPage() {
                     <td className="px-3.5 py-3 text-gray-600 text-xs">{s.carrier}</td>
                     <td className="px-3.5 py-3 text-gray-500 text-xs">{s.equipment}</td>
                     <td className="px-3.5 py-3 text-gray-500 text-xs">{s.weight}</td>
-                    <td className="px-3.5 py-3 font-semibold text-[#0F1117]">${s.rate.toLocaleString()}</td>
+                    <td className="px-3.5 py-3 font-semibold text-[#0A2540]">${s.rate.toLocaleString()}</td>
                     <td className="px-3.5 py-3 text-gray-500 text-xs">{s.pickDate}</td>
                     <td className="px-3.5 py-3 text-gray-500 text-xs">{s.delDate}</td>
                     <td className="px-3.5 py-3 min-w-[100px]">
                       <div className="bg-gray-200 rounded h-1.5 overflow-hidden">
                         <div className={`h-full rounded transition-all duration-500 ${
-                          s.progress === 100 ? "bg-emerald-500" : s.status === "At Risk" ? "bg-red-500" : "bg-blue-500"
+                          s.progress === 100 ? "bg-[#2F7A4F]" : s.status === "At Risk" ? "bg-[#9B2C2C]" : "bg-[#2A5B8B]"
                         }`} style={{ width: `${s.progress}%` }} />
                       </div>
                       <div className="text-[10px] text-gray-700 mt-1">{s.progress}%</div>
@@ -143,7 +143,7 @@ export default function ShipperShipmentsPage() {
         </div>
         {/* Pagination */}
         {data && data.totalPages > 1 && (
-          <div className="px-4 py-3 border-t border-gray-100 flex justify-between items-center text-xs text-gray-500">
+          <div className="px-4 py-3 border-t border-[#F5EEE0] flex justify-between items-center text-xs text-gray-500">
             <span>Showing {shipments.length} of {data.total} shipments</span>
             <div className="flex gap-1">
               {page > 1 && <button onClick={() => setPage(page - 1)} className="px-3 py-1 rounded bg-gray-100 hover:bg-gray-200">Prev</button>}

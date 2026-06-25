@@ -1,35 +1,49 @@
 "use client";
 
-const colors: Record<string, { bg: string; text: string; dot: string }> = {
+// Canonical SRL status palette (§2.1 / skill tokens) — the rainbow of
+// Tailwind hues was retired so badges read in-brand: success #2F7A4F,
+// warning #B07A1A, danger #9B2C2C, info #2A5B8B, plus navy/gold for tiers.
+const TONE = {
+  success: { bg: "bg-[#E6F0E9]", text: "text-[#2F7A4F]", dot: "bg-[#2F7A4F]" },
+  warning: { bg: "bg-[#FBEFD4]", text: "text-[#B07A1A]", dot: "bg-[#B07A1A]" },
+  danger:  { bg: "bg-[#F6E3E3]", text: "text-[#9B2C2C]", dot: "bg-[#9B2C2C]" },
+  info:    { bg: "bg-[#E2EAF2]", text: "text-[#2A5B8B]", dot: "bg-[#2A5B8B]" },
+  gold:    { bg: "bg-[#FAEEDA]", text: "text-[#BA7517]", dot: "bg-[#C5A572]" },
+  navy:    { bg: "bg-[#E2EAF2]", text: "text-[#0A2540]", dot: "bg-[#C5A572]" },
+  silver:  { bg: "bg-[#E2EAF2]", text: "text-[#5B7EA3]", dot: "bg-[#8AA5C0]" },
+  neutral: { bg: "bg-[#F5EEE0]", text: "text-[#3A4A5F]", dot: "bg-[#6B7685]" },
+} as const;
+
+const colors: Record<string, (typeof TONE)[keyof typeof TONE]> = {
   // Load statuses
-  POSTED: { bg: "bg-blue-500/10", text: "text-blue-600", dot: "bg-blue-500" },
-  BOOKED: { bg: "bg-violet-500/10", text: "text-violet-600", dot: "bg-violet-500" },
-  DISPATCHED: { bg: "bg-orange-500/10", text: "text-orange-600", dot: "bg-orange-500" },
-  AT_PICKUP: { bg: "bg-amber-500/10", text: "text-amber-600", dot: "bg-amber-500" },
-  LOADED: { bg: "bg-yellow-500/10", text: "text-yellow-700", dot: "bg-yellow-500" },
-  IN_TRANSIT: { bg: "bg-cyan-500/10", text: "text-cyan-600", dot: "bg-cyan-500" },
-  AT_DELIVERY: { bg: "bg-teal-500/10", text: "text-teal-600", dot: "bg-teal-500" },
-  DELIVERED: { bg: "bg-emerald-500/10", text: "text-emerald-600", dot: "bg-emerald-500" },
-  POD_RECEIVED: { bg: "bg-emerald-500/10", text: "text-emerald-600", dot: "bg-emerald-500" },
-  COMPLETED: { bg: "bg-emerald-500/10", text: "text-emerald-600", dot: "bg-emerald-500" },
-  CANCELLED: { bg: "bg-red-500/10", text: "text-red-600", dot: "bg-red-500" },
+  POSTED: TONE.info,
+  BOOKED: TONE.info,
+  DISPATCHED: TONE.info,
+  AT_PICKUP: TONE.warning,
+  LOADED: TONE.warning,
+  IN_TRANSIT: TONE.info,
+  AT_DELIVERY: TONE.info,
+  DELIVERED: TONE.success,
+  POD_RECEIVED: TONE.success,
+  COMPLETED: TONE.success,
+  CANCELLED: TONE.danger,
   // Payment statuses
-  PAID: { bg: "bg-emerald-500/10", text: "text-emerald-600", dot: "bg-emerald-500" },
-  PENDING: { bg: "bg-amber-500/10", text: "text-amber-600", dot: "bg-amber-500" },
-  APPROVED: { bg: "bg-blue-500/10", text: "text-blue-600", dot: "bg-blue-500" },
-  PROCESSING: { bg: "bg-indigo-500/10", text: "text-indigo-600", dot: "bg-indigo-500" },
-  SCHEDULED: { bg: "bg-purple-500/10", text: "text-purple-600", dot: "bg-purple-500" },
+  PAID: TONE.success,
+  PENDING: TONE.warning,
+  APPROVED: TONE.info,
+  PROCESSING: TONE.info,
+  SCHEDULED: TONE.warning,
   // Compliance
-  VALID: { bg: "bg-emerald-500/10", text: "text-emerald-600", dot: "bg-emerald-500" },
-  EXPIRING_SOON: { bg: "bg-amber-500/10", text: "text-amber-600", dot: "bg-amber-500" },
-  EXPIRED: { bg: "bg-red-500/10", text: "text-red-600", dot: "bg-red-500" },
+  VALID: TONE.success,
+  EXPIRING_SOON: TONE.warning,
+  EXPIRED: TONE.danger,
   // Caravan Partner Program tiers (v3.7.a — Silver/Gold/Platinum only)
-  PLATINUM: { bg: "bg-violet-500/10", text: "text-violet-600", dot: "bg-violet-500" },
-  GOLD: { bg: "bg-amber-500/10", text: "text-amber-600", dot: "bg-amber-500" },
-  SILVER: { bg: "bg-gray-500/10", text: "text-gray-600", dot: "bg-gray-500" },
+  PLATINUM: TONE.navy,
+  GOLD: TONE.gold,
+  SILVER: TONE.silver,
 };
 
-const fallback = { bg: "bg-gray-500/10", text: "text-gray-600", dot: "bg-gray-500" };
+const fallback = TONE.neutral;
 
 export function CarrierBadge({ status, size = "sm" }: { status: string; size?: "sm" | "md" }) {
   const c = colors[status] || fallback;

@@ -23,15 +23,16 @@
   --srl-text-secondary:#5C5549;
   --srl-text-muted:    #8C8478;
 
-  --srl-gold:          #C9A84C;
-  --srl-gold-hover:    #B8982F;
-  --srl-gold-muted:    #F5EDD6;
-  --srl-gold-text:     #8B7428;
+  /* Canonical SRL gold — structural #C5A572, emphasis #BA7517 (designer handoff 2026-04-22) */
+  --srl-gold:          #C5A572;
+  --srl-gold-hover:    #BA7517;
+  --srl-gold-muted:    #FAEEDA;
+  --srl-gold-text:     #BA7517;
 
-  --srl-success:       #2D7A4F;
-  --srl-warning:       #B8860B;
-  --srl-danger:        #C93B3B;
-  --srl-info:          #2B6CB0;
+  --srl-success:       #2F7A4F;
+  --srl-warning:       #B07A1A;
+  --srl-danger:        #9B2C2C;
+  --srl-info:          #2A5B8B;
 
   --srl-shadow-sm:     0 1px 3px rgba(26,23,20,0.06), 0 1px 2px rgba(26,23,20,0.04);
   --srl-shadow-md:     0 4px 6px rgba(26,23,20,0.06), 0 2px 4px rgba(26,23,20,0.04);
@@ -55,10 +56,10 @@
   --srl-text-secondary:#9BA1B0;
   --srl-text-muted:    #5D6379;
 
-  --srl-gold:          #C9A84C;
-  --srl-gold-hover:    #D4B85E;
-  --srl-gold-muted:    rgba(201,168,76,0.15);
-  --srl-gold-text:     #E8D48B;
+  --srl-gold:          #C5A572;
+  --srl-gold-hover:    #DAC39C;
+  --srl-gold-muted:    rgba(197,165,114,0.15);
+  --srl-gold-text:     #DAC39C;
 
   --srl-success:       #34D399;
   --srl-warning:       #FBBF24;
@@ -93,7 +94,7 @@ html {
 }
 .srl-input:focus {
   border-color: var(--srl-gold);
-  box-shadow: 0 0 0 3px rgba(201,168,76,0.1);
+  box-shadow: 0 0 0 3px rgba(197,165,114,0.40);
 }
 
 /* ═══════════════════════════════════════════════════
@@ -178,7 +179,7 @@ main, aside, .bg-white\/5, .bg-navy, .text-white, .text-slate-400, .text-slate-5
 [data-mode="light"] .bg-gold,
 [data-mode="light"] .bg-\[\#C9A84C\] {
   background: var(--srl-gold) !important;
-  color: #FFFFFF !important;
+  color: #FBF7F0 !important;
 }
 
 /* Page background */
@@ -347,7 +348,7 @@ input:-webkit-autofill:focus {
 [data-mode="dark"] select option:checked,
 [data-mode="dark"] select option:hover {
   background-color: #1C1F2B !important;
-  color: #C9A84C !important;
+  color: #C5A572 !important;
 }
 
 /* Firefox-specific select styling */
@@ -368,7 +369,10 @@ input:-webkit-autofill:focus {
   --color-charcoal: var(--srl-bg-surface);
   --color-charcoal-light: var(--srl-border-strong);
   --color-gold: var(--srl-gold);
+  --color-gold-dark: #BA7517;
   --color-gold-light: var(--srl-gold-hover);
+  --color-cream: #FBF7F0;
+  --color-cream-2: #F5EEE0;
   --color-warm-gray: #F7F6F3;
   --color-warm-gray-dark: #EEECEA;
   --color-platinum: #E5E7EB;
@@ -466,13 +470,13 @@ input:-webkit-autofill:focus {
 .pac-container .pac-item .pac-item-query {
   font-size: 0.875rem;
   font-weight: 500;
-  color: #0F1117;
+  color: #0A2540;
   padding-right: 4px;
 }
 
 .pac-container .pac-item .pac-matched {
   font-weight: 600;
-  color: #C9A84C;
+  color: #BA7517;
 }
 
 .pac-container::after {
@@ -485,7 +489,7 @@ input:-webkit-autofill:focus {
 
 /* Visible focus ring for keyboard navigation only */
 *:focus-visible {
-  outline: 2px solid var(--srl-gold, #C9A84C);
+  outline: 2px solid var(--srl-gold, #C5A572);
   outline-offset: 2px;
 }
 
@@ -512,8 +516,8 @@ input:-webkit-autofill:focus {
   margin: 0;
   overflow: visible;
   clip: auto;
-  background: var(--srl-gold, #C9A84C);
-  color: #0f172a;
+  background: var(--srl-gold, #C5A572);
+  color: #0A2540;
   z-index: 9999;
   font-weight: 600;
 }

@@ -137,10 +137,10 @@ export default function ShipperTrackingPage() {
     <div>
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="font-serif text-2xl text-[#0F1117]">Live Freight Tracking</h1>
+          <h1 className="font-serif text-2xl text-[#0A2540]">Live Freight Tracking</h1>
           <p className="text-xs text-gray-500 mt-1">Real-time shipment visibility &amp; status updates</p>
         </div>
-        <span className="flex items-center gap-1.5 px-2.5 py-1 bg-emerald-50 border border-emerald-200 rounded-full text-xs text-emerald-600">
+        <span className="flex items-center gap-1.5 px-2.5 py-1 bg-[#E6F0E9] border border-[#2F7A4F]/30 rounded-full text-xs text-[#2F7A4F]">
           <Radio className="w-3 h-3" /> Live
         </span>
       </div>
@@ -152,38 +152,38 @@ export default function ShipperTrackingPage() {
             <Package className="w-4 h-4 text-[#BA7517]" />
             <span className="text-[11px] text-gray-500 uppercase tracking-wide">Active</span>
           </div>
-          <p className="text-xl font-bold text-[#0F1117]">{isLoading ? "—" : allActive.length}</p>
+          <p className="text-xl font-bold text-[#0A2540]">{isLoading ? "—" : allActive.length}</p>
         </ShipperCard>
         <ShipperCard padding="p-4">
           <div className="flex items-center gap-2 mb-1">
-            <Truck className="w-4 h-4 text-blue-500" />
+            <Truck className="w-4 h-4 text-[#2A5B8B]" />
             <span className="text-[11px] text-gray-500 uppercase tracking-wide">In Transit</span>
           </div>
-          <p className="text-xl font-bold text-[#0F1117]">{isLoading ? "—" : allActive.filter(s => s.status === "IN_TRANSIT").length}</p>
+          <p className="text-xl font-bold text-[#0A2540]">{isLoading ? "—" : allActive.filter(s => s.status === "IN_TRANSIT").length}</p>
         </ShipperCard>
         <ShipperCard padding="p-4">
           <div className="flex items-center gap-2 mb-1">
-            <CheckCircle2 className="w-4 h-4 text-emerald-700" />
+            <CheckCircle2 className="w-4 h-4 text-[#2F7A4F]" />
             <span className="text-[11px] text-gray-500 uppercase tracking-wide">On Schedule</span>
           </div>
-          <p className="text-xl font-bold text-[#0F1117]">{isLoading ? "—" : allActive.filter(s => s.riskLevel === "GREEN").length}</p>
+          <p className="text-xl font-bold text-[#0A2540]">{isLoading ? "—" : allActive.filter(s => s.riskLevel === "GREEN").length}</p>
         </ShipperCard>
         <ShipperCard padding="p-4">
           <div className="flex items-center gap-2 mb-1">
-            <Bell className="w-4 h-4 text-amber-700" />
+            <Bell className="w-4 h-4 text-[#B07A1A]" />
             <span className="text-[11px] text-gray-500 uppercase tracking-wide">At Risk</span>
           </div>
-          <p className="text-xl font-bold text-[#0F1117]">{isLoading ? "—" : atRisk.length}</p>
+          <p className="text-xl font-bold text-[#0A2540]">{isLoading ? "—" : atRisk.length}</p>
         </ShipperCard>
       </div>
 
       {/* Tabs + Search + Filters */}
       <div className="flex items-center gap-3 mb-4 flex-wrap">
         <div className="flex bg-gray-100 rounded-lg p-0.5">
-          <button onClick={() => { setTab("active"); setSearch(""); }} className={`px-3 py-1.5 text-xs font-medium rounded-md transition ${tab === "active" ? "bg-white text-[#0F1117] shadow-sm" : "text-gray-500 hover:text-gray-700"}`}>
+          <button onClick={() => { setTab("active"); setSearch(""); }} className={`px-3 py-1.5 text-xs font-medium rounded-md transition ${tab === "active" ? "bg-white text-[#0A2540] shadow-sm" : "text-gray-500 hover:text-gray-700"}`}>
             <Radio className="w-3 h-3 inline mr-1" /> Active
           </button>
-          <button onClick={() => { setTab("history"); setSearch(""); }} className={`px-3 py-1.5 text-xs font-medium rounded-md transition ${tab === "history" ? "bg-white text-[#0F1117] shadow-sm" : "text-gray-500 hover:text-gray-700"}`}>
+          <button onClick={() => { setTab("history"); setSearch(""); }} className={`px-3 py-1.5 text-xs font-medium rounded-md transition ${tab === "history" ? "bg-white text-[#0A2540] shadow-sm" : "text-gray-500 hover:text-gray-700"}`}>
             <History className="w-3 h-3 inline mr-1" /> History
           </button>
         </div>
@@ -194,7 +194,7 @@ export default function ShipperTrackingPage() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search by ref, origin, destination..."
-            className="w-full pl-8 pr-3 py-1.5 bg-white border border-gray-200 rounded-lg text-xs text-[#0F1117] placeholder:text-gray-400 focus:outline-none focus:border-[#C9A84C]/50"
+            className="w-full pl-8 pr-3 py-1.5 bg-white border border-[#EFE6D3] rounded-lg text-xs text-[#0A2540] placeholder:text-gray-400 focus:outline-none focus:border-[#BA7517] focus:ring-[#BA7517]/15"
           />
         </div>
 
@@ -203,7 +203,7 @@ export default function ShipperTrackingPage() {
             {(["ALL", "GREEN", "AMBER", "RED"] as RiskFilter[]).map((rf) => (
               <button key={rf} onClick={() => setRiskFilter(rf)} className={`px-2 py-1 text-[10px] font-medium rounded transition ${
                 riskFilter === rf
-                  ? rf === "RED" ? "bg-red-100 text-red-700" : rf === "AMBER" ? "bg-amber-100 text-amber-700" : rf === "GREEN" ? "bg-emerald-100 text-emerald-700" : "bg-gray-200 text-gray-700"
+                  ? rf === "RED" ? "bg-[#F6E3E3] text-[#9B2C2C]" : rf === "AMBER" ? "bg-[#FBEFD4] text-[#B07A1A]" : rf === "GREEN" ? "bg-[#E6F0E9] text-[#2F7A4F]" : "bg-gray-200 text-gray-700"
                   : "bg-gray-50 text-gray-400 hover:bg-gray-100"
               }`}>
                 {rf === "ALL" ? "All" : rf}
@@ -215,13 +215,13 @@ export default function ShipperTrackingPage() {
 
       {/* At-Risk Alerts Banner */}
       {tab === "active" && atRisk.length > 0 && riskFilter !== "GREEN" && (
-        <div className="mb-5 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+        <div className="mb-5 p-3 bg-[#FBEFD4] border border-[#B07A1A]/30 rounded-lg">
           <div className="flex items-center gap-2 mb-1.5">
-            <Bell size={14} className="text-amber-600" />
-            <span className="text-xs font-bold text-amber-700">At-Risk Alert{atRisk.length > 1 ? "s" : ""}</span>
+            <Bell size={14} className="text-[#B07A1A]" />
+            <span className="text-xs font-bold text-[#B07A1A]">At-Risk Alert{atRisk.length > 1 ? "s" : ""}</span>
           </div>
           {atRisk.map((s) => (
-            <div key={s.id} className="text-xs text-amber-800 leading-relaxed mb-0.5">
+            <div key={s.id} className="text-xs text-[#B07A1A] leading-relaxed mb-0.5">
               <span className="font-mono font-semibold">{s.id}</span> — {s.riskLevel === "RED" ? "Critical delay" : "Possible delay"} on {s.origin} &rarr; {s.dest}. Your rep has been notified.
             </div>
           ))}
@@ -258,7 +258,7 @@ export default function ShipperTrackingPage() {
                   <div className="flex items-center justify-between mb-4">
                     <div>
                       <div className="flex items-center gap-2">
-                        <span className="font-mono text-sm font-bold text-[#0F1117]">{selected.id}</span>
+                        <span className="font-mono text-sm font-bold text-[#0A2540]">{selected.id}</span>
                         {selected.loadId && (
                           <button onClick={() => handleShare(selected.loadId!)} className="text-gray-700 hover:text-[#BA7517] transition" title="Share tracking link">
                             <Share2 className="w-3.5 h-3.5" />
@@ -272,15 +272,15 @@ export default function ShipperTrackingPage() {
                       </div>
                       <div className="flex items-center gap-2 mt-1">
                         <ShipperBadge status={selected.status} />
-                        {selected.riskLevel === "RED" && <span className="px-1.5 py-0.5 bg-red-100 text-red-700 text-[10px] rounded font-medium">DELAYED</span>}
-                        {selected.riskLevel === "AMBER" && <span className="px-1.5 py-0.5 bg-amber-100 text-amber-700 text-[10px] rounded font-medium">AT RISK</span>}
+                        {selected.riskLevel === "RED" && <span className="px-1.5 py-0.5 bg-[#F6E3E3] text-[#9B2C2C] text-[10px] rounded font-medium">DELAYED</span>}
+                        {selected.riskLevel === "AMBER" && <span className="px-1.5 py-0.5 bg-[#FBEFD4] text-[#B07A1A] text-[10px] rounded font-medium">AT RISK</span>}
                       </div>
                     </div>
                     <div className="text-right">
                       <div className="flex items-center gap-1 text-xs text-gray-500">
                         <Clock className="w-3 h-3" /> ETA
                       </div>
-                      <p className="text-sm font-semibold text-[#0F1117]">{selected.eta || "—"}</p>
+                      <p className="text-sm font-semibold text-[#0A2540]">{selected.eta || "—"}</p>
                     </div>
                   </div>
 
@@ -288,8 +288,8 @@ export default function ShipperTrackingPage() {
                   <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg mb-4">
                     <div className="flex-1">
                       <div className="text-[10px] text-gray-700 uppercase">Origin</div>
-                      <div className="text-sm font-medium text-[#0F1117] flex items-center gap-1">
-                        <MapPin className="w-3 h-3 text-emerald-700 shrink-0" /> {selected.origin}
+                      <div className="text-sm font-medium text-[#0A2540] flex items-center gap-1">
+                        <MapPin className="w-3 h-3 text-[#2F7A4F] shrink-0" /> {selected.origin}
                       </div>
                     </div>
                     <div className="flex items-center gap-1 text-gray-500 shrink-0">
@@ -299,8 +299,8 @@ export default function ShipperTrackingPage() {
                     </div>
                     <div className="flex-1 text-right">
                       <div className="text-[10px] text-gray-700 uppercase">Destination</div>
-                      <div className="text-sm font-medium text-[#0F1117] flex items-center justify-end gap-1">
-                        {selected.dest} <MapPin className="w-3 h-3 text-red-700 shrink-0" />
+                      <div className="text-sm font-medium text-[#0A2540] flex items-center justify-end gap-1">
+                        {selected.dest} <MapPin className="w-3 h-3 text-[#9B2C2C] shrink-0" />
                       </div>
                     </div>
                   </div>
@@ -315,14 +315,14 @@ export default function ShipperTrackingPage() {
                         <div key={step} className="flex items-center flex-1">
                           <div className="flex flex-col items-center">
                             <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold ${
-                              done ? (active ? "bg-[#C9A84C] text-white" : "bg-emerald-500 text-white") : "bg-gray-200 text-gray-400"
+                              done ? (active ? "bg-[#BA7517] text-[#FBF7F0]" : "bg-[#2F7A4F] text-[#FBF7F0]") : "bg-gray-200 text-gray-400"
                             }`}>
                               {done && !active ? "✓" : i + 1}
                             </div>
-                            <span className={`text-[10px] mt-1 ${done ? "text-[#0F1117] font-medium" : "text-gray-400"}`}>{step}</span>
+                            <span className={`text-[10px] mt-1 ${done ? "text-[#0A2540] font-medium" : "text-gray-400"}`}>{step}</span>
                           </div>
                           {i < STATUS_STEPS.length - 1 && (
-                            <div className={`flex-1 h-0.5 mx-1 mt-[-12px] ${i < currentStep ? "bg-emerald-400" : "bg-gray-200"}`} />
+                            <div className={`flex-1 h-0.5 mx-1 mt-[-12px] ${i < currentStep ? "bg-[#2F7A4F]" : "bg-gray-200"}`} />
                           )}
                         </div>
                       );
@@ -338,7 +338,7 @@ export default function ShipperTrackingPage() {
                     <div className="bg-gray-200 rounded-full h-2 overflow-hidden">
                       <div
                         className={`h-full rounded-full transition-all ${
-                          selected.riskLevel === "RED" ? "bg-red-500" : selected.riskLevel === "AMBER" ? "bg-amber-500" : "bg-[#C9A84C]"
+                          selected.riskLevel === "RED" ? "bg-[#9B2C2C]" : selected.riskLevel === "AMBER" ? "bg-[#B07A1A]" : "bg-[#BA7517]"
                         }`}
                         style={{ width: `${selected.progress}%` }}
                       />
@@ -351,7 +351,7 @@ export default function ShipperTrackingPage() {
                   <ShipperCard padding="p-4">
                     <div className="flex items-center gap-2 mb-2">
                       <Truck className="w-4 h-4 text-[#BA7517]" />
-                      <span className="text-xs font-bold text-[#0F1117]">Last Known Position</span>
+                      <span className="text-xs font-bold text-[#0A2540]">Last Known Position</span>
                       <span className="ml-auto text-[10px] text-gray-700">via ELD</span>
                     </div>
                     <div className="text-sm text-gray-700">{selected.eldPosition.address}</div>
@@ -365,11 +365,11 @@ export default function ShipperTrackingPage() {
                 {/* Check Call History */}
                 {selected.checkCalls && selected.checkCalls.length > 0 && (
                   <ShipperCard padding="p-4">
-                    <div className="text-xs font-bold text-[#0F1117] mb-3">Recent Updates</div>
+                    <div className="text-xs font-bold text-[#0A2540] mb-3">Recent Updates</div>
                     <div className="space-y-2">
                       {selected.checkCalls.slice(0, 5).map((cc, i) => (
                         <div key={i} className="flex items-start gap-3 text-xs">
-                          <div className="mt-0.5 w-1.5 h-1.5 rounded-full bg-[#C9A84C] shrink-0" />
+                          <div className="mt-0.5 w-1.5 h-1.5 rounded-full bg-[#BA7517] shrink-0" />
                           <div className="flex-1">
                             <span className="text-gray-700">{cc.city}, {cc.state}</span>
                             <span className="text-gray-700 ml-2">{cc.method}</span>
@@ -387,7 +387,7 @@ export default function ShipperTrackingPage() {
           {/* Shipment List Sidebar */}
           <div className="space-y-3">
             <ShipperCard padding="p-4">
-              <div className="text-xs font-bold text-[#0F1117] mb-3">
+              <div className="text-xs font-bold text-[#0A2540] mb-3">
                 Active Shipments ({isLoading ? "..." : filteredActive.length})
               </div>
               {isLoading ? (
@@ -408,11 +408,11 @@ export default function ShipperTrackingPage() {
                     key={s.id}
                     onClick={() => setSelectedId(s.id)}
                     className={`p-3 rounded-lg border mb-2 cursor-pointer transition-colors ${
-                      (selected?.id === s.id) ? "border-[#C9A84C]/50 bg-[#C9A84C]/5" : "border-gray-200 hover:border-[#C9A84C]/30"
+                      (selected?.id === s.id) ? "border-[#C5A572] bg-[#FAEEDA]" : "border-[#EFE6D3] hover:border-[#C5A572]"
                     }`}
                   >
                     <div className="flex justify-between mb-1.5">
-                      <span className="font-mono text-[11px] font-semibold text-[#0F1117]">{s.id}</span>
+                      <span className="font-mono text-[11px] font-semibold text-[#0A2540]">{s.id}</span>
                       <ShipperBadge status={s.status} />
                     </div>
                     <div className="text-xs text-gray-600 mb-2">{s.origin} &rarr; {s.dest}</div>
@@ -423,7 +423,7 @@ export default function ShipperTrackingPage() {
                     )}
                     <div className="bg-gray-200 rounded h-[5px] overflow-hidden">
                       <div
-                        className={`h-full rounded ${s.riskLevel === "RED" ? "bg-red-500" : s.riskLevel === "AMBER" ? "bg-amber-500" : "bg-blue-500"}`}
+                        className={`h-full rounded ${s.riskLevel === "RED" ? "bg-[#9B2C2C]" : s.riskLevel === "AMBER" ? "bg-[#B07A1A]" : "bg-[#2A5B8B]"}`}
                         style={{ width: `${s.progress}%` }}
                       />
                     </div>
@@ -437,10 +437,10 @@ export default function ShipperTrackingPage() {
             </ShipperCard>
 
             {atRisk.length === 0 && !isLoading && allActive.length > 0 && (
-              <ShipperCard padding="p-4" className="!bg-emerald-50 !border-emerald-200">
+              <ShipperCard padding="p-4" className="!bg-[#E6F0E9] !border-[#2F7A4F]/30">
                 <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 rounded-full bg-emerald-500" />
-                  <span className="text-xs font-medium text-emerald-600">All shipments on schedule</span>
+                  <div className="w-2 h-2 rounded-full bg-[#2F7A4F]" />
+                  <span className="text-xs font-medium text-[#2F7A4F]">All shipments on schedule</span>
                 </div>
               </ShipperCard>
             )}
@@ -451,7 +451,7 @@ export default function ShipperTrackingPage() {
       {/* ─── HISTORY TAB ─── */}
       {tab === "history" && (
         <ShipperCard padding="p-4">
-          <div className="text-xs font-bold text-[#0F1117] mb-4">Completed Shipments</div>
+          <div className="text-xs font-bold text-[#0A2540] mb-4">Completed Shipments</div>
           {historyLoading ? (
             <div className="py-8 text-center text-xs text-gray-700">Loading history...</div>
           ) : filteredHistory.length === 0 ? (
@@ -474,13 +474,13 @@ export default function ShipperTrackingPage() {
                 <tbody>
                   {filteredHistory.map((s) => (
                     <tr key={s.id} className="border-b border-gray-50 hover:bg-gray-50/50">
-                      <td className="py-2.5 px-2 font-mono font-semibold text-[#0F1117]">{s.id}</td>
+                      <td className="py-2.5 px-2 font-mono font-semibold text-[#0A2540]">{s.id}</td>
                       <td className="py-2.5 px-2 text-gray-600">{s.origin} &rarr; {s.dest}</td>
                       <td className="py-2.5 px-2 text-gray-600">{s.carrier}</td>
                       <td className="py-2.5 px-2 text-gray-500">
                         {s.deliveredAt ? new Date(s.deliveredAt).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : s.delDate}
                       </td>
-                      <td className="py-2.5 px-2 text-right font-medium text-[#0F1117]">${s.rate.toLocaleString()}</td>
+                      <td className="py-2.5 px-2 text-right font-medium text-[#0A2540]">${s.rate.toLocaleString()}</td>
                       <td className="py-2.5 px-2 text-center">
                         <button
                           onClick={() => setTimelineLoadId(s.loadId)}
@@ -505,7 +505,7 @@ export default function ShipperTrackingPage() {
           <div className="relative w-full max-w-md bg-white shadow-xl overflow-y-auto">
             <div className="sticky top-0 bg-white border-b border-gray-100 px-5 py-4 flex items-center justify-between">
               <div>
-                <h3 className="text-sm font-bold text-[#0F1117]">Shipment Timeline</h3>
+                <h3 className="text-sm font-bold text-[#0A2540]">Shipment Timeline</h3>
                 {timelineData && <p className="text-[10px] text-gray-700 font-mono">{timelineData.referenceNumber}</p>}
               </div>
               <button onClick={() => setTimelineLoadId(null)} className="text-gray-700 hover:text-gray-600">
@@ -520,15 +520,15 @@ export default function ShipperTrackingPage() {
                   <div className="text-[10px] text-gray-500 uppercase tracking-wider mb-2">Stops</div>
                   {timelineData.stops.map((stop) => (
                     <div key={stop.stopNumber} className="flex items-center gap-3 mb-2 p-2 bg-gray-50 rounded-lg text-xs">
-                      <div className="w-5 h-5 rounded-full bg-[#C9A84C]/20 text-[#C9A84C] flex items-center justify-center text-[10px] font-bold shrink-0">
+                      <div className="w-5 h-5 rounded-full bg-[#FAEEDA] text-[#BA7517] flex items-center justify-center text-[10px] font-bold shrink-0">
                         {stop.stopNumber}
                       </div>
                       <div className="flex-1">
-                        <div className="text-[#0F1117] font-medium">{stop.facility || stop.type}</div>
+                        <div className="text-[#0A2540] font-medium">{stop.facility || stop.type}</div>
                         {stop.actualArrival && <div className="text-gray-700">Arrived: {fmtTimestamp(stop.actualArrival)}</div>}
                       </div>
                       {stop.onTime !== null && (
-                        <span className={`text-[10px] font-medium ${stop.onTime ? "text-emerald-600" : "text-red-500"}`}>
+                        <span className={`text-[10px] font-medium ${stop.onTime ? "text-[#2F7A4F]" : "text-[#9B2C2C]"}`}>
                           {stop.onTime ? "On Time" : "Late"}
                         </span>
                       )}
@@ -548,14 +548,14 @@ export default function ShipperTrackingPage() {
                   {timelineData.timeline.map((evt, i) => (
                     <div key={i} className="relative mb-4 pb-1">
                       <div className={`absolute -left-[21px] top-0.5 w-2.5 h-2.5 rounded-full border-2 border-white ${
-                        evt.eventType === "STATUS_CHANGE" ? "bg-[#C9A84C]"
-                        : evt.eventType === "ALERT" ? "bg-red-500"
-                        : evt.eventType === "CHECK_CALL" ? "bg-blue-500"
+                        evt.eventType === "STATUS_CHANGE" ? "bg-[#BA7517]"
+                        : evt.eventType === "ALERT" ? "bg-[#9B2C2C]"
+                        : evt.eventType === "CHECK_CALL" ? "bg-[#2A5B8B]"
                         : "bg-gray-400"
                       }`} />
                       <div className="text-xs">
                         <div className="flex items-center gap-2 mb-0.5">
-                          <span className="font-medium text-[#0F1117]">
+                          <span className="font-medium text-[#0A2540]">
                             {evt.eventType === "STATUS_CHANGE" ? `Status → ${evt.status}` :
                              evt.eventType === "CHECK_CALL" ? "Check Call" :
                              evt.eventType === "LOCATION_UPDATE" ? "Location Update" :
@@ -586,7 +586,7 @@ export default function ShipperTrackingPage() {
           <div className="absolute inset-0 bg-black/20" onClick={() => setShareLoadId(null)} />
           <div className="relative bg-white rounded-xl shadow-xl p-6 w-full max-w-sm">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-sm font-bold text-[#0F1117]">Share Tracking Link</h3>
+              <h3 className="text-sm font-bold text-[#0A2540]">Share Tracking Link</h3>
               <button onClick={() => setShareLoadId(null)} className="text-gray-700 hover:text-gray-600">
                 <X className="w-4 h-4" />
               </button>
@@ -598,17 +598,17 @@ export default function ShipperTrackingPage() {
                 <div className="flex items-center gap-2 p-2.5 bg-gray-50 rounded-lg">
                   <ExternalLink className="w-3.5 h-3.5 text-[#BA7517] shrink-0" />
                   <span className="text-xs text-gray-600 truncate flex-1">{shareMutation.data.url}</span>
-                  <button onClick={() => copyLink(shareMutation.data!.url)} className="text-[#BA7517] hover:text-[#b89a3f] shrink-0">
+                  <button onClick={() => copyLink(shareMutation.data!.url)} className="text-[#BA7517] hover:text-[#854F0B] shrink-0">
                     <Copy className="w-3.5 h-3.5" />
                   </button>
                 </div>
-                {copiedLink && <p className="text-[10px] text-emerald-600 text-center">Link copied to clipboard!</p>}
+                {copiedLink && <p className="text-[10px] text-[#2F7A4F] text-center">Link copied to clipboard!</p>}
                 <p className="text-[10px] text-gray-700 text-center">
                   Expires {new Date(shareMutation.data.expiresAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
                 </p>
               </div>
             ) : shareMutation.isError ? (
-              <div className="py-4 text-center text-xs text-red-500">Failed to generate link</div>
+              <div className="py-4 text-center text-xs text-[#9B2C2C]">Failed to generate link</div>
             ) : null}
           </div>
         </div>

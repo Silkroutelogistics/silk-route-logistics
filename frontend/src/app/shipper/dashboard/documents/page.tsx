@@ -8,12 +8,12 @@ import { ShipperCard } from "@/components/shipper";
 import type { DocumentsResponse } from "@/components/shipper/shipperData";
 
 const iconMap: Record<string, { icon: typeof File; color: string; bg: string }> = {
-  BOL: { icon: File, color: "text-blue-500", bg: "bg-blue-500/10" },
-  POD: { icon: Check, color: "text-emerald-500", bg: "bg-emerald-500/10" },
-  RATE_CON: { icon: FileText, color: "text-violet-500", bg: "bg-violet-500/10" },
-  CLAIM: { icon: Shield, color: "text-amber-500", bg: "bg-amber-500/10" },
+  BOL: { icon: File, color: "text-[#2A5B8B]", bg: "bg-[#E2EAF2]" },
+  POD: { icon: Check, color: "text-[#2F7A4F]", bg: "bg-[#E6F0E9]" },
+  RATE_CON: { icon: FileText, color: "text-[#2A5B8B]", bg: "bg-[#E2EAF2]" },
+  CLAIM: { icon: Shield, color: "text-[#B07A1A]", bg: "bg-[#FBEFD4]" },
 };
-const defaultIcon = { icon: File, color: "text-gray-500", bg: "bg-gray-500/10" };
+const defaultIcon = { icon: File, color: "text-gray-500", bg: "bg-[#F5EEE0]" };
 
 const typeLabels: Record<string, string> = {
   BOL: "BOL", POD: "POD", RATE_CON: "Rate Conf", CLAIM: "Claims", OTHER: "Other",
@@ -76,7 +76,7 @@ export default function ShipperDocumentsPage() {
 
   return (
     <div>
-      <h1 className="font-serif text-2xl text-[#0F1117] mb-1">Freight Document Vault</h1>
+      <h1 className="font-serif text-2xl text-[#0A2540] mb-1">Freight Document Vault</h1>
       <p className="text-[13px] text-gray-500 mb-6">All your BOLs, proof of delivery, rate confirmations, and freight claims in one secure location</p>
 
       <div className="grid grid-cols-4 gap-3 mb-6">
@@ -102,7 +102,7 @@ export default function ShipperDocumentsPage() {
                     <Icon size={20} className={color} />
                   </div>
                   <div>
-                    <div className="text-xl font-bold text-[#0F1117]">{d.count}</div>
+                    <div className="text-xl font-bold text-[#0A2540]">{d.count}</div>
                     <div className="text-[11px] text-gray-700">{typeLabels[d.type] || d.type}</div>
                   </div>
                 </div>
@@ -124,8 +124,8 @@ export default function ShipperDocumentsPage() {
       <div
         className={`p-8 rounded-md border-2 border-dashed text-center cursor-pointer transition-colors mb-5 ${
           dragOver
-            ? "border-[#C9A84C] bg-[#C9A84C]/5"
-            : "border-gray-300 bg-gray-50"
+            ? "border-[#C5A572] bg-[#FAEEDA]"
+            : "border-gray-300 bg-[#F5EEE0]"
         }`}
         onClick={handleUploadClick}
         onDrop={handleDrop}
@@ -145,17 +145,17 @@ export default function ShipperDocumentsPage() {
           </>
         )}
         {uploadMutation.isSuccess && (
-          <div className="text-xs text-emerald-700 mt-2">Upload complete!</div>
+          <div className="text-xs text-[#2F7A4F] mt-2">Upload complete!</div>
         )}
         {uploadMutation.isError && (
-          <div className="text-xs text-red-500 mt-2">Upload failed. Please try again.</div>
+          <div className="text-xs text-[#9B2C2C] mt-2">Upload failed. Please try again.</div>
         )}
       </div>
 
       {/* Recent docs */}
       <ShipperCard padding="p-0">
         <div className="px-5 py-4 border-b border-gray-100">
-          <h3 className="text-[15px] font-bold text-[#0F1117]">Recent Documents</h3>
+          <h3 className="text-[15px] font-bold text-[#0A2540]">Recent Documents</h3>
         </div>
         {isLoading ? (
           [...Array(4)].map((_, i) => (
@@ -173,11 +173,11 @@ export default function ShipperDocumentsPage() {
           documents.map((doc) => (
             <div key={doc.id} className="px-5 py-3.5 border-b border-gray-100 flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-md bg-red-500/10 flex items-center justify-center">
-                  <File size={18} className="text-red-500" />
+                <div className="w-9 h-9 rounded-md bg-[#F6E3E3] flex items-center justify-center">
+                  <File size={18} className="text-[#9B2C2C]" />
                 </div>
                 <div>
-                  <div className="text-[13px] font-semibold text-[#0F1117]">{doc.name}</div>
+                  <div className="text-[13px] font-semibold text-[#0A2540]">{doc.name}</div>
                   <div className="text-[11px] text-gray-700">
                     {typeLabels[doc.type] || doc.type} &middot; {doc.shipment} &middot; {doc.size > 1024 * 1024 ? `${(doc.size / (1024 * 1024)).toFixed(1)} MB` : `${Math.round(doc.size / 1024)} KB`}
                   </div>

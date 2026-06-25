@@ -16,8 +16,8 @@ export function CarrierCard({
   return (
     <div
       onClick={onClick}
-      className={`bg-white rounded-md border border-gray-200 shadow-[0_1px_3px_rgba(0,0,0,0.04)] ${padding} ${
-        hover ? "cursor-pointer transition-all hover:border-[#C9A84C]/30 hover:shadow-[0_8px_30px_rgba(0,0,0,0.06)]" : ""
+      className={`bg-white rounded-lg border border-[#EFE6D3] shadow-[0_1px_3px_rgba(10,37,64,0.04)] ${padding} ${
+        hover ? "cursor-pointer transition-all hover:border-[#C5A572]/50 hover:shadow-[0_8px_30px_rgba(10,37,64,0.08)]" : ""
       } ${className}`}
     >
       {children}

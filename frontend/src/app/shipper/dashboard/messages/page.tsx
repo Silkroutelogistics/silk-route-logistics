@@ -124,12 +124,12 @@ export default function ShipperMessagesPage() {
 
   return (
     <div>
-      <h1 className="font-serif text-2xl text-[#0F1117] mb-6">Messages</h1>
+      <h1 className="font-serif text-2xl text-[#0A2540] mb-6">Messages</h1>
       <div className="grid grid-cols-1 md:grid-cols-[280px_1fr] gap-4">
         {/* Contact list */}
         <ShipperCard padding="p-0">
-          <div className="p-3.5 border-b border-gray-100 relative">
-            <div className="flex items-center gap-2 px-2.5 py-1.5 border border-gray-200 rounded-md">
+          <div className="p-3.5 border-b border-[#F5EEE0] relative">
+            <div className="flex items-center gap-2 px-2.5 py-1.5 border border-[#EFE6D3] rounded-md">
               <Search size={14} className="text-gray-700" />
               <input
                 placeholder="Search users..."
@@ -140,14 +140,14 @@ export default function ShipperMessagesPage() {
             </div>
             {/* Search dropdown */}
             {searchQuery.length >= 2 && searchResults.length > 0 && (
-              <div className="absolute left-3.5 right-3.5 top-full bg-white border border-gray-200 rounded-md shadow-lg z-10 max-h-48 overflow-y-auto">
+              <div className="absolute left-3.5 right-3.5 top-full bg-white border border-[#EFE6D3] rounded-md shadow-lg z-10 max-h-48 overflow-y-auto">
                 {searchResults.map((u) => (
                   <div
                     key={u.id}
                     onClick={() => selectSearchUser(u)}
-                    className="px-3 py-2 hover:bg-gray-50 cursor-pointer"
+                    className="px-3 py-2 hover:bg-[#F5EEE0] cursor-pointer"
                   >
-                    <div className="text-[13px] font-medium text-[#0F1117]">{u.name}</div>
+                    <div className="text-[13px] font-medium text-[#0A2540]">{u.name}</div>
                     <div className="text-[11px] text-gray-700">{u.email}</div>
                   </div>
                 ))}
@@ -167,12 +167,12 @@ export default function ShipperMessagesPage() {
               <div
                 key={c.partnerId}
                 onClick={() => selectConversation(c)}
-                className={`px-4 py-3.5 border-b border-gray-100 cursor-pointer ${
-                  selectedUserId === c.partnerId ? "bg-[#C9A84C]/[0.06]" : "hover:bg-gray-50"
+                className={`px-4 py-3.5 border-b border-[#F5EEE0] cursor-pointer ${
+                  selectedUserId === c.partnerId ? "bg-[#BA7517]/[0.06]" : "hover:bg-[#F5EEE0]"
                 }`}
               >
                 <div className="flex justify-between mb-1">
-                  <span className={`text-[13px] ${c.unreadCount > 0 ? "font-bold" : "font-medium"} text-[#0F1117]`}>
+                  <span className={`text-[13px] ${c.unreadCount > 0 ? "font-bold" : "font-medium"} text-[#0A2540]`}>
                     {c.partnerName}
                   </span>
                   <span className="text-[10px] text-gray-700">{formatTime(c.lastMessageAt)}</span>
@@ -189,12 +189,12 @@ export default function ShipperMessagesPage() {
         <ShipperCard padding="p-0" className="flex flex-col">
           {selectedUserId ? (
             <>
-              <div className="px-5 py-3.5 border-b border-gray-100 flex items-center gap-3">
-                <div className="w-9 h-9 rounded-full bg-gradient-to-br from-[#0F1117] to-[#1B2D45] flex items-center justify-center text-[13px] font-bold text-[#BA7517]">
+              <div className="px-5 py-3.5 border-b border-[#F5EEE0] flex items-center gap-3">
+                <div className="w-9 h-9 rounded-full bg-[#0A2540] flex items-center justify-center text-[13px] font-bold text-[#BA7517]">
                   {getInitials(selectedUserName)}
                 </div>
                 <div>
-                  <div className="text-sm font-semibold text-[#0F1117]">{selectedUserName}</div>
+                  <div className="text-sm font-semibold text-[#0A2540]">{selectedUserName}</div>
                 </div>
               </div>
               <div className="flex-1 p-5 min-h-[300px] max-h-[500px] overflow-y-auto">
@@ -210,7 +210,7 @@ export default function ShipperMessagesPage() {
                   messages.map((m) => (
                     <div key={m.id} className={`flex ${m.senderId !== selectedUserId ? "justify-end" : "justify-start"} mb-4`}>
                       <div className={`max-w-[70%] px-3.5 py-2.5 rounded-xl text-[13px] leading-relaxed ${
-                        m.senderId !== selectedUserId ? "bg-[#0F1117] text-white" : "bg-gray-100 text-gray-700"
+                        m.senderId !== selectedUserId ? "bg-[#0A2540] text-[#FBF7F0]" : "bg-[#F5EEE0] text-gray-700"
                       }`}>
                         {m.content}
                         <div className="text-[10px] text-gray-700 mt-1 text-right">{formatMessageTime(m.createdAt)}</div>
@@ -220,10 +220,10 @@ export default function ShipperMessagesPage() {
                 )}
                 <div ref={messagesEndRef} />
               </div>
-              <div className="px-4 py-3 border-t border-gray-100 flex gap-2">
+              <div className="px-4 py-3 border-t border-[#F5EEE0] flex gap-2">
                 <input
                   placeholder="Type a message..."
-                  className="flex-1 px-3.5 py-2.5 border border-gray-200 rounded-lg text-[13px] outline-none focus:border-[#C9A84C]"
+                  className="flex-1 px-3.5 py-2.5 border border-[#EFE6D3] rounded-lg text-[13px] outline-none focus:border-[#BA7517] focus:ring-[#BA7517]/15"
                   value={messageText}
                   onChange={(e) => setMessageText(e.target.value)}
                   onKeyDown={handleKeyDown}
@@ -232,7 +232,7 @@ export default function ShipperMessagesPage() {
                 <button
                   onClick={handleSend}
                   disabled={sendMutation.isPending || !messageText.trim()}
-                  className="inline-flex items-center gap-1.5 px-4 py-2 bg-gradient-to-br from-[#C9A84C] to-[#A88535] text-[#0F1117] text-[11px] font-semibold uppercase tracking-[2px] rounded disabled:opacity-50"
+                  className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#BA7517] text-[#FBF7F0] text-[11px] font-semibold uppercase tracking-[2px] rounded disabled:opacity-50"
                 >
                   {sendMutation.isPending ? <Loader2 size={14} className="animate-spin" /> : <ArrowRight size={14} />} Send
                 </button>

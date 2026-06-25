@@ -57,16 +57,16 @@ export default function CarrierRevenuePage() {
       {/* Header */}
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 className="font-serif text-2xl text-[#0F1117] mb-1">Revenue &amp; Earnings</h1>
+          <h1 className="font-serif text-2xl text-[#0A2540] mb-1">Revenue &amp; Earnings</h1>
           <p className="text-[13px] text-gray-500">Track revenue performance across your loads</p>
         </div>
-        <div className="flex bg-gray-100 rounded-lg p-0.5">
+        <div className="flex bg-[#F5EEE0] rounded-lg p-0.5">
           {(["weekly", "monthly", "ytd"] as Period[]).map((p) => (
             <button
               key={p}
               onClick={() => setPeriod(p)}
               className={`px-4 py-1.5 rounded-md text-[11px] font-semibold uppercase tracking-wider transition-all ${
-                p === period ? "bg-white text-[#0F1117] shadow-sm" : "text-gray-500 hover:text-gray-700"
+                p === period ? "bg-white text-[#0A2540] shadow-sm" : "text-gray-500 hover:text-gray-700"
               }`}
             >{p === "ytd" ? "YTD" : p.charAt(0).toUpperCase() + p.slice(1)}</button>
           ))}
@@ -76,24 +76,24 @@ export default function CarrierRevenuePage() {
       {/* KPI Row */}
       <div className="grid grid-cols-4 gap-4 mb-6">
         {[
-          { icon: DollarSign, color: "text-[#C9A84C]", label: "Total Revenue", value: fmt(rev?.totalRevenue) },
-          { icon: Truck, color: "text-blue-500", label: "Total Loads", value: String(rev?.totalLoads || 0) },
-          { icon: TrendingUp, color: "text-emerald-500", label: "Avg Per Load", value: fmt(rev?.avgPerLoad) },
-          { icon: CreditCard, color: "text-violet-500", label: "YTD Earnings", value: fmt(paySum?.ytdEarnings?.amount) },
+          { icon: DollarSign, color: "text-[#BA7517]", label: "Total Revenue", value: fmt(rev?.totalRevenue) },
+          { icon: Truck, color: "text-[#2A5B8B]", label: "Total Loads", value: String(rev?.totalLoads || 0) },
+          { icon: TrendingUp, color: "text-[#2F7A4F]", label: "Avg Per Load", value: fmt(rev?.avgPerLoad) },
+          { icon: CreditCard, color: "text-[#2A5B8B]", label: "YTD Earnings", value: fmt(paySum?.ytdEarnings?.amount) },
         ].map((kpi) => (
           <CarrierCard key={kpi.label} padding="p-5">
             <div className="flex items-center gap-2 mb-2">
               <kpi.icon size={16} className={kpi.color} />
               <span className="text-[11px] text-gray-700 uppercase tracking-wide">{kpi.label}</span>
             </div>
-            <div className="text-[28px] font-bold text-[#0F1117]">{kpi.value}</div>
+            <div className="text-[28px] font-bold text-[#0A2540]">{kpi.value}</div>
           </CarrierCard>
         ))}
       </div>
 
       {/* Revenue Chart */}
       <CarrierCard className="mb-6" padding="p-5">
-        <h2 className="text-sm font-semibold text-[#0F1117] mb-4">Revenue Over Time</h2>
+        <h2 className="text-sm font-semibold text-[#0A2540] mb-4">Revenue Over Time</h2>
         {chartData.length === 0 ? (
           <p className="text-sm text-gray-700 text-center py-12">No revenue data for this period</p>
         ) : (
@@ -103,7 +103,7 @@ export default function CarrierRevenuePage() {
               <XAxis dataKey="name" tick={{ fontSize: 11, fill: "#9ca3af" }} />
               <YAxis tick={{ fontSize: 11, fill: "#9ca3af" }} tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`} />
               <Tooltip formatter={(value: number | undefined) => [`$${(value || 0).toLocaleString()}`, "Revenue"]} />
-              <Bar dataKey="revenue" fill="#C9A84C" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="revenue" fill="#BA7517" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         )}
@@ -113,8 +113,8 @@ export default function CarrierRevenuePage() {
         {/* Revenue Breakdown Table */}
         <div className="col-span-2">
           <CarrierCard padding="p-0">
-            <div className="px-4 py-3 border-b border-gray-100">
-              <h2 className="text-sm font-semibold text-[#0F1117]">Revenue Breakdown</h2>
+            <div className="px-4 py-3 border-b border-[#F5EEE0]">
+              <h2 className="text-sm font-semibold text-[#0A2540]">Revenue Breakdown</h2>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-[13px]">
@@ -129,15 +129,15 @@ export default function CarrierRevenuePage() {
                   {invoices.length === 0 ? (
                     <tr><td colSpan={5} className="px-4 py-10 text-center text-sm text-gray-700">No invoices found</td></tr>
                   ) : invoices.slice(0, 15).map((inv: any, i: number) => (
-                    <tr key={i} className="border-b border-gray-100 hover:bg-gray-50">
-                      <td className="px-4 py-2.5 font-mono text-[11px] font-semibold text-[#0F1117]">{inv.load?.referenceNumber || "—"}</td>
+                    <tr key={i} className="border-b border-[#F5EEE0] hover:bg-gray-50">
+                      <td className="px-4 py-2.5 font-mono text-[11px] font-semibold text-[#0A2540]">{inv.load?.referenceNumber || "—"}</td>
                       <td className="px-4 py-2.5 text-xs text-gray-600">
                         {inv.load ? `${inv.load.originCity}, ${inv.load.originState} → ${inv.load.destCity}, ${inv.load.destState}` : "—"}
                       </td>
-                      <td className="px-4 py-2.5 font-bold text-[#0F1117]">${(inv.amount || 0).toLocaleString()}</td>
+                      <td className="px-4 py-2.5 font-bold text-[#0A2540]">${(inv.amount || 0).toLocaleString()}</td>
                       <td className="px-4 py-2.5">
                         <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
-                          inv.status === "PAID" ? "bg-emerald-50 text-emerald-600" : "bg-amber-50 text-amber-600"
+                          inv.status === "PAID" ? "bg-[#E6F0E9] text-[#2F7A4F]" : "bg-[#FBEFD4] text-[#B07A1A]"
                         }`}>{inv.status}</span>
                       </td>
                       <td className="px-4 py-2.5 text-xs text-gray-500">{new Date(inv.createdAt).toLocaleDateString()}</td>
@@ -155,14 +155,14 @@ export default function CarrierRevenuePage() {
           <CarrierCard padding="p-4">
             <div className="flex items-center gap-2 mb-3">
               <MapPin size={14} className="text-[#BA7517]" />
-              <h2 className="text-sm font-semibold text-[#0F1117]">Top Lanes</h2>
+              <h2 className="text-sm font-semibold text-[#0A2540]">Top Lanes</h2>
             </div>
             {topLanes.length === 0 ? (
               <p className="text-xs text-gray-700 text-center py-4">No lane data yet</p>
             ) : topLanes.map((lane, i) => (
-              <div key={i} className="flex justify-between items-center py-2 border-b border-gray-50 last:border-0">
+              <div key={i} className="flex justify-between items-center py-2 border-b border-[#F5EEE0] last:border-0">
                 <div>
-                  <div className="text-[12px] font-semibold text-[#0F1117]">{lane.lane}</div>
+                  <div className="text-[12px] font-semibold text-[#0A2540]">{lane.lane}</div>
                   <div className="text-[10px] text-gray-700">{lane.count} loads</div>
                 </div>
                 <div className="text-[13px] font-bold text-[#BA7517]">{fmt(lane.revenue)}</div>
@@ -174,14 +174,14 @@ export default function CarrierRevenuePage() {
           <CarrierCard padding="p-4">
             <div className="flex items-center gap-2 mb-3">
               <CreditCard size={14} className="text-[#BA7517]" />
-              <h2 className="text-sm font-semibold text-[#0F1117]">Payment Summary</h2>
+              <h2 className="text-sm font-semibold text-[#0A2540]">Payment Summary</h2>
             </div>
             {[
-              { label: "Pending Pay", value: fmt(paySum?.totalPending?.amount), color: "text-amber-500" },
-              { label: "Paid This Month", value: fmt(paySum?.totalPaid?.amount), color: "text-emerald-500" },
-              { label: "QuickPay Savings", value: fmt(paySum?.quickPaySavings || paySum?.quickPayUsed?.discount), color: "text-violet-500" },
+              { label: "Pending Pay", value: fmt(paySum?.totalPending?.amount), color: "text-[#B07A1A]" },
+              { label: "Paid This Month", value: fmt(paySum?.totalPaid?.amount), color: "text-[#2F7A4F]" },
+              { label: "QuickPay Savings", value: fmt(paySum?.quickPaySavings || paySum?.quickPayUsed?.discount), color: "text-[#BA7517]" },
             ].map((item) => (
-              <div key={item.label} className="flex justify-between items-center py-2 border-b border-gray-50 last:border-0">
+              <div key={item.label} className="flex justify-between items-center py-2 border-b border-[#F5EEE0] last:border-0">
                 <span className="text-[12px] text-gray-500">{item.label}</span>
                 <span className={`text-[13px] font-bold ${item.color}`}>{item.value}</span>
               </div>

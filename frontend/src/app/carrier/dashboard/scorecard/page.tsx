@@ -10,9 +10,9 @@ import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from "rec
 const TIERS = ["SILVER", "GOLD", "PLATINUM"] as const;
 const TIER_THRESHOLDS: Record<string, number> = { SILVER: 0, GOLD: 90, PLATINUM: 95 };
 const TIER_COLORS: Record<string, string> = {
-  PLATINUM: "bg-purple-100 text-purple-700 border-purple-300",
-  GOLD: "bg-yellow-100 text-yellow-700 border-yellow-300",
-  SILVER: "bg-gray-100 text-gray-600 border-gray-300",
+  PLATINUM: "bg-[#0A2540] text-[#C5A572] border-[#0A2540]",
+  GOLD: "bg-[#FAEEDA] text-[#BA7517] border-[#C5A572]",
+  SILVER: "bg-[#E2EAF2] text-[#5B7EA3] border-[#8AA5C0]",
 };
 
 // Map the raw enum value onto display tiers
@@ -53,14 +53,14 @@ const MILESTONES: MilestoneDef[] = [
 ];
 
 function scoreColor(s: number) {
-  return s >= 80 ? "text-green-600" : s >= 60 ? "text-yellow-600" : "text-red-500";
+  return s >= 80 ? "text-[#2F7A4F]" : s >= 60 ? "text-[#B07A1A]" : "text-[#9B2C2C]";
 }
 function barColor(v: number, invert = false) {
-  if (invert) return v < 5 ? "bg-green-500" : v < 10 ? "bg-yellow-500" : "bg-red-500";
-  return v > 90 ? "bg-green-500" : v > 75 ? "bg-yellow-500" : "bg-red-500";
+  if (invert) return v < 5 ? "bg-[#2F7A4F]" : v < 10 ? "bg-[#B07A1A]" : "bg-[#9B2C2C]";
+  return v > 90 ? "bg-[#2F7A4F]" : v > 75 ? "bg-[#B07A1A]" : "bg-[#9B2C2C]";
 }
 function ringStroke(s: number) {
-  return s >= 80 ? "#16a34a" : s >= 60 ? "#ca8a04" : "#ef4444";
+  return s >= 80 ? "#2F7A4F" : s >= 60 ? "#B07A1A" : "#9B2C2C";
 }
 function benchmarkLabel(s: number) {
   if (s >= 90) return "Top 5%";
@@ -118,7 +118,7 @@ export default function ScorecardPage() {
       <div className="mb-6 flex items-center gap-3">
         <Trophy className="w-6 h-6 text-[#BA7517]" />
         <div>
-          <h1 className="font-serif text-2xl text-[#0F1117]">Performance Scorecard</h1>
+          <h1 className="font-serif text-2xl text-[#0A2540]">Performance Scorecard</h1>
           <p className="text-[13px] text-gray-500">Track your metrics, tier status, milestones, and bonus earnings</p>
         </div>
         <span className={`ml-auto px-3 py-1 rounded-full text-xs font-semibold border ${TIER_COLORS[currentTier] || TIER_COLORS.SILVER}`}>
@@ -145,29 +145,29 @@ export default function ScorecardPage() {
         <CarrierCard>
           <div className="flex items-center gap-2 mb-3">
             <TrendingUp className="w-4 h-4 text-[#BA7517]" />
-            <h2 className="font-semibold text-[#0F1117] text-sm">Tier Progress</h2>
+            <h2 className="font-semibold text-[#0A2540] text-sm">Tier Progress</h2>
           </div>
-          <div className="relative h-3 bg-gray-100 rounded-full mb-2 overflow-hidden">
+          <div className="relative h-3 bg-[#F5EEE0] rounded-full mb-2 overflow-hidden">
             {TIERS.map((t) => (
               <div key={t} className="absolute top-0 h-full border-r border-white/60"
                 style={{ left: `${TIER_THRESHOLDS[t]}%` }} />
             ))}
-            <div className="h-full bg-[#C9A84C] rounded-full transition-all duration-500"
+            <div className="h-full bg-[#BA7517] rounded-full transition-all duration-500"
               style={{ width: `${currentScore}%` }} />
           </div>
           <div className="flex justify-between text-[10px] text-gray-700 mb-3">
             {TIERS.map((t) => <span key={t}>{t} ({TIER_THRESHOLDS[t]})</span>)}
           </div>
           {nextTier && nextTier !== currentTier ? (
-            <p className="text-sm text-gray-600">{pointsToNextTier} points to <span className="font-semibold text-[#0F1117]">{nextTier}</span></p>
+            <p className="text-sm text-gray-600">{pointsToNextTier} points to <span className="font-semibold text-[#0A2540]">{nextTier}</span></p>
           ) : (
-            <p className="text-sm text-green-600 font-medium">Maximum tier achieved!</p>
+            <p className="text-sm text-[#2F7A4F] font-medium">Maximum tier achieved!</p>
           )}
           {/* Benchmark */}
-          <div className="mt-4 pt-3 border-t border-gray-100 flex items-center gap-2">
+          <div className="mt-4 pt-3 border-t border-[#F5EEE0] flex items-center gap-2">
             <Star className="w-4 h-4 text-[#BA7517]" />
             <p className="text-sm text-gray-600">
-              Your score: <span className="font-semibold text-[#0F1117]">{currentScore}</span> &mdash; <span className="font-semibold text-[#BA7517]">{benchmarkLabel(currentScore)}</span> of SRL carriers
+              Your score: <span className="font-semibold text-[#0A2540]">{currentScore}</span> &mdash; <span className="font-semibold text-[#BA7517]">{benchmarkLabel(currentScore)}</span> of SRL carriers
             </p>
           </div>
         </CarrierCard>
@@ -177,20 +177,20 @@ export default function ScorecardPage() {
       <CarrierCard className="mb-4">
         <div className="flex items-center gap-2 mb-4">
           <Target className="w-5 h-5 text-[#BA7517]" />
-          <h2 className="font-semibold text-[#0F1117] text-sm">Milestones</h2>
+          <h2 className="font-semibold text-[#0A2540] text-sm">Milestones</h2>
           <span className={`ml-auto px-2.5 py-0.5 rounded-full text-[11px] font-bold border ${TIER_COLORS[currentTier] || TIER_COLORS.SILVER}`}>
             {currentMilestone.id}: {currentMilestone.name}
           </span>
         </div>
 
         {/* Current Milestone Badge */}
-        <div className="bg-[#C9A84C]/5 border border-[#C9A84C]/15 rounded-xl p-4 mb-4">
+        <div className="bg-[#FAEEDA] border border-[#C5A572]/40 rounded-xl p-4 mb-4">
           <div className="flex items-center gap-3 mb-2">
-            <div className="w-11 h-11 rounded-full bg-[#C9A84C]/20 flex items-center justify-center">
+            <div className="w-11 h-11 rounded-full bg-[#FAEEDA] flex items-center justify-center">
               <span className="text-sm font-bold text-[#BA7517]">{currentMilestone.id}</span>
             </div>
             <div>
-              <div className="text-sm font-bold text-[#0F1117]">{currentMilestone.name}</div>
+              <div className="text-sm font-bold text-[#0A2540]">{currentMilestone.name}</div>
               <div className="text-xs text-gray-500">{currentMilestone.description}</div>
             </div>
           </div>
@@ -200,11 +200,11 @@ export default function ScorecardPage() {
         {nextMilestoneObj && (
           <div className="mb-4">
             <div className="flex items-center justify-between mb-1.5">
-              <span className="text-xs font-semibold text-[#0F1117]">Progress to {nextMilestoneObj.id}: {nextMilestoneObj.name}</span>
+              <span className="text-xs font-semibold text-[#0A2540]">Progress to {nextMilestoneObj.id}: {nextMilestoneObj.name}</span>
               <span className="text-[11px] text-gray-700">{milestoneLoads}/{nextMilestoneObj.loadsRequired} loads</span>
             </div>
-            <div className="h-3 bg-gray-100 rounded-full overflow-hidden">
-              <div className="h-full bg-gradient-to-r from-[#C9A84C] to-[#D4AF37] rounded-full transition-all duration-700"
+            <div className="h-3 bg-[#F5EEE0] rounded-full overflow-hidden">
+              <div className="h-full bg-[#BA7517] rounded-full transition-all duration-700"
                 style={{ width: `${loadsProgress}%` }} />
             </div>
             <p className="text-[11px] text-gray-700 mt-1">{loadsToNext} more load{loadsToNext !== 1 ? "s" : ""} needed</p>
@@ -214,35 +214,35 @@ export default function ScorecardPage() {
         {/* Requirements Checklist */}
         {nextMilestoneObj && (
           <div className="mb-4">
-            <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Requirements for {nextMilestoneObj.id}</h3>
+            <h3 className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#BA7517] mb-2">Requirements for {nextMilestoneObj.id}</h3>
             <div className="space-y-2">
               <div className="flex items-center gap-2">
                 {milestoneLoads >= nextMilestoneObj.loadsRequired ? (
-                  <CheckCircle2 size={16} className="text-green-700 flex-shrink-0" />
+                  <CheckCircle2 size={16} className="text-[#2F7A4F] flex-shrink-0" />
                 ) : (
                   <Circle size={16} className="text-gray-500 flex-shrink-0" />
                 )}
-                <span className={`text-xs ${milestoneLoads >= nextMilestoneObj.loadsRequired ? "text-green-600" : "text-gray-600"}`}>
+                <span className={`text-xs ${milestoneLoads >= nextMilestoneObj.loadsRequired ? "text-[#2F7A4F]" : "text-gray-600"}`}>
                   {nextMilestoneObj.loadsRequired} completed loads ({milestoneLoads} done)
                 </span>
               </div>
               <div className="flex items-center gap-2">
                 {milestoneOnTimePct >= nextMilestoneObj.onTimePctRequired ? (
-                  <CheckCircle2 size={16} className="text-green-700 flex-shrink-0" />
+                  <CheckCircle2 size={16} className="text-[#2F7A4F] flex-shrink-0" />
                 ) : (
                   <Circle size={16} className="text-gray-500 flex-shrink-0" />
                 )}
-                <span className={`text-xs ${milestoneOnTimePct >= nextMilestoneObj.onTimePctRequired ? "text-green-600" : "text-gray-600"}`}>
+                <span className={`text-xs ${milestoneOnTimePct >= nextMilestoneObj.onTimePctRequired ? "text-[#2F7A4F]" : "text-gray-600"}`}>
                   {nextMilestoneObj.onTimePctRequired}%+ on-time delivery (currently {milestoneOnTimePct.toFixed(1)}%)
                 </span>
               </div>
               <div className="flex items-center gap-2">
                 {milestoneDaysActive >= nextMilestoneObj.daysRequired ? (
-                  <CheckCircle2 size={16} className="text-green-700 flex-shrink-0" />
+                  <CheckCircle2 size={16} className="text-[#2F7A4F] flex-shrink-0" />
                 ) : (
                   <Circle size={16} className="text-gray-500 flex-shrink-0" />
                 )}
-                <span className={`text-xs ${milestoneDaysActive >= nextMilestoneObj.daysRequired ? "text-green-600" : "text-gray-600"}`}>
+                <span className={`text-xs ${milestoneDaysActive >= nextMilestoneObj.daysRequired ? "text-[#2F7A4F]" : "text-gray-600"}`}>
                   {nextMilestoneObj.daysRequired} days active ({milestoneDaysActive} days so far)
                 </span>
               </div>
@@ -252,10 +252,10 @@ export default function ScorecardPage() {
 
         {/* Milestone Rewards Preview */}
         {nextMilestoneObj && (
-          <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3">
+          <div className="bg-[#E6F0E9] border border-[#2F7A4F]/30 rounded-lg p-3">
             <div className="flex items-center gap-2">
-              <Award size={14} className="text-emerald-600 flex-shrink-0" />
-              <span className="text-xs font-semibold text-emerald-700">
+              <Award size={14} className="text-[#2F7A4F] flex-shrink-0" />
+              <span className="text-xs font-semibold text-[#2F7A4F]">
                 At {nextMilestoneObj.id}: {nextMilestoneObj.reward}
               </span>
             </div>
@@ -263,7 +263,7 @@ export default function ScorecardPage() {
         )}
 
         {/* Milestone Timeline */}
-        <div className="mt-4 pt-4 border-t border-gray-100">
+        <div className="mt-4 pt-4 border-t border-[#F5EEE0]">
           <div className="flex items-center justify-between">
             {MILESTONES.map((m, i) => {
               const isCompleted = i < currentMilestoneIdx;
@@ -271,13 +271,13 @@ export default function ScorecardPage() {
               return (
                 <div key={m.id} className="flex flex-col items-center flex-1">
                   <div className={`w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-bold border-2 ${
-                    isCompleted ? "bg-[#C9A84C] border-[#C9A84C] text-white" :
-                    isCurrent ? "bg-white border-[#C9A84C] text-[#C9A84C]" :
-                    "bg-gray-50 border-gray-200 text-gray-400"
+                    isCompleted ? "bg-[#BA7517] border-[#C5A572] text-[#FBF7F0]" :
+                    isCurrent ? "bg-white border-[#C5A572] text-[#BA7517]" :
+                    "bg-gray-50 border-[#EFE6D3] text-gray-400"
                   }`}>
                     {m.id}
                   </div>
-                  <span className={`text-[9px] mt-1 text-center leading-tight ${isCurrent ? "font-bold text-[#0F1117]" : "text-gray-400"}`}>
+                  <span className={`text-[9px] mt-1 text-center leading-tight ${isCurrent ? "font-bold text-[#0A2540]" : "text-gray-400"}`}>
                     {m.name}
                   </span>
                 </div>
@@ -295,8 +295,8 @@ export default function ScorecardPage() {
           return (
             <CarrierCard key={key} padding="p-4">
               <p className="text-[11px] text-gray-500 mb-1 truncate">{label}</p>
-              <p className="text-xl font-bold text-[#0F1117]">{typeof val === "number" ? val.toFixed(1) : val}%</p>
-              <div className="h-1.5 bg-gray-100 rounded-full mt-2 overflow-hidden">
+              <p className="text-xl font-bold text-[#0A2540]">{typeof val === "number" ? val.toFixed(1) : val}%</p>
+              <div className="h-1.5 bg-[#F5EEE0] rounded-full mt-2 overflow-hidden">
                 <div className={`h-full rounded-full transition-all ${barColor(val, isInverted)}`}
                   style={{ width: `${Math.min(isInverted ? 100 - val * 5 : val, 100)}%` }} />
               </div>
@@ -310,7 +310,7 @@ export default function ScorecardPage() {
         <CarrierCard className="mb-4">
           <div className="flex items-center gap-2 mb-3">
             <Award className="w-4 h-4 text-[#BA7517]" />
-            <h2 className="font-semibold text-[#0F1117] text-sm">Score History</h2>
+            <h2 className="font-semibold text-[#0A2540] text-sm">Score History</h2>
           </div>
           <div className="h-48">
             <ResponsiveContainer width="100%" height="100%">
@@ -319,8 +319,8 @@ export default function ScorecardPage() {
                 <YAxis domain={[0, 100]} tick={{ fontSize: 11, fill: "#9ca3af" }} axisLine={false} tickLine={false} />
                 <Tooltip formatter={(v: number | undefined) => [v, "Score"]}
                   contentStyle={{ fontSize: 12, borderRadius: 6, border: "1px solid #e5e7eb" }} />
-                <Line type="monotone" dataKey="score" stroke="#C9A84C" strokeWidth={2}
-                  dot={{ r: 3, fill: "#C9A84C" }} activeDot={{ r: 5 }} />
+                <Line type="monotone" dataKey="score" stroke="#BA7517" strokeWidth={2}
+                  dot={{ r: 3, fill: "#BA7517" }} activeDot={{ r: 5 }} />
               </LineChart>
             </ResponsiveContainer>
           </div>
@@ -330,11 +330,11 @@ export default function ScorecardPage() {
       {/* Bonus Tracker */}
       {bonuses && bonuses.length > 0 && (
         <CarrierCard>
-          <h2 className="font-semibold text-[#0F1117] text-sm mb-3">Bonus Tracker</h2>
+          <h2 className="font-semibold text-[#0A2540] text-sm mb-3">Bonus Tracker</h2>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="text-[11px] text-gray-700 uppercase border-b border-gray-100">
+                <tr className="text-[11px] text-gray-700 uppercase border-b border-[#F5EEE0]">
                   <th className="text-left py-2 font-medium">Period</th>
                   <th className="text-left py-2 font-medium">Type</th>
                   <th className="text-right py-2 font-medium">Amount</th>
@@ -344,20 +344,20 @@ export default function ScorecardPage() {
               </thead>
               <tbody>
                 {bonuses.map((b: { period: string; type: string; amount: number; status: string; description: string }, i: number) => (
-                  <tr key={i} className="border-b border-gray-50">
+                  <tr key={i} className="border-b border-[#F5EEE0]">
                     <td className="py-2 text-gray-600">{b.period}</td>
-                    <td className="py-2 text-[#0F1117] font-medium">{b.type}</td>
-                    <td className="py-2 text-right font-semibold text-[#0F1117]">${b.amount.toLocaleString()}</td>
+                    <td className="py-2 text-[#0A2540] font-medium">{b.type}</td>
+                    <td className="py-2 text-right font-semibold text-[#0A2540]">${b.amount.toLocaleString()}</td>
                     <td className="py-2 text-center">
                       <span className={`px-2 py-0.5 rounded-full text-[11px] font-medium ${
-                        b.status === "PAID" ? "bg-green-50 text-green-700" : "bg-yellow-50 text-yellow-700"
+                        b.status === "PAID" ? "bg-[#E6F0E9] text-[#2F7A4F]" : "bg-[#FBEFD4] text-[#B07A1A]"
                       }`}>{b.status}</span>
                     </td>
                     <td className="py-2 text-gray-500 text-xs">{b.description}</td>
                   </tr>
                 ))}
                 <tr className="font-semibold">
-                  <td className="py-2 text-[#0F1117]" colSpan={2}>Total</td>
+                  <td className="py-2 text-[#0A2540]" colSpan={2}>Total</td>
                   <td className="py-2 text-right text-[#BA7517]">${totalBonus.toLocaleString()}</td>
                   <td colSpan={2} />
                 </tr>

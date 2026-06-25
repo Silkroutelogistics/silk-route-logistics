@@ -75,8 +75,8 @@ function Countdown({ expiresAt }: { expiresAt: string }) {
   const h = Math.floor(remaining / 3600000);
   const m = Math.floor((remaining % 3600000) / 60000);
   const s = Math.floor((remaining % 60000) / 1000);
-  const cls = h === 0 && m < 5 ? "text-red-400" : h === 0 && m < 30 ? "text-amber-400" : "text-gold";
-  if (remaining === 0) return <span className="font-mono font-semibold text-2xl text-red-400">Expired</span>;
+  const cls = h === 0 && m < 5 ? "text-[#9B2C2C]" : h === 0 && m < 30 ? "text-[#B07A1A]" : "text-[#BA7517]";
+  if (remaining === 0) return <span className="font-mono font-semibold text-2xl text-[#9B2C2C]">Expired</span>;
   const display = h > 0
     ? `${h}h ${String(m).padStart(2, "0")}m`
     : `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
@@ -146,14 +146,14 @@ export default function CarrierTendersPage() {
   return (
     <div className="p-6 space-y-4">
       <div>
-        <h1 className="text-2xl font-semibold text-[#0A2540]">Active tenders</h1>
+        <h1 className="text-2xl font-serif font-semibold text-[#0A2540]">Active tenders</h1>
         <p className="text-sm text-slate-700 mt-1">
           Accept or decline each tender before its expiration. Accepted tenders book the load immediately.
         </p>
       </div>
 
       {tenders.length === 0 && !tendersQuery.isLoading && (
-        <div className="p-12 text-center text-slate-500 bg-white/5 border border-white/10 rounded-xl">
+        <div className="p-12 text-center text-slate-500 bg-[#F5EEE0] border border-[#EFE6D3] rounded-xl">
           No tenders pending — we&apos;ll surface a tender here as soon as one matches your equipment and lanes.
         </div>
       )}
@@ -165,7 +165,7 @@ export default function CarrierTendersPage() {
         const counterNum = parseFloat(counterRate);
         const counterValid = !isNaN(counterNum) && counterNum > 0;
         return (
-          <div key={t.id} className="bg-white/5 border border-white/10 rounded-xl p-6">
+          <div key={t.id} className="bg-white border border-[#EFE6D3] rounded-xl p-6">
             <div className="flex items-start justify-between gap-4">
               <div>
                 <div className="flex items-center gap-2 flex-wrap">
@@ -179,7 +179,7 @@ export default function CarrierTendersPage() {
                   )}
                 </div>
                 <div className="mt-2 text-sm text-slate-500 flex items-center gap-1">
-                  <MapPin className="w-4 h-4 text-gold" />
+                  <MapPin className="w-4 h-4 text-[#BA7517]" />
                   {t.load.originCity}, {t.load.originState} → {t.load.destCity}, {t.load.destState}
                   {t.load.distance && ` · ${Math.round(t.load.distance).toLocaleString()} mi`}
                 </div>
@@ -191,7 +191,7 @@ export default function CarrierTendersPage() {
               </div>
               <div className="text-right">
                 <div className="text-[10px] text-slate-500 uppercase">Offered Rate</div>
-                <div className="text-2xl font-semibold text-gold">
+                <div className="text-2xl font-semibold text-[#BA7517]">
                   ${Number(t.offeredRate).toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                 </div>
               </div>
@@ -217,7 +217,7 @@ export default function CarrierTendersPage() {
                 <button
                   onClick={() => accept.mutate(t.id)}
                   disabled={accept.isPending}
-                  className="flex-1 flex items-center justify-center gap-2 py-3 bg-green-600 hover:bg-green-700 text-white font-semibold rounded disabled:opacity-40"
+                  className="flex-1 flex items-center justify-center gap-2 py-3 bg-[#2F7A4F] hover:bg-[#276641] text-[#FBF7F0] font-semibold rounded disabled:opacity-40"
                 >
                   <CheckCircle2 className="w-4 h-4" /> Accept
                 </button>
@@ -229,7 +229,7 @@ export default function CarrierTendersPage() {
                 </button>
                 <button
                   onClick={() => setDeclining(t.id)}
-                  className="flex-1 flex items-center justify-center gap-2 py-3 bg-white/5 hover:bg-white/10 text-slate-700 font-semibold rounded border border-white/10"
+                  className="flex-1 flex items-center justify-center gap-2 py-3 bg-[#F5EEE0] hover:bg-[#EFE6D3] text-slate-700 font-semibold rounded border border-[#EFE6D3]"
                 >
                   <AlertTriangle className="w-4 h-4" /> Decline
                 </button>
@@ -249,7 +249,7 @@ export default function CarrierTendersPage() {
                     step="1"
                     value={counterRate}
                     onChange={(e) => setCounterRate(e.target.value)}
-                    className="w-full pl-7 pr-3 py-2 bg-white border border-slate-300 rounded text-sm text-slate-900"
+                    className="w-full pl-7 pr-3 py-2 bg-white border border-[#EFE6D3] rounded text-sm text-[#0A2540] focus:border-[#BA7517] focus:ring-[#BA7517]/15 focus:outline-none"
                     placeholder="Enter your rate"
                   />
                 </div>
@@ -257,13 +257,13 @@ export default function CarrierTendersPage() {
                   <button
                     onClick={() => counter.mutate({ tenderId: t.id, counterRate: counterNum })}
                     disabled={!counterValid || counter.isPending}
-                    className="flex-1 py-2 bg-[#BA7517] hover:bg-[#8f5a11] text-white text-sm font-medium rounded disabled:opacity-40"
+                    className="flex-1 py-2 bg-[#BA7517] hover:bg-[#854F0B] text-[#FBF7F0] text-sm font-medium rounded disabled:opacity-40"
                   >
                     {counter.isPending ? "Sending…" : "Send counter offer"}
                   </button>
                   <button
                     onClick={() => { setCountering(null); setCounterRate(""); }}
-                    className="flex-1 py-2 bg-white/5 text-slate-700 text-sm font-medium rounded border border-slate-300"
+                    className="flex-1 py-2 bg-[#F5EEE0] text-slate-700 text-sm font-medium rounded border border-[#EFE6D3]"
                   >
                     Back
                   </button>
@@ -277,7 +277,7 @@ export default function CarrierTendersPage() {
                 <select
                   value={reason}
                   onChange={(e) => setReason(e.target.value)}
-                  className="w-full px-3 py-2 bg-white border border-slate-300 rounded text-sm text-slate-900"
+                  className="w-full px-3 py-2 bg-white border border-[#EFE6D3] rounded text-sm text-[#0A2540] focus:border-[#BA7517] focus:ring-[#BA7517]/15 focus:outline-none"
                 >
                   <option value="">Select a reason…</option>
                   {DECLINE_REASONS.map((r) => <option key={r} value={r}>{r}</option>)}
@@ -286,13 +286,13 @@ export default function CarrierTendersPage() {
                   <button
                     onClick={() => decline.mutate({ tenderId: t.id, reason })}
                     disabled={!reason || decline.isPending}
-                    className="flex-1 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded disabled:opacity-40"
+                    className="flex-1 py-2 bg-[#9B2C2C] hover:bg-[#7d2323] text-[#FBF7F0] text-sm font-medium rounded disabled:opacity-40"
                   >
                     {decline.isPending ? "Declining…" : "Confirm decline"}
                   </button>
                   <button
                     onClick={() => { setDeclining(null); setReason(""); }}
-                    className="flex-1 py-2 bg-white/5 text-slate-700 text-sm font-medium rounded border border-slate-300"
+                    className="flex-1 py-2 bg-[#F5EEE0] text-slate-700 text-sm font-medium rounded border border-[#EFE6D3]"
                   >
                     Back
                   </button>

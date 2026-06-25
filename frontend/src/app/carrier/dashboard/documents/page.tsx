@@ -113,12 +113,12 @@ export default function CarrierDocumentsPage() {
     <div>
       <div className="flex justify-between items-start mb-6">
         <div>
-          <h1 className="font-serif text-2xl text-[#0F1117] mb-1">Documents</h1>
+          <h1 className="font-serif text-2xl text-[#0A2540] mb-1">Documents</h1>
           <p className="text-[13px] text-gray-500">All your compliance documents, rate confirmations, BOLs, and PODs</p>
         </div>
         <button
           onClick={() => setShowUpload(!showUpload)}
-          className="flex items-center gap-1.5 px-4 py-2 bg-gradient-to-br from-[#C9A84C] to-[#A88535] text-[#0A2540] text-xs font-semibold rounded-md hover:shadow-lg transition-shadow"
+          className="flex items-center gap-1.5 px-4 py-2 bg-[#BA7517] text-[#FBF7F0] text-xs font-semibold rounded-md hover:shadow-lg transition-shadow"
         >
           <Upload size={14} /> Upload Document
         </button>
@@ -126,9 +126,9 @@ export default function CarrierDocumentsPage() {
 
       {/* Upload Panel */}
       {showUpload && (
-        <CarrierCard padding="p-5" className="mb-5 border-[#C9A84C]/30">
+        <CarrierCard padding="p-5" className="mb-5 border-[#C5A572]/30">
           <div className="flex justify-between items-center mb-4">
-            <h3 className="text-sm font-bold text-[#0F1117] flex items-center gap-2">
+            <h3 className="text-sm font-bold text-[#0A2540] flex items-center gap-2">
               <Upload size={16} className="text-[#BA7517]" /> Upload Document
             </h3>
             <button onClick={() => { setShowUpload(false); setSelectedFile(null); }} className="text-gray-700 hover:text-gray-600">
@@ -142,7 +142,7 @@ export default function CarrierDocumentsPage() {
               <select
                 value={uploadDocType}
                 onChange={(e) => { setUploadDocType(e.target.value); setUploadLoadId(""); }}
-                className="w-full px-3 py-2 border border-gray-200 rounded text-xs focus:border-[#C9A84C] focus:outline-none bg-white"
+                className="w-full px-3 py-2 border border-[#EFE6D3] rounded text-xs focus:border-[#BA7517] focus:ring-[#BA7517]/15 focus:outline-none bg-white"
               >
                 {DOC_TYPE_OPTIONS.map((opt) => (
                   <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -155,7 +155,7 @@ export default function CarrierDocumentsPage() {
                 <select
                   value={uploadLoadId}
                   onChange={(e) => setUploadLoadId(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-200 rounded text-xs focus:border-[#C9A84C] focus:outline-none bg-white"
+                  className="w-full px-3 py-2 border border-[#EFE6D3] rounded text-xs focus:border-[#BA7517] focus:ring-[#BA7517]/15 focus:outline-none bg-white"
                 >
                   <option value="">Select a load...</option>
                   {loads.map((load: LoadWithDocs) => (
@@ -173,7 +173,7 @@ export default function CarrierDocumentsPage() {
             onDrop={handleDrop}
             onClick={() => fileRef.current?.click()}
             className={`border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors ${
-              dragOver ? "border-[#C9A84C] bg-[#C9A84C]/5" : "border-gray-200 hover:border-[#C9A84C]/50"
+              dragOver ? "border-[#C5A572] bg-[#BA7517]/5" : "border-[#EFE6D3] hover:border-[#C5A572]/50"
             }`}
           >
             <input
@@ -186,9 +186,9 @@ export default function CarrierDocumentsPage() {
             {selectedFile ? (
               <div className="flex items-center justify-center gap-2">
                 <FileText size={18} className="text-[#BA7517]" />
-                <span className="text-sm font-medium text-[#0F1117]">{selectedFile.name}</span>
+                <span className="text-sm font-medium text-[#0A2540]">{selectedFile.name}</span>
                 <span className="text-[11px] text-gray-700">({(selectedFile.size / 1024).toFixed(0)} KB)</span>
-                <button onClick={(e) => { e.stopPropagation(); setSelectedFile(null); }} className="text-gray-700 hover:text-red-500 ml-1">
+                <button onClick={(e) => { e.stopPropagation(); setSelectedFile(null); }} className="text-gray-700 hover:text-[#9B2C2C] ml-1">
                   <X size={14} />
                 </button>
               </div>
@@ -202,14 +202,14 @@ export default function CarrierDocumentsPage() {
           </div>
 
           {uploadMutation.isError && (
-            <p className="text-xs text-red-500 mt-2">{(uploadMutation.error as Error & { response?: { data?: { error?: string } } })?.response?.data?.error || "Upload failed"}</p>
+            <p className="text-xs text-[#9B2C2C] mt-2">{(uploadMutation.error as Error & { response?: { data?: { error?: string } } })?.response?.data?.error || "Upload failed"}</p>
           )}
 
           <div className="flex justify-end mt-4">
             <button
               onClick={() => uploadMutation.mutate()}
               disabled={!selectedFile || (isLoadDocType && !uploadLoadId) || uploadMutation.isPending}
-              className="flex items-center gap-1.5 px-4 py-2 bg-[#0F1117] text-white text-xs font-semibold rounded-md disabled:opacity-40"
+              className="flex items-center gap-1.5 px-4 py-2 bg-[#BA7517] text-[#FBF7F0] text-xs font-semibold rounded-md disabled:opacity-40"
             >
               {uploadMutation.isPending ? <><Loader2 size={14} className="animate-spin" /> Uploading...</> : "Upload"}
             </button>
@@ -222,11 +222,11 @@ export default function CarrierDocumentsPage() {
         {[...typeCounts.entries()].slice(0, 4).map(([type, count]) => (
           <CarrierCard key={type} padding="p-4">
             <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-lg bg-[#C9A84C]/10 flex items-center justify-center">
+              <div className="w-9 h-9 rounded-lg bg-[#BA7517]/10 flex items-center justify-center">
                 <FileText size={18} className="text-[#BA7517]" />
               </div>
               <div>
-                <div className="text-lg font-bold text-[#0F1117]">{count}</div>
+                <div className="text-lg font-bold text-[#0A2540]">{count}</div>
                 <div className="text-[11px] text-gray-700">{typeLabels[type] || type}</div>
               </div>
             </div>
@@ -237,26 +237,26 @@ export default function CarrierDocumentsPage() {
       {/* Compliance Documents */}
       {complianceDocs.length > 0 && (
         <CarrierCard padding="p-0" className="mb-5">
-          <div className="px-5 py-4 border-b border-gray-100">
-            <h3 className="text-[15px] font-bold text-[#0F1117] flex items-center gap-2">
-              <Shield size={16} className="text-violet-500" /> Compliance Documents
+          <div className="px-5 py-4 border-b border-[#F5EEE0]">
+            <h3 className="text-[15px] font-bold text-[#0A2540] flex items-center gap-2">
+              <Shield size={16} className="text-[#2A5B8B]" /> Compliance Documents
             </h3>
           </div>
           {complianceDocs.map((doc: DocItem, i: number) => (
-            <div key={doc.id || i} className="px-5 py-3.5 border-b border-gray-100 flex items-center justify-between">
+            <div key={doc.id || i} className="px-5 py-3.5 border-b border-[#F5EEE0] flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-md bg-violet-500/10 flex items-center justify-center">
-                  <Shield size={16} className="text-violet-500" />
+                <div className="w-9 h-9 rounded-md bg-[#2A5B8B]/10 flex items-center justify-center">
+                  <Shield size={16} className="text-[#2A5B8B]" />
                 </div>
                 <div>
-                  <div className="text-[13px] font-semibold text-[#0F1117]">{doc.fileName || doc.type}</div>
+                  <div className="text-[13px] font-semibold text-[#0A2540]">{doc.fileName || doc.type}</div>
                   <div className="text-[11px] text-gray-700">{doc.docType || doc.type}</div>
                 </div>
               </div>
               {doc.uploaded || doc.fileUrl ? (
-                <CheckCircle size={16} className="text-emerald-700" />
+                <CheckCircle size={16} className="text-[#2F7A4F]" />
               ) : (
-                <span className="text-[11px] text-red-500 font-medium">Missing</span>
+                <span className="text-[11px] text-[#9B2C2C] font-medium">Missing</span>
               )}
             </div>
           ))}
@@ -265,20 +265,20 @@ export default function CarrierDocumentsPage() {
 
       {/* Load Documents */}
       <CarrierCard padding="p-0">
-        <div className="px-5 py-4 border-b border-gray-100">
-          <h3 className="text-[15px] font-bold text-[#0F1117]">Load Documents</h3>
+        <div className="px-5 py-4 border-b border-[#F5EEE0]">
+          <h3 className="text-[15px] font-bold text-[#0A2540]">Load Documents</h3>
         </div>
         {loadDocs.length === 0 ? (
           <div className="px-5 py-12 text-center text-sm text-gray-700">No load documents yet</div>
         ) : (
           loadDocs.slice(0, 20).map((doc: DocItem) => (
-            <div key={doc.id} className="px-5 py-3.5 border-b border-gray-100 flex items-center justify-between">
+            <div key={doc.id} className="px-5 py-3.5 border-b border-[#F5EEE0] flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-md bg-red-500/10 flex items-center justify-center">
-                  <File size={16} className="text-red-500" />
+                <div className="w-9 h-9 rounded-md bg-[#9B2C2C]/10 flex items-center justify-center">
+                  <File size={16} className="text-[#9B2C2C]" />
                 </div>
                 <div>
-                  <div className="text-[13px] font-semibold text-[#0F1117]">{doc.fileName}</div>
+                  <div className="text-[13px] font-semibold text-[#0A2540]">{doc.fileName}</div>
                   <div className="text-[11px] text-gray-700">{doc.docType || "DOC"} &middot; {doc.loadRef}</div>
                 </div>
               </div>

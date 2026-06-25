@@ -83,7 +83,7 @@ export default function CarrierMessagingPage() {
   return (
     <div>
       <div className="mb-6">
-        <h1 className="font-serif text-2xl text-[#0F1117] mb-1">Messages</h1>
+        <h1 className="font-serif text-2xl text-[#0A2540] mb-1">Messages</h1>
         <p className="text-[13px] text-gray-500">
           Communicate with your dispatcher and SRL operations team
           {totalUnread > 0 && <span className="ml-2 text-[#BA7517] font-semibold">{totalUnread} unread</span>}
@@ -93,25 +93,25 @@ export default function CarrierMessagingPage() {
       <div className="grid grid-cols-[300px_1fr] gap-4" style={{ height: "calc(100vh - 12rem)" }}>
         {/* Conversation List */}
         <CarrierCard padding="p-0" className="flex flex-col overflow-hidden">
-          <div className="p-3.5 border-b border-gray-100 flex items-center justify-between">
-            <span className="text-[13px] font-bold text-[#0F1117]">Conversations</span>
+          <div className="p-3.5 border-b border-[#F5EEE0] flex items-center justify-between">
+            <span className="text-[13px] font-bold text-[#0A2540]">Conversations</span>
             <button
               onClick={() => setShowNewMsg(!showNewMsg)}
-              className="w-7 h-7 rounded-md bg-[#C9A84C]/10 text-[#C9A84C] flex items-center justify-center hover:bg-[#C9A84C]/20"
+              className="w-7 h-7 rounded-md bg-[#BA7517]/10 text-[#BA7517] flex items-center justify-center hover:bg-[#BA7517]/20"
             >
               <Plus size={14} />
             </button>
           </div>
 
           {showNewMsg && (
-            <div className="p-3 border-b border-gray-100">
+            <div className="p-3 border-b border-[#F5EEE0]">
               <div className="relative">
                 <Search size={14} className="absolute left-3 top-2.5 text-gray-700" />
                 <input
                   value={userSearch}
                   onChange={(e) => setUserSearch(e.target.value)}
                   placeholder="Search users..."
-                  className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-md text-xs focus:border-[#C9A84C] focus:outline-none"
+                  className="w-full pl-9 pr-3 py-2 border border-[#EFE6D3] rounded-md text-xs focus:border-[#BA7517] focus:ring-[#BA7517]/15 focus:outline-none"
                 />
               </div>
               {searchResults && searchResults.length > 0 && (
@@ -122,7 +122,7 @@ export default function CarrierMessagingPage() {
                       onClick={() => selectConversation(u.id, `${u.firstName} ${u.lastName}`)}
                       className="w-full text-left p-2 rounded-md hover:bg-gray-50 text-xs"
                     >
-                      <div className="font-semibold text-[#0F1117]">{u.firstName} {u.lastName}</div>
+                      <div className="font-semibold text-[#0A2540]">{u.firstName} {u.lastName}</div>
                       <div className="text-gray-700">{u.email}</div>
                       <div className="text-gray-700">{u.company || u.role}</div>
                     </button>
@@ -137,13 +137,13 @@ export default function CarrierMessagingPage() {
               <button
                 key={conv.partner.id}
                 onClick={() => selectConversation(conv.partner.id, `${conv.partner.firstName} ${conv.partner.lastName}`)}
-                className={`w-full text-left px-4 py-3.5 border-b border-gray-100 transition ${
-                  selectedUserId === conv.partner.id ? "bg-[#C9A84C]/[0.06]" : "hover:bg-gray-50"
+                className={`w-full text-left px-4 py-3.5 border-b border-[#F5EEE0] transition ${
+                  selectedUserId === conv.partner.id ? "bg-[#BA7517]/[0.06]" : "hover:bg-gray-50"
                 }`}
               >
                 <div className="flex justify-between items-start">
                   <div className="flex-1 min-w-0">
-                    <div className={`text-[13px] text-[#0F1117] truncate ${conv.unreadCount > 0 ? "font-bold" : "font-medium"}`}>
+                    <div className={`text-[13px] text-[#0A2540] truncate ${conv.unreadCount > 0 ? "font-bold" : "font-medium"}`}>
                       {conv.partner.firstName} {conv.partner.lastName}
                     </div>
                     <div className="text-[11px] text-gray-700 truncate">{conv.partner.company || conv.partner.role}</div>
@@ -152,7 +152,7 @@ export default function CarrierMessagingPage() {
                   <div className="text-right shrink-0 ml-2">
                     <div className="text-[10px] text-gray-700">{new Date(conv.lastMessageAt).toLocaleDateString()}</div>
                     {conv.unreadCount > 0 && (
-                      <span className="inline-block mt-1 px-1.5 py-0.5 bg-[#C9A84C] text-[#0A2540] text-[9px] font-bold rounded-full">
+                      <span className="inline-block mt-1 px-1.5 py-0.5 bg-[#BA7517] text-[#FBF7F0] text-[9px] font-bold rounded-full">
                         {conv.unreadCount}
                       </span>
                     )}
@@ -173,18 +173,18 @@ export default function CarrierMessagingPage() {
         <CarrierCard padding="p-0" className="flex flex-col overflow-hidden">
           {selectedUserId ? (
             <>
-              <div className="px-5 py-3.5 border-b border-gray-100 flex items-center gap-3">
-                <div className="w-9 h-9 rounded-full bg-gradient-to-br from-[#0F1117] to-[#1B2D45] flex items-center justify-center text-[11px] font-bold text-[#BA7517]">
+              <div className="px-5 py-3.5 border-b border-[#F5EEE0] flex items-center gap-3">
+                <div className="w-9 h-9 rounded-full bg-[#0A2540] flex items-center justify-center text-[11px] font-bold text-[#BA7517]">
                   {selectedUserName.split(" ").map((n) => n[0]).join("").slice(0, 2)}
                 </div>
-                <span className="text-sm font-semibold text-[#0F1117]">{selectedUserName}</span>
+                <span className="text-sm font-semibold text-[#0A2540]">{selectedUserName}</span>
               </div>
               <div className="flex-1 overflow-y-auto p-5 space-y-3">
                 {messages?.map((msg) => (
                   <div key={msg.id} className={`flex ${msg.senderId === user?.id ? "justify-end" : "justify-start"}`}>
                     <div className={`max-w-[70%] px-3.5 py-2.5 rounded-xl text-[13px] leading-relaxed ${
                       msg.senderId === user?.id
-                        ? "bg-[#0F1117] text-white rounded-br-md"
+                        ? "bg-[#0A2540] text-[#FBF7F0] rounded-br-md"
                         : "bg-gray-100 text-gray-700 rounded-bl-md"
                     }`}>
                       {msg.content}
@@ -202,22 +202,22 @@ export default function CarrierMessagingPage() {
                 <div ref={messagesEndRef} />
               </div>
               {sendError && (
-                <div className="mx-4 mt-1 px-3 py-2 bg-red-50 border border-red-200 rounded-md flex items-center gap-2 text-xs text-red-600">
+                <div className="mx-4 mt-1 px-3 py-2 bg-[#F6E3E3] border border-[#9B2C2C]/30 rounded-md flex items-center gap-2 text-xs text-[#9B2C2C]">
                   <AlertCircle size={14} /> {sendError}
                 </div>
               )}
-              <div className="px-4 py-3 border-t border-gray-100 flex gap-2">
+              <div className="px-4 py-3 border-t border-[#F5EEE0] flex gap-2">
                 <input
                   value={newMessage}
                   onChange={(e) => setNewMessage(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && newMessage.trim() && sendMsg.mutate()}
                   placeholder="Type a message..."
-                  className="flex-1 px-3.5 py-2.5 border border-gray-200 rounded-lg text-[13px] outline-none focus:border-[#C9A84C]"
+                  className="flex-1 px-3.5 py-2.5 border border-[#EFE6D3] rounded-lg text-[13px] outline-none focus:border-[#BA7517] focus:ring-[#BA7517]/15"
                 />
                 <button
                   onClick={() => newMessage.trim() && sendMsg.mutate()}
                   disabled={!newMessage.trim() || sendMsg.isPending}
-                  className="px-4 py-2.5 bg-gradient-to-br from-[#C9A84C] to-[#A88535] text-[#0A2540] text-sm rounded-lg disabled:opacity-50"
+                  className="px-4 py-2.5 bg-[#BA7517] text-[#FBF7F0] text-sm rounded-lg disabled:opacity-50"
                 >
                   <Send size={16} />
                 </button>

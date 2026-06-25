@@ -149,7 +149,7 @@ export default function ShipperLoginPage() {
     setLocalLoading(false);
   };
 
-  const inputClass = "w-full bg-white border border-gray-200 rounded-xl px-4 py-3.5 text-sm text-gray-900 outline-none transition-all placeholder:text-gray-400 focus:border-[#C9A84C] focus:shadow-[0_0_0_3px_rgba(201,168,76,0.1)]";
+  const inputClass = "w-full bg-white border border-[#EFE6D3] rounded-xl px-4 py-3.5 text-sm text-[#0A2540] outline-none transition-all placeholder:text-gray-400 focus:border-[#BA7517] focus:ring-[#BA7517]/15 focus:shadow-[0_0_0_3px_rgba(186,117,23,0.1)]";
   const labelClass = "block text-xs font-medium text-gray-600 uppercase tracking-wider mb-1.5";
 
   return (
@@ -163,7 +163,7 @@ export default function ShipperLoginPage() {
         {/* Radial gold glow */}
         <div className="absolute pointer-events-none" style={{
           top: "35%", left: "40%", width: "500px", height: "500px",
-          background: "radial-gradient(circle, rgba(201,168,76,0.06) 0%, transparent 70%)",
+          background: "radial-gradient(circle, rgba(186,117,23,0.06) 0%, transparent 70%)",
           transform: "translate(-50%, -50%)",
           filter: "blur(60px)",
         }} />
@@ -185,31 +185,31 @@ export default function ShipperLoginPage() {
           ].map(([x,y,name],i) => (
             <g key={i}>
               <circle cx={Number(x)} cy={Number(y)} r="3" fill="rgba(255,255,255,0.5)" />
-              <circle cx={Number(x)} cy={Number(y)} r="5" fill="none" stroke="rgba(201,168,76,0.3)" strokeWidth="1">
+              <circle cx={Number(x)} cy={Number(y)} r="5" fill="none" stroke="rgba(186,117,23,0.3)" strokeWidth="1">
                 <animate attributeName="r" values="3;8;3" dur={`${3+i%3}s`} repeatCount="indefinite" />
                 <animate attributeName="opacity" values="0.5;0;0.5" dur={`${3+i%3}s`} repeatCount="indefinite" />
               </circle>
             </g>
           ))}
           {/* Animated route lines between cities */}
-          <line x1="200" y1="220" x2="280" y2="200" stroke="rgba(201,168,76,0.3)" strokeWidth="1" strokeDasharray="4,4">
+          <line x1="200" y1="220" x2="280" y2="200" stroke="rgba(186,117,23,0.3)" strokeWidth="1" strokeDasharray="4,4">
             <animate attributeName="stroke-dashoffset" values="0;-8" dur="1s" repeatCount="indefinite" />
           </line>
-          <line x1="280" y1="200" x2="350" y2="250" stroke="rgba(201,168,76,0.3)" strokeWidth="1" strokeDasharray="4,4">
+          <line x1="280" y1="200" x2="350" y2="250" stroke="rgba(186,117,23,0.3)" strokeWidth="1" strokeDasharray="4,4">
             <animate attributeName="stroke-dashoffset" values="0;-8" dur="1.2s" repeatCount="indefinite" />
           </line>
-          <line x1="350" y1="250" x2="500" y2="300" stroke="rgba(201,168,76,0.3)" strokeWidth="1" strokeDasharray="4,4">
+          <line x1="350" y1="250" x2="500" y2="300" stroke="rgba(186,117,23,0.3)" strokeWidth="1" strokeDasharray="4,4">
             <animate attributeName="stroke-dashoffset" values="0;-8" dur="1.5s" repeatCount="indefinite" />
           </line>
-          <line x1="500" y1="300" x2="600" y2="250" stroke="rgba(201,168,76,0.25)" strokeWidth="1" strokeDasharray="4,4">
+          <line x1="500" y1="300" x2="600" y2="250" stroke="rgba(186,117,23,0.25)" strokeWidth="1" strokeDasharray="4,4">
             <animate attributeName="stroke-dashoffset" values="0;-8" dur="1.3s" repeatCount="indefinite" />
           </line>
           {/* Moving truck dot */}
-          <circle r="4" fill="#C9A84C" opacity="0.8">
+          <circle r="4" fill="#BA7517" opacity="0.8">
             <animateMotion dur="12s" repeatCount="indefinite"
               path="M200,220 L280,200 L350,250 L420,280 L500,300 L600,250 L650,200" />
           </circle>
-          <circle r="4" fill="#C9A84C" opacity="0.6">
+          <circle r="4" fill="#BA7517" opacity="0.6">
             <animateMotion dur="15s" repeatCount="indefinite" begin="3s"
               path="M150,300 L240,280 L300,300 L380,320 L450,360 L520,350" />
           </circle>
@@ -224,7 +224,7 @@ export default function ShipperLoginPage() {
           {/* Feature pills */}
           <div className="grid grid-cols-2 gap-2 mb-8 w-full max-w-[360px]">
             {FEATURE_PILLS.map((f) => (
-              <div key={f.label} className="flex items-center justify-center gap-1.5 border border-white/25 text-white bg-white/10 rounded-lg px-3 py-2.5 text-xs font-medium cursor-default">
+              <div key={f.label} className="flex items-center justify-center gap-1.5 border border-white/25 text-[#FBF7F0] bg-white/10 rounded-lg px-3 py-2.5 text-xs font-medium cursor-default">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d={f.icon} /></svg>
                 {f.label}
               </div>
@@ -253,9 +253,9 @@ export default function ShipperLoginPage() {
 
           {/* Daily insight — LARGER, WHITE */}
           <div className="relative pl-5 max-w-[440px]">
-            <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-[#C9A84C] to-[#C9A84C]/20 rounded-full" />
+            <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-[#BA7517] to-[#BA7517]/20 rounded-full" />
             <div className="text-[#E8D48B] text-[11px] tracking-[2px] uppercase font-semibold mb-2">{insight.cat}</div>
-            <p className="text-white text-[16px] italic leading-relaxed m-0 font-light">{insight.text}</p>
+            <p className="text-[#FBF7F0] text-[16px] italic leading-relaxed m-0 font-light">{insight.text}</p>
             <p className="text-white/70 text-[13px] mt-2 m-0">&mdash; {insight.src}</p>
           </div>
         </div>
@@ -267,7 +267,7 @@ export default function ShipperLoginPage() {
       </div>
 
       {/* RIGHT PANEL — Form (45%) */}
-      <div className="w-full lg:w-[45%] flex items-center justify-center overflow-y-auto relative" style={{ backgroundColor: "#faf9f7" }}>
+      <div className="w-full lg:w-[45%] flex items-center justify-center overflow-y-auto relative" style={{ backgroundColor: "#FBF7F0" }}>
         <div className="absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-black/5 to-transparent pointer-events-none hidden lg:block" />
         <div className="w-full max-w-[400px] mx-auto px-8 py-12">
           {/* Mobile-only logo */}
@@ -277,17 +277,17 @@ export default function ShipperLoginPage() {
             </Link>
           </div>
 
-          <h2 className="font-serif text-2xl text-gray-900">Shipper Sign In</h2>
+          <h2 className="font-serif text-2xl text-[#0A2540]">Shipper Sign In</h2>
           <p className="text-gray-500 text-sm mt-1.5 mb-8">Track shipments and manage your freight</p>
 
           {/* Alerts */}
           {localError && (
-            <div className="mb-5 px-4 py-3 rounded-xl text-[13px] text-center leading-relaxed bg-red-50 border border-red-200 text-red-600">
+            <div className="mb-5 px-4 py-3 rounded-xl text-[13px] text-center leading-relaxed bg-[#F6E3E3] border border-[#9B2C2C]/30 text-[#9B2C2C]">
               {localError}
             </div>
           )}
           {successMsg && !localError && (
-            <div className="mb-5 px-4 py-3 rounded-xl text-[13px] text-center leading-relaxed bg-green-50 border border-green-200 text-green-600">
+            <div className="mb-5 px-4 py-3 rounded-xl text-[13px] text-center leading-relaxed bg-[#E6F0E9] border border-[#2F7A4F]/30 text-[#2F7A4F]">
               {successMsg}
             </div>
           )}
@@ -316,12 +316,12 @@ export default function ShipperLoginPage() {
               </div>
               <div className="flex items-center justify-between mb-6">
                 <label className="flex items-center gap-2 text-[13px] text-gray-500 cursor-pointer">
-                  <input type="checkbox" className="accent-[#C9A84C]" style={{ width: 15, height: 15 }} /> Remember me
+                  <input type="checkbox" className="accent-[#BA7517]" style={{ width: 15, height: 15 }} /> Remember me
                 </label>
-                <Link href="/shipper/forgot-password" className="text-[13px] text-[#C9A84C] font-medium hover:opacity-80 transition-opacity">Forgot password?</Link>
+                <Link href="/shipper/forgot-password" className="text-[13px] text-[#BA7517] font-medium hover:opacity-80 transition-opacity">Forgot password?</Link>
               </div>
               <button type="submit" disabled={localLoading}
-                className="w-full py-3.5 text-[15px] font-semibold rounded-xl border-none cursor-pointer transition-all duration-200 bg-gradient-to-r from-[#C9A84C] to-[#d4b85e] text-[#0F1117] shadow-[0_4px_12px_rgba(201,168,76,0.25)] hover:-translate-y-0.5 hover:shadow-[0_6px_20px_rgba(201,168,76,0.35)] disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:translate-y-0">
+                className="w-full py-3.5 text-[15px] font-semibold rounded-xl border-none cursor-pointer transition-all duration-200 bg-[#BA7517] text-[#FBF7F0] shadow-[0_4px_12px_rgba(186,117,23,0.25)] hover:-translate-y-0.5 hover:shadow-[0_6px_20px_rgba(186,117,23,0.35)] disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:translate-y-0">
                 {localLoading ? "Signing in..." : "Sign In"}
               </button>
             </form>
@@ -335,12 +335,12 @@ export default function ShipperLoginPage() {
                 />
               </div>
               <button type="submit" disabled={localLoading}
-                className="w-full py-3.5 text-[15px] font-semibold rounded-xl border-none cursor-pointer transition-all duration-200 bg-gradient-to-r from-[#C9A84C] to-[#d4b85e] text-[#0F1117] shadow-[0_4px_12px_rgba(201,168,76,0.25)] hover:-translate-y-0.5 hover:shadow-[0_6px_20px_rgba(201,168,76,0.35)] disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:translate-y-0">
+                className="w-full py-3.5 text-[15px] font-semibold rounded-xl border-none cursor-pointer transition-all duration-200 bg-[#BA7517] text-[#FBF7F0] shadow-[0_4px_12px_rgba(186,117,23,0.25)] hover:-translate-y-0.5 hover:shadow-[0_6px_20px_rgba(186,117,23,0.35)] disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:translate-y-0">
                 {localLoading ? "Verifying..." : "Verify"}
               </button>
               <div className="text-center mt-4">
                 <button type="button" onClick={() => { setOtpStep(false); setOtp(""); setLocalError(""); setSuccessMsg(""); }}
-                  className="text-[13px] text-gray-500 underline hover:text-[#C9A84C] transition-colors bg-transparent border-none cursor-pointer">
+                  className="text-[13px] text-gray-500 underline hover:text-[#BA7517] transition-colors bg-transparent border-none cursor-pointer">
                   Back to sign in
                 </button>
               </div>
@@ -354,7 +354,7 @@ export default function ShipperLoginPage() {
           </div>
 
           <Link href="/shipper/register"
-            className="flex items-center justify-center gap-2 w-full py-3 text-sm font-medium text-[#C9A84C] rounded-xl border border-[#C9A84C]/30 transition-all hover:bg-[#C9A84C]/5 no-underline">
+            className="flex items-center justify-center gap-2 w-full py-3 text-sm font-medium text-[#BA7517] rounded-xl border border-[#C5A572]/30 transition-all hover:bg-[#BA7517]/5 no-underline">
             <Package size={16} /> Create Shipper Account
           </Link>
 
@@ -364,11 +364,11 @@ export default function ShipperLoginPage() {
           </div>
 
           <div className="flex items-center justify-center gap-4">
-            <Link href="/carrier/login" className="text-xs font-medium text-[#C9A84C] hover:opacity-80 transition-opacity no-underline">
+            <Link href="/carrier/login" className="text-xs font-medium text-[#BA7517] hover:opacity-80 transition-opacity no-underline">
               Carrier Login
             </Link>
             <span className="text-gray-300">&middot;</span>
-            <Link href="/auth/login" className="text-xs font-medium text-[#C9A84C] hover:opacity-80 transition-opacity no-underline">
+            <Link href="/auth/login" className="text-xs font-medium text-[#BA7517] hover:opacity-80 transition-opacity no-underline">
               Employee Login
             </Link>
           </div>

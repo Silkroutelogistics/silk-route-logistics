@@ -130,39 +130,39 @@ export default function CarrierSettingsPage() {
 
   return (
     <div>
-      <h1 className="font-serif text-2xl text-[#0F1117] mb-1">Account Settings</h1>
+      <h1 className="font-serif text-2xl text-[#0A2540] mb-1">Account Settings</h1>
       <p className="text-[13px] text-gray-500 mb-6">Manage your carrier account, notifications, and security settings</p>
 
       <div className="grid grid-cols-2 gap-4">
         {/* Profile Info */}
         <CarrierCard padding="p-5">
-          <h3 className="text-sm font-bold text-[#0F1117] mb-4 flex items-center gap-2">
+          <h3 className="text-sm font-bold text-[#0A2540] mb-4 flex items-center gap-2">
             <User size={16} className="text-[#BA7517]" /> Profile Information
           </h3>
           <div className="space-y-3 text-xs">
             <div>
               <label className="text-gray-700 block mb-1">Name</label>
-              <div className="text-[#0F1117] font-medium">{user?.firstName} {user?.lastName}</div>
+              <div className="text-[#0A2540] font-medium">{user?.firstName} {user?.lastName}</div>
             </div>
             <div>
               <label className="text-gray-700 block mb-1">Email</label>
-              <div className="text-[#0F1117] font-medium">{user?.email}</div>
+              <div className="text-[#0A2540] font-medium">{user?.email}</div>
             </div>
             <div>
               <label className="text-gray-700 block mb-1">Company</label>
-              <div className="text-[#0F1117] font-medium">{profile?.companyName || user?.company || "—"}</div>
+              <div className="text-[#0A2540] font-medium">{profile?.companyName || user?.company || "—"}</div>
             </div>
             <div>
               <label className="text-gray-700 block mb-1">MC Number</label>
-              <div className="text-[#0F1117] font-medium">{profile?.mcNumber || "—"}</div>
+              <div className="text-[#0A2540] font-medium">{profile?.mcNumber || "—"}</div>
             </div>
             <div>
               <label className="text-gray-700 block mb-1">DOT Number</label>
-              <div className="text-[#0F1117] font-medium">{profile?.dotNumber || "—"}</div>
+              <div className="text-[#0A2540] font-medium">{profile?.dotNumber || "—"}</div>
             </div>
             <div>
               <label className="text-gray-700 block mb-1">Tier</label>
-              <div className="text-[#0F1117] font-medium">{profile?.tier || "—"}</div>
+              <div className="text-[#0A2540] font-medium">{profile?.tier || "—"}</div>
             </div>
             <div>
               <label className="text-gray-700 block mb-1">Equipment Types</label>
@@ -180,7 +180,7 @@ export default function CarrierSettingsPage() {
                 ))}
               </div>
             </div>
-            <div className="pt-2 border-t border-gray-100">
+            <div className="pt-2 border-t border-[#F5EEE0]">
               <label className="text-gray-700 block mb-1">Contact Phone</label>
               <div className="flex gap-2">
                 <input
@@ -188,23 +188,23 @@ export default function CarrierSettingsPage() {
                   value={contactPhone}
                   onChange={(e) => setContactPhone(e.target.value)}
                   placeholder="(555) 123-4567"
-                  className="flex-1 px-3 py-2 border border-gray-200 rounded text-xs focus:border-[#C9A84C] focus:outline-none"
+                  className="flex-1 px-3 py-2 border border-[#EFE6D3] rounded text-xs focus:border-[#BA7517] focus:ring-[#BA7517]/15 focus:outline-none"
                 />
                 <button
                   onClick={() => phoneMutation.mutate()}
                   disabled={phoneMutation.isPending}
-                  className="px-3 py-2 bg-[#0F1117] text-white text-[11px] font-semibold rounded disabled:opacity-50"
+                  className="px-3 py-2 bg-[#BA7517] text-[#FBF7F0] text-[11px] font-semibold rounded disabled:opacity-50"
                 >
                   {phoneMutation.isPending ? "..." : "Save"}
                 </button>
               </div>
               {phoneSaved && (
-                <div className="flex items-center gap-1 text-[11px] text-emerald-700 mt-1">
+                <div className="flex items-center gap-1 text-[11px] text-[#2F7A4F] mt-1">
                   <CheckCircle size={12} /> Saved
                 </div>
               )}
               {phoneError && (
-                <div className="text-[11px] text-red-500 mt-1">{phoneError}</div>
+                <div className="text-[11px] text-[#9B2C2C] mt-1">{phoneError}</div>
               )}
             </div>
           </div>
@@ -212,8 +212,8 @@ export default function CarrierSettingsPage() {
 
         {/* Change Password */}
         <CarrierCard padding="p-5">
-          <h3 className="text-sm font-bold text-[#0F1117] mb-4 flex items-center gap-2">
-            <Lock size={16} className="text-amber-700" /> Change Password
+          <h3 className="text-sm font-bold text-[#0A2540] mb-4 flex items-center gap-2">
+            <Lock size={16} className="text-[#B07A1A]" /> Change Password
           </h3>
           <form onSubmit={handleChangePassword} className="space-y-3">
             <div>
@@ -222,7 +222,7 @@ export default function CarrierSettingsPage() {
                 type="password"
                 value={currentPw}
                 onChange={(e) => setCurrentPw(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-200 rounded text-sm focus:border-[#C9A84C] focus:outline-none"
+                className="w-full px-3 py-2 border border-[#EFE6D3] rounded text-sm focus:border-[#BA7517] focus:ring-[#BA7517]/15 focus:outline-none"
                 required
               />
             </div>
@@ -232,7 +232,7 @@ export default function CarrierSettingsPage() {
                 type="password"
                 value={newPw}
                 onChange={(e) => setNewPw(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-200 rounded text-sm focus:border-[#C9A84C] focus:outline-none"
+                className="w-full px-3 py-2 border border-[#EFE6D3] rounded text-sm focus:border-[#BA7517] focus:ring-[#BA7517]/15 focus:outline-none"
                 required
                 minLength={8}
               />
@@ -243,15 +243,15 @@ export default function CarrierSettingsPage() {
                 type="password"
                 value={confirmPw}
                 onChange={(e) => setConfirmPw(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-200 rounded text-sm focus:border-[#C9A84C] focus:outline-none"
+                className="w-full px-3 py-2 border border-[#EFE6D3] rounded text-sm focus:border-[#BA7517] focus:ring-[#BA7517]/15 focus:outline-none"
                 required
                 minLength={8}
               />
             </div>
 
-            {pwError && <div className="text-xs text-red-500">{pwError}</div>}
+            {pwError && <div className="text-xs text-[#9B2C2C]">{pwError}</div>}
             {pwSuccess && (
-              <div className="flex items-center gap-1.5 text-xs text-emerald-700">
+              <div className="flex items-center gap-1.5 text-xs text-[#2F7A4F]">
                 <CheckCircle size={14} /> Password changed successfully
               </div>
             )}
@@ -259,7 +259,7 @@ export default function CarrierSettingsPage() {
             <button
               type="submit"
               disabled={saving}
-              className="px-4 py-2 bg-[#0F1117] text-white text-xs font-semibold rounded-md disabled:opacity-60"
+              className="px-4 py-2 bg-[#BA7517] text-[#FBF7F0] text-xs font-semibold rounded-md disabled:opacity-60"
             >
               {saving ? "Saving..." : "Update Password"}
             </button>
@@ -268,24 +268,24 @@ export default function CarrierSettingsPage() {
 
         {/* Two-Factor Authentication */}
         <CarrierCard padding="p-5" className="col-span-2">
-          <h3 className="text-sm font-bold text-[#0F1117] mb-4 flex items-center gap-2">
+          <h3 className="text-sm font-bold text-[#0A2540] mb-4 flex items-center gap-2">
             <ShieldCheck size={16} className="text-[#BA7517]" /> Two-Factor Authentication
           </h3>
 
           {totpSuccess && (
-            <div className="mb-3 px-3 py-2 bg-emerald-50 border border-emerald-200 rounded text-xs text-emerald-600 flex items-center gap-2">
+            <div className="mb-3 px-3 py-2 bg-[#E6F0E9] border border-[#2F7A4F]/30 rounded text-xs text-[#2F7A4F] flex items-center gap-2">
               <CheckCircle size={14} /> {totpSuccess}
             </div>
           )}
           {totpError && (
-            <div className="mb-3 px-3 py-2 bg-red-50 border border-red-200 rounded text-xs text-red-600">{totpError}</div>
+            <div className="mb-3 px-3 py-2 bg-[#F6E3E3] border border-[#9B2C2C]/30 rounded text-xs text-[#9B2C2C]">{totpError}</div>
           )}
 
           {totpEnabled ? (
             <div>
               <div className="flex items-center gap-2 mb-3">
-                <CheckCircle size={16} className="text-emerald-700" />
-                <span className="text-xs font-semibold text-emerald-600">Two-factor authentication is enabled</span>
+                <CheckCircle size={16} className="text-[#2F7A4F]" />
+                <span className="text-xs font-semibold text-[#2F7A4F]">Two-factor authentication is enabled</span>
               </div>
               {showDisable ? (
                 <div className="space-y-3">
@@ -296,23 +296,23 @@ export default function CarrierSettingsPage() {
                     value={disableCode}
                     onChange={(e) => setDisableCode(e.target.value.replace(/\D/g, ""))}
                     placeholder="000000"
-                    className="w-36 px-3 py-2 border border-gray-200 rounded text-sm text-center font-mono tracking-widest focus:border-[#C9A84C] focus:outline-none"
+                    className="w-36 px-3 py-2 border border-[#EFE6D3] rounded text-sm text-center font-mono tracking-widest focus:border-[#BA7517] focus:ring-[#BA7517]/15 focus:outline-none"
                   />
                   <div className="flex items-center gap-3">
                     <button
                       onClick={() => disableTotp.mutate()}
                       disabled={disableTotp.isPending || disableCode.length !== 6}
-                      className="px-3 py-2 bg-red-50 text-red-600 border border-red-200 text-xs font-semibold rounded disabled:opacity-50"
+                      className="px-3 py-2 bg-[#F6E3E3] text-[#9B2C2C] border border-[#9B2C2C]/30 text-xs font-semibold rounded disabled:opacity-50"
                     >
                       {disableTotp.isPending ? "Disabling..." : "Confirm Disable"}
                     </button>
-                    <button onClick={() => { setShowDisable(false); setDisableCode(""); setTotpError(""); }} className="text-xs text-gray-700 hover:text-[#0F1117]">Cancel</button>
+                    <button onClick={() => { setShowDisable(false); setDisableCode(""); setTotpError(""); }} className="text-xs text-gray-700 hover:text-[#0A2540]">Cancel</button>
                   </div>
                 </div>
               ) : (
                 <button
                   onClick={() => { setShowDisable(true); setTotpSuccess(""); setTotpError(""); }}
-                  className="px-3 py-2 bg-gray-100 text-[#0F1117] text-xs font-semibold rounded hover:bg-gray-200"
+                  className="px-3 py-2 bg-gray-100 text-[#0A2540] text-xs font-semibold rounded hover:bg-gray-200"
                 >
                   Disable 2FA
                 </button>
@@ -326,13 +326,13 @@ export default function CarrierSettingsPage() {
               </div>
               <div>
                 <label className="block text-xs text-gray-700 mb-1">Manual entry key</label>
-                <code className="block px-3 py-2 bg-gray-50 border border-gray-200 rounded text-sm text-[#C9A84C] font-mono break-all select-all">{totpSetupData.secret}</code>
+                <code className="block px-3 py-2 bg-gray-50 border border-[#EFE6D3] rounded text-sm text-[#BA7517] font-mono break-all select-all">{totpSetupData.secret}</code>
               </div>
               <div>
                 <label className="block text-xs text-gray-700 mb-2">Backup codes (save these somewhere safe)</label>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-2">
                   {totpSetupData.backupCodes.map((code, i) => (
-                    <div key={i} className="px-3 py-1.5 bg-gray-50 border border-gray-200 rounded text-xs font-mono text-gray-700 text-center">{code}</div>
+                    <div key={i} className="px-3 py-1.5 bg-gray-50 border border-[#EFE6D3] rounded text-xs font-mono text-gray-700 text-center">{code}</div>
                   ))}
                 </div>
                 <button
@@ -350,18 +350,18 @@ export default function CarrierSettingsPage() {
                   value={totpCode}
                   onChange={(e) => setTotpCode(e.target.value.replace(/\D/g, ""))}
                   placeholder="000000"
-                  className="w-36 px-3 py-2 border border-gray-200 rounded text-sm text-center font-mono tracking-widest focus:border-[#C9A84C] focus:outline-none"
+                  className="w-36 px-3 py-2 border border-[#EFE6D3] rounded text-sm text-center font-mono tracking-widest focus:border-[#BA7517] focus:ring-[#BA7517]/15 focus:outline-none"
                 />
               </div>
               <div className="flex items-center gap-3">
                 <button
                   onClick={() => verifyTotp.mutate()}
                   disabled={verifyTotp.isPending || totpCode.length !== 6}
-                  className="px-4 py-2 bg-[#0F1117] text-white text-xs font-semibold rounded-md disabled:opacity-50"
+                  className="px-4 py-2 bg-[#BA7517] text-[#FBF7F0] text-xs font-semibold rounded-md disabled:opacity-50"
                 >
                   {verifyTotp.isPending ? "Verifying..." : "Verify & Enable"}
                 </button>
-                <button onClick={() => { setTotpSetupData(null); setTotpCode(""); setTotpError(""); }} className="text-xs text-gray-700 hover:text-[#0F1117]">Cancel</button>
+                <button onClick={() => { setTotpSetupData(null); setTotpCode(""); setTotpError(""); }} className="text-xs text-gray-700 hover:text-[#0A2540]">Cancel</button>
               </div>
             </div>
           ) : (
@@ -370,7 +370,7 @@ export default function CarrierSettingsPage() {
               <button
                 onClick={() => { setupTotp.mutate(); setTotpSuccess(""); setTotpError(""); }}
                 disabled={setupTotp.isPending}
-                className="px-4 py-2 bg-[#0F1117] text-white text-xs font-semibold rounded-md disabled:opacity-50"
+                className="px-4 py-2 bg-[#BA7517] text-[#FBF7F0] text-xs font-semibold rounded-md disabled:opacity-50"
               >
                 {setupTotp.isPending ? "Setting up..." : "Enable 2FA"}
               </button>
@@ -381,32 +381,32 @@ export default function CarrierSettingsPage() {
         {/* Notification Preferences */}
         <CarrierCard padding="p-5" className="col-span-2">
           <div className="flex justify-between items-center mb-4">
-            <h3 className="text-sm font-bold text-[#0F1117] flex items-center gap-2">
+            <h3 className="text-sm font-bold text-[#0A2540] flex items-center gap-2">
               <Bell size={16} className="text-[#BA7517]" /> Notification Preferences
             </h3>
             <button
               onClick={() => notifMutation.mutate()}
               disabled={notifMutation.isPending}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-[#0F1117] text-white text-[11px] font-semibold rounded disabled:opacity-50"
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-[#BA7517] text-[#FBF7F0] text-[11px] font-semibold rounded disabled:opacity-50"
             >
               {notifMutation.isPending ? "Saving..." : notifSaved ? <><CheckCircle size={12} /> Saved</> : "Save Preferences"}
             </button>
           </div>
           {notifError && (
-            <div className="mb-3 px-3 py-2 bg-red-50 border border-red-200 rounded text-xs text-red-600">{notifError}</div>
+            <div className="mb-3 px-3 py-2 bg-[#F6E3E3] border border-[#9B2C2C]/30 rounded text-xs text-[#9B2C2C]">{notifError}</div>
           )}
           <div className="grid grid-cols-2 gap-3">
             {notifOptions.map((opt) => (
               <div
                 key={opt.key}
                 onClick={() => toggleNotif(opt.key)}
-                className="flex items-center justify-between p-3 rounded-lg border border-gray-100 hover:border-[#C9A84C]/30 cursor-pointer transition-colors"
+                className="flex items-center justify-between p-3 rounded-lg border border-[#F5EEE0] hover:border-[#C5A572]/30 cursor-pointer transition-colors"
               >
                 <div>
-                  <div className="text-xs font-semibold text-[#0F1117]">{opt.label}</div>
+                  <div className="text-xs font-semibold text-[#0A2540]">{opt.label}</div>
                   <div className="text-[11px] text-gray-700">{opt.desc}</div>
                 </div>
-                <div className={`w-9 h-5 rounded-full flex items-center transition-colors ${notifications[opt.key] ? "bg-[#C9A84C] justify-end" : "bg-gray-200 justify-start"}`}>
+                <div className={`w-9 h-5 rounded-full flex items-center transition-colors ${notifications[opt.key] ? "bg-[#BA7517] justify-end" : "bg-gray-200 justify-start"}`}>
                   <div className="w-4 h-4 rounded-full bg-white shadow-sm mx-0.5" />
                 </div>
               </div>

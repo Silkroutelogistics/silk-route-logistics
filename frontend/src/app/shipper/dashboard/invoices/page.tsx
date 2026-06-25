@@ -70,7 +70,7 @@ export default function ShipperInvoicesPage() {
     <div>
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 className="font-serif text-2xl text-[#0F1117] mb-1">Freight Invoicing &amp; Payment Management</h1>
+          <h1 className="font-serif text-2xl text-[#0A2540] mb-1">Freight Invoicing &amp; Payment Management</h1>
           <p className="text-[13px] text-gray-500">Track all freight invoices, carrier payments, and transportation billing history</p>
         </div>
         <button onClick={() => invoices.length > 0 && exportInvoicesCSV(invoices)}
@@ -82,20 +82,20 @@ export default function ShipperInvoicesPage() {
       <div className="grid grid-cols-3 gap-4 mb-6">
         <ShipperCard padding="p-5">
           <div className="text-[11px] text-gray-700 mb-1.5">Outstanding Balance</div>
-          <div className="text-[28px] font-bold text-red-500">
+          <div className="text-[28px] font-bold text-[#9B2C2C]">
             {isLoading ? <div className="h-8 w-20 bg-gray-200 rounded animate-pulse" /> : `$${(billing?.outstandingBalance || 0).toLocaleString()}`}
           </div>
           <div className="text-[11px] text-gray-700 mt-1">{billing?.unpaidCount || 0} unpaid invoices</div>
         </ShipperCard>
         <ShipperCard padding="p-5">
           <div className="text-[11px] text-gray-700 mb-1.5">YTD Total Billed</div>
-          <div className="text-[28px] font-bold text-[#0F1117]">
+          <div className="text-[28px] font-bold text-[#0A2540]">
             {isLoading ? <div className="h-8 w-20 bg-gray-200 rounded animate-pulse" /> : `$${(billing?.ytdBilled || 0).toLocaleString()}`}
           </div>
         </ShipperCard>
         <ShipperCard padding="p-5">
           <div className="text-[11px] text-gray-700 mb-1.5">Avg Payment Cycle</div>
-          <div className="text-[28px] font-bold text-[#0F1117]">
+          <div className="text-[28px] font-bold text-[#0A2540]">
             {isLoading ? <div className="h-8 w-20 bg-gray-200 rounded animate-pulse" /> : `${billing?.avgPaymentCycleDays || 0} days`}
           </div>
           <div className="text-[11px] text-gray-700 mt-1">Net 30 terms</div>
@@ -103,15 +103,15 @@ export default function ShipperInvoicesPage() {
       </div>
 
       <ShipperCard padding="p-0">
-        <div className="px-5 py-4 border-b border-gray-100 flex justify-between items-center">
-          <h3 className="text-[15px] font-bold text-[#0F1117]">Invoice History</h3>
+        <div className="px-5 py-4 border-b border-[#F5EEE0] flex justify-between items-center">
+          <h3 className="text-[15px] font-bold text-[#0A2540]">Invoice History</h3>
           <div className="flex gap-1.5">
             {filterOptions.map((f) => (
               <button
                 key={f}
                 onClick={() => { setActiveFilter(f); setPage(1); }}
                 className={`px-3 py-1 rounded-full text-[11px] font-medium ${
-                  f === activeFilter ? "bg-[#0F1117] text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                  f === activeFilter ? "bg-[#0A2540] text-[#FBF7F0]" : "bg-gray-100 text-gray-600 hover:bg-gray-200"
                 }`}
               >{f}</button>
             ))}
@@ -128,7 +128,7 @@ export default function ShipperInvoicesPage() {
           <tbody>
             {isLoading ? (
               [...Array(4)].map((_, i) => (
-                <tr key={i} className="border-b border-gray-100">
+                <tr key={i} className="border-b border-[#F5EEE0]">
                   {[...Array(7)].map((_, j) => (
                     <td key={j} className="px-4 py-3"><div className="h-4 bg-gray-200 rounded animate-pulse w-16" /></td>
                   ))}
@@ -138,10 +138,10 @@ export default function ShipperInvoicesPage() {
               <tr><td colSpan={7} className="px-4 py-12 text-center text-sm text-gray-700">No invoices found</td></tr>
             ) : (
               invoices.map((inv) => (
-                <tr key={inv.id} className="border-b border-gray-100">
-                  <td className="px-4 py-3 font-semibold text-[#0F1117] font-mono text-[11px]">{inv.id}</td>
+                <tr key={inv.id} className="border-b border-[#F5EEE0]">
+                  <td className="px-4 py-3 font-semibold text-[#0A2540] font-mono text-[11px]">{inv.id}</td>
                   <td className="px-4 py-3 font-mono text-[11px] text-gray-600">{inv.shipment}</td>
-                  <td className="px-4 py-3 font-bold text-[#0F1117]">${inv.amount.toLocaleString()}</td>
+                  <td className="px-4 py-3 font-bold text-[#0A2540]">${inv.amount.toLocaleString()}</td>
                   <td className="px-4 py-3 text-gray-500 text-xs">{inv.issued}</td>
                   <td className="px-4 py-3 text-gray-500 text-xs">{inv.due}</td>
                   <td className="px-4 py-3"><ShipperBadge status={inv.status} /></td>
@@ -152,7 +152,7 @@ export default function ShipperInvoicesPage() {
                     </button>
                     {inv.status !== "Paid" && (
                       <button onClick={() => setDisputeInvoice({ id: inv.id, invoiceNumber: inv.id, amount: inv.amount })}
-                        className="inline-flex items-center gap-1 text-gray-700 text-[11px] font-semibold uppercase tracking-wider hover:text-red-500">
+                        className="inline-flex items-center gap-1 text-gray-700 text-[11px] font-semibold uppercase tracking-wider hover:text-[#9B2C2C]">
                         <AlertTriangle size={12} /> Dispute
                       </button>
                     )}
@@ -163,7 +163,7 @@ export default function ShipperInvoicesPage() {
           </tbody>
         </table>
         {data && data.totalPages > 1 && (
-          <div className="px-4 py-3 border-t border-gray-100 flex justify-between items-center text-xs text-gray-500">
+          <div className="px-4 py-3 border-t border-[#F5EEE0] flex justify-between items-center text-xs text-gray-500">
             <span>Page {page} of {data.totalPages}</span>
             <div className="flex gap-1">
               {page > 1 && <button onClick={() => setPage(page - 1)} className="px-3 py-1 rounded bg-gray-100 hover:bg-gray-200">Prev</button>}
@@ -179,21 +179,21 @@ export default function ShipperInvoicesPage() {
           <div className="bg-white rounded-xl shadow-2xl w-full max-w-md p-6">
             {disputeSuccess ? (
               <div className="text-center py-4">
-                <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-3">
-                  <AlertTriangle className="w-6 h-6 text-green-600" />
+                <div className="w-12 h-12 rounded-full bg-[#E6F0E9] flex items-center justify-center mx-auto mb-3">
+                  <AlertTriangle className="w-6 h-6 text-[#2F7A4F]" />
                 </div>
                 <p className="text-sm text-gray-700 font-medium">{disputeSuccess}</p>
               </div>
             ) : (
               <>
-                <h3 className="text-lg font-semibold text-[#0F1117] mb-1">File a Dispute</h3>
+                <h3 className="text-lg font-semibold text-[#0A2540] mb-1">File a Dispute</h3>
                 <p className="text-xs text-gray-500 mb-4">Invoice {disputeInvoice.invoiceNumber} — ${disputeInvoice.amount.toLocaleString()}</p>
 
                 <div className="space-y-3">
                   <div>
                     <label className="block text-[11px] font-medium text-gray-500 uppercase tracking-wide mb-1">Dispute Type</label>
                     <select value={disputeForm.disputeType} onChange={(e) => setDisputeForm({ ...disputeForm, disputeType: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm">
+                      className="w-full px-3 py-2 border border-[#EFE6D3] rounded-lg text-sm focus:border-[#BA7517] focus:ring-[#BA7517]/15">
                       {DISPUTE_TYPES.map((t) => <option key={t} value={t}>{t.replace(/_/g, " ")}</option>)}
                     </select>
                   </div>
@@ -202,14 +202,14 @@ export default function ShipperInvoicesPage() {
                     <input type="number" value={disputeForm.disputedAmount}
                       onChange={(e) => setDisputeForm({ ...disputeForm, disputedAmount: e.target.value })}
                       placeholder={String(disputeInvoice.amount)}
-                      className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" />
+                      className="w-full px-3 py-2 border border-[#EFE6D3] rounded-lg text-sm focus:border-[#BA7517] focus:ring-[#BA7517]/15" />
                   </div>
                   <div>
                     <label className="block text-[11px] font-medium text-gray-500 uppercase tracking-wide mb-1">Description</label>
                     <textarea value={disputeForm.description}
                       onChange={(e) => setDisputeForm({ ...disputeForm, description: e.target.value })}
                       placeholder="Describe the issue with this invoice..."
-                      rows={3} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm resize-none" />
+                      rows={3} className="w-full px-3 py-2 border border-[#EFE6D3] rounded-lg text-sm resize-none focus:border-[#BA7517] focus:ring-[#BA7517]/15" />
                   </div>
                 </div>
 
@@ -224,7 +224,7 @@ export default function ShipperInvoicesPage() {
                       description: disputeForm.description,
                     })}
                     disabled={!disputeForm.description.trim() || fileDispute.isPending}
-                    className="flex-1 px-4 py-2.5 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 disabled:opacity-50">
+                    className="flex-1 px-4 py-2.5 bg-[#9B2C2C] text-[#FBF7F0] rounded-lg text-sm font-medium hover:bg-[#7E2222] disabled:opacity-50">
                     {fileDispute.isPending ? "Filing..." : "File Dispute"}
                   </button>
                 </div>

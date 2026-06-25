@@ -23,8 +23,8 @@ export function SpendChart({
         const bg = colorFn
           ? colorFn(v, i)
           : highlightLast && i === data.length - 1
-          ? "#C9A84C"
-          : "rgba(13, 27, 42, 0.20)";
+          ? "#BA7517"
+          : "rgba(10, 37, 64, 0.20)";
         return (
           <div key={i} className="flex-1 flex flex-col items-center gap-1">
             {showValues && <span className="text-[9px] text-gray-400">${(v / 1000).toFixed(1)}k</span>}

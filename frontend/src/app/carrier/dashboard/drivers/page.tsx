@@ -72,8 +72,8 @@ function fmtPhone(p: string | null): string {
 function expiryTone(dateStr: string | null): string {
   if (!dateStr) return "text-gray-400";
   const days = (new Date(dateStr).getTime() - Date.now()) / 86_400_000;
-  if (days < 0) return "text-red-600 font-semibold";
-  if (days < 30) return "text-amber-600 font-semibold";
+  if (days < 0) return "text-[#9B2C2C] font-semibold";
+  if (days < 30) return "text-[#B07A1A] font-semibold";
   return "text-gray-600";
 }
 
@@ -210,7 +210,7 @@ export default function CarrierDriversPage() {
   const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim());
   const canSave = !!form.firstName.trim() && !!form.lastName.trim() && form.phone.replace(/\D/g, "").length >= 10 && emailValid;
 
-  const inputCls = "w-full px-3 py-2 border border-gray-200 rounded text-xs focus:border-[#C9A84C] focus:outline-none bg-white";
+  const inputCls = "w-full px-3 py-2 border border-[#EFE6D3] rounded text-xs focus:border-[#BA7517] focus:ring-[#BA7517]/15 focus:outline-none bg-white";
   const labelCls = "text-xs text-gray-700 block mb-1";
 
   return (
@@ -218,14 +218,14 @@ export default function CarrierDriversPage() {
       {/* Header */}
       <div className="flex justify-between items-start mb-6">
         <div>
-          <h1 className="font-serif text-2xl text-[#0F1117] mb-1">Drivers</h1>
+          <h1 className="font-serif text-2xl text-[#0A2540] mb-1">Drivers</h1>
           <p className="text-[13px] text-gray-500">
             Your driver roster. Drivers added here get access to SRL Driver Academy training.
           </p>
         </div>
         <button
           onClick={() => (showForm ? closeForm() : setShowForm(true))}
-          className="flex items-center gap-1.5 px-4 py-2 bg-gradient-to-br from-[#C9A84C] to-[#A88535] text-[#0A2540] text-xs font-semibold rounded-md hover:shadow-lg transition-shadow"
+          className="flex items-center gap-1.5 px-4 py-2 bg-[#BA7517] text-[#FBF7F0] text-xs font-semibold rounded-md hover:shadow-lg transition-shadow"
         >
           <Plus size={14} /> Add Driver
         </button>
@@ -233,19 +233,19 @@ export default function CarrierDriversPage() {
 
       {/* Roster counts */}
       <div className="flex gap-2 mb-5">
-        <span className="px-2.5 py-1 rounded-full bg-green-50 border border-green-200 text-green-700 text-xs font-medium">
+        <span className="px-2.5 py-1 rounded-full bg-[#E6F0E9] border border-[#2F7A4F]/30 text-[#2F7A4F] text-xs font-medium">
           {activeCount} active
         </span>
-        <span className="px-2.5 py-1 rounded-full bg-gray-50 border border-gray-200 text-gray-500 text-xs font-medium">
+        <span className="px-2.5 py-1 rounded-full bg-gray-50 border border-[#EFE6D3] text-gray-500 text-xs font-medium">
           {inactiveCount} inactive
         </span>
       </div>
 
       {/* Add / Edit panel */}
       {showForm && (
-        <CarrierCard padding="p-5" className="mb-5 border-[#C9A84C]/30">
+        <CarrierCard padding="p-5" className="mb-5 border-[#C5A572]/30">
           <div className="flex justify-between items-center mb-4">
-            <h3 className="text-sm font-bold text-[#0F1117] flex items-center gap-2">
+            <h3 className="text-sm font-bold text-[#0A2540] flex items-center gap-2">
               <Users size={16} className="text-[#BA7517]" /> {editingId ? "Edit Driver" : "Add Driver"}
             </h3>
             <button onClick={closeForm} className="text-gray-700 hover:text-gray-600">
@@ -283,7 +283,7 @@ export default function CarrierDriversPage() {
             <div>
               <label className={labelCls}>CDL Number</label>
               <input className={inputCls} value={form.licenseNumber} onChange={(e) => setForm({ ...form, licenseNumber: e.target.value })} placeholder="S530-1234-5678" />
-              <p className="mt-1 text-[11px] text-amber-700">Required before this driver can start SRL Driver Academy training.</p>
+              <p className="mt-1 text-[11px] text-[#B07A1A]">Required before this driver can start SRL Driver Academy training.</p>
             </div>
             <div>
               <label className={labelCls}>License State</label>
@@ -301,7 +301,7 @@ export default function CarrierDriversPage() {
           </div>
 
           {formError && (
-            <div className="mb-3 px-3 py-2 bg-red-50 border-l-4 border-red-500 text-red-700 text-xs rounded">
+            <div className="mb-3 px-3 py-2 bg-[#F6E3E3] border-l-4 border-[#9B2C2C] text-[#9B2C2C] text-xs rounded">
               {formError}
             </div>
           )}
@@ -310,7 +310,7 @@ export default function CarrierDriversPage() {
             <button
               onClick={() => saveMutation.mutate()}
               disabled={!canSave || saveMutation.isPending}
-              className="flex items-center gap-1.5 px-4 py-2 bg-gradient-to-br from-[#C9A84C] to-[#A88535] text-[#0A2540] text-xs font-semibold rounded-md hover:shadow-lg transition-shadow disabled:opacity-40 disabled:cursor-not-allowed"
+              className="flex items-center gap-1.5 px-4 py-2 bg-[#BA7517] text-[#FBF7F0] text-xs font-semibold rounded-md hover:shadow-lg transition-shadow disabled:opacity-40 disabled:cursor-not-allowed"
             >
               {saveMutation.isPending && <Loader2 size={13} className="animate-spin" />}
               {editingId ? "Save Changes" : "Add to Roster"}
@@ -323,7 +323,7 @@ export default function CarrierDriversPage() {
       )}
 
       {rowError && (
-        <div className="mb-4 px-3 py-2 bg-red-50 border-l-4 border-red-500 text-red-700 text-xs rounded">
+        <div className="mb-4 px-3 py-2 bg-[#F6E3E3] border-l-4 border-[#9B2C2C] text-[#9B2C2C] text-xs rounded">
           {rowError}
         </div>
       )}
@@ -338,8 +338,8 @@ export default function CarrierDriversPage() {
       ) : drivers.length === 0 ? (
         <CarrierCard padding="p-10">
           <div className="text-center">
-            <GraduationCap size={32} className="mx-auto text-[#C9A84C] mb-3" />
-            <h3 className="text-sm font-bold text-[#0F1117] mb-1">No drivers on your roster yet</h3>
+            <GraduationCap size={32} className="mx-auto text-[#BA7517] mb-3" />
+            <h3 className="text-sm font-bold text-[#0A2540] mb-1">No drivers on your roster yet</h3>
             <p className="text-xs text-gray-500 max-w-md mx-auto">
               Add your drivers to build your roster. Each driver will get their own SRL Driver
               Academy login for training on IRP, IFTA, ELD, HOS, and more — with completion
@@ -352,7 +352,7 @@ export default function CarrierDriversPage() {
           <div className="overflow-x-auto">
             <table className="w-full text-left">
               <thead>
-                <tr className="border-b border-gray-100 text-[11px] uppercase tracking-wide text-gray-400">
+                <tr className="border-b border-[#F5EEE0] text-[11px] uppercase tracking-wide text-gray-400">
                   <th className="px-4 py-3 font-medium">Driver</th>
                   <th className="px-4 py-3 font-medium">Phone</th>
                   <th className="px-4 py-3 font-medium">License</th>
@@ -372,7 +372,7 @@ export default function CarrierDriversPage() {
                     <Fragment key={d.id}>
                     <tr className={`border-b border-gray-50 ${result ? "" : "last:border-0"} ${inactive ? "opacity-50" : ""}`}>
                       <td className="px-4 py-3">
-                        <div className="text-[13px] font-semibold text-[#0F1117]">
+                        <div className="text-[13px] font-semibold text-[#0A2540]">
                           {d.firstName} {d.lastName}
                         </div>
                         {d.email && <div className="text-[11px] text-gray-400">{d.email}</div>}
@@ -396,9 +396,9 @@ export default function CarrierDriversPage() {
                         <span
                           className={`px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wide ${
                             tState === "activated"
-                              ? "bg-green-50 text-green-700 border border-green-200"
+                              ? "bg-[#E6F0E9] text-[#2F7A4F] border border-[#2F7A4F]/30"
                               : tState === "invited"
-                                ? "bg-amber-50 text-amber-700 border border-amber-200"
+                                ? "bg-[#FBEFD4] text-[#B07A1A] border border-[#B07A1A]/30"
                                 : "bg-gray-100 text-gray-500"
                           }`}
                         >
@@ -410,7 +410,7 @@ export default function CarrierDriversPage() {
                           className={`px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wide ${
                             inactive
                               ? "bg-gray-100 text-gray-500"
-                              : "bg-green-50 text-green-700 border border-green-200"
+                              : "bg-[#E6F0E9] text-[#2F7A4F] border border-[#2F7A4F]/30"
                           }`}
                         >
                           {inactive ? "Inactive" : "Active"}
@@ -424,7 +424,7 @@ export default function CarrierDriversPage() {
                               onClick={() => inviteMutation.mutate({ id: d.id })}
                               disabled={inviteMutation.isPending}
                               title={tState === "invited" ? "Resend training invite" : "Send training invite"}
-                              className="px-2 py-1.5 flex items-center gap-1 text-[11px] font-medium text-[#BA7517] hover:bg-[#C9A84C]/10 rounded transition-colors"
+                              className="px-2 py-1.5 flex items-center gap-1 text-[11px] font-medium text-[#BA7517] hover:bg-[#BA7517]/10 rounded transition-colors"
                             >
                               <Send size={13} /> {tState === "invited" ? "Resend" : "Invite"}
                             </button>
@@ -438,7 +438,7 @@ export default function CarrierDriversPage() {
                               }}
                               disabled={inviteMutation.isPending}
                               title="Reset PIN & re-invite"
-                              className="p-1.5 text-gray-400 hover:text-[#BA7517] hover:bg-[#C9A84C]/10 rounded transition-colors"
+                              className="p-1.5 text-gray-400 hover:text-[#BA7517] hover:bg-[#BA7517]/10 rounded transition-colors"
                             >
                               <KeyRound size={14} />
                             </button>
@@ -446,7 +446,7 @@ export default function CarrierDriversPage() {
                           <button
                             onClick={() => startEdit(d)}
                             title="Edit driver"
-                            className="p-1.5 text-gray-400 hover:text-[#BA7517] hover:bg-[#C9A84C]/10 rounded transition-colors"
+                            className="p-1.5 text-gray-400 hover:text-[#BA7517] hover:bg-[#BA7517]/10 rounded transition-colors"
                           >
                             <Pencil size={14} />
                           </button>
@@ -455,7 +455,7 @@ export default function CarrierDriversPage() {
                               onClick={() => statusMutation.mutate({ id: d.id, action: "reactivate" })}
                               disabled={statusMutation.isPending}
                               title="Reactivate driver"
-                              className="p-1.5 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded transition-colors"
+                              className="p-1.5 text-gray-400 hover:text-[#2F7A4F] hover:bg-[#E6F0E9] rounded transition-colors"
                             >
                               <UserCheck size={14} />
                             </button>
@@ -468,7 +468,7 @@ export default function CarrierDriversPage() {
                               }}
                               disabled={statusMutation.isPending}
                               title="Deactivate driver"
-                              className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded transition-colors"
+                              className="p-1.5 text-gray-400 hover:text-[#9B2C2C] hover:bg-[#F6E3E3] rounded transition-colors"
                             >
                               <UserX size={14} />
                             </button>
@@ -481,7 +481,7 @@ export default function CarrierDriversPage() {
                             }}
                             disabled={deleteMutation.isPending}
                             title="Delete driver"
-                            className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+                            className="p-1.5 text-gray-400 hover:text-[#9B2C2C] hover:bg-[#F6E3E3] rounded transition-colors"
                           >
                             <Trash2 size={14} />
                           </button>
@@ -489,24 +489,24 @@ export default function CarrierDriversPage() {
                       </td>
                     </tr>
                     {result && (
-                      <tr className="border-b border-gray-50 last:border-0 bg-[#C9A84C]/5">
+                      <tr className="border-b border-gray-50 last:border-0 bg-[#BA7517]/5">
                         <td colSpan={8} className="px-4 py-3">
                           <div className="flex flex-wrap items-center gap-3">
-                            <span className="text-[11px] font-semibold text-[#0F1117]">
+                            <span className="text-[11px] font-semibold text-[#0A2540]">
                               {result.smsSent ? "✓ Texted the setup link to the driver." : "Setup link ready — text or share it with the driver:"}
                             </span>
-                            <code className="flex-1 min-w-[200px] text-[11px] text-gray-600 bg-white border border-gray-200 rounded px-2 py-1 truncate">
+                            <code className="flex-1 min-w-[200px] text-[11px] text-gray-600 bg-white border border-[#EFE6D3] rounded px-2 py-1 truncate">
                               {result.url}
                             </code>
                             <button
                               onClick={() => copyLink(d.id, result.url)}
-                              className="px-2.5 py-1 flex items-center gap-1 text-[11px] font-medium text-[#BA7517] border border-[#C9A84C]/40 hover:bg-[#C9A84C]/10 rounded transition-colors"
+                              className="px-2.5 py-1 flex items-center gap-1 text-[11px] font-medium text-[#BA7517] border border-[#C5A572]/40 hover:bg-[#BA7517]/10 rounded transition-colors"
                             >
                               {copiedId === d.id ? <><Check size={12} /> Copied</> : <><Copy size={12} /> Copy link</>}
                             </button>
                           </div>
                           {!result.smsSent && (
-                            <p className="text-[10px] text-amber-700 mt-1.5">
+                            <p className="text-[10px] text-[#B07A1A] mt-1.5">
                               Text couldn&apos;t send to this number{result.smsError ? <> — <span className="text-gray-500">{result.smsError}</span></> : ""}. The copy link above still works — share it with the driver.
                             </p>
                           )}
@@ -525,10 +525,10 @@ export default function CarrierDriversPage() {
       {/* Academy strip — links to the live Training dashboard (T5). */}
       {drivers.length > 0 && (
         <a href="/carrier/dashboard/training"
-          className="mt-5 px-4 py-3 bg-[#C9A84C]/5 border border-[#C9A84C]/20 rounded-lg flex items-center gap-3 hover:bg-[#C9A84C]/10 transition-colors">
+          className="mt-5 px-4 py-3 bg-[#BA7517]/5 border border-[#C5A572]/20 rounded-lg flex items-center gap-3 hover:bg-[#BA7517]/10 transition-colors">
           <GraduationCap size={18} className="text-[#BA7517] shrink-0" />
           <p className="text-xs text-gray-600">
-            <span className="font-semibold text-[#0F1117]">SRL Driver Academy is live.</span>{" "}
+            <span className="font-semibold text-[#0A2540]">SRL Driver Academy is live.</span>{" "}
             Invite drivers above, then track completion across IRP, IFTA, ELD &amp; HOS, inspections,
             detention documentation, and fraud awareness — with downloadable certificates.{" "}
             <span className="font-semibold text-[#BA7517]">View the Training dashboard →</span>

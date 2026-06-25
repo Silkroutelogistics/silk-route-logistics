@@ -26,7 +26,7 @@ export default function ShipperAnalyticsPage() {
     <div>
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 className="font-serif text-2xl text-[#0F1117] mb-1">Transportation Analytics &amp; Insights</h1>
+          <h1 className="font-serif text-2xl text-[#0A2540] mb-1">Transportation Analytics &amp; Insights</h1>
           <p className="text-[13px] text-gray-500">Data-driven freight intelligence for your supply chain</p>
         </div>
         <div className="flex gap-2">
@@ -35,7 +35,7 @@ export default function ShipperAnalyticsPage() {
               key={p}
               onClick={() => setActivePeriod(p)}
               className={`px-3.5 py-1.5 rounded-md text-xs font-medium border ${
-                p === activePeriod ? "bg-[#0F1117] text-white border-[#0F1117]" : "text-gray-500 border-gray-200 hover:border-gray-300"
+                p === activePeriod ? "bg-[#0A2540] text-[#FBF7F0] border-[#0A2540]" : "text-gray-500 border-[#EFE6D3] hover:border-gray-300"
               }`}
             >{p}</button>
           ))}
@@ -51,7 +51,7 @@ export default function ShipperAnalyticsPage() {
         ].map((m, i) => (
           <ShipperCard key={i} padding="p-5">
             <div className="text-[11px] text-gray-700 mb-1.5">{m.label}</div>
-            <div className="text-[28px] font-bold text-[#0F1117] mb-1">
+            <div className="text-[28px] font-bold text-[#0A2540] mb-1">
               {isLoading ? <div className="h-8 w-16 bg-gray-200 rounded animate-pulse" /> : m.value}
             </div>
           </ShipperCard>
@@ -61,7 +61,7 @@ export default function ShipperAnalyticsPage() {
       {/* Charts */}
       <div className="grid grid-cols-2 gap-4 mb-5">
         <ShipperCard padding="p-5">
-          <h3 className="text-sm font-bold text-[#0F1117] mb-5">Spend by Month</h3>
+          <h3 className="text-sm font-bold text-[#0A2540] mb-5">Spend by Month</h3>
           {data ? (
             <SpendChart
               data={data.spendByMonth}
@@ -70,8 +70,8 @@ export default function ShipperAnalyticsPage() {
               showValues
               colorFn={(_, i) =>
                 i === data.spendByMonth.length - 1
-                  ? "linear-gradient(to top, #0F1117, #C9A84C)"
-                  : "linear-gradient(to top, #0F1117, #1B2D45)"
+                  ? "linear-gradient(to top, #0A2540, #BA7517)"
+                  : "linear-gradient(to top, #0A2540, #15365A)"
               }
             />
           ) : (
@@ -79,14 +79,14 @@ export default function ShipperAnalyticsPage() {
           )}
         </ShipperCard>
         <ShipperCard padding="p-5">
-          <h3 className="text-sm font-bold text-[#0F1117] mb-5">On-Time Performance</h3>
+          <h3 className="text-sm font-bold text-[#0A2540] mb-5">On-Time Performance</h3>
           {data ? (
             <SpendChart
               data={data.onTimeByMonth}
               labels={data.months}
               height={140}
               showValues={false}
-              colorFn={(v) => (v >= 97 ? "#10B981" : v >= 95 ? "#F59E0B" : "#EF4444")}
+              colorFn={(v) => (v >= 97 ? "#2F7A4F" : v >= 95 ? "#B07A1A" : "#9B2C2C")}
             />
           ) : (
             <div className="h-[140px] flex items-center justify-center text-xs text-gray-700">Loading...</div>
@@ -97,18 +97,18 @@ export default function ShipperAnalyticsPage() {
       {/* Lanes & Carriers */}
       <div className="grid grid-cols-2 gap-4">
         <ShipperCard padding="p-5">
-          <h3 className="text-sm font-bold text-[#0F1117] mb-4">Top Lanes by Spend</h3>
+          <h3 className="text-sm font-bold text-[#0A2540] mb-4">Top Lanes by Spend</h3>
           {topLanes.length === 0 ? (
             <div className="py-6 text-center text-xs text-gray-700">No lane data yet</div>
           ) : (
             topLanes.map((l, i) => (
-              <div key={i} className={`py-2.5 ${i < topLanes.length - 1 ? "border-b border-gray-100" : ""}`}>
+              <div key={i} className={`py-2.5 ${i < topLanes.length - 1 ? "border-b border-[#F5EEE0]" : ""}`}>
                 <div className="flex justify-between mb-1.5">
-                  <span className="text-xs font-semibold text-[#0F1117]">{l.lane}</span>
-                  <span className="text-xs font-bold text-[#0F1117]">${l.spend.toLocaleString()}</span>
+                  <span className="text-xs font-semibold text-[#0A2540]">{l.lane}</span>
+                  <span className="text-xs font-bold text-[#0A2540]">${l.spend.toLocaleString()}</span>
                 </div>
                 <div className="bg-gray-100 rounded h-[5px] overflow-hidden">
-                  <div className="h-full bg-[#C9A84C] rounded" style={{ width: `${Math.round((l.spend / maxLaneSpend) * 100)}%` }} />
+                  <div className="h-full bg-[#BA7517] rounded" style={{ width: `${Math.round((l.spend / maxLaneSpend) * 100)}%` }} />
                 </div>
                 <div className="text-[10px] text-gray-700 mt-1">{l.loads} loads</div>
               </div>
@@ -116,18 +116,18 @@ export default function ShipperAnalyticsPage() {
           )}
         </ShipperCard>
         <ShipperCard padding="p-5">
-          <h3 className="text-sm font-bold text-[#0F1117] mb-4">Carrier Scorecard</h3>
+          <h3 className="text-sm font-bold text-[#0A2540] mb-4">Carrier Scorecard</h3>
           {carriers.length === 0 ? (
             <div className="py-6 text-center text-xs text-gray-700">No carrier data yet</div>
           ) : (
             carriers.map((c, i) => (
-              <div key={i} className={`flex justify-between items-center py-2.5 ${i < carriers.length - 1 ? "border-b border-gray-100" : ""}`}>
+              <div key={i} className={`flex justify-between items-center py-2.5 ${i < carriers.length - 1 ? "border-b border-[#F5EEE0]" : ""}`}>
                 <div>
-                  <div className="text-[13px] font-semibold text-[#0F1117]">{c.name}</div>
+                  <div className="text-[13px] font-semibold text-[#0A2540]">{c.name}</div>
                   <div className="text-[11px] text-gray-700">{c.loads} loads &middot; {c.otd}% on-time</div>
                 </div>
                 <span className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${
-                  c.otd >= 97 ? "bg-emerald-500/15 text-emerald-500" : c.otd >= 93 ? "bg-amber-500/15 text-amber-500" : "bg-red-500/15 text-red-500"
+                  c.otd >= 97 ? "bg-[#E6F0E9] text-[#2F7A4F]" : c.otd >= 93 ? "bg-[#FBEFD4] text-[#B07A1A]" : "bg-[#F6E3E3] text-[#9B2C2C]"
                 }`}>{c.score}</span>
               </div>
             ))

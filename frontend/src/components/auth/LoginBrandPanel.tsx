@@ -111,13 +111,13 @@ export function LoginBrandPanel({ variant }: { variant: LoginVariant }) {
         ].map(([x, y], i) => (
           <g key={i}>
             <circle cx={x} cy={y} r="3" fill="rgba(255,255,255,0.5)" />
-            <circle cx={x} cy={y} r="5" fill="none" stroke="rgba(201,168,76,0.3)" strokeWidth="1">
+            <circle cx={x} cy={y} r="5" fill="none" stroke="rgba(197,165,114,0.3)" strokeWidth="1">
               <animate attributeName="r" values="3;8;3" dur={`${3 + (i % 3)}s`} repeatCount="indefinite" />
               <animate attributeName="opacity" values="0.5;0;0.5" dur={`${3 + (i % 3)}s`} repeatCount="indefinite" />
             </circle>
           </g>
         ))}
-        <circle r="4" fill="#C9A84C" opacity="0.8">
+        <circle r="4" fill="#C5A572" opacity="0.8">
           <animateMotion dur="12s" repeatCount="indefinite" path="M200,220 L280,200 L350,250 L420,280 L500,300 L600,250 L650,200" />
         </circle>
       </svg>
@@ -133,7 +133,7 @@ export function LoginBrandPanel({ variant }: { variant: LoginVariant }) {
           {featurePills.map((f) => (
             <div
               key={f.label}
-              className="flex items-center justify-center gap-1.5 border border-white/25 text-white bg-white/10 rounded-lg px-3 py-2.5 text-xs font-medium cursor-default"
+              className="flex items-center justify-center gap-1.5 border border-white/25 text-[#FBF7F0] bg-white/10 rounded-lg px-3 py-2.5 text-xs font-medium cursor-default"
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                 <path d={f.icon} />
@@ -172,9 +172,9 @@ export function LoginBrandPanel({ variant }: { variant: LoginVariant }) {
         </div>
 
         <div className="relative pl-5 max-w-[440px]">
-          <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-[#C9A84C] to-[#C9A84C]/30 rounded-full" />
-          <div className="text-[#E8D48B] text-[11px] tracking-[2px] uppercase font-semibold mb-2">{insight.cat}</div>
-          <p className="text-white text-[16px] italic leading-relaxed m-0">{insight.text}</p>
+          <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-[#C5A572] to-[#C5A572]/30 rounded-full" />
+          <div className="text-[#DAC39C] text-[11px] tracking-[2px] uppercase font-semibold mb-2">{insight.cat}</div>
+          <p className="text-[#FBF7F0] text-[16px] italic leading-relaxed m-0">{insight.text}</p>
           <p className="text-white/70 text-[13px] mt-2 m-0">&mdash; {insight.src}</p>
         </div>
       </div>

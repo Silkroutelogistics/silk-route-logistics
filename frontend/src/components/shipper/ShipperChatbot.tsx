@@ -80,7 +80,7 @@ export function ShipperChatbot() {
       {!open && (
         <button
           onClick={() => setOpen(true)}
-          className="fixed bottom-6 right-6 z-[9998] w-14 h-14 rounded-full bg-[#C9A84C] text-[#0A2540] shadow-lg hover:shadow-xl hover:scale-105 transition-all flex items-center justify-center"
+          className="fixed bottom-6 right-6 z-[9998] w-14 h-14 rounded-full bg-[#BA7517] text-[#FBF7F0] shadow-lg hover:shadow-xl hover:scale-105 transition-all flex items-center justify-center"
           aria-label="Open SRL Assistant"
         >
           <MessageCircle size={24} />
@@ -89,21 +89,21 @@ export function ShipperChatbot() {
 
       {/* Chat panel */}
       {open && (
-        <div className="fixed bottom-6 right-6 z-[9999] w-[400px] max-w-[calc(100vw-2rem)] h-[500px] max-h-[calc(100vh-3rem)] flex flex-col rounded-2xl shadow-2xl border border-gray-200 overflow-hidden bg-white">
+        <div className="fixed bottom-6 right-6 z-[9999] w-[400px] max-w-[calc(100vw-2rem)] h-[500px] max-h-[calc(100vh-3rem)] flex flex-col rounded-2xl shadow-2xl border border-[#EFE6D3] overflow-hidden bg-white">
           {/* Header */}
-          <div className="flex items-center justify-between px-4 py-3 bg-[#0F1117] flex-shrink-0">
+          <div className="flex items-center justify-between px-4 py-3 bg-[#0A2540] flex-shrink-0">
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-full bg-[#C9A84C]/20 flex items-center justify-center">
-                <MessageCircle size={16} className="text-[#C9A84C]" />
+              <div className="w-8 h-8 rounded-full bg-[#BA7517]/20 flex items-center justify-center">
+                <MessageCircle size={16} className="text-[#BA7517]" />
               </div>
               <div>
-                <h3 className="text-sm font-semibold text-[#C9A84C]">SRL Assistant</h3>
+                <h3 className="text-sm font-semibold text-[#BA7517]">SRL Assistant</h3>
                 <p className="text-[10px] text-gray-400">Silk Route Logistics</p>
               </div>
             </div>
             <button
               onClick={() => setOpen(false)}
-              className="text-gray-400 hover:text-white transition-colors"
+              className="text-gray-400 hover:text-[#FBF7F0] transition-colors"
               aria-label="Close chat"
             >
               <X size={18} />
@@ -123,7 +123,7 @@ export function ShipperChatbot() {
                     <button
                       key={action}
                       onClick={() => sendMessage(action)}
-                      className="px-3 py-1.5 text-xs font-medium rounded-full border border-[#C9A84C]/40 text-[#BA7517] hover:bg-[#C9A84C]/10 transition-colors"
+                      className="px-3 py-1.5 text-xs font-medium rounded-full border border-[#C5A572]/40 text-[#BA7517] hover:bg-[#BA7517]/10 transition-colors"
                     >
                       {action}
                     </button>
@@ -141,8 +141,8 @@ export function ShipperChatbot() {
                 <div
                   className={`max-w-[80%] px-3 py-2 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap ${
                     msg.role === "user"
-                      ? "bg-[#C9A84C] text-[#0A2540] rounded-br-md"
-                      : "bg-gray-100 text-gray-800 rounded-bl-md"
+                      ? "bg-[#BA7517] text-[#FBF7F0] rounded-br-md"
+                      : "bg-[#F5EEE0] text-gray-800 rounded-bl-md"
                   }`}
                 >
                   {msg.content}
@@ -153,7 +153,7 @@ export function ShipperChatbot() {
             {/* Loading indicator */}
             {loading && (
               <div className="flex justify-start">
-                <div className="bg-gray-100 text-gray-500 px-3 py-2 rounded-2xl rounded-bl-md text-sm flex items-center gap-2">
+                <div className="bg-[#F5EEE0] text-gray-500 px-3 py-2 rounded-2xl rounded-bl-md text-sm flex items-center gap-2">
                   <Loader2 size={14} className="animate-spin" />
                   Thinking...
                 </div>
@@ -164,7 +164,7 @@ export function ShipperChatbot() {
           </div>
 
           {/* Input bar */}
-          <div className="flex-shrink-0 border-t border-gray-200 px-3 py-2">
+          <div className="flex-shrink-0 border-t border-[#EFE6D3] px-3 py-2">
             <div className="flex items-center gap-2">
               <input
                 ref={inputRef}
@@ -173,13 +173,13 @@ export function ShipperChatbot() {
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={handleKeyDown}
                 placeholder="Ask about shipments, quotes, invoices..."
-                className="flex-1 text-sm px-3 py-2 border border-gray-200 rounded-lg outline-none focus:border-[#C9A84C] transition-colors text-gray-800 placeholder:text-gray-400"
+                className="flex-1 text-sm px-3 py-2 border border-[#EFE6D3] rounded-lg outline-none focus:border-[#BA7517] focus:ring-[#BA7517]/15 transition-colors text-gray-800 placeholder:text-gray-400"
                 disabled={loading}
               />
               <button
                 onClick={() => sendMessage(input)}
                 disabled={!input.trim() || loading}
-                className="w-9 h-9 flex items-center justify-center rounded-lg bg-[#C9A84C] text-[#0A2540] disabled:opacity-40 hover:bg-[#b8963e] transition-colors flex-shrink-0"
+                className="w-9 h-9 flex items-center justify-center rounded-lg bg-[#BA7517] text-[#FBF7F0] disabled:opacity-40 hover:bg-[#854F0B] transition-colors flex-shrink-0"
                 aria-label="Send message"
               >
                 <Send size={16} />

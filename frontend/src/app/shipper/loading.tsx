@@ -1,6 +1,6 @@
 export default function ShipperLoading() {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
+    <div className="min-h-screen flex items-center justify-center bg-[#FBF7F0]">
       <div className="animate-pulse flex flex-col items-center gap-4">
         <div className="w-16 h-16 bg-gray-200 rounded-xl" />
         <div className="h-5 w-32 bg-gray-200 rounded" />

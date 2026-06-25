@@ -129,7 +129,7 @@ export function AddressAutocomplete({ label, value, onSelect, theme = "dark" }: 
   };
 
   const inputCls = theme === "light"
-    ? "w-full pl-9 pr-3 py-2 bg-white border border-gray-200 rounded-lg text-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-[#BA7517]/30"
+    ? "w-full pl-9 pr-3 py-2 bg-white border border-[#EFE6D3] rounded-lg text-[#0A2540] text-sm focus:outline-none focus:border-[#BA7517] focus:ring-2 focus:ring-[#BA7517]/15"
     : "w-full pl-9 pr-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:border-gold/50";
   const iconCls = theme === "light" ? "absolute left-3 top-2.5 w-4 h-4 text-[#BA7517]" : "absolute left-3 top-2.5 w-4 h-4 text-gold";
   const spinnerCls = theme === "light" ? "absolute right-3 top-2.5 w-4 h-4 text-[#BA7517] animate-spin" : "absolute right-3 top-2.5 w-4 h-4 text-gold animate-spin";
@@ -152,9 +152,9 @@ export function AddressAutocomplete({ label, value, onSelect, theme = "dark" }: 
           style={{ backgroundColor: "#fff", border: "1px solid #e2e8f0", boxShadow: "0 10px 25px rgba(0,0,0,0.12)" }}>
           {results.map((r) => (
             <button key={r.placeId} onClick={() => handleSelect(r)}
-              className="w-full text-left px-3 py-2 text-sm transition truncate hover:!bg-amber-50"
+              className="w-full text-left px-3 py-2 text-sm transition truncate hover:!bg-[#FAEEDA]"
               style={{ color: "#334155", backgroundColor: "#fff" }}>
-              <MapPin className="w-3 h-3 inline mr-1.5 text-[#C9A84C]" />{r.description}
+              <MapPin className="w-3 h-3 inline mr-1.5 text-[#BA7517]" />{r.description}
             </button>
           ))}
           <div className="px-3 py-1 text-[10px] lg:text-[9px] text-right" style={{ color: "#94a3b8" }}>Powered by Google</div>

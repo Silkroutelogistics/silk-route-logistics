@@ -13656,7 +13656,30 @@
 //   (3) fraud-awareness — quiz distractors changed to real false-comfort traps (high
 //   rate / nice website / on a load board) instead of absurd one-liners. Content files
 //   only — live via prod re-seed. 8 of 22 courses now overhauled. Per §3.1: anu → anv.
-export const SRL_VERSION = "3.8.apk";
+// v3.8.apl — Carrier + Shipper portal brand-conformance clean sweep (srl-brand-design
+//   skill alignment). ROOT CAUSE fixed: globals.css mapped --srl-gold/bg-gold/text-gold
+//   to olive #C9A84C (not canonical #C5A572) — corrected platform-wide (gold structural
+//   #C5A572 / emphasis #BA7517, status tokens canonicalized, focus rings, + cream/gold-dark
+//   @theme utilities). AE Console dark *surfaces* left as retained-by-design; only the gold
+//   token + status tokens (shared, should be canonical everywhere) changed there.
+//   Decisions locked w/ user: cream/light register + carrier & shipper scope. SHARED CHROME
+//   rebuilt canonical: CarrierSidebar + ShipperSidebar → navy #0A2540 rails (converted
+//   <aside>→<div> to escape the globals [data-mode=light] aside warm-stone !important remap);
+//   CarrierCard/ShipperCard → cream-2 #EFE6D3 border + navy-tinted shadow + rounded-lg;
+//   CarrierBadge/ShipperBadge → canonical 4-status palette (retired Tailwind rainbow);
+//   both dashboard layouts → cream #FBF7F0 canvas + gold avatar + gold-dark CTAs + canonical
+//   banners/modals (shipper session modal converted dark→light). PAGES: ~260 className-only
+//   edits across 24 carrier + 19 shipper files via 8 parallel agents on a deterministic spec
+//   — olive→canonical gold (gold-role split), #0F1117→navy #0A2540, killed the text-white-on-
+//   dark light-mode backfire (→text-[#FBF7F0]), Playfair+navy headings, gold-dark eyebrows,
+//   gold-dark CTAs, canonical input focus, canonical status pills, unified Caravan tier
+//   palette. SHARED FORMS swept: LoginBrandPanel (gold accents canonical, navy hero kept),
+//   AddressAutocomplete (light path + dropdown; AE dark path retained), QuoteForm, SpendChart,
+//   Forgot/ResetPasswordForm. Login split-screen navy heroes preserved. GATES: residual-drift
+//   grep ZERO across carrier+shipper+shared; frontend tsc --noEmit clean; npx next build clean
+//   (113 static routes). className/style-string-only — no JSX/logic/props/hooks/data changed.
+//   Per §3.1: apk → apl.
+export const SRL_VERSION = "3.8.apl";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

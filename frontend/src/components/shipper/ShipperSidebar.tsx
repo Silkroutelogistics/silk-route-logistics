@@ -39,13 +39,13 @@ export function ShipperSidebar() {
   const sidebarContent = (
     <>
       {/* Logo */}
-      <div className="flex items-center gap-2.5 border-b border-[#C9A84C]/15 min-h-[56px] px-5 py-4">
-        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#C9A84C] to-[#A88535] flex items-center justify-center text-[13px] font-extrabold text-[#0F1117] flex-shrink-0">
+      <div className="flex items-center gap-2.5 border-b border-[#15365A] min-h-[56px] px-5 py-4">
+        <div className="w-8 h-8 rounded-full bg-[#C5A572] flex items-center justify-center text-[13px] font-extrabold text-[#0A2540] flex-shrink-0">
           SR
         </div>
         <div>
-          <div className="font-serif text-[13px] font-bold text-white whitespace-nowrap">SILK ROUTE</div>
-          <div className="text-[7px] text-[#C9A84C] tracking-[2px]">SHIPPER PORTAL</div>
+          <div className="font-serif text-[13px] font-bold text-[#FBF7F0] whitespace-nowrap">SILK ROUTE</div>
+          <div className="text-[7px] text-[#C5A572] tracking-[2px]">SHIPPER PORTAL</div>
         </div>
       </div>
 
@@ -59,11 +59,11 @@ export function ShipperSidebar() {
               key={item.id}
               href={item.href}
               className={`flex items-center gap-3 rounded-lg mb-0.5 transition-all duration-150 px-3 py-2.5 justify-start ${
-                active ? "bg-[#C9A84C]/15" : "hover:bg-white/5"
+                active ? "bg-[#C5A572]/15" : "hover:bg-[#FBF7F0]/5"
               }`}
             >
-              <Icon size={18} className={`flex-shrink-0 ${active ? "text-[#C9A84C]" : "text-gray-400"}`} />
-              <span className={`text-[13px] whitespace-nowrap ${active ? "text-[#C9A84C] font-semibold" : "text-gray-400"}`}>
+              <Icon size={18} className={`flex-shrink-0 ${active ? "text-[#DAC39C]" : "text-[#C9D2DE]"}`} />
+              <span className={`text-[13px] whitespace-nowrap ${active ? "text-[#DAC39C] font-semibold" : "text-[#C9D2DE]"}`}>
                 {item.label}
               </span>
             </Link>
@@ -72,7 +72,7 @@ export function ShipperSidebar() {
       </div>
 
       {/* Bottom controls */}
-      <div className="py-3 px-2 border-t border-[#C9A84C]/10">
+      <div className="py-3 px-2 border-t border-[#15365A]">
         {/* v3.8.e.2 — link target was /shipper (the divergent legacy
             shipper-prospect landing) which surprised authenticated
             shippers expecting to return to the public marketing site.
@@ -82,10 +82,10 @@ export function ShipperSidebar() {
             Alignment for separate cleanup. */}
         <Link
           href="/"
-          className="flex items-center gap-3 rounded-lg py-2 mt-0.5 px-3 justify-start hover:bg-white/5"
+          className="flex items-center gap-3 rounded-lg py-2 mt-0.5 px-3 justify-start hover:bg-[#FBF7F0]/5"
         >
-          <ArrowLeft size={18} className="text-gray-700" />
-          <span className="text-xs text-gray-700">Back to Website</span>
+          <ArrowLeft size={18} className="text-[#8AA5C0]" />
+          <span className="text-xs text-[#8AA5C0]">Back to Website</span>
         </Link>
       </div>
     </>
@@ -94,16 +94,16 @@ export function ShipperSidebar() {
   return (
     <>
       {/* Mobile header bar */}
-      <div className="lg:hidden fixed top-0 left-0 right-0 z-40 bg-[#0F1117] border-b border-[#C9A84C]/15 px-4 py-3 flex items-center justify-between">
+      <div className="lg:hidden fixed top-0 left-0 right-0 z-40 bg-[#0A2540] border-b border-[#15365A] px-4 py-3 flex items-center justify-between">
         <div className="flex items-center gap-2.5">
-          <div className="w-7 h-7 rounded-full bg-gradient-to-br from-[#C9A84C] to-[#A88535] flex items-center justify-center text-[11px] font-extrabold text-[#0F1117]">
+          <div className="w-7 h-7 rounded-full bg-[#C5A572] flex items-center justify-center text-[11px] font-extrabold text-[#0A2540]">
             SR
           </div>
-          <span className="font-serif text-[12px] font-bold text-white">SILK ROUTE</span>
+          <span className="font-serif text-[12px] font-bold text-[#FBF7F0]">SILK ROUTE</span>
         </div>
         <button
           onClick={() => setMobileOpen(!mobileOpen)}
-          className="p-2 text-white/60 hover:text-white hover:bg-white/5 rounded-lg transition"
+          className="p-2 text-[#FBF7F0]/60 hover:text-[#FBF7F0] hover:bg-[#FBF7F0]/5 rounded-lg transition"
         >
           {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
         </button>
@@ -117,14 +117,17 @@ export function ShipperSidebar() {
         />
       )}
 
-      {/* Sidebar */}
-      <aside
-        className={`w-[220px] bg-[#080C18] flex flex-col h-screen flex-shrink-0 transition-transform duration-200 fixed lg:sticky top-0 z-50 lg:z-auto ${
+      {/* Sidebar — explicit canonical navy rail (div, not <aside>, to escape
+          the globals.css [data-mode="light"] aside warm-stone !important remap) */}
+      <div
+        role="navigation"
+        aria-label="Shipper portal"
+        className={`w-[220px] bg-[#0A2540] border-r border-[#15365A] flex flex-col h-screen flex-shrink-0 transition-transform duration-200 fixed lg:sticky top-0 z-50 lg:z-auto ${
           mobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
         }`}
       >
         {sidebarContent}
-      </aside>
+      </div>
 
       {/* Spacer for mobile top bar */}
       <div className="lg:hidden h-14 shrink-0" />
