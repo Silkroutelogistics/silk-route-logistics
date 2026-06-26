@@ -46,6 +46,10 @@ export const RC_PDF_FORBIDDEN: string[] = [
   "Priority Pay",
   "Partner Pay",
   "Elite Pay",
+  // v3.8 (counsel architecture) — the RC now references the BCA generically;
+  // the stale hard-coded BCA version citation must never return.
+  "BCA v3.1",
+  "Broker-Carrier Agreement v3.1",
 ];
 
 /**
@@ -89,8 +93,12 @@ export const RC_PDF_REQUIRED: string[] = [
   // Sprint 45-RC (v3.8.abd) extensions — Item 48 close
   "DOT# 4526880",
   "operations@silkroutelogistics.ai",
-  "State of Michigan",
-  "Kalamazoo County",
+  // v3.8 (counsel architecture, Dirk Beckwith / Foster Swift) — substantive
+  // legal terms moved to the BCA; the RC is now a clean form that references
+  // it. The governing-law + venue strings ("State of Michigan", "Kalamazoo
+  // County") now assert on the BCA PDF, not the RC. The RC asserts the BCA
+  // reference instead.
+  "Broker-Carrier Agreement",
 ];
 
 /**

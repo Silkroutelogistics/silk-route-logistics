@@ -1818,87 +1818,35 @@ export function generateEnhancedRateConfirmation(load: EnhancedRCLoadData, formD
     y = labelY + 12 + panelH + 12;
   }
 
-  // Terms & Conditions — Carmack 49 U.S.C. § 14706 + Michigan/Kalamazoo
-  // venue + BCA v3.1 reference (skill SKILL.md mandate; satisfies E2E
-  // RC_PDF_REQUIRED extensions: "State of Michigan", "Kalamazoo County")
-  // Sprint 47.b (Item 104) — label + body swapped from Helvetica-Bold/
-  // Helvetica (legacy fallback) to FONT_BODY_BOLD/FONT_BODY skill
-  // canonical for typographic consistency with the surrounding skill
-  // chrome. Safe post-Item-103 monkey-patch (ligature suppression).
+  // Governing Terms — v3.8 counsel-confirmed architecture (Dirk Beckwith,
+  // Foster Swift, 2026-06). The substantive legal terms (Carmack, insurance
+  // limits, indemnification, governing law, venue, the full re-brokering
+  // covenant, food-safety, and CARB) now live in the Broker-Carrier Agreement.
+  // This Rate Confirmation is a clean operational form that REFERENCES the
+  // BCA — per Dirk's confirmed structure ("substantive terms in the BCA; the
+  // BOL and Rate Confirmation become clean standard forms that reference it").
+  // The prior embedded numbered T&C enumeration and the stale "BCA v3.1 dated
+  // February 26, 2026" citation are removed; only per-load operational
+  // reminders remain. E2E RC_PDF_REQUIRED updated in the same commit — the
+  // governing-law + venue strings ("State of Michigan", "Kalamazoo County")
+  // now assert on the BCA, not the RC; "BCA v3.1" added to RC_PDF_FORBIDDEN.
   doc.font(FONT_BODY_BOLD, 7).fillColor(TOKENS.goldDark);
-  doc.text("TERMS & CONDITIONS", MARGIN, y, {
+  doc.text("GOVERNING TERMS", MARGIN, y, {
     characterSpacing: 7 * 0.08,
     lineBreak: false,
   });
   y += 14;
 
-  // Sprint 50 (Items 122 + 124 + 125 + 126 + 127 + 128) — RC legal exposure
-  // tier closed. 10-clause numbered enumeration replaces pre-Sprint-50
-  // prose paragraph. Sprint 49 Item 135 Top-Brokers-Pattern-Library audit
-  // surfaced canonical clauses across TQL / Landstar / Echo / CHR / Flock /
-  // RXO/Coyote / JB Hunt / Hub Group / Schneider / Knight. Numbered
-  // enumeration (not bullets, not paragraphs) is the industry-default for
-  // RC T&C bodies — auditable, citable, enforceable.
-  //
-  // New clauses this sprint: (4) re-brokering (Item 124, Landstar pattern
-  // with subcontract/co-broker/assign explicit + payment forfeiture lead),
-  // (5) indemnification (Item 125, TQL pattern with "fullest extent
-  // permitted by law"), (6) accessorial pre-approval (Item 126, TQL
-  // pattern routing to operations@), (7) detention notification (Item 127,
-  // proactive "at least 30 minutes before beginning" + departure), (8)
-  // paperwork submission window (Item 128, 24-48hr via accounting@ or
-  // carrier portal).
-  // Sprint 50 base clauses (1-10). Sprint 51 appends 11 (Item 132, always),
-  // 12 (Item 131, conditional on reefer or food-grade), 13 (Item 133,
-  // conditional on CA origin or destination). Clause numbering shifts when
-  // conditional clauses don't fire — handled via dynamic numbering below.
-  const tcsClausesBase = [
-    "Carrier accepts the rate, lane, equipment, and terms set forth above.",
-    "Carrier shall maintain cargo insurance of not less than $100,000 and auto liability of not less than $1,000,000 combined single limit, with Silk Route Logistics Inc. named as certificate holder.",
-    "Carrier shall comply with all applicable federal, state, and local laws and regulations, including Carmack Amendment liability per 49 U.S.C. § 14706.",
-    "Carrier shall not subcontract, re-broker, co-broker, or assign this load to any third party. Unauthorized transfer shall result in forfeiture of all freight charges and constitutes material breach of the Broker-Carrier Agreement.",
-    "Carrier shall indemnify and hold Broker harmless to the fullest extent permitted by law from all claims, liabilities, damages, and expenses arising from Carrier's performance under this Rate Confirmation, including cargo loss or damage, personal injury, and regulatory non-compliance.",
-    "Accessorial charges not pre-approved by Broker in writing shall not be honored. Requests must be submitted to operations@silkroutelogistics.ai with supporting documentation prior to incurrence.",
-    "Detention: Carrier shall notify Broker via call or text at least 30 minutes before beginning detention and again upon departure. Detention without notification is forfeited.",
-    "Paperwork (signed Rate Confirmation, signed BOL, POD, lumper receipts, scale tickets where applicable) must be submitted within 24-48 hours of delivery via accounting@silkroutelogistics.ai or carrier portal upload.",
-    "This Rate Confirmation, together with the SRL Broker-Carrier Agreement v3.1 dated February 26, 2026, constitutes the complete agreement for this load.",
-    "Disputes governed by the laws of the State of Michigan, with venue in Kalamazoo County.",
-    // Sprint 51 (Item 132) — discrepancy escalation clause (always renders).
-    // Flock pattern: carrier reports any RC↔BOL discrepancy and waits for SRL
-    // instructions before proceeding.
-    "Any discrepancy between this Rate Confirmation and the Bill of Lading must be reported to SRL operations immediately. Carrier shall await SRL instructions before proceeding.",
+  const governingClauses = [
+    "This Rate Confirmation is governed by the Broker-Carrier Agreement between Silk Route Logistics Inc. and Carrier (the “BCA”). In the event of conflict, the BCA controls.",
+    "Acceptance: Carrier's signature below, or Carrier's dispatch of a unit, arrival at the pickup location, or commencement of transport, whichever occurs first, constitutes binding acceptance of this Rate Confirmation and the BCA.",
+    "Accessorial charges require SRL's prior written approval (operations@silkroutelogistics.ai). Detention requires notice to SRL by call or text at least 30 minutes before it begins and again upon departure.",
+    "Carrier shall report any discrepancy between this Rate Confirmation and the Bill of Lading to SRL before proceeding. Signed BOL, POD, and supporting paperwork are due within 48 hours of delivery.",
   ];
-
-  // Sprint 51 (Item 131) — trailer seal conditional (reefer OR food-grade
-  // commodity). Echo pattern adapted: seal-applied-at-shipper +
-  // seal-cannot-be-broken-without-written-approval + claim-on-broken-seal.
-  const isReefer = /REEFER|reefer/i.test(String(equipment));
-  const foodGradeCommodity = /food|wellness|consumable|frozen|chilled|dairy|produce|meat|beverage/i.test(String(commodityName || ""));
-  if (isReefer || foodGradeCommodity) {
-    tcsClausesBase.push(
-      "Trailer seal must be applied at shipper with seal number noted on the Bill of Lading. Seal shall not be broken without SRL written approval. Delivery without intact seal results in claim.",
-    );
-  }
-
-  // Sprint 51 (Item 133) — CARB compliance conditional (CA origin OR dest).
-  // Echo pattern: CARB compliance covenant + carrier indemnification for any
-  // loss arising from CARB non-compliance.
-  const originStateCheck = (fd.shipperState as string | undefined) || load.originState;
-  const destStateCheck = (fd.consigneeState as string | undefined) || load.destState;
-  if (originStateCheck === "CA" || destStateCheck === "CA") {
-    tcsClausesBase.push(
-      "Carrier must be CARB compliant when traveling to, from, or through California. Carrier indemnifies SRL for any loss or damage arising from CARB non-compliance.",
-    );
-  }
-
-  // Number clauses (1) through (N) — dynamic to handle conditional clauses
-  // not firing. L7492033667 fires both Items 131 + 133 → 13 clauses total;
-  // a load with no reefer/food-grade and no CA origin/dest renders 11 clauses.
-  const tcsClauses = tcsClausesBase.map((c, i) => `(${i + 1}) ${c}`);
-  const tcBody = (fd.customTerms as string | undefined) || tcsClauses.join("\n");
+  const governingBody = (fd.customTerms as string | undefined) || governingClauses.join("\n");
 
   doc.font(FONT_BODY, 7.5).fillColor(TOKENS.fg2);
-  doc.text(tcBody, MARGIN, y, { width: CONTENT_W, lineGap: 1, paragraphGap: 2 });
+  doc.text(governingBody, MARGIN, y, { width: CONTENT_W, lineGap: 1, paragraphGap: 2 });
   y = doc.y + 14;
 
   // Tender expiration banner (Sprint 48 Item 108) — surfaces tender SLA

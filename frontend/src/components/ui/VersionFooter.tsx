@@ -13679,7 +13679,20 @@
 //   grep ZERO across carrier+shipper+shared; frontend tsc --noEmit clean; npx next build clean
 //   (113 static routes). className/style-string-only — no JSX/logic/props/hooks/data changed.
 //   Per §3.1: apk → apl.
-export const SRL_VERSION = "3.8.apl";
+// v3.8.apm — Rate Confirmation simplified to the counsel-confirmed document
+//   architecture (Dirk Beckwith / Foster Swift, confirmed 2026-06): substantive
+//   legal terms move to the Broker-Carrier Agreement; the RC becomes a clean
+//   operational form that REFERENCES the BCA. pdfService.ts — the embedded
+//   numbered T&C enumeration + the stale "BCA v3.1 dated February 26, 2026"
+//   citation removed, replaced by a GOVERNING TERMS block (BCA reference +
+//   acceptance + per-load operational reminders: accessorial pre-approval,
+//   detention notice, RC↔BOL discrepancy, 48h POD). e2e/helpers/pdf.ts —
+//   RC_PDF_REQUIRED drops "State of Michigan" + "Kalamazoo County" (now assert
+//   on the BCA, not the RC), adds "Broker-Carrier Agreement"; RC_PDF_FORBIDDEN
+//   locks "BCA v3.1". Commit 1 of the doc-suite simplification (BOL / Quick Pay
+//   / Invoice / onboarding click-through follow as separate atomic commits).
+//   Per §3.1: apl → apm.
+export const SRL_VERSION = "3.8.apm";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
