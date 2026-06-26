@@ -111,11 +111,17 @@ export const BOL_PDF_FORBIDDEN: string[] = [
   "Houston, TX 77063",
   "MC-1794414",
   "DOT-4526880",
+  // v3.8 (counsel architecture) — broker-carrier terms moved to the BCA; the
+  // retired non-solicitation penalty must never reappear on the BOL.
+  "35% commission",
 ];
 
 export const BOL_PDF_REQUIRED: string[] = [
   "Silk Route Logistics Inc.",
   "Galesburg, MI 49053",
+  // v3.8 (counsel architecture) — BOL is a clean straight bill of lading that
+  // references the Broker-Carrier Agreement for the broker-carrier terms.
+  "Broker-Carrier Agreement",
 ];
 
 export function assertNoForbidden(pdfText: string, forbidden: string[], context: string) {

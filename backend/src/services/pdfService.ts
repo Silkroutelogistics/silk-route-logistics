@@ -1132,50 +1132,25 @@ export async function generateBOLFromLoad(
     .text("Terms and Conditions", M, y, { lineBreak: false });
   y += 24;
 
-  const tclauses: Array<[string, string]> = [
-    ["1. ACCEPTANCE & CARRIAGE", "The goods described herein are accepted in apparent good order and condition (except as noted) for carriage subject to the Uniform Straight Bill of Lading and applicable U.S. DOT regulations. This BOL is non-negotiable and serves as receipt of goods only."],
-    ["2. LIABILITY (CARMACK AMENDMENT)", "Carrier is liable for loss, damage, or delay to cargo pursuant to 49 U.S.C. § 14706. Liability extends to the full actual value of the goods unless a written released-value agreement is executed per 49 CFR § 1035."],
-    ["3. INSURANCE REQUIREMENTS", "Carrier shall maintain: (a) Commercial General Liability and Automobile Liability min $1,000,000 per occurrence; (b) Cargo Liability min $100,000 per shipment; (c) Workers’ Compensation as required by law."],
-    ["4. CLAIMS", "Written claims must be filed within nine (9) months of delivery. Carrier shall note any damage, shortage, or discrepancy on this BOL at time of delivery."],
-    ["5. INDEPENDENT CONTRACTOR", "Carrier operates as an independent contractor. Carrier is not an agent, employee, or partner of Silk Route Logistics Inc."],
-    ["6. DOUBLE BROKERING PROHIBITION", "Carrier shall not re-broker, assign, interline, sub-contract, or transfer freight to any third party without prior written consent of SRL. Violation constitutes a material breach."],
-    ["7. NON-SOLICITATION", "Carrier shall not solicit traffic from any shipper or customer of SRL for twelve (12) months following the last load. Violation entitles SRL to 35% commission on diverted revenue."],
-    ["8. NON-BILLING", "Carrier shall not bill or accept payment from the shipper/consignee. Carrier waives any tariff or lien rights."],
-    ["9. INDEMNIFICATION", "Carrier shall defend, indemnify, and hold harmless SRL from all claims, damages, and expenses arising from Carrier’s performance or breach."],
-    ["10. DETENTION & ACCESSORIALS", "All accessorial charges must be pre-approved in writing by SRL. Unapproved charges will not be honored."],
-    ["11. FORCE MAJEURE", "Neither party shall be liable for failure to perform due to causes beyond reasonable control including acts of God, war, epidemic, or natural disaster."],
-    ["12. PROOF OF DELIVERY", "Carrier shall obtain a signed delivery receipt. Signed BOL/POD must accompany all invoices for payment processing."],
-    ["13. EQUIPMENT & COMPLIANCE", "Carrier certifies equipment meets FMCSA/DOT standards. Carrier shall comply with ELD mandates and 49 CFR Parts 171-180 for hazardous materials."],
-    ["14. CONFIDENTIALITY", "All rates, lanes, and business terms are proprietary. Carrier shall not disclose to any third party."],
-    ["15. SEVERABILITY", "If any provision is invalid, remaining provisions continue in full force."],
-    ["16. ENTIRE AGREEMENT", "This BOL with the Broker-Carrier Agreement constitutes the entire agreement. No oral modifications are binding."],
-    ["17. GOVERNING LAW", "Governed by Michigan law and applicable federal transportation law. Freight charges are prepaid unless otherwise noted."],
+  // v3.8 counsel architecture (Dirk Beckwith / Foster Swift, confirmed 2026-06)
+  // — the BOL is a clean standard straight bill of lading. The broker-carrier
+  // terms (insurance limits, re-brokering, non-solicitation, indemnification,
+  // detention, confidentiality, equipment) live in the Broker-Carrier
+  // Agreement, not on the BOL. Page 2 now carries only the standard
+  // contract-of-carriage terms, the broker-not-carrier statement, and a
+  // reference to the BCA. This also removes the retired non-solicitation
+  // penalty (twelve (12) months / 35% commission) from the BOL — the single
+  // non-solicit figure now lives only in the BCA, eliminating the prior
+  // cross-document contradiction.
+  const bolTerms = [
+    "This Bill of Lading is a non-negotiable straight bill of lading and a receipt for the goods described, accepted in apparent good order except as noted. It evidences the contract of carriage between the Shipper and the Carrier under the Uniform Straight Bill of Lading and applicable U.S. DOT regulations.",
+    "Carrier liability for cargo loss, damage, or delay is governed by the Carmack Amendment, 49 U.S.C. § 14706, to the full actual value of the goods unless a written released-value agreement is executed (49 U.S.C. § 14706(c)).",
+    "Silk Route Logistics Inc. is a licensed property broker (MC# 1794414, USDOT# 4526880), not a motor carrier or freight forwarder. Insertion of SRL's name on this Bill of Lading is for convenience only and does not make SRL the carrier; Carmack liability rests with the Carrier identified above.",
+    "The Carrier's transportation of this shipment is further subject to the Broker-Carrier Agreement between Silk Route Logistics Inc. and the Carrier, which governs insurance, re-brokering, indemnification, payment, and the other terms between Broker and Carrier. In the event of conflict, the Broker-Carrier Agreement controls as between Broker and Carrier.",
+    "Written claims must be filed within nine (9) months of delivery, with any damage, shortage, or discrepancy noted on this Bill of Lading at delivery. Freight charges are prepaid unless otherwise noted. Governed by Michigan law and applicable federal transportation law.",
   ];
-
-  // Two-column T&C. Split 9/8 — clauses 1-9 left, 10-17 right.
-  const tcGap = 14;
-  const tcColW = (CW - tcGap) / 2;
-  const tcLeftX = M;
-  const tcRightX = M + tcColW + tcGap;
-  const tcTop = y;
-
-  const renderClause = (title: string, body: string, cx: number, cy: number): number => {
-    doc.font("DMSans-Bold").fontSize(9).fillColor(NAVY)
-      .text(title, cx, cy, { width: tcColW, lineBreak: false });
-    let ny = cy + 11;
-    doc.font("DMSans-Regular").fontSize(8.5).fillColor(FG_2)
-      .text(body, cx, ny, { width: tcColW, lineGap: 1 });
-    return doc.y + 6;
-  };
-
-  let leftY = tcTop;
-  for (let i = 0; i < 9; i++) {
-    leftY = renderClause(tclauses[i][0], tclauses[i][1], tcLeftX, leftY);
-  }
-  let rightY = tcTop;
-  for (let i = 9; i < tclauses.length; i++) {
-    rightY = renderClause(tclauses[i][0], tclauses[i][1], tcRightX, rightY);
-  }
+  doc.font("DMSans-Regular").fontSize(9).fillColor(FG_2)
+    .text(bolTerms.join("\n\n"), M, y, { width: CW, lineGap: 1.5, paragraphGap: 3 });
 
   // Footer page 2 (matches page 1)
   doc.lineWidth(1).strokeColor(GOLD).moveTo(M, fyLine).lineTo(R, fyLine).stroke();
@@ -1195,7 +1170,6 @@ export async function generateBOLFromLoad(
     });
 
   void FG_DISABLED; // reserved for future disabled-text rendering
-  void rightY; void leftY;
 
   doc.end();
   return doc;

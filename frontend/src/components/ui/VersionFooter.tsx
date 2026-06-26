@@ -13692,7 +13692,18 @@
 //   locks "BCA v3.1". Commit 1 of the doc-suite simplification (BOL / Quick Pay
 //   / Invoice / onboarding click-through follow as separate atomic commits).
 //   Per §3.1: apl → apm.
-export const SRL_VERSION = "3.8.apm";
+// v3.8.apn — Bill of Lading simplified to the counsel-confirmed document
+//   architecture (Dirk Beckwith / Foster Swift): the BOL becomes a clean
+//   standard straight bill of lading that REFERENCES the Broker-Carrier
+//   Agreement. pdfService.ts generateBOLFromLoad — the page-2 17-clause
+//   two-column T&C is replaced by a short standard contract-of-carriage +
+//   broker-not-carrier + BCA-reference block. Removes the retired
+//   non-solicitation penalty (12 months / 35% commission) from the BOL,
+//   eliminating the prior cross-document contradiction (the single non-solicit
+//   figure now lives only in the BCA). e2e/helpers/pdf.ts — BOL_PDF_REQUIRED
+//   adds "Broker-Carrier Agreement"; BOL_PDF_FORBIDDEN locks "35% commission".
+//   Commit 2 of the doc-suite simplification. Per §3.1: apm → apn.
+export const SRL_VERSION = "3.8.apn";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
