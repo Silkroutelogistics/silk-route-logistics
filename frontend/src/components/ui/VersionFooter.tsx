@@ -13703,7 +13703,21 @@
 //   figure now lives only in the BCA). e2e/helpers/pdf.ts — BOL_PDF_REQUIRED
 //   adds "Broker-Carrier Agreement"; BOL_PDF_FORBIDDEN locks "35% commission".
 //   Commit 2 of the doc-suite simplification. Per §3.1: apm → apn.
-export const SRL_VERSION = "3.8.apn";
+// v3.8.apo — Onboarding/activation click-through aligned to the v3.8 counsel
+//   architecture (Dirk Beckwith / Foster Swift). carrierAgreements.ts (the
+//   single source behind the post-approval activation e-signature) — §10
+//   reworded to binding arbitration in Kalamazoo County; BCA_VERSION bumped to
+//   2026-06-27-v1; header documents the confirmed architecture + the items
+//   still pending Dirk (insurance, added protections, litigation-vs-
+//   arbitration). onboarding/page.tsx Step 4 inline click-through — §8
+//   non-solicit gains the 15% liquidated-damages figure (matches §14 canon +
+//   the activation copy). The two named v3.8 defaults (non-solicit 12mo/15% +
+//   Kalamazoo) are landed; insurance + the additional protections re-touch with
+//   Dirk's final BCA. Duplication of the click-through text across the two
+//   surfaces banked for consolidation. Commit 5 of the doc-suite arc (Commit 3
+//   Quick Pay was a Drive doc; Commit 4 Invoice skipped — shipper-facing).
+//   Per §3.1: apn → apo.
+export const SRL_VERSION = "3.8.apo";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

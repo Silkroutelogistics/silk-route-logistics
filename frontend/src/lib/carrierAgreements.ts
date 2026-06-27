@@ -8,8 +8,23 @@
 // Pay Agreement are under Michigan commercial-attorney review; swap the
 // attorney-final body in here and bump the version — the signing mechanism
 // records consent against whatever version is current, no code change needed.
+//
+// v3.8 counsel architecture (Dirk Beckwith / Foster Swift, confirmed 2026-06):
+// the BCA is the master agreement; the BOL and Rate Confirmation are clean
+// forms that reference it. The v3.8 defaults are landed here — non-solicit
+// 12 months / 15% (CLAUDE.md §14 canon) and Kalamazoo-County binding
+// arbitration. Still pending Dirk's final confirmation before the
+// attorney-final body is swapped in: insurance limits (he proposed lower),
+// the additional carrier protections (fraud/identity, OTIF, 18-month
+// authority, OFAC, audit), and litigation-vs-arbitration form. See the v3.8
+// BCA merge draft in Drive (Foster Swift folder).
+//
+// NOTE — duplication: the onboarding Step 4 click-through (onboarding/page.tsx)
+// is a SEPARATE inline copy of these terms. Both were aligned to the v3.8
+// defaults in this commit; consolidating onboarding to import BCA_ARTICLES is
+// a banked follow-up so there is a single source.
 
-export const BCA_VERSION = "2026-05-24-v1";
+export const BCA_VERSION = "2026-06-27-v1";
 export const QP_VERSION = "2026-05-24-v1";
 
 export interface AgreementArticle {
@@ -58,7 +73,7 @@ export const BCA_ARTICLES: AgreementArticle[] = [
   },
   {
     title: "10. Governing Law & Dispute Resolution",
-    body: "This agreement is governed by the laws of the State of Michigan, with venue in Kalamazoo County, Michigan, together with applicable federal transportation law.",
+    body: "This agreement is governed by the laws of the State of Michigan and applicable federal transportation law. Disputes are resolved by binding arbitration in Kalamazoo County, Michigan.",
   },
   {
     title: "11. Data Privacy & Consent",

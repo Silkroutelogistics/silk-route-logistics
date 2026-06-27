@@ -1607,7 +1607,7 @@ export default function OnboardingPage() {
                 <p className="font-semibold text-[#0A2540] mt-3">8. Confidentiality</p>
                 <ul className="list-disc ml-5 space-y-1">
                   <li>Carrier shall not disclose Broker&apos;s customer information, rates, or business practices to any third party.</li>
-                  <li>Carrier shall not solicit or conduct business directly with any shipper/customer introduced through Broker for a period of 12 months after the last load transported.</li>
+                  <li>Carrier shall not solicit or conduct business directly with any shipper/customer introduced through Broker for a period of 12 months after the last load transported, with liquidated damages of 15% of the gross revenue on any improperly solicited shipment.</li>
                 </ul>
 
                 <p className="font-semibold text-[#0A2540] mt-3">9. Termination</p>
