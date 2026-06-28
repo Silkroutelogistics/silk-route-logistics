@@ -65,6 +65,61 @@ test.describe("Full Load Lifecycle E2E", () => {
     const authHeaders = { Authorization: `Bearer ${token}` };
 
     // ─────────────────────────────────────────────────────────────────
+    // B0 — Carrier onboarding lifecycle: a PENDING carrier is APPROVED by
+    //      the AE, then the carrier completes activation by e-signing the
+    //      Broker-Carrier Agreement (sign-bca), and activation-status
+    //      confirms. Proves the onboarding → approval → activation chain
+    //      that gates a carrier before it can transact. (The multipart
+    //      registration UI is covered by a separate UI test; faking file
+    //      uploads in an API walk is brittle, so the lifecycle smoke starts
+    //      from the seeded PENDING fixture.)
+    // ─────────────────────────────────────────────────────────────────
+    const allCarriersResp = await request.get(`${BACKEND_API}/carrier/all?include_test=true&limit=200`, { headers: authHeaders });
+    expect(allCarriersResp.ok(), "B0: GET /carrier/all?include_test=true must succeed").toBeTruthy();
+    const allCarriersBody = await allCarriersResp.json();
+    const allCarriers = allCarriersBody.carriers || allCarriersBody;
+    const pendingCarrier = (Array.isArray(allCarriers) ? allCarriers : []).find(
+      (c: any) => c.email === "pending-carrier@srl.invalid"
+    );
+    expect(pendingCarrier, "B0: E2E_FIXTURES must seed pending-carrier@srl.invalid (include_test fence opt-in required)").toBeTruthy();
+    expect(pendingCarrier.onboardingStatus, "B0: fixture carrier must start PENDING").toBe("PENDING");
+
+    // AE (CEO) approves the carrier
+    const approveResp = await request.post(`${BACKEND_API}/carriers/${pendingCarrier.id}/approve`, {
+      headers: authHeaders,
+      data: { note: "E2E onboarding smoke approval" },
+    });
+    expect(approveResp.ok(), `B0: POST /carriers/:id/approve must succeed; got ${approveResp.status()} ${await approveResp.text()}`).toBeTruthy();
+    const approveBody = await approveResp.json();
+    const approvedStatus = approveBody.carrier?.onboardingStatus ?? approveBody.onboardingStatus;
+    expect(approvedStatus, "B0: carrier must be APPROVED after approve").toBe("APPROVED");
+
+    // Carrier completes activation by e-signing the BCA (Bearer carrier token)
+    const pendingTokenResp = await request.post(`${BACKEND_API}/auth/e2e-token`, {
+      data: { email: "pending-carrier@srl.invalid" },
+    });
+    expect(pendingTokenResp.ok(), "B0: carrier e2e-token mint must succeed").toBeTruthy();
+    const { token: pendingToken } = await pendingTokenResp.json();
+    const pendingAuth = { Authorization: `Bearer ${pendingToken}` };
+
+    const signResp = await request.post(`${BACKEND_API}/carrier-auth/sign-bca`, {
+      headers: pendingAuth,
+      data: {
+        signedByName: "Pending Applicant",
+        signedByTitle: "Owner",
+        agreed: true,
+        bcaVersion: "2026-06-27-v1",
+      },
+    });
+    expect(signResp.ok(), `B0: POST /carrier-auth/sign-bca must succeed after approval; got ${signResp.status()} ${await signResp.text()}`).toBeTruthy();
+
+    const actStatusResp = await request.get(`${BACKEND_API}/carrier-auth/activation-status`, { headers: pendingAuth });
+    expect(actStatusResp.ok(), "B0: GET /carrier-auth/activation-status must succeed").toBeTruthy();
+    const actStatus = await actStatusResp.json();
+    expect(actStatus.bca?.signed, "B0: BCA must be signed after sign-bca").toBe(true);
+    expect(actStatus.requiresActivation, "B0: requiresActivation must be false once the BCA is signed").toBe(false);
+
+    // ─────────────────────────────────────────────────────────────────
     // B2 — Fetch the seeded test customer + carrier (compliance-passing
     //      per E2E_FIXTURES seed extension)
     // ─────────────────────────────────────────────────────────────────
@@ -209,6 +264,36 @@ test.describe("Full Load Lifecycle E2E", () => {
     const acceptedLoad = await acceptedLoadResp.json();
     expect(acceptedLoad.status, "Item 53: load.status must flip to BOOKED inside the atomic txn").toBe("BOOKED");
     expect(acceptedLoad.carrierId, "Item 53: load.carrierId must be set inside the atomic txn").toBeTruthy();
+
+    // ─────────────────────────────────────────────────────────────────
+    // B6.6 — In-transit walk (v3.8 onboarding→in-transit coverage).
+    //   The just-BOOKED load is advanced by the CARRIER along the legal
+    //   state-machine path BOOKED → AT_PICKUP → LOADED → IN_TRANSIT via
+    //   POST /api/carrier-loads/:id/status (Bearer carrier token). Proves
+    //   the carrier-side status endpoint + loadStateMachine forward
+    //   transitions + the load reaching IN_TRANSIT. (AT_DELIVERY/DELIVERED/
+    //   POD belong to the accounting-flow tests.) The public tracking
+    //   endpoint must reflect the advanced state via the Sprint 27 mapping,
+    //   never the raw enum.
+    // ─────────────────────────────────────────────────────────────────
+    for (const next of ["AT_PICKUP", "LOADED", "IN_TRANSIT"] as const) {
+      const stResp = await request.post(`${BACKEND_API}/carrier-loads/${load.id}/status`, {
+        headers: carrierAuthHeaders,
+        data: { status: next },
+      });
+      expect(stResp.ok(), `B6.6: carrier status → ${next} must succeed; got ${stResp.status()} ${await stResp.text()}`).toBeTruthy();
+    }
+    const transitLoadResp = await request.get(`${BACKEND_API}/loads/${load.id}`, { headers: authHeaders });
+    const transitLoad = await transitLoadResp.json();
+    expect(transitLoad.status, "B6.6: load must reach IN_TRANSIT via the carrier state-machine path").toBe("IN_TRANSIT");
+
+    // Public tracking reflects the advanced state (guarded on token presence).
+    if (transitLoad.trackingToken) {
+      const trackResp = await request.get(`${BACKEND_API}/tracking/${transitLoad.trackingToken}`);
+      expect(trackResp.ok(), "B6.6: public tracking endpoint must resolve the load token").toBeTruthy();
+      const trackText = JSON.stringify(await trackResp.json());
+      expect(trackText.includes("POSTED"), "B6.6: public tracking must not leak the raw POSTED enum").toBe(false);
+    }
 
     // ─────────────────────────────────────────────────────────────────
     // B6.5a — AE accept-on-behalf (Sprint 39 Item 54)

@@ -1746,6 +1746,62 @@ Seed complete:
     });
     console.log("✅ E2E fixtures: blocked-carrier@srl.invalid (APPROVED but insurance expired) for compliance-override smoke");
 
+    // v3.8 (E2E onboarding→in-transit coverage) — a PENDING carrier so the
+    // lifecycle smoke (B0) can exercise approve → sign-bca (activation) before
+    // the carrier transacts. isTestAccount keeps it fenced from
+    // analytics/compliance/risk. Reset to PENDING + cleared agreement each run
+    // so the approve→sign walk is deterministic across re-seeds. (status is the
+    // CarrierApplicationStatus enum — no PENDING member — so it defaults to NEW;
+    // the gate-bearing field is onboardingStatus.)
+    const pendingCarrierUser = await prisma.user.upsert({
+      where: { email: "pending-carrier@srl.invalid" },
+      update: {},
+      create: {
+        email: "pending-carrier@srl.invalid",
+        passwordHash: "x",
+        firstName: "Pending",
+        lastName: "Applicant",
+        company: "Pending Applicant Test Carrier",
+        role: "CARRIER",
+        isActive: true,
+      },
+    });
+    const priorPending = await prisma.carrierProfile.findUnique({
+      where: { userId: pendingCarrierUser.id },
+      select: { id: true },
+    });
+    if (priorPending) {
+      await prisma.carrierAgreement.deleteMany({ where: { carrierId: priorPending.id } });
+    }
+    await prisma.carrierProfile.upsert({
+      where: { userId: pendingCarrierUser.id },
+      update: {
+        onboardingStatus: "PENDING",
+        approvedAt: null,
+        activatedAt: null,
+      },
+      create: {
+        userId: pendingCarrierUser.id,
+        mcNumber: "MC-777111",
+        dotNumber: "7771110",
+        companyName: "Pending Applicant Test Carrier",
+        contactName: "Pending Applicant",
+        contactPhone: "(269) 555-7711",
+        contactEmail: "pending-carrier@srl.invalid",
+        tier: "SILVER",
+        cppTier: "SILVER",
+        equipmentTypes: ["Dry Van"],
+        operatingRegions: ["Midwest"],
+        onboardingStatus: "PENDING",
+        isTestAccount: true,
+        w9Uploaded: true,
+        insuranceCertUploaded: true,
+        authorityDocUploaded: true,
+        insuranceExpiry: new Date(Date.now() + 365 * day),
+      },
+    });
+    console.log("✅ E2E fixtures: pending-carrier@srl.invalid (PENDING) for onboarding→activation smoke");
+
     // Sprint 43 (Items 60 + 62 + 66) — bulk-path E2E fixtures.
     // Both waterfall + loadbid fixtures point at the BLOCKED carrier so
     // B6.5d/e exercise Sprint 39 Item 56's compliance-fail paths
