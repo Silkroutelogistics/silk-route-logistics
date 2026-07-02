@@ -192,18 +192,31 @@ export async function complianceCheck(carrierId: string): Promise<{
     }
     // ageMonths >= 18 → silent allow (no warning, no block, no blocked_codes entry).
   } else {
-    // Post-rule carrier with null grant date. Distinguish pending (recent
-    // approval, FMCSA callback in flight) from unverified (old enough
-    // that FMCSA should have responded by now).
+    // Post-rule carrier with null grant date.
+    //
+    // v3.8.apq (go-live de-risk, FMCSA-Motus research 2026-07-02): the QCMobile
+    // /carriers/{dot}/authority endpoint returns current-status only, NOT grant
+    // history, so getCarrierAuthority returns null for EVERY real carrier (Item
+    // 182 Sprint 5 rolled back, v3.8.akv). We therefore cannot compute authority
+    // age today. Hard-blocking on that null was blocking EVERY legitimately-old
+    // carrier at tender time (a 17-year authority reads the same null as a
+    // 3-month one) — a false block, not real protection. Blocking is reserved
+    // for KNOWN-young authority (the grant-date branch above, which only fires
+    // when a date is actually on file). Here we warn only. The other compliance
+    // gates below (authority STATUS active, insurance, OFAC, safety rating) plus
+    // the Compass 35-point vetting still apply, and an admin can set a specific
+    // carrier's grant date via setAuthorityGrantDate to trigger real age
+    // enforcement for that carrier. Platform-wide age enforcement returns once
+    // the free FMCSA Socrata L&I "with history" dataset backfills
+    // authorityGrantedDate (banked fast-follow — §13.3 Item 182).
     const approvalAnchor = carrier.approvedAt || carrier.createdAt;
     const hoursSinceApproval = (now.getTime() - approvalAnchor.getTime()) / (60 * 60 * 1000);
     if (hoursSinceApproval < 24) {
       warnings.push("AUTHORITY_PENDING: FMCSA authority verification still processing");
     } else {
-      blocked_reasons.push(
-        "AUTHORITY_UNVERIFIED: FMCSA authority could not be verified — contact compliance",
+      warnings.push(
+        "AUTHORITY_AGE_UNAVAILABLE: FMCSA grant date not on file — authority age not checked (status, insurance, OFAC, safety still enforced)",
       );
-      blocked_codes.push({ code: "AUTHORITY_UNVERIFIED", overridable: false });
     }
   }
 

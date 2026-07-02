@@ -13727,7 +13727,26 @@
 //   prod error console. Non-email-dependent, so it works even when Resend is down.
 //   Backend-only; footer bumped to keep deployed-version tracking accurate.
 //   Per §3.1: apo → app.
-export const SRL_VERSION = "3.8.app";
+// v3.8.apq — GO-LIVE BLOCKER FIX (FMCSA-Motus research 2026-07-02 + go-live
+//   audit): the authority-age gate in complianceCheck() was hard-blocking EVERY
+//   real carrier at tender time. QCMobile's /carriers/{dot}/authority endpoint
+//   returns current status only (no grant-date history), so getCarrierAuthority
+//   returns null for every real carrier (Item 182 Sprint 5 rolled back, akv).
+//   The null-grant branch hard-blocked as AUTHORITY_UNVERIFIED once 24h passed
+//   after approval, and the grandfather cutoff (2026-05-21) is now in the past —
+//   so every newly-approved launch carrier would go tender-blocked platform-wide
+//   (every dispatch path consults complianceCheck) 24h after approval. Fix: a
+//   null grant date is data-UNAVAILABILITY, not known-young authority (a 17-year
+//   carrier reads the same null as a 3-month one), so it now WARNS
+//   (AUTHORITY_AGE_UNAVAILABLE) instead of blocking. Real age enforcement stays
+//   intact where a grant date IS on file (<12 / 12-18 / 18+ bands) and via the
+//   manual setAuthorityGrantDate path; other gates (authority STATUS, insurance,
+//   OFAC, safety, Compass 35-pt) untouched. Platform-wide age enforcement returns
+//   when the free FMCSA Socrata L&I "with history" dataset backfills grant dates
+//   (banked fast-follow, §13.3 Item 182). Tests Case 6 + 11 flipped hard-block →
+//   warn. Backend behavior; footer bump keeps deployed version accurate.
+//   Per §3.1: app → apq.
+export const SRL_VERSION = "3.8.apq";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

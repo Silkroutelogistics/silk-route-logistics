@@ -12,8 +12,9 @@
 //      — the hard floor never consults the override.
 //   5. Null grant date + approved < 24h ago surfaces a soft warning
 //      (FMCSA callback still in flight).
-//   6. Null grant date + approved ≥ 24h ago is a hard block (FMCSA
-//      should have responded by now).
+//   6. Null grant date + approved ≥ 24h ago WARNS (does not block) —
+//      grant-date data is unavailable from QCMobile, so null can't be
+//      treated as known-young authority (v3.8.apq go-live de-risk).
 //   7. A scoped authority-age override does NOT waive a separate
 //      insurance-expiry block — scoping must hold across the function.
 //
@@ -279,9 +280,13 @@ describe("complianceCheck — authority-age gate (v3.8.ahm)", () => {
   });
 
   // ─────────────────────────────────────────────────────────────────
-  // Case 6: null grant date + approved ≥24h ago — hard block
+  // Case 6: null grant date + approved ≥24h ago — WARN, not block
   // ─────────────────────────────────────────────────────────────────
-  it("6. hard-blocks AUTHORITY_UNVERIFIED when approved ≥24h ago with null grant date", async () => {
+  // v3.8.apq go-live de-risk: null grant date is data-unavailability, not
+  // known-young authority. QCMobile can't supply grant dates, so a null reads
+  // identically for a 17-year carrier and a 3-month one. Blocking on it was
+  // blocking every legitimate carrier at tender time. Now warns, does not block.
+  it("6. warns AUTHORITY_AGE_UNAVAILABLE (does NOT block) when approved ≥24h ago with null grant date", async () => {
     mockPrisma.carrierProfile.findUnique.mockResolvedValue(
       makeCarrier({
         approvedAt: AFTER_CUTOFF, // 2026-05-22, ~24 days before FIXED_NOW
@@ -290,8 +295,9 @@ describe("complianceCheck — authority-age gate (v3.8.ahm)", () => {
     );
 
     const result = await complianceCheck("carrier-1");
-    expect(result.allowed).toBe(false);
-    expect(result.blocked_reasons.some((r) => r.startsWith("AUTHORITY_UNVERIFIED"))).toBe(true);
+    expect(result.allowed).toBe(true);
+    expect(result.blocked_reasons.some((r) => r.startsWith("AUTHORITY_UNVERIFIED"))).toBe(false);
+    expect(result.warnings.some((w) => w.startsWith("AUTHORITY_AGE_UNAVAILABLE"))).toBe(true);
   });
 
   // ─────────────────────────────────────────────────────────────────
@@ -341,7 +347,7 @@ describe("complianceCheck — authority-age gate (v3.8.ahm)", () => {
     expect(result.blocked_codes).toEqual([]);
   });
 
-  it("11. blocked_codes for null grant + ≥24h has AUTHORITY_UNVERIFIED overridable=false", async () => {
+  it("11. null grant + ≥24h emits NO authority-age blocked_code — warns instead (v3.8.apq)", async () => {
     mockPrisma.carrierProfile.findUnique.mockResolvedValue(
       makeCarrier({
         approvedAt: AFTER_CUTOFF,
@@ -350,10 +356,9 @@ describe("complianceCheck — authority-age gate (v3.8.ahm)", () => {
     );
 
     const result = await complianceCheck("carrier-1");
-    const unverifiedEntry = result.blocked_codes.find((c) => c.code === "AUTHORITY_UNVERIFIED");
-    expect(unverifiedEntry).toBeDefined();
-    expect(unverifiedEntry!.overridable).toBe(false);
-    expect(unverifiedEntry!.ageMonths).toBeUndefined();
+    expect(result.allowed).toBe(true);
+    expect(result.blocked_codes.find((c) => c.code === "AUTHORITY_UNVERIFIED")).toBeUndefined();
+    expect(result.warnings.some((w) => w.startsWith("AUTHORITY_AGE_UNAVAILABLE"))).toBe(true);
   });
 
   // ─────────────────────────────────────────────────────────────────
