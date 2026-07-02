@@ -13746,7 +13746,14 @@
 //   (banked fast-follow, §13.3 Item 182). Tests Case 6 + 11 flipped hard-block →
 //   warn. Backend behavior; footer bump keeps deployed version accurate.
 //   Per §3.1: app → apq.
-export const SRL_VERSION = "3.8.apq";
+// v3.8.apr — Privacy posture fix on the v3.8.app email→Sentry capture: server.ts
+//   sets sendDefaultPii:false, but the FAILED-email capture passed the raw
+//   recipient address into Sentry's `extra` (an explicit PII field that bypasses
+//   that setting). The full recipient already lives in email_logs (v3.8.anl), so
+//   Sentry only needs the recipient DOMAIN to triage a whole-domain suppression.
+//   Changed extra to { recipientDomain, subject, detail } — no raw address.
+//   Backend-only; footer bump keeps deployed version accurate. Per §3.1: apq → apr.
+export const SRL_VERSION = "3.8.apr";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

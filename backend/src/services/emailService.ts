@@ -71,7 +71,13 @@ export async function sendEmail(to: string, subject: string, html: string, attac
         // email_logs table + logs with nobody watching. Sentry.captureException
         // is a no-op until SENTRY_DSN is set, then failures show in the prod
         // error console (non-email-dependent, so it works even if Resend is down).
-        Sentry.captureException(err, { tags: { area: "email" }, extra: { to, subject } });
+        // Respect server.ts sendDefaultPii:false — do NOT put the raw recipient
+        // address in Sentry. The domain is enough to triage a whole-domain
+        // suppression; the full recipient + error string live in email_logs.
+        Sentry.captureException(err, {
+          tags: { area: "email" },
+          extra: { recipientDomain: to.split("@")[1] ?? "unknown", subject, detail: "full recipient in email_logs" },
+        });
         throw err;
       }
     }
