@@ -2,6 +2,7 @@ import { Resend } from "resend";
 import { env } from "../config/env";
 import { log } from "../lib/logger";
 import { prisma } from "../config/database";
+import * as Sentry from "@sentry/node";
 
 const resend = env.RESEND_API_KEY ? new Resend(env.RESEND_API_KEY) : null;
 const fromEmail = env.EMAIL_FROM;
@@ -65,6 +66,12 @@ export async function sendEmail(to: string, subject: string, html: string, attac
         }
         log.error(`[Email] FAILED to send to ${to}: ${err.message}`);
         recordEmailLog(to, subject, "FAILED", undefined, err.message); // audit E1 — track failure
+        // audit E1 — surface the failure in Sentry. Callers commonly .catch()
+        // sendEmail (fire-and-forget), so a failed send is otherwise only in the
+        // email_logs table + logs with nobody watching. Sentry.captureException
+        // is a no-op until SENTRY_DSN is set, then failures show in the prod
+        // error console (non-email-dependent, so it works even if Resend is down).
+        Sentry.captureException(err, { tags: { area: "email" }, extra: { to, subject } });
         throw err;
       }
     }

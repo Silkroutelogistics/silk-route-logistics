@@ -13717,7 +13717,17 @@
 //   surfaces banked for consolidation. Commit 5 of the doc-suite arc (Commit 3
 //   Quick Pay was a Drive doc; Commit 4 Invoice skipped — shipper-facing).
 //   Per §3.1: apn → apo.
-export const SRL_VERSION = "3.8.apo";
+// v3.8.app — Go-live hardening (audit §13.3 Item 194 E1): failed transactional
+//   emails now surface in Sentry. emailService.sendEmail already retried 3x on
+//   rate limit + recorded every outcome to email_logs (v3.8.anl), but on final
+//   failure it threw and callers commonly .catch() (fire-and-forget), so a dead
+//   send (a carrier never getting their tender/approval) was recorded with nobody
+//   watching. Added Sentry.captureException in the FAILED branch (tags area=email,
+//   extra to+subject) — no-op until SENTRY_DSN is set, then failures land in the
+//   prod error console. Non-email-dependent, so it works even when Resend is down.
+//   Backend-only; footer bumped to keep deployed-version tracking accurate.
+//   Per §3.1: apo → app.
+export const SRL_VERSION = "3.8.app";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
