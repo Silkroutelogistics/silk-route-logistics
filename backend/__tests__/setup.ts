@@ -82,7 +82,12 @@ vi.mock("../src/config/database", () => ({
     },
     carrierPay: {
       findMany: vi.fn(),
+      findFirst: vi.fn(),
+      create: vi.fn(),
+      update: vi.fn(),
       updateMany: vi.fn(),
+      aggregate: vi.fn(),
+      count: vi.fn(),
     },
     trainingCourse: {
       findMany: vi.fn(),
