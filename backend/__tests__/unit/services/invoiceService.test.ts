@@ -140,6 +140,26 @@ describe("autoGenerateInvoice — DELIVERED -> billing hinge", () => {
     expect(byType).toEqual({ LINEHAUL: 1000, FUEL_SURCHARGE: 150, ACCESSORIAL: 75 });
   });
 
+  it("bills linehaul from the signed RC when load.rate is 0 (no $0 linehaul underbill)", async () => {
+    (mockPrisma.invoice.findFirst as any)
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce({ invoiceNumber: "INV-4000" });
+    (mockPrisma.load.findUnique as any).mockResolvedValue(
+      makeLoad({ rate: 0, rateConfirmations: [{ fuelSurcharge: 150, accessorialTotal: 75, totalCharges: 1225 }] }),
+    );
+    (mockPrisma.invoice.create as any).mockResolvedValue({ id: "inv-5", invoiceNumber: "INV-4001", amount: 1225 });
+
+    await autoGenerateInvoice("load-1");
+
+    // linehaul derived = 1225 RC total - 150 fuel - 75 accessorial = 1000; total stays 1225
+    const createManyArg = (mockPrisma.invoiceLineItem.createMany as any).mock.calls[0][0];
+    const byType = Object.fromEntries(createManyArg.data.map((li: any) => [li.type, li.amount]));
+    expect(byType).toEqual({ LINEHAUL: 1000, FUEL_SURCHARGE: 150, ACCESSORIAL: 75 });
+    expect(mockPrisma.invoice.create).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ amount: 1225 }) }),
+    );
+  });
+
   it("omits RC line items that are zero (no phantom $0 fuel/accessorial rows)", async () => {
     (mockPrisma.invoice.findFirst as any)
       .mockResolvedValueOnce(null)

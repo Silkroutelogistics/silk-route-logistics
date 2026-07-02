@@ -49,12 +49,20 @@ export async function autoGenerateInvoice(loadId: string) {
   const lineItems: { description: string; quantity: number; rate: number; amount: number; type: string; sortOrder: number }[] = [];
   // rc already resolved above in zero-rate guard
 
-  // Linehaul
+  // Linehaul. Bill from load.rate; if that's absent (rate=0) but a signed RC
+  // carries the price, derive linehaul from the RC total minus its fuel +
+  // accessorial components so the invoice bills the full signed amount instead
+  // of a $0 linehaul (go-live audit fix — the guard above already lets a
+  // rate=0 + priced-RC load through via effectiveRate, so the linehaul must
+  // match or the load under-bills to $0 + fuel + accessorials only).
+  const rcFuel = rc?.fuelSurcharge && rc.fuelSurcharge > 0 ? rc.fuelSurcharge : 0;
+  const rcAccessorial = rc?.accessorialTotal && rc.accessorialTotal > 0 ? rc.accessorialTotal : 0;
+  const linehaulAmount = load.rate > 0 ? load.rate : Math.max(0, (rc?.totalCharges || 0) - rcFuel - rcAccessorial);
   lineItems.push({
     description: `Linehaul: ${load.originCity}, ${load.originState} → ${load.destCity}, ${load.destState}`,
     quantity: 1,
-    rate: load.rate,
-    amount: load.rate,
+    rate: linehaulAmount,
+    amount: linehaulAmount,
     type: "LINEHAUL",
     sortOrder: 0,
   });

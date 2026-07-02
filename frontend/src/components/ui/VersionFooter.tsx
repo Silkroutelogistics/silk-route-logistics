@@ -13753,7 +13753,15 @@
 //   Sentry only needs the recipient DOMAIN to triage a whole-domain suppression.
 //   Changed extra to { recipientDomain, subject, detail } — no raw address.
 //   Backend-only; footer bump keeps deployed version accurate. Per §3.1: apq → apr.
-export const SRL_VERSION = "3.8.apr";
+// v3.8.aps — Go-live audit fix: autoGenerateInvoice no longer under-bills a
+//   load whose rate=0 but which has a signed Rate Confirmation carrying the
+//   price. The zero-rate guard already lets such a load through (effectiveRate =
+//   load.rate || rc.totalCharges), but the linehaul line billed load.rate alone
+//   ($0), so the invoice total dropped to just fuel + accessorials. Now linehaul
+//   is derived from the RC total minus fuel + accessorial components, so the
+//   invoice bills the full signed amount. load.rate>0 loads are unchanged.
+//   Test added (rate=0 + priced RC -> linehaul 1000, total 1225). Per §3.1: apr → aps.
+export const SRL_VERSION = "3.8.aps";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
