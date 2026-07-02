@@ -13761,7 +13761,21 @@
 //   is derived from the RC total minus fuel + accessorial components, so the
 //   invoice bills the full signed amount. load.rate>0 loads are unchanged.
 //   Test added (rate=0 + priced RC -> linehaul 1000, total 1225). Per §3.1: apr → aps.
-export const SRL_VERSION = "3.8.aps";
+// v3.8.apt — Go-live audit, shipper-sphere blockers (two fixes):
+//   (1) markInvoicePaid ledger correctness (accountingController): R1 accumulate
+//       partial payments instead of clobbering paidAmount ($600 then $400 on a
+//       $1000 invoice now reaches PAID, not stuck PARTIAL @ 400); R2 atomic
+//       conditional write (updateMany WHERE status notIn [PAID,VOID]) so two
+//       concurrent full-payments can't both credit the factoring fund — loser
+//       matches zero rows -> 409, onInvoicePaid skipped; R3 reject non-positive
+//       amounts. 6 vitest cases added.
+//   (2) Public quote form no longer drops every real lead (websiteController):
+//       the form sends `value || null` for blank optionals and z.optional()
+//       rejects null, so a normal submission 400'd with no WebsiteLead row + no
+//       operations@ notification. Changed the 6 optional string fields to
+//       .nullish(). Backend-only fix, covers both null + undefined.
+//   Gates: backend tsc + vitest 316/316 + frontend next build. Per §3.1: aps → apt.
+export const SRL_VERSION = "3.8.apt";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

@@ -13,14 +13,20 @@ const quoteRequestSchema = z.object({
   companyName: z.string().min(1).max(200),
   contactName: z.string().min(1).max(200),
   email: z.string().email().max(200),
-  phone: z.string().max(30).optional(),
+  // The public quote form sends `el.value || null` for blank optional fields,
+  // and z.optional() rejects null (it only allows undefined) — so a normal
+  // submission that left any optional field blank 400'd and the lead was
+  // silently dropped (no WebsiteLead row, no operations@ notification, no
+  // shipper confirmation). .nullish() accepts null + undefined so real
+  // submissions persist. (go-live audit — shipper lead-capture blocker)
+  phone: z.string().max(30).nullish(),
   originCity: z.string().min(1).max(200),
   destinationCity: z.string().min(1).max(200),
-  freightType: z.string().max(50).optional(),
-  estimatedWeight: z.string().max(50).optional(),
-  pickupDate: z.string().max(30).optional(),
-  specialRequirements: z.string().max(2000).optional(),
-  source: z.string().max(50).optional(),
+  freightType: z.string().max(50).nullish(),
+  estimatedWeight: z.string().max(50).nullish(),
+  pickupDate: z.string().max(30).nullish(),
+  specialRequirements: z.string().max(2000).nullish(),
+  source: z.string().max(50).nullish(),
 });
 
 const contactSchema = z.object({

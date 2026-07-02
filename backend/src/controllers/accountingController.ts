@@ -467,19 +467,42 @@ export async function markInvoicePaid(req: AuthRequest, res: Response) {
       return;
     }
 
-    const amountPaid = paidAmount ?? existing.totalAmount ?? existing.amount;
-    const isPartial = amountPaid < (existing.totalAmount ?? existing.amount);
+    // R3 (go-live audit): the body isn't Zod-validated here, so coerce + reject
+    // a non-positive / non-numeric amount before recording any money.
+    const rawAmount = paidAmount != null ? Number(paidAmount) : (existing.totalAmount ?? existing.amount ?? 0);
+    if (!Number.isFinite(rawAmount) || rawAmount <= 0) {
+      res.status(400).json({ error: "Payment amount must be a positive number" });
+      return;
+    }
 
-    const invoice = await prisma.invoice.update({
-      where: { id },
+    const invoiceTotal = existing.totalAmount ?? existing.amount ?? 0;
+    // R1 (go-live audit): ACCUMULATE across payments. A $600 then $400 on a
+    // $1000 invoice must reach PAID — previously paidAmount was overwritten to
+    // 400 and the invoice stayed PARTIAL though fully collected.
+    const priorPaid = existing.paidAmount ?? 0;
+    const cumulativePaid = priorPaid + rawAmount;
+    const willBePaid = cumulativePaid >= invoiceTotal;
+
+    // R2 (go-live audit): atomic conditional write. The prior read-then-update
+    // let two concurrent full-payments both pass the "already PAID?" read-guard
+    // and both credit the factoring fund. updateMany with a not-settled
+    // precondition means the loser matches zero rows and never fires onInvoicePaid.
+    const applied = await prisma.invoice.updateMany({
+      where: { id, status: { notIn: ["PAID", "VOID"] } },
       data: {
-        status: isPartial ? "PARTIAL" : "PAID",
+        status: willBePaid ? "PAID" : "PARTIAL",
         paidAt: new Date(),
-        paidAmount: amountPaid,
+        paidAmount: cumulativePaid,
         paymentReference: paymentReference ?? null,
         paymentMethod: paymentMethod ?? null,
       },
     });
+    if (applied.count === 0) {
+      res.status(409).json({ error: "Invoice was already settled or voided" });
+      return;
+    }
+
+    const invoice = await prisma.invoice.findUnique({ where: { id } });
 
     // Update the load status to COMPLETED if fully paid.
     // v3.8.ake Item 159 Sprint 3 — updateMany's `where: { status: "INVOICED" }`
@@ -489,7 +512,7 @@ export async function markInvoicePaid(req: AuthRequest, res: Response) {
     // the upstream invariant ever drifts (loadId exists but status is no
     // longer INVOICED — would silently be a no-op updateMany). Doesn't
     // block payment recording.
-    if (!isPartial) {
+    if (willBePaid) {
       const loadForCheck = await prisma.load.findUnique({
         where: { id: existing.loadId },
         select: { status: true, referenceNumber: true },
@@ -520,7 +543,7 @@ export async function markInvoicePaid(req: AuthRequest, res: Response) {
 
     // Integration: credit factoring fund + release shipper credit
     const { onInvoicePaid } = await import("../services/integrationService");
-    onInvoicePaid(id, amountPaid).catch((e: any) => log.error({ err: e }, "[Integration] onInvoicePaid error:"));
+    onInvoicePaid(id, rawAmount).catch((e: any) => log.error({ err: e }, "[Integration] onInvoicePaid error:"));
 
     res.json(invoice);
   } catch (error: any) {

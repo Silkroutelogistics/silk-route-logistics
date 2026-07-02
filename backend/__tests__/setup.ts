@@ -28,6 +28,7 @@ vi.mock("../src/config/database", () => ({
       findUnique: vi.fn(),
       create: vi.fn(),
       update: vi.fn(),
+      updateMany: vi.fn(),
       count: vi.fn(),
       aggregate: vi.fn(),
     },
