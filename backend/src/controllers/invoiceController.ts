@@ -356,23 +356,43 @@ export async function generateInvoiceFromLoad(req: AuthRequest, res: Response) {
 export async function markInvoicePaid(req: AuthRequest, res: Response) {
   const invoice = await prisma.invoice.findUnique({ where: { id: req.params.id } });
   if (!invoice) { res.status(404).json({ error: "Invoice not found" }); return; }
+  if (invoice.status === "VOID") { res.status(400).json({ error: "Cannot pay a voided invoice" }); return; }
 
   const { paidAmount, paymentReference, paymentMethod } = req.body;
 
-  const updated = await prisma.invoice.update({
-    where: { id: req.params.id },
+  // Same ledger safety as accountingController.markInvoicePaid (go-live audit
+  // R1/R2/R3): reject non-positive amounts, accumulate partials instead of
+  // clobbering, and write atomically with a not-settled precondition so a
+  // concurrent full-payment can't double-fire onInvoicePaid (double fund credit).
+  const rawAmount = paidAmount != null ? Number(paidAmount) : (invoice.totalAmount ?? invoice.amount ?? 0);
+  if (!Number.isFinite(rawAmount) || rawAmount <= 0) {
+    res.status(400).json({ error: "Payment amount must be a positive number" });
+    return;
+  }
+  const invoiceTotal = invoice.totalAmount ?? invoice.amount ?? 0;
+  const cumulativePaid = (invoice.paidAmount ?? 0) + rawAmount;
+  const willBePaid = cumulativePaid >= invoiceTotal;
+
+  const applied = await prisma.invoice.updateMany({
+    where: { id: req.params.id, status: { notIn: ["PAID", "VOID"] } },
     data: {
-      status: "PAID",
+      status: willBePaid ? "PAID" : "PARTIAL",
       paidAt: new Date(),
-      paidAmount: paidAmount || invoice.amount,
-      paymentReference,
+      paidAmount: cumulativePaid,
+      paymentReference: paymentReference ?? null,
       paymentMethod: paymentMethod || "ACH",
     },
-    include: { load: true },
   });
+  if (applied.count === 0) {
+    res.status(409).json({ error: "Invoice was already settled or voided" });
+    return;
+  }
 
-  // Trigger integration chain: credit factoring fund, release shipper credit, release factoring reserve
-  onInvoicePaid(invoice.id, paidAmount || invoice.amount).catch((e) =>
+  const updated = await prisma.invoice.findUnique({ where: { id: req.params.id }, include: { load: true } });
+
+  // Trigger integration chain only because we actually applied a payment (count>0),
+  // so the concurrent-race loser never double-credits the factoring fund.
+  onInvoicePaid(invoice.id, rawAmount).catch((e) =>
     log.error({ err: e }, "[Invoice] onInvoicePaid integration error:")
   );
 

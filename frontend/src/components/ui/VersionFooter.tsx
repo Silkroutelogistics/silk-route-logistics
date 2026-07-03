@@ -13790,7 +13790,23 @@
 //   invoices aren't shown to the shipper (also closes the DRAFT-visible risk).
 //   invoiceService.test rewritten (7 cases). Gates: backend tsc + vitest 314/314
 //   + frontend next build. Per §3.1: apt → apu.
-export const SRL_VERSION = "3.8.apu";
+// v3.8.apv — Go-live audit, shipper onboarding + payment security:
+//   (1) Register no longer hands a self-registered SHIPPER a live session
+//       (cookie OR body token) — that bypassed the approval gate (portal was
+//       reachable while PENDING). Shippers now log in via OTP once approved,
+//       where checkShipperApproval blocks the unapproved.
+//   (2) Register links a shipper login to an existing AE-created prospect
+//       Customer (same email, unlinked) instead of creating a DUPLICATE row —
+//       the dual-Customer trap that stranded shippers (approval gate + portal
+//       load-visibility key off the userId-linked Customer).
+//   (3) invoiceController.markInvoicePaid (the 2nd, wide-open mark-paid endpoint)
+//       hardened to match accountingController: reject non-positive, accumulate
+//       partials, atomic not-settled precondition so a concurrent full-pay can't
+//       double-credit the fund.
+//   (4) Shipper register success copy now says "Application Received — we'll
+//       email you when approved" instead of the false "you can now log in".
+//   Gates: backend tsc + vitest 314/314 + frontend next build. Per §3.1: apu → apv.
+export const SRL_VERSION = "3.8.apv";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

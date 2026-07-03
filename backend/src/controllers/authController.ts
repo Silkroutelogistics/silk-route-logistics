@@ -136,22 +136,46 @@ export async function register(req: Request, res: Response) {
     select: { id: true, email: true, firstName: true, lastName: true, role: true, company: true },
   });
 
-  // Auto-create Customer record for SHIPPER users so portal works immediately
+  // Link a SHIPPER login to its Customer record. Prefer an existing AE-created
+  // prospect (same email, not yet linked to a login) over creating a duplicate:
+  // a second Customer row would strand the shipper because the login approval
+  // gate + portal load-visibility both key off the userId-linked Customer, while
+  // the AE may have run credit / approved / attached loads on the prospect row
+  // (go-live audit — dual Customer-record trap).
   if (user.role === "SHIPPER") {
-    await prisma.customer.create({
-      data: {
-        name: user.company || `${user.firstName} ${user.lastName}`,
-        type: "SHIPPER",
-        contactName: `${user.firstName} ${user.lastName}`,
-        email: user.email,
-        creditLimit: 50000,
-        creditStatus: "NOT_CHECKED",
-        paymentTerms: "Net 30",
-        onboardingStatus: "PENDING",
-        status: "Active",
-        userId: user.id,
-      },
-    }).catch((err) => log.error({ err: err }, "[Register] Auto-create customer failed:"));
+    const prospect = await prisma.customer.findFirst({
+      where: { email: { equals: user.email, mode: "insensitive" }, userId: null },
+    });
+    if (prospect) {
+      await prisma.customer
+        .update({ where: { id: prospect.id }, data: { userId: user.id } })
+        .catch((err) => log.error({ err }, "[Register] Link existing customer failed:"));
+    } else {
+      await prisma.customer
+        .create({
+          data: {
+            name: user.company || `${user.firstName} ${user.lastName}`,
+            type: "SHIPPER",
+            contactName: `${user.firstName} ${user.lastName}`,
+            email: user.email,
+            creditLimit: 50000,
+            creditStatus: "NOT_CHECKED",
+            paymentTerms: "Net 30",
+            onboardingStatus: "PENDING",
+            status: "Active",
+            userId: user.id,
+          },
+        })
+        .catch((err) => log.error({ err }, "[Register] Auto-create customer failed:"));
+    }
+
+    // SHIPPER accounts must be approved before portal access — checkShipperApproval
+    // runs on the OTP login path. Do NOT hand a self-registered shipper a live
+    // session (cookie OR body token), or they'd bypass the approval gate entirely.
+    // They log in via OTP once an admin approves the Customer (go-live audit —
+    // register session bypass).
+    res.status(201).json({ user });
+    return;
   }
 
   const token = signToken(user.id);

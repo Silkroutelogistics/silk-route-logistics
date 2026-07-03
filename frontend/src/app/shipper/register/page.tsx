@@ -2,7 +2,6 @@
 
 import { useState, useRef, useEffect, useCallback } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { Check, ArrowRight, MapPin, User, CheckCircle2, Loader2 } from "lucide-react";
 
 const steps = ["Company Info", "Shipping Profile", "Preferences", "Review"];
@@ -14,7 +13,6 @@ export default function ShipperRegisterPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
-  const router = useRouter();
   const upd = (k: string, v: string) => setForm((p) => ({ ...p, [k]: v }));
 
   const handleSubmit = async () => {
@@ -71,15 +69,15 @@ export default function ShipperRegisterPage() {
             <div className="w-16 h-16 bg-[#E6F0E9] rounded-full flex items-center justify-center mx-auto mb-5">
               <CheckCircle2 className="w-8 h-8 text-[#2F7A4F]" />
             </div>
-            <h2 className="font-serif text-2xl text-[#0A2540] mb-2">Account Created Successfully</h2>
+            <h2 className="font-serif text-2xl text-[#0A2540] mb-2">Application Received</h2>
             <p className="text-[13px] text-gray-500 mb-6 leading-relaxed max-w-md mx-auto">
-              Your shipper account has been created. You can now log in to access your portal, request quotes, and track your shipments.
+              Thanks for registering. Our team reviews new shipper accounts before activation. We&apos;ll email you once your account is approved (typically within 1 business day), and you can log in then to request quotes and track your shipments.
             </p>
             <button
-              onClick={() => router.push("/shipper/login")}
+              onClick={() => { window.location.href = "/shippers.html"; }}
               className="inline-flex items-center gap-2 px-6 py-3 bg-[#BA7517] text-[#FBF7F0] text-xs font-semibold uppercase tracking-[2px] rounded shadow-[0_4px_20px_rgba(186,117,23,0.3)] hover:-translate-y-0.5 transition-all"
             >
-              <ArrowRight size={16} /> Continue to Login
+              <ArrowRight size={16} /> Return to Home
             </button>
           </div>
         </div>
