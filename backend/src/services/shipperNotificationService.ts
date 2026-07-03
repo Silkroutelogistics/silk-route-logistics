@@ -9,6 +9,13 @@ import {
 } from "./emailService";
 import { log } from "../lib/logger";
 
+// go-live audit R4: shipper-facing emails reply to operations@ (a monitored
+// inbox), not the noreply@ From address — so a shipper's reply doesn't vanish.
+const SHIPPER_REPLY_TO = { replyTo: "operations@silkroutelogistics.ai" };
+function sendShipperEmail(to: string, subject: string, html: string, attachments?: any[]) {
+  return sendEmail(to, subject, html, attachments, SHIPPER_REPLY_TO);
+}
+
 /**
  * Send "Shipment picked up" email to shipper when load goes LOADED.
  */
@@ -39,7 +46,7 @@ export async function sendShipperPickupEmail(loadId: string) {
   const eta = load.deliveryDate ? load.deliveryDate.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" }) : "TBD";
 
   const html = shipperPickupHtml(load.referenceNumber, origin, dest, carrierName, eta);
-  await sendEmail(load.customer.email, `Shipment Picked Up: ${load.referenceNumber}`, html);
+  await sendShipperEmail(load.customer.email, `Shipment Picked Up: ${load.referenceNumber}`, html);
 
   // Record notification for dedup
   await prisma.notification.create({
@@ -102,7 +109,7 @@ export async function sendShipperTransitUpdate(loadId: string) {
   }));
 
   const html = shipperTransitHtml(load.referenceNumber, origin, dest, lastLocation, etaStr, percentComplete, ccForEmail);
-  await sendEmail(load.customer.email, `Transit Update: ${load.referenceNumber} — ${percentComplete}% Complete`, html);
+  await sendShipperEmail(load.customer.email, `Transit Update: ${load.referenceNumber} — ${percentComplete}% Complete`, html);
 
   // Record notification for dedup
   await prisma.notification.create({
@@ -146,7 +153,7 @@ export async function sendShipperDeliveryEmail(loadId: string) {
   const deliveredAt = new Date().toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" });
 
   const html = shipperDeliveryHtml(load.referenceNumber, origin, dest, deliveredAt);
-  await sendEmail(load.customer.email, `Shipment Delivered: ${load.referenceNumber}`, html);
+  await sendShipperEmail(load.customer.email, `Shipment Delivered: ${load.referenceNumber}`, html);
 
   await prisma.notification.create({
     data: {
@@ -175,7 +182,7 @@ export async function sendShipperPODEmail(loadId: string, podUrl: string) {
 
   const fullPodUrl = `https://silkroutelogistics.ai${podUrl}`;
   const html = shipperPODHtml(load.referenceNumber, fullPodUrl);
-  await sendEmail(load.customer.email, `POD Available: ${load.referenceNumber}`, html);
+  await sendShipperEmail(load.customer.email, `POD Available: ${load.referenceNumber}`, html);
 
   log.info(`[ShipperNotify] POD email sent to ${load.customer.email} for ${load.referenceNumber}`);
 }
@@ -281,7 +288,7 @@ export async function sendShipperMilestoneEmail(loadId: string, newStatus: strin
     <p style="color:#94a3b8;font-size:12px;margin-top:20px">You are receiving this email because you have an active shipment with Silk Route Logistics.</p>
   `;
 
-  await sendEmail(load.customer.email, `Shipment ${label}: ${load.referenceNumber}`, wrap(body));
+  await sendShipperEmail(load.customer.email, `Shipment ${label}: ${load.referenceNumber}`, wrap(body));
   log.info(`[ShipperNotify] Milestone email "${label}" sent to ${load.customer.email} for ${load.referenceNumber}`);
 }
 
@@ -359,7 +366,7 @@ export async function sendShipperDelayNotification(
     </div>
   `;
 
-  await sendEmail(shipperEmail, `${levelLabel}: Shipment ${refNum}`, wrap(body));
+  await sendShipperEmail(shipperEmail, `${levelLabel}: Shipment ${refNum}`, wrap(body));
 
   // Record notification for dedup
   if (load.posterId) {

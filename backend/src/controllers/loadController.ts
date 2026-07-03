@@ -637,11 +637,11 @@ export async function updateLoadStatus(req: AuthRequest, res: Response) {
   // Shipper milestone tracking email (fires on every status change)
   sendShipperMilestoneEmail(load.id, status).catch((e) => log.error({ err: e }, "[ShipperNotify] milestone email error:"));
 
-  // Contact email load milestone notifications
-  if (["BOOKED", "DISPATCHED"].includes(status)) {
-    // Shipper should know when a carrier is assigned and when load is dispatched
-    sendPickupNotification(load.id).catch((e) => log.error({ err: e }, "[ShipperNotify]"));
-  }
+  // Contact email load milestone notifications.
+  // go-live audit R2: do NOT fire the pickup email on BOOKED/DISPATCHED — that
+  // function tells the shipper the freight "has been picked up" when the carrier
+  // has only been assigned/dispatched. The shipper still gets the milestone
+  // email above on those statuses; the pickup email fires at real pickup below.
   if (["AT_PICKUP", "LOADED", "PICKED_UP"].includes(status)) {
     sendPickupNotification(load.id).catch((e) => log.error({ err: e }, "[ShipperNotify]"));
   }

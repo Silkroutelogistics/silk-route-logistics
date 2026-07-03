@@ -13806,7 +13806,21 @@
 //   (4) Shipper register success copy now says "Application Received — we'll
 //       email you when approved" instead of the false "you can now log in".
 //   Gates: backend tsc + vitest 314/314 + frontend next build. Per §3.1: apu → apv.
-export const SRL_VERSION = "3.8.apv";
+// v3.8.apw — Go-live audit, shipper email quality (two fixes):
+//   R2 — stop firing the "your freight has been picked up" email on BOOKED/
+//        DISPATCHED (loadController). The carrier is only assigned/dispatched
+//        then, not at pickup; the shipper still gets the milestone email, and
+//        the real pickup email fires at AT_PICKUP/LOADED.
+//   R4 — all 13 shipper-facing lifecycle emails (pickup/transit/arrived/
+//        delivered/POD/milestone across shipperNotificationService +
+//        shipperLoadNotifyService) now reply-to operations@ (a monitored inbox)
+//        instead of the noreply@ From, so a shipper's reply doesn't vanish.
+//        Done via one thin sendShipperEmail wrapper per service.
+//   Deferred (fast-follow): R1 triplicate-milestone-email dedup — needs a
+//   per-event canonical choice so the POD-attachment/tracking-link content
+//   isn't dropped. Gates: backend tsc + vitest 314/314 + frontend next build.
+//   Per §3.1: apv → apw.
+export const SRL_VERSION = "3.8.apw";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

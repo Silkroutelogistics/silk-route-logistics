@@ -4,6 +4,13 @@ import { log } from "../lib/logger";
 
 const PORTAL_BASE = "https://silkroutelogistics.ai";
 
+// go-live audit R4: shipper-facing emails reply to operations@ (a monitored
+// inbox), not the noreply@ From address — so a shipper's reply doesn't vanish.
+const SHIPPER_REPLY_TO = { replyTo: "operations@silkroutelogistics.ai" };
+function sendShipperEmail(to: string, subject: string, html: string, attachments?: any[]) {
+  return sendEmail(to, subject, html, attachments, SHIPPER_REPLY_TO);
+}
+
 /**
  * Resolve the shipper notification email for a load.
  * Priority: load.contactEmail > customer.email
@@ -90,7 +97,7 @@ export async function sendPickupNotification(loadId: string) {
     <p style="color:#94a3b8;font-size:12px;margin-top:20px">You are receiving this email because your contact email is associated with this shipment on Silk Route Logistics.</p>
   `);
 
-  await sendEmail(to, `Load ${load.referenceNumber} — Picked Up`, html);
+  await sendShipperEmail(to, `Load ${load.referenceNumber} — Picked Up`, html);
   log.info(`[ShipperLoadNotify] Pickup sent to ${to} for ${load.referenceNumber}`);
 }
 
@@ -124,7 +131,7 @@ export async function sendInTransitUpdate(loadId: string) {
     <p style="color:#94a3b8;font-size:12px;margin-top:20px">You are receiving this email because your contact email is associated with this shipment on Silk Route Logistics.</p>
   `);
 
-  await sendEmail(to, `Load ${load.referenceNumber} — In Transit Update`, html);
+  await sendShipperEmail(to, `Load ${load.referenceNumber} — In Transit Update`, html);
   log.info(`[ShipperLoadNotify] InTransit sent to ${to} for ${load.referenceNumber}`);
 }
 
@@ -157,7 +164,7 @@ export async function sendDeliveryETAUpdate(loadId: string) {
     <p style="color:#94a3b8;font-size:12px;margin-top:20px">You are receiving this email because your contact email is associated with this shipment on Silk Route Logistics.</p>
   `);
 
-  await sendEmail(to, `Load ${load.referenceNumber} — In Transit Update`, html);
+  await sendShipperEmail(to, `Load ${load.referenceNumber} — In Transit Update`, html);
   log.info(`[ShipperLoadNotify] ETA update sent to ${to} for ${load.referenceNumber}`);
 }
 
@@ -180,7 +187,7 @@ export async function sendArrivedAtDelivery(loadId: string) {
     <p style="color:#94a3b8;font-size:12px;margin-top:20px">You are receiving this email because your contact email is associated with this shipment on Silk Route Logistics.</p>
   `);
 
-  await sendEmail(to, `Load ${load.referenceNumber} — Arrived at Destination`, html);
+  await sendShipperEmail(to, `Load ${load.referenceNumber} — Arrived at Destination`, html);
   log.info(`[ShipperLoadNotify] ArrivedAtDelivery sent to ${to} for ${load.referenceNumber}`);
 }
 
@@ -209,7 +216,7 @@ export async function sendDeliveredWithPOD(loadId: string, podUrl?: string) {
     <p style="color:#94a3b8;font-size:12px;margin-top:20px">You are receiving this email because your contact email is associated with this shipment on Silk Route Logistics.</p>
   `);
 
-  await sendEmail(to, `Load ${load.referenceNumber} — Delivered ✓`, html);
+  await sendShipperEmail(to, `Load ${load.referenceNumber} — Delivered ✓`, html);
   log.info(`[ShipperLoadNotify] Delivered sent to ${to} for ${load.referenceNumber}`);
 }
 
@@ -237,7 +244,7 @@ export async function sendPODToContact(loadId: string) {
     <p style="color:#94a3b8;font-size:12px;margin-top:20px">You are receiving this email because your contact email is associated with this shipment on Silk Route Logistics.</p>
   `);
 
-  await sendEmail(to, `Load ${load.referenceNumber} — Proof of Delivery`, html);
+  await sendShipperEmail(to, `Load ${load.referenceNumber} — Proof of Delivery`, html);
   log.info(`[ShipperLoadNotify] POD email sent to ${to} for ${load.referenceNumber}`);
 }
 
@@ -344,7 +351,7 @@ export async function sendTrackingLinkToCrmContacts(loadId: string) {
         </p>
       `);
 
-      await sendEmail(contact.email!, `Tracking: Load ${load.loadNumber ?? load.referenceNumber} · ${origin} → ${dest}`, html);
+      await sendShipperEmail(contact.email!, `Tracking: Load ${load.loadNumber ?? load.referenceNumber} · ${origin} → ${dest}`, html);
       sent++;
 
       await logLoadActivity({
