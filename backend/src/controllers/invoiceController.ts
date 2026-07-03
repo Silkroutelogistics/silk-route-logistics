@@ -6,14 +6,12 @@ import { generateInvoicePdf } from "../services/pdfService";
 import { sendEmail, wrap } from "../services/emailService";
 import { onInvoicePaid } from "../services/integrationService";
 import { log } from "../lib/logger";
+import { nextSequentialInvoiceNumber } from "../lib/invoiceNumber";
 
 export async function createInvoice(req: AuthRequest, res: Response) {
   const data = createInvoiceSchema.parse(req.body);
-  const lastInvoice = await prisma.invoice.findFirst({
-    orderBy: { createdAt: "desc" },
-    select: { invoiceNumber: true },
-  });
-  const lastNum = lastInvoice ? parseInt(lastInvoice.invoiceNumber.replace("INV-", ""), 10) : 1000;
+  // go-live audit: robust against legacy date-format numbers (no parseInt jump).
+  const invoiceNumber = await nextSequentialInvoiceNumber();
 
   const { lineItems, ...invoiceData } = data;
 
@@ -27,7 +25,7 @@ export async function createInvoice(req: AuthRequest, res: Response) {
       data: {
         ...invoiceData,
         amount: computedAmount,
-        invoiceNumber: `INV-${lastNum + 1}`,
+        invoiceNumber,
         userId: req.user!.id,
       } as any,
     });
@@ -123,6 +121,13 @@ export async function updateInvoiceStatus(req: AuthRequest, res: Response) {
   const valid = ["DRAFT", "SUBMITTED", "UNDER_REVIEW", "APPROVED", "FUNDED", "PAID", "REJECTED"];
   if (!valid.includes(status)) {
     res.status(400).json({ error: "Invalid status" });
+    return;
+  }
+  // go-live audit (NOTE 7): a generic status update must not flip an invoice to
+  // PAID — that path records no paidAmount and never credits the factoring fund
+  // (onInvoicePaid). Route payment recording through the mark-paid endpoint.
+  if (status === "PAID") {
+    res.status(400).json({ error: "Use the mark-paid endpoint to record a payment (it captures the amount and credits the fund)." });
     return;
   }
 
@@ -276,9 +281,8 @@ export async function generateInvoiceFromLoad(req: AuthRequest, res: Response) {
   }
 
   // Generate invoice number
-  const lastInvoice = await prisma.invoice.findFirst({ orderBy: { createdAt: "desc" }, select: { invoiceNumber: true } });
-  const lastNum = lastInvoice ? parseInt(lastInvoice.invoiceNumber.replace("INV-", ""), 10) : 1000;
-  const invoiceNumber = `INV-${lastNum + 1}`;
+  // go-live audit: robust against legacy date-format numbers (no parseInt jump).
+  const invoiceNumber = await nextSequentialInvoiceNumber();
 
   const dueDate = new Date();
   dueDate.setDate(dueDate.getDate() + 30);

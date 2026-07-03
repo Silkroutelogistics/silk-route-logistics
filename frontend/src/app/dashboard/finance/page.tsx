@@ -225,7 +225,7 @@ function ReceivablesTab() {
   });
 
   const markPaid = useMutation({
-    mutationFn: (id: string) => api.patch(`/accounting/invoices/${id}/pay`),
+    mutationFn: (id: string) => api.put(`/accounting/invoices/${id}/mark-paid`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["finance-ar"] });
       queryClient.invalidateQueries({ queryKey: ["aging-detail"] });

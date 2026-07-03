@@ -1,5 +1,6 @@
 import { prisma } from "../config/database";
 import { log } from "../lib/logger";
+import { createInvoiceWithRetry } from "../lib/invoiceNumber";
 
 /**
  * Auto-draft the SHIPPER accounts-receivable invoice on delivery/POD.
@@ -72,15 +73,6 @@ export async function autoGenerateInvoice(loadId: string) {
   const fuelSurcharge = load.fuelSurcharge && load.fuelSurcharge > 0 ? load.fuelSurcharge : 0;
   const totalAmount = customerRate + fuelSurcharge;
 
-  // Generate next invoice number
-  const lastInvoice = await prisma.invoice.findFirst({
-    orderBy: { createdAt: "desc" },
-    select: { invoiceNumber: true },
-  });
-  const parsed = lastInvoice ? parseInt(lastInvoice.invoiceNumber.replace("INV-", ""), 10) : 1000;
-  const lastNum = Number.isFinite(parsed) ? parsed : 1000;
-  const invoiceNumber = `INV-${lastNum + 1}`;
-
   const dueDate = new Date();
   dueDate.setDate(dueDate.getDate() + 30);
 
@@ -105,39 +97,41 @@ export async function autoGenerateInvoice(loadId: string) {
     });
   }
 
-  const invoice = await prisma.$transaction(async (tx) => {
-    const inv = await tx.invoice.create({
-      data: {
-        invoiceNumber,
-        userId: load.posterId!,
-        loadId: load.id,
-        amount: totalAmount,
-        totalAmount,
-        lineHaulAmount: customerRate,
-        fuelSurchargeAmount: fuelSurcharge,
-        // DRAFT — the AE reviews and sends. Hidden from the shipper portal
-        // (getShipperInvoices excludes DRAFT/VOID) until the AE sends it.
-        status: "DRAFT",
-        dueDate,
-      },
-    });
+  const invoice = await createInvoiceWithRetry((invoiceNumber) =>
+    prisma.$transaction(async (tx) => {
+      const inv = await tx.invoice.create({
+        data: {
+          invoiceNumber,
+          userId: load.posterId!,
+          loadId: load.id,
+          amount: totalAmount,
+          totalAmount,
+          lineHaulAmount: customerRate,
+          fuelSurchargeAmount: fuelSurcharge,
+          // DRAFT — the AE reviews and sends. Hidden from the shipper portal
+          // (getShipperInvoices excludes DRAFT/VOID) until the AE sends it.
+          status: "DRAFT",
+          dueDate,
+        },
+      });
 
-    await tx.invoiceLineItem.createMany({
-      data: lineItems.map((li) => ({
-        invoiceId: inv.id,
-        description: li.description,
-        quantity: li.quantity,
-        rate: li.rate,
-        amount: li.amount,
-        type: li.type as any,
-        sortOrder: li.sortOrder,
-      })),
-    });
+      await tx.invoiceLineItem.createMany({
+        data: lineItems.map((li) => ({
+          invoiceId: inv.id,
+          description: li.description,
+          quantity: li.quantity,
+          rate: li.rate,
+          amount: li.amount,
+          type: li.type as any,
+          sortOrder: li.sortOrder,
+        })),
+      });
 
-    return inv;
-  });
+      return inv;
+    }),
+  );
 
-  log.info(`[AutoInvoice] Drafted shipper invoice ${invoiceNumber} for load ${load.referenceNumber} — $${totalAmount} (customer rate)`);
+  log.info(`[AutoInvoice] Drafted shipper invoice ${invoice.invoiceNumber} for load ${load.referenceNumber} — $${totalAmount} (customer rate)`);
 
   // Notify the AE (load poster) to review + send the shipper invoice.
   await prisma.notification
@@ -146,11 +140,11 @@ export async function autoGenerateInvoice(loadId: string) {
         userId: load.posterId,
         type: "INVOICE",
         title: "Shipper invoice drafted",
-        message: `Invoice ${invoiceNumber} drafted for load ${load.referenceNumber} — $${totalAmount.toLocaleString()} (customer rate). Review and send.`,
+        message: `Invoice ${invoice.invoiceNumber} drafted for load ${load.referenceNumber} — $${totalAmount.toLocaleString()} (customer rate). Review and send.`,
         actionUrl: "/dashboard/invoices",
       },
     })
-    .catch((e: any) => log.error(`[AutoInvoice] AE notify failed for ${invoiceNumber}: ${e?.message}`));
+    .catch((e: any) => log.error(`[AutoInvoice] AE notify failed for ${invoice.invoiceNumber}: ${e?.message}`));
 
   return invoice;
 }

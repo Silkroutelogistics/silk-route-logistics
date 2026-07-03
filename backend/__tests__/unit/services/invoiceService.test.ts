@@ -35,6 +35,9 @@ beforeEach(() => {
   (mockPrisma.$transaction as any).mockImplementation(async (cb: any) => cb(mockPrisma));
   (mockPrisma.invoiceLineItem.createMany as any).mockResolvedValue({ count: 1 });
   (mockPrisma.notification.create as any).mockResolvedValue({});
+  // numbering now reads recent invoices via findMany (nextSequentialInvoiceNumber);
+  // default to none -> INV-1001. Individual tests override for a specific max.
+  (mockPrisma.invoice.findMany as any).mockResolvedValue([]);
 });
 
 describe("autoGenerateInvoice — DELIVERED -> shipper-AR draft", () => {
@@ -79,9 +82,8 @@ describe("autoGenerateInvoice — DELIVERED -> shipper-AR draft", () => {
   });
 
   it("drafts a shipper invoice at the CUSTOMER rate, owned to the poster, in DRAFT", async () => {
-    (mockPrisma.invoice.findFirst as any)
-      .mockResolvedValueOnce(null) // dup guard
-      .mockResolvedValueOnce({ invoiceNumber: "INV-1042" }); // numbering
+    (mockPrisma.invoice.findFirst as any).mockResolvedValue(null); // dup guard
+    (mockPrisma.invoice.findMany as any).mockResolvedValue([{ invoiceNumber: "INV-1042" }]); // numbering -> INV-1043
     (mockPrisma.load.findUnique as any).mockResolvedValue(makeLoad({ customerRate: 2400 }));
     (mockPrisma.invoice.create as any).mockResolvedValue({ id: "inv-1", invoiceNumber: "INV-1043", amount: 2400 });
 
@@ -109,9 +111,8 @@ describe("autoGenerateInvoice — DELIVERED -> shipper-AR draft", () => {
   });
 
   it("adds the load fuel surcharge to the total", async () => {
-    (mockPrisma.invoice.findFirst as any)
-      .mockResolvedValueOnce(null)
-      .mockResolvedValueOnce({ invoiceNumber: "INV-2000" });
+    (mockPrisma.invoice.findFirst as any).mockResolvedValue(null);
+    (mockPrisma.invoice.findMany as any).mockResolvedValue([{ invoiceNumber: "INV-2000" }]);
     (mockPrisma.load.findUnique as any).mockResolvedValue(makeLoad({ customerRate: 2400, fuelSurcharge: 180 }));
     (mockPrisma.invoice.create as any).mockResolvedValue({ id: "inv-2", invoiceNumber: "INV-2001", amount: 2580 });
 
@@ -127,7 +128,8 @@ describe("autoGenerateInvoice — DELIVERED -> shipper-AR draft", () => {
   });
 
   it("numbers the first-ever invoice INV-1001 when no prior invoice exists", async () => {
-    (mockPrisma.invoice.findFirst as any).mockResolvedValueOnce(null).mockResolvedValueOnce(null);
+    (mockPrisma.invoice.findFirst as any).mockResolvedValue(null);
+    (mockPrisma.invoice.findMany as any).mockResolvedValue([]); // no prior -> INV-1001
     (mockPrisma.load.findUnique as any).mockResolvedValue(makeLoad({ customerRate: 500 }));
     (mockPrisma.invoice.create as any).mockResolvedValue({ id: "inv-3", invoiceNumber: "INV-1001" });
 

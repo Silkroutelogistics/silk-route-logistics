@@ -13835,7 +13835,20 @@
 //   Deferred fast-follow: invoice-number race + format collision (INV-{n} vs
 //   INV-YYYYMMDD) — needs a one-helper consolidation. Gates: backend tsc +
 //   vitest 314/314 + frontend next build. Per §3.1: apw → apx.
-export const SRL_VERSION = "3.8.apx";
+// v3.8.apy — Go-live audit fast-follows (invoice numbering + two guards):
+//   (1) New lib/invoiceNumber.ts: nextSequentialInvoiceNumber IGNORES legacy
+//       date-format numbers (INV-YYYYMMDD-XXXX) so parseInt can't jump the
+//       sequence to INV-20260707; createInvoiceWithRetry retries on a P2002
+//       unique collision so a concurrent duplicate isn't silently dropped (the
+//       fire-and-forget POD/delivery auto-invoice would otherwise swallow it).
+//       Wired into autoGenerateInvoice (full retry) + invoiceController
+//       createInvoice + generateInvoiceFromLoad (robust number source). 6 tests.
+//   (2) updateInvoiceStatus no longer flips an invoice to PAID (that path
+//       recorded no amount + never credited the fund) — directs to mark-paid.
+//   (3) dashboard/finance "Confirm Paid" button called a non-existent route
+//       (PATCH /accounting/invoices/:id/pay) — repointed to PUT .../mark-paid.
+//   Gates: backend tsc + vitest 320/320 + frontend next build. Per §3.1: apx → apy.
+export const SRL_VERSION = "3.8.apy";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
