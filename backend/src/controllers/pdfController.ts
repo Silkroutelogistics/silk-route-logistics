@@ -116,10 +116,13 @@ export async function downloadShipperLoadConfirmation(req: AuthRequest, res: Res
 
 export async function downloadInvoicePDF(req: AuthRequest, res: Response) {
   try {
-    const invoice = await prisma.invoice.findUnique({
-      where: { id: req.params.invoiceId },
+    // go-live audit: the shipper frontend may pass the invoiceNumber (mapInvoice
+    // exposes it as the row id) — match on either id or invoiceNumber.
+    const invoiceId = req.params.invoiceId;
+    const invoice = await prisma.invoice.findFirst({
+      where: { OR: [{ id: invoiceId }, { invoiceNumber: invoiceId }] },
       include: {
-        load: { select: { referenceNumber: true, originCity: true, originState: true, destCity: true, destState: true, rate: true, pickupDate: true, deliveryDate: true } },
+        load: { select: { referenceNumber: true, originCity: true, originState: true, destCity: true, destState: true, rate: true, pickupDate: true, deliveryDate: true, posterId: true, customer: { select: { userId: true } } } },
         user: { select: { firstName: true, lastName: true, company: true } },
         lineItems: { orderBy: { sortOrder: "asc" } },
       },
@@ -129,8 +132,14 @@ export async function downloadInvoicePDF(req: AuthRequest, res: Response) {
 
     const isOwner = req.user!.id === invoice.userId;
     const isEmployee = ["ADMIN", "BROKER", "DISPATCH", "OPERATIONS", "ACCOUNTING"].includes(req.user!.role);
-    // Shippers can download invoices for their loads
-    const isShipperOwner = req.user!.role === "SHIPPER" && invoice.load;
+    // go-live audit IDOR fix: a SHIPPER may download an invoice PDF ONLY when the
+    // invoice's load is actually theirs (load linked to their Customer, or a load
+    // they posted). Previously `role === "SHIPPER" && invoice.load` let any shipper
+    // pull ANY invoice PDF that had a load — including other parties' financials.
+    const isShipperOwner =
+      req.user!.role === "SHIPPER" &&
+      !!invoice.load &&
+      (invoice.load.customer?.userId === req.user!.id || invoice.load.posterId === req.user!.id);
     if (!isOwner && !isEmployee && !isShipperOwner) { res.status(403).json({ error: "Not authorized" }); return; }
 
     const doc = generateInvoicePDF(invoice);

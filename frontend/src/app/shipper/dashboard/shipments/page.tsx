@@ -18,14 +18,19 @@ export default function ShipperShipmentsPage() {
 
   const exportShipmentsCSV = (shipments: Shipment[]) => {
     const headers = ["Reference", "Origin", "Destination", "Equipment", "Status", "Pickup Date", "Delivery Date", "Rate"];
+    // go-live audit: read the actual shipment DTO keys (mapLoadToShipment) —
+    // id/origin/dest/equipment/pickDate/delDate. The old referenceNumber/
+    // originCity/equipmentType/pickupDate keys don't exist on the DTO, so every
+    // column but Status + Rate exported blank. pickDate/delDate are already
+    // formatted strings.
     const rows = shipments.map((s: Record<string, any>) => [
-      s.referenceNumber || "",
-      `${s.originCity || ""} ${s.originState || ""}`,
-      `${s.destCity || ""} ${s.destState || ""}`,
-      s.equipmentType || "",
+      s.id || "",
+      s.origin || "",
+      s.dest || "",
+      s.equipment || "",
       s.status || "",
-      s.pickupDate ? new Date(s.pickupDate).toLocaleDateString() : "",
-      s.deliveryDate ? new Date(s.deliveryDate).toLocaleDateString() : "",
+      s.pickDate || "",
+      s.delDate || "",
       s.rate || "",
     ]);
     const csv = [headers.join(","), ...rows.map((r) => r.map((v) => `"${v}"`).join(","))].join("\n");

@@ -868,10 +868,18 @@ export async function fileShipperDispute(req: AuthRequest, res: Response) {
       return res.status(400).json({ error: `Invalid disputeType. Must be one of: ${validTypes.join(", ")}` });
     }
 
-    // Resolve shipper's loads to verify they own the invoice
+    // Resolve shipper's loads to verify they own the invoice.
+    // go-live audit: mapInvoice exposes the invoiceNumber as the row "id", so the
+    // shipper frontend posts the invoiceNumber here — match on either id or
+    // invoiceNumber. The load: loadWhere ownership filter is preserved, so this
+    // stays scoped to the shipper's own invoices (not an IDOR).
     const loadWhere = await resolveShipperLoadWhere(userId);
     const invoice = await prisma.invoice.findFirst({
-      where: { id: invoiceId, load: loadWhere, deletedAt: null },
+      where: {
+        OR: [{ id: invoiceId }, { invoiceNumber: invoiceId }],
+        load: loadWhere,
+        deletedAt: null,
+      },
       include: {
         load: { select: { id: true, referenceNumber: true, carrierId: true } },
       },

@@ -13820,7 +13820,22 @@
 //   per-event canonical choice so the POD-attachment/tracking-link content
 //   isn't dropped. Gates: backend tsc + vitest 314/314 + frontend next build.
 //   Per §3.1: apv → apw.
-export const SRL_VERSION = "3.8.apw";
+// v3.8.apx — Go-live audit, shipper portal correctness + a real IDOR:
+//   (1) Dispute filing was always 404: mapInvoice exposes invoiceNumber as the
+//       row "id", so the shipper posted "INV-1043" but the dispute handler looked
+//       up by cuid id. Now matches id OR invoiceNumber (ownership filter kept).
+//   (2) Invoice-PDF IDOR: downloadInvoicePDF granted any SHIPPER access to ANY
+//       invoice PDF that had a load (`role === "SHIPPER" && invoice.load`) — other
+//       parties' financials included. Now requires the invoice's load to be the
+//       shipper's own (customer.userId match or they posted it); also matches
+//       id OR invoiceNumber.
+//   (3) Shipper CSV export produced blank columns — it read referenceNumber/
+//       originCity/equipmentType/pickupDate but the DTO exposes id/origin/dest/
+//       equipment/pickDate/delDate. Repointed to the real keys.
+//   Deferred fast-follow: invoice-number race + format collision (INV-{n} vs
+//   INV-YYYYMMDD) — needs a one-helper consolidation. Gates: backend tsc +
+//   vitest 314/314 + frontend next build. Per §3.1: apw → apx.
+export const SRL_VERSION = "3.8.apx";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
