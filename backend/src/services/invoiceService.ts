@@ -1,7 +1,22 @@
 import { prisma } from "../config/database";
-import { sendAutoInvoiceEmail } from "./emailService";
 import { log } from "../lib/logger";
 
+/**
+ * Auto-draft the SHIPPER accounts-receivable invoice on delivery/POD.
+ *
+ * go-live audit fix: this used to bill `load.rate` (= the CARRIER's accepted
+ * rate) owned to the carrier, and the shipper portal surfaced it as "what you
+ * owe" — leaking the carrier rate to the shipper and under-billing SRL's margin
+ * (shipper billed $2,000 instead of the $2,400 customer rate). Carrier payables
+ * flow through CarrierPay/settlement, NOT Invoice, so the carrier side of this
+ * function was never load-bearing for paying carriers.
+ *
+ * Now it produces a proper shipper AR invoice at `load.customerRate`, owned to
+ * the load poster (AE), in DRAFT (the AE reviews + sends; DRAFT is hidden from
+ * the shipper portal). If the customer rate isn't set yet, it does NOT invoice
+ * (never falls back to the carrier rate) and instead notifies the AE to set the
+ * rate and bill manually.
+ */
 export async function autoGenerateInvoice(loadId: string) {
   // Prevent duplicate invoices for the same load
   const existing = await prisma.invoice.findFirst({ where: { loadId } });
@@ -12,139 +27,130 @@ export async function autoGenerateInvoice(loadId: string) {
 
   const load = await prisma.load.findUnique({
     where: { id: loadId },
-    include: {
-      carrier: { select: { id: true, email: true, firstName: true, lastName: true, company: true } },
-      rateConfirmations: {
-        where: { status: "SIGNED" },
-        orderBy: { createdAt: "desc" },
-        take: 1,
-      },
+    select: {
+      id: true,
+      referenceNumber: true,
+      posterId: true,
+      customerRate: true,
+      fuelSurcharge: true,
+      originCity: true,
+      originState: true,
+      destCity: true,
+      destState: true,
     },
   });
-  if (!load || !load.carrierId) {
-    log.info(`[AutoInvoice] No load or carrier found for ${loadId}`);
+  if (!load) {
+    log.info(`[AutoInvoice] No load found for ${loadId}`);
+    return null;
+  }
+  // The AR invoice is owned to the load poster (the AE). Without a poster we
+  // can't own it correctly; skip rather than mis-own it.
+  if (!load.posterId) {
+    log.warn(`[AutoInvoice] Load ${loadId} has no posterId — cannot own the shipper AR invoice; skipping.`);
     return null;
   }
 
-  // Guard: skip auto-invoice for zero-rate loads (e.g., RFQ quotes awaiting pricing)
-  const rc = load.rateConfirmations[0];
-  const effectiveRate = load.rate || rc?.totalCharges || 0;
-  if (effectiveRate <= 0) {
-    log.warn(`[AutoInvoice] Skipping zero-rate load ${loadId} (rate=$${load.rate}, RC=${rc ? rc.totalCharges : "none"}) — no billable amount`);
+  // Bill the CUSTOMER rate, never load.rate (the carrier rate). If it isn't set,
+  // do NOT auto-invoice — notify the AE to set the customer rate + bill manually.
+  const customerRate = load.customerRate ?? 0;
+  if (customerRate <= 0) {
+    log.warn(`[AutoInvoice] Load ${loadId} delivered with no customerRate set — skipping auto-invoice; AE must set the customer rate and bill.`);
+    await prisma.notification
+      .create({
+        data: {
+          userId: load.posterId,
+          type: "INVOICE",
+          title: "Set customer rate to invoice",
+          message: `Load ${load.referenceNumber} was delivered but has no customer rate on file. Set the customer rate and generate the shipper invoice.`,
+          actionUrl: "/dashboard/invoices",
+        },
+      })
+      .catch((e: any) => log.error(`[AutoInvoice] AE notify failed for ${loadId}: ${e?.message}`));
     return null;
   }
+
+  const fuelSurcharge = load.fuelSurcharge && load.fuelSurcharge > 0 ? load.fuelSurcharge : 0;
+  const totalAmount = customerRate + fuelSurcharge;
 
   // Generate next invoice number
   const lastInvoice = await prisma.invoice.findFirst({
     orderBy: { createdAt: "desc" },
     select: { invoiceNumber: true },
   });
-  const lastNum = lastInvoice ? parseInt(lastInvoice.invoiceNumber.replace("INV-", ""), 10) : 1000;
+  const parsed = lastInvoice ? parseInt(lastInvoice.invoiceNumber.replace("INV-", ""), 10) : 1000;
+  const lastNum = Number.isFinite(parsed) ? parsed : 1000;
   const invoiceNumber = `INV-${lastNum + 1}`;
 
   const dueDate = new Date();
   dueDate.setDate(dueDate.getDate() + 30);
 
-  // Build line items from load + rate confirmation
-  const lineItems: { description: string; quantity: number; rate: number; amount: number; type: string; sortOrder: number }[] = [];
-  // rc already resolved above in zero-rate guard
-
-  // Linehaul. Bill from load.rate; if that's absent (rate=0) but a signed RC
-  // carries the price, derive linehaul from the RC total minus its fuel +
-  // accessorial components so the invoice bills the full signed amount instead
-  // of a $0 linehaul (go-live audit fix — the guard above already lets a
-  // rate=0 + priced-RC load through via effectiveRate, so the linehaul must
-  // match or the load under-bills to $0 + fuel + accessorials only).
-  const rcFuel = rc?.fuelSurcharge && rc.fuelSurcharge > 0 ? rc.fuelSurcharge : 0;
-  const rcAccessorial = rc?.accessorialTotal && rc.accessorialTotal > 0 ? rc.accessorialTotal : 0;
-  const linehaulAmount = load.rate > 0 ? load.rate : Math.max(0, (rc?.totalCharges || 0) - rcFuel - rcAccessorial);
-  lineItems.push({
-    description: `Linehaul: ${load.originCity}, ${load.originState} → ${load.destCity}, ${load.destState}`,
-    quantity: 1,
-    rate: linehaulAmount,
-    amount: linehaulAmount,
-    type: "LINEHAUL",
-    sortOrder: 0,
-  });
-
-  if (rc) {
-    if (rc.fuelSurcharge && rc.fuelSurcharge > 0) {
-      lineItems.push({
-        description: "Fuel Surcharge",
-        quantity: 1,
-        rate: rc.fuelSurcharge,
-        amount: rc.fuelSurcharge,
-        type: "FUEL_SURCHARGE",
-        sortOrder: 1,
-      });
-    }
-    const accessorialAmt = rc.accessorialTotal || 0;
-    if (accessorialAmt > 0) {
-      lineItems.push({
-        description: "Accessorial Charges",
-        quantity: 1,
-        rate: accessorialAmt,
-        amount: accessorialAmt,
-        type: "ACCESSORIAL",
-        sortOrder: 2,
-      });
-    }
+  const lineItems: { description: string; quantity: number; rate: number; amount: number; type: string; sortOrder: number }[] = [
+    {
+      description: `Linehaul: ${load.originCity}, ${load.originState} → ${load.destCity}, ${load.destState}`,
+      quantity: 1,
+      rate: customerRate,
+      amount: customerRate,
+      type: "LINEHAUL",
+      sortOrder: 0,
+    },
+  ];
+  if (fuelSurcharge > 0) {
+    lineItems.push({
+      description: "Fuel Surcharge",
+      quantity: 1,
+      rate: fuelSurcharge,
+      amount: fuelSurcharge,
+      type: "FUEL_SURCHARGE",
+      sortOrder: 1,
+    });
   }
-
-  const totalAmount = lineItems.reduce((sum, li) => sum + li.amount, 0);
 
   const invoice = await prisma.$transaction(async (tx) => {
     const inv = await tx.invoice.create({
       data: {
         invoiceNumber,
-        userId: load.carrierId!,
+        userId: load.posterId!,
         loadId: load.id,
         amount: totalAmount,
-        status: "SUBMITTED",
+        totalAmount,
+        lineHaulAmount: customerRate,
+        fuelSurchargeAmount: fuelSurcharge,
+        // DRAFT — the AE reviews and sends. Hidden from the shipper portal
+        // (getShipperInvoices excludes DRAFT/VOID) until the AE sends it.
+        status: "DRAFT",
         dueDate,
       },
     });
 
-    if (lineItems.length > 0) {
-      await tx.invoiceLineItem.createMany({
-        data: lineItems.map((li) => ({
-          invoiceId: inv.id,
-          description: li.description,
-          quantity: li.quantity,
-          rate: li.rate,
-          amount: li.amount,
-          type: li.type as any,
-          sortOrder: li.sortOrder,
-        })),
-      });
-    }
+    await tx.invoiceLineItem.createMany({
+      data: lineItems.map((li) => ({
+        invoiceId: inv.id,
+        description: li.description,
+        quantity: li.quantity,
+        rate: li.rate,
+        amount: li.amount,
+        type: li.type as any,
+        sortOrder: li.sortOrder,
+      })),
+    });
 
     return inv;
   });
 
-  log.info(`[AutoInvoice] Created ${invoiceNumber} for load ${load.referenceNumber} — $${totalAmount}`);
+  log.info(`[AutoInvoice] Drafted shipper invoice ${invoiceNumber} for load ${load.referenceNumber} — $${totalAmount} (customer rate)`);
 
-  // Notify carrier in-app
-  await prisma.notification.create({
-    data: {
-      userId: load.carrierId,
-      type: "INVOICE",
-      title: "Invoice Auto-Generated",
-      message: `Invoice ${invoiceNumber} has been created for load ${load.referenceNumber} — $${totalAmount.toLocaleString()}.`,
-      actionUrl: "/dashboard/invoices",
-    },
-  });
-
-  // Send email to carrier (non-critical — don't fail invoice creation if email fails)
-  if (load.carrier) {
-    sendAutoInvoiceEmail(
-      load.carrier.email,
-      load.carrier.firstName || load.carrier.company || "Carrier",
-      load.referenceNumber,
-      invoiceNumber,
-      totalAmount,
-    ).catch((e) => log.error(`[AutoInvoice] Email failed for ${invoiceNumber}: ${e.message}`));
-  }
+  // Notify the AE (load poster) to review + send the shipper invoice.
+  await prisma.notification
+    .create({
+      data: {
+        userId: load.posterId,
+        type: "INVOICE",
+        title: "Shipper invoice drafted",
+        message: `Invoice ${invoiceNumber} drafted for load ${load.referenceNumber} — $${totalAmount.toLocaleString()} (customer rate). Review and send.`,
+        actionUrl: "/dashboard/invoices",
+      },
+    })
+    .catch((e: any) => log.error(`[AutoInvoice] AE notify failed for ${invoiceNumber}: ${e?.message}`));
 
   return invoice;
 }

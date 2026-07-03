@@ -13775,7 +13775,22 @@
 //       operations@ notification. Changed the 6 optional string fields to
 //       .nullish(). Backend-only fix, covers both null + undefined.
 //   Gates: backend tsc + vitest 316/316 + frontend next build. Per §3.1: aps → apt.
-export const SRL_VERSION = "3.8.apt";
+// v3.8.apu — Go-live audit, invoice AR/AP separation (the #1 shipper money
+//   issue): autoGenerateInvoice used to bill load.rate (= the CARRIER's rate)
+//   owned to the carrier, and the shipper portal surfaced it as "what you owe"
+//   — disclosing the carrier rate to the shipper and under-billing SRL's margin
+//   ($2,000 carrier rate instead of the $2,400 customer rate), while also
+//   blocking the correct customer-rate invoice (one-invoice-per-load early
+//   return). Carrier pay flows through CarrierPay, not Invoice, so the carrier
+//   side was never load-bearing. Rewrote autoGenerateInvoice to draft a proper
+//   SHIPPER AR invoice at load.customerRate (+ load.fuelSurcharge), owned to the
+//   load poster, status DRAFT (AE reviews + sends). If customerRate isn't set it
+//   does NOT invoice (never falls back to the carrier rate) and notifies the AE.
+//   getShipperInvoices now excludes DRAFT + VOID so un-sent drafts + cancelled
+//   invoices aren't shown to the shipper (also closes the DRAFT-visible risk).
+//   invoiceService.test rewritten (7 cases). Gates: backend tsc + vitest 314/314
+//   + frontend next build. Per §3.1: apt → apu.
+export const SRL_VERSION = "3.8.apu";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

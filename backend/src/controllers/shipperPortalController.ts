@@ -322,12 +322,15 @@ export async function getShipperInvoices(req: AuthRequest, res: Response) {
     }
 
     const statusMap: Record<string, string[]> = {
-      Unpaid: ["SENT", "SUBMITTED", "OVERDUE", "DRAFT"],
+      Unpaid: ["SENT", "SUBMITTED", "OVERDUE"],
       Processing: ["UNDER_REVIEW", "APPROVED", "PARTIAL"],
       Paid: ["PAID", "FUNDED"],
     };
 
-    let invoiceWhere: any = { loadId: { in: loadIds } };
+    // Exclude DRAFT + VOID from the shipper's view: a DRAFT is an un-sent AE-side
+    // invoice (auto-drafted on delivery, not yet reviewed/sent) and a VOID is
+    // cancelled — neither is something the shipper owes (go-live audit).
+    let invoiceWhere: any = { loadId: { in: loadIds }, status: { notIn: ["DRAFT", "VOID"] } };
     if (status && status !== "All" && statusMap[status]) {
       invoiceWhere.status = { in: statusMap[status] };
     }
@@ -345,12 +348,12 @@ export async function getShipperInvoices(req: AuthRequest, res: Response) {
       prisma.invoice.count({ where: invoiceWhere }),
       // Outstanding balance
       prisma.invoice.findMany({
-        where: { loadId: { in: loadIds }, status: { in: ["SENT", "SUBMITTED", "OVERDUE", "DRAFT"] } },
+        where: { loadId: { in: loadIds }, status: { in: ["SENT", "SUBMITTED", "OVERDUE"] } },
         select: { amount: true, totalAmount: true },
       }),
-      // YTD billed
+      // YTD billed (exclude un-sent drafts + voids)
       prisma.invoice.findMany({
-        where: { loadId: { in: loadIds }, createdAt: { gte: yearStart } },
+        where: { loadId: { in: loadIds }, createdAt: { gte: yearStart }, status: { notIn: ["DRAFT", "VOID"] } },
         select: { amount: true, totalAmount: true },
       }),
       // Avg payment cycle
