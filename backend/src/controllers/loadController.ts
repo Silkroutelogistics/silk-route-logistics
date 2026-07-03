@@ -7,8 +7,7 @@ import { createLoadSchema, updateLoadStatusSchema, loadQuerySchema } from "../va
 import { autoGenerateInvoice } from "../services/invoiceService";
 import { calculateMileage } from "../services/mileageService";
 import { actualEventStamps } from "../lib/loadEventStamps";
-import { sendShipperPickupEmail, sendShipperDeliveryEmail, sendShipperMilestoneEmail } from "../services/shipperNotificationService";
-import { sendPickupNotification, sendInTransitUpdate, sendArrivedAtDelivery, sendDeliveredWithPOD } from "../services/shipperLoadNotifyService";
+import { sendShipperDeliveryEmail, sendShipperMilestoneEmail } from "../services/shipperNotificationService";
 import { onLoadDelivered, onLoadDispatched, enforceShipperCredit, onLoadCancelledOrTONU } from "../services/integrationService";
 import { checkCustomerActive } from "../lib/customerActive";
 import { refreshBOLTrackingTokenExpiry } from "../services/shipperTrackingTokenService";
@@ -568,11 +567,6 @@ export async function updateLoadStatus(req: AuthRequest, res: Response) {
     onLoadDispatched(load.id).catch((e) => log.error({ err: e }, "[Integration] onLoadDispatched error:"));
   }
 
-  // Shipper pickup notification on LOADED
-  if (status === "LOADED") {
-    sendShipperPickupEmail(load.id).catch((e) => log.error({ err: e }, "[ShipperNotify] pickup email error:"));
-  }
-
   // TONU / CANCELLED cleanup: reverse credit, void AP, cancel tenders, reverse fund
   if (status === "TONU" || status === "CANCELLED") {
     const reason = req.body.reason || req.body.cancellationReason;
@@ -637,23 +631,11 @@ export async function updateLoadStatus(req: AuthRequest, res: Response) {
   // Shipper milestone tracking email (fires on every status change)
   sendShipperMilestoneEmail(load.id, status).catch((e) => log.error({ err: e }, "[ShipperNotify] milestone email error:"));
 
-  // Contact email load milestone notifications.
-  // go-live audit R2: do NOT fire the pickup email on BOOKED/DISPATCHED — that
-  // function tells the shipper the freight "has been picked up" when the carrier
-  // has only been assigned/dispatched. The shipper still gets the milestone
-  // email above on those statuses; the pickup email fires at real pickup below.
-  if (["AT_PICKUP", "LOADED", "PICKED_UP"].includes(status)) {
-    sendPickupNotification(load.id).catch((e) => log.error({ err: e }, "[ShipperNotify]"));
-  }
-  if (status === "IN_TRANSIT") {
-    sendInTransitUpdate(load.id).catch((e) => log.error({ err: e }, "[ShipperNotify]"));
-  }
-  if (status === "AT_DELIVERY") {
-    sendArrivedAtDelivery(load.id).catch((e) => log.error({ err: e }, "[ShipperNotify]"));
-  }
-  if (status === "DELIVERED") {
-    sendDeliveredWithPOD(load.id).catch((e) => log.error({ err: e }, "[ShipperNotify]"));
-  }
+  // go-live audit R1: the per-status pickup / in-transit / arrived / delivered
+  // emails that used to fire here were duplicates of the milestone email above
+  // (same event, near-identical content — a shipper got 2-3 emails per milestone).
+  // sendShipperMilestoneEmail is the single canonical shipper lifecycle email;
+  // the POD email is sent separately by the POD-upload flow (validateAndNotifyPOD).
 
   res.json(load);
 }

@@ -7,8 +7,8 @@ import { validateBody } from "../middleware/validate";
 import { upload } from "../config/upload";
 import { uploadFile } from "../services/storageService";
 import { nextShipmentNumber } from "../controllers/shipmentController";
-import { sendPODToContact, sendPickupNotification, sendInTransitUpdate, sendArrivedAtDelivery, sendDeliveredWithPOD } from "../services/shipperLoadNotifyService";
-import { sendShipperPickupEmail, sendShipperDeliveryEmail, sendShipperMilestoneEmail } from "../services/shipperNotificationService";
+import { sendPODToContact } from "../services/shipperLoadNotifyService";
+import { sendShipperDeliveryEmail, sendShipperMilestoneEmail } from "../services/shipperNotificationService";
 import { autoGenerateInvoice } from "../services/invoiceService";
 import { onLoadDelivered } from "../services/integrationService";
 import { onLoadStatusChange as aiOnLoadStatusChange, onCarrierResponse } from "../services/aiLearningLoop/feedbackCollector";
@@ -496,29 +496,12 @@ router.post("/:id/status", validateBody(statusUpdateSchema), async (req: AuthReq
     onLoadDelivered(load.id).catch((e) => log.error({ err: e }, "[Integration] onLoadDelivered error:"));
   }
 
-  // Pickup email on LOADED (single-event shipper notification).
-  if (status === "LOADED") {
-    sendShipperPickupEmail(load.id).catch((e) => log.error({ err: e }, "[ShipperNotify] pickup email error:"));
-  }
-
-  // Milestone email — fires for every status change, batched-aware on receiver side.
+  // Milestone email — the single canonical shipper lifecycle email (milestone
+  // label + full details + tracking link), fires for every status change.
+  // go-live audit R1: the pickup email + the per-status CRM contact cascade that
+  // used to fire here were removed as duplicates of this one (a shipper got 2-3
+  // emails per milestone); the POD email is sent by the POD-upload flow.
   sendShipperMilestoneEmail(load.id, status).catch((e) => log.error({ err: e }, "[ShipperNotify] milestone email error:"));
-
-  // CRM contact-email cascade per status — pickup arrival, in-transit,
-  // delivery arrival, POD delivery. Each surfaces to the contact list
-  // configured per customer (CRM CustomerContact[] with role tags).
-  if (["AT_PICKUP", "LOADED"].includes(status)) {
-    sendPickupNotification(load.id).catch((e) => log.error({ err: e }, "[ShipperNotify]"));
-  }
-  if (status === "IN_TRANSIT") {
-    sendInTransitUpdate(load.id).catch((e) => log.error({ err: e }, "[ShipperNotify]"));
-  }
-  if (status === "AT_DELIVERY") {
-    sendArrivedAtDelivery(load.id).catch((e) => log.error({ err: e }, "[ShipperNotify]"));
-  }
-  if (status === "DELIVERED") {
-    sendDeliveredWithPOD(load.id).catch((e) => log.error({ err: e }, "[ShipperNotify]"));
-  }
 
   res.json(updated);
 });

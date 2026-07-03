@@ -13848,7 +13848,19 @@
 //   (3) dashboard/finance "Confirm Paid" button called a non-existent route
 //       (PATCH /accounting/invoices/:id/pay) — repointed to PUT .../mark-paid.
 //   Gates: backend tsc + vitest 320/320 + frontend next build. Per §3.1: apx → apy.
-export const SRL_VERSION = "3.8.apy";
+// v3.8.apz — Go-live audit R1 (last deferred fast-follow): shipper milestone
+//   email de-duplication. A shipper got 2-3 near-identical emails per milestone
+//   because loadController AND carrierLoads each fired sendShipperMilestoneEmail
+//   PLUS sendShipperPickupEmail PLUS the shipperLoadNotifyService per-status
+//   cascade (sendPickupNotification / sendInTransitUpdate / sendArrivedAtDelivery
+//   / sendDeliveredWithPOD). Verified sendShipperMilestoneEmail is the
+//   comprehensive canonical (every status label + full details + tracking link),
+//   so the duplicate calls were removed from both files (+ their now-unused
+//   imports). The POD email is still sent by the POD-upload flow
+//   (validateAndNotifyPOD -> sendShipperPODEmail); sendShipperDeliveryEmail is
+//   retained. Net: one clean lifecycle email per status. Gates: backend tsc +
+//   vitest 320/320 + frontend next build. Per §3.1: apy → apz.
+export const SRL_VERSION = "3.8.apz";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
