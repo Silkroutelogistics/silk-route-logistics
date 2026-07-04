@@ -13913,7 +13913,32 @@
 //   intersections, work zones, ADAS). All 10 gap-closing courses (D1-D10) now in.
 //   seed --dry-run valid. Reaches drivers on prod course-seed re-run.
 //   Per §3.1: aqd -> aqe.
-export const SRL_VERSION = "3.8.aqe";
+// v3.8.aqf — Driver Academy DEFINITIVE content audit + fixes (all 32 published
+//   courses). A 5-agent deep per-course audit web-verified ~200 regulatory
+//   citations against current 2026 CFR/FMCSA/OSHA/FDA: catalog was already
+//   more accurate than typical commercial programs (CarriersEdge/JJ Keller/ELDT).
+//   Applied ~10 true accuracy/safety fixes + ~1 cross-course inconsistency +
+//   per-course enrichment to full ELDT/industry parity + tighter quiz coverage.
+//   Accuracy fixes: reefer continuous-vs-cycle-sentry mode was BACKWARDS
+//   (continuous=fresh/produce, cycle-sentry=frozen); railroad brake-failure
+//   said "pump" — wrong for the AIR brakes most tractors run (do NOT pump,
+//   bleeds reservoirs); detention Carmack presumption re-anchored to the PICKUP
+//   BOL not the delivery POD; driver-qualification currency gap closed —
+//   Clearinghouse-II CDL downgrade (49 CFR 383.73, eff 2024-11-18) + oral-fluid
+//   softened (no HHS labs yet) + Schedule III doesn't change Part 40; pre-trip
+//   (60 psi) vs vehicle-systems (55 psi) low-air harmonized (cites both CDL-manual
+//   60 + reg 393.51's 55); trip-planning 392.7 miscitation removed; adverse-weather
+//   retarder-on-ice caution added; space/rollover ramp speed aligned to FMCSA
+//   1/3-to-1/2 below advisory; backing spring-brake-holds-tug-test clarified;
+//   accident 390.5 definition added. Enrichment across all courses (pushrod/ABS
+//   depth, HOS duty-status, HT force/fraud/coercion definition, wellness
+//   preventive-care/tobacco/DVT, ADAS AEB/ESC mandate + phantom-braking,
+//   cargo-theft strategic-pickup reweight, fraud look-alike domains + NOA, dock
+//   injury-reporting + pinch points, tracking shipper-app + privacy, + more).
+//   Catalog now 32 published courses / 119 lessons / 292 Q (was 265). backend tsc
+//   clean, seed --dry-run valid, RE-SEEDED TO PROD (live — critical fixes
+//   confirmed by DB query). Per §3.1: aqe -> aqf.
+export const SRL_VERSION = "3.8.aqf";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
