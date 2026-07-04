@@ -13892,7 +13892,18 @@
 //   liquid surge). Catalog 22 -> 25 courses / 82 -> 95 lessons / 184 -> 209 Q;
 //   seed --dry-run valid. Reaches drivers when the prod course-seed re-runs.
 //   Per §3.1: aqb -> aqc.
-export const SRL_VERSION = "3.8.aqc";
+// v3.8.aqd — Driver Academy best-in-class expansion, BATCH 2: 3 more new
+//   courses — (D4) Vehicle Systems & Diagnosing Malfunctions (4 lessons/8 Q —
+//   air-brake operation + fail-safe, tires/wheels/drivetrain, steering/
+//   suspension/coupling + tug test, reading warning lights/sounds/smells/feel),
+//   (D5) Driver Wellness & Health (4/8 — health = your med card, eating/moving
+//   on the road, sleep/stress/mental health + 988, injury prevention), (D6)
+//   Night Operation & Reduced Visibility (4/8 — don't overdrive your headlights,
+//   glare + the circadian low WOCL, fog/rain/snow low-beam rules, night hazards +
+//   conspicuity). Catalog 25 -> 28 courses / 95 -> 107 lessons / 209 -> 233 Q;
+//   seed --dry-run valid. Reaches drivers on prod course-seed re-run.
+//   Per §3.1: aqc -> aqd.
+export const SRL_VERSION = "3.8.aqd";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

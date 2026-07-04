@@ -1419,4 +1419,282 @@ Every rollover you never have protects the driver, the freight, and your carrier
       { order: 8, question: "Roughly what share of truck drivers killed in rollovers were NOT belted?", options: ["Almost none", "About half", "All of them", "Only new drivers"], correctIndex: 1, explanation: "About half of the truck drivers killed in rollovers weren't wearing a seat belt. The belt is your last defense when prevention has failed — wear it every mile." },
     ],
   },
+
+  // ───────────────────────────────────────────────────────── D4
+  {
+    slug: "vehicle-systems-malfunctions",
+    title: "Vehicle Systems & Diagnosing Malfunctions",
+    category: "Vehicle & Cargo Safety",
+    summary: "The knowledge under the pre-trip: how air brakes, tires, the drivetrain, steering, and coupling actually work — and how to recognize a malfunction by its warning light, sound, smell, or feel before it strands you or causes a crash.",
+    version: "1",
+    estMinutes: 24,
+    passThreshold: 80,
+    validityMonths: 12,
+    sortOrder: 26,
+    disclaimer: DISCLAIMER,
+    lessons: [
+      {
+        order: 1,
+        title: "Air brakes — how they actually work",
+        estMinutes: 6,
+        bodyMarkdown: `Almost every heavy truck stops on **air brakes**, and understanding them is what turns your pre-trip from a ritual into real safety.
+
+**The basics.** An engine-driven compressor pushes air into storage tanks. A **governor** controls it: the compressor stops pumping at the **cut-out** pressure (about **125 psi**) and starts again at the **cut-in** (about **100 psi**). When you press the pedal, air applies the brakes; release, and it lets them off.
+
+**The warnings and the fail-safe.** A **low-air warning** (light and buzzer) must come on **at or before 55 psi** — if it does, stop safely now, because you are running out of braking air. Trucks carry **spring brakes** for parking and emergency: as air pressure falls (typically somewhere around **20–45 psi**), the springs **apply the brakes automatically** — so a total loss of air stops the truck rather than leaving it with none. That's the fail-safe, not a normal way to stop.
+
+**Two things that get drivers killed:**
+- **Brake fade on long downgrades.** Riding the service brakes overheats them until they stop working. Use a **low gear and the engine brake/retarder** to hold your speed; save the service brakes for real slowing.
+- **Water/oil in the tanks.** Drain the tanks (or trust the automatic dryer) so moisture doesn't freeze a valve or foul the system.
+
+**Adjustment.** Brakes work through **slack adjusters**; over-travel of the pushrod means the brakes are out of adjustment and won't deliver full force. That's why the pre-trip brake checks and the CVSA inspection look hard at brake adjustment — see the Pre-Trip and Roadside Inspections courses for the step-by-step checks.
+
+[[figure:air-brake-system-flow]]
+
+> ` + DISCLAIMER,
+      },
+      {
+        order: 2,
+        title: "Tires, wheels & the drivetrain",
+        estMinutes: 6,
+        bodyMarkdown: `**Tires** are the only thing between you and the road, and a tire failure at speed is violent.
+
+- **Tread depth:** at least **4/32 inch** on the **steer** tires and **2/32 inch** on all others. Less than that is out of service.
+- **Inflation:** run the pressure on the tire/placard. **Under-inflation** builds heat and is the leading cause of blowouts; check with a **gauge**, not a thumb or a boot.
+- **Condition:** no cuts, bulges, exposed cords, or mismatched sizes/types on the same axle.
+- **A blowout:** hold the wheel firmly, **stay off the brake**, let off the throttle, keep straight, and slow gradually — braking hard on a blown tire can spin you.
+
+**Wheels and rims:** watch for cracks, missing or loose lug nuts (rust streaks or shiny threads are a tell), and bent rims. A wheel that comes off is a projectile.
+
+**Drivetrain.** The **engine** turns the wheels through the **clutch, transmission, driveshaft, and axles.** You don't repair these on the road, but you must recognize trouble: slipping or grabbing clutch, hard shifting or grinding, a vibration or clunk in the driveline, low power, or overheating on the gauge. A coolant or oil temperature climbing toward the red, or oil pressure dropping, means **shut it down before you destroy the engine.**
+
+[[figure:tire-tread-min-depths]]`,
+      },
+      {
+        order: 3,
+        title: "Steering, suspension & coupling",
+        estMinutes: 5,
+        bodyMarkdown: `**Steering.** Excess **play** at the wheel (more than about **10–15 degrees**, roughly 2 inches at the rim of a 20-inch wheel, before the front wheels move) means worn linkage — get it checked. Watch for a truck that wanders, pulls to one side, or shimmies.
+
+**Suspension.** Cracked or shifted **leaf springs**, a broken **spring hanger**, loose **U-bolts**, or a leaking **air bag/shock** change how the truck handles and can drop an axle. Look under the truck at the pre-trip.
+
+**The coupling — where the trailer meets the tractor.** This connection is life-or-death:
+- The **fifth wheel** locks around the trailer's **kingpin**; the locking jaws must be **fully closed** around the pin, not on the "lip."
+- After coupling, do a **tug test** (pull gently forward against the locked trailer brakes) to confirm the lock. Then look at the connection: the jaws closed, the release handle in the locked position, **no gap** between the fifth wheel and the trailer apron.
+- **Air lines (glad hands)** and the **electrical cord** must be connected, and the lines routed so they can't be crushed or dragged. The **tractor protection valve** and **trailer air supply** keep the tractor's air if the trailer breaks away.
+
+[[figure:fifth-wheel-kingpin-lock]]
+
+A trailer that drops or comes uncoupled is one of the worst outcomes on the road — the tug test and the visual under the fifth wheel are non-negotiable.`,
+      },
+      {
+        order: 4,
+        title: "Recognizing a malfunction on the road",
+        estMinutes: 5,
+        bodyMarkdown: `Between inspections, the truck talks to you — through your **gauges, warning lights, sounds, smells, and the feel of the controls.** Knowing the language is how you catch a failure before it becomes a breakdown or a crash.
+
+**Gauges and lights:** a **low-air warning**, a climbing **coolant or oil temperature**, a **dropping oil pressure**, an **ABS light** that stays on, a **check-engine/stop-engine** lamp, or a **charging** fault — each is the truck telling you something is wrong. A **stop-engine** light means stop and shut down.
+
+**Sounds:** a new squeal, grinding, knocking, hissing air (a leak), or a rhythmic thump (a tire) — investigate, don't ignore.
+
+**Smells:** hot rubber or burning (overheated brakes or an electrical fault), coolant (sweet), or fuel/oil — pull over and look.
+
+**Feel:** a soft or fading brake pedal, a pull, a shimmy, a wander, a vibration that wasn't there this morning. Your hands and the seat feel a problem before a gauge does.
+
+**When in doubt, stop safely and check.** If it's a defect that affects safe operation, the truck is **out of service** until it's fixed — and you record it on your **DVIR** (post-trip inspection report) so it gets repaired and the next driver knows. "It was making that noise all day" is never a good thing to say after a breakdown or a crash.
+
+[[figure:dash-warning-lights]]`,
+      },
+    ],
+    questions: [
+      { order: 1, question: "The low-air-pressure warning must come on at or before:", options: ["85 psi", "55 psi", "20 psi", "125 psi"], correctIndex: 1, explanation: "The low-air warning (light + buzzer) must activate at or before 55 psi. If it comes on, stop safely — you're running out of braking air. (Governor cut-out is ~125 psi, cut-in ~100 psi.)" },
+      { order: 2, question: "As air pressure falls toward ~20–45 psi, the spring (parking/emergency) brakes:", options: ["Release completely", "Apply automatically — the fail-safe", "Stay exactly where they are", "Only work if you pull the valve"], correctIndex: 1, explanation: "Spring brakes apply automatically as air drops into that range, so a total loss of air stops the truck instead of leaving it with no brakes. It's a fail-safe, not a normal stopping method." },
+      { order: 3, question: "Minimum tread depth is:", options: ["2/32\" on all tires", "4/32\" on the steer axle, 2/32\" on all others", "6/32\" everywhere", "There is no minimum"], correctIndex: 1, explanation: "At least 4/32\" on the steer (front) tires and 2/32\" on all others; below that is out of service. Check with a gauge and watch inflation — underinflation builds heat and causes blowouts." },
+      { order: 4, question: "You have a front-tire blowout at highway speed. You should:", options: ["Brake hard immediately", "Hold the wheel firmly, stay off the brake, ease off the throttle, and slow gradually", "Steer sharply onto the shoulder", "Accelerate to keep control"], correctIndex: 1, explanation: "Hard braking on a blown tire can spin the truck. Grip the wheel, keep straight, get off the throttle, and let it slow before easing off the road." },
+      { order: 5, question: "To hold your speed on a long downgrade and avoid brake fade, you:", options: ["Ride the service brakes steadily", "Use a low gear and the engine brake/retarder, saving the service brakes", "Coast in neutral", "Pump the brakes hard the whole way"], correctIndex: 1, explanation: "Riding the service brakes overheats them until they fade to nothing. Select a safe low gear before the grade and let the engine brake/retarder hold you; use the service brakes only for extra slowing." },
+      { order: 6, question: "After coupling to a trailer, the tug test is:", options: ["Optional if the trailer looks connected", "Pulling gently forward against the locked trailer brakes to confirm the fifth wheel is locked on the kingpin", "Slamming the trailer to seat it", "Checking the tire pressure"], correctIndex: 1, explanation: "A gentle forward pull against the locked trailer brakes confirms the fifth-wheel jaws are locked around the kingpin (not on the lip). Then look under: jaws closed, handle locked, no gap between the fifth wheel and the trailer apron." },
+      { order: 7, question: "A stop-engine warning light comes on. You should:", options: ["Keep driving to the next stop", "Stop safely and shut the engine down", "Ignore it if the truck still runs", "Rev the engine to clear it"], correctIndex: 1, explanation: "A stop-engine lamp means shut it down before you destroy the engine (e.g., low oil pressure or overheating). Don't try to nurse it down the road." },
+      { order: 8, question: "You find a defect that affects safe operation during your trip. You:", options: ["Finish the load and mention it later", "Take the truck out of service until it's repaired and record it on your DVIR", "Only note it if a cop stops you", "Fix it yourself at the next exit"], correctIndex: 1, explanation: "A safety-affecting defect makes the truck out of service until repaired, and it goes on your post-trip DVIR so it's fixed and the next driver is warned. Never run a known safety defect." },
+    ],
+  },
+
+  // ───────────────────────────────────────────────────────── D5
+  {
+    slug: "driver-wellness-health",
+    title: "Driver Wellness & Health",
+    category: "Driver Qualification & Health",
+    summary: "Staying healthy enough to keep your medical card and your career: eating and moving on the road, managing blood pressure and blood sugar, protecting your mental health, and avoiding the injuries and chronic disease the job is known for.",
+    version: "1",
+    estMinutes: 20,
+    passThreshold: 80,
+    validityMonths: 12,
+    sortOrder: 27,
+    disclaimer: DISCLAIMER,
+    lessons: [
+      {
+        order: 1,
+        title: "Your health is your license",
+        estMinutes: 5,
+        bodyMarkdown: `Your **DOT medical card** — and therefore your ability to work — depends on your health. The lifestyle of the job (long hours seated, truck-stop food, disrupted sleep, stress) drives the exact conditions the physical checks: **high blood pressure, high blood sugar/diabetes, obesity, heart disease, and sleep apnea.** Managing them isn't optional wellness advice; it's how you keep passing the exam and stay in the seat.
+
+**Blood pressure.** Hypertension is common in drivers and directly affects certification. Well-controlled pressure can mean a normal certification cycle; uncontrolled can **shorten your card or disqualify you** until it's managed. Know your numbers, take prescribed medication consistently, and cut back on the salt and energy drinks that spike it.
+
+**Blood sugar / diabetes.** Diabetes can be managed and still allow certification, but it must be **under control and documented.** Watch for the warning signs of a blood-sugar low (shakiness, confusion, sweating) — never drive through one.
+
+**Weight and heart health.** Carrying extra weight raises blood pressure, blood sugar, apnea risk, and heart-attack risk — the leading medical causes of a driver losing certification. Small, sustained changes beat crash diets.
+
+The theme: the conditions that end driving careers are largely **preventable and manageable.** Treat your health the way you treat your CDL and your logs — as a thing you protect on purpose.
+
+[[figure:med-card-health-drivers]]
+
+> ` + DISCLAIMER,
+      },
+      {
+        order: 2,
+        title: "Eating and moving on the road",
+        estMinutes: 5,
+        bodyMarkdown: `You can eat and move well from a truck — it just takes a plan, because the default (fried food, sodas, energy drinks, and 11 hours in the seat) works against you.
+
+**Eating:**
+- Keep a **cooler** with real food — fruit, nuts, jerky, yogurt, pre-made meals — so you're not at the mercy of the fried counter.
+- **Water first.** Dehydration causes fatigue, headaches, and poor focus; energy drinks and constant soda spike blood sugar and blood pressure. Aim to keep water in reach and sip through the day.
+- Watch **portion size** and the late-night heavy meal that wrecks your sleep.
+
+**Moving:**
+- You lose ground sitting all day. Build in **short movement** — a brisk walk around the lot at fuel and rest stops, stretching, bodyweight exercises, a resistance band you keep in the cab.
+- Even **10–15 minutes** of walking a few times a day meaningfully offsets the seated hours and helps blood pressure, weight, mood, and alertness.
+
+None of this requires a gym. It requires a **cooler, a water bottle, and the decision to walk instead of sit** at every stop. Done for months, it's the difference between passing your physical and losing it.
+
+[[figure:cooler-and-walk-plan]]`,
+      },
+      {
+        order: 3,
+        title: "Sleep, stress & mental health",
+        estMinutes: 5,
+        bodyMarkdown: `**Sleep is the foundation.** Fatigue is covered in depth in the Distracted & Fatigued Driving course — the wellness angle is: protect your sleep like a health asset. Get real, dark, quiet rest; treat **sleep apnea** (loud snoring, gasping, waking unrefreshed, daytime sleepiness) because untreated apnea both wrecks your health and can affect your medical certification. If you suspect it, get evaluated — it's treatable.
+
+**Mental health is real health.** The job is **isolating** — long stretches alone, missed family time, financial and schedule stress. Chronic stress raises blood pressure and drives poor eating, drinking, and sleep. Depression and anxiety are common and treatable.
+
+- **Stay connected** — regular calls home, a routine, contact with other drivers.
+- **Recognize the warning signs** in yourself: persistent low mood, hopelessness, sleeplessness, heavy drinking, or thoughts of self-harm. These are medical issues, not weakness.
+- **Reach out.** Talk to family, a doctor, your carrier's resources, or the **988 Suicide & Crisis Lifeline** (call or text **988**) if you're in crisis. And remember the drug/alcohol rules — self-medicating with alcohol or drugs risks your career on top of your health.
+
+Taking care of your head keeps you safe on the road and in the seat for the long run.
+
+[[figure:driver-mental-health-connect]]`,
+      },
+      {
+        order: 4,
+        title: "Staying injury-free",
+        estMinutes: 4,
+        bodyMarkdown: `The job's day-to-day injuries are mostly preventable — and they're covered hands-on in the Workplace & Dock Safety course. The wellness habits that keep you off the injured list:
+
+- **Lift with your legs, not your back**, keep the load close, and don't twist — most driver back injuries come from securing freight, handling tarps/chains, or grabbing a heavy bag, not from a crash.
+- **Three points of contact** getting in and out of the cab and trailer — a slip off the steps is one of the most common driver injuries.
+- **Hydrate and manage heat and cold** — heat exhaustion in a hot trailer or on a summer dock, and cold injury in winter, both sneak up on you.
+- **Stretch** before and after long stints in the seat to protect your back, hips, and shoulders.
+- **Wear the seat belt** — the single biggest thing you can do to survive a crash.
+
+Your body is your equipment. Maintain it the way you maintain the truck, and it'll keep you earning for decades instead of ending the career early.`,
+      },
+    ],
+    questions: [
+      { order: 1, question: "Why does driver health directly affect your career?", options: ["It doesn't — only driving record matters", "The DOT medical card depends on it; conditions like high blood pressure, diabetes, apnea, and heart disease can shorten or end certification", "Only if you drive hazmat", "Only after age 65"], correctIndex: 1, explanation: "The DOT physical checks blood pressure, blood sugar, weight, heart, and apnea — the very conditions the job's lifestyle drives. Managing them is how you keep passing the exam and stay in the seat." },
+      { order: 2, question: "The best default beverage to keep in reach on the road is:", options: ["Energy drinks", "Soda", "Water", "Coffee only"], correctIndex: 2, explanation: "Dehydration causes fatigue, headaches, and poor focus; energy drinks and soda spike blood sugar and blood pressure. Keep water in reach and sip through the day." },
+      { order: 3, question: "Untreated sleep apnea is a concern because it:", options: ["Has no health effect", "Wrecks your health AND can affect your medical certification — and it's treatable", "Only matters for team drivers", "Improves alertness"], correctIndex: 1, explanation: "Signs include loud snoring, gasping, and daytime sleepiness. Untreated apnea harms your health and can affect certification — get evaluated, because it's treatable." },
+      { order: 4, question: "You notice persistent low mood, sleeplessness, and heavy drinking creeping in. This is:", options: ["Weakness to push through alone", "A medical issue — reach out to family, a doctor, or 988; self-medicating with alcohol/drugs risks your career too", "Normal, ignore it", "Only a problem if you crash"], correctIndex: 1, explanation: "Mental health is real health. The job is isolating and stressful; depression/anxiety are common and treatable. Stay connected, watch the warning signs, and reach out — the 988 Suicide & Crisis Lifeline is call-or-text 988. Self-medicating also risks the drug/alcohol rules." },
+      { order: 5, question: "Most driver back injuries come from:", options: ["Crashes only", "Securing freight, handling tarps/chains, and lifting — so lift with your legs, keep the load close, don't twist", "Sitting still", "Nothing preventable"], correctIndex: 1, explanation: "The everyday injuries are from handling freight and gear, not crashes. Lift with your legs, keep the load close, avoid twisting, and use three points of contact getting in and out." },
+      { order: 6, question: "Realistically, staying active on the road looks like:", options: ["Nothing is possible from a truck", "Short walks around the lot at every stop, stretching, bodyweight/band exercises — 10–15 min a few times a day", "A full gym workout daily", "Only on home time"], correctIndex: 1, explanation: "No gym required — a cooler, a water bottle, and walking instead of sitting at every stop, a few times a day, meaningfully offsets the seated hours." },
+      { order: 7, question: "Well-controlled high blood pressure vs. uncontrolled, for your medical card:", options: ["Makes no difference", "Controlled can mean a normal certification cycle; uncontrolled can shorten your card or disqualify you until managed", "Always disqualifies you either way", "Only matters over age 70"], correctIndex: 1, explanation: "Blood pressure directly affects certification length. Know your numbers, take medication consistently, and cut the salt and energy drinks that spike it." },
+      { order: 8, question: "The single biggest thing you can do to survive a crash is:", options: ["Drive a newer truck", "Wear your seat belt", "Carry more insurance", "Drive slower only in town"], correctIndex: 1, explanation: "The seat belt is your last and best defense in any crash or rollover — wear it every mile." },
+    ],
+  },
+
+  // ───────────────────────────────────────────────────────── D6
+  {
+    slug: "night-reduced-visibility",
+    title: "Night Operation & Reduced Visibility",
+    category: "On-Road Safety",
+    summary: "Driving when you can't see well: night vision and not overdriving your headlights, glare and the circadian low, fog/rain/snow/dust, and the night hazards — animals, pedestrians, impaired drivers — plus keeping your own truck visible.",
+    version: "1",
+    estMinutes: 18,
+    passThreshold: 80,
+    validityMonths: 12,
+    sortOrder: 28,
+    disclaimer: DISCLAIMER,
+    lessons: [
+      {
+        order: 1,
+        title: "Night vision and your headlights",
+        estMinutes: 5,
+        bodyMarkdown: `At night you can see far **less** than in daylight, yet the road looks deceptively calm. The single most important night rule handles that gap.
+
+**Don't overdrive your headlights.** You must be able to **stop within the distance you can see ahead.** Low beams light roughly **250 feet**; high beams roughly **350–500 feet**. At **55 mph** a loaded truck can need **more than 250 feet** to stop — so on low beams you may be driving faster than you can see to stop. The fix: **use your high beams whenever it's legal and there's no oncoming traffic**, and when you can't (oncoming cars, fog, close following), **slow down** to match the distance you can actually see.
+
+**Use high beams correctly.** Switch to high beams on dark open road; drop to **low beams** when you meet oncoming traffic (about **500 feet** away) or come up **behind** another vehicle (about **500 feet**), so you don't blind them. Dirty or misaimed headlights cut your seeing distance — keep the lenses clean.
+
+**Give your eyes time.** It takes several minutes for your eyes to adapt to the dark, and a bright light resets it. Dim your dash, and don't stare into oncoming lights.
+
+[[figure:overdriving-headlights]]
+
+> ` + DISCLAIMER,
+      },
+      {
+        order: 2,
+        title: "Glare, fatigue & the circadian low",
+        estMinutes: 4,
+        bodyMarkdown: `**Glare recovery.** A blast of oncoming high beams can blind you for **several seconds** — long enough to cover the length of a football field at highway speed without really seeing. Don't look directly at oncoming lights; **glance toward the right edge of your lane** and use the lane line to steer until your eyes recover. If you're blinded, slow down.
+
+**Night is fatigue's home turf.** Your body clock has a **window of circadian low (WOCL)**, roughly **midnight to 6 a.m.** (and a smaller dip mid-afternoon), when alertness bottoms out no matter how much you slept. Driving through the WOCL is when microsleeps and drift-offs happen. The Distracted & Fatigued Driving course covers the response — the night-specific version: if you're fighting your eyes at 3 a.m., the road is dark, and you're leaning on the rumble strip to stay awake, **that is the signal to stop**, not to push the last hour.
+
+**Boredom and monotony** on an empty night highway also dull you. Keep your eyes moving, keep the cab cool, and don't rely on caffeine to replace sleep — it delays the crash, it doesn't prevent it.
+
+[[figure:wocl-alertness-curve]]`,
+      },
+      {
+        order: 3,
+        title: "Fog, rain, snow and dust",
+        estMinutes: 5,
+        bodyMarkdown: `Reduced visibility isn't only night — weather can drop your sight to a few truck lengths in daylight.
+
+**Fog (and smoke, heavy dust):**
+- Use **low beams**, never high — high beams **reflect back off the fog** and blind you.
+- **Slow way down** so you can stop within what you can see, and increase following distance.
+- Use fog lights if equipped; turn on your **wipers/defroster**.
+- If it's too thick to see safely, **get completely off the road** — all the way into a rest area or off the shoulder with lights and 4-ways on. A truck stopped on the fog line is a pile-up waiting to happen; drivers behind fixate on your taillights and drive right into you.
+
+**Rain:** the first rain lifts oil to a slick surface; watch for **hydroplaning** (at speed on standing water the tires ride up and you lose steering and braking) — slow down, avoid puddles and ruts, and after a deep puddle, **dry your brakes** with light pressure.
+
+**Snow/ice:** slow down long before you need to, no sudden inputs, watch for **black ice** on bridges and shaded spots (bridges freeze first). If the road is beating you, the professional call is to **shut down safely** rather than roll the truck into a ditch or a chain-reaction crash.
+
+[[figure:fog-low-beams-pull-off]]`,
+      },
+      {
+        order: 4,
+        title: "Night hazards and being seen",
+        estMinutes: 4,
+        bodyMarkdown: `The dark hides specific threats — anticipate them.
+
+- **Animals.** Dawn, dusk, and night are peak wildlife hours. Watch the road edges for **eye-shine**, slow near woods and crossing signs, and don't swerve violently for an animal — a controlled hit is usually safer than a rollover or a head-on.
+- **Pedestrians and cyclists** are far harder to see at night, especially in dark clothing near shoulders, rural roads, and truck stops. Scan the edges, especially around lots and towns.
+- **Impaired and drowsy drivers** cluster **late night**, especially weekends and bar-closing hours. A car weaving, drifting, or with no lights is a screaming hazard — give it room and don't be next to it.
+- **Work zones at night** are common and dangerous — reduced lighting, shifted lanes, workers close to traffic. Slow down and expect the unexpected.
+
+**Be seen.** Your conspicuity is your protection: keep all **lights, reflectors, and reflective tape clean** — a road-grimed trailer is nearly invisible at night, and the car that "came out of nowhere" often just never saw the dark trailer. Use your lights, signal early, and make sure the small vehicle can see the truck.
+
+[[figure:night-conspicuity-reflectors]]`,
+      },
+    ],
+    questions: [
+      { order: 1, question: "\"Don't overdrive your headlights\" means:", options: ["Always use high beams", "Drive so you can stop within the distance your headlights let you see — slow down when you can't use high beams", "Drive faster at night", "Turn your lights off to see better"], correctIndex: 1, explanation: "Low beams light ~250 ft, and at 55 mph a loaded truck may need more than that to stop. Use high beams when legal and clear; when you can't (oncoming, fog, following), slow to match the distance you can actually see." },
+      { order: 2, question: "In fog you should use:", options: ["High beams", "Low beams — high beams reflect back and blind you", "No lights", "Hazards only, no headlights"], correctIndex: 1, explanation: "High beams bounce off the fog and worsen your vision. Use low beams (and fog lights if equipped), slow way down, and if it's too thick to see, get completely off the road." },
+      { order: 3, question: "You're blinded by oncoming high beams. You should:", options: ["Stare at their lights", "Look toward the right edge of your lane and use the lane line until your eyes recover; slow if needed", "Flash your high beams and speed up", "Close your eyes briefly"], correctIndex: 1, explanation: "Glare can blind you for several seconds. Don't look into the lights — glance to the right edge and steer by the lane line, and slow down while your eyes recover." },
+      { order: 4, question: "The Window of Circadian Low (WOCL) — when alertness bottoms out — is roughly:", options: ["Noon to 2 p.m.", "Midnight to 6 a.m.", "6 p.m. to 9 p.m.", "There's no such window"], correctIndex: 1, explanation: "Your body clock hits its low from about midnight to 6 a.m. (with a smaller mid-afternoon dip). Microsleeps cluster here regardless of prior sleep — if you're fighting your eyes at 3 a.m., that's the signal to stop." },
+      { order: 5, question: "A truck stopped on the fog line with taillights on is dangerous because:", options: ["It's perfectly safe", "Following drivers fixate on the taillights and drive right into it — get completely off the road", "It uses too much fuel", "It's illegal to stop anywhere"], correctIndex: 1, explanation: "In fog, drivers behind lock onto your taillights and follow them into you. If it's too thick to drive, get all the way off the road (into a rest area or well off the shoulder) with your 4-ways on." },
+      { order: 6, question: "A deer runs into the road at night. The safer response is usually to:", options: ["Swerve hard to miss it", "Brake in a controlled way and take a controlled hit if needed, rather than swerve into a rollover or head-on", "Speed up", "Turn off your lights"], correctIndex: 1, explanation: "Violent swerving in a high-CG truck risks a rollover or crossing into oncoming traffic. Slow in a controlled way; a controlled hit is usually safer than losing the truck. Watch road edges for eye-shine near woods." },
+      { order: 7, question: "Late-night, a car ahead is weaving and drifting across the lane. You should:", options: ["Pass close alongside it", "Assume it's an impaired/drowsy driver — give it lots of room and don't ride beside it", "Tailgate to hurry it up", "Flash your brights repeatedly"], correctIndex: 1, explanation: "Weaving, drifting, or no-lights cars cluster late night/weekends and are a major hazard. Give room, don't sit beside it, and keep your out." },
+      { order: 8, question: "The best protection against \"the car that came out of nowhere\" at night is:", options: ["Driving faster to get ahead of traffic", "Keeping your lights, reflectors, and reflective tape clean so the truck is visible", "Using only low beams", "Nothing — it's unavoidable"], correctIndex: 1, explanation: "A road-grimed trailer is nearly invisible at night. Clean lights/reflectors/tape, early signals, and good lane position are your conspicuity — make sure the small vehicle can see the truck." },
+    ],
+  },
 ];
