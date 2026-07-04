@@ -13874,7 +13874,15 @@
 //       session) is allowed until the next login sets it.
 //   Gates: prisma generate + backend tsc + vitest 320/320 + frontend next build.
 //   Per §3.1: apz → aqa.
-export const SRL_VERSION = "3.8.aqa";
+// v3.8.aqb — Driver Academy content authenticity fix (from the full 22-course
+//   regulatory audit, which otherwise found the content accurate + current).
+//   cargo-securement Lesson 1 listed a nonexistent "0.2 g vertical (upward)"
+//   force under 49 CFR 393.102. Corrected: §393.102(a) has only the three
+//   g-forces (0.8 fwd / 0.5 rear / 0.5 lateral); the ~20% figure is the SEPARATE
+//   §393.102(b) DOWNWARD force of at least 20% of the article's weight for cargo
+//   not fully contained by structure. Course version 4 -> 5. Reaches drivers when
+//   the prod course-seed (seed-training-courses.ts) is re-run. Per §3.1: aqa -> aqb.
+export const SRL_VERSION = "3.8.aqb";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

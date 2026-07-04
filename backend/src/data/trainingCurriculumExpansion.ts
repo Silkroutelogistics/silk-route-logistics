@@ -304,7 +304,7 @@ These are awareness points; your full hazmat training and the ERG carry the deta
     title: "Cargo Securement",
     category: "Vehicle & Cargo Safety",
     summary: "The FMCSA securement rules: the forces your system must hold, the working-load-limit 50% rule and how each tiedown counts, the minimum-tiedown count, a worked example you can run at the dock, spotting weak securement, and when to re-check.",
-    version: "4",
+    version: "5",
     estMinutes: 24,
     passThreshold: 80,
     validityMonths: 12,
@@ -317,7 +317,7 @@ These are awareness points; your full hazmat training and the ERG carry the deta
         estMinutes: 4,
         bodyMarkdown: `Cargo securement is governed by **49 CFR 393, Subpart I**. The goal: cargo must not shift, spill, leak, blow off, or fall during normal driving, including hard braking and hard steering.
 
-**The forces your system must hold (49 CFR 393.102).** Your securement must withstand at least **0.8 g forward** (a hard stop), **0.5 g rearward**, **0.5 g to each side**, and **0.2 g vertical** (upward). In plain terms: the freight has to stay put when you brake hard, accelerate, swerve, or hit a bump.
+**The forces your system must hold (49 CFR 393.102).** Under **§393.102(a)** your securement must withstand at least **0.8 g forward** (a hard stop), **0.5 g rearward**, and **0.5 g to each side**. Separately, under **§393.102(b)**, for cargo that is not fully contained by walls, a headboard, or other structure, the tiedowns must provide a **downward force of at least 20% of the article's weight**. In plain terms: the freight has to stay put when you brake hard, accelerate, or swerve, and be held down so it can't bounce free.
 
 **It is on you.** The driver is responsible for knowing the cargo is properly distributed and secured before moving, and for keeping it that way en route. "The shipper loaded it" is not a defense if the load comes loose on your truck.`,
       },
