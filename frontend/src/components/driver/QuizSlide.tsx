@@ -7,7 +7,7 @@
 // + the per-question checked state + the server check call; the final /quiz submit
 // stays the sole pass authority. Canonical §2.1 tokens.
 
-import { ChevronLeft, ChevronRight, Loader2, CheckCircle2, XCircle } from "lucide-react";
+import { ChevronRight, Loader2, CheckCircle2, XCircle } from "lucide-react";
 
 export interface CheckedResult { correct: boolean; correctIndex: number; explanation: string | null; xp?: number }
 
@@ -20,7 +20,6 @@ export interface QuizSlideProps {
   checkedResult: CheckedResult | null; // this question's result, if already checked (locks it)
   onCheck: () => void; // player calls the check endpoint + stores the result + awards XP
   checking: boolean;
-  onBack: () => void; // index 0 → review lessons; else previous question
   onNext: () => void;
   onSubmit: () => void;
   submitting: boolean;
@@ -105,11 +104,11 @@ export function QuizSlide(p: QuizSlideProps) {
         </div>
       )}
 
-      <div className="mt-4 flex items-center justify-between">
-        <button onClick={p.onBack}
-          className="flex items-center gap-1 rounded-lg px-3 py-2.5 text-[13px] text-[#6B7685] transition-colors hover:bg-[#F5EEE0]">
-          <ChevronLeft size={16} /> {p.index === 0 ? "Review lessons" : "Back"}
-        </button>
+      {/* v3.8 — forward-only quiz: no Back button. Once a driver Checks an answer
+          it locks; there is no returning to a previous question or to the lessons.
+          The quiz is a committed assessment. */}
+      <div className="mt-4 flex items-center justify-between gap-3">
+        <span className="text-[11px] text-[#A7AEB8]">Forward only — you can&apos;t go back to a previous question.</span>
         {!locked ? (
           <button onClick={p.onCheck} disabled={!hasSelection || p.checking} className={PRIMARY}>
             {p.checking && <Loader2 size={14} className="animate-spin" />} Check

@@ -148,6 +148,9 @@ function CourseContent() {
   };
 
   const goToQuiz = async () => {
+    // Committed-assessment confirm: once the quiz starts there is no going back
+    // to the lessons or to a previous question (forward-only).
+    if (typeof window !== "undefined" && !window.confirm("Start the quiz? Once you begin, you can't go back to the lessons or change an earlier answer.")) return;
     // audit F3 — record full read-through server-side AND await it before the
     // quiz so the backend "complete all lessons" gate never blocks a legit driver.
     try {
@@ -280,11 +283,6 @@ function CourseContent() {
           checkedResult={checked[q.id] ?? null}
           onCheck={() => checkAnswer(q)}
           checking={checking}
-          onBack={() => {
-            setError(null); setStaleReload(false);
-            if (quizIdx === 0) { setPhase("lessons"); setLessonIdx(0); window.scrollTo({ top: 0 }); }
-            else { setQuizIdx((i) => Math.max(0, i - 1)); window.scrollTo({ top: 0 }); }
-          }}
           onNext={() => { setError(null); setQuizIdx((i) => Math.min(questions.length - 1, i + 1)); window.scrollTo({ top: 0 }); }}
           onSubmit={submitQuiz}
           submitting={submitting}

@@ -2556,6 +2556,11 @@ model Driver {
   trainingFailedAttempts Int       @default(0)
   trainingLockedUntil    DateTime?
   trainingLastLoginAt    DateTime?
+  // Single active session per driver: rotated on every login/set-pin and
+  // embedded as the `sid` claim in the session JWT. authenticateDriver rejects
+  // a token whose sid != this value, so a new login anywhere signs the old
+  // device out. Null = no post-feature login yet (backward-compatible).
+  trainingSessionId      String?
 
   shipments Shipment[]
   loads     Load[]

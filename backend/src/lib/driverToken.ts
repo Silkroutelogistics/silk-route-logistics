@@ -49,6 +49,7 @@ export interface DriverSessionPayload {
   driverId: string;
   carrierProfileId: string;
   purpose: typeof SESSION_PURPOSE;
+  sid: string | null; // single-session id — must match drivers.trainingSessionId
 }
 
 export function mintDriverInviteToken(driverId: string, carrierProfileId: string, expiresIn: string | number = "7d"): string {
@@ -73,9 +74,9 @@ export function verifyDriverInviteToken(token: string): DriverInvitePayload | nu
   }
 }
 
-export function mintDriverSessionToken(driverId: string, carrierProfileId: string, expiresIn: string | number = DRIVER_SESSION_SECONDS): string {
+export function mintDriverSessionToken(driverId: string, carrierProfileId: string, sessionId: string, expiresIn: string | number = DRIVER_SESSION_SECONDS): string {
   return jwt.sign(
-    { driverId, carrierProfileId, purpose: SESSION_PURPOSE },
+    { driverId, carrierProfileId, purpose: SESSION_PURPOSE, sid: sessionId },
     env.JWT_SECRET,
     { algorithm: "HS256", expiresIn } as jwt.SignOptions,
   );
@@ -89,7 +90,11 @@ export function verifyDriverSessionToken(token: string): DriverSessionPayload | 
     if (typeof driverId !== "string" || typeof carrierProfileId !== "string" || decoded.purpose !== SESSION_PURPOSE) {
       return null;
     }
-    return { driverId, carrierProfileId, purpose: SESSION_PURPOSE };
+    // Legacy tokens (pre single-session) carry no sid — null is allowed; the
+    // middleware treats a null-sid token as valid only until the driver's next
+    // login rotates trainingSessionId (see authenticateDriver).
+    const sid = typeof decoded.sid === "string" ? decoded.sid : null;
+    return { driverId, carrierProfileId, purpose: SESSION_PURPOSE, sid };
   } catch {
     return null;
   }

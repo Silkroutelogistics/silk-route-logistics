@@ -14,6 +14,7 @@ import { setTokenCookie, clearTokenCookie } from "../utils/cookies";
 import { blacklistToken, isTokenBlacklisted } from "../utils/tokenBlacklist";
 import { normalizePhoneE164 } from "../lib/phoneNormalization";
 import { isWeakPin } from "../lib/pinValidation";
+import { randomUUID } from "crypto";
 
 /**
  * v3.8.amz — SRL Driver Academy Sprint T2: driver phone + PIN authentication.
@@ -132,6 +133,7 @@ router.post("/set-pin", setPinLimiter, validateBody(setPinSchema), async (req: R
   }
 
   const pinHash = await bcrypt.hash(pin, 12);
+  const sessionId = randomUUID(); // single active session — see authenticateDriver
   // Atomic compare-and-set: only set if STILL null. A concurrent set-pin
   // (e.g. an old link racing a fresh one after reset) hits count===0 and
   // gets 409 instead of silently overwriting the winner's PIN.
@@ -143,6 +145,7 @@ router.post("/set-pin", setPinLimiter, validateBody(setPinSchema), async (req: R
       trainingFailedAttempts: 0,
       trainingLockedUntil: null,
       trainingLastLoginAt: new Date(),
+      trainingSessionId: sessionId,
     },
   });
   if (result.count === 0) {
@@ -155,7 +158,7 @@ router.post("/set-pin", setPinLimiter, validateBody(setPinSchema), async (req: R
   void logDriverAuthEvent(`Driver ${driver.id} activated training PIN`, "INFO", clientIp(req));
 
   // Auto-login: issue a session so the driver lands straight in the portal.
-  const sessionToken = mintDriverSessionToken(driver.id, driver.carrierProfileId);
+  const sessionToken = mintDriverSessionToken(driver.id, driver.carrierProfileId, sessionId);
   setTokenCookie(res, sessionToken, "DRIVER", DRIVER_SESSION_MAX_AGE_MS);
   res.json({ driver: publicDriver(driver), activated: true });
 });
@@ -238,12 +241,13 @@ router.post("/login", driverLoginLimiter, validateBody(loginSchema), async (req:
     return;
   }
 
+  const sessionId = randomUUID(); // single active session — rotates on each login
   await prisma.driver.update({
     where: { id: matched.id },
-    data: { trainingFailedAttempts: 0, trainingLockedUntil: null, trainingLastLoginAt: new Date() },
+    data: { trainingFailedAttempts: 0, trainingLockedUntil: null, trainingLastLoginAt: new Date(), trainingSessionId: sessionId },
   });
 
-  const sessionToken = mintDriverSessionToken(matched.id, matched.carrierProfileId);
+  const sessionToken = mintDriverSessionToken(matched.id, matched.carrierProfileId, sessionId);
   setTokenCookie(res, sessionToken, "DRIVER", DRIVER_SESSION_MAX_AGE_MS);
   res.json({ driver: publicDriver(matched) });
 });

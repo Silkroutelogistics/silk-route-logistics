@@ -13860,7 +13860,21 @@
 //   (validateAndNotifyPOD -> sendShipperPODEmail); sendShipperDeliveryEmail is
 //   retained. Net: one clean lifecycle email per status. Gates: backend tsc +
 //   vitest 320/320 + frontend next build. Per §3.1: apy → apz.
-export const SRL_VERSION = "3.8.apz";
+// v3.8.aqa — SRL Driver Academy: two hard rules.
+//   (1) QUIZ IS FORWARD-ONLY. Once the quiz starts a driver can't go back to
+//       the lessons or to a previous question. The answer already locked on
+//       "Check"; removed the Back button from QuizSlide + the player's onBack
+//       wiring, and added a "Start the quiz? you can't go back" confirm before
+//       entering. (The browser-back exit-lock from v3.8.ans already traps that.)
+//   (2) ONE ACTIVE SESSION PER DRIVER. New drivers.trainingSessionId (additive
+//       migration) is rotated on every login + set-pin and embedded as the `sid`
+//       claim in the session JWT; authenticateDriver rejects a token whose sid
+//       no longer matches (401 SESSION_SUPERSEDED) — a new login anywhere signs
+//       the old device out. Backward-compatible: a null stored id (pre-feature
+//       session) is allowed until the next login sets it.
+//   Gates: prisma generate + backend tsc + vitest 320/320 + frontend next build.
+//   Per §3.1: apz → aqa.
+export const SRL_VERSION = "3.8.aqa";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

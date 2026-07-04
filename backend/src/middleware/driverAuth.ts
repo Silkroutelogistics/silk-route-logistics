@@ -67,6 +67,7 @@ export async function authenticateDriver(req: DriverRequest, res: Response, next
       lastName: true,
       status: true,
       trainingPinHash: true,
+      trainingSessionId: true,
     },
   });
 
@@ -89,6 +90,17 @@ export async function authenticateDriver(req: DriverRequest, res: Response, next
     res.status(403).json({
       error: "Your driver profile is inactive. Contact your carrier.",
       code: "DRIVER_INACTIVE",
+    });
+    return;
+  }
+  // Single active session: the token's sid must match the driver's current
+  // trainingSessionId. Every login / set-pin rotates that id, so an older
+  // session token stops working — one active device at a time. A null stored id
+  // means a pre-feature session; allowed until the next login sets it.
+  if (driver.trainingSessionId && payload.sid !== driver.trainingSessionId) {
+    res.status(401).json({
+      error: "You've been signed out because your account was signed in on another device.",
+      code: "SESSION_SUPERSEDED",
     });
     return;
   }
