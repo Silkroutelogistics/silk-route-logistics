@@ -1113,4 +1113,310 @@ Look **far ahead**, keep an **escape path** to the side, and never let a four-wh
       { order: 8, question: "A shipper says 'it's only a little overweight, just avoid the scales.' This is:", options: ["smart routing advice", "coercion to violate the rules — the same protections apply as being pushed past your hours", "fine as long as you don't get caught", "only the shipper's problem, not yours"], correctIndex: 1, explanation: "Coercion under 390.6 isn't only about hours — being pushed to run overweight, skip a securement or brake check, or drive a truck with a known defect counts too. The same right to refuse and the same reporting protections apply." },
     ],
   },
+
+  // ───────────────────────────────────────────────────────── D1
+  {
+    slug: "space-speed-hazard-management",
+    title: "Space & Speed Management + Hazard Perception",
+    category: "On-Road Safety",
+    summary: "The core of defensive driving: search far enough ahead to see trouble early, keep enough following distance and space on all sides, manage speed to the real stopping physics of a loaded truck, and read hazards before they become emergencies.",
+    version: "1",
+    estMinutes: 26,
+    passThreshold: 80,
+    validityMonths: 12,
+    sortOrder: 23,
+    disclaimer: DISCLAIMER,
+    lessons: [
+      {
+        order: 1,
+        title: "See the whole picture",
+        estMinutes: 5,
+        bodyMarkdown: `Most crashes are lost in the seconds before they happen — because the driver was looking too close to the front of the truck. Defensive driving starts with **where you look**.
+
+**Look 12 to 15 seconds ahead.** That is about a **quarter mile** at highway speed, or about **one and a half blocks** in town. Aiming that far down the road gives you time to see a problem, decide, and act smoothly instead of reacting at the last second. If all you can see is the bumper ahead of you, you are driving blind.
+
+**Keep your eyes moving.** Scan — near, far, both mirrors — don't fix on one point. Check your **mirrors every 5 to 8 seconds** and before every lane change, hill, and curve so you always know what is beside and behind you. A stare is how you miss the car drifting into your lane.
+
+**Get the big picture.** Watch the traffic two, three, four vehicles ahead, not just the car in front of you. Brake lights way up the line are your early warning; by the time the car directly ahead lights up, you have already lost your cushion.
+
+These are the first three of the **Smith System 5 Keys** — *Aim High in Steering, Get the Big Picture, Keep Your Eyes Moving.* The last two, *Leave Yourself an Out* and *Make Sure They See You*, come later in this course.
+
+[[figure:visual-lead-time-quarter-mile]]
+
+> ` + DISCLAIMER,
+      },
+      {
+        order: 2,
+        title: "Following distance — the space ahead",
+        estMinutes: 5,
+        bodyMarkdown: `The space in front of you is the one you control, and it is the space that keeps you out of the rear-end crash.
+
+**The rule (CDL manual).** Under **40 mph**, keep at least **one second of following distance for every 10 feet of vehicle length**. **Above 40 mph, add one more second.** A typical **60-foot** tractor-trailer needs about **6 seconds** below 40 mph and **7 seconds** at highway speed.
+
+**How to count it.** Pick a fixed object ahead — a sign, an overpass shadow, a paint mark. When the vehicle in front passes it, count *"one-thousand-one, one-thousand-two…"* until your front bumper reaches the same spot. Fewer seconds than the rule says means **drop back**.
+
+**Add space when it's not ideal:** rain, snow, or ice; darkness; fog; heavy or fast traffic; being tailgated (yes — *more* room, so you can brake gently and not get hit from behind); a heavy load; or when you're tired. When in doubt, open it up. Space is free; a crash is not.
+
+[[figure:following-distance-seconds-rule]]
+
+The driver who tailgates has given away the one thing that could have saved the load — time.`,
+      },
+      {
+        order: 3,
+        title: "Space on all six sides",
+        estMinutes: 5,
+        bodyMarkdown: `You manage space in every direction, not just ahead.
+
+**Behind.** Directly behind the trailer is your **largest blind spot** — one lane wide and up to **200 feet** back. Tap the brakes early to warn a tailgater and be ready to increase your following distance so you can stop gently.
+
+**To the sides.** Trucks have blind spots along both sides — the **"No-Zone."** The right side is the worst. Before any lane change or turn, check the mirror **and** account for the spot the mirror can't show, signal early, and change lanes slowly so a vehicle hidden there has time to clear.
+
+**Above.** Know your **real loaded height** (not the legal max — the actual number on today's trailer). Watch for low bridges, canopies, wires, and tree limbs. "It looked like it would fit" is how trailers get peeled open.
+
+**Below.** Watch for high railroad crossings, dips, and soft or low ground that can trap a trailer's tandems or drag the underride. On a **highway-rail grade crossing**, never start across unless you're sure you can clear the far side without stopping.
+
+**Ahead and to the front corners.** There's a blind spot directly in front of the hood — roughly **20 feet** — where a small car or a person can disappear. Leave room and look before you roll from a stop.
+
+[[figure:truck-no-zone-six-sides]]
+
+Managing space on all six sides is how you always have somewhere to go — the fourth Smith key, **Leave Yourself an Out.**`,
+      },
+      {
+        order: 4,
+        title: "Speed management and the real stopping physics",
+        estMinutes: 6,
+        bodyMarkdown: `A loaded truck does not stop like a car, and the numbers are not intuitive. Manage speed to the physics, not to the flow of traffic.
+
+**Total stopping distance = perception + reaction + braking.** From the moment a hazard appears: you have to *see* it (perception), *move your foot* (reaction), then the *brakes have to do the work* (braking). At **55 mph on dry pavement**, a loaded combination needs roughly **the length of a football field — and then some — to stop.** Wet, snow, or ice can **easily double or triple** that.
+
+**Braking distance grows with the SQUARE of speed.** Double your speed and your braking distance is about **four times** as long. That is why 5 mph over "to make up time" costs far more stopping distance than it feels like.
+
+**Empty can be worse than loaded.** With little weight over the drive tires, an empty or lightly loaded truck has **less traction** and can bounce, so it may take **longer** to stop and is easier to skid or jackknife than you'd expect. Don't assume light means safe.
+
+**Slow before the curve, not in it.** Braking hard in a curve invites a skid or a rollover. Get your speed down on the straight approach, then power gently through. **Posted advisory (yellow) curve and ramp speeds are set for passenger cars** — a loaded truck should be **well below** them.
+
+**Speed on grades.** Pick a safe, low gear **before** a long downgrade and let the engine brake / retarder hold you; don't ride the service brakes down a mountain or they'll fade to nothing. Know where the runaway ramps are.
+
+[[figure:stopping-distance-vs-speed-square]]`,
+      },
+      {
+        order: 5,
+        title: "Read hazards early — and always keep an out",
+        estMinutes: 5,
+        bodyMarkdown: `A **hazard** is anything that could become an emergency — a ball rolling into the street (a child may follow), brake lights cresting a hill, a car weaving, a merge lane ending, a driver on a phone, a wet shine on the road. **Hazard perception** is spotting these early and adjusting *before* you have to react.
+
+**Cover the brake and open space** when you see a hazard developing: ease off the throttle, move your foot over the brake, and create room. Most of the time nothing happens — and that's the point. You bought yourself margin for free.
+
+**Watch the drivers, not just the cars.** A tilted head (phone), no eye contact at a stop, drifting within a lane, brake lights that don't quite make sense — these tell you what a vehicle is about to do before it does it.
+
+**Make sure they see you** — the fifth Smith key. Use your signals early, your lights in low visibility, your horn when needed, and your position on the road so a car merging or turning across your path has every chance to notice the truck. Assume the small vehicle *hasn't* seen you until it proves otherwise.
+
+**Always leave yourself an out.** Position the truck so that if the worst happens you have somewhere to go — a shoulder, an open lane, a gap. Boxing yourself in beside another truck or riding in a car's blind spot takes your options away.
+
+Speed and space management, done early and every mile, is what keeps a hazard from ever becoming a crash — and it's a direct input to your carrier's **SRL Compass Score** through your safety and claims record.`,
+      },
+    ],
+    questions: [
+      { order: 1, question: "How far ahead should you be looking while driving?", options: ["Just past the hood", "About 1–2 seconds ahead", "12–15 seconds ahead (about a quarter mile at highway speed)", "As far as the next town"], correctIndex: 2, explanation: "Aiming 12–15 seconds ahead (roughly a quarter mile at highway speed, about a block and a half in town) gives you time to see, decide, and act smoothly instead of reacting late." },
+      { order: 2, question: "A 60-foot combination at 55 mph should keep a following distance of about:", options: ["2 seconds", "4 seconds", "7 seconds", "1 truck length"], correctIndex: 2, explanation: "The rule is 1 second per 10 feet of length under 40 mph, plus 1 more second above 40 mph — a 60-ft truck needs ~6 seconds under 40 and ~7 seconds at highway speed." },
+      { order: 3, question: "You are being tailgated by a car. You should:", options: ["Speed up to lose them", "Brake-check them", "Increase your following distance ahead so you can brake gently", "Move onto the shoulder"], correctIndex: 2, explanation: "Open MORE room ahead so you can slow gradually and never need a hard stop that the tailgater can't match — a hard stop is how you get rear-ended." },
+      { order: 4, question: "If you double your speed, your braking distance increases by about:", options: ["2 times", "3 times", "4 times", "It stays the same"], correctIndex: 2, explanation: "Braking distance grows with the square of speed — double the speed is roughly four times the braking distance. That's why small increases in speed cost far more stopping distance than they feel like." },
+      { order: 5, question: "A posted yellow advisory speed for a highway ramp is set for:", options: ["Loaded trucks", "Passenger cars — a loaded truck should be well below it", "Empty trucks only", "Wet conditions"], correctIndex: 1, explanation: "Advisory curve/ramp speeds are calculated for passenger cars. A high-center-of-gravity loaded truck should take them well below the posted number, and should slow BEFORE the curve, not in it." },
+      { order: 6, question: "Compared with a loaded truck, an empty truck:", options: ["Always stops much shorter", "Can take LONGER to stop and is easier to skid — less traction over the drive tires", "Cannot skid", "Handles exactly the same"], correctIndex: 1, explanation: "With little weight over the drive axles, an empty/lightly loaded truck has less traction and can bounce, so it may take longer to stop and is easier to skid or jackknife. Light does not mean safe." },
+      { order: 7, question: "Your largest blind spot is:", options: ["Directly in front of the hood", "Directly behind the trailer (up to ~200 ft)", "The left mirror", "Above the cab"], correctIndex: 1, explanation: "The area directly behind the trailer is the biggest No-Zone — one lane wide and up to about 200 feet back. Tap the brakes early to warn a tailgater and keep extra room to stop gently." },
+      { order: 8, question: "A ball rolls into the street ahead. The defensive response is to:", options: ["Hold your speed — it's just a ball", "Cover the brake, ease off, and open space in case a child follows", "Swerve immediately into the next lane", "Honk and keep going"], correctIndex: 1, explanation: "A ball is a hazard cue — a child may follow. Cover the brake, reduce speed, and create room BEFORE it becomes an emergency. Most of the time nothing happens, and that's the point." },
+      { order: 9, question: "\"Leave yourself an out\" means:", options: ["Always drive in the left lane", "Position the truck so you have somewhere to go if something goes wrong — avoid boxing yourself in", "Exit the highway at every chance", "Keep the doors unlocked"], correctIndex: 1, explanation: "The 4th Smith Key — keep an escape path (a shoulder, an open lane, a gap). Riding in a blind spot or trapped beside another truck takes your options away." },
+    ],
+  },
+
+  // ───────────────────────────────────────────────────────── D2
+  {
+    slug: "intersections-turning-offtracking",
+    title: "Intersections, Turning & Off-Tracking",
+    category: "On-Road Safety",
+    summary: "Where trucks and other road users collide most: why your trailer cuts the corner (off-tracking), how to make right and left turns without the squeeze, and how to read intersections, lane changes, merges, and roundabouts in a long vehicle.",
+    version: "1",
+    estMinutes: 22,
+    passThreshold: 80,
+    validityMonths: 12,
+    sortOrder: 24,
+    disclaimer: DISCLAIMER,
+    lessons: [
+      {
+        order: 1,
+        title: "Off-tracking — why the trailer cuts the corner",
+        estMinutes: 5,
+        bodyMarkdown: `In a turn, your trailer's rear wheels **do not follow the same path** as your steer tires — they track a **shorter, tighter arc, toward the inside of the turn.** This is **off-tracking**, and it is the single fact that explains almost every turning crash a truck is in.
+
+**The tighter and slower the turn, the more the rear off-tracks inward.** Turn a corner the way a car does and your trailer tandems will climb the inside curb, crush whatever is on it, or sweep across the space where a cyclist or pedestrian is standing.
+
+**So you turn wide — but wide *correctly*.** You keep the rear of the trailer near the curb or lane line you're turning around, and you let the tractor swing out only as much as needed to bring the trailer through. Swinging the *front* out early to "set up" is what invites a car up the inside — the exact spot the trailer is about to occupy.
+
+**Tail swing.** As the tractor turns, the very back of the trailer can **swing the opposite way** — out toward the vehicle or object beside you. Check that your tail isn't about to strike a car, a pole, or a pump before you commit.
+
+[[figure:offtracking-inside-arc]]
+
+Off-tracking never goes away — every turn you make, plan for the trailer to cut inside your front wheels.`,
+      },
+      {
+        order: 2,
+        title: "Right turns without the squeeze",
+        estMinutes: 6,
+        bodyMarkdown: `The **right turn** is the most dangerous turn a truck makes, because of the **"right-turn squeeze"**: a driver swings wide-left first to make room, a car or cyclist slips up the open right side, and the trailer off-tracks back into them.
+
+**Do it right:**
+
+1. **Approach in the right lane**, as far right as is safe, so no one can get between your trailer and the curb.
+2. **Keep the rear of the trailer close to the curb** as you begin the turn.
+3. **Turn wide as you *complete* the turn**, not as you start it — swing out with the tractor only enough to bring the trailer around the corner.
+4. If the corner is too tight to make from the right lane, it's better to **take up part of the next lane through the turn** (button-hook) than to leave a gap on your right. Don't create the gap that invites a squeeze.
+
+**Before and during:** signal early, check your right mirror repeatedly for anyone trying to pass on the right, and go **slow** — off-tracking is worst in a tight, slow turn, so give yourself time to watch the tandems and the tail.
+
+[[figure:right-turn-button-hook-vs-squeeze]]
+
+The rule of thumb: **never leave room on your right that a car or bike can dive into.** That gap is where the squeeze happens.`,
+      },
+      {
+        order: 3,
+        title: "Left turns, lane changes & merging",
+        estMinutes: 5,
+        bodyMarkdown: `**Left turns.** The mistake here is turning **too soon**: cut the corner early and your trailer's rear wheels off-track over the inside — clipping the curb, a median, or a car stopped in the opposing left-turn lane. **Reach the center of the intersection before you begin to turn**, so the trailer swings through the intersection, not over the corner. If there are two left-turn lanes, take the one that lets your trailer track through cleanly and stay in your lane on exit.
+
+**Lane changes.** Signal **early** (long vehicles need more warning), check the mirror **and** the blind spot you can't see, and move over **slowly and smoothly** so a vehicle hidden in the No-Zone has time to react or clear. Remember **tail swing** — on a sharp move the back of the trailer sweeps the opposite way.
+
+**Merging onto a highway.** Use the whole on-ramp to build speed toward the flow — a slow, heavy truck forcing into fast traffic is a crash setup. Signal, find your gap early, and merge at a matched speed. When *you* are the through traffic and a vehicle is merging, adjust — open space or move over one lane if it's clear — rather than holding your ground and forcing the squeeze.
+
+[[figure:left-turn-reach-center]]
+
+Every one of these is an off-tracking + blind-spot problem. Turn late enough, signal early enough, and go slow enough that the trailer has room to follow.`,
+      },
+      {
+        order: 4,
+        title: "Intersections & roundabouts",
+        estMinutes: 5,
+        bodyMarkdown: `Intersections are where paths cross, and a long, slow-to-stop truck has to be the careful one.
+
+**Approaching an intersection:** cover the brake, **look left–right–left**, and watch for **red-light runners** — don't launch the instant your light turns green; make sure cross traffic has actually stopped. On a **stale green** (one that's been green a while), expect it to change and be ready to stop smoothly, remembering your stopping distance. Never enter an intersection you're not sure you can clear.
+
+**Blocked or gridlocked:** don't pull into an intersection you can't get all the way across — a truck stopped across the box blocks everyone and can be caught by a changing light or a train at a nearby crossing.
+
+**Roundabouts.** Take them **slow.** A truck may need to **straddle both lanes or use the paved truck apron** in the center to get the trailer around — that's what the apron is for. Signal your exit, watch for cars trying to squeeze alongside, and let the trailer track through. Other drivers should give a truck room in a roundabout; don't assume they will.
+
+**Left turn across traffic** (no signal): you need a **much larger gap** than a car does, because you accelerate slowly and clear the intersection slowly. Wait for the big gap; don't take the car-sized one.
+
+[[figure:roundabout-truck-apron]]`,
+      },
+    ],
+    questions: [
+      { order: 1, question: "\"Off-tracking\" means that in a turn, the trailer's rear wheels:", options: ["Follow the exact same path as the steer tires", "Track a tighter path toward the INSIDE of the turn", "Swing wide to the outside", "Lift off the ground"], correctIndex: 1, explanation: "The rear wheels follow a shorter, tighter arc toward the inside of the turn. The tighter and slower the turn, the more the rear cuts inward — which is why you must turn wide (correctly) and watch the tandems." },
+      { order: 2, question: "The \"right-turn squeeze\" happens when a truck driver:", options: ["Approaches in the right lane and keeps the trailer near the curb", "Swings wide LEFT first, leaving a gap a car or cyclist fills on the right", "Turns too slowly", "Uses the truck apron"], correctIndex: 1, explanation: "Swinging left to 'set up' opens the right side; a car or cyclist slips in, then the trailer off-tracks back into them. Approach right, keep the rear near the curb, and turn wide as you COMPLETE the turn." },
+      { order: 3, question: "To avoid off-tracking over the inside corner on a LEFT turn, you should:", options: ["Turn as soon as you enter the intersection", "Reach the center of the intersection before beginning the turn", "Turn from the right lane", "Accelerate hard through it"], correctIndex: 1, explanation: "Turning too soon lets the trailer's rear wheels cut over the inside curb/median. Reach the center of the intersection first so the trailer tracks through, not over the corner." },
+      { order: 4, question: "Your light just turned green at a busy intersection. You should:", options: ["Accelerate immediately to clear it fast", "Look left–right–left and make sure cross traffic has stopped before proceeding", "Assume all cross traffic has stopped", "Honk and go"], correctIndex: 1, explanation: "Watch for red-light runners — confirm cross traffic has actually stopped before you commit a slow-starting, slow-stopping truck into the intersection." },
+      { order: 5, question: "In a roundabout, a truck may need to:", options: ["Fit entirely in one narrow lane", "Straddle both lanes or use the center truck apron to bring the trailer around", "Stop in the middle", "Reverse if it doesn't fit"], correctIndex: 1, explanation: "The paved apron in the center exists for exactly this — a truck often has to straddle lanes / use the apron so the trailer tracks around. Go slow, signal your exit, and watch for cars alongside." },
+      { order: 6, question: "The back of the trailer swinging OUT toward a vehicle beside you as the tractor turns is called:", options: ["Off-tracking", "Tail swing", "Jackknifing", "Understeer"], correctIndex: 1, explanation: "Tail swing — as the tractor turns, the rear of the trailer can sweep the opposite way, out toward whatever is beside you. Check that your tail won't strike a car, pole, or pump before committing." },
+      { order: 7, question: "You're turning left across oncoming traffic (no green arrow). Compared to a car, you need:", options: ["The same size gap", "A smaller gap because you're more visible", "A much larger gap — you accelerate and clear slowly", "No gap if you signal"], correctIndex: 2, explanation: "A heavy truck accelerates slowly and takes longer to clear the intersection, so it needs a much bigger gap than a car. Wait for the large gap; don't take the car-sized one." },
+      { order: 8, question: "The corner is too tight to complete a right turn from the right lane alone. The better choice is to:", options: ["Swing wide left first to set up", "Take up part of the next lane through the turn (button-hook) rather than leave a gap on your right", "Skip the turn", "Turn fast to get it over with"], correctIndex: 1, explanation: "Button-hooking into part of the adjacent lane is safer than creating a right-side gap that invites the squeeze. Never leave room on your right that a car or bike can dive into." },
+    ],
+  },
+
+  // ───────────────────────────────────────────────────────── D3
+  {
+    slug: "rollover-prevention",
+    title: "Rollover Prevention & Load Stability",
+    category: "On-Road Safety",
+    summary: "Why loaded trucks roll — a high center of gravity, curve and ramp speed, and load height/shift — and how to prevent it: slow before the curve, keep the load low and secure, and never trust a posted advisory speed made for cars.",
+    version: "1",
+    estMinutes: 20,
+    passThreshold: 80,
+    validityMonths: 12,
+    sortOrder: 25,
+    disclaimer: DISCLAIMER,
+    lessons: [
+      {
+        order: 1,
+        title: "Why trucks roll",
+        estMinutes: 5,
+        bodyMarkdown: `A rollover is one of the most survivable-to-prevent, hardest-to-recover crashes a truck has — and the cause is usually the driver, not the truck.
+
+**Most rollovers are driver error.** FMCSA's rollover research finds that the large majority of truck rollovers involve **driver behavior** — most often **too fast for a curve or ramp**, and **over-steering / over-correcting.** These are choices, which means they're preventable.
+
+**A truck has a high center of gravity (CG).** A loaded van or reefer carries weight **up high**, so it takes far **less sideways force to tip a truck than a car.** You can be at a speed that feels fine to your hands and still be close to the point where the trailer lifts a wheel — and by the time you feel it, it's often too late to stop it.
+
+**You may not feel it coming.** In many rollovers the trailer starts to go over **before the tractor gives the driver a clear warning.** That is why rollover control is about **prevention**, not reaction — you set your speed before the curve, because in the curve there may be no save.
+
+**Belt up.** Roughly **half of the truck drivers killed in rollovers were not wearing a seat belt.** The belt is your last line of defense when everything else has failed — wear it every mile.
+
+[[figure:high-cg-tip-threshold]]
+
+> ` + DISCLAIMER,
+      },
+      {
+        order: 2,
+        title: "Curves and ramps — the speed that flips you",
+        estMinutes: 5,
+        bodyMarkdown: `The classic rollover is a loaded truck on a **highway exit ramp** or a **curve**, taken a few miles per hour too fast.
+
+**The posted advisory (yellow) speed is for cars.** That number is calculated for a passenger vehicle with a low center of gravity. A loaded truck should be **well below** it — often **5 to 15 mph slower**, more on a tight, downhill, or decreasing-radius ramp.
+
+**Slow down BEFORE the curve, on the straight.** Braking hard *in* the curve shifts weight and can trip the rollover or start a skid. Get your speed down on the approach, then hold a steady, gentle throttle through the arc.
+
+**A curved ramp tightens.** Many exit ramps **decrease in radius** as they go — it gets tighter after you've committed. Enter slow enough that you still have margin if the curve keeps tightening; you can always add a little speed, but you can't un-roll a trailer.
+
+**Don't over-steer or jerk the wheel.** A sudden swerve — for a merging car, a pothole, a wandering wheel onto the shoulder — can start a rollover on its own. Ease back on smoothly; a quick correction at speed is how a recoverable drift becomes a rollover.
+
+[[figure:ramp-decreasing-radius]]
+
+The margin that saves you is set **before** the curve. Once you're in it too fast, there may be nothing left to do.`,
+      },
+      {
+        order: 3,
+        title: "Load height, distribution & shift",
+        estMinutes: 5,
+        bodyMarkdown: `Your rollover risk is packed at the dock, before you ever turn a wheel.
+
+**Keep the center of gravity low.** Load **heavy items low and light items high**, not the other way around. A tall, top-heavy load — or a light load stacked high — raises the CG and lowers the speed at which the truck will tip.
+
+**Center and balance the load.** Weight shoved to one side raises the rollover risk toward that side and can also overload one set of tires. Balance side-to-side and keep it within your axle limits.
+
+**Secure it so it can't move.** A load that **shifts** in a curve suddenly moves the CG at the worst possible moment. Securement (its own course) isn't just about the load blowing off — a shifting load is a rollover cause. Block, brace, and tie so nothing moves.
+
+**Liquid surge.** If you ever move a tank or a partially filled liquid load, the liquid **sloshes** — surging forward under braking and side-to-side in a turn, shoving the truck around. Partial loads surge the most. Treat any liquid or partial-liquid load with extra following distance and much slower, smoother inputs.
+
+**Know it's higher today.** A high, dense reefer or dry-van load rolls more easily than an empty or a low, dense one. Adjust your curve and ramp speeds to the load you're actually carrying — don't drive every load the same.
+
+[[figure:load-cg-low-vs-high]]`,
+      },
+      {
+        order: 4,
+        title: "If it starts to go — and how to build the habit",
+        estMinutes: 4,
+        bodyMarkdown: `**Prevention is the only reliable control** — but know the response and build the habits that keep you out of it.
+
+**If a wheel drops onto a soft shoulder,** don't jerk it back onto the pavement at speed — that abrupt steer is a classic rollover/loss-of-control trigger. **Ease off** the throttle, hold the wheel straight, let the truck slow, then steer back gently when speeds are low and it's safe.
+
+**If the trailer begins to tip or you feel it going light,** avoid a hard, sudden counter-steer. Smooth is survival; a violent correction usually makes it worse. But understand the honest truth from Lesson 1: in a real rollover the window to react is often gone — which is why the save is the speed you chose *before* the curve.
+
+**The habits that prevent rollovers:**
+
+- Enter every ramp and curve **below** the posted advisory speed, braking on the approach.
+- Keep the load **low, centered, and secured.**
+- Add margin for a **high or shifting load**, for **wet or windy** conditions, and for **partial liquid** loads.
+- **No sudden steering** at speed — ease, don't jerk.
+- **Wear your belt** every mile.
+
+Every rollover you never have protects the driver, the freight, and your carrier's safety and claims record — which feeds the **SRL Compass Score** and the freight it unlocks.`,
+      },
+    ],
+    questions: [
+      { order: 1, question: "The large majority of truck rollovers are caused by:", options: ["Mechanical failure", "Driver behavior — most often too fast for a curve/ramp and over-steering", "Other drivers", "Tire blowouts"], correctIndex: 1, explanation: "FMCSA's research finds most rollovers involve driver error — chiefly excess speed for a curve or ramp and over-correcting. That makes them preventable choices." },
+      { order: 2, question: "A yellow advisory speed posted for a curve or exit ramp is set for:", options: ["Loaded trucks", "A passenger car — a loaded truck should be well below it", "Empty trucks", "Wet roads"], correctIndex: 1, explanation: "Advisory speeds assume a low-CG passenger car. A loaded truck's high center of gravity means it should take the curve/ramp well below that number — often 5–15 mph slower." },
+      { order: 3, question: "Compared with a car, a loaded truck tips over:", options: ["With much more sideways force", "With far LESS sideways force — its center of gravity is high", "Only when empty", "Never on a paved road"], correctIndex: 1, explanation: "A loaded truck carries weight high, so it takes far less lateral force to tip than a car. You can be near the tip point at a speed that still feels fine at the wheel." },
+      { order: 4, question: "The right time to reduce speed for a curve is:", options: ["In the middle of the curve", "Before the curve, on the straight approach", "After you exit the curve", "Only if it feels tight"], correctIndex: 1, explanation: "Braking hard IN the curve shifts weight and can trip a rollover or skid. Set your speed on the straight approach, then hold a steady, gentle throttle through the arc." },
+      { order: 5, question: "To keep the center of gravity low, you load:", options: ["Heavy items high, light items low", "Heavy items low, light items high", "Everything on one side", "Everything as high as it fits"], correctIndex: 1, explanation: "Heavy low, light high keeps the CG down. A tall or top-heavy load — even a light load stacked high — raises the CG and lowers the speed at which the truck will tip." },
+      { order: 6, question: "Your right wheels drop onto a soft shoulder at highway speed. You should:", options: ["Jerk the wheel hard back onto the pavement", "Ease off the throttle, hold straight, slow down, then steer back gently", "Brake hard immediately", "Accelerate to pull out"], correctIndex: 1, explanation: "A hard, abrupt steer back onto the pavement at speed is a classic rollover/loss-of-control trigger. Ease off, keep it straight, let it slow, then ease back on when it's safe." },
+      { order: 7, question: "A partially filled liquid load is more dangerous because it:", options: ["Is lighter", "Surges — sloshing forward under braking and side-to-side in turns, shoving the truck", "Can't shift", "Lowers the center of gravity"], correctIndex: 1, explanation: "Liquid surge shoves the truck around, and partial loads surge the most. Add following distance and use much slower, smoother inputs with any liquid or partial-liquid load." },
+      { order: 8, question: "Roughly what share of truck drivers killed in rollovers were NOT belted?", options: ["Almost none", "About half", "All of them", "Only new drivers"], correctIndex: 1, explanation: "About half of the truck drivers killed in rollovers weren't wearing a seat belt. The belt is your last defense when prevention has failed — wear it every mile." },
+    ],
+  },
 ];

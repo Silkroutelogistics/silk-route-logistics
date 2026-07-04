@@ -13882,7 +13882,17 @@
 //   §393.102(b) DOWNWARD force of at least 20% of the article's weight for cargo
 //   not fully contained by structure. Course version 4 -> 5. Reaches drivers when
 //   the prod course-seed (seed-training-courses.ts) is re-run. Per §3.1: aqa -> aqb.
-export const SRL_VERSION = "3.8.aqb";
+// v3.8.aqc — Driver Academy best-in-class expansion, BATCH 1 of the audit's
+//   gap list: 3 new courses closing the biggest ELDT/defensive-driving gaps —
+//   (D1) Space & Speed Management + Hazard Perception (5 lessons/9 Q — visual
+//   lead, following-distance seconds rule, six-sided space, stopping physics,
+//   Smith 5 Keys), (D2) Intersections, Turning & Off-Tracking (4/8 — off-tracking,
+//   right-turn squeeze, left turns/merging, roundabout apron), (D3) Rollover
+//   Prevention & Load Stability (4/8 — high-CG, curve/ramp speed, load height +
+//   liquid surge). Catalog 22 -> 25 courses / 82 -> 95 lessons / 184 -> 209 Q;
+//   seed --dry-run valid. Reaches drivers when the prod course-seed re-runs.
+//   Per §3.1: aqb -> aqc.
+export const SRL_VERSION = "3.8.aqc";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
