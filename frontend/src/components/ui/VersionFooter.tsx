@@ -13903,7 +13903,17 @@
 //   conspicuity). Catalog 25 -> 28 courses / 95 -> 107 lessons / 209 -> 233 Q;
 //   seed --dry-run valid. Reaches drivers on prod course-seed re-run.
 //   Per §3.1: aqc -> aqd.
-export const SRL_VERSION = "3.8.aqd";
+// v3.8.aqe — Driver Academy best-in-class expansion, BATCH 3 (final): 4 more new
+//   courses completing the audit's gap list — (D7) External Communications &
+//   Customer Service, (D8) Fuel-Efficient Driving & Environmental Compliance,
+//   (D9) In-Cab Safety Technology / ADAS (assist-don't-replace), (D10) Work-Zone
+//   Driving. Catalog now 28 -> 32 courses / 107 -> 119 lessons / 233 -> 265 Q —
+//   hitting the audit's ~32-course best-in-class target, covering every ELDT
+//   Class-A theory unit plus the insurer/defensive topics ELDT omits (rollover,
+//   intersections, work zones, ADAS). All 10 gap-closing courses (D1-D10) now in.
+//   seed --dry-run valid. Reaches drivers on prod course-seed re-run.
+//   Per §3.1: aqd -> aqe.
+export const SRL_VERSION = "3.8.aqe";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

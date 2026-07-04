@@ -1697,4 +1697,304 @@ Your body is your equipment. Maintain it the way you maintain the truck, and it'
       { order: 8, question: "The best protection against \"the car that came out of nowhere\" at night is:", options: ["Driving faster to get ahead of traffic", "Keeping your lights, reflectors, and reflective tape clean so the truck is visible", "Using only low beams", "Nothing — it's unavoidable"], correctIndex: 1, explanation: "A road-grimed trailer is nearly invisible at night. Clean lights/reflectors/tape, early signals, and good lane position are your conspicuity — make sure the small vehicle can see the truck." },
     ],
   },
+
+  // ───────────────────────────────────────────────────────── D7
+  {
+    slug: "external-communications-customer-service",
+    title: "External Communications & Customer Service",
+    category: "SRL Operational Excellence",
+    summary: "You are the face of your carrier and SRL to everyone you meet: how you communicate with other drivers on the road, keep your cool when others don't (road rage), and represent the load professionally at the shipper and receiver.",
+    version: "1",
+    estMinutes: 16,
+    passThreshold: 80,
+    validityMonths: 12,
+    sortOrder: 29,
+    disclaimer: DISCLAIMER,
+    lessons: [
+      {
+        order: 1,
+        title: "Communicating with the road around you",
+        estMinutes: 5,
+        bodyMarkdown: `You "talk" to every driver near you without a word — through signals, lights, horn, and position. Clear communication prevents crashes; mixed signals cause them.
+
+**Signal early and clearly.** A long vehicle needs more warning, so signal well before a turn, lane change, or merge, and make sure the signal is off after you complete it. A courtesy flash of the trailer lights (where customary) to let a passing truck know it's clear to move back in keeps traffic flowing and earns the same in return.
+
+**Use the horn and lights right.** A light **tap** to alert someone drifting into you; the **horn** is a warning tool, not an insult. Hazards for a slow-down or a stop. High/low beams as covered in the night course.
+
+**Position communicates intent.** Being in the correct lane early, holding a steady speed, and not weaving tells other drivers what you'll do. Erratic speed or lane wandering makes you unpredictable — and a truck's unpredictability scares the cars around it into bad moves.
+
+**Be courteous.** Let merging traffic in when you safely can, don't block others in, and give room. Professional courtesy from a truck lowers everyone's stress and, honestly, changes how the public sees trucks.
+
+[[figure:road-communication-signals]]
+
+> ` + DISCLAIMER,
+      },
+      {
+        order: 2,
+        title: "Keeping your cool — road rage",
+        estMinutes: 5,
+        bodyMarkdown: `You drive an 80,000-pound vehicle. You cannot afford to lose your temper, and you can't control what other drivers do — only what you do.
+
+**Don't take it personally, don't engage.** Cut off, tailgated, honked at, gestured at — let it go. Do **not** retaliate: no brake-checking, no blocking, no rolling coal, no gestures, no chasing. Escalating with a truck can turn a rude moment into a fatal crash or a lawsuit, and it's your career on the line, not theirs.
+
+**De-escalate:** ease off, create space, and let the aggressive driver get away from you. If someone is raging at you, **avoid eye contact, keep your distance, and do not exit the vehicle.** If you feel genuinely threatened, drive to a public place (a truck stop, a police station) and call **911** — don't drive home or somewhere isolated.
+
+**You represent more than yourself.** Your truck likely carries your carrier's name and DOT number, and it's moving an SRL load. One video of a truck driving aggressively does damage far beyond the moment. The professional move — every time — is to be the calm one.
+
+**If you witness dangerous driving** (an impaired or reckless driver, a crash), you can report it safely: note the vehicle and location, and call it in when you can do so without adding to the danger.
+
+[[figure:de-escalate-road-rage]]`,
+      },
+      {
+        order: 3,
+        title: "At the shipper, the receiver, and representing SRL",
+        estMinutes: 4,
+        bodyMarkdown: `At every dock you are the visible representative of your carrier **and** of SRL. The relationship that gets your carrier the next load is built here.
+
+**Follow the facility's rules.** Every shipper and receiver has its own check-in, PPE, parking, and dock procedures — follow them without argument. Sign in, be where you're told, wear what's required, and stay out of restricted areas.
+
+**Be professional and patient.** Show up clean and on time. Detention and long waits are frustrating, but the dock staff usually didn't cause them — stay courteous. If there's a real problem (a documentation issue, a refused load, an unsafe request), work it through **dispatch and SRL**, not a confrontation with the person at the window. (Being *forced* to do something unsafe is coercion — see that course.)
+
+**Represent the brand.** How you treat the guard, the lumper, and the dock worker is how the shipper remembers "the SRL carrier." Courtesy and reliability turn a one-time load into a lane, and that consistency feeds your carrier's **SRL Compass Score** and its access to better, repeat freight.
+
+**Communicate proactively.** Keep dispatch informed — arrival, delays, issues — so SRL can keep the shipper informed. Good communication is most of good customer service.`,
+      },
+    ],
+    questions: [
+      { order: 1, question: "The professional response to being cut off and honked at is to:", options: ["Brake-check them", "Let it go, create space, and not engage or retaliate", "Chase them down", "Block them from merging"], correctIndex: 1, explanation: "You can't control other drivers, only yourself. Retaliating with an 80,000-lb truck can turn a rude moment into a fatal crash or lawsuit — de-escalate, give room, and stay the calm one." },
+      { order: 2, question: "Someone is enraged and following you aggressively. You should:", options: ["Pull over and confront them", "Drive home so they know where you live", "Avoid eye contact, keep distance, don't exit, and if threatened drive to a public place and call 911", "Speed up and outrun them"], correctIndex: 2, explanation: "Don't engage or go somewhere isolated. Keep distance, stay in the vehicle, and if you feel threatened head to a truck stop or police station and call 911." },
+      { order: 3, question: "At a shipper or receiver, their check-in, PPE, and dock rules are:", options: ["Suggestions you can skip", "Rules you follow without arguing", "Only for new drivers", "Negotiable at the window"], correctIndex: 1, explanation: "Every facility has its own procedures — follow them. Sign in, wear required PPE, park and dock where told, and stay out of restricted areas." },
+      { order: 4, question: "You should signal a turn or lane change:", options: ["At the last second", "Early and clearly, because a long vehicle needs more warning — and cancel it after", "Only if police are nearby", "Never, to avoid confusing others"], correctIndex: 1, explanation: "Signal well ahead so drivers have time to react to a long, slow-to-maneuver vehicle, and make sure it cancels after the maneuver. Predictable communication prevents crashes." },
+      { order: 5, question: "A documentation problem comes up at the dock. You:", options: ["Argue it out with the dock worker", "Work it through dispatch and SRL", "Leave without telling anyone", "Refuse and drive off angry"], correctIndex: 1, explanation: "Handle real problems through dispatch and SRL, not a confrontation at the window. (If you're being forced to do something unsafe, that's coercion — a separate protection.)" },
+      { order: 6, question: "How you treat the guard, lumper, and dock staff matters because:", options: ["It doesn't", "You're the face of your carrier and SRL — courtesy and reliability turn one load into a lane and feed the Compass Score", "Only the driver sees it", "Tips are expected"], correctIndex: 1, explanation: "At the dock you represent your carrier and SRL. Professionalism builds the shipper relationship and repeat freight — which feeds your carrier's SRL Compass Score." },
+      { order: 7, question: "Erratic speed and lane wandering are dangerous partly because they:", options: ["Save fuel", "Make you unpredictable, so the cars around a big truck make bad moves", "Are required in traffic", "Help other drivers"], correctIndex: 1, explanation: "Steady speed and correct lane position communicate your intent. Unpredictability from a large truck scares surrounding drivers into panic moves." },
+      { order: 8, question: "The best 'customer service' from the road is mostly:", options: ["Driving faster to arrive early", "Proactive communication — keeping dispatch informed of arrival, delays, and issues so SRL can keep the shipper informed", "Never calling in", "Handling everything yourself"], correctIndex: 1, explanation: "Good communication is most of good service. Keep dispatch in the loop so SRL can keep the shipper updated; surprises are what damage the relationship." },
+    ],
+  },
+
+  // ───────────────────────────────────────────────────────── D8
+  {
+    slug: "eco-driving-environmental",
+    title: "Fuel-Efficient Driving & Environmental Compliance",
+    category: "SRL Operational Excellence",
+    summary: "Driving that saves fuel and protects the environment: smooth speed and shifting, cutting idle time, managing speed and following distance for MPG, plus idle laws, DEF/emissions systems, and preventing fuel and fluid spills.",
+    version: "1",
+    estMinutes: 18,
+    passThreshold: 80,
+    validityMonths: 12,
+    sortOrder: 30,
+    disclaimer: DISCLAIMER,
+    lessons: [
+      {
+        order: 1,
+        title: "Driving for fuel economy",
+        estMinutes: 5,
+        bodyMarkdown: `Fuel is one of the biggest costs in trucking, and **how you drive** can swing MPG by a large margin. Smooth is efficient.
+
+**Smooth and steady wins.** Hard acceleration and hard braking waste the fuel you just burned to build speed. Accelerate gently, anticipate so you can coast instead of brake, and hold a **steady speed** — use cruise control on flat, open road.
+
+**Slow down.** Aerodynamic drag rises sharply with speed — every few mph over about **60 mph** noticeably cuts your MPG. A slightly slower steady pace saves real fuel over a day.
+
+**Manage following distance for MPG, not just safety.** Tailgating forces the brake-then-accelerate cycle that murders fuel economy. The big following distance that keeps you safe also lets you roll steadily and burn less.
+
+**Shift smart.** Use **progressive/block shifting** — shift up before the engine winds out, keep the engine in its efficient rpm band, and don't over-rev. On rolling terrain, let the truck **use its momentum**: build a little speed going downhill to carry you up the next rise instead of flooring it at the top.
+
+**Keep tires inflated.** Under-inflated tires add rolling resistance and cost fuel (and cause blowouts). Correct pressure is a free MPG gain.
+
+[[figure:mpg-smooth-driving]]
+
+> ` + DISCLAIMER,
+      },
+      {
+        order: 2,
+        title: "Idle reduction and idle laws",
+        estMinutes: 4,
+        bodyMarkdown: `A truck idling burns roughly **three-quarters of a gallon to a gallon of fuel per hour** while going nowhere, adds engine wear and emissions, and — in many places — **breaks the law.**
+
+**Idle laws.** Many states and cities limit idling, commonly to about **5 minutes**, with fines for exceeding it; **California (CARB)** and others are especially strict. The limits vary by jurisdiction, so know the rule where you park and sleep.
+
+**Reduce idling:**
+- Use the truck's **bunk heater / APU (auxiliary power unit)** or shore power at a truck stop for cab comfort instead of idling the main engine.
+- Don't idle to "warm up" longer than the manual calls for, and don't idle just for the radio or AC when you can avoid it.
+- Exceptions exist (extreme temperatures, safety) — but the default is: **if you're not moving and don't need the engine, shut it off.**
+
+Less idling saves fuel and the engine, cuts emissions, and keeps you legal where idling is restricted.
+
+[[figure:idle-reduction-apu]]`,
+      },
+      {
+        order: 3,
+        title: "Emissions systems and spill prevention",
+        estMinutes: 4,
+        bodyMarkdown: `Modern diesels have emissions systems you must keep working, and you handle fuel and fluids that can pollute if spilled.
+
+**DEF and the emissions system.** Most modern trucks use **Diesel Exhaust Fluid (DEF)** in a **Selective Catalytic Reduction (SCR)** system, plus a **Diesel Particulate Filter (DPF)** that periodically **regenerates** (burns off soot). Keep the **DEF tank filled** (running out will derate the engine to a crawl), let regens complete, and **never tamper with or delete** emissions controls — it's illegal and can put the truck out of service.
+
+**Fuel and fluid spills.** When you fuel, **stay with the nozzle**, don't top off past the click, and watch for overflow — a spill is an environmental and safety hazard and can bring a fine. Report and contain leaks of fuel, oil, coolant, or DEF. Dispose of used fluids and filters properly, never on the ground or down a drain.
+
+**Hazmat is different.** A spill of a hazardous material is a regulated release — that's covered in the Hazmat course (stop, secure, ERG, report). For ordinary fluids, the rule is still: **don't let it reach the ground or water**, and clean up what you can safely.
+
+Keeping the emissions system healthy and preventing spills protects the environment, the truck, and your record.`,
+      },
+    ],
+    questions: [
+      { order: 1, question: "The biggest driver-controlled factor in fuel economy is:", options: ["The color of the truck", "Smooth, steady driving — gentle acceleration, anticipation, steady speed", "Idling to keep the engine warm", "Driving faster to finish sooner"], correctIndex: 1, explanation: "Hard acceleration and braking waste fuel; smooth, anticipatory, steady-speed driving (cruise on flat road) is the biggest lever a driver controls." },
+      { order: 2, question: "As speed rises above ~60 mph, fuel economy:", options: ["Improves", "Drops noticeably — aerodynamic drag rises sharply with speed", "Stays the same", "Only matters when empty"], correctIndex: 1, explanation: "Drag increases sharply with speed, so every few mph over ~60 cuts MPG. A slightly slower steady pace saves real fuel over a day." },
+      { order: 3, question: "A truck idling burns roughly how much fuel per hour, going nowhere?", options: ["A few ounces", "About 3/4 to 1 gallon", "5 gallons", "None — idling is free"], correctIndex: 1, explanation: "Idling burns roughly 0.75–1 gallon/hour plus engine wear and emissions — and many places limit idling (often ~5 minutes; CARB is strict). Use an APU/bunk heater or shut it off." },
+      { order: 4, question: "Many jurisdictions limit idling to about:", options: ["1 hour", "5 minutes, with fines for exceeding it", "There's never a limit", "8 hours"], correctIndex: 1, explanation: "A common limit is around 5 minutes, and California/CARB and others are strict, with fines. Limits vary — know the rule where you park." },
+      { order: 5, question: "If your DEF (Diesel Exhaust Fluid) tank runs empty, the truck will:", options: ["Run normally", "Derate to a crawl — keep the DEF tank filled", "Shut off the brakes", "Burn less fuel"], correctIndex: 1, explanation: "Running out of DEF derates the engine to very low power. Keep the DEF filled, let DPF regens complete, and never tamper with or delete emissions controls (illegal + OOS)." },
+      { order: 6, question: "When fueling, to prevent a spill you should:", options: ["Set the nozzle and walk away", "Stay with the nozzle, don't top off past the click, and watch for overflow", "Top it off as full as possible", "Fuel with the engine at high idle"], correctIndex: 1, explanation: "Stay with the nozzle and don't overfill — a fuel spill is an environmental + safety hazard and can bring a fine. Contain and report leaks; dispose of fluids/filters properly." },
+      { order: 7, question: "On rolling hills, the fuel-smart technique is to:", options: ["Floor it at the top of each hill", "Use the truck's momentum — build a little speed downhill to carry up the next rise, staying in the efficient rpm band", "Brake on every downhill", "Idle over the crest"], correctIndex: 1, explanation: "Let momentum work — carry speed downhill to help climb the next rise, and use progressive shifting to keep the engine in its efficient band rather than over-revving." },
+      { order: 8, question: "Deleting or tampering with the truck's emissions controls is:", options: ["A smart fuel upgrade", "Illegal and can put the truck out of service", "Required for regens", "Recommended for old trucks"], correctIndex: 1, explanation: "Tampering with or deleting emissions systems (SCR/DEF/DPF) is illegal and can put the truck out of service. Keep them working and let regens complete." },
+    ],
+  },
+
+  // ───────────────────────────────────────────────────────── D9
+  {
+    slug: "in-cab-safety-technology",
+    title: "In-Cab Safety Technology (ADAS)",
+    category: "On-Road Safety",
+    summary: "How to use — and not over-trust — the safety technology in modern trucks: collision-mitigation/automatic emergency braking, adaptive cruise, lane-departure warning, stability control, blind-spot alerts, speed limiters, and dashcams.",
+    version: "1",
+    estMinutes: 16,
+    passThreshold: 80,
+    validityMonths: 12,
+    sortOrder: 31,
+    disclaimer: DISCLAIMER,
+    lessons: [
+      {
+        order: 1,
+        title: "What the systems do",
+        estMinutes: 5,
+        bodyMarkdown: `Modern trucks carry **Advanced Driver Assistance Systems (ADAS)** — a set of aids that watch the road and help you avoid crashes. Know what yours has and what each one does.
+
+- **Forward Collision Warning (FCW) + Automatic Emergency Braking (AEB / collision mitigation):** radar/camera senses a slower or stopped vehicle ahead, warns you, and if you don't act, applies the brakes to reduce or avoid the impact.
+- **Adaptive Cruise Control (ACC):** cruise that automatically keeps a set following distance from the vehicle ahead, slowing and resuming with traffic.
+- **Lane Departure Warning (LDW):** alerts you (a sound or seat/wheel vibration) if you drift out of your lane without signaling.
+- **Electronic Stability Control (ESC) / Roll Stability:** senses an impending skid or rollover and can cut throttle and apply individual brakes to help keep the truck stable — a big help against the rollover physics in that course.
+- **Blind-Spot Detection:** warns when a vehicle is in your side No-Zone.
+- **Speed limiter:** caps the truck's top speed.
+- **Dashcam / event recorder:** records road and sometimes driver-facing video, usually saving clips around hard braking or a collision.
+
+These are genuinely life-saving tools — the point of this course is how to work *with* them.
+
+[[figure:adas-systems-overview]]
+
+> ` + DISCLAIMER,
+      },
+      {
+        order: 2,
+        title: "Assist, don't replace — the golden rule",
+        estMinutes: 5,
+        bodyMarkdown: `ADAS is a **safety net, not a driver.** The most dangerous thing you can do with it is trust it to do your job.
+
+- **Automatic emergency braking may not catch everything.** It's tuned to reduce crashes, not guarantee zero. It can be late or miss a crossing vehicle, a stopped object, or an unusual situation. **You still watch the road, manage following distance, and brake yourself** — treat an AEB event as a failure you should have prevented, not a feature to rely on.
+- **Adaptive cruise keeps distance, it doesn't steer or think.** You still monitor, still steer, and still take over — turn it off in heavy weather, work zones, and stop-and-go where you need full control.
+- **Lane-departure warns; it does not drive.** If it's beeping, you drifted — fix your attention, don't tune it out.
+- **Stability control helps, but it can't beat physics.** It buys margin against a skid or rollover; it does **not** mean you can take the ramp at car speed. Slow before the curve as always.
+
+**Never disable or ignore a working system.** If a system is faulty or constantly false-alarming, report it for repair — don't defeat it. And don't let the tech lull you: the systems fail quietly, and the driver is always the last line.
+
+[[figure:adas-assist-not-replace]]`,
+      },
+      {
+        order: 3,
+        title: "Dashcams, limiters, and living with the tech",
+        estMinutes: 4,
+        bodyMarkdown: `**Dashcams and event recorders.** Many trucks record continuously and save a clip around a hard brake, swerve, or collision; some also face the driver. Treat the cab as if you're **always on camera** — because you often are. The upside is real: in a not-at-fault crash, **the footage is frequently what clears you**, showing the car that cut you off or ran the light. Drive professionally and the camera is your best witness.
+
+**Speed limiters.** Your truck may be governed to a top speed. Don't fight it by riding it downhill or tailgating to keep pace — drive to conditions, not to the limiter.
+
+**Living with alerts.** Alert fatigue is real — if you tune out every beep, the one that matters gets ignored too. Keep the systems clean and functional (a dirt-covered radar or camera goes blind), respond to warnings, and report a system that cries wolf so it gets fixed rather than mentally muted.
+
+**The bottom line:** the technology has cut real-world crashes, and it's on your side — as long as you stay the driver. Use it, keep it working, and never hand it your attention.`,
+      },
+    ],
+    questions: [
+      { order: 1, question: "Automatic Emergency Braking (collision mitigation) is best understood as:", options: ["A replacement for watching the road", "A safety net that reduces crashes but may be late or miss situations — you still watch and brake yourself", "A cruise control", "A parking aid only"], correctIndex: 1, explanation: "AEB is tuned to reduce impacts, not guarantee zero. It can be late or miss a crossing/stopped object. You still manage following distance and brake — treat an AEB event as a prevention failure, not a feature to lean on." },
+      { order: 2, question: "The golden rule for all ADAS features is:", options: ["Trust them completely", "They assist, they don't replace the driver — you stay the last line", "Turn them all off", "Only use them at night"], correctIndex: 1, explanation: "ADAS is a safety net, not a driver. The systems fail quietly; you monitor, steer, and brake, and you never hand them your attention." },
+      { order: 3, question: "Electronic Stability / Roll Stability control means you can:", options: ["Take ramps and curves at car speed now", "Rely on it instead of slowing", "Still must slow before the curve — it buys margin but can't beat physics", "Ignore load height"], correctIndex: 2, explanation: "Stability control helps prevent a skid or rollover but can't override physics. Slow before the curve as always; it's margin, not permission to go fast." },
+      { order: 4, question: "Your lane-departure warning goes off. It means:", options: ["The system is broken", "You drifted out of your lane without signaling — refocus", "You should turn it off", "Nothing important"], correctIndex: 1, explanation: "LDW alerts you to an unsignaled lane drift — a fix-your-attention cue, not noise to tune out." },
+      { order: 5, question: "A dashcam that records the road (and sometimes you) is best treated as:", options: ["An enemy to defeat", "A reason to drive as if always on camera — and often the footage that clears you in a not-at-fault crash", "Only useful for the company", "Something to cover up"], correctIndex: 1, explanation: "Assume you're always recorded — the upside is that in a not-at-fault crash the footage frequently clears you by showing what the other driver did." },
+      { order: 6, question: "A safety system is constantly false-alarming. You should:", options: ["Disable it", "Report it for repair — don't defeat a working safety system", "Cover the sensor", "Ignore all its alerts permanently"], correctIndex: 1, explanation: "Report a faulty/false-alarming system for repair rather than defeating it. Disabling or ignoring a working system removes a real safety layer — and a dirt-covered radar/camera goes blind." },
+      { order: 7, question: "Adaptive cruise control should be turned OFF in:", options: ["Open, flat, dry highway", "Heavy weather, work zones, and stop-and-go where you need full control", "Any daylight driving", "Never — leave it on always"], correctIndex: 1, explanation: "ACC keeps distance but doesn't steer or judge context. Take full control in weather, work zones, and stop-and-go." },
+      { order: 8, question: "\"Alert fatigue\" is dangerous because:", options: ["Alerts save fuel", "If you tune out every beep, you'll ignore the one that matters — keep systems clean and respond to warnings", "It only affects new drivers", "Alerts are never useful"], correctIndex: 1, explanation: "Tuning out constant alerts trains you to ignore the critical one too. Keep sensors clean, respond to warnings, and get a cry-wolf system fixed rather than mentally muting it." },
+    ],
+  },
+
+  // ───────────────────────────────────────────────────────── D10
+  {
+    slug: "work-zone-driving",
+    title: "Work-Zone Driving",
+    category: "On-Road Safety",
+    summary: "Work zones are among the highest-severity places a truck drives: narrowed and shifted lanes, sudden stops, flaggers, and workers close to traffic. How to read them, slow early, keep your distance, and get through without a rear-end or a worker strike.",
+    version: "1",
+    estMinutes: 14,
+    passThreshold: 80,
+    validityMonths: 12,
+    sortOrder: 32,
+    disclaimer: DISCLAIMER,
+    lessons: [
+      {
+        order: 1,
+        title: "Why work zones are so dangerous for trucks",
+        estMinutes: 4,
+        bodyMarkdown: `A work zone concentrates every hazard: **narrowed and shifted lanes, uneven surfaces, sudden stops, flaggers, equipment, and workers standing feet from live traffic** — all at once, often with reduced sight lines.
+
+**The number-one work-zone truck crash is the rear-end.** Traffic **stops suddenly** in a work zone — a queue appears over a rise, a flagger holds traffic — and a loaded truck that was following too close or going too fast can't stop in time. Many work-zone fatalities involve a large truck striking stopped or slowing traffic.
+
+**Workers and equipment are exposed.** People on foot, trucks and machines entering and leaving the lane, and shifted patterns mean anything can happen close to you.
+
+**The penalties are real.** Work zones commonly carry **reduced speed limits, doubled fines, and increased enforcement** — "Give 'Em a Brake." But the reason to slow isn't the fine; it's that a truck at speed in a compressed, unpredictable space has no room for error.
+
+[[figure:work-zone-layout]]
+
+> ` + DISCLAIMER,
+      },
+      {
+        order: 2,
+        title: "Reading and entering a work zone",
+        estMinutes: 5,
+        bodyMarkdown: `Work zones warn you in advance — read the signs and set up early.
+
+**The advance-warning signs** (orange diamonds) tell you what's coming: a lane closure ahead, a shift, a flagger, reduced speed. **Slow down early** and get into the open lane **before** the merge point — don't race to the front of a closing lane and force your way in at the cones; set up smoothly while there's room.
+
+**Obey the posted work-zone speed** — it's lower for a reason, and often doubled-fine. More importantly, drive slow enough for the compressed space and the chance of a sudden stop.
+
+**Open up your following distance.** This is the single best defense against the rear-end that kills in work zones. Expect the traffic ahead to **stop suddenly** and give yourself room to brake gently. Cover the brake.
+
+**Watch for the pattern shifts:** lanes that jog left or right, temporary lane lines, narrow lanes with a barrier inches off your mirror, uneven pavement or a drop-off at the lane edge. Keep the truck centered and steady — no sudden moves in a tight, barrier-lined lane.
+
+[[figure:work-zone-merge-early]]`,
+      },
+      {
+        order: 3,
+        title: "Through the zone and the people in it",
+        estMinutes: 4,
+        bodyMarkdown: `Inside the zone, the workers are the priority.
+
+**Flaggers direct you — obey them, even over a signal or sign.** A flagger's stop or slow paddle is a lawful instruction; be ready to stop for it and don't creep or pressure them. Make eye contact when you can.
+
+**Give workers room.** People are on foot near the travel lane; equipment backs and turns across it. Move over a lane if one is open and it's safe, and slow down so you can react to someone stepping out or a machine pulling in.
+
+**Expect the stop-and-go.** Don't tailgate in a slow work-zone queue — the accordion effect means the truck behind (you) needs the most room. Keep a gap even at low speed.
+
+**Night work zones** stack the night-visibility problems (glare, reduced sight, fatigue — see that course) on top of the work-zone hazards. Slow down more, not less, at night.
+
+**Don't rush the exit.** The zone isn't over until you're past the "End Road Work" sign and traffic has fully opened up — workers and equipment can be near the end too.
+
+The whole job in a work zone: **slow early, big following distance, no sudden moves, obey the flagger, protect the people on foot.** That's how a truck gets through without being the crash everyone remembers.`,
+      },
+    ],
+    questions: [
+      { order: 1, question: "The most common truck crash in a work zone is:", options: ["Rollover", "Rear-ending stopped or slowing traffic", "Sideswipe", "Backing crash"], correctIndex: 1, explanation: "Traffic stops suddenly in work zones, and a loaded truck following too close or going too fast can't stop in time. Big following distance is the best defense." },
+      { order: 2, question: "When a lane is closing ahead in a work zone, you should:", options: ["Race to the front and force in at the cones", "Slow early and merge into the open lane before the merge point, while there's room", "Speed up to beat the closure", "Stop in the closing lane"], correctIndex: 1, explanation: "Set up smoothly and merge early where there's room, rather than forcing your way in at the cones with a long, slow-to-maneuver truck." },
+      { order: 3, question: "A flagger holds up a STOP paddle where the signal is green. You:", options: ["Follow the green signal", "Obey the flagger — their instruction is lawful and controls", "Ignore both and proceed", "Honk and drive through"], correctIndex: 1, explanation: "A flagger's instruction is a lawful direction and controls even over a signal or sign. Be ready to stop, don't pressure them, and make eye contact when you can." },
+      { order: 4, question: "Your single best defense against the work-zone rear-end is:", options: ["Driving faster to clear it", "A big following distance and covering the brake — expect sudden stops", "Tailgating to keep the queue tight", "Changing lanes constantly"], correctIndex: 1, explanation: "Open up your following distance and expect the traffic ahead to stop suddenly. In a slow queue don't tailgate — the accordion effect means the truck needs the most room." },
+      { order: 5, question: "Work-zone speed limits are typically:", options: ["Higher than normal", "Lower, often with doubled fines and more enforcement", "The same as the open road", "Only advisory"], correctIndex: 1, explanation: "Work zones commonly post reduced limits with doubled fines. But the real reason to slow is the compressed, unpredictable space and the chance of a sudden stop." },
+      { order: 6, question: "At night, in a work zone, you should:", options: ["Speed up to get through faster", "Slow down more — night-visibility problems stack on top of the work-zone hazards", "Use high beams through the whole zone", "Drive the same as daytime"], correctIndex: 1, explanation: "Night work zones combine reduced sight, glare, and fatigue with the work-zone hazards. Slow down more, not less." },
+      { order: 7, question: "The work zone is over when:", options: ["You pass the first cone", "You're past the 'End Road Work' sign and traffic has fully opened — workers/equipment can be near the end too", "You see a worker wave", "Halfway through"], correctIndex: 1, explanation: "Don't rush the exit — stay slow and alert until you're past the End Road Work sign and traffic has fully reopened; hazards exist at the end of the zone too." },
+      { order: 8, question: "Inside a barrier-lined narrow work-zone lane, you should:", options: ["Make quick lane corrections", "Keep the truck centered and steady with no sudden moves", "Ride the barrier line", "Speed up to spend less time in it"], correctIndex: 1, explanation: "Narrow, barrier-lined lanes leave inches of margin. Keep centered and steady — sudden moves risk the barrier, your mirror, or an adjacent vehicle." },
+    ],
+  },
 ];
