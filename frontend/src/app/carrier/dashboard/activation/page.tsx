@@ -15,8 +15,6 @@ import { FileSignature, FileText, CheckCircle2, Loader2, Zap } from "lucide-reac
 import { api } from "@/lib/api";
 import { CarrierCard } from "@/components/carrier";
 import {
-  BCA_VERSION,
-  BCA_ARTICLES,
   QP_VERSION,
   QP_SUMMARY,
   QP_TIER_TERMS,
@@ -29,6 +27,17 @@ interface ActivationStatus {
   bca: { signed: boolean; signedAt: string | null; signedByName: string | null; version: string | null };
   quickPay: { enabled: boolean; signed: boolean; signedByName: string | null; agreedAt: string | null; version: string | null };
   activatedAt: string | null;
+}
+
+// Canonical BCA content fetched from the backend (single source) — the review
+// pane renders this, and the signed version is always the backend's.
+interface AgreementContent {
+  title: string;
+  subtitle: string;
+  version: string;
+  effectiveNote: string;
+  preamble: string[];
+  sections: { heading: string; clauses: string[] }[];
 }
 
 function extractError(err: unknown, fallback: string): string {
@@ -55,6 +64,13 @@ export default function CarrierActivationPage() {
     queryFn: () => api.get("/carrier-auth/activation-status").then((r) => r.data),
   });
 
+  // Canonical Broker-Carrier Agreement content (backend single source).
+  const { data: bca } = useQuery<AgreementContent>({
+    queryKey: ["agreement", "broker-carrier"],
+    queryFn: () => api.get("/carrier-auth/agreement/broker-carrier").then((r) => r.data),
+    staleTime: 5 * 60 * 1000,
+  });
+
   // BCA signature
   const [name, setName] = useState("");
   const [title, setTitle] = useState("");
@@ -67,7 +83,7 @@ export default function CarrierActivationPage() {
         signedByName: name.trim(),
         signedByTitle: title.trim() || undefined,
         agreed: true,
-        bcaVersion: BCA_VERSION,
+        bcaVersion: bca?.version ?? "",
       }),
     onSuccess: () => {
       setBcaError(null);
@@ -136,7 +152,7 @@ export default function CarrierActivationPage() {
 
   const bcaSigned = data.bca.signed;
   const qpEnabled = data.quickPay.enabled;
-  const canSign = name.trim().length >= 2 && agreed && !signBca.isPending;
+  const canSign = name.trim().length >= 2 && agreed && !!bca?.version && !signBca.isPending;
 
   return (
     <div className="max-w-3xl">
@@ -190,17 +206,30 @@ export default function CarrierActivationPage() {
               Review the agreement, then sign with your full legal name. This is the agreement between your company and Silk Route Logistics that governs every load.
             </p>
 
-            {/* Review pane */}
+            {/* Review pane — canonical BCA content fetched from the backend */}
             <div className="max-h-72 overflow-auto rounded-lg border border-[#EFE6D3] bg-[#F5EEE0] p-4 mb-4">
-              {BCA_ARTICLES.map((a) => (
-                <div key={a.title} className="mb-3 last:mb-0">
-                  <p className="text-xs font-bold text-[#0A2540] mb-0.5">{a.title}</p>
-                  <p className="text-[11px] text-gray-600 leading-relaxed">{a.body}</p>
+              {!bca ? (
+                <div className="flex items-center gap-2 text-gray-400 text-xs py-4">
+                  <Loader2 size={14} className="animate-spin" /> Loading the agreement...
                 </div>
-              ))}
-              <p className="text-[10px] text-gray-400 mt-3 pt-3 border-t border-gray-300/60">
-                Broker-Carrier Agreement v{BCA_VERSION}. The full executed agreement governs.
-              </p>
+              ) : (
+                <>
+                  {bca.preamble.map((p, i) => (
+                    <p key={`pre-${i}`} className="text-[11px] text-gray-600 leading-relaxed mb-2">{p}</p>
+                  ))}
+                  {bca.sections.map((s) => (
+                    <div key={s.heading} className="mb-3 last:mb-0">
+                      <p className="text-xs font-bold text-[#0A2540] mb-0.5">{s.heading}</p>
+                      {s.clauses.map((c, i) => (
+                        <p key={i} className="text-[11px] text-gray-600 leading-relaxed">{c}</p>
+                      ))}
+                    </div>
+                  ))}
+                  <p className="text-[10px] text-gray-400 mt-3 pt-3 border-t border-gray-300/60">
+                    {bca.title} v{bca.version}. The full executed agreement governs.
+                  </p>
+                </>
+              )}
             </div>
 
             {/* Signature */}
@@ -217,7 +246,7 @@ export default function CarrierActivationPage() {
             <label className="flex items-start gap-2 mb-3 cursor-pointer">
               <input type="checkbox" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} className="mt-0.5 accent-[#BA7517]" />
               <span className="text-xs text-gray-600">
-                I have read and agree to the Broker-Carrier Agreement (v{BCA_VERSION}) on behalf of my company. Typing my name above is my electronic signature.
+                I have read and agree to the Broker-Carrier Agreement (v{bca?.version}) on behalf of my company. Typing my name above is my electronic signature.
               </span>
             </label>
 

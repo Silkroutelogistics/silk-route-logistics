@@ -13993,7 +13993,22 @@
 //   320/320 + frontend tsc + next build clean. Banked follow-up: repoint the
 //   frontend review pane + onboarding to fetch GET /agreement/:type so the BCA
 //   text is truly single-source (backend canonical already live). Per §3.1: aqh -> aqi.
-export const SRL_VERSION = "3.8.aqi";
+// v3.8.aqj — BCA text truly single-sourced (design conformance Phase 2c). The
+//   Broker-Carrier Agreement text + version now live ONLY in the backend
+//   (data/agreements.ts), upgraded to the fuller DETAILED clause set (each
+//   section's sub-clauses, reconciled from the onboarding copy, with the stale
+//   "GPS compliance" → "tracking compliance" §9 fix). GET /carrier-auth/
+//   agreement/:type is now PUBLIC so BOTH the post-approval activation review
+//   pane AND the pre-approval onboarding Step 4 click-through fetch + render the
+//   same source and stamp the same backend version — killing the two drifted
+//   frontend copies (which disagreed: onboarding was v2026-05-24-v1, backend
+//   v2026-06-27-v1) and the concise-vs-detailed text drift. Removed
+//   BCA_ARTICLES + BCA_VERSION from carrierAgreements.ts (QP exports kept). The
+//   executed BCA PDF is now the detailed 4-page doc; re-smoked clean. Gates:
+//   backend tsc + npm test 320/320 + frontend tsc + next build clean. §16 §20.
+//   Remaining: Quick Pay Agreement PDF (Phase 3, held for the legal text). Per
+//   §3.1: aqi -> aqj.
+export const SRL_VERSION = "3.8.aqj";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

@@ -346,6 +346,27 @@ export default function OnboardingPage() {
   }, [applyFmcsaData, fmcsaResult?.verified]);
 
   const set = (field: keyof CarrierFormData, value: unknown) => setForm((p) => ({ ...p, [field]: value }));
+
+  // v3.8.aqj — fetch the canonical Broker-Carrier Agreement from the backend so
+  // the Step 4 click-through renders ONE source (kills the drifted inline copy +
+  // the stale local version). Falls back to the local constant if the fetch
+  // fails so registration is never blocked.
+  const [bcaContent, setBcaContent] = useState<{
+    version: string;
+    preamble: string[];
+    sections: { heading: string; clauses: string[] }[];
+  } | null>(null);
+  useEffect(() => {
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+    if (!apiUrl) return;
+    fetch(`${apiUrl}/carrier-auth/agreement/broker-carrier`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        if (d?.sections) setBcaContent(d);
+      })
+      .catch(() => {});
+  }, []);
+  const bcaVersionResolved = bcaContent?.version ?? BCA_VERSION;
   const toggleArray = (field: "equipmentTypes" | "operatingRegions", val: string) => {
     const arr = form[field];
     set(field, arr.includes(val) ? arr.filter((v) => v !== val) : [...arr, val]);
@@ -487,7 +508,7 @@ export default function OnboardingPage() {
         ...insurancePayload,
         ...(numTrucksStr ? { numberOfTrucks: numTrucksStr } : {}),
         ...(einFromForm ? { ein: einFromForm } : {}),
-        bcaVersion: BCA_VERSION,
+        bcaVersion: bcaVersionResolved,
       };
       for (const [key, value] of Object.entries(flatPayload)) {
         if (value === undefined || value === null) continue;
@@ -1525,7 +1546,7 @@ export default function OnboardingPage() {
                   destination — no PDF library needed. */}
               <div className="flex items-center justify-between gap-3 print:hidden">
                 <div className="text-xs text-[#6B7685]">
-                  <span className="uppercase tracking-[0.18em] font-semibold text-[#BA7517]">Version</span> {BCA_VERSION}
+                  <span className="uppercase tracking-[0.18em] font-semibold text-[#BA7517]">Version</span> {bcaVersionResolved}
                 </div>
                 <button
                   type="button"
@@ -1541,97 +1562,33 @@ export default function OnboardingPage() {
                   timestamp at print time for the carrier's records. */}
               <div className="hidden print:block mb-4 pb-3 border-b border-[#EFE6D3]">
                 <p className="text-xs text-[#6B7685]">
-                  Silk Route Logistics Inc. — Broker-Carrier Agreement (Click-Through) — Version {BCA_VERSION} — Printed {new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}
+                  Silk Route Logistics Inc. — Broker-Carrier Agreement (Click-Through) — Version {bcaVersionResolved} — Printed {new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}
                 </p>
               </div>
               <div className="p-5 rounded-xl bg-[#FBF7F0] border border-[#EFE6D3] max-h-80 overflow-y-auto text-sm text-[#3A4A5F] leading-relaxed space-y-4 print:max-h-none print:overflow-visible print:bg-white print:border-0 print:p-0">
                 <p className="font-serif italic font-semibold text-[#0A2540] text-base">Silk Route Logistics — Broker-Carrier Agreement (Click-Through)</p>
-                <p>This Broker-Carrier Agreement (&quot;Agreement&quot;) is entered into between Silk Route Logistics Inc. (&quot;Broker&quot;) and the undersigned motor carrier (&quot;Carrier&quot;). By completing registration, Carrier agrees to the following terms and conditions:</p>
-
-                <p className="font-semibold text-[#0A2540] mt-3">1. Authority & Compliance</p>
-                <ul className="list-disc ml-5 space-y-1">
-                  <li>Carrier shall maintain valid operating authority (MC/DOT) issued by the FMCSA at all times during the term of this Agreement.</li>
-                  <li>Carrier shall comply with all applicable federal, state, provincial, and local laws, including FMCSA regulations, DOT requirements, FMCSA safety regulations (49 CFR Parts 382-399), and applicable Canadian provincial/territorial regulations.</li>
-                  <li>Carrier shall maintain a &quot;Satisfactory&quot; or better safety rating with the FMCSA. If Carrier&apos;s rating is downgraded to &quot;Conditional&quot; or &quot;Unsatisfactory,&quot; Carrier shall notify Broker within 24 hours.</li>
-                  <li>Carrier shall maintain valid Safety Fitness Certificate for Canadian interprovincial operations where applicable.</li>
-                </ul>
-
-                <p className="font-semibold text-[#0A2540] mt-3">2. Insurance Requirements</p>
-                <ul className="list-disc ml-5 space-y-1">
-                  <li>Carrier shall maintain at minimum: (a) Commercial Auto Liability — $1,000,000 per occurrence; (b) Motor Cargo/Freight Insurance — $100,000 per occurrence; (c) General Liability — $1,000,000 per occurrence; (d) Workers&apos; Compensation — as required by applicable law.</li>
-                  <li>Carrier shall name Silk Route Logistics Inc. as an additional insured and certificate holder on all policies.</li>
-                  <li>Carrier shall provide certificates of insurance prior to hauling any loads and shall provide updated certificates upon renewal or policy change.</li>
-                  <li>Carrier shall provide Broker with 30 days&apos; written notice prior to cancellation, non-renewal, or material modification of any insurance policy.</li>
-                </ul>
-
-                <p className="font-semibold text-[#0A2540] mt-3">3. Independent Contractor Relationship</p>
-                <ul className="list-disc ml-5 space-y-1">
-                  <li>Carrier is an independent contractor and not an employee, agent, or partner of Broker. Nothing in this Agreement creates an employer-employee relationship.</li>
-                  <li>Carrier retains full control over drivers, equipment, routes, and methods of transportation, subject to shipper requirements.</li>
-                  <li>Carrier is solely responsible for all taxes, including self-employment tax, income tax withholding, and unemployment insurance for its employees and drivers.</li>
-                </ul>
-
-                <p className="font-semibold text-[#0A2540] mt-3">4. Load Acceptance & Transportation</p>
-                <ul className="list-disc ml-5 space-y-1">
-                  <li>Carrier has the right to accept or reject any load tendered by Broker. Once accepted, Carrier is obligated to complete the transportation as agreed.</li>
-                  <li>Carrier shall not double-broker, co-broker, or assign any load to a third party without prior written consent from Broker.</li>
-                  <li>Carrier shall provide accurate and timely updates on load status, location, and any delays or exceptions.</li>
-                  <li>Carrier shall comply with ELD mandates and GPS tracking requirements while transporting loads arranged by Broker.</li>
-                </ul>
-
-                <p className="font-semibold text-[#0A2540] mt-3">5. Documentation & Payment</p>
-                <ul className="list-disc ml-5 space-y-1">
-                  <li>Carrier shall submit all required documentation, including Bill of Lading (BOL), Proof of Delivery (POD), and lumper receipts, within 24 hours of delivery.</li>
-                  <li>Standard payment terms and per-load Quick Pay options are as established in the Caravan Partner Program (published at silkroutelogistics.ai/carriers), from receipt of complete and accurate documentation unless otherwise agreed in writing.</li>
-                  <li>Optional per-load Quick Pay is available without requiring a factoring contract; published fees apply per the Caravan Partner Program.</li>
-                  <li>Carrier shall submit a completed W-9 form prior to receiving any payment.</li>
-                  <li>Rates shall be as agreed upon in each individual rate confirmation/load tender.</li>
-                </ul>
-
-                <p className="font-semibold text-[#0A2540] mt-3">6. Cargo Claims & Liability</p>
-                <ul className="list-disc ml-5 space-y-1">
-                  <li>Carrier assumes full liability for loss, damage, or delay to cargo from the time of pickup to delivery, pursuant to the Carmack Amendment (49 U.S.C. § 14706) for domestic shipments.</li>
-                  <li>Carrier shall notify Broker immediately upon discovery of any cargo loss, damage, shortage, or delay.</li>
-                  <li>Carrier shall cooperate fully in the investigation and processing of all cargo claims.</li>
-                  <li>Carrier shall indemnify and hold Broker harmless from any claims, damages, or liabilities arising from Carrier&apos;s performance or failure to perform under this Agreement.</li>
-                </ul>
-
-                <p className="font-semibold text-[#0A2540] mt-3">7. Caravan Partner Program & Performance Tracking</p>
-                <ul className="list-disc ml-5 space-y-1">
-                  <li>Carrier acknowledges that Broker tracks performance metrics through the Compass Engine, including on-time pickup/delivery, communication responsiveness, claims ratio, documentation timeliness, GPS compliance, and acceptance rate.</li>
-                  <li>Carrier&apos;s placement within the Caravan Partner Program is determined by the performance criteria, advancement thresholds, and program economics published at silkroutelogistics.ai/carriers, which the carrier acknowledges as the authoritative reference for program structure.</li>
-                  <li>Advancement within the Caravan Partner Program is performance-based per the criteria published at silkroutelogistics.ai/carriers; thresholds are calibrated to current operating volume and may be revisited.</li>
-                  <li>Broker reserves the right to modify program criteria with 30 days&apos; notice.</li>
-                </ul>
-
-                <p className="font-semibold text-[#0A2540] mt-3">8. Confidentiality</p>
-                <ul className="list-disc ml-5 space-y-1">
-                  <li>Carrier shall not disclose Broker&apos;s customer information, rates, or business practices to any third party.</li>
-                  <li>Carrier shall not solicit or conduct business directly with any shipper/customer introduced through Broker for a period of 12 months after the last load transported, with liquidated damages of 15% of the gross revenue on any improperly solicited shipment.</li>
-                </ul>
-
-                <p className="font-semibold text-[#0A2540] mt-3">9. Termination</p>
-                <ul className="list-disc ml-5 space-y-1">
-                  <li>Either party may terminate this Agreement with 30 days&apos; written notice.</li>
-                  <li>Broker may terminate immediately if Carrier&apos;s operating authority is revoked, insurance lapses, or Carrier breaches any material term of this Agreement.</li>
-                  <li>Termination does not relieve Carrier of obligations for loads already in transit or payment obligations already incurred.</li>
-                </ul>
-
-                <p className="font-semibold text-[#0A2540] mt-3">10. Governing Law & Dispute Resolution</p>
-                <ul className="list-disc ml-5 space-y-1">
-                  <li>This Agreement shall be governed by federal transportation law (49 U.S.C. § 14101(b)) and, to the extent not preempted, the laws of the State of Michigan.</li>
-                  <li>Any dispute arising under this Agreement shall first be subject to mediation. If mediation fails, disputes shall be resolved by binding arbitration with venue in Kalamazoo County, Michigan.</li>
-                  <li>The prevailing party in any dispute shall be entitled to recover reasonable attorney&apos;s fees and costs.</li>
-                </ul>
-
-                <p className="font-semibold text-[#0A2540] mt-3">11. Data Privacy & Consent</p>
-                <ul className="list-disc ml-5 space-y-1">
-                  <li>Carrier consents to Broker collecting, storing, and processing Carrier&apos;s business information, FMCSA data, insurance records, and performance data for operational purposes.</li>
-                  <li>Broker shall handle Carrier&apos;s data in accordance with its Privacy Policy and applicable data protection laws.</li>
-                  <li>Carrier consents to automated FMCSA compliance monitoring, safety scoring, and OFAC screening.</li>
-                </ul>
-
-                <p className="text-xs text-[#6B7685] mt-4 italic">Last updated: May 2026. Silk Route Logistics Inc. reserves the right to update these terms with 30 days&apos; notice to registered carriers. When the standalone Broker-Carrier Agreement and Caravan Quick Pay Agreement v2 are executed between Broker and Carrier, those agreements will govern over this onboarding click-through where they conflict.</p>
+                {!bcaContent ? (
+                  <p className="text-[#6B7685]">Loading the agreement…</p>
+                ) : (
+                  <>
+                    {bcaContent.preamble.map((p, i) => (
+                      <p key={`pre-${i}`}>{p}</p>
+                    ))}
+                    {bcaContent.sections.map((s) => (
+                      <div key={s.heading}>
+                        <p className="font-semibold text-[#0A2540] mt-3">{s.heading}</p>
+                        <ul className="list-disc ml-5 space-y-1">
+                          {s.clauses.map((c, i) => (
+                            <li key={i}>{c}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    ))}
+                    <p className="text-xs text-[#6B7685] mt-4 italic">
+                      Silk Route Logistics Inc. reserves the right to update these terms with 30 days&apos; notice to registered carriers. When the standalone Broker-Carrier Agreement and Caravan Quick Pay Agreement are executed between Broker and Carrier, those agreements govern where they conflict.
+                    </p>
+                  </>
+                )}
               </div>
               <label className="flex items-center gap-3 cursor-pointer p-4 rounded-lg border border-[#EFE6D3] bg-white hover:bg-[#FBF7F0] transition print:hidden">
                 <input type="checkbox" checked={form.agreeTerms}

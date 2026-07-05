@@ -694,8 +694,12 @@ async function loadCarrierIdentity(profileId: string) {
 }
 
 // GET /api/carrier-auth/agreement/:type — canonical agreement content (version +
-// sections) so the portal review pane renders from the SAME source the PDF does.
-router.get("/agreement/:type", authenticate, authorize("CARRIER"), async (req: AuthRequest, res: Response) => {
+// sections). PUBLIC: non-sensitive legal text, served to BOTH the approved
+// carrier (activation review pane) and the pre-approval applicant (onboarding
+// click-through) so every surface renders from ONE source and the signed
+// version is always the backend canonical. (The PDF endpoint below stays
+// carrier-authed — it renders the carrier's own executed copy.)
+router.get("/agreement/:type", async (req: AuthRequest, res: Response) => {
   const agreement = getAgreement(req.params.type);
   if (!agreement) {
     res.status(404).json({ error: "Unknown agreement" });
