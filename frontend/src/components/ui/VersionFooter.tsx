@@ -13960,7 +13960,23 @@
 //   smokes pass (incl. 40-load settlement pagination + minimal no-customer
 //   invoice). Phase 2 = BCA generator (new multi-page legal renderer); Phase 3
 //   = Quick Pay Agreement (held for the legal text). Per §3.1: aqf -> aqg.
-export const SRL_VERSION = "3.8.aqg";
+// v3.8.aqh — Design conformance Phase 2a: Broker-Carrier Agreement PDF on the
+//   skill chrome. New reusable multi-page legal renderer (agreementPdfService)
+//   — the one capability BCA/QP need beyond the 1-page BOL/RC: wrapping
+//   justified clauses + section headings with auto page-break + continuation
+//   headers, the MASTER_AGREEMENT (Broker+Carrier) signature block, an executed
+//   ESIGN/UETA attestation strip, and correct Page X of Y via bufferPages.
+//   Backend now owns the canonical agreement text (data/agreements.ts) as the
+//   single source. New carrier endpoints: GET /carrier-auth/agreement/:type
+//   (content for the review pane) + /agreement/:type/pdf (inline PDF — review
+//   copy if unsigned, EXECUTED copy w/ signer/date/IP once signed). sign-bca now
+//   auto-generates + stores the executed countersigned PDF to documentUrl.
+//   Both copies visually verified (2-page legal doc, all 11 articles, prefilled
+//   carrier identity, no overlaps). Existing signature mechanism confirmed
+//   solid (CarrierAgreement typed-name e-sig + click-wrap audit). Next (aqi):
+//   hard portal-access gate until BCA signed + Quick Pay as a real signature
+//   (parity with BCA). backend tsc clean. Per §3.1: aqg -> aqh.
+export const SRL_VERSION = "3.8.aqh";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

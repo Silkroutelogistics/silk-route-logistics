@@ -23,7 +23,13 @@ import { resolveCountry, extractClientIp, detectUnusualActivity } from "../servi
 import { sendOtpSms } from "../services/openPhoneService";
 import { resolveInfoRequest, getCategoryLabel } from "../services/infoRequestService";
 import { upload } from "../config/upload";
-import { uploadFile } from "../services/storageService";
+import { uploadFile, uploadFileToPath } from "../services/storageService";
+// v3.8.aqh — Broker-Carrier Agreement PDF (skill-chrome multi-page legal doc).
+import {
+  generateBrokerCarrierAgreementPdf,
+  generateBrokerCarrierAgreementBuffer,
+} from "../services/agreementPdfService";
+import { getAgreement } from "../data/agreements";
 import path from "path";
 import { verifyTotpCode } from "../services/totpService";
 import { z } from "zod";
@@ -673,6 +679,74 @@ async function loadActivationProfile(userId: string) {
   return user?.carrierProfile ?? null;
 }
 
+// Carrier legal identity for the executed agreement PDF signature block.
+async function loadCarrierIdentity(profileId: string) {
+  const p = await prisma.carrierProfile.findUnique({
+    where: { id: profileId },
+    select: { companyName: true, mcNumber: true, dotNumber: true },
+  });
+  return {
+    legalName: p?.companyName || "Carrier",
+    mcNumber: p?.mcNumber || null,
+    dotNumber: p?.dotNumber || null,
+    ein: null,
+  };
+}
+
+// GET /api/carrier-auth/agreement/:type — canonical agreement content (version +
+// sections) so the portal review pane renders from the SAME source the PDF does.
+router.get("/agreement/:type", authenticate, authorize("CARRIER"), async (req: AuthRequest, res: Response) => {
+  const agreement = getAgreement(req.params.type);
+  if (!agreement) {
+    res.status(404).json({ error: "Unknown agreement" });
+    return;
+  }
+  res.json({
+    templateName: agreement.templateName,
+    title: agreement.title,
+    subtitle: agreement.subtitle,
+    version: agreement.version,
+    effectiveNote: agreement.effectiveNote,
+    preamble: agreement.preamble,
+    sections: agreement.sections,
+  });
+});
+
+// GET /api/carrier-auth/agreement/:type/pdf — branded PDF, opens inline in a new
+// tab. Executed copy (signer/date/IP + attestation) once signed, review copy
+// otherwise.
+router.get("/agreement/:type/pdf", authenticate, authorize("CARRIER"), async (req: AuthRequest, res: Response) => {
+  const agreement = getAgreement(req.params.type);
+  if (!agreement || agreement.templateName !== "broker-carrier") {
+    res.status(404).json({ error: "Unknown agreement" });
+    return;
+  }
+  const profile = await loadActivationProfile(req.user!.id);
+  if (!profile) {
+    res.status(404).json({ error: "Carrier profile not found" });
+    return;
+  }
+  const identity = await loadCarrierIdentity(profile.id);
+  const signed = await prisma.carrierAgreement.findFirst({
+    where: { carrierId: profile.id, status: "SIGNED", templateName: "broker-carrier" },
+    orderBy: { signedAt: "desc" },
+  });
+  const signature =
+    signed && signed.signedAt
+      ? {
+          signedByName: signed.signedByName || identity.legalName,
+          signedByTitle: signed.signedByTitle,
+          signedAt: signed.signedAt,
+          signerIp: signed.signerIp,
+          version: signed.version,
+        }
+      : undefined;
+  const doc = generateBrokerCarrierAgreementPdf({ carrier: identity, signature });
+  res.setHeader("Content-Type", "application/pdf");
+  res.setHeader("Content-Disposition", `inline; filename="Broker-Carrier-Agreement-${agreement.version}.pdf"`);
+  doc.pipe(res);
+});
+
 // GET /api/carrier-auth/activation-status — what the carrier still needs to
 // do post-approval. bcaSigned reads the SAME query the compliance gate +
 // vetting use (carrierAgreement findFirst status SIGNED, latest by signedAt),
@@ -805,6 +879,19 @@ router.post("/sign-bca", authenticate, authorize("CARRIER"), validateBody(signBc
       }),
     )
     .catch(() => {});
+
+  // v3.8.aqh — generate + store the EXECUTED BCA PDF (documentUrl) so the carrier
+  // can download their countersigned copy. Non-blocking; the signature record is
+  // already persisted above and the download endpoint regenerates on demand too.
+  void (async () => {
+    const identity = await loadCarrierIdentity(profile.id);
+    const buf = await generateBrokerCarrierAgreementBuffer({
+      carrier: identity,
+      signature: { signedByName, signedByTitle: signedByTitle || null, signedAt: now, signerIp: ip || null, version: bcaVersion },
+    });
+    const url = await uploadFileToPath(buf, `agreements/bca-${agreement.id}.pdf`, "application/pdf");
+    await prisma.carrierAgreement.update({ where: { id: agreement.id }, data: { documentUrl: url } });
+  })().catch(() => {});
 
   res.status(201).json({ signed: true, agreement });
 });
