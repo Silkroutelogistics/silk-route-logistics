@@ -13938,7 +13938,29 @@
 //   Catalog now 32 published courses / 119 lessons / 292 Q (was 265). backend tsc
 //   clean, seed --dry-run valid, RE-SEEDED TO PROD (live — critical fixes
 //   confirmed by DB query). Per §3.1: aqe -> aqf.
-export const SRL_VERSION = "3.8.aqf";
+// v3.8.aqg — SRL document design conformance, Phase 1 (money docs onto the
+//   brand skill chrome). Audit of all SRL PDF generators found: BOL = the
+//   hand-authored v2.9 gold standard the skill chrome was extracted FROM; RC
+//   already fully migrated (reference impl); Invoice + Settlement + Shipper
+//   Load Confirmation still bespoke plain-PDFKit (off-canonical #D4A843/#1E1E2F,
+//   Helvetica, no compass/fonts/footer). This commit migrates all three onto
+//   backend/src/lib/srl-chrome.ts — registerSkillFonts (Playfair/DM Sans +
+//   ligature suppression), drawHeaderFirstPage (compass, no QR), drawMetaStrip,
+//   and the pre-built-but-unused invoice primitives (drawBillToBlock,
+//   drawChargesBlock, drawSettlementSummary, drawRemitToBlock,
+//   drawPaymentReference, drawLaneReferenceRow) + drawPartiesBlock +
+//   drawShipmentTable + drawSignatureBlock + drawFooter. Invoice now renders the
+//   structured line-haul/FSC/accessorial columns it previously ignored + fixed
+//   the silent crash on the email-attach path (widened its fetch to include
+//   customer + user). Settlement paginates the loads table across pages with a
+//   Net Settlement summary panel. Shipper Load Confirmation gets the parties
+//   block + Broker/Shipper signature (agreed shipper rate only, no carrier cost).
+//   BOL left untouched (production-validated gold standard). All 3 visually
+//   verified (compass/fonts/panels/footer, no overlaps). backend tsc clean, PDF
+//   smokes pass (incl. 40-load settlement pagination + minimal no-customer
+//   invoice). Phase 2 = BCA generator (new multi-page legal renderer); Phase 3
+//   = Quick Pay Agreement (held for the legal text). Per §3.1: aqf -> aqg.
+export const SRL_VERSION = "3.8.aqg";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

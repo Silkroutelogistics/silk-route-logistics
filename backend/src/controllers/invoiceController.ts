@@ -316,7 +316,7 @@ export async function generateInvoiceFromLoad(req: AuthRequest, res: Response) {
     await tx.invoiceLineItem.createMany({
       data: lineItems.map((li) => ({ invoiceId: inv.id, ...li })),
     });
-    return tx.invoice.findUnique({ where: { id: inv.id }, include: { load: true, lineItems: { orderBy: { sortOrder: "asc" } } } });
+    return tx.invoice.findUnique({ where: { id: inv.id }, include: { load: { include: { customer: true } }, user: { select: { firstName: true, lastName: true, company: true } }, lineItems: { orderBy: { sortOrder: "asc" } } } });
   });
 
   // Generate PDF

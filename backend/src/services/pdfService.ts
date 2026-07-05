@@ -29,10 +29,20 @@ import {
   drawContinuationHeader,
   drawPanel,
   registerSkillFonts,
+  // v3.8.aqg — Invoice/Settlement migration (Sprint 45-RC2/RC3): the invoice
+  // + settlement chrome primitives that were pre-built but never consumed.
+  drawBillToBlock,
+  drawChargesBlock,
+  drawSettlementSummary,
+  drawRemitToBlock,
+  drawPaymentReference,
+  drawLaneReferenceRow,
   FONT_BODY,
   FONT_BODY_BOLD,
+  FONT_BODY_ITALIC,
   MARGIN,
   CONTENT_W,
+  PAGE_W,
   PAGE_H,
   TOKENS,
   type Party,
@@ -40,6 +50,9 @@ import {
   type EquipmentSpec,
   type CarrierRequirements,
   type RateConTerms,
+  type BillTo,
+  type InvoiceCharge,
+  type SignatureRole,
 } from "../lib/srl-chrome";
 import { rcVerifyToken } from "../controllers/verifyController";
 
@@ -1892,100 +1905,96 @@ export function generateEnhancedRateConfirmation(load: EnhancedRCLoadData, formD
 /**
  * Shipper-facing Load Confirmation PDF — omits all carrier cost/rate information.
  */
+/**
+ * v3.8.aqg — Shipper Load Confirmation migrated onto the SRL skill chrome
+ * (Sprint 45-RC3): compass header, meta strip (reference / date / equipment /
+ * commodity / weight / agreed rate), the SHIPPER + CONSIGNEE parties block, a
+ * wrapped Special Instructions panel, and a two-party AUTHORIZED-BY / SHIPPER
+ * signature block. Customer-facing — shows the agreed shipper rate only, never
+ * carrier cost.
+ */
 export function generateShipperLoadConfirmation(load: EnhancedRCLoadData, formData: Record<string, any>): InstanceType<typeof PDFDocument> {
-  const doc = new PDFDocument({ margin: 50, size: "LETTER" });
+  const doc = new PDFDocument({ size: "LETTER", margin: 0 });
+  registerSkillFonts(doc);
   const fd = formData || {};
 
-  addHeader(doc, "LOAD CONFIRMATION");
+  const money = (n: number) =>
+    `$${(n || 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  const fmtDate = (d?: Date | string | null) => {
+    if (!d) return "—";
+    if (typeof d === "string") return d;
+    return new Date(d).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" });
+  };
+  const smallLabel = (text: string, x: number, ly: number, size = 7) =>
+    doc.font(FONT_BODY_BOLD, size).fillColor(TOKENS.goldDark)
+       .text(text.toUpperCase(), x, ly, { characterSpacing: 0.8, lineBreak: false });
 
-  let y = 155;
+  const SHIPPER_LC_SIGNATURE_ROLES: SignatureRole[] = [
+    { title: "AUTHORIZED BY · SILK ROUTE LOGISTICS", certification: "Broker confirms this booking at the agreed rate.", fields: ["PRINT NAME", "TITLE", "SIGNATURE", "DATE"] },
+    { title: "ACKNOWLEDGED BY · SHIPPER", certification: "Shipper acknowledges the booking terms above.", fields: ["PRINT NAME", "TITLE", "SIGNATURE", "DATE"] },
+  ];
 
-  // Reference & Date
-  labelValue(doc, "Reference Number", fd.referenceNumber || load.referenceNumber, 50, y);
-  labelValue(doc, "Date", new Date().toLocaleDateString(), 450, y);
+  const ref = fd.referenceNumber || load.referenceNumber;
+  const docId = ref;
+  const shipperRate = Number(fd.customerRate ?? (load as any).customerRate ?? load.rate ?? 0);
 
-  y += 40;
-  doc.moveTo(50, y).lineTo(560, y).strokeColor("#EEEEEE").lineWidth(0.5).stroke();
-  y += 10;
+  // Header
+  let y = drawHeaderFirstPage(doc, {
+    docTitle: "Load Confirmation",
+    subtitle: "Shipper Copy · Booking Confirmation",
+    loadId: docId,
+    includeQr: false,
+  });
 
-  // Broker Info
-  y = sectionTitle(doc, "BROKER", y);
-  doc.fontSize(10).fillColor("#1E1E2F");
-  doc.text(COMPANY.name, 50, y);
-  doc.text(`${COMPANY.address}, ${COMPANY.cityStateZip}`, 50, y + 14);
-  doc.text(`${COMPANY.phone} | ${COMPANY.email}`, 50, y + 28);
-  y += 50;
+  // Meta strip
+  y = drawMetaStrip(
+    doc,
+    {
+      "REFERENCE": ref,
+      "DATE": fmtDate(new Date()),
+      "EQUIPMENT": fd.equipmentType || load.equipmentType,
+      "COMMODITY": fd.commodity || load.commodity || "General Freight",
+      "WEIGHT": load.weight ? `${load.weight.toLocaleString()} lbs` : null,
+      "AGREED RATE": money(shipperRate),
+    },
+    y,
+  );
+  y += 12;
 
-  // Shipper / Origin
-  y = checkPageBreak(doc, y, 80);
-  y = sectionTitle(doc, "SHIPPER / ORIGIN", y);
-  doc.fontSize(10).fillColor("#1E1E2F");
-  doc.text(fd.shipperName || load.customer?.name || "—", 50, y);
-  if (fd.shipperAddress || load.customer?.address) doc.text(fd.shipperAddress || load.customer?.address || "", 50, y + 14);
-  const shipperCSZ = fd.shipperCity || load.customer?.city
-    ? `${fd.shipperCity || load.customer?.city || ""}, ${fd.shipperState || load.customer?.state || ""} ${fd.shipperZip || load.customer?.zip || ""}`
-    : `${load.originCity}, ${load.originState} ${load.originZip}`;
-  doc.text(shipperCSZ, 50, y + 28);
-  y += 55;
+  // Parties (shipper / origin + consignee / destination)
+  const shipperCity = `${fd.shipperCity || load.customer?.city || load.originCity}, ${fd.shipperState || load.customer?.state || load.originState} ${fd.shipperZip || load.customer?.zip || load.originZip || ""}`.trim();
+  const consigneeCity = `${fd.consigneeCity || load.destCity}, ${fd.consigneeState || load.destState} ${fd.consigneeZip || load.destZip || ""}`.trim();
+  const shipper: Party = {
+    name: fd.shipperName || load.customer?.name || `${load.originCity}, ${load.originState}`,
+    addressLines: [fd.shipperAddress || load.customer?.address || "", shipperCity].filter(Boolean),
+    window: `Pickup ${fmtDate(fd.pickupDate || load.pickupDate)}${fd.pickupTimeWindow ? " · " + fd.pickupTimeWindow : ""}`,
+  };
+  const consignee: Party = {
+    name: fd.consigneeName || `${load.destCity}, ${load.destState}`,
+    addressLines: [fd.consigneeAddress || "", consigneeCity].filter(Boolean),
+    window: `Delivery ${fmtDate(fd.deliveryDate || load.deliveryDate)}${fd.deliveryTimeWindow ? " · " + fd.deliveryTimeWindow : ""}`,
+  };
+  y = drawPartiesBlock(doc, shipper, consignee, y, 100);
+  y += 14;
 
-  // Consignee / Destination
-  y = checkPageBreak(doc, y, 80);
-  y = sectionTitle(doc, "CONSIGNEE / DESTINATION", y);
-  doc.fontSize(10).fillColor("#1E1E2F");
-  doc.text(fd.consigneeName || "—", 50, y);
-  if (fd.consigneeAddress) doc.text(fd.consigneeAddress, 50, y + 14);
-  const consigneeCSZ = fd.consigneeCity
-    ? `${fd.consigneeCity}, ${fd.consigneeState || ""} ${fd.consigneeZip || ""}`
-    : `${load.destCity}, ${load.destState} ${load.destZip}`;
-  doc.text(consigneeCSZ, 50, y + 28);
-  y += 55;
-
-  // Equipment & Commodity
-  y = checkPageBreak(doc, y, 50);
-  y = sectionTitle(doc, "EQUIPMENT & COMMODITY", y);
-  labelValue(doc, "Equipment", fd.equipmentType || load.equipmentType, 50, y);
-  labelValue(doc, "Commodity", fd.commodity || load.commodity || "General Freight", 200, y);
-  labelValue(doc, "Weight", load.weight ? `${load.weight.toLocaleString()} lbs` : "—", 380, y);
-  y += 35;
-
-  // Dates
-  y = checkPageBreak(doc, y, 50);
-  y = sectionTitle(doc, "SCHEDULE", y);
-  labelValue(doc, "Pickup Date", fd.pickupDate || load.pickupDate.toLocaleDateString(), 50, y);
-  labelValue(doc, "Pickup Window", fd.pickupTimeWindow || "—", 200, y);
-  labelValue(doc, "Delivery Date", fd.deliveryDate || load.deliveryDate.toLocaleDateString(), 350, y);
-  labelValue(doc, "Delivery Window", fd.deliveryTimeWindow || "—", 500, y);
-  y += 35;
-
-  // Shipper Rate (customer-facing, NO carrier cost)
-  y = checkPageBreak(doc, y, 60);
-  y = sectionTitle(doc, "RATE", y);
-  const shipperRate = fd.customerRate ?? load.customer ? (load as any).customerRate || load.rate : load.rate;
-  doc.fontSize(12).fillColor("#1E1E2F").text("Agreed Rate:", 50, y);
-  doc.text(`$${Number(shipperRate).toLocaleString()}`, 200, y);
-  y += 30;
-
-  // Special Instructions
-  const instructions = fd.specialInstructions || load.specialInstructions || load.notes;
-  if (instructions) {
-    y = checkPageBreak(doc, y, 60);
-    y = sectionTitle(doc, "SPECIAL INSTRUCTIONS", y);
-    doc.fontSize(9).fillColor("#1E1E2F").text(instructions, 50, y, { width: 510 });
-    y += doc.heightOfString(instructions, { width: 510 }) + 15;
+  // Special Instructions (wrapped cream-2 panel)
+  const rawInstr = fd.specialInstructions || load.specialInstructions || load.notes;
+  if (rawInstr) {
+    const text = decodeHtmlEntities(String(rawInstr));
+    const boxW = CONTENT_W;
+    const textH = doc.font(FONT_BODY, 9).heightOfString(text, { width: boxW - 24 });
+    const boxH = 26 + textH + 10;
+    doc.save().fillColor(TOKENS.cream2).strokeColor(TOKENS.border1).lineWidth(0.5)
+       .roundedRect(MARGIN, y, boxW, boxH, 6).fillAndStroke().restore();
+    smallLabel("SPECIAL INSTRUCTIONS", MARGIN + 10, y + 8, 7);
+    doc.font(FONT_BODY, 9).fillColor(TOKENS.fg1).text(text, MARGIN + 12, y + 24, { width: boxW - 24 });
+    y += boxH + 14;
   }
 
-  // Signatures
-  y = checkPageBreak(doc, y, 80);
-  y = sectionTitle(doc, "AUTHORIZATION", y);
-  y += 10;
-  doc.fontSize(8).fillColor("#888888");
-  doc.text("Authorized by Silk Route Logistics", 50, y);
-  doc.text("Acknowledged by Shipper", 310, y);
-  y += 30;
-  doc.moveTo(50, y).lineTo(250, y).strokeColor("#1E1E2F").lineWidth(0.5).stroke();
-  doc.moveTo(310, y).lineTo(550, y).strokeColor("#1E1E2F").lineWidth(0.5).stroke();
+  // Authorization signatures (Broker + Shipper)
+  y = drawSignatureBlock(doc, y, { roles: SHIPPER_LC_SIGNATURE_ROLES, height: 118 });
 
-  addFooter(doc);
+  drawFooter(doc, { pageNum: 1, totalPages: 1, docId });
   doc.end();
   return doc;
 }
@@ -2000,136 +2009,153 @@ interface InvoiceLineItemData {
 
 interface InvoiceData {
   invoiceNumber: string; amount: number; status: string;
-  factoringFee?: number | null; advanceAmount?: number | null;
+  lineHaulAmount?: number | null; fuelSurchargeAmount?: number | null;
+  accessorialsAmount?: number | null; totalAmount?: number | null;
+  factoringFee?: number | null; advanceAmount?: number | null; paidAmount?: number | null;
   dueDate?: Date | null; createdAt: Date;
-  load: { referenceNumber: string; originCity: string; originState: string; destCity: string; destState: string; rate: number; pickupDate: Date; deliveryDate: Date };
-  user: { firstName: string; lastName: string; company?: string | null };
+  load: {
+    referenceNumber: string; originCity: string; originState: string;
+    destCity: string; destState: string; rate: number;
+    pickupDate: Date; deliveryDate: Date;
+    customer?: {
+      name?: string | null; contactName?: string | null;
+      billingContactName?: string | null; paymentTerms?: string | null;
+      address?: string | null; city?: string | null; state?: string | null; zip?: string | null;
+      billingAddress?: string | null; billingCity?: string | null; billingState?: string | null; billingZip?: string | null;
+    } | null;
+  };
+  user?: { firstName: string; lastName: string; company?: string | null } | null;
   lineItems?: InvoiceLineItemData[];
 }
 
+/**
+ * v3.8.aqg — Invoice migrated onto the SRL skill chrome (Sprint 45-RC2),
+ * matching the Rate Confirmation register: Playfair/DM Sans fonts + ligature
+ * suppression (via registerSkillFonts), compass header, meta strip, lane
+ * reference, BILL TO + CHARGES (from the structured line-haul / FSC /
+ * accessorial columns the old plain layout ignored), optional balance-due
+ * summary, REMIT TO, and a wire payment reference. Degrades gracefully when
+ * customer/user are absent (e.g. the email-attach path) — no crash.
+ */
 export function generateInvoicePDF(invoice: InvoiceData): PDFDoc {
-  const doc = new PDFDocument({ margin: 50, size: "LETTER" });
-  const hasLineItems = invoice.lineItems && invoice.lineItems.length > 0;
+  const doc = new PDFDocument({ size: "LETTER", margin: 0 });
+  registerSkillFonts(doc);
 
-  addHeader(doc, "INVOICE");
+  const fmtDate = (d?: Date | null) =>
+    d ? new Date(d).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" }) : null;
+  const titleCase = (s: string) =>
+    (s || "").replace(/_/g, " ").toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
+  const cust = invoice.load.customer;
+  const terms = (cust?.paymentTerms || "Net 30").trim();
+  const docId = invoice.invoiceNumber;
 
-  let y = 155;
+  // Header (REFERENCE mode — no QR; invoice # in the upper-right filing slot)
+  let y = drawHeaderFirstPage(doc, {
+    docTitle: "Invoice",
+    subtitle: "Accounts Receivable",
+    loadId: docId,
+    includeQr: false,
+  });
 
-  labelValue(doc, "Invoice Number", invoice.invoiceNumber, 50, y);
-  labelValue(doc, "Date", invoice.createdAt.toLocaleDateString(), 250, y);
-  labelValue(doc, "Status", invoice.status, 400, y);
+  // Meta strip
+  y = drawMetaStrip(
+    doc,
+    {
+      "DATE ISSUED": fmtDate(invoice.createdAt),
+      "INVOICE #": invoice.invoiceNumber,
+      "LOAD REF": invoice.load.referenceNumber,
+      "TERMS": terms,
+      "DUE DATE": fmtDate(invoice.dueDate),
+      "STATUS": titleCase(invoice.status),
+    },
+    y,
+  );
+  y += 12;
 
-  y += 40;
-  doc.moveTo(50, y).lineTo(560, y).strokeColor("#EEEEEE").lineWidth(0.5).stroke();
-  y += 15;
+  // Lane reference (origin → destination with dates)
+  y = drawLaneReferenceRow(
+    doc,
+    `${invoice.load.originCity}, ${invoice.load.originState}`,
+    `Pickup ${fmtDate(invoice.load.pickupDate) ?? "—"}`,
+    `${invoice.load.destCity}, ${invoice.load.destState}`,
+    `Delivery ${fmtDate(invoice.load.deliveryDate) ?? "—"}`,
+    y,
+  );
+  y += 8;
 
-  // Bill To
-  doc.fontSize(11).fillColor("#D4A843").text("BILL TO", 50, y);
-  y += 16;
-  doc.fontSize(10).fillColor("#1E1E2F");
-  doc.text(invoice.user.company || `${invoice.user.firstName} ${invoice.user.lastName}`, 50, y);
+  // BILL TO (left) + CHARGES (right)
+  const billName =
+    cust?.billingContactName?.trim() ||
+    cust?.name?.trim() ||
+    invoice.user?.company?.trim() ||
+    (invoice.user ? `${invoice.user.firstName} ${invoice.user.lastName}`.trim() : "") ||
+    "Customer";
+  const addrLines = (a?: string | null, c?: string | null, s?: string | null, z?: string | null): string[] => {
+    const street = (a || "").trim();
+    const cityLine = ([c, s].filter((v) => v && v.trim()).join(", ") + (z && z.trim() ? ` ${z.trim()}` : "")).trim();
+    return [street, cityLine].filter(Boolean);
+  };
+  let billLines = addrLines(cust?.billingAddress, cust?.billingCity, cust?.billingState, cust?.billingZip);
+  if (!billLines.length) billLines = addrLines(cust?.address, cust?.city, cust?.state, cust?.zip);
+  const attn = cust?.contactName?.trim();
+  const billTo: BillTo = {
+    name: billName,
+    addressLines: billLines.length ? billLines : ["—"],
+    attention: attn && attn !== billName ? attn : undefined,
+  };
+  const billBottom = drawBillToBlock(doc, billTo, y);
 
-  // From
-  doc.fontSize(11).fillColor("#D4A843").text("FROM", 310, y - 16);
-  doc.fontSize(10).fillColor("#1E1E2F");
-  doc.text(COMPANY.name, 310, y);
-  doc.text(`${COMPANY.address}, ${COMPANY.cityStateZip}`, 310, y + 14);
+  // Charges — prefer the structured line-haul / FSC / accessorial columns
+  // (the old plain layout ignored them). Fall back to line items, then rate.
+  const charges: InvoiceCharge[] = [];
+  if (invoice.lineHaulAmount != null) charges.push({ label: "Line Haul", amount: invoice.lineHaulAmount });
+  if (invoice.fuelSurchargeAmount != null && invoice.fuelSurchargeAmount > 0)
+    charges.push({ label: "Fuel Surcharge", amount: invoice.fuelSurchargeAmount });
+  if (invoice.accessorialsAmount != null && invoice.accessorialsAmount > 0)
+    charges.push({ label: "Accessorials", amount: invoice.accessorialsAmount });
+  if (charges.length === 0 && invoice.lineItems && invoice.lineItems.length) {
+    for (const li of invoice.lineItems)
+      charges.push({ label: li.description || li.type.replace(/_/g, " "), amount: li.amount });
+  }
+  if (charges.length === 0)
+    charges.push({ label: "Line Haul", amount: invoice.load.rate ?? invoice.totalAmount ?? invoice.amount });
+  const chargesBottom = drawChargesBlock(doc, charges, y, 280);
 
-  y += 50;
-  doc.moveTo(50, y).lineTo(560, y).strokeColor("#EEEEEE").lineWidth(0.5).stroke();
-  y += 15;
+  y = Math.max(billBottom, chargesBottom) + 16;
 
-  // Load Details
-  doc.fontSize(11).fillColor("#D4A843").text("LOAD DETAILS", 50, y);
-  y += 20;
-
-  labelValue(doc, "Reference", invoice.load.referenceNumber, 50, y);
-  labelValue(doc, "Route", `${invoice.load.originCity}, ${invoice.load.originState} → ${invoice.load.destCity}, ${invoice.load.destState}`, 200, y);
-  y += 35;
-  labelValue(doc, "Pickup", invoice.load.pickupDate.toLocaleDateString(), 50, y);
-  labelValue(doc, "Delivery", invoice.load.deliveryDate.toLocaleDateString(), 200, y);
-
-  y += 45;
-  doc.moveTo(50, y).lineTo(560, y).strokeColor("#EEEEEE").lineWidth(0.5).stroke();
-  y += 15;
-
-  if (hasLineItems) {
-    // Line Items Table
-    doc.fontSize(11).fillColor("#D4A843").text("LINE ITEMS", 50, y);
-    y += 20;
-
-    // Table header
-    doc.fontSize(8).fillColor("#888888");
-    doc.text("Description", 50, y);
-    doc.text("Type", 250, y);
-    doc.text("Qty", 340, y);
-    doc.text("Rate", 390, y);
-    doc.text("Amount", 470, y);
-    y += 14;
-    doc.moveTo(50, y).lineTo(560, y).strokeColor("#EEEEEE").lineWidth(0.5).stroke();
+  // Partial-payment balance-due summary, when applicable
+  if (invoice.paidAmount != null && invoice.paidAmount > 0) {
+    const invTotal = invoice.totalAmount ?? invoice.amount;
+    y = drawSettlementSummary(doc, invTotal, invoice.paidAmount, y, 280);
     y += 8;
-
-    // Table rows
-    doc.fontSize(9).fillColor("#1E1E2F");
-    for (const li of invoice.lineItems!) {
-      if (y > 650) { addFooter(doc); doc.addPage(); addHeader(doc, "INVOICE (cont.)"); y = 155; }
-      doc.text(li.description, 50, y, { width: 195 });
-      doc.text(li.type.replace(/_/g, " "), 250, y);
-      doc.text(String(li.quantity), 340, y);
-      doc.text(`$${li.rate.toLocaleString()}`, 390, y);
-      doc.text(`$${li.amount.toLocaleString()}`, 470, y);
-      y += 18;
-    }
-
-    // Subtotal
-    y += 5;
-    doc.moveTo(380, y).lineTo(560, y).strokeColor("#EEEEEE").lineWidth(0.5).stroke();
-    y += 8;
-
-    const subtotal = invoice.lineItems!.reduce((s, li) => s + li.amount, 0);
-    doc.fontSize(10).fillColor("#1E1E2F");
-    doc.text("Subtotal:", 390, y); doc.text(`$${subtotal.toLocaleString()}`, 470, y);
-    y += 18;
-
-    if (invoice.factoringFee) {
-      doc.text("Factoring Fee:", 390, y); doc.text(`-$${invoice.factoringFee.toLocaleString()}`, 470, y);
-      y += 18;
-    }
-
-    doc.fontSize(13).fillColor("#1E1E2F");
-    doc.text("Total Due:", 390, y); doc.text(`$${invoice.amount.toLocaleString()}`, 470, y);
-    y += 25;
-  } else {
-    // Simple amount layout (fallback)
-    doc.fontSize(11).fillColor("#D4A843").text("AMOUNT", 50, y);
-    y += 20;
-
-    doc.fontSize(10).fillColor("#1E1E2F");
-    doc.text("Load Rate:", 50, y); doc.text(`$${invoice.load.rate.toLocaleString()}`, 250, y);
-    y += 18;
-    if (invoice.factoringFee) {
-      doc.text("Factoring Fee:", 50, y); doc.text(`-$${invoice.factoringFee.toLocaleString()}`, 250, y);
-      y += 18;
-    }
-    doc.fontSize(14).fillColor("#1E1E2F");
-    doc.text("Total Due:", 50, y); doc.text(`$${invoice.amount.toLocaleString()}`, 250, y);
-    y += 25;
   }
 
-  if (invoice.dueDate) {
-    doc.fontSize(9).fillColor("#888888").text(`Due Date: ${invoice.dueDate.toLocaleDateString()}`, 50, y);
-    y += 20;
-  }
+  // REMIT TO (Silk Route Logistics). COMPANY.address is already the full
+  // one-line address (street + city/state/zip), so don't repeat cityStateZip.
+  y = drawRemitToBlock(
+    doc,
+    { legalName: COMPANY.name, mailAddress: [COMPANY.address, COMPANY.email] },
+    y,
+  );
+  y += 6;
 
-  // Payment Instructions
-  y += 15;
-  doc.fontSize(9).fillColor("#D4A843").text("PAYMENT INSTRUCTIONS", 50, y);
-  y += 14;
-  doc.fontSize(9).fillColor("#1E1E2F");
-  doc.text("Please remit payment to Silk Route Logistics Inc.", 50, y);
-  doc.text("For questions, contact accounting@silkroutelogistics.ai", 50, y + 14);
+  // Wire payment reference memo
+  y = drawPaymentReference(
+    doc,
+    (cust?.name || billName).slice(0, 20),
+    invoice.load.referenceNumber,
+    invoice.invoiceNumber,
+    y,
+  );
+  y += 4;
 
-  addFooter(doc);
+  doc.font(FONT_BODY_ITALIC, 8.5).fillColor(TOKENS.fg3)
+     .text(`Please remit payment per terms (${terms}). Questions: ${COMPANY.email}.`, MARGIN, y, {
+       width: CONTENT_W,
+       lineBreak: true,
+     });
+
+  drawFooter(doc, { pageNum: 1, totalPages: 1, docId });
   doc.end();
   return doc;
 }
@@ -2154,106 +2180,144 @@ interface SettlementPDFData {
   }[];
 }
 
+/**
+ * v3.8.aqg — Carrier Settlement migrated onto the SRL skill chrome (Sprint
+ * 45-RC3): compass header, meta strip, PAY TO (carrier), a paginated
+ * navy-banded loads table with per-page continuation headers, and a hand-built
+ * Net Settlement summary panel (Gross Pay / Quick Pay Discount / Other
+ * Deductions → Net) in the RC's doc-specific-composite register.
+ */
 export function generateSettlementPDF(settlement: SettlementPDFData): PDFDoc {
-  const doc = new PDFDocument({ margin: 50, size: "LETTER" });
+  const doc = new PDFDocument({ size: "LETTER", margin: 0 });
+  registerSkillFonts(doc);
 
-  addHeader(doc, "CARRIER SETTLEMENT STATEMENT");
+  const money = (n: number) =>
+    `$${(n || 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  const fmtDate = (d?: Date | null) =>
+    d ? new Date(d).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" }) : "—";
+  // Compact (no year) — used for the period-range start so it fits its meta cell.
+  const fmtDateShort = (d?: Date | null) =>
+    d ? new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "—";
+  const titleCase = (s: string) =>
+    (s || "").replace(/_/g, " ").toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
+  const smallLabel = (text: string, x: number, ly: number, size = 6.5) =>
+    doc.font(FONT_BODY_BOLD, size).fillColor(TOKENS.goldDark)
+       .text(text.toUpperCase(), x, ly, { characterSpacing: 0.8, lineBreak: false });
 
-  let y = 155;
-
-  // Settlement info
-  labelValue(doc, "Settlement #", settlement.settlementNumber, 50, y);
-  labelValue(doc, "Period", `${settlement.periodStart.toLocaleDateString()} — ${settlement.periodEnd.toLocaleDateString()}`, 200, y);
-  labelValue(doc, "Status", settlement.status, 450, y);
-
-  y += 40;
-  doc.moveTo(50, y).lineTo(560, y).strokeColor("#EEEEEE").lineWidth(0.5).stroke();
-  y += 15;
-
-  // Carrier info
-  doc.fontSize(11).fillColor("#D4A843").text("CARRIER", 50, y);
-  y += 16;
-  doc.fontSize(10).fillColor("#1E1E2F");
-  doc.text(settlement.carrier.company || `${settlement.carrier.firstName} ${settlement.carrier.lastName}`, 50, y);
-
-  // From
-  doc.fontSize(11).fillColor("#D4A843").text("ISSUED BY", 310, y - 16);
-  doc.fontSize(10).fillColor("#1E1E2F");
-  doc.text(COMPANY.name, 310, y);
-  doc.text(`${COMPANY.address}, ${COMPANY.cityStateZip}`, 310, y + 14);
-
-  y += 50;
-  doc.moveTo(50, y).lineTo(560, y).strokeColor("#EEEEEE").lineWidth(0.5).stroke();
-  y += 15;
-
-  // Loads table
-  doc.fontSize(11).fillColor("#D4A843").text("LOADS", 50, y);
-  y += 20;
-
-  // Table header
-  doc.fontSize(8).fillColor("#888888");
-  doc.text("Reference", 50, y);
-  doc.text("Route", 150, y);
-  doc.text("Pickup", 340, y);
-  doc.text("Delivery", 420, y);
-  doc.text("Gross Pay", 500, y);
-  y += 14;
-  doc.moveTo(50, y).lineTo(560, y).strokeColor("#EEEEEE").lineWidth(0.5).stroke();
-  y += 8;
-
-  // Table rows
-  doc.fontSize(9).fillColor("#1E1E2F");
-  for (const cp of settlement.carrierPays) {
-    if (y > 630) { addFooter(doc); doc.addPage(); addHeader(doc, "SETTLEMENT (cont.)"); y = 155; }
-    doc.text(cp.load.referenceNumber, 50, y);
-    doc.text(`${cp.load.originCity}, ${cp.load.originState} → ${cp.load.destCity}, ${cp.load.destState}`, 150, y, { width: 185 });
-    doc.text(cp.load.pickupDate.toLocaleDateString(), 340, y);
-    doc.text(cp.load.deliveryDate.toLocaleDateString(), 420, y);
-    doc.text(`$${cp.amount.toLocaleString()}`, 500, y);
-    y += 18;
-  }
-
-  y += 10;
-  doc.moveTo(50, y).lineTo(560, y).strokeColor("#EEEEEE").lineWidth(0.5).stroke();
-  y += 15;
-
-  // Deductions section
-  doc.fontSize(11).fillColor("#D4A843").text("SUMMARY", 50, y);
-  y += 20;
-
-  doc.fontSize(10).fillColor("#1E1E2F");
-  doc.text("Gross Pay:", 50, y); doc.text(`$${settlement.grossPay.toLocaleString()}`, 250, y);
-  y += 18;
-
-  // QuickPay deductions
+  const docId = settlement.settlementNumber;
+  const carrierName =
+    settlement.carrier.company?.trim() ||
+    `${settlement.carrier.firstName} ${settlement.carrier.lastName}`.trim() ||
+    "Carrier";
+  const totalGross = settlement.carrierPays.reduce((s, cp) => s + cp.amount, 0);
   const quickPayTotal = settlement.carrierPays.reduce((s, cp) => s + (cp.quickPayDiscount || 0), 0);
-  if (quickPayTotal > 0) {
-    doc.text("QuickPay Discount:", 50, y); doc.text(`-$${quickPayTotal.toLocaleString()}`, 250, y);
-    y += 18;
+  const otherDeductions = Math.max(0, settlement.deductions - quickPayTotal);
+
+  const headers = ["LOAD REF", "LANE", "DELIVERED", "GROSS PAY"];
+  const colWidths = [92, 268, 92, 88];
+  const rows = settlement.carrierPays.map((cp) => [
+    cp.load.referenceNumber,
+    `${cp.load.originCity}, ${cp.load.originState} → ${cp.load.destCity}, ${cp.load.destState}`,
+    fmtDate(cp.load.deliveryDate),
+    money(cp.amount),
+  ]);
+  const rowH = 18;
+  const headerH = 16;
+  const FOOTER_TOP = PAGE_H - MARGIN - 30;
+  const SUMMARY_H = 120; // reserved on the page where the table ends
+  const CONT_TOP = MARGIN + 52; // ~ drawContinuationHeader return
+
+  // Page 1 header + meta + PAY TO
+  let y = drawHeaderFirstPage(doc, {
+    docTitle: "Carrier Settlement",
+    subtitle: "Statement of Account",
+    loadId: docId,
+    includeQr: false,
+  });
+  y = drawMetaStrip(
+    doc,
+    {
+      "SETTLEMENT #": settlement.settlementNumber,
+      "PERIOD": `${fmtDateShort(settlement.periodStart)} – ${fmtDate(settlement.periodEnd)}`,
+      "CYCLE": titleCase(settlement.period),
+      "LOADS": String(settlement.carrierPays.length),
+      "STATUS": titleCase(settlement.status),
+    },
+    y,
+  );
+  y += 12;
+  smallLabel("PAY TO", MARGIN, y, 7);
+  doc.font(FONT_BODY_BOLD, 12).fillColor(TOKENS.navy).text(carrierName, MARGIN, y + 14, { lineBreak: false });
+  y += 34;
+
+  // Paginate the loads table (reserve summary space on the ending page)
+  const capacity = (topY: number) => Math.max(1, Math.floor((FOOTER_TOP - SUMMARY_H - topY - headerH) / rowH));
+  const chunks: string[][][] = [];
+  let idx = 0;
+  let topY = y;
+  while (idx < rows.length) {
+    const cap = capacity(topY);
+    chunks.push(rows.slice(idx, idx + cap));
+    idx += cap;
+    topY = CONT_TOP;
+  }
+  if (chunks.length === 0) chunks.push([]);
+  const totalPages = chunks.length;
+
+  for (let p = 0; p < chunks.length; p++) {
+    const isLast = p === chunks.length - 1;
+    const tableTop = p === 0 ? y : drawContinuationHeader(doc, "Carrier Settlement", docId);
+    const tableBottom = drawShipmentTable(doc, {
+      headers,
+      rows: chunks[p],
+      totalsRow: isLast ? ["", "", "Total Gross", money(totalGross)] : undefined,
+      yTop: tableTop,
+      colWidths,
+    });
+
+    if (isLast) {
+      // Net Settlement summary panel (right) + payment note (left)
+      const sumW = 280;
+      const sumX = PAGE_W - MARGIN - sumW;
+      const sy = tableBottom + 10;
+      const summaryRows: [string, number][] = [["Gross Pay", settlement.grossPay || totalGross]];
+      if (quickPayTotal > 0) summaryRows.push(["Quick Pay Discount", -quickPayTotal]);
+      if (otherDeductions > 0) summaryRows.push(["Other Deductions", -otherDeductions]);
+      const panelH = 16 + summaryRows.length * 16 + 26;
+
+      doc.save().fillColor(TOKENS.cream2).strokeColor(TOKENS.border1).lineWidth(0.5)
+         .roundedRect(sumX, sy, sumW, panelH, 6).fillAndStroke().restore();
+
+      let ry = sy + 14;
+      for (const [label, amt] of summaryRows) {
+        doc.font(FONT_BODY, 10).fillColor(TOKENS.fg2).text(label, sumX + 12, ry, { lineBreak: false });
+        const str = (amt < 0 ? "-" : "") + money(Math.abs(amt));
+        doc.font(FONT_BODY, 10).fillColor(TOKENS.fg1);
+        const w = doc.widthOfString(str);
+        doc.text(str, sumX + sumW - 12 - w, ry, { lineBreak: false });
+        ry += 16;
+      }
+      doc.save().strokeColor(TOKENS.goldDark).lineWidth(0.6)
+         .moveTo(sumX + 12, ry - 3).lineTo(sumX + sumW - 12, ry - 3).stroke().restore();
+      ry += 4;
+      doc.font(FONT_BODY_BOLD, 11).fillColor(TOKENS.goldDark).text("Net Settlement", sumX + 12, ry, { lineBreak: false });
+      doc.font(FONT_BODY_BOLD, 12);
+      const netStr = money(settlement.netSettlement);
+      const netW = doc.widthOfString(netStr);
+      doc.text(netStr, sumX + sumW - 12 - netW, ry, { lineBreak: false });
+
+      smallLabel("PAYMENT", MARGIN, sy, 7);
+      doc.font(FONT_BODY_ITALIC, 8.5).fillColor(TOKENS.fg3)
+         .text(
+           `Remitted via ACH or check per your Quick Pay election and standard terms. Questions: ${COMPANY.email}.`,
+           MARGIN, sy + 14, { width: sumX - MARGIN - 20, lineBreak: true },
+         );
+    }
+
+    drawFooter(doc, { pageNum: p + 1, totalPages, docId });
+    if (!isLast) doc.addPage();
   }
 
-  const otherDeductions = settlement.deductions - quickPayTotal;
-  if (otherDeductions > 0) {
-    doc.text("Other Deductions:", 50, y); doc.text(`-$${otherDeductions.toLocaleString()}`, 250, y);
-    y += 18;
-  }
-
-  y += 5;
-  doc.moveTo(50, y).lineTo(350, y).strokeColor("#D4A843").lineWidth(1).stroke();
-  y += 10;
-
-  doc.fontSize(14).fillColor("#1E1E2F");
-  doc.text("Net Settlement:", 50, y); doc.text(`$${settlement.netSettlement.toLocaleString()}`, 250, y);
-
-  // Payment instructions
-  y += 40;
-  doc.fontSize(9).fillColor("#D4A843").text("PAYMENT INSTRUCTIONS", 50, y);
-  y += 14;
-  doc.fontSize(9).fillColor("#1E1E2F");
-  doc.text("Payment will be remitted via ACH or check within the standard payment terms.", 50, y);
-  doc.text("For questions, contact accounting@silkroutelogistics.ai", 50, y + 14);
-
-  addFooter(doc);
   doc.end();
   return doc;
 }
