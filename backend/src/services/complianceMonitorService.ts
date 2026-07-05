@@ -256,9 +256,11 @@ export async function complianceCheck(carrierId: string): Promise<{
     warnings.push("Authority document not uploaded");
   }
 
-  // HARD BLOCK: no signed carrier-broker agreement
+  // HARD BLOCK: no signed carrier-broker agreement. Filter to templateName
+  // "broker-carrier" (v3.8.aqi) — the Quick Pay Agreement is now ALSO a signed
+  // CarrierAgreement row ("quick-pay"), and it must never satisfy the BCA gate.
   const agreement = await prisma.carrierAgreement.findFirst({
-    where: { carrierId, status: "SIGNED" },
+    where: { carrierId, status: "SIGNED", templateName: "broker-carrier" },
     orderBy: { signedAt: "desc" },
   });
   if (!agreement) {

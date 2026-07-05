@@ -11,7 +11,7 @@
 
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { FileSignature, CheckCircle2, Loader2, Zap } from "lucide-react";
+import { FileSignature, FileText, CheckCircle2, Loader2, Zap } from "lucide-react";
 import { api } from "@/lib/api";
 import { CarrierCard } from "@/components/carrier";
 import {
@@ -27,7 +27,7 @@ interface ActivationStatus {
   onboardingStatus: string;
   requiresActivation: boolean;
   bca: { signed: boolean; signedAt: string | null; signedByName: string | null; version: string | null };
-  quickPay: { enabled: boolean; agreedAt: string | null; version: string | null };
+  quickPay: { enabled: boolean; signed: boolean; signedByName: string | null; agreedAt: string | null; version: string | null };
   activatedAt: string | null;
 }
 
@@ -76,25 +76,53 @@ export default function CarrierActivationPage() {
     onError: (err) => setBcaError(extractError(err, "Couldn't record your signature. Please try again.")),
   });
 
-  // Quick Pay election
+  // Quick Pay election — v3.8.aqi: enabling requires a typed-name e-signature
+  // (parity with the BCA), not just a checkbox.
   const [showQpEnable, setShowQpEnable] = useState(false);
   const [qpAgreed, setQpAgreed] = useState(false);
+  const [qpName, setQpName] = useState("");
+  const [qpTitle, setQpTitle] = useState("");
   const [qpError, setQpError] = useState<string | null>(null);
 
   const qpMutation = useMutation({
     mutationFn: (enabled: boolean) =>
       api.post(
         "/carrier-auth/quickpay-election",
-        enabled ? { enabled: true, agreedToQpTerms: true, qpVersion: QP_VERSION } : { enabled: false },
+        enabled
+          ? {
+              enabled: true,
+              agreedToQpTerms: true,
+              qpVersion: QP_VERSION,
+              signedByName: qpName.trim(),
+              signedByTitle: qpTitle.trim() || undefined,
+            }
+          : { enabled: false },
       ),
     onSuccess: () => {
       setQpError(null);
       setShowQpEnable(false);
       setQpAgreed(false);
+      setQpName("");
+      setQpTitle("");
       queryClient.invalidateQueries({ queryKey: ["carrier-activation"] });
     },
     onError: (err) => setQpError(extractError(err, "Couldn't update Quick Pay. Please try again.")),
   });
+
+  // Open the branded agreement PDF in a new tab (review copy pre-sign, executed
+  // copy once signed). Uses the api client so the httpOnly cookie is sent.
+  const [pdfError, setPdfError] = useState<string | null>(null);
+  const viewAgreementPdf = async () => {
+    setPdfError(null);
+    try {
+      const res = await api.get("/carrier-auth/agreement/broker-carrier/pdf", { responseType: "blob" });
+      const url = URL.createObjectURL(res.data as Blob);
+      window.open(url, "_blank");
+      setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    } catch (err) {
+      setPdfError(extractError(err, "Couldn't open the agreement PDF."));
+    }
+  };
 
   if (isLoading || !data) {
     return (
@@ -145,6 +173,11 @@ export default function CarrierActivationPage() {
         <h2 className="font-serif text-lg text-[#0A2540] mb-1 flex items-center gap-2">
           <FileSignature size={18} className="text-[#BA7517]" /> Broker-Carrier Agreement
         </h2>
+
+        <button onClick={viewAgreementPdf} className="text-[11px] text-[#BA7517] hover:underline mb-2 inline-flex items-center gap-1">
+          <FileText size={12} /> View the {bcaSigned ? "executed " : ""}agreement (PDF, opens in a new tab)
+        </button>
+        {pdfError && <div className={errorBox}>{pdfError}</div>}
 
         {bcaSigned ? (
           <p className="text-[13px] text-gray-600">
@@ -267,15 +300,25 @@ export default function CarrierActivationPage() {
                     By enabling Quick Pay you agree to the Caravan Quick Pay Agreement: SRL advances payment on eligible completed loads after a clean proof of delivery, less the flat Quick Pay fee for your tier shown above. Quick Pay does not require a factoring contract, is applied per load at your election, and can be turned off at any time. The full Caravan Quick Pay Agreement governs.
                   </p>
                 </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
+                  <div>
+                    <label className={labelCls}>Your full legal name *</label>
+                    <input className={inputCls} value={qpName} onChange={(e) => setQpName(e.target.value)} placeholder="John Smith" autoComplete="name" />
+                  </div>
+                  <div>
+                    <label className={labelCls}>Title (optional)</label>
+                    <input className={inputCls} value={qpTitle} onChange={(e) => setQpTitle(e.target.value)} placeholder="Owner" />
+                  </div>
+                </div>
                 <label className="flex items-start gap-2 mb-3 cursor-pointer">
                   <input type="checkbox" checked={qpAgreed} onChange={(e) => setQpAgreed(e.target.checked)} className="mt-0.5 accent-[#BA7517]" />
                   <span className="text-xs text-gray-600">
-                    I agree to the Caravan Quick Pay Agreement (v{QP_VERSION}) and want Quick Pay enabled on my account.
+                    I agree to the Caravan Quick Pay Agreement (v{QP_VERSION}) and want Quick Pay enabled on my account. Typing my name above is my electronic signature.
                   </span>
                 </label>
                 {qpError && <div className={errorBox}>{qpError}</div>}
                 <div className="flex gap-2">
-                  <button onClick={() => qpMutation.mutate(true)} disabled={!qpAgreed || qpMutation.isPending} className={goldCta}>
+                  <button onClick={() => qpMutation.mutate(true)} disabled={!qpAgreed || qpName.trim().length < 2 || qpMutation.isPending} className={goldCta}>
                     {qpMutation.isPending && <Loader2 size={13} className="animate-spin" />} Enable Quick Pay
                   </button>
                   <button

@@ -5,7 +5,7 @@ import { useRouter, usePathname } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { CarrierSidebar } from "@/components/carrier";
-import { Search, Bell, X, LogOut, Clock, FileSignature, ChevronRight } from "lucide-react";
+import { Search, Bell, X, LogOut, Clock } from "lucide-react";
 import { useCarrierAuth } from "@/hooks/useCarrierAuth";
 import { useSessionTimeout } from "@/hooks/useSessionTimeout";
 import { Logo } from "@/components/ui/Logo";
@@ -20,6 +20,7 @@ import type { Notification } from "@/types/entities";
 // load endpoints directly. SUSPENDED never reaches this layout — login
 // is hard-blocked at the OTP/TOTP gates in carrierAuth.ts.
 const STATUS_PAGE = "/carrier/dashboard/application-status";
+const ACTIVATION_PAGE = "/carrier/dashboard/activation";
 
 function timeAgo(dateStr: string): string {
   const diff = Date.now() - new Date(dateStr).getTime();
@@ -109,6 +110,22 @@ export default function CarrierDashboardLayout({ children }: { children: React.R
     }
   }, [user, pathname, checking, router]);
 
+  // v3.8.aqi — HARD activation gate. An APPROVED carrier who hasn't signed the
+  // Broker-Carrier Agreement cannot access ANY operational surface — the portal
+  // redirects them to the activation page (the only reachable route) until the
+  // BCA is signed. Backend independently hard-blocks tendering (complianceCheck),
+  // so this is the matching UX enforcement, not the security boundary.
+  useEffect(() => {
+    if (checking || !user || !pathname) return;
+    if (
+      user.carrierProfile?.onboardingStatus === "APPROVED" &&
+      activationData?.requiresActivation &&
+      pathname !== ACTIVATION_PAGE
+    ) {
+      router.replace(ACTIVATION_PAGE);
+    }
+  }, [user, pathname, checking, activationData, router]);
+
   if (checking) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#FBF7F0]">
@@ -123,19 +140,23 @@ export default function CarrierDashboardLayout({ children }: { children: React.R
   const initials = user ? `${user.firstName?.[0] || ""}${user.lastName?.[0] || ""}` : "C";
   const companyName = user?.carrierProfile?.companyName || user?.company || "";
   const isApproved = user?.carrierProfile?.onboardingStatus === "APPROVED";
-  const needsActivation = !!activationData?.requiresActivation && pathname !== "/carrier/dashboard/activation";
+  // v3.8.aqi — hard activation gate. Until the BCA is signed, an approved carrier
+  // sees ONLY the activation page: no sidebar, search, notifications, or content.
+  const mustActivate = isApproved && !!activationData?.requiresActivation;
+  const onActivationPage = pathname === ACTIVATION_PAGE;
+  const showOperationalChrome = isApproved && !mustActivate;
 
   return (
     <div className="flex h-screen bg-[#FBF7F0] overflow-hidden">
       {/* v3.8.ajd Sprint 1 — Sidebar hidden for non-APPROVED carriers.
           They only have one accessible route (application-status) so there's
           no nav to surface. Approved carriers see the full sidebar. */}
-      {isApproved && <CarrierSidebar />}
+      {showOperationalChrome && <CarrierSidebar />}
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Top Bar */}
         <header className="h-14 bg-white border-b border-[#EFE6D3] flex items-center justify-between px-4 sm:px-6 flex-shrink-0">
           <div className="flex items-center gap-3 flex-1 min-w-0">
-            {isApproved ? (
+            {showOperationalChrome ? (
               <>
                 <Search size={16} className="text-gray-400 shrink-0" />
                 <input
@@ -152,9 +173,8 @@ export default function CarrierDashboardLayout({ children }: { children: React.R
             {companyName && (
               <span className="text-xs text-gray-400 font-medium hidden sm:inline">{companyName}</span>
             )}
-            {/* Notifications — APPROVED carriers only. Non-APPROVED have
-                a single page with no actionable notifications surface. */}
-            {isApproved && (
+            {/* Notifications — activated (BCA-signed) carriers only. */}
+            {showOperationalChrome && (
               <div className="relative">
                 <button onClick={() => setNotifOpen(!notifOpen)} className="relative">
                   <Bell size={19} className="text-gray-500" />
@@ -197,27 +217,21 @@ export default function CarrierDashboardLayout({ children }: { children: React.R
         {/* Post-Sprint-53 auth refresh banner (auto-expires 24h post-deploy) */}
         <AuthRefreshBanner />
 
-        {/* Track 1.1b — Activation banner: APPROVED but Broker-Carrier
-            Agreement not yet signed. Soft-gate UX nudge; tendering is
-            independently blocked by the compliance gate until signed. */}
-        {isApproved && needsActivation && (
-          <a
-            href="/carrier/dashboard/activation"
-            className="flex items-center gap-3 px-4 sm:px-6 py-2.5 bg-[#FBEFD4] border-b border-[#B07A1A]/30 hover:bg-[#FAEEDA] transition-colors"
-          >
-            <FileSignature size={16} className="text-[#B07A1A] shrink-0" />
-            <p className="text-[13px] text-[#0A2540] flex-1 min-w-0">
-              <span className="font-semibold">Complete your activation to start hauling.</span>{" "}
-              Sign your Broker-Carrier Agreement and choose Quick Pay.
-            </p>
-            <span className="text-[13px] font-semibold text-[#B07A1A] flex items-center gap-1 shrink-0">
-              Activate <ChevronRight size={14} />
-            </span>
-          </a>
-        )}
-
-        {/* Content */}
-        <main className="flex-1 overflow-auto p-4 sm:p-6">{children}</main>
+        {/* Content — v3.8.aqi hard activation gate. Until the BCA is signed, only
+            the activation page renders; every other route is redirected there by
+            the effect above, so operational surfaces never show pre-signature. */}
+        <main className="flex-1 overflow-auto p-4 sm:p-6">
+          {mustActivate && !onActivationPage ? (
+            <div className="min-h-[50vh] flex items-center justify-center">
+              <div className="text-center">
+                <Logo size="lg" />
+                <p className="mt-4 text-sm text-gray-400 animate-pulse">Redirecting to activation…</p>
+              </div>
+            </div>
+          ) : (
+            children
+          )}
+        </main>
       </div>
 
       {/* Marco Polo AI Assistant — token={null} is intentional; auth flows through httpOnly cookie.

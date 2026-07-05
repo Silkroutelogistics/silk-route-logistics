@@ -13976,7 +13976,24 @@
 //   solid (CarrierAgreement typed-name e-sig + click-wrap audit). Next (aqi):
 //   hard portal-access gate until BCA signed + Quick Pay as a real signature
 //   (parity with BCA). backend tsc clean. Per §3.1: aqg -> aqh.
-export const SRL_VERSION = "3.8.aqh";
+// v3.8.aqi — Carrier activation workflow optimization (design conformance Phase
+//   2b). (1) HARD portal-access gate: an approved carrier who hasn't signed the
+//   BCA is redirected to the activation page and sees NO sidebar / search /
+//   notifications / operational content until signed — replaces the old soft
+//   banner (the backend already hard-blocked tendering; this matches the UX).
+//   (2) Quick Pay is now a REAL signature (parity with the BCA): opting in
+//   creates a "quick-pay" CarrierAgreement typed-name e-signature (signer /
+//   date / IP / version), not just a checkbox flag; the activation page collects
+//   the legal name. (3) Correctness prerequisite: the BCA compliance gate +
+//   activation-status + sign-bca idempotency queries are now filtered to
+//   templateName "broker-carrier" so a quick-pay agreement can never falsely
+//   satisfy the BCA gate. (4) "View the agreement (PDF)" opens the branded BCA
+//   (review copy pre-sign, executed copy post-sign) in a new tab. QP remains
+//   optional + reversible + never a hauling gate. Gates: backend tsc + npm test
+//   320/320 + frontend tsc + next build clean. Banked follow-up: repoint the
+//   frontend review pane + onboarding to fetch GET /agreement/:type so the BCA
+//   text is truly single-source (backend canonical already live). Per §3.1: aqh -> aqi.
+export const SRL_VERSION = "3.8.aqi";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

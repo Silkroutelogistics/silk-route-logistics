@@ -29,7 +29,7 @@ import {
   generateBrokerCarrierAgreementPdf,
   generateBrokerCarrierAgreementBuffer,
 } from "../services/agreementPdfService";
-import { getAgreement } from "../data/agreements";
+import { getAgreement, QP_VERSION } from "../data/agreements";
 import path from "path";
 import { verifyTotpCode } from "../services/totpService";
 import { z } from "zod";
@@ -759,9 +759,16 @@ router.get("/activation-status", authenticate, authorize("CARRIER"), async (req:
   }
 
   const agreement = await prisma.carrierAgreement.findFirst({
-    where: { carrierId: profile.id, status: "SIGNED" },
+    where: { carrierId: profile.id, status: "SIGNED", templateName: "broker-carrier" },
     orderBy: { signedAt: "desc" },
     select: { id: true, version: true, signedAt: true, signedByName: true, expiresAt: true },
+  });
+  // Quick Pay is now a real signature too (v3.8.aqi) — a "quick-pay"
+  // CarrierAgreement, recorded only when the carrier opts in.
+  const qpAgreement = await prisma.carrierAgreement.findFirst({
+    where: { carrierId: profile.id, status: "SIGNED", templateName: "quick-pay" },
+    orderBy: { signedAt: "desc" },
+    select: { signedAt: true, signedByName: true, version: true },
   });
   const now = new Date();
   const bcaSigned = !!agreement && (!agreement.expiresAt || agreement.expiresAt > now);
@@ -778,7 +785,9 @@ router.get("/activation-status", authenticate, authorize("CARRIER"), async (req:
     },
     quickPay: {
       enabled: profile.quickPayEnabled,
-      agreedAt: profile.quickPayAgreedAt,
+      signed: !!qpAgreement,
+      agreedAt: profile.quickPayAgreedAt ?? qpAgreement?.signedAt ?? null,
+      signedByName: qpAgreement?.signedByName ?? null,
       version: profile.quickPayVersion,
     },
     activatedAt: profile.activatedAt,
@@ -823,7 +832,7 @@ router.post("/sign-bca", authenticate, authorize("CARRIER"), validateBody(signBc
   // already-signed (return it). A different version (attorney updated the
   // doc) falls through and re-records consent to the new version.
   const existing = await prisma.carrierAgreement.findFirst({
-    where: { carrierId: profile.id, status: "SIGNED" },
+    where: { carrierId: profile.id, status: "SIGNED", templateName: "broker-carrier" },
     orderBy: { signedAt: "desc" },
   });
   if (existing && existing.version === bcaVersion && (!existing.expiresAt || existing.expiresAt > now)) {
@@ -905,13 +914,22 @@ router.post("/sign-bca", authenticate, authorize("CARRIER"), validateBody(signBc
 const quickPayElectionSchema = z
   .object({
     enabled: z.boolean(),
+    signedByName: z.string().trim().max(120).optional(),
+    signedByTitle: z.string().trim().max(120).optional(),
     agreedToQpTerms: z.boolean().optional(),
     qpVersion: z.string().trim().max(60).optional(),
   })
-  .refine((d) => !d.enabled || (d.agreedToQpTerms === true && !!d.qpVersion), {
-    message: "To enable Quick Pay you must agree to the Quick Pay Agreement.",
-    path: ["agreedToQpTerms"],
-  });
+  // v3.8.aqi — enabling Quick Pay now requires a typed-name e-signature (parity
+  // with the BCA), not just a checkbox.
+  .refine(
+    (d) =>
+      !d.enabled ||
+      (d.agreedToQpTerms === true && !!d.qpVersion && !!d.signedByName && d.signedByName.trim().length >= 2),
+    {
+      message: "To enable Quick Pay, type your full legal name and agree to the Quick Pay Agreement.",
+      path: ["signedByName"],
+    },
+  );
 router.post("/quickpay-election", authenticate, authorize("CARRIER"), validateBody(quickPayElectionSchema), async (req: AuthRequest, res: Response) => {
   const profile = await loadActivationProfile(req.user!.id);
   if (!profile) {
@@ -926,30 +944,64 @@ router.post("/quickpay-election", authenticate, authorize("CARRIER"), validateBo
     return;
   }
 
-  const { enabled, qpVersion } = req.body as { enabled: boolean; qpVersion?: string };
+  const { enabled, signedByName, signedByTitle, qpVersion } = req.body as {
+    enabled: boolean;
+    signedByName?: string;
+    signedByTitle?: string;
+    qpVersion?: string;
+  };
   const now = new Date();
   const ip = extractClientIp(req);
   const userAgent = (req.headers["user-agent"] as string) || "";
+  const version = qpVersion || QP_VERSION;
 
-  const updated = await prisma.carrierProfile.update({
+  if (enabled) {
+    // Record the Quick Pay Agreement signature — a real typed-name e-signature
+    // (parity with the BCA), persisted as a "quick-pay" CarrierAgreement row.
+    // Idempotent per version. This NEVER satisfies the BCA gate (that query is
+    // filtered to templateName "broker-carrier").
+    const existingQp = await prisma.carrierAgreement.findFirst({
+      where: { carrierId: profile.id, status: "SIGNED", templateName: "quick-pay" },
+      orderBy: { signedAt: "desc" },
+    });
+    if (!existingQp || existingQp.version !== version) {
+      await prisma.carrierAgreement.create({
+        data: {
+          carrierId: profile.id,
+          version,
+          templateName: "quick-pay",
+          status: "SIGNED",
+          signedAt: now,
+          signedByName: signedByName!,
+          signedByTitle: signedByTitle || null,
+          signatureData: signedByName!,
+          signerIp: ip || "",
+          signerUserAgent: userAgent,
+          expiresAt: null,
+          createdById: req.user!.id,
+        },
+      });
+    }
+    await prisma.carrierProfile.update({
+      where: { id: profile.id },
+      data: {
+        quickPayEnabled: true,
+        quickPayAgreedAt: now,
+        quickPayAgreedFromIp: ip || null,
+        quickPayAgreedFromUserAgent: userAgent || null,
+        quickPayVersion: version,
+      },
+    });
+    res.json({ quickPayEnabled: true, quickPayAgreedAt: now, quickPayVersion: version, signed: true });
+    return;
+  }
+
+  // Opt out — flip the flag; the signed agreement row + audit history are kept.
+  await prisma.carrierProfile.update({
     where: { id: profile.id },
-    data: enabled
-      ? {
-          quickPayEnabled: true,
-          quickPayAgreedAt: now,
-          quickPayAgreedFromIp: ip || null,
-          quickPayAgreedFromUserAgent: userAgent || null,
-          quickPayVersion: qpVersion || null,
-        }
-      : { quickPayEnabled: false },
-    select: { quickPayEnabled: true, quickPayAgreedAt: true, quickPayVersion: true },
+    data: { quickPayEnabled: false },
   });
-
-  res.json({
-    quickPayEnabled: updated.quickPayEnabled,
-    quickPayAgreedAt: updated.quickPayAgreedAt,
-    quickPayVersion: updated.quickPayVersion,
-  });
+  res.json({ quickPayEnabled: false, signed: false });
 });
 
 // v3.8.aje Sprint A — Email verification.
