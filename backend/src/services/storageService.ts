@@ -8,19 +8,53 @@ import { env } from "../config/env";
 import { log } from "../lib/logger";
 
 const useS3 = !!(env.S3_BUCKET_NAME && env.AWS_ACCESS_KEY_ID);
+const isProd = env.NODE_ENV === "production";
 
 let s3: S3Client | null = null;
 if (useS3) {
   s3 = new S3Client({
     region: env.AWS_REGION,
+    // Unset endpoint = AWS S3. Set it (with AWS_REGION=auto) to point at any
+    // S3-compatible provider such as Cloudflare R2 — config change, no code change.
+    ...(env.S3_ENDPOINT ? { endpoint: env.S3_ENDPOINT } : {}),
     credentials: {
       accessKeyId: env.AWS_ACCESS_KEY_ID!,
       secretAccessKey: env.AWS_SECRET_ACCESS_KEY!,
     },
   });
-  log.info(`[Storage] Using S3 bucket: ${env.S3_BUCKET_NAME}`);
+  log.info(
+    `[Storage] Using S3 bucket: ${env.S3_BUCKET_NAME}${env.S3_ENDPOINT ? ` via ${env.S3_ENDPOINT}` : ""} (region ${env.AWS_REGION})`
+  );
+} else if (isProd) {
+  // Loud on purpose. The old behaviour was a quiet log.info, so a mistyped or
+  // rotated-away credential would silently downgrade production to the container's
+  // ephemeral disk — every W-9, COI, POD and executed agreement destroyed on the
+  // next deploy, with no alarm. uploadFile() also hard-refuses in production below.
+  log.error(
+    "[Storage] CRITICAL: object storage is NOT configured in production. " +
+      "S3_BUCKET_NAME and AWS_ACCESS_KEY_ID must both be set. " +
+      "Uploads will be REFUSED rather than written to ephemeral disk."
+  );
 } else {
-  log.info("[Storage] Using local disk storage (S3 not configured)");
+  log.info("[Storage] Using local disk storage (development)");
+}
+
+/**
+ * Resolve a local-fallback file URL to an absolute path inside UPLOAD_DIR.
+ *
+ * Replaces a previous `path.basename(fileUrl)` which (a) broke every nested key
+ * — `carrier-docs/<id>/w9-1.pdf` was looked up in the upload root and 404'd —
+ * and (b) discarded the directory component of an attacker-supplied URL.
+ * Resolution is confined to UPLOAD_DIR so `../` cannot escape it.
+ */
+function localPathFromUrl(fileUrl: string): string {
+  const key = fileUrl.startsWith("/uploads/") ? fileUrl.slice("/uploads/".length) : fileUrl;
+  const root = path.resolve(env.UPLOAD_DIR);
+  const resolved = path.resolve(root, key);
+  if (resolved !== root && !resolved.startsWith(root + path.sep)) {
+    throw new Error("Invalid storage key: path escapes the upload directory");
+  }
+  return resolved;
 }
 
 /**
@@ -44,8 +78,16 @@ export async function uploadFile(
     return `s3://${env.S3_BUCKET_NAME}/${key}`;
   }
 
-  // Local fallback
-  const filePath = path.resolve(env.UPLOAD_DIR, key);
+  // Local fallback — development only.
+  // In production, refuse rather than write a legally-significant document to a
+  // disk that is destroyed on the next deploy and (historically) served without auth.
+  if (isProd) {
+    throw new Error(
+      "Object storage is not configured. Refusing to write to ephemeral local disk in production."
+    );
+  }
+
+  const filePath = localPathFromUrl(`/uploads/${key}`);
   await fsp.mkdir(path.dirname(filePath), { recursive: true });
   await fsp.writeFile(filePath, buffer);
   return `/uploads/${key}`;
@@ -65,17 +107,24 @@ export async function uploadFileToPath(
 
 /**
  * Get a download URL for a stored file.
- * For S3 files: returns a presigned URL (valid 1 hour).
+ * For S3 files: returns a presigned URL.
  * For local files: returns the /uploads/ path as-is.
+ *
+ * A presigned URL is a bearer credential — anyone holding it can read the object,
+ * with no further auth. The only caller (documentController.downloadDocument)
+ * consumes it via an immediate 302, so it is live for milliseconds; the previous
+ * 1-hour window meant a URL captured from browser history, a referrer header, a
+ * proxy log or a shared screenshot stayed usable for an hour. 5 minutes is still
+ * generous for a redirect while collapsing that window.
  */
-export async function getDownloadUrl(fileUrl: string): Promise<string> {
+export async function getDownloadUrl(fileUrl: string, expiresInSeconds = 300): Promise<string> {
   if (fileUrl.startsWith("s3://") && s3) {
     const key = fileUrl.replace(`s3://${env.S3_BUCKET_NAME}/`, "");
     const command = new GetObjectCommand({
       Bucket: env.S3_BUCKET_NAME!,
       Key: key,
     });
-    return getSignedUrl(s3, command, { expiresIn: 3600 });
+    return getSignedUrl(s3, command, { expiresIn: expiresInSeconds });
   }
 
   // Local file — return path as-is (served by express.static)
@@ -98,8 +147,7 @@ export async function getFileStream(fileUrl: string): Promise<Readable> {
   }
 
   // Local file
-  const filePath = path.resolve(env.UPLOAD_DIR, path.basename(fileUrl));
-  return fs.createReadStream(filePath);
+  return fs.createReadStream(localPathFromUrl(fileUrl));
 }
 
 /**
@@ -118,11 +166,10 @@ export async function deleteFile(fileUrl: string): Promise<void> {
   }
 
   // Local file
-  const filePath = path.resolve(env.UPLOAD_DIR, path.basename(fileUrl));
   try {
-    await fsp.unlink(filePath);
+    await fsp.unlink(localPathFromUrl(fileUrl));
   } catch {
-    // File may not exist — ignore
+    // File may not exist (or key was invalid) — ignore
   }
 }
 
@@ -159,4 +206,84 @@ export function isS3Url(fileUrl: string): boolean {
  */
 export function isS3Active(): boolean {
   return useS3;
+}
+
+/**
+ * End-to-end storage self-test (ADMIN only, exposed at GET /api/admin/storage/selftest).
+ *
+ * `isS3Active()` only proves two env vars are non-empty. It does NOT prove the
+ * credentials are valid, that the IAM policy grants PutObject/GetObject/DeleteObject,
+ * or that AWS_REGION matches the bucket's actual region. Until the first real upload
+ * lands, a misconfiguration is invisible — and the first upload is a carrier's W-9
+ * during onboarding, which is the worst possible moment to discover it.
+ *
+ * This exercises the full round trip against the live bucket with a throwaway object:
+ *   PutObject -> presign -> GET the presigned URL -> byte-compare -> DeleteObject
+ *
+ * Writes and removes a single ~40 byte object under the `_selftest/` prefix.
+ */
+export async function runStorageSelfTest(): Promise<{
+  ok: boolean;
+  mode: "s3" | "local";
+  bucket: string | null;
+  region: string | null;
+  endpoint: string | null;
+  steps: { name: string; ok: boolean; detail: string }[];
+}> {
+  const steps: { name: string; ok: boolean; detail: string }[] = [];
+  const key = `_selftest/selftest-${Date.now()}-${Math.random().toString(36).slice(2, 10)}.txt`;
+  const payload = Buffer.from(`srl-storage-selftest ${new Date().toISOString()}`);
+  // Holder objects, not bare `let`: values are assigned inside async closures, and
+  // TS control-flow analysis would otherwise narrow the bare bindings to `never`.
+  const stored: { url: string | null } = { url: null };
+  const presigned: { url: string | null } = { url: null };
+
+  const record = async (name: string, fn: () => Promise<string>) => {
+    try {
+      steps.push({ name, ok: true, detail: await fn() });
+      return true;
+    } catch (e: any) {
+      steps.push({ name, ok: false, detail: e?.name ? `${e.name}: ${e.message}` : String(e?.message ?? e) });
+      return false;
+    }
+  };
+
+  const wrote = await record("write (PutObject)", async () => {
+    stored.url = await uploadFile(payload, key, "text/plain");
+    return stored.url;
+  });
+
+  if (wrote && stored.url) {
+    const storedUrl = stored.url;
+
+    await record("presign (GetObject)", async () => {
+      presigned.url = await getDownloadUrl(storedUrl);
+      return presigned.url.startsWith("http") ? `${presigned.url.split("?")[0]} (+signature)` : presigned.url;
+    });
+
+    if (presigned.url && presigned.url.startsWith("http")) {
+      const signedUrl = presigned.url;
+      await record("read back via presigned URL", async () => {
+        const resp = await fetch(signedUrl);
+        if (!resp.ok) throw new Error(`HTTP ${resp.status} ${resp.statusText}`);
+        const got = Buffer.from(await resp.arrayBuffer());
+        if (!got.equals(payload)) throw new Error("byte mismatch: content read back does not match content written");
+        return `${got.length} bytes, content matches`;
+      });
+    }
+
+    await record("delete (DeleteObject)", async () => {
+      await deleteFile(storedUrl);
+      return "removed";
+    });
+  }
+
+  return {
+    ok: steps.length > 0 && steps.every((s) => s.ok),
+    mode: useS3 ? "s3" : "local",
+    bucket: useS3 ? env.S3_BUCKET_NAME ?? null : null,
+    region: useS3 ? env.AWS_REGION ?? null : null,
+    endpoint: env.S3_ENDPOINT ?? null,
+    steps,
+  };
 }

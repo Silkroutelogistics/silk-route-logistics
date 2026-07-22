@@ -31,11 +31,15 @@ const envSchema = z.object({
   PCMILER_API_KEY: z.string().optional(),
   EIA_API_KEY: z.string().optional(),
   FSC_INDEX_PROVIDER: z.enum(["eia", "manual"]).default("eia"),
-  // AWS S3
+  // Object storage (AWS S3, or any S3-compatible provider via S3_ENDPOINT)
   AWS_ACCESS_KEY_ID: z.string().optional(),
   AWS_SECRET_ACCESS_KEY: z.string().optional(),
   AWS_REGION: z.string().default("us-east-1"),
   S3_BUCKET_NAME: z.string().optional(),
+  // Optional S3-compatible endpoint. Unset = AWS S3 (current production).
+  // Set to https://<accountid>.r2.cloudflarestorage.com (with AWS_REGION=auto)
+  // to move to Cloudflare R2 without a code change.
+  S3_ENDPOINT: z.string().optional(),
   // ELD Providers
   SAMSARA_API_TOKEN: z.string().optional(),
   MOTIVE_API_KEY: z.string().optional(),

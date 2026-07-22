@@ -154,7 +154,16 @@ app.use(cookieParser());
 app.use(sanitizeInput);
 
 // ─── Static Files ───────────────────────────────────────────
-app.use("/uploads", express.static(path.resolve(env.UPLOAD_DIR)));
+// DEVELOPMENT ONLY. This mount predates the S3 migration and had no auth, no
+// ownership check and no rate limit in front of it: anyone who obtained or guessed
+// a path could pull a carrier's W-9 (which carries their EIN), a COI, a POD or an
+// executed agreement. Production serves documents from S3 through authenticated
+// endpoints that mint short-lived presigned URLs, so nothing needs this.
+// Verified before removal: zero rows across all 30 url/path/file columns in the
+// public schema reference a /uploads/ path, so nothing 404s as a result.
+if (env.NODE_ENV !== "production") {
+  app.use("/uploads", express.static(path.resolve(env.UPLOAD_DIR)));
+}
 
 // ─── Build Version (force logout on deploy) ─────────────────
 app.get("/api/build-version", (_req, res) => {

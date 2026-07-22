@@ -15,6 +15,18 @@ router.get("/crons", authenticate, authorize("ADMIN"), listCronJobs as any);
 router.post("/crons/:name/run", authenticate, authorize("ADMIN"), manualRunCron as any);
 router.post("/crons/:name/toggle", authenticate, authorize("ADMIN"), toggleCron as any);
 
+// Storage self-test (admin only) — proves the live bucket credentials actually
+// permit PutObject/GetObject/DeleteObject, which isS3Active() cannot tell you.
+router.get("/storage/selftest", authenticate, authorize("ADMIN", "CEO"), async (_req: AuthRequest, res: Response) => {
+  try {
+    const { runStorageSelfTest } = await import("../services/storageService");
+    const result = await runStorageSelfTest();
+    res.status(result.ok ? 200 : 503).json(result);
+  } catch (e: any) {
+    res.status(500).json({ ok: false, error: `Storage self-test failed to run: ${e.message}` });
+  }
+});
+
 // Error logs (admin only)
 router.get("/errors", authenticate, authorize("ADMIN"), getErrorLogs as any);
 router.get("/errors/stats", authenticate, authorize("ADMIN"), getErrorStats as any);

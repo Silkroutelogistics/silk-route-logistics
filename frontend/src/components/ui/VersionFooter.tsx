@@ -14037,7 +14037,13 @@
 // with 422 {"missing":["w9","insurance","authority","wc"]} — including complete
 // ones. Dead from 2026-05-26 to 2026-07-22. Guarded now by a structural test that
 // asserts every route-normalized field is declared in the schema.
-export const SRL_VERSION = "3.8.aql";
+// v3.8.aqm — storage hardening. Production is on S3 (bucket srl-documents-prod,
+// confirmed live via /health), but the pre-S3 unauthenticated /uploads mount was
+// still registered, the unconfigured-storage path failed silently, nested keys
+// were unreadable on the local branch, and presigned URLs lived an hour for a
+// redirect consumed in milliseconds. Adds an ADMIN storage self-test, because
+// "two env vars are set" never proved the credentials actually work.
+export const SRL_VERSION = "3.8.aqm";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
