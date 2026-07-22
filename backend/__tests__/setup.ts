@@ -134,7 +134,11 @@ vi.mock("../src/config/database", () => ({
     },
     document: {
       findMany: vi.fn(),
+      findUnique: vi.fn(),
       create: vi.fn(),
+      update: vi.fn(),
+      delete: vi.fn(),
+      count: vi.fn(),
     },
     eDITransaction: {
       create: vi.fn(),

@@ -58,8 +58,19 @@ router.post("/upload", upload.array("files", 10), uploadDocuments as any);
 // Legacy upload route (kept for backward compat)
 router.post("/", upload.array("files", 5), uploadDocuments as any);
 
-// List documents with filters
-router.get("/", getDocuments as any);
+// List documents with filters.
+// v3.8.aqn — AE-internal roles only. Verified before restricting: the ONLY caller
+// of this endpoint anywhere in frontend/src is the AE console at
+// /dashboard/documents (and it sends no query params). The carrier portal lists
+// its documents via /carrier-compliance/documents and the shipper portal via
+// /shipper-portal/documents, both of which are already owner-scoped — so no
+// carrier or shipper flow depends on this route. getDocuments additionally
+// applies per-role ownership scoping as defense in depth.
+router.get(
+  "/",
+  authorize("ADMIN", "CEO", "BROKER", "DISPATCH", "OPERATIONS", "ACCOUNTING", "AE") as any,
+  getDocuments as any
+);
 
 // Download a document (any authenticated user with a valid role)
 router.get("/:id/download", authorize("ADMIN", "CEO", "BROKER", "DISPATCH", "OPERATIONS", "AE", "CARRIER", "SHIPPER") as any, downloadDocument as any);

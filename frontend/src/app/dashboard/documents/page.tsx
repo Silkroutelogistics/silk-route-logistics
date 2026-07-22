@@ -59,9 +59,15 @@ export default function DocumentsPage() {
   const [loadId, setLoadId] = useState("");
   const [invoiceId, setInvoiceId] = useState("");
 
+  // v3.8.aqn — GET /documents returns { documents, total, page, totalPages },
+  // not a bare array. This was typed as Doc[] and handed straight to
+  // `allDocs.filter(...)` below; because the response object is truthy the
+  // `documents || []` guard never fired, so the page threw
+  // "documents.filter is not a function" on render. Unwrap the array.
   const { data: documents } = useQuery({
     queryKey: ["documents"],
-    queryFn: () => api.get<Doc[]>("/documents").then((r) => r.data),
+    queryFn: () =>
+      api.get<{ documents: Doc[] }>("/documents").then((r) => r.data?.documents ?? []),
   });
 
   const uploadMut = useMutation({

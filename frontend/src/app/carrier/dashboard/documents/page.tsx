@@ -43,16 +43,26 @@ export default function CarrierDocumentsPage() {
   const uploadMutation = useMutation({
     mutationFn: async () => {
       if (!selectedFile) throw new Error("No file selected");
-      const formData = new FormData();
-      formData.append("file", selectedFile);
-      formData.append("docType", uploadDocType);
 
+      // v3.8.aqn — the two destinations expect DIFFERENT multer field names, so
+      // the FormData must be built per branch. It was previously built once with
+      // "file", which is correct for /carrier-loads/:id/documents
+      // (upload.single("file")) but wrong for /documents/upload
+      // (upload.array("files")). Multer rejects an unexpected field name outright
+      // — verified: LIMIT_UNEXPECTED_FILE / HTTP 400 — so EVERY carrier
+      // compliance-document upload (W-9, COI, authority) failed from the portal.
+      const formData = new FormData();
       const isLoadDoc = !COMPLIANCE_TYPES.includes(uploadDocType);
+
       if (isLoadDoc && uploadLoadId) {
+        formData.append("file", selectedFile); // upload.single("file")
+        formData.append("docType", uploadDocType);
         return api.post(`/carrier-loads/${uploadLoadId}/documents`, formData, {
           headers: { "Content-Type": "multipart/form-data" },
         });
       } else {
+        formData.append("files", selectedFile); // upload.array("files")
+        formData.append("docType", uploadDocType);
         formData.append("type", uploadDocType);
         return api.post("/documents/upload", formData, {
           headers: { "Content-Type": "multipart/form-data" },

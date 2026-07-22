@@ -14043,7 +14043,15 @@
 // were unreadable on the local branch, and presigned URLs lived an hour for a
 // redirect consumed in milliseconds. Adds an ADMIN storage self-test, because
 // "two env vars are set" never proved the credentials actually work.
-export const SRL_VERSION = "3.8.aqm";
+// v3.8.aqn — document access control. GET /api/documents applied its ownership
+// clause only when NO filter was passed, so any filter REMOVED the restriction:
+// ?entityType=CARRIER returned every carrier's W-9/COI platform-wide. Uploads
+// took loadId/entityId straight from the body with no ownership test, so a
+// carrier could overwrite a customer's contractUrl or fire onPODUploaded on
+// someone else's load. Also fixes the carrier compliance upload (wrong multer
+// field name -> 400 on every attempt) and the AE Documents page (.filter on an
+// object -> render crash).
+export const SRL_VERSION = "3.8.aqn";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

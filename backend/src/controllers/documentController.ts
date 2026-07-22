@@ -9,6 +9,107 @@ import { validateAndNotifyPOD } from "../services/shipperNotificationService";
 import { onPODUploaded } from "../services/integrationService";
 import { log } from "../lib/logger";
 
+/**
+ * Roles that operate SRL internally and legitimately need visibility across all
+ * tenants. Everyone else (CARRIER, SHIPPER, FACTOR) must be scoped to what they own.
+ */
+const AE_INTERNAL_ROLES = ["ADMIN", "CEO", "BROKER", "DISPATCH", "OPERATIONS", "ACCOUNTING", "AE"];
+
+function isAeInternal(role: string): boolean {
+  return AE_INTERNAL_ROLES.includes(role);
+}
+
+/**
+ * v3.8.aqn — verify the caller is allowed to attach a document to the target they
+ * named. Returns an error string to reject with, or null when allowed.
+ *
+ * uploadDocuments previously took loadId / invoiceId / entityType / entityId
+ * straight from the request body and never checked them against the caller. Since
+ * the route carried only `authenticate` (no authorize, no ownership test), ANY
+ * logged-in user could:
+ *   - POST docType=CUSTOMER_CONTRACT&entityType=CUSTOMER&entityId=<any customer>
+ *     and overwrite that customer's contractUrl — which is a precondition of the
+ *     customer-approval gate;
+ *   - POST docType=POD&loadId=<someone else's load>, which fires onPODUploaded()
+ *     and advances that load to POD_RECEIVED and its invoice to SENT.
+ * Both are cross-tenant writes triggered purely by body parameters.
+ *
+ * Verified against every caller before writing this: the carrier portal sends no
+ * entity fields at all (the auto-link block below fills in its OWN profile), the
+ * shipper portal sends only files, and every caller that does name an entity —
+ * CRM DocsTab, track-trace DocsTab/PhotosTab, CreateInvoiceModal — is AE-console.
+ * So no legitimate flow supplies a target it does not own.
+ */
+async function checkUploadTargetOwnership(
+  req: AuthRequest,
+  target: { loadId?: string; invoiceId?: string; entityType?: string; entityId?: string; docType?: string }
+): Promise<string | null> {
+  const role = req.user!.role;
+  const userId = req.user!.id;
+
+  if (isAeInternal(role)) return null;
+
+  const { loadId, invoiceId, entityType, entityId, docType } = target;
+
+  // Attaching to a load requires being a party to that load.
+  if (loadId) {
+    const load = await prisma.load.findUnique({
+      where: { id: loadId },
+      select: { posterId: true, carrierId: true, customer: { select: { userId: true } } },
+    });
+    if (!load) return "Load not found";
+    const isParty =
+      load.carrierId === userId || load.posterId === userId || load.customer?.userId === userId;
+    if (!isParty) return "Not authorized to attach documents to this load";
+  }
+
+  // Attaching to an invoice requires owning it.
+  if (invoiceId) {
+    const invoice = await prisma.invoice.findUnique({
+      where: { id: invoiceId },
+      select: { userId: true, load: { select: { posterId: true, carrierId: true, customer: { select: { userId: true } } } } },
+    });
+    if (!invoice) return "Invoice not found";
+    const isParty =
+      invoice.userId === userId ||
+      invoice.load?.carrierId === userId ||
+      invoice.load?.posterId === userId ||
+      invoice.load?.customer?.userId === userId;
+    if (!isParty) return "Not authorized to attach documents to this invoice";
+  }
+
+  // Attaching to an entity requires owning that entity.
+  if (entityType === "CARRIER" && entityId) {
+    const profile = await prisma.carrierProfile.findUnique({
+      where: { id: entityId },
+      select: { userId: true },
+    });
+    if (!profile || profile.userId !== userId) {
+      return "Not authorized to attach documents to this carrier";
+    }
+  } else if (entityType === "CUSTOMER" && entityId) {
+    const customer = await prisma.customer.findUnique({
+      where: { id: entityId },
+      select: { userId: true },
+    });
+    if (!customer || customer.userId !== userId) {
+      return "Not authorized to attach documents to this customer";
+    }
+  } else if (entityType && entityId) {
+    // Unknown entity type from a non-AE caller — fail closed rather than guess.
+    return "Not authorized to attach documents to this entity";
+  }
+
+  // The customer-contract cross-write feeds the approval gate. Restrict it to AE
+  // staff outright: a carrier must never be able to set a customer's contractUrl,
+  // and a shipper should not self-serve their own approval precondition.
+  if (docType === "CUSTOMER_CONTRACT") {
+    return "Only SRL staff can upload a customer contract";
+  }
+
+  return null;
+}
+
 // ─── POST /api/documents/upload ───────────────────────
 export async function uploadDocuments(req: AuthRequest, res: Response) {
   const files = req.files as Express.Multer.File[];
@@ -34,6 +135,21 @@ export async function uploadDocuments(req: AuthRequest, res: Response) {
       entityType = "CARRIER";
       entityId = carrierProfile.id;
     }
+  }
+
+  // v3.8.aqn — the caller must actually own whatever they are attaching to.
+  // Runs AFTER the auto-link above so the auto-filled values are validated too
+  // (they are self-owned, so a legitimate carrier upload passes unchanged).
+  const ownershipError = await checkUploadTargetOwnership(req, {
+    loadId,
+    invoiceId,
+    entityType,
+    entityId,
+    docType,
+  });
+  if (ownershipError) {
+    res.status(403).json({ error: ownershipError });
+    return;
   }
 
   const documents = await Promise.all(
@@ -125,9 +241,42 @@ export async function getDocuments(req: AuthRequest, res: Response) {
   if (entityId) where.entityId = entityId;
   if (docType) where.docType = docType;
 
-  // Non-admin users can only see their own documents unless filtering by entity
-  if (req.user!.role !== "ADMIN" && !entityType && !loadId && !invoiceId) {
-    where.userId = req.user!.id;
+  // v3.8.aqn — ownership scoping is now ALWAYS applied to non-AE callers.
+  //
+  // It used to be opt-OUT: the `userId` clause was added only when the caller
+  // supplied none of entityType/loadId/invoiceId. Supplying any filter therefore
+  // REMOVED the ownership restriction instead of narrowing within it, so
+  //   GET /api/documents?entityType=CARRIER&entityId=<another carrier's profile>
+  // returned that carrier's W-9 / COI / AUTHORITY rows — including fileUrl — to
+  // any authenticated user. The same shape leaked customer contracts via
+  // entityType=CUSTOMER and any load's documents via loadId.
+  //
+  // It also compared against "ADMIN" only, so CEO was silently scoped to its own
+  // uploads and saw an empty documents page.
+  //
+  // Prisma ANDs top-level keys, so the caller's filters still apply — they now
+  // narrow WITHIN the ownership set rather than replacing it.
+  const role = req.user!.role;
+  const userId = req.user!.id;
+
+  if (!isAeInternal(role)) {
+    const ownership: Record<string, unknown>[] = [{ userId }];
+
+    if (role === "CARRIER") {
+      const profile = await prisma.carrierProfile.findUnique({
+        where: { userId },
+        select: { id: true },
+      });
+      if (profile) ownership.push({ entityType: "CARRIER", entityId: profile.id });
+      ownership.push({ load: { carrierId: userId } });
+    } else if (role === "SHIPPER") {
+      const customers = await prisma.customer.findMany({ where: { userId }, select: { id: true } });
+      for (const c of customers) ownership.push({ entityType: "CUSTOMER", entityId: c.id });
+      ownership.push({ load: { posterId: userId } });
+      ownership.push({ load: { customer: { userId } } });
+    }
+
+    where.OR = ownership;
   }
 
   const [documents, total] = await Promise.all([
