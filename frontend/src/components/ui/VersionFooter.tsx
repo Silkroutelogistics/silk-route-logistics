@@ -14031,7 +14031,13 @@
 //   branded one sat behind an endpoint no frontend called — repointed, keeping
 //   the stronger per-record authorization. Gates: backend tsc + npm test
 //   320/320 + frontend tsc + next build clean. Per §3.1: aqj -> aqk.
-export const SRL_VERSION = "3.8.aqk";
+// v3.8.aql — carrier self-registration un-broken. `docTypes` was normalized by
+// the /register route but never declared in carrierRegisterSchema, so Zod stripped
+// it inside validateBody and the required-document gate rejected every application
+// with 422 {"missing":["w9","insurance","authority","wc"]} — including complete
+// ones. Dead from 2026-05-26 to 2026-07-22. Guarded now by a structural test that
+// asserts every route-normalized field is declared in the schema.
+export const SRL_VERSION = "3.8.aql";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

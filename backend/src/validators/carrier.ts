@@ -61,6 +61,21 @@ export const carrierRegisterSchema = z.object({
   // audit fields are NOT in the validator because they're captured
   // server-side from req.* (authoritative), not accepted from client.
   bcaVersion: z.string().optional(),
+  // v3.8.aql — LOAD-BEARING. Must stay declared here.
+  //
+  // routes/carrier.ts:169 normalizes this FormData field, then validateBody
+  // (middleware/validate.ts:21) does `req.body = result.data`. Zod strips keys
+  // it does not declare, so an undeclared `docTypes` was silently deleted from
+  // the body between normalization and the controller. registerCarrier's
+  // required-document gate (v3.8.alb) then read `req.body.docTypes`, found
+  // nothing, and returned 422 {"missing":["w9","insurance","authority","wc"]}
+  // on EVERY request — including fully valid ones carrying all four files.
+  // Carrier self-registration was 100% dead from 2026-05-26 until this fix,
+  // which is why production has zero Document rows.
+  //
+  // Paired by index with the `files[]` uploads (multer sets req.files
+  // independently, so only this body field was lost).
+  docTypes: z.array(z.string()).optional(),
   // Insurance Agent Contact
   insuranceAgentName: z.string().optional(),
   insuranceAgentEmail: z.string().email().optional().or(z.literal("")),
