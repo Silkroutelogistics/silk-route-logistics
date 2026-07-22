@@ -205,6 +205,14 @@ export async function registerCarrier(req: Request, res: Response) {
     data: {
       email: data.email,
       passwordHash,
+      // v3.8.aqk GO-LIVE BLOCKER FIX: without this, carrierAuth.ts:316/405
+      // computes `mustChangePassword = !user.passwordChangedAt` = true on the
+      // carrier's FIRST login, routing them to /auth/force-password-change —
+      // an AE-console page that bounces them to the AE login where their
+      // credentials are rejected. A self-registering carrier chooses their own
+      // password (with the strong-password + HIBP gate), so there is nothing
+      // to force-change. Mirrors authController.ts:135.
+      passwordChangedAt: new Date(),
       firstName: data.firstName,
       lastName: data.lastName,
       company: data.company,
@@ -212,6 +220,11 @@ export async function registerCarrier(req: Request, res: Response) {
       role: "CARRIER",
       carrierProfile: {
         create: {
+          // v3.8.aqk GO-LIVE FIX: companyName was never persisted at
+          // self-registration, so carriers rendered as "(no name)" in the AE
+          // list/pickers and the EXECUTED Broker-Carrier Agreement PDF was
+          // signed by the literal string "Carrier".
+          companyName: data.company,
           mcNumber: data.mcNumber,
           dotNumber: data.dotNumber,
           equipmentTypes: data.equipmentTypes,

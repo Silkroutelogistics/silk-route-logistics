@@ -14008,7 +14008,30 @@
 //   backend tsc + npm test 320/320 + frontend tsc + next build clean. §16 §20.
 //   Remaining: Quick Pay Agreement PDF (Phase 3, held for the legal text). Per
 //   §3.1: aqi -> aqj.
-export const SRL_VERSION = "3.8.aqj";
+// v3.8.aqk — GO-LIVE BLOCKER FIXES (from the 82-agent pre-launch audit, each
+//   finding adversarially verified). (1) CARRIER COULD NOT LOG IN: registerCarrier
+//   never set passwordChangedAt, so carrierAuth.ts:316/405 flagged
+//   mustChangePassword on login #1 and routed the carrier to the AE-console
+//   force-password-change page, which bounced them to AE login where their
+//   credentials were rejected — a dead end for every self-registered carrier.
+//   (2) QUICK PAY FEE SKIMMED WITHOUT ELECTION: integrationService mapped
+//   SILVER->PRIORITY->2% and a 2-day due date for EVERY carrier on delivery, so
+//   a carrier who never elected QP (nor signed the QP Agreement) lost 2% of
+//   their first settlement and their free Net-30 — contradicting §8. Now
+//   gated on quickPayEnabled, with §8 pricing (QP 7-day: Silver 3/Gold 2/
+//   Platinum 1) and free standard net terms (30/21/14) otherwise.
+//   (3) FALSE SUCCESS ON FAILED REGISTRATION: the onboarding catch matched the
+//   bare substring "Failed", which also matches the server's "Validation
+//   failed" — a REJECTED application rendered the "Application Received"
+//   screen. Narrowed to genuine network failures; the no-apiUrl path no longer
+//   fakes success either. (4) companyName was never persisted at carrier
+//   self-registration, so carriers showed as "(no name)" and the EXECUTED BCA
+//   PDF was signed by the literal string "Carrier". (5) The Load Board's "Rate
+//   Confirmation" button called the LEGACY off-brand generator while the
+//   branded one sat behind an endpoint no frontend called — repointed, keeping
+//   the stronger per-record authorization. Gates: backend tsc + npm test
+//   320/320 + frontend tsc + next build clean. Per §3.1: aqj -> aqk.
+export const SRL_VERSION = "3.8.aqk";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

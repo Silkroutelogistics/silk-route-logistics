@@ -161,17 +161,20 @@ async function createCarrierPayOnDelivery(load: any) {
   const accessorials = rc?.accessorialTotal || 0;
   const grossAmount = lineHaul + fuelSurcharge + accessorials;
 
-  // Determine payment tier from carrier's CPP tier or preference
-  const tierMap: Record<string, string> = {
-    PLATINUM: "ELITE", GOLD: "PARTNER", SILVER: "PRIORITY", GUEST: "STANDARD", NONE: "STANDARD",
-  };
-  const paymentTier = profile.paymentPreference || tierMap[profile.tier] || "STANDARD";
+  // v3.8.aqk GO-LIVE BLOCKER FIX — Quick Pay is OPT-IN (CLAUDE.md §8).
+  // This previously mapped SILVER -> "PRIORITY" -> a 2% fee and a 2-day due
+  // date for EVERY carrier, so a carrier who never elected Quick Pay (and never
+  // signed the QP Agreement) had 2% skimmed off their first settlement and lost
+  // their free Net-30. Standard pay by tier is FREE per §8; Quick Pay is an
+  // account-level election (CarrierProfile.quickPayEnabled).
+  const cppTier = profile.tier || "SILVER";
+  const quickPayElected = profile.quickPayEnabled === true;
 
-  // Calculate quick-pay fee
-  const feeRates: Record<string, number> = {
-    FLASH: 5, EXPRESS: 3.5, PRIORITY: 2, PARTNER: 1.5, ELITE: 0, STANDARD: 0,
-  };
-  const quickPayFeePercent = feeRates[paymentTier] || 0;
+  // §8 locked pricing — 7-day Quick Pay fee by tier (applies ONLY when elected).
+  const qpFeeByTier: Record<string, number> = { SILVER: 3, GOLD: 2, PLATINUM: 1 };
+
+  const paymentTier = quickPayElected ? "PRIORITY" : "STANDARD";
+  const quickPayFeePercent = quickPayElected ? (qpFeeByTier[cppTier] ?? 3) : 0;
   const quickPayFeeAmount = grossAmount * (quickPayFeePercent / 100);
   const netAmount = grossAmount - quickPayFeeAmount;
 
@@ -182,13 +185,13 @@ async function createCarrierPayOnDelivery(load: any) {
   });
   const paymentNumber = `CP-${todayStr}-${String(existingCount + 1).padStart(4, "0")}`;
 
-  // Calculate SLA due date based on tier
-  const slaDays: Record<string, number> = {
-    FLASH: 0, EXPRESS: 1, PRIORITY: 2, PARTNER: 3, ELITE: 5, STANDARD: 30,
-  };
+  // v3.8.aqk — due date per §8: elected Quick Pay pays at 7 days; otherwise the
+  // carrier keeps their tier's FREE standard net terms (Silver Net-30, Gold
+  // Net-21, Platinum Net-14). Previously every carrier got a 2-day PRIORITY SLA.
+  const standardNetByTier: Record<string, number> = { SILVER: 30, GOLD: 21, PLATINUM: 14 };
+  const netDays = quickPayElected ? 7 : (standardNetByTier[cppTier] ?? 30);
   const dueDate = new Date();
-  const slaHours = paymentTier === "FLASH" ? 2 : (slaDays[paymentTier] || 30) * 24;
-  dueDate.setTime(dueDate.getTime() + slaHours * 60 * 60 * 1000);
+  dueDate.setTime(dueDate.getTime() + netDays * 24 * 60 * 60 * 1000);
 
   const payment = await prisma.carrierPay.create({
     data: {

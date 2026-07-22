@@ -443,7 +443,12 @@ export default function OnboardingPage() {
     try {
       const apiUrl = process.env.NEXT_PUBLIC_API_URL;
       if (!apiUrl) {
-        setSuccess(true);
+        // v3.8.aqk — previously showed a FALSE success screen without ever
+        // calling the API. Never tell an applicant they applied when we did
+        // not submit anything.
+        setError(
+          "We couldn't submit your application due to a configuration error. Please contact operations@silkroutelogistics.ai and we'll onboard you directly.",
+        );
         return;
       }
 
@@ -558,8 +563,18 @@ export default function OnboardingPage() {
       setSuccess(true);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Registration failed";
-      if (msg.includes("fetch") || msg.includes("network") || msg.includes("Failed")) {
-        setSuccess(true);
+      // v3.8.aqk GO-LIVE BLOCKER FIX: this previously matched the bare substring
+      // "Failed", which ALSO matches the server's "Validation failed" — so a
+      // REJECTED registration rendered the "Application Received" success
+      // screen. The applicant walked away believing they had applied while SRL
+      // had no record of them. Only a genuine network/transport failure is
+      // ambiguous; every other error is real and must be surfaced.
+      const isNetworkFailure =
+        msg.includes("Failed to fetch") || msg.toLowerCase().includes("networkerror") || msg.toLowerCase().includes("network request");
+      if (isNetworkFailure) {
+        setError(
+          "We couldn't reach our servers to confirm your application. Please check your connection and try again — if you receive a confirmation email, your application was already received.",
+        );
       } else {
         setError(msg);
       }

@@ -1,7 +1,7 @@
 import { Response } from "express";
 import { prisma } from "../config/database";
 import { AuthRequest } from "../middleware/auth";
-import { generateBOL, generateBOLFromLoad, generateRateConfirmation, generateEnhancedRateConfirmation, generateShipperLoadConfirmation, generateInvoicePDF, generateSettlementPDF } from "../services/pdfService";
+import { generateBOL, generateBOLFromLoad, generateEnhancedRateConfirmation, generateShipperLoadConfirmation, generateInvoicePDF, generateSettlementPDF } from "../services/pdfService";
 import { generateBOLPrintToken } from "../services/shipperTrackingTokenService";
 import { log } from "../lib/logger";
 
@@ -32,8 +32,10 @@ export async function downloadRateConfirmation(req: AuthRequest, res: Response) 
       where: { id: req.params.loadId },
       include: {
         carrier: {
-          select: { id: true, firstName: true, lastName: true, company: true, phone: true, carrierProfile: { select: { mcNumber: true } } },
+          select: { id: true, firstName: true, lastName: true, company: true, phone: true, carrierProfile: { select: { mcNumber: true, dotNumber: true, address: true, city: true, state: true, zip: true, contactPhone: true, contactEmail: true } } },
         },
+        rateConfirmations: { where: { status: "SIGNED" }, orderBy: { createdAt: "desc" }, take: 1 },
+        customer: { select: { name: true, contactName: true, email: true, phone: true } },
       },
     });
 
@@ -44,7 +46,13 @@ export async function downloadRateConfirmation(req: AuthRequest, res: Response) 
     const isEmployee = ["ADMIN", "BROKER", "DISPATCH", "OPERATIONS"].includes(req.user!.role);
     if (!isPoster && !isAssignedCarrier && !isEmployee) { res.status(403).json({ error: "Not authorized" }); return; }
 
-    const doc = generateRateConfirmation(load);
+    // v3.8.aqk — this route now renders the BRANDED rate confirmation (skill
+    // chrome). It previously called the legacy off-canonical generator, so the
+    // Load Board's "Rate Confirmation" button produced an off-brand PDF while
+    // the branded generator sat behind an endpoint no frontend ever called.
+    const rc = load.rateConfirmations?.[0];
+    const formData = (rc?.formData && typeof rc.formData === "object" && !Array.isArray(rc.formData) ? rc.formData : {}) as Record<string, any>;
+    const doc = generateEnhancedRateConfirmation(load, formData);
     const filename = `RC-${load.referenceNumber}.pdf`;
 
     res.setHeader("Content-Type", "application/pdf");
