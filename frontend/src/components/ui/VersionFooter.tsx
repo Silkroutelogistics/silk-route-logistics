@@ -14051,7 +14051,13 @@
 // someone else's load. Also fixes the carrier compliance upload (wrong multer
 // field name -> 400 on every attempt) and the AE Documents page (.filter on an
 // object -> render crash).
-export const SRL_VERSION = "3.8.aqn";
+// v3.8.aqo — upload rate limiting. Only /api/documents was covered; the other 8
+// multipart routes (carrier compliance docs, per-load docs, exception receipts,
+// COI reads, SOP uploads, info-request resolve, and a PUBLIC registration route
+// with no upload limiter at all) fell through to the general 300/15min limiter.
+// Mounted at route level, not as path prefixes, so ordinary GET traffic on those
+// routers is not throttled.
+export const SRL_VERSION = "3.8.aqo";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

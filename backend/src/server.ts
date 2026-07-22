@@ -14,6 +14,7 @@ import cors from "cors";
 import cookieParser from "cookie-parser";
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
+import { uploadLimiter } from "./middleware/rateLimiters";
 import hpp from "hpp";
 import { env } from "./config/env";
 import { prisma } from "./config/database";
@@ -222,14 +223,11 @@ const writeLimiter = rateLimit({
   skip: (req) => req.method === "GET" || req.method === "HEAD" || req.method === "OPTIONS",
 });
 
-// 6c. Upload rate limiter: 20 uploads per 15 min
-const uploadLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 20,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: { error: "Too many uploads, please try again later" },
-});
+// 6c. Upload rate limiter: 20 uploads per 15 min.
+// v3.8.aqo — definition moved to middleware/rateLimiters so the multipart routes
+// outside /api/documents can mount the SAME limiter at route level (a path mount
+// like app.use("/api/carrier-loads", ...) would throttle that router's ordinary
+// GET traffic too). The /api/documents path mounts below are unchanged.
 
 // 6d. Message spam limiter: 30 messages per 15 min
 const messageLimiter = rateLimit({

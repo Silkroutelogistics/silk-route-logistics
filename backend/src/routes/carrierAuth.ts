@@ -33,6 +33,7 @@ import { getAgreement, QP_VERSION } from "../data/agreements";
 import path from "path";
 import { verifyTotpCode } from "../services/totpService";
 import { z } from "zod";
+import { uploadLimiter } from "../middleware/rateLimiters";
 import { log } from "../lib/logger";
 
 const router = Router();
@@ -1192,6 +1193,9 @@ router.post(
   "/info-requests/:id/resolve",
   authenticate,
   authorize("CARRIER"),
+  // v3.8.aqo — carrier-facing multipart route; the /api/carrier-auth path mount
+  // only applies authLimiter, which is not an upload budget.
+  uploadLimiter,
   upload.array("files", 5),
   async (req: AuthRequest, res: Response) => {
     try {

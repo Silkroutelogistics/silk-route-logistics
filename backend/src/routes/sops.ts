@@ -4,6 +4,7 @@ import { authenticate, authorize, AuthRequest } from "../middleware/auth";
 import { upload } from "../config/upload";
 import { prisma } from "../config/database";
 import { generateSOPPdf } from "../services/sopPdfService";
+import { staffUploadLimiter } from "../middleware/rateLimiters";
 import { log } from "../lib/logger";
 
 const router = Router();
@@ -13,7 +14,7 @@ router.get("/", getSOPs);
 router.get("/:id", getSOPById);
 router.post("/", authorize("ADMIN", "CEO", "OPERATIONS"), createSOP);
 router.patch("/:id", authorize("ADMIN", "CEO", "OPERATIONS"), updateSOP);
-router.post("/:id/upload", authorize("ADMIN", "CEO", "OPERATIONS"), upload.single("file"), uploadSOPFile);
+router.post("/:id/upload", authorize("ADMIN", "CEO", "OPERATIONS"), staffUploadLimiter, upload.single("file"), uploadSOPFile);
 router.delete("/:id", authorize("ADMIN", "CEO"), deleteSOP);
 
 // GET /sops/:id/pdf — generate branded PDF on the fly

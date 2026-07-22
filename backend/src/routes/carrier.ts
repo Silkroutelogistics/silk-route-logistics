@@ -12,6 +12,7 @@ import { auditLog } from "../middleware/audit";
 import { validateBody } from "../middleware/validate";
 import { carrierRegisterSchema, verifyCarrierSchema } from "../validators/carrier";
 import { verifyCarrierWithFMCSA, lookupByMcNumber } from "../services/fmcsaService";
+import { uploadLimiter } from "../middleware/rateLimiters";
 import { log } from "../lib/logger";
 
 const router = Router();
@@ -200,7 +201,7 @@ router.post("/register",
 
 // Authenticated carrier
 router.use(authenticate);
-router.post("/documents", upload.array("files", 5), uploadCarrierDocuments);
+router.post("/documents", uploadLimiter, upload.array("files", 5), uploadCarrierDocuments);
 router.get("/onboarding-status", getOnboardingStatus);
 router.get("/dashboard", getDashboard);
 router.get("/scorecard", getScorecard);

@@ -29,6 +29,7 @@ import { getFullInspectionData } from "../services/fmcsaInspectionService";
 import { extractCOIData } from "../services/coiReaderService";
 import { verifyCarrierWithFMCSA } from "../services/fmcsaService";
 import { buildCarrierTrainingSummary } from "../services/trainingService";
+import { uploadLimiter, staffUploadLimiter } from "../middleware/rateLimiters";
 import { log } from "../lib/logger";
 
 const router = Router();
@@ -85,6 +86,9 @@ const updateCarrierSchema = z.object({
 
 // Public: carrier self-registration (supports multipart/form-data for file uploads)
 router.post("/",
+  // v3.8.aqo — public multipart endpoint; it previously had NO upload limiter at
+  // all and fell through to the general 300/15min apiLimiter.
+  uploadLimiter,
   upload.fields([{ name: "photoId", maxCount: 1 }, { name: "articlesOfInc", maxCount: 1 }]),
   (req, _res, next) => {
     // Normalize FormData array fields (equipmentTypes, operatingRegions come as repeated fields)
@@ -198,7 +202,7 @@ router.get("/:id/compass-report", authorize("ADMIN", "CEO", "BROKER", "OPERATION
 });
 
 // AI COI Reader — upload COI file and extract structured insurance data
-router.post("/:id/read-coi", authorize("ADMIN", "CEO", "BROKER", "OPERATIONS"), upload.single("file"), async (req: AuthRequest, res: Response) => {
+router.post("/:id/read-coi", authorize("ADMIN", "CEO", "BROKER", "OPERATIONS"), staffUploadLimiter, upload.single("file"), async (req: AuthRequest, res: Response) => {
   try {
     const carrier = await prisma.carrierProfile.findUnique({ where: { id: req.params.id } });
     if (!carrier) {
@@ -676,7 +680,7 @@ router.get("/:carrierId/documents", authorize("ADMIN", "CEO", "BROKER", "OPERATI
 });
 
 // POST /api/carriers/:carrierId/documents — upload document for a carrier (AE/admin)
-router.post("/:carrierId/documents", authorize("ADMIN", "CEO", "BROKER", "OPERATIONS"), upload.single("file"), async (req: AuthRequest, res: Response) => {
+router.post("/:carrierId/documents", authorize("ADMIN", "CEO", "BROKER", "OPERATIONS"), staffUploadLimiter, upload.single("file"), async (req: AuthRequest, res: Response) => {
   try {
     const carrier = await prisma.carrierProfile.findUnique({ where: { id: req.params.carrierId } });
     if (!carrier) { res.status(404).json({ error: "Carrier not found" }); return; }

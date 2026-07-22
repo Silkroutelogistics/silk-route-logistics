@@ -19,6 +19,7 @@ import { broadcastSSE } from "./trackTraceSSE";
 import { log } from "../lib/logger";
 import { validateLoadStatusTransition } from "../lib/loadStateMachine";
 import { actualEventStamps } from "../lib/loadEventStamps";
+import { uploadLimiter } from "../middleware/rateLimiters";
 
 const router = Router();
 
@@ -507,7 +508,7 @@ router.post("/:id/status", validateBody(statusUpdateSchema), async (req: AuthReq
 });
 
 // POST /api/carrier-loads/:id/documents — Upload a document (BOL, POD, etc.)
-router.post("/:id/documents", upload.single("file"), async (req: AuthRequest, res: Response) => {
+router.post("/:id/documents", uploadLimiter, upload.single("file"), async (req: AuthRequest, res: Response) => {
   const load = await prisma.load.findUnique({ where: { id: req.params.id } });
   if (!load) {
     res.status(404).json({ error: "Load not found" });
@@ -794,7 +795,7 @@ router.post("/:id/exceptions", validateBody(carrierExceptionSchema), async (req:
 });
 
 // POST /:id/exceptions/:excId/receipt — upload repair receipt for a specific exception
-router.post("/:id/exceptions/:excId/receipt", upload.single("file"), async (req: AuthRequest, res: Response) => {
+router.post("/:id/exceptions/:excId/receipt", uploadLimiter, upload.single("file"), async (req: AuthRequest, res: Response) => {
   const load = await prisma.load.findUnique({ where: { id: req.params.id } });
   if (!load) { res.status(404).json({ error: "Load not found" }); return; }
   if (load.carrierId !== req.user!.id) { res.status(403).json({ error: "Not your load" }); return; }
