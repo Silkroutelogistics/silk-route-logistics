@@ -3,6 +3,8 @@ import { prisma } from "../config/database";
 import { AuthRequest } from "../middleware/auth";
 import { log } from "../lib/logger";
 import { validateLoadStatusTransition } from "../lib/loadStateMachine";
+import { generateInvoicePdf } from "../services/pdfService";
+import { sendCustomerInvoiceEmail } from "../services/emailService";
 
 // ============================================================
 // HELPERS
@@ -423,7 +425,31 @@ export async function updateInvoice(req: AuthRequest, res: Response) {
 export async function sendInvoice(req: AuthRequest, res: Response) {
   try {
     const { id } = req.params;
-    const existing = await prisma.invoice.findUnique({ where: { id } });
+
+    // v3.8.aqp — this endpoint previously ONLY flipped status to SENT and
+    // delivered nothing (no email, no PDF), so the customer was never billed
+    // while the console reported SENT. Now it generates the invoice PDF and
+    // emails it to the customer, flipping to SENT only on a successful send.
+    const existing = await prisma.invoice.findUnique({
+      where: { id },
+      include: {
+        load: {
+          select: {
+            referenceNumber: true, originCity: true, originState: true, destCity: true, destState: true,
+            rate: true, pickupDate: true, deliveryDate: true, posterId: true,
+            customer: {
+              select: {
+                userId: true, name: true, email: true, contactName: true, billingContactName: true,
+                paymentTerms: true, address: true, city: true, state: true, zip: true,
+                billingAddress: true, billingCity: true, billingState: true, billingZip: true,
+              },
+            },
+          },
+        },
+        user: { select: { firstName: true, lastName: true, company: true } },
+        lineItems: { orderBy: { sortOrder: "asc" } },
+      },
+    });
     if (!existing) {
       res.status(404).json({ error: "Invoice not found" });
       return;
@@ -433,12 +459,41 @@ export async function sendInvoice(req: AuthRequest, res: Response) {
       return;
     }
 
+    const customerEmail = existing.load?.customer?.email;
+    if (!customerEmail) {
+      // Fail loud rather than silently marking SENT with no recipient — the old
+      // behaviour's core defect.
+      res.status(400).json({
+        error: "Customer has no email on file — cannot deliver this invoice. Add a contact email to the customer, then resend.",
+      });
+      return;
+    }
+
+    // Generate the PDF and email it. If the send throws, we do NOT flip SENT —
+    // the AE sees the failure and can retry, instead of a false SENT.
+    const pdf = await generateInvoicePdf(existing as any);
+    const load = existing.load;
+    const route = load
+      ? `${load.originCity ?? ""}, ${load.originState ?? ""} → ${load.destCity ?? ""}, ${load.destState ?? ""}`
+      : "";
+    const amount = (existing.totalAmount ?? existing.amount ?? 0) as number;
+    const terms = existing.load?.customer?.paymentTerms || "Net 30";
+
+    await sendCustomerInvoiceEmail({
+      email: customerEmail,
+      customerName: existing.load?.customer?.contactName || existing.load?.customer?.name || "Customer",
+      invoiceNumber: existing.invoiceNumber,
+      loadRef: existing.load?.referenceNumber ?? existing.invoiceNumber,
+      route,
+      amount,
+      dueDate: existing.dueDate ?? null,
+      terms,
+      pdf,
+    });
+
     const invoice = await prisma.invoice.update({
       where: { id },
-      data: {
-        status: "SENT",
-        sentDate: new Date(),
-      },
+      data: { status: "SENT", sentDate: new Date() },
     });
 
     res.json(invoice);

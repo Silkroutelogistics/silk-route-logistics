@@ -524,7 +524,11 @@ router.post("/:id/documents", uploadLimiter, upload.single("file"), async (req: 
     return;
   }
 
-  const docType = (req.body.type || "OTHER").toUpperCase();
+  // v3.8.aqp — the carrier my-loads uploader sends `docType` (page.tsx:67), but
+  // this handler only read `req.body.type`, so a POD arrived as undefined -> tagged
+  // OTHER, and the whole POD pipeline below (POD_RECEIVED advance, invoice trigger,
+  // shipper POD email, UI confirmation) never fired. Accept both field names.
+  const docType = (req.body.docType || req.body.type || "OTHER").toUpperCase();
   const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
   const ext = path.extname(req.file.originalname).toLowerCase();
   const key = `documents/${uniqueSuffix}${ext}`;

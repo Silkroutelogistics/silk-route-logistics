@@ -24,6 +24,16 @@ export async function onCarrierApproved(carrierProfileId: string) {
   });
   if (!profile) return;
 
+  // v3.8.aqp — idempotency guard. This is now called from BOTH the Compass
+  // auto-approve path (carrierController.verifyCarrier) AND the AE manual-approve
+  // path (approvalService.approveCarrier). If the carrier was already
+  // initialized (cppJoinedDate set), skip — otherwise a second call would create
+  // a duplicate scorecard and reset the join date, corrupting tenure/tier math.
+  if (profile.cppJoinedDate) {
+    log.info(`[Integration] Carrier ${profile.user?.company || profile.id} already initialized (cppJoinedDate set) — skipping onCarrierApproved`);
+    return;
+  }
+
   // Create initial CPP scorecard with baseline scores
   await prisma.carrierScorecard.create({
     data: {

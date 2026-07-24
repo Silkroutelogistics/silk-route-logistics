@@ -14057,7 +14057,17 @@
 // with no upload limiter at all) fell through to the general 300/15min limiter.
 // Mounted at route level, not as path prefixes, so ordinary GET traffic on those
 // routers is not throttled.
-export const SRL_VERSION = "3.8.aqo";
+// v3.8.aqp — first-load money-seam fixes. (1) The accounting "Send invoice"
+// button now generates the PDF + emails the customer with it attached, flipping
+// to SENT only on a real send (was a no-op that reported SENT and delivered
+// nothing). (2) Carrier POD upload was mis-tagged OTHER because the backend read
+// req.body.type while the portal sends docType — the whole POD pipeline
+// (POD_RECEIVED, invoice trigger, shipper email) never fired; now accepts both.
+// (3) The AE manual carrier-approve path now initializes CPP state
+// (scorecard + cppJoinedDate) via onCarrierApproved, so tier tracking is not
+// frozen from load #1. Idempotency-guarded so the two approve paths can't
+// double-initialize.
+export const SRL_VERSION = "3.8.aqp";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

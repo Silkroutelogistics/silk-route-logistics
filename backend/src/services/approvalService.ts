@@ -21,6 +21,7 @@
 
 import { prisma } from "../config/database";
 import { sendEmail, wrap } from "./emailService";
+import { onCarrierApproved } from "./integrationService";
 import { log } from "../lib/logger";
 
 interface ApproveCarrierArgs {
@@ -120,6 +121,15 @@ export async function approveCarrier(args: ApproveCarrierArgs) {
       }).catch(() => { /* logging-table contention swallowed */ });
     });
   }
+
+  // v3.8.aqp — initialize CPP state (initial scorecard + tier + cppJoinedDate).
+  // Pre-aqp only the Compass auto-approve path (carrierController.verifyCarrier)
+  // fired this, so a carrier approved via THIS AE-discretion path started with
+  // no scorecard and cppJoinedDate=NULL — freezing tier/milestone tracking from
+  // load #1. Fire-and-forget + idempotent-guarded inside onCarrierApproved.
+  onCarrierApproved(args.carrierId).catch((err) =>
+    log.error({ err, carrierId: args.carrierId }, "[Approval] onCarrierApproved (CPP init) failed")
+  );
 
   // In-app notification — surfaces on the NotificationBell when the
   // carrier next logs in.

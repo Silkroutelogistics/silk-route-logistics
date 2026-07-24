@@ -197,6 +197,59 @@ export async function sendAutoInvoiceEmail(
   await sendEmail(carrierEmail, `Invoice ${invoiceNumber} generated for load ${loadRef}`, html);
 }
 
+/**
+ * v3.8.aqp — CUSTOMER-facing invoice email WITH the PDF attached.
+ *
+ * The accounting console's "Send invoice" button previously only flipped the
+ * invoice status to SENT and delivered NOTHING — no email, no PDF — so the
+ * shipper was never billed while the system reported SENT. This is the delivery
+ * the customer actually receives. Throws if the send fails (sendEmail throws on
+ * final failure), so the caller flips to SENT only on a real send.
+ *
+ * Audience is the CUSTOMER (shipper), not the carrier — sendAutoInvoiceEmail
+ * above is the carrier-facing variant and links to the carrier payment portal.
+ */
+export async function sendCustomerInvoiceEmail(args: {
+  email: string;
+  customerName: string;
+  invoiceNumber: string;
+  loadRef: string;
+  route: string;
+  amount: number;
+  dueDate: Date | null;
+  terms: string;
+  pdf?: Buffer;
+}): Promise<string | undefined> {
+  const due = args.dueDate
+    ? args.dueDate.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })
+    : args.terms;
+
+  const html = wrap(`
+    <h2 style="color:#0A2540;margin:0 0 12px">Invoice ${args.invoiceNumber}</h2>
+    <p style="color:#3A4A5F">Dear ${args.customerName},</p>
+    <p style="color:#3A4A5F">Please find attached your invoice for shipment <strong>${args.loadRef}</strong>.</p>
+    <table style="width:100%;border-collapse:collapse;margin:16px 0">
+      <tr><td style="padding:8px 12px;border-bottom:1px solid #E2EAF2;color:#6B7685">Route</td>
+          <td style="padding:8px 12px;border-bottom:1px solid #E2EAF2;color:#0A2540">${args.route}</td></tr>
+      <tr><td style="padding:8px 12px;border-bottom:1px solid #E2EAF2;color:#6B7685">Amount Due</td>
+          <td style="padding:8px 12px;border-bottom:1px solid #E2EAF2;color:#0A2540;font-weight:600">$${args.amount.toLocaleString()}</td></tr>
+      <tr><td style="padding:8px 12px;border-bottom:1px solid #E2EAF2;color:#6B7685">Due Date</td>
+          <td style="padding:8px 12px;border-bottom:1px solid #E2EAF2;color:#0A2540">${due}</td></tr>
+      <tr><td style="padding:8px 12px;color:#6B7685">Terms</td>
+          <td style="padding:8px 12px;color:#0A2540">${args.terms}</td></tr>
+    </table>
+    <p style="color:#6B7685;font-size:13px;margin-top:24px">Questions about this invoice? Reply to this email or write to <a href="mailto:accounting@silkroutelogistics.ai" style="color:#BA7517">accounting@silkroutelogistics.ai</a>.</p>
+  `);
+
+  return sendEmail(
+    args.email,
+    `Invoice ${args.invoiceNumber} — ${args.loadRef}`,
+    html,
+    args.pdf ? [{ filename: `${args.invoiceNumber}.pdf`, content: args.pdf, contentType: "application/pdf" }] : undefined,
+    { replyTo: "accounting@silkroutelogistics.ai" }
+  );
+}
+
 export async function sendLateAlertEmail(
   brokerEmail: string,
   brokerName: string,
