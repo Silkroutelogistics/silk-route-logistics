@@ -3,7 +3,7 @@ import {
   createCustomer, getCustomers, getCustomerById, getCustomerStats, updateCustomer, deleteCustomer, restoreCustomer,
   getCustomerContacts, addCustomerContact, updateCustomerContact, deleteCustomerContact, updateCustomerCredit,
   bulkCreateCustomers, sendMassEmail, bulkUpdateStage, getCustomerIndustries, getActivityFeed,
-  markNotInterested, approveCustomer, inactivateCustomer, reactivateCustomer,
+  markNotInterested, approveCustomer, sendPortalInvite, inactivateCustomer, reactivateCustomer,
 } from "../controllers/customerController";
 import { authenticate, authorize } from "../middleware/auth";
 import { validateBody, validateQuery } from "../middleware/validate";
@@ -46,6 +46,7 @@ router.get("/:id", getCustomerById);
 router.patch("/bulk-stage", authorize("ADMIN", "CEO", "BROKER"), bulkUpdateStage);
 router.post("/:id/mark-not-interested", markNotInterested);
 router.post("/:id/approve", authorize("ADMIN", "CEO"), approveCustomer);
+router.post("/:id/send-portal-invite", authorize("ADMIN", "CEO"), sendPortalInvite);
 router.post("/:id/inactivate", authorize("ADMIN", "CEO"), validateBody(z.object({ reason: z.string().min(5).max(500) })), inactivateCustomer);
 router.post("/:id/reactivate", authorize("ADMIN", "CEO"), reactivateCustomer);
 router.patch("/:id", validateBody(updateCustomerSchema), updateCustomer);

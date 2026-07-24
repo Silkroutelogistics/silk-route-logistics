@@ -250,6 +250,30 @@ export async function sendCustomerInvoiceEmail(args: {
   );
 }
 
+/**
+ * v3.8.aqs — invite an approved customer to set up their shipper-portal login.
+ *
+ * Reuses the existing, tested self-register → link-by-email → approval flow
+ * rather than minting a login server-side. The register link carries the exact
+ * on-file email so the registration attaches to THIS customer row instead of
+ * forking a duplicate PENDING customer on a mismatch. Because the customer is
+ * already APPROVED, they can log in immediately after registering.
+ */
+export async function sendPortalInviteEmail(email: string, customerName: string, registerUrl: string) {
+  const html = wrap(`
+    <h2 style="color:#0A2540;margin:0 0 12px">Set up your Silk Route portal access</h2>
+    <p style="color:#3A4A5F">Hi ${customerName},</p>
+    <p style="color:#3A4A5F">Your Silk Route Logistics account is active. Set up your portal login to track shipments in real time, view documents, and see your invoices in one place.</p>
+    <div style="text-align:center;margin:32px 0">
+      <a href="${registerUrl}" style="display:inline-block;background:#BA7517;color:#FBF7F0;padding:14px 36px;text-decoration:none;border-radius:8px;font-weight:bold;font-size:15px">Set Up Portal Access</a>
+    </div>
+    <p style="color:#6B7685;font-size:13px">Please register with this email address (<strong>${email}</strong>) so we can connect your portal to your account. Questions? Reply to this email or write to <a href="mailto:operations@silkroutelogistics.ai" style="color:#BA7517">operations@silkroutelogistics.ai</a>.</p>
+  `);
+  await sendEmail(email, "Set up your Silk Route Logistics portal access", html, undefined, {
+    replyTo: "operations@silkroutelogistics.ai",
+  });
+}
+
 export async function sendLateAlertEmail(
   brokerEmail: string,
   brokerName: string,

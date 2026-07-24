@@ -13,7 +13,21 @@ export default function ShipperRegisterPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [invitedEmail, setInvitedEmail] = useState<string | null>(null);
   const upd = (k: string, v: string) => setForm((p) => ({ ...p, [k]: v }));
+
+  // v3.8.aqs — when an AE sends a portal invite, the register link carries the
+  // customer's exact on-file email (?email=). Pre-fill + lock it so registration
+  // links to that customer row instead of forking a duplicate on a typo. Read
+  // from window.location (not useSearchParams) to avoid a Suspense boundary
+  // under static export.
+  useEffect(() => {
+    const e = new URLSearchParams(window.location.search).get("email");
+    if (e) {
+      setInvitedEmail(e);
+      setForm((p) => ({ ...p, email: e }));
+    }
+  }, []);
 
   const handleSubmit = async () => {
     setSubmitting(true);
@@ -165,7 +179,7 @@ export default function ShipperRegisterPage() {
               <div className="grid grid-cols-2 gap-x-4">
                 <Field label="Primary Contact Name" required value={form.contact} onChange={(v) => upd("contact", v)} placeholder="Jane Doe" icon={<User size={16} />} />
                 <Field label="Title / Role" value={form.title} onChange={(v) => upd("title", v)} placeholder="Logistics Manager" />
-                <Field label="Email" required type="email" value={form.email} onChange={(v) => upd("email", v)} placeholder="jane@company.com" />
+                <Field label="Email" required type="email" value={form.email} onChange={(v) => upd("email", v)} placeholder="jane@company.com" readOnly={!!invitedEmail} helpText={invitedEmail ? "Invited address — registers your portal to your existing account." : undefined} />
                 <Field label="Phone" required value={form.phone} onChange={(v) => upd("phone", v)} placeholder="(555) 123-4567" />
               </div>
             </>
@@ -275,9 +289,9 @@ export default function ShipperRegisterPage() {
 }
 
 function Field({
-  label, type = "text", value, onChange, placeholder, required, options, icon, helpText,
+  label, type = "text", value, onChange, placeholder, required, options, icon, helpText, readOnly,
 }: {
-  label: string; type?: string; value?: string; onChange: (v: string) => void; placeholder?: string; required?: boolean; options?: string[]; icon?: React.ReactNode; helpText?: string;
+  label: string; type?: string; value?: string; onChange: (v: string) => void; placeholder?: string; required?: boolean; options?: string[]; icon?: React.ReactNode; helpText?: string; readOnly?: boolean;
 }) {
   return (
     <div className="mb-4">
@@ -294,7 +308,7 @@ function Field({
         ) : type === "textarea" ? (
           <textarea value={value || ""} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} rows={4} className="w-full py-2.5 px-3.5 border border-[#EFE6D3] rounded-md text-[13px] text-gray-700 outline-none focus:border-[#BA7517] focus:ring-[#BA7517]/15 transition-colors resize-y" />
         ) : (
-          <input type={type} value={value || ""} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} className={`w-full py-2.5 ${icon ? "pl-10" : "pl-3.5"} pr-3.5 border border-[#EFE6D3] rounded-md text-[13px] text-gray-700 outline-none focus:border-[#BA7517] focus:ring-[#BA7517]/15 transition-colors`} />
+          <input type={type} value={value || ""} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} readOnly={readOnly} className={`w-full py-2.5 ${icon ? "pl-10" : "pl-3.5"} pr-3.5 border border-[#EFE6D3] rounded-md text-[13px] text-gray-700 outline-none focus:border-[#BA7517] focus:ring-[#BA7517]/15 transition-colors ${readOnly ? "bg-gray-50 text-gray-500 cursor-not-allowed" : ""}`} />
         )}
       </div>
       {helpText && <div className="text-[11px] text-gray-400 mt-1">{helpText}</div>}

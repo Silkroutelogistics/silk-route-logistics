@@ -3,11 +3,12 @@ import { prisma } from "../config/database";
 import { AuthRequest } from "../middleware/auth";
 import { z } from "zod";
 import { createCustomerSchema, updateCustomerSchema, customerQuerySchema, markManualReviewSchema } from "../validators/customer";
-import { sendEmail } from "../services/emailService";
+import { sendEmail, sendPortalInviteEmail } from "../services/emailService";
 import { buildEmailSync, GMAIL_SIGNATURE, CEO_NAME, CEO_EMAIL } from "../email/builder";
 import { VALID_PIPELINE_STATUSES } from "../../../shared/constants/pipelineStatus";
 import { markProspectNotInterested } from "../services/prospectStatusService";
 import { logCustomerActivity } from "../services/customerActivityService";
+import { caseInsensitiveEmailFilter } from "../lib/emailNormalization";
 import { validateLoadStatusTransition } from "../lib/loadStateMachine";
 import { log } from "../lib/logger";
 import { LoadStatus } from "@prisma/client";
@@ -430,6 +431,65 @@ export async function markNotInterested(req: AuthRequest, res: Response) {
 // (TIN, credit, contract) before flipping. Idempotent on already-APPROVED.
 // updateCustomerSchema deliberately does NOT include onboardingStatus,
 // so PATCH /customers/:id cannot bypass this gate.
+/**
+ * v3.8.aqs — POST /customers/:id/send-portal-invite (ADMIN/CEO)
+ *
+ * The AE-side flow to give an approved customer a shipper-portal login. Previously
+ * the ONLY path to portal access was the customer self-registering with the exact
+ * on-file email (a mismatch silently forked a duplicate PENDING customer), and
+ * nobody told them to. This emails the customer a register link carrying their
+ * exact email so registration attaches to THIS row, not a fork. Reuses the tested
+ * self-register → link → approval flow rather than minting a login here.
+ */
+export async function sendPortalInvite(req: AuthRequest, res: Response) {
+  const customer = await prisma.customer.findFirst({
+    where: { id: req.params.id, deletedAt: null },
+    select: { id: true, name: true, contactName: true, email: true, userId: true, onboardingStatus: true },
+  });
+  if (!customer) {
+    res.status(404).json({ error: "Customer not found" });
+    return;
+  }
+  if (customer.userId) {
+    res.status(409).json({ error: "This customer already has a portal login linked." });
+    return;
+  }
+  const email = customer.email?.trim();
+  if (!email) {
+    res.status(400).json({ error: "Add a contact email to this customer before sending a portal invite." });
+    return;
+  }
+  // If a login already exists for this email, self-registration would collide.
+  // Surface it rather than sending an invite that will fail at registration.
+  const existingUser = await prisma.user.findFirst({ where: caseInsensitiveEmailFilter(email) });
+  if (existingUser) {
+    res.status(409).json({
+      error: "A login already exists for this email. Link it to this customer instead of inviting a new registration.",
+    });
+    return;
+  }
+
+  const registerUrl = `https://silkroutelogistics.ai/shipper/register?email=${encodeURIComponent(email)}`;
+  try {
+    await sendPortalInviteEmail(email, customer.contactName || customer.name || "there", registerUrl);
+  } catch (e: any) {
+    log.error({ err: e, customerId: customer.id }, "[Customer] Portal invite email failed");
+    res.status(502).json({ error: "Could not send the invite email — please try again." });
+    return;
+  }
+
+  await logCustomerActivity({
+    customerId: customer.id,
+    eventType: "portal_invite_sent",
+    description: `Portal setup invite sent to ${email}`,
+    actorType: "USER",
+    actorId: req.user?.id ?? null,
+    actorName: req.user?.email ?? null,
+  }).catch(() => { /* non-fatal */ });
+
+  res.json({ ok: true, sentTo: email });
+}
+
 export async function approveCustomer(req: AuthRequest, res: Response) {
   const customer = await prisma.customer.findFirst({
     where: { id: req.params.id, deletedAt: null },

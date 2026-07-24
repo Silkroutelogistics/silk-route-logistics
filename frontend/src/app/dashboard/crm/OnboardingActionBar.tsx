@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
-import { CheckCircle2, XCircle, AlertTriangle, X, Ban, RotateCcw } from "lucide-react";
+import { CheckCircle2, XCircle, AlertTriangle, X, Ban, RotateCcw, Mail } from "lucide-react";
 import { api } from "@/lib/api";
 import type { CrmCustomer } from "./types";
 
@@ -69,6 +69,14 @@ export function OnboardingActionBar({ customer, onChange }: Props) {
     },
   });
 
+  const [inviteMsg, setInviteMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const portalInvite = useMutation({
+    mutationFn: async () => (await api.post(`/customers/${customer.id}/send-portal-invite`)).data,
+    onSuccess: (d: any) => setInviteMsg({ ok: true, text: `Portal invite sent to ${d?.sentTo ?? "the customer"}.` }),
+    onError: (err: any) =>
+      setInviteMsg({ ok: false, text: err?.response?.data?.error ?? err?.message ?? "Could not send the invite." }),
+  });
+
   const reactivate = useMutation({
     mutationFn: async () => (await api.post(`/customers/${customer.id}/reactivate`)).data,
     onSuccess: () => {
@@ -127,14 +135,30 @@ export function OnboardingActionBar({ customer, onChange }: Props) {
             <CheckCircle2 className="w-4 h-4 text-[#2F7A4F]" strokeWidth={2} />
             <span className="text-xs text-[#2F7A4F] font-medium">Approved customer · onboarding gate cleared</span>
           </div>
-          <button
-            onClick={() => setShowInactivate(true)}
-            className="px-3 py-1.5 text-xs font-medium rounded-md text-[#9B2C2C] border border-[#9B2C2C]/40 hover:bg-[#F6E3E3]/60 focus:outline-none focus:ring-2 focus:ring-[#9B2C2C]/30 inline-flex items-center gap-1.5"
-          >
-            <Ban className="w-3.5 h-3.5" strokeWidth={2} />
-            Inactivate
-          </button>
+          <div className="flex gap-2">
+            {/* v3.8.aqs — no linked portal login yet: offer to invite them to set one up. */}
+            {!customer.userId && (
+              <button
+                onClick={() => { setInviteMsg(null); portalInvite.mutate(); }}
+                disabled={portalInvite.isPending}
+                className="px-3 py-1.5 text-xs font-medium rounded-md text-white bg-[#BA7517] hover:bg-[#8f5a11] disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-[#BA7517]/40 inline-flex items-center gap-1.5"
+              >
+                <Mail className="w-3.5 h-3.5" strokeWidth={2} />
+                {portalInvite.isPending ? "Sending…" : "Send portal invite"}
+              </button>
+            )}
+            <button
+              onClick={() => setShowInactivate(true)}
+              className="px-3 py-1.5 text-xs font-medium rounded-md text-[#9B2C2C] border border-[#9B2C2C]/40 hover:bg-[#F6E3E3]/60 focus:outline-none focus:ring-2 focus:ring-[#9B2C2C]/30 inline-flex items-center gap-1.5"
+            >
+              <Ban className="w-3.5 h-3.5" strokeWidth={2} />
+              Inactivate
+            </button>
+          </div>
         </div>
+        {inviteMsg && (
+          <div className={`mt-2 text-xs ${inviteMsg.ok ? "text-[#2F7A4F]" : "text-[#9B2C2C]"}`}>{inviteMsg.text}</div>
+        )}
         {errMsg && <div className="mt-2 text-xs text-[#9B2C2C]">{errMsg}</div>}
         {showInactivate && (
           <InactivateModal

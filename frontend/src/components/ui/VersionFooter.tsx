@@ -14078,7 +14078,14 @@
 // a marked test exception + flushes it and returns the event id, so you get proof
 // error telemetry is actually CAPTURING to your project — not just enabled by a
 // DSN that might be stale/wrong. Symmetric to the v3.8.aqm storage self-test.
-export const SRL_VERSION = "3.8.aqr";
+// v3.8.aqs — AE shipper-portal invite. Closes the gap where an approved customer
+// (e.g. Beekeepers) had no way to get a portal login except self-registering with
+// the exact on-file email (a mismatch forked a duplicate customer), and nobody
+// told them to. New "Send portal invite" button on an approved customer with no
+// linked login emails them a register link carrying their exact email; the
+// shipper register page pre-fills + locks that email so registration attaches to
+// their existing (approved) customer row and they can log in immediately.
+export const SRL_VERSION = "3.8.aqs";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
