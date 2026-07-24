@@ -270,6 +270,38 @@ router.patch(
           log.error({ err, bidId }, "[Bids] accept notification failed");
         }
 
+        // v3.8.aqt — generate the Rate Confirmation on bid-accept, at parity with
+        // the direct/on-behalf/waterfall tender-accept paths (which all call
+        // autoGenerateRateConfirmation). That generator strictly needs a
+        // LoadTender, but a loadboard win only has a LoadBid — so we record an
+        // ACCEPTED LoadTender for the win (data-consistent with the tender-based
+        // paths: the load now has a carrier via an accepted tender) and generate
+        // the RC from it. Non-fatal: the load is already dispatched above, so a
+        // failure here must not fail the accept. Note: this ACCEPTED tender is
+        // excluded from the OFFERED-only active-tender queries; it does count in
+        // the tender-funnel analytics as a conversion, which a bid-accept is.
+        try {
+          const posterLoad = await prisma.load.findUnique({ where: { id: loadId }, select: { posterId: true } });
+          if (posterLoad?.posterId) {
+            const syntheticTender = await prisma.loadTender.create({
+              data: {
+                loadId,
+                carrierId: carrierProfile.id,
+                offeredRate: Number(bid.bidRate),
+                status: "ACCEPTED",
+                respondedAt: now,
+                expiresAt: now,
+              },
+            });
+            const { autoGenerateRateConfirmation } = await import("../services/autoRateConfirmationService");
+            await autoGenerateRateConfirmation(loadId, syntheticTender.id, posterLoad.posterId);
+          } else {
+            log.warn({ loadId }, "[Bids] no posterId — skipping RC generation on bid-accept");
+          }
+        } catch (err) {
+          log.error({ err, loadId, bidId }, "[Bids] RC generation on bid-accept failed (non-fatal)");
+        }
+
         return res.json({ bid: updated });
       }
 

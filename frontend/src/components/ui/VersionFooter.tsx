@@ -14085,7 +14085,16 @@
 // linked login emails them a register link carrying their exact email; the
 // shipper register page pre-fills + locks that email so registration attaches to
 // their existing (approved) customer row and they can log in immediately.
-export const SRL_VERSION = "3.8.aqs";
+// v3.8.aqt — findings cleanup. (1) Loadboard bid-accept now generates the Rate
+// Confirmation at parity with the direct/on-behalf/waterfall tender paths — it
+// records an ACCEPTED LoadTender for the win (data-consistent; excluded from
+// OFFERED-only active queries) and generates the RC from it, non-fatal. (2) The
+// standard 7-day request-quickpay endpoint labeled its carrier-pay row FLASH
+// (same-day); corrected to PRIORITY per the 7-day mapping (reporting label only,
+// no SLA/money impact). Carrier RC-by-loadId was assessed and left as-is: RC
+// delivery already works via the AE Send step, and DRAFT-invisible is the
+// deliberate review gate.
+export const SRL_VERSION = "3.8.aqt";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

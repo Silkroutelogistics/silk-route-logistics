@@ -220,7 +220,12 @@ router.post("/:id/request-quickpay", async (req: AuthRequest, res: Response) => 
       quickPayFeePercent: feePercent,
       quickPayFeeAmount: discount,
       netAmount,
-      paymentTier: "FLASH",
+      // v3.8.aqt — this is the STANDARD 7-day QuickPay request (no same-day
+      // option on this endpoint). Per the Sprint 33 mapping (7-day → PRIORITY,
+      // same-day → FLASH), label it PRIORITY. FLASH here mislabeled every 7-day
+      // request as same-day in reporting/filtering (paymentTier drives no SLA or
+      // money — it is a reporting label only, so this is an accuracy fix).
+      paymentTier: "PRIORITY",
     },
   });
 
