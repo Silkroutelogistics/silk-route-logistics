@@ -14067,7 +14067,14 @@
 // (scorecard + cppJoinedDate) via onCarrierApproved, so tier tracking is not
 // frozen from load #1. Idempotency-guarded so the two approve paths can't
 // double-initialize.
-export const SRL_VERSION = "3.8.aqp";
+// v3.8.aqq — QuickPay fee correction + §8 pricing centralized. The
+// request-quickpay charge site had its own inline table charging Silver 2% /
+// Gold 1.5%, contradicting §8 (and the carrier portal, which shows Silver 3%).
+// Now sourced from a single tested lib/quickPayPricing helper (Silver 3% /
+// Gold 2% / Platinum 1%) so the money value can't drift from the published
+// rate again. Closes the last verified booked→invoiced gap; the rest of the
+// pipeline (accept→compliance→RC→dispatch→deliver→invoice) verified working.
+export const SRL_VERSION = "3.8.aqq";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

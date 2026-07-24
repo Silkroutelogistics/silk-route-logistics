@@ -1,6 +1,7 @@
 import { Router, Response } from "express";
 import { prisma } from "../config/database";
 import { authenticate, authorize, AuthRequest } from "../middleware/auth";
+import { quickPayFeePercent, normalizeTier } from "../lib/quickPayPricing";
 
 const router = Router();
 
@@ -164,16 +165,14 @@ router.post("/:id/request-quickpay", async (req: AuthRequest, res: Response) => 
     return;
   }
 
-  // Get carrier tier to determine QuickPay fee
+  // Get carrier tier to determine QuickPay fee.
+  // v3.8.aqq — fees sourced from the canonical §8 helper (Silver 3% · Gold 2% ·
+  // Platinum 1%). Pre-aqq this had its own inline table charging Silver 2% /
+  // Gold 1.5% — undercharging vs the published rate and contradicting the tier
+  // cards the carrier sees. Centralized so the charge site can't drift again.
   const profile = await prisma.carrierProfile.findUnique({ where: { userId: req.user!.id } });
-  let feePercent = 3; // Default 3%
-  let tier = "SILVER";
-  if (profile) {
-    tier = profile.tier || "SILVER";
-    if (profile.tier === "PLATINUM") feePercent = 1;
-    else if (profile.tier === "GOLD") feePercent = 1.5;
-    else if (profile.tier === "SILVER") feePercent = 2;
-  }
+  const tier = normalizeTier(profile?.tier);
+  const feePercent = quickPayFeePercent(tier);
 
   // v3.8.ajx C5 — Monthly limit hard block. Aggregate this carrier's QP
   // activity (anything with paymentMethod=QUICKPAY) created within the
