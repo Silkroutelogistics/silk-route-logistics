@@ -14074,7 +14074,11 @@
 // Gold 2% / Platinum 1%) so the money value can't drift from the published
 // rate again. Closes the last verified booked→invoiced gap; the rest of the
 // pipeline (accept→compliance→RC→dispatch→deliver→invoice) verified working.
-export const SRL_VERSION = "3.8.aqq";
+// v3.8.aqr — Sentry capture self-test. GET /api/admin/sentry-test (admin) captures
+// a marked test exception + flushes it and returns the event id, so you get proof
+// error telemetry is actually CAPTURING to your project — not just enabled by a
+// DSN that might be stale/wrong. Symmetric to the v3.8.aqm storage self-test.
+export const SRL_VERSION = "3.8.aqr";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
