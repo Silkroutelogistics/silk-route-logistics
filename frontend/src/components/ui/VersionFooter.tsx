@@ -14094,7 +14094,15 @@
 // no SLA/money impact). Carrier RC-by-loadId was assessed and left as-is: RC
 // delivery already works via the AE Send step, and DRAFT-invisible is the
 // deliberate review gate.
-export const SRL_VERSION = "3.8.aqt";
+// v3.8.aqu — AE LOGIN LOCKOUT FIX. Any AE whose password passed the 60-day
+// expiry completed password + OTP, got redirected to /auth/force-password-change,
+// and was instantly bounced back to /auth/login — unable to log in at all. Two
+// independent breaks: (1) the login page handed the temp token across a full page
+// navigation via sessionStorage, but the force-change page read it only from the
+// in-memory Zustand store that the navigation wipes; (2) the endpoint sat behind
+// `authenticate`, which v3.8.amz hardened to reject purpose-bearing tokens — and
+// the force-change temp token is exactly that, so it 401'd even with a good token.
+export const SRL_VERSION = "3.8.aqu";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

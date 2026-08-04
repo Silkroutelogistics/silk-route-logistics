@@ -426,36 +426,48 @@ export async function forceChangePassword(req: AuthRequest, res: Response) {
     return;
   }
 
-  // Verify this is a force-change-password token
+  // v3.8.aqu — this endpoint is authorized ONLY by the force-change-password
+  // temp token minted at the passwordExpired branch of OTP/TOTP verify. It no
+  // longer sits behind the shared `authenticate` middleware: v3.8.amz correctly
+  // hardened that middleware to reject ANY purpose-bearing token (cross-token-
+  // class isolation), which silently broke this endpoint — the temp token
+  // carries purpose:"force-change-password", so every expired-password AE got
+  // 401 "Invalid token" here and could never complete login (whaider lockout).
+  // The route now self-verifies the token, which also closes the pre-aqu hole
+  // where a cookie-authenticated call could skip the purpose check entirely
+  // (the Bearer header used to be optional).
   const header = req.headers.authorization;
-  if (header?.startsWith("Bearer ")) {
-    const token = header.split(" ")[1];
-    try {
-      const payload = jwt.verify(token, env.JWT_SECRET, { algorithms: ["HS256"] }) as { userId: string; purpose?: string };
-      if (payload.purpose !== "force-change-password") {
-        res.status(403).json({ error: "Invalid token for this operation" });
-        return;
-      }
-    } catch {
-      res.status(401).json({ error: "Invalid or expired token" });
+  if (!header?.startsWith("Bearer ")) {
+    res.status(401).json({ error: "Missing password-change token" });
+    return;
+  }
+  let userId: string;
+  try {
+    const payload = jwt.verify(header.split(" ")[1], env.JWT_SECRET, { algorithms: ["HS256"] }) as { userId?: string; purpose?: string };
+    if (payload.purpose !== "force-change-password" || typeof payload.userId !== "string") {
+      res.status(403).json({ error: "Invalid token for this operation" });
       return;
     }
+    userId = payload.userId;
+  } catch {
+    res.status(401).json({ error: "Invalid or expired token" });
+    return;
   }
 
   const passwordHash = await bcrypt.hash(newPassword, 12);
   await prisma.user.update({
-    where: { id: req.user!.id },
+    where: { id: userId },
     data: { passwordHash, passwordChangedAt: new Date() },
   });
 
   const ipAddress = (req.headers["x-forwarded-for"] as string) || req.ip || "";
   const userAgent = req.headers["user-agent"] || "";
 
-  const fullToken = signToken(req.user!.id);
+  const fullToken = signToken(userId);
 
   await prisma.auditLog.create({
     data: {
-      userId: req.user!.id,
+      userId,
       action: "LOGIN",
       entity: "Session",
       changes: "Password changed (expired)",
@@ -465,11 +477,16 @@ export async function forceChangePassword(req: AuthRequest, res: Response) {
   });
 
   const user = await prisma.user.findUnique({
-    where: { id: req.user!.id },
+    where: { id: userId },
     select: { id: true, email: true, firstName: true, lastName: true, role: true },
   });
+  if (!user) {
+    res.status(404).json({ error: "User not found" });
+    return;
+  }
 
-  setTokenCookie(res, fullToken, user?.role || req.user!.role);
+  registerSession(userId, fullToken, user.role);
+  setTokenCookie(res, fullToken, user.role);
   res.json({ user, token: fullToken });
 }
 

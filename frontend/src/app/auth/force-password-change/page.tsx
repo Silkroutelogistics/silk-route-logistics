@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { useAuthStore } from "@/hooks/useAuthStore";
 import { Logo } from "@/components/ui/Logo";
@@ -14,17 +14,37 @@ export default function ForcePasswordChangePage() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [validationError, setValidationError] = useState("");
   const [showSplash, setShowSplash] = useState(false);
+  const [hydrated, setHydrated] = useState(false);
+
+  // v3.8.aqu — the login page hands the temp token across a FULL page
+  // navigation via sessionStorage ("srl_temp_token"), but this page read it
+  // only from the in-memory Zustand store — which that navigation wipes. Net
+  // effect: every AE whose password had passed the 60-day expiry completed
+  // password + OTP successfully, was redirected here, instantly bounced back
+  // to /auth/login with no explanation, and could never log in (this is what
+  // locked out whaider). Hydrate the store from sessionStorage BEFORE the
+  // no-token redirect guard may fire.
+  useEffect(() => {
+    const stored = sessionStorage.getItem("srl_temp_token");
+    if (stored && !useAuthStore.getState().tempToken) {
+      useAuthStore.setState({ tempToken: stored });
+    }
+    setHydrated(true);
+  }, []);
+
+  // Redirect if no temp token — only after the sessionStorage hydration above
+  // has had its chance (the pre-aqu inline render-time guard fired first and
+  // caused the bounce loop).
+  useEffect(() => {
+    if (hydrated && !useAuthStore.getState().tempToken && !showSplash) {
+      window.location.href = "/auth/login";
+    }
+  }, [hydrated, showSplash]);
 
   const handleSplashComplete = useCallback(() => {
     sessionStorage.removeItem("otpEmail");
     window.location.href = "/dashboard/overview";
   }, []);
-
-  // Redirect if no temp token
-  if (typeof window !== "undefined" && !tempToken && !showSplash) {
-    window.location.href = "/auth/login";
-    return null;
-  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -38,6 +58,7 @@ export default function ForcePasswordChangePage() {
 
     const success = await forceChangePassword(newPassword);
     if (success) {
+      sessionStorage.removeItem("srl_temp_token"); // single-use — consumed
       setShowSplash(true);
     }
   };

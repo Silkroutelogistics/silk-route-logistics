@@ -111,7 +111,10 @@ router.post("/e2e-token", async (req, res) => {
 });
 
 // Authenticated routes
-router.post("/force-change-password", authenticate, validateBody(z.object({ newPassword: z.string().min(8) })), forceChangePassword);
+// v3.8.aqu — no `authenticate` here: the shared middleware rejects purpose-bearing
+// tokens (v3.8.amz isolation), and this endpoint is authorized by exactly such a
+// token. The controller verifies it (purpose + userId) itself.
+router.post("/force-change-password", validateBody(z.object({ newPassword: z.string().min(8) })), forceChangePassword);
 router.get("/me", authenticate, getProfile);
 router.get("/profile", authenticate, getProfile);
 router.patch("/profile", authenticate, validateBody(updateProfileSchema), updateProfile);
