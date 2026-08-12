@@ -1100,6 +1100,27 @@ export async function generateBOLFromLoad(
   // identically (T&C content area unaffected — wraps and ends well
   // above the footer regardless).
   const fyLine = 770;
+
+  // v3.8.ara — condensed terms strip carrying the legal substance now that the
+  // T&C page is gone: Carmack governing law + released-value cross-reference,
+  // SRL's broker (not carrier) status, the claims window, and incorporation of
+  // the Broker–Carrier Agreement by reference.
+  //
+  // SIZED TO MEASURED SPACE, not guessed. The tallest signature column (CARRIER
+  // · DRIVER) was measured ending at y=746.97 and the footer rule is at 770, so
+  // the real budget is ~23pt. An earlier draft of this strip started at 748 with
+  // two full paragraphs (~28pt) and would have run through both the signature
+  // block above and the footer rule below. This is one paragraph at 5.75pt that
+  // wraps to 2 lines (~14pt) starting at 750 — verified to end above 770.
+  const termsY = 750;
+  doc.font("DMSans-Regular").fontSize(5.75).fillColor(FG_3)
+    .text(
+      "Non-negotiable straight bill of lading; goods in apparent good order except as noted. Carrier cargo liability per Carmack, 49 U.S.C. § 14706 " +
+      "(released value § 14706(c)); claims within nine (9) months. SRL is a licensed property broker, not a motor carrier; carriage is subject to the " +
+      "Broker–Carrier Agreement. Michigan law governs.",
+      M, termsY, { width: CW, lineGap: 0.25 },
+    );
+
   doc.lineWidth(1).strokeColor(GOLD).moveTo(M, fyLine).lineTo(R, fyLine).stroke();
   const footerY = fyLine + 8;
   const footerThirdW = CW / 3;
@@ -1113,76 +1134,23 @@ export async function generateBOLFromLoad(
       width: footerThirdW, align: "center", lineBreak: false,
     });
   doc.font("DMSans-Regular").fontSize(7).fillColor(FG_3)
-    .text("Page 1 of 2", M + 2 * footerThirdW, footerY, {
+    .text("Page 1 of 1", M + 2 * footerThirdW, footerY, {
       width: footerThirdW, align: "right", lineBreak: false,
     });
 
-  // ========================= PAGE 2 =========================
-  doc.addPage();
-  doc.rect(0, 0, 612, 3).fill(GOLD);
-
-  // Condensed header (no QR column). Same transparent-variant preference as page 1.
-  if (hasLogo || hasLogoTransparent) {
-    doc.image(logoAsset, M, 12, { width: 28, height: 28, fit: [28, 28] });
-  }
-  doc.font("Playfair-Bold").fontSize(10).fillColor(NAVY)
-    .text("SILK ROUTE LOGISTICS INC.", M + 34, 13, { lineBreak: false });
-  doc.font("DMSans-Regular").fontSize(7).fillColor(FG_3)
-    .text(`${bolNum} ${MIDDOT} Terms and Conditions (continued)`, M + 34, 26, { lineBreak: false });
-  doc.font("DMSans-Bold").fontSize(8).fillColor(NAVY)
-    .text(bolNum, R - 220, 13, { width: 220, align: "right", lineBreak: false });
-  doc.font("DMSans-Regular").fontSize(7).fillColor(FG_3)
-    .text(`${pickupDateFmt} ${MIDDOT} ${load.referenceNumber}`, R - 220, 26, {
-      width: 220, align: "right", lineBreak: false,
-    });
-
-  y = 50;
-  doc.lineWidth(1).strokeColor(GOLD).moveTo(M, y).lineTo(R, y).stroke();
-  y += 14;
-
-  // T&C title
-  doc.font("Playfair-Bold").fontSize(16).fillColor(NAVY)
-    .text("Terms and Conditions", M, y, { lineBreak: false });
-  y += 24;
-
-  // v3.8 counsel architecture (Dirk Beckwith / Foster Swift, confirmed 2026-06)
-  // — the BOL is a clean standard straight bill of lading. The broker-carrier
-  // terms (insurance limits, re-brokering, non-solicitation, indemnification,
-  // detention, confidentiality, equipment) live in the Broker-Carrier
-  // Agreement, not on the BOL. Page 2 now carries only the standard
-  // contract-of-carriage terms, the broker-not-carrier statement, and a
-  // reference to the BCA. This also removes the retired non-solicitation
-  // penalty (twelve (12) months / 35% commission) from the BOL — the single
-  // non-solicit figure now lives only in the BCA, eliminating the prior
-  // cross-document contradiction.
-  const bolTerms = [
-    "This Bill of Lading is a non-negotiable straight bill of lading and a receipt for the goods described, accepted in apparent good order except as noted. It evidences the contract of carriage between the Shipper and the Carrier under the Uniform Straight Bill of Lading and applicable U.S. DOT regulations.",
-    "Carrier liability for cargo loss, damage, or delay is governed by the Carmack Amendment, 49 U.S.C. § 14706, to the full actual value of the goods unless a written released-value agreement is executed (49 U.S.C. § 14706(c)).",
-    "Silk Route Logistics Inc. is a licensed property broker (MC# 1794414, USDOT# 4526880), not a motor carrier or freight forwarder. Insertion of SRL's name on this Bill of Lading is for convenience only and does not make SRL the carrier; Carmack liability rests with the Carrier identified above.",
-    "The Carrier's transportation of this shipment is further subject to the Broker-Carrier Agreement between Silk Route Logistics Inc. and the Carrier, which governs insurance, re-brokering, indemnification, payment, and the other terms between Broker and Carrier. In the event of conflict, the Broker-Carrier Agreement controls as between Broker and Carrier.",
-    "Written claims must be filed within nine (9) months of delivery, with any damage, shortage, or discrepancy noted on this Bill of Lading at delivery. Freight charges are prepaid unless otherwise noted. Governed by Michigan law and applicable federal transportation law.",
-  ];
-  doc.font("DMSans-Regular").fontSize(9).fillColor(FG_2)
-    .text(bolTerms.join("\n\n"), M, y, { width: CW, lineGap: 1.5, paragraphGap: 3 });
-
-  // Footer page 2 (matches page 1)
-  doc.lineWidth(1).strokeColor(GOLD).moveTo(M, fyLine).lineTo(R, fyLine).stroke();
-  const f2y = fyLine + 8;
-  doc.font("DMSans-Regular").fontSize(7).fillColor(FG_3)
-    .text(
-      `MC# ${COMPANY.mc} ${MIDDOT} DOT# ${COMPANY.dot} ${MIDDOT} ${COMPANY.website}`,
-      M, f2y, { width: footerThirdW, lineBreak: false },
-    );
-  doc.font("DMSans-Italic").fontSize(7).fillColor(GOLD_DARK)
-    .text("Where Trust Travels.", M + footerThirdW, f2y, {
-      width: footerThirdW, align: "center", lineBreak: false,
-    });
-  doc.font("DMSans-Regular").fontSize(7).fillColor(FG_3)
-    .text("Page 2 of 2", M + 2 * footerThirdW, f2y, {
-      width: footerThirdW, align: "right", lineBreak: false,
-    });
-
-  void FG_DISABLED; // reserved for future disabled-text rendering
+  // v3.8.ara — BOL is a ONE-PAGE document.
+  //
+  // Pre-ara a second page carried only the Terms and Conditions. Industry
+  // practice (Echo, Flock Freight, Varstar and the other majors) is a single-
+  // page straight BOL: it is a dock document that gets printed, signed, and
+  // handed over, and a second sheet is routinely separated and lost. The legal
+  // substance is preserved, not dropped:
+  //   - The Carmack released-value election + 49 U.S.C. § 14706(c) citation
+  //     stay on page 1 where the shipper actually initials them.
+  //   - The full T&C body lives in the Broker-Carrier Agreement, which the
+  //     carrier e-signs at activation and which controls between Broker and
+  //     Carrier; page 1 incorporates it by reference in the terms strip below.
+  // A BOL that references its governing agreement is the standard construction.
 
   doc.end();
   return doc;

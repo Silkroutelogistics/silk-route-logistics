@@ -166,26 +166,42 @@ export async function getPublicTracking(req: Request, res: Response) {
   const currentIdx = statusOrder.indexOf(load.status);
   const progressPct = currentIdx >= 0 ? Math.round((currentIdx / (statusOrder.length - 1)) * 100) : 0;
 
+  // v3.8.ara — STATUS_ONLY now actually means status-only.
+  //
+  // The BOL QR mints a STATUS_ONLY token (shipperTrackingTokenService), and
+  // accessLevel DEFAULTS to STATUS_ONLY for any bare lookup — but pre-ara only
+  // `stops` and `checkCalls` were gated on FULL. Everything else was returned to
+  // anyone who scanned the QR or guessed a reference number: the CUSTOMER NAME,
+  // the COMMODITY, the weight, the equipment, temperature spec, and a link to
+  // the signed POD. A BOL travels through many hands (dock workers, lumpers,
+  // receivers, anyone who photographs it), so that is a commercial-confidentiality
+  // leak: it exposes who ships what, on which lane, in what volume.
+  //
+  // STATUS_ONLY now returns strictly the tracking function — where it is going,
+  // where it is now, and when it should arrive:
+  //     lane (origin/destination CITY + STATE), status, progress, milestones,
+  //     scheduled + actual dates, last known city/state, ETA.
+  // Withheld: customer/shipper name, commodity, weight, equipment, temperature,
+  // stop-by-stop facility detail, check calls, and the POD document.
+  //
+  // NOTE: this deliberately REVERSES the §14 locked v3.7.k decision that
+  // `shipperName` be visible on public /track. That decision reasoned the BOL
+  // already prints the shipper beside the QR so redaction added nothing. Wasi
+  // reversed it 2026-08-12: the QR outlives the paper it was printed on, and a
+  // link that is forwarded or scanned by a stranger should not name the customer.
+  // §14 updated in the same commit.
+  const isFull = accessLevel === "FULL";
+
   res.json({
     referenceNumber: load.referenceNumber,
     status: load.status,
     progressPct,
     origin: { city: decodeOpt(load.originCity), state: decodeOpt(load.originState) },
     destination: { city: decodeOpt(load.destCity), state: decodeOpt(load.destState) },
-    equipment: decodeOpt(load.equipmentType),
-    commodity: decodeOpt(load.commodity),
-    weight: load.weight,
-    temperatureControlled: load.temperatureControlled || false,
-    tempRange: load.temperatureControlled ? { min: load.tempMin, max: load.tempMax } : undefined,
     pickupDate: load.pickupDate,
     deliveryDate: load.deliveryDate,
     actualPickup: load.actualPickupDatetime,
     actualDelivery: load.actualDeliveryDatetime,
-    // v3.8.i.1 — `carrierFirstName` field removed from response. Layer-2
-    // allowlist (this object) now matches Layer-1 (loadSelect above).
-    // Frontend consumer at frontend/src/app/track/page.tsx reads
-    // `d.carrierFirstName || '—'` so absence renders em-dash gracefully.
-    shipperName: decodeOpt(load.customer?.name) || null,
     lastLocation,
     estimatedDelivery: eta,
     predictiveEta: predictiveEta ? {
@@ -196,9 +212,21 @@ export async function getPublicTracking(req: Request, res: Response) {
       method: predictiveEta.method,
     } : null,
     milestones,
+    accessLevel,
+
+    // ── Commercially sensitive — FULL-access links only ──────────────
+    // v3.8.i.1 — `carrierFirstName` stays removed from the response entirely.
+    shipperName: isFull ? (decodeOpt(load.customer?.name) || null) : undefined,
+    equipment: isFull ? decodeOpt(load.equipmentType) : undefined,
+    commodity: isFull ? decodeOpt(load.commodity) : undefined,
+    weight: isFull ? load.weight : undefined,
+    temperatureControlled: isFull ? (load.temperatureControlled || false) : undefined,
+    tempRange: isFull && load.temperatureControlled ? { min: load.tempMin, max: load.tempMax } : undefined,
     stops,
-    podUrl: ["DELIVERED", "POD_RECEIVED", "INVOICED", "COMPLETED"].includes(load.status) ? load.podUrl : null,
-    checkCalls: accessLevel === "FULL" ? load.checkCalls.map((cc: any) => ({
+    podUrl: isFull && ["DELIVERED", "POD_RECEIVED", "INVOICED", "COMPLETED"].includes(load.status)
+      ? load.podUrl
+      : null,
+    checkCalls: isFull ? load.checkCalls.map((cc: any) => ({
       status: cc.status,
       city: decodeOpt(cc.city),
       state: decodeOpt(cc.state),

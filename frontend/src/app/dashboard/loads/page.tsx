@@ -57,14 +57,14 @@ const STATUS_COLORS: Record<string, string> = {
   BOOKED: "bg-violet-500/20 text-violet-400", DISPATCHED: "bg-orange-500/20 text-orange-400",
   AT_PICKUP: "bg-amber-500/20 text-amber-400", LOADED: "bg-yellow-500/20 text-yellow-400",
   PICKED_UP: "bg-yellow-500/20 text-yellow-400", IN_TRANSIT: "bg-cyan-500/20 text-cyan-400",
-  AT_DELIVERY: "bg-teal-500/20 text-teal-400", DELIVERED: "bg-green-500/20 text-green-400",
+  AT_DELIVERY: "bg-teal-500/20 text-teal-400", DELIVERED: "bg-[#E6F0E9] text-[#256340] border border-[#2F7A4F]/25",
   POD_RECEIVED: "bg-emerald-500/20 text-emerald-400", INVOICED: "bg-lime-500/20 text-lime-400",
   COMPLETED: "bg-emerald-500/20 text-emerald-400",
   TONU: "bg-red-500/20 text-red-400", CANCELLED: "bg-red-500/20 text-red-400",
 };
 
 const TENDER_COLORS: Record<string, string> = {
-  OFFERED: "bg-blue-500/20 text-blue-400", ACCEPTED: "bg-green-500/20 text-green-400",
+  OFFERED: "bg-blue-500/20 text-blue-400", ACCEPTED: "bg-[#E6F0E9] text-[#256340] border border-[#2F7A4F]/25",
   COUNTERED: "bg-yellow-500/20 text-yellow-400", DECLINED: "bg-red-500/20 text-red-400",
   EXPIRED: "bg-slate-500/20 text-gray-600",
 };
@@ -675,8 +675,23 @@ export default function LoadsPage() {
         </div>
 
         {/* ---- UPGRADE 3: Slide-out Detail Panel ---- */}
+        {/* v3.8.ara — converted to the canonical full-viewport right drawer used
+            by CustomerDrawer / ProspectDrawer / SlideDrawer / LoadDetailDrawer:
+            a `fixed inset-0` wrapper + backdrop + `absolute top-0 bottom-0
+            right-0` panel. Pre-ara this was the ONLY detail surface that behaved
+            differently: above `lg` the `lg:relative lg:inset-auto` cancelled the
+            `fixed inset-0`, so it became an in-flow column that started below the
+            header/KPI/tab rows and was capped at `calc(100vh-4rem)` — i.e. it
+            opened partially down the screen instead of top-to-bottom, which is
+            exactly what Wasi reported against the CRM drawer. */}
         {selectedLoadId && load && (
-          <div className="w-full lg:w-[55%] shrink-0 lg:ml-4 fixed inset-0 z-40 lg:relative lg:inset-auto lg:z-auto bg-[#161921] border border-gray-200 rounded-xl flex flex-col overflow-hidden lg:sticky lg:top-0 h-full lg:h-[calc(100vh-4rem)]">
+          <div className="fixed inset-0 z-50">
+            <div
+              className="absolute inset-0 bg-black/20"
+              onClick={() => setSelectedLoadId(null)}
+              aria-hidden
+            />
+            <div className="absolute top-0 bottom-0 right-0 w-full max-w-[860px] bg-[#161921] border-l border-gray-200 shadow-2xl flex flex-col overflow-hidden animate-slide-in-right">
             {/* Mobile close bar */}
             <button onClick={() => setSelectedLoadId(null)} className="lg:hidden flex items-center gap-2 px-4 py-2 border-b border-gray-200 text-slate-400 hover:text-white shrink-0">
               <X className="w-4 h-4" /> <span className="text-sm">Close</span>
@@ -754,7 +769,7 @@ export default function LoadsPage() {
                     {/* BOL download */}
                     <button
                       onClick={() => downloadBol(load.id, load.referenceNumber)}
-                      className="px-3 py-1.5 bg-[#C5A572]/20 text-[#C5A572] rounded-lg text-xs hover:bg-[#C5A572]/30"
+                      className="px-3 py-1.5 bg-[#F5EEE0] text-[#0A2540] border border-[#EFE6D3] rounded-lg text-xs hover:bg-[#EFE6D3]"
                       title="Download BOL"
                     >
                       <Download className="w-3 h-3 inline mr-1" />BOL
@@ -763,7 +778,7 @@ export default function LoadsPage() {
                     {canCreate && !["DRAFT", "CANCELLED", "TONU"].includes(load.status) && (
                       <button
                         onClick={() => setShowRateConf(true)}
-                        className="px-3 py-1.5 bg-indigo-500/20 text-indigo-400 rounded-lg text-xs hover:bg-indigo-500/30"
+                        className="px-3 py-1.5 bg-[#E2EAF2] text-[#2A5B8B] border border-[#2A5B8B]/20 rounded-lg text-xs hover:bg-[#d3e0ee]"
                         title="Rate Confirmation"
                       >
                         <ClipboardCheck className="w-3 h-3 inline mr-1" />Rate Conf
@@ -784,7 +799,7 @@ export default function LoadsPage() {
                       <button
                         onClick={() => datPostMutation.mutate(load.id)}
                         disabled={datPostMutation.isPending}
-                        className="px-3 py-1.5 bg-green-500/20 text-green-400 rounded-lg text-xs hover:bg-green-500/30 disabled:opacity-50"
+                        className="px-3 py-1.5 bg-[#E6F0E9] text-[#256340] border border-[#2F7A4F]/25 rounded-lg text-xs hover:bg-[#d8e8de] disabled:opacity-50"
                         title="Post to DAT"
                       >
                         <Globe className="w-3 h-3 inline mr-1" />{datPostMutation.isPending ? "Posting..." : "DAT"}
@@ -807,7 +822,7 @@ export default function LoadsPage() {
                         if (confirm("Cancel this load? This will notify the carrier and reverse any credit holds.")) {
                           updateStatus.mutate({ loadId: load.id, status: "CANCELLED" });
                         }
-                      }} className="flex items-center gap-1 px-2.5 py-1.5 bg-red-500/10 text-red-400 rounded text-xs hover:bg-red-500/20">
+                      }} className="flex items-center gap-1 px-2.5 py-1.5 bg-[#F6E3E3] text-[#9B2C2C] border border-[#9B2C2C]/20 rounded text-xs hover:bg-[#f0d5d5]">
                         <X className="w-3 h-3" /> Cancel
                       </button>
                     )}
@@ -844,7 +859,7 @@ export default function LoadsPage() {
                     {canCreate && !["COMPLETED", "CANCELLED", "TONU"].includes(load.status) && (
                       <button
                         onClick={() => setShowEdit(true)}
-                        className="flex items-center gap-1 px-2.5 py-1.5 bg-[#BA7517]/15 text-[#BA7517] rounded text-xs hover:bg-[#BA7517]/25"
+                        className="flex items-center gap-1 px-2.5 py-1.5 bg-[#FAEEDA] text-[#0A2540] border border-[#BA7517]/30 rounded text-xs hover:bg-[#f5e3c6]"
                       >
                         <Pencil className="w-3 h-3" /> Edit
                       </button>
@@ -864,6 +879,7 @@ export default function LoadsPage() {
               <div className="p-4">{renderPanelContent()}</div>
             </div>
             </div>{/* end inner flex wrapper */}
+            </div>{/* end drawer panel */}
           </div>
         )}
       </div>
@@ -1554,7 +1570,7 @@ function PanelCarrier({
                 <button
                   onClick={() => datPostMutation.mutate(load.id)}
                   disabled={datPostMutation.isPending}
-                  className="flex-1 px-3 py-2 bg-green-500/20 text-green-400 rounded-lg text-xs hover:bg-green-500/30 disabled:opacity-50"
+                  className="flex-1 px-3 py-2 bg-[#E6F0E9] text-[#256340] border border-[#2F7A4F]/25 rounded-lg text-xs hover:bg-[#d8e8de] disabled:opacity-50"
                 >
                   <Globe className="w-3 h-3 inline mr-1" />
                   {datPostMutation.isPending ? "Posting..." : "Quick Post"}
