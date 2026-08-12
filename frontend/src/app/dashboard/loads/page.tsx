@@ -695,10 +695,19 @@ export default function LoadsPage() {
                 shift this one LEFT by that drawer's width instead of letting it
                 sit underneath. Both are right-anchored, so without the shift the
                 new drawer covers the load context the AE is tendering FROM.
-                SlideDrawer's default is max-w-2xl (672px); translate by that. */}
+                v3.8.ard — the shift must equal the OPEN drawer's ACTUAL width or
+                a gap opens between them. The two secondaries are not the same
+                size: Tender is width="max-w-md" (448px) and Advanced DAT takes
+                SlideDrawer's default max-w-2xl (672px). A single 672px shift
+                overshot Tender by 224px — exactly the gap Wasi flagged. Keep
+                these values in sync with the SlideDrawer width props below. */}
             <div
               className={`absolute top-0 bottom-0 right-0 w-full max-w-[860px] bg-[#161921] border-l border-gray-200 shadow-2xl flex flex-col overflow-hidden animate-slide-in-right transition-transform duration-300 ease-out ${
-                showTender || showDatAdvanced ? "-translate-x-[672px]" : "translate-x-0"
+                showTender
+                  ? "-translate-x-[448px]"
+                  : showDatAdvanced
+                    ? "-translate-x-[672px]"
+                    : "translate-x-0"
               }`}
             >
             {/* Mobile close bar */}
