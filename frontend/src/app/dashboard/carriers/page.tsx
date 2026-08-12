@@ -738,7 +738,13 @@ export default function CarrierPoolPage() {
 
         {/* RIGHT: Slide Panel */}
         {selectedCarrier && (
-          <div className="fixed top-0 right-0 bottom-0 w-[720px] border-l border-gray-200 bg-white flex flex-row overflow-hidden shadow-2xl z-40 animate-slide-in-right">
+          /* v3.8.arb — wrapped in the canonical `fixed inset-0` + backdrop so this
+             drawer has click-out-to-close like every other one. It was already
+             full-height, but it was the only drawer with no backdrop: clicking
+             away did nothing and there was no dimming to signal modality. */
+          <div className="fixed inset-0 z-40">
+            <div className="absolute inset-0 bg-black/20" onClick={closePanel} aria-hidden />
+            <div className="absolute top-0 right-0 bottom-0 w-[720px] border-l border-gray-200 bg-white flex flex-row overflow-hidden shadow-2xl animate-slide-in-right">
             {/* Vertical Icon Tab Strip */}
             <div className="w-[66px] shrink-0 border-r border-gray-100 bg-gray-50/80 flex flex-col items-center pt-5 gap-3">
               {([
@@ -1653,6 +1659,7 @@ export default function CarrierPoolPage() {
               </div>
             </div>
             </div>
+          </div>
           </div>
         )}
       </div>

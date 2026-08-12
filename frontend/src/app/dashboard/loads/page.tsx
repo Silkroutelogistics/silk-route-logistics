@@ -52,20 +52,20 @@ interface Load extends BaseLoad {
 /* ------------------------------------------------------------------ */
 
 const STATUS_COLORS: Record<string, string> = {
-  DRAFT: "bg-slate-500/20 text-gray-600", POSTED: "bg-blue-500/20 text-blue-400",
-  TENDERED: "bg-indigo-500/20 text-indigo-400", CONFIRMED: "bg-purple-500/20 text-purple-400",
+  DRAFT: "bg-slate-500/20 text-gray-600", POSTED: "bg-[#E2EAF2] text-[#2A5B8B]",
+  TENDERED: "bg-[#E2EAF2] text-[#2A5B8B]", CONFIRMED: "bg-[#E2EAF2] text-[#0A2540]",
   BOOKED: "bg-violet-500/20 text-violet-400", DISPATCHED: "bg-orange-500/20 text-orange-400",
-  AT_PICKUP: "bg-amber-500/20 text-amber-400", LOADED: "bg-yellow-500/20 text-yellow-400",
-  PICKED_UP: "bg-yellow-500/20 text-yellow-400", IN_TRANSIT: "bg-cyan-500/20 text-cyan-400",
+  AT_PICKUP: "bg-amber-500/20 text-amber-400", LOADED: "bg-[#FBEFD4] text-[#854F0B]",
+  PICKED_UP: "bg-[#FBEFD4] text-[#854F0B]", IN_TRANSIT: "bg-cyan-500/20 text-cyan-400",
   AT_DELIVERY: "bg-teal-500/20 text-teal-400", DELIVERED: "bg-[#E6F0E9] text-[#256340] border border-[#2F7A4F]/25",
   POD_RECEIVED: "bg-emerald-500/20 text-emerald-400", INVOICED: "bg-lime-500/20 text-lime-400",
   COMPLETED: "bg-emerald-500/20 text-emerald-400",
-  TONU: "bg-red-500/20 text-red-400", CANCELLED: "bg-red-500/20 text-red-400",
+  TONU: "bg-[#F6E3E3] text-[#9B2C2C]", CANCELLED: "bg-[#F6E3E3] text-[#9B2C2C]",
 };
 
 const TENDER_COLORS: Record<string, string> = {
-  OFFERED: "bg-blue-500/20 text-blue-400", ACCEPTED: "bg-[#E6F0E9] text-[#256340] border border-[#2F7A4F]/25",
-  COUNTERED: "bg-yellow-500/20 text-yellow-400", DECLINED: "bg-red-500/20 text-red-400",
+  OFFERED: "bg-[#E2EAF2] text-[#2A5B8B]", ACCEPTED: "bg-[#E6F0E9] text-[#256340] border border-[#2F7A4F]/25",
+  COUNTERED: "bg-[#FBEFD4] text-[#854F0B]", DECLINED: "bg-[#F6E3E3] text-[#9B2C2C]",
   EXPIRED: "bg-slate-500/20 text-gray-600",
 };
 
@@ -761,7 +761,7 @@ export default function LoadsPage() {
                       <button
                         onClick={() => updateStatus.mutate({ loadId: load.id, status: NEXT_STATUS[load.status] })}
                         disabled={updateStatus.isPending}
-                        className="px-3 py-1.5 bg-blue-500/20 text-blue-400 rounded-lg text-xs hover:bg-blue-500/30 disabled:opacity-50"
+                        className="px-3 py-1.5 bg-[#E2EAF2] text-[#2A5B8B] rounded-lg text-xs hover:bg-[#d3e0ee] disabled:opacity-50"
                       >
                         <ChevronRight className="w-3 h-3 inline mr-1" />{STATUS_ACTIONS[load.status]}
                       </button>
@@ -788,7 +788,7 @@ export default function LoadsPage() {
                     {canCreate && !["DRAFT", "POSTED", "CANCELLED", "TONU"].includes(load.status) && (
                       <button
                         onClick={() => downloadPdf(load.id, load.referenceNumber)}
-                        className="px-3 py-1.5 bg-purple-500/20 text-purple-400 rounded-lg text-xs hover:bg-purple-500/30"
+                        className="px-3 py-1.5 bg-[#E2EAF2] text-[#0A2540] rounded-lg text-xs hover:bg-[#d3e0ee]"
                         title="Download Rate Confirmation PDF"
                       >
                         <FileText className="w-3 h-3 inline mr-1" />PDF
@@ -810,7 +810,7 @@ export default function LoadsPage() {
                       <button
                         onClick={() => datRemoveMutation.mutate(load.datPostId!)}
                         disabled={datRemoveMutation.isPending}
-                        className="px-3 py-1.5 bg-red-500/20 text-red-400 rounded-lg text-xs hover:bg-red-500/30 disabled:opacity-50"
+                        className="px-3 py-1.5 bg-[#F6E3E3] text-[#9B2C2C] rounded-lg text-xs hover:bg-[#f0d5d5] disabled:opacity-50"
                         title="Remove DAT Post"
                       >
                         <X className="w-3 h-3 inline mr-1" />DAT
@@ -844,7 +844,7 @@ export default function LoadsPage() {
                           queryClient.invalidateQueries({ queryKey: ["loads"] });
                           setSelectedLoadId(null);
                         }
-                      }} className="flex items-center gap-1 px-2.5 py-1.5 bg-red-500/20 text-red-400 rounded text-xs hover:bg-red-500/30">
+                      }} className="flex items-center gap-1 px-2.5 py-1.5 bg-[#F6E3E3] text-[#9B2C2C] rounded text-xs hover:bg-[#f0d5d5]">
                         <Trash2 className="w-3 h-3" /> Delete
                       </button>
                     )}
@@ -1051,7 +1051,7 @@ function LaneRateWidget({ originState, destState, equipment, currentRate }: {
   if (!data || data.sampleSize === 0) return null;
   const diff = currentRate - data.avgRate;
   const diffPct = ((diff / data.avgRate) * 100).toFixed(1);
-  const trendColor = data.trend === "RISING" ? "text-red-400" : data.trend === "FALLING" ? "text-green-400" : "text-gray-600";
+  const trendColor = data.trend === "RISING" ? "text-[#9B2C2C]" : data.trend === "FALLING" ? "text-[#256340]" : "text-gray-600";
   return (
     <section>
       <h3 className="text-xs font-medium text-slate-500 uppercase tracking-wider mb-2">Lane Rate Intelligence</h3>
@@ -1076,7 +1076,7 @@ function LaneRateWidget({ originState, destState, equipment, currentRate }: {
         </div>
         <div className="flex items-center justify-between text-xs pt-1 border-t border-white/5">
           <span className="text-gray-600">
-            Your rate: <span className={diff > 0 ? "text-green-400" : diff < 0 ? "text-red-400" : "text-gray-700"}>
+            Your rate: <span className={diff > 0 ? "text-[#256340]" : diff < 0 ? "text-[#9B2C2C]" : "text-gray-700"}>
               {diff > 0 ? "+" : ""}{diffPct}% vs avg
             </span>
           </span>
@@ -1126,7 +1126,7 @@ function PanelDetails({ load, canSeeMargin }: { load: Load; canSeeMargin: boolea
           </span>
         )}
         {load.datPostId && (
-          <span className="px-2.5 py-1 bg-green-500/10 rounded-lg text-xs text-green-400 border border-green-500/20">
+          <span className="px-2.5 py-1 bg-[#E6F0E9] rounded-lg text-xs text-[#256340] border border-[#2F7A4F]/25">
             <Globe className="w-3 h-3 inline mr-1" />DAT Posted
           </span>
         )}
@@ -1181,7 +1181,7 @@ function PanelDetails({ load, canSeeMargin }: { load: Load; canSeeMargin: boolea
           <Detail label="Weight" value={load.weight ? `${load.weight.toLocaleString()} lbs` : "\u2014"} />
           {load.pieces != null && <Detail label="Pieces" value={String(load.pieces)} />}
           {load.hazmat && (
-            <Detail icon={<Shield className="w-4 h-4 text-red-400" />} label="Hazmat" value="Yes" />
+            <Detail icon={<Shield className="w-4 h-4 text-[#9B2C2C]" />} label="Hazmat" value="Yes" />
           )}
           {load.tempMin != null && (
             <Detail
@@ -1235,7 +1235,7 @@ function PanelDetails({ load, canSeeMargin }: { load: Load; canSeeMargin: boolea
               return (
                 <div className="flex items-center justify-between">
                   <span className="text-xs text-gray-600">Margin</span>
-                  <span className={`text-sm font-medium ${margin >= 0 ? "text-green-400" : "text-red-400"}`}>
+                  <span className={`text-sm font-medium ${margin >= 0 ? "text-[#256340]" : "text-[#9B2C2C]"}`}>
                     ${margin.toLocaleString()} ({pct}%)
                   </span>
                 </div>
@@ -1298,7 +1298,7 @@ function PanelTracking({ load }: { load: Load }) {
               />
               <span
                 className={`text-xs pb-3 ${
-                  done ? (active ? "text-[#C5A572] font-semibold" : "text-green-400") : "text-slate-600"
+                  done ? (active ? "text-[#C5A572] font-semibold" : "text-[#256340]") : "text-slate-600"
                 }`}
               >
                 {st.replace(/_/g, " ")}
@@ -1537,7 +1537,7 @@ function PanelCarrier({
       {/* DAT Responses */}
       {datResponses && datResponses.responses.length > 0 && (
         <section>
-          <h3 className="text-xs font-medium text-green-400 uppercase tracking-wider mb-2 flex items-center gap-1">
+          <h3 className="text-xs font-medium text-[#256340] uppercase tracking-wider mb-2 flex items-center gap-1">
             <Globe className="w-3.5 h-3.5" /> DAT Responses
             {datResponses.mock && <span className="text-slate-500 normal-case">(simulated)</span>}
           </h3>
@@ -1586,7 +1586,7 @@ function PanelCarrier({
               <button
                 onClick={() => datRemoveMutation.mutate(load.datPostId!)}
                 disabled={datRemoveMutation.isPending}
-                className="flex-1 px-3 py-2 bg-red-500/20 text-red-400 rounded-lg text-xs hover:bg-red-500/30 disabled:opacity-50"
+                className="flex-1 px-3 py-2 bg-[#F6E3E3] text-[#9B2C2C] rounded-lg text-xs hover:bg-[#f0d5d5] disabled:opacity-50"
               >
                 <X className="w-3 h-3 inline mr-1" />
                 {datRemoveMutation.isPending ? "Removing..." : "Remove DAT Post"}
@@ -1653,7 +1653,7 @@ function PanelExceptions({ load }: { load: Load }) {
       <h3 className="text-xs font-medium text-slate-500 uppercase tracking-wider">Exceptions</h3>
       {hasIssue ? (
         <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg">
-          <p className="text-sm text-red-400 font-medium">
+          <p className="text-sm text-[#9B2C2C] font-medium">
             {load.status === "TONU" ? "TONU \u2014 Truck Ordered Not Used" : "Load Cancelled"}
           </p>
           <p className="text-xs text-slate-400 mt-1">Review claims or delays associated with this load.</p>
@@ -1947,9 +1947,9 @@ function TenderForm({
       </div>
       {complianceResult && !complianceResult.allowed && (
         <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-lg">
-          <p className="text-sm font-medium text-red-400 mb-1">Carrier Blocked</p>
+          <p className="text-sm font-medium text-[#9B2C2C] mb-1">Carrier Blocked</p>
           {complianceResult.blocked_reasons.map((r, i) => (
-            <p key={i} className="text-xs text-red-300">- {r}</p>
+            <p key={i} className="text-xs text-[#9B2C2C]">- {r}</p>
           ))}
           {/* Sprint 40 Item 58 — admin override path. Backend ADMIN/CEO
               gated; modal owns reason capture + quota check. */}
@@ -2077,7 +2077,7 @@ function DatAdvancedForm({
           className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-white placeholder:text-gray-400 focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/20 resize-none"
         />
       </div>
-      {isError && <p className="text-xs text-red-400">Failed to post. Please try again.</p>}
+      {isError && <p className="text-xs text-[#9B2C2C]">Failed to post. Please try again.</p>}
       <button
         onClick={() => {
           const body: Record<string, any> = { loadId };
