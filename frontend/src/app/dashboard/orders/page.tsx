@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { api } from "@/lib/api";
@@ -714,6 +714,51 @@ export default function OrderBuilderPage() {
   //     target cost together gate dispatch.
   //   - Temperature spec: tempMin + tempMax required when
   //     temperatureControlled=true (reefer carriers need the range)
+  // v3.8.aqy — maps each requiredMissing label to the DOM anchor for its field,
+  // so the footer can jump you straight to it. Kept as a lookup (rather than
+  // changing requiredMissing to objects) so the six existing consumers of the
+  // string[] — the three submit guards, the tooltip, and two button titles —
+  // keep working untouched. Keys MUST match the pushed labels below exactly.
+  const FIELD_ANCHORS: Record<string, string> = {
+    "Customer": "req-customer",
+    "Origin city/state": "req-origin-address",
+    "Origin ZIP": "req-origin-address",
+    "Destination city/state": "req-dest-address",
+    "Destination ZIP": "req-dest-address",
+    "Origin contact phone": "req-origin-phone",
+    "Destination contact phone": "req-dest-phone",
+    "Pickup date": "req-pickup-date",
+    "Pickup time window start": "req-pickup-time",
+    "Delivery date": "req-delivery-date",
+    "Delivery time window start": "req-delivery-time",
+    "Equipment": "req-equipment",
+    "Temperature min °F": "req-temp-min",
+    "Temperature max °F": "req-temp-max",
+    "Customer rate": "req-customer-rate",
+    "Target cost (carrier rate)": "req-target-cost",
+    "At least one complete line item (pieces, weight, description, package type)": "req-line-items",
+    "Hazmat lines need UN # and hazmat class": "req-line-items",
+  };
+
+  /**
+   * Scroll a missing field into view, focus it, and flash a ring so the eye
+   * lands on it. Falls back gracefully: if the anchor wraps a custom component
+   * we focus the first focusable control inside it.
+   */
+  const goToField = useCallback((label: string) => {
+    const anchor = FIELD_ANCHORS[label];
+    if (!anchor) return;
+    const el = document.getElementById(anchor);
+    if (!el) return;
+    el.scrollIntoView({ behavior: "smooth", block: "center" });
+    const target = el.matches("input,select,textarea")
+      ? (el as HTMLElement)
+      : el.querySelector<HTMLElement>("input,select,textarea,button");
+    target?.focus({ preventScroll: true });
+    el.classList.add("req-flash");
+    window.setTimeout(() => el.classList.remove("req-flash"), 1800);
+  }, []);
+
   const requiredMissing = useMemo(() => {
     const missing: string[] = [];
     if (!form.customerId) missing.push("Customer");
@@ -921,7 +966,7 @@ export default function OrderBuilderPage() {
         {/* LEFT — scrollable form */}
         <div className="flex-1 min-w-0 overflow-y-auto pr-2">
           {/* SECTION 1 — Customer */}
-          <Section number={1} title="Customer">
+          <Section number={1} title="Customer" anchorId="req-customer">
             {!selectedCustomer ? (
               <div className="relative">
                 <div className="relative">
@@ -1013,7 +1058,7 @@ export default function OrderBuilderPage() {
           <Section number={2} title="Route">
             <div className="grid grid-cols-2 gap-3">
               {/* Origin */}
-              <div>
+              <div id="req-origin-address">
                 <Label>Origin facility</Label>
                 {/* Sprint 61 (v3.8.aex) Item 180.11 — facility summary block.
                     After AE picks a facility from the picker list, collapse
@@ -1071,6 +1116,7 @@ export default function OrderBuilderPage() {
                     className={inp}
                   />
                   <input
+                    id="req-origin-phone"
                     placeholder="Contact phone"
                     value={form.originContactPhone}
                     onChange={(e) => setForm((f) => ({ ...f, originContactPhone: e.target.value }))}
@@ -1080,7 +1126,7 @@ export default function OrderBuilderPage() {
               </div>
 
               {/* Destination */}
-              <div>
+              <div id="req-dest-address">
                 <Label>Destination facility</Label>
                 {/* Sprint 61 (v3.8.aex) Item 180.11 — facility summary
                     block, mirrors Origin column above. */}
@@ -1131,6 +1177,7 @@ export default function OrderBuilderPage() {
                     className={inp}
                   />
                   <input
+                    id="req-dest-phone"
                     placeholder="Contact phone"
                     value={form.destContactPhone}
                     onChange={(e) => setForm((f) => ({ ...f, destContactPhone: e.target.value }))}
@@ -1147,20 +1194,20 @@ export default function OrderBuilderPage() {
                 its corresponding facility column above. */}
             <div className="grid grid-cols-4 gap-2 mt-3">
               <Field label="Pickup date *">
-                <input type="date" value={form.pickupDate} onChange={(e) => setForm((f) => ({ ...f, pickupDate: e.target.value }))} className={inp} />
+                <input id="req-pickup-date" type="date" value={form.pickupDate} onChange={(e) => setForm((f) => ({ ...f, pickupDate: e.target.value }))} className={inp} />
               </Field>
               <Field label="PU window">
                 <div className="flex gap-1">
-                  <input type="time" value={form.pickupTimeStart} onChange={(e) => setForm((f) => ({ ...f, pickupTimeStart: e.target.value }))} className={inpSm} />
+                  <input id="req-pickup-time" type="time" value={form.pickupTimeStart} onChange={(e) => setForm((f) => ({ ...f, pickupTimeStart: e.target.value }))} className={inpSm} />
                   <input type="time" value={form.pickupTimeEnd} onChange={(e) => setForm((f) => ({ ...f, pickupTimeEnd: e.target.value }))} className={inpSm} />
                 </div>
               </Field>
               <Field label="Delivery date *">
-                <input type="date" value={form.deliveryDate} onChange={(e) => setForm((f) => ({ ...f, deliveryDate: e.target.value }))} className={inp} />
+                <input id="req-delivery-date" type="date" value={form.deliveryDate} onChange={(e) => setForm((f) => ({ ...f, deliveryDate: e.target.value }))} className={inp} />
               </Field>
               <Field label="DEL window">
                 <div className="flex gap-1">
-                  <input type="time" value={form.deliveryTimeStart} onChange={(e) => setForm((f) => ({ ...f, deliveryTimeStart: e.target.value }))} className={inpSm} />
+                  <input id="req-delivery-time" type="time" value={form.deliveryTimeStart} onChange={(e) => setForm((f) => ({ ...f, deliveryTimeStart: e.target.value }))} className={inpSm} />
                   <input type="time" value={form.deliveryTimeEnd} onChange={(e) => setForm((f) => ({ ...f, deliveryTimeEnd: e.target.value }))} className={inpSm} />
                 </div>
               </Field>
@@ -1221,7 +1268,7 @@ export default function OrderBuilderPage() {
                 </select>
               </Field>
               <Field label="Equipment *">
-                <select value={form.equipmentType} onChange={(e) => setForm((f) => ({ ...f, equipmentType: e.target.value }))} className={inp}>
+                <select id="req-equipment" value={form.equipmentType} onChange={(e) => setForm((f) => ({ ...f, equipmentType: e.target.value }))} className={inp}>
                   {EQUIPMENT_OPTIONS.map((e) => <option key={e}>{e}</option>)}
                 </select>
               </Field>
@@ -1258,10 +1305,10 @@ export default function OrderBuilderPage() {
             {form.temperatureControlled && (
               <div className="grid grid-cols-3 gap-2 mt-2">
                 <Field label="Min °F">
-                  <input type="number" value={form.tempMin} onChange={(e) => setForm((f) => ({ ...f, tempMin: e.target.value }))} className={inp} />
+                  <input id="req-temp-min" type="number" value={form.tempMin} onChange={(e) => setForm((f) => ({ ...f, tempMin: e.target.value }))} className={inp} />
                 </Field>
                 <Field label="Max °F">
-                  <input type="number" value={form.tempMax} onChange={(e) => setForm((f) => ({ ...f, tempMax: e.target.value }))} className={inp} />
+                  <input id="req-temp-max" type="number" value={form.tempMax} onChange={(e) => setForm((f) => ({ ...f, tempMax: e.target.value }))} className={inp} />
                 </Field>
                 <Field label="Mode">
                   <select value={form.tempMode} onChange={(e) => setForm((f) => ({ ...f, tempMode: e.target.value as "continuous" | "cycling" }))} className={inp}>
@@ -1274,7 +1321,7 @@ export default function OrderBuilderPage() {
 
             {/* Shipment line items (v3.8.c) — multi-commodity capture */}
             <div className="mt-4 pt-4 border-t border-slate-200">
-              <div className="text-xs text-[#6B7685] uppercase tracking-wider font-medium mb-2">
+              <div id="req-line-items" className="text-xs text-[#6B7685] uppercase tracking-wider font-medium mb-2">
                 Shipment Line Items
               </div>
               <LineItemsSection
@@ -1541,15 +1588,30 @@ export default function OrderBuilderPage() {
             // missing that is a dead end — you can see something is wrong but
             // not what. Now the fields are listed directly (capped so a
             // brand-new draft with many gaps stays readable).
+            // v3.8.aqy — each missing field is now a button that scrolls to,
+            // focuses, and flashes the actual input. Naming the field (aqx)
+            // told you WHAT was missing; this takes you to it.
             <div className="flex items-start gap-2 text-xs text-[#B07A1A]">
-              <AlertTriangle className="w-4 h-4 shrink-0 mt-px" />
-              <span>
+              <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+              <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1">
                 <strong className="font-semibold">
                   Missing {requiredMissing.length} required field{requiredMissing.length === 1 ? "" : "s"}:
-                </strong>{" "}
-                {requiredMissing.slice(0, 4).join(" · ")}
-                {requiredMissing.length > 4 ? ` · +${requiredMissing.length - 4} more` : ""}
-              </span>
+                </strong>
+                {requiredMissing.slice(0, 4).map((label, i) => (
+                  <span key={label} className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => goToField(label)}
+                      title={`Go to "${label}"`}
+                      className="underline decoration-dotted underline-offset-2 hover:text-[#8f5a11] hover:decoration-solid focus:outline-none focus:ring-2 focus:ring-[#B07A1A]/40 rounded"
+                    >
+                      {label}
+                    </button>
+                    {i < Math.min(requiredMissing.length, 4) - 1 && <span aria-hidden>·</span>}
+                  </span>
+                ))}
+                {requiredMissing.length > 4 && <span>· +{requiredMissing.length - 4} more</span>}
+              </div>
             </div>
           )}
         </div>
@@ -1955,9 +2017,9 @@ const inp = "w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-s
 const inpSm = "w-full px-2 py-1.5 bg-white border border-slate-200 rounded text-xs text-[#0A2540] focus:outline-none focus:ring-2 focus:ring-[#C5A572]/40";
 const inpAuto = "w-full px-3 py-2 bg-[#FAEEDA] border border-[#BA7517]/40 rounded-lg text-sm text-[#0A2540] focus:outline-none focus:ring-2 focus:ring-[#C5A572]/40";
 
-function Section({ number, title, children }: { number: number; title: React.ReactNode; children: React.ReactNode }) {
+function Section({ number, title, children, anchorId }: { number: number; title: React.ReactNode; children: React.ReactNode; anchorId?: string }) {
   return (
-    <section className="mb-5 bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
+    <section id={anchorId} className="mb-5 bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
       <div className="flex items-center gap-2 mb-3 pb-2 border-b border-[#C5A572]/40">
         <div className="w-6 h-6 rounded-full bg-[#FAEEDA] text-[#BA7517] flex items-center justify-center text-xs font-bold">
           {number}

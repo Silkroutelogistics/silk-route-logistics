@@ -531,3 +531,21 @@ input:-webkit-autofill:focus {
 @media (prefers-reduced-motion: reduce) {
   .srl-slide-in { animation: none; }
 }
+
+/* v3.8.aqy — Order Builder "jump to missing field".
+   Clicking a field name in the footer's missing-fields list scrolls to the
+   input and flashes this ring so the eye lands on it. Uses the §2.1 warning
+   token (#B07A1A) to match the banner it was clicked from. Honors
+   prefers-reduced-motion by holding a static ring instead of pulsing. */
+.req-flash {
+  border-radius: 0.5rem;
+  animation: req-flash-pulse 1.8s ease-out 1;
+}
+@keyframes req-flash-pulse {
+  0%   { box-shadow: 0 0 0 0 rgba(176, 122, 26, 0.55); }
+  35%  { box-shadow: 0 0 0 4px rgba(176, 122, 26, 0.35); }
+  100% { box-shadow: 0 0 0 0 rgba(176, 122, 26, 0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .req-flash { animation: none; box-shadow: 0 0 0 3px rgba(176, 122, 26, 0.45); }
+}

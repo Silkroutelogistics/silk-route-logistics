@@ -177,6 +177,7 @@ export function OrderSidebar({
             </div>
             {customerRateSource !== "agreement" && (
               <input
+                id="req-customer-rate"
                 type="number"
                 value={customerRate ?? ""}
                 onChange={(e) => onCustomerRateChange(parseFloat(e.target.value) || 0)}
@@ -210,6 +211,7 @@ export function OrderSidebar({
           <div className="rounded-lg p-3 border border-slate-200 bg-white">
             <div className="text-[10px] uppercase text-[#6B7685]">Target carrier cost</div>
             <input
+              id="req-target-cost"
               type="number"
               value={targetCost ?? ""}
               onChange={(e) => onTargetCostChange(parseFloat(e.target.value) || 0)}
