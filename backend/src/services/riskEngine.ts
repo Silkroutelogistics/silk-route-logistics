@@ -111,6 +111,10 @@ export async function runRiskFlagging() {
   const loads = await prisma.load.findMany({
     where: {
       status: { in: activeStatuses as any[] },
+      // v3.8.aqw — exclude soft-deleted loads. Same gap that caused the
+      // check-call flood: a soft-deleted load stayed operationally live and
+      // would keep scoring/alerting as a dispatch risk forever.
+      deletedAt: null,
       // v3.8.alj §13.3 Item 192 — exclude explicit test/seed/E2E loads.
       isTestAccount: false,
       // v3.8.alj §13.3 Item 192 — staleness guard (see above).

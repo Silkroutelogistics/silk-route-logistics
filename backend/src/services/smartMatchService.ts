@@ -138,6 +138,9 @@ export async function matchCarriersForLoad(loadId: string): Promise<{
       destState: load.originState,
       deliveryDate: { gte: dayBefore, lte: pickupDate },
       carrierId: { not: null },
+      // v3.8.aqw — exclude soft-deleted loads so a deleted load can't create a
+      // phantom "this carrier is delivering nearby" signal in match scoring.
+      deletedAt: null,
     },
     select: { carrierId: true },
   });

@@ -418,6 +418,9 @@ export function startSchedulers() {
         where: {
           status: { in: ["DELIVERED", "COMPLETED", "POD_RECEIVED", "INVOICED"] },
           deliveryDate: { gte: prevMonth, lte: prevMonthEnd },
+          // v3.8.aqw — exclude soft-deleted loads; they were inflating the
+          // monthly revenue / cost / margin summary.
+          deletedAt: null,
         },
         select: { customerRate: true, carrierRate: true, grossMargin: true, marginPercent: true },
       });

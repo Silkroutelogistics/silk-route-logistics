@@ -58,6 +58,11 @@ export function initCronJobs() {
           checkCalls: {
             none: { createdAt: { gte: new Date(now.getTime() - 2 * 3600_000) } }, // No check call in 2 hours
           },
+          // v3.8.aqw — THE actual root cause of the flood: this query never
+          // excluded soft-deleted loads. Every load in prod was soft-deleted in
+          // the July cleanup, yet this cron kept alerting on one of them for
+          // weeks, because deleting a load did not remove it from operations.
+          deletedAt: null,
           // v3.8.aqv — exclude explicit test/seed/E2E loads + dead stale loads.
           isTestAccount: false,
           pickupDate: { gte: staleCutoff },
@@ -284,14 +289,16 @@ export function initCronJobs() {
     try {
       const weekAgo = new Date(Date.now() - 7 * 86_400_000);
 
+      // v3.8.aqw — exclude soft-deleted loads; they were inflating the weekly
+      // load count, delivered count, and revenue total.
       const loads = await prisma.load.count({
-        where: { createdAt: { gte: weekAgo } },
+        where: { createdAt: { gte: weekAgo }, deletedAt: null },
       });
       const delivered = await prisma.load.count({
-        where: { status: { in: ["DELIVERED", "COMPLETED", "POD_RECEIVED"] }, deliveryDate: { gte: weekAgo } },
+        where: { status: { in: ["DELIVERED", "COMPLETED", "POD_RECEIVED"] }, deliveryDate: { gte: weekAgo }, deletedAt: null },
       });
       const revenue = await prisma.load.aggregate({
-        where: { deliveryDate: { gte: weekAgo }, customerRate: { not: null } },
+        where: { deliveryDate: { gte: weekAgo }, customerRate: { not: null }, deletedAt: null },
         _sum: { customerRate: true },
       });
 

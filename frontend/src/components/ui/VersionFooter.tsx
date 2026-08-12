@@ -14108,7 +14108,14 @@
 // produced 46,928 rows = 98% of the notification table, burying every real alert
 // in the CEO bell. Adds per-load dedup (once per 2h overdue window) + test-load
 // exclusion + a 14-day staleness guard, mirroring the riskEngine Item 192 fix.
-export const SRL_VERSION = "3.8.aqv";
+// v3.8.aqw — soft-deleted loads are now operationally invisible. Investigating
+// the check-call flood revealed the true root cause: SIX load queries across the
+// crons/services never filtered `deletedAt`. Every load in prod was soft-deleted
+// in the July cleanup, yet the check-call cron kept alerting on one of them —
+// because deleting a load never removed it from operations. Same gap let deleted
+// loads inflate the weekly + monthly financial reports, raise risk alerts, and
+// skew carrier match scoring. All six fixed + a source-contract test suite.
+export const SRL_VERSION = "3.8.aqw";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
