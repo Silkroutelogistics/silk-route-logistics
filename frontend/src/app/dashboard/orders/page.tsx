@@ -1535,9 +1535,21 @@ export default function OrderBuilderPage() {
         <div className="mr-auto flex items-center gap-3 flex-wrap">
           <DraftStatus state={saveState} at={lastSavedAt} />
           {!isValid && (
-            <div className="flex items-center gap-2 text-[11px] text-[#B07A1A]">
-              <AlertTriangle className="w-3.5 h-3.5" />
-              <span>Missing {requiredMissing.length} required field{requiredMissing.length === 1 ? "" : "s"} — hover any action to see the list</span>
+            // v3.8.aqx — NAME the missing fields inline. Pre-aqx this said
+            // "hover any action to see the list", which meant the AE had to
+            // discover that the list lived in a button tooltip. With one field
+            // missing that is a dead end — you can see something is wrong but
+            // not what. Now the fields are listed directly (capped so a
+            // brand-new draft with many gaps stays readable).
+            <div className="flex items-start gap-2 text-xs text-[#B07A1A]">
+              <AlertTriangle className="w-4 h-4 shrink-0 mt-px" />
+              <span>
+                <strong className="font-semibold">
+                  Missing {requiredMissing.length} required field{requiredMissing.length === 1 ? "" : "s"}:
+                </strong>{" "}
+                {requiredMissing.slice(0, 4).join(" · ")}
+                {requiredMissing.length > 4 ? ` · +${requiredMissing.length - 4} more` : ""}
+              </span>
             </div>
           )}
         </div>

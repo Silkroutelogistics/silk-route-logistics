@@ -14115,7 +14115,7 @@
 // because deleting a load never removed it from operations. Same gap let deleted
 // loads inflate the weekly + monthly financial reports, raise risk alerts, and
 // skew carrier match scoring. All six fixed + a source-contract test suite.
-export const SRL_VERSION = "3.8.aqw";
+export const SRL_VERSION = "3.8.aqx";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
