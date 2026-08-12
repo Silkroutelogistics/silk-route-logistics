@@ -547,13 +547,42 @@ export function RateConfirmationModal({ open, onClose, load }: RateConfirmationM
   // calls produced silent dead-state. Now any failure populates submitError
   // and renders a red banner above the button row. Closes §13.3 Item 43.
   const [submitError, setSubmitError] = useState<string | null>(null);
+  // v3.8.arc — id of the DRAFT this modal is editing (auto-generated on tender
+  // accept, or one previously saved here). When set, saves UPDATE that row
+  // instead of POSTing a new one.
+  const [draftId, setDraftId] = useState<string | null>(null);
 
-  // Reset form when modal opens
+  // Load the existing DRAFT (if any) when the modal opens.
+  //
+  // v3.8.arc — pre-arc this ALWAYS rebuilt a blank form from the load, and every
+  // save POSTed a NEW RateConfirmation, so a load accumulated one RC per save —
+  // 19 on a single production load. The tender-accept flow already
+  // auto-generates a DRAFT with 61 fields filled from load + tender + carrier;
+  // this modal is the REVIEW/EDIT surface for that document, not a second
+  // creator. So: fetch the DRAFT, hydrate from its formData, and update it in
+  // place. Only when no DRAFT exists do we build a fresh form and create one.
   useEffect(() => {
-    if (open && load) {
-      setForm(initForm(load, user));
-      setSection("broker");
-    }
+    if (!open || !load) return;
+    setSection("broker");
+    setDraftId(null);
+    setForm(initForm(load, user));
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await api.get(`/rate-confirmations/load/${load.id}`);
+        const list = Array.isArray(res.data) ? res.data : (res.data?.rateConfirmations ?? []);
+        const draft = list.find((r: any) => r.status === "DRAFT");
+        if (!cancelled && draft) {
+          setDraftId(draft.id);
+          if (draft.formData && typeof draft.formData === "object") {
+            setForm((f) => ({ ...f, ...draft.formData }));
+          }
+        }
+      } catch {
+        // Non-fatal — fall back to the freshly-built form + create-on-save.
+      }
+    })();
+    return () => { cancelled = true; };
   }, [open, load, user]);
 
   // Generic updater
@@ -641,8 +670,11 @@ export function RateConfirmationModal({ open, onClose, load }: RateConfirmationM
 
   // Mutations
   const createMutation = useMutation({
+    // v3.8.arc — update the DRAFT we are editing instead of creating another.
     mutationFn: (data: { loadId: string; formData: Record<string, any> }) =>
-      api.post("/rate-confirmations", data),
+      draftId
+        ? api.put(`/rate-confirmations/${draftId}`, data)
+        : api.post("/rate-confirmations", data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["load"] });
       queryClient.invalidateQueries({ queryKey: ["loads"] });
@@ -704,8 +736,17 @@ export function RateConfirmationModal({ open, onClose, load }: RateConfirmationM
     setSaving(true);
     setSubmitError(null);
     try {
-      const res = await api.post("/rate-confirmations", { loadId: load.id, formData: buildPayload() });
-      const pdfRes = await api.get(`/rate-confirmations/${res.data.id}/pdf`, { responseType: "blob" });
+      // v3.8.arc — reuse/refresh the DRAFT rather than minting a new RC per PDF.
+      const pdfPayload = { loadId: load.id, formData: buildPayload() };
+      let rcId = draftId;
+      if (rcId) {
+        await api.put(`/rate-confirmations/${rcId}`, pdfPayload);
+      } else {
+        const created = await api.post("/rate-confirmations", pdfPayload);
+        rcId = created.data.id;
+        setDraftId(rcId);
+      }
+      const pdfRes = await api.get(`/rate-confirmations/${rcId}/pdf`, { responseType: "blob" });
       const url = window.URL.createObjectURL(new Blob([pdfRes.data]));
       const a = document.createElement("a");
       a.href = url;

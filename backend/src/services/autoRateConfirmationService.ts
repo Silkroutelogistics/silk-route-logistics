@@ -106,6 +106,22 @@ export async function autoGenerateRateConfirmation(
     return null;
   }
 
+  // v3.8.arc — idempotency. Pre-arc this created a RateConfirmation
+  // unconditionally on every accept, and the AE's Rate Conf modal POSTed a NEW
+  // one on every save, so a single load accumulated 19 RCs in production. An
+  // RC is a document about a load, not an event log: one working DRAFT per load
+  // is the correct cardinality. If a DRAFT already exists we return it and let
+  // the caller/AE edit that one instead of stacking another.
+  const rcReader = prismaClient ?? prisma;
+  const existingDraft = await rcReader.rateConfirmation.findFirst({
+    where: { loadId, status: "DRAFT" },
+    orderBy: { createdAt: "desc" },
+  });
+  if (existingDraft) {
+    log.info({ loadId, tenderId, rcId: existingDraft.id }, "[autoRC] DRAFT already exists for this load — reusing it");
+    return existingDraft;
+  }
+
   const carrier = tender.carrier;
   const carrierUser = carrier.user;
   const tier = (carrier.tier ?? "SILVER").toString().toUpperCase();

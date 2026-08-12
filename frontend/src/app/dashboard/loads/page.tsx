@@ -691,7 +691,16 @@ export default function LoadsPage() {
               onClick={() => setSelectedLoadId(null)}
               aria-hidden
             />
-            <div className="absolute top-0 bottom-0 right-0 w-full max-w-[860px] bg-[#161921] border-l border-gray-200 shadow-2xl flex flex-col overflow-hidden animate-slide-in-right">
+            {/* v3.8.arc — when a secondary drawer opens on top (Tender / DAT),
+                shift this one LEFT by that drawer's width instead of letting it
+                sit underneath. Both are right-anchored, so without the shift the
+                new drawer covers the load context the AE is tendering FROM.
+                SlideDrawer's default is max-w-2xl (672px); translate by that. */}
+            <div
+              className={`absolute top-0 bottom-0 right-0 w-full max-w-[860px] bg-[#161921] border-l border-gray-200 shadow-2xl flex flex-col overflow-hidden animate-slide-in-right transition-transform duration-300 ease-out ${
+                showTender || showDatAdvanced ? "-translate-x-[672px]" : "translate-x-0"
+              }`}
+            >
             {/* Mobile close bar */}
             <button onClick={() => setSelectedLoadId(null)} className="lg:hidden flex items-center gap-2 px-4 py-2 border-b border-gray-200 text-slate-400 hover:text-white shrink-0">
               <X className="w-4 h-4" /> <span className="text-sm">Close</span>
