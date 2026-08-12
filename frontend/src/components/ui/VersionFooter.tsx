@@ -14102,7 +14102,13 @@
 // in-memory Zustand store that the navigation wipes; (2) the endpoint sat behind
 // `authenticate`, which v3.8.amz hardened to reject purpose-bearing tokens — and
 // the force-change temp token is exactly that, so it 401'd even with a good token.
-export const SRL_VERSION = "3.8.aqu";
+// v3.8.aqv — check-call notification flood fix. The 5-minute check-call cron had
+// NO notification-level dedup (its only window was on check CALLS), so a load
+// with zero check calls re-notified every 5 min forever — one stale test load
+// produced 46,928 rows = 98% of the notification table, burying every real alert
+// in the CEO bell. Adds per-load dedup (once per 2h overdue window) + test-load
+// exclusion + a 14-day staleness guard, mirroring the riskEngine Item 192 fix.
+export const SRL_VERSION = "3.8.aqv";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

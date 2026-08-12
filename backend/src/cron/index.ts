@@ -45,6 +45,12 @@ export function initCronJobs() {
     try {
       const now = new Date();
 
+      // v3.8.aqv §13.3 Item 192 (same class) — staleness guard. A load whose
+      // pickupDate is more than 14 days past and is STILL pre-delivery is dead
+      // data, not a live check-call risk. Mirrors the riskEngine guard so the
+      // two dispatcher-alert crons behave consistently.
+      const staleCutoff = new Date(now.getTime() - 14 * 24 * 3600_000);
+
       // Find loads in transit without recent check calls
       const loadsNeedingCheckCall = await prisma.load.findMany({
         where: {
@@ -52,19 +58,45 @@ export function initCronJobs() {
           checkCalls: {
             none: { createdAt: { gte: new Date(now.getTime() - 2 * 3600_000) } }, // No check call in 2 hours
           },
+          // v3.8.aqv — exclude explicit test/seed/E2E loads + dead stale loads.
+          isTestAccount: false,
+          pickupDate: { gte: staleCutoff },
         },
         select: { id: true, referenceNumber: true, carrierId: true, posterId: true },
         take: 50,
       });
 
       if (loadsNeedingCheckCall.length > 0) {
-        // Create notifications for dispatchers about overdue check calls
-        const adminUsers = await prisma.user.findMany({
-          where: { role: { in: ["ADMIN", "DISPATCH"] }, isActive: true },
-          select: { id: true },
+        // v3.8.aqv — THE FLOOD FIX: per-load notification dedup.
+        // Pre-aqv the only time window was on CHECK CALLS, not on the
+        // notifications themselves — so a load with no check calls re-notified
+        // EVERY 5 MINUTES forever (288/day per admin). One stale load produced
+        // 46,926 rows = 98% of the entire notification table over ~3 months.
+        // Now: re-notify a given load at most once per 2h overdue window, which
+        // matches the window the alert is actually about.
+        const recentlyNotified = await prisma.notification.findMany({
+          where: {
+            type: "CHECK_CALL_DUE",
+            createdAt: { gte: new Date(now.getTime() - 2 * 3600_000) },
+          },
+          select: { link: true },
         });
+        const alreadyNotifiedLoadIds = new Set(
+          recentlyNotified
+            .map((n) => n.link?.match(/[?&]load=([^&]+)/)?.[1])
+            .filter((id): id is string => !!id)
+        );
+        const dueLoads = loadsNeedingCheckCall.filter((l) => !alreadyNotifiedLoadIds.has(l.id));
 
-        const notificationData = loadsNeedingCheckCall.flatMap(load =>
+        // Create notifications for dispatchers about overdue check calls
+        const adminUsers = dueLoads.length
+          ? await prisma.user.findMany({
+              where: { role: { in: ["ADMIN", "DISPATCH"] }, isActive: true },
+              select: { id: true },
+            })
+          : [];
+
+        const notificationData = dueLoads.flatMap(load =>
           adminUsers.map(admin => ({
             userId: admin.id,
             type: "CHECK_CALL_DUE" as const,
