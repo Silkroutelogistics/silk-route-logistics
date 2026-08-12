@@ -915,7 +915,7 @@ export default function OrderBuilderPage() {
             </div>
             <button
               onClick={() => setDraftBannerDismissed(true)}
-              className="text-[10px] text-[#6B7685] hover:text-[#0A2540] focus:outline-none focus:ring-2 focus:ring-[#C5A572]/40 rounded"
+              className="text-[11px] text-[#3A4A5F] hover:text-[#0A2540] focus:outline-none focus:ring-2 focus:ring-[#C5A572]/40 rounded"
             >
               Dismiss
             </button>
@@ -937,8 +937,8 @@ export default function OrderBuilderPage() {
                     className="block w-full text-left pr-8 focus:outline-none"
                   >
                     <div className="text-[11px] text-[#0A2540] font-medium truncate">{d.customer?.name ?? "No customer"}</div>
-                    <div className="text-[9px] text-[#6B7685] truncate">{lane}</div>
-                    <div className="text-[9px] text-[#6B7685]">Edited {edited}</div>
+                    <div className="text-[11px] text-[#3A4A5F] truncate">{lane}</div>
+                    <div className="text-[11px] text-[#3A4A5F]">Edited {edited}</div>
                   </button>
                   {/* v3.8.akl §13.3 Item 180.1 — Duplicate this draft.
                       One-click clone for repeat-lane workflows. */}
@@ -1026,7 +1026,7 @@ export default function OrderBuilderPage() {
                       </div>
                       {autoFillBanner && (
                         <div
-                          className="mt-1 inline-block px-2 py-0.5 text-[9px] rounded bg-[#BA7517]"
+                          className="mt-1 inline-block px-2 py-0.5 text-[10px] rounded bg-[#BA7517]"
                           style={{ color: "#FFFFFF" }}
                         >
                           Auto-filled: facilities, rates, contacts, instructions
@@ -1075,7 +1075,7 @@ export default function OrderBuilderPage() {
                       onSelect={(parts) => setForm((f) => ({ ...f, originAddress: parts.address, originCity: parts.city, originState: parts.state, originZip: parts.zip, originFacilityId: "" }))}
                     />
                     <input placeholder="Facility name" value={form.originCompany} onChange={(e) => setForm((f) => ({ ...f, originCompany: e.target.value }))} className={inp} />
-                    <button type="button" onClick={() => setManualOriginMode(false)} className="text-[10px] text-[#6B7685] hover:text-[#0A2540] focus:outline-none focus:ring-2 focus:ring-[#C5A572]/40 rounded">← Back to saved facilities</button>
+                    <button type="button" onClick={() => setManualOriginMode(false)} className="text-[11px] text-[#3A4A5F] hover:text-[#0A2540] focus:outline-none focus:ring-2 focus:ring-[#C5A572]/40 rounded">← Back to saved facilities</button>
                   </div>
                 ) : form.originFacilityId ? (
                   <div className="rounded-lg border border-[#BA7517] bg-white p-3">
@@ -1139,7 +1139,7 @@ export default function OrderBuilderPage() {
                       onSelect={(parts) => setForm((f) => ({ ...f, destAddress: parts.address, destCity: parts.city, destState: parts.state, destZip: parts.zip, destFacilityId: "" }))}
                     />
                     <input placeholder="Facility name" value={form.destCompany} onChange={(e) => setForm((f) => ({ ...f, destCompany: e.target.value }))} className={inp} />
-                    <button type="button" onClick={() => setManualDestMode(false)} className="text-[10px] text-[#6B7685] hover:text-[#0A2540] focus:outline-none focus:ring-2 focus:ring-[#C5A572]/40 rounded">← Back to saved facilities</button>
+                    <button type="button" onClick={() => setManualDestMode(false)} className="text-[11px] text-[#3A4A5F] hover:text-[#0A2540] focus:outline-none focus:ring-2 focus:ring-[#C5A572]/40 rounded">← Back to saved facilities</button>
                   </div>
                 ) : form.destFacilityId ? (
                   <div className="rounded-lg border border-[#BA7517] bg-white p-3">
@@ -1439,7 +1439,7 @@ export default function OrderBuilderPage() {
                     has saved rates configured (helps AE understand why
                     amounts auto-fill on type-change). */}
                 {selectedCustomer?.defaultAccessorialRates && Object.keys(selectedCustomer.defaultAccessorialRates).length > 0 && (
-                  <div className="text-[10px] text-[#6B7685] italic mt-0.5">
+                  <div className="text-[11px] text-[#3A4A5F] italic mt-0.5">
                     {Object.keys(selectedCustomer.defaultAccessorialRates).length} negotiated rate(s) on file for {selectedCustomer.name} — auto-fills on type pick.
                   </div>
                 )}
@@ -1496,7 +1496,7 @@ export default function OrderBuilderPage() {
                     className={`${inp} resize-none`}
                     placeholder={active.placeholder}
                   />
-                  <div className="mt-1.5 text-[10px] text-slate-500 flex items-center gap-2">
+                  <div className="mt-1.5 text-[11px] text-[#3A4A5F] flex items-center gap-2">
                     <span>{active.hint}</span>
                     {instructionsView === "special" && autoFillBanner && (
                       <span className="text-[#C5A572]">· Pre-filled from CRM notes + facility</span>
@@ -1823,7 +1823,7 @@ export default function OrderBuilderPage() {
                 <p className="text-[11px] text-[#6B7685] mt-0.5 truncate">
                   To: {quotePreview.recipientName ?? "—"}
                   {quotePreview.recipientEmail && (
-                    <span className="text-[#A7AEB8]"> &lt;{quotePreview.recipientEmail}&gt;</span>
+                    <span className="text-[#6B7685]"> &lt;{quotePreview.recipientEmail}&gt;</span>
                   )}
                   {!quotePreview.recipientEmail && (
                     <span className="text-[#B07A1A]"> · No email on customer — send will be a no-op</span>
@@ -1909,7 +1909,7 @@ export default function OrderBuilderPage() {
                   }
                 }}
               />
-              <p className="text-[10px] text-[#6B7685] mt-1">
+              <p className="text-[11px] text-[#3A4A5F] mt-1">
                 Stores lane, freight, refs, accessorials, and instructions. Pickup/delivery dates + rate are reset on apply (per-use values).
               </p>
               {saveAsTemplate.isError && (
@@ -1965,7 +1965,7 @@ function TemplatePicker({
 
   if (customerTemplates.length === 0) {
     return (
-      <div className="mt-3 pt-3 border-t border-slate-100 text-[10px] text-[#6B7685]">
+      <div className="mt-3 pt-3 border-t border-slate-100 text-[11px] text-[#3A4A5F]">
         <Bookmark className="w-3 h-3 inline mr-1 text-[#C5A572]" />
         No saved templates for this customer. Use <strong>Save as template</strong> in the footer to save the current setup.
       </div>
@@ -1976,7 +1976,7 @@ function TemplatePicker({
     <div className="mt-3 pt-3 border-t border-slate-100">
       <div className="flex items-center gap-1.5 mb-1.5">
         <Bookmark className="w-3 h-3 text-[#C5A572]" />
-        <span className="text-[10px] uppercase tracking-wider text-[#6B7685] font-semibold">Saved templates</span>
+        <span className="text-[11px] uppercase tracking-wider text-[#3A4A5F] font-semibold">Saved templates</span>
       </div>
       <div className="flex flex-wrap gap-1.5">
         {customerTemplates.map((t) => (
@@ -2032,15 +2032,15 @@ function Section({ number, title, children, anchorId }: { number: number; title:
 }
 
 function Label({ children }: { children: React.ReactNode }) {
-  return <div className="text-[10px] text-[#6B7685] uppercase tracking-wider font-medium mb-1">{children}</div>;
+  return <div className="text-[11px] text-[#3A4A5F] uppercase tracking-wider font-medium mb-1">{children}</div>;
 }
 
 function Field({ label, tag, children }: { label: string; tag?: string; children: React.ReactNode }) {
   return (
     <div>
-      <div className="flex items-center gap-1 text-[10px] text-[#6B7685] uppercase tracking-wider font-medium mb-1">
+      <div className="flex items-center gap-1 text-[11px] text-[#3A4A5F] uppercase tracking-wider font-medium mb-1">
         {label}
-        {tag && <span className="text-[8px] text-[#BA7517] normal-case">· {tag}</span>}
+        {tag && <span className="text-[10px] text-[#BA7517] normal-case">· {tag}</span>}
       </div>
       {children}
     </div>
@@ -2094,7 +2094,7 @@ function DispatchCard({
         <span className={`w-3 h-3 rounded-full border ${active ? "bg-[#BA7517] border-[#BA7517]" : "border-slate-300"}`} />
         <span className="text-xs font-semibold text-[#0A2540]">{title}</span>
       </div>
-      <div className="text-[10px] text-[#6B7685] mt-1 ml-5">{desc}</div>
+      <div className="text-[11px] text-[#3A4A5F] mt-1 ml-5">{desc}</div>
     </button>
   );
 }
@@ -2104,15 +2104,15 @@ function StatusBadge({ status }: { status: string }) {
   const cls = s.includes("prospect") ? "bg-[#FBEFD4] text-[#B07A1A]"
             : s.includes("inactive") ? "bg-slate-100 text-slate-600"
             : "bg-[#E6F0E9] text-[#2F7A4F]";
-  return <span className={`px-1.5 py-0.5 text-[9px] rounded ${cls}`}>{status || "Active"}</span>;
+  return <span className={`px-1.5 py-0.5 text-[10px] rounded ${cls}`}>{status || "Active"}</span>;
 }
 
 function DraftStatus({ state, at }: { state: SaveState; at: Date | null }) {
-  if (state === "saving") return <span className="text-[10px] text-[#6B7685]">Saving…</span>;
-  if (state === "error") return <span className="text-[10px] text-[#9B2C2C]">Save failed</span>;
+  if (state === "saving") return <span className="text-[11px] text-[#3A4A5F]">Saving…</span>;
+  if (state === "error") return <span className="text-[11px] text-[#9B2C2C]">Save failed</span>;
   if (state === "saved" && at) {
     const ago = Math.round((Date.now() - at.getTime()) / 1000);
-    return <span className="text-[10px] text-[#6B7685]">Draft saved {ago < 5 ? "just now" : `${ago}s ago`}</span>;
+    return <span className="text-[11px] text-[#3A4A5F]">Draft saved {ago < 5 ? "just now" : `${ago}s ago`}</span>;
   }
   return null;
 }
@@ -2141,7 +2141,7 @@ function PoInput({ pos, onChange }: { pos: string[]; onChange: (list: string[]) 
       {pos.length > 0 && (
         <div className="flex flex-wrap gap-1">
           {pos.map((p) => (
-            <span key={p} className="inline-flex items-center gap-1 px-1.5 py-0.5 text-[9px] bg-[#FAEEDA] text-[#0A2540] rounded">
+            <span key={p} className="inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] bg-[#FAEEDA] text-[#0A2540] rounded">
               {p}
               <button onClick={() => onChange(pos.filter((x) => x !== p))} className="text-[#6B7685] hover:text-[#9B2C2C]">
                 <X className="w-2 h-2" />
