@@ -744,7 +744,7 @@ export default function CarrierPoolPage() {
              away did nothing and there was no dimming to signal modality. */
           <div className="fixed inset-0 z-40">
             <div className="absolute inset-0 bg-black/20" onClick={closePanel} aria-hidden />
-            <div className="absolute top-0 right-0 bottom-0 w-[720px] border-l border-gray-200 bg-white flex flex-row overflow-hidden shadow-2xl animate-slide-in-right">
+            <div className="absolute top-0 right-0 bottom-0 w-full max-w-[720px] border-l border-gray-200 bg-white flex flex-row overflow-hidden shadow-2xl animate-slide-in-right">
             {/* Vertical Icon Tab Strip */}
             <div className="w-[66px] shrink-0 border-r border-gray-100 bg-gray-50/80 flex flex-col items-center pt-5 gap-3">
               {([

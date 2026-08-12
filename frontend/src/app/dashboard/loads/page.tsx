@@ -702,7 +702,7 @@ export default function LoadsPage() {
                 overshot Tender by 224px — exactly the gap Wasi flagged. Keep
                 these values in sync with the SlideDrawer width props below. */}
             <div
-              className={`absolute top-0 bottom-0 right-0 w-full max-w-[860px] bg-[#161921] border-l border-gray-200 shadow-2xl flex flex-col overflow-hidden animate-slide-in-right transition-transform duration-300 ease-out ${
+              className={`absolute top-0 bottom-0 right-0 w-full max-w-[720px] bg-[#161921] border-l border-gray-200 shadow-2xl flex flex-col overflow-hidden animate-slide-in-right transition-transform duration-300 ease-out ${
                 showTender
                   ? "-translate-x-[448px]"
                   : showDatAdvanced
