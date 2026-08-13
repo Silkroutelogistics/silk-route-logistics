@@ -307,6 +307,66 @@ async function withLock(jobName: string, ttlMs: number, fn: () => Promise<void>)
   }
 }
 
+// ─── Adaptive waterfall ticker (v3.8.arf) ──────────────────────────────
+//
+// Neon suspends compute after 5 minutes of inactivity and bills only while
+// active, so the cost lever is not "how much work" but "how often we touch the
+// database at all". These two cadences straddle that 5-minute window on purpose.
+const WATERFALL_FAST_MS = 30 * 1000;       // live cascade — unchanged responsiveness
+const WATERFALL_IDLE_MS = 10 * 60 * 1000;  // > 5-min suspend window, so compute sleeps
+// Consecutive empty ticks tolerated before backing off. A cascade can briefly
+// report no movement between positions, so we do not drop to idle on the first
+// quiet tick.
+const WATERFALL_IDLE_AFTER = 3;
+
+let waterfallTimer: NodeJS.Timeout | null = null;
+let waterfallIdleStreak = 0;
+let waterfallFast = true;
+
+/**
+ * Resume fast ticking immediately. Call this whenever a waterfall is created or
+ * started so the idle backoff never delays a real dispatch.
+ */
+export function notifyWaterfallActivity() {
+  waterfallIdleStreak = 0;
+  if (!waterfallFast) {
+    log.info("[Scheduler] Waterfall activity — resuming 30s tick");
+    waterfallFast = true;
+    scheduleWaterfallTick();
+  }
+}
+
+function scheduleWaterfallTick() {
+  if (waterfallTimer) clearTimeout(waterfallTimer);
+  const delay = waterfallFast ? WATERFALL_FAST_MS : WATERFALL_IDLE_MS;
+  waterfallTimer = setTimeout(runWaterfallTick, delay);
+}
+
+async function runWaterfallTick() {
+  try {
+    await withLock("waterfall-tick", 60 * 1000, async () => {
+      const result = await waterfallTick();
+      const didWork = !!(result.expired || result.started || result.promoted);
+      if (didWork) {
+        log.info(`[Scheduler] Waterfall tick: ${result.expired} expired, ${result.started} started, ${result.promoted} → DAT`);
+        waterfallIdleStreak = 0;
+        if (!waterfallFast) { waterfallFast = true; log.info("[Scheduler] Waterfall work found — 30s tick"); }
+      } else {
+        waterfallIdleStreak++;
+        if (waterfallFast && waterfallIdleStreak >= WATERFALL_IDLE_AFTER) {
+          waterfallFast = false;
+          log.info(`[Scheduler] Waterfall idle ×${waterfallIdleStreak} — backing off to ${WATERFALL_IDLE_MS / 60000}m so Neon compute can suspend`);
+        }
+      }
+    });
+  } catch (err) {
+    log.error({ err }, "[Scheduler] waterfall-tick error");
+  } finally {
+    // Always re-arm, even after an error, so the ticker can never die silently.
+    scheduleWaterfallTick();
+  }
+}
+
 export function startSchedulers() {
   // Pre-tracing: every hour at :00
   cron.schedule("0 * * * *", async () => {
@@ -534,18 +594,25 @@ export function startSchedulers() {
     });
   });
 
-  // Waterfall engine tick — every 30 seconds. Expires stale waterfall
-  // positions, advances cascade, promotes stale open loads to DAT, and
-  // picks up new full-auto loads. setInterval instead of cron because
-  // node-cron syntax only goes down to minute granularity.
-  setInterval(() => {
-    withLock("waterfall-tick", 60 * 1000, async () => {
-      const result = await waterfallTick();
-      if (result.expired || result.started || result.promoted) {
-        log.info(`[Scheduler] Waterfall tick: ${result.expired} expired, ${result.started} started, ${result.promoted} → DAT`);
-      }
-    }).catch((err) => log.error({ err }, "[Scheduler] waterfall-tick error"));
-  }, 30 * 1000);
+  // Waterfall engine tick — ADAPTIVE cadence (v3.8.arf).
+  //
+  // Expires stale waterfall positions, advances the cascade, promotes stale
+  // open loads to DAT, and picks up new full-auto loads.
+  //
+  // Pre-arf this was a flat setInterval every 30 SECONDS. That single line was
+  // the dominant driver of the Neon bill: Neon scales compute to zero after 5
+  // minutes of inactivity, so a query every 30s made scale-to-zero
+  // mathematically impossible — the database was billed ~24h/day. Measured at
+  // the time: ~12 CU-hours/day (~$40/mo) on an otherwise idle system, with
+  // storage at $0.01. Worse, the waterfall engine had done NO work since
+  // 2026-05-20 (all runs `exhausted`), so ~260k queries had returned nothing.
+  //
+  // Now: tick fast (30s) ONLY while a waterfall is actually live; otherwise
+  // back off to IDLE_MS, which is safely above Neon's 5-minute suspend window
+  // so the compute can sleep between checks. `notifyWaterfallActivity()` is
+  // exported so the code that starts a waterfall can resume fast ticking
+  // immediately — the backoff therefore costs no dispatch latency.
+  scheduleWaterfallTick();
 
   // ─── Enterprise Carrier Compliance Crons ───────────────────────
 

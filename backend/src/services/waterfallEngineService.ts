@@ -122,6 +122,15 @@ export async function buildWaterfall(loadId: string, opts: BuildOptions = {}) {
  * already active, returns current state.
  */
 export async function startWaterfall(waterfallId: string) {
+  // v3.8.arf — resume the fast (30s) scheduler tick immediately. The ticker
+  // backs off to 10 minutes when idle so Neon compute can suspend; without this
+  // hook a brand-new waterfall could wait up to that long before cascading.
+  // Dynamic import avoids a circular dependency (schedulerService imports this
+  // module for waterfallTick). Non-fatal: a missed hook only costs latency.
+  import("./schedulerService")
+    .then((m) => m.notifyWaterfallActivity?.())
+    .catch(() => { /* scheduler not loaded (e.g. tests) — safe to ignore */ });
+
   const wf = await prisma.waterfall.findUnique({
     where: { id: waterfallId },
     include: {
