@@ -72,6 +72,12 @@ export const createLoadWithTenderSchema = z.object({
   temperatureControlled: z.boolean().default(false),
   tempMin: z.number().optional().nullable(),
   tempMax: z.number().optional().nullable(),
+  // v3.8.art — Fahrenheit. reeferContinuous carries .default(true) here (a
+  // create-only path, unlike the load.ts PATCH surface) so it matches the
+  // column default and the corpus mandate when the drawer omits it.
+  tempSetpoint: z.number().optional().nullable(),
+  preCoolTo: z.number().optional().nullable(),
+  reeferContinuous: z.boolean().default(true),
 
   // Schedule (drawer Section 3)
   pickupDate: z.string().transform((s) => new Date(s)),

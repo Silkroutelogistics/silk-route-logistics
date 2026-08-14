@@ -1268,9 +1268,27 @@ model Load {
   hazmatPlacardRequired  Boolean @default(false)
 
   // Temperature
+  // Fahrenheit throughout — deliberately no unit column. SRL is a US domestic
+  // broker, every document in docs/rc-references/ is Fahrenheit, and an unused
+  // unit column invites a future bug where two loads disagree.
   temperatureControlled    Boolean @default(false)
   tempMin                  Float?
   tempMax                  Float?
+  // v3.8.art — the one number the driver dials in, distinct from the min/max
+  // range. Schneider prints "Expected Min Temp / Expected Max Temp / Temp
+  // Setting" as three separate fields.
+  tempSetpoint             Float?
+  // Pre-cool target before loading. MoLo carries "Pre-Cool To" as its own column.
+  preCoolTo                Float?
+  // Continuous vs cycle-sentry. Defaults true because the reference corpus
+  // mandates continuous: Scotlynn prints "Reefer Mode: Continuous Required",
+  // MoLo says run all reefers on continuous absent written instructions
+  // otherwise, TIS forbids cycle mode in transit outright. An explicit false is
+  // therefore a deliberate AE exception, never an unset — do not truthiness-test it.
+  reeferContinuous         Boolean @default(true)
+  // NOTE: distinct from reeferContinuous. This is continuous *monitoring*
+  // (logging/telemetry), not continuous *run mode*. Currently written and read
+  // by nothing in src/ — see the dead-column note in the partition report.
   tempContinuousMonitoring Boolean @default(false)
 
   // Customs / Cross-border

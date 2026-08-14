@@ -59,11 +59,19 @@ export const createLoadSchema = z.object({
   hazmatClass: z.string().optional().nullable(),
   hazmatName: z.string().optional().nullable(),
 
-  // Temperature
+  // Temperature (Fahrenheit — no unit field by design, see schema.prisma)
   temperature: z.number().optional(),
   tempMin: z.number().optional(),
   tempMax: z.number().optional(),
   temperatureControlled: z.boolean().optional(),
+  // v3.8.art — the single setpoint the driver dials in, the pre-cool target,
+  // and the run mode. Left .optional() rather than .default(true) on
+  // reeferContinuous so a PATCH that omits it does not silently rewrite a
+  // deliberate cycle-sentry election back to continuous; the column default
+  // supplies true on create.
+  tempSetpoint: z.number().optional(),
+  preCoolTo: z.number().optional(),
+  reeferContinuous: z.boolean().optional(),
 
   // Cross-border
   crossBorder: z.boolean().optional(),

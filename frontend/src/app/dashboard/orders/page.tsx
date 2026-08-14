@@ -584,6 +584,9 @@ export default function OrderBuilderPage() {
       temperatureControlled: form.temperatureControlled,
       tempMin: form.tempMin ? parseFloat(form.tempMin) : undefined,
       tempMax: form.tempMax ? parseFloat(form.tempMax) : undefined,
+      tempSetpoint: form.tempSetpoint ? parseFloat(form.tempSetpoint) : undefined,
+      preCoolTo: form.preCoolTo ? parseFloat(form.preCoolTo) : undefined,
+      reeferContinuous: form.reeferContinuous,
       // Schedule
       pickupDate: form.pickupDate,
       pickupWindowOpen: form.pickupTimeStart || null,
@@ -734,6 +737,7 @@ export default function OrderBuilderPage() {
     "Equipment": "req-equipment",
     "Temperature min °F": "req-temp-min",
     "Temperature max °F": "req-temp-max",
+    "Temperature setpoint °F": "req-temp-setpoint",
     "Customer rate": "req-customer-rate",
     "Target cost (carrier rate)": "req-target-cost",
     "At least one complete line item (pieces, weight, description, package type)": "req-line-items",
@@ -784,6 +788,10 @@ export default function OrderBuilderPage() {
     if (form.temperatureControlled) {
       if (!form.tempMin) missing.push("Temperature min °F");
       if (!form.tempMax) missing.push("Temperature max °F");
+      // Setpoint is the one number the driver actually dials in, so it is
+      // required alongside the range. Pre-cool + run mode stay optional
+      // (run mode carries a Continuous default, the industry norm).
+      if (!form.tempSetpoint) missing.push("Temperature setpoint °F");
     }
 
     // Pricing — both customer rate (billing) + target cost (carrier-
@@ -1304,16 +1312,22 @@ export default function OrderBuilderPage() {
 
             {form.temperatureControlled && (
               <div className="grid grid-cols-3 gap-2 mt-2">
+                <Field label="Setpoint °F">
+                  <input id="req-temp-setpoint" type="number" value={form.tempSetpoint} onChange={(e) => setForm((f) => ({ ...f, tempSetpoint: e.target.value }))} className={inp} />
+                </Field>
                 <Field label="Min °F">
                   <input id="req-temp-min" type="number" value={form.tempMin} onChange={(e) => setForm((f) => ({ ...f, tempMin: e.target.value }))} className={inp} />
                 </Field>
                 <Field label="Max °F">
                   <input id="req-temp-max" type="number" value={form.tempMax} onChange={(e) => setForm((f) => ({ ...f, tempMax: e.target.value }))} className={inp} />
                 </Field>
-                <Field label="Mode">
-                  <select value={form.tempMode} onChange={(e) => setForm((f) => ({ ...f, tempMode: e.target.value as "continuous" | "cycling" }))} className={inp}>
-                    <option value="continuous">Continuous</option>
-                    <option value="cycling">Cycling</option>
+                <Field label="Pre-cool to °F">
+                  <input type="number" value={form.preCoolTo} onChange={(e) => setForm((f) => ({ ...f, preCoolTo: e.target.value }))} className={inp} />
+                </Field>
+                <Field label="Run mode">
+                  <select value={form.reeferContinuous ? "continuous" : "cycle"} onChange={(e) => setForm((f) => ({ ...f, reeferContinuous: e.target.value === "continuous" }))} className={inp}>
+                    <option value="continuous">Continuous (standard)</option>
+                    <option value="cycle">Cycle</option>
                   </select>
                 </Field>
               </div>
@@ -1773,6 +1787,9 @@ export default function OrderBuilderPage() {
           temperatureControlled: form.temperatureControlled,
           tempMin: form.tempMin ?? "",
           tempMax: form.tempMax ?? "",
+          tempSetpoint: form.tempSetpoint ?? "",
+          preCoolTo: form.preCoolTo ?? "",
+          reeferContinuous: form.reeferContinuous,
           // Refs (Sprint 59.b — PO + appointment)
           poNumbersText: (form.poNumbers ?? []).join(", "),
           appointmentNumber: form.appointmentNumber ?? "",

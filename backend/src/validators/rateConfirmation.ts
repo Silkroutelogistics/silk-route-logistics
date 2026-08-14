@@ -90,7 +90,24 @@ export const createRateConfirmationSchema = z.object({
     pieces: z.number().optional(),
     dims: z.string().optional(),
     hazmat: z.boolean().optional(),
+    // Free-text summary line; an AE can override it on the RC modal.
     tempRequirements: z.string().optional(),
+    // v3.8.art — structured reefer fields backing the summary above, so the
+    // renderer can print labelled values instead of parsing a string.
+    //
+    // Declaring them here is load-bearing, not cosmetic: this schema is a plain
+    // z.object(), which STRIPS unknown keys. autoRateConfirmationService writes
+    // formData straight to Prisma and so seeds them fine, but the first AE
+    // re-save through this validator would silently drop anything undeclared —
+    // the Sprint 48.b / §13.3 Item 116 defect that rendered em-dashes for every
+    // carrier field. Both ends of the flow have to agree on the key names.
+    //
+    // .optional() and NOT .default(true) on reeferContinuous: a default would
+    // stamp "Continuous" onto dry-van rate confirmations that have no reefer at
+    // all. Undefined here means "not stated"; the renderer decides.
+    tempSetpoint: z.number().optional(),
+    preCoolTo: z.number().optional(),
+    reeferContinuous: z.boolean().optional(),
 
     // Section 6 — Dates & Times
     pickupDate: z.string().optional(),

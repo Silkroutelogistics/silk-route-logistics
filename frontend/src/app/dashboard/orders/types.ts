@@ -145,10 +145,20 @@ export interface OrderForm {
   // turnable) moved to `lineItems` in v3.8.c.
   mode: "FTL" | "LTL";
   equipmentType: string;
+  // Reefer spec. Fahrenheit throughout — SRL is a US domestic broker and
+  // every reference rate confirmation is °F, so there is deliberately no
+  // unit field (an unused unit column invites two loads disagreeing).
+  // tempMin/tempMax are the expected range; tempSetpoint is the single
+  // number the driver dials in (Schneider prints these as three separate
+  // fields). reeferContinuous replaces the former `tempMode` string —
+  // same fact, one representation, and unlike tempMode it is actually
+  // transmitted on every payload below.
   temperatureControlled: boolean;
   tempMin: string;
   tempMax: string;
-  tempMode: "continuous" | "cycling";
+  tempSetpoint: string;
+  preCoolTo: string;
+  reeferContinuous: boolean;
   customsRequired: boolean;
   driverMode: "solo" | "team";
   liveOrDrop: "live" | "drop";
@@ -223,7 +233,9 @@ export const emptyOrderForm = (): OrderForm => ({
   temperatureControlled: false,
   tempMin: "",
   tempMax: "",
-  tempMode: "continuous",
+  tempSetpoint: "",
+  preCoolTo: "",
+  reeferContinuous: true,
   customsRequired: false,
   driverMode: "solo",
   liveOrDrop: "live",

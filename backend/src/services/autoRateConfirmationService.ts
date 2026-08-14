@@ -59,6 +59,49 @@ function timeWindow(start?: string | null, end?: string | null): string | undefi
   return start || end || undefined;
 }
 
+/**
+ * v3.8.art — human-readable reefer summary for the RC `tempRequirements` line,
+ * the free-text field an AE can override on the RC modal.
+ *
+ * Every numeric test here is `!= null`, never truthiness. 0°F is a legitimate
+ * setpoint for frozen freight, and `if (setpoint)` would silently drop it —
+ * the same defect class as the v3.8.arn `detentionRate: 0`, which published
+ * "DETENTION $0/hr" to every accepting carrier because the renderer's `?? 50`
+ * default does not catch a literal zero.
+ */
+function reeferSummary(load: {
+  tempMin: number | null;
+  tempMax: number | null;
+  tempSetpoint: number | null;
+  preCoolTo: number | null;
+  reeferContinuous: boolean;
+}): string {
+  const parts: string[] = [];
+  const hasAnyNumber =
+    load.tempSetpoint != null ||
+    load.tempMin != null ||
+    load.tempMax != null ||
+    load.preCoolTo != null;
+
+  if (load.tempSetpoint != null) parts.push(`Set ${load.tempSetpoint}°F`);
+
+  // Range prints when either bound is set — and also when the load is flagged
+  // reefer but carries no numbers at all, so the resulting "?°F – ?°F" keeps the
+  // missing temperature visible to the AE instead of rendering a clean line.
+  if (load.tempMin != null || load.tempMax != null || !hasAnyNumber) {
+    parts.push(`Range ${load.tempMin ?? "?"}°F – ${load.tempMax ?? "?"}°F`);
+  }
+
+  if (load.preCoolTo != null) parts.push(`Pre-cool ${load.preCoolTo}°F`);
+
+  // Printed either way. Continuous is the corpus-mandated norm, and cycle-sentry
+  // is a deliberate exception the carrier must be told about — so this is stated
+  // explicitly rather than left to be inferred from silence.
+  parts.push(load.reeferContinuous ? "Continuous" : "Cycle-sentry");
+
+  return parts.join(" · ");
+}
+
 function brokerContact(poster?: { firstName: string | null; lastName: string | null } | null): string | undefined {
   if (!poster) return undefined;
   const name = `${poster.firstName ?? ""} ${poster.lastName ?? ""}`.trim();
@@ -196,9 +239,21 @@ export async function autoGenerateRateConfirmation(
     weight: load.weight ?? undefined,
     pieces: load.pieces ?? undefined,
     hazmat: load.hazmat,
-    tempRequirements: load.temperatureControlled
-      ? `${load.tempMin ?? "?"}°F – ${load.tempMax ?? "?"}°F`
-      : "",
+    tempRequirements: load.temperatureControlled ? reeferSummary(load) : "",
+    // v3.8.art — structured reefer fields alongside the summary string above.
+    // The string is what an AE free-text overrides; these are what the renderer
+    // reads for labelled fields.
+    //
+    // `?? undefined` and NOT `|| undefined`: 0°F is a legitimate setpoint for
+    // frozen freight and `0 || undefined` is undefined — the v3.8.arn
+    // `detentionRate: 0` defect class, which shipped "DETENTION $0/hr".
+    //
+    // reeferContinuous is passed through un-coerced so a deliberate false
+    // survives to the carrier. It is gated on temperatureControlled only, so a
+    // dry-van RC carries undefined rather than a fabricated "Continuous".
+    tempSetpoint: load.temperatureControlled ? (load.tempSetpoint ?? undefined) : undefined,
+    preCoolTo: load.temperatureControlled ? (load.preCoolTo ?? undefined) : undefined,
+    reeferContinuous: load.temperatureControlled ? load.reeferContinuous : undefined,
 
     // Section 6 — Dates & Times
     pickupDate: load.pickupDate.toISOString(),

@@ -135,6 +135,14 @@ export async function createLoadWithTender(req: AuthRequest, res: Response) {
           temperatureControlled: loadFields.temperatureControlled,
           tempMin: loadFields.tempMin ?? null,
           tempMax: loadFields.tempMax ?? null,
+          // v3.8.art — reefer setpoint / pre-cool / run mode.
+          // `?? null` and NOT `|| null`: 0°F is a legitimate setpoint for frozen
+          // freight and `0 || null` is null. reeferContinuous is passed straight
+          // through because the validator defaults it to true, so it is always a
+          // boolean here — coercing it would swallow a deliberate false.
+          tempSetpoint: loadFields.tempSetpoint ?? null,
+          preCoolTo: loadFields.preCoolTo ?? null,
+          reeferContinuous: loadFields.reeferContinuous,
 
           // Schedule
           pickupDate: loadFields.pickupDate,

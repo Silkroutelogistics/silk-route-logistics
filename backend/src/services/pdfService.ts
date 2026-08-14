@@ -1463,6 +1463,19 @@ interface EnhancedRCLoadData {
   pickupTimeEnd?: string | null;
   deliveryTimeStart?: string | null;
   deliveryTimeEnd?: string | null;
+  // v3.8.art — reefer spec. Root capture is Order Builder, carried through the
+  // Tender workflow, rendered here automatically. temperatureControlled, tempMin
+  // and tempMax already existed and were already REQUIRED in Order Builder on a
+  // reefer load; the Rate Confirmation simply never read them, which is how a
+  // reefer load produced a document with no temperature on it at all before
+  // v3.8.arm. tempSetpoint is the one number a driver dials in; the min/max pair
+  // is the acceptable range around it.
+  temperatureControlled?: boolean | null;
+  tempMin?: number | null;
+  tempMax?: number | null;
+  tempSetpoint?: number | null;
+  preCoolTo?: number | null;
+  reeferContinuous?: boolean | null;
 }
 
 function sectionTitle(doc: PDFDoc, title: string, y: number): number {
@@ -1737,15 +1750,37 @@ export function generateEnhancedRateConfirmation(load: EnhancedRCLoadData, formD
   const tempMatch = tempRaw.match(/-?\d+(\.\d+)?/);
   const loadTempMin = (load as any).tempMin;
   const loadTempMax = (load as any).tempMax;
+  // v3.8.art — resolution order: the AE's free-text override, then the load's own
+  // setpoint (the field Order Builder now captures), then the bottom of the
+  // acceptable range as a last resort. `typeof === "number"` rather than a
+  // truthiness check throughout, because 0°F is a legitimate frozen setpoint.
+  const loadSetpoint = load.tempSetpoint;
   const tempSetpointResolved = tempMatch
     ? parseFloat(tempMatch[0])
-    : (typeof loadTempMin === "number" ? loadTempMin : undefined);
+    : (typeof loadSetpoint === "number"
+        ? loadSetpoint
+        : (typeof loadTempMin === "number" ? loadTempMin : undefined));
   const isTempControlled = Boolean(
-    (load as any).temperatureControlled || tempRaw || typeof loadTempMin === "number",
+    load.temperatureControlled === true
+    || tempRaw
+    || typeof loadSetpoint === "number"
+    || typeof loadTempMin === "number",
   );
+  // v3.8.art — the full reefer spec now reaches page 1, where a driver actually
+  // looks before rolling. Previously only the setpoint was passed, so run mode
+  // and pre-cool lived four paragraphs into page 2 — and most reefers default to
+  // cycle-sentry, so a driver reading "38°F" on page 1 and setting 38 on cycle
+  // is the excursion claim SRL cannot afford on its first cold-chain customer.
+  // Every check is against null/undefined, never truthiness: 0°F is a legitimate
+  // frozen setpoint and reeferContinuous === false is a deliberate instruction.
   const equipSpec: EquipmentSpec = {
     type: equipment,
+    tempControlled: load.temperatureControlled === true || tempSetpointResolved !== undefined,
     tempSetpointF: tempSetpointResolved,
+    tempMinF: load.tempMin ?? undefined,
+    tempMaxF: load.tempMax ?? undefined,
+    tempContinuous: load.reeferContinuous ?? undefined,
+    preCoolToF: load.preCoolTo ?? undefined,
   };
   y = drawEquipmentSpec(doc, equipSpec, y);
 
@@ -1970,6 +2005,35 @@ export function generateEnhancedRateConfirmation(load: EnhancedRCLoadData, formD
     // (CheckCall model; SRL-handled check calls are a published §4 floor
     // benefit) but never told the driver when they were due.
     "Check calls: by 8:00 AM Eastern daily in transit and on arrival at each stop. Running late: call before the appointment.",
+    // v3.8.art — detention evidence. SRL promises detention and never required
+    // the proof needed to bill it, so the first disputed claim costs $250 out of
+    // margin with nothing to present to the shipper. MoLo: "Signed in/out times
+    // and all accessorial or lumper receipts must be submitted within 24 hours
+    // or they will not be reimbursed." Schneider: detention "must be clearly
+    // noted on the bill of lading".
+    "Detention pay needs proof: have the facility write your in and out times on the BOL. No times on the BOL, no detention.",
+    // v3.8.art — Transervice, the single most practical clause in the corpus:
+    // "Carrier shall call TIS and make appropriate notations prior to signing
+    // the BOL or leaving the shipping facility in the event Carrier is not
+    // allowed on the shipping dock to witness loading."
+    "If the dock will not let you watch the load or count it, note that on the BOL before you sign and call SRL. Signing a clean BOL says you received everything on it in good order.",
+    // v3.8.art — Allen Lund requires the driver to verify the seal number
+    // MATCHES the BOL, not merely to record it; MoLo requires a reseal after
+    // each stop. SRL said only "record the number".
+    "Check the seal number on the trailer matches the number written on the BOL before you leave. Reseal after any stop where the doors open.",
+    // v3.8.art — Transervice OS&D. SRL carried nothing on overage, shortage or
+    // damage anywhere on the document: "All overage, shortage, and damage must
+    // be reported to TIS immediately following the occurrence of the OS&D, with
+    // such OS&D noted on the Bill of Lading."
+    "Overage, shortage, damage, accident, theft or any delay that puts delivery at risk: note it on the BOL and call SRL immediately, not at delivery.",
+    // v3.8.art — Schneider: "Carrier must contact Schneider (do not call the
+    // customer)". SRL has ONE customer; a driver negotiating directly with them
+    // both disintermediates SRL and removes SRL's visibility of the load.
+    "Bring every issue to SRL, not to the shipper or receiver. Do not negotiate appointments, rates or accessorials with the facility.",
+    // v3.8.art — Allen Lund states trailer condition four separate ways on the
+    // only food load in the corpus; MoLo names FSMA explicitly. SRL hauls
+    // refrigerated food for a food shipper and named neither.
+    "Trailer must be clean, dry, odor-free and empty on arrival, and food-grade for food loads. No trailer that last hauled garbage, chemicals or hazmat. If it fails any of these, do not load.",
   ];
 
   // v3.8.arq — MEASURE before drawing, and defer to page 2 when page 1 cannot
@@ -2182,7 +2246,14 @@ export function generateEnhancedRateConfirmation(load: EnhancedRCLoadData, formD
     y += 12;
     doc.font(FONT_BODY, 7.5).fillColor(TOKENS.fg2);
     doc.text(
-      "Set point " + tempRangeStr + ". Run continuous, not cycle-sentry. Pre-cool before loading. If the BOL shows a different temperature than this Rate Confirmation, do not sign it — call (269) 220-6760 before loading. Download the reefer at delivery and send it with your paperwork.",
+      // v3.8.art — the numbers now print on page 1 in the EQUIPMENT block, so
+      // this block carries only what page 1 cannot: the conflict procedure and
+      // the download. Repeating the setpoint here invited the two to drift.
+      // Transervice inverts the authority ("Always refer to BOL for the required
+      // reefer temperature ... obtain written confirmation of the correct
+      // temperature from the shipper"); SRL asserts its own number and stops the
+      // driver instead, which suits a broker whose customer set the spec.
+      "Set point and run mode are on page 1 under EQUIPMENT. Run continuous, not cycle-sentry, unless this Rate Confirmation says otherwise in writing. Pre-cool the trailer before loading. If the BOL shows a different temperature than this Rate Confirmation, do not sign it and do not load. Call (269) 220-6760 and SRL will confirm the correct temperature with the shipper in writing. Download the reefer at delivery and send it with your paperwork.",
       MARGIN, y, { width: CONTENT_W, lineGap: 0.5 },
     );
     y = doc.y + 10;
@@ -2216,8 +2287,19 @@ export function generateEnhancedRateConfirmation(load: EnhancedRCLoadData, formD
   const invoiceLines = [
     "Send to: accounting@silkroutelogistics.ai",
     invoiceSubject,
-    "Attach the signed BOL, a clean POD, and original receipts for any approved lumper or accessorial charge.",
+    // v3.8.art — the signed Rate Confirmation joins the packet. Allen Lund makes
+    // it a hard gate ("FINAL PAYMENT CANNOT BE MADE WITHOUT A SIGNED COPY OF THE
+    // BILL OF LADING AND A SIGNED COPY OF THE RATE CONFIRMATION"); MoLo and
+    // Schneider both require the document returned with the invoice. SRL printed
+    // a signature block and never said where to send it, so it asked for a
+    // signature it could not collect.
+    "Attach a signed copy of this Rate Confirmation, the signed BOL, a clean POD, and original receipts for any approved lumper or accessorial charge.",
     "Put the SRL load number on the invoice. One invoice per load; do not batch loads onto one invoice.",
+    // v3.8.art — Steam: "Your invoice should match the final Rate Confirmation
+    // sent from Steam. Any invoice that does not match ... may be disputed and
+    // delayed. Please contact your broker before invoicing." Preventing the
+    // mismatch is cheaper than adjudicating it.
+    "Your invoice must match this Rate Confirmation. If you think a figure here is wrong, call SRL before you invoice rather than billing a different number.",
     "Payment terms run from the date SRL receives a complete packet. An incomplete packet does not start the clock.",
   ].join("\n");
 
@@ -2312,12 +2394,25 @@ export function generateEnhancedRateConfirmation(load: EnhancedRCLoadData, formD
   // ~700 in a rendered doc) plus 4pt of slack. An earlier 232 padded for a
   // label header twice and tipped every fixture to three pages with page 2
   // nearly empty, which is the opposite of the problem being solved.
-  rcEnsureRoom(214);
+  // v3.8.art — 214 -> 232 to reserve the return-instruction line below the block.
+  rcEnsureRoom(232);
   drawSignatureBlock(doc, y, {
     roles: RATE_CON_SIGNATURE_ROLES,
     height: 210,
     prefilledValues: sigPrefill,
   });
+
+  // v3.8.art — close the signature loop. SRL printed a 7-field acceptance block
+  // and gave no return channel, so it asked for a signature it had no way to
+  // collect, then fell back to arguing whether dispatch occurred. Greatwide:
+  // "Carrier must sign load confirmation and fax back to agency at ...". MoLo:
+  // "Please sign and return to MoLo". Allen Lund: "PRINT & SIGN THIS PAGE and
+  // then EMAIL to ...". 3 of 7 name a return channel; SRL named none.
+  doc.font(FONT_BODY, 7.5).fillColor(TOKENS.fg2);
+  doc.text(
+    "Sign and return this page to operations@silkroutelogistics.ai before dispatch. A signed copy also travels with your invoice.",
+    MARGIN, y + 214, { width: CONTENT_W, lineGap: 0.5 },
+  );
 
   // v3.8.aro — stamp every buffered page with a truthful "Page N of M". Before
   // this the total was the literal 2, so any third page would have shipped with

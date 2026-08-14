@@ -1180,6 +1180,15 @@ export interface EquipmentSpec {
   tempSetpointF?: number;
   tempContinuous?: boolean;
   preCoolRequired?: boolean;
+  // v3.8.art — tempControlled makes the TEMPERATURE row unmissable rather than
+  // conditional on data. Previously the row was gated purely on tempSetpointF,
+  // so a reefer load whose setpoint was never captured rendered byte-identical
+  // to a dry van: silence and not-applicable became indistinguishable, and
+  // nobody catches it at the desk because the document looks complete.
+  tempControlled?: boolean;
+  tempMinF?: number;
+  tempMaxF?: number;
+  preCoolToF?: number;
   loadingMethod?: string;
   unloadingMethod?: string;
   stackable?: boolean;
@@ -1284,11 +1293,27 @@ export function drawEquipmentSpec(
   if (equip.tarpRequired) trailerReqs.push('Tarps required');
   if (trailerReqs.length) fields.push(['TRAILER REQ', trailerReqs.join(' · ')]);
 
-  if (equip.tempSetpointF !== undefined) {
-    let tempStr = `${equip.tempSetpointF}°F`;
-    if (equip.tempContinuous === true) tempStr += ' continuous';
-    else if (equip.tempContinuous === false) tempStr += ' cycle';
-    if (equip.preCoolRequired) tempStr += ' · pre-cool required';
+  // v3.8.art — the row prints whenever the load is temperature-controlled, even
+  // if the setpoint is missing, so a data gap surfaces as a loud instruction
+  // instead of an absent row. Frozen freight makes 0°F legitimate, so every
+  // check here is against undefined rather than truthiness.
+  const hasSetpoint = equip.tempSetpointF !== undefined;
+  if (hasSetpoint || equip.tempControlled === true) {
+    let tempStr: string;
+    if (hasSetpoint) {
+      tempStr = `${equip.tempSetpointF}°F`;
+      if (equip.tempMinF !== undefined && equip.tempMaxF !== undefined) {
+        tempStr += ` (${equip.tempMinF}–${equip.tempMaxF}°F)`;
+      }
+      if (equip.tempContinuous === true) tempStr += ' · continuous';
+      else if (equip.tempContinuous === false) tempStr += ' · cycle';
+      if (equip.preCoolToF !== undefined) tempStr += ` · pre-cool ${equip.preCoolToF}°F`;
+      else if (equip.preCoolRequired) tempStr += ' · pre-cool required';
+    } else {
+      // Colon, not an em-dash: references/voice.md bans em-dashes as sentence
+      // connectors and this is a sentence, not a list separator.
+      tempStr = 'TEMP-CONTROLLED: setpoint not specified. Call before loading.';
+    }
     fields.push(['TEMPERATURE', tempStr]);
   }
 

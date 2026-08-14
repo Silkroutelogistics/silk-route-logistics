@@ -85,6 +85,13 @@ interface DrawerFormState {
   temperatureControlled: boolean;
   tempMin: string;
   tempMax: string;
+  // Reefer spec carried through from Order Builder (the root entry point).
+  // The drawer does not re-edit these; it passes them to the tender payload
+  // so the Rate Confirmation can render the temperature the load was built
+  // with rather than an AE-typed free-text override.
+  tempSetpoint: string;
+  preCoolTo: string;
+  reeferContinuous: boolean;
 
   // Schedule
   pickupDate: string;
@@ -196,6 +203,7 @@ const EMPTY_FORM: DrawerFormState = {
   distance: "",
   equipmentType: "Dry Van 53'", commodity: "", pieces: "1", packageType: "PLT", weight: "", description: "General Freight",
   hazmat: false, temperatureControlled: false, tempMin: "", tempMax: "",
+  tempSetpoint: "", preCoolTo: "", reeferContinuous: true,
   pickupDate: "", pickupTimeStart: "", pickupTimeEnd: "",
   deliveryDate: "", deliveryTimeStart: "", deliveryTimeEnd: "",
   poNumbersText: "", shipperReference: "", deliveryReference: "", appointmentNumber: "",
@@ -379,6 +387,9 @@ export function CarrierEngagementDrawer(props: CarrierEngagementDrawerProps) {
         temperatureControlled: data.temperatureControlled,
         tempMin: data.tempMin ? Number(data.tempMin) : null,
         tempMax: data.tempMax ? Number(data.tempMax) : null,
+        tempSetpoint: data.tempSetpoint ? Number(data.tempSetpoint) : null,
+        preCoolTo: data.preCoolTo ? Number(data.preCoolTo) : null,
+        reeferContinuous: data.reeferContinuous,
         pickupDate: new Date(data.pickupDate).toISOString(),
         pickupTimeStart: data.pickupTimeStart || null,
         pickupTimeEnd: data.pickupTimeEnd || null,
