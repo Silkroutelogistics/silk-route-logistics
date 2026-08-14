@@ -78,7 +78,7 @@ export const BRAND = {
   address:            '2317 S 35th St, Galesburg, MI 49053',
   phone:              '+1 (269) 220-6760',
   email:              'operations@silkroutelogistics.ai',
-  mc:                 '01794414',
+  mc:                 '1794414',
   dot:                '4526880',
 } as const;
 
@@ -1204,7 +1204,8 @@ export function drawRateConTerms(
   // v3.8.arn — terse by measurement, not preference: this cell draws with
   // lineBreak:false and "capped at $250/stop · notify" is 216.6pt against 202pt
   // of width, so the longer wording overprints the adjacent TONU label.
-  if (terms.detentionMaxPerStop) detStr += `, ${terms.detentionMaxPerStop}/stop cap`;
+  // v3.8.arv — was missing the $ and printed "250/stop cap" on a money term.
+  if (terms.detentionMaxPerStop) detStr += `, $${terms.detentionMaxPerStop}/stop cap`;
   items.push(['DETENTION', detStr]);
 
   items.push(['TONU', `$${terms.tonuAmount ?? 200} (truck-order-not-used)`]);
@@ -1226,7 +1227,13 @@ export function drawRateConTerms(
     const x = MARGIN + col * colW;
     drawLabel(doc, key, x, curY, { color: TOKENS.goldDark, size: 6.5 });
     doc.font(FONT_BODY, 9).fillColor(TOKENS.fg1)
-       .text(val, x + 90, curY, { lineBreak: false });
+       // v3.8.arv — L-9 mirroring fix. The v3.8.arn gutter change belongs to
+       // THIS function: its widest label (CANCELLATION, 55.3pt) is what the
+       // measurement was taken against, and with the ratified $250 cap the
+       // DETENTION value measures 189.0pt against the 180pt a 90pt gutter
+       // allows, overprinting the TONU label. The skill copy had applied it to
+       // drawEquipmentSpec instead and left this one broken.
+       .text(val, x + 68, curY, { lineBreak: false });
     if (col === 1) curY += lineH;
   });
   if (items.length % 2 === 1) curY += lineH;

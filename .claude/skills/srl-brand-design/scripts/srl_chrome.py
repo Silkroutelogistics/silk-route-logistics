@@ -100,7 +100,7 @@ BRAND = {
     "address":             "2317 S 35th St, Galesburg, MI 49053",
     "phone":               "+1 (269) 220-6760",
     "email":               "operations@silkroutelogistics.ai",
-    "mc":                  "01794414",
+    "mc":                  "1794414",
     "dot":                 "4526880",
 }
 

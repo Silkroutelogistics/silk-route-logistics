@@ -25,7 +25,7 @@ Layout left → right:
    - Line 1: `SILK ROUTE LOGISTICS INC.` — Helvetica-Bold 13pt, `--navy`
    - Line 2: `2317 S 35th St, Galesburg, MI 49053` — Helvetica 8.5pt, `--fg-2`
    - Line 3: `+1 (269) 220-6760  |  operations@silkroutelogistics.ai  |  silkroutelogistics.ai` — same style
-   - Line 4: `MC# 01794414  ·  DOT# 4526880` — Helvetica-Bold 8.5pt, `--fg-1`
+   - Line 4: `MC# 1794414  ·  DOT# 4526880` — Helvetica-Bold 8.5pt, `--fg-1`
    - Line 5 (italic tagline): `Where Trust Travels.` — Times-Italic 9pt, `--gold-dark`
 3. **Right area** at top-right:
    - **For BOL only**: 75×75 pt QR code with `--gold` 0.75pt frame, **TRACK label** in small-caps `--gold-dark` below, human-readable load ID in Courier-Bold 8.5pt below the label. QR error correction M (15%) — balances density and warehouse-print damage tolerance. URL: `https://silkroutelogistics.ai/track/{token}` (deep-link).
@@ -153,7 +153,7 @@ Per-page footer is required for legal continuity. If pages get separated in carr
 
 - 0.75pt gold rule (`--gold`) across full width above the footer line
 - Three-column row, all 7.5pt:
-  - Left: `MC# 01794414  ·  DOT# 4526880  ·  silkroutelogistics.ai` (Helvetica, `--fg-3`)
+  - Left: `MC# 1794414  ·  DOT# 4526880  ·  silkroutelogistics.ai` (Helvetica, `--fg-3`)
   - Center: `Where Trust Travels.` (Times-Italic 8pt, `--gold-dark`)
   - Right: `Page X of Y` (Helvetica, `--fg-3`)
 

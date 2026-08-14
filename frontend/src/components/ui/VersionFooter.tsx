@@ -14123,7 +14123,7 @@
 // retrieved this sprint (Scotlynn + TQL court exhibits via CourtListener, TQL
 // modern, Leonard's Express) — temperature setpoint, driver/equipment capture,
 // and seal handling each appeared in 4 of 4 and in 0 of SRL's.
-export const SRL_VERSION = "3.8.aru";
+export const SRL_VERSION = "3.8.arv";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

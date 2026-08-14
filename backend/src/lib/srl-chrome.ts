@@ -1329,7 +1329,14 @@ export function drawEquipmentSpec(
     } else {
       // Colon, not an em-dash: references/voice.md bans em-dashes as sentence
       // connectors and this is a sentence, not a list separator.
-      tempStr = 'TEMP-CONTROLLED: setpoint not specified. Call before loading.';
+      // v3.8.arv — MEASURED to 165.7pt against a 202pt cell. The v3.8.art string
+      // ("TEMP-CONTROLLED: setpoint not specified. Call before loading.") was
+      // 279.9pt, and this cell draws with lineBreak:false, so PDFKit did not
+      // wrap it — the media box clipped the tail and the words "Call before
+      // loading." never printed. The instruction written to make a data gap
+      // LOUD was the part being silently cut. The label already reads
+      // TEMPERATURE, so the value does not need to repeat "TEMP-CONTROLLED".
+      tempStr = 'Not specified. Call SRL before loading.';
     }
     fields.push(['TEMPERATURE', tempStr]);
   }
@@ -1350,7 +1357,15 @@ export function drawEquipmentSpec(
     const x = MARGIN + col * colW;
     drawLabel(doc, key, x, curY, { color: TOKENS.goldDark, size: 6.5 });
     doc.font(FONT_BODY, 9.5).fillColor(TOKENS.fg1)
-       .text(val, x + 90, curY, { lineBreak: false });
+       // v3.8.arv — gutter 90 -> 68, matching drawRateConTerms. This cell draws
+       // with lineBreak:false in a CONTENT_W/2 = 270pt column, so a 90pt gutter
+       // left 180pt and the canonical reefer value measures 191.0pt:
+       // "36°F (34–38°F) · continuous · pre-cool 34°F". It overran into the
+       // adjacent column. 68pt buys 202pt and clears it by 11pt. The v3.8.arn
+       // fix made exactly this change in drawRateConTerms and never reached
+       // here, because drawEquipmentSpec did not yet carry a value long enough
+       // to expose it — v3.8.art gave it one.
+       .text(val, x + 68, curY, { lineBreak: false });
     if (col === 1) curY += lineH;
   });
   if (fields.length % 2 === 1) curY += lineH;

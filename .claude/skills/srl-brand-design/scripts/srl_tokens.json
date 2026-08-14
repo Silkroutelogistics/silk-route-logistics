@@ -34,7 +34,7 @@
       }
     },
     "cream": {
-      "DEFAULT": "#FDFBF7",
+      "DEFAULT": "#FBF7F0",
       "2":       "#F5EEE0",
       "3":       "#EFE6D3"
     },
@@ -47,11 +47,11 @@
       "2":         "#3A4A5F",
       "3":         "#6B7685",
       "disabled":  "#A7AEB8",
-      "on-navy":   "#FDFBF7",
+      "on-navy":   "#FBF7F0",
       "on-navy-2": "#C9D2DE"
     },
     "bg": {
-      "page-web":   "#FDFBF7",
+      "page-web":   "#FBF7F0",
       "page-print": "#FFFFFF",
       "surface":    "#FFFFFF",
       "surface-2":  "#F5EEE0",
@@ -134,7 +134,7 @@
     "phone":               "+1 (269) 220-6760",
     "email_ops":           "operations@silkroutelogistics.ai",
     "email_exec":          "whaider@silkroutelogistics.ai",
-    "mc":                  "01794414",
+    "mc":                  "1794414",
     "dot":                 "4526880",
     "tracking_url_pattern": "https://silkroutelogistics.ai/track/{token}"
   }
