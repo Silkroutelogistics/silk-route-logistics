@@ -1138,13 +1138,25 @@ export async function generateBOLFromLoad(
       width: footerThirdW, align: "right", lineBreak: false,
     });
 
-  // v3.8.ara — BOL is a ONE-PAGE document.
+  // v3.8.ara — BOL is a ONE-PAGE document. PROVISIONAL: see caveat below.
   //
-  // Pre-ara a second page carried only the Terms and Conditions. Industry
-  // practice (Echo, Flock Freight, Varstar and the other majors) is a single-
-  // page straight BOL: it is a dock document that gets printed, signed, and
-  // handed over, and a second sheet is routinely separated and lost. The legal
-  // substance is preserved, not dropped:
+  // Pre-ara a second page carried only the Terms and Conditions. The reasoning
+  // for folding it onto page 1 is operational: a BOL is a dock document that
+  // gets printed, signed, and handed over, and a loose second sheet is routinely
+  // separated and lost.
+  //
+  // CAVEAT (v3.8.arg, honesty correction). An earlier version of this comment
+  // asserted that "industry practice (Echo, Flock Freight, Varstar)" is a
+  // single-page straight BOL. That was written from general knowledge, NOT from
+  // examining those companies' actual documents — no such reference existed in
+  // this repo when the change was made. The operational reasoning above stands
+  // on its own, but the competitive-conformance claim was not verified and has
+  // been withdrawn. Wasi is gathering real reference BOLs (three current ones
+  // plus Dirk's); re-evaluate field inventory, signature-block structure, legal
+  // density, and whether those documents are genuinely one page once they land.
+  // If any ships as page-1 + a separate terms sheet, revisit this decision.
+  //
+  // The legal substance is preserved, not dropped:
   //   - The Carmack released-value election + 49 U.S.C. § 14706(c) citation
   //     stay on page 1 where the shipper actually initials them.
   //   - The full T&C body lives in the Broker-Carrier Agreement, which the
