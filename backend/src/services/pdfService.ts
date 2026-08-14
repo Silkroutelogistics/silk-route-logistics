@@ -435,7 +435,10 @@ export async function generateBOLFromLoad(
   // v3.8.b pivot: the cream band (CREAM_2) was dropped because it created a
   // visible boundary the logo chip didn't integrate into. White page background
   // keeps the compass mark visually unified with the company block.
-  const qrSize = 95;
+  // v3.8.ark — 60pt (~0.83"): frees 29pt of band height for the content budget
+  // below while remaining comfortably phone-scannable at dock distance (short
+  // tracking URL = low-density QR). Was 95.
+  const qrSize = 60;
   const qrColX = R - 86;
   const qrColW = 86;
   const qrFrameX = qrColX + (qrColW - qrSize) / 2;
@@ -490,6 +493,43 @@ export async function generateBOLFromLoad(
       width: qrColW, align: "center", lineBreak: false,
     });
 
+  // ── v3.8.ark — ADAPTIVE ONE-PAGE BUDGET ─────────────────────────────────
+  // The arj layout fit exactly ONE line item; the fit matrix showed 3 rows
+  // overlapping the terms strip, 4 rows crashing the footer, 5 rows exploding
+  // to five pages. This block computes how much EXTRA height the variable
+  // content needs (line-item rows beyond the first, overflow footer, hazmat
+  // contact line, wrapped special instructions) and "shaves" that deficit from
+  // a prioritized list of inter-section gaps via take() — decorative air goes
+  // first, signature row pitch last, and if a pathological combination exceeds
+  // total capacity the visible row cap drops (overflow footer keeps the totals
+  // honest). Every gap below has a floor, so the page degrades gracefully
+  // instead of colliding. Keep BOL_ROW_H in sync with rowH in the table block.
+  const BOL_ROW_H = 22;
+  const budgetItems: any[] = Array.isArray(load.lineItems) ? load.lineItems : [];
+  const budgetHasItems = budgetItems.some((li: any) =>
+    (li?.description && String(li.description).trim()) || li?.pieces || li?.weight);
+  const nRowsTotal = budgetHasItems ? budgetItems.length : 1;
+  const anyHazmat = budgetItems.some((li: any) => li?.hazmat);
+  const siMeasureRaw = safe(load.specialInstructions || load.notes).trim();
+  const siMeasuredH = siMeasureRaw
+    ? doc.font("DMSans-Italic").fontSize(8.25)
+        .heightOfString(siMeasureRaw, { width: CW - 160 })
+    : 10;
+  const siExtraH = siMeasuredH > 12 ? 11 : 0; // wraps to a 2nd line
+  const SHAVE_CAPACITY = 45; // sum of all take() maxima below
+  const BASE_SLACK = 22;     // measured 1-row headroom (QR 60 + title 42 variant)
+  let bolVisibleRows = Math.min(nRowsTotal, 4);
+  let bolExtraH = 0, bolDeficit = 0;
+  for (;;) {
+    const overflowFooterH = nRowsTotal > bolVisibleRows ? 16 : 0;
+    bolExtraH = (bolVisibleRows - 1) * BOL_ROW_H + overflowFooterH + (anyHazmat ? 16 : 0) + siExtraH;
+    bolDeficit = Math.max(0, bolExtraH - BASE_SLACK);
+    if (bolDeficit <= SHAVE_CAPACITY || bolVisibleRows <= 1) break;
+    bolVisibleRows--;
+  }
+  let shavePool = bolDeficit;
+  const take = (max: number): number => { const t = Math.min(max, shavePool); shavePool -= t; return t; };
+
   // Gold rule below header band
   let y = headerBandH + 2;
   doc.lineWidth(1.75).strokeColor(GOLD).moveTo(M, y).lineTo(R, y).stroke();
@@ -502,7 +542,13 @@ export async function generateBOLFromLoad(
     .text(`STRAIGHT ${MIDDOT} NON-NEGOTIABLE`, R - 220, y + 10, {
       width: 220, align: "right", characterSpacing: 1.4, lineBreak: false,
     });
-  y += 26; // v3.8.arj — was 38; largest single air pocket in the measured map
+  // v3.8.ark — 34 clears Playfair 24pt descenders; arj's 26 overlapped the
+  // meta strip (measured gap 12.5pt, needs >=27). Adaptive floor 30.
+  // Baseline math: Playfair 24pt descenders reach ~29pt below the text top and
+  // the meta strip border sits at this offset — 42 gives ~9pt of clearance at
+  // base and ~5pt at the shave floor (38). 34 left the descenders 1pt off the
+  // border; arj's 26 visibly overlapped.
+  y += 42 - take(4);
 
   // Meta row — 6 cells
   const metaTop = y;
@@ -579,12 +625,12 @@ export async function generateBOLFromLoad(
         .text(EM, mx + 6, metaTop + 18, { width: cw6 - 10, lineBreak: false });
     }
   });
-  y = metaTop + metaH + 14; // v3.8.arj — was +18
+  y = metaTop + metaH + 14 - take(3); // v3.8.ark adaptive (floor 11)
 
   // PARTIES section header + rounded cream container
   doc.font("DMSans-SemiBold").fontSize(8).fillColor(GOLD_DARK)
     .text("PARTIES", M, y, { characterSpacing: 1.2, lineBreak: false });
-  y += 11; // v3.8.arj — was 13
+  y += 11 - take(2); // v3.8.ark adaptive (floor 9)
 
   const partiesPad = 12;
   const partiesTop = y;
@@ -688,12 +734,12 @@ export async function generateBOLFromLoad(
 
   renderParty("shipper", shipperX, partiesTop + partiesPad + 14);
   renderParty("consignee", consigneeX, partiesTop + partiesPad + 14);
-  y = partiesTop + partiesH + 12; // v3.8.arj — was +16
+  y = partiesTop + partiesH + 12 - take(2); // v3.8.ark adaptive (floor 10)
 
   // Shipment details table — rounded container, NAVY header, dashed body separators, CREAM_2 totals
   doc.font("DMSans-SemiBold").fontSize(8).fillColor(GOLD_DARK)
     .text("SHIPMENT DETAILS", M, y, { characterSpacing: 1.2, lineBreak: false });
-  y += 11; // v3.8.arj — was 13
+  y += 11 - take(2); // v3.8.ark adaptive (floor 9)
 
   const tblTop = y;
   const colDefs: Array<{ label: string; w: number }> = [
@@ -719,8 +765,8 @@ export async function generateBOLFromLoad(
   const MAX_ROWS = 10;
   const allLineItems = load.lineItems ?? [];
   const useMulti = allLineItems.length > 0;
-  const renderedItems = useMulti ? allLineItems.slice(0, MAX_ROWS) : [];
-  const overflowCount = useMulti ? Math.max(0, allLineItems.length - MAX_ROWS) : 0;
+  const renderedItems = useMulti ? allLineItems.slice(0, Math.min(MAX_ROWS, bolVisibleRows)) : [];
+  const overflowCount = useMulti ? Math.max(0, allLineItems.length - Math.min(MAX_ROWS, bolVisibleRows)) : 0;
 
   type Cell = { text: string; placeholder: boolean; bold?: boolean };
   const dimsStr = (l?: number | null, w?: number | null, h?: number | null): string =>
@@ -870,7 +916,7 @@ export async function generateBOLFromLoad(
       );
   }
 
-  y = tblTop + tblH + 12; // v3.8.arj — was +14
+  y = tblTop + tblH + 12 - take(2); // v3.8.ark adaptive (floor 10)
 
   // v3.8.arj — hazmat shipments require a 24-hour emergency response phone on
   // the shipping paper (49 CFR 172.604). Conditional: renders only when a line
@@ -883,7 +929,7 @@ export async function generateBOLFromLoad(
   }
 
   // Special Instructions — single row cream container
-  const siH = 28;
+  const siH = 28 + siExtraH; // v3.8.ark — +11 when instructions wrap to a 2nd line
   doc.roundedRect(M, y, CW, siH, 4).fill(CREAM_2);
   doc.lineWidth(0.5).strokeColor(BORDER_1).roundedRect(M, y, CW, siH, 4).stroke();
   doc.font("DMSans-SemiBold").fontSize(6.75).fillColor(GOLD_DARK)
@@ -900,9 +946,9 @@ export async function generateBOLFromLoad(
   doc.font("DMSans-Italic").fontSize(8.25)
     .fillColor(siDisplay.isPlaceholder ? GOLD_DARK : FG_2)
     .text(siDisplay.text, M + 150, y + 9, {
-      width: CW - 160, height: siH - 14, ellipsis: true, lineBreak: false,
+      width: CW - 160, height: siH - 12, ellipsis: true, // v3.8.ark — wrap allowed (2-line cap via height+ellipsis)
     });
-  y += siH + 10;
+  y += siH + 10 - take(2); // v3.8.ark adaptive (floor 8)
 
   // Released Value form row
   const rvH = 36;
@@ -993,13 +1039,18 @@ export async function generateBOLFromLoad(
   // Carmack citation below row
   doc.font("DMSans-Italic").fontSize(7).fillColor(FG_3)
     .text("Per 49 U.S.C. § 14706(c)", M, y, { lineBreak: false });
-  y += 10; // v3.8.arj — was 14
+  y += 10 - take(2); // v3.8.ark adaptive (floor 8)
 
   // Signature blocks — 3 columns
-  // v3.8.arj — signature row pitch. 28pt keeps 9pt of pen room below each
-  // underline (drawSigField rules at by+19) while freeing 12pt on the tallest
-  // (carrier) column per the spacing audit.
-  const SIG_ROW = 28;
+  // v3.8.arj/ark — signature row pitch. Base 28pt keeps 9pt of pen room below
+  // each underline (drawSigField rules at by+19). Under deficit the pitch
+  // shaves down to 24pt (5pt pen room — compact but writable), consuming the
+  // REMAINING pool after all decorative gaps, spread across the 6-row carrier
+  // column (the tall pole).
+  const certShave = take(2);
+  const sigRowShave = Math.min(4, Math.ceil(shavePool / 6));
+  shavePool = Math.max(0, shavePool - sigRowShave * 6);
+  const SIG_ROW = 28 - sigRowShave;
   const sigColGap = 12;
   const sigColW = (CW - sigColGap * 2) / 3;
   const sigTop = y;
@@ -1140,7 +1191,7 @@ export async function generateBOLFromLoad(
     by += 6;
     doc.font("DMSans-Italic").fontSize(7.75).fillColor(FG_2)
       .text(blk.cert, bx, by, { width: sigColW, lineGap: 1.5 });
-    by = doc.y + 8;
+    by = doc.y + 8 - certShave;
     maxSigBottom = Math.max(maxSigBottom, blk.render(bx, by));
   });
 
@@ -1177,7 +1228,7 @@ export async function generateBOLFromLoad(
   // bottoms were computed and then DISCARDED. Now any future field addition
   // moves the strip down with it (clamped so it can never cross the footer
   // rule at 770; the verify script asserts the whole page still fits).
-  const termsY = Math.min(maxSigBottom + 10, 751);
+  const termsY = Math.min(maxSigBottom + 8, 752);
   doc.font("DMSans-Regular").fontSize(6).fillColor(NAVY) // v3.8.arj — navy + 6pt: FG_3 gray at 5.75pt was the weakest element on a B&W print
     .text(
       "Non-negotiable straight bill of lading; goods in apparent good order except as noted. Carrier cargo liability per Carmack, 49 U.S.C. § 14706 " +
