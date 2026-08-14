@@ -544,7 +544,10 @@ export async function generateBOLFromLoad(
     { label: "EQUIPMENT", raw: load.equipmentType, placeholder: "Equipment" },
     { label: "PRO #", raw: load.proNumber, placeholder: null },
     { label: "SHIPPER REF", raw: shipperRefValue, placeholder: null },
-    { label: "FREIGHT CHARGES", raw: "Prepaid · Third Party", placeholder: null },
+    // v3.8.ari — the reference BOLs (Echo, Flock, Varstar, SunteckTTS,
+    // WorldWide, Coyote) all name the third-party bill-to explicitly rather
+    // than just ticking "third party". SRL is that party on every load.
+    { label: "FREIGHT CHARGES", raw: "Third Party · bill SRL", placeholder: null },
   ];
 
   doc.lineWidth(1).strokeColor(BORDER_1).moveTo(M, metaTop).lineTo(R, metaTop).stroke();
@@ -1019,6 +1022,31 @@ export async function generateBOLFromLoad(
         drawSigField(bx, by, halfW, "PIECES TENDERED", ptValue);
         drawSigField(bx + halfW + 8, by, halfW, "DATE", "");
         by += 30;
+
+        // v3.8.ari — TRAILER LOADED / FREIGHT COUNTED attestation.
+        // Verified present on every broker BOL in the reference set (Echo,
+        // Flock, Varstar, SunteckTTS, XPO, Armstrong). It allocates liability
+        // for the count: "shipper load and count" vs a driver-verified count
+        // materially changes who owns an overage/shortage claim. Its absence
+        // was the single biggest gap against industry practice.
+        // Placed in the SHIPPER column because it is a shipper-side attestation,
+        // and because this column ends 90pt above the CARRIER column — free
+        // vertical space that costs the one-page budget nothing.
+        const cbSize = 6.5;
+        const cbRow = (labelText: string, opts: string[], rowY: number): number => {
+          doc.font("DMSans-SemiBold").fontSize(6.75).fillColor(GOLD_DARK)
+            .text(labelText, bx, rowY, { width: sigColW, characterSpacing: 1.0, lineBreak: false });
+          let oy = rowY + 10;
+          for (const o of opts) {
+            drawCheckbox(bx, oy - 0.5, cbSize, false);
+            doc.font("DMSans-Regular").fontSize(7).fillColor(NAVY)
+              .text(o, bx + cbSize + 4, oy, { width: sigColW - cbSize - 4, lineBreak: false });
+            oy += 10;
+          }
+          return oy;
+        };
+        by = cbRow("TRAILER LOADED", ["By shipper", "By driver"], by) + 4;
+        by = cbRow("FREIGHT COUNTED", ["By shipper", "By driver / pallets said to contain", "By driver / pieces"], by);
         return by;
       },
     },
@@ -1064,6 +1092,17 @@ export async function generateBOLFromLoad(
         drawSigField(bx, by, halfW, "PIECES RECEIVED", prValue);
         drawSigField(bx + halfW + 8, by, halfW, "DATE", "");
         by += 30;
+
+        // v3.8.ari — Section 7 (non-delivery without payment of freight).
+        // Present on Echo, Varstar, SunteckTTS, XPO, WorldWide and Coyote in
+        // the reference set. Uses the CONSIGNEE column's free vertical space —
+        // this column ends ~90pt above the CARRIER column.
+        doc.font("DMSans-Regular").fontSize(6.25).fillColor(FG_3)
+          .text(
+            "The carrier shall not make delivery of this shipment without payment of freight and all other lawful charges.",
+            bx, by, { width: sigColW, lineGap: 0.2 },
+          );
+        by = doc.y + 2;
         return by;
       },
     },
