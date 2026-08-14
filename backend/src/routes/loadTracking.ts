@@ -16,7 +16,7 @@ export const DETENTION_FREE_HOURS = 2;
 export const DETENTION_FREE_MINUTES = DETENTION_FREE_HOURS * 60;
 export const DETENTION_FREE_MS = DETENTION_FREE_MINUTES * 60 * 1000;
 export const DETENTION_RATE_PER_HOUR = 50;   // $/hr billable after free time
-export const DETENTION_CAP_PER_STOP = 200;   // $ ceiling, applied per stop
+export const DETENTION_CAP_PER_STOP = 250;   // $ ceiling per stop. v3.8.ars — raised 200 -> 250 so the cap EQUALS the layover day rate; detention hands off to layover instead of dead-ending between billable hour 4 and hour 24.
 
 /**
  * Billable detention dollars for ONE stop: overage hours x rate, clamped to the
@@ -367,7 +367,7 @@ router.post(
                 loadId,
                 stopId: pickupStop.id,
                 type: "DETENTION_PU",
-                // v3.8.arn — $50/hr capped at $200 for THIS stop (see detentionCharge)
+                // v3.8.ars — $50/hr capped at $250 for THIS stop (see detentionCharge)
                 amount: detentionCharge(detentionMin),
                 quantity: detentionMin,
                 unit: "minutes",

@@ -135,17 +135,17 @@ export const RC_PDF_REQUIRED: string[] = [
   // locks rate, free hours, and cap in one adjacency: a regression that
   // dropped the cap while keeping the rate would still fail. If the renderer
   // ever gains wrapping here, split this into "$50/hr after 2 hrs free" and
-  // "$200/stop cap" rather than deleting it.
+  // "$250/stop cap" rather than deleting it.
   //
-  // The cap reads "$200/stop cap" and NOT "capped at $200/stop" for a measured
-  // reason: the grid cell draws with lineBreak:false, and "capped at $200/stop
+  // The cap reads "$250/stop cap" and NOT "capped at $250/stop" for a measured
+  // reason: the grid cell draws with lineBreak:false, and "capped at $250/stop
   // · notify" measures 216.6pt against 202pt of available width, so it would
   // overprint the adjacent TONU label. The only way to keep "capped at" is to
   // drop the deliberate Sprint 50 " · notify" suffix, which is a real control.
   // If you are tempted to make this string read better, measure it first.
   // (Trailing " · notify" is appended after the cap, so it does not affect
   // this match.)
-  "$50/hr after 2 hrs free, $200/stop cap",
+  "$50/hr after 2 hrs free, $250/stop cap",
   "$200 (truck-order-not-used)",
   "$250/day",
   // Paperwork deadline, from the GOVERNING TERMS clause block: "Signed BOL,

@@ -98,7 +98,7 @@ export const SAME_DAY_QP_PREMIUM = 0.02;
 // Free time is counted per stop and does not accumulate across stops.
 export const DETENTION_FREE_HOURS_PER_STOP = 2;
 export const DETENTION_RATE_PER_HOUR = 50;      // $/hr after free time
-export const DETENTION_MAX_PER_STOP = 200;      // $ cap per stop
+export const DETENTION_MAX_PER_STOP = 250;      // $ cap per stop (v3.8.ars — equals the layover day rate)
 
 // ─── Milestone advancement thresholds (locked launch model) ─────────────
 //

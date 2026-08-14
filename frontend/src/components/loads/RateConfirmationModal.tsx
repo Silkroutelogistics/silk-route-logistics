@@ -324,7 +324,7 @@ const DEFAULT_DOCUMENT_CHECKLIST: DocumentCheck[] = [
 //
 // Figures below are kept canonical anyway so that whenever it IS switched on it
 // does not contradict the grid: v3.8.arn corrected clause 5 detention from
-// $75.00/hr uncapped -> $50.00/hr capped at $200.00/stop, and clause 6 TONU from
+// $75.00/hr uncapped -> $50.00/hr capped at $250.00/stop, and clause 6 TONU from
 // $250.00 -> $200.00.
 const DEFAULT_TERMS = `CARRIER-BROKER AGREEMENT - TERMS & CONDITIONS
 
@@ -336,7 +336,7 @@ const DEFAULT_TERMS = `CARRIER-BROKER AGREEMENT - TERMS & CONDITIONS
 
 4. DOUBLE BROKERING PROHIBITED: Carrier shall not re-broker, co-broker, or assign this shipment to any other carrier, broker, or third party without prior written consent from Broker. Violation of this clause shall result in immediate forfeiture of payment.
 
-5. DETENTION: Free time of two (2) hours is allowed at each stop. After free time, detention will be paid at $50.00/hour, capped at $200.00 per stop, with prior authorization from Broker.
+5. DETENTION: Free time of two (2) hours is allowed at each stop. After free time, detention will be paid at $50.00/hour, capped at $250.00 per stop, with prior authorization from Broker.
 
 6. TONU (Truck Ordered Not Used): If Carrier is dispatched and load is cancelled by shipper after Carrier has been dispatched, a TONU fee of $200.00 will be paid to Carrier, subject to Broker verification.
 

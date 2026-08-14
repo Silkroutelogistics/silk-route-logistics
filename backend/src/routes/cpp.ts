@@ -32,7 +32,7 @@ router.get("/my-status", authorize("CARRIER"), async (req: AuthRequest, res: Res
   // §5). Detention perk is now identical at every tier: tier-differentiated
   // detention is prohibited by §5. Detention terms are flat platform-wide —
   // see the DETENTION_* constants in services/caravanService.
-  const DETENTION_PERK = "$50/hr detention after 2hr free per stop, capped at $200/stop";
+  const DETENTION_PERK = "$50/hr detention after 2hr free per stop, capped at $250/stop";
   const tiers = [
     { name: "PLATINUM", min: 95, bonus: 3, perks: ["Net-14 payment terms", "1% / 3% (same-day) Quick Pay", "Priority freight access", DETENTION_PERK] },
     { name: "GOLD",     min: 90, bonus: 1.5, perks: ["Net-21 payment terms", "2% / 4% (same-day) Quick Pay", DETENTION_PERK] },

@@ -1178,7 +1178,7 @@ export function drawRateConTerms(
       : 50;
   let detStr = `$${detentionRate}/hr after ${detentionFree} hrs free`;
   // v3.8.arn — terse by measurement, not preference: this cell draws with
-  // lineBreak:false and "capped at $200/stop · notify" is 216.6pt against 202pt
+  // lineBreak:false and "capped at $250/stop · notify" is 216.6pt against 202pt
   // of width, so the longer wording overprints the adjacent TONU label.
   if (terms.detentionMaxPerStop) detStr += `, ${terms.detentionMaxPerStop}/stop cap`;
   items.push(['DETENTION', detStr]);

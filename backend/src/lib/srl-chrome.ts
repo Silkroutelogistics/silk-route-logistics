@@ -1397,7 +1397,7 @@ export function drawRateConTerms(
   const colW = CONTENT_W / 2;
   // v3.8.arn — label gutter narrowed 90 -> 68. Cells draw with lineBreak:false,
   // so a value wider than (colW - gutter) overprints the next column's label
-  // rather than wrapping. Once DETENTION carries the canonical $200/stop cap it
+  // rather than wrapping. Once DETENTION carries the canonical $250/stop cap it
   // measures ~190pt, over the 180pt a 90pt gutter allowed. The widest label
   // (CANCELLATION) is 55.3pt at 6.5pt with 8% tracking, so 90pt was ~35pt of
   // dead slack; 68pt still clears it by 12.7pt and buys every cell 202pt.

@@ -1925,8 +1925,15 @@ export function generateEnhancedRateConfirmation(load: EnhancedRCLoadData, formD
     detentionRatePerHour: fd.detentionRate as number | undefined,
     // v3.8.arn — the renderer's cap branch had never fired: it is gated on
     // detentionMaxPerStop and this object never passed one, so no cap has ever
-    // printed on a Rate Confirmation. $200/stop is canonical.
-    detentionMaxPerStop: 200,
+    // printed on a Rate Confirmation.
+    // v3.8.ars — 200 -> 250, deliberately EQUAL to the layover day rate. At 200
+    // the cap was reached at billable hour 4 while auto-layover did not fire
+    // until hour 24, so a carrier held overnight earned nothing across an
+    // 18-hour gap. Setting cap = layover rate makes a day of waiting worth the
+    // same number whichever instrument pays it, which is how Campbell's
+    // published schedule handles it ($360 cap / $360 per 24-hour layover) and
+    // what Scotlynn's "$50/HR OR UNTIL LAYOVER OR $300 IS HIT" is reaching for.
+    detentionMaxPerStop: 250,
     detentionNotify: true,
     quickPayTier: qpTier !== "—" ? qpTier : undefined,
   };
@@ -2112,7 +2119,13 @@ export function generateEnhancedRateConfirmation(load: EnhancedRCLoadData, formD
     // early to help and is taken before the appointment. This wording mirrors
     // the on-time gate the TONU clause below already applies, so one rule
     // governs both rather than two different ones on one page.
-    "Accessorial charges require SRL's prior written approval (operations@silkroutelogistics.ai). Detention free time starts when you arrive, and runs separately at each stop. Detention is not payable if you arrive outside your appointment window. Notify SRL by call or text at least 30 minutes before detention begins and again on departure.",
+    // v3.8.ars — the conversion sentence is the point of raising the cap to
+    // equal the layover rate. Without it the two instruments could both bill the
+    // same hours: an overnight hold would collect the $250 cap AND $250 layover
+    // for one day. Landstar's published tariff makes layover explicitly ADDITIVE
+    // to detention, so a carrier citing the only public tariff in the corpus
+    // would win that argument against a document that stayed silent.
+    "Accessorial charges require SRL's prior written approval (operations@silkroutelogistics.ai). Detention free time starts when you arrive, and runs separately at each stop. Detention is not payable if you arrive outside your appointment window. At the $250 per stop cap detention converts to layover at $250 per day; the two do not stack for the same hours. Notify SRL by call or text at least 30 minutes before detention begins and again on departure.",
     // v3.8.arp — TONU qualification. SRL priced TONU at $200 and printed no rule
     // for earning it, so a carrier who dispatched and drove 90 miles and one who
     // never left the yard had identical claims. Two gates, per Wasi 2026-08-14.
