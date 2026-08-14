@@ -1487,7 +1487,14 @@ function checkPageBreak(doc: PDFDoc, y: number, needed: number): number {
  */
 export function generateEnhancedRateConfirmation(load: EnhancedRCLoadData, formData: Record<string, any>): PDFDoc {
   const fd = formData || {};
-  const doc = new PDFDocument({ size: "LETTER", margin: 0 });
+  // v3.8.aro — bufferPages lets the footer be stamped AFTER all content is laid
+  // out, so "Page N of M" reports the real total instead of a hardcoded 2. Until
+  // now the page count was a constant and every content addition became a
+  // trimming exercise against a fixed budget; the maximal fixture has run as
+  // little as 14pt of slack. Content should not lose to layout on a document
+  // that carries money terms. References run longer than this: Scotlynn 2 pages,
+  // Allen Lund 4, Schneider 5.
+  const doc = new PDFDocument({ size: "LETTER", margin: 0, bufferPages: true });
 
   // Sprint 47 (v3.8.abf, Item 101) — register skill canonical fonts on this
   // doc instance. Required for Playfair-Bold / DMSans-* references inside
@@ -1892,12 +1899,25 @@ export function generateEnhancedRateConfirmation(load: EnhancedRCLoadData, formD
   doc.font(FONT_BODY, 7.5).fillColor(TOKENS.fg2);
   doc.text(dockLines.join("\n"), MARGIN, y, { width: CONTENT_W, lineGap: 0.5, paragraphGap: 1.5 });
 
-  // Page 1 footer + page break
-  drawFooter(doc, { pageNum: 1, totalPages: 2, docId });
+  // v3.8.aro — footers are stamped at the end over the buffered page range, so
+  // no drawFooter call belongs here any more.
   doc.addPage();
 
   // ─── PAGE 2 ────────────────────────────────────────────────────
   y = drawContinuationHeader(doc, "Rate Confirmation", docId);
+
+  // v3.8.aro — page-break helper. Any page-2+ block that might not fit calls
+  // this first. PDFKit's own auto-pagination would add a bare page with no
+  // continuation header, so overflow has to be handled explicitly. The 749
+  // ceiling matches the clearance gate in scripts/verify-rc-matrix.ts: the
+  // footer rule is drawn at y≈755 and a body baseline past 749 collides with
+  // it — which is exactly how a line once rendered THROUGH the footer while
+  // the matrix still scored it clean.
+  const rcEnsureRoom = (needed: number): void => {
+    if (y + needed <= 749) return;
+    doc.addPage();
+    y = drawContinuationHeader(doc, "Rate Confirmation", docId);
+  };
 
   // Carrier requirements — insurance minimums (skill canonical defaults).
   // Sprint 51 (Item 130) — trackingAcceptance bullet added per sub-pattern 4
@@ -2137,8 +2157,18 @@ export function generateEnhancedRateConfirmation(load: EnhancedRCLoadData, formD
     prefilledValues: sigPrefill,
   });
 
-  // Page 2 footer
-  drawFooter(doc, { pageNum: 2, totalPages: 2, docId });
+  // v3.8.aro — stamp every buffered page with a truthful "Page N of M". Before
+  // this the total was the literal 2, so any third page would have shipped with
+  // no footer at all: no gold rule, no MC#/DOT#, no page number. A carrier
+  // holding an unnumbered page cannot tell whether they received the whole
+  // document, which matters on a document that incorporates the BCA by
+  // reference and carries a signature block.
+  const rcPages = doc.bufferedPageRange();
+  for (let i = 0; i < rcPages.count; i++) {
+    doc.switchToPage(rcPages.start + i);
+    drawFooter(doc, { pageNum: i + 1, totalPages: rcPages.count, docId });
+  }
+  doc.flushPages();
 
   doc.end();
   return doc;
