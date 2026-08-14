@@ -49,9 +49,26 @@ export const TOKENS = {
   fg2:         '#3A4A5F',
   fg3:         '#6B7685',
   fgOnNavy:    '#FBF7F0',
-  border1:     '#0A25401A',  // 10% alpha
-  border2:     '#0A254029',
-  borderStrong:'#0A254052',
+  // v3.8.aru — CRITICAL RENDER FIX. These were 8-digit hex carrying an alpha
+  // byte. PDFKit has no alpha-in-hex support: it parses the whole string as one
+  // integer and shifts, so #0A25401A yielded r = 10.184, which a PDF renderer
+  // clamps to 1.0 per ISO 32000-1 §8.6.8. Proven by content-stream dump:
+  //     #0A25401A  ->  10.184313725490195 0.25098039215686274 0.10196078431372549 SCN
+  // Every panel border and all seven CARRIER · ACCEPTANCE signature underlines
+  // were rendering rgb(255, 64, 26), bright red-orange, on every SRL PDF — not
+  // just the Rate Confirmation. The BOL, Invoice and Settlement share this
+  // library.
+  //
+  // references/tokens.md declares these as rgba over navy #0A2540 at 10/16/32%.
+  // PDFKit cannot express that in a colour string, so the values below are those
+  // exact alphas PRE-COMPOSITED over the white print canvas. Every existing call
+  // site keeps working unchanged, which matters: under the alternative fix
+  // (doc.strokeOpacity) a missed call site fails to fully-opaque navy, which is
+  // a different and less obvious wrong. Where a border sits on a cream-2 panel
+  // the composite runs marginally cool, imperceptible at 0.5pt hairline weight.
+  border1:     '#E7E9EC',  // rgba(10,37,64,0.10) over white
+  border2:     '#D8DCE0',  // rgba(10,37,64,0.16) over white
+  borderStrong:'#B1B9C2',  // rgba(10,37,64,0.32) over white
 } as const;
 
 // v3.8.akg §13.3 Item 8.9 — BRAND values sourced from canonical

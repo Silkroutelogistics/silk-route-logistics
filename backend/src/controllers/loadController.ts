@@ -244,8 +244,19 @@ export async function createLoad(req: AuthRequest, res: Response) {
 
     // Temperature
     temperatureControlled: raw.temperature != null || raw.temperatureControlled || false,
-    tempMin: raw.tempMin || (raw.temperature != null ? raw.temperature : undefined),
-    tempMax: raw.tempMax || undefined,
+    // v3.8.aru — `||` discarded a legitimate 0°F. Frozen freight runs at or below
+    // zero, so `0 || fallback` silently dropped the lower bound on exactly the
+    // loads where temperature matters most. Same shape as the detentionRate: 0
+    // defect that published "$0/hr" to carriers, and as the falsy-zero traps
+    // guarded throughout v3.8.art. `??` only falls through on null/undefined.
+    tempMin: raw.tempMin ?? (raw.temperature != null ? raw.temperature : undefined),
+    tempMax: raw.tempMax ?? undefined,
+    // v3.8.aru — the third Load write path. The reefer spec was threaded through
+    // withTenderController and the Order Builder draft in v3.8.art but not here,
+    // so a load created on this path dropped the setpoint and pre-cool entirely.
+    tempSetpoint: raw.tempSetpoint ?? undefined,
+    preCoolTo: raw.preCoolTo ?? undefined,
+    reeferContinuous: raw.reeferContinuous ?? undefined,
 
     // Dimensions
     dimensionsLength: dims.length || raw.length || undefined,
@@ -677,7 +688,7 @@ export async function updateLoad(req: AuthRequest, res: Response) {
     pickupDate, deliveryDate, pickupTimeStart, pickupTimeEnd,
     deliveryTimeStart, deliveryTimeEnd,
     hazmat, hazmatClass, hazmatUnNumber,
-    temperatureControlled, tempMin, tempMax,
+    temperatureControlled, tempMin, tempMax, tempSetpoint, preCoolTo, reeferContinuous,
     specialInstructions, notes, contactName, contactPhone,
     customerId, carrierId,
     // TMW-level fields
@@ -749,6 +760,12 @@ export async function updateLoad(req: AuthRequest, res: Response) {
   if (temperatureControlled !== undefined) data.temperatureControlled = temperatureControlled;
   if (tempMin !== undefined) data.tempMin = tempMin;
   if (tempMax !== undefined) data.tempMax = tempMax;
+  // v3.8.aru — reefer spec on the update path. `!== undefined` rather than a
+  // truthiness check so a 0°F setpoint and a deliberate reeferContinuous:false
+  // both persist instead of being read as "not supplied".
+  if (tempSetpoint !== undefined) data.tempSetpoint = tempSetpoint;
+  if (preCoolTo !== undefined) data.preCoolTo = preCoolTo;
+  if (reeferContinuous !== undefined) data.reeferContinuous = reeferContinuous;
   if (specialInstructions !== undefined) data.specialInstructions = specialInstructions;
   if (notes !== undefined) data.notes = notes;
   if (contactName !== undefined) data.contactName = contactName;
