@@ -1389,7 +1389,19 @@ export function drawCarrierRequirements(
   if (reqs.generalLiabilityMin !== undefined)
     items.push(`General Liability: $${reqs.generalLiabilityMin.toLocaleString('en-US')} min`);
   if (reqs.trackingAcceptance)
-    items.push('Tracking via Marco Polo (SMS) or Quo phone tracking accepted before dispatch.');
+    // v3.8.arw — this previously read "Tracking via Marco Polo (SMS) or Quo
+    // phone tracking accepted before dispatch." Both named tools were false on
+    // a document a carrier signs. references/voice.md assigns Marco Polo to the
+    // AI chatbot, and marcoPoloService.ts contains ZERO references to SMS.
+    // "Quo" appeared exactly once in the entire backend — in this string — and
+    // nowhere in the skill's naming table or in any of the 16 reference rate
+    // confirmations. It named a third-party tracking integration that does not
+    // exist. voice.md:29 bans fabricated metrics because "carriers and shippers
+    // can smell it"; the same test applies to capabilities, and a carrier who
+    // asks for the Quo integration finds out we do not have one.
+    // The carrier portal is the actual mechanism: /carrier/dashboard/my-loads
+    // carries status advancement and POD upload.
+    items.push('Status updates through the SRL carrier portal, or by call or text to (269) 220-6760.');
 
   const endorsements: string[] = [];
   if (reqs.twicRequired) endorsements.push('TWIC');
