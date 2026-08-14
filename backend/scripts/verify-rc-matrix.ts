@@ -67,7 +67,14 @@ function makeLoad(o: { rows?: number; longSi?: boolean; reefer?: boolean; longNa
           if (!isFooter) maxY = Math.max(maxY, Math.round((792 - it.transform[5]) * 2) / 2);
         }
         dead.push(Math.round(755 - maxY));
-        if (maxY > 768) problems.push("p" + pn + " below footer rule (" + maxY + ")");
+        // v3.8.arm — the footer rule is drawn at y≈755 and the footer text
+        // baseline lands at ≈755.5. maxY here is the BASELINE of the last body
+        // line, so its descenders (and any wrap the extractor reports as a
+        // separate item) sit below it. The old threshold of 768 let a body line
+        // at 753.5 score as "dead=2 :: ok" while it was in fact rendering
+        // through the footer — caught by coordinate audit, not by this matrix.
+        // Require ~6pt of real clearance above the rule.
+        if (maxY > 749) problems.push("p" + pn + " collides with footer (last baseline " + maxY + ", rule at 755)");
       }
       if (!sawBca) problems.push("BCA incorporation MISSING");
       if (!sawInvoicing) problems.push("invoicing block MISSING");

@@ -1650,12 +1650,27 @@ export function generateEnhancedRateConfirmation(load: EnhancedRCLoadData, formD
     y = drawLaneEconomics(doc, miles, transitHours, totalCarrierPay, y - 4, "hours");
   }
 
-  // Equipment spec — type + temp-setpoint if reefer
+  // Equipment spec — type + temp-setpoint if reefer.
+  // v3.8.arm — the setpoint now falls back to the LOAD's own temperature
+  // fields. Pre-arm this read only fd.tempRequirements, which is populated
+  // solely when an AE types it into the RC form — so a reefer load built in
+  // Order Builder (which captures temperatureControlled + tempMin + tempMax as
+  // REQUIRED fields) rendered a rate confirmation with no temperature on it at
+  // all. A retrieved-corpus check makes the cost concrete: all 4 real rate
+  // confirmations (Scotlynn, TQL x2, Leonard's) carry a setpoint on the face.
   const tempRaw = fd.tempRequirements ? String(fd.tempRequirements) : "";
   const tempMatch = tempRaw.match(/-?\d+(\.\d+)?/);
+  const loadTempMin = (load as any).tempMin;
+  const loadTempMax = (load as any).tempMax;
+  const tempSetpointResolved = tempMatch
+    ? parseFloat(tempMatch[0])
+    : (typeof loadTempMin === "number" ? loadTempMin : undefined);
+  const isTempControlled = Boolean(
+    (load as any).temperatureControlled || tempRaw || typeof loadTempMin === "number",
+  );
   const equipSpec: EquipmentSpec = {
     type: equipment,
-    tempSetpointF: tempMatch ? parseFloat(tempMatch[0]) : undefined,
+    tempSetpointF: tempSetpointResolved,
   };
   y = drawEquipmentSpec(doc, equipSpec, y);
 
@@ -1838,6 +1853,41 @@ export function generateEnhancedRateConfirmation(load: EnhancedRCLoadData, formD
   };
   y = drawRateConTerms(doc, opTerms, y - 4);
 
+  // ── v3.8.arm — DOCK & DISPATCH ──────────────────────────────────────────
+  // Sourced from a corpus of REAL rate confirmations retrieved this sprint
+  // (Scotlynn and TQL court exhibits via CourtListener, TQL modern, Leonard's
+  // Express live TMS output). Frequencies below are over those 4 documents.
+  // Every line here is an OPERATING INSTRUCTION for the driver or dispatcher,
+  // never a covenant — covenants stay in the BCA per the counsel-confirmed
+  // architecture (Dirk Beckwith, Foster Swift). Placed on page 1 below the
+  // operational terms grid: this is the last thing the driver reads before
+  // rolling, and page 1 carried ~85pt of dead space pre-arm.
+  doc.font(FONT_BODY_BOLD, 7).fillColor(TOKENS.goldDark);
+  doc.text("DOCK & DISPATCH", MARGIN, y - 6, { characterSpacing: 7 * 0.08, lineBreak: false });
+  y += 6;
+
+  const dockLines: string[] = [
+    // Driver / truck / trailer capture — driver 4 of 4, truck+trailer 3 of 4.
+    // SRL captured the carrier as a legal entity and nothing about the physical
+    // unit, so dispatch could not tell a shipper gate who was arriving and
+    // tracking had no driver cell to start from.
+    "Before pickup — Driver ____________  Cell ____________  Truck # ________  Trailer # ________",
+    // Identity at the dock — 0 of 18 retrieved documents carry this, yet every
+    // fraud source in the corpus names check-in identity as the highest-signal
+    // tell. NOT a restatement of the BCA re-brokering covenant: that binds the
+    // carrier; this tells an honest driver what to do when someone ELSE tries it.
+    "Check in at both stops as Silk Route Logistics, load " + refNum + ". The BOL must name SRL as broker. If it names another company or MC number, do not load — call (269) 220-6760.",
+    // Seals — 4 of 4 real rate confirmations address seals; SRL printed nothing.
+    "Seals: record the number on the BOL at pickup; the receiver removes it, not the driver. Broken or missing seal at delivery: call before the doors open.",
+    // Check calls — 2 of 4 state an explicit clock time. SRL runs check calls
+    // (CheckCall model; SRL-handled check calls are a published §4 floor
+    // benefit) but never told the driver when they were due.
+    "Check calls: by 8:00 AM Eastern daily in transit and on arrival at each stop. Running late: call before the appointment.",
+  ];
+
+  doc.font(FONT_BODY, 7.5).fillColor(TOKENS.fg2);
+  doc.text(dockLines.join("\n"), MARGIN, y, { width: CONTENT_W, lineGap: 0.5, paragraphGap: 1.5 });
+
   // Page 1 footer + page break
   drawFooter(doc, { pageNum: 1, totalPages: 2, docId });
   doc.addPage();
@@ -1944,8 +1994,38 @@ export function generateEnhancedRateConfirmation(load: EnhancedRCLoadData, formD
     : governingClauses.join("\n");
 
   doc.font(FONT_BODY, 7.5).fillColor(TOKENS.fg2);
-  doc.text(governingBody, MARGIN, y, { width: CONTENT_W, lineGap: 1, paragraphGap: 2 });
-  y = doc.y + 14;
+  // v3.8.arm — page-2 blocks run tighter (lineGap 1→0.5, gap 14→10). The
+  // maximal fixture (long special instructions + per-load custom terms +
+  // reefer temperature block, all at once) overflowed the footer rule by ~18pt
+  // once DOCK & DISPATCH and TEMPERATURE CONTROL landed. A terms page tolerates
+  // bottom whitespace in the common case far better than it tolerates a body
+  // line rendering through the footer, so the compression is unconditional
+  // rather than an adaptive shave.
+  doc.text(governingBody, MARGIN, y, { width: CONTENT_W, lineGap: 0.5, paragraphGap: 1.5 });
+  y = doc.y + 10;
+
+  // ── v3.8.arm — TEMPERATURE CONTROL (conditional) ────────────────────────
+  // Renders only on temp-controlled loads, same conditional pattern as the
+  // BOL's hazmat contact line. Setpoint + run mode appear on 4 of 4 real rate
+  // confirmations in the retrieved corpus; SRL had no temperature semantics on
+  // the document at all. The BOL-mismatch instruction is the operationally
+  // important half: it stops a driver signing a bill that contradicts the
+  // tender, which is where cold-chain claims are won or lost.
+  if (isTempControlled) {
+    const tempRangeStr =
+      typeof loadTempMin === "number" && typeof loadTempMax === "number"
+        ? String(loadTempMin) + "°F to " + String(loadTempMax) + "°F"
+        : tempRaw || (typeof tempSetpointResolved === "number" ? String(tempSetpointResolved) + "°F" : "per bill of lading");
+    doc.font(FONT_BODY_BOLD, 7).fillColor(TOKENS.goldDark);
+    doc.text("TEMPERATURE CONTROL", MARGIN, y, { characterSpacing: 7 * 0.08, lineBreak: false });
+    y += 12;
+    doc.font(FONT_BODY, 7.5).fillColor(TOKENS.fg2);
+    doc.text(
+      "Set point " + tempRangeStr + ". Run continuous, not cycle-sentry. Pre-cool before loading. If the BOL shows a different temperature than this Rate Confirmation, do not sign it — call (269) 220-6760 before loading. Download the reefer at delivery and send it with your paperwork.",
+      MARGIN, y, { width: CONTENT_W, lineGap: 0.5 },
+    );
+    y = doc.y + 10;
+  }
 
   // ── v3.8.arl — INVOICING ────────────────────────────────────────────────
   // Present on 5 of 5 reference rate confirmations (Greatwide, MoLo, Steam,
@@ -1975,8 +2055,8 @@ export function generateEnhancedRateConfirmation(load: EnhancedRCLoadData, formD
   ].join("\n");
 
   doc.font(FONT_BODY, 7.5).fillColor(TOKENS.fg2);
-  doc.text(invoiceLines, MARGIN, y, { width: CONTENT_W, lineGap: 1, paragraphGap: 2 });
-  y = doc.y + 14;
+  doc.text(invoiceLines, MARGIN, y, { width: CONTENT_W, lineGap: 0.5, paragraphGap: 1.5 });
+  y = doc.y + 10;
 
   // ── v3.8.arl — anti-fraud domain anchor ─────────────────────────────────
   // The verify URL (Sprint 51, Item 129) is genuinely ahead of the field —

@@ -14115,7 +14115,15 @@
 // because deleting a load never removed it from operations. Same gap let deleted
 // loads inflate the weekly + monthly financial reports, raise risk alerts, and
 // skew carrier match scoring. All six fixed + a source-contract test suite.
-export const SRL_VERSION = "3.8.arl";
+// v3.8.arm — Rate Confirmation: DOCK & DISPATCH block (driver/truck/trailer
+// capture, dock-identity anti-fraud instruction, seal handling, check-call
+// clock) on page 1; conditional TEMPERATURE CONTROL block for reefer loads,
+// now sourced from Load.tempMin/tempMax rather than only the free-text field.
+// Gaps identified by cross-comparison against 4 REAL rate confirmations
+// retrieved this sprint (Scotlynn + TQL court exhibits via CourtListener, TQL
+// modern, Leonard's Express) — temperature setpoint, driver/equipment capture,
+// and seal handling each appeared in 4 of 4 and in 0 of SRL's.
+export const SRL_VERSION = "3.8.arm";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
