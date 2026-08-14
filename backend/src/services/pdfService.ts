@@ -493,7 +493,7 @@ export async function generateBOLFromLoad(
   // Gold rule below header band
   let y = headerBandH + 2;
   doc.lineWidth(1.75).strokeColor(GOLD).moveTo(M, y).lineTo(R, y).stroke();
-  y += 14;
+  y += 10; // v3.8.arj — was 14; top-zone compression per measured spacing audit
 
   // Title row
   doc.font("Playfair-Bold").fontSize(24).fillColor(NAVY)
@@ -502,7 +502,7 @@ export async function generateBOLFromLoad(
     .text(`STRAIGHT ${MIDDOT} NON-NEGOTIABLE`, R - 220, y + 10, {
       width: 220, align: "right", characterSpacing: 1.4, lineBreak: false,
     });
-  y += 38;
+  y += 26; // v3.8.arj — was 38; largest single air pocket in the measured map
 
   // Meta row — 6 cells
   const metaTop = y;
@@ -539,7 +539,12 @@ export async function generateBOLFromLoad(
     || null;
 
   const metaCells: MetaCell[] = [
-    { label: "DATE ISSUED", raw: pickupDateFmt, placeholder: null },
+    // v3.8.arj — DATE ISSUED now shows the GENERATION date (per Varstar/Echo
+    // convention), not the pickup date it previously mislabeled. Also fixes two
+    // rendering warts: the weekday prefix made the value wrap (orphaning "2026"
+    // onto its own line), and the UTC pickup date rendered a day early in local
+    // time. Pickup/delivery dates still appear in the parties Window lines.
+    { label: "DATE ISSUED", raw: new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }), placeholder: null },
     { label: "LOAD REF", raw: load.referenceNumber, placeholder: null },
     { label: "EQUIPMENT", raw: load.equipmentType, placeholder: "Equipment" },
     { label: "PRO #", raw: load.proNumber, placeholder: null },
@@ -547,7 +552,7 @@ export async function generateBOLFromLoad(
     // v3.8.ari — the reference BOLs (Echo, Flock, Varstar, SunteckTTS,
     // WorldWide, Coyote) all name the third-party bill-to explicitly rather
     // than just ticking "third party". SRL is that party on every load.
-    { label: "FREIGHT CHARGES", raw: "Third Party · bill SRL", placeholder: null },
+    { label: "FREIGHT CHARGES", raw: "3rd Party · SRL" /* v3.8.arj — previous value wrapped, orphaning "SRL" onto its own line */, placeholder: null },
   ];
 
   doc.lineWidth(1).strokeColor(BORDER_1).moveTo(M, metaTop).lineTo(R, metaTop).stroke();
@@ -574,12 +579,12 @@ export async function generateBOLFromLoad(
         .text(EM, mx + 6, metaTop + 18, { width: cw6 - 10, lineBreak: false });
     }
   });
-  y = metaTop + metaH + 18;
+  y = metaTop + metaH + 14; // v3.8.arj — was +18
 
   // PARTIES section header + rounded cream container
   doc.font("DMSans-SemiBold").fontSize(8).fillColor(GOLD_DARK)
     .text("PARTIES", M, y, { characterSpacing: 1.2, lineBreak: false });
-  y += 13;
+  y += 11; // v3.8.arj — was 13
 
   const partiesPad = 12;
   const partiesTop = y;
@@ -683,12 +688,12 @@ export async function generateBOLFromLoad(
 
   renderParty("shipper", shipperX, partiesTop + partiesPad + 14);
   renderParty("consignee", consigneeX, partiesTop + partiesPad + 14);
-  y = partiesTop + partiesH + 16;
+  y = partiesTop + partiesH + 12; // v3.8.arj — was +16
 
   // Shipment details table — rounded container, NAVY header, dashed body separators, CREAM_2 totals
   doc.font("DMSans-SemiBold").fontSize(8).fillColor(GOLD_DARK)
     .text("SHIPMENT DETAILS", M, y, { characterSpacing: 1.2, lineBreak: false });
-  y += 13;
+  y += 11; // v3.8.arj — was 13
 
   const tblTop = y;
   const colDefs: Array<{ label: string; w: number }> = [
@@ -865,7 +870,17 @@ export async function generateBOLFromLoad(
       );
   }
 
-  y = tblTop + tblH + 14;
+  y = tblTop + tblH + 12; // v3.8.arj — was +14
+
+  // v3.8.arj — hazmat shipments require a 24-hour emergency response phone on
+  // the shipping paper (49 CFR 172.604). Conditional: renders only when a line
+  // is flagged hazmat, so the everyday dry-van BOL pays no space for it.
+  if ((load.lineItems ?? []).some((li: any) => li.hazmat)) {
+    doc.font("DMSans-SemiBold").fontSize(7).fillColor(NAVY)
+      .text("24-HR EMERGENCY CONTACT (49 CFR 172.604):", M, y, { lineBreak: false });
+    doc.lineWidth(0.75).strokeColor(NAVY).moveTo(M + 200, y + 8).lineTo(M + 340, y + 8).stroke();
+    y += 16;
+  }
 
   // Special Instructions — single row cream container
   const siH = 28;
@@ -978,9 +993,13 @@ export async function generateBOLFromLoad(
   // Carmack citation below row
   doc.font("DMSans-Italic").fontSize(7).fillColor(FG_3)
     .text("Per 49 U.S.C. § 14706(c)", M, y, { lineBreak: false });
-  y += 14;
+  y += 10; // v3.8.arj — was 14
 
   // Signature blocks — 3 columns
+  // v3.8.arj — signature row pitch. 28pt keeps 9pt of pen room below each
+  // underline (drawSigField rules at by+19) while freeing 12pt on the tallest
+  // (carrier) column per the spacing audit.
+  const SIG_ROW = 28;
   const sigColGap = 12;
   const sigColW = (CW - sigColGap * 2) / 3;
   const sigTop = y;
@@ -1015,13 +1034,13 @@ export async function generateBOLFromLoad(
       cert: "Certifies contents are properly classified, packaged, marked, and labeled per DOT regulations (49 CFR 172).",
       render: (bx, cy) => {
         let by = cy;
-        drawSigField(bx, by, sigColW, "SIGNATURE", ""); by += 30;
-        drawSigField(bx, by, sigColW, "PRINT NAME", ""); by += 30;
+        drawSigField(bx, by, sigColW, "SIGNATURE", ""); by += SIG_ROW;
+        drawSigField(bx, by, sigColW, "PRINT NAME", ""); by += SIG_ROW;
         const halfW = (sigColW - 8) / 2;
         const ptValue = load.piecesTendered != null ? String(load.piecesTendered) : "";
         drawSigField(bx, by, halfW, "PIECES TENDERED", ptValue);
         drawSigField(bx + halfW + 8, by, halfW, "DATE", "");
-        by += 30;
+        by += SIG_ROW;
 
         // v3.8.ari — TRAILER LOADED / FREIGHT COUNTED attestation.
         // Verified present on every broker BOL in the reference set (Echo,
@@ -1052,31 +1071,31 @@ export async function generateBOLFromLoad(
     },
     {
       title: "CARRIER · DRIVER",
-      cert: "Acknowledges receipt of shipment in apparent good order, except as noted.",
+      cert: "Receipt in apparent good order except as noted. Required placards received; emergency response info available (49 CFR 172).",
       render: (bx, cy) => {
         let by = cy;
         // carrierLegalName is pre-derived by pdfController.downloadBOLFromLoad
         // from carrier.carrierProfile.companyName || carrier.company.
         const carrierLegalName = safe(load.carrierLegalName ?? load.carrier?.company).trim();
-        drawSigField(bx, by, sigColW, "CARRIER LEGAL NAME", carrierLegalName); by += 30;
+        drawSigField(bx, by, sigColW, "CARRIER LEGAL NAME", carrierLegalName); by += SIG_ROW;
         const halfW = (sigColW - 8) / 2;
         const mcNo = safe(load.carrier?.carrierProfile?.mcNumber).trim();
         const dotNo = safe(load.carrier?.carrierProfile?.dotNumber).trim();
         drawSigField(bx, by, halfW, "MC #", mcNo);
         drawSigField(bx + halfW + 8, by, halfW, "DOT #", dotNo);
-        by += 30;
+        by += SIG_ROW;
         const driverNm = safe(load.driverName).trim();
-        drawSigField(bx, by, sigColW, "DRIVER NAME", driverNm); by += 30;
-        drawSigField(bx, by, sigColW, "SIGNATURE", ""); by += 30;
+        drawSigField(bx, by, sigColW, "DRIVER NAME", driverNm); by += SIG_ROW;
+        drawSigField(bx, by, sigColW, "SIGNATURE", ""); by += SIG_ROW;
         const truckNo = safe(load.truckNumber).trim();
         const trailerNo = safe(load.trailerNumber).trim();
         drawSigField(bx, by, halfW, "TRUCK #", truckNo);
         drawSigField(bx + halfW + 8, by, halfW, "TRAILER #", trailerNo);
-        by += 30;
+        by += SIG_ROW;
         const sealNo = safe(load.sealNumber).trim();
         drawSigField(bx, by, halfW, "SEAL #", sealNo);
         drawSigField(bx + halfW + 8, by, halfW, "DATE", "");
-        by += 30;
+        by += SIG_ROW;
         return by;
       },
     },
@@ -1085,13 +1104,13 @@ export async function generateBOLFromLoad(
       cert: "Acknowledges delivery — any exceptions noted above.",
       render: (bx, cy) => {
         let by = cy;
-        drawSigField(bx, by, sigColW, "SIGNATURE", ""); by += 30;
-        drawSigField(bx, by, sigColW, "PRINT NAME", ""); by += 30;
+        drawSigField(bx, by, sigColW, "SIGNATURE", ""); by += SIG_ROW;
+        drawSigField(bx, by, sigColW, "PRINT NAME", ""); by += SIG_ROW;
         const halfW = (sigColW - 8) / 2;
         const prValue = load.piecesReceived != null ? String(load.piecesReceived) : "";
         drawSigField(bx, by, halfW, "PIECES RECEIVED", prValue);
         drawSigField(bx + halfW + 8, by, halfW, "DATE", "");
-        by += 30;
+        by += SIG_ROW;
 
         // v3.8.ari — Section 7 (non-delivery without payment of freight).
         // Present on Echo, Varstar, SunteckTTS, XPO, WorldWide and Coyote in
@@ -1108,6 +1127,7 @@ export async function generateBOLFromLoad(
     },
   ];
 
+  let maxSigBottom = sigTop; // v3.8.arj — feeds the dynamic terms strip below
   sigBlocks.forEach((blk, i) => {
     const bx = M + i * (sigColW + sigColGap);
     let by = sigTop;
@@ -1121,7 +1141,7 @@ export async function generateBOLFromLoad(
     doc.font("DMSans-Italic").fontSize(7.75).fillColor(FG_2)
       .text(blk.cert, bx, by, { width: sigColW, lineGap: 1.5 });
     by = doc.y + 8;
-    blk.render(bx, by);
+    maxSigBottom = Math.max(maxSigBottom, blk.render(bx, by));
   });
 
   // Footer page 1
@@ -1151,8 +1171,14 @@ export async function generateBOLFromLoad(
   // two full paragraphs (~28pt) and would have run through both the signature
   // block above and the footer rule below. This is one paragraph at 5.75pt that
   // wraps to 2 lines (~14pt) starting at 750 — verified to end above 770.
-  const termsY = 750;
-  doc.font("DMSans-Regular").fontSize(5.75).fillColor(FG_3)
+  // v3.8.arj — DYNAMIC: anchored to the measured tallest signature column
+  // instead of a fixed constant. The v3.8.ari checkbox block grew the shipper
+  // column past the old fixed 750 and collided with this strip because column
+  // bottoms were computed and then DISCARDED. Now any future field addition
+  // moves the strip down with it (clamped so it can never cross the footer
+  // rule at 770; the verify script asserts the whole page still fits).
+  const termsY = Math.min(maxSigBottom + 10, 751);
+  doc.font("DMSans-Regular").fontSize(6).fillColor(NAVY) // v3.8.arj — navy + 6pt: FG_3 gray at 5.75pt was the weakest element on a B&W print
     .text(
       "Non-negotiable straight bill of lading; goods in apparent good order except as noted. Carrier cargo liability per Carmack, 49 U.S.C. § 14706 " +
       "(released value § 14706(c)); claims within nine (9) months. SRL is a licensed property broker, not a motor carrier; carriage is subject to the " +
