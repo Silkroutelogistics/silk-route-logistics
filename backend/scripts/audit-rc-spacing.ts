@@ -6,7 +6,7 @@ const load: any = {
   originContactName:"Monika Pape", destCompany:"Mainfreight North Lake",
   destAddress:"17801 Interstate 35 West Service Road", destCity:"Northlake", destState:"TX", destZip:"76262",
   pickupDate:new Date("2026-08-13"), deliveryDate:new Date("2026-08-17"),
-  equipmentType:"Dry Van 53'", commodity:"Liposomal Suppliments", weight:16500, pieces:26, miles:1350,
+  equipmentType:"Dry Van 53'", commodity:"Liposomal Suppliments", weight:16500, pieces:26, distance:1350,
   rate:4100, customerRate:4850, specialInstructions:"Driver Assist is Needed", poNumbers:["PO1770"],
   carrier:{ firstName:"Test", lastName:"Carrier", company:"ZO Enterprises LLC", phone:"555-555-5555",
             carrierProfile:{ mcNumber:"MC-596655", dotNumber:"1911857", tier:"SILVER", contactEmail:"d@x.com" } },

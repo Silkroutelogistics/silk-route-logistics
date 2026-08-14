@@ -1487,6 +1487,11 @@ function checkPageBreak(doc: PDFDoc, y: number, needed: number): number {
  */
 export function generateEnhancedRateConfirmation(load: EnhancedRCLoadData, formData: Record<string, any>): PDFDoc {
   const fd = formData || {};
+  // v3.8.arq — the footer RULE is drawn at PAGE_H - MARGIN - 12 - 4, which is
+  // 792 - 36 - 12 - 4 = 740. Body content must finish above it. The previous
+  // 749 ceiling sat NINE POINTS BELOW the rule it was supposed to protect,
+  // which is how three lines shipped rendering through the footer.
+  const RC_CONTENT_FLOOR = 738;
   // v3.8.aro — bufferPages lets the footer be stamped AFTER all content is laid
   // out, so "Page N of M" reports the real total instead of a hardcoded 2. Until
   // now the page count was a constant and every content addition became a
@@ -1873,9 +1878,10 @@ export function generateEnhancedRateConfirmation(load: EnhancedRCLoadData, formD
   // architecture (Dirk Beckwith, Foster Swift). Placed on page 1 below the
   // operational terms grid: this is the last thing the driver reads before
   // rolling, and page 1 carried ~85pt of dead space pre-arm.
-  doc.font(FONT_BODY_BOLD, 7).fillColor(TOKENS.goldDark);
-  doc.text("DOCK & DISPATCH", MARGIN, y - 6, { characterSpacing: 7 * 0.08, lineBreak: false });
-  y += 6;
+  // v3.8.arq — the label is drawn inside drawDockBlock below, so it travels with
+  // the body when the block defers to page 2. Drawing it here as well left an
+  // orphan heading stranded on page 1 above nothing.
+  y -= 6;
 
   const dockLines: string[] = [
     // Driver / truck / trailer capture — driver 4 of 4, truck+trailer 3 of 4.
@@ -1896,8 +1902,30 @@ export function generateEnhancedRateConfirmation(load: EnhancedRCLoadData, formD
     "Check calls: by 8:00 AM Eastern daily in transit and on arrival at each stop. Running late: call before the appointment.",
   ];
 
-  doc.font(FONT_BODY, 7.5).fillColor(TOKENS.fg2);
-  doc.text(dockLines.join("\n"), MARGIN, y, { width: CONTENT_W, lineGap: 0.5, paragraphGap: 1.5 });
+  // v3.8.arq — MEASURE before drawing, and defer to page 2 when page 1 cannot
+  // hold it. v3.8.arm moved this block onto page 1 on the strength of "page 1
+  // has 85pt of dead space" — a number produced by a gate fixture that set
+  // `miles` while the generator reads `load.distance`, so drawLaneEconomics
+  // (~54pt) never rendered under test. On a real load page 1 has no slack, and
+  // these lines rendered at y=783 on a 792pt page: below the footer and inside
+  // most printers' non-printable margin. The three lines falling off the page
+  // were the seal protocol, the check-call schedule, and the phone number a
+  // driver is told to call when a document looks forged.
+  const drawDockBlock = (): void => {
+    doc.font(FONT_BODY_BOLD, 7).fillColor(TOKENS.goldDark);
+    doc.text("DOCK & DISPATCH", MARGIN, y, { characterSpacing: 7 * 0.08, lineBreak: false });
+    y += 12;
+    doc.font(FONT_BODY, 7.5).fillColor(TOKENS.fg2);
+    doc.text(dockLines.join("\n"), MARGIN, y, { width: CONTENT_W, lineGap: 0.5, paragraphGap: 1.5 });
+    y = doc.y;
+  };
+
+  doc.font(FONT_BODY, 7.5);
+  const dockH = 12 + doc.heightOfString(dockLines.join("\n"), {
+    width: CONTENT_W, lineGap: 0.5, paragraphGap: 1.5,
+  });
+  const dockOnPage1 = y + dockH <= RC_CONTENT_FLOOR;
+  if (dockOnPage1) drawDockBlock();
 
   // v3.8.aro — footers are stamped at the end over the buffered page range, so
   // no drawFooter call belongs here any more.
@@ -1905,6 +1933,14 @@ export function generateEnhancedRateConfirmation(load: EnhancedRCLoadData, formD
 
   // ─── PAGE 2 ────────────────────────────────────────────────────
   y = drawContinuationHeader(doc, "Rate Confirmation", docId);
+
+  // v3.8.arq — deferred from page 1 when the lane band left no room. Dock and
+  // dispatch instructions lead page 2 rather than being buried after the terms:
+  // they are the last thing a driver needs before rolling.
+  if (!dockOnPage1) {
+    drawDockBlock();
+    y += 14;
+  }
 
   // v3.8.aro — page-break helper. Any page-2+ block that might not fit calls
   // this first. PDFKit's own auto-pagination would add a bare page with no
@@ -1914,7 +1950,7 @@ export function generateEnhancedRateConfirmation(load: EnhancedRCLoadData, formD
   // it — which is exactly how a line once rendered THROUGH the footer while
   // the matrix still scored it clean.
   const rcEnsureRoom = (needed: number): void => {
-    if (y + needed <= 749) return;
+    if (y + needed <= RC_CONTENT_FLOOR) return;
     doc.addPage();
     y = drawContinuationHeader(doc, "Rate Confirmation", docId);
   };

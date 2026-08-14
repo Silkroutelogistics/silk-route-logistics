@@ -26,6 +26,49 @@ have inflated every frequency below.
 | 3 | TQL | Modern published specimen | Rate confirmation |
 | 4 | Leonard's Express | Live TMS output | Rate confirmation |
 
+---
+
+## THE CORPUS ON DISK (this is what an audit may actually cite)
+
+Seven live broker rate confirmations, all supplied by Wasi and transcribed here.
+**Nothing outside this list may be cited as a reference document.**
+
+| File | Broker | Pages | Equipment | Dated |
+|---|---|---|---|---|
+| `allen-lund-8426497.md` | Allen Lund Company | 4 | Dry van, food grade | 2026 |
+| `schneider-4010206867.md` | Schneider National | 5 | Van, power only | 2026 |
+| `scotlynn-1495595.md` | Scotlynn USA | 2 | **Reefer** | 2026 |
+| `greatwide-G3730946.md` | Greatwide Dallas Mavis | **1** | — | 2023, **signed** |
+| `molo-2000957370.md` | MoLo Solutions (ArcBest) | 4 + BOL | Dry van | 2023 |
+| `steam-2030381.md` | Steam Logistics | 2 | Dry van | **2025 — newest** |
+| `transervice-TIS20078.md` | Transervice Integrated Solutions | 2 | Dry van | 2022 |
+
+Plus `_CURRENT_SRL_RC_RENDERED.txt` — SRL's own output, text-extracted with Y
+coordinates, for a reefer case and a dry van case.
+
+Page counts run 1 to 5. **Length is a choice, not a requirement**: Greatwide
+carries rate, full terms, billing instructions and an executed signature block on
+a single page, and Steam — the most recent document here — needs two.
+
+### The forks the corpus does NOT settle
+
+Real brokers disagree, so these are SRL policy choices rather than norms:
+
+- **Precedence.** SRL and MoLo make the master agreement control. **Transervice
+  makes the rate confirmation prevail** over its Carrier Brokerage Contract.
+  Mirror images, both defensible.
+- **Acceptance.** SRL and Schneider use acceptance by conduct. **MoLo uses
+  acceptance by silence** — terms bind unless the carrier objects within 24 hours
+  of receipt or before work begins, whichever is earlier.
+- **Paperwork deadline.** MoLo 24h for accessorials · Scotlynn end of delivery
+  day · Leonard's 24h for detention eligibility · TIS 30 days · Schneider 90 days
+  · Greatwide 180 days · Allen Lund none. There is no standard.
+- **Pay-when-paid.** Greatwide states it three ways, including on detention and
+  TONU. Nobody else in the corpus does. SRL does not, deliberately.
+- **Reefer temperature authority.** SRL asserts the setpoint on the rate
+  confirmation and tells the driver not to sign a conflicting BOL. **TIS inverts
+  it** — the BOL governs, and a conflict triggers written shipper confirmation.
+
 Frequencies stated in `pdfService.ts` comments are over **these 4 documents**,
 not over all 19. Where a comment says "0 of 18", that is the full artifact set
 and is used only to show that something is absent everywhere, never to claim a
@@ -34,6 +77,68 @@ majority practice.
 Wasi separately supplied 5 rate confirmations earlier in the same session; those
 informed the v3.8.arl pass. This corpus was retrieved independently at his
 instruction ("not just rely on the copy I shared research on your own").
+
+---
+
+## Second retrieval pass (2026-08-14)
+
+Run because the first pass returned only 4 genuine documents out of 19 pulled.
+
+**Honest denominator: 28 artefacts were downloaded and read this pass. 14 were
+genuine rate confirmations. 9 are transcribed here** — the other 5 were
+same-broker duplicates of a document already transcribed (2 more C.H. Robinson,
+1 more Echo, 2 more Arrive), kept on disk but not written up.
+
+The 14 rejects break down as: 8 federal court complaints that *mention* a rate
+confirmation without attaching one, 4 scanned exhibits with no text layer
+(3 Scotlynn, 1 Landstar) that cannot be transcribed without OCR, 1 TQL carrier
+*setup packet* (payment-terms election and ACH authorisation — a contract-file
+document, not a per-load one), and 1 Hebrew-language youth-programme proposal
+misfiled in a carrier's document archive.
+
+Not counted above: roughly 140 URL probes that 404'd while enumerating
+directories. Those are misses, not artefacts, and inflating the denominator
+with them would be dishonest in the other direction.
+
+| Broker | Ref | File | Pages | Provenance |
+|---|---|---|---|---|
+| C.H. Robinson | 400126857 | `chrobinson-400126857.md` | 3 | claims-recovery host |
+| J.B. Hunt | 7H33283 | `jbhunt-7h33283.md` | 3 | claims-recovery host |
+| GlobalTranz | 24779211 | `globaltranz-24779211.md` | 1 | claims-recovery host |
+| NTG (Nolan) | 4374644 | `ntg-4374644.md` | 2 | claims-recovery host |
+| MoLo Solutions | 760821 | `molo-760821.md` | 3 | claims-recovery host |
+| RND Logistics | 5024 | `rnd-logistics-5024.md` | 1 | claims-recovery host |
+| Echo Global | 34405981 | `echo-34405981.md` | 2 | carrier's open doc archive |
+| Arrive Logistics | 535700 | `arrive-535700.md` | 2 | carrier's open doc archive |
+| TQL | 33614902 | `tql-33614902.md` | 5 | insurance submission attachment |
+
+Combined with the 7 Wasi-supplied documents in the table above, the corpus on
+disk is now **16 genuine rate confirmations across 15 distinct brokers**
+(MoLo appears twice — `molo-2000957370.md` supplied, `molo-760821.md` retrieved;
+they are different loads two years apart and both are live, not duplicates).
+
+**Any frequency stated in `pdfService.ts` comments must now name its denominator
+explicitly.** The "4 documents" and "0 of 18" denominators recorded above belong
+to the v3.8.arm pass and are superseded for anything re-derived after this one.
+Re-deriving a frequency over 16 documents and leaving a comment that says 4 is
+the same class of error this file was created to prevent.
+
+### What worked, for the next pass
+
+- **The CourtListener web UI 403s WebFetch, but the REST API answers curl.**
+  `api/rest/v4/search/?type=r&q=...` returns `filepath_local` + `is_available`.
+  Only `is_available: true` documents are fetchable, and in practice that is
+  almost always the *complaint*, not the exhibit. Exhibit attachments are the
+  thing you want and are usually paywalled. **CourtListener produced 0 of the 9.**
+- **Claims-recovery and insurance-submission hosts produced 7 of the 9.** Carriers
+  file their rate confirmations as claim support, and those directories are often
+  world-readable. This is by far the highest-yield vein.
+- **Carriers' own open document archives produced 2 of the 9**, and one such
+  archive held years of loads from many different brokers.
+- WebFetch cannot parse PDFs, but it saves the binary to
+  `tool-results/`; `pdf-parse` (already a repo dependency) extracts the text.
+  Roughly a third of court exhibits are scanned images with no text layer and
+  cannot be transcribed without OCR.
 
 ---
 

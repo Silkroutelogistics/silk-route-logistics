@@ -14,7 +14,7 @@ function makeLoad(o: { rows?: number; longSi?: boolean; reefer?: boolean; longNa
     pickupDate: new Date("2026-08-13"), deliveryDate: new Date("2026-08-17"),
     equipmentType: o.reefer ? "Reefer 53'" : "Dry Van 53'",
     temperatureControlled: !!o.reefer, tempMin: o.reefer ? 34 : null, tempMax: o.reefer ? 38 : null,
-    commodity: "Mixed", weight: 16500, pieces: 26, miles: 1350, rate: 4100, customerRate: 4850,
+    commodity: "Mixed", weight: 16500, pieces: 26, distance: 1350, rate: 4100, customerRate: 4850,
     specialInstructions: o.longSi
       ? "Driver Assist is Needed. Call ahead 2 hours before arrival. Dock 26 only; overnight parking not permitted; PPE required inside the facility; lumper receipt must accompany the POD; driver must reseal after each stop and record the seal number on the bill of lading."
       : "Driver Assist is Needed",
@@ -66,7 +66,7 @@ function makeLoad(o: { rows?: number; longSi?: boolean; reefer?: boolean; longNa
           const isFooter = s.includes("Page ") || s.startsWith("MC# 1794414 · DOT#") || s.startsWith("Where Trust Travels");
           if (!isFooter) maxY = Math.max(maxY, Math.round((792 - it.transform[5]) * 2) / 2);
         }
-        dead.push(Math.round(755 - maxY));
+        dead.push(Math.round(738 - maxY));
         // v3.8.arm — the footer rule is drawn at y≈755 and the footer text
         // baseline lands at ≈755.5. maxY here is the BASELINE of the last body
         // line, so its descenders (and any wrap the extractor reports as a
@@ -74,7 +74,7 @@ function makeLoad(o: { rows?: number; longSi?: boolean; reefer?: boolean; longNa
         // at 753.5 score as "dead=2 :: ok" while it was in fact rendering
         // through the footer — caught by coordinate audit, not by this matrix.
         // Require ~6pt of real clearance above the rule.
-        if (maxY > 749) problems.push("p" + pn + " collides with footer (last baseline " + maxY + ", rule at 755)");
+        if (maxY > 738) problems.push("p" + pn + " collides with footer (last baseline " + maxY + ", rule at 740)");
       }
       if (!sawBca) problems.push("BCA incorporation MISSING");
       if (!sawInvoicing) problems.push("invoicing block MISSING");
