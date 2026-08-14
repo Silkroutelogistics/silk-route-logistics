@@ -1436,6 +1436,33 @@ interface EnhancedRCLoadData {
   pickupNumber?: string | null;
   poNumbers?: string[] | null;
   shipperPoNumber?: string | null;
+  // v3.8.arr — CLAUDE.md §3.9 compliance. These are the canonical physical
+  // pickup and delivery identities and they already exist on Load; the BOL in
+  // this same file has always read them. The Rate Confirmation never did, so it
+  // printed the BILLING CUSTOMER over the ORIGIN city — two different companies
+  // on one line — with no street address at all, and a literal "Consignee TBD"
+  // on a document headed BINDING. All 7 Wasi-supplied reference rate
+  // confirmations name the facility at each stop; 6 of 7 print a street.
+  // §3.9: "Customer (billing entity) address is NEVER used on shipping documents
+  // unless origin fields are empty."
+  originCompany?: string | null;
+  originAddress?: string | null;
+  originContactName?: string | null;
+  originContactPhone?: string | null;
+  shipperFacility?: string | null;
+  destCompany?: string | null;
+  destAddress?: string | null;
+  destContactName?: string | null;
+  destContactPhone?: string | null;
+  consigneeFacility?: string | null;
+  // v3.8.arr — appointment windows. Page 2 conditions BOTH detention and TONU
+  // on "your appointment window", and the document printed a bare date with no
+  // time. Conditioning payment on a window that is never disclosed is
+  // unenforceable against the carrier and indefensible to them.
+  pickupTimeStart?: string | null;
+  pickupTimeEnd?: string | null;
+  deliveryTimeStart?: string | null;
+  deliveryTimeEnd?: string | null;
 }
 
 function sectionTitle(doc: PDFDoc, title: string, y: number): number {
@@ -1591,27 +1618,60 @@ export function generateEnhancedRateConfirmation(load: EnhancedRCLoadData, formD
   // clearance from the meta-strip row above. Sprint 45-RC's `y - 4`
   // collided the parties label with the meta strip's DATE value row;
   // user-visible overlap on every RC PDF.
+  // v3.8.arr — §3.9 order: AE override, then the load's own physical origin,
+  // then the billing customer only as a last resort.
   const shipperAddrLines: string[] = [];
-  const shipperStreet = fd.shipperAddress || load.customer?.address;
+  const shipperStreet = fd.shipperAddress || load.originAddress || load.customer?.address;
   if (shipperStreet) shipperAddrLines.push(shipperStreet);
-  const shipperCSZ = (fd.shipperCity || load.customer?.city)
-    ? `${fd.shipperCity || load.customer?.city || ""}, ${fd.shipperState || load.customer?.state || ""} ${fd.shipperZip || load.customer?.zip || ""}`.replace(/\s+/g, " ").trim()
+  // v3.8.arr — the load's ORIGIN city is authoritative, not the customer's.
+  // This previously preferred load.customer?.city, so a load picking up in
+  // Colton for a customer headquartered elsewhere printed the customer's city
+  // beside the customer's name — a pickup address that exists nowhere on the
+  // trip. Only an explicit AE override outranks the origin.
+  const shipperCSZ = fd.shipperCity
+    ? `${fd.shipperCity}, ${fd.shipperState || ""} ${fd.shipperZip || ""}`.replace(/\s+/g, " ").trim()
     : `${load.originCity}, ${load.originState} ${load.originZip}`;
   shipperAddrLines.push(shipperCSZ);
 
   const consigneeAddrLines: string[] = [];
-  if (fd.consigneeAddress) consigneeAddrLines.push(fd.consigneeAddress);
+  // v3.8.arr — read the load destination, not just an AE override.
+  const consigneeStreet = fd.consigneeAddress || load.destAddress;
+  if (consigneeStreet) consigneeAddrLines.push(consigneeStreet);
   const consigneeCSZ = fd.consigneeCity
     ? `${fd.consigneeCity}, ${fd.consigneeState || ""} ${fd.consigneeZip || ""}`.replace(/\s+/g, " ").trim()
     : `${load.destCity}, ${load.destState} ${load.destZip}`;
   consigneeAddrLines.push(consigneeCSZ);
 
-  const shipperContactLine = (fd.shipperContact && fd.shipperPhone)
-    ? `${fd.shipperContact} · ${fd.shipperPhone}`
-    : (fd.shipperContact || fd.shipperPhone || (load.customer?.phone ? load.customer.phone : undefined));
-  const consigneeContactLine = (fd.consigneeContact && fd.consigneePhone)
-    ? `${fd.consigneeContact} · ${fd.consigneePhone}`
-    : (fd.consigneeContact || fd.consigneePhone || undefined);
+  // v3.8.arr — appointment windows. Page 2 conditions BOTH detention ("not
+  // payable if you arrive outside your appointment window") and TONU ("you must
+  // have been inside your appointment window") on a window the document was
+  // printing as a bare date with no times. The load carries the times already;
+  // only an AE-typed override was ever read. Conditioning payment on an
+  // undisclosed window is unenforceable against the carrier and indefensible
+  // to them. 7 of 7 reference rate confirmations print a time or an explicit
+  // hours range.
+  const timeRange = (a?: string | null, b?: string | null): string | undefined => {
+    const from = (a ?? "").trim();
+    const to = (b ?? "").trim();
+    if (from && to) return from === to ? from : `${from}-${to}`;
+    return from || to || undefined;
+  };
+  const pickupWindowStr = fd.pickupTimeWindow || timeRange(load.pickupTimeStart, load.pickupTimeEnd);
+  const deliveryWindowStr = fd.deliveryTimeWindow || timeRange(load.deliveryTimeStart, load.deliveryTimeEnd);
+
+  // v3.8.arr — the person at the DOCK, not the billing contact. The customer
+  // phone stays only as a last resort; a driver calling it reaches accounts
+  // payable, not the gate.
+  const shipContact = fd.shipperContact || load.originContactName;
+  const shipPhone = fd.shipperPhone || load.originContactPhone;
+  const shipperContactLine = (shipContact && shipPhone)
+    ? `${shipContact} · ${shipPhone}`
+    : (shipContact || shipPhone || load.customer?.phone || undefined);
+  const consContact = fd.consigneeContact || load.destContactName;
+  const consPhone = fd.consigneePhone || load.destContactPhone;
+  const consigneeContactLine = (consContact && consPhone)
+    ? `${consContact} · ${consPhone}`
+    : (consContact || consPhone || undefined);
 
   // Sprint 49 (Item 118) — appointment flag suffix on parties block windows.
   // Reads fd.appointmentRequired (RC modal future toggle, not yet wired) OR
@@ -1627,19 +1687,22 @@ export function generateEnhancedRateConfirmation(load: EnhancedRCLoadData, formD
   // Shipper retains 2-tier fallback (formData → load.customer → em-dash)
   // because customer is usually populated; em-dash there is rare.
   const shipperParty: Party = {
-    name: fd.shipperName || load.customer?.name || "—",
+    // v3.8.arr — §3.9: the facility at pickup, never the billing entity.
+    name: fd.shipperName || load.originCompany || load.shipperFacility || load.customer?.name || "—",
     addressLines: shipperAddrLines,
     contact: shipperContactLine,
     window: pickupStr !== "—"
-      ? `${pickupStr}${fd.pickupTimeWindow ? " · " + fd.pickupTimeWindow : ""}${apptFlag}`
+      ? `${pickupStr}${pickupWindowStr ? " · " + pickupWindowStr : ""}${apptFlag}`
       : undefined,
   };
   const consigneeParty: Party = {
-    name: fd.consigneeName || "Consignee TBD",
+    // v3.8.arr — §3.9: the facility at delivery. "Consignee TBD" was printed
+    // unconditionally because no load-level fallback existed at all.
+    name: fd.consigneeName || load.destCompany || load.consigneeFacility || "Consignee TBD",
     addressLines: consigneeAddrLines,
     contact: consigneeContactLine,
     window: deliveryStr !== "—"
-      ? `${deliveryStr}${fd.deliveryTimeWindow ? " · " + fd.deliveryTimeWindow : ""}${apptFlag}`
+      ? `${deliveryStr}${deliveryWindowStr ? " · " + deliveryWindowStr : ""}${apptFlag}`
       : undefined,
   };
   y = drawPartiesBlock(doc, shipperParty, consigneeParty, y + 12);

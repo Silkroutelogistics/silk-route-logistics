@@ -35,7 +35,7 @@ export async function downloadRateConfirmation(req: AuthRequest, res: Response) 
           select: { id: true, firstName: true, lastName: true, company: true, phone: true, carrierProfile: { select: { mcNumber: true, dotNumber: true, address: true, city: true, state: true, zip: true, contactPhone: true, contactEmail: true } } },
         },
         rateConfirmations: { where: { status: "SIGNED" }, orderBy: { createdAt: "desc" }, take: 1 },
-        customer: { select: { name: true, contactName: true, email: true, phone: true } },
+        customer: { select: { name: true, contactName: true, email: true, phone: true, address: true, city: true, state: true, zip: true } }, // v3.8.arr — address fields needed for the §3.9 last-resort fallback
       },
     });
 
@@ -73,7 +73,7 @@ export async function downloadEnhancedRateConfirmation(req: AuthRequest, res: Re
           select: { id: true, firstName: true, lastName: true, company: true, phone: true, carrierProfile: { select: { mcNumber: true, dotNumber: true, address: true, city: true, state: true, zip: true, contactPhone: true, contactEmail: true } } },
         },
         rateConfirmations: { where: { status: "SIGNED" }, orderBy: { createdAt: "desc" }, take: 1 },
-        customer: { select: { name: true, contactName: true, email: true, phone: true } },
+        customer: { select: { name: true, contactName: true, email: true, phone: true, address: true, city: true, state: true, zip: true } }, // v3.8.arr — address fields needed for the §3.9 last-resort fallback
       },
     });
 
@@ -98,7 +98,7 @@ export async function downloadShipperLoadConfirmation(req: AuthRequest, res: Res
     const load = await prisma.load.findUnique({
       where: { id: req.params.loadId },
       include: {
-        customer: { select: { name: true, contactName: true, email: true, phone: true } },
+        customer: { select: { name: true, contactName: true, email: true, phone: true, address: true, city: true, state: true, zip: true } }, // v3.8.arr — address fields needed for the §3.9 last-resort fallback
       },
     });
 
