@@ -677,7 +677,8 @@
               formSelect("Rate Type", "rateType", fd.rateType, ["FLAT", "PER_MILE"]) +
               formField("Fuel Surcharge $", "fuelSurcharge", fd.fuelSurcharge, "", "number") +
               formSelect("Fuel Surcharge Type", "fuelSurchargeType", fd.fuelSurchargeType, ["FLAT", "PERCENTAGE"]) +
-              formField("Detention Rate $/hr", "detentionRate", fd.detentionRate || 0, "", "number") +
+              // v3.8.arn: default to canonical $50/hr (was 0, which tendered loads with no detention rate).
+              formField("Detention Rate $/hr", "detentionRate", fd.detentionRate || 50, "", "number") +
             '</div>' +
             '<div style="margin-top:16px">' +
               '<label style="font-size:12px;font-weight:600;color:var(--gray-500);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;display:block">Accessorials</label>' +

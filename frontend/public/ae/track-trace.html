@@ -815,14 +815,14 @@
             var detColor = detMin > 240 ? "#dc2626" : detMin > 0 ? "#EAB308" : "var(--gray-400)";
             html += '<div style="font-size:0.78rem;color:' + detColor + ';font-weight:600">';
             if (detMin > 0) {
-              html += 'Detention: ' + Math.floor(detMin/60) + 'h ' + (detMin%60) + 'm ($' + Math.round(detMin/60*75) + ')';
+              html += 'Detention: ' + Math.floor(detMin/60) + 'h ' + (detMin%60) + 'm ($' + detentionPay(detMin) + ')';
               if (detMin > 1440) html += ' <span style="color:#dc2626">[AUTO-LAYOVER]</span>';
             } else {
               html += 'Dwell: ' + dwellMin + ' min (free time: ' + (freeTime - dwellMin) + ' min remaining)';
             }
             html += '</div>';
           } else if (s.detentionMinutes) {
-            html += '<div style="font-size:0.78rem;color:var(--red)">Detention: ' + s.detentionMinutes + ' min ($' + Math.round(s.detentionMinutes/60*75) + ')</div>';
+            html += '<div style="font-size:0.78rem;color:var(--red)">Detention: ' + s.detentionMinutes + ' min ($' + detentionPay(s.detentionMinutes) + ')</div>';
           }
           if (s.hookType) html += '<div style="font-size:0.78rem">Hook: ' + s.hookType.replace(/_/g," ") + '</div>';
           if (s.trailerNumber) html += '<div style="font-size:0.78rem">Trailer: ' + s.trailerNumber + (s.sealNumber ? ' | Seal: ' + s.sealNumber : '') + '</div>';
@@ -1114,6 +1114,15 @@
       if (!d) return "--";
       var dt = new Date(d);
       return (dt.getMonth()+1) + "/" + dt.getDate();
+    }
+
+    // v3.8.arn: canonical detention pay — $50/hr, capped at $200 per stop.
+    // Was $75/hr uncapped, which overpaid ~3x against stated policy on long dwells.
+    var DETENTION_RATE_PER_HR = 50;
+    var DETENTION_CAP_PER_STOP = 200;
+    function detentionPay(detentionMinutes) {
+      var pay = Math.round((detentionMinutes / 60) * DETENTION_RATE_PER_HR);
+      return Math.min(pay, DETENTION_CAP_PER_STOP);
     }
 
     function formatDateTime(d) {

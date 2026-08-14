@@ -306,6 +306,26 @@ const DEFAULT_DOCUMENT_CHECKLIST: DocumentCheck[] = [
   { key: "carrierAuthority", label: "Carrier Authority Verification", checked: false },
 ];
 
+// ⚠ THIS TEXT DOES NOT CURRENTLY PRINT ON ANY RATE CONFIRMATION.
+//
+// The comment that used to sit here claimed it "is stored as formData.customTerms
+// and APPENDED to the governing clauses on the rendered PDF". That describes the
+// INTENT, not the behaviour. The FormState key is `termsConditions` (declared
+// below in the interface, bound to the textarea in the T&C tab), but the backend
+// validator only accepts `customTerms` (validators/rateConfirmation.ts). Zod
+// strips the unknown key, so `fd.customTerms` is always undefined on this path
+// and pdfService never renders a word of it.
+//
+// Do NOT "fix" this by renaming the key on its own. That is not a rename — it
+// switches on a large block of never-reviewed text against a page that has ~14pt
+// of vertical slack in the worst-case fixture, and several clauses here restate
+// terms the GOVERNING TERMS block and the operational grid already carry. Landing
+// it needs a content reconciliation plus a layout budget, i.e. its own sprint.
+//
+// Figures below are kept canonical anyway so that whenever it IS switched on it
+// does not contradict the grid: v3.8.arn corrected clause 5 detention from
+// $75.00/hr uncapped -> $50.00/hr capped at $200.00/stop, and clause 6 TONU from
+// $250.00 -> $200.00.
 const DEFAULT_TERMS = `CARRIER-BROKER AGREEMENT - TERMS & CONDITIONS
 
 1. TRANSPORTATION SERVICES: Carrier agrees to transport the shipment(s) described herein from origin to destination in accordance with the terms of this Rate Confirmation. This Rate Confirmation, when signed by Carrier, shall constitute a binding contract.
@@ -316,9 +336,9 @@ const DEFAULT_TERMS = `CARRIER-BROKER AGREEMENT - TERMS & CONDITIONS
 
 4. DOUBLE BROKERING PROHIBITED: Carrier shall not re-broker, co-broker, or assign this shipment to any other carrier, broker, or third party without prior written consent from Broker. Violation of this clause shall result in immediate forfeiture of payment.
 
-5. DETENTION: Free time of two (2) hours is allowed at each stop. After free time, detention will be paid at $75.00/hour with prior authorization from Broker.
+5. DETENTION: Free time of two (2) hours is allowed at each stop. After free time, detention will be paid at $50.00/hour, capped at $200.00 per stop, with prior authorization from Broker.
 
-6. TONU (Truck Ordered Not Used): If Carrier is dispatched and load is cancelled by shipper after Carrier has been dispatched, a TONU fee of $250.00 will be paid to Carrier, subject to Broker verification.
+6. TONU (Truck Ordered Not Used): If Carrier is dispatched and load is cancelled by shipper after Carrier has been dispatched, a TONU fee of $200.00 will be paid to Carrier, subject to Broker verification.
 
 7. CLAIMS: Carrier is liable for all cargo loss and damage claims. Claims must be filed within nine (9) months of delivery. Carrier must maintain cargo insurance for the full declared value of goods.
 

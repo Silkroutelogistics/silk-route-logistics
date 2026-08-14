@@ -650,7 +650,7 @@ async function main() {
     { num: 29, status: "CANCELLED", eqType: "Dry Van", originCity: "Birmingham", originState: "AL", originZip: "35203", destCity: "Jacksonville", destState: "FL", destZip: "32201", distance: 450, rate: 2300, customerRate: 2600, carrierRate: null, pickupDayOffset: 6, deliveryDayOffset: 7, customerIndex: 3, carrierIndex: null, commodity: "Paper Products", weight: 44000 },
 
     // TONU (1)
-    { num: 30, status: "TONU", eqType: "Flatbed", originCity: "Houston", originState: "TX", originZip: "77001", destCity: "Dallas", destState: "TX", destZip: "75201", distance: 240, rate: 350, customerRate: 350, carrierRate: 350, pickupDayOffset: -2, deliveryDayOffset: -2, customerIndex: 4, carrierIndex: 2, commodity: "Construction Equipment", weight: 48000 },
+    { num: 30, status: "TONU", eqType: "Flatbed", originCity: "Houston", originState: "TX", originZip: "77001", destCity: "Dallas", destState: "TX", destZip: "75201", distance: 240, rate: 200, customerRate: 200, carrierRate: 200, pickupDayOffset: -2, deliveryDayOffset: -2, customerIndex: 4, carrierIndex: 2, commodity: "Construction Equipment", weight: 48000 },
   ];
 
   const loads = [];
@@ -1100,6 +1100,8 @@ async function main() {
   await prisma.sOP.createMany({
     data: [
       // ── OPERATIONS ──────────────────────────────
+      // v3.8.arn: §2.3 accessorials reconciled to canonical policy
+      // (detention $50/hr after 2hr free per stop, $200/stop cap; TONU $200 flat; layover $250/day).
       {
         title: "Standard Freight Operations Manual",
         category: "operations",
@@ -1119,7 +1121,7 @@ async function main() {
 2. RATE MANAGEMENT
 2.1 Spot Rates — Check DAT/Truckstop for lane averages. Markup: 12-18% standard, 8-12% for contract shippers.
 2.2 Contract Rates — Reviewed quarterly. Mini-bid process for lanes >10 loads/month. Rate lock periods: 30/60/90 days.
-2.3 Accessorial Charges — Detention: $75/hr after 2-hour free time. Lumper: pass-through + $25 admin fee. TONU: $350 flat. Layover: $350/day.
+2.3 Accessorial Charges — Detention: $50/hr after 2-hour free time at each stop, capped at $200 per stop. Lumper: pass-through + $25 admin fee. TONU: $200 flat. Layover: $250/day.
 
 3. EXCEPTION HANDLING
 3.1 Service Failures — Late pickup/delivery: document cause, notify customer immediately, file carrier scorecard deduction.

@@ -46,8 +46,9 @@ const TIER_CONFIG = {
     quickPayMonthlyLimit: 15000,             // $/month
     safetyBonusPerMonth: 0,                  // none
     fscPassThrough: "LOADED" as const,       // loaded miles only
-    detentionRate: 50,                       // $/hr
-    detentionStartHours: 2,
+    // v3.8.arn: per-tier detention removed — tier-based detention is
+    // prohibited (CLAUDE.md §5). Detention is flat across all tiers; see
+    // the DETENTION_* constants below.
     rateTransparency: "CARRIER_RATE" as const,
     referralBonus: 250,                      // $/referred carrier
     priorityFreight: false,
@@ -63,8 +64,7 @@ const TIER_CONFIG = {
     quickPayMonthlyLimit: 40000,
     safetyBonusPerMonth: 150,                // $/month ($450/qtr)
     fscPassThrough: "LOADED_EMPTY" as const,
-    detentionRate: 65,
-    detentionStartHours: 2,
+    // v3.8.arn: per-tier detention removed — see DETENTION_* constants below.
     rateTransparency: "SHIPPER_RATE_MARGIN" as const,
     referralBonus: 500,
     priorityFreight: false,
@@ -80,8 +80,7 @@ const TIER_CONFIG = {
     quickPayMonthlyLimit: 80000,
     safetyBonusPerMonth: 300,                // $/month ($900/qtr)
     fscPassThrough: "ALL_MILES" as const,
-    detentionRate: 75,
-    detentionStartHours: 1.5,
+    // v3.8.arn: per-tier detention removed — see DETENTION_* constants below.
     rateTransparency: "FULL" as const,
     referralBonus: 750,
     priorityFreight: true,
@@ -92,6 +91,14 @@ type TierKey = keyof typeof TIER_CONFIG;
 
 // Same-day QP premium (universal — added on top of each tier's 7-day rate).
 export const SAME_DAY_QP_PREMIUM = 0.02;
+
+// Detention (v3.8.arn) — FLAT across every tier and every equipment type.
+// Tier-differentiated detention is prohibited by CLAUDE.md §5; these are the
+// single source of truth, replacing the former per-tier TIER_CONFIG fields.
+// Free time is counted per stop and does not accumulate across stops.
+export const DETENTION_FREE_HOURS_PER_STOP = 2;
+export const DETENTION_RATE_PER_HOUR = 50;      // $/hr after free time
+export const DETENTION_MAX_PER_STOP = 200;      // $ cap per stop
 
 // ─── Milestone advancement thresholds (locked launch model) ─────────────
 //

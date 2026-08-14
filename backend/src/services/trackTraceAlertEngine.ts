@@ -9,6 +9,10 @@ import { createNotification } from "./notificationService";
 import { broadcastSSE } from "../routes/trackTraceSSE";
 import { log } from "../lib/logger";
 
+// v3.8.arn — canonical layover rate. Was $350 here while the rate confirmation
+// printed $250/day; $250 is the ratified figure. Single source of truth.
+const LAYOVER_RATE_PER_DAY = 250;
+
 export interface AlertResult {
   loadId: string;
   level: "GREEN" | "YELLOW" | "RED" | "CRITICAL";
@@ -245,10 +249,10 @@ export async function runAlertScanner() {
             stopId: stop.id,
             type: "LAYOVER" as any,
             notes: `Auto-layover: ${Math.round(dwellHrs)}h detention at ${stop.facilityName || "stop"}`,
-            amount: 350,
+            amount: LAYOVER_RATE_PER_DAY,
             quantity: 1,
             unit: "flat",
-            rate: 350,
+            rate: LAYOVER_RATE_PER_DAY,
             billedTo: "SHIPPER",
             status: "PENDING" as any,
           },
@@ -259,7 +263,7 @@ export async function runAlertScanner() {
             stop.load.posterId,
             "LOAD_UPDATE",
             `Auto-Layover: ${stop.load.loadNumber || stop.load.referenceNumber}`,
-            `Detention exceeded 24hrs at ${stop.facilityName || "stop"}. Layover accessorial ($350) auto-created.`,
+            `Detention exceeded 24hrs at ${stop.facilityName || "stop"}. Layover accessorial ($${LAYOVER_RATE_PER_DAY}) auto-created.`,
             { actionUrl: "/dashboard/tracking" }
           );
         }
@@ -267,7 +271,7 @@ export async function runAlertScanner() {
         broadcastSSE({
           type: "accessorial",
           loadId: stop.load.id,
-          data: { type: "LAYOVER", amount: 350, facility: stop.facilityName },
+          data: { type: "LAYOVER", amount: LAYOVER_RATE_PER_DAY, facility: stop.facilityName },
         });
       }
     }

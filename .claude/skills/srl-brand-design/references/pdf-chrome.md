@@ -474,6 +474,8 @@ rate = RateBreakdown(linehaul=2400.00, fuel_surcharge=400.00)
 y = draw_rate_breakdown(c, rate, y_top=y - 8, width=280)
 
 terms = RateConTerms(detention_free_hours=2, detention_rate_per_hour=50,
+                      detention_max_per_stop=200,   # v3.8.arn - canonical; omitting
+                                                    # this silently prints a capless RC
                       tonu_amount=200, layover_per_day=250,
                       cancellation_window_hours=4)
 y = draw_rate_con_terms(c, terms, y_top=y - 12)

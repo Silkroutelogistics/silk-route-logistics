@@ -50,6 +50,30 @@ export const RC_PDF_FORBIDDEN: string[] = [
   // the stale hard-coded BCA version citation must never return.
   "BCA v3.1",
   "Broker-Carrier Agreement v3.1",
+  // ── v3.8.arn — superseded money terms ────────────────────────────────────
+  // Pre-arn the repo held five detention rates ($0/hr, $50, $65, $75, and
+  // tier-varying), three TONU figures ($200/$250/$350) and two layover figures
+  // ($250/$350). One canonical set now prints; every superseded figure is
+  // locked out here so the divergence cannot be reintroduced silently.
+  //
+  // Token choice is deliberate. Matching is substring-based (`includes()` in
+  // assertNoForbidden below), so a bare "$75" would also match a legitimate
+  // "$750.00" line-haul figure in the rate breakdown and fail a clean PDF.
+  // "/hr" renders ONLY in the DETENTION cell and "/day" ONLY in the LAYOVER
+  // cell (srl-chrome.ts drawRateConTerms), so the suffixed forms are
+  // unambiguous. Verified: no other RC surface renders either suffix.
+  "$0/hr",
+  "$65/hr",
+  "$75/hr",
+  // TONU renders as `$<amount> (truck-order-not-used)` with NO decimals, so a
+  // bare "$250.00" could never match a TONU regression while it COULD match a
+  // legitimate $250.00 accessorial. Anchored on the label instead.
+  "$250 (truck-order-not-used)",
+  "$350 (truck-order-not-used)",
+  "$350/day",
+  // Paperwork is due within 24 hours of delivery, never 48. Verified: nothing
+  // else in the RC render path emits "48 hours".
+  "48 hours",
 ];
 
 /**
@@ -99,6 +123,39 @@ export const RC_PDF_REQUIRED: string[] = [
   // County") now assert on the BCA PDF, not the RC. The RC asserts the BCA
   // reference instead.
   "Broker-Carrier Agreement",
+  // ── v3.8.arn — canonical money terms ─────────────────────────────────────
+  // Uniform for every carrier and every equipment type: no tier split, no
+  // reefer/dry-van split. Mirrors CLAUDE.md §5.
+  //
+  // The detention entry is asserted as one long string on purpose. The
+  // DETENTION cell is drawn with `lineBreak: false` (srl-chrome.ts
+  // drawRateConTerms), so PDFKit emits it as a single unwrapped run and
+  // pdf-parse cannot split it — the §19 Sub-pattern 9 false-negative class
+  // ("freight \ncharges") only affects wrapped body copy. Keeping it whole
+  // locks rate, free hours, and cap in one adjacency: a regression that
+  // dropped the cap while keeping the rate would still fail. If the renderer
+  // ever gains wrapping here, split this into "$50/hr after 2 hrs free" and
+  // "$200/stop cap" rather than deleting it.
+  //
+  // The cap reads "$200/stop cap" and NOT "capped at $200/stop" for a measured
+  // reason: the grid cell draws with lineBreak:false, and "capped at $200/stop
+  // · notify" measures 216.6pt against 202pt of available width, so it would
+  // overprint the adjacent TONU label. The only way to keep "capped at" is to
+  // drop the deliberate Sprint 50 " · notify" suffix, which is a real control.
+  // If you are tempted to make this string read better, measure it first.
+  // (Trailing " · notify" is appended after the cap, so it does not affect
+  // this match.)
+  "$50/hr after 2 hrs free, $200/stop cap",
+  "$200 (truck-order-not-used)",
+  "$250/day",
+  // Paperwork deadline, from the GOVERNING TERMS clause block: "Signed BOL,
+  // POD, and supporting paperwork are due within 24 hours of delivery."
+  // NOTE: that block IS wrapped (`width: CONTENT_W`), so if a future edit to
+  // an earlier clause shifts the wrap point to land between "24" and "hours",
+  // pdf-parse will insert a newline and this assertion will fail on an
+  // otherwise-correct PDF. If that fires, the fix is a shorter token or
+  // whitespace normalization in the matcher — NOT deleting the lock.
+  "24 hours",
 ];
 
 /**

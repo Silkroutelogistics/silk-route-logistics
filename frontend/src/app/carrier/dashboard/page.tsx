@@ -35,10 +35,13 @@ const TIER_COLORS: Record<string, { bg: string; text: string; border: string; ba
 };
 
 // v3 Quick Pay pricing — 7-day rate shown as the headline (same-day = +2%).
-const TIER_BENEFITS: Record<string, { paymentTerms: string; qpSpeed: string; qpFee: string; safetyBonus: string; detentionRate: string }> = {
-  SILVER:   { paymentTerms: "Net-30", qpSpeed: "7-day",  qpFee: "3.0%", safetyBonus: "—",         detentionRate: "$50/hr" },
-  GOLD:     { paymentTerms: "Net-21", qpSpeed: "7-day",  qpFee: "2.0%", safetyBonus: "$150/mo",   detentionRate: "$65/hr" },
-  PLATINUM: { paymentTerms: "Net-14", qpSpeed: "7-day",  qpFee: "1.0%", safetyBonus: "$300/mo",   detentionRate: "$75/hr" },
+// v3.8.arn: detention is flat at every tier (tier-based detention is
+// prohibited by CLAUDE.md §5). Safety-bonus row dropped — no backend honors
+// the claim, so it must not be shown to carriers (§5).
+const TIER_BENEFITS: Record<string, { paymentTerms: string; qpSpeed: string; qpFee: string; detentionRate: string }> = {
+  SILVER:   { paymentTerms: "Net-30", qpSpeed: "7-day",  qpFee: "3.0%", detentionRate: "$50/hr" },
+  GOLD:     { paymentTerms: "Net-21", qpSpeed: "7-day",  qpFee: "2.0%", detentionRate: "$50/hr" },
+  PLATINUM: { paymentTerms: "Net-14", qpSpeed: "7-day",  qpFee: "1.0%", detentionRate: "$50/hr" },
 };
 
 const MILESTONE_NAMES: Record<string, string> = {
@@ -201,10 +204,6 @@ export default function CarrierOverviewPage() {
             <div className="flex justify-between">
               <span className="text-gray-700">Quick Pay Fee</span>
               <span className="font-semibold text-[#0A2540]">{benefits.qpFee}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-700">Safety Bonus</span>
-              <span className="font-semibold text-[#2F7A4F]">{benefits.safetyBonus}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-gray-700">Detention Rate</span>

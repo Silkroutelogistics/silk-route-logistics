@@ -217,6 +217,8 @@ This SOP covers setting up shipper portal access and EDI connections for custome
 - Webhooks available for real-time event notifications`,
   },
 
+  // v3.8.arn: Accessorial Pricing reconciled to canonical (detention $50/hr + $200/stop cap,
+  // TONU $200 flat — not distance-scaled, layover $250/day).
   {
     title: "Rate Engine & Pricing Methodology",
     category: "Finance",
@@ -250,10 +252,10 @@ This SOP defines how SRL calculates freight rates, maintains margin targets, and
    - Expedited: 18% minimum, 25% target
 
 ### Accessorial Pricing
-- Detention (after 2hr free time): $75/hour
+- Detention (after 2hr free time at each stop): $50/hour, capped at $200 per stop
 - Lumper: Pass-through at cost + $25 admin fee
-- TONU (Truck Ordered Not Used): $250-500 depending on distance traveled
-- Layover: $300/day
+- TONU (Truck Ordered Not Used): $200 flat
+- Layover: $250/day
 - Driver assist: $50-100 per stop
 - Inside delivery: $75-150
 - Lift gate: $50-75

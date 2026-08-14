@@ -28,10 +28,15 @@ router.get("/my-status", authorize("CARRIER"), async (req: AuthRequest, res: Res
   const currentTier = profile.cppTier !== "NONE" ? profile.cppTier : profile.tier;
 
   // Caravan Partner Program 3-tier thresholds (v3.7.a)
+  // v3.8.arn: safety-bonus perks removed — no backend honors them (CLAUDE.md
+  // §5). Detention perk is now identical at every tier: tier-differentiated
+  // detention is prohibited by §5. Detention terms are flat platform-wide —
+  // see the DETENTION_* constants in services/caravanService.
+  const DETENTION_PERK = "$50/hr detention after 2hr free per stop, capped at $200/stop";
   const tiers = [
-    { name: "PLATINUM", min: 95, bonus: 3, perks: ["Net-14 payment terms", "1% / 3% (same-day) Quick Pay", "$300/mo safety bonus", "Priority freight access", "$75/hr detention after 1.5hr"] },
-    { name: "GOLD",     min: 90, bonus: 1.5, perks: ["Net-21 payment terms", "2% / 4% (same-day) Quick Pay", "$150/mo safety bonus", "$65/hr detention after 2hr"] },
-    { name: "SILVER",   min: 0,  bonus: 0, perks: ["Net-30 payment terms", "3% / 5% (same-day) Quick Pay", "$50/hr detention after 2hr", "Day-1 entry tier"] },
+    { name: "PLATINUM", min: 95, bonus: 3, perks: ["Net-14 payment terms", "1% / 3% (same-day) Quick Pay", "Priority freight access", DETENTION_PERK] },
+    { name: "GOLD",     min: 90, bonus: 1.5, perks: ["Net-21 payment terms", "2% / 4% (same-day) Quick Pay", DETENTION_PERK] },
+    { name: "SILVER",   min: 0,  bonus: 0, perks: ["Net-30 payment terms", "3% / 5% (same-day) Quick Pay", "Day-1 entry tier", DETENTION_PERK] },
   ];
 
   const currentTierInfo = tiers.find(t => t.name === currentTier) || tiers[2];

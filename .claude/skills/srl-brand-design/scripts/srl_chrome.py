@@ -1432,7 +1432,8 @@ def draw_rate_con_terms(c: Canvas, terms: RateConTerms,
     # Detention
     det_str = f"${terms.detention_rate_per_hour:.0f}/hr after {terms.detention_free_hours:.0f} hrs free"
     if terms.detention_max_per_stop:
-        det_str += f", capped at ${terms.detention_max_per_stop:.0f}/stop"
+        # v3.8.arn - terse by measurement; see the TS twin for the width math.
+        det_str += f", ${terms.detention_max_per_stop:.0f}/stop cap"
     items.append(("DETENTION", det_str))
 
     items.append(("TONU", f"${terms.tonu_amount:.0f} (truck-order-not-used)"))

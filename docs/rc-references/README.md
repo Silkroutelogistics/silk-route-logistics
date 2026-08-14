@@ -73,7 +73,9 @@ reference. Everything below appears in the reference corpus but changes **when
 SRL pays money** or **what SRL is contractually bound to**, so it is Wasi's and
 Dirk's call, not an engineering one:
 
-- Detention clock-start definition and a cap
+- ~~Detention clock-start definition and a cap~~ — the **cap shipped** in v3.8.arn
+  ($200/stop). The **clock-start definition has not** and is still open: the
+  document says "2 hrs free" without saying free from what.
 - TONU qualification criteria
 - Lumper pre-authorization threshold
 - Late / missed-appointment fee
@@ -82,10 +84,22 @@ Dirk's call, not an engineering one:
 - Exclusive-use / no-co-load covenant
 - No-re-brokering notice with a withholding remedy
 
-**Open conflict needing a decision:** the rate confirmation states paperwork is
-due within 48 hours; BCA §5 says 24. The rate confirmation also states the BCA
-controls on conflict, so today the carrier is bound to 24 while reading 48. One
-of the two documents has to move. Research across the corpus favours 48.
+**RESOLVED (v3.8.arn, 2026-08-14) — do not reopen.** The rate confirmation used
+to say 48 hours while BCA §5 said 24, and the rate confirmation's own precedence
+clause made the BCA control — so a carrier was bound to 24 while reading 48.
+Wasi ratified **24**, and the rate confirmation moved. The BCA did not change.
+
+Corpus support for 24 (an earlier draft of this file said the corpus favoured 48,
+which was wrong — Schneider's 90 days is an outlier, not the centre): Scotlynn
+requires paperwork **"EMAILED BY END OF DAY ON DELIVERY DATE"**, which is
+stricter than 24; Leonard's Express gates *detention eligibility* on BOLs
+submitted **"within 24 hours, or the next full business day for weekend
+deliveries"**; Allen Lund states no deadline at all.
+
+24 also aligns the document with Compass Score, which grades document timeliness
+at `POD_GRACE_MS = 24h` ([docTimeliness.ts](../../backend/src/lib/docTimeliness.ts)).
+Before this change a carrier who met the printed 48-hour deadline was silently
+marked down on the score SRL publishes about them.
 
 ---
 

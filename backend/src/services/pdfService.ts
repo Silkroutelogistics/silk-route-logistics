@@ -1848,6 +1848,10 @@ export function generateEnhancedRateConfirmation(load: EnhancedRCLoadData, formD
   // the 30-min-before notification obligation locked in T&C clause (7).
   const opTerms: RateConTerms = {
     detentionRatePerHour: fd.detentionRate as number | undefined,
+    // v3.8.arn — the renderer's cap branch had never fired: it is gated on
+    // detentionMaxPerStop and this object never passed one, so no cap has ever
+    // printed on a Rate Confirmation. $200/stop is canonical.
+    detentionMaxPerStop: 200,
     detentionNotify: true,
     quickPayTier: qpTier !== "—" ? qpTier : undefined,
   };
@@ -1979,7 +1983,7 @@ export function generateEnhancedRateConfirmation(load: EnhancedRCLoadData, formD
     "This Rate Confirmation is governed by the Broker-Carrier Agreement between Silk Route Logistics Inc. and Carrier (the “BCA”). In the event of conflict, the BCA controls.",
     "Acceptance: Carrier's signature below, or Carrier's dispatch of a unit, arrival at the pickup location, or commencement of transport, whichever occurs first, constitutes binding acceptance of this Rate Confirmation and the BCA.",
     "Accessorial charges require SRL's prior written approval (operations@silkroutelogistics.ai). Detention requires notice to SRL by call or text at least 30 minutes before it begins and again upon departure.",
-    "Carrier shall report any discrepancy between this Rate Confirmation and the Bill of Lading to SRL before proceeding. Signed BOL, POD, and supporting paperwork are due within 48 hours of delivery.",
+    "Carrier shall report any discrepancy between this Rate Confirmation and the Bill of Lading to SRL before proceeding. Signed BOL, POD, and supporting paperwork are due within 24 hours of delivery.",
   ];
   // v3.8.arl — customTerms APPENDS; it must never REPLACE the mandatory core.
   // Pre-arl this read `(fd.customTerms) || governingClauses.join()`, so the

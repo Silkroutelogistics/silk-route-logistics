@@ -214,7 +214,11 @@ export async function autoGenerateRateConfirmation(
     rateType: "FLAT" as const,
     fuelSurcharge: 0,
     fuelSurchargeType: "FLAT" as const,
-    detentionRate: 0,
+    // v3.8.arn — was 0, which is not "unset": the renderer's `?? 50` default
+    // does not catch a literal 0, so every auto-generated RC published
+    // "DETENTION $0/hr" to the accepting carrier. Write the canonical rate
+    // explicitly so the stored formData is self-describing.
+    detentionRate: 50,
     accessorials: [],
     totalCharges: tender.offeredRate,
 

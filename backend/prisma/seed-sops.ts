@@ -406,6 +406,8 @@ Can I ask a few questions about your current freight setup?"
   },
 
   // ─── CARRIER GROWTH STRATEGY ────────────────────────────────
+  // v3.8.arn: tier-table Detention column flattened to canonical $50/hr + $200/stop cap.
+  // Detention is not tier-differentiated (tier-based detention is prohibited by CLAUDE.md §5).
   {
     title: "Carrier Onboarding & Growth Playbook",
     category: "operations",
@@ -500,14 +502,15 @@ Tell carriers:
 
 ### Tier Structure
 
-| Tier         | Entry                                  | Payment Terms | 7-day QP | Same-day QP  | Detention           | Safety Bonus  | FSC pass-through | Referral | Priority Freight |
-|--------------|----------------------------------------|---------------|----------|--------------|---------------------|---------------|------------------|----------|------------------|
-| **SILVER**   | Day 1 on onboarding (1-4 trucks)       | Net-30 free   | 3.0%     | 5.0% (3+2%)  | $50/hr after 2hr    | —             | loaded miles     | $250     | No               |
-| **GOLD**     | 5-10 trucks OR M4 milestone            | Net-21 free   | 2.0%     | 4.0% (2+2%)  | $65/hr after 2hr    | $150/mo       | loaded + empty   | $500     | No               |
-| **PLATINUM** | 11+ trucks OR M5 milestone             | Net-14 free   | 1.0%     | 3.0% (1+2%)  | $75/hr after 1.5hr  | $300/mo       | all miles        | $750     | Yes              |
+| Tier         | Entry                                  | Payment Terms | 7-day QP | Same-day QP  | Detention             | Safety Bonus  | FSC pass-through | Referral | Priority Freight |
+|--------------|----------------------------------------|---------------|----------|--------------|-----------------------|---------------|------------------|----------|------------------|
+| **SILVER**   | Day 1 on onboarding (1-4 trucks)       | Net-30 free   | 3.0%     | 5.0% (3+2%)  | $50/hr, $200/stop cap | —             | loaded miles     | $250     | No               |
+| **GOLD**     | 5-10 trucks OR M4 milestone            | Net-21 free   | 2.0%     | 4.0% (2+2%)  | $50/hr, $200/stop cap | $150/mo       | loaded + empty   | $500     | No               |
+| **PLATINUM** | 11+ trucks OR M5 milestone             | Net-14 free   | 1.0%     | 3.0% (1+2%)  | $50/hr, $200/stop cap | $300/mo       | all miles        | $750     | Yes              |
 
 GUEST tier (not onboarded yet) and NONE are retained as non-program states.
 Same-day QP is a universal **+2% premium** over the tier's 7-day rate — every tier can elect same-day.
+Detention is a **flat, non-tiered** accessorial: 2 hours free at each stop, then $50/hr, capped at $200 per stop.
 
 ### Milestone Progression
 

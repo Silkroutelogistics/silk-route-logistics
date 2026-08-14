@@ -1105,7 +1105,10 @@ export function drawEquipmentSpec(
     const x = MARGIN + col * colW;
     drawLabel(doc, key, x, curY, { color: TOKENS.goldDark, size: 6.5 });
     doc.font(FONT_BODY, 9.5).fillColor(TOKENS.fg1)
-       .text(val, x + 90, curY, { lineBreak: false });
+       // v3.8.arn — gutter 90 -> 68. Cells draw with lineBreak:false, so a value
+       // wider than (colW - gutter) overprints the next column label. The widest
+       // label (CANCELLATION) is 55.3pt, so 90 was ~35pt of dead slack.
+       .text(val, x + 68, curY, { lineBreak: false });
     if (col === 1) curY += lineH;
   });
   if (fields.length % 2 === 1) curY += lineH;
@@ -1165,9 +1168,19 @@ export function drawRateConTerms(
 ): number {
   const items: [string, string][] = [];
   const detentionFree = terms.detentionFreeHours ?? 2;
-  const detentionRate = terms.detentionRatePerHour ?? 50;
+  // v3.8.arn — a literal 0 is not "unset". Nullish coalescing let a caller pass
+  // detentionRate: 0 straight through and publish "$0/hr" to a carrier. Treat any
+  // non-positive or non-finite value as unset.
+  const rawDetentionRate = terms.detentionRatePerHour;
+  const detentionRate =
+    typeof rawDetentionRate === "number" && Number.isFinite(rawDetentionRate) && rawDetentionRate > 0
+      ? rawDetentionRate
+      : 50;
   let detStr = `$${detentionRate}/hr after ${detentionFree} hrs free`;
-  if (terms.detentionMaxPerStop) detStr += `, capped at $${terms.detentionMaxPerStop}/stop`;
+  // v3.8.arn — terse by measurement, not preference: this cell draws with
+  // lineBreak:false and "capped at $200/stop · notify" is 216.6pt against 202pt
+  // of width, so the longer wording overprints the adjacent TONU label.
+  if (terms.detentionMaxPerStop) detStr += `, ${terms.detentionMaxPerStop}/stop cap`;
   items.push(['DETENTION', detStr]);
 
   items.push(['TONU', `$${terms.tonuAmount ?? 200} (truck-order-not-used)`]);

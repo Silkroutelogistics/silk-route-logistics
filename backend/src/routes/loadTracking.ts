@@ -8,8 +8,25 @@ import { log } from "../lib/logger";
 const router = Router();
 router.use(authenticate);
 
-const DETENTION_FREE_MINUTES = 120;      // 2h free time
-const DETENTION_RATE_PER_HOUR = 75;      // $/hr billable
+// ─── Canonical detention rates (v3.8.arn) ───
+// 2h free at EACH stop (independent, non-cumulative), then $50/hr, capped at
+// $200 PER STOP. Flat rate — no tier and no equipment differentiation.
+// These are the single source of truth; do not re-inline the numbers below.
+export const DETENTION_FREE_HOURS = 2;
+export const DETENTION_FREE_MINUTES = DETENTION_FREE_HOURS * 60;
+export const DETENTION_FREE_MS = DETENTION_FREE_MINUTES * 60 * 1000;
+export const DETENTION_RATE_PER_HOUR = 50;   // $/hr billable after free time
+export const DETENTION_CAP_PER_STOP = 200;   // $ ceiling, applied per stop
+
+/**
+ * Billable detention dollars for ONE stop: overage hours x rate, clamped to the
+ * per-stop cap. v3.8.arn — the cap is per stop, so DETENTION_PU and
+ * DETENTION_DEL each clamp independently and are never summed before clamping.
+ */
+export function detentionCharge(overageMinutes: number): number {
+  const raw = (Math.max(0, overageMinutes) / 60) * DETENTION_RATE_PER_HOUR;
+  return Math.round(Math.min(raw, DETENTION_CAP_PER_STOP) * 100) / 100;
+}
 
 /**
  * Close (or create+close) a DetentionRecord for a stop arrival→departure.
@@ -31,8 +48,9 @@ async function closeDetentionRecord(params: {
     Math.round((departedAt.getTime() - enteredAt.getTime()) / 60000)
   );
   const billable = elapsedMinutes >= DETENTION_FREE_MINUTES;
-  const overageHours = billable ? (elapsedMinutes - DETENTION_FREE_MINUTES) / 60 : 0;
-  const totalCharge = Math.round(overageHours * DETENTION_RATE_PER_HOUR * 100) / 100;
+  const overageMinutes = billable ? elapsedMinutes - DETENTION_FREE_MINUTES : 0;
+  // v3.8.arn — capped at the per-stop ceiling; this record is one stop.
+  const totalCharge = detentionCharge(overageMinutes);
 
   const existing = await prisma.detentionRecord.findFirst({
     where: { loadId, locationType, departedAt: null },
@@ -334,7 +352,7 @@ router.post(
 
         // Calculate detention if applicable
         if (pickupStop.actualArrival) {
-          const freeTimeMs = 2 * 60 * 60 * 1000; // 2 hours default
+          const freeTimeMs = DETENTION_FREE_MS; // v3.8.arn — 2h free, from the shared constant
           const dwellMs = loadedTime.getTime() - new Date(pickupStop.actualArrival).getTime();
           if (dwellMs > freeTimeMs) {
             const detentionMin = Math.round((dwellMs - freeTimeMs) / 60000);
@@ -349,10 +367,11 @@ router.post(
                 loadId,
                 stopId: pickupStop.id,
                 type: "DETENTION_PU",
-                amount: Math.round((detentionMin / 60) * 75 * 100) / 100,
+                // v3.8.arn — $50/hr capped at $200 for THIS stop (see detentionCharge)
+                amount: detentionCharge(detentionMin),
                 quantity: detentionMin,
                 unit: "minutes",
-                rate: 75,
+                rate: DETENTION_RATE_PER_HOUR,
                 billedTo: "SHIPPER",
                 createdBy: req.user!.id,
               },
@@ -444,7 +463,7 @@ router.post(
 
         // Calculate delivery detention
         if (delStop.actualArrival) {
-          const freeTimeMs = 2 * 60 * 60 * 1000;
+          const freeTimeMs = DETENTION_FREE_MS; // v3.8.arn — 2h free at THIS stop, independent of pickup
           const dwellMs = deliveredTime.getTime() - new Date(delStop.actualArrival).getTime();
           if (dwellMs > freeTimeMs) {
             const detentionMin = Math.round((dwellMs - freeTimeMs) / 60000);
@@ -458,10 +477,11 @@ router.post(
                 loadId,
                 stopId: delStop.id,
                 type: "DETENTION_DEL",
-                amount: Math.round((detentionMin / 60) * 75 * 100) / 100,
+                // v3.8.arn — clamped independently of DETENTION_PU; the cap is per stop
+                amount: detentionCharge(detentionMin),
                 quantity: detentionMin,
                 unit: "minutes",
-                rate: 75,
+                rate: DETENTION_RATE_PER_HOUR,
                 billedTo: "SHIPPER",
                 createdBy: req.user!.id,
               },
@@ -572,10 +592,11 @@ router.get("/:loadId/detention", async (req: AuthRequest, res: Response) => {
 
     const dwellMs = Date.now() - new Date(activeStop.actualArrival!).getTime();
     const dwellMinutes = Math.round(dwellMs / 60000);
-    const freeTimeMinutes = 120; // 2 hour industry standard
+    const freeTimeMinutes = DETENTION_FREE_MINUTES; // v3.8.arn — 2h free at this stop
     const inDetention = dwellMinutes > freeTimeMinutes;
     const detentionMinutes = inDetention ? dwellMinutes - freeTimeMinutes : 0;
-    const estimatedCharge = inDetention ? Math.round((detentionMinutes / 60) * 75 * 100) / 100 : 0;
+    // v3.8.arn — capped preview: never quote a carrier a number settlement won't honor
+    const estimatedCharge = inDetention ? detentionCharge(detentionMinutes) : 0;
 
     res.json({
       detention: inDetention,

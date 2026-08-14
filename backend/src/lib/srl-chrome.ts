@@ -1370,9 +1370,17 @@ export function drawRateConTerms(
 ): number {
   const items: [string, string][] = [];
   const detentionFree = terms.detentionFreeHours ?? 2;
-  const detentionRate = terms.detentionRatePerHour ?? 50;
+  // v3.8.arn — a literal 0 is not "unset". Nullish coalescing let a caller's
+  // `detentionRate: 0` through and published "$0/hr" to the carrier. Treat any
+  // non-positive or non-finite rate as unset so a bad write upstream can never
+  // again silently promise a carrier nothing.
+  const rawDetentionRate = terms.detentionRatePerHour;
+  const detentionRate =
+    typeof rawDetentionRate === "number" && Number.isFinite(rawDetentionRate) && rawDetentionRate > 0
+      ? rawDetentionRate
+      : 50;
   let detStr = `$${detentionRate}/hr after ${detentionFree} hrs free`;
-  if (terms.detentionMaxPerStop) detStr += `, capped at $${terms.detentionMaxPerStop}/stop`;
+  if (terms.detentionMaxPerStop) detStr += `, $${terms.detentionMaxPerStop}/stop cap`;
   if (terms.detentionNotify) detStr += ' · notify';
   items.push(['DETENTION', detStr]);
 
@@ -1387,6 +1395,13 @@ export function drawRateConTerms(
   if (terms.quickPayTier) items.push(['QUICK PAY', terms.quickPayTier]);
 
   const colW = CONTENT_W / 2;
+  // v3.8.arn — label gutter narrowed 90 -> 68. Cells draw with lineBreak:false,
+  // so a value wider than (colW - gutter) overprints the next column's label
+  // rather than wrapping. Once DETENTION carries the canonical $200/stop cap it
+  // measures ~190pt, over the 180pt a 90pt gutter allowed. The widest label
+  // (CANCELLATION) is 55.3pt at 6.5pt with 8% tracking, so 90pt was ~35pt of
+  // dead slack; 68pt still clears it by 12.7pt and buys every cell 202pt.
+  const labelGutter = 68;
   drawLabel(doc, 'OPERATIONAL TERMS', MARGIN, yTop, { color: TOKENS.goldDark, size: 7 });
   let curY = yTop + 16;
   const lineH = 13;
@@ -1395,7 +1410,7 @@ export function drawRateConTerms(
     const x = MARGIN + col * colW;
     drawLabel(doc, key, x, curY, { color: TOKENS.goldDark, size: 6.5 });
     doc.font(FONT_BODY, 9).fillColor(TOKENS.fg1)
-       .text(val, x + 90, curY, { lineBreak: false });
+       .text(val, x + labelGutter, curY, { lineBreak: false });
     if (col === 1) curY += lineH;
   });
   if (items.length % 2 === 1) curY += lineH;

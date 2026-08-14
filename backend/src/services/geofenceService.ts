@@ -6,6 +6,13 @@
 import { prisma } from "../config/database";
 import { broadcastSSE } from "../routes/trackTraceSSE";
 import { log } from "../lib/logger";
+// v3.8.arn — shared detention constants so geofence-written rows carry the same
+// billing shape as loadTracking-written ones (two writers, one table).
+import {
+  DETENTION_FREE_MINUTES,
+  DETENTION_RATE_PER_HOUR,
+  detentionCharge,
+} from "../routes/loadTracking";
 
 const GEOFENCE_RADIUS_MILES = 1.0;
 
@@ -87,6 +94,11 @@ export async function checkGeofence(
             locationType: stop.stopType === "PICKUP" ? "origin" : "destination",
             facilityName: stop.facilityName,
             enteredAt: new Date(),
+            // v3.8.arn — stamp the canonical rate at open time. Nothing is billable
+            // until the stop closes, but the row now states the rate it bills at.
+            billable: false,
+            ratePerHour: DETENTION_RATE_PER_HOUR,
+            totalCharge: 0,
           },
         });
 
@@ -186,9 +198,21 @@ export async function checkGeofence(
         const elapsedMinutes = Math.round(
           (now.getTime() - new Date(openDetention.enteredAt).getTime()) / 60000
         );
+        // v3.8.arn — close with the same billable/rate/charge math loadTracking uses,
+        // so a detention record means the same thing whichever writer created it.
+        const billable = elapsedMinutes >= DETENTION_FREE_MINUTES;
+        const totalCharge = detentionCharge(
+          billable ? elapsedMinutes - DETENTION_FREE_MINUTES : 0
+        );
         await prisma.detentionRecord.update({
           where: { id: openDetention.id },
-          data: { departedAt: now, elapsedMinutes },
+          data: {
+            departedAt: now,
+            elapsedMinutes,
+            billable,
+            ratePerHour: DETENTION_RATE_PER_HOUR,
+            totalCharge,
+          },
         });
       }
 

@@ -672,6 +672,8 @@
           { title: "Privacy Controls", detail: "The tracking page only shows the carrier's first name (not full details), the load reference, and operational status. Financial data (rates, margins) is never exposed.", tip: null }
         ]
       },
+      // v3.8.arn: detention figures reconciled to canonical ($50/hr after 2hr free per stop,
+      // $200/stop cap). Worked example recomputed: 3 billable hrs x $50 = $150 (was $225 at $75/hr).
       {
         id: "SOP-025",
         title: "Using the Detention Pay Tracker (Carrier Tool)",
@@ -682,9 +684,9 @@
         lastUpdated: "2026-02-12",
         context: "Understand the Carrier Portal's Detention Pay Tracker so you can support carriers with detention claims and verify their submissions.",
         steps: [
-          { title: "Carrier Access", detail: "Carriers access the Detention Pay Tracker at /carrier/tools.html → Detention Pay tab. It calculates detention based on SRL's policy: 2 hours free time, then $75/hour.", tip: null },
+          { title: "Carrier Access", detail: "Carriers access the Detention Pay Tracker at /carrier/tools.html → Detention Pay tab. It calculates detention based on SRL's policy: 2 hours free time at each stop, then $50/hour, capped at $200 per stop.", tip: null },
           { title: "How Carriers Log Detention", detail: "Carriers enter: Load Reference, Facility Name, Arrival Time, and Departure Time. The system auto-calculates billable hours and detention pay amount.", tip: null },
-          { title: "Detention Calculation", detail: "Formula: Total time - 2 hours free time = Billable hours (rounded up). Billable hours x $75/hr = Detention pay. Example: 4h 30m at facility = 3 billable hours = $225.", tip: "Tip: If a carrier claims excessive detention (>6 hours), verify with the facility before approving. Check the load's check-call timestamps for corroboration." },
+          { title: "Detention Calculation", detail: "Formula: Total time - 2 hours free time = Billable hours (rounded up). Billable hours x $50/hr = Detention pay, capped at $200 per stop. Example: 4h 30m at facility = 3 billable hours = $150. The $200 cap is reached at 4 billable hours (6h 00m at the facility); dwell beyond that does not increase the payout.", tip: "Tip: If a carrier claims excessive detention (>6 hours), verify with the facility before approving. Check the load's check-call timestamps for corroboration." },
           { title: "Reviewing Claims", detail: "Carriers can submit detention claims for payment. Review them in the carrier's payment queue. Verify the timestamps match the load's status updates.", tip: null },
           { title: "Detention History", detail: "The carrier sees their detention history with status (Pending, Approved, Paid). As AE, you can see all detention submissions in the carrier's profile.", tip: null }
         ]
