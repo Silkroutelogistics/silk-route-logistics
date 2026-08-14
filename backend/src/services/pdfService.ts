@@ -2002,7 +2002,31 @@ export function generateEnhancedRateConfirmation(load: EnhancedRCLoadData, formD
     "Silk Route Logistics Inc. is an FMCSA-licensed property broker (USDOT 4526880, MC# 1794414). SRL arranges transportation. SRL does not transport freight.",
     "This Rate Confirmation is governed by the Broker-Carrier Agreement between Silk Route Logistics Inc. and Carrier (the “BCA”). In the event of conflict, the BCA controls.",
     "Acceptance: Carrier's signature below, or Carrier's dispatch of a unit, arrival at the pickup location, or commencement of transport, whichever occurs first, constitutes binding acceptance of this Rate Confirmation and the BCA.",
-    "Accessorial charges require SRL's prior written approval (operations@silkroutelogistics.ai). Detention requires notice to SRL by call or text at least 30 minutes before it begins and again upon departure.",
+    // v3.8.arp — detention clock-start. "2 hrs free" never said free from WHAT,
+    // which is the single largest money ambiguity on the document: a driver who
+    // gates in four hours early could bill from arrival while SRL believed it
+    // owed from the appointment. Scotlynn runs the clock from appointment time;
+    // Landstar from arrival-plus-notification; an earlier draft here used "later
+    // of arrival or appointment", which adversarial review showed is wrong in
+    // BOTH directions — it pays for a carrier's own lateness (money the shipper
+    // will correctly refuse to reimburse) and pays nothing when a driver arrives
+    // early to help and is taken before the appointment. This wording mirrors
+    // the on-time gate the TONU clause below already applies, so one rule
+    // governs both rather than two different ones on one page.
+    "Accessorial charges require SRL's prior written approval (operations@silkroutelogistics.ai). Detention free time starts when you arrive, and runs separately at each stop. Detention is not payable if you arrive outside your appointment window. Notify SRL by call or text at least 30 minutes before detention begins and again on departure.",
+    // v3.8.arp — TONU qualification. SRL priced TONU at $200 and printed no rule
+    // for earning it, so a carrier who dispatched and drove 90 miles and one who
+    // never left the yard had identical claims. Two gates, per Wasi 2026-08-14.
+    // Gate 1 is the only TONU condition found verbatim on a real rate
+    // confirmation (TQL PO# 33614902: no TONU "UNLESS TQL HAS PROVIDED THE
+    // CARRIER WITH LOAD DETAILS ... AND APPROVED THE CARRIER TO BEGIN DRIVING").
+    // Gate 2 is Wasi's Bison rule. They are deliberately NOT a strict AND: a
+    // cancellation while the driver is still en route would otherwise deny a
+    // carrier who did everything right, which is the bad-faith pattern the
+    // research flagged. Arrival only gates the case where arrival happened.
+    // Notice is satisfiable by TEXT precisely because §6 business hours are
+    // Mon-Fri 7-7 — a voicemail at 6pm Friday must not cost a carrier $200.
+    "TONU: payable only if SRL gave you the pickup number and shipper address and cleared you to head to pickup, and SRL or the shipper then cancels. If you already arrived, you must have been inside your appointment window. Not payable if you cancel, or if your trailer is rejected as non-compliant. Call or text SRL before you leave.",
     "Carrier shall report any discrepancy between this Rate Confirmation and the Bill of Lading to SRL before proceeding. Signed BOL, POD, and supporting paperwork are due within 24 hours of delivery.",
   ];
   // v3.8.arl — customTerms APPENDS; it must never REPLACE the mandatory core.
@@ -2041,6 +2065,7 @@ export function generateEnhancedRateConfirmation(load: EnhancedRCLoadData, formD
         ? String(loadTempMin) + "°F to " + String(loadTempMax) + "°F"
         : tempRaw || (typeof tempSetpointResolved === "number" ? String(tempSetpointResolved) + "°F" : "per bill of lading");
     doc.font(FONT_BODY_BOLD, 7).fillColor(TOKENS.goldDark);
+    rcEnsureRoom(60);
     doc.text("TEMPERATURE CONTROL", MARGIN, y, { characterSpacing: 7 * 0.08, lineBreak: false });
     y += 12;
     doc.font(FONT_BODY, 7.5).fillColor(TOKENS.fg2);
@@ -2060,6 +2085,12 @@ export function generateEnhancedRateConfirmation(load: EnhancedRCLoadData, formD
   // undefined clock underneath a PUBLISHED §8 Net-30/21/14 commitment.
   // Operational only: no new contractual obligation is created here.
   doc.font(FONT_BODY_BOLD, 7).fillColor(TOKENS.goldDark);
+  // v3.8.arp — reserve INVOICING (~90pt) plus the anti-fraud line and tender
+  // banner (~62pt) that follow it, so the payment instructions never split
+  // across a page. Deliberately NOT sized to include the signature block: that
+  // has its own guard below, and reserving for both here pushed every case to
+  // three pages with page 2 nearly empty.
+  rcEnsureRoom(160);
   doc.text("INVOICING", MARGIN, y, { characterSpacing: 7 * 0.08, lineBreak: false });
   y += 12;
 
@@ -2093,7 +2124,16 @@ export function generateEnhancedRateConfirmation(load: EnhancedRCLoadData, formD
   // every contact detail on a forged rate confirmation is chosen by the forger.
   doc.font(FONT_BODY, 6.75).fillColor(TOKENS.fg3);
   doc.text(
-    "SRL sends rate confirmations only from @silkroutelogistics.ai. We will never change our remit-to address or banking details by email. If anything here looks wrong, do not call the number printed on this document. Call the number on our FMCSA record for MC# 1794414.",
+    // v3.8.arp — reworded from a NEGATION to an ESCALATION. This line used to
+    // read "do not call the number printed on this document", which flatly
+    // contradicted the two places on page 1 that tell a driver to call
+    // (269) 220-6760 the moment something looks wrong. On a legitimate document
+    // that made the fastest correct action look forbidden; the contradiction was
+    // the defect, not the number. Wasi's call (2026-08-14): keep the number.
+    // The independent-verification path still exists for the case it was written
+    // for — a FORGED rate confirmation, where every printed contact detail is
+    // the forger's — but now as a second step rather than a denial of the first.
+    "SRL sends rate confirmations only from @silkroutelogistics.ai. We will never change our remit-to address or banking details by email. If anything here looks wrong, call SRL at (269) 220-6760. If you have any doubt this document is genuine, verify us independently against our FMCSA record for MC# 1794414 before you move the freight.",
     MARGIN, y, { width: CONTENT_W, lineGap: 0.5 },
   );
   y = doc.y + 12;
@@ -2151,6 +2191,16 @@ export function generateEnhancedRateConfirmation(load: EnhancedRCLoadData, formD
   if (carrierDot && carrierDot !== "—") sigPrefill["DOT #"] = carrierDot;
   // Sprint 49.b (Item 139) — block height 180 → 210 to accommodate 26pt
   // row spacing × 7 RC fields = 182pt + certification + label header.
+  //
+  // v3.8.arp — the signature block must never straddle a page boundary. It is
+  // the tallest element on the document and the one a carrier signs; half a
+  // signature block at the foot of one page with the ruled fields on the next
+  // is how a returned copy comes back unsigned. 214 = the declared 210 height
+  // (which already covers the CARRIER · ACCEPTANCE label — measured 508.5 to
+  // ~700 in a rendered doc) plus 4pt of slack. An earlier 232 padded for a
+  // label header twice and tipped every fixture to three pages with page 2
+  // nearly empty, which is the opposite of the problem being solved.
+  rcEnsureRoom(214);
   drawSignatureBlock(doc, y, {
     roles: RATE_CON_SIGNATURE_ROLES,
     height: 210,
