@@ -38,7 +38,13 @@ export async function verifyRC(req: Request, res: Response) {
 
   // Hash-scan last 90 days of loads. Acceptable at current volume; Item 146
   // tracks the schema-field migration when N grows.
-  const since = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000);
+  // v3.8.arl — was 90 days. A carrier holding a legitimate 91-day-old rate
+  // confirmation got "not found or verification expired" from our own
+  // anti-fraud tool — the strongest possible fraud signal, for a valid
+  // document. Widened to 18 months to match the 49 U.S.C. 14705(a) window in
+  // which a carrier can still be invoicing against that load, so any RC worth
+  // verifying verifies. Item 146 tracks the O(1) schema-field migration.
+  const since = new Date(Date.now() - 548 * 24 * 60 * 60 * 1000);
   const loads = await prisma.load.findMany({
     where: { createdAt: { gte: since } },
     select: {
@@ -63,7 +69,12 @@ export async function verifyRC(req: Request, res: Response) {
   const match = loads.find((l) => rcVerifyToken({ id: l.id, referenceNumber: l.referenceNumber }) === token);
 
   if (!match) {
-    res.status(404).json({ valid: false, error: "Rate Confirmation not found or verification expired" });
+    // v3.8.arl — unambiguous. The old copy conflated "we have no record" with
+    // "this expired", so a carrier could not tell a filing artifact from fraud.
+    res.status(404).json({
+      valid: false,
+      error: "We have no record of this Rate Confirmation. Do not haul this load. Call SRL at (269) 220-6760 before you move.",
+    });
     return;
   }
 

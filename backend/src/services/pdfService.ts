@@ -1921,16 +1921,78 @@ export function generateEnhancedRateConfirmation(load: EnhancedRCLoadData, formD
   y += 14;
 
   const governingClauses = [
+    // v3.8.arl — 49 CFR 371.7 requires a broker to operate under its registered
+    // name and bars it from representing its operations to be those of a
+    // carrier. None of the 5 reference rate confirmations carried an equivalent
+    // statement; it is the cheapest compliance line available to us.
+    "Silk Route Logistics Inc. is an FMCSA-licensed property broker (USDOT 4526880, MC# 1794414). SRL arranges transportation. SRL does not transport freight.",
     "This Rate Confirmation is governed by the Broker-Carrier Agreement between Silk Route Logistics Inc. and Carrier (the “BCA”). In the event of conflict, the BCA controls.",
     "Acceptance: Carrier's signature below, or Carrier's dispatch of a unit, arrival at the pickup location, or commencement of transport, whichever occurs first, constitutes binding acceptance of this Rate Confirmation and the BCA.",
     "Accessorial charges require SRL's prior written approval (operations@silkroutelogistics.ai). Detention requires notice to SRL by call or text at least 30 minutes before it begins and again upon departure.",
     "Carrier shall report any discrepancy between this Rate Confirmation and the Bill of Lading to SRL before proceeding. Signed BOL, POD, and supporting paperwork are due within 48 hours of delivery.",
   ];
-  const governingBody = (fd.customTerms as string | undefined) || governingClauses.join("\n");
+  // v3.8.arl — customTerms APPENDS; it must never REPLACE the mandatory core.
+  // Pre-arl this read `(fd.customTerms) || governingClauses.join()`, so the
+  // first AE to set per-load custom terms would ship a Rate Confirmation with
+  // NO governing clauses at all: no BCA incorporation, no acceptance clause, no
+  // accessorial prior-approval requirement, no paperwork deadline. The core
+  // block is now always printed and per-load additions append under their own
+  // heading.
+  const customAddendum = (fd.customTerms as string | undefined)?.trim();
+  const governingBody = customAddendum
+    ? governingClauses.join("\n") + "\nADDITIONAL TERMS FOR THIS LOAD: " + customAddendum
+    : governingClauses.join("\n");
 
   doc.font(FONT_BODY, 7.5).fillColor(TOKENS.fg2);
   doc.text(governingBody, MARGIN, y, { width: CONTENT_W, lineGap: 1, paragraphGap: 2 });
   y = doc.y + 14;
+
+  // ── v3.8.arl — INVOICING ────────────────────────────────────────────────
+  // Present on 5 of 5 reference rate confirmations (Greatwide, MoLo, Steam,
+  // Transervice) and absent from BOTH the SRL rate confirmation and the BCA —
+  // a genuine gap, not something the counsel-confirmed architecture moved.
+  // The RC previously told a carrier WHEN paperwork was due but never where to
+  // send it, what to attach, or when the payment clock starts. That left an
+  // undefined clock underneath a PUBLISHED §8 Net-30/21/14 commitment.
+  // Operational only: no new contractual obligation is created here.
+  doc.font(FONT_BODY_BOLD, 7).fillColor(TOKENS.goldDark);
+  doc.text("INVOICING", MARGIN, y, { characterSpacing: 7 * 0.08, lineBreak: false });
+  y += 12;
+
+  const invoiceMcRaw = String(
+    fd.carrierMcNumber || load.carrier?.carrierProfile?.mcNumber || "",
+  ).replace(/^MC-?/i, "").trim();
+  const invoiceSubject = invoiceMcRaw
+    ? "Subject: Invoice · Load " + refNum + " · MC " + invoiceMcRaw
+    : "Subject: Invoice · Load " + refNum;
+
+  const invoiceLines = [
+    "Send to: accounting@silkroutelogistics.ai",
+    invoiceSubject,
+    "Attach the signed BOL, a clean POD, and original receipts for any approved lumper or accessorial charge.",
+    "Put the SRL load number on the invoice. One invoice per load; do not batch loads onto one invoice.",
+    "Payment terms run from the date SRL receives a complete packet. An incomplete packet does not start the clock.",
+  ].join("\n");
+
+  doc.font(FONT_BODY, 7.5).fillColor(TOKENS.fg2);
+  doc.text(invoiceLines, MARGIN, y, { width: CONTENT_W, lineGap: 1, paragraphGap: 2 });
+  y = doc.y + 14;
+
+  // ── v3.8.arl — anti-fraud domain anchor ─────────────────────────────────
+  // The verify URL (Sprint 51, Item 129) is genuinely ahead of the field —
+  // none of the 5 reference rate confirmations had one — but it has a
+  // structural hole: a forger impersonating SRL prints their OWN lookalike
+  // verify URL and it resolves against their own site. Anchoring the sending
+  // domain, and directing a suspicious carrier to the number on our FMCSA
+  // record rather than the number printed here, is what makes the control
+  // mean something. The last sentence is deliberately self-distrusting:
+  // every contact detail on a forged rate confirmation is chosen by the forger.
+  doc.font(FONT_BODY, 6.75).fillColor(TOKENS.fg3);
+  doc.text(
+    "SRL sends rate confirmations only from @silkroutelogistics.ai. We will never change our remit-to address or banking details by email. If anything here looks wrong, do not call the number printed on this document. Call the number on our FMCSA record for MC# 1794414.",
+    MARGIN, y, { width: CONTENT_W, lineGap: 0.5 },
+  );
+  y = doc.y + 12;
 
   // Tender expiration banner (Sprint 48 Item 108) — surfaces tender SLA
   // deadline above signature block so carrier sees expiry at point of
