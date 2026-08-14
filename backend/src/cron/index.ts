@@ -41,7 +41,7 @@ export function initCronJobs() {
 
   // ─── Every 5 minutes: Check call reminders ───────────────────
   // Eastern timezone per Item 185 — produces dispatcher Notifications.
-  cron.schedule("*/5 * * * *", () => withGuard("check-call-reminders", async () => {
+  cron.schedule("0,30 * * * *", () => withGuard("check-call-reminders", async () => {
     try {
       const now = new Date();
 
@@ -122,7 +122,7 @@ export function initCronJobs() {
   }), { timezone: "America/New_York" });
 
   // ─── Hourly: Sequence advance (Lead Hunter v3.6.c) ────────────
-  cron.schedule("15 * * * *", () => withGuard("sequence-advance", async () => {
+  cron.schedule("0 * * * *", () => withGuard("sequence-advance", async () => {
     try {
       const { advanceSequences } = require("./sequenceAdvance");
       const result = await advanceSequences();

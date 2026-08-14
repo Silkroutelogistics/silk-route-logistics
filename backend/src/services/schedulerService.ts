@@ -393,7 +393,7 @@ export function startSchedulers() {
   });
 
   // Phase C: Check-call automation: every 15 minutes
-  cron.schedule("*/15 * * * *", async () => {
+  cron.schedule("0,30 * * * *", async () => {
     log.info("[Scheduler] Running check-call automation...");
     await withLock("check-call-automation", 5 * 60 * 1000, processDueCheckCalls);
   });
@@ -408,13 +408,13 @@ export function startSchedulers() {
   // (3) per-user preference gate (notifications.riskAlerts) + per-load
   // email kill switch (riskEmailMuted). AMBER is in-app only; only RED
   // reaches email.
-  cron.schedule("5,35 * * * *", async () => {
+  cron.schedule("0,30 * * * *", async () => {
     log.info("[Scheduler] Running risk flagging engine...");
     await withLock("risk-flagging", 10 * 60 * 1000, runRiskFlagging);
   });
 
   // Phase C: Email sequence processor: every hour at :10
-  cron.schedule("10 * * * *", async () => {
+  cron.schedule("0 * * * *", async () => {
     log.info("[Scheduler] Processing due email sequences...");
     await withLock("email-sequences", 5 * 60 * 1000, processDueSequences);
   });
@@ -519,7 +519,7 @@ export function startSchedulers() {
   // ─── AI Learning Loop Crons ────────────────────────────────────
 
   // AI Queue Processor: every 10 minutes
-  cron.schedule("*/10 * * * *", async () => {
+  cron.schedule("0,30 * * * *", async () => {
     log.info("[Scheduler] Processing AI learning queue...");
     await withLock("ai-queue-processor", 5 * 60 * 1000, async () => {
       const result = await processQueue();
@@ -546,7 +546,7 @@ export function startSchedulers() {
   });
 
   // Shipment Risk Monitor: every 30 minutes
-  cron.schedule("20,50 * * * *", async () => {
+  cron.schedule("0,30 * * * *", async () => {
     log.info("[Scheduler] Running shipment risk monitor...");
     await withLock("ai-shipment-monitor", 10 * 60 * 1000, async () => {
       const result = await scanActiveShipments();
@@ -557,13 +557,13 @@ export function startSchedulers() {
   // ─── Track & Trace Phase 3 Crons ──────────────────────────────────
 
   // Geofence scanner: every 5 minutes
-  cron.schedule("*/5 * * * *", async () => {
+  cron.schedule("0,30 * * * *", async () => {
     log.info("[Scheduler] Running geofence scanner...");
     await withLock("geofence-scanner", 4 * 60 * 1000, scanGeofences);
   });
 
   // ELD GPS sync: every 15 minutes at :03, :18, :33, :48
-  cron.schedule("3,18,33,48 * * * *", async () => {
+  cron.schedule("0,30 * * * *", async () => {
     log.info("[Scheduler] Running ELD GPS sync...");
     await withLock("eld-gps-sync", 10 * 60 * 1000, async () => {
       const [samsara, motive] = await Promise.allSettled([
@@ -580,13 +580,13 @@ export function startSchedulers() {
   });
 
   // Alert engine (ETA vs appointment): every 15 minutes at :07, :22, :37, :52
-  cron.schedule("7,22,37,52 * * * *", async () => {
+  cron.schedule("0,30 * * * *", async () => {
     log.info("[Scheduler] Running track & trace alert engine...");
     await withLock("tt-alert-engine", 10 * 60 * 1000, runAlertScanner);
   });
 
   // Tender expiration: every 30 minutes at :12 and :42
-  cron.schedule("12,42 * * * *", async () => {
+  cron.schedule("0,30 * * * *", async () => {
     log.info("[Scheduler] Running tender expiration check...");
     await withLock("tender-expiry", 5 * 60 * 1000, async () => {
       const result = await processExpiredTenders();
@@ -681,7 +681,7 @@ export function startSchedulers() {
   });
 
   // Gmail reply tracking: every 30 minutes at :25 and :55
-  cron.schedule("25,55 * * * *", async () => {
+  cron.schedule("0,30 * * * *", async () => {
     log.info("[Scheduler] Running Gmail reply checker...");
     await withLock("gmail-reply-checker", 5 * 60 * 1000, async () => {
       const { checkForReplies } = await import("./gmailService");
