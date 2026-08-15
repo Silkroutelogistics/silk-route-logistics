@@ -1673,7 +1673,17 @@ Seed complete:
         data: {
           carrierId: c.id,
           version: "1.0",
-          templateName: "standard",
+          // v3.8.arx — was "standard", which no longer satisfies anything.
+          // v3.8.aqi added a templateName filter to the BCA compliance gate
+          // (complianceMonitorService: status SIGNED AND templateName
+          // "broker-carrier") so that the Quick Pay Agreement — now also a
+          // signed CarrierAgreement row — could never satisfy it. This fixture
+          // was never updated, so from that commit onward every seeded carrier
+          // failed the gate, every POST /loads/:id/tender returned 403 "No
+          // signed carrier-broker agreement on file", and the E2E lifecycle
+          // smoke has failed on every push since. Must match the canonical
+          // name in backend/src/data/agreements.ts.
+          templateName: "broker-carrier",
           status: "SIGNED",
           signedAt: new Date(),
           signedByName: "E2E Test Signer",

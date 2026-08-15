@@ -82,17 +82,30 @@ test.describe("Full Load Lifecycle E2E", () => {
       (c: any) => c.email === "pending-carrier@srl.invalid"
     );
     expect(pendingCarrier, "B0: E2E_FIXTURES must seed pending-carrier@srl.invalid (include_test fence opt-in required)").toBeTruthy();
-    expect(pendingCarrier.onboardingStatus, "B0: fixture carrier must start PENDING").toBe("PENDING");
+    // v3.8.arx — RETRY-SAFE. playwright.config.ts sets `retries: 1` on CI, and
+    // this very block APPROVES the fixture carrier, so a second attempt finds it
+    // already APPROVED. Asserting PENDING unconditionally turned every retry
+    // into "B0: fixture carrier must start PENDING" — an error about the
+    // fixture, thrown after the fixture had done its job, which MASKED the real
+    // first-attempt failure. That is exactly what happened while the
+    // templateName bug was live: the genuine 403 appeared only in attempt 1 and
+    // the retry reported a fixture problem that did not exist.
+    expect(
+      ["PENDING", "APPROVED"],
+      `B0: fixture carrier must be PENDING on a fresh run or APPROVED on a retry; got ${pendingCarrier.onboardingStatus}`,
+    ).toContain(pendingCarrier.onboardingStatus);
 
-    // AE (CEO) approves the carrier
-    const approveResp = await request.post(`${BACKEND_API}/carriers/${pendingCarrier.id}/approve`, {
-      headers: authHeaders,
-      data: { note: "E2E onboarding smoke approval" },
-    });
-    expect(approveResp.ok(), `B0: POST /carriers/:id/approve must succeed; got ${approveResp.status()} ${await approveResp.text()}`).toBeTruthy();
-    const approveBody = await approveResp.json();
-    const approvedStatus = approveBody.carrier?.onboardingStatus ?? approveBody.onboardingStatus;
-    expect(approvedStatus, "B0: carrier must be APPROVED after approve").toBe("APPROVED");
+    // AE (CEO) approves the carrier — skipped when a prior attempt already did.
+    if (pendingCarrier.onboardingStatus === "PENDING") {
+      const approveResp = await request.post(`${BACKEND_API}/carriers/${pendingCarrier.id}/approve`, {
+        headers: authHeaders,
+        data: { note: "E2E onboarding smoke approval" },
+      });
+      expect(approveResp.ok(), `B0: POST /carriers/:id/approve must succeed; got ${approveResp.status()} ${await approveResp.text()}`).toBeTruthy();
+      const approveBody = await approveResp.json();
+      const approvedStatus = approveBody.carrier?.onboardingStatus ?? approveBody.onboardingStatus;
+      expect(approvedStatus, "B0: carrier must be APPROVED after approve").toBe("APPROVED");
+    }
 
     // Carrier completes activation by e-signing the BCA (Bearer carrier token)
     const pendingTokenResp = await request.post(`${BACKEND_API}/auth/e2e-token`, {
