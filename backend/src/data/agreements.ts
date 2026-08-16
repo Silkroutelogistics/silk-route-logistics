@@ -18,7 +18,7 @@
 // THIS FILE IS THE ONLY COPY. The frontend mirrors it held — BCA_ARTICLES and
 // BCA_VERSION in frontend/src/lib/carrierAgreements.ts (deleted v3.8.aqj), the
 // QP_VERSION mirror there (deleted v3.8.asa), and the onboarding page's own
-// hardcoded BCA_VERSION fallback (deleted v3.8.asc) — are all gone, and every
+// hardcoded BCA_VERSION fallback (deleted v3.8.asb) — are all gone, and every
 // surface fetches GET /carrier-auth/agreement/:type. The header sentence that
 // stood here said this file "mirrors" that one and that it "will be repointed",
 // both of which stopped being true a while before anyone read it again. Do not
@@ -86,7 +86,7 @@ export const BCA_VERSION = "2026-06-27-v1";
 // backend REJECT a posted version that is not this constant (409) instead of
 // stamping whatever the client sent, so a signature row can only ever name a
 // body reproducible from this file. Do not reintroduce a frontend copy.
-// v3.8.asc — bumped 2026-08-16-v2 → 2026-08-16-v3. §8 clause 1 contradicted
+// v3.8.asb — bumped 2026-08-16-v2 → 2026-08-16-v3. §8 clause 1 contradicted
 // §5 clause 4 inside the same signed document, on the same fact, with opposite
 // money outcomes:
 //   §5  "If documentation is incomplete or inaccurate, the timing clock has not
@@ -108,7 +108,59 @@ export const BCA_VERSION = "2026-06-27-v1";
 // and decline path, with the §6 outcome (standard terms, no fee) named. If
 // either condition is ever enforced automatically, this clause can go back to
 // stating it as a state.
-export const QP_VERSION = "2026-08-16-v3";
+//
+// PILOT — bumped 2026-08-16-v3 → 2026-08-16-v4. Quick Pay is now a LIMITED
+// PILOT: available by request, subject to Broker's approval, and withdrawable
+// by Broker on notice. Ratified 2026-08-16 (CLAUDE.md §21).
+//
+// The document had to move because the mechanism moved. Pre-pilot, a carrier
+// turned Quick Pay on themselves — POST /quickpay-election flipped
+// quickPayEnabled in one call — and §3 said so twice ("Carrier may enable or
+// disable Quick Pay on Carrier's account at any time through the carrier
+// portal"). Under the pilot the carrier REQUESTS and Broker approves or
+// declines, so leaving that sentence would have described a control the
+// carrier no longer has, on the same surface the last three bumps existed to
+// stop describing controls that do not exist.
+//
+// WHAT CHANGED — availability only:
+//   preamble  a third paragraph, first thing a reader meets: limited pilot,
+//             by request, subject to approval, withdrawable on notice, and
+//             standard tier terms are unaffected and always free.
+//   §3 cl.1   admission stated: request → Broker approves or declines →
+//             per-load election. Replaces "enabling Quick Pay on Carrier's
+//             account", which is no longer a thing the carrier does.
+//   §3 cl.2   NEW. A declined request is not a default, carries no penalty,
+//             and does not touch tier, Compass Score, or load eligibility.
+//             Mirrors the §6 language for a declined per-load request so the
+//             two decline paths cannot be read as different in consequence.
+//   §3 cl.8   "may enable or disable" → may stop at any time; re-admission
+//             needs a new request. The stop half was true and stayed.
+//   §10 cl.2  NEW. Broker may withdraw Carrier from the pilot, or end the
+//             pilot, on notice. Loads already funded are untouched and loads
+//             not yet funded revert to standard terms at no fee.
+//
+// WHAT DID NOT CHANGE — economics. §4 fee schedule (3/2/1 by tier, +2%
+// universal same-day premium), §5 documentation trigger and payment timing,
+// §6 approval limits ($2,000/$4,000/$6,000 per load; $15,000/$40,000/$80,000
+// per month), §7 fee application, §8 and §9 are byte-identical. A pilot
+// changes who can get in, never what it costs. Do not weaken them here on the
+// theory that a pilot is provisional.
+//
+// TWO DECLINE PATHS, DELIBERATELY DISTINCT. §3 cl.2 is admission to the pilot
+// (Broker declines the carrier). §6 cl.3 is a single load over an approval
+// ceiling (Broker declines that load). Both end at standard tier terms at no
+// fee. Keep them separate — collapsing them loses the fact that a carrier in
+// the pilot can still have one load declined.
+//
+// SIGNATURES ALREADY TAKEN AGAINST v3 REMAIN VALID AND KEEP PAYING. Every
+// gate that can deduct a fee looks for a SIGNED quick-pay CarrierAgreement
+// WITHOUT filtering on version (carrierPayments.ts, integrationService,
+// accountingController), so a carrier who signed v3 is not un-signed by this
+// bump and no funded load re-prices. The 409 guard on /quickpay-election
+// compares the POSTED version to this constant, so a stale open tab is
+// rejected rather than stamped — which is the intended behaviour and the
+// reason the constant is the only version anywhere.
+export const QP_VERSION = "2026-08-16-v4";
 
 export const BROKER_CARRIER_AGREEMENT: LegalAgreement = {
   templateName: "broker-carrier",
@@ -242,6 +294,16 @@ export const BROKER_CARRIER_AGREEMENT: LegalAgreement = {
 // WHAT THE BILLING PATH ACTUALLY DOES (v3.8.asa). These clauses are promises
 // about money, so each one has a counterpart in code. If you change a clause,
 // change its counterpart in the same commit, and vice versa:
+//   §3 pilot admission     → QuickPayEnrollment. The row IS the standing:
+//                            PENDING on request, APPROVED / DECLINED on the
+//                            AE decision, WITHDRAWN when either side stops it.
+//                            CarrierProfile.quickPayEnabled is a denormalised
+//                            mirror of "has an APPROVED enrolment", written
+//                            only in the same transaction as a transition, and
+//                            it stays the read-gate every charge path already
+//                            checks. Do not write the flag from anywhere else,
+//                            or the mirror and the lifecycle drift and the
+//                            money path follows the wrong one.
 //   §3 per-load election   → integrationService.createCarrierPayOnDelivery
 //                            prices from Load.quickPayFeePercent, frozen when
 //                            the rate confirmation was issued. The account
@@ -263,7 +325,7 @@ export const BROKER_CARRIER_AGREEMENT: LegalAgreement = {
 //                            arrives carries no due date until
 //                            onPODUploaded stamps it. §5 governs documentation
 //                            timing ALONE — §8 used to contradict it on the
-//                            same fact and was narrowed in v3.8.asc.
+//                            same fact and was narrowed in v3.8.asb.
 //   §8 ineligibility       → NOT ENFORCED, and the clause says so. Neither
 //                            charge path queries PaymentDispute for an open
 //                            claim or runs complianceCheck for authority and
@@ -292,7 +354,7 @@ export const BROKER_CARRIER_AGREEMENT: LegalAgreement = {
 //                              routes/carrierPayments (carrier's own request)
 //                              accountingController.resolveElectedQuickPayFee
 //                                (AE prepare / edit a settlement)
-//                            The third was gateless until v3.8.asc: it derived
+//                            The third was gateless until v3.8.asb: it derived
 //                            a fee from a request-supplied PaymentTier string,
 //                            so editing a settlement's tier label deducted a
 //                            fee from a carrier who had signed nothing. If a
@@ -302,12 +364,16 @@ export const BROKER_CARRIER_AGREEMENT: LegalAgreement = {
 export const CARAVAN_QUICK_PAY_AGREEMENT: LegalAgreement = {
   templateName: "quick-pay",
   title: "Caravan Quick Pay Agreement",
-  subtitle: "Supplement to the Broker-Carrier Agreement · Optional Per-Load Election",
+  // The pilot belongs in the subtitle because the subtitle is the second line
+  // of the PDF and of the portal review pane — a reader meets it before any
+  // clause. Availability is the first thing that has to be true.
+  subtitle: "Supplement to the Broker-Carrier Agreement · Limited Pilot, By Request · Optional Per-Load Election",
   version: QP_VERSION,
   effectiveNote: `Version ${QP_VERSION} · Effective on execution`,
   preamble: [
     "This Caravan Quick Pay Agreement (the “Quick Pay Agreement”) is made and entered into between Silk Route Logistics Inc., a Michigan corporation and FMCSA-licensed property broker (USDOT 4526880, MC# 1794414) (“Broker”), and the motor carrier identified in the signature block below (“Carrier”).",
     "This Quick Pay Agreement supplements, and does not replace, the Broker-Carrier Agreement between the parties (the “Broker-Carrier Agreement”). It governs one thing: Carrier’s optional election to be paid earlier than Carrier’s standard tier payment terms on a load Broker has tendered. Carrier is never required to elect Quick Pay, and declining it has no effect on Carrier’s eligibility to haul, on load tendering, or on Carrier’s standing in the Caravan Partner Program.",
+    "Quick Pay is currently offered as a limited pilot. Carrier requests it, Broker approves or declines the request, and Broker may withdraw Carrier from the pilot, or end the pilot, on notice to Carrier. Signing this Quick Pay Agreement is a request to join the pilot; it does not by itself admit Carrier to it. Carrier’s standard tier payment terms are unaffected by any of this and are always available at no fee: Net-30 at Silver, Net-21 at Gold, Net-14 at Platinum. The fee schedule in Section 4 and the approval limits in Section 6 apply to Carrier on the same published terms as every other participant for as long as Carrier is in the pilot.",
   ],
   sections: [
     {
@@ -329,15 +395,16 @@ export const CARAVAN_QUICK_PAY_AGREEMENT: LegalAgreement = {
       ],
     },
     {
-      heading: "3. Election Is Per Load and Optional",
+      heading: "3. Admission to the Pilot, and Election Per Load",
       clauses: [
-        "Quick Pay is elected on a per-load basis. Enabling Quick Pay on Carrier’s account makes the option available; it does not apply Quick Pay to every load automatically.",
+        "Admission to the Quick Pay pilot comes first, and it comes by request. Carrier requests Quick Pay, Broker approves or declines the request, and Broker notifies Carrier of the decision. Approval makes the option available to Carrier; it does not apply Quick Pay to every load automatically. Quick Pay is then elected on a per-load basis.",
+        "If Broker declines Carrier’s request to join the pilot, Carrier is paid on Carrier’s standard tier payment terms at no fee, exactly as before the request. A declined request is not a default, carries no penalty, does not affect Carrier’s tier, Compass Score, or load eligibility, and does not prevent Carrier from requesting again later.",
         "The Quick Pay speed for a load, and the fee percentage that goes with it, are recorded on that load when Broker issues the rate confirmation for it. The percentage recorded at that moment is the fee for that load and does not change afterward.",
         "Broker will not deduct a Quick Pay fee on a load unless all three of the following are true: a Quick Pay fee is recorded on that load, this Quick Pay Agreement is signed, and Quick Pay is enabled on Carrier’s account. If any one of them is not true, the load is paid on Carrier’s standard tier payment terms at no fee.",
         "The fee that applies is the published percentage in Section 4 for Carrier’s tier and the speed recorded, so the amount is determinable from Section 4 before the load is hauled. The settlement for the load itemizes the percentage applied and the dollar amount deducted, as stated in Section 7, so Carrier can verify the fee charged against Section 4. Carrier may ask Broker at any time which Quick Pay speed, if any, is recorded on a load, and Broker will state it.",
         "If Carrier does not elect Quick Pay on a load, that load is paid on Carrier’s standard tier payment terms at no fee: Net-30 at Silver, Net-21 at Gold, Net-14 at Platinum, in each case running from the trigger stated in Section 5.",
-        "Carrier may enable or disable Quick Pay on Carrier’s account at any time through the carrier portal. Disabling it does not affect loads already funded under Quick Pay and does not affect Carrier’s tier, Compass Score, or load eligibility.",
-        "An election is irrevocable for the load once Broker has funded that load under Quick Pay. Carrier withdraws an election by disabling Quick Pay in the carrier portal, which withdraws it on every load Broker has not yet funded; each of those loads then reverts to standard tier terms at no fee.",
+        "Carrier may stop using Quick Pay at any time through the carrier portal, without cause and without notice. Stopping does not affect loads already funded under Quick Pay and does not affect Carrier’s tier, Compass Score, or load eligibility. Carrier cannot switch Quick Pay back on unilaterally while it remains a pilot; re-admission takes a new request under the first clause of this Section.",
+        "An election is irrevocable for the load once Broker has funded that load under Quick Pay. Carrier withdraws an election by stopping Quick Pay in the carrier portal, which withdraws it on every load Broker has not yet funded; each of those loads then reverts to standard tier terms at no fee.",
         "Enabling Quick Pay after a load has been hauled does not apply Quick Pay to that load, and does not change what Broker owes on it. A load is priced by the Quick Pay speed recorded on that load when its rate confirmation was issued, and by nothing else.",
       ],
     },
@@ -399,7 +466,8 @@ export const CARAVAN_QUICK_PAY_AGREEMENT: LegalAgreement = {
       heading: "10. Term and Termination",
       clauses: [
         "This Quick Pay Agreement takes effect on execution and continues until terminated.",
-        "Either party may stop offering or electing Quick Pay at any time, effective prospectively, by written notice or by disabling Quick Pay in the carrier portal. No cause or notice period is required.",
+        "Either party may stop offering or electing Quick Pay at any time, effective prospectively, by written notice or by stopping Quick Pay in the carrier portal. No cause or notice period is required.",
+        "Quick Pay is a limited pilot. Broker may withdraw Carrier from the pilot, or end the pilot entirely, on notice to Carrier. Withdrawal is effective prospectively: it does not affect any load Broker has already funded under Quick Pay, and it does not change what Broker owes on any load. Loads Broker has not yet funded revert to Carrier’s standard tier payment terms at no fee. Withdrawal from the pilot is not a default by Carrier, carries no penalty, and does not affect Carrier’s tier, Compass Score, load eligibility, or the Broker-Carrier Agreement.",
         "Termination of this Quick Pay Agreement does not affect loads already funded under Quick Pay, does not affect Broker’s obligation to pay for loads on standard tier terms, and does not terminate the Broker-Carrier Agreement.",
         "This Quick Pay Agreement terminates automatically if the Broker-Carrier Agreement terminates. Sections 8 and 9 survive termination as to any load funded under Quick Pay.",
       ],

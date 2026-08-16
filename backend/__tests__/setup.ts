@@ -93,6 +93,14 @@ vi.mock("../src/config/database", () => ({
     carrierPay: {
       findMany: vi.fn(),
       findFirst: vi.fn(),
+      // Real Prisma has findUnique and production reads settlements by id on
+      // three paths (accountingController.updatePayment / submitPayment,
+      // carrierPayController.getCarrierPayById, the carrier-portal routes). The
+      // mock did not, so a test exercising any of them died on
+      // "Cannot read properties of undefined" rather than on its assertion.
+      // Same class as the v3.8.alh findFirst gap: mirror the client, never
+      // alias one method to another, or the divergence hides.
+      findUnique: vi.fn(),
       create: vi.fn(),
       update: vi.fn(),
       updateMany: vi.fn(),
@@ -134,6 +142,38 @@ vi.mock("../src/config/database", () => ({
     invoiceLineItem: {
       createMany: vi.fn(),
       deleteMany: vi.fn(),
+      count: vi.fn(),
+    },
+    // v3.8.asb — the APPROVED accessorial ledger is now the money input for
+    // BOTH the carrier settlement and the customer invoice, so every test that
+    // touches either path queries this model. Absent here, the call throws.
+    loadAccessorial: {
+      findMany: vi.fn(),
+      findFirst: vi.fn(),
+      create: vi.fn(),
+      update: vi.fn(),
+      updateMany: vi.fn(),
+    },
+    approvalQueue: {
+      create: vi.fn(),
+      findMany: vi.fn(),
+    },
+    factoringFund: {
+      findFirst: vi.fn(),
+      create: vi.fn(),
+    },
+    rateConfirmation: {
+      findFirst: vi.fn(),
+      findUnique: vi.fn(),
+      findMany: vi.fn(),
+      create: vi.fn(),
+      update: vi.fn(),
+    },
+    quickPayEnrollment: {
+      findFirst: vi.fn(),
+      findMany: vi.fn(),
+      create: vi.fn(),
+      update: vi.fn(),
     },
     checkCall: {
       updateMany: vi.fn(),
@@ -143,6 +183,9 @@ vi.mock("../src/config/database", () => ({
     },
     document: {
       findMany: vi.fn(),
+      // documentationReceivedAt reads the POD through this to start the
+      // payment clock, so any settlement-timing test needs it present.
+      findFirst: vi.fn(),
       findUnique: vi.fn(),
       create: vi.fn(),
       update: vi.fn(),

@@ -7,6 +7,7 @@ import { notifyTenderAction } from "../services/notificationService";
 import { autoGenerateRateConfirmation } from "../services/autoRateConfirmationService";
 import { logLoadActivity } from "../services/loadActivityService";
 import { checkCustomerActive } from "../lib/customerActive";
+import { generateLoadNumber, formatDocumentNumber } from "../lib/documentNumber";
 import { log } from "../lib/logger";
 
 /**
@@ -92,9 +93,22 @@ export async function createLoadWithTender(req: AuthRequest, res: Response) {
     }
   }
 
-  // Generate reference numbers
-  const refNumber = `L${Date.now().toString().slice(-8)}${Math.floor(Math.random() * 100)}`;
-  const bolNumber = `BOL-${Date.now().toString().slice(-8)}`;
+  // The load number comes off the Postgres sequence like every other creator's.
+  //
+  // This path stamped `L${Date.now()}${rand}` and never called the generator,
+  // and it is the Carrier Engagement Drawer — the canonical AE way to build a
+  // load — so in practice most real loads numbered L1234567842 while the three
+  // paths nobody uses numbered SRL-121485. Every document derives its number
+  // from this stem (lib/documentNumber.ts), so the whole BOL / rate con /
+  // invoice / settlement thread was breaking on exactly the loads that matter.
+  //
+  // Allocated here rather than inside the transaction: nextval is
+  // non-transactional anyway, so enrolling it would buy nothing, and CREATE
+  // SEQUENCE inside a transaction takes a lock that concurrent creates would
+  // queue behind. A rolled-back create burns a number, which is the same trade
+  // loadController makes — gaps are free, collisions are not. It sits after the
+  // compliance, customer and order gates so a rejected request burns nothing.
+  const refNumber = await generateLoadNumber();
   const isHot = loadFields.shipmentPriority === "hot";
 
   try {
@@ -105,7 +119,21 @@ export async function createLoadWithTender(req: AuthRequest, res: Response) {
         data: {
           referenceNumber: refNumber,
           loadNumber: refNumber,
-          bolNumber,
+          // srlBolNumber is OUR document number for the BOL (SRL-121485B).
+          // `bolNumber` is a different column: it holds the CUSTOMER'S own BOL
+          // reference, which arrives from the shipper and is written through the
+          // AE edit surface (loadController.updateLoad). This path used to stamp
+          // `BOL-<timestamp>` into it, which put SRL-generated junk in the
+          // customer's reference field and left our own document number null —
+          // so the BOL printed an invented number and the shipper's reference was
+          // a number they had never issued. The drawer does not collect a
+          // customer BOL reference, so `bolNumber` is left null for the AE to
+          // fill when the shipper supplies one.
+          //
+          // The BOL is 1:1 with the load and its number is fully determined by a
+          // stem that just came off the sequence, so it is stamped here with no
+          // scan and no race. A re-issue takes SRL-…B2 via withDocumentNumber.
+          srlBolNumber: formatDocumentNumber(refNumber, "BOL"),
           customerId: loadFields.customerId,
           posterId: req.user!.id,
 

@@ -110,6 +110,40 @@ enum QuickPayStatus {
   ON_HOLD
 }
 
+// ─── Quick Pay pilot (v3.8.asb) ─────────────────────────
+// Lifecycle of ONE carrier's request to join the Quick Pay pilot.
+// Distinguishability, which is the whole reason this is a status and not a
+// pair of booleans:
+//   never asked            → no QuickPayEnrollment row at all
+//   requested, undecided   → PENDING   (this is the AE queue)
+//   turned down            → DECLINED  (reviewedAt set, withdrawnAt null)
+//   approved then pulled   → WITHDRAWN (reviewedAt set AND withdrawnAt set)
+// DECLINED and WITHDRAWN are separate states, not one "inactive" state: the
+// pilot is explicitly withdrawable on notice, and "we said no" is a different
+// conversation from "we said yes and then stopped".
+enum QuickPayEnrollmentStatus {
+  PENDING
+  APPROVED
+  DECLINED
+  WITHDRAWN
+}
+
+// Per-load Quick Pay speed. STANDARD = no Quick Pay, carrier is paid on the
+// free tier terms (Net-30 / 21 / 14 by tier). SAME_DAY is the universal +2%
+// premium on the tier fee and is never tier-gated.
+enum QuickPaySpeed {
+  STANDARD
+  SEVEN_DAY
+  SAME_DAY
+}
+
+// Base invoice vs the supplemental accessorial invoice billed against the same
+// load. See the Invoice model for why this is a separate row and not a flag.
+enum InvoiceKind {
+  BASE
+  SUPPLEMENTAL
+}
+
 enum OnboardingStatus {
   // v3.8.ajd Sprint 1 — 6-state carrier onboarding lifecycle.
   // PENDING: submission received, awaiting AE pickup.
@@ -827,6 +861,12 @@ model User {
   carrierCallLogs    CarrierCallLog[]     @relation("CallLogCaller")
   fuelTables         FuelSurchargeTable[] @relation("FuelTableCreator")
 
+  // Quick Pay pilot (v3.8.asb) — the AE who approved/declined a request, and
+  // the AE who later withdrew an approved enrolment. Two relations because the
+  // reviewer and the withdrawer are frequently different people.
+  reviewedQuickPayEnrollments  QuickPayEnrollment[] @relation("QuickPayReviewer")
+  withdrawnQuickPayEnrollments QuickPayEnrollment[] @relation("QuickPayWithdrawer")
+
   @@index([email])
   @@index([role])
   @@index([isActive, role])
@@ -939,12 +979,30 @@ model CarrierProfile {
   // only the signed BCA blocks tendering. Default false = the opt-out state,
   // so a carrier who never elects QP is fully operational on standard Net
   // terms with zero extra steps.
+  //
+  // ─── v3.8.asb: quickPayEnabled IS NO LONGER CARRIER-SETTABLE. ───
+  // Quick Pay became a request-then-approve pilot. `QuickPayEnrollment` is the
+  // authoritative record of who asked, who decided, and who withdrew.
+  // quickPayEnabled is now a DENORMALISED CACHE of "this carrier has an
+  // enrolment in state APPROVED", written in the SAME transaction as the
+  // enrolment row and by no other path. It is retained rather than dropped
+  // because it is the live read-gate on the money path
+  // (accountingController.ts:90-95) and every other reader; rewriting those
+  // reads is a separate change with its own blast radius. Read it freely.
+  // Write it ONLY alongside a QuickPayEnrollment transition.
+  //
+  // The quickPayAgreed* columns keep their meaning: they are the CONSENT
+  // artefact (the carrier's tick of the Caravan Quick Pay Agreement, with
+  // forensics). The enrolment row is the WORKFLOW. One act at onboarding
+  // writes both; they are not duplicates of each other.
   quickPayEnabled             Boolean   @default(false)
   quickPayAgreedAt            DateTime?
   quickPayAgreedFromIp        String?
   quickPayAgreedFromUserAgent String?
   quickPayVersion             String?
   activatedAt                 DateTime?
+
+  quickPayEnrollments QuickPayEnrollment[]
 
   // Insurance Agent Contact
   insuranceAgentName  String?
@@ -1414,6 +1472,19 @@ model Load {
   carrierPaymentTier   PaymentTier?
   quickPayFeePercent   Float?
 
+  // Per-load Quick Pay speed (v3.8.asb). STORED, not derived from
+  // quickPayFeePercent, because derivation is already wrong today:
+  //   3% is Silver/7-day AND Platinum/same-day — genuinely ambiguous without
+  //   the tier, and the carrier's tier moves as they advance, so
+  //   reconstructing an old load's speed from today's tier returns the wrong
+  //   answer. LoadQuickPayOverride can also put the fee off the ladder
+  //   entirely, at which point there is nothing to derive from.
+  // NULL = not yet elected (distinct from an explicit STANDARD election).
+  // The application applies the 7-day default; the column stays NULL-able so
+  // "never asked" and "asked for standard" remain different facts.
+  // The RC prints quickPaySpeed + quickPayFeePercent as applied to THIS load.
+  quickPaySpeed        QuickPaySpeed?
+
   // Terms
   termsConditions     String?
   specialInstructions String?
@@ -1425,7 +1496,15 @@ model Load {
   // TMW-level reference fields
   poNumbers         String[] @default([])
   proNumber         String?
+  // SHIPPER-SUPPLIED BOL reference. Whatever the customer calls this load on
+  // their own paper. NOT SRL's document number — see srlBolNumber below.
   bolNumber         String?
+  // SRL's OWN BOL document number, suffix form on the load stem: SRL-121485B.
+  // Re-issues take a numeric revision — SRL-121485B2 — and a number is never
+  // reused, so a dispute can name the exact version the driver signed.
+  // Deliberately a separate column from bolNumber: they are different
+  // documents' identifiers and conflating them loses the shipper's reference.
+  srlBolNumber      String?  @unique
   sealNumber        String?
   appointmentNumber String?
   additionalRefs    Json?
@@ -1750,6 +1829,11 @@ model RateConfirmation {
   id            String    @id @default(cuid())
   loadId        String
   load          Load      @relation(fields: [loadId], references: [id], onDelete: Restrict)
+  // The RC's document number, suffix form on the load stem: SRL-121485R.
+  // Re-issues take a numeric revision — SRL-121485R2 — and never reuse a
+  // number; @unique would reject reuse anyway, which is the point.
+  // Column already existed and had ZERO writers repo-wide as of v3.8.asb, so
+  // it is claimed here rather than duplicated.
   rateConNumber String?   @unique
   formData      Json
   pdfUrl        String?
@@ -1779,11 +1863,68 @@ model RateConfirmation {
   updatedAt DateTime @updatedAt
 
   carrierPays CarrierPay[]
+  invoices    Invoice[] @relation("InvoiceRateCon")
 
   @@index([loadId])
   @@index([status])
   @@index([totalCharges])
   @@map("rate_confirmations")
+}
+
+// ─── Quick Pay pilot enrolment (v3.8.asb) ────────────────
+// Request-then-approve, NOT cold invite. The carrier ticks a request at
+// onboarding; it lands as PENDING for the AE; the AE approves or declines with
+// a reason; an approved enrolment can later be withdrawn on notice.
+//
+// A dedicated model rather than columns on CarrierProfile because a carrier can
+// be declined and re-request, or be withdrawn and re-approved. Flattened onto
+// CarrierProfile, each new attempt would overwrite the last, and "why was this
+// carrier withdrawn in June and re-approved in August" — a real question during
+// a pilot — becomes unanswerable. Here every attempt is its own row.
+//
+// AT MOST ONE LIVE ENROLMENT per carrier is enforced by a partial unique index
+// hand-authored in the migration (Prisma cannot express the WHERE clause):
+//
+//     CREATE UNIQUE INDEX quick_pay_enrollment_one_live
+//       ON quick_pay_enrollments (carrier_profile_id)
+//       WHERE status IN ('PENDING', 'APPROVED');
+//
+// so "the carrier's current standing" is the single non-terminal row, or none.
+// Nothing is denormalised to compute it. CarrierProfile.quickPayEnabled is a
+// cache of `status = APPROVED` and must be written in the same transaction.
+model QuickPayEnrollment {
+  id               String                   @id @default(cuid())
+  carrierProfileId String                   @map("carrier_profile_id")
+  carrierProfile   CarrierProfile           @relation(fields: [carrierProfileId], references: [id], onDelete: Cascade)
+  status           QuickPayEnrollmentStatus @default(PENDING)
+
+  // The request. Consent forensics for the Caravan Quick Pay Agreement live on
+  // CarrierProfile.quickPayAgreed* — the agreement artefact — and are not
+  // duplicated here. This row is the workflow.
+  requestedAt DateTime @default(now()) @map("requested_at")
+
+  // The AE decision — approve or decline are the same act with two outcomes, so
+  // they share one timestamp. On a WITHDRAWN row these still hold the original
+  // approval, which is what makes WITHDRAWN readable as "was approved, then
+  // pulled" rather than "never approved".
+  reviewedAt   DateTime? @map("reviewed_at")
+  reviewedById String?   @map("reviewed_by_id")
+  reviewedBy   User?     @relation("QuickPayReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+  reviewNote   String?   @map("review_note")
+
+  // Withdrawal of an already-approved enrolment, on notice.
+  withdrawnAt      DateTime? @map("withdrawn_at")
+  withdrawnById    String?   @map("withdrawn_by_id")
+  withdrawnBy      User?     @relation("QuickPayWithdrawer", fields: [withdrawnById], references: [id], onDelete: SetNull)
+  withdrawalReason String?   @map("withdrawal_reason")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // The AE pending queue reads (status, requestedAt) — oldest request first.
+  @@index([status, requestedAt])
+  @@index([carrierProfileId, status])
+  @@map("quick_pay_enrollments")
 }
 
 // ─── Per-Load Quick Pay Override (v3.7.a) ────────────────
@@ -1842,10 +1983,41 @@ model CheckCall {
 
 model Invoice {
   id                  String         @id @default(cuid())
+  // INTERNAL accounting sequence, INV-<n>. Occupied: lib/invoiceNumber.ts owns
+  // it, computes the next value by scanning `startsWith: "INV-"`, and retries
+  // on P2002. Two legacy formats already coexist in it. Repointing this column
+  // at the SRL-stem scheme would break that generator, so the customer-facing
+  // document number lives in srlDocNumber below and this stays as-is.
   invoiceNumber       String         @unique
+  // The customer-facing document number, suffix form on the load stem:
+  //   SRL-121485I  base invoice
+  //   SRL-121485S  supplemental accessorial invoice (invoiceKind SUPPLEMENTAL)
+  // Re-issues take a numeric revision (SRL-121485I2); numbers are never reused.
+  srlDocNumber        String?        @unique
   loadId              String
   load                Load           @relation(fields: [loadId], references: [id], onDelete: Restrict)
   status              InvoiceStatus  @default(DRAFT)
+
+  // The RC that priced this load. Nullable because invoices predating the link
+  // exist, and because a load can be invoiced without an RC on file.
+  rateConfirmationId String?
+  rateConfirmation   RateConfirmation? @relation("InvoiceRateCon", fields: [rateConfirmationId], references: [id], onDelete: SetNull)
+
+  // ─── Supplemental accessorial invoice (v3.8.asb) ───
+  // A SEPARATE ROW, not a flag on the base invoice. Justification:
+  //   - it carries its OWN document number (…S vs …I); one row cannot hold two
+  //   - it has its own amount, dueDate, sentDate, status and reminder ladder —
+  //     the base can be PAID while the supplemental is still SENT
+  //   - it is paid separately, so paidAt/paidAmount/paymentReference differ
+  //   - Invoice.loadId is not unique, so multiple invoices per load already fit
+  //   - LoadAccessorial.shipperInvoiceId already points at ONE invoice, so
+  //     accessorials attach to the supplemental row directly with no new wiring
+  // invoiceKind is the discriminator; supplementsInvoiceId links back to the
+  // base so the pair is navigable in both directions.
+  invoiceKind          InvoiceKind @default(BASE)
+  supplementsInvoiceId String?
+  supplementsInvoice   Invoice?    @relation("InvoiceSupplement", fields: [supplementsInvoiceId], references: [id], onDelete: SetNull)
+  supplementalInvoices Invoice[]   @relation("InvoiceSupplement")
   amount              Float
   lineHaulAmount      Float?
   fuelSurchargeAmount Float?
@@ -1890,6 +2062,9 @@ model Invoice {
   @@index([userId, status])
   @@index([invoiceNumber])
   @@index([dueDate])
+  @@index([loadId, invoiceKind])
+  @@index([rateConfirmationId])
+  @@index([supplementsInvoiceId])
   @@map("invoices")
 }
 
@@ -1913,7 +2088,17 @@ model InvoiceLineItem {
 
 model CarrierPay {
   id                 String            @id @default(cuid())
+  // INTERNAL accounting sequence, CP-YYYYMMDD-XXXX (accountingController.ts:986,
+  // integrationService.ts:404, plus search + CSV export columns). Left alone.
   paymentNumber      String?           @unique
+  // Carrier-facing settlement document number for THIS load, suffix form on the
+  // load stem: SRL-121485P. "P" for pay — "S" is taken by the supplemental
+  // invoice, and the two must not collide.
+  // NOTE: this is the PER-LOAD pay document. `Settlement` is a per-carrier,
+  // per-period rollup spanning many loads, so the per-load stem does not apply
+  // to it; Settlement.settlementNumber already exists, is @unique and NOT NULL,
+  // and needs nothing added.
+  srlDocNumber       String?           @unique
   carrierId          String
   carrier            User              @relation("CarrierPayments", fields: [carrierId], references: [id])
   loadId             String
@@ -4295,6 +4480,27 @@ model LoadAccessorial {
   load Load      @relation(fields: [loadId], references: [id], onDelete: Cascade)
   stop LoadStop? @relation(fields: [stopId], references: [id])
 
+  // ─── Closes the KNOWN GAP documented in lib/detentionLayover.ts ───
+  // applyStopDwellCharges is findFirst-then-create across an await, with five
+  // entry points including two crons and an ELD webhook. Interleave two callers
+  // on one 31h stop and both findFirst calls return null before either create
+  // lands: two DETENTION rows and two LAYOVER rows, $1000 on a stop the
+  // ratified schedule prices at $500. This constraint makes the database refuse
+  // the second row even if the application logic is bypassed.
+  //
+  // The source comment specifies a PARTIAL index (WHERE stop_id IS NOT NULL) on
+  // the assumption that load-level rows, which legitimately repeat with a NULL
+  // stopId, would collide. They do not: Postgres unique indexes treat NULLs as
+  // DISTINCT unless NULLS NOT DISTINCT is declared (PG15+ opt-in), and Prisma
+  // never emits that clause. So a plain composite unique is equivalent for the
+  // NULL case and strictly better in two ways — it is expressible in the DSL,
+  // so there is no schema/database drift, and Prisma `upsert` can target it,
+  // which is exactly what part 2 of the documented fix needs.
+  // `name` is the CLIENT-side compound key, so part 2 of the fix reads
+  //   upsert({ where: { load_accessorial_stop_type: { loadId, stopId, type } } })
+  // `map` is the DATABASE index name. Both are set to the same string so the
+  // two never drift and the migration is readable.
+  @@unique([loadId, stopId, type], name: "load_accessorial_stop_type", map: "load_accessorial_stop_type")
   @@index([loadId])
   @@index([status])
   @@map("load_accessorials")

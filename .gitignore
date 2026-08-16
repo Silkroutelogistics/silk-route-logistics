@@ -42,6 +42,9 @@ test-results/
 # Misc
 .turbo/
 
+# Local MCP connector config (references personal key path + sheet ID)
+.mcp.json
+
 # Frontend production env (contains API keys)
 frontend/.env.production
 my-knowledge-base/raw/assets/_extracted/

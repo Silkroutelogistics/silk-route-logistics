@@ -19,17 +19,10 @@ import { logLoadCreation, diffLoadChanges, logLoadChanges, logStatusChange, getL
 import { onLoadStatusChange as aiOnLoadStatusChange } from "../services/aiLearningLoop/feedbackCollector";
 import { log } from "../lib/logger";
 import { validateLoadStatusTransition, getAllowedNextStatuses } from "../lib/loadStateMachine";
-
-async function generateLoadNumber(): Promise<string> {
-  // Ensure sequence exists (idempotent) — safe static SQL, no user input
-  await prisma.$executeRaw`CREATE SEQUENCE IF NOT EXISTS load_number_seq START WITH 121472`;
-  const result = await prisma.$queryRaw<{ nextval: bigint }[]>`SELECT nextval('load_number_seq') as nextval`;
-  if (!result || result.length === 0) {
-    throw new Error("Failed to generate load number: sequence returned no result");
-  }
-  const num = Number(result[0].nextval);
-  return `SRL-${num}`;
-}
+// generateLoadNumber lived here and two other load creators could not reach it,
+// so they shipped loads with no number at all. It owns a Postgres sequence, so
+// there must be exactly one path to it: lib/documentNumber.ts.
+import { generateLoadNumber, formatDocumentNumber } from "../lib/documentNumber";
 
 const RELEASED_VALUE_BASIS_VALUES = ["PER_POUND", "PER_PIECE", "TOTAL", "NVD"] as const;
 type ReleasedValueBasisLiteral = (typeof RELEASED_VALUE_BASIS_VALUES)[number];
@@ -333,6 +326,13 @@ export async function createLoad(req: AuthRequest, res: Response) {
       ...data,
       referenceNumber: refNumber,
       loadNumber: refNumber,
+      // The BOL is the one document that is 1:1 with the load, and its number is
+      // fully determined by a stem that just came off a sequence — so it can be
+      // stamped here with no scan and no race. Allocating it at load creation
+      // (rather than at first print) keeps the renderer a pure read, which the
+      // synchronous, database-free RC/BOL fixture gates depend on.
+      // A re-issued BOL takes SRL-…B2 via withDocumentNumber, not this line.
+      srlBolNumber: formatDocumentNumber(refNumber, "BOL"),
       posterId: req.user!.id,
       ...(lineItems ? { lineItems: { create: lineItems } } : {}),
     } as any,
@@ -424,7 +424,20 @@ export async function getLoadById(req: AuthRequest, res: Response) {
     where: { id: req.params.id, deletedAt: null },
     include: {
       poster: { select: { id: true, company: true, firstName: true, lastName: true, phone: true } },
-      carrier: { select: { id: true, company: true, firstName: true, lastName: true, phone: true } },
+      // v3.8.asb — carrierProfile added. The RC modal has read
+      // `load.carrier.carrierProfile.tier` since Sprint 33 to price the Payment
+      // Terms panel, and this select has never supplied it: the tier resolved
+      // undefined and every carrier's draft was priced at the Silver rung
+      // (3% / 5%) regardless of their actual tier, unless the AE happened to
+      // re-pick the carrier from the picker, which does carry tier. A Gold
+      // carrier's draft showed a point too much on 7-day and Platinum two.
+      // quickPayEnabled comes along for the election indicator on the same panel.
+      carrier: {
+        select: {
+          id: true, company: true, firstName: true, lastName: true, phone: true,
+          carrierProfile: { select: { tier: true, quickPayEnabled: true } },
+        },
+      },
       tenders: {
         include: { carrier: { include: { user: { select: { company: true, firstName: true, lastName: true } } } } },
         orderBy: { createdAt: "desc" },

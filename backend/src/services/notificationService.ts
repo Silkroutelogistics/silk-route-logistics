@@ -11,6 +11,11 @@ import {
   sendBidDeclinedEmail,
 } from "./emailService";
 import { mintTenderActionToken, tenderActionUrl } from "../lib/tenderActionToken";
+import { sendEmail, wrap } from "./emailService";
+// v3.8.asb — the ONE Quick Pay resolver. The election notice quotes a fee to a
+// carrier, so it must read the same ladder settlement charges from. Never
+// restate the percentages inline here.
+import { normalizeTier, quickPayFeePercent, standardNetDays } from "../lib/quickPayPricing";
 
 // Sprint 54 (v3.8.acc) Item 7 — operations@ alias is CC'd on every
 // AE-facing tender-accept email so the team has a shared audit trail
@@ -734,4 +739,103 @@ export async function notifyCreditAlert(shipperId: string, message: string) {
       )
     )
   );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// v3.8.asb — THE QUICK PAY ELECTION WINDOW
+// ═══════════════════════════════════════════════════════════════════════════
+//
+// Quick Pay defaults OFF per load (principal, 2026-08-16), which is what the
+// signed agreement has always said. The consequence is that a carrier who WANTS
+// Quick Pay has to elect it, and until now nothing told them the chance existed.
+//
+// The window opens when they accept a tender and closes when the AE sends the
+// rate confirmation, because the fee freezes on send. That is a real window and
+// it can be short: sending the RC is what authorises the haul, so an AE has
+// every reason to send immediately.
+//
+// This closes most of the gap and cannot close all of it. A carrier away from
+// their phone can still miss it. The other half is on the AE side — the draft
+// now shows whether the carrier has chosen, so the operator can hold a send
+// voluntarily on a load where the carrier clearly has not seen this yet. No
+// timed hold, no delayed send: the AE stays in control of when the document
+// issues.
+//
+// EVERY FIGURE HERE COMES FROM lib/quickPayPricing. Do not restate the ladder
+// inline. Four resolvers disagreeing is what cost this project a full sprint,
+// and a fee quoted to a carrier that differs from the fee settlement charges is
+// the worst version of that bug.
+export async function notifyQuickPayElectionOpen(loadId: string): Promise<void> {
+  const load = await prisma.load.findUnique({
+    where: { id: loadId },
+    select: {
+      id: true,
+      referenceNumber: true,
+      quickPaySpeed: true,
+      quickPayFeePercent: true,
+      carrierId: true,
+      carrier: {
+        select: {
+          email: true,
+          carrierProfile: { select: { tier: true, quickPayEnabled: true, contactEmail: true } },
+        },
+      },
+    },
+  });
+
+  // Silence is correct in every one of these cases, and each is a different
+  // reason: no carrier to tell, a carrier not in the pilot, or an election the
+  // carrier has already made.
+  if (!load?.carrierId || !load.carrier) return;
+  if (load.carrier.carrierProfile?.quickPayEnabled !== true) return;
+  if (load.quickPaySpeed) return;
+  if (load.quickPayFeePercent !== null && load.quickPayFeePercent !== undefined) return;
+
+  const tier = normalizeTier(load.carrier.carrierProfile?.tier);
+  const sevenDayPct = quickPayFeePercent(tier, false);
+  const sameDayPct = quickPayFeePercent(tier, true);
+  const netDays = standardNetDays(tier);
+  const ref = load.referenceNumber;
+
+  const line =
+    `Load ${ref}: standard pay is free at Net-${netDays}. ` +
+    `Quick Pay is ${sevenDayPct}% for 7-day or ${sameDayPct}% same day. ` +
+    `Choose before we send your rate confirmation, which is when the price is set.`;
+
+  await createNotification(
+    load.carrierId,
+    "LOAD_UPDATE",
+    `Quick Pay is open on ${ref}`,
+    line,
+    { actionUrl: "/carrier/dashboard/my-loads" },
+  ).catch((err) => log.error({ err, loadId }, "[QuickPay] election-open notification failed"));
+
+  const to = load.carrier.carrierProfile?.contactEmail || load.carrier.email;
+  if (!to) return;
+
+  await sendEmail(
+    to,
+    `Quick Pay is open on load ${ref}`,
+    wrap(`
+      <h2 style="margin:0 0 16px;">You can choose how fast you are paid on this load</h2>
+      <p>Load <strong>${ref}</strong> is yours. Before we send your rate confirmation you can
+         choose when you want to be paid. After we send it the price is set for this load.</p>
+      <table role="presentation" style="width:100%;border-collapse:collapse;margin:18px 0;">
+        <tr><td style="padding:8px 0;"><strong>Standard</strong></td>
+            <td style="padding:8px 0;text-align:right;">Net-${netDays}, no fee</td></tr>
+        <tr><td style="padding:8px 0;"><strong>Quick Pay, 7 days</strong></td>
+            <td style="padding:8px 0;text-align:right;">${sevenDayPct}%</td></tr>
+        <tr><td style="padding:8px 0;"><strong>Quick Pay, same day</strong></td>
+            <td style="padding:8px 0;text-align:right;">${sameDayPct}%</td></tr>
+      </table>
+      <p>Doing nothing is fine. The load pays your standard ${tier} terms at no fee.</p>
+      <p style="margin:24px 0;">
+        <a href="https://silkroutelogistics.ai/carrier/dashboard/my-loads"
+           style="background:#BA7517;color:#FFFFFF;padding:12px 22px;border-radius:4px;
+                  text-decoration:none;font-weight:600;">Choose on this load</a>
+      </p>
+    `),
+    undefined,
+    { replyTo: "operations@silkroutelogistics.ai" },
+  ).catch((err) => log.error({ err, loadId }, "[QuickPay] election-open email failed"));
 }

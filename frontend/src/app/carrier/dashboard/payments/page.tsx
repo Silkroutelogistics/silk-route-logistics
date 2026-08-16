@@ -16,9 +16,21 @@ const CARAVAN_TIER_MAP: Record<string, string> = {
   GUEST: "SILVER", NONE: "SILVER", SILVER: "SILVER", GOLD: "GOLD", PLATINUM: "PLATINUM",
 };
 const QP_FEES: Record<string, number> = { SILVER: 3.0, GOLD: 2.0, PLATINUM: 1.0 };
-const QP_SPEEDS: Record<string, string> = { SILVER: "7-day", GOLD: "7-day", PLATINUM: "7-day" };
 const QP_DAYS: Record<string, number> = { SILVER: 7, GOLD: 7, PLATINUM: 7 };
 const FACTORING_RATE = 4.5;
+
+// v3.8.asb — the carrier's Quick Pay pilot standing, from
+// GET /carrier-auth/activation-status. Optional throughout so a frontend
+// deployed ahead of the backend degrades to the account flag rather than
+// crashing on a missing field.
+interface QuickPayStanding {
+  quickPay: {
+    enabled: boolean;
+    signed: boolean;
+    pilotStatus?: "PENDING" | "APPROVED" | "DECLINED" | "WITHDRAWN" | null;
+    pilotReason?: string | null;
+  };
+}
 
 export default function CarrierPaymentsPage() {
   const [activeFilter, setActiveFilter] = useState("All");
@@ -30,8 +42,64 @@ export default function CarrierPaymentsPage() {
   const rawTier = user?.carrierProfile?.tier || "NONE";
   const caravanTier = CARAVAN_TIER_MAP[rawTier] || "SILVER";
   const tierFeeRate = QP_FEES[caravanTier];
-  const tierSpeed = QP_SPEEDS[caravanTier];
   const tierDays = QP_DAYS[caravanTier];
+
+  // v3.8.asb — Quick Pay is a pilot, so the per-payment control is gated on
+  // the carrier's standing, not just on the load.
+  //
+  // POST /carrier-payments/:id/request-quickpay refuses on three separate
+  // conditions and this page previously checked only the third:
+  //   403 QP_AGREEMENT_NOT_SIGNED  no SIGNED quick-pay CarrierAgreement
+  //   403 QP_NOT_ENABLED           quickPayEnabled is not true
+  //   422 QP_NOT_ELECTED_ON_LOAD   no fee recorded on the load
+  // A carrier approved into the pilot but not yet signed, or one withdrawn
+  // from it, would see a button and be refused by it. Both halves are checked
+  // here now so the button appears only when the request can actually succeed.
+  const { data: standing } = useQuery<QuickPayStanding>({
+    queryKey: ["carrier-activation"],
+    queryFn: () => api.get("/carrier-auth/activation-status").then((r) => r.data),
+    staleTime: 60_000,
+  });
+  const qpOn = standing?.quickPay?.enabled === true && standing?.quickPay?.signed === true;
+  const pilotStatus = standing?.quickPay?.pilotStatus ?? null;
+  // What to tell a carrier whose loads carry no Quick Pay control. Keyed to the
+  // state that actually applies, because "not available" is four different
+  // conversations and only one of them is something they can act on.
+  const pilotNotice: { tone: "info" | "warn"; text: string; cta?: { label: string; href: string } } | null = qpOn
+    ? null
+    : standing?.quickPay?.enabled === true && standing?.quickPay?.signed !== true
+      ? {
+          tone: "warn",
+          text: "Quick Pay is on for your account but the Caravan Quick Pay Agreement is not signed, so no load can be funded early yet.",
+          cta: { label: "Read and sign", href: "/carrier/dashboard/activation" },
+        }
+      : pilotStatus === "APPROVED"
+        ? {
+            tone: "warn",
+            text: "You are approved for the Quick Pay pilot. Read and sign the Caravan Quick Pay Agreement and Quick Pay turns on for your loads.",
+            cta: { label: "Read and sign", href: "/carrier/dashboard/activation" },
+          }
+        : pilotStatus === "PENDING"
+          ? {
+              tone: "info",
+              text: "Your request to join the Quick Pay pilot is with our team. Until it is decided your loads pay your standard tier terms, at no fee.",
+            }
+          : pilotStatus === "DECLINED"
+            ? {
+                tone: "info",
+                text: "Your Quick Pay pilot request was not approved, so these loads pay your standard tier terms at no fee. Your rep can look again if something has changed.",
+                cta: { label: "See the reason", href: "/carrier/dashboard/activation" },
+              }
+            : pilotStatus === "WITHDRAWN"
+              ? {
+                  tone: "info",
+                  text: "Quick Pay has been withdrawn from your account. Loads already funded under Quick Pay keep their fee and payment date; everything else pays your standard tier terms at no fee.",
+                  cta: { label: "See the reason", href: "/carrier/dashboard/activation" },
+                }
+              : {
+                  tone: "info",
+                  text: "Quick Pay is running as a limited pilot and you are not in it, so these loads pay your standard tier terms at no fee. Standard pay is free at every tier.",
+                };
 
   const query = new URLSearchParams();
   if (activeFilter !== "All") query.set("status", activeFilter);
@@ -142,6 +210,27 @@ export default function CarrierPaymentsPage() {
         </CarrierCard>
       </div>
 
+      {/* v3.8.asb — Quick Pay pilot standing. Explains the empty QuickPay
+          column instead of leaving a carrier to guess why the control they
+          were told about is not there. */}
+      {pilotNotice && (
+        <div
+          className={`mb-4 flex flex-wrap items-center gap-2 px-4 py-2.5 rounded-lg border text-[12px] ${
+            pilotNotice.tone === "warn"
+              ? "bg-[#FBEFD4]/60 border-[#B07A1A]/30 text-[#B07A1A]"
+              : "bg-[#F5EEE0] border-[#EFE6D3] text-gray-600"
+          }`}
+        >
+          <Zap size={14} className="shrink-0" />
+          <span>{pilotNotice.text}</span>
+          {pilotNotice.cta && (
+            <a href={pilotNotice.cta.href} className="font-semibold underline hover:no-underline">
+              {pilotNotice.cta.label}
+            </a>
+          )}
+        </div>
+      )}
+
       {/* Filters */}
       <CarrierCard padding="p-3" className="mb-4">
         <div className="flex gap-1.5 flex-wrap">
@@ -203,8 +292,15 @@ export default function CarrierPaymentsPage() {
                           QP_NOT_ELECTED_ON_LOAD without it, so an ungated button
                           offers the carrier something that can never succeed.
                           Auto-generated rate confirmations record no election
-                          today, which is most loads. */}
-                      {(pay.status === "PENDING" || pay.status === "APPROVED") &&
+                          today, which is most loads.
+
+                          v3.8.asb — `qpOn` added. The load half was already
+                          checked; the ACCOUNT half was not, so an approved
+                          carrier who had not signed, or one withdrawn from the
+                          pilot, still got a button that 403s. Both halves now
+                          match the three conditions the endpoint enforces. */}
+                      {qpOn &&
+                       (pay.status === "PENDING" || pay.status === "APPROVED") &&
                        typeof pay.load?.quickPayFeePercent === "number" &&
                        pay.load.quickPayFeePercent > 0 ? (
                         <button
@@ -257,7 +353,18 @@ export default function CarrierPaymentsPage() {
       {/* Quick Pay Confirmation Modal */}
       {qpModal && (() => {
         const gross = qpModal.grossAmount || qpModal.amount || 0;
-        const fee = Math.round(gross * (tierFeeRate / 100) * 100) / 100;
+        // v3.8.asb — price from the fee RECORDED ON THE LOAD, never re-derived
+        // from the tier ladder. Quick Pay Agreement §3: "a load is priced by
+        // the Quick Pay speed recorded on that load when its rate confirmation
+        // was issued, and by nothing else", and carrierPayments.ts reads
+        // load.quickPayFeePercent for exactly that reason. Deriving it here
+        // from the carrier's CURRENT tier showed a number the settlement would
+        // not match the moment a carrier advanced a tier, or whenever a
+        // per-load override was in play. The button only renders when this is
+        // a positive number, so the fallback is unreachable and defensive.
+        const recordedPct: number =
+          typeof qpModal.load?.quickPayFeePercent === "number" ? qpModal.load.quickPayFeePercent : tierFeeRate;
+        const fee = Math.round(gross * (recordedPct / 100) * 100) / 100;
         const net = Math.round((gross - fee) * 100) / 100;
         const factoringFee = Math.round(gross * (FACTORING_RATE / 100) * 100) / 100;
         const savings = Math.round((factoringFee - fee) * 100) / 100;
@@ -288,7 +395,7 @@ export default function CarrierPaymentsPage() {
                   <span className="font-semibold text-[#0A2540]">${gross.toLocaleString()}</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-500">QP Fee ({tierFeeRate}%)</span>
+                  <span className="text-gray-500">QP Fee ({recordedPct}%)</span>
                   <span className="font-semibold text-[#9B2C2C]">-${fee.toLocaleString()}</span>
                 </div>
                 <div className="border-t border-[#EFE6D3] pt-2 flex justify-between text-sm">
@@ -297,11 +404,15 @@ export default function CarrierPaymentsPage() {
                 </div>
               </div>
 
-              {/* Speed */}
+              {/* v3.8.asb — states the fee recorded on this load, not the tier
+                  ladder. The speed itself is not on this payload, so it is not
+                  claimed here; the agreement points the carrier at their rep,
+                  and the settlement itemises what was actually charged. */}
               <div className="flex items-center gap-2 mb-4 px-3 py-2 bg-[#FAEEDA] rounded-lg">
                 <Zap size={14} className="text-[#BA7517]" />
                 <span className="text-xs text-[#BA7517]">
-                  <strong>{tierSpeed}</strong> payment ({caravanTier} tier)
+                  <strong>{recordedPct}%</strong> recorded on this load when we issued its rate confirmation
+                  {caravanTier ? <> · {caravanTier} tier</> : null}
                 </span>
               </div>
 

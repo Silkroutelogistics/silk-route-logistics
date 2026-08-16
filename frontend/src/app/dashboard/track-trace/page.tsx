@@ -8,6 +8,8 @@ import {
 } from "lucide-react";
 import { BoardTable } from "./BoardTable";
 import { LoadDetailDrawer } from "./LoadDetailDrawer";
+import { PendingAccessorialQueue } from "@/components/accessorials/PendingAccessorialQueue";
+import type { DrawerTab } from "./drawer-types";
 import type {
   BoardTab, QuickFilter, BoardResponse, BoardSummary,
 } from "./types";
@@ -69,6 +71,12 @@ export default function TrackTracePage() {
   const [dateRange, setDateRange] = useState<DateRange>("all");
   const [quickFilter, setQuickFilter] = useState<QuickFilter>("all");
   const [selectedLoadId, setSelectedLoadId] = useState<string | null>(null);
+  const [drawerTab, setDrawerTab] = useState<DrawerTab>("details");
+
+  const openLoad = (id: string, tab: DrawerTab = "details") => {
+    setDrawerTab(tab);
+    setSelectedLoadId(id);
+  };
 
   const dateFilter = useMemo(() => dateRangeToFilter(dateRange), [dateRange]);
 
@@ -118,6 +126,11 @@ export default function TrackTracePage() {
           <p className="text-sm text-gray-500 mt-1">Real-time board for every active load.</p>
         </div>
       </div>
+
+      {/* Accessorial claims waiting on a decision. Lives here rather than on a
+          route of its own — detention posts itself against a stop that closed
+          hours ago, so nobody is looking at that load when the claim appears. */}
+      <PendingAccessorialQueue onOpenLoad={(id) => openLoad(id, "finance")} />
 
       {/* Summary stat cards */}
       <div className="grid grid-cols-5 gap-3">
@@ -220,11 +233,12 @@ export default function TrackTracePage() {
       {/* Table */}
       {boardQuery.isLoading
         ? <div className="p-12 text-center text-gray-700">Loading…</div>
-        : <BoardTable loads={loads} onRowClick={setSelectedLoadId} />}
+        : <BoardTable loads={loads} onRowClick={(id) => openLoad(id)} />}
 
       {/* Detail drawer */}
       <LoadDetailDrawer
         loadId={selectedLoadId}
+        initialTab={drawerTab}
         onClose={() => setSelectedLoadId(null)}
       />
     </div>

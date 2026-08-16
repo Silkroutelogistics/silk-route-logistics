@@ -74,6 +74,39 @@ export const RC_PDF_FORBIDDEN: string[] = [
   // Paperwork is due within 24 hours of delivery, never 48. Verified: nothing
   // else in the RC render path emits "48 hours".
   "48 hours",
+  // ── Document numbering — retired PREFIX scheme ───────────────────────────
+  // The RC's document id is a SUFFIX on the load stem (SRL-121485R, and
+  // SRL-121485R2 on a re-issue), so every document for one load sorts together.
+  // It was `RC-SRL-${referenceNumber}`, and because referenceNumber already
+  // carries the "SRL-" stem that rendered RC-SRL-SRL-121488 in production, on
+  // the page-1 header and on every continuation header and footer.
+  //
+  // Locking the doubled fragment rather than a bare "RC-SRL-" is deliberate: it
+  // is unambiguous, and it catches the exact defect that shipped. Verified: no
+  // other RC surface emits this sequence.
+  //
+  // There is no matching REQUIRED entry because the correct value is per-load
+  // (SRL-<seq>R) and cannot be written as a literal here. The renderer's own
+  // gate is scripts/verify-rc-matrix.ts, which renders the fixtures and whose
+  // capture at docs/rc-references/_CURRENT_SRL_RC_RENDERED.txt shows the
+  // expected form.
+  "RC-SRL-SRL-",
+  // ── v3.8.asb — the retired Quick Pay PRICE LIST ──────────────────────────
+  // The Quick Pay panel used to render a hardcoded 4-cell grid of all three
+  // tiers whenever a tier was set — TIER / STANDARD / 7-DAY QP / SAME-DAY QP —
+  // and never said which of those prices was taken on this load. A carrier
+  // charged 3% could read the whole ladder and still not find their own fee.
+  // The panel now states the applied speed and fee, so these two headers can
+  // only come back by reinstating the price list in place of the applied
+  // number.
+  //
+  // Both tokens are anchored on the "QP" suffix, which renders nowhere else on
+  // the document: the applied panel's headers are "QUICK PAY FEE",
+  // "FEE ON THIS RATE" and "NET ON THIS RATE", and the not-elected panel's
+  // context line spells the tiers out in prose ("Silver 3% · Gold 2% ·
+  // Platinum 1% at 7 days") rather than as grid headers.
+  "7-DAY QP",
+  "SAME-DAY QP",
 ];
 
 /**
@@ -156,6 +189,21 @@ export const RC_PDF_REQUIRED: string[] = [
   // otherwise-correct PDF. If that fires, the fix is a shorter token or
   // whitespace normalization in the matcher — NOT deleting the lock.
   "24 hours",
+  // ── v3.8.asb — the Quick Pay position is stated on every rate confirmation ─
+  //
+  // "QUICK PAY" is the meta-strip cell label, the panel label, and the
+  // OPERATIONAL TERMS grid label. It renders in BOTH states — elected and not
+  // elected — which is the point: a load with no election says so rather than
+  // leaving the carrier to infer it. Losing this string means the surface
+  // stopped rendering, which is how the fee went unstated in the first place.
+  //
+  // The state-specific assertions deliberately live in
+  // backend/scripts/verify-rc-matrix.ts instead of here. That gate renders
+  // both states from fixed formData, so it can assert the exact applied
+  // strings ("3% · 7-day", "$123.00", "Not elected on this load"). This e2e
+  // path takes whatever election the live flow produced, so pinning either
+  // state's copy here would fail on a correct PDF of the other state.
+  "QUICK PAY",
 ];
 
 /**
@@ -171,6 +219,11 @@ export const BOL_PDF_FORBIDDEN: string[] = [
   // v3.8 (counsel architecture) — broker-carrier terms moved to the BCA; the
   // retired non-solicitation penalty must never reappear on the BOL.
   "35% commission",
+  // Document numbering — retired PREFIX scheme. The BOL's number is a suffix on
+  // the load stem (SRL-121485B); it was `BOL-SRL-121485`, which sorted every BOL
+  // away from its own load in any text-sorted column. Verified: the BOL renders
+  // this token nowhere else.
+  "BOL-SRL-",
 ];
 
 export const BOL_PDF_REQUIRED: string[] = [

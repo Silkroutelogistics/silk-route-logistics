@@ -114,9 +114,21 @@
             </div>
 
             <div class="hero-stats">
+              <!-- v3.8.asb — was "Same-Day / Quick Pay Option". Quick Pay is a
+                   limited pilot now: available by request, subject to approval.
+                   A hero stat naming a speed reads as "this is what you get",
+                   which is no longer true for a carrier who has not been
+                   approved into it.
+
+                   Replaced with the half of the Quick Pay pitch that IS
+                   unconditionally true and is CLAUDE.md §4 whitelisted claim #3
+                   — no factoring contract is required to use it. The pilot
+                   gates availability; it does not put a contract in front of
+                   anyone. Do not restore a speed here while Quick Pay is a
+                   pilot. -->
               <div class="hero-stat-item">
-                <div class="hero-stat-number">Same-Day</div>
-                <div class="hero-stat-label">Quick Pay Option</div>
+                <div class="hero-stat-number">No Contract</div>
+                <div class="hero-stat-label">Quick Pay, No Factoring</div>
               </div>
               <div class="hero-stat-item">
                 <div class="hero-stat-number">7-Factor</div>
@@ -268,7 +280,7 @@
                 <div class="commitment-card-body">
                   <h3>Quick Pay Without a Factoring Contract</h3>
                   <hr class="card-divider">
-                  <p class="commitment-teaser">Per-load. Optional. No contract.</p>
+                  <p class="commitment-teaser">Per-load. Optional. No contract. Limited pilot, by request.</p>
                   <span class="commitment-flip-cta">
                     <span>Click to learn more</span>
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 18 15 12 9 6"></polyline></svg>
@@ -278,11 +290,17 @@
               <div class="commitment-card-back">
                 <h4>How it works</h4>
                 <hr class="card-divider">
+                <!-- v3.8.asb — pilot stated FIRST, before the mechanics. A
+                     carrier reading how Quick Pay works should learn whether
+                     they can have it before they learn what it costs. The fee
+                     lines are unchanged: a pilot changes availability, never
+                     economics. -->
                 <ul class="mechanism-steps">
-                  <li>Quick Pay is per-load and optional. Elect it on the invoices that need cash flow, skip it on the ones that don't.</li>
+                  <li>Quick Pay is running as a limited pilot. Ask for it with your application, we approve or decline, and we tell you which. We can withdraw it on notice, and loads already funded are never affected.</li>
+                  <li>Once you are in, Quick Pay is per-load and optional. Take it on the loads that need cash flow, skip it on the ones that don't.</li>
                   <li>No 12&ndash;24 month factoring contract. No termination fees. No letter of release on most invoices.</li>
                   <li>Published tier fees: Silver 3%, Gold 2%, Platinum 1% on 7-day pay. Same-day adds a universal 2%.</li>
-                  <li>Standard pay is always free: Silver Net-30, Gold Net-21, Platinum Net-14.</li>
+                  <li>Standard pay is always free and never depends on the pilot: Silver Net-30, Gold Net-21, Platinum Net-14.</li>
                 </ul>
                 <span class="commitment-flip-back-cta">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"></polyline></svg>
@@ -342,7 +360,13 @@
                 </div>
                 <div class="tier-benefit-item">
                   <svg viewBox="0 0 24 24" fill="none" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-                  <span><strong>3%</strong> 7-day Quick Pay option</span>
+                  <!-- v3.8.asb — "(pilot)" marks the claim where it is made.
+                       The fee is real and published; what changed is that
+                       reaching a tier no longer grants Quick Pay by itself.
+                       A tier-benefit line reading "3% 7-day Quick Pay option"
+                       with no qualifier says being Silver gets you the option,
+                       which is the one thing about it that is now untrue. -->
+                  <span><strong>3%</strong> 7-day Quick Pay (pilot)</span>
                 </div>
                 <div class="tier-benefit-item">
                   <svg viewBox="0 0 24 24" fill="none" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
@@ -379,7 +403,7 @@
                 </div>
                 <div class="tier-benefit-item">
                   <svg viewBox="0 0 24 24" fill="none" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-                  <span><strong>2%</strong> 7-day Quick Pay option</span>
+                  <span><strong>2%</strong> 7-day Quick Pay (pilot)</span>
                 </div>
                 <div class="tier-benefit-item">
                   <svg viewBox="0 0 24 24" fill="none" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
@@ -417,7 +441,7 @@
                 </div>
                 <div class="tier-benefit-item">
                   <svg viewBox="0 0 24 24" fill="none" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-                  <span><strong>1%</strong> 7-day Quick Pay option (lowest fee)</span>
+                  <span><strong>1%</strong> 7-day Quick Pay (pilot, lowest fee)</span>
                 </div>
                 <div class="tier-benefit-item">
                   <svg viewBox="0 0 24 24" fill="none" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
@@ -432,13 +456,18 @@
           </div>
 
           <p style="font-size:12px;color:#6B7280;text-align:center;margin-top:16px;max-width:640px;margin-left:auto;margin-right:auto">
-            <!-- v3.8.asc — "Every tier can elect same-day on any load" implied a
+            <!-- v3.8.asb — "Every tier can elect same-day on any load" implied a
                  per-load control in the carrier portal. There is none: the speed
                  is recorded on the load when we issue the rate confirmation, and
                  Quick Pay Agreement §4 now says the carrier asks us for it. The
                  pricing promise is unchanged and real; only the mechanism is
                  described accurately. Keep this in step with QP §4. -->
-            Same-day Quick Pay is a universal +2% premium on top of your tier's 7-day rate. It is available at every tier and on any load. Ask us for it and we record it on the load when we issue your rate confirmation.
+            <!-- v3.8.asb — the pilot qualifier leads, because availability has
+                 to be true before pricing is relevant. "Available at every tier
+                 and on any load" is still exactly right about the PRICE not
+                 being tier-gated, which is the §8 universal-premium rule; it
+                 was the unqualified reading of "available" that had to go. -->
+            Quick Pay is a limited pilot: you ask to join, we approve or decline, and we can withdraw it on notice. Loads already funded are never affected. For carriers in the pilot, same-day Quick Pay is a universal +2% premium on top of your tier's 7-day rate, never restricted by tier or by standing. Ask us for it and we record it on the load when we issue your rate confirmation.
           </p>
           <p style="font-size:12px;color:#6B7280;text-align:center;margin-top:8px;max-width:640px;margin-left:auto;margin-right:auto">
             Founding recognition status: 30 loads, 98% on-time, 180-day tenure floor. Carrier remains Platinum tier; Founding marks the locked 1% Quick Pay tier permanently.
@@ -640,7 +669,12 @@
         <div class="section-header" style="max-width:760px;margin:0 auto 40px;text-align:center">
           <div class="section-label" style="color:#BA7517">The Caravan Partner Program</div>
           <h2 class="section-title" id="journey-heading" style="color:#0A2540">Freight goes out. Cash comes back faster.</h2>
-          <p class="section-desc" style="color:#3A4A5F">Climb the tiers and your Quick Pay accelerates. Fleet size does not decide it.</p>
+          <!-- v3.8.asb — the journey animation shows tier unlocks as
+               "Net-30 · 3% Quick Pay" pills. The Net terms are what a tier
+               actually unlocks and they are free; the Quick Pay rate is the
+               price you would pay IF you are in the pilot. Said here once,
+               above the animation, rather than qualifying every pill. -->
+          <p class="section-desc" style="color:#3A4A5F">Climb the tiers and your standard pay accelerates, free at every step. Fleet size does not decide it. The Quick Pay rate beside each tier is what that tier pays in the pilot, which you ask to join.</p>
         </div>
 
         <div class="cj-canvas" id="cjCanvas">

@@ -2,9 +2,89 @@ import { Router, Response } from "express";
 import { prisma } from "../config/database";
 import { authenticate, authorize, AuthRequest } from "../middleware/auth";
 import { auditLog } from "../middleware/audit";
+import { log } from "../lib/logger";
+import { syncCarrierPayAccessorials } from "../services/integrationService";
+import { syncInvoiceAccessorials } from "../services/invoiceService";
+
+/**
+ * Push an approved accessorial into the two money paths.
+ *
+ * Approval is the moment the claim becomes money, and it happens on its own
+ * schedule — a five-hour detention is normally approved the morning after the
+ * load delivered, which is after both the settlement and the invoice already
+ * exist. Neither of those recomputes itself, so without this the amount is
+ * calculated correctly, stored correctly, and paid to nobody.
+ *
+ * Both calls are idempotent and both decide for themselves whether the document
+ * they are updating can still be changed. Failures are logged, not thrown: the
+ * approval itself has already been recorded and must not be rolled back because
+ * a downstream document was busy.
+ */
+async function pushAccessorialToMoneyPaths(loadId: string) {
+  await Promise.allSettled([
+    syncCarrierPayAccessorials(loadId).catch((e) =>
+      log.error({ err: e, loadId }, "[Accessorial] carrier settlement sync failed"),
+    ),
+    syncInvoiceAccessorials(loadId).catch((e) =>
+      log.error({ err: e, loadId }, "[Accessorial] customer invoice sync failed"),
+    ),
+  ]);
+}
 
 const router = Router();
 router.use(authenticate);
+
+/**
+ * GET /api/load-accessorials/pending — every unapproved claim, across loads.
+ *
+ * The per-load GET below can only answer "what is on this load", which means an
+ * operator has to already suspect a load before they can find the claim on it.
+ * Detention is written by a cron against a stop that closed hours ago, so there
+ * is no moment where anyone is looking at that load. Without this the pending
+ * rows are only reachable by guessing, and a claim nobody approves is a carrier
+ * nobody pays.
+ *
+ * Ordered oldest first: the row that has been waiting longest is the one
+ * holding up a settlement.
+ *
+ * MUST stay above `/:loadId` — Express matches in declaration order and would
+ * otherwise read "pending" as a load id.
+ */
+router.get(
+  "/pending",
+  // v3.8.asb — AE added. This set, /item/:id/approve and /item/:id/reject must
+  // stay identical: see is act on this surface.
+  authorize("BROKER", "ADMIN", "CEO", "OPERATIONS", "DISPATCH", "AE") as any,
+  async (req: AuthRequest, res: Response) => {
+    try {
+      const accessorials = await prisma.loadAccessorial.findMany({
+        where: { status: "PENDING" },
+        orderBy: { createdAt: "asc" },
+        take: 200,
+        include: {
+          stop: {
+            select: {
+              id: true, stopNumber: true, stopType: true,
+              facilityName: true, city: true, state: true,
+            },
+          },
+          load: {
+            select: {
+              id: true, loadNumber: true, referenceNumber: true, status: true,
+              originCity: true, originState: true, destCity: true, destState: true,
+              customer: { select: { name: true } },
+              carrier: { select: { company: true, firstName: true, lastName: true } },
+            },
+          },
+        },
+      });
+      res.json({ accessorials, count: accessorials.length });
+    } catch (err) {
+      log.error({ err }, "[Accessorial] pending queue fetch failed");
+      res.status(500).json({ error: "Failed to fetch pending accessorials" });
+    }
+  }
+);
 
 // GET /api/load-accessorials/:loadId — Get all accessorials for a load
 router.get(
@@ -88,6 +168,12 @@ router.put(
         data: updateData,
       });
 
+      // An amount corrected on an already-approved line has to reach the money
+      // paths too, not just a fresh approval.
+      if (accessorial.status === "APPROVED") {
+        await pushAccessorialToMoneyPaths(accessorial.loadId);
+      }
+
       res.json({ accessorial });
     } catch (err) {
       res.status(500).json({ error: "Failed to update accessorial" });
@@ -98,7 +184,12 @@ router.put(
 // PUT /api/load-accessorials/item/:id/approve — AE approves
 router.put(
   "/item/:id/approve",
-  authorize("BROKER", "ADMIN", "CEO", "OPERATIONS") as any,
+  // v3.8.asb — must match the /pending viewer set exactly. It did not: DISPATCH
+  // could see the queue and its buttons and got a 403 on click, and AE — the
+  // role named for this desk — was absent from all three routes while the
+  // surface was built for an account executive. A queue you can read and cannot
+  // act on is worse than one you cannot see.
+  authorize("BROKER", "ADMIN", "CEO", "OPERATIONS", "DISPATCH", "AE") as any,
   auditLog("APPROVE", "LoadAccessorial"),
   async (req: AuthRequest, res: Response) => {
     try {
@@ -113,6 +204,8 @@ router.put(
         },
       });
 
+      await pushAccessorialToMoneyPaths(accessorial.loadId);
+
       res.json({ accessorial });
     } catch (err) {
       res.status(500).json({ error: "Failed to approve accessorial" });
@@ -123,7 +216,8 @@ router.put(
 // PUT /api/load-accessorials/item/:id/reject — AE rejects
 router.put(
   "/item/:id/reject",
-  authorize("BROKER", "ADMIN", "CEO", "OPERATIONS") as any,
+  // v3.8.asb — same set as /pending and /approve. See the note above.
+  authorize("BROKER", "ADMIN", "CEO", "OPERATIONS", "DISPATCH", "AE") as any,
   auditLog("REJECT", "LoadAccessorial"),
   async (req: AuthRequest, res: Response) => {
     try {
@@ -137,6 +231,12 @@ router.put(
           rejectedReason: reason || null,
         },
       });
+
+      // Rejecting a line that had already been approved takes money back out of
+      // an unpaid settlement. A line already billed to the customer is a credit
+      // memo, which does not exist yet — syncCarrierPayAccessorials queues that
+      // case for an operator rather than editing a committed document.
+      await pushAccessorialToMoneyPaths(accessorial.loadId);
 
       res.json({ accessorial });
     } catch (err) {

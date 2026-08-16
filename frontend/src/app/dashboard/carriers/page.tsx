@@ -10,7 +10,7 @@ import {
   TrendingUp, TrendingDown, DollarSign, Package, Award, ShieldAlert, Calendar,
   BarChart3, Percent, Hash, Compass, RefreshCw, ExternalLink, AlertTriangle, Download,
   User, CheckSquare, ClipboardList, Upload, Eye, ArrowLeft, FolderOpen,
-  MessageCircle, Sliders, FlaskConical, GraduationCap,
+  MessageCircle, Sliders, FlaskConical, GraduationCap, Zap,
 } from "lucide-react";
 import { InfoRequestModal } from "@/components/carriers/InfoRequestModal";
 import { InfoRequestThread } from "@/components/carriers/InfoRequestThread";
@@ -91,6 +91,62 @@ interface Carrier {
   insuranceAgentPhone?: string | null;
   insuranceAgencyName?: string | null;
 }
+
+// ── v3.8.asb — Quick Pay pilot ────────────────────────────────────────────
+// Request-then-approve. A carrier asks at onboarding
+// (carrierRegisterSchema.requestQuickPayPilot); these rows are how SRL answers.
+// Shape mirrors GET /api/carriers/quickpay-enrollments exactly — the row plus
+// the three includes the controller selects.
+type QpStatus = "PENDING" | "APPROVED" | "DECLINED" | "WITHDRAWN";
+
+interface QpActor {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+}
+
+interface QpEnrollment {
+  id: string;
+  carrierProfileId: string;
+  status: QpStatus;
+  requestedAt: string;
+  reviewedAt: string | null;
+  reviewNote: string | null;
+  withdrawnAt: string | null;
+  withdrawalReason: string | null;
+  carrierProfile: {
+    id: string;
+    companyName: string | null;
+    mcNumber: string | null;
+    dotNumber: string | null;
+    tier: string | null;
+    onboardingStatus: string;
+    quickPayEnabled: boolean;
+    isTestAccount: boolean;
+  } | null;
+  reviewedBy: QpActor | null;
+  withdrawnBy: QpActor | null;
+}
+
+const QP_STATUS_STYLE: Record<QpStatus, string> = {
+  PENDING: "bg-[#FBEFD4] text-[#B07A1A] border-[#B07A1A]/30",
+  APPROVED: "bg-[#E6F0E9] text-[#2F7A4F] border-[#2F7A4F]/30",
+  DECLINED: "bg-[#F6E3E3] text-[#9B2C2C] border-[#9B2C2C]/30",
+  WITHDRAWN: "bg-[#F6E3E3] text-[#9B2C2C] border-[#9B2C2C]/30",
+};
+
+// "Declined" and "Withdrawn" are NOT the same event and must not read as one.
+// Declined means the request was refused and nothing was ever switched on.
+// Withdrawn means the carrier was in the pilot and has been taken out of it,
+// which can have funded loads behind it. The AE needs to see which one they
+// are looking at without reading dates.
+const QP_STATUS_LABEL: Record<QpStatus, string> = {
+  PENDING: "Awaiting decision",
+  APPROVED: "In the pilot",
+  DECLINED: "Request declined",
+  WITHDRAWN: "Withdrawn after approval",
+};
 
 interface CarrierDoc {
   id: string;
@@ -291,7 +347,15 @@ export default function CarrierPoolPage() {
   const [statusFilter, setStatusFilter] = useState("");
   const [equipFilter, setEquipFilter] = useState("");
   const [selectedCarrierId, setSelectedCarrierId] = useState<string | null>(null);
-  const [panelTab, setPanelTab] = useState<"profile" | "insurance" | "compliance" | "compass" | "inspections" | "performance" | "history" | "documents" | "info-requests" | "preferences" | "training">("profile");
+  // v3.8.asb — Quick Pay pilot decisions are ADMIN / CEO / OPERATIONS, wider
+  // than the ADMIN+CEO `isAdmin` used for approve/reject. Deliberate, and it
+  // mirrors routes/carriers.ts exactly: carrier approval decides whether they
+  // may haul at all; this decides whether they may pay a fee for faster money
+  // on loads they are already cleared to haul. Operations runs the pilot.
+  // Gating the UI on isAdmin would hide working controls from the role that
+  // uses them most.
+  const canReviewQuickPay = user?.role === "ADMIN" || user?.role === "CEO" || user?.role === "OPERATIONS";
+  const [panelTab, setPanelTab] = useState<"profile" | "insurance" | "compliance" | "compass" | "inspections" | "performance" | "history" | "documents" | "info-requests" | "preferences" | "training" | "quickpay">("profile");
   const [editingCarrier, setEditingCarrier] = useState<Carrier | null>(null);
   const [editingTab, setEditingTab] = useState<string | null>(null);
   const [editForm, setEditForm] = useState({
@@ -341,6 +405,71 @@ export default function CarrierPoolPage() {
       api.patch(`/carriers/${vars.id}/test-account`, { isTestAccount: vars.isTestAccount }).then((r) => r.data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["carrier-all"] });
+    },
+  });
+
+  // ── v3.8.asb — Quick Pay pilot queue ────────────────────────────────────
+  //
+  // ONE `status=ALL` read serves both surfaces: the pending strip above the
+  // list, and the per-carrier standing + history in the panel tab. There is no
+  // single-carrier enrolment endpoint, so the tab has to find its rows in this
+  // list either way, and a second PENDING-only query would just be a subset of
+  // what is already here.
+  //
+  // Controller caps at 200 rows ordered by requestedAt ASC. At pilot volume
+  // that is the whole table. If enrolment history ever outgrows it the oldest
+  // terminal rows fall off the end first and the per-carrier "latest" below
+  // could go stale — the fix then is a `GET /carriers/:id/quickpay-enrollment`,
+  // not a bigger cap.
+  const { data: qpData } = useQuery({
+    queryKey: ["quickpay-enrollments"],
+    queryFn: () =>
+      api.get<{ status: string; count: number; enrollments: QpEnrollment[] }>("/carriers/quickpay-enrollments?status=ALL")
+        .then((r) => r.data),
+    enabled: canReviewQuickPay,
+  });
+  const qpEnrollments = qpData?.enrollments ?? [];
+  const qpPending = qpEnrollments.filter((e) => e.status === "PENDING");
+
+  const [qpAction, setQpAction] = useState<null | "approve" | "decline" | "withdraw">(null);
+  const [qpNote, setQpNote] = useState("");
+  const [qpReason, setQpReason] = useState("");
+  const [qpMessage, setQpMessage] = useState<{ tone: "success" | "error"; text: string } | null>(null);
+
+  const resetQpForm = () => {
+    setQpAction(null);
+    setQpNote("");
+    setQpReason("");
+  };
+
+  // One mutation for all three decisions — same shape, same invalidation, and
+  // the endpoint differs only by its last path segment. `carrier-all` is
+  // invalidated alongside the enrolment list because approve/withdraw can move
+  // CarrierProfile.quickPayEnabled, which the carrier list renders.
+  const qpDecision = useMutation({
+    mutationFn: ({ id, action, body }: { id: string; action: "approve" | "decline" | "withdraw"; body: Record<string, string> }) =>
+      api.post(`/carriers/${id}/quickpay/${action}`, body).then((r) => r.data),
+    onSuccess: (_res, vars) => {
+      queryClient.invalidateQueries({ queryKey: ["quickpay-enrollments"] });
+      queryClient.invalidateQueries({ queryKey: ["carrier-all"] });
+      resetQpForm();
+      setQpMessage({
+        tone: "success",
+        text:
+          vars.action === "approve"
+            ? "Approved. The carrier has been notified and can now sign the Quick Pay Agreement to turn it on."
+            : vars.action === "decline"
+              ? "Declined. The carrier has been told, and given your reason."
+              // Same correction as the confirm copy below: the fee survives on
+              // any load that already carries one, funded or not.
+              : "Withdrawn. Loads that already carry a Quick Pay fee keep it and their payment date; loads with no fee recorded pay standard terms. No new Quick Pay elections.",
+      });
+    },
+    onError: (err: unknown) => {
+      const msg = (err && typeof err === "object" && "response" in err
+        ? (err as { response?: { data?: { error?: string } } }).response?.data?.error
+        : undefined) || "The decision could not be saved.";
+      setQpMessage({ tone: "error", text: msg });
     },
   });
 
@@ -627,6 +756,57 @@ export default function CarrierPoolPage() {
         ))}
       </div>
 
+      {/* ── v3.8.asb — Quick Pay pilot queue ─────────────────────────────────
+          Pending requests are surfaced here rather than only inside a carrier's
+          panel, because a request nobody opens is a request nobody answers.
+          Oldest first — the order the controller returns — so a carrier who
+          asked three weeks ago does not sit behind one who asked this morning.
+          Hidden entirely when there is nothing waiting. */}
+      {canReviewQuickPay && qpPending.length > 0 && (
+        <div className="bg-[#FBEFD4]/60 border border-[#B07A1A]/30 rounded-xl p-4">
+          <div className="flex items-center gap-2 mb-2">
+            <Zap className="w-4 h-4 text-[#B07A1A]" />
+            <h2 className="text-sm font-semibold text-[#B07A1A]">
+              {qpPending.length} Quick Pay pilot {qpPending.length === 1 ? "request" : "requests"} waiting
+            </h2>
+          </div>
+          <div className="space-y-1.5">
+            {qpPending.map((e) => (
+              <div key={e.id} className="flex items-center justify-between gap-3 flex-wrap bg-white/70 border border-[#B07A1A]/20 rounded-lg px-3 py-2">
+                <div className="min-w-0">
+                  <p className="text-xs font-semibold text-gray-900 truncate">
+                    {e.carrierProfile?.companyName || "Unknown carrier"}
+                    {e.carrierProfile?.isTestAccount && (
+                      <span className="ml-1.5 px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-100 text-amber-700 border border-amber-300">TEST</span>
+                    )}
+                  </p>
+                  <p className="text-[11px] text-gray-500">
+                    {e.carrierProfile?.mcNumber ? `MC-${e.carrierProfile.mcNumber}` : "MC —"}
+                    {e.carrierProfile?.tier ? ` · ${e.carrierProfile.tier}` : ""}
+                    {" · asked "}
+                    {new Date(e.requestedAt).toLocaleDateString()}
+                    {e.carrierProfile?.onboardingStatus && e.carrierProfile.onboardingStatus !== "APPROVED"
+                      ? ` · carrier ${e.carrierProfile.onboardingStatus.replace(/_/g, " ").toLowerCase()}`
+                      : ""}
+                  </p>
+                </div>
+                <button
+                  onClick={() => {
+                    setQpMessage(null);
+                    resetQpForm();
+                    setSelectedCarrierId(e.carrierProfileId);
+                    setPanelTab("quickpay");
+                  }}
+                  className="px-3 py-1.5 rounded text-xs font-semibold bg-[#C5A572] text-[#0A2540] hover:bg-[#b8975f] shrink-0"
+                >
+                  Review
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Filters */}
       <div className="flex flex-wrap gap-3">
         <div className="relative flex-1 min-w-[200px]">
@@ -777,7 +957,15 @@ export default function CarrierPoolPage() {
                 // v3.8.and (T6) — SRL Driver Academy training visibility.
                 // Read-only roster × course completion matrix + expiry flags.
                 { key: "training", icon: GraduationCap, label: "Training" },
-              ] as const).map(({ key, icon: Icon, label }) => (
+                // v3.8.asb — Quick Pay pilot standing + the approve / decline /
+                // withdraw controls. Tab is hidden rather than disabled for
+                // roles that cannot act on it: the enrolment query is gated the
+                // same way, so a BROKER opening it would get an empty panel
+                // with no explanation.
+                { key: "quickpay", icon: Zap, label: "Quick Pay" },
+              ] as const)
+                .filter(({ key }) => key !== "quickpay" || canReviewQuickPay)
+                .map(({ key, icon: Icon, label }) => (
                 <button key={key} onClick={() => { setPanelTab(key); setEditingTab(null); setDocView("list"); setPreviewDoc(null); }} title={label}
                   className="flex flex-col items-center gap-1.5 py-1 transition-all duration-150">
                   <div className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-150 ${panelTab === key ? "bg-[#C5A572] text-[#0A2540] shadow-sm" : "text-gray-400 hover:bg-gray-200/80 hover:text-gray-600"}`}>
@@ -1655,6 +1843,280 @@ export default function CarrierPoolPage() {
                 {panelTab === "training" && selectedCarrier && (
                   <TrainingTab carrierId={selectedCarrier.id} />
                 )}
+
+                {/* ===== QUICK PAY PILOT TAB (v3.8.asb) ===== */}
+                {panelTab === "quickpay" && selectedCarrier && canReviewQuickPay && (() => {
+                  // Rows for THIS carrier, newest first. The list arrives
+                  // requestedAt ASC, so reversing gives current standing at the
+                  // head and history behind it.
+                  const rows = qpEnrollments
+                    .filter((e) => e.carrierProfileId === selectedCarrier.id)
+                    .slice()
+                    .reverse();
+                  const current = rows[0] ?? null;
+                  const history = rows.slice(1);
+                  const status = current?.status ?? null;
+                  // The carrier signed and switched it on. Approval alone does
+                  // not do this — the signature is the other half — so the AE
+                  // is shown which of the two is outstanding.
+                  const live = selectedCarrier as Carrier & { quickPayEnabled?: boolean };
+                  const enabled = current?.carrierProfile?.quickPayEnabled ?? live.quickPayEnabled ?? false;
+                  const reasonValid = qpReason.trim().length >= 10;
+
+                  return (
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between gap-2 flex-wrap">
+                        <h3 className="text-sm font-semibold text-gray-900 flex items-center gap-1.5">
+                          <Zap className="w-4 h-4 text-[#C5A572]" /> Quick Pay pilot
+                        </h3>
+                        {status ? (
+                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wide border ${QP_STATUS_STYLE[status]}`}>
+                            {QP_STATUS_LABEL[status]}
+                          </span>
+                        ) : (
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wide border bg-gray-100 text-gray-500 border-gray-300">
+                            Never requested
+                          </span>
+                        )}
+                      </div>
+
+                      {qpMessage && (
+                        <div
+                          className={`px-3 py-2 rounded text-xs border ${
+                            qpMessage.tone === "success"
+                              ? "bg-[#E6F0E9] text-[#2F7A4F] border-[#2F7A4F]/30"
+                              : "bg-[#F6E3E3] text-[#9B2C2C] border-[#9B2C2C]/30"
+                          }`}
+                        >
+                          {qpMessage.text}
+                        </div>
+                      )}
+
+                      {/* Current standing */}
+                      <div className="bg-gray-100 rounded-lg p-4 space-y-0.5">
+                        {!current ? (
+                          <p className="text-xs text-gray-600">
+                            This carrier has never asked to join the Quick Pay pilot, so there is nothing to approve.
+                            Carriers request it on their application. They pay their standard tier terms, at no fee, and
+                            nothing here is blocking them from hauling.
+                          </p>
+                        ) : (
+                          <>
+                            <InfoRow label="Requested" value={new Date(current.requestedAt).toLocaleString()} />
+                            {current.reviewedAt && (
+                              <InfoRow
+                                label={current.status === "DECLINED" ? "Declined" : "Approved"}
+                                value={`${new Date(current.reviewedAt).toLocaleString()}${
+                                  current.reviewedBy ? ` · ${current.reviewedBy.firstName} ${current.reviewedBy.lastName}` : ""
+                                }`}
+                              />
+                            )}
+                            {current.withdrawnAt && (
+                              <InfoRow
+                                label="Withdrawn"
+                                value={`${new Date(current.withdrawnAt).toLocaleString()}${
+                                  current.withdrawnBy ? ` · ${current.withdrawnBy.firstName} ${current.withdrawnBy.lastName}` : ""
+                                }`}
+                              />
+                            )}
+                            {current.reviewNote && <InfoRow label="Note" value={current.reviewNote} />}
+                            {current.withdrawalReason && <InfoRow label="Reason" value={current.withdrawalReason} />}
+                            <InfoRow
+                              label="Switched on"
+                              value={
+                                enabled ? (
+                                  <span className="text-[#2F7A4F] text-xs font-semibold">Yes — agreement signed, Quick Pay live</span>
+                                ) : (
+                                  <span className="text-gray-500 text-xs">No</span>
+                                )
+                              }
+                            />
+                          </>
+                        )}
+                      </div>
+
+                      {/* Approval alone does not switch Quick Pay on. The
+                          carrier still has to sign the Caravan Quick Pay
+                          Agreement, and until they do no load can be funded
+                          early. Said plainly so an AE does not report the
+                          pilot as live when it is half-done. */}
+                      {status === "APPROVED" && !enabled && (
+                        <div className="px-3 py-2 rounded text-xs bg-[#FBEFD4] text-[#B07A1A] border border-[#B07A1A]/30">
+                          Approved, but the carrier has not signed the Caravan Quick Pay Agreement yet, so Quick Pay is
+                          not live on their loads. They sign it in their portal under Activation.
+                        </div>
+                      )}
+
+                      {/* ── Controls ───────────────────────────────────────
+                          Rendered only where the endpoint will accept them.
+                          PENDING takes approve or decline; APPROVED takes
+                          withdraw; DECLINED, WITHDRAWN and never-requested
+                          take nothing, because there is no re-request endpoint
+                          on this side — the carrier asks, SRL answers. */}
+                      {status === "PENDING" && (
+                        <div className="space-y-2">
+                          {qpAction !== "decline" && (
+                            <div className="space-y-2">
+                              <textarea
+                                value={qpNote}
+                                onChange={(e) => setQpNote(e.target.value)}
+                                rows={2}
+                                maxLength={2000}
+                                placeholder="Optional note for the file (not required to approve)"
+                                className="w-full px-3 py-2 border border-gray-300 rounded text-xs focus:border-[#C5A572] focus:outline-none"
+                              />
+                              <button
+                                onClick={() => {
+                                  setQpMessage(null);
+                                  qpDecision.mutate({
+                                    id: selectedCarrier.id,
+                                    action: "approve",
+                                    body: qpNote.trim() ? { note: qpNote.trim() } : {},
+                                  });
+                                }}
+                                disabled={qpDecision.isPending}
+                                className="px-3 py-1.5 rounded text-xs font-semibold bg-[#E6F0E9] text-[#2F7A4F] border border-[#2F7A4F]/30 hover:bg-[#d8e9de] disabled:opacity-40"
+                              >
+                                Approve into the pilot
+                              </button>
+                            </div>
+                          )}
+
+                          {qpAction !== "decline" ? (
+                            <button
+                              onClick={() => { setQpMessage(null); setQpAction("decline"); }}
+                              className="text-xs text-[#9B2C2C] hover:underline"
+                            >
+                              Decline this request
+                            </button>
+                          ) : (
+                            <div className="space-y-2 border-t border-gray-200 pt-3">
+                              <label className="block text-xs text-gray-600">
+                                Why are you declining? The carrier is shown this verbatim, so write it for them to read.
+                              </label>
+                              <textarea
+                                value={qpReason}
+                                onChange={(e) => setQpReason(e.target.value)}
+                                rows={3}
+                                maxLength={2000}
+                                placeholder="At least 10 characters"
+                                className="w-full px-3 py-2 border border-gray-300 rounded text-xs focus:border-[#C5A572] focus:outline-none"
+                              />
+                              <div className="flex items-center gap-2">
+                                <button
+                                  onClick={() =>
+                                    qpDecision.mutate({
+                                      id: selectedCarrier.id,
+                                      action: "decline",
+                                      body: { reason: qpReason.trim() },
+                                    })
+                                  }
+                                  disabled={!reasonValid || qpDecision.isPending}
+                                  className="px-3 py-1.5 rounded text-xs font-semibold bg-[#F6E3E3] text-[#9B2C2C] border border-[#9B2C2C]/30 hover:bg-[#f0d5d5] disabled:opacity-40"
+                                >
+                                  Decline request
+                                </button>
+                                <button onClick={resetQpForm} className="text-xs text-gray-500 hover:text-gray-700">Cancel</button>
+                                <span className="text-[10px] text-gray-400">{qpReason.trim().length}/10 minimum</span>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {status === "APPROVED" && (
+                        <div className="space-y-2">
+                          {qpAction !== "withdraw" ? (
+                            <button
+                              onClick={() => { setQpMessage(null); setQpAction("withdraw"); }}
+                              className="px-3 py-1.5 rounded text-xs font-semibold bg-[#F6E3E3] text-[#9B2C2C] border border-[#9B2C2C]/30 hover:bg-[#f0d5d5]"
+                            >
+                              Withdraw from the pilot
+                            </button>
+                          ) : (
+                            <div className="space-y-2">
+                              {/* This has to match integrationService, which
+                                  keeps a frozen election alive through an SRL
+                                  withdrawal (pilotWithdrawnBySrl &&
+                                  hasFrozenElection). The survival test is a fee
+                                  RECORDED ON THE LOAD, not funding — a load
+                                  priced at 3% on its rate confirmation still
+                                  pays at 3% after this, whether or not we have
+                                  cut the cheque. Say that, because the operator
+                                  reads this line to the carrier. */}
+                              <p className="text-xs text-gray-600">
+                                Withdrawing is forward-only. Any load that already carries a Quick Pay fee on its rate
+                                confirmation keeps that fee and that payment date, funded or not. Loads with no Quick Pay
+                                fee recorded pay standard tier terms at no fee. The carrier cannot elect Quick Pay on new
+                                loads after this.
+                              </p>
+                              <label className="block text-xs text-gray-600">
+                                Why are you withdrawing? The carrier is shown this verbatim.
+                              </label>
+                              <textarea
+                                value={qpReason}
+                                onChange={(e) => setQpReason(e.target.value)}
+                                rows={3}
+                                maxLength={2000}
+                                placeholder="At least 10 characters"
+                                className="w-full px-3 py-2 border border-gray-300 rounded text-xs focus:border-[#C5A572] focus:outline-none"
+                              />
+                              <div className="flex items-center gap-2">
+                                <button
+                                  onClick={() =>
+                                    qpDecision.mutate({
+                                      id: selectedCarrier.id,
+                                      action: "withdraw",
+                                      body: { reason: qpReason.trim() },
+                                    })
+                                  }
+                                  disabled={!reasonValid || qpDecision.isPending}
+                                  className="px-3 py-1.5 rounded text-xs font-semibold bg-[#F6E3E3] text-[#9B2C2C] border border-[#9B2C2C]/30 hover:bg-[#f0d5d5] disabled:opacity-40"
+                                >
+                                  Confirm withdrawal
+                                </button>
+                                <button onClick={resetQpForm} className="text-xs text-gray-500 hover:text-gray-700">Cancel</button>
+                                <span className="text-[10px] text-gray-400">{qpReason.trim().length}/10 minimum</span>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {(status === "DECLINED" || status === "WITHDRAWN") && (
+                        <p className="text-xs text-gray-500">
+                          {status === "DECLINED"
+                            ? "This request is closed. The carrier can ask again — a new request comes in as a new row and lands back in the pending queue."
+                            : "Quick Pay is off for this carrier. Re-admission starts with a new request from them."}
+                        </p>
+                      )}
+
+                      {/* History — every prior attempt keeps its own row and
+                          its own reason, which is the whole point of modelling
+                          this as enrolments instead of a flag. */}
+                      {history.length > 0 && (
+                        <div>
+                          <h4 className="text-xs font-semibold text-gray-700 mb-1.5">Earlier requests</h4>
+                          <div className="space-y-1.5">
+                            {history.map((h) => (
+                              <div key={h.id} className="bg-gray-50 border border-gray-200 rounded px-3 py-2 text-xs text-gray-600">
+                                <div className="flex items-center justify-between gap-2">
+                                  <span className={`px-1.5 py-0.5 rounded text-[10px] font-semibold border ${QP_STATUS_STYLE[h.status]}`}>
+                                    {QP_STATUS_LABEL[h.status]}
+                                  </span>
+                                  <span className="text-gray-400">{new Date(h.requestedAt).toLocaleDateString()}</span>
+                                </div>
+                                {(h.reviewNote || h.withdrawalReason) && (
+                                  <p className="mt-1 italic">&ldquo;{h.withdrawalReason || h.reviewNote}&rdquo;</p>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
 
               </div>
             </div>

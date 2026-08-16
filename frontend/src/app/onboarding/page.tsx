@@ -14,7 +14,7 @@ const steps = ["Company Info", "Equipment & Regions", "Documents", "Terms", "Rev
 // Bump this constant any time the Step 4 agreement body changes.
 // Format: YYYY-MM-DD-vN (date of revision + revision counter for
 // same-day multi-edits).
-// v3.8.asc — the hardcoded BCA_VERSION fallback that stood here was DELETED.
+// v3.8.asb — the hardcoded BCA_VERSION fallback that stood here was DELETED.
 //
 // It read `bcaContent?.version ?? BCA_VERSION` and was sent in the
 // registration payload onto CarrierProfile.bcaVersion, so a failed agreement
@@ -240,6 +240,11 @@ interface CarrierFormData {
   numberOfTrucks: string; ein: string;
   equipmentTypes: string[]; operatingRegions: string[];
   agreeTerms: boolean;
+  // v3.8.asb — the Quick Pay pilot REQUEST. A tick, and nothing more. It asks
+  // to be considered; it enables nothing, and it is never a gate on submitting
+  // the application. The backend records a QuickPayEnrollment{status: PENDING}
+  // and an AE approves or declines it.
+  requestQuickPayPilot: boolean;
   // Extended insurance fields
   autoLiability: InsuranceLineData;
   cargoInsurance: InsuranceLineData;
@@ -283,6 +288,7 @@ export default function OnboardingPage() {
     numberOfTrucks: "", ein: "",
     equipmentTypes: [], operatingRegions: [],
     agreeTerms: false,
+    requestQuickPayPilot: false,
     autoLiability: { ...emptyInsLine },
     cargoInsurance: { ...emptyInsLine },
     generalLiability: { ...emptyInsLine },
@@ -478,6 +484,12 @@ export default function OnboardingPage() {
       // ever since (every carrier hit "Validation failed" on submit).
       // Caught when Wasi tried to register a real test carrier on
       // deployed v3.8.aja.
+      // v3.8.asb — requestQuickPayPilot is deliberately NOT peeled out here.
+      // It rides `...regData` into flatPayload, where the boolean branch of the
+      // append loop below sends it as the string "true" / "false".
+      // carrierRegisterSchema hand-parses those two strings rather than using
+      // z.coerce.boolean(), which would read "false" as TRUE and file a pilot
+      // request for an applicant who explicitly declined one.
       const { agreeTerms: _, unit: _u, ein: einFromForm,
         autoLiability, cargoInsurance, generalLiability, workersComp,
         additionalInsuredSRL, waiverOfSubrogation, thirtyDayCancellationNotice,
@@ -1639,6 +1651,88 @@ export default function OnboardingPage() {
                     : "The agreement is still loading. It has to be on screen before you can agree to it."}
                 </span>
               </label>
+
+              {/* ── v3.8.asb — Quick Pay pilot REQUEST ──────────────────────
+                  A request, not an enrolment, and the copy has to say so in
+                  those words. Ticking this asks to be considered; SRL approves
+                  or declines and tells the carrier either way.
+
+                  NOT a gate. canNext() for this step is unchanged — it still
+                  checks only agreeTerms + the loaded agreement body. An
+                  applicant who leaves this alone is a fully operational
+                  carrier on free standard terms.
+
+                  The fee ladder is shown because a carrier deciding whether to
+                  ask is entitled to know the price before they ask, not after
+                  they are approved. Figures are the locked CLAUDE.md §8 ladder.
+                  Do not soften them on the theory that a pilot is provisional:
+                  a pilot changes who can get in, never what it costs. */}
+              <div className="p-5 rounded-xl border border-[#EFE6D3] bg-white print:hidden">
+                <div className="flex items-center gap-2 mb-1.5">
+                  <p className="text-[10px] uppercase tracking-[0.22em] font-semibold text-[#BA7517]">Optional</p>
+                  <span className="text-[10px] uppercase tracking-wide font-semibold text-[#B07A1A] bg-[#FBEFD4] border border-[#B07A1A]/30 rounded-full px-2 py-0.5">
+                    Limited pilot
+                  </span>
+                </div>
+                <h3 className="font-serif italic font-semibold text-lg text-[#0A2540] mb-2">Quick Pay</h3>
+                <p className="text-sm text-[#3A4A5F] leading-relaxed mb-3">
+                  Quick Pay pays you early on a load you choose, for a flat fee by tier, once we have your complete and
+                  accurate paperwork. It is running as a limited pilot: you ask, we approve or decline, and we tell you
+                  which. We can also withdraw it on notice, and if we do, loads we have already funded are unaffected.
+                </p>
+                <p className="text-sm text-[#3A4A5F] leading-relaxed mb-3">
+                  Your standard pay terms do not depend on any of this. They are free at every tier either way, and
+                  Quick Pay is never required to haul.
+                </p>
+
+                <div className="rounded-lg border border-[#EFE6D3] overflow-hidden mb-2">
+                  <table className="w-full text-left text-xs">
+                    <thead>
+                      <tr className="bg-[#FBF7F0] text-[10px] uppercase tracking-wide text-[#6B7685]">
+                        <th className="px-3 py-2 font-medium">Tier</th>
+                        <th className="px-3 py-2 font-medium">Standard pay (free)</th>
+                        <th className="px-3 py-2 font-medium">7-day Quick Pay</th>
+                        <th className="px-3 py-2 font-medium">Same-day</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {[
+                        { tier: "Silver", standard: "Net-30", seven: "3%", same: "5%" },
+                        { tier: "Gold", standard: "Net-21", seven: "2%", same: "4%" },
+                        { tier: "Platinum", standard: "Net-14", seven: "1%", same: "3%" },
+                      ].map((t) => (
+                        <tr key={t.tier} className="border-t border-[#F5EEE0]">
+                          <td className="px-3 py-2 font-semibold text-[#0A2540]">{t.tier}</td>
+                          <td className="px-3 py-2 text-[#3A4A5F]">{t.standard}</td>
+                          <td className="px-3 py-2 text-[#3A4A5F]">{t.seven}</td>
+                          <td className="px-3 py-2 text-[#3A4A5F]">{t.same}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <p className="text-xs text-[#6B7685] mb-4">
+                  Every approved carrier starts at Silver. Same-day is a universal 2% on top of your tier&apos;s 7-day
+                  rate, at any tier. If you are approved into the pilot you read and sign the Caravan Quick Pay
+                  Agreement in your portal before anything turns on.
+                </p>
+
+                <label className="flex items-center gap-3 p-4 rounded-lg border border-[#EFE6D3] bg-[#FBF7F0] cursor-pointer hover:bg-white transition">
+                  <input
+                    type="checkbox"
+                    checked={form.requestQuickPayPilot}
+                    onChange={(e) => set("requestQuickPayPilot", e.target.checked)}
+                    className="w-5 h-5 rounded border-[#C5A572] text-[#BA7517] focus:ring-[#BA7517]"
+                  />
+                  <span className="text-sm font-medium text-[#0A2540]">
+                    Please consider me for the Quick Pay pilot
+                    <span className="block text-xs font-normal text-[#6B7685] mt-0.5">
+                      This is a request. It does not enable Quick Pay and does not affect whether your application is
+                      approved.
+                    </span>
+                  </span>
+                </label>
+              </div>
             </div>
           )}
 
@@ -1675,6 +1769,29 @@ export default function OnboardingPage() {
                 <div className="p-4 rounded-lg bg-[#FBF7F0] border border-[#EFE6D3]">
                   <p className="text-[10px] uppercase tracking-[0.22em] font-semibold text-[#BA7517] mb-1.5">Operating Regions</p>
                   <p className="text-sm text-[#0A2540]">{form.operatingRegions.join(", ")}</p>
+                </div>
+                {/* v3.8.asb — echo the pilot request either way. A carrier is
+                    about to be told what they submitted, and whether they asked
+                    for Quick Pay is part of it. Rendered in both states so the
+                    absence of a request is visible rather than inferred. */}
+                <div className="p-4 rounded-lg bg-[#FBF7F0] border border-[#EFE6D3]">
+                  <p className="text-[10px] uppercase tracking-[0.22em] font-semibold text-[#BA7517] mb-1.5">Quick Pay Pilot</p>
+                  {form.requestQuickPayPilot ? (
+                    <>
+                      <p className="font-semibold text-[#0A2540]">Requested</p>
+                      <p className="text-sm text-[#3A4A5F] mt-0.5">
+                        We will approve or decline this and tell you either way. Nothing turns on until you are approved
+                        and you sign the Caravan Quick Pay Agreement in your portal.
+                      </p>
+                    </>
+                  ) : (
+                    <>
+                      <p className="font-semibold text-[#0A2540]">Not requested</p>
+                      <p className="text-sm text-[#3A4A5F] mt-0.5">
+                        You will be paid on your free standard tier terms. You can ask about the pilot later.
+                      </p>
+                    </>
+                  )}
                 </div>
                 {/* Insurance Summary in Review */}
                 {(form.autoLiability.provider || form.cargoInsurance.provider || form.generalLiability.provider || form.workersComp.provider) && (

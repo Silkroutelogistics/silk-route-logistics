@@ -40,7 +40,7 @@
 // Both halves are closed now, so do not read the sentence above as current
 // backend behaviour: v3.8.asb made both signing routes REJECT a posted version
 // that is not the served constant (409 AGREEMENT_VERSION_STALE) and stamp the
-// constant, and v3.8.asc closed the onboarding click-wrap by deleting its own
+// constant, and v3.8.asb closed the onboarding click-wrap by deleting its own
 // stale fallback constant and having the server stamp the version there too.
 // A request can no longer decide the version on any consent write.
 //

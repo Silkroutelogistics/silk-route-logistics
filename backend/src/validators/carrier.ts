@@ -60,7 +60,7 @@ export const carrierRegisterSchema = z.object({
   // server-captured agreedAt + IP + userAgent. Other 3 click-wrap
   // audit fields are NOT in the validator because they're captured
   // server-side from req.* (authoritative), not accepted from client.
-  // v3.8.asc — ACCEPTED AND IGNORED. The registration controller stamps
+  // v3.8.asb — ACCEPTED AND IGNORED. The registration controller stamps
   // BCA_VERSION from data/agreements.ts; a request no longer decides what
   // version a consent record names. Kept declared only so a cached older
   // frontend bundle that still sends it does not look like a schema change.
@@ -86,6 +86,28 @@ export const carrierRegisterSchema = z.object({
   insuranceAgentEmail: z.string().email().optional().or(z.literal("")),
   insuranceAgentPhone: z.string().optional(),
   insuranceAgencyName: z.string().optional(),
+  // v3.8.asb — the Quick Pay pilot REQUEST, ticked at onboarding.
+  //
+  // This asks to be considered. It enables nothing. The controller records a
+  // QuickPayEnrollment{status: PENDING} and an AE approves or declines it;
+  // until an AE approves, no fee can be recorded on a load and no fee can be
+  // deducted on any path. Absent or false is simply "did not ask", which is a
+  // fully operational carrier on their free tier net terms.
+  //
+  // The coercion is hand-written rather than z.coerce.boolean(). Registration
+  // arrives as multipart/form-data, so every field is a string, and
+  // z.coerce.boolean() is `Boolean(value)` — it turns the string "false" into
+  // TRUE. That would file a pilot request for a carrier who explicitly
+  // declined one. routes/carrier.ts has a string→boolean loop for the three
+  // insurance flags, but this field is not in it and that file is not ours to
+  // edit, so the parsing happens here where it cannot be missed.
+  requestQuickPayPilot: z
+    .preprocess((v) => {
+      if (v === "true") return true;
+      if (v === "false" || v === "") return false;
+      return v;
+    }, z.boolean())
+    .optional(),
 });
 
 export const verifyCarrierSchema = z.object({

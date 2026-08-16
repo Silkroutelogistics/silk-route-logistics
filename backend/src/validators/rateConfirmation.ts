@@ -137,6 +137,21 @@ export const createRateConfirmationSchema = z.object({
     // Section 8 — Payment Terms
     carrierPaymentTier: z.string().optional(),
     quickPayFeePercent: z.number().optional(),
+    // Declaring these two is load-bearing, not cosmetic, for the same reason
+    // the reefer fields above are: this is a plain z.object(), which STRIPS
+    // undeclared keys. autoRateConfirmationService writes formData straight to
+    // Prisma and seeds all three Quick Pay fields fine, but the first AE edit
+    // through this validator silently dropped the speed and the printed cell
+    // value and kept only the percentage — half an election, which is how a
+    // frozen fee ends up sitting next to a speed that says something else.
+    //
+    // The enum matches Prisma's QuickPaySpeed exactly. An unrecognised string
+    // is refused here rather than at issue time.
+    quickPaySpeed: z.enum(["STANDARD", "SEVEN_DAY", "SAME_DAY"]).optional(),
+    // quickPayCellValue was declared here and is deleted in v3.8.asb — it was a
+    // pre-measured display string the renderer never read and whose measurement
+    // claim was wrong. The document derives its own cell text from
+    // quickPaySpeed + quickPayFeePercent above.
     factoringCompany: z.string().optional(),
     factoringContact: z.string().optional(),
     factoringEmail: z.string().optional(),

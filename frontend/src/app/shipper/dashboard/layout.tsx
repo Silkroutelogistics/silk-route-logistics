@@ -37,12 +37,16 @@ export default function ShipperDashboardLayout({ children }: { children: React.R
 
   const { data: notifData } = useQuery({
     queryKey: ["shipper-notifications"],
-    queryFn: () => api.get<{ notifications: Notification[] }>("/notifications").then((r) => r.data),
+    // v3.8.asb — same fix as the carrier portal. GET /notifications returns a
+    // bare array; this destructured a `notifications` key off it, got
+    // undefined, and fell through to []. The shipper bell has never shown a
+    // notification either.
+    queryFn: () => api.get<Notification[]>("/notifications").then((r) => r.data),
     enabled: !!user,
     refetchInterval: 120000,
   });
 
-  const notifications = notifData?.notifications || [];
+  const notifications = Array.isArray(notifData) ? notifData : [];
   const unreadCount = notifications.filter((n) => !n.read).length;
 
   useEffect(() => {

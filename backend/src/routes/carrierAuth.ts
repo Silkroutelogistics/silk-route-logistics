@@ -33,6 +33,9 @@ import {
   agreementPdfFilename,
 } from "../services/agreementPdfService";
 import { getAgreement, BROKER_CARRIER_AGREEMENT, CARAVAN_QUICK_PAY_AGREEMENT, QP_VERSION, BCA_VERSION } from "../data/agreements";
+// v3.8.asb — the Quick Pay pilot state. One resolver, so the carrier-facing
+// gate and the pricing gates answer the same question the same way.
+import { getLatestQuickPayEnrollment, notifyQuickPayPilotRequested } from "../controllers/carrierController";
 import path from "path";
 import { verifyTotpCode } from "../services/totpService";
 import { z } from "zod";
@@ -793,6 +796,10 @@ router.get("/activation-status", authenticate, authorize("CARRIER"), async (req:
     orderBy: { signedAt: "desc" },
     select: { signedAt: true, signedByName: true, version: true },
   });
+  // v3.8.asb — the carrier's most recent pilot enrolment of any status. The
+  // LATEST rather than the live one: DECLINED and WITHDRAWN are exactly the
+  // states the portal most needs to render, and both are terminal.
+  const qpEnrollment = await getLatestQuickPayEnrollment(profile.id);
   const now = new Date();
   const bcaSigned = !!agreement && (!agreement.expiresAt || agreement.expiresAt > now);
 
@@ -812,6 +819,27 @@ router.get("/activation-status", authenticate, authorize("CARRIER"), async (req:
       agreedAt: profile.quickPayAgreedAt ?? qpAgreement?.signedAt ?? null,
       signedByName: qpAgreement?.signedByName ?? null,
       version: profile.quickPayVersion,
+      // v3.8.asb — the pilot state, so the portal renders the carrier's actual
+      // position instead of an enable switch that will 403. `pilotStatus` is
+      // null when they have never asked.
+      //
+      // Reason text is returned for DECLINED and WITHDRAWN because a carrier is
+      // owed the reason they were given, not a bare status. It is the same
+      // string the AE typed and the same string the notification carried.
+      pilotStatus: qpEnrollment?.status ?? null,
+      pilotRequestedAt: qpEnrollment?.requestedAt ?? null,
+      pilotDecidedAt: qpEnrollment?.reviewedAt ?? null,
+      pilotWithdrawnAt: qpEnrollment?.withdrawnAt ?? null,
+      pilotReason:
+        qpEnrollment?.status === "WITHDRAWN"
+          ? qpEnrollment.withdrawalReason
+          : qpEnrollment?.status === "DECLINED"
+            ? qpEnrollment.reviewNote
+            : null,
+      // Can the carrier turn Quick Pay ON right now? Approval alone is not
+      // enough — the signature is the other half — but this is what decides
+      // whether the switch is offered at all.
+      pilotApproved: qpEnrollment?.status === "APPROVED",
     },
     activatedAt: profile.activatedAt,
   });
@@ -991,6 +1019,68 @@ router.post("/quickpay-election", authenticate, authorize("CARRIER"), validateBo
     return;
   }
 
+  // ── v3.8.asb — the Quick Pay PILOT gate ──────────────────────────────────
+  //
+  // Quick Pay is a pilot now, and a carrier no longer switches it on for
+  // themselves. They request it, an AE approves, and only then does this
+  // endpoint have anything to enable. Everything below this block — the
+  // version check, the signature, the executed PDF — is unchanged and still
+  // required; the pilot state simply comes first.
+  //
+  // Scoped to the ENABLE path. Opting out is always allowed, including from a
+  // withdrawn or declined state: a carrier must never be stuck holding a
+  // switch they cannot turn off, and turning it off records no consent so it
+  // needs no approval to sit behind. That is also what keeps the invariant
+  // one-directional — this endpoint can set quickPayEnabled true only with an
+  // APPROVED enrolment, and false at any time.
+  //
+  // Four distinct codes because the portal has four different things to say,
+  // and collapsing them into one "not eligible" would leave a carrier who was
+  // declined last week unable to tell that from a request nobody has read yet.
+  if ((req.body as { enabled?: boolean }).enabled === true) {
+    const latest = await getLatestQuickPayEnrollment(profile.id);
+
+    if (!latest) {
+      res.status(403).json({
+        error:
+          "Quick Pay is running as a pilot and is not open to every carrier yet. Ask to be considered and we will come back to you.",
+        code: "QP_PILOT_NOT_REQUESTED",
+        action: { label: "Request the Quick Pay pilot", href: "/carrier/dashboard/activation" },
+      });
+      return;
+    }
+    if (latest.status === "PENDING") {
+      res.status(403).json({
+        error:
+          "Your request to join the Quick Pay pilot is with our team. We will let you know as soon as it is decided. Until then your loads pay on your standard terms, at no fee.",
+        code: "QP_PILOT_PENDING",
+        requestedAt: latest.requestedAt,
+      });
+      return;
+    }
+    if (latest.status === "DECLINED") {
+      res.status(403).json({
+        error:
+          "Your request to join the Quick Pay pilot was not approved. Your loads pay on your standard tier terms, at no fee. Talk to your rep if something has changed and you would like us to look again.",
+        code: "QP_PILOT_DECLINED",
+        decidedAt: latest.reviewedAt,
+        reason: latest.reviewNote,
+      });
+      return;
+    }
+    if (latest.status === "WITHDRAWN") {
+      res.status(403).json({
+        error:
+          "Quick Pay has been withdrawn from your account, so it cannot be switched back on here. Any load that already carries a Quick Pay fee still pays at that fee, on that schedule. Talk to your rep about rejoining the pilot.",
+        code: "QP_PILOT_WITHDRAWN",
+        withdrawnAt: latest.withdrawnAt,
+        reason: latest.withdrawalReason,
+      });
+      return;
+    }
+    // Falls through only on APPROVED.
+  }
+
   const { enabled, signedByName, signedByTitle, qpVersion } = req.body as {
     enabled: boolean;
     signedByName?: string;
@@ -1079,6 +1169,64 @@ router.post("/quickpay-election", authenticate, authorize("CARRIER"), validateBo
     data: { quickPayEnabled: false },
   });
   res.json({ quickPayEnabled: false, signed: false });
+});
+
+// POST /api/carrier-auth/quickpay-pilot-request — ask to join the Quick Pay
+// pilot from the portal.
+//
+// v3.8.asb. The request is normally made at onboarding
+// (carrierRegisterSchema.requestQuickPayPilot). This is the same request for
+// the carrier who did not tick the box then, or who was declined earlier and
+// wants to be looked at again. Without it the "Ask to be considered" message
+// the election gate returns would point at nothing.
+//
+// Records a PENDING enrolment and stops. It enables nothing, signs nothing and
+// changes no price. An AE approves or declines it from the queue.
+router.post("/quickpay-pilot-request", authenticate, authorize("CARRIER"), async (req: AuthRequest, res: Response) => {
+  const profile = await loadActivationProfile(req.user!.id);
+  if (!profile) {
+    res.status(404).json({ error: "Carrier profile not found" });
+    return;
+  }
+  if (profile.onboardingStatus !== "APPROVED") {
+    res.status(403).json({
+      error: "Your application must be approved before you can ask to join the Quick Pay pilot.",
+      code: "NOT_APPROVED",
+    });
+    return;
+  }
+
+  const existing = await getLatestQuickPayEnrollment(profile.id);
+
+  // Idempotent while a request is open, so a double tap does not read as a
+  // failure. The partial unique index would reject the second row anyway; this
+  // answers plainly instead of surfacing a constraint violation.
+  if (existing?.status === "PENDING") {
+    res.json({ status: "PENDING", requestedAt: existing.requestedAt, alreadyRequested: true });
+    return;
+  }
+  if (existing?.status === "APPROVED") {
+    res.json({ status: "APPROVED", alreadyApproved: true });
+    return;
+  }
+
+  // DECLINED and WITHDRAWN are terminal rows outside the one-live index, so a
+  // carrier can ask again and each attempt keeps its own record.
+  const created = await prisma.quickPayEnrollment.create({
+    data: { carrierProfileId: profile.id, status: "PENDING" },
+  });
+
+  // Tell the desk. Without this the carrier is told "our team will look at
+  // your request" and nothing puts it in front of anyone.
+  void notifyQuickPayPilotRequested(profile.id, "portal");
+
+  log.info({ carrierProfileId: profile.id, enrollmentId: created.id }, "[QuickPayPilot] requested from portal");
+  res.status(201).json({
+    status: "PENDING",
+    requestedAt: created.requestedAt,
+    message:
+      "Thanks. Our team will look at your request and let you know. Until then your loads pay on your standard tier terms, at no fee.",
+  });
 });
 
 // v3.8.aje Sprint A — Email verification.

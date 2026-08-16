@@ -189,24 +189,43 @@ export async function onLoadDelivered(loadId: string) {
 export type { QuickPaySpeed };
 
 /**
- * Resolves the elected speed from the fee percent recorded on the load.
+ * Resolves the elected speed for a load.
  *
- * The rate confirmation is the per-load document the carrier accepts, and the
- * fee percent printed on it is the elected price. We compare it against the
- * carrier's own tier ladder rather than trusting Load.carrierPaymentTier, which
- * is written from two different sources with two different meanings (the RC
- * finalize path writes the CPP tier string into a PaymentTier enum column) and
- * so cannot be relied on.
+ * v3.8.asb — `storedSpeed` (Load.quickPaySpeed) is now the authoritative
+ * answer when it is present, and the fee-percent derivation below is the
+ * fallback for loads priced before that column existed.
  *
- * An AE override to some rate that is on neither rung is still Quick Pay, and
- * is treated as the 7-day product — the default speed, and the slower of the
- * two, so an ambiguous election never shortens SRL's own obligation.
+ * Derivation was never reliable and the schema comment on Load.quickPaySpeed
+ * says why: 3% is Silver seven-day AND Platinum same-day, so the percentage
+ * alone is genuinely ambiguous without the tier; the carrier's tier moves as
+ * they advance, so reading today's tier to reconstruct an old load's speed
+ * returns the wrong answer; and an AE override can put the fee on neither rung,
+ * leaving nothing to derive from. The stored speed is what the rate
+ * confirmation printed and what the carrier read, so it is what SRL owes.
+ *
+ * The fallback keeps its old shape. An AE override to a rate on neither rung is
+ * still Quick Pay and is treated as the 7-day product — the default speed, and
+ * the slower of the two, so an ambiguous election never shortens SRL's own
+ * obligation.
  */
 export function resolveQuickPaySpeed(
   electedPct: number | null | undefined,
   tier: { quickPayFee7Day: number; quickPayFeeSameDay: number },
+  storedSpeed?: "STANDARD" | "SEVEN_DAY" | "SAME_DAY" | null,
 ): QuickPaySpeed {
   if (electedPct === null || electedPct === undefined || electedPct <= 0) return "STANDARD";
+
+  // The Prisma enum and this module's speed union are different vocabularies
+  // for the same three states — SEVEN_DAY/SAME_DAY here are QP_7DAY/QP_SAMEDAY.
+  // The mapping is spelled out rather than inferred so a future rename of
+  // either side fails to compile instead of quietly mispricing.
+  if (storedSpeed === "SAME_DAY") return "QP_SAMEDAY";
+  if (storedSpeed === "SEVEN_DAY") return "QP_7DAY";
+  // A stored STANDARD alongside a positive fee is a contradiction — the
+  // election says no Quick Pay, the frozen fee says otherwise. Fall through to
+  // derivation rather than voiding the fee, because the fee is the half the
+  // carrier was shown a number for.
+
   const sameDayPct = tier.quickPayFeeSameDay * 100;
   return Math.abs(electedPct - sameDayPct) < 0.01 ? "QP_SAMEDAY" : "QP_7DAY";
 }
@@ -232,6 +251,159 @@ export function sumAtCostReimbursements(
 ): number {
   if (!Array.isArray(lines)) return 0;
   return lines.reduce((sum, l) => (isAtCostReimbursement(l) ? sum + (Number(l?.amount) || 0) : sum), 0);
+}
+
+/**
+ * THE answer to "what part of this load's settlement is money the carrier
+ * fronted and SRL repays at cost". Every fee-charging path calls this and
+ * nothing else.
+ *
+ * It exists because four paths used to answer the question four ways, and three
+ * of them answered it wrong:
+ *
+ *   createCarrierPayOnDelivery      read the APPROVED ledger        — correct
+ *   carrierPayController            did not ask at all              — skimmed
+ *   carrierPayments request-quickpay read RC formData.accessorials  — see below
+ *   accountingController            read RC formData.accessorials   — see below
+ *
+ * The two formData readers were dead in practice, not merely stale. formData is
+ * the rate-confirmation PROPOSAL, retired as a money source in v3.8.asb; the
+ * carrier-portal reader also filtered its rate confirmation to `status:
+ * "SIGNED"` while rate confirmations normally sit at SENT, so the include
+ * resolved to nothing, the sum resolved to 0, and the carve-out those paths
+ * appeared to apply did not exist. A carrier who fronted $150 of lumper was
+ * charged a Quick Pay fee on their own $150.
+ *
+ * Worse than being wrong, it was wrong ASYMMETRICALLY: the amount being charged
+ * came from the ledger and the exclusion came from formData, so the subtraction
+ * had one store on each side of the minus sign. Two stores in one subtraction is
+ * how two numbers that must agree stop agreeing.
+ *
+ * This reads the same APPROVED ledger rows that produced the money being
+ * charged, so the exclusion and the thing it is excluded from can no longer
+ * describe different sets.
+ */
+export async function atCostReimbursementsForLoad(
+  loadId: string,
+  client: any = prisma,
+): Promise<number> {
+  return sumLedgerReimbursements(await approvedAccessorials(loadId, client));
+}
+
+/**
+ * The at-cost sum over ledger rows already in hand.
+ *
+ * The single implementation. `atCostReimbursementsForLoad` fetches then calls
+ * this; `carrierAccessorialsForLoad` already holds the rows for its own total
+ * and calls this rather than re-querying. Two copies of this reduce is how the
+ * carve-out starts meaning different things in different places, which is the
+ * defect this whole helper exists to end.
+ */
+function sumLedgerReimbursements(lines: AccessorialLine[]): number {
+  return round2(
+    lines.reduce((s, l) => (isAtCostReimbursement({ type: l.type, description: l.notes }) ? s + l.amount : s), 0),
+  );
+}
+
+/** One accessorial line as the money paths read it. */
+export interface AccessorialLine {
+  id: string;
+  type: string;
+  amount: number;
+  notes: string | null;
+  billedTo: string | null;
+}
+
+/**
+ * The APPROVED accessorial ledger for a load.
+ *
+ * This is the money input for BOTH sides — what the carrier is owed and, at
+ * cost, what the customer is billed. PENDING rows are excluded: a claim an AE
+ * has not looked at is not yet money, in either direction.
+ *
+ * `LoadAccessorial.amount` is a Prisma Decimal, so every read converts once,
+ * here, rather than at each call site.
+ */
+export async function approvedAccessorials(
+  loadId: string,
+  client: any = prisma,
+): Promise<AccessorialLine[]> {
+  const rows = await client.loadAccessorial.findMany({
+    where: { loadId, status: "APPROVED" },
+    orderBy: { createdAt: "asc" },
+    select: { id: true, type: true, amount: true, notes: true, billedTo: true },
+  });
+  return (rows || []).map((r: any) => ({
+    id: r.id,
+    type: String(r.type),
+    amount: Number(r.amount) || 0,
+    notes: r.notes ?? null,
+    billedTo: r.billedTo ?? null,
+  }));
+}
+
+/**
+ * What the carrier is owed in accessorials on a load, and how much of it is an
+ * at-cost reimbursement that must stay out of the Quick Pay fee base.
+ *
+ * v3.8.asb — the pay input moved off `RateConfirmation.accessorialTotal`. That
+ * scalar is frozen when the rate confirmation is built, and autoRateConfirmation
+ * writes a literal 0 into it, so detention accrued at a stop hours later could
+ * never reach a settlement no matter how correctly it was computed. The ledger
+ * that `applyStopDwellCharges` writes is the live record and is now the input.
+ *
+ * v3.8.asb — the retired scalar is no longer a FLOOR either. It used to return
+ * `Math.max(ledgerTotal, declared)`, which paid the carrier the greater of the
+ * two on the standing rule that an ambiguous case pays the carrier MORE. That
+ * rule is right, and the floor was the wrong way to honour it, because only ONE
+ * side of the trade could see the higher number.
+ *
+ * The customer invoice reads the ledger and nothing else
+ * (invoiceService.unbilledCustomerAccessorials), and it must: it itemises one
+ * invoice line per ledger row, so a declared figure with no ledger row behind it
+ * has no line to be billed on and no receipt to substantiate it. So an AE who
+ * typed $200 of layover onto a rate confirmation against a $150 ledger paid the
+ * carrier $200 and billed the customer $150 — a $50 hole that never closed,
+ * against a policy (CLAUDE.md §5) whose whole content is that the customer is
+ * billed exactly what the carrier is owed. The extra $50 also entered the Quick
+ * Pay fee base while `reimbursements` was computed from ledger rows only, so the
+ * fee was charged on money no ledger row described.
+ *
+ * The ledger is now authoritative on BOTH sides. A declared figure above it is
+ * reported as `rcShortfall` and routed to an operator, and the resolution is to
+ * add the missing ledger row — which then flows to the settlement (via
+ * syncCarrierPayAccessorials) AND to the customer (via syncInvoiceAccessorials)
+ * in the same movement, correct on both sides.
+ *
+ * This does not abandon the pay-the-carrier-more rule; it stops the rule being
+ * used to paper over a missing ledger row. The floor paid the money and thereby
+ * removed the only pressure to record it, so the customer under-billing became
+ * permanent and silent. Surfacing the gap is what actually gets the carrier
+ * their $200 and bills the customer for it.
+ */
+export async function carrierAccessorialsForLoad(
+  loadId: string,
+  rcDeclaredTotal: number | null | undefined,
+  client: any = prisma,
+): Promise<{ total: number; reimbursements: number; lines: AccessorialLine[]; rcShortfall: number }> {
+  const lines = await approvedAccessorials(loadId, client);
+  const ledgerTotal = round2(lines.reduce((s, l) => s + l.amount, 0));
+  const declared = round2(Number(rcDeclaredTotal) || 0);
+
+  // Same implementation the standalone helper uses, over rows already fetched.
+  const reimbursements = sumLedgerReimbursements(lines);
+
+  return {
+    total: ledgerTotal,
+    reimbursements,
+    lines,
+    rcShortfall: round2(Math.max(0, declared - ledgerTotal)),
+  };
+}
+
+/** Money rounding. Every cent figure in this module goes through it. */
+function round2(n: number): number {
+  return Math.round((Number(n) || 0) * 100) / 100;
 }
 
 // Published business hours, CLAUDE.md §6 — Mon-Fri, 7:00 AM to 7:00 PM Eastern.
@@ -341,8 +513,13 @@ async function createCarrierPayOnDelivery(load: any) {
 
   const lineHaul = load.carrierRate || load.rate || 0;
   const fuelSurcharge = rc?.fuelSurcharge || load.fuelSurcharge || 0;
-  const accessorials = rc?.accessorialTotal || 0;
-  const grossAmount = lineHaul + fuelSurcharge + accessorials;
+
+  // v3.8.asb — accessorials come from the APPROVED LoadAccessorial ledger, not
+  // from the frozen RC scalar. See carrierAccessorialsForLoad for why the
+  // scalar stays on as a floor rather than as the input.
+  const acc = await carrierAccessorialsForLoad(load.id, rc?.accessorialTotal);
+  const accessorials = acc.total;
+  const grossAmount = round2(lineHaul + fuelSurcharge + accessorials);
 
   // v3.8.aqk GO-LIVE BLOCKER FIX — Quick Pay is OPT-IN (CLAUDE.md §8).
   // This previously mapped SILVER -> "PRIORITY" -> a 2% fee and a 2-day due
@@ -369,34 +546,114 @@ async function createCarrierPayOnDelivery(load: any) {
   const tierConfig = getTierConfig(tierKey);
   const cppTier = profile.tier || "SILVER";
 
+  // The frozen Load column is the ONLY source of the elected fee.
+  //
+  // This used to fall back to `rc.formData.quickPayFeePercent`. Now that the
+  // freeze has moved off draft creation and onto the send path, that fallback
+  // is the hole in the new design: formData carries the PROPOSAL, and reading
+  // it here lets a draft nobody sent price a real settlement. The condition-5
+  // check below catches the common shape of that (a draft has no
+  // rateConfirmationPdfUrl), but not all of it — documentController can write
+  // that URL from a manual PDF upload without freezing anything, which would
+  // leave the URL set, the column null, and the proposal charging the carrier.
+  //
+  // A null column means no fee was ever recorded on this load, which every
+  // charge path already reads as standard terms.
   const electedPct: number | null =
-    typeof load.quickPayFeePercent === "number"
-      ? load.quickPayFeePercent
-      : typeof rc?.formData?.quickPayFeePercent === "number"
-        ? rc.formData.quickPayFeePercent
-        : null;
+    typeof load.quickPayFeePercent === "number" ? load.quickPayFeePercent : null;
 
   const qpAgreementSigned = !!(await prisma.carrierAgreement.findFirst({
     where: { carrierId: profile.id, status: "SIGNED", templateName: "quick-pay" },
     select: { id: true },
   }));
 
+  // ── v3.8.asb — condition 4: the Quick Pay pilot, and what withdrawal does ──
+  //
+  // The pilot state is read from the enrolment, not from quickPayEnabled. The
+  // invariant is that enabled implies an APPROVED enrolment, so in a
+  // consistent database this is redundant — but this line decides whether
+  // money comes out of a carrier's settlement, and "the cache said so" is not
+  // a good enough reason to take it.
+  //
+  // This gate runs at DELIVERY, which is AFTER the rate confirmation froze the
+  // fee and the pay date onto the load. So the account-level conditions have
+  // had time to change since the carrier was told what this load pays, and the
+  // two ways they can change are not the same act:
+  //
+  //   THE CARRIER SWITCHED QUICK PAY OFF themselves. Their enrolment is still
+  //   APPROVED; only the flag moved. This withdraws their own election on any
+  //   load not yet funded — the behaviour §3 describes and v3.8.asa shipped —
+  //   and it pays them MORE, at no fee, on their free tier terms. Their choice,
+  //   in their favour, unchanged here.
+  //
+  //   SRL WITHDREW THE PILOT. The enrolment is WITHDRAWN and the same flag was
+  //   cleared, in the same transaction, by us. Treating that identically would
+  //   strip the 7-day pay date off a load whose rate confirmation already
+  //   promised it, on a load the carrier may be sitting under right now. That
+  //   is the claw-back withdrawQuickPayEnrollment exists to forbid: withdrawal
+  //   stops FUTURE elections and does not re-price work already done.
+  //
+  // So a frozen election survives an SRL withdrawal and does not survive the
+  // carrier's own opt-out. A load with no frozen election has nothing to
+  // survive and simply pays standard terms.
+  const liveEnrollment = await prisma.quickPayEnrollment.findFirst({
+    where: { carrierProfileId: profile.id },
+    orderBy: { requestedAt: "desc" },
+    select: { status: true },
+  });
+  const pilotApproved = liveEnrollment?.status === "APPROVED";
+  const pilotWithdrawnBySrl = liveEnrollment?.status === "WITHDRAWN";
+  const hasFrozenElection = typeof electedPct === "number" && electedPct > 0;
+
+  const accountAllowsQuickPay =
+    (pilotApproved && profile.quickPayEnabled === true) ||
+    (pilotWithdrawnBySrl && hasFrozenElection);
+
+  // ── v3.8.asb — condition 5: the rate confirmation was actually SENT ──
+  //
+  // Quick Pay Agreement §3 cl.3 dates the fee from the load "when Broker ISSUES
+  // the rate confirmation for it". The fee is frozen onto the Load the instant
+  // the DRAFT row is created, which is not the same event: the only thing that
+  // issues a rate confirmation is an AE clicking send, and that is the sole
+  // writer of rateConfirmationPdfUrl — which is also the gate on the carrier
+  // being able to see the document in their portal at all.
+  //
+  // On a one-operator desk the ordinary failure is a Friday tender whose draft
+  // nobody opens. The carrier hauls it, delivers it, and under the old code was
+  // charged a percentage under an instrument that was never sent and that they
+  // had no way to read. A fee the carrier could not have seen is not a fee they
+  // agreed to, so an unissued rate confirmation pays standard tier terms at no
+  // charge. Like every other condition here, failing it pays the carrier MORE.
+  const rcIssued = !!load.rateConfirmationPdfUrl;
+
   const speed: QuickPaySpeed =
-    qpAgreementSigned && profile.quickPayEnabled === true
-      ? resolveQuickPaySpeed(electedPct, tierConfig)
+    qpAgreementSigned && accountAllowsQuickPay && rcIssued
+      ? resolveQuickPaySpeed(electedPct, tierConfig, load.quickPaySpeed)
       : "STANDARD";
+
+  if (hasFrozenElection && qpAgreementSigned && accountAllowsQuickPay && !rcIssued) {
+    log.warn(
+      { loadId: load.id, referenceNumber: load.referenceNumber, electedPct },
+      `[Integration] Load ${load.referenceNumber} carried a ${electedPct}% Quick Pay election but its rate confirmation was never sent — settling at standard terms, no fee`,
+    );
+  }
 
   // §4 — the fee is calculated on line haul, fuel surcharge and approved
   // accessorials, but NOT on reimbursements repaid at cost. A carrier who
   // fronts $150 of lumper is repaid $150; skimming it would charge them a fee
   // on their own money.
-  const reimbursements = sumAtCostReimbursements(rc?.formData?.accessorials);
-  const feeBase = Math.max(0, grossAmount - reimbursements);
+  //
+  // v3.8.asb — the reimbursement figure now comes off the same APPROVED ledger
+  // rows that produced the accessorial total, so the exclusion and the amount
+  // it is excluded from can no longer disagree. The old read of
+  // rc.formData.accessorials described a different set than the gross did.
+  const reimbursements = acc.reimbursements;
+  const feeBase = Math.max(0, round2(grossAmount - reimbursements));
 
   const paymentTier = speed === "QP_SAMEDAY" ? "FLASH" : speed === "QP_7DAY" ? "PRIORITY" : "STANDARD";
   const quickPayFeePercent = speed === "STANDARD" ? 0 : (electedPct as number);
-  const quickPayFeeAmount = Math.round(feeBase * (quickPayFeePercent / 100) * 100) / 100;
-  const netAmount = Math.round((grossAmount - quickPayFeeAmount) * 100) / 100;
+  const quickPayFeeAmount = round2(feeBase * (quickPayFeePercent / 100));
+  const netAmount = round2(grossAmount - quickPayFeeAmount);
 
   // Generate payment number
   const todayStr = new Date().toISOString().slice(0, 10).replace(/-/g, "");
@@ -450,8 +707,14 @@ async function createCarrierPayOnDelivery(load: any) {
         (speed === "STANDARD"
           ? ` · Standard ${standardNetDays(cppTier)}-day tier terms, no Quick Pay fee`
           : ` · ${speed === "QP_SAMEDAY" ? "Same-day" : "7-day"} Quick Pay elected at ${quickPayFeePercent}%`) +
+        (accessorials > 0
+          ? ` · $${accessorials.toFixed(2)} approved accessorials included`
+          : "") +
         (speed !== "STANDARD" && reimbursements > 0
           ? ` · $${reimbursements.toFixed(2)} at-cost reimbursement paid in full and excluded from the fee base`
+          : "") +
+        (acc.rcShortfall > 0
+          ? ` · rate confirmation declared $${acc.rcShortfall.toFixed(2)} more in accessorials than the approved ledger holds; flagged for review so the missing line can be recorded and paid`
           : "") +
         (receivedAt
           ? ` · Payment clock started on receipt of documentation ${receivedAt.toISOString().slice(0, 10)}`
@@ -476,16 +739,34 @@ async function createCarrierPayOnDelivery(load: any) {
   //
   // The tier ceilings govern Quick Pay funding. A standard-terms settlement is
   // not a Quick Pay decision, so it keeps the generic large-payment review.
-  let reviewReason: string | null = null;
+  // Reasons accumulate. An over-ceiling settlement that ALSO has an accessorial
+  // discrepancy is two things the operator needs to see, and the older
+  // single-slot assignment silently dropped whichever fired first.
+  const reviewReasons: string[] = [];
+
+  // A rate confirmation promising more accessorial money than the approved
+  // ledger holds is a MISSING LEDGER ROW, and that is what the operator is asked
+  // to fix. Recording it pays the carrier and bills the customer in one movement
+  // (syncCarrierPayAccessorials and syncInvoiceAccessorials both watch the
+  // ledger). Paying the promise here instead — what this path used to do —
+  // settled the carrier and left the customer under-billed forever, because the
+  // invoice can only itemise rows that exist.
+  if (acc.rcShortfall > 0) {
+    reviewReasons.push(
+      `rate confirmation declared $${acc.rcShortfall.toLocaleString()} more in accessorials than the approved ledger holds — record the missing line so the carrier is paid it and the customer is billed it`,
+    );
+  }
   if (speed === "STANDARD") {
     if (netAmount >= 5000) {
-      reviewReason = `$${netAmount.toLocaleString()} standard settlement`;
+      reviewReasons.push(`$${netAmount.toLocaleString()} standard settlement`);
     }
   } else {
     const perLoadCeiling = quickPayAutoApprovePerLoad(cppTier);
     const monthCeiling = quickPayMonthlyLimit(cppTier);
     if (grossAmount > perLoadCeiling) {
-      reviewReason = `$${grossAmount.toLocaleString()} gross is over the ${cppTier} $${perLoadCeiling.toLocaleString()} per-load Quick Pay auto-approve ceiling`;
+      reviewReasons.push(
+        `$${grossAmount.toLocaleString()} gross is over the ${cppTier} $${perLoadCeiling.toLocaleString()} per-load Quick Pay auto-approve ceiling`,
+      );
     } else {
       const monthStart = new Date();
       monthStart.setDate(1);
@@ -501,10 +782,14 @@ async function createCarrierPayOnDelivery(load: any) {
       });
       const usedThisMonth = monthQp._sum.amount || 0;
       if (usedThisMonth + grossAmount > monthCeiling) {
-        reviewReason = `$${(usedThisMonth + grossAmount).toLocaleString()} month-to-date is over the ${cppTier} $${monthCeiling.toLocaleString()} monthly Quick Pay auto-approve ceiling`;
+        reviewReasons.push(
+          `$${(usedThisMonth + grossAmount).toLocaleString()} month-to-date is over the ${cppTier} $${monthCeiling.toLocaleString()} monthly Quick Pay auto-approve ceiling`,
+        );
       }
     }
   }
+
+  const reviewReason = reviewReasons.length ? reviewReasons.join("; ") : null;
 
   if (reviewReason) {
     await prisma.approvalQueue.create({
@@ -514,7 +799,10 @@ async function createCarrierPayOnDelivery(load: any) {
         referenceType: "CarrierPay",
         amount: netAmount,
         description: `Auto-generated carrier payment ${paymentNumber} for load ${load.referenceNumber} — ${reviewReason}`,
-        priority: netAmount >= 10000 ? "HIGH" : "MEDIUM",
+        // A shortfall is always HIGH: it is a carrier who has been paid less
+        // than a document SRL issued to them promised. Size does not soften
+        // that, so it does not ride on the netAmount threshold.
+        priority: acc.rcShortfall > 0 || netAmount >= 10000 ? "HIGH" : "MEDIUM",
         status: "PENDING",
         requestedById: load.carrierId,
       },
@@ -543,6 +831,246 @@ async function createCarrierPayOnDelivery(load: any) {
   }
 
   log.info(`[Integration] CarrierPay ${paymentNumber} created: gross=$${grossAmount}, net=$${netAmount}, tier=${paymentTier}`);
+}
+
+/**
+ * Re-price an existing settlement after the accessorial ledger moves.
+ *
+ * createCarrierPayOnDelivery returns early when a CarrierPay already exists, so
+ * gross is computed exactly once, at delivery, and never again. Detention is
+ * routinely approved AFTER that — a driver sits five hours, the claim is filed
+ * with the POD, and an AE looks at it the next morning. Without this the money
+ * is computed correctly, written to the ledger correctly, and never paid.
+ *
+ * What happens depends on whether the carrier has been paid yet:
+ *
+ *   NOT YET PAID (PENDING/PREPARED/SUBMITTED/REJECTED) — the settlement is
+ *   re-priced in place. The carrier has not received anything, so there is no
+ *   second payment to make; the one that is coming is simply correct. The Quick
+ *   Pay percentage and speed are NOT recomputed: they were frozen when the rate
+ *   confirmation issued, and this function exists to add money, not to re-open
+ *   the price of the freight.
+ *
+ *   ALREADY APPROVED OR PAID — the figure has been committed and, once PAID,
+ *   sent. Editing it would rewrite a settlement the carrier has already
+ *   reconciled, and would make the sum of the deductions stop agreeing with
+ *   what left the account. So the row is left alone and the shortfall goes to
+ *   the approval queue as a separate payment for the operator to issue. On a
+ *   one-operator desk that is a queue item on a screen he already reads, not a
+ *   silent write nobody sees.
+ *
+ * Idempotent: it computes the ledger total and compares, so running it twice
+ * for the same approval is a no-op the second time.
+ */
+export async function syncCarrierPayAccessorials(loadId: string): Promise<void> {
+  const pay = await prisma.carrierPay.findFirst({
+    where: { loadId },
+    orderBy: { createdAt: "desc" },
+  });
+  if (!pay) return; // Not settled yet — delivery will read the ledger fresh.
+
+  const load = await prisma.load.findUnique({
+    where: { id: loadId },
+    select: { id: true, referenceNumber: true, carrierId: true },
+  });
+  if (!load) return;
+
+  const rc = pay.rateConfirmationId
+    ? await prisma.rateConfirmation.findUnique({
+        where: { id: pay.rateConfirmationId },
+        select: { accessorialTotal: true },
+      })
+    : null;
+
+  const acc = await carrierAccessorialsForLoad(loadId, rc?.accessorialTotal);
+  const previous = round2(Number(pay.accessorialsTotal) || 0);
+  const delta = round2(acc.total - previous);
+  if (Math.abs(delta) < 0.01) return; // Already in step.
+
+  const settled = ["APPROVED", "PROCESSING", "PAID"].includes(String(pay.status));
+
+  if (settled) {
+    await prisma.approvalQueue.create({
+      data: {
+        type: "CARRIER_PAYMENT",
+        referenceId: pay.id,
+        referenceType: "CarrierPay",
+        amount: Math.abs(delta),
+        description:
+          `Load ${load.referenceNumber}: $${Math.abs(delta).toFixed(2)} of approved accessorials ` +
+          `${delta > 0 ? "were approved after" : "were removed after"} settlement ${pay.paymentNumber} reached ${pay.status}. ` +
+          `That settlement is committed and is not being rewritten. Issue a separate payment for the difference.`,
+        priority: Math.abs(delta) >= 500 ? "HIGH" : "MEDIUM",
+        status: "PENDING",
+        // CarrierPay.carrierId is required, so this is always present; Load's
+        // own carrierId is nullable and would not typecheck here.
+        requestedById: pay.carrierId,
+      },
+    });
+    log.info(
+      { loadId, paymentNumber: pay.paymentNumber, status: pay.status, delta },
+      `[Integration] Accessorial delta on a committed settlement — queued for a separate payment`,
+    );
+    return;
+  }
+
+  // ── Re-price in place. The frozen Quick Pay terms carry over untouched. ──
+  //
+  // v3.8.asb — THIS ARITHMETIC DESTROYED SETTLEMENTS. It used to rebuild the
+  // gross from its parts:
+  //
+  //     grossAmount = pay.lineHaul + pay.fuelSurcharge + acc.total
+  //
+  // `lineHaul`, `fuelSurcharge` and `accessorialsTotal` are all `Float?` —
+  // nullable — and carrierPayController.createCarrierPay wrote NONE of them. A
+  // hand-raised $3,100 settlement therefore carried null, null, null, and the
+  // rebuild read that as 0 + 0 + $300 of newly-approved detention and wrote
+  // $300. An AE approving a detention row deleted $2,800 of a carrier's money,
+  // silently, as a side effect of doing the right thing.
+  //
+  // The fix had two candidates and only one of them cannot come back:
+  //
+  //   Populate the components everywhere. Rejected. The columns are nullable at
+  //   the schema level, so nothing enforces it. It fixes today's three writers
+  //   and leaves the trap armed for the fourth — a rebuild that treats a missing
+  //   component as 0 on a money row is the defect, and this leaves that rebuild
+  //   in place, depending on a discipline the database does not check.
+  //
+  //   Derive from the amount already on the row. Taken. `amount` is `Float`,
+  //   NOT NULL — it cannot be absent, and it is the exact figure this settlement
+  //   pays. This function's job is to ADD newly-approved accessorial money, not
+  //   to re-open the price of the freight, so moving the gross by the accessorial
+  //   delta IS the job, stated directly. There is no component to be missing,
+  //   so there is nothing to silently read as zero.
+  //
+  // Where `previous` is 0 because no accessorials were ever recorded on the row,
+  // adding the ledger's total is the honest reading — the settlement records $0
+  // of accessorials, the ledger now holds $300, so it gains $300 — and it errs
+  // toward paying the carrier more, which is this module's standing rule for
+  // every ambiguous case.
+  const priorGross = round2(Number(pay.grossAmount ?? pay.amount) || 0);
+  const grossAmount = round2(priorGross + delta);
+  const feeBase = Math.max(0, round2(grossAmount - acc.reimbursements));
+  const quickPayFeePercent = Number(pay.quickPayFeePercent) || 0;
+  const quickPayFeeAmount = round2(feeBase * (quickPayFeePercent / 100));
+  const netAmount = round2(grossAmount - quickPayFeeAmount);
+
+  // ── The tripwire ──
+  //
+  // A re-price moves a settlement by the accessorial delta. Anything larger is
+  // not a re-price, it is this function computing a number it has no business
+  // computing, and the last time it did that it took $2,800 off a carrier. The
+  // net moves by the delta less the fee on it, so |delta| bounds both.
+  //
+  // Refuse and log rather than write. A settlement that stays a few hundred
+  // dollars stale is a queue item; a settlement silently rewritten to a wrong
+  // figure is money gone. The delta arithmetic above satisfies this by
+  // construction — which is the point. This exists to fail the day someone
+  // reintroduces a rebuild, before the carrier pays for it.
+  const priorNet = round2(Number(pay.netAmount) || 0);
+  const tolerance = Math.abs(delta) + 0.01;
+  const grossMove = Math.abs(round2(grossAmount - priorGross));
+  const netMove = Math.abs(round2(netAmount - priorNet));
+
+  // v3.8.asb — the tripwire above bounds this function's own STEP. It says
+  // nothing about whether the row it is stepping from is sane, and a proof run
+  // showed why that matters: a settlement zeroed by some other path then
+  // received a legitimate $150 approval, moved by exactly $150, passed cleanly,
+  // and cemented a $3,103 loss. The guard held while the number it guarded was
+  // nonsense.
+  //
+  // A settlement whose prior gross is zero has no line haul in it, which is not
+  // a state any real settlement reaches. Refuse and queue rather than re-price
+  // a row that was already wrong before this function touched it.
+  const priorGrossImplausible = priorGross <= 0 && delta > 0;
+
+  if (grossMove > tolerance || netMove > tolerance || priorGrossImplausible) {
+    log.error(
+      {
+        loadId,
+        paymentNumber: pay.paymentNumber,
+        priorGrossImplausible,
+        delta,
+        priorGross,
+        grossAmount,
+        priorNet,
+        netAmount,
+        grossMove,
+        netMove,
+      },
+      `[Integration] REFUSED to re-price ${pay.paymentNumber}: a $${Math.abs(delta).toFixed(2)} accessorial change would have moved the settlement by $${Math.max(grossMove, netMove).toFixed(2)}. Settlement left untouched.`,
+    );
+    await prisma.approvalQueue
+      .create({
+        data: {
+          type: "CARRIER_PAYMENT",
+          referenceId: pay.id,
+          referenceType: "CarrierPay",
+          amount: Math.abs(delta),
+          description:
+            `Load ${load.referenceNumber}: settlement ${pay.paymentNumber} was NOT re-priced. ` +
+            `A $${Math.abs(delta).toFixed(2)} accessorial change computed a $${Math.max(grossMove, netMove).toFixed(2)} movement, ` +
+            `which is larger than the change itself. The settlement has been left exactly as it was. ` +
+            `Check the accessorial ledger for this load and adjust the settlement by hand.`,
+          priority: "HIGH",
+          status: "PENDING",
+          requestedById: pay.carrierId,
+        },
+      })
+      .catch((e) => log.error({ err: e }, "[Integration] re-price refusal queue entry failed"));
+    return;
+  }
+
+  // v3.8.asb — R4. A DOWNWARD move is written, and it is deliberate: an
+  // accessorial that was approved and is later rejected genuinely reduces what
+  // the carrier is owed, and refusing that would leave SRL paying a claim it
+  // has withdrawn. But it is the one movement a carrier notices and disputes,
+  // and until now nothing distinguished "the claim was withdrawn" from "a row
+  // was lost". So it is written AND surfaced, never written silently.
+  if (delta < 0) {
+    log.warn(
+      { loadId, paymentNumber: pay.paymentNumber, delta, priorGross, grossAmount, priorNet, netAmount },
+      `[Integration] settlement ${pay.paymentNumber} REDUCED by $${Math.abs(delta).toFixed(2)} after an accessorial was withdrawn or rejected.`,
+    );
+    await prisma.approvalQueue
+      .create({
+        data: {
+          type: "CARRIER_PAYMENT",
+          referenceId: pay.id,
+          referenceType: "CarrierPay",
+          amount: Math.abs(delta),
+          description:
+            `Load ${load.referenceNumber}: settlement ${pay.paymentNumber} was reduced by ` +
+            `$${Math.abs(delta).toFixed(2)} because an accessorial was rejected or withdrawn. ` +
+            `Gross $${priorGross.toFixed(2)} to $${grossAmount.toFixed(2)}. ` +
+            `Confirm the carrier was told, since this is a reduction they will see.`,
+          priority: "HIGH",
+          status: "PENDING",
+          requestedById: pay.carrierId,
+        },
+      })
+      .catch((e) => log.error({ err: e }, "[Integration] downward re-price queue entry failed"));
+  }
+
+  await prisma.carrierPay.update({
+    where: { id: pay.id },
+    data: {
+      accessorialsTotal: acc.total,
+      amount: grossAmount,
+      grossAmount,
+      quickPayFeeAmount,
+      quickPayDiscount: quickPayFeeAmount,
+      netAmount,
+      notes:
+        `${pay.notes ?? ""} · Re-priced ${new Date().toISOString().slice(0, 10)}: approved accessorials ` +
+        `$${previous.toFixed(2)} → $${acc.total.toFixed(2)}`.trim(),
+    },
+  });
+
+  log.info(
+    { loadId, paymentNumber: pay.paymentNumber, previous, now: acc.total, netAmount },
+    `[Integration] CarrierPay ${pay.paymentNumber} re-priced on an accessorial change`,
+  );
 }
 
 // ── Update Shipper Credit utilization on delivery ──

@@ -6,6 +6,7 @@ import { LoadStatus } from "@prisma/client";
 import { getVehicleLocation } from "../services/eldService";
 import { env } from "../config/env";
 import { log } from "../lib/logger";
+import { generateLoadNumber, formatDocumentNumber } from "../lib/documentNumber";
 
 // ─── Helpers ─────────────────────────────────────────────
 
@@ -815,10 +816,22 @@ export async function createQuoteRequest(req: AuthRequest, res: Response) {
     // Resolve the shipper's customer record
     const customer = await prisma.customer.findUnique({ where: { userId } });
 
-    // Create the load as a quote (POSTED status = pending quote)
+    // Create the load as a quote (POSTED status = pending quote).
+    //
+    // This used to stamp `RFQ-<base36 timestamp>` and leave loadNumber null, so a
+    // shipper-portal quote had no SRL stem and none of its documents could be
+    // numbered. It now draws from the same sequence as every other creator.
+    //
+    // A quote that never converts burns a sequence number. That is the right
+    // trade: nextval is non-transactional so gaps are normal and free, whereas
+    // renumbering later would change the reference the shipper was already shown
+    // on this response.
+    const refNumber = await generateLoadNumber();
     const load = await prisma.load.create({
       data: {
-        referenceNumber: `RFQ-${Date.now().toString(36).toUpperCase()}`,
+        referenceNumber: refNumber,
+        loadNumber: refNumber,
+        srlBolNumber: formatDocumentNumber(refNumber, "BOL"),
         status: LoadStatus.POSTED,
         originAddress: originAddress || "",
         originCity,

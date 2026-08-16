@@ -24,11 +24,22 @@ interface IconTabsProps {
   active: DrawerTab;
   onChange: (tab: DrawerTab) => void;
   openExceptionCount?: number;
+  pendingAccessorialCount?: number;
 }
 
-export function IconTabs({ active, onChange, openExceptionCount = 0 }: IconTabsProps) {
-  const tabsWithAlert = TABS.map((t) =>
-    t.id === "exceptions" && openExceptionCount > 0 ? { ...t, alert: true } : t
-  );
+export function IconTabs({
+  active,
+  onChange,
+  openExceptionCount = 0,
+  pendingAccessorialCount = 0,
+}: IconTabsProps) {
+  // A pending accessorial is money that is neither paid nor billed, and the
+  // Finance tab is the only place it can be released. Flagging the tab is what
+  // makes it findable by an operator who opened this load for another reason.
+  const tabsWithAlert = TABS.map((t) => {
+    if (t.id === "exceptions" && openExceptionCount > 0) return { ...t, alert: true };
+    if (t.id === "finance" && pendingAccessorialCount > 0) return { ...t, alert: true };
+    return t;
+  });
   return <SharedIconTabs tabs={tabsWithAlert} active={active} onChange={onChange} />;
 }

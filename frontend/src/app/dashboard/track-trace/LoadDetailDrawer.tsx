@@ -19,10 +19,16 @@ import type { DrawerTab } from "./drawer-types";
 interface Props {
   loadId: string | null;
   onClose: () => void;
+  /**
+   * Tab to land on when the drawer opens. The pending-accessorial queue opens
+   * straight onto "finance" so the claim it was pointing at is the first thing
+   * on screen, rather than making the operator hunt for it.
+   */
+  initialTab?: DrawerTab;
 }
 
-export function LoadDetailDrawer({ loadId, onClose }: Props) {
-  const [tab, setTab] = useState<DrawerTab>("details");
+export function LoadDetailDrawer({ loadId, onClose, initialTab = "details" }: Props) {
+  const [tab, setTab] = useState<DrawerTab>(initialTab);
   const [statusError, setStatusError] = useState<string | null>(null);
   const queryClient = useQueryClient();
 
@@ -34,13 +40,13 @@ export function LoadDetailDrawer({ loadId, onClose }: Props) {
     if (loadId) {
       document.addEventListener("keydown", handleKeyDown);
       document.body.style.overflow = "hidden";
-      setTab("details");
+      setTab(initialTab);
     }
     return () => {
       document.removeEventListener("keydown", handleKeyDown);
       document.body.style.overflow = "";
     };
-  }, [loadId, handleKeyDown]);
+  }, [loadId, handleKeyDown, initialTab]);
 
   // Sprint 42 (Item 63 P1-1) — browser-back close. Trigger-dep variant.
   useEffect(() => {
@@ -97,6 +103,9 @@ export function LoadDetailDrawer({ loadId, onClose }: Props) {
   const statusAction = load ? getNextStatusAction(load.status) : null;
 
   const openExceptionCount = (load?.loadExceptions ?? []).filter((e: any) => e.status === "OPEN").length;
+  const pendingAccessorialCount = (load?.loadAccessorials ?? []).filter(
+    (a: any) => String(a.status).toUpperCase() === "PENDING",
+  ).length;
 
   const statusBadge = (s: string) => {
     const map: Record<string, string> = {
@@ -121,7 +130,12 @@ export function LoadDetailDrawer({ loadId, onClose }: Props) {
         aria-modal="true"
         className="absolute top-0 bottom-0 right-0 w-full max-w-[720px] bg-white shadow-2xl flex animate-slide-in-right"
       >
-        <IconTabs active={tab} onChange={setTab} openExceptionCount={openExceptionCount} />
+        <IconTabs
+          active={tab}
+          onChange={setTab}
+          openExceptionCount={openExceptionCount}
+          pendingAccessorialCount={pendingAccessorialCount}
+        />
 
         <div className="flex-1 flex flex-col min-w-0">
           {/* Header */}
@@ -225,7 +239,7 @@ export function LoadDetailDrawer({ loadId, onClose }: Props) {
             {load && tab === "docs"        && <DocsTab        load={load} loadId={loadId} onChange={() => query.refetch()} />}
             {load && tab === "check_calls" && <CheckCallsTab  load={load} loadId={loadId} onChange={() => query.refetch()} />}
             {load && tab === "exceptions"  && <ExceptionsTab  load={load} loadId={loadId} onChange={() => query.refetch()} />}
-            {load && tab === "finance"     && <FinanceTab     load={load} />}
+            {load && tab === "finance"     && <FinanceTab     load={load} loadId={loadId} onChange={() => query.refetch()} />}
             {load && tab === "photos"      && <PhotosTab      load={load} loadId={loadId} onChange={() => query.refetch()} />}
           </div>
         </div>

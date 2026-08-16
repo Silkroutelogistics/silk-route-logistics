@@ -7,6 +7,10 @@ import { calculateMileage, MileageResult } from "./mileageService";
 import { log } from "../lib/logger";
 import { generateBOLQRBuffer } from "../utils/qrGenerator";
 import { decodeHtmlEntities } from "../utils/htmlEntities";
+// ONE derivation rule for every document identifier this file prints. These are
+// pure reads: the number is allocated and persisted where the document is
+// CREATED, never here, so regenerating a PDF reproduces the same number.
+import { documentNumberFor, resolveLoadStem } from "../lib/documentNumber";
 // Sprint 45-RC (v3.8.abd) — Item 48 close. Skill chrome library imported from
 // backend/src/lib/srl-chrome.ts (mirrored from .claude/skills/srl-brand-design/
 // scripts/srl_chrome.ts at session HEAD; manually sync when skill ships canonical
@@ -210,6 +214,10 @@ export interface BOLRenderContext {
 interface LoadBOLData {
   referenceNumber: string;
   loadNumber?: string | null;
+  /** SRL's own BOL document number (SRL-121485B), allocated when the BOL is
+   *  first issued. Optional so the adapter paths and fixtures still type; when
+   *  absent the renderer derives revision 1 from the load stem. */
+  srlBolNumber?: string | null;
   originCompany?: string | null;
   originAddress?: string | null; originCity: string; originState: string; originZip: string;
   originContactName?: string | null; originContactPhone?: string | null;
@@ -406,8 +414,9 @@ export async function generateBOLFromLoad(
       : { text: `[${placeholder}]`, isPlaceholder: true };
   };
 
-  const ref = load.loadNumber || load.referenceNumber;
-  const bolNum = ref.startsWith("SRL-") ? `BOL-${ref}` : `BOL-SRL-${ref}`;
+  // Suffix on the load stem: SRL-121485B. Was `BOL-SRL-121485` — a prefix, which
+  // sorts every BOL away from its own load in any text-sorted column.
+  const bolNum = documentNumberFor(load.srlBolNumber, load, "BOL") ?? "";
 
   // QR generation for /track deep-link. Non-fatal on failure — frame
   // renders empty to preserve layout spacing.
@@ -1523,12 +1532,22 @@ function checkPageBreak(doc: PDFDoc, y: number, needed: number): number {
  */
 export function buildRateConOperationalTerms(
   formData: Record<string, any>,
-  carrierPaymentTier?: string
+  quickPayApplied?: string
 ): RateConTerms {
   const fd = formData || {};
-  // The generator carries "—" as its no-tier sentinel. Normalise here so the
-  // renderer only ever sees a real tier or nothing.
-  const qpTier = carrierPaymentTier && carrierPaymentTier !== "—" ? carrierPaymentTier : undefined;
+  // ── v3.8.asb — this cell states the election, not the tier ───────────────
+  //
+  // The OPERATIONAL TERMS grid has a cell labelled QUICK PAY that printed the
+  // carrier's TIER NAME: a row reading "QUICK PAY — SILVER" beside DETENTION,
+  // TONU and LAYOVER, all of which state money. It named a membership where
+  // its neighbours name a price, so the one cell on the page a carrier would
+  // look at to find their fee gave them a word instead of a number. This is
+  // the same defect as the meta-strip cell and it was in two places; the
+  // generator now passes the applied election here as well.
+  //
+  // The "—" no-tier sentinel is still normalised away, so an empty or unknown
+  // value drops the cell rather than rendering a dash beside a money label.
+  const qpTier = quickPayApplied && quickPayApplied !== "—" ? quickPayApplied : undefined;
 
   // Operational terms — detention / TONU / layover / lumper / cancellation / QP.
   // Sprint 50 (Item 127, Path β belt-and-suspenders) — detentionNotify: true
@@ -1630,8 +1649,26 @@ export function generateEnhancedRateConfirmation(load: EnhancedRCLoadData, formD
   // "Font not found" on first text() invocation. Mirror of BOL v2.9 pattern.
   registerSkillFonts(doc);
 
-  const refNum = fd.referenceNumber || load.referenceNumber;
-  const docId = `RC-SRL-${refNum}`;
+  // Was `RC-SRL-${fd.referenceNumber || load.referenceNumber}`. Two defects in
+  // one line, both live in production output:
+  //   1. referenceNumber ALREADY carries the "SRL-" stem, so this rendered
+  //      RC-SRL-SRL-121488 on every page header of every Rate Confirmation.
+  //   2. it preferred formData over the load record and ignored loadNumber, so
+  //      the RC could print a different identifier than the BOL for one load.
+  // Now: the persisted rateConNumber, else revision 1 off the load stem.
+  // `fd.rateConNumber` is injected by the caller from the RateConfirmation row
+  // (see rateConfirmationController.renderFormData) rather than stored in
+  // formData, so there is still exactly one persisted copy: the rateConNumber
+  // column. Callers that render an unsaved preview pass nothing and get
+  // revision 1 derived from the stem, which is what a first issue would get.
+  const docId = documentNumberFor(fd.rateConNumber, load, "RATE_CONFIRMATION") ?? "";
+
+  // The load stem, which is NOT the document number. `docId` identifies THIS
+  // Rate Confirmation (SRL-121488R2 on a re-issue); `stem` identifies the
+  // freight (SRL-121488) and is what the body copy means when it tells a driver
+  // which load to check in against, or names the load in the invoicing subject
+  // line. Conflating them would put a revision suffix in a driver instruction.
+  const stem = resolveLoadStem(load) ?? "";
 
   // ─── PAGE 1 ────────────────────────────────────────────────────
   // Header (no QR — RC carrier-portal artifact, no scan event per skill)
@@ -1676,29 +1713,83 @@ export function generateEnhancedRateConfirmation(load: EnhancedRCLoadData, formD
   const pickupStr = fd.pickupDate || (load.pickupDate instanceof Date ? load.pickupDate.toLocaleDateString() : null) || "—";
   const deliveryStr = fd.deliveryDate || (load.deliveryDate instanceof Date ? load.deliveryDate.toLocaleDateString() : null) || "—";
   const equipment = fd.equipmentType || load.equipmentType || "—";
-  const qpTier = fd.carrierPaymentTier || "—";
   const termsLabel = fd.paymentTerms || "Net-30";
-  // Sprint 51 (Item 134 α) — Quick Pay meta strip cell: non-em-dash fallback
-  // when no Caravan tier is set. Communicates default payment terms instead
-  // of leaving the cell ambiguous. Pairs with Item 134 γ nudge panel swap on
-  // the rate breakdown area.
+  // ── v3.8.asb — the QUICK PAY cell states the FEE APPLIED TO THIS LOAD ────
   //
-  // Sprint 51.d (Item 152) — value shortened "Standard Net-30" → "Standard".
-  // 8-cell meta strip layout (Sprint 49 Item 117) per-cell width is ~67.5pt
-  // at CONTENT_W 540pt / 8 cells. "Standard Net-30" (15 chars at FONT_BODY
-  // 9pt ≈ 75pt) overflowed adjacent TERMS cell on Phase 4 visual verification.
-  // "Standard" (8 chars ≈ 40pt) fits with ~27pt margin. TERMS cell adjacency
-  // provides "Net-30" context unambiguously. Sub-pattern 8.a refinement:
-  // when a conditional changes content of pre-existing element within layout
-  // constraint, verification scope must include element's layout integrity
-  // with the new content — not just "is the value X vs Y" check.
-  const qpCellValue = qpTier !== "—" ? qpTier : "Standard";
+  // It used to print the carrier's TIER NAME ("SILVER"), and before that the
+  // word "Standard". Neither is a fee. A carrier charged $60 on a $2,000 load
+  // could not find "3%" anywhere on any document, while carrierPayments.ts
+  // told them "the fee is confirmed in writing on the rate confirmation" and
+  // schema.prisma asserted "the RC prints quickPaySpeed + quickPayFeePercent
+  // as applied to THIS load". It printed neither. Quick Pay Agreement §7
+  // requires the deduction be verifiable on the document's face; a tier name
+  // is not verifiable against a dollar figure.
+  //
+  // The value is resolved from what the load actually elected, in this order:
+  //   1. fd.quickPaySpeed + fd.quickPayFeePercent — both halves, written by
+  //      autoRateConfirmationService. The fee alone is ambiguous (3% is Silver
+  //      seven-day AND Platinum same-day), so speed is what disambiguates it.
+  //   2. fd.quickPayFeePercent alone — validators/rateConfirmation.ts declares
+  //      quickPayFeePercent but NOT quickPaySpeed, so a Zod parse on any AE
+  //      edit strips the speed and leaves the percent. That path still has a
+  //      real fee to state and must not fall through to "not elected".
+  //   3. no fee — the load is on standard terms. Per the 2026-08-16 decision
+  //      Quick Pay defaults OFF per load, so this is the ordinary case and it
+  //      has to say so plainly rather than imply an election that never
+  //      happened.
+  //
+  // There WAS an fd.quickPayCellValue, pre-computed upstream, which this
+  // renderer never read. Its own comment claimed the strings were pre-measured
+  // to fit; they were not — "Same-day · 5%" measures 69.6pt against a 67.5pt
+  // cell and would have overprinted TERMS, the Item 152 defect. It was deleted
+  // in v3.8.asb. The renderer owns its own geometry and measures below rather
+  // than trusting an upstream claim about a font it cannot see.
+  const qpFeePct =
+    typeof fd.quickPayFeePercent === "number" && fd.quickPayFeePercent > 0 ? fd.quickPayFeePercent : null;
+  const qpSpeedRaw = typeof fd.quickPaySpeed === "string" ? fd.quickPaySpeed.toUpperCase() : null;
+  // A non-zero percent is what decides this, and NOT a speed of "STANDARD"
+  // sitting beside it. The two can disagree, and when they do the money
+  // follows the percent: integrationService derives the speed from the frozen
+  // percent (resolveQuickPaySpeed compares it against the tier's same-day
+  // rate) and only zeroes the fee when that derivation yields STANDARD, which
+  // it cannot do for a non-zero percent. So a load carrying 3% and a STANDARD
+  // label is charged 3%. Reading the label instead of the percent would print
+  // "not elected" on a load the ledger bills — which is the whole defect this
+  // change exists to close, reintroduced through the side door.
+  const qpElected = qpFeePct !== null;
+  const qpSameDay = qpSpeedRaw === "SAME_DAY";
+  // Speed wording matches what the TERMS cell beside it prints for the same
+  // load (autoRateConfirmationService election.paymentTerms), so the two cells
+  // read as one statement rather than two vocabularies.
+  const qpSpeedLabel = qpSameDay ? "Same day" : "7 days";
+
+  // Measured fit, not asserted fit. The meta strip draws every cell with
+  // lineBreak:false, so a value wider than its column silently overprints its
+  // neighbour — there is no wrap and no error. Rather than hand-check a string
+  // and leave the next editor to rediscover the constraint, the renderer walks
+  // a ladder of candidates and takes the first that measures inside the column
+  // with a 4pt gutter. Worst case it degrades to the bare percent, which is
+  // still the number the carrier is charged. Measured at DMSans-Regular 10pt
+  // (drawMetaStrip's own font/size) against CONTENT_W/8 = 67.5pt:
+  //   "3% · 7-day"  48.4pt   "5% same day"  61.5pt   "Not elected"  54.1pt
+  //   "5% · same day" 66.1pt is inside the column but inside the gutter too,
+  //   so it is not first in the ladder.
+  const qpCellValue = (() => {
+    const ladder = qpElected
+      ? qpSameDay
+        ? [`${qpFeePct}% same day`, `${qpFeePct}% SD`, `${qpFeePct}%`]
+        : [`${qpFeePct}% · 7-day`, `${qpFeePct}% 7-day`, `${qpFeePct}%`]
+      : ["Not elected", "None"];
+    const budget = CONTENT_W / 8 - 4;
+    doc.font(FONT_BODY, 10);
+    return ladder.find((s) => doc.widthOfString(s) <= budget) ?? ladder[ladder.length - 1];
+  })();
   const pickupNumStr = fd.pickupNumber || load.pickupNumber || "";
   const poNumStr = fd.poNumber || (load.poNumbers && load.poNumbers.length > 0 ? load.poNumbers[0] : "") || load.shipperPoNumber || "";
 
   y = drawMetaStrip(doc, {
     "DATE ISSUED": dateStr,
-    "LOAD REF": refNum,
+    "LOAD REF": stem,
     "PICKUP": pickupStr,
     "DELIVERY": deliveryStr,
     "PICKUP #": pickupNumStr,
@@ -1979,10 +2070,30 @@ export function generateEnhancedRateConfirmation(load: EnhancedRCLoadData, formD
   };
   y = drawRateBreakdown(doc, rate, y - 8);
 
-  // Quick Pay tier breakdown panel (Sprint 48 Item 109) — surfaces CPP
-  // tier fee structure so carrier sees their effective rate at-a-glance.
-  // Source: fd.carrierPaymentTier; renders only when a CPP tier is set.
-  // Tier fee schedule per CLAUDE.md §8 (locked v3 pricing).
+  // ── v3.8.asb — the panel states the APPLIED terms, not a price list ──────
+  //
+  // This panel used to print a hardcoded 4-cell grid of the whole §8 ladder
+  // whenever a tier was set: TIER / STANDARD / 7-DAY QP / SAME-DAY QP. A menu
+  // is fine as context. A menu INSTEAD of the applied number is what let a
+  // carrier be charged a fee that appears on no document, because the grid
+  // showed all three prices and never said which one was taken on this load.
+  //
+  // So the panel now has two states and they are decided by the ELECTION, not
+  // by whether a tier happens to be set:
+  //
+  //   elected     → what was applied to this load: speed, fee, and where the
+  //                 fee lands in dollars on the rate confirmed here. That is
+  //                 the "verifiable on its face" the Quick Pay Agreement §7
+  //                 requires — a carrier can check the deduction against this
+  //                 document without asking anyone.
+  //   not elected → says so plainly, then the carrier's OWN tier's terms as
+  //                 context for a future load. Their tier, not all three:
+  //                 a carrier has one tier and the other two rows were never
+  //                 information, only noise. It cannot contradict the meta
+  //                 strip cell because both read the same election.
+  //
+  // The tier ladder below is context ONLY and is never the source of what is
+  // charged; the applied fee comes from the election frozen onto the load.
   const tierUpper = (fd.carrierPaymentTier as string | undefined)?.toUpperCase();
   const tierFees: Record<string, { netDays: number; sevenDay: number; sameDay: number }> = {
     SILVER:   { netDays: 30, sevenDay: 3, sameDay: 5 },
@@ -1990,16 +2101,47 @@ export function generateEnhancedRateConfirmation(load: EnhancedRCLoadData, formD
     PLATINUM: { netDays: 14, sevenDay: 1, sameDay: 3 },
   };
   const tierData = tierUpper && tierFees[tierUpper] ? tierFees[tierUpper] : null;
-  // Sprint 51 (Item 134 γ) — same y-position panel swap. Tier panel when set;
-  // nudge panel when not. Preserves layout stability across tier-set vs unset
-  // states. Nudge panel surfaces the §8 Caravan Partner Program fee schedule
-  // as a marketing nudge with operational ask (contact operations@srl).
+  const tierLabel = tierUpper ? tierUpper.charAt(0) + tierUpper.slice(1).toLowerCase() : null;
+
+  // Dollar figures print only when this rate confirmation carries no
+  // accessorial lines, which is every auto-generated one. The reason is
+  // narrow and deliberate: the fee base is line haul plus fuel plus approved
+  // accessorials, LESS anything reimbursed at cost, and the at-cost test lives
+  // in integrationService (isAtCostReimbursement — lumper is the ratified
+  // case). Re-implementing that test here would put a second copy of a money
+  // rule in the codebase, which is the way two ladders diverged before. So
+  // when accessorials exist the panel states speed and fee and leaves the
+  // arithmetic to the settlement, which owns the rule. When they do not, the
+  // base is unambiguous and the carrier gets the arithmetic on the page.
+  const qpFeeBase = accs.length === 0 ? linehaul + fsc : null;
+  const qpFeeAmount =
+    qpElected && qpFeeBase !== null ? Math.round(qpFeeBase * (qpFeePct as number)) / 100 : null;
+  const money = (n: number) => `$${n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
   const qpLabelY = y;
   doc.font(FONT_BODY_BOLD, 7).fillColor(TOKENS.goldDark);
   doc.text("QUICK PAY · CARAVAN PARTNER PROGRAM", MARGIN, qpLabelY, {
     characterSpacing: 7 * 0.08,
     lineBreak: false,
   });
+  // The basis for the percentage, right-aligned on the label row.
+  //
+  // It belongs beside the number, but it cannot cost height: page 1 renders
+  // with 22pt of clearance above the footer rule, and one accessorial line in
+  // the rate breakdown eats 16pt of that. A third row inside the panel was
+  // written first and scripts/verify-rc-matrix.ts caught it colliding with the
+  // footer on the accessorial fixture — which is what that gate is for. The
+  // label row has 88pt of unused width at this size, so this is free.
+  // Measured: label 163.6pt + note 276.2pt + 12pt gap = 451.8pt of 540pt.
+  if (qpElected) {
+    doc.font(FONT_BODY, 7).fillColor(TOKENS.fg3);
+    doc.text(
+      "Fee applies to line haul, fuel and approved accessorials, less at-cost reimbursements.",
+      MARGIN,
+      qpLabelY + 1,
+      { width: CONTENT_W, align: "right", lineBreak: false },
+    );
+  }
   const qpPanelY = qpLabelY + 12;
   const qpPanelH = 42;
   // Item 94 (A-5) — frame via drawPanel, per SKILL.md "Don't hand-build
@@ -2010,37 +2152,57 @@ export function generateEnhancedRateConfirmation(load: EnhancedRCLoadData, formD
   // fg1 / 10pt inset, so both bodies stay hand-rendered below. `h` is
   // honored with wrap omitted, so the rect is byte-identical.
   drawPanel(doc, { x: MARGIN, y: qpPanelY, w: CONTENT_W, h: qpPanelH });
-  if (tierData) {
-    // Tier-set path — 4-cell grid (TIER / STANDARD / 7-DAY QP / SAME-DAY QP)
-    const cellW = CONTENT_W / 4;
-    const qpHeaders = ["TIER", "STANDARD", "7-DAY QP", "SAME-DAY QP"];
-    const qpValues = [
-      tierUpper as string,
-      `Net-${tierData.netDays}`,
-      `${tierData.sevenDay}%`,
-      `${tierData.sameDay}%`,
-    ];
-    for (let i = 0; i < 4; i++) {
+  if (qpElected) {
+    // ELECTED — what was applied to this load. Two or four cells depending on
+    // whether the arithmetic can be stated without re-implementing the at-cost
+    // rule (see qpFeeBase above).
+    const qpCells: [string, string][] =
+      qpFeeAmount !== null && qpFeeBase !== null
+        ? [
+            ["SPEED", qpSpeedLabel],
+            ["QUICK PAY FEE", `${qpFeePct}%`],
+            ["FEE ON THIS RATE", money(qpFeeAmount)],
+            ["NET ON THIS RATE", money(Math.round((qpFeeBase - qpFeeAmount) * 100) / 100)],
+          ]
+        : [
+            ["SPEED", qpSpeedLabel],
+            ["QUICK PAY FEE", `${qpFeePct}%`],
+          ];
+    const cellW = CONTENT_W / qpCells.length;
+    qpCells.forEach(([head, val], i) => {
       const cx = MARGIN + i * cellW;
       doc.font(FONT_BODY, 7).fillColor(TOKENS.fg3);
-      doc.text(qpHeaders[i], cx, qpPanelY + 8, { width: cellW, align: "center", lineBreak: false });
+      doc.text(head, cx, qpPanelY + 8, { width: cellW, align: "center", lineBreak: false });
       doc.font(FONT_BODY_BOLD, 10).fillColor(TOKENS.fg1);
-      doc.text(qpValues[i], cx, qpPanelY + 22, { width: cellW, align: "center", lineBreak: false });
-    }
+      doc.text(val, cx, qpPanelY + 22, { width: cellW, align: "center", lineBreak: false });
+    });
   } else {
-    // No-tier path — marketing nudge with §8 fee schedule + operations@ ask.
-    // Italic 8pt body for marketing-copy register; visually distinct from
-    // the tier grid above.
+    // NOT ELECTED — the ordinary case, since Quick Pay is off per load unless
+    // the carrier elects it. Line 1 states the absence so the cell above is
+    // never read as a fee that was hidden. Line 2 is the carrier's own tier as
+    // context for a future load, or the ladder when no tier is on the form.
     doc.font(FONT_BODY, 8).fillColor(TOKENS.fg2);
-    const nudgeLine1 = "Quick Pay available. Contact operations@silkroutelogistics.ai for tier enrollment.";
-    const nudgeLine2 = "Caravan Partner Program: Silver 3% · Gold 2% · Platinum 1% (7-day standard).";
-    doc.text(nudgeLine1, MARGIN + 12, qpPanelY + 10, { width: CONTENT_W - 24, lineBreak: false });
-    doc.text(nudgeLine2, MARGIN + 12, qpPanelY + 24, { width: CONTENT_W - 24, lineBreak: false });
+    const noneLine1 = tierLabel
+      ? `No Quick Pay elected on this load. It pays on standard ${tierLabel} terms at no fee.`
+      : "No Quick Pay elected on this load. It pays on your standard tier terms at no fee.";
+    const noneLine2 =
+      tierData && tierLabel
+        ? `${tierLabel} Quick Pay, if elected on a later load: ${tierData.sevenDay}% at 7 days, ${tierData.sameDay}% same day. Ask operations@silkroutelogistics.ai.`
+        : "Caravan Partner Program Quick Pay: Silver 3% · Gold 2% · Platinum 1% at 7 days, plus 2% for same day.";
+    doc.text(noneLine1, MARGIN + 12, qpPanelY + 10, { width: CONTENT_W - 24, lineBreak: false });
+    doc.text(noneLine2, MARGIN + 12, qpPanelY + 24, { width: CONTENT_W - 24, lineBreak: false });
   }
   y = qpPanelY + qpPanelH + 12;
 
 
-  const opTerms: RateConTerms = buildRateConOperationalTerms(fd, qpTier);
+  // The OPERATIONAL TERMS grid's QUICK PAY cell gets the applied election, not
+  // the tier name. Its cells are 202pt at FONT_BODY 9 (srl-chrome
+  // drawRateConTerms, labelGutter 68), so the long form fits with room:
+  // "5% same day on this load" measures 106.3pt.
+  const qpTermsCell = qpElected
+    ? `${qpFeePct}% ${qpSameDay ? "same day" : "at 7 days"} on this load`
+    : "Not elected on this load";
+  const opTerms: RateConTerms = buildRateConOperationalTerms(fd, qpTermsCell);
   y = drawRateConTerms(doc, opTerms, y - 4);
 
   // ── v3.8.arm — DOCK & DISPATCH ──────────────────────────────────────────
@@ -2069,7 +2231,7 @@ export function generateEnhancedRateConfirmation(load: EnhancedRCLoadData, formD
     // fraud source in the corpus names check-in identity as the highest-signal
     // tell. NOT a restatement of the BCA re-brokering covenant: that binds the
     // carrier; this tells an honest driver what to do when someone ELSE tries it.
-    "Check in at both stops as Silk Route Logistics, load " + refNum + ". The BOL must name SRL as broker. If it names another company or MC number, do not load. Call (269) 220-6760.",
+    "Check in at both stops as Silk Route Logistics, load " + stem + ". The BOL must name SRL as broker. If it names another company or MC number, do not load. Call (269) 220-6760.",
     // Seals — 4 of 4 real rate confirmations address seals; SRL printed nothing.
     "Seals: record the number on the BOL at pickup; the receiver removes it, not the driver. Broken or missing seal at delivery: call before the doors open.",
     // Check calls — 2 of 4 state an explicit clock time. SRL runs check calls
@@ -2365,8 +2527,8 @@ export function generateEnhancedRateConfirmation(load: EnhancedRCLoadData, formD
     fd.carrierMcNumber || load.carrier?.carrierProfile?.mcNumber || "",
   ).replace(/^MC-?/i, "").trim();
   const invoiceSubject = invoiceMcRaw
-    ? "Subject: Invoice · Load " + refNum + " · MC " + invoiceMcRaw
-    : "Subject: Invoice · Load " + refNum;
+    ? "Subject: Invoice · Load " + stem + " · MC " + invoiceMcRaw
+    : "Subject: Invoice · Load " + stem;
 
   const invoiceLines = [
     "Send to: accounting@silkroutelogistics.ai",
@@ -2547,8 +2709,12 @@ export function generateShipperLoadConfirmation(load: EnhancedRCLoadData, formDa
     { title: "ACKNOWLEDGED BY · SHIPPER", certification: "Shipper acknowledges the booking terms above.", fields: ["PRINT NAME", "TITLE", "SIGNATURE", "DATE"] },
   ];
 
-  const ref = fd.referenceNumber || load.referenceNumber;
-  const docId = ref;
+  // Shipper-facing Load Confirmation. This is the booking acknowledgement, not
+  // one of the five numbered documents, so it carries the bare load stem with no
+  // suffix — inventing a sixth letter for it would be scope the scheme has not
+  // ratified. It now resolves the stem through the shared rule (loadNumber, then
+  // referenceNumber) instead of preferring the AE-editable formData copy.
+  const docId = resolveLoadStem(load) ?? "";
   const shipperRate = Number(fd.customerRate ?? (load as any).customerRate ?? load.rate ?? 0);
 
   // Header
@@ -2563,7 +2729,7 @@ export function generateShipperLoadConfirmation(load: EnhancedRCLoadData, formDa
   y = drawMetaStrip(
     doc,
     {
-      "REFERENCE": ref,
+      "REFERENCE": docId,
       "DATE": fmtDate(new Date()),
       "EQUIPMENT": fd.equipmentType || load.equipmentType,
       "COMMODITY": fd.commodity || load.commodity || "General Freight",
@@ -2621,13 +2787,20 @@ interface InvoiceLineItemData {
 }
 
 interface InvoiceData {
-  invoiceNumber: string; amount: number; status: string;
+  invoiceNumber: string;
+  /** Customer-facing document number (SRL-121485I, or …S for a supplemental),
+   *  allocated at invoice creation. Optional so the email-attach path and older
+   *  rows still type; absent falls back to the internal INV- sequence. */
+  srlDocNumber?: string | null;
+  invoiceKind?: "BASE" | "SUPPLEMENTAL" | null;
+  amount: number; status: string;
   lineHaulAmount?: number | null; fuelSurchargeAmount?: number | null;
   accessorialsAmount?: number | null; totalAmount?: number | null;
   factoringFee?: number | null; advanceAmount?: number | null; paidAmount?: number | null;
   dueDate?: Date | null; createdAt: Date;
   load: {
-    referenceNumber: string; originCity: string; originState: string;
+    referenceNumber: string; loadNumber?: string | null;
+    originCity: string; originState: string;
     destCity: string; destState: string; rate: number;
     pickupDate: Date; deliveryDate: Date;
     customer?: {
@@ -2660,7 +2833,16 @@ export function generateInvoicePDF(invoice: InvoiceData): PDFDoc {
     (s || "").replace(/_/g, " ").toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
   const cust = invoice.load.customer;
   const terms = (cust?.paymentTerms || "Net 30").trim();
-  const docId = invoice.invoiceNumber;
+  // Customer-facing number, which is NOT invoiceNumber: that column is the
+  // internal accounting sequence (INV-<n>) owned by lib/invoiceNumber.ts and is
+  // deliberately left alone. The customer sees the SRL stem so this invoice
+  // files with its own BOL and rate con.
+  const docId =
+    documentNumberFor(
+      invoice.srlDocNumber,
+      invoice.load,
+      invoice.invoiceKind === "SUPPLEMENTAL" ? "SUPPLEMENTAL_INVOICE" : "INVOICE",
+    ) ?? invoice.invoiceNumber;
 
   // Header (REFERENCE mode — no QR; invoice # in the upper-right filing slot)
   let y = drawHeaderFirstPage(doc, {

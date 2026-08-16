@@ -910,7 +910,16 @@ export function RateConfirmationModal({ open, onClose, load }: RateConfirmationM
             {section === "stops" && <SectionStops form={form} set={set} />}
             {section === "carrier" && <SectionCarrier form={form} set={set} />}
             {section === "financials" && <SectionFinancials form={form} set={set} financials={financials} />}
-            {section === "payment" && <SectionPayment form={form} set={set} financials={financials} loadId={load?.id || null} />}
+            {section === "payment" && (
+              <SectionPayment
+                form={form}
+                set={set}
+                financials={financials}
+                loadId={load?.id || null}
+                pilotEnabled={!!load?.carrier?.carrierProfile?.quickPayEnabled}
+                electedSpeed={load?.quickPaySpeed ?? null}
+              />
+            )}
             {section === "terms" && <SectionTerms form={form} set={set} />}
             {section === "instructions" && <SectionInstructions form={form} set={set} />}
           </div>
@@ -2068,16 +2077,76 @@ function SectionFinancials({
    SECTION 8 - PAYMENT TERMS
    ═══════════════════════════════════════════════════════════════════════════ */
 
+// v3.8.asb — what the carrier has (or has not) elected, in the AE's own words.
+// The Quick Pay fee freezes when this document is SENT, so sending is the act
+// that closes the carrier's window. The AE should not have to guess whether it
+// is closing on a choice or on a default. No timed hold: the AE still decides
+// when to issue.
+const SPEED_LABEL: Record<string, string> = {
+  STANDARD: "standard terms",
+  SEVEN_DAY: "7-Day Quick Pay",
+  SAME_DAY: "Same-Day Quick Pay",
+};
+
+function ElectionIndicator({
+  pilotEnabled,
+  electedSpeed,
+  tier,
+}: {
+  pilotEnabled: boolean;
+  electedSpeed: string | null;
+  tier: string;
+}) {
+  // Not in the pilot: there is nothing for the carrier to elect, so an
+  // indicator would only add noise to a screen that already has plenty.
+  if (!pilotEnabled) return null;
+
+  if (!electedSpeed) {
+    return (
+      <div className="mt-4 rounded-lg border border-amber-500/30 bg-amber-500/5 px-3 py-2.5">
+        <p className="text-xs font-semibold text-amber-400">Carrier has not chosen a payment speed yet</p>
+        <p className="text-[11px] text-slate-400 mt-1 leading-relaxed">
+          They were notified when they accepted. Sending this rate confirmation locks the
+          terms below and closes their window. Standard {standardNetByTier(tier)} carries no fee.
+        </p>
+      </div>
+    );
+  }
+
+  const fee =
+    electedSpeed === "SEVEN_DAY"
+      ? feePctForSpeed("QP_7DAY", tier)
+      : electedSpeed === "SAME_DAY"
+        ? feePctForSpeed("QP_SAMEDAY", tier)
+        : 0;
+
+  return (
+    <div className="mt-4 rounded-lg border border-emerald-500/30 bg-emerald-500/5 px-3 py-2.5">
+      <p className="text-xs font-semibold text-emerald-400">
+        Carrier chose {SPEED_LABEL[electedSpeed] || electedSpeed}
+        {fee > 0 ? ` — ${fee}%` : ""}
+      </p>
+      <p className="text-[11px] text-slate-400 mt-1 leading-relaxed">
+        Confirm the speed above matches before sending. Sending freezes it.
+      </p>
+    </div>
+  );
+}
+
 function SectionPayment({
   form,
   set,
   financials,
   loadId,
+  pilotEnabled,
+  electedSpeed,
 }: {
   form: FormState;
   set: <K extends keyof FormState>(k: K, v: FormState[K]) => void;
   financials: any;
   loadId: string | null;
+  pilotEnabled: boolean;
+  electedSpeed: string | null;
 }) {
   const toggleDocCheck = (key: string) => {
     set(
@@ -2140,6 +2209,11 @@ function SectionPayment({
             );
           })}
         </div>
+        <ElectionIndicator
+          pilotEnabled={pilotEnabled}
+          electedSpeed={electedSpeed}
+          tier={tierForDisplay}
+        />
       </div>
 
       {/* Caravan QP Override (v3.7.b) — AEs can elect a non-default applied

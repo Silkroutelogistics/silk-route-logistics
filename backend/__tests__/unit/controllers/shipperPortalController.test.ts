@@ -134,11 +134,18 @@ describe("shipperPortalController", () => {
   });
 
   // ── createQuoteRequest ──────────────────────────────────
-  it("createQuoteRequest — creates load as RFQ and returns 201", async () => {
+  // Numbering changed here: this creator used to stamp `RFQ-<base36 timestamp>`
+  // and leave loadNumber null, so a shipper-portal quote had no SRL stem and
+  // none of its documents could be numbered. It now draws from the same
+  // load_number_seq as every other creator, which is why the sequence read has
+  // to be mocked.
+  it("createQuoteRequest — numbers the load off the shared sequence and returns 201", async () => {
     mockPrisma.customer.findUnique.mockResolvedValue({ id: "cust-1" } as any);
+    (mockPrisma.$executeRaw as any).mockResolvedValue(1);
+    (mockPrisma.$queryRaw as any).mockResolvedValue([{ nextval: 121500n }]);
     mockPrisma.load.create.mockResolvedValue({
       id: "load-new",
-      referenceNumber: "RFQ-ABC123",
+      referenceNumber: "SRL-121500",
       status: "POSTED",
     } as any);
 
@@ -162,5 +169,13 @@ describe("shipperPortalController", () => {
     expect(res.json).toHaveBeenCalledWith(
       expect.objectContaining({ message: "Quote request submitted successfully" })
     );
+
+    // The load carries the SRL stem on BOTH columns, and its BOL number is
+    // stamped at creation so the renderer stays a pure read. A regression to
+    // RFQ- numbering would leave every document on this load unnumberable.
+    const created = (mockPrisma.load.create as any).mock.calls[0][0].data;
+    expect(created.referenceNumber).toBe("SRL-121500");
+    expect(created.loadNumber).toBe("SRL-121500");
+    expect(created.srlBolNumber).toBe("SRL-121500B");
   });
 });

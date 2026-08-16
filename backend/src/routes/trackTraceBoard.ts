@@ -329,7 +329,17 @@ router.get(
           loadActivities: { orderBy: { createdAt: "desc" }, take: 200 },
           geofenceEvents: { orderBy: { occurredAt: "asc" } },
           detentionRecords: { orderBy: { enteredAt: "desc" } },
-          loadAccessorials: { orderBy: { createdAt: "desc" } },
+          // v3.8.asb — the nested stop was missing, so `row.stop` was undefined
+          // in the drawer and the per-load review never showed WHICH stop a
+          // detention claim came from. The /pending queue includes it, so the
+          // two surfaces disagreed about the same row. Same select shape as
+          // loadAccessorials.ts:99 so both render identically.
+          loadAccessorials: {
+            orderBy: { createdAt: "desc" },
+            include: {
+              stop: { select: { id: true, stopNumber: true, stopType: true, facilityName: true, city: true, state: true } },
+            },
+          },
           shipperTrackingTokens: { orderBy: { createdAt: "desc" }, take: 1 },
         },
       });

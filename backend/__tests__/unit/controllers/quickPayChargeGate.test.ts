@@ -31,12 +31,27 @@ const CARRIER_USER_ID = "user_carrier_1";
 const LOAD_ID = "load_1";
 const PROFILE_ID = "profile_1";
 
-/** A load carrying a recorded 3% Quick Pay election and no reimbursements. */
-function loadWithElection(pct: number | null, accessorials: unknown[] = []) {
-  return {
-    quickPayFeePercent: pct,
-    rateConfirmations: [{ formData: { accessorials } }],
-  };
+/** A load carrying a recorded Quick Pay election. */
+function loadWithElection(pct: number | null) {
+  return { quickPayFeePercent: pct };
+}
+
+/**
+ * Put approved accessorial rows on the ledger.
+ *
+ * v3.8.asb — the carve-out used to be read from
+ * `rateConfirmations[0].formData.accessorials`, and these tests supplied it
+ * there. That store never held the data in production: formData is the rate
+ * confirmation PROPOSAL, retired as a money source in v3.8.asb. The tests
+ * passed against a source the running system did not use, which is why a live
+ * carrier was still charged a fee on their own lumper. Reimbursements now come
+ * off the APPROVED LoadAccessorial ledger — the same rows that produce the
+ * amount being charged.
+ */
+function ledger(rows: Array<{ type: string; amount: number; notes?: string | null }>) {
+  mockPrisma.loadAccessorial.findMany.mockResolvedValue(
+    rows.map((r, i) => ({ id: `acc-${i}`, notes: null, billedTo: "SHIPPER", ...r })),
+  );
 }
 
 beforeEach(() => {
@@ -120,12 +135,11 @@ describe("Quick Pay Agreement §3 — never deduct a fee unless all three condit
 
 describe("Quick Pay Agreement §4 — at-cost reimbursements sit outside the fee base", () => {
   it("carves out a lumper the carrier fronted", async () => {
-    mockPrisma.load.findUnique.mockResolvedValue(
-      loadWithElection(3, [
-        { type: "LUMPER", amount: 150 },
-        { type: "DETENTION", amount: 250 },
-      ]),
-    );
+    mockPrisma.load.findUnique.mockResolvedValue(loadWithElection(3));
+    ledger([
+      { type: "LUMPER", amount: 150 },
+      { type: "DETENTION", amount: 250 },
+    ]);
     mockPrisma.carrierProfile.findUnique.mockResolvedValue({ id: PROFILE_ID, quickPayEnabled: true });
     mockPrisma.carrierAgreement.findFirst.mockResolvedValue({ id: "agreement_1" });
 
@@ -136,8 +150,24 @@ describe("Quick Pay Agreement §4 — at-cost reimbursements sit outside the fee
     expect(result.feePercent).toBe(3);
   });
 
+  it("reads the carve-out from the APPROVED ledger, not the rate confirmation", async () => {
+    mockPrisma.load.findUnique.mockResolvedValue(loadWithElection(3));
+    ledger([{ type: "LUMPER", amount: 150 }]);
+    mockPrisma.carrierProfile.findUnique.mockResolvedValue({ id: PROFILE_ID, quickPayEnabled: true });
+    mockPrisma.carrierAgreement.findFirst.mockResolvedValue({ id: "agreement_1" });
+
+    await resolveElectedQuickPayFee(CARRIER_USER_ID, LOAD_ID);
+
+    // Same store as the amount being charged. Two stores either side of a minus
+    // sign is how two figures that must agree stop agreeing.
+    expect(mockPrisma.loadAccessorial.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { loadId: LOAD_ID, status: "APPROVED" } }),
+    );
+  });
+
   it("reports no carve-out when the load has no reimbursement lines", async () => {
-    mockPrisma.load.findUnique.mockResolvedValue(loadWithElection(3, [{ type: "DETENTION", amount: 250 }]));
+    mockPrisma.load.findUnique.mockResolvedValue(loadWithElection(3));
+    ledger([{ type: "DETENTION", amount: 250 }]);
     mockPrisma.carrierProfile.findUnique.mockResolvedValue({ id: PROFILE_ID, quickPayEnabled: true });
     mockPrisma.carrierAgreement.findFirst.mockResolvedValue({ id: "agreement_1" });
 

@@ -9,7 +9,20 @@ interface Props {
   onClose: () => void;
 }
 
-const PAYMENT_METHODS = ["ACH", "CHECK", "WIRE", "QUICKPAY", "FACTORING"] as const;
+// QUICKPAY is deliberately not offered here.
+//
+// This modal used to carry a free-text "Discount %" box defaulted to 2 — the
+// GOLD rate, which is wrong for the Silver carrier this desk will onboard
+// first — and posted it straight through to /carrier-pay, where it was applied
+// with no pilot check, no signed-agreement check and no per-load election. That
+// is a second way to price Quick Pay, sitting beside the §8 ladder, and two
+// ladders is how they diverge.
+//
+// A Quick Pay settlement is now created by the delivery pricing path off the
+// fee frozen on the load's rate confirmation. If a Quick Pay row has to be
+// raised by hand, the fee still comes from the ladder behind the pilot gate —
+// the backend derives it and refuses if the carrier is not entitled to one.
+const PAYMENT_METHODS = ["ACH", "CHECK", "WIRE", "FACTORING"] as const;
 
 export function CreateCarrierPayModal({ onClose }: Props) {
   const queryClient = useQueryClient();
@@ -17,13 +30,9 @@ export function CreateCarrierPayModal({ onClose }: Props) {
   const [loadId, setLoadId] = useState("");
   const [amount, setAmount] = useState("");
   const [paymentMethod, setPaymentMethod] = useState<string>("ACH");
-  const [isQuickPay, setIsQuickPay] = useState(false);
-  const [quickPayPct, setQuickPayPct] = useState("2");
   const [error, setError] = useState<string | null>(null);
 
   const parsedAmount = parseFloat(amount) || 0;
-  const discount = isQuickPay ? Number((parsedAmount * parseFloat(quickPayPct || "0") / 100).toFixed(2)) : 0;
-  const netAmount = parsedAmount - discount;
 
   const create = useMutation({
     mutationFn: () =>
@@ -31,9 +40,7 @@ export function CreateCarrierPayModal({ onClose }: Props) {
         carrierId,
         loadId,
         amount: parsedAmount,
-        paymentMethod: isQuickPay ? "QUICKPAY" : paymentMethod,
-        isQuickPay,
-        quickPayDiscountPct: isQuickPay ? parseFloat(quickPayPct) : undefined,
+        paymentMethod,
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["carrier-pays"] });
@@ -87,37 +94,17 @@ export function CreateCarrierPayModal({ onClose }: Props) {
 
           <div>
             <label className="block text-sm font-medium text-white/70 mb-1">Payment Method</label>
-            <select value={isQuickPay ? "QUICKPAY" : paymentMethod} onChange={(e) => {
-              if (e.target.value === "QUICKPAY") { setIsQuickPay(true); } else { setIsQuickPay(false); setPaymentMethod(e.target.value); }
-            }}
+            <select value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)}
               className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white outline-none focus:ring-2 focus:ring-gold/50 focus:border-gold/50">
               {PAYMENT_METHODS.map((m) => (
                 <option key={m} value={m} className="bg-navy">{m}</option>
               ))}
             </select>
+            <p className="mt-1.5 text-xs text-slate-400">
+              Pays the full amount. A Quick Pay fee comes from the tier ladder on the load&apos;s rate confirmation, not
+              from this form.
+            </p>
           </div>
-
-          {/* QuickPay */}
-          {isQuickPay && (
-            <div className="bg-gold/5 border border-gold/20 rounded-lg p-4 space-y-3">
-              <p className="text-sm font-medium text-gold">QuickPay Discount</p>
-              <div className="flex items-center gap-3">
-                <div className="flex-1">
-                  <label className="block text-xs text-slate-400 mb-1">Discount %</label>
-                  <input type="number" step="0.1" min="0" max="10" value={quickPayPct} onChange={(e) => setQuickPayPct(e.target.value)}
-                    className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white outline-none text-sm" />
-                </div>
-                <div className="flex-1">
-                  <label className="block text-xs text-slate-400 mb-1">Discount</label>
-                  <p className="text-lg font-bold text-red-400 py-2">-${discount.toLocaleString()}</p>
-                </div>
-                <div className="flex-1">
-                  <label className="block text-xs text-slate-400 mb-1">Net Amount</label>
-                  <p className="text-lg font-bold text-green-400 py-2">${netAmount.toLocaleString()}</p>
-                </div>
-              </div>
-            </div>
-          )}
 
           <div className="flex gap-3 pt-2">
             <button type="button" onClick={onClose}
@@ -126,7 +113,7 @@ export function CreateCarrierPayModal({ onClose }: Props) {
             </button>
             <button type="submit" disabled={create.isPending}
               className="flex-1 px-4 py-2 bg-gold text-navy font-semibold rounded-lg hover:bg-gold-light disabled:opacity-50 transition">
-              {create.isPending ? "Creating..." : `Create Pay${isQuickPay ? ` ($${netAmount.toLocaleString()})` : ""}`}
+              {create.isPending ? "Creating..." : `Create Pay${parsedAmount > 0 ? ` ($${parsedAmount.toLocaleString()})` : ""}`}
             </button>
           </div>
         </form>

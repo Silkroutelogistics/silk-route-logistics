@@ -280,7 +280,7 @@ export async function registerCarrier(req: Request, res: Response) {
           // IP from req.ip (Render forwards x-forwarded-for via Express
           // 'trust proxy' setting). UA from req.headers.
           //
-          // v3.8.asc — the version is now server-stamped too. It used to be
+          // v3.8.asb — the version is now server-stamped too. It used to be
           // `data.bcaVersion || null`, a client-supplied string on a consent
           // record: the same defect the two signing routes in carrierAuth got
           // a 409 guard for, on the one surface that guard never sees, because
@@ -410,6 +410,35 @@ export async function registerCarrier(req: Request, res: Response) {
         w9TinLastFour: data.ein.slice(-4),
       },
     });
+  }
+
+  // ── v3.8.asb — the Quick Pay pilot REQUEST ──
+  //
+  // A tick at onboarding, and nothing more. It records that the carrier asked
+  // to be considered; it does not enable Quick Pay, does not set
+  // quickPayEnabled, and does not let a fee be recorded on any load. An AE
+  // approves or declines it from the pending queue.
+  //
+  // Awaited rather than fire-and-forget, because the carrier is about to be
+  // told their application was submitted and the request is part of what they
+  // submitted. Wrapped so a failure here cannot fail a registration that has
+  // already created the user — the account is real either way, and a carrier
+  // whose request was lost can ask again from the portal. The failure is
+  // logged loudly so it is not silent.
+  if (data.requestQuickPayPilot === true && user.carrierProfile) {
+    try {
+      await prisma.quickPayEnrollment.create({
+        data: { carrierProfileId: user.carrierProfile.id, status: "PENDING" },
+      });
+      // Tell the desk. Fire-and-forget: the request is recorded either way, and
+      // the queue still holds it if the signal fails.
+      void notifyQuickPayPilotRequested(user.carrierProfile.id, "onboarding");
+    } catch (err) {
+      log.error(
+        { err, carrierProfileId: user.carrierProfile.id, email: data.email },
+        "[QuickPayPilot] Registration requested the pilot but the enrolment row could not be created",
+      );
+    }
   }
 
   // No JWT issued at registration — carrier must be approved first.
@@ -1520,4 +1549,461 @@ export async function setAuthorityGrantDate(req: AuthRequest, res: Response) {
     log.error({ err: err }, "[Carrier] setAuthorityGrantDate error:");
     res.status(500).json({ error: "Failed to set authority grant date" });
   }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// v3.8.asb — QUICK PAY PILOT: the AE side of request-then-approve
+// ═══════════════════════════════════════════════════════════════════════════
+//
+// The carrier ticks a request at onboarding (registerCarrier above). It lands
+// here as a QuickPayEnrollment{status:PENDING}. An AE approves or declines it
+// with a reason, and can later withdraw an approved enrolment on notice.
+//
+// WHAT APPROVAL DOES, AND WHAT IT DOES NOT DO.
+//   Approval opens the door. It does NOT set quickPayEnabled and does NOT by
+//   itself put a fee on any load, because the carrier still has to read and
+//   sign the Caravan Quick Pay Agreement. That signature happens at
+//   POST /carrier-auth/quickpay-election, which now refuses anyone without an
+//   APPROVED enrolment. Approval is SRL's consent; the signature is the
+//   carrier's. Both are required and neither substitutes for the other.
+//
+// THE INVARIANT every charge path depends on:
+//
+//     CarrierProfile.quickPayEnabled === true
+//        implies that carrier has a QuickPayEnrollment{status: APPROVED}
+//
+// One direction only. A carrier can be APPROVED with quickPayEnabled false —
+// that is the normal state between approval and signature, and it is also
+// where a carrier lands if they later switch Quick Pay off themselves, which
+// they keep the right to do. What must never happen is the reverse: enabled
+// true without an approval behind it. Two things hold it:
+//   · the enable branch of /quickpay-election requires an APPROVED enrolment
+//   · withdrawal below clears quickPayEnabled in the SAME transaction
+//
+// This is what lets accountingController.resolveElectedQuickPayFee keep
+// reading quickPayEnabled and stay correct without an edit.
+//
+// WITHDRAWAL IS FORWARD-ONLY. See withdrawQuickPayEnrollment.
+
+type QpEnrollmentStatus = "PENDING" | "APPROVED" | "DECLINED" | "WITHDRAWN";
+
+/**
+ * The carrier's CURRENT standing in the pilot: the single non-terminal
+ * enrolment, or null.
+ *
+ * The `quick_pay_enrollment_one_live` partial unique index guarantees at most
+ * one row in (PENDING, APPROVED) per carrier, so this findFirst is a lookup,
+ * not a pick-the-best. DECLINED and WITHDRAWN rows accumulate as history and
+ * are deliberately not returned — "was declined in June" is not a current
+ * standing, and treating it as one would leave a carrier who re-requested
+ * still reading as declined.
+ *
+ * Exported because the carrier-facing gate in routes/carrierAuth.ts and the
+ * pricing gates in integrationService + routes/carrierPayments all ask the
+ * same question, and asking it in one place is what keeps the answer the same
+ * everywhere.
+ */
+export async function getLiveQuickPayEnrollment(carrierProfileId: string) {
+  return prisma.quickPayEnrollment.findFirst({
+    where: { carrierProfileId, status: { in: ["PENDING", "APPROVED"] } },
+    orderBy: { requestedAt: "desc" },
+  });
+}
+
+/** True when the carrier is approved into the pilot. The one question the money paths ask. */
+export async function isQuickPayPilotApproved(carrierProfileId: string): Promise<boolean> {
+  const live = await getLiveQuickPayEnrollment(carrierProfileId);
+  return live?.status === "APPROVED";
+}
+
+/**
+ * The most recent enrolment of ANY status, live or terminal.
+ *
+ * The carrier-facing gate needs this rather than the live one, because
+ * "declined" and "withdrawn" are the two cases where the carrier most needs to
+ * be told something specific, and both are terminal states the live lookup
+ * skips on purpose.
+ */
+export async function getLatestQuickPayEnrollment(carrierProfileId: string) {
+  return prisma.quickPayEnrollment.findFirst({
+    where: { carrierProfileId },
+    orderBy: { requestedAt: "desc" },
+  });
+}
+
+/**
+ * Tell the desk a carrier has asked to join the Quick Pay pilot.
+ *
+ * Before this, a PENDING enrolment was written and nothing else happened. The
+ * only surface was an amber strip inside a carrier drawer on a page nobody has
+ * a reason to open, so a request made on a Friday afternoon sat unseen until
+ * someone happened to look — and the carrier, who has been told "we will let
+ * you know", is waiting on that look. This desk is one person; the signal has
+ * to come to them.
+ *
+ * Both the in-app bell and an email, matching the new-application notify above:
+ * the bell is what they see while working, the email is what reaches them when
+ * they are not. Fire-and-forget and individually caught — a request that was
+ * recorded must never fail because a mail send did, and the carrier can be
+ * approved from the queue whether or not this fired.
+ */
+export async function notifyQuickPayPilotRequested(
+  carrierProfileId: string,
+  source: "onboarding" | "portal",
+): Promise<void> {
+  try {
+    const profile = await prisma.carrierProfile.findUnique({
+      where: { id: carrierProfileId },
+      select: {
+        companyName: true,
+        mcNumber: true,
+        dotNumber: true,
+        tier: true,
+        user: { select: { email: true, firstName: true, lastName: true } },
+      },
+    });
+    if (!profile) return;
+
+    const company = profile.companyName || `${profile.user?.firstName ?? ""} ${profile.user?.lastName ?? ""}`.trim() || "A carrier";
+    const authority = profile.mcNumber || (profile.dotNumber ? `DOT ${profile.dotNumber}` : "no MC on file");
+    const where = source === "onboarding" ? "on their application" : "from their portal";
+
+    const staff = await prisma.user.findMany({
+      where: { role: { in: ["ADMIN", "CEO", "OPERATIONS"] }, isActive: true },
+      select: { id: true, email: true, firstName: true },
+    });
+    if (staff.length === 0) return;
+
+    for (const person of staff) {
+      prisma.notification
+        .create({
+          data: {
+            userId: person.id,
+            type: "ONBOARDING",
+            title: "Quick Pay pilot request",
+            message: `${company} (${authority}) asked to join the Quick Pay pilot ${where}. Approve or decline it from the carrier's Quick Pay panel.`,
+            actionUrl: "/dashboard/carriers",
+          },
+        })
+        .catch((err) => log.error({ err }, `[QuickPayPilot] bell notification failed for ${person.email}`));
+
+      sendEmail(
+        person.email,
+        `Quick Pay pilot request — ${company}`,
+        wrap(`
+          <h2 style="color:#0A2540;margin-bottom:4px">Quick Pay pilot request</h2>
+          <p style="color:#3A4A5F;font-size:14px;margin-bottom:20px">Hi ${person.firstName}, ${company} asked to join the Quick Pay pilot ${where}. Nothing is enabled and no fee can be charged until you approve it.</p>
+
+          <div style="background:#F5EEE0;border:1px solid #EFE6D3;border-radius:8px;padding:20px;margin-bottom:24px">
+            <table style="width:100%;border-collapse:collapse">
+              <tr><td style="padding:8px 12px;border-bottom:1px solid #EFE6D3;font-weight:600;color:#0A2540;width:40%">Carrier</td><td style="padding:8px 12px;border-bottom:1px solid #EFE6D3;color:#3A4A5F">${company}</td></tr>
+              <tr><td style="padding:8px 12px;border-bottom:1px solid #EFE6D3;font-weight:600;color:#0A2540">Authority</td><td style="padding:8px 12px;border-bottom:1px solid #EFE6D3;color:#3A4A5F">${authority}</td></tr>
+              <tr><td style="padding:8px 12px;border-bottom:1px solid #EFE6D3;font-weight:600;color:#0A2540">Tier</td><td style="padding:8px 12px;border-bottom:1px solid #EFE6D3;color:#3A4A5F">${profile.tier || "SILVER"}</td></tr>
+              <tr><td style="padding:8px 12px;font-weight:600;color:#0A2540">Requested</td><td style="padding:8px 12px;color:#3A4A5F">${where === "on their application" ? "At application" : "From the carrier portal"}</td></tr>
+            </table>
+          </div>
+
+          <div style="text-align:center;margin:24px 0">
+            <a href="https://silkroutelogistics.ai/dashboard/carriers" style="display:inline-block;background:#BA7517;color:#FBF7F0;padding:14px 36px;text-decoration:none;border-radius:8px;font-weight:bold;font-size:15px">Review the request</a>
+          </div>
+        `),
+      ).catch((err) => log.error({ err }, `[QuickPayPilot] request email failed for ${person.email}`));
+    }
+  } catch (err) {
+    log.error({ err, carrierProfileId }, "[QuickPayPilot] could not notify the desk of a pilot request");
+  }
+}
+
+/**
+ * GET /api/carriers/quickpay-enrollments?status=PENDING
+ *
+ * The AE queue. Defaults to PENDING, oldest request first — a carrier who
+ * asked three weeks ago should not sit behind one who asked this morning. The
+ * (status, requestedAt) index exists for exactly this read.
+ */
+export async function listQuickPayEnrollments(req: AuthRequest, res: Response) {
+  const raw = String(req.query.status ?? "PENDING").toUpperCase();
+  const allowed: QpEnrollmentStatus[] = ["PENDING", "APPROVED", "DECLINED", "WITHDRAWN"];
+  if (raw !== "ALL" && !allowed.includes(raw as QpEnrollmentStatus)) {
+    res.status(400).json({
+      error: `Unknown status "${req.query.status}". Use one of ${allowed.join(", ")} or ALL.`,
+    });
+    return;
+  }
+
+  const enrollments = await prisma.quickPayEnrollment.findMany({
+    where: raw === "ALL" ? {} : { status: raw as QpEnrollmentStatus },
+    orderBy: { requestedAt: "asc" },
+    take: 200,
+    include: {
+      carrierProfile: {
+        select: {
+          id: true,
+          companyName: true,
+          mcNumber: true,
+          dotNumber: true,
+          tier: true,
+          onboardingStatus: true,
+          quickPayEnabled: true,
+          isTestAccount: true,
+        },
+      },
+      reviewedBy: { select: { id: true, firstName: true, lastName: true, email: true } },
+      withdrawnBy: { select: { id: true, firstName: true, lastName: true, email: true } },
+    },
+  });
+
+  res.json({ status: raw, count: enrollments.length, enrollments });
+}
+
+/** Resolve :id (a CarrierProfile.id) or answer 404. Every AE action below starts here. */
+async function loadPilotCarrier(carrierProfileId: string) {
+  return prisma.carrierProfile.findUnique({
+    where: { id: carrierProfileId },
+    select: { id: true, userId: true, companyName: true, quickPayEnabled: true },
+  });
+}
+
+/**
+ * POST /api/carriers/:id/quickpay/approve
+ *
+ * Approves a PENDING request. Idempotent on an already-APPROVED enrolment so a
+ * double-click is not an error.
+ *
+ * Deliberately does NOT set quickPayEnabled — see the invariant note above.
+ * The carrier signs the Caravan Quick Pay Agreement at
+ * POST /carrier-auth/quickpay-election, and that is what enables the account.
+ * Flipping the flag here would enable Quick Pay on an unsigned instrument,
+ * which is the thing every gate in this codebase exists to prevent.
+ *
+ * A carrier with no request on file cannot be approved into the pilot. This is
+ * request-then-approve, not cold invite: SRL does not enrol a carrier in a
+ * fee-bearing programme they never asked about.
+ */
+export async function approveQuickPayEnrollment(req: AuthRequest, res: Response) {
+  const carrier = await loadPilotCarrier(req.params.id);
+  if (!carrier) {
+    res.status(404).json({ error: "Carrier not found" });
+    return;
+  }
+
+  const live = await getLiveQuickPayEnrollment(carrier.id);
+  if (!live) {
+    res.status(409).json({
+      error:
+        "This carrier has not requested the Quick Pay pilot, so there is nothing to approve. They can request it from their portal.",
+      code: "QP_PILOT_NOT_REQUESTED",
+    });
+    return;
+  }
+  if (live.status === "APPROVED") {
+    res.json({ enrollment: live, alreadyApproved: true });
+    return;
+  }
+
+  const note = typeof req.body?.note === "string" ? req.body.note.trim().slice(0, 2000) : null;
+  const updated = await prisma.quickPayEnrollment.update({
+    where: { id: live.id },
+    data: {
+      status: "APPROVED",
+      reviewedAt: new Date(),
+      reviewedById: req.user!.id,
+      reviewNote: note || null,
+    },
+  });
+
+  await prisma.notification
+    .create({
+      data: {
+        userId: carrier.userId,
+        type: "GENERAL",
+        title: "You are in the Quick Pay pilot",
+        message:
+          "Your request to join the Quick Pay pilot has been approved. One step left: read and sign the Caravan Quick Pay Agreement in your portal, and Quick Pay turns on for your loads.",
+        actionUrl: "/carrier/dashboard/activation",
+      },
+    })
+    .catch((err) => log.error({ err }, "[QuickPayPilot] approval notification failed"));
+
+  log.info({ carrierProfileId: carrier.id, enrollmentId: updated.id, by: req.user!.id }, "[QuickPayPilot] approved");
+  res.json({ enrollment: updated });
+}
+
+/**
+ * POST /api/carriers/:id/quickpay/decline — reason required.
+ *
+ * Terminal for this attempt, not for the carrier: the partial unique index
+ * only covers PENDING and APPROVED, so a declined carrier can request again
+ * later and each attempt keeps its own row and its own reason. That history is
+ * the point of the model.
+ *
+ * Declining a PENDING request touches no money — nothing was ever enabled. It
+ * is a separate act from withdraw for that reason: the two read the same in a
+ * status column and are completely different conversations.
+ */
+export async function declineQuickPayEnrollment(req: AuthRequest, res: Response) {
+  const carrier = await loadPilotCarrier(req.params.id);
+  if (!carrier) {
+    res.status(404).json({ error: "Carrier not found" });
+    return;
+  }
+
+  const reason = typeof req.body?.reason === "string" ? req.body.reason.trim() : "";
+  if (reason.length < 10) {
+    res.status(400).json({
+      error: "Give a reason of at least 10 characters. The carrier is told why, so write it for them to read.",
+      code: "REASON_REQUIRED",
+    });
+    return;
+  }
+
+  const live = await getLiveQuickPayEnrollment(carrier.id);
+  if (!live) {
+    res.status(409).json({
+      error: "This carrier has no open Quick Pay pilot request, so there is nothing to decline.",
+      code: "QP_PILOT_NOT_REQUESTED",
+    });
+    return;
+  }
+  if (live.status === "APPROVED") {
+    res.status(409).json({
+      error:
+        "This carrier is already approved into the pilot. Use withdraw, which stops future elections without disturbing loads already priced.",
+      code: "QP_PILOT_ALREADY_APPROVED",
+    });
+    return;
+  }
+
+  const updated = await prisma.quickPayEnrollment.update({
+    where: { id: live.id },
+    data: {
+      status: "DECLINED",
+      reviewedAt: new Date(),
+      reviewedById: req.user!.id,
+      reviewNote: reason.slice(0, 2000),
+    },
+  });
+
+  await prisma.notification
+    .create({
+      data: {
+        userId: carrier.userId,
+        type: "GENERAL",
+        title: "Quick Pay pilot request declined",
+        message: `We are not able to add you to the Quick Pay pilot right now. ${reason.slice(0, 400)} Your loads pay on your standard tier terms, at no fee, as always.`,
+        actionUrl: "/carrier/dashboard/activation",
+      },
+    })
+    .catch((err) => log.error({ err }, "[QuickPayPilot] decline notification failed"));
+
+  log.info({ carrierProfileId: carrier.id, enrollmentId: updated.id, by: req.user!.id }, "[QuickPayPilot] declined");
+  res.json({ enrollment: updated });
+}
+
+/**
+ * POST /api/carriers/:id/quickpay/withdraw — reason required.
+ *
+ * WITHDRAWAL IS FORWARD-ONLY. THIS IS THE WHOLE POINT.
+ *
+ * Withdrawal stops FUTURE elections. It never re-prices work already done. A
+ * carrier who hauled a load under terms SRL published, and who was told on the
+ * rate confirmation what the fee on that load would be, keeps those terms. The
+ * failure to avoid here is taking money back from a carrier who relied on what
+ * we told them.
+ *
+ * Concretely, at the moment of withdrawal:
+ *
+ *  (i)  LOADS ALREADY FUNDED — untouched. Nothing is clawed back, no invoice
+ *       is reissued, no settlement is reopened. The fee was disclosed on the
+ *       rate confirmation before the carrier accepted, the carrier hauled on
+ *       that basis, and the money moved. It is closed.
+ *
+ *  (ii) LOADS ELECTED BUT NOT YET FUNDED — the recorded election STANDS and
+ *       pays at the recorded fee and the recorded speed. Load.quickPayFeePercent
+ *       and Load.quickPaySpeed are deliberately NOT cleared, and the pricing
+ *       gates deliberately do not re-check the pilot at funding time for a load
+ *       that already carries an election. This is the case that matters most:
+ *       the carrier is mid-haul or awaiting payment on a load whose rate
+ *       confirmation states a fee and a pay date. Withdrawing the pilot
+ *       underneath them would move a settlement they have already planned
+ *       around, in SRL's favour, after the fact.
+ *
+ *       It also cuts the other way, and that is fine. If SRL withdraws a
+ *       carrier for cause, that carrier still gets their 7-day money on the
+ *       load already in flight. That is what "on notice" means.
+ *
+ *       Loads TENDERED but not yet rate-confirmed carry no election yet, so
+ *       they simply price at standard terms — no fee, carrier paid more.
+ *
+ * (iii) THE SIGNED AGREEMENT — kept, untouched, still signed. The
+ *       CarrierAgreement{templateName:"quick-pay"} row is the record of a
+ *       thing that happened, and it governs the loads already priced under it.
+ *       It is not revoked, not superseded, not marked void. If the carrier is
+ *       re-approved later they do not re-sign the same version, and the
+ *       existing signature keeps covering the loads it always covered.
+ *
+ * What DOES change, in one transaction: the enrolment goes WITHDRAWN and
+ * quickPayEnabled goes false. From that moment no NEW rate confirmation can
+ * record a fee (autoRateConfirmationService reads the enrolment), and the
+ * carrier cannot re-enable themselves (/quickpay-election requires APPROVED).
+ * The door closes; nothing behind it is disturbed.
+ */
+export async function withdrawQuickPayEnrollment(req: AuthRequest, res: Response) {
+  const carrier = await loadPilotCarrier(req.params.id);
+  if (!carrier) {
+    res.status(404).json({ error: "Carrier not found" });
+    return;
+  }
+
+  const reason = typeof req.body?.reason === "string" ? req.body.reason.trim() : "";
+  if (reason.length < 10) {
+    res.status(400).json({
+      error: "Give a reason of at least 10 characters. The carrier is told why, so write it for them to read.",
+      code: "REASON_REQUIRED",
+    });
+    return;
+  }
+
+  const live = await getLiveQuickPayEnrollment(carrier.id);
+  if (!live || live.status !== "APPROVED") {
+    res.status(409).json({
+      error: "This carrier is not currently approved into the Quick Pay pilot, so there is nothing to withdraw.",
+      code: "QP_PILOT_NOT_APPROVED",
+    });
+    return;
+  }
+
+  // One transaction. The invariant "quickPayEnabled implies an APPROVED
+  // enrolment" has to survive a crash between these two writes, and which
+  // order fails safe stops mattering once they cannot be observed apart.
+  const [updated] = await prisma.$transaction([
+    prisma.quickPayEnrollment.update({
+      where: { id: live.id },
+      data: {
+        status: "WITHDRAWN",
+        withdrawnAt: new Date(),
+        withdrawnById: req.user!.id,
+        withdrawalReason: reason.slice(0, 2000),
+      },
+    }),
+    prisma.carrierProfile.update({
+      where: { id: carrier.id },
+      data: { quickPayEnabled: false },
+    }),
+  ]);
+
+  await prisma.notification
+    .create({
+      data: {
+        userId: carrier.userId,
+        type: "GENERAL",
+        title: "Quick Pay pilot withdrawn",
+        message: `Quick Pay has been withdrawn from your account. ${reason.slice(0, 400)} Any load that already has a Quick Pay fee on its rate confirmation still pays at that fee and on that schedule. This does not change a load you have already run, or one already in flight. New loads pay your standard tier terms, at no fee.`,
+        actionUrl: "/carrier/dashboard/activation",
+      },
+    })
+    .catch((err) => log.error({ err }, "[QuickPayPilot] withdrawal notification failed"));
+
+  log.info({ carrierProfileId: carrier.id, enrollmentId: updated.id, by: req.user!.id }, "[QuickPayPilot] withdrawn");
+  res.json({ enrollment: updated, quickPayEnabled: false });
 }

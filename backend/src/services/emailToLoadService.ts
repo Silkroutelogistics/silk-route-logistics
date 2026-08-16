@@ -7,6 +7,7 @@
 
 import { prisma } from "../config/database";
 import { log } from "../lib/logger";
+import { generateLoadNumber, formatDocumentNumber } from "../lib/documentNumber";
 
 // ─── Types ──────────────────────────────────────────────
 
@@ -467,8 +468,17 @@ export async function createLoadFromEmail(
     ? new Date(parsed.deliveryDate + "T17:00:00Z")
     : new Date(pickupDate.getTime() + 2 * 24 * 60 * 60 * 1000);
 
+  // This create passed no referenceNumber at all, so the column fell back to its
+  // @default(cuid()) and loadNumber stayed null. The result was a 25-character
+  // opaque cuid printed on the BOL for a driver to read back over the phone from
+  // a dock. Same sequence as every other creator now.
+  const refNumber = await generateLoadNumber();
+
   const load = await prisma.load.create({
     data: {
+      referenceNumber: refNumber,
+      loadNumber: refNumber,
+      srlBolNumber: formatDocumentNumber(refNumber, "BOL"),
       status: "DRAFT",
       originCity: parsed.originCity || "TBD",
       originState: parsed.originState || "XX",

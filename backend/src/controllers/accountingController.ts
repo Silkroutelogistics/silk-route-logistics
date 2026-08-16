@@ -3,6 +3,7 @@ import { prisma } from "../config/database";
 import { AuthRequest } from "../middleware/auth";
 import { log } from "../lib/logger";
 import { validateLoadStatusTransition } from "../lib/loadStateMachine";
+import { resolveLoadStem, withDocumentNumber } from "../lib/documentNumber";
 import { generateInvoicePdf } from "../services/pdfService";
 import { sendCustomerInvoiceEmail } from "../services/emailService";
 import {
@@ -15,7 +16,10 @@ import {
 } from "../lib/quickPayPricing";
 // §4 at-cost carve-out. One helper, shared by all three charge paths, so a
 // lumper the carrier fronted is never inside a fee base on any of them.
-import { sumAtCostReimbursements } from "../services/integrationService";
+// One resolver for "what part of this settlement is the carrier's own money",
+// reading the APPROVED accessorial ledger. Shared with the delivery path, the
+// carrier portal and the manual carrier-pay route.
+import { atCostReimbursementsForLoad, carrierAccessorialsForLoad } from "../services/integrationService";
 
 // ============================================================
 // HELPERS
@@ -75,10 +79,7 @@ export async function resolveElectedQuickPayFee(
   // and does not change afterward", so it is read, never re-derived.
   const load = await prisma.load.findUnique({
     where: { id: loadId },
-    select: {
-      quickPayFeePercent: true,
-      rateConfirmations: { orderBy: { createdAt: "desc" }, take: 1, select: { formData: true } },
-    },
+    select: { quickPayFeePercent: true },
   });
   const electedPct = load?.quickPayFeePercent;
   if (typeof electedPct !== "number" || electedPct <= 0) {
@@ -103,11 +104,14 @@ export async function resolveElectedQuickPayFee(
   if (!signed) return none("Caravan Quick Pay Agreement not signed");
 
   // §4 — reimbursements repaid at cost against an original receipt are the
-  // carrier's own money and sit outside the fee base. Same helper as the other
-  // two charge paths so a lumper is carved out identically everywhere.
-  const reimbursements = sumAtCostReimbursements(
-    (load?.rateConfirmations?.[0]?.formData as any)?.accessorials,
-  );
+  // carrier's own money and sit outside the fee base.
+  //
+  // v3.8.asb — this read `rateConfirmations[0].formData.accessorials`. formData
+  // is the rate-confirmation PROPOSAL, retired as a money source in v3.8.asb,
+  // and it is not the store the gross being charged comes from. The one helper
+  // reads the APPROVED accessorial ledger, so the exclusion and the amount it is
+  // excluded from now describe the same set of rows on every charge path.
+  const reimbursements = await atCostReimbursementsForLoad(loadId);
   return { feePercent: electedPct, reimbursements, reason: "elected on the load" };
 }
 
@@ -250,7 +254,16 @@ export async function getInvoices(req: AuthRequest, res: Response) {
     if (search) {
       where.OR = [
         { invoiceNumber: { contains: search as string, mode: "insensitive" } },
+        // The number the customer actually has in front of them. Without this
+        // branch, an AE pasting "SRL-121485I" off the emailed invoice — the only
+        // number that document prints — got zero results, because invoiceNumber
+        // holds the internal INV- sequence and referenceNumber holds the bare
+        // stem with no suffix letter.
+        { srlDocNumber: { contains: search as string, mode: "insensitive" } },
         { load: { referenceNumber: { contains: search as string, mode: "insensitive" } } },
+        // Loads numbered before referenceNumber and loadNumber were kept in
+        // step still match on the stem the documents were derived from.
+        { load: { loadNumber: { contains: search as string, mode: "insensitive" } } },
       ];
     }
 
@@ -366,15 +379,33 @@ export async function createInvoice(req: AuthRequest, res: Response) {
       return;
     }
 
-    // Verify load exists
+    // Verify load exists. loadNumber + referenceNumber come back so the
+    // customer-facing document number can be derived off the load stem.
     const load = await prisma.load.findUnique({
       where: { id: loadId },
-      select: { id: true, posterId: true, customerId: true },
+      select: { id: true, posterId: true, customerId: true, loadNumber: true, referenceNumber: true },
     });
     if (!load) {
       res.status(404).json({ error: "Load not found" });
       return;
     }
+
+    // Task F — link the invoice to the Rate Confirmation that priced this load.
+    // Most recent SENT/SIGNED RC if there is one, else the most recent of any
+    // status: a re-issue supersedes its predecessor, so the newest is the one
+    // that actually priced the freight. Nullable by design — a load can be
+    // invoiced with no RC on file, and invoices predating the link exist.
+    const pricingRc =
+      (await prisma.rateConfirmation.findFirst({
+        where: { loadId, status: { in: ["SENT", "SIGNED"] } },
+        orderBy: { createdAt: "desc" },
+        select: { id: true },
+      })) ??
+      (await prisma.rateConfirmation.findFirst({
+        where: { loadId },
+        orderBy: { createdAt: "desc" },
+        select: { id: true },
+      }));
 
     // Generate invoice number atomically: INV-YYYYMMDD-XXXX
     const todayStr = new Date().toISOString().slice(0, 10).replace(/-/g, "");
@@ -393,9 +424,17 @@ export async function createInvoice(req: AuthRequest, res: Response) {
     const componentSum = Math.round(((lineHaulAmount ?? 0) + (fuelSurchargeAmount ?? 0) + (accessorialsAmount ?? 0)) * 100) / 100;
     const totalAmount = componentSum > 0 ? componentSum : amount;
 
-    const invoice = await prisma.invoice.create({
+    // Customer-facing document number, allocated at creation and persisted, so
+    // regenerating the PDF reproduces it. Separate from invoiceNumber above:
+    // that stays the internal INV- accounting sequence.
+    const stem = resolveLoadStem(load);
+
+    const buildInvoice = (srlDocNumber: string | null) =>
+      prisma.invoice.create({
       data: {
         invoiceNumber,
+        srlDocNumber,
+        rateConfirmationId: pricingRc?.id ?? null,
         loadId,
         userId: load.posterId,
         createdById: req.user!.id,
@@ -422,6 +461,13 @@ export async function createInvoice(req: AuthRequest, res: Response) {
       },
       include: { lineItems: true },
     });
+
+    // This endpoint creates BASE invoices. The supplemental accessorial invoice
+    // (…S) is a separate row created by its own flow; when that lands it passes
+    // "SUPPLEMENTAL_INVOICE" here and gets its own number off the same stem.
+    const invoice = stem
+      ? await withDocumentNumber("INVOICE", stem, buildInvoice)
+      : await buildInvoice(null);
 
     res.status(201).json(invoice);
   } catch (error: any) {
@@ -510,7 +556,11 @@ export async function sendInvoice(req: AuthRequest, res: Response) {
       include: {
         load: {
           select: {
-            referenceNumber: true, originCity: true, originState: true, destCity: true, destState: true,
+            // loadNumber as well as referenceNumber: it is the authoritative
+            // stem, and the invoice PDF falls back to deriving its number from
+            // the stem when srlDocNumber is null (invoices predating the scheme).
+            referenceNumber: true, loadNumber: true,
+            originCity: true, originState: true, destCity: true, destState: true,
             rate: true, pickupDate: true, deliveryDate: true, posterId: true,
             customer: {
               select: {
@@ -950,10 +1000,14 @@ export async function preparePayment(req: AuthRequest, res: Response) {
       return;
     }
 
-    // Verify load
+    // Verify load. Stem columns come back so the carrier-facing settlement
+    // document number can be derived.
     const load = await prisma.load.findUnique({
       where: { id: loadId },
-      select: { id: true, carrierRate: true, totalCarrierPay: true, fuelSurcharge: true },
+      select: {
+        id: true, carrierRate: true, totalCarrierPay: true, fuelSurcharge: true,
+        loadNumber: true, referenceNumber: true,
+      },
     });
     if (!load) {
       res.status(404).json({ error: "Load not found" });
@@ -962,7 +1016,18 @@ export async function preparePayment(req: AuthRequest, res: Response) {
 
     const lh = lineHaul ?? load.carrierRate ?? load.totalCarrierPay ?? 0;
     const fs = fuelSurcharge ?? load.fuelSurcharge ?? 0;
-    const acc = accessorialsTotal ?? 0;
+    // v3.8.asb — `acc` defaulted to 0 while the fee base below subtracts
+    // `elected.reimbursements`, which IS read from the approved ledger. Two
+    // different stores either side of one minus sign: an AE preparing without
+    // typing an accessorial total dropped $300 of approved money out of the
+    // gross AND still deducted the $150 lumper carve-out from a base that never
+    // contained it. On the worked example that paid $2,747.00 against
+    // $3,041.00 owed. Gross and the carve-out must read the same store.
+    // null for the RC-declared total: this route has no rate confirmation in
+    // scope, so there is nothing to compare the ledger against and no shortfall
+    // to report. The ledger is the figure.
+    const ledgerAccessorials = await carrierAccessorialsForLoad(loadId, null);
+    const acc = accessorialsTotal ?? ledgerAccessorials.total;
     const grossAmount = lh + fs + acc;
 
     // Quick Pay Agreement §3 — the fee is the one recorded on the load, and it
@@ -988,9 +1053,21 @@ export async function preparePayment(req: AuthRequest, res: Response) {
       if (!dup) break;
     }
 
-    const payment = await prisma.carrierPay.create({
+    // Carrier-facing settlement document number for THIS load: SRL-121485P.
+    // "P" for pay — "S" belongs to the supplemental invoice and the two must not
+    // collide. Distinct from paymentNumber above, which stays the internal CP-
+    // sequence that search filters and the CSV export already key on.
+    //
+    // Note this is the PER-LOAD pay document. The Settlement model is a
+    // per-carrier, per-period rollup spanning many loads, so a per-load stem
+    // cannot apply to it; Settlement.settlementNumber is left exactly as it is.
+    const paySt = resolveLoadStem(load);
+
+    const buildPayment = (srlDocNumber: string | null) =>
+      prisma.carrierPay.create({
       data: {
         paymentNumber,
+        srlDocNumber,
         carrierId,
         loadId,
         rateConfirmationId: rateConfirmationId ?? null,
@@ -1017,6 +1094,10 @@ export async function preparePayment(req: AuthRequest, res: Response) {
         load: { select: { referenceNumber: true } },
       },
     });
+
+    const payment = paySt
+      ? await withDocumentNumber("SETTLEMENT", paySt, buildPayment)
+      : await buildPayment(null);
 
     res.status(201).json(payment);
   } catch (error: any) {
@@ -1049,10 +1130,52 @@ export async function updatePayment(req: AuthRequest, res: Response) {
       notes,
     } = req.body;
 
-    const lh = lineHaul ?? existing.lineHaul ?? 0;
-    const fs = fuelSurcharge ?? existing.fuelSurcharge ?? 0;
-    const acc = accessorialsTotal ?? existing.accessorialsTotal ?? 0;
-    const grossAmount = lh + fs + acc;
+    // v3.8.asb — NEVER rebuild a gross from the three nullable components.
+    //
+    // This route used to read `lineHaul ?? existing.lineHaul ?? 0` and add the
+    // three together. lineHaul, fuelSurcharge and accessorialsTotal are all
+    // Float? and carrierPayController.createCarrierPay deliberately leaves the
+    // first two null — that route takes one `amount` with no split, and
+    // inventing a split would be a lie. So a hand-raised $3,100 settlement had
+    // all three read as 0, and editing a NOTE wrote the settlement to zero:
+    //
+    //     before  amount=3100  gross=3100  net=3041
+    //     after   amount=0     gross=0     net=0
+    //
+    // This is the same defect class v3.8.asb fixed in
+    // integrationService.syncCarrierPayAccessorials, still standing in the path
+    // that fix never touched — and that fix is what armed it, because it is
+    // what made the null-component row shape deliberate. `amount` is NOT NULL
+    // and cannot be absent, so it is the only safe anchor.
+    //
+    // The components are still WRITTEN when a caller supplies them, so the
+    // delivery path keeps its split. They are simply never used to reconstruct
+    // a total that already exists.
+    const priorGross = Number(existing.grossAmount ?? existing.amount);
+    if (!Number.isFinite(priorGross)) {
+      // `amount` is NOT NULL in the schema so this should be unreachable, but a
+      // NaN reaching a money column would write a settlement nobody can read
+      // and nothing downstream would catch it. Refuse rather than rely on the
+      // column definition holding forever.
+      log.error({ paymentId: id, grossAmount: existing.grossAmount, amount: existing.amount },
+        "[updatePayment] refused: settlement has no readable prior total");
+      res.status(409).json({
+        error: "This settlement has no readable total and cannot be edited. Raise it with support.",
+        code: "SETTLEMENT_TOTAL_UNREADABLE",
+      });
+      return;
+    }
+    const lh = lineHaul ?? existing.lineHaul;
+    const fs = fuelSurcharge ?? existing.fuelSurcharge;
+    const acc = accessorialsTotal ?? existing.accessorialsTotal;
+
+    // A money edit is only a money edit when the caller actually sent a money
+    // field. Anything else (a note, a date, a tier label) leaves the total alone.
+    const componentsSupplied =
+      lineHaul !== undefined || fuelSurcharge !== undefined || accessorialsTotal !== undefined;
+    const grossAmount = componentsSupplied
+      ? (lh ?? 0) + (fs ?? 0) + (acc ?? 0)
+      : priorGross;
 
     const tier = paymentTier ?? existing.paymentTier;
     // Quick Pay Agreement §3. Editing the PaymentTier label used to re-derive a
@@ -1060,18 +1183,53 @@ export async function updatePayment(req: AuthRequest, res: Response) {
     // correctly-zero settlement into a 3% deduction on a carrier who had signed
     // no Quick Pay Agreement. The fee is now whatever is recorded on the load,
     // and only when the agreement is signed and Quick Pay is enabled.
-    let quickPayFeePercent = existing.quickPayFeePercent ?? 0;
-    let reimbursements = 0;
-    if (paymentTier) {
-      const elected = await resolveElectedQuickPayFee(existing.carrierId, existing.loadId);
-      quickPayFeePercent = elected.feePercent;
-      reimbursements = elected.reimbursements;
-    }
+    //
+    // v3.8.asb — the fee and its carve-out are resolved TOGETHER, unconditionally.
+    //
+    // They used to be split: the percentage was carried forward on every edit,
+    // but `reimbursements` was computed only inside `if (paymentTier)` and was
+    // otherwise 0. So any edit that did not happen to touch the PaymentTier
+    // label — moving a scheduled date, correcting a note — kept the fee and
+    // dropped the exclusion, and the settlement was silently rewritten with the
+    // fee charged on the carrier's own lumper. On the worked example that is
+    // $3.00 off the carrier for editing a date, again on the next date change,
+    // with nothing on the row to show why the net moved.
+    //
+    // A fee and the base it is charged on are one decision and cannot be
+    // resolved on different conditions. Resolving both here also keeps the two
+    // in step with the load when an election has changed since the row was
+    // raised, which is the same answer preparePayment gives.
+    // Both come from the load, on every edit. No carry-forward branch: if the
+    // load no longer resolves an election, the fee is 0 and the carrier is paid
+    // MORE, which is the safe direction this whole path takes on every
+    // ambiguous case. It is also exactly what preparePayment does, so the two
+    // routes cannot price the same settlement differently.
+    const elected = await resolveElectedQuickPayFee(existing.carrierId, existing.loadId);
+    const quickPayFeePercent = elected.feePercent;
+    const reimbursements = elected.reimbursements;
 
     // §4 — at-cost reimbursements are outside the fee base.
     const feeBase = Math.max(0, grossAmount - reimbursements);
     const quickPayFeeAmount = Math.round(feeBase * (quickPayFeePercent / 100) * 100) / 100;
     const netAmount = grossAmount - quickPayFeeAmount;
+
+    // v3.8.asb tripwire. integrationService has one on its own re-price; this
+    // route had none, which is why a zeroing edit wrote straight through. An
+    // edit that supplied no money field must not move the total at all, and one
+    // that did must not move it further than the components it supplied.
+    // Refuse rather than write: a settlement is a promise to a carrier, and a
+    // number nobody can explain is worse than a rejected request.
+    if (!componentsSupplied && Math.abs(grossAmount - priorGross) > 0.01) {
+      log.error(
+        { paymentId: id, priorGross, grossAmount },
+        "[updatePayment] refused: gross moved on an edit that supplied no money field",
+      );
+      res.status(409).json({
+        error: "This edit would change the settlement total without changing any amount. Refused.",
+        code: "SETTLEMENT_MOVED_WITHOUT_AMOUNT",
+      });
+      return;
+    }
 
     const payment = await prisma.carrierPay.update({
       where: { id },
@@ -1113,8 +1271,36 @@ export async function submitPayment(req: AuthRequest, res: Response) {
       return;
     }
 
-    // $5K approval threshold — auto-create approval queue entry
-    const needsApproval = existing.netAmount >= 5000;
+    // Approval threshold.
+    //
+    // v3.8.asb — this was a flat `netAmount >= 5000` for every carrier, which
+    // is not what anybody signed. Quick Pay Agreement §6 sets the auto-approve
+    // ceiling BY TIER: Silver $2,000 a load, Gold $4,000, Platinum $6,000. A
+    // $4,000 Silver Quick Pay settlement therefore went straight through
+    // unreviewed against a ceiling the carrier had signed at half that, while a
+    // $5,500 Platinum one was stopped for review despite sitting comfortably
+    // inside its own. The tier figures come from lib/quickPayPricing, the one
+    // resolver, so this gate and the delivery-time gate in integrationService
+    // cannot drift apart.
+    //
+    // The ceiling governs QUICK PAY funding — that is what §6 is about. A
+    // standard-terms settlement is not a Quick Pay decision and keeps the
+    // generic large-payment review at $5,000.
+    //
+    // Over the ceiling is a REVIEW, never a refusal: §6 says "auto-approved up
+    // to", so exceeding it means an operator looks, not that the carrier is
+    // denied something the instrument grants them.
+    const isQuickPay = (existing.quickPayFeeAmount ?? 0) > 0 || existing.paymentTier !== "STANDARD";
+    const tier = await prisma.carrierPay
+      .findUnique({
+        where: { id },
+        select: { carrier: { select: { carrierProfile: { select: { tier: true } } } } },
+      })
+      .then((r) => r?.carrier?.carrierProfile?.tier ?? null);
+
+    const ceiling = isQuickPay ? quickPayAutoApprovePerLoad(tier) : 5000;
+    const measured = isQuickPay ? (existing.grossAmount ?? existing.netAmount) : existing.netAmount;
+    const needsApproval = measured > ceiling;
 
     const payment = await prisma.carrierPay.update({
       where: { id },
@@ -1131,7 +1317,9 @@ export async function submitPayment(req: AuthRequest, res: Response) {
           referenceId: payment.id,
           referenceType: "CARRIER_PAY",
           amount: payment.netAmount,
-          description: `Carrier payment ${payment.paymentNumber} requires admin approval (>$5K)`,
+          description: isQuickPay
+            ? `Carrier payment ${payment.paymentNumber}: $${measured.toLocaleString()} gross is over the ${tier ?? "SILVER"} $${ceiling.toLocaleString()} per-load Quick Pay auto-approve ceiling`
+            : `Carrier payment ${payment.paymentNumber} requires admin approval (>$${ceiling.toLocaleString()})`,
           priority: payment.netAmount >= 25000 ? "URGENT" : payment.netAmount >= 10000 ? "HIGH" : "NORMAL",
           requestedById: req.user!.id,
         },

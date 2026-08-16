@@ -468,6 +468,15 @@ Short-form variant (tight UI contexts):
 
 ## §8 v3 QUICK PAY PRICING (LOCKED)
 
+> **Pilot note (ratified 2026-08-16, §21.1).** Quick Pay is a **limited pilot**:
+> the carrier requests it, SRL approves or declines, and SRL may withdraw it on
+> notice. That governs **availability only**. Every figure in this section is
+> unchanged and stays LOCKED — a pilot changes who can get in, never what it
+> costs. Standard tier pay is free and never depends on the pilot. Do not
+> soften any number here on the theory that a pilot is provisional, and do not
+> present reaching a tier as granting Quick Pay: it grants the Net terms and
+> the published fee that would apply, not admission.
+
 > **Tier-advancement calibration note (added v3.8.aij, 2026-05-23).** Tier names + pricing are stable; the loads / on-time / tenure thresholds in §10 that gate advancement between tiers are calibrated to **current pre-revenue launch volume** and are scheduled to be revisited at ~6 months operational baseline OR when monthly volume materially increases. Threshold revisions go through the same atomic-commit + halt cadence as the v3.8.aii backend + v3.8.aij ledger commits that locked them.
 
 ### v3.8.aib Sprint 1 honesty pass — retired lines per tier
@@ -1288,13 +1297,13 @@ Each is a discrete sprint. Mix of operational, security, UX, and technical debt.
 - **BMC-84 bond:** $75,000, filed with FMCSA, surety PFA Protects (CA# 0M18074) — full detail in §1. No carrier-facing agreement restates the bond provisions and none needs to: the bond is a filing with the FMCSA, not a term between SRL and a carrier, and per the counsel-confirmed architecture covenants live in the Broker-Carrier Agreement. The citation that stood here to "Caravan Quick Pay Agreement v2 (Article 20)" pointed at a document that does not exist in this repo; removed 2026-08-16.
 - Michigan governing law, Kalamazoo County venue for disputes.
 - Non-solicitation 12 months post-termination, 15% liquidated damages (Flock pattern).
-- **Broker-Carrier Agreement — exists in-house, pending counsel.** The body is `BROKER_CARRIER_AGREEMENT` in [`backend/src/data/agreements.ts`](backend/src/data/agreements.ts): 11 sections, `BCA_VERSION = 2026-06-27-v1`. It is the master agreement governing every tendered load. The agreement PDF renders from it, the carrier portal fetches it (`GET /carrier-auth/agreement/broker-carrier`), the onboarding click-through presents it, and carriers sign it today. A standalone `.docx` is no longer the mechanism: this file is the source and the PDF is generated, so the review pane, the click-through, and the executed PDF cannot disagree on the *body* — and, since v3.8.asc, cannot disagree on the *version* either. [`frontend/src/app/onboarding/page.tsx`](frontend/src/app/onboarding/page.tsx) used to keep a hardcoded `BCA_VERSION = "2026-05-24-v1"` as the fallback behind its fetch (`bcaContent?.version ?? BCA_VERSION`), so a failed fetch stamped a three-month-stale string onto `CarrierProfile.bcaVersion` — and let the applicant tick "I agree to the Broker-Carrier Agreement above" while the pane still read "Loading the agreement…". It failed OPEN. That constant is deleted, the acknowledgement checkbox is disabled until the body has loaded (the activation pane's fail-closed pattern), and [`carrierController.ts`](backend/src/controllers/carrierController.ts) now stamps `BCA_VERSION` server-side instead of `data.bcaVersion || null`. The validator still declares `bcaVersion` so a cached older bundle does not 400, but it is accepted and ignored. It has NOT been through a Michigan commercial attorney — see §16 #1. Each load is further governed by the Rate Confirmation, an operational form incorporating this Agreement by reference; the Agreement controls on conflict.
+- **Broker-Carrier Agreement — exists in-house, pending counsel.** The body is `BROKER_CARRIER_AGREEMENT` in [`backend/src/data/agreements.ts`](backend/src/data/agreements.ts): 11 sections, `BCA_VERSION = 2026-06-27-v1`. It is the master agreement governing every tendered load. The agreement PDF renders from it, the carrier portal fetches it (`GET /carrier-auth/agreement/broker-carrier`), the onboarding click-through presents it, and carriers sign it today. A standalone `.docx` is no longer the mechanism: this file is the source and the PDF is generated, so the review pane, the click-through, and the executed PDF cannot disagree on the *body* — and, since v3.8.asb, cannot disagree on the *version* either. [`frontend/src/app/onboarding/page.tsx`](frontend/src/app/onboarding/page.tsx) used to keep a hardcoded `BCA_VERSION = "2026-05-24-v1"` as the fallback behind its fetch (`bcaContent?.version ?? BCA_VERSION`), so a failed fetch stamped a three-month-stale string onto `CarrierProfile.bcaVersion` — and let the applicant tick "I agree to the Broker-Carrier Agreement above" while the pane still read "Loading the agreement…". It failed OPEN. That constant is deleted, the acknowledgement checkbox is disabled until the body has loaded (the activation pane's fail-closed pattern), and [`carrierController.ts`](backend/src/controllers/carrierController.ts) now stamps `BCA_VERSION` server-side instead of `data.bcaVersion || null`. The validator still declares `bcaVersion` so a cached older bundle does not 400, but it is accepted and ignored. It has NOT been through a Michigan commercial attorney — see §16 #1. Each load is further governed by the Rate Confirmation, an operational form incorporating this Agreement by reference; the Agreement controls on conflict.
 - **Caravan Quick Pay Agreement — exists in-house, pending counsel.** The body is `CARAVAN_QUICK_PAY_AGREEMENT` in the same file: 10 sections, versioned by `QP_VERSION` in that file. **The literal version string is deliberately not reproduced here** — go read the constant. Every time this section has restated it, it has gone stale, once inside the same hour it was written. `getAgreement()` resolves `quick-pay`, `quickpay`, and `qp` to it, so `GET /carrier-auth/agreement/quick-pay` serves it and the signed `CarrierAgreement` row written by [`routes/carrierAuth.ts`](backend/src/routes/carrierAuth.ts) records consent against a version that points at real clauses. It is a first draft written in-house. It is NOT attorney-reviewed and NOT final — §16 #2. It is a **supplement**, not a second master: Section 1 incorporates the BCA by reference, it deliberately does not restate BCA covenants, and the BCA controls on conflict. Every economic figure in it is the locked §8 ladder. When counsel returns, swap the body in that file and bump `QP_VERSION`; the signing mechanism records consent against whatever version is current, so no code change is needed. **Version-stamping invariant:** the version recorded on a `CarrierAgreement` signature row must be the version of the text the signer was actually shown, resolved server-side from `agreements.ts`. A request body must never decide it. The frontend `QP_VERSION` mirror this section previously flagged is gone — deleted in v3.8.asa, recorded at [`frontend/src/lib/carrierAgreements.ts`](frontend/src/lib/carrierAgreements.ts) — and the activation pane now fetches the body and posts back the version served with it. That closed the client half; v3.8.asb closed the server half. Both signing paths in [`routes/carrierAuth.ts`](backend/src/routes/carrierAuth.ts) (`sign-bca`, `quickpay-election`) now compare the posted version against the served constant, return `409 AGREEMENT_VERSION_STALE` on mismatch so a stale tab is told to reload rather than silently recording consent to a body nobody can reproduce, and stamp the constant — never the request. **The tripwire for any future consent write is the pattern `bodyVersion || CONSTANT`, or any write that stamps a version the request supplied.** The constant is the only correct source; the request is only ever evidence of what the signer was shown, which is what the 409 is for. **Correction history:** the "DRAFTED — 22 articles, 3 exhibits, 513 paragraphs, 42.6 KB" instrument described here through 2026-08-15 is not in this repo and never was. The 2026-08-15 replacement text was itself written mid-flight and read as false the moment its own commit landed — it said the endpoint 404s and cited `2026-05-24-v1`, both of which describe the state before that sprint. Corrected 2026-08-16. Describe what is, not what is in motion. That correction then went stale inside the same day: this section cited `2026-08-15-v1` while the constant had moved to `-16`, and it warned about a frontend version mirror that had already been deleted, while the server-side tripwire that actually remained went unrecorded. Corrected again 2026-08-16. That correction was then itself overtaken while it was being written: a parallel sprint bumped the constant again (v3.8.asb, narrowing two Quick Pay clauses that promised more than the billing path delivers) between the sentence being typed and the pass being verified. Three drifts, one of them inside the hour. So the literal is now gone from this section entirely. The lesson is narrower than "describe what is" — **do not restate a value that lives in code. Cite the constant and make the reader go read it.** A version string in prose has a half-life measured in hours; a pointer to the constant does not.
 - **Ratified-vs-implemented ledger (as of 2026-08-16).** A ratified term is not a live term. This section is where that distinction is kept, because a future session reads this file as binding and will otherwise quote a decision as behaviour. Figures live in §5 and are deliberately not restated here.
   - **Corrected detention-to-layover ladder — RATIFIED AND IMPLEMENTED.** [`backend/src/lib/detentionLayover.ts`](backend/src/lib/detentionLayover.ts) is the single writer of both charge types for a stop, and [`backend/__tests__/unit/lib/detentionLayover.test.ts`](backend/__tests__/unit/lib/detentionLayover.test.ts) holds it: named cases at the conversion instant and either side of it, plus an invariant sweep in quarter-hour steps out to five days asserting that detention and layover never cover the same hour, that **no band past the conversion is left unpaid by any instrument**, that charges never decrease as dwell grows, that every started layover day is paid, and that the ladder never pays less than the pre-sprint code did at the same dwell. **Read that second one precisely, because it is narrower than it looks and the narrowness is deliberate:** the ladder is FLAT from hour 7 to hour 31 — a 14-hour hold and a 30-hour hold both pay $500 — and that is correct, because layover day one is billed in full at the conversion rather than accrued through those hours. The guarantee the code can support is *no unpaid band*, not *earns continuously*. An earlier version of this bullet said "no band past the conversion accrues nothing", which reads as the stronger claim and is why the test and the reconciler doc were both reworded off it. Do not restore the stronger wording, and do not "fix" the flat band — it is prepaid, not unaccrued. The sweep's overlap test asserts its own exercised count, so it cannot pass vacuously. This one is safe to describe as live.
   - **Caravan Quick Pay Agreement body — EXISTS AND IS SIGNED TODAY; counsel review OPEN.** The document is real and binding on the carrier who signs it. It is not attorney-reviewed. §16 #2.
-  - **Consent path — RATIFIED AND IMPLEMENTED, no residual gap.** Both activation panes fetch the agreement body from the backend, render what was served, and post back the version served with it; both fail closed when no body loaded. The executed PDF is generated and stored against the signature row for both agreements, and both signing routes reject a stale posted version with a 409 rather than stamping it. The onboarding registration write was the one surface off that path — it posted `bcaVersion` in the registration payload, so the 409 guard never saw it — and v3.8.asc closed it by deleting the page's stale fallback constant, disabling the acknowledgement until the body loads, and stamping the version server-side. **No consent write anywhere now takes its version from the request.** The standing tripwire is unchanged: `bodyVersion || CONSTANT`, or any write that stamps a version the request supplied.
-  - **Quick Pay §3 three-condition charge gate — IMPLEMENTED ON ALL THREE CHARGE PATHS.** §3 says Broker will not deduct a Quick Pay fee unless a fee is recorded on the load, the agreement is signed, and Quick Pay is enabled. Three paths can deduct one: `integrationService.createCarrierPayOnDelivery`, `routes/carrierPayments` (the carrier's own request), and `accountingController` prepare/edit. The third checked **none** of the three until v3.8.asc — it derived a fee from a request-supplied `PaymentTier` string, so `PUT /accounting/payments/:id` with `{ paymentTier: "PRIORITY" }` overwrote the correctly-zero fee the delivery path had written and deducted 3% from a carrier who had signed nothing. All three now resolve the fee from the load behind the same gate, and [`__tests__/unit/controllers/quickPayChargeGate.test.ts`](backend/__tests__/unit/controllers/quickPayChargeGate.test.ts) pins each condition independently. **If a fourth charge path is added it checks the same three conditions, or the clause is false again.**
+  - **Consent path — RATIFIED AND IMPLEMENTED, no residual gap.** Both activation panes fetch the agreement body from the backend, render what was served, and post back the version served with it; both fail closed when no body loaded. The executed PDF is generated and stored against the signature row for both agreements, and both signing routes reject a stale posted version with a 409 rather than stamping it. The onboarding registration write was the one surface off that path — it posted `bcaVersion` in the registration payload, so the 409 guard never saw it — and v3.8.asb closed it by deleting the page's stale fallback constant, disabling the acknowledgement until the body loads, and stamping the version server-side. **No consent write anywhere now takes its version from the request.** The standing tripwire is unchanged: `bodyVersion || CONSTANT`, or any write that stamps a version the request supplied.
+  - **Quick Pay §3 three-condition charge gate — IMPLEMENTED ON ALL THREE CHARGE PATHS.** §3 says Broker will not deduct a Quick Pay fee unless a fee is recorded on the load, the agreement is signed, and Quick Pay is enabled. Three paths can deduct one: `integrationService.createCarrierPayOnDelivery`, `routes/carrierPayments` (the carrier's own request), and `accountingController` prepare/edit. The third checked **none** of the three until v3.8.asb — it derived a fee from a request-supplied `PaymentTier` string, so `PUT /accounting/payments/:id` with `{ paymentTier: "PRIORITY" }` overwrote the correctly-zero fee the delivery path had written and deducted 3% from a carrier who had signed nothing. All three now resolve the fee from the load behind the same gate, and [`__tests__/unit/controllers/quickPayChargeGate.test.ts`](backend/__tests__/unit/controllers/quickPayChargeGate.test.ts) pins each condition independently. **If a fourth charge path is added it checks the same three conditions, or the clause is false again.**
   - **Quick Pay §8 ineligibility conditions — NOT IMPLEMENTED, and the clause now says so.** Neither charge path queries `PaymentDispute` for an open cargo claim, nor runs `complianceCheck` for authority and insurance standing. §8 stated these as an automatic state ("a load is not eligible… standard tier payment terms continue to apply"), which a carrier could rely on and be charged anyway; it now states them as a right Broker may exercise through the §6 review. Do not restate them as automatic before the checks exist on all three charge paths. The same clause also contradicted §5 outright on incomplete documentation — §5 said the load "remains eligible on the same terms", §8 said "not eligible… standard tier terms apply", one signed page, opposite money — resolved in favour of §5, which is what the billing path does.
   - **TONU two-sided billing — RATIFIED 2026-08-15, NOT IMPLEMENTED.** Neither side exists in the billing path. There is no customer-side TONU charge at all, and `onLoadCancelledOrTONU` ([`integrationService.ts`](backend/src/services/integrationService.ts)) *reverses* credit, voids AP and reverses funding on cancellation — it raises nothing. TONU is a load status today, not a charge. The carrier-side clause the Rate Confirmation prints pays on a narrower trigger than the ratified one. Do not describe either side as live.
   - **4-hour carrier release window — RATIFIED 2026-08-15, NOT IMPLEMENTED.** Nothing enforces it, and the terms grid still prints the line without naming the releasing party. §5 carries the reframing and the reason it no longer conflicts with TONU.
@@ -2121,6 +2130,128 @@ The Marco Polo chatbot (homepage widget at `frontend/public/shared/js/marco-polo
 **Halt-and-report fire on PFA Protects (banked Sub-pattern 15 fire #5):** the v3.8.akx directive author asked to include "PFA surety" in the chatbot authority chain; Phase A audit confirmed PFA Protects appears NOWHERE on the three deployed public pages (only mention in the entire codebase is an internal development comment on `/index.html` line 438 explaining why the surety name was REMOVED per the v3.8.aga directive). §20.1.5 explicitly bans named-underwriter reveal as a vendor-stack reveal class. The directive's own articulated rules ("never reveal... the vendor stack", "never state a figure not on a deployed public page") contradicted the literal "PFA surety" mention; Sub-pattern 13 ratification-layer principle (workflow-first over literal-text) resolved to exclude PFA from the chatbot prompt. Disclosure ceiling > directive literal text when the directive contradicts itself.
 
 **Going-forward gate:** any future chatbot system-prompt edit must include a Phase A audit of the three deployed public pages alongside the CLAUDE.md sections. Adding a new fact to the chatbot prompt requires either: (a) the fact already appears on a deployed page, OR (b) the fact is added to a deployed page in the same atomic sprint. The chatbot is downstream of public-page canonical, not upstream of it.
+
+---
+
+## §21 QUICK PAY PILOT + DOCUMENT NUMBERING (ratified 2026-08-16)
+
+Two principal decisions, both ratified 2026-08-16. This section states what was
+decided and, separately, what is actually built — those are not the same list,
+and the difference is the point of writing it down.
+
+### §21.1 — Quick Pay is a limited pilot (request, then approve)
+
+**Ratified.** Quick Pay is no longer generally available on request of the
+carrier alone. It is a **limited pilot**:
+
+1. The carrier **asks** — a tick on the carrier application (`/onboarding`).
+2. The request lands for an AE as **pending**.
+3. An AE **approves or declines**, with a reason on decline.
+4. Once approved, the enrolment rides the tender-sending process.
+5. The carrier receives the Rate Confirmation, which states the option applied
+   to that load.
+
+The pilot is **withdrawable by SRL on notice**. Withdrawal is forward-only: it
+never affects a load already funded under Quick Pay.
+
+**What the carrier picks, and when.** Onboarding is a yes/no request to join.
+**Speed is per load**, because same-day is a +2% premium under §8 and cash need
+is per load, not permanent. Default is 7-day. The RC prints the speed and the
+fee percentage applied **to that load**, not the tier ladder.
+
+**A pilot changes availability, never economics.** The §8 ladder is untouched
+and stays LOCKED: Silver Net-30 / 3% / 5%, Gold Net-21 / 2% / 4%, Platinum
+Net-14 / 1% / 3%; same-day is a universal +2% premium and is never tier-gated;
+auto-approve $2,000 / $4,000 / $6,000; monthly $15,000 / $40,000 / $80,000. Do
+not weaken any of these on the theory that a pilot is provisional. Standard tier
+pay is free, always available, and never depends on the pilot.
+
+**Two decline paths, deliberately distinct.** Declining a carrier's request to
+JOIN (QP Agreement §3) is not the same event as declining ONE LOAD over an
+approval ceiling (QP Agreement §6). Both end at standard tier terms at no fee.
+Keep them separate — collapsing them loses the fact that a carrier inside the
+pilot can still have a single load declined. The same distinction holds between
+**declined** (refused; nothing was ever switched on) and **withdrawn** (was in,
+taken out; funded loads may sit behind it). No surface may render those two as
+one status.
+
+**Built.** `QuickPayEnrollment` model + `QuickPayEnrollmentStatus`; the
+`requestQuickPayPilot` tick on registration; AE `GET /carriers/quickpay-enrollments`
+and `POST /carriers/:id/quickpay/{approve,decline,withdraw}` (ADMIN / CEO /
+**OPERATIONS** — wider than the ADMIN+CEO carrier-approval pair on purpose, since
+this decides fee-bearing payment timing on loads the carrier is already cleared
+to haul, and Operations runs the pilot); the pilot fields on
+`GET /carrier-auth/activation-status`; the four-code 403 gate on the enable path
+of `POST /carrier-auth/quickpay-election`; Caravan Quick Pay Agreement
+**v2026-08-16-v4** carrying the pilot in its preamble, §3 and §10; and the
+surfaces — onboarding request, AE pending queue + per-carrier tab, carrier
+activation, carrier payments, `/carriers`, `/faq`.
+
+**Ratified-pending — NOT built.** Read this list before assuming the loop closes:
+
+- **The migration is authored but NOT applied.** Per §2.2 nothing was run against
+  Neon. Until it is, every enrolment read returns nothing and every surface
+  correctly renders "never requested".
+- **There is no carrier-side request endpoint.** The only way to ask is the
+  onboarding tick. A carrier who did not tick, or who was declined and wants to
+  ask again, has no control — and the portal deliberately does not offer one,
+  because a button with no endpoint is worse than none. Both the enable-path 403
+  (`action.href: /carrier/dashboard/activation`) and the approve-path 409 ("They
+  can request it from their portal") already describe a control that does not
+  exist. Until `POST /carrier-auth/quickpay-request` lands, the portal routes
+  those carriers to `operations@silkroutelogistics.ai`, which does work.
+- **Approval does not switch Quick Pay on.** Approval admits; the carrier still
+  signs the Caravan Quick Pay Agreement, and only that sets `quickPayEnabled`.
+  An AE reading "approved" is looking at a half-done state, and the AE tab says
+  so.
+- **`CarrierProfile.quickPayEnabled` is now a denormalised mirror** of "has an
+  APPROVED enrolment", not an independent switch. It stays the read-gate every
+  charge path already checks. Write it only in the same transaction as an
+  enrolment transition. Anything else re-opens the drift this model closed.
+
+### §21.2 — Document numbering: suffix on a shared stem
+
+**Ratified.** Document references are a **SUFFIX on a shared stem, never a
+prefix.** The stem is the existing load number, so every document for one load
+sorts together in any system that sorts a text column — which is the whole
+point, and what a prefix scheme (`BOL-…`, `RC-…`) destroys.
+
+| Document | Number |
+|---|---|
+| Load | `SRL-121485` — the anchor, already generated today |
+| BOL | `SRL-121485B` |
+| Rate confirmation | `SRL-121485R` |
+| Invoice | `SRL-121485I` |
+| Supplemental invoice (accessorial-only) | `SRL-121485S` |
+| Settlement / carrier pay | `SRL-121485P` — P for pay, so it cannot collide with S |
+
+This is the Bison Transport convention (load 5789854, invoice 5789854A,
+accessorials 5789854S) carried onto the SRL stem. The `SRL-` prefix stays so a
+carrier hauling for several brokers can tell whose paper they are holding.
+
+**Re-issues take a numeric revision suffix** — `SRL-121485R2`, `SRL-121485R3`.
+Revision 1 carries no digit so the common case reads clean. **Original numbers
+are NEVER reused:** `rateConNumber` is `@unique`, so reuse throws on a normal
+re-issue, and in a dispute the document has to say on its face which version the
+carrier signed.
+
+**`Load.bolNumber` is NOT this.** That column is the **shipper-supplied** BOL
+reference their AP department searches on. SRL's own BOL number is
+`Load.srlBolNumber`. They are different things and must stay different — do not
+overload either.
+
+**Built.** The anchor (`generateLoadNumber`, Postgres sequence `load_number_seq`)
+already existed. The suffix scheme, the allocator and the re-issue rule live in
+`backend/src/lib/documentNumber.ts`; the persisted columns (`Load.srlBolNumber`,
+`RateConfirmation.rateConNumber`, `Invoice.srlDocNumber`, `CarrierPay.srlDocNumber`)
+are in the schema and the migration.
+
+**Ratified-pending — NOT built.** Same caveat: the migration is authored, not
+applied. Two load creators still bypass `generateLoadNumber`
+(`shipperPortalController.ts`, `emailToLoadService.ts`), so a portal-created or
+email-created load has a null `loadNumber` and therefore **no stem to suffix
+from** — its documents have nothing to hang off. Closing that is a prerequisite
+for the scheme being true of every load rather than most of them.
 
 ---
 

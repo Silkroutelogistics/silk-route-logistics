@@ -52,7 +52,18 @@ export default function CarrierDashboardLayout({ children }: { children: React.R
   // surface, no polling. Saves a 2-minute interval network call.
   const { data: notifData } = useQuery({
     queryKey: ["carrier-notifications"],
-    queryFn: () => api.get<{ notifications: Notification[] }>("/notifications").then((r) => r.data),
+    // v3.8.asb — GET /notifications returns a BARE ARRAY
+    // (notificationController.getNotifications -> res.json(notifications)).
+    // This asked for `{ notifications: [...] }`, so `notifData.notifications`
+    // was undefined, the `|| []` below swallowed it, and the carrier bell has
+    // never displayed a single notification. The shipper portal had the
+    // identical mismatch. The AE console reads the array directly and has
+    // always worked, which is why nobody noticed.
+    //
+    // Fixed on the consumer rather than the endpoint: the endpoint's shape is
+    // already correct for its longest-standing caller, and changing it would
+    // have broken the one bell that works.
+    queryFn: () => api.get<Notification[]>("/notifications").then((r) => r.data),
     enabled: !!user && user.carrierProfile?.onboardingStatus === "APPROVED",
     refetchInterval: 120000,
   });
@@ -68,7 +79,7 @@ export default function CarrierDashboardLayout({ children }: { children: React.R
     enabled: !!user && user.carrierProfile?.onboardingStatus === "APPROVED",
   });
 
-  const notifications = notifData?.notifications || [];
+  const notifications = Array.isArray(notifData) ? notifData : [];
   const unreadCount = notifications.filter((n) => !n.read).length;
 
   useEffect(() => {

@@ -4,6 +4,9 @@ import { uploadFile } from "../services/storageService";
 import {
   getAllCarriers, getCarrierDetail, registerCarrier, updateCarrier, verifyCarrier,
   getCarrierScore,
+  // v3.8.asb — Quick Pay pilot, AE side of request-then-approve.
+  listQuickPayEnrollments, approveQuickPayEnrollment,
+  declineQuickPayEnrollment, withdrawQuickPayEnrollment,
 } from "../controllers/carrierController";
 import {
   vetCarrierEndpoint, getVettingReport, runFullVetting,
@@ -105,6 +108,16 @@ router.use(authenticate);
 
 // Carrier vetting
 router.post("/vet", authorize("ADMIN", "CEO", "BROKER", "DISPATCH", "OPERATIONS"), vetCarrierEndpoint);
+
+// ── v3.8.asb — Quick Pay pilot queue ──
+// MOUNTED ABOVE `/:id`. Express matches in declaration order, so declared
+// after it this literal path would be swallowed by the parameterised route and
+// answer 404 "Carrier not found" for a carrier id of "quickpay-enrollments".
+router.get(
+  "/quickpay-enrollments",
+  authorize("ADMIN", "CEO", "OPERATIONS"),
+  listQuickPayEnrollments,
+);
 
 // Employee-facing list & detail
 router.get("/", authorize("ADMIN", "CEO", "BROKER", "DISPATCH", "OPERATIONS"), validateQuery(carrierQuerySchema), getAllCarriers);
@@ -596,6 +609,56 @@ router.post("/:id/approve", authorize("ADMIN", "CEO"), validateBody(approveCarri
     res.status(status).json({ error: msg });
   }
 });
+
+// ── v3.8.asb — Quick Pay pilot decisions ──────────────────────────────────
+//
+// Request-then-approve. The carrier asks at onboarding
+// (carrierRegisterSchema.requestQuickPayPilot); these three endpoints are how
+// SRL answers. Reason is required on decline and on withdraw and is sent to
+// the carrier verbatim, so it is written for them to read, not for a log.
+//
+// ADMIN / CEO / OPERATIONS. Wider than the ADMIN+CEO approve/reject pair
+// below on purpose: those decide whether a carrier may haul at all, this
+// decides whether they may pay a fee for faster money on loads they are
+// already cleared to haul. Operations runs the pilot day to day.
+//
+// Audited under the existing AuditAction values — the enum is closed
+// (schema.prisma:471) and adding QUICKPAY_* would be a migration for three
+// labels. `entity: "QuickPayEnrollment"` is what makes these greppable apart
+// from carrier approval, and entityId is the CarrierProfile id, matching
+// every other /:id route in this file.
+const quickPayReviewSchema = z.object({
+  note: z.string().max(2000).optional(),
+});
+const quickPayReasonSchema = z.object({
+  reason: z
+    .string()
+    .trim()
+    .min(10, "Give a reason of at least 10 characters. The carrier is told why, so write it for them to read.")
+    .max(2000),
+});
+
+router.post(
+  "/:id/quickpay/approve",
+  authorize("ADMIN", "CEO", "OPERATIONS"),
+  validateBody(quickPayReviewSchema),
+  auditLog("APPROVE", "QuickPayEnrollment"),
+  approveQuickPayEnrollment,
+);
+router.post(
+  "/:id/quickpay/decline",
+  authorize("ADMIN", "CEO", "OPERATIONS"),
+  validateBody(quickPayReasonSchema),
+  auditLog("REJECT", "QuickPayEnrollment"),
+  declineQuickPayEnrollment,
+);
+router.post(
+  "/:id/quickpay/withdraw",
+  authorize("ADMIN", "CEO", "OPERATIONS"),
+  validateBody(quickPayReasonSchema),
+  auditLog("UPDATE", "QuickPayEnrollment"),
+  withdrawQuickPayEnrollment,
+);
 
 // v3.8.ajn — Lift a rejection. Clears all 5 rejection fields + the ajm
 // reminder dedup + flips REJECTED → REVIEWING. Carrier is notified.

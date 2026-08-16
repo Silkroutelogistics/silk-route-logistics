@@ -14203,7 +14203,26 @@
 // $0 while sending 3%. NOT yet built, and recorded as such: accessorial rows are
 // written correctly and reach neither the shipper invoice nor the carrier
 // settlement. That is the invoice upgrade.
-export const SRL_VERSION = "3.8.asa";
+// v3.8.asb — the money paths the Quick Pay pilot and the accessorial ledger
+// depend on. Six things that were each individually plausible and collectively
+// meant a settlement could be silently zeroed, a carrier charged a fee they
+// never elected, and an approved accessorial claim reach neither invoice nor
+// settlement.
+//
+// The one to remember: `updatePayment` rebuilt a settlement's gross from three
+// nullable component columns, and the manual-settlement writer deliberately
+// leaves two of them null. Editing the NOTES on a $3,100 manual settlement
+// wrote it to $0. Nothing about the request said "change the amount."
+// Components now only recompute when components are supplied, a prior gross
+// that cannot be read is a 409 rather than a guess, and a settlement that
+// moves without an amount in the request is refused outright.
+//
+// Also here: the carrier and shipper notification bells have never displayed a
+// single notification — both portals destructured a `notifications` key off an
+// endpoint that returns a bare array. The AE console reads the array directly,
+// which is why nobody noticed. That mattered this sprint because the Quick Pay
+// election window is announced through exactly that channel.
+export const SRL_VERSION = "3.8.asb";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

@@ -20,6 +20,8 @@
  * the rate confirmation prints and what CarrierPay.quickPayFeePercent stores.
  */
 
+import { log } from "./logger";
+
 export type CaravanTier = "SILVER" | "GOLD" | "PLATINUM";
 
 /**
@@ -56,11 +58,32 @@ const MONTHLY_LIMIT: Record<CaravanTier, number> = {
 // Same-day is a universal +2% premium on the tier's 7-day fee (§8 "Critical rule").
 export const SAME_DAY_PREMIUM = 2;
 
-/** Normalize any stored tier to the three canonical tiers (GUEST/NONE → Silver entry). */
+/**
+ * Normalize any stored tier to the three canonical tiers (GUEST/NONE → Silver
+ * entry, which is where an unranked carrier genuinely starts).
+ *
+ * Silver is also the HIGHEST-fee rung, so this is the one fallback in the Quick
+ * Pay system that points against the carrier. `CarrierProfile.tier` is
+ * non-nullable with a SILVER default, so a null or unrecognised value reaching
+ * here means a CALLER passed nothing — not that a carrier is unranked — and
+ * that is a bug that should be visible rather than absorbed into a 3% rate.
+ *
+ * It is logged rather than thrown. Throwing here would take down a settlement
+ * write on what is usually a display path, and the caller that matters most
+ * (a live fee) no longer exists: every charge path reads the percentage frozen
+ * on the load, never a tier ladder. So the honest handling is to keep returning
+ * the entry tier and say loudly that nobody told us which tier this was.
+ */
 export function normalizeTier(tier?: string | null): CaravanTier {
   const t = (tier || "SILVER").toUpperCase();
   if (t === "PLATINUM") return "PLATINUM";
   if (t === "GOLD") return "GOLD";
+  if (t !== "SILVER" && t !== "GUEST" && t !== "NONE") {
+    log.warn(
+      { tier },
+      `[QuickPay] normalizeTier fell back to SILVER on an unrecognised tier — SILVER is the highest-fee rung, so verify the caller is passing a real tier`,
+    );
+  }
   return "SILVER";
 }
 
@@ -122,7 +145,7 @@ export function paymentTierFromSpeed(speed: QuickPaySpeed): "FLASH" | "PRIORITY"
  * Fee percent for a carrier's Caravan tier at the speed a PaymentTier row
  * represents. STANDARD is always zero — free tier terms are free (§3).
  *
- * PRICES, DOES NOT AUTHORIZE. As of v3.8.asc this has no production callers,
+ * PRICES, DOES NOT AUTHORIZE. As of v3.8.asb this has no production callers,
  * and that is deliberate: deriving a live fee from a PaymentTier label is the
  * shape of the defect that let `PUT /accounting/payments/:id` deduct 3% from a
  * carrier who had signed no Quick Pay Agreement. A real charge is the
