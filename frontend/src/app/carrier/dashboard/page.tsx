@@ -35,23 +35,70 @@ const TIER_COLORS: Record<string, { bg: string; text: string; border: string; ba
 };
 
 // v3 Quick Pay pricing — 7-day rate shown as the headline (same-day = +2%).
-// v3.8.arn: detention is flat at every tier (tier-based detention is
-// prohibited by CLAUDE.md §5). Safety-bonus row dropped — no backend honors
-// the claim, so it must not be shown to carriers (§5).
-const TIER_BENEFITS: Record<string, { paymentTerms: string; qpSpeed: string; qpFee: string; detentionRate: string }> = {
-  SILVER:   { paymentTerms: "Net-30", qpSpeed: "7-day",  qpFee: "3.0%", detentionRate: "$50/hr" },
-  GOLD:     { paymentTerms: "Net-21", qpSpeed: "7-day",  qpFee: "2.0%", detentionRate: "$50/hr" },
-  PLATINUM: { paymentTerms: "Net-14", qpSpeed: "7-day",  qpFee: "1.0%", detentionRate: "$50/hr" },
+// Only genuinely tier-scoped terms belong in this table. Detention was removed
+// here: it is uniform platform-wide, and presenting it as a tier benefit is the
+// shape CLAUDE.md §5 retired even when the number matches on every row. Safety
+// bonuses are absent for the same reason — no backend honors the claim.
+const TIER_BENEFITS: Record<string, { paymentTerms: string; qpSpeed: string; qpFee: string }> = {
+  SILVER:   { paymentTerms: "Net-30", qpSpeed: "7-day",  qpFee: "3.0%" },
+  GOLD:     { paymentTerms: "Net-21", qpSpeed: "7-day",  qpFee: "2.0%" },
+  PLATINUM: { paymentTerms: "Net-14", qpSpeed: "7-day",  qpFee: "1.0%" },
 };
 
+// Accessorials, ratified 2026-08-14 (CLAUDE.md §5). Uniform across every tier
+// and every equipment type. State each term COMPLETE — a bare "$50/hr" reads in
+// the carrier's favour and sets up a pay dispute on the first held load. Free
+// time is per stop, independent and non-cumulative; the clock starts at arrival.
+const ACCESSORIAL_TERMS = [
+  {
+    label: "Detention",
+    value: "$50/hr, all equipment",
+    detail:
+      "After 2 hours free at each stop, capped at $250 per stop. Free time is counted per stop and does not carry over. The clock starts when you arrive. At the cap, detention converts to layover; the two do not stack for the same hours. Not payable if you arrive outside the appointment window. Notify us 30 minutes before detention begins and again when you depart.",
+  },
+  {
+    label: "TONU",
+    value: "$200 flat",
+    detail:
+      "Payable when we have given you the pickup number and shipper address and cleared you to head to pickup, and we or the shipper then cancel. If you have already arrived, you must have arrived inside the appointment window. Not payable on carrier cancellation or a trailer rejected as non-compliant.",
+  },
+  {
+    label: "Layover",
+    value: "$250 per day",
+    detail: "Billed per day. Detention converts to layover once it reaches the $250 per-stop cap.",
+  },
+  {
+    label: "Lumper",
+    value: "Reimbursed at cost",
+    detail:
+      "Front the lumper and send us the original receipt. We reimburse on that receipt. We do not issue money codes: no Comchek, no EFS, no Comdata, no fuel cards.",
+  },
+];
+
+// CarrierMilestone Prisma enum values. The locked launch model (CLAUDE.md §10)
+// has four states: Silver entry, Gold, Platinum, Founding recognition.
+// M2_PROVEN and M3_RELIABLE are inert legacy values kept for pre-reconciliation
+// rows; caravanService normalizes them to M1_FIRST_LOAD, so they show as the
+// entry state here rather than as gates a carrier has to clear.
 const MILESTONE_NAMES: Record<string, string> = {
-  M1: "New Partner",
-  M2: "Established",
-  M3: "Reliable",
-  M4: "Preferred",
-  M5: "Elite",
-  M6: "Legend",
+  M1_FIRST_LOAD: "New Partner",
+  M2_PROVEN: "New Partner",
+  M3_RELIABLE: "New Partner",
+  M4_PARTNER: "Partner",
+  M5_CORE: "Core",
+  M6_FOUNDING: "Founding",
 };
+
+// Tolerate the short forms older payloads used.
+const MILESTONE_ALIASES: Record<string, string> = {
+  M1: "M1_FIRST_LOAD", M2: "M1_FIRST_LOAD", M3: "M1_FIRST_LOAD",
+  M4: "M4_PARTNER", M5: "M5_CORE", M6: "M6_FOUNDING",
+};
+
+function milestoneLabel(id: string): string {
+  const key = MILESTONE_ALIASES[id] ?? id;
+  return MILESTONE_NAMES[key] ?? key;
+}
 
 export default function CarrierOverviewPage() {
   const { user } = useCarrierAuth();
@@ -93,16 +140,19 @@ export default function CarrierOverviewPage() {
   const alerts = compliance?.alerts || [];
   const criticalAlerts = compliance?.alertsSummary?.critical || 0;
 
-  // Milestone data from scorecard or defaults
-  const currentMilestone = scorecard?.milestone || "M1";
+  // Milestone data from scorecard or defaults. Defaults are the real entry
+  // state and the real first gate (12 loads toward Gold per CLAUDE.md §10) —
+  // the old 10-loads-to-"M2" default published a gate that does not exist.
+  const currentMilestone = scorecard?.milestone || "M1_FIRST_LOAD";
   const milestoneLoads = scorecard?.milestoneLoads || 0;
-  const milestoneTarget = scorecard?.milestoneTarget || 10;
+  const milestoneTarget = scorecard?.milestoneTarget || 12;
   const milestoneProgress = milestoneTarget > 0 ? Math.min((milestoneLoads / milestoneTarget) * 100, 100) : 0;
-  const nextMilestone = scorecard?.nextMilestone || "M2";
+  const nextMilestone = scorecard?.nextMilestone || "M4_PARTNER";
 
   // QP Savings Calculator state
   const [calcAmount, setCalcAmount] = useState(15000);
-  const tierFeePercent = parseFloat(benefits.qpFee) || 3.5;
+  // Fallback is the Silver entry rate. 3.5% is not a published Quick Pay fee.
+  const tierFeePercent = parseFloat(benefits.qpFee) || 3;
   const factoringRate = 4.5;
   const calcFactoringCost = Math.round(calcAmount * (factoringRate / 100));
   const calcQPCost = Math.round(calcAmount * (tierFeePercent / 100));
@@ -142,11 +192,8 @@ export default function CarrierOverviewPage() {
             </div>
           </div>
           <div className="flex items-center gap-2 mt-2">
-            <div className={`w-6 h-6 rounded-md ${tierStyle.bg} flex items-center justify-center`}>
-              <span className="text-[10px] font-bold text-gray-500">{currentMilestone}</span>
-            </div>
-            <span className="text-xs text-gray-500">{MILESTONE_NAMES[currentMilestone] || currentMilestone}</span>
-            <span className="text-[10px] text-gray-700 ml-auto">{milestoneLoads}/{milestoneTarget} loads to {nextMilestone}</span>
+            <span className="text-xs text-gray-500">{milestoneLabel(currentMilestone)}</span>
+            <span className="text-[10px] text-gray-700 ml-auto">{milestoneLoads}/{milestoneTarget} loads toward {milestoneLabel(nextMilestone)}</span>
           </div>
           <div className="h-1.5 bg-[#F5EEE0] rounded-full mt-2 overflow-hidden">
             <div className="h-full bg-[#BA7517] rounded-full transition-all duration-500" style={{ width: `${milestoneProgress}%` }} />
@@ -205,13 +252,34 @@ export default function CarrierOverviewPage() {
               <span className="text-gray-700">Quick Pay Fee</span>
               <span className="font-semibold text-[#0A2540]">{benefits.qpFee}</span>
             </div>
-            <div className="flex justify-between">
-              <span className="text-gray-700">Detention Rate</span>
-              <span className="font-semibold text-[#0A2540]">{benefits.detentionRate}</span>
-            </div>
           </div>
+          <p className="text-[11px] text-gray-500 mt-3 leading-relaxed">
+            Same-day Quick Pay is available on any load at every tier, at your tier fee plus 2%.
+          </p>
         </CarrierCard>
       </div>
+
+      {/* Accessorial terms — uniform at every tier, stated in full */}
+      <CarrierCard padding="p-5" className="mb-6">
+        <div className="flex items-center gap-2 mb-1">
+          <Clock size={16} className="text-[#BA7517]" />
+          <span className="text-[13px] font-bold text-[#0A2540]">Accessorial Terms</span>
+        </div>
+        <p className="text-[11px] text-gray-500 mb-4">
+          The same at every tier and on every equipment type.
+        </p>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {ACCESSORIAL_TERMS.map((t) => (
+            <div key={t.label} className="border border-[#EFE6D3] rounded-lg p-3.5">
+              <div className="flex items-baseline justify-between gap-3 mb-1.5">
+                <span className="text-xs font-bold text-[#0A2540]">{t.label}</span>
+                <span className="text-xs font-semibold text-[#BA7517] text-right">{t.value}</span>
+              </div>
+              <p className="text-[11px] text-gray-600 leading-relaxed">{t.detail}</p>
+            </div>
+          ))}
+        </div>
+      </CarrierCard>
 
       {/* QP Savings Calculator */}
       <CarrierCard padding="p-5" className="mb-6">

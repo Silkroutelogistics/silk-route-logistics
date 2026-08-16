@@ -27,16 +27,22 @@ router.get("/my-status", authorize("CARRIER"), async (req: AuthRequest, res: Res
   const currentScore = latestScore?.overallScore || 0;
   const currentTier = profile.cppTier !== "NONE" ? profile.cppTier : profile.tier;
 
-  // Caravan Partner Program 3-tier thresholds (v3.7.a)
-  // v3.8.arn: safety-bonus perks removed — no backend honors them (CLAUDE.md
-  // §5). Detention perk is now identical at every tier: tier-differentiated
-  // detention is prohibited by §5. Detention terms are flat platform-wide —
-  // see the DETENTION_* constants in services/caravanService.
-  const DETENTION_PERK = "$50/hr detention after 2hr free per stop, capped at $250/stop";
+  // Caravan Partner Program 3-tier ladder (v3.7.a).
+  //
+  // NO SCORE THRESHOLDS. Score-based promotion was retired in v3.8.aii — tiers
+  // advance on the locked loads-and-days gate (CLAUDE.md §10), never on the
+  // Compass Score. This endpoint is CARRIER-authorized, so a `min` / `minScore`
+  // field here is a retired term published straight to a carrier. Do not
+  // reintroduce one.
+  //
+  // NO DETENTION PERK. Detention is uniform platform-wide (CLAUDE.md §5) — see
+  // the DETENTION_* constants in services/caravanService. Listing it as a tier
+  // perk is the tier-differentiated shape §5 retired, even when the number is
+  // the same on every row.
   const tiers = [
-    { name: "PLATINUM", min: 95, bonus: 3, perks: ["Net-14 payment terms", "1% / 3% (same-day) Quick Pay", "Priority freight access", DETENTION_PERK] },
-    { name: "GOLD",     min: 90, bonus: 1.5, perks: ["Net-21 payment terms", "2% / 4% (same-day) Quick Pay", DETENTION_PERK] },
-    { name: "SILVER",   min: 0,  bonus: 0, perks: ["Net-30 payment terms", "3% / 5% (same-day) Quick Pay", "Day-1 entry tier", DETENTION_PERK] },
+    { name: "PLATINUM", bonus: 3, perks: ["Net-14 payment terms", "1% / 3% (same-day) Quick Pay", "Priority freight access"] },
+    { name: "GOLD",     bonus: 1.5, perks: ["Net-21 payment terms", "2% / 4% (same-day) Quick Pay"] },
+    { name: "SILVER",   bonus: 0, perks: ["Net-30 payment terms", "3% / 5% (same-day) Quick Pay", "Day-1 entry tier"] },
   ];
 
   const currentTierInfo = tiers.find(t => t.name === currentTier) || tiers[2];
@@ -57,10 +63,10 @@ router.get("/my-status", authorize("CARRIER"), async (req: AuthRequest, res: Res
     totalBonusEarned,
     pendingBonuses,
     currentTierInfo,
+    // No minScore / pointsNeeded: the next tier is earned on completed loads,
+    // on-time percentage and tenure (CLAUDE.md §10), not on points.
     nextTier: nextTier ? {
       name: nextTier.name,
-      minScore: nextTier.min,
-      pointsNeeded: Math.max(0, nextTier.min - currentScore),
       perks: nextTier.perks,
     } : null,
     scorecards: profile.scorecards,

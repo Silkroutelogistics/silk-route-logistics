@@ -121,7 +121,12 @@ export const createRateConfirmationSchema = z.object({
     rateType: z.enum(["FLAT", "PER_MILE"]).optional(),
     fuelSurcharge: z.number().optional(),
     fuelSurchargeType: z.enum(["FLAT", "PERCENTAGE"]).optional(),
-    detentionRate: z.number().optional(),
+    // Bounded to the ratified uniform rate (CLAUDE.md §5). Detention is $50/hr for
+    // ALL equipment — the retired "$50 dry van / $65 reefer" split was never
+    // implemented, and the renderer's guard only rejects non-positive values, so an
+    // unbounded field left 65 printable on a signed document. .literal keeps the
+    // field optional and shaped as before; only off-policy values are now refused.
+    detentionRate: z.literal(50).optional(),
     accessorials: z.array(z.object({
       type: z.string().optional(),
       description: z.string(),

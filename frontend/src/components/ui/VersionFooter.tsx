@@ -14148,7 +14148,35 @@
 // positions, 108 diff lines, every one an intended voice edit, zero coordinates
 // moved. The artefact header fix went into the GENERATOR, not the file it emits,
 // after the gate proved a fix in a generated file reverts on first regeneration.
-export const SRL_VERSION = "3.8.ary";
+// v3.8.arz — carrier-facing surfaces stop contradicting the terms we ratified.
+// A nine-agent read-only platform audit swept every surface that states or
+// computes detention, TONU, layover, lumper, paperwork, Quick Pay and the
+// covenants, ahead of the invoice and BCA upgrades, so those inherit truth
+// instead of re-deriving it. Highest severity was an authorization hole:
+// POST /carriers/agreements/:id/sign carried authenticate but NO authorize()
+// and resolved the row by agreementId alone, so any authenticated principal —
+// including a carrier, including a DIFFERENT carrier — could execute the
+// instrument that allocates cargo liability and unblocks tendering. Now gated
+// to ADMIN/CEO/OPERATIONS and re-mounted carrier-scoped so ownership is
+// checkable rather than theatre. Next worst was the Driver Academy teaching
+// drivers that lumpers are paid with "a Comchek or EFS code that dispatch
+// issues" — SRL has no money code — and GRADING against it, so the accurate
+// behaviour scored wrong and earned an SRL certificate. A driver following our
+// own training stalls at a Beekeepers dock waiting for a code we cannot issue.
+// Also closed: $150/mo and $300/mo safety bonuses live in the portal scorecard
+// (§5 names both verbatim as prohibited); portal advancement gates at 6x the
+// published load counts; "QUICKPAY EXPRESS — paid within 24 hours, no
+// paperwork" on the login splash, three false claims contradicting the covenant
+// the carrier is about to sign; retired score-to-tier thresholds on a
+// carrier-authorized endpoint; and detention stated in the portal stripped of
+// free time, cap and appointment-window condition, every omission reading in
+// the carrier's favour. seed-sops.ts had not PARSED since v3.7.a — an unescaped
+// backtick pair terminated a template literal, so six months of SOP corrections
+// including this sprint's could never reach the database. tsc never caught it
+// because tsconfig excludes prisma/. NOT closed, needs ratification: the
+// detention->layover conversion the RC promises is unimplemented, TONU pays $0,
+// and accessorials reach neither invoice nor settlement.
+export const SRL_VERSION = "3.8.arz";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

@@ -167,7 +167,7 @@ Approved carriers must hold active FMCSA operating authority of at least 18 mont
 7-factor weighted formula:
 - On-time pickup: 20%
 - On-time delivery: 20%
-- GPS compliance: 15%
+- Tracking compliance: 15%
 - Claims ratio: 15%
 - Communication: 10%
 - Document timeliness: 10%

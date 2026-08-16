@@ -682,8 +682,16 @@ export async function vetCarrier(
 
   // ── 26. Carrier-Broker Agreement ──
   if (existingCarrier) {
+    // templateName MUST be filtered. Quick Pay election writes its own SIGNED
+    // CarrierAgreement row (templateName "quick-pay", carrierAuth.ts), and
+    // /quickpay-election gates only on onboardingStatus === "APPROVED" — it does
+    // not require the BCA. Without this filter an approved carrier who elected
+    // Quick Pay and never signed the BCA reported "Carrier-Broker Agreement →
+    // PASS" on the vetting report, with the 5-point deduction waived. The hard
+    // tender gate was never fooled (complianceMonitorService filters correctly,
+    // v3.8.aqi); what broke was the AE's read of whether the instrument is on file.
     const agreement = await prisma.carrierAgreement.findFirst({
-      where: { carrierId: existingCarrier.id, status: "SIGNED" },
+      where: { carrierId: existingCarrier.id, status: "SIGNED", templateName: "broker-carrier" },
       orderBy: { signedAt: "desc" },
     });
     if (agreement) {

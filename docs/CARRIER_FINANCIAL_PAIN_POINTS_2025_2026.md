@@ -185,7 +185,7 @@ For the 97% of US carriers with 10 trucks or fewer, the math is brutal: average 
 **SRL QP addresses this:** NO -- QP accelerates payment but doesn't address detention itself.
 
 **What's missing:**
-- **Mandatory detention pay policy**: SRL should build detention pay into every rate confirmation. Canonical policy as of v3.8.arn: $50/hour after 2 hours free at each stop, capped at $200 per stop.
+- **Mandatory detention pay policy**: SRL should build detention pay into every rate confirmation. Canonical policy as of v3.8.ars: $50/hour after 2 hours free at each stop, capped at $250 per stop. At the cap detention converts to layover at $250/day; the two do not stack for the same hours.
 - **Detention tracking**: Track shipper detention performance and adjust rates/relationships accordingly
 - **Carrier notification**: Alert carriers about shippers with high detention histories before they accept loads
 - **This is a significant carrier loyalty opportunity**
@@ -372,7 +372,7 @@ Note: These categories overlap. A carrier may factor invoices from smaller broke
 |---|---|---|
 | **No fuel card/discount program** | Factoring companies bundle fuel discounts (5-15 cents/gallon). This is a major reason carriers stay with factoring even at higher fees | Partner with fuel card provider (TCS, Comdata, EFS). Offer SRL carriers 5-10 cents/gallon off. Cost: negotiated volume discount |
 | **No fuel advance at pickup** | Factoring companies offer 50-80% advance at pickup so carriers can fuel for delivery. This is the #1 factoring benefit carriers cite | Build a "Fuel Advance" feature: release 50% of carrier pay at confirmed pickup, remainder minus QP fee at delivery POD |
-| **No detention pay guarantee** | $11.5B industry problem. Carriers eat detention costs regularly | Implement mandatory detention pay on all SRL loads — canonical as of v3.8.arn: $50/hr after 2hr free at each stop, $200/stop cap. Bill to shipper |
+| **No detention pay guarantee** | $11.5B industry problem. Carriers eat detention costs regularly | Implement mandatory detention pay on all SRL loads — canonical as of v3.8.ars: $50/hr after 2hr free at each stop, $250/stop cap, converts to layover at the cap. Bill to shipper |
 | **No emergency advance** | Catastrophic repairs ($5,000-$15,000) can ground a carrier for weeks | Offer emergency advances against future loads for carriers with 10+ completed loads with SRL |
 
 ### Important Gaps (Should Address)
@@ -499,7 +499,7 @@ Supporting points:
 ### Tier 1 -- Launch With (Months 1-3)
 1. **Payment Guarantee language** on all rate confirmations and carrier portal
 2. **True Cost Calculator** comparing SRL QP vs. factoring (carrier portal widget)
-3. **Detention pay policy** -- $50/hour after 2 hours free at each stop, capped at $200 per stop, mandatory on all loads (canonical as of v3.8.arn)
+3. **Detention pay policy** -- $50/hour after 2 hours free at each stop, capped at $250 per stop, mandatory on all loads (canonical as of v3.8.ars)
 4. **Same-day payment tier** at 3.5-4% (in addition to existing 1-3% tiers)
 
 ### Tier 2 -- Add by Month 6

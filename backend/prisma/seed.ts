@@ -1100,8 +1100,11 @@ async function main() {
   await prisma.sOP.createMany({
     data: [
       // ── OPERATIONS ──────────────────────────────
-      // v3.8.arn: §2.3 accessorials reconciled to canonical policy
-      // (detention $50/hr after 2hr free per stop, $200/stop cap; TONU $200 flat; layover $250/day).
+      // §2.3 accessorials reconciled to canonical policy per CLAUDE.md §5
+      // (detention $50/hr after 2hr free per stop, $250/stop cap converting to
+      // layover; TONU $200 flat; layover $250/day). Cap raised $200 → $250 in
+      // v3.8.ars. Lumper is reimbursed on the original receipt. SRL has no
+      // money code and charges no admin fee on it.
       {
         title: "Standard Freight Operations Manual",
         category: "operations",
@@ -1111,7 +1114,7 @@ async function main() {
         description: "Comprehensive guide covering end-to-end freight brokerage operations including load booking, dispatch, tracking, delivery confirmation, and post-delivery processes.",
         content: `1. LOAD LIFECYCLE MANAGEMENT
 1.1 Load Entry & Validation — All loads must include: origin/destination with full address, pickup/delivery windows (date + 2-hour window), equipment type, weight, commodity description, rate, and shipper contact.
-1.2 Load Posting — Posted loads appear on the Load Board within 30 seconds. Reference numbers follow SRL-YYYYMMDD-XXXX format. All posted loads require minimum $1M cargo insurance.
+1.2 Load Posting — Posted loads appear on the Load Board within 30 seconds. Reference numbers follow SRL-YYYYMMDD-XXXX format. Carriers must carry minimum $1M auto liability and $100K cargo (see §3.3 of the Carrier Compliance SOP). Loads valued over $100K require excess cargo coverage before tender.
 1.3 Carrier Assignment — Tender loads to qualified carriers matching equipment type, region, and tier requirements. Platinum/Gold carriers receive priority. Tender expiry: 24 hours standard, 4 hours for urgent.
 1.4 Dispatch — Confirm driver name, phone, truck/trailer numbers. Send dispatch confirmation to shipper within 1 hour of booking. Verify driver has BOL copy and delivery instructions.
 1.5 In-Transit Monitoring — GPS check-ins every 2 hours minimum. Proactive ETA updates to shipper at: pickup, midpoint, and 2 hours before delivery. Escalation for 30+ min late: notify AE → Dispatch Manager.
@@ -1121,12 +1124,12 @@ async function main() {
 2. RATE MANAGEMENT
 2.1 Spot Rates — Check DAT/Truckstop for lane averages. Markup: 12-18% standard, 8-12% for contract shippers.
 2.2 Contract Rates — Reviewed quarterly. Mini-bid process for lanes >10 loads/month. Rate lock periods: 30/60/90 days.
-2.3 Accessorial Charges — Detention: $50/hr after 2-hour free time at each stop, capped at $200 per stop. Lumper: pass-through + $25 admin fee. TONU: $200 flat. Layover: $250/day.
+2.3 Accessorial Charges — Detention: $50/hr, all equipment types, after 2 hours free at each stop, capped at $250 per stop. Free time is per stop, independent and non-cumulative. Clock starts at arrival. Not payable if the carrier arrives outside the appointment window. At the cap detention converts to layover; the two do not stack for the same hours. Carrier notifies SRL 30 minutes before detention begins and again on departure. Lumper: carrier fronts the cost, SRL reimburses on the original receipt. SRL issues no money codes (no Comchek, EFS, or Comdata) and charges no admin fee on lumper. TONU: $200 flat. Layover: $250/day. No tier or equipment differentiation on any of these.
 
 3. EXCEPTION HANDLING
 3.1 Service Failures — Late pickup/delivery: document cause, notify customer immediately, file carrier scorecard deduction.
 3.2 Claims Process — Report within 24 hours. Carrier liable per Carmack Amendment. SRL claim deductible: $250. Maximum claim: lesser of invoice value or $100,000.
-3.3 Load Cancellations — Shipper cancel >24hrs: no charge. <24hrs: $150 admin fee. <2hrs/at pickup: full TONU.
+3.3 Load Cancellations — Carrier side: TONU is $200 flat, payable only when SRL has given the carrier the pickup number and shipper address and cleared them to head to pickup, and SRL or the shipper then cancels. If the carrier already arrived, arrival must have been inside the appointment window. TONU is not payable when the carrier cancels or when the trailer is rejected as non-compliant. Shipper side: SRL has no standing cancellation fee schedule; bill per the customer agreement.
 
 4. DOCUMENT RETENTION
 BOLs, PODs, rate confirmations: 7 years. Carrier packets: duration of relationship + 3 years. Compliance records: per FMCSA requirements.
@@ -1369,10 +1372,12 @@ Before any load is tendered, the carrier must have on file:
 3.4 Carrier scorecard: weekly internal scoring (on-time, communication, claims, documentation).
 
 4. TIER QUALIFICATION
-- Platinum (98+): priority tendering, 3% rate premium, weekly performance bonus
-- Gold (95-97.9): standard priority, 1% rate premium
-- Silver (90-94.9): standard tendering, no premium
-- Bronze (<90): probationary, limited to 2 loads/week, quarterly review
+Tiers are earned on completed work, never on a Compass-score threshold. Each gate is an AND of cumulative-since-join loads, on-time percentage, and tenure days. There is no Bronze tier, no rate premium, and no performance bonus. The tier reward is the pay ladder.
+- Silver: every approved carrier starts here on day 1, any fleet size. Net-30 standard pay, 3% 7-day Quick Pay.
+- Gold: 12 loads, 97% on-time, 90-day tenure floor. Net-21 standard pay, 2% 7-day Quick Pay.
+- Platinum: 20 loads, 98% on-time, 120-day tenure floor. Net-14 standard pay, 1% 7-day Quick Pay, priority freight access.
+- Founding: 30 loads, 98% on-time, 180-day tenure floor. Recognition status. Carrier stays Platinum and the 1% rate locks permanently.
+Compass Score drives scorecard reporting and carrier review. It does not promote a carrier on its own.
 
 5. DEACTIVATION TRIGGERS
 - MC authority revoked or suspended
@@ -1447,7 +1452,7 @@ Last revised: ${new Date().toISOString().split("T")[0]} | Regulatory basis: 49 C
 - Standard: Net 30
 - Preferred customers (>$50K/month volume): Net 45
 - New customers (<90 days): Net 15 or prepay (credit review pending)
-- Quick Pay option: 2% discount for payment within 5 days
+- Early-pay discount: 2% off for customer payment within 5 days. This is a customer AR term. Do not confuse it with carrier Quick Pay in §5 and never quote it to a carrier.
 
 3. CREDIT MANAGEMENT
 3.1 New customer credit application required before first load.
@@ -1463,27 +1468,34 @@ Last revised: ${new Date().toISOString().split("T")[0]} | Regulatory basis: 49 C
 - 91+ days: collections agency or legal action. Write-off requires VP approval.
 
 5. CARRIER PAYMENTS
-5.1 Standard: Net 30 from invoice receipt.
-5.2 Quick Pay (factoring): 97% within 24 hours of approved invoice.
+5.1 Standard pay is free at the carrier's tier terms from approved invoice: Silver Net-30, Gold Net-21, Platinum Net-14.
+5.2 Quick Pay is optional and elected per load: 7 days at the tier fee (Silver 3%, Gold 2%, Platinum 1%), or same day for a universal +2% premium. It is not factoring, carries no advance rate and no holdback, and requires no factoring contract.
 5.3 Deductions: document and communicate before payment. Never deduct without written carrier agreement.
 
 Last revised: ${new Date().toISOString().split("T")[0]} | Next review: Annually | Owner: Controller`,
       },
       {
-        title: "Factoring & Quick Pay Program",
+        title: "Quick Pay Program",
         category: "finance",
-        version: "1.2",
+        version: "1.3",
         author: "Wasih Haider",
         pages: 6,
-        description: "Quick Pay factoring program terms, advance rates by carrier tier, fee schedules, and reconciliation procedures for accelerated carrier payment processing.",
+        description: "Caravan Quick Pay terms, published fees by carrier tier, eligibility, and reconciliation procedures for accelerated carrier payment.",
         content: `1. PROGRAM OVERVIEW
-Silk Route Logistics offers Quick Pay factoring to approved carriers, providing accelerated payment (24-48 hours) at a discount from the invoice face value.
+Quick Pay lets an approved carrier take payment early on a delivered load for a published fee. It is elected per load. Quick Pay is not factoring: SRL buys no receivable, files no UCC, and requires no factoring contract. Never describe it to a carrier as factoring, and never quote an advance rate. The carrier is paid the full load rate minus the published fee, with no holdback.
 
-2. ADVANCE RATES & FEES BY TIER
-- Platinum carriers: 97% advance rate, 3% factoring fee
-- Gold carriers: 96% advance rate, 4% factoring fee
-- Silver carriers: 95% advance rate, 5% factoring fee
-- Bronze carriers: 93% advance rate, 7% factoring fee
+Standard pay is always free at the carrier's tier terms. Quick Pay is the optional alternative.
+
+2. PUBLISHED FEES BY TIER (locked)
+| Tier | Free standard pay | 7-day Quick Pay | Same-day Quick Pay |
+|------|-------------------|-----------------|--------------------|
+| Silver | Net-30 | 3% | 5% (3+2%) |
+| Gold | Net-21 | 2% | 4% (2+2%) |
+| Platinum | Net-14 | 1% | 3% (1+2%) |
+
+Same-day is a universal +2% premium on the tier's 7-day rate. It is not tier-gated. Every tier can elect same-day on any load. There is no Bronze tier and no other fee schedule.
+
+Auto-approve limits: Silver $2,000/load and $15,000/month, Gold $4,000/load and $40,000/month, Platinum $6,000/load and $80,000/month. Anything above the limit routes to AE review.
 
 3. ELIGIBILITY
 3.1 Carrier must be onboarded and approved (APPROVED status).
@@ -1494,11 +1506,11 @@ Silk Route Logistics offers Quick Pay factoring to approved carriers, providing 
 4. PROCESS
 4.1 Carrier submits invoice with POD via portal.
 4.2 AR team verifies: POD matches BOL, no exceptions noted, rate matches confirmation.
-4.3 Approved invoices funded next business day via ACH.
-4.4 Remainder (holdback) released upon customer payment, minus fees.
+4.3 Carrier elects standard pay (free, at tier terms) or Quick Pay (7-day, or same-day for the +2% premium) on the approved invoice.
+4.4 Paid in full via ACH on the elected schedule, less the published Quick Pay fee if elected. No holdback. SRL does not retain a remainder against customer payment.
 
 5. RECONCILIATION
-Monthly statement sent to carrier showing: invoices factored, advance amounts, fees withheld, holdback releases, net payments.
+Monthly statement sent to carrier showing: invoices paid, pay schedule elected per load, Quick Pay fees applied, and net payments.
 
 Last revised: ${new Date().toISOString().split("T")[0]} | Owner: Accounting Manager`,
       },

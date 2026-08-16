@@ -406,8 +406,12 @@ Can I ask a few questions about your current freight setup?"
   },
 
   // ─── CARRIER GROWTH STRATEGY ────────────────────────────────
-  // v3.8.arn: tier-table Detention column flattened to canonical $50/hr + $200/stop cap.
-  // Detention is not tier-differentiated (tier-based detention is prohibited by CLAUDE.md §5).
+  // Tier table carries the pay ladder only (CLAUDE.md §8). The Detention,
+  // Safety Bonus, FSC pass-through and Referral columns were dropped rather
+  // than corrected: all four describe programs that do not exist and are
+  // prohibited by §5. Detention is uniform and non-tiered: $50/hr, all
+  // equipment, after 2 free hours at each stop, $250/stop cap (v3.8.ars).
+  // Entry is performance-gated per §10; the fleet-size shortcut is retired.
   {
     title: "Carrier Onboarding & Growth Playbook",
     category: "operations",
@@ -443,9 +447,9 @@ Silk Route Logistics is a carrier-first brokerage. Happy carriers = reliable ser
 ### Carrier Value Proposition
 Tell carriers:
 1. "Consistent freight — we have steady volume, not just spot loads"
-2. "QuickPay available — get paid in 2-5 days instead of Net 30"
-3. "Fuel discount program — save on every gallon"
-4. "Performance bonuses — earn more as your score improves"
+2. "Standard pay is free and gets faster as you advance: Net-30 at Silver, Net-21 at Gold, Net-14 at Platinum. Quick Pay is optional, 7 days at your tier rate or same day for two points more. No factoring contract either way"
+3. "Detention pays automatically. $50 an hour after two free hours at each stop, capped at $250 per stop. Same rate for every carrier, no haggling"
+4. "Advancement is published and identical for everyone: 12 loads, 97% on-time and 90 days moves you to Gold"
 5. "Easy self-service portal — track loads, payments, documents online"
 6. "Transparent scoring — you always know where you stand"
 
@@ -502,36 +506,53 @@ Tell carriers:
 
 ### Tier Structure
 
-| Tier         | Entry                                  | Payment Terms | 7-day QP | Same-day QP  | Detention             | Safety Bonus  | FSC pass-through | Referral | Priority Freight |
-|--------------|----------------------------------------|---------------|----------|--------------|-----------------------|---------------|------------------|----------|------------------|
-| **SILVER**   | Day 1 on onboarding (1-4 trucks)       | Net-30 free   | 3.0%     | 5.0% (3+2%)  | $50/hr, $200/stop cap | —             | loaded miles     | $250     | No               |
-| **GOLD**     | 5-10 trucks OR M4 milestone            | Net-21 free   | 2.0%     | 4.0% (2+2%)  | $50/hr, $200/stop cap | $150/mo       | loaded + empty   | $500     | No               |
-| **PLATINUM** | 11+ trucks OR M5 milestone             | Net-14 free   | 1.0%     | 3.0% (1+2%)  | $50/hr, $200/stop cap | $300/mo       | all miles        | $750     | Yes              |
+| Tier         | Entry                                          | Payment Terms | 7-day QP | Same-day QP  | Priority Freight |
+|--------------|------------------------------------------------|---------------|----------|--------------|------------------|
+| **SILVER**   | Day 1 on approval, any fleet size              | Net-30 free   | 3.0%     | 5.0% (3+2%)  | No               |
+| **GOLD**     | 12 loads, 97% on-time, 90-day tenure floor     | Net-21 free   | 2.0%     | 4.0% (2+2%)  | No               |
+| **PLATINUM** | 20 loads, 98% on-time, 120-day tenure floor    | Net-14 free   | 1.0%     | 3.0% (1+2%)  | Yes              |
 
-GUEST tier (not onboarded yet) and NONE are retained as non-program states.
+Every approved carrier starts at Silver regardless of fleet size. Fleet size does not
+promote a carrier and does not accelerate any threshold. Advancement is an AND of
+cumulative-since-join loads, on-time percentage, and tenure days.
+
 Same-day QP is a universal **+2% premium** over the tier's 7-day rate — every tier can elect same-day.
-Detention is a **flat, non-tiered** accessorial: 2 hours free at each stop, then $50/hr, capped at $200 per stop.
+
+**Do not quote any of these to a carrier. They do not exist:** tier-based safety
+bonuses, referral bonuses, tier-graduated FSC pass-through, tier-based detention,
+a Bronze tier, a Guest tier, or a score-to-tier mapping. Accessorials are uniform
+for every carrier at every tier (see Accessorials below).
+
+### Accessorials (uniform, no tier or equipment differentiation)
+
+- **Detention** — $50/hr, all equipment types, after 2 hours free at each stop, capped at $250 per stop. Free time is per stop, independent and non-cumulative. Clock starts at arrival. Not payable if the carrier arrived outside the appointment window. At the cap detention converts to layover; the two do not stack for the same hours. Carrier notifies SRL 30 minutes before detention begins and again on departure.
+- **TONU** — $200 flat. Payable only when SRL gave the pickup number and shipper address and cleared the carrier to head to pickup, and SRL or the shipper then cancelled. If the carrier already arrived, arrival must have been inside the appointment window. Not payable on carrier cancellation or a trailer rejected as non-compliant.
+- **Layover** — $250 per day.
+- **Lumper** — carrier fronts the cost, SRL reimburses on the original receipt. SRL issues no money codes (no Comchek, EFS, or Comdata). None exists to issue.
+- **Paperwork** — signed BOL, POD and supporting paperwork due within 24 hours of delivery.
 
 ### Milestone Progression
 
-| Milestone            | Requirement                                                         | Reward                                                               |
-|----------------------|---------------------------------------------------------------------|----------------------------------------------------------------------|
-| M1 First Load        | Complete first load                                                 | Silver tier confirmed                                                |
-| M2 Proven            | 30 days, 10 loads, 95% on-time                                      | QP auto-approve expanded, priority loads                             |
-| M3 Reliable          | 90 days, 30 loads, 96% on-time                                      | QP fee eases 0.5%                                                    |
-| M4 Partner           | 180 days, 75 loads, 97% on-time, 1 referral                         | Promotion to **Gold**                                                |
-| M5 Core              | 360 days, 150 loads, 98% on-time, 3 strategic lanes                 | Promotion to **Platinum**                                            |
-| M6 Founding          | 720 days, 300 loads                                                 | Permanent 1% QP rate, founding-carrier recognition                   |
+| Milestone       | Requirement                                | Outcome                                                          |
+|-----------------|--------------------------------------------|------------------------------------------------------------------|
+| M1 First Load   | Complete first load                        | Silver tier confirmed                                            |
+| M4 Partner      | 12 loads, 97% on-time, 90-day tenure       | Promotion to **Gold** — Net-21 + 2% 7-day QP                     |
+| M5 Core         | 20 loads, 98% on-time, 120-day tenure      | Promotion to **Platinum** — Net-14 + 1% 7-day QP, priority freight |
+| M6 Founding     | 30 loads, 98% on-time, 180-day tenure      | Recognition status. Carrier stays Platinum; 1% QP locked permanently |
+
+Load counts are cumulative since join. Each gate is an AND of all three conditions.
+M2_PROVEN and M3_RELIABLE are inert legacy enum values only. There is no M2 or M3
+gate and neither carries a reward. Do not describe them to a carrier.
 
 ### 7-Factor Compass Score (Drives Tier Advancement)
 
 The Caravan tier is earned through performance, not fleet size. Every carrier's score
-is the weighted average of seven measurable factors. Fleet size can accelerate milestone
-thresholds but does not bypass earning the tier.
+is the weighted average of seven measurable factors. Score does not promote a carrier
+on its own. The loads-and-days gate above is the only advancement path.
 
 1. **On-Time Pickup** — 20%
 2. **On-Time Delivery** — 20%
-3. **GPS Compliance** — 15%
+3. **Tracking Compliance** — 15%
 4. **Claims Ratio (inverted)** — 15%
 5. **Communication Score** — 10%
 6. **Document Timeliness** — 10%
@@ -558,7 +579,7 @@ or same-day for a +2% universal premium on top of the tier rate.
 | PLATINUM    | 1.0%         | 3.0% (1+2%)     | $6,000/load        | $80,000     |
 
 Per-load override: AEs can elect a non-default rate on specific loads (e.g. competitive match,
-volume bonus, strategic lane). Every override is recorded in `LoadQuickPayOverride` for audit;
+volume bonus, strategic lane). Every override is recorded in \`LoadQuickPayOverride\` for audit;
 monthly variance reports flag anomalies to the CEO.
 
 ### Process
@@ -575,15 +596,20 @@ QuickPay fees are SRL revenue. At scale:
 
 ---
 
-## Part 5: Fuel Discount Program
+## Part 5: Fuel Discount Program (ROADMAP, NOT LIVE)
+
+**Do not offer this to a carrier.** No fuel network partnership is signed, no fuel
+card exists, and no discount is payable today. §5 lists a fuel card program as a
+roadmap item only. The figures below are planning targets for a future negotiation,
+not terms SRL can honor. Everything in this Part stays internal until it is built.
 
 ### Program Overview
-SRL negotiates bulk fuel pricing and passes discounts to CPP carriers. This is a loyalty incentive — carriers save money by staying in the SRL network.
+The plan is to negotiate bulk fuel pricing and pass discounts to CPP carriers as a
+loyalty incentive.
 
-### Discount Tiers
+### Target Discount Tiers (planning figures, not offered)
 | Tier | Fuel Discount |
 |------|--------------|
-| GUEST | Not eligible |
 | SILVER | $0.03/gallon off retail |
 | GOLD | $0.05/gallon off retail |
 | PLATINUM | $0.08/gallon off retail |
@@ -618,7 +644,7 @@ A truck averaging 6 MPG, driving 10,000 miles/month:
 - **PLATINUM**: Quarterly business review with Operations Director
 - **GOLD**: Monthly check-in call with dispatch
 - **SILVER**: Bi-monthly email with lane opportunities
-- **GUEST**: Monthly newsletter with tips + available freight
+- **Applicants not yet approved**: Monthly newsletter with tips + available freight
 
 ### Carrier Churn Prevention
 Red flags to watch:

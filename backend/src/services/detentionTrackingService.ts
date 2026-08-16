@@ -256,7 +256,10 @@ export async function getFacilityDetentionWarning(
   const risk = avg > 240 ? "HIGH" : avg > 180 ? "MEDIUM" : "LOW";
   const hrs = (avg / 60).toFixed(1);
   const warning = risk === "HIGH"
-    ? `High detention risk: ${facilityName} averages ${hrs} hours wait time (${profile.totalRatings} visits). Consider requesting appointment or adding detention pay.`
+    // Detention is automatic and uniform on every SRL load ($50/hr after 2 free hours
+    // at each stop, $250/stop cap). It is never negotiated per load, so this advisory
+    // tells the driver what to do on arrival rather than implying a rate to ask for.
+    ? `High detention risk: ${facilityName} averages ${hrs} hours wait time (${profile.totalRatings} visits). Get a firm appointment if you can, log your arrival time, and call SRL 30 minutes before free time runs out.`
     : `Moderate detention: ${facilityName} averages ${hrs} hours (${profile.totalRatings} visits).`;
 
   return { avgWaitMinutes: avg, detentionRisk: risk, warning };

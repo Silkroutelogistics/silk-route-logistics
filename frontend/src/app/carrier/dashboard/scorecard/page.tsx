@@ -1,14 +1,27 @@
 "use client";
 
-import { Trophy, TrendingUp, Award, Star, Target, CheckCircle2, Circle } from "lucide-react";
+import { Trophy, TrendingUp, Award, Target, CheckCircle2, Circle } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { CarrierCard } from "@/components/carrier";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 
 // Caravan Partner Program 3-tier (v3.7.a). Silver is Day-1 entry tier.
+//
+// There is deliberately NO score-to-tier threshold table here. Score-based
+// promotion was retired in v3.8.aii; tiers advance on the locked loads /
+// on-time / tenure gate (CLAUDE.md §10). A "GOLD: 90" style map on a carrier
+// surface publishes a gate that does not exist. Do not reintroduce one.
 const TIERS = ["SILVER", "GOLD", "PLATINUM"] as const;
-const TIER_THRESHOLDS: Record<string, number> = { SILVER: 0, GOLD: 90, PLATINUM: 95 };
+
+// Pay ladder per CLAUDE.md §8 (LOCKED). 7-day Quick Pay is the headline rate;
+// same-day is a universal +2% at every tier.
+const TIER_PAY: Record<string, string> = {
+  SILVER: "Net-30 · QP 3%",
+  GOLD: "Net-21 · QP 2%",
+  PLATINUM: "Net-14 · QP 1%",
+};
+
 const TIER_COLORS: Record<string, string> = {
   PLATINUM: "bg-[#0A2540] text-[#C5A572] border-[#0A2540]",
   GOLD: "bg-[#FAEEDA] text-[#BA7517] border-[#C5A572]",
@@ -28,13 +41,27 @@ const KPI_LABELS: Record<string, string> = {
   claimRatio: "Claim Ratio",
   documentSubmissionTimeliness: "Doc Timeliness",
   acceptanceRate: "Acceptance Rate",
-  gpsCompliancePct: "GPS Compliance",
+  // Published factor name is "Tracking compliance" (CLAUDE.md §9) — location
+  // visibility from any source, not GPS only. DB column name is unchanged.
+  gpsCompliancePct: "Tracking Compliance",
 };
 
 // ─── Milestone Definitions ────────────────────────────────────────────────────
 
+// Locked launch model (CLAUDE.md §10). Four states: Silver entry, Gold,
+// Platinum, Founding recognition. Each transition is an AND of cumulative
+// loads since joining, on-time percentage, and tenure days. IDs are the
+// CarrierMilestone Prisma enum values so this ladder and
+// caravanService.checkMilestoneAdvancement cannot drift apart.
+//
+// Retired and absent by design: safety bonuses (no SafetyScore tracking or
+// payout backend exists), referral requirements, "3 active lanes", the
+// "QP fee eases 0.5%" step (no half-point exists in §8), and the M2_PROVEN /
+// M3_RELIABLE gates. Those two enum values survive only on pre-reconciliation
+// rows and normalize to the entry state.
 interface MilestoneDef {
   id: string;
+  badge: string;
   name: string;
   description: string;
   loadsRequired: number;
@@ -44,13 +71,18 @@ interface MilestoneDef {
 }
 
 const MILESTONES: MilestoneDef[] = [
-  { id: "M1", name: "New Partner",   description: "Welcome to the Caravan Partner Program",  loadsRequired: 0,   onTimePctRequired: 0,  daysRequired: 0,   reward: "Silver tier — Net-30, 7-day Quick Pay at 3%" },
-  { id: "M2", name: "Proven",        description: "30 days of consistent delivery",          loadsRequired: 10,  onTimePctRequired: 95, daysRequired: 30,  reward: "QP auto-approve expanded, priority loads" },
-  { id: "M3", name: "Reliable",      description: "90 days of proven reliability",           loadsRequired: 30,  onTimePctRequired: 96, daysRequired: 90,  reward: "QP fee eases 0.5%" },
-  { id: "M4", name: "Partner",       description: "180 days, Gold tier eligible",            loadsRequired: 75,  onTimePctRequired: 97, daysRequired: 180, reward: "Gold tier — Net-21, 7-day QP 2%, $150/mo safety" },
-  { id: "M5", name: "Core",          description: "360 days, Platinum tier eligible",        loadsRequired: 150, onTimePctRequired: 98, daysRequired: 360, reward: "Platinum tier — Net-14, 7-day QP 1%, $300/mo safety, priority freight" },
-  { id: "M6", name: "Founding",      description: "720 days — the highest honor",            loadsRequired: 300, onTimePctRequired: 98, daysRequired: 720, reward: "Permanent 1% QP rate, founding-carrier recognition" },
+  { id: "M1_FIRST_LOAD", badge: "Silver",   name: "New Partner", description: "Silver tier, active from day one", loadsRequired: 0,  onTimePctRequired: 0,  daysRequired: 0,   reward: "Net-30 standard pay, 7-day Quick Pay at 3%" },
+  { id: "M4_PARTNER",    badge: "Gold",     name: "Partner",     description: "Gold gate cleared",                loadsRequired: 12, onTimePctRequired: 97, daysRequired: 90,  reward: "Net-21 standard pay, 7-day Quick Pay at 2%" },
+  { id: "M5_CORE",       badge: "Platinum", name: "Core",        description: "Platinum gate cleared",            loadsRequired: 20, onTimePctRequired: 98, daysRequired: 120, reward: "Net-14 standard pay, 7-day Quick Pay at 1%, priority freight access" },
+  { id: "M6_FOUNDING",   badge: "Founding", name: "Founding",    description: "Recognition on top of Platinum",   loadsRequired: 30, onTimePctRequired: 98, daysRequired: 180, reward: "1% Quick Pay locked permanently. Tier stays Platinum." },
 ];
+
+// Legacy and short-form milestone ids seen on older rows and payloads.
+const MILESTONE_ALIASES: Record<string, string> = {
+  M1: "M1_FIRST_LOAD", M2: "M1_FIRST_LOAD", M3: "M1_FIRST_LOAD",
+  M2_PROVEN: "M1_FIRST_LOAD", M3_RELIABLE: "M1_FIRST_LOAD",
+  M4: "M4_PARTNER", M5: "M5_CORE", M6: "M6_FOUNDING",
+};
 
 function scoreColor(s: number) {
   return s >= 80 ? "text-[#2F7A4F]" : s >= 60 ? "text-[#B07A1A]" : "text-[#9B2C2C]";
@@ -62,16 +94,10 @@ function barColor(v: number, invert = false) {
 function ringStroke(s: number) {
   return s >= 80 ? "#2F7A4F" : s >= 60 ? "#B07A1A" : "#9B2C2C";
 }
-function benchmarkLabel(s: number) {
-  if (s >= 90) return "Top 5%";
-  if (s >= 80) return "Top 15%";
-  if (s >= 70) return "Top 30%";
-  if (s >= 60) return "Top 50%";
-  return "Below average";
-}
-
 function getMilestoneIndex(id: string): number {
-  return MILESTONES.findIndex(m => m.id === id);
+  const key = MILESTONE_ALIASES[id] ?? id;
+  const idx = MILESTONES.findIndex(m => m.id === key);
+  return idx >= 0 ? idx : 0;
 }
 
 export default function ScorecardPage() {
@@ -87,12 +113,12 @@ export default function ScorecardPage() {
     <div className="flex items-center justify-center h-64 text-gray-700 text-sm">No scorecard data available.</div>
   );
 
-  const { currentScore, currentTier: rawTier, bonusPercentage, pointsToNextTier, nextTier: rawNextTier, metrics, history, bonuses } = data;
+  // pointsToNextTier / nextTierThreshold are still returned by the API but are
+  // deliberately not read: they are score-to-tier values, and score does not
+  // promote a carrier (CLAUDE.md §10).
+  const { currentScore, currentTier: rawTier, bonusPercentage, metrics, history, bonuses } = data;
   const currentTier = CARAVAN_TIER_MAP[rawTier] || "SILVER";
-  const nextTier = rawNextTier ? (CARAVAN_TIER_MAP[rawNextTier] || rawNextTier) : null;
 
-  const currentThreshold = TIER_THRESHOLDS[currentTier] || 0;
-  const nextThreshold = nextTier ? (TIER_THRESHOLDS[nextTier] || 100) : 100;
   const circumference = 2 * Math.PI * 54;
   const strokeDash = (currentScore / 100) * circumference;
 
@@ -103,7 +129,7 @@ export default function ScorecardPage() {
   }));
 
   // Milestone data
-  const currentMilestoneId = data.milestone || "M1";
+  const currentMilestoneId = data.milestone || "M1_FIRST_LOAD";
   const currentMilestoneIdx = getMilestoneIndex(currentMilestoneId);
   const currentMilestone = MILESTONES[currentMilestoneIdx] || MILESTONES[0];
   const nextMilestoneObj = currentMilestoneIdx < MILESTONES.length - 1 ? MILESTONES[currentMilestoneIdx + 1] : null;
@@ -142,32 +168,32 @@ export default function ScorecardPage() {
           <p className="text-sm text-gray-500 mt-1">{currentTier} Tier &middot; {bonusPercentage}% Bonus Rate</p>
         </CarrierCard>
 
+        {/* Pay ladder. Not a score bar: score does not move a carrier between
+            tiers. The gate is loads + on-time + tenure, shown under Milestones. */}
         <CarrierCard>
           <div className="flex items-center gap-2 mb-3">
             <TrendingUp className="w-4 h-4 text-[#BA7517]" />
-            <h2 className="font-semibold text-[#0A2540] text-sm">Tier Progress</h2>
+            <h2 className="font-semibold text-[#0A2540] text-sm">Pay Ladder</h2>
           </div>
-          <div className="relative h-3 bg-[#F5EEE0] rounded-full mb-2 overflow-hidden">
+          <div className="grid grid-cols-3 gap-2 mb-3">
             {TIERS.map((t) => (
-              <div key={t} className="absolute top-0 h-full border-r border-white/60"
-                style={{ left: `${TIER_THRESHOLDS[t]}%` }} />
+              <div key={t}
+                className={`rounded-lg border px-2 py-2.5 text-center ${
+                  t === currentTier ? TIER_COLORS[t] : "bg-[#F5EEE0] text-gray-500 border-[#EFE6D3]"
+                }`}>
+                <div className="text-[11px] font-bold">{t}</div>
+                <div className="text-[10px] mt-0.5 whitespace-nowrap">{TIER_PAY[t]}</div>
+              </div>
             ))}
-            <div className="h-full bg-[#BA7517] rounded-full transition-all duration-500"
-              style={{ width: `${currentScore}%` }} />
           </div>
-          <div className="flex justify-between text-[10px] text-gray-700 mb-3">
-            {TIERS.map((t) => <span key={t}>{t} ({TIER_THRESHOLDS[t]})</span>)}
-          </div>
-          {nextTier && nextTier !== currentTier ? (
-            <p className="text-sm text-gray-600">{pointsToNextTier} points to <span className="font-semibold text-[#0A2540]">{nextTier}</span></p>
-          ) : (
-            <p className="text-sm text-[#2F7A4F] font-medium">Maximum tier achieved!</p>
-          )}
-          {/* Benchmark */}
-          <div className="mt-4 pt-3 border-t border-[#F5EEE0] flex items-center gap-2">
-            <Star className="w-4 h-4 text-[#BA7517]" />
-            <p className="text-sm text-gray-600">
-              Your score: <span className="font-semibold text-[#0A2540]">{currentScore}</span> &mdash; <span className="font-semibold text-[#BA7517]">{benchmarkLabel(currentScore)}</span> of SRL carriers
+          <p className="text-xs text-gray-600 leading-relaxed">
+            Same-day Quick Pay is available on any load at every tier, at your tier fee plus 2%.
+          </p>
+          <div className="mt-3 pt-3 border-t border-[#F5EEE0]">
+            <p className="text-xs text-gray-600 leading-relaxed">
+              Your Compass Score measures service quality. It does not move your tier on its own.
+              Tiers advance on completed loads, on-time percentage, and time with SRL. The exact
+              gate is below.
             </p>
           </div>
         </CarrierCard>
@@ -179,7 +205,7 @@ export default function ScorecardPage() {
           <Target className="w-5 h-5 text-[#BA7517]" />
           <h2 className="font-semibold text-[#0A2540] text-sm">Milestones</h2>
           <span className={`ml-auto px-2.5 py-0.5 rounded-full text-[11px] font-bold border ${TIER_COLORS[currentTier] || TIER_COLORS.SILVER}`}>
-            {currentMilestone.id}: {currentMilestone.name}
+            {currentMilestone.name}
           </span>
         </div>
 
@@ -187,7 +213,7 @@ export default function ScorecardPage() {
         <div className="bg-[#FAEEDA] border border-[#C5A572]/40 rounded-xl p-4 mb-4">
           <div className="flex items-center gap-3 mb-2">
             <div className="w-11 h-11 rounded-full bg-[#FAEEDA] flex items-center justify-center">
-              <span className="text-sm font-bold text-[#BA7517]">{currentMilestone.id}</span>
+              <span className="text-[10px] font-bold text-[#BA7517] text-center leading-tight">{currentMilestone.badge}</span>
             </div>
             <div>
               <div className="text-sm font-bold text-[#0A2540]">{currentMilestone.name}</div>
@@ -200,7 +226,7 @@ export default function ScorecardPage() {
         {nextMilestoneObj && (
           <div className="mb-4">
             <div className="flex items-center justify-between mb-1.5">
-              <span className="text-xs font-semibold text-[#0A2540]">Progress to {nextMilestoneObj.id}: {nextMilestoneObj.name}</span>
+              <span className="text-xs font-semibold text-[#0A2540]">Progress to {nextMilestoneObj.badge}</span>
               <span className="text-[11px] text-gray-700">{milestoneLoads}/{nextMilestoneObj.loadsRequired} loads</span>
             </div>
             <div className="h-3 bg-[#F5EEE0] rounded-full overflow-hidden">
@@ -214,7 +240,8 @@ export default function ScorecardPage() {
         {/* Requirements Checklist */}
         {nextMilestoneObj && (
           <div className="mb-4">
-            <h3 className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#BA7517] mb-2">Requirements for {nextMilestoneObj.id}</h3>
+            <h3 className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#BA7517] mb-2">Requirements for {nextMilestoneObj.badge}</h3>
+            <p className="text-[11px] text-gray-600 mb-2 leading-relaxed">All three are required. Loads count from the day you joined.</p>
             <div className="space-y-2">
               <div className="flex items-center gap-2">
                 {milestoneLoads >= nextMilestoneObj.loadsRequired ? (
@@ -256,7 +283,7 @@ export default function ScorecardPage() {
             <div className="flex items-center gap-2">
               <Award size={14} className="text-[#2F7A4F] flex-shrink-0" />
               <span className="text-xs font-semibold text-[#2F7A4F]">
-                At {nextMilestoneObj.id}: {nextMilestoneObj.reward}
+                At {nextMilestoneObj.badge}: {nextMilestoneObj.reward}
               </span>
             </div>
           </div>
@@ -275,10 +302,10 @@ export default function ScorecardPage() {
                     isCurrent ? "bg-white border-[#C5A572] text-[#BA7517]" :
                     "bg-gray-50 border-[#EFE6D3] text-gray-400"
                   }`}>
-                    {m.id}
+                    {i + 1}
                   </div>
                   <span className={`text-[9px] mt-1 text-center leading-tight ${isCurrent ? "font-bold text-[#0A2540]" : "text-gray-400"}`}>
-                    {m.name}
+                    {m.badge}
                   </span>
                 </div>
               );

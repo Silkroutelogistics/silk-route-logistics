@@ -10,7 +10,7 @@ import { useCarrierAuth } from "@/hooks/useCarrierAuth";
 
 const FEATURE_PILLS = [
   { icon: "M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7", label: "Load Board" },
-  { icon: "M13 10V3L4 14h7v7l9-11h-7z", label: "QuickPay" },
+  { icon: "M13 10V3L4 14h7v7l9-11h-7z", label: "Quick Pay" },
   { icon: "M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z", label: "Scorecard" },
   { icon: "M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z M15 12a3 3 0 11-6 0 3 3 0 016 0z", label: "Self-Service" },
 ];
@@ -18,7 +18,12 @@ const FEATURE_PILLS = [
 const SLIDES = [
   { label: "PARTNER DASHBOARD", text: "Your loads, payments, and performance in one place" },
   { label: "PERFORMANCE SCORECARD", text: "Track your KPIs and climb the tier ladder" },
-  { label: "QUICKPAY EXPRESS", text: "Get paid within 24 hours, no paperwork" },
+  // "QuickPay Express" was a retired tier name, "24 hours" matched no published
+  // Quick Pay speed, and "no paperwork" contradicted both the agreement the
+  // carrier signs and the document-timeliness factor they are graded on.
+  // Restated from the honest claim in CLAUDE.md §4 #3. Keep in sync with the
+  // carrier variant in components/auth/LoginBrandPanel.tsx.
+  { label: "QUICK PAY", text: "Optional per-load Quick Pay. No factoring contract required." },
 ];
 
 const INSIGHTS = [

@@ -442,7 +442,13 @@
                Was redundant with the Caravan Journey animation at the
                top of the page (M0/M1-M3/M4/M5 tabs + M6 QP LOCKED
                plaque). Strip also carried label errors (M5 mislabeled
-               "Core — Platinum"; M6 labeled invented "Founding"). -->
+               "Core — Platinum"; M6 labeled invented "Founding").
+
+               Correction (2026-08-15): the second half of that note is itself
+               wrong and left the M5/M6 inversion in the phase-3 eyebrow below.
+               Per §10 the enum mapping is M5_CORE = Platinum and
+               M6_FOUNDING = Founding. "Founding" is canonical, not invented.
+               Kept as a record per §3.12 rather than rewritten. -->
 
           <div style="text-align:center;margin-top:40px" class="animate-on-scroll">
             <a href="/onboarding" class="btn-primary btn-large" style="display:inline-flex;align-items:center;gap:8px">
@@ -808,7 +814,10 @@
                 <div class="cj-gate"><span class="cj-glabel">Sustained</span><span class="cj-gval">Sustained on-time performance</span></div>
                 <div class="cj-gate"><span class="cj-glabel">Loyalty</span><span class="cj-gval">Long-tenure carrier &middot; advisory voice at Founding</span></div>
               </div>
-              <div class="cj-unlock"><span class="cj-unlock-eyebrow">Platinum unlocks &middot; M6 Core locks 1% permanently</span><span class="cj-unlock-pill">Net-14 &middot; 1% Quick Pay</span></div>
+              <!-- Per §10 the enum mapping is M5_CORE = Platinum, M6_FOUNDING = Founding.
+                   The eyebrow had the two inverted ("M6 Core"). M-numbering stays dropped
+                   on carrier-facing copy per v3.8.aij, so this reads "Founding". -->
+              <div class="cj-unlock"><span class="cj-unlock-eyebrow">Platinum unlocks &middot; Founding locks 1% permanently</span><span class="cj-unlock-pill">Net-14 &middot; 1% Quick Pay</span></div>
             </article>
           </div>
         </div>

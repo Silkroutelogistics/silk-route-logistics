@@ -217,8 +217,10 @@ This SOP covers setting up shipper portal access and EDI connections for custome
 - Webhooks available for real-time event notifications`,
   },
 
-  // v3.8.arn: Accessorial Pricing reconciled to canonical (detention $50/hr + $200/stop cap,
-  // TONU $200 flat — not distance-scaled, layover $250/day).
+  // Accessorial Pricing reconciled to canonical per CLAUDE.md §5 (detention $50/hr
+  // + $250/stop cap converting to layover, TONU $200 flat — not distance-scaled,
+  // layover $250/day). Cap raised $200 → $250 in v3.8.ars. Lumper is reimbursed on
+  // the original receipt; SRL has no money code and charges no admin fee on it.
   {
     title: "Rate Engine & Pricing Methodology",
     category: "Finance",
@@ -252,8 +254,8 @@ This SOP defines how SRL calculates freight rates, maintains margin targets, and
    - Expedited: 18% minimum, 25% target
 
 ### Accessorial Pricing
-- Detention (after 2hr free time at each stop): $50/hour, capped at $200 per stop
-- Lumper: Pass-through at cost + $25 admin fee
+- Detention (after 2hr free time at each stop): $50/hour, all equipment types, capped at $250 per stop. Free time is per stop, independent and non-cumulative. At the cap detention converts to layover; the two do not stack for the same hours
+- Lumper: Carrier fronts the cost, SRL reimburses on the original receipt. No money code (no Comchek, EFS, or Comdata), no admin fee
 - TONU (Truck Ordered Not Used): $200 flat
 - Layover: $250/day
 - Driver assist: $50-100 per stop
@@ -505,17 +507,17 @@ This SOP defines the KPIs, dashboards, and reporting cadences used to manage SRL
 - Gross Margin %: Target 15% blended (FTL 12-18%, LTL 20-28%)
 - Revenue per Load: Track monthly trend
 - Days Sales Outstanding (DSO): Target < 35 days
-- Carrier Payment Cycle: Standard Net 30, QuickPay Net 3
+- Carrier Payment Cycle: standard pay free at tier terms (Silver Net-30, Gold Net-21, Platinum Net-14); Quick Pay optional at 7 days, or same day for a +2% premium
 - Bad Debt Rate: Target < 0.5% of revenue
 
-### Carrier Performance (Scorecard)
+### Carrier Performance (Compass Score — published weights, quote these exactly)
 - On-Time Pickup: 20% of score
-- On-Time Delivery: 25% of score
-- Communication/Check Calls: 15% of score
+- On-Time Delivery: 20% of score
+- Tracking Compliance: 15% of score
 - Claim Ratio: 15% of score (inverted — lower is better)
+- Communication/Check Calls: 10% of score
 - Document Timeliness: 10% of score
 - Acceptance Rate: 10% of score
-- GPS Compliance: 5% of score
 
 ### Customer Performance
 - Shipment Volume: monthly trend
@@ -647,7 +649,7 @@ This SOP ensures SRL maintains all required federal and state licenses, bonds, a
 
 ## Federal Requirements
 
-### FMCSA Broker Authority (MC# 01794414)
+### FMCSA Broker Authority (MC# 1794414)
 - MC authority must remain ACTIVE at all times
 - No renewal required (authority is perpetual once granted)
 - Must maintain active BMC-84 surety bond or BMC-85 trust fund

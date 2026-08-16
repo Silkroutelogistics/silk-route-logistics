@@ -281,7 +281,27 @@ router.post("/fraud-reports/:reportId/respond", authorize("ADMIN", "CEO", "OPERA
 // Carrier-broker agreements
 router.get("/:id/agreements", authorize("ADMIN", "CEO", "OPERATIONS", "BROKER"), getCarrierAgreements);
 router.post("/:id/agreements", authorize("ADMIN", "CEO", "OPERATIONS"), createAgreement);
-router.post("/agreements/:agreementId/sign", signAgreement);
+// The AE-side counter-signature path. Previously mounted at
+// `/agreements/:agreementId/sign` with NO authorize() and no ownership check,
+// so any authenticated principal — a CARRIER, or a DIFFERENT carrier — could
+// execute the instrument that allocates cargo liability for anyone, by
+// enumerating an id. On a "broker-carrier" row that directly satisfies the
+// complianceCheck hard-gate and unblocks tendering. Same defect class the
+// fraud-report respond route was gated for in v3.8.ani.
+//
+// Now (a) gated to the AE roles that own the agreement flow, and (b) mounted
+// carrier-scoped so the handler can verify the agreement belongs to the carrier
+// in the path — matching every other route in this file, which takes :id =
+// CarrierProfile.id. Carriers sign their own BCA through the portal path
+// (POST /api/carrier-auth/sign-bca), which is carrier-authed and self-scoped.
+// One caller exists and it already used the NEW shape: the AE console at
+// frontend/public/ae/compliance/carrier.html POSTs
+// /api/carriers/<id>/agreements/<agreementId>/sign, so it was 404ing against the
+// old mount and this re-mount fixes it. It sends no body, and signAgreement
+// requires signedByName + signatureData, so it now 400s instead — still broken,
+// pre-existing, but reachable for the first time. Nothing in frontend/src, e2e,
+// backend/scripts or backend/__tests__ referenced either path.
+router.post("/:id/agreements/:agreementId/sign", authorize("ADMIN", "CEO", "OPERATIONS"), signAgreement);
 
 // Phase B: CSA, overbooking, VIN, UCR
 router.post("/:id/csa-update", authorize("ADMIN", "CEO", "OPERATIONS"), runCsaUpdate);

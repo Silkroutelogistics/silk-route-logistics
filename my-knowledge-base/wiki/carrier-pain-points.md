@@ -1,7 +1,7 @@
 ---
 title: Carrier Financial Pain Points (2025-2026)
 created: 2026-04-07
-last_updated: 2026-04-07
+last_updated: 2026-08-14
 source_count: 1
 status: reviewed
 ---
@@ -71,7 +71,7 @@ A 30-day payment delay costs a small carrier **$13,000-$48,000/year** in real co
 
 1. **Fuel card program** — Partner with TCS/Comdata/EFS. Carriers stay with factoring because of 5-15 cents/gallon fuel discounts. SRL must match this.
 2. **Fuel advance at pickup** — Release 50% of carrier pay at confirmed pickup. This is the #1 factoring benefit carriers cite.
-3. **Detention pay guarantee** — $75/hr after 2hr free on all SRL loads. $11.5B industry problem.
+3. **Detention pay guarantee** — $50/hr after 2hr free at each stop, capped at $250 per stop, on all SRL loads (canonical policy as of v3.8.ars). At the cap detention converts to layover at $250/day; the two do not stack for the same hours. $11.5B industry problem.
 4. **Emergency advance** — For carriers with 10+ loads, offer advance against future loads for catastrophic repairs ($5K-$15K).
 
 ## Carrier Recruitment Email Insights

@@ -552,11 +552,22 @@ export async function createAgreement(req: AuthRequest, res: Response) {
     data: {
       carrierId: req.params.id,
       version: version || "1.0",
-      templateName: templateName || "standard",
+      // Default to the template the compliance hard-gate actually filters for
+      // (complianceMonitorService reads status SIGNED + templateName
+      // "broker-carrier"). The old "standard" default meant an agreement created
+      // on this AE path could be signed, display as SIGNED on every surface, and
+      // still 403 every tender. v3.8.arx fixed the seed and asserted "standard"
+      // appeared nowhere else; this call site was the surviving half.
+      templateName: templateName || "broker-carrier",
       documentUrl: documentUrl || null,
       status: "SENT",
       sentAt: new Date(),
-      expiresAt: expiresAt ? new Date(expiresAt) : new Date(Date.now() + 90 * 86_400_000), // 90 days default
+      // Evergreen unless the caller explicitly sets a date. The BCA terminates by
+      // clause, not by calendar, which is why the carrier portal path
+      // (carrierAuth POST /sign-bca) writes expiresAt: null. The old 90-day
+      // default meant a validly signed BCA silently reported unsigned ninety days
+      // later — the gate re-blocks on expiry and nothing notifies anyone.
+      expiresAt: expiresAt ? new Date(expiresAt) : null,
       createdById: req.user!.id,
     },
   });
@@ -565,10 +576,17 @@ export async function createAgreement(req: AuthRequest, res: Response) {
 }
 
 /**
- * POST /api/carriers/agreements/:agreementId/sign — Carrier signs an agreement
+ * POST /api/carriers/:id/agreements/:agreementId/sign — record a signature on a
+ * carrier's agreement (AE-side; ADMIN/CEO/OPERATIONS per the route mount).
+ *
+ * :id is the CarrierProfile.id, same as every other carrier-scoped route in this
+ * module. The agreement is resolved by id AND carrierId together, so an
+ * agreementId belonging to another carrier is unreachable here. Carriers sign
+ * their own BCA through the carrier-authed portal path
+ * (POST /api/carrier-auth/sign-bca), not this one.
  */
 export async function signAgreement(req: AuthRequest, res: Response) {
-  const { agreementId } = req.params;
+  const { id: carrierId, agreementId } = req.params;
   const { signedByName, signedByTitle, signatureData } = req.body;
 
   if (!signedByName || !signatureData) {
@@ -576,7 +594,14 @@ export async function signAgreement(req: AuthRequest, res: Response) {
     return;
   }
 
-  const agreement = await prisma.carrierAgreement.findUnique({ where: { id: agreementId } });
+  // Ownership check. Scoped lookup rather than findUnique-then-compare, matching
+  // the carrier-documents handler in routes/carriers.ts. 404 (not 403) on a
+  // non-owned id, per the convention set by getOwnedDriver in
+  // routes/carrierDrivers.ts, so agreement ids stay non-enumerable across
+  // carriers.
+  const agreement = await prisma.carrierAgreement.findFirst({
+    where: { id: agreementId, carrierId },
+  });
   if (!agreement) {
     res.status(404).json({ error: "Agreement not found" });
     return;
