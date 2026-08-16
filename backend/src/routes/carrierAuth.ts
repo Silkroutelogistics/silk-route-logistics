@@ -24,12 +24,15 @@ import { sendOtpSms } from "../services/openPhoneService";
 import { resolveInfoRequest, getCategoryLabel } from "../services/infoRequestService";
 import { upload } from "../config/upload";
 import { uploadFile, uploadFileToPath } from "../services/storageService";
-// v3.8.aqh — Broker-Carrier Agreement PDF (skill-chrome multi-page legal doc).
+// v3.8.aqh — agreement PDFs (skill-chrome multi-page legal doc).
+// v3.8.asa — generic entry points. The BCA-only generators were the reason a
+// signed Quick Pay Agreement could not be produced as a document at all.
 import {
-  generateBrokerCarrierAgreementPdf,
-  generateBrokerCarrierAgreementBuffer,
+  generateAgreementPdf,
+  generateAgreementBuffer,
+  agreementPdfFilename,
 } from "../services/agreementPdfService";
-import { getAgreement, QP_VERSION } from "../data/agreements";
+import { getAgreement, BROKER_CARRIER_AGREEMENT, CARAVAN_QUICK_PAY_AGREEMENT, QP_VERSION, BCA_VERSION } from "../data/agreements";
 import path from "path";
 import { verifyTotpCode } from "../services/totpService";
 import { z } from "zod";
@@ -698,8 +701,20 @@ async function loadCarrierIdentity(profileId: string) {
 // sections). PUBLIC: non-sensitive legal text, served to BOTH the approved
 // carrier (activation review pane) and the pre-approval applicant (onboarding
 // click-through) so every surface renders from ONE source and the signed
-// version is always the backend canonical. (The PDF endpoint below stays
-// carrier-authed — it renders the carrier's own executed copy.)
+// version is always the backend canonical.
+//
+// v3.8.asb — the missing-middleware asymmetry against the /pdf sibling below
+// is DELIBERATE, not an oversight. Recorded here so it is not "fixed" later:
+//   - Gating this route would break onboarding. The click-through runs before
+//     approval, so the applicant has no CARRIER session to authenticate with.
+//   - The response is static: title, subtitle, version, preamble, sections.
+//     It is the same terms a carrier is asked to sign before doing business,
+//     and a prospective carrier reading them before applying is the intended
+//     use. Nothing here is keyed to a carrier.
+//   - /pdf IS gated because it renders the carrier's OWN executed copy —
+//     signer name, title, timestamp and signer IP. That is carrier-specific
+//     and must stay behind authenticate + authorize("CARRIER").
+// Public body, private execution. Keep it that way.
 router.get("/agreement/:type", async (req: AuthRequest, res: Response) => {
   const agreement = getAgreement(req.params.type);
   if (!agreement) {
@@ -722,7 +737,7 @@ router.get("/agreement/:type", async (req: AuthRequest, res: Response) => {
 // otherwise.
 router.get("/agreement/:type/pdf", authenticate, authorize("CARRIER"), async (req: AuthRequest, res: Response) => {
   const agreement = getAgreement(req.params.type);
-  if (!agreement || agreement.templateName !== "broker-carrier") {
+  if (!agreement) {
     res.status(404).json({ error: "Unknown agreement" });
     return;
   }
@@ -732,8 +747,11 @@ router.get("/agreement/:type/pdf", authenticate, authorize("CARRIER"), async (re
     return;
   }
   const identity = await loadCarrierIdentity(profile.id);
+  // v3.8.asa — signature lookup keys off the RESOLVED agreement, not a
+  // hardcoded "broker-carrier". Pre-asa this route 404'd on quick-pay and,
+  // had it not, would have stamped the BCA signature onto a Quick Pay PDF.
   const signed = await prisma.carrierAgreement.findFirst({
-    where: { carrierId: profile.id, status: "SIGNED", templateName: "broker-carrier" },
+    where: { carrierId: profile.id, status: "SIGNED", templateName: agreement.templateName },
     orderBy: { signedAt: "desc" },
   });
   const signature =
@@ -746,9 +764,9 @@ router.get("/agreement/:type/pdf", authenticate, authorize("CARRIER"), async (re
           version: signed.version,
         }
       : undefined;
-  const doc = generateBrokerCarrierAgreementPdf({ carrier: identity, signature });
+  const doc = generateAgreementPdf(agreement, { carrier: identity, signature });
   res.setHeader("Content-Type", "application/pdf");
-  res.setHeader("Content-Disposition", `inline; filename="Broker-Carrier-Agreement-${agreement.version}.pdf"`);
+  res.setHeader("Content-Disposition", `inline; filename="${agreementPdfFilename(agreement)}"`);
   doc.pipe(res);
 });
 
@@ -826,11 +844,35 @@ router.post("/sign-bca", authenticate, authorize("CARRIER"), validateBody(signBc
     return;
   }
 
-  const { signedByName, signedByTitle, bcaVersion } = req.body as {
+  const { signedByName, signedByTitle, bcaVersion: postedVersion } = req.body as {
     signedByName: string;
     signedByTitle?: string;
     bcaVersion: string;
   };
+
+  // v3.8.asb — the posted version is CHECKED, never stamped. Pre-asb this
+  // route wrote whatever string the client sent (any value up to 60 chars)
+  // onto a binding signature row. A tab left open across a version bump
+  // therefore recorded consent naming a body that can no longer be produced
+  // from this repo — the unreproducible-document defect the agreement work
+  // exists to close, surviving at the last step.
+  //
+  // Stamping BCA_VERSION unconditionally would be the opposite error: it
+  // records consent to the CURRENT body against a signer who read the OLD
+  // one. When the two disagree there is no version we can honestly write, so
+  // the signature is refused and the carrier is sent back to re-read. The
+  // response carries the current version so the client can refetch
+  // GET /agreement/broker-carrier and re-render before retrying.
+  if (postedVersion !== BCA_VERSION) {
+    res.status(409).json({
+      error:
+        "The Broker-Carrier Agreement was updated while this page was open. Reload the page to review the current version, then sign.",
+      code: "AGREEMENT_VERSION_STALE",
+      currentVersion: BCA_VERSION,
+    });
+    return;
+  }
+  const bcaVersion = BCA_VERSION;
   const now = new Date();
 
   // Idempotent: a current SIGNED, non-expired agreement of THIS version means
@@ -899,7 +941,7 @@ router.post("/sign-bca", authenticate, authorize("CARRIER"), validateBody(signBc
   // already persisted above and the download endpoint regenerates on demand too.
   void (async () => {
     const identity = await loadCarrierIdentity(profile.id);
-    const buf = await generateBrokerCarrierAgreementBuffer({
+    const buf = await generateAgreementBuffer(BROKER_CARRIER_AGREEMENT, {
       carrier: identity,
       signature: { signedByName, signedByTitle: signedByTitle || null, signedAt: now, signerIp: ip || null, version: bcaVersion },
     });
@@ -958,7 +1000,24 @@ router.post("/quickpay-election", authenticate, authorize("CARRIER"), validateBo
   const now = new Date();
   const ip = extractClientIp(req);
   const userAgent = (req.headers["user-agent"] as string) || "";
-  const version = qpVersion || QP_VERSION;
+
+  // v3.8.asb — same fix as sign-bca above, and this path was worse: the
+  // version was OPTIONAL and fell back with `qpVersion || QP_VERSION`, so a
+  // client could stamp an arbitrary string on a binding row, and a stale tab
+  // silently recorded consent to a body nobody can reproduce. The posted
+  // version is now checked against the served constant and never stamped.
+  // Only the enable path signs anything, so the check is scoped to it —
+  // opting out records no consent and needs no version.
+  if (enabled && qpVersion !== QP_VERSION) {
+    res.status(409).json({
+      error:
+        "The Caravan Quick Pay Agreement was updated while this page was open. Reload the page to review the current version, then enable Quick Pay.",
+      code: "AGREEMENT_VERSION_STALE",
+      currentVersion: QP_VERSION,
+    });
+    return;
+  }
+  const version = QP_VERSION;
 
   if (enabled) {
     // Record the Quick Pay Agreement signature — a real typed-name e-signature
@@ -970,7 +1029,7 @@ router.post("/quickpay-election", authenticate, authorize("CARRIER"), validateBo
       orderBy: { signedAt: "desc" },
     });
     if (!existingQp || existingQp.version !== version) {
-      await prisma.carrierAgreement.create({
+      const qpRow = await prisma.carrierAgreement.create({
         data: {
           carrierId: profile.id,
           version,
@@ -986,6 +1045,19 @@ router.post("/quickpay-election", authenticate, authorize("CARRIER"), validateBo
           createdById: req.user!.id,
         },
       });
+
+      // v3.8.asa — store the EXECUTED Quick Pay PDF, mirroring sign-bca. The
+      // signature row above is binding, so a countersigned copy has to exist as
+      // a document the carrier, a factor, or a court can be handed.
+      void (async () => {
+        const identity = await loadCarrierIdentity(profile.id);
+        const buf = await generateAgreementBuffer(CARAVAN_QUICK_PAY_AGREEMENT, {
+          carrier: identity,
+          signature: { signedByName: signedByName!, signedByTitle: signedByTitle || null, signedAt: now, signerIp: ip || null, version },
+        });
+        const url = await uploadFileToPath(buf, `agreements/qp-${qpRow.id}.pdf`, "application/pdf");
+        await prisma.carrierAgreement.update({ where: { id: qpRow.id }, data: { documentUrl: url } });
+      })().catch(() => {});
     }
     await prisma.carrierProfile.update({
       where: { id: profile.id },

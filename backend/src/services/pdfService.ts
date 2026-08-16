@@ -55,6 +55,14 @@ import {
   type SignatureRole,
 } from "../lib/srl-chrome";
 import { rcVerifyToken } from "../controllers/verifyController";
+// The dwell figures the Rate Confirmation PRINTS and the figures the reconciler
+// SETTLES against are the same policy. Import them rather than retyping them, so
+// the promise on the signed document and the money in the ledger cannot drift.
+import {
+  DETENTION_FREE_HOURS,
+  DETENTION_CAP_PER_STOP,
+  LAYOVER_RATE_PER_DAY,
+} from "../lib/detentionLayover";
 
 type PDFDoc = InstanceType<typeof PDFDocument>;
 
@@ -1495,6 +1503,81 @@ function checkPageBreak(doc: PDFDoc, y: number, needed: number): number {
 }
 
 /**
+ * Build the operational terms grid the Rate Confirmation prints.
+ *
+ * Extracted from `generateEnhancedRateConfirmation` so the dwell figures on the
+ * signed document are reachable from a test. They were not before, and the gap
+ * was load-bearing rather than cosmetic: the unit suite pinned
+ * DETENTION_CAP_PER_STOP to the literal 250, but nothing pinned the PRINTED grid
+ * to that constant. Replacing `detentionMaxPerStop` here with a literal 300
+ * published "$50/hr after 2 hrs free, $300/stop cap" on a document a carrier
+ * signs while settlement kept paying $250, and every runnable pre-commit gate
+ * stayed green: tsc clean, the dwell unit suite 50/50, and verify-rc-matrix
+ * "ALL CASES PASS" (it checks page count and dead space, not cell text). The
+ * only gate that saw it was e2e/helpers/pdf.ts, which this repo does not run.
+ *
+ * A testable seam on a money path is worth more than a tidy module boundary, so
+ * this is exported. The test asserts the identity in the direction that matters:
+ * the figures this builder emits ARE the reconciler's constants, not merely
+ * numbers equal to them today.
+ */
+export function buildRateConOperationalTerms(
+  formData: Record<string, any>,
+  carrierPaymentTier?: string
+): RateConTerms {
+  const fd = formData || {};
+  // The generator carries "—" as its no-tier sentinel. Normalise here so the
+  // renderer only ever sees a real tier or nothing.
+  const qpTier = carrierPaymentTier && carrierPaymentTier !== "—" ? carrierPaymentTier : undefined;
+
+  // Operational terms — detention / TONU / layover / lumper / cancellation / QP.
+  // Sprint 50 (Item 127, Path β belt-and-suspenders) — detentionNotify: true
+  // appends " · notify" to the DETENTION cell as a glance-level reminder of
+  // the 30-min-before notification obligation locked in T&C clause (7).
+  return {
+    detentionRatePerHour: fd.detentionRate as number | undefined,
+    // v3.8.arn — the renderer's cap branch had never fired: it is gated on
+    // detentionMaxPerStop and this object never passed one, so no cap has ever
+    // printed on a Rate Confirmation.
+    // v3.8.ars — 200 -> 250, deliberately EQUAL to the layover day rate. At 200
+    // the cap was reached at billable hour 4 while auto-layover did not fire
+    // until hour 24, so a carrier held overnight earned nothing across an
+    // 18-hour gap. Setting cap = layover rate makes a day of waiting worth the
+    // same number whichever instrument pays it, which is how Campbell's
+    // published schedule handles it ($360 cap / $360 per 24-hour layover) and
+    // what Scotlynn's "$50/HR OR UNTIL LAYOVER OR $300 IS HIT" is reaching for.
+    detentionMaxPerStop: DETENTION_CAP_PER_STOP,
+    detentionFreeHours: DETENTION_FREE_HOURS,
+    detentionNotify: true,
+    // ── Ownership of the remaining money/term cells ─────────────────────────
+    // These three have printed for the whole life of the document from `??`
+    // fallbacks inside drawRateConTerms, because this object — the function's
+    // ONLY caller — never passed them. The values below are exactly what those
+    // fallbacks rendered, so this changes no output. What it changes is who
+    // decides: three numbers on a document a carrier signs move out of a
+    // renderer default and into a reviewable, greppable choice at the call
+    // site. The renderer keeps its fallbacks as defence in depth, but it is no
+    // longer the place the value is chosen.
+    //
+    // TONU and layover are ratified in CLAUDE.md §5: $200 flat, $250/day.
+    tonuAmount: 200,
+    layoverPerDay: LAYOVER_RATE_PER_DAY,
+    // UNRATIFIED — NEEDS A DECISION. DO NOT SILENTLY KEEP OR DROP THIS.
+    // CLAUDE.md §5 ratifies detention, TONU, layover and lumper; §9 ratifies
+    // the 24-hour paperwork deadline. NO cancellation term is ratified
+    // anywhere. This 4-hour notice window has nonetheless printed on every
+    // Rate Confirmation a carrier has signed, sourced from a renderer default
+    // that no human ever chose. The value is preserved here unchanged so this
+    // commit stays byte-identical on the rendered page: it is surfaced, not
+    // settled. The principal must either ratify a cancellation window into §5
+    // or strike the cell. Note that striking it is not free — it would drop
+    // the grid from 5 items to 4 and change the row layout.
+    cancellationWindowHours: 4,
+    quickPayTier: qpTier,
+  };
+}
+
+/**
  * Sprint 45-RC (v3.8.abd) — Item 48 close. Path β1 migration: skill chrome
  * library imported from backend/src/lib/srl-chrome.ts; legacy hand-built
  * chrome (addHeader/addFooter/sectionTitle/checkPageBreak/labelValue) no
@@ -1956,50 +2039,8 @@ export function generateEnhancedRateConfirmation(load: EnhancedRCLoadData, formD
   }
   y = qpPanelY + qpPanelH + 12;
 
-  // Operational terms — detention / TONU / layover / lumper / cancellation / QP.
-  // Sprint 50 (Item 127, Path β belt-and-suspenders) — detentionNotify: true
-  // appends " · notify" to the DETENTION cell as a glance-level reminder of
-  // the 30-min-before notification obligation locked in T&C clause (7).
-  const opTerms: RateConTerms = {
-    detentionRatePerHour: fd.detentionRate as number | undefined,
-    // v3.8.arn — the renderer's cap branch had never fired: it is gated on
-    // detentionMaxPerStop and this object never passed one, so no cap has ever
-    // printed on a Rate Confirmation.
-    // v3.8.ars — 200 -> 250, deliberately EQUAL to the layover day rate. At 200
-    // the cap was reached at billable hour 4 while auto-layover did not fire
-    // until hour 24, so a carrier held overnight earned nothing across an
-    // 18-hour gap. Setting cap = layover rate makes a day of waiting worth the
-    // same number whichever instrument pays it, which is how Campbell's
-    // published schedule handles it ($360 cap / $360 per 24-hour layover) and
-    // what Scotlynn's "$50/HR OR UNTIL LAYOVER OR $300 IS HIT" is reaching for.
-    detentionMaxPerStop: 250,
-    detentionNotify: true,
-    // ── Ownership of the remaining money/term cells ─────────────────────────
-    // These three have printed for the whole life of the document from `??`
-    // fallbacks inside drawRateConTerms, because this object — the function's
-    // ONLY caller — never passed them. The values below are exactly what those
-    // fallbacks rendered, so this changes no output. What it changes is who
-    // decides: three numbers on a document a carrier signs move out of a
-    // renderer default and into a reviewable, greppable choice at the call
-    // site. The renderer keeps its fallbacks as defence in depth, but it is no
-    // longer the place the value is chosen.
-    //
-    // TONU and layover are ratified in CLAUDE.md §5: $200 flat, $250/day.
-    tonuAmount: 200,
-    layoverPerDay: 250,
-    // UNRATIFIED — NEEDS A DECISION. DO NOT SILENTLY KEEP OR DROP THIS.
-    // CLAUDE.md §5 ratifies detention, TONU, layover and lumper; §9 ratifies
-    // the 24-hour paperwork deadline. NO cancellation term is ratified
-    // anywhere. This 4-hour notice window has nonetheless printed on every
-    // Rate Confirmation a carrier has signed, sourced from a renderer default
-    // that no human ever chose. The value is preserved here unchanged so this
-    // commit stays byte-identical on the rendered page: it is surfaced, not
-    // settled. The principal must either ratify a cancellation window into §5
-    // or strike the cell. Note that striking it is not free — it would drop
-    // the grid from 5 items to 4 and change the row layout.
-    cancellationWindowHours: 4,
-    quickPayTier: qpTier !== "—" ? qpTier : undefined,
-  };
+
+  const opTerms: RateConTerms = buildRateConOperationalTerms(fd, qpTier);
   y = drawRateConTerms(doc, opTerms, y - 4);
 
   // ── v3.8.arm — DOCK & DISPATCH ──────────────────────────────────────────

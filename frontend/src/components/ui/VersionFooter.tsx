@@ -14176,7 +14176,34 @@
 // because tsconfig excludes prisma/. NOT closed, needs ratification: the
 // detention->layover conversion the RC promises is unimplemented, TONU pays $0,
 // and accessorials reach neither invoice nor settlement.
-export const SRL_VERSION = "3.8.arz";
+// v3.8.asa — the dwell ladder the Rate Confirmation promises is now the ladder the
+// ledger computes, and Quick Pay can no longer be charged against nothing. Four
+// principal ratifications landed: keep $250 and implement the conversion; TONU
+// bills the customer on any cancellation and pays the carrier only same-day or
+// post-dispatch; the 4-hour window is the CARRIER's release window, not SRL's;
+// and make a Quick Pay Agreement. The conversion first shipped BACKWARDS — the
+// capped $250 consumed layover day one, so hours 7 to 31 accrued $0 marginal and
+// a 30h hold paid $250 where the pre-sprint code paid $500. That inverted the
+// ratified rationale, which raised the cap to $250 precisely to close a band
+// "where a held carrier earned nothing", and contradicted what SRL teaches
+// drivers. Corrected so layover day one bills AT conversion: 7h $500, 31h $500,
+// past 31h $750, past 55h $1000, proven over a 7,201-sample minute sweep with
+// zero overlap, zero decreases and no dwell paying less than before. The test
+// suite could not previously fail in the direction of the defect — a mutant with
+// the conversion deleted passed all six sweep invariants — so lower bounds were
+// added and four mutants now fail 20/16/22/13. geofenceService was a FIFTH writer
+// of actualDeparture that reconciled nothing: a 5h geofenced hold settled at $0
+// where $150 was owed, permanently, with no correcting path. The Quick Pay
+// Agreement now exists, renders in the activation pane, downloads as its own PDF,
+// and gates its own charge: two live AE routes deducted a fee from a request-
+// supplied tier string against carriers who had signed nothing, and a client-
+// supplied version string was being stamped onto a binding signature. One
+// document contradicted itself — section 5 said an incomplete-paperwork load
+// stays eligible, section 8 said it does not — and the AE override panel showed
+// $0 while sending 3%. NOT yet built, and recorded as such: accessorial rows are
+// written correctly and reach neither the shipper invoice nor the carrier
+// settlement. That is the invoice upgrade.
+export const SRL_VERSION = "3.8.asa";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

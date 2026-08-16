@@ -2,10 +2,17 @@ import { prisma } from "../config/database";
 import { calculateOverallScore, getBonusPercentage, checkGuestPromotion } from "./tierService";
 import { createCheckCallSchedule } from "./checkCallAutomation";
 import { notifyMatchedCarriers } from "./carrierOutreachService";
-import { checkMilestoneAdvancement, applyMilestoneRewards } from "./caravanService";
+import { checkMilestoneAdvancement, applyMilestoneRewards, getEffectiveTier, getTierConfig } from "./caravanService";
 import { calcOnTimePerformance } from "../lib/onTimePerformance";
 import { calcDocTimeliness } from "../lib/docTimeliness";
 import { log } from "../lib/logger";
+import {
+  standardNetDays,
+  quickPayAutoApprovePerLoad,
+  quickPayMonthlyLimit,
+  speedFromPaymentTier,
+  type QuickPaySpeed,
+} from "../lib/quickPayPricing";
 
 /**
  * Cross-System Integration Service
@@ -100,6 +107,11 @@ export async function onLoadDelivered(loadId: string) {
             select: {
               id: true, tier: true, cppTier: true, cppTotalLoads: true, cppTotalMiles: true,
               paymentPreference: true,
+              // v3.8.asa — quickPayEnabled was read by createCarrierPayOnDelivery
+              // but never selected, so it was always undefined and the v3.8.aqk
+              // election check could never be true. It failed safe (no fee ever
+              // charged) but the account-level path was inert.
+              quickPayEnabled: true,
             },
           },
         },
@@ -154,6 +166,167 @@ export async function onLoadDelivered(loadId: string) {
   log.info(`[Integration] Load ${load.referenceNumber} delivered → AP + credit + CPP + milestone triggered`);
 }
 
+// ──────────────────────────────────────────────────
+// Quick Pay pricing helpers (v3.8.asa)
+//
+// The Caravan Quick Pay Agreement promises three things the pay path did not
+// do. These helpers are what make the promises true, and they are exported so
+// they can be tested without a database.
+//
+//   §3  The election is PER LOAD. Enabling Quick Pay on the account makes the
+//       option available; it does not apply Quick Pay to every load. The
+//       elected fee is frozen on the Load row when the rate confirmation is
+//       issued (Load.quickPayFeePercent), so toggling the account flag later
+//       cannot re-price a load that has already been hauled.
+//   §4  SAME-DAY Quick Pay exists at every tier: the 7-day tier fee plus a
+//       universal 2% premium (Silver 5%, Gold 4%, Platinum 3%).
+//   §4  Reimbursements repaid AT COST against an original receipt — lumper
+//       fees above all — are not subject to the Quick Pay fee.
+// ──────────────────────────────────────────────────
+
+// Defined in lib/quickPayPricing, the one authoritative Quick Pay module.
+// Re-exported here so existing importers keep working.
+export type { QuickPaySpeed };
+
+/**
+ * Resolves the elected speed from the fee percent recorded on the load.
+ *
+ * The rate confirmation is the per-load document the carrier accepts, and the
+ * fee percent printed on it is the elected price. We compare it against the
+ * carrier's own tier ladder rather than trusting Load.carrierPaymentTier, which
+ * is written from two different sources with two different meanings (the RC
+ * finalize path writes the CPP tier string into a PaymentTier enum column) and
+ * so cannot be relied on.
+ *
+ * An AE override to some rate that is on neither rung is still Quick Pay, and
+ * is treated as the 7-day product — the default speed, and the slower of the
+ * two, so an ambiguous election never shortens SRL's own obligation.
+ */
+export function resolveQuickPaySpeed(
+  electedPct: number | null | undefined,
+  tier: { quickPayFee7Day: number; quickPayFeeSameDay: number },
+): QuickPaySpeed {
+  if (electedPct === null || electedPct === undefined || electedPct <= 0) return "STANDARD";
+  const sameDayPct = tier.quickPayFeeSameDay * 100;
+  return Math.abs(electedPct - sameDayPct) < 0.01 ? "QP_SAMEDAY" : "QP_7DAY";
+}
+
+/**
+ * True when an accessorial line is money the carrier fronted and SRL repays at
+ * cost, rather than money the carrier earned.
+ *
+ * Lumper is the ratified case (CLAUDE.md §5: carrier fronts, reimbursed on the
+ * original receipt, at cost). Detention, layover and TONU are earnings and are
+ * correctly inside the fee base. The match is deliberately narrow: anything not
+ * recognised as a reimbursement stays in the base, so a mislabelled line can
+ * only ever cost SRL margin, never skim a carrier's own money.
+ */
+export function isAtCostReimbursement(line: { type?: string | null; description?: string | null }): boolean {
+  const text = `${line?.type ?? ""} ${line?.description ?? ""}`.toLowerCase();
+  return /\blumper\b|\breimburse/.test(text);
+}
+
+/** Sum of at-cost reimbursement lines. Paid in full, excluded from the fee base. */
+export function sumAtCostReimbursements(
+  lines: Array<{ type?: string | null; description?: string | null; amount?: number | null }> | null | undefined,
+): number {
+  if (!Array.isArray(lines)) return 0;
+  return lines.reduce((sum, l) => (isAtCostReimbursement(l) ? sum + (Number(l?.amount) || 0) : sum), 0);
+}
+
+// Published business hours, CLAUDE.md §6 — Mon-Fri, 7:00 AM to 7:00 PM Eastern.
+const BUSINESS_TZ = "America/New_York";
+const BUSINESS_OPEN_HOUR = 7;
+const BUSINESS_CLOSE_HOUR = 19;
+
+/** Eastern-time calendar parts for an instant. */
+function easternParts(d: Date): { year: number; month: number; day: number; hour: number; dow: number } {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: BUSINESS_TZ,
+    weekday: "short",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    hour12: false,
+  }).formatToParts(d);
+  const get = (t: string) => parts.find((p) => p.type === t)?.value ?? "";
+  const dowMap: Record<string, number> = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
+  return {
+    year: Number(get("year")),
+    month: Number(get("month")),
+    day: Number(get("day")),
+    hour: Number(get("hour")) % 24, // "24" is midnight in some ICU builds
+    dow: dowMap[get("weekday")] ?? 0,
+  };
+}
+
+/** The instant corresponding to a given Eastern wall-clock time. */
+function easternWallClockToInstant(year: number, month: number, day: number, hour: number): Date {
+  const asIfUtc = Date.UTC(year, month - 1, day, hour);
+  const probe = new Date(asIfUtc);
+  const inZone = new Date(probe.toLocaleString("en-US", { timeZone: BUSINESS_TZ }));
+  const inUtc = new Date(probe.toLocaleString("en-US", { timeZone: "UTC" }));
+  return new Date(asIfUtc + (inUtc.getTime() - inZone.getTime()));
+}
+
+/**
+ * Quick Pay Agreement §5: same-day Quick Pay is paid on the same business day
+ * when complete documentation arrives during published business hours, and on
+ * the next business day when it arrives outside them.
+ */
+export function sameDayQuickPayDueDate(receivedAt: Date): Date {
+  const et = easternParts(receivedAt);
+  const isWeekday = et.dow >= 1 && et.dow <= 5;
+  if (isWeekday && et.hour >= BUSINESS_OPEN_HOUR && et.hour < BUSINESS_CLOSE_HOUR) return receivedAt;
+
+  // Before open on a weekday: today at open. Otherwise: the next weekday at open.
+  let cursor = new Date(receivedAt);
+  if (!(isWeekday && et.hour < BUSINESS_OPEN_HOUR)) {
+    do {
+      cursor = new Date(cursor.getTime() + 24 * 60 * 60 * 1000);
+    } while (![1, 2, 3, 4, 5].includes(easternParts(cursor).dow));
+  }
+  const next = easternParts(cursor);
+  return easternWallClockToInstant(next.year, next.month, next.day, BUSINESS_OPEN_HOUR);
+}
+
+/**
+ * When Broker received complete documentation for a load, or null if it has
+ * not arrived yet.
+ *
+ * Quick Pay Agreement §5 and Broker-Carrier Agreement §5 both date payment
+ * timing from "receipt of complete and accurate documentation", never from
+ * delivery, and §5 is explicit that "if documentation is incomplete or
+ * inaccurate, the timing clock has not started".
+ *
+ * POD presence is the machine-checkable proxy for that documentation set. It is
+ * the one required item the platform reliably records with a timestamp, and it
+ * is the item a carrier cannot deliver without. If BOL and lumper receipts
+ * later get their own verified state, add them to this query and every timing
+ * path inherits it, because this is the only place the trigger is decided.
+ */
+export async function documentationReceivedAt(loadId: string): Promise<Date | null> {
+  const pod = await prisma.document.findFirst({
+    where: { loadId, docType: "POD" },
+    orderBy: { createdAt: "asc" },
+    select: { createdAt: true },
+  });
+  return pod?.createdAt ?? null;
+}
+
+/**
+ * Due date for a settlement, measured from receipt of complete documentation.
+ *
+ * Same-day resolves through the published-business-hours rule; 7-day Quick Pay
+ * is seven days; standard is the carrier's free tier net terms (§3).
+ */
+export function quickPayDueDate(speed: QuickPaySpeed, tier: string | null | undefined, receivedAt: Date): Date {
+  if (speed === "QP_SAMEDAY") return sameDayQuickPayDueDate(receivedAt);
+  const days = speed === "QP_7DAY" ? 7 : standardNetDays(tier);
+  return new Date(receivedAt.getTime() + days * 24 * 60 * 60 * 1000);
+}
+
 // ── Create Carrier Pay entry on delivery ──
 async function createCarrierPayOnDelivery(load: any) {
   // Check for duplicate
@@ -175,18 +348,55 @@ async function createCarrierPayOnDelivery(load: any) {
   // This previously mapped SILVER -> "PRIORITY" -> a 2% fee and a 2-day due
   // date for EVERY carrier, so a carrier who never elected Quick Pay (and never
   // signed the QP Agreement) had 2% skimmed off their first settlement and lost
-  // their free Net-30. Standard pay by tier is FREE per §8; Quick Pay is an
-  // account-level election (CarrierProfile.quickPayEnabled).
+  // their free Net-30. Standard pay by tier is FREE per §8.
+  //
+  // v3.8.asa — the election is now PER LOAD, which is what the Quick Pay
+  // Agreement §3 actually promises. aqk read the ACCOUNT boolean at delivery,
+  // so flipping it re-priced loads that had already been hauled, in both
+  // directions. The elected fee is frozen on the Load when the rate
+  // confirmation is issued, and that is the number we charge.
+  //
+  // Three conditions, all required, each mapping to a clause:
+  //   1. a positive elected fee on this load               (§3 per-load)
+  //   2. a signed Caravan Quick Pay Agreement              (never deduct a fee
+  //                                                         under an unsigned
+  //                                                         instrument)
+  //   3. Quick Pay still enabled on the account            (§3 withdrawal on any
+  //                                                         load not yet funded)
+  // Any one missing pays standard tier terms at no fee. Every failure mode
+  // therefore pays the carrier MORE, not less.
+  const tierKey = getEffectiveTier({ tier: profile.tier });
+  const tierConfig = getTierConfig(tierKey);
   const cppTier = profile.tier || "SILVER";
-  const quickPayElected = profile.quickPayEnabled === true;
 
-  // §8 locked pricing — 7-day Quick Pay fee by tier (applies ONLY when elected).
-  const qpFeeByTier: Record<string, number> = { SILVER: 3, GOLD: 2, PLATINUM: 1 };
+  const electedPct: number | null =
+    typeof load.quickPayFeePercent === "number"
+      ? load.quickPayFeePercent
+      : typeof rc?.formData?.quickPayFeePercent === "number"
+        ? rc.formData.quickPayFeePercent
+        : null;
 
-  const paymentTier = quickPayElected ? "PRIORITY" : "STANDARD";
-  const quickPayFeePercent = quickPayElected ? (qpFeeByTier[cppTier] ?? 3) : 0;
-  const quickPayFeeAmount = grossAmount * (quickPayFeePercent / 100);
-  const netAmount = grossAmount - quickPayFeeAmount;
+  const qpAgreementSigned = !!(await prisma.carrierAgreement.findFirst({
+    where: { carrierId: profile.id, status: "SIGNED", templateName: "quick-pay" },
+    select: { id: true },
+  }));
+
+  const speed: QuickPaySpeed =
+    qpAgreementSigned && profile.quickPayEnabled === true
+      ? resolveQuickPaySpeed(electedPct, tierConfig)
+      : "STANDARD";
+
+  // §4 — the fee is calculated on line haul, fuel surcharge and approved
+  // accessorials, but NOT on reimbursements repaid at cost. A carrier who
+  // fronts $150 of lumper is repaid $150; skimming it would charge them a fee
+  // on their own money.
+  const reimbursements = sumAtCostReimbursements(rc?.formData?.accessorials);
+  const feeBase = Math.max(0, grossAmount - reimbursements);
+
+  const paymentTier = speed === "QP_SAMEDAY" ? "FLASH" : speed === "QP_7DAY" ? "PRIORITY" : "STANDARD";
+  const quickPayFeePercent = speed === "STANDARD" ? 0 : (electedPct as number);
+  const quickPayFeeAmount = Math.round(feeBase * (quickPayFeePercent / 100) * 100) / 100;
+  const netAmount = Math.round((grossAmount - quickPayFeeAmount) * 100) / 100;
 
   // Generate payment number
   const todayStr = new Date().toISOString().slice(0, 10).replace(/-/g, "");
@@ -195,13 +405,22 @@ async function createCarrierPayOnDelivery(load: any) {
   });
   const paymentNumber = `CP-${todayStr}-${String(existingCount + 1).padStart(4, "0")}`;
 
-  // v3.8.aqk — due date per §8: elected Quick Pay pays at 7 days; otherwise the
-  // carrier keeps their tier's FREE standard net terms (Silver Net-30, Gold
-  // Net-21, Platinum Net-14). Previously every carrier got a 2-day PRIORITY SLA.
-  const standardNetByTier: Record<string, number> = { SILVER: 30, GOLD: 21, PLATINUM: 14 };
-  const netDays = quickPayElected ? 7 : (standardNetByTier[cppTier] ?? 30);
-  const dueDate = new Date();
-  dueDate.setTime(dueDate.getTime() + netDays * 24 * 60 * 60 * 1000);
+  // Due date per §8: elected Quick Pay pays at 7 days, same-day pays on the
+  // business-hours rule, and otherwise the carrier keeps their tier's FREE
+  // standard net terms (Silver Net-30, Gold Net-21, Platinum Net-14).
+  //
+  // The clock runs from receipt of complete documentation, NOT from delivery.
+  // This path fires on delivery, and it used to stamp receivedAt = now, which
+  // started every carrier's clock before their POD existed — a comment here even
+  // claimed "delivery with a POD on file is the trigger this path fires on",
+  // which was untrue of this function; POD handling is onPODUploaded. That made
+  // the settlement look due before §5 says the clock had started.
+  //
+  // If documentation has not arrived, the clock has not started and dueDate
+  // stays null. onPODUploaded stamps it the moment the deficiency is cured,
+  // which is what §5 promises.
+  const receivedAt = await documentationReceivedAt(load.id);
+  const dueDate = receivedAt ? quickPayDueDate(speed, cppTier, receivedAt) : null;
 
   const payment = await prisma.carrierPay.create({
     data: {
@@ -222,25 +441,85 @@ async function createCarrierPayOnDelivery(load: any) {
       status: "PREPARED",
       dueDate,
       preparedAt: new Date(),
-      notes: `Auto-generated on delivery of load ${load.referenceNumber}`,
+      // Quick Pay Agreement §7 — the deduction has to be verifiable on its
+      // face. The columns above carry gross / fee % / fee $ / net; the note
+      // records the speed elected and any at-cost reimbursement excluded from
+      // the fee base, so a carrier querying a settlement gets the whole answer.
+      notes:
+        `Auto-generated on delivery of load ${load.referenceNumber}` +
+        (speed === "STANDARD"
+          ? ` · Standard ${standardNetDays(cppTier)}-day tier terms, no Quick Pay fee`
+          : ` · ${speed === "QP_SAMEDAY" ? "Same-day" : "7-day"} Quick Pay elected at ${quickPayFeePercent}%`) +
+        (speed !== "STANDARD" && reimbursements > 0
+          ? ` · $${reimbursements.toFixed(2)} at-cost reimbursement paid in full and excluded from the fee base`
+          : "") +
+        (receivedAt
+          ? ` · Payment clock started on receipt of documentation ${receivedAt.toISOString().slice(0, 10)}`
+          : ` · Payment clock starts on receipt of complete documentation (POD outstanding)`),
     },
   });
 
-  // If >= $5K, create approval queue entry
-  if (netAmount >= 5000) {
+  log.info(
+    { loadId: load.id, tier: tierKey, speed, electedPct, reimbursements, feeBase, quickPayFeeAmount, netAmount, dueDate },
+    `[Integration] CarrierPay ${paymentNumber} priced — ${speed}`,
+  );
+
+  // Approval review.
+  //
+  // Quick Pay Agreement §6 sets auto-approve ceilings BY TIER: Silver $2,000
+  // per load and $15,000 per month, Gold $4,000 and $40,000, Platinum $6,000
+  // and $80,000. This path used a flat $5,000, so a $4,000 Silver Quick Pay
+  // load auto-approved unreviewed against a $2,000 ceiling the carrier had just
+  // signed. Over a ceiling is a review, never a refusal — §6 says "auto-approved
+  // up to", and refusing here would deny a carrier something the instrument
+  // grants.
+  //
+  // The tier ceilings govern Quick Pay funding. A standard-terms settlement is
+  // not a Quick Pay decision, so it keeps the generic large-payment review.
+  let reviewReason: string | null = null;
+  if (speed === "STANDARD") {
+    if (netAmount >= 5000) {
+      reviewReason = `$${netAmount.toLocaleString()} standard settlement`;
+    }
+  } else {
+    const perLoadCeiling = quickPayAutoApprovePerLoad(cppTier);
+    const monthCeiling = quickPayMonthlyLimit(cppTier);
+    if (grossAmount > perLoadCeiling) {
+      reviewReason = `$${grossAmount.toLocaleString()} gross is over the ${cppTier} $${perLoadCeiling.toLocaleString()} per-load Quick Pay auto-approve ceiling`;
+    } else {
+      const monthStart = new Date();
+      monthStart.setDate(1);
+      monthStart.setHours(0, 0, 0, 0);
+      const monthQp = await prisma.carrierPay.aggregate({
+        where: {
+          carrierId: load.carrierId,
+          quickPayFeeAmount: { gt: 0 },
+          createdAt: { gte: monthStart },
+          status: { notIn: ["VOID"] },
+        },
+        _sum: { amount: true },
+      });
+      const usedThisMonth = monthQp._sum.amount || 0;
+      if (usedThisMonth + grossAmount > monthCeiling) {
+        reviewReason = `$${(usedThisMonth + grossAmount).toLocaleString()} month-to-date is over the ${cppTier} $${monthCeiling.toLocaleString()} monthly Quick Pay auto-approve ceiling`;
+      }
+    }
+  }
+
+  if (reviewReason) {
     await prisma.approvalQueue.create({
       data: {
         type: "CARRIER_PAYMENT",
         referenceId: payment.id,
         referenceType: "CarrierPay",
         amount: netAmount,
-        description: `Auto-generated carrier payment ${paymentNumber} for load ${load.referenceNumber} — $${netAmount.toLocaleString()}`,
+        description: `Auto-generated carrier payment ${paymentNumber} for load ${load.referenceNumber} — ${reviewReason}`,
         priority: netAmount >= 10000 ? "HIGH" : "MEDIUM",
         status: "PENDING",
         requestedById: load.carrierId,
       },
     });
-    log.info(`[Integration] $5K+ threshold → approval queue entry created for ${paymentNumber}`);
+    log.info(`[Integration] Approval queue entry created for ${paymentNumber} — ${reviewReason}`);
   }
 
   // Record QP fee in factoring fund (if any)
@@ -452,6 +731,27 @@ export async function onPODUploaded(loadId: string) {
     where: { loadId, docPod: false },
     data: { docPod: true },
   });
+
+  // Quick Pay Agreement §5 — "the clock starts when the deficiency is cured".
+  // A settlement created on delivery before documentation arrived has no due
+  // date; this is where it gets one. Rows that already have a due date are left
+  // alone, so a later POD revision never moves a date the carrier was given.
+  const receivedAt = (await documentationReceivedAt(loadId)) ?? new Date();
+  const awaitingDocs = await prisma.carrierPay.findMany({
+    where: { loadId, dueDate: null },
+    select: { id: true, carrierId: true, paymentTier: true, paymentNumber: true },
+  });
+  for (const pay of awaitingDocs) {
+    const profile = await prisma.carrierProfile.findUnique({
+      where: { userId: pay.carrierId },
+      select: { tier: true },
+    });
+    const dueDate = quickPayDueDate(speedFromPaymentTier(pay.paymentTier), profile?.tier, receivedAt);
+    await prisma.carrierPay.update({ where: { id: pay.id }, data: { dueDate } });
+    log.info(
+      `[Integration] Documentation received for load ${loadId} → payment clock started on ${pay.paymentNumber || pay.id}, due ${dueDate.toISOString().slice(0, 10)}`,
+    );
+  }
 }
 
 // ──────────────────────────────────────────────────

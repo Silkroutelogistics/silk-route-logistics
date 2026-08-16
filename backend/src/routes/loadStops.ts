@@ -3,9 +3,58 @@ import { prisma } from "../config/database";
 import { authenticate, authorize, AuthRequest } from "../middleware/auth";
 import { auditLog } from "../middleware/audit";
 import { log } from "../lib/logger";
+import { applyStopDwellCharges } from "../lib/detentionLayover";
 
 const router = Router();
 router.use(authenticate);
+
+/**
+ * Settle detention and layover for a stop whose departure was just written.
+ *
+ * Both stop-edit endpoints below set actualDeparture directly. Before this
+ * helper existed, neither reconciled, and that was not merely a missed charge:
+ * the alert engine selects on `actualDeparture: null`, so the moment an AE saved
+ * a departure the stop left the engine's query forever, and the only path that
+ * walks a provisional layover back is the "final" pass, which nothing on these
+ * routes ever ran. The concrete failure was permanent. A stop open 31h has the
+ * engine write LAYOVER $250. An AE then records the real 5h departure. The
+ * ledger keeps the $250 layover, never writes the $150 detention that actually
+ * applies, and no later pass corrects it.
+ *
+ * Routing through the single owner fixes amount and composition together, and
+ * makes the walk-back reachable.
+ *
+ * Never throws into the response. A stop edit is not a billing operation from
+ * the AE's point of view, and a reconciler failure must not lose their edit.
+ */
+async function settleDwellForStop(stopId: string): Promise<void> {
+  try {
+    const stop = await prisma.loadStop.findUnique({
+      where: { id: stopId },
+      select: {
+        id: true,
+        loadId: true,
+        stopType: true,
+        facilityName: true,
+        actualArrival: true,
+        actualDeparture: true,
+      },
+    });
+    if (!stop?.actualArrival || !stop.actualDeparture) return;
+
+    await applyStopDwellCharges(prisma, {
+      loadId: stop.loadId,
+      stopId: stop.id,
+      stopType: stop.stopType,
+      arrivalAt: new Date(stop.actualArrival),
+      departedAt: new Date(stop.actualDeparture),
+      phase: "final",
+      facilityName: stop.facilityName,
+    });
+  } catch (err) {
+    log.error({ err, stopId }, "Dwell reconciliation failed after stop edit");
+  }
+}
 
 // GET /api/load-stops/:loadId — Get all stops ordered by stop_number
 router.get(
@@ -146,6 +195,13 @@ router.put(
         where: { id: stopId },
         data: updateData,
       });
+
+      // An edit that moves either dwell timestamp changes what this stop owes.
+      // Hand the stop to the single owner rather than leaving a departure
+      // written here and the money written somewhere else.
+      if (actualArrival !== undefined || actualDeparture !== undefined) {
+        await settleDwellForStop(stopId);
+      }
 
       res.json({ stop });
     } catch (err) {
@@ -292,6 +348,13 @@ router.patch(
         where: { id: stopId },
         data: updateData,
       });
+
+      // An edit that moves either dwell timestamp changes what this stop owes.
+      // Hand the stop to the single owner rather than leaving a departure
+      // written here and the money written somewhere else.
+      if (actualArrival !== undefined || actualDeparture !== undefined) {
+        await settleDwellForStop(stopId);
+      }
 
       res.json({ stop });
     } catch (err) {

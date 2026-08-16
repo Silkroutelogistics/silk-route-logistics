@@ -7,9 +7,25 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { prisma } from "../../../src/config/database";
 
-// onInvoicePaid is dynamically imported inside markInvoicePaid — mock the module.
-const onInvoicePaid = vi.fn().mockResolvedValue(undefined);
-vi.mock("../../../src/services/integrationService", () => ({ onInvoicePaid }));
+// integrationService is mocked because markInvoicePaid dynamically imports
+// onInvoicePaid from it.
+//
+// The mocked surface has to cover every export accountingController pulls from
+// this module, and vi.hoisted is load-bearing rather than stylistic. The
+// factory used to close over a plain `const onInvoicePaid` declared above it.
+// vi.mock is hoisted to the top of the file, so that only worked while the
+// module was reached exclusively through a DYNAMIC import — by then the const
+// had initialized. The moment accountingController gained a static top-level
+// import from this module (sumAtCostReimbursements, for the Quick Pay Agreement
+// §4 at-cost carve-out) the factory ran during module load and hit the const in
+// its temporal dead zone: "Cannot access 'onInvoicePaid' before initialization",
+// which fails the whole suite rather than one assertion. vi.hoisted lifts the
+// declarations with the mock so the ordering cannot matter again.
+const { onInvoicePaid, sumAtCostReimbursements } = vi.hoisted(() => ({
+  onInvoicePaid: vi.fn().mockResolvedValue(undefined),
+  sumAtCostReimbursements: vi.fn().mockReturnValue(0),
+}));
+vi.mock("../../../src/services/integrationService", () => ({ onInvoicePaid, sumAtCostReimbursements }));
 
 import { markInvoicePaid } from "../../../src/controllers/accountingController";
 

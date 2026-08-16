@@ -1,7 +1,13 @@
 import { Router, Response } from "express";
 import { prisma } from "../config/database";
 import { authenticate, authorize, AuthRequest } from "../middleware/auth";
-import { quickPayFeePercent, normalizeTier } from "../lib/quickPayPricing";
+import { log } from "../lib/logger";
+import {
+  normalizeTier,
+  quickPayAutoApprovePerLoad,
+  quickPayMonthlyLimit,
+} from "../lib/quickPayPricing";
+import { sumAtCostReimbursements } from "../services/integrationService";
 
 const router = Router();
 
@@ -31,6 +37,12 @@ router.get("/", async (req: AuthRequest, res: Response) => {
             originCity: true, originState: true,
             destCity: true, destState: true,
             pickupDate: true, deliveryDate: true,
+            // Returned so the portal can HIDE the QuickPay control on a load with
+            // no recorded election, rather than offering a button that always
+            // 422s QP_NOT_ELECTED_ON_LOAD. Auto-generated rate confirmations
+            // (autoRateConfirmationService, the tender-accept path) currently
+            // write no election, so that is most loads today.
+            quickPayFeePercent: true,
           },
         },
       },
@@ -119,35 +131,41 @@ router.get("/:id", async (req: AuthRequest, res: Response) => {
   res.json(payment);
 });
 
-// v3.8.ajx C5 — Tier-graduated QuickPay limits per CLAUDE.md §8.
-//
-// Silver: auto-approve $2,000/load · monthly limit $15K
-// Gold:   auto-approve $4,000/load · monthly limit $40K
-// Platinum: auto-approve $6,000/load · monthly limit $80K
-//
-// Pre-ajx the request-quickpay endpoint had ZERO enforcement of either
-// bound. A carrier could request QP on a $50K freight settlement and the
-// system would happily mark the row paymentMethod=QUICKPAY + record the
-// discount with no upstream review trigger; same for cumulative month
-// (carrier could rack up $200K in QP requests on a $15K-limit Silver
-// account). C5 makes the monthly aggregate a hard block at request time
-// (most-actionable upstream gate; AE-approval review is downstream).
-//
-// `auto-approve $X/load` is currently advisory — set on the row so AE
-// review surfaces the over-threshold flag — but does NOT block the
-// request (carrier may still request QP on a $5K Silver load; it just
-// gets flagged for AE review rather than auto-approving). Hard block
-// on per-load deferred until the AE approval-state-machine work lands
-// (banked as v3.8.ajx C5b follow-up).
-const QP_TIER_LIMITS: Record<string, { autoApprovePerLoad: number; monthlyLimit: number }> = {
-  PLATINUM: { autoApprovePerLoad: 6000, monthlyLimit: 80000 },
-  GOLD: { autoApprovePerLoad: 4000, monthlyLimit: 40000 },
-  SILVER: { autoApprovePerLoad: 2000, monthlyLimit: 15000 },
-};
-
 // POST /api/carrier-payments/:id/request-quickpay — Request QuickPay on a pending payment
+//
+// Every gate below maps to a clause. A carrier could previously be charged a
+// Quick Pay fee having never signed the Quick Pay Agreement: this handler
+// checked ownership, status and the monthly total, and nothing else. It read
+// neither the signed agreement, nor the account election, nor the fee the rate
+// confirmation actually froze on the load — it re-derived a fee from the tier
+// ladder and deducted it.
+//
+//   §3  the election is per load, recorded on the rate confirmation
+//   §4  the fee is not charged on at-cost reimbursements
+//   §6  auto-approve ceilings by tier: over the per-load ceiling goes to
+//       review, over the monthly ceiling is refused
+//
+// Every failure mode below leaves the carrier on free standard tier terms at no
+// fee, which pays them more, not less.
 router.post("/:id/request-quickpay", async (req: AuthRequest, res: Response) => {
-  const payment = await prisma.carrierPay.findUnique({ where: { id: req.params.id } });
+  const payment = await prisma.carrierPay.findUnique({
+    where: { id: req.params.id },
+    include: {
+      load: {
+        select: {
+          id: true,
+          referenceNumber: true,
+          quickPayFeePercent: true,
+          rateConfirmations: {
+            where: { status: "SIGNED" },
+            orderBy: { createdAt: "desc" },
+            take: 1,
+            select: { formData: true },
+          },
+        },
+      },
+    },
+  });
   if (!payment) {
     res.status(404).json({ error: "Payment not found" });
     return;
@@ -165,21 +183,77 @@ router.post("/:id/request-quickpay", async (req: AuthRequest, res: Response) => 
     return;
   }
 
-  // Get carrier tier to determine QuickPay fee.
-  // v3.8.aqq — fees sourced from the canonical §8 helper (Silver 3% · Gold 2% ·
-  // Platinum 1%). Pre-aqq this had its own inline table charging Silver 2% /
-  // Gold 1.5% — undercharging vs the published rate and contradicting the tier
-  // cards the carrier sees. Centralized so the charge site can't drift again.
-  const profile = await prisma.carrierProfile.findUnique({ where: { userId: req.user!.id } });
-  const tier = normalizeTier(profile?.tier);
-  const feePercent = quickPayFeePercent(tier);
+  const profile = await prisma.carrierProfile.findUnique({
+    where: { userId: req.user!.id },
+    select: { id: true, tier: true, quickPayEnabled: true },
+  });
+  if (!profile) {
+    res.status(404).json({ error: "Carrier profile not found" });
+    return;
+  }
+  const tier = normalizeTier(profile.tier);
 
-  // v3.8.ajx C5 — Monthly limit hard block. Aggregate this carrier's QP
-  // activity (anything with paymentMethod=QUICKPAY) created within the
-  // current calendar month. If this request would push the total over
-  // the tier's monthly limit, refuse with 422 + structured message so the
-  // carrier portal can render "Monthly limit reached. Cycle resets [date]."
-  const limits = QP_TIER_LIMITS[tier] || QP_TIER_LIMITS.SILVER;
+  // §4 — never deduct a fee under an unsigned instrument.
+  const qpAgreementSigned = !!(await prisma.carrierAgreement.findFirst({
+    where: { carrierId: profile.id, status: "SIGNED", templateName: "quick-pay" },
+    select: { id: true },
+  }));
+  if (!qpAgreementSigned) {
+    res.status(403).json({
+      error:
+        "Quick Pay needs the Caravan Quick Pay Agreement signed first. Open Activation in your portal to read and sign it, then request Quick Pay again. This load keeps your free standard terms until then.",
+      code: "QP_AGREEMENT_NOT_SIGNED",
+      action: { label: "Review and sign", href: "/carrier/dashboard/activation" },
+    });
+    return;
+  }
+
+  // §3 — enabling Quick Pay makes the option available; disabling it withdraws
+  // the election on every load not yet funded.
+  if (profile.quickPayEnabled !== true) {
+    res.status(403).json({
+      error:
+        "Quick Pay is turned off on your account. Turn it on in Activation, then request Quick Pay again. This load keeps your free standard terms until then.",
+      code: "QP_NOT_ENABLED",
+      action: { label: "Turn on Quick Pay", href: "/carrier/dashboard/activation" },
+    });
+    return;
+  }
+
+  // §3 — the fee is "recorded on that load when Broker issues the rate
+  // confirmation for it", and "a load is priced by the Quick Pay speed recorded
+  // on that load when its rate confirmation was issued, and by nothing else".
+  // So the fee is read from the load, never re-derived from the tier ladder
+  // here. Re-deriving it is how this endpoint used to charge a carrier a fee
+  // that was recorded on nothing.
+  //
+  // This is also the third condition of the §3 gate — a Quick Pay fee has to be
+  // recorded on the load before any fee is deducted.
+  const electedPct = payment.load?.quickPayFeePercent;
+  if (typeof electedPct !== "number" || electedPct <= 0) {
+    res.status(422).json({
+      error:
+        `No Quick Pay fee is recorded on load ${payment.load?.referenceNumber || "this load"}, so it pays your ${tier} standard terms at no fee. The speed and fee are recorded when the rate confirmation is issued, before the load is hauled. Ask your rep which speed is recorded on a load and they will tell you.`,
+      code: "QP_NOT_ELECTED_ON_LOAD",
+      tier,
+    });
+    return;
+  }
+  const feePercent = electedPct;
+
+  // §6 — rolling calendar-month ceiling. Measured on gross carrier pay, which
+  // is stable regardless of the fee percentage and is the more conservative
+  // bound.
+  //
+  // Over the ceiling is a REVIEW, not a refusal. §6 is explicit: "A request
+  // above either limit is not refused. It is routed to Broker for manual
+  // review, and Broker will approve or decline it and notify Carrier." This
+  // route used to return 422 and stop, which is a refusal by an automatic rule
+  // on a promise that said the opposite — and it disagreed with the delivery
+  // path, which already queued a review on the same overage. Both ceilings now
+  // behave the same way on both paths: apply the election, queue the review.
+  const monthlyLimit = quickPayMonthlyLimit(tier);
+  const autoApprovePerLoad = quickPayAutoApprovePerLoad(tier);
   const now = new Date();
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
   const monthQpAggregate = await prisma.carrierPay.aggregate({
@@ -191,26 +265,17 @@ router.post("/:id/request-quickpay", async (req: AuthRequest, res: Response) => 
     _sum: { amount: true },
   });
   const usedThisMonth = monthQpAggregate._sum.amount || 0;
-  if (usedThisMonth + payment.amount > limits.monthlyLimit) {
-    const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 1);
-    res.status(422).json({
-      error: `Monthly QuickPay limit reached for ${tier} tier ($${limits.monthlyLimit.toLocaleString()}). Cycle resets ${monthEnd.toISOString().slice(0, 10)}.`,
-      code: "QP_MONTHLY_LIMIT_EXCEEDED",
-      tier,
-      monthlyLimit: limits.monthlyLimit,
-      usedThisMonth,
-      requestedAmount: payment.amount,
-    });
-    return;
-  }
+  const overMonthly = usedThisMonth + payment.amount > monthlyLimit;
 
-  // Per-load auto-approve threshold — flag for AE review but allow the
-  // request to proceed. Banked as C5b for hard-enforcement once the
-  // AE-approval state machine surface stabilizes.
-  const overAutoApprove = payment.amount > limits.autoApprovePerLoad;
-
-  const discount = payment.amount * (feePercent / 100);
-  const netAmount = payment.amount - discount;
+  // §4 — reimbursements repaid at cost against an original receipt are the
+  // carrier's own money. Charging a fee on a lumper the carrier fronted skims
+  // it. Same carve-out the delivery pricing path applies, same helper.
+  const reimbursements = sumAtCostReimbursements(
+    (payment.load?.rateConfirmations?.[0]?.formData as any)?.accessorials,
+  );
+  const feeBase = Math.max(0, payment.amount - reimbursements);
+  const discount = Math.round(feeBase * (feePercent / 100) * 100) / 100;
+  const netAmount = Math.round((payment.amount - discount) * 100) / 100;
 
   const updated = await prisma.carrierPay.update({
     where: { id: payment.id },
@@ -220,25 +285,56 @@ router.post("/:id/request-quickpay", async (req: AuthRequest, res: Response) => 
       quickPayFeePercent: feePercent,
       quickPayFeeAmount: discount,
       netAmount,
-      // v3.8.aqt — this is the STANDARD 7-day QuickPay request (no same-day
-      // option on this endpoint). Per the Sprint 33 mapping (7-day → PRIORITY,
-      // same-day → FLASH), label it PRIORITY. FLASH here mislabeled every 7-day
-      // request as same-day in reporting/filtering (paymentTier drives no SLA or
-      // money — it is a reporting label only, so this is an accuracy fix).
+      // Sprint 33 mapping — 7-day is PRIORITY, same-day is FLASH. This endpoint
+      // requests the 7-day product. paymentTier is a reporting label; it carries
+      // no SLA and no money.
       paymentTier: "PRIORITY",
     },
   });
 
+  // §6 — over either ceiling is not a refusal, it is a review. Previously the
+  // per-load case returned a flag and queued nothing (so "auto-approved up to
+  // $2,000" meant auto-approved at any amount) and the monthly case returned a
+  // 422 (a refusal on a clause that says requests over the limit are not
+  // refused). Both now queue the review §6 promises.
+  const overAutoApprove = payment.amount > autoApprovePerLoad;
+  const reviewReasons: string[] = [];
+  if (overAutoApprove) {
+    reviewReasons.push(
+      `$${payment.amount.toLocaleString()} gross is over the ${tier} $${autoApprovePerLoad.toLocaleString()} per-load auto-approve ceiling`,
+    );
+  }
+  if (overMonthly) {
+    reviewReasons.push(
+      `$${(usedThisMonth + payment.amount).toLocaleString()} month-to-date is over the ${tier} $${monthlyLimit.toLocaleString()} monthly auto-approve ceiling`,
+    );
+  }
+  if (reviewReasons.length > 0) {
+    await prisma.approvalQueue
+      .create({
+        data: {
+          type: "CARRIER_PAYMENT",
+          referenceId: payment.id,
+          referenceType: "CarrierPay",
+          amount: netAmount,
+          description: `Quick Pay requested on ${payment.paymentNumber || payment.id} for load ${payment.load?.referenceNumber || payment.loadId} — ${reviewReasons.join("; ")}`,
+          priority: "HIGH",
+          status: "PENDING",
+          requestedById: req.user!.id,
+        },
+      })
+      .catch((e) => log.error({ err: e }, "[QuickPay] approval queue entry failed"));
+  }
+
   res.json({
     ...updated,
-    // v3.8.ajx C5 — informational flag so the carrier portal can surface
-    // "Awaiting AE review (over $X auto-approve threshold)" rather than
-    // assuming the QP request was auto-approved. Hard-enforcement of the
-    // per-load auto-approve threshold deferred to C5b.
     overAutoApprove,
-    autoApprovePerLoad: limits.autoApprovePerLoad,
+    overMonthly,
+    pendingReview: reviewReasons.length > 0,
+    autoApprovePerLoad,
     usedThisMonthIncluding: usedThisMonth + payment.amount,
-    monthlyLimit: limits.monthlyLimit,
+    monthlyLimit,
+    reimbursementsExcluded: reimbursements,
   });
 });
 

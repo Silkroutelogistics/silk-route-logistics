@@ -150,9 +150,44 @@ export function QuickPayOverridePanel({ loadId, carrierUserId, speed, onAppliedR
     : null;
   const isOverride = deltaPp !== null && Math.abs(deltaPp) > 0.0001;
 
+  // Publish the applied rate up to the rate-confirmation form.
+  //
+  // TWO fixes here, and the second is why the callback is read through a ref.
+  //
+  // 1. The panel is hidden on STANDARD but still MOUNTED, so this effect kept
+  //    publishing a Quick Pay rate while the AE had Standard selected. Standard
+  //    and 7-day share a query key (speedForQuery collapses STANDARD onto
+  //    QP_7DAY), so switching 7-Day → Standard served the cached 3% default,
+  //    the speed-change reset saw no change and did not fire, and appliedPct
+  //    stayed "3.00". Payment Calculation showed the AE $0 because it zeroes
+  //    the fee on Standard, but buildPayload still sent 3, the controller wrote
+  //    it to Load.quickPayFeePercent, and the delivery path charged 3% — on a
+  //    load the AE had marked Standard, to a carrier who could not see it,
+  //    because the rate confirmation prints the tier ladder rather than the
+  //    applied fee. Standard now publishes 0 explicitly. Quick Pay Agreement
+  //    §3: a load with no Quick Pay fee recorded on it pays standard tier terms
+  //    at no fee, and 0 records that positively.
+  //
+  // 2. `onAppliedRateChange` is an inline arrow at the call site, so it had a
+  //    new identity on every parent render, and it was in this effect's dep
+  //    array. Effect → set() → new form object → parent re-render → new arrow →
+  //    dep changed → effect. Reading it through a ref keeps the callback
+  //    current without making its identity a trigger, so the effect fires when
+  //    the speed or the rate actually changes and not otherwise.
+  const onAppliedRateChangeRef = useRef(onAppliedRateChange);
   useEffect(() => {
-    if (appliedRateFraction !== null && onAppliedRateChange) onAppliedRateChange(appliedRateNumber);
-  }, [appliedRateNumber, appliedRateFraction, onAppliedRateChange]);
+    onAppliedRateChangeRef.current = onAppliedRateChange;
+  });
+
+  useEffect(() => {
+    const publish = onAppliedRateChangeRef.current;
+    if (!publish) return;
+    if (speed === "STANDARD") {
+      publish(0);
+      return;
+    }
+    if (appliedRateFraction !== null) publish(appliedRateNumber);
+  }, [speed, appliedRateNumber, appliedRateFraction]);
 
   const saveMutation = useMutation({
     mutationFn: () => {

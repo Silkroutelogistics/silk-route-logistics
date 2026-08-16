@@ -13,8 +13,60 @@ import {
   DETENTION_RATE_PER_HOUR,
   detentionCharge,
 } from "../routes/loadTracking";
+// The single owner of DETENTION_* and LAYOVER accessorial rows. lib/detentionLayover
+// imports only a Prisma type, so this adds no cycle: nothing it pulls in reaches
+// back here, and routes/loadTracking (imported above) does not import this module.
+import { applyStopDwellCharges } from "../lib/detentionLayover";
 
 const GEOFENCE_RADIUS_MILES = 1.0;
+
+/**
+ * Settle detention and layover for a stop this scan has just departed.
+ *
+ * Mirrors `settleDwellForStop` in routes/loadStops.ts, and exists for the same
+ * reason. This service is the fourth writer of `actualDeparture` and was the
+ * only one that wrote no accessorial. The alert engine selects on
+ * `actualDeparture: null`, so the instant the departure branch fired, the stop
+ * left that query forever and no "final" pass ever ran against it.
+ *
+ * The failure was permanent and it ran in the carrier's disfavour both ways:
+ *
+ *   - A five hour geofenced hold settled at $0. The ratified schedule owes $150.
+ *   - Past the cap the ledger froze at whatever the engine had written on its
+ *     last tick rather than at the real departure, and the provisional layover
+ *     the engine writes against wall-clock could never be walked back.
+ *
+ * Routing departure through the single owner fixes amount and composition
+ * together, exactly as the loadStops fix did.
+ *
+ * Never throws into the scan. Geofence detection runs over every active load on
+ * a cron, and one stop's billing failure must not stop the rest of the sweep.
+ */
+async function settleGeofenceDeparture(args: {
+  loadId: string;
+  stopId: string;
+  stopType: string;
+  facilityName: string | null;
+  arrivalAt: Date;
+  departedAt: Date;
+}): Promise<void> {
+  try {
+    await applyStopDwellCharges(prisma, {
+      loadId: args.loadId,
+      stopId: args.stopId,
+      stopType: args.stopType,
+      arrivalAt: args.arrivalAt,
+      departedAt: args.departedAt,
+      phase: "final",
+      facilityName: args.facilityName,
+    });
+  } catch (err) {
+    log.error(
+      { err, stopId: args.stopId, loadId: args.loadId },
+      "Dwell reconciliation failed after geofence departure"
+    );
+  }
+}
 
 /** Haversine formula: distance between two lat/lng points in miles */
 function haversineDistance(
@@ -168,10 +220,28 @@ export async function checkGeofence(
         });
       }
     } else if (stop.actualArrival && !stop.actualDeparture) {
-      // Out-of-radius with prior arrival = departure event
+      // Out-of-radius with prior arrival = departure event.
+      //
+      // One timestamp for the whole departure. The stop row, the DetentionRecord
+      // and the accessorial ledger now all describe the same instant instead of
+      // three separate `new Date()` calls drifting by however long the writes
+      // between them took.
+      const departedAt = new Date();
+
       await prisma.loadStop.update({
         where: { id: stop.id },
-        data: { actualDeparture: new Date() },
+        data: { actualDeparture: departedAt },
+      });
+
+      // The line above removes this stop from the alert engine's query for good,
+      // so this is the last pass that will ever price it. Settle first.
+      await settleGeofenceDeparture({
+        loadId,
+        stopId: stop.id,
+        stopType: stop.stopType,
+        facilityName: stop.facilityName,
+        arrivalAt: new Date(stop.actualArrival),
+        departedAt,
       });
 
       await prisma.geofenceEvent.create({
@@ -194,9 +264,8 @@ export async function checkGeofence(
         orderBy: { enteredAt: "desc" },
       });
       if (openDetention) {
-        const now = new Date();
         const elapsedMinutes = Math.round(
-          (now.getTime() - new Date(openDetention.enteredAt).getTime()) / 60000
+          (departedAt.getTime() - new Date(openDetention.enteredAt).getTime()) / 60000
         );
         // v3.8.arn — close with the same billable/rate/charge math loadTracking uses,
         // so a detention record means the same thing whichever writer created it.
@@ -207,7 +276,7 @@ export async function checkGeofence(
         await prisma.detentionRecord.update({
           where: { id: openDetention.id },
           data: {
-            departedAt: now,
+            departedAt,
             elapsedMinutes,
             billable,
             ratePerHour: DETENTION_RATE_PER_HOUR,

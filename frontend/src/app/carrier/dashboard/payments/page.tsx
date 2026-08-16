@@ -198,7 +198,15 @@ export default function CarrierPaymentsPage() {
                       {pay.paidAt ? new Date(pay.paidAt).toLocaleDateString() : new Date(pay.createdAt).toLocaleDateString()}
                     </td>
                     <td className="px-4 py-3">
-                      {pay.status === "PENDING" || pay.status === "APPROVED" ? (
+                      {/* The control is shown only when the load carries a recorded
+                          Quick Pay election. The backend requires one and 422s
+                          QP_NOT_ELECTED_ON_LOAD without it, so an ungated button
+                          offers the carrier something that can never succeed.
+                          Auto-generated rate confirmations record no election
+                          today, which is most loads. */}
+                      {(pay.status === "PENDING" || pay.status === "APPROVED") &&
+                       typeof pay.load?.quickPayFeePercent === "number" &&
+                       pay.load.quickPayFeePercent > 0 ? (
                         <button
                           onClick={() => setQpModal(pay)}
                           disabled={quickPayMutation.isPending}

@@ -60,6 +60,11 @@ export const carrierRegisterSchema = z.object({
   // server-captured agreedAt + IP + userAgent. Other 3 click-wrap
   // audit fields are NOT in the validator because they're captured
   // server-side from req.* (authoritative), not accepted from client.
+  // v3.8.asc — ACCEPTED AND IGNORED. The registration controller stamps
+  // BCA_VERSION from data/agreements.ts; a request no longer decides what
+  // version a consent record names. Kept declared only so a cached older
+  // frontend bundle that still sends it does not look like a schema change.
+  // Do not start reading it again.
   bcaVersion: z.string().optional(),
   // v3.8.aql — LOAD-BEARING. Must stay declared here.
   //

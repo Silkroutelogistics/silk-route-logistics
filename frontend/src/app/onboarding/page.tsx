@@ -14,7 +14,20 @@ const steps = ["Company Info", "Equipment & Regions", "Documents", "Terms", "Rev
 // Bump this constant any time the Step 4 agreement body changes.
 // Format: YYYY-MM-DD-vN (date of revision + revision counter for
 // same-day multi-edits).
-const BCA_VERSION = "2026-05-24-v1";
+// v3.8.asc — the hardcoded BCA_VERSION fallback that stood here was DELETED.
+//
+// It read `bcaContent?.version ?? BCA_VERSION` and was sent in the
+// registration payload onto CarrierProfile.bcaVersion, so a failed agreement
+// fetch stamped "2026-05-24-v1" — three months stale — onto a consent record,
+// printed that stale string in the print header, and let the applicant tick
+// "I agree to the Broker-Carrier Agreement above" while the body above still
+// read "Loading the agreement…". Consent to nothing, recorded against a version
+// that described different text. This write is on the registration payload, not
+// /sign-bca, so the 409 stale-version guard on the signing routes never saw it.
+//
+// The page now fails CLOSED, which is what the activation pane already did: no
+// body loaded, no acknowledgement possible. The server stamps the version it
+// served (carrierController) so the request cannot decide it either.
 
 /* ── v3.8.ain Path 2C — Canonical chrome parity nav for /onboarding ──
    Mirrors the static-HTML `_partials/nav.html` chrome that's injected on
@@ -366,7 +379,7 @@ export default function OnboardingPage() {
       })
       .catch(() => {});
   }, []);
-  const bcaVersionResolved = bcaContent?.version ?? BCA_VERSION;
+  const bcaVersionResolved = bcaContent?.version ?? null;
   const toggleArray = (field: "equipmentTypes" | "operatingRegions", val: string) => {
     const arr = form[field];
     set(field, arr.includes(val) ? arr.filter((v) => v !== val) : [...arr, val]);
@@ -433,7 +446,11 @@ export default function OnboardingPage() {
       if (hasCanadianOps && !hasDoc("safety")) return false;
       return true;
     }
-    if (step === 3) return form.agreeTerms;
+    // Fail closed: the agreement body has to be on screen before an
+    // acknowledgement of it means anything. Without this the applicant could
+    // tick "I agree to the Broker-Carrier Agreement above" while the pane still
+    // read "Loading the agreement…".
+    if (step === 3) return form.agreeTerms && !!bcaContent;
     return true;
   };
 
@@ -513,7 +530,9 @@ export default function OnboardingPage() {
         ...insurancePayload,
         ...(numTrucksStr ? { numberOfTrucks: numTrucksStr } : {}),
         ...(einFromForm ? { ein: einFromForm } : {}),
-        bcaVersion: bcaVersionResolved,
+        // bcaVersion is deliberately NOT sent. The server stamps the version it
+        // served; a request-supplied version on a consent record is the defect
+        // the 409 guard on the signing routes exists to stop.
       };
       for (const [key, value] of Object.entries(flatPayload)) {
         if (value === undefined || value === null) continue;
@@ -1561,7 +1580,7 @@ export default function OnboardingPage() {
                   destination — no PDF library needed. */}
               <div className="flex items-center justify-between gap-3 print:hidden">
                 <div className="text-xs text-[#6B7685]">
-                  <span className="uppercase tracking-[0.18em] font-semibold text-[#BA7517]">Version</span> {bcaVersionResolved}
+                  <span className="uppercase tracking-[0.18em] font-semibold text-[#BA7517]">Version</span> {bcaVersionResolved ?? "loading…"}
                 </div>
                 <button
                   type="button"
@@ -1577,7 +1596,7 @@ export default function OnboardingPage() {
                   timestamp at print time for the carrier's records. */}
               <div className="hidden print:block mb-4 pb-3 border-b border-[#EFE6D3]">
                 <p className="text-xs text-[#6B7685]">
-                  Silk Route Logistics Inc. — Broker-Carrier Agreement (Click-Through) — Version {bcaVersionResolved} — Printed {new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}
+                  Silk Route Logistics Inc. — Broker-Carrier Agreement (Click-Through) — Version {bcaVersionResolved ?? "not loaded"} — Printed {new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}
                 </p>
               </div>
               <div className="p-5 rounded-xl bg-[#FBF7F0] border border-[#EFE6D3] max-h-80 overflow-y-auto text-sm text-[#3A4A5F] leading-relaxed space-y-4 print:max-h-none print:overflow-visible print:bg-white print:border-0 print:p-0">
@@ -1605,11 +1624,20 @@ export default function OnboardingPage() {
                   </>
                 )}
               </div>
-              <label className="flex items-center gap-3 cursor-pointer p-4 rounded-lg border border-[#EFE6D3] bg-white hover:bg-[#FBF7F0] transition print:hidden">
-                <input type="checkbox" checked={form.agreeTerms}
+              {/* Fail closed — you cannot agree to text that is not on screen. */}
+              <label
+                className={`flex items-center gap-3 p-4 rounded-lg border border-[#EFE6D3] bg-white transition print:hidden ${
+                  bcaContent ? "cursor-pointer hover:bg-[#FBF7F0]" : "opacity-60 cursor-not-allowed"
+                }`}
+              >
+                <input type="checkbox" checked={form.agreeTerms} disabled={!bcaContent}
                   onChange={(e) => set("agreeTerms", e.target.checked)}
-                  className="w-5 h-5 rounded border-[#C5A572] text-[#BA7517] focus:ring-[#BA7517]" />
-                <span className="text-sm font-medium text-[#0A2540]">I agree to the Broker-Carrier Agreement above</span>
+                  className="w-5 h-5 rounded border-[#C5A572] text-[#BA7517] focus:ring-[#BA7517] disabled:cursor-not-allowed" />
+                <span className="text-sm font-medium text-[#0A2540]">
+                  {bcaContent
+                    ? "I agree to the Broker-Carrier Agreement above"
+                    : "The agreement is still loading. It has to be on screen before you can agree to it."}
+                </span>
               </label>
             </div>
           )}

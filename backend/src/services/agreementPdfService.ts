@@ -14,7 +14,7 @@ import {
   FONT_BODY_BOLD,
   FONT_BODY_ITALIC,
 } from "../lib/srl-chrome";
-import { BROKER_CARRIER_AGREEMENT, type LegalAgreement } from "../data/agreements";
+import { type LegalAgreement } from "../data/agreements";
 
 type PDFDoc = InstanceType<typeof PDFDocument>;
 
@@ -34,13 +34,24 @@ export interface AgreementCarrierIdentity {
 }
 
 /**
+ * Document-ID prefix per agreement. Shows in the header, the per-page footer,
+ * and the executed filename, so an executed BCA and an executed Quick Pay
+ * Agreement are distinguishable at a glance in a claims or audit file.
+ */
+const DOC_ID_PREFIX: Record<string, string> = {
+  "broker-carrier": "BCA",
+  "quick-pay": "QPA",
+};
+
+/**
  * v3.8.aqh — Reusable multi-page legal-agreement renderer on the SRL skill
  * chrome. This is the one new chrome capability the BCA/QP need beyond the
  * one-page BOL/RC: wrapping justified clauses + section headings with automatic
  * page-break + continuation headers, the MASTER_AGREEMENT (Broker + Carrier)
  * signature block, an executed e-signature attestation strip, and per-page
  * footers with correct "Page X of Y" via bufferPages. Both agreements share it
- * — the Quick Pay Agreement will call this same function once its text lands.
+ * — as of v3.8.art the Quick Pay Agreement text has landed and calls this same
+ * function through generateAgreementPdf below.
  */
 function renderLegalAgreement(
   doc: PDFDoc,
@@ -49,7 +60,7 @@ function renderLegalAgreement(
 ): void {
   registerSkillFonts(doc);
   const { carrier, signature } = opts;
-  const docId = `${agreement.templateName === "broker-carrier" ? "BCA" : "AGR"}-${agreement.version}`;
+  const docId = `${DOC_ID_PREFIX[agreement.templateName] ?? "AGR"}-${agreement.version}`;
   const CONTENT_BOTTOM = PAGE_H - MARGIN - 40;
 
   let y = drawHeaderFirstPage(doc, {
@@ -148,21 +159,35 @@ function renderLegalAgreement(
   }
 }
 
-/** Broker-Carrier Agreement PDF. Pass `signature` for the executed copy. */
-export function generateBrokerCarrierAgreementPdf(
-  opts: { carrier?: AgreementCarrierIdentity; signature?: AgreementSignature } = {},
+export type AgreementPdfOptions = {
+  carrier?: AgreementCarrierIdentity;
+  signature?: AgreementSignature;
+};
+
+/**
+ * v3.8.art — Generic entry point. Renders ANY LegalAgreement from
+ * data/agreements.ts. Pre-art the only exported generator hardcoded the BCA, so
+ * a signed Quick Pay Agreement could not be produced as a document at all — a
+ * binding e-signature against something neither party could hand to a claims
+ * adjuster, a factor, or a court. Callers should resolve the agreement via
+ * getAgreement(templateName) and pass it here.
+ */
+export function generateAgreementPdf(
+  agreement: LegalAgreement,
+  opts: AgreementPdfOptions = {},
 ): PDFDoc {
   const doc = new PDFDocument({ size: "LETTER", margin: 0, bufferPages: true });
-  renderLegalAgreement(doc, BROKER_CARRIER_AGREEMENT, opts);
+  renderLegalAgreement(doc, agreement, opts);
   doc.end();
   return doc;
 }
 
-/** Buffer form for storage/email. */
-export async function generateBrokerCarrierAgreementBuffer(
-  opts: { carrier?: AgreementCarrierIdentity; signature?: AgreementSignature } = {},
+/** Buffer form of any agreement, for storage/email. */
+export async function generateAgreementBuffer(
+  agreement: LegalAgreement,
+  opts: AgreementPdfOptions = {},
 ): Promise<Buffer> {
-  const doc = generateBrokerCarrierAgreementPdf(opts);
+  const doc = generateAgreementPdf(agreement, opts);
   return new Promise<Buffer>((resolve, reject) => {
     const chunks: Buffer[] = [];
     doc.on("data", (c: Buffer) => chunks.push(c));
@@ -170,3 +195,18 @@ export async function generateBrokerCarrierAgreementBuffer(
     doc.on("error", reject);
   });
 }
+
+/**
+ * Filename for the downloaded/stored copy, derived from the agreement title so
+ * a Quick Pay PDF is not served as "Broker-Carrier-Agreement-*.pdf".
+ */
+export function agreementPdfFilename(agreement: LegalAgreement): string {
+  return `${agreement.title.replace(/[^A-Za-z0-9]+/g, "-").replace(/^-|-$/g, "")}-${agreement.version}.pdf`;
+}
+
+// v3.8.asa — the four per-agreement wrappers (generateBrokerCarrierAgreementPdf
+// / Buffer, generateQuickPayAgreementPdf / Buffer) were deleted here. They were
+// a second way to do exactly what generateAgreementPdf / generateAgreementBuffer
+// already do, and the BCA pair being the only wired path is precisely how the
+// Quick Pay PDF route ended up hardcoded to "broker-carrier". Callers resolve
+// the agreement with getAgreement(templateName) and pass it in.

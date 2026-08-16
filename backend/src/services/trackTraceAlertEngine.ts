@@ -8,10 +8,11 @@ import { sendShipperDelayNotification } from "./shipperNotificationService";
 import { createNotification } from "./notificationService";
 import { broadcastSSE } from "../routes/trackTraceSSE";
 import { log } from "../lib/logger";
-
-// v3.8.arn — canonical layover rate. Was $350 here while the rate confirmation
-// printed $250/day; $250 is the ratified figure. Single source of truth.
-const LAYOVER_RATE_PER_DAY = 250;
+import {
+  applyStopDwellCharges,
+  LAYOVER_RATE_PER_DAY,
+  DETENTION_CAP_PER_STOP,
+} from "../lib/detentionLayover";
 
 export interface AlertResult {
   loadId: string;
@@ -221,7 +222,17 @@ export async function runAlertScanner() {
     }
   }
 
-  // ─── Auto-Layover: detention > 24hrs → create LAYOVER accessorial ───
+  // ─── Auto-Layover on an open stop ──────────────────────────────────────
+  // This writer used to fire on its own 24h rule and write a flat $250 LAYOVER
+  // row on the same stopId that loadTracking would later bill detention
+  // against, so a long hold collected both for one span of hours. It no longer
+  // decides anything: it hands the dwell to the reconciler and writes only what
+  // comes back. Layover starts at the cap conversion (arrival + 7h) and bills
+  // day one there, so a stop that has capped is already worth $500 and there is
+  // no band where a held carrier accrues nothing. The reconciler also writes the
+  // detention leg on this pass once it has capped, because past the cap that
+  // figure is frozen — that is what keeps the mid-hold quote from disagreeing
+  // with the ledger.
   const stopsWithDetention = await prisma.loadStop.findMany({
     where: {
       actualArrival: { not: null },
@@ -235,45 +246,38 @@ export async function runAlertScanner() {
   });
 
   for (const stop of stopsWithDetention) {
-    const dwellMs = Date.now() - new Date(stop.actualArrival!).getTime();
-    const dwellHrs = dwellMs / (1000 * 60 * 60);
-    if (dwellHrs >= 24) {
-      // Check if LAYOVER already created
-      const existingLayover = await prisma.loadAccessorial.findFirst({
-        where: { loadId: stop.load.id, stopId: stop.id, type: "LAYOVER" as any },
-      });
-      if (!existingLayover) {
-        await prisma.loadAccessorial.create({
-          data: {
-            loadId: stop.load.id,
-            stopId: stop.id,
-            type: "LAYOVER" as any,
-            notes: `Auto-layover: ${Math.round(dwellHrs)}h detention at ${stop.facilityName || "stop"}`,
-            amount: LAYOVER_RATE_PER_DAY,
-            quantity: 1,
-            unit: "flat",
-            rate: LAYOVER_RATE_PER_DAY,
-            billedTo: "SHIPPER",
-            status: "PENDING" as any,
-          },
-        });
+    const arrivalAt = new Date(stop.actualArrival!);
+    const dwellHrs = (Date.now() - arrivalAt.getTime()) / (1000 * 60 * 60);
 
-        if (stop.load.posterId) {
-          await createNotification(
-            stop.load.posterId,
-            "LOAD_UPDATE",
-            `Auto-Layover: ${stop.load.loadNumber || stop.load.referenceNumber}`,
-            `Detention exceeded 24hrs at ${stop.facilityName || "stop"}. Layover accessorial ($${LAYOVER_RATE_PER_DAY}) auto-created.`,
-            { actionUrl: "/dashboard/tracking" }
-          );
-        }
+    const { layoverChanged, layoverDays } = await applyStopDwellCharges(prisma, {
+      loadId: stop.load.id,
+      stopId: stop.id,
+      stopType: stop.stopType,
+      arrivalAt,
+      departedAt: new Date(),
+      phase: "in_progress",
+      facilityName: stop.facilityName,
+    });
 
-        broadcastSSE({
-          type: "accessorial",
-          loadId: stop.load.id,
-          data: { type: "LAYOVER", amount: LAYOVER_RATE_PER_DAY, facility: stop.facilityName },
-        });
+    if (layoverChanged) {
+      const amount = layoverDays * LAYOVER_RATE_PER_DAY;
+      const dayLabel = `${layoverDays} day${layoverDays === 1 ? "" : "s"}`;
+
+      if (stop.load.posterId) {
+        await createNotification(
+          stop.load.posterId,
+          "LOAD_UPDATE",
+          `Auto-Layover: ${stop.load.loadNumber || stop.load.referenceNumber}`,
+          `${Math.round(dwellHrs)}h at ${stop.facilityName || "stop"}. Detention hit the $${DETENTION_CAP_PER_STOP} cap and converted to layover: ${dayLabel} at $${LAYOVER_RATE_PER_DAY}/day ($${amount}).`,
+          { actionUrl: "/dashboard/tracking" }
+        );
       }
+
+      broadcastSSE({
+        type: "accessorial",
+        loadId: stop.load.id,
+        data: { type: "LAYOVER", amount, days: layoverDays, facility: stop.facilityName },
+      });
     }
   }
 

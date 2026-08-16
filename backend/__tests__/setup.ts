@@ -65,6 +65,15 @@ vi.mock("../src/config/database", () => ({
       create: vi.fn(),
       update: vi.fn(),
     },
+    // Quick Pay Agreement §3 condition 2 — "this Quick Pay Agreement is
+    // signed". Every path that can deduct a Quick Pay fee queries this model,
+    // so a test of any of those paths needs it here or the call throws.
+    carrierAgreement: {
+      findFirst: vi.fn(),
+      findMany: vi.fn(),
+      create: vi.fn(),
+      update: vi.fn(),
+    },
     customer: {
       findUnique: vi.fn(),
       findFirst: vi.fn(),

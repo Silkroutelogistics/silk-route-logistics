@@ -15,7 +15,6 @@ import { FileSignature, FileText, CheckCircle2, Loader2, Zap } from "lucide-reac
 import { api } from "@/lib/api";
 import { CarrierCard } from "@/components/carrier";
 import {
-  QP_VERSION,
   QP_SUMMARY,
   QP_TIER_TERMS,
   QP_SAME_DAY_NOTE,
@@ -71,6 +70,19 @@ export default function CarrierActivationPage() {
     staleTime: 5 * 60 * 1000,
   });
 
+  // v3.8.asa — canonical Caravan Quick Pay Agreement content, fetched the same
+  // way the BCA already was. Pre-asa this pane showed a ~90-word paraphrase and
+  // stamped a locally-mirrored version string, so the carrier signed a binding
+  // document containing set-off, recoupment against future loads, and survival
+  // clauses they were never shown. Click-wrap turns on reasonable notice; the
+  // signer now sees the body they are signing, and the version stamped is the
+  // one the backend served with that body.
+  const { data: qp, isLoading: qpLoading } = useQuery<AgreementContent>({
+    queryKey: ["agreement", "quick-pay"],
+    queryFn: () => api.get("/carrier-auth/agreement/quick-pay").then((r) => r.data),
+    staleTime: 5 * 60 * 1000,
+  });
+
   // BCA signature
   const [name, setName] = useState("");
   const [title, setTitle] = useState("");
@@ -108,7 +120,8 @@ export default function CarrierActivationPage() {
           ? {
               enabled: true,
               agreedToQpTerms: true,
-              qpVersion: QP_VERSION,
+              // The version served WITH the body above, never a local mirror.
+              qpVersion: qp?.version ?? "",
               signedByName: qpName.trim(),
               signedByTitle: qpTitle.trim() || undefined,
             }
@@ -127,18 +140,22 @@ export default function CarrierActivationPage() {
 
   // Open the branded agreement PDF in a new tab (review copy pre-sign, executed
   // copy once signed). Uses the api client so the httpOnly cookie is sent.
+  // v3.8.asa — takes the agreement type; the Quick Pay PDF route is live now.
   const [pdfError, setPdfError] = useState<string | null>(null);
-  const viewAgreementPdf = async () => {
-    setPdfError(null);
+  const [qpPdfError, setQpPdfError] = useState<string | null>(null);
+  const openAgreementPdf = async (type: "broker-carrier" | "quick-pay", setErr: (m: string | null) => void) => {
+    setErr(null);
     try {
-      const res = await api.get("/carrier-auth/agreement/broker-carrier/pdf", { responseType: "blob" });
+      const res = await api.get(`/carrier-auth/agreement/${type}/pdf`, { responseType: "blob" });
       const url = URL.createObjectURL(res.data as Blob);
       window.open(url, "_blank");
       setTimeout(() => URL.revokeObjectURL(url), 60_000);
     } catch (err) {
-      setPdfError(extractError(err, "Couldn't open the agreement PDF."));
+      setErr(extractError(err, "Couldn't open the agreement PDF."));
     }
   };
+  const viewAgreementPdf = () => openAgreementPdf("broker-carrier", setPdfError);
+  const viewQuickPayPdf = () => openAgreementPdf("quick-pay", setQpPdfError);
 
   if (isLoading || !data) {
     return (
@@ -153,6 +170,11 @@ export default function CarrierActivationPage() {
   const bcaSigned = data.bca.signed;
   const qpEnabled = data.quickPay.enabled;
   const canSign = name.trim().length >= 2 && agreed && !!bca?.version && !signBca.isPending;
+  // v3.8.asa — fail CLOSED. No agreement body loaded means no version to stamp
+  // and nothing the carrier can be said to have read, so there is nothing to
+  // sign. Declining to sign costs the carrier nothing: standard tier terms are
+  // free and Quick Pay is never a hauling gate.
+  const canSignQp = qpAgreed && qpName.trim().length >= 2 && !!qp?.version && !qpMutation.isPending;
 
   return (
     <div className="max-w-3xl">
@@ -323,11 +345,45 @@ export default function CarrierActivationPage() {
               </div>
             ) : (
               <>
-                <div className="max-h-48 overflow-auto rounded-lg border border-[#EFE6D3] bg-[#F5EEE0] p-4 mb-3 text-[11px] text-gray-600 leading-relaxed">
-                  <p className="font-bold text-[#0A2540] mb-1 text-xs">Caravan Quick Pay Agreement v{QP_VERSION}</p>
-                  <p>
-                    By enabling Quick Pay you agree to the Caravan Quick Pay Agreement: SRL advances payment on eligible completed loads after a clean proof of delivery, less the flat Quick Pay fee for your tier shown above. Quick Pay does not require a factoring contract, is applied per load at your election, and can be turned off at any time. The full Caravan Quick Pay Agreement governs.
-                  </p>
+                <p className="text-[13px] text-gray-500 mb-3">
+                  Read the agreement below, then sign with your full legal name. It covers how the fee is applied, when you get paid, approval limits, and what happens if a load is later disputed.
+                </p>
+
+                <button onClick={viewQuickPayPdf} className="text-[11px] text-[#BA7517] hover:underline mb-2 inline-flex items-center gap-1">
+                  <FileText size={12} /> View the agreement (PDF, opens in a new tab)
+                </button>
+                {qpPdfError && <div className={errorBox}>{qpPdfError}</div>}
+
+                {/* Review pane — canonical Quick Pay body fetched from the backend */}
+                <div className="max-h-72 overflow-auto rounded-lg border border-[#EFE6D3] bg-[#F5EEE0] p-4 mb-3">
+                  {qpLoading ? (
+                    <div className="flex items-center gap-2 text-gray-400 text-xs py-4">
+                      <Loader2 size={14} className="animate-spin" /> Loading the agreement...
+                    </div>
+                  ) : !qp ? (
+                    <p className="text-[11px] text-[#9B2C2C] py-4">
+                      The Quick Pay Agreement could not be loaded, so it cannot be signed right now. Reload the page, or email operations@silkroutelogistics.ai. Your standard tier pay terms are unaffected.
+                    </p>
+                  ) : (
+                    <>
+                      <p className="text-xs font-bold text-[#0A2540] mb-0.5">{qp.title}</p>
+                      <p className="text-[10px] text-gray-400 mb-2">{qp.effectiveNote}</p>
+                      {qp.preamble.map((p, i) => (
+                        <p key={`qp-pre-${i}`} className="text-[11px] text-gray-600 leading-relaxed mb-2">{p}</p>
+                      ))}
+                      {qp.sections.map((s) => (
+                        <div key={s.heading} className="mb-3 last:mb-0">
+                          <p className="text-xs font-bold text-[#0A2540] mb-0.5">{s.heading}</p>
+                          {s.clauses.map((c, i) => (
+                            <p key={i} className="text-[11px] text-gray-600 leading-relaxed">{c}</p>
+                          ))}
+                        </div>
+                      ))}
+                      <p className="text-[10px] text-gray-400 mt-3 pt-3 border-t border-gray-300/60">
+                        {qp.title} v{qp.version}. The full executed agreement governs.
+                      </p>
+                    </>
+                  )}
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
                   <div>
@@ -340,14 +396,15 @@ export default function CarrierActivationPage() {
                   </div>
                 </div>
                 <label className="flex items-start gap-2 mb-3 cursor-pointer">
-                  <input type="checkbox" checked={qpAgreed} onChange={(e) => setQpAgreed(e.target.checked)} className="mt-0.5 accent-[#BA7517]" />
+                  <input type="checkbox" checked={qpAgreed} onChange={(e) => setQpAgreed(e.target.checked)} disabled={!qp} className="mt-0.5 accent-[#BA7517] disabled:opacity-40" />
                   <span className="text-xs text-gray-600">
-                    I agree to the Caravan Quick Pay Agreement (v{QP_VERSION}) and want Quick Pay enabled on my account. Typing my name above is my electronic signature.
+                    I have read and agree to the Caravan Quick Pay Agreement{qp ? ` (v${qp.version})` : ""} on behalf of my company. Typing my name above is my electronic signature.
                   </span>
                 </label>
                 {qpError && <div className={errorBox}>{qpError}</div>}
                 <div className="flex gap-2">
-                  <button onClick={() => qpMutation.mutate(true)} disabled={!qpAgreed || qpName.trim().length < 2 || qpMutation.isPending} className={goldCta}>
+                  {/* Fail CLOSED: no body loaded, no signature. */}
+                  <button onClick={() => qpMutation.mutate(true)} disabled={!canSignQp} className={goldCta}>
                     {qpMutation.isPending && <Loader2 size={13} className="animate-spin" />} Enable Quick Pay
                   </button>
                   <button

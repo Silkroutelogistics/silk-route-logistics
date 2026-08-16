@@ -10,18 +10,38 @@ router.use(authenticate);
 
 // ─── Canonical detention rates (v3.8.arn) ───
 // 2h free at EACH stop (independent, non-cumulative), then $50/hr, capped at
-// $200 PER STOP. Flat rate — no tier and no equipment differentiation.
-// These are the single source of truth; do not re-inline the numbers below.
-export const DETENTION_FREE_HOURS = 2;
+// $250 PER STOP. Flat rate — no tier and no equipment differentiation.
+//
+// The figures now live in lib/detentionLayover.ts alongside the conversion math
+// that consumes them, so the cap and the layover rate it hands off to cannot
+// drift apart again. These re-exports keep the existing import surface intact
+// for geofenceService, which reads them from here.
+import {
+  DETENTION_FREE_HOURS,
+  DETENTION_RATE_PER_HOUR,
+  DETENTION_CAP_PER_STOP,
+  applyStopDwellCharges,
+  reconcileStopDwellCharges,
+} from "../lib/detentionLayover";
+
+export {
+  DETENTION_FREE_HOURS,
+  DETENTION_RATE_PER_HOUR,
+  DETENTION_CAP_PER_STOP,
+};
 export const DETENTION_FREE_MINUTES = DETENTION_FREE_HOURS * 60;
 export const DETENTION_FREE_MS = DETENTION_FREE_MINUTES * 60 * 1000;
-export const DETENTION_RATE_PER_HOUR = 50;   // $/hr billable after free time
-export const DETENTION_CAP_PER_STOP = 250;   // $ ceiling per stop. v3.8.ars — raised 200 -> 250 so the cap EQUALS the layover day rate; detention hands off to layover instead of dead-ending between billable hour 4 and hour 24.
 
 /**
  * Billable detention dollars for ONE stop: overage hours x rate, clamped to the
  * per-stop cap. v3.8.arn — the cap is per stop, so DETENTION_PU and
  * DETENTION_DEL each clamp independently and are never summed before clamping.
+ *
+ * Kept for the DetentionRecord writers (here and in geofenceService), which
+ * carry their own money columns and have no concept of layover. The
+ * LoadAccessorial path no longer uses it — that path goes through
+ * reconcileStopDwellCharges, which performs the cap→layover conversion the
+ * Rate Confirmation promises.
  */
 export function detentionCharge(overageMinutes: number): number {
   const raw = (Math.max(0, overageMinutes) / 60) * DETENTION_RATE_PER_HOUR;
@@ -350,34 +370,26 @@ router.post(
           sealNumber: sealNumber || null,
         };
 
-        // Calculate detention if applicable
+        // Detention + layover for this stop, reconciled by the single owner.
+        // Past the $250 cap detention converts to layover at $250/day and the
+        // two never cover the same hours — see lib/detentionLayover.ts.
         if (pickupStop.actualArrival) {
-          const freeTimeMs = DETENTION_FREE_MS; // v3.8.arn — 2h free, from the shared constant
-          const dwellMs = loadedTime.getTime() - new Date(pickupStop.actualArrival).getTime();
-          if (dwellMs > freeTimeMs) {
-            const detentionMin = Math.round((dwellMs - freeTimeMs) / 60000);
-            updateData.detentionStart = new Date(
-              new Date(pickupStop.actualArrival).getTime() + freeTimeMs
-            );
-            updateData.detentionMinutes = detentionMin;
+          const arrivalAt = new Date(pickupStop.actualArrival);
+          const result = await applyStopDwellCharges(prisma, {
+            loadId,
+            stopId: pickupStop.id,
+            stopType: "PICKUP",
+            arrivalAt,
+            departedAt: loadedTime,
+            phase: "final",
+            facilityName: pickupStop.facilityName,
+          });
 
-            // Auto-create detention accessorial
-            await prisma.loadAccessorial.create({
-              data: {
-                loadId,
-                stopId: pickupStop.id,
-                type: "DETENTION_PU",
-                // v3.8.ars — $50/hr capped at $250 for THIS stop (see detentionCharge)
-                amount: detentionCharge(detentionMin),
-                quantity: detentionMin,
-                unit: "minutes",
-                rate: DETENTION_RATE_PER_HOUR,
-                billedTo: "SHIPPER",
-                createdBy: req.user!.id,
-              },
-            });
-            detentionCreated = true;
+          if (result.plan.detention) {
+            updateData.detentionStart = result.plan.detention.startsAt;
+            updateData.detentionMinutes = result.plan.detention.billableMinutes;
           }
+          detentionCreated = result.detentionWritten;
         }
 
         await prisma.loadStop.update({
@@ -461,31 +473,22 @@ router.post(
           updateData.onTime = deliveredTime <= apptDeadline;
         }
 
-        // Calculate delivery detention
+        // Delivery-side dwell. Free time is per stop and non-cumulative, so
+        // this reconciles independently of the pickup stop.
         if (delStop.actualArrival) {
-          const freeTimeMs = DETENTION_FREE_MS; // v3.8.arn — 2h free at THIS stop, independent of pickup
-          const dwellMs = deliveredTime.getTime() - new Date(delStop.actualArrival).getTime();
-          if (dwellMs > freeTimeMs) {
-            const detentionMin = Math.round((dwellMs - freeTimeMs) / 60000);
-            updateData.detentionStart = new Date(
-              new Date(delStop.actualArrival).getTime() + freeTimeMs
-            );
-            updateData.detentionMinutes = detentionMin;
+          const result = await applyStopDwellCharges(prisma, {
+            loadId,
+            stopId: delStop.id,
+            stopType: "DELIVERY",
+            arrivalAt: new Date(delStop.actualArrival),
+            departedAt: deliveredTime,
+            phase: "final",
+            facilityName: delStop.facilityName,
+          });
 
-            await prisma.loadAccessorial.create({
-              data: {
-                loadId,
-                stopId: delStop.id,
-                type: "DETENTION_DEL",
-                // v3.8.arn — clamped independently of DETENTION_PU; the cap is per stop
-                amount: detentionCharge(detentionMin),
-                quantity: detentionMin,
-                unit: "minutes",
-                rate: DETENTION_RATE_PER_HOUR,
-                billedTo: "SHIPPER",
-                createdBy: req.user!.id,
-              },
-            });
+          if (result.plan.detention) {
+            updateData.detentionStart = result.plan.detention.startsAt;
+            updateData.detentionMinutes = result.plan.detention.billableMinutes;
           }
         }
 
@@ -590,13 +593,27 @@ router.get("/:loadId/detention", async (req: AuthRequest, res: Response) => {
     const activeStop = load.loadStops.find((s) => s.actualArrival && !s.actualDeparture);
     if (!activeStop) { res.json({ detention: false, dwellMinutes: 0 }); return; }
 
-    const dwellMs = Date.now() - new Date(activeStop.actualArrival!).getTime();
+    const arrivalAt = new Date(activeStop.actualArrival!);
+    const now = new Date();
+    const dwellMs = now.getTime() - arrivalAt.getTime();
     const dwellMinutes = Math.round(dwellMs / 60000);
     const freeTimeMinutes = DETENTION_FREE_MINUTES; // v3.8.arn — 2h free at this stop
     const inDetention = dwellMinutes > freeTimeMinutes;
     const detentionMinutes = inDetention ? dwellMinutes - freeTimeMinutes : 0;
-    // v3.8.arn — capped preview: never quote a carrier a number settlement won't honor
-    const estimatedCharge = inDetention ? detentionCharge(detentionMinutes) : 0;
+
+    // Preview through the same reconciliation settlement uses, so the number a
+    // carrier is quoted mid-hold is the number that gets billed. Past the cap
+    // that means detention + layover, not a detention figure that stops moving.
+    const plan = reconcileStopDwellCharges({ arrivalAt, departedAt: now });
+    const estimatedCharge = plan.totalAmount;
+
+    // The quote projects to right now; the ledger only carries what is settled.
+    // Below the cap detention is still moving and no row exists yet, so say so
+    // rather than let an AE read a projection as a posted charge. Past the cap
+    // both legs are written mid-hold and the two figures agree.
+    const settledAmount = plan.detention?.atCap
+      ? plan.totalAmount
+      : (plan.layover?.amount ?? 0);
 
     res.json({
       detention: inDetention,
@@ -604,6 +621,12 @@ router.get("/:loadId/detention", async (req: AuthRequest, res: Response) => {
       detentionMinutes,
       freeTimeMinutes,
       estimatedCharge,
+      settledAmount,
+      isSettled: settledAmount === plan.totalAmount,
+      estimatedDetention: plan.detention?.amount ?? 0,
+      estimatedLayover: plan.layover?.amount ?? 0,
+      layoverDays: plan.layover?.days ?? 0,
+      convertedToLayoverAt: plan.convertedAt,
       facilityName: activeStop.facilityName,
       stopType: activeStop.stopType,
       arrivedAt: activeStop.actualArrival,

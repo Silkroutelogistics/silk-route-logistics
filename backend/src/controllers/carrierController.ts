@@ -18,6 +18,9 @@ import { sendEmail, sendEmailVerificationEmail, wrap } from "../services/emailSe
 import { runIdentityCheck } from "../services/identityVerificationService";
 import { screenCarrier } from "../services/ofacScreeningService";
 import { populateAuthorityGrantedDate } from "../services/fmcsaService";
+// The consent record names the version the server serves, never one the
+// request supplied. See the bcaVersion write below.
+import { BCA_VERSION } from "../data/agreements";
 import { createEmailVerificationToken } from "../services/otpService";
 import { resolveCountry, extractClientIp } from "../services/geoService";
 import { normalizePhoneE164 } from "../lib/phoneNormalization";
@@ -275,13 +278,27 @@ export async function registerCarrier(req: Request, res: Response) {
           // v3.8.aja — BCA click-wrap audit trail captured server-side.
           // agreedAt = server-now (authoritative — not client-supplied).
           // IP from req.ip (Render forwards x-forwarded-for via Express
-          // 'trust proxy' setting). UA from req.headers. Version from
-          // client (the frontend constant that identifies which BCA
-          // text was rendered + acknowledged).
+          // 'trust proxy' setting). UA from req.headers.
+          //
+          // v3.8.asc — the version is now server-stamped too. It used to be
+          // `data.bcaVersion || null`, a client-supplied string on a consent
+          // record: the same defect the two signing routes in carrierAuth got
+          // a 409 guard for, on the one surface that guard never sees, because
+          // this write comes in on the registration payload rather than
+          // /sign-bca. The onboarding page's fallback constant had drifted
+          // three months stale, so a failed agreement fetch stamped a version
+          // that no longer described the text being shown.
+          //
+          // This route is not a version-negotiation surface — the applicant is
+          // registering, and refusing the whole registration over a stale tab
+          // would be the wrong trade. The page fetches the body and now blocks
+          // the acknowledgement until it has loaded, so the text acknowledged
+          // is this version's text, and the server records the version it
+          // actually serves. The request no longer decides.
           bcaAgreedAt: new Date(),
           bcaAgreedFromIp: req.ip || (req.headers["x-forwarded-for"] as string)?.split(",")[0]?.trim() || null,
           bcaAgreedFromUserAgent: (req.headers["user-agent"] as string) || null,
-          bcaVersion: data.bcaVersion || null,
+          bcaVersion: BCA_VERSION,
         },
       },
     },

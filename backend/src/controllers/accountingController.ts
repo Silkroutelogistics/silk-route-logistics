@@ -5,6 +5,17 @@ import { log } from "../lib/logger";
 import { validateLoadStatusTransition } from "../lib/loadStateMachine";
 import { generateInvoicePdf } from "../services/pdfService";
 import { sendCustomerInvoiceEmail } from "../services/emailService";
+import {
+  speedFromPaymentTier,
+  quickPayFeePercent,
+  standardNetDays,
+  quickPayAutoApprovePerLoad,
+  quickPayMonthlyLimit,
+  SAME_DAY_PREMIUM,
+} from "../lib/quickPayPricing";
+// §4 at-cost carve-out. One helper, shared by all three charge paths, so a
+// lumper the carrier fronted is never inside a fee base on any of them.
+import { sumAtCostReimbursements } from "../services/integrationService";
 
 // ============================================================
 // HELPERS
@@ -24,16 +35,80 @@ function daysBetween(a: Date, b: Date): number {
   return Math.floor((b.getTime() - a.getTime()) / 86_400_000);
 }
 
-/** Centralized quick-pay fee schedule — single source of truth */
-function getQuickPayFeePercent(tier: string): number {
-  switch (tier) {
-    case "FLASH": return 5;
-    case "EXPRESS": return 3.5;
-    case "PRIORITY": return 2;
-    case "PARTNER": return 1.5;
-    case "ELITE": return 0;
-    default: return 0; // STANDARD
+/**
+ * Quick Pay fee for a carrier-pay row prepared or edited from the AE console.
+ *
+ * This used to be a local switch keyed on the RETIRED PaymentTier names, with
+ * FLASH 5 / EXPRESS 3.5 / PRIORITY 2 / PARTNER 1.5 / ELITE 0. It was a second
+ * fee ladder: PARTNER 1.5% is in no version of CLAUDE.md §8, and none of the
+ * rungs moved with the carrier's Caravan tier.
+ *
+ * Replacing that table with the canonical one fixed the NUMBER but not the
+ * AUTHORITY to charge. These two endpoints still derived a fee from a
+ * request-supplied PaymentTier string and deducted it, checking none of the
+ * three conditions Quick Pay Agreement §3 states:
+ *
+ *   "Broker will not deduct a Quick Pay fee on a load unless all three of the
+ *    following are true: a Quick Pay fee is recorded on that load, this Quick
+ *    Pay Agreement is signed, and Quick Pay is enabled on Carrier's account.
+ *    If any one of them is not true, the load is paid on Carrier's standard
+ *    tier payment terms at no fee."
+ *
+ * So `PUT /accounting/payments/:id` with `{ paymentTier: "PRIORITY" }` would
+ * overwrite the zero fee `createCarrierPayOnDelivery` had correctly written and
+ * deduct 3% from a carrier who had signed nothing. That is the exact deduction
+ * §3 promises will not happen, on a route the delivery-path gate never sees.
+ *
+ * The fee now comes from the load, gated the same way and by the same three
+ * conditions as every other charge path. PaymentTier stays a reporting label:
+ * it says how fast, never how much, and it can no longer create a charge.
+ */
+export async function resolveElectedQuickPayFee(
+  carrierUserId: string,
+  loadId: string | null | undefined,
+): Promise<{ feePercent: number; reimbursements: number; reason: string }> {
+  const none = (reason: string) => ({ feePercent: 0, reimbursements: 0, reason });
+  if (!loadId) return none("no load on the payment");
+
+  // §3 condition 1 — a Quick Pay fee recorded on THIS load. The percentage is
+  // frozen when the rate confirmation is issued and is "the fee for that load
+  // and does not change afterward", so it is read, never re-derived.
+  const load = await prisma.load.findUnique({
+    where: { id: loadId },
+    select: {
+      quickPayFeePercent: true,
+      rateConfirmations: { orderBy: { createdAt: "desc" }, take: 1, select: { formData: true } },
+    },
+  });
+  const electedPct = load?.quickPayFeePercent;
+  if (typeof electedPct !== "number" || electedPct <= 0) {
+    return none("no Quick Pay fee recorded on the load");
   }
+
+  const profile = await prisma.carrierProfile.findUnique({
+    where: { userId: carrierUserId },
+    select: { id: true, quickPayEnabled: true },
+  });
+  if (!profile) return none("no carrier profile");
+
+  // §3 condition 3 — Quick Pay enabled on the account.
+  if (profile.quickPayEnabled !== true) return none("Quick Pay not enabled on the account");
+
+  // §3 condition 2 — a signed Quick Pay Agreement. Never deduct a fee under an
+  // unsigned instrument.
+  const signed = await prisma.carrierAgreement.findFirst({
+    where: { carrierId: profile.id, status: "SIGNED", templateName: "quick-pay" },
+    select: { id: true },
+  });
+  if (!signed) return none("Caravan Quick Pay Agreement not signed");
+
+  // §4 — reimbursements repaid at cost against an original receipt are the
+  // carrier's own money and sit outside the fee base. Same helper as the other
+  // two charge paths so a lumper is carved out identically everywhere.
+  const reimbursements = sumAtCostReimbursements(
+    (load?.rateConfirmations?.[0]?.formData as any)?.accessorials,
+  );
+  return { feePercent: electedPct, reimbursements, reason: "elected on the load" };
 }
 
 function paginate(query: Record<string, any>) {
@@ -890,10 +965,15 @@ export async function preparePayment(req: AuthRequest, res: Response) {
     const acc = accessorialsTotal ?? 0;
     const grossAmount = lh + fs + acc;
 
-    // Calculate quick-pay discount based on CPP tier
+    // Quick Pay Agreement §3 — the fee is the one recorded on the load, and it
+    // is only deducted when the agreement is signed and Quick Pay is enabled.
+    // PaymentTier is stored as a reporting label below; it does not price.
     const tier = paymentTier ?? "STANDARD";
-    const quickPayFeePercent = getQuickPayFeePercent(tier);
-    const quickPayFeeAmount = Math.round(grossAmount * (quickPayFeePercent / 100) * 100) / 100;
+    const elected = await resolveElectedQuickPayFee(carrierId, loadId);
+    const quickPayFeePercent = elected.feePercent;
+    // §4 — at-cost reimbursements are paid in full and excluded from the base.
+    const feeBase = Math.max(0, grossAmount - elected.reimbursements);
+    const quickPayFeeAmount = Math.round(feeBase * (quickPayFeePercent / 100) * 100) / 100;
     const netAmount = grossAmount - quickPayFeeAmount;
 
     // Generate payment number with collision retry
@@ -975,12 +1055,22 @@ export async function updatePayment(req: AuthRequest, res: Response) {
     const grossAmount = lh + fs + acc;
 
     const tier = paymentTier ?? existing.paymentTier;
+    // Quick Pay Agreement §3. Editing the PaymentTier label used to re-derive a
+    // fee from the tier ladder and write it, so this route could turn a
+    // correctly-zero settlement into a 3% deduction on a carrier who had signed
+    // no Quick Pay Agreement. The fee is now whatever is recorded on the load,
+    // and only when the agreement is signed and Quick Pay is enabled.
     let quickPayFeePercent = existing.quickPayFeePercent ?? 0;
+    let reimbursements = 0;
     if (paymentTier) {
-      quickPayFeePercent = getQuickPayFeePercent(tier);
+      const elected = await resolveElectedQuickPayFee(existing.carrierId, existing.loadId);
+      quickPayFeePercent = elected.feePercent;
+      reimbursements = elected.reimbursements;
     }
 
-    const quickPayFeeAmount = grossAmount * (quickPayFeePercent / 100);
+    // §4 — at-cost reimbursements are outside the fee base.
+    const feeBase = Math.max(0, grossAmount - reimbursements);
+    const quickPayFeeAmount = Math.round(feeBase * (quickPayFeePercent / 100) * 100) / 100;
     const netAmount = grossAmount - quickPayFeeAmount;
 
     const payment = await prisma.carrierPay.update({
@@ -3746,17 +3836,41 @@ export async function getAPAging(req: AuthRequest, res: Response) {
 // 57. CPP TIER FEE SCHEDULE
 // ============================================================
 
+// Serves the CLAUDE.md §8 ladder and the Quick Pay Agreement §6 ceilings.
+//
+// This used to publish a sixth-rung schedule keyed on the RETIRED PaymentTier
+// names — Flash Pay at a 2-hour SLA, Express next-business-day, PARTNER at
+// 1.5%, Elite at 5 business days no fee, and a flat Net 30 for everyone. None
+// of those products exist. An AE reading this endpoint would quote a carrier a
+// fee and a turnaround SRL cannot honor and the signed agreement does not name.
+//
+// It now serves the three Caravan tiers, priced from the one authoritative
+// module. The retired names are reported only as a speed translation for legacy
+// CarrierPay rows, never as prices.
 export async function getCPPTierSchedule(_req: AuthRequest, res: Response) {
+  const tiers = (["SILVER", "GOLD", "PLATINUM"] as const).map((tier) => ({
+    tier,
+    standardNetDays: standardNetDays(tier),
+    standardFeePercent: 0,
+    quickPay7DayFeePercent: quickPayFeePercent(tier),
+    quickPaySameDayFeePercent: quickPayFeePercent(tier, true),
+    autoApprovePerLoad: quickPayAutoApprovePerLoad(tier),
+    monthlyLimit: quickPayMonthlyLimit(tier),
+    description: `${tier[0]}${tier.slice(1).toLowerCase()} — free Net-${standardNetDays(tier)} standard, ${quickPayFeePercent(tier)}% 7-day Quick Pay, ${quickPayFeePercent(tier, true)}% same-day`,
+  }));
+
   res.json({
-    tiers: [
-      { tier: "FLASH", feePercent: 5, slaHours: 2, description: "Flash Pay — Same day, 2-hour SLA" },
-      { tier: "EXPRESS", feePercent: 3.5, slaHours: 24, description: "Express Pay — Next business day" },
-      { tier: "PRIORITY", feePercent: 2, slaHours: 48, description: "Priority Pay — 2 business days" },
-      { tier: "PARTNER", feePercent: 1.5, slaHours: 72, description: "Partner Pay — 3 business days" },
-      { tier: "ELITE", feePercent: 0, slaHours: 120, description: "Elite Pay — 5 business days, no fee" },
-      { tier: "STANDARD", feePercent: 0, slaHours: 720, description: "Standard — Net 30" },
-    ],
-    approvalThreshold: 5000,
+    tiers,
+    // Same-day is a universal premium on the tier fee, never tier-gated (§8).
+    sameDayPremiumPercent: SAME_DAY_PREMIUM,
+    // Quick Pay timing runs from receipt of complete documentation, not from
+    // delivery (Quick Pay Agreement §5).
+    timingTrigger: "RECEIPT_OF_COMPLETE_DOCUMENTATION",
+    // The retired PaymentTier enum members are a speed label on legacy rows.
+    // They carry no price of their own.
+    legacyPaymentTierSpeeds: Object.fromEntries(
+      ["FLASH", "EXPRESS", "PRIORITY", "PARTNER", "ELITE", "STANDARD"].map((t) => [t, speedFromPaymentTier(t)]),
+    ),
     fundHealthThresholds: { green: 25000, yellow: 10000, red: 0 },
   });
 }
