@@ -2,6 +2,13 @@
 
 Created v3.8.arm (2026-08-14). Companion to `docs/bol-references/`.
 
+Money terms, layout figures and the shipped/not-shipped list re-verified against
+the rendering code on **2026-08-15**. Two things were provably stale and are
+corrected below: the detention cap (recorded as $200/stop, ratified at $250 in
+v3.8.ars) and the layout budget (recorded for a 2-page document that now renders
+3). Both had the same cause — a figure written once and never re-read against the
+code. Re-verify before citing anything here.
+
 Exists because of a mistake worth not repeating: in v3.8.arf a claim shipped in
 code comments that SRL's BOL had been cross-referenced against Echo, Flock, and
 Varstar. It had not — no such documents were in the repo. v3.8.arg withdrew the
@@ -44,7 +51,17 @@ Seven live broker rate confirmations, all supplied by Wasi and transcribed here.
 | `transervice-TIS20078.md` | Transervice Integrated Solutions | 2 | Dry van | 2022 |
 
 Plus `_CURRENT_SRL_RC_RENDERED.txt` — SRL's own output, text-extracted with Y
-coordinates, for a reefer case and a dry van case.
+coordinates, for a dry van case and a reefer case. **It is a capture, not a
+specification, and it is only as current as its stamp.** Regenerate it with
+`cd backend && npx tsx scripts/verify-rc-matrix.ts --dump`, which renders the
+same fixtures the layout gate asserts against and stamps the file with the
+commit it came from.
+
+That file went stale once and did real damage: it stayed a 2-page capture after
+the document grew to 3 pages in v3.8.arp/arq/art, and still carried a tracking
+string that v3.8.arw removed for naming two tools that do not exist. A spec was
+then written from it and inherited the wrong page map. **Believe the code over
+the capture whenever they disagree**, and regenerate rather than hand-edit.
 
 Page counts run 1 to 5. **Length is a choice, not a requirement**: Greatwide
 carries rate, full terms, billing instructions and an executed signature block on
@@ -176,13 +193,31 @@ substantive covenants live in the Broker-Carrier Agreement and the rate
 confirmation stays a clean operational form that incorporates the BCA by
 reference. Everything below appears in the reference corpus but changes **when
 SRL pays money** or **what SRL is contractually bound to**, so it is Wasi's and
-Dirk's call, not an engineering one:
+Dirk's call, not an engineering one.
 
-- ~~Detention clock-start definition and a cap~~ — the **cap shipped** in v3.8.arn
-  ($200/stop). The **clock-start definition has not** and is still open: the
-  document says "2 hrs free" without saying free from what.
-- TONU qualification criteria
-- Lumper pre-authorization threshold
+Struck-through entries have since been ratified and shipped; they are kept here
+with their outcome rather than deleted, because the list's value is the record of
+what was held for a decision and how the decision came out. **Verified against
+`pdfService.ts` on 2026-08-15** — the six live entries below still return no hits
+in the rendering code.
+
+- ~~Detention clock-start definition and a cap~~ — **both shipped.** The cap
+  shipped in v3.8.arn and was re-ratified at **$250/stop** in v3.8.ars, set
+  deliberately EQUAL to the layover day rate: at $200 the cap was reached at
+  billable hour 4 while auto-layover did not fire until hour 24, leaving an
+  18-hour gap in which a held carrier earned nothing. At the cap detention
+  **converts** to layover and the two do not stack for the same hours
+  (`pdfService.ts` `detentionMaxPerStop: 250` + the conversion sentence in the
+  accessorial clause). The clock-start shipped in v3.8.arp — "Detention free
+  time starts when you arrive, and runs separately at each stop", plus the
+  appointment-window gate. Canonical wording: CLAUDE.md §5.
+- ~~TONU qualification criteria~~ — **shipped in v3.8.arp.** Two gates: SRL must
+  have given the pickup number and shipper address and cleared the carrier to
+  head to pickup, and a carrier who already arrived must have been inside the
+  appointment window.
+- Lumper pre-authorization threshold (a dollar figure above which pre-approval is
+  required — the document says "approved lumper" without saying what needs
+  approving)
 - Late / missed-appointment fee
 - Reefer FSMA continuous-temperature covenant
 - Factoring / notice-of-assignment handling
@@ -215,19 +250,40 @@ pdfjs-dist coordinate extraction. Text extraction alone cannot see a collision �
 that is how a line rendering *through* the footer scored as clean before the
 threshold was corrected in arm.
 
-- Footer rule sits at y ≈ 755. Body content must clear it by ~6pt.
-- Page 1 after arm: 18pt clearance (was 85pt of dead space before the dock block
-  moved down from page 2).
-- Page 2 worst case (long special instructions + per-load custom terms + reefer,
-  all at once): 14pt clearance.
-- Page 2 uses `lineGap: 0.5` and 10pt inter-block gaps. The compression is
-  unconditional: a terms page tolerates bottom whitespace in the common case far
-  better than it tolerates a collision in the maximal one.
+**Geometry (derived from the code, not eyeballed).** The gold footer rule is
+drawn at **y = 740** — `PAGE_H − MARGIN − 12 − 4`, i.e. `792 − 36 − 16` in
+`srl-chrome.ts` `drawFooter`. The footer *text* baseline lands at ≈ 755.5, which
+is a different number and has been mistaken for the rule in both this file and
+the gate's own comment. The gate fails any body baseline below **738**, so it
+demands 2pt of baseline clearance above the rule; descenders and any wrapped
+fragment the extractor reports separately live in that margin.
+
+**Measured clearance, all 9 fixtures, 3 pages each** (`dead` = 738 − last body
+baseline, so larger is more empty space at the bottom):
+
+| Page | Clearance | Note |
+|---|---|---|
+| 1 | 22pt on every fixture | Page 1 is fixed-height content; nothing on it varies with line count. |
+| 2 | 76pt (worst case) to 166pt (baseline) | The only page that flexes. Worst case = 6 line items + long special instructions + reefer + per-load custom terms, all at once. |
+| 3 | 306pt on every fixture | Invoicing + the acceptance block; ends well short of the floor. |
+
+Page 2 uses `lineGap: 0.5` and 10pt inter-block gaps. The compression is
+unconditional: a terms page tolerates bottom whitespace in the common case far
+better than it tolerates a collision in the maximal one.
+
+**The page count is now asserted, not merely printed.** Until v3.8.ary this
+script printed `pages=N` and checked nothing about it, so `ALL CASES PASS` was
+never evidence of page-count stability — the growth from 2 pages to 3 went
+unremarked by the gate. `EXPECTED_PAGES` in that file records the current count
+per fixture. It is a **baseline, not a law**: if the document legitimately
+changes shape, confirm the new shape in the PDF and update the number in the
+same commit.
 
 Run before shipping any rate-confirmation layout change:
 
 ```
 cd backend
-npx tsx scripts/verify-rc-matrix.ts   # 9 fixtures, must print ALL CASES PASS
-npx tsx scripts/audit-rc-spacing.ts   # per-line coordinates, scan for collisions
+npx tsx scripts/verify-rc-matrix.ts          # 9 fixtures, must print ALL CASES PASS
+npx tsx scripts/verify-rc-matrix.ts --dump   # same, and regenerates the capture below
+npx tsx scripts/audit-rc-spacing.ts          # per-line coordinates, scan for collisions
 ```

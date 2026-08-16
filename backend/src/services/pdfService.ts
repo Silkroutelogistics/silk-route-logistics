@@ -1816,13 +1816,16 @@ export function generateEnhancedRateConfirmation(load: EnhancedRCLoadData, formD
 
   const carrierPanelY = carrierLabelY + 12;
   const carrierPanelH = 58;
-  doc.save()
-    .fillColor(TOKENS.cream2)
-    .strokeColor(TOKENS.border1)
-    .lineWidth(0.5)
-    .roundedRect(MARGIN, carrierPanelY, CONTENT_W, carrierPanelH, 8)
-    .fillAndStroke()
-    .restore();
+  // Item 94 (A-5) — frame via drawPanel instead of a hand-built
+  // roundedRect + fillAndStroke, per SKILL.md "Don't hand-build chrome".
+  // FRAME ONLY, deliberately: the body is three rows at three different
+  // font/size/color combinations (11pt bold fg1 name, 8.5pt fg2 MC/DOT,
+  // 8.5pt fg2 conditional contact) at fixed offsets, and drawPanel takes a
+  // single bodyText rendered at one font, so the rows stay hand-rendered
+  // below. With wrap omitted (false) and no bodyText, drawPanel honors `h`
+  // and emits exactly the save/fill/stroke/roundedRect/fillAndStroke/restore
+  // sequence this replaced — byte-identical output, one owner for the tokens.
+  drawPanel(doc, { x: MARGIN, y: carrierPanelY, w: CONTENT_W, h: carrierPanelH });
 
   doc.font(FONT_BODY_BOLD, 11).fillColor(TOKENS.fg1);
   doc.text(carrierName, MARGIN + 12, carrierPanelY + 9, { lineBreak: false });
@@ -1916,13 +1919,14 @@ export function generateEnhancedRateConfirmation(load: EnhancedRCLoadData, formD
   });
   const qpPanelY = qpLabelY + 12;
   const qpPanelH = 42;
-  doc.save()
-    .fillColor(TOKENS.cream2)
-    .strokeColor(TOKENS.border1)
-    .lineWidth(0.5)
-    .roundedRect(MARGIN, qpPanelY, CONTENT_W, qpPanelH, 8)
-    .fillAndStroke()
-    .restore();
+  // Item 94 (A-5) — frame via drawPanel, per SKILL.md "Don't hand-build
+  // chrome". FRAME ONLY: both body paths are unexpressible as a single
+  // bodyText. The tier path is a 4-column grid (per-cell align:center, 7pt
+  // fg3 header over 10pt bold fg1 value); the no-tier path is two 8pt fg2
+  // lines at a 12pt inset. drawPanel renders one string at FONT_BODY 9 /
+  // fg1 / 10pt inset, so both bodies stay hand-rendered below. `h` is
+  // honored with wrap omitted, so the rect is byte-identical.
+  drawPanel(doc, { x: MARGIN, y: qpPanelY, w: CONTENT_W, h: qpPanelH });
   if (tierData) {
     // Tier-set path — 4-cell grid (TIER / STANDARD / 7-DAY QP / SAME-DAY QP)
     const cellW = CONTENT_W / 4;
@@ -1945,7 +1949,7 @@ export function generateEnhancedRateConfirmation(load: EnhancedRCLoadData, formD
     // Italic 8pt body for marketing-copy register; visually distinct from
     // the tier grid above.
     doc.font(FONT_BODY, 8).fillColor(TOKENS.fg2);
-    const nudgeLine1 = "Quick Pay available — contact operations@silkroutelogistics.ai for tier enrollment.";
+    const nudgeLine1 = "Quick Pay available. Contact operations@silkroutelogistics.ai for tier enrollment.";
     const nudgeLine2 = "Caravan Partner Program: Silver 3% · Gold 2% · Platinum 1% (7-day standard).";
     doc.text(nudgeLine1, MARGIN + 12, qpPanelY + 10, { width: CONTENT_W - 24, lineBreak: false });
     doc.text(nudgeLine2, MARGIN + 12, qpPanelY + 24, { width: CONTENT_W - 24, lineBreak: false });
@@ -1970,6 +1974,30 @@ export function generateEnhancedRateConfirmation(load: EnhancedRCLoadData, formD
     // what Scotlynn's "$50/HR OR UNTIL LAYOVER OR $300 IS HIT" is reaching for.
     detentionMaxPerStop: 250,
     detentionNotify: true,
+    // ── Ownership of the remaining money/term cells ─────────────────────────
+    // These three have printed for the whole life of the document from `??`
+    // fallbacks inside drawRateConTerms, because this object — the function's
+    // ONLY caller — never passed them. The values below are exactly what those
+    // fallbacks rendered, so this changes no output. What it changes is who
+    // decides: three numbers on a document a carrier signs move out of a
+    // renderer default and into a reviewable, greppable choice at the call
+    // site. The renderer keeps its fallbacks as defence in depth, but it is no
+    // longer the place the value is chosen.
+    //
+    // TONU and layover are ratified in CLAUDE.md §5: $200 flat, $250/day.
+    tonuAmount: 200,
+    layoverPerDay: 250,
+    // UNRATIFIED — NEEDS A DECISION. DO NOT SILENTLY KEEP OR DROP THIS.
+    // CLAUDE.md §5 ratifies detention, TONU, layover and lumper; §9 ratifies
+    // the 24-hour paperwork deadline. NO cancellation term is ratified
+    // anywhere. This 4-hour notice window has nonetheless printed on every
+    // Rate Confirmation a carrier has signed, sourced from a renderer default
+    // that no human ever chose. The value is preserved here unchanged so this
+    // commit stays byte-identical on the rendered page: it is surfaced, not
+    // settled. The principal must either ratify a cancellation window into §5
+    // or strike the cell. Note that striking it is not free — it would drop
+    // the grid from 5 items to 4 and change the row layout.
+    cancellationWindowHours: 4,
     quickPayTier: qpTier !== "—" ? qpTier : undefined,
   };
   y = drawRateConTerms(doc, opTerms, y - 4);
@@ -1993,12 +2021,14 @@ export function generateEnhancedRateConfirmation(load: EnhancedRCLoadData, formD
     // SRL captured the carrier as a legal entity and nothing about the physical
     // unit, so dispatch could not tell a shipper gate who was arriving and
     // tracking had no driver cell to start from.
-    "Before pickup — Driver ____________  Cell ____________  Truck # ________  Trailer # ________",
+    // V-2 — colon, not an em-dash: this is a label introducing fields, and
+    // references/voice.md does not want em-dashes as sentence connectors.
+    "Before pickup: Driver ____________  Cell ____________  Truck # ________  Trailer # ________",
     // Identity at the dock — 0 of 18 retrieved documents carry this, yet every
     // fraud source in the corpus names check-in identity as the highest-signal
     // tell. NOT a restatement of the BCA re-brokering covenant: that binds the
     // carrier; this tells an honest driver what to do when someone ELSE tries it.
-    "Check in at both stops as Silk Route Logistics, load " + refNum + ". The BOL must name SRL as broker. If it names another company or MC number, do not load — call (269) 220-6760.",
+    "Check in at both stops as Silk Route Logistics, load " + refNum + ". The BOL must name SRL as broker. If it names another company or MC number, do not load. Call (269) 220-6760.",
     // Seals — 4 of 4 real rate confirmations address seals; SRL printed nothing.
     "Seals: record the number on the BOL at pickup; the receiver removes it, not the driver. Broken or missing seal at delivery: call before the doors open.",
     // Check calls — 2 of 4 state an explicit clock time. SRL runs check calls
@@ -2101,9 +2131,26 @@ export function generateEnhancedRateConfirmation(load: EnhancedRCLoadData, formD
   };
   y = drawCarrierRequirements(doc, reqs, y);
 
-  // Special instructions — render as cream-2 frame with manual wrapped
-  // text (drawPanel itself uses lineBreak: false for single-line bodies;
-  // we want wrapping for multi-line free text, so frame + text manually).
+  // Special instructions — cream-2 frame via drawPanel, body still rendered
+  // here. Item 94 (A-5): drawPanel now HAS a wrap mode, but this block cannot
+  // adopt it without moving pixels, so only the frame was migrated.
+  //
+  // Why wrap is not used here. drawPanel's measured mode is built around an
+  // INSIDE label: it fixes the body at panelTop + PANEL_BODY_TOP (22) to clear
+  // a 6.5pt label at +8, and pads PANEL_PAD_BOTTOM (10) below. This panel
+  // renders its label OUTSIDE and above the rect, so its body sits at
+  // panelTop + 10 with 18pt below. Adopting wrap would push the body down 12pt
+  // into a gap reserved for a label that is not there, cut the bottom pad from
+  // 18 to 10, and grow the rect by ~4pt plus one lineGap per wrapped line.
+  // That is a visible change to a shipped document, so the frame is migrated
+  // and the measure + body render stay put. Closing the gap properly means
+  // teaching drawPanel a label-outside body offset — a change to srl-chrome.ts,
+  // which is not this file's to make.
+  //
+  // Known latent defect, deliberately preserved: the height below is measured
+  // WITHOUT lineGap but the body renders WITH lineGap: 1, so the panel
+  // under-measures by ~1pt per wrapped line. Correcting it would also move
+  // pixels; it belongs with the wrap migration above, not here.
   const instructions = fd.specialInstructions || load.specialInstructions || load.notes;
   if (instructions || fd.pickupInstructions || fd.deliveryInstructions || fd.appointmentRequired) {
     const instrParts: string[] = [];
@@ -2129,14 +2176,10 @@ export function generateEnhancedRateConfirmation(load: EnhancedRCLoadData, formD
     const bodyHeight = doc.heightOfString(instrBody, { width: CONTENT_W - 20 });
     const panelH = bodyHeight + 28;
 
-    // cream-2 frame
-    doc.save()
-      .fillColor(TOKENS.cream2)
-      .strokeColor(TOKENS.border1)
-      .lineWidth(0.5)
-      .roundedRect(MARGIN, labelY + 12, CONTENT_W, panelH, 8)
-      .fillAndStroke()
-      .restore();
+    // cream-2 frame — drawPanel with wrap omitted honors the measured `h`
+    // computed above and emits the identical rect. See the block comment
+    // above for why the wrap mode itself is not used.
+    drawPanel(doc, { x: MARGIN, y: labelY + 12, w: CONTENT_W, h: panelH });
 
     // wrapped body text
     doc.font(FONT_BODY, 9).fillColor(TOKENS.fg1);

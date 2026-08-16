@@ -36,16 +36,26 @@ The skill is layered. Read what's relevant to the task, not all of it.
 - **TypeScript (production `pdfService.ts`, PDFKit)** → `scripts/srl_chrome.ts`
 
 Both expose the same building-block API:
+- `register_skill_fonts` / `registerSkillFonts` — **call first, before every other function here.** Registers Playfair Display + DM Sans under the names the chrome uses. See the font note below for the API divergence between the two.
 - `draw_header_first_page` / `drawHeaderFirstPage` — logo, company info, tagline, gold rule, doc title, QR, TRACK label
-- `draw_meta_strip` / `drawMetaStrip` — 6-field strip with em-dashes for empty fields, gold rules above and below
+- `draw_meta_strip` / `drawMetaStrip` — 6-to-8-field strip with em-dashes for empty fields, gold rules above and below. Column width is `CONTENT_W / n`; values are drawn without wrapping, so each must fit its column. See `references/pdf-chrome.md` for the measured fit rule.
 - `draw_parties_block` / `drawPartiesBlock` — two cream-2 accent panels (Shipper + Consignee)
-- `draw_signature_block` / `drawSignatureBlock` — three columns separated by gold-dark vertical rules
-- `draw_shipment_table` / `drawShipmentTable` — navy header band + alternating cream-2 rows + totals
-- `draw_panel` / `drawPanel` — cream-2 sunken region (special instructions, released value, etc.)
+- `draw_signature_block` / `drawSignatureBlock` — columns separated by gold-dark vertical rules; the column count comes from the roles passed, not from the function
+- `draw_shipment_table` / `drawShipmentTable` — navy header band + **white body rows** + optional cream-2 totals band. There are no alternating row fills; the totals row is the table's sole accent. Column *sets* differ by document — the BOL keeps the LTL classification columns, the Rate Con does not.
+- `draw_panel` / `drawPanel` — cream-2 sunken region (special instructions, released value, etc.). Single-line by default; pass `wrap: true` for multi-line free text and the panel measures and sizes itself to the body (the `h` argument is then ignored). See `references/pdf-chrome.md`.
 - `draw_footer` / `drawFooter` — per-page footer with MC#/DOT#, tagline, Page X of Y
 - `draw_continuation_header` / `drawContinuationHeader` — lighter chrome for page 2+
 
 A new artifact should be ~30 lines of code: header + meta + body + signature + footer.
+
+**The scripts do not ship the fonts — the caller supplies them, by calling the registration function first.** The chrome references Playfair Display (display) and DM Sans (body) by their registered names (`FONT_BODY`, `FONT_DISPLAY_BOLD`, …), so those faces must be on the document before the first `text()` call or the renderer throws "font not found".
+
+The scripts expose the function that does this. **Call it immediately after constructing the document and before any `draw_*` / `draw*` call:**
+
+- **TypeScript / PDFKit** → `registerSkillFonts(doc)` — takes the document, because PDFKit registers fonts per-document. It also installs the ligature suppression that keeps `Rate Confirmation` from rendering as `Rate Confrmation`, so it is not optional even when fonts happen to resolve.
+- **Python / ReportLab** → `register_skill_fonts()` — takes **no canvas**, because ReportLab's font registry is process-global. Idempotent; call it once at startup.
+
+Both locate `backend/src/assets/fonts/bol-v2.9/` automatically (or take an explicit directory / `$SRL_FONTS_DIR`), and both **throw with the remedy spelled out rather than falling back to Helvetica** — a silent fallback is the exact bug this design exists to kill. If you use the scripts in another toolchain, register equivalents under the same face names, and remember that any build step copying the compiled output must copy the font directory too.
 
 ### 3. Use the CSS for web/UI
 
@@ -164,6 +174,8 @@ No "best-in-class," "world-class," "synergy," "revolutionary," "disrupting." No 
 - [ ] Voice has operational specifics, no marketing softeners, no exclamation points in B2B
 - [ ] Lucide icons only (web/UI work)
 - [ ] Used the bundled scripts for chrome — didn't hand-build header/footer/signature
+- [ ] If PDF: called `registerSkillFonts(doc)` / `register_skill_fonts()` before the first draw call — the chrome names registered faces and throws without it
+- [ ] Typography named by `FONT_*` constant, never a literal `Helvetica` / `Times-*` (see `references/pdf-chrome.md`)
 
 ---
 

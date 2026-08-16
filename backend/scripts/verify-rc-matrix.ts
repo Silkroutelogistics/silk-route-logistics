@@ -1,6 +1,89 @@
 /** v3.8.arl — Rate Confirmation fit matrix. Asserts page count is stable and
- *  nothing renders below the footer rule across variable content. */
+ *  nothing renders below the footer rule across variable content.
+ *
+ *  v3.8.ary — two additions, both closing gaps that let a real defect through:
+ *
+ *  (1) PAGE COUNT IS NOW ASSERTED. This script printed `pages=N` from the start
+ *      but never checked it, so "ALL CASES PASS" was never evidence of
+ *      page-count stability — a change that silently added or dropped a page
+ *      passed the gate. See EXPECTED_PAGES.
+ *
+ *  (2) `--dump` regenerates docs/rc-references/_CURRENT_SRL_RC_RENDERED.txt
+ *      from this same render. That capture had gone stale (it was a 2-page
+ *      document while the code rendered 3, and it still carried strings that
+ *      v3.8.arw removed), and a spec was then written from it — so the stale
+ *      artefact taught a wrong page map to everything downstream. Regenerating
+ *      from the gate that already renders these fixtures removes the manual
+ *      step that rotted.
+ */
+import * as fs from "fs";
+import * as path from "path";
 import { generateEnhancedRateConfirmation } from "../src/services/pdfService";
+
+const REPO_ROOT = path.resolve(__dirname, "..", "..");
+const CAPTURE_FILE = path.join(REPO_ROOT, "docs", "rc-references", "_CURRENT_SRL_RC_RENDERED.txt");
+
+/** Recorded page count per fixture — a BASELINE, NOT A LAW.
+ *
+ *  The Rate Confirmation legitimately grew from 2 pages to 3 across
+ *  v3.8.arp/arq/art, and that was correct. So a mismatch here does not mean
+ *  "you broke it"; it means "the document changed shape — go look at the PDF,
+ *  decide whether the new shape is right, and if it is, update this number in
+ *  the same commit that changed it." What it stops is the change going
+ *  unnoticed, which is exactly what happened to the reference capture.
+ */
+const EXPECTED_PAGES: Record<string, number> = {
+  "baseline 1 line": 3,
+  "3 lines": 3,
+  "6 lines": 3,
+  "long special instr": 3,
+  reefer: 3,
+  "long names": 3,
+  "no carrier assigned": 3,
+  "customTerms set": 3,
+  "worst case": 3,
+};
+
+/** Cases written into the reference capture by a bare `--dump`. One dry van and
+ *  one reefer, which is what that file has always held — the reefer case is the
+ *  only one that exercises the TEMPERATURE CONTROL block. `--dump=all` writes
+ *  all nine; `--dump=reefer,worst case` writes a named subset. */
+const DUMP_DEFAULT = ["baseline 1 line", "reefer"];
+
+type Row = { y: number; text: string };
+
+/** Reproduces the pre-existing capture format exactly, so a diff against the
+ *  previous version reads as a content change rather than a format change:
+ *  Y (top-down, rounded to 0.5) padded to 7, two spaces, then every text item
+ *  sharing that Y sorted left-to-right and joined with " ⟂ ". */
+function captureBlock(name: string, pages: Row[][]): string {
+  let s = `\n\n################ CASE: ${name} — ${pages.length} pages ################\n`;
+  pages.forEach((rows, i) => {
+    s += `\n─────────── PAGE ${i + 1} ───────────\n`;
+    for (const r of rows) s += String(r.y).padStart(7) + "  " + r.text + "\n";
+  });
+  return s;
+}
+
+/** Derived from git rather than hand-typed, because a hand-typed provenance
+ *  stamp is precisely what goes stale. */
+async function sourceStamp(): Promise<string> {
+  try {
+    const { execFileSync } = await import("child_process");
+    const git = (args: string[]) => execFileSync("git", args, { cwd: REPO_ROOT, encoding: "utf8" });
+    const sha = git(["rev-parse", "--short", "HEAD"]).trim();
+    const version = git(["log", "-1", "--pretty=%s"]).trim().match(/v\d+\.\d+\.[a-z]+/)?.[0] ?? "no version letter in HEAD subject";
+    const renderInputs = ["backend/src/services/pdfService.ts", "backend/src/lib/srl-chrome.ts"];
+    // Strip the two-character porcelain status and its separator. Do NOT trim
+    // the whole blob first: that eats the leading space of " M path" and takes
+    // the first character of the filename with it.
+    const dirty = git(["status", "--porcelain", "--", ...renderInputs])
+      .split("\n").map((l) => l.replace(/^\s*\S+\s+/, "").trim()).filter(Boolean);
+    return `${version} (commit ${sha})` + (dirty.length ? ` PLUS uncommitted changes to ${dirty.join(", ")}` : "");
+  } catch {
+    return "unknown — git was not available when this was generated";
+  }
+}
 
 function makeLoad(o: { rows?: number; longSi?: boolean; reefer?: boolean; longNames?: boolean; noCarrier?: boolean; custom?: boolean } = {}): any {
   const rows = o.rows ?? 1;
@@ -35,6 +118,14 @@ function makeLoad(o: { rows?: number; longSi?: boolean; reefer?: boolean; longNa
 }
 
 (async () => {
+  const dumpArg = process.argv.find((a) => a === "--dump" || a.startsWith("--dump="));
+  const dumpSel: string[] | null = !dumpArg
+    ? null
+    : dumpArg.includes("=")
+      ? dumpArg.slice(dumpArg.indexOf("=") + 1).split(",").map((s) => s.trim()).filter(Boolean)
+      : DUMP_DEFAULT;
+  const dumpAll = !!dumpSel && dumpSel.includes("all");
+
   const pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs");
   const cases: [string, any, any][] = [
     ["baseline 1 line", makeLoad(), {}],
@@ -48,27 +139,47 @@ function makeLoad(o: { rows?: number; longSi?: boolean; reefer?: boolean; longNa
     ["worst case", makeLoad({ rows: 6, longSi: true, reefer: true, longNames: true }), { customTerms: "Extra handling required." }],
   ];
   let fails = 0;
+  const captured: string[] = [];
+  const dumpedNames: string[] = [];
   for (const [name, load, extra] of cases) {
     try {
+      const wantCapture = !!dumpSel && (dumpAll || dumpSel.includes(name));
       const fd = { carrierRate: 4100, fuelSurcharge: 0, totalCarrierPay: 4100, ...extra };
       const doc = generateEnhancedRateConfirmation(load, fd);
       const chunks: Buffer[] = []; doc.on("data", (c: Buffer) => chunks.push(c));
       await new Promise<void>((r) => doc.on("end", () => r()));
       const d = await pdfjs.getDocument({ data: new Uint8Array(Buffer.concat(chunks)) }).promise;
       const problems: string[] = []; const dead: number[] = []; let sawBca = false, sawInvoicing = false;
+      const pages: Row[][] = [];
       for (let pn = 1; pn <= d.numPages; pn++) {
         const tc = await (await d.getPage(pn)).getTextContent();
+        const bands = new Map<number, { x: number; s: string }[]>();
         let maxY = 0;
         for (const it of tc.items as any[]) {
           const s = String(it.str).trim(); if (!s) continue;
+          const yTop = Math.round((792 - it.transform[5]) * 2) / 2;
           if (s.includes("Broker-Carrier Agreement")) sawBca = true;
           if (s.includes("accounting@silkroutelogistics.ai")) sawInvoicing = true;
           const isFooter = s.includes("Page ") || s.startsWith("MC# 1794414 · DOT#") || s.startsWith("Where Trust Travels");
-          if (!isFooter) maxY = Math.max(maxY, Math.round((792 - it.transform[5]) * 2) / 2);
+          if (!isFooter) maxY = Math.max(maxY, yTop);
+          if (wantCapture) {
+            if (!bands.has(yTop)) bands.set(yTop, []);
+            bands.get(yTop)!.push({ x: it.transform[4], s });
+          }
+        }
+        if (wantCapture) {
+          pages.push([...bands.entries()].sort((a, b) => a[0] - b[0]).map(([y, items]) => ({
+            y, text: items.sort((a, b) => a.x - b.x).map((i) => i.s).join(" ⟂ "),
+          })));
         }
         dead.push(Math.round(738 - maxY));
-        // v3.8.arm — the footer rule is drawn at y≈755 and the footer text
-        // baseline lands at ≈755.5. maxY here is the BASELINE of the last body
+        // v3.8.arm — the footer text baseline lands at ≈755.5.
+        // v3.8.ary — this comment used to say the footer RULE was at y≈755 too.
+        // It is not: drawFooter puts the rule at PAGE_H − MARGIN − 12 − 4 = 740
+        // (792 − 36 − 16), and 755.5 is the footer text below it. So 738 buys
+        // 2pt of baseline clearance above the rule, not ~17. The threshold is
+        // unchanged and correct; only the stated geometry was wrong, and it was
+        // wrong in the README too.  maxY here is the BASELINE of the last body
         // line, so its descenders (and any wrap the extractor reports as a
         // separate item) sit below it. The old threshold of 768 let a body line
         // at 753.5 score as "dead=2 :: ok" while it was in fact rendering
@@ -76,11 +187,62 @@ function makeLoad(o: { rows?: number; longSi?: boolean; reefer?: boolean; longNa
         // Require ~6pt of real clearance above the rule.
         if (maxY > 738) problems.push("p" + pn + " collides with footer (last baseline " + maxY + ", rule at 740)");
       }
+      // v3.8.ary — page-count assertion. Deliberately worded so a failure reads
+      // as "confirm and re-record", not "revert": the baseline is a record of
+      // observed behaviour, and the correct fix is sometimes to update it.
+      const expected = EXPECTED_PAGES[name];
+      if (expected === undefined) {
+        problems.push("no recorded page-count baseline for this fixture — add \"" + name + "\" to EXPECTED_PAGES");
+      } else if (d.numPages !== expected) {
+        problems.push("PAGE COUNT changed: rendered " + d.numPages + ", recorded baseline " + expected
+          + " — the baseline is a record of current behaviour, not a law. Open the PDF, confirm the new"
+          + " shape is intended, then update EXPECTED_PAGES[\"" + name + "\"] in this file in the same commit.");
+      }
       if (!sawBca) problems.push("BCA incorporation MISSING");
       if (!sawInvoicing) problems.push("invoicing block MISSING");
       if (problems.length) fails++;
+      if (wantCapture && !problems.length) { captured.push(captureBlock(name, pages)); dumpedNames.push(name); }
       console.log(name.padEnd(22) + "pages=" + d.numPages + " dead=[" + dead.join(", ") + "] :: " + (problems.length ? "FAIL " + problems.join("; ") : "ok"));
     } catch (e: any) { fails++; console.log(name.padEnd(22) + "THREW: " + (e?.message ?? e)); }
   }
+
+  if (dumpSel) {
+    const unmatched = dumpAll ? [] : dumpSel.filter((n) => !cases.some(([cn]) => cn === n));
+    if (unmatched.length) console.log("\n--dump: no such fixture: " + unmatched.join(", "));
+    if (!captured.length) {
+      console.log("--dump: nothing captured, capture file left untouched");
+      fails++;
+    } else {
+      const stamp = [
+        "SRL RATE CONFIRMATION — RENDERED CAPTURE",
+        "",
+        "Generated " + new Date().toISOString().slice(0, 10) + " from " + (await sourceStamp()) + ".",
+        "Regenerate:  cd backend && npx tsx scripts/verify-rc-matrix.ts --dump",
+        "",
+        "Y coordinates are top-down from the page top, rounded to 0.5pt. Items sharing",
+        "a Y are listed left to right, joined with \" ⟂ \". The gold footer rule sits",
+        "at y = 740 and the footer text baseline at ≈ 755.5; body content must stay",
+        "at or above 738.",
+        "",
+        "One line changes on every regeneration by design: DATE ISSUED, which is the",
+        "render date. A diff confined to that value means nothing moved.",
+        "",
+        "The verify-URL token is NOT that line. rcVerifyToken (verifyController.ts) is",
+        "sha256(id | referenceNumber | constant salt) truncated to 12 hex chars — fully",
+        "deterministic, so regenerating reproduces the identical token. If the verify",
+        "line changes, either the load identity or the token derivation changed, and",
+        "that is a real diff. Do not wave it through.",
+        "",
+        "This is a CAPTURE, not a specification. It records what the code rendered on",
+        "the date above, for the fixtures named below — nothing more. Do not derive a",
+        "layout rule from it without checking the code: a stale copy of this file was",
+        "read as a page map and taught the wrong one for several sprints.",
+      ].join("\n") + "\n";
+      fs.writeFileSync(CAPTURE_FILE, stamp + captured.join(""), "utf8");
+      console.log("\nwrote " + path.relative(process.cwd(), CAPTURE_FILE) + " — " + dumpedNames.length + " case(s): " + dumpedNames.join(", "));
+    }
+  }
+
   console.log(fails ? "\n" + fails + " case(s) FAILING" : "\nALL CASES PASS");
+  if (fails) process.exit(1);
 })().catch((e) => { console.error("FAILED:", e?.message ?? e); process.exit(1); });

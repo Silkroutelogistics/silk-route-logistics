@@ -9,12 +9,17 @@
  * Usage in pdfService.ts:
  *   import PDFDocument from 'pdfkit';
  *   import {
+ *     registerSkillFonts,
  *     drawHeaderFirstPage, drawMetaStrip, drawPartiesBlock,
  *     drawSignatureBlock, drawFooter, BOL_SIGNATURE_ROLES,
  *     PAGE_W, PAGE_H, MARGIN
  *   } from './srl_chrome';
  *
  *   const doc = new PDFDocument({ size: 'LETTER', margin: MARGIN });
+ *   registerSkillFonts(doc);   // REQUIRED — see TYPOGRAPHY section below.
+ *                              // Every chrome function names a registered
+ *                              // face; without this call PDFKit throws
+ *                              // "Font not found" on the first text().
  *   let y = drawHeaderFirstPage(doc, {
  *     docTitle: 'Bill of Lading',
  *     subtitle: 'Straight · Non-Negotiable',
@@ -88,13 +93,177 @@ export const PAGE_H = 792;
 export const MARGIN = 36;
 export const CONTENT_W = PAGE_W - 2 * MARGIN;
 
-// Standard fonts available in PDFKit without registration
-const FONT_BODY = 'Helvetica';
-const FONT_BODY_BOLD = 'Helvetica-Bold';
-const FONT_BODY_ITALIC = 'Helvetica-Oblique';
-const FONT_DISPLAY_BOLD = 'Times-Bold';
-const FONT_DISPLAY_ITALIC = 'Times-Italic';
-const FONT_MONO_BOLD = 'Courier-Bold';
+// ============================================================================
+// TYPOGRAPHY — Sprint 47 (Item 101), synced from backend/src/lib/srl-chrome.ts
+//
+// references/tokens.md mandates Playfair Display (display) + DM Sans (body).
+// This library previously named PDFKit's built-ins (Helvetica / Times-Bold /
+// Times-Italic), so every PDF generated from the bundled script rendered in
+// Helvetica — off-brand, and silently so, because a built-in font never fails
+// to resolve. The names below are REGISTERED faces: they only resolve after
+// registerSkillFonts(doc) has run, which turns a brand miss into a loud error
+// instead of a quiet one.
+//
+//   Playfair Display 700 / italic — display headings + tagline
+//   DM Sans 400/500/700           — body text + small-caps labels
+//   Courier / Courier-Bold        — mono (PDFKit built-ins; tokens.md names
+//                                   SF Mono for web, and the skill spec ships
+//                                   no custom mono TTF, so the built-ins stay
+//                                   for reference fields like load IDs and the
+//                                   TRACK label per references/pdf-chrome.md,
+//                                   and for the ABA/routing line, where
+//                                   fixed-width digits are the whole point)
+//
+// Exported (not module-private as before) so consumers rendering text outside
+// the canned drawing functions — custom T&C blocks, special-instruction
+// panels — name the same faces instead of hardcoding strings that drift.
+// ============================================================================
+
+import * as path from 'path';
+import * as fs from 'fs';
+
+export const FONT_BODY = 'DMSans-Regular';
+export const FONT_BODY_BOLD = 'DMSans-Bold';
+export const FONT_BODY_ITALIC = 'DMSans-Italic';
+export const FONT_DISPLAY_BOLD = 'Playfair-Bold';
+export const FONT_DISPLAY_ITALIC = 'Playfair-Italic';
+export const FONT_MONO = 'Courier';
+export const FONT_MONO_BOLD = 'Courier-Bold';
+
+/** Registered face name -> TTF filename, as shipped in bol-v2.9. */
+const FONT_FILES: ReadonlyArray<readonly [string, string]> = [
+  ['Playfair-Regular',   'PlayfairDisplay-Regular.ttf'],
+  ['Playfair-Italic',    'PlayfairDisplay-Italic.ttf'],
+  ['Playfair-Bold',      'PlayfairDisplay-Bold.ttf'],
+  ['Playfair-BoldItalic','PlayfairDisplay-BoldItalic.ttf'],
+  ['DMSans-Regular',     'DMSans-Regular.ttf'],
+  ['DMSans-Italic',      'DMSans-Italic.ttf'],
+  ['DMSans-Medium',      'DMSans-Medium.ttf'],
+  ['DMSans-SemiBold',    'DMSans-SemiBold.ttf'],
+  ['DMSans-Bold',        'DMSans-Bold.ttf'],
+];
+
+/**
+ * Locate the bol-v2.9 TTF directory.
+ *
+ * The live mirror at backend/src/lib/srl-chrome.ts hardcodes a single path
+ * (`__dirname/../assets/fonts/bol-v2.9`) because it always sits one directory
+ * below src/. This copy is the portable one — it gets vendored into projects
+ * with different layouts — so it searches, in priority order:
+ *
+ *   1. the explicit `fontsDir` argument
+ *   2. $SRL_FONTS_DIR
+ *   3. `<this file>/fonts`                     — fonts vendored beside the script,
+ *                                                the same pattern the compass PNGs use
+ *   4. `<this file>/../assets/fonts/bol-v2.9`  — the live-mirror layout, for when
+ *                                                this file is copied into src/lib/
+ *   5. `<repo root>/backend/src/assets/fonts/bol-v2.9` — in-repo location, reached
+ *                                                from .claude/skills/<skill>/scripts/
+ *
+ * Throws with the remedy spelled out rather than falling back to Helvetica:
+ * a silent fallback is precisely the bug this section exists to kill.
+ */
+function resolveFontsDir(explicit?: string): string {
+  const candidates = [
+    explicit,
+    process.env.SRL_FONTS_DIR,
+    path.resolve(__dirname, 'fonts'),
+    path.resolve(__dirname, '../assets/fonts/bol-v2.9'),
+    path.resolve(__dirname, '../../../../backend/src/assets/fonts/bol-v2.9'),
+  ].filter((p): p is string => typeof p === 'string' && p.length > 0);
+
+  for (const dir of candidates) {
+    if (fs.existsSync(path.join(dir, 'DMSans-Regular.ttf'))) return dir;
+  }
+
+  throw new Error(
+    'srl_chrome: could not locate the bol-v2.9 font directory (Playfair Display ' +
+    '+ DM Sans TTFs). Pass it explicitly as registerSkillFonts(doc, fontsDir), ' +
+    'or set SRL_FONTS_DIR. Searched: ' + candidates.join(', ')
+  );
+}
+
+/**
+ * Register the skill's canonical faces on a PDFDocument, and suppress
+ * ligature substitution for the lifetime of that document.
+ *
+ * MUST be called immediately after `new PDFDocument(...)` and before any
+ * chrome function runs — the drawing functions name registered faces, and
+ * fontkit throws "Font not found" if they aren't on the doc yet.
+ */
+export function registerSkillFonts(doc: PDFKit.PDFDocument, fontsDir?: string): void {
+  const dir = resolveFontsDir(fontsDir);
+  for (const [face, file] of FONT_FILES) {
+    doc.registerFont(face, path.join(dir, file));
+  }
+
+  // Sprint 47.b (Item 103) — ligature suppression. Bundled INSIDE font
+  // registration deliberately: registering Playfair + DM Sans without this
+  // patch reintroduces a shipped bug. fontkit substitutes the `fi` ligature
+  // and the Rate Confirmation title rendered "Rate Confrmation" — same class
+  // as the "classified" -> "classifed" bug Sprint v3.8.b fixed for BOL v2.9.
+  // Built-in PDFKit faces don't exhibit it and don't need the patch, so
+  // applying it doc-wide is harmless.
+  //
+  // fontkit accepts `features` as either an array (ADDITIVE — enables the
+  // listed features on top of the script defaults, and therefore cannot turn
+  // `liga` off) or an object (explicit on/off per tag). Only the object form
+  // can disable a default, so an array supplied by a caller is discarded.
+  // Covers direct doc.text() calls and fluent-chained .text() calls alike.
+  //
+  // @types/pdfkit declares features as `string[]`, which models only the array
+  // form; the `as unknown as string[]` cast is an explicit concession that
+  // we're using the runtime-supported object shape the types don't describe.
+  const _origText = doc.text.bind(doc);
+  (doc as { text: typeof doc.text }).text =
+    function (this: typeof doc, ...args: unknown[]): typeof doc {
+      const last = args[args.length - 1];
+      const isOptionsObj =
+        last !== null &&
+        typeof last === "object" &&
+        !Array.isArray(last) &&
+        !Buffer.isBuffer(last);
+
+      // Base object: disable all ligature-family features, keep kern on.
+      const base: Record<string, boolean> = {
+        liga: false,
+        clig: false,
+        rlig: false,
+        dlig: false,
+        kern: true,
+      };
+
+      if (isOptionsObj) {
+        const opts = last as Record<string, unknown>;
+        const callerFeatures = opts.features;
+        let merged: Record<string, boolean>;
+        if (
+          callerFeatures !== null &&
+          typeof callerFeatures === "object" &&
+          !Array.isArray(callerFeatures)
+        ) {
+          // Object form: preserve caller intent (e.g. a kern preference) but
+          // force the four liga-family flags off.
+          merged = {
+            ...(callerFeatures as Record<string, boolean>),
+            liga: false,
+            clig: false,
+            rlig: false,
+            dlig: false,
+            kern:
+              (callerFeatures as Record<string, boolean>).kern ?? true,
+          };
+        } else {
+          // Array form (additive, can't disable defaults) or missing.
+          merged = base;
+        }
+        opts.features = merged as unknown as string[];
+      } else {
+        args.push({ features: base as unknown as string[] });
+      }
+      return (_origText as (...a: unknown[]) => typeof doc)(...args);
+    } as typeof doc.text;
+}
 
 // ============================================================================
 // PRIMITIVES
@@ -179,8 +348,7 @@ function drawItalic(
 // Override via opts.compassMarkPath if you have a different logo file.
 // ============================================================================
 
-import * as path from 'path';
-import * as fs from 'fs';
+// `path` and `fs` are imported once, up in the TYPOGRAPHY section.
 
 const LOGO_DIR = __dirname;
 
@@ -201,7 +369,11 @@ function resolveCompassPng(targetSize: number): string | null {
   return fs.existsSync(fallback) ? fallback : null;
 }
 
-function drawCompassMark(doc: PDFDoc, x: number, y: number, size: number = 50): void {
+// v3.8.anc — exported. Ceremonial layouts that don't use drawHeaderFirstPage
+// need the mark on its own (the live mirror exports it for the SRL Driver
+// Academy completion certificate, which centres the mark rather than running
+// the document-style header). Additive; behaviour unchanged.
+export function drawCompassMark(doc: PDFDoc, x: number, y: number, size: number = 50): void {
   const pngPath = resolveCompassPng(size);
 
   if (pngPath) {
@@ -476,10 +648,13 @@ export const BOL_SIGNATURE_ROLES: SignatureRole[] = [
 export const RATE_CON_SIGNATURE_ROLES: SignatureRole[] = [
   {
     title: 'CARRIER · ACCEPTANCE',
-    certification:
-      'Carrier accepts the rate, lane, equipment, and terms set forth above. ' +
-      'This Rate Confirmation, together with the Broker-Carrier Agreement v3.1 ' +
-      'dated February 26, 2026, constitutes the complete agreement for this load.',
+    // Sprint 50 (Item 122) — prose paragraph removed. Both sentences were
+    // verbatim duplicates of GOVERNING TERMS clauses (1) and (9), so the
+    // document said the same thing twice, once in a place a carrier reads as
+    // the binding text and once as signature-block filler. The header label
+    // remains as the structural section anchor; drawSignatureBlock guards the
+    // certification render path when this is empty.
+    certification: '',
     fields: ['CARRIER LEGAL NAME', 'MC #', 'DOT #',
              'AUTHORIZED SIGNATORY (PRINT)', 'TITLE',
              'SIGNATURE', 'DATE'],
@@ -507,9 +682,15 @@ export const MASTER_AGREEMENT_SIGNATURE_ROLES: SignatureRole[] = [
 export function drawSignatureBlock(
   doc: PDFDoc,
   yTop: number,
-  options: { roles?: SignatureRole[]; height?: number } = {}
+  options: { roles?: SignatureRole[]; height?: number; prefilledValues?: Record<string, string> } = {}
 ): number {
-  const { roles = BOL_SIGNATURE_ROLES, height = 220 } = options;
+  // Sprint 48.c — prefilledValues. Pre-fill the carrier identity SRL already
+  // knows (CARRIER LEGAL NAME / MC # / DOT #) so the carrier only writes
+  // AUTHORIZED SIGNATORY / TITLE / SIGNATURE / DATE at signing. Industry-
+  // standard Rate Con pattern; matches CHR / Coyote / RXO templates. A field
+  // present in the map renders its value above the underline in fg1; a field
+  // absent leaves the underline bare for handwriting.
+  const { roles = BOL_SIGNATURE_ROLES, height = 220, prefilledValues = {} } = options;
   const n = roles.length;
   const colW = CONTENT_W / n;
 
@@ -527,24 +708,46 @@ export function drawSignatureBlock(
 
     drawLabel(doc, role.title, x, yTop, { color: TOKENS.goldDark, size: 7 });
 
-    // Certification (italic, wraps)
-    doc.font(FONT_BODY_ITALIC, 7.5).fillColor(TOKENS.fg2)
-       .text(role.certification, x, yTop + 16, { width: colInnerW, lineGap: 1 });
-
-    let fieldY = doc.y + 12;
-    doc.font(FONT_BODY_BOLD, 6.5);
+    // Sprint 50 (Item 122) — certification render guard. When the string is
+    // empty, skip the italic render and set the field start explicitly:
+    // doc.text('') still advances doc.y by a line height (~9pt), which would
+    // leave phantom whitespace under the header label.
+    let fieldY: number;
+    if (role.certification && role.certification.length > 0) {
+      // Certification (italic, wraps)
+      doc.font(FONT_BODY_ITALIC, 7.5).fillColor(TOKENS.fg2)
+         .text(role.certification, x, yTop + 16, { width: colInnerW, lineGap: 1 });
+      fieldY = doc.y + 12;
+    } else {
+      fieldY = yTop + 20;
+    }
 
     role.fields.forEach(f => {
+      // Sprint 49.b (Item 139) — row pitch 22 -> 26pt, underline +14 -> +20,
+      // value at +10. Sprint 48.c had placed the pre-filled value at fieldY+4
+      // while the label sits at fieldY; a 6.5pt label extends ~6.5pt down and
+      // an 8.5pt value starting at +4 produced a MEASURED ~2.5pt overlap on
+      // every pre-filled row. At 26pt pitch the row reads label fieldY..~+7,
+      // gap +7..+10, value +10..~+19, underline +20. Callers passing a fixed
+      // block height must allow ~28pt x N fields of headroom.
+      doc.font(FONT_BODY_BOLD, 6.5);
       drawLabel(doc, f, x, fieldY, { color: TOKENS.fg3, size: 6.5 });
+
+      const preVal = prefilledValues[f];
+      if (preVal) {
+        doc.font(FONT_BODY, 8.5).fillColor(TOKENS.fg1);
+        doc.text(preVal, x, fieldY + 10, { width: colInnerW, lineBreak: false });
+      }
+
       // Underline
       doc.save()
          .strokeColor(TOKENS.borderStrong)
          .lineWidth(0.5)
-         .moveTo(x, fieldY + 14)
-         .lineTo(x + colInnerW, fieldY + 14)
+         .moveTo(x, fieldY + 20)
+         .lineTo(x + colInnerW, fieldY + 20)
          .stroke()
          .restore();
-      fieldY += 22;
+      fieldY += 26;
     });
   });
 
@@ -555,10 +758,26 @@ export function drawSignatureBlock(
 // PUBLIC: FOOTER
 // ============================================================================
 
+/**
+ * Three-column footer: authority chain (left) · tagline (center) · page N of M (right).
+ *
+ * A-8 — `docId` IS ACCEPTED AND DELIBERATELY UNUSED. Do not "fix" the footer by
+ * stamping it. pdf-chrome.md specifies exactly three footer columns and no
+ * document ID, so the omission is the SPEC and the parameter is the vestige.
+ * The document ID belongs to the continuation header (see drawContinuationHeader,
+ * which renders it twice — inline and right-aligned), not to the footer.
+ *
+ * Retained ONLY for call-site compatibility. In the backend mirror, five callers
+ * pass it as an object-literal property; dropping it there turns TypeScript's
+ * excess-property check into 5 × TS2353 and reds the build in files that module
+ * does not own. Verified empirically, not assumed. If those call sites are ever
+ * cleaned up, delete this property from all three copies in the same commit.
+ */
 export function drawFooter(
   doc: PDFDoc,
-  options: { pageNum: number; totalPages: number; docId?: string } = { pageNum: 1, totalPages: 1 }
+  options: { pageNum: number; totalPages: number; /** accepted for call-site compatibility, never rendered — see above */ docId?: string } = { pageNum: 1, totalPages: 1 }
 ): void {
+  // docId intentionally NOT destructured — nothing below may render it.
   const { pageNum, totalPages } = options;
   const footerY = PAGE_H - MARGIN - 12;
 
@@ -680,30 +899,78 @@ export function drawShipmentTable(
 // PUBLIC: cream-2 panel utility
 // ============================================================================
 
+// Panel geometry. Extracted as named constants so the measured (wrap) path and
+// the fixed-height path cannot drift apart; the literals are the ones the
+// single-line path has always used.
+const PANEL_INSET_X = 10;   // left AND right body inset
+const PANEL_BODY_TOP = 22;  // panel top -> body text start (clears the 6.5pt label at +8)
+const PANEL_PAD_BOTTOM = 10; // measured-height mode only; matches the horizontal inset
+
+/**
+ * cream-2 panel utility.
+ *
+ * `wrap` DEFAULTS TO FALSE and the false path is byte-identical to the original:
+ * fixed `h`, body rendered with `lineBreak: false`. Every existing caller is
+ * unaffected — the only difference is that the function now also returns the y
+ * below the panel, which callers are free to keep ignoring.
+ *
+ * `wrap: true` is the path that lets this utility absorb hand-built
+ * roundedRect + fillAndStroke + manual wrapped text blocks (SKILL.md "Don't
+ * hand-build chrome"; CLAUDE.md §13.3 Item 94). In that mode the panel is SIZED
+ * FROM THE MEASURED TEXT rather than from `h`, so `h` is ignored and the return
+ * value is the only way to learn where the panel ended.
+ *
+ * Correctness note (Sprint 47.b / Item 104, generalized): the height measurement
+ * and the text render must share BOTH the same font AND the same text options —
+ * `width` and `lineGap` both change wrapped height. They are measured and drawn
+ * from one `textOpts` object here precisely so they cannot diverge.
+ *
+ * @returns y coordinate immediately below the panel (its bottom edge).
+ */
 export function drawPanel(
   doc: PDFDoc,
   options: {
     x: number; y: number; w: number; h: number;
     label?: string; bodyText?: string;
+    /** Wrap multi-line bodyText and size the panel to it. `h` is ignored when true. Default false. */
+    wrap?: boolean;
   }
-): void {
-  const { x, y, w, h, label, bodyText } = options;
+): number {
+  const { x, y, w, h, label, bodyText, wrap = false } = options;
+
+  // Measured mode sizes the rect from the text; fixed mode keeps the caller's h.
+  let panelH = h;
+  const innerW = w - PANEL_INSET_X * 2;
+  const textOpts = { width: innerW, lineGap: 1 };
+
+  if (wrap && bodyText) {
+    // Font must be current BEFORE heightOfString — it measures with the active font.
+    doc.font(FONT_BODY, 9);
+    panelH = PANEL_BODY_TOP + doc.heightOfString(bodyText, textOpts) + PANEL_PAD_BOTTOM;
+  }
 
   doc.save()
      .fillColor(TOKENS.cream2)
      .strokeColor(TOKENS.border1)
      .lineWidth(0.5)
-     .roundedRect(x, y, w, h, 8)
+     .roundedRect(x, y, w, panelH, 8)
      .fillAndStroke()
      .restore();
 
   if (label) {
-    drawLabel(doc, label, x + 10, y + 8, { color: TOKENS.goldDark, size: 6.5 });
+    drawLabel(doc, label, x + PANEL_INSET_X, y + 8, { color: TOKENS.goldDark, size: 6.5 });
   }
   if (bodyText) {
-    doc.font(FONT_BODY, 9).fillColor(TOKENS.fg1)
-       .text(bodyText, x + 10, y + 22, { lineBreak: false });
+    doc.font(FONT_BODY, 9).fillColor(TOKENS.fg1);
+    if (wrap) {
+      // Same font + same textOpts the height was measured with.
+      doc.text(bodyText, x + PANEL_INSET_X, y + PANEL_BODY_TOP, textOpts);
+    } else {
+      doc.text(bodyText, x + PANEL_INSET_X, y + PANEL_BODY_TOP, { lineBreak: false });
+    }
   }
+
+  return y + panelH;
 }
 
 // ============================================================================
@@ -933,7 +1200,7 @@ export function drawRemitToBlock(
       curY += 11;
     }
     if (remit.routingAba) {
-      doc.font('Courier', 9);
+      doc.font(FONT_MONO, 9);
       doc.text(`ABA / Routing #: ${remit.routingAba}`, MARGIN, curY, { lineBreak: false });
       curY += 11;
     }
@@ -1030,12 +1297,24 @@ export interface CarrierRequirements {
   eldRequired?: boolean;
   teamDrivers?: boolean;
   bondRequired?: boolean;
+  // Sprint 51 (Item 130) — tracking acceptance gate as a preconditions-tier
+  // bullet (NOT a T&C clause per Phase A sub-pattern 4 reclassification).
+  // Industry pattern (TQL): tracking is a precondition for dispatch, not a
+  // behavior rule like indemnification or governing law. Renders as a 4th
+  // bullet alongside insurance minimums when set.
+  trackingAcceptance?: boolean;
 }
 
 export interface RateConTerms {
   detentionFreeHours?: number;
   detentionRatePerHour?: number;
   detentionMaxPerStop?: number;
+  // Sprint 50 (Item 127) — Path β belt-and-suspenders: appends " · notify"
+  // to the DETENTION value in the OPERATIONAL TERMS grid. Pairs with T&C
+  // clause (7), which mandates 30-min-before + departure notifications. The
+  // cell suffix surfaces the obligation at the operational glance level; the
+  // clause locks the enforcement language.
+  detentionNotify?: boolean;
   tonuAmount?: number;
   layoverPerDay?: number;
   lumperReimbursement?: boolean;
@@ -1105,11 +1384,38 @@ export function drawEquipmentSpec(
   if (equip.tarpRequired) trailerReqs.push('Tarps required');
   if (trailerReqs.length) fields.push(['TRAILER REQ', trailerReqs.join(' · ')]);
 
-  if (equip.tempSetpointF !== undefined) {
-    let tempStr = `${equip.tempSetpointF}°F`;
-    if (equip.tempContinuous === true) tempStr += ' continuous';
-    else if (equip.tempContinuous === false) tempStr += ' cycle';
-    if (equip.preCoolRequired) tempStr += ' · pre-cool required';
+  // v3.8.art / v3.8.arv — the row prints whenever the load is temperature-
+  // controlled, even with no setpoint captured, so a data gap surfaces as a
+  // loud instruction instead of an absent row. Before this, the row was gated
+  // purely on tempSetpointF: a reefer load whose setpoint was never captured
+  // rendered byte-identical to a dry van, and silence became indistinguishable
+  // from not-applicable — nobody catches that at the desk, because the document
+  // looks complete. Frozen freight makes 0°F legitimate, so every check here is
+  // against undefined rather than truthiness.
+  const hasSetpoint = equip.tempSetpointF !== undefined;
+  if (hasSetpoint || equip.tempControlled === true) {
+    let tempStr: string;
+    if (hasSetpoint) {
+      tempStr = `${equip.tempSetpointF}°F`;
+      if (equip.tempMinF !== undefined && equip.tempMaxF !== undefined) {
+        tempStr += ` (${equip.tempMinF}–${equip.tempMaxF}°F)`;
+      }
+      if (equip.tempContinuous === true) tempStr += ' · continuous';
+      else if (equip.tempContinuous === false) tempStr += ' · cycle';
+      if (equip.preCoolToF !== undefined) tempStr += ` · pre-cool ${equip.preCoolToF}°F`;
+      else if (equip.preCoolRequired) tempStr += ' · pre-cool required';
+    } else {
+      // Colon, not an em-dash: references/voice.md bans em-dashes as sentence
+      // connectors and this is a sentence, not a list separator.
+      // v3.8.arv — MEASURED at 165.7pt against a 202pt cell. The v3.8.art
+      // string ("TEMP-CONTROLLED: setpoint not specified. Call before
+      // loading.") was 279.9pt, and this cell draws with lineBreak:false, so
+      // PDFKit did not wrap it — the media box clipped the tail and the words
+      // "Call before loading." never printed. The instruction written to make
+      // a data gap LOUD was the part being silently cut. The label already
+      // reads TEMPERATURE, so the value need not repeat "TEMP-CONTROLLED".
+      tempStr = 'Not specified. Call SRL before loading.';
+    }
     fields.push(['TEMPERATURE', tempStr]);
   }
 
@@ -1129,9 +1435,15 @@ export function drawEquipmentSpec(
     const x = MARGIN + col * colW;
     drawLabel(doc, key, x, curY, { color: TOKENS.goldDark, size: 6.5 });
     doc.font(FONT_BODY, 9.5).fillColor(TOKENS.fg1)
-       // v3.8.arn — gutter 90 -> 68. Cells draw with lineBreak:false, so a value
-       // wider than (colW - gutter) overprints the next column label. The widest
-       // label (CANCELLATION) is 55.3pt, so 90 was ~35pt of dead slack.
+       // v3.8.arv — gutter 90 -> 68, matching drawRateConTerms. This cell draws
+       // with lineBreak:false in a CONTENT_W/2 = 270pt column, so a 90pt gutter
+       // left 180pt, and the canonical reefer value measures 191.0pt:
+       // "36°F (34–38°F) · continuous · pre-cool 34°F". It overran into the
+       // adjacent column. 68pt buys 202pt and clears it by 11pt.
+       //
+       // The v3.8.arn fix made exactly this change in drawRateConTerms and did
+       // not reach here, because drawEquipmentSpec did not yet carry a value
+       // long enough to expose it — v3.8.art gave it one.
        .text(val, x + 68, curY, { lineBreak: false });
     if (col === 1) curY += lineH;
   });
@@ -1155,6 +1467,20 @@ export function drawCarrierRequirements(
     items.push(`Auto Liability: $${reqs.autoLiabilityMin.toLocaleString('en-US')} min`);
   if (reqs.generalLiabilityMin !== undefined)
     items.push(`General Liability: $${reqs.generalLiabilityMin.toLocaleString('en-US')} min`);
+  if (reqs.trackingAcceptance)
+    // v3.8.arw — this previously read "Tracking via Marco Polo (SMS) or Quo
+    // phone tracking accepted before dispatch." Both named tools were false on
+    // a document a carrier signs. references/voice.md assigns Marco Polo to the
+    // AI chatbot, and marcoPoloService.ts contains ZERO references to SMS.
+    // "Quo" appeared exactly once in the entire backend — in this string — and
+    // nowhere in the skill's naming table or in any of the 16 reference rate
+    // confirmations. It named a third-party tracking integration that does not
+    // exist. voice.md:29 bans fabricated metrics because "carriers and shippers
+    // can smell it"; the same test applies to capabilities, and a carrier who
+    // asks for the Quo integration finds out we do not have one.
+    // The carrier portal is the actual mechanism: /carrier/dashboard/my-loads
+    // carries status advancement and POD upload.
+    items.push('Status updates through the SRL carrier portal, or by call or text to (269) 220-6760.');
 
   const endorsements: string[] = [];
   if (reqs.twicRequired) endorsements.push('TWIC');
@@ -1202,10 +1528,17 @@ export function drawRateConTerms(
       : 50;
   let detStr = `$${detentionRate}/hr after ${detentionFree} hrs free`;
   // v3.8.arn — terse by measurement, not preference: this cell draws with
-  // lineBreak:false and "capped at $250/stop · notify" is 216.6pt against 202pt
-  // of width, so the longer wording overprints the adjacent TONU label.
+  // lineBreak:false, and the longer wording
+  // "$50/hr after 2 hrs free, capped at $250/stop · notify" measures 216.0pt
+  // against 202pt of width, so it overprints the adjacent TONU label. The
+  // shipped terse form measures 189.0pt and clears by 13.0pt.
+  // (Earlier revisions of this comment cited 216.6pt while quoting only the
+  // fragment "capped at $250/stop · notify", which is 119.4pt on its own — the
+  // number always belonged to the whole cell value, not the fragment. Quoted in
+  // full here so the next mirror-check measures the same string.)
   // v3.8.arv — was missing the $ and printed "250/stop cap" on a money term.
   if (terms.detentionMaxPerStop) detStr += `, $${terms.detentionMaxPerStop}/stop cap`;
+  if (terms.detentionNotify) detStr += ' · notify';
   items.push(['DETENTION', detStr]);
 
   items.push(['TONU', `$${terms.tonuAmount ?? 200} (truck-order-not-used)`]);
@@ -1240,15 +1573,34 @@ export function drawRateConTerms(
   return curY + 4;
 }
 
+/**
+ * Sprint 47 (Item 100) — transitUnit, default "hours".
+ *
+ * Carriers convert to drive hours mentally regardless, because HOS log entries,
+ * ETA windows, and dispatch conversations all run in hours; every major broker's
+ * lane-economics widget reads in hours. "2.7 days" for a 1,352-mile lane is
+ * correct arithmetic and poor UX. Pass "days" explicitly when the caller has
+ * genuinely computed calendar days (multi-day plan, HOS-strict pacing).
+ *
+ * transitValue semantics follow transitUnit:
+ *   transitUnit="hours" -> drive hours (typically miles / 55, the industry
+ *                          highway average)
+ *   transitUnit="days"  -> calendar days
+ */
 export function drawLaneEconomics(
-  doc: PDFDoc, miles: number, transitDays: number, totalPay: number, yTop: number
+  doc: PDFDoc, miles: number, transitValue: number, totalPay: number, yTop: number,
+  transitUnit: "hours" | "days" = "hours"
 ): number {
   const boxW = (CONTENT_W - 16) / 3;
   const boxH = 42;
 
+  const transitDisplay = transitUnit === "hours"
+    ? `${transitValue.toFixed(1)} hrs`
+    : `${transitValue.toFixed(1)} days`;
+
   const fields: [string, string, string][] = [
     ['MILES', miles.toLocaleString('en-US'), 'Lane mileage'],
-    ['TRANSIT', `${transitDays.toFixed(1)} days`, 'Standard pace'],
+    ['TRANSIT', transitDisplay, 'Standard pace'],
     ['$/MILE', `$${(totalPay / miles).toFixed(2)}`, 'Carrier rate'],
   ];
 

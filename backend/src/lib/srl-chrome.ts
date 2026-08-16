@@ -9,12 +9,17 @@
  * Usage in pdfService.ts:
  *   import PDFDocument from 'pdfkit';
  *   import {
+ *     registerSkillFonts,
  *     drawHeaderFirstPage, drawMetaStrip, drawPartiesBlock,
  *     drawSignatureBlock, drawFooter, BOL_SIGNATURE_ROLES,
  *     PAGE_W, PAGE_H, MARGIN
  *   } from './srl_chrome';
  *
  *   const doc = new PDFDocument({ size: 'LETTER', margin: MARGIN });
+ *   registerSkillFonts(doc);   // REQUIRED — see FONT REGISTRATION below.
+ *                              // Every chrome function names a registered
+ *                              // face; without this call PDFKit throws
+ *                              // "Font not found" on the first text().
  *   let y = drawHeaderFirstPage(doc, {
  *     docTitle: 'Bill of Lading',
  *     subtitle: 'Straight · Non-Negotiable',
@@ -112,9 +117,10 @@ export const CONTENT_W = PAGE_W - 2 * MARGIN;
 // Sprint 47 (v3.8.abf, Item 101) — Skill canonical fonts per tokens.md:
 //   Playfair Display 700 — display headings + tagline italic
 //   DM Sans 400/500/700 — body text + small-caps labels
-//   Courier-Bold — mono (PDFKit built-in; skill spec doesn't include
-//                  a custom mono — kept for reference fields like load
-//                  IDs and TRACK label per pdf-chrome.md)
+//   Courier / Courier-Bold — mono (PDFKit built-ins; skill spec doesn't
+//                  include a custom mono — kept for reference fields like
+//                  load IDs and TRACK label per pdf-chrome.md, and for the
+//                  ABA/routing line, where fixed-width digits are the point)
 // TTFs ship at backend/src/assets/fonts/bol-v2.9/ and propagate to Render
 // prod via the cp -r src/assets/. step in buildCommand (CLAUDE.md §2.2).
 // Mirrors generateBOLFromLoad font registration at pdfService.ts:317-326.
@@ -132,6 +138,7 @@ export const FONT_BODY_BOLD = 'DMSans-Bold';
 export const FONT_BODY_ITALIC = 'DMSans-Italic';
 export const FONT_DISPLAY_BOLD = 'Playfair-Bold';
 export const FONT_DISPLAY_ITALIC = 'Playfair-Italic';
+export const FONT_MONO = 'Courier';
 export const FONT_MONO_BOLD = 'Courier-Bold';
 
 // ============================================================================
@@ -747,10 +754,27 @@ export function drawSignatureBlock(
 // PUBLIC: FOOTER
 // ============================================================================
 
+/**
+ * Three-column footer: authority chain (left) · tagline (center) · page N of M (right).
+ *
+ * A-8 — `docId` IS ACCEPTED AND DELIBERATELY UNUSED. Do not "fix" the footer by
+ * stamping it. pdf-chrome.md specifies exactly three footer columns and no
+ * document ID, so the omission is the SPEC and the parameter is the vestige.
+ * The document ID belongs to the continuation header (see drawContinuationHeader,
+ * which renders it twice — inline and right-aligned), not to the footer.
+ *
+ * The parameter is retained ONLY for call-site compatibility: five callers pass
+ * it as an object-literal property (agreementPdfService.ts:147 and
+ * pdfService.ts:2426/2526/2687/2846). Dropping it from this type turns TypeScript's
+ * excess-property check on those literals into 5 × TS2353 and reds the build in
+ * files this module does not own. Verified empirically, not assumed. If those five
+ * call sites are ever cleaned up, delete this property in the same commit.
+ */
 export function drawFooter(
   doc: PDFDoc,
-  options: { pageNum: number; totalPages: number; docId?: string } = { pageNum: 1, totalPages: 1 }
+  options: { pageNum: number; totalPages: number; /** accepted for call-site compatibility, never rendered — see above */ docId?: string } = { pageNum: 1, totalPages: 1 }
 ): void {
+  // docId intentionally NOT destructured — nothing below may render it.
   const { pageNum, totalPages } = options;
   const footerY = PAGE_H - MARGIN - 12;
 
@@ -872,30 +896,78 @@ export function drawShipmentTable(
 // PUBLIC: cream-2 panel utility
 // ============================================================================
 
+// Panel geometry. Extracted as named constants so the measured (wrap) path and
+// the fixed-height path cannot drift apart; the literals are the ones the
+// single-line path has always used.
+const PANEL_INSET_X = 10;   // left AND right body inset
+const PANEL_BODY_TOP = 22;  // panel top -> body baseline start (clears the 6.5pt label at +8)
+const PANEL_PAD_BOTTOM = 10; // measured-height mode only; matches the horizontal inset
+
+/**
+ * cream-2 panel utility.
+ *
+ * `wrap` DEFAULTS TO FALSE and the false path is byte-identical to the original:
+ * fixed `h`, body rendered with `lineBreak: false`. Every existing caller is
+ * unaffected — the only difference is that the function now also returns the y
+ * below the panel, which callers are free to keep ignoring.
+ *
+ * `wrap: true` is the path that lets this utility absorb the hand-built
+ * roundedRect + fillAndStroke + manual wrapped text blocks in pdfService
+ * (SKILL.md "Don't hand-build chrome"; CLAUDE.md §13.3 Item 94). In that mode
+ * the panel is SIZED FROM THE MEASURED TEXT rather than from `h`, so `h` is
+ * ignored and the return value is the only way to learn where the panel ended.
+ *
+ * Correctness note (Sprint 47.b / Item 104, generalized): the height measurement
+ * and the text render must share BOTH the same font AND the same text options —
+ * `width` and `lineGap` both change wrapped height. They are measured and drawn
+ * from one `textOpts` object here precisely so they cannot diverge.
+ *
+ * @returns y coordinate immediately below the panel (its bottom edge).
+ */
 export function drawPanel(
   doc: PDFDoc,
   options: {
     x: number; y: number; w: number; h: number;
     label?: string; bodyText?: string;
+    /** Wrap multi-line bodyText and size the panel to it. `h` is ignored when true. Default false. */
+    wrap?: boolean;
   }
-): void {
-  const { x, y, w, h, label, bodyText } = options;
+): number {
+  const { x, y, w, h, label, bodyText, wrap = false } = options;
+
+  // Measured mode sizes the rect from the text; fixed mode keeps the caller's h.
+  let panelH = h;
+  const innerW = w - PANEL_INSET_X * 2;
+  const textOpts = { width: innerW, lineGap: 1 };
+
+  if (wrap && bodyText) {
+    // Font must be current BEFORE heightOfString — it measures with the active font.
+    doc.font(FONT_BODY, 9);
+    panelH = PANEL_BODY_TOP + doc.heightOfString(bodyText, textOpts) + PANEL_PAD_BOTTOM;
+  }
 
   doc.save()
      .fillColor(TOKENS.cream2)
      .strokeColor(TOKENS.border1)
      .lineWidth(0.5)
-     .roundedRect(x, y, w, h, 8)
+     .roundedRect(x, y, w, panelH, 8)
      .fillAndStroke()
      .restore();
 
   if (label) {
-    drawLabel(doc, label, x + 10, y + 8, { color: TOKENS.goldDark, size: 6.5 });
+    drawLabel(doc, label, x + PANEL_INSET_X, y + 8, { color: TOKENS.goldDark, size: 6.5 });
   }
   if (bodyText) {
-    doc.font(FONT_BODY, 9).fillColor(TOKENS.fg1)
-       .text(bodyText, x + 10, y + 22, { lineBreak: false });
+    doc.font(FONT_BODY, 9).fillColor(TOKENS.fg1);
+    if (wrap) {
+      // Same font + same textOpts the height was measured with.
+      doc.text(bodyText, x + PANEL_INSET_X, y + PANEL_BODY_TOP, textOpts);
+    } else {
+      doc.text(bodyText, x + PANEL_INSET_X, y + PANEL_BODY_TOP, { lineBreak: false });
+    }
   }
+
+  return y + panelH;
 }
 
 // ============================================================================
@@ -1125,7 +1197,7 @@ export function drawRemitToBlock(
       curY += 11;
     }
     if (remit.routingAba) {
-      doc.font('Courier', 9);
+      doc.font(FONT_MONO, 9);
       doc.text(`ABA / Routing #: ${remit.routingAba}`, MARGIN, curY, { lineBreak: false });
       curY += 11;
     }

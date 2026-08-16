@@ -14123,7 +14123,32 @@
 // retrieved this sprint (Scotlynn + TQL court exhibits via CourtListener, TQL
 // modern, Leonard's Express) — temperature setpoint, driver/equipment capture,
 // and seal handling each appeared in 4 of 4 and in 0 of SRL's.
-export const SRL_VERSION = "3.8.arx";
+// v3.8.ary — the canonical chrome copy can now reproduce the document SRL sends.
+// The skill at .claude/skills/srl-brand-design is declared canonical by §20.1 but
+// had drifted from its own mirror: it emitted Helvetica where tokens.md mandates
+// Playfair + DM Sans, reproduced the "Rate Confrmation" ligature bug, and lacked
+// trackingAcceptance + detentionNotify — two features pdfService sets true on
+// EVERY production RC. Rendering both copies side by side with production args
+// now yields a byte-identical text layer. Also: drawPanel gained `wrap` (default
+// false) so the three hand-built panel frames in the RC stop violating "don't
+// hand-build chrome" (§13.3 Item 94); FONT_MONO added so the ABA routing line
+// stops being the one literal built-in the spec forbids; the spec's Rate Con
+// anatomy went from 11 blocks to the 21 the code renders; the meta strip from a
+// hard "six columns" to 6-8 with a measured fit rule; the shipment table from an
+// LTL column set (CLASS/NMFC# appear in 0 of 16 corpus RCs) to the FTL five.
+// Three fixes worth naming because they were wrong in the file that teaches:
+// pdf-chrome.md handed agents `detention_max_per_stop=200` tagged v3.8.arn — the
+// figure v3.8.ars RETIRED — so a generated RC would have promised $50/stop less
+// than we pay; the Rate Con quickstart called `transit_days=`, renamed to
+// `transit_value` by Item 100, so it did not run; both BOL quickstarts omitted
+// include_qr and rendered a BOL with no QR and no TRACK label. Renderer defaults
+// nobody chose (TONU $200, layover $250/day, a 4-hour cancellation window that is
+// NOT in the ratified §5 set) are now passed explicitly by the caller, values
+// unchanged. Verified by rendering 9 fixtures before and after: 1,445 text
+// positions, 108 diff lines, every one an intended voice edit, zero coordinates
+// moved. The artefact header fix went into the GENERATOR, not the file it emits,
+// after the gate proved a fix in a generated file reverts on first regeneration.
+export const SRL_VERSION = "3.8.ary";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

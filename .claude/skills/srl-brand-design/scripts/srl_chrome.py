@@ -13,6 +13,7 @@ Design surface mode for PRINT/PDF:
   emphasis      = gold-dark (#BA7517)  — CTAs, labels, tagline, vertical rules
 
 Public API (the building blocks you'll actually call):
+  - register_skill_fonts()   <- REQUIRED, once, before any draw_* call
   - draw_header_first_page(canvas, doc_title, subtitle, qr_url, load_id)
   - draw_meta_strip(canvas, fields)
   - draw_parties_block(canvas, shipper, consignee)
@@ -25,6 +26,11 @@ Dependencies: reportlab>=4.0, qrcode>=7.0, Pillow
 Quickstart for a Rate Confirmation:
     from srl_chrome import *
     from reportlab.pdfgen.canvas import Canvas
+
+    register_skill_fonts()   # REQUIRED — registers Playfair Display + DM Sans.
+                             # Every chrome function names a registered face;
+                             # without this, reportlab raises KeyError on the
+                             # first setFont. See the TYPOGRAPHY section.
 
     c = Canvas("rate_con.pdf", pagesize=LETTER)
     draw_header_first_page(c, "Rate Confirmation",
@@ -48,6 +54,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Iterable
 import io
+import math
+import os as _os
 
 from reportlab.pdfgen.canvas import Canvas
 from reportlab.lib.pagesizes import LETTER
@@ -56,6 +64,9 @@ from reportlab.platypus import Paragraph, Frame
 from reportlab.lib.styles import ParagraphStyle
 from reportlab.lib.enums import TA_LEFT, TA_RIGHT, TA_CENTER
 from reportlab.lib.units import inch
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
+from reportlab.pdfbase.pdfmetrics import registerFontFamily
 
 try:
     import qrcode
@@ -111,6 +122,154 @@ CONTENT_W = PAGE_W - 2 * MARGIN
 
 
 # ============================================================================
+# TYPOGRAPHY — synced from the TS twin (Sprint 47, Item 101)
+#
+# references/tokens.md mandates Playfair Display (display) + DM Sans (body).
+# This library previously named reportlab's built-in Type 1 faces (Helvetica /
+# Times-Bold / Times-Italic), so every PDF generated from the bundled script
+# rendered in Helvetica — off-brand, and silently so, because a built-in font
+# never fails to resolve. The names below are REGISTERED faces: they resolve
+# only after register_skill_fonts() has run, which turns a brand miss into a
+# loud error instead of a quiet one.
+#
+#   Playfair Display 700 / italic — display headings + tagline
+#   DM Sans 400/500/700           — body text + small-caps labels
+#   Courier / Courier-Bold        — mono (reportlab built-ins; tokens.md names
+#                                   SF Mono for web, and the skill ships no
+#                                   custom mono TTF, so the built-ins stay for
+#                                   reference fields like load IDs and the
+#                                   TRACK label per references/pdf-chrome.md,
+#                                   and for the ABA/routing line, where
+#                                   fixed-width digits are the whole point)
+#
+# LIGATURE SUPPRESSION — NOT MIRRORED, AND NOT NEEDED HERE.
+# The TS twin monkey-patches doc.text to force
+# {liga: False, clig: False, rlig: False, dlig: False, kern: True} on every
+# call, because fontkit applies OpenType GSUB features by default and
+# substituted the `fi` ligature: the Rate Confirmation title shipped as
+# "Rate Confrmation" (same class as the "classified" -> "classifed" bug fixed
+# for BOL v2.9). reportlab has no equivalent hook because it has no equivalent
+# bug — TTFont maps characters to glyphs through the font's cmap and never
+# applies GSUB, so `fi` stays two glyphs and the substitution cannot occur.
+# There is nothing to disable. If this file is ever moved onto a shaping-aware
+# backend (HarfBuzz via reportlab's RL_ACCEL / an alternate renderer), the
+# suppression must be reintroduced or the bug returns.
+# ============================================================================
+
+FONT_BODY           = "DMSans-Regular"
+FONT_BODY_BOLD      = "DMSans-Bold"
+FONT_BODY_ITALIC    = "DMSans-Italic"
+FONT_DISPLAY_BOLD   = "Playfair-Bold"
+FONT_DISPLAY_ITALIC = "Playfair-Italic"
+FONT_MONO           = "Courier"
+FONT_MONO_BOLD      = "Courier-Bold"
+
+# Registered face name -> TTF filename, as shipped in bol-v2.9.
+_FONT_FILES = [
+    ("Playfair-Regular",    "PlayfairDisplay-Regular.ttf"),
+    ("Playfair-Italic",     "PlayfairDisplay-Italic.ttf"),
+    ("Playfair-Bold",       "PlayfairDisplay-Bold.ttf"),
+    ("Playfair-BoldItalic", "PlayfairDisplay-BoldItalic.ttf"),
+    ("DMSans-Regular",      "DMSans-Regular.ttf"),
+    ("DMSans-Italic",       "DMSans-Italic.ttf"),
+    ("DMSans-Medium",       "DMSans-Medium.ttf"),
+    ("DMSans-SemiBold",     "DMSans-SemiBold.ttf"),
+    ("DMSans-Bold",         "DMSans-Bold.ttf"),
+]
+
+_FONTS_REGISTERED = False
+_FONTS_DIR_USED: str | None = None
+
+
+def _resolve_fonts_dir(explicit: str | None = None) -> str:
+    """Locate the bol-v2.9 TTF directory.
+
+    The live mirror at backend/src/lib/srl-chrome.ts hardcodes one path,
+    because it always sits one directory below src/. This copy is the portable
+    one — it gets vendored into projects with different layouts — so it
+    searches, in priority order:
+
+      1. the explicit `fonts_dir` argument
+      2. $SRL_FONTS_DIR
+      3. <this file>/fonts                     — fonts vendored beside the
+                                                 script, the same pattern the
+                                                 compass PNGs already use
+      4. <this file>/../assets/fonts/bol-v2.9  — the live-mirror layout, for
+                                                 when this file is copied into
+                                                 a src/lib/ position
+      5. <repo root>/backend/src/assets/fonts/bol-v2.9 — the in-repo location,
+                                                 reached from
+                                                 .claude/skills/<skill>/scripts/
+
+    Raises with the remedy spelled out rather than falling back to Helvetica:
+    a silent fallback is precisely the bug this section exists to kill.
+    """
+    here = _os.path.dirname(_os.path.abspath(__file__))
+    candidates = [
+        explicit,
+        _os.environ.get("SRL_FONTS_DIR"),
+        _os.path.join(here, "fonts"),
+        _os.path.join(here, "..", "assets", "fonts", "bol-v2.9"),
+        _os.path.join(here, "..", "..", "..", "..", "backend", "src",
+                      "assets", "fonts", "bol-v2.9"),
+    ]
+    for cand in candidates:
+        if not cand:
+            continue
+        cand = _os.path.abspath(cand)
+        if _os.path.exists(_os.path.join(cand, "DMSans-Regular.ttf")):
+            return cand
+
+    searched = ", ".join(_os.path.abspath(c) for c in candidates if c)
+    raise FileNotFoundError(
+        "srl_chrome: could not locate the bol-v2.9 font directory (Playfair "
+        "Display + DM Sans TTFs). Pass it explicitly as "
+        "register_skill_fonts(fonts_dir), or set SRL_FONTS_DIR. "
+        "Searched: " + searched
+    )
+
+
+def register_skill_fonts(fonts_dir: str | None = None, force: bool = False) -> str:
+    """Register the skill's canonical faces with reportlab. Returns the dir used.
+
+    MUST be called before any draw_* function runs, or reportlab raises
+    KeyError on the first setFont for an unregistered face.
+
+    API divergence from the TS twin, forced by the libraries: PDFKit registers
+    fonts per-document, so registerSkillFonts takes the doc. reportlab's
+    registry is process-global, so this takes no canvas and is idempotent —
+    call it once at startup. `force=True` re-registers (useful only if the TTFs
+    were swapped mid-process).
+    """
+    global _FONTS_REGISTERED, _FONTS_DIR_USED
+    if _FONTS_REGISTERED and not force and _FONTS_DIR_USED:
+        return _FONTS_DIR_USED
+
+    directory = _resolve_fonts_dir(fonts_dir)
+    for face, filename in _FONT_FILES:
+        pdfmetrics.registerFont(TTFont(face, _os.path.join(directory, filename)))
+
+    # Family mapping so Paragraph flowables resolve <b> / <i> to the right
+    # face instead of falling back to the regular weight. bol-v2.9 ships no
+    # DMSans BoldItalic, so bold-italic maps to DMSans-Bold — the closest face
+    # that exists, and a deliberate choice rather than a typo.
+    registerFontFamily(
+        "DMSans",
+        normal="DMSans-Regular", bold="DMSans-Bold",
+        italic="DMSans-Italic", boldItalic="DMSans-Bold",
+    )
+    registerFontFamily(
+        "Playfair",
+        normal="Playfair-Regular", bold="Playfair-Bold",
+        italic="Playfair-Italic", boldItalic="Playfair-BoldItalic",
+    )
+
+    _FONTS_REGISTERED = True
+    _FONTS_DIR_USED = directory
+    return directory
+
+
+# ============================================================================
 # PRIMITIVES
 # ============================================================================
 
@@ -136,19 +295,19 @@ def _label(c: Canvas, text: str, x: float, y: float,
     """
     c.saveState()
     c.setFillColor(color)
-    c.setFont("Helvetica-Bold", size)
+    c.setFont(FONT_BODY_BOLD, size)
     upper = text.upper()
     # ~8% extra tracking
-    tracked_advance = c.stringWidth(upper, "Helvetica-Bold", size) * 0.08
+    tracked_advance = c.stringWidth(upper, FONT_BODY_BOLD, size) * 0.08
     cursor = x
     for ch in upper:
         c.drawString(cursor, y, ch)
-        cursor += c.stringWidth(ch, "Helvetica-Bold", size) + tracked_advance / max(len(upper), 1)
+        cursor += c.stringWidth(ch, FONT_BODY_BOLD, size) + tracked_advance / max(len(upper), 1)
     c.restoreState()
 
 
 def _body(c: Canvas, text: str, x: float, y: float,
-          font: str = "Helvetica", size: float = 9.5,
+          font: str = FONT_BODY, size: float = 9.5,
           color: Color = FG_1) -> None:
     c.saveState()
     c.setFillColor(color)
@@ -158,7 +317,7 @@ def _body(c: Canvas, text: str, x: float, y: float,
 
 
 def _italic(c: Canvas, text: str, x: float, y: float,
-            font: str = "Times-Italic", size: float = 9,
+            font: str = FONT_DISPLAY_ITALIC, size: float = 9,
             color: Color = GOLD_DARK) -> None:
     c.saveState()
     c.setFillColor(color)
@@ -204,13 +363,20 @@ def _generate_qr_image(url: str, error_correction_level: str = "M"):
 # without code changes.
 # ============================================================================
 
-import os as _os
+# `os` is imported once, as _os, in the module import block at the top.
 _LOGO_DIR = _os.path.dirname(_os.path.abspath(__file__))
 _LOGO_SVG_PATH = _os.path.join(_LOGO_DIR, 'srl_compass.svg')
 
 
-def _draw_compass_mark(c: Canvas, x: float, y: float, size: float = 50.0) -> None:
+def draw_compass_mark(c: Canvas, x: float, y: float, size: float = 50.0) -> None:
     """Draw the SRL compass mark at (x, y) with the given size.
+
+    v3.8.anc — public. Ceremonial layouts that don't run draw_header_first_page
+    need the mark on its own; the TS twin exports drawCompassMark for the SRL
+    Driver Academy completion certificate, which centres the mark rather than
+    using the document-style header. `_draw_compass_mark` remains below as an
+    alias so existing internal callers keep working.
+
 
     Strategy:
       1. Use the closest bundled PNG raster fallback >= target size — these
@@ -259,6 +425,10 @@ def _draw_compass_mark(c: Canvas, x: float, y: float, size: float = 50.0) -> Non
     c.restoreState()
 
 
+# Back-compat alias for the pre-v3.8.anc private name.
+_draw_compass_mark = draw_compass_mark
+
+
 # ============================================================================
 # PUBLIC: HEADER (FIRST PAGE)
 # ============================================================================
@@ -296,16 +466,16 @@ def draw_header_first_page(c: Canvas, doc_title: str, subtitle: str,
     info_x = MARGIN + 70
     info_y = y_top - 8
 
-    c.setFont("Helvetica-Bold", 13)
+    c.setFont(FONT_BODY_BOLD, 13)
     c.setFillColor(NAVY)
     c.drawString(info_x, info_y, BRAND["legal_name"])
 
-    c.setFont("Helvetica", 8.5)
+    c.setFont(FONT_BODY, 8.5)
     c.setFillColor(FG_2)
     c.drawString(info_x, info_y - 12, BRAND["address"])
     c.drawString(info_x, info_y - 24, f'{BRAND["phone"]}  |  {BRAND["email"]}  |  {BRAND["domain"]}')
     c.setFillColor(FG_1)
-    c.setFont("Helvetica-Bold", 8.5)
+    c.setFont(FONT_BODY_BOLD, 8.5)
     c.drawString(info_x, info_y - 36, f'MC# {BRAND["mc"]}  ·  DOT# {BRAND["dot"]}')
 
     # Tagline (Where Trust Travels.) in italic gold-dark
@@ -334,22 +504,22 @@ def draw_header_first_page(c: Canvas, doc_title: str, subtitle: str,
         # TRACK label below QR
         _label(c, "TRACK", qr_x + 5, qr_y - 14, color=GOLD_DARK, size=7)
         if load_id:
-            c.setFont("Courier-Bold", 8.5)
+            c.setFont(FONT_MONO_BOLD, 8.5)
             c.setFillColor(FG_1)
             c.drawString(qr_x, qr_y - 26, load_id)
     elif load_id:
         # Non-BOL: show doc identifier in upper-right as a filing reference
         # No QR (would be visual noise — see docstring), no TRACK label
         # (the doc isn't a tracking artifact), just the identifier itself.
-        c.setFont("Helvetica", 8)
+        c.setFont(FONT_BODY, 8)
         c.setFillColor(FG_3)
         ref_label = "REFERENCE"
-        label_w = c.stringWidth(ref_label, "Helvetica-Bold", 6.5)
+        label_w = c.stringWidth(ref_label, FONT_BODY_BOLD, 6.5)
         _label(c, ref_label, PAGE_W - MARGIN - 100, y_top - 12,
                color=GOLD_DARK, size=6.5)
-        c.setFont("Courier-Bold", 11)
+        c.setFont(FONT_MONO_BOLD, 11)
         c.setFillColor(FG_1)
-        id_w = c.stringWidth(load_id, "Courier-Bold", 11)
+        id_w = c.stringWidth(load_id, FONT_MONO_BOLD, 11)
         c.drawString(PAGE_W - MARGIN - id_w, y_top - 28, load_id)
 
     # Top gold rule across full width
@@ -358,13 +528,13 @@ def draw_header_first_page(c: Canvas, doc_title: str, subtitle: str,
 
     # Document title (left) and subtitle below it
     title_y = rule_y - 24
-    c.setFont("Times-Bold", 22)
+    c.setFont(FONT_DISPLAY_BOLD, 22)
     c.setFillColor(NAVY)
     c.drawString(MARGIN, title_y, doc_title)
 
     if subtitle:
         c.setFillColor(GOLD_DARK)
-        c.setFont("Times-Italic", 8.5)
+        c.setFont(FONT_DISPLAY_ITALIC, 8.5)
         c.drawString(MARGIN, title_y - 14, subtitle.upper())
 
     return title_y - 30  # caller uses this as next y
@@ -401,7 +571,7 @@ def draw_meta_strip(c: Canvas, fields: dict[str, str | None],
         x = MARGIN + i * col_w
         _label(c, key, x, label_y, color=GOLD_DARK, size=6.5)
         display = val if val and str(val).strip() else "—"
-        _body(c, display, x, value_y, font="Helvetica", size=10, color=FG_1)
+        _body(c, display, x, value_y, font=FONT_BODY, size=10, color=FG_1)
 
     # Bottom gold rule
     bottom_y = y_top - 32
@@ -460,13 +630,13 @@ def draw_parties_block(c: Canvas, shipper: Party, consignee: Party,
         _label(c, role, x + 10, panel_y + height - 12, color=GOLD_DARK, size=6.5)
 
         # Name (bold)
-        c.setFont("Helvetica-Bold", 11)
+        c.setFont(FONT_BODY_BOLD, 11)
         c.setFillColor(NAVY)
         c.drawString(x + 10, panel_y + height - 27, party.name)
 
         # Address
         cur = panel_y + height - 40
-        c.setFont("Helvetica", 8.5)
+        c.setFont(FONT_BODY, 8.5)
         c.setFillColor(FG_2)
         for line in party.address_lines:
             c.drawString(x + 10, cur, line)
@@ -526,9 +696,13 @@ BOL_SIGNATURE_ROLES = [
 RATE_CON_SIGNATURE_ROLES = [
     SignatureRole(
         title="CARRIER · ACCEPTANCE",
-        certification=("Carrier accepts the rate, lane, equipment, and terms set forth above. "
-                       "This Rate Confirmation, together with the Broker-Carrier Agreement "
-                       "v3.1 dated February 26, 2026, constitutes the complete agreement for this load."),
+        # Sprint 50 (Item 122) — prose paragraph removed. Both sentences were
+        # verbatim duplicates of GOVERNING TERMS clauses (1) and (9), so the
+        # document said the same thing twice: once where a carrier reads the
+        # binding text, once as signature-block filler. The header label stays
+        # as the structural section anchor; draw_signature_block guards the
+        # certification render path when this is empty.
+        certification="",
         fields=["CARRIER LEGAL NAME", "MC #", "DOT #",
                 "AUTHORIZED SIGNATORY (PRINT)", "TITLE",
                 "SIGNATURE", "DATE"],
@@ -555,17 +729,27 @@ MASTER_AGREEMENT_SIGNATURE_ROLES = [
 
 def draw_signature_block(c: Canvas, roles: list[SignatureRole] | None = None,
                          y_top: float | None = None,
-                         height: float = 220) -> float:
+                         height: float = 220,
+                         prefilled_values: dict[str, str] | None = None) -> float:
     """Draw the three-column signature block.
 
     Columns separated by gold-dark 1pt vertical rules. Each column has a
     title (small-caps gold-dark), italic certification line, and ordered
     field labels with underline rules.
+
+    Sprint 48.c — prefilled_values. Pre-fill the carrier identity SRL already
+    knows (CARRIER LEGAL NAME / MC # / DOT #) so the carrier only writes
+    AUTHORIZED SIGNATORY / TITLE / SIGNATURE / DATE at signing. Industry-
+    standard Rate Con pattern; matches CHR / Coyote / RXO templates. A field
+    present in the map renders its value above the underline in fg-1; a field
+    absent leaves the underline bare for handwriting.
     """
     if roles is None:
         roles = BOL_SIGNATURE_ROLES
     if y_top is None:
         y_top = PAGE_H - MARGIN - 480
+    if prefilled_values is None:
+        prefilled_values = {}
 
     n = len(roles)
     col_w = CONTENT_W / n
@@ -587,34 +771,62 @@ def draw_signature_block(c: Canvas, roles: list[SignatureRole] | None = None,
         # Title
         _label(c, role.title, x, y_top - 12, color=GOLD_DARK, size=7)
 
-        # Certification (italic, 7.5pt, fg-2)
-        cert_y = y_top - 28
-        c.setFont("Helvetica-Oblique", 7.5)
-        c.setFillColor(FG_2)
-        # Simple wrap at ~38 chars
-        words = role.certification.split()
-        line = ""
-        cur_y = cert_y
-        for w in words:
-            test = (line + " " + w).strip()
-            if c.stringWidth(test, "Helvetica-Oblique", 7.5) > col_inner_w:
+        # Sprint 50 (Item 122) — certification render guard. With an empty
+        # string the wrap loop below draws nothing but still leaves cur_y at
+        # the certification's first-line baseline, so the fields started a
+        # full paragraph's worth of whitespace lower than they should. Set the
+        # field start explicitly instead. The TS twin starts fields at
+        # yTop + 20 where the certification would have started at yTop + 16;
+        # here the certification starts at y_top - 28, so the mirrored start
+        # is 4pt further on: y_top - 32.
+        if role.certification:
+            # Certification (italic, 7.5pt, fg-2)
+            cert_y = y_top - 28
+            c.setFont(FONT_BODY_ITALIC, 7.5)
+            c.setFillColor(FG_2)
+            # Simple wrap at ~38 chars
+            words = role.certification.split()
+            line = ""
+            cur_y = cert_y
+            for w in words:
+                test = (line + " " + w).strip()
+                if c.stringWidth(test, FONT_BODY_ITALIC, 7.5) > col_inner_w:
+                    c.drawString(x, cur_y, line)
+                    cur_y -= 9
+                    line = w
+                else:
+                    line = test
+            if line:
                 c.drawString(x, cur_y, line)
-                cur_y -= 9
-                line = w
-            else:
-                line = test
-        if line:
-            c.drawString(x, cur_y, line)
+            field_y = cur_y - 18
+        else:
+            field_y = y_top - 32
 
-        # Fields — labels with underline
-        field_y = cur_y - 18
+        # Fields — labels, optional pre-filled value, underline.
+        #
+        # Sprint 49.b (Item 139) — row pitch 22 -> 26pt, underline offset
+        # 4 -> 20pt, value at 10pt. Sprint 48.c had placed the pre-filled value
+        # 4pt from the label, which produced a MEASURED ~2.5pt overlap on every
+        # pre-filled row. The offsets mirror the TS twin's +10 / +20 / +26 with
+        # the sign flipped for reportlab's bottom-up axis; because these are
+        # measured from a BASELINE here and from a text-box TOP in PDFKit, the
+        # rendered result is marginally airier than the TS, which is the safe
+        # direction for a fix whose entire purpose was clearance.
+        # Callers passing a fixed `height` must allow ~28pt x N fields.
         for f in role.fields:
             _label(c, f, x, field_y, color=FG_3, size=6.5)
+
+            pre_val = prefilled_values.get(f)
+            if pre_val:
+                c.setFont(FONT_BODY, 8.5)
+                c.setFillColor(FG_1)
+                c.drawString(x, field_y - 10, pre_val)
+
             # Underline
             c.setStrokeColor(BORDER_STRONG)
             c.setLineWidth(0.5)
-            c.line(x, field_y - 4, x + col_inner_w, field_y - 4)
-            field_y -= 22
+            c.line(x, field_y - 20, x + col_inner_w, field_y - 20)
+            field_y -= 26
 
     return bottom_y
 
@@ -631,28 +843,40 @@ def draw_footer(c: Canvas, page_num: int, total_pages: int,
       Left:   MC# · DOT# · domain
       Center: italic Where Trust Travels.
       Right:  Page X of Y
+
+    A-8 -- doc_id IS ACCEPTED AND DELIBERATELY UNUSED. Do not "fix" the footer by
+    stamping it. pdf-chrome.md specifies exactly three footer columns and no
+    document ID, so the omission is the SPEC and the parameter is the vestige.
+    The document ID belongs to the continuation header (see
+    draw_continuation_header, which renders it twice -- inline and right-aligned),
+    not to the footer.
+
+    Retained ONLY for call-site compatibility across the three chrome copies. If
+    the callers are ever cleaned up, drop the parameter from all three in the same
+    commit.
     """
+    # doc_id intentionally unread below -- nothing here may render it.
     footer_y = MARGIN + 30
     _gold_rule(c, footer_y + 12, color=GOLD, weight=0.75)
 
     # Left
-    c.setFont("Helvetica", 7.5)
+    c.setFont(FONT_BODY, 7.5)
     c.setFillColor(FG_3)
     left_text = f'MC# {BRAND["mc"]}  ·  DOT# {BRAND["dot"]}  ·  {BRAND["domain"]}'
     c.drawString(MARGIN, footer_y, left_text)
 
     # Center — Where Trust Travels (italic, gold-dark)
-    c.setFont("Times-Italic", 8)
+    c.setFont(FONT_DISPLAY_ITALIC, 8)
     c.setFillColor(GOLD_DARK)
     tagline = BRAND["tagline"]
-    tagline_w = c.stringWidth(tagline, "Times-Italic", 8)
+    tagline_w = c.stringWidth(tagline, FONT_DISPLAY_ITALIC, 8)
     c.drawString((PAGE_W - tagline_w) / 2, footer_y, tagline)
 
     # Right — page X of Y
-    c.setFont("Helvetica", 7.5)
+    c.setFont(FONT_BODY, 7.5)
     c.setFillColor(FG_3)
     page_text = f"Page {page_num} of {total_pages}"
-    page_w = c.stringWidth(page_text, "Helvetica", 7.5)
+    page_w = c.stringWidth(page_text, FONT_BODY, 7.5)
     c.drawString(PAGE_W - MARGIN - page_w, footer_y, page_text)
 
 
@@ -673,18 +897,18 @@ def draw_continuation_header(c: Canvas, doc_title: str, doc_id: str,
     _draw_compass_mark(c, MARGIN, y_top - 35, size=30)
 
     info_x = MARGIN + 40
-    c.setFont("Helvetica-Bold", 11)
+    c.setFont(FONT_BODY_BOLD, 11)
     c.setFillColor(NAVY)
     c.drawString(info_x, y_top - 12, BRAND["legal_name"])
 
-    c.setFont("Helvetica", 8)
+    c.setFont(FONT_BODY, 8)
     c.setFillColor(FG_3)
     c.drawString(info_x, y_top - 24, f"{doc_id}  ·  {doc_title} (continued)")
 
     # Right side — doc id
-    c.setFont("Helvetica-Bold", 9)
+    c.setFont(FONT_BODY_BOLD, 9)
     c.setFillColor(FG_1)
-    txt_w = c.stringWidth(doc_id, "Helvetica-Bold", 9)
+    txt_w = c.stringWidth(doc_id, FONT_BODY_BOLD, 9)
     c.drawString(PAGE_W - MARGIN - txt_w, y_top - 12, doc_id)
 
     # Thin gold rule
@@ -732,7 +956,7 @@ def draw_shipment_table(c: Canvas, headers: list[str], rows: list[list[str]],
     for ri, row in enumerate(rows):
         cur_y -= row_h
         cur_x = MARGIN + 8
-        c.setFont("Helvetica", 9)
+        c.setFont(FONT_BODY, 9)
         c.setFillColor(FG_1)
         for i, cell in enumerate(row):
             c.drawString(cur_x, cur_y + 5, str(cell) if cell else "—")
@@ -746,7 +970,7 @@ def draw_shipment_table(c: Canvas, headers: list[str], rows: list[list[str]],
         c.rect(MARGIN, cur_y, CONTENT_W, row_h, stroke=0, fill=1)
         c.restoreState()
         cur_x = MARGIN + 8
-        c.setFont("Helvetica-Bold", 9)
+        c.setFont(FONT_BODY_BOLD, 9)
         c.setFillColor(FG_1)
         for i, cell in enumerate(totals_row):
             c.drawString(cur_x, cur_y + 5, str(cell) if cell else "")
@@ -759,12 +983,82 @@ def draw_shipment_table(c: Canvas, headers: list[str], rows: list[list[str]],
 # PUBLIC: cream-2 panel (general utility)
 # ============================================================================
 
+# Panel geometry. Named constants so the measured (wrap) path and the
+# fixed-height path cannot drift apart; the literals are the ones the
+# single-line path has always used.
+PANEL_INSET_X = 10   # left AND right body inset
+PANEL_BODY_TOP = 28  # panel top -> body text BASELINE (the TS twin's 22 is to
+                     # a text-box top; 28 is the same position expressed for
+                     # reportlab's baseline-anchored drawString, and is the
+                     # offset this function has always used)
+PANEL_PAD_BOTTOM = 10  # measured-height mode only; matches the horizontal inset
+# Leading for wrapped panel body at 9pt: reportlab's conventional 1.2x leading
+# plus the 1pt lineGap the TS twin measures and renders with, so the two twins
+# wrap to comparable heights.
+_PANEL_BODY_LEADING = 9 * 1.2 + 1
+
+
+def _wrap_lines(c: Canvas, text: str, font: str, size: float,
+                max_width: float) -> list[str]:
+    """Greedy word wrap to max_width, honouring explicit newlines.
+
+    reportlab has no heightOfString, so wrapping is measured here and the same
+    line list is reused for rendering — measure and draw can't drift apart.
+    """
+    lines: list[str] = []
+    for paragraph in text.split("\n"):
+        if not paragraph.strip():
+            lines.append("")
+            continue
+        line = ""
+        for word in paragraph.split():
+            test = (line + " " + word).strip()
+            if line and c.stringWidth(test, font, size) > max_width:
+                lines.append(line)
+                line = word
+            else:
+                line = test
+        if line:
+            lines.append(line)
+    return lines
+
+
 def draw_panel(c: Canvas, x: float, y: float, w: float, h: float,
                label: str | None = None,
-               body_text: str | None = None) -> None:
+               body_text: str | None = None,
+               wrap: bool = False) -> float:
     """Draw a cream-2 accent panel — used for special instructions, released-value
     frame, and other sunken regions on print/PDF surfaces.
+
+    `wrap` (§13.3 Item 94, default False): the single-line path draws body_text
+    with drawString, which cannot wrap. That is why multi-line panels get
+    hand-built from roundRect at call sites, which SKILL.md forbids ("Don't
+    hand-build chrome"). Pass wrap=True and the panel measures the body at the
+    panel's inner width, sizes its own rect to fit, and draws the wrapped lines.
+
+    With wrap=False every existing caller is byte-identical to before: same
+    rect, same fixed `h`, same single drawString.
+
+    AXIS NOTE: reportlab's `y` is the panel's BOTTOM edge. When self-sizing, the
+    panel's TOP is held fixed at (y + h) — matching the TS twin, where `y` is
+    the top and the panel grows downward — and the bottom moves. So passing the
+    same (y, h) to both twins anchors the panel identically; only the edge that
+    moves differs, as the coordinate systems require.
+
+    Returns the panel's bottom edge. This was previously None; widening a
+    None return to a value breaks no existing call site, and a self-sizing
+    panel is unusable without it.
     """
+    inner_w = w - 2 * PANEL_INSET_X
+    top_y = y + h
+
+    body_lines: list[str] | None = None
+    if wrap and body_text:
+        body_lines = _wrap_lines(c, body_text, FONT_BODY, 9, inner_w)
+        measured = len(body_lines) * _PANEL_BODY_LEADING
+        h = PANEL_BODY_TOP + measured + PANEL_PAD_BOTTOM
+        y = top_y - h
+
     c.saveState()
     c.setFillColor(CREAM_2)
     c.setStrokeColor(BORDER_1)
@@ -773,11 +1067,19 @@ def draw_panel(c: Canvas, x: float, y: float, w: float, h: float,
     c.restoreState()
 
     if label:
-        _label(c, label, x + 10, y + h - 12, color=GOLD_DARK, size=6.5)
+        _label(c, label, x + PANEL_INSET_X, top_y - 12, color=GOLD_DARK, size=6.5)
     if body_text:
-        c.setFont("Helvetica", 9)
+        c.setFont(FONT_BODY, 9)
         c.setFillColor(FG_1)
-        c.drawString(x + 10, y + h - 28, body_text)
+        if body_lines is not None:
+            line_y = top_y - PANEL_BODY_TOP
+            for line in body_lines:
+                c.drawString(x + PANEL_INSET_X, line_y, line)
+                line_y -= _PANEL_BODY_LEADING
+        else:
+            c.drawString(x + PANEL_INSET_X, top_y - PANEL_BODY_TOP, body_text)
+
+    return y
 
 
 # ============================================================================
@@ -839,18 +1141,18 @@ def draw_bill_to_block(c: Canvas, bill_to: BillTo, y_top: float,
     _label(c, "BILL TO", MARGIN, y_top, color=GOLD_DARK, size=7)
 
     cur_y = y_top - 14
-    c.setFont("Helvetica-Bold", 12)
+    c.setFont(FONT_BODY_BOLD, 12)
     c.setFillColor(NAVY)
     c.drawString(MARGIN, cur_y, bill_to.name)
     cur_y -= 14
 
     if bill_to.attention:
-        c.setFont("Helvetica", 9)
+        c.setFont(FONT_BODY, 9)
         c.setFillColor(FG_2)
         c.drawString(MARGIN, cur_y, f"Attn: {bill_to.attention}")
         cur_y -= 11
 
-    c.setFont("Helvetica", 9.5)
+    c.setFont(FONT_BODY, 9.5)
     c.setFillColor(FG_1)
     for line in bill_to.address_lines:
         c.drawString(MARGIN, cur_y, line)
@@ -860,7 +1162,7 @@ def draw_bill_to_block(c: Canvas, bill_to: BillTo, y_top: float,
         cur_y -= 4
         _label(c, "CUSTOMER ACCOUNT", MARGIN, cur_y, color=GOLD_DARK, size=6.5)
         cur_y -= 11
-        c.setFont("Courier-Bold", 10)
+        c.setFont(FONT_MONO_BOLD, 10)
         c.setFillColor(FG_1)
         c.drawString(MARGIN, cur_y, bill_to.customer_account)
         cur_y -= 6
@@ -895,10 +1197,10 @@ def draw_invoice_meta_block(c: Canvas, meta: dict[str, str | None],
         # Label (left)
         _label(c, key, x_start, cur_y, color=GOLD_DARK, size=6.5)
         # Value (right-aligned within block)
-        c.setFont("Helvetica", 10)
+        c.setFont(FONT_BODY, 10)
         c.setFillColor(FG_1)
         val_str = str(val)
-        val_w = c.stringWidth(val_str, "Helvetica", 10)
+        val_w = c.stringWidth(val_str, FONT_BODY, 10)
         c.drawString(x_start + width - val_w, cur_y, val_str)
         cur_y -= line_h
 
@@ -924,20 +1226,20 @@ def draw_lane_reference_row(c: Canvas, shipper_name: str, shipper_city: str,
 
     # SHIPPER column
     _label(c, "SHIPPER", MARGIN, y_top - 10, color=GOLD_DARK, size=6.5)
-    c.setFont("Helvetica-Bold", 10)
+    c.setFont(FONT_BODY_BOLD, 10)
     c.setFillColor(NAVY)
     c.drawString(MARGIN, y_top - 22, shipper_name)
-    c.setFont("Helvetica", 9)
+    c.setFont(FONT_BODY, 9)
     c.setFillColor(FG_2)
     c.drawString(MARGIN, y_top - 33, shipper_city)
 
     # RECEIVER column
     rcv_x = MARGIN + col_w
     _label(c, "RECEIVER", rcv_x, y_top - 10, color=GOLD_DARK, size=6.5)
-    c.setFont("Helvetica-Bold", 10)
+    c.setFont(FONT_BODY_BOLD, 10)
     c.setFillColor(NAVY)
     c.drawString(rcv_x, y_top - 22, receiver_name)
-    c.setFont("Helvetica", 9)
+    c.setFont(FONT_BODY, 9)
     c.setFillColor(FG_2)
     c.drawString(rcv_x, y_top - 33, receiver_city)
 
@@ -969,13 +1271,13 @@ def draw_charges_block(c: Canvas,
 
     line_h = 16
     for charge in charges:
-        c.setFont("Helvetica", 10)
+        c.setFont(FONT_BODY, 10)
         c.setFillColor(FG_2)
         c.drawString(x_start, cur_y, charge.label)
         amt = f"${charge.amount:,.2f}"
-        c.setFont("Helvetica", 10)
+        c.setFont(FONT_BODY, 10)
         c.setFillColor(FG_1)
-        amt_w = c.stringWidth(amt, "Helvetica", 10)
+        amt_w = c.stringWidth(amt, FONT_BODY, 10)
         c.drawString(x_start + width - amt_w, cur_y, amt)
         cur_y -= line_h
 
@@ -991,12 +1293,12 @@ def draw_charges_block(c: Canvas,
 
     # Total line — bold, larger
     total = sum(ch.amount for ch in charges)
-    c.setFont("Helvetica-Bold", 11)
+    c.setFont(FONT_BODY_BOLD, 11)
     c.setFillColor(FG_1)
     c.drawString(x_start, cur_y, "Total USD")
     total_str = f"${total:,.2f}"
-    total_w = c.stringWidth(total_str, "Helvetica-Bold", 12)
-    c.setFont("Helvetica-Bold", 12)
+    total_w = c.stringWidth(total_str, FONT_BODY_BOLD, 12)
+    c.setFont(FONT_BODY_BOLD, 12)
     c.drawString(x_start + width - total_w, cur_y, total_str)
     cur_y -= line_h
 
@@ -1034,13 +1336,13 @@ def draw_settlement_summary(c: Canvas,
 
     def row(label: str, amount: float, bold: bool = False, color=FG_1):
         nonlocal cur_y
-        c.setFont("Helvetica-Bold" if bold else "Helvetica", 10)
+        c.setFont(FONT_BODY_BOLD if bold else FONT_BODY, 10)
         c.setFillColor(FG_2 if not bold else color)
         c.drawString(x_start + pad, cur_y, label)
         amt_str = f"${amount:,.2f}"
-        c.setFont("Helvetica-Bold" if bold else "Helvetica", 10)
+        c.setFont(FONT_BODY_BOLD if bold else FONT_BODY, 10)
         c.setFillColor(color)
-        amt_w = c.stringWidth(amt_str, "Helvetica-Bold" if bold else "Helvetica", 10)
+        amt_w = c.stringWidth(amt_str, FONT_BODY_BOLD if bold else FONT_BODY, 10)
         c.drawString(x_start + width - pad - amt_w, cur_y, amt_str)
         cur_y -= line_h
 
@@ -1073,13 +1375,13 @@ def draw_remit_to_block(c: Canvas, remit: RemitTo, y_top: float,
     _label(c, "REMIT TO", MARGIN, y_top, color=GOLD_DARK, size=7)
     cur_y = y_top - 14
 
-    c.setFont("Helvetica-Bold", 10)
+    c.setFont(FONT_BODY_BOLD, 10)
     c.setFillColor(NAVY)
     c.drawString(MARGIN, cur_y, remit.legal_name)
     cur_y -= 13
 
     # Mail-to address
-    c.setFont("Helvetica", 9)
+    c.setFont(FONT_BODY, 9)
     c.setFillColor(FG_2)
     for line in remit.mail_address:
         c.drawString(MARGIN, cur_y, line)
@@ -1090,13 +1392,13 @@ def draw_remit_to_block(c: Canvas, remit: RemitTo, y_top: float,
         cur_y -= 6
         _label(c, "ACH / WIRE", MARGIN, cur_y, color=GOLD_DARK, size=6.5)
         cur_y -= 12
-        c.setFont("Helvetica", 9)
+        c.setFont(FONT_BODY, 9)
         c.setFillColor(FG_1)
         if remit.bank_name:
             c.drawString(MARGIN, cur_y, f"Bank: {remit.bank_name}")
             cur_y -= 11
         if remit.routing_aba:
-            c.setFont("Courier", 9)
+            c.setFont(FONT_MONO, 9)
             c.drawString(MARGIN, cur_y, f"ABA / Routing #: {remit.routing_aba}")
             cur_y -= 11
         if remit.account_number:
@@ -1119,8 +1421,8 @@ def draw_payment_reference(c: Canvas, account: str, load_id: str,
     c.saveState()
     # Cream-2 highlight box
     ref_str = f"{account}  {load_id}  {invoice_num}"
-    c.setFont("Courier-Bold", 9.5)
-    text_w = c.stringWidth(ref_str, "Courier-Bold", 9.5)
+    c.setFont(FONT_MONO_BOLD, 9.5)
+    text_w = c.stringWidth(ref_str, FONT_MONO_BOLD, 9.5)
     box_x = MARGIN
     box_w = text_w + 24
     box_h = 22
@@ -1134,7 +1436,7 @@ def draw_payment_reference(c: Canvas, account: str, load_id: str,
     _label(c, "PAYMENT REFERENCE (WIRE MEMO)", MARGIN, y_top + 4,
            color=GOLD_DARK, size=6.5)
 
-    c.setFont("Courier-Bold", 9.5)
+    c.setFont(FONT_MONO_BOLD, 9.5)
     c.setFillColor(FG_1)
     c.drawString(box_x + 12, y_top - box_h + 7, ref_str)
 
@@ -1185,6 +1487,16 @@ class EquipmentSpec:
     temp_setpoint_f: int | None = None           # e.g., 36 for fresh, -10 for frozen
     temp_continuous: bool | None = None          # True = continuous, False = cycle
     pre_cool_required: bool = False              # Pre-cool trailer before load
+    # v3.8.art — temp_controlled makes the TEMPERATURE row unmissable rather
+    # than conditional on data. Previously the row was gated purely on
+    # temp_setpoint_f, so a reefer load whose setpoint was never captured
+    # rendered byte-identical to a dry van: silence and not-applicable became
+    # indistinguishable, and nobody catches it at the desk because the document
+    # looks complete.
+    temp_controlled: bool = False                # True = reefer load, setpoint or not
+    temp_min_f: int | None = None                # Acceptable range floor
+    temp_max_f: int | None = None                # Acceptable range ceiling
+    pre_cool_to_f: int | None = None             # Explicit pre-cool target
     # Loading method
     loading_method: str | None = None            # "Live load", "Drop trailer", "Dock high", "Reefer plug-in"
     unloading_method: str | None = None
@@ -1197,15 +1509,27 @@ class EquipmentSpec:
 @dataclass
 class CarrierRequirements:
     """Carrier qualification + insurance requirements (carrier-facing)."""
-    cargo_insurance_min: float = 100_000.0       # Minimum cargo coverage
-    auto_liability_min: float = 1_000_000.0      # Minimum auto liability
-    general_liability_min: float = 1_000_000.0   # Minimum GL
+    # v3.8.arw mirror — Optional so a caller CAN suppress a bullet, matching the
+    # TS twins' `!== undefined` gate. The canonical SRL minimums stay as the
+    # defaults (CLAUDE.md section 14: $1M auto / $100K cargo), because
+    # pdfService sets all three on every production Rate Confirmation and a
+    # default-constructed py render must reproduce that document. Pass None to
+    # omit a line.
+    cargo_insurance_min: float | None = 100_000.0     # Minimum cargo coverage
+    auto_liability_min: float | None = 1_000_000.0    # Minimum auto liability
+    general_liability_min: float | None = 1_000_000.0  # Minimum GL
     twic_required: bool = False                  # Port/secure facility access
     hazmat_endorsement_required: bool = False    # For hazmat loads
     fast_card_required: bool = False             # Cross-border (US/Canada/Mexico)
     eld_required: bool = True                    # Electronic logging device (default: yes per FMCSA)
     team_drivers: bool = False                   # Team service required
     bond_required: bool = False                  # Surety bond requirement
+    # Sprint 51 (Item 130) — tracking acceptance gate as a preconditions-tier
+    # bullet (NOT a T&C clause per Phase A sub-pattern 4 reclassification).
+    # Industry pattern (TQL): tracking is a precondition for dispatch, not a
+    # behavior rule like indemnification or governing law. Renders as a 4th
+    # bullet alongside the insurance minimums when set.
+    tracking_acceptance: bool = False
 
 
 @dataclass
@@ -1216,8 +1540,18 @@ class RateConTerms:
     BCA, so the carrier doesn't need to look them up before accepting.
     """
     detention_free_hours: float = 2.0            # Free detention time at each stop
-    detention_rate_per_hour: float = 50.0        # After free hours
+    # v3.8.arn mirror — Optional so the zero-guard in draw_rate_con_terms has
+    # something to guard. Typed non-Optional float, `RateConTerms(
+    # detention_rate_per_hour=0)` was a legal construction that published
+    # "$0/hr" to a carrier on a money term.
+    detention_rate_per_hour: float | None = 50.0  # After free hours
     detention_max_per_stop: float | None = None  # Cap per stop (None = no cap)
+    # Sprint 50 (Item 127) — Path β belt-and-suspenders: appends " · notify" to
+    # the DETENTION value in the OPERATIONAL TERMS grid. Pairs with T&C clause
+    # (7), which mandates 30-min-before + departure notifications. The cell
+    # suffix surfaces the obligation at the operational glance level; the clause
+    # locks the enforcement language.
+    detention_notify: bool = False
     tonu_amount: float = 200.0                   # Truck-Order-Not-Used compensation
     layover_per_day: float = 250.0               # If carrier held overnight
     lumper_reimbursement: bool = True            # Reimburse with original receipt
@@ -1240,7 +1574,7 @@ def draw_rate_breakdown(c: Canvas, rate: RateBreakdown,
     cur_y = y_top - 16
     line_h = 16
 
-    def line(label: str, amount: float, font: str = "Helvetica",
+    def line(label: str, amount: float, font: str = FONT_BODY,
              label_color=FG_2, amt_color=FG_1):
         nonlocal cur_y
         c.setFont(font, 10)
@@ -1273,16 +1607,27 @@ def draw_rate_breakdown(c: Canvas, rate: RateBreakdown,
     cur_y -= 8
 
     # Total — bold, larger
-    c.setFont("Helvetica-Bold", 11)
+    c.setFont(FONT_BODY_BOLD, 11)
     c.setFillColor(FG_1)
     c.drawString(x_start, cur_y, "Total Carrier Pay")
     total_str = f"${rate.total:,.2f}"
-    c.setFont("Helvetica-Bold", 12)
-    total_w = c.stringWidth(total_str, "Helvetica-Bold", 12)
+    c.setFont(FONT_BODY_BOLD, 12)
+    total_w = c.stringWidth(total_str, FONT_BODY_BOLD, 12)
     c.drawString(x_start + width - total_w, cur_y, total_str)
     cur_y -= line_h
 
     return cur_y
+
+
+# v3.8.arn — label gutter for the two-column key/value grids shared by
+# draw_equipment_spec and draw_rate_con_terms. Narrowed 90 -> 68: cells draw
+# without wrapping, so a value wider than (col_w - gutter) overprints the next
+# column's label instead of wrapping. The widest label (CANCELLATION) is 55.3pt
+# at 6.5pt with 8% tracking, so 90pt was ~35pt of dead slack; 68pt still clears
+# it by 12.7pt and buys every cell 202pt. Shared constant so the two grids
+# cannot drift apart again — the TS twin had this fix land in one function and
+# not the other for weeks.
+_LABEL_GUTTER = 68
 
 
 def draw_equipment_spec(c: Canvas, equip: EquipmentSpec,
@@ -1314,15 +1659,37 @@ def draw_equipment_spec(c: Canvas, equip: EquipmentSpec,
     if trailer_reqs:
         fields.append(("TRAILER REQ", " · ".join(trailer_reqs)))
 
-    # Reefer specifics
-    if equip.temp_setpoint_f is not None:
-        temp_str = f"{equip.temp_setpoint_f}°F"
-        if equip.temp_continuous is True:
-            temp_str += " continuous"
-        elif equip.temp_continuous is False:
-            temp_str += " cycle"
-        if equip.pre_cool_required:
-            temp_str += " · pre-cool required"
+    # Reefer specifics.
+    #
+    # v3.8.art / v3.8.arv — the row prints whenever the load is temperature-
+    # controlled, even with no setpoint captured, so a data gap surfaces as a
+    # loud instruction instead of an absent row. Frozen freight makes 0°F
+    # legitimate, so every check here is against None rather than truthiness.
+    has_setpoint = equip.temp_setpoint_f is not None
+    if has_setpoint or equip.temp_controlled:
+        if has_setpoint:
+            temp_str = f"{equip.temp_setpoint_f}°F"
+            if equip.temp_min_f is not None and equip.temp_max_f is not None:
+                temp_str += f" ({equip.temp_min_f}–{equip.temp_max_f}°F)"
+            if equip.temp_continuous is True:
+                temp_str += " · continuous"
+            elif equip.temp_continuous is False:
+                temp_str += " · cycle"
+            if equip.pre_cool_to_f is not None:
+                temp_str += f" · pre-cool {equip.pre_cool_to_f}°F"
+            elif equip.pre_cool_required:
+                temp_str += " · pre-cool required"
+        else:
+            # Colon, not an em-dash: references/voice.md bans em-dashes as
+            # sentence connectors and this is a sentence, not a list separator.
+            # v3.8.arv — MEASURED at 165.7pt against a 202pt cell. The v3.8.art
+            # string ("TEMP-CONTROLLED: setpoint not specified. Call before
+            # loading.") was 279.9pt, and this cell draws without wrapping, so
+            # the media box clipped the tail and the words "Call before
+            # loading." never printed. The instruction written to make a data
+            # gap LOUD was the part being silently cut. The label already reads
+            # TEMPERATURE, so the value need not repeat "TEMP-CONTROLLED".
+            temp_str = "Not specified. Call SRL before loading."
         fields.append(("TEMPERATURE", temp_str))
 
     # Loading
@@ -1349,9 +1716,18 @@ def draw_equipment_spec(c: Canvas, equip: EquipmentSpec,
         col = i % 2
         x = MARGIN + col * col_w
         _label(c, key, x, cur_y, color=GOLD_DARK, size=6.5)
-        c.setFont("Helvetica", 9.5)
+        c.setFont(FONT_BODY, 9.5)
         c.setFillColor(FG_1)
-        c.drawString(x + 90, cur_y, val)
+        # v3.8.arv — gutter 90 -> 68, matching draw_rate_con_terms. This cell
+        # draws without wrapping in a CONTENT_W/2 = 270pt column, so a 90pt
+        # gutter left 180pt, and the canonical reefer value measures 191.0pt:
+        # "36°F (34–38°F) · continuous · pre-cool 34°F". It overran into the
+        # adjacent column. 68pt buys 202pt and clears it by 11pt.
+        #
+        # The v3.8.arn fix made exactly this change in draw_rate_con_terms and
+        # did not reach here, because draw_equipment_spec did not yet carry a
+        # value long enough to expose it — v3.8.art gave it one.
+        c.drawString(x + _LABEL_GUTTER, cur_y, val)
         if col == 1:
             cur_y -= line_h
 
@@ -1376,9 +1752,33 @@ def draw_carrier_requirements(c: Canvas, reqs: CarrierRequirements,
     items: list[str] = []
 
     # Insurance minimums
-    items.append(f"Cargo: ${reqs.cargo_insurance_min:,.0f} min")
-    items.append(f"Auto Liability: ${reqs.auto_liability_min:,.0f} min")
-    items.append(f"General Liability: ${reqs.general_liability_min:,.0f} min")
+    # v3.8.arw mirror — each line is gated, matching the TS twins' `!== undefined`
+    # checks. This copy pushed all three unconditionally, so a caller who
+    # deliberately suppressed one still got it printed.
+    if reqs.cargo_insurance_min is not None:
+        items.append(f"Cargo: ${reqs.cargo_insurance_min:,.0f} min")
+    if reqs.auto_liability_min is not None:
+        items.append(f"Auto Liability: ${reqs.auto_liability_min:,.0f} min")
+    if reqs.general_liability_min is not None:
+        items.append(f"General Liability: ${reqs.general_liability_min:,.0f} min")
+
+    # v3.8.arw — this previously read "Tracking via Marco Polo (SMS) or Quo
+    # phone tracking accepted before dispatch." Both named tools were false on a
+    # document a carrier signs. references/voice.md assigns Marco Polo to the AI
+    # chatbot, and marcoPoloService.ts contains ZERO references to SMS. "Quo"
+    # appeared exactly once in the entire backend — in this string — and nowhere
+    # in the skill's naming table or in any of the 16 reference rate
+    # confirmations. It named a third-party tracking integration that does not
+    # exist. voice.md:29 bans fabricated metrics because "carriers and shippers
+    # can smell it"; the same test applies to capabilities, and a carrier who
+    # asks for the Quo integration finds out we do not have one.
+    # The carrier portal is the actual mechanism: /carrier/dashboard/my-loads
+    # carries status advancement and POD upload.
+    if reqs.tracking_acceptance:
+        items.append(
+            "Status updates through the SRL carrier portal, "
+            "or by call or text to (269) 220-6760."
+        )
 
     # Endorsements / certifications
     endorsements = []
@@ -1411,7 +1811,7 @@ def draw_carrier_requirements(c: Canvas, reqs: CarrierRequirements,
            color=GOLD_DARK, size=7)
 
     cur_y = y_top - 26
-    c.setFont("Helvetica", 9)
+    c.setFont(FONT_BODY, 9)
     c.setFillColor(FG_1)
     for item in items:
         c.drawString(MARGIN + 10, cur_y, "•  " + item)
@@ -1430,10 +1830,31 @@ def draw_rate_con_terms(c: Canvas, terms: RateConTerms,
     items: list[tuple[str, str]] = []
 
     # Detention
-    det_str = f"${terms.detention_rate_per_hour:.0f}/hr after {terms.detention_free_hours:.0f} hrs free"
+    # v3.8.arn — a literal 0 is not "unset". This copy formatted the raw field,
+    # so a caller's detention_rate_per_hour=0 published "$0/hr" to the carrier
+    # on a money term. Treat any non-positive or non-finite rate as unset so a
+    # bad write upstream can never again silently promise a carrier nothing.
+    # (The comment below has cited the TS twin since v3.8.arn while this copy
+    # carried none of its safety — the guard itself never crossed over.)
+    raw_detention_rate = terms.detention_rate_per_hour
+    detention_rate = (
+        raw_detention_rate
+        if isinstance(raw_detention_rate, (int, float))
+        and not isinstance(raw_detention_rate, bool)
+        and math.isfinite(raw_detention_rate)
+        and raw_detention_rate > 0
+        else 50.0
+    )
+    det_str = f"${detention_rate:.0f}/hr after {terms.detention_free_hours:.0f} hrs free"
     if terms.detention_max_per_stop:
-        # v3.8.arn - terse by measurement; see the TS twin for the width math.
+        # v3.8.arn — terse by measurement, not preference: this cell draws with
+        # no wrapping, and the longer wording
+        # "$50/hr after 2 hrs free, capped at $250/stop · notify" measures
+        # 216.0pt against 202pt of width, so it overprints the adjacent TONU
+        # label. The shipped terse form measures 189.0pt and clears by 13.0pt.
         det_str += f", ${terms.detention_max_per_stop:.0f}/stop cap"
+    if terms.detention_notify:
+        det_str += " · notify"
     items.append(("DETENTION", det_str))
 
     items.append(("TONU", f"${terms.tonu_amount:.0f} (truck-order-not-used)"))
@@ -1457,9 +1878,15 @@ def draw_rate_con_terms(c: Canvas, terms: RateConTerms,
         col = i % 2
         x = MARGIN + col * col_w
         _label(c, key, x, cur_y, color=GOLD_DARK, size=6.5)
-        c.setFont("Helvetica", 9)
+        c.setFont(FONT_BODY, 9)
         c.setFillColor(FG_1)
-        c.drawString(x + 90, cur_y, val)
+        # v3.8.arn — the gutter measurement was taken against THIS function's
+        # widest label (CANCELLATION); with the ratified $250/stop cap the
+        # DETENTION value measures 189.0pt against the 180pt a 90pt gutter
+        # allows, overprinting the TONU label. Both TS twins carry 68 here;
+        # this copy still had 90, so the fix the comment above claimed had
+        # never actually reached the Python side.
+        c.drawString(x + _LABEL_GUTTER, cur_y, val)
         if col == 1:
             cur_y -= line_h
     if len(items) % 2 == 1:
@@ -1467,20 +1894,36 @@ def draw_rate_con_terms(c: Canvas, terms: RateConTerms,
     return cur_y - 4
 
 
-def draw_lane_economics(c: Canvas, miles: float, transit_days: float,
-                         total_pay: float, y_top: float) -> float:
+def draw_lane_economics(c: Canvas, miles: float, transit_value: float,
+                         total_pay: float, y_top: float,
+                         transit_unit: str = "hours") -> float:
     """Draw the lane economics callout — miles, transit, $/mile.
 
     Carriers use this to evaluate whether to accept the load. Three boxes
     side-by-side: MILES | TRANSIT | $/MILE. Rendered as gold-tint pills.
+
+    Sprint 47 (Item 100) — transit_unit, default "hours". Carriers convert to
+    drive hours mentally regardless, because HOS log entries, ETA windows, and
+    dispatch conversations all run in hours; every major broker's lane-economics
+    widget reads in hours. "2.7 days" for a 1,352-mile lane is correct
+    arithmetic and poor UX. Pass "days" explicitly when the caller has genuinely
+    computed calendar days (multi-day plan, HOS-strict pacing).
+
+    transit_value semantics follow transit_unit:
+      transit_unit="hours" -> drive hours (typically miles / 55, the industry
+                              highway average)
+      transit_unit="days"  -> calendar days
     """
     box_w = (CONTENT_W - 16) / 3
     box_h = 42
     panel_y = y_top - box_h
 
+    transit_display = (f"{transit_value:.1f} hrs" if transit_unit == "hours"
+                       else f"{transit_value:.1f} days")
+
     fields = [
         ("MILES",   f"{miles:,.0f}",        "Lane mileage"),
-        ("TRANSIT", f"{transit_days:.1f} days", "Standard pace"),
+        ("TRANSIT", transit_display,        "Standard pace"),
         ("$/MILE",  f"${total_pay/miles:.2f}", "Carrier rate"),
     ]
 
@@ -1495,13 +1938,13 @@ def draw_lane_economics(c: Canvas, miles: float, transit_days: float,
         c.restoreState()
 
         _label(c, label, x + 10, y_top - 11, color=GOLD_DARK, size=6.5)
-        c.setFont("Helvetica-Bold", 16)
+        c.setFont(FONT_BODY_BOLD, 16)
         c.setFillColor(NAVY)
         c.drawString(x + 10, panel_y + 10, value)
-        c.setFont("Helvetica", 8)
+        c.setFont(FONT_BODY, 8)
         c.setFillColor(FG_3)
         # Right-aligned sub-label
-        sub_w = c.stringWidth(sub, "Helvetica", 8)
+        sub_w = c.stringWidth(sub, FONT_BODY, 8)
         c.drawString(x + box_w - 10 - sub_w, panel_y + 10, sub)
 
     return panel_y - 8
@@ -1512,6 +1955,11 @@ def draw_lane_economics(c: Canvas, miles: float, transit_days: float,
 __all__ = [
     "BRAND", "NAVY", "GOLD", "GOLD_DARK", "CREAM", "CREAM_2", "WHITE",
     "FG_1", "FG_2", "FG_3", "FG_ON_NAVY",
+    # Typography — register_skill_fonts() MUST run before any draw_* call.
+    "register_skill_fonts",
+    "FONT_BODY", "FONT_BODY_BOLD", "FONT_BODY_ITALIC",
+    "FONT_DISPLAY_BOLD", "FONT_DISPLAY_ITALIC", "FONT_MONO", "FONT_MONO_BOLD",
+    "draw_compass_mark",
     "Party", "SignatureRole",
     "BillTo", "InvoiceCharge", "RemitTo",
     "RateBreakdown", "EquipmentSpec", "CarrierRequirements", "RateConTerms",
