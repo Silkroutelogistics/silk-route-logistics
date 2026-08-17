@@ -95,6 +95,16 @@ import {
   MC_NUMBER,
   DOT_NUMBER,
 } from "../config/authority";
+// v3.8.asc — the operational-terms grid prints money, so it reads money from the
+// one module that owns it rather than carrying its own fallbacks.
+import {
+  TONU_AMOUNT,
+  LAYOVER_RATE_PER_DAY,
+  CARRIER_RELEASE_WINDOW_HOURS,
+  DETENTION_FREE_HOURS,
+  DETENTION_RATE_PER_HOUR,
+  DETENTION_CAP_PER_STOP,
+} from "./accessorialPolicy";
 
 export const BRAND = {
   legalName:          ENTITY_NAME.toUpperCase(),
@@ -1510,7 +1520,7 @@ export function drawRateConTerms(
   doc: PDFDoc, terms: RateConTerms, yTop: number
 ): number {
   const items: [string, string][] = [];
-  const detentionFree = terms.detentionFreeHours ?? 2;
+  const detentionFree = terms.detentionFreeHours ?? DETENTION_FREE_HOURS;
   // v3.8.arn — a literal 0 is not "unset". Nullish coalescing let a caller's
   // `detentionRate: 0` through and published "$0/hr" to the carrier. Treat any
   // non-positive or non-finite rate as unset so a bad write upstream can never
@@ -1519,19 +1529,41 @@ export function drawRateConTerms(
   const detentionRate =
     typeof rawDetentionRate === "number" && Number.isFinite(rawDetentionRate) && rawDetentionRate > 0
       ? rawDetentionRate
-      : 50;
+      : DETENTION_RATE_PER_HOUR;
   let detStr = `$${detentionRate}/hr after ${detentionFree} hrs free`;
-  if (terms.detentionMaxPerStop) detStr += `, $${terms.detentionMaxPerStop}/stop cap`;
+  // v3.8.asc — the cap now falls back like every sibling term. It was the ONLY
+  // item in this grid with no default: when a caller omitted it the clause simply
+  // vanished and the document told the carrier detention was UNCAPPED. Today the
+  // sole caller always passes it, so nothing mis-stated — but the Invoice and
+  // Settlement generators are queued to call this same function, and a silent
+  // omission on a signed page is not a defect worth discovering later.
+  const detentionCap = terms.detentionMaxPerStop ?? DETENTION_CAP_PER_STOP;
+  if (detentionCap) detStr += `, $${detentionCap}/stop cap`;
   if (terms.detentionNotify) detStr += ' · notify';
   items.push(['DETENTION', detStr]);
 
-  items.push(['TONU', `$${terms.tonuAmount ?? 200} (truck-order-not-used)`]);
-  items.push(['LAYOVER', `$${terms.layoverPerDay ?? 250}/day`]);
+  // v3.8.asc/asd — every fallback in this grid now comes from lib/accessorialPolicy.
+  // They were bare literals (2 / 50 / 200 / 250 / 4). The values were right, but a
+  // literal in a renderer is how the schedule drifts: nothing connects it to the
+  // ratified figure, so raising the layover rate in policy would have left this
+  // printing the old one on every signed Rate Confirmation.
+  //
+  // asc did the last three and left the two detention terms behind — which is worth
+  // recording, because a partial migration is the more dangerous state. The comment
+  // then claimed the fallbacks "come from lib/accessorialPolicy, the single source",
+  // and that read as true of the whole function while being false of the two lines
+  // directly above it. asd finished the job.
+  items.push(['TONU', `$${terms.tonuAmount ?? TONU_AMOUNT} (truck-order-not-used)`]);
+  items.push(['LAYOVER', `$${terms.layoverPerDay ?? LAYOVER_RATE_PER_DAY}/day`]);
 
   if (terms.lumperReimbursement !== false)
     items.push(['LUMPER', 'Reimbursed with original receipt']);
+  // The window is the CARRIER'S right to release, not SRL's right to cancel — see
+  // CLAUDE.md §5. The label still does not name the party; naming it is pending the
+  // implementation, and e2e/helpers/pdf.ts pins this string character for character,
+  // so both move in the same change.
   items.push(['CANCELLATION',
-    `${Math.floor(terms.cancellationWindowHours ?? 4)}-hour notice without penalty`]);
+    `${Math.floor(terms.cancellationWindowHours ?? CARRIER_RELEASE_WINDOW_HOURS)}-hour notice without penalty`]);
 
   if (terms.quickPayTier) items.push(['QUICK PAY', terms.quickPayTier]);
 

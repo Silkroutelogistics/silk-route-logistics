@@ -3,6 +3,17 @@
  * Run: npx tsx prisma/seed-sops.ts
  */
 import { PrismaClient } from "@prisma/client";
+// v3.8.asc — ratified accessorial figures are interpolated, never typed. An AE
+// quotes these SOPs to a carrier verbatim, so a stale figure here becomes a
+// promise SRL did not make. scripts/verify-accessorial-standard.ts enforces it.
+import {
+  POLICY_TEXT,
+  DETENTION_FREE_HOURS,
+  DETENTION_RATE_PER_HOUR,
+  DETENTION_CAP_PER_STOP,
+  LAYOVER_RATE_PER_DAY,
+  TONU_AMOUNT,
+} from "../src/lib/accessorialPolicy";
 
 const prisma = new PrismaClient();
 
@@ -448,7 +459,7 @@ Silk Route Logistics is a carrier-first brokerage. Happy carriers = reliable ser
 Tell carriers:
 1. "Consistent freight — we have steady volume, not just spot loads"
 2. "Standard pay is free and gets faster as you advance: Net-30 at Silver, Net-21 at Gold, Net-14 at Platinum. Quick Pay is optional, 7 days at your tier rate or same day for two points more. No factoring contract either way"
-3. "Detention pays automatically. $50 an hour after two free hours at each stop, capped at $250 per stop. Same rate for every carrier, no haggling"
+3. "Detention pays automatically. $${DETENTION_RATE_PER_HOUR} an hour after ${DETENTION_FREE_HOURS} free hours at each stop, capped at $${DETENTION_CAP_PER_STOP} per stop. Same rate for every carrier, no haggling"
 4. "Advancement is published and identical for everyone: 12 loads, 97% on-time and 90 days moves you to Gold"
 5. "Easy self-service portal — track loads, payments, documents online"
 6. "Transparent scoring — you always know where you stand"
@@ -525,11 +536,11 @@ for every carrier at every tier (see Accessorials below).
 
 ### Accessorials (uniform, no tier or equipment differentiation)
 
-- **Detention** — $50/hr, all equipment types, after 2 hours free at each stop, capped at $250 per stop. Free time is per stop, independent and non-cumulative. Clock starts at arrival. Not payable if the carrier arrived outside the appointment window. At the cap detention converts to layover; the two do not stack for the same hours. Carrier notifies SRL 30 minutes before detention begins and again on departure.
-- **TONU** — $200 flat. Payable only when SRL gave the pickup number and shipper address and cleared the carrier to head to pickup, and SRL or the shipper then cancelled. If the carrier already arrived, arrival must have been inside the appointment window. Not payable on carrier cancellation or a trailer rejected as non-compliant.
-- **Layover** — $250 per day.
+- **Detention** — ${POLICY_TEXT.detentionFull()} ${POLICY_TEXT.conversion()}
+- **TONU** — $${TONU_AMOUNT} flat. Payable only when SRL gave the pickup number and shipper address and cleared the carrier to head to pickup, and SRL or the shipper then cancelled. If the carrier already arrived, arrival must have been inside the appointment window. Not payable on carrier cancellation or a trailer rejected as non-compliant.
+- **Layover** — $${LAYOVER_RATE_PER_DAY} per day.
 - **Lumper** — carrier fronts the cost, SRL reimburses on the original receipt. SRL issues no money codes (no Comchek, EFS, or Comdata). None exists to issue.
-- **Paperwork** — signed BOL, POD and supporting paperwork due within 24 hours of delivery.
+- **Paperwork** — ${POLICY_TEXT.paperwork()}
 
 ### Milestone Progression
 

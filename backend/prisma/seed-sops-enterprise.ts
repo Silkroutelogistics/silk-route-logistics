@@ -1,4 +1,22 @@
 import { PrismaClient } from "@prisma/client";
+// v3.8.asc/asd — the ratified accessorial figures in this file are INTERPOLATED,
+// never typed. See the Standard Freight Operations Manual entry below for why.
+//
+// asc claimed this held "in this file" while the Rate Engine & Pricing Methodology
+// SOP a few hundred lines down still typed every figure as a literal. asd made the
+// claim true. The remaining dollar figures in that SOP (driver assist, inside
+// delivery, lift gate, residential) are deliberately still literals: they are
+// customer-side BILLING ranges, negotiable per contract, and are not part of the
+// ratified carrier-pay schedule this module owns.
+import {
+  POLICY_TEXT,
+  TONU_AMOUNT,
+  PAPERWORK_DUE_HOURS,
+  DETENTION_FREE_HOURS,
+  DETENTION_RATE_PER_HOUR,
+  DETENTION_CAP_PER_STOP,
+  LAYOVER_RATE_PER_DAY,
+} from "../src/lib/accessorialPolicy";
 
 const prisma = new PrismaClient();
 
@@ -254,10 +272,10 @@ This SOP defines how SRL calculates freight rates, maintains margin targets, and
    - Expedited: 18% minimum, 25% target
 
 ### Accessorial Pricing
-- Detention (after 2hr free time at each stop): $50/hour, all equipment types, capped at $250 per stop. Free time is per stop, independent and non-cumulative. At the cap detention converts to layover; the two do not stack for the same hours
+- Detention (after ${DETENTION_FREE_HOURS}hr free time at each stop): $${DETENTION_RATE_PER_HOUR}/hour, all equipment types, capped at $${DETENTION_CAP_PER_STOP} per stop. Free time is per stop, independent and non-cumulative. ${POLICY_TEXT.conversion()}
 - Lumper: Carrier fronts the cost, SRL reimburses on the original receipt. No money code (no Comchek, EFS, or Comdata), no admin fee
-- TONU (Truck Ordered Not Used): $200 flat
-- Layover: $250/day
+- TONU (Truck Ordered Not Used): $${TONU_AMOUNT} flat
+- Layover: $${LAYOVER_RATE_PER_DAY}/day
 - Driver assist: $50-100 per stop
 - Inside delivery: $75-150
 - Lift gate: $50-75
@@ -705,6 +723,64 @@ This SOP ensures SRL maintains all required federal and state licenses, bonds, a
 - Physical copies maintained in secure filing cabinet at office
 - Digital backup in cloud storage (encrypted)
 - Retention: permanent for authority documents, 7 years for financial compliance`,
+  },
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // v3.8.asc — the Standard Freight Operations Manual joins a seed file.
+  //
+  // It was written by prisma/seed.ts, which calls deleteMany and therefore can
+  // never be run against production. That made it the one live SOP no re-seed
+  // could reach, and it drifted the furthest: v3.0 was serving detention $75/hr,
+  // lumper pass-through + $25 admin fee, TONU $350 flat, layover $350/day, and a
+  // $150 shipper-cancellation admin fee — four ratified figures wrong and one
+  // charge that was never ratified at all. Every one of those numbers was
+  // reachable by an AE at /dashboard/sops while the Rate Confirmation beside it
+  // printed the correct schedule.
+  //
+  // Two changes, and the second is the one that lasts: the figures are corrected,
+  // and they are now INTERPOLATED from lib/accessorialPolicy rather than typed. A
+  // future rate change edits one constant and this manual follows. Retyping a
+  // figure here would reintroduce exactly the drift that made this entry
+  // necessary, and scripts/verify-accessorial-standard.ts will fail the build if
+  // anyone does.
+  // ─────────────────────────────────────────────────────────────────────────
+  {
+    title: "Standard Freight Operations Manual",
+    category: "operations",
+    version: "3.1",
+    author: "Wasih Haider",
+    description:
+      "Comprehensive guide covering end-to-end freight brokerage operations including load booking, dispatch, tracking, delivery confirmation, and post-delivery processes.",
+    pages: 24,
+    content: `1. LOAD LIFECYCLE MANAGEMENT
+1.1 Load Entry & Validation — All loads must include: origin/destination with full address, pickup/delivery windows (date + 2-hour window), equipment type, weight, commodity description, rate, and shipper contact.
+1.2 Load Posting — Posted loads appear on the Load Board within 30 seconds. Reference numbers follow the SRL load stem; documents suffix it (BOL …B, rate confirmation …R, invoice …I, supplemental …S, settlement …P). Carriers must carry minimum $1M auto liability and $100K cargo.
+1.3 Carrier Assignment — Tender loads to qualified carriers matching equipment type, region, and tier requirements. Platinum carriers hold priority freight access. Tender expiry is selectable at 4, 24 or 48 hours; 24 hours is the default.
+1.4 Dispatch — Confirm driver name, phone, truck/trailer numbers. Send dispatch confirmation to shipper within 1 hour of booking. Verify driver has BOL copy and delivery instructions.
+1.5 In-Transit Monitoring — Check calls every 2 hours minimum, from the carrier portal, a geofence event, a check-call email, or connected telematics. Proactive ETA updates to shipper at: pickup, midpoint, and 2 hours before delivery. Escalation for 30+ min late: notify AE → Dispatch Manager.
+1.6 Delivery & POD — Driver must obtain signed POD (Proof of Delivery) at destination. ${POLICY_TEXT.paperwork()} This is the same ${PAPERWORK_DUE_HOURS}-hour deadline the Compass Score grades document timeliness against, so a carrier is measured against the deadline they were given in writing. Any exceptions (shortages, damage, refusal) documented immediately.
+1.7 Load Completion — Status updated to COMPLETED after POD verification. Invoice generated within 24 hours. Carrier performance scored within 48 hours.
+
+2. RATE MANAGEMENT
+2.1 Spot Rates — Check DAT/Truckstop for lane averages. Markup: 12-18% standard, 8-12% for contract shippers.
+2.2 Contract Rates — Reviewed quarterly. Mini-bid process for lanes >10 loads/month. Rate lock periods: 30/60/90 days.
+2.3 Accessorial Charges — uniform for every carrier. There is no tier differentiation and no equipment differentiation; quote the same numbers to everyone.
+
+${POLICY_TEXT.fullSchedule()}
+
+What SRL bills a shipper for an accessorial is negotiable per customer contract. What SRL PAYS a carrier is the schedule above and does not vary. The spread is margin — never quote a customer's billing rate to a carrier as their pay rate.
+
+3. EXCEPTION HANDLING
+3.1 Service Failures — Late pickup/delivery: document cause, notify customer immediately, file carrier scorecard deduction.
+3.2 Claims Process — Report within 24 hours. Carrier liable per Carmack Amendment. SRL claim deductible: $250. Maximum claim: lesser of invoice value or $100,000.
+3.3 Load Cancellations — The carrier's release window is ratified: ${POLICY_TEXT.release()} That window belongs to the carrier and is not a window for SRL to cancel penalty-free.
+    RATIFIED BUT NOT YET BUILT — do not quote either side as live. The ratified rule is to bill the customer $${TONU_AMOUNT} on any cancellation with no notice test, and to pay the carrier $${TONU_AMOUNT} when the cancellation lands same-day as pickup or after the carrier was dispatched. Neither side exists in the billing path today, and the carrier-side clause the Rate Confirmation currently prints pays on a narrower trigger. Escalate a cancellation to Operations rather than promising a charge the system will not raise.
+    The former "$150 admin fee" on a shipper cancellation inside 24 hours was never ratified and has been struck.
+
+4. DOCUMENT RETENTION
+BOLs, PODs, rate confirmations: 7 years. Carrier packets: duration of relationship + 3 years. Compliance records: per FMCSA requirements.
+
+Owner: Operations Manager | Next review: Quarterly | Accessorial figures are generated from lib/accessorialPolicy — correct them there, not here.`,
   },
 ];
 

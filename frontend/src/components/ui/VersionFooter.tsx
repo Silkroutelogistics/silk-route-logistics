@@ -14222,7 +14222,36 @@
 // endpoint that returns a bare array. The AE console reads the array directly,
 // which is why nobody noticed. That mattered this sprint because the Quick Pay
 // election window is announced through exactly that channel.
-export const SRL_VERSION = "3.8.asb";
+// v3.8.asc — the ratified accessorial schedule gets ONE source, and a guard.
+//
+// The schedule was ratified in v3.8.arn and re-ratified on 2026-08-15, and it had
+// drifted anyway, because the figures lived as prose in a dozen files. Production
+// was simultaneously serving a Rate Confirmation printing detention $50/hr capped
+// at $250/stop AND "Standard Freight Operations Manual" v3.0 at /dashboard/sops
+// telling the AE it was $75/hr, TONU $350, layover $350/day, lumper +$25 admin
+// fee, plus a $150 cancellation fee that was never ratified at all. An AE reading
+// SRL's own manual would have quoted a carrier four wrong numbers.
+//
+// That manual was written by prisma/seed.ts, which calls deleteMany and so can
+// never run against production — it was the one live SOP no re-seed could reach.
+// It now lives in seed-sops-enterprise.ts and is republished at v3.1.
+//
+// The durable half: lib/accessorialPolicy.ts is now the only definition, every
+// renderer and document interpolates from it, and scripts/verify-accessorial-
+// standard.ts fails the build when a surface contradicts it — including when a
+// contractual surface merely HARDCODES a still-correct figure, which is how the
+// drift started. Mutation-tested both ways before shipping.
+//
+// A 13-agent sweep of seven surface classes found 21 verified disagreements and
+// refuted 13. Two were live §5-prohibited claims on a crawlable public asset
+// (retired $150/$300-per-month safety bonuses on the Caravan tier illustration).
+// One was a second complete copy of the dwell schedule in caravanService whose
+// own comment called it "the single source of truth". One was in this sprint's
+// own predecessor: v3.8.asc repointed three of five fallbacks in the RC terms
+// grid and left the two detention terms behind, under a comment claiming the
+// whole function now read from policy. A partial migration that says it is
+// finished is worse than one that never started.
+export const SRL_VERSION = "3.8.asc";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

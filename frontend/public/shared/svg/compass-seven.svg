@@ -50,7 +50,7 @@
           fill="url(#goldGrad)" stroke="#C5A572" stroke-width="1.5" opacity="0.7"/>
     <g transform="rotate(-102.86) translate(132 95)">
       <text font-family="Playfair Display, Georgia, serif" font-size="18" font-weight="600" fill="#0A2540" text-anchor="middle">15%</text>
-      <text y="16" font-family="DM Sans, sans-serif" font-size="10" font-weight="600" fill="#3A4A5F" letter-spacing="1" text-anchor="middle">GPS COMPLIANCE</text>
+      <text y="16" font-family="DM Sans, sans-serif" font-size="10" font-weight="600" fill="#3A4A5F" letter-spacing="1" text-anchor="middle">TRACKING</text>
     </g>
   </g>
 

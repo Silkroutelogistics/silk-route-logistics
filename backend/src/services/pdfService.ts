@@ -62,11 +62,20 @@ import { rcVerifyToken } from "../controllers/verifyController";
 // The dwell figures the Rate Confirmation PRINTS and the figures the reconciler
 // SETTLES against are the same policy. Import them rather than retyping them, so
 // the promise on the signed document and the money in the ledger cannot drift.
+// v3.8.asc — repointed from lib/detentionLayover to lib/accessorialPolicy. The
+// dwell constants still have exactly one definition (accessorialPolicy re-exports
+// them from the engine); this import just also reaches TONU and the release window,
+// which had no constant at all and were passed as literals below.
 import {
   DETENTION_FREE_HOURS,
+  DETENTION_RATE_PER_HOUR,
   DETENTION_CAP_PER_STOP,
   LAYOVER_RATE_PER_DAY,
-} from "../lib/detentionLayover";
+  TONU_AMOUNT,
+  CARRIER_RELEASE_WINDOW_HOURS,
+  DETENTION_NOTICE_MINUTES,
+  PAPERWORK_DUE_HOURS,
+} from "../lib/accessorialPolicy";
 
 type PDFDoc = InstanceType<typeof PDFDocument>;
 
@@ -1554,7 +1563,13 @@ export function buildRateConOperationalTerms(
   // appends " · notify" to the DETENTION cell as a glance-level reminder of
   // the 30-min-before notification obligation locked in T&C clause (7).
   return {
-    detentionRatePerHour: fd.detentionRate as number | undefined,
+    // v3.8.asc — was `fd.detentionRate` alone, the one dwell figure in this object
+    // not bound to a constant. The rate printed on a signed page was decided by
+    // whatever happened to be frozen into an RC row months ago, never by policy.
+    // A stored rate still wins — an RC that promised a specific rate must keep
+    // printing it — but the fallback is now the ratified figure rather than a
+    // literal buried two files away in the renderer.
+    detentionRatePerHour: (fd.detentionRate as number | undefined) ?? DETENTION_RATE_PER_HOUR,
     // v3.8.arn — the renderer's cap branch had never fired: it is gated on
     // detentionMaxPerStop and this object never passed one, so no cap has ever
     // printed on a Rate Confirmation.
@@ -1578,20 +1593,24 @@ export function buildRateConOperationalTerms(
     // site. The renderer keeps its fallbacks as defence in depth, but it is no
     // longer the place the value is chosen.
     //
-    // TONU and layover are ratified in CLAUDE.md §5: $200 flat, $250/day.
-    tonuAmount: 200,
+    // TONU and layover are ratified in CLAUDE.md §5. v3.8.asc: the literal 200
+    // became TONU_AMOUNT, so all three now come from lib/accessorialPolicy and
+    // there is nothing left here for a policy change to miss.
+    tonuAmount: TONU_AMOUNT,
     layoverPerDay: LAYOVER_RATE_PER_DAY,
-    // UNRATIFIED — NEEDS A DECISION. DO NOT SILENTLY KEEP OR DROP THIS.
-    // CLAUDE.md §5 ratifies detention, TONU, layover and lumper; §9 ratifies
-    // the 24-hour paperwork deadline. NO cancellation term is ratified
-    // anywhere. This 4-hour notice window has nonetheless printed on every
-    // Rate Confirmation a carrier has signed, sourced from a renderer default
-    // that no human ever chose. The value is preserved here unchanged so this
-    // commit stays byte-identical on the rendered page: it is surfaced, not
-    // settled. The principal must either ratify a cancellation window into §5
-    // or strike the cell. Note that striking it is not free — it would drop
-    // the grid from 5 items to 4 and change the row layout.
-    cancellationWindowHours: 4,
+    // RESOLVED 2026-08-15, and this comment previously said the opposite. The
+    // window is ratified — as the CARRIER'S release window: the carrier may
+    // release a load up to this many hours before pickup without penalty. It is
+    // NOT a window for SRL to cancel penalty-free, which is the reading that made
+    // this cell and the TONU clause contradict each other on the same signed page.
+    // Reframed, they govern different parties and can coexist.
+    //
+    // Still open, and deliberately not fixed here: the grid renders the line as
+    // "4-hour notice without penalty" without naming the releasing party. It must
+    // name the carrier when the rule is actually enforced by a writer — nothing
+    // enforces it today. e2e/helpers/pdf.ts pins that string character for
+    // character, so the label and the test move in the same change.
+    cancellationWindowHours: CARRIER_RELEASE_WINDOW_HOURS,
     quickPayTier: qpTier,
   };
 }
@@ -2435,7 +2454,12 @@ export function generateEnhancedRateConfirmation(load: EnhancedRCLoadData, formD
     // for one day. Landstar's published tariff makes layover explicitly ADDITIVE
     // to detention, so a carrier citing the only public tariff in the corpus
     // would win that argument against a document that stayed silent.
-    "Accessorial charges require SRL's prior written approval (operations@silkroutelogistics.ai). Detention free time starts when you arrive, and runs separately at each stop. Detention is not payable if you arrive outside your appointment window. At the $250 per stop cap detention converts to layover at $250 per day; the two do not stack for the same hours. Notify SRL by call or text at least 30 minutes before detention begins and again on departure.",
+    // v3.8.asc — the three figures in this clause are interpolated, not typed.
+    // They were correct, but this is the sentence a carrier signs, and it was the
+    // last place stating the cap, the layover rate and the notice window as prose
+    // literals. If policy moves and this string does not, SRL is contractually
+    // bound to the old number on every document already in a carrier's inbox.
+    `Accessorial charges require SRL's prior written approval (operations@silkroutelogistics.ai). Detention free time starts when you arrive, and runs separately at each stop. Detention is not payable if you arrive outside your appointment window. At the $${DETENTION_CAP_PER_STOP} per stop cap detention converts to layover at $${LAYOVER_RATE_PER_DAY} per day; the two do not stack for the same hours. Notify SRL by call or text at least ${DETENTION_NOTICE_MINUTES} minutes before detention begins and again on departure.`,
     // v3.8.arp — TONU qualification. SRL priced TONU at $200 and printed no rule
     // for earning it, so a carrier who dispatched and drove 90 miles and one who
     // never left the yard had identical claims. Two gates, per Wasi 2026-08-14.
@@ -2449,7 +2473,12 @@ export function generateEnhancedRateConfirmation(load: EnhancedRCLoadData, formD
     // Notice is satisfiable by TEXT precisely because §6 business hours are
     // Mon-Fri 7-7 — a voicemail at 6pm Friday must not cost a carrier $200.
     "TONU: payable only if SRL gave you the pickup number and shipper address and cleared you to head to pickup, and SRL or the shipper then cancels. If you already arrived, you must have been inside your appointment window. Not payable if you cancel, or if your trailer is rejected as non-compliant. Call or text SRL before you leave.",
-    "Carrier shall report any discrepancy between this Rate Confirmation and the Bill of Lading to SRL before proceeding. Signed BOL, POD, and supporting paperwork are due within 24 hours of delivery.",
+    // v3.8.asc — the 24 is interpolated. It had four independent copies: here, the
+    // Broker-Carrier Agreement §5, the Compass document-timeliness grading window,
+    // and PAPERWORK_DUE_HOURS itself. CLAUDE.md §9 instructs that a change to one
+    // "must move the other in the same commit" — an instruction only needed because
+    // nothing enforced it. Now three of the four read the constant.
+    `Carrier shall report any discrepancy between this Rate Confirmation and the Bill of Lading to SRL before proceeding. Signed BOL, POD, and supporting paperwork are due within ${PAPERWORK_DUE_HOURS} hours of delivery.`,
   ];
   // v3.8.arl — customTerms APPENDS; it must never REPLACE the mandatory core.
   // Pre-arl this read `(fd.customTerms) || governingClauses.join()`, so the

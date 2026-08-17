@@ -33,6 +33,7 @@ import { prisma } from "../config/database";
 import { log } from "../lib/logger";
 import { quickPayFeePercent, standardNetDays, normalizeTier } from "../lib/quickPayPricing";
 import { resolveLoadStem, withDocumentNumber } from "../lib/documentNumber";
+import { DETENTION_RATE_PER_HOUR } from "../lib/accessorialPolicy";
 
 // Sprint 59 (v3.8.acj) Item 176 — transaction-aware Prisma client. New
 // POST /api/loads/with-tender atomic endpoint passes its transaction
@@ -587,7 +588,11 @@ export async function autoGenerateRateConfirmation(
     // does not catch a literal 0, so every auto-generated RC published
     // "DETENTION $0/hr" to the accepting carrier. Write the canonical rate
     // explicitly so the stored formData is self-describing.
-    detentionRate: 50,
+    // v3.8.asc — and read it from policy rather than typing it. This writer
+    // bypasses the Zod validator and writes formData straight to Prisma, so it is
+    // the copy that decides the stored rate on nearly every RC in the system. A
+    // literal here would have outlived a policy change in every existing row.
+    detentionRate: DETENTION_RATE_PER_HOUR,
     accessorials: [],
     totalCharges: tender.offeredRate,
 

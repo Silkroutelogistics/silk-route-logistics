@@ -61,7 +61,7 @@
     <text x="0" y="26" text-anchor="middle" font-family="Playfair Display, Georgia, serif"
           font-size="20" font-weight="600" fill="#BA7517">2% QP</text>
     <text x="0" y="42" text-anchor="middle" font-family="DM Sans, sans-serif"
-          font-size="8" fill="#6B7685">Net-21 free · $150/mo bonus</text>
+          font-size="8" fill="#6B7685">Net-21 free · 4% same-day</text>
   </g>
 
   <!-- ========== TIER 3: PLATINUM ========== -->
@@ -76,7 +76,7 @@
     <text x="0" y="28" text-anchor="middle" font-family="Playfair Display, Georgia, serif"
           font-size="22" font-weight="600" fill="#FDFBF7">1% QP</text>
     <text x="0" y="44" text-anchor="middle" font-family="DM Sans, sans-serif"
-          font-size="8" fill="#FDFBF7" opacity="0.85">Net-14 free · $300/mo bonus</text>
+          font-size="8" fill="#FDFBF7" opacity="0.85">Net-14 free · 3% same-day</text>
   </g>
 
   <!-- "Tier advancement is earned" tagline -->

@@ -58,7 +58,18 @@ const git = (args: string[]): string => {
 /** Every tracked source file, read once. Searching this in memory is far faster
  *  than shelling out to grep per symbol, and it keeps the check hermetic. */
 function sourceCorpus(): { file: string; body: string }[] {
-  const files = git(["ls-files", "backend/src", "frontend/src", "frontend/public", "e2e"])
+  // v3.8.asc — backend/scripts and backend/prisma added. They were missing, and
+  // the gate reported three healthy exports as DEAD because their only consumers
+  // are a verification script and the SOP seeds. Seeds and build-time scripts are
+  // real consumers: a constant read only by prisma/seed-sops.ts still decides what
+  // an AE reads in production. The omission made the gate wrong in the direction
+  // that gets working code deleted, which is the worse direction for a gate to
+  // fail in — it trains people to ignore it.
+  const files = git([
+    "ls-files",
+    "backend/src", "backend/scripts", "backend/prisma",
+    "frontend/src", "frontend/public", "e2e",
+  ])
     .split("\n")
     .map((f) => f.trim())
     .filter((f) => /\.(ts|tsx|js|jsx|html)$/.test(f));

@@ -92,13 +92,19 @@ type TierKey = keyof typeof TIER_CONFIG;
 // Same-day QP premium (universal — added on top of each tier's 7-day rate).
 export const SAME_DAY_QP_PREMIUM = 0.02;
 
-// Detention (v3.8.arn) — FLAT across every tier and every equipment type.
-// Tier-differentiated detention is prohibited by CLAUDE.md §5; these are the
-// single source of truth, replacing the former per-tier TIER_CONFIG fields.
-// Free time is counted per stop and does not accumulate across stops.
-export const DETENTION_FREE_HOURS_PER_STOP = 2;
-export const DETENTION_RATE_PER_HOUR = 50;      // $/hr after free time
-export const DETENTION_MAX_PER_STOP = 250;      // $ cap per stop (v3.8.ars — equals the layover day rate)
+// Detention lives in lib/accessorialPolicy, not here.
+//
+// v3.8.arn put DETENTION_FREE_HOURS_PER_STOP / DETENTION_RATE_PER_HOUR /
+// DETENTION_MAX_PER_STOP here, described as "the single source of truth" — true
+// when written, false by v3.8.asc, because lib/detentionLayover.ts had since
+// become the engine that actually computes the ladder and lib/accessorialPolicy
+// the module that publishes it. That left two complete definitions of the same
+// schedule, one of them asserting in a comment that it was the only one.
+//
+// Deleted rather than re-exported: a grep confirmed zero importers outside this
+// file, and a second NAME for one value is the same drift risk as a second value.
+// Detention is a per-load dwell charge; nothing about it belongs in the tier
+// service. Import from lib/accessorialPolicy.
 
 // ─── Milestone advancement thresholds (locked launch model) ─────────────
 //

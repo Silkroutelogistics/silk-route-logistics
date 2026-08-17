@@ -6,7 +6,17 @@
 // measure timeliness of a doc that doesn't exist / a delivery never timestamped).
 // Neutral 100 when nothing is measurable.
 
-export const POD_GRACE_MS = 24 * 60 * 60 * 1000; // 24 hours
+// v3.8.asc — derived from PAPERWORK_DUE_HOURS rather than its own 24.
+//
+// This is the window a carrier is GRADED against; PAPERWORK_DUE_HOURS is the
+// deadline they are GIVEN, in writing, on the Rate Confirmation and in the
+// Broker-Carrier Agreement. CLAUDE.md §9 says the two "must move in the same
+// commit" — which was an instruction to a human because nothing connected them.
+// Now they cannot separate: grading a carrier against a deadline different from
+// the one they signed is the kind of thing that loses a Compass Score dispute.
+import { PAPERWORK_DUE_HOURS } from "./accessorialPolicy";
+
+export const POD_GRACE_MS = PAPERWORK_DUE_HOURS * 60 * 60 * 1000;
 
 export interface DocTimelinessRow {
   actualDelivery: Date | null;

@@ -39,6 +39,13 @@ export interface LegalAgreement {
   sections: LegalSection[];
 }
 
+// v3.8.asc — the paperwork deadline in §5 is interpolated from here.
+// NOTE ON VERSIONS: BCA_VERSION is deliberately NOT bumped for that change. The
+// interpolation renders byte-identically to the literal it replaced, so the text
+// a carrier signs is unchanged; bumping would 409 every open tab and invalidate
+// nothing meaningful. Bump when the WORDS change, not when their source does.
+import { PAPERWORK_DUE_HOURS } from "../lib/accessorialPolicy";
+
 export const BCA_VERSION = "2026-06-27-v1";
 
 // v3.8.art — QP_VERSION bumped 2026-05-24-v1 → 2026-08-15-v1. The prior string
@@ -211,7 +218,11 @@ export const BROKER_CARRIER_AGREEMENT: LegalAgreement = {
     {
       heading: "5. Documentation & Payment",
       clauses: [
-        "Carrier shall submit all required documentation, including a clean signed Bill of Lading (BOL), Proof of Delivery (POD), and lumper receipts, within 24 hours of delivery.",
+        // v3.8.asc — interpolated. This is the master agreement; the Rate
+        // Confirmation and the Compass grading window both restate this same
+        // deadline, and all three now resolve from PAPERWORK_DUE_HOURS. A carrier
+        // cannot be graded against a window their signed agreement does not state.
+        `Carrier shall submit all required documentation, including a clean signed Bill of Lading (BOL), Proof of Delivery (POD), and lumper receipts, within ${PAPERWORK_DUE_HOURS} hours of delivery.`,
         "Standard payment terms and per-load Quick Pay options are as established in the Caravan Partner Program (published at silkroutelogistics.ai/carriers), from receipt of complete and accurate documentation unless otherwise agreed in writing.",
         "Optional per-load Quick Pay is available without requiring a factoring contract; published fees apply per the Caravan Partner Program and the separate Caravan Quick Pay Agreement.",
         "Carrier shall submit a completed W-9 form prior to receiving any payment. Rates shall be as agreed in each individual rate confirmation / load tender.",
