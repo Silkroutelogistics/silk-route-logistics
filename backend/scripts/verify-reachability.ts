@@ -84,6 +84,28 @@ function sourceCorpus(): { file: string; body: string }[] {
   return out;
 }
 
+// The baseline must resolve, and this must be checked BEFORE any diff.
+//
+// git() swallows failures and returns "", which is right for an optional lookup and
+// catastrophic here: an unresolvable baseline produces an empty diff, the gate finds
+// nothing to check, and it PASSES. A gate that silently checks nothing is worse than
+// no gate, because it is trusted.
+//
+// That is not hypothetical. This gate now runs in CI against `HEAD^`, and
+// actions/checkout defaults to a depth-1 clone where `HEAD^` does not exist. The
+// workflow sets fetch-depth: 2 — but if anyone removes it, or a future event type
+// checks out differently, this is the line that says so instead of going quiet.
+{
+  const resolved = git(["rev-parse", "--verify", "--quiet", `${BASELINE}^{commit}`]).trim();
+  if (!resolved) {
+    console.error(`\n  Baseline ref "${BASELINE}" does not resolve in this clone.`);
+    console.error(`  Nothing can be diffed, so this gate would pass while checking nothing.`);
+    console.error(`  In CI: actions/checkout needs fetch-depth >= 2 for HEAD^.`);
+    console.error(`  Locally: pass a ref that exists, e.g. origin/main.\n`);
+    process.exit(2);
+  }
+}
+
 /** Lines added since the baseline, per file. */
 function addedLines(pathspec: string): { file: string; text: string }[] {
   const diff = git(["diff", BASELINE, "--unified=0", "--", pathspec]);

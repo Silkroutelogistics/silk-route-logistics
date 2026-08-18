@@ -28,6 +28,17 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          # Depth 2 so the reachability gate has something to diff
+          # against. The default shallow clone has no parent commit, so `HEAD^`
+          # does not resolve and the gate would judge an empty diff — passing
+          # while checking nothing, which is the worst way for a gate to fail.
+          #
+          # `HEAD^` is correct for BOTH event types this workflow fires on: on a
+          # push it is the previous tip of main, and on a pull_request checkout@v4
+          # builds a merge commit whose first parent is the base branch. One
+          # expression, no branching.
+          fetch-depth: 2
       - uses: actions/setup-node@v4
         with:
           node-version: 20
@@ -39,6 +50,27 @@ jobs:
       - run: npx prisma generate
       - run: npx tsc --noEmit
       - run: npm test
+
+      # The two v3.8.asc content gates run here, not just on someone's laptop.
+      #
+      # Both were written in v3.8.asc and both immediately caught real defects, but
+      # neither was wired in, so the guarantee was "someone remembered" rather than
+      # "the build enforces it" — the same shape as the problem they exist to solve.
+      #
+      # The accessorial gate fails when a document states a retired figure, or when
+      # a contractual surface hardcodes a still-correct one. A literal 250 is right
+      # today and silently wrong the day the cap moves; that is how the schedule
+      # drifted the first time, with production serving $50/hr on the rate
+      # confirmation and $75/hr in SRL's own operations manual.
+      - name: Accessorial standard holds
+        run: npx tsx scripts/verify-accessorial-standard.ts
+
+      # The reachability gate fails on work nothing consumes — a dead export, an
+      # endpoint with no caller, a column written and never read, a page behind a
+      # 301. It diffs against the merge base, so it only judges what this push adds.
+      - name: Nothing shipped is unreachable
+        run: npx tsx scripts/verify-reachability.ts HEAD^
+
       - run: npm audit --omit=dev --audit-level=high || true
 
   frontend:
