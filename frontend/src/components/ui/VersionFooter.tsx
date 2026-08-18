@@ -14312,7 +14312,7 @@
 // Letter note: this work was written as asd and renumbered when a parallel
 // compliance sprint landed asd on main mid-flight (Sub-pattern 6). Only my own
 // markers moved; theirs were left alone.
-export const SRL_VERSION = "3.8.asg";
+export const SRL_VERSION = "3.8.ash";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

@@ -7,28 +7,58 @@ import { syncCarrierPayAccessorials } from "../services/integrationService";
 import { syncInvoiceAccessorials } from "../services/invoiceService";
 
 /**
- * Push an approved accessorial into the two money paths.
+ * Fan an approval or rejection into both money paths.
  *
- * Approval is the moment the claim becomes money, and it happens on its own
- * schedule — a five-hour detention is normally approved the morning after the
- * load delivered, which is after both the settlement and the invoice already
- * exist. Neither of those recomputes itself, so without this the amount is
- * calculated correctly, stored correctly, and paid to nobody.
+ * Failures are still swallowed rather than rolled back, and that is deliberate:
+ * the decision an operator just made is the durable fact, and undoing it because
+ * a downstream sync had a bad minute would lose the decision and leave the
+ * operator with nothing. The syncs are idempotent and re-run on the next
+ * approve, reject or amend on that load.
  *
- * Both calls are idempotent and both decide for themselves whether the document
- * they are updating can still be changed. Failures are logged, not thrown: the
- * approval itself has already been recorded and must not be rolled back because
- * a downstream document was busy.
+ * v3.8.ash — but the CALLER now learns what happened. Before, this returned void
+ * and every route answered 200, so an approve whose money never moved rendered as
+ * a green Approved pill on screen. That is the worst failure shape available: the
+ * operator believes the carrier is being paid and the customer billed, and
+ * nothing anywhere contradicts them until someone reconciles by hand.
+ *
+ * Reporting the outcome costs nothing and lets the route say "approved, but the
+ * settlement did not update" — which is true, and actionable, and the difference
+ * between a caught problem and a discovered one.
  */
-async function pushAccessorialToMoneyPaths(loadId: string) {
-  await Promise.allSettled([
-    syncCarrierPayAccessorials(loadId).catch((e) =>
-      log.error({ err: e, loadId }, "[Accessorial] carrier settlement sync failed"),
-    ),
-    syncInvoiceAccessorials(loadId).catch((e) =>
-      log.error({ err: e, loadId }, "[Accessorial] customer invoice sync failed"),
-    ),
+async function pushAccessorialToMoneyPaths(
+  loadId: string,
+): Promise<{ carrier: boolean; invoice: boolean }> {
+  const [carrier, invoice] = await Promise.allSettled([
+    syncCarrierPayAccessorials(loadId),
+    syncInvoiceAccessorials(loadId),
   ]);
+
+  if (carrier.status === "rejected") {
+    log.error({ err: carrier.reason, loadId }, "[Accessorial] carrier settlement sync failed");
+  }
+  if (invoice.status === "rejected") {
+    log.error({ err: invoice.reason, loadId }, "[Accessorial] customer invoice sync failed");
+  }
+
+  return {
+    carrier: carrier.status === "fulfilled",
+    invoice: invoice.status === "fulfilled",
+  };
+}
+
+/**
+ * Turn a fan-out result into something a screen can show without inventing an
+ * error the operator cannot act on.
+ *
+ * The decision itself succeeded either way — that is why the route stays 200.
+ * What changes is whether the response admits the money is out of step.
+ */
+function syncWarning(r: { carrier: boolean; invoice: boolean }): string | null {
+  if (r.carrier && r.invoice) return null;
+  const failed = [!r.carrier && "carrier settlement", !r.invoice && "customer invoice"]
+    .filter(Boolean)
+    .join(" and ");
+  return `Decision saved, but the ${failed} did not update. It will retry on the next change to this load; if the amount still looks wrong, tell operations.`;
 }
 
 const router = Router();
@@ -170,11 +200,12 @@ router.put(
 
       // An amount corrected on an already-approved line has to reach the money
       // paths too, not just a fresh approval.
+      let warning: string | null = null;
       if (accessorial.status === "APPROVED") {
-        await pushAccessorialToMoneyPaths(accessorial.loadId);
+        warning = syncWarning(await pushAccessorialToMoneyPaths(accessorial.loadId));
       }
 
-      res.json({ accessorial });
+      res.json({ accessorial, warning });
     } catch (err) {
       res.status(500).json({ error: "Failed to update accessorial" });
     }
@@ -204,9 +235,9 @@ router.put(
         },
       });
 
-      await pushAccessorialToMoneyPaths(accessorial.loadId);
+      const warning = syncWarning(await pushAccessorialToMoneyPaths(accessorial.loadId));
 
-      res.json({ accessorial });
+      res.json({ accessorial, warning });
     } catch (err) {
       res.status(500).json({ error: "Failed to approve accessorial" });
     }
@@ -236,9 +267,9 @@ router.put(
       // an unpaid settlement. A line already billed to the customer is a credit
       // memo, which does not exist yet — syncCarrierPayAccessorials queues that
       // case for an operator rather than editing a committed document.
-      await pushAccessorialToMoneyPaths(accessorial.loadId);
+      const warning = syncWarning(await pushAccessorialToMoneyPaths(accessorial.loadId));
 
-      res.json({ accessorial });
+      res.json({ accessorial, warning });
     } catch (err) {
       res.status(500).json({ error: "Failed to reject accessorial" });
     }

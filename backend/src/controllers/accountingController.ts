@@ -752,15 +752,47 @@ export async function voidInvoice(req: AuthRequest, res: Response) {
       return;
     }
 
-    const invoice = await prisma.invoice.update({
-      where: { id },
-      data: {
-        status: "VOID",
-        notes: reason ? `VOIDED: ${reason}\n${existing.notes ?? ""}` : existing.notes,
-      },
+    // v3.8.ash — voiding an invoice RELEASES the accessorials it had billed.
+    //
+    // `shipperInvoiceId` is the stamp that says "this charge is on a customer
+    // document". unbilledCustomerAccessorials selects on `shipperInvoiceId: null`,
+    // so a row still pointing at a voided invoice is invisible to every later
+    // billing pass — the detention was approved, was billed once onto a document
+    // that no longer exists, and can never be billed again. Silent revenue loss,
+    // and the only trace is a row nobody queries.
+    //
+    // Releasing returns APPROVED rows to the unbilled pool so the next invoice or
+    // supplemental picks them up, and unstamps REJECTED ones, which is right
+    // because there is no longer a live document to credit them off.
+    //
+    // In one transaction with the void: a void that half-happened would leave the
+    // charges stranded against an invoice already marked dead, which is the state
+    // this is fixing.
+    const { invoice, released } = await prisma.$transaction(async (tx) => {
+      const inv = await tx.invoice.update({
+        where: { id },
+        data: {
+          status: "VOID",
+          notes: reason ? `VOIDED: ${reason}\n${existing.notes ?? ""}` : existing.notes,
+        },
+      });
+
+      const { count } = await tx.loadAccessorial.updateMany({
+        where: { shipperInvoiceId: id },
+        data: { shipperInvoiceId: null },
+      });
+
+      return { invoice: inv, released: count };
     });
 
-    res.json(invoice);
+    if (released > 0) {
+      log.info(
+        { invoiceId: id, invoiceNumber: existing.invoiceNumber, released },
+        "[Invoice] void released accessorials back to the unbilled pool",
+      );
+    }
+
+    res.json({ ...invoice, accessorialsReleased: released });
   } catch (error: any) {
     log.error({ err: error }, "voidInvoice error:");
     res.status(500).json({ error: "Failed to void invoice", details: error.message });

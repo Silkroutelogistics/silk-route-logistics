@@ -38,10 +38,19 @@ export function AccessorialReview({
   const [reason, setReason] = useState("");
   const [error, setError] = useState<string | null>(null);
 
-  const settled = () => {
+  // v3.8.ash — a decision that saved but whose money did not move is no longer
+  // silent. The backend fans an approval into the settlement and the invoice,
+  // swallows a failure there on purpose (the decision must not be rolled back
+  // because a downstream document was busy), and used to answer a bare 200 —
+  // so a failed money move rendered as a green Approved pill and nothing
+  // anywhere contradicted it. It now returns `warning`, and this shows it.
+  const [warning, setWarning] = useState<string | null>(null);
+
+  const settled = (data?: { warning?: string | null }) => {
     setRejectingId(null);
     setReason("");
     setError(null);
+    setWarning(data?.warning ?? null);
     // The board's pending count and this load's rows both move on a decision.
     queryClient.invalidateQueries({ queryKey: ["tt-load-detail", loadId] });
     queryClient.invalidateQueries({ queryKey: ["accessorials-pending"] });
@@ -89,6 +98,15 @@ export function AccessorialReview({
       {error && (
         <div className="text-[12px] text-red-700 bg-red-50 border border-red-200 rounded px-2.5 py-1.5">
           {error}
+        </div>
+      )}
+
+      {/* Amber, not red: the decision DID save, so this is not a failure the
+          operator needs to retry — it is the money being out of step with it,
+          which they need to know about and cannot see anywhere else. */}
+      {warning && (
+        <div className="text-[12px] text-[#B07A1A] bg-[#FBEFD4] border border-[#B07A1A]/40 rounded px-2.5 py-1.5">
+          {warning}
         </div>
       )}
 
