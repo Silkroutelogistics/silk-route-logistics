@@ -2997,6 +2997,12 @@ interface SettlementPDFData {
   status: string;
   carrier: { firstName: string; lastName: string; company?: string | null };
   carrierPays: {
+    // v3.8.asg — the per-load settlement document number (SRL-121485P).
+    //
+    // Optional because a settlement can legitimately span loads created before
+    // the numbering scheme, and because a load with no stem cannot have one. The
+    // row falls back to the load reference rather than printing a blank cell.
+    srlDocNumber?: string | null;
     load: { referenceNumber: string; originCity: string; originState: string; destCity: string; destState: string; pickupDate: Date; deliveryDate: Date };
     amount: number;
     quickPayDiscount: number | null;
@@ -3037,10 +3043,19 @@ export function generateSettlementPDF(settlement: SettlementPDFData): PDFDoc {
   const quickPayTotal = settlement.carrierPays.reduce((s, cp) => s + (cp.quickPayDiscount || 0), 0);
   const otherDeductions = Math.max(0, settlement.deductions - quickPayTotal);
 
-  const headers = ["LOAD REF", "LANE", "DELIVERED", "GROSS PAY"];
+  // v3.8.asg — the first column carries the per-load settlement document number
+  // when the load has one. The …P number CONTAINS the load reference
+  // (SRL-121485 -> SRL-121485P), so nothing is lost by preferring it and the
+  // carrier gets the exact string to quote when querying one line of a rollup.
+  //
+  // Column width is unchanged at 92pt deliberately: one extra character on a
+  // reference that already fits. The cells draw with lineBreak:false, so a value
+  // wider than its column overprints the next one rather than wrapping — do not
+  // widen the value further without re-measuring.
+  const headers = ["LOAD / DOC #", "LANE", "DELIVERED", "GROSS PAY"];
   const colWidths = [92, 268, 92, 88];
   const rows = settlement.carrierPays.map((cp) => [
-    cp.load.referenceNumber,
+    cp.srlDocNumber || cp.load.referenceNumber,
     `${cp.load.originCity}, ${cp.load.originState} → ${cp.load.destCity}, ${cp.load.destState}`,
     fmtDate(cp.load.deliveryDate),
     money(cp.amount),

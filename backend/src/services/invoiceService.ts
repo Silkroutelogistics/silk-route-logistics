@@ -492,11 +492,32 @@ export async function autoGenerateInvoice(loadId: string) {
     });
   });
 
-  const invoice = await createInvoiceWithRetry((invoiceNumber) =>
+  // v3.8.asg — the base invoice is now ALLOCATED an SRL document number instead
+  // of having one derived at print time.
+  //
+  // This is the dominant invoice creator — it fires on every delivered load — and
+  // it wrote no srlDocNumber at all. The renderer's documentNumberFor falls back
+  // to deriving `SRL-<stem>I` off the load, so the customer received a document
+  // that looked correctly numbered while the column stayed NULL. That is worse
+  // than an unnumbered invoice: nextDocumentNumber allocates by scanning
+  // `startsWith(stem + suffix)` on the storage column, a NULL matches no prefix,
+  // so the scan cannot see it, the next allocation on that load computes revision
+  // 1 again, and the @unique index cannot arbitrate because Postgres treats NULLs
+  // as distinct. Two invoices on one load could print the same number.
+  //
+  // Its own supplemental and credit-memo siblings in this file already did this
+  // correctly; the base was the odd one out.
+  //
+  // A load with no stem still invoices — build(null) — because refusing to bill a
+  // customer over a missing internal reference would be the wrong failure.
+  const stem = resolveLoadStem(load);
+  const buildInvoice = (srlDocNumber: string | null) =>
+    createInvoiceWithRetry((invoiceNumber) =>
     prisma.$transaction(async (tx) => {
       const inv = await tx.invoice.create({
         data: {
           invoiceNumber,
+          srlDocNumber,
           userId: load.posterId!,
           loadId: load.id,
           amount: totalAmount,
@@ -537,7 +558,11 @@ export async function autoGenerateInvoice(loadId: string) {
     }),
   );
 
-  log.info(`[AutoInvoice] Drafted shipper invoice ${invoice.invoiceNumber} for load ${load.referenceNumber} — $${totalAmount} (customer rate)`);
+  const invoice = stem
+    ? await withDocumentNumber("INVOICE", stem, buildInvoice)
+    : await buildInvoice(null);
+
+  log.info(`[AutoInvoice] Drafted shipper invoice ${invoice.srlDocNumber ?? invoice.invoiceNumber} for load ${load.referenceNumber} — $${totalAmount} (customer rate)`);
 
   // Notify the AE (load poster) to review + send the shipper invoice.
   await prisma.notification

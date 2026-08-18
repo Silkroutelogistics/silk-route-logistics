@@ -1,3 +1,4 @@
+import { resolveLoadStem, withDocumentNumber } from "../lib/documentNumber";
 import { APPROVAL_REF } from "../lib/approvalQueueRefs";
 import { prisma } from "../config/database";
 import { calculateOverallScore, getBonusPercentage, checkGuestPromotion } from "./tierService";
@@ -680,9 +681,23 @@ async function createCarrierPayOnDelivery(load: any) {
   const receivedAt = await documentationReceivedAt(load.id);
   const dueDate = receivedAt ? quickPayDueDate(speed, cppTier, receivedAt) : null;
 
-  const payment = await prisma.carrierPay.create({
+  // v3.8.asg — the settlement is now ALLOCATED an SRL document number.
+  //
+  // Same defect as the base shipper invoice, on the carrier side: this creator
+  // fires on every delivered load and wrote no srlDocNumber, so the column stayed
+  // NULL, the allocator's prefix scan could not see the row, and @unique could not
+  // arbitrate because Postgres treats NULLs as distinct. paymentNumber keeps its
+  // own CP-YYYYMMDD-XXXX sequence — that has writers, a search filter and CSV
+  // export columns, and is a different identifier for a different purpose.
+  //
+  // "P" for pay, because "S" belongs to the supplemental invoice and a carrier and
+  // a customer must never be handed the same string for different documents.
+  const stem = resolveLoadStem(load);
+  const buildPayment = (srlDocNumber: string | null) =>
+    prisma.carrierPay.create({
     data: {
       paymentNumber,
+      srlDocNumber,
       carrierId: load.carrierId,
       loadId: load.id,
       rateConfirmationId: rc?.id || null,
@@ -722,6 +737,10 @@ async function createCarrierPayOnDelivery(load: any) {
           : ` · Payment clock starts on receipt of complete documentation (POD outstanding)`),
     },
   });
+
+  const payment = stem
+    ? await withDocumentNumber("SETTLEMENT", stem, buildPayment)
+    : await buildPayment(null);
 
   log.info(
     { loadId: load.id, tier: tierKey, speed, electedPct, reimbursements, feeBase, quickPayFeeAmount, netAmount, dueDate },
