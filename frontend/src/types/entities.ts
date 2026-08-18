@@ -87,7 +87,20 @@ export type InvoiceStatus = "DRAFT" | "SUBMITTED" | "SENT" | "UNDER_REVIEW" | "A
 
 export interface Invoice {
   id: string;
+  /** Internal sequence, INV-<n>. Distinct from the customer-facing SRL number. */
   invoiceNumber: string;
+  /**
+   * The SRL document number printed on the PDF — `SRL-121485I` for a base,
+   * `…S` for a supplemental. This is what a customer quotes when they call, so
+   * screens should prefer it. Null on rows predating the scheme.
+   */
+  srlDocNumber?: string | null;
+  /**
+   * BASE or SUPPLEMENTAL. A supplemental is its own row, not a flag: own number,
+   * own amount, own dueDate, own status — the base can be PAID while it is still
+   * SENT. It exists because accessorials were approved after the base went out.
+   */
+  invoiceKind?: "BASE" | "SUPPLEMENTAL" | null;
   loadId?: string;
   amount: number;
   totalAmount?: number;

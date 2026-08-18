@@ -322,8 +322,24 @@ export default function InvoicesPage() {
                         >
                           <td className="px-5 py-3">
                             <span className="text-sm text-white font-medium">
-                              {inv.invoiceNumber}
+                              {/* v3.8.asi — prefer the SRL document number. It is the
+                                  string on the PDF the customer is holding, so it is
+                                  the one they quote when they call. invoiceNumber is
+                                  the internal INV-<n> sequence and stays as the
+                                  fallback for rows predating the scheme. */}
+                              {inv.srlDocNumber || inv.invoiceNumber}
                             </span>
+                            {/* A supplemental chases money on a load whose base
+                                invoice has ALREADY gone to the customer. Rendered
+                                identically to a base draft it is invisible: an AE
+                                scanning their drafts cannot tell which rows are
+                                ordinary work-in-progress and which are billed-late
+                                accessorials waiting to be sent. */}
+                            {inv.invoiceKind === "SUPPLEMENTAL" && (
+                              <span className="ml-2 align-middle text-[10px] font-semibold tracking-wide px-1.5 py-0.5 rounded bg-[#B07A1A]/20 text-[#D9A441]">
+                                SUPPLEMENTAL
+                              </span>
+                            )}
                             {panelOpen && inv.load?.referenceNumber && (
                               <span className="block text-[11px] text-slate-500 mt-0.5">
                                 {inv.load.referenceNumber}
