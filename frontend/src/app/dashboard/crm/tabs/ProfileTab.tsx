@@ -5,6 +5,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { Star, Edit2, Shield, Search, ExternalLink, CheckCircle2, XCircle, User } from "lucide-react";
 import type { CrmCustomer } from "../types";
+import { ACCESSORIAL_TYPES } from "@/lib/accessorialTypes";
 
 interface Props {
   customer: CrmCustomer;
@@ -413,16 +414,32 @@ function EditProfileForm({
         )}
         {accessorials.map((row, i) => (
           <div key={i} className="grid grid-cols-[1fr_100px_auto] gap-2 items-center">
-            <input
+            {/* v3.8.asf — was a free-text box placeheld "e.g. Detention, Layover,
+                TONU". Both wrong: the lookup key is the AccessorialType enum
+                value, so casing mattered, and there is no DETENTION at all — the
+                enum splits DETENTION_PU and DETENTION_DEL. An AE following that
+                placeholder produced a rate card matching nothing, and the failure
+                was silent: the line billed at cost on an invoice that looked
+                completely normal. A list you pick from cannot be typed wrong. */}
+            <select
               value={row.type}
               onChange={(e) => {
                 const next = [...accessorials];
                 next[i] = { ...next[i], type: e.target.value };
                 setAccessorials(next);
               }}
-              placeholder="e.g. Detention, Layover, TONU"
               className="px-2 py-1 text-sm border border-gray-200 rounded bg-white"
-            />
+            >
+              <option value="">Select accessorial…</option>
+              {ACCESSORIAL_TYPES.map((t) => (
+                <option key={t.value} value={t.value}>{t.label}</option>
+              ))}
+              {/* A card typed before this became a list still shows its own value
+                  rather than silently resetting to blank on the next save. */}
+              {row.type && !ACCESSORIAL_TYPES.some((t) => t.value === row.type) && (
+                <option value={row.type}>{row.type} (unrecognised)</option>
+              )}
+            </select>
             <input
               type="number"
               min={0}

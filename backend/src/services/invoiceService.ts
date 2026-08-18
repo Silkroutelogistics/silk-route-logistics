@@ -78,6 +78,27 @@ function presentAccessorial(type: string): { label: string; type: string } {
  * that happens to be null would bill zero, so the absence of a quantity has to
  * mean "flat", not "times nothing".
  */
+/**
+ * Rate-card keys are typed by a human, and the lookup key is a Prisma enum value.
+ *
+ * The CRM editor that writes `defaultAccessorialRates` was a free-text box whose
+ * placeholder read "e.g. Detention, Layover, TONU" — sentence case, and
+ * "Detention" is not even an AccessorialType (the enum splits DETENTION_PU and
+ * DETENTION_DEL). An AE following that placeholder produced a rate card that
+ * matched nothing, and the failure was silent: the lookup missed, the row billed
+ * at cost, and the invoice looked entirely normal.
+ *
+ * v3.8.asf constrains the editor to the real enum, which stops NEW cards being
+ * wrong. This normalisation is for the ones already typed: it folds case and
+ * treats spaces and hyphens as underscores, so "Detention PU", "detention-pu" and
+ * "DETENTION_PU" all resolve. It deliberately invents no aliases — "Detention"
+ * with no leg still matches nothing, because guessing which leg a customer
+ * negotiated is not something this function may do.
+ */
+function normalizeRateKey(raw: string): string {
+  return raw.trim().toUpperCase().replace(/[\s-]+/g, "_");
+}
+
 export function customerPriceFor(
   row: { type: string; amount: unknown; customerAmount?: unknown; quantity?: unknown },
   negotiated: Record<string, number> | null | undefined,
@@ -85,7 +106,11 @@ export function customerPriceFor(
   const explicit = row.customerAmount == null ? NaN : Number(row.customerAmount);
   if (Number.isFinite(explicit) && explicit >= 0) return round2(explicit);
 
-  const rate = negotiated?.[String(row.type)];
+  const wanted = normalizeRateKey(String(row.type));
+  let rate: unknown;
+  for (const [key, value] of Object.entries(negotiated ?? {})) {
+    if (normalizeRateKey(key) === wanted) { rate = value; break; }
+  }
   if (typeof rate === "number" && Number.isFinite(rate) && rate >= 0) {
     const qty = row.quantity == null ? null : Number(row.quantity);
     // A quantity of 0 is a real quantity and bills zero. Only ABSENCE means flat.
