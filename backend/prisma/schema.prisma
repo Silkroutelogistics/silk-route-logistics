@@ -4460,7 +4460,24 @@ model LoadAccessorial {
   loadId           String            @map("load_id")
   stopId           String?           @map("stop_id")
   type             AccessorialType
+  // What SRL PAYS the carrier. The uniform ratified schedule — $50/hr detention
+  // capped at $250/stop, $250/day layover, $200 TONU, lumpers at cost. Same for
+  // every carrier, no tier and no equipment differentiation.
   amount           Decimal           @db.Decimal(10, 2)
+  // What SRL BILLS the customer for the same event, when that differs.
+  //
+  // NULL means "bill what we paid", which is exactly what happened before this
+  // column existed — so no backfill is needed and no historical row changes
+  // meaning. Only a customer with a negotiated rate gets a value here.
+  //
+  // These are two different numbers by policy, not by accident. CLAUDE.md §5 and
+  // §13.3 Item 180.6: what SRL bills a shipper for detention is negotiable per
+  // contract, what SRL pays a carrier is the uniform schedule, and the spread is
+  // margin. Until this column existed there was one `amount` serving both, so
+  // every accessorial was billed at cost and SRL earned nothing on any of them.
+  // Customer.defaultAccessorialRates has held the negotiated rates the whole
+  // time and no money path had ever read it.
+  customerAmount   Decimal?          @db.Decimal(10, 2) @map("customer_amount")
   quantity         Decimal?          @db.Decimal(10, 2)
   unit             String?           @db.VarChar(20)
   rate             Decimal?          @db.Decimal(10, 2)

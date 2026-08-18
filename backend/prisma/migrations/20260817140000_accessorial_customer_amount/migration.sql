@@ -1,0 +1,23 @@
+-- Separate what SRL BILLS a customer for an accessorial from what SRL PAYS the
+-- carrier for it.
+--
+-- Hand-authored per CLAUDE.md §2.2. Purely additive: one nullable column, no
+-- index, no constraint, no data touched.
+--
+-- WHY. LoadAccessorial had a single `amount`, and every money path on both sides
+-- read it. The customer invoice billed the carrier-pay figure verbatim, so a
+-- $500 dwell was billed at $500 and paid at $500 and SRL earned nothing on it.
+-- Customer.defaultAccessorialRates — the field holding the negotiated customer
+-- rate — existed the whole time and was read by no money path anywhere.
+--
+-- That is a policy contradiction, not just a missing feature: CLAUDE.md §5 says
+-- customer billing is negotiable per contract while carrier pay is the uniform
+-- ratified schedule, and one column cannot hold two numbers.
+--
+-- NULL IS MEANINGFUL AND IS THE DEFAULT. It means "bill what we paid", which is
+-- precisely the behaviour before this column existed. Every historical row keeps
+-- its current meaning, no backfill is required, and a customer with no negotiated
+-- rate continues to be billed at cost. Only a customer who has negotiated a rate
+-- gets a value written here.
+
+ALTER TABLE "public"."load_accessorials" ADD COLUMN "customer_amount" DECIMAL(10,2);

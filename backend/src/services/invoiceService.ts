@@ -58,18 +58,73 @@ function presentAccessorial(type: string): { label: string; type: string } {
  * put on an invoice, which is what makes the supplemental path able to bill a
  * late accessorial exactly once.
  */
+/**
+ * What the CUSTOMER is billed for one accessorial row.
+ *
+ * Three sources, in order, and the order is the whole point:
+ *
+ *   1. `customerAmount` on the row — a price already decided for THIS event,
+ *      whether by negotiation at creation time or by an AE editing it. Once a
+ *      figure is on the row it wins; nothing recomputes behind an operator.
+ *   2. The customer's negotiated rate for this accessorial type, from
+ *      `Customer.defaultAccessorialRates`. This field has existed all along and
+ *      no money path had ever read it.
+ *   3. The carrier-pay amount — bill at cost. The honest default when SRL has
+ *      negotiated nothing, and exactly what happened before this function.
+ *
+ * The negotiated rate is a PER-UNIT price where the row carries a quantity, and
+ * a flat price where it does not. A detention row records quantity 5 and unit
+ * "hours"; a TONU records neither. Multiplying a flat $200 TONU by a quantity
+ * that happens to be null would bill zero, so the absence of a quantity has to
+ * mean "flat", not "times nothing".
+ */
+export function customerPriceFor(
+  row: { type: string; amount: unknown; customerAmount?: unknown; quantity?: unknown },
+  negotiated: Record<string, number> | null | undefined,
+): number {
+  const explicit = row.customerAmount == null ? NaN : Number(row.customerAmount);
+  if (Number.isFinite(explicit) && explicit >= 0) return round2(explicit);
+
+  const rate = negotiated?.[String(row.type)];
+  if (typeof rate === "number" && Number.isFinite(rate) && rate >= 0) {
+    const qty = row.quantity == null ? null : Number(row.quantity);
+    // A quantity of 0 is a real quantity and bills zero. Only ABSENCE means flat.
+    if (qty !== null && Number.isFinite(qty)) return round2(rate * qty);
+    return round2(rate);
+  }
+
+  return round2(Number(row.amount));
+}
+
 export async function unbilledCustomerAccessorials(loadId: string, client: any = prisma) {
   const rows = await client.loadAccessorial.findMany({
     where: { loadId, status: "APPROVED", shipperInvoiceId: null },
     orderBy: { createdAt: "asc" },
-    select: { id: true, type: true, amount: true, billedTo: true, notes: true },
+    select: {
+      id: true, type: true, amount: true, customerAmount: true,
+      quantity: true, billedTo: true, notes: true,
+    },
   });
+
+  // The negotiated rate card belongs to the customer, so it is fetched once per
+  // load rather than per row. A load with no customer bills at cost.
+  const load = await client.load.findUnique({
+    where: { id: loadId },
+    select: { customer: { select: { defaultAccessorialRates: true } } },
+  });
+  const negotiated = (load?.customer?.defaultAccessorialRates ?? null) as
+    | Record<string, number>
+    | null;
+
   return (rows || [])
     .filter((r: any) => !r.billedTo || String(r.billedTo).toUpperCase() === "SHIPPER")
     .map((r: any) => ({
       id: r.id,
       type: String(r.type),
-      amount: round2(Number(r.amount)),
+      amount: customerPriceFor(r, negotiated),
+      // Carried so a caller can show the margin, and so a future reconciliation
+      // can tell "billed at cost" from "billed at the negotiated rate".
+      carrierAmount: round2(Number(r.amount)),
       notes: r.notes ?? null,
     }))
     .filter((r: any) => r.amount > 0);

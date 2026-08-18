@@ -7,7 +7,7 @@ import { log } from "../lib/logger";
 import { isQuickPayPilotApproved } from "./carrierController";
 // One resolver for "what part of this settlement is the carrier's own money",
 // shared with the delivery path, the carrier portal and accounting.
-import { atCostReimbursementsForLoad } from "../services/integrationService";
+import { atCostReimbursementsForLoad, syncCarrierPayAccessorials } from "../services/integrationService";
 import { createCarrierPaySchema, updateCarrierPaySchema, batchCarrierPaySchema, carrierPayQuerySchema } from "../validators/carrierPay";
 
 /**
@@ -193,6 +193,36 @@ export async function createCarrierPay(req: AuthRequest, res: Response) {
       load: { select: { id: true, referenceNumber: true, originCity: true, originState: true, destCity: true, destState: true } },
     },
   });
+
+  // v3.8.ase — fold in any accessorials that were ALREADY APPROVED when this
+  // settlement was raised.
+  //
+  // This is the only settlement creator wired to the AE console, and it takes
+  // `amount` verbatim from the request. `accessorialsTotal: 0` above is a true
+  // statement about what the REQUEST contained, and the comment there is right
+  // that it makes a later approval a clean addition — but it only works in that
+  // direction. An accessorial approved BEFORE the AE raised the settlement had
+  // already fired its sync, found no CarrierPay row, and returned early
+  // (integrationService.ts:870, "Not settled yet — delivery will read the ledger
+  // fresh"). For a hand-raised settlement there is no delivery path to read it
+  // fresh, so the money was simply dropped and the carrier was underpaid with
+  // nothing anywhere recording it.
+  //
+  // Running the existing sync once after the row exists closes that window using
+  // the mechanism that is already tripwired, idempotent, and refuses to rewrite a
+  // committed settlement. Deliberately not a second pricing implementation —
+  // this session has already paid for having several of those.
+  //
+  // Non-blocking: the settlement is created and the AE gets their 201 either way.
+  // A failure here leaves the ledger and the settlement out of step, which is
+  // exactly what syncCarrierPayAccessorials detects and escalates next time it
+  // runs on this load.
+  void syncCarrierPayAccessorials(data.loadId).catch((err) =>
+    log.error(
+      { err, loadId: data.loadId, carrierPayId: carrierPay.id },
+      "[CarrierPay] post-create accessorial sync failed — settlement may understate approved accessorials",
+    ),
+  );
 
   res.status(201).json(carrierPay);
 }

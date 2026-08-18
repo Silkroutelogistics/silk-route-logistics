@@ -1,3 +1,4 @@
+import { APPROVAL_REF } from "../lib/approvalQueueRefs";
 import { prisma } from "../config/database";
 import { calculateOverallScore, getBonusPercentage, checkGuestPromotion } from "./tierService";
 import { createCheckCallSchedule } from "./checkCallAutomation";
@@ -796,7 +797,7 @@ async function createCarrierPayOnDelivery(load: any) {
       data: {
         type: "CARRIER_PAYMENT",
         referenceId: payment.id,
-        referenceType: "CarrierPay",
+        referenceType: APPROVAL_REF.CARRIER_PAY,
         amount: netAmount,
         description: `Auto-generated carrier payment ${paymentNumber} for load ${load.referenceNumber} — ${reviewReason}`,
         // A shortfall is always HIGH: it is a carrier who has been paid less
@@ -823,7 +824,7 @@ async function createCarrierPayOnDelivery(load: any) {
         transactionType: "QP_FEE_EARNED",
         amount: quickPayFeeAmount,
         runningBalance: currentBalance + quickPayFeeAmount,
-        referenceType: "CarrierPay",
+        referenceType: APPROVAL_REF.CARRIER_PAY,
         referenceId: payment.id,
         description: `Quick-pay fee (${quickPayFeePercent}%) on ${paymentNumber}`,
       },
@@ -894,7 +895,7 @@ export async function syncCarrierPayAccessorials(loadId: string): Promise<void> 
       data: {
         type: "CARRIER_PAYMENT",
         referenceId: pay.id,
-        referenceType: "CarrierPay",
+        referenceType: APPROVAL_REF.CARRIER_PAY,
         amount: Math.abs(delta),
         description:
           `Load ${load.referenceNumber}: $${Math.abs(delta).toFixed(2)} of approved accessorials ` +
@@ -1005,7 +1006,7 @@ export async function syncCarrierPayAccessorials(loadId: string): Promise<void> 
         data: {
           type: "CARRIER_PAYMENT",
           referenceId: pay.id,
-          referenceType: "CarrierPay",
+          referenceType: APPROVAL_REF.CARRIER_PAY,
           amount: Math.abs(delta),
           description:
             `Load ${load.referenceNumber}: settlement ${pay.paymentNumber} was NOT re-priced. ` +
@@ -1037,7 +1038,7 @@ export async function syncCarrierPayAccessorials(loadId: string): Promise<void> 
         data: {
           type: "CARRIER_PAYMENT",
           referenceId: pay.id,
-          referenceType: "CarrierPay",
+          referenceType: APPROVAL_REF.CARRIER_PAY,
           amount: Math.abs(delta),
           description:
             `Load ${load.referenceNumber}: settlement ${pay.paymentNumber} was reduced by ` +
@@ -1135,7 +1136,7 @@ export async function onInvoicePaid(invoiceId: string, paidAmount: number) {
       transactionType: "SHIPPER_PAYMENT_IN",
       amount: paidAmount,
       runningBalance: currentBalance + paidAmount,
-      referenceType: "Invoice",
+      referenceType: APPROVAL_REF.INVOICE,
       referenceId: invoice.id,
       description: `Shipper payment received for invoice ${invoice.invoiceNumber}`,
     },
@@ -1206,7 +1207,7 @@ export async function onInvoicePaid(invoiceId: string, paidAmount: number) {
             transactionType: "RESERVE_RELEASE",
             amount: reserveRelease,
             runningBalance: balance,
-            referenceType: "CarrierPay",
+            referenceType: APPROVAL_REF.CARRIER_PAY,
             referenceId: carrierPay.id,
             description: `Factoring reserve released — shipper paid invoice ${invoice.invoiceNumber}`,
           },
@@ -1571,7 +1572,7 @@ export async function onLoadCancelledOrTONU(loadId: string, reason?: string) {
 
     // Reverse factoring fund entries for this carrier pay
     const fundEntries = await prisma.factoringFund.findMany({
-      where: { referenceId: cp.id, referenceType: "CarrierPay" },
+      where: { referenceId: cp.id, referenceType: APPROVAL_REF.CARRIER_PAY },
     });
     if (fundEntries.length > 0) {
       const latestFund = await prisma.factoringFund.findFirst({
@@ -1588,7 +1589,7 @@ export async function onLoadCancelledOrTONU(loadId: string, reason?: string) {
             transactionType: "REVERSAL",
             amount: -entry.amount,
             runningBalance,
-            referenceType: "CarrierPay",
+            referenceType: APPROVAL_REF.CARRIER_PAY,
             referenceId: cp.id,
             description: `Reversal of ${entry.transactionType} — load ${load.status === "TONU" ? "TONU" : "cancelled"} (${entry.description})`,
           },

@@ -1,3 +1,4 @@
+import { APPROVAL_REF, matchesRef } from "../lib/approvalQueueRefs";
 import { Response } from "express";
 import { prisma } from "../config/database";
 import { AuthRequest } from "../middleware/auth";
@@ -1315,7 +1316,7 @@ export async function submitPayment(req: AuthRequest, res: Response) {
         data: {
           type: "CARRIER_PAYMENT",
           referenceId: payment.id,
-          referenceType: "CARRIER_PAY",
+          referenceType: APPROVAL_REF.CARRIER_PAY,
           amount: payment.netAmount,
           description: isQuickPay
             ? `Carrier payment ${payment.paymentNumber}: $${measured.toLocaleString()} gross is over the ${tier ?? "SILVER"} $${ceiling.toLocaleString()} per-load Quick Pay auto-approve ceiling`
@@ -1357,7 +1358,7 @@ export async function approvePayment(req: AuthRequest, res: Response) {
 
     // Resolve matching approval queue entry
     await prisma.approvalQueue.updateMany({
-      where: { referenceId: id, referenceType: "CARRIER_PAY", status: "PENDING" },
+      where: { referenceId: id, referenceType: APPROVAL_REF.CARRIER_PAY, status: "PENDING" },
       data: { status: "APPROVED", reviewedById: req.user!.id, reviewedAt: new Date() },
     });
 
@@ -1460,7 +1461,7 @@ export async function rejectPayment(req: AuthRequest, res: Response) {
 
     // Resolve matching approval queue entry
     await prisma.approvalQueue.updateMany({
-      where: { referenceId: id, referenceType: "CARRIER_PAY", status: "PENDING" },
+      where: { referenceId: id, referenceType: APPROVAL_REF.CARRIER_PAY, status: "PENDING" },
       data: { status: "REJECTED", reviewedById: req.user!.id, reviewedAt: new Date(), reviewNotes: reason ?? null },
     });
 
@@ -1542,7 +1543,7 @@ export async function markPaymentPaid(req: AuthRequest, res: Response) {
         transactionType: "CARRIER_PAYMENT_OUT",
         amount: -payment.netAmount,
         runningBalance: currentBalance,
-        referenceType: "CarrierPay",
+        referenceType: APPROVAL_REF.CARRIER_PAY,
         referenceId: payment.id,
         description: `Carrier payment ${payment.paymentNumber} paid`,
         createdById: req.user!.id,
@@ -1560,7 +1561,7 @@ export async function markPaymentPaid(req: AuthRequest, res: Response) {
           transactionType: "FACTORING_RESERVE",
           amount: -factoringReserve,
           runningBalance: currentBalance,
-          referenceType: "CarrierPay",
+          referenceType: APPROVAL_REF.CARRIER_PAY,
           referenceId: payment.id,
           description: `Factoring reserve (${FACTORING_RESERVE_PCT}% of $${payment.grossAmount ?? 0}) on ${payment.paymentNumber} — held until shipper pays invoice`,
           createdById: req.user!.id,
@@ -1583,7 +1584,7 @@ export async function markPaymentPaid(req: AuthRequest, res: Response) {
             transactionType: "RESERVE_RELEASE",
             amount: reserveRelease,
             runningBalance: currentBalance,
-            referenceType: "CarrierPay",
+            referenceType: APPROVAL_REF.CARRIER_PAY,
             referenceId: payment.id,
             description: `Factoring reserve released — shipper invoice already paid for ${payment.paymentNumber}`,
             createdById: req.user!.id,
@@ -3544,7 +3545,7 @@ export async function getApprovalById(req: AuthRequest, res: Response) {
 
     // Fetch the referenced item details
     let referenceData: any = null;
-    if (approval.referenceType === "CARRIER_PAY") {
+    if (matchesRef(approval.referenceType, APPROVAL_REF.CARRIER_PAY)) {
       referenceData = await prisma.carrierPay.findUnique({
         where: { id: approval.referenceId },
         include: {
@@ -3552,7 +3553,7 @@ export async function getApprovalById(req: AuthRequest, res: Response) {
           load: { select: { referenceNumber: true, originCity: true, originState: true, destCity: true, destState: true } },
         },
       });
-    } else if (approval.referenceType === "INVOICE") {
+    } else if (matchesRef(approval.referenceType, APPROVAL_REF.INVOICE)) {
       referenceData = await prisma.invoice.findUnique({
         where: { id: approval.referenceId },
         include: {
@@ -3601,7 +3602,7 @@ export async function reviewApproval(req: AuthRequest, res: Response) {
     });
 
     // Cascade the decision to the referenced item
-    if (existing.referenceType === "CARRIER_PAY") {
+    if (matchesRef(existing.referenceType, APPROVAL_REF.CARRIER_PAY)) {
       if (newStatus === "APPROVED") {
         await prisma.carrierPay.update({
           where: { id: existing.referenceId },

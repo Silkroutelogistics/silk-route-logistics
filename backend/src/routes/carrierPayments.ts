@@ -1,3 +1,4 @@
+import { APPROVAL_REF } from "../lib/approvalQueueRefs";
 import { Router, Response } from "express";
 import { prisma } from "../config/database";
 import { authenticate, authorize, AuthRequest } from "../middleware/auth";
@@ -656,7 +657,7 @@ router.post("/:id/request-quickpay", async (req: AuthRequest, res: Response) => 
         data: {
           type: "CARRIER_PAYMENT",
           referenceId: payment.id,
-          referenceType: "CarrierPay",
+          referenceType: APPROVAL_REF.CARRIER_PAY,
           amount: netAmount,
           description: `Quick Pay requested on ${payment.paymentNumber || payment.id} for load ${payment.load?.referenceNumber || payment.loadId} — ${reviewReasons.join("; ")}`,
           priority: "HIGH",

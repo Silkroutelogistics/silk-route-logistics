@@ -14280,7 +14280,39 @@
 // at docs/audit-reports/compliance-architecture-eld-vin.md; it also found that
 // tenderController computes SRL's entire negligent-selection defense and
 // discards it before writing the tender. That one is next.
-export const SRL_VERSION = "3.8.asd";
+// v3.8.ase — the customer stops being billed at cost.
+//
+// A ten-agent trace of the accessorial money path first corrected the premise.
+// The long-standing note that accessorials "reach neither the shipper invoice nor
+// the carrier settlement" was STALE — v3.8.asb had closed both main legs, and an
+// AE can approve a claim on a live screen and watch the money move. What the
+// trace found instead was quieter and worse.
+//
+// LoadAccessorial carried ONE `amount` column and both sides read it, so a $500
+// dwell was billed at $500 and paid at $500 and SRL earned nothing on any
+// accessorial, ever. Customer.defaultAccessorialRates — the field holding the
+// negotiated customer rate — had been there the whole time, read by no money path
+// in the codebase. That is a policy contradiction rather than a missing feature:
+// §5 says customer billing is negotiable per contract while carrier pay is the
+// uniform ratified schedule, and one column cannot hold two numbers.
+//
+// Two more, both silent. The only settlement creator wired to the console took
+// `amount` verbatim and hardcoded accessorials to zero, so anything approved
+// BEFORE an AE raised a settlement by hand was dropped — its sync had already run,
+// found no settlement, and returned early, and no delivery path exists to read it
+// again. And ApprovalQueue.referenceType had drifted into two spellings: twelve
+// writers on "CarrierPay", every reader comparing "CARRIER_PAY". The row that
+// never matched is the accessorial-shortfall escalation — the one mechanism in the
+// system that records a carrier is still owed money.
+//
+// Honest scope: a read-only production check at ship time found ZERO customers
+// with negotiated rates on file, so nothing bills differently today. This is the
+// mechanism, not the revenue. It starts earning the moment a rate is entered.
+//
+// Letter note: this work was written as asd and renumbered when a parallel
+// compliance sprint landed asd on main mid-flight (Sub-pattern 6). Only my own
+// markers moved; theirs were left alone.
+export const SRL_VERSION = "3.8.ase";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
