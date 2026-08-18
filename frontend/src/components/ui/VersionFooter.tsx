@@ -14251,7 +14251,36 @@
 // grid and left the two detention terms behind, under a comment claiming the
 // whole function now read from policy. A partial migration that says it is
 // finished is worse than one that never started.
-export const SRL_VERSION = "3.8.asc";
+// v3.8.asd — every compliance job watched carriers; none of them watched us.
+//
+// Twenty-odd recurring jobs re-check carrier authority, insurance, OFAC, and
+// chameleon fingerprints. Not one of them looked up DOT 4526880. A 13-agent
+// compliance sweep surfaced it as the only genuinely existential gap on the
+// board: since 2026-01-16 FMCSA suspends broker authority when available
+// financial security stays below $75,000 for seven calendar days, and the
+// surety owes FMCSA just thirty days' notice before cancellation. Absent this
+// check SRL learns its own authority is gone from the public record.
+//
+// checkSelfAuthority() rides the existing 3am FMCSA tick in its own try/catch
+// — a carrier-scan failure must not suppress it, and it takes no new cron slot
+// (v3.8.arh consolidation). It diffs SRL's FMCSA record against the previous
+// run and emails compliance@ only on a change or an unresolved critical
+// condition, so a quiet inbox is itself the signal.
+//
+// Three conditions alert on every run while true rather than only on the run
+// they appear, because a bond missing for a week is not less urgent on day
+// seven: authority not active, no financial security on file, an out-of-service
+// date. It also watches the registered address and phone — if those change and
+// we did not file the change, someone else did. That is the same FMCSA-record
+// compromise the audit named as SRL's sharpest residual exposure, the one where
+// callback verification lands on the fraudster and every control agrees.
+//
+// No new model. The prior snapshot reads back from SystemLog, mirroring the
+// run-summary pattern from v3.8.ahy. The read-only audit that produced this is
+// at docs/audit-reports/compliance-architecture-eld-vin.md; it also found that
+// tenderController computes SRL's entire negligent-selection defense and
+// discards it before writing the tender. That one is next.
+export const SRL_VERSION = "3.8.asd";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

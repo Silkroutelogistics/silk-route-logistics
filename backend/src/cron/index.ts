@@ -404,6 +404,29 @@ export function initCronJobs() {
     } catch (err) {
       log.error({ err }, "[Cron Daily] FMCSA scan error:");
     }
+
+    // v3.8.asd — SRL's OWN authority. Every other compliance job in this file
+    // watches carriers; nothing watched us. A bond draw-down below $75,000 that
+    // goes unreplenished for 7 days suspends SRL's authority (FMCSA rule
+    // effective 2026-01-16), and the surety gives FMCSA only 30 days' notice
+    // before cancellation — so absent this check SRL learns from the public
+    // record rather than from PFA. Also catches a change to our registered
+    // address or phone, which is the signature of an FMCSA-record compromise.
+    //
+    // Deliberately its own try/catch inside the same guard: a carrier-scan
+    // failure above must not suppress the self-check, and vice versa. Rides
+    // this tick rather than taking a new slot per the v3.8.arh cron
+    // consolidation (fewer wakeups so Neon compute can suspend).
+    try {
+      const { checkSelfAuthority } = require("../services/selfAuthorityMonitorService");
+      const self = await checkSelfAuthority();
+      log.info(
+        { changed: self.changed, findings: self.findings.length },
+        "[Cron Daily] SRL self-authority check complete",
+      );
+    } catch (err) {
+      log.error({ err }, "[Cron Daily] SRL self-authority check error:");
+    }
   }));
 
   // ─── Daily (6 AM): Identity/email/phone validation for pending carriers ──
