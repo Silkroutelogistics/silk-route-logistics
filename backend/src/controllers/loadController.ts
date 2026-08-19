@@ -19,6 +19,7 @@ import { logLoadCreation, diffLoadChanges, logLoadChanges, logStatusChange, getL
 import { onLoadStatusChange as aiOnLoadStatusChange } from "../services/aiLearningLoop/feedbackCollector";
 import { log } from "../lib/logger";
 import { validateLoadStatusTransition, getAllowedNextStatuses } from "../lib/loadStateMachine";
+import { isTonuFaultSide, TONU_FAULT_SIDES } from "../lib/tonuPolicy";
 // generateLoadNumber lived here and two other load creators could not reach it,
 // so they shipped loads with no number at all. It owns a Postgres sequence, so
 // there must be exactly one path to it: lib/documentNumber.ts.
@@ -594,6 +595,27 @@ export async function updateLoadStatus(req: AuthRequest, res: Response) {
   // TONU / CANCELLED cleanup: reverse credit, void AP, cancel tenders, reverse fund
   if (status === "TONU" || status === "CANCELLED") {
     const reason = req.body.reason || req.body.cancellationReason;
+
+    // Arc 2 Item 5 — a TONU must say whose failure it was. The two-sided rule
+    // ratified 2026-08-15 bills the customer or pays the carrier depending
+    // entirely on the fault side, so recording a TONU without one produces a
+    // row nobody can bill or settle from later. Recorded now even though the
+    // billing legs are still banked (see lib/tonuPolicy), because the fault
+    // side is only knowable at the moment of the flip — reconstructing it from
+    // a cancellation reason weeks later is guesswork.
+    if (status === "TONU") {
+      const faultSide = req.body.tonuFaultSide;
+      if (!isTonuFaultSide(faultSide)) {
+        res.status(422).json({
+          error:
+            "A TONU must record whose failure caused it. Pass tonuFaultSide as CUSTOMER, CARRIER, or BROKER.",
+          code: "TONU_FAULT_SIDE_REQUIRED",
+          allowed: TONU_FAULT_SIDES,
+        });
+        return;
+      }
+      await prisma.load.update({ where: { id: load.id }, data: { tonuFaultSide: faultSide } });
+    }
     onLoadCancelledOrTONU(load.id, reason).catch((e) =>
       log.error({ err: e }, `[Integration] onLoadCancelledOrTONU error:`)
     );

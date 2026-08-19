@@ -14363,7 +14363,15 @@
 //   wrong. Backfill is DRY RUN by default because writing this column is what
 //   turns an inert gate live and can stop dispatch. Also fixes the block copy
 //   that told a 6-month carrier the minimum was 18.
-export const SRL_VERSION = "3.8.asn";
+// v3.8.aso — A TONU must now say whose failure it was.
+//   Two-sided TONU and the 4-hour carrier release window were both ratified in
+//   August and neither had any code: the cancellation path only REVERSES, and
+//   nothing enforced the window. The fault side is now required at the flip
+//   (422 without it) and recorded, because it is only knowable at that moment —
+//   reconstructing it from a cancellation reason weeks later is guesswork.
+//   The decision function is built and tested; the two billing legs are NOT
+//   wired, on purpose. A half-live billing change is worse than a banked one.
+export const SRL_VERSION = "3.8.aso";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

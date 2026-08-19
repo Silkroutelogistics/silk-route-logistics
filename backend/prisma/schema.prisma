@@ -1602,6 +1602,7 @@ model Load {
   deletedAt          DateTime?
   deletedBy          String?
   cancellationReason String?
+  tonuFaultSide      String?   // CUSTOMER | CARRIER | BROKER — Arc 2 Item 5. Required at the TONU flip; drives the two-sided TONU decision in lib/tonuPolicy.
 
   // v3.8.ali §13.3 Item 192 — per-load risk-email kill switch. When
   // riskEmailMuted=true the risk engine still writes RiskLog + still
