@@ -225,6 +225,81 @@ Both are halt-ship: smallest safe default, recorded here.
 
 Pass 1 staying at 26 is the intended outcome, not a miss. Nothing qualified as cleanly DEAD: the two closest candidates share controllers with live routes and are money-path, on code I did not author, and Pass 1 only proves *the frontend* does not call something — it cannot see an integration or a script. Full reasoning and per-endpoint verdicts in [`orphan-endpoint-triage.md`](orphan-endpoint-triage.md).
 
+---
+
+# Arc 3 — ship, finish the money path, close the triage (2026-08-19)
+
+Baseline HEAD `274249e8`. Deployed through **`274249e8`** (migration applied to production Neon, code pushed, CI green on backend + frontend).
+
+| Phase | What | Commit |
+|---|---|---|
+| 1 | Migration to prod + push + CI | deploy only |
+| 2 | TONU obligation reaches the accessorial ledger | `5b42271a` v3.8.asp |
+| 3 | Dispute workflow wired — and a live 404 fixed | `7c4adf28` v3.8.asq |
+| 5 | Pass 1 graded by evidence | `d233fddf` (unversioned) |
+| 4 | Pass 4 delete-only rows | **banked — see below** |
+
+## Phase 1 — deployed, column before code
+
+The migration was applied to a **fresh Postgres 16 container** first, running the whole 39-migration chain from empty rather than `db push`: all applied clean, `tonuFaultSide` present as nullable `text`, `migrate status` reporting up to date. Then production Neon: applied, and verified directly — `information_schema` shows the column, `_prisma_migrations` shows the row with `applied_steps_count: 1`. Only then was the code pushed, so the column has never been behind the code that reads it.
+
+**Smoke, reported honestly.** Two of the three requested checks need an authenticated AE or carrier session that this environment does not have, and I did not fabricate credentials to manufacture a green tick.
+
+1. **TONU flip without a fault side** — *partially verified*. `PATCH /api/loads/:id/status` on production returns `401 {"error":"No token provided"}`. The endpoint is live and fails cleanly rather than 500-ing, but the `422 TONU_FAULT_SIDE_REQUIRED` gate sits behind auth and could not be exercised. The gate's logic is covered by unit tests; its production behaviour is unverified.
+2. **POD reminder cron registered** — *not verified*. The `:45 pod-reminders` job is in the deployed commit and Render is serving that commit (`/api/health` 200), but confirming registration needs Render logs or the authenticated monitoring endpoint.
+3. **Carrier check-call closes its schedule** — *not verified*. Needs an authenticated carrier session and a live load.
+
+One thing the smoke did confirm: `POST /api/auth/e2e-token` returns `404` in production, so the v3.8.anh hardening holds and there is no bypass to borrow.
+
+## Phase 2 — the TONU obligation is recorded; billing stays banked
+
+Both legs are **one `LoadAccessorial` row**, because that is the existing architecture rather than a shortcut. The customer reader (`unbilledCustomerAccessorials`) applies the negotiated rate and drops any row not billed to `SHIPPER`; the carrier reader (`approvedAccessorials`) reads the same row and does not filter on `billedTo` at all. So:
+
+| Fault | `amount` | `customerAmount` | `billedTo` | Effect |
+|---|---|---|---|---|
+| CUSTOMER | TONU_AMOUNT | null | SHIPPER | bills customer, pays carrier |
+| BROKER | TONU_AMOUNT | 0 | BROKER | pays carrier out of margin, bills nobody |
+| CARRIER | — | — | — | no row; existing reversal is the whole story |
+
+**Ordering, which Phase 2c asked to pin:** `onLoadCancelledOrTONU` cancels tenders, reverses shipper credit, voids `CarrierPay`, cancels approval-queue rows and reverses factoring funds — and never touches `LoadAccessorial`. It is also fire-and-forget from `loadController`, so anything written to those tables here could be voided or not depending on which finished first. The ledger cannot be raced, which is why it is the anchor, and a test asserts no `CarrierPay` or `Invoice` write happens on this path.
+
+**Activation banked, for a specific reason.** On a TONU load neither money *document* exists: `syncInvoiceAccessorials` returns null without a BASE invoice and `autoGenerateInvoice` only fires on the POD/delivery path; `syncCarrierPayAccessorials` returns early without a `CarrierPay`, and the reversal voids any that existed. Conjuring one is wrong in both available ways — `autoGenerateInvoice` would bill the customer the full linehaul for a truck that never moved, and a bespoke TONU invoice is the parallel plumbing this design avoids. A "settle a TONU" surface is a product decision. The row is still load-bearing: the moment an invoice or settlement exists on that load, the existing readers pick it up.
+
+## Phase 3 — the dispute Resolve button had never worked
+
+Phase 3 was scoped as "build MISSING-UI". The first trace found a live bug instead: the Resolve button POSTed to `/accounting/disputes/:id/resolve` and only a `PUT` exists, so **every click 404'd**. It also sent `{ resolution }` where the controller reads `{ resolutionNotes }`, so even with the right verb the notes were dropped. Investigate and Propose were wired for the first time, making the `INVESTIGATING` state the controller enforces reachable at all. Approve and Deny are separate buttons because `resolveDispute` reads `approved !== false` — one button could only ever approve.
+
+**Priority list adjusted against the code:** invoice mark-paid needed nothing. `accounting/invoices/page.tsx:135` already calls `PUT /accounting/invoices/:id/mark-paid`; the Pass 1 finding was the *duplicate* `PATCH /invoices/:id/mark-paid`, which the triage doc had already classified as DUPLICATE rather than MISSING-UI. Invoice line-items edit remains unbuilt.
+
+## Phase 5 — Pass 1 now grades its evidence
+
+v1 asked whether each static route segment appeared in a file preceded by `/` or `${...}`, so `action: "deactivate"` never matched and two live endpoints sat on an "orphan" list through a whole triage pass. v2 matches **segments** against the tail of each caller path, either side allowed to be dynamic, and grades the result EXACT / PATTERN / UNRESOLVED.
+
+The first v2 run made a worse mistake than v1 — `/:id/deactivate` matched any two-segment caller, attributing carrier-drivers to a customer-contacts call. A wrong caller is worse than none, because it reads as evidence. PATTERN matches now must also look aimed at the route's own mount, and the most specific caller wins.
+
+**26 binary orphans → 17 UNRESOLVED, 9 PATTERN, 73 EXACT.** Both known false positives report PATTERN against the correct file and path, and the three dispute routes wired in Phase 3 dropped off entirely as EXACT — the tool independently confirming that work.
+
+## Phase 4 — banked, with the reason
+
+Not triaged. Reading the 14 findings showed the Pass 4 heuristic has the **same defect Pass 5 just fixed in Pass 1**: it flags any `.map(...)`, including ones that are state updaters rather than list renders. At least six are not list rows at all —
+
+```
+return list.map((l, i) => ({ ...l, order: i + 1 }))        // reorder helper
+onChange(lessons.map((l, idx) => idx === i ? {...l, ...patch} : l))  // the edit affordance itself
+form.stops.map((s) => s.id === id ? {...s, [key]: value} : s)        // update reducer
+```
+
+Triaging those as "rows where an AE cannot correct their data" would be triaging noise. The honest next step is to fix Pass 4's matcher the way Pass 1's was fixed — require the `.map()` to be inside JSX and to render a row — and only then triage what survives. Candidates that do look like real renders: `TagManagementPanel` assignments, `tagging-rules` rules, `orders` customerTemplates, `documents` filtered, `admin/monitoring` audit entries.
+
+## Counters
+
+| Counter | Arc 2 close | Arc 3 close | Why |
+|---|---:|---:|---|
+| Pass 1 | 26 (binary) | **17 UNRESOLVED** + 9 PATTERN | Graded; two false positives reclassified, three disputes routes became EXACT |
+| Pass 2 | 511 | **508** | The disputes UI now references `investigationNotes`, `proposedResolution`, `proposedAmount` |
+| Pass 4 | 14 | 14 | Untouched — banked with its own heuristic defect named |
+| Backend suite | 632 | **641** | +9 TONU ledger tests |
+
 ## Still open after this arc
 
 | ID | Why it was not built |

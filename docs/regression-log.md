@@ -13,6 +13,21 @@ so it's searchable and never lost.
 
 ---
 
+## Resolved — 2026-08-19 (Arc 3: v3.8.asp → v3.8.asq — deploy, TONU ledger, dispute fix)
+
+Baseline `274249e8`, **deployed through `274249e8`**. CLAUDE.md §13.3 Item 197; write-up appended to `docs/audits/carrier-lifecycle-audit.md`.
+
+- **Dispute Resolve button 404'd on every click (P1, Fixed in `7c4adf28` / v3.8.asq)** — `/accounting/disputes` POSTed to `/accounting/disputes/:id/resolve` and only a `PUT` route exists. It also sent `{ resolution }` where `resolveDispute` reads `{ resolutionNotes }`, so even with the right verb the notes were discarded. Verb and body now match. Investigate and Propose wired for the first time, so the `INVESTIGATING` state the controller enforces is reachable at all; Approve and Deny split because the controller reads `approved !== false` and one button could only ever approve.
+- **TONU obligation was decided but never recorded (P1, Fixed in `5b42271a` / v3.8.asp)** — `resolveTonuBilling` returned the right answer and nothing wrote it anywhere. One `LoadAccessorial` row now carries both legs: the customer reader drops anything not billed to SHIPPER, the carrier reader ignores `billedTo` entirely, so a broker-fault TONU pays the carrier out of margin while staying off the customer's invoice. The ledger is the only anchor the fire-and-forget cancellation reversal cannot race. Billing activation stays banked — a TONU load has neither an invoice nor a settlement to attach to.
+- **Pass 1 called two live endpoints orphans (Fixed in `d233fddf`, unversioned)** — the matcher is now segment-based and grades findings EXACT / PATTERN / UNRESOLVED instead of answering yes or no. 26 binary orphans became 17 UNRESOLVED, 9 PATTERN, 73 EXACT.
+- **TONU migration applied to production** — tested first against a fresh Postgres 16 container running the full 39-migration chain from empty, then applied to Neon and verified by direct query before the code was pushed.
+
+Banked rather than done: **Phase 4** (Pass 4 delete-only rows) — its heuristic has the same defect Pass 1 just had, flagging state-updater `.map()` calls as list rows, so at least 6 of 14 findings are noise. Fix the matcher before triaging. **TONU billing activation** and **invoice line-items edit** also remain open.
+
+Smoke limits stated plainly: the TONU 422 gate, POD cron registration and the carrier check-call close all need an authenticated session this environment lacks and were **not** verified. What was: production returns a clean `401` on the TONU endpoint rather than a 500, `/api/health` is 200, and `POST /api/auth/e2e-token` 404s in production.
+
+Gates: backend `tsc` clean at every commit; vitest **632 → 641**; frontend `tsc` + `next build` clean. `urlSafety > allows public hostnames` remains the only red and is sandbox-DNS only — green in CI on both `2b76cc93` and `274249e8`.
+
 ## Resolved — 2026-08-18 (Arc 2: v3.8.asl → v3.8.aso — carrier lifecycle open queue)
 
 Second pass over the queue the carrier-lifecycle audit left. Baseline HEAD `2b76cc93`. CLAUDE.md §13.3 Item 196; write-up appended to `docs/audits/carrier-lifecycle-audit.md`; endpoint verdicts in `docs/audits/orphan-endpoint-triage.md`.
