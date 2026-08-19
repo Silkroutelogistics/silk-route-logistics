@@ -128,6 +128,167 @@ function extractEndpoints(): Endpoint[] {
   return endpoints;
 }
 
+// ─── Pass 1 matching, v2 (Arc 3 Phase 5) ───────────────────────────────
+//
+// v1 asked "does every static segment of the route appear in this file,
+// immediately preceded by a slash or a ${...}". That reads a call like
+//
+//     api.patch(`/carrier-drivers/${id}/${action}`)   // action: "deactivate"
+//
+// as having no caller, because the literal "deactivate" appears only as
+// `action: "deactivate"` where the preceding character is a quote. Both
+// carrier-driver deactivate/reactivate endpoints were reported as orphans while
+// being live in production — the finding that prompted this rewrite.
+//
+// v2 compares SEGMENTS instead of scanning for substrings. A route path is
+// matched against the tail of a caller path, segment by segment, where either
+// side may be dynamic (`:id` on the route, `${...}` on the caller). Tail rather
+// than whole, because a route declares `/:id/deactivate` while the caller writes
+// the mounted `/carrier-drivers/${id}/${action}`.
+//
+// The result is graded rather than boolean:
+//
+//   EXACT      every literal segment of the route met a matching literal in the
+//              caller. As close to proof as a grep gets.
+//   PATTERN    the route matched, but at least one of its literal segments lined
+//              up with a `${...}` slot. The caller MAY hit this route — it
+//              depends on a runtime value. Live until shown otherwise.
+//   UNRESOLVED nothing matched. This is the only grade worth calling an orphan.
+//
+// Grading matters because a binary answer invites the reader to treat a
+// heuristic as a verdict, which is exactly how two live endpoints ended up on a
+// list titled "orphan".
+
+type Confidence = "EXACT" | "PATTERN" | "UNRESOLVED";
+
+interface GradedEndpoint extends Endpoint {
+  confidence: Confidence;
+  caller?: string;
+}
+
+interface Segment {
+  dynamic: boolean;
+  text: string;
+}
+
+function toSegments(p: string): Segment[] {
+  return p
+    .split("/")
+    .filter((s) => s.length > 0)
+    .map((s) => {
+      // `:id` on the backend, `${...}` (possibly with surrounding text) on the
+      // frontend. A segment that merely CONTAINS an interpolation is dynamic —
+      // `v${n}` could be anything at runtime.
+      if (s.startsWith(":") || s.includes("${")) return { dynamic: true, text: s };
+      return { dynamic: false, text: s };
+    });
+}
+
+/** Every api.<verb>(`...`) path literal in the frontend, by verb. */
+function extractFrontendCalls(
+  frontendFiles: string[],
+  frontendCache: Map<string, string>,
+): Map<string, { path: string; file: string }[]> {
+  const byVerb = new Map<string, { path: string; file: string }[]>();
+  const re = /api\.(put|patch|delete)\s*\(\s*[`'"]([^`'"]+)[`'"]/gi;
+  for (const file of frontendFiles) {
+    const content = frontendCache.get(file) ?? readFile(file);
+    if (!frontendCache.has(file)) frontendCache.set(file, content);
+    let m: RegExpExecArray | null;
+    re.lastIndex = 0;
+    while ((m = re.exec(content)) !== null) {
+      const verb = m[1].toUpperCase();
+      const list = byVerb.get(verb) ?? [];
+      // Drop a querystring — it is not part of the route.
+      list.push({ path: m[2].split("?")[0], file });
+      byVerb.set(verb, list);
+    }
+  }
+  return byVerb;
+}
+
+/**
+ * Does this caller path's tail match the route, and how confidently?
+ * Returns null when it does not match at all.
+ */
+function matchRoute(routeSegs: Segment[], callerSegs: Segment[]): Confidence | null {
+  if (routeSegs.length === 0) return "PATTERN"; // Mount-root route; nothing to compare.
+  if (callerSegs.length < routeSegs.length) return null;
+
+  const tail = callerSegs.slice(callerSegs.length - routeSegs.length);
+  let sawPatternOnly = false;
+
+  for (let i = 0; i < routeSegs.length; i++) {
+    const r = routeSegs[i];
+    const c = tail[i];
+    if (r.dynamic) continue;            // route param accepts whatever the caller passes
+    if (c.dynamic) { sawPatternOnly = true; continue; } // caller may or may not produce it
+    if (r.text !== c.text) return null; // two literals that disagree — different route
+  }
+  return sawPatternOnly ? "PATTERN" : "EXACT";
+}
+
+/**
+ * The mount a route file is served under, guessed from its filename:
+ * carrierDrivers.ts → "carrier-drivers". Used to stop a PATTERN match from
+ * pairing a route with an unrelated caller.
+ *
+ * Without this, a route like `/:id/deactivate` (two segments, one dynamic)
+ * matches the tail of ANY two-segment caller path — the first run of v2 happily
+ * attributed carrier-driver deactivate to a customer-contacts call. A wrong
+ * caller is worse than no caller: it reads as evidence.
+ *
+ * Compared with a trailing "s" trimmed off both sides, since a file named
+ * routingGuide.ts is mounted at /routing-guides.
+ */
+function mountHint(file: string): string {
+  const base = path.basename(file, ".ts");
+  return base.replace(/([a-z0-9])([A-Z])/g, "$1-$2").toLowerCase();
+}
+
+function depluralize(s: string): string {
+  return s.endsWith("s") ? s.slice(0, -1) : s;
+}
+
+function callerLooksMounted(callPath: string, hint: string): boolean {
+  const wanted = depluralize(hint);
+  return toSegments(callPath).some((seg) => !seg.dynamic && depluralize(seg.text.toLowerCase()) === wanted);
+}
+
+function classifyEndpoint(
+  ep: Endpoint,
+  callsByVerb: Map<string, { path: string; file: string }[]>,
+): { confidence: Confidence; caller?: string } {
+  const routeSegs = toSegments(ep.path);
+  const candidates = callsByVerb.get(ep.verb) ?? [];
+  const hint = mountHint(ep.file);
+
+  let best: { confidence: Confidence; caller?: string } = { confidence: "UNRESOLVED" };
+  for (const call of candidates) {
+    const verdict = matchRoute(routeSegs, toSegments(call.path));
+    if (!verdict) continue;
+
+    // A route whose own literals all matched real literals is self-evidencing.
+    // Anything weaker has to also look like it is aimed at this route's mount.
+    if (verdict === "PATTERN" && !callerLooksMounted(call.path, hint)) continue;
+
+    const caller = `${relPath(call.file)} → ${call.path}`;
+    if (verdict === "EXACT") return { confidence: "EXACT", caller };
+    // Among PATTERN matches keep the most specific caller — the one with the
+    // most path segments. `/carrier-drivers/${id}/${action}` and
+    // `/carrier-drivers/${id}` both match `/:id/deactivate`, and only the first
+    // is the real caller; showing the shorter one sends the reader to the wrong
+    // line.
+    if (
+      best.confidence === "UNRESOLVED" ||
+      toSegments(call.path).length > toSegments((best.caller ?? "").split(" → ")[1] ?? "").length
+    ) {
+      best = { confidence: "PATTERN", caller };
+    }
+  }
+  return best;
+}
+
 function endpointHasCaller(ep: Endpoint, frontendFiles: string[], frontendCache: Map<string, string>): boolean {
   // Static parts of the route — drop :param tokens, split on /, keep non-empty.
   const staticParts = ep.path
@@ -275,7 +436,7 @@ function pad(n: number, w: number): string {
 
 function buildReport(
   endpoints: Endpoint[],
-  orphanEndpoints: Endpoint[],
+  orphanEndpoints: GradedEndpoint[],
   schemaFields: SchemaField[],
   orphanFields: Array<SchemaField & { refs: number }>,
   listRenders: ListRender[],
@@ -291,7 +452,10 @@ function buildReport(
   lines.push("");
   lines.push(`| Pass | Total scanned | Findings |`);
   lines.push(`|---|---:|---:|`);
-  lines.push(`| 1 — Orphan endpoints (PUT/PATCH/DELETE w/o caller) | ${endpoints.length} | **${orphanEndpoints.length}** |`);
+  const unresolved = orphanEndpoints.filter((e) => e.confidence === "UNRESOLVED");
+  const patterned = orphanEndpoints.filter((e) => e.confidence === "PATTERN");
+  lines.push(`| 1 — Orphan endpoints (UNRESOLVED only) | ${endpoints.length} | **${unresolved.length}** |`);
+  lines.push(`| 1b — Pattern-matched, likely live (verify) | — | ${patterned.length} |`);
   lines.push(`| 2 — Orphan schema fields (low frontend refs) | ${schemaFields.length} | **${orphanFields.length}** |`);
   lines.push(`| 4 — List rows (Delete-only, no Edit) | — | **${listRenders.length}** |`);
   lines.push("");
@@ -299,15 +463,21 @@ function buildReport(
   // ── Pass 1 detail
   lines.push(`## Pass 1 — Orphan endpoints`);
   lines.push("");
-  lines.push(`Backend mutating routes (\`PUT\` / \`PATCH\` / \`DELETE\`) where no frontend file appears to call them. False positives possible — heuristic checks for static parts of the URL + matching \`api.<verb>\` call in the same file. Manually verify before logging as a backlog item.`);
+  lines.push(`Backend mutating routes (\`PUT\` / \`PATCH\` / \`DELETE\`) graded by how well a frontend caller could be matched. Matching is segment-based (v2): the route is compared against the TAIL of each caller path, and either side may be dynamic.`);
+  lines.push("");
+  lines.push(`- **UNRESOLVED** — nothing matched. This is the only grade worth calling an orphan.`);
+  lines.push(`- **PATTERN** — matched, but a literal route segment lined up with a \`\${...}\` slot in the caller, so whether it is hit depends on a runtime value. Treat as live until shown otherwise.`);
+  lines.push(`- **EXACT** matches are not listed here — they have a caller.`);
   lines.push("");
   if (orphanEndpoints.length === 0) {
     lines.push(`✅ No orphan endpoints found.`);
   } else {
-    lines.push(`| Verb | Path | Source |`);
-    lines.push(`|---|---|---|`);
-    for (const ep of orphanEndpoints) {
-      lines.push(`| ${ep.verb} | \`${ep.path}\` | \`${relPath(ep.file)}:${ep.line}\` |`);
+    lines.push(`| Confidence | Verb | Path | Source | Possible caller |`);
+    lines.push(`|---|---|---|---|---|`);
+    for (const ep of [...unresolved, ...patterned]) {
+      lines.push(
+        `| ${ep.confidence} | ${ep.verb} | \`${ep.path}\` | \`${relPath(ep.file)}:${ep.line}\` | ${ep.caller ? "`" + ep.caller + "`" : "—"} |`,
+      );
     }
   }
   lines.push("");
@@ -367,8 +537,17 @@ function main() {
   console.error(`[audit] Indexing ${frontendFiles.length} frontend files...`);
 
   console.error("[audit] Pass 1 — checking endpoint callers...");
-  const orphanEndpoints = endpoints.filter((ep) => !endpointHasCaller(ep, frontendFiles, frontendCache));
-  console.error(`[audit] Pass 1: ${orphanEndpoints.length} orphan endpoint(s).`);
+  // v2 — grade every endpoint, then keep only the ones without an EXACT caller.
+  // PATTERN findings stay in the list but are reported separately: they are
+  // likely live and only need a human to confirm the runtime value.
+  const callsByVerb = extractFrontendCalls(frontendFiles, frontendCache);
+  const graded: GradedEndpoint[] = endpoints.map((ep) => ({ ...ep, ...classifyEndpoint(ep, callsByVerb) }));
+  const orphanEndpoints = graded.filter((e) => e.confidence !== "EXACT");
+  const unresolvedCount = orphanEndpoints.filter((e) => e.confidence === "UNRESOLVED").length;
+  const patternCount = orphanEndpoints.filter((e) => e.confidence === "PATTERN").length;
+  console.error(
+    `[audit] Pass 1: ${unresolvedCount} UNRESOLVED, ${patternCount} PATTERN (likely live), ${endpoints.length - orphanEndpoints.length} EXACT.`,
+  );
 
   console.error("[audit] Pass 2 — checking schema field references...");
   const schemaFields = extractSchemaFields().filter((f) => !COMMON_FIELDS.has(f.field));
@@ -395,7 +574,7 @@ function main() {
   const reportPath = path.join(REPORT_DIR, `audit-${stamp}.md`);
   fs.writeFileSync(reportPath, report);
   console.error(`\n[audit] Report written to: ${relPath(reportPath)}`);
-  console.error(`[audit] Total findings: ${orphanEndpoints.length + orphanFields.length + listRenders.length}`);
+  console.error(`[audit] Total findings: ${unresolvedCount + orphanFields.length + listRenders.length} (Pass 1 counts UNRESOLVED only; ${patternCount} PATTERN listed separately)`);
 
   // Echo to stdout for piping
   process.stdout.write(report);
