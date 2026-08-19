@@ -14398,7 +14398,16 @@
 //   policy function and nothing covered the wire; caught by the Phase 1e smoke.
 //   Same stripping silently dropped reason/cancellationReason, so every voided
 //   CarrierPay note read "no reason provided" whatever the AE typed.
-export const SRL_VERSION = "3.8.asr";
+// v3.8.ass — The cron fleet can be asked what it scheduled.
+//   There was no external oracle. cron_registry looks like one and is not: it
+//   holds 22 rows written by a different service for a different set of jobs,
+//   so a job scheduled in cron/index.ts is simply absent from it and absence
+//   proved nothing. node-cron has no name to read either — the name is an
+//   argument to withGuard inside the callback, which does not run until the job
+//   first fires. So the inventory is declared and logged once at boot, and a
+//   test parses the withGuard names out of the file to keep it honest in both
+//   directions.
+export const SRL_VERSION = "3.8.ass";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

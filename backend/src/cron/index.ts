@@ -20,6 +20,58 @@ import { log } from "../lib/logger";
  *   pinned to Eastern.
  */
 
+/**
+ * Every job this module schedules, by the name it guards under.
+ *
+ * Declared rather than derived because there is nothing to derive it from: the
+ * name is an argument to `withGuard` inside each job's callback, so it does not
+ * exist until that job first fires. Logged once at boot so the deployed
+ * process can be asked what it actually scheduled.
+ *
+ * Kept truthful by __tests__/unit/cron/scheduledJobs.test.ts, which parses the
+ * withGuard names out of this file and asserts the two agree in both
+ * directions. A job added without being listed here fails that test.
+ */
+export const SCHEDULED_JOB_NAMES = [
+  "ai-carrier-intelligence",
+  "ai-compliance-forecast",
+  "ai-customer-intelligence",
+  "ai-lane-optimizer",
+  "ai-morning-briefing",
+  "ai-rate-intelligence",
+  "ai-system-optimizer",
+  "authority-date-resolution",
+  "auto-reversal",
+  "chameleon-scan",
+  "check-call-reminders",
+  "compass-score-recalc",
+  "compliance-reminders",
+  "csa-basic-update",
+  "daily-cpp-cleanup",
+  "driver-training-expiry-sms",
+  "eld-validation",
+  "fmcsa-compliance",
+  "fraud-report-permanence",
+  "health-digest",
+  "identity-validation",
+  "invoice-aging",
+  "load-compliance-scan",
+  "monthly-invoice-reminders",
+  "monthly-qp-variance",
+  "news-fetch",
+  "ofac-rescan",
+  "overbooking-check",
+  "pod-reminders",
+  "reapply-eligibility-reminder",
+  "sequence-advance",
+  "tender-expiry-sweep",
+  "tin-verification",
+  "training-expiry-reminders",
+  "vin-batch-verify",
+  "weekly-fuel-index",
+  "weekly-report",
+] as const;
+
 // In-memory concurrency guard — prevents overlapping runs of the same job
 const runningJobs = new Set<string>();
 
@@ -865,5 +917,19 @@ export function initCronJobs() {
     seedNewsSources().catch((e: any) => log.error({ err: e }, "News source seed error"));
   } catch {}
 
-  log.info("[Cron] All scheduled jobs initialized (including AI learning cycles)");
+  // Boot inventory. Arc 3 — there was no way to confirm from outside the
+  // process that a given job is scheduled. `cron_registry` looked like the
+  // oracle and is not: it holds 22 rows written by cronRegistryService for a
+  // different set of jobs, so a job scheduled here is simply absent from it and
+  // absence proves nothing. node-cron has no name to read either — the name
+  // lives in the withGuard call, which does not run until the job first fires.
+  //
+  // So the inventory is declared, and a test keeps it honest by parsing the
+  // withGuard names out of this file and comparing
+  // (__tests__/unit/cron/scheduledJobs.test.ts). Adding a job without listing it
+  // fails there, which is what stops this from rotting into a stale comment.
+  log.info(
+    { count: SCHEDULED_JOB_NAMES.length, jobs: SCHEDULED_JOB_NAMES },
+    "[Cron] All scheduled jobs initialized — boot inventory",
+  );
 }
