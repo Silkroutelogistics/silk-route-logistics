@@ -32,7 +32,21 @@ const passwordChangeLimiter = rateLimit({ windowMs: 60 * 60 * 1000, max: 10, mes
 // /verify-otp passes its own gate.
 const otpSchema = z.object({ email: z.string().email(), code: z.string().length(8), expectedRole: z.enum(["AE", "SHIPPER"]).optional() });
 const resendOtpSchema = z.object({ email: z.string().email() });
-const resetPasswordSchema = z.object({ token: z.string().min(1), email: z.string().email(), newPassword: z.string().min(8) });
+// totpCode is REQUIRED here even though it is optional to send. authController
+// .resetPassword reads it (line ~650) and gates on it for any user with
+// totpEnabled: `if (!totpCode) return 400 requires2FA`. validateBody replaces
+// req.body with the Zod result and Zod strips undeclared keys, so before this
+// line existed totpCode was ALWAYS undefined — and a TOTP-enabled user could
+// never reset their password. The frontend was already correct
+// (ResetPasswordForm.tsx:62 resends with totpCode after the requires2FA reply);
+// it just handed the value to a schema that threw it away, so the retry got the
+// same requires2FA answer forever. Same class as the tonuFaultSide P0.
+const resetPasswordSchema = z.object({
+  token: z.string().min(1),
+  email: z.string().email(),
+  newPassword: z.string().min(8),
+  totpCode: z.string().optional(),
+});
 const changePasswordSchema = z.object({ currentPassword: z.string().min(1), newPassword: z.string().min(8) });
 const updateProfileSchema = z.object({
   firstName: z.string().min(1).optional(),

@@ -14431,7 +14431,15 @@
 //   every deploy for the window; a test pins the needs list so nobody "fixes"
 //   it back into the hang path. Three dashboard steps remain — see
 //   docs/internal/render-deploy-gate-setup.md.
-export const SRL_VERSION = "3.8.asv";
+// v3.8.asw — Sub-pattern 5 swept mechanically across all 71 validated routes.
+//   A field a handler reads but its schema does not declare is stripped by
+//   validateBody and is undefined at runtime, with no type error and no runtime
+//   error. Two live bugs found: totpCode meant a TOTP-enabled user could NEVER
+//   reset their password (the frontend resent the code, the backend answered
+//   requires2FA forever), and four insurance *Effective fields were read by the
+//   carrier-update writer but stripped before it saw them. Surface is now clean
+//   and CI keeps it that way.
+export const SRL_VERSION = "3.8.asw";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

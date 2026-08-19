@@ -85,6 +85,16 @@ const updateCarrierSchema = z.object({
   insuranceAgentEmail: z.string().nullable().optional(),
   insuranceAgentPhone: z.string().nullable().optional(),
   insuranceAgencyName: z.string().nullable().optional(),
+  // v3.8.aiw added the COI effective/expiry date PAIR to registration and to
+  // the updateCarrier writer, but not to this schema — so the writer read four
+  // fields validateBody had already stripped, and an effective date could be
+  // written at registration and never corrected afterwards. Quieter than the
+  // reset-password case because no AE surface calls PUT /carriers/:id with them
+  // today, but the handler reads them and the contract should say so.
+  autoLiabilityEffective: z.string().optional(),
+  cargoInsuranceEffective: z.string().optional(),
+  generalLiabilityEffective: z.string().optional(),
+  workersCompEffective: z.string().optional(),
 });
 
 // Public: carrier self-registration (supports multipart/form-data for file uploads)

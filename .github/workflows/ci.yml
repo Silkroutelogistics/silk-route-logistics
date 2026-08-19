@@ -71,6 +71,16 @@ jobs:
       - name: Nothing shipped is unreachable
         run: npx tsx scripts/verify-reachability.ts HEAD^
 
+      # A field a handler reads but its Zod schema does not declare is stripped
+      # by validateBody and is undefined at runtime — no type error, no runtime
+      # error. That shipped twice: tonuFaultSide made TONU impossible to record,
+      # and totpCode made password reset impossible for any TOTP-enabled user.
+      # Strict because the surface is clean as of Arc 4; a route can opt out with
+      # `// schema-drift-ok: <reason>` above it, which records the reason in the
+      # source rather than in someone's memory.
+      - name: Every field a handler reads is declared
+        run: npx tsx scripts/audit-schema-drift.ts --strict
+
       - run: npm audit --omit=dev --audit-level=high || true
 
   frontend:
