@@ -14407,7 +14407,15 @@
 //   first fires. So the inventory is declared and logged once at boot, and a
 //   test parses the withGuard names out of the file to keep it honest in both
 //   directions.
-export const SRL_VERSION = "3.8.ass";
+// v3.8.ast — Deploy verification stops being inference.
+//   /api/health reported version "1.0.0" from package.json, which never
+//   changes, so confirming a deploy meant correlating uptime against a push
+//   time — arithmetic that cannot tell "the deploy landed" from "the service
+//   restarted a minute later for its own reasons". Render injects
+//   RENDER_GIT_COMMIT with no key required, so the deployed commit is now read,
+//   alongside a bootedAt fixed at process start. Short SHA, because that is
+//   what gets compared against git rev-parse --short.
+export const SRL_VERSION = "3.8.ast";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

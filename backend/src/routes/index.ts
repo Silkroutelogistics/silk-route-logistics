@@ -1,3 +1,4 @@
+import { buildInfo } from "../lib/buildInfo";
 import { Router, Response } from "express";
 import { prisma } from "../config/database";
 import { authenticate, authorize, AuthRequest } from "../middleware/auth";
@@ -92,7 +93,14 @@ const router = Router();
 
 // --- Health & Monitoring (before any auth-guarded routes) ---
 router.get("/health", (_req, res) => {
-  res.json({ status: "ok", uptime: process.uptime(), timestamp: new Date().toISOString(), version: "1.0.0" });
+  // sha + bootedAt turn deploy verification from "correlate uptime against the
+  // push time and hope" into a value you read. See lib/buildInfo.
+  res.json({
+    status: "ok",
+    uptime: process.uptime(),
+    timestamp: new Date().toISOString(),
+    ...buildInfo(),
+  });
 });
 
 router.get("/health/detailed", authenticate, authorize("ADMIN") as any, async (req: any, res: Response) => {

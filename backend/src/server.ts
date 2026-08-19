@@ -27,6 +27,7 @@ import { auditMiddleware } from "./middleware/auditTrail";
 import { requestIdMiddleware } from "./middleware/requestId";
 import { startSchedulers } from "./services/schedulerService";
 import { initCronJobs } from "./cron";
+import { buildInfo } from "./lib/buildInfo";
 import { seedCronRegistry } from "./services/cronRegistryService";
 
 const app = express();
@@ -201,7 +202,7 @@ app.get("/health", async (_req, res) => {
     status: dbOk ? "ok" : "degraded",
     uptime: process.uptime(),
     timestamp: new Date().toISOString(),
-    version: "1.0.0",
+    ...buildInfo(),
     environment: env.NODE_ENV,
     database: { connected: dbOk, latencyMs: dbLatency },
     storage: { mode: isS3Active() ? "s3" : "local", bucket: isS3Active() ? env.S3_BUCKET_NAME : null },
