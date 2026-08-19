@@ -14422,7 +14422,16 @@
 //   caught me shipping work no caller could reach. BUILD_SHA is now module-local
 //   too, per the gate advisory that a one-in-module-use export is an export
 //   nobody asked for.
-export const SRL_VERSION = "3.8.asu";
+// v3.8.asv — Render deploys are gated on CI.
+//   Render auto-deploys on push and does not read GitHub Actions, so a red
+//   commit still reached production — demonstrated the same day: 67dd1c41
+//   deployed at 12:51:05, its CI failed at 12:51:17. A deploy job now waits on
+//   backend + frontend and POSTs the Render hook. NOT gated on E2E, because
+//   that job hung 6h on a browser download the same day and would have blocked
+//   every deploy for the window; a test pins the needs list so nobody "fixes"
+//   it back into the hang path. Three dashboard steps remain — see
+//   docs/internal/render-deploy-gate-setup.md.
+export const SRL_VERSION = "3.8.asv";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

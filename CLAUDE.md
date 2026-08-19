@@ -1329,6 +1329,16 @@ Each is a discrete sprint. Mix of operational, security, UX, and technical debt.
 
     **Counters.** Pass 1 26 → **17 UNRESOLVED** (+9 PATTERN, 73 EXACT). Pass 2 511 → **508** — the disputes UI now references `investigationNotes`, `proposedResolution` and `proposedAmount`. Pass 4 14 → 14. Backend suite 632 → **641**. Frontend tsc + next build clean throughout; the `urlSafety` DNS red is sandbox-only and passed in CI on both `2b76cc93` and `274249e8`.
 
+198. **CI-gated Render deploys (2026-08-19, v3.8.asv) — code-complete, pending three dashboard steps.** Render auto-deploys on push to `main` and does not read GitHub Actions, so a commit whose CI fails still reaches production. Demonstrated the same day: `67dd1c41` pushed 12:49:24, **deployed by Render 12:51:05**, CI **failed** on it 12:51:17. Harmless in that instance (a dead export caught by the reachability gate, no behaviour change, endpoint verified before and after) but the path is indifferent to whether the breakage is harmless.
+
+    **Shipped:** a `deploy` job in `.github/workflows/ci.yml` — `needs: [backend, frontend]`, push-to-`main` only (never a PR), POSTs the hook from `RENDER_DEPLOY_HOOK_URL`, **fails loudly if that secret is unset** rather than skipping, and treats a non-2xx from Render as failure. **Not gated on E2E, deliberately:** that job hung 6h02m on a Playwright browser download the same day, and gating deploys on it would have blocked every deploy for the window over an infrastructure hang unrelated to the code. [`backend/__tests__/unit/ci/deployGate.test.ts`](backend/__tests__/unit/ci/deployGate.test.ts) pins the needs list against `e2e` — verified by temporarily adding it and confirming only that assertion fails — so a later "make the gate stricter" change fails CI rather than quietly reintroducing the hang.
+
+    **PENDING — three dashboard steps, Wasi only, order matters:** (1) create the deploy hook in the Render dashboard, (2) add it as GitHub secret `RENDER_DEPLOY_HOOK_URL` and confirm the deploy job goes green, (3) **only then** turn Render auto-deploy off. Doing (3) before (2) leaves a window where nothing deploys at all. Full checklist with verification, rollback, and the break-glass path for deploying during an incident: [`docs/internal/render-deploy-gate-setup.md`](docs/internal/render-deploy-gate-setup.md).
+
+    **Interim state is safe and deliberate:** with auto-deploy still on and the secret absent, Render deploys exactly as it does today and the deploy job fails visibly on every push. Degraded loudly, not silently — the same principle the job itself enforces about the missing secret.
+
+    **Note for whoever migrates to a Blueprint:** `render.yaml` is documentation-only (§2.2) — the live service `srv-d64iqtffte5s73894h8g` was created by hand in the dashboard, so auto-deploy cannot be flipped from the repo. That is why step (3) is manual rather than a line in this commit.
+
 ---
 
 ## §14 LEGAL / COMPLIANCE STATUS

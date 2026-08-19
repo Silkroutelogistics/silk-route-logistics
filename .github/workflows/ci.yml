@@ -213,3 +213,51 @@ jobs:
           name: playwright-report
           path: playwright-report/
           retention-days: 7
+
+  # ─── Deploy ────────────────────────────────────────────────────────────
+  # Gates the Render deploy on CI instead of letting a push deploy straight to
+  # production regardless of result.
+  #
+  # The gap this closes, from the regression log: on 2026-08-19 commit 67dd1c41
+  # was deployed by Render at 12:51:05 and its CI failed at 12:51:17. Render
+  # auto-deploys on push and does not read GitHub Actions, so a red commit
+  # reached production. That one was harmless (a dead export, no behaviour
+  # change) but the same path ships a genuinely broken commit just as happily.
+  #
+  # needs is DELIBERATELY [backend, frontend] and NOT e2e. On the same day the
+  # E2E job hung for 6h02m on a Playwright browser download and was killed by
+  # GitHub's job timeout; gating deploys on it would have blocked every deploy
+  # for that window over an infrastructure hang unrelated to the code. Backend
+  # and frontend are the jobs that actually exercise what is being deployed.
+  # __tests__/unit/ci/deployGate.test.ts asserts this, so a later "fix" that
+  # adds e2e to the needs list fails rather than quietly reintroducing the hang.
+  deploy:
+    name: Deploy to Render
+    runs-on: ubuntu-latest
+    needs: [backend, frontend]
+    # Pushes to main only. A pull_request run must never deploy.
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    steps:
+      - name: Require the deploy hook secret
+        env:
+          HOOK: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+        run: |
+          if [ -z "$HOOK" ]; then
+            echo "::error::RENDER_DEPLOY_HOOK_URL is not set. This job fails loudly rather than skipping, so a missing secret can never look like a successful deploy. Create the hook in the Render dashboard and add it as a repo secret — see docs/internal/render-deploy-gate-setup.md."
+            exit 1
+          fi
+          echo "Deploy hook secret present."
+
+      - name: Trigger Render deploy
+        env:
+          HOOK: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+        run: |
+          code=$(curl -sS -o /tmp/render-resp.txt -w "%{http_code}" -X POST "$HOOK")
+          echo "Render responded HTTP $code"
+          cat /tmp/render-resp.txt || true
+          echo
+          if [ "$code" -lt 200 ] || [ "$code" -ge 300 ]; then
+            echo "::error::Render deploy hook returned HTTP $code — deploy NOT triggered."
+            exit 1
+          fi
+          echo "Render deploy triggered for ${GITHUB_SHA}."

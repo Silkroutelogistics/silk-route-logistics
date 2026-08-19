@@ -13,6 +13,28 @@ so it's searchable and never lost.
 
 ---
 
+## Open → code-complete — 2026-08-19 (v3.8.asv — Render deployed commits whose CI was red)
+
+**The gap.** Render auto-deploys on every push to `main` and does not read GitHub Actions, so a commit that fails CI still reaches production. Nothing in the pipeline connected the two.
+
+**Case study, same day, exact timeline:**
+
+| Time (UTC) | Event |
+|---|---|
+| 12:49:24 | `67dd1c41` pushed |
+| 12:51:05 | Render finished deploying it to production (`/api/health` served `sha: 67dd1c41`) |
+| 12:51:17 | CI **failed** on that commit — the reachability gate caught a dead export |
+
+Production ran a red commit twelve seconds before the red was even knowable. That one was harmless (an unused export, no behaviour change, verified by hitting the endpoint before and after) but nothing about the path depended on it being harmless.
+
+**Shipped in `v3.8.asv`:** a `deploy` job in `.github/workflows/ci.yml` that waits on backend + frontend, runs only on a push to `main`, POSTs the Render deploy hook from `RENDER_DEPLOY_HOOK_URL`, and **fails loudly when that secret is unset** rather than skipping — a job that silently no-ops on a missing secret reports success while deploying nothing, which is worse than no gate at all.
+
+**Deliberately not gated on E2E.** On the same day E2E hung 6h02m on a Playwright browser download and was killed by GitHub's job timeout; gating deploys on it would have blocked every deploy for that window over an infrastructure hang unrelated to the code. [`deployGate.test.ts`](../backend/__tests__/unit/ci/deployGate.test.ts) asserts the needs list excludes `e2e`, verified by temporarily adding it and watching only that assertion fail — so a later "make the gate stricter" change fails CI instead of quietly reintroducing the hang.
+
+**Still open — three dashboard steps only Wasi can do,** in this order (order matters: doing 3 before 2 leaves a window where nothing deploys): create the Render deploy hook → add it as the GitHub secret → turn Render auto-deploy off. Full checklist with verification and rollback: [`docs/internal/render-deploy-gate-setup.md`](internal/render-deploy-gate-setup.md).
+
+**Until those are done, behaviour is unchanged and degraded loudly rather than silently:** auto-deploy still fires as today, and the deploy job fails visibly on every push because the secret is absent. That is the intended interim state, not a regression.
+
 ## Resolved — 2026-08-19 (Arc 3 follow-up: v3.8.asr + v3.8.ass — P0 TONU block, cron oracle)
 
 - **P0 — TONU was impossible to record (Fixed in `4ab1065f` / v3.8.asr).** v3.8.aso added a 422 gate requiring `tonuFaultSide` on a TONU flip and read it off `req.body`. `validateBody` replaces `req.body` with the Zod result (`middleware/validate.ts:21`), Zod strips unknown keys, and `updateLoadStatusSchema` declared only `status` — so the field was **always undefined** and the gate rejected *every* TONU, including ones sending a valid fault side. No type error, no runtime error; the value vanished between the wire and the handler. Shipped and deployed before it was caught.
