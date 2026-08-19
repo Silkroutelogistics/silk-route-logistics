@@ -99,11 +99,11 @@ router.post("/payments/bulk-process", authorize("ADMIN", "CEO"), bulkProcessPaym
 router.get("/disputes", authorize("ADMIN", "CEO", "ACCOUNTING", "BROKER"), getDisputes);
 router.get("/disputes/:id", authorize("ADMIN", "CEO", "ACCOUNTING", "BROKER"), getDisputeById);
 router.post("/disputes", authorize("ADMIN", "CEO", "ACCOUNTING", "BROKER"), fileDispute);
-// audit-pass1: MISSING-UI — dispute workflow backend built, /accounting/disputes never wired to it.
+// audit-pass1: RESOLVED (Arc 3 Phase 3) — wired from /accounting/disputes (Log Investigation).
 router.put("/disputes/:id/investigate", authorize("ADMIN", "CEO", "ACCOUNTING", "BROKER"), investigateDispute);
-// audit-pass1: MISSING-UI — dispute workflow backend built, no frontend caller.
+// audit-pass1: RESOLVED (Arc 3 Phase 3) — wired from /accounting/disputes (Propose Resolution).
 router.put("/disputes/:id/propose", authorize("ADMIN", "CEO", "ACCOUNTING", "BROKER"), proposeDisputeResolution);
-// audit-pass1: MISSING-UI — dispute workflow backend built, no frontend caller.
+// audit-pass1: RESOLVED (Arc 3 Phase 3) — wired from /accounting/disputes (Approve / Deny; ADMIN+CEO only). The page previously POSTed here, and only a PUT exists, so every resolve click 404d.
 router.put("/disputes/:id/resolve", authorize("ADMIN", "CEO"), resolveDispute);
 
 // --- Shipper Credit ---

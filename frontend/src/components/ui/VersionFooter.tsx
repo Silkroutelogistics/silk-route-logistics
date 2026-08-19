@@ -14380,7 +14380,16 @@
 //   reversal voids CarrierPay and is fire-and-forget, but it never touches
 //   LoadAccessorial. Idempotent, so re-flipping to correct a fault side cannot
 //   bill twice for one wasted truck.
-export const SRL_VERSION = "3.8.asp";
+// v3.8.asq — The dispute Resolve button had never worked.
+//   It POSTed to /accounting/disputes/:id/resolve and only a PUT exists, so
+//   every click 404d; and it sent { resolution } where the controller reads
+//   { resolutionNotes }, so even with the right verb the notes were dropped.
+//   Verb and body now match. Investigate and Propose — built in the backend and
+//   never reachable — are wired too, so the INVESTIGATING state the controller
+//   enforces is finally reachable from the console. Approve and Deny are
+//   separate buttons because the controller reads `approved !== false`: one
+//   button could only ever approve, and denying was unreachable.
+export const SRL_VERSION = "3.8.asq";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

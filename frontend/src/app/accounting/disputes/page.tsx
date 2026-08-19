@@ -54,6 +54,9 @@ export default function DisputesPage() {
   const [showCreate, setShowCreate] = useState(false);
   const [newDispute, setNewDispute] = useState({ loadRef: "", type: "RATE_DISCREPANCY", amount: "", description: "" });
   const [resolutionNotes, setResolutionNotes] = useState("");
+  const [investigationNotes, setInvestigationNotes] = useState("");
+  const [proposedResolution, setProposedResolution] = useState("");
+  const [proposedAmount, setProposedAmount] = useState("");
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
@@ -74,11 +77,37 @@ export default function DisputesPage() {
     onError: () => toast("Operation failed", "error"),
   });
 
+  // Arc 3 Phase 3 — this button was broken, not merely unpolished. It POSTed to
+  // /disputes/:id/resolve and the only route is a PUT, so every click 404'd; and
+  // it sent { resolution } where the controller reads { resolutionNotes }, so
+  // even with the right verb the notes would have been dropped on the floor.
+  // Verb and body now match accountingController.resolveDispute. `approved`
+  // distinguishes approving the dispute from denying it — the controller reads
+  // `approved !== false`, so it must be sent explicitly to deny.
   const resolveMutation = useMutation({
-    mutationFn: ({ id, resolution }: { id: string; resolution: string }) =>
-      api.post(`/accounting/disputes/${id}/resolve`, { resolution }),
+    mutationFn: ({ id, resolutionNotes: notes, approved }: { id: string; resolutionNotes: string; approved: boolean }) =>
+      api.put(`/accounting/disputes/${id}/resolve`, { resolutionNotes: notes, approved }),
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["disputes"] }); setSelected(null); setResolutionNotes(""); },
-    onError: () => toast("Operation failed", "error"),
+    onError: (e: any) => toast(e?.response?.data?.error || "Operation failed", "error"),
+  });
+
+  // The other two thirds of the dispute workflow. Both controllers have existed
+  // since the disputes backend was built and neither had ever been reachable
+  // (orphan-endpoint-triage.md, MISSING-UI). Without them a dispute could only
+  // jump straight from OPEN to resolved, so the INVESTIGATING state the
+  // controller enforces was unreachable from the console.
+  const investigateMutation = useMutation({
+    mutationFn: ({ id, investigationNotes }: { id: string; investigationNotes: string }) =>
+      api.put(`/accounting/disputes/${id}/investigate`, { investigationNotes }),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["disputes"] }); setInvestigationNotes(""); },
+    onError: (e: any) => toast(e?.response?.data?.error || "Operation failed", "error"),
+  });
+
+  const proposeMutation = useMutation({
+    mutationFn: ({ id, proposedResolution, proposedAmount }: { id: string; proposedResolution: string; proposedAmount?: number }) =>
+      api.put(`/accounting/disputes/${id}/propose`, { proposedResolution, proposedAmount }),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["disputes"] }); setProposedResolution(""); setProposedAmount(""); },
+    onError: (e: any) => toast(e?.response?.data?.error || "Operation failed", "error"),
   });
 
   return (
@@ -230,25 +259,105 @@ export default function DisputesPage() {
                   <p className="text-sm text-slate-300">{selected.resolutionNotes}</p>
                 </div>
               )}
-              {selected.status === "OPEN" || selected.status === "UNDER_REVIEW" ? (
-                <div>
-                  <label className="text-xs text-slate-400 mb-1 block">Resolution Notes</label>
-                  <textarea
-                    value={resolutionNotes}
-                    onChange={(e) => setResolutionNotes(e.target.value)}
-                    rows={3}
-                    placeholder="Enter resolution notes..."
-                    className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white focus:outline-none resize-none mb-3 placeholder:text-slate-500"
-                  />
-                  <button
-                    onClick={() => {
-                      if (resolutionNotes.trim()) resolveMutation.mutate({ id: selected.id, resolution: resolutionNotes.trim() });
-                    }}
-                    disabled={!resolutionNotes.trim() || resolveMutation.isPending}
-                    className="w-full py-2 bg-green-500/20 text-green-400 rounded-lg text-sm font-medium hover:bg-green-500/30 transition disabled:opacity-50"
-                  >
-                    {resolveMutation.isPending ? "Resolving..." : "Resolve Dispute"}
-                  </button>
+              {!["CLOSED", "APPROVED", "DENIED"].includes(selected.status) ? (
+                <div className="space-y-4">
+                  {/* Step 1 — investigate. The controller only accepts this from
+                      OPEN or INVESTIGATING, so it is hidden once the dispute has
+                      moved on rather than offered and then rejected. */}
+                  {["OPEN", "INVESTIGATING"].includes(selected.status) && (
+                    <div>
+                      <label className="text-xs text-slate-400 mb-1 block">Investigation Notes</label>
+                      <textarea
+                        value={investigationNotes}
+                        onChange={(e) => setInvestigationNotes(e.target.value)}
+                        rows={2}
+                        placeholder="What you found looking into this..."
+                        className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white focus:outline-none resize-none mb-2 placeholder:text-slate-500"
+                      />
+                      <button
+                        onClick={() => {
+                          if (investigationNotes.trim())
+                            investigateMutation.mutate({ id: selected.id, investigationNotes: investigationNotes.trim() });
+                        }}
+                        disabled={!investigationNotes.trim() || investigateMutation.isPending}
+                        className="w-full py-2 bg-blue-500/20 text-blue-400 rounded-lg text-sm font-medium hover:bg-blue-500/30 transition disabled:opacity-50"
+                      >
+                        {investigateMutation.isPending ? "Saving..." : "Log Investigation"}
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Step 2 — propose. Amount is optional; the controller falls
+                      back to it at resolve time when no resolutionAmount is given. */}
+                  <div>
+                    <label className="text-xs text-slate-400 mb-1 block">Proposed Resolution</label>
+                    <textarea
+                      value={proposedResolution}
+                      onChange={(e) => setProposedResolution(e.target.value)}
+                      rows={2}
+                      placeholder="What you are offering to settle this..."
+                      className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white focus:outline-none resize-none mb-2 placeholder:text-slate-500"
+                    />
+                    <input
+                      type="number"
+                      value={proposedAmount}
+                      onChange={(e) => setProposedAmount(e.target.value)}
+                      placeholder="Proposed amount (optional)"
+                      className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white focus:outline-none mb-2 placeholder:text-slate-500"
+                    />
+                    <button
+                      onClick={() => {
+                        if (!proposedResolution.trim()) return;
+                        const amt = proposedAmount.trim() === "" ? undefined : Number(proposedAmount);
+                        proposeMutation.mutate({
+                          id: selected.id,
+                          proposedResolution: proposedResolution.trim(),
+                          proposedAmount: Number.isFinite(amt as number) ? (amt as number) : undefined,
+                        });
+                      }}
+                      disabled={!proposedResolution.trim() || proposeMutation.isPending}
+                      className="w-full py-2 bg-[#C8963E]/20 text-[#C8963E] rounded-lg text-sm font-medium hover:bg-[#C8963E]/30 transition disabled:opacity-50"
+                    >
+                      {proposeMutation.isPending ? "Saving..." : "Propose Resolution"}
+                    </button>
+                  </div>
+
+                  {/* Step 3 — resolve. Approve and deny are separate buttons
+                      because the controller reads `approved !== false`: a single
+                      button could only ever approve, and denying a dispute would
+                      have been unreachable. ADMIN/CEO only server-side. */}
+                  <div>
+                    <label className="text-xs text-slate-400 mb-1 block">Resolution Notes</label>
+                    <textarea
+                      value={resolutionNotes}
+                      onChange={(e) => setResolutionNotes(e.target.value)}
+                      rows={3}
+                      placeholder="Enter resolution notes..."
+                      className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white focus:outline-none resize-none mb-3 placeholder:text-slate-500"
+                    />
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => {
+                          if (resolutionNotes.trim())
+                            resolveMutation.mutate({ id: selected.id, resolutionNotes: resolutionNotes.trim(), approved: true });
+                        }}
+                        disabled={!resolutionNotes.trim() || resolveMutation.isPending}
+                        className="flex-1 py-2 bg-green-500/20 text-green-400 rounded-lg text-sm font-medium hover:bg-green-500/30 transition disabled:opacity-50"
+                      >
+                        {resolveMutation.isPending ? "Resolving..." : "Approve"}
+                      </button>
+                      <button
+                        onClick={() => {
+                          if (resolutionNotes.trim())
+                            resolveMutation.mutate({ id: selected.id, resolutionNotes: resolutionNotes.trim(), approved: false });
+                        }}
+                        disabled={!resolutionNotes.trim() || resolveMutation.isPending}
+                        className="flex-1 py-2 bg-red-500/20 text-red-400 rounded-lg text-sm font-medium hover:bg-red-500/30 transition disabled:opacity-50"
+                      >
+                        Deny
+                      </button>
+                    </div>
+                  </div>
                 </div>
               ) : null}
             </div>
