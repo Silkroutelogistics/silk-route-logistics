@@ -14495,7 +14495,17 @@
 //   maintaining would change which settlements can be paid. Absent flags
 //   read 'not recorded', never a red cross, since every historical row is
 //   false and painting those delinquent would be a lie about the past.
-export const SRL_VERSION = "3.8.atb";
+// v3.8.atc — The carrier finally gets paid for a truck they held.
+//   recordTonuObligation wrote the TONU to the accessorial ledger, where
+//   both money readers look. On the carrier side that reader opens with
+//   `if (!pay) return`, and a CarrierPay is created on DELIVERY — which a
+//   TONU load never reaches. The obligation was recorded correctly and had
+//   nothing to attach to, permanently. Raised at the END of the reversal,
+//   never at the flip site: that reversal voids every non-PAID settlement
+//   on the load and runs fire-and-forget, so a payable created beside it
+//   would lose the race intermittently. No Quick Pay fee — the election is
+//   per load on the rate confirmation and a load that never ran has none.
+export const SRL_VERSION = "3.8.atc";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

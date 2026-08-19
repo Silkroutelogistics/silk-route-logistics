@@ -1420,6 +1420,21 @@ Each is a discrete sprint. Mix of operational, security, UX, and technical debt.
 
     **When it fires, the order matters:** start writing the columns (nothing does today), let them populate for a period long enough that blocking on them is fair to carriers already mid-cycle, and only then gate. Gating first would block every settlement on day one.
 
+
+205. **Carrier accessorial leg — the symmetry premise was wrong, and the TONU payable was the real gap (`v3.8.atc`).**
+
+    **What the trace found.** The customer leg reaches exactly-once by MARKING rows: `shipperInvoiceId` is stamped when a line is invoiced, `unbilledCustomerAccessorials` selects on it being null, voiding clears it. The carrier leg reaches exactly-once by RECONCILING TOTALS: `syncCarrierPayAccessorials` compares the ledger total against `CarrierPay.accessorialsTotal` and acts on the delta — re-pricing in place while the settlement is open, escalating a separate payment through `ApprovalQueue` once it is committed.
+
+    **So the carrier leg is not missing exactly-once. It has a different and complete mechanism**, and mirroring the customer's row-marking onto it would create a SECOND source of truth for "has this been paid" — the dual-status class this codebase has repeatedly had to unpick (dual suspension columns, dual onboarding status). `carrierInvoiceId` is therefore a deletion, not a gap: `git log -S "carrierInvoiceId" --all -- backend/src` returns **no commits**, so it has never been referenced in application code at any point in the repository's history. Added to the batched deletion set at [`prisma/_pending_migrations/`](backend/prisma/_pending_migrations/) with that corroboration in the header. **Not applied.**
+
+    **The real gap, and what shipped.** `recordTonuObligation` (Arc 3) writes the TONU to the accessorial ledger correctly. On the carrier side the reader of that ledger is `syncCarrierPayAccessorials`, whose first line is `if (!pay) return`, and a `CarrierPay` is created by `createCarrierPayOnDelivery` firing from `onLoadDelivered`. **A TONU load never delivers.** The obligation had nothing to attach to, permanently. `raiseTonuCarrierPayable` creates it.
+
+    **Ordering was the whole risk.** `onLoadCancelledOrTONU` voids every non-PAID `CarrierPay` on the load, and `loadController` invokes it fire-and-forget. A payable raised at the flip site would race that void loop and lose, intermittently — the carrier's TONU money deleted by the same event that created it. It is raised at the **end of the reversal itself**, so the order is a property of the code rather than of timing, and a test asserts both that the call sits after the void loop and that `loadController` does not call it directly.
+
+    **Deliberate defaults, and the question held.** No Quick Pay fee: the election is per load on the rate confirmation, a load that never ran has none, and §8 makes standard tier pay free — charging here would take money off a carrier for a truck that never moved. The clock starts at the TONU rather than on documentation, because the deficiency `createCarrierPayOnDelivery` waits on is a POD and a truck that never loaded will never produce one. The amount is read back from the ledger row, never a literal, so it cannot disagree with what the customer was billed. **Banked question:** whether Quick Pay should ever apply to a TONU payment is a product decision; the default taken is the one that pays the carrier more.
+
+    **Still not built: the customer-side TONU charge.** `resolveTonuBilling` returns `billCustomer` and nothing bills it. A TONU load has no base invoice — `autoGenerateInvoice` prices a delivered load, and calling it here would bill the full linehaul for a truck that never moved. The seam is a TONU-only invoice path, and it is a product decision about what that document says, not a wiring gap.
+
 ---
 
 ## §14 LEGAL / COMPLIANCE STATUS

@@ -28,3 +28,34 @@
 ALTER TABLE "public"."carrier_profiles" DROP COLUMN IF EXISTS "w9Url";
 ALTER TABLE "public"."carrier_profiles" DROP COLUMN IF EXISTS "coiUrl";
 ALTER TABLE "public"."carrier_profiles" DROP COLUMN IF EXISTS "authorityLetterUrl";
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- Added 2026-08-19 (Arc 6 Phase 4/5): LoadAccessorial.carrierInvoiceId.
+--
+-- Its sibling shipperInvoiceId is load-bearing — invoiceService calls it "the
+-- not-yet-billed marker", unbilledCustomerAccessorials selects on it being
+-- null, and voiding an invoice clears it. carrierInvoiceId has no reader and no
+-- writer.
+--
+-- CORROBORATION, which is why this is a deletion rather than a gap to fill:
+--
+--   git log -S "carrierInvoiceId" --all -- backend/src   ->   NO COMMITS.
+--
+-- The column has never been referenced in application code at any point in the
+-- repository's history. It was introduced by a Track & Trace commit (49d0da79)
+-- as one half of a designed pair and the half was never built.
+--
+-- It is not needed. The carrier leg reaches exactly-once a DIFFERENT way, and
+-- that way is complete: syncCarrierPayAccessorials compares the ledger total
+-- against CarrierPay.accessorialsTotal and acts on the delta — re-pricing in
+-- place while the settlement is open, escalating a separate payment once it is
+-- committed. That is reconciliation by total, not by row marking. Adding a
+-- per-row marker would introduce a SECOND source of truth for "has this been
+-- paid", which is the dual-status class this codebase has repeatedly had to
+-- unpick (dual suspension columns, dual onboarding status).
+--
+-- Same gate as above: no code reference does not prove no stored value.
+--
+--   SELECT count(*) FROM load_accessorials WHERE "carrierInvoiceId" IS NOT NULL;
+
+ALTER TABLE "public"."load_accessorials" DROP COLUMN IF EXISTS "carrierInvoiceId";

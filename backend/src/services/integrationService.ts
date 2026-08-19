@@ -8,6 +8,7 @@ import { checkMilestoneAdvancement, applyMilestoneRewards, getEffectiveTier, get
 import { calcOnTimePerformance } from "../lib/onTimePerformance";
 import { calcDocTimeliness } from "../lib/docTimeliness";
 import { log } from "../lib/logger";
+import { resolveTonuBilling } from "../lib/tonuPolicy";
 import {
   standardNetDays,
   quickPayAutoApprovePerLoad,
@@ -1529,6 +1530,123 @@ export async function enforceShipperCredit(customerId: string): Promise<{ allowe
 // LOOP 6 — Load Cancellation / TONU cleanup
 // ──────────────────────────────────────────────────
 
+/**
+ * Raise the carrier's TONU payable.
+ *
+ * THE GAP THIS CLOSES. `recordTonuObligation` (Arc 3) writes the TONU to the
+ * accessorial ledger, which is the one place both money readers already look —
+ * and on the carrier side that reader is `syncCarrierPayAccessorials`, whose
+ * first line is `if (!pay) return`. A CarrierPay is created by
+ * `createCarrierPayOnDelivery`, which fires from `onLoadDelivered`. A TONU
+ * load never delivers. So the obligation was recorded correctly and had nothing
+ * to attach to, permanently.
+ *
+ * ORDERING IS THE WHOLE RISK, so this is called from the END of
+ * `onLoadCancelledOrTONU` rather than from the flip site. That function voids
+ * every non-PAID CarrierPay on the load, and it is invoked fire-and-forget from
+ * loadController. A payable raised at the flip site would race that void loop
+ * and lose, silently, some of the time. Raised after it, in the same function,
+ * the order cannot be raced at all. Pinned by test.
+ *
+ * NO QUICK PAY FEE, deliberately. Quick Pay is opt-in per load and is frozen
+ * onto the load by the rate confirmation; a TONU has no elected fee for the TONU
+ * amount, and §8 makes standard tier pay free and always available. Charging a
+ * fee here would take money off a carrier for a load that never moved, on an
+ * election they never made. Whether Quick Pay should EVER apply to a TONU is a
+ * product question, banked — the safe default is the one that pays the carrier
+ * more.
+ *
+ * THE AMOUNT COMES FROM THE LEDGER ROW, never from a literal. `recordTonuObligation`
+ * resolved it from `accessorialPolicy`, and reading it back keeps one source of
+ * truth for what a TONU is worth.
+ */
+export async function raiseTonuCarrierPayable(loadId: string): Promise<{ created: boolean; reason?: string }> {
+  const load = await prisma.load.findUnique({
+    where: { id: loadId },
+    select: {
+      id: true, status: true, referenceNumber: true, carrierId: true, tonuFaultSide: true,
+      carrier: { select: { carrierProfile: { select: { id: true, cppTier: true, tier: true } } } },
+    },
+  });
+
+  if (!load) return { created: false, reason: "load not found" };
+  if (load.status !== "TONU") return { created: false, reason: "not a TONU" };
+  if (!load.carrierId || !load.carrier?.carrierProfile) return { created: false, reason: "no carrier on load" };
+
+  // Whose failure it was decides whether the carrier is paid at all. CARRIER
+  // fault pays nobody, and the existing reversal is the whole correct outcome.
+  const billing = resolveTonuBilling(load.tonuFaultSide as any);
+  if (!billing.payCarrier) return { created: false, reason: `fault side ${load.tonuFaultSide} does not pay the carrier` };
+
+  // The ledger row written at the flip is the source of the figure.
+  const tonuRow = await prisma.loadAccessorial.findFirst({
+    where: { loadId, type: "TONU", status: { not: "REJECTED" } },
+    orderBy: { createdAt: "desc" },
+    select: { id: true, amount: true },
+  });
+  if (!tonuRow) return { created: false, reason: "no TONU ledger row — recordTonuObligation has not run" };
+
+  const amount = round2(Number(tonuRow.amount) || 0);
+  if (amount <= 0) return { created: false, reason: "TONU amount is zero" };
+
+  // Idempotent. A re-flip, a retry, or a second call must not raise a second
+  // payable. Keyed on a live (non-VOID) TONU settlement for this load, so the
+  // void loop above having voided an OLD delivery settlement does not block the
+  // TONU one, and a TONU payable already raised does.
+  const existing = await prisma.carrierPay.findFirst({
+    where: { loadId, status: { not: "VOID" }, paymentTier: "STANDARD", notes: { contains: "TONU" } },
+    select: { id: true },
+  });
+  if (existing) return { created: false, reason: "TONU payable already raised" };
+
+  const profile = load.carrier.carrierProfile;
+  const cppTier = profile.cppTier || profile.tier || null;
+
+  const todayStr = new Date().toISOString().slice(0, 10).replace(/-/g, "");
+  const existingCount = await prisma.carrierPay.count({
+    where: { paymentNumber: { startsWith: `CP-${todayStr}` } },
+  });
+  const paymentNumber = `CP-${todayStr}-${String(existingCount + 1).padStart(4, "0")}`;
+
+  // The clock runs from the TONU itself. There is no documentation gate here:
+  // the deficiency createCarrierPayOnDelivery waits on is a POD, and a truck
+  // that never loaded will never produce one. Leaving dueDate null would mean
+  // the clock never starts, which is the wrong failure on money already owed.
+  const dueDate = quickPayDueDate("STANDARD", cppTier, new Date());
+
+  const pay = await prisma.carrierPay.create({
+    data: {
+      paymentNumber,
+      carrierId: load.carrierId,
+      loadId: load.id,
+      paymentTier: "STANDARD" as any,
+      lineHaul: 0,
+      fuelSurcharge: 0,
+      accessorialsTotal: amount,
+      amount,
+      grossAmount: amount,
+      quickPayFeePercent: null,
+      quickPayFeeAmount: null,
+      quickPayDiscount: null,
+      netAmount: amount,
+      status: "PREPARED",
+      dueDate,
+      preparedAt: new Date(),
+      notes:
+        `TONU on load ${load.referenceNumber} — truck ordered and not used, fault side ${load.tonuFaultSide}. ` +
+        `${amount.toFixed(2)} payable per the ratified flat TONU. ` +
+        `Standard ${standardNetDays(cppTier)}-day tier terms, no Quick Pay fee: Quick Pay is elected per load on the rate confirmation and no election exists for a load that never ran. ` +
+        `Clock starts at the TONU, not on documentation — there is no POD for a truck that never loaded.`,
+    },
+  });
+
+  log.info(
+    { loadId, paymentNumber: pay.paymentNumber, amount, faultSide: load.tonuFaultSide },
+    "[TONU] Carrier payable raised",
+  );
+  return { created: true };
+}
+
 export async function onLoadCancelledOrTONU(loadId: string, reason?: string) {
   const load = await prisma.load.findUnique({
     where: { id: loadId },
@@ -1628,6 +1746,23 @@ export async function onLoadCancelledOrTONU(loadId: string, reason?: string) {
     where: { loadId, status: { in: ["PENDING", "SENT"] } },
     data: { status: "CANCELLED" },
   });
+
+  // 6. Raise the carrier's TONU payable — AFTER the void loop above, never
+  //    before it.
+  //
+  //    Step 3 voids every non-PAID CarrierPay on this load. A payable raised at
+  //    the flip site in loadController would be racing that loop, because
+  //    onLoadCancelledOrTONU is called fire-and-forget there — and losing the
+  //    race means the carrier's TONU money is voided by the same event that
+  //    created it, intermittently. Raising it here makes the order a property of
+  //    the code rather than of timing.
+  //
+  //    Non-blocking and last: a failure here must not undo a reversal that has
+  //    already succeeded. The obligation stays on the ledger either way, so a
+  //    miss is recoverable by calling this again.
+  await raiseTonuCarrierPayable(loadId).catch((e) =>
+    log.error({ err: e, loadId }, "[TONU] Failed to raise carrier payable (non-fatal — ledger row stands)"),
+  );
 
   log.info(`[Integration] Load ${load.referenceNumber || loadId} ${load.status === "TONU" ? "TONU" : "cancelled"} → credit reversed, AP voided, fund reversed, tenders cancelled`);
 }
