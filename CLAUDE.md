@@ -1386,6 +1386,25 @@ Each is a discrete sprint. Mix of operational, security, UX, and technical debt.
 
     **Resume state for enforcement.** Read the `expected:false` lines first: each is either a real bug or a transition nobody documented. Then decide the auto-pilot and fall-off cases — likely a distinct `AUTO`/`SYSTEM` actor rather than widening the AE map, so a human AE does not inherit skip-ahead. Only then gate. Carrier-side ([`carrierLoads.ts`](backend/src/routes/carrierLoads.ts)) and `ediService` already enforce correctly and are the pattern to copy.
 
+
+202. **Pass 2 orphan-field triage — the tool was fixed before its output was trusted (`v3.8.asz`).**
+
+    **The tool was crying wolf.** Pass 2 of [`audit-completeness.ts`](backend/scripts/audit-completeness.ts) counted references in `frontend/src` **only**, so every backend-only column — audit stamps, cron bookkeeping, denormalised mirrors — surfaced as an "orphan" beside genuinely dead ones: **506 findings, 437 of them noise**. It also contradicted the triage note in its own file header, which says to grep `backend/src` **and** `frontend/src` before bucketing anything. Now both, tagged `UNREFERENCED` (69) vs `BACKEND_ONLY` (437). The latter is reported rather than hidden, because "used but never surfaced" is occasionally a missing screen.
+
+    **Triage: [`docs/audits/orphan-field-triage.md`](docs/audits/orphan-field-triage.md).** Every cited finding was verified independently of the scanner (`grep -rn` over both trees, 0 code refs against 1 schema declaration); it was right in every case. The findings that matter:
+    - **`CarrierAgreement` cannot be terminated.** Only `SIGNED` is ever written or queried, so a signed BCA or Quick Pay agreement is signed forever. `assessVersions` (Item 199 Phase 2) judges on the latest SIGNED row and therefore assumed a termination path that does not exist. §21.1 needs it too — **withdrawn ≠ declined**, and neither is representable on the row today.
+    - **The `CarrierPay` settlement document checklist is seven columns nothing reads.** The live gate is a single `Load.podVerified`, so a settlement can be finalised with a POD and no scale ticket, lumper receipt, or temp log — the last being the evidence in a reefer claim. Whether it should gate payment or merely inform the AE is a business decision; a schema implying a check that does not run is not defensible either way.
+    - **`ShipperTrackingToken.accessCount` / `lastAccessedAt` are never written.** §14 narrowed the public `/track` payload (v3.8.ara) precisely because the QR outlives the paper. That reduced what a leaked link discloses without making leakage visible.
+    - **`LoadAccessorial.carrierInvoiceId` is dead while `shipperInvoiceId` is load-bearing** — the customer leg knows what has been billed, the carrier leg does not. **Independently corroborated:** the reachability gate's Check 4 header comment already names this exact pair, so the observation has been sitting in the repo unactioned.
+
+    **Nothing deleted.** The one clean candidate (three `CarrierProfile` doc-URL columns superseded by `Document` rows) is authored under [`prisma/_pending_migrations/`](backend/prisma/_pending_migrations/) — deliberately **outside** `prisma/migrations/`, because Render runs `migrate deploy` on every push, so a file placed there is *scheduled*, not pending, and would additionally drift from a `schema.prisma` that still declares the columns. It carries a row-count gate in its header: no code reference does not mean no stored value.
+
+    **Reachability gate fixed alongside.** It has a "consumed only by tests" verdict that is a REVIEW rather than a failure, but `backend/__tests__` was absent from its corpus, so that branch could never fire for backend unit tests and a test-only export was reported DEAD instead — sending someone to delete a helper their test depends on. Same failure direction the v3.8.asc comment in that file warns about; `e2e/` was already listed, this closes the gap.
+
+203. **Arc 5 Phase 3 (counsel document consolidation) — NOT RUN, pending a file drop.**
+
+    Inputs are absent: zero `.docx` anywhere in the repo, and no `my-knowledge-base/raw/counsel/`. Nothing was inferred or reconstructed in their place, since a counsel document reconstructed from memory is worse than no document. **§16 #1 and #2 remain open regardless** — the Broker-Carrier Agreement and the Caravan Quick Pay Agreement both exist in-house, are signed by carriers today, and have not been through a Michigan commercial attorney. Resume when the files land.
+
 ---
 
 ## §14 LEGAL / COMPLIANCE STATUS

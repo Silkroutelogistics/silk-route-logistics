@@ -13,6 +13,15 @@ so it's searchable and never lost.
 
 ---
 
+## Closed — 2026-08-19 (Arc 5 Phase 4: v3.8.asy/asz — two audit tools were wrong in the direction that deletes working code)
+
+- **Pass 2 of `audit-completeness.ts` counted frontend references only (Fixed in v3.8.asz).** Every backend-only column read as an orphan: 506 findings, 437 noise. It also contradicted the triage note in its own file header, which says to grep `backend/src` AND `frontend/src` before bucketing. Now tagged `UNREFERENCED` (69) vs `BACKEND_ONLY` (437). Triage: [`docs/audits/orphan-field-triage.md`](audits/orphan-field-triage.md).
+- **`verify-reachability.ts` reported test-only exports as DEAD (Fixed in v3.8.asz).** The gate has a "consumed only by tests" verdict that is a REVIEW rather than a failure, but `backend/__tests__` was missing from its corpus, so that branch could never fire for backend unit tests. DEAD exits 1; an export a test depends on was therefore both CI-failing and flagged for deletion. `e2e/` was already listed. Same failure direction the v3.8.asc comment in that file warns about — a gate that is wrong toward deleting live code trains people to ignore it.
+- **`Load.status` transitions are observed, not yet enforced (v3.8.asy).** The audit finding said to wire `validateLoadStatusTransition` into the AE-side write sites. Tracing all 29 (not 10) found the framing backwards: most named sites already validate or are guarded, and the **map** is what is wrong — it omits `POSTED`/`TENDERED` → `DISPATCHED` (the §2 auto-pilot dispatch divergence) and the fall-off recovery re-post. Enforcing it would have broken bulk dispatch and fall-off recovery. Observation ships instead, tagged `expected:true|false`, on the existing client extension rather than 29 call sites. Verified against a live database including a violating transition inside an interactive transaction — logged, and the transaction still committed.
+  - **Guard:** [`loadTransitionObserver.test.ts`](../backend/__tests__/unit/lib/loadTransitionObserver.test.ts) asserts every known-divergence entry is *still* rejected by the map, so reconciling the map fails the test rather than leaving a stale comment.
+
+---
+
 ## Closed — 2026-08-19 (Arc 5: v3.8.asx — auth events were recorded nowhere)
 
 - **Observability gap, not a user-facing defect (Closed in v3.8.asx).** Establishing the blast radius of the entry below required a production query, because password-reset attempts leave no record. Neither `resetPassword` nor `forgotPassword` logs; neither route carries `auditLog` middleware; `auditMiddleware` misses on all three of its conditions (`skipPaths` contains `/api/auth` at `auditTrail.ts:45`, it only records 2xx, and it requires `req.user` — a reset is unauthenticated and the broken path returned 400). The events a lockout postmortem or fraud investigation most needs were the ones structurally excluded from every record kept.
