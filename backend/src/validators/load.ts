@@ -130,6 +130,23 @@ export const updateLoadStatusSchema = z.object({
     "AT_PICKUP", "LOADED", "PICKED_UP", "IN_TRANSIT", "AT_DELIVERY",
     "DELIVERED", "POD_RECEIVED", "INVOICED", "COMPLETED", "TONU", "CANCELLED",
   ]),
+  // These three MUST be declared here even though the controller reads them off
+  // req.body directly. validateBody replaces req.body with the Zod result
+  // (middleware/validate.ts:21) and Zod strips unknown keys, so a field absent
+  // from this schema is silently gone by the time the handler runs.
+  //
+  // tonuFaultSide — v3.8.aso added a 422 gate requiring it on a TONU flip and
+  // read it off the stripped body, so the gate rejected EVERY TONU including
+  // ones that sent a valid fault side. TONU was impossible to record. Caught by
+  // the Phase 1e smoke, which is the entire reason that smoke was worth running.
+  //
+  // reason / cancellationReason — same stripping, pre-existing and quieter: the
+  // TONU/CANCELLED handler reads `req.body.reason || req.body.cancellationReason`
+  // and passed undefined to onLoadCancelledOrTONU every time, so every voided
+  // CarrierPay note read "no reason provided" no matter what the AE typed.
+  tonuFaultSide: z.enum(["CUSTOMER", "CARRIER", "BROKER"]).optional(),
+  reason: z.string().max(2000).optional(),
+  cancellationReason: z.string().max(2000).optional(),
 });
 
 export const loadQuerySchema = z.object({

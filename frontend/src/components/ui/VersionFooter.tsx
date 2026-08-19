@@ -14389,7 +14389,16 @@
 //   enforces is finally reachable from the console. Approve and Deny are
 //   separate buttons because the controller reads `approved !== false`: one
 //   button could only ever approve, and denying was unreachable.
-export const SRL_VERSION = "3.8.asq";
+// v3.8.asr — P0: TONU was impossible to record.
+//   v3.8.aso added a 422 gate requiring tonuFaultSide and read it off req.body,
+//   but validateBody replaces req.body with the Zod result and Zod strips
+//   unknown keys — and updateLoadStatusSchema declared only `status`. So the
+//   field was always undefined and the gate rejected EVERY TONU, including ones
+//   sending a valid fault side. Shipped because the unit tests covered the
+//   policy function and nothing covered the wire; caught by the Phase 1e smoke.
+//   Same stripping silently dropped reason/cancellationReason, so every voided
+//   CarrierPay note read "no reason provided" whatever the AE typed.
+export const SRL_VERSION = "3.8.asr";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
