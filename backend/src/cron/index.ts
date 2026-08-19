@@ -152,6 +152,24 @@ export function initCronJobs() {
     }
   }), { timezone: "America/New_York" });  // Eastern per Item 185 — fans out carrier emails
 
+  // ─── Hourly (:45): POD paperwork reminders ─────────────────────
+  // v3.8.ask audit F-8. Compass has graded document timeliness against
+  // delivery + PAPERWORK_DUE_HOURS since Build D/E and nothing ever told the
+  // carrier the clock was running. Banded (4-20h, 20-24h, 24h+) rather than
+  // exact-hour so a skipped run self-heals; deduped per (load, band) on the
+  // notification link. Eastern per Item 185 — fans out carrier emails.
+  cron.schedule("45 * * * *", () => withGuard("pod-reminders", async () => {
+    try {
+      const { sendPodReminders } = require("../services/podReminderService");
+      const result = await sendPodReminders();
+      if (result.carrierRemindersSent > 0 || result.aeEscalations > 0) {
+        log.info({ result }, "[Cron Hourly] POD reminders sent");
+      }
+    } catch (err) {
+      log.error({ err }, "[Cron Hourly] POD reminder error:");
+    }
+  }), { timezone: "America/New_York" });
+
   // ─── Hourly: Invoice aging & overdue detection ───────────────
   cron.schedule("0 * * * *", () => withGuard("invoice-aging", async () => {
     try {

@@ -1073,6 +1073,53 @@ export interface TenderExpiredEmailParams {
 // Defensive add for Sprint 45b cron-driven expiry handler (Item 80d).
 // Sprint 45a wires the email path so 45b only needs to fire the cron tick
 // + flip tender status to EXPIRED + call notifyTenderAction("EXPIRED").
+// Audit F-8 — the carrier-facing half of the POD deadline. Compass has graded
+// document timeliness against delivery + PAPERWORK_DUE_HOURS since Build D/E,
+// and the Broker-Carrier Agreement and the Rate Confirmation both print the
+// deadline, but nothing ever told the carrier the clock was running. This is
+// that message.
+export interface PodReminderEmailParams {
+  to: string;
+  carrierName: string;
+  ref: string;
+  originName: string;
+  destName: string;
+  deliveredAt: Date;
+  hoursRemaining: number;
+  dueHours: number;
+}
+
+export async function sendPodReminderEmail(params: PodReminderEmailParams): Promise<string | undefined> {
+  const overdue = params.hoursRemaining <= 0;
+  const headline = overdue
+    ? "Paperwork is past due"
+    : `Paperwork due in ${params.hoursRemaining} hour${params.hoursRemaining === 1 ? "" : "s"}`;
+  const headlineColor = overdue ? "#9B2C2C" : "#B07A1A";
+  const lede = overdue
+    ? `We still do not have the signed BOL and POD for this load. It was due within ${params.dueHours} hours of delivery. Uploading now keeps the invoice moving and limits the effect on your Compass Score.`
+    : `Your signed BOL, POD, and any supporting receipts are due within ${params.dueHours} hours of delivery. Uploading now keeps the invoice moving and protects your Compass Score.`;
+
+  const html = wrap(`
+    <h2 style="color:${headlineColor};margin:0 0 16px">${headline}</h2>
+    <p>Hi ${params.carrierName},</p>
+    <p>${lede}</p>
+    <table style="width:100%;border-collapse:collapse;margin:16px 0">
+      <tr><td style="padding:8px;border:1px solid #E2EAF2;font-weight:bold">Reference</td><td style="padding:8px;border:1px solid #E2EAF2">${params.ref}</td></tr>
+      <tr><td style="padding:8px;border:1px solid #E2EAF2;font-weight:bold">Lane</td><td style="padding:8px;border:1px solid #E2EAF2">${params.originName} &rarr; ${params.destName}</td></tr>
+      <tr><td style="padding:8px;border:1px solid #E2EAF2;font-weight:bold">Delivered</td><td style="padding:8px;border:1px solid #E2EAF2">${params.deliveredAt.toISOString().replace("T", " ").slice(0, 16)} UTC</td></tr>
+    </table>
+    <a href="https://silkroutelogistics.ai/carrier/dashboard/my-loads" style="display:inline-block;background:#BA7517;color:#FFFFFF;padding:12px 24px;text-decoration:none;border-radius:6px;font-weight:bold;margin-top:8px">Upload paperwork</a>
+  `);
+
+  return sendEmail(
+    params.to,
+    overdue ? `Paperwork past due: ${params.ref}` : `Paperwork due: ${params.ref}`,
+    html,
+    undefined,
+    { replyTo: "operations@silkroutelogistics.ai" },
+  );
+}
+
 export async function sendTenderExpiredEmail(params: TenderExpiredEmailParams): Promise<string | undefined> {
   const rateFmt = `$${params.rate.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
 
