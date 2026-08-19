@@ -1405,6 +1405,21 @@ Each is a discrete sprint. Mix of operational, security, UX, and technical debt.
 
     Inputs are absent: zero `.docx` anywhere in the repo, and no `my-knowledge-base/raw/counsel/`. Nothing was inferred or reconstructed in their place, since a counsel document reconstructed from memory is worse than no document. **§16 #1 and #2 remain open regardless** — the Broker-Carrier Agreement and the Caravan Quick Pay Agreement both exist in-house, are signed by carriers today, and have not been through a Michigan commercial attorney. Resume when the files land.
 
+
+204. **Settlement document checklist — surfaced as information, gate-at-scale banked (decided 2026-08-19, `v3.8.atb`).**
+
+    **What shipped.** The seven `CarrierPay` doc columns (`docSignedRateCon`, `docSignedBol`, `docCarrierInvoice`, `docLumperReceipt`, `docScaleTicket`, `docTempLog`, `allDocsVerified`) now render per load on `/dashboard/settlements` as an N/6 completeness indicator with a per-document tooltip. `getSettlementById` already returned them — `carrierPays` uses `include` with no `select`, so every scalar was in the payload and simply never displayed. Frontend-only; no API change.
+
+    **What deliberately did NOT ship: a gate.** The live payment gate stays the single `Load.podVerified` boolean. Turning these seven into a precondition would change which settlements can be paid, on data nobody has been maintaining — every historical row is `false` because nothing ever wrote them. That is a business decision, not a rendering one.
+
+    **Absent flags render "not recorded", never a red cross.** Showing 0/6 in red across every past settlement would assert a compliance failure where the truth is an unused feature. The distinction matters the first time someone reads this screen during a dispute.
+
+    **Gate-at-scale trigger — revisit when EITHER fires:**
+    - **The first claims dispute where a missing document costs money.** The temp log is the evidence in a reefer claim; the scale ticket is the evidence in an overweight fine. One of these landing is the argument for the gate, and it will arrive with a dollar figure attached.
+    - **Sustained settlement volume** past the point where an AE can eyeball each one — roughly when settlements stop being individually reviewed.
+
+    **When it fires, the order matters:** start writing the columns (nothing does today), let them populate for a period long enough that blocking on them is fair to carriers already mid-cycle, and only then gate. Gating first would block every settlement on day one.
+
 ---
 
 ## §14 LEGAL / COMPLIANCE STATUS

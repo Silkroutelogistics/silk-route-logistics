@@ -16,6 +16,18 @@ interface CarrierPayInSettlement {
   quickPayDiscount: number | null;
   netAmount: number;
   status: string;
+  // Settlement document checklist. These seven columns have existed on
+  // CarrierPay since the model was written and nothing read them (Pass 2
+  // orphan-field triage, section A2) — getSettlementById already returns them,
+  // they were simply never rendered. INFORMATIONAL ONLY: this surface does not
+  // gate payment. See the note above DocChecklist.
+  docSignedRateCon?: boolean;
+  docSignedBol?: boolean;
+  docCarrierInvoice?: boolean;
+  docLumperReceipt?: boolean;
+  docScaleTicket?: boolean;
+  docTempLog?: boolean;
+  allDocsVerified?: boolean;
   load?: { referenceNumber: string; originCity: string; originState: string; destCity: string; destState: string; pickupDate: string | null; deliveryDate: string | null };
 }
 
@@ -35,6 +47,58 @@ interface Settlement {
   carrier?: { id: string; firstName: string; lastName: string; company: string | null };
   carrierPays?: CarrierPayInSettlement[];
   _count?: { carrierPays: number };
+}
+
+/**
+ * Settlement document completeness, shown to the AE and gating nothing.
+ *
+ * WHY INFORMATIONAL. The live payment gate is a single `Load.podVerified`
+ * boolean. These seven columns describe a fuller checklist — signed rate con,
+ * signed BOL, carrier invoice, lumper receipt, scale ticket, temp log — that
+ * nothing has ever read, so wiring them as a gate would change which
+ * settlements can be paid, on data nobody has been maintaining. That is a
+ * business decision (§13.3), not a rendering change, and it is deliberately not
+ * taken here.
+ *
+ * What this does buy: an AE approving a settlement can see that the temp log is
+ * missing before they pay it, which is the document that matters in a reefer
+ * claim. Seeing it is worth something even when nothing blocks on it.
+ *
+ * Absent flags read as "not recorded", never as "missing" — these columns have
+ * never been written, so every historical row is false, and rendering false as
+ * a red cross would paint every past settlement as delinquent.
+ */
+const DOC_FIELDS: Array<{ key: keyof CarrierPayInSettlement; label: string }> = [
+  { key: "docSignedRateCon", label: "Rate con" },
+  { key: "docSignedBol", label: "Signed BOL" },
+  { key: "docCarrierInvoice", label: "Carrier invoice" },
+  { key: "docLumperReceipt", label: "Lumper receipt" },
+  { key: "docScaleTicket", label: "Scale ticket" },
+  { key: "docTempLog", label: "Temp log" },
+];
+
+function docsRecorded(cp: CarrierPayInSettlement): number {
+  return DOC_FIELDS.filter((f) => cp[f.key] === true).length;
+}
+
+function DocChecklist({ cp }: { cp: CarrierPayInSettlement }) {
+  const recorded = docsRecorded(cp);
+  const total = DOC_FIELDS.length;
+
+  if (recorded === 0) {
+    // Nothing recorded at all — say so plainly rather than showing 0/6 in red,
+    // which would read as a compliance failure when it is an unused feature.
+    return <span className="text-slate-600" title="No settlement documents have been recorded for this load">not recorded</span>;
+  }
+
+  return (
+    <span
+      className={recorded === total ? "text-green-400" : "text-amber-400"}
+      title={DOC_FIELDS.map((f) => `${f.label}: ${cp[f.key] === true ? "yes" : "no"}`).join(" · ")}
+    >
+      {recorded}/{total}
+    </span>
+  );
 }
 
 const statusColors: Record<string, string> = {
@@ -198,6 +262,7 @@ export default function SettlementsPage() {
                                 <th className="text-left px-3 py-2 font-medium">Route</th>
                                 <th className="text-left px-3 py-2 font-medium">Pickup</th>
                                 <th className="text-left px-3 py-2 font-medium">Delivery</th>
+                                <th className="text-center px-3 py-2 font-medium" title="Settlement documents recorded. Informational — does not gate payment.">Docs</th>
                                 <th className="text-right px-3 py-2 font-medium">Gross Pay</th>
                               </tr>
                             </thead>
@@ -210,6 +275,7 @@ export default function SettlementsPage() {
                                   </td>
                                   <td className="px-3 py-2 text-slate-400">{cp.load?.pickupDate ? new Date(cp.load.pickupDate).toLocaleDateString() : "—"}</td>
                                   <td className="px-3 py-2 text-slate-400">{cp.load?.deliveryDate ? new Date(cp.load.deliveryDate).toLocaleDateString() : "—"}</td>
+                                  <td className="px-3 py-2 text-center"><DocChecklist cp={cp} /></td>
                                   <td className="px-3 py-2 text-right text-white">${cp.amount.toLocaleString()}</td>
                                 </tr>
                               ))}

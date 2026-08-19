@@ -14484,7 +14484,18 @@
 //   already given. Same block, honest message, distinct non-overridable
 //   code. Termination is a status change and never a delete: the row and
 //   the executed PDF are the record of what governed loads already run.
-export const SRL_VERSION = "3.8.ata";
+// v3.8.atb — The settlement document checklist is finally visible.
+//   Seven columns on CarrierPay describing signed rate con, signed BOL,
+//   carrier invoice, lumper receipt, scale ticket and temp log, read by
+//   nothing since the model was written. getSettlementById already returned
+//   them; they were never rendered. Now the AE sees completeness per load
+//   before approving a settlement — the temp log being the one that decides
+//   a reefer claim. INFORMATIONAL: it gates nothing. The live gate stays a
+//   single podVerified boolean, because gating on columns nobody has been
+//   maintaining would change which settlements can be paid. Absent flags
+//   read 'not recorded', never a red cross, since every historical row is
+//   false and painting those delinquent would be a lie about the past.
+export const SRL_VERSION = "3.8.atb";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
