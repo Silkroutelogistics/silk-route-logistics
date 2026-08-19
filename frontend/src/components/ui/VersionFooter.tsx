@@ -14371,7 +14371,16 @@
 //   reconstructing it from a cancellation reason weeks later is guesswork.
 //   The decision function is built and tested; the two billing legs are NOT
 //   wired, on purpose. A half-live billing change is worse than a banked one.
-export const SRL_VERSION = "3.8.aso";
+// v3.8.asp — The TONU obligation now lands on the accessorial ledger.
+//   One row, not two code paths: the customer reader takes it via billedTo
+//   SHIPPER and the customer's negotiated rate, the carrier reader takes the
+//   same row and does not filter on billedTo at all — so a broker-fault TONU
+//   pays the carrier out of margin while staying off the customer's invoice.
+//   The ledger is also the only anchor that cannot be raced: the cancellation
+//   reversal voids CarrierPay and is fire-and-forget, but it never touches
+//   LoadAccessorial. Idempotent, so re-flipping to correct a fault side cannot
+//   bill twice for one wasted truck.
+export const SRL_VERSION = "3.8.asp";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

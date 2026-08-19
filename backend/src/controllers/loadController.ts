@@ -20,6 +20,7 @@ import { onLoadStatusChange as aiOnLoadStatusChange } from "../services/aiLearni
 import { log } from "../lib/logger";
 import { validateLoadStatusTransition, getAllowedNextStatuses } from "../lib/loadStateMachine";
 import { isTonuFaultSide, TONU_FAULT_SIDES } from "../lib/tonuPolicy";
+import { recordTonuObligation } from "../services/tonuBillingService";
 // generateLoadNumber lived here and two other load creators could not reach it,
 // so they shipped loads with no number at all. It owns a Postgres sequence, so
 // there must be exactly one path to it: lib/documentNumber.ts.
@@ -615,6 +616,16 @@ export async function updateLoadStatus(req: AuthRequest, res: Response) {
         return;
       }
       await prisma.load.update({ where: { id: load.id }, data: { tonuFaultSide: faultSide } });
+
+      // Arc 3 Phase 2 — record the obligation on the accessorial ledger, which
+      // is the one place both the customer invoice reader and the carrier
+      // settlement reader already look. Awaited deliberately, unlike the
+      // reversal below: the ledger write must land before anything else runs,
+      // and it is the only write here that cannot be raced (the reversal never
+      // touches LoadAccessorial). Idempotent, so a re-flip cannot double-bill.
+      await recordTonuObligation(load.id, faultSide, req.user!.id).catch((e) =>
+        log.error({ err: e, loadId: load.id }, "[TONU] Failed to record obligation (non-fatal)"),
+      );
     }
     onLoadCancelledOrTONU(load.id, reason).catch((e) =>
       log.error({ err: e }, `[Integration] onLoadCancelledOrTONU error:`)
