@@ -13,6 +13,18 @@ so it's searchable and never lost.
 
 ---
 
+## Resolved — 2026-08-18 (v3.8.asj + v3.8.ask — carrier lifecycle audit, 2 P1s)
+
+Full report: `docs/audits/carrier-lifecycle-audit.md` (committed alone at `a4c51785` before any code changed). Baseline HEAD `ea3994dd` / v3.8.asi. CLAUDE.md §13.3 Item 195.
+
+- **F-5 (P1, Fixed in `b57e19a9` / v3.8.asj)** — A carrier check call never satisfied its schedule. `CheckCall` records the call, `CheckCallSchedule` holds the obligation, and `backend/src/routes/carrierLoads.ts` only ever wrote the record (`grep checkCallSchedule` → 0 matches). A carrier reporting in through the portal left the row PENDING, was texted by `processDueCheckCalls` for the update they had just given, flipped to MISSED 30 minutes later, and picked up 25 risk points in `riskEngine` (50 at two misses). New `markScheduledCheckCallsAnswered` in `checkCallAutomation.ts`, called from both carrier write paths. Closes only DUE obligations — already-MISSED rows are left alone rather than retroactively cleared, and future windows still have to be answered.
+- **F-6 (P2, Fixed in `b57e19a9` / v3.8.asj)** — `backend/src/routes/loadTracking.ts` created its PRE_PICKUP schedule with no `carrierPhone`; `processDueCheckCalls` guards its send on that field and then flips the row to SENT regardless, so the schedule aged into MISSED without one message reaching the carrier. Now resolves the phone the same way `createCheckCallSchedule` does.
+- **F-8 (P1, Fixed in `32d22d50` / v3.8.ask)** — Nothing enforced the 24-hour POD deadline. It is printed on the Rate Confirmation, written into the Broker-Carrier Agreement, taught in the driver curriculum, and graded by `lib/docTimeliness` — and none of the 35 cron jobs mentioned POD. The only prompts (`POD_REQUEST_30MIN` / `_1HR` inside `createCheckCallSchedule`) were pegged to planned `deliveryDate` rather than actual, and sat nowhere near 24 hours. New `podReminderService.sendPodReminders`, hourly at :45 Eastern, banded 4-20h carrier / 20-24h carrier final / 24h+ AE escalation, deduped per (load, band) on the notification link. Deadline derives from `PAPERWORK_DUE_HOURS` with a test pinning it to the constant Compass grades against.
+
+Still open from the same audit, recorded in CLAUDE.md §13.3 Item 195: **F-1** authority-age ladder coded but inert (no FMCSA grant date exists to measure; the brief's four-tier model also diverges from the ratified three-tier one), **F-2** hard-floor copy misstates the threshold (unreachable until F-1 is live), **F-3** document absence warns rather than blocks (by design), **F-4** no NOA/factoring check on any charge path, **F-7** TONU two-sided billing and the 4-hour carrier release window unbuilt. F-4 and F-7 are already ratified-pending in CLAUDE.md §14.
+
+Gates: backend `tsc` clean at each commit; vitest 579/580 → 588/589 (+9). Frontend `tsc` clean, no frontend files changed. `urlSafety > allows public hostnames` fails throughout and is pre-existing + environment-dependent (live DNS lookup of `hooks.slack.com`), verified by stashing the changed files and re-running against a clean tree.
+
 ## Resolved — 2026-05-25 (v3.8.akp + v3.8.akt + v3.8.akw — EIA weekly diesel-price feed shipped + live-verified)
 
 ### CLOSED — EIA fuel-index upstream supplier to existing FuelSurchargeTable pipeline

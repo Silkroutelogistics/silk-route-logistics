@@ -161,3 +161,27 @@ P1s with a code-shaped fix: **F-5**, **F-6**, **F-8**.
 P1 without one: **F-1** — inert because of an upstream data source, already carrying the correct safe default, and its target model is an unresolved product decision. Documented, not patched.
 
 P2s recorded and deliberately not built: **F-2**, **F-3**, **F-4**, **F-7**.
+
+---
+
+## Before / after
+
+| Finding | Before | After | Commit |
+|---|---|---|---|
+| F-5 | `grep checkCallSchedule src/routes/carrierLoads.ts` → 0 matches. Carrier reports in, schedule stays PENDING, carrier is texted for the update they just gave, MISSED 30 min later, +25 risk points. | Both carrier write paths call `markScheduledCheckCallsAnswered`. Due obligations close; already-MISSED rows and future windows are untouched. | `b57e19a9` (v3.8.asj) |
+| F-6 | `loadTracking.ts` PRE_PICKUP schedule created with no `carrierPhone`; `processDueCheckCalls` skips the send and flips to SENT anyway, so it ages into MISSED silently. | Phone resolved the same way `createCheckCallSchedule` does. | `b57e19a9` (v3.8.asj) |
+| F-8 | 35 cron jobs, none mentions POD. Compass grades against delivery + 24h; carrier is never told. | Hourly `pod-reminders` at :45 Eastern. Banded 4-20h / 20-24h carrier, 24h+ AE. Deadline derived from `PAPERWORK_DUE_HOURS`, pinned to the grading constant by test. | `32d22d50` (v3.8.ask) |
+
+**Gates.** Backend `tsc` clean at every commit. Vitest **579/580 → 588/589** (+9 band-boundary tests). Frontend `tsc` clean (no frontend files changed). The single failure throughout is `urlSafety > allows public hostnames`, which performs a live DNS lookup of `hooks.slack.com`; it was verified pre-existing by stashing the three changed files and re-running against a clean tree, and it is environment-dependent rather than a code defect.
+
+**`audit-completeness.ts` is unchanged at 550 findings (26 / 510 / 14), and that is expected.** That tool measures three things — mutating endpoints with no frontend caller, schema fields with no frontend reference, and delete-only list rows. None of the three fixes added an endpoint, added a field, or touched a list row; F-5 and F-6 are backend-internal wiring between two tables, and F-8 is a cron. The counter not moving is a limitation of what the tool measures, not evidence the fixes were inert. The reachability evidence for each is the consumer grep recorded in its commit message.
+
+## Still open after this arc
+
+| ID | Why it was not built |
+|---|---|
+| F-1 | Needs a working authority-date source (FMCSA Socrata L&I "with history" backfill) before either the ratified three-tier or the brief's four-tier model can run. The four-tier model is also an unratified product change. |
+| F-2 | Unreachable while F-1 is inert; fix the copy when the ladder goes live so the two land together. |
+| F-3 | Working as designed — recorded so nobody assumes upload completeness gates tendering. |
+| F-4 | NOA / factoring ineligibility is ratified-pending in §14; implementing it is a billing change. |
+| F-7 | TONU two-sided billing and the 4-hour release window are ratified-pending in §14; both are billing/RC changes needing their own sprint. |
