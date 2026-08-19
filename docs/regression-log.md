@@ -13,6 +13,16 @@ so it's searchable and never lost.
 
 ---
 
+## Closed — 2026-08-19 (Arc 6: v3.8.ata–atd — the agreement that could not be ended, and the truck nobody paid for)
+
+- **A signed carrier agreement could never be terminated (Closed in v3.8.ata).** `CarrierAgreement` carried `terminatedAt`, `terminatedBy` and `terminationReason` since the model was written and nothing wrote them; only `SIGNED` was ever written or queried. No migration was needed — `TERMINATED` was already in the enum. Termination already blocked tendering (a TERMINATED row fails the `SIGNED` filter); what was wrong was the reason given, "No signed carrier-broker agreement on file", which sends an AE to chase a signature the carrier already gave. Distinct non-overridable `AGREEMENT_TERMINATED` code with the date. Termination is a status change, never a delete — the row and executed PDF are the record of what governed past loads, pinned by test.
+- **The carrier was never paid for a TONU (Closed in v3.8.atc).** `recordTonuObligation` wrote the obligation to the accessorial ledger correctly; the carrier-side reader of that ledger opens with `if (!pay) return`, and a `CarrierPay` is created on DELIVERY — which a TONU load never reaches. Raised at the END of `onLoadCancelledOrTONU`, because that function voids every non-PAID settlement on the load and runs fire-and-forget, so a payable created at the flip site would lose the race intermittently.
+- **Premise correction — the carrier accessorial leg was not missing exactly-once.** The customer leg marks rows (`shipperInvoiceId`); the carrier leg reconciles totals (`accessorialsTotal` delta). Both are complete. Mirroring row-marking would have created a second source of truth for "has this been paid". `carrierInvoiceId` is a deletion, not a gap: `git log -S` over all history returns no commits touching it in `backend/src`.
+- **Public tracking links now leave a trace (v3.8.atd).** A hashed-token log line, deliberately not the counter columns — writing a column there would put a database write on an unauthenticated public endpoint.
+- **Tool honesty:** an attempted Pass 2 comment-stripping fix was reverted after it misreported demonstrably-written fields. See the known-limitation section in [`orphan-field-triage.md`](audits/orphan-field-triage.md).
+
+---
+
 ## Closed — 2026-08-19 (Arc 5 Phase 4: v3.8.asy/asz — two audit tools were wrong in the direction that deletes working code)
 
 - **Pass 2 of `audit-completeness.ts` counted frontend references only (Fixed in v3.8.asz).** Every backend-only column read as an orphan: 506 findings, 437 noise. It also contradicted the triage note in its own file header, which says to grep `backend/src` AND `frontend/src` before bucketing. Now tagged `UNREFERENCED` (69) vs `BACKEND_ONLY` (437). Triage: [`docs/audits/orphan-field-triage.md`](audits/orphan-field-triage.md).

@@ -19,6 +19,16 @@ Pass 2 now checks both and tags each finding:
 
 Every finding below was verified independently of the scanner (`grep -rn` across `backend/src` + `frontend/src`, confirming 0 code references against 1 schema declaration). The scanner was right in every case checked.
 
+## Known limitation: comments count as references
+
+Pass 2 matches identifiers against raw file text, so a field named only in a **comment** reads as referenced.
+
+This is not hypothetical and it bit during Arc 6. A comment added to `trackingController` explaining that `accessCount` and `lastAccessedAt` are deliberately **not** written made both fields disappear from the UNREFERENCED list — two fields nothing writes "cleared" on the strength of prose describing their absence. The count moved in the direction that hides work.
+
+**A fix was attempted and reverted.** Lifting `stripComments` from `audit-schema-drift.ts` into Pass 2 moved ~80 fields between buckets and reported `terminatedAt` and `terminationReason` as unreferenced when `terminateAgreement` demonstrably writes both — so the strip was over-matching, most likely desyncing on a template literal. A measurement tool that is confidently wrong is worse than one that is knowably imprecise, so the change was reverted rather than shipped half-verified. The first attempt also failed silently for a different reason worth recording: Pass 2 shared `frontendCache` with Pass 1, which populates it with raw text, so the strip never ran at all.
+
+**Read the counts with this in mind:** a field that leaves the UNREFERENCED list has either gained a real consumer or gained a comment. Confirm which before treating it as closed. Resume state for a proper fix: give Pass 2 its own cache (never the shared one), and validate any comment-stripper against a file containing nested template literals before trusting its output.
+
 ## Nothing was deleted
 
 Same posture as the Pass 1 triage, for the same reason: a column I did not author, on a table with production rows, is not something to drop on the strength of a grep. Dropping a column is irreversible in a way that adding one is not. The one clean deletion candidate (section C1) is authored as a migration in [`backend/prisma/_pending_migrations/`](../../backend/prisma/_pending_migrations/) — deliberately **outside** `prisma/migrations/`, because Render runs `migrate deploy` on every push, so a file placed there is scheduled rather than pending. **It was not applied this arc**, and applying it requires the row-count gate in its header plus the matching `schema.prisma` edit.

@@ -1403,6 +1403,8 @@ Each is a discrete sprint. Mix of operational, security, UX, and technical debt.
 
 203. **Arc 5 Phase 3 (counsel document consolidation) — NOT RUN, pending a file drop.**
 
+    **Re-checked 2026-08-19 (Arc 6 Phase 1): still absent.** No `.docx` anywhere in the repo, no `my-knowledge-base/raw/counsel/`, and no ITG Quick Pay PDFs — searched by name (`202832959`, `Counsel Review`, `ITG`, `Broker Carrier Agreement`) and by extension across the whole tree. Arc 6 Phase 1 therefore did not run and fell through as specified. The consolidation spec stands as written; when the files land, the addition from Pass 2 is that the **termination gap (Item 205 / v3.8.ata) goes in the BCA analysis explicitly** — the consolidated draft should state what its termination clause requires the platform to support, since the mechanism now exists and the paper still contains no amendment, re-consent, or termination-notice clause. §16 #7 holds the two policy questions the mechanism deliberately did not decide.
+
     Inputs are absent: zero `.docx` anywhere in the repo, and no `my-knowledge-base/raw/counsel/`. Nothing was inferred or reconstructed in their place, since a counsel document reconstructed from memory is worse than no document. **§16 #1 and #2 remain open regardless** — the Broker-Carrier Agreement and the Caravan Quick Pay Agreement both exist in-house, are signed by carriers today, and have not been through a Michigan commercial attorney. Resume when the files land.
 
 
