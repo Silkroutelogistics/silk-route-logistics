@@ -18,6 +18,7 @@ import { isValidExceptionCode, getExceptionReason } from "../services/exceptionT
 import { broadcastSSE } from "./trackTraceSSE";
 import { log } from "../lib/logger";
 import { validateLoadStatusTransition } from "../lib/loadStateMachine";
+import { markScheduledCheckCallsAnswered } from "../services/checkCallAutomation";
 import { actualEventStamps } from "../lib/loadEventStamps";
 import { uploadLimiter } from "../middleware/rateLimiters";
 
@@ -448,6 +449,12 @@ router.post("/:id/status", validateBody(statusUpdateSchema), async (req: AuthReq
     // Non-critical, don't fail the request
   }
 
+  // Audit F-5 — a status advance IS a check-in. Close any due obligation so the
+  // carrier is not texted for an update they just gave, then marked MISSED.
+  await markScheduledCheckCallsAnswered(load.id, {
+    responseText: `Carrier advanced load to ${status} via portal`,
+  });
+
   // Notify broker
   if (load.posterId) {
     await prisma.notification.create({
@@ -657,6 +664,15 @@ router.post("/:id/check-call", validateBody(checkCallSchema), async (req: AuthRe
       method: "CARRIER_PORTAL",
       notes: notes || `Carrier check-in from ${location || "unknown location"}`,
     },
+  });
+
+  // Audit F-5 — this is the whole point of the endpoint: the carrier answered.
+  // Close the outstanding schedule row so processDueCheckCalls stops chasing it
+  // and riskEngine stops counting it against the load.
+  await markScheduledCheckCallsAnswered(load.id, {
+    responseText: location
+      ? `Carrier reported in via portal from ${location}`
+      : "Carrier reported in via portal",
   });
 
   // Notify broker

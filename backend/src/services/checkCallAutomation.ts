@@ -384,6 +384,58 @@ export async function handleCheckCallResponse(fromPhone: string, responseText: s
 }
 
 /**
+ * Close out any check-call obligation the carrier has just answered.
+ *
+ * Two tables track the same event and, before this, did not talk to each other:
+ * CheckCall is the RECORD of a call, CheckCallSchedule is the OBLIGATION. The
+ * carrier portal only ever wrote the record, so a carrier who reported in
+ * through the channel we tell them to use left the schedule PENDING, got texted
+ * for the update they had just given, was flipped to MISSED 30 minutes later by
+ * processDueCheckCalls, and picked up 25-50 risk points in riskEngine. This is
+ * the missing link (carrier-lifecycle audit F-5).
+ *
+ * Only DUE obligations are closed — PENDING or SENT with scheduledTime already
+ * past. That boundary is deliberate:
+ *   - rows already MISSED or ESCALATED are history and are left alone; clearing
+ *     them would retroactively erase a real miss,
+ *   - rows scheduled in the future have not been asked yet, so reporting in
+ *     early does not excuse the carrier from the window that comes later.
+ *
+ * `response` stays null — that column holds the 1-5 SMS keypad code, and the
+ * portal is not that flow. The label goes in responseText.
+ *
+ * Returns the number of obligations closed. Never throws; a failure here must
+ * not fail the carrier's write.
+ */
+export async function markScheduledCheckCallsAnswered(
+  loadId: string,
+  opts: { responseText?: string; at?: Date } = {},
+): Promise<number> {
+  const now = opts.at ?? new Date();
+  try {
+    const { count } = await prisma.checkCallSchedule.updateMany({
+      where: {
+        loadId,
+        status: { in: ["PENDING", "SENT"] },
+        scheduledTime: { lte: now },
+      },
+      data: {
+        status: "RESPONDED",
+        respondedAt: now,
+        responseText: opts.responseText ?? "Carrier reported in via portal",
+      },
+    });
+    if (count > 0) {
+      log.info(`[CheckCall] Load ${loadId} — ${count} scheduled check call(s) answered by carrier`);
+    }
+    return count;
+  } catch (err) {
+    log.error({ err, loadId }, "[CheckCall] Failed to close scheduled check calls (non-fatal)");
+    return 0;
+  }
+}
+
+/**
  * Send text via OpenPhone API (falls back to log-only if API key not configured)
  */
 async function sendCheckCallText(to: string, message: string) {

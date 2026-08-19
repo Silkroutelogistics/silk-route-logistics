@@ -259,12 +259,27 @@ router.post(
             ? new Date(new Date(load.pickupDate).getTime() - 4 * 60 * 60 * 1000)
             : new Date(Date.now() + freq * 60 * 1000);
 
+          // Audit F-6 — carrierPhone was omitted here, and processDueCheckCalls
+          // guards its send on `if (cc.carrierPhone)` before flipping the row to
+          // SENT regardless. So this schedule aged silently into MISSED without
+          // one message ever reaching the carrier. Resolve the phone the same
+          // way createCheckCallSchedule does.
+          const carrierUser = load.carrierId
+            ? await prisma.user.findUnique({
+                where: { id: load.carrierId },
+                select: { phone: true, carrierProfile: { select: { contactPhone: true } } },
+              })
+            : null;
+          const carrierPhone =
+            carrierUser?.phone || carrierUser?.carrierProfile?.contactPhone || null;
+
           await prisma.checkCallSchedule.create({
             data: {
               loadId,
               scheduledTime: firstCheckTime,
               type: "PRE_PICKUP",
               status: "PENDING",
+              carrierPhone,
             },
           });
         }
