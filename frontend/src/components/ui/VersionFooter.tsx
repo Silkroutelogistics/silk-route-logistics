@@ -14312,7 +14312,30 @@
 // Letter note: this work was written as asd and renumbered when a parallel
 // compliance sprint landed asd on main mid-flight (Sub-pattern 6). Only my own
 // markers moved; theirs were left alone.
-export const SRL_VERSION = "3.8.asi";
+// v3.8.asj — Reporting in through the carrier portal now closes the check call.
+//   CheckCall is the record of a call; CheckCallSchedule is the obligation; the
+//   portal only ever wrote the record. So a carrier who used the channel we tell
+//   them to use left the row PENDING, was texted for the update they had just
+//   given, went MISSED thirty minutes later, and picked up 25 risk points.
+//   Doing the right thing made them look delinquent.
+//   Only DUE obligations close. Rows already MISSED stay — clearing them would
+//   retroactively erase a real miss — and future windows still have to be
+//   answered. Same commit fixes the sibling defect where one schedule path
+//   omitted carrierPhone, so it aged into MISSED with no message ever sent.
+//
+// v3.8.ask — The 24-hour paperwork deadline now reminds someone.
+//   It is printed on the Rate Confirmation, written into the BCA, taught in the
+//   curriculum, and graded by docTimeliness. None of the 35 crons mentioned POD.
+//   Hourly banded sweep: 4-20h and 20-24h nudge the carrier, 24h+ escalates to
+//   the AE. Banded rather than exact-hour so a skipped run self-heals, and
+//   deduped per (load, band) so it cannot become the Item 192 flood.
+//   The deadline derives from PAPERWORK_DUE_HOURS — the same constant Compass
+//   grades against — with a test pinning the two, because reminding a carrier of
+//   one deadline and scoring them against another is how you lose a dispute.
+//
+// Both from the carrier-lifecycle audit (docs/audits/carrier-lifecycle-audit.md,
+// CLAUDE.md §13.3 Item 195). Backend-only, but they deploy, so §3.1 applies.
+export const SRL_VERSION = "3.8.ask";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
