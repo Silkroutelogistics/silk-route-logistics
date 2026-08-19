@@ -14462,7 +14462,18 @@
 //   so it also sees the dynamic writes a grep cannot classify. Verified against
 //   a live database, including a violating transition inside an interactive
 //   transaction: logged, and the transaction still committed.
-export const SRL_VERSION = "3.8.asy";
+// v3.8.asz — Pass 2 of the completeness audit stopped crying wolf.
+//   It counted references in frontend/src only, so every backend-only column
+//   — audit stamps, cron bookkeeping, denormalised mirrors — surfaced as an
+//   orphan beside the genuinely dead ones. 506 findings, of which 437 were
+//   noise. It also contradicted the triage note in its own header, which says
+//   to grep backend AND frontend before bucketing anything. Now both, tagged:
+//   69 UNREFERENCED, 437 BACKEND_ONLY. Triage in docs/audits. The real finds
+//   are an agreement that cannot be terminated, a settlement document
+//   checklist nothing reads, and a tracking link with no access telemetry.
+//   Also fixed the reachability gate, which had a test-only verdict that could
+//   never fire because backend/__tests__ was missing from its corpus.
+export const SRL_VERSION = "3.8.asz";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

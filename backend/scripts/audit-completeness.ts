@@ -49,6 +49,7 @@ import * as path from "path";
 const REPO_ROOT = path.resolve(__dirname, "../..");
 const BACKEND_ROUTES = path.join(REPO_ROOT, "backend/src/routes");
 const FRONTEND_SRC = path.join(REPO_ROOT, "frontend/src");
+const BACKEND_SRC = path.join(REPO_ROOT, "backend/src");
 const PRISMA_SCHEMA = path.join(REPO_ROOT, "backend/prisma/schema.prisma");
 const REPORT_DIR = path.join(REPO_ROOT, "docs/audit-reports");
 
@@ -382,6 +383,30 @@ function fieldReferenceCount(field: string, frontendFiles: string[], frontendCac
   return count;
 }
 
+/**
+ * Why a field has no frontend reference.
+ *
+ * Pass 2 originally counted frontend files only, so every backend-only field —
+ * audit columns, cron bookkeeping, denormalised mirrors — surfaced as an
+ * "orphan" beside genuinely dead ones. That buries the signal, and it also
+ * contradicts this file's own triage note, which says to grep backend/src AND
+ * frontend/src before bucketing anything.
+ *
+ *   UNREFERENCED — nothing outside schema.prisma mentions it. The real finding.
+ *   BACKEND_ONLY — the server uses it; no UI surfaces it. Usually correct, and
+ *                  occasionally a missing screen, so it is reported, not hidden.
+ */
+export type FieldCategory = "UNREFERENCED" | "BACKEND_ONLY";
+
+function categorizeField(
+  field: string,
+  frontendRefs: number,
+  backendRefs: number,
+): FieldCategory | null {
+  if (frontendRefs > 0) return null; // surfaced somewhere; not this pass's problem
+  return backendRefs > 0 ? "BACKEND_ONLY" : "UNREFERENCED";
+}
+
 // ─── Pass 4: List action completeness ──────────────────────────────────
 
 interface ListRender {
@@ -438,9 +463,13 @@ function buildReport(
   endpoints: Endpoint[],
   orphanEndpoints: GradedEndpoint[],
   schemaFields: SchemaField[],
-  orphanFields: Array<SchemaField & { refs: number }>,
+  orphanFields: Array<SchemaField & { refs: number; backendRefs: number; category: FieldCategory }>,
   listRenders: ListRender[],
 ): string {
+  // Split here rather than taking two arrays, so the report and the console
+  // summary cannot disagree about what is in which bucket.
+  const unreferenced = orphanFields.filter((f) => f.category === "UNREFERENCED");
+  const backendOnly = orphanFields.filter((f) => f.category === "BACKEND_ONLY");
   const now = new Date().toISOString();
   const lines: string[] = [];
   lines.push(`# SRL Audit Completeness Report`);
@@ -485,15 +514,37 @@ function buildReport(
   // ── Pass 2 detail
   lines.push(`## Pass 2 — Orphan schema fields`);
   lines.push("");
-  lines.push(`Prisma model fields with **zero references** in any \`frontend/src/**/*.tsx\` file. Common boilerplate names (id, status, name, email, etc.) excluded. A non-zero count doesn't guarantee the field is *captured by a form* — it just means the name appears somewhere; manual check needed for that.`);
+  lines.push(
+    `Prisma model fields with **zero references in \`frontend/src\`**, split by whether the backend uses them. Common boilerplate names (id, status, name, email, etc.) excluded. A non-zero count doesn't guarantee the field is *captured by a form* — it just means the name appears somewhere; manual check needed for that.`,
+  );
   lines.push("");
-  if (orphanFields.length === 0) {
-    lines.push(`✅ No fields with zero frontend refs (after excluding common names).`);
+  lines.push(
+    `**UNREFERENCED** is the actionable bucket: nothing outside \`schema.prisma\` mentions the field. **BACKEND_ONLY** means the server uses it but no screen surfaces it — usually correct (audit columns, cron bookkeeping), occasionally a missing screen, so it is listed rather than hidden.`,
+  );
+  lines.push("");
+  lines.push(`### UNREFERENCED (${unreferenced.length}) — no reference anywhere outside the schema`);
+  lines.push("");
+  if (unreferenced.length === 0) {
+    lines.push(`✅ None.`);
   } else {
     lines.push(`| Model | Field | Type | Schema line |`);
     lines.push(`|---|---|---|---|`);
-    for (const f of orphanFields) {
+    for (const f of unreferenced) {
       lines.push(`| \`${f.model}\` | \`${f.field}\` | ${f.type} | \`schema.prisma:${f.line}\` |`);
+    }
+  }
+  lines.push("");
+  lines.push(`### BACKEND_ONLY (${backendOnly.length}) — server-side use, no UI surface`);
+  lines.push("");
+  if (backendOnly.length === 0) {
+    lines.push(`✅ None.`);
+  } else {
+    lines.push(`| Model | Field | Type | Backend files | Schema line |`);
+    lines.push(`|---|---|---|---|---|`);
+    for (const f of backendOnly) {
+      lines.push(
+        `| \`${f.model}\` | \`${f.field}\` | ${f.type} | ${f.backendRefs} | \`schema.prisma:${f.line}\` |`,
+      );
     }
   }
   lines.push("");
@@ -551,14 +602,24 @@ function main() {
 
   console.error("[audit] Pass 2 — checking schema field references...");
   const schemaFields = extractSchemaFields().filter((f) => !COMMON_FIELDS.has(f.field));
-  const orphanFields: Array<SchemaField & { refs: number }> = [];
+  // Backend files too — a field the server reads is not an orphan just because
+  // no screen shows it. Counting only the frontend made every audit column look
+  // dead and buried the handful that genuinely are.
+  const backendFiles = walkFiles(BACKEND_SRC, [".ts"]);
+  const backendCache = new Map<string, string>();
+  const orphanFields: Array<SchemaField & { refs: number; backendRefs: number; category: FieldCategory }> = [];
   for (const f of schemaFields) {
     const refs = fieldReferenceCount(f.field, frontendFiles, frontendCache);
-    if (refs === 0) {
-      orphanFields.push({ ...f, refs });
-    }
+    if (refs > 0) continue;
+    const backendRefs = fieldReferenceCount(f.field, backendFiles, backendCache);
+    const category = categorizeField(f.field, refs, backendRefs);
+    if (category) orphanFields.push({ ...f, refs, backendRefs, category });
   }
-  console.error(`[audit] Pass 2: ${orphanFields.length} orphan field(s) (of ${schemaFields.length} non-common fields).`);
+  const unreferenced = orphanFields.filter((f) => f.category === "UNREFERENCED");
+  const backendOnly = orphanFields.filter((f) => f.category === "BACKEND_ONLY");
+  console.error(
+    `[audit] Pass 2: ${unreferenced.length} UNREFERENCED, ${backendOnly.length} BACKEND_ONLY (of ${schemaFields.length} non-common fields).`,
+  );
 
   console.error("[audit] Pass 4 — scanning list-row action patterns...");
   const listRenders = findListRenders(frontendFiles, frontendCache);
@@ -574,7 +635,7 @@ function main() {
   const reportPath = path.join(REPORT_DIR, `audit-${stamp}.md`);
   fs.writeFileSync(reportPath, report);
   console.error(`\n[audit] Report written to: ${relPath(reportPath)}`);
-  console.error(`[audit] Total findings: ${unresolvedCount + orphanFields.length + listRenders.length} (Pass 1 counts UNRESOLVED only; ${patternCount} PATTERN listed separately)`);
+  console.error(`[audit] Total findings: ${unresolvedCount + unreferenced.length + listRenders.length} (Pass 1 counts UNRESOLVED only; Pass 2 counts UNREFERENCED only; ${patternCount} PATTERN listed separately)`);
 
   // Echo to stdout for piping
   process.stdout.write(report);

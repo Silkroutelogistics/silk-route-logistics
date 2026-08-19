@@ -65,9 +65,16 @@ function sourceCorpus(): { file: string; body: string }[] {
   // an AE reads in production. The omission made the gate wrong in the direction
   // that gets working code deleted, which is the worse direction for a gate to
   // fail in — it trains people to ignore it.
+  // v3.8.asz — backend/__tests__ added, for the same reason and with the same
+  // failure mode. This gate HAS a "consumed only by tests" verdict, which is a
+  // REVIEW rather than a failure — but backend unit tests were not in the corpus,
+  // so that branch could never fire for them and a test-only export was reported
+  // DEAD instead. Reporting an export as unreachable when a test reaches it sends
+  // someone to delete a helper their test depends on. e2e/ was already listed;
+  // this closes the gap for backend/__tests__.
   const files = git([
     "ls-files",
-    "backend/src", "backend/scripts", "backend/prisma",
+    "backend/src", "backend/scripts", "backend/prisma", "backend/__tests__",
     "frontend/src", "frontend/public", "e2e",
   ])
     .split("\n")
