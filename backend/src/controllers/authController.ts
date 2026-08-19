@@ -13,6 +13,7 @@ import { validatePassword } from "../utils/passwordPolicy";
 import { verifyTotpCode } from "../services/totpService";
 import { registerSession, removeSession } from "../middleware/auth";
 import { log } from "../lib/logger";
+import { logAuthEvent } from "../lib/authEvents";
 import { caseInsensitiveEmailFilter } from "../lib/emailNormalization";
 
 const PASSWORD_EXPIRY_DAYS = 60;
@@ -639,6 +640,7 @@ export async function forgotPassword(req: Request, res: Response) {
     );
   }
 
+  logAuthEvent("reset.requested", { email, req });
   res.json({ message: "If an account with that email exists, a password reset link has been sent." });
 }
 
@@ -662,6 +664,7 @@ export async function resetPassword(req: Request, res: Response) {
   // (1) Peek — validate token WITHOUT consuming.
   const peek = await peekPasswordResetToken(token);
   if (!peek) {
+    logAuthEvent("reset.failed", { email, reason: "invalid_token", req });
     res.status(400).json({ error: "Invalid or expired reset link" });
     return;
   }
@@ -669,6 +672,7 @@ export async function resetPassword(req: Request, res: Response) {
   // (2) Load user + email match. Token still not consumed.
   const user = await prisma.user.findUnique({ where: { id: peek.userId } });
   if (!user || user.email !== email) {
+    logAuthEvent("reset.failed", { email, reason: "invalid_token", req });
     res.status(400).json({ error: "Invalid or expired reset link" });
     return;
   }
@@ -676,11 +680,13 @@ export async function resetPassword(req: Request, res: Response) {
   // (3) TOTP gate. Token still not consumed on any failure here.
   if (user.totpEnabled) {
     if (!totpCode) {
+      logAuthEvent("reset.failed", { userId: user.id, reason: "totp_required", req });
       res.status(400).json({ error: "Two-factor authentication code is required", requires2FA: true });
       return;
     }
     const totpValid = await verifyTotpCode(user.id, totpCode);
     if (!totpValid) {
+      logAuthEvent("reset.failed", { userId: user.id, reason: "totp_invalid", req });
       res.status(401).json({ error: "Invalid authenticator code" });
       return;
     }
@@ -702,6 +708,7 @@ export async function resetPassword(req: Request, res: Response) {
     }),
   ]);
 
+  logAuthEvent("reset.completed", { userId: user.id, req });
   res.json({ message: "Password has been reset successfully. You can now log in." });
 }
 
@@ -727,6 +734,7 @@ export async function handleTotpLoginVerify(req: Request, res: Response) {
 
   const valid = await verifyTotpCode(payload.userId, code);
   if (!valid) {
+    logAuthEvent("totp.challenge_failed", { userId: payload?.userId ?? null, req });
     res.status(401).json({ error: "Invalid authenticator code" });
     return;
   }

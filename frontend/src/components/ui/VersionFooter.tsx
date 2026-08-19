@@ -14439,7 +14439,17 @@
 //   requires2FA forever), and four insurance *Effective fields were read by the
 //   carrier-update writer but stripped before it saw them. Surface is now clean
 //   and CI keeps it that way.
-export const SRL_VERSION = "3.8.asw";
+// v3.8.asx — Auth events are recorded, and the TOTP reset lockout is classified.
+//   A read-only diagnostic asked "did anyone hit the broken reset path" and
+//   could not answer: resets are recorded nowhere. auditMiddleware skips
+//   /api/auth outright, requires a 2xx, and requires req.user — a reset is
+//   unauthenticated and the broken path returned 400, so it missed on all three
+//   counts. logAuthEvent now records requested/completed/failed with a failure
+//   class, hashing the email rather than logging it (the convention already in
+//   carrierController). The diagnostic also settled the blast radius: one TOTP
+//   user of eleven, zero reset tokens ever issued, so the defect is latent —
+//   never fired — and the regression entry says so rather than implying harm.
+export const SRL_VERSION = "3.8.asx";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

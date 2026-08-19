@@ -13,6 +13,16 @@ so it's searchable and never lost.
 
 ---
 
+## Closed — 2026-08-19 (Arc 5: v3.8.asx — auth events were recorded nowhere)
+
+- **Observability gap, not a user-facing defect (Closed in v3.8.asx).** Establishing the blast radius of the entry below required a production query, because password-reset attempts leave no record. Neither `resetPassword` nor `forgotPassword` logs; neither route carries `auditLog` middleware; `auditMiddleware` misses on all three of its conditions (`skipPaths` contains `/api/auth` at `auditTrail.ts:45`, it only records 2xx, and it requires `req.user` — a reset is unauthenticated and the broken path returned 400). The events a lockout postmortem or fraud investigation most needs were the ones structurally excluded from every record kept.
+  - **Fix:** [`lib/authEvents.ts`](../backend/src/lib/authEvents.ts) — `logAuthEvent` over a closed event union, seven call sites across the reset and TOTP-challenge paths. Log lines rather than a table: these events often have no authenticated user and `AuditTrail` is user-keyed. No new tables.
+  - **Secrets:** the helper has no parameter for a token, code, or password, and a test greps the call sites. Adversarially verified three times; **round 2 slipped through** — `ip: resetToken` passed a `\btoken` check because camelCase gives no word boundary. Guard strengthened to an allowlist of keys plus a substring scan, not the injection weakened.
+  - **Regression caught by an older suite:** the first cut passed `ip: extractClientIp(req)`. Arguments evaluate before the callee, so extraction ran outside the helper's try and a request without `headers` threw through it — a clean 400 became a 500. The v3.7.m reset suite (written 2026, long before this change) went 8-of-9 red. Extraction moved inside the guarantee; IP is now enrichment that can fail without losing the event.
+  - **Left alone:** `authController.ts:239` already records failed logins as a `SECURITY` `SystemLog` but embeds the raw email in the message text, inconsistent with the hashing convention adopted here. Flagged rather than silently changed — it alters the shape of an existing record.
+
+---
+
 ## Resolved — 2026-08-19 (Arc 4 Phase 1: v3.8.asw — a TOTP user could never reset their password)
 
 - **P0-class defect, classification: LATENT — NEVER FIRED (Fixed in `1b6d1e49` / v3.8.asw).** `resetPasswordSchema` (routes/auth.ts:35) declared `{ token, email, newPassword }`. `authController.resetPassword` reads `totpCode` and gates on it for any user with `totpEnabled`: `if (!totpCode) return 400 requires2FA`. `validateBody` strips undeclared keys, so `totpCode` was **always undefined** and the gate **always fired**. The frontend was already correct — `ResetPasswordForm.tsx:62` resends with the code after the `requires2FA` reply — so the retry would have received the same `requires2FA` answer forever.
