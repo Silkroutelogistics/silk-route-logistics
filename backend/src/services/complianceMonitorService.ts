@@ -164,8 +164,12 @@ export async function complianceCheck(carrierId: string): Promise<{
     if (ageMonths < 12) {
       // HARD FLOOR — no override waives this. Do NOT consult overrides
       // in this branch per Phase A D9 ratification.
+      // Arc 2 Item 4(d) / audit F-2 — this used to read "minimum 18", which to a
+      // 6-month carrier says "come back at 18 and you're fine" when in fact no
+      // override exists at all below 12 and the answer is no. State the floor
+      // that actually applies to this branch, and that it cannot be waived.
       blocked_reasons.push(
-        `AUTHORITY_TOO_YOUNG: carrier authority ${ageMonths} months old, minimum 18`,
+        `AUTHORITY_TOO_YOUNG: carrier authority is ${ageMonths} months old; SRL requires 12 months minimum to haul and this cannot be overridden`,
       );
       blocked_codes.push({ code: "AUTHORITY_TOO_YOUNG", ageMonths, overridable: false });
     } else if (ageMonths < 18) {
@@ -184,8 +188,12 @@ export async function complianceCheck(carrierId: string): Promise<{
         );
         // No blocked_codes entry — the block is released for this run.
       } else {
+        // Arc 2 Item 4(d) / audit F-2 — name the way out. This branch IS
+        // waivable, and the previous copy was identical to the hard-floor
+        // message, so an AE could not tell from the reason alone whether an
+        // override was even possible.
         blocked_reasons.push(
-          `AUTHORITY_TOO_YOUNG: carrier authority ${ageMonths} months old, minimum 18`,
+          `AUTHORITY_TOO_YOUNG: carrier authority is ${ageMonths} months old, under the 18-month standard; an ADMIN or CEO may apply a scoped AUTHORITY_TOO_YOUNG override to tender this load`,
         );
         blocked_codes.push({ code: "AUTHORITY_TOO_YOUNG", ageMonths, overridable: true });
       }

@@ -1,177 +1,180 @@
-/**
- * One-time backfill — CarrierProfile.authorityGrantedDate
- *
- * Sprint v3.8.ahk (Item 182 sprint 2 of 5 — authority-age compliance epic).
- *
- * Walks every CarrierProfile row where `dotNumber` is non-null, calls
- * the free FMCSA QCMobile authority endpoint via the existing
- * `getCarrierAuthority` service helper, and persists the earliest
- * GRANT date on the row. The new write-path in `registerCarrier` +
- * `setupAdminCarrierProfile` covers carriers created from v3.8.ahk
- * forward; this backfill covers the ~100+ APPROVED carriers that
- * pre-date the wiring.
- *
- * Behavior:
- *
- *   - **Idempotent.** Skips rows where `authorityGrantedDate IS NOT
- *     NULL` by default. Safe to re-run; safe to interrupt with
- *     Ctrl-C — the next run picks up exactly where this one stopped
- *     (the `authorityGrantedDate IS NULL` filter is the bookmark).
- *
- *   - **`--force` flag.** Re-pulls every row regardless of current
- *     state. Use to refresh after FMCSA data corrections or when the
- *     reinstatement-continuity surface lands in a later sprint and
- *     we want to re-anchor the existing carrier base.
- *
- *   - **Self-throttled.** 2-second delay between FMCSA lookups.
- *     Internal calls bypass the HTTP-route `fmcsaLookupLimiter`
- *     (which is per-IP, middleware-only), so the script owns its
- *     own pacing. At ~1,800 calls/hour the script stays well under
- *     the 30 req per 15 min courtesy ceiling FMCSA publishes for
- *     the public route, and avoids hot-spotting the API for the
- *     production registration path that may fire concurrently.
- *
- *   - **No fabricated dates.** Legitimate no-GRANT results
- *     (intrastate-only carriers, DOT-without-MC, brand-new filings)
- *     persist as `null`. Transient HTTP/network errors ALSO persist
- *     as `null` so the next run re-attempts them rather than baking
- *     in a bad value.
- *
- * Run:
- *
- *   ```
- *   cd backend
- *   npx tsx scripts/backfill-authority-dates.ts            # idempotent
- *   npx tsx scripts/backfill-authority-dates.ts --force    # re-pull all
- *   ```
- *
- * Requires `FMCSA_WEB_KEY` set in env. Without it the script aborts
- * with exit code 1 — there's no value in walking the carrier base
- * without an API key.
- */
+// Backfill CarrierProfile.authorityGrantedDate from the FMCSA Socrata L&I
+// AuthHist dataset. Arc 2 Item 4 — the fast-follow banked under §13.3 Item 182
+// that unblocks the authority-age gate (carrier-lifecycle audit F-1).
+//
+//   npx tsx scripts/backfill-authority-dates.ts              # DRY RUN (default)
+//   npx tsx scripts/backfill-authority-dates.ts --commit     # actually writes
+//   npx tsx scripts/backfill-authority-dates.ts --limit 25   # cap the scan
+//
+// DRY RUN IS THE DEFAULT AND IS NOT A COURTESY. Writing authorityGrantedDate
+// turns a currently-inert compliance gate live: complianceMonitorService hard-
+// blocks tendering below 12 months and requires a scoped override between 12
+// and 18. Populating this column across the carrier base can therefore stop
+// dispatch for real carriers the moment it lands. The dry run produces a report
+// naming, per carrier, exactly what the gate WOULD do — that report is meant to
+// be read by a human before anyone passes --commit.
 
 import { prisma } from "../src/config/database";
-import { env } from "../src/config/env";
-import { getCarrierAuthority } from "../src/services/fmcsaService";
+import { resolveAuthorityGrantDate } from "../src/services/authorityHistoryService";
+import { calendarMonthsBetween } from "../src/services/fmcsaService";
+import { writeFileSync, mkdirSync } from "node:fs";
+import path from "node:path";
 
-const FORCE = process.argv.includes("--force");
-const DELAY_MS = 2000;
+const COMMIT = process.argv.includes("--commit");
+const limitArg = process.argv.indexOf("--limit");
+const LIMIT = limitArg !== -1 ? Number(process.argv[limitArg + 1]) : undefined;
 
-// Same classifier used by `populateAuthorityGrantedDate` — kept inline
-// here so the script's summary buckets stay independent of any future
-// helper refactor.
-const TRANSIENT_PATTERN = /endpoint HTTP|endpoint error|abort|ETIMEDOUT|ECONNRESET|fetch failed/i;
+/** Socrata is free and unauthenticated; this keeps us a polite neighbour rather than a scraper. */
+const DELAY_MS = 250;
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
+/** What the live gate in complianceMonitorService would do with this age. */
+function gateVerdict(months: number | null): string {
+  if (months === null) return "unresolved — gate stays on the warn-only path";
+  if (months < 12) return `**HARD BLOCK** (${months}mo, no override possible)`;
+  if (months < 18) return `override-eligible (${months}mo, needs scoped AUTHORITY_TOO_YOUNG override)`;
+  return `allowed (${months}mo)`;
 }
 
-async function main(): Promise<void> {
-  if (!env.FMCSA_WEB_KEY) {
-    // eslint-disable-next-line no-console
-    console.error("[backfill-authority-dates] FMCSA_WEB_KEY not set — aborting.");
-    process.exit(1);
-  }
-
-  const totalWithDot = await prisma.carrierProfile.count({
-    where: { dotNumber: { not: null } },
-  });
-  const alreadyPopulated = await prisma.carrierProfile.count({
-    where: { dotNumber: { not: null }, authorityGrantedDate: { not: null } },
-  });
-  const remaining = FORCE ? totalWithDot : totalWithDot - alreadyPopulated;
-
-  // eslint-disable-next-line no-console
-  console.log(`[backfill-authority-dates] scope (FORCE=${FORCE}):`);
-  // eslint-disable-next-line no-console
-  console.log(`  Total carriers with DOT:  ${totalWithDot}`);
-  // eslint-disable-next-line no-console
-  console.log(`  Already populated:        ${alreadyPopulated}`);
-  // eslint-disable-next-line no-console
-  console.log(`  Remaining to process:     ${remaining}`);
-  // eslint-disable-next-line no-console
-  console.log(`  FMCSA pacing delay:       ${DELAY_MS}ms between calls`);
-  // eslint-disable-next-line no-console
-  console.log("");
-
-  if (remaining === 0) {
-    // eslint-disable-next-line no-console
-    console.log("[backfill-authority-dates] nothing to do.");
-    await prisma.$disconnect();
-    return;
-  }
+async function main() {
+  const started = new Date();
+  console.log(`[backfill] mode: ${COMMIT ? "COMMIT (will write)" : "DRY RUN (no writes)"}`);
 
   const carriers = await prisma.carrierProfile.findMany({
-    where: FORCE
-      ? { dotNumber: { not: null } }
-      : { dotNumber: { not: null }, authorityGrantedDate: null },
-    select: { id: true, dotNumber: true, mcNumber: true },
+    where: { authorityGrantedDate: null },
+    select: {
+      id: true,
+      companyName: true,
+      dotNumber: true,
+      mcNumber: true,
+      onboardingStatus: true,
+      isTestAccount: true,
+      approvedAt: true,
+    },
     orderBy: { createdAt: "asc" },
+    ...(LIMIT ? { take: LIMIT } : {}),
   });
 
-  let populated = 0;
-  let leftNullNoGrant = 0;
+  console.log(`[backfill] ${carriers.length} carrier(s) with a null authorityGrantedDate`);
+
+  const rows: string[] = [];
+  let resolved = 0;
+  let unresolved = 0;
   let errored = 0;
+  let written = 0;
+  const verdictTally: Record<string, number> = { block: 0, override: 0, allowed: 0, unresolved: 0 };
 
-  for (let i = 0; i < carriers.length; i++) {
-    const c = carriers[i];
-    if (!c.dotNumber) continue; // defensive — findMany filter should already exclude
+  for (const c of carriers) {
+    const r = await resolveAuthorityGrantDate({ mcNumber: c.mcNumber, dotNumber: c.dotNumber });
+    const months = r.grantedDate ? calendarMonthsBetween(r.grantedDate, started) : null;
+    const verdict = gateVerdict(months);
 
-    const tag = `[${i + 1}/${carriers.length}] DOT ${c.dotNumber}`;
-    try {
-      const result = await getCarrierAuthority(c.dotNumber);
+    if (r.error) errored++;
+    if (r.grantedDate) {
+      resolved++;
+      if (months !== null && months < 12) verdictTally.block++;
+      else if (months !== null && months < 18) verdictTally.override++;
+      else verdictTally.allowed++;
+    } else {
+      unresolved++;
+      verdictTally.unresolved++;
+    }
 
-      if (result.authorityGrantDate) {
+    rows.push(
+      `| ${c.companyName || c.id} | ${c.dotNumber || "—"} | ${c.mcNumber || "—"} | ${c.onboardingStatus}${c.isTestAccount ? " (TEST)" : ""} | ` +
+        `${r.grantedDate ? r.grantedDate.toISOString().slice(0, 10) : "—"} | ${r.opAuthType || "—"} | ${r.docket || "—"} | ` +
+        `${r.matchedBy} | ${r.disposition || "—"} | ${verdict} |`,
+    );
+
+    if (COMMIT && r.grantedDate) {
+      const before = await prisma.carrierProfile.findUnique({
+        where: { id: c.id },
+        select: { authorityGrantedDate: true },
+      });
+      // Only ever fills a null. Never overwrites a value an admin set by hand
+      // through setAuthorityGrantDate (v3.8.aio), which is the manual-correction
+      // path and outranks a bulk import.
+      if (before?.authorityGrantedDate == null) {
         await prisma.carrierProfile.update({
           where: { id: c.id },
-          data: { authorityGrantedDate: new Date(result.authorityGrantDate) },
+          data: { authorityGrantedDate: r.grantedDate },
         });
-        // eslint-disable-next-line no-console
-        console.log(`${tag} → POPULATED ${result.authorityGrantDate} (${result.authorityAgeMonths} mo)`);
-        populated++;
+        written++;
+        console.log(
+          `[backfill][WRITE] ${c.companyName} (${c.dotNumber || c.mcNumber}) ` +
+            `before=null after=${r.grantedDate.toISOString().slice(0, 10)} src=${r.docket}/${r.opAuthType}`,
+        );
       } else {
-        const hasTransient = result.errors.some((e) => TRANSIENT_PATTERN.test(e));
-        if (hasTransient) {
-          // eslint-disable-next-line no-console
-          console.log(`${tag} → ERROR (transient) ${result.errors[0] || "unknown"}`);
-          errored++;
-        } else {
-          // eslint-disable-next-line no-console
-          console.log(`${tag} → NO_GRANT ${result.errors[0] || "(no detail)"}`);
-          leftNullNoGrant++;
-        }
+        console.log(`[backfill][SKIP] ${c.companyName} — already set to ${before.authorityGrantedDate.toISOString().slice(0, 10)}`);
       }
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : String(e);
-      // eslint-disable-next-line no-console
-      console.log(`${tag} → UNCAUGHT ${msg}`);
-      errored++;
     }
 
-    // Pace before the next FMCSA call. Skip the trailing sleep on the
-    // last iteration so the script doesn't idle for nothing.
-    if (i < carriers.length - 1) {
-      await sleep(DELAY_MS);
-    }
+    await sleep(DELAY_MS);
   }
 
-  // eslint-disable-next-line no-console
-  console.log("");
-  // eslint-disable-next-line no-console
-  console.log("[backfill-authority-dates] summary:");
-  // eslint-disable-next-line no-console
-  console.log(`  Populated:                              ${populated}`);
-  // eslint-disable-next-line no-console
-  console.log(`  Left null (no GRANT in FMCSA history):  ${leftNullNoGrant}`);
-  // eslint-disable-next-line no-console
-  console.log(`  Errored (transient — re-run will retry): ${errored}`);
+  const stamp = started.toISOString().replace(/[:.]/g, "-").slice(0, 19);
+  const reportDir = path.join(__dirname, "..", "..", "docs", "audits");
+  mkdirSync(reportDir, { recursive: true });
+  const reportPath = path.join(reportDir, `authority-backfill-report-${stamp}.md`);
+
+  const report = [
+    `# Authority grant-date backfill — ${COMMIT ? "COMMIT" : "DRY RUN"}`,
+    ``,
+    `**Run:** ${started.toISOString()}`,
+    `**Source:** FMCSA Socrata L&I \`AuthHist - All With History\` (dataset \`9mw4-x3tu\`), free and unauthenticated.`,
+    `**Scanned:** ${carriers.length} carrier(s) with a null \`authorityGrantedDate\`${LIMIT ? ` (capped at --limit ${LIMIT})` : ""}.`,
+    ``,
+    `| Result | Count |`,
+    `|---|---:|`,
+    `| Resolved a grant date | ${resolved} |`,
+    `| No record found | ${unresolved} |`,
+    `| Lookup errored | ${errored} |`,
+    COMMIT ? `| **Written to DB** | **${written}** |` : `| Written to DB | 0 (dry run) |`,
+    ``,
+    `## What the live gate would do with these dates`,
+    ``,
+    `Populating this column is what makes the authority-age ladder in \`complianceMonitorService\` fire for the first time. Read this before committing.`,
+    ``,
+    `| Gate outcome | Carriers |`,
+    `|---|---:|`,
+    `| **Hard block (under 12 months)** | **${verdictTally.block}** |`,
+    `| Override-eligible (12–18 months) | ${verdictTally.override} |`,
+    `| Allowed (18+ months) | ${verdictTally.allowed} |`,
+    `| Unresolved — stays warn-only | ${verdictTally.unresolved} |`,
+    ``,
+    verdictTally.block > 0
+      ? `> ${verdictTally.block} carrier(s) would be **blocked from tendering** the moment this is committed. Confirm that is intended before running with \`--commit\`.`
+      : `> No carrier in this scan would be hard-blocked by committing these dates.`,
+    ``,
+    `## Per-carrier detail`,
+    ``,
+    `| Carrier | DOT | MC | Status | Resolved grant | Auth type | Docket | Matched by | Disposition | Gate verdict |`,
+    `|---|---|---|---|---|---|---|---|---|---|`,
+    ...rows,
+    ``,
+    `## Method`,
+    ``,
+    `Per carrier: query the dataset by MC docket first (exact index key, cannot collide), fall back to the DOT zero-padded to 8 characters. Among the returned rows keep only \`GRANTED\` ones, prefer \`MOTOR\` operating-authority types over broker/forwarder, and take the **earliest** such grant.`,
+    ``,
+    `Earliest is deliberate and matches the reinstatement caveat already recorded in the carrier-lifecycle audit: age anchors on the original grant, not the most recent reinstatement, so a revoked-then-reinstated carrier reads as older than they operationally are. The separate FMCSA-status gate is what catches an authority that is not currently active — the \`Disposition\` column above surfaces those rows so a human can see them.`,
+    ``,
+    `\`--commit\` only ever fills a null. It will not overwrite a date an admin set by hand via \`setAuthorityGrantDate\` (v3.8.aio); the manual-correction path outranks a bulk import.`,
+    ``,
+  ].join("\n");
+
+  writeFileSync(reportPath, report, "utf8");
+  console.log(`[backfill] report: ${reportPath}`);
+  console.log(
+    `[backfill] resolved=${resolved} unresolved=${unresolved} errored=${errored} written=${written} ` +
+      `| gate: block=${verdictTally.block} override=${verdictTally.override} allowed=${verdictTally.allowed}`,
+  );
+  if (!COMMIT) console.log("[backfill] DRY RUN — nothing was written. Re-run with --commit to apply.");
+
+  await prisma.$disconnect();
 }
 
-main()
-  .then(() => prisma.$disconnect())
-  .catch(async (e) => {
-    // eslint-disable-next-line no-console
-    console.error("[backfill-authority-dates] fatal:", e);
-    await prisma.$disconnect();
-    process.exit(1);
-  });
+main().catch(async (e) => {
+  console.error("[backfill] FAILED:", e);
+  await prisma.$disconnect();
+  process.exit(1);
+});

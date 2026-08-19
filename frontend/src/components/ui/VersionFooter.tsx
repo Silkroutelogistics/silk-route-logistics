@@ -14351,7 +14351,19 @@
 //   paperwork that never arrived. The escalation ordinal now rides in the link,
 //   so each 48h repeat is its own dedup key. No new table, no new column, and
 //   the 14-day abandon window still stops it on its own.
-export const SRL_VERSION = "3.8.asm";
+// v3.8.asn — The authority-age gate finally has a data source.
+//   The ladder in complianceMonitorService has been coded correctly and has
+//   never once fired, because every branch keys off authorityGrantedDate and
+//   QCMobile returns current status with no grant history — so it is null for
+//   every real carrier. The free Socrata L&I AuthHist dataset has the grant
+//   dates QCMobile does not. Three things about it were found by probing, not
+//   by reading docs: DOT is zero-padded to 8 (an unpadded query returns nothing
+//   and reads as an empty dataset), a carrier has many rows across authority
+//   types plus revocation events, and the dates are MM/DD/YYYY text that sorts
+//   wrong. Backfill is DRY RUN by default because writing this column is what
+//   turns an inert gate live and can stop dispatch. Also fixes the block copy
+//   that told a 6-month carrier the minimum was 18.
+export const SRL_VERSION = "3.8.asn";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

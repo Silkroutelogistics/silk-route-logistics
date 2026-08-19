@@ -524,6 +524,29 @@ export function initCronJobs() {
   }), { timezone: "America/New_York" });
 
   // ─── Weekly (Monday 3:30 AM): Full chameleon scan ─────────────
+  // ─── Weekly (Monday 4:00 AM): FMCSA authority grant-date resolution ───
+  // Arc 2 Item 4. registerCarrier already tries to populate authorityGrantedDate
+  // and always gets null, because QCMobile returns current status with no grant
+  // history — which is why the authority-age gate has never fired. This resolves
+  // it from the free Socrata L&I AuthHist dataset instead.
+  //
+  // Scoped to carriers who registered AFTER the gate went live. The pre-existing
+  // base is a different risk: writing dates across it turns an inert gate live
+  // in bulk and can stop dispatch for real carriers, so that stays with
+  // scripts/backfill-authority-dates.ts, which is dry-run by default and writes
+  // a report for a human. Internal resolution job, so no timezone pin (Item 185).
+  cron.schedule("0 4 * * 1", () => withGuard("authority-date-resolution", async () => {
+    try {
+      const { resolveMissingAuthorityDates } = require("../services/authorityHistoryService");
+      const result = await resolveMissingAuthorityDates();
+      if (result.scanned > 0) {
+        log.info({ result }, "[Cron Weekly] Authority grant-date resolution complete");
+      }
+    } catch (err) {
+      log.error({ err }, "[Cron Weekly] Authority grant-date resolution error:");
+    }
+  }));
+
   cron.schedule("30 3 * * 1", () => withGuard("chameleon-scan", async () => {
     try {
       log.info("[Cron Weekly] Starting full chameleon detection scan...");
