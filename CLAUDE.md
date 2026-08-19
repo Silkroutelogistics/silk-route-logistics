@@ -1454,6 +1454,8 @@ Each is a discrete sprint. Mix of operational, security, UX, and technical debt.
 5. **`compliance@silkroutelogistics.ai` alias monitoring cadence** confirmed (published on CarrierFraudBanner since v3.7.e)
 6. **Insurance verification** — contingent broker coverage via PFA Protects + LOGISTIQ Broker Shield. Confirm policies active, not just in application state.
 
+7. **Agreement-termination policy — WHO and WITH WHAT NOTICE.** The mechanism shipped in v3.8.ata (`POST /api/carriers/:id/agreements/:agreementId/terminate`), deliberately at its narrowest safe default: **ADMIN + CEO only, effective immediately, carrier notified with the reason**. Two questions are policy, not code, and are held here rather than decided in a commit: (a) **who may terminate** — the default matches carrier-approval consequence (ADMIN + CEO) rather than the ADMIN/CEO/OPERATIONS on agreement create and sign, because terminating a BCA hard-blocks every tender; widening it to OPERATIONS is a business call; (b) **whether notice is owed before it bites** — today it is immediate. The BCA itself contains no termination-notice clause, which is one of the things counsel review (#1) should settle; §244's 30-day notice governs Caravan *program criteria*, not the agreement body. Until counsel returns, immediate termination is defensible precisely because the paper does not promise otherwise — but that is an absence, not a permission, and the consolidated draft should say plainly what the platform must support.
+
 ---
 
 ## §17 SECURITY GATE VERIFICATION METHODOLOGY

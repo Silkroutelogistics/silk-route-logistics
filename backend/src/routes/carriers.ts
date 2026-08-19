@@ -16,6 +16,7 @@ import {
   runOfacScreen, runFacialVerify, runEldValidation, runTinVerify,
   getFraudReports, fileFraudReport, reviewFraudReport, respondToFraudReport,
   getCarrierAgreements, createAgreement, signAgreement,
+  terminateAgreement,
   runCsaUpdate, runOverbookingCheck, getOverbookingReportEndpoint,
   runVinVerification, runSingleVinVerify, updateUcrStatus,
 } from "../controllers/carrierVettingController";
@@ -302,6 +303,10 @@ router.patch("/fraud-reports/:reportId/review", authorize("ADMIN", "CEO"), revie
 // carrier-self-response feature would get its own carrier-scoped + owned endpoint.
 router.post("/fraud-reports/:reportId/respond", authorize("ADMIN", "CEO", "OPERATIONS"), respondToFraudReport);
 
+const terminateAgreementSchema = z.object({
+  reason: z.string().trim().min(10).max(2000),
+});
+
 // Carrier-broker agreements
 router.get("/:id/agreements", authorize("ADMIN", "CEO", "OPERATIONS", "BROKER"), getCarrierAgreements);
 router.post("/:id/agreements", authorize("ADMIN", "CEO", "OPERATIONS"), createAgreement);
@@ -326,6 +331,20 @@ router.post("/:id/agreements", authorize("ADMIN", "CEO", "OPERATIONS"), createAg
 // pre-existing, but reachable for the first time. Nothing in frontend/src, e2e,
 // backend/scripts or backend/__tests__ referenced either path.
 router.post("/:id/agreements/:agreementId/sign", authorize("ADMIN", "CEO", "OPERATIONS"), signAgreement);
+
+// Terminate a signed agreement. ADMIN + CEO only — narrower than create/sign
+// above, because terminating a BCA hard-blocks the carrier from every tender,
+// which is carrier-approval consequence rather than agreement-admin consequence.
+// The row and its PDF survive: termination is a status change, not a delete,
+// because a terminated agreement is the record of what governed past loads.
+// Policy questions (who may terminate, whether notice is owed) are §16.
+router.post(
+  "/:id/agreements/:agreementId/terminate",
+  authorize("ADMIN", "CEO"),
+  validateBody(terminateAgreementSchema),
+  auditLog("UPDATE", "CarrierAgreement"),
+  terminateAgreement,
+);
 
 // Phase B: CSA, overbooking, VIN, UCR
 router.post("/:id/csa-update", authorize("ADMIN", "CEO", "OPERATIONS"), runCsaUpdate);

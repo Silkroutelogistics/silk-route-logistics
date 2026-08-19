@@ -394,3 +394,104 @@ describe("complianceCheck — authority-age gate (v3.8.ahm)", () => {
     expect(result.blocked_reasons.some((r) => r === "Insurance has expired")).toBe(true);
   });
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// A terminated carrier-broker agreement (Arc 6 Phase 2)
+//
+// Termination already blocked before this shipped, because a TERMINATED row
+// fails the status: "SIGNED" filter and falls into the no-agreement branch. The
+// defect was the REASON: it said "none on file", which sends an AE to chase a
+// carrier for a signature they already gave and someone revoked. These pin the
+// block AND the distinction.
+// ─────────────────────────────────────────────────────────────────────────────
+describe("complianceCheck — terminated agreement", () => {
+  beforeEach(() => {
+    vi.resetAllMocks();
+    vi.useFakeTimers();
+    vi.setSystemTime(FIXED_NOW);
+    mockPrisma.complianceOverride.findFirst.mockResolvedValue(null);
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("blocks a carrier whose BCA was terminated, and says terminated rather than missing", async () => {
+    mockPrisma.carrierProfile.findUnique.mockResolvedValue(makeCarrier());
+    // First call (SIGNED lookup) finds nothing; second (TERMINATED lookup) does.
+    mockPrisma.carrierAgreement.findFirst
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce({
+        terminatedAt: new Date("2026-06-01T00:00:00Z"),
+        terminationReason: "Carrier offboarded at their request",
+      });
+
+    const result = await complianceCheck("carrier-1");
+
+    expect(result.allowed).toBe(false);
+    expect(result.blocked_reasons.join(" ")).toContain("AGREEMENT_TERMINATED");
+    expect(result.blocked_reasons.join(" ")).toContain("2026-06-01");
+    expect(result.blocked_reasons.join(" ")).not.toContain("No signed carrier-broker agreement on file");
+  });
+
+  it("surfaces a non-overridable AGREEMENT_TERMINATED code", async () => {
+    // An AE waving this through would put a load on a carrier with no agreement
+    // governing it. The remedy is a signature, not an override.
+    mockPrisma.carrierProfile.findUnique.mockResolvedValue(makeCarrier());
+    mockPrisma.carrierAgreement.findFirst
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce({ terminatedAt: new Date("2026-06-01T00:00:00Z"), terminationReason: "x" });
+
+    const result = await complianceCheck("carrier-1");
+
+    const code = result.blocked_codes.find((c) => c.code === "AGREEMENT_TERMINATED");
+    expect(code).toBeDefined();
+    expect(code!.overridable).toBe(false);
+  });
+
+  it("still says 'none on file' when the carrier genuinely never signed", async () => {
+    // The old message is correct in exactly this case, and must survive.
+    mockPrisma.carrierProfile.findUnique.mockResolvedValue(makeCarrier());
+    mockPrisma.carrierAgreement.findFirst.mockResolvedValue(null);
+
+    const result = await complianceCheck("carrier-1");
+
+    expect(result.allowed).toBe(false);
+    expect(result.blocked_reasons).toContain("No signed carrier-broker agreement on file");
+    expect(result.blocked_codes.some((c) => c.code === "AGREEMENT_TERMINATED")).toBe(false);
+  });
+
+  it("allows a carrier who re-signed after termination", async () => {
+    // The whole point of keeping the sign path idempotent: terminate, re-sign,
+    // haul again. The SIGNED lookup finds the newer row, so the terminated
+    // branch is never reached.
+    mockPrisma.carrierProfile.findUnique.mockResolvedValue(makeCarrier());
+    mockPrisma.carrierAgreement.findFirst.mockResolvedValue({
+      id: "agreement-2",
+      status: "SIGNED",
+      signedAt: new Date(FIXED_NOW.getTime() - 86_400_000),
+      expiresAt: null,
+    });
+
+    const result = await complianceCheck("carrier-1");
+
+    expect(result.allowed).toBe(true);
+    expect(result.blocked_reasons).toEqual([]);
+  });
+
+  it("does not consult the terminated lookup at all when a signed agreement exists", async () => {
+    // Guards the ordering: one extra query per compliance check on the
+    // no-agreement path only, never on the healthy path.
+    mockPrisma.carrierProfile.findUnique.mockResolvedValue(makeCarrier());
+    mockPrisma.carrierAgreement.findFirst.mockResolvedValue({
+      id: "agreement-1",
+      status: "SIGNED",
+      signedAt: new Date(FIXED_NOW.getTime() - 86_400_000),
+      expiresAt: null,
+    });
+
+    await complianceCheck("carrier-1");
+
+    expect(mockPrisma.carrierAgreement.findFirst).toHaveBeenCalledTimes(1);
+  });
+});

@@ -68,7 +68,7 @@ export const AUTHORITY_AGE_GATE_LIVE_AT = new Date("2026-05-21T19:00:00Z");
  * inside complianceCheck so the two cannot diverge.
  */
 export interface BlockedCode {
-  code: "AUTHORITY_TOO_YOUNG" | "AUTHORITY_UNVERIFIED";
+  code: "AUTHORITY_TOO_YOUNG" | "AUTHORITY_UNVERIFIED" | "AGREEMENT_TERMINATED";
   ageMonths?: number;
   overridable: boolean;
 }
@@ -272,7 +272,30 @@ export async function complianceCheck(carrierId: string): Promise<{
     orderBy: { signedAt: "desc" },
   });
   if (!agreement) {
-    blocked_reasons.push("No signed carrier-broker agreement on file");
+    // A terminated agreement already fails the SIGNED filter above, so it was
+    // already blocking — but it reported "none on file", which sends an AE to
+    // chase a carrier for a signature they already gave and someone revoked.
+    // Same block, honest reason. Only reached when no SIGNED row exists, so a
+    // carrier who signed, was terminated, and re-signed is unaffected: their
+    // newer SIGNED row matches and this branch never runs.
+    const terminated = await prisma.carrierAgreement.findFirst({
+      where: { carrierId, status: "TERMINATED", templateName: "broker-carrier" },
+      orderBy: { terminatedAt: "desc" },
+      select: { terminatedAt: true, terminationReason: true },
+    });
+
+    if (terminated) {
+      const when = terminated.terminatedAt ? terminated.terminatedAt.toISOString().slice(0, 10) : "an earlier date";
+      blocked_reasons.push(
+        `AGREEMENT_TERMINATED: the carrier-broker agreement was terminated on ${when} and must be re-signed before this carrier can haul`,
+      );
+      // Not overridable. An AE waving through a terminated contract would put a
+      // load on a carrier with no agreement governing it; the remedy is a
+      // signature, and the existing sign path already records a new one.
+      blocked_codes.push({ code: "AGREEMENT_TERMINATED", overridable: false });
+    } else {
+      blocked_reasons.push("No signed carrier-broker agreement on file");
+    }
   } else if (agreement.expiresAt && agreement.expiresAt < now) {
     blocked_reasons.push("Carrier-broker agreement has expired");
   }

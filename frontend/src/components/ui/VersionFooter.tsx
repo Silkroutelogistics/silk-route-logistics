@@ -14473,7 +14473,18 @@
 //   checklist nothing reads, and a tracking link with no access telemetry.
 //   Also fixed the reachability gate, which had a test-only verdict that could
 //   never fire because backend/__tests__ was missing from its corpus.
-export const SRL_VERSION = "3.8.asz";
+// v3.8.ata — A carrier agreement can finally be ended.
+//   CarrierAgreement has carried terminatedAt, terminatedBy and
+//   terminationReason since the model was written and nothing ever wrote
+//   them, so a signed BCA was signed forever — no way to record an
+//   offboarded carrier, or an agreement superseded when counsel returns.
+//   Termination already blocked tendering, because a TERMINATED row fails
+//   the SIGNED filter; what was wrong was the reason it gave, which said
+//   'none on file' and sent an AE chasing a signature the carrier had
+//   already given. Same block, honest message, distinct non-overridable
+//   code. Termination is a status change and never a delete: the row and
+//   the executed PDF are the record of what governed loads already run.
+export const SRL_VERSION = "3.8.ata";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

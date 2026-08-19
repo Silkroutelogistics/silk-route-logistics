@@ -528,6 +528,116 @@ export async function respondToFraudReport(req: AuthRequest, res: Response) {
 /**
  * GET /api/carriers/:id/agreements — Get carrier agreements
  */
+/**
+ * Terminate a signed carrier agreement.
+ *
+ * WHY THIS EXISTS. `CarrierAgreement` has carried `terminatedAt`,
+ * `terminatedBy` and `terminationReason` since the model was written, and
+ * nothing ever wrote them (Pass 2 orphan-field triage, section A1). Only
+ * `SIGNED` was ever written or queried, so a signed BCA or Quick Pay agreement
+ * was signed forever: a carrier could be offboarded, or an agreement superseded
+ * when counsel returns (§16 #1/#2), with no way to record it.
+ *
+ * It also left a hole under the version-drift work — `assessVersions` judges a
+ * carrier on their latest SIGNED row, which assumed a termination path existed.
+ *
+ * TERMINATION IS NOT DELETION. The row stays, the executed PDF stays, the
+ * signature metadata stays. A terminated agreement is evidence of what was
+ * agreed and when it ended; destroying it would destroy the record of a contract
+ * that governed real loads. This only moves the status and stamps who ended it,
+ * when, and why.
+ *
+ * AUTHZ — ADMIN + CEO, deliberately narrower than the ADMIN/CEO/OPERATIONS on
+ * agreement create and sign. Terminating a BCA hard-blocks the carrier from
+ * every tender, which puts it in the same consequence class as carrier approval
+ * (ADMIN + CEO) rather than Quick Pay admission (§21.1 widened that to
+ * OPERATIONS on purpose). Who may terminate, and whether notice is owed before
+ * it bites, are policy questions — §16, HALT-SHIP. The default here is the safe
+ * one: narrowest role, effective immediately, carrier told why.
+ */
+export async function terminateAgreement(req: AuthRequest, res: Response) {
+  const { id: carrierId, agreementId } = req.params;
+
+  // Reason is required and is read by the carrier, so hold it to the same bar
+  // the Quick Pay withdrawal holds (carrierController.withdrawQuickPayEnrollment).
+  const reason = typeof req.body?.reason === "string" ? req.body.reason.trim() : "";
+  if (reason.length < 10) {
+    res.status(400).json({
+      error: "Give a reason of at least 10 characters. The carrier is told why, so write it for them to read.",
+      code: "REASON_REQUIRED",
+    });
+    return;
+  }
+
+  // Resolved by id AND carrierId together, so an agreementId belonging to
+  // another carrier is unreachable here — same scoping as signAgreement.
+  const agreement = await prisma.carrierAgreement.findFirst({
+    where: { id: agreementId, carrierId },
+    include: { carrier: { select: { userId: true, companyName: true } } },
+  });
+
+  if (!agreement) {
+    res.status(404).json({ error: "Agreement not found for this carrier" });
+    return;
+  }
+
+  if (agreement.status === "TERMINATED") {
+    // Idempotent in the honest sense: say it is already done rather than
+    // re-stamping a different terminator and reason over the original record.
+    res.status(409).json({
+      error: "This agreement is already terminated.",
+      code: "AGREEMENT_ALREADY_TERMINATED",
+      terminatedAt: agreement.terminatedAt,
+    });
+    return;
+  }
+
+  if (agreement.status !== "SIGNED") {
+    res.status(409).json({
+      error: `Only a signed agreement can be terminated. This one is ${agreement.status}.`,
+      code: "AGREEMENT_NOT_SIGNED",
+    });
+    return;
+  }
+
+  const updated = await prisma.carrierAgreement.update({
+    where: { id: agreement.id },
+    data: {
+      status: "TERMINATED",
+      terminatedAt: new Date(),
+      terminatedBy: req.user!.id,
+      terminationReason: reason.slice(0, 2000),
+    },
+  });
+
+  // The carrier is told, and told what it means for them. Non-blocking: a
+  // notification failure must not leave the agreement half-terminated.
+  if (agreement.carrier?.userId) {
+    await prisma.notification
+      .create({
+        data: {
+          userId: agreement.carrier.userId,
+          type: "GENERAL",
+          title: "Carrier agreement terminated",
+          message:
+            `Your ${agreement.templateName === "quick-pay" ? "Quick Pay Agreement" : "Broker-Carrier Agreement"} has been terminated. ` +
+            `${reason.slice(0, 400)} ` +
+            `You will not be able to accept new loads until a current agreement is signed. Loads already in flight are unaffected. ` +
+            `Contact operations@silkroutelogistics.ai if you believe this is an error.`,
+          actionUrl: "/carrier/dashboard/activation",
+        },
+      })
+      .catch((err) => log.error({ err }, "[AgreementTermination] carrier notification failed"));
+  }
+
+  log.info(
+    { carrierId, agreementId: updated.id, templateName: updated.templateName, by: req.user!.id },
+    "[AgreementTermination] agreement terminated",
+  );
+
+  res.json(updated);
+}
+
 export async function getCarrierAgreements(req: AuthRequest, res: Response) {
   const agreements = await prisma.carrierAgreement.findMany({
     where: { carrierId: req.params.id },
