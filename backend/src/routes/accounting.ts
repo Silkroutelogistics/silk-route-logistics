@@ -85,6 +85,7 @@ router.get("/payments", authorize("ADMIN", "CEO", "ACCOUNTING", "BROKER"), getPa
 router.get("/payments/:id", authorize("ADMIN", "CEO", "ACCOUNTING", "BROKER"), getPaymentById);
 router.post("/payments/prepare", authorize("ADMIN", "CEO", "ACCOUNTING", "BROKER"), preparePayment);
 router.post("/payments/bulk-approve", authorize("ADMIN", "CEO"), bulkApprovePayments);
+// audit-pass1: MISSING-UI — live money path (fee gate hardened v3.8.asb); no AE edit surface built. See orphan-endpoint-triage.md.
 router.put("/payments/:id", authorize("ADMIN", "CEO", "ACCOUNTING", "BROKER"), updatePayment);
 router.post("/payments/:id/submit", authorize("ADMIN", "CEO", "ACCOUNTING", "BROKER"), submitPayment);
 router.post("/payments/:id/approve", authorize("ADMIN", "CEO"), approvePayment);
@@ -98,8 +99,11 @@ router.post("/payments/bulk-process", authorize("ADMIN", "CEO"), bulkProcessPaym
 router.get("/disputes", authorize("ADMIN", "CEO", "ACCOUNTING", "BROKER"), getDisputes);
 router.get("/disputes/:id", authorize("ADMIN", "CEO", "ACCOUNTING", "BROKER"), getDisputeById);
 router.post("/disputes", authorize("ADMIN", "CEO", "ACCOUNTING", "BROKER"), fileDispute);
+// audit-pass1: MISSING-UI — dispute workflow backend built, /accounting/disputes never wired to it.
 router.put("/disputes/:id/investigate", authorize("ADMIN", "CEO", "ACCOUNTING", "BROKER"), investigateDispute);
+// audit-pass1: MISSING-UI — dispute workflow backend built, no frontend caller.
 router.put("/disputes/:id/propose", authorize("ADMIN", "CEO", "ACCOUNTING", "BROKER"), proposeDisputeResolution);
+// audit-pass1: MISSING-UI — dispute workflow backend built, no frontend caller.
 router.put("/disputes/:id/resolve", authorize("ADMIN", "CEO"), resolveDispute);
 
 // --- Shipper Credit ---
@@ -129,6 +133,7 @@ router.get("/pnl/shippers", authorize("ADMIN", "CEO", "ACCOUNTING", "BROKER"), g
 // --- Financial Reports ---
 router.get("/reports/stored", authorize("ADMIN", "CEO", "ACCOUNTING"), getFinancialReports);
 router.post("/reports/generate", authorize("ADMIN", "CEO", "ACCOUNTING"), generateFinancialReport);
+// audit-pass1: MISSING-UI — saved-report delete has no frontend affordance.
 router.delete("/reports/:id", authorize("ADMIN", "CEO"), deleteFinancialReport);
 router.get("/reports/weekly", authorize("ADMIN", "CEO", "ACCOUNTING", "BROKER"), getWeeklyReport);
 router.get("/reports/monthly", authorize("ADMIN", "CEO", "ACCOUNTING", "BROKER"), getMonthlyReport);

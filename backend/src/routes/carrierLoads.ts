@@ -350,6 +350,7 @@ const updateDriverSchema = z.object({
 });
 
 // PATCH /api/carrier-loads/:id/driver — Update driver/truck info on assigned load
+// audit-pass1: MISSING-UI — carrier driver-assignment endpoint; portal has no assign-driver control.
 router.patch("/:id/driver", validateBody(updateDriverSchema), async (req: AuthRequest, res: Response) => {
   const load = await prisma.load.findUnique({ where: { id: req.params.id } });
   if (!load) {

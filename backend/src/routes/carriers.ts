@@ -283,6 +283,7 @@ router.post("/:id/tin-verify", authorize("ADMIN", "CEO", "OPERATIONS"), runTinVe
 // Fraud reporting
 router.get("/:id/fraud-reports", authorize("ADMIN", "CEO", "OPERATIONS", "BROKER"), getFraudReports);
 router.post("/:id/fraud-reports", authorize("ADMIN", "CEO", "OPERATIONS", "BROKER", "DISPATCH"), fileFraudReport);
+// audit-pass1: MISSING-UI — fraud-report review is AE-managed but has no console surface.
 router.patch("/fraud-reports/:reportId/review", authorize("ADMIN", "CEO"), reviewFraudReport);
 // v3.8.ani (audit F1) — was behind authenticate but missing role authz, so any
 // authenticated user (carrier/shipper included) could write a response to any
@@ -321,9 +322,11 @@ router.post("/:id/csa-update", authorize("ADMIN", "CEO", "OPERATIONS"), runCsaUp
 router.post("/:id/overbooking-check", authorize("ADMIN", "CEO", "OPERATIONS", "DISPATCH"), runOverbookingCheck);
 router.get("/:id/overbooking-report", authorize("ADMIN", "CEO", "OPERATIONS", "DISPATCH"), getOverbookingReportEndpoint);
 router.post("/:id/vin-verify", authorize("ADMIN", "CEO", "OPERATIONS"), runVinVerification);
+// audit-pass1: MISSING-UI — UCR is read by Compass vetting; manual correction has no UI.
 router.patch("/:id/ucr", authorize("ADMIN", "CEO", "OPERATIONS"), updateUcrStatus);
 
 // Chameleon match review (not carrier-scoped)
+// audit-pass1: MISSING-UI — matches surface read-only in SecuritySignalsCard; review action never wired.
 router.put("/chameleon-matches/:matchId/review", authorize("ADMIN", "CEO"), reviewChameleonMatch);
 
 // Admin verification
@@ -732,6 +735,7 @@ router.delete("/:id", authorize("ADMIN", "CEO"), async (req: AuthRequest, res: R
 });
 
 // PUT /api/carriers/:id/restore
+// audit-pass1: MISSING-UI — soft-delete restore has no console affordance.
 router.put("/:id/restore", authorize("ADMIN", "CEO"), async (req: AuthRequest, res: Response) => {
   const carrier = await prisma.carrierProfile.findUnique({ where: { id: req.params.id } });
   if (!carrier || !carrier.deletedAt) {

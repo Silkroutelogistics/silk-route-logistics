@@ -238,6 +238,7 @@ router.patch("/:id", validateBody(updateDriverSchema), async (req: AuthRequest, 
 // PATCH /api/carrier-drivers/:id/deactivate — soft-remove from roster.
 // INACTIVE (reversible) rather than TERMINATED or hard delete so future
 // training records survive roster churn.
+// audit-pass1: FALSE-POSITIVE — called from carrier/dashboard/drivers/page.tsx:145 as `/carrier-drivers/${id}/${action}`; the template variable defeats the Pass 1 heuristic.
 router.patch("/:id/deactivate", async (req: AuthRequest, res: Response) => {
   const profile = await getApprovedProfile(req, res);
   if (!profile) return;
@@ -257,6 +258,7 @@ router.patch("/:id/deactivate", async (req: AuthRequest, res: Response) => {
 });
 
 // PATCH /api/carrier-drivers/:id/reactivate — restore to the active roster
+// audit-pass1: FALSE-POSITIVE — same call site as deactivate (drivers/page.tsx:145, template-variable path).
 router.patch("/:id/reactivate", async (req: AuthRequest, res: Response) => {
   const profile = await getApprovedProfile(req, res);
   if (!profile) return;

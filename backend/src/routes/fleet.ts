@@ -17,7 +17,9 @@ router.get("/trucks/stats", authorize("ADMIN", "CEO", "DISPATCH", "OPERATIONS", 
 router.get("/trucks/:id", authorize("ADMIN", "CEO", "DISPATCH", "OPERATIONS", "BROKER"), getTruckById);
 router.post("/trucks", authorize("ADMIN", "CEO", "OPERATIONS"), auditLog("CREATE", "Truck"), createTruck);
 router.patch("/trucks/:id", authorize("ADMIN", "CEO", "OPERATIONS"), auditLog("UPDATE", "Truck"), updateTruck);
+// audit-pass1: MISSING-UI — /dashboard/fleet is read-plus-create; no delete affordance.
 router.delete("/trucks/:id", authorize("ADMIN", "CEO"), auditLog("DELETE", "Truck"), deleteTruck);
+// audit-pass1: MISSING-UI — truck assignment done via /drivers/:id/assign-truck instead.
 router.patch("/trucks/:id/assign", authorize("ADMIN", "CEO", "DISPATCH", "OPERATIONS"), auditLog("ASSIGN_DRIVER", "Truck"), assignDriverToTruck);
 
 // Trailers
@@ -26,6 +28,7 @@ router.get("/trailers/stats", authorize("ADMIN", "CEO", "DISPATCH", "OPERATIONS"
 router.get("/trailers/:id", authorize("ADMIN", "CEO", "DISPATCH", "OPERATIONS", "BROKER"), getTrailerById);
 router.post("/trailers", authorize("ADMIN", "CEO", "OPERATIONS"), auditLog("CREATE", "Trailer"), createTrailer);
 router.patch("/trailers/:id", authorize("ADMIN", "CEO", "OPERATIONS"), auditLog("UPDATE", "Trailer"), updateTrailer);
+// audit-pass1: MISSING-UI — /dashboard/fleet is read-plus-create; no delete affordance.
 router.delete("/trailers/:id", authorize("ADMIN", "CEO"), auditLog("DELETE", "Trailer"), deleteTrailer);
 
 // Overview

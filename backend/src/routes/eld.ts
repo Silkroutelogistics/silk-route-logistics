@@ -34,6 +34,7 @@ router.get("/devices", async (_req: AuthRequest, res: Response) => {
 });
 
 // PUT /api/eld/devices/:id — Link a device to a carrier
+// audit-pass1: MISSING-UI — ELD device mapping edit has no console surface (banked since v3.8.ajt).
 router.put("/devices/:id", async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;

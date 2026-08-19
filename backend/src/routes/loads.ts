@@ -89,6 +89,7 @@ router.patch(
 );
 
 router.delete("/:id", authorize("ADMIN", "CEO", "BROKER", "DISPATCH", "OPERATIONS"), auditLog("DELETE", "Load"), deleteLoad);
+// audit-pass1: MISSING-UI — soft-delete restore has no console affordance (see §13.3 Item 8.2 cancelled-loads tab).
 router.put("/:id/restore", authorize("ADMIN", "BROKER", "DISPATCH", "OPERATIONS"), auditLog("UPDATE", "Load"), restoreLoad);
 
 // Field-level audit trail

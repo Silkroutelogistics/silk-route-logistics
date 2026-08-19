@@ -10,6 +10,7 @@ router.get("/", authorize("ADMIN", "CEO", "BROKER", "DISPATCH", "OPERATIONS", "A
 router.get("/:id", authorize("ADMIN", "CEO", "BROKER", "DISPATCH", "OPERATIONS", "ACCOUNTING"), getShipmentById);
 router.patch("/:id", authorize("ADMIN", "CEO", "BROKER", "DISPATCH", "OPERATIONS"), updateShipment);
 router.patch("/:id/status", authorize("ADMIN", "CEO", "BROKER", "DISPATCH", "OPERATIONS"), updateShipmentStatus);
+// audit-pass1: INTENTIONAL — integration/API surface per Phase 5E.c Decision 4.1; not expected to have a frontend caller.
 router.patch("/:id/location", authorize("ADMIN", "CEO", "DISPATCH"), updateShipmentLocation);
 router.delete("/:id", authorize("ADMIN", "CEO"), deleteShipment);
 

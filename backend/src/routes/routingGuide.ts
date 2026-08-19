@@ -116,6 +116,7 @@ router.post("/:id/entries", authorize("ADMIN", "CEO", "BROKER") as any, async (r
 });
 
 // PATCH /routing-guides/entries/:entryId
+// audit-pass1: MISSING-UI — guide entries edited as a whole guide, not per entry.
 router.patch("/entries/:entryId", authorize("ADMIN", "CEO", "BROKER") as any, async (req: AuthRequest, res: Response) => {
   try {
     const entry = await updateRoutingGuideEntry(req.params.entryId, req.body);
@@ -126,6 +127,7 @@ router.patch("/entries/:entryId", authorize("ADMIN", "CEO", "BROKER") as any, as
 });
 
 // DELETE /routing-guides/entries/:entryId
+// audit-pass1: MISSING-UI — guide entries deleted as a whole guide, not per entry.
 router.delete("/entries/:entryId", authorize("ADMIN", "CEO", "BROKER") as any, async (req: AuthRequest, res: Response) => {
   try {
     await removeRoutingGuideEntry(req.params.entryId);

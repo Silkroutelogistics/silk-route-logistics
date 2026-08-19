@@ -21,9 +21,11 @@ router.get("/all", authorize("ADMIN", "CEO", "BROKER", "DISPATCH", "OPERATIONS",
 router.post("/generate/:loadId", authorize("ADMIN", "CEO", "BROKER", "OPERATIONS", "ACCOUNTING"), auditLog("GENERATE", "Invoice"), generateInvoiceFromLoad);
 router.post("/batch/status", authorize("ADMIN", "CEO", "BROKER", "OPERATIONS", "ACCOUNTING"), auditLog("BATCH_UPDATE", "Invoice"), batchUpdateInvoiceStatus);
 router.get("/:id", authorize("ADMIN", "CEO", "BROKER", "DISPATCH", "OPERATIONS", "ACCOUNTING"), getInvoiceById);
+// audit-pass1: MISSING-UI — invoice line-item edit lives in accounting; this route never wired.
 router.put("/:id/line-items", authorize("ADMIN", "CEO", "BROKER", "OPERATIONS", "ACCOUNTING"), auditLog("UPDATE", "InvoiceLineItems"), updateInvoiceLineItems);
 router.post("/:id/factor", authorize("ADMIN", "CEO", "BROKER", "OPERATIONS", "ACCOUNTING"), auditLog("FACTOR", "Invoice"), submitForFactoring);
 router.patch("/:id/status", authorize("ADMIN", "CEO", "BROKER", "OPERATIONS", "ACCOUNTING"), auditLog("UPDATE_STATUS", "Invoice"), updateInvoiceStatus);
+// audit-pass1: DUPLICATE — same markInvoicePaid controller as PUT /accounting/invoices/:id/mark-paid, which is what the frontend calls. Consolidation candidate, not deleted (money path).
 router.patch("/:id/mark-paid", authorize("ADMIN", "CEO", "ACCOUNTING"), auditLog("MARK_PAID", "Invoice"), markInvoicePaid);
 
 export default router;

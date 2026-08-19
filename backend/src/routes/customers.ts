@@ -51,6 +51,7 @@ router.post("/:id/inactivate", authorize("ADMIN", "CEO"), validateBody(z.object(
 router.post("/:id/reactivate", authorize("ADMIN", "CEO"), reactivateCustomer);
 router.patch("/:id", validateBody(updateCustomerSchema), updateCustomer);
 router.delete("/:id", authorize("ADMIN", "CEO", "BROKER"), deleteCustomer);
+// audit-pass1: MISSING-UI — soft-delete restore has no console affordance.
 router.put("/:id/restore", authorize("ADMIN", "CEO", "BROKER"), restoreCustomer);
 
 // Customer contacts
@@ -60,6 +61,7 @@ router.patch("/:id/contacts/:cid", validateBody(contactSchema.partial()), update
 router.delete("/:id/contacts/:cid", deleteCustomerContact);
 
 // Customer credit
+// audit-pass1: DUPLICATE — frontend uses PUT /accounting/credit/:id. Consolidation candidate, not deleted (both reachable).
 router.patch("/:id/credit", validateBody(creditSchema), updateCustomerCredit);
 
 export default router;
