@@ -93,6 +93,39 @@ export function isPodChaseableStatus(status: string): boolean {
   return (POD_CHASE_STATUSES as readonly string[]).includes(status);
 }
 
+/** How often the AE is re-told about a load still sitting overdue. */
+export const OVERDUE_REESCALATION_HOURS = 48;
+
+/**
+ * Which overdue escalation a load is in — 0 at the deadline, then one per
+ * OVERDUE_REESCALATION_HOURS after it. Null before the deadline.
+ *
+ * Arc 2 Item 2. Dedup is per link, and the overdue link used to be a single
+ * fixed key, so the AE was told once and then never again. A load could sit
+ * ten days past its deadline in silence — the one state where somebody
+ * definitely needs to keep hearing about it, since the invoice may already
+ * have gone out against paperwork that never arrived.
+ *
+ * Encoding the ordinal in the link makes each repeat its own dedup key, so the
+ * existing link-matching dedup handles repeats with no new table and no new
+ * column. The 14-day abandon window still caps it: the sweep's `earliest`
+ * filter drops the load out of the population entirely, so escalation stops on
+ * its own rather than needing a separate cap.
+ */
+export function overdueEscalationOrdinal(hoursSince: number): number | null {
+  if (hoursSince < PAPERWORK_DUE_HOURS) return null;
+  return Math.floor((hoursSince - PAPERWORK_DUE_HOURS) / OVERDUE_REESCALATION_HOURS);
+}
+
+/**
+ * The dedup key for a (load, moment) pair. Carrier bands fire once each; the
+ * overdue band fires once per escalation ordinal.
+ */
+export function podDedupKey(band: PodReminderBand, hoursSince: number): string {
+  if (band.key !== "overdue") return band.key;
+  return `overdue-${overdueEscalationOrdinal(hoursSince) ?? 0}`;
+}
+
 export interface PodReminderResult {
   scanned: number;
   carrierRemindersSent: number;
@@ -180,7 +213,7 @@ export async function sendPodReminders(): Promise<PodReminderResult> {
       const band = podReminderBand(hoursSince);
       if (!band) continue;
 
-      const link = `/carrier/dashboard/my-loads?load=${load.id}&pod=${band.key}`;
+      const link = `/carrier/dashboard/my-loads?load=${load.id}&pod=${podDedupKey(band, hoursSince)}`;
       if (priorLinks.has(link)) {
         result.skippedAlreadyNotified++;
         continue;
@@ -221,13 +254,21 @@ export async function sendPodReminders(): Promise<PodReminderResult> {
         }
         result.carrierRemindersSent++;
       } else if (load.posterId) {
-        // Overdue — the carrier has had their two nudges; this one is for the AE.
+        // Overdue — the carrier has had their two nudges; this one is for the AE,
+        // and it repeats every OVERDUE_REESCALATION_HOURS for as long as the load
+        // stays in the population (Item 2). Silence after one notice was the bug:
+        // the invoice may already have gone out against paperwork that never came.
+        const ordinal = overdueEscalationOrdinal(hoursSince) ?? 0;
+        const days = Math.floor(hoursSince / 24);
         await prisma.notification.create({
           data: {
             userId: load.posterId,
             type: "POD_REMINDER",
-            title: "POD overdue",
-            message: `No POD on ${ref} — ${Math.round(hoursSince)}h since delivery (due within ${PAPERWORK_DUE_HOURS}h).`,
+            title: ordinal === 0 ? "POD overdue" : `POD still overdue (${days}d)`,
+            message:
+              ordinal === 0
+                ? `No POD on ${ref} — ${Math.round(hoursSince)}h since delivery (due within ${PAPERWORK_DUE_HOURS}h).`
+                : `Still no POD on ${ref} — ${days} days since delivery. Carrier has been reminded; this needs a call.`,
             link,
             actionUrl: `/dashboard/loads`,
           },

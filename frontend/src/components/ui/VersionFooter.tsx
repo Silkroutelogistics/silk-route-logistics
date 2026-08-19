@@ -14343,7 +14343,15 @@
 //   owing paperwork with nothing left to notice. INVOICED is now chased too,
 //   and it is actionable: a POD uploaded against an INVOICED load still files
 //   correctly, the status just does not walk backwards.
-export const SRL_VERSION = "3.8.asl";
+// v3.8.asm — The AE keeps hearing about a load whose POD never came.
+//   Dedup is per link and the overdue link was one fixed key, so the AE was
+//   told once and then never again. A load could sit ten days past its
+//   deadline in silence — the one state where somebody definitely needs to
+//   keep hearing, because the invoice may already have gone out against
+//   paperwork that never arrived. The escalation ordinal now rides in the link,
+//   so each 48h repeat is its own dedup key. No new table, no new column, and
+//   the 14-day abandon window still stops it on its own.
+export const SRL_VERSION = "3.8.asm";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
