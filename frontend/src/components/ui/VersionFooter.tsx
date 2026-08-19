@@ -14449,7 +14449,20 @@
 //   carrierController). The diagnostic also settled the blast radius: one TOTP
 //   user of eleven, zero reset tokens ever issued, so the defect is latent —
 //   never fired — and the regression entry says so rather than implying harm.
-export const SRL_VERSION = "3.8.asx";
+// v3.8.asy — Load status transitions are observed before they are enforced.
+//   The audit said 10 AE-side sites bypass the state-machine validator, so
+//   wire it in. Tracing every real write site — 29, not 10 — says the framing
+//   is backwards. Most named sites already validate or are guarded. What is
+//   wrong is the MAP: it omits POSTED/TENDERED -> DISPATCHED, which is the §2
+//   auto-pilot dispatch divergence, and the fall-off recovery re-post. Turning
+//   enforcement on would have broken bulk dispatch and fall-off recovery — the
+//   exact outage the instruction would have caused. So: observe first, tag the
+//   two documented divergences, and grep expected:false for real surprises.
+//   One choke point on the existing client extension rather than 29 call sites,
+//   so it also sees the dynamic writes a grep cannot classify. Verified against
+//   a live database, including a violating transition inside an interactive
+//   transaction: logged, and the transaction still committed.
+export const SRL_VERSION = "3.8.asy";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

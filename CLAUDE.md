@@ -1365,6 +1365,27 @@ Each is a discrete sprint. Mix of operational, security, UX, and technical debt.
     **The observability guarantee is load-bearing, and the first cut broke it.** `logAuthEvent` never throws — but the first version took `ip: extractClientIp(req)`, and arguments evaluate *before* the callee, so extraction ran outside the try and a request with no `headers` threw straight through, turning a clean 400 into a 500. **The pre-existing v3.7.m reset suite went 8-of-9 red and caught it** — an independent oracle written long before this change, which is exactly why "prove no response changed" is run against the old suite rather than a new one. Extraction moved inside the guarantee; the helper takes `req`. IP is enrichment, so failing to resolve one drops the field, never the event.
 
     **Not touched:** the raw email embedded in the existing `SECURITY` `SystemLog` message text at [`authController.ts:239`](backend/src/controllers/authController.ts#L239) (failed logins *are* captured there, inconsistently with the hashing convention above) — flagged, deliberately not silently "fixed", since it changes an existing record's shape. **Phase 3 (counsel document consolidation) did not run:** the inputs are absent — zero `.docx` anywhere in the repo and no `my-knowledge-base/raw/counsel/`. Pending a file drop; §16 #1 and #2 remain open regardless.
+
+201. **Item 159 A1 — log-first shipped; the audit's framing was backwards, and enforcing it would have caused an outage.**
+
+    **What the finding said.** "10 AE-side `Load.status` write sites bypass `validateLoadStatusTransition` — wire it in."
+
+    **What tracing every site found.** There are **29** status-writing `prisma.load.update` calls, not 10 — inventory produced by a scanner rather than a grep, because `status:` with a computed value cannot be classified by eye. More importantly the named sites are largely fine: [`ediService.ts:114`](backend/src/services/ediService.ts#L114) already validates and is the reference pattern; [`integrationService.ts:1252`](backend/src/services/integrationService.ts#L1252) and [`shipperNotificationService.ts:210`](backend/src/services/shipperNotificationService.ts#L210) are guarded by an `if (load.status === "DELIVERED")` check; [`instantBookService.ts:131`](backend/src/services/instantBookService.ts#L131) only proceeds from POSTED.
+
+    **The actual defect is the MAP, not the call sites — and it fails in the dangerous direction.** `AE_ALLOWED_TRANSITIONS` omits transitions production legitimately performs:
+    - `POSTED`/`TENDERED` → `DISPATCHED` at [`loadBids.ts:221`](backend/src/routes/loadBids.ts#L221) and [`waterfallEngineService.ts:492`](backend/src/services/waterfallEngineService.ts#L492) — the **§2 auto-pilot dispatch divergence**, deliberate and load-bearing (bulk accept skips the BOOKED checkpoint, and `routes/waterfalls.ts` queries `dispatchedAt` for the dispatched-today dashboards).
+    - `BOOKED`/`DISPATCHED` → `POSTED` at [`fallOffRecovery.ts:57`](backend/src/services/fallOffRecovery.ts#L57) — backwards, intentional, re-posts a fallen-off load.
+
+    So **"wire it in" would have blocked bulk dispatch and fall-off recovery.** Log-first is not caution here; it is the difference between a fix and an outage.
+
+    **Shipped (`v3.8.asy`).** [`lib/loadTransitionObserver.ts`](backend/src/lib/loadTransitionObserver.ts) validates as AE and logs **only** rejected transitions, each tagged `expected: true|false` against a documented divergence list. Tagging is not whitelisting — expected ones are still emitted, because their frequency is the evidence that decides whether the map gains the transition or the call site changes. Grep `expected:false` for genuine surprises. A test asserts every `KNOWN_DIVERGENCES` entry is *still* rejected by the map, so reconciling the map fails the test rather than leaving a comment describing a gap that closed.
+
+    **One choke point, not 29 edits.** It hangs off the existing `$allOperations` extension in [`config/database.ts`](backend/src/config/database.ts), so it observes every status write including the dynamic ones a scanner cannot classify and any site added later — completeness being the whole point of a survey whose output decides the reconciliation. Prior status is read through the **base** client, which does not re-enter the extension. One edit to remove when enforcement replaces it.
+
+    **Verified against a live database** (CI-shape container, never production): known divergence tagged, genuine skip flagged, clean transition silent, and — the decisive case — a violating transition **inside an interactive transaction** logged while the transaction still committed. Postgres MVCC serves the pre-transaction row rather than blocking on the lock, which is what makes reading through a second connection safe.
+
+    **Resume state for enforcement.** Read the `expected:false` lines first: each is either a real bug or a transition nobody documented. Then decide the auto-pilot and fall-off cases — likely a distinct `AUTO`/`SYSTEM` actor rather than widening the AE map, so a human AE does not inherit skip-ahead. Only then gate. Carrier-side ([`carrierLoads.ts`](backend/src/routes/carrierLoads.ts)) and `ediService` already enforce correctly and are the pattern to copy.
+
 ---
 
 ## §14 LEGAL / COMPLIANCE STATUS

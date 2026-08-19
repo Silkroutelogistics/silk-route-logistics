@@ -1,5 +1,6 @@
 import { PrismaClient } from "@prisma/client";
 import crypto from "crypto";
+import { observeLoadTransition } from "../lib/loadTransitionObserver";
 
 // ─── Key Rotation Support ─────────────────────────────────
 // ENCRYPTION_KEY = current key (required)
@@ -127,23 +128,56 @@ function createClient(): PrismaClient {
   // Use Prisma client extension for transparent field encryption
   return client.$extends({
     query: {
-      $allOperations({ model, operation, args, query }: { model?: string; operation: string; args: any; query: (args: any) => Promise<any> }) {
+      async $allOperations({ model, operation, args, query }: { model?: string; operation: string; args: any; query: (args: any) => Promise<any> }) {
         // Encrypt on write operations
         if (model && ENCRYPTED_FIELDS[model] && args.data) {
           encryptDataFields(model, args.data);
         }
 
-        return query(args).then((result: any) => {
-          // Decrypt on read
-          if (model && ENCRYPTED_FIELDS[model]) {
-            if (Array.isArray(result)) {
-              result.forEach((r: any) => decryptRecord(model, r));
-            } else {
-              decryptRecord(model, result);
-            }
+        // v3.8.asy — log-first Load.status transition observation (§13.3 Item
+        // 159). One choke point rather than 29 call sites, so it also sees the
+        // dynamic writes a grep cannot classify. Reads the prior status through
+        // the BASE client, which does not re-enter this extension. Wrapped so a
+        // failure here can never fail the write it is watching.
+        let priorStatuses: Array<{ id: string; status: any }> | null = null;
+        if (
+          model === "Load" &&
+          (operation === "update" || operation === "updateMany") &&
+          typeof args?.data?.status === "string"
+        ) {
+          try {
+            priorStatuses = await client.load.findMany({
+              where: args.where,
+              select: { id: true, status: true },
+              take: 25,
+            });
+          } catch {
+            priorStatuses = null;
           }
-          return result;
-        });
+        }
+
+        const result = await query(args);
+
+        if (priorStatuses) {
+          for (const row of priorStatuses) {
+            observeLoadTransition({
+              from: row.status,
+              to: args.data.status,
+              loadId: row.id,
+              operation,
+            });
+          }
+        }
+
+        // Decrypt on read
+        if (model && ENCRYPTED_FIELDS[model]) {
+          if (Array.isArray(result)) {
+            result.forEach((r: any) => decryptRecord(model, r));
+          } else {
+            decryptRecord(model, result);
+          }
+        }
+        return result;
       },
     },
   }) as unknown as PrismaClient;
