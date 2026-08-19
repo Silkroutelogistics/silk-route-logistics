@@ -13,6 +13,21 @@ so it's searchable and never lost.
 
 ---
 
+## Resolved — 2026-08-18 (Arc 2: v3.8.asl → v3.8.aso — carrier lifecycle open queue)
+
+Second pass over the queue the carrier-lifecycle audit left. Baseline HEAD `2b76cc93`. CLAUDE.md §13.3 Item 196; write-up appended to `docs/audits/carrier-lifecycle-audit.md`; endpoint verdicts in `docs/audits/orphan-endpoint-triage.md`.
+
+- **POD sweep escape hatch (P1, Fixed in `6b8bbd50` / v3.8.asl)** — the sweep scanned `DELIVERED` alone, but the AE map allows `DELIVERED → INVOICED` directly, so an AE invoicing a load before its POD landed removed it from the chase population permanently. Worse: `INVOICED` only advances to `COMPLETED`, so it could never reach `POD_RECEIVED` either — the load left the pipeline owing paperwork with the money already out. Population is now DELIVERED + INVOICED, pinned by test.
+- **Overdue POD escalation fired once, then went silent forever (P1, Fixed in `a4ed85cd` / v3.8.asm)** — dedup is per notification link and the overdue band used one fixed key, so a load could sit ten days past its deadline in silence. The escalation ordinal now rides in the link, so each 48h repeat is its own dedup key. No new table or column; the 14-day abandon window still stops it.
+- **26 Pass 1 orphan endpoints untriaged (Fixed in `9cbba6a7`, unversioned)** — all 26 classified and annotated in place. 2 were false positives that are actually live (the heuristic cannot resolve a path segment built from a template variable). Nothing deleted; the closest candidates are money-path routes sharing controllers with live ones.
+- **F-1 authority-age gate had no data source (P1, unblocked in `816ce5eb` / v3.8.asn)** — the ladder had never fired because `authorityGrantedDate` is null everywhere and QCMobile returns no grant history. The free Socrata L&I dataset `9mw4-x3tu` has it. Backfill script is dry-run by default. Production dry run: 4/4 resolved, 0 errors; committing would hard-block exactly 1 carrier, a test account on SRL's own docket. `--commit` not run — that is Wasi's call.
+- **F-2 misleading block copy (P2, Fixed in `816ce5eb` / v3.8.asn)** — the under-12 block said "minimum 18", telling a 6-month carrier to come back at 18 when no override exists below 12; and it was identical to the 12–18 message, so an AE could not tell an overridable block from an absolute one. Both rewritten. Only the `AUTHORITY_TOO_YOUNG` code is matched on anywhere.
+- **F-7 TONU two-sided billing + 4-hour window (P2, half-closed in `1c845260` / v3.8.aso)** — fault side is now captured and **required** at the TONU flip (422 without it), and the two-sided decision function is built and tested. The customer invoice line and carrier settlement payable are deliberately NOT wired — both cross real money paths, and a half-live billing change is worse than a banked one. Resume state in §13.3 Item 196.
+
+Open, unchanged: **F-3** (document absence warns, expiry blocks — by design), **F-4** (NOA/factoring — untouched per instruction; ratified-pending in §14). The RC clause still does not name the party releasing under the 4-hour window.
+
+Gates: backend `tsc` clean at every commit; vitest **594 → 632** (+38); frontend `tsc` + `next build` clean. `urlSafety > allows public hostnames` is the only red throughout — sandbox DNS only, and it passed in CI on `2b76cc93`.
+
 ## Resolved — 2026-08-18 (v3.8.asj + v3.8.ask — carrier lifecycle audit, 2 P1s)
 
 Full report: `docs/audits/carrier-lifecycle-audit.md` (committed alone at `a4c51785` before any code changed). Baseline HEAD `ea3994dd` / v3.8.asi. CLAUDE.md §13.3 Item 195.

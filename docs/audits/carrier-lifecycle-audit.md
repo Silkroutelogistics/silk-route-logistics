@@ -176,12 +176,61 @@ P2s recorded and deliberately not built: **F-2**, **F-3**, **F-4**, **F-7**.
 
 **`audit-completeness.ts` is unchanged at 550 findings (26 / 510 / 14), and that is expected.** That tool measures three things — mutating endpoints with no frontend caller, schema fields with no frontend reference, and delete-only list rows. None of the three fixes added an endpoint, added a field, or touched a list row; F-5 and F-6 are backend-internal wiring between two tables, and F-8 is a cron. The counter not moving is a limitation of what the tool measures, not evidence the fixes were inert. The reachability evidence for each is the consumer grep recorded in its commit message.
 
+---
+
+# Arc 2 — working the open queue (2026-08-18)
+
+Second pass over the queue this audit left. Five items, five commits, baseline HEAD `2b76cc93`.
+
+| Item | What | Commit |
+|---|---|---|
+| 1 | POD sweep escape hatch — INVOICED loads were never chased | `6b8bbd50` v3.8.asl |
+| 2 | Repeat AE escalation every 48h while a POD stays overdue | `a4ed85cd` v3.8.asm |
+| 3 | Triaged and annotated all 26 Pass 1 orphan endpoints | `9cbba6a7` (unversioned) |
+| 4 | **F-1 unblocked** — FMCSA Socrata authority-date source, + F-2 copy | `816ce5eb` v3.8.asn |
+| 5 | F-7 TONU fault side captured and required; billing legs banked | `1c845260` v3.8.aso |
+
+## F-1 is no longer blocked on data
+
+The audit recorded F-1 as inert because `authorityGrantedDate` is null for every carrier and QCMobile has no grant history. That is now solved: the free Socrata L&I dataset `9mw4-x3tu` ("AuthHist - All With History") carries `orig_served_date` per authority action, keyed by DOT and MC docket, no API key.
+
+Three properties of it were found by probing the live API rather than reading documentation, and each has a failure mode that looks like an empty dataset rather than a bug:
+
+1. `dot_number` is **zero-padded to 8**. `dot_number=4526880` returns `[]`; `04526880` returns the row. Unpadded, a backfill reports "no record found" for every carrier.
+2. A carrier has **many rows** — one per operating-authority type plus revocation events. INTEGRITY EXPRESS holds a 2007 PROPERTY BROKER grant and a 2010 MOTOR PROPERTY CONTRACT CARRIER grant. The gate asks how long they have been *hauling*, so motor authority wins and it reads 2010.
+3. Dates are **MM/DD/YYYY text**, so `01/02/2020` sorts before `12/31/1999` and a naive sort reports a carrier decades younger than they are.
+
+Selection rule: GRANTED rows only, prefer MOTOR authority types, take the earliest. Earliest matches the reinstatement caveat this audit already recorded — age anchors on original grant, and the separate FMCSA-status gate catches an authority that is not currently active.
+
+**Dry run against production, 2026-08-19:** 4 carriers with a null date, **4 resolved, 0 unresolved, 0 errors**. Gate outcome if committed: 1 hard block, 0 override-eligible, 3 allowed. The single block is `SRL Transport LLC` — a **test account** on SRL's own broker docket, 5 months old. Three of the four rows are test accounts and the fourth is PENDING, so **no real approved carrier is affected today**.
+
+`--commit` was deliberately not run. Writing this column is what turns an inert compliance gate live, and that is Wasi's call after reading the report.
+
+## Two decisions taken rather than asked
+
+Both are halt-ship: smallest safe default, recorded here.
+
+**The four-tier authority model is still not built.** This arc's brief specified 18+ / 12–18 / 6–12 / under-6-decline. §13.3 Item 182 ratifies three tiers with no 6-month band and no Quick-Pay consequence. Item 4 shipped the *data source* and left the ladder logic exactly as ratified. Adopting the four-tier model remains open and is Wasi's decision.
+
+**The release window is measured before pickup, not before acceptance.** The brief said "within 4 hours of acceptance". The Rate Confirmation and `accessorialPolicy` both say *before pickup*, and the instruction was to read the template as source of truth — so before-pickup won. A test fails if anyone re-anchors it.
+
+## What moved, and what did not
+
+| Counter | Before | After | Why |
+|---|---:|---:|---|
+| Pass 1 orphan endpoints | 26 | 26 | Every one is now annotated at its call site with a verdict. Nothing was deleted — see below. |
+| Pass 2 orphan schema fields | 510 | **511** | `Load.tonuFaultSide` is new and backend-captured; its AE surface is banked with the billing legs. An honest increase. |
+| Pass 4 delete-only rows | 14 | 14 | Untouched this arc. |
+| Backend test suite | 594 | **632** | +38 across POD population, escalation ordinals, Socrata parsing, and TONU branches. |
+
+Pass 1 staying at 26 is the intended outcome, not a miss. Nothing qualified as cleanly DEAD: the two closest candidates share controllers with live routes and are money-path, on code I did not author, and Pass 1 only proves *the frontend* does not call something — it cannot see an integration or a script. Full reasoning and per-endpoint verdicts in [`orphan-endpoint-triage.md`](orphan-endpoint-triage.md).
+
 ## Still open after this arc
 
 | ID | Why it was not built |
 |---|---|
-| F-1 | Needs a working authority-date source (FMCSA Socrata L&I "with history" backfill) before either the ratified three-tier or the brief's four-tier model can run. The four-tier model is also an unratified product change. |
-| F-2 | Unreachable while F-1 is inert; fix the copy when the ladder goes live so the two land together. |
+| F-1 | **Data source solved in Arc 2** (`816ce5eb`). What remains is a decision, not a build: run the backfill with `--commit` to turn the ladder live, and settle three-tier vs the brief's four-tier. |
+| F-2 | **Fixed in Arc 2** (`816ce5eb`) — the under-12 block now states the 12-month floor and that it cannot be waived; the 12–18 message names the scoped override and who can apply it. |
 | F-3 | Working as designed — recorded so nobody assumes upload completeness gates tendering. |
 | F-4 | NOA / factoring ineligibility is ratified-pending in §14; implementing it is a billing change. |
-| F-7 | TONU two-sided billing and the 4-hour release window are ratified-pending in §14; both are billing/RC changes needing their own sprint. |
+| F-7 | **Half-closed in Arc 2** (`1c845260`). The fault side is captured and required at the TONU flip, and the two-sided decision function is built and tested. The two billing legs — customer invoice line, carrier settlement payable — are deliberately NOT wired: they cross `invoiceService`'s accessorial path and the carrierPay/settlement path, and a half-live billing change is worse than a banked one. Resume state in §13.3 Item 196. The RC clause still does not name the releasing party; it must when a writer enforces the rule, and `e2e/helpers/pdf.ts` pins that string. |
