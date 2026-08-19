@@ -14335,7 +14335,15 @@
 //
 // Both from the carrier-lifecycle audit (docs/audits/carrier-lifecycle-audit.md,
 // CLAUDE.md §13.3 Item 195). Backend-only, but they deploy, so §3.1 applies.
-export const SRL_VERSION = "3.8.ask";
+// v3.8.asl — Closes the POD sweep's escape hatch.
+//   The sweep only scanned DELIVERED. The AE map lets DELIVERED go straight to
+//   INVOICED, so an AE invoicing a load before its POD landed removed it from
+//   the chase population for good — and INVOICED only advances to COMPLETED,
+//   so it could never reach POD_RECEIVED either. It left the pipeline still
+//   owing paperwork with nothing left to notice. INVOICED is now chased too,
+//   and it is actionable: a POD uploaded against an INVOICED load still files
+//   correctly, the status just does not walk backwards.
+export const SRL_VERSION = "3.8.asl";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

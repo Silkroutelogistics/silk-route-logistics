@@ -64,6 +64,35 @@ export function podReminderBand(hoursSince: number): PodReminderBand | null {
 /** Stop chasing a load that has been sitting overdue for this long — it is an ops problem by then, not a reminder. */
 const ABANDON_AFTER_HOURS = 14 * 24;
 
+/**
+ * Statuses a load can sit in while paperwork is still genuinely owed.
+ *
+ * Arc 2 Item 1 — this used to be DELIVERED alone, which left an escape hatch.
+ * The AE map allows DELIVERED to go straight to INVOICED (loadStateMachine:77),
+ * so an AE invoicing a load before the POD landed silently removed it from the
+ * chase population forever. Worse than it sounds: INVOICED only advances to
+ * COMPLETED, so such a load can never reach POD_RECEIVED either — it exits the
+ * pipeline owing paperwork with nothing left to notice.
+ *
+ * INVOICED is still chaseable, not futile: the POD upload path records the
+ * Document row and stamps podUrl regardless of status, and only *advances*
+ * status from AT_DELIVERY / DELIVERED / LOADED (carrierLoads.ts
+ * podAdvancingStatuses). So a carrier uploading against an INVOICED load
+ * still files their paperwork correctly — the status simply does not walk
+ * backwards, which is right.
+ *
+ * Deliberately excluded:
+ *   POD_RECEIVED — the paperwork is in by definition,
+ *   COMPLETED    — terminal and settled; chasing a closed load is noise,
+ *   TONU / CANCELLED — never delivered, so nothing is owed.
+ */
+export const POD_CHASE_STATUSES = ["DELIVERED", "INVOICED"] as const;
+
+/** Pure form of the population rule, so the boundary is pinned by test rather than read out of a query. */
+export function isPodChaseableStatus(status: string): boolean {
+  return (POD_CHASE_STATUSES as readonly string[]).includes(status);
+}
+
 export interface PodReminderResult {
   scanned: number;
   carrierRemindersSent: number;
@@ -97,14 +126,16 @@ export async function sendPodReminders(): Promise<PodReminderResult> {
 
   const loads = await prisma.load.findMany({
     where: {
-      status: "DELIVERED", // POD_RECEIVED means the paperwork already landed
+      status: { in: [...POD_CHASE_STATUSES] },
       actualDeliveryDatetime: { not: null, gte: earliest, lte: latest },
       deletedAt: null,
       isTestAccount: false,
       carrierId: { not: null },
-      // No POD on file. A load whose POD arrived but whose status has not yet
-      // advanced must not be chased.
+      // No POD on file, by either signal. The Document row is the primary one;
+      // podUrl is checked too so a load whose POD landed through a path that
+      // stamped the load but left no row of that docType is never chased.
       documents: { none: { docType: "POD" } },
+      podUrl: null,
     },
     select: {
       id: true,

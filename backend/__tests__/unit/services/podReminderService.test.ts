@@ -6,7 +6,12 @@
 // moment an AE is escalated to.
 
 import { describe, it, expect } from "vitest";
-import { podReminderBand, BANDS } from "../../../src/services/podReminderService";
+import {
+  podReminderBand,
+  BANDS,
+  isPodChaseableStatus,
+  POD_CHASE_STATUSES,
+} from "../../../src/services/podReminderService";
 import { PAPERWORK_DUE_HOURS } from "../../../src/lib/accessorialPolicy";
 
 describe("podReminderBand", () => {
@@ -65,5 +70,38 @@ describe("podReminderBand", () => {
       const matches = BANDS.filter((b) => h >= b.fromHours && h < b.toHours);
       expect(matches).toHaveLength(1);
     }
+  });
+});
+
+describe("isPodChaseableStatus", () => {
+  it("chases a delivered load", () => {
+    expect(isPodChaseableStatus("DELIVERED")).toBe(true);
+  });
+
+  it("chases an INVOICED load — the escape hatch this closes", () => {
+    // The AE map allows DELIVERED -> INVOICED directly (loadStateMachine:77).
+    // Before Arc 2 Item 1 the sweep only looked at DELIVERED, so invoicing a
+    // load before its POD landed removed it from the population permanently —
+    // and INVOICED only advances to COMPLETED, so it could never reach
+    // POD_RECEIVED either. It exited the pipeline owing paperwork.
+    expect(isPodChaseableStatus("INVOICED")).toBe(true);
+  });
+
+  it("never chases a load whose paperwork is already in", () => {
+    expect(isPodChaseableStatus("POD_RECEIVED")).toBe(false);
+  });
+
+  it("never chases a closed load", () => {
+    expect(isPodChaseableStatus("COMPLETED")).toBe(false);
+  });
+
+  it("never chases a load that was never delivered", () => {
+    for (const s of ["TONU", "CANCELLED", "IN_TRANSIT", "AT_DELIVERY", "BOOKED", "POSTED", "DRAFT"]) {
+      expect(isPodChaseableStatus(s)).toBe(false);
+    }
+  });
+
+  it("keeps the population to exactly the two owing-paperwork statuses", () => {
+    expect([...POD_CHASE_STATUSES].sort()).toEqual(["DELIVERED", "INVOICED"]);
   });
 });
