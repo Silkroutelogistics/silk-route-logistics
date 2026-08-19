@@ -14415,7 +14415,14 @@
 //   RENDER_GIT_COMMIT with no key required, so the deployed commit is now read,
 //   alongside a bootedAt fixed at process start. Short SHA, because that is
 //   what gets compared against git rev-parse --short.
-export const SRL_VERSION = "3.8.ast";
+// v3.8.asu — Remove a dead export the reachability gate caught.
+//   BUILD_SHA_FULL was exported on the theory that something might want a
+//   full-length SHA. Nothing did. The repo gate that fails on unreachable
+//   exports is the same discipline I had been applying by hand all arc, and it
+//   caught me shipping work no caller could reach. BUILD_SHA is now module-local
+//   too, per the gate advisory that a one-in-module-use export is an export
+//   nobody asked for.
+export const SRL_VERSION = "3.8.asu";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

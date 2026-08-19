@@ -34,8 +34,12 @@ const RAW_SHA =
   process.env.SOURCE_VERSION ||
   "local";
 
-export const BUILD_SHA_FULL = RAW_SHA;
-export const BUILD_SHA = RAW_SHA === "local" ? "local" : RAW_SHA.slice(0, 8);
+// Module-local, not exported. buildInfo() is the only surface anything needs,
+// and the reachability gate is right that an export with one in-module use is
+// an export nobody asked for. A full-length SHA constant lived here briefly on
+// the theory that something might want it; nothing did, so it is gone rather
+// than shipped as work no caller can reach.
+const BUILD_SHA = RAW_SHA === "local" ? "local" : RAW_SHA.slice(0, 8);
 
 export interface BuildInfo {
   /** Short commit SHA, or "local" when no runner injected one. */
