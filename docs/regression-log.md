@@ -13,6 +13,17 @@ so it's searchable and never lost.
 
 ---
 
+## Resolved — 2026-08-19 (Arc 4 Phase 1: v3.8.asw — a TOTP user could never reset their password)
+
+- **P0-class, live (Fixed in `1b6d1e49` / v3.8.asw).** `resetPasswordSchema` (routes/auth.ts:35) declared `{ token, email, newPassword }`. `authController.resetPassword` reads `totpCode` and gates on it for any user with `totpEnabled`: `if (!totpCode) return 400 requires2FA`. `validateBody` strips undeclared keys, so `totpCode` was **always undefined** and the gate **always fired**. The frontend was already correct — `ResetPasswordForm.tsx:62` resends with the code after the `requires2FA` reply — so the retry received the same `requires2FA` answer forever. **A TOTP-enabled user could not reset their password by any route through the UI.**
+  - **Lens:** §19 Pattern 6 Sub-pattern 5, fire #3 — same `z.object().strip()` mechanic as `tonuFaultSide` (v3.8.asr) and the Sprint 48.b RC-modal keys.
+  - **Guard:** [`schemaDrift.test.ts`](../backend/__tests__/unit/validators/schemaDrift.test.ts) + CI gate `audit-schema-drift.ts --strict`.
+- **Same class, quieter (same commit).** `updateCarrierSchema` (routes/carriers.ts:50 — a *different* schema from the registration one) never declared the four insurance `*Effective` fields that `updateCarrier` reads. v3.8.aiw added them to registration and to the writer but not here, so an effective date could be set at registration and never corrected. No AE surface calls that route with them today, so nothing user-visible broke.
+- **Swept repo-wide rather than spot-fixed.** All 71 `validateBody` routes: 39 clean, **0 undeclared-read**, 22 declared-unread (advisory), 8 unresolvable. Now enforced in CI.
+- **Worth recording about the tooling:** the scanner produced 45 false findings, then 6, then 3 before it was right — outer brace swallowed in the first key, comments parsed as code, and schemas keyed by bare name colliding across files. Every finding was verified against source before being treated as real, which is the only reason the two genuine ones were trusted. And the guard's **first adversarial verification was a false pass** — the mutation silently didn't apply, so the guard "passed" against unbroken code.
+
+**Agreement version drift (`7437f8ce`, unversioned — detection only).** `complianceCheck` accepts any SIGNED broker-carrier agreement regardless of version, so bumping `BCA_VERSION` reaches nobody who already signed. Detection shipped; **enforcement banked** because the BCA contains no re-consent clause (forcing re-signature is a policy decision, not a contractual right SRL holds), because gating without a re-consent surface would lock carriers out on the deploy that bumps the constant, and because the Rate Confirmation records no version, IP or user agent at all — so the per-load document governing a haul carries weaker evidence than the master agreements. Resume state in §13.3 Item 199.
+
 ## Open → code-complete — 2026-08-19 (v3.8.asv — Render deployed commits whose CI was red)
 
 **The gap.** Render auto-deploys on every push to `main` and does not read GitHub Actions, so a commit that fails CI still reaches production. Nothing in the pipeline connected the two.
