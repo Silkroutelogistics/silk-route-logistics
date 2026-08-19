@@ -13,6 +13,20 @@ so it's searchable and never lost.
 
 ---
 
+## Resolved — 2026-08-19 (Arc 3 follow-up: v3.8.asr + v3.8.ass — P0 TONU block, cron oracle)
+
+- **P0 — TONU was impossible to record (Fixed in `4ab1065f` / v3.8.asr).** v3.8.aso added a 422 gate requiring `tonuFaultSide` on a TONU flip and read it off `req.body`. `validateBody` replaces `req.body` with the Zod result (`middleware/validate.ts:21`), Zod strips unknown keys, and `updateLoadStatusSchema` declared only `status` — so the field was **always undefined** and the gate rejected *every* TONU, including ones sending a valid fault side. No type error, no runtime error; the value vanished between the wire and the handler. Shipped and deployed before it was caught.
+  - **Lens:** §19 Pattern 6 **Sub-pattern 5 — audit-both-ends-of-data-flow**, fire #2. Sprint 48.b caught the frontend-writes-vs-validator end; this is the validator-vs-handler-reads end, same `z.object().strip()` mechanic.
+  - **Why tests missed it:** unit tests covered `resolveTonuBilling` (policy) and `recordTonuObligation` (writer) — both green, both correct. Nothing covered the wire between them, which is where the field was lost.
+  - **Guard test:** [`backend/__tests__/unit/validators/updateLoadStatusSchema.test.ts`](../backend/__tests__/unit/validators/updateLoadStatusSchema.test.ts) — pins that the schema carries every field the handler reads.
+  - **Same root cause, pre-existing:** `reason` / `cancellationReason` were being stripped too, so `onLoadCancelledOrTONU` received `undefined` every time and every voided CarrierPay note read "no reason provided" whatever the AE typed. Fixed in the same commit.
+  - **Caught by:** the Phase 1e smoke, run against a local instance of the deployed code because prod verification needs auth this environment lacks.
+- **Cron fleet had no external oracle (Fixed in `f0a47994` / v3.8.ass).** `cron_registry` looks like the oracle and is not — 22 rows written by `cronRegistryService` for a different set of jobs, so a job scheduled in `cron/index.ts` is simply absent and absence proves nothing. node-cron has no name to read either (the name is a `withGuard` argument inside the callback, which does not run until first fire). `SCHEDULED_JOB_NAMES` now declares all 37 and is logged at boot as a structured field; [`scheduledJobs.test.ts`](../backend/__tests__/unit/cron/scheduledJobs.test.ts) parses the `withGuard` names out of the source and asserts both directions so the list cannot rot.
+
+**POD reminder path exercised end-to-end** (one-time, throwaway container, torn down): a DELIVERED load with `actualDeliveryDatetime` 6h ago and no POD produced `scanned:1, carrierRemindersSent:1`, a carrier notification reading *"Signed BOL and POD … are due in 18h"*, and dedup key `&pod=early` in the link; a second run returned `skippedAlreadyNotified:1, carrierRemindersSent:0`. **Constraint worth knowing:** the sweep excludes `isTestAccount` loads by design (Item 192 flood guard), so a test-flagged load can *never* exercise this path — the fixture had to be non-test to be eligible.
+
+**Prod TONU verification remains local-only.** The 422 gate and the ledger write were verified against a local instance of the deployed code, seeded and authenticated via the E2E bypass. Production verification needs an authenticated AE session this environment does not have, and no credentials were fabricated to manufacture one.
+
 ## Resolved — 2026-08-19 (Arc 3: v3.8.asp → v3.8.asq — deploy, TONU ledger, dispute fix)
 
 Baseline `274249e8`, **deployed through `274249e8`**. CLAUDE.md §13.3 Item 197; write-up appended to `docs/audits/carrier-lifecycle-audit.md`.
