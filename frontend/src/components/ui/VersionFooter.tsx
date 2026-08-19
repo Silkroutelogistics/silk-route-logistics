@@ -14505,7 +14505,17 @@
 //   on the load and runs fire-and-forget, so a payable created beside it
 //   would lose the race intermittently. No Quick Pay fee — the election is
 //   per load on the rate confirmation and a load that never ran has none.
-export const SRL_VERSION = "3.8.atc";
+// v3.8.atd — A public tracking link that is opened leaves a trace.
+//   accessCount and lastAccessedAt have sat on ShipperTrackingToken unwritten
+//   since the model was written, so nobody could tell a link opened once from
+//   one being scraped. §14 narrowed what this endpoint returns precisely
+//   because the QR outlives the paper — forwarded, photographed, scanned by
+//   people who are not parties to the shipment. That reduced what a leaked
+//   link discloses without making leakage visible. A log line, not a counter:
+//   writing a column here would put a database write on an unauthenticated
+//   public endpoint, which is a free lever for anyone holding one token. The
+//   token is hashed, never logged raw — it is a bearer credential.
+export const SRL_VERSION = "3.8.atd";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

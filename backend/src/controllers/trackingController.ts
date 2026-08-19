@@ -1,6 +1,9 @@
 import { Request, Response } from "express";
 import { Prisma } from "@prisma/client";
+import crypto from "crypto";
 import { prisma } from "../config/database";
+import { log } from "../lib/logger";
+import { extractClientIp } from "../services/geoService";
 import { calculatePredictiveETA } from "../services/predictiveEtaService";
 import { decodeHtmlEntities } from "../utils/htmlEntities";
 
@@ -44,6 +47,43 @@ export async function getPublicTracking(req: Request, res: Response) {
     }
     loadId = shipperToken.loadId;
     accessLevel = shipperToken.accessLevel;
+
+    // Arc 6 Phase 5 — a tracking link that is opened leaves a trace.
+    //
+    // ShipperTrackingToken carries accessCount and lastAccessedAt and nothing
+    // has ever written them (Pass 2 orphan-field triage, section D1), so nobody
+    // could tell a link opened once from a link being scraped.
+    //
+    // That matters more than housekeeping here. §14 deliberately narrowed what
+    // this endpoint returns on a STATUS_ONLY token (v3.8.ara) precisely BECAUSE
+    // the QR outlives the paper: the link gets forwarded, photographed, and
+    // scanned by dock workers and receivers who are not parties to the shipment.
+    // Narrowing reduced what a leaked link discloses. It did not make leakage
+    // visible. This does.
+    //
+    // A LOG LINE, NOT A COUNTER COLUMN. Writing accessCount would put a database
+    // write on an unauthenticated public endpoint — a free lever for anyone
+    // holding one token to generate load on the primary. The log carries token
+    // identity, so "how often, from where, over what window" is answerable
+    // without that. The two columns stay unwritten and are named in the triage
+    // as such rather than quietly half-filled.
+    //
+    // The token is HASHED, never logged raw: it is a bearer credential, and a
+    // log dump that contains it hands over live tracking access. Same 16-char
+    // sha256 prefix convention as lib/authEvents and carrierController.
+    try {
+      log.info(
+        {
+          trackingTokenHash: crypto.createHash("sha256").update(token).digest("hex").slice(0, 16),
+          loadId: shipperToken.loadId,
+          accessLevel: shipperToken.accessLevel,
+          ip: extractClientIp(req),
+        },
+        "[Tracking] public link opened",
+      );
+    } catch {
+      // Telemetry must never fail a shipper's tracking lookup.
+    }
   }
 
   // v3.8.i.1 — Typed allowlist (was `any`). Prisma.LoadSelect catches
