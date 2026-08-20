@@ -14574,7 +14574,16 @@
 //   running one, and it never throws: the endpoint that reports an outage
 //   must survive one. Paired with a hard §2.2 rule that held work lives on a
 //   hold/ branch, since a commit held back by position is not held back.
-export const SRL_VERSION = "3.8.atj";
+// v3.8.atk — atj put the schema field on the wrong endpoint.
+//   /api/health is routes/index.ts; server.ts serves a separate internal
+//   /health. atj added the field only to the latter, so the endpoint that
+//   misled during the incident — and that anyone actually curls to verify a
+//   deploy — still returned nothing about the schema. tsc was clean, the test
+//   was green, and it was green because it pinned the same wrong file. Caught
+//   by curling production after the deploy, which is the only check that
+//   could have caught it. Both endpoints now carry it, the test pins the
+//   /api one first, and it also pins that both handlers are async.
+export const SRL_VERSION = "3.8.atk";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

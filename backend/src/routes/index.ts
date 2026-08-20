@@ -1,4 +1,5 @@
 import { buildInfo } from "../lib/buildInfo";
+import { schemaInfo } from "../lib/schemaInfo";
 import { Router, Response } from "express";
 import { prisma } from "../config/database";
 import { authenticate, authorize, AuthRequest } from "../middleware/auth";
@@ -92,14 +93,25 @@ import emailTrackingRoutes from "./emailTracking";
 const router = Router();
 
 // --- Health & Monitoring (before any auth-guarded routes) ---
-router.get("/health", (_req, res) => {
+router.get("/health", async (_req, res) => {
   // sha + bootedAt turn deploy verification from "correlate uptime against the
   // push time and hope" into a value you read. See lib/buildInfo.
+  //
+  // v3.8.atk — `schema` answers the other half. The SHA says what CODE is
+  // running; a migration applies during the BUILD, while the previous process is
+  // still serving, so the SHA can report the old commit when the database has
+  // already changed. That is precisely how a column drop looked un-deployed on
+  // 2026-08-20 (§13.3 Item 212). See lib/schemaInfo.
+  //
+  // THIS is the endpoint that matters for that: /api/health. The internal
+  // /health in server.ts is a separate handler, and adding the field only there
+  // — which is what v3.8.atj did — left the blindness exactly where it was.
   res.json({
     status: "ok",
     uptime: process.uptime(),
     timestamp: new Date().toISOString(),
     ...buildInfo(),
+    schema: await schemaInfo(),
   });
 });
 

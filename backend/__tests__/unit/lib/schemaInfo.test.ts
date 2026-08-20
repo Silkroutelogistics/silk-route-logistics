@@ -91,19 +91,43 @@ describe("schemaInfo", () => {
   });
 });
 
-describe("the health endpoint exposes it", () => {
-  it("includes schema alongside the SHA", async () => {
-    // Pins the wiring, not just the helper. The incident happened because the
-    // endpoint reported build identity and nothing about the schema.
+describe("the health endpoints expose it", () => {
+  // THIS TEST WAS WRONG AND STILL PASSED. It pinned server.ts, which serves the
+  // internal /health — while the endpoint anyone actually reads for deploy
+  // verification, and the one that misled during the incident, is /api/health in
+  // routes/index.ts. The field shipped to the wrong handler, tsc was clean, this
+  // assertion was green, and production returned no schema field at all. Caught
+  // only by curling production.
+  //
+  // So both are pinned now, and the /api one first, because it is the one the
+  // lesson is about.
+  const read = async (rel: string) => {
     const fs = await import("fs");
     const path = await import("path");
-    const server = fs.readFileSync(path.join(__dirname, "../../../src/server.ts"), "utf8");
+    return fs.readFileSync(path.join(__dirname, "../../../src", rel), "utf8");
+  };
 
-    expect(server).toContain("schema: await schemaInfo()");
-    // Next to buildInfo, so one read answers both "what code" and "what schema".
-    const sha = server.indexOf("...buildInfo()");
-    const schema = server.indexOf("schema: await schemaInfo()");
+  it("/api/health — the endpoint used for deploy verification", async () => {
+    const src = await read("routes/index.ts");
+    expect(src).toContain("schema: await schemaInfo()");
+
+    const sha = src.indexOf("...buildInfo()");
+    const schema = src.indexOf("schema: await schemaInfo()");
     expect(sha).toBeGreaterThan(-1);
     expect(schema).toBeGreaterThan(sha);
+  });
+
+  it("/health — the internal check, kept consistent with it", async () => {
+    const src = await read("server.ts");
+    expect(src).toContain("schema: await schemaInfo()");
+  });
+
+  it("both handlers are async, since reading the ledger is a query", async () => {
+    // The /api/health handler was synchronous; adding an awaited call without
+    // making it async would have silently serialised a Promise into the body.
+    const api = await read("routes/index.ts");
+    expect(api).toContain('router.get("/health", async (_req, res)');
+    const internal = await read("server.ts");
+    expect(internal).toContain('app.get("/health", async (_req, res)');
   });
 });
