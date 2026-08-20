@@ -1561,6 +1561,16 @@ export async function markPaymentPaid(req: AuthRequest, res: Response) {
       },
     });
 
+    // v3.8.ati — the carrier is paid, and the board is told. Same defect as
+    // customerInvoiced above: queried by the Track & Trace "delivered" tab,
+    // rendered by its Finance tab, and written by nothing, so the tab could
+    // never be cleared.
+    if (payment.loadId) {
+      await prisma.load
+        .update({ where: { id: payment.loadId }, data: { carrierSettled: true } })
+        .catch((e: any) => log.error({ err: e, loadId: payment.loadId }, "[CarrierPay] carrierSettled flag not set (non-fatal)"));
+    }
+
     // Record in factoring fund as outflow
     const latestFund = await prisma.factoringFund.findFirst({
       orderBy: { createdAt: "desc" },

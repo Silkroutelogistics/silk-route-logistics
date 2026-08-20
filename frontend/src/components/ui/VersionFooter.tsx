@@ -14555,7 +14555,16 @@
 //   matter what was uploaded, and it is the evidence in a reefer claim.
 //   Recomputed from source rather than flipped, so re-firing is free and a
 //   missed event self-heals. No backfill: history keeps saying not recorded.
-export const SRL_VERSION = "3.8.ath";
+// v3.8.ati — The Track & Trace delivered tab can finally be cleared.
+//   customerInvoiced and carrierSettled were queried AND rendered and written
+//   by nothing. The delivered tab selects on podVerified false OR
+//   customerInvoiced false OR carrierSettled false, so with two of the three
+//   permanently false the OR was always true: every delivered load stayed on
+//   the tab forever, however completely it had been invoiced and settled. A
+//   worklist that cannot empty is not a worklist. Both now set at their
+//   source events — invoice sent, settlement paid. No backfill, so the tab
+//   drains going forward rather than claiming work nobody recorded.
+export const SRL_VERSION = "3.8.ati";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

@@ -116,25 +116,40 @@ function inSpan(idx: number, spans: Array<[number, number]>): boolean {
 /**
  * Which Prisma context encloses this offset.
  *
- * Looks back a bounded window for the nearest of data / select / include /
- * where. `data:` is the only one that writes; the rest read.
+ * Walks BACKWARD tracking brace depth to find the brace that opens the object
+ * this match sits in, then reads the key in front of it.  writes; the
+ * rest read.
+ *
+ * The first version looked back a fixed 600 characters for the nearest keyword,
+ * and that was wrong in a way that mattered: a Prisma create payload here is
+ * routinely forty-odd fields, so  sat far outside the window and every
+ * later field in the block was reported READ-never-WRITTEN. withTenderController
+ * assigns destContactName literally inside a data block and was classified as a
+ * read — which would have sent someone to "fix" a field that was already
+ * written. Depth-walking has no window to outgrow.
  */
 function nearestContext(code: string, idx: number): "data" | "read" | null {
-  const WINDOW = 600;
-  const start = Math.max(0, idx - WINDOW);
-  const before = code.slice(start, idx);
-
-  let best: { kind: "data" | "read"; at: number } | null = null;
-  for (const [kw, kind] of [
-    ["data:", "data"],
-    ["select:", "read"],
-    ["include:", "read"],
-    ["where:", "read"],
-  ] as Array<[string, "data" | "read"]>) {
-    const at = before.lastIndexOf(kw);
-    if (at >= 0 && (!best || at > best.at)) best = { kind, at };
+  let depth = 0;
+  for (let i = idx; i >= 0; i--) {
+    const ch = code[i];
+    if (ch === "}") depth++;
+    else if (ch === "{") {
+      if (depth === 0) {
+        // The key immediately before this opening brace names the context.
+        const before = code.slice(Math.max(0, i - 80), i);
+        const m = before.match(/(\w+)\s*:\s*$/);
+        if (!m) return null;
+        const key = m[1];
+        if (key === "data") return "data";
+        if (key === "select" || key === "include" || key === "where") return "read";
+        // Nested object inside a payload (e.g. ) — keep going
+        // outward rather than guessing.
+        return nearestContext(code, i - 1);
+      }
+      depth--;
+    }
   }
-  return best ? best.kind : null;
+  return null;
 }
 
 export function classifyField(field: string, files: Array<{ file: string; src: string }>): {
@@ -286,6 +301,30 @@ function main() {
     console.log(`\n${field}: ${verdict}\n`);
     for (const m of matches) console.log(`  ${m.kind.padEnd(12)} ${m.file}:${m.line}  ${m.snippet}`);
     if (!matches.length) console.log("  (no references outside the schema)");
+    return;
+  }
+
+  // --surface: READ-never-WRITTEN split by whether a frontend file consumes it.
+  // A column read by a page is a user being shown false emptiness; a column read
+  // only by backend code is an internal assumption. They deserve different
+  // urgency, so they are reported apart rather than as one list of 217.
+  if (args.includes("--surface")) {
+    const fields = schemaFields();
+    const ui = []; const internal = [];
+    for (const f of fields) {
+      const { verdict, matches } = classifyField(f.field, corpus);
+      if (verdict !== "READ") continue;
+      const onScreen = matches.some((m) => m.file.startsWith("frontend/src"));
+      (onScreen ? ui : internal).push({ ...f, files: [...new Set(matches.map((m) => m.file))] });
+    }
+    console.log(`
+READ-never-WRITTEN, by consumer surface
+`);
+    console.log(`  FRONTEND-VISIBLE  ${ui.length}   (a screen renders a value nothing produces)`);
+    console.log(`  BACKEND-ONLY      ${internal.length}
+`);
+    console.log("── FRONTEND-VISIBLE ──");
+    for (const f of ui) console.log(`  ${(f.model + "." + f.field).padEnd(46)} ${f.files.filter((x) => x.startsWith("frontend")).join(", ")}`);
     return;
   }
 

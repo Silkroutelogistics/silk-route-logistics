@@ -351,6 +351,18 @@ export async function generateInvoiceFromLoad(req: AuthRequest, res: Response) {
     await sendEmail(load.customer.email, `Invoice ${invoiceNumber} — ${load.referenceNumber}`, wrap(body)).catch((e: any) => log.error({ err: e }, "[Invoice] Email error:"));
 
     await prisma.invoice.update({ where: { id: invoice!.id }, data: { status: "SENT", sentDate: new Date() } });
+
+    // v3.8.ati — the load is now invoiced, and the board is told.
+    //
+    // Load.customerInvoiced has been queried and rendered since it was added and
+    // written by NOTHING. The Track & Trace "delivered" tab filters on
+    // { podVerified: false } OR { customerInvoiced: false } OR
+    // { carrierSettled: false }, so with two of those three permanently false
+    // the OR was always true: the tab showed every delivered load forever and
+    // could never be cleared. A worklist that cannot empty is not a worklist.
+    await prisma.load
+      .update({ where: { id: load.id }, data: { customerInvoiced: true } })
+      .catch((e: any) => log.error({ err: e, loadId: load.id }, "[Invoice] customerInvoiced flag not set (non-fatal)"));
   }
 
   res.status(201).json(invoice);
