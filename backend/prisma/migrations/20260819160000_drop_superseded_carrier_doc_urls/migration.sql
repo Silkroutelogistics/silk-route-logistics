@@ -1,0 +1,63 @@
+-- Drop four columns that no code has ever referenced.
+--
+-- Re-verified against the CURRENT tree on 2026-08-20 (Arc 7 Phase 4), not
+-- trusting the pre-Arc-6 corroboration: `terminatedAt` and its family sat in the
+-- same "dead column" bucket a week ago and became load-bearing in v3.8.ata, so a
+-- stale verdict on a DROP is exactly the thing that deletes working data.
+--
+-- For each column, both checks were re-run:
+--     grep -rn "<col>" backend/src frontend/src        -> no references
+--     git log -S "<col>" --all -- backend/src frontend/src -> 0 commits
+--
+-- ─── carrier_profiles: superseded by the Document table ──────────────────────
+--
+-- Carrier documents are stored as Document rows keyed by docType (W9 / COI /
+-- AUTHORITY) with a companion *Uploaded boolean on CarrierProfile — see
+-- carrierController.ts:352-354. These three are the earlier single-URL shape.
+--
+-- ─── load_accessorials: the unbuilt half of a designed pair ──────────────────
+--
+-- The sibling shipperInvoiceId is load-bearing: invoiceService calls it "the
+-- not-yet-billed marker", unbilledCustomerAccessorials selects on it being null,
+-- and voiding an invoice clears it. carrier_invoice_id has no reader and no
+-- writer, and is not needed: the carrier leg reaches exactly-once by a different
+-- and complete mechanism — syncCarrierPayAccessorials compares the ledger total
+-- against CarrierPay.accessorialsTotal and acts on the delta. Adding a per-row
+-- marker would create a SECOND source of truth for "has this been paid", which
+-- is the dual-status class this codebase has repeatedly had to unpick.
+--
+-- NOTE THE COLUMN NAME. The Prisma field is `carrierInvoiceId` but it carries
+-- @map("carrier_invoice_id"), so the database column is snake_case. An earlier
+-- draft of this migration dropped "carrierInvoiceId" WITH `IF EXISTS`, which
+-- would have silently matched nothing: the schema would have lost the field, the
+-- database would have kept the column, and nothing would have complained.
+--
+-- ─── WHY NO `IF EXISTS` ──────────────────────────────────────────────────────
+--
+-- Deliberately absent. `IF EXISTS` turns a wrong column name into a silent
+-- no-op, which is how the mismatch above would have shipped. These names have
+-- been verified against schema.prisma and against a from-zero apply on a
+-- CI-shape container; if any of them is wrong, this migration should FAIL and
+-- halt the deploy rather than half-apply and leave the schema disagreeing with
+-- the database. Prisma runs each migration once, tracked in _prisma_migrations,
+-- so re-run tolerance is not a reason to soften this.
+--
+-- ─── BEFORE APPLYING TO PRODUCTION ───────────────────────────────────────────
+--
+-- No code reference does not prove no stored value. Run against prod first:
+--
+--   SELECT count(*) FILTER (WHERE "w9Url" IS NOT NULL)              AS w9,
+--          count(*) FILTER (WHERE "coiUrl" IS NOT NULL)             AS coi,
+--          count(*) FILTER (WHERE "authorityLetterUrl" IS NOT NULL) AS authority
+--   FROM carrier_profiles;
+--
+--   SELECT count(*) FROM load_accessorials WHERE carrier_invoice_id IS NOT NULL;
+--
+-- A non-zero count on any of the three URL columns means it holds the only
+-- pointer to a stored file, and the Document table does not carry it. Backfill
+-- first, or leave the column — it costs nothing where it sits.
+
+ALTER TABLE "public"."carrier_profiles" DROP COLUMN "w9Url";
+ALTER TABLE "public"."carrier_profiles" DROP COLUMN "coiUrl";
+ALTER TABLE "public"."carrier_profiles" DROP COLUMN "authorityLetterUrl";
+ALTER TABLE "public"."load_accessorials" DROP COLUMN "carrier_invoice_id";

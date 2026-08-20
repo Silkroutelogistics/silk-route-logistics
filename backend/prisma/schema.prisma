@@ -909,11 +909,8 @@ model CarrierProfile {
   approvedAt            DateTime?
   isTestAccount         Boolean                  @default(false)
   w9Uploaded            Boolean                  @default(false)
-  w9Url                 String?
   insuranceCertUploaded Boolean                  @default(false)
-  coiUrl                String?
   authorityDocUploaded  Boolean                  @default(false)
-  authorityLetterUrl    String?
   address               String?
   city                  String?
   state                 String?
@@ -4488,7 +4485,6 @@ model LoadAccessorial {
   rejectedReason   String?           @map("rejected_reason")
   receiptDocId     String?           @map("receipt_document_id")
   billedTo         String?           @map("billed_to") @db.VarChar(20)
-  carrierInvoiceId String?           @map("carrier_invoice_id")
   shipperInvoiceId String?           @map("shipper_invoice_id")
   notes            String?
   createdBy        String?           @map("created_by")
