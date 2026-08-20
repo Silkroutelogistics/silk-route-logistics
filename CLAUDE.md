@@ -1555,6 +1555,19 @@ Each is a discrete sprint. Mix of operational, security, UX, and technical debt.
 
     **Still owed, in order:** the PITR count before 2026-08-27; the deploy-gate secret, which ends the red-email streak and would have prevented Item 212 outright.
 
+
+214. **The deploy gate warns instead of failing while its secret is missing (2026-08-20).**
+
+    The job failed loudly on an absent `RENDER_DEPLOY_HOOK_URL` so that a missing secret could never look like a successful deploy. That is the right trade for hours. It ran for a week: **seven consecutive failure emails**, every one for a run whose backend, frontend and E2E were green, and four of them generated after Wasi had already raised the noise — I acknowledged it and kept pushing while waiting for someone else to act, which was the wrong call.
+
+    Unactionable red teaches a reader to ignore CI mail, and an ignored inbox costs more than the thing the red was guarding.
+
+    **Now:** an absent secret emits a `::warning::` and skips the trigger step; the run stays green. **A configured hook that returns a non-2xx still fails hard** — the quieting applies only to the absent-secret case.
+
+    **The residual risk, which is real and is named in the warning text itself:** while the secret is absent this job does not deploy and Render's own auto-deploy ships the commit. If auto-deploy is switched off *before* the secret exists, nothing deploys and this job stays green about it. The setup doc's ordering (add secret → confirm green → then disable auto-deploy) is what prevents that, and a test asserts the warning still carries the sentence saying so.
+
+    **A stale test was passing for the wrong reason.** The old assertion — "fails when the secret is missing rather than skipping" — kept passing after the behaviour changed, because it only checked the job contained `exit 1` somewhere and the hook-failure path still does. It now names the exact annotation level. A test that passes for a reason unrelated to its name is worse than no test, and this is the third time in two days that a green assertion turned out to be aimed at the wrong thing (see Items 212 and 213).
+
 ---
 
 ## §14 LEGAL / COMPLIANCE STATUS

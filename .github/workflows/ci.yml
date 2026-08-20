@@ -248,17 +248,38 @@ jobs:
     # Pushes to main only. A pull_request run must never deploy.
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     steps:
-      - name: Require the deploy hook secret
+      # WHY THIS WARNS INSTEAD OF FAILING.
+      #
+      # It failed loudly at first, on the reasoning that a missing secret must
+      # never look like a successful deploy. That is right for a few hours and
+      # wrong after a few days: the secret went unset for a week, every push
+      # emailed a failure, and seven of them arrived for runs whose backend,
+      # frontend and E2E were all green. Unactionable red teaches a reader to
+      # ignore CI mail, which costs more than the thing the red was guarding.
+      #
+      # THE RESIDUAL RISK, STATED PLAINLY. While the secret is absent this job
+      # does not deploy, and Render's own auto-deploy is what ships the commit.
+      # If auto-deploy is ever switched OFF while the secret is still missing,
+      # nothing deploys and this job stays green about it. That ordering is the
+      # one thing the setup doc insists on: add the secret, confirm this job goes
+      # green, and only then turn auto-deploy off.
+      #
+      # A real hook failure still fails hard — see the next step.
+      - name: Check for the deploy hook secret
+        id: hook
         env:
           HOOK: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
         run: |
           if [ -z "$HOOK" ]; then
-            echo "::error::RENDER_DEPLOY_HOOK_URL is not set. This job fails loudly rather than skipping, so a missing secret can never look like a successful deploy. Create the hook in the Render dashboard and add it as a repo secret — see docs/internal/render-deploy-gate-setup.md."
-            exit 1
+            echo "::warning::RENDER_DEPLOY_HOOK_URL is not set, so this job did not deploy. Render's own auto-deploy is currently shipping this commit. Do NOT turn auto-deploy off until this secret exists and this job has gone green — see docs/internal/render-deploy-gate-setup.md."
+            echo "present=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "Deploy hook secret present."
+            echo "present=true" >> "$GITHUB_OUTPUT"
           fi
-          echo "Deploy hook secret present."
 
       - name: Trigger Render deploy
+        if: steps.hook.outputs.present == 'true'
         env:
           HOOK: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
         run: |
