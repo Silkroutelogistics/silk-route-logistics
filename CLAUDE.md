@@ -1452,7 +1452,7 @@ Each is a discrete sprint. Mix of operational, security, UX, and technical debt.
 
     **The distinct rendering is the more important half.** TERMINATED now reads differently from never-signed on both surfaces that show agreement state — the carrier panel names the date and reason, and the tender-time override modal treats `AGREEMENT_TERMINATED` as a hard block whose remedy is a signature rather than a waiver. That confusion was the original defect. Also widened the `blocked_codes` union in the three places the parent components declared it inline: tsc passed without it because the shapes are structural, but the narrower type was lying about what arrives at runtime.
 
-208. **Column-drop migration STAGED, push blocked on the deploy gate (Arc 7 Phase 4).**
+208. **Column-drop migration — STAGED in Arc 7, then PUSHED AND APPLIED unverified in Arc 8. See Item 212 for the incident.**
 
     The four columns (`CarrierProfile.w9Url` / `coiUrl` / `authorityLetterUrl`, `LoadAccessorial.carrier_invoice_id`) were **re-verified against the current tree**, not trusted from the pre-Arc-6 corroboration — `terminatedAt` sat in the same dead-column bucket a week ago and became load-bearing in `v3.8.ata`, so a stale verdict on a DROP is exactly what deletes working data. All four: zero references in `backend/src` + `frontend/src`, zero commits touching them in src across all history.
 
@@ -1488,6 +1488,23 @@ Each is a discrete sprint. Mix of operational, security, UX, and technical debt.
     **The classifier was wrong twice while producing this list, and both are recorded rather than smoothed over.** (a) A column written through a spread never appears literally at the write site — this hit my own doc-flag sync, fixed by writing the columns explicitly rather than teaching the tool dataflow analysis, kept as a self-test fixture. (b) The context heuristic used a fixed 600-character lookback, and a Prisma payload here is routinely forty-odd fields, so `data: {` fell outside the window and **every later field in the block reported READ**; `destContactName` is assigned literally inside a data block and was called a read. Replaced with backward brace-depth walking. That correction moved the count **217 → 237**, in both directions, so both earlier numbers were wrong.
 
     **Remaining: 134 frontend-visible, 103 backend-only**, banked with first-pass verdicts (WIRE / RENDER-REMOVE / SCHEMA-DEAD) and an explicit instruction to read each column's matches before acting — the tool has earned that caution.
+
+
+212. **INCIDENT — the staged column-drop migration was pushed and applied to production unverified (2026-08-20, Arc 8 close-out).**
+
+    **What happened.** In Arc 7 the migration was deliberately committed as the unpushed local tip, with Item 208 recording that it must not ship until the deploy gate was live and the row-count gate had been run against production. In Arc 8 I committed Phase 3 (`edd39163`) and Phase 4 (`3a8a3fdb`) **on top of it** and then ran `git push`. Git history is linear: pushing the tip pushed everything beneath it, including `0cf1ed58`. Render auto-deploys on push, its build chain runs `prisma migrate deploy`, and the four columns were dropped from production at approximately 19:59 UTC.
+
+    **My error, and the specific mechanism.** Arc 7 got this right by making the migration the tip and pushing an explicit earlier SHA. Arc 8 lost that property the moment two commits landed above it, and I did not re-check `git log origin/main..HEAD` before pushing. The safeguard was positional, not enforced — and a positional safeguard survives exactly as long as nobody commits on top of it.
+
+    **Why the health check gave false comfort.** At 19:59 `/api/health` reported `sha: 994994b0`, the pre-migration commit, which read as "not deployed yet". It was the OLD process still serving: Render runs `migrate deploy` during the BUILD, before the new process boots. **The database had already changed while the app still reported the previous SHA.** Anyone using `/api/health` to decide whether a migration has landed will be wrong by exactly one build window — check `_prisma_migrations`, not the app.
+
+    **State now.** Production is healthy on `259f0ef2`. The drop was precise: `w9Url`, `coiUrl`, `authorityLetterUrl` and `carrier_invoice_id` are gone, the load-bearing sibling `shipper_invoice_id` is present, and `carrier_profiles` retains its 149 other columns including the live `w9Uploaded` / `coiExpiryDate` / `authorityDocUploaded` family. The migration succeeded, which independently confirms the column names were right — `IF EXISTS` had been removed, so a wrong name would have failed the build.
+
+    **What cannot now be known.** Whether those three URL columns held values. The row-count gate existed precisely to answer that and I ran it after the drop, when the columns were already gone. The evidence that it was harmless is strong but circumstantial: zero references in `backend/src` and `frontend/src`, and `git log -S` returning **no commits** touching any of them in src across the repository's entire history — nothing in this codebase has ever written them, so a value could only have come from outside it.
+
+    **Recovery, if it matters:** Neon PITR is 7 days (Item 70). Branching production to just before 19:59 UTC on 2026-08-20 and running the row-count query there would settle it definitively. That is a Neon dashboard operation.
+
+    **The lesson, stated so it binds.** A commit held back by position is not held back. If work must not ship, it does not belong on the branch that ships — it belongs on a separate branch, or behind a mechanism that refuses. Item 208's own instruction ("push only up to the pre-migration commit") depended on every later arc remembering an ordering constraint that nothing enforced.
 
 ---
 

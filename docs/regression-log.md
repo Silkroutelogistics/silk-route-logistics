@@ -13,6 +13,15 @@ so it's searchable and never lost.
 
 ---
 
+## INCIDENT — 2026-08-20 (Arc 8: a staged migration shipped unverified)
+
+- **A column-drop migration held back for the deploy gate was pushed and applied to production.** Arc 7 committed it as the unpushed tip; Arc 8 committed two phases on top of it and pushed, which carried it along, and Render's build chain applied the drops. **My error** — the safeguard was positional and I did not re-check `git log origin/main..HEAD` before pushing.
+- **`/api/health` gave false comfort.** It reported the pre-migration SHA at the moment the database had already changed, because `migrate deploy` runs during the BUILD and the old process keeps serving until the new one boots. Use `_prisma_migrations`, not the app, to decide whether a migration landed.
+- **Outcome:** production healthy, drop precise, load-bearing sibling intact. Whether the three URL columns held data is now unknowable — the gate that would have answered it was run after the drop. Evidence of harmlessness is strong but circumstantial (zero refs, zero commits in all history). Neon PITR is 7 days if it needs settling.
+- **Binding lesson:** a commit held back by position is not held back. Work that must not ship does not belong on the branch that ships.
+
+---
+
 ## Closed — 2026-08-20 (Arc 8: v3.8.ath–ati — screens that showed values nothing produced)
 
 - **The settlement document checklist was decoration (Closed in v3.8.ath).** Seven columns rendered since atb and written by nothing. Each now flips at its own source event. `TEMP_LOG` had no docType at all, so `docTempLog` could never have become true — and it is the evidence in a reefer claim. Recomputed from source, no backfill; history keeps saying "not recorded".
