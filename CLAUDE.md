@@ -1462,6 +1462,33 @@ Each is a discrete sprint. Mix of operational, security, UX, and technical debt.
 
     **NOT PUSHED.** `gh secret list` returns empty, so `RENDER_DEPLOY_HOOK_URL` is unset and the deploy gate is not live — Render still auto-deploys on push. An ungated auto-deploy applying column drops the moment they hit `main` is precisely the risk the gate exists for. The commit is local and is the unpushed tip. **To release it:** complete the three dashboard steps in `docs/internal/render-deploy-gate-setup.md`, confirm the deploy job goes green, run the row-count gate in the migration header against production, then push.
 
+
+209. **Deploy gate still not live — migration still staged, and the CI email noise is a consequence (2026-08-20, Arc 8 Phase 1).**
+
+    `gh secret list` returns empty and the deploy job's failure line still reads `RENDER_DEPLOY_HOOK_URL is not set`. Two independent signals, and the second rules out an org-level secret, which would have resolved inside the workflow. **Phase 1 stopped and Phase 2 stayed blocked**; the column-drop migration remains the unpushed local tip described at Item 208.
+
+    **Operational consequence, raised by Wasi mid-arc:** every run since `f9aada76` — the commit that added the deploy job on 2026-08-19 — has reported failure, five consecutive, and he is receiving the emails. Backend, frontend and E2E passed on all of them; the only red job is the deploy gate failing loudly on the missing secret, which is the behaviour v3.8.asv deliberately chose so a missing secret could never look like a successful deploy.
+
+    **That reasoning holds for hours, not days.** Unactionable red trains a reader to ignore CI mail, which defeats the thing the loud failure protects. The fix with two payoffs is the secret itself: it silences the noise AND releases the staged migration. The alternative — skipping instead of failing when the secret is absent — has a hole worth stating: once auto-deploy is turned off, a skip means nothing deploys and CI stays green about it, and CI cannot detect auto-deploy state. Left as Wasi's call rather than weakened unilaterally.
+
+210. **Settlement document checklist is data (`v3.8.ath`) — Item 204's ordered first step, done.**
+
+    All seven `CarrierPay` columns now flip at their own source event: POD or signed delivery BOL, carrier invoice, lumper receipt, scale ticket, temp log, and a SIGNED rate confirmation read off the `RateConfirmation` rather than a file. **`TEMP_LOG` had no docType at all**, so `docTempLog` could never have become true no matter what was uploaded — and it is the evidence in a reefer claim. Added to the free-form vocabulary per the v3.8.aky Path γ convention, no migration.
+
+    **Recomputed from source, never incremented**, so re-firing is free and a missed event self-heals — the `syncCarrierPayAccessorials` idiom. **No backfill:** it runs only from a source event, so historical settlements keep their false flags and keep rendering "not recorded", which is the honest state. A test enumerates the call sites to keep it that way.
+
+    Item 204's gate-at-scale decision now has the data it was waiting on. **It is still not gated**, and the trigger conditions there are unchanged.
+
+211. **READ-never-WRITTEN — the class, the top cluster fixed, and two tool corrections (`v3.8.ati`).**
+
+    The inverse of an orphan: code depending on a value nothing produces, and where the consumer is a screen, a UI showing a user false emptiness. Triaged by consumer surface in [`docs/audits/read-never-written-triage.md`](docs/audits/read-never-written-triage.md).
+
+    **Top cluster, fixed:** `Load.customerInvoiced` and `Load.carrierSettled` are queried as a filter (`trackTraceBoard.ts:97-101`) and rendered (`:268-269`) and were written by nothing. The **"delivered" tab** selects on `podVerified: false` OR `customerInvoiced: false` OR `carrierSettled: false`, so with two of three permanently false the OR was always true — every delivered load stayed on the tab forever regardless of how completely it had been invoiced and settled. Now set at invoice-sent and settlement-paid. No backfill, so it drains forward.
+
+    **The classifier was wrong twice while producing this list, and both are recorded rather than smoothed over.** (a) A column written through a spread never appears literally at the write site — this hit my own doc-flag sync, fixed by writing the columns explicitly rather than teaching the tool dataflow analysis, kept as a self-test fixture. (b) The context heuristic used a fixed 600-character lookback, and a Prisma payload here is routinely forty-odd fields, so `data: {` fell outside the window and **every later field in the block reported READ**; `destContactName` is assigned literally inside a data block and was called a read. Replaced with backward brace-depth walking. That correction moved the count **217 → 237**, in both directions, so both earlier numbers were wrong.
+
+    **Remaining: 134 frontend-visible, 103 backend-only**, banked with first-pass verdicts (WIRE / RENDER-REMOVE / SCHEMA-DEAD) and an explicit instruction to read each column's matches before acting — the tool has earned that caution.
+
 ---
 
 ## §14 LEGAL / COMPLIANCE STATUS

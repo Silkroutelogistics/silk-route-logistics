@@ -13,6 +13,15 @@ so it's searchable and never lost.
 
 ---
 
+## Closed — 2026-08-20 (Arc 8: v3.8.ath–ati — screens that showed values nothing produced)
+
+- **The settlement document checklist was decoration (Closed in v3.8.ath).** Seven columns rendered since atb and written by nothing. Each now flips at its own source event. `TEMP_LOG` had no docType at all, so `docTempLog` could never have become true — and it is the evidence in a reefer claim. Recomputed from source, no backfill; history keeps saying "not recorded".
+- **The Track & Trace delivered tab could never be cleared (Closed in v3.8.ati).** `customerInvoiced` and `carrierSettled` are filtered on AND rendered, and were written by nothing, so the tab's `OR` was permanently true and every delivered load stayed on it forever. Set at invoice-sent and settlement-paid.
+- **The field-usage classifier was wrong twice, and both are documented (v3.8.ati).** Spread writes are invisible to identifier matching — which caught my own doc-flag sync and was fixed by making the writes explicit. And a fixed 600-char context window was smaller than a routine Prisma payload, so later fields in any large `data:` block reported READ; replaced with brace-depth walking. Counts moved 217 → 237 in both directions. Any single verdict is a question until its matches are read.
+- **Deploy gate still absent; five consecutive CI "failures" are that job alone.** Backend, frontend and E2E have been green throughout. Raised by Wasi as email noise; the loud-failure design was deliberate but has outlived its window. See §13.3 Item 209.
+
+---
+
 ## Closed — 2026-08-20 (Arc 7: v3.8.ate–atg — both sides of a TONU, a button, and a measurement that means something)
 
 - **The customer was never billed for a TONU (Closed in v3.8.ate).** Same shape as the carrier gap closed in atc: the charge was on the ledger and the reader gave up at `if (!base) return null`, because the thing that creates that base prices a delivered load. Creates only the missing anchor invoice and lets the existing `syncInvoiceAccessorials` path do the billing. F-7 is now two-sided.
