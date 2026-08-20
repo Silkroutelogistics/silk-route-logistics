@@ -6,7 +6,7 @@ import { AuthRequest } from "../middleware/auth";
 import { env } from "../config/env";
 import { uploadFile, uploadFileToPath, getDownloadUrl, getFileStream, deleteFile, validateBufferSignature, isS3Url } from "../services/storageService";
 import { validateAndNotifyPOD } from "../services/shipperNotificationService";
-import { onPODUploaded } from "../services/integrationService";
+import { onPODUploaded, syncSettlementDocFlags } from "../services/integrationService";
 import { log } from "../lib/logger";
 
 /**
@@ -223,6 +223,15 @@ export async function uploadDocuments(req: AuthRequest, res: Response) {
     }
     // Integration: advance load to POD_RECEIVED + invoice to SENT
     onPODUploaded(loadId).catch((e) => log.error({ err: e }, "[Integration] onPODUploaded error:"));
+  }
+
+  // v3.8.ath — the settlement document checklist becomes true here, at the
+  // moment the document arrives, rather than never. Recomputed from what exists,
+  // so a re-upload or a second document of the same type is free.
+  if (loadId) {
+    syncSettlementDocFlags(loadId).catch((e) =>
+      log.error({ err: e, loadId }, "[Settlement] doc-flag sync failed (non-fatal)"),
+    );
   }
 
   res.status(201).json(documents);

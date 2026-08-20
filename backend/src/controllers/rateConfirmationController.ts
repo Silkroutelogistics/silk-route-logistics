@@ -1,5 +1,6 @@
 import { Response } from "express";
 import { prisma } from "../config/database";
+import { syncSettlementDocFlags } from "../services/integrationService";
 import { AuthRequest } from "../middleware/auth";
 import {
   createRateConfirmationSchema,
@@ -396,6 +397,15 @@ export async function signRateConfirmation(req: AuthRequest, res: Response) {
       formData: updatedFormData as any,
     },
   });
+
+  // v3.8.ath — a signed rate confirmation is the source event for the
+  // docSignedRateCon column on the settlement checklist. Recomputed rather than
+  // flipped, so signing twice is free.
+  if (rc.loadId) {
+    syncSettlementDocFlags(rc.loadId).catch((e) =>
+      log.error({ err: e, loadId: rc.loadId }, "[Settlement] doc-flag sync after RC signing failed (non-fatal)"),
+    );
+  }
 
   res.json(updated);
 }

@@ -15,6 +15,8 @@ vi.mock("../../../src/services/shipperNotificationService", () => ({
 }));
 vi.mock("../../../src/services/integrationService", () => ({
   onPODUploaded: vi.fn().mockResolvedValue(undefined),
+  // v3.8.ath — the upload path now also syncs the settlement doc checklist.
+  syncSettlementDocFlags: vi.fn().mockResolvedValue({ updated: false }),
 }));
 
 import { uploadDocuments, getDocuments } from "../../../src/controllers/documentController";

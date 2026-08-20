@@ -134,6 +134,11 @@ export async function onLoadDelivered(loadId: string) {
   // ── AP: Create CarrierPay ──
   if (load.carrierId && load.carrier?.carrierProfile) {
     await createCarrierPayOnDelivery(load);
+    // v3.8.ath — the settlement is born with its document checklist already
+    // correct, rather than false until the next upload happens to fire.
+    await syncSettlementDocFlags(load.id).catch((e) =>
+      log.error({ err: e, loadId: load.id }, "[Settlement] initial doc-flag sync failed (non-fatal)"),
+    );
   }
 
   // ── Shipper Credit: Increase utilization ──
@@ -1561,6 +1566,103 @@ export async function enforceShipperCredit(customerId: string): Promise<{ allowe
  * resolved it from `accessorialPolicy`, and reading it back keeps one source of
  * truth for what a TONU is worth.
  */
+/**
+ * Which settlement documents a load actually has, mapped onto the CarrierPay
+ * checklist.
+ *
+ * WHY THIS EXISTS. Seven booleans on CarrierPay describe a per-settlement
+ * document checklist. Until now NOTHING wrote them: the AE surface added in
+ * v3.8.atb renders them, and the field-usage classifier (v3.8.atg) reported
+ * `docSignedBol` as READ-never-WRITTEN — a screen showing a value nothing
+ * produces. Item 204 named writing them as the ordered FIRST step, before any
+ * decision about gating payment on them, and this is that step.
+ *
+ * RECOMPUTED FROM SOURCE, never incremented. Each call re-derives all seven from
+ * the documents that exist right now, which makes re-firing free and makes the
+ * flags self-heal if an event is ever missed — the same reconciliation idiom
+ * `syncCarrierPayAccessorials` uses for money. An incremental flip would need
+ * its own idempotency guard and would drift the moment one event was dropped.
+ *
+ * NO BACKFILL. This runs only when a source event fires for a load. A historical
+ * settlement whose documents predate this code keeps its `false` flags and keeps
+ * rendering "not recorded", which is the honest state: nobody recorded them.
+ * Guessing retroactively would put a checkmark against a document no one ever
+ * confirmed, on the screen an AE will read during a claim.
+ *
+ * WHAT COUNTS AS EACH DOCUMENT. `docType` is a free-form String with its accepted
+ * values documented as a comment on the model (the v3.8.aky Path γ convention),
+ * so this maps to those strings directly.
+ */
+const SETTLEMENT_DOC_TYPES = {
+  // A signed BOL at delivery IS the POD in this system — onPODUploaded is the
+  // delivery-proof path — so any of these three satisfies it.
+  docSignedBol: ["POD", "SIGNED_BOL_DEL", "SIGNED_BOL_PU"],
+  docCarrierInvoice: ["INVOICE"],
+  docLumperReceipt: ["RECEIPT_LUMPER"],
+  docScaleTicket: ["RECEIPT_SCALE"],
+  // v3.8.ath — TEMP_LOG added to the docType vocabulary. It is the evidence in a
+  // reefer claim and had no source type at all, so this column could never have
+  // become true no matter what anyone uploaded.
+  docTempLog: ["TEMP_LOG"],
+} as const;
+
+export async function syncSettlementDocFlags(loadId: string): Promise<{ updated: boolean }> {
+  const pay = await prisma.carrierPay.findFirst({
+    where: { loadId, status: { not: "VOID" } },
+    orderBy: { createdAt: "desc" },
+    select: { id: true },
+  });
+  // No settlement yet. createCarrierPayOnDelivery calls this after it creates
+  // one, so the flags are correct from birth rather than waiting for the next
+  // upload.
+  if (!pay) return { updated: false };
+
+  const docs = await prisma.document.findMany({
+    where: { loadId },
+    select: { docType: true },
+  });
+  const present = new Set(docs.map((d) => (d.docType || "").toUpperCase()));
+
+  const flags: Record<string, boolean> = {};
+  for (const [column, types] of Object.entries(SETTLEMENT_DOC_TYPES)) {
+    flags[column] = (types as readonly string[]).some((t) => present.has(t));
+  }
+
+  // The rate confirmation is a signature event, not an uploaded file, so it is
+  // read from the document it actually lives on rather than from a docType.
+  const signedRc = await prisma.rateConfirmation.findFirst({
+    where: { loadId, status: "SIGNED" },
+    select: { id: true },
+  });
+  flags.docSignedRateCon = !!signedRc;
+
+  // "All six recorded" — matching the word the AE surface uses. A stricter
+  // reading (every document also status VERIFIED) is a separate decision and is
+  // banked with the gate-at-scale question in §13.3 Item 204.
+  const allDocsVerified = Object.values(flags).every(Boolean);
+
+  // Written out one column at a time rather than spread from the map above.
+  // A spread hides the column names from every tool that matches identifiers —
+  // the field-usage classifier reported docSignedBol as READ-never-WRITTEN
+  // against this very function, because the only literal occurrence was a map
+  // key. Verbose beats clever when the clever version makes the code invisible
+  // to the thing that audits it.
+  await prisma.carrierPay.update({
+    where: { id: pay.id },
+    data: {
+      docSignedBol: flags.docSignedBol,
+      docCarrierInvoice: flags.docCarrierInvoice,
+      docLumperReceipt: flags.docLumperReceipt,
+      docScaleTicket: flags.docScaleTicket,
+      docTempLog: flags.docTempLog,
+      docSignedRateCon: flags.docSignedRateCon,
+      allDocsVerified,
+    },
+  });
+
+  return { updated: true };
+}
+
 export async function raiseTonuCarrierPayable(loadId: string): Promise<{ created: boolean; reason?: string }> {
   const load = await prisma.load.findUnique({
     where: { id: loadId },

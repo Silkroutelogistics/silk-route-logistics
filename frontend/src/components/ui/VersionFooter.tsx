@@ -14545,7 +14545,17 @@
 //   the matches attached. READ-never-WRITTEN is the interesting bucket: code
 //   depending on a value nothing produces — which is exactly what the
 //   settlement doc checklist turned out to be.
-export const SRL_VERSION = "3.8.atg";
+// v3.8.ath — The settlement document checklist becomes data.
+//   Seven booleans rendered since atb and written by nothing; the field-usage
+//   classifier independently called docSignedBol READ-never-WRITTEN, which is
+//   a screen showing a value nothing produces. Now each flips at the moment
+//   its own source event fires — POD or signed BOL, carrier invoice, lumper
+//   receipt, scale ticket, temp log, and a SIGNED rate confirmation. TEMP_LOG
+//   had no docType at all, so that column could never have become true no
+//   matter what was uploaded, and it is the evidence in a reefer claim.
+//   Recomputed from source rather than flipped, so re-firing is free and a
+//   missed event self-heals. No backfill: history keeps saying not recorded.
+export const SRL_VERSION = "3.8.ath";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

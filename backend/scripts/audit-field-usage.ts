@@ -232,6 +232,15 @@ function selfTest(): number {
         "",
         "await prisma.thing.update({ where: { id }, data: { plantedRealWrite: new Date() } });",
         "const x = row.plantedRealRead;",
+        "// KNOWN LIMITATION, kept as a fixture so it is not rediscovered:",
+        "// a column written through a spread never appears literally at the write",
+        "// site, so identifier matching cannot see it. This bit for real — the",
+        "// settlement doc-flag sync wrote its columns via data: { ...flags } and",
+        "// the classifier reported them READ-never-WRITTEN. The fix was to write",
+        "// them out explicitly, because code invisible to its own audit tool is",
+        "// the problem, not the tool. If this verdict ever changes, the matcher",
+        "// has grown real dataflow analysis and this case should be revisited.",
+        "await prisma.thing.update({ data: { ...computedFlags } });",
       ].join("\n"),
     },
   ];
@@ -241,6 +250,8 @@ function selfTest(): number {
     ["plantedRealWrite", "WRITTEN"],
     ["plantedRealRead", "READ"],
     ["plantedNeverMentioned", "UNREFERENCED"],
+    // Documents the spread blind spot rather than pretending it is handled.
+    ["plantedSpreadWrite", "UNREFERENCED"],
   ];
 
   let failed = 0;
