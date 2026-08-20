@@ -1403,6 +1403,8 @@ Each is a discrete sprint. Mix of operational, security, UX, and technical debt.
 
 203. **Arc 5 Phase 3 (counsel document consolidation) — NOT RUN, pending a file drop.**
 
+    **Re-checked 2026-08-20 (Arc 7 Phase 1): still absent — third consecutive arc.** Same search, same result.
+
     **Re-checked 2026-08-19 (Arc 6 Phase 1): still absent.** No `.docx` anywhere in the repo, no `my-knowledge-base/raw/counsel/`, and no ITG Quick Pay PDFs — searched by name (`202832959`, `Counsel Review`, `ITG`, `Broker Carrier Agreement`) and by extension across the whole tree. Arc 6 Phase 1 therefore did not run and fell through as specified. The consolidation spec stands as written; when the files land, the addition from Pass 2 is that the **termination gap (Item 205 / v3.8.ata) goes in the BCA analysis explicitly** — the consolidated draft should state what its termination clause requires the platform to support, since the mechanism now exists and the paper still contains no amendment, re-consent, or termination-notice clause. §16 #7 holds the two policy questions the mechanism deliberately did not decide.
 
     Inputs are absent: zero `.docx` anywhere in the repo, and no `my-knowledge-base/raw/counsel/`. Nothing was inferred or reconstructed in their place, since a counsel document reconstructed from memory is worse than no document. **§16 #1 and #2 remain open regardless** — the Broker-Carrier Agreement and the Caravan Quick Pay Agreement both exist in-house, are signed by carriers today, and have not been through a Michigan commercial attorney. Resume when the files land.
@@ -1436,6 +1438,29 @@ Each is a discrete sprint. Mix of operational, security, UX, and technical debt.
     **Deliberate defaults, and the question held.** No Quick Pay fee: the election is per load on the rate confirmation, a load that never ran has none, and §8 makes standard tier pay free — charging here would take money off a carrier for a truck that never moved. The clock starts at the TONU rather than on documentation, because the deficiency `createCarrierPayOnDelivery` waits on is a POD and a truck that never loaded will never produce one. The amount is read back from the ledger row, never a literal, so it cannot disagree with what the customer was billed. **Banked question:** whether Quick Pay should ever apply to a TONU payment is a product decision; the default taken is the one that pays the carrier more.
 
     **Still not built: the customer-side TONU charge.** `resolveTonuBilling` returns `billCustomer` and nothing bills it. A TONU load has no base invoice — `autoGenerateInvoice` prices a delivered load, and calling it here would bill the full linehaul for a truck that never moved. The seam is a TONU-only invoice path, and it is a product decision about what that document says, not a wiring gap.
+
+
+206. **F-7 closed — the TONU is billed on both sides (`v3.8.ate`).**
+
+    The customer leg had the same shape of gap as the carrier leg: `recordTonuObligation` writes the charge to the ledger and stamps `billedTo: "SHIPPER"`, and the customer-side reader `syncInvoiceAccessorials` gives up at `if (!base) return null` because `autoGenerateInvoice` prices a DELIVERED load and a TONU never delivers. `raiseTonuCustomerCharge` creates only the missing anchor — an empty DRAFT BASE invoice — then calls `syncInvoiceAccessorials`, so itemisation, `customerPriceFor` pricing and the `shipperInvoiceId` stamp all stay on the one existing path. No linehaul is billed: the load never moved.
+
+    **The fault side was already in the ledger.** `unbilledCustomerAccessorials` bills rows whose `billedTo` is null or SHIPPER; `recordTonuObligation` writes SHIPPER for customer fault and BROKER for broker fault. A broker-fault TONU is excluded by the existing filter without the new code knowing anything about fault. Ordering rides the payable's: step 4 of `onLoadCancelledOrTONU` VOIDS invoices, so raising one before it would be voided by the same event — verified adversarially by moving the call and watching the ordering test go red. **§14's ratified-pending ledger entry for TONU can now be read as implemented on both sides.**
+
+207. **Termination reaches a human, and reads as termination (`v3.8.atf`).**
+
+    The endpoint shipped in `v3.8.ata` with no caller. The AE compliance panel now lists agreements with a confirm-then-terminate action gated on `isAdmin` (ADMIN or CEO), matching the route's `authorize("ADMIN", "CEO")` rather than guessing, with a required reason and the consequence stated plainly before the click.
+
+    **The distinct rendering is the more important half.** TERMINATED now reads differently from never-signed on both surfaces that show agreement state — the carrier panel names the date and reason, and the tender-time override modal treats `AGREEMENT_TERMINATED` as a hard block whose remedy is a signature rather than a waiver. That confusion was the original defect. Also widened the `blocked_codes` union in the three places the parent components declared it inline: tsc passed without it because the shapes are structural, but the narrower type was lying about what arrives at runtime.
+
+208. **Column-drop migration STAGED, push blocked on the deploy gate (Arc 7 Phase 4).**
+
+    The four columns (`CarrierProfile.w9Url` / `coiUrl` / `authorityLetterUrl`, `LoadAccessorial.carrier_invoice_id`) were **re-verified against the current tree**, not trusted from the pre-Arc-6 corroboration — `terminatedAt` sat in the same dead-column bucket a week ago and became load-bearing in `v3.8.ata`, so a stale verdict on a DROP is exactly what deletes working data. All four: zero references in `backend/src` + `frontend/src`, zero commits touching them in src across all history.
+
+    **Step (a) caught a real defect in the migration.** `carrierInvoiceId` carries `@map("carrier_invoice_id")`, so the database column is snake_case, and the drafted SQL dropped `"carrierInvoiceId"` **with `IF EXISTS`** — it would have silently matched nothing, leaving `schema.prisma` without the field and the database with the column, and nothing would have complained. Name corrected, and `IF EXISTS` removed from all four so a wrong name FAILS the deploy rather than half-applying. Prisma runs each migration once, so re-run tolerance is not a reason to soften it.
+
+    **Verified from zero** on a fresh CI-shape Postgres container: the full 40-migration chain applied, all four columns confirmed absent, the load-bearing sibling `shipper_invoice_id` confirmed present, `migrate status` clean, and the suite green against that database.
+
+    **NOT PUSHED.** `gh secret list` returns empty, so `RENDER_DEPLOY_HOOK_URL` is unset and the deploy gate is not live — Render still auto-deploys on push. An ungated auto-deploy applying column drops the moment they hit `main` is precisely the risk the gate exists for. The commit is local and is the unpushed tip. **To release it:** complete the three dashboard steps in `docs/internal/render-deploy-gate-setup.md`, confirm the deploy job goes green, run the row-count gate in the migration header against production, then push.
 
 ---
 

@@ -13,6 +13,15 @@ so it's searchable and never lost.
 
 ---
 
+## Closed — 2026-08-20 (Arc 7: v3.8.ate–atg — both sides of a TONU, a button, and a measurement that means something)
+
+- **The customer was never billed for a TONU (Closed in v3.8.ate).** Same shape as the carrier gap closed in atc: the charge was on the ledger and the reader gave up at `if (!base) return null`, because the thing that creates that base prices a delivered load. Creates only the missing anchor invoice and lets the existing `syncInvoiceAccessorials` path do the billing. F-7 is now two-sided.
+- **Termination had no button (Closed in v3.8.atf).** The endpoint shipped in ata with no caller. More importantly, TERMINATED now renders distinctly from never-signed on both surfaces — that confusion was the original defect, and the tender-time modal now refuses to offer an override whose remedy is a signature.
+- **A migration would have silently dropped nothing (caught in Arc 7 Phase 4, unshipped).** The drafted SQL dropped `"carrierInvoiceId"` with `IF EXISTS`, but the column is `@map`-ed to `carrier_invoice_id` — it would have matched nothing, left the schema and database disagreeing, and reported success. Caught by re-verifying every column against the current tree rather than trusting a week-old corroboration. `IF EXISTS` removed from the batch so a wrong name fails loudly.
+- **Field usage is measured by kind (v3.8.atg).** Pass 2's yes/no count was wrong permissively (comments counted as references) and wrong bluntly when fixed (~80 fields moved with no visible reason). Columns now report WRITTEN / READ / STRING_ONLY / UNREFERENCED with matches attached. The READ-never-WRITTEN bucket immediately found `docSignedBol`: the settlement checklist is rendered and written by nothing, corroborating Item 204 from a second direction.
+
+---
+
 ## Closed — 2026-08-19 (Arc 6: v3.8.ata–atd — the agreement that could not be ended, and the truck nobody paid for)
 
 - **A signed carrier agreement could never be terminated (Closed in v3.8.ata).** `CarrierAgreement` carried `terminatedAt`, `terminatedBy` and `terminationReason` since the model was written and nothing wrote them; only `SIGNED` was ever written or queried. No migration was needed — `TERMINATED` was already in the enum. Termination already blocked tendering (a TERMINATED row fails the `SIGNED` filter); what was wrong was the reason given, "No signed carrier-broker agreement on file", which sends an AE to chase a signature the carrier already gave. Distinct non-overridable `AGREEMENT_TERMINATED` code with the date. Termination is a status change, never a delete — the row and executed PDF are the record of what governed past loads, pinned by test.
