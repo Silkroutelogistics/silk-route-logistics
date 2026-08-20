@@ -14535,7 +14535,17 @@
 //   the gate said 'none on file' for a revoked signature and sent an AE
 //   chasing one the carrier had already given. The tender-time modal now
 //   refuses to offer an override for it: the remedy is a signature.
-export const SRL_VERSION = "3.8.atf";
+// v3.8.atg — Field usage is measured by KIND, not by yes-or-no.
+//   Pass 2 asked 'does this name appear anywhere', and that question was
+//   wrong in both directions inside a week: a comment saying accessCount is
+//   never written made it read as referenced, and stripping comments to fix
+//   that moved ~80 fields at once with no way to see why. A count cannot
+//   distinguish a live writer from a read from a name inside a log string.
+//   Now each column reports WRITTEN / READ / STRING_ONLY / UNREFERENCED with
+//   the matches attached. READ-never-WRITTEN is the interesting bucket: code
+//   depending on a value nothing produces — which is exactly what the
+//   settlement doc checklist turned out to be.
+export const SRL_VERSION = "3.8.atg";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
