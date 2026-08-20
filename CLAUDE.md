@@ -1536,7 +1536,7 @@ Each is a discrete sprint. Mix of operational, security, UX, and technical debt.
 
     **What cannot now be known.** Whether those three URL columns held values. The row-count gate existed precisely to answer that and I ran it after the drop, when the columns were already gone. The evidence that it was harmless is strong but circumstantial: zero references in `backend/src` and `frontend/src`, and `git log -S` returning **no commits** touching any of them in src across the repository's entire history — nothing in this codebase has ever written them, so a value could only have come from outside it.
 
-    **Recovery, if it matters:** Neon PITR is 7 days (Item 70). Branching production to just before 19:59 UTC on 2026-08-20 and running the row-count query there would settle it definitively. That is a Neon dashboard operation.
+    **Recovery, if it matters:** Neon PITR is 7 days (Item 70). Branching production to just before **19:59:29 UTC** on 2026-08-20 and running the row-count query there would settle it definitively. That is a Neon dashboard operation.
 
     **The lesson, stated so it binds.** A commit held back by position is not held back. If work must not ship, it does not belong on the branch that ships — it belongs on a separate branch, or behind a mechanism that refuses. Item 208's own instruction ("push only up to the pre-migration commit") depended on every later arc remembering an ordering constraint that nothing enforced.
 
