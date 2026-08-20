@@ -20,7 +20,7 @@ import { api } from "@/lib/api";
  *     (contact compliance).
  */
 export interface BlockedCode {
-  code: "AUTHORITY_TOO_YOUNG" | "AUTHORITY_UNVERIFIED";
+  code: "AUTHORITY_TOO_YOUNG" | "AUTHORITY_UNVERIFIED" | "AGREEMENT_TERMINATED";
   ageMonths?: number;
   overridable: boolean;
 }
@@ -87,13 +87,23 @@ export function OverrideComplianceModal({
   const unverifiedAuthority = codes.find(
     (c) => c.code === "AUTHORITY_UNVERIFIED",
   );
+  // v3.8.atf — a terminated agreement is a hard block, and the remedy is a
+  // signature rather than a waiver. Overriding it would put a load on a carrier
+  // with no agreement governing it, which is the one thing an override must not
+  // be able to do. The backend already returns overridable: false; this makes
+  // the UI say why instead of offering a button that would be refused.
+  const terminatedAgreement = codes.find(
+    (c) => c.code === "AGREEMENT_TERMINATED",
+  );
   const isAuthorityOverride = !!overridableAuthority;
-  const isHardBlocked = !!hardFloorAuthority || !!unverifiedAuthority;
+  const isHardBlocked = !!hardFloorAuthority || !!unverifiedAuthority || !!terminatedAgreement;
   const disabledTooltip = hardFloorAuthority
     ? "Authority under 12 months — hard floor, cannot be overridden"
     : unverifiedAuthority
       ? "FMCSA authority unverified — contact compliance"
-      : undefined;
+      : terminatedAgreement
+        ? "Agreement terminated — the carrier must re-sign. This is not something to override."
+        : undefined;
 
   const { data: status } = useQuery<{
     recentOverrideCount: number;

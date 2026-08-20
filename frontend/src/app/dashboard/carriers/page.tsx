@@ -148,6 +148,26 @@ const QP_STATUS_LABEL: Record<QpStatus, string> = {
   WITHDRAWN: "Withdrawn after approval",
 };
 
+/**
+ * One signed-agreement row as the AE surface reads it.
+ *
+ * TERMINATED renders distinctly from never-signed everywhere it appears. That
+ * distinction IS the original defect: the compliance gate said "No signed
+ * carrier-broker agreement on file" for a terminated one, which sends an AE to
+ * chase a carrier for a signature they already gave and somebody revoked.
+ */
+interface CarrierAgreementRow {
+  id: string;
+  templateName: string;
+  version: string;
+  status: string;
+  signedAt: string | null;
+  signedByName: string | null;
+  terminatedAt: string | null;
+  terminationReason: string | null;
+  documentUrl: string | null;
+}
+
 interface CarrierDoc {
   id: string;
   fileName: string;
@@ -574,6 +594,47 @@ export default function CarrierPoolPage() {
   const pendingOnboard = carriers.filter((c) => c.onboardingStatus !== "APPROVED").length;
 
   const selectedCarrier = carriers.find((c) => c.id === selectedCarrierId) || null;
+
+  // v3.8.atf — agreement termination. The endpoint has existed since ata with
+  // no way to reach it; this is that button.
+  const [terminateReason, setTerminateReason] = useState("");
+  const [terminateConfirming, setTerminateConfirming] = useState<string | null>(null);
+  const [terminateMessage, setTerminateMessage] = useState<{ tone: "success" | "error"; text: string } | null>(null);
+
+  const { data: agreements } = useQuery<CarrierAgreementRow[]>({
+    queryKey: ["carrier-agreements", selectedCarrier?.id],
+    queryFn: async () => {
+      const { data } = await api.get<CarrierAgreementRow[]>(`/carriers/${selectedCarrier!.id}/agreements`);
+      return data;
+    },
+    enabled: !!selectedCarrier?.id && panelTab === "compliance",
+  });
+
+  const terminateAgreement = useMutation({
+    mutationFn: ({ carrierId, agreementId, reason }: { carrierId: string; agreementId: string; reason: string }) =>
+      api
+        .post(`/carriers/${carrierId}/agreements/${agreementId}/terminate`, { reason })
+        .then((r) => r.data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["carrier-agreements"] });
+      queryClient.invalidateQueries({ queryKey: ["carrier-all"] });
+      setTerminateReason("");
+      setTerminateConfirming(null);
+      setTerminateMessage({
+        tone: "success",
+        text: "Agreement terminated. This carrier cannot be tendered until they re-sign.",
+      });
+    },
+    onError: (err: unknown) => {
+      const msg =
+        (err && typeof err === "object" && "response" in err
+          ? (err as { response?: { data?: { error?: string } } }).response?.data?.error
+          : undefined) || "Failed to terminate the agreement.";
+      setTerminateMessage({ tone: "error", text: msg });
+    },
+  });
+
+
 
   // ESC to close panel
   const closePanel = useCallback(() => { setSelectedCarrierId(null); }, []);
@@ -1297,6 +1358,117 @@ export default function CarrierPoolPage() {
                       <ComplianceRow label="BOC-3 Filing" status={selectedCarrier.onboardingStatus === "APPROVED"} />
                       <ComplianceRow label="MCS-150 (Biennial Update)" status={selectedCarrier.dotNumber !== null} />
                       <ComplianceRow label="UCR Registration" status={selectedCarrier.onboardingStatus === "APPROVED"} />
+                    </div>
+
+                    {/* v3.8.atf — agreements, with TERMINATED distinct from never-signed. */}
+                    <h3 className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Agreements</h3>
+                    <div className="bg-gray-100 rounded-lg p-4 space-y-3">
+                      {!agreements?.length && (
+                        <p className="text-xs text-gray-500">
+                          No agreement on file. This carrier has never signed, and cannot be tendered until they do.
+                        </p>
+                      )}
+                      {agreements?.map((ag) => {
+                        const isTerminated = ag.status === "TERMINATED";
+                        const isSigned = ag.status === "SIGNED";
+                        return (
+                          <div key={ag.id} className="border-b border-gray-200 pb-3 last:border-0 last:pb-0">
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <span className="text-xs font-semibold text-gray-800">
+                                  {ag.templateName === "quick-pay" ? "Quick Pay Agreement" : "Broker-Carrier Agreement"}
+                                </span>
+                                <span className="ml-2 text-[10px] text-gray-500">v{ag.version}</span>
+                              </div>
+                              <span
+                                className={`px-2 py-0.5 rounded text-[10px] font-medium ${
+                                  isTerminated
+                                    ? "bg-red-500/20 text-red-700"
+                                    : isSigned
+                                      ? "bg-green-500/20 text-green-700"
+                                      : "bg-gray-300 text-gray-700"
+                                }`}
+                              >
+                                {ag.status}
+                              </span>
+                            </div>
+
+                            {isTerminated && (
+                              // Distinct from "never signed", deliberately. The AE needs to
+                              // know a signature EXISTED and was revoked, not go hunting for
+                              // one that was never given.
+                              <p className="mt-1 text-[11px] text-red-700">
+                                Terminated{ag.terminatedAt ? ` on ${new Date(ag.terminatedAt).toLocaleDateString()}` : ""}
+                                {ag.terminationReason ? ` — ${ag.terminationReason}` : ""}. The carrier must re-sign before they can be tendered.
+                              </p>
+                            )}
+
+                            {isSigned && (
+                              <p className="mt-1 text-[11px] text-gray-600">
+                                Signed{ag.signedAt ? ` ${new Date(ag.signedAt).toLocaleDateString()}` : ""}
+                                {ag.signedByName ? ` by ${ag.signedByName}` : ""}
+                              </p>
+                            )}
+
+                            {isSigned && isAdmin && (
+                              <div className="mt-2">
+                                {terminateConfirming !== ag.id ? (
+                                  <button
+                                    onClick={() => { setTerminateConfirming(ag.id); setTerminateMessage(null); }}
+                                    className="text-[11px] text-red-700 hover:text-red-800 underline"
+                                  >
+                                    Terminate this agreement
+                                  </button>
+                                ) : (
+                                  <div className="bg-red-50 border border-red-300 rounded p-2 space-y-2">
+                                    {/* The consequence, in plain words, before they commit. */}
+                                    <p className="text-[11px] text-red-800">
+                                      This carrier will not be able to accept any load until they sign a new agreement.
+                                      Loads already in flight are unaffected. The agreement and its signed PDF are kept as a record.
+                                    </p>
+                                    <textarea
+                                      value={terminateReason}
+                                      onChange={(e) => setTerminateReason(e.target.value)}
+                                      placeholder="Why is this being terminated? The carrier is shown this."
+                                      rows={2}
+                                      className="w-full text-[11px] border border-red-300 rounded px-2 py-1"
+                                    />
+                                    <div className="flex gap-2">
+                                      <button
+                                        disabled={terminateReason.trim().length < 10 || terminateAgreement.isPending}
+                                        onClick={() =>
+                                          terminateAgreement.mutate({
+                                            carrierId: selectedCarrier.id,
+                                            agreementId: ag.id,
+                                            reason: terminateReason.trim(),
+                                          })
+                                        }
+                                        className="px-2 py-1 rounded bg-red-700 text-white text-[11px] disabled:opacity-40"
+                                      >
+                                        {terminateAgreement.isPending ? "Terminating…" : "Confirm termination"}
+                                      </button>
+                                      <button
+                                        onClick={() => { setTerminateConfirming(null); setTerminateReason(""); }}
+                                        className="px-2 py-1 rounded border border-gray-300 text-[11px] text-gray-700"
+                                      >
+                                        Cancel
+                                      </button>
+                                    </div>
+                                    {terminateReason.trim().length > 0 && terminateReason.trim().length < 10 && (
+                                      <p className="text-[10px] text-red-700">At least 10 characters.</p>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                      {terminateMessage && (
+                        <p className={`text-[11px] ${terminateMessage.tone === "success" ? "text-green-700" : "text-red-700"}`}>
+                          {terminateMessage.text}
+                        </p>
+                      )}
                     </div>
 
                     <h3 className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Document Completeness</h3>

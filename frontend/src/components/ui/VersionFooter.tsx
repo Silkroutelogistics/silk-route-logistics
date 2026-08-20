@@ -14525,7 +14525,17 @@
 //   path itemises, prices through customerPriceFor and stamps it. No linehaul
 //   is billed, because the load never moved. Raised after the reversal, which
 //   VOIDS invoices — the same race the payable had, on the other leg.
-export const SRL_VERSION = "3.8.ate";
+// v3.8.atf — Termination reaches a human, and reads as termination.
+//   The endpoint shipped in ata with no way to reach it. The AE compliance
+//   panel now lists agreements with a confirm-then-terminate action, gated on
+//   the same ADMIN-or-CEO the route enforces, requiring a reason the carrier
+//   is shown, and stating the consequence in plain words before the click.
+//   The other half matters more: TERMINATED renders distinctly from
+//   never-signed on both surfaces. That confusion WAS the original defect —
+//   the gate said 'none on file' for a revoked signature and sent an AE
+//   chasing one the carrier had already given. The tender-time modal now
+//   refuses to offer an override for it: the remedy is a signature.
+export const SRL_VERSION = "3.8.atf";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

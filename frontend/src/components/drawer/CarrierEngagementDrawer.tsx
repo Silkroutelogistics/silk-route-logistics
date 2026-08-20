@@ -185,7 +185,7 @@ interface ComplianceResult {
   // Optional on the type because pre-ahq deploys won't include the field;
   // the modal handles undefined gracefully with `blockedCodes ?? []`.
   blocked_codes?: Array<{
-    code: "AUTHORITY_TOO_YOUNG" | "AUTHORITY_UNVERIFIED";
+    code: "AUTHORITY_TOO_YOUNG" | "AUTHORITY_UNVERIFIED" | "AGREEMENT_TERMINATED";
     ageMonths?: number;
     overridable: boolean;
   }>;
