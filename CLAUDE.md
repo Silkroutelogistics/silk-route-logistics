@@ -240,6 +240,40 @@ The `cp -r src/lib dist/backend/src/lib` step (Sprint 45-RC) is load-bearing for
 
 The `cp -r src/config dist/backend/src/config` step is load-bearing for runtime `__dirname`-relative reads of email signature templates (`backend/src/email/builder.ts:18` reads `dist/backend/src/config/signatures/whaider.html`). Item 72 (Sprint 44b pre-commit audit) caught the omission of this step in an intermediate Sprint 44b draft — restored before commit. Any future `__dirname`-relative asset under `backend/src/` must either live under `src/assets/` or `src/config/`, or the buildCommand must extend the cp chain.
 
+**HELD WORK LIVES ON A BRANCH, NEVER ON `main` (hard rule, added 2026-08-20).**
+
+Any commit whose release conditions are not yet met — a migration waiting on a
+verification step, a change waiting on a secret, anything a human still has to
+approve — goes on a branch named `hold/<what-it-is-waiting-for>`. **Merging is
+the release act.** Nothing else.
+
+The rule exists because the alternative was tried and failed. A column-drop
+migration was committed to `main` as the unpushed tip, with a note saying not to
+push it. That worked exactly as long as nobody committed on top of it. Two
+commits later it was no longer the tip, `git push` carried it along, Render
+auto-deployed, and the columns were dropped from production without the
+row-count verification the migration's own header required. Full account at
+§13.3 Item 212.
+
+**A commit held back by position is not held back.** Position is not a
+mechanism: it depends on every future session noticing an ordering constraint
+that nothing enforces, and it fails silently and completely the first time one
+does not. A branch cannot be pushed by accident, because pushing `main` does not
+push it.
+
+Corollaries worth stating, since each was a step in that failure:
+
+- **Re-read `git log origin/main..HEAD` immediately before every push.** If it
+  contains anything you did not intend to release, stop. This is cheap and it is
+  the last point at which the mistake above was catchable.
+- **`/api/health` does not tell you whether a migration landed.** `migrate deploy`
+  runs during the BUILD while the previous process keeps serving, so the SHA can
+  report the old commit while the schema has already changed. Read the `schema`
+  field (v3.8.atj) or `_prisma_migrations` directly.
+- **A destructive migration's own verification gate runs BEFORE the push**, not
+  after. Once it has applied, the question the gate answers is unanswerable
+  except through PITR.
+
 **Schema mutation paths:**
 
 1. **CANONICAL — author migration in feature branch:**
@@ -1505,6 +1539,21 @@ Each is a discrete sprint. Mix of operational, security, UX, and technical debt.
     **Recovery, if it matters:** Neon PITR is 7 days (Item 70). Branching production to just before 19:59 UTC on 2026-08-20 and running the row-count query there would settle it definitively. That is a Neon dashboard operation.
 
     **The lesson, stated so it binds.** A commit held back by position is not held back. If work must not ship, it does not belong on the branch that ships — it belongs on a separate branch, or behind a mechanism that refuses. Item 208's own instruction ("push only up to the pre-migration commit") depended on every later arc remembering an ordering constraint that nothing enforced.
+
+
+213. **Incident hardening — two controls shipped; the data question is still OPEN (`v3.8.atj`, 2026-08-20).**
+
+    **PITR verification did NOT run.** It needs a connection string for a branch snapshotted before 19:59 UTC on 2026-08-20, and none was provided. Production cannot stand in for it — the columns are already dropped there, so the query fails rather than answering. **The Item 212 question "did those three URL columns hold data" remains unanswered**, and the regression entry stays open on it. Neon PITR is 7 days, so the window closes **2026-08-27**; after that it is unanswerable by any means.
+
+    **Deploy-gate verification did NOT run either.** `gh secret list` is still empty. Pushing a trivial commit to exercise a gate that does not exist would only have produced a sixth consecutive red email about the thing Wasi had just raised, so it was not done.
+
+    **What did ship — two controls, both independent of those preconditions:**
+
+    **(a) Held work lives on a branch.** New hard rule in §2.2: any commit whose release conditions are unmet goes on `hold/<what-it-is-waiting-for>`, and merging is the release act. Item 212 is its case study. Nothing was moved, because nothing is currently held — the migration this rule exists to have protected has already applied. The rule carries three corollaries, each of which was a step in that failure: re-read `git log origin/main..HEAD` immediately before every push; `/api/health` does not tell you whether a migration landed; a destructive migration's verification gate runs before the push, not after.
+
+    **(b) Migration-aware health.** [`lib/schemaInfo.ts`](backend/src/lib/schemaInfo.ts) adds `schema: { migration, appliedAt }` to `/api/health`, read from `_prisma_migrations`. This closes the specific blindness Item 212 documented: the SHA reported the pre-migration commit at the moment the schema had already changed, because `migrate deploy` runs during the BUILD while the old process keeps serving. Cached per process (a migration cannot apply to a running one), never throws (the endpoint that reports an outage has to survive one), and does not cache a failure. Seven tests, adversarially verified by removing the wiring and watching the endpoint test go red.
+
+    **Still owed, in order:** the PITR count before 2026-08-27; the deploy-gate secret, which ends the red-email streak and would have prevented Item 212 outright.
 
 ---
 

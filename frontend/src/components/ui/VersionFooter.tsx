@@ -14564,7 +14564,17 @@
 //   worklist that cannot empty is not a worklist. Both now set at their
 //   source events — invoice sent, settlement paid. No backfill, so the tab
 //   drains going forward rather than claiming work nobody recorded.
-export const SRL_VERSION = "3.8.ati";
+// v3.8.atj — /api/health says which SCHEMA production is on.
+//   A column-drop migration reached production while health reported the
+//   commit BEFORE it: migrate deploy runs during the BUILD and the previous
+//   process keeps serving, so the SHA was right about the code and silent
+//   about the database — and the database was what had changed. Health now
+//   also reports the latest applied migration, read from the ledger Prisma
+//   itself writes. Cached per process, because a migration cannot apply to a
+//   running one, and it never throws: the endpoint that reports an outage
+//   must survive one. Paired with a hard §2.2 rule that held work lives on a
+//   hold/ branch, since a commit held back by position is not held back.
+export const SRL_VERSION = "3.8.atj";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

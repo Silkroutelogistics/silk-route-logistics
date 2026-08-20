@@ -28,6 +28,7 @@ import { requestIdMiddleware } from "./middleware/requestId";
 import { startSchedulers } from "./services/schedulerService";
 import { initCronJobs } from "./cron";
 import { buildInfo } from "./lib/buildInfo";
+import { schemaInfo } from "./lib/schemaInfo";
 import { seedCronRegistry } from "./services/cronRegistryService";
 
 const app = express();
@@ -203,6 +204,11 @@ app.get("/health", async (_req, res) => {
     uptime: process.uptime(),
     timestamp: new Date().toISOString(),
     ...buildInfo(),
+    // v3.8.atj — what SCHEMA this is running against, not just what code.
+    // migrate deploy runs during the BUILD while the old process still serves,
+    // so the SHA can report the previous commit while the database has already
+    // changed. That window is exactly when someone is watching.
+    schema: await schemaInfo(),
     environment: env.NODE_ENV,
     database: { connected: dbOk, latencyMs: dbLatency },
     storage: { mode: isS3Active() ? "s3" : "local", bucket: isS3Active() ? env.S3_BUCKET_NAME : null },
