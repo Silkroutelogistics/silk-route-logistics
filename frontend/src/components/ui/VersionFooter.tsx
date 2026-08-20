@@ -14515,7 +14515,17 @@
 //   writing a column here would put a database write on an unauthenticated
 //   public endpoint, which is a free lever for anyone holding one token. The
 //   token is hashed, never logged raw — it is a bearer credential.
-export const SRL_VERSION = "3.8.atd";
+// v3.8.ate — The customer side of a TONU is billed, closing F-7.
+//   recordTonuObligation wrote the charge to the ledger and stamped it for
+//   the shipper; the reader of that ledger gives up at `if (!base) return
+//   null`, and the thing that would create that base prices a DELIVERED load.
+//   A TONU never delivers, so the charge had no document to land on — the
+//   invoice-side twin of the payable gap closed in atc. This creates only the
+//   missing anchor: an empty DRAFT base, then the SAME syncInvoiceAccessorials
+//   path itemises, prices through customerPriceFor and stamps it. No linehaul
+//   is billed, because the load never moved. Raised after the reversal, which
+//   VOIDS invoices — the same race the payable had, on the other leg.
+export const SRL_VERSION = "3.8.ate";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

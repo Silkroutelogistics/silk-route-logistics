@@ -1,5 +1,6 @@
 import { prisma } from "../config/database";
 import { log } from "../lib/logger";
+import { resolveTonuBilling } from "../lib/tonuPolicy";
 import { createInvoiceWithRetry } from "../lib/invoiceNumber";
 import { resolveLoadStem, withDocumentNumber } from "../lib/documentNumber";
 
@@ -606,6 +607,121 @@ export async function autoGenerateInvoice(loadId: string) {
  * the same transaction that bills the line. Re-running this after an approval
  * finds nothing unbilled and returns null.
  */
+/**
+ * Raise the customer's TONU charge.
+ *
+ * THE GAP. `recordTonuObligation` writes the TONU to the accessorial ledger and
+ * stamps `billedTo: "SHIPPER"` when the customer is at fault. The customer-side
+ * reader of that ledger is `syncInvoiceAccessorials`, and it gives up at
+ * `if (!base) return null` — "not invoiced yet, autoGenerateInvoice will read
+ * the ledger when it runs". `autoGenerateInvoice` prices a DELIVERED load and a
+ * TONU load never delivers. So the charge was recorded correctly and had no
+ * document to land on, exactly as the carrier payable had no settlement to land
+ * on before v3.8.atc.
+ *
+ * WHY THIS IS NOT PARALLEL PLUMBING. It does not bill anything itself. It
+ * creates the missing BASE invoice — empty, DRAFT, zero — and then calls
+ * `syncInvoiceAccessorials`, which is the same path every other accessorial
+ * takes. That path itemises the line, prices it through `customerPriceFor` (so a
+ * negotiated rate applies), stamps `shipperInvoiceId`, and updates the totals.
+ * One ledger-to-invoice mechanism, given the anchor it was missing.
+ *
+ * THE FAULT SIDE IS ALREADY ENCODED IN THE LEDGER. `unbilledCustomerAccessorials`
+ * bills rows whose `billedTo` is null or SHIPPER, and `recordTonuObligation`
+ * writes SHIPPER for customer fault and BROKER for broker fault. So a
+ * broker-fault TONU is excluded by the existing filter without this function
+ * knowing anything about fault. The `billCustomer` check below exists only to
+ * avoid creating an empty invoice that would then have nothing to fold.
+ *
+ * ORDERING. Called from the end of `onLoadCancelledOrTONU`, beside the carrier
+ * payable, and for the same reason: step 4 of that reversal VOIDS every invoice
+ * on the load. An invoice raised before it would be voided by the same event
+ * that created it.
+ *
+ * The linehaul is NOT billed. A TONU is the flat charge for a truck ordered and
+ * not used; billing the freight for a load that never moved is the failure this
+ * whole path exists to avoid.
+ */
+export async function raiseTonuCustomerCharge(loadId: string): Promise<{ created: boolean; reason?: string }> {
+  const load = await prisma.load.findUnique({
+    where: { id: loadId },
+    select: {
+      id: true, status: true, referenceNumber: true, loadNumber: true,
+      posterId: true, customerId: true, tonuFaultSide: true,
+    },
+  });
+
+  if (!load) return { created: false, reason: "load not found" };
+  if (load.status !== "TONU") return { created: false, reason: "not a TONU" };
+  if (!load.posterId) return { created: false, reason: "no poster to invoice" };
+
+  const billing = resolveTonuBilling(load.tonuFaultSide as any);
+  if (!billing.billCustomer) {
+    return { created: false, reason: `fault side ${load.tonuFaultSide} does not bill the customer` };
+  }
+
+  // Idempotent. A re-flip must not raise a second invoice. Mirrors the payable's
+  // guard and matches how autoGenerateInvoice and syncInvoiceAccessorials both
+  // look for a base: BASE and not VOID. A VOID invoice must not block a replacement
+  // — voiding says "that document was wrong", never "this load is never billed".
+  const existingBase = await prisma.invoice.findFirst({
+    where: { loadId, invoiceKind: "BASE", status: { not: "VOID" } },
+    select: { id: true },
+  });
+  if (existingBase) return { created: false, reason: "base invoice already exists" };
+
+  // Nothing to bill means no document. Checked before creating anything, so a
+  // missing ledger row cannot leave an empty invoice behind.
+  const pending = await unbilledCustomerAccessorials(loadId);
+  if (!pending.length) {
+    return { created: false, reason: "no unbilled customer accessorials — recordTonuObligation has not run" };
+  }
+
+  const dueDate = new Date();
+  dueDate.setDate(dueDate.getDate() + 30);
+  const stem = resolveLoadStem(load);
+
+  // Created empty and at zero. syncInvoiceAccessorials below folds the ledger in
+  // and moves the totals, which is what keeps this on the one path rather than
+  // re-implementing itemisation here.
+  const buildInvoice = (srlDocNumber: string | null) =>
+    createInvoiceWithRetry((invoiceNumber) =>
+      prisma.invoice.create({
+        data: {
+          invoiceNumber,
+          srlDocNumber,
+          userId: load.posterId!,
+          loadId: load.id,
+          invoiceKind: "BASE",
+          amount: 0,
+          totalAmount: 0,
+          lineHaulAmount: 0,
+          fuelSurchargeAmount: 0,
+          accessorialsAmount: 0,
+          status: "DRAFT",
+          dueDate,
+          notes:
+            `TONU on load ${load.referenceNumber} — truck ordered and not used, fault side ${load.tonuFaultSide}. ` +
+            `No linehaul is billed: the load never moved.`,
+        },
+      }),
+    );
+
+  const created = stem
+    ? await withDocumentNumber("INVOICE", stem, buildInvoice)
+    : await buildInvoice(null);
+
+  // The one path. Itemises, prices through customerPriceFor, stamps
+  // shipperInvoiceId, moves the totals.
+  await syncInvoiceAccessorials(loadId);
+
+  log.info(
+    { loadId, invoiceNumber: created.invoiceNumber, faultSide: load.tonuFaultSide },
+    "[TONU] Customer charge raised",
+  );
+  return { created: true };
+}
+
 export async function syncInvoiceAccessorials(loadId: string) {
   // Reconcile in both directions, because this is what the reject route calls too.
   //

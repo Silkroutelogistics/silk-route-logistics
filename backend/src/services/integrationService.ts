@@ -9,6 +9,7 @@ import { calcOnTimePerformance } from "../lib/onTimePerformance";
 import { calcDocTimeliness } from "../lib/docTimeliness";
 import { log } from "../lib/logger";
 import { resolveTonuBilling } from "../lib/tonuPolicy";
+import { raiseTonuCustomerCharge } from "./invoiceService";
 import {
   standardNetDays,
   quickPayAutoApprovePerLoad,
@@ -1762,6 +1763,19 @@ export async function onLoadCancelledOrTONU(loadId: string, reason?: string) {
   //    miss is recoverable by calling this again.
   await raiseTonuCarrierPayable(loadId).catch((e) =>
     log.error({ err: e, loadId }, "[TONU] Failed to raise carrier payable (non-fatal — ledger row stands)"),
+  );
+
+  // 7. Raise the customer TONU charge — same position, same reason.
+  //
+  //    Step 4 above VOIDS every invoice on this load. An invoice raised before
+  //    it would be voided by the same event that created it, which is the
+  //    invoice-side twin of the payable race in step 6.
+  //
+  //    The fault side is not consulted here: recordTonuObligation already
+  //    stamped billedTo, and unbilledCustomerAccessorials bills only null or
+  //    SHIPPER — so a broker-fault TONU is excluded by the existing filter.
+  await raiseTonuCustomerCharge(loadId).catch((e) =>
+    log.error({ err: e, loadId }, "[TONU] Failed to raise customer charge (non-fatal — ledger row stands)"),
   );
 
   log.info(`[Integration] Load ${load.referenceNumber || loadId} ${load.status === "TONU" ? "TONU" : "cancelled"} → credit reversed, AP voided, fund reversed, tenders cancelled`);
