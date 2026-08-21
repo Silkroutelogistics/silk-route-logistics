@@ -31,6 +31,22 @@ Caught on `CarrierScorecard.calculatedAt`, whose banked verdict below read *"WIR
 
 **Cumulatively, 40% of the original list was the tool.** 237 → 164 (`@default`) → 149 (shorthand) → **143** (hoisted). Frontend-visible 134 → **78**. Five blind spots now, every one found by reading a verdict's matches instead of trusting the verdict, which is the only reason the tool prints them.
 
+**Frontend request payloads are not recognised as writes, and this is the big one.** (Arc 13.) The write-detection rule is Prisma-shaped: a `field:` inside a `data:` context. A field the CRM sets by PUTting `{ minMarginPercent: … }` at an API is produced by the system just as surely, and reads as never-written.
+
+Three of the AE tier's top candidates turned out to be exactly this, all money- or config-adjacent, all working:
+
+| Field | Actually written by |
+|---|---|
+| `Customer.minMarginPercent` | `ProfileTab.tsx:338` → PATCH → `validators/customer.ts` → `updateCustomer` |
+| `Customer.defaultAccessorialRates` | `ProfileTab.tsx:339`, same path. This is the rate card `invoiceService.customerPriceFor` reads — the feature works; what v3.8.ase found was that no customer had *entered* rates yet, which is not the same as being unable to. |
+| `CustomerFacility.operatingHours` | `FacilitiesTab.tsx:205` → the facility routes, which spread `...req.body` with no `validateBody`, so nothing strips it. §13.3 Item 8.2.2's closure is accurate. |
+
+**It hits the frontend-visible bucket hardest, which is the bucket this document ranks first.** A column rendered on a screen is very often also *edited* on a screen. So treat the frontend-visible count as an upper bound, not an estimate.
+
+**Not fixed, deliberately.** The three shapes have no single cheap signal in common — `minMarginPercent` is in a Zod validator, `operatingHours` is in none, and detecting "object literal passed as the second argument to `api.patch`" is real static analysis. Three arcs of evidence say every widening of this heuristic has produced a new class of error, and the tool's own header already says a verdict is a question. Widening it again to save a grep is a bad trade.
+
+**The procedural fix instead, and it is cheap: for any frontend-visible field, grep the CRM/portal save path BEFORE anything else.** One grep for the field name in `frontend/src` restricted to save handlers answers it in seconds, and answers it correctly where the tool cannot.
+
 ## Current state
 
 | Bucket | Count | Arc 11 | Original |
@@ -66,9 +82,15 @@ Ordered carrier-visible first, on the grounds that a falsehood shown to a custom
 | `Load.pickupNumber` | A dead FALLBACK, not a missing write. `pdfService:1806` reads `fd.pickupNumber \|\| load.pickupNumber \|\| ""` — the RC's own `formData` carries the value and is populated. The cascade resolves; nothing renders empty. |
 | `Load.shipperPoNumber` | Same shape. The BOL renders `poNumbers[]` first (v3.8.d.4) and this is the third link in the fallback chain. `trackingController:158` also searches by it, a branch that can never match. |
 
-**The last two need a decision, not a fix, so neither was made.** Either the Order Builder should capture a pickup number onto the load and the RC formData is a workaround (**WIRE**), or formData is canonical and the columns are redundant (**SCHEMA-DEAD**, to a `hold/` branch per §2.2). Dropping them would foreclose the first reading; wiring them would duplicate a working source. That is a product call.
+**DECIDED Arc 13 — dropped.** The reads are deleted and the columns are authored at `prisma/_pending_migrations/20260821040000_drop_dead_load_ref_fallbacks`, outside `prisma/migrations/` so they are pending rather than scheduled, with the row-count gate in the header. **Original note kept for the reasoning:** Either the Order Builder should capture a pickup number onto the load and the RC formData is a workaround (**WIRE**), or formData is canonical and the columns are redundant (**SCHEMA-DEAD**, to a `hold/` branch per §2.2). Dropping them would foreclose the first reading; wiring them would duplicate a working source. That is a product call.
 
 This closes the carrier tier at **zero user-visible falsehoods** — which is the honest result, not an absence of work.
+
+## AE-VISIBLE TIER — worked Arc 13, and it is clean so far
+
+Carrier-visible closed in Arc 12 at zero defects. The AE tier's highest-value candidates — the money- and config-adjacent ones — are the three false positives in the table above. No defect found.
+
+Remaining AE-tier candidates, not yet individually read: the Order Builder cluster (`driverMode`, `liveOrDrop`, `cargoValue`, `lumperEstimate`, `originFacilityId`, `destFacilityId`, the four lat/lng), `Load.truckId` / `trailerId`, `Customer.accountRepId`, `CustomerFacility.dockInfo`. **Every one of these is edited on a screen**, so the procedural fix above applies to all of them and most are likely the same class. Read the save path first.
 
 ## Verdict vocabulary for the remainder
 
