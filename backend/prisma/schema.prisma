@@ -39,8 +39,19 @@ enum UserRole {
   OPERATIONS
   ACCOUNTING
   CEO
+  /// DEPRECATED (v3.8.aue) — superseded by ACCOUNT_EXECUTIVE. Do NOT use in
+  /// new code. Held by zero users, but still referenced by 25 authorize()
+  /// gates and 4 role-set constants, and Postgres cannot DROP an enum value
+  /// without recreating the type — so removal is its own housekeeping task.
+  /// Note it is also absent from authController's AE_ROLES login set, so a
+  /// user holding AE cannot log into the AE portal at all.
   AE
   READONLY
+  /// v3.8.aue — full operational load cycle, minus ADMIN-exclusive surfaces,
+  /// minus money movement. Not enumerated in authorize() call-sites: it is
+  /// resolved centrally in middleware/auth.ts as (BROKER ∪ OPERATIONS) minus
+  /// ACCOUNT_EXECUTIVE_DENY, with DENY evaluated BEFORE any grant.
+  ACCOUNT_EXECUTIVE
 }
 
 enum LoadStatus {
