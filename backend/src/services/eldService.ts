@@ -128,37 +128,6 @@ export async function getDriverHOSData(): Promise<HOSData[]> {
 }
 
 /**
- * Get simulated DVIR reports
- */
-export async function getDVIRReports(): Promise<DVIRReport[]> {
-  const trucks = await prisma.truck.findMany({
-    where: { status: { in: ["ACTIVE", "IN_SHOP"] } },
-    include: { assignedDriver: { select: { firstName: true, lastName: true } } },
-    take: 10,
-  });
-
-  return trucks.map(t => {
-    const hasDefects = t.status === "IN_SHOP" || Math.random() < 0.15;
-    const defects: string[] = [];
-    if (hasDefects) {
-      const possibleDefects = ["Low tire pressure (LF)", "Brake light out (rear)", "Cracked windshield", "Oil leak detected", "Loose mirror"];
-      const numDefects = Math.floor(Math.random() * 2) + 1;
-      for (let i = 0; i < numDefects; i++) defects.push(randomElement(possibleDefects));
-    }
-
-    return {
-      vehicleId: t.id,
-      vehicleUnit: t.unitNumber,
-      driverName: t.assignedDriver ? `${t.assignedDriver.firstName} ${t.assignedDriver.lastName}` : "Unassigned",
-      inspectionDate: new Date(Date.now() - Math.random() * 86400000 * 3).toISOString(),
-      defectsFound: hasDefects,
-      defects,
-      status: hasDefects ? "NEEDS_REPAIR" : "PASSED",
-    };
-  });
-}
-
-/**
  * Get ELD provider status summary
  */
 export async function getELDSummary() {

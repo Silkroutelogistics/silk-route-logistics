@@ -914,16 +914,11 @@ export async function vetCarrier(
     } else {
       checks.push({ name: "IFTA Compliance", result: "WARNING", detail: "IFTA status not confirmed — request documentation", deduction: 5 });
       score -= 5;
-    }
-    // Also check truck-level IFTA expiry
-    const trucks = await prisma.truck.findMany({
-      where: { iftaExpiry: { lt: new Date() }, ifta: true },
-      select: { id: true, unitNumber: true, iftaExpiry: true },
-    });
-    if (trucks.length > 0) {
-      checks.push({ name: "IFTA Truck Expiry", result: "FAIL", detail: `${trucks.length} truck(s) with expired IFTA: ${trucks.slice(0, 3).map(t => t.unitNumber).join(", ")}`, deduction: 10 });
-      score -= 10;
-      flags.push(`${trucks.length} truck(s) with expired IFTA credentials`);
+    // The truck-level IFTA check that sat here is REMOVED (Arc 23, Item 230).
+    // It queried prisma.truck with NO carrier scope at all, so one expired
+    // IFTA row anywhere in the database deducted 10 points from every carrier
+    // being vetted. Same class as the VIN check, and worse for being
+    // cross-contaminating rather than merely inert.
     }
   } else {
     checks.push({ name: "IFTA Compliance", result: "WARNING", detail: "No carrier record — cannot verify IFTA", deduction: 5 });

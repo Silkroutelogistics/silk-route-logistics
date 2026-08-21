@@ -1,5 +1,5 @@
 import { Router, Response } from "express";
-import { getHOSData, getDVIRs, getELDOverview, getDriverLocation, getAllLocations } from "../controllers/eldController";
+import { getHOSData, getELDOverview, getDriverLocation, getAllLocations } from "../controllers/eldController";
 import { authenticate, authorize, AuthRequest } from "../middleware/auth";
 import { prisma } from "../config/database";
 import { processSamsaraLocations } from "../services/samsaraService";
@@ -14,7 +14,6 @@ router.use(authorize("ADMIN", "CEO", "DISPATCH", "OPERATIONS", "BROKER") as any)
 
 router.get("/overview", getELDOverview);
 router.get("/hos", getHOSData);
-router.get("/dvir", getDVIRs);
 router.get("/locations", getAllLocations);
 router.get("/locations/:id", getDriverLocation);
 

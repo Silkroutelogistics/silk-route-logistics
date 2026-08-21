@@ -5,8 +5,6 @@ import { createDriverSchema, updateDriverSchema, driverQuerySchema } from "../va
 
 const driverInclude = {
   assignedEquipment: true,
-  assignedTruck: true,
-  assignedTrailer: true,
 };
 
 export async function createDriver(req: AuthRequest, res: Response) {

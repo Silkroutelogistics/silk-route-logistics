@@ -1,16 +1,11 @@
 import { Response } from "express";
 import { AuthRequest } from "../middleware/auth";
-import { getDriverHOSData, getDVIRReports, getELDSummary, getVehicleLocation } from "../services/eldService";
+import { getDriverHOSData, getELDSummary, getVehicleLocation } from "../services/eldService";
 import { prisma } from "../config/database";
 
 export async function getHOSData(req: AuthRequest, res: Response) {
   const hosData = await getDriverHOSData();
   res.json(hosData);
-}
-
-export async function getDVIRs(req: AuthRequest, res: Response) {
-  const reports = await getDVIRReports();
-  res.json(reports);
 }
 
 export async function getELDOverview(req: AuthRequest, res: Response) {

@@ -99,76 +99,11 @@ export async function scanCompliance(req: AuthRequest, res: Response) {
     }
   }
 
-  // Scan Trucks
-  const trucks = await prisma.truck.findMany({
-    where: {
-      status: { not: "OUT_OF_SERVICE" },
-    },
-  });
-
-  for (const truck of trucks) {
-    const name = `Truck ${truck.unitNumber}`;
-
-    if (truck.registrationExpiry) {
-      if (truck.registrationExpiry <= now) {
-        newAlerts.push({ type: "REGISTRATION_EXPIRY", entityType: "Truck", entityId: truck.id, entityName: name, expiryDate: truck.registrationExpiry, severity: "CRITICAL" });
-      } else if (truck.registrationExpiry <= thirtyDaysFromNow) {
-        newAlerts.push({ type: "REGISTRATION_EXPIRY", entityType: "Truck", entityId: truck.id, entityName: name, expiryDate: truck.registrationExpiry, severity: "WARNING" });
-      }
-    }
-
-    if (truck.insuranceExpiry) {
-      if (truck.insuranceExpiry <= now) {
-        newAlerts.push({ type: "INSURANCE_EXPIRY", entityType: "Truck", entityId: truck.id, entityName: name, expiryDate: truck.insuranceExpiry, severity: "CRITICAL" });
-      } else if (truck.insuranceExpiry <= thirtyDaysFromNow) {
-        newAlerts.push({ type: "INSURANCE_EXPIRY", entityType: "Truck", entityId: truck.id, entityName: name, expiryDate: truck.insuranceExpiry, severity: "WARNING" });
-      }
-    }
-
-    if (truck.nextInspectionDate) {
-      if (truck.nextInspectionDate <= now) {
-        newAlerts.push({ type: "INSPECTION_DUE", entityType: "Truck", entityId: truck.id, entityName: name, expiryDate: truck.nextInspectionDate, severity: "CRITICAL" });
-      } else if (truck.nextInspectionDate <= thirtyDaysFromNow) {
-        newAlerts.push({ type: "INSPECTION_DUE", entityType: "Truck", entityId: truck.id, entityName: name, expiryDate: truck.nextInspectionDate, severity: "WARNING" });
-      }
-    }
-
-    if (truck.iftaExpiry) {
-      if (truck.iftaExpiry <= now) {
-        newAlerts.push({ type: "IFTA_EXPIRY", entityType: "Truck", entityId: truck.id, entityName: name, expiryDate: truck.iftaExpiry, severity: "CRITICAL" });
-      } else if (truck.iftaExpiry <= thirtyDaysFromNow) {
-        newAlerts.push({ type: "IFTA_EXPIRY", entityType: "Truck", entityId: truck.id, entityName: name, expiryDate: truck.iftaExpiry, severity: "WARNING" });
-      }
-    }
-  }
-
-  // Scan Trailers
-  const trailers = await prisma.trailer.findMany({
-    where: {
-      status: { not: "OUT_OF_SERVICE" },
-    },
-  });
-
-  for (const trailer of trailers) {
-    const name = `Trailer ${trailer.unitNumber}`;
-
-    if (trailer.registrationExpiry) {
-      if (trailer.registrationExpiry <= now) {
-        newAlerts.push({ type: "REGISTRATION_EXPIRY", entityType: "Trailer", entityId: trailer.id, entityName: name, expiryDate: trailer.registrationExpiry, severity: "CRITICAL" });
-      } else if (trailer.registrationExpiry <= thirtyDaysFromNow) {
-        newAlerts.push({ type: "REGISTRATION_EXPIRY", entityType: "Trailer", entityId: trailer.id, entityName: name, expiryDate: trailer.registrationExpiry, severity: "WARNING" });
-      }
-    }
-
-    if (trailer.nextInspectionDate) {
-      if (trailer.nextInspectionDate <= now) {
-        newAlerts.push({ type: "INSPECTION_DUE", entityType: "Trailer", entityId: trailer.id, entityName: name, expiryDate: trailer.nextInspectionDate, severity: "CRITICAL" });
-      } else if (trailer.nextInspectionDate <= thirtyDaysFromNow) {
-        newAlerts.push({ type: "INSPECTION_DUE", entityType: "Trailer", entityId: trailer.id, entityName: name, expiryDate: trailer.nextInspectionDate, severity: "WARNING" });
-      }
-    }
-  }
-
+  // Truck and trailer scans REMOVED (Arc 23, §13.3 Item 230). SRL is a pure
+  // broker; the fleet tables carried no owner and no carrier could register
+  // equipment in them, so these scans could only ever raise alerts about
+  // phantom units. Carrier equipment reaches SRL as free text on the load
+  // (Load.truckNumber), supplied by the carrier at driver assignment.
   // Scan Carrier Profiles
   const carriers = await prisma.carrierProfile.findMany({
     where: {
@@ -212,13 +147,11 @@ export async function scanCompliance(req: AuthRequest, res: Response) {
 
   res.json({
     scannedDrivers: drivers.length,
-    scannedTrucks: trucks.length,
-    scannedTrailers: trailers.length,
     scannedCarriers: carriers.length,
     totalIssuesFound: newAlerts.length,
     newAlertsCreated: created,
     alertsCreated: created,
-    scanned: drivers.length + trucks.length + trailers.length + carriers.length,
+    scanned: drivers.length + carriers.length,
   });
 }
 
