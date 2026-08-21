@@ -1,7 +1,7 @@
 import { Response } from "express";
 import { prisma } from "../config/database";
 import { AuthRequest } from "../middleware/auth";
-import { createDriverSchema, updateDriverSchema, updateDriverHOSSchema, assignEquipmentSchema, assignTruckSchema, assignTrailerSchema, driverQuerySchema } from "../validators/driver";
+import { createDriverSchema, updateDriverSchema, assignTruckSchema, assignTrailerSchema, driverQuerySchema } from "../validators/driver";
 
 const driverInclude = {
   assignedEquipment: true,
@@ -82,25 +82,6 @@ export async function updateDriver(req: AuthRequest, res: Response) {
   const driver = await prisma.driver.update({
     where: { id: req.params.id },
     data: data as any,
-    include: driverInclude,
-  });
-  res.json(driver);
-}
-
-export async function updateDriverHOS(req: AuthRequest, res: Response) {
-  const data = updateDriverHOSSchema.parse(req.body);
-  const driver = await prisma.driver.update({
-    where: { id: req.params.id },
-    data,
-  });
-  res.json(driver);
-}
-
-export async function assignEquipment(req: AuthRequest, res: Response) {
-  const { assignedEquipmentId } = assignEquipmentSchema.parse(req.body);
-  const driver = await prisma.driver.update({
-    where: { id: req.params.id },
-    data: { assignedEquipmentId },
     include: driverInclude,
   });
   res.json(driver);

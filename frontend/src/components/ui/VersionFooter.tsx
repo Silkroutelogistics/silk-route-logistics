@@ -14748,7 +14748,27 @@
 //   scripts/_arc15-gate-proof.ts now mints a session for an unenrolled carrier
 //   and asks every mount whether it refuses. It prints WALL HOLDS or names the
 //   mounts that are wrong.
-export const SRL_VERSION = "3.8.aub";
+// v3.8.auc — Arc 22. Pass 1 closed: 17 UNRESOLVED to 0. The headline is not any
+//   endpoint, it is the tool. Arc 2 triaged all ten survivors and wrote each
+//   verdict into the code as an audit-pass1 note; Pass 1 matched paths and
+//   ignored comments, so all ten resurfaced as UNRESOLVED on every run since.
+//   Seventeen open questions, ten of them answered eleven arcs earlier. A list
+//   that re-asks settled questions stops being read, and still looks like
+//   coverage while nobody reads it. Pass 1 now reads the notes; a verdict yields
+//   DISPOSITIONED, which is listed with its reason and never hidden — an
+//   annotation that could remove a finding from the page would silence rather
+//   than answer it, and the first cut of this change counted them without
+//   listing them, which is exactly that failure.
+//   Seven endpoints deleted DEAD-BY-STRATEGY. SRL is a pure broker; Truck and
+//   Trailer carry no owner column at all and the only creators were the fleet
+//   module's own POST and the seed. The sharpest of the seven is not merely
+//   strategic: PATCH /drivers/:id/hos hand-edits the 11/14/70 clock under
+//   49 CFR 395, which is what the ELD mandate exists to prevent.
+//   Three false-greens in one arc: tsc returned exit 0 on a syntax error
+//   because tsconfig excludes scripts/; a shell && chained an "ok" off head
+//   rather than tsc; and a patch helper closed over the outer string so every
+//   call discarded the previous edit while reporting success.
+export const SRL_VERSION = "3.8.auc";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

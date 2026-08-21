@@ -102,6 +102,35 @@ interface Endpoint {
   path: string;
   file: string;
   line: number;
+  /**
+   * The `// audit-pass1:` verdict written beside the route, if any.
+   *
+   * Arc 2 triaged 26 endpoints and wrote each verdict into the code. This tool
+   * matched paths and ignored those comments, so every one of them resurfaced
+   * as UNRESOLVED on the next run — the triage had no memory, and re-deciding
+   * settled questions is how a finding list stops being read at all.
+   */
+  disposition?: string;
+}
+
+/**
+ * Read the `// audit-pass1: VERDICT — reason` note attached to a route.
+ *
+ * Looks only at the lines immediately above, so a note cannot drift onto a
+ * route it was never about. A dispositioned endpoint is still LISTED, with its
+ * reason shown — it is moved out of UNRESOLVED, never hidden. An annotation
+ * that could silence a finding would be worse than no annotation at all.
+ */
+function readDisposition(lines: string[], routeLine: number): string | undefined {
+  for (let k = routeLine - 1; k >= Math.max(0, routeLine - 3); k--) {
+    const t = lines[k].trim();
+    if (!t.startsWith("//")) break;
+    // Matched with string methods, not a literal regex: the escaping is one
+    // more thing to get wrong for no benefit, and it got wrong once already.
+    const idx = t.indexOf("audit-pass1:");
+    if (idx >= 0) return t.slice(idx + "audit-pass1:".length).trim();
+  }
+  return undefined;
 }
 
 function extractEndpoints(): Endpoint[] {
@@ -122,6 +151,7 @@ function extractEndpoints(): Endpoint[] {
           path: m[2],
           file,
           line: i + 1,
+          disposition: readDisposition(lines, i),
         });
       }
     }
@@ -160,7 +190,7 @@ function extractEndpoints(): Endpoint[] {
 // heuristic as a verdict, which is exactly how two live endpoints ended up on a
 // list titled "orphan".
 
-type Confidence = "EXACT" | "PATTERN" | "UNRESOLVED";
+type Confidence = "EXACT" | "PATTERN" | "UNRESOLVED" | "DISPOSITIONED";
 
 interface GradedEndpoint extends Endpoint {
   confidence: Confidence;
@@ -483,6 +513,10 @@ function buildReport(
   lines.push(`|---|---:|---:|`);
   const unresolved = orphanEndpoints.filter((e) => e.confidence === "UNRESOLVED");
   const patterned = orphanEndpoints.filter((e) => e.confidence === "PATTERN");
+  // Dispositioned endpoints are LISTED, not hidden. A verdict moves a finding
+  // out of the open column; it must never remove it from the page, or the
+  // annotation becomes a way to silence a finding rather than answer one.
+  const dispositioned = orphanEndpoints.filter((e) => e.confidence === "DISPOSITIONED");
   lines.push(`| 1 — Orphan endpoints (UNRESOLVED only) | ${endpoints.length} | **${unresolved.length}** |`);
   lines.push(`| 1b — Pattern-matched, likely live (verify) | — | ${patterned.length} |`);
   lines.push(`| 2 — Orphan schema fields (low frontend refs) | ${schemaFields.length} | **${orphanFields.length}** |`);
@@ -494,7 +528,8 @@ function buildReport(
   lines.push("");
   lines.push(`Backend mutating routes (\`PUT\` / \`PATCH\` / \`DELETE\`) graded by how well a frontend caller could be matched. Matching is segment-based (v2): the route is compared against the TAIL of each caller path, and either side may be dynamic.`);
   lines.push("");
-  lines.push(`- **UNRESOLVED** — nothing matched. This is the only grade worth calling an orphan.`);
+  lines.push(`- **UNRESOLVED** — nothing matched and no verdict is on file. This is the only grade worth calling an orphan.`);
+  lines.push("- **DISPOSITIONED** — no caller, but an audit-pass1 verdict sits beside the route in the code. Listed with its reason; not an open question.");
   lines.push(`- **PATTERN** — matched, but a literal route segment lined up with a \`\${...}\` slot in the caller, so whether it is hit depends on a runtime value. Treat as live until shown otherwise.`);
   lines.push(`- **EXACT** matches are not listed here — they have a caller.`);
   lines.push("");
@@ -503,9 +538,9 @@ function buildReport(
   } else {
     lines.push(`| Confidence | Verb | Path | Source | Possible caller |`);
     lines.push(`|---|---|---|---|---|`);
-    for (const ep of [...unresolved, ...patterned]) {
+    for (const ep of [...unresolved, ...dispositioned, ...patterned]) {
       lines.push(
-        `| ${ep.confidence} | ${ep.verb} | \`${ep.path}\` | \`${relPath(ep.file)}:${ep.line}\` | ${ep.caller ? "`" + ep.caller + "`" : "—"} |`,
+        `| ${ep.confidence} | ${ep.verb} | \`${ep.path}\` | \`${relPath(ep.file)}:${ep.line}\` | ${ep.caller ? "`" + ep.caller + "`" : ep.disposition ? ep.disposition : "—"} |`,
       );
     }
   }
@@ -592,12 +627,28 @@ function main() {
   // PATTERN findings stay in the list but are reported separately: they are
   // likely live and only need a human to confirm the runtime value.
   const callsByVerb = extractFrontendCalls(frontendFiles, frontendCache);
-  const graded: GradedEndpoint[] = endpoints.map((ep) => ({ ...ep, ...classifyEndpoint(ep, callsByVerb) }));
+  const gradedRaw: GradedEndpoint[] = endpoints.map((ep) => ({ ...ep, ...classifyEndpoint(ep, callsByVerb) }));
+  // An UNRESOLVED endpoint carrying a written verdict is DISPOSITIONED: still
+  // reported, still visible, but no longer counted as an open question.
+  const graded = gradedRaw.map((e) =>
+    e.confidence === "UNRESOLVED" && e.disposition
+      ? { ...e, confidence: "DISPOSITIONED" as Confidence }
+      : e,
+  );
   const orphanEndpoints = graded.filter((e) => e.confidence !== "EXACT");
   const unresolvedCount = orphanEndpoints.filter((e) => e.confidence === "UNRESOLVED").length;
   const patternCount = orphanEndpoints.filter((e) => e.confidence === "PATTERN").length;
+  const dispositionedCount = orphanEndpoints.filter((e) => e.confidence === "DISPOSITIONED").length;
+  // Tripwire. If the annotation reader silently matched nothing while notes are
+  // present in the tree, this pass would quietly go back to re-asking settled
+  // questions — the §19 Sub-pattern 16 failure, in a tool whose whole job is
+  // reporting. Fail loudly instead.
+  const notesInTree = gradedRaw.filter((e) => e.disposition).length;
+  if (notesInTree === 0) {
+    console.error("[audit] WARNING: no audit-pass1 notes found. The reader may have broken.");
+  }
   console.error(
-    `[audit] Pass 1: ${unresolvedCount} UNRESOLVED, ${patternCount} PATTERN (likely live), ${endpoints.length - orphanEndpoints.length} EXACT.`,
+    `[audit] Pass 1: ${unresolvedCount} UNRESOLVED, ${dispositionedCount} DISPOSITIONED (verdict on file), ${patternCount} PATTERN (likely live), ${endpoints.length - orphanEndpoints.length} EXACT.`,
   );
 
   console.error("[audit] Pass 2 — checking schema field references...");

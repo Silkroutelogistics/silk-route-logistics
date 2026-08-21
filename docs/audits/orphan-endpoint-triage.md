@@ -80,3 +80,87 @@ Ranked by what an operator currently cannot do:
 ## Rerunning
 
 `npx tsx backend/scripts/audit-completeness.ts`. Pass 1 will still report 26; each now has a verdict at the call site. A finding that appears *without* an `audit-pass1:` comment above it is new since 2026-08-18 and needs triage.
+
+---
+
+## Arc 22 — Pass 1 closure (2026-08-21)
+
+**17 UNRESOLVED → 0.** Seven endpoints deleted, ten already carried a verdict.
+
+The headline finding is not about any endpoint. **Arc 2 had already triaged all ten
+survivors and written each verdict into the code as a `// audit-pass1:` note — and
+the tool matched paths and ignored comments, so every one resurfaced as UNRESOLVED
+on every run since.** The triage had no memory. Re-deciding settled questions each
+run is how a findings list stops being read, and a list nobody reads is worse than
+no list, because it still looks like coverage.
+
+Pass 1 now reads those notes. A note moves an endpoint from UNRESOLVED to
+**DISPOSITIONED** — still listed, still shown with its reason, no longer counted as
+an open question. It never hides anything: an annotation that could remove a finding
+from the page would be a way to silence a finding rather than answer one.
+
+### Deleted — DEAD-BY-STRATEGY (7)
+
+**The business fact, stated rather than implied: SRL is a pure broker and has no
+truck side.** §5 prohibits SRL from ever claiming "our fleet" / "our trucks" / "we
+own". `Truck` and `Trailer` carry **no owner column at all** — not a carrier, not
+SRL — and the only two things that ever created a row were this module's own POST
+and the seed. They modelled an asset-carrier operation SRL will never run.
+
+| Verb | Path | Rationale |
+|---|---|---|
+| PATCH | `/fleet/trucks/:id` | No caller in any frontend, present or historical (`git log -S` on `trucks/` under `frontend/` is empty). |
+| DELETE | `/fleet/trucks/:id` | Same. |
+| PATCH | `/fleet/trucks/:id/assign` | Same; driver↔truck assignment is a motor-carrier act. |
+| PATCH | `/fleet/trailers/:id` | Same. |
+| DELETE | `/fleet/trailers/:id` | Same. |
+| PATCH | `/drivers/:id/assign-equipment` | Superseded by the narrower `assign-truck` / `assign-trailer`, which are live. |
+| PATCH | `/drivers/:id/hos` | **The strongest case of the seven, and not merely strategic.** It hand-edits `hosDrivingUsed` / `hosOnDutyUsed` / `hosCycleUsed` / `hosCycleLimit` — the 11/14/70 clock under 49 CFR 395. A typed-in HOS clock is exactly what the ELD mandate exists to prevent. Even a motor carrier should not have this endpoint; a broker certainly should not. |
+
+All seven verified to have **zero** other consumers before deletion — not just no
+frontend caller, but nothing in `src`, `__tests__`, `e2e`, cron, or service code.
+Route, controller handler, and now-orphaned Zod schema removed together.
+
+**Read and create remain**, because `/dashboard/fleet` calls them. The module is now
+exactly what its UI does. Retiring it wholesale is §13.3 Item 228 — a business
+decision, deliberately not taken here.
+
+**Schema consequence, batched not executed.** Three fields lost their last backend
+reference: `Truck.assignedDriverId`, `Trailer.assignedDriverId`,
+`Driver.assignedEquipmentId` (Pass 2 UNREFERENCED 52 → 55, total unchanged at 1538).
+No migration was authored for them: Item 228 would supersede a three-column drop,
+and pre-empting a decision with a partial migration is how a schema accumulates
+half-finished intentions.
+
+### Dispositioned — verdict on file (10)
+
+Each was independently re-verified this arc, not taken on Arc 2's word.
+
+| Path | Verdict | Worth building? |
+|---|---|---|
+| `PUT /carriers/chameleon-matches/:matchId/review` | MISSING-UI | **Yes — the highest-value gap found.** `SecuritySignalsCard` renders the match count and the overlap explanation, and offers no way to mark one reviewed. Matches accrue OPEN forever and the count an AE sees never falls, so the signal decays into background noise. |
+| `PATCH /carrier-loads/:id/driver` | MISSING-UI | **Yes, and worth more since Arc 19.** Driver verification is now per-load; this is the natural place a carrier names the driver. |
+| `PUT /invoices/:id/line-items` | MISSING-UI | Yes — Item 211 flagged line-item edit as unbuilt; this is the backend half already standing. |
+| `PUT /eld/devices/:id` | MISSING-UI | Yes, eventually. **Explicitly NOT dead-by-strategy** — Compass tracking is telematics-activated and the Motive/Samsara services are real code; a carrier connecting their own ELD is the intended path. |
+| `PATCH /routing-guides/entries/:entryId` | MISSING-UI | Low. The UI manages whole guides; the entire `/entries` sub-resource is unwired, so this is one third of a missing feature rather than a loose end. |
+| `DELETE /routing-guides/entries/:entryId` | MISSING-UI | Low, same. |
+| `PUT /carriers/:id/restore` | MISSING-UI | Low. Soft-delete exists with no restore affordance; a rare, recoverable-by-support need. |
+| `PUT /customers/:id/restore` | MISSING-UI | Low, same. |
+| `DELETE /accounting/reports/:id` | MISSING-UI | Low. Saved-report delete; no harm in its absence. |
+| `PATCH /shipments/:id/location` | INTENTIONAL | n/a — integration surface per Phase 5E.c Decision 4.1; a frontend caller was never expected. |
+
+### The tool change, adversarially verified
+
+Three injections, each run and each observed to move the count:
+
+1. Rename `audit-pass1:` to an ordinary comment → that endpoint returns to UNRESOLVED.
+   The reader requires the real tag; it does not treat any nearby comment as a verdict.
+2. Append a new unannotated route → UNRESOLVED rises. An annotation elsewhere cannot
+   blanket-silence the pass.
+3. Append a route into a file dense with verdicts → still UNRESOLVED. A note cannot
+   bleed onto the route below it, because the walk stops at the first non-comment line.
+
+**A gate that did not cover the artifact.** `tsc --noEmit` returned 0 on a file with a
+syntax error, because `tsconfig.json` includes only `src/**/*` — `scripts/` is outside
+it. Twice during this arc a green tsc was reported over an audit-tool change it never
+read. The gate for a tool change is running the tool.

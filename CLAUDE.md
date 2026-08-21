@@ -1872,6 +1872,28 @@ Each is a discrete sprint. Mix of operational, security, UX, and technical debt.
 
     **Proof:** Arc 16's per-creation-path money proof re-run against the migrated code, **14/14**.
 
+228. **Pass 1 closed — and the tool had no memory of its own triage (Arc 22, 2026-08-21).**
+
+    **17 UNRESOLVED → 0.** Seven endpoints deleted, ten already answered. Full disposition table with per-endpoint evidence and value judgments: [`docs/audits/orphan-endpoint-triage.md`](docs/audits/orphan-endpoint-triage.md).
+
+    **228.1 — THE REAL FINDING IS ABOUT THE TOOL, NOT THE ENDPOINTS.** Arc 2 triaged all ten survivors and wrote each verdict into the code as a `// audit-pass1:` note. Pass 1 matched paths and ignored comments, so **every one resurfaced as UNRESOLVED on every run since** — a list of seventeen open questions of which ten had been answered eleven arcs earlier. Re-deciding settled questions is how a findings list stops being read, and a list nobody reads is worse than none because it still looks like coverage. Pass 1 now reads the notes: a verdict moves an endpoint to **DISPOSITIONED** — still listed, reason shown, no longer counted open. **It never hides anything.** An annotation that could remove a finding from the page would be a way to silence a finding rather than answer one, so the emitter lists DISPOSITIONED rows alongside the rest — and the first cut of this change counted them without listing them, which is exactly the failure it was written to avoid.
+
+    **228.2 — DEAD-BY-STRATEGY, with the business fact stated rather than implied.** **SRL is a pure broker and has no truck side.** §5 prohibits SRL from ever claiming "our fleet" / "our trucks" / "we own". `Truck` and `Trailer` carry **no owner column at all** — not a carrier, not SRL — and the only two things that ever created a row were the fleet module's own POST and the seed. `git log -S "trucks/" -- frontend/` is empty across all history: an edit UI never existed. Five truck/trailer mutation routes plus `PATCH /drivers/:id/assign-equipment` deleted with route, handler, and orphaned Zod schema.
+
+    **The seventh is the one worth remembering, and it is not merely strategic.** `PATCH /drivers/:id/hos` hand-edits `hosDrivingUsed` / `hosOnDutyUsed` / `hosCycleUsed` / `hosCycleLimit` — the 11/14/70 clock under 49 CFR 395. **A typed-in HOS clock is precisely what the ELD mandate exists to prevent.** Even a motor carrier should not have that endpoint.
+
+    All seven verified to have **zero** other consumers first — not "no frontend caller" but nothing in `src`, `__tests__`, `e2e`, cron, or service code. **Read and create remain**, because `/dashboard/fleet` calls them; the module is now exactly what its UI does. Retiring it wholesale is a business decision and is **deliberately not taken here** — see 228.4.
+
+    **228.3 — THE HIGHEST-VALUE GAP IS A SIGNAL THAT CANNOT BE ACTED ON.** `SecuritySignalsCard` renders the chameleon match count and the fingerprint-overlap explanation, and offers no way to mark a match reviewed. **Matches accrue OPEN forever and the count an AE sees never falls**, so a fraud signal decays into background noise — the same decay Item 192 fixed for risk emails, here reached by an unwired endpoint rather than a flooding cron. `PUT /carriers/chameleon-matches/:matchId/review` is built and waiting. Per the brief, **no UI was built** — logged with the judgment.
+
+    **228.4 — SCHEMA CONSEQUENCE BATCHED, NOT EXECUTED.** Three fields lost their last backend reference with the handlers: `Truck.assignedDriverId`, `Trailer.assignedDriverId`, `Driver.assignedEquipmentId` (Pass 2 UNREFERENCED **52 → 55**, total unchanged at 1538 — an honest increase, reported rather than smoothed). **No migration was authored.** A wholesale fleet-module retirement would supersede a three-column drop, and pre-empting an undecided question with a partial migration is how a schema accumulates half-finished intentions. **Open for Wasi:** retire `/dashboard/fleet` and its models entirely, or keep a read-only equipment register. Nothing blocks on it.
+
+    **228.5 — A GATE THAT DID NOT COVER THE ARTIFACT.** `tsc --noEmit` returned **exit 0 on a file with a syntax error**, because `tsconfig.json` includes only `src/**/*` and `scripts/` sits outside it. Twice this arc a green tsc was reported over an audit-tool change it had never read. **§19 Sub-pattern 16 in its purest form: the check ran, and it was not checking the thing its name implied.** The gate for a tool change is running the tool. A third false-green came from my own shell — `npx tsc --noEmit | head -20 && echo "clean"` prints "clean" off `head`, not off `tsc`.
+
+    **228.6 — AND MY PATCH HELPER SILENTLY DISCARDED EDITS.** A replace helper closed over the outer string rather than the running one, so each call operated on the original and only the last survived. It reported success on every call. Caught because the file it half-patched then failed to compile — that is luck, not method. **A helper that reports per-call success while discarding per-call work is the same class as a guard that passes without checking.**
+
+    **Verification.** Three injections, each executed and each observed to move the count: renaming the tag returns an endpoint to UNRESOLVED; a new unannotated route raises UNRESOLVED; a route appended into a file dense with verdicts stays UNRESOLVED, so a note cannot bleed onto the route below it.
+
 ## §14 LEGAL / COMPLIANCE STATUS
 
 - Property broker under 49 U.S.C. §§ 13904, 13906
