@@ -1762,6 +1762,22 @@ Each is a discrete sprint. Mix of operational, security, UX, and technical debt.
 
     **Method note.** Two proof scripts, both real-database and real-route: [`_arc17-waterfall-flight.ts`](backend/scripts/_arc17-waterfall-flight.ts) and [`_arc17-seams.ts`](backend/scripts/_arc17-seams.ts). Outbound captured off `emailService`'s `[NoAPI]` branch, which proves both that the path ran and that nothing left the building. The region fix also carries a CI-resident guard ([`operatingRegions.test.ts`](backend/__tests__/unit/lib/operatingRegions.test.ts), 9 cases) because the flight needs a database and does not run in CI — the arithmetic that made the old comparison wrong is pinned there, including the Northeast/Oregon coincidence.
 
+224. **Termination mid-load: ratified, built, and proved (Arc 18, 2026-08-21).**
+
+    Closes the one HALT-SHIP product question Arc 17 raised (Item 223.6). The policy is in §14 verbatim; this is what was built behind it and how it was verified.
+
+    **The behaviour did not change. What changed is that it is now chosen, stated, and visible.** Termination blocked the next tender and left in-flight loads alone — defensible, but nothing said so, no AE was told, and nobody had decided whether SRL still pays. New [`terminationImpactService.ts`](backend/src/services/terminationImpactService.ts) adds the two things that were missing: the owning AE is notified by load number and lane, and those loads move to the EXPEDITED check-call cadence. **Reuses the existing urgency protocol rather than inventing a second one** — it sets `Load.urgencyLevel = "EXPEDITED"` and lets `createCheckCallSchedule` (which deletes and rebuilds, so this is idempotent) do the work.
+
+    **Scope decisions, each with a reason.** In-flight is *assigned, past tender, not yet POD_RECEIVED* — a load at POD_RECEIVED or beyond needs paying, not watching. One notification per AE listing all their loads, not one per load, because an AE with four affected loads needs one message they will read. The terminating admin always gets the full picture even for loads they did not post. **Quick Pay terminations trigger none of it** — a fee change is not a dispatch risk. The endpoint returns real counts (`inFlight.count`, `aesNotified`, `checkCallsEscalated`) and the modal reports them, so an admin is never told loads were escalated when they were not.
+
+    **The modal now separates what stops from what does not.** The prior copy said "loads already in flight are unaffected", which reads as *nothing happens to them*. Full replacement wording is in §14.
+
+    **Proof — [`_arc18-termination-proof.ts`](backend/scripts/_arc18-termination-proof.ts), 12/12, real router over HTTP with a real admin session.** Three loads (IN_TRANSIT, DELIVERED, COMPLETED) and a Quick Pay control. Asserts both directions: future tenders blocked; the in-flight load keeps its status, its carrier and its agreed rate; **a load delivered by a TERMINATED carrier still produces a settlement at the agreed rate** — which is the whole meaning of "pay normally"; the COMPLETED load is not swept up; the AE notification names the load and states the policy rather than just the fact; the Quick Pay termination escalates nothing.
+
+    **Adversarially verified by neutering the fan-out: 12/12 → 8/12**, and the four that fail are exactly the Arc 18 additions while the three ratified-policy assertions still pass — confirming those are properties of the platform rather than of the new code.
+
+    **The Arc 17 pinning assertions are unchanged; only their comments are.** They no longer guard a pending decision — they assert a promise, so breaking either is now breaking policy rather than changing behaviour nobody had chosen.
+
 ## §14 LEGAL / COMPLIANCE STATUS
 
 - Property broker under 49 U.S.C. §§ 13904, 13906
@@ -1777,6 +1793,21 @@ Each is a discrete sprint. Mix of operational, security, UX, and technical debt.
   **Notice:** none. Termination bites the moment it is recorded. **This is defensible because the paper does not promise otherwise** — the BCA contains no termination-notice clause, and §244's 30-day notice governs Caravan *program criteria*, not the agreement body. That is an absence rather than a permission, and it is the right default until counsel says otherwise: a platform that supports immediate termination can add a notice window later, whereas one that cannot terminate at all has no answer to a carrier who must be stopped today.
 
   **What counsel should settle (rides with §16 #1, not a platform blocker):** whether the BCA should carry a termination-notice clause at all, and if so how long. The consolidated draft should state plainly what the platform must support, since the mechanism now exists and the paper is silent about it.
+
+  **TERMINATION MID-LOAD — RATIFIED 2026-08-21 (Arc 18), and IMPLEMENTED.** The policy, verbatim:
+
+  > **In-flight loads complete and pay normally. Termination blocks future tenders only. Freight-cause exceptions are human-handled and out of code scope.**
+
+  This is the behaviour the platform already had; Arc 17 found it *undecided* rather than broken and pinned it while the question stood. Ratifying it costs nothing to change and everything to leave unsaid. **A carrier who hauls a load is owed for it whatever else is true about the relationship** — the freight is on their truck, somebody has to deliver it, and refusing to pay for work already done because the commercial relationship ended is both wrong and the kind of thing that gets a broker's bond claimed against. The third clause matters as much as the first two: if a carrier is being terminated *because* of something on this load, that is a human decision about that load, taken on the load, and code must not try to infer it.
+
+  **What the code does, therefore, is not stop anything — it makes sure a human knows.** Two consequences follow from terminating a Broker-Carrier Agreement, and only two ([`terminationImpactService.ts`](backend/src/services/terminationImpactService.ts)):
+
+  1. **The owning AE is notified**, by load number and lane, that a load of theirs is now being hauled by a carrier SRL has terminated — one message per AE listing all of their affected loads, not one per load. The admin who terminated always receives the full picture regardless of who posted the loads, because they took the action.
+  2. **Those loads move to the EXPEDITED check-call cadence**, reusing the protocol the platform already runs for urgent freight rather than inventing a second one. The concrete risk of a terminated carrier finishing a load is that they stop answering. **Watch harder; do not seize.**
+
+  **In-flight means assigned and past tender but not yet POD_RECEIVED.** A load at POD_RECEIVED or beyond is excluded deliberately: the freight is delivered and the paperwork is in, so a terminated carrier at that point needs paying, not watching. Terminating a **Quick Pay** Agreement triggers none of this — it changes payment timing, not who is hauling, and escalating check calls over a fee change would be noise.
+
+  **The confirmation modal states both halves before the admin commits**, because the prior wording ("loads already in flight are unaffected") reads as *nothing happens to them* and left an admin to guess whether SRL still pays. It now separates **stops immediately** — this carrier cannot be tendered or accept any new load until they sign a new agreement — from **does not stop**: loads already in flight stay with this carrier, complete normally, and **are paid normally**, with check calls tightened and the AE notified. It closes by saying that a load which must be taken off this carrier has to be moved on the load itself, because termination will not do it.
 
   **TERMINATED reads as terminated, not as never-signed.** That distinction is enforced in two places (v3.8.atf): the carrier compliance panel names the date and reason, and the tender-time override modal treats `AGREEMENT_TERMINATED` as a hard block whose remedy is a signature rather than a waiver. Confusing the two was the original defect — an AE offered a waiver for a condition no waiver can fix.
 

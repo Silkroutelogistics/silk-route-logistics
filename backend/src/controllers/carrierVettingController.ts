@@ -630,12 +630,53 @@ export async function terminateAgreement(req: AuthRequest, res: Response) {
       .catch((err) => log.error({ err }, "[AgreementTermination] carrier notification failed"));
   }
 
+  // ARC 18 — the in-flight consequence, made visible.
+  //
+  // Ratified policy (§14): in-flight loads complete and pay normally;
+  // termination blocks future tenders only. So nothing here stops a load. What
+  // it does is make sure a human knows one is now being hauled by a carrier SRL
+  // has terminated, and tightens the check-call cadence on exactly those loads,
+  // because the concrete risk is that a terminated carrier stops answering.
+  //
+  // Only for the Broker-Carrier Agreement. Terminating a Quick Pay Agreement
+  // changes payment timing, not who is hauling — escalating check calls over a
+  // fee change would be noise, and §13.3 Item 223.6 is specific to the BCA.
+  //
+  // Non-blocking: the agreement is already terminated and must stay terminated
+  // even if the fan-out fails. The count is reported honestly rather than
+  // assumed, so an admin is never told loads were escalated when they were not.
+  let impact = { affected: [] as any[], notified: 0, escalated: 0 };
+  if (updated.templateName === "broker-carrier" && agreement.carrier?.userId) {
+    try {
+      const { applyTerminationImpact } = await import("../services/terminationImpactService");
+      impact = await applyTerminationImpact({
+        carrierUserId: agreement.carrier.userId,
+        carrierName: agreement.carrier.companyName || "This carrier",
+        terminatedByUserId: req.user!.id,
+        reason,
+      });
+    } catch (err) {
+      log.error({ err, carrierId }, "[AgreementTermination] in-flight impact fan-out failed");
+    }
+  }
+
   log.info(
-    { carrierId, agreementId: updated.id, templateName: updated.templateName, by: req.user!.id },
+    {
+      carrierId, agreementId: updated.id, templateName: updated.templateName, by: req.user!.id,
+      inFlightLoads: impact.affected.length, aesNotified: impact.notified, escalated: impact.escalated,
+    },
     "[AgreementTermination] agreement terminated",
   );
 
-  res.json(updated);
+  res.json({
+    ...updated,
+    inFlight: {
+      count: impact.affected.length,
+      loads: impact.affected.map((l: any) => ({ referenceNumber: l.referenceNumber, status: l.status, lane: l.lane })),
+      aesNotified: impact.notified,
+      checkCallsEscalated: impact.escalated,
+    },
+  });
 }
 
 export async function getCarrierAgreements(req: AuthRequest, res: Response) {

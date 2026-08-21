@@ -353,7 +353,19 @@ async function main() {
     void r1; void r2;
   }
   {
-    // Termination mid-load — the seam Arc 15 flagged as undecided.
+    // Termination mid-load.
+    //
+    // ARC 18 — these two assertions are UNCHANGED. What changed is why they
+    // are here. Arc 15 flagged this seam as undecided and Arc 17 pinned the
+    // behaviour so it could not drift while the question was open. §14 now
+    // RATIFIES it: in-flight loads complete and pay normally; termination
+    // blocks future tenders only. So these no longer guard a pending decision
+    // — they assert a promise, and breaking either is now breaking policy
+    // rather than merely changing behaviour nobody had chosen.
+    //
+    // The full policy proof, including that a terminated carrier's delivered
+    // load still settles and that the AE is told, is
+    // scripts/_arc18-termination-proof.ts.
     const load = await makeLoad({ status: "IN_TRANSIT", carrierId: cu.id });
     const { complianceCheck } = await import("../src/services/complianceMonitorService");
     await prisma.carrierAgreement.update({
@@ -374,12 +386,12 @@ async function main() {
       `load still ${stillHeld?.status} with the carrier assigned`,
     );
     finding(
-      "TERMINATION MID-LOAD IS UNDECIDED, NOT BROKEN. Termination blocks the next tender " +
-        "and leaves loads already in the carrier's hands untouched. No carrier-portal gate reads " +
-        "CarrierAgreement.status, so that carrier keeps working the load, uploading the POD, and " +
-        "being paid. That is arguably right — the freight is on their truck and someone must deliver " +
-        "it — but nothing states the intent, no AE is told an in-flight load is now held by a " +
-        "terminated carrier, and no one decided whether SRL still pays. HALT-SHIP product question.",
+      "TERMINATION MID-LOAD IS RATIFIED (§14, Arc 18), no longer an open question. " +
+        "In-flight loads complete and pay normally; termination blocks future tenders only; " +
+        "freight-cause exceptions are human-handled and out of code scope. Arc 18 added the two " +
+        "things the behaviour was missing rather than changing it: the owning AE is notified with " +
+        "the affected load numbers, and those loads move to the EXPEDITED check-call cadence — " +
+        "watch harder, do not seize.",
     );
     // restore for later phases
     await prisma.carrierAgreement.update({ where: { id: bca.id }, data: { status: "SIGNED", terminatedAt: null } });

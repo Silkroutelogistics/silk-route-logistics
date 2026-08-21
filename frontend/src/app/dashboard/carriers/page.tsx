@@ -615,14 +615,25 @@ export default function CarrierPoolPage() {
       api
         .post(`/carriers/${carrierId}/agreements/${agreementId}/terminate`, { reason })
         .then((r) => r.data),
-    onSuccess: () => {
+    onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ["carrier-agreements"] });
       queryClient.invalidateQueries({ queryKey: ["carrier-all"] });
+      queryClient.invalidateQueries({ queryKey: ["loads"] });
       setTerminateReason("");
       setTerminateConfirming(null);
+      // ARC 18 — report what actually happened rather than a fixed sentence.
+      // The endpoint returns the in-flight loads it found, the AEs it told and
+      // the check-call schedules it tightened; an admin who just terminated a
+      // carrier mid-haul should see that count, not be reassured by a constant.
+      const n = data?.inFlight?.count ?? 0;
       setTerminateMessage({
         tone: "success",
-        text: "Agreement terminated. This carrier cannot be tendered until they re-sign.",
+        text:
+          "Agreement terminated. This carrier cannot be tendered until they re-sign." +
+          (n > 0
+            ? ` ${n} load${n === 1 ? "" : "s"} still in flight stay with them and will complete and pay normally — ` +
+              `check calls tightened and ${data?.inFlight?.aesNotified ?? 0} AE notification${(data?.inFlight?.aesNotified ?? 0) === 1 ? "" : "s"} sent.`
+            : " No loads were in flight."),
       });
     },
     onError: (err: unknown) => {
@@ -1421,11 +1432,24 @@ export default function CarrierPoolPage() {
                                   </button>
                                 ) : (
                                   <div className="bg-red-50 border border-red-300 rounded p-2 space-y-2">
-                                    {/* The consequence, in plain words, before they commit. */}
-                                    <p className="text-[11px] text-red-800">
-                                      This carrier will not be able to accept any load until they sign a new agreement.
-                                      Loads already in flight are unaffected. The agreement and its signed PDF are kept as a record.
-                                    </p>
+                                    {/* ARC 18 — what stops and what does not, separated.
+                                        The prior wording said "loads already in flight are
+                                        unaffected", which reads as "nothing happens to them"
+                                        and left an admin to guess whether SRL still pays.
+                                        The ratified policy (§14) is that they complete AND
+                                        pay; an admin about to terminate a carrier mid-haul
+                                        needs to be told that plainly, not reassured. */}
+                                    <div className="text-[11px] text-red-800 space-y-1">
+                                      <p><span className="font-semibold">Stops immediately:</span>{" "}
+                                        this carrier cannot be tendered or accept any new load until they sign a new agreement.</p>
+                                      <p><span className="font-semibold">Does not stop:</span>{" "}
+                                        loads already in flight. They stay with this carrier, complete normally, and
+                                        <span className="font-semibold"> are paid normally</span>. Check calls on those
+                                        loads move to the tighter cadence and the assigned AE is notified.</p>
+                                      <p className="text-red-700">
+                                        If a load must be taken off this carrier, do that on the load itself — termination will not do it.
+                                        The agreement and its signed PDF are kept as a record.</p>
+                                    </div>
                                     <textarea
                                       value={terminateReason}
                                       onChange={(e) => setTerminateReason(e.target.value)}
