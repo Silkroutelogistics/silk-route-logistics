@@ -1575,6 +1575,35 @@ Each is a discrete sprint. Mix of operational, security, UX, and technical debt.
     - **A3 gate-live verification — BLOCKED.** `gh secret list` still empty; `RENDER_DEPLOY_HOOK_URL` unset. The deploy job is green since the CI-quieting commit `a5265210` (which carried no version bump, being CI-only) because it warns rather than fails on the absent secret, which is **not** the same signal as a verified gated deploy. Pipeline mode remains: Render auto-deploy ships commits, CI does not gate them.
     - **A4 counsel consolidation — BLOCKED, fifth consecutive attempt.** No `my-knowledge-base/raw/counsel/`, no `.docx` anywhere. Item 203 holds the spec; not re-recorded here.
 
+
+216. **Mandatory carrier 2FA — recovery hardened and shipped; enrollment, enforcement, step-up and OAuth BANKED with resume state (Arc 10, 2026-08-20).**
+
+    **The safety ordering is the whole design and it is not negotiable: recovery commits BEFORE enforcement deploys.** A mandatory second factor with no recovery path is a lockout generator. That ordering is why the one piece that shipped is the recovery foundation.
+
+    **SHIPPED (`v3.8.atl`) — backup codes are password-equivalent and now treated as such.** They were AES-encrypted, which is reversible by anyone holding `ENCRYPTION_KEY`; now bcrypt-hashed at password cost, shown once, unrecoverable. The consume path was a read-modify-write, so the same code presented twice concurrently could be spent twice — now a compare-and-swap pinned to the exact value read. Legacy plaintext entries still authenticate and are rehashed on first use, so the upgrade locks nobody out. Verified against the real artifact per Sub-pattern 16: real database, real crypto, raw column read back and grepped for the issued codes — zero appear.
+
+    **THE PRODUCTION CENSUS, which changes the enforcement plan.** Read-only, 2026-08-20 (`scripts/_readonly-carrier-2fa-census.ts`):
+
+    | | |
+    |---|---|
+    | CARRIER users | **4** |
+    | with TOTP enabled | **0** |
+    | carrier_profiles | 4, of which **3 are test accounts** |
+    | APPROVED and real (`NOT isTestAccount`) | **0** |
+    | real active carriers | **1** — `PENDING`, `lastLogin = never` |
+
+    **So the forced-migration notification email is NOT required, and shipping it would be worse than not.** Its purpose is to stop an existing carrier being surprised at next login by a flow that changed under them. There is no such carrier: the single real account is PENDING, has never logged in, and will meet the enrollment wall as a first-time user like any new registration. Emailing "your next login now requires an authenticator app" to someone who has never had a first login is confusing, not protective. **If this census changes before enforcement ships — any real carrier reaching APPROVED and logging in — the email becomes required again and must be confirmed sent before the enforcement commit deploys.** Re-run the census script; do not trust this table's age.
+
+    **BANKED, with resume state.** Not started, deliberately, rather than half-built: a partially wired mandatory-2FA flow is exactly the lockout the ordering above exists to prevent, and the brief's own rule for these phases is that a drift bug here is a lockout.
+
+    - **B1-RECOVERY remainder.** (a) Carrier-side password reset for a TOTP user, verified end to end against the real wire shape — the Arc 4 fix (`1b6d1e49`) corrected `resetPasswordSchema` at [`routes/auth.ts`](backend/src/routes/auth.ts); what is unverified is that the CARRIER UI actually sends `totpCode` on the resend, which is Sub-pattern 5's home ground (frontend writes vs validator declares). (b) Admin unenroll: ADMIN/CEO only, reason required, `auditLog`, carrier notified at the verified email, never self-service — mirror `terminateAgreement` in [`carrierVettingController.ts`](backend/src/controllers/carrierVettingController.ts) for shape and authz. `disableTotp` already exists at [`totpService.ts`](backend/src/services/totpService.ts) and clears secret + codes; it needs the endpoint, the audit row and the notification around it. (c) Route every recovery event through `logAuthEvent` ([`lib/authEvents.ts`](backend/src/lib/authEvents.ts)) — the union will need new members.
+    - **B1-ENROLLMENT.** Blocking step after email verification, before portal access. Trace the existing gate first: the portal already blocks unverified emails, and the instruction is to extend that same mechanism one step rather than invent a parallel one — start at [`routes/carrierAuth.ts`](backend/src/routes/carrierAuth.ts) and the carrier dashboard layout's status routing ([`frontend/src/app/carrier/dashboard/layout.tsx`](frontend/src/app/carrier/dashboard/layout.tsx), which already redirects non-APPROVED carriers to `application-status`). `generateTotpSetup` already returns QR + secret + codes.
+    - **B1-ENFORCEMENT.** TOTP challenge after password success at [`routes/carrierAuth.ts`](backend/src/routes/carrierAuth.ts) login. No remember-this-device in v1 (ratified). Reuse `failedLoginAttempts`/`lockedUntil`, do not fork. Census precondition above.
+    - **B2 step-up.** Fresh-code gate on money-moving actions, not satisfiable by the login code. Enumerate from the carrier portal: banking/payment details, Quick Pay election ([`carrierAuth.ts`](backend/src/routes/carrierAuth.ts) `quickpay-election`), contact-email change. Notify the PREVIOUS email on any email change. Note for §14: this is the platform answer to ITG's banking-freeze clause.
+    - **B3 OAuth + B3g Compass signal.** Ships dark behind an env check; provider setup doc for Wasi; TOTP still fires after OAuth for enrolled carriers; new OAuth accounts enter the same enrollment wall. Compass inputs are additive to EXISTING checks and a neutrality test must prove no existing carrier's score moves on feature enrollment.
+
+    **A5 (the 134 frontend-visible READ-never-WRITTEN fields) is also unstarted** and remains banked at [`docs/audits/read-never-written-triage.md`](docs/audits/read-never-written-triage.md) with its verdicts and the standing warning to read each column's matches before acting.
+
 ---
 
 ## §14 LEGAL / COMPLIANCE STATUS

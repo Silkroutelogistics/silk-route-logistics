@@ -13,6 +13,15 @@ so it's searchable and never lost.
 
 ---
 
+## Fixed — 2026-08-20 (v3.8.atl: backup codes were recoverable, and spendable twice)
+
+- **Backup codes were AES-encrypted, not hashed.** Reversible by anyone holding ENCRYPTION_KEY. Acceptable while TOTP was optional; not once mandatory 2FA makes a backup code a complete authentication factor. Now bcrypt at password cost, shown once, unrecoverable.
+- **The consume path could spend one code twice.** Read-modify-write: two concurrent requests with the same code both found it and both succeeded. Now a compare-and-swap pinned to the exact value read.
+- **Legacy plaintext entries still authenticate** and are rehashed on first use, so the upgrade locks nobody out.
+- **Verified against the real artifact** per §19 Sub-pattern 16 — real database, real crypto, raw column read back and grepped for the issued codes; zero appear. The unit tests mock encryption, so the fixture alone could not have shown this.
+
+---
+
 ## Pattern — 2026-08-20: a green check proves the check ran, not that it observed the thing it names
 
 Canonized as **§19 Sub-pattern 16** after three fires in two days, each green in CI and each caught only by the real artifact:
