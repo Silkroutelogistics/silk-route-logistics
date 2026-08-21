@@ -184,6 +184,21 @@ export async function confirmDriverVerification(opts: {
     }),
   ]);
 
+  // ARC 20 — a fresh verification is the ONLY thing that clears an opt-out.
+  //
+  // A driver who sent STOP and is later assigned another load must not be
+  // silently re-enrolled by that assignment. They opt back in by answering a
+  // new code and being shown the consent language again — a deliberate act by
+  // the person holding the handset, which is what consent means. This call
+  // sits AFTER the transaction above, so re-consent is only ever recorded for
+  // a verification that actually completed. §13.3 Item 226.
+  try {
+    const { recordReconsent } = await import("./smsComplianceService");
+    await recordReconsent(row.phone);
+  } catch (err) {
+    log.error({ err, loadId: opts.loadId }, "[DriverVerify] re-consent not recorded");
+  }
+
   log.info({ loadId: opts.loadId }, "[DriverVerify] driver handset proven and consent captured");
   return { ok: true, verifiedAt: now };
 }

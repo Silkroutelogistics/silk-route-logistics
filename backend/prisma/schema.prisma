@@ -4468,6 +4468,34 @@ model DriverPhoneVerification {
   @@map("driver_phone_verifications")
 }
 
+/// ARC 20 — a handset that told us to stop texting it.
+///
+/// KEYED ON THE NUMBER, NOT ON A LOAD OR A PERSON. A STOP is a statement about
+/// a handset, and it outlives the load it was sent from, the driver who sent it,
+/// and the carrier they drove for. Scoping it any narrower would let the same
+/// number be re-enrolled by a different load the next day, which is the exact
+/// thing TCPA penalises.
+///
+/// NEVER DELETED. Re-consent sets optedInAgainAt and leaves the row, because the
+/// evidence a business needs in a TCPA dispute is that it honoured the STOP —
+/// and a deleted row proves nothing. Opted out means: a row exists whose
+/// optedInAgainAt is null.
+model SmsOptOut {
+  id             String    @id @default(cuid())
+  /// E.164, normalised on write, so lookups cannot miss on formatting.
+  phone          String    @unique @db.VarChar(20)
+  optedOutAt     DateTime  @map("opted_out_at")
+  /// The word they actually sent, kept verbatim as evidence of the request.
+  keyword        String    @db.VarChar(20)
+  /// Set only by an explicit fresh verification. A driver is never silently
+  /// re-enrolled by being assigned another load.
+  optedInAgainAt DateTime? @map("opted_in_again_at")
+  createdAt      DateTime  @default(now()) @map("created_at")
+
+  @@index([optedInAgainAt])
+  @@map("sms_opt_outs")
+}
+
 model LoadTrackingEvent {
   id             String            @id @default(cuid())
   loadId         String            @map("load_id")

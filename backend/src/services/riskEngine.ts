@@ -58,7 +58,19 @@ export async function calculateLoadRisk(loadId: string): Promise<RiskResult> {
 
   // 1. Dispatched hours ago and nobody has proven the driver's handset.
   const DISPATCH_VERIFY_GRACE_HOURS = 4;
-  if (load.carrierId && !load.driverPhoneVerifiedAt) {
+  // ARC 20 — a driver who opted out is NOT an unverified driver, and must
+  // not score as one. Opting out is a legal right exercised deliberately;
+  // once they have, SMS verification is a thing we are not permitted to
+  // attempt, so scoring its absence would penalise a carrier for our
+  // compliance. It would also teach AEs that compliance produces noise in
+  // their queue, which is how compliance stops being taken seriously.
+  // The tracking gap is real and is surfaced as an AE notification instead.
+  // §13.3 Item 226.
+  const driverOptedOut = load.driverPhone
+    ? await (await import("./smsComplianceService")).isOptedOut(load.driverPhone)
+    : false;
+
+  if (load.carrierId && !load.driverPhoneVerifiedAt && !driverOptedOut) {
     const since = load.dispatchedAt || load.carrierConfirmedAt || load.updatedAt;
     const hours = since ? (now.getTime() - new Date(since).getTime()) / 3_600_000 : 0;
     if (hours >= DISPATCH_VERIFY_GRACE_HOURS) {

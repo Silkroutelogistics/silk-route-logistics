@@ -96,7 +96,52 @@ async function resolveFromNumber(): Promise<string> {
   throw new Error("OPENPHONE_PHONE_NUMBER_ID not configured");
 }
 
-export async function sendSMS(to: string, content: string, fromOverride?: string) {
+/**
+ * ARC 20 — THE SINGLE CHOKE POINT FOR SMS OPT-OUT.
+ *
+ * Every SMS the platform sends passes through here: the driver verification
+ * code, check calls and their retries, the location-link message, driver
+ * training reminders, and the ad-hoc AE send endpoint. Gating opt-out HERE
+ * rather than at each of those sites means a send site added tomorrow inherits
+ * the refusal for free — and, more to the point, that nobody has to remember.
+ *
+ * A per-site gate would be six places to forget and one silent TCPA violation
+ * the first time somebody forgets. This is one place, and a test asserts no
+ * caller passes the exemption except the STOP confirmation itself.
+ *
+ * `allowOptedOut` exists for exactly one message: the single confirmation a
+ * carrier permits after a STOP, so the sender is on record having received the
+ * request. It is deliberately awkward to reach rather than quietly special.
+ *
+ * REFUSING IS NOT AN ERROR. The handset told us to stop, so stopping is the
+ * correct outcome. The caller is told, so it can take the operational path —
+ * retarget to the carrier, notify an AE — instead of retrying.
+ */
+export async function sendSMS(
+  to: string,
+  content: string,
+  fromOverride?: string,
+  opts?: { allowOptedOut?: boolean },
+) {
+  if (!opts?.allowOptedOut) {
+    const { isOptedOut } = await import("./smsComplianceService");
+    if (await isOptedOut(to)) {
+      log.info({ to }, "[OpenPhone] send REFUSED — this number has opted out");
+      return { skipped: true, reason: "OPTED_OUT" as const };
+    }
+  }
+  // ARC 20 — when SMS is not configured, no-op with a log line rather than
+  // throwing. `sendEmail` has always behaved this way ([Email][NoAPI]); this
+  // threw, so every caller in a rehearsal or dev environment caught an
+  // exception and logged an error for what is simply "SMS is off here". That
+  // buried real failures in noise and made the two channels behave
+  // differently for the same condition. The log line is also what makes an
+  // outbound audit possible without a live account.
+  if (!process.env.OPENPHONE_API_KEY || !process.env.OPENPHONE_PHONE_NUMBER_ID) {
+    log.info(`[SMS][NoAPI] To: ${to} | ${content}`);
+    return { skipped: true, reason: "NOT_CONFIGURED" as const };
+  }
+
   const from = fromOverride || (await resolveFromNumber());
 
   const normalizedTo = to.startsWith("+1") ? to : `+1${to.replace(/\D/g, "")}`;

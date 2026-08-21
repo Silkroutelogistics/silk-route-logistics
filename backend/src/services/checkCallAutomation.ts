@@ -184,13 +184,28 @@ export async function processDueCheckCalls() {
     // an unknown party to hand us a position, which is the opposite of the
     // point. Replying with a digit stays available and is listed first: the
     // link is an easier alternative, never a requirement. §13.3 Item 225.
+    // ARC 20 CORRECTION — the ping link goes to the DRIVER'S handset, as its
+    // own message. Arc 19 appended it to `msg`, which is sent to
+    // `cc.carrierPhone` — the CARRIER'S number, because check calls have
+    // always gone to the carrier's dispatch contact and never to the driver.
+    // The token embeds the driver's verified number, so whoever tapped the
+    // link would have shared THEIR position and had it recorded as the
+    // driver's. Delivering it to the number we actually verified is the
+    // whole point of having verified one. §13.3 Item 226.
+    //
+    // Separate send, and non-blocking: an opted-out driver simply produces no
+    // link message while the carrier's check call goes out exactly as before.
     if (cc.load.driverPhoneVerifiedAt && cc.load.driverPhoneVerified) {
       try {
         const { mintDriverPingToken, driverPingUrl } = await import("../lib/driverPingToken");
         const url = driverPingUrl(mintDriverPingToken(cc.load.id, cc.load.driverPhoneVerified));
-        msg += ` Or tap to share your location once: ${url}`;
+        const { sendSMS } = await import("./openPhoneService");
+        await sendSMS(
+          cc.load.driverPhoneVerified,
+          `SRL Load #${cc.load.referenceNumber}: tap to share your location once — ${url}`,
+        );
       } catch (err) {
-        log.error({ err, loadId: cc.load.id }, "[CheckCall] could not mint a ping link; sending without it");
+        log.error({ err, loadId: cc.load.id }, "[CheckCall] driver ping link not sent");
       }
     }
 
@@ -278,6 +293,42 @@ export async function processDueCheckCalls() {
  * Handle check-call response from carrier (via OpenPhone webhook)
  */
 export async function handleCheckCallResponse(fromPhone: string, responseText: string) {
+  // ARC 20 — STOP and HELP are answered FIRST, before the keypad parse.
+  //
+  // Extended here rather than forked into a second webhook: this is already
+  // the one place inbound SMS arrives, and a parallel entry point would mean
+  // two places to keep in step about what a driver just said. A message that
+  // is neither keyword falls straight through to the existing digit mapping,
+  // unchanged. §13.3 Item 226.
+  const { handleComplianceKeyword } = await import("./smsComplianceService");
+  const compliance = await handleComplianceKeyword(fromPhone, responseText);
+  if (compliance) {
+    // The single confirmation a carrier permits after a STOP — and the only
+    // send in the system that may reach an opted-out number. HELP is
+    // answerable too: someone asking who is texting them is entitled to be
+    // told, whether or not they have opted out.
+    try {
+      const { sendSMS } = await import("./openPhoneService");
+      if (!compliance.alreadyOptedOut) {
+        await sendSMS(fromPhone, compliance.reply, undefined, { allowOptedOut: true });
+      }
+    } catch (err) {
+      log.error({ err, keyword: compliance.keyword }, "[CheckCall] compliance reply failed to send");
+    }
+
+    // Only on the FIRST stop. A driver who sends STOP twice has not opted
+    // out twice, and notifying the AE again would make a compliance event
+    // look like an escalating problem.
+    if (compliance.keyword === "STOP" && !compliance.alreadyOptedOut) {
+      const { applyOptOutConsequences } = await import("./smsOptOutConsequences");
+      await applyOptOutConsequences(fromPhone).catch((err) =>
+        log.error({ err }, "[CheckCall] opt-out consequences failed (non-blocking)"),
+      );
+    }
+
+    return { keyword: compliance.keyword, label: compliance.keyword, loadId: null };
+  }
+
   // Normalize phone: strip everything except digits
   const normalizedPhone = fromPhone.replace(/\D/g, "");
   const responseNum = responseText.trim().charAt(0);
