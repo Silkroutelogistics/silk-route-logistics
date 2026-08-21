@@ -1680,28 +1680,6 @@ Seed complete:
       where: { onboardingStatus: "APPROVED" },
       select: { id: true },
     });
-
-    // ARC 15 — enrol every carrier in TOTP.
-    //
-    // v3.8.atm made 2FA mandatory before any carrier-portal route, and
-    // v3.8.atu made that wall actually gate: before atu the middleware
-    // short-circuited on !req.user and waved everyone through on five of six
-    // mounts. This suite passed under that bug — POST /carrier-auth/sign-bca
-    // succeeded for a carrier who had never enrolled, which the product no
-    // longer permits and should never have permitted.
-    //
-    // So this is not a workaround for the gate; it is the fixture catching up
-    // to the real onboarding sequence, where a carrier enrols before they can
-    // reach anything. The secret is a fixed test value: nothing in the suite
-    // presents a TOTP code, because login here goes through /auth/e2e-token
-    // rather than the password + OTP + TOTP challenge.
-    await prisma.user.updateMany({
-      where: { role: "CARRIER" },
-      data: {
-        totpEnabled: true,
-        totpSecret: encrypt("E2EFIXTURESECRETBASE32AAAA"),
-      },
-    });
     const oneYear = new Date(Date.now() + 365 * day);
     for (const c of approvedCarriers) {
       await prisma.carrierAgreement.create({
@@ -1965,6 +1943,29 @@ Seed complete:
     } else {
       console.log("⚠ E2E fixtures: Haider Logistics customer not found — B15 shipper walk will skip");
     }
+
+    // ARC 15 — enrol every carrier in TOTP.
+    //
+    // v3.8.atm made 2FA mandatory before any carrier-portal route, and
+    // v3.8.atu made that wall actually gate: before atu the middleware
+    // short-circuited on !req.user and waved everyone through on five of six
+    // mounts. This suite passed under that bug — POST /carrier-auth/sign-bca
+    // succeeded for a carrier who had never enrolled, which the product no
+    // longer permits and should never have permitted.
+    //
+    // So this is not a workaround for the gate; it is the fixture catching up
+    // to the real onboarding sequence, where a carrier enrols before they can
+    // reach anything. The secret is a fixed test value: nothing in the suite
+    // presents a TOTP code, because login here goes through /auth/e2e-token
+    // rather than the password + OTP + TOTP challenge.
+    await prisma.user.updateMany({
+      where: { role: "CARRIER" },
+      data: {
+        totpEnabled: true,
+        totpSecret: encrypt("E2EFIXTURESECRETBASE32AAAA"),
+      },
+    });
+
   }
 }
 
