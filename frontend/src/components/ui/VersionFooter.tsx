@@ -14677,7 +14677,27 @@
 //   but never returned it, so the TEST badge and the toggle's own state both
 //   read undefined. The fence has been working since alo; the label saying so
 //   was invisible.
-export const SRL_VERSION = "3.8.atq";
+// v3.8.atr — The two auth guards can now see what they were guarding.
+//   Arc 11 shipped the enrollment wall with two STATIC guards: text searches
+//   asserting a line was present in a file, because this repo had no frontend
+//   test runner. Both said so in their own files. The weaker of the two covered
+//   the ato lockout — a search for "data.pendingTotp" proves the string exists;
+//   it cannot prove the branch is reached, that the store lands anywhere sane,
+//   or that a caller can tell what happened, which is exactly the seam the bug
+//   lived in.
+//   Vitest + React Testing Library in jsdom, and the runner proved itself
+//   before anything trusted it: a deliberately wrong assertion, run against a
+//   real component, watched to fail. It failed for the wrong reason — every
+//   render threw "React is not defined", because tsconfig sets jsx: preserve
+//   for Next and esbuild follows tsconfig. A green suite would have hidden
+//   that; the deliberate failure is what surfaced it.
+//   Both guards are now behavioural and both were re-verified by restoring the
+//   ORIGINAL defect rather than a synthetic one. The static versions are
+//   deleted rather than kept for comfort — a text search for a property a real
+//   test now covers is strictly weaker. One check stayed on the backend side,
+//   because neither suite can make it alone: the middleware's 403 hands back an
+//   href, and if that href and the page ever drift the wall becomes a 404.
+export const SRL_VERSION = "3.8.atr";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

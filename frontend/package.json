@@ -9,7 +9,9 @@
     "start": "next start",
     "lint": "next lint",
     "inject-chrome": "node scripts/inject-chrome.mjs",
-    "verify-chrome": "node scripts/verify-chrome.mjs"
+    "verify-chrome": "node scripts/verify-chrome.mjs",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
     "@hookform/resolvers": "^4.1.3",
@@ -29,13 +31,19 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.0.6",
+    "@testing-library/jest-dom": "^7.0.1",
+    "@testing-library/react": "^16.3.2",
+    "@testing-library/user-event": "^14.6.5",
     "@types/node": "^22.12.0",
     "@types/react": "^19.0.8",
     "@types/react-dom": "^19.0.3",
+    "@vitejs/plugin-react": "^6.1.0",
     "eslint": "^9.19.0",
     "eslint-config-next": "^15.1.6",
+    "jsdom": "^30.0.1",
     "postcss": "^8.5.1",
     "tailwindcss": "^4.0.6",
-    "typescript": "^5.7.3"
+    "typescript": "^5.7.3",
+    "vitest": "^3.2.7"
   }
 }

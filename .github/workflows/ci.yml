@@ -84,7 +84,7 @@ jobs:
       - run: npm audit --omit=dev --audit-level=high || true
 
   frontend:
-    name: Frontend - Lint & Build
+    name: Frontend - Lint, Test & Build
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -100,6 +100,25 @@ jobs:
 
       - run: npm ci
       - run: npx next lint
+
+      # Arc 12 — component + store tests (vitest + React Testing Library,
+      # jsdom). Placed IN this job rather than as a fourth one, mirroring the
+      # backend job, which runs lint + test + build together and gates deploy.
+      #
+      # These gate the deploy, and that is deliberate: they cover the carrier
+      # auth path, where the v3.8.ato bug was a lockout that looped every
+      # enrolled carrier between login and dashboard. A broken assertion there
+      # SHOULD stop a release.
+      #
+      # That is not in tension with the E2E job being excluded from the deploy
+      # gate (v3.8.asv). E2E was excluded because it downloads Playwright
+      # browsers and stands up Postgres — infrastructure that once hung for six
+      # hours on a failure unrelated to any code. These run in jsdom with no
+      # network and no download step, which is the same risk profile as the
+      # backend tests that already gate deploy. The rule was never "frontend
+      # tests do not gate"; it was "a flaky infrastructure job does not gate".
+      - run: npm test
+
       - run: npm run build
         env:
           NEXT_PUBLIC_API_URL: https://api.silkroutelogistics.ai/api

@@ -161,136 +161,42 @@ describe("every carrier-portal router is actually behind the gate", () => {
   });
 });
 
-describe("the portal wall defers to the enrollment gate", () => {
-  // STATIC, and weaker than the behavioural tests above — deliberately said out
-  // loud rather than left for a reader to discover. There is no frontend test
-  // runner in this repo, and standing one up mid-arc to assert one precedence
-  // rule is not a trade worth making. So this reads the layout the way the
-  // mount-parity test reads the router: it cannot prove the redirect fires, only
-  // that the ordering rule is still written down.
+describe("the wall the middleware points at is a real page", () => {
+  // WHAT SURVIVED THE MOVE TO BEHAVIOURAL TESTS (Arc 12 Phase 1).
   //
-  // It is worth having anyway, because the failure it catches is silent. Three
-  // gates each call router.replace, and without an explicit rule the winner is
-  // whichever effect React happens to run last. If enrollment stops outranking
-  // status routing, a PENDING carrier without an authenticator gets bounced to
-  // the application-status page instead of the enrollment wall — and since the
-  // backend exempts /activation-status, they sit there able to load exactly one
-  // page and never reach the screen that would let them out.
-  const layout = fs.readFileSync(
-    path.join(__dirname, "../../../../frontend/src/app/carrier/dashboard/layout.tsx"),
-    "utf8",
-  );
-
-  it("computes the precedence once rather than per-gate", () => {
-    expect(layout).toContain("const mustEnroll =");
-  });
-
-  it("yields to enrollment in both of the older gates", () => {
-    // Two, not one: status routing AND the activation wall each have to stand
-    // down, or the carrier lands somewhere that is not the enrollment screen.
-    const yields = layout.split("if (mustEnroll) return;").length - 1;
-    expect(yields).toBe(2);
-  });
-
-  it("sends an unenrolled carrier to the enrollment screen", () => {
-    expect(layout).toContain("router.replace(SECURITY_PAGE)");
-  });
-
-  it("hides the operational chrome behind it, as the activation wall does", () => {
-    // A sidebar whose every link 403s is worse than no sidebar.
-    expect(layout).toMatch(/showOperationalChrome =.*!mustEnroll/);
-  });
-
-  it("points at the page that actually exists", () => {
-    // The middleware hands back this href in its 403 body. If the constant and
-    // the route ever disagree, the carrier is redirected to a 404 and the wall
-    // becomes a dead end.
+  // Two static describes used to live here: one asserting the layout's
+  // precedence rule, one asserting the carrier store branches on pendingTotp.
+  // Both are now real behavioural tests, in the frontend suite that Arc 12
+  // stood up —
+  //   frontend/src/app/carrier/dashboard/layout.test.tsx
+  //   frontend/src/hooks/useCarrierAuth.test.ts
+  // — and both were adversarially verified by restoring the original defect
+  // rather than a synthetic mutation. Text searches for the same properties
+  // are strictly weaker, so they are gone rather than kept for comfort.
+  //
+  // THIS check stayed because neither suite can make it alone. It spans the
+  // backend middleware, the frontend route constant and the filesystem: the
+  // 403 body hands back an href, and if that href and the page ever drift the
+  // carrier is redirected to a 404 and the wall becomes a dead end. The
+  // frontend suite cannot see the middleware; the middleware tests above
+  // cannot see the page.
+  it("agrees with the layout constant, and the page exists on disk", () => {
     const middleware = fs.readFileSync(
       path.join(__dirname, "../../../src/middleware/requireTotpEnrolled.ts"),
       "utf8",
     );
-    expect(layout).toContain('const SECURITY_PAGE = "/carrier/dashboard/security"');
+    const layout = fs.readFileSync(
+      path.join(__dirname, "../../../../frontend/src/app/carrier/dashboard/layout.tsx"),
+      "utf8",
+    );
+
     expect(middleware).toContain("/carrier/dashboard/security");
+    expect(layout).toContain('const SECURITY_PAGE = "/carrier/dashboard/security"');
     expect(
       fs.existsSync(
         path.join(__dirname, "../../../../frontend/src/app/carrier/dashboard/security/page.tsx"),
       ),
       "the enrollment page the gate redirects to does not exist",
     ).toBe(true);
-  });
-});
-
-describe("the login flow consumes the challenge the backend sends", () => {
-  // THE BUG THIS EXISTS FOR, because it is worth knowing about rather than
-  // just guarding against.
-  //
-  // /verify-otp has answered { pendingTotp, totpToken } for a long time when a
-  // user has 2FA armed, and deliberately does NOT set the session cookie at
-  // that point — the authenticator has not been presented yet. The carrier
-  // store never had a branch for it. So it fell through to the success path,
-  // read data.user (undefined), stored null, and returned "success". The page
-  // then routed to the dashboard, the layout found no cookie, and sent them
-  // back to login. Password, code, redirect, password, code, redirect.
-  //
-  // Nobody had hit it because no carrier had 2FA on. v3.8.atm made enrollment
-  // mandatory, which would have walked every carrier into it on their next
-  // sign-in.
-  //
-  // STATIC, like the layout guard above and for the same reason: no frontend
-  // test runner exists here. It cannot prove the step renders — only that the
-  // branch is still there. The full-flow check against a real portal session is
-  // recorded as owed rather than pretended.
-  const store = fs.readFileSync(
-    path.join(__dirname, "../../../../frontend/src/hooks/useCarrierAuth.ts"),
-    "utf8",
-  );
-  const loginPage = fs.readFileSync(
-    path.join(__dirname, "../../../../frontend/src/app/carrier/login/page.tsx"),
-    "utf8",
-  );
-
-  it("branches on pendingTotp before assuming a session exists", () => {
-    // Scoped to verifyOtp. login() also reads data.user and sits above it, so an
-    // unscoped indexOf measures the wrong function and fails for the wrong
-    // reason — which is what the first version of this test did.
-    const fn = store.slice(store.indexOf("verifyOtp: async"), store.indexOf("verifyTotp: async"));
-    const branch = fn.indexOf("data.pendingTotp");
-    const readsUser = fn.indexOf("user: data.user");
-    expect(branch, "no pendingTotp branch in verifyOtp").toBeGreaterThan(-1);
-    expect(readsUser, "verifyOtp no longer reads data.user — retarget this test").toBeGreaterThan(-1);
-    // Order is the whole bug: reading data.user first is what stored null and
-    // reported success.
-    expect(branch).toBeLessThan(readsUser);
-  });
-
-  it("has somewhere to send the code", () => {
-    expect(store).toContain("/carrier-auth/totp-verify");
-    expect(store).toContain("verifyTotp");
-  });
-
-  it("keeps the short-lived token out of storage that outlives the tab", () => {
-    // It is a credential. localStorage would leave it readable after the tab,
-    // and after logout.
-    const totpLines = store.split("\n").filter((l) => l.includes("totpToken"));
-    for (const line of totpLines) {
-      expect(line).not.toMatch(/localStorage|sessionStorage/);
-    }
-  });
-
-  it("clears the token on logout", () => {
-    const logoutAt = store.indexOf("logout: () => {");
-    expect(logoutAt).toBeGreaterThan(-1);
-    expect(store.slice(logoutAt, logoutAt + 600)).toContain("totpToken: null");
-  });
-
-  it("renders an authenticator step on the login page", () => {
-    expect(loginPage).toContain("pendingTotp ?");
-    expect(loginPage).toContain("verifyTotp");
-  });
-
-  it("tells a carrier without their phone what to do", () => {
-    // A code box with no way past it is a dead end for anyone who lost the
-    // device, and backup codes are useless if nobody says they work here.
-    expect(loginPage).toMatch(/backup code/i);
   });
 });
