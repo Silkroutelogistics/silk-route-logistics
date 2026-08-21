@@ -1,51 +1,70 @@
 # Go-live readiness — first-load dress rehearsal
 
-**Date:** 2026-08-21 · **Arc 14**, revised by **Arc 15** (audit) and **Arc 16** (fixes) · Rehearsal load `SRL-140001`
+**Date:** 2026-08-21 · **Arc 14** (documents) → **15** (audit) → **16** (fixes) → **17** (interactive lifecycle) · Rehearsal load `SRL-140001`
 **Scenario:** Beekeepers Naturals · Lebanon NH → North Lake TX · Reefer 53′ · honey/propolis, 28,400 lb, setpoint 38°F continuous
 
 ---
 
 ## Verdict
 
-**Arc 14 said SRL could run a real load. Arc 15 audited the machinery behind those documents and found four defects that made that verdict wrong. Arc 16 fixed all four and proved each against a real database and the real routes. The verdict is now earned rather than assumed — and it is earned by the re-verification, not by the fixes compiling.**
+> **SRL can run a real load today, including auto-dispatch. The document chain, the money path, and the interactive lifecycle have each been walked end to end against a real database and the real routes, and every fix has been adversarially verified by restoring the defect it closes. Two things are still owed and neither is code: a human eye-pass on the four PDFs, and a walk through the deployed portals as a real carrier and a real shipper. Until those two happen, this sentence is earned about the machinery and unproven about the pixels.**
 
-The distinction matters, because Arc 14's original verdict was reached honestly and was still wrong: it walked the DOCUMENT CHAIN, and the money moves in the machinery underneath. A rate confirmation can print the right number while settlement pays a different one.
+That boundary is the sentence's own, not an apology attached to it. Everything a script can establish has been established. The two remaining passes are the two a script cannot do.
 
-### The four, and what each would have done on a real load
+### How the verdict changed, and why each change was honest
 
-| # | Defect | What it would have cost | Closed |
-|---|---|---|---|
-| 221.1 | Settlement read `load.carrierRate \|\| load.rate`, and no accept path wrote `carrierRate` | The carrier settled at **100% of SRL's revenue** — the entire margin, silently, on ordinary-looking paperwork | `v3.8.atv` |
-| 221.2 | Carrier outreach quoted `load.rate` with no fallback | The **first outbound touch** on a normal load offered carriers the customer rate, then the rate confirmation would have offered less | `v3.8.atv` |
-| 221.3 | `carrierSettled` written only by an endpoint nothing calls | The Track & Trace **delivered tab could never clear** — every completed load stayed on it forever | `v3.8.atw` |
-| 221.4 | `processExpiredTenders` scheduled twice under two locks that could not see each other | **Every expired tender emailed the carrier and the AE twice** — the Item 192 flood class, by accident | `v3.8.atw` |
+| Arc | Said | Was |
+|---|---|---|
+| **14** | "can run a real load" — document chain sound | True about documents, and documents were not the risk |
+| **15** | four GO-BLOCKERs in the machinery beneath | The money moves in code, not in paperwork |
+| **16** | all four closed, proved on real routes | Closing them surfaced a fifth nobody had seen |
+| **17** | the lifecycle flown, including the path that had never run | Flying it surfaced a sixth |
 
-### A fifth, found only by running the proof
+Each arc's verdict was reached honestly and each was incomplete, because each looked at a layer the previous one had not. That is the argument for the two human passes rather than a third script.
 
-`acceptPosition` passed `pos.carrierId` — a **User** id by deliberate design — to `complianceCheck`, which looks up `CarrierProfile` by primary key. Probed live: profile id returns a real verdict, user id returns `{allowed: false, reasons: ["Carrier not found"]}`. The branch below then marks the position skipped and advances. Every position in turn.
+### Arc 17: the waterfall's maiden flight
 
-**Waterfall auto-dispatch could never accept a carrier**, and it failed in the shape of a carrier problem, so the log read like ordinary compliance churn. Live since Sprint 39 — the commit that ADDED the check. The loadbid path in that same commit resolves the profile first, so the two bulk paths were written to different conventions on the same day. No unit test could have seen it: with Prisma mocked, the lookup returns whatever the mock is told to.
+**Auto-dispatch had never once accepted a carrier.** Arc 16 found `acceptPosition` passing a User id to `complianceCheck`, which looks up `CarrierProfile` — so every position resolved to "Carrier not found", was skipped, and the cascade exhausted. Flying it for the first time found a **second, independent** reason it could not work:
 
-### What "earned" means here
+`waterfallScoringService` filtered carriers by comparing the carrier's REGION NAME to the load's two-letter STATE CODE with `includes()`:
 
-Two proof scripts, both against a real Postgres and the real routers, controllers and middleware — not fixtures, not mocks:
+```
+"NORTHEAST".includes("NH")   // false — a Northeast carrier, a New Hampshire load
+"NORTHEAST".includes("OR")   // TRUE  — a Northeast carrier, an OREGON load
+```
 
-- [`_arc16-rate-proof.ts`](../../backend/scripts/_arc16-rate-proof.ts) — **14/14.** Six creation paths settled end to end with customer $5,100 against agreed $4,100, so a pass cannot be ambiguous about which was read. Includes the counter-offer case, which is the one that costs money: `acceptTenderOnBehalf` admits COUNTERED tenders, so reading `offeredRate` there underpays the carrier by the counter delta on a rate confirmation they signed.
-- [`_arc16-settled-proof.ts`](../../backend/scripts/_arc16-settled-proof.ts) — **8/8.** Includes the partial-payment case the old unconditional write got wrong, the reversal, the void convention, and the delivered-tab query itself: not "the column is true" but "the load leaves the tab".
+Across the ten regions onboarding offers and all fifty states, **41 of 50 states could never be matched by any region a carrier can select**, and the nine that could matched the wrong carriers. Onboarding *requires* a region, so every portal-onboarded carrier was excluded from essentially every waterfall. Fixed in `v3.8.atx` with a real region→state map that fails OPEN, because a filter just shown capable of excluding everyone must not exclude on ignorance.
 
-Both adversarially verified against the real artifact (§19 Sub-pattern 16): restoring the settlement fallback and deleting two writers takes the rate proof **14/14 → 9/14**, reporting *"settled at the CUSTOMER rate $5100 — the margin was paid away"*; neutering the settled sync takes the other **8/8 → 3/8**. Restored, both green. The 2FA wall proof was re-run on this HEAD and still prints `WALL HOLDS`.
+**The flight now passes 20/20**: build → score (risk exclusions firing) → tender → accept → dispatched at the agreed rate → check-call schedule created → carrier notified, plus the skip case, the decline case and the eligibility floor. Restoring **both** defects reproduces the historical failure verbatim — `blocked_reasons: ["Carrier not found"]`, waterfall exhausted, tender DECLINED, zero check-calls, 12/20.
 
-**The rate proof caught a defect in itself first.** Its original version inlined each accept path's write; deleting the writer from `tenderController` left it passing, because it was asserting a copy of the code rather than the code. That is exactly the "presence is not function" failure banked one commit earlier at §13.3 Item 221 — caught here only because the injection was actually run. It now drives the accepts over HTTP.
+### Arc 17: the seams
 
-### What is still true from Arc 14
+Six handoffs no single domain owns, walked live — **18/18**:
 
-The document chain itself was sound and remains so: the executed BCA, rate confirmation, BOL and customer invoice all generate off the production data path, carry the authority and legal language they must, and do not contradict one another. The invoice never exposes carrier pay.
+- **signature → gate** — a signed BCA opens tendering; a Quick Pay signature does *not* satisfy it.
+- **counter → settlement** — the 221.1 case at full length: the carrier counters $4,350 against a $4,100 offer, the AE accepts on behalf, the rate confirmation is signed at the counter, and **settlement pays that number** — not the offer, not the $5,100 customer rate.
+- **POD → delivered tab** — the tab clears only once POD, invoice *and* settlement are all genuinely done.
+- **check-call → risk** — two missed calls score 50 points; a carrier check-in satisfies the obligation it was texted about without retroactively erasing a real miss.
+- **waterfall → tracking** — the newly-joined seam: auto-dispatch creates the check-call schedule and joins the load to tracking, exactly as the direct path does.
+- **the outbound set** — three sends, each to the right class: *Tender Accepted* → AE, *Booked* → the carrier's dispatch alias, *Paperwork due* → carrier. Across 20 notifications, **zero** cross-portal action links.
 
-Arc 15 found the margin leaving through a different door — `getShipperDocuments` returned every `fileUrl` on the load with no docType filter, and the rate confirmation is persisted on the load as `RATE_CON`, so **a shipper could download the carrier's rate confirmation from their own portal and read SRL's entire margin.** Arc 14's cross-check was correct about the invoice's CONTENTS; this was an endpoint's SCOPE. Fixed in `v3.8.att` with an allowlist (BOL, POD, INVOICE), because a denylist leaks every docType added after it.
+**Exactly-once, proven by forced repeat.** Sweeping expired tenders twice in one window: first sweep expired 1, sent 1 email; the repeat expired 0, sent 0. That count only became a meaningful test once Arc 16 removed the second scheduler — before that it would have read 2, which is precisely what carriers and AEs were receiving.
 
-### Scope of this verdict
+### The one open product question
 
-Still not a full interactive UI walk — no browser, no screenshots. What *is* now covered that was not: the money path end to end on six creation paths, the settlement flag against the real tab query, the 2FA wall against a live server, and every fix adversarially verified. The remaining gaps are listed under *Not covered*, unchanged.
+**Termination mid-load is undecided, not broken.** Terminating a BCA blocks the next tender immediately and leaves loads already in the carrier's hands untouched. No carrier-portal gate reads `CarrierAgreement.status`, so that carrier keeps working the load, uploading the POD, and being paid.
+
+That is arguably correct — the freight is on their truck and somebody has to deliver it. But nothing states the intent, no AE is told an in-flight load is now held by a terminated carrier, and nobody has decided whether SRL still pays. **Wasi's call**, and it is a policy question rather than a bug.
+
+### What is owed, and by whom
+
+| Owed | Owner | Why a script cannot close it |
+|---|---|---|
+| Eye-pass on the four PDFs | **Wasi** | Text extraction is conclusive on wording, citations and numbers, and blind to colour, overprint and a wrong-hue border — the v3.8.aru class |
+| Portal walk as carrier + shipper on production | **Wasi** | Needs real credentials against the deployed site; every walk here is server-side |
+| Termination-mid-load policy | **Wasi** | A decision, not a defect |
+| Render deploy-hook secret | **Wasi** | CI cannot gate deploys until it exists; dashboard-only |
+| PITR read for Item 212 | **Wasi** | Window closes **2026-08-27** |
 
 ---
 ## What was actually done
