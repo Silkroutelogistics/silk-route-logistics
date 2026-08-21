@@ -1568,6 +1568,13 @@ Each is a discrete sprint. Mix of operational, security, UX, and technical debt.
 
     **A stale test was passing for the wrong reason.** The old assertion — "fails when the secret is missing rather than skipping" — kept passing after the behaviour changed, because it only checked the job contained `exit 1` somewhere and the hook-failure path still does. It now names the exact annotation level. A test that passes for a reason unrelated to its name is worse than no test, and this is the third time in two days that a green assertion turned out to be aimed at the wrong thing (see Items 212 and 213).
 
+
+215. **Arc 9 gate fall-throughs (2026-08-20) — three phases did not run, one line each as specified.**
+
+    - **A2 PITR settlement — BLOCKED.** No `pitr-item-212` connection string was provided. Deadline unchanged: **2026-08-27**, after which whether the three dropped URL columns held data is permanently unanswerable.
+    - **A3 gate-live verification — BLOCKED.** `gh secret list` still empty; `RENDER_DEPLOY_HOOK_URL` unset. The deploy job is green since `v3.8.atl` because it warns rather than fails on the absent secret, which is **not** the same signal as a verified gated deploy. Pipeline mode remains: Render auto-deploy ships commits, CI does not gate them.
+    - **A4 counsel consolidation — BLOCKED, fifth consecutive attempt.** No `my-knowledge-base/raw/counsel/`, no `.docx` anywhere. Item 203 holds the spec; not re-recorded here.
+
 ---
 
 ## §14 LEGAL / COMPLIANCE STATUS
@@ -2017,6 +2024,28 @@ This is the methodology library's first principle that operates at the ratificat
 **Going-forward gate canonical text:** *"Sprint Phase A audits that consult §13.3 backlog row text MUST cross-reference each item against §11 history rows (grep for `closes.*Item N` or `§13\.3 Item N.*CLOSED`) AND verbatim against the file:line references in the row's text, BEFORE relying on the row's 'Fix shape' or 'Sprint shape' framing. §13.3 rows are signals, not authoritative state. The going-forward maintenance discipline: when shipping a closure, update both the §11 history row AND the §13.3 backlog row in the same commit."*
 
 **Prevention value:** stops sprint scope-padding from stale-row signals. Today's v3.8.akw Item 51+52+53 "bundle of three" would have been three sprints' worth of work if not caught at Phase A audit — instead it's one ~15-LOC source change + two docs-only closures. Saves multi-sprint cycle on stale signals.
+
+##### Sub-pattern 16 — Green-check-proves-the-check-ran (three-fire validated canonical)
+- **Origin:** 2026-08-19/20, three fires in two days across the Arc 7-8 incident cluster.
+- **Layer:** Verification (a fourth layer — above audit, ratification and execution; it governs whether a passing signal means what its name says).
+- **Trigger:** any guard, gate, assertion or safeguard reporting success.
+
+**The principle: a green check proves the check RAN, not that it observed the thing it names.**
+
+Three independent fires, all green in CI, none caught by CI:
+
+1. **A migration held by position.** Item 208 recorded that a column-drop commit must not ship. Nothing enforced it — it was the unpushed tip, which is a property of ordering, not a mechanism. Two commits landed above it and `git push` carried it along. **Caught by reading the push list**, after the drop had already applied to production (Item 212).
+2. **A field asserted against the wrong file.** `v3.8.atj` added `schema` to `/health` in `server.ts`; the endpoint that matters is `/api/health` in `routes/index.ts`. tsc was clean and the test was green — green *because it asserted against the same wrong file*, so the mistake was self-consistent. **Caught by curling production** (Item 213 / `v3.8.atk`).
+3. **An assertion outliving the behaviour it named.** "fails when the deploy hook secret is missing" kept passing after that behaviour was deliberately removed, because it only checked the job contained `exit 1` somewhere — and a different path still did. **Caught by the user's inbox** (Item 214).
+
+**Going-forward rule, as practice rather than aspiration:** every new guard is verified against the **real artifact** once — the production response, the actual git state, the rendered output, the actual email — before its green is trusted. A fixture proves the logic; only the artifact proves the aim.
+
+**Kin already in this library**, which is what makes this a pattern rather than an anecdote:
+- The `\Z` regex in `deployGate.test.ts` (Arc 3) — Ruby/Python syntax in JavaScript, so the assertion matched nothing and passed vacuously.
+- The false-passing adversarial injection (Arc 4) — a string replace that silently did not match, so the "verification" ran against unbroken code and reported success.
+- The sub-agent completeness claim (v3.8.alm) — a delegated audit asserting "no extras" while the orchestrator's own grep found twice as many sites.
+
+**Relationship to Sub-pattern 11 (CI-parity).** Sub-pattern 11 asks whether the local gate matches the CI gate. Sub-pattern 16 asks whether *either* gate observes the claim it makes. Passing 11 and failing 16 is exactly the state all three fires above were in.
 
 ###### Cumulative fire registry extension (post-Sprint-51.f, three new fires)
 

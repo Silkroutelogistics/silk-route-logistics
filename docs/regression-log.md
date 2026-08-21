@@ -13,6 +13,18 @@ so it's searchable and never lost.
 
 ---
 
+## Pattern — 2026-08-20: a green check proves the check ran, not that it observed the thing it names
+
+Canonized as **§19 Sub-pattern 16** after three fires in two days, each green in CI and each caught only by the real artifact:
+
+1. A migration held by position rather than by a mechanism — caught by the **push list**, after it had applied (Item 212).
+2. A health field asserted against the wrong handler, the test green because it pinned the same wrong file — caught by **curling production** (Item 213).
+3. An assertion that outlived the behaviour it named, still passing on an unrelated `exit 1` — caught by the **user's inbox** (Item 214).
+
+**Rule:** every new guard is verified against the real artifact once before its green is trusted. A fixture proves the logic; only the artifact proves the aim.
+
+---
+
 ## INCIDENT — 2026-08-20 (Arc 8: a staged migration shipped unverified)
 
 - **A column-drop migration held back for the deploy gate was pushed and applied to production.** Arc 7 committed it as the unpushed tip; Arc 8 committed two phases on top of it and pushed, which carried it along, and Render's build chain applied the drops. **My error** — the safeguard was positional and I did not re-check `git log origin/main..HEAD` before pushing.
