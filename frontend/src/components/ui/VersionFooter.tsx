@@ -14642,7 +14642,26 @@
 //   in the same box, and says where to write if both are gone. The temp token
 //   lives in memory only and is cleared on logout — it is a credential, and
 //   one that outlives its session is just a spare key left in the lock.
-export const SRL_VERSION = "3.8.ato";
+// v3.8.atp — A live session can no longer move money on its own.
+//   Signing in proves who you are. It does not prove you are still there an
+//   hour later, so the two writes a carrier can make that matter now ask for
+//   a fresh authenticator code: electing or dropping Quick Pay, and updating
+//   the insurance on file. The second is the less obvious one and the reason
+//   it is here — complianceCheck reads those fields to decide whether this
+//   carrier may be tendered a load, so a session that can rewrite them can
+//   rewrite the gate's own inputs.
+//   The action is bound into the token, so a step-up granted for one change
+//   cannot be spent on another: consent to update insurance is not consent
+//   to move payment terms, even though both belong to the same carrier and
+//   both fall inside the same ten minutes. A token rather than a
+//   lastStepUpAt column, because migrations are on the hold-branch rule
+//   after atd — and because a column is ambient, where a token has to be
+//   handed over deliberately.
+//   Also corrects atn: that screen told carriers their account holds bank
+//   details. It does not. SRL stores no account or routing columns anywhere,
+//   and overstating what is at risk to justify a security control is still a
+//   false statement about their own data.
+export const SRL_VERSION = "3.8.atp";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

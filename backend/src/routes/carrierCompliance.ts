@@ -5,6 +5,7 @@ import { z } from "zod";
 import { validateBody } from "../middleware/validate";
 import { sendInsuranceVerificationEmail, validateInsuranceCoverage, maybeSendInsuranceVerificationEmail } from "../services/insuranceVerificationService";
 import { log } from "../lib/logger";
+import { requireStepUp } from "../middleware/requireStepUp";
 
 const router = Router();
 
@@ -233,7 +234,11 @@ router.get("/expiration-calendar", async (req: AuthRequest, res: Response) => {
 });
 
 // PATCH /api/carrier-compliance/insurance — Carrier updates their own insurance details
-router.patch("/insurance", async (req: AuthRequest, res: Response) => {
+// Step-up gated (Arc 11 B2). complianceCheck reads these fields to decide
+// whether this carrier may be tendered a load, so a session that can rewrite
+// them can rewrite the gate's own inputs. Same class as moving payment terms,
+// different currency.
+router.patch("/insurance", requireStepUp("insurance-update"), async (req: AuthRequest, res: Response) => {
   const profile = await prisma.carrierProfile.findUnique({ where: { userId: req.user!.id } });
   if (!profile) {
     res.status(404).json({ error: "Carrier profile not found" });

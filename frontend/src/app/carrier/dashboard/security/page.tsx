@@ -244,7 +244,14 @@ export default function CarrierSecurityPage() {
               Set up two-factor authentication
             </h1>
             <p className="mt-2 text-sm text-[#3A4A5F] leading-relaxed">
-              Your account holds bank details, rate confirmations and load information. A
+              {/* Says what the account actually holds. An earlier draft claimed
+                  "bank details", which is not true — SRL stores no account or
+                  routing columns anywhere, and a carrier reading that would
+                  reasonably conclude we hold something we do not. Overstating
+                  what is at risk to justify a security control is still a false
+                  statement about their data. */}
+              Your account holds your payment records, rate confirmations, load details
+              and compliance documents. A
               password alone is not enough to protect it, so every carrier account needs an
               authenticator app before using the portal.
             </p>

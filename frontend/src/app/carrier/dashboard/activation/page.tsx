@@ -13,6 +13,8 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { FileSignature, FileText, CheckCircle2, Loader2, Zap, Clock, XCircle, Mail } from "lucide-react";
 import { api } from "@/lib/api";
+import { useStepUp } from "@/hooks/useStepUp";
+import { StepUpPrompt } from "@/components/carrier";
 import { CarrierCard } from "@/components/carrier";
 import {
   // QP_TIER_TERMS + QP_SAME_DAY_NOTE are pure §8 economics and the pilot did
@@ -142,8 +144,15 @@ export default function CarrierActivationPage() {
   const [qpTitle, setQpTitle] = useState("");
   const [qpError, setQpError] = useState<string | null>(null);
 
+  // Arc 11 B2 — step-up. Electing or dropping Quick Pay changes what the
+  // carrier is paid and when, so the backend refuses it on a session alone.
+  // stepUp.run replays the request with a fresh-code token once the carrier
+  // confirms; the mutation body is unchanged.
+  const stepUp = useStepUp("quickpay-election");
+
   const qpMutation = useMutation({
     mutationFn: (enabled: boolean) =>
+      stepUp.run((headers) =>
       api.post(
         "/carrier-auth/quickpay-election",
         enabled
@@ -156,6 +165,8 @@ export default function CarrierActivationPage() {
               signedByTitle: qpTitle.trim() || undefined,
             }
           : { enabled: false },
+        { headers },
+      ),
       ),
     onSuccess: () => {
       setQpError(null);
@@ -667,6 +678,18 @@ export default function CarrierActivationPage() {
         Questions about the agreement or Quick Pay? Email{" "}
         <a href="mailto:operations@silkroutelogistics.ai" className="text-[#BA7517] hover:underline">operations@silkroutelogistics.ai</a>.
       </p>
+      {/* Arc 11 B2 — without this mounted, useStepUp opens a prompt nobody
+          renders and the write resolves false in silence: the carrier clicks
+          save and nothing happens, with no error to read. */}
+      <StepUpPrompt
+        open={stepUp.prompting}
+        title="Confirm this Quick Pay change"
+        description="This changes when and how you are paid, so we ask for a code from your authenticator app before saving it."
+        verifying={stepUp.verifying}
+        error={stepUp.error}
+        onSubmit={stepUp.submitCode}
+        onCancel={stepUp.cancel}
+      />
     </div>
   );
 }

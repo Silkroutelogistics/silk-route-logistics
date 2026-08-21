@@ -4,6 +4,8 @@ import { useState } from "react";
 import { Shield, FileText, AlertTriangle, CheckCircle, Clock, AlertCircle, Compass, Edit3, Save, X } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
+import { useStepUp } from "@/hooks/useStepUp";
+import { StepUpPrompt } from "@/components/carrier";
 import { CarrierCard, CarrierBadge } from "@/components/carrier";
 
 const scoreLabels: Record<string, string> = {
@@ -98,8 +100,14 @@ export default function CarrierCompliancePage() {
     workersCompProvider: "", workersCompPolicy: "", workersCompExpiry: "",
   });
 
+  // Arc 11 B2 — step-up. complianceCheck reads these fields to decide whether
+  // this carrier can be tendered a load, so rewriting them rewrites the gate's
+  // own inputs. Same protection as moving payment terms.
+  const stepUp = useStepUp("insurance-update");
+
   const updateInsurance = useMutation({
-    mutationFn: (body: Record<string, string>) => api.patch("/carrier-compliance/insurance", body),
+    mutationFn: (body: Record<string, string>) =>
+      stepUp.run((headers) => api.patch("/carrier-compliance/insurance", body, { headers })),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["carrier-compliance-overview"] });
       setEditingInsurance(false);
@@ -566,6 +574,18 @@ export default function CarrierCompliancePage() {
           )}
         </CarrierCard>
       </div>
+      {/* Arc 11 B2 — without this mounted, useStepUp opens a prompt nobody
+          renders and the write resolves false in silence: the carrier clicks
+          save and nothing happens, with no error to read. */}
+      <StepUpPrompt
+        open={stepUp.prompting}
+        title="Confirm this insurance update"
+        description="Your coverage on file decides which loads you can be tendered, so we ask for a code from your authenticator app before saving it."
+        verifying={stepUp.verifying}
+        error={stepUp.error}
+        onSubmit={stepUp.submitCode}
+        onCancel={stepUp.cancel}
+      />
     </div>
   );
 }

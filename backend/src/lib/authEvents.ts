@@ -51,7 +51,13 @@ export type AuthEvent =
   // Arc 11 — mandatory carrier 2FA enrollment.
   | "totp.setup_started"
   | "totp.enrolled"
-  | "totp.enrollment_failed";
+  | "totp.enrollment_failed"
+  // Arc 11 B2 — step-up. Named separately rather than folded into totp.*: a
+  // failed step-up on a LIVE session is a different signal from a failed
+  // login, and the point of this file is that the interesting events are the
+  // ones nobody thought to record.
+  | "stepup.granted"
+  | "stepup.failed";
 
 /**
  * Why it failed, as a class rather than the message shown to the user.

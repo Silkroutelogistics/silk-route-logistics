@@ -4,6 +4,8 @@ import jwt from "jsonwebtoken";
 import rateLimit from "express-rate-limit";
 import { prisma } from "../config/database";
 import { logAuthEvent } from "../lib/authEvents";
+import { mintStepUpToken, STEP_UP_WINDOW_MINUTES, STEP_UP_ACTIONS } from "../lib/stepUpToken";
+import { requireStepUp } from "../middleware/requireStepUp";
 import { generateTotpSetup, verifyTotpCode, enableTotp, issueBackupCodes } from "../services/totpService";
 import { caseInsensitiveEmailFilter } from "../lib/emailNormalization";
 import { env } from "../config/env";
@@ -851,6 +853,44 @@ router.post(
   },
 );
 
+// ─── Step-up verification (Arc 11 B2) ───────────────────────────────────────
+//
+// Signing in proved who you are. This proves you are STILL there, and that the
+// person changing the payment terms is the person who typed the password.
+//
+// The action is bound into the token so a step-up granted for one change
+// cannot be spent on another. The carrier consented to a specific thing.
+
+const stepUpSchema = z.object({
+  code: z.string().trim().min(6).max(8),
+  action: z.enum(STEP_UP_ACTIONS),
+});
+
+router.post(
+  "/step-up",
+  authenticate,
+  authorize("CARRIER"),
+  otpVerifyLimiter,
+  validateBody(stepUpSchema),
+  async (req: AuthRequest, res: Response) => {
+    const valid = await verifyTotpCode(req.user!.id, req.body.code);
+    if (!valid) {
+      logAuthEvent("stepup.failed", { userId: req.user!.id, reason: "totp_invalid", req });
+      res.status(401).json({
+        error: "That code did not match. Check your authenticator app and try the current code.",
+        code: "TOTP_CODE_INVALID",
+      });
+      return;
+    }
+
+    logAuthEvent("stepup.granted", { userId: req.user!.id, req });
+    res.json({
+      stepUpToken: mintStepUpToken(req.user!.id, req.body.action),
+      expiresInMinutes: STEP_UP_WINDOW_MINUTES,
+    });
+  },
+);
+
 router.get("/totp/status", authenticate, authorize("CARRIER"), async (req: AuthRequest, res: Response) => {
   const user = await prisma.user.findUnique({
     where: { id: req.user!.id },
@@ -1102,7 +1142,9 @@ const quickPayElectionSchema = z
       path: ["signedByName"],
     },
   );
-router.post("/quickpay-election", authenticate, authorize("CARRIER"), validateBody(quickPayElectionSchema), async (req: AuthRequest, res: Response) => {
+// Step-up gated (Arc 11 B2): this changes what the carrier is paid and when.
+// A session alone should not be able to move money terms.
+router.post("/quickpay-election", authenticate, authorize("CARRIER"), requireStepUp("quickpay-election"), validateBody(quickPayElectionSchema), async (req: AuthRequest, res: Response) => {
   const profile = await loadActivationProfile(req.user!.id);
   if (!profile) {
     res.status(404).json({ error: "Carrier profile not found" });
