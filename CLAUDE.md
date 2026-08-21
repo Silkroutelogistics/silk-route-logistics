@@ -1835,6 +1835,43 @@ Each is a discrete sprint. Mix of operational, security, UX, and technical debt.
 
     **The SMS surface is now legally shippable**, pending only the A2P 10DLC and CNAM chain on Wasi's side ([`driver-sms-groundwork.md`](docs/internal/driver-sms-groundwork.md)).
 
+227. **`Load.rate` retired — one column, one meaning (Arc 21, 2026-08-21).**
+
+    Closes §13.3 Item 220.2, open since Arc 14, and Item 220.1 with it. `v3.8.aub` on main; the drop migration is authored on `hold/retire-load-rate` and deliberately NOT merged.
+
+    **227.1 — THE PROBLEM.** `Load.rate` meant the CUSTOMER number on `loadController.createLoad` (`rate: raw.customerRate || raw.rate`) and the CARRIER number on `withTenderController` (`rate: tender.offeredRate`). Every consumer wrote `customerRate || rate` or `carrierRate || rate` and hoped. Arc 16 stopped the money paths depending on it; Arc 21 removes the dependency everywhere else.
+
+    **227.2 — WRITERS FIRST, and that ordering is the safety.** `createLoad` set `customerRate: raw.customerRate || undefined`, so an AE supplying only `rate` produced a row with the number in `rate` and NULL in `customerRate`; `emailToLoadService` and the shipper portal never set it at all. **Migrating readers while a creation path can still leave the explicit field null would silently zero those loads.** All four writers now populate the explicit field, and `rate` becomes a mirror of `customerRate` on every path.
+
+    **227.3 — THE READER CENSUS, ~45 sites, classified and decided.**
+
+    | Class | Field | Surfaces |
+    |---|---|---|
+    | CUSTOMER-MEANING | `customerRate` | invoice, shipper portal, CRM revenue, analyticsService, integrationService invoice amount, RC customer side, marcoPolo revenue, admin lane table, analytics **shipper-spend** block |
+    | CARRIER-MEANING | `carrierRate` | documentController, carrier portal, DAT, fall-off recovery, quickPayOverride, smartMatch, waterfall, **EDI 204** |
+    | DISPLAY-AMBIGUOUS | decided per surface | market rate → carrier (buy side); AE load-board filter → customer (ranges over the column beside it); **public RC verify → carrier** |
+    | DEAD | removed | eight `select: { rate: true }` that fetched and never read |
+
+    **`analytics.ts` takes OPPOSITE answers in one file** — its market block is buy-side, its shipper-spend block is sell-side. That is the clearest possible demonstration of why one ambiguous column could not serve both.
+
+    **227.4 — TWO LIVE DEFECTS, not merely ambiguity.** `autoQuoteService.getMarketBenchmark` feeds `carrierRatePerMile` — the caller's own comment says *"Determine base carrier rate per mile"* — and was built from `rate`, the CUSTOMER number. **Every auto-generated quote derived its carrier cost from what customers had been charged**, and the inflated baseline then inflated the quote on top of it. And `pdfService.generateRateConfirmation` printed `load.rate` as "Linehaul Rate" on a document a carrier signs, with no fallback softening it.
+
+    **227.5 — CLOSES ITEM 220.1.** Arc 14 found the enhanced RC's linehaul fallback (`fd.lineHaulRate ?? load.rate`) reads the customer rate and recorded it LATENT because both live producers set the key. **Latent is not fixed** — Arc 14's own rehearsal demonstrated it accidentally, printing $5,100 against an agreed $4,100. Now `?? load.carrierRate ?? 0`.
+
+    **227.6 — THE COLUMN IS A WRITE-ONLY MIRROR.** Scaffolding, not data: kept written so a rollback finds what it expects, read by nothing. **The removal condition lives in code beside the mirror**, not in memory — guard green for a full deploy cycle plus the gate-live secret. [`noLoadRateReads.test.ts`](backend/__tests__/unit/lib/noLoadRateReads.test.ts) fails on any new read, carries a vacuity tripwire, and asserts that removal condition is still documented. Adversarially verified by re-introducing one read.
+
+    **227.7 — MY CENSUS TOOL WAS INCOMPLETE AND THE GUARD CAUGHT IT.** [`_arc21-rate-census.ts`](backend/scripts/_arc21-rate-census.ts) missed `select: { … rate: true … }` inside long lines, and every reader downstream of one. The guard surfaced them across **four iterations** as earlier sites cleared — pdfService's RC printer among them. **The census narrowed the field; the guard proved it empty, and only the second is a claim worth making.** Item 8.10's lesson in a new costume: a narrow scan can be correct and its inference still wrong.
+
+    **The guard cried wolf twice before it was right**, flagging three `prisma.shipment.aggregate` blocks — a different model's rate. A guard that reports false positives is a guard people learn to ignore, so the model is now resolved from a short window above the line rather than the line alone.
+
+    **227.8 — THE DROP IS HELD, ON A BRANCH.** `hold/retire-load-rate`, per §2.2 and because of Item 212 — a commit held back by POSITION is not held back. **Release conditions are both, not either:** the zero-reader guard green for a full deploy cycle, and `RENDER_DEPLOY_HOOK_URL` existing so CI gates the deploy; until it does, merging would apply the drop the moment the branch lands rather than when somebody decides it should.
+
+    **The row-parity gate in the header has been RUN, not merely written** — and its first draft was wrong. It used `customer_rate`, but those columns are camelCase in Postgres with no `@map`, so the query would have **errored rather than answered**, and the tempting fix when a gate errors is to drop the condition rather than quote the identifier. Corrected, then executed against a container migrated from main: **0 mismatched rows.** The full chain including the drop applies cleanly from zero.
+
+    **After merging**, remove the four mirror writes and the guard's allowance for them — the header says so, because scaffolding left standing becomes architecture.
+
+    **Proof:** Arc 16's per-creation-path money proof re-run against the migrated code, **14/14**.
+
 ## §14 LEGAL / COMPLIANCE STATUS
 
 - Property broker under 49 U.S.C. §§ 13904, 13906
