@@ -21,4 +21,5 @@ together with the matching `schema.prisma` edit, as one deliberate change.
 
 | Migration | Source | Gate before applying |
 |---|---|---|
-| `20260819160000_drop_superseded_carrier_doc_urls` | `docs/audits/orphan-field-triage.md` §C1 | Run the row-count query in the file header. A non-zero count means the column holds the only pointer to a stored file. |
+| ~~`20260819160000_drop_superseded_carrier_doc_urls`~~ | `docs/audits/orphan-field-triage.md` §C1 | **APPLIED 2026-08-20, gate NOT run.** It was moved into `prisma/migrations/`, rode a push, and Render applied it during the build. §13.3 Item 212. Listed here so the table is a record rather than only a queue. |
+| `20260821040000_drop_dead_load_ref_fallbacks` | `docs/audits/read-never-written-triage.md`, carrier-visible tier | Run the row-count query in the file header. Expected 0 and 0. A non-zero count means something wrote the column outside the application and the values are the only copy. |

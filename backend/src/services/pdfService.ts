@@ -257,7 +257,8 @@ interface LoadBOLData {
   // downloadBOLFromLoad; drawing code does not yet consume these —
   // template rendering lands in Commit 2 / v3.7.p.
   shipperReference?: string | null;
-  shipperPoNumber?: string | null;
+  // Arc 13 — shipperPoNumber removed. It was declared here for a renderer that
+  // never consumed it, and the column behind it was never written.
   trailerNumber?: string | null;
   sealNumber?: string | null;
   declaredValue?: number | null;
@@ -606,7 +607,6 @@ export async function generateBOLFromLoad(
       ? formatPoList(load.poNumbers)
       : null)
     || load.shipperReference
-    || load.shipperPoNumber
     || load.customerRef
     || null;
 
@@ -1457,11 +1457,13 @@ interface EnhancedRCLoadData {
   // a toggle — read directly from Load.
   appointmentRequired?: boolean | null;
   // Sprint 49 (Item 117) — pickup #/PO # data path for meta strip 8-cell.
-  // Both already exist on Load (pickupNumber:1100, poNumbers:1220 array,
-  // shipperPoNumber:1099). Renderer applies formData primary + Load fallback.
-  pickupNumber?: string | null;
+  //
+  // Arc 13 — the Load fallbacks are gone. Load.pickupNumber and
+  // Load.shipperPoNumber were never written by anything, in the entire history
+  // of the repo, so the "formData primary + Load fallback" chain only ever
+  // resolved on its first link. poNumbers stays: it IS populated, and it is what
+  // the BOL renders.
   poNumbers?: string[] | null;
-  shipperPoNumber?: string | null;
   // v3.8.arr — CLAUDE.md §3.9 compliance. These are the canonical physical
   // pickup and delivery identities and they already exist on Load; the BOL in
   // this same file has always read them. The Rate Confirmation never did, so it
@@ -1803,8 +1805,14 @@ export function generateEnhancedRateConfirmation(load: EnhancedRCLoadData, formD
     doc.font(FONT_BODY, 10);
     return ladder.find((s) => doc.widthOfString(s) <= budget) ?? ladder[ladder.length - 1];
   })();
-  const pickupNumStr = fd.pickupNumber || load.pickupNumber || "";
-  const poNumStr = fd.poNumber || (load.poNumbers && load.poNumbers.length > 0 ? load.poNumbers[0] : "") || load.shipperPoNumber || "";
+  // Arc 13 — was `fd.pickupNumber || load.pickupNumber || ""`. The middle term
+  // read a column nothing has ever written, so it could only ever contribute an
+  // empty string to a chain that had already resolved or already failed.
+  const pickupNumStr = fd.pickupNumber || "";
+  // Arc 13 — the trailing `|| load.shipperPoNumber` is gone with the column.
+  // poNumbers is the populated source and always was; the removed link could
+  // only ever have contributed an empty string.
+  const poNumStr = fd.poNumber || (load.poNumbers && load.poNumbers.length > 0 ? load.poNumbers[0] : "") || "";
 
   y = drawMetaStrip(doc, {
     "DATE ISSUED": dateStr,

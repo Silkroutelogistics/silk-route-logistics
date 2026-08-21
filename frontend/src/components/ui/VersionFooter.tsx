@@ -14697,7 +14697,23 @@
 //   test now covers is strictly weaker. One check stayed on the backend side,
 //   because neither suite can make it alone: the middleware's 403 hands back an
 //   href, and if that href and the page ever drift the wall becomes a 404.
-export const SRL_VERSION = "3.8.atr";
+// v3.8.ats — Two fallback links that could only ever be empty, removed.
+//   Load.pickupNumber and Load.shipperPoNumber have never been written by
+//   anything, in the whole history of the repo. Both sat in the middle or at
+//   the end of a chain whose earlier link is populated, so the terms could only
+//   contribute an empty string to something already resolved or already lost.
+//   Two search branches queried shipperPoNumber and could never have matched a
+//   row. The carrier's BOL preview had a PO row and a Pickup/Release row that
+//   have never once rendered.
+//   The columns are authored for the hold branch, NOT dropped — the row-count
+//   gate in the migration header runs against production first. That gate is
+//   the step skipped in atd, where a staged drop rode a push and the counts it
+//   asked for became unanswerable except through PITR.
+//   Not a loss and not a gain: the generated BOL PDF renders poNumbers[], which
+//   IS populated. Wiring the preview to the same array would give the carrier
+//   parity with the document they receive — banked, because that is a feature
+//   and this is a deletion.
+export const SRL_VERSION = "3.8.ats";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

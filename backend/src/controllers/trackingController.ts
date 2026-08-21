@@ -155,7 +155,6 @@ export async function getPublicTracking(req: Request, res: Response) {
           OR: [
             { referenceNumber: token },
             { loadNumber: token },
-            { shipperPoNumber: token },
           ],
         },
         select: loadSelect,

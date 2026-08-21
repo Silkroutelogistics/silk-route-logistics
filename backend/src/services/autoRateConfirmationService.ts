@@ -508,10 +508,13 @@ export async function autoGenerateRateConfirmation(
     shipperContact: load.originContactName ?? "",
     shipperPhone: load.originContactPhone ?? "",
     shipperRefNumber: load.shipperReference ?? load.poNumbers?.[0] ?? "",
-    pickupNumber: load.pickupNumber ?? "",
+    // Arc 13 — was seeded from Load.pickupNumber, a column nothing writes, so
+    // this only ever seeded an empty string. The AE fills it on the RC.
+    pickupNumber: "",
     pickupHours: load.pickupHours ?? timeWindow(load.pickupTimeStart, load.pickupTimeEnd) ?? "",
     loadingType: load.loadingType ?? "",
-    poNumber: load.poNumbers?.[0] ?? load.shipperPoNumber ?? "",
+    // Arc 13 — the shipperPoNumber link is gone; poNumbers is the populated one.
+    poNumber: load.poNumbers?.[0] ?? "",
 
     // Section 3 — Consignee / Delivery
     consigneeName: load.destCompany ?? "",

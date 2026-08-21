@@ -448,7 +448,9 @@ function initForm(load: any, user: any): FormState {
     shipperEmail: "",
     shipperReference: load?.shipperReference || "",
     poNumber: load?.shipperPoNumber || (load?.poNumbers && load.poNumbers.length > 0 ? load.poNumbers[0] : "") || "",
-    pickupNumber: load?.pickupNumber || "",
+    // Arc 13 — was seeded from load?.pickupNumber, never written. Blank, and
+    // the AE types it.
+    pickupNumber: "",
     pickupDate: load?.pickupDate ? load.pickupDate.split("T")[0] : "",
     pickupTimeStart: load?.pickupTimeStart || "",
     pickupTimeEnd: load?.pickupTimeEnd || "",

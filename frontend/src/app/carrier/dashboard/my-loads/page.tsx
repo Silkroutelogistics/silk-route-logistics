@@ -316,8 +316,6 @@ export default function MyLoadsPage() {
             referenceNumber: detail.referenceNumber || "",
             loadNumber: detail.loadNumber,
             shipperReference: detail.shipperReference,
-            shipperPoNumber: detail.shipperPoNumber,
-            pickupNumber: detail.pickupNumber,
             deliveryReference: detail.deliveryReference,
             originCompany: detail.originCompany,
             originAddress: detail.originAddress,

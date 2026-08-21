@@ -1,0 +1,48 @@
+-- Drop two Load columns that nothing has ever written.
+--
+-- SOURCE: docs/audits/read-never-written-triage.md, carrier-visible tier
+-- (Arc 12), decision taken Arc 13.
+--
+-- WHAT THEY WERE. Both were the middle or last link of a fallback chain whose
+-- earlier link is populated:
+--
+--   pdfService     fd.pickupNumber || load.pickupNumber || ""
+--   pdfService     fd.poNumber || load.poNumbers[0] || load.shipperPoNumber || ""
+--
+-- The chains always resolved on their first or second link, so the removed
+-- terms could only ever contribute an empty string. Two search branches also
+-- queried shipperPoNumber (trackingController, trackTraceBoard) and could never
+-- have matched a row.
+--
+-- CORROBORATION, per the standing rule that a verdict is a question until its
+-- matches are read:
+--   · no load-create path assigns either column — checked loadController,
+--     withTenderController and validators/load.ts
+--   · `git log -S "load.pickupNumber = "` and the shipperPoNumber equivalent
+--     return NO commits across all history in backend/src or frontend/src
+--   · the application reads were deleted in the same commit that authored this
+--     file, so schema and code agree before anything is applied
+--
+-- NOT the same as poNumbers. `Load.poNumbers` is a populated array and is what
+-- the BOL actually renders (v3.8.d.4). It stays.
+--
+-- ─────────────────────────────────────────────────────────────────────────────
+-- GATE — RUN THIS AGAINST PRODUCTION BEFORE APPLYING, AND READ THE RESULT.
+--
+-- This is the step that was skipped in the v3.8.atd incident: a staged drop rode
+-- a push, Render applied it during the build, and the row counts the migration
+-- itself asked for became unanswerable except through PITR. Once these columns
+-- are gone, whether they held anything cannot be recovered.
+--
+--   SELECT
+--     count(*) FILTER (WHERE "pickupNumber"    IS NOT NULL AND "pickupNumber"    <> '') AS pickup_rows,
+--     count(*) FILTER (WHERE "shipperPoNumber" IS NOT NULL AND "shipperPoNumber" <> '') AS po_rows
+--   FROM "loads";
+--
+-- EXPECTED: 0 and 0. A non-zero count means something wrote these outside the
+-- application — a manual backfill, an import, a direct SQL session — and the
+-- values are the only copy. STOP and decide what to do with them first.
+-- ─────────────────────────────────────────────────────────────────────────────
+
+ALTER TABLE "public"."loads" DROP COLUMN "pickupNumber";
+ALTER TABLE "public"."loads" DROP COLUMN "shipperPoNumber";

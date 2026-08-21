@@ -20,8 +20,15 @@ export interface BOLData {
   referenceNumber: string;
   loadNumber?: string;
   shipperReference?: string;
-  shipperPoNumber?: string;
-  pickupNumber?: string;
+  // Arc 13 — shipperPoNumber and pickupNumber removed. Their only caller fed
+  // them from Load columns nothing has ever written, so both rows were
+  // conditional on a value that was always undefined and have never rendered.
+  //
+  // NOT a loss of information, but worth knowing it is not a gain either: the
+  // generated BOL PDF renders poNumbers[], which IS populated. Wiring this
+  // preview to the same array would give the carrier PO parity with the document
+  // they actually receive. Banked rather than done here — that is a feature, and
+  // this commit is a deletion.
   deliveryReference?: string;
   sealNumber?: string;
 
@@ -212,7 +219,6 @@ export function BOLTemplate({ data, onClose }: BOLTemplateProps) {
               <div className="bol-ref-item"><span className="bol-ref-key">BOL #</span><span className="bol-ref-val">{bolNum}</span></div>
               <div className="bol-ref-item"><span className="bol-ref-key">Date</span><span className="bol-ref-val">{today}</span></div>
               <div className="bol-ref-item"><span className="bol-ref-key">Load Ref</span><span className="bol-ref-val">{data.referenceNumber}</span></div>
-              {data.shipperPoNumber && <div className="bol-ref-item"><span className="bol-ref-key">PO #</span><span className="bol-ref-val">{data.shipperPoNumber}</span></div>}
               {data.sealNumber && <div className="bol-ref-item"><span className="bol-ref-key">Seal #</span><span className="bol-ref-val">{data.sealNumber}</span></div>}
             </div>
 
@@ -226,7 +232,6 @@ export function BOLTemplate({ data, onClose }: BOLTemplateProps) {
                   <div className="bol-box-line">{data.originCity}, {data.originState} {data.originZip}</div>
                   {data.originContactName && <div className="bol-box-line">Contact: {data.originContactName}</div>}
                   {data.originContactPhone && <div className="bol-box-line">Phone: {data.originContactPhone}</div>}
-                  {data.pickupNumber && <div className="bol-box-line">Pickup/Release #: {data.pickupNumber}</div>}
                 </div>
               </div>
               <div className="bol-box">

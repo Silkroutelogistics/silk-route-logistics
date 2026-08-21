@@ -134,7 +134,6 @@ router.get(
             { bolNumber: { contains: s, mode: "insensitive" } },
             { customerRef: { contains: s, mode: "insensitive" } },
             { driverName: { contains: s, mode: "insensitive" } },
-            { shipperPoNumber: { contains: s, mode: "insensitive" } },
           ],
         });
       }
