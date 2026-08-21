@@ -14713,7 +14713,23 @@
 //   IS populated. Wiring the preview to the same array would give the carrier
 //   parity with the document they receive — banked, because that is a feature
 //   and this is a deletion.
-export const SRL_VERSION = "3.8.ats";
+// v3.8.att — A shipper could download the carrier's rate confirmation.
+//   getShipperDocuments queried every document on the shipper's loads with no
+//   docType filter and returned each fileUrl. documentController persists the
+//   rate confirmation against the LOAD as docType RATE_CON, and that document
+//   prints "Carrier Rate" and "Total Carrier Pay". So a customer could open
+//   their own portal, list documents for their own load, and read exactly what
+//   SRL pays the carrier — the entire margin on their freight. Nothing errored;
+//   it looked like a working documents tab.
+//   Not the same defect as "the invoice must not expose carrier pay", which was
+//   checked in Arc 14 and is clean. The invoice IS clean. The margin reached the
+//   customer through a different door, which is the argument for testing the
+//   SCOPE of an endpoint rather than the contents of one document.
+//   Fixed with an allowlist rather than a denylist: a denylist leaks every
+//   docType added after it, and nobody learns of it until a customer mentions
+//   it. An allowlist fails the other way — a new shipper-facing type is
+//   invisible until someone adds it, which is a support ticket.
+export const SRL_VERSION = "3.8.att";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

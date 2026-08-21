@@ -757,6 +757,14 @@ export async function generateTrackingLink(req: AuthRequest, res: Response) {
 
 // ─── Documents ───────────────────────────────────────────
 
+/**
+ * Documents a shipper may see on their own load.
+ *
+ * The bill of lading, the proof of delivery, and their own invoice. NOT the
+ * rate confirmation — that is the carrier's pay document and it prints SRL's
+ * margin.
+ */
+const SHIPPER_VISIBLE_DOC_TYPES = ["BOL", "POD", "INVOICE"];
 export async function getShipperDocuments(req: AuthRequest, res: Response) {
   try {
     const userId = req.user!.id;
@@ -766,8 +774,20 @@ export async function getShipperDocuments(req: AuthRequest, res: Response) {
       return res.json({ typeCounts: [], documents: [] });
     }
 
+    // ARC 15 — this query had NO docType filter, so it returned every document
+    // attached to the shipper's loads. documentController persists the rate
+    // confirmation on the LOAD as docType RATE_CON, and that document prints
+    // "Carrier Rate" and "Total Carrier Pay". A shipper could therefore download
+    // the carrier's rate confirmation from their own portal and read exactly what
+    // SRL pays the carrier — the entire margin on their own freight.
+    //
+    // ALLOWLIST, not a denylist. A denylist leaks every docType added after it:
+    // the next carrier-facing document is exposed by default and nobody learns
+    // of it until a customer mentions it. An allowlist fails the other way — a
+    // new shipper-facing type is invisible until someone adds it, which is a
+    // support ticket rather than a disclosure.
     const documents = await prisma.document.findMany({
-      where: { loadId: { in: loadIds } },
+      where: { loadId: { in: loadIds }, docType: { in: SHIPPER_VISIBLE_DOC_TYPES } },
       orderBy: { createdAt: "desc" },
       include: { load: { select: { referenceNumber: true } } },
     });
