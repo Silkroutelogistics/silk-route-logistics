@@ -14583,7 +14583,17 @@
 //   by curling production after the deploy, which is the only check that
 //   could have caught it. Both endpoints now carry it, the test pins the
 //   /api one first, and it also pins that both handlers are async.
-export const SRL_VERSION = "3.8.atk";
+// v3.8.atl — Backup codes are hashed, and can only be spent once.
+//   They were AES-encrypted, which is reversible: anyone holding
+//   ENCRYPTION_KEY could read every code back. Fine while TOTP was optional
+//   and a backup code was a convenience; not fine once mandatory carrier 2FA
+//   makes one a complete authentication factor. Now bcrypt at the same cost
+//   as passwords, shown once and unrecoverable after. The consume path also
+//   did a read-modify-write, so the same code presented twice concurrently
+//   could be spent twice — now a compare-and-swap on the exact value read,
+//   so a racing second attempt loses instead of double-spending. Legacy
+//   plaintext entries still work and are rehashed on first use.
+export const SRL_VERSION = "3.8.atl";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

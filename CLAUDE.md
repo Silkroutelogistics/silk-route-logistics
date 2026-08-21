@@ -1572,7 +1572,7 @@ Each is a discrete sprint. Mix of operational, security, UX, and technical debt.
 215. **Arc 9 gate fall-throughs (2026-08-20) — three phases did not run, one line each as specified.**
 
     - **A2 PITR settlement — BLOCKED.** No `pitr-item-212` connection string was provided. Deadline unchanged: **2026-08-27**, after which whether the three dropped URL columns held data is permanently unanswerable.
-    - **A3 gate-live verification — BLOCKED.** `gh secret list` still empty; `RENDER_DEPLOY_HOOK_URL` unset. The deploy job is green since `v3.8.atl` because it warns rather than fails on the absent secret, which is **not** the same signal as a verified gated deploy. Pipeline mode remains: Render auto-deploy ships commits, CI does not gate them.
+    - **A3 gate-live verification — BLOCKED.** `gh secret list` still empty; `RENDER_DEPLOY_HOOK_URL` unset. The deploy job is green since the CI-quieting commit `a5265210` (which carried no version bump, being CI-only) because it warns rather than fails on the absent secret, which is **not** the same signal as a verified gated deploy. Pipeline mode remains: Render auto-deploy ships commits, CI does not gate them.
     - **A4 counsel consolidation — BLOCKED, fifth consecutive attempt.** No `my-knowledge-base/raw/counsel/`, no `.docx` anywhere. Item 203 holds the spec; not re-recorded here.
 
 ---

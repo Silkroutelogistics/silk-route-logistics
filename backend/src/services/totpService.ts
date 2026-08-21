@@ -3,6 +3,7 @@ import * as QRCode from "qrcode";
 import crypto from "crypto";
 import { prisma } from "../config/database";
 import { encrypt, decrypt } from "../utils/encryption";
+import bcrypt from "bcryptjs";
 
 const ISSUER = "Silk Route Logistics";
 
@@ -28,9 +29,25 @@ export async function generateTotpSetup(userId: string, email: string) {
     backupCodes.push(crypto.randomBytes(4).toString("hex").toUpperCase());
   }
 
-  // Store encrypted secret and backup codes (not yet enabled)
+  // v3.8.atm — backup codes are HASHED, not merely encrypted.
+  //
+  // They were AES-encrypted, which is reversible: anyone holding ENCRYPTION_KEY
+  // could recover every code. That was defensible while TOTP was optional and a
+  // backup code was a convenience. Under MANDATORY carrier 2FA a backup code is
+  // a complete authentication factor — password-equivalent — and the bar for a
+  // password is that the system itself cannot read it back.
+  //
+  // Hashed with bcrypt at the same cost factor as passwords. They are returned
+  // in plaintext HERE, once, to be shown to the carrier, and are unrecoverable
+  // afterwards. That is the point: losing them means using the admin unenroll
+  // path, not asking someone to look them up.
+  //
+  // The encrypt() wrapper stays on the JSON envelope. It is now belt over
+  // braces rather than the protection itself, and keeping it avoids changing
+  // how this column is read and written everywhere else.
   const encryptedSecret = encrypt(secret);
-  const encryptedBackupCodes = encrypt(JSON.stringify(backupCodes));
+  const hashedBackupCodes = await Promise.all(backupCodes.map((c) => bcrypt.hash(c, 12)));
+  const encryptedBackupCodes = encrypt(JSON.stringify(hashedBackupCodes));
 
   await prisma.user.update({
     where: { id: userId },
@@ -69,23 +86,55 @@ export async function verifyTotpCode(userId: string, code: string): Promise<bool
   const delta = totp.validate({ token: code, window: 1 });
   if (delta !== null) return true;
 
-  // Check backup codes
+  // Check backup codes.
   if (user.totpBackupCodes) {
     try {
-      const backupCodes: string[] = JSON.parse(decrypt(user.totpBackupCodes));
-      const upperCode = code.toUpperCase();
-      const index = backupCodes.indexOf(upperCode);
-      if (index !== -1) {
-        // Remove used backup code
-        backupCodes.splice(index, 1);
-        await prisma.user.update({
-          where: { id: userId },
-          data: { totpBackupCodes: encrypt(JSON.stringify(backupCodes)) },
-        });
-        return true;
+      const stored: string[] = JSON.parse(decrypt(user.totpBackupCodes));
+      const candidate = code.toUpperCase();
+
+      // Entries are bcrypt hashes (v3.8.atm). A legacy entry is a plaintext
+      // code from before that change; it is matched directly so an existing
+      // carrier is never locked out by the upgrade, and the whole set is
+      // rewritten as hashes the moment one is used. bcrypt output always begins
+      // "$2", which no generated code can, so the two are unambiguous.
+      let index = -1;
+      for (let i = 0; i < stored.length; i++) {
+        const entry = stored[i];
+        const matches = entry.startsWith("$2")
+          ? await bcrypt.compare(candidate, entry)
+          : entry.toUpperCase() === candidate;
+        if (matches) { index = i; break; }
       }
+      if (index === -1) return false;
+
+      const remaining = stored.filter((_, i) => i !== index);
+      // Re-hash any surviving legacy entries so the set converges on hashes.
+      const rewritten = await Promise.all(
+        remaining.map((e) => (e.startsWith("$2") ? Promise.resolve(e) : bcrypt.hash(e.toUpperCase(), 12))),
+      );
+
+      // COMPARE-AND-SWAP, not a blind write.
+      //
+      // The previous version read the list, spliced, and wrote it back. Two
+      // requests presenting the SAME backup code concurrently would both read a
+      // list containing it, both find it, and both succeed — a consume-once
+      // credential consumed twice, which is exactly the case a backup code
+      // exists to make impossible.
+      //
+      // The where clause pins the exact ciphertext that was read. If anything
+      // else consumed a code in between, the stored value differs, the update
+      // matches nothing, and this attempt loses rather than double-spending.
+      const { count } = await prisma.user.updateMany({
+        where: { id: userId, totpBackupCodes: user.totpBackupCodes },
+        data: { totpBackupCodes: encrypt(JSON.stringify(rewritten)) },
+      });
+      if (count !== 1) return false;
+
+      return true;
     } catch {
-      // Invalid backup codes format
+      // Unreadable backup-code payload: fail closed rather than fall through to
+      // a success path.
+      return false;
     }
   }
 
