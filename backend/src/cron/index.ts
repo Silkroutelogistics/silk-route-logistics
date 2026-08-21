@@ -67,7 +67,6 @@ export const SCHEDULED_JOB_NAMES = [
   "tender-expiry-sweep",
   "tin-verification",
   "training-expiry-reminders",
-  "vin-batch-verify",
   "weekly-fuel-index",
   "weekly-report",
 ] as const;
@@ -827,18 +826,6 @@ export function initCronJobs() {
       log.info({ result }, "[Compass] CSA update");
     } catch (err) {
       log.error({ err }, "[Compass] CSA update error:");
-    }
-  }));
-
-  // ─── Weekly (Monday 3:15 AM): Batch VIN verification sweep ──
-  cron.schedule("15 3 * * 1", () => withGuard("vin-batch-verify", async () => {
-    try {
-      log.info("[Compass] Running batch VIN verification...");
-      const { verifyAllCarrierVins } = require("../services/vinVerificationService");
-      const result = await verifyAllCarrierVins();
-      log.info({ result }, "[Compass] VIN batch verify");
-    } catch (err) {
-      log.error({ err }, "[Compass] VIN batch verify error:");
     }
   }));
 

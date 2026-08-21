@@ -1894,6 +1894,52 @@ Each is a discrete sprint. Mix of operational, security, UX, and technical debt.
 
     **Verification.** Three injections, each executed and each observed to move the count: renaming the tag returns an endpoint to UNRESOLVED; a new unannotated route raises UNRESOLVED; a route appended into a file dense with verdicts stays UNRESOLVED, so a note cannot bleed onto the route below it.
 
+229. **The chameleon signal can be acted on — and the field that carries it turns out to be a verdict, not a deduction (Arc 23, 2026-08-21).**
+
+    Closes §13.3 Item 228.3. `SecuritySignalsCard` rendered matches read-only, so they accrued OPEN forever and the count an AE saw never fell — a fraud signal decaying into background noise, the Item 192 decay reached through an unwired endpoint instead of a flooding cron.
+
+    **229.1 — WHAT SHIPPED.** A per-match review action on the card, ADMIN/CEO-gated to match the route's own `authorize`, with a required note and two dispositions: **Not a match** (`DISMISSED`) and **Confirm risk** (`CONFIRMED_FRAUD`). `auditLog("UPDATE", "ChameleonMatch")` added to the route, which carried none. Reviewer, timestamp and note all persist.
+
+    **229.2 — THE HEADER COUNTED THE WRONG THING.** It counted `OPEN + REVIEWED` together, so working the queue never moved the number. It now counts OPEN only, with a distinct line when the remainder are confirmed risks.
+
+    **229.3 — A CONFIRMED MATCH USED TO VANISH, WHICH WAS BACKWARDS.** The card's query filtered `status IN (OPEN, REVIEWED)`, so the instant an AE confirmed a match as real it dropped off the security panel entirely. **The one match a human has confirmed is the one that must stay visible.** `CONFIRMED_FRAUD` is now included and renders prominently; `DISMISSED` stays excluded, because cleared means stop nagging.
+
+    **229.4 — THE FINDING THAT CHANGED THE DESIGN: A "SOFT WARNING" THAT HARD-BLOCKS.** The brief asked that confirming feed the existing chameleon signal path and never auto-block — deductions, not verdicts. Tracing that path found the two halves disagree about what `CarrierProfile.chameleonRiskLevel` is. `carrierVettingService` treats it as a **deduction** (HIGH −20, MEDIUM −10, LOW −5). `complianceMonitorService` pushes HIGH into **`blocked_reasons`**, under a comment that literally reads `// SOFT WARNING: chameleon risk`. A non-empty `blocked_reasons` makes `complianceCheck` return `allowed: false`, and every tender path gates on that. **It is a hard block wearing a comment that says it is not.**
+
+    So writing HIGH from the review action would have created exactly the auto-block the brief forbids. **The review therefore does not write `chameleonRiskLevel` at all** — `chameleonDetectionService` remains its sole writer, which also keeps this off the dual-writer path this codebase keeps having to unpick. Confirming records a human finding, durably and visibly; it does not pass sentence. A test pins that the field is unchanged and that `complianceCheck` still allows.
+
+    **Left for Wasi, deliberately not flipped either way:** whether HIGH chameleon risk *should* hard-block at tender time. It does today. If that is intended, the comment is wrong and should say BLOCK. If the comment is right, the push into `blocked_reasons` belongs in `warnings`. Changing it either way moves who can be tendered, so it is a policy call, not a cleanup.
+
+    **Proof:** [`_arc23-chameleon-proof.ts`](backend/scripts/_arc23-chameleon-proof.ts), **12/12**, real router over HTTP with a real admin session against a rehearsal container. Adversarial in two directions, each executed: neutering the write freezes the count (**6/12** — and note "an admin can clear a match" still PASSES on its 200 while the count does not move, which is why a 200 was never the assertion); reverting the query widening fails exactly one assertion (**11/12**), isolating that fix as load-bearing.
+
+    **Two mistakes of mine in the proof, both worth recording.** It first checked `AuditTrail` when `auditLog()` writes `AuditLog` — Item 61's two parallel audit tables biting a test that guessed — and it raced the middleware, which is fire-and-forget inside `res.json`. And its vacuity tripwire asserted global counts while printing a detail string of numbers it had never measured; residue from an earlier run failed it correctly, but **a failure message that states unmeasured values is a failure message that lies.** Both fixed: right table, polled not raced, tripwire scoped to the run and printing what it counted.
+
+230. **Fleet retired, and the Compass VIN check turns out to have been taxing every carrier 5 points (Arc 23, 2026-08-21).**
+
+    Closes §13.3 Item 228.4 on the ratified decision to retire the fleet module.
+
+    **230.1 — PHASE 2 FIRST, AND IT CHANGED THE SHAPE OF PHASE 3.** The brief required tracing what feeds Compass "Fleet VIN Verification" before deleting anything. `verifyAllCarrierVins(carrierId)` finds a carrier's trucks **through `Load.truckId`** — not through ownership, because `Truck` has no owner column. **Nothing has ever written `Load.truckId`.** The only remaining mentions of that name write `Driver.assignedTruckId`, a different column. So the id list is always empty, `findMany` returns nothing, and the check has always landed in one branch.
+
+    **That branch is not benign, which is where the expected finding turned into a real one.** `totalChecked === 0` emits a WARNING **and deducts 5 points**. Not "coded, unreachable, safe default" — a **permanent, unearned 5-point penalty on every carrier's vetting score, for a fleet no carrier had any way to register.** And `lastVettingScore < 40` pushes into `blocked_reasons`, so the tax moved every carrier five points closer to a hard block. A weekly cron also called `verifyAllCarrierVins()` **unscoped**, which means `where: undefined` — every Truck row in the database, against the live NHTSA API, every Monday at 3:15.
+
+    **Disposition: REMOVED**, not retained-inert. Removing it raises every carrier's score by exactly 5, which is a correction rather than a loosening.
+
+    **230.2 — WHAT RETIREMENT ACTUALLY PULLED IN.** The brief scoped "the page, the remaining read+create routes, fleetController, and seed blocks." Tracing consumers first found the reads were not the page's alone:
+    - `/dashboard/drivers` populated its truck and trailer dropdowns from `/fleet/trucks` and `/fleet/trailers`, feeding `PATCH /drivers/:id/assign-truck` and `assign-trailer` — the two endpoints Arc 22 **kept** because they had a live caller. Deleting the fleet reads without them would have left dropdowns that could not load. They are the same DEAD-BY-STRATEGY class Arc 22 applied and were simply out of that arc's 17. Pairing a carrier-owned driver with an SRL-owned truck was never coherent for a pure broker.
+    - `CarrierFleetOverview` fetched `/fleet/overview` and **never referenced the result** — a dead read discarding its own response.
+
+    Removed: the page and its three Sidebar entries and Command Palette entry; the fleet router and `fleetController`; driver↔equipment assignment across route, controller, validator and UI; `vinVerificationService` with its two AE endpoints, the vetting step that called it, check 27, and the weekly cron; the seed's truck and trailer blocks and the driver rows referencing them. Every target verified zero-consumer beforehand — nothing in `src`, `__tests__`, `e2e`, cron or services.
+
+    **The cron guard caught the one thing I missed**: `SCHEDULED_JOB_NAMES` still listed `vin-batch-verify` after the job was gone, and the boot-inventory test failed exactly as designed.
+
+    **230.3 — PASS 1 HAS BEEN COUNTING OVER A PARTIAL CORPUS THE WHOLE TIME.** Adding `auditLog` to the chameleon route wrapped it across lines, and it **disappeared from Pass 1 entirely** — the extractor matched `router.VERB(` and the path on a single line. Checking the rest found **25 mutating routes in that shape.** Arc 22's "0 UNRESOLVED" was true of an inventory that silently excluded them. The extractor now looks on the verb line and up to two lines below; the corpus went **89 → 114 endpoints**, surfacing **7 endpoints never triaged by anyone.** All seven verified zero-consumer and annotated with verdicts and value judgments, so Pass 1 returns to **0 UNRESOLVED / 16 DISPOSITIONED** — this time over a complete corpus. The two worth building are CRM note edit/delete (notes are add-only today) and multi-stop reorder/edit.
+
+    **230.4 — TWO HELD MIGRATIONS, AND THEY SHOULD NOT MERGE.** `hold/retire-fleet-module` drops `trucks` and `trailers`, the four enums only they used, `Load.truckId` / `Load.trailerId` (FKs to those tables), and `Driver.assignedTruckId` / `assignedTrailerId` / `assignedEquipmentId` — which absorbs the three stranded fields Item 228.4 banked. `hold/retire-load-rate` drops one column.
+
+    **Keep them separate.** They answer to different release conditions — one waits on the zero-reader guard staying green through a deploy cycle, the other on this retirement being deployed and soaked — and merging couples two unrelated decisions so that reverting either reverts both. They share only the precondition that the deploy-hook secret exists, which now gates **two** held migrations rather than one.
+
+    **230.5 — WHAT A CARRIER-OWNED EQUIPMENT MODEL WOULD TAKE**, recorded because the VIN check was reaching for it and had nothing to hold. It needs an owner column (`carrierProfileId`) so equipment belongs to somebody; a carrier-portal surface to register it, since SRL cannot enter another company's fleet; and a link from a load to the specific unit that hauled it, which is the honest version of what `Load.truckId` was pretending to be. Only then does a VIN check have a population to verify. None of that is built and none of it is urgent — VIN verification is a motor-carrier control, and SRL's leverage over equipment is the Compass score and the insurance file, not an asset register.
+
 ## §14 LEGAL / COMPLIANCE STATUS
 
 - Property broker under 49 U.S.C. §§ 13904, 13906

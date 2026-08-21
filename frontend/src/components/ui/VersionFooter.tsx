@@ -14768,7 +14768,25 @@
 //   because tsconfig excludes scripts/; a shell && chained an "ok" off head
 //   rather than tsc; and a patch helper closed over the outer string so every
 //   call discarded the previous edit while reporting success.
-export const SRL_VERSION = "3.8.auc";
+// v3.8.aud — Arc 23. Two ratified decisions built, and two findings that
+//   changed the work in the middle of it.
+//   CHAMELEON: matches are reviewable per-match now, so the OPEN count an AE
+//   reads finally falls. It counted OPEN + REVIEWED together before, and a
+//   CONFIRMED_FRAUD match used to vanish off the card entirely — the one a
+//   human has confirmed is the one that must stay visible. Confirming does
+//   NOT write chameleonRiskLevel: that field is a deduction in the vetting
+//   service and a HARD BLOCK in the compliance service, under a comment that
+//   says SOFT WARNING. Writing it would have been a verdict, not a finding.
+//   FLEET: retired. Phase 2 traced the Compass VIN check first and found it
+//   reaches trucks through Load.truckId, which nothing has ever written — so
+//   it always took the one branch, and that branch quietly deducted 5 points
+//   from every carrier for a fleet none of them could register. Removed.
+//   Retirement also pulled in driver-equipment assignment, because the
+//   drivers-page dropdowns were fed by /fleet/trucks.
+//   And Pass 1 had been counting over a partial corpus: wrapping one route
+//   across lines made it disappear from the extractor, and 25 routes were in
+//   that shape. 89 -> 114 endpoints, 7 never triaged by anyone.
+export const SRL_VERSION = "3.8.aud";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

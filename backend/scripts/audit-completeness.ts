@@ -136,15 +136,29 @@ function readDisposition(lines: string[], routeLine: number): string | undefined
 function extractEndpoints(): Endpoint[] {
   const files = walkFiles(BACKEND_ROUTES, [".ts"]);
   const endpoints: Endpoint[] = [];
-  // Match: router.put("/:id/foo/:bar", ...
-  // Match: router.patch('/customers/:id/facilities/:facilityId', ...
-  const re = /router\.(put|patch|delete)\s*\(\s*["'`]([^"'`]+)["'`]/gi;
+  // Matches both shapes:
+  //   router.put("/:id/foo", handler)                 — path on the same line
+  //   router.put(\n  "/:id/foo",\n  authorize(...),   — path on the NEXT line
+  //
+  // The single-line-only version of this regex hid 25 mutating routes from
+  // Pass 1, so every count this pass has ever reported was over a partial
+  // corpus. It surfaced when a route was reformatted to multi-line for an
+  // added middleware and silently vanished from the inventory. §13.3 Item 230.
+  const verbRe = /router\.(put|patch|delete)\s*\(/i;
+  const pathRe = /["'`]([^"'`]+)["'`]/;
   for (const file of files) {
     const content = readFile(file);
     const lines = content.split("\n");
     for (let i = 0; i < lines.length; i++) {
-      const m = re.exec(lines[i]);
-      re.lastIndex = 0;
+      const v = verbRe.exec(lines[i]);
+      if (!v) continue;
+      // The path is the first quoted string at or after the verb. Look on this
+      // line first, then the next two — far enough for a wrapped call, near
+      // enough that an unrelated string below cannot be mistaken for a path.
+      const after = lines[i].slice(v.index + v[0].length);
+      let p = pathRe.exec(after);
+      for (let k = 1; k <= 2 && !p; k++) if (lines[i + k] !== undefined) p = pathRe.exec(lines[i + k]);
+      const m = p ? [v[0], v[1], p[1]] : null;
       if (m && MUTATING_VERBS.includes(m[1].toLowerCase() as any)) {
         endpoints.push({
           verb: m[1].toUpperCase(),

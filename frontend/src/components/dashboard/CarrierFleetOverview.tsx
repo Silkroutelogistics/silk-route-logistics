@@ -26,10 +26,6 @@ export function CarrierFleetOverview() {
     queryFn: () => api.get<{ carriers: Carrier[]; total: number }>("/carrier/all").then(r => r.data),
   });
 
-  const { data: fleetData } = useQuery({
-    queryKey: ["fleet-overview"],
-    queryFn: () => api.get("/fleet/overview").then(r => r.data).catch(() => null),
-  });
 
   const { data: complianceData } = useQuery({
     queryKey: ["fleet-compliance"],

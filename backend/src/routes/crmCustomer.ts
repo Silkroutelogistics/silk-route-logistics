@@ -255,6 +255,7 @@ router.post(
   }
 );
 
+// audit-pass1: MISSING-UI — CRM note edit; notes are add-only in the UI. Worth building, notes get typed wrong.
 router.patch(
   "/:id/notes/:noteId",
   authorize(...CRM_ROLES) as any,
@@ -270,6 +271,7 @@ router.patch(
   }
 );
 
+// audit-pass1: MISSING-UI — CRM note delete; notes are add-only in the UI. Worth building alongside the edit.
 router.delete(
   "/:id/notes/:noteId",
   authorize(...CRM_ROLES) as any,

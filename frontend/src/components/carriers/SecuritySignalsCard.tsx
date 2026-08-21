@@ -92,6 +92,26 @@ export function SecuritySignalsCard({ carrierId, isAdmin }: { carrierId: string;
   const [smsOverrideOpen, setSmsOverrideOpen] = useState(false);
   const [smsOverrideReason, setSmsOverrideReason] = useState("");
   const [smsOverrideError, setSmsOverrideError] = useState<string | null>(null);
+  // v3.8.aud — per-match chameleon review. Item 228.3: the card rendered matches
+  // read-only, so they accrued OPEN forever and the count an AE saw never fell.
+  // A fraud signal nobody can act on decays into background noise.
+  const [reviewOpenId, setReviewOpenId] = useState<string | null>(null);
+  const [reviewNote, setReviewNote] = useState("");
+  const [reviewError, setReviewError] = useState<string | null>(null);
+
+  const reviewMutation = useMutation({
+    mutationFn: (v: { matchId: string; status: "DISMISSED" | "CONFIRMED_FRAUD" }) =>
+      api.put(`/carriers/chameleon-matches/${v.matchId}/review`, { status: v.status, notes: reviewNote }),
+    onSuccess: () => {
+      setReviewOpenId(null);
+      setReviewNote("");
+      setReviewError(null);
+      queryClient.invalidateQueries({ queryKey: ["carrier-security-signals", carrierId] });
+    },
+    onError: (err: { response?: { data?: { error?: string } } }) => {
+      setReviewError(err.response?.data?.error || "Could not record the review");
+    },
+  });
 
   const { data, isLoading, isError } = useQuery({
     queryKey: ["carrier-security-signals", carrierId],
@@ -150,6 +170,10 @@ export function SecuritySignalsCard({ carrierId, isAdmin }: { carrierId: string;
   }
 
   const { geo, events, chameleonMatches, unusualOtpSmsOverride } = data;
+  // The header used to count OPEN + REVIEWED together, so working the queue
+  // never moved the number. Open is the only count that should drive urgency.
+  const openMatchCount = chameleonMatches.filter((m) => m.status === "OPEN").length;
+  const confirmedMatchCount = chameleonMatches.filter((m) => m.status === "CONFIRMED_FRAUD").length;
 
   return (
     <div className="space-y-3">
@@ -165,16 +189,22 @@ export function SecuritySignalsCard({ carrierId, isAdmin }: { carrierId: string;
             <UserX size={16} className="text-red-600 mt-0.5 flex-shrink-0" />
             <div className="flex-1 min-w-0">
               <p className="text-xs font-semibold text-red-900">
-                {chameleonMatches.length} chameleon match{chameleonMatches.length === 1 ? "" : "es"} flagged
+                {openMatchCount > 0
+                  ? `${openMatchCount} chameleon match${openMatchCount === 1 ? "" : "es"} awaiting review`
+                  : confirmedMatchCount > 0
+                    ? `${confirmedMatchCount} confirmed chameleon risk${confirmedMatchCount === 1 ? "" : "s"}`
+                    : "Chameleon matches reviewed"}
               </p>
               <p className="text-xs text-red-800 mt-0.5">
-                This carrier&apos;s fingerprint overlaps with {chameleonMatches.length === 1 ? "another carrier" : "other carriers"} (phone, email, address, EIN, or IP). Triage in the chameleon detection UI before approving.
+                This carrier&apos;s fingerprint overlaps with {chameleonMatches.length === 1 ? "another carrier" : "other carriers"} (phone, email, address, EIN, or IP).
+                {openMatchCount > 0 ? " Review each below before approving." : " Confirmed matches stay listed here."}
               </p>
             </div>
           </div>
           <ul className="space-y-1.5 mt-2">
             {chameleonMatches.map((m) => (
-              <li key={m.id} className="bg-white border border-red-200 rounded-md p-2 flex items-center justify-between gap-2 text-xs">
+              <li key={m.id} className={`rounded-md p-2 text-xs border ${m.status === "CONFIRMED_FRAUD" ? "bg-red-100 border-red-400" : m.status === "OPEN" ? "bg-white border-red-200" : "bg-gray-50 border-gray-200"}`}>
+                <div className="flex items-center justify-between gap-2">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-1.5 mb-0.5">
                     <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-red-100 text-red-700">
@@ -184,6 +214,12 @@ export function SecuritySignalsCard({ carrierId, isAdmin }: { carrierId: string;
                     {m.status === "OPEN" && (
                       <span className="text-[10px] text-red-600 font-semibold">UNREVIEWED</span>
                     )}
+                    {m.status === "CONFIRMED_FRAUD" && (
+                      <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-red-600 text-white">CONFIRMED RISK</span>
+                    )}
+                    {m.status === "REVIEWED" && (
+                      <span className="text-[10px] text-gray-500 font-semibold">REVIEWED</span>
+                    )}
                   </div>
                   <p className="text-[11px] text-gray-700 truncate">
                     Matches <strong>{m.matchedCarrier.companyName || "—"}</strong>
@@ -191,7 +227,58 @@ export function SecuritySignalsCard({ carrierId, isAdmin }: { carrierId: string;
                     <span className="text-gray-500"> · {m.matchedCarrier.onboardingStatus}</span>
                   </p>
                 </div>
-                <span className="text-[10px] text-gray-400 whitespace-nowrap">{formatDate(m.createdAt)}</span>
+                <div className="flex items-center gap-2 whitespace-nowrap">
+                  <span className="text-[10px] text-gray-400">{formatDate(m.createdAt)}</span>
+                  {isAdmin && m.status === "OPEN" && reviewOpenId !== m.id && (
+                    <button
+                      onClick={() => { setReviewOpenId(m.id); setReviewNote(""); setReviewError(null); }}
+                      className="text-[10px] font-semibold text-red-700 hover:text-red-900 underline"
+                    >
+                      Review
+                    </button>
+                  )}
+                </div>
+                </div>
+                {reviewOpenId === m.id && (
+                  <div className="mt-2 pt-2 border-t border-red-200">
+                    <label className="block text-[10px] font-semibold text-red-900 uppercase tracking-wider mb-1">Reviewer note (required)</label>
+                    <textarea
+                      value={reviewNote}
+                      onChange={(e) => setReviewNote(e.target.value)}
+                      rows={2}
+                      maxLength={1000}
+                      placeholder="e.g. shared office address, unrelated companies; or same owner running a second MC..."
+                      className="w-full px-2 py-1.5 bg-white border border-red-300 rounded text-xs focus:outline-none focus:border-red-500"
+                    />
+                    {reviewError && <p className="mt-1 text-[10px] text-red-700">{reviewError}</p>}
+                    {/* Confirming records the reviewer finding. It deliberately does NOT
+                        write CarrierProfile.chameleonRiskLevel: complianceMonitorService
+                        reads that field as a BLOCK, and this action is a finding, not a
+                        verdict. See CLAUDE.md 13.3 Item 229. */}
+                    <div className="mt-2 flex items-center justify-end gap-2">
+                      <button
+                        onClick={() => { setReviewOpenId(null); setReviewNote(""); setReviewError(null); }}
+                        className="text-[10px] text-gray-600 hover:text-gray-800"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={() => reviewMutation.mutate({ matchId: m.id, status: "DISMISSED" })}
+                        disabled={reviewNote.trim().length < 5 || reviewMutation.isPending}
+                        className="px-2.5 py-1 bg-white border border-gray-400 text-gray-700 text-[10px] font-semibold rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        Not a match
+                      </button>
+                      <button
+                        onClick={() => reviewMutation.mutate({ matchId: m.id, status: "CONFIRMED_FRAUD" })}
+                        disabled={reviewNote.trim().length < 5 || reviewMutation.isPending}
+                        className="px-2.5 py-1 bg-red-600 text-white text-[10px] font-semibold rounded hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {reviewMutation.isPending ? "Saving..." : "Confirm risk"}
+                      </button>
+                    </div>
+                  </div>
+                )}
               </li>
             ))}
           </ul>

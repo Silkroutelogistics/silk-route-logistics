@@ -28,7 +28,6 @@ const commands: Cmd[] = [
   { name: "Go to Accounting", category: "Navigation", action: "/accounting" },
   { name: "Go to Messages", category: "Navigation", action: "/dashboard/messages" },
   { name: "Go to SOPs", category: "Navigation", action: "/dashboard/sops" },
-  { name: "Go to Fleet", category: "Navigation", action: "/dashboard/fleet" },
   { name: "Go to Drivers", category: "Navigation", action: "/dashboard/drivers" },
   { name: "Go to Compliance", category: "Navigation", action: "/dashboard/compliance" },
   // Actions

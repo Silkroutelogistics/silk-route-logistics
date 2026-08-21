@@ -253,6 +253,7 @@ router.delete(
 );
 
 // PUT /api/load-stops/:loadId/reorder — Reorder stops
+// audit-pass1: MISSING-UI — multi-stop reorder; Order Builder builds stops in order and never resequences. Worth building for multi-stop lanes.
 router.put(
   "/:loadId/reorder",
   authorize("BROKER", "ADMIN", "DISPATCH", "OPERATIONS", "CEO") as any,
@@ -301,6 +302,7 @@ router.put(
 );
 
 // PATCH /api/load-stops/stop/:stopId — Update stop by stopId only
+// audit-pass1: MISSING-UI — single-stop edit; same gap as reorder, and the more commonly needed half.
 router.patch(
   "/stop/:stopId",
   authorize("BROKER", "ADMIN", "DISPATCH", "OPERATIONS", "CEO", "CARRIER") as any,

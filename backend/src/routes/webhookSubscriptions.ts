@@ -96,6 +96,7 @@ router.delete(
 );
 
 /** Toggle enable/disable */
+// audit-pass1: MISSING-UI — webhook enable/disable; no integrations console surfaces subscriptions at all yet.
 router.patch(
   "/:id/toggle",
   authorize("ADMIN", "CEO"),

@@ -37,12 +37,8 @@ interface Driver {
   emergencyContactName: string | null;
   emergencyContactPhone: string | null;
   assignedEquipment?: { id: string; unitNumber: string; type: string; make: string; model: string | null } | null;
-  assignedTruck?: { id: string; unitNumber: string; make: string; model: string; year: number } | null;
-  assignedTrailer?: { id: string; unitNumber: string; type: string; make: string; model: string } | null;
 }
 
-interface TruckOption { id: string; unitNumber: string; make: string; model: string; year: number; }
-interface TrailerOption { id: string; unitNumber: string; type: string; make: string; model: string; }
 
 interface DriverStats {
   totalDrivers: number;
@@ -97,7 +93,6 @@ export default function DriversPage() {
   const [statusFilter, setStatusFilter] = useState("");
   const [expanded, setExpanded] = useState<string | null>(null);
   const [showAddDriver, setShowAddDriver] = useState(false);
-  const [assignModal, setAssignModal] = useState<{ driverId: string; type: "truck" | "trailer" } | null>(null);
   const [driverForm, setDriverForm] = useState({
     firstName: "", lastName: "", phone: "", email: "", licenseType: "CDL-A",
     licenseNumber: "", licenseState: "", licenseExpiry: "", status: "AVAILABLE",
@@ -121,17 +116,7 @@ export default function DriversPage() {
     queryFn: () => api.get<{ drivers: Driver[]; total: number }>(`/drivers?${params.toString()}`).then((r) => r.data),
   });
 
-  const { data: trucksData } = useQuery({
-    queryKey: ["trucks-available"],
-    queryFn: () => api.get<{ trucks: TruckOption[] }>("/fleet/trucks?status=ACTIVE&limit=100").then((r) => r.data),
-    enabled: !!assignModal && assignModal.type === "truck",
-  });
 
-  const { data: trailersData } = useQuery({
-    queryKey: ["trailers-available"],
-    queryFn: () => api.get<{ trailers: TrailerOption[] }>("/fleet/trailers?status=ACTIVE&limit=100").then((r) => r.data),
-    enabled: !!assignModal && assignModal.type === "trailer",
-  });
 
   const createDriver = useMutation({
     mutationFn: () => api.post("/drivers", {
@@ -148,23 +133,7 @@ export default function DriversPage() {
     },
   });
 
-  const assignTruck = useMutation({
-    mutationFn: ({ driverId, truckId }: { driverId: string; truckId: string | null }) =>
-      api.patch(`/drivers/${driverId}/assign-truck`, { truckId }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["drivers"] });
-      setAssignModal(null);
-    },
-  });
 
-  const assignTrailer = useMutation({
-    mutationFn: ({ driverId, trailerId }: { driverId: string; trailerId: string | null }) =>
-      api.patch(`/drivers/${driverId}/assign-trailer`, { trailerId }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["drivers"] });
-      setAssignModal(null);
-    },
-  });
 
   const drivers = driversData?.drivers || [];
 
@@ -260,16 +229,6 @@ export default function DriversPage() {
                   {expiryBadge(d.licenseExpiry, "License")}
                   {expiryBadge(d.medicalCardExpiry, "Medical")}
                   {expiryBadge(d.twicExpiry, "TWIC")}
-                  {d.assignedTruck && (
-                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs bg-blue-500/10 text-blue-400">
-                      <Truck className="w-3 h-3" /> {d.assignedTruck.unitNumber}
-                    </span>
-                  )}
-                  {d.assignedTrailer && (
-                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs bg-purple-500/10 text-purple-400">
-                      <Package className="w-3 h-3" /> {d.assignedTrailer.unitNumber}
-                    </span>
-                  )}
                 </div>
 
                 {/* HOS Bars */}
@@ -303,32 +262,6 @@ export default function DriversPage() {
                     </div>
                   )}
 
-                  {/* Assignment Section */}
-                  <div className="flex items-center gap-3">
-                    <h3 className="text-sm font-medium text-white flex items-center gap-1"><Link2 className="w-4 h-4 text-gold" /> Fleet Assignment</h3>
-                  </div>
-                  <div className="grid sm:grid-cols-2 gap-3">
-                    <div className="bg-gray-100 rounded-lg border border-gray-200 p-3">
-                      <p className="text-xs text-slate-500 mb-1">Assigned Truck</p>
-                      {d.assignedTruck ? (
-                        <p className="text-sm text-[#0A2540]">{d.assignedTruck.unitNumber} — {d.assignedTruck.year} {d.assignedTruck.make} {d.assignedTruck.model}</p>
-                      ) : <p className="text-sm text-gray-600">None</p>}
-                      <button onClick={(e) => { e.stopPropagation(); setAssignModal({ driverId: d.id, type: "truck" }); }}
-                        className="mt-2 text-xs text-gold hover:text-gold/80">
-                        {d.assignedTruck ? "Change Truck" : "Assign Truck"}
-                      </button>
-                    </div>
-                    <div className="bg-gray-100 rounded-lg border border-gray-200 p-3">
-                      <p className="text-xs text-slate-500 mb-1">Assigned Trailer</p>
-                      {d.assignedTrailer ? (
-                        <p className="text-sm text-[#0A2540]">{d.assignedTrailer.unitNumber} — {d.assignedTrailer.make} {d.assignedTrailer.model} ({d.assignedTrailer.type})</p>
-                      ) : <p className="text-sm text-gray-600">None</p>}
-                      <button onClick={(e) => { e.stopPropagation(); setAssignModal({ driverId: d.id, type: "trailer" }); }}
-                        className="mt-2 text-xs text-gold hover:text-gold/80">
-                        {d.assignedTrailer ? "Change Trailer" : "Assign Trailer"}
-                      </button>
-                    </div>
-                  </div>
                 </div>
               )}
             </div>
@@ -405,35 +338,6 @@ export default function DriversPage() {
             </div>
       </SlideDrawer>
 
-      {/* Assign Truck/Trailer Drawer */}
-      <SlideDrawer open={!!assignModal} onClose={() => setAssignModal(null)} title={`Assign ${assignModal?.type === "truck" ? "Truck" : "Trailer"}`} width="max-w-md">
-            <div className="space-y-2">
-              {assignModal && (
-                <>
-              <button onClick={() => {
-                if (assignModal.type === "truck") assignTruck.mutate({ driverId: assignModal.driverId, truckId: null });
-                else assignTrailer.mutate({ driverId: assignModal.driverId, trailerId: null });
-              }} className="w-full text-left p-3 bg-gray-50 rounded-lg border border-gray-200 hover:border-gray-200 text-sm text-gray-500">
-                Unassign (None)
-              </button>
-              {assignModal.type === "truck" && trucksData?.trucks?.map((t) => (
-                <button key={t.id} onClick={() => assignTruck.mutate({ driverId: assignModal.driverId, truckId: t.id })}
-                  className="w-full text-left p-3 bg-gray-50 rounded-lg border border-gray-200 hover:border-amber-400/50 text-sm text-white">
-                  <span className="font-medium">{t.unitNumber}</span>
-                  <span className="text-gray-500 ml-2">{t.year} {t.make} {t.model}</span>
-                </button>
-              ))}
-              {assignModal.type === "trailer" && trailersData?.trailers?.map((t) => (
-                <button key={t.id} onClick={() => assignTrailer.mutate({ driverId: assignModal.driverId, trailerId: t.id })}
-                  className="w-full text-left p-3 bg-gray-50 rounded-lg border border-gray-200 hover:border-amber-400/50 text-sm text-white">
-                  <span className="font-medium">{t.unitNumber}</span>
-                  <span className="text-gray-500 ml-2">{t.make} {t.model} ({t.type})</span>
-                </button>
-              ))}
-                </>
-              )}
-            </div>
-      </SlideDrawer>
     </div>
   );
 }

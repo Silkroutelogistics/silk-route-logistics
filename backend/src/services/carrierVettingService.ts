@@ -13,7 +13,6 @@ import { screenCarrier } from "./ofacScreeningService";
 import { validateEldProvider } from "./eldValidationService";
 import { checkOverbooking } from "./overbookingService";
 import { updateCarrierCsaScores } from "./csaBasicService";
-import { verifyAllCarrierVins } from "./vinVerificationService";
 import { checkExclusions } from "./samGovService";
 import { verifyTinWithIRS } from "./tinMatchService";
 import type { EnhancedTinResult } from "./tinMatchService";
@@ -710,33 +709,16 @@ export async function vetCarrier(
     score -= 5;
   }
 
-  // ── 27. Fleet VIN Verification (NHTSA API) ──
-  if (existingCarrier) {
-    try {
-      const vinStats = await verifyAllCarrierVins(existingCarrier.userId);
-      const totalChecked = vinStats.verified + vinStats.mismatch + vinStats.notFound;
-      if (totalChecked === 0) {
-        checks.push({ name: "Fleet VIN Verification", result: "WARNING", detail: "No trucks with VINs on file", deduction: 5 });
-        score -= 5;
-      } else if (vinStats.mismatch > 0) {
-        const deduction = Math.min(vinStats.mismatch * 8, 20);
-        checks.push({ name: "Fleet VIN Verification", result: "FAIL", detail: `${vinStats.mismatch} VIN mismatch(es) of ${totalChecked} checked`, deduction });
-        score -= deduction;
-        flags.push(`${vinStats.mismatch} truck VIN(s) don't match NHTSA records`);
-      } else if (vinStats.notFound > 0) {
-        checks.push({ name: "Fleet VIN Verification", result: "WARNING", detail: `${vinStats.notFound} VIN(s) not found in NHTSA`, deduction: 3 });
-        score -= 3;
-      } else {
-        checks.push({ name: "Fleet VIN Verification", result: "PASS", detail: `${vinStats.verified} truck(s) verified via NHTSA`, deduction: 0 });
-      }
-    } catch (e) {
-      checks.push({ name: "Fleet VIN Verification", result: "WARNING", detail: "VIN verification unavailable", deduction: 3 });
-      score -= 3;
-    }
-  } else {
-    checks.push({ name: "Fleet VIN Verification", result: "WARNING", detail: "No carrier record", deduction: 3 });
-    score -= 3;
-  }
+  // ── 27. Fleet VIN Verification — REMOVED (Arc 23, §13.3 Item 230).
+  //
+  // The check found a carrier's trucks through Load.truckId. NOTHING has
+  // ever written Load.truckId, so the id list was always empty and the
+  // check always landed in its totalChecked === 0 branch. That branch was
+  // not benign: it deducted 5 points from EVERY carrier, permanently, for
+  // a fleet no carrier had any way to register — and lastVettingScore < 40
+  // is a hard block in complianceMonitorService. Removing it raises every
+  // carrier's score by exactly 5, which is a correction, not a loosening.
+  // Carrier-owned equipment would need its own model; see Item 230.
 
   // ── 28. Probationary Period (New Carrier Risk Gate) ──
   if (existingCarrier) {

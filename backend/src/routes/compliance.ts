@@ -21,7 +21,7 @@ import {
   getLatestScan,
   checkCarrier,
 } from "../controllers/complianceController";
-import { triggerAutoReversal, triggerChameleonScan, triggerLoadComplianceScan, runSingleVinVerify } from "../controllers/carrierVettingController";
+import { triggerAutoReversal, triggerChameleonScan, triggerLoadComplianceScan } from "../controllers/carrierVettingController";
 import { authenticate, authorize } from "../middleware/auth";
 import { auditLog } from "../middleware/audit";
 
@@ -61,6 +61,5 @@ router.post("/carrier/:carrierId/check", authorize("ADMIN", "OPERATIONS", "CEO",
 router.post("/check-reversals", authorize("ADMIN", "OPERATIONS"), triggerAutoReversal);
 router.post("/chameleon-scan", authorize("ADMIN"), triggerChameleonScan);
 router.post("/load-compliance-scan", authorize("ADMIN", "OPERATIONS"), triggerLoadComplianceScan);
-router.post("/truck/:truckId/vin-verify", authorize("ADMIN", "OPERATIONS"), runSingleVinVerify);
 
 export default router;

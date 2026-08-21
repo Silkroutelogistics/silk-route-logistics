@@ -231,6 +231,7 @@ router.post(
 );
 
 // DELETE /api/automation/sequences/:id
+// audit-pass1: MISSING-UI — email-sequence delete; the Lead Hunter UI stops/pauses a sequence but never removes one. Low value.
 router.delete(
   "/sequences/:id",
   authorize("ADMIN", "CEO", "BROKER"),

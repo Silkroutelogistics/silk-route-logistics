@@ -18,7 +18,7 @@ import {
   getCarrierAgreements, createAgreement, signAgreement,
   terminateAgreement,
   runCsaUpdate, runOverbookingCheck, getOverbookingReportEndpoint,
-  runVinVerification, runSingleVinVerify, updateUcrStatus,
+  updateUcrStatus,
 } from "../controllers/carrierVettingController";
 import { authenticate, authorize, AuthRequest } from "../middleware/auth";
 import { validateBody, validateQuery } from "../middleware/validate";
@@ -350,13 +350,18 @@ router.post(
 router.post("/:id/csa-update", authorize("ADMIN", "CEO", "OPERATIONS"), runCsaUpdate);
 router.post("/:id/overbooking-check", authorize("ADMIN", "CEO", "OPERATIONS", "DISPATCH"), runOverbookingCheck);
 router.get("/:id/overbooking-report", authorize("ADMIN", "CEO", "OPERATIONS", "DISPATCH"), getOverbookingReportEndpoint);
-router.post("/:id/vin-verify", authorize("ADMIN", "CEO", "OPERATIONS"), runVinVerification);
 // audit-pass1: MISSING-UI — UCR is read by Compass vetting; manual correction has no UI.
 router.patch("/:id/ucr", authorize("ADMIN", "CEO", "OPERATIONS"), updateUcrStatus);
 
-// Chameleon match review (not carrier-scoped)
-// audit-pass1: MISSING-UI — matches surface read-only in SecuritySignalsCard; review action never wired.
-router.put("/chameleon-matches/:matchId/review", authorize("ADMIN", "CEO"), reviewChameleonMatch);
+// Chameleon match review (not carrier-scoped).
+// Wired to SecuritySignalsCard in v3.8.aud. ADMIN/CEO matches the card's own
+// isAdmin gate, so the control is never shown to a role the route would refuse.
+router.put(
+  "/chameleon-matches/:matchId/review",
+  authorize("ADMIN", "CEO"),
+  auditLog("UPDATE", "ChameleonMatch"),
+  reviewChameleonMatch,
+);
 
 // Admin verification
 router.post("/:id/verify", authorize("ADMIN", "CEO"), validateBody(verifyCarrierSchema), auditLog("VERIFY", "Carrier"), verifyCarrier);
@@ -488,7 +493,7 @@ router.get("/:id/security-signals", authorize("ADMIN", "CEO", "BROKER", "OPERATI
   // chameleonDetectionService UI for full triage; this just surfaces
   // the existence of the match alongside other security context.
   const chameleonMatches = await prisma.chameleonMatch.findMany({
-    where: { carrierId: carrier.id, status: { in: ["OPEN", "REVIEWED"] } },
+    where: { carrierId: carrier.id, status: { in: ["OPEN", "REVIEWED", "CONFIRMED_FRAUD"] } },
     orderBy: { createdAt: "desc" },
     take: 10,
     select: {

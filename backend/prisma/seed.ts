@@ -341,167 +341,6 @@ async function main() {
   });
 
   // ═══════════════════════════════════════════════
-  // FLEET - TRUCKS
-  // ═══════════════════════════════════════════════
-
-  const trucks = [];
-  trucks.push(await prisma.truck.create({
-    data: {
-      unitNumber: "T-101",
-      vin: "1FUJGLDR7CLBP1234",
-      make: "Freightliner",
-      model: "Cascadia",
-      year: 2021,
-      type: "SLEEPER",
-      status: "ACTIVE",
-      licensePlate: "MI-1234",
-      registrationExpiry: new Date(now.getTime() + 180 * day),
-    },
-  }));
-
-  trucks.push(await prisma.truck.create({
-    data: {
-      unitNumber: "T-102",
-      vin: "1XKYDP9X9KJ123456",
-      make: "Kenworth",
-      model: "T680",
-      year: 2022,
-      type: "SLEEPER",
-      status: "ACTIVE",
-      licensePlate: "MI-1235",
-      registrationExpiry: new Date(now.getTime() + 210 * day),
-    },
-  }));
-
-  trucks.push(await prisma.truck.create({
-    data: {
-      unitNumber: "T-103",
-      vin: "1NP5DB9X9MN234567",
-      make: "Peterbilt",
-      model: "579",
-      year: 2020,
-      type: "SLEEPER",
-      status: "ACTIVE",
-      licensePlate: "MI-1236",
-      registrationExpiry: new Date(now.getTime() + 150 * day),
-    },
-  }));
-
-  trucks.push(await prisma.truck.create({
-    data: {
-      unitNumber: "T-104",
-      vin: "4V4NC9EH7LN345678",
-      make: "Volvo",
-      model: "VNL 860",
-      year: 2023,
-      type: "SLEEPER",
-      status: "IN_SHOP",
-      licensePlate: "MI-1237",
-      registrationExpiry: new Date(now.getTime() + 300 * day),
-    },
-  }));
-
-  trucks.push(await prisma.truck.create({
-    data: {
-      unitNumber: "T-105",
-      vin: "3AKJHHDR8MSLT4567",
-      make: "International",
-      model: "LT",
-      year: 2021,
-      type: "DAY_CAB",
-      status: "ACTIVE",
-      licensePlate: "MI-1238",
-      registrationExpiry: new Date(now.getTime() + 190 * day),
-    },
-  }));
-
-  // ═══════════════════════════════════════════════
-  // FLEET - TRAILERS
-  // ═══════════════════════════════════════════════
-
-  const trailers = [];
-  trailers.push(await prisma.trailer.create({
-    data: {
-      unitNumber: "TR-201",
-      vin: "1GRAA0621PB123456",
-      make: "Great Dane",
-      model: "Everest",
-      year: 2021,
-      type: "DRY_VAN",
-      status: "ACTIVE",
-      licensePlate: "MI-T201",
-      registrationExpiry: new Date(now.getTime() + 180 * day),
-      length: 53,
-    },
-  }));
-
-  trailers.push(await prisma.trailer.create({
-    data: {
-      unitNumber: "TR-202",
-      vin: "1JJV532W8KL234567",
-      make: "Wabash",
-      model: "DuraPlate",
-      year: 2022,
-      type: "REEFER",
-      status: "ACTIVE",
-      licensePlate: "MI-T202",
-      registrationExpiry: new Date(now.getTime() + 200 * day),
-      length: 53,
-      reeferUnit: true,
-      reeferModel: "Carrier Transicold",
-      reeferHours: 3450,
-    },
-  }));
-
-  trailers.push(await prisma.trailer.create({
-    data: {
-      unitNumber: "TR-203",
-      vin: "1JJV532W3ML345678",
-      make: "Utility",
-      model: "3000R",
-      year: 2020,
-      type: "REEFER",
-      status: "ACTIVE",
-      licensePlate: "MI-T203",
-      registrationExpiry: new Date(now.getTime() + 160 * day),
-      length: 53,
-      reeferUnit: true,
-      reeferModel: "Thermo King",
-      reeferHours: 5680,
-    },
-  }));
-
-  trailers.push(await prisma.trailer.create({
-    data: {
-      unitNumber: "TR-204",
-      vin: "1GRAA0628NB456789",
-      make: "Great Dane",
-      model: "Champion",
-      year: 2023,
-      type: "DRY_VAN",
-      status: "ACTIVE",
-      licensePlate: "MI-T204",
-      registrationExpiry: new Date(now.getTime() + 320 * day),
-      length: 53,
-    },
-  }));
-
-  trailers.push(await prisma.trailer.create({
-    data: {
-      unitNumber: "TR-205",
-      vin: "4KFFF0820PU567890",
-      make: "Fontaine",
-      model: "Revolution",
-      year: 2021,
-      type: "FLATBED",
-      status: "ACTIVE",
-      licensePlate: "MI-T205",
-      registrationExpiry: new Date(now.getTime() + 185 * day),
-      length: 48,
-    },
-  }));
-
-  // ═══════════════════════════════════════════════
   // FLEET - DRIVERS
   // ═══════════════════════════════════════════════
 
@@ -518,8 +357,6 @@ async function main() {
       status: "ON_ROUTE",
       licenseType: "CDL-A",
       endorsements: ["Hazmat", "Tanker"],
-      assignedTruckId: trucks[0].id,
-      assignedTrailerId: trailers[0].id,
       safetyScore:98,
     },
   }));
@@ -536,8 +373,6 @@ async function main() {
       status: "ON_ROUTE",
       licenseType: "CDL-A",
       endorsements: ["Doubles/Triples"],
-      assignedTruckId: trucks[1].id,
-      assignedTrailerId: trailers[1].id,
       safetyScore:95,
     },
   }));
@@ -554,8 +389,6 @@ async function main() {
       status: "AVAILABLE",
       licenseType: "CDL-A",
       endorsements: [],
-      assignedTruckId: trucks[2].id,
-      assignedTrailerId: trailers[2].id,
       safetyScore:92,
     },
   }));
@@ -572,8 +405,6 @@ async function main() {
       status: "AVAILABLE",
       licenseType: "CDL-A",
       endorsements: ["Hazmat"],
-      assignedTruckId: trucks[3].id,
-      assignedTrailerId: trailers[3].id,
       safetyScore:97,
     },
   }));
@@ -590,8 +421,6 @@ async function main() {
       status: "OFF_DUTY",
       licenseType: "CDL-A",
       endorsements: [],
-      assignedTruckId: trucks[4].id,
-      assignedTrailerId: trailers[4].id,
       safetyScore:89,
     },
   }));

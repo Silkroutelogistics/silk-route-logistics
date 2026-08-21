@@ -17,7 +17,6 @@ import { verifyTin } from "../services/tinMatchService";
 import { updateCarrierCsaScores } from "../services/csaBasicService";
 import { checkOverbooking, getOverbookingReport } from "../services/overbookingService";
 import { checkLoadCompliance, checkAllActiveLoadCompliance } from "../services/loadComplianceService";
-import { verifyTruckVin, verifyAllCarrierVins } from "../services/vinVerificationService";
 import { buildFingerprint } from "../services/chameleonDetectionService";
 import { prisma } from "../config/database";
 import { log } from "../lib/logger";
@@ -105,14 +104,6 @@ export async function runFullVetting(req: AuthRequest, res: Response) {
     }
   } else {
     results.csa = { status: "skipped", error: "No DOT number" };
-  }
-
-  // 8. VIN Verification (for all trucks)
-  try {
-    const vins = await verifyAllCarrierVins(carrierId);
-    results.vin = { status: "completed", data: { message: "Batch VIN verification triggered" } };
-  } catch (err) {
-    results.vin = { status: "error", error: err instanceof Error ? err.message : "VIN verification failed" };
   }
 
   // Summary
@@ -833,30 +824,6 @@ export async function getOverbookingReportEndpoint(req: AuthRequest, res: Respon
     res.json(result);
   } catch (err) {
     res.status(500).json({ error: err instanceof Error ? err.message : "Overbooking report failed" });
-  }
-}
-
-/**
- * POST /api/carriers/:id/vin-verify — Verify all VINs for a carrier's trucks
- */
-export async function runVinVerification(req: AuthRequest, res: Response) {
-  try {
-    const result = await verifyAllCarrierVins(req.params.id);
-    res.json(result);
-  } catch (err) {
-    res.status(500).json({ error: err instanceof Error ? err.message : "VIN verification failed" });
-  }
-}
-
-/**
- * POST /api/trucks/:truckId/vin-verify — Verify a single truck VIN
- */
-export async function runSingleVinVerify(req: AuthRequest, res: Response) {
-  try {
-    const result = await verifyTruckVin(req.params.truckId);
-    res.json(result);
-  } catch (err) {
-    res.status(500).json({ error: err instanceof Error ? err.message : "VIN verification failed" });
   }
 }
 

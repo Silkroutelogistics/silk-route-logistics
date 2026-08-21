@@ -152,6 +152,7 @@ router.get(
 );
 
 // ─── Accept/reject bid (AE) ────────────────────────────────
+// audit-pass1: MISSING-UI — bid amend; the board accepts or rejects a bid but cannot amend one. Low value, reject-and-rebid works.
 router.patch(
   "/loads/:loadId/bids/:bidId",
   authorize(...AE_ROLES) as any,

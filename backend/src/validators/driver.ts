@@ -55,14 +55,6 @@ export const updateDriverSchema = z.object({
   emergencyContactPhone: z.string().optional(),
 });
 
-export const assignTruckSchema = z.object({
-  truckId: z.string().nullable(),
-});
-
-export const assignTrailerSchema = z.object({
-  trailerId: z.string().nullable(),
-});
-
 export const driverQuerySchema = z.object({
   status: z.string().optional(),
   search: z.string().optional(),

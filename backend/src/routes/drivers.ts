@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { createDriver, getDrivers, getDriverById, getDriverStats, updateDriver, assignTruck, assignTrailer, deleteDriver } from "../controllers/driverController";
+import { createDriver, getDrivers, getDriverById, getDriverStats, updateDriver, deleteDriver } from "../controllers/driverController";
 import { authenticate, authorize } from "../middleware/auth";
 import { auditLog } from "../middleware/audit";
 
@@ -12,8 +12,6 @@ router.get("/", getDrivers);
 router.get("/stats", getDriverStats);
 router.get("/:id", getDriverById);
 router.patch("/:id", auditLog("UPDATE", "Driver"), updateDriver);
-router.patch("/:id/assign-truck", auditLog("ASSIGN_TRUCK", "Driver"), assignTruck);
-router.patch("/:id/assign-trailer", auditLog("ASSIGN_TRAILER", "Driver"), assignTrailer);
 router.delete("/:id", authorize("ADMIN", "CEO"), auditLog("DELETE", "Driver"), deleteDriver);
 
 export default router;
