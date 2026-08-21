@@ -17,7 +17,17 @@ That verdict is scoped, and the scope matters: **this rehearsal walked the DOCUM
 
 A throwaway Postgres container, schema applied from the real migration chain, the BKN scenario seeded as real rows, and each PDF produced by driving the **real download controller** with a captured response — not a hand-built fixture. A fixture proves a renderer works; this proves the renderer works *on this load*.
 
-**Outbound neutralised by absence, not by mocking.** `RESEND_API_KEY` and `OPENPHONE_API_KEY` were left unset, so `emailService` takes its `[Email][NoAPI]` log branch and `openPhoneService` throws before any network call. The rehearsal script refuses to start if either is set, or if `DATABASE_URL` is not the container. No email or SMS could leave the machine.
+**Outbound neutralisation — CORRECTED 2026-08-21 (Arc 15). The claim originally printed here was false.**
+
+> ~~*Outbound neutralised by absence… The rehearsal script refuses to start if either is set… No email or SMS could leave the machine.*~~
+
+The script's guard read `process.env` at module top — **before** the first `await import("../src/config/database")` pulled in `config/env` and ran `dotenv.config()`. `dotenv` does not override an already-set variable, but `RESEND_API_KEY` was never set by the rehearsal env at all, so dotenv filled it from `backend/.env`, **which holds the production key**. The guard had already printed "both absent" by then.
+
+**Nothing was sent, and that is verified rather than assumed:** zero `[Email] Sent to` lines across both rehearsals, and `autoGenerateInvoice`'s "AE notify" is a `prisma.notification.create` row rather than an email. But that outcome depended on which code paths happened to run, not on the control working. A rehearsal that exercised a genuine send path — a tender email, a POD reminder — would have sent **real mail from the production Resend account to whatever address the seed data carried**.
+
+This is §19 Sub-pattern 16 aimed at the most expensive possible target: a safety control that was green for the wrong reason, and that I published as evidence.
+
+**Corrected control**, now in the script and adversarially verified: the guard loads dotenv *itself* first, so it inspects the environment the app will actually see, and requires the keys to be **explicitly empty** rather than merely unset. An empty string survives dotenv (it counts as set) and is falsy where the code branches — `emailService` builds no client, `openPhoneService` throws before any network call. Run against the old conditions the new guard refuses with *"RESEND_API_KEY is set to a real value. Outbound would be LIVE"*, and the backend's own boot log now reports `[Email] Resend configured: false`.
 
 ---
 

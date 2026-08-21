@@ -85,7 +85,11 @@ Generate it from the load, open it, and confirm:
 - Seal line present
 - One page
 
-Then **get it to the driver** — email, or the carrier portal. Confirm they have it before pickup day. Do not assume.
+Then **get it to the driver yourself — email it.**
+
+**There is no carrier-portal download for the BOL.** Verified Arc 15: `GET /api/pdf/bol-load/:loadId` is gated to ADMIN, CEO, BROKER, DISPATCH and OPERATIONS; CARRIER is not on that list, the carrier load-detail response does not return `bolUrl`, and nothing populates that column. You are the only route this document has to the dock.
+
+Confirm the driver has it before pickup day. Do not assume.
 
 ---
 

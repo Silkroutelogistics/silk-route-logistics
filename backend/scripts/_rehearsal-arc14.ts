@@ -22,19 +22,48 @@ import path from "path";
 const OUT = path.join(process.cwd(), "..", ".rehearsal-arc14");
 
 function guard() {
+  // ARC 15 CORRECTION — this guard was WRONG and it reported success.
+  //
+  // It read process.env at module top, which is BEFORE the first
+  // `await import("../src/config/database")` pulls in config/env and runs
+  // dotenv.config(). dotenv does not override an already-set variable, but
+  // RESEND_API_KEY was never set by the rehearsal env file at all — so dotenv
+  // filled it from backend/.env, which holds the PRODUCTION key. The guard had
+  // already printed "both absent" by then.
+  //
+  // Nothing was ever sent (verified: zero "[Email] Sent to" lines across both
+  // rehearsals, and autoGenerateInvoice's "AE notify" is a Notification row, not
+  // an email). But that was luck about which code paths ran, not the control
+  // working — and a safety control that is green for the wrong reason is the
+  // §19 Sub-pattern 16 failure mode aimed at the most expensive possible target.
+  //
+  // Two changes: load dotenv HERE so we inspect the env the app will actually
+  // see, and require the keys to be explicitly EMPTY rather than merely unset.
+  // An empty string survives dotenv (it counts as set) and is falsy where the
+  // code branches on it — emailService builds no client, openPhoneService throws
+  // before any network call.
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  require("dotenv").config();
+
   const url = process.env.DATABASE_URL || "";
-  if (!url.includes("55432")) {
-    console.error("REFUSING: DATABASE_URL is not the rehearsal container (:55432).");
+  if (!/:(55432|55433)\//.test(url) && !url.includes("55432") && !url.includes("55433")) {
+    console.error("REFUSING: DATABASE_URL is not a rehearsal container (:55432/:55433).");
     console.error("   got:", url.replace(/:[^:@]*@/, ":***@"));
     process.exit(1);
   }
   for (const k of ["RESEND_API_KEY", "OPENPHONE_API_KEY"]) {
-    if (process.env[k]) {
-      console.error(`REFUSING: ${k} is set. Outbound must be neutralised by absence.`);
+    const v = process.env[k];
+    if (v === undefined) {
+      console.error(`REFUSING: ${k} is UNSET, which dotenv will fill from backend/.env.`);
+      console.error(`   Set ${k}= (explicitly empty) in the rehearsal env instead.`);
+      process.exit(1);
+    }
+    if (v !== "") {
+      console.error(`REFUSING: ${k} is set to a real value. Outbound would be LIVE.`);
       process.exit(1);
     }
   }
-  console.log("guard: rehearsal DB confirmed, RESEND_API_KEY and OPENPHONE_API_KEY both absent");
+  console.log("guard: rehearsal DB confirmed; RESEND_API_KEY and OPENPHONE_API_KEY explicitly empty (post-dotenv)");
 }
 guard();
 
