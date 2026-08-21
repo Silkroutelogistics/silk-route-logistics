@@ -25,17 +25,23 @@ Caught on `CarrierScorecard.calculatedAt`, whose banked verdict below read *"WIR
 
 **This moved the count by roughly a third.** 237 READ → **164**; frontend-visible 134 → **95**. Reclassified as `DB_WRITTEN` rather than dropped, so the fields are still accounted for. Third correction to this tool, and the third one found by reading a verdict's matches instead of trusting the verdict — which is the whole reason it prints them.
 
+**Object shorthand was invisible.** (Arc 12.) `data: { status: "COUNTERED", counterRate, respondedAt }` writes `counterRate` — but shorthand carries no colon, and the classifier keyed on `field:`. Shorthand is idiomatic here, so this was never one stray case. The disambiguation that makes it safe is the enclosing context: a destructure, `const { counterRate } = schema.parse(body)`, has the identical shape and is a read. It sits outside any `data:` payload, so it stays one. Both shapes are now fixtures, because a rule that distinguishes them is untested unless both are present.
+
+**Hoisted payloads were invisible.** (Arc 12.) A payload is routinely built as `const data = { ... }` and handed to prisma on the next line rather than written inline. The key-before-brace walk only saw the inline form, so every field in a hoisted payload read as consulted-never-assigned. Found on `DriverCourseProgress.bestScorePct`, which driverTraining assigns and upserts — a driver's best quiz score has been recorded correctly the whole time. Narrowed deliberately to variables actually named `data` / `payload` / `createData` / `updateData`: treating every `const x = {` as a write would call half the codebase written and break the audit in the other direction. The narrowing has its own fixture.
+
+**Cumulatively, 40% of the original list was the tool.** 237 → 164 (`@default`) → 149 (shorthand) → **143** (hoisted). Frontend-visible 134 → **78**. Five blind spots now, every one found by reading a verdict's matches instead of trusting the verdict, which is the only reason the tool prints them.
+
 ## Current state
 
-| Bucket | Count | Was (pre-Arc-11) |
-|---|---|---|
-| WRITTEN | 1401 | 1399 |
-| **READ (never written)** | **164** | 237 |
-| DB_WRITTEN | 73 | — (counted as READ) |
-| STRING_ONLY | 4 | 4 |
-| UNREFERENCED | 67 | 67 |
+| Bucket | Count | Arc 11 | Original |
+|---|---|---|---|
+| WRITTEN | 1427 | 1401 | 1399 |
+| **READ (never written)** | **143** | 164 | 237 |
+| DB_WRITTEN | 73 | 73 | — |
+| STRING_ONLY | 4 | 4 | 4 |
+| UNREFERENCED | 67 | 67 | 67 |
 
-Of the 164: **95 frontend-visible**, 69 backend-only. Frontend-visible ranks first because a rendered column that nothing writes is a user being told something false.
+Of the 143: **78 frontend-visible**, 65 backend-only. Frontend-visible ranks first because a rendered column that nothing writes is a user being told something false.
 
 ## FIXED this arc — the top surface-visible cluster
 
@@ -49,6 +55,20 @@ Not cosmetic. Both are **queried as a filter** and **rendered**, and written by 
 With two of the three permanently false, that OR was **always true**. The delivered tab showed every delivered load forever and could never be cleared, no matter how completely a load was invoiced, settled and closed. A worklist that cannot empty is not a worklist — an AE working that tab had no way to tell which loads actually still needed something.
 
 **Fixed at the source events**, the same pattern as the settlement checklist: `customerInvoiced` is set where the invoice is sent to the customer (`invoiceController`), `carrierSettled` where the settlement reaches PAID (`accountingController`). No backfill — historical loads keep their false flags, so the tab will drain going forward rather than retroactively claiming work was done that nobody recorded.
+
+## CARRIER-VISIBLE TIER — worked Arc 12, and it is clean
+
+Ordered carrier-visible first, on the grounds that a falsehood shown to a customer outranks one shown to staff. After the two classifier fixes above, the tier is three fields, and **none of them is a code defect**:
+
+| Field | Finding |
+|---|---|
+| `Message.receiverId` | Written via `data: { senderId, ...data }` — the spread blind spot, already documented. `messageController` is correct. Pre-existing code, so recorded rather than restructured to satisfy a tool. |
+| `Load.pickupNumber` | A dead FALLBACK, not a missing write. `pdfService:1806` reads `fd.pickupNumber \|\| load.pickupNumber \|\| ""` — the RC's own `formData` carries the value and is populated. The cascade resolves; nothing renders empty. |
+| `Load.shipperPoNumber` | Same shape. The BOL renders `poNumbers[]` first (v3.8.d.4) and this is the third link in the fallback chain. `trackingController:158` also searches by it, a branch that can never match. |
+
+**The last two need a decision, not a fix, so neither was made.** Either the Order Builder should capture a pickup number onto the load and the RC formData is a workaround (**WIRE**), or formData is canonical and the columns are redundant (**SCHEMA-DEAD**, to a `hold/` branch per §2.2). Dropping them would foreclose the first reading; wiring them would duplicate a working source. That is a product call.
+
+This closes the carrier tier at **zero user-visible falsehoods** — which is the honest result, not an absence of work.
 
 ## Verdict vocabulary for the remainder
 

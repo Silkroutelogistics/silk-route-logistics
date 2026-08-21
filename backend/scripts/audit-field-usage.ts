@@ -140,7 +140,26 @@ function nearestContext(code: string, idx: number): "data" | "read" | null {
         // The key immediately before this opening brace names the context.
         const before = code.slice(Math.max(0, i - 80), i);
         const m = before.match(/(\w+)\s*:\s*$/);
-        if (!m) return null;
+        if (!m) {
+          // THE FIFTH BLIND SPOT (Arc 12 Phase 3). A payload is routinely built
+          // as `const data = { ... }` and handed to prisma on the next line,
+          // rather than written inline as `data: { ... }`. The key-before-brace
+          // rule only sees the inline form, so every field in a hoisted payload
+          // looked like a read.
+          //
+          // Found on DriverCourseProgress.bestScorePct, which driverTraining
+          // assigns at the top of a hoisted payload and then upserts. The tool
+          // called it READ-never-WRITTEN; a driver's best quiz score has been
+          // recorded correctly the whole time.
+          //
+          // Narrow on purpose: only a variable actually NAMED data / payload /
+          // createData / updateData counts. Treating every `const x = {` as a
+          // write would call half the codebase written and make the audit
+          // useless in the other direction.
+          const assigned = before.match(/(?:const|let|var)\s+(\w+)(?:\s*:\s*[^=]+)?\s*=\s*$/);
+          if (assigned && /^(data|payload|createData|updateData)$/.test(assigned[1])) return "data";
+          return null;
+        }
         const key = m[1];
         if (key === "data") return "data";
         if (key === "select" || key === "include" || key === "where") return "read";
@@ -176,12 +195,29 @@ export function classifyField(field: string, files: Array<{ file: string; src: s
       }
 
       const after = code.slice(idx + field.length, idx + field.length + 40);
+      const before = code.slice(Math.max(0, idx - 40), idx);
       const isAssignment = /^\s*=[^=]/.test(after);
       const isProperty = /^\s*:/.test(after);
 
+      // THE FOURTH BLIND SPOT (Arc 12 Phase 3). Object shorthand — `{ x }`
+      // rather than `{ x: x }` — carries no colon, so it fell through to READ.
+      // tenderController writes `data: { status: "COUNTERED", counterRate,
+      // respondedAt }`, an unambiguous write, and the tool called that field
+      // READ-never-WRITTEN. Shorthand is idiomatic in this codebase, so this
+      // was never going to be one stray case.
+      //
+      // A shorthand property is a bare identifier followed by a comma or a
+      // closing brace, NOT preceded by a dot (property access) or a colon (the
+      // value half of `k: field`).
+      //
+      // The `data` context check is what keeps it honest: a destructure —
+      // `const { counterRate } = schema.parse(body)` — has the same shape and
+      // is a READ. It sits outside any `data:` payload, so it stays one.
+      const isShorthand = /^s*[,}]/.test(after) && !/[.:]s*$/.test(before);
+
       let kind: Match["kind"] = "READ";
       if (isAssignment) kind = "WRITTEN";
-      else if (isProperty) kind = nearestContext(code, idx) === "data" ? "WRITTEN" : "READ";
+      else if (isProperty || isShorthand) kind = nearestContext(code, idx) === "data" ? "WRITTEN" : "READ";
 
       matches.push({ file, line: lineNo, kind, snippet: lineText });
     }
@@ -252,6 +288,30 @@ function schemaFields(): Array<{ model: string; field: string; dbSupplied: boole
 function selfTest(): number {
   const fixture = [
     {
+      // Arc 12 — object shorthand, both directions. The write and the
+      // destructure have the SAME shape; only the enclosing context tells them
+      // apart, so both belong here or the disambiguation is untested.
+      file: "fixture/shorthand.ts",
+      src: [
+        "const { plantedShorthandRead } = counterSchema.parse(req.body);",
+        "await prisma.thing.update({ where: { id }, data: { status: \"X\", plantedShorthandWrite, updatedAt: new Date() } });",
+      ].join(String.fromCharCode(10)),
+    },
+    {
+      // Arc 12 — a payload hoisted into a local before the prisma call. Both
+      // shapes are here: the one that IS a write because the variable is named
+      // data, and the one that is NOT because it is an ordinary local. Without
+      // the second, the narrowing rule is untested and could be widened to every
+      // `const x = {` without a fixture noticing.
+      file: "fixture/hoisted.ts",
+      src: [
+        "const data = { plantedHoistedWrite: 1, other: 2 };",
+        "await prisma.thing.update({ where: { id }, data });",
+        "const opts = { plantedHoistedNotAPayload: 3 };",
+        "doSomething(opts);",
+      ].join(String.fromCharCode(10)),
+    },
+    {
       file: "fixture/commentOnly.ts",
       src: [
         "// plantedCommentOnly is deliberately never written — see the triage doc.",
@@ -280,6 +340,10 @@ function selfTest(): number {
     ["plantedNeverMentioned", "UNREFERENCED"],
     // Documents the spread blind spot rather than pretending it is handled.
     ["plantedSpreadWrite", "UNREFERENCED"],
+    ["plantedShorthandWrite", "WRITTEN"],
+    ["plantedShorthandRead", "READ"],
+    ["plantedHoistedWrite", "WRITTEN"],
+    ["plantedHoistedNotAPayload", "READ"],
   ];
 
   let failed = 0;
