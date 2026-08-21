@@ -1,0 +1,86 @@
+# Go-live readiness — first-load dress rehearsal
+
+**Date:** 2026-08-21 · **Arc 14** · Rehearsal load `SRL-140001`
+**Scenario:** Beekeepers Naturals · Lebanon NH → North Lake TX · Reefer 53′ · honey/propolis, 28,400 lb, setpoint 38°F continuous
+
+---
+
+## Verdict
+
+**SRL can run a real load today, because the four documents that bind it — the executed BCA, the rate confirmation, the BOL, and the customer invoice — all generate off the production data path for a real scenario, carry the authority and legal language they must, and do not contradict one another on the numbers that matter.** The one cross-document property with money at stake — that the customer invoice never exposes what SRL pays the carrier — holds.
+
+That verdict is scoped, and the scope matters: **this rehearsal walked the DOCUMENT CHAIN, not the full interactive lifecycle.** What was not walked is listed under *Not covered* and is the honest reason this is a "can, with eyes open" rather than an unqualified yes.
+
+---
+
+## What was actually done
+
+A throwaway Postgres container, schema applied from the real migration chain, the BKN scenario seeded as real rows, and each PDF produced by driving the **real download controller** with a captured response — not a hand-built fixture. A fixture proves a renderer works; this proves the renderer works *on this load*.
+
+**Outbound neutralised by absence, not by mocking.** `RESEND_API_KEY` and `OPENPHONE_API_KEY` were left unset, so `emailService` takes its `[Email][NoAPI]` log branch and `openPhoneService` throws before any network call. The rehearsal script refuses to start if either is set, or if `DATABASE_URL` is not the container. No email or SMS could leave the machine.
+
+---
+
+## Per-document verdict
+
+| Document | Pages | Functional | Brand (text-checkable) | Verdict |
+|---|---|---|---|---|
+| Executed BCA | 4 | Signature block carries name, title, timestamp, **IP**, version `2026-06-27-v1`, ESIGN/UETA language, carrier legal name + MC/DOT | Authority on page, no placeholder text, no ligature bug | **PASS** |
+| Rate Confirmation | 3 | Facility named, both cities, temperature setpoint, full accessorial schedule (detention $50/hr after 2h, $250/stop cap; TONU $200; layover $250/day), carrier acceptance block, per-page footer | `SRL-140001R` suffix present, authority on page | **PASS** with one latent hazard (below) |
+| BOL v2.9 | 1 | One-page layout held with real reefer/commodity data; Carmack cited as **49 U.S.C. § 14706**; shipper, consignee, seal language, weight, hazmat marking cite `49 CFR 172` correctly | Authority on page, no placeholders | **PASS** |
+| Customer Invoice | 1 | `srlDocNumber = SRL-140001I` — the §21.2 suffix scheme works; bills $4,850; terms present | Authority on page | **PASS** |
+
+**Brand caveat, stated rather than glossed:** text extraction is conclusive for wording, citations, numbers and per-page footers. It **cannot see colour, overprint, or a border in the wrong hue** — which is exactly the class the v3.8.aru red-orange border regression belonged to. A human-eye pass over all four rendered pages in both light and dark viewers is **owed** and is not claimable from this rehearsal.
+
+---
+
+## Findings
+
+### GO-BLOCKER
+**None found in the document chain.**
+
+### FIX-NOW-SMALL
+**None.** The two real findings below are latent rather than live, and fixing either means changing a shared field's meaning or a fallback's source — neither is a small inline change, and both deserve their own commit with tests.
+
+### POST-GO-LIVE
+
+**1. The rate confirmation's linehaul fallback reads the customer rate.**
+`pdfService.ts:1925` — `const linehaul = (fd.lineHaulRate ?? load.rate)`. `loadController.createLoad:230` sets `rate: raw.customerRate || raw.rate`, so on the AE's primary creation path **`Load.rate` is the customer rate**. If `fd.lineHaulRate` is ever absent, the carrier's binding pay document prints SRL's customer rate as carrier pay.
+
+*Not live today:* both producers set it — auto-RC from `tender.offeredRate`, the RC modal from `toNum(form.carrierLineHaul)`, which returns `0` rather than `undefined` on a blank field, so `??` does not fall through. Reachable only by a future producer that omits the key.
+
+*Why it is worth recording anyway:* this rehearsal accidentally demonstrated it. A seed that used `lineHaul` instead of `lineHaulRate` produced a rate confirmation reading **Linehaul $4,850.00 · Total Carrier Pay $5,100.00** against an agreed $4,100 — a $1,000 overstatement on a document a carrier signs. The failure is silent and the document looks entirely normal.
+
+**2. `Load.rate` means different things on different creation paths.**
+`loadController.createLoad:230` → customer rate. `withTenderController:194` → `tender.offeredRate`, the carrier rate. One column, two meanings, and finding 1 is downstream of it. Any consumer reading `Load.rate` is right on one path and wrong on the other.
+
+### NOT FINDINGS — probe errors, recorded so nobody re-raises them
+- `49 CFR` appears on the BCA and BOL and is **correct**: `Parts 382-399` (FMCSA safety) and `172` (hazmat marking). The obsolete Carmack citation `§ 1035` appears nowhere; the BOL cites `14706`.
+- The BCA carries no load reference. Correct — it is a master agreement, not load-scoped.
+- First-run "missing IP / missing carrier name" on the BCA was my options shape: the field is `signerIp`, and `carrier` is an option separate from `signature`. Corrected, both render.
+
+---
+
+## Not covered by this rehearsal
+
+Each of these is a real gap in the verdict, not an omission of convenience:
+
+- **The full interactive lifecycle.** Registration → email verify → TOTP wall → application → vetting → approve → dispatch → status walk → check calls → POD. Individual pieces have unit and E2E coverage; the *continuous* walk as both actors has not been done.
+- **A human-eye brand pass** over the four rendered pages. See the brand caveat above.
+- **The carrier's first-touch experience** through the real registration flow.
+- **Unhappy paths:** TONU with fault side, tender expiry, missed check call, late POD.
+- **Reachability of the BOL to the driver at the dock.** The generator works; whether the AE can print it and the carrier can retrieve it pre-pickup was not exercised end to end. A BOL that exists only in code does not get freight signed.
+- **`rateConNumber` allocation.** The rehearsal created the RC row directly, so no number was allocated; the invoice's `SRL-140001I` shows the scheme works. Whether the real send path allocates `…R` was not exercised.
+
+---
+
+## Reproducing
+
+```
+docker run -d --name srl-rehearsal -e POSTGRES_PASSWORD=rehearsal -e POSTGRES_DB=srl -p 55432:5432 postgres:16
+# env with DATABASE_URL on :55432 and NO Resend/OpenPhone keys
+npx prisma migrate deploy
+npx tsx scripts/_rehearsal-arc14.ts        # seeds + produces the four PDFs
+npx tsx scripts/_rehearsal-arc14-read.ts   # opens and reads them
+```
+Output lands in `.rehearsal-arc14/` with `extracted-text.json` for inspection.
