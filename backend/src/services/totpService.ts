@@ -142,6 +142,37 @@ export async function verifyTotpCode(userId: string, code: string): Promise<bool
 }
 
 /**
+ * Issue a fresh set of backup codes, returning them in plaintext ONCE.
+ *
+ * WHY THIS EXISTS SEPARATELY FROM generateTotpSetup. Since v3.8.atl the stored
+ * codes are bcrypt hashes, so they cannot be read back — which is the point, and
+ * which means the only moment they can be shown is the moment they are created.
+ *
+ * The carrier enrollment flow needs that moment to be AFTER the authenticator is
+ * proven working, not before. Codes handed out at setup time belong to a device
+ * that may never have been successfully paired: the carrier walks away holding
+ * recovery codes for a second factor they never armed, and the codes for the
+ * factor they DID arm were never shown. So enrollment calls this at confirm,
+ * once a valid code has proven the pairing, and whatever setup generated is
+ * superseded here.
+ *
+ * generateTotpSetup keeps returning codes for the existing AE flow (routes/auth
+ * shows them at setup), so this is additive rather than a change to that path.
+ */
+export async function issueBackupCodes(userId: string): Promise<string[]> {
+  const codes: string[] = [];
+  for (let i = 0; i < 8; i++) {
+    codes.push(crypto.randomBytes(4).toString("hex").toUpperCase());
+  }
+  const hashed = await Promise.all(codes.map((c) => bcrypt.hash(c, 12)));
+  await prisma.user.update({
+    where: { id: userId },
+    data: { totpBackupCodes: encrypt(JSON.stringify(hashed)) },
+  });
+  return codes;
+}
+
+/**
  * Enable TOTP after successful setup verification
  */
 export async function enableTotp(userId: string): Promise<void> {

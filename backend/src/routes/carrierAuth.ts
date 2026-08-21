@@ -3,6 +3,8 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import rateLimit from "express-rate-limit";
 import { prisma } from "../config/database";
+import { logAuthEvent } from "../lib/authEvents";
+import { generateTotpSetup, verifyTotpCode, enableTotp, issueBackupCodes } from "../services/totpService";
 import { caseInsensitiveEmailFilter } from "../lib/emailNormalization";
 import { env } from "../config/env";
 import { authenticate, authorize, AuthRequest, registerSession, removeSession } from "../middleware/auth";
@@ -37,7 +39,6 @@ import { getAgreement, BROKER_CARRIER_AGREEMENT, CARAVAN_QUICK_PAY_AGREEMENT, QP
 // gate and the pricing gates answer the same question the same way.
 import { getLatestQuickPayEnrollment, notifyQuickPayPilotRequested } from "../controllers/carrierController";
 import path from "path";
-import { verifyTotpCode } from "../services/totpService";
 import { z } from "zod";
 import { uploadLimiter } from "../middleware/rateLimiters";
 import { log } from "../lib/logger";
@@ -777,6 +778,91 @@ router.get("/agreement/:type/pdf", authenticate, authorize("CARRIER"), async (re
 // do post-approval. bcaSigned reads the SAME query the compliance gate +
 // vetting use (carrierAgreement findFirst status SIGNED, latest by signedAt),
 // so the portal can never disagree with the gate.
+// ─── Mandatory 2FA enrollment (Arc 11 B1-ENROLLMENT) ────────────────────────
+//
+// Two steps on purpose. Setup hands over a QR and a typed key; confirm proves
+// the authenticator actually works before anything is armed. Nothing is enabled
+// until a real code round-trips, so a carrier cannot strand themselves behind a
+// second factor they never successfully paired.
+//
+// Backup codes are issued at CONFIRM, not at setup, and shown exactly once —
+// since v3.8.atl they are stored as bcrypt hashes and cannot be read back.
+
+router.post("/totp/setup", authenticate, authorize("CARRIER"), async (req: AuthRequest, res: Response) => {
+  const user = await prisma.user.findUnique({
+    where: { id: req.user!.id },
+    select: { email: true, totpEnabled: true },
+  });
+  if (!user) {
+    res.status(404).json({ error: "Account not found" });
+    return;
+  }
+  if (user.totpEnabled) {
+    // Re-running setup would mint a new secret and silently invalidate the
+    // authenticator the carrier is currently using.
+    res.status(409).json({
+      error: "Two-factor authentication is already set up on this account.",
+      code: "TOTP_ALREADY_ENABLED",
+    });
+    return;
+  }
+
+  const setup = await generateTotpSetup(req.user!.id, user.email);
+  logAuthEvent("totp.setup_started", { userId: req.user!.id, req });
+
+  res.json({
+    qrCode: setup.qrCodeDataUrl,
+    // The typed fallback, for a carrier whose phone cannot scan the screen it is
+    // being shown on — which is most of them, since both are often one device.
+    manualKey: setup.secret,
+    appHint: "Google Authenticator, Microsoft Authenticator, or any authenticator app",
+  });
+});
+
+const totpConfirmSchema = z.object({ code: z.string().trim().min(6).max(8) });
+
+router.post(
+  "/totp/confirm",
+  authenticate,
+  authorize("CARRIER"),
+  validateBody(totpConfirmSchema),
+  async (req: AuthRequest, res: Response) => {
+    const valid = await verifyTotpCode(req.user!.id, req.body.code);
+    if (!valid) {
+      logAuthEvent("totp.enrollment_failed", { userId: req.user!.id, reason: "totp_invalid", req });
+      res.status(400).json({
+        error: "That code did not match. Check your authenticator app and try the current code.",
+        code: "TOTP_CODE_INVALID",
+      });
+      return;
+    }
+
+    await enableTotp(req.user!.id);
+    // Fresh codes AFTER the pairing is proven — see issueBackupCodes.
+    const backupCodes = await issueBackupCodes(req.user!.id);
+    logAuthEvent("totp.enrolled", { userId: req.user!.id, req });
+
+    res.json({
+      enabled: true,
+      backupCodes,
+      warning:
+        "These codes are shown once and cannot be recovered. Save them somewhere you can reach without your phone.",
+    });
+  },
+);
+
+router.get("/totp/status", authenticate, authorize("CARRIER"), async (req: AuthRequest, res: Response) => {
+  const user = await prisma.user.findUnique({
+    where: { id: req.user!.id },
+    select: { totpEnabled: true, emailVerifiedAt: true },
+  });
+  res.json({
+    enrolled: !!user?.totpEnabled,
+    emailVerified: !!user?.emailVerifiedAt,
+    required: true,
+  });
+});
+
 router.get("/activation-status", authenticate, authorize("CARRIER"), async (req: AuthRequest, res: Response) => {
   const profile = await loadActivationProfile(req.user!.id);
   if (!profile) {
@@ -802,9 +888,20 @@ router.get("/activation-status", authenticate, authorize("CARRIER"), async (req:
   const qpEnrollment = await getLatestQuickPayEnrollment(profile.id);
   const now = new Date();
   const bcaSigned = !!agreement && (!agreement.expiresAt || agreement.expiresAt > now);
+  const enrolmentUser = await prisma.user.findUnique({
+    where: { id: req.user!.id },
+    select: { totpEnabled: true },
+  });
+  const totpEnrolled = !!enrolmentUser?.totpEnabled;
 
   res.json({
     onboardingStatus: profile.onboardingStatus,
+    // Arc 11 — the enrollment gate sits ABOVE the activation gate and above the
+    // application-status page: an unenrolled carrier reaches the enrollment
+    // screen and nothing else, whatever their onboarding state. Unlike
+    // requiresActivation this is NOT conditioned on APPROVED, because a PENDING
+    // carrier waiting on review still has an account worth protecting.
+    requiresTotpEnrollment: !totpEnrolled,
     // requiresActivation: approved, but the gate-satisfying BCA isn't signed yet.
     requiresActivation: profile.onboardingStatus === "APPROVED" && !bcaSigned,
     bca: {

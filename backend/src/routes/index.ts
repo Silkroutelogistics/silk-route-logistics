@@ -1,5 +1,6 @@
 import { buildInfo } from "../lib/buildInfo";
 import { schemaInfo } from "../lib/schemaInfo";
+import { requireTotpEnrolled } from "../middleware/requireTotpEnrolled";
 import { Router, Response } from "express";
 import { prisma } from "../config/database";
 import { authenticate, authorize, AuthRequest } from "../middleware/auth";
@@ -215,11 +216,16 @@ router.use("/loads", loadRoutes);
 router.use("/invoices", invoiceRoutes);
 router.use("/documents", documentRoutes);
 // Carrier-specific routes MUST come before /carrier to avoid prefix matching
-router.use("/carrier-auth", carrierAuthRoutes);
-router.use("/carrier-loads", carrierLoadRoutes);
-router.use("/carrier-compliance", carrierComplianceRoutes);
-router.use("/carrier-payments", carrierPaymentRoutes);
-router.use("/carrier-drivers", carrierDriversRoutes);
+// Arc 11 — mandatory carrier 2FA. Every carrier-portal mount passes through the
+// enrollment gate; carrier-auth included, because its own exemption list is what
+// keeps /totp/setup, /totp/confirm, /me and /logout reachable to a carrier who
+// has not enrolled yet. A gate that blocks the route which satisfies the gate is
+// a lockout, and that is the failure this whole ordering exists to avoid.
+router.use("/carrier-auth", requireTotpEnrolled, carrierAuthRoutes);
+router.use("/carrier-loads", requireTotpEnrolled, carrierLoadRoutes);
+router.use("/carrier-compliance", requireTotpEnrolled, carrierComplianceRoutes);
+router.use("/carrier-payments", requireTotpEnrolled, carrierPaymentRoutes);
+router.use("/carrier-drivers", requireTotpEnrolled, carrierDriversRoutes);
 // v3.8.amz — SRL Driver Academy T2: driver-portal auth (phone + PIN). Public
 // set-pin/login + authenticated me/logout. Drivers are not Users; this mount
 // uses authenticateDriver, not the shared authenticate.
@@ -279,7 +285,7 @@ router.use("/track-trace", trackTraceBoardRoutes);
 router.use("/track-trace", trackTraceSSERoutes);
 router.use("/load-exceptions", loadExceptionsRoutes);
 router.use("/waterfalls", waterfallRoutes);
-router.use("/carrier-tenders", carrierTendersRoutes);
+router.use("/carrier-tenders", requireTotpEnrolled, carrierTendersRoutes);
 router.use("/orders", ordersRoutes);
 router.use("/", loadBidsRoutes); // /loadboard, /loads/:id/bids, /loads/:id/notes, /market-rates
 router.use("/external-integrations", externalIntegrations);

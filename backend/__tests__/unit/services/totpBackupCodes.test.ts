@@ -38,6 +38,15 @@ vi.mock("qrcode", () => ({ toDataURL: async () => "data:image/png;base64,x" }));
 
 import { generateTotpSetup, verifyTotpCode } from "../../../src/services/totpService";
 
+// bcrypt at cost 12 is deliberately slow. Eight hashes is roughly 3s on its own,
+// and under full-suite parallel load that crosses vitest's 5s default — so these
+// passed in isolation and failed in the suite. That is a timing fact, not a logic
+// one. The cost IS the property under test (a cheap hash would defeat the point of
+// moving off reversible encryption), so the budget moves and the cost does not.
+// The survivor-rewrite inside verifyTotpCode re-hashes at 12 too, which is why
+// this is set for the file rather than the one obviously-slow describe.
+vi.setConfig({ testTimeout: 30_000 });
+
 describe("backup codes at rest", () => {
   beforeEach(() => vi.resetAllMocks());
 

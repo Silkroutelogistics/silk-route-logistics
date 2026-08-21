@@ -47,7 +47,11 @@ export type AuthEvent =
   | "login.failed"
   | "login.locked_out"
   | "otp.failed"
-  | "email.verified";
+  | "email.verified"
+  // Arc 11 — mandatory carrier 2FA enrollment.
+  | "totp.setup_started"
+  | "totp.enrolled"
+  | "totp.enrollment_failed";
 
 /**
  * Why it failed, as a class rather than the message shown to the user.

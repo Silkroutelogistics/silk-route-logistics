@@ -14593,7 +14593,23 @@
 //   could be spent twice — now a compare-and-swap on the exact value read,
 //   so a racing second attempt loses instead of double-spending. Legacy
 //   plaintext entries still work and are rehashed on first use.
-export const SRL_VERSION = "3.8.atl";
+// v3.8.atm — Carriers can arm a second factor, and the portal now requires it.
+//   The enrollment gate is three parts, shaped after the activation gate
+//   (v3.8.aqi) rather than a second idiom: a requiresTotpEnrollment flag on
+//   /activation-status, a layout redirect, and a middleware boundary that
+//   holds when someone calls the API directly — which is the only version of
+//   "mandatory" that means anything. Setup hands over a QR and a typed key;
+//   nothing is armed until a real code round-trips, so a carrier cannot
+//   strand themselves behind a factor they never successfully paired. Backup
+//   codes are issued at CONFIRM rather than setup, because since atl they are
+//   hashes and cannot be read back: the only moment they can be shown is the
+//   moment they exist, and that moment has to be after the pairing is proven.
+//   The exemption list is the part that stops this being a lockout — a gate
+//   that blocks the route which satisfies the gate locks out every carrier
+//   permanently, so setup, confirm, status, activation-status, /me and
+//   /logout stay open. Unlike requiresActivation this is not conditioned on
+//   APPROVED: a PENDING carrier still has an account worth protecting.
+export const SRL_VERSION = "3.8.atm";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
