@@ -507,14 +507,13 @@ export function startSchedulers() {
     });
   });
 
-  // CPP: Weekly tier recalculation — Sunday 6 AM ET (11:00 UTC)
-  cron.schedule("0 11 * * 0", async () => {
-    log.info("[Scheduler] Running weekly CPP tier recalculation...");
-    await withLock("cpp-weekly-recalc", 30 * 60 * 1000, async () => {
-      const result = await processAllCPPRecalculations();
-      log.info(`[Scheduler] CPP recalc: ${result.recalculated}/${result.total} carriers processed`);
-    });
-  });
+  // ARC 16 — REMOVED: also scheduled in cron/index.ts, under a different
+  // guard key, so the two never excluded each other and the CPP tier recalculation ran twice.
+  // Found by the cross-file guard written for the tender-expiry duplicate
+  // (__tests__/unit/cron/noDuplicateSchedules.test.ts) — it reported this one
+  // on its first run. The surviving registration is cron/index.ts's
+  // "cpp-weekly-recalc", which the boot inventory can see. Do not re-add it here.
+  // §13.3 Item 221.4.
 
   // ─── AI Learning Loop Crons ────────────────────────────────────
 
@@ -585,14 +584,13 @@ export function startSchedulers() {
     await withLock("tt-alert-engine", 10 * 60 * 1000, runAlertScanner);
   });
 
-  // Tender expiration: every 30 minutes at :12 and :42
-  cron.schedule("0,30 * * * *", async () => {
-    log.info("[Scheduler] Running tender expiration check...");
-    await withLock("tender-expiry", 5 * 60 * 1000, async () => {
-      const result = await processExpiredTenders();
-      log.info(`[Scheduler] Tender expiry: ${result.expired} expired, ${result.loadsReverted} loads reverted`);
-    });
-  });
+  // ARC 16 — tender expiry REMOVED from here. It was also registered in
+  // cron/index.ts under a different guard key, so the two never excluded each
+  // other and both fired at :30, duplicating every expiry email. The
+  // surviving registration is cron/index.ts's `tender-expiry-sweep`, which
+  // the boot inventory and the SCHEDULED_JOB_NAMES guard can see; it took
+  // this file's :00/:30 cadence with it. Do not re-add it here.
+  // §13.3 Item 221.4.
 
   // Waterfall engine tick — ADAPTIVE cadence (v3.8.arf).
   //
@@ -653,23 +651,21 @@ export function startSchedulers() {
     });
   });
 
-  // OFAC weekly rescan: Sunday 5 AM ET (10:00 UTC)
-  cron.schedule("0 10 * * 0", async () => {
-    log.info("[Scheduler] Running weekly OFAC rescan...");
-    await withLock("ofac-weekly-rescan", 60 * 60 * 1000, async () => {
-      const result = await weeklyOfacRescan();
-      log.info(`[Scheduler] OFAC rescan: ${result.total} screened, ${result.matches} matches, ${result.errors} errors`);
-    });
-  });
+  // ARC 16 — REMOVED: also scheduled in cron/index.ts, under a different
+  // guard key, so the two never excluded each other and the OFAC rescan ran twice.
+  // Found by the cross-file guard written for the tender-expiry duplicate
+  // (__tests__/unit/cron/noDuplicateSchedules.test.ts) — it reported this one
+  // on its first run. The surviving registration is cron/index.ts's
+  // "ofac-weekly-rescan", which the boot inventory can see. Do not re-add it here.
+  // §13.3 Item 221.4.
 
-  // Chameleon detection full scan: weekly Wednesday 3 AM ET (08:00 UTC)
-  cron.schedule("0 8 * * 3", async () => {
-    log.info("[Scheduler] Running full chameleon detection scan...");
-    await withLock("chameleon-full-scan", 30 * 60 * 1000, async () => {
-      const result = await runFullChameleonScan();
-      log.info(`[Scheduler] Chameleon scan: ${result.scanned} scanned, ${result.matchesFound} matches, ${result.errors} errors`);
-    });
-  });
+  // ARC 16 — REMOVED: also scheduled in cron/index.ts, under a different
+  // guard key, so the two never excluded each other and the full chameleon scan ran twice.
+  // Found by the cross-file guard written for the tender-expiry duplicate
+  // (__tests__/unit/cron/noDuplicateSchedules.test.ts) — it reported this one
+  // on its first run. The surviving registration is cron/index.ts's
+  // "chameleon-full-scan", which the boot inventory can see. Do not re-add it here.
+  // §13.3 Item 221.4.
 
   // Monthly full re-vetting: 1st of month 2 AM ET (07:00 UTC)
   cron.schedule("0 7 1 * *", async () => {

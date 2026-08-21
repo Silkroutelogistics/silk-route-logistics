@@ -1,5 +1,6 @@
 import { Response } from "express";
 import { prisma } from "../config/database";
+import { syncCarrierSettledForPays } from "../lib/settlementFlags";
 import { AuthRequest } from "../middleware/auth";
 import { createSettlementSchema, settlementQuerySchema } from "../validators/settlement";
 
@@ -157,6 +158,15 @@ export async function markSettlementPaid(req: AuthRequest, res: Response) {
 
     return stl;
   });
+
+  // ARC 16 — the board is told the carrier is settled. Outside the
+  // transaction on purpose: this is a visibility flag, and a failure here
+  // must never roll back a payment that already happened. §13.3 Item 221.3.
+  const paid = await prisma.carrierPay.findMany({
+    where: { settlementId: req.params.id },
+    select: { id: true },
+  });
+  await syncCarrierSettledForPays(paid.map((p) => p.id));
 
   res.json(updated);
 }

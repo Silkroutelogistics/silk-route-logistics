@@ -1,6 +1,7 @@
 import { APPROVAL_REF, matchesRef } from "../lib/approvalQueueRefs";
 import { Response } from "express";
 import { prisma } from "../config/database";
+import { syncCarrierSettled } from "../lib/settlementFlags";
 import { AuthRequest } from "../middleware/auth";
 import { log } from "../lib/logger";
 import { validateLoadStatusTransition } from "../lib/loadStateMachine";
@@ -1565,11 +1566,11 @@ export async function markPaymentPaid(req: AuthRequest, res: Response) {
     // customerInvoiced above: queried by the Track & Trace "delivered" tab,
     // rendered by its Finance tab, and written by nothing, so the tab could
     // never be cleared.
-    if (payment.loadId) {
-      await prisma.load
-        .update({ where: { id: payment.loadId }, data: { carrierSettled: true } })
-        .catch((e: any) => log.error({ err: e, loadId: payment.loadId }, "[CarrierPay] carrierSettled flag not set (non-fatal)"));
-    }
+    // ARC 16 — was an unconditional `carrierSettled: true` here. Routed
+    // through the shared helper so this endpoint and the three the product
+    // actually uses cannot disagree, and so a partially-paid load reports
+    // false rather than true. §13.3 Item 221.3.
+    await syncCarrierSettled(payment.loadId);
 
     // Record in factoring fund as outflow
     const latestFund = await prisma.factoringFund.findFirst({

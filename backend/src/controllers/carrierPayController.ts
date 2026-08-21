@@ -1,5 +1,6 @@
 import { Response } from "express";
 import { prisma } from "../config/database";
+import { syncCarrierSettled, syncCarrierSettledForPays } from "../lib/settlementFlags";
 import { AuthRequest } from "../middleware/auth";
 import { log } from "../lib/logger";
 // One resolver for "is this carrier in the pilot", shared with the carrier
@@ -287,6 +288,11 @@ export async function updateCarrierPay(req: AuthRequest, res: Response) {
     },
   });
 
+  // ARC 16 — recomputed rather than set, so a status moving AWAY from PAID
+  // (a correction, a void reversal) puts the load back on the board instead
+  // of leaving a stale true behind. §13.3 Item 221.3.
+  await syncCarrierSettled(updated.loadId);
+
   res.json(updated);
 }
 
@@ -307,6 +313,10 @@ export async function batchUpdateCarrierPays(req: AuthRequest, res: Response) {
   const result = await prisma.$transaction(
     ids.map((id) => prisma.carrierPay.update({ where: { id }, data }))
   );
+
+  // ARC 16 — same sync for the bulk path. Deduplicates by load, so paying
+  // twelve pays across three loads is three flag reads, not twelve.
+  await syncCarrierSettledForPays(ids);
 
   res.json({ updated: result.length });
 }

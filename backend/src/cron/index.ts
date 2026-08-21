@@ -193,9 +193,22 @@ export function initCronJobs() {
   // Sub-pattern 12 (write-read-dataflow-audit) prospective application —
   // orphaned producer caught at Phase A audit time and wired before
   // post-deploy surfacing.
-  cron.schedule("30 * * * *", () => withGuard("tender-expiry-sweep", async () => {
+  // ARC 16 — this job was scheduled TWICE, here and in schedulerService, under
+  // two different mechanisms (`withGuard("tender-expiry-sweep")` vs
+  // `withLock("tender-expiry")`) and two different keys, so neither excluded
+  // the other. Both initCronJobs() and startSchedulers() run at boot
+  // (server.ts), so at :30 past every hour both fired, and the body is
+  // read-then-write — every expired tender sent the carrier AND the AE two
+  // identical emails. The Item 192 flood class, from a scheduling accident.
+  //
+  // This registration survives because it is the one the boot inventory and
+  // the SCHEDULED_JOB_NAMES guard can see; schedulerService's 32 jobs are
+  // invisible to both, which is precisely where the duplicate hid. It adopts
+  // schedulerService's :00/:30 cadence so de-duplicating does not also halve
+  // how promptly a tender expires. §13.3 Item 221.4.
+  cron.schedule("0,30 * * * *", () => withGuard("tender-expiry-sweep", async () => {
     try {
-      log.info("[TenderExpiry] Starting hourly sweep");
+      log.info("[TenderExpiry] Starting sweep");
       const { processExpiredTenders } = require("../controllers/tenderController");
       const result = await processExpiredTenders();
       log.info(`[TenderExpiry] Sweep complete: ${result.expired} tenders expired, ${result.loadsReverted} loads reverted`);
