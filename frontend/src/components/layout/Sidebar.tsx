@@ -215,7 +215,9 @@ export function Sidebar() {
   const admin = isAdmin(user?.role);
   const ceo = isCeo(user?.role);
   const broker = user?.role === "BROKER";
-  const hasAccountingAccess = admin || broker || user?.role === "ACCOUNTING";
+  // v3.8.aue — ACCOUNT_EXECUTIVE reaches invoicing + P&L, so it needs the
+  // Accounting nav. The backend still denies fund/payments/credit.
+  const hasAccountingAccess = admin || broker || user?.role === "ACCOUNTING" || user?.role === "ACCOUNT_EXECUTIVE";
   const flatNav = getNav(user?.role, viewMode);
   const useGrouped = admin && viewMode === "ae";
 
@@ -424,7 +426,7 @@ export function Sidebar() {
                 </p>
                 <p className="text-xs text-slate-500">
                   {ceo ? "Chief Executive Officer"
-                    : user.role === "BROKER" ? "Account Executive"
+                    : user.role === "BROKER" || user.role === "ACCOUNT_EXECUTIVE" ? "Account Executive"
                     : user.role === "ADMIN" ? "Administrator"
                     : user.role === "DISPATCH" ? "Dispatch"
                     : user.role === "OPERATIONS" ? "Operations"

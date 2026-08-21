@@ -1,6 +1,8 @@
-export type UserRole = "ADMIN" | "CEO" | "BROKER" | "CARRIER" | "DISPATCH" | "OPERATIONS" | "ACCOUNTING" | "SHIPPER" | "FACTOR";
+export type UserRole = "ADMIN" | "CEO" | "BROKER" | "CARRIER" | "DISPATCH" | "OPERATIONS" | "ACCOUNTING" | "SHIPPER" | "FACTOR" | "ACCOUNT_EXECUTIVE";
 
-export const EMPLOYEE_ROLES: UserRole[] = ["ADMIN", "CEO", "BROKER", "DISPATCH", "OPERATIONS", "ACCOUNTING"];
+// v3.8.aue — ACCOUNT_EXECUTIVE is an employee role. Adding it here also feeds
+// isEmployee() and useRoleGuard(), so the /dashboard route guard follows free.
+export const EMPLOYEE_ROLES: UserRole[] = ["ADMIN", "CEO", "BROKER", "DISPATCH", "OPERATIONS", "ACCOUNTING", "ACCOUNT_EXECUTIVE"];
 export const CARRIER_ONLY_ROUTES = ["scorecard", "revenue", "documents", "factoring"];
 export const EMPLOYEE_ONLY_ROUTES = ["tracking", "finance", "crm", "sops", "drivers", "market", "edi", "carriers", "fleet", "compliance", "audit", "orders", "violations", "payables", "settlements"];
 

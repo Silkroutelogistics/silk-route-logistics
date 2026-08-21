@@ -69,7 +69,8 @@ const TENDER_COLORS: Record<string, string> = {
   EXPIRED: "bg-slate-500/20 text-gray-600",
 };
 
-const MARGIN_ROLES = ["ADMIN", "CEO", "BROKER", "ACCOUNTING"];
+// v3.8.aue — ACCOUNT_EXECUTIVE granted margin/P&L READ (money movement stays denied).
+const MARGIN_ROLES = ["ADMIN", "CEO", "BROKER", "ACCOUNTING", "ACCOUNT_EXECUTIVE"];
 
 type StatusTab = "attention" | "DRAFT" | "POSTED" | "TENDERED" | "BOOKED" | "all";
 type PanelTab = "details" | "tracking" | "invoice" | "documents" | "history" | "carrier" | "exceptions" | "tags";

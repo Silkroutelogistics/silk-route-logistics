@@ -14786,7 +14786,30 @@
 //   And Pass 1 had been counting over a partial corpus: wrapping one route
 //   across lines made it disappear from the extractor, and 25 routes were in
 //   that shape. 89 -> 114 endpoints, 7 never triaged by anyone.
-export const SRL_VERSION = "3.8.aud";
+// v3.8.aue — ACCOUNT_EXECUTIVE, a role that resolves rather than enumerates.
+//   Full operational load cycle, minus ADMIN-exclusive surfaces, minus money
+//   movement. It is NOT listed in the ~280 authorize() call-sites it may use:
+//   it resolves centrally in middleware/auth.ts as (BROKER ∪ OPERATIONS) minus
+//   a nine-entry deny list, evaluated BEFORE any grant. 55 LOC instead of ~294
+//   edit sites across 44 files, and the role's real reach stays readable in one
+//   place. Deny beats inheritance AND an explicit grant, so a future call-site
+//   naming the role cannot re-open payments.
+//   The deny matcher normalizes first — lowercase, strip trailing and doubled
+//   slashes — because Express routing is case-insensitive and non-strict, so
+//   /API/Accounting/Payments/ reaches the same handler a case-sensitive
+//   matcher would wave through. An injection proved it: with the lowercasing
+//   removed, the uppercase variant returned null instead of 403.
+//   carrier-pay was NOT in the ratified deny list and had to be added. BROKER
+//   reaches it through a FILE-LEVEL guard (carrierPay.ts:9) and 5 of its 6
+//   routes carry no per-route gate, so a per-route scan cannot see it at all —
+//   and POST /carrier-pay/batch is a live settle path.
+//   The lockout that would have made all of this moot: AE_ROLES in
+//   authController gates AE-PORTAL LOGIN, not routes. Omit a role there and it
+//   cannot sign in at all, whatever authorize() allows. The legacy AE value is
+//   absent from that set and is therefore unloggable-in today.
+//   Zero routes are CEO-exclusive, and whaider@ is ADMIN, not CEO — so the
+//   boundary that actually matters is ADMIN-only, not "CEO-only".
+export const SRL_VERSION = "3.8.aue";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

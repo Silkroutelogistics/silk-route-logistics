@@ -13,7 +13,8 @@ import {
 import { useToast } from "@/components/ui/Toast";
 import { useAuthStore } from "@/hooks/useAuthStore";
 
-const MARGIN_ROLES = ["ADMIN", "CEO", "BROKER", "ACCOUNTING"];
+// v3.8.aue — ACCOUNT_EXECUTIVE granted margin/P&L READ (money movement stays denied).
+const MARGIN_ROLES = ["ADMIN", "CEO", "BROKER", "ACCOUNTING", "ACCOUNT_EXECUTIVE"];
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, LineChart, Line,
