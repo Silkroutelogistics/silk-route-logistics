@@ -1,18 +1,53 @@
 # Go-live readiness — first-load dress rehearsal
 
-**Date:** 2026-08-21 · **Arc 14** · Rehearsal load `SRL-140001`
+**Date:** 2026-08-21 · **Arc 14**, revised by **Arc 15** (audit) and **Arc 16** (fixes) · Rehearsal load `SRL-140001`
 **Scenario:** Beekeepers Naturals · Lebanon NH → North Lake TX · Reefer 53′ · honey/propolis, 28,400 lb, setpoint 38°F continuous
 
 ---
 
 ## Verdict
 
-**SRL can run a real load today, because the four documents that bind it — the executed BCA, the rate confirmation, the BOL, and the customer invoice — all generate off the production data path for a real scenario, carry the authority and legal language they must, and do not contradict one another on the numbers that matter.** The one cross-document property with money at stake — that the customer invoice never exposes what SRL pays the carrier — holds.
+**Arc 14 said SRL could run a real load. Arc 15 audited the machinery behind those documents and found four defects that made that verdict wrong. Arc 16 fixed all four and proved each against a real database and the real routes. The verdict is now earned rather than assumed — and it is earned by the re-verification, not by the fixes compiling.**
 
-That verdict is scoped, and the scope matters: **this rehearsal walked the DOCUMENT CHAIN, not the full interactive lifecycle.** What was not walked is listed under *Not covered* and is the honest reason this is a "can, with eyes open" rather than an unqualified yes.
+The distinction matters, because Arc 14's original verdict was reached honestly and was still wrong: it walked the DOCUMENT CHAIN, and the money moves in the machinery underneath. A rate confirmation can print the right number while settlement pays a different one.
+
+### The four, and what each would have done on a real load
+
+| # | Defect | What it would have cost | Closed |
+|---|---|---|---|
+| 221.1 | Settlement read `load.carrierRate \|\| load.rate`, and no accept path wrote `carrierRate` | The carrier settled at **100% of SRL's revenue** — the entire margin, silently, on ordinary-looking paperwork | `v3.8.atv` |
+| 221.2 | Carrier outreach quoted `load.rate` with no fallback | The **first outbound touch** on a normal load offered carriers the customer rate, then the rate confirmation would have offered less | `v3.8.atv` |
+| 221.3 | `carrierSettled` written only by an endpoint nothing calls | The Track & Trace **delivered tab could never clear** — every completed load stayed on it forever | `v3.8.atw` |
+| 221.4 | `processExpiredTenders` scheduled twice under two locks that could not see each other | **Every expired tender emailed the carrier and the AE twice** — the Item 192 flood class, by accident | `v3.8.atw` |
+
+### A fifth, found only by running the proof
+
+`acceptPosition` passed `pos.carrierId` — a **User** id by deliberate design — to `complianceCheck`, which looks up `CarrierProfile` by primary key. Probed live: profile id returns a real verdict, user id returns `{allowed: false, reasons: ["Carrier not found"]}`. The branch below then marks the position skipped and advances. Every position in turn.
+
+**Waterfall auto-dispatch could never accept a carrier**, and it failed in the shape of a carrier problem, so the log read like ordinary compliance churn. Live since Sprint 39 — the commit that ADDED the check. The loadbid path in that same commit resolves the profile first, so the two bulk paths were written to different conventions on the same day. No unit test could have seen it: with Prisma mocked, the lookup returns whatever the mock is told to.
+
+### What "earned" means here
+
+Two proof scripts, both against a real Postgres and the real routers, controllers and middleware — not fixtures, not mocks:
+
+- [`_arc16-rate-proof.ts`](../../backend/scripts/_arc16-rate-proof.ts) — **14/14.** Six creation paths settled end to end with customer $5,100 against agreed $4,100, so a pass cannot be ambiguous about which was read. Includes the counter-offer case, which is the one that costs money: `acceptTenderOnBehalf` admits COUNTERED tenders, so reading `offeredRate` there underpays the carrier by the counter delta on a rate confirmation they signed.
+- [`_arc16-settled-proof.ts`](../../backend/scripts/_arc16-settled-proof.ts) — **8/8.** Includes the partial-payment case the old unconditional write got wrong, the reversal, the void convention, and the delivered-tab query itself: not "the column is true" but "the load leaves the tab".
+
+Both adversarially verified against the real artifact (§19 Sub-pattern 16): restoring the settlement fallback and deleting two writers takes the rate proof **14/14 → 9/14**, reporting *"settled at the CUSTOMER rate $5100 — the margin was paid away"*; neutering the settled sync takes the other **8/8 → 3/8**. Restored, both green. The 2FA wall proof was re-run on this HEAD and still prints `WALL HOLDS`.
+
+**The rate proof caught a defect in itself first.** Its original version inlined each accept path's write; deleting the writer from `tenderController` left it passing, because it was asserting a copy of the code rather than the code. That is exactly the "presence is not function" failure banked one commit earlier at §13.3 Item 221 — caught here only because the injection was actually run. It now drives the accepts over HTTP.
+
+### What is still true from Arc 14
+
+The document chain itself was sound and remains so: the executed BCA, rate confirmation, BOL and customer invoice all generate off the production data path, carry the authority and legal language they must, and do not contradict one another. The invoice never exposes carrier pay.
+
+Arc 15 found the margin leaving through a different door — `getShipperDocuments` returned every `fileUrl` on the load with no docType filter, and the rate confirmation is persisted on the load as `RATE_CON`, so **a shipper could download the carrier's rate confirmation from their own portal and read SRL's entire margin.** Arc 14's cross-check was correct about the invoice's CONTENTS; this was an endpoint's SCOPE. Fixed in `v3.8.att` with an allowlist (BOL, POD, INVOICE), because a denylist leaks every docType added after it.
+
+### Scope of this verdict
+
+Still not a full interactive UI walk — no browser, no screenshots. What *is* now covered that was not: the money path end to end on six creation paths, the settlement flag against the real tab query, the 2FA wall against a live server, and every fix adversarially verified. The remaining gaps are listed under *Not covered*, unchanged.
 
 ---
-
 ## What was actually done
 
 A throwaway Postgres container, schema applied from the real migration chain, the BKN scenario seeded as real rows, and each PDF produced by driving the **real download controller** with a captured response — not a hand-built fixture. A fixture proves a renderer works; this proves the renderer works *on this load*.
@@ -47,21 +82,27 @@ This is §19 Sub-pattern 16 aimed at the most expensive possible target: a safet
 ## Findings
 
 ### GO-BLOCKER
-**None found in the document chain.**
+**None found in the document chain** — and that was accurate as far as it went. **Four were found in the machinery beneath it by Arc 15, and all four are closed in Arc 16.** See the verdict above. The lesson worth keeping: a document chain can be entirely correct while the code that acts on the same numbers is not.
 
 ### FIX-NOW-SMALL
 **None.** The two real findings below are latent rather than live, and fixing either means changing a shared field's meaning or a fallback's source — neither is a small inline change, and both deserve their own commit with tests.
 
 ### POST-GO-LIVE
 
-**1. The rate confirmation's linehaul fallback reads the customer rate.**
+**1. The rate confirmation's linehaul fallback reads the customer rate.** — **PARTIALLY RESOLVED, Arc 16.**
+
+> The same root cause turned out to be live elsewhere, not merely latent here: settlement and carrier outreach both read `load.rate` on paths where it holds the customer number, and both are fixed (221.1, 221.2). The RC fallback at `pdfService.ts:1925` is **unchanged** and remains latent for the reason given below — but it is now the last consumer of the ambiguity rather than one of three.
+
 `pdfService.ts:1925` — `const linehaul = (fd.lineHaulRate ?? load.rate)`. `loadController.createLoad:230` sets `rate: raw.customerRate || raw.rate`, so on the AE's primary creation path **`Load.rate` is the customer rate**. If `fd.lineHaulRate` is ever absent, the carrier's binding pay document prints SRL's customer rate as carrier pay.
 
 *Not live today:* both producers set it — auto-RC from `tender.offeredRate`, the RC modal from `toNum(form.carrierLineHaul)`, which returns `0` rather than `undefined` on a blank field, so `??` does not fall through. Reachable only by a future producer that omits the key.
 
 *Why it is worth recording anyway:* this rehearsal accidentally demonstrated it. A seed that used `lineHaul` instead of `lineHaulRate` produced a rate confirmation reading **Linehaul $4,850.00 · Total Carrier Pay $5,100.00** against an agreed $4,100 — a $1,000 overstatement on a document a carrier signs. The failure is silent and the document looks entirely normal.
 
-**2. `Load.rate` means different things on different creation paths.**
+**2. `Load.rate` means different things on different creation paths.** — **STILL OPEN, and deliberately so.**
+
+> Arc 16 resolved the semantics by making `carrierRate` the single answer to "what do we owe the carrier" and giving it a writer on all four accept paths, so the money paths no longer depend on `Load.rate`'s meaning. The column's own ambiguity is untouched: unifying it means changing a shared field's meaning across every reader, which is a migration sprint, not an inline fix. Recorded rather than rushed.
+
 `loadController.createLoad:230` → customer rate. `withTenderController:194` → `tender.offeredRate`, the carrier rate. One column, two meanings, and finding 1 is downstream of it. Any consumer reading `Load.rate` is right on one path and wrong on the other.
 
 ### NOT FINDINGS — probe errors, recorded so nobody re-raises them
