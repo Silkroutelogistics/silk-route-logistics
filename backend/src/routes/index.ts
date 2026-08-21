@@ -221,11 +221,29 @@ router.use("/documents", documentRoutes);
 // keeps /totp/setup, /totp/confirm, /me and /logout reachable to a carrier who
 // has not enrolled yet. A gate that blocks the route which satisfies the gate is
 // a lockout, and that is the failure this whole ordering exists to avoid.
-router.use("/carrier-auth", requireTotpEnrolled, carrierAuthRoutes);
-router.use("/carrier-loads", requireTotpEnrolled, carrierLoadRoutes);
-router.use("/carrier-compliance", requireTotpEnrolled, carrierComplianceRoutes);
-router.use("/carrier-payments", requireTotpEnrolled, carrierPaymentRoutes);
-router.use("/carrier-drivers", requireTotpEnrolled, carrierDriversRoutes);
+// ARC 15 — `authenticate` is listed here DELIBERATELY, and the gate does not
+// work without it.
+//
+// requireTotpEnrolled short-circuits on `!req.user` (middleware/auth is what
+// populates it). Every carrier router calls `router.use(authenticate)`
+// INTERNALLY, which runs AFTER this mount's middleware chain — so when the
+// gate ran, req.user was undefined and it called next() for everyone. The
+// wall was mounted on all six routers and gated exactly one of them:
+// /carrier-tenders, and only by accident, because an earlier mount at "/"
+// had already populated req.user as a side effect.
+//
+// The mount-parity test that was supposed to protect this asserted the STRING
+// "requireTotpEnrolled" appeared on each mount line. It did. Presence is not
+// function, and removing the string to "adversarially verify" that guard could
+// never have surfaced this. §19 Sub-pattern 16.
+//
+// authenticate is idempotent — running it here and again inside the router
+// re-reads the same cookie and re-populates the same req.user.
+router.use("/carrier-auth", authenticate, requireTotpEnrolled, carrierAuthRoutes);
+router.use("/carrier-loads", authenticate, requireTotpEnrolled, carrierLoadRoutes);
+router.use("/carrier-compliance", authenticate, requireTotpEnrolled, carrierComplianceRoutes);
+router.use("/carrier-payments", authenticate, requireTotpEnrolled, carrierPaymentRoutes);
+router.use("/carrier-drivers", authenticate, requireTotpEnrolled, carrierDriversRoutes);
 // v3.8.amz — SRL Driver Academy T2: driver-portal auth (phone + PIN). Public
 // set-pin/login + authenticated me/logout. Drivers are not Users; this mount
 // uses authenticateDriver, not the shared authenticate.
@@ -285,7 +303,7 @@ router.use("/track-trace", trackTraceBoardRoutes);
 router.use("/track-trace", trackTraceSSERoutes);
 router.use("/load-exceptions", loadExceptionsRoutes);
 router.use("/waterfalls", waterfallRoutes);
-router.use("/carrier-tenders", requireTotpEnrolled, carrierTendersRoutes);
+router.use("/carrier-tenders", authenticate, requireTotpEnrolled, carrierTendersRoutes);
 router.use("/orders", ordersRoutes);
 router.use("/", loadBidsRoutes); // /loadboard, /loads/:id/bids, /loads/:id/notes, /market-rates
 router.use("/external-integrations", externalIntegrations);

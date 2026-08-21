@@ -140,6 +140,18 @@ describe("every carrier-portal router is actually behind the gate", () => {
     "carrier-tenders",
   ];
 
+  // ARC 15 — THIS BLOCK WAS NOT ENOUGH, and the failure is worth keeping.
+  //
+  // It asserts the STRING "requireTotpEnrolled" appears on each mount line. It
+  // did, on all six, and the wall gated exactly ONE of them. The gate
+  // short-circuits on !req.user, and every carrier router calls authenticate
+  // INTERNALLY — after this mount chain has already run — so req.user was
+  // undefined and the gate called next() for everyone.
+  //
+  // Removing the string to "adversarially verify" this guard could never have
+  // surfaced that. Presence is not function. The mount lines must now also carry
+  // authenticate BEFORE the gate, which is what the added assertion below pins,
+  // and the behavioural proof lives in scripts/_arc15-gate-proof.ts.
   for (const mount of CARRIER_MOUNTS) {
     it(`/${mount} passes through requireTotpEnrolled`, () => {
       const line = routesFile
@@ -147,6 +159,8 @@ describe("every carrier-portal router is actually behind the gate", () => {
         .find((l) => l.includes(`router.use("/${mount}"`));
       expect(line, `no mount line found for /${mount}`).toBeTruthy();
       expect(line).toContain("requireTotpEnrolled");
+      // Order matters: authenticate must populate req.user BEFORE the gate reads it.
+      expect(line, `/${mount} must run authenticate BEFORE the gate`).toContain("authenticate, requireTotpEnrolled");
     });
   }
 

@@ -14729,7 +14729,26 @@
 //   docType added after it, and nobody learns of it until a customer mentions
 //   it. An allowlist fails the other way — a new shipper-facing type is
 //   invisible until someone adds it, which is a support ticket.
-export const SRL_VERSION = "3.8.att";
+// v3.8.atu — The mandatory-2FA wall was mounted on six routers and gated one.
+//   requireTotpEnrolled short-circuits on !req.user, and every carrier router
+//   calls authenticate INTERNALLY — after the mount chain has already run. So
+//   req.user was undefined when the gate read it and it called next() for
+//   everyone. /carrier-tenders refused only by accident: an earlier mount at "/"
+//   had populated req.user as a side effect.
+//   The guard that was supposed to prevent this asserted the STRING
+//   "requireTotpEnrolled" appeared on each mount line. It did, on all six.
+//   Presence is not function — and removing the string to adversarially verify
+//   that guard could never have surfaced it. atm shipped a wall that was open.
+//   Fixing it immediately exposed a second defect the inert gate had hidden:
+//   the exempt list carried /activation-status (the BCA gate) but not
+//   /application-status (carrierAuth:587) — two different routes. The moment
+//   the gate started working, a PENDING carrier could not load the only page
+//   available to them. That is precisely the lockout the exempt list exists to
+//   prevent, and it was found by PROVING the gate rather than reading it.
+//   scripts/_arc15-gate-proof.ts now mints a session for an unenrolled carrier
+//   and asks every mount whether it refuses. It prints WALL HOLDS or names the
+//   mounts that are wrong.
+export const SRL_VERSION = "3.8.atu";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

@@ -35,7 +35,17 @@ const ENROLLMENT_EXEMPT = [
   "/totp/setup",
   "/totp/confirm",
   "/totp/status",
+  // ARC 15 — /application-status was MISSING and it is the one page a PENDING
+  // carrier is allowed to see. The list had /activation-status (the BCA gate)
+  // and they are two different routes: carrierAuth.ts:587 and :906. While the
+  // gate was inert this was invisible; the moment it started working, a PENDING
+  // carrier could not load the only page available to them — exactly the lockout
+  // this list exists to prevent. Caught by proving the gate, not by reading it.
+  "/application-status",
   "/activation-status",
+  // Recovery must stay reachable: a carrier whose verification link died needs
+  // this before they can do anything else, and it is authenticated + CARRIER-scoped.
+  "/resend-verification",
   "/me",
   "/logout",
 ];
