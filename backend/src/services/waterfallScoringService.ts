@@ -15,6 +15,7 @@
  */
 
 import { prisma } from "../config/database";
+import { regionsCoverLane } from "../lib/operatingRegions";
 import type { Prisma } from "@prisma/client";
 
 const INSURANCE_SAFETY_DAYS = 30;
@@ -153,15 +154,16 @@ export async function getEligibleCarriers(ctx: LoadContext) {
       if (!hasAny) return false;
     }
 
-    // Region coverage — must match origin OR destination state if the
-    // carrier publishes regions. Blank region list = nationwide.
-    if (c.operatingRegions && c.operatingRegions.length > 0) {
-      const covered = c.operatingRegions.some((r) => {
-        const upper = (r || "").toUpperCase();
-        return regionSet.some((s) => s && upper.includes(s));
-      });
-      if (!covered) return false;
-    }
+    // Region coverage — origin OR destination, per lib/operatingRegions.
+    //
+    // ARC 17 — this compared the carrier's REGION NAME to the load's two-letter
+    // STATE CODE with includes(). "NORTHEAST".includes("NH") is false;
+    // "NORTHEAST".includes("OR") is true. Across the ten regions onboarding
+    // offers and all fifty states, 41 states could never be matched by any
+    // region, and the nine that could matched the wrong carriers. Onboarding
+    // REQUIRES a region, so every portal-onboarded carrier was excluded from
+    // essentially every waterfall. §13.3 Item 223.
+    if (!regionsCoverLane(c.operatingRegions, regionSet)) return false;
 
     // Compliance flags — hard exclude
     if (c.lastVettingRisk === "CRITICAL" || c.lastVettingRisk === "HIGH") return false;
