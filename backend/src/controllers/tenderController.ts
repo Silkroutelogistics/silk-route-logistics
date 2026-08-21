@@ -1,5 +1,6 @@
 import { Response } from "express";
 import { prisma } from "../config/database";
+import { agreedRateFromTender } from "../lib/agreedCarrierRate";
 import { AuthRequest } from "../middleware/auth";
 import { createTenderSchema, counterTenderSchema, declineTenderSchema } from "../validators/tender";
 import { nextShipmentNumber } from "./shipmentController";
@@ -123,7 +124,15 @@ export async function acceptTender(req: AuthRequest, res: Response) {
     }),
     prisma.load.update({
       where: { id: tender.loadId },
-      data: { status: "BOOKED", carrierId: tender.carrier.userId },
+        // ARC 16 — persist the agreed carrier rate at the moment of accept.
+        // Without this, carrierRate stayed null all the way to settlement and
+        // createCarrierPayOnDelivery fell back to load.rate, which is the
+        // CUSTOMER rate on the primary creation path. §13.3 Item 221.1.
+      data: {
+        status: "BOOKED",
+        carrierId: tender.carrier.userId,
+        carrierRate: agreedRateFromTender(tender as any),
+      },
     }),
     prisma.loadTender.updateMany({
       where: { loadId: tender.loadId, id: { not: tender.id }, status: "OFFERED" },
@@ -294,7 +303,15 @@ export async function acceptTenderOnBehalf(req: AuthRequest, res: Response) {
     }),
     prisma.load.update({
       where: { id: tender.loadId },
-      data: { status: "BOOKED", carrierId: tender.carrier.userId },
+        // ARC 16 — persist the agreed carrier rate at the moment of accept.
+        // Without this, carrierRate stayed null all the way to settlement and
+        // createCarrierPayOnDelivery fell back to load.rate, which is the
+        // CUSTOMER rate on the primary creation path. §13.3 Item 221.1.
+      data: {
+        status: "BOOKED",
+        carrierId: tender.carrier.userId,
+        carrierRate: agreedRateFromTender(tender as any),
+      },
     }),
     prisma.loadTender.updateMany({
       where: { loadId: tender.loadId, id: { not: tender.id }, status: "OFFERED" },

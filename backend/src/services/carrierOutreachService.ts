@@ -78,7 +78,19 @@ export function generateOutreachEmail(
     equipmentType: string;
     weight: number | null;
     pickupDate: Date;
-    rate: number;
+    // ARC 16 — was `rate: number`, and `rate` is the CUSTOMER rate on the
+    // primary creation path (loadController.createLoad: `rate: raw.customerRate
+    // || raw.rate`). This email is the first outbound touch on a normal load,
+    // so it was quoting carriers the whole margin as their offer. §13.3 Item 221.2.
+    //
+    // `carrierRate` is the only field that means "what SRL pays the carrier".
+    // It is nullable because an AE need not set one at create time, and there
+    // is no other field that can stand in: `targetCarrierCost` exists on the
+    // model but is written by nothing. When it is null the email omits the row
+    // rather than inventing a number — a carrier who has to ask what the load
+    // pays is an inconvenience; a carrier quoted the customer rate and then
+    // offered less on the rate confirmation is a credibility problem.
+    carrierRate: number | null;
   },
   carrierName: string,
 ): string {
@@ -90,7 +102,10 @@ export function generateOutreachEmail(
     year: "numeric",
   });
   const weightStr = load.weight ? `${load.weight.toLocaleString()} lbs` : "TBD";
-  const rateStr = `$${load.rate.toLocaleString()}`;
+  const rateRow =
+    load.carrierRate == null
+      ? ""
+      : `<tr><td style="padding:8px;border:1px solid #e2e8f0;font-weight:bold">Rate</td><td style="padding:8px;border:1px solid #e2e8f0">$${load.carrierRate.toLocaleString()}</td></tr>`;
 
   return wrap(`
     <h2 style="color:#0f172a">New Load Available</h2>
@@ -101,7 +116,7 @@ export function generateOutreachEmail(
       <tr><td style="padding:8px;border:1px solid #e2e8f0;font-weight:bold">Equipment</td><td style="padding:8px;border:1px solid #e2e8f0">${load.equipmentType}</td></tr>
       <tr><td style="padding:8px;border:1px solid #e2e8f0;font-weight:bold">Weight</td><td style="padding:8px;border:1px solid #e2e8f0">${weightStr}</td></tr>
       <tr><td style="padding:8px;border:1px solid #e2e8f0;font-weight:bold">Pickup</td><td style="padding:8px;border:1px solid #e2e8f0">${pickupStr}</td></tr>
-      <tr><td style="padding:8px;border:1px solid #e2e8f0;font-weight:bold">Rate</td><td style="padding:8px;border:1px solid #e2e8f0">${rateStr}</td></tr>
+      ${rateRow}
     </table>
     <div style="text-align:center;margin:24px 0">
       <a href="https://silkroutelogistics.ai/carrier/dashboard/available-loads" style="display:inline-block;background:#d4a574;color:#0f172a;padding:14px 32px;text-decoration:none;border-radius:6px;font-weight:bold;font-size:16px">Accept This Load</a>
@@ -131,7 +146,8 @@ export async function notifyMatchedCarriers(
       equipmentType: true,
       weight: true,
       pickupDate: true,
-      rate: true,
+      // ARC 16 — carrierRate, not rate. §13.3 Item 221.2.
+      carrierRate: true,
     },
   });
 
@@ -276,7 +292,8 @@ export async function notifyMatchedCarriers(
         userId: carrier.userId,
         type: "LOAD_UPDATE",
         title: "New Load Available",
-        message: `New ${load.equipmentType} load available: ${route}${load.rate ? ` — $${load.rate.toLocaleString()}` : ""} (${load.referenceNumber})`,
+        // ARC 16 — same correction as the email: carrier-facing, so carrierRate.
+        message: `New ${load.equipmentType} load available: ${route}${load.carrierRate ? ` — $${load.carrierRate.toLocaleString()}` : ""} (${load.referenceNumber})`,
         actionUrl: "/carrier/dashboard/available-loads",
       },
     });
@@ -299,7 +316,7 @@ export async function notifyMatchedCarriers(
           referenceNumber: load.referenceNumber,
           route,
           equipmentType: load.equipmentType,
-          rate: load.rate,
+          offeredCarrierRate: load.carrierRate,
           carriers: notifiedCarrierNames,
           emailsSent,
         } as any,

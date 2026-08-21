@@ -14,6 +14,7 @@
  */
 
 import { prisma } from "../config/database";
+import { agreedRateFromValue } from "../lib/agreedCarrierRate";
 import type { Prisma } from "@prisma/client";
 import { log } from "../lib/logger";
 import {
@@ -427,7 +428,36 @@ export async function acceptPosition(positionId: string, actorId?: string | null
   // to next position. Carrier opted in but newly ineligible — next
   // match runs.
   const { complianceCheck } = await import("./complianceMonitorService");
-  const compliance = await complianceCheck(pos.carrierId);
+
+  // ARC 16 — was `complianceCheck(pos.carrierId)`, and that is a USER id.
+  //
+  // `WaterfallPosition.carrierId` deliberately holds `User.id` (buildWaterfall:
+  // "store User.id since Load.carrierId references User"), but `complianceCheck`
+  // looks up `CarrierProfile` by primary key. A User id finds no profile, so it
+  // returned `{ allowed: false, blocked_reasons: ["Carrier not found"] }` — and
+  // the branch below then marked the position `skipped` and advanced. Every
+  // position in turn. **Waterfall auto-dispatch could never accept a carrier**,
+  // and it failed in the shape of a carrier problem, so the log read like
+  // ordinary compliance churn rather than a broken path.
+  //
+  // Live since Sprint 39 (61589fa7), the commit that ADDED this check — the
+  // loadbid path in that same commit resolves the profile first
+  // (routes/loadBids.ts: `complianceCheck(carrierProfile.id)`), so the two bulk
+  // paths were written to different conventions on the same day. Same id-
+  // semantics class as §13.3 Item 57. Found by driving the real path against a
+  // real database in the Arc 16 money-path proof; no unit test could see it,
+  // because with Prisma mocked the lookup returns whatever the mock is told to.
+  //
+  // The file already does this resolution for the tender-send path a few
+  // hundred lines up (`findFirst({ where: { userId: pos.carrierId } })`); this
+  // is the same lookup, and it fails closed if there is no profile.
+  const acceptingProfile = await prisma.carrierProfile.findFirst({
+    where: { userId: pos.carrierId },
+    select: { id: true },
+  });
+  const compliance = acceptingProfile
+    ? await complianceCheck(acceptingProfile.id)
+    : { allowed: false, blocked_reasons: ["Carrier profile not found"], warnings: [] as string[] };
   if (!compliance.allowed) {
     await prisma.waterfallPosition.update({
       where: { id: positionId },
@@ -494,6 +524,8 @@ export async function acceptPosition(positionId: string, actorId?: string | null
     data: {
       status: "DISPATCHED",
       carrierId: pos.carrierId,
+      // ARC 16 — the agreed rate for a waterfall position. §13.3 Item 221.1.
+      carrierRate: agreedRateFromValue(pos.offeredRate),
       dispatchedAt: now,
       dispatchedCarrierId: pos.carrierId,
       statusUpdatedAt: now,

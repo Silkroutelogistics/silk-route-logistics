@@ -1,5 +1,6 @@
 import { Router, Response } from "express";
 import { prisma } from "../config/database";
+import { agreedRateFromValue } from "../lib/agreedCarrierRate";
 import { authenticate, authorize, AuthRequest } from "../middleware/auth";
 import { logWaterfallEvent } from "../services/waterfallEventService";
 import { createCheckCallSchedule } from "../services/checkCallAutomation";
@@ -223,6 +224,8 @@ router.patch(
           data: {
             status: "DISPATCHED",
             carrierId: bid.carrierId,
+            // ARC 16 — the bid the AE accepted is the agreed rate. §13.3 Item 221.1.
+            carrierRate: agreedRateFromValue(bid.bidRate),
             dispatchedAt: now,
             dispatchedCarrierId: bid.carrierId,
             statusUpdatedAt: now,

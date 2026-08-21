@@ -520,7 +520,51 @@ async function createCarrierPayOnDelivery(load: any) {
   const rc = load.rateConfirmations?.[0];
   const profile = load.carrier.carrierProfile;
 
-  const lineHaul = load.carrierRate || load.rate || 0;
+  // ARC 16 — was `load.carrierRate || load.rate || 0`.
+  //
+  // `load.rate` is the CUSTOMER rate on the primary creation path
+  // (loadController.createLoad: `rate: raw.customerRate || raw.rate`), and no
+  // tender-accept path wrote carrierRate — so a normally-created load arrived
+  // here with carrierRate null and the carrier was settled at 100% of SRL's
+  // revenue. This writes CarrierPay; it is money out, not a display bug.
+  //
+  // Arc 16 makes all four accept paths persist the agreed rate, so the fallback
+  // is no longer needed. It is removed rather than left as a safety net,
+  // because a safety net whose default is the customer rate is not a safety
+  // net — it is the bug, waiting. A null carrierRate on a carrier-pay path is
+  // now an ERROR: no CarrierPay is created, and an AE is told. Refusing to pay
+  // is recoverable in minutes; overpaying by the whole margin is a clawback
+  // conversation with a carrier who was told a number in writing.
+  //
+  // The shape is copied deliberately from invoiceService's customer-side guard
+  // (`load.customerRate ?? 0`, refuse if zero), which already solved exactly
+  // this problem on the billing side. §13.3 Item 221.1.
+  const lineHaul = load.carrierRate == null ? null : Number(load.carrierRate);
+
+  if (lineHaul === null || !Number.isFinite(lineHaul) || lineHaul <= 0) {
+    log.error(
+      { loadId: load.id, referenceNumber: load.referenceNumber, carrierRate: load.carrierRate },
+      "[Integration] REFUSING to create CarrierPay: no agreed carrier rate on this load",
+    );
+    if (load.posterId) {
+      await prisma.notification
+        .create({
+          data: {
+            userId: load.posterId,
+            type: "SYSTEM_ALERT",
+            title: "Carrier settlement blocked — no agreed rate",
+            message:
+              `Load ${load.referenceNumber} delivered, but no agreed carrier rate is recorded, so no settlement was created. ` +
+              `Set the carrier rate on the load and it will settle. Nothing has been paid.`,
+            actionUrl: "/dashboard/payables",
+          },
+        })
+        .catch((e: any) =>
+        log.error({ err: e, loadId: load.id }, "[Integration] AE notify failed for blocked settlement"),
+      );
+    }
+    return;
+  }
   const fuelSurcharge = rc?.fuelSurcharge || load.fuelSurcharge || 0;
 
   // v3.8.asb — accessorials come from the APPROVED LoadAccessorial ledger, not
