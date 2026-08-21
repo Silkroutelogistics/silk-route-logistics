@@ -18,7 +18,7 @@ export type UserContext = ToolContext;
 const ADMIN_ROLES = ["ADMIN", "CEO"];
 const FINANCE_ROLES = ["ACCOUNTING", ...ADMIN_ROLES];
 const OPERATIONS_ROLES = ["DISPATCH", "OPERATIONS", ...ADMIN_ROLES];
-const BROKER_ROLES = ["BROKER", "AE"];
+const BROKER_ROLES = ["BROKER", "AE", "ACCOUNT_EXECUTIVE"]; // v3.8.aue
 const INTERNAL_ROLES = [...BROKER_ROLES, ...OPERATIONS_ROLES, ...FINANCE_ROLES];
 
 function isAdmin(role: string): boolean {

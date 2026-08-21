@@ -293,22 +293,126 @@ setInterval(() => {
   }
 }, 10 * 60 * 1000);
 
+// ─────────────────────────────────────────────────────────────────────────────
+// v3.8.aue — ACCOUNT_EXECUTIVE effective-permission resolution.
+//
+// ACCOUNT_EXECUTIVE is deliberately NOT enumerated in the ~280 authorize()
+// call-sites it is entitled to. It resolves centrally, here, as:
+//
+//     ACCOUNT_EXECUTIVE = (BROKER ∪ OPERATIONS) − ACCOUNT_EXECUTIVE_DENY
+//
+// DENY is evaluated BEFORE any grant, so an inherited BROKER/OPERATIONS grant
+// can never leak a denied surface — and it still applies even if a future
+// call-site names ACCOUNT_EXECUTIVE explicitly. Deny always wins.
+//
+// Do NOT add "ACCOUNT_EXECUTIVE" to individual authorize() lists. Widening the
+// role means editing AE_INHERITED_ROLES or ACCOUNT_EXECUTIVE_DENY here, so the
+// role's true reach stays readable in one place.
+//
+// The deprecated AE value is a separate, older role — see schema.prisma. It is
+// NOT inherited and must not be used in new code.
+// ─────────────────────────────────────────────────────────────────────────────
+
+export const ACCOUNT_EXECUTIVE = "ACCOUNT_EXECUTIVE";
+
+/** Roles ACCOUNT_EXECUTIVE inherits route grants from. */
+export const AE_INHERITED_ROLES: readonly string[] = ["BROKER", "OPERATIONS"];
+
+type DenyRule = { name: string; re: RegExp; methods?: string[] };
+
+/**
+ * Surfaces ACCOUNT_EXECUTIVE may never reach. Patterns are matched against the
+ * NORMALIZED path (see normalizeRoutePath) and must therefore be lowercase and
+ * carry no trailing slash.
+ */
+export const ACCOUNT_EXECUTIVE_DENY: readonly DenyRule[] = [
+  // ── Money movement ────────────────────────────────────────────────────────
+  { name: "accounting-payments", re: /^\/api\/accounting\/payments(\/|$)/ },
+  { name: "accounting-fund", re: /^\/api\/accounting\/fund(\/|$)/ },
+  { name: "accounting-credit", re: /^\/api\/accounting\/credit(\/|$)/ },
+  { name: "quickpay-override", re: /^\/api\/loads\/[^/]+\/quickpay-override(\/|$)/ },
+  // carrier-pay is granted to BROKER by a FILE-LEVEL guard (carrierPay.ts:9)
+  // and 5 of its 6 routes have no per-route gate, so a per-route scan misses
+  // it entirely. POST /carrier-pay/batch is a live settle path.
+  { name: "carrier-pay", re: /^\/api\/carrier-pay(\/|$)/ },
+  // Factoring moves money. The rest of /invoices/* is allowed.
+  { name: "invoice-factoring", re: /^\/api\/invoices\/[^/]+\/factor(\/|$)/, methods: ["POST"] },
+
+  // ── Admin surfaces: defense-in-depth ──────────────────────────────────────
+  // Redundant today — neither BROKER nor OPERATIONS reaches these, so nothing
+  // is inherited to deny. Kept so that if either role is ever added to an
+  // admin route, ACCOUNT_EXECUTIVE does not silently acquire it too.
+  { name: "admin-console", re: /^\/api\/admin(\/|$)/ },
+  { name: "system-logs", re: /^\/api\/system-logs(\/|$)/ },
+  { name: "audit-trail", re: /^\/api\/audit-trail(\/|$)/ },
+];
+
+/**
+ * Normalize a request URL before deny-matching.
+ *
+ * Express routing is case-insensitive and non-strict about trailing slashes by
+ * default, so `/API/Accounting/Payments/` and `/api/accounting/payments` reach
+ * the same handler. A case-sensitive matcher would let the first bypass the
+ * deny list. Strips query/hash, lowercases, collapses duplicate slashes, and
+ * removes trailing slashes.
+ */
+export function normalizeRoutePath(originalUrl: string): string {
+  let p = originalUrl || "";
+  const cut = Math.min(
+    ...[p.indexOf("?"), p.indexOf("#")].filter((i) => i !== -1).concat([p.length]),
+  );
+  p = p.slice(0, cut).toLowerCase().replace(/\/{2,}/g, "/").replace(/\/+$/, "");
+  return p === "" ? "/" : p;
+}
+
+/** Returns the DenyRule that blocks this request, or null if none applies. */
+export function matchAccountExecutiveDeny(method: string, originalUrl: string): DenyRule | null {
+  const path = normalizeRoutePath(originalUrl);
+  const verb = (method || "").toUpperCase();
+  for (const rule of ACCOUNT_EXECUTIVE_DENY) {
+    if (rule.methods && !rule.methods.includes(verb)) continue;
+    if (rule.re.test(path)) return rule;
+  }
+  return null;
+}
+
 export function authorize(...roles: string[]) {
   return (req: AuthRequest, res: Response, next: NextFunction) => {
-    if (!req.user || !roles.includes(req.user.role)) {
-      // Log unauthorized access attempt
+    const deny = (reason: string) => {
       if (req.user) {
         prisma.systemLog.create({
           data: {
             logType: "SECURITY",
             severity: "WARNING",
             source: "authorize",
-            message: `Access denied: ${req.user.email} (${req.user.role}) attempted ${req.method} ${req.originalUrl} — required: ${roles.join(", ")}`,
+            message: `Access denied: ${req.user.email} (${req.user.role}) attempted ${req.method} ${req.originalUrl} — ${reason}`,
             ipAddress: (req.headers["x-forwarded-for"] as string) || req.ip || null,
           },
         }).catch((e) => log.warn({ err: e }, "[Auth] Audit log write failed:"));
       }
       res.status(403).json({ error: "Insufficient permissions" });
+    };
+
+    if (!req.user) {
+      deny(`required: ${roles.join(", ")}`);
+      return;
+    }
+
+    // DENY FIRST — before any grant, inherited or explicit.
+    if (req.user.role === ACCOUNT_EXECUTIVE) {
+      const rule = matchAccountExecutiveDeny(req.method, req.originalUrl);
+      if (rule) {
+        deny(`ACCOUNT_EXECUTIVE denied by rule: ${rule.name}`);
+        return;
+      }
+    }
+
+    const granted =
+      roles.includes(req.user.role) ||
+      (req.user.role === ACCOUNT_EXECUTIVE && AE_INHERITED_ROLES.some((r) => roles.includes(r)));
+
+    if (!granted) {
+      deny(`required: ${roles.join(", ")}`);
       return;
     }
     next();

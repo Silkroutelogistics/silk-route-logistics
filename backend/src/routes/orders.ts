@@ -20,7 +20,8 @@ import { buildQuoteApprovalUrl } from "./quoteApprove"; // v3.8.akn §13.3 Item 
 const router = Router();
 router.use(authenticate);
 
-const AE_ROLES = ["BROKER", "ADMIN", "DISPATCH", "OPERATIONS", "CEO", "AE"] as const;
+// v3.8.aue — ACCOUNT_EXECUTIVE added.
+const AE_ROLES = ["BROKER", "ADMIN", "DISPATCH", "OPERATIONS", "CEO", "AE", "ACCOUNT_EXECUTIVE"] as const;
 
 // ─── List / get ───────────────────────────────────────────
 

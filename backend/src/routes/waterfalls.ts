@@ -16,7 +16,8 @@ import { log } from "../lib/logger";
 const router = Router();
 router.use(authenticate);
 
-const AE_ROLES = ["BROKER", "ADMIN", "DISPATCH", "OPERATIONS", "CEO", "AE"] as const;
+// v3.8.aue — ACCOUNT_EXECUTIVE added.
+const AE_ROLES = ["BROKER", "ADMIN", "DISPATCH", "OPERATIONS", "CEO", "AE", "ACCOUNT_EXECUTIVE"] as const;
 
 // ─── Waterfall board summary + list ────────────────────────
 

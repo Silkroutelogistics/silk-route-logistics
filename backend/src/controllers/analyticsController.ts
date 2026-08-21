@@ -19,7 +19,12 @@ function buildFilters(req: AuthRequest): analytics.AnalyticsFilters {
 
   if (role === "CARRIER") {
     filters.carrierId = req.user!.id;
-  } else if (role === "BROKER" || role === "AE") {
+  } else if (role === "BROKER" || role === "AE" || role === "ACCOUNT_EXECUTIVE") {
+    // v3.8.aue — ACCOUNT_EXECUTIVE scopes to its OWN book, matching BROKER
+    // (which the UI already labels "Account Executive"). This is the least-
+    // privilege reading and it is a deliberate fork: ACCOUNT_EXECUTIVE also
+    // inherits OPERATIONS, which sees everything. To give AEs company-wide
+    // analytics instead, move ACCOUNT_EXECUTIVE out of this branch.
     filters.userId = req.user!.id;
   }
   // ADMIN, CEO, ACCOUNTING, OPERATIONS, DISPATCH see everything

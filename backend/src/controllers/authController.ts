@@ -29,7 +29,13 @@ function signToken(userId: string): string {
 // → OTP → /shipper/dashboard, producing a portal-boundary violation
 // (Item 174). The optional expectedRole param identifies which portal
 // initiated the request; mismatch returns 401 ROLE_MISMATCH.
-const AE_ROLES = new Set(["ADMIN", "CEO", "BROKER", "DISPATCH", "OPERATIONS", "ACCOUNTING"]);
+// v3.8.aue — ACCOUNT_EXECUTIVE added. This set gates AE-PORTAL LOGIN, not route
+// access: omit a role here and it cannot sign in at all (401 ROLE_MISMATCH),
+// whatever authorize() would have allowed. Any new staff role must be added.
+// (The legacy AE value is absent and therefore unloggable-in — see schema.prisma.)
+const AE_ROLES = new Set([
+  "ADMIN", "CEO", "BROKER", "DISPATCH", "OPERATIONS", "ACCOUNTING", "ACCOUNT_EXECUTIVE",
+]);
 function rolesMatch(userRole: string, expectedRole: "AE" | "SHIPPER"): boolean {
   if (expectedRole === "AE") return AE_ROLES.has(userRole);
   if (expectedRole === "SHIPPER") return userRole === "SHIPPER";

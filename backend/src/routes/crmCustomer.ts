@@ -19,7 +19,8 @@ import { log } from "../lib/logger";
 const router = Router();
 router.use(authenticate);
 
-const CRM_ROLES = ["ADMIN", "CEO", "BROKER", "OPERATIONS", "ACCOUNTING", "DISPATCH", "AE"] as const;
+// v3.8.aue — ACCOUNT_EXECUTIVE added.
+const CRM_ROLES = ["ADMIN", "CEO", "BROKER", "OPERATIONS", "ACCOUNTING", "DISPATCH", "AE", "ACCOUNT_EXECUTIVE"] as const;
 
 // ─── Account rep picker ───────────────────────────────────
 // Lightweight user dropdown scoped to roles that can own an account.
@@ -32,7 +33,9 @@ router.get(
   async (req: AuthRequest, res: Response) => {
     const search = (req.query.search as string) || "";
     const where: any = {
-      role: { in: ["BROKER", "OPERATIONS", "DISPATCH", "ADMIN", "CEO", "AE"] },
+      // v3.8.aue — data filter, not authz: this is the account-rep picker, so
+      // ACCOUNT_EXECUTIVE users must appear here to be assignable.
+      role: { in: ["BROKER", "OPERATIONS", "DISPATCH", "ADMIN", "CEO", "AE", "ACCOUNT_EXECUTIVE"] },
       isActive: true,
     };
     if (search) {

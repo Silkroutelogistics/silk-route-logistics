@@ -13,7 +13,8 @@ import { log } from "../lib/logger";
  * Roles that operate SRL internally and legitimately need visibility across all
  * tenants. Everyone else (CARRIER, SHIPPER, FACTOR) must be scoped to what they own.
  */
-const AE_INTERNAL_ROLES = ["ADMIN", "CEO", "BROKER", "DISPATCH", "OPERATIONS", "ACCOUNTING", "AE"];
+// v3.8.aue — ACCOUNT_EXECUTIVE added (POD/document access is operational).
+const AE_INTERNAL_ROLES = ["ADMIN", "CEO", "BROKER", "DISPATCH", "OPERATIONS", "ACCOUNTING", "AE", "ACCOUNT_EXECUTIVE"];
 
 function isAeInternal(role: string): boolean {
   return AE_INTERNAL_ROLES.includes(role);
