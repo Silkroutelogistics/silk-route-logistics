@@ -101,7 +101,7 @@ export async function loadLoadContext(loadId: string): Promise<LoadContext | nul
     pickupDate: load.pickupDate,
     deliveryDate: load.deliveryDate,
     distance: load.distance ?? null,
-    customerRate: load.customerRate ?? load.rate ?? null,
+    customerRate: load.customerRate ?? null,
     carrierRate: load.carrierRate ?? null,
   };
 }

@@ -48,7 +48,7 @@ export async function getRevenueMetrics(range: DateRange, groupBy: string = "day
   // Current period totals
   let totalRevenue = 0, totalCost = 0, loadCount = 0;
   loads.forEach((l) => {
-    const rev = l.customerRate || l.rate || 0;
+    const rev = l.customerRate ?? 0;
     const cost = l.carrierRate || l.totalCarrierPay || 0;
     totalRevenue += rev;
     totalCost += cost;
@@ -61,10 +61,10 @@ export async function getRevenueMetrics(range: DateRange, groupBy: string = "day
   // Previous period for comparison
   const prev = prevPeriod(range);
   const prevWhere = { ...where, pickupDate: { gte: prev.start, lte: prev.end } };
-  const prevLoads = await prisma.load.findMany({ where: prevWhere, select: { rate: true, customerRate: true, carrierRate: true, totalCarrierPay: true } });
+  const prevLoads = await prisma.load.findMany({ where: prevWhere, select: { customerRate: true, carrierRate: true, totalCarrierPay: true } });
   let prevRevenue = 0, prevCost = 0;
   prevLoads.forEach((l) => {
-    prevRevenue += l.customerRate || l.rate || 0;
+    prevRevenue += l.customerRate ?? 0;
     prevCost += l.carrierRate || l.totalCarrierPay || 0;
   });
   const prevMargin = prevRevenue - prevCost;
@@ -83,7 +83,7 @@ export async function getRevenueMetrics(range: DateRange, groupBy: string = "day
       key = d.toISOString().split("T")[0];
     }
     if (!seriesMap[key]) seriesMap[key] = { date: key, revenue: 0, cost: 0, margin: 0, loads: 0 };
-    const rev = l.customerRate || l.rate || 0;
+    const rev = l.customerRate ?? 0;
     const cost = l.carrierRate || l.totalCarrierPay || 0;
     seriesMap[key].revenue += rev;
     seriesMap[key].cost += cost;
@@ -248,7 +248,7 @@ export async function getLaneProfitability(range: DateRange, filters: AnalyticsF
 
   const loads = await prisma.load.findMany({
     where,
-    select: { originState: true, destState: true, rate: true, customerRate: true, carrierRate: true, totalCarrierPay: true, distance: true },
+    select: { originState: true, destState: true, customerRate: true, carrierRate: true, totalCarrierPay: true, distance: true },
   });
 
   const lanes: Record<string, { originState: string; destState: string; loads: number; revenue: number; cost: number; totalMiles: number }> = {};
@@ -256,7 +256,7 @@ export async function getLaneProfitability(range: DateRange, filters: AnalyticsF
     const key = `${l.originState}-${l.destState}`;
     if (!lanes[key]) lanes[key] = { originState: l.originState, destState: l.destState, loads: 0, revenue: 0, cost: 0, totalMiles: 0 };
     lanes[key].loads++;
-    lanes[key].revenue += l.customerRate || l.rate || 0;
+    lanes[key].revenue += l.customerRate ?? 0;
     lanes[key].cost += l.carrierRate || l.totalCarrierPay || 0;
     lanes[key].totalMiles += l.distance || 0;
   });
@@ -371,7 +371,7 @@ export async function getShipperScorecard(range: DateRange, filters: AnalyticsFi
       };
     }
     shippers[l.customerId].loads++;
-    shippers[l.customerId].revenue += l.customerRate || l.rate || 0;
+    shippers[l.customerId].revenue += l.customerRate ?? 0;
     shippers[l.customerId].cost += l.carrierRate || l.totalCarrierPay || 0;
     shippers[l.customerId].totalMiles += l.distance || 0;
   });

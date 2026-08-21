@@ -1151,7 +1151,7 @@ async function updateShipperCreditOnDelivery(load: any) {
   });
   if (!credit) return;
 
-  const invoiceAmount = load.customerRate || load.rate || 0;
+  const invoiceAmount = load.customerRate ?? 0;
 
   await prisma.shipperCredit.update({
     where: { id: credit.id },

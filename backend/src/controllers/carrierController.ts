@@ -1334,7 +1334,7 @@ export async function getCarrierDetail(req: AuthRequest, res: Response) {
       tenders: {
         orderBy: { createdAt: "desc" },
         take: 10,
-        include: { load: { select: { referenceNumber: true, originCity: true, originState: true, destCity: true, destState: true, rate: true } } },
+        include: { load: { select: { referenceNumber: true, originCity: true, originState: true, destCity: true, destState: true } } },
       },
     },
   });
@@ -1350,7 +1350,7 @@ export async function getCarrierDetail(req: AuthRequest, res: Response) {
     take: 10,
     select: {
       id: true, referenceNumber: true, originCity: true, originState: true,
-      destCity: true, destState: true, rate: true, status: true, pickupDate: true, deliveryDate: true,
+      destCity: true, destState: true, status: true, pickupDate: true, deliveryDate: true,
     },
   });
 

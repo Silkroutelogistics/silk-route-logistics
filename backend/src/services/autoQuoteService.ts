@@ -231,14 +231,29 @@ export async function getMarketBenchmark(
       status: { in: ["DELIVERED", "COMPLETED", "IN_TRANSIT", "AT_PICKUP", "AT_DELIVERY"] },
     },
     select: {
-      rate: true,
+      carrierRate: true,
       distance: true,
     },
   });
 
   if (loads.length === 0) return null;
 
-  const rates = loads.map((l) => l.rate).sort((a, b) => a - b);
+  // ARC 21 — DECIDED: carrierRate. And this was not merely ambiguous, it was
+  // WRONG. getMarketBenchmark's output feeds `carrierRatePerMile` a few lines
+  // down in the caller — the comment there reads "Determine base carrier rate
+  // per mile". It was built from `rate`, which on the primary creation path
+  // is the CUSTOMER number, so every auto-generated quote derived its carrier
+  // cost from what customers had been charged. That inflates the baseline,
+  // and the inflated baseline then inflates the quote built on top of it.
+  //
+  // A market benchmark in freight means what it costs to move the lane, which
+  // is the buy side. Loads with no carrier rate yet are excluded rather than
+  // counted as zero — an uncovered load has no cost to average.
+  const rates = loads
+    .map((l) => l.carrierRate ?? 0)
+    .filter((r) => r > 0)
+    .sort((a, b) => a - b);
+  if (rates.length === 0) return null;
   const sum = rates.reduce((acc, r) => acc + r, 0);
   const avg = sum / rates.length;
   const low = rates[Math.floor(rates.length * 0.1)] ?? rates[0];

@@ -396,7 +396,7 @@ export async function generateRateConfirmation(req: AuthRequest, res: Response) 
 }
 
 function buildRateConHTML(load: any): string {
-  const carrierRate = load.carrierRate || load.rate || 0;
+  const carrierRate = load.carrierRate ?? 0;
   const pickup = load.pickupDate ? new Date(load.pickupDate).toLocaleDateString("en-US") : "--";
   const delivery = load.deliveryDate ? new Date(load.deliveryDate).toLocaleDateString("en-US") : "--";
 

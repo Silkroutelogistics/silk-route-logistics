@@ -227,9 +227,30 @@ export async function createLoad(req: AuthRequest, res: Response) {
     distance: raw.miles || raw.distance || undefined,
 
     // Financials
-    rate: raw.customerRate || raw.rate || 0,
-    customerRate: raw.customerRate || undefined,
+    // ARC 21 — customerRate is now ALWAYS populated on this path.
+    //
+    // It was `raw.customerRate || undefined`, so an AE who supplied only
+    // `rate` produced a row with the number in `rate` and NULL in
+    // `customerRate`. Every consumer then had to write `customerRate || rate`
+    // to find it, which is what kept the ambiguous column alive. Writers are
+    // fixed first, deliberately: migrating readers while a creation path can
+    // still leave the explicit field null would silently zero those loads.
+    customerRate: raw.customerRate ?? raw.rate ?? 0,
     carrierRate: raw.carrierRate || undefined,
+    // ARC 21 — `rate` is now a WRITE-ONLY MIRROR. Scaffolding, not data.
+    //
+    // The column means the customer rate on this path and the carrier rate on
+    // `withTenderController`, which is the ambiguity Item 220.2 recorded and
+    // this arc exists to end. Every reader has moved to an explicit field; the
+    // column is kept written so a rollback to any commit before this arc finds
+    // the data it expects.
+    //
+    // REMOVAL CONDITION, stated so this does not become permanent: drop it once
+    // the zero-reader guard has been green for a full deploy cycle AND the
+    // gate-live secret exists. The migration is authored on hold/retire-load-rate
+    // and deliberately not merged — the Item 212 lesson is that held work on a
+    // shipping branch is not held.
+    rate: raw.customerRate ?? raw.rate ?? 0,
     rateType: raw.rateType || "FLAT",
 
     // Hazmat
@@ -391,9 +412,14 @@ export async function getLoads(req: AuthRequest, res: Response) {
   if (query.destState) where.destState = query.destState;
   if (query.equipmentType) where.equipmentType = query.equipmentType;
   if (query.minRate || query.maxRate) {
-    where.rate = {};
-    if (query.minRate) (where.rate as Record<string, number>).gte = query.minRate;
-    if (query.maxRate) (where.rate as Record<string, number>).lte = query.maxRate;
+    // ARC 21 — DECIDED: customerRate. The AE load list is a pipeline view and
+    // the number beside each row is what the load is worth to SRL; a filter
+    // that ranges over a different field than the column it sits next to is a
+    // filter that looks broken. The carrier number is the subject of the
+    // tender and rate-confirmation surfaces, where it is shown explicitly.
+    where.customerRate = {};
+    if (query.minRate) (where.customerRate as Record<string, number>).gte = query.minRate;
+    if (query.maxRate) (where.customerRate as Record<string, number>).lte = query.maxRate;
   }
   if (query.search) {
     where.OR = [
@@ -790,7 +816,13 @@ export async function updateLoad(req: AuthRequest, res: Response) {
   if (equipmentType !== undefined) data.equipmentType = equipmentType;
   if (commodity !== undefined) data.commodity = commodity;
   if (freightClass !== undefined) data.freightClass = freightClass;
-  if (rate !== undefined) data.rate = rate;
+  // ARC 21 — an edit to the legacy field updates the explicit one too, so a
+  // caller still sending `rate` cannot drift the two apart. The mirror is
+  // written last, from whatever customerRate ends up being.
+  if (rate !== undefined) {
+    data.rate = rate;
+    if (data.customerRate === undefined) data.customerRate = rate;
+  }
   if (customerRate !== undefined) data.customerRate = customerRate;
   if (carrierRate !== undefined) data.carrierRate = carrierRate;
   if (distance !== undefined) data.distance = distance;
@@ -868,7 +900,7 @@ export async function updateLoad(req: AuthRequest, res: Response) {
   }
 
   // Recalculate margin fields if rates changed (guard against division by zero)
-  const finalCustRate = (customerRate ?? existing.customerRate ?? rate ?? existing.rate) as number;
+  const finalCustRate = (customerRate ?? existing.customerRate ?? 0) as number;
   const finalCarrRate = (carrierRate ?? existing.carrierRate) as number | null;
   const finalDist = (distance ?? existing.distance) as number | null;
   if (finalCarrRate && finalCarrRate > 0) {

@@ -55,7 +55,7 @@ export async function verifyRC(req: Request, res: Response) {
       originState: true,
       destState: true,
       equipmentType: true,
-      rate: true,
+      carrierRate: true,
       createdAt: true,
       carrier: {
         select: {
@@ -102,7 +102,11 @@ export async function verifyRC(req: Request, res: Response) {
           dot: match.carrier.carrierProfile?.dotNumber,
         }
       : null,
-    rate: match.rate,
+    // ARC 21 — DECIDED: carrierRate. This is a PUBLIC token endpoint verifying
+    // a rate confirmation, and an RC states the carrier's rate. Returning the
+    // customer number here would publish SRL's margin to anyone holding the
+    // token — the v3.8.att class of leak, on a route with no session at all.
+    rate: match.carrierRate ?? 0,
     issuedAt: match.createdAt,
   });
 }

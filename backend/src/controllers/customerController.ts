@@ -120,10 +120,10 @@ export async function getCustomers(req: AuthRequest, res: Response) {
     customers.map(async (c) => {
       const loadAgg = await prisma.load.aggregate({
         where: { customerId: c.id, deletedAt: null },
-        _sum: { customerRate: true, rate: true },
+        _sum: { customerRate: true },
         _count: true,
       });
-      const loadRevenue = (loadAgg._sum.customerRate ?? 0) || (loadAgg._sum.rate ?? 0);
+      const loadRevenue = loadAgg._sum.customerRate ?? 0;
       const shipmentAgg = await prisma.shipment.aggregate({
         where: { customerId: c.id },
         _sum: { rate: true },

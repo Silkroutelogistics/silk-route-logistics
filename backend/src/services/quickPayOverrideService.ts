@@ -143,7 +143,7 @@ export async function summarizeVariance(periodStart: Date, periodEnd: Date): Pro
     const applied = o.appliedRate.toNumber();
     const delta = applied - tier;
     totalDelta += delta;
-    const carrierRate = o.load.carrierRate ?? o.load.rate ?? 0;
+    const carrierRate = o.load.carrierRate ?? 0;
     totalMarginImpact += delta * carrierRate;
     byReason[o.reason as OverrideReasonKey] += 1;
   }

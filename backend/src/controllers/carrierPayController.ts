@@ -256,7 +256,7 @@ export async function getCarrierPayById(req: AuthRequest, res: Response) {
     where: { id: req.params.id },
     include: {
       carrier: { select: { id: true, firstName: true, lastName: true, company: true, email: true } },
-      load: { select: { id: true, referenceNumber: true, originCity: true, originState: true, destCity: true, destState: true, rate: true, pickupDate: true, deliveryDate: true } },
+      load: { select: { id: true, referenceNumber: true, originCity: true, originState: true, destCity: true, destState: true, pickupDate: true, deliveryDate: true } },
       settlement: true,
     },
   });

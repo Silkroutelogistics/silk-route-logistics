@@ -1311,6 +1311,8 @@ export async function generateBOLFromLoad(
 }
 
 interface LoadData {
+  // ARC 21 — declared so a rate confirmation can print the CARRIER number.
+  carrierRate?: number | null;
   referenceNumber: string;
   originCity: string; originState: string; originZip: string;
   destCity: string; destState: string; destZip: string;
@@ -1382,10 +1384,14 @@ export function generateRateConfirmation(load: LoadData): PDFDoc {
 
   doc.fontSize(10).fillColor("#1E1E2F");
   doc.text("Linehaul Rate:", 50, y);
-  doc.text(`$${load.rate.toLocaleString()}`, 200, y, { align: "left" });
+  // ARC 21 — a rate confirmation states what SRL pays the CARRIER. This
+  // printed `load.rate`, which on the primary creation path is the CUSTOMER
+  // number — the same class as Item 220.1, here with no fallback softening it
+  // and on a document a carrier signs. §13.3 Item 227.
+  doc.text(`$${(load.carrierRate ?? 0).toLocaleString()}`, 200, y, { align: "left" });
   y += 18;
   doc.fontSize(12).fillColor("#1E1E2F").text("Total:", 50, y);
-  doc.text(`$${load.rate.toLocaleString()}`, 200, y);
+  doc.text(`$${(load.carrierRate ?? 0).toLocaleString()}`, 200, y);
 
   if (load.notes) {
     y += 35;
@@ -1430,6 +1436,8 @@ export function getMileageFootnote(source?: string): string | null {
 // ─── Enhanced Multi-Page Rate Confirmation ───────────────────
 
 interface EnhancedRCLoadData {
+  // ARC 21 — the RC prints what SRL pays the carrier.
+  carrierRate?: number | null;
   // Sprint 51 (Item 129) — id required for RC verification URL token derivation.
   // Pre-Sprint-51 the generator only needed referenceNumber; the verifier needs
   // both (id + referenceNumber + salt) to hash-match against stored loads.
@@ -1922,7 +1930,15 @@ export function generateEnhancedRateConfirmation(load: EnhancedRCLoadData, formD
   y = drawPartiesBlock(doc, shipperParty, consigneeParty, y + 12);
 
   // Lane economics — MILES / TRANSIT / $/MILE pills (only with distance)
-  const linehaul = (fd.lineHaulRate ?? load.rate) as number;
+  // ARC 21 — CLOSES §13.3 Item 220.1.
+  //
+  // Arc 14 found this fallback reads the CUSTOMER rate — `load.rate` on the
+  // primary creation path — and recorded it as latent because both live
+  // producers happen to set `lineHaulRate`. Latent is not fixed: a future
+  // producer that omits the key would print SRL's customer rate as carrier
+  // pay on a document the carrier signs. Arc 14's own rehearsal demonstrated
+  // it accidentally, reading $5,100 against an agreed $4,100.
+  const linehaul = (fd.lineHaulRate ?? load.carrierRate ?? 0) as number;
   const fsc = (fd.fuelSurcharge as number | undefined) ?? 0;
   const accs = (fd.accessorials as Array<{ description?: string; type?: string; amount: number }> | undefined) ?? [];
   const accSum = accs.reduce((s, a) => s + Number(a.amount || 0), 0);
@@ -2752,7 +2768,7 @@ export function generateShipperLoadConfirmation(load: EnhancedRCLoadData, formDa
   // ratified. It now resolves the stem through the shared rule (loadNumber, then
   // referenceNumber) instead of preferring the AE-editable formData copy.
   const docId = resolveLoadStem(load) ?? "";
-  const shipperRate = Number(fd.customerRate ?? (load as any).customerRate ?? load.rate ?? 0);
+  const shipperRate = Number(fd.customerRate ?? (load as any).customerRate ?? 0);
 
   // Header
   let y = drawHeaderFirstPage(doc, {
@@ -2838,7 +2854,10 @@ interface InvoiceData {
   load: {
     referenceNumber: string; loadNumber?: string | null;
     originCity: string; originState: string;
-    destCity: string; destState: string; rate: number;
+    // ARC 21 — `rate` dropped: this invoice renderer never printed it, and
+    // the caller no longer selects it. The invoice total comes from the
+    // invoice, not from the load.
+    destCity: string; destState: string;
     pickupDate: Date; deliveryDate: Date;
     customer?: {
       name?: string | null; contactName?: string | null;
@@ -2950,7 +2969,9 @@ export function generateInvoicePDF(invoice: InvoiceData): PDFDoc {
       charges.push({ label: li.description || li.type.replace(/_/g, " "), amount: li.amount });
   }
   if (charges.length === 0)
-    charges.push({ label: "Line Haul", amount: invoice.load.rate ?? invoice.totalAmount ?? invoice.amount });
+    // ARC 21 — an invoice bills the CUSTOMER, so its line haul is the customer
+  // rate. The load's legacy column is gone from this interface entirely.
+  charges.push({ label: "Line Haul", amount: invoice.totalAmount ?? invoice.amount });
   const chargesBottom = drawChargesBlock(doc, charges, y, 280);
 
   y = Math.max(billBottom, chargesBottom) + 16;

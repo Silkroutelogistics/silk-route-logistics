@@ -492,6 +492,10 @@ export async function createLoadFromEmail(
       pickupDate,
       deliveryDate,
       commodity: parsed.commodity || null,
+      // ARC 21 — a rate parsed out of a shipper's email is what the SHIPPER
+      // said they would pay, so it is the customer rate. This path set only
+      // `rate`, leaving customerRate null on every email-created load.
+      customerRate: parsed.rate || 0,
       rate: parsed.rate || 0,
       specialInstructions: parsed.specialInstructions || null,
       hazmat: parsed.hazmat || false,

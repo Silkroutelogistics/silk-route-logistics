@@ -529,12 +529,13 @@ export async function getAnalyticsSummary(ctx: UserContext, metric: string, date
             pickupDate: { gte: start, lte: end },
             status: { notIn: ["DRAFT", "CANCELLED"] },
           },
-          select: { rate: true, customerRate: true, carrierRate: true, totalCarrierPay: true, distance: true },
+          select: { customerRate: true, carrierRate: true, totalCarrierPay: true, distance: true },
         });
 
         let totalRevenue = 0, totalCost = 0, totalMiles = 0;
         loads.forEach((l) => {
-          totalRevenue += l.customerRate || l.rate || 0;
+                // ARC 21 — revenue is what the customer pays. §13.3 Item 227.
+      totalRevenue += l.customerRate ?? 0;
           totalCost += l.carrierRate || l.totalCarrierPay || 0;
           totalMiles += l.distance || 0;
         });
@@ -686,7 +687,7 @@ export async function getAnalyticsSummary(ctx: UserContext, metric: string, date
             pickupDate: { gte: start, lte: end },
             status: { notIn: ["DRAFT", "CANCELLED"] },
           },
-          select: { originState: true, destState: true, rate: true, customerRate: true, carrierRate: true, distance: true },
+          select: { originState: true, destState: true, customerRate: true, carrierRate: true, distance: true },
         });
 
         const lanes: Record<string, { origin: string; dest: string; loads: number; revenue: number; cost: number; miles: number }> = {};
@@ -694,7 +695,7 @@ export async function getAnalyticsSummary(ctx: UserContext, metric: string, date
           const key = `${l.originState}-${l.destState}`;
           if (!lanes[key]) lanes[key] = { origin: l.originState, dest: l.destState, loads: 0, revenue: 0, cost: 0, miles: 0 };
           lanes[key].loads++;
-          lanes[key].revenue += l.customerRate || l.rate || 0;
+          lanes[key].revenue += l.customerRate ?? 0;
           lanes[key].cost += l.carrierRate || 0;
           lanes[key].miles += l.distance || 0;
         });
@@ -813,12 +814,12 @@ export async function getFinancialSummary(ctx: UserContext) {
           pickupDate: { gte: thirtyDaysAgo },
           status: { notIn: ["DRAFT", "CANCELLED"] },
         },
-        select: { rate: true, customerRate: true, carrierRate: true, totalCarrierPay: true },
+        select: { customerRate: true, carrierRate: true, totalCarrierPay: true },
       });
 
       let revenue = 0, cost = 0;
       loads.forEach((l) => {
-        revenue += l.customerRate || l.rate || 0;
+        revenue += l.customerRate ?? 0;
         cost += l.carrierRate || l.totalCarrierPay || 0;
       });
 
@@ -882,12 +883,12 @@ export async function getFinancialSummary(ctx: UserContext) {
         pickupDate: { gte: thirtyDaysAgo },
         status: { notIn: ["DRAFT", "CANCELLED"] },
       },
-      select: { rate: true, customerRate: true, carrierRate: true, totalCarrierPay: true },
+      select: { customerRate: true, carrierRate: true, totalCarrierPay: true },
     });
 
     let revenue = 0, cost = 0;
     recentLoads.forEach((l) => {
-      revenue += l.customerRate || l.rate || 0;
+      revenue += l.customerRate ?? 0;
       cost += l.carrierRate || l.totalCarrierPay || 0;
     });
 

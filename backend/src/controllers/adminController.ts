@@ -428,7 +428,7 @@ export async function getAnalytics(_req: AuthRequest, res: Response) {
 
     // Top lanes
     const loadsForLanes = await prisma.load.findMany({
-      select: { originState: true, destState: true, rate: true },
+      select: { originState: true, destState: true, customerRate: true },
       where: { status: { not: "CANCELLED" as any } },
     });
 
@@ -437,7 +437,9 @@ export async function getAnalytics(_req: AuthRequest, res: Response) {
       const key = `${load.originState}|${load.destState}`;
       const existing = laneMap.get(key) || { count: 0, totalRate: 0 };
       existing.count++;
-      existing.totalRate += load.rate;
+      // ARC 21 — DECIDED: customerRate. An admin lane table is a revenue view;
+      // the buy-side equivalent lives on /market.
+      existing.totalRate += load.customerRate ?? 0;
       laneMap.set(key, existing);
     }
 

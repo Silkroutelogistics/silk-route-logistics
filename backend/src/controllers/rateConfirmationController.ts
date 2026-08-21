@@ -589,7 +589,7 @@ export async function finalizeRateConfirmation(req: AuthRequest, res: Response) 
   }
 
   // Recalculate margins if we have both rates (guard against division by zero)
-  const custRate = (fd.customerRate ?? rc.load.customerRate ?? rc.load.rate) as number;
+  const custRate = (fd.customerRate ?? rc.load.customerRate ?? 0) as number;
   const carrRate = fd.lineHaulRate ?? rc.load.carrierRate;
   if (custRate && custRate > 0 && carrRate && carrRate > 0) {
     loadUpdate.grossMargin = custRate - carrRate;

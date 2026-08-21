@@ -84,7 +84,7 @@ function mapLoadToShipment(load: any) {
     equipment: load.equipmentType || "—",
     pickDate: formatDate(load.pickupDate),
     delDate: formatDate(load.deliveryDate),
-    rate: load.customerRate || load.rate || 0,
+    rate: load.customerRate ?? 0,
     weight: load.weight ? `${Number(load.weight).toLocaleString()} lbs` : "—",
     distance: load.distance ? `${load.distance} mi` : "—",
     eta,
@@ -158,7 +158,7 @@ export async function getShipperDashboard(req: AuthRequest, res: Response) {
       where: { ...where, pickupDate: { gte: monthStart } },
       select: { customerRate: true, rate: true },
     });
-    const monthSpend = monthSpendLoads.reduce((sum, l) => sum + (l.customerRate || l.rate || 0), 0);
+    const monthSpend = monthSpendLoads.reduce((sum, l) => sum + (l.customerRate ?? 0), 0);
 
     // On-time % (delivered loads)
     const deliveredLoads = await prisma.load.findMany({
@@ -202,7 +202,7 @@ export async function getShipperDashboard(req: AuthRequest, res: Response) {
         where: { ...where, pickupDate: { gte: d, lte: end } },
         select: { customerRate: true, rate: true },
       });
-      const spend = loads.reduce((s, l) => s + (l.customerRate || l.rate || 0), 0);
+      const spend = loads.reduce((s, l) => s + (l.customerRate ?? 0), 0);
       spendTrend.push({
         month: d.toLocaleDateString("en-US", { month: "short" }),
         spend: Math.round(spend),
@@ -419,7 +419,7 @@ export async function getShipperAnalytics(req: AuthRequest, res: Response) {
     });
 
     const totalShipments = periodLoads.length;
-    const totalSpend = periodLoads.reduce((s, l) => s + (l.customerRate || l.rate || 0), 0);
+    const totalSpend = periodLoads.reduce((s, l) => s + (l.customerRate ?? 0), 0);
     const totalMiles = periodLoads.reduce((s, l) => s + (l.distance || 0), 0);
     const avgCostPerMile = totalMiles > 0 ? Math.round((totalSpend / totalMiles) * 100) / 100 : 0;
 
@@ -451,7 +451,7 @@ export async function getShipperAnalytics(req: AuthRequest, res: Response) {
         select: { customerRate: true, rate: true, deliveryDate: true, actualDeliveryDatetime: true, status: true },
       });
 
-      spendByMonth.push(Math.round(mLoads.reduce((s, l) => s + (l.customerRate || l.rate || 0), 0)));
+      spendByMonth.push(Math.round(mLoads.reduce((s, l) => s + (l.customerRate ?? 0), 0)));
 
       const delivered = mLoads.filter((l) => ["DELIVERED", "POD_RECEIVED", "COMPLETED"].includes(l.status));
       const onTime = delivered.filter((l) => {
@@ -473,7 +473,7 @@ export async function getShipperAnalytics(req: AuthRequest, res: Response) {
     for (const l of allLoads) {
       const lane = `${l.originCity}, ${l.originState} → ${l.destCity}, ${l.destState}`;
       const existing = laneMap.get(lane) || { spend: 0, count: 0 };
-      existing.spend += l.customerRate || l.rate || 0;
+      existing.spend += l.customerRate ?? 0;
       existing.count += 1;
       laneMap.set(lane, existing);
     }
@@ -867,6 +867,11 @@ export async function createQuoteRequest(req: AuthRequest, res: Response) {
         commodity,
         weight: parseFloat(weight.toString().replace(/,/g, "")) || 0,
         specialInstructions: specialInstructions || "",
+        // ARC 21 — a shipper-portal request carries no price yet; the AE
+        // quotes it. Both fields are written as 0 so the row is never NULL in
+        // one and set in the other, which is the state that forced every
+        // consumer into `customerRate || rate`.
+        customerRate: 0,
         rate: 0,
         notes: `Load Type: ${loadType || "FTL"}\nSubmitted via Shipper Portal`,
         posterId: userId,

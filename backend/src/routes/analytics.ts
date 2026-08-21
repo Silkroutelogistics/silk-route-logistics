@@ -88,11 +88,11 @@ router.get("/lane-rate/:origin/:dest", async (req: AuthRequest, res: Response) =
         originState: origin,
         destState: dest,
         deletedAt: null,
-        rate: { gt: 0 },
+        carrierRate: { gt: 0 },
         createdAt: { gte: ninetyDaysAgo },
         ...(equipment ? { equipmentType: { contains: equipment, mode: "insensitive" as any } } : {}),
       },
-      select: { rate: true },
+      select: { carrierRate: true },
     });
 
     if (loads.length === 0) {
@@ -100,7 +100,11 @@ router.get("/lane-rate/:origin/:dest", async (req: AuthRequest, res: Response) =
       return;
     }
 
-    const rates = loads.map((l) => l.rate).sort((a, b) => a - b);
+    // ARC 21 — DECIDED: carrierRate. This is the market-rate fallback (see the
+    // "aggregate from recent loads" comment above), so it takes the same buy-
+    // side answer as marketController rather than the revenue answer used by
+    // the shipper-spend block further down this same file.
+    const rates = loads.map((l) => l.carrierRate ?? 0).filter((r) => r > 0).sort((a, b) => a - b);
     const avg = rates.reduce((s, r) => s + r, 0) / rates.length;
     res.json({
       lane: `${origin} → ${dest}`,
@@ -175,7 +179,7 @@ router.get("/variance", authorize("ADMIN", "CEO", "BROKER", "ACCOUNTING") as any
       select: {
         id: true, loadNumber: true, referenceNumber: true,
         originState: true, destState: true, equipmentType: true,
-        rate: true, customerRate: true, carrierRate: true,
+        customerRate: true, carrierRate: true,
         fuelSurcharge: true, totalCarrierPay: true,
         grossMargin: true, marginPercent: true,
         customer: { select: { id: true, name: true } },
@@ -187,7 +191,7 @@ router.get("/variance", authorize("ADMIN", "CEO", "BROKER", "ACCOUNTING") as any
 
     // Calculate variance stats
     const variances = loads.map((l) => {
-      const quoted = l.customerRate || l.rate;
+      const quoted = l.customerRate ?? 0;
       const actual = l.totalCarrierPay || l.carrierRate || 0;
       const variance = quoted - actual;
       const variancePct = quoted > 0 ? ((variance / quoted) * 100) : 0;
@@ -238,40 +242,44 @@ router.get("/geo-spend", authorize("ADMIN", "CEO", "BROKER", "ACCOUNTING") as an
     const byOrigin = await prisma.load.groupBy({
       by: ["originState"],
       where: { deletedAt: null, rate: { gt: 0 }, createdAt: { gte: since } },
-      _sum: { rate: true, totalCarrierPay: true },
+      _sum: { customerRate: true, totalCarrierPay: true },
       _count: true,
-      _avg: { rate: true, distance: true },
+      _avg: { customerRate: true, distance: true },
     });
 
     // Spend by dest state
     const byDest = await prisma.load.groupBy({
       by: ["destState"],
       where: { deletedAt: null, rate: { gt: 0 }, createdAt: { gte: since } },
-      _sum: { rate: true, totalCarrierPay: true },
+      _sum: { customerRate: true, totalCarrierPay: true },
       _count: true,
-      _avg: { rate: true, distance: true },
+      _avg: { customerRate: true, distance: true },
     });
 
     // Top lanes by spend
     const topLanes = await prisma.load.groupBy({
       by: ["originState", "destState"],
       where: { deletedAt: null, rate: { gt: 0 }, createdAt: { gte: since } },
-      _sum: { rate: true, totalCarrierPay: true },
+      _sum: { customerRate: true, totalCarrierPay: true },
       _count: true,
-      _avg: { rate: true, distance: true, weight: true },
-      orderBy: { _sum: { rate: "desc" } },
+      _avg: { customerRate: true, distance: true, weight: true },
+      orderBy: { _sum: { customerRate: "desc" } },
       take: 20,
     });
 
     // Overall stats
     const totals = await prisma.load.aggregate({
       where: { deletedAt: null, rate: { gt: 0 }, createdAt: { gte: since } },
-      _sum: { rate: true, weight: true, distance: true },
+      _sum: { customerRate: true, weight: true, distance: true },
       _count: true,
-      _avg: { rate: true },
+      _avg: { customerRate: true },
     });
 
-    const totalSpend = totals._sum.rate || 0;
+    // ARC 21 — DECIDED: customerRate. This block is SHIPPER SPEND — what the
+  // customer paid — so it is the sell side, unlike the market block above.
+  // Two surfaces, one file, opposite answers: which is precisely why a single
+  // ambiguous column could not serve both.
+  const totalSpend = totals._sum.customerRate || 0;
     const totalWeight = totals._sum.weight || 0;
     const totalDistance = totals._sum.distance || 0;
     const totalLoads = totals._count || 0;
@@ -286,26 +294,26 @@ router.get("/geo-spend", authorize("ADMIN", "CEO", "BROKER", "ACCOUNTING") as an
       },
       byOriginState: byOrigin.map((s) => ({
         state: s.originState,
-        spend: Math.round(s._sum.rate || 0),
+        spend: Math.round(s._sum.customerRate || 0),
         count: s._count,
-        avgRate: Math.round(s._avg.rate || 0),
+        avgRate: Math.round(s._avg.customerRate || 0),
       })),
       byDestState: byDest.map((s) => ({
         state: s.destState,
-        spend: Math.round(s._sum.rate || 0),
+        spend: Math.round(s._sum.customerRate || 0),
         count: s._count,
-        avgRate: Math.round(s._avg.rate || 0),
+        avgRate: Math.round(s._avg.customerRate || 0),
       })),
       topLanes: topLanes.map((l) => ({
         origin: l.originState,
         dest: l.destState,
-        spend: Math.round(l._sum.rate || 0),
+        spend: Math.round(l._sum.customerRate || 0),
         carrierCost: Math.round(l._sum.totalCarrierPay || 0),
         count: l._count,
-        avgRate: Math.round(l._avg.rate || 0),
+        avgRate: Math.round(l._avg.customerRate || 0),
         avgDistance: Math.round(l._avg.distance || 0),
         avgWeight: Math.round(l._avg.weight || 0),
-        spendPerMile: (l._avg.distance || 0) > 0 ? Math.round(((l._sum.rate || 0) / ((l._avg.distance || 1) * l._count)) * 100) / 100 : null,
+        spendPerMile: (l._avg.distance || 0) > 0 ? Math.round(((l._sum.customerRate || 0) / ((l._avg.distance || 1) * l._count)) * 100) / 100 : null,
       })),
     });
   } catch (err) {

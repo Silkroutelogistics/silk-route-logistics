@@ -310,7 +310,7 @@ async function sendWaterfallTenderEmail(loadId: string, carrierUserId: string, e
   if (!to) return;
 
   const { sendEmail, wrap } = emailMod;
-  const rate = load.carrierRate ?? load.rate ?? 0;
+  const rate = load.carrierRate ?? 0;
   const lane = `${load.originCity}, ${load.originState} → ${load.destCity}, ${load.destState}`;
   const portalUrl = "https://silkroutelogistics.ai/carrier/dashboard/tenders";
   const minutesRemaining = Math.max(0, Math.round((expiresAt.getTime() - Date.now()) / 60000));

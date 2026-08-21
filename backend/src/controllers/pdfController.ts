@@ -130,7 +130,7 @@ export async function downloadInvoicePDF(req: AuthRequest, res: Response) {
     const invoice = await prisma.invoice.findFirst({
       where: { OR: [{ id: invoiceId }, { invoiceNumber: invoiceId }] },
       include: {
-        load: { select: { referenceNumber: true, originCity: true, originState: true, destCity: true, destState: true, rate: true, pickupDate: true, deliveryDate: true, posterId: true, customer: { select: { userId: true, name: true, contactName: true, billingContactName: true, paymentTerms: true, address: true, city: true, state: true, zip: true, billingAddress: true, billingCity: true, billingState: true, billingZip: true } } } },
+        load: { select: { referenceNumber: true, originCity: true, originState: true, destCity: true, destState: true, pickupDate: true, deliveryDate: true, posterId: true, customer: { select: { userId: true, name: true, contactName: true, billingContactName: true, paymentTerms: true, address: true, city: true, state: true, zip: true, billingAddress: true, billingCity: true, billingState: true, billingZip: true } } } },
         user: { select: { firstName: true, lastName: true, company: true } },
         lineItems: { orderBy: { sortOrder: "asc" } },
       },

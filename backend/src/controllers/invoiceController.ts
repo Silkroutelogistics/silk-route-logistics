@@ -287,7 +287,7 @@ export async function generateInvoiceFromLoad(req: AuthRequest, res: Response) {
   const dueDate = new Date();
   dueDate.setDate(dueDate.getDate() + 30);
 
-  const customerRate = load.customerRate || load.rate;
+  const customerRate = load.customerRate ?? 0;
   const fuelSurcharge = load.fuelSurcharge || 0;
   const totalAmount = customerRate + fuelSurcharge;
 
@@ -472,10 +472,10 @@ export async function getFinancialSummary(req: AuthRequest, res: Response) {
 
   const loads = await prisma.load.findMany({
     where: { createdAt: { gte: startDate }, status: { notIn: ["CANCELLED", "TONU", "DRAFT"] } },
-    select: { customerRate: true, carrierRate: true, rate: true, grossMargin: true, marginPercent: true, quickPayFeePercent: true },
+    select: { customerRate: true, carrierRate: true, grossMargin: true, marginPercent: true, quickPayFeePercent: true },
   });
 
-  const totalRevenue = loads.reduce((s, l) => s + (l.customerRate || l.rate || 0), 0);
+  const totalRevenue = loads.reduce((s, l) => s + (l.customerRate ?? 0), 0);
   const totalCarrierCost = loads.reduce((s, l) => s + (l.carrierRate || 0), 0);
   const totalMargin = totalRevenue - totalCarrierCost;
   const avgMarginPct = loads.length > 0

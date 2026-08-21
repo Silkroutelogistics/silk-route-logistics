@@ -191,9 +191,18 @@ export async function createLoadWithTender(req: AuthRequest, res: Response) {
           // Financials — fuelSurcharge dropped from drawer scope at
           // Sprint 59.b per Item 176; RC generation hardcodes 0 and AE
           // adjusts on the RC PDF surface post-acceptance.
-          rate: tender.offeredRate,
+          // ARC 21 — this path wrote the CARRIER number into `rate` while
+          // createLoad wrote the CUSTOMER number into the same column. One
+          // column, two meanings, which is Item 220.2 exactly. The explicit
+          // fields carry the truth; `rate` is now a mirror of customerRate on
+          // every path so the column has ONE meaning for as long as it exists.
+          //
+          // customerRate stays null when the AE genuinely did not supply one —
+          // inventing a customer rate from the tender would be worse than a
+          // null, because a null is visibly missing and a wrong number is not.
           customerRate: loadFields.customerRate ?? null,
           carrierRate: tender.offeredRate,
+          rate: loadFields.customerRate ?? tender.offeredRate,
           accessorials: loadFields.accessorials ?? undefined,
 
           // Instructions

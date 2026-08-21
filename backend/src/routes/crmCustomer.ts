@@ -341,13 +341,13 @@ router.get(
       const existing = laneMap.get(key);
       if (existing) {
         existing.count++;
-        existing.totalRate += (l.customerRate ?? l.rate ?? 0);
+        existing.totalRate += l.customerRate ?? 0;
       } else {
         laneMap.set(key, {
           origin: `${l.originCity}, ${l.originState}`,
           dest: `${l.destCity}, ${l.destState}`,
           count: 1,
-          totalRate: l.customerRate ?? l.rate ?? 0,
+          totalRate: l.customerRate ?? 0,
         });
       }
     }
@@ -356,7 +356,7 @@ router.get(
       .slice(0, 5)
       .map((l) => ({ ...l, avgRate: Math.round(l.totalRate / l.count) }));
 
-    const totalRevenue = loads.reduce((s, l) => s + (l.customerRate ?? l.rate ?? 0), 0);
+    const totalRevenue = loads.reduce((s, l) => s + (l.customerRate ?? 0), 0);
     const avgMargin = loads.filter((l) => l.marginPercent).length > 0
       ? loads.reduce((s, l) => s + (l.marginPercent ?? 0), 0) / loads.length
       : 0;

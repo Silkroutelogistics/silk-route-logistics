@@ -25,7 +25,7 @@ export async function getLanes(req: AuthRequest, res: Response) {
   }
 
   // Group loads by origin-dest state pair
-  const loads = await prisma.load.findMany({ where, select: { originState: true, originCity: true, destState: true, destCity: true, rate: true, distance: true, equipmentType: true, pickupDate: true, deliveryDate: true, createdAt: true } });
+  const loads = await prisma.load.findMany({ where, select: { originState: true, originCity: true, destState: true, destCity: true, carrierRate: true, distance: true, equipmentType: true, pickupDate: true, deliveryDate: true, createdAt: true } });
 
   const laneMap = new Map<string, { origin: string; dest: string; rates: number[]; distances: number[]; transitDays: number[]; equipTypes: string[]; recentRates: number[]; olderRates: number[] }>();
   const now = new Date();
@@ -38,13 +38,20 @@ export async function getLanes(req: AuthRequest, res: Response) {
       laneMap.set(key, { origin: `${l.originCity}, ${l.originState}`, dest: `${l.destCity}, ${l.destState}`, rates: [], distances: [], transitDays: [], equipTypes: [], recentRates: [], olderRates: [] });
     }
     const lane = laneMap.get(key)!;
-    lane.rates.push(l.rate);
+    // ARC 21 — DECIDED: carrierRate. Market rate in freight is the buy side:
+    // what it costs to move the lane, which is what DAT publishes and what an
+    // AE compares against when pricing. Uncovered loads contribute nothing
+    // rather than a zero, because a load nobody has priced has no market
+    // signal in it.
+    if (l.carrierRate) lane.rates.push(l.carrierRate);
     if (l.distance) lane.distances.push(l.distance);
     const transit = (l.deliveryDate.getTime() - l.pickupDate.getTime()) / (1000 * 60 * 60 * 24);
     lane.transitDays.push(transit);
     lane.equipTypes.push(l.equipmentType);
-    if (l.createdAt >= fourWeeksAgo) lane.recentRates.push(l.rate);
-    else if (l.createdAt >= eightWeeksAgo) lane.olderRates.push(l.rate);
+    if (l.carrierRate) {
+      if (l.createdAt >= fourWeeksAgo) lane.recentRates.push(l.carrierRate);
+      else if (l.createdAt >= eightWeeksAgo) lane.olderRates.push(l.carrierRate);
+    }
   }
 
   const lanes = Array.from(laneMap.entries()).map(([, v]) => {
@@ -78,10 +85,10 @@ export async function getRegions(req: AuthRequest, res: Response) {
   for (const [regionName, states] of Object.entries(REGIONS)) {
     const [loadCount, avgRate, carrierCount] = await Promise.all([
       prisma.load.count({ where: { OR: [{ originState: { in: states } }, { destState: { in: states } }] } }),
-      prisma.load.aggregate({ where: { OR: [{ originState: { in: states } }, { destState: { in: states } }] }, _avg: { rate: true, distance: true } }),
+      prisma.load.aggregate({ where: { OR: [{ originState: { in: states } }, { destState: { in: states } }] }, _avg: { carrierRate: true, distance: true } }),
       prisma.carrierProfile.count({ where: { operatingRegions: { hasSome: states }, isTestAccount: false } }), // v3.8.alm §13.3 Item 189 — market heatmap carrier count
     ]);
-    const avgRateVal = avgRate._avg.rate || 0;
+    const avgRateVal = avgRate._avg.carrierRate || 0;
     const avgDist = avgRate._avg.distance || 1;
     results.push({
       region: regionName,
@@ -112,7 +119,7 @@ export async function getTrends(req: AuthRequest, res: Response) {
     }
   }
 
-  const loads = await prisma.load.findMany({ where, select: { rate: true, distance: true, createdAt: true }, orderBy: { createdAt: "asc" } });
+  const loads = await prisma.load.findMany({ where, select: { carrierRate: true, distance: true, createdAt: true }, orderBy: { createdAt: "asc" } });
 
   const buckets = new Map<string, { rates: number[]; distances: number[] }>();
   for (const l of loads) {
@@ -127,7 +134,7 @@ export async function getTrends(req: AuthRequest, res: Response) {
     }
     if (!buckets.has(key)) buckets.set(key, { rates: [], distances: [] });
     const b = buckets.get(key)!;
-    b.rates.push(l.rate);
+    if (l.carrierRate) b.rates.push(l.carrierRate);
     if (l.distance) b.distances.push(l.distance);
   }
 

@@ -113,7 +113,7 @@ export async function matchCarriersForLoad(loadId: string): Promise<{
     },
     _avg: { carrierRate: true },
   });
-  const avgLaneRate = avgRateData._avg.carrierRate || (load.carrierRate || load.rate);
+  const avgLaneRate = avgRateData._avg.carrierRate || load.carrierRate || 0;
 
   // Get active loads per carrier for availability
   const pickupDate = new Date(load.pickupDate);
@@ -188,7 +188,7 @@ export async function matchCarriersForLoad(loadId: string): Promise<{
     // --- Rate Score (0-25) ---
     let rateScore = 5; // outside range
     const carrierAvgRate = c.scorecards[0]?.overallScore; // We'll use lane avg rate instead
-    const loadRate = load.carrierRate || load.rate;
+    const loadRate = load.carrierRate ?? 0;
     if (avgLaneRate && loadRate) {
       const diff = Math.abs(loadRate - avgLaneRate) / avgLaneRate * 100;
       if (diff <= 5) rateScore = 25;
@@ -287,7 +287,8 @@ export async function matchCarriersForLoad(loadId: string): Promise<{
       destState: load.destState,
       equipmentType: load.equipmentType,
       pickupDate: load.pickupDate,
-      rate: load.rate,
+      // ARC 21 — carrier matching is about what SRL will pay a carrier.
+    rate: load.carrierRate ?? 0,
       carrierRate: load.carrierRate,
     },
     matches: top10,

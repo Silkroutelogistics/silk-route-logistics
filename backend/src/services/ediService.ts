@@ -16,6 +16,12 @@ interface LoadData {
   pieces?: number | null;
   equipmentType: string;
   commodity?: string | null;
+  // ARC 21 — EDI 204 is a load TENDER to a carrier, so its rate is what SRL
+  // offers the carrier. It read `rate`, which on the primary creation path is
+  // the CUSTOMER number, so a 204 was tendering loads at the sell price. The
+  // controller already passes the whole Load row; only the interface was
+  // missing the field.
+  carrierRate?: number | null;
   rate: number;
   distance?: number | null;
   pickupDate: Date;
@@ -61,7 +67,7 @@ export async function generate204(load: LoadData, carrierId?: string) {
       },
     ],
     commodity: load.commodity || "FAK",
-    rate: load.rate,
+    rate: load.carrierRate ?? 0,
     rateQualifier: "FR", // Flat Rate
     specialInstructions: load.specialInstructions || "",
     temperatureControl: load.tempMin != null ? { min: load.tempMin, max: load.tempMax, unit: "FA" } : null,

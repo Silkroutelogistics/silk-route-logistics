@@ -75,7 +75,7 @@ export async function executeFallOffRecovery(loadId: string, reason?: string) {
 
     for (const match of top3) {
       // Send urgent text to each carrier
-      const msg = `SRL urgent load: ${load.originCity}, ${load.originState} to ${load.destCity}, ${load.destState}, $${load.carrierRate || load.rate}, pickup ${new Date(load.pickupDate).toLocaleDateString()}. Reply YES to accept.`;
+      const msg = `SRL urgent load: ${load.originCity}, ${load.originState} to ${load.destCity}, ${load.destState}, $${load.carrierRate ?? 0}, pickup ${new Date(load.pickupDate).toLocaleDateString()}. Reply YES to accept.`;
       log.info(`[FallOff][SMS] To ${match.phone}: ${msg}`);
 
       // Create notification for the carrier
@@ -84,7 +84,7 @@ export async function executeFallOffRecovery(loadId: string, reason?: string) {
           userId: match.userId,
           type: "LOAD_TENDERED",
           title: `Urgent Load Available: #${load.referenceNumber}`,
-          message: `${load.originCity}, ${load.originState} → ${load.destCity}, ${load.destState}. Rate: $${load.carrierRate || load.rate}. Reply to accept.`,
+          message: `${load.originCity}, ${load.originState} → ${load.destCity}, ${load.destState}. Rate: $${load.carrierRate ?? 0}. Reply to accept.`,
           actionUrl: `/carrier/dashboard/loads`,
         },
       });
