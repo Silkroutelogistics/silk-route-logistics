@@ -49,7 +49,9 @@ const REPO_ROOT = path.resolve(__dirname, "../..");
 const SCAN_ROOTS = ["backend/src", "frontend/src"];
 const PRISMA_SCHEMA = path.join(REPO_ROOT, "backend/prisma/schema.prisma");
 
-export type UsageKind = "WRITTEN" | "READ" | "STRING_ONLY" | "UNREFERENCED";
+// DB_WRITTEN is not a fourth flavour of application usage — it is the
+// classifier saying the question does not apply. See schemaFields().
+export type UsageKind = "WRITTEN" | "READ" | "STRING_ONLY" | "UNREFERENCED" | "DB_WRITTEN";
 
 export interface Match {
   file: string;
@@ -214,9 +216,9 @@ function loadCorpus(): Array<{ file: string; src: string }> {
 
 const COMMON = new Set(["id", "name", "email", "status", "type", "amount", "notes", "createdAt", "updatedAt", "userId"]);
 
-function schemaFields(): Array<{ model: string; field: string }> {
+function schemaFields(): Array<{ model: string; field: string; dbSupplied: boolean }> {
   const content = fs.readFileSync(PRISMA_SCHEMA, "utf8");
-  const out: Array<{ model: string; field: string }> = [];
+  const out: Array<{ model: string; field: string; dbSupplied: boolean }> = [];
   let model: string | null = null;
   for (const line of content.split("\n")) {
     const mm = line.match(/^model\s+(\w+)\s*\{/);
@@ -229,7 +231,18 @@ function schemaFields(): Array<{ model: string; field: string }> {
     const scalar = ["String", "Int", "Float", "Boolean", "DateTime", "Json", "Decimal", "Bytes", "BigInt"];
     if (/^[A-Z]/.test(type) && !scalar.includes(type.replace("?", ""))) continue;
     if (COMMON.has(field)) continue;
-    out.push({ model, field });
+    // THE THIRD BLIND SPOT (Arc 11 Phase 5). A column carrying @default or
+    // @updatedAt is written by Postgres on every insert, with no literal write
+    // site anywhere in the application — so the classifier saw it consulted and
+    // never assigned, and called it READ-never-WRITTEN.
+    //
+    // Found on CarrierScorecard.calculatedAt, whose banked verdict was
+    // "WIRE — trivially set where the scorecard is computed". It already has
+    // @default(now()). Acting on that verdict would have added an explicit
+    // write for something the database already does, and the audit would have
+    // manufactured the busywork it exists to prevent.
+    const dbSupplied = /@default\(|@updatedAt/.test(line);
+    out.push({ model, field, dbSupplied });
   }
   return out;
 }
@@ -314,6 +327,9 @@ function main() {
     for (const f of fields) {
       const { verdict, matches } = classifyField(f.field, corpus);
       if (verdict !== "READ") continue;
+      // Postgres writes it. Not a case of code depending on a value nothing
+      // produces, which is the only thing this list is for.
+      if (f.dbSupplied) continue;
       const onScreen = matches.some((m) => m.file.startsWith("frontend/src"));
       (onScreen ? ui : internal).push({ ...f, files: [...new Set(matches.map((m) => m.file))] });
     }
@@ -330,9 +346,15 @@ READ-never-WRITTEN, by consumer surface
 
   const fields = schemaFields();
   const buckets: Record<UsageKind, Array<{ model: string; field: string }>> = {
-    WRITTEN: [], READ: [], STRING_ONLY: [], UNREFERENCED: [],
+    WRITTEN: [], READ: [], STRING_ONLY: [], UNREFERENCED: [], DB_WRITTEN: [],
   };
-  for (const f of fields) buckets[classifyField(f.field, corpus).verdict].push(f);
+  for (const f of fields) {
+    const v = classifyField(f.field, corpus).verdict;
+    // A @default / @updatedAt column reported READ is the tool not knowing who
+    // wrote it, not a defect in the code. Reclassified rather than silently
+    // dropped, so the count stays honest about where the fields went.
+    buckets[v === "READ" && f.dbSupplied ? "DB_WRITTEN" : v].push(f);
+  }
 
   console.log(`\nFIELD USAGE — ${fields.length} non-common scalar fields\n`);
   console.log(`  WRITTEN       ${buckets.WRITTEN.length}`);

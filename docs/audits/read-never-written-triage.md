@@ -19,16 +19,23 @@ Both corrections happened while producing this document, and both are worth know
 
 **That second fix moved the count in both directions:** 217 → 237 READ. It corrected false READs (far-away `data:`) *and* false WRITTENs (a nearby `data:` that was not the real enclosing context). Both prior numbers were wrong. Treat any single verdict as a question until the matches under it are read — which is why the tool prints them.
 
+**Database-supplied columns looked like application bugs.** (Arc 11 Phase 5.) A column carrying `@default(...)` or `@updatedAt` is written by Postgres on every insert and has no literal write site anywhere in the application — so the classifier saw it consulted, never assigned, and called it READ-never-WRITTEN.
+
+Caught on `CarrierScorecard.calculatedAt`, whose banked verdict below read *"WIRE — trivially set where the scorecard is computed"*. It already has `@default(now())`. Acting on that verdict would have added an explicit write for something the database already does — the audit manufacturing the busywork it exists to prevent. Six queries order by that column and all of them were fine the whole time.
+
+**This moved the count by roughly a third.** 237 READ → **164**; frontend-visible 134 → **95**. Reclassified as `DB_WRITTEN` rather than dropped, so the fields are still accounted for. Third correction to this tool, and the third one found by reading a verdict's matches instead of trusting the verdict — which is the whole reason it prints them.
+
 ## Current state
 
-| Bucket | Count |
-|---|---|
-| WRITTEN | 1399 |
-| **READ (never written)** | **237** |
-| STRING_ONLY | 4 |
-| UNREFERENCED | 67 |
+| Bucket | Count | Was (pre-Arc-11) |
+|---|---|---|
+| WRITTEN | 1401 | 1399 |
+| **READ (never written)** | **164** | 237 |
+| DB_WRITTEN | 73 | — (counted as READ) |
+| STRING_ONLY | 4 | 4 |
+| UNREFERENCED | 67 | 67 |
 
-Of the 237: **134 frontend-visible**, 103 backend-only. Frontend-visible ranks first because a rendered column that nothing writes is a user being told something false.
+Of the 164: **95 frontend-visible**, 69 backend-only. Frontend-visible ranks first because a rendered column that nothing writes is a user being told something false.
 
 ## FIXED this arc — the top surface-visible cluster
 
@@ -58,7 +65,7 @@ Not yet individually verified. Given the tool was wrong twice today, **each need
 | Rate-confirmation form fields | `Load.trailerLength`, `pickupHours`, `deliveryHours`, `deliveryAppointment`, `unloadingType`, `pickupNumber`, `shipperPoNumber` | Likely **WIRE** — the RC modal renders them and the Order Builder probably should capture them. Check whether the RC's own `formData` JSON already carries the value, in which case the column is genuinely redundant and this is RENDER-REMOVE. |
 | Order Builder dispatch fields | `Load.waterfallMode`, `driverMode`, `liveOrDrop`, `cargoValue`, `lumperEstimate`, `directTenderCarrierId` | Mixed. `directTenderCarrierId` is a known dead write-path (Item 176 deleted its only consumer) — likely **SCHEMA-DEAD**. The others need a read of the convert-to-load path. |
 | Facility / geo | `Load.originFacilityId`, `destFacilityId`, `originLat` | Likely **WIRE** — FacilityPicker selects a facility and the id should persist. |
-| Scorecard | `CarrierScorecard.calculatedAt` | **WIRE** — trivially set where the scorecard is computed. |
-| `CarrierProfile.isTestAccount` | Rendered as the TEST badge | Known: the badge never renders because `getAllCarriers` filters on the column without returning it (banked at §13.3 Item 193). **WIRE** the response field. |
+| Scorecard | `CarrierScorecard.calculatedAt` | ~~WIRE~~ — **FALSE POSITIVE, closed Arc 11.** Has `@default(now())`; Postgres writes it. This verdict is what exposed the third blind spot above. |
+| `CarrierProfile.isTestAccount` | Rendered as the TEST badge | ~~WIRE~~ — **FIXED v3.8.atq.** `getAllCarriers` filtered on the column without returning it, so the badge and the toggle's current state both read undefined. The fence worked; its label was invisible. |
 
 The 103 backend-only READs are lower urgency by construction — an internal assumption rather than a user-visible falsehood — and are left for a later pass.

@@ -14661,7 +14661,23 @@
 //   details. It does not. SRL stores no account or routing columns anywhere,
 //   and overstating what is at risk to justify a security control is still a
 //   false statement about their own data.
-export const SRL_VERSION = "3.8.atp";
+// v3.8.atq — A third of the audit backlog was work that did not need doing.
+//   The READ-never-WRITTEN list had 237 columns on it: code consulting a value
+//   nothing produces. 73 of them were written by Postgres. A column carrying
+//   @default or @updatedAt has no literal write site anywhere in the
+//   application, so the classifier saw it read, never assigned, and called it
+//   a bug.
+//   Caught on CarrierScorecard.calculatedAt, whose banked verdict said to wire
+//   up a write for it. It has @default(now()). Six queries order by that
+//   column and every one of them was fine — following the verdict would have
+//   had the audit manufacture the busywork it exists to prevent. Third
+//   correction to that tool, and the third found by reading a verdict's
+//   matches instead of trusting the verdict.
+//   The real bug on the same list: the carriers page filters on isTestAccount
+//   but never returned it, so the TEST badge and the toggle's own state both
+//   read undefined. The fence has been working since alo; the label saying so
+//   was invisible.
+export const SRL_VERSION = "3.8.atq";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

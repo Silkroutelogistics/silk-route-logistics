@@ -1249,6 +1249,11 @@ export async function getAllCarriers(req: AuthRequest, res: Response) {
       return {
         id: c.id,
         userId: c.userId,
+        // v3.8.atq — the WHERE above filters on isTestAccount but the response
+        // never returned it, so the TEST badge on the carriers list and the
+        // toggle's current state both read undefined. The fence worked; the
+        // label for it was invisible. Found by the READ-never-WRITTEN audit.
+        isTestAccount: c.isTestAccount,
         company: c.user.company || `${c.user.firstName} ${c.user.lastName}`,
         contactName: `${c.user.firstName} ${c.user.lastName}`,
         email: c.user.email,
