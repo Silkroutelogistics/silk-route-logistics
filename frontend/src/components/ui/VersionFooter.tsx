@@ -14609,7 +14609,23 @@
 //   permanently, so setup, confirm, status, activation-status, /me and
 //   /logout stay open. Unlike requiresActivation this is not conditioned on
 //   APPROVED: a PENDING carrier still has an account worth protecting.
-export const SRL_VERSION = "3.8.atm";
+// v3.8.atn — The enrollment wall carriers actually see.
+//   atm built the boundary; this is the screen behind it and the routing
+//   that gets a carrier there. Three gates now redirect — status, activation
+//   and enrollment — and each calls router.replace, so without a stated rule
+//   the winner is whichever effect React runs last. Precedence is computed
+//   once and the two older gates stand down explicitly, because the failure
+//   is silent: a PENDING carrier without an authenticator would be bounced
+//   to the application-status page, and since the backend exempts that route
+//   they would sit on the one page that loads and never reach the screen
+//   that lets them out.
+//   The backup codes are shown at the end of enrollment and never again —
+//   the screen says so plainly, and the query is deliberately not
+//   invalidated until the carrier confirms they have saved them, because a
+//   refetch would flip the page to its enrolled state and take the codes
+//   away mid-read. A typed key sits beside the QR for the common case where
+//   the carrier is reading this on the same phone that holds the app.
+export const SRL_VERSION = "3.8.atn";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

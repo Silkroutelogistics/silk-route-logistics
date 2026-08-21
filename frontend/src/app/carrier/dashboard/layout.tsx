@@ -21,6 +21,12 @@ import type { Notification } from "@/types/entities";
 // is hard-blocked at the OTP/TOTP gates in carrierAuth.ts.
 const STATUS_PAGE = "/carrier/dashboard/application-status";
 const ACTIVATION_PAGE = "/carrier/dashboard/activation";
+// Arc 11 — mandatory carrier 2FA. This gate sits ABOVE both of the above:
+// an unenrolled carrier reaches the enrollment screen and nothing else,
+// whatever their onboarding state. Unlike ACTIVATION_PAGE it is not
+// conditioned on APPROVED, because a PENDING carrier waiting on review
+// still has an account worth protecting.
+const SECURITY_PAGE = "/carrier/dashboard/security";
 
 function timeAgo(dateStr: string): string {
   const diff = Date.now() - new Date(dateStr).getTime();
@@ -75,9 +81,27 @@ export default function CarrierDashboardLayout({ children }: { children: React.R
   // complianceMonitorService — this banner is a UX nudge, not the enforcement.
   const { data: activationData } = useQuery({
     queryKey: ["carrier-activation"],
-    queryFn: () => api.get<{ requiresActivation: boolean }>("/carrier-auth/activation-status").then((r) => r.data),
-    enabled: !!user && user.carrierProfile?.onboardingStatus === "APPROVED",
+    // Arc 11 — this one query now answers BOTH gates. It gained
+    // requiresTotpEnrollment rather than getting a second query beside it,
+    // because two queries against the same endpoint drift: one refetches,
+    // the other does not, and the portal briefly believes two different
+    // things about the same carrier.
+    queryFn: () =>
+      api
+        .get<{ requiresActivation: boolean; requiresTotpEnrollment: boolean }>(
+          "/carrier-auth/activation-status",
+        )
+        .then((r) => r.data),
+    // No longer restricted to APPROVED. The enrollment gate covers PENDING
+    // carriers too, so this has to resolve for them as well.
+    enabled: !!user,
   });
+
+  // Precedence, stated once and read by every gate below rather than left to
+  // the order the effects happen to run in. Whichever effect calls
+  // router.replace last would otherwise win, which is a fragile way to decide
+  // which wall a carrier hits.
+  const mustEnroll = !!activationData?.requiresTotpEnrollment;
 
   const notifications = Array.isArray(notifData) ? notifData : [];
   const unreadCount = notifications.filter((n) => !n.read).length;
@@ -104,6 +128,17 @@ export default function CarrierDashboardLayout({ children }: { children: React.R
     }
   }, [user, loadUser, router]);
 
+  // Arc 11 — HARD enrollment gate, and the first of the three. A carrier
+  // without an armed authenticator sees the enrollment screen and nothing
+  // else. The backend refuses every other carrier route independently
+  // (requireTotpEnrolled), so this is the matching UX, not the boundary.
+  useEffect(() => {
+    if (checking || !user || !pathname) return;
+    if (mustEnroll && pathname !== SECURITY_PAGE) {
+      router.replace(SECURITY_PAGE);
+    }
+  }, [user, pathname, checking, mustEnroll, router]);
+
   // v3.8.ajd Sprint 1 — Status-based routing. Once `user` is loaded, if
   // onboardingStatus is non-APPROVED AND the carrier is trying to access
   // anything other than the application-status page, redirect them.
@@ -112,6 +147,9 @@ export default function CarrierDashboardLayout({ children }: { children: React.R
   // not meant for approved carriers; their stale tab gets the redirect).
   useEffect(() => {
     if (checking || !user || !pathname) return;
+    // Enrollment outranks status routing: an unenrolled carrier must not be
+    // bounced to the application-status page instead of the wall.
+    if (mustEnroll) return;
     const status = user.carrierProfile?.onboardingStatus;
     if (!status) return;
     if (status !== "APPROVED" && pathname !== STATUS_PAGE) {
@@ -119,7 +157,7 @@ export default function CarrierDashboardLayout({ children }: { children: React.R
     } else if (status === "APPROVED" && pathname === STATUS_PAGE) {
       router.replace("/carrier/dashboard");
     }
-  }, [user, pathname, checking, router]);
+  }, [user, pathname, checking, mustEnroll, router]);
 
   // v3.8.aqi — HARD activation gate. An APPROVED carrier who hasn't signed the
   // Broker-Carrier Agreement cannot access ANY operational surface — the portal
@@ -128,6 +166,9 @@ export default function CarrierDashboardLayout({ children }: { children: React.R
   // so this is the matching UX enforcement, not the security boundary.
   useEffect(() => {
     if (checking || !user || !pathname) return;
+    // Enrollment outranks activation. A carrier who has not armed a second
+    // factor should not be asked to sign the BCA first.
+    if (mustEnroll) return;
     if (
       user.carrierProfile?.onboardingStatus === "APPROVED" &&
       activationData?.requiresActivation &&
@@ -135,7 +176,7 @@ export default function CarrierDashboardLayout({ children }: { children: React.R
     ) {
       router.replace(ACTIVATION_PAGE);
     }
-  }, [user, pathname, checking, activationData, router]);
+  }, [user, pathname, checking, mustEnroll, activationData, router]);
 
   if (checking) {
     return (
@@ -155,7 +196,10 @@ export default function CarrierDashboardLayout({ children }: { children: React.R
   // sees ONLY the activation page: no sidebar, search, notifications, or content.
   const mustActivate = isApproved && !!activationData?.requiresActivation;
   const onActivationPage = pathname === ACTIVATION_PAGE;
-  const showOperationalChrome = isApproved && !mustActivate;
+  // Arc 11 — the enrollment wall hides the chrome too. There is exactly one
+  // reachable route until the authenticator is armed, so there is no nav to
+  // surface and a bell that cannot be clicked through is just noise.
+  const showOperationalChrome = isApproved && !mustActivate && !mustEnroll;
 
   return (
     <div className="flex h-screen bg-[#FBF7F0] overflow-hidden">

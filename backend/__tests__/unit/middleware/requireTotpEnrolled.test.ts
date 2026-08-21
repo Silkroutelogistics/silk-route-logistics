@@ -160,3 +160,62 @@ describe("every carrier-portal router is actually behind the gate", () => {
     expect(declared.sort()).toEqual([...CARRIER_MOUNTS].sort());
   });
 });
+
+describe("the portal wall defers to the enrollment gate", () => {
+  // STATIC, and weaker than the behavioural tests above — deliberately said out
+  // loud rather than left for a reader to discover. There is no frontend test
+  // runner in this repo, and standing one up mid-arc to assert one precedence
+  // rule is not a trade worth making. So this reads the layout the way the
+  // mount-parity test reads the router: it cannot prove the redirect fires, only
+  // that the ordering rule is still written down.
+  //
+  // It is worth having anyway, because the failure it catches is silent. Three
+  // gates each call router.replace, and without an explicit rule the winner is
+  // whichever effect React happens to run last. If enrollment stops outranking
+  // status routing, a PENDING carrier without an authenticator gets bounced to
+  // the application-status page instead of the enrollment wall — and since the
+  // backend exempts /activation-status, they sit there able to load exactly one
+  // page and never reach the screen that would let them out.
+  const layout = fs.readFileSync(
+    path.join(__dirname, "../../../../frontend/src/app/carrier/dashboard/layout.tsx"),
+    "utf8",
+  );
+
+  it("computes the precedence once rather than per-gate", () => {
+    expect(layout).toContain("const mustEnroll =");
+  });
+
+  it("yields to enrollment in both of the older gates", () => {
+    // Two, not one: status routing AND the activation wall each have to stand
+    // down, or the carrier lands somewhere that is not the enrollment screen.
+    const yields = layout.split("if (mustEnroll) return;").length - 1;
+    expect(yields).toBe(2);
+  });
+
+  it("sends an unenrolled carrier to the enrollment screen", () => {
+    expect(layout).toContain("router.replace(SECURITY_PAGE)");
+  });
+
+  it("hides the operational chrome behind it, as the activation wall does", () => {
+    // A sidebar whose every link 403s is worse than no sidebar.
+    expect(layout).toMatch(/showOperationalChrome =.*!mustEnroll/);
+  });
+
+  it("points at the page that actually exists", () => {
+    // The middleware hands back this href in its 403 body. If the constant and
+    // the route ever disagree, the carrier is redirected to a 404 and the wall
+    // becomes a dead end.
+    const middleware = fs.readFileSync(
+      path.join(__dirname, "../../../src/middleware/requireTotpEnrolled.ts"),
+      "utf8",
+    );
+    expect(layout).toContain('const SECURITY_PAGE = "/carrier/dashboard/security"');
+    expect(middleware).toContain("/carrier/dashboard/security");
+    expect(
+      fs.existsSync(
+        path.join(__dirname, "../../../../frontend/src/app/carrier/dashboard/security/page.tsx"),
+      ),
+      "the enrollment page the gate redirects to does not exist",
+    ).toBe(true);
+  });
+});
