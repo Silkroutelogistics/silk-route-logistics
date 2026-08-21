@@ -219,3 +219,78 @@ describe("the portal wall defers to the enrollment gate", () => {
     ).toBe(true);
   });
 });
+
+describe("the login flow consumes the challenge the backend sends", () => {
+  // THE BUG THIS EXISTS FOR, because it is worth knowing about rather than
+  // just guarding against.
+  //
+  // /verify-otp has answered { pendingTotp, totpToken } for a long time when a
+  // user has 2FA armed, and deliberately does NOT set the session cookie at
+  // that point — the authenticator has not been presented yet. The carrier
+  // store never had a branch for it. So it fell through to the success path,
+  // read data.user (undefined), stored null, and returned "success". The page
+  // then routed to the dashboard, the layout found no cookie, and sent them
+  // back to login. Password, code, redirect, password, code, redirect.
+  //
+  // Nobody had hit it because no carrier had 2FA on. v3.8.atm made enrollment
+  // mandatory, which would have walked every carrier into it on their next
+  // sign-in.
+  //
+  // STATIC, like the layout guard above and for the same reason: no frontend
+  // test runner exists here. It cannot prove the step renders — only that the
+  // branch is still there. The full-flow check against a real portal session is
+  // recorded as owed rather than pretended.
+  const store = fs.readFileSync(
+    path.join(__dirname, "../../../../frontend/src/hooks/useCarrierAuth.ts"),
+    "utf8",
+  );
+  const loginPage = fs.readFileSync(
+    path.join(__dirname, "../../../../frontend/src/app/carrier/login/page.tsx"),
+    "utf8",
+  );
+
+  it("branches on pendingTotp before assuming a session exists", () => {
+    // Scoped to verifyOtp. login() also reads data.user and sits above it, so an
+    // unscoped indexOf measures the wrong function and fails for the wrong
+    // reason — which is what the first version of this test did.
+    const fn = store.slice(store.indexOf("verifyOtp: async"), store.indexOf("verifyTotp: async"));
+    const branch = fn.indexOf("data.pendingTotp");
+    const readsUser = fn.indexOf("user: data.user");
+    expect(branch, "no pendingTotp branch in verifyOtp").toBeGreaterThan(-1);
+    expect(readsUser, "verifyOtp no longer reads data.user — retarget this test").toBeGreaterThan(-1);
+    // Order is the whole bug: reading data.user first is what stored null and
+    // reported success.
+    expect(branch).toBeLessThan(readsUser);
+  });
+
+  it("has somewhere to send the code", () => {
+    expect(store).toContain("/carrier-auth/totp-verify");
+    expect(store).toContain("verifyTotp");
+  });
+
+  it("keeps the short-lived token out of storage that outlives the tab", () => {
+    // It is a credential. localStorage would leave it readable after the tab,
+    // and after logout.
+    const totpLines = store.split("\n").filter((l) => l.includes("totpToken"));
+    for (const line of totpLines) {
+      expect(line).not.toMatch(/localStorage|sessionStorage/);
+    }
+  });
+
+  it("clears the token on logout", () => {
+    const logoutAt = store.indexOf("logout: () => {");
+    expect(logoutAt).toBeGreaterThan(-1);
+    expect(store.slice(logoutAt, logoutAt + 600)).toContain("totpToken: null");
+  });
+
+  it("renders an authenticator step on the login page", () => {
+    expect(loginPage).toContain("pendingTotp ?");
+    expect(loginPage).toContain("verifyTotp");
+  });
+
+  it("tells a carrier without their phone what to do", () => {
+    // A code box with no way past it is a dead end for anyone who lost the
+    // device, and backup codes are useless if nobody says they work here.
+    expect(loginPage).toMatch(/backup code/i);
+  });
+});

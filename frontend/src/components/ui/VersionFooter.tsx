@@ -14625,7 +14625,24 @@
 //   refetch would flip the page to its enrolled state and take the codes
 //   away mid-read. A typed key sits beside the QR for the common case where
 //   the carrier is reading this on the same phone that holds the app.
-export const SRL_VERSION = "3.8.atn";
+// v3.8.ato — Turning on 2FA would have locked every carrier out.
+//   /verify-otp has answered { pendingTotp, totpToken } for a long time when
+//   a user has an authenticator armed, and deliberately does not set the
+//   session cookie at that point. The carrier store had no branch for it, so
+//   it fell through to the success path, read an undefined user, stored null
+//   and reported success — the page routed to the dashboard, the layout found
+//   no cookie, and sent them back to sign in. Password, code, redirect,
+//   password, code, redirect, with nothing on screen to explain it.
+//   Latent for as long as the endpoint has existed, because no carrier had
+//   2FA on. atm made enrollment mandatory, which would have walked every
+//   carrier into it on their next sign-in. So the wall shipped two commits
+//   before the step that makes the wall survivable, and this closes that gap
+//   before any of it reaches production.
+//   The login page now asks for the authenticator code, accepts a backup code
+//   in the same box, and says where to write if both are gone. The temp token
+//   lives in memory only and is cleared on logout — it is a credential, and
+//   one that outlives its session is just a spare key left in the lock.
+export const SRL_VERSION = "3.8.ato";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

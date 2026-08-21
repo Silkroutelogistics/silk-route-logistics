@@ -48,8 +48,12 @@ export default function CarrierLoginPage() {
   const [otpCode, setOtpCode] = useState("");
   const [otpStep, setOtpStep] = useState(false);
   const [otpSuccess, setOtpSuccess] = useState("");
+  // Arc 11 — the authenticator step. No boolean beside it: pendingTotp from the
+  // store IS the condition, so the two cannot disagree about which step we are
+  // on. otpStep predates this and is left as it is.
+  const [totpCode, setTotpCode] = useState("");
   const [currentSlide, setCurrentSlide] = useState(0);
-  const { login, verifyOtp, isLoading, error, token, mustChangePassword, pendingOtp, pendingEmail } = useCarrierAuth();
+  const { login, verifyOtp, verifyTotp, isLoading, error, token, mustChangePassword, pendingOtp, pendingEmail, pendingTotp } = useCarrierAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -72,6 +76,13 @@ export default function CarrierLoginPage() {
       setOtpSuccess(`Verification code sent to ${pendingEmail}`);
     }
   }, [pendingOtp, pendingEmail]);
+
+  // Once the emailed code is accepted, that banner is stale — it would sit
+  // above the authenticator step still saying "code sent to ...", which reads
+  // as if the app were asking for the email code a second time.
+  useEffect(() => {
+    if (pendingTotp) setOtpSuccess("");
+  }, [pendingTotp]);
 
   // Slide rotation
   useEffect(() => {
@@ -100,6 +111,18 @@ export default function CarrierLoginPage() {
       window.location.href = nextPath;
     } else if (result === "password") {
       router.push("/auth/force-password-change");
+    }
+  };
+
+  const handleTotpSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const result = await verifyTotp(totpCode);
+    if (result === "success") {
+      window.location.href = nextPath;
+    } else if (result === "password") {
+      router.push("/auth/force-password-change");
+    } else {
+      setTotpCode("");
     }
   };
 
@@ -246,7 +269,42 @@ export default function CarrierLoginPage() {
             </div>
           )}
 
-          {!otpStep ? (
+          {pendingTotp ? (
+            <form onSubmit={handleTotpSubmit}>
+              <div className="mb-4">
+                <label className={labelClass}>Authenticator Code</label>
+                <input
+                  type="text"
+                  value={totpCode}
+                  onChange={(e) => setTotpCode(e.target.value.replace(/[^0-9A-Za-z]/g, "").slice(0, 8))}
+                  placeholder="000000"
+                  autoComplete="one-time-code"
+                  inputMode="numeric"
+                  autoFocus
+                  className={`${inputClass} text-center tracking-[6px] text-lg font-mono`}
+                  required
+                />
+                <p className="text-[11px] text-gray-400 mt-2 text-center">
+                  Open your authenticator app and enter the six-digit code
+                </p>
+              </div>
+              <button
+                type="submit"
+                disabled={isLoading || totpCode.length < 6}
+                className="w-full py-3.5 text-[15px] font-semibold rounded-xl border-none cursor-pointer transition-all duration-200 bg-[#BA7517] text-[#FBF7F0] shadow-[0_4px_12px_rgba(186,117,23,0.25)] hover:-translate-y-0.5 hover:shadow-[0_6px_20px_rgba(186,117,23,0.35)] disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:translate-y-0"
+              >
+                {isLoading ? "Verifying..." : "Verify"}
+              </button>
+              <p className="text-[11px] text-gray-400 mt-3 text-center leading-relaxed">
+                Lost your phone? Enter one of your backup codes above. If those are gone
+                too, email{" "}
+                <a href="mailto:operations@silkroutelogistics.ai" className="text-[#BA7517]">
+                  operations@silkroutelogistics.ai
+                </a>
+                .
+              </p>
+            </form>
+          ) : !otpStep ? (
             <form onSubmit={handleSubmit}>
               <div className="mb-4">
                 <label className={labelClass}>Email Address</label>
