@@ -1778,6 +1778,35 @@ Each is a discrete sprint. Mix of operational, security, UX, and technical debt.
 
     **The Arc 17 pinning assertions are unchanged; only their comments are.** They no longer guard a pending decision — they assert a promise, so breaking either is now breaking policy rather than changing behaviour nobody had chosen.
 
+225. **Verified driver phone + consented location pings (Arc 19, 2026-08-21).**
+
+    Tier 1 of driver verification. `v3.8.atz`. One additive migration, two consent boundaries, two fraud signals, and one Wasi checklist.
+
+    **PHASE A CORRECTED THE BRIEF'S OWN PREMISE.** The arc was scoped as "mostly assembly of built parts". Tracing all ten named surfaces first showed that is **half right**, and the half that is wrong is the half that matters:
+
+    | Genuinely reusable | Had to be built |
+    |---|---|
+    | `tenderActionToken` public-link pattern | **`OtpCode` cannot serve a driver** — `userId` is a required FK to `User`, and drivers deliberately have no User row (Item 193 T2). Reusing it means minting a User per driver, the registration-bypass shape that decision prevents |
+    | `sendSMS` + the inbound webhook | **`processGpsUpdate` records ONLY on a geofence hit** — a mid-lane ping, which is where a driver is when we ask, matched no zone and wrote nothing at all |
+    | `checkCallAutomation` schedule + retry | **`processGpsUpdate` hardcodes `"ELD"`** — a browser tap was recorded as telematics, and Compass's tracking factor is telematics-gated |
+    | `checkGeofence`, `LoadTrackingEvent`, `riskEngine` | **No consent capture existed anywhere** — zero hits for TCPA, consent, or A2P across the repo |
+    | `Driver` roster + `Load.driverId` | **`/gps-update` is carrier-authenticated**, so it cannot serve an unauthenticated driver tap |
+    | `express-rate-limit` | **No line-type lookup exists**, so Phase 3's VoIP signal has no data source at all |
+
+    **225.1 — THE TWO CONSENT BOUNDARIES, and they are the point.** (a) **No SMS to a driver number until someone holding that handset answered a code**, and the consent sentence was captured verbatim with a timestamp. (b) **NO LOCATION WITHOUT A TAP, EVER** — the GET renders a page and reads nothing; only a POST carrying coordinates the browser produced after a deliberate press writes a position. Both are pinned by assertion and both were adversarially verified by breaching them.
+
+    **225.2 — Phase 1, verified driver phone.** New `DriverPhoneVerification` model (a driver is not a User, so this could not be `OtpCode`) plus four nullable columns on Load. **The code is stored plaintext, matching `OtpCode`** — deliberate rather than lax: same threat class, worthless after ten minutes and five attempts, and a second convention for the same artifact is how this codebase ends up unpicking dual conventions. **Verification is per-load, not per-driver**, so a swap mid-load re-verifies; `driverPhoneVerified` holds the E.164 that was proven, so editing the number by any path reads as unverified rather than inheriting the old proof. **Consent is captured at CONFIRM, not at start** — consent given before the handset is proven is consent from an unknown party. The **rate confirmation download is gated** on a proven handset for CARRIER callers only: it is the document that sends a truck to a shipper's dock, and issuing it against an unconfirmed number means nobody can reach whoever shows up. AE roles are exempt because they arrange the verification.
+
+    **225.3 — Phase 2, the ping.** `driverPingToken` copies the `tenderActionToken` shape (signed, purpose-scoped, expiring, public route where the token IS the auth) rather than inventing a second scheme. **Phone-scoped as well as load-scoped**, so a swapped-off driver's old link stops writing. New `driverPingService.recordDriverPing` **always records the position and then separately asks the geofence about it** — that separation is the fix: the position is the record, the geofence is the interpretation, and a geofence failure must not discard a position already taken. Labelled `CARRIER_PORTAL`, not `ELD`. **Mounted in the public zone beside `/tender-action`** — the first mount attempt landed after the API routers and returned 401, caught by the proof.
+
+    **225.4 — Phase 3, deductions never verdicts.** `DRIVER_PHONE_UNVERIFIED` (+20 after a 4-hour grace from dispatch) and `PING_OFF_CORRIDOR` (+25 beyond a 250-mile detour tolerance). Neither blocks anything, per §14's eligibility half: a wrongly-flagged carrier who is merely watched is cleared by a human in a minute; a wrongly-blocked one is a load that does not move. **The VoIP signal is deliberately ABSENT rather than approximated** — it needs a line-type lookup no integration here exposes, and a guess from area code would flag real mobiles and miss real VoIP, which is worse than no signal because an AE learns to ignore it.
+
+    **225.5 — THE PROOF CAUGHT MY OWN TEST BEING WRONG, TWICE, AND BOTH ARE INSTRUCTIVE.** (a) The corridor case first asserted that a Columbus OH ping on a Lebanon NH → North Lake TX lane should fire. It did not, because **Columbus is almost exactly on that line** — the test was wrong, not the factor, and a signal that flags a driver for being where the route goes is one an AE learns to ignore. It is now a false-positive guard, with Seattle as the genuinely-off-lane case. (b) The first GET-writes-location injection used a fire-and-forget `void (async () => …)()`, which raced the assertion and reported a pass. **An injection that does not actually inject proves nothing** — §19 Sub-pattern 16 pointed at the verification itself. Redone awaited, it correctly failed.
+
+    **Proof: [`_arc19-driver-proof.ts`](backend/scripts/_arc19-driver-proof.ts), 21/21**, real router over HTTP, real database. Adversarial: dropping the consent requirement → 19/21; making the GET write a position → 20/21. The fixture **enrols the carrier in TOTP rather than bypassing the 2FA wall** — the first run was refused at every carrier mount, which was the Arc 15 wall working.
+
+    **BANKED, and the first is blocking.** (1) **STOP/HELP handling must ship before the first real driver message** — the consent text promises both, the inbound webhook exists and routes digits, and promising STOP without honouring it is the specific thing TCPA penalises. (2) A2P 10DLC registration, CNAM, and the 147C dependency: [`docs/internal/driver-sms-groundwork.md`](docs/internal/driver-sms-groundwork.md). (3) The consent text goes to counsel with the BCA + QP package (§16). (4) A sixth `LocationSource` value if driver taps ever need reporting apart from carrier-portal entries. (5) Compass credits a driver ping only once `eldEnabled` — a ping-only carrier stays neutral-100, which neither penalises nor rewards; worth a decision if pings become the main signal. (6) Tier 2 ELD consent, sketched in the groundwork doc.
+
 ## §14 LEGAL / COMPLIANCE STATUS
 
 - Property broker under 49 U.S.C. §§ 13904, 13906

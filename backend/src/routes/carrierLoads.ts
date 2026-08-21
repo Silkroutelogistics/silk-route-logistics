@@ -730,6 +730,59 @@ router.post("/post-capacity", async (req: AuthRequest, res: Response) => {
   }
 });
 
+// ─── ARC 19: verified driver phone ─────────────────────────────────
+//
+// Dispatch requires a driver name and a mobile we have PROVEN reaches a
+// handset. `driverPhone` was free text: a typo produced silence
+// indistinguishable from a driver ignoring us, and a deliberately wrong
+// number produced the same silence with worse intent. §13.3 Item 225.
+
+const driverVerifyStartSchema = z.object({
+  driverName: z.string().min(2).max(120),
+  driverPhone: z.string().min(7).max(24),
+});
+
+router.post("/:id/driver-verify/start", validateBody(driverVerifyStartSchema), async (req: AuthRequest, res: Response) => {
+  const load = await prisma.load.findFirst({
+    where: { id: req.params.id, carrierId: req.user!.id },
+    select: { id: true },
+  });
+  if (!load) { res.status(404).json({ error: "Load not found" }); return; }
+
+  const { startDriverVerification, DRIVER_SMS_CONSENT_TEXT } = await import("../services/driverVerificationService");
+  const r = await startDriverVerification({
+    loadId: load.id,
+    phone: req.body.driverPhone,
+    driverName: req.body.driverName,
+  });
+  if (!r.ok) { res.status(400).json({ error: r.reason }); return; }
+  // The consent text goes out with the start response so the carrier's UI
+  // shows the driver the exact words that will be stored against them.
+  res.json({ ok: true, phone: r.phone, alreadyVerified: !!r.alreadyVerified, consentText: DRIVER_SMS_CONSENT_TEXT });
+});
+
+const driverVerifyConfirmSchema = z.object({
+  code: z.string().min(4).max(10),
+  consented: z.boolean(),
+});
+
+router.post("/:id/driver-verify/confirm", validateBody(driverVerifyConfirmSchema), async (req: AuthRequest, res: Response) => {
+  const load = await prisma.load.findFirst({
+    where: { id: req.params.id, carrierId: req.user!.id },
+    select: { id: true },
+  });
+  if (!load) { res.status(404).json({ error: "Load not found" }); return; }
+
+  const { confirmDriverVerification } = await import("../services/driverVerificationService");
+  const r = await confirmDriverVerification({
+    loadId: load.id,
+    code: req.body.code,
+    consented: req.body.consented === true,
+  });
+  if (!r.ok) { res.status(400).json({ error: r.reason }); return; }
+  res.json({ ok: true, verifiedAt: r.verifiedAt });
+});
+
 // ─── GPS Location Update (Geofence Check) ───────────────────────────
 // Carrier app sends periodic location pings; service auto-detects
 // arrival/departure at stops and triggers status changes.

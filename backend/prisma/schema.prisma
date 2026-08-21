@@ -724,22 +724,22 @@ enum ReleasedValueBasis {
 // OTHER pairs with the line-level description for exotic
 // units (TOTE, CASE, BAG, etc.) until promoted to enum.
 enum PackageType {
-  PLT       // Pallet (GMA 48×40 or similar)
-  SKID      // One-way skid
-  CTN       // Carton
-  BOX       // Box (distinct from CTN in LTL usage)
-  DRUM      // 55-gal drum or fiber drum
-  BALE      // Compressed bale
-  BUNDLE    // Strapped bundle
-  CRATE     // Wooden crate
-  ROLL      // Roll (paper, carpet, coil)
-  OTHER     // Catch-all; see line description
+  PLT // Pallet (GMA 48×40 or similar)
+  SKID // One-way skid
+  CTN // Carton
+  BOX // Box (distinct from CTN in LTL usage)
+  DRUM // 55-gal drum or fiber drum
+  BALE // Compressed bale
+  BUNDLE // Strapped bundle
+  CRATE // Wooden crate
+  ROLL // Roll (paper, carpet, coil)
+  OTHER // Catch-all; see line description
 }
 
 // ─── Core Models ──────────────────────────────────────────
 
 model User {
-  id           String    @id @default(cuid())
+  id                       String    @id @default(cuid())
   // v3.8.ale — citext type for native case-insensitive uniqueness. The
   // @unique constraint is the same `users_email_key` B-tree as before;
   // citext shifts the operator class to citext_ops so equality is
@@ -747,16 +747,16 @@ model User {
   // case-insensitively without mode: "insensitive". v3.8.ald callers
   // (findFirst + caseInsensitiveEmailFilter) stay working — mode:
   // insensitive becomes redundant but harmless on citext.
-  email        String    @unique @db.Citext
-  passwordHash String
-  firstName    String
-  lastName     String
-  company      String?
-  role         UserRole
-  phone        String?
-  isVerified   Boolean   @default(false)
-  isActive     Boolean   @default(true)
-  lastLogin    DateTime?
+  email                    String    @unique @db.Citext
+  passwordHash             String
+  firstName                String
+  lastName                 String
+  company                  String?
+  role                     UserRole
+  phone                    String?
+  isVerified               Boolean   @default(false)
+  isActive                 Boolean   @default(true)
+  lastLogin                DateTime?
   // v3.8.aje — Email verification gate.
   // emailVerifiedAt is the canonical "this carrier proved control of
   // the inbox" timestamp. Separate from the overloaded `isVerified`
@@ -766,61 +766,61 @@ model User {
   // does NOT require this flip — but unverified email surfaces in the
   // AE drawer as a fraud signal and in the carrier's application-status
   // page as a "please verify your email" call to action.
-  emailVerifiedAt           DateTime?
+  emailVerifiedAt          DateTime?
   // Raw IP + resolved country at verification-click time. Raw IP retained
   // for AE forensic inspection (not hashed — chameleon already hashes
   // registration IP for cross-reference; the verify-click IP is single-
   // use audit material). Resolved country via geoip-lite offline lookup
   // (no per-request cost).
-  emailVerifiedFromIp       String?
-  emailVerifiedFromCountry  String? // ISO 3166-1 alpha-2 (e.g. "US", "CA")
+  emailVerifiedFromIp      String?
+  emailVerifiedFromCountry String? // ISO 3166-1 alpha-2 (e.g. "US", "CA")
   // v3.8.ajf — Unusual-activity dual-channel OTP. Track the last
   // successful login's IP + resolved country so the next login attempt
   // can be classified "unusual" if the country differs. When unusual,
   // the OTP is sent via BOTH email AND SMS (OpenPhone) — defense-in-
   // depth on the assumption that account compromise typically captures
   // password + email but not phone.
-  lastLoginIp               String?
-  lastLoginCountry          String?
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
+  lastLoginIp              String?
+  lastLoginCountry         String?
+  createdAt                DateTime  @default(now())
+  updatedAt                DateTime  @updatedAt
 
-  carrierProfile      CarrierProfile?
-  eldDevices          ELDDeviceMapping[]
-  loadsPosted         Load[]             @relation("LoadPoster")
-  loadsCarried        Load[]             @relation("LoadCarrier")
-  invoices            Invoice[]
-  documents           Document[]
-  sentMessages        Message[]          @relation("MessageSender")
-  receivedMessages    Message[]          @relation("MessageReceiver")
-  notifications       Notification[]
-  auditLogs           AuditLog[]
+  carrierProfile        CarrierProfile?
+  eldDevices            ELDDeviceMapping[]
+  loadsPosted           Load[]             @relation("LoadPoster")
+  loadsCarried          Load[]             @relation("LoadCarrier")
+  invoices              Invoice[]
+  documents             Document[]
+  sentMessages          Message[]          @relation("MessageSender")
+  receivedMessages      Message[]          @relation("MessageReceiver")
+  notifications         Notification[]
+  auditLogs             AuditLog[]
   // v3.8.ajh — InfoRequest workflow. AE-side relation: every info-request
   // an AE creates against a carrier records the AE as createdBy. Cancellation
   // tracked separately via cancelledById nullable field on the model.
-  createdInfoRequests   InfoRequest[]    @relation("InfoRequestCreatedBy")
-  cancelledInfoRequests InfoRequest[]    @relation("InfoRequestCancelledBy")
-  preferredTheme      String             @default("silk-route-classic")
-  darkMode            Boolean            @default(false)
+  createdInfoRequests   InfoRequest[]      @relation("InfoRequestCreatedBy")
+  cancelledInfoRequests InfoRequest[]      @relation("InfoRequestCancelledBy")
+  preferredTheme        String             @default("silk-route-classic")
+  darkMode              Boolean            @default(false)
   // Free-form user preferences JSON (v3.4.u). First consumer: waterfall
   // automation mode (manual | semi_auto | full_auto). Rule 9 — any DB
   // preference goes here instead of localStorage.
-  preferences         Json?
-  passwordChangedAt   DateTime?
-  totpSecret          String?
-  totpEnabled         Boolean            @default(false)
-  totpBackupCodes     String?
-  failedLoginAttempts Int                @default(0)
-  lockedUntil         DateTime?
-  otpCodes            OtpCode[]
-  rateConfirmations   RateConfirmation[] @relation("RateConfCreator")
-  checkCalls          CheckCall[]        @relation("CheckCallUser")
-  carrierPays         CarrierPay[]       @relation("CarrierPayments")
-  settlements         Settlement[]       @relation("CarrierSettlements")
-  statusUpdates       Load[]             @relation("StatusUpdater")
-  tenderedLoads       Load[]             @relation("TenderCreator")
-  systemLogs          SystemLog[]
-  auditTrails         AuditTrail[]       @relation("AuditPerformer")
+  preferences           Json?
+  passwordChangedAt     DateTime?
+  totpSecret            String?
+  totpEnabled           Boolean            @default(false)
+  totpBackupCodes       String?
+  failedLoginAttempts   Int                @default(0)
+  lockedUntil           DateTime?
+  otpCodes              OtpCode[]
+  rateConfirmations     RateConfirmation[] @relation("RateConfCreator")
+  checkCalls            CheckCall[]        @relation("CheckCallUser")
+  carrierPays           CarrierPay[]       @relation("CarrierPayments")
+  settlements           Settlement[]       @relation("CarrierSettlements")
+  statusUpdates         Load[]             @relation("StatusUpdater")
+  tenderedLoads         Load[]             @relation("TenderCreator")
+  systemLogs            SystemLog[]
+  auditTrails           AuditTrail[]       @relation("AuditPerformer")
 
   // Accounting relations
   preparedPayments    CarrierPay[]            @relation("PaymentPreparer")
@@ -960,10 +960,10 @@ model CarrierProfile {
   // Per CLAUDE.md §14 + §16, this improves the interim click-through
   // enforceability while the standalone executable BCA + Michigan
   // attorney review remain as first-carrier blockers.
-  bcaAgreedAt              DateTime?
-  bcaAgreedFromIp          String?
-  bcaAgreedFromUserAgent   String?
-  bcaVersion               String?
+  bcaAgreedAt            DateTime?
+  bcaAgreedFromIp        String?
+  bcaAgreedFromUserAgent String?
+  bcaVersion             String?
 
   // Post-approval activation (Track 1, 2026-06-24). The binding BCA
   // signature is recorded as a CarrierAgreement{status:SIGNED} row (the
@@ -1131,9 +1131,9 @@ model CarrierProfile {
   // Override is per-carrier; resets implicitly when a new login from
   // ANOTHER different country fires (the next v3.8.aje verify-click
   // or v3.8.ajf login-time SystemLog warning surfaces normally).
-  geoMismatchOverriddenAt    DateTime?
-  geoMismatchOverriddenById  String?
-  geoMismatchOverrideNote    String?
+  geoMismatchOverriddenAt   DateTime?
+  geoMismatchOverriddenById String?
+  geoMismatchOverrideNote   String?
 
   // Document expiry enforcement
   coiExpiryDate          DateTime? // Certificate of Insurance expiry
@@ -1200,7 +1200,7 @@ model CarrierProfile {
   // v3.8.amw — SRL Driver Academy Sprint T1: carrier-owned driver roster.
   // Drivers added via the carrier portal carry carrierProfileId; legacy
   // AE-console fleet rows keep it NULL and stay invisible to carriers.
-  drivers Driver[] @relation("CarrierDrivers")
+  drivers              Driver[]                     @relation("CarrierDrivers")
   trainingRequirements CarrierTrainingRequirement[]
 
   @@index([mcNumber])
@@ -1379,6 +1379,17 @@ model Load {
   carrierDispatcherPhone String?
   driverName             String?
   driverPhone            String?
+  // ARC 19 — the driver number, PROVEN. driverPhone is what the carrier typed;
+  // these say a person holding that handset answered a code we sent, when, and
+  // what messaging consent they were shown. Stored per-load rather than per-
+  // driver because a swap mid-load must re-verify: the number that matters is
+  // the one on the truck now. driverPhoneVerified holds the E.164 that was
+  // proven, so editing driverPhone to anything else silently invalidates it.
+  driverPhoneVerified    String?                   @map("driver_phone_verified")
+  driverPhoneVerifiedAt  DateTime?                 @map("driver_phone_verified_at")
+  driverConsentAt        DateTime?                 @map("driver_consent_at")
+  driverConsentText      String?                   @map("driver_consent_text")
+  driverVerifications    DriverPhoneVerification[]
   truckNumber            String?
   trailerNumber          String?
   hookType               HookType?
@@ -1480,7 +1491,7 @@ model Load {
   // The application applies the 7-day default; the column stays NULL-able so
   // "never asked" and "asked for standard" remain different facts.
   // The RC prints quickPaySpeed + quickPayFeePercent as applied to THIS load.
-  quickPaySpeed        QuickPaySpeed?
+  quickPaySpeed QuickPaySpeed?
 
   // Terms
   termsConditions     String?
@@ -1579,7 +1590,7 @@ model Load {
   delays             LoadDelay[]
 
   // Freight structure relations (v3.8.a)
-  lineItems          LoadLineItem[]
+  lineItems LoadLineItem[]
 
   // Track & Trace relations
   loadStops             LoadStop[]
@@ -1599,7 +1610,7 @@ model Load {
   deletedAt          DateTime?
   deletedBy          String?
   cancellationReason String?
-  tonuFaultSide      String?   // CUSTOMER | CARRIER | BROKER — Arc 2 Item 5. Required at the TONU flip; drives the two-sided TONU decision in lib/tonuPolicy.
+  tonuFaultSide      String? // CUSTOMER | CARRIER | BROKER — Arc 2 Item 5. Required at the TONU flip; drives the two-sided TONU decision in lib/tonuPolicy.
 
   // v3.8.ali §13.3 Item 192 — per-load risk-email kill switch. When
   // riskEmailMuted=true the risk engine still writes RiskLog + still
@@ -1618,7 +1629,7 @@ model Load {
   // loads (Feb-2026-dated) are additionally caught by the risk engine's
   // 14-day pickupDate staleness guard, so no risky prod backfill of
   // this column is needed. Mirrors CarrierProfile.isTestAccount (v3.8.aim).
-  isTestAccount      Boolean   @default(false)
+  isTestAccount Boolean @default(false)
 
   @@index([status])
   @@index([loadNumber])
@@ -1688,14 +1699,14 @@ model LoadTender {
 // (BKN's lane setup ≠ Acme's lane setup). ON DELETE CASCADE on the
 // Customer relation so deleting a customer cleans up their templates.
 model OrderTemplate {
-  id          String    @id @default(cuid())
-  name        String    @db.VarChar(120)
-  customerId  String    @map("customer_id")
-  customer    Customer  @relation("CustomerOrderTemplates", fields: [customerId], references: [id], onDelete: Cascade)
-  formData    Json      @default("{}") @map("form_data")
-  createdById String?   @map("created_by_id")
-  createdAt   DateTime  @default(now()) @map("created_at")
-  updatedAt   DateTime  @updatedAt @map("updated_at")
+  id          String   @id @default(cuid())
+  name        String   @db.VarChar(120)
+  customerId  String   @map("customer_id")
+  customer    Customer @relation("CustomerOrderTemplates", fields: [customerId], references: [id], onDelete: Cascade)
+  formData    Json     @default("{}") @map("form_data")
+  createdById String?  @map("created_by_id")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
 
   @@unique([customerId, name])
   @@index([customerId])
@@ -1861,7 +1872,7 @@ model RateConfirmation {
   updatedAt DateTime @updatedAt
 
   carrierPays CarrierPay[]
-  invoices    Invoice[] @relation("InvoiceRateCon")
+  invoices    Invoice[]    @relation("InvoiceRateCon")
 
   @@index([loadId])
   @@index([status])
@@ -1980,21 +1991,21 @@ model CheckCall {
 // ─── Finance Models ──────────────────────────────────
 
 model Invoice {
-  id                  String         @id @default(cuid())
+  id            String        @id @default(cuid())
   // INTERNAL accounting sequence, INV-<n>. Occupied: lib/invoiceNumber.ts owns
   // it, computes the next value by scanning `startsWith: "INV-"`, and retries
   // on P2002. Two legacy formats already coexist in it. Repointing this column
   // at the SRL-stem scheme would break that generator, so the customer-facing
   // document number lives in srlDocNumber below and this stays as-is.
-  invoiceNumber       String         @unique
+  invoiceNumber String        @unique
   // The customer-facing document number, suffix form on the load stem:
   //   SRL-121485I  base invoice
   //   SRL-121485S  supplemental accessorial invoice (invoiceKind SUPPLEMENTAL)
   // Re-issues take a numeric revision (SRL-121485I2); numbers are never reused.
-  srlDocNumber        String?        @unique
-  loadId              String
-  load                Load           @relation(fields: [loadId], references: [id], onDelete: Restrict)
-  status              InvoiceStatus  @default(DRAFT)
+  srlDocNumber  String?       @unique
+  loadId        String
+  load          Load          @relation(fields: [loadId], references: [id], onDelete: Restrict)
+  status        InvoiceStatus @default(DRAFT)
 
   // The RC that priced this load. Nullable because invoices predating the link
   // exist, and because a load can be invoiced without an RC on file.
@@ -2012,25 +2023,25 @@ model Invoice {
   //     accessorials attach to the supplemental row directly with no new wiring
   // invoiceKind is the discriminator; supplementsInvoiceId links back to the
   // base so the pair is navigable in both directions.
-  invoiceKind          InvoiceKind @default(BASE)
+  invoiceKind          InvoiceKind    @default(BASE)
   supplementsInvoiceId String?
-  supplementsInvoice   Invoice?    @relation("InvoiceSupplement", fields: [supplementsInvoiceId], references: [id], onDelete: SetNull)
-  supplementalInvoices Invoice[]   @relation("InvoiceSupplement")
-  amount              Float
-  lineHaulAmount      Float?
-  fuelSurchargeAmount Float?
-  accessorialsAmount  Float?
-  totalAmount         Float?
-  factoringFee        Float?
-  advanceRate         Float?
-  advanceAmount       Float?
-  dueDate             DateTime?
-  sentDate            DateTime?
-  paidAt              DateTime?
-  paidAmount          Float?
-  paymentReference    String?
-  paymentMethod       PaymentMethod?
-  pdfUrl              String?
+  supplementsInvoice   Invoice?       @relation("InvoiceSupplement", fields: [supplementsInvoiceId], references: [id], onDelete: SetNull)
+  supplementalInvoices Invoice[]      @relation("InvoiceSupplement")
+  amount               Float
+  lineHaulAmount       Float?
+  fuelSurchargeAmount  Float?
+  accessorialsAmount   Float?
+  totalAmount          Float?
+  factoringFee         Float?
+  advanceRate          Float?
+  advanceAmount        Float?
+  dueDate              DateTime?
+  sentDate             DateTime?
+  paidAt               DateTime?
+  paidAmount           Float?
+  paymentReference     String?
+  paymentMethod        PaymentMethod?
+  pdfUrl               String?
 
   // Reminder tracking
   reminderSent31   Boolean   @default(false)
@@ -2298,14 +2309,14 @@ model Document {
   reviewedBy   String?
   createdAt    DateTime  @default(now())
 
-  userId      String
-  user        User           @relation(fields: [userId], references: [id], onDelete: Restrict)
-  loadId      String?
-  load        Load?          @relation(fields: [loadId], references: [id], onDelete: Cascade)
-  invoiceId   String?
-  invoice     Invoice?       @relation(fields: [invoiceId], references: [id])
-  exceptionId String?        @map("exception_id")
-  exception   LoadException? @relation("ExceptionDocs", fields: [exceptionId], references: [id], onDelete: SetNull)
+  userId        String
+  user          User           @relation(fields: [userId], references: [id], onDelete: Restrict)
+  loadId        String?
+  load          Load?          @relation(fields: [loadId], references: [id], onDelete: Cascade)
+  invoiceId     String?
+  invoice       Invoice?       @relation(fields: [invoiceId], references: [id])
+  exceptionId   String?        @map("exception_id")
+  exception     LoadException? @relation("ExceptionDocs", fields: [exceptionId], references: [id], onDelete: SetNull)
   // v3.8.aji — Attachment linkage to InfoRequest. When a carrier resolves
   // an info request with file uploads (COI scan, voided check, etc.) each
   // file lands as a Document row with this FK set + docType=
@@ -2313,8 +2324,8 @@ model Document {
   // that deleting an InfoRequest doesn't cascade-delete the doc — the
   // attachment stays in the carrier's document history under the regular
   // documents tab even if the info-request thread is cleaned up.
-  infoRequestId String?      @map("info_request_id")
-  infoRequest   InfoRequest? @relation(fields: [infoRequestId], references: [id], onDelete: SetNull)
+  infoRequestId String?        @map("info_request_id")
+  infoRequest   InfoRequest?   @relation(fields: [infoRequestId], references: [id], onDelete: SetNull)
 
   @@index([entityType, entityId])
   @@index([loadId, docType])
@@ -2419,7 +2430,7 @@ model Customer {
   // OrderSidebar shows a red alert chip when target carrier cost
   // produces margin% below this floor. Per-customer override of the
   // global 10% default. Stored as a percent (e.g. 12.5 = 12.5%).
-  minMarginPercent   Float?  @map("min_margin_percent")
+  minMarginPercent Float? @map("min_margin_percent")
 
   // Approval-event metadata (Phase 6.2 Lead Hunter / CRM separation)
   approvedAt   DateTime? @map("approved_at")
@@ -2448,7 +2459,7 @@ model Customer {
   vertical ProspectVertical @default(UNKNOWN)
 
   // Lead Hunter — Sequence State (v3.6.c)
-  sequenceStatus  String?   @map("sequence_status")    // ACTIVE | PAUSED | STOPPED | COMPLETED
+  sequenceStatus  String?   @map("sequence_status") // ACTIVE | PAUSED | STOPPED | COMPLETED
   currentTouch    Int?      @map("current_touch")
   lastTouchSentAt DateTime? @map("last_touch_sent_at")
   nextTouchDueAt  DateTime? @map("next_touch_due_at")
@@ -2892,25 +2903,25 @@ enum DriverCourseStatus {
 }
 
 model TrainingCourse {
-  id             String               @id @default(cuid())
-  slug           String               @unique
+  id             String                       @id @default(cuid())
+  slug           String                       @unique
   title          String
   category       String
   summary        String?
-  version        String               @default("1")
-  estMinutes     Int                  @default(0)
-  passThreshold  Int                  @default(80) // percent correct required to pass the quiz
+  version        String                       @default("1")
+  estMinutes     Int                          @default(0)
+  passThreshold  Int                          @default(80) // percent correct required to pass the quiz
   validityMonths Int? // null = no expiry; e.g. 12 for an annual refresher (T6)
-  status         TrainingCourseStatus @default(PUBLISHED)
-  sortOrder      Int                  @default(0)
+  status         TrainingCourseStatus         @default(PUBLISHED)
+  sortOrder      Int                          @default(0)
   disclaimer     String?
   lessons        TrainingLesson[]
   questions      TrainingQuestion[]
   progress       DriverCourseProgress[]
   attempts       TrainingAttempt[]
   requirements   CarrierTrainingRequirement[]
-  createdAt      DateTime             @default(now())
-  updatedAt      DateTime             @updatedAt
+  createdAt      DateTime                     @default(now())
+  updatedAt      DateTime                     @updatedAt
 
   @@index([status])
   @@index([category])
@@ -2951,19 +2962,19 @@ model TrainingQuestion {
 }
 
 model DriverCourseProgress {
-  id               String             @id @default(cuid())
-  driverId         String
-  driver           Driver             @relation(fields: [driverId], references: [id], onDelete: Cascade)
-  courseId         String
-  course           TrainingCourse     @relation(fields: [courseId], references: [id], onDelete: Cascade)
-  status           DriverCourseStatus @default(NOT_STARTED)
-  lessonsCompleted Int                @default(0)
-  lastLessonOrder  Int                @default(0)
-  bestScorePct     Int?
-  attemptCount     Int                @default(0)
-  startedAt        DateTime?
-  completedAt      DateTime?
-  expiresAt        DateTime? // completedAt + validityMonths — drives the T6 refresher cron
+  id                    String             @id @default(cuid())
+  driverId              String
+  driver                Driver             @relation(fields: [driverId], references: [id], onDelete: Cascade)
+  courseId              String
+  course                TrainingCourse     @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  status                DriverCourseStatus @default(NOT_STARTED)
+  lessonsCompleted      Int                @default(0)
+  lastLessonOrder       Int                @default(0)
+  bestScorePct          Int?
+  attemptCount          Int                @default(0)
+  startedAt             DateTime?
+  completedAt           DateTime?
+  expiresAt             DateTime? // completedAt + validityMonths — drives the T6 refresher cron
   // Document.id of the issued completion certificate (T5). Soft reference
   // (no FK relation) to avoid coupling to the heavily-related Document model.
   certificateDocumentId String?
@@ -2971,9 +2982,9 @@ model DriverCourseProgress {
   // the first time a cert is generated for this completion; printed (+ QR) on the
   // cert PDF so a shipper/auditor/insurer can confirm it at /verify-cert/<code>.
   // Unique + indexed for O(1) public lookup (no scan, unlike the RC verifier).
-  verifyCode       String?            @unique
-  createdAt        DateTime           @default(now())
-  updatedAt        DateTime           @updatedAt
+  verifyCode            String?            @unique
+  createdAt             DateTime           @default(now())
+  updatedAt             DateTime           @updatedAt
 
   @@unique([driverId, courseId])
   @@index([driverId])
@@ -3655,7 +3666,7 @@ model MileageCache {
 model FuelIndexCache {
   region     String   @id // NATIONAL | PADD1 | PADD2 | PADD3 | PADD4 | PADD5 | CA (EIA taxonomy)
   indexPrice Float    @map("index_price") // $/gallon, weekly U.S. on-highway No. 2 diesel retail
-  indexDate  DateTime @map("index_date")  // EIA week-ending date
+  indexDate  DateTime @map("index_date") // EIA week-ending date
   source     String   @default("EIA_DOE") // EIA_DOE | MANUAL (operator override when EIA unavailable)
   fetchedAt  DateTime @default(now()) @map("fetched_at")
   expiresAt  DateTime @map("expires_at")
@@ -4424,6 +4435,39 @@ model LoadStop {
   @@map("load_stops")
 }
 
+/// ARC 19 — a one-time code proving someone holds the driver handset.
+///
+/// WHY NOT OtpCode. That model requires a userId FK to User, and a driver is
+/// deliberately NOT a User (§13.3 Item 193 T2 — drivers have no User row, no
+/// UserRole, and authenticate through a purpose-scoped token). Reusing it would
+/// have meant minting a User per driver, which is the registration-bypass shape
+/// that decision exists to prevent.
+///
+/// The code is stored in plaintext, matching OtpCode. That is deliberate rather
+/// than lax: it is the same threat class as the login OTP, it is worthless after
+/// ten minutes and five attempts, and inventing a second convention for the same
+/// artifact is how this codebase ends up unpicking dual conventions later.
+model DriverPhoneVerification {
+  id          String    @id @default(cuid())
+  loadId      String    @map("load_id")
+  load        Load      @relation(fields: [loadId], references: [id], onDelete: Cascade)
+  phone       String    @db.VarChar(20)
+  code        String    @db.VarChar(10)
+  expiresAt   DateTime  @map("expires_at")
+  attempts    Int       @default(0)
+  verifiedAt  DateTime? @map("verified_at")
+  /// The exact consent sentence shown at verification, stored verbatim so a
+  /// TCPA dispute can name what the driver actually agreed to rather than what
+  /// the current build happens to say.
+  consentText String?   @map("consent_text")
+  consentAt   DateTime? @map("consent_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  @@index([loadId, phone])
+  @@index([expiresAt])
+  @@map("driver_phone_verifications")
+}
+
 model LoadTrackingEvent {
   id             String            @id @default(cuid())
   loadId         String            @map("load_id")
@@ -4475,7 +4519,7 @@ model LoadAccessorial {
   // every accessorial was billed at cost and SRL earned nothing on any of them.
   // Customer.defaultAccessorialRates has held the negotiated rates the whole
   // time and no money path had ever read it.
-  customerAmount   Decimal?          @db.Decimal(10, 2) @map("customer_amount")
+  customerAmount   Decimal?          @map("customer_amount") @db.Decimal(10, 2)
   quantity         Decimal?          @db.Decimal(10, 2)
   unit             String?           @db.VarChar(20)
   rate             Decimal?          @db.Decimal(10, 2)
@@ -4521,43 +4565,43 @@ model LoadAccessorial {
 }
 
 model LoadLineItem {
-  id                     String      @id @default(cuid())
-  loadId                 String      @map("load_id")
-  lineNumber             Int         @map("line_number")
+  id         String @id @default(cuid())
+  loadId     String @map("load_id")
+  lineNumber Int    @map("line_number")
 
   // Required core fields (D10)
-  pieces                 Int
-  packageType            PackageType @map("package_type")
-  description            String
-  weight                 Float       // pounds
+  pieces      Int
+  packageType PackageType @map("package_type")
+  description String
+  weight      Float // pounds
 
   // Optional dimensions (inches)
-  dimensionsLength       Float?      @map("dimensions_length")
-  dimensionsWidth        Float?      @map("dimensions_width")
-  dimensionsHeight       Float?      @map("dimensions_height")
+  dimensionsLength Float? @map("dimensions_length")
+  dimensionsWidth  Float? @map("dimensions_width")
+  dimensionsHeight Float? @map("dimensions_height")
 
   // Optional freight classification
-  freightClass           String?     @map("freight_class")
-  nmfcCode               String?     @map("nmfc_code")
+  freightClass String? @map("freight_class")
+  nmfcCode     String? @map("nmfc_code")
 
   // Per-line hazmat (D2)
-  hazmat                 Boolean     @default(false)
-  hazmatUnNumber         String?     @map("hazmat_un_number")
-  hazmatClass            String?     @map("hazmat_class")
-  hazmatEmergencyContact String?     @map("hazmat_emergency_contact")
-  hazmatPlacardRequired  Boolean?    @map("hazmat_placard_required")
+  hazmat                 Boolean  @default(false)
+  hazmatUnNumber         String?  @map("hazmat_un_number")
+  hazmatClass            String?  @map("hazmat_class")
+  hazmatEmergencyContact String?  @map("hazmat_emergency_contact")
+  hazmatPlacardRequired  Boolean? @map("hazmat_placard_required")
 
   // Per-line physical constraints (D9)
-  stackable              Boolean     @default(true)
-  turnable               Boolean     @default(true)
+  stackable Boolean @default(true)
+  turnable  Boolean @default(true)
 
-  createdAt              DateTime    @default(now()) @map("created_at")
-  updatedAt              DateTime    @updatedAt      @map("updated_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
-  load                   Load        @relation(fields: [loadId], references: [id], onDelete: Cascade)
+  load Load @relation(fields: [loadId], references: [id], onDelete: Cascade)
 
-  @@index([loadId])
   @@unique([loadId, lineNumber])
+  @@index([loadId])
   @@map("load_line_items")
 }
 
@@ -5155,7 +5199,6 @@ model WebhookEndpoint {
   @@map("webhook_endpoints")
 }
 
-
 // ─── v3.8.ajh — InfoRequest workflow ─────────────────────────
 //
 // AE creates an InfoRequest against a carrier when REVIEWING surfaces
@@ -5173,32 +5216,32 @@ model WebhookEndpoint {
 //   * AE cancels last OPEN request → INFO_REQUESTED → REVIEWING
 
 model InfoRequest {
-  id              String              @id @default(cuid())
-  carrierId       String
-  carrier         CarrierProfile      @relation(fields: [carrierId], references: [id], onDelete: Cascade)
+  id        String         @id @default(cuid())
+  carrierId String
+  carrier   CarrierProfile @relation(fields: [carrierId], references: [id], onDelete: Cascade)
 
-  createdById     String
-  createdBy       User                @relation("InfoRequestCreatedBy", fields: [createdById], references: [id])
-  cancelledById   String?
-  cancelledBy     User?               @relation("InfoRequestCancelledBy", fields: [cancelledById], references: [id])
+  createdById   String
+  createdBy     User    @relation("InfoRequestCreatedBy", fields: [createdById], references: [id])
+  cancelledById String?
+  cancelledBy   User?   @relation("InfoRequestCancelledBy", fields: [cancelledById], references: [id])
 
-  category        InfoRequestCategory @default(OTHER)
-  message         String              @db.Text
-  status          InfoRequestStatus   @default(OPEN)
+  category InfoRequestCategory @default(OTHER)
+  message  String              @db.Text
+  status   InfoRequestStatus   @default(OPEN)
 
-  resolvedNote    String?             @db.Text
-  resolvedAt      DateTime?
-  cancelledAt     DateTime?
+  resolvedNote String?   @db.Text
+  resolvedAt   DateTime?
+  cancelledAt  DateTime?
 
   // v3.8.aji — File attachments uploaded by carrier during resolution.
   // Documents are created with docType="INFO_REQUEST_RESPONSE",
   // entityType="CARRIER", entityId=carrierProfileId, infoRequestId=this.id.
   // They surface in both the AE info-request list (this relation) AND the
   // carrier's regular documents tab (entityType/entityId lookup).
-  attachments     Document[]
+  attachments Document[]
 
-  createdAt       DateTime            @default(now())
-  updatedAt       DateTime            @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([carrierId, status])
   @@index([createdAt])
@@ -5230,13 +5273,13 @@ enum InfoRequestStatus {
 // Null/never reasons (FRAUD_DETECTED, IDENTITY_FRAUD) cannot reapply.
 
 enum RejectionReason {
-  MISSING_DOCUMENTS         // 7 days
-  EXPIRED_INSURANCE         // 30 days
-  AUTHORITY_NOT_ACTIVE      // 60 days
+  MISSING_DOCUMENTS // 7 days
+  EXPIRED_INSURANCE // 30 days
+  AUTHORITY_NOT_ACTIVE // 60 days
   SAFETY_RATING_UNSATISFACTORY // 90 days
-  COMPLIANCE_VIOLATION      // 60 days
-  FRAUD_DETECTED            // never (permanent)
-  IDENTITY_FRAUD            // never (permanent)
-  DUPLICATE_APPLICATION     // 30 days
-  OTHER                     // 30 days (default)
+  COMPLIANCE_VIOLATION // 60 days
+  FRAUD_DETECTED // never (permanent)
+  IDENTITY_FRAUD // never (permanent)
+  DUPLICATE_APPLICATION // 30 days
+  OTHER // 30 days (default)
 }

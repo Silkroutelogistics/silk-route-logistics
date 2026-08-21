@@ -164,13 +164,35 @@ export async function processDueCheckCalls() {
       scheduledTime: { lte: now },
     },
     include: {
-      load: { select: { id: true, referenceNumber: true, originCity: true, originState: true, destCity: true, destState: true } },
+      load: {
+        select: {
+          id: true, referenceNumber: true, originCity: true, originState: true,
+          destCity: true, destState: true,
+          // ARC 19 — needed to mint the tap-to-share link below.
+          driverPhoneVerified: true, driverPhoneVerifiedAt: true,
+        },
+      },
     },
     take: 50,
   });
 
   for (const cc of due) {
-    const msg = `SRL Check-Call: Load #${cc.load.referenceNumber} (${cc.load.originCity}, ${cc.load.originState} → ${cc.load.destCity}, ${cc.load.destState}). Reply: 1=At Pickup, 2=Loaded, 3=In Transit, 4=At Delivery, 5=Delivered`;
+    let msg = `SRL Check-Call: Load #${cc.load.referenceNumber} (${cc.load.originCity}, ${cc.load.originState} → ${cc.load.destCity}, ${cc.load.destState}). Reply: 1=At Pickup, 2=Loaded, 3=In Transit, 4=At Delivery, 5=Delivered`;
+
+    // ARC 19 — offer the one-tap position link, but only to a handset we have
+    // proven. Texting a location link to an unverified number would be asking
+    // an unknown party to hand us a position, which is the opposite of the
+    // point. Replying with a digit stays available and is listed first: the
+    // link is an easier alternative, never a requirement. §13.3 Item 225.
+    if (cc.load.driverPhoneVerifiedAt && cc.load.driverPhoneVerified) {
+      try {
+        const { mintDriverPingToken, driverPingUrl } = await import("../lib/driverPingToken");
+        const url = driverPingUrl(mintDriverPingToken(cc.load.id, cc.load.driverPhoneVerified));
+        msg += ` Or tap to share your location once: ${url}`;
+      } catch (err) {
+        log.error({ err, loadId: cc.load.id }, "[CheckCall] could not mint a ping link; sending without it");
+      }
+    }
 
     if (cc.carrierPhone) {
       await sendCheckCallText(cc.carrierPhone, msg);

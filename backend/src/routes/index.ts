@@ -88,6 +88,7 @@ import fuelSurchargeTableRoutes from "./fuelSurchargeTable";
 import tagRoutes from "./tags";
 import shipperDefaultsRoutes from "./shipperDefaults";
 import openPhoneRoutes from "./openPhone";
+import driverPingRoutes from "./driverPing";
 import sequenceRoutes from "./sequences";
 import emailTrackingRoutes from "./emailTracking";
 
@@ -207,6 +208,7 @@ router.use("/webhook-subscriptions", webhookSubscriptionRoutes);
 router.use("/email-tracking", emailTrackingRoutes); // Resend webhook (public)
 router.use("/quote-approve", quoteApproveRoutes); // v3.8.akn Item 180.4 — magic-link approval (public; JWT IS the auth)
 router.use("/tender-action", tenderActionRoutes); // v3.8.als Item 142 — magic-link tender accept/decline (public; JWT IS the auth)
+router.use("/ping", driverPingRoutes); // ARC 19 — driver location ping (public; the load-scoped token IS the auth)
 router.use("/", websiteRoutes);
 
 // --- API Routes ---

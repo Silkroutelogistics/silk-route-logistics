@@ -340,6 +340,27 @@ export async function downloadRateConfirmationPdf(req: AuthRequest, res: Respons
     return;
   }
 
+  // ARC 19 — and the driver handset on this load must be PROVEN first.
+  //
+  // The rate confirmation is the document that sends a truck to a shipper.
+  // Issuing it against a number nobody has confirmed means that when the load
+  // goes quiet, dispatch is calling a handset that may never have existed. The
+  // check is on the carrier path only: AE-side roles need to read the RC while
+  // they are arranging the verification. §13.3 Item 225.
+  if (req.user!.role === "CARRIER") {
+    const { isDriverPhoneVerified } = await import("../services/driverVerificationService");
+    if (!(await isDriverPhoneVerified(rc.loadId))) {
+      res.status(403).json({
+        error: "DRIVER_NOT_VERIFIED",
+        message:
+          "Confirm the driver mobile number before downloading the rate confirmation. We text a code " +
+          "to the driver; entering it proves we can reach the person hauling this load.",
+        action: { href: "/carrier/dashboard/my-loads", label: "Verify the driver" },
+      });
+      return;
+    }
+  }
+
   const doc = generateEnhancedRateConfirmation(rc.load, renderFormData(rc));
   // Filename now carries the RC's own number, so a re-issue downloads as
   // SRL-121485R2.pdf instead of overwriting the original in the AE's downloads

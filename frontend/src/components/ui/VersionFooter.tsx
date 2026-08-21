@@ -14748,7 +14748,7 @@
 //   scripts/_arc15-gate-proof.ts now mints a session for an unenrolled carrier
 //   and asks every mount whether it refuses. It prints WALL HOLDS or names the
 //   mounts that are wrong.
-export const SRL_VERSION = "3.8.aty";
+export const SRL_VERSION = "3.8.atz";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

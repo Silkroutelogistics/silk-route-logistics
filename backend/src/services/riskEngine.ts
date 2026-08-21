@@ -31,12 +31,87 @@ export async function calculateLoadRisk(loadId: string): Promise<RiskResult> {
         },
       },
       poster: { select: { id: true, email: true, firstName: true } },
+      // ARC 19 — inputs for the driver-verification signals below.
+      trackingEvents: {
+        where: { latitude: { not: null } },
+        orderBy: { createdAt: "desc" },
+        take: 1,
+        select: { latitude: true, longitude: true, createdAt: true },
+      },
     },
   });
   if (!load) throw new Error("Load not found");
 
   const factors: RiskFactor[] = [];
   const now = new Date();
+
+  // ── ARC 19 driver-verification signals ────────────────────────────────
+  //
+  // DEDUCTIONS, NEVER VERDICTS. Each of these adds points and surfaces to an
+  // AE; none blocks a tender, a dispatch or a payment. §14's eligibility half
+  // says a matching decision that cannot tell must fail OPEN — offering a
+  // lane a carrier declines costs a decline you can see, refusing one they
+  // would have run loses the load invisibly. The same asymmetry holds here:
+  // a wrongly-flagged carrier who is merely watched can be cleared by a
+  // human in a minute, and a wrongly-blocked one is a load that does not
+  // move and a relationship that does not recover. §13.3 Item 225.
+
+  // 1. Dispatched hours ago and nobody has proven the driver's handset.
+  const DISPATCH_VERIFY_GRACE_HOURS = 4;
+  if (load.carrierId && !load.driverPhoneVerifiedAt) {
+    const since = load.dispatchedAt || load.carrierConfirmedAt || load.updatedAt;
+    const hours = since ? (now.getTime() - new Date(since).getTime()) / 3_600_000 : 0;
+    if (hours >= DISPATCH_VERIFY_GRACE_HOURS) {
+      factors.push({
+        factor: "DRIVER_PHONE_UNVERIFIED",
+        points: 20,
+        description:
+          `Driver mobile still unverified ${Math.floor(hours)}h after dispatch — ` +
+          `nobody has confirmed the number reaches the person hauling this load`,
+      });
+    }
+  }
+
+  // 2. A shared position nowhere near the lane.
+  //
+  // Deliberately crude: a straight-line corridor around origin→destination
+  // with a wide tolerance. A truck legitimately detours for fuel, traffic,
+  // and hours-of-service, so this fires only on positions that no plausible
+  // routing explains. Wide enough to be quiet; narrow enough that a ping
+  // from another state is not.
+  const CORRIDOR_TOLERANCE_MILES = 250;
+  const lastPing = load.trackingEvents?.[0];
+  if (lastPing?.latitude && lastPing?.longitude && load.originLat && load.originLng && load.destLat && load.destLng) {
+    const miles = (aLat: number, aLng: number, bLat: number, bLng: number) => {
+      const R = 3958.8, rad = (d: number) => (d * Math.PI) / 180;
+      const dLat = rad(bLat - aLat), dLng = rad(bLng - aLng);
+      const h = Math.sin(dLat / 2) ** 2 + Math.cos(rad(aLat)) * Math.cos(rad(bLat)) * Math.sin(dLng / 2) ** 2;
+      return 2 * R * Math.asin(Math.sqrt(h));
+    };
+    const pLat = Number(lastPing.latitude), pLng = Number(lastPing.longitude);
+    const laneMiles = miles(Number(load.originLat), Number(load.originLng), Number(load.destLat), Number(load.destLng));
+    const viaPing =
+      miles(Number(load.originLat), Number(load.originLng), pLat, pLng) +
+      miles(pLat, pLng, Number(load.destLat), Number(load.destLng));
+    const detour = viaPing - laneMiles;
+    if (detour > CORRIDOR_TOLERANCE_MILES) {
+      factors.push({
+        factor: "PING_OFF_CORRIDOR",
+        points: 25,
+        description:
+          `Last shared position is ~${Math.round(detour)} miles off the direct lane — ` +
+          `further than routing, fuel or traffic explains`,
+      });
+    }
+  }
+
+  // 3. VoIP-flagged driver number — NOT IMPLEMENTED, and deliberately absent
+  //    rather than approximated. It needs a line-type lookup, and neither
+  //    OpenPhone's client here nor any other integration exposes one. A
+  //    guess from number formatting or area code would flag real mobiles and
+  //    miss real VoIP, which is worse than no signal because an AE would
+  //    learn to ignore it. Blocked on a vendor capability, banked in §13.3
+  //    Item 225 with the lookup options.
 
   // --- Unassigned time ---
   if (!load.carrierId) {
