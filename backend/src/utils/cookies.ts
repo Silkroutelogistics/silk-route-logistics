@@ -55,9 +55,14 @@ function cookieOpts(extra: Record<string, unknown> = {}) {
  * srl_token_carrier / srl_token_shipper) so concurrent sessions across
  * portals in the same browser don't collide.
  */
-export function setTokenCookie(res: Response, token: string, role: string, maxAgeMs?: number) {
+export function setTokenCookie(res: Response, token: string, role: string, maxAgeMs?: number | null) {
   const name = COOKIE_NAMES[portalForRole(role)];
-  res.cookie(name, token, cookieOpts({ maxAge: maxAgeMs || 2 * 24 * 60 * 60 * 1000 }));
+  // null means a SESSION cookie — no Max-Age, dropped when the browser closes.
+  // Distinct from undefined, which keeps the historic 48h default for every
+  // existing caller. It has to be an explicit sentinel: the original
+  // `maxAgeMs || default` collapses both null and 0 into the default.
+  const lifetime = maxAgeMs === null ? {} : { maxAge: maxAgeMs || 2 * 24 * 60 * 60 * 1000 };
+  res.cookie(name, token, cookieOpts(lifetime));
 }
 
 /**

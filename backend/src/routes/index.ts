@@ -6,6 +6,7 @@ import { Router, Response } from "express";
 import { prisma } from "../config/database";
 import { authenticate, authorize, AuthRequest } from "../middleware/auth";
 import authRoutes from "./auth";
+import ssoAuthRoutes from "./ssoAuth";
 import loadRoutes from "./loads";
 import invoiceRoutes from "./invoices";
 import documentRoutes from "./documents";
@@ -212,6 +213,7 @@ router.use("/ping", driverPingRoutes); // ARC 19 — driver location ping (publi
 router.use("/", websiteRoutes);
 
 // --- API Routes ---
+router.use("/auth/sso", ssoAuthRoutes); // v3.8 SSO — before /auth so the prefix is unambiguous; inherits authLimiter mounted on /api/auth
 router.use("/auth", authRoutes);
 router.use("/chat", chatRoutes);
 router.use("/loads", loadRoutes);

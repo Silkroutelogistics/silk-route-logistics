@@ -40,6 +40,9 @@ const INSIGHTS = [
 export default function EmployeeLoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  // SSO-only remember-me. The password path has no equivalent — it is fixed at
+  // a 24h ceiling server-side.
+  const [ssoRemember, setSsoRemember] = useState(false);
   const [otp, setOtp] = useState("");
   const [otpStep, setOtpStep] = useState(false);
   const [pendingEmail, setPendingEmail] = useState("");
@@ -450,7 +453,11 @@ export default function EmployeeLoginPage() {
               </div>
               <div className="flex items-center justify-between mb-6">
                 <label className="flex items-center gap-2 text-[13px] text-gray-500 cursor-pointer">
-                  <input type="checkbox" className="accent-[#C9A84C]" style={{ width: 15, height: 15 }} /> Remember me
+                  {/* The password path has no remember-me: it is fixed at a 24h
+                      ceiling server-side. A checkbox lived here that was bound
+                      to nothing — no state, no handler — so it promised a
+                      persistence the server never granted. Remember-me is
+                      offered on the Google path below, where it is real. */}
                 </label>
                 <Link href="/auth/forgot-password" className="text-[13px] text-[#C9A84C] font-medium hover:opacity-80 transition-opacity">Forgot password?</Link>
               </div>
@@ -458,6 +465,43 @@ export default function EmployeeLoginPage() {
                 className="w-full py-3.5 text-[15px] font-semibold rounded-xl border-none cursor-pointer transition-all duration-200 bg-gradient-to-r from-[#C9A84C] to-[#d4b85e] text-[#0F1117] shadow-[0_4px_12px_rgba(201,168,76,0.25)] hover:-translate-y-0.5 hover:shadow-[0_6px_20px_rgba(201,168,76,0.35)] disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:translate-y-0">
                 {localLoading ? "Signing in..." : "Sign In"}
               </button>
+
+              {/* ── Google Workspace SSO ───────────────────────────────────
+                  Deliberately a plain <a>, not fetch/router.push. The OAuth
+                  start must be a TOP-LEVEL NAVIGATION so the browser follows
+                  the redirect to Google and carries the state cookie back; an
+                  XHR would be blocked by CORS and would never set it.
+                  type="button" is irrelevant here for the same reason — this
+                  is a link, so it cannot submit the password form. */}
+              <div className="flex items-center gap-3 my-5">
+                <div className="h-px flex-1 bg-gray-200" />
+                <span className="text-[12px] text-gray-400">or</span>
+                <div className="h-px flex-1 bg-gray-200" />
+              </div>
+
+              <label className="flex items-center gap-2 text-[13px] text-gray-600 mb-3 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={ssoRemember}
+                  onChange={(e) => setSsoRemember(e.target.checked)}
+                  className="accent-[#C9A84C]"
+                  style={{ width: 15, height: 15 }}
+                />
+                Keep me signed in for 30 days
+              </label>
+
+              <a
+                href={`${BASE}/api/auth/sso/google${ssoRemember ? "?remember=1" : ""}`}
+                className="w-full flex items-center justify-center gap-2.5 py-3.5 text-[15px] font-semibold rounded-xl border border-gray-300 bg-white text-gray-700 no-underline transition-all duration-200 hover:bg-gray-50 hover:-translate-y-0.5"
+              >
+                <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true">
+                  <path fill="#4285F4" d="M45.1 24.5c0-1.6-.1-3.1-.4-4.5H24v8.5h11.8c-.5 2.7-2 5-4.4 6.6v5.5h7.1c4.1-3.8 6.6-9.4 6.6-16.1z" />
+                  <path fill="#34A853" d="M24 46c5.9 0 10.9-2 14.5-5.4l-7.1-5.5c-2 1.3-4.5 2.1-7.4 2.1-5.7 0-10.5-3.8-12.2-9.3H4.5v5.7C8.1 41.1 15.4 46 24 46z" />
+                  <path fill="#FBBC05" d="M11.8 27.9c-.4-1.3-.7-2.6-.7-3.9s.2-2.7.7-3.9v-5.7H4.5C3.1 17.2 2.3 20.5 2.3 24s.8 6.8 2.2 9.7l7.3-5.8z" />
+                  <path fill="#EA4335" d="M24 10.8c3.2 0 6.1 1.1 8.4 3.3l6.3-6.3C34.9 4.2 29.9 2 24 2 15.4 2 8.1 6.9 4.5 14.3l7.3 5.7c1.7-5.2 6.5-9.2 12.2-9.2z" />
+                </svg>
+                Sign in with Google
+              </a>
             </form>
           ) : (
             <form onSubmit={handleOtp}>

@@ -33,6 +33,7 @@
 import crypto from "crypto";
 import { log } from "./logger";
 import { extractClientIp } from "../services/geoService";
+import { prisma } from "../config/database";
 
 /**
  * What happened. Deliberately a closed set: a free-text event name makes these
@@ -57,7 +58,23 @@ export type AuthEvent =
   // login, and the point of this file is that the interesting events are the
   // ones nobody thought to record.
   | "stepup.granted"
-  | "stepup.failed";
+  | "stepup.failed"
+  // Google Workspace SSO. Each refusal class is named separately because
+  // "sso failed" is useless during an incident: a wrong-domain attempt and a
+  // forged signature are different events needing different responses.
+  | "sso.success"
+  | "sso.unknown_identity"
+  | "sso.wrong_domain"
+  | "sso.email_unverified"
+  | "sso.token_invalid"
+  | "sso.inactive_account"
+  // authMethod enforcement.
+  | "password.refused_sso_only"
+  | "reset.refused_staff"
+  // Session policy. Ceiling and idle are distinct: one means the session was
+  // simply old, the other that it went unused.
+  | "session.expired_ceiling"
+  | "session.expired_idle";
 
 /**
  * Why it failed, as a class rather than the message shown to the user.
@@ -135,5 +152,53 @@ export function logAuthEvent(event: AuthEvent, fields: AuthEventFields = {}): vo
     log.info(payload, `[Auth] ${event}`);
   } catch {
     // An observability failure must never surface to the caller.
+  }
+
+  // Also persist to auth_events.
+  //
+  // The log line above stays HASHED: a log dump must not become a mailing list.
+  // The table stores the raw email, which is not a widening — `users` already
+  // holds every address, and an events table you cannot join to an account is
+  // not much of an audit trail.
+  //
+  // Fire-and-forget and swallowed on purpose: this helper's contract is that
+  // observability can never change whether a login succeeds, and that outranks
+  // capturing any single row. Optional-chained so it no-ops on an un-migrated
+  // database rather than throwing.
+  try {
+    if (fields.email) {
+      void (prisma as unknown as { authEvent?: { create: (a: unknown) => Promise<unknown> } }).authEvent
+        ?.create({
+          data: {
+            type: event,
+            email: fields.email.trim().toLowerCase().slice(0, 255),
+            userId: fields.userId ?? null,
+            ip: fields.req ? safeIp(fields.req) : null,
+            userAgent: readUserAgent(fields.req),
+          },
+        })
+        .catch(() => {});
+    }
+  } catch {
+    // Same guarantee as above.
+  }
+}
+
+/** IP extraction that cannot throw — see the note on logAuthEvent. */
+function safeIp(req: RequestLike): string | null {
+  try {
+    return extractClientIp(req as Parameters<typeof extractClientIp>[0]) ?? null;
+  } catch {
+    return null;
+  }
+}
+
+function readUserAgent(req?: RequestLike): string | null {
+  try {
+    const h = req?.headers as Record<string, unknown> | undefined;
+    const ua = h?.["user-agent"];
+    return typeof ua === "string" ? ua.slice(0, 512) : null;
+  } catch {
+    return null;
   }
 }

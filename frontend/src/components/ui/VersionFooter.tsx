@@ -14954,7 +14954,47 @@
 //   nothing here (three "restarts" all hit a stale process), NODE_ENV=production
 //   demands TLS the container lacks, and the other session's migration landed
 //   between my container and my prisma generate. Each looked like a real bug.
-export const SRL_VERSION = "3.8.aul";
+// v3.8.aum — The auth arc, worked in its own worktree and merged whole. Google
+//   Workspace SSO for staff, plus the two enforcement rules that make an SSO
+//   account mean anything: an SSO_ONLY user cannot log in with a password
+//   (401 before the hash compare, so it is not a credential oracle), and no
+//   staff role can mint a password-reset token at all. That second one returns
+//   a message BYTE-IDENTICAL to the unknown-email response — if the two ever
+//   diverge, the difference itself tells an attacker which addresses are staff,
+//   and a test compares the two responses rather than a literal.
+//   SESSIONS: a 30-day ceiling computed from the JWT's own iat, and a 7-day
+//   rolling idle read from a persisted staff_sessions row. The legacy idle
+//   check it replaces was an in-memory Map, so on Render every deploy silently
+//   refreshed everyone's idle clock. With no row the policy FAILS CLOSED at
+//   24h — it cannot know a session was remember-me, so it assumes the shortest
+//   life, which is also what makes deleting a row a real server-side
+//   revocation. Remember-me is offered on the SSO path only; the password path
+//   had a checkbox bound to no state and no handler, promising a persistence
+//   the server never granted. It is gone.
+//   The one that would have shipped silently: legs 3 and 6 were each correct
+//   and did not MEET. The callback wrote no staff_sessions row, so every SSO
+//   login fell to the fail-closed 24h and remember-me would have appeared to
+//   work for a day. The row is keyed with getTokenHash, which TRUNCATES sha256
+//   to 32 chars — a plain sha256 there writes a row nothing can ever find.
+//   SETTINGS, three defects sharing one cause — the page trusted the auth
+//   store, which carries only what /auth/me selects at LOGIN. Profile save was
+//   blanking phone and company: neither was ever fetched, both sat at "", and
+//   updateProfile writes them on !== undefined rather than truthiness, so
+//   saving a name change wiped what the server held. The 2FA card asserted
+//   login-time state. And client validation accepted >= 8 characters while the
+//   server requires >= 10 plus composition — THAT GAP is why an in-product
+//   rotation could look accepted and never land: the form passed what the
+//   server refused. All three now read the server; the client mirrors
+//   passwordPolicy character for character and states the rule up front.
+//   Every guard proved by BREAKING it, each injection confirmed applied in the
+//   diff first — an injection that silently fails to apply reports green and
+//   proves nothing (Sub-pattern 16). Policy call neutered: 13 pass → 8, and the
+//   5 failures are exactly the policy block. SSO_ONLY off: 3 fail. Staff reset
+//   off: all 7 roles fail. State nonce off: mismatch + absent-cookie +
+//   empty-param fail. One honest limit recorded rather than glossed — the
+//   31-minute remember-me case still passes under injection, because the
+//   legacy idle map is empty in a fresh test process and has nothing to expire.
+export const SRL_VERSION = "3.8.aum";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

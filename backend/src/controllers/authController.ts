@@ -17,7 +17,8 @@ import { logAuthEvent } from "../lib/authEvents";
 import { caseInsensitiveEmailFilter } from "../lib/emailNormalization";
 
 const PASSWORD_EXPIRY_DAYS = 60;
-function signToken(userId: string): string {
+// Exported for the SSO callback, which must mint a byte-identical session.
+export function signToken(userId: string): string {
   return jwt.sign({ userId }, env.JWT_SECRET, { algorithm: "HS256", expiresIn: env.JWT_EXPIRES_IN } as jwt.SignOptions);
 }
 
@@ -208,6 +209,25 @@ export async function login(req: Request, res: Response) {
     return;
   }
 
+  // authMethod enforcement. An SSO_ONLY account has deliberately given up the
+  // password path: the point of moving it to SSO is that Workspace (with
+  // 2SV/passkeys) becomes the single place an identity is proven, so leaving a
+  // live password would preserve exactly the weaker path SSO was adopted to
+  // retire. HYBRID and PASSWORD are unaffected.
+  //
+  // Placed AFTER isActive and BEFORE the credential comparison, so a refused
+  // account never has its hash compared and this cannot become a password
+  // oracle. Distinct code so the client can say something useful rather than
+  // "invalid credentials".
+  if (user.authMethod === "SSO_ONLY") {
+    logAuthEvent("password.refused_sso_only", { email: user.email, userId: user.id, req, role: user.role });
+    res.status(401).json({
+      error: "This account signs in with Google Workspace. Use Sign in with Google.",
+      code: "SSO_ONLY",
+    });
+    return;
+  }
+
   // Sprint 174 (v3.8.acf) Item 174 — portal-boundary role gate.
   // Rejects cross-portal credential entry (e.g., CARRIER creds on
   // /shipper/login). Same 401 status as invalid-creds path; code
@@ -389,6 +409,11 @@ export async function handleVerifyOtp(req: Request, res: Response) {
     },
   });
 
+  // Deliberately writes NO staff_sessions row. The password path has no
+  // remember-me, and the session policy's fail-closed branch turns an absent
+  // row into exactly the ruled 24h cap from iat. Adding a row here would be a
+  // regression, not a fix.
+
   registerSession(user.id, token, user.role);
   setTokenCookie(res, token, user.role);
   res.json({
@@ -503,6 +528,11 @@ export async function getProfile(req: AuthRequest, res: Response) {
     select: {
       id: true, email: true, firstName: true, lastName: true,
       company: true, role: true, phone: true, isVerified: true, createdAt: true,
+      // Live 2FA state. The settings card previously read this from the auth
+      // store, which is populated at LOGIN — so enabling/disabling 2FA out of
+      // band (or by an admin script) left the card asserting a stale answer
+      // until the next sign-in. Boolean only; the secret is never returned.
+      totpEnabled: true,
       preferredTheme: true, darkMode: true, preferences: true,
       carrierProfile: { select: { mcNumber: true, dotNumber: true, tier: true } },
     },
@@ -634,6 +664,31 @@ export async function forgotPassword(req: Request, res: Response) {
   // Always return generic message to prevent user enumeration
   // v3.8.ald — case-insensitive lookup.
   const user = await prisma.user.findFirst({ where: caseInsensitiveEmailFilter(email) });
+
+  // Reset-token refusal for STAFF roles.
+  //
+  // The reset path and TOTP interact badly today (the open lockout defect), and
+  // every staff account is TOTP-enrolled, so a reset is the one flow that can
+  // strand the people who administer the platform. Staff rotate via a known-
+  // password change or an admin-side rotation instead.
+  //
+  // Portal roles (CARRIER, SHIPPER, FACTOR) keep reset untouched — they are the
+  // users who genuinely need self-service recovery and they are not caught by
+  // the lockout.
+  //
+  // Deliberately still returns the SAME generic message below, so this does not
+  // become an account-enumeration oracle telling an attacker which addresses
+  // are staff. The refusal is recorded in auth_events, not in the response.
+  if (user && AE_ROLES.has(user.role)) {
+    logAuthEvent("reset.refused_staff", { email: user.email, userId: user.id, req, role: user.role });
+    // Byte-identical to the terminal message at the end of this function. If
+    // these two ever diverge, the difference itself tells an attacker which
+    // addresses are staff — which is the enumeration oracle this branch is
+    // written to avoid. A test asserts they match.
+    res.json({ message: "If an account with that email exists, a password reset link has been sent." });
+    return;
+  }
+
   if (user) {
     const token = await createPasswordResetToken(user.id);
     const frontendUrl = env.CORS_ORIGIN.split(",")[0].trim();
@@ -796,6 +851,11 @@ export async function handleTotpLoginVerify(req: Request, res: Response) {
       userAgent,
     },
   });
+
+  // Deliberately writes NO staff_sessions row. The password path has no
+  // remember-me, and the session policy's fail-closed branch turns an absent
+  // row into exactly the ruled 24h cap from iat. Adding a row here would be a
+  // regression, not a fix.
 
   registerSession(user.id, token, user.role);
   setTokenCookie(res, token, user.role);

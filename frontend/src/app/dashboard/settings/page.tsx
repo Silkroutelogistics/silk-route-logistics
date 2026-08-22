@@ -11,6 +11,33 @@ import { VersionFooter } from "@/components/ui/VersionFooter";
 import { useToast } from "@/components/ui/Toast";
 import { useQueryClient } from "@tanstack/react-query";
 
+/**
+ * Client mirror of the server's password policy (backend utils/passwordPolicy).
+ *
+ * This is a UX gate, never the enforcement — the server re-validates and its
+ * message wins, which is why changePassword's onError still surfaces the
+ * response verbatim. The mirror exists because the two had DRIFTED: this page
+ * accepted anything >= 8 characters while the server requires >= 10 plus
+ * composition, so a password the form called valid was refused server-side and
+ * the change silently failed to land.
+ *
+ * Deliberately NOT mirrored: the server's common-password list. Shipping a
+ * dictionary to the browser to save one round-trip is not worth it, and the
+ * server's refusal message is already surfaced.
+ */
+function passwordPolicyErrors(pw: string): string[] {
+  const errors: string[] = [];
+  if (pw.length < 10) errors.push("Password must be at least 10 characters long");
+  if (!/[A-Z]/.test(pw)) errors.push("Password must contain at least one uppercase letter");
+  if (!/[a-z]/.test(pw)) errors.push("Password must contain at least one lowercase letter");
+  if (!/[0-9]/.test(pw)) errors.push("Password must contain at least one number");
+  // Same character class as the server, character for character.
+  if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?`~]/.test(pw)) {
+    errors.push("Password must contain at least one special character");
+  }
+  return errors;
+}
+
 export default function SettingsPage() {
   const { user } = useAuthStore();
   const carrier = isCarrier(user?.role);
@@ -23,6 +50,33 @@ export default function SettingsPage() {
 
   // 2FA state
   const queryClient = useQueryClient();
+
+  /**
+   * The server is the source of truth for this page, not the auth store.
+   *
+   * The store carries only what /auth/me selects at LOGIN — no phone, no
+   * company, no totpEnabled. Seeding the form from it left phone and company
+   * as empty strings that had never been read from anywhere, and updateProfile
+   * writes those two on `!== undefined` (not truthiness), so saving a name
+   * change silently blanked whatever the server actually held.
+   */
+  const profileQuery = useQuery({
+    queryKey: ["auth-profile"],
+    queryFn: () => api.get("/auth/profile").then((r) => r.data),
+  });
+  const profileLoaded = profileQuery.isSuccess;
+
+  useEffect(() => {
+    const p = profileQuery.data;
+    if (!p) return;
+    setProfile({
+      firstName: p.firstName ?? "",
+      lastName: p.lastName ?? "",
+      phone: p.phone ?? "",
+      company: p.company ?? "",
+    });
+  }, [profileQuery.data]);
+
   const [totpEnabled, setTotpEnabled] = useState(user?.totpEnabled || false);
   const [totpSetupData, setTotpSetupData] = useState<{ qrCodeDataUrl: string; secret: string; backupCodes: string[] } | null>(null);
   const [totpCode, setTotpCode] = useState("");
@@ -31,7 +85,14 @@ export default function SettingsPage() {
   const [showDisable, setShowDisable] = useState(false);
   const [disableCode, setDisableCode] = useState("");
 
-  useEffect(() => { setTotpEnabled(user?.totpEnabled || false); }, [user?.totpEnabled]);
+  // Live 2FA state from the server, not the login-time store. If this card
+  // read the store it would assert a stale answer whenever 2FA changed out of
+  // band — and it would also overwrite a freshly-fetched true with the store's
+  // stale false, which is why the store sync is gone rather than kept as a
+  // fallback.
+  useEffect(() => {
+    if (profileQuery.data) setTotpEnabled(!!profileQuery.data.totpEnabled);
+  }, [profileQuery.data]);
 
   const isAdminOrCeo = user?.role === "ADMIN" || user?.role === "CEO";
 
@@ -80,8 +141,17 @@ export default function SettingsPage() {
   });
 
   const updateProfile = useMutation({
+    // Sends only what this form actually loaded and owns. The save button is
+    // disabled until the fetch lands, so `profile` can never be the unfetched
+    // empty-string seed by the time this runs.
     mutationFn: () => api.patch("/auth/profile", profile),
-    onSuccess: () => { setProfileSaved(true); setTimeout(() => setProfileSaved(false), 3000); },
+    onSuccess: () => {
+      setProfileSaved(true);
+      // Re-read rather than trust the local copy, so the form shows what was
+      // actually persisted (server-side normalisation included).
+      queryClient.invalidateQueries({ queryKey: ["auth-profile"] });
+      setTimeout(() => setProfileSaved(false), 3000);
+    },
   });
 
   const changePassword = useMutation({
@@ -152,7 +222,7 @@ export default function SettingsPage() {
           </div>
         </div>
         <div className="mt-4 flex items-center gap-3">
-          <button onClick={() => updateProfile.mutate()} disabled={updateProfile.isPending}
+          <button onClick={() => updateProfile.mutate()} disabled={updateProfile.isPending || !profileLoaded}
             className="flex items-center gap-2 px-4 py-2 bg-gold text-navy font-medium rounded-lg text-sm hover:bg-gold/90 disabled:opacity-50">
             <Save className="w-4 h-4" /> Save Changes
           </button>
@@ -176,6 +246,11 @@ export default function SettingsPage() {
             <label className="block text-xs text-slate-400 mb-1">New Password</label>
             <input type="password" value={passwords.newPassword} onChange={(e) => setPasswords((p) => ({ ...p, newPassword: e.target.value }))}
               className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white focus:outline-none focus:border-gold/50" />
+            {/* States the requirement up front. Its absence is why a rejected
+                change read as a silent no-op rather than a policy failure. */}
+            <p className="mt-1 text-xs text-slate-500">
+              At least 10 characters, with an uppercase letter, a lowercase letter, a number, and a special character.
+            </p>
           </div>
           <div>
             <label className="block text-xs text-slate-400 mb-1">Confirm New Password</label>
@@ -186,9 +261,18 @@ export default function SettingsPage() {
           <div className="flex items-center gap-3">
             <button onClick={() => {
               if (passwords.newPassword !== passwords.confirm) { setPwError("Passwords don't match"); return; }
-              if (passwords.newPassword.length < 8) { setPwError("Min 8 characters"); return; }
+              const problems = passwordPolicyErrors(passwords.newPassword);
+              if (problems.length) { setPwError(problems[0]); return; }
               changePassword.mutate();
-            }} disabled={changePassword.isPending || !passwords.currentPassword || !passwords.newPassword}
+            }} disabled={
+              changePassword.isPending ||
+              !passwords.currentPassword ||
+              !passwords.newPassword ||
+              // Confirm gates the button. Previously it did not, so the click
+              // handler was the only thing standing between a mismatch and a
+              // request.
+              !passwords.confirm
+            }
               className="flex items-center gap-2 px-4 py-2 bg-white/10 text-white rounded-lg text-sm hover:bg-white/20 disabled:opacity-50">
               <Lock className="w-4 h-4" /> Update Password
             </button>
