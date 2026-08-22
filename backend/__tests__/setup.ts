@@ -201,6 +201,12 @@ vi.mock("../src/config/database", () => ({
     riskLog: {
       findMany: vi.fn(),
     },
+    staffSession: {
+      findUnique: vi.fn().mockResolvedValue(null),
+      update: vi.fn().mockResolvedValue({}),
+      delete: vi.fn().mockResolvedValue({}),
+      create: vi.fn().mockResolvedValue({}),
+    },
     authEvent: {
       create: vi.fn().mockResolvedValue({}),
     },

@@ -7,6 +7,8 @@ import { prisma } from "../config/database";
 import { isTokenBlacklisted } from "../utils/tokenBlacklist";
 import { LEGACY_COOKIE_NAME } from "../utils/cookies";
 import { log } from "../lib/logger";
+import { logAuthEvent } from "../lib/authEvents";
+import { isStaffRole, resolveStaffSessionPolicy } from "../lib/sessionPolicy";
 
 export interface AuthRequest extends Request<any, any, any, any> {
   user?: {
@@ -174,12 +176,12 @@ function resolveCookieCandidates(req: AuthRequest): { tokens: string[]; meta: { 
  */
 type TryAuthResult =
   | { ok: true; user: NonNullable<AuthRequest["user"]>; token: string }
-  | { ok: false; reason: "invalid_jwt" | "blacklisted" | "user_not_found" | "user_inactive" | "session_replaced" | "session_timeout"; status: number; errorBody: { error: string; code?: string } };
+  | { ok: false; reason: "invalid_jwt" | "blacklisted" | "user_not_found" | "user_inactive" | "session_replaced" | "session_timeout" | "session_ceiling" | "session_idle"; status: number; errorBody: { error: string; code?: string } };
 
 async function tryAuthenticateToken(token: string): Promise<TryAuthResult> {
-  let payload: { userId?: unknown; purpose?: unknown };
+  let payload: { userId?: unknown; purpose?: unknown; iat?: unknown };
   try {
-    payload = jwt.verify(token, env.JWT_SECRET, { algorithms: ["HS256"] }) as { userId?: unknown; purpose?: unknown };
+    payload = jwt.verify(token, env.JWT_SECRET, { algorithms: ["HS256"] }) as { userId?: unknown; purpose?: unknown; iat?: unknown };
   } catch {
     return { ok: false, reason: "invalid_jwt", status: 401, errorBody: { error: "Invalid token" } };
   }
@@ -213,6 +215,42 @@ async function tryAuthenticateToken(token: string): Promise<TryAuthResult> {
   const tokenHash = getTokenHash(token);
   if (sessions && sessions.size > 0 && !sessions.has(tokenHash)) {
     return { ok: false, reason: "session_replaced", status: 401, errorBody: { error: "Session ended — you logged in from another device", code: "SESSION_REPLACED" } };
+  }
+
+  // ── Staff session policy: ceiling from iat, idle from the PERSISTED row ────
+  //
+  // The legacy idle check below is an in-memory Map that empties on every
+  // process restart, so on Render a deploy silently refreshed everyone's idle
+  // clock. Staff enforcement therefore runs here, off persisted state. A
+  // remember-me session then skips the legacy check entirely — its own 7-day
+  // rolling idle governs instead. Portal roles fall straight through.
+  if (isStaffRole(user.role)) {
+    const persisted = await prisma.staffSession
+      .findUnique({ where: { tokenHash }, select: { rememberMe: true, lastSeenAt: true } })
+      .catch(() => null);
+
+    const iatMs = typeof payload.iat === "number" ? payload.iat * 1000 : null;
+    const verdict = resolveStaffSessionPolicy({ role: user.role, iatMs, now: Date.now(), session: persisted });
+
+    if (!verdict.ok) {
+      lastActivity.delete(user.id);
+      removeSession(user.id, token);
+      await prisma.staffSession.delete({ where: { tokenHash } }).catch(() => {});
+      logAuthEvent(verdict.reason === "ceiling" ? "session.expired_ceiling" : "session.expired_idle", {
+        userId: user.id,
+        email: user.email,
+        role: user.role,
+      });
+      return { ok: false, reason: `session_${verdict.reason}`, status: 401, errorBody: { error: verdict.message, code: verdict.code } };
+    }
+
+    // Throttled: only written when genuinely stale, so this is not a
+    // per-request UPDATE. At 7-day granularity the lost precision is nil.
+    if (verdict.shouldTouch) {
+      await prisma.staffSession.update({ where: { tokenHash }, data: { lastSeenAt: new Date() } }).catch(() => {});
+    }
+
+    if (verdict.bypassLegacyIdle) return { ok: true, user, token };
   }
 
   const last = lastActivity.get(user.id);
