@@ -1983,7 +1983,14 @@ function TenderForm({
           )}
         </div>
       )}
-      {complianceResult && complianceResult.allowed && complianceResult.warnings.length > 0 && (
+      {/* Arc 26 — NOT gated on `allowed` any more. A blanket override can now
+          release some blocks while a hard floor keeps the carrier blocked, and
+          the warnings are what say so: which blocks were released, and that the
+          remaining one is not waivable by any override. Gated on allowed, that
+          text was invisible in exactly the state it explains — the AE would
+          grant an override, stay blocked, and see no sign it had done
+          anything. */}
+      {complianceResult && complianceResult.warnings.length > 0 && (
         <div className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-lg">
           <p className="text-sm font-medium text-amber-400 mb-1">Compliance Warnings</p>
           {complianceResult.warnings.map((w, i) => (

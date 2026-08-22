@@ -510,6 +510,37 @@ export async function overrideBlock(req: AuthRequest, res: Response) {
       }
     }
 
+    // Arc 26 — for a BLANKET grant, record what it releases AT GRANT TIME.
+    // The gate recomputes this on every evaluation and the two can legitimately
+    // differ as the carrier's state moves, which is precisely what an incident
+    // review needs: "what was wrong when this was granted" and "what did it let
+    // through last Tuesday" are different questions with different answers.
+    //
+    // Evaluated BEFORE the row is created, so the verdict is the pre-override
+    // one — the full set of blocks this grant is about to act on.
+    // Wrapped, deliberately. This preview is DOCUMENTATION of a grant the
+    // admin is already authorised to make — role-gated, quota-checked,
+    // reason-required and audited. If the gate throws while we are writing the
+    // record, the right outcome is a grant with a thinner record, not a 500
+    // that leaves an AE unable to release a load and no way to tell why.
+    // Recording an act must never be able to prevent it.
+    let releasedAtGrant: string[] = [];
+    let floorsAtGrant: string[] = [];
+    if (!checkCode) {
+      try {
+        const preview = await complianceMonitorService.complianceCheck(carrierId);
+        floorsAtGrant = preview.blocked_codes.filter((c) => !c.overridable).map((c) => c.code);
+        releasedAtGrant = preview.blocked_reasons.filter(
+          (r) => !floorsAtGrant.some((code) => r.startsWith(code)),
+        );
+      } catch (previewErr) {
+        log.warn(
+          { err: previewErr, carrierId },
+          "[Compliance] Could not compute released-at-grant for blanket override; minting anyway",
+        );
+      }
+    }
+
     // Create override with 24hr expiry. checkCode is persisted as null
     // when absent or empty so the lookup in complianceCheck preserves
     // the Sprint 40 blanket semantic for legacy callers.
@@ -536,6 +567,10 @@ export async function overrideBlock(req: AuthRequest, res: Response) {
           checkCode: checkCode || null,
           overrideId: override.id,
           expiresAt: expiresAt.toISOString(),
+          // Blanket grants only — a scoped grant releases exactly its checkCode,
+          // which is already recorded above.
+          releasedAtGrant: checkCode ? undefined : releasedAtGrant,
+          floorsThatStillApply: checkCode ? undefined : floorsAtGrant,
           carrierName: carrier.user.company || `${carrier.user.firstName} ${carrier.user.lastName}`,
         } as any,
       },
@@ -543,7 +578,17 @@ export async function overrideBlock(req: AuthRequest, res: Response) {
 
     res.json({
       override,
-      message: `Override created. Expires at ${expiresAt.toISOString()}`,
+      releasedAtGrant: checkCode ? undefined : releasedAtGrant,
+      floorsThatStillApply: checkCode ? undefined : floorsAtGrant,
+      message: checkCode
+        ? `Override created. Expires at ${expiresAt.toISOString()}`
+        : releasedAtGrant.length || floorsAtGrant.length
+          ? `Override created, releasing ${releasedAtGrant.length} block(s). ` +
+            (floorsAtGrant.length
+              ? `${floorsAtGrant.length} non-waivable block(s) still apply: ${floorsAtGrant.join(", ")}. `
+              : "") +
+            `Expires at ${expiresAt.toISOString()}`
+          : `Override created — nothing is currently blocking this carrier. Expires at ${expiresAt.toISOString()}`,
     });
   } catch (err) {
     log.error({ err: err }, "[Compliance] Override error:");

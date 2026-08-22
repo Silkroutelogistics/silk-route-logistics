@@ -290,7 +290,13 @@ export function CarrierEngagementDrawer(props: CarrierEngagementDrawerProps) {
 
   const compliance = complianceQuery.data ?? null;
   const isCarrierBlocked = compliance !== null && !compliance.allowed;
-  const hasComplianceWarnings = compliance !== null && compliance.allowed && compliance.warnings.length > 0;
+  // Arc 26 — NOT gated on `allowed`. A blanket override can release some blocks
+  // while a hard floor keeps the carrier blocked, and the warnings are what say
+  // which were released and that the remaining one is not waivable by any
+  // override. Gated on allowed, that text was invisible in exactly the state it
+  // explains: the AE grants an override, stays blocked, and sees no sign it did
+  // anything.
+  const hasComplianceWarnings = compliance !== null && compliance.warnings.length > 0;
 
   // Sprint 59.a (v3.8.acn) Bug #2 fix — re-seed form on each `open` flip.
   // react-hook-form's useForm reads defaultValues only once at mount; the
@@ -706,9 +712,15 @@ export function CarrierEngagementDrawer(props: CarrierEngagementDrawerProps) {
       </div>
 
       {/* Sprint 63 — Override modal mounts above drawer per Sprint 40 Item
-          58 pattern. On success, re-fetch compliance so the amber "Active
-          compliance override in effect" warning renders + Send Tender
-          enables (override grants 24h pass per backend). */}
+          58 pattern. On success, re-fetch compliance so the amber override
+          warning renders and Send Tender enables.
+
+          Arc 26 — the refetch matters more than it used to. A general
+          override no longer grants a blanket 24h pass: the gate re-runs the
+          full sequence, releases the waivable blocks and NAMES them in the
+          warning, and leaves the hard floors blocking. So after a grant this
+          carrier may still be blocked, and the refetch is what tells the AE
+          that rather than enabling a button on a stale verdict. */}
       {showOverrideModal && selectedCarrier && compliance && (
         <OverrideComplianceModal
           carrierId={selectedCarrier.id}

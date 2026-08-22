@@ -13,6 +13,23 @@ so it's searchable and never lost.
 
 ---
 
+## Fixed — 2026-08-22 (Arc 26: a blanket override skipped the checks it was never meant to waive)
+
+- **`complianceCheck` returned at the top on any blanket override**, above every check, with `blocked_reasons: []` and `blocked_codes: []`. It therefore waived the two blocks this codebase declares un-waivable: the authority **<12-month floor** (whose endpoint 409s `HARD_FLOOR_NOT_OVERRIDABLE`) and **AGREEMENT_TERMINATED** (whose modal disables submit). The endpoint, the modal and the code flags all agreed; the gate — the thing that decides whether a load can be tendered — did not. **P1, latent since Sprint 40**, and reachable by any ADMIN/CEO with a reason string. Documented as an open policy question at Item 233.4; ratified and closed here.
+- **The empty `blocked_codes` was a second defect inside the first.** That array is how the frontend learns a block is non-waivable, so an override did not just release a floor — it erased the evidence one had fired.
+- **Now evaluate-then-release.** Full sequence always runs; the return partitions into the floors (which survive) and a new `released[]` naming every block actually waived, plus a warning when something is not waivable by any override. An AE sees what was waived rather than a bare `allowed: true`.
+- **Verified against the real gate**, 21/21, hermetic container, outbound explicitly dead. Adversarially: restoring the original short-circuit → **6/21**, failing exactly the floor cases. Note **batched-vs-serial parity PASSES under the defect** — parity holds when both paths are equally wrong, which is why the floor is asserted directly and not inferred from agreement.
+- **Still waivable, and arguably should not be:** OFAC/SDN, FMCSA authority revoked, FMCSA Out-of-Service. Not changed here because none is declared un-waivable anywhere today, so it is new policy rather than reconciliation. Item 235.4.
+
+## Fixed — 2026-08-22 (Arc 26: recording an override could 500 the override)
+
+- **A regression introduced in the same arc, caught by a pre-existing test.** Recording what a grant releases means previewing the gate at grant time; the first cut let a preview failure fail the grant. An admin authorised to release a load must not be blocked by the code that *describes* the release. Now wrapped, with the record degrading to empty rather than fabricated. **Recording an act must never be able to prevent it.**
+- **The new warnings were invisible in exactly the state they explain.** Both tender surfaces rendered `warnings` only when `allowed === true` — harmless while a blanket override meant "everything passes", not harmless now that the interesting case is override-granted-but-still-blocked. An AE would grant an override, remain blocked, and see nothing indicating it had done anything. Now rendered regardless of `allowed`. Found by tracing the render *conditions*, which is the half of "the surface states the new semantics" that reading the copy does not cover.
+- **A hand-written verdict literal TypeScript was not checking.** `waterfallEngineService`'s profile-not-found fallback widened an unannotated ternary to a union with the real shape; it had already been missing `blocked_codes` and compiled fine. Annotated with the gate's return type, so the next field addition fails at build time.
+- **Third fire of the shell-quoting class:** a heredoc ate the template literals in a new proof case, so two assertions ran real and printed **empty** detail — the Arc 23 "failure message that lies" shape. Repaired by writing the file directly, and the case gained a tripwire, since "the blocked carrier is absent" is trivially true of an empty candidate set.
+
+---
+
 ## Fixed — 2026-08-20 (v3.8.atl: backup codes were recoverable, and spendable twice)
 
 - **Backup codes were AES-encrypted, not hashed.** Reversible by anyone holding ENCRYPTION_KEY. Acceptable while TOTP was optional; not once mandatory 2FA makes a backup code a complete authentication factor. Now bcrypt at password cost, shown once, unrecoverable.

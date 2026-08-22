@@ -455,9 +455,15 @@ export async function acceptPosition(positionId: string, actorId?: string | null
     where: { userId: pos.carrierId },
     select: { id: true },
   });
-  const compliance = acceptingProfile
+  // Arc 26 — annotated with the gate's own return type ON PURPOSE. This
+  // fallback is a hand-written verdict, and an unannotated ternary just widens
+  // to a union of the real shape and this literal: it compiled happily while
+  // missing blocked_codes, and would have gone on compiling as the shape grew.
+  // Annotated, a new required field on complianceCheck fails HERE, at build
+  // time, instead of surfacing as a missing field on a live verdict.
+  const compliance: Awaited<ReturnType<typeof complianceCheck>> = acceptingProfile
     ? await complianceCheck(acceptingProfile.id)
-    : { allowed: false, blocked_reasons: ["Carrier profile not found"], warnings: [] as string[] };
+    : { allowed: false, blocked_reasons: ["Carrier profile not found"], blocked_codes: [], released: [], warnings: [] };
   if (!compliance.allowed) {
     await prisma.waterfallPosition.update({
       where: { id: positionId },

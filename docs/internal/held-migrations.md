@@ -11,7 +11,9 @@ instinct here; it is the whole reason this file exists rather than a single
 They share exactly one precondition (the deploy-hook secret, below) and nothing
 else.
 
-Last reviewed: 2026-08-21, Arc 24.
+Last reviewed: 2026-08-22, Arc 26 — three holds confirmed intact (two branches,
+one file), the scheduled `prisma/migrations/` directory confirmed clean of
+untracked files, and `RENDER_DEPLOY_HOOK_URL` confirmed still unset.
 
 ---
 

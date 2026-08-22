@@ -2046,6 +2046,36 @@ Each is a discrete sprint. Mix of operational, security, UX, and technical debt.
 
     **Context worth keeping:** realistic N today is **0** — approval sets `cppTier = GUEST` and scoring requires SILVER+, so every waterfall currently builds a DAT-fallback-only cascade (§13.3 Item 223.3). The measurement matters for when that changes, not for today's load.
 
+235. **A blanket override stops skipping the checks it was never meant to waive (Arc 26, v3.8.auk, 2026-08-22).**
+
+    **Letter note — third collision in three arcs, and the first caught BEFORE the commit.** The SSO session committed `v3.8.auj` to `main` mid-arc. The guard flagged the letter as claimed in uncommitted work, and the flag was *nearly dismissed*: part of the signal was my own version bump, which made the whole of it look like a known false positive. It was a true positive wearing a false positive's clothes. **When a guard fires and part of the reason is explainable, that explains part of it — check the rest before proceeding.** The guard's `apq` hit in the same run genuinely was noise (a historical version named in CLAUDE.md prose), which is the confusion worth naming: the same run produced one real collision and one false one.
+
+    Closes the policy question Item 233.4 left open. Ratified: **a blanket override runs the FULL check sequence and releases only the waivable blocks. Hard floors apply regardless of any override.**
+
+    **235.1 — WHAT IT WAS.** `complianceCheck` returned at the very top the moment a blanket override existed — above every check, with `blocked_reasons: []` and `blocked_codes: []`. So it waived the two things this codebase explicitly declares un-waivable: the authority **<12-month floor**, whose own endpoint 409s `HARD_FLOOR_NOT_OVERRIDABLE` rather than mint against it, and **AGREEMENT_TERMINATED**, whose modal disables submit because the remedy is a signature and not a waiver. Three places agreed with each other and the fourth — the one that actually decides whether a load can be tendered — did not.
+
+    The empty `blocked_codes` mattered on its own. That array is how the frontend learns a block is non-waivable, so a blanket override did not merely release a floor: it erased the evidence that a floor had ever fired.
+
+    **235.2 — WHAT IT IS NOW.** No short-circuit. The sequence always runs; at the return the reasons are partitioned into `kept` (the floors, which survive) and a new **`released`** field naming every block the override actually waived. An AE sees *what* was waived instead of a bare `allowed: true`, and a second warning states plainly when a block is not waivable by any override. `allowed` is now `kept.length === 0`, so a floor keeps the carrier blocked with its code returned.
+
+    **235.3 — MEMBERSHIP IS MIRRORED, NOT JUDGED.** A block is absolute when the rest of the system already refuses to waive it: `overridable: false` on its code, an endpoint that 409s, a modal that disables submit. That rule is written into the declaring comment so the next person adding one has a test rather than an opinion. Exactly two qualify today, and they match the two `overridable: false` codes one-for-one.
+
+    **`AUTHORITY_UNVERIFIED` is in the `BlockedCode` union and is never pushed** — v3.8.apq downgraded that branch to a warning after hard-blocking on a null grant date started rejecting 17-year-old authorities. It is neither absolute nor waivable; it does not fire. Recorded so nobody reads its absence from the absolute set as an omission.
+
+    **235.4 — SURFACED, DELIBERATELY NOT DECIDED.** Three blocks are arguably not SRL's to waive at all and a blanket override still releases them: **OFAC/SDN match**, **FMCSA authority revoked**, and **FMCSA Out-of-Service**. A sanctions hit is federal law and an OOS order is a federal safety prohibition — neither is a commercial judgement a broker gets to make. But none carries a `blocked_code`, no endpoint 409s on them and no modal disables for them, so making them absolute is **new policy** rather than reconciling an existing contradiction, which is all Arc 26 was chartered to do. Recommended as the next ratification. Adding each is one `overridable: false`, one `absoluteReasons.add`, and a line in §14.
+
+    **235.5 — A REGRESSION I INTRODUCED, CAUGHT BY AN EXISTING TEST.** Recording what a grant releases means previewing the gate at grant time, and the first cut let that preview 500 the grant. A pre-existing case went red and was right to: an admin who is authorised to release a load must not be blocked by a failure in the code that *describes* the release. Now wrapped — **recording an act must never be able to prevent it.** Two cases added to pin both halves in CI, since the container proof covers the gate and not the audit record.
+
+    **235.6 — THE NEW WARNINGS WERE INVISIBLE IN THE STATE THEY EXPLAIN.** Both tender surfaces rendered `warnings` only when `allowed === true`. That was harmless while a blanket override meant "everything passes"; it is not harmless now, because the interesting case is precisely the mixed one — override granted, two blocks released, a floor still standing, `allowed: false`. An AE in that state saw the remaining block and no sign that their override had done anything at all. Both surfaces now render warnings regardless of `allowed`. Found by tracing the render conditions rather than the copy, which is the half of "the surfaces state the new semantics" that reading the strings does not cover.
+
+    **235.7 — A HAND-WRITTEN VERDICT THAT TYPESCRIPT WAS NOT CHECKING.** `waterfallEngineService`'s carrier-profile-not-found fallback is a literal verdict object, and an unannotated ternary just widens to a union of the real shape and that literal. It had already been missing `blocked_codes` and compiled happily. Annotated with the gate's own return type, so the next field addition fails at build time instead of surfacing as a missing field on a live verdict.
+
+    **Proof:** [`_arc26-blanket-proof.ts`](backend/scripts/_arc26-blanket-proof.ts), **21/21**, real gate against a hermetic container, outbound keys explicitly empty (`Resend configured: false`, zero sends). Terminated + blanket still blocked with its code; <12mo + blanket still blocked; two waivables released **and named**; floor and waivable together partition correctly; expiry returns the blocks; batched and serial agree verdict-for-verdict; and end-to-end a terminated carrier holding a blanket override is **absent from the auto-dispatch candidate set**, with a tripwire proving that set was non-empty.
+
+    **Adversarial, executed:** restoring the original short-circuit takes it to **6/21**, failing exactly the floor cases. Worth noting that **6c — batched-vs-serial parity — PASSES under the defect**, because parity holds when both paths are equally wrong. That is why 6a asserts the floor directly rather than trusting agreement between two paths.
+
+    **And the proof caught my own test twice.** A shell heredoc ate the template literals in case 8, so two assertions ran real but printed *empty* detail — the "failure message that lies" shape from Arc 23, third fire of that quoting class in this lineage. Repaired via a file write with no shell interpolation. Case 8 then needed a tripwire of its own: "the floor carrier is absent" is trivially true of an empty candidate set.
+
 ## §14 LEGAL / COMPLIANCE STATUS
 
 - Property broker under 49 U.S.C. §§ 13904, 13906
@@ -2100,6 +2130,37 @@ Each is a discrete sprint. Mix of operational, security, UX, and technical debt.
   clearing a match removes a 20-point deduction that stays baked into a
   persisted score until vetting re-runs, so an AE followed the named exit and
   hit a different wall. It now names the re-vet as its own exit.
+
+- **AN OVERRIDE RELEASES; IT DOES NOT SKIP. HARD FLOORS APPLY REGARDLESS
+  (ratified 2026-08-22, Arc 26).** A blanket compliance override runs the full
+  check sequence and releases only the **waivable** blocks. It never short-
+  circuits the gate, and the response **names every block it released** rather
+  than returning a bare `allowed: true`.
+
+  Two blocks are absolute and no override of any kind waives them: **authority
+  under 12 months** and **AGREEMENT_TERMINATED**. Both were already declared
+  un-waivable elsewhere — the override endpoint 409s rather than mint against a
+  <12-month authority, and the modal disables submit on a terminated agreement.
+  The gate was the one place that disagreed, and it was the place that decides.
+
+  **Membership in that set is mirrored, never judged fresh.** A block is
+  absolute when the rest of the system already refuses to waive it: an
+  `overridable: false` code, an endpoint that 409s, a modal that disables
+  submit. Adding one means marking it in all of those places and saying why
+  here. Adding a block the endpoint would still happily mint an override for is
+  the same contradiction pointing the other way.
+
+  **Recording an override must never be able to prevent it.** Naming what a
+  grant releases is documentation of an act the admin is already authorised to
+  take — role-gated, quota-checked, reason-required, audited. If computing that
+  record fails, the grant proceeds with a thinner record; it does not 500 and
+  leave a load stuck with no explanation.
+
+  **Open, and deliberately not decided here:** OFAC/SDN, FMCSA authority
+  revoked, and FMCSA Out-of-Service are still waivable by a blanket override.
+  They are arguably not SRL's to waive at all, but none is declared un-waivable
+  anywhere today, so making them absolute is new policy rather than
+  reconciliation. §13.3 Item 235.4.
 
 - **FAIL TOWARD NOT PAYING, NOT TOWARD PAYING THE WRONG NUMBER (ratified 2026-08-21, Arc 16/17).** When a money path cannot determine what SRL owes, it must **refuse and tell a human** — never substitute a number that happens to be nearby.
 

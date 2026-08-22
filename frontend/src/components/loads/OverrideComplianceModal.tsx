@@ -305,6 +305,32 @@ export function OverrideComplianceModal({
           className="w-full px-3 py-2 text-sm bg-white border border-slate-300 rounded-lg text-[#0A2540] placeholder:text-slate-400 focus:outline-none focus:border-[#BA7517]"
         />
 
+        {/* Arc 26 — a general override no longer waives everything. It runs the
+            full check sequence and releases only the waivable blocks; the
+            authority under-12-month floor and a terminated agreement always
+            apply. This is stated here because the old behaviour was "waive the
+            lot", and an AE who learned that behaviour will otherwise assume it
+            still holds.
+
+            Also gated on !isHardBlocked: when a floor is standing, submit is
+            disabled and no override can be granted from here at all, so
+            describing what one would do is describing an action the UI is
+            refusing. The floor's own panel above explains that case. */}
+        {!isAuthorityOverride && !chameleonUnreviewed && !isHardBlocked && (
+          <div className="mb-3 p-2 border-l-4 text-xs rounded bg-slate-50 border-slate-400 text-slate-700">
+            <p className="font-medium mb-1">What a general override does</p>
+            <p>
+              Releases every <span className="font-semibold">waivable</span> block on this
+              carrier for 24 hours. The confirmation will list exactly which ones.
+            </p>
+            <p className="mt-1">
+              It does <span className="font-semibold">not</span> release the authority
+              under-12-month floor or a terminated agreement. Those apply regardless of any
+              override, and the carrier stays blocked by them.
+            </p>
+          </div>
+        )}
+
         <label className="flex items-start gap-2 mt-4 cursor-pointer">
           <input
             type="checkbox"

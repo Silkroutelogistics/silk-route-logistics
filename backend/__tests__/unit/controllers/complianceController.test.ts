@@ -40,6 +40,10 @@ vi.mock("../../../src/services/emailService", () => ({
   wrap: (s: string) => s,
 }));
 
+// Arc 26 — a blanket grant now previews the gate so the audit row can record
+// WHAT it releases. A bare vi.fn() returns undefined, which is a legitimate
+// stand-in for "the gate threw": case 6 leans on that on purpose. Cases that
+// assert the recorded content set a real verdict per-test.
 vi.mock("../../../src/services/complianceMonitorService", () => ({
   complianceCheck: vi.fn(),
 }));
@@ -57,6 +61,9 @@ vi.mock("../../../src/services/fmcsaService", () => ({
 }));
 
 import { overrideBlock } from "../../../src/controllers/complianceController";
+// Arc 26 — imported as a value so the per-test verdict can be set. The
+// module-level vi.mock above still governs; this is the handle to it.
+import * as complianceMonitorService from "../../../src/services/complianceMonitorService";
 
 // Pin "now" to a deterministic mid-month date so nMonthsAgo(N) lands on
 // the 15th of some prior month and calendarMonthsBetween returns
@@ -250,5 +257,57 @@ describe("overrideBlock — v3.8.ahn scoped AUTHORITY_TOO_YOUNG", () => {
     // Audit log records null too.
     const auditCall = mockPrisma.auditTrail.create.mock.calls[0][0];
     expect(auditCall.data.changedFields.checkCode).toBeNull();
+  });
+
+  // ─────────────────────────────────────────────────────────────────
+  // Case 6 (Arc 26): a blanket grant records WHAT it released, and the
+  // hard floor it cannot. Pins the Phase 2 behaviour in CI — the
+  // container proof covers the gate, this covers the audit record.
+  // ─────────────────────────────────────────────────────────────────
+  it("6. a blanket grant records the released blocks and the floors that still apply", async () => {
+    mockPrisma.carrierProfile.findUnique.mockResolvedValue(makeCarrier());
+    (complianceMonitorService.complianceCheck as any).mockResolvedValue({
+      allowed: false,
+      blocked_reasons: [
+        "Insurance has expired",
+        "AGREEMENT_TERMINATED: the carrier-broker agreement was terminated",
+      ],
+      blocked_codes: [{ code: "AGREEMENT_TERMINATED", overridable: false }],
+      released: [],
+      warnings: [],
+    });
+
+    const req = makeReq({ body: { reason: "Load must move; insurance renewal is in hand." } });
+    const res = makeRes();
+    await overrideBlock(req as any, res);
+
+    expect(res._status).toBe(200);
+    const fields = mockPrisma.auditTrail.create.mock.calls[0][0].data.changedFields;
+    // The waivable one is recorded as released...
+    expect(fields.releasedAtGrant).toEqual(["Insurance has expired"]);
+    // ...and the floor is recorded as still applying, so an incident review can
+    // see this override did NOT let a terminated carrier through.
+    expect(fields.floorsThatStillApply).toEqual(["AGREEMENT_TERMINATED"]);
+  });
+
+  // ─────────────────────────────────────────────────────────────────
+  // Case 7 (Arc 26): the preview is documentation. If the gate throws,
+  // the grant still happens — an admin who is authorised to release a
+  // load must not be blocked by a failure in the code that describes
+  // the release.
+  // ─────────────────────────────────────────────────────────────────
+  it("7. a gate failure during the preview does not fail the grant", async () => {
+    mockPrisma.carrierProfile.findUnique.mockResolvedValue(makeCarrier());
+    (complianceMonitorService.complianceCheck as any).mockRejectedValue(new Error("gate exploded"));
+
+    const req = makeReq({ body: { reason: "Gate is down; load still has to move today." } });
+    const res = makeRes();
+    await overrideBlock(req as any, res);
+
+    expect(res._status).toBe(200);
+    expect(mockPrisma.complianceOverride.create).toHaveBeenCalledTimes(1);
+    // Recorded as empty rather than wrong — an absent record beats a fabricated one.
+    const fields = mockPrisma.auditTrail.create.mock.calls[0][0].data.changedFields;
+    expect(fields.releasedAtGrant).toEqual([]);
   });
 });

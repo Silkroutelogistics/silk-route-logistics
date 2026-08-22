@@ -165,16 +165,45 @@ export async function complianceCheck(carrierId: string, pre?: ComplianceBundle)
   allowed: boolean;
   blocked_reasons: string[];
   blocked_codes: BlockedCode[];
+  /**
+   * Blocks a blanket override waived on THIS evaluation. Empty unless a blanket
+   * override is active. Recomputed every call, so it can differ from what the
+   * same override released yesterday as the carrier's state moves — which is
+   * the thing an incident review actually needs to see.
+   */
+  released: string[];
   warnings: string[];
 }> {
   const carrier = pre ? pre.carrier : await fetchCarrierForCompliance(carrierId);
 
   if (!carrier) {
-    return { allowed: false, blocked_reasons: ["Carrier not found"], blocked_codes: [], warnings: [] };
+    return { allowed: false, blocked_reasons: ["Carrier not found"], blocked_codes: [], released: [], warnings: [] };
   }
 
   const blocked_reasons: string[] = [];
   const blocked_codes: BlockedCode[] = [];
+
+  /**
+   * Blocks a blanket override may NOT waive.
+   *
+   * Membership is not a judgement made here — it mirrors what the rest of the
+   * system already refuses to waive: a `blocked_code` with `overridable: false`,
+   * an endpoint that 409s rather than mint, a modal that disables submit. When
+   * those three said one thing and this gate said another, the gate was wrong.
+   *
+   * TO ADD A THIRD: mark it `overridable: false` where it is pushed, add its
+   * reason here, and say why in CLAUDE.md §14. Do NOT add a block here that the
+   * endpoint would still happily mint an override for — that is the same
+   * contradiction pointing the other way.
+   *
+   * Deliberately NOT here, and worth a decision rather than a default: OFAC/SDN
+   * match, FMCSA authority revoked, and FMCSA Out-of-Service. Those are arguably
+   * not SRL's to waive at all — a sanctions hit is federal law and an OOS order
+   * is a federal safety prohibition — but none carries a `blocked_code` today,
+   * so making them absolute is new policy rather than reconciling existing
+   * contradictions. §13.3 Item 235.
+   */
+  const absoluteReasons = new Set<string>();
   const warnings: string[] = [];
   const now = new Date();
 
@@ -190,9 +219,21 @@ export async function complianceCheck(carrierId: string, pre?: ComplianceBundle)
         orderBy: { createdAt: "desc" },
       });
 
-  if (activeBlanketOverride) {
-    return { allowed: true, blocked_reasons: [], blocked_codes: [], warnings: ["Active compliance override in effect"] };
-  }
+  // NO SHORT-CIRCUIT. Ratified Arc 26 (§14): a blanket override releases the
+  // waivable blocks and is evaluated against the rest — it does not skip the
+  // check sequence.
+  //
+  // It used to return here, above every other check, which meant it waived the
+  // two things this file explicitly declares un-waivable: the authority
+  // <12-month floor (whose own endpoint 409s HARD_FLOOR_NOT_OVERRIDABLE) and a
+  // TERMINATED agreement (whose modal disables the submit button). The gate
+  // contradicted the endpoint and the UI, and the empty blocked_codes it
+  // returned meant the frontend never learned a non-waivable code had fired.
+  //
+  // Now the full sequence always runs. At the end, hard floors survive the
+  // override and everything else is moved to `released` — so an AE can see
+  // WHAT was waived rather than a bare allowed:true.
+  const blanketActive = !!activeBlanketOverride;
 
   // HARD BLOCK: carrier suspended or deactivated
   if (carrier.onboardingStatus === "SUSPENDED") {
@@ -255,6 +296,7 @@ export async function complianceCheck(carrierId: string, pre?: ComplianceBundle)
         `AUTHORITY_TOO_YOUNG: carrier authority is ${ageMonths} months old; SRL requires 12 months minimum to haul and this cannot be overridden`,
       );
       blocked_codes.push({ code: "AUTHORITY_TOO_YOUNG", ageMonths, overridable: false });
+      absoluteReasons.add(blocked_reasons[blocked_reasons.length - 1]);
     } else if (ageMonths < 18) {
       // Override-eligible window — consult a scoped override before blocking.
       const ageOverride = pre
@@ -378,6 +420,7 @@ export async function complianceCheck(carrierId: string, pre?: ComplianceBundle)
       // load on a carrier with no agreement governing it; the remedy is a
       // signature, and the existing sign path already records a new one.
       blocked_codes.push({ code: "AGREEMENT_TERMINATED", overridable: false });
+      absoluteReasons.add(blocked_reasons[blocked_reasons.length - 1]);
     } else {
       blocked_reasons.push("No signed carrier-broker agreement on file");
     }
@@ -484,10 +527,31 @@ export async function complianceCheck(carrierId: string, pre?: ComplianceBundle)
     }
   }
 
+  // A blanket override releases the waivable blocks and leaves the floors.
+  // Both lists are returned, so an incident review can see what an override
+  // actually did rather than inferring it from an empty response.
+  const kept = blanketActive ? blocked_reasons.filter((r) => absoluteReasons.has(r)) : blocked_reasons;
+  const released = blanketActive ? blocked_reasons.filter((r) => !absoluteReasons.has(r)) : [];
+  const keptCodes = blanketActive ? blocked_codes.filter((c) => !c.overridable) : blocked_codes;
+
+  if (blanketActive) {
+    warnings.push(
+      released.length
+        ? `Active blanket compliance override — released ${released.length} block(s): ${released.join(" | ")}`
+        : "Active blanket compliance override — nothing waivable was blocking",
+    );
+    if (kept.length) {
+      warnings.push(
+        `${kept.length} block(s) are not waivable by any override and still apply.`,
+      );
+    }
+  }
+
   return {
-    allowed: blocked_reasons.length === 0,
-    blocked_reasons,
-    blocked_codes,
+    allowed: kept.length === 0,
+    blocked_reasons: kept,
+    blocked_codes: keptCodes,
+    released,
     warnings,
   };
 }

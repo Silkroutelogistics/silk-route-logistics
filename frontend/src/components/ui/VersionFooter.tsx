@@ -14890,7 +14890,41 @@
 //   rather than writing a faster copy that would drift back out of agreement.
 //   What did NOT migrate: vetting-risk HIGH, which the gate only warns about.
 //   Moving it would have quietly LOOSENED auto-dispatch.
-export const SRL_VERSION = "3.8.aui";
+// v3.8.auk — Arc 26. Letter auk, not auj: the SSO session committed auj to
+//   main while this arc was running. Third collision in three arcs — and the
+//   first the guard caught BEFORE the commit rather than after. Worth recording
+//   how close it came to being dismissed: part of the "auj is claimed" signal
+//   was my own version bump, which made the rest of it look explainable. A
+//   true positive wearing a false positive's clothes.
+//   The thing aui reported is now fixed: a BLANKET override
+//   no longer returns allowed:true above every check. It runs the full
+//   sequence, releases only the WAIVABLE blocks, and NAMES each one it
+//   released instead of handing back a bare allowed:true.
+//   Two blocks are absolute and no override waives them — authority under 12
+//   months, and a terminated agreement. Both were already declared un-waivable
+//   by an endpoint that 409s and a modal that disables submit. The gate was the
+//   one place that disagreed, and it was the place that decides.
+//   Membership in that set is MIRRORED, never judged fresh: a block is
+//   absolute when the rest of the system already refuses to waive it.
+//   The empty blocked_codes was its own defect — that array is how the UI
+//   learns a block is non-waivable, so an override did not merely release a
+//   floor, it erased the evidence one had fired.
+//   STILL WAIVABLE, and arguably should not be: OFAC/SDN, FMCSA revoked,
+//   FMCSA Out-of-Service. Making them absolute is new policy rather than
+//   reconciling a contradiction, so it is surfaced, not taken. Item 235.4.
+//   A REGRESSION I INTRODUCED, caught by a pre-existing test: recording what a
+//   grant releases could 500 the grant. Recording an act must never be able to
+//   prevent it. Wrapped, and both halves pinned in CI.
+//   AND THE NEW WARNINGS WERE INVISIBLE in the state they explain: both tender
+//   surfaces rendered warnings only when allowed=true, so an AE could grant an
+//   override, stay blocked behind a floor, and see no sign it had done
+//   anything. Found by tracing the render CONDITIONS — the half of "the
+//   surfaces state the new semantics" that reading the copy does not cover.
+//   22/22 against the real gate. Restoring the old short-circuit → 6/22.
+//   Batched-vs-serial parity PASSES under the defect, because parity holds
+//   when both paths are equally wrong — which is why the floor is asserted
+//   directly rather than inferred from agreement.
+export const SRL_VERSION = "3.8.auk";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
