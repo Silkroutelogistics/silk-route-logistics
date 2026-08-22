@@ -183,3 +183,43 @@ describe("SSO callback refuses without minting a session", () => {
     expect(getToken).not.toHaveBeenCalled();
   });
 });
+
+describe("state nonce — the CSRF binding", () => {
+  it("absent cookie is refused, even with a well-formed state param", async () => {
+    // An attacker can craft the query string. They cannot set an httpOnly
+    // cookie on the victim's browser, which is the whole point of the binding.
+    const res = await request(app())
+      .get("/api/auth/sso/google/callback?code=abc&state=anything");
+    expect(res.headers.location).toContain("sso_error=bad_state");
+    expect(getToken).not.toHaveBeenCalled();
+  });
+
+  it("empty state param is refused", async () => {
+    const a = app();
+    const start = await request(a).get("/api/auth/sso/google");
+    const jar = ((start.headers["set-cookie"] as unknown as string[]) || [])
+      .map((c) => c.split(";")[0]).join("; ");
+    const res = await request(a)
+      .get("/api/auth/sso/google/callback?code=abc&state=").set("Cookie", jar);
+    expect(res.headers.location).toContain("sso_error=bad_state");
+    expect(getToken).not.toHaveBeenCalled();
+  });
+
+  it("the callback clears the state cookie, so the browser cannot replay it", async () => {
+    // Replay is bounded on two sides: Google refuses a second use of the
+    // authorization code, and the nonce this end is one-shot because the
+    // response expires the cookie. We own the second half; assert it.
+    const res = await ssoLogin(true);
+    const cleared = ((res.headers["set-cookie"] as unknown as string[]) || [])
+      .find((c) => c.startsWith("srl_sso_state="));
+    expect(cleared).toBeTruthy();
+    expect(cleared).toMatch(/Expires=Thu, 01 Jan 1970|Max-Age=0/);
+  });
+
+  it("the remember-me cookie is cleared too, so it cannot leak into a later login", async () => {
+    const res = await ssoLogin(true);
+    const cleared = ((res.headers["set-cookie"] as unknown as string[]) || [])
+      .find((c) => c.startsWith("srl_sso_remember="));
+    expect(cleared).toMatch(/Expires=Thu, 01 Jan 1970|Max-Age=0/);
+  });
+});
