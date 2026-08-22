@@ -16,6 +16,8 @@
 
 import { prisma } from "../config/database";
 import { regionsCoverLane } from "../lib/operatingRegions";
+import { complianceCheckMany } from "./complianceMonitorService";
+import { log } from "../lib/logger";
 import type { Prisma } from "@prisma/client";
 
 const INSURANCE_SAFETY_DAYS = 30;
@@ -145,7 +147,7 @@ export async function getEligibleCarriers(ctx: LoadContext) {
   const equipmentKey = normalizeEquipment(ctx.equipmentType);
   const regionSet = [ctx.originState, ctx.destState].map((s) => (s || "").toUpperCase());
 
-  return candidates.filter((c) => {
+  const structurallyEligible = candidates.filter((c) => {
     // Equipment — carrier must have the type OR a compatible one. Filter
     // out carriers that declare no equipment at all; "compatible" still
     // passes eligibility (the scorer assigns the partial credit).
@@ -165,9 +167,20 @@ export async function getEligibleCarriers(ctx: LoadContext) {
     // essentially every waterfall. §13.3 Item 223.
     if (!regionsCoverLane(c.operatingRegions, regionSet)) return false;
 
-    // Compliance flags — hard exclude
-    if (c.lastVettingRisk === "CRITICAL" || c.lastVettingRisk === "HIGH") return false;
-    if (c.chameleonRiskLevel && ["HIGH", "CRITICAL"].includes(c.chameleonRiskLevel)) return false;
+    // Compliance exclusions are NOT decided here any more — see the
+    // complianceCheckMany pass below. This filter keeps only the cheap
+    // structural predicates; anything that is a question of "may this carrier
+    // be tendered at all" now comes from the same gate the tender endpoint
+    // uses, so an override applies to both paths identically.
+    //
+    // What deliberately STAYS here: auto-dispatch declines a vetting risk of
+    // HIGH (score 40-59), which the gate only warns about. That is not a
+    // compliance decision, it is a selection policy — the waterfall picks a
+    // carrier with no human looking at the choice, so it is allowed to be
+    // fussier than a gate an AE is standing in front of. Dropping it would
+    // have silently LOOSENED auto-dispatch, which is the opposite of what
+    // migrating to the gate is for. §13.3 Item 234.
+    if (c.lastVettingRisk === "HIGH") return false;
 
     // Extended insurance expiry — if detailed fields exist, enforce them too
     if (c.autoLiabilityExpiry && c.autoLiabilityExpiry < insuranceCutoff) return false;
@@ -175,6 +188,40 @@ export async function getEligibleCarriers(ctx: LoadContext) {
 
     return true;
   });
+
+  // ── the gate, once, for everyone ────────────────────────────────────
+  //
+  // Compliance exclusions come from complianceCheck — the SAME verdict the
+  // tender endpoint uses — so a scoped override released for a tender is
+  // released here too. Before this, the waterfall read chameleonRiskLevel and
+  // lastVettingRisk straight off the row and consulted no override at all, so
+  // an AE could override a carrier, tender them by hand, and still never see
+  // them in auto-dispatch.
+  //
+  // Batched deliberately. Measured on a rehearsal database, a per-candidate
+  // call costs 53 ms — 5.3 SECONDS at 100 candidates, on a request an AE is
+  // waiting on. complianceCheckMany does three queries regardless of N and
+  // then runs the same complianceCheck per carrier with its inputs handed in,
+  // so there is one set of rules rather than a fast copy that can drift.
+  if (structurallyEligible.length === 0) return structurallyEligible;
+
+  const verdicts = await complianceCheckMany(structurallyEligible.map((c) => c.id));
+  const cleared = structurallyEligible.filter((c) => {
+    const v = verdicts.get(c.id);
+    if (!v) return false;
+    if (!v.allowed) {
+      // Log the GATE reason. The old filter excluded silently, so a carrier
+      // vanishing from every waterfall looked identical to one that simply
+      // did not match the lane.
+      log.info(
+        { carrierId: c.id, reasons: v.blocked_reasons },
+        "[Waterfall] candidate excluded by compliance gate",
+      );
+      return false;
+    }
+    return true;
+  });
+  return cleared;
 }
 
 /**

@@ -20,7 +20,11 @@ import { api } from "@/lib/api";
  *     (contact compliance).
  */
 export interface BlockedCode {
-  code: "AUTHORITY_TOO_YOUNG" | "AUTHORITY_UNVERIFIED" | "AGREEMENT_TERMINATED";
+  code:
+    | "AUTHORITY_TOO_YOUNG"
+    | "AUTHORITY_UNVERIFIED"
+    | "AGREEMENT_TERMINATED"
+    | "CHAMELEON_UNREVIEWED";
   ageMonths?: number;
   overridable: boolean;
 }
@@ -95,6 +99,14 @@ export function OverrideComplianceModal({
   const terminatedAgreement = codes.find(
     (c) => c.code === "AGREEMENT_TERMINATED",
   );
+  // v3.8.auh — chameleon HIGH is override-eligible, but the review is the
+  // remedy. The modal says so in that order, for the same reason the blocked
+  // reason does: an override that reads as the primary path teaches AEs to
+  // waive a fraud signal instead of triaging it.
+  const chameleonUnreviewed = codes.find(
+    (c) => c.code === "CHAMELEON_UNREVIEWED" && c.overridable,
+  );
+
   const isAuthorityOverride = !!overridableAuthority;
   const isHardBlocked = !!hardFloorAuthority || !!unverifiedAuthority || !!terminatedAgreement;
   const disabledTooltip = hardFloorAuthority
@@ -119,6 +131,10 @@ export function OverrideComplianceModal({
 
   const mutation = useMutation({
     mutationFn: async () => {
+      // v3.8.auh — two scoped codes now. Authority takes precedence when both
+      // are present, because the authority block is the narrower window; the
+      // chameleon override would not release the authority block anyway, so
+      // offering it first would produce an override that changes nothing.
       // v3.8.ahq — send checkCode only when an overridable authority-age
       // block is the surfaced state. Omitting checkCode preserves the
       // Sprint 40 blanket-override semantic for all other use cases
@@ -126,6 +142,8 @@ export function OverrideComplianceModal({
       const body: { reason: string; checkCode?: string } = { reason };
       if (isAuthorityOverride) {
         body.checkCode = "AUTHORITY_TOO_YOUNG";
+      } else if (chameleonUnreviewed) {
+        body.checkCode = "CHAMELEON_UNREVIEWED";
       }
       const { data } = await api.post(
         `/compliance/carrier/${carrierId}/override-block`,
@@ -245,6 +263,29 @@ export function OverrideComplianceModal({
                 No authority-age override available.
               </p>
             )}
+          </div>
+        )}
+
+        {/* v3.8.auh — the review comes first here, deliberately. Clearing the
+            matches is the fix; the override only buys time, and an AE who reads
+            it as the primary path learns to waive a fraud signal rather than
+            look at it. */}
+        {chameleonUnreviewed && (
+          <div className="mb-3 p-2 border-l-4 text-xs rounded bg-red-50 border-red-500 text-red-800">
+            <p className="font-medium mb-1">Identity overlap — unreviewed</p>
+            <p>
+              This carrier&apos;s fingerprint overlaps another carrier&apos;s.{" "}
+              <span className="font-semibold">
+                The fix is to review the matches on the carrier&apos;s Security Signals card
+              </span>{" "}
+              — clearing them releases this block permanently.
+            </p>
+            <p className="mt-1">
+              If the load cannot wait for that triage, this override mints a scoped
+              <code className="px-1 mx-0.5 bg-red-100 rounded">CHAMELEON_UNREVIEWED</code>
+              waiver that lasts 24 hours. The block returns when it expires, because
+              nothing about the carrier will have changed.
+            </p>
           </div>
         )}
 

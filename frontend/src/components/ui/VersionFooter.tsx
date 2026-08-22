@@ -14874,7 +14874,23 @@
 //   AuditLog rows are seed-era artifacts left untouched.
 //   Reset-token password reset must not be used on EITHER active staff account
 //   until the TOTP lockout defect is fixed. Rotation is known-password only.
-export const SRL_VERSION = "3.8.auh";
+// v3.8.aui — Arc 25. Letter aui, not auh: a second session took auh and pushed
+//   it mid-arc. The guard caught it, again.
+//   CHAMELEON_UNREVIEWED is a scoped, expiring override mirroring the
+//   authority-age shape. The reason names the REVIEW first and the override
+//   second, and that order is pinned by a test: leading with the waiver
+//   teaches AEs to waive a fraud signal instead of looking at it.
+//   FOUND, REPORTED, NOT CHANGED: a BLANKET override returns allowed:true
+//   above every check, so it waives even the authority hard floor and a
+//   terminated agreement — the two things the code says cannot be waived.
+//   THE WATERFALL now reads the same verdict the tender path reads, so an
+//   override finally applies to both. Measured before migrating: 53 ms per
+//   carrier, 5.3 SECONDS at 100 candidates on a request an AE waits on.
+//   Batched to 48 ms by handing prefetched inputs to the SAME complianceCheck
+//   rather than writing a faster copy that would drift back out of agreement.
+//   What did NOT migrate: vetting-risk HIGH, which the gate only warns about.
+//   Moving it would have quietly LOOSENED auto-dispatch.
+export const SRL_VERSION = "3.8.aui";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

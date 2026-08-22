@@ -402,6 +402,14 @@ export async function getOverrideStatus(req: AuthRequest, res: Response) {
 
 // POST /compliance/carrier/:carrierId/override-block
 //
+/**
+ * checkCodes a scoped override can actually target.
+ *
+ * complianceCheck looks each of these up by exact string, so a value absent
+ * from this list produces an override row that matches nothing.
+ */
+const SCOPED_CHECK_CODES = ["AUTHORITY_TOO_YOUNG", "CHAMELEON_UNREVIEWED"];
+
 // v3.8.ahn — extended to accept optional checkCode for scoped overrides
 // (Item 182 sprint 4). When checkCode is "AUTHORITY_TOO_YOUNG" the
 // endpoint re-derives ageMonths server-side from carrier.authorityGrantedDate
@@ -454,6 +462,21 @@ export async function overrideBlock(req: AuthRequest, res: Response) {
 
     if (!carrier) {
       res.status(404).json({ error: "Carrier not found" });
+      return;
+    }
+
+    // v3.8.auh — checkCode was free-form. A typo ("CHAMELEON_UNREVIEW") minted
+    // a row that matches no lookup in complianceCheck, so the override appeared
+    // to succeed, counted against the carrier's 30-day quota, and released
+    // nothing. Silent no-ops are the worst kind of override. Allow-list it, and
+    // keep null/absent meaning the legacy blanket override.
+    if (checkCode && !SCOPED_CHECK_CODES.includes(checkCode)) {
+      res.status(400).json({
+        code: "UNKNOWN_CHECK_CODE",
+        error:
+          `Unknown checkCode "${checkCode}". Scoped overrides exist for: ${SCOPED_CHECK_CODES.join(", ")}. ` +
+          "Omit checkCode entirely for a blanket override.",
+      });
       return;
     }
 

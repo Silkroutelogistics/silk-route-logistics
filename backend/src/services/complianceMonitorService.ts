@@ -68,21 +68,106 @@ export const AUTHORITY_AGE_GATE_LIVE_AT = new Date("2026-05-21T19:00:00Z");
  * inside complianceCheck so the two cannot diverge.
  */
 export interface BlockedCode {
-  code: "AUTHORITY_TOO_YOUNG" | "AUTHORITY_UNVERIFIED" | "AGREEMENT_TERMINATED";
+  code:
+    | "AUTHORITY_TOO_YOUNG"
+    | "AUTHORITY_UNVERIFIED"
+    | "AGREEMENT_TERMINATED"
+    | "CHAMELEON_UNREVIEWED";
   ageMonths?: number;
   overridable: boolean;
 }
 
-export async function complianceCheck(carrierId: string): Promise<{
+/**
+ * Everything complianceCheck would otherwise fetch, fetched in bulk.
+ *
+ * The waterfall needs a verdict for every candidate, and a per-candidate call
+ * costs three to six queries with no caching — measured at 53 ms per carrier,
+ * which is 5.3 SECONDS at 100 candidates on a request an AE is waiting on.
+ * Passing a prefetched bundle collapses that to three queries TOTAL.
+ *
+ * The point of doing it this way rather than writing a second, faster filter:
+ * there is still exactly one set of rules. complianceCheck reads its inputs
+ * from the bundle when given one and queries for them when not; the logic
+ * between the inputs and the verdict is the same code either way. A parallel
+ * fast path would drift from the gate the moment either changed, and the
+ * waterfall would start disagreeing with the tender endpoint about who may
+ * haul — silently, and only for auto-dispatch.
+ */
+export interface ComplianceBundle {
+  carrier: Awaited<ReturnType<typeof fetchCarrierForCompliance>>;
+  overrides: Array<{ checkCode: string | null; expiresAt: Date }>;
+  agreements: Array<{
+    status: string;
+    templateName: string;
+    signedAt: Date | null;
+    terminatedAt: Date | null;
+    terminationReason: string | null;
+    expiresAt: Date | null;
+  }>;
+}
+
+function fetchCarrierForCompliance(carrierId: string) {
+  return prisma.carrierProfile.findUnique({
+    where: { id: carrierId },
+    include: { user: { select: { company: true, firstName: true, lastName: true } } },
+  });
+}
+
+/**
+ * Verdicts for many carriers in a fixed number of queries.
+ *
+ * Three queries regardless of N, then the same complianceCheck for each carrier
+ * with its inputs handed in. Returns a Map keyed by carrierId.
+ */
+export async function complianceCheckMany(carrierIds: string[]) {
+  const out = new Map<string, Awaited<ReturnType<typeof complianceCheck>>>();
+  if (carrierIds.length === 0) return out;
+
+  const now = new Date();
+  const [carriers, overrides, agreements] = await Promise.all([
+    prisma.carrierProfile.findMany({
+      where: { id: { in: carrierIds } },
+      include: { user: { select: { company: true, firstName: true, lastName: true } } },
+    }),
+    prisma.complianceOverride.findMany({
+      where: { carrierId: { in: carrierIds }, expiresAt: { gt: now } },
+      orderBy: { createdAt: "desc" },
+    }),
+    prisma.carrierAgreement.findMany({
+      where: { carrierId: { in: carrierIds }, templateName: "broker-carrier" },
+      orderBy: { signedAt: "desc" },
+    }),
+  ]);
+
+  const byCarrier = new Map(carriers.map((c) => [c.id, c]));
+  const ovByCarrier = new Map<string, typeof overrides>();
+  for (const o of overrides) {
+    if (!ovByCarrier.has(o.carrierId)) ovByCarrier.set(o.carrierId, []);
+    ovByCarrier.get(o.carrierId)!.push(o);
+  }
+  const agByCarrier = new Map<string, typeof agreements>();
+  for (const a of agreements) {
+    if (!agByCarrier.has(a.carrierId)) agByCarrier.set(a.carrierId, []);
+    agByCarrier.get(a.carrierId)!.push(a);
+  }
+
+  for (const id of carrierIds) {
+    out.set(id, await complianceCheck(id, {
+      carrier: byCarrier.get(id) ?? null,
+      overrides: ovByCarrier.get(id) ?? [],
+      agreements: agByCarrier.get(id) ?? [],
+    }));
+  }
+  return out;
+}
+
+export async function complianceCheck(carrierId: string, pre?: ComplianceBundle): Promise<{
   allowed: boolean;
   blocked_reasons: string[];
   blocked_codes: BlockedCode[];
   warnings: string[];
 }> {
-  const carrier = await prisma.carrierProfile.findUnique({
-    where: { id: carrierId },
-    include: { user: { select: { company: true, firstName: true, lastName: true } } },
-  });
+  const carrier = pre ? pre.carrier : await fetchCarrierForCompliance(carrierId);
 
   if (!carrier) {
     return { allowed: false, blocked_reasons: ["Carrier not found"], blocked_codes: [], warnings: [] };
@@ -98,14 +183,12 @@ export async function complianceCheck(carrierId: string): Promise<{
   // consulted per-check downstream instead of short-circuiting the whole
   // function. Pre-ahl override rows have checkCode = null and continue to
   // blanket-allow per the original Sprint 40 semantic — backwards-compatible.
-  const activeBlanketOverride = await prisma.complianceOverride.findFirst({
-    where: {
-      carrierId,
-      expiresAt: { gt: now },
-      checkCode: null,
-    },
-    orderBy: { createdAt: "desc" },
-  });
+  const activeBlanketOverride = pre
+    ? pre.overrides.find((o) => o.checkCode === null && o.expiresAt > now) ?? null
+    : await prisma.complianceOverride.findFirst({
+        where: { carrierId, expiresAt: { gt: now }, checkCode: null },
+        orderBy: { createdAt: "desc" },
+      });
 
   if (activeBlanketOverride) {
     return { allowed: true, blocked_reasons: [], blocked_codes: [], warnings: ["Active compliance override in effect"] };
@@ -174,14 +257,12 @@ export async function complianceCheck(carrierId: string): Promise<{
       blocked_codes.push({ code: "AUTHORITY_TOO_YOUNG", ageMonths, overridable: false });
     } else if (ageMonths < 18) {
       // Override-eligible window — consult a scoped override before blocking.
-      const ageOverride = await prisma.complianceOverride.findFirst({
-        where: {
-          carrierId,
-          checkCode: "AUTHORITY_TOO_YOUNG",
-          expiresAt: { gt: now },
-        },
-        orderBy: { createdAt: "desc" },
-      });
+      const ageOverride = pre
+        ? pre.overrides.find((o) => o.checkCode === "AUTHORITY_TOO_YOUNG" && o.expiresAt > now) ?? null
+        : await prisma.complianceOverride.findFirst({
+            where: { carrierId, checkCode: "AUTHORITY_TOO_YOUNG", expiresAt: { gt: now } },
+            orderBy: { createdAt: "desc" },
+          });
       if (ageOverride) {
         warnings.push(
           `AUTHORITY_AGE_OVERRIDE: carrier authority ${ageMonths} months old; override active until ${ageOverride.expiresAt.toISOString()}`,
@@ -267,10 +348,12 @@ export async function complianceCheck(carrierId: string): Promise<{
   // HARD BLOCK: no signed carrier-broker agreement. Filter to templateName
   // "broker-carrier" (v3.8.aqi) — the Quick Pay Agreement is now ALSO a signed
   // CarrierAgreement row ("quick-pay"), and it must never satisfy the BCA gate.
-  const agreement = await prisma.carrierAgreement.findFirst({
-    where: { carrierId, status: "SIGNED", templateName: "broker-carrier" },
-    orderBy: { signedAt: "desc" },
-  });
+  const agreement = pre
+    ? pre.agreements.find((a) => a.status === "SIGNED" && a.templateName === "broker-carrier") ?? null
+    : await prisma.carrierAgreement.findFirst({
+        where: { carrierId, status: "SIGNED", templateName: "broker-carrier" },
+        orderBy: { signedAt: "desc" },
+      });
   if (!agreement) {
     // A terminated agreement already fails the SIGNED filter above, so it was
     // already blocking — but it reported "none on file", which sends an AE to
@@ -278,7 +361,9 @@ export async function complianceCheck(carrierId: string): Promise<{
     // Same block, honest reason. Only reached when no SIGNED row exists, so a
     // carrier who signed, was terminated, and re-signed is unaffected: their
     // newer SIGNED row matches and this branch never runs.
-    const terminated = await prisma.carrierAgreement.findFirst({
+    const terminated = pre
+      ? pre.agreements.find((a) => a.status === "TERMINATED" && a.templateName === "broker-carrier") ?? null
+      : await prisma.carrierAgreement.findFirst({
       where: { carrierId, status: "TERMINATED", templateName: "broker-carrier" },
       orderBy: { terminatedAt: "desc" },
       select: { terminatedAt: true, terminationReason: true },
@@ -348,10 +433,34 @@ export async function complianceCheck(carrierId: string): Promise<{
   // block rather than merely annotating it. A block a human cannot escape is a
   // deletion with extra steps.
   if (carrier.chameleonRiskLevel === "HIGH") {
-    blocked_reasons.push(
-      "HIGH chameleon risk — this carrier's identity overlaps another carrier's. " +
-        "Review the matches on the carrier's Security Signals card: clearing them releases this block.",
-    );
+    // Scoped override, mirroring the AUTHORITY_TOO_YOUNG shape: checkCode-
+    // matched, expiring, consulted here rather than short-circuiting the whole
+    // function the way a blanket override does.
+    const chameleonOverride = pre
+      ? pre.overrides.find((o) => o.checkCode === "CHAMELEON_UNREVIEWED" && o.expiresAt > now) ?? null
+      : await prisma.complianceOverride.findFirst({
+          where: { carrierId, checkCode: "CHAMELEON_UNREVIEWED", expiresAt: { gt: now } },
+          orderBy: { createdAt: "desc" },
+        });
+    if (chameleonOverride) {
+      warnings.push(
+        `CHAMELEON_OVERRIDE: identity overlap unresolved; override active until ` +
+          `${chameleonOverride.expiresAt.toISOString()}. Reviewing the matches is still the fix.`,
+      );
+      // No blocked_codes entry — released for this run only. When the override
+      // expires the block returns, because nothing about the carrier changed.
+    } else {
+      // ORDER MATTERS. The review is the remedy and is stated first; the
+      // override is a release valve for the case where an AE needs the load to
+      // move before the triage is done. Leading with the override would teach
+      // AEs to waive a fraud signal rather than look at it.
+      blocked_reasons.push(
+        "HIGH chameleon risk — this carrier's identity overlaps another carrier's. " +
+          "Review the matches on the carrier's Security Signals card: clearing them releases this block. " +
+          "An ADMIN or CEO can also apply a 24-hour override if the load cannot wait for triage.",
+      );
+      blocked_codes.push({ code: "CHAMELEON_UNREVIEWED", overridable: true });
+    }
   } else if (carrier.chameleonRiskLevel === "MEDIUM") {
     warnings.push("MEDIUM chameleon risk — identity overlap with other carriers");
   }
@@ -781,10 +890,7 @@ export async function getCarrierCompliance(carrierId: string) {
 // ────────────────────────────────────────────────────────────
 
 export async function runFmcsaScan(carrierId: string) {
-  const carrier = await prisma.carrierProfile.findUnique({
-    where: { id: carrierId },
-    include: { user: { select: { company: true, firstName: true, lastName: true } } },
-  });
+  const carrier = await fetchCarrierForCompliance(carrierId);
 
   if (!carrier) throw new Error("Carrier not found");
   if (!carrier.dotNumber) throw new Error("Carrier has no DOT number on file");

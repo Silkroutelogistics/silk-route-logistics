@@ -2010,6 +2010,42 @@ Each is a discrete sprint. Mix of operational, security, UX, and technical debt.
 
     **The count is now held to the code.** [`compassCheckCount.test.ts`](backend/__tests__/unit/services/compassCheckCount.test.ts) counts distinct check NAMES — not `checks.push` calls, which number about 130 because one named check pushes once per outcome — and fails naming every surface that disagrees. Adversarially verified by reverting one surface to 35. A number written down in nine places is a maintenance liability; the guard is what makes it cheap.
 
+233. **The chameleon block gains a scoped override — and a blanket override still releases everything (Arc 25, 2026-08-22).**
+
+    Arc 24 gave the block a human exit (review the matches). This adds the release valve for when a load cannot wait: `CHAMELEON_UNREVIEWED` as a machine-readable `blocked_code`, `overridable: true`, with a checkCode-scoped `ComplianceOverride` mirroring `AUTHORITY_TOO_YOUNG` — 24-hour expiry, same 15-per-30-day quota, consulted at the branch rather than short-circuiting the function.
+
+    **233.1 — ORDER IS THE DESIGN.** The blocked reason names the review FIRST and the override SECOND, and the modal panel does the same. Leading with the override would teach AEs to waive a fraud signal rather than look at it, and the waiver is the thing that should feel like the exception. Pinned by assertion: the proof fails if the two swap.
+
+    **233.2 — THE BLOCK RETURNS ON EXPIRY.** Nothing about the carrier changes when an override lapses, so a delay must not quietly become a waiver. Proven by expiring the row and re-checking. Also proven: a scoped override releases ONLY its own block — an unrelated expired-insurance block stays standing alongside it.
+
+    **233.3 — `checkCode` WAS FREE-FORM.** Any string was persisted. A typo (`CHAMELEON_UNREVIEW`) minted a row that matches no lookup, appeared to succeed, counted against the carrier's quota, and released nothing. Now allow-listed against `SCOPED_CHECK_CODES`, 400 on anything else; omitting it still means the legacy blanket override.
+
+    **233.4 — FINDING, REPORTED NOT CHANGED: a blanket override releases EVERYTHING.** `checkCode: null` short-circuits `complianceCheck` with a literal `return { allowed: true, blocked_reasons: [], blocked_codes: [] }` placed above every other check. It therefore waives the things the codebase explicitly declares un-waivable — the authority **<12-month hard floor** (whose scoped endpoint 409s `HARD_FLOOR_NOT_OVERRIDABLE`), **AGREEMENT_TERMINATED** (whose modal disables submit), and chameleon HIGH. The empty `blocked_codes` in that return also means the frontend never learns a non-overridable code existed. **Verified live** (expired insurance waived alongside). Inherited, not introduced — the chameleon block already sat below that return. **Whether a blanket override should be able to waive a hard floor is a policy question and is left open.**
+
+    **233.5 — THE MIRROR THAT TYPESCRIPT CANNOT SEE.** `OverrideComplianceModal` keeps a hand-maintained copy of `BlockedCode` rather than importing it, and its fallback for an unrecognised code is to send **no** `checkCode` — which the backend reads as a blanket override. So a forgotten mirror entry turns a scoped waiver into a total one, silently and in the wrong direction. [`blockedCodeMirror.test.ts`](backend/__tests__/unit/services/blockedCodeMirror.test.ts) now holds the two unions equal and checks every allow-listed code is a real `blocked_code`.
+
+    **Proof:** [`_arc25-override-proof.ts`](backend/scripts/_arc25-override-proof.ts), **9/9**, real router over HTTP on a hermetic database.
+
+234. **One gate for both paths — the waterfall stops reading columns (Arc 25, 2026-08-22).**
+
+    `waterfallScoringService` excluded carriers by reading `chameleonRiskLevel` and `lastVettingRisk` straight off the row, consulting no override at all. An AE could override a carrier, hand-tender them successfully, and that same carrier would still never appear in auto-dispatch. Two answers to "may this carrier haul", disagreeing silently — and only on the path with no human in it.
+
+    Compliance exclusions now come from `complianceCheck`, the same verdict the tender endpoint uses, so an override applies to both identically.
+
+    **234.1 — MEASURED FIRST, BECAUSE IT WAS MATERIAL.** A per-candidate call costs **53 ms** — 3 queries typical, 6 worst, no caching. At 100 candidates that is **5,329 ms added to a request an AE is waiting on**. Batched: **48 ms for the same 100, a 111× reduction**, three queries regardless of N.
+
+    **234.2 — BATCHED WITHOUT FORKING THE RULES.** `complianceCheckMany` bulk-fetches the carrier rows, the unexpired overrides and the agreements, then calls **the same `complianceCheck`** for each carrier with its inputs handed in via an optional prefetched bundle. There is one set of rules, not a fast copy — a parallel filter would drift from the gate the moment either changed, and the waterfall would start disagreeing with the tender endpoint again, which is the defect being fixed.
+
+    **234.3 — WHAT DELIBERATELY DID NOT MIGRATE, because a naive migration LOOSENS auto-dispatch.** `lastVettingRisk` maps to score bands: CRITICAL is <40, HIGH is 40-59. `complianceCheck` **blocks** on <40 and only **warns** on <60 — so moving the whole exclusion to the gate would have made vetting-risk-HIGH carriers newly eligible for auto-dispatch. That exclusion stays, relabelled for what it is: a **selection policy**, not a compliance gate. Auto-dispatch picks with no human looking at the choice, so it is allowed to be fussier than a gate an AE is standing in front of. Pinned by assertion — the proof checks the carrier is excluded from the waterfall *while the gate allows them*.
+
+    **234.4 — AND ONE DIVERGENCE THAT TURNED OUT TO BE NOTHING.** The old filter excluded `chameleonRiskLevel` in `["HIGH", "CRITICAL"]` while the gate tests `=== "HIGH"`. The `ChameleonRiskLevel` enum has **no CRITICAL member** — NONE/LOW/MEDIUM/HIGH — so that arm was dead and the semantics match exactly. Worth checking rather than assuming: had CRITICAL been real, the migration would have opened a hole in auto-dispatch.
+
+    **234.5 — EXCLUSIONS ARE NOW LOGGED WITH THE GATE'S REASON.** The column filter dropped carriers silently, so a carrier vanishing from every waterfall looked identical to one that simply did not match the lane.
+
+    **Proof:** [`_arc25-waterfall-parity.ts`](backend/scripts/_arc25-waterfall-parity.ts), **7/7** — overridden carrier appears, unoverridden HIGH still excluded, reason is the gate's and names the remedy, HIGH-vetting-risk still excluded while the gate allows, batched cost bounded. Adversarially verified by neutering the gate pass: the exclusion assertion fails. Cost measured by [`_arc25-waterfall-cost.ts`](backend/scripts/_arc25-waterfall-cost.ts).
+
+    **Context worth keeping:** realistic N today is **0** — approval sets `cppTier = GUEST` and scoring requires SILVER+, so every waterfall currently builds a DAT-fallback-only cascade (§13.3 Item 223.3). The measurement matters for when that changes, not for today's load.
+
 ## §14 LEGAL / COMPLIANCE STATUS
 
 - Property broker under 49 U.S.C. §§ 13904, 13906

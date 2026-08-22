@@ -163,7 +163,7 @@ export default function LoadsPage() {
     // v3.8.ahq — structured signal for the OverrideComplianceModal.
     // Optional on the type because pre-ahq deploys won't include it.
     blocked_codes?: Array<{
-      code: "AUTHORITY_TOO_YOUNG" | "AUTHORITY_UNVERIFIED" | "AGREEMENT_TERMINATED";
+      code: "AUTHORITY_TOO_YOUNG" | "AUTHORITY_UNVERIFIED" | "AGREEMENT_TERMINATED" | "CHAMELEON_UNREVIEWED";
       ageMonths?: number;
       overridable: boolean;
     }>;
@@ -937,7 +937,7 @@ export default function LoadsPage() {
                       allowed: boolean;
                       blocked_reasons: string[];
                       blocked_codes?: Array<{
-                        code: "AUTHORITY_TOO_YOUNG" | "AUTHORITY_UNVERIFIED" | "AGREEMENT_TERMINATED";
+                        code: "AUTHORITY_TOO_YOUNG" | "AUTHORITY_UNVERIFIED" | "AGREEMENT_TERMINATED" | "CHAMELEON_UNREVIEWED";
                         ageMonths?: number;
                         overridable: boolean;
                       }>;
@@ -1730,7 +1730,7 @@ function TenderForm({
     // v3.8.ahq — blocked_codes added for the OverrideComplianceModal's
     // authority-age render conditional. Optional for pre-ahq compatibility.
     blocked_codes?: Array<{
-      code: "AUTHORITY_TOO_YOUNG" | "AUTHORITY_UNVERIFIED" | "AGREEMENT_TERMINATED";
+      code: "AUTHORITY_TOO_YOUNG" | "AUTHORITY_UNVERIFIED" | "AGREEMENT_TERMINATED" | "CHAMELEON_UNREVIEWED";
       ageMonths?: number;
       overridable: boolean;
     }>;

@@ -62,11 +62,11 @@ re-run before it was trusted.
 
 ---
 
-## 2. `_pending_migrations/20260822010000_drop_fleet_module` — drop the fleet tables
+## 2. `hold/retire-fleet-module` — drop the fleet tables
 
 | | |
 |---|---|
-| **Form** | file under `backend/prisma/_pending_migrations/` |
+| **Form** | git branch (`hold/retire-fleet-module`) |
 | **Drops** | `trucks`, `trailers`, four enums used only by them, `Load.truckId` / `Load.trailerId`, `Driver.assignedTruckId` / `assignedTrailerId` |
 | **Authored** | Arc 23, §13.3 Item 230 |
 | **Verified from zero** | Yes — full 44-migration chain applied to an empty container; tables and enums confirmed absent, survivors (`equipment`, `Load.truckNumber`) confirmed present |
@@ -75,11 +75,16 @@ re-run before it was trusted.
 and the only two things that ever created a row were the fleet module's own POST
 and the seed. The application half shipped in Arc 23; this is the schema half.
 
-**Why a file and not a branch (originally).** A concurrent session was editing
-`prisma/schema.prisma` at the time, and branching would have meant committing my
-schema edit over their uncommitted one. Their work has since landed
-(`f9c0d475`), so this **can now become a branch** — see the conversion note in
-the file header.
+**It was a file first, and that is worth remembering.** A concurrent session held
+`prisma/schema.prisma` when this was authored, so branching would have meant
+committing my schema edit over their uncommitted one; it went to
+`_pending_migrations/` instead and lost nothing. Their work landed
+(`f9c0d475`), and Arc 24 converted it to this branch.
+
+**Arc 25 sweep found the pending copy still sitting on `main`** — the conversion
+removed it on the branch only, so the same migration existed twice, in two
+different states, with this file describing the older one. Removed from `main`.
+Two copies of a destructive migration is exactly how the wrong one gets applied.
 
 **`Driver.assignedEquipmentId` is deliberately NOT in this drop.** Arc 22 banked
 it as stranded because the field name appears nowhere in `src` — but
