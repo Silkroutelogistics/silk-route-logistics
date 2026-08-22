@@ -2121,6 +2121,24 @@ Each is a discrete sprint. Mix of operational, security, UX, and technical debt.
 
     **236.9 — §2.2 GAINS THE SHARED-INDEX RULE (Phase 4).** From Arc 26: `git add` writes to a repository-wide index, so twelve staged files were swept into the other session's commit during the pause before mine. Stage by explicit pathspec, late, never early. The corollary is recorded too — the version guard reads the *unstaged* diff, so running it after staging your own bump makes it flag your own letter, and Arc 26's `auj` collision was real and was nearly dismissed for that reason.
 
+237. **The release, the production proof, and a monitor that watches the front door (Arc 28, 2026-08-22).**
+
+    **237.1 — RELEASED.** `28edfbbf` pushed; five commits, three of them the concurrent SSO session's. Their migration was read a third time before the push (`CREATE TYPE` ×1, `CREATE TABLE` ×2, `ALTER TABLE` ×2, indexes ×7, **zero DROP or TRUNCATE**) and their tree had been idle 62 minutes. CI green on the SHA. Production reports `sha: 28edfbbf` with `schema.migration: 20260822140000_add_sso_auth_method_events` applied at **15:08:45**, 35 seconds before the new process booted at **15:09:20** — the exact build-time ordering Item 213 documented, and the `schema` field added in atj/atk doing precisely the job it was built for. Their `auth_events` table is empty until their writer lands; accepted interim.
+
+    **237.2 — THE OUTAGE IS CLOSED, PROVEN ON PRODUCTION ITSELF.** `POST /carrier-auth/login` with garbage credentials now returns `401 {"error":"Invalid credentials"}` — the **handler's** refusal. Before the release that same line read `{"error":"No token provided"}`, the middleware's. Same status code, opposite meaning, and **the body is the only thing that distinguishes them**. `GET /agreement/broker-carrier` → `200`, `version 2026-06-27-v1`, 11 sections. `/me`, `/application-status`, `/agreement/:type/pdf` and `GET /login` all still refuse tokenless, so the fix widened nothing and the `$` anchor and method-awareness both hold in production.
+
+    **237.3 — SIXTEEN PUBLIC SURFACES, EVERY 15 MINUTES, ASSERTING SHAPE.** [`probe-public-surfaces.mjs`](backend/scripts/probe-public-surfaces.mjs) + [`public-surface-monitor.yml`](.github/workflows/public-surface-monitor.yml). Failure is a failed workflow, which emails Wasi through the channel that already reaches him — no new infrastructure, no new secret.
+
+    Every probe states `mustContain` / `mustNotContain`, and **`mustNotContain: ["No token provided"]` is the load-bearing half**: that string on a public route *is* the outage. A status-only table would have read the fixed login as broken and, during the outage, would have read 401 as simply "unauthorized" and moved on. It also runs **on push when routing or middleware changes** — atu was a routing change — and waits for the deployed SHA to catch up before probing, falling through with a warning rather than passing silently if the deploy never lands.
+
+    Scope stated honestly: it probes production, deliberately. A staging probe would have been green for the entire 27 hours.
+
+    **237.4 — AND A GUARD ON THE MONITOR.** [`publicSurfaceProbes.test.ts`](backend/__tests__/unit/routes/publicSurfaceProbes.test.ts) fails if a route is added to the public allowlist without a probe, if any probe checks a status without a shape, or if a carrier-auth probe stops watching for the outage signature. Its authority is `PUBLIC_CARRIER_AUTH_ROUTES` — the list that *makes* a route public — rather than a second hand-kept list that could disagree. Same shape as `SCHEDULED_JOB_NAMES`, same reason: a list nobody is forced to update goes stale silently, and a monitor reporting green over a stale list is worse than no monitor. Adversarially verified three ways — an unprobed public route, a status-only probe, and a probe that stops watching for `No token provided` — each turning it red.
+
+    **237.5 — §19 GAINS `presence-as-malfunction`.** Sub-pattern 16's fifth fire, and the first where the guard's own subject was the defect: it asserted `authenticate` was present on the mount line, and the presence was the bug. Every earlier fire was a guard failing to *observe* something wrong; this one was pointed at the wrong thing and green *because of* it. New rule: a guard whose subject is a middleware, mount, gate or boundary must **exercise** it.
+
+    **237.6 — §14.1 SANDBOX TRAPS.** Three of my own probes were wrong before the fix was ever in question — `pkill` silently doing nothing (three "restarts" all hit a stale process; `bootedAt` exposed it), `NODE_ENV=production` demanding TLS a local container lacks, and `prisma generate` picking up the concurrent session's schema so the client asked for a column the container did not have. Each produced a plausible-looking failure *of the thing under test*, which is what makes them expensive.
+
 ## §14 LEGAL / COMPLIANCE STATUS
 
 - Property broker under 49 U.S.C. §§ 13904, 13906
@@ -2254,6 +2272,16 @@ Each is a discrete sprint. Mix of operational, security, UX, and technical debt.
   - Do NOT re-expose customer/commodity on `STATUS_ONLY` without an explicit reversal of THIS decision.
 
 ---
+
+## §14.1 SANDBOX TRAPS (this environment; each cost real time before it was recognised)
+
+These are not defects in the codebase. Each one produced a **plausible-looking failure of the thing under test**, which is what makes them expensive: the natural response is to debug the fix rather than the harness. Banked Arc 28 after all three fired in one arc.
+
+- **`pkill` silently does nothing here.** Three consecutive "restarts" of a local server all reported success and all left the original process running, so several rounds of diagnosis were spent on a stale build. **Kill by PID** (`netstat -ano | grep :PORT` → `taskkill /F /PID`), and **verify freshness from the artifact** — `/api/health` reports `bootedAt`, which is what finally exposed it. A restart you did not confirm is a restart that did not happen.
+- **`NODE_ENV=production` locally demands TLS the container does not offer.** Prisma refuses a plain Postgres connection and every query throws `error performing TLS handshake`, which surfaces as a 500 from whatever handler ran first. Append `?sslmode=disable` when running a production-config build against a local container.
+- **`prisma generate` picks up a concurrent session's schema.** A migration committed by another session between the container being created and the client being generated leaves the client asking for a column the container lacks — here, `users.googleSub` — and the resulting error names *your* handler. Re-run `prisma migrate deploy` against the rehearsal container after any pull or any concurrent-session commit.
+
+**The shared lesson:** when a probe fails, the first question is whether the probe is sound, not whether the code is. Two of the three above looked exactly like the feature being fixed was still broken.
 
 ## §15 TOOL PREFERENCES (this Claude Code environment)
 
@@ -2706,6 +2734,16 @@ All three CI jobs pinned `node-version: 20`, while `backend/package.json` had de
 The runner had also been saying so out loud on every run: *"actions target Node.js 20 but are being forced to run on Node.js 24"*. An annotation, not a failure, so it read as noise for weeks.
 
 Two things make this a Sub-pattern 16 instance rather than an ordinary version bump. The green was **real but mis-aimed** — tests genuinely passed, on the wrong runtime. And the contradiction was **already written down in two files that disagreed**, which is Pattern 6 sub-rule b (spatial contradiction) feeding 16: `engines` and the CI pin could not both be right, and nobody had read them together.
+
+**FIFTH FIRE — and the first where the guard's own subject was what broke (2026-08-21/22, Arcs 27-28).**
+
+Arc 15 added `authenticate` to the `/carrier-auth` mount so the 2FA wall would gate. The mount-parity test asserted the STRING `authenticate` appears on each mount line. It did. **The string being present is what broke carrier login for 27 hours** — that mount is the only carrier mount holding routes deliberately written *without* `authenticate`, and a mount-level guard cannot know that.
+
+Every prior fire was a guard failing to observe a thing that was wrong. This one is a guard **confirming the presence of the very thing that was wrong**, and reporting it as health. Naming it: **presence-as-malfunction.** The guard was not merely blind — it was pointed at the defect and green because of it.
+
+**What made it survive 27 hours** is the part worth keeping. CI was green (the change compiled and tested). `/api/health` was 200 throughout. Error rates were flat, because **a 401 is not an error**. Every automated signal the platform owned agreed the system was healthy while its front door was locked, and a human walking the site is what found it.
+
+**GOING-FORWARD RULE: a guard whose subject is a middleware, mount, gate or boundary must EXERCISE it — send a request and read the answer.** A text assertion over a mount line can only ever prove a string is written there, and this fire proves the string can be the bug. Arc 27's replacement builds the real chain and asserts both directions: the public routes reachable, the protected ones refused. Arc 28 extends the same principle to production with a 15-minute probe that asserts response **shape**, because the broken login and the fixed login both return 401 and only the body tells them apart.
 
 **GOING-FORWARD RULE, now canonical: any change to a dependency or to an `engines` field re-checks the CI runtime pin IN THE SAME COMMIT.** Not afterwards, and not on the next failure. A dependency with an engine floor is a claim about the runtime, and the pin is where that claim is either honoured or silently contradicted. Cheap: one grep of `node-version` against `engines`.
 

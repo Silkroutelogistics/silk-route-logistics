@@ -13,6 +13,24 @@ so it's searchable and never lost.
 
 ---
 
+## PRODUCTION OUTAGE — carrier authentication, 2026-08-21 14:59 UTC → 2026-08-22 15:09 UTC
+
+| | |
+|---|---|
+| **Window** | `2aa2b848` (v3.8.atu) deployed 2026-08-21 → `28edfbbf` (v3.8.aul) deployed 2026-08-22 15:09 UTC. **~27 hours.** |
+| **Impact** | `POST /api/carrier-auth/login` returned `401 {"error":"No token provided"}`. No carrier could sign in. `/verify-otp`, `/totp-verify`, `/resend-otp`, `/verify-email` and `GET /agreement/:type` were down with it, so no prospect could complete registration either. |
+| **Blast radius** | **Zero real carriers**, census-proven. The Arc 16 read-only census recorded `carrier_users: 4, totp_enabled: 0, approved_real: 0` — the single real carrier is PENDING and has `lastLogin = never`. Everything else is a test account. Nobody was turned away because nobody was trying. |
+| **Detection** | Founder walking the site. Not CI (green — the change compiled and tested), not `/api/health` (200 throughout), not error rates (a 401 is not an error). |
+| **Root cause** | A **correct fix with an unconsidered blast radius.** Arc 15 added `authenticate` to the `/carrier-auth` mount so the 2FA wall would actually gate — genuinely necessary, since `requireTotpEnrolled` short-circuits on `!req.user`. But `/carrier-auth` is the only carrier mount holding routes deliberately written *without* `authenticate`, and a mount-level guard cannot know that. |
+| **Guard class** | **Presence-as-malfunction.** The mount-parity test asserted the string `authenticate` appears on each mount line. It did — *the string being present is what broke login.* §19 Sub-pattern 16, in the direction nobody was watching. |
+| **Fix** | Method-aware allowlist mirroring the route definitions (`middleware/allowPublicCarrierAuth.ts`), plus a behavioural guard that sends real requests through the real chain instead of reading the file. |
+| **Verified on production** | `POST /carrier-auth/login` → `401 {"error":"Invalid credentials"}` — the *handler's* refusal. `GET /agreement/broker-carrier` → `200`, `version 2026-06-27-v1`, 11 sections. `/me`, `/application-status`, `/agreement/:type/pdf` and `GET /login` all still `401 {"error":"No token provided"}`. |
+| **Prevention** | Synthetic monitoring of all sixteen public production surfaces every 15 minutes, asserting response **shape** rather than status — because the broken login and the fixed login both return 401, and only the body separates them. Failure emails Wasi through the existing GitHub Actions channel. |
+
+**The detection gap is the real finding.** Every automated signal the platform had was green for 27 hours while its front door was locked. A health check that only asks "is the process up" cannot see a routing change, and a status-code check cannot see this one either. That is why the monitor asserts bodies.
+
+---
+
 ## P0 Fixed — 2026-08-22 (Arc 27: carrier login had been dead in production for 27 hours)
 
 - **`POST /api/carrier-auth/login` returned `401 {"error":"No token provided"}` in production.** You could not log in without already being logged in. Five siblings were down with it: `/verify-otp`, `/totp-verify`, `/resend-otp`, `/verify-email`, and `GET /agreement/:type` — the last being the reported symptom, a public `/onboarding` Step 4 stuck on "Loading the agreement…". **P0, live from 2026-08-21 10:59 EDT (`2aa2b848`, v3.8.atu) until this fix.**

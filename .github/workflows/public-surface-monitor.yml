@@ -1,0 +1,92 @@
+# SYNTHETIC MONITORING OF THE PUBLIC SURFACE — Arc 28.
+#
+# Carrier login returned 401 "No token provided" in production for ~27 hours and
+# nothing noticed. CI was green (the defect compiled and tested fine),
+# /api/health was 200 throughout, and a 401 does not raise an error rate. The
+# founder found it by walking the site.
+#
+# This closes that gap with the cheapest thing that actually works: curl the
+# public surface on a schedule and assert the SHAPE of each response. A failing
+# workflow emails Wasi — the same channel that already reaches him — so there is
+# no alerting service to keep alive and no secret beyond what the repo has.
+#
+# It runs against PRODUCTION deliberately. A staging probe would have been green
+# through the entire outage.
+name: Public Surface Monitor
+
+on:
+  schedule:
+    # Every 15 minutes. GitHub's scheduler is best-effort and runs late under
+    # load, which is fine: the thing being caught here lasted 27 hours, so the
+    # difference between 15 and 25 minutes of detection latency does not matter.
+    # What matters is that it is minutes rather than "when somebody looks".
+    - cron: "*/15 * * * *"
+  # So a human can confirm a fix immediately rather than waiting for the tick.
+  workflow_dispatch:
+  # On push to main, because a deploy is when the public surface is most likely
+  # to change shape — that is exactly what happened in atu.
+  push:
+    branches: [main]
+    paths:
+      - "backend/src/routes/**"
+      - "backend/src/middleware/**"
+      - "backend/src/server.ts"
+      - "backend/scripts/probe-public-surfaces.mjs"
+      - ".github/workflows/public-surface-monitor.yml"
+
+# A second run while one is in flight tells us nothing new, and on the push
+# trigger it would race the deploy it is meant to be checking.
+concurrency:
+  group: public-surface-monitor
+  cancel-in-progress: false
+
+jobs:
+  probe:
+    name: Probe public production surfaces
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+
+      # On the push trigger this fires the moment the commit lands, while Render
+      # is still building — so the probe would hit the OLD process and report
+      # health that is one deploy stale. Wait for the deployed SHA to match, and
+      # if it never does, fall through and probe anyway rather than passing
+      # silently: a deploy that never lands is itself worth an email.
+      - name: Wait for the deployed SHA to catch up (push trigger only)
+        if: github.event_name == 'push'
+        continue-on-error: true
+        run: |
+          for i in $(seq 1 40); do
+            LIVE=$(curl -sS --max-time 10 https://api.silkroutelogistics.ai/api/health | sed -n 's/.*"sha":"\([^"]*\)".*/\1/p')
+            echo "attempt $i: live=$LIVE want=${GITHUB_SHA:0:8}"
+            [ "$LIVE" = "${GITHUB_SHA:0:8}" ] && exit 0
+            sleep 30
+          done
+          echo "::warning::deployed SHA never matched ${GITHUB_SHA:0:8}; probing whatever is live"
+
+      - name: Probe
+        run: node backend/scripts/probe-public-surfaces.mjs
+
+      # The probe's own stdout names which surface broke and what the body said,
+      # but the summary is what appears in the notification email without
+      # opening the run.
+      - name: Say so in the run summary
+        if: failure()
+        run: |
+          {
+            echo "## A public production surface is down"
+            echo
+            echo "These are the pages and links customers and carriers reach with **no session**."
+            echo "A failure here is visible to the outside world right now."
+            echo
+            echo "If the signature is \`No token provided\` on a route that should be public, a"
+            echo "mount-level guard has been added in front of it — see"
+            echo "\`backend/src/middleware/allowPublicCarrierAuth.ts\` and CLAUDE.md Item 236."
+            echo
+            echo "Open the **Probe** step above for the failing surface and its response body."
+          } >> "$GITHUB_STEP_SUMMARY"
