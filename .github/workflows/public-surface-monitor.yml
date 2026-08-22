@@ -1,18 +1,42 @@
-# SYNTHETIC MONITORING OF THE PUBLIC SURFACE — Arc 28.
+# SYNTHETIC MONITORING OF THE PUBLIC SURFACE — Arc 28, alert hygiene Arc 29.
 #
 # Carrier login returned 401 "No token provided" in production for ~27 hours and
-# nothing noticed. CI was green (the defect compiled and tested fine),
-# /api/health was 200 throughout, and a 401 does not raise an error rate. The
+# nothing noticed. CI was green (the change compiled and tested), /api/health was
+# 200 throughout, and error rates were flat because a 401 is not an error. The
 # founder found it by walking the site.
 #
-# This closes that gap with the cheapest thing that actually works: curl the
-# public surface on a schedule and assert the SHAPE of each response. A failing
-# workflow emails Wasi — the same channel that already reaches him — so there is
-# no alerting service to keep alive and no secret beyond what the repo has.
+# This closes that gap: curl the public surface on a schedule and assert the
+# SHAPE of each response. A failing run emails Wasi through the channel that
+# already reaches him — no alerting service to keep alive, no new secret.
+#
+# ═══ THE RULE THIS FILE EXISTS TO PROTECT ═══════════════════════════════════
+#
+# EVERY RED RUN OF THIS WORKFLOW IS A REAL PRODUCTION FAULT.
+#
+# That is worth more than the monitoring itself. A channel carrying occasional
+# drills, self-tests or branch experiments is a channel people learn to skim,
+# and a skimmed alert is the same as no alert — which is exactly the state the
+# 27-hour outage happened in. So:
+#
+#   - Adversarial verification runs as `mode: adversarial`, INSIDE a passing
+#     job. It proves the harness detects a wrong shape and exits GREEN.
+#     Arc 28 proved it instead by pushing a broken probe to a branch and taking
+#     a real red email; that works once and corrodes the channel if repeated.
+#   - Non-main refs do not probe at all. The probe hits PRODUCTION regardless of
+#     which branch it runs from, so a feature-branch run says nothing about that
+#     branch — it would just be a second opinion about prod, with the power to
+#     email. It exits green with a notice instead.
+#   - `mode: fire-drill` deliberately fails, and is the one deliberate exception.
+#     It exists to demonstrate the alert format end to end and is removed once
+#     it has.
 #
 # It runs against PRODUCTION deliberately. A staging probe would have been green
-# through the entire outage.
-name: Public Surface Monitor
+# for the entire 27 hours.
+#
+# The 🔴 in the name is load-bearing: GitHub puts the workflow name in the email
+# subject, and nothing else about that subject can be changed. It is what makes
+# a real production alert distinguishable at a glance from every other CI email.
+name: 🔴 PRODUCTION Public Surface Monitor
 
 on:
   schedule:
@@ -21,10 +45,9 @@ on:
     # difference between 15 and 25 minutes of detection latency does not matter.
     # What matters is that it is minutes rather than "when somebody looks".
     - cron: "*/15 * * * *"
-  # So a human can confirm a fix immediately rather than waiting for the tick.
-  workflow_dispatch:
-  # On push to main, because a deploy is when the public surface is most likely
-  # to change shape — that is exactly what happened in atu.
+
+  # main only. A probe change on a feature branch must never execute the monitor
+  # there — see the rule above, and the ref guard in the job.
   push:
     branches: [main]
     paths:
@@ -33,6 +56,21 @@ on:
       - "backend/src/server.ts"
       - "backend/scripts/probe-public-surfaces.mjs"
       - ".github/workflows/public-surface-monitor.yml"
+
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "probe = check production | adversarial = self-test, always green, no email"
+        required: false
+        default: probe
+        type: choice
+        # TEMPORARY — `fire-drill` is present for exactly one run, to prove this
+        # alert channel end to end and show the summary format in the inbox. It
+        # is REMOVED in the follow-up commit of this same arc, and a guard then
+        # pins its absence: a drill that stays one dropdown away from any
+        # maintainer is a drill that gets run, and every drill spends a little
+        # of the credibility the channel exists to hold.
+        options: [probe, adversarial, fire-drill]
 
 # A second run while one is in flight tells us nothing new, and on the push
 # trigger it would race the deploy it is meant to be checking.
@@ -52,13 +90,31 @@ jobs:
         with:
           node-version: "24"
 
+      # The probe hits production no matter which branch this runs from, so a
+      # run on a feature branch is not a test of that branch — it is a second
+      # opinion about prod that can email. Exit green with a notice.
+      - name: Refuse to alert from a non-main ref
+        if: github.ref != 'refs/heads/main'
+        run: |
+          echo "::notice::Not on main (${{ github.ref }}). This workflow probes PRODUCTION"
+          echo "::notice::regardless of branch, so a run here would say nothing about this"
+          echo "::notice::branch while still being able to email. Skipping."
+          echo "SKIPPED=1" >> "$GITHUB_ENV"
+
+      # ── adversarial: prove the harness works, inside a passing job ──
+      - name: Adversarial self-test (never alerts)
+        if: env.SKIPPED != '1' && inputs.mode == 'adversarial'
+        run: |
+          node backend/scripts/probe-public-surfaces.mjs --self-test
+          echo "SKIPPED=1" >> "$GITHUB_ENV"
+
       # On the push trigger this fires the moment the commit lands, while Render
       # is still building — so the probe would hit the OLD process and report
       # health that is one deploy stale. Wait for the deployed SHA to match, and
       # if it never does, fall through and probe anyway rather than passing
       # silently: a deploy that never lands is itself worth an email.
       - name: Wait for the deployed SHA to catch up (push trigger only)
-        if: github.event_name == 'push'
+        if: env.SKIPPED != '1' && github.event_name == 'push'
         continue-on-error: true
         run: |
           for i in $(seq 1 40); do
@@ -69,24 +125,31 @@ jobs:
           done
           echo "::warning::deployed SHA never matched ${GITHUB_SHA:0:8}; probing whatever is live"
 
+      # TEMPORARY — removed with the fire-drill input in the follow-up commit.
+      - name: Fire drill (deliberately fails, to prove the channel)
+        if: env.SKIPPED != '1' && inputs.mode == 'fire-drill'
+        run: |
+          node backend/scripts/probe-public-surfaces.mjs --fire-drill
+          echo "SKIPPED=1" >> "$GITHUB_ENV"
+
       - name: Probe
+        if: env.SKIPPED != '1' && inputs.mode != 'fire-drill'
         run: node backend/scripts/probe-public-surfaces.mjs
 
-      # The probe's own stdout names which surface broke and what the body said,
-      # but the summary is what appears in the notification email without
-      # opening the run.
-      - name: Say so in the run summary
+      # The probe writes the detailed self-explaining summary itself — it has the
+      # expected-vs-received data. This only fires if the harness died before it
+      # could, so the email is never empty of explanation.
+      - name: Fallback summary if the harness itself died
         if: failure()
         run: |
-          {
-            echo "## A public production surface is down"
-            echo
-            echo "These are the pages and links customers and carriers reach with **no session**."
-            echo "A failure here is visible to the outside world right now."
-            echo
-            echo "If the signature is \`No token provided\` on a route that should be public, a"
-            echo "mount-level guard has been added in front of it — see"
-            echo "\`backend/src/middleware/allowPublicCarrierAuth.ts\` and CLAUDE.md Item 236."
-            echo
-            echo "Open the **Probe** step above for the failing surface and its response body."
-          } >> "$GITHUB_STEP_SUMMARY"
+          if [ ! -s "$GITHUB_STEP_SUMMARY" ]; then
+            {
+              echo "# 🔴 The public surface monitor failed before it could report"
+              echo
+              echo "The probe harness itself errored, so there is no per-surface detail."
+              echo "Open the **Probe** step above for the raw output."
+              echo
+              echo "This still means the check did not complete — treat production as"
+              echo "unverified until a green run follows."
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi

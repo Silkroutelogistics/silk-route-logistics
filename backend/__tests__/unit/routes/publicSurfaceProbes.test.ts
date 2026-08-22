@@ -27,6 +27,8 @@ import { PUBLIC_CARRIER_AUTH_ROUTES } from "../../../src/middleware/allowPublicC
 
 // The probe file is ESM with no types; read it as text rather than importing,
 // so this test cannot be broken by the probe harness's own runtime.
+const WORKFLOW = path.join(__dirname, "../../../../.github/workflows/public-surface-monitor.yml");
+
 const probeSource = readFileSync(
   path.join(__dirname, "../../../scripts/probe-public-surfaces.mjs"),
   "utf8",
@@ -91,10 +93,7 @@ describe("Arc 28 — every public carrier-auth route has a monitor probe", () =>
   });
 
   it("the workflow runs on a schedule and on pushes that touch routing", () => {
-    const wf = readFileSync(
-      path.join(__dirname, "../../../../.github/workflows/public-surface-monitor.yml"),
-      "utf8",
-    );
+    const wf = readFileSync(WORKFLOW, "utf8");
     // A monitor that only runs on demand is a script, not a monitor.
     expect(wf).toMatch(/schedule:/);
     expect(wf).toMatch(/cron: "\*\/15 \* \* \* \*"/);
@@ -102,5 +101,84 @@ describe("Arc 28 — every public carrier-auth route has a monitor probe", () =>
     // visible in minutes rather than at the next tick.
     expect(wf).toMatch(/backend\/src\/routes\/\*\*/);
     expect(wf).toMatch(/backend\/src\/middleware\/\*\*/);
+  });
+});
+
+/**
+ * ARC 29 — the alert channel is only worth having if every message in it is
+ * real, and that property is a function of the workflow's TRIGGERS.
+ *
+ * Widen them and the channel degrades silently: a push trigger on all branches
+ * turns every probe experiment into a red email, and one drill too many teaches
+ * the inbox to skim — which is the state the 27-hour outage happened in.
+ *
+ * So the trigger set is pinned. Exactly {schedule, push:main, workflow_dispatch}.
+ */
+describe("Arc 29 — the monitor's triggers are pinned so the channel stays trustworthy", () => {
+  const wf = readFileSync(WORKFLOW, "utf8");
+  // The `on:` block only, so a `push:` mentioned in prose or in another key
+  // cannot satisfy or break these.
+  const onBlock = wf.slice(wf.indexOf("\non:"), wf.indexOf("\nconcurrency:"));
+
+  it("has exactly three triggers: schedule, push, workflow_dispatch", () => {
+    const triggers = [...onBlock.matchAll(/^ {2}([a-z_]+):/gm)].map((m) => m[1]).sort();
+    expect(
+      triggers,
+      `triggers are ${triggers.join(", ")}. Adding one widens what can send mail to Wasi — ` +
+        `if that is intended, change this test deliberately and say why in CLAUDE.md.`,
+    ).toEqual(["push", "schedule", "workflow_dispatch"]);
+  });
+
+  it("the push trigger is scoped to main ONLY", () => {
+    const push = onBlock.slice(onBlock.indexOf("  push:"));
+    expect(
+      push,
+      "a push trigger on any branch means a probe change on a feature branch runs the " +
+        "monitor against PRODUCTION and can email. Arc 28 did exactly that, deliberately, once.",
+    ).toMatch(/branches: \[main\]/);
+    // No wildcard branch patterns anywhere in the push block.
+    expect(push.slice(0, push.indexOf("workflow_dispatch"))).not.toMatch(/branches:\s*\[\s*['"]?\*/);
+  });
+
+  it("a non-main ref cannot reach the probe step", () => {
+    // The structural half of the same guarantee: even a workflow_dispatch aimed
+    // at a branch must not probe, because the probe hits production regardless
+    // of ref and would email off a branch's probe list.
+    expect(wf).toMatch(/if: github\.ref != 'refs\/heads\/main'/);
+    expect(wf).toMatch(/SKIPPED=1/);
+    expect(
+      wf,
+      "the Probe step must be gated on the skip flag, or the ref guard is decorative",
+      // \s+ rather than \n\s+ on purpose: a CRLF checkout would otherwise make
+      // this guard silently environment-dependent, which is the same class of
+      // fragility as the text assertions it replaced.
+    ).toMatch(/name: Probe\s+if: env\.SKIPPED != '1'/);
+  });
+
+  it("adversarial mode exists, is dispatch-only, and cannot fail the run", () => {
+    // The whole point: verification of the harness happens INSIDE a green job.
+    // Asserts adversarial is PRESENT rather than that the option list is
+    // exactly two — pinning the list's contents is the fire-drill guard's job,
+    // and duplicating it here would mean two tests failing for one cause.
+    expect(onBlock).toMatch(/options: \[probe, adversarial/);
+    expect(wf).toMatch(/--self-test/);
+    // It must set the skip flag so the real probe does not then run and
+    // turn a self-test into a production alert.
+    const step = wf.slice(wf.indexOf("Adversarial self-test"));
+    expect(step.slice(0, 400)).toMatch(/SKIPPED=1/);
+  });
+
+  // NOTE — the guard pinning `fire-drill` OUT of the dispatch inputs lands in
+  // the follow-up commit of this arc, together with the removal of the input
+  // itself. It is deliberately absent here rather than skipped: this commit is
+  // the one that legitimately carries the input, for exactly one run, and a
+  // guard asserting the opposite of what the committed file says would have to
+  // be disabled to pass — which is how guards learn to be ignored.
+
+  it("the workflow name carries the severity marker", () => {
+    // GitHub puts the workflow name in the email subject and nothing else about
+    // that subject is controllable. This is the only lever for making a real
+    // production alert visually distinct in an inbox.
+    expect(wf).toMatch(/^name: 🔴 PRODUCTION Public Surface Monitor$/m);
   });
 });
