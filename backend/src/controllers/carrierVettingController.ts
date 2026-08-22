@@ -8,7 +8,7 @@ import { Response } from "express";
 import { AuthRequest } from "../middleware/auth";
 import { vetAndStoreReport } from "../services/carrierVettingService";
 import { runIdentityCheck } from "../services/identityVerificationService";
-import { checkChameleon, runFullChameleonScan } from "../services/chameleonDetectionService";
+import { checkChameleon, runFullChameleonScan, recomputeChameleonRiskLevel } from "../services/chameleonDetectionService";
 import { grantGracePeriod, checkAutoReversal } from "../services/complianceMonitorService";
 import { screenCarrier } from "../services/ofacScreeningService";
 import { verifyFacialMatch } from "../services/biometricVerificationService";
@@ -245,7 +245,32 @@ export async function reviewChameleonMatch(req: AuthRequest, res: Response) {
     },
   });
 
-  res.json(updated);
+  // Recompute the carrier's risk from the matches still standing. Without
+  // this the review only annotated a row: chameleonRiskLevel stayed HIGH, the
+  // tender block never lifted, and the card's own instruction to "clear them
+  // to release this block" would have been a false promise. §13.3 Item 231.
+  const riskLevel = await recomputeChameleonRiskLevel(match.carrierId);
+
+  // Clearing a match removes a 20-point chameleon deduction from the vetting
+  // score — but that score is persisted, so it stays stale until vetting runs
+  // again, and a stale score has its own block. Kick a re-vet so the number
+  // catches up. Fire-and-forget: it makes live FMCSA/OFAC/CSA calls and must
+  // not hold an admin's request open, and it must never fail the review it
+  // follows. Until it lands the carrier may still see the score block, which
+  // is why that message now names the manual re-vet as its exit.
+  if (riskLevel !== "HIGH") {
+    const profile = await prisma.carrierProfile.findUnique({
+      where: { id: match.carrierId },
+      select: { dotNumber: true, mcNumber: true },
+    });
+    if (profile?.dotNumber) {
+      void vetAndStoreReport(profile.dotNumber, match.carrierId, profile.mcNumber || undefined, "CHAMELEON_REVIEW", req.user!.id).catch((err) =>
+        log.error({ err, carrierId: match.carrierId }, "[Chameleon] post-review re-vet failed"),
+      );
+    }
+  }
+
+  res.json({ ...updated, chameleonRiskLevel: riskLevel });
 }
 
 /**

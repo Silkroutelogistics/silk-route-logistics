@@ -464,7 +464,7 @@ function buildSequenceEmail(template: string, name: string, step: number): strin
     introduction: `
       <p>Hi ${firstName},</p>
       <p>I'm Wasi, founder of Silk Route Logistics, a Michigan-licensed property broker (MC# 1794414, DOT# 4526880, BMC-84 bonded $75K, $100K contingent cargo through Hancock &amp; Associates). I came across your company and thought there might be a fit.</p>
-      <p>Compass Engine is our 35-point carrier vetting system. Every carrier on our network clears equipment age, claims ratio, and on-time-in-full at retailer DCs before hauling a load. Real-time GPS tracking on every load via the shipper portal. I personally handle every account today.</p>
+      <p>Compass Engine is our 34-point carrier vetting system. Every carrier on our network clears equipment age, claims ratio, and on-time-in-full at retailer DCs before hauling a load. Real-time GPS tracking on every load via the shipper portal. I personally handle every account today.</p>
       <p>If you have a recent BOL on a tricky lane, send it over and I will come back with a quote and the carrier's full Compass profile.</p>
       <p>Best,</p>
     `,

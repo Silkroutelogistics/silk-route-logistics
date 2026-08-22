@@ -112,7 +112,7 @@ const EMAIL_TEMPLATES: Record<TemplateType, { label: string; subject: string; pr
     preview: (name: string) => `<p>Hi ${name},</p>
 <p>I'm Wasi at Silk Route Logistics, a Michigan-licensed property broker (MC# 1794414, DOT# 4526880, BMC-84 bonded $75K, $100K contingent cargo through Hancock &amp; Associates). We move FTL dry van and reefer for CPG shippers across the Midwest and nationwide.</p>
 <p>What I can offer on a first lane:</p>
-<ul><li>Real-time GPS tracking on every load via our shipper portal</li><li>Compass Engine, our 35-point carrier vetting system, applied before any carrier hauls a load</li><li>Dedicated point of contact: I personally handle every account today</li></ul>
+<ul><li>Real-time GPS tracking on every load via our shipper portal</li><li>Compass Engine, our 34-point carrier vetting system, applied before any carrier hauls a load</li><li>Dedicated point of contact: I personally handle every account today</li></ul>
 <p>If you have a recent BOL on a lane that has been tricky, send it over and I will come back with a quote and the carrier's full Compass profile.</p>
 <p>Wasi</p>
 <p>Best regards,<br/><strong>Wasi Haider</strong><br/>CEO, Silk Route Logistics Inc.<br/>MC# 1794414 | DOT# 4526880<br/>(269) 220-6760 | whaider@silkroutelogistics.ai<br/>silkroutelogistics.ai</p>`,
@@ -131,7 +131,7 @@ const EMAIL_TEMPLATES: Record<TemplateType, { label: string; subject: string; pr
     subject: "Backup capacity quote",
     preview: (name: string) => `<p>Hi ${name},</p>
 <p>If you are looking at backup capacity for a tight week or peak season, I have a vetted carrier bench across dry van, reefer, flatbed, and specialized.</p>
-<p>Compass Engine is our 35-point carrier vetting system. Equipment age, brake performance, claims ratio, on-time-in-full at retailer DCs, and load-securement history are all checked before any carrier touches a load on our network. The full Compass profile travels with every quote.</p>
+<p>Compass Engine is our 34-point carrier vetting system. Equipment age, brake performance, claims ratio, on-time-in-full at retailer DCs, and load-securement history are all checked before any carrier touches a load on our network. The full Compass profile travels with every quote.</p>
 <p>If you have a lane or a single trial load you want quoted, send me the BOL or rate confirmation and I will come back with our number plus the carrier's full profile.</p>
 <p>Wasi</p>
 <p>Best regards,<br/><strong>Wasi Haider</strong><br/>Founder &amp; CEO, Silk Route Logistics Inc.<br/>(269) 220-6760 | whaider@silkroutelogistics.ai</p>`,

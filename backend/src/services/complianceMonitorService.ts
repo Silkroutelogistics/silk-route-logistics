@@ -212,7 +212,7 @@ export async function complianceCheck(carrierId: string): Promise<{
     // for KNOWN-young authority (the grant-date branch above, which only fires
     // when a date is actually on file). Here we warn only. The other compliance
     // gates below (authority STATUS active, insurance, OFAC, safety rating) plus
-    // the Compass 35-point vetting still apply, and an admin can set a specific
+    // the Compass 34-point vetting still apply, and an admin can set a specific
     // carrier's grant date via setAuthorityGrantDate to trigger real age
     // enforcement for that carrier. Platform-wide age enforcement returns once
     // the free FMCSA Socrata L&I "with history" dataset backfills
@@ -328,9 +328,30 @@ export async function complianceCheck(carrierId: string): Promise<{
     warnings.push("Authority document expired");
   }
 
-  // SOFT WARNING: chameleon risk
+  // HARD BLOCK — ratified 2026-08-21 (§14, §13.3 Item 231).
+  //
+  // This is deliberately a block and not a deduction, and it is the ONLY
+  // fraud signal that blocks. The distinction that earns it: chameleon risk is
+  // carrier-SPECIFIC evidence — this carrier's phone, email, address, EIN, IP
+  // or DOT hash overlapping another carrier's — not a generic score. A
+  // reincarnated carrier operating under a fresh MC is the fraud a broker
+  // cannot absorb, because the loss lands on the shipper's freight and SRL's
+  // bond, and it is not recoverable after the fact the way an overpayment is.
+  //
+  // It was labelled "SOFT WARNING" here while pushing to blocked_reasons,
+  // which meant the code and the comment said opposite things for as long as
+  // the line existed. Arc 24 ratified the behaviour and corrected the label.
+  //
+  // THE BLOCK ALWAYS NAMES ITS HUMAN EXIT. An AE clears the matches on the
+  // carrier's security card, and reviewChameleonMatch recomputes this field
+  // from the matches that remain — so working the queue genuinely releases the
+  // block rather than merely annotating it. A block a human cannot escape is a
+  // deletion with extra steps.
   if (carrier.chameleonRiskLevel === "HIGH") {
-    blocked_reasons.push("HIGH chameleon risk — suspected identity fraud");
+    blocked_reasons.push(
+      "HIGH chameleon risk — this carrier's identity overlaps another carrier's. " +
+        "Review the matches on the carrier's Security Signals card: clearing them releases this block.",
+    );
   } else if (carrier.chameleonRiskLevel === "MEDIUM") {
     warnings.push("MEDIUM chameleon risk — identity overlap with other carriers");
   }
@@ -338,7 +359,17 @@ export async function complianceCheck(carrierId: string): Promise<{
   // SOFT WARNING: low vetting score
   if (carrier.lastVettingScore !== null && carrier.lastVettingScore !== undefined) {
     if (carrier.lastVettingScore < 40) {
-      blocked_reasons.push(`Vetting score CRITICAL: ${carrier.lastVettingScore}/100`);
+      // §14: every block names its human exit. This score is a SNAPSHOT taken
+      // the last time vetting ran, so it can outlive the thing that caused it
+      // — most visibly after an AE clears a chameleon match, which removes a
+      // 20-point deduction that stays baked into this number until vetting
+      // runs again. Naming the re-vet is what stops the carrier being stuck
+      // behind a stale number with no stated way out.
+      blocked_reasons.push(
+        `Vetting score CRITICAL: ${carrier.lastVettingScore}/100 (as of ` +
+          `${carrier.lastVettedAt ? new Date(carrier.lastVettedAt).toISOString().slice(0, 10) : "unknown date"}). ` +
+          "If the underlying issues are resolved, re-run vetting from the carrier's Compliance tab to refresh it.",
+      );
     } else if (carrier.lastVettingScore < 60) {
       warnings.push(`Vetting score HIGH risk: ${carrier.lastVettingScore}/100`);
     }

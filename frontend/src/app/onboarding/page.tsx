@@ -1742,7 +1742,7 @@ export default function OnboardingPage() {
               <div className="pb-4 border-b border-[#EFE6D3]">
                 <p className="text-[10px] uppercase tracking-[0.22em] font-semibold text-[#BA7517] mb-1.5">Step 5 of 5</p>
                 <h2 className="font-serif italic font-semibold text-2xl text-[#0A2540] mb-2">Review Your Application</h2>
-                <p className="text-sm text-[#3A4A5F] leading-relaxed">Confirm everything looks right before submission. The Compass Engine begins its 35-point check immediately on submit.</p>
+                <p className="text-sm text-[#3A4A5F] leading-relaxed">Confirm everything looks right before submission. The Compass Engine begins its 34-point check immediately on submit.</p>
               </div>
               <div className="grid gap-3">
                 <div className="p-4 rounded-lg bg-[#FBF7F0] border border-[#EFE6D3]">

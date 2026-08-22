@@ -240,6 +240,42 @@ The `cp -r src/lib dist/backend/src/lib` step (Sprint 45-RC) is load-bearing for
 
 The `cp -r src/config dist/backend/src/config` step is load-bearing for runtime `__dirname`-relative reads of email signature templates (`backend/src/email/builder.ts:18` reads `dist/backend/src/config/signatures/whaider.html`). Item 72 (Sprint 44b pre-commit audit) caught the omission of this step in an intermediate Sprint 44b draft — restored before commit. Any future `__dirname`-relative asset under `backend/src/` must either live under `src/assets/` or `src/config/`, or the buildCommand must extend the cp chain.
 
+**MORE THAN ONE SESSION MAY BE WORKING THIS REPO AT ONCE (hard rule, added
+2026-08-21).**
+
+Two sessions took `v3.8.aud` on the same afternoon. Neither noticed. The
+letter is assigned from memory of "what came last", and a second session is
+precisely the thing that invalidates that memory.
+
+**Before every commit, in this order:**
+
+1. **Re-derive the version letter from origin, never from memory.** Run
+   `node backend/scripts/check-version-letter.js <letter>`. It fetches, takes
+   the maximum over both the footer and the commit subjects, and refuses a
+   letter already claimed on origin. Run it immediately before the commit —
+   origin moved twice under Arc 24 alone, so an answer from session start is
+   already stale.
+2. **Read `git status` for foreign modifications.** Files you did not touch,
+   modified since you started, belong to somebody else. Do not stage them, do
+   not revert them, do not "clean them up".
+3. **Never stage broader than the files you edited.** `git add backend/src`
+   is how another session's work — or an unrelated stray file — rides into
+   your commit. Name the paths. Arc 23's broad add swept in an empty file and
+   came within one directory of taking uncommitted work with it.
+
+**If a file you need is being edited by another session, it is theirs.** Do
+not race it. Arc 23 needed `schema.prisma` for a hold branch while another
+session had it open; the schema change went to `_pending_migrations/` instead
+and lost nothing, because that work was going to be held anyway. When their
+work has landed, restore YOUR file from `HEAD` and replay only their hunk —
+after verifying it verbatim in the tree first. Never the blanket checkout.
+
+**Untracked files are not branch-scoped.** `git branch -D` leaves behind any
+directory the branch created. Arc 23 abandoned a hold branch and left a
+destructive migration sitting untracked in `prisma/migrations/` — the
+SCHEDULED directory — where one `git add -A` would have applied it. After
+abandoning a branch, read `git status` for what the deletion did not take.
+
 **HELD WORK LIVES ON A BRANCH, NEVER ON `main` (hard rule, added 2026-08-20).**
 
 Any commit whose release conditions are not yet met — a migration waiting on a
@@ -1948,6 +1984,32 @@ Each is a discrete sprint. Mix of operational, security, UX, and technical debt.
     **It should not merge with `hold/retire-load-rate`.** Different release conditions — one waits on the zero-reader guard staying green through a deploy cycle, the other on this retirement soaking — and merging couples two unrelated decisions so that reverting either reverts both. They share only the deploy-hook-secret precondition, which now gates **two** held schema changes.
     **230.5 — WHAT A CARRIER-OWNED EQUIPMENT MODEL WOULD TAKE**, recorded because the VIN check was reaching for it and had nothing to hold. It needs an owner column (`carrierProfileId`) so equipment belongs to somebody; a carrier-portal surface to register it, since SRL cannot enter another company's fleet; and a link from a load to the specific unit that hauled it, which is the honest version of what `Load.truckId` was pretending to be. Only then does a VIN check have a population to verify. None of that is built and none of it is urgent — VIN verification is a motor-carrier control, and SRL's leverage over equipment is the Compass score and the insurance file, not an asset register.
 
+231. **The chameleon block, ratified — and the exit it was promising did not exist (Arc 24, 2026-08-21).**
+
+    Closes the policy question §13.3 Item 229.4 left for Wasi. HIGH chameleon risk hard-blocks a tender, deliberately; the reasoning and the universal rule it establishes are in §14.
+
+    **231.1 — THE COMMENT AND THE CODE SAID OPPOSITE THINGS.** `// SOFT WARNING: chameleon risk` sat directly above a push into `blocked_reasons`, which is a hard block on every tender path. Ratified as a block and the label corrected.
+
+    **231.2 — THE EXIT WAS ADVERTISED AND ABSENT.** Reviewing a match wrote `ChameleonMatch.status` and nothing else. `chameleonRiskLevel` — the field the block actually reads — has exactly one writer, in the detection service. So an AE could clear every match and the carrier stayed blocked forever. Now `reviewChameleonMatch` recomputes the level from the matches still standing, DISMISSED excluded, and the blocked reason names the card to do it on.
+
+    **231.3 — AND THE NEXT SCAN ERASED THE REVIEW.** The detection service's dedup lookup filtered `status IN (OPEN, REVIEWED)`, so a DISMISSED pair was not found and was **recreated as a fresh OPEN row** — on a weekly cron. An AE's decision had a seven-day half-life. The lookup now sees every status and skips a pair a human has already judged.
+
+    **231.4 — A SECOND BLOCK WAS WAITING BEHIND THE FIRST, AND THE FAN-OUT FOUND IT.** HIGH also deducts 20 points into `lastVettingScore`, a persisted snapshot that only moves when vetting re-runs — and `lastVettingScore < 40` is its own block. **Verified live before fixing:** after clearing, `chameleonRiskLevel` went to NONE and the carrier was still refused with `"Vetting score CRITICAL: 35/100"`. The AE follows the named exit, the first block lifts, and a second one nobody mentioned is standing there. That is the §14 promise failing on its own terms. Fixed both ways: the score block now names the re-vet as its exit, and a review that lowers the risk fires a re-vet (fire-and-forget — it makes live FMCSA/OFAC/CSA calls and must not hold an admin's request open, nor fail the review it follows).
+
+    **231.5 — DELIBERATELY NOT DONE.** The chameleon branch pushes nothing into `blocked_codes`, so `OverrideComplianceModal` cannot offer a scoped override for it — only the blanket 24-hour waiver that suspends every check. That is arguably correct for a fraud block, and making it scoped-overridable is a policy change, not a cleanup. Also unaddressed: `waterfallScoringService` reads the column directly and consults no override at all, so even a blanket waiver does not return the carrier to the waterfall pool.
+
+    **Proof:** [`_arc24-block-exit-proof.ts`](backend/scripts/_arc24-block-exit-proof.ts), **9/9**, real router over HTTP with a real admin session — blocked, message names the card, real tender refused 403, cleared, tender 201, rescan does not resurrect, confirming keeps the block, stale-score block names its own exit. Adversarial: removing the recompute takes it to 4/8 **while the message assertion still passes** — the block goes on advertising an exit that no longer works, which is the exact false-promise shape.
+
+    **Two of my own test defects, recorded.** The proof first ran against a container carrying carriers from previous runs that shared a hardcoded phone, so the rescan legitimately matched them and the failure looked like a code defect (`1 -> 6` matches, growing each run). Fixed by making the fixture hermetic — per-run fingerprints, fresh database. **A dirty database makes a correct fix look broken, which costs more than the run it saved.**
+
+232. **The published Compass count had drifted, and it is a marketing claim (Arc 24, 2026-08-21).**
+
+    Arc 23 removed two vetting checks. **36 → 34 distinct named checks.** Nothing recounted, and the number is not internal: "35-point vetting" was live on the homepage capability tile and its rotating pool, `/shippers` body copy and its ops-loop animation, the public Marco Polo prompt, four Lead Hunter outreach templates, the onboarding review step — and **§18.8 and §18.9 mandated the phrasing**, so the stale figure was being enforced as a rule.
+
+    All nine surfaces updated, and the two canonical sections with them. `identityVerificationService`'s "up to 35 points" is a different scoring scale and was left alone.
+
+    **The count is now held to the code.** [`compassCheckCount.test.ts`](backend/__tests__/unit/services/compassCheckCount.test.ts) counts distinct check NAMES — not `checks.push` calls, which number about 130 because one named check pushes once per outcome — and fails naming every surface that disagrees. Adversarially verified by reverting one surface to 35. A number written down in nine places is a maintenance liability; the guard is what makes it cheap.
+
 ## §14 LEGAL / COMPLIANCE STATUS
 
 - Property broker under 49 U.S.C. §§ 13904, 13906
@@ -1982,6 +2044,27 @@ Each is a discrete sprint. Mix of operational, security, UX, and technical debt.
   **TERMINATED reads as terminated, not as never-signed.** That distinction is enforced in two places (v3.8.atf): the carrier compliance panel names the date and reason, and the tender-time override modal treats `AGREEMENT_TERMINATED` as a hard block whose remedy is a signature rather than a waiver. Confusing the two was the original defect — an AE offered a waiver for a condition no waiver can fix.
 
 - **Caravan Quick Pay Agreement — exists in-house, pending counsel.** The body is `CARAVAN_QUICK_PAY_AGREEMENT` in the same file: 10 sections, versioned by `QP_VERSION` in that file. **The literal version string is deliberately not reproduced here** — go read the constant. Every time this section has restated it, it has gone stale, once inside the same hour it was written. `getAgreement()` resolves `quick-pay`, `quickpay`, and `qp` to it, so `GET /carrier-auth/agreement/quick-pay` serves it and the signed `CarrierAgreement` row written by [`routes/carrierAuth.ts`](backend/src/routes/carrierAuth.ts) records consent against a version that points at real clauses. It is a first draft written in-house. It is NOT attorney-reviewed and NOT final — §16 #2. It is a **supplement**, not a second master: Section 1 incorporates the BCA by reference, it deliberately does not restate BCA covenants, and the BCA controls on conflict. Every economic figure in it is the locked §8 ladder. When counsel returns, swap the body in that file and bump `QP_VERSION`; the signing mechanism records consent against whatever version is current, so no code change is needed. **Version-stamping invariant:** the version recorded on a `CarrierAgreement` signature row must be the version of the text the signer was actually shown, resolved server-side from `agreements.ts`. A request body must never decide it. The frontend `QP_VERSION` mirror this section previously flagged is gone — deleted in v3.8.asa, recorded at [`frontend/src/lib/carrierAgreements.ts`](frontend/src/lib/carrierAgreements.ts) — and the activation pane now fetches the body and posts back the version served with it. That closed the client half; v3.8.asb closed the server half. Both signing paths in [`routes/carrierAuth.ts`](backend/src/routes/carrierAuth.ts) (`sign-bca`, `quickpay-election`) now compare the posted version against the served constant, return `409 AGREEMENT_VERSION_STALE` on mismatch so a stale tab is told to reload rather than silently recording consent to a body nobody can reproduce, and stamp the constant — never the request. **The tripwire for any future consent write is the pattern `bodyVersion || CONSTANT`, or any write that stamps a version the request supplied.** The constant is the only correct source; the request is only ever evidence of what the signer was shown, which is what the 409 is for. **Correction history:** the "DRAFTED — 22 articles, 3 exhibits, 513 paragraphs, 42.6 KB" instrument described here through 2026-08-15 is not in this repo and never was. The 2026-08-15 replacement text was itself written mid-flight and read as false the moment its own commit landed — it said the endpoint 404s and cited `2026-05-24-v1`, both of which describe the state before that sprint. Corrected 2026-08-16. Describe what is, not what is in motion. That correction then went stale inside the same day: this section cited `2026-08-15-v1` while the constant had moved to `-16`, and it warned about a frontend version mirror that had already been deleted, while the server-side tripwire that actually remained went unrecorded. Corrected again 2026-08-16. That correction was then itself overtaken while it was being written: a parallel sprint bumped the constant again (v3.8.asb, narrowing two Quick Pay clauses that promised more than the billing path delivers) between the sentence being typed and the pass being verified. Three drifts, one of them inside the hour. So the literal is now gone from this section entirely. The lesson is narrower than "describe what is" — **do not restate a value that lives in code. Cite the constant and make the reader go read it.** A version string in prose has a half-life measured in hours; a pointer to the constant does not.
+- **A SEVERE CARRIER-SPECIFIC FRAUD SIGNAL MAY BLOCK A TENDER; THE BLOCK MUST
+  ALWAYS NAME ITS HUMAN EXIT (ratified 2026-08-21, Arc 24).** Chameleon risk at
+  HIGH is the only fraud signal that blocks rather than deducts, and it earns
+  that because it is evidence about THIS carrier — a phone, email, address,
+  EIN, IP or DOT hash overlapping another carrier's — not a generic score. A
+  reincarnated carrier under a fresh MC is the loss a broker cannot absorb: it
+  lands on the shipper's freight and SRL's bond, and unlike an overpayment it
+  is not recoverable afterwards.
+
+  **The exit is the load-bearing half.** An AE reviews the matches on the
+  carrier's Security Signals card; clearing them recomputes the risk from what
+  remains and releases the block. Confirming one keeps it. A block a human
+  cannot escape is a deletion with extra steps, so the blocked reason itself
+  states the remedy rather than leaving an AE to find it.
+
+  This applies to every block, not just this one. The vetting-score block was
+  found in the same arc to be a SECOND, unnamed block sitting behind the first:
+  clearing a match removes a 20-point deduction that stays baked into a
+  persisted score until vetting re-runs, so an AE followed the named exit and
+  hit a different wall. It now names the re-vet as its own exit.
+
 - **FAIL TOWARD NOT PAYING, NOT TOWARD PAYING THE WRONG NUMBER (ratified 2026-08-21, Arc 16/17).** When a money path cannot determine what SRL owes, it must **refuse and tell a human** — never substitute a number that happens to be nearby.
 
   The rule exists because the alternative was in production. `createCarrierPayOnDelivery` read `load.carrierRate || load.rate || 0`, and `load.rate` holds the CUSTOMER rate on the primary creation path. With no accept path writing `carrierRate`, an ordinary load settled the carrier at **100% of SRL's revenue** — silently, on a document that looked entirely normal. The `||` was there to be safe. It was the bug.
@@ -2121,7 +2204,7 @@ Cold-outreach copy MUST follow voice.md + §4 + §5:
 - No marketing softeners ("I'd love the opportunity", "see if we can add value", "would you be open to a brief call", "I'd be happy to").
 - No em-dashes in body copy (commas, colons, sentence breaks instead). Em-dashes acceptable only in list-separator context.
 - No "we track" / "we serve" / "we deliver to X retailers" implied-portfolio language unless the portfolio actually exists. Use industry-knowledge framing: "In refrigerated CPG, the operational signal that matters is..."
-- Compass Engine is a **35-point carrier vetting system**. Never describe as "AI-powered market intelligence" (per voice.md line 25 prohibition).
+- Compass Engine is a **34-point carrier vetting system** (re-derive this number before quoting it — `backend/__tests__/unit/services/compassCheckCount.test.ts` holds every surface to the code). Never describe as "AI-powered market intelligence" (per voice.md line 25 prohibition).
 - Authority line on every cold-outreach intro: `Michigan-licensed property broker (MC# 1794414, DOT# 4526880, BMC-84 bonded $75K, $100K contingent cargo through Hancock & Associates)`.
 - Sender identity: `Wasi Haider` / `whaider@silkroutelogistics.ai` (never `Wasih`). Single source of truth: `CEO_NAME` + `CEO_EMAIL` exports in [`backend/src/email/builder.ts`](backend/src/email/builder.ts) — startup log line surfaces a regression in production logs immediately.
 - Specific operational ask at close: "send a recent BOL on a tricky lane and I'll come back with a quote and the carrier's full Compass profile" — never "would you be open to a brief call this week?"
@@ -2144,7 +2227,7 @@ Hook structure rule (per voice.md, restated here for outreach scope):
   - Opening sentence: a company-specific operational signal that proves recipient research. Not credentials.
   - Authority line (MC#, BMC-84, contingent cargo): one line above signature. Not paragraph one.
   - Length: 4-5 short paragraphs. Tight beats long.
-  - Compass Engine described correctly (35-point carrier vetting), never "AI-powered market intelligence".
+  - Compass Engine described correctly (34-point carrier vetting — see §18.8 on re-deriving the count), never "AI-powered market intelligence".
 
 Implementation guidance for Lead Hunter system prompts (touch1ColdChainTemplate, touch1WellnessTemplate, fallback): the system prompt must explicitly enumerate the banned constructions in §18.9 above and instruct the model to self-check before output. The audit is also applied at the test/preview stage — Little Spoon and MERIT preview render must pass §18.9 audit, not just §18.8 honest-framing.
 

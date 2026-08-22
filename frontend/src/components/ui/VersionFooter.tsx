@@ -14809,7 +14809,27 @@
 //   absent from that set and is therefore unloggable-in today.
 //   Zero routes are CEO-exclusive, and whaider@ is ADMIN, not CEO — so the
 //   boundary that actually matters is ADMIN-only, not "CEO-only".
-export const SRL_VERSION = "3.8.aue";
+// v3.8.aug — Arc 24. Letter aug, not auf: a second session held auf in
+//   uncommitted files, which git cannot see. The guard added this arc reads
+//   the working-tree diff for exactly that reason, and caught it.
+//   THE CHAMELEON BLOCK IS RATIFIED and now has a real exit. It hard-blocks
+//   tenders deliberately — carrier-specific fraud evidence, not a score —
+//   under a comment that had said SOFT WARNING while pushing to
+//   blocked_reasons. The exit it advertised did not exist: reviewing a match
+//   wrote the match row and nothing else, so the field the block reads never
+//   moved and a cleared carrier stayed blocked forever. Worse, the weekly
+//   scan looked pairs up with a filter that excluded DISMISSED and RECREATED
+//   cleared matches as fresh OPEN rows — a reviewer's decision had a
+//   seven-day half-life.
+//   And a SECOND block was waiting behind the first: the 20-point chameleon
+//   deduction is baked into a persisted vetting score that only moves when
+//   vetting re-runs, so an AE followed the named exit and hit a different
+//   wall. Verified live, then fixed — that block names its own exit now.
+//   Compass recount 36 -> 34 after Arc 23 removed two checks. 35-point was
+//   live on the homepage, /shippers, the public chatbot and four outreach
+//   templates, and CLAUDE.md mandated the phrasing, so a stale number was
+//   being enforced as a rule. A guard now holds the count to the code.
+export const SRL_VERSION = "3.8.aug";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

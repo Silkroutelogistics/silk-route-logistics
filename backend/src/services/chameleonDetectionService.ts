@@ -83,6 +83,44 @@ interface ChameleonResult {
   totalMatches: number;
 }
 
+/**
+ * The HIGH / MEDIUM / LOW thresholds, in one place.
+ *
+ * HIGH is what blocks a tender (complianceMonitorService), so the moment a
+ * review path and a scan path could compute it differently, an AE could clear
+ * a carrier and watch it re-block for reasons neither of them could explain.
+ */
+export function deriveRiskLevel(riskScores: number[]): ChameleonResult["riskLevel"] {
+  if (riskScores.length === 0) return "NONE";
+  const maxRisk = Math.max(...riskScores);
+  if (maxRisk >= 75 || riskScores.length >= 3) return "HIGH";
+  if (maxRisk >= 50 || riskScores.length >= 2) return "MEDIUM";
+  return "LOW";
+}
+
+/**
+ * Recompute a carrier's chameleon risk from the matches that are still
+ * standing, and persist it.
+ *
+ * This is what makes the tender block escapable. DISMISSED matches are
+ * excluded because an AE has judged that pair; CONFIRMED_FRAUD and OPEN both
+ * still count, so confirming a match keeps the carrier blocked rather than
+ * quietly resolving it.
+ *
+ * Called after every review. Returns the level it wrote.
+ */
+export async function recomputeChameleonRiskLevel(carrierId: string) {
+  const standing = await prisma.chameleonMatch.findMany({
+    where: { carrierId, status: { not: "DISMISSED" } },
+    select: { riskScore: true },
+  });
+  const riskLevel = deriveRiskLevel(standing.map((m) => m.riskScore));
+  await prisma.carrierProfile.update({
+    where: { id: carrierId },
+    data: { chameleonRiskLevel: riskLevel },
+  });
+  return riskLevel;
+}
 export async function checkChameleon(carrierId: string): Promise<ChameleonResult> {
   // Ensure fingerprint exists
   await buildFingerprint(carrierId);
@@ -152,14 +190,20 @@ export async function checkChameleon(carrierId: string): Promise<ChameleonResult
 
     const matchType = fields.length > 1 ? "MULTI" as const : fields[0];
 
-    // Create or update ChameleonMatch record
+    // Look up the pair regardless of status. The previous filter excluded
+    // DISMISSED, so a match an AE had cleared was not found here and was
+    // RECREATED as a fresh OPEN row on the very next scan — the clear was
+    // undone silently, and the carrier re-blocked. §13.3 Item 231.
     const existingMatch = await prisma.chameleonMatch.findFirst({
-      where: {
-        carrierId,
-        matchedCarrierId: mfp.carrierId,
-        status: { in: ["OPEN", "REVIEWED"] },
-      },
+      where: { carrierId, matchedCarrierId: mfp.carrierId },
+      orderBy: { createdAt: "desc" },
     });
+
+    // A human has already judged this pair. Respect that: do not recreate it,
+    // and do not let it drive the risk level. If genuinely new evidence
+    // appears it arrives as a different pair or a wider matchType, which does
+    // create a new row.
+    if (existingMatch?.status === "DISMISSED") continue;
 
     if (!existingMatch) {
       await prisma.chameleonMatch.create({
@@ -182,14 +226,9 @@ export async function checkChameleon(carrierId: string): Promise<ChameleonResult
     });
   }
 
-  // Determine overall risk level
-  let riskLevel: ChameleonResult["riskLevel"] = "NONE";
-  if (matches.length > 0) {
-    const maxRisk = Math.max(...matches.map((m) => m.riskScore));
-    if (maxRisk >= 75 || matches.length >= 3) riskLevel = "HIGH";
-    else if (maxRisk >= 50 || matches.length >= 2) riskLevel = "MEDIUM";
-    else riskLevel = "LOW";
-  }
+  // One source for the thresholds, shared with recomputeChameleonRiskLevel so
+  // a review and a rescan can never disagree about what HIGH means.
+  const riskLevel = deriveRiskLevel(matches.map((m) => m.riskScore));
 
   // Update carrier profile with chameleon check results
   await prisma.carrierProfile.update({
