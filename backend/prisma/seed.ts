@@ -1,10 +1,72 @@
+// v3.8.auf — dotenv is imported HERE, first, on purpose. assertNotProduction()
+// below reads DATABASE_URL, and PrismaClient loads .env on its own AFTER module
+// init. A guard that read process.env before dotenv ran would see "absent",
+// pass, and then let Prisma connect to the very database it was meant to
+// refuse — the exact shape of the Resend near-miss banked at §13.3 Item 221.
+import "dotenv/config";
 import { PrismaClient, UserRole } from "@prisma/client";
 import { encrypt } from "../src/utils/encryption";
 import bcrypt from "bcryptjs";
+import crypto from "crypto";
 
 const prisma = new PrismaClient();
 
+/** Production Neon host. Seeding this would TRUNCATE every table. */
+const PROD_DB_HOST_FRAGMENT = "ep-green-frog-ajsgv9me";
+
+/**
+ * Refuses to seed anything that looks like production. FAILS CLOSED: if
+ * DATABASE_URL is absent we cannot prove where we are pointing, so we refuse
+ * rather than assume it is safe. Must run BEFORE the TRUNCATE below.
+ */
+function assertNotProduction(): void {
+  const url = process.env.DATABASE_URL || "";
+  const host = url.split("@")[1]?.split("/")[0] ?? "(unparseable)";
+  const reasons: string[] = [];
+
+  if (!url) reasons.push("DATABASE_URL is not set — cannot verify the target is safe");
+  if (process.env.NODE_ENV === "production") reasons.push("NODE_ENV=production");
+  if (url.includes(PROD_DB_HOST_FRAGMENT)) reasons.push(`DATABASE_URL points at the production Neon host (${host})`);
+
+  if (reasons.length > 0) {
+    console.error("\n  REFUSING TO SEED\n");
+    reasons.forEach((r) => console.error(`   - ${r}`));
+    console.error(
+      "\n  This script TRUNCATEs every table in the schema. Running it against\n" +
+        "  production would destroy all data irrecoverably. Point DATABASE_URL at a\n" +
+        "  local or throwaway database and run again.\n",
+    );
+    process.exit(1);
+  }
+  console.log(`Seeding ${host} (NODE_ENV=${process.env.NODE_ENV ?? "undefined"})`);
+}
+
+/**
+ * v3.8.auf — the seed password is generated per run instead of being a literal
+ * committed to this file. The previous hardcoded value was shared by all seed
+ * accounts, and three of them were still live in production carrying it.
+ * Composition is guaranteed so the value also satisfies the platform's own
+ * strong-password rules; randomInt avoids the modulo bias of randomBytes % n.
+ */
+function generateSeedPassword(length = 20): string {
+  const upper = "ABCDEFGHJKLMNPQRSTUVWXYZ";
+  const lower = "abcdefghijkmnpqrstuvwxyz";
+  const digit = "23456789";
+  const special = "!@#$%^&*()-_=+";
+  const all = upper + lower + digit + special;
+  const pick = (set: string) => set[crypto.randomInt(set.length)];
+  const chars = [pick(upper), pick(lower), pick(digit), pick(special)];
+  while (chars.length < length) chars.push(pick(all));
+  for (let i = chars.length - 1; i > 0; i--) {
+    const j = crypto.randomInt(i + 1);
+    [chars[i], chars[j]] = [chars[j], chars[i]];
+  }
+  return chars.join("");
+}
+
 async function main() {
+  assertNotProduction();
+
   // Clean all tables via TRUNCATE CASCADE
   const tables = await prisma.$queryRaw<{ tablename: string }[]>`
     SELECT tablename FROM pg_tables WHERE schemaname = 'public' AND tablename != '_prisma_migrations'
@@ -14,7 +76,11 @@ async function main() {
   const now = new Date();
   const day = 24 * 60 * 60 * 1000;
 
-  const hash = await bcrypt.hash("Wasishah3089$", 12);
+  const seedPassword = generateSeedPassword();
+  console.log("\n  ┌─ SEED PASSWORD (this run only, not stored) ──────────────");
+  console.log(`  │  ${seedPassword}`);
+  console.log("  │  shared by every seeded account; regenerated each seed\n  └──────────────────────────────────────────────────────────\n");
+  const hash = await bcrypt.hash(seedPassword, 12);
 
   // Single admin account
   const admin = await prisma.user.create({
