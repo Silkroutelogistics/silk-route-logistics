@@ -2139,6 +2139,20 @@ Each is a discrete sprint. Mix of operational, security, UX, and technical debt.
 
     **237.6 — §14.1 SANDBOX TRAPS.** Three of my own probes were wrong before the fix was ever in question — `pkill` silently doing nothing (three "restarts" all hit a stale process; `bootedAt` exposed it), `NODE_ENV=production` demanding TLS a local container lacks, and `prisma generate` picking up the concurrent session's schema so the client asked for a column the container did not have. Each produced a plausible-looking failure *of the thing under test*, which is what makes them expensive.
 
+238. **Carrier OAuth stopped at its credentials gate — and the reason is a finding, not an absence (Arc 29→30 boundary, 2026-08-22).**
+
+    Arc 30 was to build carrier "Sign in with Google" on the SSO rails the concurrent session had just landed. Its Step 0 gate asked whether an **External** OAuth client exists. It does not, and the arc stopped there as specified. Setup: [`oauth-external-app-setup.md`](docs/internal/oauth-external-app-setup.md).
+
+    **238.1 — THE STAFF CLIENT CANNOT BE REUSED, AND REUSING IT WOULD BREAK STAFF SSO.** [`ssoService.ts:106`](backend/src/services/ssoService.ts) refuses any identity whose `hd` claim is not `silkroutelogistics.ai`; its own comment notes this "covers both a personal gmail.com account (no hd at all) and any other domain". That is exactly the population carriers come from. So either every carrier is refused `sso.wrong_domain`, or somebody deletes the `hd` check to make them work — and **the guarantee that only SRL Workspace accounts reach staff SSO is gone**, the guarantee that session had just proved by breaking it in its Leg 8 adversarial sweep. The second failure looks like a one-line edit and is a security regression, which is why this is recorded rather than left to be rediscovered.
+
+    **238.2 — FOUR GOOGLE CLIENTS, NOT ONE.** `GOOGLE_MAPS_API_KEY` (geocoding, not OAuth), `GOOGLE_OAUTH_*` (Lead Hunter Gmail reply tracking), `GOOGLE_SSO_*` (staff Workspace SSO — **shipped and dormant; its credentials are unset too**), and the carrier client that does not exist. The brief named the new one `GOOGLE_CLIENT_ID`/`SECRET`; the doc recommends `GOOGLE_CARRIER_*` and **flags the deviation rather than making it silently**, because a bare `GOOGLE_CLIENT_ID` among three prefixed clients is precisely the ambiguity the gate exists to refuse.
+
+    **238.3 — SCOPE DISCIPLINE IS THE SCHEDULE.** `openid`, `userinfo.email`, `userinfo.profile` and nothing else. Those three are non-sensitive, which keeps Google's verification light; one Gmail or Drive scope moves it to restricted review with a security questionnaire. Carrier sign-in reads only `email` and `email_verified`, so nothing more is needed — and adding a sensitive scope to a *published* app re-triggers review and can suspend sign-in for carriers mid-flight.
+
+    **238.4 — WHY NOT BUILD IT DARK.** A sign-in path that cannot be exercised end to end is one nobody has seen work, sitting in the highest-risk surface in the repo until the day a real carrier is the first to try it. Item 236 is the argument: a correct, compiling, CI-green change to that same carrier mount locked every carrier out of production for 27 hours precisely because no path exercised the front door. Building an unrunnable flow into it would be repeating that with the lesson already written down.
+
+    **Unblocks on:** an External-type client with the redirect URIs in the doc, its four env vars in all four places (§19 Sub-pattern 11 — local `.env`, Render, CI env blocks, §2.2). The build itself is fully specified at Item 217 and unchanged.
+
 ## §14 LEGAL / COMPLIANCE STATUS
 
 - Property broker under 49 U.S.C. §§ 13904, 13906
