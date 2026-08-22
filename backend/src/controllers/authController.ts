@@ -528,6 +528,11 @@ export async function getProfile(req: AuthRequest, res: Response) {
     select: {
       id: true, email: true, firstName: true, lastName: true,
       company: true, role: true, phone: true, isVerified: true, createdAt: true,
+      // Live 2FA state. The settings card previously read this from the auth
+      // store, which is populated at LOGIN — so enabling/disabling 2FA out of
+      // band (or by an admin script) left the card asserting a stale answer
+      // until the next sign-in. Boolean only; the secret is never returned.
+      totpEnabled: true,
       preferredTheme: true, darkMode: true, preferences: true,
       carrierProfile: { select: { mcNumber: true, dotNumber: true, tier: true } },
     },
