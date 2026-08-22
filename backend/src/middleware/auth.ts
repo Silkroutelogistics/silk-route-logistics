@@ -34,7 +34,10 @@ const activeSessions = new Map<string, Set<string>>();
 const MAX_SESSIONS_ADMIN = 1;  // ADMIN/CEO: 1 concurrent session
 const MAX_SESSIONS_DEFAULT = 3; // Others: 3 concurrent sessions
 
-function getTokenHash(token: string): string {
+// Exported so the SSO callback keys staff_sessions with the SAME derivation
+// the middleware looks up by. Note it TRUNCATES to 32 chars — reimplementing
+// a plain sha256 elsewhere would silently never match.
+export function getTokenHash(token: string): string {
   return crypto.createHash("sha256").update(token).digest("hex").slice(0, 32);
 }
 

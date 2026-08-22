@@ -409,6 +409,11 @@ export async function handleVerifyOtp(req: Request, res: Response) {
     },
   });
 
+  // Deliberately writes NO staff_sessions row. The password path has no
+  // remember-me, and the session policy's fail-closed branch turns an absent
+  // row into exactly the ruled 24h cap from iat. Adding a row here would be a
+  // regression, not a fix.
+
   registerSession(user.id, token, user.role);
   setTokenCookie(res, token, user.role);
   res.json({
@@ -841,6 +846,11 @@ export async function handleTotpLoginVerify(req: Request, res: Response) {
       userAgent,
     },
   });
+
+  // Deliberately writes NO staff_sessions row. The password path has no
+  // remember-me, and the session policy's fail-closed branch turns an absent
+  // row into exactly the ruled 24h cap from iat. Adding a row here would be a
+  // regression, not a fix.
 
   registerSession(user.id, token, user.role);
   setTokenCookie(res, token, user.role);

@@ -30,7 +30,7 @@ import { log } from "../lib/logger";
 import { logAuthEvent } from "../lib/authEvents";
 import { signToken } from "../controllers/authController";
 import { setTokenCookie } from "../utils/cookies";
-import { registerSession } from "../middleware/auth";
+import { registerSession, getTokenHash } from "../middleware/auth";
 import { ssoClient, ssoConfigured, verifyGoogleIdToken } from "../services/ssoService";
 
 const router = Router();
@@ -54,12 +54,22 @@ function stateCookieOpts() {
   };
 }
 
+/** Remember-me travels in its own short-lived cookie, not in the OAuth state.
+ *  It is a user preference, not a security parameter, and keeping it out of
+ *  `state` leaves that value a pure CSRF nonce with nothing to parse. */
+const REMEMBER_COOKIE = "srl_sso_remember";
+
 /** Start: redirect to Google. Top-level navigation, never XHR. */
 router.get("/google", (req, res) => {
   if (!ssoConfigured()) {
     res.status(503).json({ error: "SSO is not configured on this server" });
     return;
   }
+
+  // Remember-me is offered on the SSO path only; the password path has no
+  // such option and is fixed at 24h.
+  const remember = req.query.remember === "1" || req.query.remember === "true";
+  res.cookie(REMEMBER_COOKIE, remember ? "1" : "0", stateCookieOpts());
 
   const state = crypto.randomBytes(32).toString("base64url");
   res.cookie(STATE_COOKIE, state, stateCookieOpts());
@@ -160,7 +170,31 @@ router.get("/google/callback", async (req, res) => {
   // Mint a session identical in shape to the password path's.
   const token = signToken(user.id);
   registerSession(user.id, token, user.role);
-  setTokenCookie(res, token, user.role);
+
+  // Persist the session row that the staff session policy reads.
+  //
+  // Keyed with getTokenHash — the SAME derivation the middleware looks up by,
+  // which TRUNCATES sha256 to 32 chars. Reimplementing a plain sha256 here
+  // would produce a row that never matches and silently drop every session to
+  // the fail-closed 24h cap.
+  //
+  // rememberMe governs the ruled policy: true -> 7d rolling idle + 30d ceiling;
+  // false -> 24h. Upsert rather than create so a repeated callback cannot
+  // collide on the unique tokenHash.
+  const rememberMe = (req.cookies || {})[REMEMBER_COOKIE] === "1";
+  res.clearCookie(REMEMBER_COOKIE, { ...stateCookieOpts(), maxAge: undefined });
+  await prisma.staffSession
+    .upsert({
+      where: { tokenHash: getTokenHash(token) },
+      create: { tokenHash: getTokenHash(token), userId: user.id, rememberMe },
+      update: { rememberMe, lastSeenAt: new Date() },
+    })
+    .catch((err) => log.error({ err }, "[SSO] staff_sessions write failed"));
+
+  // Cookie lifetime follows the same choice: a 30-day Max-Age with remember-me,
+  // a session cookie without. The server-side ceiling is what actually governs;
+  // this only stops the browser holding a cookie longer than the policy allows.
+  setTokenCookie(res, token, user.role, rememberMe ? 30 * 24 * 60 * 60 * 1000 : null);
 
   await prisma.auditLog
     .create({
