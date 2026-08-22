@@ -346,6 +346,83 @@ async function main() {
       `${ids.size} carrier(s) survived scoring — 8a is an exclusion, not an empty list`);
   }
 
+  // ══ 9. ARC 27 — THE THREE FEDERAL ABSOLUTES ════════════════════════
+  //
+  // Arc 26 marked two blocks absolute by MIRRORING declarations that already
+  // existed elsewhere. These three are a ratified decision instead: an override
+  // releases a JUDGMENT CALL, never a FACT. Whether a 14-month authority is
+  // good enough is a judgment. Whether a carrier is sanctioned, has had its
+  // authority revoked, or is under an Out-of-Service order is a fact held by
+  // another party — SRL waiving its own record of one does not change it, it
+  // only removes the evidence SRL knew.
+  //
+  // Each is asserted the same way as the Arc 26 pair: blanket override active,
+  // carrier STILL blocked, code returned and non-overridable, and — the part a
+  // status check alone would miss — a waivable block on the same carrier is
+  // still released alongside it, so this is a partition and not a blunt
+  // "anything federal disables the override".
+  {
+    const federal: Array<{ tag: string; code: string; apply: (id: string) => Promise<unknown> }> = [
+      {
+        tag: "ofac", code: "OFAC_MATCH",
+        apply: (id) => prisma.carrierProfile.update({ where: { id }, data: { ofacStatus: "POTENTIAL_MATCH" } }),
+      },
+      {
+        tag: "revoked", code: "FMCSA_REVOKED",
+        apply: (id) => prisma.carrierProfile.update({ where: { id }, data: { fmcsaAuthorityStatus: "REVOKED" } }),
+      },
+      {
+        tag: "oos", code: "OUT_OF_SERVICE",
+        apply: (id) => prisma.carrierProfile.update({ where: { id }, data: { fmcsaAuthorityStatus: "OUT_OF_SERVICE" } }),
+      },
+    ];
+
+    for (const fed of federal) {
+      const c = await mkCarrier(fed.tag);
+      await signBca(c.id);
+      // A waivable block on the SAME carrier, so the partition is observable.
+      await prisma.carrierProfile.update({
+        where: { id: c.id }, data: { insuranceExpiry: new Date(Date.now() - 10 * 864e5) },
+      });
+      await fed.apply(c.id);
+      await blanket(c.id);
+      const v = await complianceCheck(c.id);
+
+      check(`9.${fed.tag}a. ${fed.code} + BLANKET → STILL BLOCKED`,
+        !v.allowed && codes(v).includes(fed.code),
+        `allowed=${v.allowed} codes=[${codes(v)}]`);
+
+      check(`9.${fed.tag}b. ${fed.code} is returned as NON-overridable`,
+        v.blocked_codes.some((bc) => bc.code === fed.code && bc.overridable === false),
+        `overridable=false — the endpoint 409s for it and the modal disables submit on it`);
+
+      check(`9.${fed.tag}c. the waivable block IS still released alongside it`,
+        v.released.some((r) => /insurance/i.test(r)),
+        `released=[${v.released.map((r) => r.slice(0, 40))}] — a partition, not a blanket disable`);
+    }
+
+    // The set is exactly five. A sixth added without ratification, or one
+    // quietly dropped, changes what an override can do and must fail here.
+    const c = await mkCarrier("five");
+    await signBca(c.id, { status: "TERMINATED", terminatedAt: new Date(), terminationReason: "Arc 27 set-size." });
+    await prisma.carrierProfile.update({
+      where: { id: c.id },
+      data: {
+        authorityGrantedDate: new Date(Date.now() - 183 * 864e5),
+        approvedAt: new Date(),
+        ofacStatus: "POTENTIAL_MATCH",
+        fmcsaAuthorityStatus: "REVOKED",
+      },
+    });
+    await blanket(c.id);
+    const all = await complianceCheck(c.id);
+    const absolutes = all.blocked_codes.filter((bc) => bc.overridable === false).map((bc) => bc.code).sort();
+    check("9z. all four simultaneously-triggerable absolutes survive one blanket override",
+      !all.allowed &&
+        ["AGREEMENT_TERMINATED", "AUTHORITY_TOO_YOUNG", "FMCSA_REVOKED", "OFAC_MATCH"].every((x) => absolutes.includes(x)),
+      `non-overridable codes returned: [${absolutes}] (OUT_OF_SERVICE shares fmcsaAuthorityStatus with FMCSA_REVOKED, so it is covered by 9.oos*)`);
+  }
+
   await prisma.$disconnect();
   const failed = results.filter((r) => !r.ok).length;
   console.log(`\n${results.length - failed}/${results.length} passed`);

@@ -24,7 +24,11 @@ export interface BlockedCode {
     | "AUTHORITY_TOO_YOUNG"
     | "AUTHORITY_UNVERIFIED"
     | "AGREEMENT_TERMINATED"
-    | "CHAMELEON_UNREVIEWED";
+    | "CHAMELEON_UNREVIEWED"
+    // Arc 27 — federal absolutes. Never overridable, scoped or blanket. §14.
+    | "OFAC_MATCH"
+    | "FMCSA_REVOKED"
+    | "OUT_OF_SERVICE";
   ageMonths?: number;
   overridable: boolean;
 }
@@ -107,15 +111,32 @@ export function OverrideComplianceModal({
     (c) => c.code === "CHAMELEON_UNREVIEWED" && c.overridable,
   );
 
+  // Arc 27 — the three federal absolutes. An override releases a JUDGMENT CALL,
+  // never a FACT: sanctions, a revoked authority and an Out-of-Service order are
+  // facts held by another party, and SRL waiving its own record of one does not
+  // change it — it only removes the evidence SRL knew. The backend returns
+  // overridable: false and the endpoint 409s; this is the third leg of that
+  // same mirror, so the AE is told rather than offered a button that is refused.
+  const federalAbsolute = codes.find(
+    (c) => c.code === "OFAC_MATCH" || c.code === "FMCSA_REVOKED" || c.code === "OUT_OF_SERVICE",
+  );
+
   const isAuthorityOverride = !!overridableAuthority;
-  const isHardBlocked = !!hardFloorAuthority || !!unverifiedAuthority || !!terminatedAgreement;
+  const isHardBlocked =
+    !!hardFloorAuthority || !!unverifiedAuthority || !!terminatedAgreement || !!federalAbsolute;
   const disabledTooltip = hardFloorAuthority
     ? "Authority under 12 months — hard floor, cannot be overridden"
     : unverifiedAuthority
       ? "FMCSA authority unverified — contact compliance"
       : terminatedAgreement
         ? "Agreement terminated — the carrier must re-sign. This is not something to override."
-        : undefined;
+        : federalAbsolute?.code === "OFAC_MATCH"
+          ? "OFAC/SDN sanctions match — the screening review must clear it. Not overridable."
+          : federalAbsolute?.code === "FMCSA_REVOKED"
+            ? "FMCSA authority revoked — the carrier must restore it with FMCSA. Not overridable."
+            : federalAbsolute?.code === "OUT_OF_SERVICE"
+              ? "FMCSA Out-of-Service order — only FMCSA can lift it. Not overridable."
+              : undefined;
 
   const { data: status } = useQuery<{
     recentOverrideCount: number;
@@ -270,6 +291,33 @@ export function OverrideComplianceModal({
             matches is the fix; the override only buys time, and an AE who reads
             it as the primary path learns to waive a fraud signal rather than
             look at it. */}
+        {/* Arc 27 — a tooltip on a disabled button is discoverable only by
+            hovering it. A federal absolute is the case where the AE most needs
+            to know that no amount of authority on their part changes the
+            answer, and what would. */}
+        {federalAbsolute && (
+          <div className="mb-3 p-3 border-l-4 rounded bg-[#F6E3E3] border-[#9B2C2C] text-sm">
+            <p className="font-semibold text-[#9B2C2C]">
+              {federalAbsolute.code === "OFAC_MATCH"
+                ? "Sanctions match — not overridable"
+                : federalAbsolute.code === "FMCSA_REVOKED"
+                  ? "Operating authority revoked — not overridable"
+                  : "Out-of-Service order — not overridable"}
+            </p>
+            <p className="mt-1 text-[#3A4A5F]">
+              {federalAbsolute.code === "OFAC_MATCH"
+                ? "This is a legal prohibition on transacting, not a risk to weigh. The screening review has to clear the match."
+                : federalAbsolute.code === "FMCSA_REVOKED"
+                  ? "The carrier has no operating authority. Restoring it is between the carrier and FMCSA."
+                  : "FMCSA has prohibited this carrier from operating. Only FMCSA can lift the order."}
+            </p>
+            <p className="mt-1 text-[#6B7685]">
+              An override cannot change a fact held by another party — it would only remove SRL&apos;s
+              record of knowing it.
+            </p>
+          </div>
+        )}
+
         {chameleonUnreviewed && (
           <div className="mb-3 p-2 border-l-4 text-xs rounded bg-red-50 border-red-500 text-red-800">
             <p className="font-medium mb-1">Identity overlap — unreviewed</p>

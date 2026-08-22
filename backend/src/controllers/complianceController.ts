@@ -408,6 +408,21 @@ export async function getOverrideStatus(req: AuthRequest, res: Response) {
  * complianceCheck looks each of these up by exact string, so a value absent
  * from this list produces an override row that matches nothing.
  */
+/**
+ * Arc 27 — codes no override may target, scoped or blanket. The endpoint
+ * refusing to MINT is half of the mirror rule; the gate refusing to HONOUR is
+ * the other half, and neither is sufficient alone: minting without honouring
+ * burns a carrier's quota on a no-op, honouring without minting leaves an
+ * endpoint happily issuing overrides the gate ignores.
+ */
+const NEVER_OVERRIDABLE_CHECK_CODES = [
+  "AUTHORITY_TOO_YOUNG_HARD_FLOOR",
+  "OFAC_MATCH",
+  "FMCSA_REVOKED",
+  "OUT_OF_SERVICE",
+  "AGREEMENT_TERMINATED",
+] as const;
+
 const SCOPED_CHECK_CODES = ["AUTHORITY_TOO_YOUNG", "CHAMELEON_UNREVIEWED"];
 
 // v3.8.ahn — extended to accept optional checkCode for scoped overrides
@@ -539,6 +554,18 @@ export async function overrideBlock(req: AuthRequest, res: Response) {
           "[Compliance] Could not compute released-at-grant for blanket override; minting anyway",
         );
       }
+    }
+
+    // Arc 27 — refuse to mint against a federal absolute. Same 409 the
+    // authority hard floor already returns, because it is the same answer: this
+    // is not a thing an override can act on, and issuing one would spend the
+    // carrier's monthly quota to change nothing.
+    if (checkCode && (NEVER_OVERRIDABLE_CHECK_CODES as readonly string[]).includes(checkCode)) {
+      res.status(409).json({
+        code: "HARD_FLOOR_NOT_OVERRIDABLE",
+        error: `${checkCode} cannot be overridden. It is a fact held by another party — the remedy is to change the fact, not SRL's record of it.`,
+      });
+      return;
     }
 
     // Create override with 24hr expiry. checkCode is persisted as null

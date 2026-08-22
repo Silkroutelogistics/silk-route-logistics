@@ -114,10 +114,39 @@ console.log(`  my unpushed commits use    : ${mine.length ? [...new Set(mine)].j
 // unstaged and not yours is the other session's work in progress — which is the
 // thing git cannot otherwise see.
 const dirty = sh("git diff");
-const claimedInTree = [...new Set(
-  [...dirty.matchAll(/^\+.*\bv(\d+\.\d+\.[a-z]+)/gm)].map((m) => letterOf(m[1])).filter(Boolean),
-)];
-if (claimedInTree.length) console.log(`  claimed in uncommitted work: ${claimedInTree.join(", ")}`);
+
+// Arc 27 — report WHICH FILE claims each letter, not just the letter.
+//
+// This scan cannot tell a CLAIM from a historical REFERENCE. An arc that
+// documents its own history writes "v3.8.atu" into prose and trips its own
+// guard; teaching it that difference means teaching it semantics. Naming the
+// file instead lets a human decide in one glance, which is all that was ever
+// needed.
+//
+// Arc 26 nearly dismissed a REAL collision for want of exactly this. The output
+// said only "auj", and part of that signal WAS self-inflicted (its own version
+// bump) — which made the whole of it look explainable. The other part was
+// another session's schema.prisma, and a file name would have said so
+// immediately. A guard that cries wolf is one people learn to ignore, and the
+// cost of ignoring this one is two sessions shipping the same version.
+const claimsByLetter = new Map();
+for (const block of dirty.split(/^diff --git /m)) {
+  const fileMatch = block.match(/^a\/(\S+)/m);
+  const file = fileMatch ? fileMatch[1] : "(unknown file)";
+  for (const m of block.matchAll(/^\+.*\bv(\d+\.\d+\.[a-z]+)/gm)) {
+    const L = letterOf(m[1]);
+    if (!L) continue;
+    if (!claimsByLetter.has(L)) claimsByLetter.set(L, new Set());
+    claimsByLetter.get(L).add(file);
+  }
+}
+const claimedInTree = [...claimsByLetter.keys()];
+if (claimedInTree.length) {
+  console.log("  claimed in uncommitted work:");
+  for (const [L, files] of claimsByLetter) {
+    console.log(`    ${L.padEnd(5)} ${[...files].join(", ")}`);
+  }
+}
 
 // The next free letter has to clear BOTH what origin knows and what is merely
 // sitting in the tree. Computing it from origin alone told me `auf` was next

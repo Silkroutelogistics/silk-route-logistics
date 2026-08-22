@@ -72,7 +72,11 @@ export interface BlockedCode {
     | "AUTHORITY_TOO_YOUNG"
     | "AUTHORITY_UNVERIFIED"
     | "AGREEMENT_TERMINATED"
-    | "CHAMELEON_UNREVIEWED";
+    | "CHAMELEON_UNREVIEWED"
+    // Arc 27 — federal absolutes. Never overridable, scoped or blanket. §14.
+    | "OFAC_MATCH"
+    | "FMCSA_REVOKED"
+    | "OUT_OF_SERVICE";
   ageMonths?: number;
   overridable: boolean;
 }
@@ -196,12 +200,21 @@ export async function complianceCheck(carrierId: string, pre?: ComplianceBundle)
    * endpoint would still happily mint an override for — that is the same
    * contradiction pointing the other way.
    *
-   * Deliberately NOT here, and worth a decision rather than a default: OFAC/SDN
-   * match, FMCSA authority revoked, and FMCSA Out-of-Service. Those are arguably
-   * not SRL's to waive at all — a sanctions hit is federal law and an OOS order
-   * is a federal safety prohibition — but none carries a `blocked_code` today,
-   * so making them absolute is new policy rather than reconciling existing
-   * contradictions. §13.3 Item 235.
+   * FIVE members, ratified across two arcs:
+   *
+   *   AUTHORITY_TOO_YOUNG (<12mo)  Arc 26 — reconciled an existing contradiction
+   *   AGREEMENT_TERMINATED         Arc 26 — same
+   *   OFAC_MATCH                   Arc 27 — ratified as policy
+   *   FMCSA_REVOKED                Arc 27 — ratified as policy
+   *   OUT_OF_SERVICE               Arc 27 — ratified as policy
+   *
+   * The first two were already declared un-waivable elsewhere and the gate was
+   * simply disagreeing. The last three are a decision: an override releases a
+   * JUDGMENT CALL, never a FACT. Whether a 14-month authority is good enough is
+   * a judgment. Whether a carrier is under sanctions, has had its authority
+   * revoked, or is subject to an Out-of-Service order is not — those are facts
+   * held by another party, and SRL waiving its own record of one does not
+   * change it. It only removes the evidence that SRL knew. §14.
    */
   const absoluteReasons = new Set<string>();
   const warnings: string[] = [];
@@ -355,10 +368,27 @@ export async function complianceCheck(carrierId: string, pre?: ComplianceBundle)
   if (carrier.fmcsaAuthorityStatus) {
     const status = carrier.fmcsaAuthorityStatus.toUpperCase();
     if (status === "REVOKED" || status === "NOT AUTHORIZED") {
-      blocked_reasons.push("FMCSA authority revoked");
+      // Arc 27 — ABSOLUTE. A carrier without operating authority is not a
+      // carrier. There is no version of this SRL is entitled to wave through:
+      // the freight would move under no authority at all, and the shipper's
+      // recourse and SRL's bond both assume one exists.
+      blocked_reasons.push(
+        "FMCSA_REVOKED: FMCSA operating authority is revoked or not authorized. " +
+          "No override can waive this — the carrier must restore authority with FMCSA.",
+      );
+      blocked_codes.push({ code: "FMCSA_REVOKED", overridable: false });
+      absoluteReasons.add(blocked_reasons[blocked_reasons.length - 1]);
     }
     if (status === "OUT_OF_SERVICE" || status === "OOS") {
-      blocked_reasons.push("Carrier is FMCSA Out-of-Service");
+      // Arc 27 — ABSOLUTE. An out-of-service order is a federal prohibition on
+      // operating, issued by FMCSA and lifted by FMCSA. An AE waiving it does
+      // not make the truck legal; it makes SRL the party that dispatched it.
+      blocked_reasons.push(
+        "OUT_OF_SERVICE: the carrier is under an FMCSA Out-of-Service order. " +
+          "No override can waive this — the order must be lifted by FMCSA.",
+      );
+      blocked_codes.push({ code: "OUT_OF_SERVICE", overridable: false });
+      absoluteReasons.add(blocked_reasons[blocked_reasons.length - 1]);
     }
   }
 
@@ -430,7 +460,16 @@ export async function complianceCheck(carrierId: string, pre?: ComplianceBundle)
 
   // HARD BLOCK: OFAC potential match (auto-suspended carriers already caught above, but belt-and-suspenders)
   if (carrier.ofacStatus === "POTENTIAL_MATCH") {
-    blocked_reasons.push("OFAC/SDN potential match — pending review");
+    // Arc 27 — ABSOLUTE. A sanctions match is a legal prohibition on
+    // transacting, not a risk score to weigh against a load that needs moving.
+    // The exit is the screening review clearing it, which changes the FACT;
+    // an override would only change SRL's record of the fact.
+    blocked_reasons.push(
+      "OFAC_MATCH: potential OFAC/SDN sanctions match, pending review. " +
+        "No override can waive this — the screening review must clear it.",
+    );
+    blocked_codes.push({ code: "OFAC_MATCH", overridable: false });
+    absoluteReasons.add(blocked_reasons[blocked_reasons.length - 1]);
   }
 
   // SOFT WARNING: probationary carrier (< 3 loads, < 90 days)

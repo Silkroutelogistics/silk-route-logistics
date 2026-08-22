@@ -368,23 +368,88 @@ export default function OnboardingPage() {
 
   // v3.8.aqj — fetch the canonical Broker-Carrier Agreement from the backend so
   // the Step 4 click-through renders ONE source (kills the drifted inline copy +
-  // the stale local version). Falls back to the local constant if the fetch
-  // fails so registration is never blocked.
+  // the stale local version).
+  //
+  // Arc 27 — the comment that stood here said it "falls back to the local
+  // constant if the fetch fails so registration is never blocked". That was true
+  // once and asb deleted the constant, making the page fail CLOSED. Fail-closed
+  // is right — you must not be able to agree to text you were never shown — but
+  // it turns every fetch failure into a permanently disabled checkbox, and the
+  // page said only "Loading the agreement…" forever.
+  //
+  // Four separate paths reached that spinner and none of them said anything: a
+  // non-ok response resolved to null, a network error hit an empty catch, a
+  // missing NEXT_PUBLIC_API_URL returned before fetching, and a hung request
+  // never resolved at all. When the endpoint started 401ing, a prospect saw a
+  // spinner where an error belonged and had no way to know registration was
+  // impossible.
+  //
+  // Now: bounded by a timeout, every failure named, and a retry. Fail-closed is
+  // preserved exactly — the checkbox is still gated on `bcaContent`.
   const [bcaContent, setBcaContent] = useState<{
     version: string;
     preamble: string[];
     sections: { heading: string; clauses: string[] }[];
   } | null>(null);
+  const [bcaError, setBcaError] = useState<string | null>(null);
+  const [bcaLoading, setBcaLoading] = useState(true);
+  const [bcaAttempt, setBcaAttempt] = useState(0);
+
   useEffect(() => {
     const apiUrl = process.env.NEXT_PUBLIC_API_URL;
-    if (!apiUrl) return;
-    fetch(`${apiUrl}/carrier-auth/agreement/broker-carrier`)
-      .then((r) => (r.ok ? r.json() : null))
-      .then((d) => {
-        if (d?.sections) setBcaContent(d);
+    if (!apiUrl) {
+      // A build-configuration fault, not a network one. Saying so is the
+      // difference between a fixable report and "the site is broken".
+      setBcaLoading(false);
+      setBcaError("This page is missing its API configuration. Please contact operations@silkroutelogistics.ai so we can complete your registration.");
+      return;
+    }
+
+    const controller = new AbortController();
+    // A hung request is the one failure the old code could not even represent:
+    // no rejection, no resolution, spinner forever.
+    const timer = setTimeout(() => controller.abort(), 12_000);
+    let cancelled = false;
+
+    setBcaLoading(true);
+    setBcaError(null);
+
+    fetch(`${apiUrl}/carrier-auth/agreement/broker-carrier`, { signal: controller.signal })
+      .then(async (r) => {
+        if (!r.ok) {
+          // Status carried through deliberately. "401" in a screenshot is what
+          // turned this from a mystery into a one-line diagnosis.
+          throw new Error(`The agreement could not be loaded (server said ${r.status}).`);
+        }
+        const d = await r.json();
+        if (!d?.sections?.length) throw new Error("The agreement came back empty.");
+        return d;
       })
-      .catch(() => {});
-  }, []);
+      .then((d) => {
+        if (cancelled) return;
+        setBcaContent(d);
+        setBcaLoading(false);
+      })
+      .catch((err: unknown) => {
+        if (cancelled) return;
+        const aborted = err instanceof DOMException && err.name === "AbortError";
+        setBcaLoading(false);
+        setBcaError(
+          aborted
+            ? "The agreement took too long to load. Check your connection and try again."
+            : err instanceof Error && err.message
+              ? err.message
+              : "The agreement could not be loaded.",
+        );
+      })
+      .finally(() => clearTimeout(timer));
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+      controller.abort();
+    };
+  }, [bcaAttempt]);
   const bcaVersionResolved = bcaContent?.version ?? null;
   const toggleArray = (field: "equipmentTypes" | "operatingRegions", val: string) => {
     const arr = form[field];
@@ -1613,8 +1678,37 @@ export default function OnboardingPage() {
               </div>
               <div className="p-5 rounded-xl bg-[#FBF7F0] border border-[#EFE6D3] max-h-80 overflow-y-auto text-sm text-[#3A4A5F] leading-relaxed space-y-4 print:max-h-none print:overflow-visible print:bg-white print:border-0 print:p-0">
                 <p className="font-serif italic font-semibold text-[#0A2540] text-base">Silk Route Logistics — Broker-Carrier Agreement (Click-Through)</p>
-                {!bcaContent ? (
+                {!bcaContent && bcaLoading ? (
                   <p className="text-[#6B7685]">Loading the agreement…</p>
+                ) : !bcaContent ? (
+                  /* Arc 27 — an explicit failure where a spinner used to sit
+                     forever. It names what went wrong, offers a retry, and
+                     gives a route out that does not depend on this page
+                     working, because the case that produced it was the API
+                     itself being unreachable. */
+                  <div className="rounded-lg border-l-4 border-[#9B2C2C] bg-[#F6E3E3] p-4 not-italic">
+                    <p className="font-semibold text-[#9B2C2C]">The agreement could not be loaded</p>
+                    <p className="mt-1 text-[#3A4A5F]">{bcaError}</p>
+                    <p className="mt-2 text-[#3A4A5F]">
+                      You cannot agree to terms that are not on screen, so registration is paused
+                      here until it loads. Nothing you have entered has been lost.
+                    </p>
+                    <div className="mt-3 flex flex-wrap items-center gap-3">
+                      <button
+                        type="button"
+                        onClick={() => setBcaAttempt((n) => n + 1)}
+                        className="px-4 py-2 rounded-lg bg-[#BA7517] text-white text-sm font-medium hover:bg-[#854F0B]"
+                      >
+                        Try again
+                      </button>
+                      <a
+                        href="mailto:operations@silkroutelogistics.ai?subject=Carrier%20registration%20%E2%80%94%20agreement%20will%20not%20load"
+                        className="text-sm text-[#BA7517] underline hover:text-[#854F0B]"
+                      >
+                        Email operations@silkroutelogistics.ai
+                      </a>
+                    </div>
+                  </div>
                 ) : (
                   <>
                     {bcaContent.preamble.map((p, i) => (
@@ -1648,7 +1742,9 @@ export default function OnboardingPage() {
                 <span className="text-sm font-medium text-[#0A2540]">
                   {bcaContent
                     ? "I agree to the Broker-Carrier Agreement above"
-                    : "The agreement is still loading. It has to be on screen before you can agree to it."}
+                    : bcaLoading
+                      ? "The agreement is still loading. It has to be on screen before you can agree to it."
+                      : "The agreement could not be loaded, so there is nothing here to agree to yet."}
                 </span>
               </label>
 

@@ -1,6 +1,7 @@
 import { buildInfo } from "../lib/buildInfo";
 import { schemaInfo } from "../lib/schemaInfo";
 import { requireTotpEnrolled } from "../middleware/requireTotpEnrolled";
+import { makeAllowPublicCarrierAuth } from "../middleware/allowPublicCarrierAuth";
 import { Router, Response } from "express";
 import { prisma } from "../config/database";
 import { authenticate, authorize, AuthRequest } from "../middleware/auth";
@@ -240,7 +241,39 @@ router.use("/documents", documentRoutes);
 //
 // authenticate is idempotent — running it here and again inside the router
 // re-reads the same cookie and re-populates the same req.user.
-router.use("/carrier-auth", authenticate, requireTotpEnrolled, carrierAuthRoutes);
+//
+// ═══ ARC 27 — AND THAT CHANGE LOCKED THE FRONT DOOR ═══════════════════════
+//
+// Adding `authenticate` here was right for the gate and wrong for /carrier-auth
+// specifically, because that router is the ONLY carrier mount holding routes
+// that must work with NO session. From atu until this fix, production answered
+// every one of them with 401 "No token provided":
+//
+//     POST /login          — you cannot log in if logging in requires a login
+//     POST /verify-otp     — step 2 of that same login
+//     POST /totp-verify    — step 3 of that same login
+//     POST /resend-otp     — the recovery path for step 2
+//     POST /verify-email   — clicked from an email by someone with no session
+//     GET  /agreement/:type— the PUBLIC onboarding click-through reads this
+//
+// No carrier could sign in, and no prospect could finish registering. It ran
+// for roughly 27 hours. The other four mounts below are untouched by this fix
+// because every route under them is meant to be authenticated; carrier-auth is
+// the exception, and being the exception is exactly what made it invisible.
+//
+// Arc 15's guard could not have caught it. It asserted the STRING
+// "authenticate" appeared on each mount line — and the string being present is
+// what broke login. That is §19 Sub-pattern 16 pointing the other way: the
+// guard proved the wall was mounted, and could not see that the wall now
+// blocked the door people come in through. The replacement guard
+// (__tests__/unit/routes/carrierAuthPublicRoutes.test.ts) sends real requests
+// through this real chain instead of reading this file.
+//
+// The allowlist is METHOD-AWARE on purpose: only POST /login is public, not
+// GET /login. And /agreement/:type ends in `$` so it cannot match
+// /agreement/:type/pdf, which is carrier-only.
+const allowPublicCarrierAuth = makeAllowPublicCarrierAuth(carrierAuthRoutes);
+router.use("/carrier-auth", allowPublicCarrierAuth, authenticate, requireTotpEnrolled, carrierAuthRoutes);
 router.use("/carrier-loads", authenticate, requireTotpEnrolled, carrierLoadRoutes);
 router.use("/carrier-compliance", authenticate, requireTotpEnrolled, carrierComplianceRoutes);
 router.use("/carrier-payments", authenticate, requireTotpEnrolled, carrierPaymentRoutes);

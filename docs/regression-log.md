@@ -13,6 +13,26 @@ so it's searchable and never lost.
 
 ---
 
+## P0 Fixed — 2026-08-22 (Arc 27: carrier login had been dead in production for 27 hours)
+
+- **`POST /api/carrier-auth/login` returned `401 {"error":"No token provided"}` in production.** You could not log in without already being logged in. Five siblings were down with it: `/verify-otp`, `/totp-verify`, `/resend-otp`, `/verify-email`, and `GET /agreement/:type` — the last being the reported symptom, a public `/onboarding` Step 4 stuck on "Loading the agreement…". **P0, live from 2026-08-21 10:59 EDT (`2aa2b848`, v3.8.atu) until this fix.**
+- **Root cause was a correct fix with an unconsidered blast radius.** Arc 15 added `authenticate` to the `/carrier-auth` mount so the 2FA wall would gate — genuinely necessary, since `requireTotpEnrolled` short-circuits on `!req.user`. But `/carrier-auth` is the only carrier mount holding routes deliberately written WITHOUT `authenticate`, and a mount-level guard cannot know that. The other four mounts are unaffected because everything under them is meant to be authenticated.
+- **Arc 15's guard could not have caught it.** `requireTotpEnrolled.test.ts` asserts the STRING `authenticate` appears on each mount line. It does — the string being present is what broke login. §19 Sub-pattern 16, pointing the other way: a guard can confirm the wall is mounted and be blind to the wall blocking the front door.
+- **Fixed** with a method-aware allowlist (`middleware/allowPublicCarrierAuth.ts`) that mirrors the route definitions rather than making a fresh decision, anchored so `/agreement/:type` cannot match the carrier-only `/agreement/:type/pdf`, and failing toward the guard on any unmatched path. Replaced the text guard with a **behavioural** one (14 cases, both directions, vacuity tripwire), adversarially verified by reproducing the Arc 15 state → exactly the seven public cases red.
+- **Second defect, same page:** four independent silent paths (non-ok → null, empty `.catch`, missing env, no timeout) all ended at one permanent spinner, and the comment above them still promised a local-constant fallback that v3.8.asb had deleted. Fail-closed was right and stays; what was missing was ever saying so. Now timed out at 12s, every failure named with its status, retry, and an email route that does not depend on the page working.
+- **Sibling sweep:** all twelve public surfaces curled against production. Three broken (same mount), nine healthy. AE, shipper and driver logins were never affected — only carriers.
+- **Three of my own probes were wrong first:** `pkill` silently does nothing in this shell (three "restarts" all hit a stale process, exposed by `bootedAt`), a `NODE_ENV=production` local server demands TLS the container lacks, and the concurrent session's SSO migration landed between container build and `prisma generate`. Each produced a plausible-looking failure that was not the fix.
+
+---
+
+## Ratified — 2026-08-22 (Arc 27: the federal absolutes; closes Item 235.4)
+
+- `OFAC_MATCH`, `FMCSA_REVOKED` and `OUT_OF_SERVICE` join the absolute set — **five total**. Declared un-waivable at the source first (non-overridable code, endpoint 409, disabled submit with the reason on screen), then mirrored into the gate.
+- **The test for admission: an override releases a judgment call, never a fact.** Whether a 14-month authority is good enough is a judgment. Sanctions, a revoked authority and an Out-of-Service order are facts held by another party — waiving SRL's record of one does not change it, it only removes the evidence SRL knew.
+- Proof 22 → **32/32**; each absolute blocked under a live blanket override with a waivable block still released alongside it, so it is a partition rather than a blunt disable. Adversarial: restoring `OFAC_MATCH` waivability → 31/32, failing exactly that case.
+
+---
+
 ## Fixed — 2026-08-22 (Arc 26: a blanket override skipped the checks it was never meant to waive)
 
 - **`complianceCheck` returned at the top on any blanket override**, above every check, with `blocked_reasons: []` and `blocked_codes: []`. It therefore waived the two blocks this codebase declares un-waivable: the authority **<12-month floor** (whose endpoint 409s `HARD_FLOOR_NOT_OVERRIDABLE`) and **AGREEMENT_TERMINATED** (whose modal disables submit). The endpoint, the modal and the code flags all agreed; the gate — the thing that decides whether a load can be tendered — did not. **P1, latent since Sprint 40**, and reachable by any ADMIN/CEO with a reason string. Documented as an open policy question at Item 233.4; ratified and closed here.

@@ -14924,7 +14924,37 @@
 //   Batched-vs-serial parity PASSES under the defect, because parity holds
 //   when both paths are equally wrong — which is why the floor is asserted
 //   directly rather than inferred from agreement.
-export const SRL_VERSION = "3.8.auk";
+// v3.8.aul — Arc 27. The report was "public /onboarding Step 4 hangs on Loading
+//   the agreement". The agreement fetch was one of SIX routes down, and the
+//   biggest was POST /carrier-auth/login: production returned 401 "No token
+//   provided". YOU COULD NOT LOG IN WITHOUT ALREADY BEING LOGGED IN. Also dead:
+//   verify-otp, totp-verify, resend-otp, verify-email. Live for ~27 hours.
+//   Root cause was a CORRECT fix with an unconsidered blast radius. atu added
+//   `authenticate` to the /carrier-auth mount so the 2FA wall would actually
+//   gate — necessary, since requireTotpEnrolled short-circuits on !req.user.
+//   But that mount is the only carrier mount holding routes deliberately
+//   written WITHOUT authenticate, and a mount-level guard cannot know that.
+//   ARC 15'S GUARD COULD NOT HAVE CAUGHT IT: it asserts the STRING
+//   "authenticate" appears on each mount line. It does — the string being
+//   present is what broke login. Sub-pattern 16 in the direction people forget:
+//   a guard can confirm the wall is mounted and be blind to the wall blocking
+//   the front door. Replaced with a behavioural one that sends real requests.
+//   Second defect, same page: four silent paths (non-ok, empty catch, missing
+//   env, no timeout) all ended at one permanent spinner, under a comment still
+//   promising a fallback asb had deleted. Fail-closed was right and stays; what
+//   was missing was ever SAYING so.
+//   Sibling sweep: 12 public surfaces curled against production, 3 broken (all
+//   this mount), 9 healthy. AE, shipper and driver logins were never affected.
+//   THE FEDERAL ABSOLUTES RATIFIED: OFAC_MATCH, FMCSA_REVOKED, OUT_OF_SERVICE
+//   join the set — five total. An override releases a JUDGMENT CALL, never a
+//   FACT. Sanctions, revocation and an OOS order are facts held by another
+//   party; waiving SRL's record of one does not change it, it only removes the
+//   evidence SRL knew. 32/32; restoring OFAC waivability → 31/32.
+//   Three of my own probes were wrong before any of that: pkill silently does
+//   nothing here (three "restarts" all hit a stale process), NODE_ENV=production
+//   demands TLS the container lacks, and the other session's migration landed
+//   between my container and my prisma generate. Each looked like a real bug.
+export const SRL_VERSION = "3.8.aul";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

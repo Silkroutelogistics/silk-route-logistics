@@ -263,6 +263,29 @@ precisely the thing that invalidates that memory.
    your commit. Name the paths. Arc 23's broad add swept in an empty file and
    came within one directory of taking uncommitted work with it.
 
+4. **THE INDEX IS SHARED STATE. Stage by explicit pathspec, late, never early.**
+   `git add` writes to `.git/index`, and there is one index per repository, not
+   one per session. Anything you stage is staged for the other session too, and
+   their next bare `git commit` takes it.
+
+   Arc 26 staged twelve files and paused to re-run the version guard. In that
+   gap the concurrent session committed, and all twelve rode into a commit
+   titled *"fix(auth): logout actually revokes the session"* — describing none
+   of them. They reset it back out correctly and nothing was lost, but the
+   window is the defect, and it is not small: any pause between `git add` and
+   `git commit` is a window.
+
+   So: **`git commit -F msg -- path1 path2 …`**, which stages and commits as one
+   act. A brand-new file still needs `git add` first, because a pathspec commit
+   only matches paths git already knows — do that immediately before the commit,
+   never as a separate step earlier in the arc.
+
+   Corollary for the version-letter guard: it reads the UNSTAGED diff, so
+   running it after staging your own bump makes it report your own letter as
+   claimed. Run it before you stage, and read the file list when it fires —
+   Arc 26's `auj` collision was real (the other session's `schema.prisma`) and
+   was very nearly dismissed because part of the same signal was self-inflicted.
+
 **If a file you need is being edited by another session, it is theirs.** Do
 not race it. Arc 23 needed `schema.prisma` for a hold branch while another
 session had it open; the schema change went to `_pending_migrations/` instead
@@ -2076,6 +2099,28 @@ Each is a discrete sprint. Mix of operational, security, UX, and technical debt.
 
     **And the proof caught my own test twice.** A shell heredoc ate the template literals in case 8, so two assertions ran real but printed *empty* detail — the "failure message that lies" shape from Arc 23, third fire of that quoting class in this lineage. Repaired via a file write with no shell interpolation. Case 8 then needed a tripwire of its own: "the floor carrier is absent" is trivially true of an empty candidate set.
 
+236. **Carrier login had been dead in production for 27 hours, and the onboarding symptom was one of six (Arc 27, v3.8.aul, 2026-08-22).**
+
+    **236.1 — WHAT WAS REPORTED vs WHAT WAS TRUE.** The report was that public `/onboarding` Step 4 hangs on "Loading the agreement…". The agreement fetch was one of **six** routes down, and the largest was **`POST /carrier-auth/login`**: `curl` against production returned `401 {"error":"No token provided"}`. **You could not log in without already being logged in.** Also dead: `/verify-otp`, `/totp-verify`, `/resend-otp`, `/verify-email`, and `GET /agreement/:type`.
+
+    **236.2 — ROOT CAUSE, and it was a correct fix with an unconsidered blast radius.** `2aa2b848` (v3.8.atu, Arc 15, 2026-08-21 10:59 EDT) added `authenticate` to the `/carrier-auth` mount line. That was *right* — `requireTotpEnrolled` short-circuits on `!req.user`, so without it the 2FA wall was inert. But `/carrier-auth` is the only carrier mount holding routes deliberately written WITHOUT `authenticate`, and a mount-level guard does not know that. The other four mounts Arc 15 touched are unaffected precisely because everything under them is meant to be authenticated. Being the exception is what made it invisible.
+
+    **236.3 — ARC 15'S OWN GUARD COULD NOT HAVE CAUGHT IT, AND ITS COMMENT SAYS WHY.** `requireTotpEnrolled.test.ts` reads `routes/index.ts` as TEXT and asserts the string `authenticate` appears on each mount line. It does — **the string being present is what broke login.** Sub-pattern 16 in the direction people forget: a guard can confirm the wall is mounted and be blind to the wall blocking the front door. Its own header warns that "presence is not function"; the warning was about the gate being absent, and the same blindness ran the other way.
+
+    **236.4 — THE FIX.** New [`middleware/allowPublicCarrierAuth.ts`](backend/src/middleware/allowPublicCarrierAuth.ts): a **method-aware** allowlist that hands the six routes straight to the router and lets everything else fall into the guard chain untouched. Method-aware because only `POST /login` is public, not `GET /login`; and `/agreement/:type` is anchored with `$` so it cannot match `/agreement/:type/pdf`, which is carrier-only. Fall-through is deliberately the safe direction — an allowlisted path the router does not handle continues into `authenticate` rather than out. The list **mirrors** the route definitions (each entry is a route whose own definition omits `authenticate`) rather than making a fresh decision, and each entry carries its reason as a field the test asserts is non-empty.
+
+    **236.5 — THE SECOND DEFECT: FOUR SILENT PATHS TO ONE SPINNER.** A non-ok response resolved to `null`, a network error hit `.catch(() => {})`, a missing `NEXT_PUBLIC_API_URL` returned before fetching, and a hung request never resolved. All four ended at "Loading the agreement…" forever with the checkbox disabled — and the comment above them still claimed a local-constant fallback "so registration is never blocked", which v3.8.asb had deleted. **Fail-closed was correct and stayed**; what was missing was ever saying so. Now: a 12s `AbortController` timeout, every failure named (status carried through — "401" in a screenshot is what turns a mystery into a one-line diagnosis), a retry that re-runs the effect, and a route out by email that does not depend on this page working.
+
+    **236.6 — SIBLING SWEEP (Phase 2), all twelve public surfaces curled against production.** Three broken, all the same mount, all fixed here; nine healthy — FMCSA lookup by DOT and by MC, carrier register, `/tracking/:token` (the BOL QR), the shipper quote form, the contact form, tender-action magic links, `/auth/login` (AE + shipper), `/driver-auth/login`. **AE, shipper and driver logins were never affected**; only carriers were locked out.
+
+    **236.7 — PROOF, and the process I was probing was not the one I thought.** The push is held (Step 0), so this was proven against a production-config local build of the **real** mount chain: the six public routes reach their handlers (`login` → `401 {"error":"Invalid credentials"}` — the *handler's* refusal, not the middleware's `"No token provided"`; the rest → Zod `400`; agreement → `200` with `version 2026-06-27-v1`, 11 sections), and `/me`, `/application-status`, `/agreement/:type/pdf` still return `No token provided`. **A status-only table would have read as still-broken; the body is what distinguishes.** Plus a behavioural guard, [`carrierAuthPublicRoutes.test.ts`](backend/__tests__/unit/routes/carrierAuthPublicRoutes.test.ts), 14 cases asserting both directions with a vacuity tripwire — adversarially verified by reproducing the Arc 15 state, which turns exactly the seven public cases red.
+
+    **Three of my own probes were wrong before any of that was true.** `pkill` does not work in this shell, so three "restarts" silently did nothing and I spent several rounds diagnosing a stale process — `bootedAt` on `/api/health` is what exposed it. A `NODE_ENV=production` local server demands TLS the container does not offer. And the concurrent session's SSO migration landed between my container being built and my `prisma generate`, so the client asked for a `users.googleSub` the container lacked. None was a defect in the fix; all three produced a plausible-looking failure, which is the point worth keeping.
+
+    **236.8 — THE FEDERAL ABSOLUTES, RATIFIED (Phase 3, closes Item 235.4).** `OFAC_MATCH`, `FMCSA_REVOKED` and `OUT_OF_SERVICE` join the absolute set — five total. Implemented by the mirror rule in order: declared un-waivable at the source first (a `blocked_code` with `overridable: false`, a 409 `HARD_FLOOR_NOT_OVERRIDABLE` from the override endpoint, a disabled submit with the reason rendered as a panel rather than only a tooltip), and only then mirrored into the gate's set. §14 carries the table and the test for admission: **an override releases a judgment call, never a fact.** Proof extended 22 → **32/32** — each of the three blocked under a live blanket override with its code returned, and a waivable block on the same carrier still released alongside it, so it is a partition and not a blunt "anything federal disables the override". Adversarial: restoring waivability of `OFAC_MATCH` → 31/32, failing exactly that case.
+
+    **236.9 — §2.2 GAINS THE SHARED-INDEX RULE (Phase 4).** From Arc 26: `git add` writes to a repository-wide index, so twelve staged files were swept into the other session's commit during the pause before mine. Stage by explicit pathspec, late, never early. The corollary is recorded too — the version guard reads the *unstaged* diff, so running it after staging your own bump makes it flag your own letter, and Arc 26's `auj` collision was real and was nearly dismissed for that reason.
+
 ## §14 LEGAL / COMPLIANCE STATUS
 
 - Property broker under 49 U.S.C. §§ 13904, 13906
@@ -2137,11 +2182,34 @@ Each is a discrete sprint. Mix of operational, security, UX, and technical debt.
   circuits the gate, and the response **names every block it released** rather
   than returning a bare `allowed: true`.
 
-  Two blocks are absolute and no override of any kind waives them: **authority
-  under 12 months** and **AGREEMENT_TERMINATED**. Both were already declared
-  un-waivable elsewhere — the override endpoint 409s rather than mint against a
-  <12-month authority, and the modal disables submit on a terminated agreement.
-  The gate was the one place that disagreed, and it was the place that decides.
+  **FIVE blocks are absolute and no override of any kind waives them**, ratified
+  across two arcs:
+
+  | Code | Ratified | Why |
+  |---|---|---|
+  | `AUTHORITY_TOO_YOUNG` (<12mo) | Arc 26 | reconciled an existing contradiction |
+  | `AGREEMENT_TERMINATED` | Arc 26 | same |
+  | `OFAC_MATCH` | Arc 27 | sanctions are a legal prohibition on transacting |
+  | `FMCSA_REVOKED` | Arc 27 | a carrier with no operating authority is not a carrier |
+  | `OUT_OF_SERVICE` | Arc 27 | a federal prohibition on operating, lifted only by FMCSA |
+
+  **An override releases a JUDGMENT CALL, never a FACT.** Whether a 14-month
+  authority is good enough for this load is a judgment, and judgments are what an
+  AE is entitled to make. Whether a carrier is under sanctions, has had its
+  authority revoked, or is subject to an Out-of-Service order is not a judgment —
+  those are facts held by another party. SRL waiving its own record of one does
+  not change the fact; it only removes the evidence that SRL knew. That is the
+  test for admission to this set, and it is why the first two entries arrived by
+  reconciliation and the last three by decision.
+
+  The Arc 26 pair were already declared un-waivable elsewhere — the override
+  endpoint 409s rather than mint against a <12-month authority, and the modal
+  disables submit on a terminated agreement — and the gate was the one place that
+  disagreed, and it was the place that decides. The Arc 27 three carried no such
+  declaration anywhere, so each was declared at its source FIRST (a
+  `blocked_code` with `overridable: false`, a 409 from the override endpoint, a
+  disabled submit with the reason on screen) and the gate's absolute set mirrors
+  those declarations rather than leading them.
 
   **Membership in that set is mirrored, never judged fresh.** A block is
   absolute when the rest of the system already refuses to waive it: an
@@ -2156,11 +2224,9 @@ Each is a discrete sprint. Mix of operational, security, UX, and technical debt.
   record fails, the grant proceeds with a thinner record; it does not 500 and
   leave a load stuck with no explanation.
 
-  **Open, and deliberately not decided here:** OFAC/SDN, FMCSA authority
-  revoked, and FMCSA Out-of-Service are still waivable by a blanket override.
-  They are arguably not SRL's to waive at all, but none is declared un-waivable
-  anywhere today, so making them absolute is new policy rather than
-  reconciliation. §13.3 Item 235.4.
+  ~~**Open, and deliberately not decided here:** OFAC/SDN, FMCSA authority
+  revoked, and FMCSA Out-of-Service are still waivable by a blanket override.~~
+  **CLOSED — ratified Arc 27**, all three now absolute; see the table above.
 
 - **FAIL TOWARD NOT PAYING, NOT TOWARD PAYING THE WRONG NUMBER (ratified 2026-08-21, Arc 16/17).** When a money path cannot determine what SRL owes, it must **refuse and tell a human** — never substitute a number that happens to be nearby.
 
