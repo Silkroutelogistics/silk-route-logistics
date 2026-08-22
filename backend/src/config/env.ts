@@ -54,6 +54,19 @@ const envSchema = z.object({
   PROJECT44_API_KEY: z.string().optional(),
   // Inbound email webhook
   INBOUND_EMAIL_SECRET: z.string().optional(),
+  // Google Workspace SSO (staff login). A SEPARATE OAuth client from the Gmail
+  // one below: different purpose, different consent screen, scopes limited to
+  // openid/email/profile. Kept distinct so rotating an SSO secret cannot break
+  // Lead Hunter reply tracking, and vice versa.
+  // Optional so the server still boots without SSO configured — the routes
+  // refuse with a clear error rather than failing at import time.
+  GOOGLE_SSO_CLIENT_ID: z.string().optional(),
+  GOOGLE_SSO_CLIENT_SECRET: z.string().optional(),
+  GOOGLE_SSO_REDIRECT_URI: z.string().optional().default("https://api.silkroutelogistics.ai/api/auth/sso/google/callback"),
+  /** Where the callback sends the browser once the session cookie is set. */
+  SSO_SUCCESS_REDIRECT: z.string().optional().default("https://silkroutelogistics.ai/dashboard/overview"),
+  SSO_FAILURE_REDIRECT: z.string().optional().default("https://silkroutelogistics.ai/auth/login"),
+
   // Google OAuth (Gmail reply tracking)
   GOOGLE_OAUTH_CLIENT_ID: z.string().optional(),
   GOOGLE_OAUTH_CLIENT_SECRET: z.string().optional(),

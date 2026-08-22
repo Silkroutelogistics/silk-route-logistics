@@ -17,7 +17,8 @@ import { logAuthEvent } from "../lib/authEvents";
 import { caseInsensitiveEmailFilter } from "../lib/emailNormalization";
 
 const PASSWORD_EXPIRY_DAYS = 60;
-function signToken(userId: string): string {
+// Exported for the SSO callback, which must mint a byte-identical session.
+export function signToken(userId: string): string {
   return jwt.sign({ userId }, env.JWT_SECRET, { algorithm: "HS256", expiresIn: env.JWT_EXPIRES_IN } as jwt.SignOptions);
 }
 
