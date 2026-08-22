@@ -64,13 +64,16 @@ on:
         required: false
         default: probe
         type: choice
-        # TEMPORARY — `fire-drill` is present for exactly one run, to prove this
-        # alert channel end to end and show the summary format in the inbox. It
-        # is REMOVED in the follow-up commit of this same arc, and a guard then
-        # pins its absence: a drill that stays one dropdown away from any
-        # maintainer is a drill that gets run, and every drill spends a little
-        # of the credibility the channel exists to hold.
-        options: [probe, adversarial, fire-drill]
+        # `fire-drill` was here for exactly one run (32582758484, 2026-08-22) to
+        # prove this channel end to end and show the alert format in the inbox.
+        # It is gone, and a guard pins its absence: a drill one dropdown away
+        # from any maintainer is a drill that gets run, and every drill spends a
+        # little of the credibility the channel exists to hold.
+        #
+        # The harness still accepts --fire-drill, so the channel CAN be re-proved
+        # deliberately — by someone who has to edit this file to do it. That is
+        # the friction, and it is the point.
+        options: [probe, adversarial]
 
 # A second run while one is in flight tells us nothing new, and on the push
 # trigger it would race the deploy it is meant to be checking.
@@ -125,15 +128,8 @@ jobs:
           done
           echo "::warning::deployed SHA never matched ${GITHUB_SHA:0:8}; probing whatever is live"
 
-      # TEMPORARY — removed with the fire-drill input in the follow-up commit.
-      - name: Fire drill (deliberately fails, to prove the channel)
-        if: env.SKIPPED != '1' && inputs.mode == 'fire-drill'
-        run: |
-          node backend/scripts/probe-public-surfaces.mjs --fire-drill
-          echo "SKIPPED=1" >> "$GITHUB_ENV"
-
       - name: Probe
-        if: env.SKIPPED != '1' && inputs.mode != 'fire-drill'
+        if: env.SKIPPED != '1'
         run: node backend/scripts/probe-public-surfaces.mjs
 
       # The probe writes the detailed self-explaining summary itself — it has the

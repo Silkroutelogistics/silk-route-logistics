@@ -93,7 +93,7 @@ describe("Arc 28 — every public carrier-auth route has a monitor probe", () =>
   });
 
   it("the workflow runs on a schedule and on pushes that touch routing", () => {
-    const wf = readFileSync(WORKFLOW, "utf8");
+    const wf = readFileSync(WORKFLOW, "utf8"); // raw: schedule/paths live in real YAML
     // A monitor that only runs on demand is a script, not a monitor.
     expect(wf).toMatch(/schedule:/);
     expect(wf).toMatch(/cron: "\*\/15 \* \* \* \*"/);
@@ -115,9 +115,29 @@ describe("Arc 28 — every public carrier-auth route has a monitor probe", () =>
  * So the trigger set is pinned. Exactly {schedule, push:main, workflow_dispatch}.
  */
 describe("Arc 29 — the monitor's triggers are pinned so the channel stays trustworthy", () => {
-  const wf = readFileSync(WORKFLOW, "utf8");
-  // The `on:` block only, so a `push:` mentioned in prose or in another key
-  // cannot satisfy or break these.
+  const wfRaw = readFileSync(WORKFLOW, "utf8");
+
+  /**
+   * Comments stripped before any assertion.
+   *
+   * The first cut of these guards read raw text and promptly failed on the
+   * comments explaining the guards — the words `fire-drill` and `--fire-drill`
+   * appear in prose describing why they are absent. Same class as the Arc 27
+   * version-letter guard flagging a historical version named in CLAUDE.md: a
+   * text scan cannot tell a MENTION from a DECLARATION.
+   *
+   * The fix is to assert about what the YAML says, not what the file contains.
+   * A guard that punishes explaining yourself gets its explanations deleted.
+   */
+  const stripComments = (s: string) =>
+    s
+      .split("\n")
+      .filter((l) => !/^\s*#/.test(l))
+      .join("\n");
+
+  const wf = stripComments(wfRaw);
+  // The `on:` block only, so a `push:` mentioned in another key cannot satisfy
+  // or break these.
   const onBlock = wf.slice(wf.indexOf("\non:"), wf.indexOf("\nconcurrency:"));
 
   it("has exactly three triggers: schedule, push, workflow_dispatch", () => {
@@ -168,12 +188,32 @@ describe("Arc 29 — the monitor's triggers are pinned so the channel stays trus
     expect(step.slice(0, 400)).toMatch(/SKIPPED=1/);
   });
 
-  // NOTE — the guard pinning `fire-drill` OUT of the dispatch inputs lands in
-  // the follow-up commit of this arc, together with the removal of the input
-  // itself. It is deliberately absent here rather than skipped: this commit is
-  // the one that legitimately carries the input, for exactly one run, and a
-  // guard asserting the opposite of what the committed file says would have to
-  // be disabled to pass — which is how guards learn to be ignored.
+  it("fire-drill is NOT a dispatch input — it cannot be re-run casually", () => {
+    // The channel was proved end to end once, by run 32582758484 on 2026-08-22,
+    // and the input was removed in the same arc. The harness still accepts
+    // --fire-drill, so it CAN be re-proved deliberately — by someone who has to
+    // edit the workflow to do it. That friction is the point: a drill one
+    // dropdown away from any maintainer is a drill that gets run, and every
+    // drill spends a little of the credibility this channel exists to hold.
+    expect(
+      onBlock,
+      "fire-drill must not be a workflow_dispatch option. If you are re-adding it for a " +
+        "deliberate re-proof, remove it again in the same change — and say in CLAUDE.md why " +
+        "the channel needed re-proving.",
+    ).not.toMatch(/fire-drill/);
+  });
+
+  it("no step can deliberately fail the run", () => {
+    // Structural, not just declarative: even with the input gone, a step that
+    // invokes --fire-drill would email. There must be exactly one probe
+    // invocation and it must be the honest one.
+    const wf2 = stripComments(readFileSync(WORKFLOW, "utf8"));
+    expect(
+      wf2.split("--fire-drill").length - 1,
+      "a workflow step invokes --fire-drill; that step will email Wasi a failure that is " +
+        "not a production fault.",
+    ).toBe(0);
+  });
 
   it("the workflow name carries the severity marker", () => {
     // GitHub puts the workflow name in the email subject and nothing else about
