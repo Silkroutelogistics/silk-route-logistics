@@ -14809,6 +14809,32 @@
 //   absent from that set and is therefore unloggable-in today.
 //   Zero routes are CEO-exclusive, and whaider@ is ADMIN, not CEO — so the
 //   boundary that actually matters is ADMIN-only, not "CEO-only".
+// v3.8.auf — Security remediation, three legs. Backdated entry: this shipped
+//   between aue and aug but its VersionFooter line could not be written at the
+//   time, because a parallel session was holding this file with uncommitted
+//   work and staging it would have swept their changes into the commit.
+//   BROKER WAS SELF-REGISTERABLE FROM THE OPEN INTERNET. POST /api/auth/register
+//   is unauthenticated and the controller spreads the validated body straight
+//   into user.create with no second role check, so registerSchema was the ONLY
+//   gate — and it accepted BROKER, which AE_ROLES admits to the AE console and
+//   which reaches ~278 authorize() gates including margin, fund and payment
+//   preparation. Login gates only on isActive, so such an account worked
+//   immediately. The set is now an explicit allowlist (CARRIER, SHIPPER,
+//   FACTOR): every staff role is unregisterable by construction rather than by
+//   omission. Prod census first — no account was ever minted through it.
+//   All four staff accounts shared ONE bcrypt hash of a literal committed at
+//   seed.ts:17, and three still had passwordChangedAt null. noor@ rotated,
+//   dispatch@ and accounting@ deactivated (not deleted — FK-referenced seed
+//   rows, and isActive is already a hard login block). Verified by
+//   bcrypt.compare rather than by reading passwordChangedAt, which is exactly
+//   how whaider@ was found STILL holding the seed literal despite a 2026-08-12
+//   timestamp: the field had moved, the password had not.
+//   seed.ts now generates its password per run and refuses to run against
+//   production. It TRUNCATEs every table as its first act and nothing stopped
+//   that. The guard FAILS CLOSED on a missing DATABASE_URL, and dotenv is
+//   imported first — PrismaClient loads .env after module init, so a guard
+//   reading process.env before it would see "absent", pass, and connect to the
+//   very database it was meant to refuse (§13.3 Item 221).
 // v3.8.aug — Arc 24. Letter aug, not auf: a second session held auf in
 //   uncommitted files, which git cannot see. The guard added this arc reads
 //   the working-tree diff for exactly that reason, and caught it.
@@ -14829,7 +14855,26 @@
 //   live on the homepage, /shippers, the public chatbot and four outreach
 //   templates, and CLAUDE.md mandated the phrasing, so a stale number was
 //   being enforced as a rule. A guard now holds the count to the code.
-export const SRL_VERSION = "3.8.aug";
+// v3.8.auh — operations@ issued as the first ACCOUNT_EXECUTIVE; noor@ retired.
+//   TOTP was enrolled through the product's own generateTotpSetup/enableTotp,
+//   never by writing totpSecret directly: those columns hold AES iv:ciphertext
+//   and since atm the backup codes are bcrypt hashes inside an encrypted
+//   envelope, so a hand-written row is unreadable by the verify path. The
+//   pairing is proven BEFORE it is accepted — a live code computed from the
+//   returned secret is pushed through the production verifyTotpCode, and
+//   enableTotp runs only if that returns true. Deactivating noor@ was gated on
+//   all eleven creation checks passing.
+//   Proven with a real login rather than a simulated one, reading the emailed
+//   OTP out of the database to complete the chain. The result worth keeping: a
+//   valid password AND a valid OTP still hand out no session — only the TOTP
+//   step does. Boundary probes on that session put pnl and contract-rates at
+//   200 while admin/users, payments/prepare, carrier-pay and quickpay-override
+//   all 403, which is the ACCOUNT_EXECUTIVE-vs-OPERATIONS difference made real.
+//   noor@ was deactivated rather than deleted: nothing reassigned, and its 70
+//   AuditLog rows are seed-era artifacts left untouched.
+//   Reset-token password reset must not be used on EITHER active staff account
+//   until the TOTP lockout defect is fixed. Rotation is known-password only.
+export const SRL_VERSION = "3.8.auh";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
