@@ -26,7 +26,7 @@ interface AuthState {
   resendOtp: (email: string) => Promise<boolean>;
   forceChangePassword: (newPassword: string) => Promise<boolean>;
   registerUser: (data: Record<string, unknown>) => Promise<void>;
-  logout: () => void;
+  logout: () => Promise<void>;
   clearAuth: () => void;
   loadUser: () => Promise<void>;
   // Legacy getter for code that reads .token — returns null (cookie-based now)
@@ -129,12 +129,36 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
   },
 
-  logout: () => {
+  // v3.8.auj — AWAIT the revocation call before navigating.
+  //
+  // This previously fired api.post unawaited and then set window.location.href
+  // on the very next line. The navigation tore the page down and aborted the
+  // in-flight XHR, so the server usually never saw it — token_blacklist had
+  // ZERO rows in production across the platform's entire life, and no LOGOUT
+  // audit rows existed for sessions that had provably logged out. The token
+  // stayed valid until its natural 24h expiry. The `.catch(() => {})` then hid
+  // the whole thing.
+  //
+  // Bounded with Promise.race so a hung or slow backend cannot trap someone on
+  // a page they are trying to leave: after 1.5s we navigate anyway and say so.
+  // Local state is cleared regardless, so the client always logs out even when
+  // the server side could not be reached.
+  logout: async () => {
     const currentUser = get().user;
-    // Call backend to blacklist token and clear cookie
-    api.post("/auth/logout").catch(() => {});
-    set({ user: null, isAuthenticated: false, tempToken: null });
     const dest = currentUser?.role === "SHIPPER" ? "/shipper/login" : currentUser?.role === "CARRIER" ? "/carrier/login" : "/auth/login";
+
+    try {
+      await Promise.race([
+        api.post("/auth/logout"),
+        new Promise((_, reject) => setTimeout(() => reject(new Error("logout revocation timed out after 1500ms")), 1500)),
+      ]);
+    } catch (err) {
+      // Surfaced, not swallowed. If this fires the session is still live
+      // server-side until it expires, which is exactly the thing worth knowing.
+      console.error("[SRL] Logout: server-side session revocation failed — the token may remain valid until expiry.", err);
+    }
+
+    set({ user: null, isAuthenticated: false, tempToken: null });
     window.location.href = dest;
   },
 
