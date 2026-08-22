@@ -32,6 +32,11 @@ describe("authController", () => {
     vi.clearAllMocks();
   });
 
+  // v3.8.auf — these register payloads used role: "BROKER" until BROKER was
+  // removed from the public allowlist (validators/auth.ts). They now use
+  // CARRIER, which is genuinely self-registerable. The login/OTP fixtures
+  // further down deliberately keep BROKER: existing BROKER accounts still
+  // exist and must still be able to sign in.
   describe("register", () => {
     it("creates a user and returns token on success", async () => {
       mockPrisma.user.findUnique.mockResolvedValue(null);
@@ -40,7 +45,7 @@ describe("authController", () => {
         email: "test@test.com",
         firstName: "John",
         lastName: "Doe",
-        role: "BROKER",
+        role: "CARRIER",
       } as any);
 
       const { req, res } = mockReqRes({
@@ -48,7 +53,7 @@ describe("authController", () => {
         password: "Password123!",
         firstName: "John",
         lastName: "Doe",
-        role: "BROKER",
+        role: "CARRIER",
       });
 
       await register(req, res);
@@ -72,7 +77,7 @@ describe("authController", () => {
         password: "Password123!",
         firstName: "John",
         lastName: "Doe",
-        role: "BROKER",
+        role: "CARRIER",
       });
 
       await register(req, res);
