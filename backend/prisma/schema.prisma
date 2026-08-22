@@ -54,6 +54,17 @@ enum UserRole {
   ACCOUNT_EXECUTIVE
 }
 
+/// How an account is allowed to authenticate.
+///   PASSWORD  — password + email OTP + TOTP only (the default; every existing row)
+///   SSO_ONLY  — Google Workspace SSO only; password login is REFUSED
+///   HYBRID    — either path works (break-glass for the owner account)
+/// Default is PASSWORD so the migration changes no existing account's behaviour.
+enum AuthMethod {
+  PASSWORD
+  SSO_ONLY
+  HYBRID
+}
+
 enum LoadStatus {
   DRAFT
   PLANNED
@@ -818,6 +829,13 @@ model User {
   // preference goes here instead of localStorage.
   preferences           Json?
   passwordChangedAt     DateTime?
+  /// Google Workspace `sub` claim — the stable subject id, NOT the email.
+  /// Nullable because almost no row has one, unique so an identity can never
+  /// be bound to two accounts. Lookup order at the callback is googleSub first,
+  /// then verified email; a match on email backfills this.
+  googleSub             String?            @unique
+  /// Which login paths this account may use. See enum AuthMethod.
+  authMethod            AuthMethod         @default(PASSWORD)
   totpSecret            String?
   totpEnabled           Boolean            @default(false)
   totpBackupCodes       String?
@@ -5321,4 +5339,60 @@ enum RejectionReason {
   IDENTITY_FRAUD // never (permanent)
   DUPLICATE_APPLICATION // 30 days
   OTHER // 30 days (default)
+}
+
+/// v3.8.auj — append-only audit of every authentication OUTCOME, success or
+/// refusal. Deliberately separate from AuditLog: this records attempts by an
+/// identity that may not resolve to a User at all (an unknown Google account,
+/// a wrong-domain login), so userId is nullable while email always carries the
+/// asserted identity. Never updated, only inserted.
+model AuthEvent {
+  id        String   @id @default(cuid())
+  /// Dotted event name, e.g. sso.success, sso.unknown_identity,
+  /// sso.wrong_domain, password.refused_sso_only, reset.refused_staff,
+  /// session.expired_ceiling, session.expired_idle.
+  type      String
+  /// The identity asserted by the attempt. Present even when userId is not.
+  email     String
+  /// Null when the attempt never resolved to a known account.
+  userId    String?
+  ip        String?
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  @@index([type, createdAt])
+  @@index([email])
+  @@index([userId])
+  @@map("auth_events")
+}
+
+/// v3.8.auj — server-side session state for STAFF sessions, keyed by the same
+/// sha256 token hash the blacklist uses.
+///
+/// This exists because the idle timeout was an in-memory Map (middleware/auth.ts
+/// lastActivity) that resets on every process restart — on Render, a deploy or a
+/// cold start silently refreshed everyone's idle clock. The 7-day rolling idle
+/// for SSO sessions has to survive that, so lastSeenAt is persisted.
+///
+/// The 30-day hard ceiling is NOT stored here; it is derived from the JWT `iat`
+/// claim so it holds even if this row is missing. This table is the idle half.
+///
+/// The legacy in-memory map is untouched and still governs the 30/60-minute
+/// portal-role behaviour.
+model StaffSession {
+  id         String   @id @default(cuid())
+  /// sha256(token) — same hashing as TokenBlacklist, so the two can be joined.
+  tokenHash  String   @unique
+  userId     String
+  /// Whether the session was minted with remember-me. Persisted rather than
+  /// carried as a JWT claim: tryAuthenticateToken rejects any token bearing a
+  /// `purpose` claim, and widening the token payload for policy data invites
+  /// exactly that class of mistake.
+  rememberMe Boolean  @default(false)
+  issuedAt   DateTime @default(now())
+  lastSeenAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([lastSeenAt])
+  @@map("staff_sessions")
 }
