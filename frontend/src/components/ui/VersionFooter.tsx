@@ -14994,7 +14994,22 @@
 //   empty-param fail. One honest limit recorded rather than glossed — the
 //   31-minute remember-me case still passes under injection, because the
 //   legacy idle map is empty in a fresh test process and has nothing to expire.
-export const SRL_VERSION = "3.8.aum";
+// v3.8.aun — Arc 31. The asset-driver page is retired: SRL is a pure broker and
+//   owns no drivers. /dashboard/drivers, its six routes, its controller, its
+//   validator, five seeded drivers, three sidebar entries and a Command Palette
+//   destination are gone.
+//   THE BOUNDARY MATTERED MORE THAN THE DELETION. Carrier-scoped drivers share
+//   the SAME Driver model — the portal roster, phone verification, the Arc 19
+//   SMS/GPS chain and the whole Driver Academy are rows in it. The model stays.
+//   AND THE PAGE WAS NOT PURELY ASSET-SIDE: getDrivers and getDriverStats had NO
+//   carrierProfileId filter, so the AE list showed every carrier's drivers with
+//   edit and ADMIN/CEO delete over them. Retiring it removes an unscoped
+//   cross-carrier write surface — the deletion is a security improvement, not
+//   only a tidy-up.
+//   HOS was READ-never-WRITTEN against a source Arc 22 deleted. The display went
+//   with the page; the columns stay because eldService still reads them, and
+//   that service has a worse problem of its own (Item 239).
+export const SRL_VERSION = "3.8.aun";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

@@ -2153,6 +2153,24 @@ Each is a discrete sprint. Mix of operational, security, UX, and technical debt.
 
     **Unblocks on:** an External-type client with the redirect URIs in the doc, its four env vars in all four places (§19 Sub-pattern 11 — local `.env`, Render, CI env blocks, §2.2). The build itself is fully specified at Item 217 and unchanged.
 
+239. **The asset-driver page retired — and the boundary trace found more than the deletion did (Arc 31, v3.8.aun, 2026-08-23).**
+
+    SRL is a pure broker and owns no drivers, so `/dashboard/drivers` was an asset-era register for a fleet that does not exist — the same class Arc 23 retired for trucks and trailers. **The deletion was the small half of this arc.**
+
+    **239.1 — THE BOUNDARY, because this deletion has a live twin.** Carrier-scoped drivers share the **same `Driver` model**: the portal roster (Item 193 T1), `DriverPhoneVerification`, the Arc 19 SMS/GPS chain and the entire Driver Academy are rows in it, distinguished only by `carrierProfileId`. **The model stays.** What went: the page, `routes/drivers.ts` (6 routes), `driverController.ts` (6 exports), `validators/driver.ts`, five seeded drivers, three sidebar entries, one Command Palette destination. Each verified zero-consumer first — `validators/driver.ts` had exactly one importer (the controller being deleted), and `carrierDrivers.ts` defines its own `createDriverSchema`/`updateDriverSchema` inline, so the two never shared a validator.
+
+    **239.2 — THE PAGE WAS NOT PURELY ASSET-SIDE, AND THAT IS A SECURITY FINDING.** `getDrivers` built its `where` from `status` and `search` only — **no `carrierProfileId` filter** — and `getDriverStats` used a bare `prisma.driver.count()`. So the AE list rendered **every carrier's drivers**, with edit and an ADMIN/CEO `DELETE /drivers/:id` over rows a carrier created in their own portal. Deleting the page removes an unscoped cross-carrier write surface. AE keeps legitimate roster visibility through the per-carrier Training tab (Item 193 T6), which is scoped.
+
+    **239.3 — HOS: READ-NEVER-WRITTEN AGAINST A SOURCE ARC 22 DELETED.** `hosDrivingUsed` / `hosOnDutyUsed` / `hosCycleUsed` have no writer anywhere — Arc 22 removed `PATCH /drivers/:id/hos` as a typed-in HOS clock, which is exactly what the ELD mandate exists to prevent. The display went with the page. **The columns stay, because `eldService` still reads them** — see below.
+
+    **239.4 — TWO FINDINGS IN `eldService`, REPORTED NOT FIXED (out of scope: it is the telematics surface, not the asset page).**
+    - **`getELDSummary` blocks `hold/retire-fleet-module`.** It calls `prisma.truck.count()` and is reachable via `GET /eld`. That hold **drops the `trucks` table**, so merging it breaks the endpoint at runtime. Arc 23's typecheck caught five such survivors; this one is on `main` and was not among them. **This is an unmet release condition nobody had recorded** — now in `held-migrations.md`.
+    - **`hosViolations` can never be non-zero.** It counts drivers with `hosDrivingUsed >= 11`, a counter nothing writes, and reports the result to the AE as a live compliance number. Alongside `connectedDevices`, which the code itself labels `// Simulated`. An HOS-violation detector that structurally cannot fire is worse than none, because it reads as a clean bill of health.
+
+    **239.5 — AND `Load.driverId` IS NEVER WRITTEN.** Carriers assign free-text `driverName`/`driverPhone` (T1 recorded this). So `shipperPortalController`'s ELD-position lookup filters on `l.driverId`, always gets an empty set, and the shipper's driver-position map is always empty — a third READ-never-WRITTEN surface rendering against a dead source.
+
+    **239.6 — SCHEMA: a fourth hold, deliberately narrow.** Only three Driver columns are genuinely dead after this retirement: `cppMilesEarned` (no reader, no writer), `violations` and `safetyScore` (readers were the deleted page and stats endpoint; the surviving `safetyScore` greps are `CarrierProfile.safetyScore`, a different model). The HOS quartet is **excluded** pending the `eldService` decision, and `assignedTruckId`/`assignedTrailerId` are **excluded because the fleet hold already drops them** — two copies of a destructive migration is precisely how the wrong one gets applied, which `held-migrations.md` already records as a near-miss.
+
 ## §14 LEGAL / COMPLIANCE STATUS
 
 - Property broker under 49 U.S.C. §§ 13904, 13906

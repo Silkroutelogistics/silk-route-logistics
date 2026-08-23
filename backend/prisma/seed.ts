@@ -406,90 +406,11 @@ async function main() {
     ],
   });
 
-  // ═══════════════════════════════════════════════
-  // FLEET - DRIVERS
-  // ═══════════════════════════════════════════════
+  // Arc 31 — the asset-driver seed block is gone with the /dashboard/drivers
+  // page it populated. Those five rows had no carrierProfileId, so they were
+  // SRL-owned drivers for a broker that owns no drivers. The `drivers` array
+  // they filled was never read again in this file.
 
-  const drivers = [];
-  drivers.push(await prisma.driver.create({
-    data: {
-      firstName: "Mike",
-      lastName: "Kowalski",
-      email: "mkowalski@srltransport.com",
-      phone: "(269) 555-0301",
-      licenseNumber: "K234-5678-9012",
-      licenseState: "MI",
-      licenseExpiry: new Date(now.getTime() + 730 * day),
-      status: "ON_ROUTE",
-      licenseType: "CDL-A",
-      endorsements: ["Hazmat", "Tanker"],
-      safetyScore:98,
-    },
-  }));
-
-  drivers.push(await prisma.driver.create({
-    data: {
-      firstName: "James",
-      lastName: "Brown",
-      email: "jbrown@srltransport.com",
-      phone: "(269) 555-0302",
-      licenseNumber: "B345-6789-0123",
-      licenseState: "MI",
-      licenseExpiry: new Date(now.getTime() + 650 * day),
-      status: "ON_ROUTE",
-      licenseType: "CDL-A",
-      endorsements: ["Doubles/Triples"],
-      safetyScore:95,
-    },
-  }));
-
-  drivers.push(await prisma.driver.create({
-    data: {
-      firstName: "Roberto",
-      lastName: "Santos",
-      email: "rsantos@srltransport.com",
-      phone: "(269) 555-0303",
-      licenseNumber: "S456-7890-1234",
-      licenseState: "MI",
-      licenseExpiry: new Date(now.getTime() + 580 * day),
-      status: "AVAILABLE",
-      licenseType: "CDL-A",
-      endorsements: [],
-      safetyScore:92,
-    },
-  }));
-
-  drivers.push(await prisma.driver.create({
-    data: {
-      firstName: "Derek",
-      lastName: "Williams",
-      email: "dwilliams@srltransport.com",
-      phone: "(269) 555-0304",
-      licenseNumber: "W567-8901-2345",
-      licenseState: "MI",
-      licenseExpiry: new Date(now.getTime() + 820 * day),
-      status: "AVAILABLE",
-      licenseType: "CDL-A",
-      endorsements: ["Hazmat"],
-      safetyScore:97,
-    },
-  }));
-
-  drivers.push(await prisma.driver.create({
-    data: {
-      firstName: "Tyler",
-      lastName: "Anderson",
-      email: "tanderson@srltransport.com",
-      phone: "(269) 555-0305",
-      licenseNumber: "A678-9012-3456",
-      licenseState: "MI",
-      licenseExpiry: new Date(now.getTime() + 910 * day),
-      status: "OFF_DUTY",
-      licenseType: "CDL-A",
-      endorsements: [],
-      safetyScore:89,
-    },
-  }));
 
   // ═══════════════════════════════════════════════
   // LOADS (30)

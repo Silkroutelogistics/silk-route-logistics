@@ -17,7 +17,6 @@ import notificationRoutes from "./notifications";
 import integrationRoutes from "./integrations";
 import shipmentRoutes from "./shipments";
 import customerRoutes from "./customers";
-import driverRoutes from "./drivers";
 import equipmentRoutes from "./equipment";
 import sopRoutes from "./sops";
 import accountingRoutes from "./accounting";
@@ -301,7 +300,11 @@ router.use("/integrations", integrationRoutes);
 router.use("/shipments", shipmentRoutes);
 router.use("/customers", crmCustomerRoutes); // CRM upgrade routes (tracking, facilities, notes, docs, activity)
 router.use("/customers", customerRoutes);
-router.use("/drivers", driverRoutes);
+// Arc 31 — /drivers (asset-era driver register) retired. SRL is a pure broker;
+// drivers belong to carriers, and the carrier-scoped roster lives at
+// /carrier-drivers with its own auth, its own schemas and the Academy built on
+// it. The AE page this served is gone and the Driver MODEL stays, because the
+// carrier portal owns rows in it.
 router.use("/equipment", equipmentRoutes);
 router.use("/sops", sopRoutes);
 router.use("/accounting", accountingRoutes);

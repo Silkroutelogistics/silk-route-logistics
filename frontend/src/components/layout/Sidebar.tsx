@@ -36,7 +36,6 @@ const employeeNav = [
   { href: "/dashboard/loads", label: "Load Board", icon: Package },
   { href: "/dashboard/carriers", label: "Carrier Pool", icon: UserCheck },
   { href: "/dashboard/track-trace", label: "Track & Trace", icon: MapPin },
-  { href: "/dashboard/drivers", label: "Drivers", icon: Users },
   { href: "/dashboard/communications", label: "Communications", icon: Mail },
   { href: "/dashboard/claims", label: "Claims", icon: AlertTriangle },
   { href: "/dashboard/messages", label: "Messages", icon: MessageSquare },
@@ -68,7 +67,6 @@ const carrierNav = [
 const carrierViewNav = [
   { href: "/dashboard/overview", label: "Dashboard", icon: LayoutDashboard },
   { href: "/dashboard/loads", label: "Assigned Loads", icon: Package },
-  { href: "/dashboard/drivers", label: "Drivers", icon: Users },
   { href: "/dashboard/scorecard", label: "Scorecard", icon: BarChart3 },
   { href: "/dashboard/revenue", label: "Revenue", icon: TrendingUp },
   { href: "/dashboard/violations", label: "DOT / Compliance", icon: Shield },
@@ -109,7 +107,6 @@ const aeViewGroups: NavGroup[] = [
     label: "CARRIERS",
     items: [
       { href: "/dashboard/carriers", label: "Carrier Pool", icon: Truck },
-      { href: "/dashboard/drivers", label: "Drivers", icon: UserCheck },
     ],
   },
   {
