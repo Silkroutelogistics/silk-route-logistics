@@ -1,0 +1,44 @@
+-- Arc 31 (v3.8.aun) — drop three dead columns left by the asset-driver page.
+--
+-- DESTRUCTIVE. Read the gate below and run it BEFORE merging, not after: a
+-- row-count run after the drop answers nothing, which is exactly what made
+-- Item 212 permanently unanswerable.
+--
+-- WHAT THESE WERE. The /dashboard/drivers page and its GET /drivers/stats
+-- endpoint were the only readers. Both are gone (Arc 31). Nothing writes any of
+-- the three: cppMilesEarned had neither a reader nor a writer even before the
+-- retirement, and the surviving `safetyScore` references in src are
+-- CarrierProfile.safetyScore, a different model on a different table.
+--
+-- WHAT IS DELIBERATELY *NOT* HERE:
+--
+--   hosDrivingUsed / hosOnDutyUsed / hosCycleUsed / hosCycleLimit
+--     Dead in the write direction — Arc 22 deleted the only writer — but
+--     eldService STILL READS them (getDriverHOSData, and the hosViolations
+--     count in getELDSummary). Dropping them without settling what eldService
+--     should report is how a 500 reaches an AE dashboard. §13.3 Item 239.4.
+--
+--   assignedTruckId / assignedTrailerId
+--     Already dropped by hold/retire-fleet-module, on this same table. Two
+--     copies of a destructive migration is precisely how the wrong one gets
+--     applied — held-migrations.md records that near-miss.
+--
+-- THE DRIVER TABLE ITSELF STAYS. The carrier portal owns rows in it: the
+-- roster, phone verification, the Arc 19 SMS/GPS chain and the whole Driver
+-- Academy. This drops three columns from a live table, nothing more.
+--
+-- ── ROW-COUNT GATE — run against PRODUCTION before merging ─────────────────
+--
+--   SELECT
+--     count(*) FILTER (WHERE "safetyScore"    IS DISTINCT FROM 100) AS safety_nondefault,
+--     count(*) FILTER (WHERE "violations"     IS DISTINCT FROM 0)   AS violations_nonzero,
+--     count(*) FILTER (WHERE "cppMilesEarned" IS DISTINCT FROM 0)   AS cpp_miles_nonzero
+--   FROM "drivers";
+--
+-- All three zero means no row ever carried a value here and the drop loses
+-- nothing. A non-zero anywhere means something wrote a column this migration
+-- believes is dead — STOP and find the writer before proceeding.
+
+ALTER TABLE "drivers" DROP COLUMN "safetyScore";
+ALTER TABLE "drivers" DROP COLUMN "violations";
+ALTER TABLE "drivers" DROP COLUMN "cppMilesEarned";

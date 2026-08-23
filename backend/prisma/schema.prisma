@@ -2749,8 +2749,6 @@ model Driver {
   currentLocation String?
   hireDate        DateTime?
   terminationDate DateTime?
-  safetyScore     Float        @default(100)
-  violations      Int          @default(0)
 
   medicalCardExpiry   DateTime?
   drugTestDate        DateTime?
@@ -2769,7 +2767,6 @@ model Driver {
   hosCycleLimit  Float @default(70)
 
   // CPP miles
-  cppMilesEarned Float @default(0)
 
   assignedTruckId   String?  @unique
   assignedTruck     Truck?   @relation("TruckDriver", fields: [assignedTruckId], references: [id])
