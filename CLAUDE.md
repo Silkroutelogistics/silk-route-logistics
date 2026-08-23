@@ -2171,6 +2171,28 @@ Each is a discrete sprint. Mix of operational, security, UX, and technical debt.
 
     **239.6 — SCHEMA: a fourth hold, deliberately narrow.** Only three Driver columns are genuinely dead after this retirement: `cppMilesEarned` (no reader, no writer), `violations` and `safetyScore` (readers were the deleted page and stats endpoint; the surviving `safetyScore` greps are `CarrierProfile.safetyScore`, a different model). The HOS quartet is **excluded** pending the `eldService` decision, and `assignedTruckId`/`assignedTrailerId` are **excluded because the fleet hold already drops them** — two copies of a destructive migration is precisely how the wrong one gets applied, which `held-migrations.md` already records as a near-miss.
 
+240. **P1 — the AE approves carriers against a compliance display the page invents (Arc 31 Phase 3 walk, 2026-08-23).**
+
+    Walked application → review → approve → decline against a production-config build with a real PENDING fixture. **The flow completes end to end and the AE never has to leave the page.** Pending application visible (with the v3.8.alo test-account toggle), Compass verdict runs, chameleon card loads, approve flips PENDING → APPROVED and fires both an in-app notification and an email, the carrier's next session resolves APPROVED so the layout routes to the dashboard, and decline records reason + note + a 7-day reapply window matching the `MISSING_DOCUMENTS` policy. Zero real outbound: `Resend configured: false`, two emails captured as `[NoAPI]`.
+
+    **240.1 — BUT THE CHECK-LEVEL DETAIL IS FABRICATED.** `POST /carriers/:id/full-vet` returns **34 named checks** with real results and real deductions in `results.fmcsa.data.checks[]`. [`dashboard/carriers/page.tsx:707-732`](frontend/src/app/dashboard/carriers/page.tsx) **ignores that array** and rebuilds **nine** synthetic checks client-side. The reconstruction is not merely lossy — it is **systematically more favourable than the engine**:
+
+    | Check | Engine | What the AE sees |
+    |---|---|---|
+    | FMCSA grade | **F / score 0 / REJECT** | `"FMCSA Grade" → PASS` — the result is a **hardcoded literal** |
+    | OFAC/SDN Screening | WARNING (−10) | PASS — because the result object merely *exists* |
+    | ELD Device Verification | WARNING (−5) | PASS — same reason |
+    | W-9 TIN Match | WARNING (−5) | PASS — same reason |
+    | VIN Verification | **does not exist** (removed Arc 23) | rendered WARNING on every carrier, forever |
+
+    The generic `addCheck` helper is worse still: it emits `result: "PASS"` with `detail: JSON.stringify(resultObj).slice(0, 80)` — a raw JSON fragment shown to a human as a compliance finding — and invents a `−5` deduction on the failure branch. Those invented numbers then feed a `totalDeduction` used as a **fallback score** whenever the backend score is absent.
+
+    **Severity P1, not P0:** the headline score and grade come from the backend when present (`backendScore`), so the number the AE reads is real; and the AE can still approve or decline. What is false is the *evidence* under it. An AE who opens the detail to decide a marginal carrier sees PASS badges on three checks the engine graded WARNING, and a PASS on an F-grade carrier.
+
+    **Fix shape (deliberately not done here — Phase 3 is a verification phase, and this is a render change I cannot visually verify in this environment):** delete the composite builder and render `results.fmcsa.data.checks[]` directly; it already carries `name`, `result`, `detail` and `deduction` in exactly the `CompassCheck` shape the page declares. That is a net deletion of ~30 lines. Do it with a visual pass per §19 Sub-pattern 8.
+
+    **240.2 — decline notifies by email only.** `approvalService` writes a `Notification` row **and** emails; `rejectionService` emails only. A carrier whose mail is filtered learns of the decision by logging in — the reason *is* on the application-status page (`rejectionReason`, `rejectionNote`, `reapplyEligibleAt` are all selected), so it is recoverable, but the bell stays silent on the most consequential decision the platform makes about them. **P2**, ~5 LOC to match approve.
+
 ## §14 LEGAL / COMPLIANCE STATUS
 
 - Property broker under 49 U.S.C. §§ 13904, 13906

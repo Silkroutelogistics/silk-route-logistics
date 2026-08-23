@@ -1,6 +1,6 @@
 # Held schema changes
 
-Three schema changes are authored, verified, and deliberately not applied.
+**Four** schema changes are authored, verified, and deliberately not applied.
 
 **They release SEPARATELY.** Each answers to its own condition, and merging them
 into one change would couple decisions that have nothing to do with each other —
@@ -11,9 +11,12 @@ instinct here; it is the whole reason this file exists rather than a single
 They share exactly one precondition (the deploy-hook secret, below) and nothing
 else.
 
-Last reviewed: 2026-08-22, Arc 26 — three holds confirmed intact (two branches,
-one file), the scheduled `prisma/migrations/` directory confirmed clean of
-untracked files, and `RENDER_DEPLOY_HOOK_URL` confirmed still unset.
+Last reviewed: 2026-08-23, Arc 31 — **four** holds (three branches, one file),
+scheduled `prisma/migrations/` confirmed clean of untracked files on `main`, and
+`RENDER_DEPLOY_HOOK_URL` confirmed still unset.
+
+**Arc 31 found an unmet release condition on hold #2 that nobody had recorded —
+see the ⚠ under it. Read that before merging the fleet hold.**
 
 ---
 
@@ -101,11 +104,34 @@ not branch-scoped, and it was one `git add -A` from Render applying it. Removed
 in Arc 24. **When abandoning a branch that created directories, check
 `git status` for what the branch deletion did not take with it.**
 
-**Release conditions — BOTH:**
+**⚠ RELEASE CONDITION NOT MET — found Arc 31, 2026-08-23.**
+
+`eldService.getELDSummary` calls `prisma.truck.count({ where: { status: "ACTIVE" } })`
+and is reachable in production via `GET /eld` → `getELDOverview`. **This hold
+drops the `trucks` table, so merging it as things stand breaks that endpoint at
+runtime.**
+
+Arc 23's own typecheck against this branch caught five surviving fleet
+consumers, and this was not among them — it sits in a service the fleet
+retirement never looked at. (A `prisma.truck` grep also matches
+`carrierVettingService`, but that one is a COMMENT Arc 23 left explaining a
+removal; prose, not code.)
+
+Fixing it is a decision about what `/eld` should report once SRL owns no
+vehicles, not a mechanical edit — and the same service has a second problem
+worth settling in the same change: `hosViolations` counts drivers with
+`hosDrivingUsed >= 11`, a counter nothing has written since Arc 22, so it
+reports a permanent zero to the AE as though it were a live compliance figure.
+§13.3 Item 239.4.
+
+**Release conditions — ALL THREE:**
 
 1. Arc 23's application-side retirement deployed and soaked; nothing may
    reference these tables when this runs.
-2. The shared precondition above.
+2. **`eldService`'s `prisma.truck` read resolved** — see the ⚠ above. Verify
+   with `grep -rn "prisma\.truck\|prisma\.trailer" backend/src` returning only
+   comments.
+3. The shared precondition above.
 
 ---
 
@@ -125,6 +151,43 @@ search branches queried `shipperPoNumber` and could never have matched a row.
 **Release conditions:** the shared precondition, plus running the row-count gate
 in the file header. The banked follow-up (wiring the carrier BOL preview to the
 populated `poNumbers[]` array) is a feature and is not blocked by this.
+
+---
+
+## 4. `hold/retire-asset-drivers` — drop three dead Driver columns
+
+| | |
+|---|---|
+| **Form** | git branch (`hold/retire-asset-drivers`) |
+| **Drops** | `Driver.safetyScore`, `Driver.violations`, `Driver.cppMilesEarned` |
+| **Authored** | Arc 31, §13.3 Item 239.6 |
+| **Verified from zero** | Yes — full chain applied to an empty container; the three confirmed absent and `carrierProfileId` / `trainingPinHash` / `hosDrivingUsed` / `licenseExpiry` confirmed present; `migrate status` clean; backend tsc clean against the regenerated client |
+
+**Why held.** The `/dashboard/drivers` page and `GET /drivers/stats` were the only
+readers, and both went in v3.8.aun. `cppMilesEarned` had neither a reader nor a
+writer even before that.
+
+**THE TABLE STAYS, and this is the important part.** `Driver` is shared: the
+carrier portal owns rows in it — the roster, phone verification, the Arc 19
+SMS/GPS chain and the entire Driver Academy. This drops three columns from a
+live table, nothing more. Anyone reading "retire asset drivers" and reaching for
+`DROP TABLE` has misread the boundary.
+
+**Deliberately narrow, and the exclusions are the reasoning:**
+
+- **HOS quartet excluded.** Dead in the write direction since Arc 22 removed the
+  only writer, but `eldService` still *reads* them. Dropping them before
+  settling what that service should report puts a 500 on an AE dashboard.
+- **`assignedTruckId` / `assignedTrailerId` excluded.** Hold #2 already drops
+  them, from this same table. Two copies of a destructive migration is exactly
+  how the wrong one gets applied — the near-miss recorded under hold #2.
+
+**Release conditions — BOTH:**
+
+1. The row-count gate in the migration header, run against production **before**
+   merging. All three counters must be zero; a non-zero means something wrote a
+   column this migration believes is dead.
+2. The shared precondition above.
 
 ---
 
