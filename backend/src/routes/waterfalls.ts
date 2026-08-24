@@ -459,6 +459,11 @@ router.get(
         distance: distance ? Number(distance) : null,
         customerRate: customer_rate ? Number(customer_rate) : null,
         carrierRate: carrier_rate ? Number(carrier_rate) : null,
+        // A hypothetical lane with no customer behind it, so no routing guide
+        // applies and every carrier scores NEUTRAL_NO_GUIDE. Taking a
+        // customer_id here would let the preview reflect a real guide — a small
+        // follow-up, not something to guess at now.
+        customerId: null,
       };
 
       const scored = await scoreCarriersForLoad(ctx);
