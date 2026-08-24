@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { CarrierSidebar } from "@/components/carrier";
 import { Search, Bell, X, LogOut, Clock } from "lucide-react";
@@ -12,6 +12,7 @@ import { Logo } from "@/components/ui/Logo";
 import { AuthRefreshBanner } from "@/components/ui/AuthRefreshBanner";
 import { MarcoPolo } from "@/components/MarcoPolo";
 import type { Notification } from "@/types/entities";
+import { resolveNotificationHref } from "@/lib/notificationTarget";
 
 // v3.8.ajd Sprint 1 — Non-APPROVED carriers may log in but are confined
 // to /carrier/dashboard/application-status. The layout enforces this
@@ -43,6 +44,7 @@ export default function CarrierDashboardLayout({ children }: { children: React.R
   const { user, loadUser, logout } = useCarrierAuth();
   const [checking, setChecking] = useState(true);
   const router = useRouter();
+  const queryClient = useQueryClient();
   const pathname = usePathname();
   const { showWarning, countdown, extendSession } = useSessionTimeout({
     // audit F2 — unified to 60 min (was an undocumented 45) to match the shipper
@@ -248,12 +250,42 @@ export default function CarrierDashboardLayout({ children }: { children: React.R
                     {notifications.length === 0 ? (
                       <div className="px-3 py-6 text-center text-xs text-gray-400">No notifications</div>
                     ) : (
-                      notifications.slice(0, 10).map((n) => (
-                        <div key={n.id} className={`px-3 py-2.5 border-b border-[#F5EEE0] cursor-pointer hover:bg-[#FBF7F0] ${!n.read ? "bg-[#E2EAF2]/60" : ""}`}>
-                          <div className="text-xs text-gray-700 leading-snug">{n.message || n.title}</div>
-                          <div className="text-[10px] text-gray-400 mt-1">{timeAgo(n.createdAt)}</div>
-                        </div>
-                      ))
+                      notifications.slice(0, 10).map((n) => {
+                        // Only a row with somewhere safe to go is rendered
+                        // clickable. Previously EVERY row carried cursor-pointer
+                        // and a hover highlight with no handler at all, so it
+                        // invited a click and did nothing — which reads as a
+                        // broken app rather than as an item with no target.
+                        const href = resolveNotificationHref(n.actionUrl, "/carrier");
+                        const seen = () => {
+                          if (n.read) return;
+                          api
+                            .patch(`/notifications/${n.id}/read`)
+                            .then(() => queryClient.invalidateQueries({ queryKey: ["carrier-notifications"] }))
+                            .catch(() => {}); // never block navigation on the read receipt
+                        };
+                        const body = (
+                          <>
+                            <div className="text-xs text-gray-700 leading-snug">{n.message || n.title}</div>
+                            <div className="text-[10px] text-gray-400 mt-1">{timeAgo(n.createdAt)}</div>
+                          </>
+                        );
+                        const base = `px-3 py-2.5 border-b border-[#F5EEE0] ${!n.read ? "bg-[#E2EAF2]/60" : ""}`;
+                        return href ? (
+                          <button
+                            key={n.id}
+                            type="button"
+                            onClick={() => { seen(); setNotifOpen(false); router.push(href); }}
+                            className={`${base} w-full text-left cursor-pointer hover:bg-[#FBF7F0]`}
+                          >
+                            {body}
+                          </button>
+                        ) : (
+                          <div key={n.id} className={base} onClick={seen}>
+                            {body}
+                          </div>
+                        );
+                      })
                     )}
                   </div>
                 )}
