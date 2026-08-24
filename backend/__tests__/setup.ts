@@ -64,6 +64,7 @@ vi.mock("../src/config/database", () => ({
       findFirst: vi.fn(),
       create: vi.fn(),
       update: vi.fn(),
+      count: vi.fn(),
     },
     // Quick Pay Agreement §3 condition 2 — "this Quick Pay Agreement is
     // signed". Every path that can deduct a Quick Pay fee queries this model,
@@ -73,6 +74,7 @@ vi.mock("../src/config/database", () => ({
       findMany: vi.fn(),
       create: vi.fn(),
       update: vi.fn(),
+      count: vi.fn(),
     },
     // B4 — the waterfall now reads the routing guide when scoring. A missing
     // mock here does not fail loudly; it throws "findFirst is not a function"

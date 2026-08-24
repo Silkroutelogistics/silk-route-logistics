@@ -11,7 +11,7 @@ import {
   AlertTriangle, Mail, Target, Plug, Container, Landmark,
   ChevronDown, ChevronRight, ChevronsLeft, ChevronsRight,
   ScrollText, Gavel, Route, Crosshair, Fuel, Calendar, Tag,
-  Compass, Clock, Phone, Map, Layers, GraduationCap,
+  Compass, Clock, Phone, Map, Layers, GraduationCap, ClipboardCheck,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Logo } from "@/components/ui/Logo";
@@ -35,6 +35,7 @@ const employeeNav = [
   { href: "/dashboard/crm", label: "Customers", icon: Users },
   { href: "/dashboard/loads", label: "Load Board", icon: Package },
   { href: "/dashboard/carriers", label: "Carrier Pool", icon: UserCheck },
+  { href: "/dashboard/bench", label: "Carrier Bench", icon: ClipboardCheck },
   { href: "/dashboard/track-trace", label: "Track & Trace", icon: MapPin },
   { href: "/dashboard/communications", label: "Communications", icon: Mail },
   { href: "/dashboard/claims", label: "Claims", icon: AlertTriangle },
@@ -107,6 +108,7 @@ const aeViewGroups: NavGroup[] = [
     label: "CARRIERS",
     items: [
       { href: "/dashboard/carriers", label: "Carrier Pool", icon: Truck },
+      { href: "/dashboard/bench", label: "Carrier Bench", icon: ClipboardCheck },
     ],
   },
   {
