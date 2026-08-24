@@ -132,12 +132,29 @@ function countRateReads(file: string): number {
   return count;
 }
 
+/**
+ * Memoized because every it() block called scan(), and scan() re-walked the
+ * whole of frontend/src reading each file. Several walks of a few hundred files
+ * is enough I/O to cross vitest's 5s default under full-suite load — this guard
+ * went red at 6735ms while passing 5/5 in isolation, and on the next run a
+ * DIFFERENT assertion in the same file crossed instead, which is the tell that
+ * the file is slow rather than any one test being wrong.
+ *
+ * A guard that flakes is a guard somebody eventually deletes, and the failure
+ * reads as "Load.rate came back" rather than "the disk was busy", so the
+ * misdiagnosis costs time too. The walk is genuinely needed; doing it once per
+ * test was not.
+ */
+let scanCache: Record<string, number> | null = null;
+
 function scan(): Record<string, number> {
+  if (scanCache) return scanCache;
   const found: Record<string, number> = {};
   for (const file of walk(FRONTEND_SRC)) {
     const n = countRateReads(file);
     if (n > 0) found[path.relative(FRONTEND_SRC, file).replace(/\\/g, "/")] = n;
   }
+  scanCache = found;
   return found;
 }
 

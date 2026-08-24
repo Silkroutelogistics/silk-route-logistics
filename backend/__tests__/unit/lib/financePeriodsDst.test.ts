@@ -24,8 +24,23 @@
  * passed throughout. Walking every day of a year is what makes the two days
  * that matter unmissable, and it is cheap.
  */
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { etStartOfMonth, etStartOfWeek, etParts, weekIsInsideMonth } from "../../../src/lib/financePeriods";
+
+/**
+ * These sweeps walk four years a day at a time, and every etParts call builds
+ * an Intl.DateTimeFormat. That is thorough on purpose and it is not fast: in
+ * isolation the file runs in well under a second, but under full-suite load it
+ * crossed vitest's 5s default and went red.
+ *
+ * I shipped that flake to main. Recording it rather than quietly widening the
+ * number, because the failure LOOKS like a logic error — a DST assertion going
+ * red reads as "the boundary maths broke" — and the same misread cost real time
+ * on accountingSummary.test.ts, where a slow supertest import presented exactly
+ * as cross-file mock pollution. Slow is not broken. A guard that flakes is a
+ * guard somebody eventually deletes.
+ */
+vi.setConfig({ testTimeout: 30_000 });
 
 /** Every day of a year, sampled at noon UTC. */
 function everyDayOf(year: number): Date[] {

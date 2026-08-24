@@ -48,12 +48,11 @@ import { calendarMonthsBetween } from "./fmcsaService";
  */
 export type AuthorityTier = "READY" | "OVERRIDE_ELIGIBLE" | "BLOCKED" | "AGE_NOT_ON_FILE";
 
-export const AUTHORITY_TIER_LABEL: Record<AuthorityTier, string> = {
-  READY: "18+ months",
-  OVERRIDE_ELIGIBLE: "12-18 months",
-  BLOCKED: "Under 12 months",
-  AGE_NOT_ON_FILE: "Age not on file",
-};
+// The tier LABELS deliberately live on the frontend only, beside the colours
+// and the explanatory hints they belong with. A backend copy was exported here
+// and consumed by nothing — the reachability gate caught it. Presentation
+// strings shipped from two places drift; the API returns the tier KEY and the
+// surface rendering it decides how to say it.
 
 /** Item 182's thresholds, in one place, named. */
 export const AUTHORITY_MIN_MONTHS = 12;
