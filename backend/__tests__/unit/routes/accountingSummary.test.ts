@@ -25,6 +25,20 @@ import {
 
 const mockPrisma = prisma as any;
 
+/**
+ * These tests dynamically import the accounting router — 56 routes and their
+ * whole controller graph — and drive it through supertest. That costs 2-3.5s
+ * even on a quiet machine, and under full-suite load it intermittently crossed
+ * vitest's 5s default and failed.
+ *
+ * Worth recording how that presented, because it was misleading: the file
+ * passed 16/16 in isolation and failed two tests inside the suite, which reads
+ * exactly like cross-file mock pollution. It is not — the run that finally
+ * showed the truth had the test PASSING at 3458ms, just under the wire. Slow is
+ * not broken, and a timeout is not a bug in the endpoint.
+ */
+vi.setConfig({ testTimeout: 30_000 });
+
 // Auth is not what this file is about; admit every request as a CEO.
 vi.mock("../../../src/middleware/auth", async (orig) => {
   const actual = (await orig()) as any;

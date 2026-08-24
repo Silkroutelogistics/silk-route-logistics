@@ -59,18 +59,47 @@ const SOURCE_INDICATOR: Record<DataSource, string> = {
   SELF: "\u26AA",         // white circle
 };
 
-// Category grouping for the 35 checks
+/**
+ * Category grouping for the 32 checks.
+ *
+ * POSITIONAL, and that is the hazard: checkMap is built as
+ * `checks.forEach((c, i) => checkMap.set(i + 1, c))`, so these are array
+ * positions, not names. A check inserted or removed upstream silently
+ * re-points every heading after it, and nothing crashes — an index that no
+ * longer resolves is dropped by `if (!check) continue;` and the heading simply
+ * renders a row short.
+ *
+ * It had ALREADY drifted before this arc. Arc 23 removed check #27 and never
+ * re-indexed here, so three checks have been rendering under the wrong heading
+ * on every shipped PDF since — Document Expiry Enforcement under Performance,
+ * SAM.gov under Compliance, and IRP under Identity. Only three of the eight
+ * shifted positions actually landed wrong, because adjacent positions often
+ * share a category, which is precisely why the drift survived unnoticed.
+ *
+ * Re-derived entry by entry against the runtime order, not patched for the two
+ * deletions alone. Also fixed:
+ *   - index 3 was listed under BOTH FMCSA and Insurance; categories iterate in
+ *     order and dedupe, so the Insurance entry was unreachable. Dropped.
+ *   - index 22 (Biometric Facial Match) was in NO category and had been
+ *     falling through to the generic OTHER CHECKS bucket since this was written.
+ *   - 33/34/35 no longer exist and would have dangled silently.
+ *
+ * INVARIANT, enforced by compassCheckCount.test.ts: these indices cover 1..N
+ * exactly once, where N is what the engine actually runs. That test is what
+ * makes the next removal fail loudly here rather than quietly mislabel a
+ * customer-facing PDF.
+ */
 interface CheckCategory {
   name: string;
-  indices: number[]; // 1-based check numbers
+  indices: number[]; // 1-based RUNTIME positions, NOT the inline `// ── N.` numbers
 }
 
 const CATEGORIES: CheckCategory[] = [
   { name: "FMCSA Authority & Safety", indices: [1, 2, 3, 4, 5, 6, 7] },
-  { name: "Insurance & Financial", indices: [3, 8, 17, 21] },
-  { name: "Identity & Fraud", indices: [11, 12, 13, 14, 15, 19, 23, 30, 31] },
-  { name: "Compliance & Documentation", indices: [16, 20, 24, 26, 29, 32, 33, 34, 35] },
-  { name: "Performance & Operations", indices: [9, 10, 18, 25, 27, 28] },
+  { name: "Insurance & Financial", indices: [8, 17, 21] },
+  { name: "Identity & Fraud", indices: [11, 12, 13, 14, 15, 19, 22, 23, 29, 30] },
+  { name: "Compliance & Documentation", indices: [16, 20, 24, 26, 28, 31, 32] },
+  { name: "Performance & Operations", indices: [9, 10, 18, 25, 27] },
 ];
 
 export interface CompassCarrierData {

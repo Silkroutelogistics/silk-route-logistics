@@ -76,7 +76,7 @@ I'm Wasi at Silk Route Logistics, a Michigan-licensed property broker (MC# 17944
 
 In refrigerated CPG, the operational signal that matters is logger-download temperature drift on the last 50 miles into the DC. That drift translates into receiving-lane rejection rates that Walmart and Kroger compliance teams flag.
 
-Compass Engine is our 34-point carrier vetting system. For reefer freight the load-bearing checks are unit age, last PM date, calibration certificate currency, and historical temp-compliance scores.
+Compass Engine is our 32-point carrier vetting system. For reefer freight the load-bearing checks are unit age, last PM date, calibration certificate currency, and historical temp-compliance scores.
 
 If you're running outbound reefer into retailer DCs or 3PLs and want a comparison on one current lane, send a recent BOL and I'll come back with a quote and the carrier's full Compass profile.
 
@@ -94,7 +94,7 @@ I'm Wasi at Silk Route Logistics, a Michigan-licensed property broker (MC# 17944
 
 In clean beauty, the operational signal that matters is damage rate at the retailer DC. Sephora 003 chargebacks on broken glass, leaking primary, pallet shift, and missed signature-required residential on PR drops kill margin on a launch SKU. We pre-check carriers on equipment age, brake performance, and load-securement history before assignment, and keep a small expedited bench for launch-window surges that does not surge-price.
 
-Compass Engine is our 34-point carrier vetting system. For premium retail freight the load-bearing checks are claims ratio, inspection history, and on-time-in-full at retailer DCs.
+Compass Engine is our 32-point carrier vetting system. For premium retail freight the load-bearing checks are claims ratio, inspection history, and on-time-in-full at retailer DCs.
 
 If you're running outbound to retailer DCs or 3PLs and want a comparison on one current lane, send a recent BOL and I'll come back with a quote and the carrier's full Compass profile.
 
@@ -115,7 +115,7 @@ function touch1Template(firstName: string, _hook: string, _relevance: string, _c
 
 I'm Wasi at Silk Route Logistics, a Michigan-licensed property broker (MC# 1794414, DOT# 4526880, BMC-84 bonded $75K, $100K contingent cargo through Hancock & Associates). We move FTL freight for shippers across the Midwest and nationwide.
 
-Compass Engine is our 34-point carrier vetting system. Every carrier in our network clears equipment age, brake performance, claims ratio, and on-time-in-full at retailer DCs before hauling a load.
+Compass Engine is our 32-point carrier vetting system. Every carrier in our network clears equipment age, brake performance, claims ratio, and on-time-in-full at retailer DCs before hauling a load.
 
 If you have a recent BOL on a lane that has been tricky, send it over and I will come back with a quote and the carrier's full Compass profile.
 
@@ -131,7 +131,7 @@ function touch2Template(firstName: string, hook: string, cluster: string): Templ
 
 I noticed your operation handles temperature-sensitive freight. With FSMA enforcement tightening, the carrier you trust with your loads matters more than ever.
 
-Every carrier in our network passes a 34-point compliance check before hauling their first load. For food-grade shipments, that includes reefer certification, temperature monitoring history, and clean inspection records.
+Every carrier in our network passes a 32-point compliance check before hauling their first load. For food-grade shipments, that includes reefer certification, temperature monitoring history, and clean inspection records.
 
 If your current broker isn't vetting carriers at that level, it might be worth a conversation.`,
     },
