@@ -79,6 +79,7 @@ export async function liftCarrierRejection(args: { carrierId: string; liftedById
     where: { id: args.carrierId },
     data: {
       onboardingStatus: "REVIEWING",
+      status: "REVIEW", // B2 — paired; see lib/carrierOperational
       rejectionReason: null,
       rejectedAt: null,
       rejectedById: null,
@@ -146,6 +147,7 @@ export async function rejectCarrier(args: RejectCarrierArgs) {
     where: { id: args.carrierId },
     data: {
       onboardingStatus: "REJECTED",
+      status: "REJECTED", // B2 — paired; see lib/carrierOperational
       rejectionReason: args.reason as any,
       rejectedAt: new Date(),
       rejectedById: args.rejectedById,

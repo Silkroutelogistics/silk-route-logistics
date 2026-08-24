@@ -102,7 +102,7 @@ export async function createInfoRequest(args: CreateInfoRequestArgs) {
     if (carrier.onboardingStatus === "PENDING" || carrier.onboardingStatus === "REVIEWING") {
       await tx.carrierProfile.update({
         where: { id: args.carrierId },
-        data: { onboardingStatus: "INFO_REQUESTED" },
+        data: { onboardingStatus: "INFO_REQUESTED" , status: "REVIEW"},
       });
     }
 
@@ -183,7 +183,7 @@ export async function resolveInfoRequest(args: ResolveInfoRequestArgs) {
     if (remainingOpen === 0 && request.carrier.onboardingStatus === "INFO_REQUESTED") {
       await tx.carrierProfile.update({
         where: { id: request.carrier.id },
-        data: { onboardingStatus: "REVIEWING" },
+        data: { onboardingStatus: "REVIEWING" , status: "REVIEW"},
       });
     }
 
@@ -268,7 +268,7 @@ export async function cancelInfoRequest(args: CancelInfoRequestArgs) {
     if (remainingOpen === 0 && request.carrier.onboardingStatus === "INFO_REQUESTED") {
       await tx.carrierProfile.update({
         where: { id: request.carrierId },
-        data: { onboardingStatus: "REVIEWING" },
+        data: { onboardingStatus: "REVIEWING" , status: "REVIEW"},
       });
     }
 

@@ -89,7 +89,7 @@ export async function transitionToReviewing(carrierId: string): Promise<{ moved:
 
   await prisma.carrierProfile.update({
     where: { id: carrierId },
-    data: { onboardingStatus: "REVIEWING" },
+    data: { onboardingStatus: "REVIEWING" , status: "REVIEW"},
   });
 
   const link = `/carrier/dashboard/application-status?reviewing=${carrierId}`;

@@ -1288,7 +1288,7 @@ export async function fmcsaComplianceScan() {
         });
         await prisma.carrierProfile.update({
           where: { id: carrier.id },
-          data: { onboardingStatus: "SUSPENDED", autoSuspendedAt: new Date(), autoSuspendReason: "FMCSA auto-suspension" },
+          data: { onboardingStatus: "SUSPENDED", autoSuspendedAt: new Date(), autoSuspendReason: "FMCSA auto-suspension" , status: "SUSPENDED"},
         });
         results.alerts++;
         results.suspended++;
@@ -1400,7 +1400,7 @@ export async function fmcsaComplianceScan() {
         });
         await prisma.carrierProfile.update({
           where: { id: carrier.id },
-          data: { onboardingStatus: "SUSPENDED", autoSuspendedAt: new Date(), autoSuspendReason: "FMCSA auto-suspension" },
+          data: { onboardingStatus: "SUSPENDED", autoSuspendedAt: new Date(), autoSuspendReason: "FMCSA auto-suspension" , status: "SUSPENDED"},
         });
         results.alerts++;
         results.suspended++;
@@ -1611,6 +1611,7 @@ export async function checkAutoReversal() {
           where: { id: carrier.id },
           data: {
             onboardingStatus: "APPROVED",
+            status: "APPROVED", // B2 — paired; see lib/carrierOperational
             autoSuspendedAt: null,
             autoSuspendReason: null,
             fmcsaAuthorityStatus: "AUTHORIZED",
@@ -1812,6 +1813,7 @@ export async function processInsuranceExpiryEnforcement() {
       where: { id: carrier.id },
       data: {
         onboardingStatus: "SUSPENDED",
+        status: "SUSPENDED", // B2 — paired; see lib/carrierOperational
         autoSuspendReason: `Auto-suspended: Insurance expired on ${carrier.insuranceExpiry?.toISOString().split("T")[0]}`,
         autoSuspendedAt: now,
       },
@@ -1943,6 +1945,7 @@ export async function monthlyCarrierReVetting() {
           where: { id: carrier.id },
           data: {
             onboardingStatus: "SUSPENDED",
+            status: "SUSPENDED", // B2 — paired; see lib/carrierOperational
             autoSuspendReason: `Auto-suspended by monthly re-vetting: score ${report.score}/100 (CRITICAL). Flags: ${report.flags.slice(0, 3).join(", ")}`,
             autoSuspendedAt: new Date(),
           },
@@ -2053,6 +2056,7 @@ export async function detectFmcsaAuthorityChanges() {
             where: { id: carrier.id },
             data: {
               onboardingStatus: "SUSPENDED",
+              status: "SUSPENDED", // B2 — paired; see lib/carrierOperational
               autoSuspendReason: `Auto-suspended: FMCSA authority changed from ${previousStatus} to ${currentStatus}`,
               autoSuspendedAt: new Date(),
             },
@@ -2093,6 +2097,7 @@ export async function detectFmcsaAuthorityChanges() {
             where: { id: carrier.id },
             data: {
               onboardingStatus: "SUSPENDED",
+              status: "SUSPENDED", // B2 — paired; see lib/carrierOperational
               autoSuspendReason: `Auto-suspended: FMCSA safety rating changed to UNSATISFACTORY`,
               autoSuspendedAt: new Date(),
               safetyRating: "UNSATISFACTORY",

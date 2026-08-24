@@ -72,6 +72,7 @@ export async function approveCarrier(args: ApproveCarrierArgs) {
       where: { id: args.carrierId },
       data: {
         onboardingStatus: "APPROVED",
+        status: "APPROVED", // B2 — paired; see lib/carrierOperational
         approvedAt: new Date(),
         // Note: CarrierProfile has no `approvedById` column (only
         // `approvedAt`). AE attribution captured via `auditLog("APPROVE",

@@ -638,7 +638,7 @@ export async function suspendCarrier(req: AuthRequest, res: Response) {
 
     const updated = await prisma.carrierProfile.update({
       where: { id: req.params.carrierId },
-      data: { onboardingStatus: "SUSPENDED" },
+      data: { onboardingStatus: "SUSPENDED" , status: "SUSPENDED"},
     });
 
     // Create audit trail

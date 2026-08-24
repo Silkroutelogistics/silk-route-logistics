@@ -30,6 +30,7 @@ import { approveCarrier } from "../services/approvalService";
 import { logAuthEvent } from "../lib/authEvents";
 import { COMPLIANCE_EMAIL } from "../config/authority";
 import * as crypto from "crypto";
+import { pairedApplicationStatus } from "../lib/carrierOperational";
 
 // v3.8.ala — Fire-and-forget compliance flag dispatch on registration
 // duplicate hits. Sends a brief alert to COMPLIANCE_EMAIL +
@@ -264,6 +265,7 @@ export async function registerCarrier(req: Request, res: Response) {
           equipmentTypes: data.equipmentTypes,
           operatingRegions: data.operatingRegions,
           onboardingStatus: "PENDING",
+          status: "NEW", // B2 — paired; see lib/carrierOperational
           // v3.8.aje — Resolved country from registration IP (geoip-lite).
           // Compared against User.emailVerifiedFromCountry at verify-click
           // time to surface country-jump fraud signals in the AE drawer.
@@ -882,6 +884,11 @@ export async function verifyCarrier(req: AuthRequest, res: Response) {
     where: { id: req.params.id },
     data: {
       onboardingStatus: status,
+      // B2 — paired. The one writer whose value is a variable rather than a
+      // literal, so it resolves through the same table the others use.
+      // `?? undefined` leaves status untouched when an onboarding value has no
+      // application-side counterpart, rather than inventing one.
+      status: pairedApplicationStatus(status) ?? undefined,
       safetyScore: safetyScore ?? null,
       approvedAt: status === "APPROVED" ? new Date() : null,
     },
@@ -1169,6 +1176,7 @@ export async function setupAdminCarrierProfile(req: AuthRequest, res: Response) 
         ...(zip && { zip }),
         ...(numberOfTrucks && { numberOfTrucks: parseInt(numberOfTrucks) }),
         onboardingStatus: "APPROVED",
+        status: "APPROVED", // B2 — paired; see lib/carrierOperational
         approvedAt: existing.approvedAt || new Date(),
         w9Uploaded: true,
         insuranceCertUploaded: true,
@@ -1213,6 +1221,7 @@ export async function setupAdminCarrierProfile(req: AuthRequest, res: Response) 
       zip: zip || "",
       numberOfTrucks: numberOfTrucks ? parseInt(numberOfTrucks) : 1,
       onboardingStatus: "APPROVED",
+      status: "APPROVED", // B2 — paired; see lib/carrierOperational
       approvedAt: new Date(),
       w9Uploaded: true,
       insuranceCertUploaded: true,
