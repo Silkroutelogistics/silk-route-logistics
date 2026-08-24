@@ -396,6 +396,14 @@ export default function CarrierPoolPage() {
   // Arc 33 — AE invitation. Root-mounted like its two siblings: the side
   // panel's overflow:auto chrome would clip a fixed-position overlay.
   const [inviteModalOpen, setInviteModalOpen] = useState(false);
+  // Arc 33 — PENDING -> REVIEWING. Invalidates the list the page actually
+  // reads: ["carrier-all", showTestAccounts]. NOT ["carriers"], which no
+  // useQuery in this codebase declares — four existing invalidations on that
+  // key are dead, banked in the Phase A trace.
+  const startReview = useMutation({
+    mutationFn: async (carrierId: string) => (await api.post(`/carriers/${carrierId}/start-review`)).data,
+    onSuccess: () => { void queryClient.invalidateQueries({ queryKey: ["carrier-all"] }); },
+  });
   const [compassResult, setCompassResult] = useState<CompassResult | null>(null);
   const [compassCarrierId, setCompassCarrierId] = useState<string | null>(null);
   const [compassLoading, setCompassLoading] = useState<string | null>(null);
@@ -1156,6 +1164,20 @@ export default function CarrierPoolPage() {
                         <button onClick={() => setRejectModalOpen(true)}
                           className="flex items-center gap-1.5 px-3 py-1.5 bg-red-500/20 text-red-400 rounded-lg text-xs hover:bg-red-500/30 transition">
                           <AlertCircle className="w-3.5 h-3.5" /> Reject
+                        </button>
+                      )}
+                      {/* Arc 33 — Start Review. PENDING only: this is the
+                          transition that did not exist, so a submitted
+                          application sat silent until a decision. Idempotent
+                          server-side, but showing it past PENDING would imply
+                          an action with no effect. */}
+                      {isAdmin && selectedCarrier.onboardingStatus === "PENDING" && (
+                        <button
+                          onClick={() => startReview.mutate(selectedCarrier.id)}
+                          disabled={startReview.isPending}
+                          className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-500/20 text-blue-300 rounded-lg text-xs hover:bg-blue-500/30 transition disabled:opacity-50"
+                        >
+                          <Eye className="w-3.5 h-3.5" /> {startReview.isPending ? "Starting…" : "Start Review"}
                         </button>
                       )}
                       {/* v3.8.ajh — Request Info button. Only shown for carriers

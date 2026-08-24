@@ -98,11 +98,17 @@ export async function issueInvite(input: IssueInput): Promise<IssueResult> {
     orderBy: { updatedAt: "desc" },
   });
   if (existingDraft && existingDraft.status === "SUBMITTED") {
+    // invitedAt earns its place here: an AE about to re-invite wants to know
+    // this carrier was already reached, and when. Without that the 409 reads
+    // as an obstruction rather than an answer.
+    const when = existingDraft.invitedAt
+      ? ` They were invited on ${existingDraft.invitedAt.toISOString().slice(0, 10)}.`
+      : "";
     return {
       ok: false,
       reason: "already_onboarding",
       status: existingDraft.status,
-      detail: "That carrier has already submitted an application. Review it in the pending list.",
+      detail: `That carrier has already submitted an application. Review it in the pending list.${when}`,
     };
   }
 
