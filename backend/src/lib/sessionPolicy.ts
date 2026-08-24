@@ -129,3 +129,100 @@ export function resolveStaffSessionPolicy(args: {
     shouldTouch: lastSeen !== null && now - lastSeen > TOUCH_THROTTLE_MS,
   };
 }
+
+// ── Arc 34: ONE policy, applied to all four portals ─────────────────
+//
+// The constants above govern the staff-only policy that preceded this and are
+// left intact so its tests keep passing. Everything below supersedes them.
+//
+// WHY UNIFORM. Before this the four portals had four different answers: staff
+// 30m idle / 24h ceiling, carrier and shipper 60m idle / no ceiling, driver no
+// idle at all and a 7-day token. None of the idle numbers were actually
+// enforced, because the only idle store was an in-memory Map that empties on
+// every process restart — and on Render that is every deploy.
+//
+// REMEMBER-ME SHORTENS RE-AUTH, NOT IDLE. A remembered session still idles out
+// at 30 minutes; what it buys is not having to type a password again on the
+// next sign-in. The preceding policy gave remember-me a 7-day rolling idle,
+// which is a different and much weaker promise. That path was unreachable in
+// production anyway (see the note on the missing writer), so tightening it
+// costs nothing today and would have been expensive to discover later.
+
+/** THE single source. Any other hardcoded lifetime is a CI failure. */
+export const SESSION_IDLE_MINUTES = 30;
+export const SESSION_ABSOLUTE_HOURS = 12;
+
+export const SESSION_IDLE_MS = SESSION_IDLE_MINUTES * 60 * 1000;
+export const SESSION_ABSOLUTE_MS = SESSION_ABSOLUTE_HOURS * 60 * 60 * 1000;
+
+/** Distinct so the sign-in screen can say WHY, rather than just "signed out". */
+export type SessionExpiryCode = "SESSION_IDLE_EXPIRED" | "SESSION_ABSOLUTE_EXPIRED";
+
+export type PortalSessionVerdict =
+  | { ok: true; shouldTouch: boolean }
+  | { ok: false; code: SessionExpiryCode; message: string };
+
+/**
+ * Uniform across staff, carrier, shipper and driver.
+ *
+ * ABSOLUTE is stateless — derived from the token's own `iat`, so it holds even
+ * when the session row is missing. IDLE requires the persisted row, which is
+ * the whole reason this arc adds one to every portal: a stateless token cannot
+ * express "has this person done anything lately".
+ *
+ * FAILS CLOSED ON A MISSING ROW, deliberately. A token with no session record
+ * is either older than the rollout or has had its row swept, and in both cases
+ * the honest answer is "sign in again" rather than "assume fresh".
+ */
+export function resolveSessionPolicy(args: {
+  iatMs: number | null;
+  now: number;
+  lastActivityAt: Date | null;
+  /** Absent row. Distinguished from a present row with a null timestamp. */
+  sessionMissing?: boolean;
+}): PortalSessionVerdict {
+  const { iatMs, now, lastActivityAt } = args;
+
+  // No provable age. Refuse rather than assume freshness.
+  if (typeof iatMs !== "number" || !Number.isFinite(iatMs)) {
+    return {
+      ok: false,
+      code: "SESSION_ABSOLUTE_EXPIRED",
+      message: "Your session could not be verified. Please sign in again.",
+    };
+  }
+
+  if (now - iatMs > SESSION_ABSOLUTE_MS) {
+    return {
+      ok: false,
+      code: "SESSION_ABSOLUTE_EXPIRED",
+      message: `For security, sessions end after ${SESSION_ABSOLUTE_HOURS} hours. Please sign in again.`,
+    };
+  }
+
+  if (args.sessionMissing || lastActivityAt === null) {
+    return {
+      ok: false,
+      code: "SESSION_IDLE_EXPIRED",
+      message: "Your session has ended. Please sign in again.",
+    };
+  }
+
+  const idleFor = now - lastActivityAt.getTime();
+  if (idleFor > SESSION_IDLE_MS) {
+    return {
+      ok: false,
+      code: "SESSION_IDLE_EXPIRED",
+      message: `You were signed out after ${SESSION_IDLE_MINUTES} minutes of inactivity.`,
+    };
+  }
+
+  // Throttled so this is not an UPDATE per request.
+  return { ok: true, shouldTouch: idleFor > TOUCH_THROTTLE_MS };
+}
+
+/**
+ * How long the frontend should wait before warning. Exported so the warning
+ * modal cannot drift from the rule it is warning about.
+ */
+export const SESSION_WARNING_LEAD_MS = 2 * 60 * 1000;
