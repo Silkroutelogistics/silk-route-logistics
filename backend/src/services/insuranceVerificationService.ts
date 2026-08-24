@@ -1,5 +1,6 @@
 import { prisma } from "../config/database";
 import { log } from "../lib/logger";
+import { monitoredCarrierWhere } from "../lib/carrierOperational";
 import {
   ENTITY_NAME,
   MC_LABEL,
@@ -328,14 +329,20 @@ export async function checkExpiringInsurance() {
 
   // Find carriers with expiring insurance
   const expiring = await prisma.carrierProfile.findMany({
+    // AND, not a spread. monitoredCarrierWhere() carries its own OR — it spans
+    // the two status enums — and spreading it beside this OR would silently
+    // drop one of them, because the last key wins in an object literal. The
+    // loser would have been the span this fix exists to add.
     where: {
-      deletedAt: null,
-      isTestAccount: false, // v3.8.alm §13.3 Item 190 — insurance-expiry sweep
-      status: "APPROVED",
-      OR: [
-        { autoLiabilityExpiry: { lte: days60, gte: now } },
-        { cargoInsuranceExpiry: { lte: days60, gte: now } },
-        { generalLiabilityExpiry: { lte: days60, gte: now } },
+      AND: [
+        monitoredCarrierWhere(),
+        {
+          OR: [
+            { autoLiabilityExpiry: { lte: days60, gte: now } },
+            { cargoInsuranceExpiry: { lte: days60, gte: now } },
+            { generalLiabilityExpiry: { lte: days60, gte: now } },
+          ],
+        },
       ],
     },
     include: { user: { select: { firstName: true, lastName: true, email: true } } },

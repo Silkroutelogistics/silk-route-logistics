@@ -1,5 +1,6 @@
 import { prisma } from "../config/database";
 import { log } from "../lib/logger";
+import { monitoredCarrierWhere } from "../lib/carrierOperational";
 
 // ─── Types ───────────────────────────────────────────────────
 
@@ -236,9 +237,10 @@ export async function batchUpdateCsaScores(): Promise<{ updated: number; failed:
 
   try {
     const carriers = await prisma.carrierProfile.findMany({
+      // B2 — spread is safe here: monitoredCarrierWhere() has no key that
+      // collides with dotNumber.
       where: {
-        status: "APPROVED",
-        isTestAccount: false, // v3.8.alm §13.3 Item 190 — CSA BASIC scan
+        ...monitoredCarrierWhere(),
         dotNumber: { not: null },
       },
       select: { id: true, dotNumber: true },

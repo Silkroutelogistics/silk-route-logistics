@@ -1,5 +1,6 @@
 import { prisma } from "../config/database";
 import { log } from "../lib/logger";
+import { monitoredCarrierWhere } from "../lib/carrierOperational";
 
 // ─── Types ───────────────────────────────────────────────────
 
@@ -140,8 +141,10 @@ export async function screenCarrier(carrierId: string) {
 
 export async function weeklyOfacRescan() {
   const carriers = await prisma.carrierProfile.findMany({
-    // v3.8.alm §13.3 Item 190 — exclude test carriers from the weekly OFAC rescan.
-    where: { status: "APPROVED", isTestAccount: false },
+    // B2 — one definition of who gets monitored. This used to read
+    // `status: "APPROVED"` alone, and the canonical approve path never sets
+    // that field, so a normally-approved carrier was never sanctions-rescanned.
+    where: monitoredCarrierWhere(),
     select: { id: true, companyName: true, contactName: true },
   });
 
@@ -183,6 +186,7 @@ export async function weeklyOfacRescan() {
             where: { id: carrier.id },
             data: {
               onboardingStatus: "SUSPENDED",
+              status: "SUSPENDED", // B2 — paired; see lib/carrierOperational
               autoSuspendReason: `Auto-suspended: OFAC/SDN match detected (score: ${topScore}). Immediate review required.`,
               autoSuspendedAt: new Date(),
             },

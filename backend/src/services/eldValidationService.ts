@@ -10,6 +10,7 @@
  */
 
 import { prisma } from "../config/database";
+import { monitoredCarrierWhere } from "../lib/carrierOperational";
 
 // FMCSA-registered ELD providers (normalized to uppercase)
 // Source: https://eld.fmcsa.dot.gov/List — last reviewed Feb 2026
@@ -174,8 +175,8 @@ export async function validateAllCarrierElds(): Promise<{
   errors: string[];
 }> {
   const carriers = await prisma.carrierProfile.findMany({
-    // v3.8.alm §13.3 Item 190 — exclude test carriers from ELD validation sweep.
-    where: { status: "APPROVED", isTestAccount: false },
+    // B2 — one definition of who gets monitored (see lib/carrierOperational).
+    where: monitoredCarrierWhere(),
     select: { id: true },
   });
 
