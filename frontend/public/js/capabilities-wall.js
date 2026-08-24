@@ -34,7 +34,7 @@
   var facts = [
     { t: 'Cold-chain capable',        i: 'thermometer-snowflake', c: 'warm' },
     { t: 'Quick Pay, day one',        i: 'banknote',              c: 'warm' },
-    { t: '34-point vetting',          i: 'shield-check',          c: 'cool' },
+    { t: '32-point vetting',          i: 'shield-check',          c: 'cool' },
     { t: '48 contiguous states',      i: 'map',                   c: 'warm' },
     { t: 'BMC-84 bonded',             i: 'badge-check',           c: 'cool' },
     { t: 'FMCSA broker',              i: 'scroll-text',           c: 'cool' },

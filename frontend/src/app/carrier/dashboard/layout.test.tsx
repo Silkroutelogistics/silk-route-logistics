@@ -36,6 +36,10 @@ vi.mock("next/navigation", () => ({
 vi.mock("@tanstack/react-query", () => ({
   useQuery: ({ queryKey }: any) =>
     queryKey[0] === "carrier-activation" ? { data: activationData.value } : { data: [] },
+  // The layout marks a notification read on click, which needs a query client.
+  // A no-op is right here: this file is about ROUTING, and a real client would
+  // add a provider and a cache to tests that care about neither.
+  useQueryClient: () => ({ invalidateQueries: vi.fn() }),
 }));
 
 vi.mock("@/hooks/useCarrierAuth", () => ({

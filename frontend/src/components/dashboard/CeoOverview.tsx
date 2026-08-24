@@ -23,6 +23,21 @@ import {
 const fmt = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
 const fmtCompact = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", notation: "compact", maximumFractionDigits: 1 });
 
+/**
+ * UNFETCHABLE IS NOT ZERO.
+ *
+ * These cards read $0 for months because GET /accounting/summary did not exist,
+ * the query had no .catch, and `finance?.revenueMTD ?? 0` turned a 404 into a
+ * confident zero. A real zero means "we looked and there was none"; a null
+ * means "we could not answer". Collapsing the two made a dead endpoint look
+ * like a business with no revenue.
+ */
+const DASH = "—";
+const money = (v: number | null | undefined, f: Intl.NumberFormat = fmt) =>
+  typeof v === "number" && Number.isFinite(v) ? f.format(v) : DASH;
+const percent = (v: number | null | undefined) =>
+  typeof v === "number" && Number.isFinite(v) ? `${v.toFixed(1)}%` : DASH;
+
 function pctChange(current: number, previous: number): number | null {
   if (!previous) return null;
   return Math.round(((current - previous) / previous) * 100);
@@ -72,7 +87,9 @@ export function CeoOverview() {
 
   const { data: finance, isLoading: financeLoading } = useQuery({
     queryKey: ["ceo-finance"],
-    queryFn: () => api.get("/accounting/summary?period=monthly").then(r => r.data),
+    // .catch so a transport failure is distinguishable from a real zero. Its
+    // absence is what rendered a 404 as $0 across three cards.
+    queryFn: () => api.get("/accounting/summary").then(r => r.data).catch(() => null),
   });
 
   const { data: customers } = useQuery({
@@ -155,10 +172,11 @@ export function CeoOverview() {
     return d && d >= lastMonthStart && d < startOfMonth;
   });
 
-  // Revenue MTD
-  const revenueMTD = finance?.revenueMTD ?? finance?.totalRevenue ?? 0;
-  const avgMarginPercent = finance?.avgMarginPercent ?? finance?.marginPercent ?? 0;
-  const cashBalance = finance?.cashBalance ?? 0;
+  // null, never 0, when the server could not answer. The `?? 0` these replace
+  // is the whole T5 defect.
+  const revenueMTD: number | null = finance?.revenueMTD ?? null;
+  const avgMarginPercent: number | null = finance?.avgMarginPercent ?? null;
+  const cashBalance: number | null = finance?.cashBalance ?? null;
 
   // Active carriers
   const activeCarrierCount = allCarriers.filter(c => c.onboardingStatus === "APPROVED").length || allCarriers.length;
@@ -216,7 +234,11 @@ export function CeoOverview() {
         const d = l.pickupDate ? new Date(l.pickupDate) : null;
         return d && d >= m && d < mEnd;
       });
-      const monthRev = monthLoads.reduce((s, l) => s + (l.rate || 0), 0);
+      // customerRate, not the retired Load.rate mirror (§13.3 Item 227). This
+      // is the chart's load-derived FALLBACK, used only when the server sends
+      // no monthlyTrend — so it is a rough shape, not billed revenue, and it
+      // will disagree with the invoice-derived cards above by design.
+      const monthRev = monthLoads.reduce((s, l) => s + (l.customerRate || 0), 0);
       revenueByMonth.push({ month: MONTH_NAMES[m.getMonth()], revenue: monthRev });
     }
   }
@@ -229,15 +251,25 @@ export function CeoOverview() {
     return d && d >= startOfWeek;
   }).length;
 
-  const revenueThisWeek = allLoads.filter(l => {
-    const d = l.pickupDate ? new Date(l.pickupDate) : null;
-    return d && d >= startOfWeek;
-  }).reduce((s, l) => s + (l.rate || 0), 0);
+  // Invoice-derived, from the same endpoint and the same query shape as
+  // revenueMTD — which is what makes the two consistent.
+  //
+  // It used to sum Load.rate over loads whose PICKUP fell in the week, with no
+  // upper bound and no status filter. That reported $4,850 against $0 MTD: one
+  // TENDERED load picking up TOMORROW, counted as revenue before a truck moved.
+  // Load.rate is also the retired write-only mirror (§13.3 Item 227) whose
+  // meaning depends on the creation path, under a drop migration on
+  // hold/retire-load-rate.
+  const revenueThisWeek: number | null = finance?.revenueThisWeek ?? null;
 
   const newCustomersThisMonth = customers?.newThisMonth ?? customers?.activeCustomers ?? 0;
 
   const pendingInvoices = allInvoices.filter(inv => inv.status === "PENDING" || inv.status === "SENT");
-  const pipelineValue = allLoads.filter(l => l.status === "POSTED").reduce((s, l) => s + (l.rate || 0), 0);
+  // customerRate, not the retired Load.rate mirror — pipeline value is what a
+  // shipper would pay, so the customer-meaning field is the correct one.
+  const pipelineValue = allLoads
+    .filter(l => l.status === "POSTED")
+    .reduce((s, l) => s + (l.customerRate || 0), 0);
 
   const carriersOnboardedThisMonth = allCarriers.filter(c => {
     const d = c.createdAt ? new Date(c.createdAt) : null;
@@ -287,7 +319,13 @@ export function CeoOverview() {
   }
 
   const loadCountChange = pctChange(loadsThisMonth.length, loadsLastMonth.length);
-  const marginColor = avgMarginPercent > 15 ? "text-green-400" : avgMarginPercent >= 10 ? "text-yellow-400" : "text-red-400";
+  // Neutral when unknown. Colouring an unanswerable margin red would assert a
+  // bad number where there is no number.
+  const marginColor =
+    avgMarginPercent === null ? "text-slate-400"
+      : avgMarginPercent > 15 ? "text-green-400"
+      : avgMarginPercent >= 10 ? "text-yellow-400"
+      : "text-red-400";
 
   return (
     <div className="p-6 space-y-6">
@@ -318,8 +356,8 @@ export function CeoOverview() {
           icon={<DollarSign className="w-4 h-4" />}
           iconBg="text-green-400 bg-green-500/20"
           label="Revenue MTD"
-          value={fmtCompact.format(revenueMTD)}
-          trend={revenueMTD > 0 ? { direction: "up", label: "active" } : undefined}
+          value={money(revenueMTD, fmtCompact)}
+          trend={typeof revenueMTD === "number" && revenueMTD > 0 ? { direction: "up", label: "active" } : undefined}
           href="/dashboard/finance"
         />
 
@@ -328,7 +366,7 @@ export function CeoOverview() {
           icon={<TrendingUp className="w-4 h-4" />}
           iconBg={`${marginColor} ${marginColor.replace("text-", "bg-").replace("400", "500/20")}`}
           label="Gross Margin %"
-          value={`${avgMarginPercent.toFixed(1)}%`}
+          value={percent(avgMarginPercent)}
           valueColor={marginColor}
           href="/dashboard/lane-analytics"
         />
@@ -367,10 +405,10 @@ export function CeoOverview() {
         {/* 6. Cash Balance */}
         <KpiCard
           icon={<DollarSign className="w-4 h-4" />}
-          iconBg={cashBalance < 10000 ? "text-red-400 bg-red-500/20" : "text-emerald-400 bg-emerald-500/20"}
+          iconBg={typeof cashBalance === "number" && cashBalance < 10000 ? "text-red-400 bg-red-500/20" : "text-emerald-400 bg-emerald-500/20"}
           label="Cash Balance"
-          value={fmtCompact.format(cashBalance)}
-          valueColor={cashBalance < 10000 ? "text-red-400" : undefined}
+          value={money(cashBalance, fmtCompact)}
+          valueColor={typeof cashBalance === "number" && cashBalance < 10000 ? "text-red-400" : undefined}
           href="/accounting/fund"
         />
       </div>
@@ -388,7 +426,7 @@ export function CeoOverview() {
           </h3>
           <div className="space-y-3">
             <TeamMetricRow label="Loads Created This Week" value={String(loadsCreatedThisWeek)} />
-            <TeamMetricRow label="Revenue This Week" value={fmt.format(revenueThisWeek)} />
+            <TeamMetricRow label="Revenue This Week" value={money(revenueThisWeek)} />
             <TeamMetricRow label="New Customers This Month" value={String(newCustomersThisMonth)} />
             <TeamMetricRow label="Proposals Sent (Pending)" value={String(pendingInvoices.length)} />
             <TeamMetricRow label="Pipeline Value (Posted)" value={fmt.format(pipelineValue)} highlight />
@@ -416,7 +454,7 @@ export function CeoOverview() {
           Run-button + last-run summary, sitting next to the Compliance Alerts
           tile above. POST /integrations/fmcsa/bulk-monitor (fire-and-forget,
           202) + GET /integrations/fmcsa/last-scan for the summary card.
-          Daily 3am Eastern cron writes summaries too — same card reflects both.
+          Daily 3:00 AM Eastern cron writes summaries too — same card reflects both.
           ═══════════════════════════════════════════════════════════════════════ */}
       <div className="grid md:grid-cols-3 gap-4">
         {/* Run-FMCSA-Scan card */}
@@ -426,7 +464,7 @@ export function CeoOverview() {
             FMCSA Compliance Scan
           </h3>
           <p className="text-xs text-slate-400 mb-4 flex-1">
-            Re-check every approved carrier against FMCSA. Runs daily at 3 AM Eastern automatically; manual re-scan anytime.
+            Re-check every approved carrier against FMCSA. Runs daily at 3:00 AM Eastern automatically; manual re-scan anytime.
           </p>
           <button
             type="button"
@@ -460,16 +498,36 @@ export function CeoOverview() {
           {lastScanLoading ? (
             <div className="text-slate-500 text-sm">Loading...</div>
           ) : !lastScan?.found ? (
-            <div className="text-slate-500 text-sm">No scans recorded yet. Run a scan or wait for the daily 3 AM ET cron.</div>
+            <div className="text-slate-500 text-sm">No scans recorded yet. Run a scan or wait for the daily 3:00 AM Eastern cron.</div>
           ) : (
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+              {/* A scan that had nobody to scan is not a clean scan. It ran, on
+                  time, and did nothing — and for 86 days it rendered in the same
+                  neutral white as success. Said in words, because a reader
+                  cannot tell "0 changes, all healthy" from "0 carriers existed"
+                  by looking at zeros. */}
+              {lastScan.emptyPopulation ? (
+                <div className="col-span-2 md:col-span-4 flex items-start gap-2 px-3 py-2 rounded-lg bg-yellow-500/10 border border-yellow-500/30">
+                  <AlertTriangle className="w-4 h-4 text-yellow-400 mt-0.5 shrink-0" />
+                  <div className="text-yellow-200 text-xs">
+                    <span className="font-medium">Nothing was scanned.</span>{" "}
+                    No carrier was eligible — every approved carrier is currently a test
+                    account, so the fence that keeps the scan off seed data also empties
+                    it. This is not a clean run.
+                  </div>
+                </div>
+              ) : null}
               <div>
                 <div className="text-slate-500 text-xs uppercase tracking-wide mb-1">When</div>
                 <div className="text-white">{formatScanTimestamp(lastScan.timestamp)}</div>
               </div>
               <div>
                 <div className="text-slate-500 text-xs uppercase tracking-wide mb-1">Carriers Scanned</div>
-                <div className="text-white">{lastScan.carriersScanned ?? "—"}</div>
+                {/* Zero gets warning treatment. Its siblings below already
+                    escalate above zero; this cell escalated on nothing at all. */}
+                <div className={lastScan.carriersScanned === 0 ? "text-yellow-400" : "text-white"}>
+                  {lastScan.carriersScanned ?? "—"}
+                </div>
               </div>
               <div>
                 <div className="text-slate-500 text-xs uppercase tracking-wide mb-1">Changes Found</div>

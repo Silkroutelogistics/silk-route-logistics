@@ -2,6 +2,7 @@ import { Router, Response } from "express";
 import { authenticate, authorize, AuthRequest } from "../middleware/auth";
 import * as ctrl from "../controllers/analyticsController";
 import { getTopLanes, getLaneDetail, getLaneHeatmap, getMarginAnalysis } from "../services/laneAnalyticsService";
+import { buildBenchBoard } from "../services/benchBoardService";
 import { prisma } from "../config/database";
 import { log } from "../lib/logger";
 
@@ -468,5 +469,27 @@ router.get("/tender-funnel", authorize("ADMIN", "CEO", "BROKER", "OPERATIONS") a
     res.status(500).json({ error: "Failed to generate tender funnel data" });
   }
 });
+
+// ─── Carrier Bench Board ─────────────────────────────────────────────
+
+// A single static segment, so the two-segment /lane-rate/:origin/:dest and
+// /lanes/:origin/:dest routes above cannot shadow it, and there is no
+// single-segment param route in this file for it to collide with.
+//
+// DISPATCH and ACCOUNT_EXECUTIVE are included deliberately: the bench is a
+// daily operating surface, not a management report. A scoreboard only the CEO
+// can open is not part of anyone's daily loop.
+router.get(
+  "/bench-board",
+  authorize("ADMIN", "CEO", "BROKER", "DISPATCH", "OPERATIONS", "ACCOUNT_EXECUTIVE") as any,
+  async (_req: AuthRequest, res: Response) => {
+    try {
+      res.json(await buildBenchBoard());
+    } catch (err) {
+      log.error({ err }, "[Analytics] Bench board error:");
+      res.status(500).json({ error: "Failed to build the bench board" });
+    }
+  },
+);
 
 export default router;

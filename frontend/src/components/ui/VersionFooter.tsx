@@ -15053,7 +15053,47 @@
 // carriers were never congratulated while manually-approved ones were; and
 // answering or having an info request withdrawn told the carrier nothing.
 // Lifecycle emails now ride the transition, not the path.
-export const SRL_VERSION = "3.8.auq";
+// v3.8.aur — the Carrier Bench arc. Nine commits, merged as one letter.
+//
+// A load could read TENDERED with no tender behind it, so it vanished from
+// the carrier loadboard while looking dispatched to the AE. The status flip
+// now happens inside the same transaction that creates the tender.
+//
+// GET /accounting/summary did not exist. The dashboard had been calling it
+// for a while and rendering a confident $0 built out of the rejection, which
+// is the same shape as the finance-card defect: unfetchable is not zero.
+//
+// Two Compass checks read columns nothing writes, so every carrier lost ten
+// points for data no code path could supply — and under 40 is a tender block,
+// so the phantom penalty was not cosmetic. 34 checks became 32, and the PDF
+// category map was re-indexed because it is positional and had silently
+// re-pointed three headings on every shipped Compass report.
+//
+// The FMCSA scan ran at 3 AM UTC, which is the previous evening in Eastern,
+// and an empty scan reported success indistinguishable from a healthy one.
+//
+// The routing guide became a scoring input without re-ranking anything today:
+// with no guide, the new composite is an affine transform of the old, so the
+// order is provably unchanged. The wiring changes what is possible, not who
+// gets offered freight this morning.
+//
+// financePeriods — this arc's own library — was wrong on the two days a year
+// it existed for. It round-tripped an instant through a formatted string and
+// re-parsed it in the HOST timezone, so it only worked when the server was
+// not itself Eastern. On 1 Nov 2026 it returned six hours, an offset US
+// Eastern has never had. An hour of revenue in the wrong bucket, twice a
+// year. The guard now walks every day of four years, because the original
+// tests asserted January and July and both passed throughout.
+//
+// The Carrier Bench itself: who can haul, on which lanes, right now. It asks
+// the same gate the tender path runs rather than forming its own opinion, and
+// every zero names what would make it non-zero.
+//
+// The carrier and shipper notification bells carried cursor-pointer and no
+// click handler — a row that invited a click and did nothing, while actionUrl
+// sat on the type unread. Now clickable only when there is somewhere safe to
+// go, confined to the portal doing the rendering.
+export const SRL_VERSION = "3.8.aur";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

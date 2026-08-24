@@ -25,6 +25,7 @@ import {
   type LoadContext,
 } from "./waterfallScoringService";
 import { logWaterfallEvent } from "./waterfallEventService";
+import { validateLoadStatusTransition } from "../lib/loadStateMachine";
 import { broadcastSSE } from "../routes/trackTraceSSE";
 
 const TENDER_WINDOW_MS = 20 * 60 * 1000;            // 20 minutes per position
@@ -158,9 +159,19 @@ export async function startWaterfall(waterfallId: string) {
   });
 
   // Flip visibility to waterfall so the load hides from the open loadboard.
+  //
+  // Status is deliberately NOT set here. It used to flip to TENDERED on this
+  // line — before tenderPosition ran, i.e. before we knew whether any tender
+  // would actually be sent. A fallback-only cascade (no carrier positions,
+  // which is every cascade today while scoring requires cppTier SILVER+) took
+  // the isFallback branch, created ZERO LoadTender rows, and left the load
+  // reading TENDERED with nothing tendered to anyone. Nothing could then move
+  // it: the loadboard, outreach and re-cascade are all POSTED-gated, and the
+  // only TENDERED -> POSTED writer derives its set from EXPIRED tenders, of
+  // which there were none. The status now follows the tender in tenderPosition.
   await prisma.load.update({
     where: { id: wf.loadId },
-    data: { visibility: "waterfall", status: "TENDERED" },
+    data: { visibility: "waterfall" },
   });
 
   await tenderPosition(waterfallId, 1);
@@ -203,16 +214,44 @@ async function tenderPosition(waterfallId: string, position: number) {
   const now = new Date();
   const expiresAt = new Date(now.getTime() + TENDER_WINDOW_MS);
 
-  const tender = await prisma.loadTender.create({
-    data: {
-      loadId: pos.waterfall.loadId,
-      carrierId: profile.id,
-      status: "OFFERED",
-      offeredRate: Number(pos.offeredRate ?? 0),
-      expiresAt,
-      waterfallPositionId: pos.id,
-    },
+  // The load moves to TENDERED here, in the same transaction as the tender
+  // itself — never before it. That ordering is the whole fix: a load reads
+  // TENDERED if and only if a LoadTender row exists to back it.
+  //
+  // Routed through the state-machine validator, which this file previously
+  // called nowhere. tenderedAt is stamped; tenderedById is deliberately left
+  // null because no human tendered this — inventing an actor (the poster, say)
+  // would misattribute an automated action. tenderedAt set with tenderedById
+  // null is therefore the honest signature of a waterfall tender.
+  const loadNow = await prisma.load.findUnique({
+    where: { id: pos.waterfall.loadId },
+    select: { status: true },
   });
+  const needsFlip =
+    !!loadNow &&
+    loadNow.status !== "TENDERED" &&
+    validateLoadStatusTransition(loadNow.status, "TENDERED", "AE").allowed;
+
+  const [tender] = await prisma.$transaction([
+    prisma.loadTender.create({
+      data: {
+        loadId: pos.waterfall.loadId,
+        carrierId: profile.id,
+        status: "OFFERED",
+        offeredRate: Number(pos.offeredRate ?? 0),
+        expiresAt,
+        waterfallPositionId: pos.id,
+      },
+    }),
+    ...(needsFlip
+      ? [
+          prisma.load.update({
+            where: { id: pos.waterfall.loadId },
+            data: { status: "TENDERED", tenderedAt: now },
+          }),
+        ]
+      : []),
+  ]);
 
   await prisma.waterfallPosition.update({
     where: { id: pos.id },
@@ -650,12 +689,28 @@ export async function triggerFallbackChain(loadId: string, waterfallId: string) 
     data: { status: "exhausted", completedAt: now },
   });
 
+  // Visibility and status move TOGETHER. This used to write visibility only,
+  // so an exhausted cascade left the load advertised as open-board by its
+  // visibility column while its status still said TENDERED — and status is
+  // what every consumer actually gates on (carrierLoads, outreach, re-cascade
+  // are all `status: "POSTED"`). Returning it to POSTED is the documented AE
+  // un-tender step and is in the AE transition map.
+  const current = await prisma.load.findUnique({
+    where: { id: loadId },
+    select: { status: true },
+  });
+  const returnToBoard =
+    !!current &&
+    current.status === "TENDERED" &&
+    validateLoadStatusTransition(current.status, "POSTED", "AE").allowed;
+
   await prisma.load.update({
     where: { id: loadId },
     data: {
       visibility: "open",
       fallbackChainStartedAt: now,
       fallbackPostedToLoadboardAt: now,
+      ...(returnToBoard ? { status: "POSTED" as const } : {}),
     },
   });
 
@@ -720,10 +775,23 @@ export async function promoteStaleOpenLoadsToDat() {
     });
     if (acceptedBids > 0) continue; // somebody took it, skip
 
+    // Same rule one step further down the chain. The selector above still
+    // admits TENDERED so pre-fix rows are picked up and healed rather than
+    // promoted to DAT while wearing a status that hides them from carriers.
     const now = new Date();
+    const cur = await prisma.load.findUnique({ where: { id: l.id }, select: { status: true } });
+    const heal =
+      !!cur &&
+      cur.status === "TENDERED" &&
+      validateLoadStatusTransition(cur.status, "POSTED", "AE").allowed;
+
     await prisma.load.update({
       where: { id: l.id },
-      data: { visibility: "dat", fallbackPostedToDatAt: now },
+      data: {
+        visibility: "dat",
+        fallbackPostedToDatAt: now,
+        ...(heal ? { status: "POSTED" as const } : {}),
+      },
     });
 
     await logWaterfallEvent({

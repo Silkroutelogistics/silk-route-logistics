@@ -1,9 +1,14 @@
 /**
  * Waterfall Dispatch — carrier eligibility + composite match scoring
  *
- * Implements the spec §2.1 eligibility rules and §2.2 scoring formula:
- *   Lane history (30%) + SRCPP tier (25%) + Rate competitiveness (20%)
- *                      + On-time performance (15%) + Equipment match (10%)
+ * Implements the spec §2.1 eligibility rules and §2.2 scoring formula.
+ * Weights are RELATIVE and the composite divides by their sum (see
+ * DEFAULT_WEIGHTS + totalWeight):
+ *   Lane history 30 + tier 25 + rate 20 + on-time 15 + equipment 10
+ *                   + routing guide 20  (B4)  = 120
+ * The header used to state these as percentages summing to 100. It stopped
+ * being true when routingGuide was added, so it now names the weights instead —
+ * a comment asserting a total is a comment that goes stale on the next factor.
  *
  * Single source of truth for carrier scoring (Rule 5 cleanup in v3.4.u).
  * The legacy ~95pt scoring that lived in carrierMatch.ts has been
@@ -30,15 +35,64 @@ export interface ScoringWeights {
   rate: number;
   onTime: number;
   equipment: number;
+  /** The customer's routing guide, where they have ranked carriers on this lane (B4). */
+  routingGuide: number;
 }
 
+/**
+ * Weights no longer sum to 100; the composite divides by their SUM.
+ *
+ * routingGuide was ADDED rather than carved out of laneHistory, and the
+ * distinction is load-bearing. Carving 20 out of lane history would shrink it
+ * from 30 to 10, so the gap between a carrier with three prior runs on the lane
+ * and one with none would fall from 30 points to 10 — silently re-ordering live
+ * dispatch on the day this shipped, for a feature with zero rows behind it.
+ *
+ * Adding, and normalising by the total, is provably inert today: with no routing
+ * guide the factor returns the SAME neutral value for every carrier, so the
+ * composite becomes an affine increasing transform of the old one and the
+ * ordering is identical. A test asserts precisely that. Once guides carry rows,
+ * the factor varies per carrier and starts doing real work.
+ */
 export const DEFAULT_WEIGHTS: ScoringWeights = {
   laneHistory: 30,
   tier: 25,
   rate: 20,
   onTime: 15,
   equipment: 10,
+  // Deliberately second-heaviest. A routing guide is not one more opinion about
+  // a carrier — it is the SHIPPER instructing us whom to use on their freight,
+  // in order. It should outweigh our own readings of rate and punctuality, and
+  // sit just under the lane history that records who actually runs it.
+  routingGuide: 20,
 };
+
+/** Weights are relative, so the composite divides by whatever they total. */
+export function totalWeight(w: ScoringWeights = DEFAULT_WEIGHTS): number {
+  return w.laneHistory + w.tier + w.rate + w.onTime + w.equipment + w.routingGuide;
+}
+
+/**
+ * Rank on the customer's routing guide → 0-100.
+ *
+ * NEUTRAL_NO_GUIDE is returned both when the lane has no guide and when a guide
+ * exists but does not name this carrier. Those are deliberately the same value:
+ * a shipper listing three preferred carriers is expressing a preference, not a
+ * prohibition, and treating "unlisted" as a penalty would quietly make an
+ * incomplete routing guide an exclusion list. Exclusion is what the compliance
+ * gate is for.
+ */
+export const NEUTRAL_NO_GUIDE = 50;
+
+export function routingGuideFactor(rank: number | null | undefined): number {
+  if (rank == null) return NEUTRAL_NO_GUIDE;
+  if (rank <= 1) return 100;
+  if (rank === 2) return 85;
+  if (rank === 3) return 70;
+  // Named but far down the list still beats unlisted — the shipper did put them
+  // on it. Floors above neutral rather than decaying through it.
+  return 60;
+}
 
 export interface ScoredCarrier {
   carrierId: string;          // CarrierProfile.id
@@ -52,6 +106,9 @@ export interface ScoredCarrier {
     rate: number;
     onTime: number;
     equipment: number;
+    routingGuide: number;     // 0–100; NEUTRAL_NO_GUIDE when the lane has none
+    /** Rank on the customer's routing guide, or null if unlisted / no guide. */
+    routingGuideRank: number | null;
     laneRunCount: number;
     onTimePct: number;
     estimatedRate: number | null;
@@ -73,6 +130,12 @@ export interface LoadContext extends EligibilityInput {
   distance: number | null;
   customerRate: number | null;
   carrierRate: number | null; // target carrier cost
+  /**
+   * Needed to find the CUSTOMER's routing guide (B4). A routing guide belongs
+   * to a shipper, so scoring a load without knowing whose freight it is can
+   * only ever find a generic lane guide, never theirs.
+   */
+  customerId: string | null;
 }
 
 /**
@@ -92,6 +155,7 @@ export async function loadLoadContext(loadId: string): Promise<LoadContext | nul
       customerRate: true,
       carrierRate: true,
       rate: true,
+      customerId: true,
     },
   });
   if (!load) return null;
@@ -105,6 +169,7 @@ export async function loadLoadContext(loadId: string): Promise<LoadContext | nul
     distance: load.distance ?? null,
     customerRate: load.customerRate ?? null,
     carrierRate: load.carrierRate ?? null,
+    customerId: load.customerId ?? null,
   };
 }
 
@@ -252,6 +317,36 @@ async function filterDoubleBooked<T extends { userId: string }>(
 
 // ────────── Scoring ──────────
 
+/**
+ * The composite, as a pure function of the six factors.
+ *
+ * EXTRACTED so the tests can call THIS rather than re-implementing the formula
+ * beside it. A test that reproduces the code cannot test the code: it would
+ * have passed just as happily if the engine forgot to divide by totalWeight,
+ * or dropped routingGuide from the sum entirely (§13.3 Item 222.5).
+ */
+export function compositeScore(
+  f: {
+    laneHistory: number;
+    tier: number;
+    rate: number;
+    onTime: number;
+    equipment: number;
+    routingGuide: number;
+  },
+  weights: ScoringWeights = DEFAULT_WEIGHTS,
+): number {
+  return (
+    (f.laneHistory * weights.laneHistory +
+      f.tier * weights.tier +
+      f.rate * weights.rate +
+      f.onTime * weights.onTime +
+      f.equipment * weights.equipment +
+      f.routingGuide * weights.routingGuide) /
+    totalWeight(weights)
+  );
+}
+
 export function normalizeEquipment(type: string): string {
   return (type || "").toUpperCase().replace(/[\s_-]/g, "");
 }
@@ -379,6 +474,16 @@ export async function scoreCarriersForLoad(
 
   const loadKey = normalizeEquipment(ctx.equipmentType);
 
+  // B4 — the customer's routing guide for this lane, fetched ONCE per scoring
+  // run rather than once per carrier. RoutingGuideEntry.carrierId is a real FK
+  // to CarrierProfile.id, so the rank map keys directly off the id we already
+  // hold; no join guesswork.
+  //
+  // Zero rows in production today, by design — this is the read path those rows
+  // will land in. Non-fatal on failure: a scoring run that cannot reach the
+  // guide should rank carriers without it, not refuse to dispatch.
+  const guideRanks = await loadRoutingGuideRanks(ctx);
+
   const scored: ScoredCarrier[] = [];
   for (const c of eligible) {
     const equipmentMatch: "exact" | "compatible" | "none" =
@@ -400,13 +505,22 @@ export async function scoreCarriersForLoad(
     const rateF = rateFactor(estimatedRate, ctx.carrierRate);
     const otF   = onTimeFactor(onTimePct);
     const eqF   = equipmentFactor(equipmentMatch);
+    const rgRank = guideRanks.get(c.id) ?? null;
+    const rgF   = routingGuideFactor(rgRank);
 
-    const weighted =
-      (laneF  * weights.laneHistory / 100) +
-      (tierF  * weights.tier        / 100) +
-      (rateF  * weights.rate        / 100) +
-      (otF    * weights.onTime      / 100) +
-      (eqF    * weights.equipment   / 100);
+    // Divided by the weight TOTAL, not by 100 — weights are relative, and
+    // routingGuide was added on top rather than taken from the others.
+    const weighted = compositeScore(
+      {
+        laneHistory: laneF,
+        tier: tierF,
+        rate: rateF,
+        onTime: otF,
+        equipment: eqF,
+        routingGuide: rgF,
+      },
+      weights,
+    );
 
     scored.push({
       carrierId: c.id,
@@ -420,6 +534,8 @@ export async function scoreCarriersForLoad(
         rate: rateF,
         onTime: otF,
         equipment: eqF,
+        routingGuide: rgF,
+        routingGuideRank: rgRank,
         laneRunCount: runCount,
         onTimePct,
         estimatedRate,
@@ -447,4 +563,76 @@ export function scoredCarrierToJson(sc: ScoredCarrier): Prisma.InputJsonValue {
     equipmentMatch: sc.equipmentMatch,
     breakdown: sc.breakdown,
   };
+}
+
+/**
+ * Rank map for the customer's routing guide on this load's lane.
+ *
+ * Keyed by CarrierProfile.id, which is what RoutingGuideEntry.carrierId is a
+ * real FK to — so this joins on an id we already hold rather than guessing.
+ *
+ * Returns an EMPTY map when there is no guide, which is every load today: zero
+ * RoutingGuide rows exist in production. That is the intended state, not a
+ * failure — this is the read path the rows will land in, and an empty map makes
+ * every carrier score NEUTRAL_NO_GUIDE, which is provably order-preserving.
+ *
+ * Swallows its own errors on purpose. A scoring run that cannot reach the
+ * routing guide should rank carriers without it; refusing to dispatch because a
+ * preference lookup failed would be a worse outcome than dispatching without
+ * the preference.
+ */
+export async function loadRoutingGuideRanks(ctx: LoadContext): Promise<Map<string, number>> {
+  const ranks = new Map<string, number>();
+  if (!ctx.originState || !ctx.destState || !ctx.equipmentType) return ranks;
+
+  // RoutingGuide.customerId is NULLABLE: a guide is either specific to one
+  // customer or global. That makes the customer filter two questions, not one,
+  // and getting it wrong fails in both directions — a customer filter alone
+  // misses the global guides, and NO filter lets one customer's negotiated
+  // ranking steer another customer's freight.
+  //
+  // A customer-specific guide WINS over a global one for the same lane, so ask
+  // for it first rather than trying to express the preference in one query.
+  const laneWhere = {
+    originState: ctx.originState,
+    destState: ctx.destState,
+    equipmentType: ctx.equipmentType,
+    isActive: true,
+    deletedAt: null,
+    OR: [{ expirationDate: null }, { expirationDate: { gte: new Date() } }],
+  };
+  const entrySelect = {
+    entries: {
+      where: { isActive: true },
+      select: { carrierId: true, rank: true },
+      orderBy: { rank: "asc" as const },
+    },
+  };
+
+  try {
+    let guide = ctx.customerId
+      ? await prisma.routingGuide.findFirst({
+          where: { ...laneWhere, customerId: ctx.customerId },
+          select: entrySelect,
+          orderBy: { updatedAt: "desc" },
+        })
+      : null;
+
+    // Fall back to a guide that belongs to no customer. A load with no customer
+    // may ONLY ever see these.
+    if (!guide) {
+      guide = await prisma.routingGuide.findFirst({
+        where: { ...laneWhere, customerId: null },
+        select: entrySelect,
+        orderBy: { updatedAt: "desc" },
+      });
+    }
+
+    for (const e of guide?.entries ?? []) {
+      if (e.carrierId && typeof e.rank === "number") ranks.set(e.carrierId, e.rank);
+    }
+  } catch (err) {
+    log.warn({ err, loadId: ctx.loadId }, "[Scoring] routing guide lookup failed — scoring without it");
+  }
+  return ranks;
 }

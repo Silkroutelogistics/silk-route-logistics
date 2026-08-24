@@ -1,10 +1,15 @@
 /**
- * Compass by SRL — Vetting Engine — 35-Check Composite Risk Scoring
+ * Compass by SRL — Vetting Engine — 32-Check Composite Risk Scoring
  * Covers FMCSA, identity, fraud, OFAC/SDN, biometrics, ELD, TIN match,
  * UCR, overbooking, fraud reports, agreements, historical performance,
- * fleet VIN verification (NHTSA), probationary period, document expiry,
- * SAM.gov federal exclusion screening, cross-reference identity validation,
- * IRP registration, IFTA compliance, BOC-3 process agent, and MCS-150 update.
+ * probationary period, document expiry, SAM.gov federal exclusion screening,
+ * cross-reference identity validation, BOC-3 process agent, MCS-150 update.
+ *
+ * This header was stale through TWO removals before anyone noticed — it still
+ * claimed 35 and still listed fleet VIN verification (deleted Arc 23) and IRP
+ * and IFTA (deleted this arc). It was not in compassCheckCount's SURFACES list,
+ * so the guard that exists to keep this number honest could not see the most
+ * authoritative-looking statement of it in the codebase. It is now on the list.
  */
 
 import { prisma } from "../config/database";
@@ -884,46 +889,33 @@ export async function vetCarrier(
     score -= 5;
   }
 
-  // ── 32. IRP (International Registration Plan) ──
-  if (existingCarrier) {
-    const irpStatus = (existingCarrier as any).irpStatus as string | null;
-    if (irpStatus === "VERIFIED") {
-      checks.push({ name: "IRP Registration", result: "PASS", detail: "IRP apportioned registration verified", deduction: 0 });
-    } else if (irpStatus === "EXPIRED") {
-      checks.push({ name: "IRP Registration", result: "WARNING", detail: "IRP registration expired — carrier must renew", deduction: 8 });
-      score -= 8;
-      flags.push("IRP registration expired");
-    } else {
-      checks.push({ name: "IRP Registration", result: "WARNING", detail: "IRP status not confirmed — request documentation", deduction: 5 });
-      score -= 5;
-    }
-  } else {
-    checks.push({ name: "IRP Registration", result: "WARNING", detail: "No carrier record — cannot verify IRP", deduction: 5 });
-    score -= 5;
-  }
-
-  // ── 33. IFTA (International Fuel Tax Agreement) ──
-  if (existingCarrier) {
-    const iftaStatus = (existingCarrier as any).iftaStatus as string | null;
-    if (iftaStatus === "VERIFIED") {
-      checks.push({ name: "IFTA Compliance", result: "PASS", detail: "IFTA fuel tax compliance verified", deduction: 0 });
-    } else if (iftaStatus === "EXPIRED") {
-      checks.push({ name: "IFTA Compliance", result: "WARNING", detail: "IFTA registration expired — carrier must renew", deduction: 8 });
-      score -= 8;
-      flags.push("IFTA registration expired");
-    } else {
-      checks.push({ name: "IFTA Compliance", result: "WARNING", detail: "IFTA status not confirmed — request documentation", deduction: 5 });
-      score -= 5;
-    // The truck-level IFTA check that sat here is REMOVED (Arc 23, Item 230).
-    // It queried prisma.truck with NO carrier scope at all, so one expired
-    // IFTA row anywhere in the database deducted 10 points from every carrier
-    // being vetted. Same class as the VIN check, and worse for being
-    // cross-contaminating rather than merely inert.
-    }
-  } else {
-    checks.push({ name: "IFTA Compliance", result: "WARNING", detail: "No carrier record — cannot verify IFTA", deduction: 5 });
-    score -= 5;
-  }
+  // ── IRP Registration and IFTA Compliance: REMOVED (B1, this arc) ──
+  //
+  // Both read CarrierProfile columns — irpStatus and iftaStatus — that NOTHING
+  // in this repository writes. Verified: zero writers across backend/src and
+  // frontend/src outside these checks' own reads; the columns appear in
+  // schema.prisma and the baseline migration and nowhere else. Neither could
+  // ever reach its VERIFIED or EXPIRED branch, so both landed permanently on
+  // "not confirmed" — a standing -5 each, on every carrier, forever, for data
+  // no code path could supply.
+  //
+  // Not cosmetic: complianceMonitorService pushes `lastVettingScore < 40` into
+  // blocked_reasons, so a phantom -10 moved every carrier ten points closer to
+  // being un-tenderable.
+  //
+  // Third instance of this class. Arc 23 removed the Fleet VIN check (#27) for
+  // reading Load.truckId, which nothing wrote, and an IFTA truck-expiry check
+  // that queried prisma.truck with NO carrier scope — one expired row anywhere
+  // deducted 10 from everyone. The shape each time is a check written against a
+  // column somebody meant to populate later.
+  //
+  // DELETED rather than wired, deliberately: wiring means inventing a data
+  // source, and re-adding either against a real one is its own small ratified
+  // commit. Until that exists, a silent -5 is worse than no check.
+  //
+  // BOC-3 is deliberately NOT removed alongside them. boc3Filed is equally
+  // unwritten, but its check falls back to PASS when FMCSA authority is
+  // AUTHORIZED, so it costs an already-passing carrier nothing.
 
   // ── 34. BOC-3 Process Agent ──
   {
