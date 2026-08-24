@@ -45,13 +45,7 @@
  * grow into a second opinion about eligibility.
  */
 
-/** The subset of CarrierProfile these predicates read. */
-export interface CarrierStatusFacts {
-  onboardingStatus: string;
-  status: string;
-  isTestAccount: boolean;
-  deletedAt: Date | null;
-}
+import type { Prisma } from "@prisma/client";
 
 /**
  * States that mean "this carrier has been approved at some point", on either
@@ -76,7 +70,7 @@ const DISPATCHABLE_APPLICATION = ["APPROVED", "NEW"] as const;
  * The OR is the whole point: it spans the disagreement rather than picking a
  * side. Spread it into a sweep's existing where-clause.
  */
-export function monitoredCarrierWhere() {
+export function monitoredCarrierWhere(): Prisma.CarrierProfileWhereInput {
   return {
     deletedAt: null,
     isTestAccount: false,
@@ -85,16 +79,6 @@ export function monitoredCarrierWhere() {
       { status: { in: [...MONITORED_APPLICATION] } },
     ],
   };
-}
-
-/** In-memory form of the same rule, for a profile already loaded. */
-export function isMonitoredCarrier(c: CarrierStatusFacts): boolean {
-  if (c.deletedAt) return false;
-  if (c.isTestAccount) return false;
-  return (
-    (MONITORED_ONBOARDING as readonly string[]).includes(c.onboardingStatus) ||
-    (MONITORED_APPLICATION as readonly string[]).includes(c.status)
-  );
 }
 
 /**
@@ -106,23 +90,13 @@ export function isMonitoredCarrier(c: CarrierStatusFacts): boolean {
  * while the writers are repaired, and it can narrow to APPROVED alone once the
  * drift-repair has run and the writer discipline has held for a while.
  */
-export function dispatchableCarrierWhere() {
+export function dispatchableCarrierWhere(): Prisma.CarrierProfileWhereInput {
   return {
     deletedAt: null,
     isTestAccount: false,
     onboardingStatus: DISPATCHABLE_ONBOARDING,
     status: { in: [...DISPATCHABLE_APPLICATION] },
   };
-}
-
-/** In-memory form of the same rule. */
-export function isDispatchableCarrier(c: CarrierStatusFacts): boolean {
-  if (c.deletedAt) return false;
-  if (c.isTestAccount) return false;
-  return (
-    c.onboardingStatus === DISPATCHABLE_ONBOARDING &&
-    (DISPATCHABLE_APPLICATION as readonly string[]).includes(c.status)
-  );
 }
 
 /**

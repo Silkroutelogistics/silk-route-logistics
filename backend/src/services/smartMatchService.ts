@@ -1,4 +1,5 @@
 import { prisma } from "../config/database";
+import { dispatchableCarrierWhere } from "../lib/carrierOperational";
 
 interface MatchCandidate {
   carrierId: string;
@@ -39,15 +40,17 @@ export async function matchCarriersForLoad(loadId: string): Promise<{
   if (!load) throw new Error("Load not found");
 
   // Get all approved carriers with valid data.
+  //
+  // B2 — this filter was written inline and is now the resolver's exclusive
+  // answer, so it cannot drift from the definition the rest of the platform
+  // uses. It also gains `deletedAt: null`, which the inline version omitted:
+  // a soft-deleted carrier could previously be matched to a load.
+  //
   // isTestAccount: false — v3.8.aim Build 1 test-carrier load-assignment
   // fence. Test/seed carriers are retained for manual regression but
   // are excluded from the canonical "who can take this load" picker.
   const carriers = await prisma.carrierProfile.findMany({
-    where: {
-      onboardingStatus: "APPROVED",
-      status: { in: ["APPROVED", "NEW"] },
-      isTestAccount: false,
-    },
+    where: dispatchableCarrierWhere(),
     include: {
       user: { select: { id: true, firstName: true, lastName: true, company: true, phone: true, email: true } },
       scorecards: { orderBy: { calculatedAt: "desc" }, take: 1 },
