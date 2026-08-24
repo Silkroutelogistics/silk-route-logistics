@@ -25,6 +25,8 @@ import { createEmailVerificationToken } from "../services/otpService";
 import { resolveCountry, extractClientIp } from "../services/geoService";
 import { normalizePhoneE164 } from "../lib/phoneNormalization";
 import { normalizeEmail, caseInsensitiveEmailFilter } from "../lib/emailNormalization";
+import { verifyReceipt } from "../services/onboardingDraftService";
+import { logAuthEvent } from "../lib/authEvents";
 import { COMPLIANCE_EMAIL } from "../config/authority";
 import * as crypto from "crypto";
 
@@ -112,6 +114,34 @@ export async function registerCarrier(req: Request, res: Response) {
     return;
   }
   data.email = normalizedEmail;
+
+  // ── Arc 32: the gate ────────────────────────────────────────────────
+  // Registration is the ONE server write the five-step wizard makes — Steps
+  // 2-5 are React state until Submit — so this single check is the whole of
+  // server-side enforcement. It sits ABOVE the duplicate-email lookup
+  // deliberately: an unverified caller must not learn which addresses are
+  // already registered.
+  //
+  // Fails CLOSED. A malformed, forged, expired, wrong-address or nonce-stale
+  // receipt all land here, and the message names the remedy rather than the
+  // failure class — the carrier's next action is identical in every case, and
+  // the classes are already in the auth log.
+  const receiptCheck = await verifyReceipt(data.verificationReceipt, data.email);
+  if (!receiptCheck.ok) {
+    logAuthEvent("onboarding.verify_failed", {
+      email: data.email,
+      req,
+      reason: receiptCheck.reason === "expired" ? "expired_token" : "invalid_token",
+    });
+    res.status(403).json({
+      error: "Please confirm your email address before submitting your application.",
+      code: "EMAIL_NOT_VERIFIED",
+      // The wizard reads this to reopen the verification step rather than
+      // stranding the carrier on Step 5 with a message and no control.
+      reverifyEmail: data.email,
+    });
+    return;
+  }
 
   // v3.8.ala — Capture registration IP + country early so duplicate-hit
   // compliance flag dispatch (below) carries forensic context.

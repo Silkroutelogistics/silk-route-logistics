@@ -74,7 +74,13 @@ export type AuthEvent =
   // Session policy. Ceiling and idle are distinct: one means the session was
   // simply old, the other that it went unused.
   | "session.expired_ceiling"
-  | "session.expired_idle";
+  | "session.expired_idle"
+  // Arc 32 — email verification BEFORE an account exists. Named separately
+  // from email.verified, which is the post-account confirmation: this one has
+  // no userId to correlate on, so the hashed email is the only handle there is.
+  | "onboarding.code_sent"
+  | "onboarding.verified"
+  | "onboarding.verify_failed";
 
 /**
  * Why it failed, as a class rather than the message shown to the user.
@@ -90,7 +96,11 @@ export type AuthFailureReason =
   | "account_locked"
   | "user_not_found"
   | "otp_invalid"
-  | "otp_expired";
+  | "otp_expired"
+  // Arc 32. The other onboarding failures reuse members above that already fit
+  // exactly — a wrong code is otp_invalid, a dead link is invalid_token.
+  | "too_many_attempts"
+  | "onboarding_draft_missing";
 
 /** Just enough of an Express request to find a client IP. */
 type RequestLike = { ip?: string; headers?: unknown; socket?: { remoteAddress?: string } };

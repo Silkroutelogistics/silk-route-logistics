@@ -5396,3 +5396,66 @@ model StaffSession {
   @@index([lastSeenAt])
   @@map("staff_sessions")
 }
+
+/// Arc 32 — a carrier's Step 1 answers, held server-side so the email can be
+/// verified BEFORE the account exists.
+///
+/// WHY THIS IS NOT AN OtpCode ROW. `OtpCode.userId` is a required FK to `User`,
+/// and the whole point of this gate is that there is no User yet — verification
+/// happens before registration, not after. That is the same wall the Driver
+/// Academy hit (§13.3 Item 193 T2), and `DriverPhoneVerification` is the
+/// precedent this model follows: a purpose-specific verification row keyed to
+/// its own subject, carrying its own code, expiry and attempt counter.
+///
+/// WHY THE DRAFT AND THE VERIFICATION ARE ONE MODEL. They share a lifetime and
+/// a key. Splitting them would mean two rows to keep consistent and a join to
+/// answer "is this email verified for this application", which is the only
+/// question anything asks.
+model OnboardingDraft {
+  id        String  @id @default(cuid())
+  /// Lowercased at write. The subject of verification.
+  email     String
+  /// Step 1 identity, so an abandoned application resumes with its answers.
+  mcNumber  String
+  dotNumber String?
+  company   String?
+  firstName String?
+  lastName  String?
+  phone     String?
+  address   String?
+  city      String?
+  state     String?
+  zip       String?
+
+  /// 6-digit code, plaintext by the same reasoning as OtpCode: worthless after
+  /// 10 minutes and 5 attempts, and a second storage convention for the same
+  /// artifact is how this codebase ends up unpicking dual conventions.
+  code          String?
+  codeExpiresAt DateTime?
+  attempts      Int       @default(0)
+  /// Resend cooldown anchor.
+  lastSentAt    DateTime?
+
+  /// One-click link. SHA-256 of the token, so a database read cannot be
+  /// replayed as a click. Cleared on use — single-use is enforced by absence.
+  linkTokenHash String?
+
+  /// Rotated on every send AND on any email change. The receipt carries it, so
+  /// editing the email voids every receipt already issued.
+  nonce      String
+  verifiedAt DateTime?
+
+  /// Recorded for audit and as an early signal. NOT a second Compass input —
+  /// the engine already grades disposable domains via IdentityVerification.
+  emailIsDisposable Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  /// Re-submitting the same email + MC updates the draft rather than
+  /// duplicating it.
+  @@unique([email, mcNumber])
+  @@index([linkTokenHash])
+  @@index([codeExpiresAt])
+  @@map("onboarding_drafts")
+}

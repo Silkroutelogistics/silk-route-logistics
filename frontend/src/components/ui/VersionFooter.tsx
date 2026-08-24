@@ -15009,7 +15009,22 @@
 //   HOS was READ-never-WRITTEN against a source Arc 22 deleted. The display went
 //   with the page; the columns stay because eldService still reads them, and
 //   that service has a worse problem of its own (Item 239).
-export const SRL_VERSION = "3.8.aun";
+// v3.8.auo — Arc 32. An application can no longer be submitted from an email
+// address nobody has proven they can read. Step 1 now persists a draft and
+// sends a code; Step 2 does not open until the mailbox answers, by typed code
+// or by one-click link — the link because the carrier usually opens the email
+// on a different device from the one holding the half-finished form, and the
+// 5-second poll is what lets the laptop notice.
+//
+// The proof is a signed receipt bound to {email, nonce}, checked server-side
+// at POST /carrier/register — the ONE server write the whole five-step wizard
+// makes, since Steps 2-5 are React state until Submit. It fails closed.
+//
+// Two shape deviations from the brief, both forced and both reported: the
+// per-step endpoints it described do not exist (one chokepoint instead), and
+// OtpCode could not carry this because its userId is a required FK to a User
+// that by definition does not exist yet.
+export const SRL_VERSION = "3.8.auo";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

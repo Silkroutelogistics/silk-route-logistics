@@ -2193,6 +2193,32 @@ Each is a discrete sprint. Mix of operational, security, UX, and technical debt.
 
     **240.2 — decline notifies by email only.** `approvalService` writes a `Notification` row **and** emails; `rejectionService` emails only. A carrier whose mail is filtered learns of the decision by logging in — the reason *is* on the application-status page (`rejectionReason`, `rejectionNote`, `reapplyEligibleAt` are all selected), so it is recoverable, but the bell stays silent on the most consequential decision the platform makes about them. **P2**, ~5 LOC to match approve.
 
+241. **The email verification gate — an application can no longer come from an address nobody has proven they can read (Arc 32, 2026-08-24, `v3.8.auo`).**
+
+    **THE STEP 0b TRACE CHANGED THE BRIEF, in three ways worth recording because each was a premise rather than a detail.**
+
+    **(a) The wizard is entirely client-side.** All five steps live in one `useState<CarrierFormData>`, and the only server write in the whole flow is `POST /carrier/register` at Submit. The brief's "server-side enforcement on Steps 2-5" describes endpoints that do not exist — so enforcement is **one chokepoint**, not five. That is better than the brief assumed, not worse: a single gate cannot drift out of agreement with four siblings.
+
+    **(b) `OtpCode` could not carry this.** `OtpCode.userId` is a required FK to `User`, and the entire point of this gate is that verification happens BEFORE the account exists. The brief's "send via existing OtpCode infra (`ONBOARD:` prefix)" is impossible as written. `DriverPhoneVerification` hit the identical wall in Item 193 T2 and solved it with a purpose-specific row; `OnboardingDraft` follows that precedent.
+
+    **(c) Disposable domains were already handled.** `validateEmailDomain` populates the flag and `carrierVettingService:318` grades it `FAIL -10`. Adding a second Compass input would have double-counted one fact.
+
+    **Census first: zero blast radius.** Read-only against production — 3 APPROVED + 1 PENDING carrier profiles, of which exactly one is real and non-test, and that one is already past registration. Nobody is mid-application behind this change.
+
+    **WHAT SHIPPED.** `OnboardingDraft`, keyed `@@unique([email, mcNumber])` so re-submitting Step 1 updates rather than duplicates. Five public routes above the `router.use(authenticate)` boundary — public by necessity, since the subject has no account. Both paths reach the same outcome: a 6-digit code typed into the wizard, or a one-click link. **The link is not a convenience.** The carrier routinely opens the email on a phone while the half-finished form sits on a laptop, and the 5-second poll is what lets the laptop notice.
+
+    **THE RECEIPT IS BOUND, NOT MERELY SIGNED.** Enforcement could have looked the draft up by email and read `verifiedAt`. It must not: a browser that edits the address would then be checked against a *different* draft, and if that one happened to be verified it would pass. The receipt is an HMAC over `{email, verifiedAt, nonce}`, and the nonce rotates on every send — so editing the email, or re-sending, kills every receipt already issued. Deliberately **not a JWT**: a JWT here is one `verify()` mistake away from being accepted as a session, and this proves one narrow thing.
+
+    **A TRAP THAT WOULD HAVE CLOSED ONBOARDING ENTIRELY, caught by checking rather than assuming.** `validateBody` does `req.body = result.data` and `z.object()` strips unknown keys. Had `verificationReceipt` not been declared in `carrierRegisterSchema`, it would have arrived at the controller as `undefined` and the gate would have refused **every legitimate application** — no type error, no crash, just carrier onboarding silently shut. That is Sub-pattern 5, and the TONU 422 shipped in exactly this shape. `onboardingReceipt.test.ts` now holds the declaration behaviourally, injection-verified by deleting it (`expected undefined to be 'abc.def'`).
+
+    **A THIRD OUTBOUND CHANNEL THE SAFETY GUARD DID NOT COVER.** The rehearsal guard asserted Resend and OpenPhone were explicitly empty. The register path also **uploads documents**, and `storageService` keys off `S3_BUCKET_NAME && AWS_ACCESS_KEY_ID`. Neither is in `.env` today, so it took local disk — but *absence is not neutralization*, which is the whole Arc 15 lesson. The guard now demands all four be explicitly empty.
+
+    **PROOF — [`_arc32-verification-proof.ts`](../../backend/scripts/_arc32-verification-proof.ts), 20/20**, real router on a local port, real middleware chain, real Zod, real database, multipart registration so the field is proven to survive multer → normalizer → limiter → Zod. **Adversarial: neutering the gate gives 15/20**, and the five that fail are exactly the gate assertions while the eight verification-mechanics assertions still pass — the proof isolates its subject.
+
+    **MY FIXTURE WAS WRONG FOUR TIMES, and each failure looked like a code defect.** Missing `equipmentTypes`/`operatingRegions` → Zod 400'd ahead of the gate, failing assertions in BOTH directions. Then the v3.8.alc document gate 422'd, which actually *proved* the gate had passed the application through. Then a shared phone hit the v3.8.ala duplicate check. Then a fixed DOT collided with the **previous run**, because the container persists between runs. Every one was the test, not the code — and a proof whose fixture never reaches its subject is the same failure as a guard that does not check.
+
+    **Not built, deliberately:** rate limits are IP-keyed because there is no identity to key on yet, with the 60s per-draft cooldown as the real control; expired drafts are not swept (a cleanup cron belongs with Arc 34's session sweep rather than alone); the disposable flag is recorded and left to the existing Compass input.
+
 ## §14 LEGAL / COMPLIANCE STATUS
 
 - Property broker under 49 U.S.C. §§ 13904, 13906

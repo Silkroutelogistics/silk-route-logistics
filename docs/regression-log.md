@@ -13,6 +13,62 @@ so it's searchable and never lost.
 
 ---
 
+## Hardened — 2026-08-24 (Arc 32: an application could be submitted from any address, proven or not)
+
+- **Symptom:** the carrier onboarding wizard never verified that the applicant
+  could read the email address they typed. The five steps lived entirely in
+  React state and the only server write was `POST /carrier/register` at Submit,
+  so a typo'd address produced an application nobody could reply to, and a
+  deliberate one produced an application under someone else's name.
+- **Where:** `frontend/src/app/onboarding/page.tsx`, `POST /api/carrier/register`
+- **Severity:** P1 — not an outage; a data-quality and impersonation surface on
+  the platform's front door.
+- **Status:** Fixed in v3.8.auo. Step 1 persists an `OnboardingDraft` and sends a
+  6-digit code plus a one-click link; Step 2 does not open until either answers.
+  The gate at registration checks an HMAC receipt bound to `{email, nonce}` and
+  **fails closed** — no receipt, forged receipt, wrong address, or a nonce
+  rotated by an email edit all refuse with `EMAIL_NOT_VERIFIED`.
+- **Blast radius before the change:** none in flight. Production census read
+  3 APPROVED + 1 PENDING carrier profiles, of which one is real and non-test,
+  and that one is already past registration.
+- **Proof:** `_arc32-verification-proof.ts` 20/20 over the real router against a
+  real database; neutering the gate gives 15/20 with exactly the five gate
+  assertions failing.
+- **Date noted:** 2026-08-24
+
+## Caught before shipping — 2026-08-24 (Arc 32: the gate would have refused every legitimate application)
+
+- **Symptom (never reached production):** `validateBody` does
+  `req.body = result.data` and `z.object()` strips unknown keys, so a
+  `verificationReceipt` that is not DECLARED in `carrierRegisterSchema` arrives
+  at the controller as `undefined`. The gate would then have refused **every**
+  real applicant — no type error, no crash, carrier onboarding simply closed.
+- **Where:** `backend/src/validators/carrier.ts`, `backend/src/middleware/validate.ts`
+- **Severity:** would have been P0.
+- **Status:** declared in the schema, and held there behaviourally by
+  `onboardingReceipt.test.ts`. Injection-verified: deleting the declaration
+  turns the guard red with `expected undefined to be 'abc.def'`.
+- **Note:** this is §19 Sub-pattern 5, and the TONU 422 shipped in exactly this
+  shape. It was caught by reading `validate.ts` rather than assuming the field
+  would survive.
+- **Date noted:** 2026-08-24
+
+## Guard gap closed — 2026-08-24 (Arc 32: the rehearsal guard did not cover object storage)
+
+- **Symptom:** the arc-proof safety guard asserted `RESEND_API_KEY` and
+  `OPENPHONE_API_KEY` were explicitly empty, but the registration path also
+  **uploads documents**, and `storageService` enables S3 on
+  `S3_BUCKET_NAME && AWS_ACCESS_KEY_ID`. Object storage is an outbound channel
+  and no guard covered it.
+- **Where:** `backend/scripts/_arc32-verification-proof.ts` (and the guard shape
+  every arc proof copies)
+- **Severity:** P2 in practice — neither key is in `.env`, so the run took the
+  local-disk branch. But absence is not neutralization, which is the whole
+  Arc 15 lesson.
+- **Status:** the guard now requires all four explicitly empty, and the final
+  assertion checks all four rather than the two it named.
+- **Date noted:** 2026-08-24
+
 ## PRODUCTION OUTAGE — carrier authentication, 2026-08-21 14:59 UTC → 2026-08-22 15:09 UTC
 
 | | |
