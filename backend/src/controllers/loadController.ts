@@ -539,12 +539,35 @@ export async function updateLoadStatus(req: AuthRequest, res: Response) {
   // — the bug surfaced on L6894191249 (2026-04-30) where the load
   // advanced through TENDERED → CONFIRMED → BOOKED purely as status
   // flags with no carrier ever assigned.
-  const requiresCarrier = ["TENDERED", "CONFIRMED", "BOOKED"];
+  // B2 — TENDERED is backed by a LoadTender row, NOT by carrierId.
+  //
+  // This guard demanded a carrierId for TENDERED too, which is the wrong
+  // invariant in both directions. A load that has been OFFERED to a carrier has
+  // no carrierId — the carrier is not assigned until they accept — so the guard
+  // blocked a legitimate transition. And it failed to catch the thing it was
+  // written for: the status-walk on L6894191249 is stopped by asking "is there
+  // a tender?", not "is there a carrier?".
+  const requiresCarrier = ["CONFIRMED", "BOOKED"];
   if (requiresCarrier.includes(status) && !existing.carrierId) {
     res.status(400).json({
       error: `Cannot transition to ${status} without an assigned carrier. Use the Tender modal to offer the load to a carrier first; on acceptance the load will move to BOOKED automatically.`,
     });
     return;
+  }
+
+  if (status === "TENDERED") {
+    const liveTenders = await prisma.loadTender.count({
+      where: { loadId: existing.id, status: { in: ["OFFERED", "COUNTERED"] }, deletedAt: null },
+    });
+    if (liveTenders === 0) {
+      res.status(400).json({
+        error:
+          "Cannot transition to TENDERED without an outstanding tender. Use the Tender " +
+          "modal to offer the load to a carrier — the status follows the tender, not the " +
+          "other way round.",
+      });
+      return;
+    }
   }
 
   // v3.8.j Layer 1 — Removed the line-477 carrier auto-assign clause:

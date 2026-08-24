@@ -1,6 +1,7 @@
 import cron from "node-cron";
 import { prisma } from "../config/database";
 import { log } from "../lib/logger";
+import { checkMilestoneAdvancement, calculateTierFromMilestone } from "../services/caravanService";
 
 /**
  * SRL Cron Job System
@@ -266,31 +267,40 @@ export function initCronJobs() {
   // ─── Daily at 6 AM: DSO calculation, CPP tier updates ─────
   cron.schedule("0 6 * * *", () => withGuard("daily-cpp-cleanup", async () => {
     try {
-      // Update CPP tiers based on total loads completed
-      // v3.8.alm §13.3 Item 190 — exclude test carriers from the daily
-      // tier-update sweep (was previously unfiltered — all carriers).
+      // B2 — tier advancement now runs the CANONICAL gate.
+      //
+      // This block promoted on volume alone: 50 loads to GOLD, 100 to
+      // PLATINUM, with no on-time requirement and no tenure floor. That is the
+      // pre-v3.8.aii model. §10's locked gate is an AND of loads, on-time
+      // percentage and days since joining — 12/97%/90d for Gold, 20/98%/120d
+      // for Platinum — and v3.8.aii retired the parallel promotion path
+      // precisely so a carrier could not bypass it.
+      //
+      // This cron survived that retirement and had been promoting daily on the
+      // old rules, so a carrier's tier could disagree with both the locked
+      // model and the /carriers page that publishes it.
+      //
+      // It also wrote cppTier alone and left tier stale — the same
+      // two-fields-one-truth drift B2 fixes for the status enums.
       const carriers = await prisma.carrierProfile.findMany({
+        // v3.8.alm §13.3 Item 190 — exclude test carriers from the daily sweep.
         where: { isTestAccount: false },
-        select: { id: true, cppTotalLoads: true, cppTier: true },
+        select: { id: true, tier: true, cppTier: true },
       });
 
       for (const carrier of carriers) {
-        const loads = carrier.cppTotalLoads || 0;
-        // 3-tier Caravan Partner Program (v3.7.a): every carrier starts at
-        // SILVER on day 1; volume-based fast-track to GOLD (50+ loads) and
-        // PLATINUM (100+).
-        let newTier: "PLATINUM" | "GOLD" | "SILVER";
-        if (loads >= 100) newTier = "PLATINUM";
-        else if (loads >= 50) newTier = "GOLD";
-        else newTier = "SILVER";
+        const result = await checkMilestoneAdvancement(carrier.id);
+        if (!result.advanced || !result.newMilestone) continue;
 
-        if (newTier !== carrier.cppTier) {
-          await prisma.carrierProfile.update({
-            where: { id: carrier.id },
-            data: { cppTier: newTier },
-          });
-          log.info(`[Cron Daily] Updated carrier ${carrier.id} tier: ${carrier.cppTier} → ${newTier}`);
-        }
+        const newTier = calculateTierFromMilestone(result.newMilestone);
+        const oldTier = carrier.cppTier !== "NONE" ? carrier.cppTier : carrier.tier;
+        if (newTier === oldTier) continue;
+
+        await prisma.carrierProfile.update({
+          where: { id: carrier.id },
+          data: { tier: newTier, cppTier: newTier },
+        });
+        log.info(`[Cron Daily] Carrier ${carrier.id} advanced ${oldTier} → ${newTier} (milestone gate)`);
       }
 
       // Clean expired JWT blacklist entries
