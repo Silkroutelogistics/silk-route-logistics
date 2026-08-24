@@ -24,6 +24,7 @@
 import { prisma } from "../config/database";
 import { sendEmail, wrap } from "./emailService";
 import { log } from "../lib/logger";
+import { confirmInfoRequestAnswered, notifyInfoRequestWithdrawn } from "./onboardingLifecycleService";
 
 // Industry-standard category labels for AE template + carrier portal display.
 // Order chosen by carrier-onboarding frequency (most common asks first).
@@ -189,6 +190,15 @@ export async function resolveInfoRequest(args: ResolveInfoRequestArgs) {
     return updated;
   });
 
+  // Arc 33 — the carrier did the work and heard nothing back, so from their
+  // side answering and being ignored looked identical. Fire-and-forget.
+  confirmInfoRequestAnswered({
+    carrierId: request.carrier.id,
+    requestId: request.id,
+    categoryLabel: getCategoryLabel(request.category),
+    askedFor: request.message,
+  }).catch((err) => log.warn({ err }, "[InfoRequest] carrier confirmation failed"));
+
   // Fire-and-forget email to AE who created the request.
   if (request.createdBy.email) {
     sendInfoRequestResolvedEmail({
@@ -218,6 +228,8 @@ export async function cancelInfoRequest(args: CancelInfoRequestArgs) {
       id: true,
       status: true,
       carrierId: true,
+      // Arc 33 — needed to name the withdrawn request to the carrier.
+      category: true,
       carrier: { select: { onboardingStatus: true } },
     },
   });
@@ -228,6 +240,15 @@ export async function cancelInfoRequest(args: CancelInfoRequestArgs) {
   if (request.status !== "OPEN") {
     throw new Error("Only open requests can be cancelled");
   }
+
+  // Arc 33 — the more urgent of the two silences: without this the carrier
+  // keeps chasing paperwork nobody needs any more. Fired before the
+  // transaction returns so a caller that ignores the promise still triggers it.
+  notifyInfoRequestWithdrawn({
+    carrierId: request.carrierId,
+    requestId: request.id,
+    categoryLabel: getCategoryLabel(request.category),
+  }).catch((err) => log.warn({ err }, "[InfoRequest] carrier withdrawal notice failed"));
 
   return prisma.$transaction(async (tx) => {
     const updated = await tx.infoRequest.update({

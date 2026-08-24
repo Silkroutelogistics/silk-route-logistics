@@ -15036,7 +15036,24 @@
 // Item 91 fixed this class once and it came back, so the durable output is
 // the guard: it derives the real route set from the app router and fails
 // naming any file:line whose URL does not resolve.
-export const SRL_VERSION = "3.8.aup";
+// v3.8.auq — Arc 33. The "Invite Carriers" button now invites a carrier.
+// It used to navigate the AE to /onboarding — the carrier's own five-step
+// self-registration wizard — where an AE would fill in someone else's
+// details and set their password. Arc 32's gate had already turned that
+// quiet wrongness into a loud failure, which is how it surfaced.
+//
+// Clicking the invitation IS the verification: the AE vouches for the address
+// by typing it, the carrier proves they can read it by opening the mail, and
+// asking them to also type a code from that same inbox would prove the same
+// fact twice. The click mints the Arc 32 receipt, so registration's gate
+// needs no special case.
+//
+// Also closes three silences: nothing moved an application to REVIEWING, so
+// carriers heard nothing between the receipt and a decision; auto-approved
+// carriers were never congratulated while manually-approved ones were; and
+// answering or having an info request withdrawn told the carrier nothing.
+// Lifecycle emails now ride the transition, not the path.
+export const SRL_VERSION = "3.8.auq";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

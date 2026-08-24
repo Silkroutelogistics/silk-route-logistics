@@ -26,6 +26,7 @@ import { resolveCountry, extractClientIp } from "../services/geoService";
 import { normalizePhoneE164 } from "../lib/phoneNormalization";
 import { normalizeEmail, caseInsensitiveEmailFilter } from "../lib/emailNormalization";
 import { verifyReceipt } from "../services/onboardingDraftService";
+import { approveCarrier } from "../services/approvalService";
 import { logAuthEvent } from "../lib/authEvents";
 import { COMPLIANCE_EMAIL } from "../config/authority";
 import * as crypto from "crypto";
@@ -669,24 +670,17 @@ export async function registerCarrier(req: Request, res: Response) {
           return;
         }
         try {
-          await prisma.carrierProfile.update({
-            where: { id: profileId },
-            data: { onboardingStatus: "APPROVED", approvedAt: new Date() },
-          });
-          await prisma.user.update({
-            where: { id: user.id },
-            data: { isVerified: true },
-          });
-          // Notify carrier of auto-approval
-          await prisma.notification.create({
-            data: {
-              userId: user.id,
-              type: "ONBOARDING",
-              title: "Application Approved!",
-              message: "Your carrier application has been automatically approved. Welcome to Silk Route Logistics!",
-              actionUrl: "/carrier/dashboard",
-            },
-          });
+          // Arc 33 — both approval paths converge HERE rather than each writing
+          // their own status flip. Before this, the AE path called
+          // approveCarrier (which emails a welcome) while this one wrote the
+          // columns inline and sent only an in-app notification — so an
+          // auto-approved carrier was never congratulated by email and a
+          // manually-approved one was. A carrier must not be able to infer HOW
+          // they were approved from WHETHER they heard about it.
+          //
+          // approvedById is null because no human approved this. The source is
+          // recorded internally; the carrier-facing email is identical.
+          await approveCarrier({ carrierId: profileId, approvedById: null, source: "COMPASS_AUTO" });
           log.info(`[Compass Auto-Approve] Carrier ${data.company} (DOT: ${dot}) auto-approved with grade A (score: ${report.score})`);
         } catch (e: any) {
           log.error({ err: e }, "[Compass Auto-Approve] Error:");

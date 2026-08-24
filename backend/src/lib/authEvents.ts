@@ -80,7 +80,14 @@ export type AuthEvent =
   // no userId to correlate on, so the hashed email is the only handle there is.
   | "onboarding.code_sent"
   | "onboarding.verified"
-  | "onboarding.verify_failed";
+  | "onboarding.verify_failed"
+  // Arc 33 — AE-issued invitations. The accept is named separately from
+  // onboarding.verified because it proves the mailbox by a different route,
+  // and "which route" is the first question in any onboarding dispute.
+  | "onboarding.invited"
+  | "onboarding.invite_accepted"
+  | "onboarding.invite_reopened"
+  | "onboarding.invite_failed";
 
 /**
  * Why it failed, as a class rather than the message shown to the user.

@@ -2256,6 +2256,31 @@ Each is a discrete sprint. Mix of operational, security, UX, and technical debt.
 
     **Sub-agent undercount, again.** The Phase A agent reported the two `/carrier/dashboard/loads` sites in `emailService.ts`. The orchestrator's own grep found **four** — the same two plus `checkCallAutomation.ts:450` and `fallOffRecovery.ts:88`. That is the v3.8.alm lesson holding: a delegated audit's self-asserted completeness is not a substitute for running the completeness grep yourself.
 
+243. **The "Invite Carriers" button now invites a carrier (Arc 33, 2026-08-24, `v3.8.auq`).**
+
+    **THE MISROUTE.** `dashboard/carriers/page.tsx:986` was `<a href="/onboarding">Invite Carriers</a>` — a plain anchor to the carrier's own five-step self-registration wizard. It sent nothing to anybody. An AE who used it landed on a form asking for *their* company name, MC number, insurance and password, and filled it in on the carrier's behalf. **Arc 32's verification gate had already converted that from quietly wrong to loudly broken** — the AE cannot read the carrier's inbox — which is how the misroute surfaced at all. Two working invite flows existed (shipper portal v3.8.aqs, Driver Academy v3.8.amz); the carrier one never did.
+
+    **CLICKING THE LINK IS THE VERIFICATION.** The AE vouches for the address by typing it; the carrier proves they can read it by opening the mail. That is precisely what Arc 32's one-click link proves, so the click mints **the same receipt** and registration's gate needs no special case for invited carriers. Asking someone who just opened a link in their inbox to also type a code from that inbox proves the same fact twice.
+
+    **CONSUMPTION IS VERIFICATION, NOT COMPLETION.** Burning the token proves the mailbox; the draft persists and the wizard resumes. A second click answers *"already verified — continue"*, never an error, because re-opening a link you were sent is not a mistake.
+
+    **THE INVITE IS ITS OWN RECORD, and the reason is a column-meaning one.** `OnboardingInvite` carries the token hash, inviter, prefill, `expiresAt` and `consumedAt`. It is deliberately NOT fields on the draft: an invitation lives 7 days and the OTP lives 10 minutes, so sharing `codeExpiresAt` would have given the six-digit code a week of life. Stored SHA-256-hashed and single-use by `consumedAt` — a record, not a JWT, so revocation is a row update rather than a blacklist.
+
+    **THE FUNNEL IS A FIELD, NOT AN INFERENCE.** `OnboardingDraftStatus` — STARTED / INVITED / LINK_CLICKED / DRAFT_VERIFIED / SUBMITTED — with existing drafts backfilled to their derivable state **in the same migration**, so no row sits at a default that misdescribes it. It deliberately stops at SUBMITTED rather than mirroring review states: a second copy of `onboardingStatus` is the dual-status drift Item 194 D1 exists to warn about.
+
+    **THREE SILENCES CLOSED, on one principle: the email rides the STATUS TRANSITION, never the path.**
+    - **PENDING → REVIEWING did not exist.** No code moved an application into review, so a carrier heard nothing between the receipt email and a decision — indistinguishable, from their side, from being ignored.
+    - **Auto-approved carriers were never congratulated.** The AE path called `approveCarrier` (which emails); the Compass path wrote the columns inline and sent only an in-app notification. Both now converge on the one transition, with `approvedById: null` because no human approved it — inventing one would corrupt the audit answer to "who cleared this carrier". **The carrier-facing email is identical either way, deliberately: a carrier must not be able to infer HOW they were approved from WHETHER they were congratulated.**
+    - **Answering an info request told the carrier nothing** (the AE was emailed), and **withdrawing one told them nothing at all** — the worse of the two, because they keep chasing paperwork nobody needs.
+
+    Exactly-once is **link-encoded** — the notification's `actionUrl` carries the transition marker, so a repeat cannot re-announce. No migration; the `podReminderService` shape.
+
+    **PROOF — [`_arc33-invite-proof.ts`](../../backend/scripts/_arc33-invite-proof.ts), 21/21** over the real router with a real ADMIN cookie: issue → funnel shows INVITED before any click → click accepts and advances to LINK_CLICKED → **registers with no code step** → second click says already-verified → re-invite refreshes in place and the superseded link stops working → expiry refused → fresh-request notifies the AE and issues nothing → forged token refused → inviting an existing carrier returns their state → both approval paths congratulate **once**. Adversarial: neutering the dedup gives 20/21, failing exactly that assertion.
+
+    **A LATENT TRAP IN THE MONITOR, found by using it.** `probe-public-surfaces.mjs`'s self-test pinned its fixtures to `PROBES[0]`. Adding the invitation probe at the top silently re-pointed every fixture at a different subject, and the self-test failed for a reason that had nothing to do with the harness. Now pinned **by name** — a harness that tests itself against an arbitrary array slot is one prepend away from testing nothing.
+
+    **A correctness bug my own anchor introduced, caught by tsc.** The modal mount first landed inside `{selectedCarrier && (...)}`. That breaks JSX, but the worse half is semantic: inviting a *new* carrier means none is selected, so the header button would have opened nothing.
+
 ## §14 LEGAL / COMPLIANCE STATUS
 
 - Property broker under 49 U.S.C. §§ 13904, 13906

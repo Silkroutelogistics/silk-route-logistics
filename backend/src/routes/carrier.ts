@@ -14,6 +14,7 @@ import {
   draftStatus,
 } from "../services/onboardingDraftService";
 import type { VerifyFailureReason } from "../services/onboardingDraftService";
+import { acceptInvite, requestFreshInvite } from "../services/onboardingInviteService";
 import { prisma } from "../config/database";
 import { upload } from "../config/upload";
 import { auditLog } from "../middleware/audit";
@@ -348,6 +349,58 @@ router.get("/onboarding/status", async (req: Request, res: Response) => {
   res.json(await draftStatus(email, mcNumber));
 });
 
+/**
+ * Arc 33 — accept an AE invitation. PUBLIC: the whole point is that the
+ * recipient has no account yet.
+ *
+ * The click IS the verification, so this mints the same Arc 32 receipt the
+ * typed code produces and the wizard skips its OTP step. Asking someone who
+ * just opened a link in their inbox to also type a code from that inbox
+ * proves the same fact twice.
+ */
+router.post("/onboarding/invite/accept", onboardingVerifyLimiter, async (req: Request, res: Response) => {
+  const { token } = req.body ?? {};
+  if (typeof token !== "string" || !token) {
+    res.status(400).json({ error: "Missing invitation token." });
+    return;
+  }
+  const out = await acceptInvite(token);
+  if (out.ok) {
+    res.json({
+      accepted: true,
+      email: out.email,
+      receipt: out.receipt,
+      prefill: out.prefill,
+      alreadyUsed: out.alreadyUsed,
+    });
+    return;
+  }
+  res.status(400).json({
+    accepted: false,
+    reason: out.reason,
+    error:
+      out.reason === "expired"
+        ? "This invitation has expired. You can ask for a new one below."
+        : "We could not find that invitation. Ask your Silk Route contact to send a new one.",
+  });
+});
+
+/**
+ * Expired link → ask the inviting AE for a fresh one. Deliberately does NOT
+ * auto-issue: that would let anyone holding an old link mint new ones
+ * indefinitely, which is the opposite of what an expiry is for.
+ */
+router.post("/onboarding/invite/request-fresh", onboardingSendLimiter, async (req: Request, res: Response) => {
+  const { token } = req.body ?? {};
+  if (typeof token !== "string" || !token) {
+    res.status(400).json({ error: "Missing invitation token." });
+    return;
+  }
+  await requestFreshInvite(token);
+  // Always the same answer: whether a token maps to a real invitation is not
+  // something an unauthenticated caller should be able to probe.
+  res.json({ ok: true });
+});
 // Authenticated carrier
 router.use(authenticate);
 router.post("/documents", uploadLimiter, upload.array("files", 5), uploadCarrierDocuments);

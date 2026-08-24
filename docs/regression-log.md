@@ -13,6 +13,77 @@ so it's searchable and never lost.
 
 ---
 
+## Fixed — 2026-08-24 (Arc 33: the "Invite Carriers" button invited nobody)
+
+- **Symptom:** the CTA on the AE carriers page was an anchor to `/onboarding` —
+  the carrier's own five-step self-registration wizard. No email was sent, no
+  token minted, no record created. An AE who used it filled in a carrier's
+  company, MC, insurance and password on their behalf.
+- **Where:** `frontend/src/app/dashboard/carriers/page.tsx:986`
+- **Severity:** P1 — a primary AE workflow that did not exist, wearing a label
+  that said it did.
+- **Interaction worth recording:** Arc 32's email-verification gate had already
+  turned this from quietly wrong into loudly broken, because an AE cannot read
+  the carrier's inbox to retrieve the code. Arc 32 closed an impersonation path
+  that ran through this button, and that is how the misroute surfaced.
+- **Status:** Fixed in v3.8.auq. A real invitation modal, a signed single-use
+  7-day link, and a separately-labelled "Open registration page" link kept for
+  the walk-in case — both labels now match their actions.
+- **Date noted:** 2026-08-24
+
+## Fixed — 2026-08-24 (Arc 33: an application went silent between receipt and decision)
+
+- **Symptom:** nothing in the codebase moved a carrier from PENDING to
+  REVIEWING. The transition did not exist, so there was no moment to email on,
+  and a submitted application produced no further contact until a decision.
+  From the carrier's side that is indistinguishable from being ignored.
+- **Where:** no owning file — the gap was the absence of a transition.
+- **Severity:** P2 — no data is wrong; the relationship is.
+- **Status:** Fixed in v3.8.auq. `transitionToReviewing` plus an AE
+  `POST /carriers/:id/start-review`, idempotent, with a link-encoded
+  exactly-once announcement.
+- **Date noted:** 2026-08-24
+
+## Fixed — 2026-08-24 (Arc 33: auto-approved carriers were never congratulated)
+
+- **Symptom:** the AE approval path called `approveCarrier`, which emails a
+  welcome. The Compass auto-approve path wrote `onboardingStatus` inline and
+  created only an in-app notification. Same moment, two outcomes — a carrier
+  could tell HOW they were approved by WHETHER they heard about it.
+- **Where:** `backend/src/controllers/carrierController.ts:674`
+- **Severity:** P2.
+- **Status:** Fixed in v3.8.auq. Both paths converge on `approveCarrier`;
+  `approvedById` is nullable because no human approves on the Compass path, and
+  the source is recorded internally while the carrier-facing email is identical.
+  Link-encoded dedup prevents a double congratulation when both paths run.
+- **Date noted:** 2026-08-24
+
+## Fixed — 2026-08-24 (Arc 33: answering or withdrawing an info request told the carrier nothing)
+
+- **Symptom:** resolving an info request emailed the AE only; cancelling one
+  emailed nobody. The carrier who did the work heard nothing, and a carrier
+  whose request was withdrawn kept chasing paperwork nobody needed.
+- **Where:** `backend/src/services/infoRequestService.ts`
+- **Severity:** P2 — the withdrawal case wastes the carrier's time directly.
+- **Status:** Fixed in v3.8.auq via `confirmInfoRequestAnswered` and
+  `notifyInfoRequestWithdrawn`, both link-encoded exactly-once.
+- **Date noted:** 2026-08-24
+
+## Fixed — 2026-08-24 (Arc 33: the public-surface self-test pinned to an array index)
+
+- **Symptom:** `probe-public-surfaces.mjs --self-test` built its fixtures from
+  `PROBES[0]`. Adding a probe at the top of the array silently re-pointed every
+  fixture at a different subject, and the self-test failed for a reason
+  unrelated to the harness.
+- **Where:** `backend/scripts/probe-public-surfaces.mjs`
+- **Severity:** P2 — it fails loudly rather than passing falsely, but a harness
+  that self-tests against an arbitrary array slot is one prepend away from
+  testing nothing.
+- **Status:** Fixed in v3.8.auq — pinned by name, with an explicit failure if
+  the named probe is ever removed.
+- **Found by:** adding the Arc 33 invitation probe.
+- **Date noted:** 2026-08-24
+
 ## Fixed — 2026-08-24 (Arc 33: the Rate Confirmation email's button was a 404 for months)
 
 - **Symptom:** the "View in Dashboard" button in the Rate Confirmation email —

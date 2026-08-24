@@ -26,8 +26,19 @@ import { log } from "../lib/logger";
 
 interface ApproveCarrierArgs {
   carrierId: string;
-  approvedById: string;
+  /**
+   * The AE who approved. NULL when the Compass engine auto-approved — there is
+   * no human to attribute, and inventing one would corrupt the audit answer to
+   * "who cleared this carrier".
+   */
+  approvedById: string | null;
   note?: string;
+  /**
+   * Arc 33 — which path got here. Recorded internally ONLY. The carrier-facing
+   * email is byte-identical either way, deliberately: a carrier must not be able
+   * to infer HOW they were approved from WHETHER they were congratulated.
+   */
+  source?: "AE" | "COMPASS_AUTO";
 }
 
 export async function approveCarrier(args: ApproveCarrierArgs) {
@@ -131,17 +142,30 @@ export async function approveCarrier(args: ApproveCarrierArgs) {
     log.error({ err, carrierId: args.carrierId }, "[Approval] onCarrierApproved (CPP init) failed")
   );
 
-  // In-app notification — surfaces on the NotificationBell when the
-  // carrier next logs in.
-  prisma.notification.create({
-    data: {
-      userId: carrier.userId,
-      type: "ONBOARDING",
-      title: "Application Approved!",
-      message: "Welcome to the Caravan Partner Program. You're cleared to start hauling loads.",
-      actionUrl: "/carrier/dashboard",
-    },
-  }).catch((err) => log.error({ err, carrierId: args.carrierId }, "[Approval] In-app notification failed"));
+  // In-app notification — surfaces on the NotificationBell when the carrier
+  // next logs in. Link-encoded exactly-once: the actionUrl carries the
+  // transition marker, so a repeated approval (a retry, a re-run, a second
+  // path arriving late) cannot congratulate the same carrier twice. No
+  // migration — the same dedup shape podReminderService uses.
+  const approvalLink = `/carrier/dashboard?approved=${args.carrierId}`;
+  prisma.notification
+    .findFirst({ where: { userId: carrier.userId, actionUrl: approvalLink } })
+    .then((already) => {
+      if (already) {
+        log.info({ carrierId: args.carrierId }, "[Approval] approval already announced — not repeating");
+        return null;
+      }
+      return prisma.notification.create({
+        data: {
+          userId: carrier.userId,
+          type: "ONBOARDING",
+          title: "Application Approved!",
+          message: "Welcome to the Caravan Partner Program. You're cleared to start hauling loads.",
+          actionUrl: approvalLink,
+        },
+      });
+    })
+    .catch((err) => log.error({ err, carrierId: args.carrierId }, "[Approval] In-app notification failed"));
 
   return updated;
 }

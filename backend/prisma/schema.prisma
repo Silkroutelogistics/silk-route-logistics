@@ -761,6 +761,8 @@ enum PackageType {
 // ─── Core Models ──────────────────────────────────────────
 
 model User {
+  /// Arc 33 — carrier onboarding invitations this user sent.
+  carrierInvitesSent OnboardingInvite[] @relation("CarrierInvitesSent")
   id                       String    @id @default(cuid())
   // v3.8.ale — citext type for native case-insensitive uniqueness. The
   // @unique constraint is the same `users_email_key` B-tree as before;
@@ -5449,6 +5451,12 @@ model OnboardingDraft {
   /// the engine already grades disposable domains via IdentityVerification.
   emailIsDisposable Boolean @default(false)
 
+  /// Arc 33 — the funnel state. Explicit, never inferred.
+  status OnboardingDraftStatus @default(STARTED)
+  /// Set when an AE issued the invitation this draft came from.
+  invitedById String?
+  invitedAt   DateTime?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -5458,4 +5466,64 @@ model OnboardingDraft {
   @@index([linkTokenHash])
   @@index([codeExpiresAt])
   @@map("onboarding_drafts")
+}
+
+/// Arc 33 — the funnel, as an explicit field rather than an inference over
+/// nullable timestamps. The Carrier Pool mirror renders THIS; deriving state
+/// from which columns happen to be null is how two surfaces end up disagreeing
+/// about the same carrier.
+enum OnboardingDraftStatus {
+  /// Carrier started the wizard themselves.
+  STARTED
+  /// An AE created the draft and sent an invitation; not yet opened.
+  INVITED
+  /// Invitation link opened. The click burns the token and IS the email
+  /// verification, so this state already implies a proven mailbox.
+  LINK_CLICKED
+  /// Email proven — by invitation click, by typed code, or by verify-link.
+  DRAFT_VERIFIED
+  /// Registration accepted. Past here the CarrierProfile.onboardingStatus is
+  /// canonical for review state; this field stops moving. Deliberately NOT
+  /// mirrored into review states — a second copy of onboardingStatus is the
+  /// dual-status drift §13.3 Item 194 D1 exists to warn about.
+  SUBMITTED
+}
+
+/// Arc 33 — an AE-issued invitation to onboard.
+///
+/// Its own record rather than fields on the draft, because the two have
+/// different lifetimes and different secrets: the invite lives 7 days, the
+/// OTP lives 10 minutes, and sharing one expiry column would have given the
+/// 6-digit code a week of life. One column, one meaning.
+model OnboardingInvite {
+  id String @id @default(cuid())
+
+  /// SHA-256 of the token. The plaintext exists only in the email and the
+  /// copy-link handed to the AE, so a database read cannot be replayed as a
+  /// click.
+  tokenHash String @unique
+
+  /// Lowercased. The address the AE vouched for.
+  email String
+
+  invitedById String
+  invitedBy   User   @relation("CarrierInvitesSent", fields: [invitedById], references: [id])
+
+  /// Optional prefill so the carrier does not retype what the AE already knows.
+  company  String?
+  mcNumber String?
+  /// A line from the AE, shown in the invitation body.
+  note     String?
+
+  expiresAt  DateTime
+  /// Single-use: set on the click that burns it. A second click reads this and
+  /// says "already verified — continue", never an error.
+  consumedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([email])
+  @@index([expiresAt])
+  @@map("onboarding_invites")
 }

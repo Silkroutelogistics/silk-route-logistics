@@ -15,6 +15,7 @@ import {
 import { InfoRequestModal } from "@/components/carriers/InfoRequestModal";
 import { InfoRequestThread } from "@/components/carriers/InfoRequestThread";
 import { RejectCarrierModal } from "@/components/carriers/RejectCarrierModal";
+import { InviteCarrierModal } from "@/components/carriers/InviteCarrierModal";
 import { SecuritySignalsCard } from "@/components/carriers/SecuritySignalsCard";
 import { CarrierPreferencesPanel } from "@/components/carriers/CarrierPreferencesPanel";
 import { TrainingTab } from "@/components/carriers/TrainingTab";
@@ -392,6 +393,9 @@ export default function CarrierPoolPage() {
   const [infoRequestModalOpen, setInfoRequestModalOpen] = useState(false);
   // v3.8.ajk — Reject modal replaces the bare confirm dialog for REJECTED.
   const [rejectModalOpen, setRejectModalOpen] = useState(false);
+  // Arc 33 — AE invitation. Root-mounted like its two siblings: the side
+  // panel's overflow:auto chrome would clip a fixed-position overlay.
+  const [inviteModalOpen, setInviteModalOpen] = useState(false);
   const [compassResult, setCompassResult] = useState<CompassResult | null>(null);
   const [compassCarrierId, setCompassCarrierId] = useState<string | null>(null);
   const [compassLoading, setCompassLoading] = useState<string | null>(null);
@@ -801,6 +805,14 @@ export default function CarrierPoolPage() {
           <h1 className="text-2xl font-bold text-white">Carrier Pool</h1>
           <p className="text-slate-400 text-sm mt-1">{carriers.length} carriers in network</p>
         </div>
+        {isAdmin && (
+          <button
+            onClick={() => setInviteModalOpen(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-gold text-navy rounded-lg text-sm font-semibold hover:bg-gold/90 transition"
+          >
+            <Mail className="w-4 h-4" /> Invite Carrier
+          </button>
+        )}
       </div>
 
       {/* Stats Row */}
@@ -983,7 +995,25 @@ export default function CarrierPoolPage() {
               <Truck className="w-12 h-12 text-slate-400 mb-4" />
               <h3 className="text-lg font-semibold text-white mb-1">No carriers match your criteria</h3>
               <p className="text-sm text-slate-400 mb-4 max-w-sm">Invite carriers to join your network</p>
-              <a href="/onboarding" className="px-4 py-2 bg-gold text-navy rounded-lg text-sm font-medium">Invite Carriers</a>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => setInviteModalOpen(true)}
+                  className="px-4 py-2 bg-gold text-navy rounded-lg text-sm font-medium"
+                >
+                  Invite Carrier
+                </button>
+                {/* Kept, and separately labelled: an AE with a carrier on the
+                    phone sometimes walks them through the public form. The old
+                    control did THIS while saying it did the other thing. */}
+                <a
+                  href="/onboarding"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm font-medium text-gold underline-offset-4 hover:underline"
+                >
+                  Open registration page
+                </a>
+              </div>
             </div>
           )}
         </div>
@@ -2361,6 +2391,12 @@ export default function CarrierPoolPage() {
 
       {/* v3.8.ajh — Request Info modal. Mounted at root so the fixed-position
           overlay doesn't clip against the side panel's overflow:auto chrome. */}
+      {/* Arc 33 — the invitation modal is deliberately NOT inside the
+          selectedCarrier guard below: inviting a carrier means there is no
+          carrier to select yet, so gating it on a selection would make the
+          header button open nothing. */}
+      <InviteCarrierModal open={inviteModalOpen} onClose={() => setInviteModalOpen(false)} />
+
       {selectedCarrier && (
         <InfoRequestModal
           carrierId={selectedCarrier.id}

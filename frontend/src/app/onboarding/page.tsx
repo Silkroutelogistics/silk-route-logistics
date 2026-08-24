@@ -294,6 +294,12 @@ export default function OnboardingPage() {
   const [verifyError, setVerifyError] = useState<string | null>(null);
   const [verifyBusy, setVerifyBusy] = useState(false);
   const [cooldown, setCooldown] = useState(0);
+  // Arc 33 — arrived by AE invitation. The click already proved the mailbox, so
+  // the receipt is minted server-side and the OTP interstitial never opens.
+  // window.location rather than useSearchParams: the latter needs a Suspense
+  // boundary under static export, and this page has none.
+  const [inviteState, setInviteState] = useState<"none" | "checking" | "accepted" | "expired" | "bad">("none");
+  const [emailLocked, setEmailLocked] = useState(false);
   const [hibpStatus, setHibpStatus] = useState<"unknown" | "checking" | "safe" | "pwned" | "error">("unknown");
   const [hibpCount, setHibpCount] = useState(0);
   const hibpTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -425,6 +431,68 @@ export default function OnboardingPage() {
     const id = setInterval(tick, 5000);
     return () => { live = false; clearInterval(id); };
   }, [verifyOpen, emailIsVerified, emailNorm, form.mcNumber, apiBase]);
+
+  useEffect(() => {
+    const token = new URLSearchParams(window.location.search).get("invite");
+    if (!token || !apiBase) return;
+    let live = true;
+    setInviteState("checking");
+    (async () => {
+      try {
+        const r = await fetch(`${apiBase}/carrier/onboarding/invite/accept`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ token }),
+        });
+        const d = await r.json().catch(() => ({}));
+        if (!live) return;
+        if (!r.ok || !d.accepted) {
+          setInviteState(d.reason === "expired" ? "expired" : "bad");
+          return;
+        }
+        // The click IS the verification — same receipt the typed code mints, so
+        // registration's gate needs no special case for invited carriers.
+        setReceipt(d.receipt);
+        setVerifiedEmail(String(d.email).trim().toLowerCase());
+        setEmailLocked(true);
+        setForm((prev) => ({
+          ...prev,
+          email: d.email,
+          company: d.prefill?.company || prev.company,
+          mcNumber: d.prefill?.mcNumber || prev.mcNumber,
+        }));
+        setInviteState("accepted");
+      } catch {
+        if (live) setInviteState("bad");
+      }
+    })();
+    return () => { live = false; };
+    // Mount-only: the token is read once from the URL it arrived on.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [apiBase]);
+
+  /** Editing an invited address voids the AE's vouch and re-gates through OTP. */
+  const unlockEmail = () => {
+    setEmailLocked(false);
+    setReceipt(null);
+    setVerifiedEmail(null);
+    setInviteState("none");
+  };
+
+  const requestFreshInvite = async () => {
+    const token = new URLSearchParams(window.location.search).get("invite");
+    if (!token || !apiBase) return;
+    try {
+      await fetch(`${apiBase}/carrier/onboarding/invite/request-fresh`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token }),
+      });
+    } catch {
+      // The banner already tells them to contact operations@ if this fails.
+    }
+    setInviteState("none");
+  };
 
   const startVerification = async (resend = false) => {
     if (!apiBase) {
@@ -1294,7 +1362,20 @@ export default function OnboardingPage() {
               <div className="grid sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-[#0A2540] mb-1">Email *</label>
-                  <input type="email" value={form.email} onChange={(e) => set("email", e.target.value)} className="w-full px-3 py-2 bg-white border border-[#EFE6D3] rounded-lg text-sm text-[#0A2540] focus:border-[#BA7517] focus:ring-2 focus:ring-[#BA7517]/15 outline-none transition placeholder:text-[#A7AEB8]" autoComplete="off" name="carrier-registration-email" />
+                  {/* Arc 33 — an invited address is read-only: the AE vouched
+                      for it and the click proved it. Changing it voids both, so
+                      it is an explicit act with a stated consequence rather than
+                      an editable field that silently re-gates. */}
+                  <input type="email" value={form.email} onChange={(e) => set("email", e.target.value)} readOnly={emailLocked} className={`w-full px-3 py-2 border border-[#EFE6D3] rounded-lg text-sm text-[#0A2540] focus:border-[#BA7517] focus:ring-2 focus:ring-[#BA7517]/15 outline-none transition placeholder:text-[#A7AEB8] ${emailLocked ? "bg-[#FBF7F0] cursor-not-allowed" : "bg-white"}`} autoComplete="off" name="carrier-registration-email" />
+                  {emailLocked && (
+                    <p className="mt-1 text-xs text-[#6B7685]">
+                      Confirmed from your invitation.{" "}
+                      <button type="button" onClick={unlockEmail} className="font-medium text-[#BA7517] underline underline-offset-2">
+                        Use a different address
+                      </button>{" "}
+                      — you&apos;ll need to confirm the new one with a code.
+                    </p>
+                  )}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-[#0A2540] mb-1">Phone *</label>
@@ -2082,6 +2163,49 @@ export default function OnboardingPage() {
                   )}
                 </div>
               </div>
+            </div>
+          )}
+
+          {/* Arc 33 — arrived by invitation. The confirmation matters: the
+              carrier is being told the code step was skipped ON PURPOSE, not
+              that something was missed. */}
+          {inviteState === "accepted" && (
+            <div className="mt-8 rounded-xl border border-[#2F7A4F]/40 bg-[#E6F0E9] p-5 print:hidden">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#2F7A4F]">
+                Invitation confirmed
+              </p>
+              <p className="mt-2 text-sm leading-relaxed text-[#3A4A5F]">
+                <strong>{form.email}</strong> is confirmed — opening the link did that, so there is
+                no code to enter. Carry on below.
+              </p>
+            </div>
+          )}
+
+          {inviteState === "expired" && (
+            <div className="mt-8 rounded-xl border border-[#B07A1A]/40 bg-[#FBEFD4] p-5 print:hidden">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#B07A1A]">
+                Invitation expired
+              </p>
+              <p className="mt-2 text-sm leading-relaxed text-[#3A4A5F]">
+                Invitation links last 7 days. Ask us for a fresh one and we&apos;ll send it — or
+                just fill in the form below and confirm your email with a code.
+              </p>
+              <button
+                type="button"
+                onClick={() => void requestFreshInvite()}
+                className="mt-3 rounded-md bg-[#BA7517] px-5 py-2 text-sm font-semibold text-[#FBF7F0] hover:bg-[#C5A572]"
+              >
+                Ask for a new link
+              </button>
+            </div>
+          )}
+
+          {inviteState === "bad" && (
+            <div className="mt-8 rounded-xl border border-[#EFE6D3] bg-[#FBF7F0] p-5 print:hidden">
+              <p className="text-sm leading-relaxed text-[#3A4A5F]">
+                We couldn&apos;t read that invitation link. You can still apply below — fill in your
+                details and we&apos;ll confirm your email with a code.
+              </p>
             </div>
           )}
 
