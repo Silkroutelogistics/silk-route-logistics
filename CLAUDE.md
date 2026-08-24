@@ -2219,6 +2219,43 @@ Each is a discrete sprint. Mix of operational, security, UX, and technical debt.
 
     **Not built, deliberately:** rate limits are IP-keyed because there is no identity to key on yet, with the 60s per-draft cooldown as the real control; expired drafts are not swept (a cleanup cron belongs with Arc 34's session sweep rather than alone); the disposable flag is recorded and left to the existing Compass input.
 
+242. **Fourteen action URLs pointed at pages that do not exist — including the email every tendered carrier receives (Arc 33 Phase 2a, 2026-08-24, `v3.8.aup`).**
+
+    Arc 33's brief asked for *"every email's action URL verified against the real route it targets"*. Doing that against production rather than against the code found **14 broken destinations across 8 distinct paths**, every one live.
+
+    **The worst is the Rate Confirmation email.** Its "View in Dashboard" button pointed at `/carrier/dashboard/loads` — **HTTP 404**. The carrier load pages are `my-loads`, `available-loads` and `loadboard`; there is no `loads`. This is the email EVERY tendered carrier receives, and it has been a dead link since **v3.8.abc (§13.3 Item 91)**, the commit that set out to fix exactly this class. That fix correctly changed `/dashboard/loads` → `/carrier/dashboard/loads`, repairing the AE-vs-carrier prefix, and landed on a carrier path that does not exist. **Half-right, and invisible: a wrong-but-plausible path looks exactly like a right one in a diff.**
+
+    **A carrier payment notification was wrong in both directions at once.** `notificationService` sends it to `payment.carrierId` — a carrier — with `actionUrl: "/dashboard/payments"`, which is both the AE console and a 404. Fixed to `/carrier/dashboard/payments`.
+
+    **The password-expiry reminder goes to every role.** `schedulerService`'s query has no role filter, and both its email CTA and its in-app `actionUrl` were hardcoded to `/dashboard/settings`. Every carrier and shipper who ever received it was told to change their password and sent somewhere they cannot open. Now resolved through `settingsPathForRole(role)`, with `role` added to the two `select`s that fetch the recipients — without which the helper would always have taken its default branch and nothing would have changed.
+
+    **Full list, each source confirmed 404 and each target confirmed 200 on production before the edit:**
+
+    | Dead path | Sites | Now |
+    |---|---|---|
+    | `/carrier/dashboard/loads` | emailService ×2, checkCallAutomation, fallOffRecovery | `/carrier/dashboard/my-loads` |
+    | `/carrier/tenders` | emailTemplates | `/carrier/dashboard/tenders` |
+    | `/carrier/check-calls` | emailTemplates | `/carrier/dashboard/my-loads` |
+    | `/carrier/pod-upload` | emailTemplates | `/carrier/dashboard/my-loads` |
+    | `/carrier/load-board` | emailTemplates | `/carrier/dashboard/loadboard` |
+    | `/shipments` | emailTemplates | `/shipper/dashboard/shipments` |
+    | `/shipper/invoices` | arCollectionsService | `/shipper/dashboard/invoices` |
+    | `/invoices` | emailTemplates | `/shipper/dashboard/invoices` |
+    | `/dashboard/tenders` | notificationService | `/dashboard/loads` (AE) |
+    | `/dashboard/payments` | notificationService | `/carrier/dashboard/payments` |
+    | `/dashboard/disputes` ×3 | notificationService | `/accounting/disputes` |
+    | `/dashboard/credit` | notificationService | `/accounting/credit` |
+    | `/dashboard/accounting` | arCollectionsService | `/accounting` |
+    | `/dashboard/settings` | schedulerService + emailService | role-resolved |
+
+    **THE GUARD IS THE POINT.** Item 91 fixed this class and it returned, so the durable output is [`emailActionUrls.test.ts`](../../backend/__tests__/unit/routes/emailActionUrls.test.ts): it derives the real route set from the app router and the static pages, extracts every absolute link and `actionUrl` from the backend, and fails naming any `file:line` that does not resolve. Injection-verified by reverting one URL to the historical 404 — it names `emailService.ts:168`. It also **reports its own reach** (147 static URLs checked, 5 interpolated skipped) rather than implying it covered everything.
+
+    **A guard of mine was unsound and was removed rather than kept.** The first audience check flagged any `/dashboard/*` in a file whose name contained "carrier" or "shipper". It fired on `carrierLoads.ts` and `shipperNotificationService.ts` — whose notifications go to `load.posterId`, the **AE**, where `/dashboard/*` is correct. Recipient is not statically derivable in general, and a guard with false positives is one people learn to ignore (the Arc 21 lesson). Replaced with the one audience rule that can be judged statically: the all-roles sender must resolve its path from the recipient.
+
+    **Three more of its findings were my own false positives, caught by testing against production instead of trusting the route set:** `.html` variants (301/308 to their extensionless route), the legacy `/ae/*` surface (301), and `/logo-penguin.gif` (an asset, not a page). All now handled explicitly.
+
+    **Sub-agent undercount, again.** The Phase A agent reported the two `/carrier/dashboard/loads` sites in `emailService.ts`. The orchestrator's own grep found **four** — the same two plus `checkCallAutomation.ts:450` and `fallOffRecovery.ts:88`. That is the v3.8.alm lesson holding: a delegated audit's self-asserted completeness is not a substitute for running the completeness grep yourself.
+
 ## §14 LEGAL / COMPLIANCE STATUS
 
 - Property broker under 49 U.S.C. §§ 13904, 13906

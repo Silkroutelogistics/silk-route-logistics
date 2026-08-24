@@ -13,6 +13,7 @@ import {
   verifyLink,
   draftStatus,
 } from "../services/onboardingDraftService";
+import type { VerifyFailureReason } from "../services/onboardingDraftService";
 import { prisma } from "../config/database";
 import { upload } from "../config/upload";
 import { auditLog } from "../middleware/audit";
@@ -298,8 +299,11 @@ router.post("/onboarding/verify-code", onboardingVerifyLimiter, async (req: Requ
   // Distinct messages here are deliberate and are NOT an enumeration leak:
   // the caller already supplied the address, and a carrier who cannot tell
   // "expired" from "wrong" retypes the same dead code until they give up.
-  const copy: Record<string, string> = {
-    not_found: "That code is no longer valid. Request a new one.",
+  // Typed to the service's own union, NOT Record<string, string>: the loose
+  // type let a rename slip through and the carrier got a 400 with an EMPTY
+  // message. Exhaustive by construction now — a renamed member fails the build.
+  const copy: Record<VerifyFailureReason, string> = {
+    onboarding_draft_missing: "That code is no longer valid. Request a new one.",
     expired: "That code has expired. Request a new one.",
     wrong_code: "That code is not correct. Check the email and try again.",
     too_many_attempts: "Too many incorrect attempts. Request a new code.",

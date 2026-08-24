@@ -447,7 +447,7 @@ export async function handleCheckCallResponse(fromPhone: string, responseText: s
           type: "POD_RECEIVED",
           title: `Upload POD: Load #${schedule.load.referenceNumber}`,
           message: "Load marked as delivered. Please upload the Proof of Delivery document.",
-          actionUrl: `/carrier/dashboard/loads`,
+          actionUrl: `/carrier/dashboard/my-loads`,
         },
       });
     }

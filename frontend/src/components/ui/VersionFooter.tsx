@@ -15024,7 +15024,19 @@
 // per-step endpoints it described do not exist (one chokepoint instead), and
 // OtpCode could not carry this because its userId is a required FK to a User
 // that by definition does not exist yet.
-export const SRL_VERSION = "3.8.auo";
+// v3.8.aup — Arc 33 Phase 2a. Fourteen action URLs in emails and in-app
+// notifications pointed at pages that do not exist. The worst was the Rate
+// Confirmation email — the one EVERY tendered carrier receives — whose
+// "View in Dashboard" button had been a 404 since v3.8.abc corrected its
+// /dashboard prefix and landed on /carrier/dashboard/loads, which is not a
+// route. A carrier payment notification was both a 404 and addressed to the
+// wrong console. The password-expiry reminder goes to every role and sent
+// them all to the AE settings page.
+//
+// Item 91 fixed this class once and it came back, so the durable output is
+// the guard: it derives the real route set from the app router and fails
+// naming any file:line whose URL does not resolve.
+export const SRL_VERSION = "3.8.aup";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

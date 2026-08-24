@@ -1,7 +1,7 @@
 import crypto from "crypto";
 import cron from "node-cron";
 import { prisma } from "../config/database";
-import { sendPreTracingEmail, sendLateAlertEmail, sendPasswordExpiryReminder } from "./emailService";
+import { sendPreTracingEmail, sendLateAlertEmail, sendPasswordExpiryReminder, settingsPathForRole } from "./emailService";
 import { processDueCheckCalls } from "./checkCallAutomation";
 import { runRiskFlagging } from "./riskEngine";
 import { processDueSequences } from "./emailSequenceService";
@@ -230,7 +230,7 @@ async function runPasswordExpiryReminder() {
       where: {
         passwordChangedAt: { gte: windowStart, lt: windowEnd },
       },
-      select: { id: true, email: true, firstName: true },
+      select: { id: true, email: true, firstName: true, role: true },
     });
 
     // Users with passwordChangedAt IS NULL — use createdAt as fallback
@@ -239,7 +239,7 @@ async function runPasswordExpiryReminder() {
         passwordChangedAt: null,
         createdAt: { gte: windowStart, lt: windowEnd },
       },
-      select: { id: true, email: true, firstName: true },
+      select: { id: true, email: true, firstName: true, role: true },
     });
 
     const users = [...usersWithPwChange, ...usersNullPwChange];
@@ -263,12 +263,12 @@ async function runPasswordExpiryReminder() {
           type: "PASSWORD_EXPIRY",
           title: `Password expires in ${daysLeft} day${daysLeft !== 1 ? "s" : ""}`,
           message: `Your password will expire in ${daysLeft} day${daysLeft !== 1 ? "s" : ""}. Please change it in Settings to avoid being locked out.`,
-          actionUrl: "/dashboard/settings",
+          actionUrl: settingsPathForRole(user.role),
         },
       });
 
       // Email
-      await sendPasswordExpiryReminder(user.email, user.firstName, daysLeft);
+      await sendPasswordExpiryReminder(user.email, user.firstName, daysLeft, user.role);
 
       log.info(`[PasswordExpiry] Sent ${daysLeft}-day reminder to ${user.email}`);
     }

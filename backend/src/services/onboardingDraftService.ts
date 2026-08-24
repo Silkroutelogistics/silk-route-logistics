@@ -228,9 +228,21 @@ export async function sendVerification(draftId: string, req?: RequestLike): Prom
 
 // ── verifying ────────────────────────────────────────────────────────
 
+/**
+ * Why a verification attempt failed. Exported so the routes can key their user-
+ * facing copy off THIS union exhaustively — a `Record<string, string>` lookup
+ * silently yields undefined on a renamed member, which is how the carrier ended
+ * up seeing a 400 with no message at all.
+ */
+export type VerifyFailureReason =
+  | "onboarding_draft_missing"
+  | "expired"
+  | "wrong_code"
+  | "too_many_attempts";
+
 export type VerifyOutcome =
   | { ok: true; receipt: string; email: string }
-  | { ok: false; reason: "onboarding_draft_missing" | "expired" | "wrong_code" | "too_many_attempts" };
+  | { ok: false; reason: VerifyFailureReason };
 
 async function markVerified(draft: { id: string; email: string; nonce: string }) {
   const verifiedAt = new Date();

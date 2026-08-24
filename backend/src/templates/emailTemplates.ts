@@ -151,7 +151,7 @@ export function invoiceEmail(recipientName: string, invoiceNumber: string, amoun
     <p style="color:#475569;font-size:15px;line-height:1.6;margin:0 0 8px">
       Please remit payment by the due date. Contact us if you have any questions.
     </p>
-    ${button("View Invoice", "https://silkroutelogistics.ai/invoices")}
+    ${button("View Invoice", "https://silkroutelogistics.ai/shipper/dashboard/invoices")}
   `);
 }
 
@@ -188,7 +188,7 @@ export function tenderOfferEmail(carrierName: string, loadRef: string, origin: s
     <p style="color:#dc2626;font-size:14px;line-height:1.6;margin:0 0 16px;font-weight:600">
       This tender expires on ${expiresAt}. Please respond before the deadline to secure this load.
     </p>
-    ${button("Review & Accept Tender", "https://silkroutelogistics.ai/carrier/tenders")}
+    ${button("Review & Accept Tender", "https://silkroutelogistics.ai/carrier/dashboard/tenders")}
   `);
 }
 
@@ -226,7 +226,7 @@ export function checkCallRequestEmail(carrierName: string, loadRef: string, orig
     <p style="color:#475569;font-size:15px;line-height:1.6;margin:0 0 8px">
       Timely check calls help us ensure smooth delivery and keep all parties informed. Thank you for your cooperation.
     </p>
-    ${button("Submit Check Call", "https://silkroutelogistics.ai/carrier/check-calls")}
+    ${button("Submit Check Call", "https://silkroutelogistics.ai/carrier/dashboard/my-loads")}
   `);
 }
 
@@ -262,7 +262,7 @@ export function podRequestEmail(carrierName: string, loadRef: string, origin: st
     <p style="color:#475569;font-size:15px;line-height:1.6;margin:0 0 8px">
       Prompt submission of POD documents ensures timely invoice processing and payment. Thank you.
     </p>
-    ${button("Upload POD Documents", "https://silkroutelogistics.ai/carrier/pod-upload")}
+    ${button("Upload POD Documents", "https://silkroutelogistics.ai/carrier/dashboard/my-loads")}
   `);
 }
 
@@ -282,7 +282,7 @@ export function deliveryConfirmationEmail(recipientName: string, loadRef: string
     <p style="color:#475569;font-size:15px;line-height:1.6;margin:0 0 8px">
       Thank you for choosing Silk Route Logistics. If you have any questions about this delivery, please don't hesitate to reach out.
     </p>
-    ${button("View Delivery Details", "https://silkroutelogistics.ai/shipments")}
+    ${button("View Delivery Details", "https://silkroutelogistics.ai/shipper/dashboard/shipments")}
   `);
 }
 
@@ -319,7 +319,7 @@ export function loadOpportunityEmail(carrierName: string, loadRef: string, origi
       <tr><td style="color:#64748b;border-bottom:1px solid #E2EAF2"><strong>Equipment</strong></td><td style="color:#0A2540;border-bottom:1px solid #E2EAF2;font-weight:600">${equipmentType}</td></tr>
       <tr><td style="color:#64748b"><strong>Rate</strong></td><td style="color:#BA7517;font-weight:700;font-size:16px">${rate}</td></tr>
     </table>
-    ${button("View Load Details", "https://silkroutelogistics.ai/carrier/load-board")}
+    ${button("View Load Details", "https://silkroutelogistics.ai/carrier/dashboard/loadboard")}
   `);
 }
 

@@ -13,6 +13,55 @@ so it's searchable and never lost.
 
 ---
 
+## Fixed — 2026-08-24 (Arc 33: the Rate Confirmation email's button was a 404 for months)
+
+- **Symptom:** the "View in Dashboard" button in the Rate Confirmation email —
+  which every tendered carrier receives — pointed at
+  `/carrier/dashboard/loads`, which returns **HTTP 404**. The carrier load pages
+  are `my-loads`, `available-loads` and `loadboard`.
+- **Where:** `backend/src/services/emailService.ts:429` (plus `:168`
+  sendPreTracingEmail, `checkCallAutomation.ts:450`, `fallOffRecovery.ts:88`)
+- **Severity:** P1 — a dead link on the primary carrier-facing transactional
+  email.
+- **Introduced by the fix for the same class.** v3.8.abc (§13.3 Item 91) changed
+  `/dashboard/loads` → `/carrier/dashboard/loads`, correcting the AE-vs-carrier
+  prefix and landing on a carrier path that does not exist. Half-right, and
+  invisible in review because a wrong-but-plausible path looks like a right one.
+- **Status:** Fixed in v3.8.aup, along with 13 other broken destinations across
+  8 distinct paths. Every source confirmed 404 and every target confirmed 200 on
+  production before the edit.
+- **Held closed by:** `emailActionUrls.test.ts`, which derives the real route set
+  from the app router and fails naming any file:line that does not resolve.
+  Injection-verified against this exact defect.
+- **Date noted:** 2026-08-24
+
+## Fixed — 2026-08-24 (Arc 33: a carrier payment notification was a 404 AND the wrong console)
+
+- **Symptom:** `notificationService` sends the payment notification to
+  `payment.carrierId` — a carrier — with `actionUrl: "/dashboard/payments"`.
+  That path is the AE console, which a carrier cannot open, and it is also a 404.
+- **Where:** `backend/src/services/notificationService.ts:573`
+- **Severity:** P1 — money-related notification, wrong audience, dead link.
+- **Status:** Fixed in v3.8.aup → `/carrier/dashboard/payments`.
+- **Date noted:** 2026-08-24
+
+## Fixed — 2026-08-24 (Arc 33: the password-expiry reminder sent carriers and shippers to the AE console)
+
+- **Symptom:** `schedulerService`'s recipient query has **no role filter** — it
+  emails every role — while both the email CTA and the in-app `actionUrl` were
+  hardcoded to `/dashboard/settings`, the AE settings page. Carriers and
+  shippers were told to change their password and sent somewhere they cannot
+  open. `/carrier/dashboard/settings` and `/shipper/dashboard/settings` both
+  exist.
+- **Where:** `backend/src/services/schedulerService.ts:266` + `:271`,
+  `backend/src/services/emailService.ts` sendPasswordExpiryReminder
+- **Severity:** P2 — recoverable (the reader can navigate), but the reminder
+  exists to prevent a lockout and it pointed away from the fix.
+- **Status:** Fixed in v3.8.aup via `settingsPathForRole(role)`. `role` had to be
+  added to both recipient `select`s — without that the helper would always have
+  taken its default branch and nothing would have changed.
+- **Date noted:** 2026-08-24
+
 ## Hardened — 2026-08-24 (Arc 32: an application could be submitted from any address, proven or not)
 
 - **Symptom:** the carrier onboarding wizard never verified that the applicant
