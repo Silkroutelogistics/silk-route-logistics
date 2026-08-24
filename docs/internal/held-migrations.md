@@ -1,6 +1,6 @@
 # Held schema changes
 
-**Four** schema changes are authored, verified, and deliberately not applied.
+**Five** schema changes are authored, verified, and deliberately not applied.
 
 **They release SEPARATELY.** Each answers to its own condition, and merging them
 into one change would couple decisions that have nothing to do with each other —
@@ -11,7 +11,7 @@ instinct here; it is the whole reason this file exists rather than a single
 They share exactly one precondition (the deploy-hook secret, below) and nothing
 else.
 
-Last reviewed: 2026-08-23, Arc 31 — **four** holds (three branches, one file),
+Last reviewed: 2026-08-24, Arc 34 — **five** holds (four branches, one file),
 scheduled `prisma/migrations/` confirmed clean of untracked files on `main`, and
 `RENDER_DEPLOY_HOOK_URL` confirmed still unset.
 
@@ -30,7 +30,7 @@ That is Item 212 in one sentence: a column-drop reached production because it
 was held back by *position* rather than by a mechanism, and position is not a
 mechanism. Setup: [`render-deploy-gate-setup.md`](render-deploy-gate-setup.md).
 
-This one secret now gates **three** schema changes. It is the highest-leverage
+This one secret now gates **four** schema changes (hold 5 releases on evidence, not on the secret). It is the highest-leverage
 thing outstanding on the human side.
 
 ---
@@ -188,6 +188,62 @@ live table, nothing more. Anyone reading "retire asset drivers" and reaching for
    merging. All three counters must be zero; a non-zero means something wrote a
    column this migration believes is dead.
 2. The shared precondition above.
+
+---
+
+## 5. `hold/arc34-session-policy` — uniform session lifetime (30m idle / 12h absolute)
+
+| | |
+|---|---|
+| **Form** | git branch (`hold/arc34-session-policy`), tip `8dfa5c5f` |
+| **Adds** | `SessionPortal` enum + `StaffSession.portal` (additive, defaulted) |
+| **Authored** | Arc 34, §13.3 Item 244 |
+| **Verified from zero** | NO — and that is the point. See the release condition. |
+
+**THIS ONE IS DIFFERENT IN KIND FROM THE FOUR ABOVE, and conflating them would
+misread both.** Holds 1-4 are DESTRUCTIVE changes waiting on the deploy-hook
+secret: the schema work is finished and proven, and what is missing is a
+mechanism to control WHEN it applies. This one is ADDITIVE — it drops nothing,
+and its migration is safe to apply the moment it lands. What it is waiting for
+is EVIDENCE, not a gate.
+
+**Why held.** The branch changes how every authenticated request is judged, on
+all four portals, via a fail-closed policy. It is correct by reasoning and
+unproven by execution. Reasoning has a poor record in this specific file: three
+diagnoses about it were confidently wrong in a row, and two real defects — one a
+total lockout — were caught by tests the concurrent session wrote, not by
+review.
+
+**Release condition — ONE thing:**
+
+The five-path proof-by-login (staff-password, carrier, shipper, driver, SSO)
+against a real server. Per path: a session is minted; the row exists with the
+right `portal` AND is keyed by the 32-char truncated hash the middleware reads;
+and **a subsequent authenticated request succeeds**. That last assertion is the
+whole gate — it converts the outstanding "stale fixture" verdict on
+`sets req.user and calls next for valid token` from a diagnosis into a fact. The
+alternative reading of that failing test is "authentication is broken", and
+nothing currently distinguishes the two.
+
+Plus, in the same harness: idle → `SESSION_IDLE_EXPIRED`; absolute at 12h;
+a pre-policy session → `SESSION_REVOKED_POLICY_ROLLOUT`; a background poll that
+does NOT reset the clock (adversarially verified by unmarking one poll); and a
+remembered SSO session still idling at 30m.
+
+**The deploy-hook secret is NOT a precondition here** — unlike holds 1-4. This
+hold releases on evidence alone.
+
+**Also outstanding before merge** (all specified in `8dfa5c5f`'s message): dated
+supersession wording on the two intended test changes, the supersession comments
+at `authController.ts:412/:855` per
+[`seam-note-arc34-session-policy.md`](seam-note-arc34-session-policy.md), and
+the rollout sweep call.
+
+**Census, taken 2026-08-24 and still the reason this is cheap to ship:**
+`staff_sessions` 6 rows, zero users signed in within 7 days, zero drivers
+holding a training session. **The rollout signs out nobody.** Re-run
+`scripts/_readonly-session-census.ts` before merging — if sign-ins now exist,
+`SESSION_REVOKED_POLICY_ROLLOUT` stops being insurance and becomes load-bearing.
 
 ---
 
