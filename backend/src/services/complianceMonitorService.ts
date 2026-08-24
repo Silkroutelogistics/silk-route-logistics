@@ -1125,6 +1125,46 @@ export async function fmcsaComplianceScan() {
   const results = { scanned: 0, passed: 0, failed: 0, alerts: 0, suspended: 0, errors: 0 };
   const scanStartedAt = new Date();
 
+  // A run with nobody to scan is not a healthy run, and for 86 consecutive days
+  // it logged as one. The loop below never executes, `results` stays all-zeros,
+  // and the summary reports INFO — indistinguishable from a clean scan of a
+  // real fleet. The card then renders "0 carriers scanned" in the same neutral
+  // white it uses for success.
+  //
+  // Logged as its own line so one grep shows BOTH the count and the fence that
+  // produced it: every APPROVED carrier in production is currently a test
+  // account, so the fence that correctly stops the scan touching seed data is
+  // also what empties it.
+  const emptyPopulation = carriers.length === 0;
+  if (emptyPopulation) {
+    const [approvedTotal, approvedReal] = await Promise.all([
+      prisma.carrierProfile.count({ where: { onboardingStatus: "APPROVED" } }),
+      prisma.carrierProfile.count({
+        where: { onboardingStatus: "APPROVED", isTestAccount: false, dotNumber: { not: null } },
+      }),
+    ]);
+    log.warn(
+      { approvedTotal, approvedReal, fence: "isTestAccount:false + dotNumber not null" },
+      "[FMCSAScan] Zero eligible carriers — nothing was scanned",
+    );
+    await prisma.systemLog.create({
+      data: {
+        logType: "CRON_JOB",
+        severity: "WARNING",
+        source: "fmcsa-compliance-scan",
+        message:
+          `FMCSA scan had ZERO eligible carriers. ${approvedTotal} APPROVED in total, ` +
+          `${approvedReal} after the isTestAccount + dotNumber fence. Nothing was scanned — ` +
+          `this is not a clean run.`,
+        details: {
+          approvedTotal,
+          approvedReal,
+          fence: "isTestAccount:false, dotNumber:{not:null}",
+        } as any,
+      },
+    }).catch((err) => log.error({ err }, "[FMCSAScan] Failed to write zero-population warning"));
+  }
+
   for (const carrier of carriers) {
     try {
       if (!carrier.dotNumber) continue;
@@ -1394,9 +1434,16 @@ export async function fmcsaComplianceScan() {
   await prisma.systemLog.create({
     data: {
       logType: "CRON_JOB",
-      severity: results.errors > 0 ? "WARNING" : "INFO",
+      // Three-way, keyed on FINDINGS — the same shape selfAuthorityMonitorService
+      // uses twenty lines away in this very cron tick, rather than a new one.
+      // The old ternary consulted only results.errors, so a run that scanned
+      // NOBODY reported INFO. That is the single line which let 86 empty scans
+      // read as healthy.
+      severity: results.errors > 0 || emptyPopulation ? "WARNING" : "INFO",
       source: "fmcsa-compliance-scan",
-      message: `FMCSA scan complete: ${results.scanned} scanned, ${results.alerts} alerts, ${results.suspended} suspended, ${results.errors} errors`,
+      message: emptyPopulation
+        ? "FMCSA scan complete: 0 carriers were eligible — nothing was scanned"
+        : `FMCSA scan complete: ${results.scanned} scanned, ${results.alerts} alerts, ${results.suspended} suspended, ${results.errors} errors`,
       details: {
         startedAt: scanStartedAt.toISOString(),
         completedAt: new Date().toISOString(),
@@ -1406,6 +1453,9 @@ export async function fmcsaComplianceScan() {
         alertsCreated: results.alerts,
         autoSuspended: results.suspended,
         errors: results.errors,
+        // So the card can distinguish "scanned everyone, all clean" from
+        // "there was nobody to scan" without re-deriving it from a zero.
+        emptyPopulation,
       } as any,
     },
   }).catch((err) => log.error({ err }, "[FMCSAScan] Failed to write FMCSA_SCAN_RUN summary"));

@@ -454,7 +454,7 @@ export function CeoOverview() {
           Run-button + last-run summary, sitting next to the Compliance Alerts
           tile above. POST /integrations/fmcsa/bulk-monitor (fire-and-forget,
           202) + GET /integrations/fmcsa/last-scan for the summary card.
-          Daily 3am Eastern cron writes summaries too — same card reflects both.
+          Daily 3:00 AM Eastern cron writes summaries too — same card reflects both.
           ═══════════════════════════════════════════════════════════════════════ */}
       <div className="grid md:grid-cols-3 gap-4">
         {/* Run-FMCSA-Scan card */}
@@ -464,7 +464,7 @@ export function CeoOverview() {
             FMCSA Compliance Scan
           </h3>
           <p className="text-xs text-slate-400 mb-4 flex-1">
-            Re-check every approved carrier against FMCSA. Runs daily at 3 AM Eastern automatically; manual re-scan anytime.
+            Re-check every approved carrier against FMCSA. Runs daily at 3:00 AM Eastern automatically; manual re-scan anytime.
           </p>
           <button
             type="button"
@@ -498,16 +498,36 @@ export function CeoOverview() {
           {lastScanLoading ? (
             <div className="text-slate-500 text-sm">Loading...</div>
           ) : !lastScan?.found ? (
-            <div className="text-slate-500 text-sm">No scans recorded yet. Run a scan or wait for the daily 3 AM ET cron.</div>
+            <div className="text-slate-500 text-sm">No scans recorded yet. Run a scan or wait for the daily 3:00 AM Eastern cron.</div>
           ) : (
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+              {/* A scan that had nobody to scan is not a clean scan. It ran, on
+                  time, and did nothing — and for 86 days it rendered in the same
+                  neutral white as success. Said in words, because a reader
+                  cannot tell "0 changes, all healthy" from "0 carriers existed"
+                  by looking at zeros. */}
+              {lastScan.emptyPopulation ? (
+                <div className="col-span-2 md:col-span-4 flex items-start gap-2 px-3 py-2 rounded-lg bg-yellow-500/10 border border-yellow-500/30">
+                  <AlertTriangle className="w-4 h-4 text-yellow-400 mt-0.5 shrink-0" />
+                  <div className="text-yellow-200 text-xs">
+                    <span className="font-medium">Nothing was scanned.</span>{" "}
+                    No carrier was eligible — every approved carrier is currently a test
+                    account, so the fence that keeps the scan off seed data also empties
+                    it. This is not a clean run.
+                  </div>
+                </div>
+              ) : null}
               <div>
                 <div className="text-slate-500 text-xs uppercase tracking-wide mb-1">When</div>
                 <div className="text-white">{formatScanTimestamp(lastScan.timestamp)}</div>
               </div>
               <div>
                 <div className="text-slate-500 text-xs uppercase tracking-wide mb-1">Carriers Scanned</div>
-                <div className="text-white">{lastScan.carriersScanned ?? "—"}</div>
+                {/* Zero gets warning treatment. Its siblings below already
+                    escalate above zero; this cell escalated on nothing at all. */}
+                <div className={lastScan.carriersScanned === 0 ? "text-yellow-400" : "text-white"}>
+                  {lastScan.carriersScanned ?? "—"}
+                </div>
               </div>
               <div>
                 <div className="text-slate-500 text-xs uppercase tracking-wide mb-1">Changes Found</div>

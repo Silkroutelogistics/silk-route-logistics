@@ -12,12 +12,19 @@ import { log } from "../lib/logger";
  *   briefings pass `{ timezone: "America/New_York" }` as the third argument
  *   to cron.schedule so their wall-clock times read as Eastern (Wasi-facing
  *   operational interpretation).
- * - Internal recompute / cleanup / validation jobs (FMCSA scan, AI learning
- *   cycles, OFAC/ELD/TIN/CSA/VIN sweeps, AI cycles, log-purge, etc.) run on
+ * - Internal recompute / cleanup / validation jobs (AI learning cycles,
+ *   OFAC/ELD/TIN/CSA/VIN sweeps, AI cycles, log-purge, etc.) run on
  *   the node-cron default which uses the host process clock — Render
  *   containers default to UTC since no TZ env var is set. The container
  *   timezone is intentionally NOT changed; only the human-facing jobs are
  *   pinned to Eastern.
+ * - The FMCSA scan MOVED to Eastern (T4). It was listed as internal here, and
+ *   it is not: it feeds a dashboard card whose copy says "3 AM Eastern" in
+ *   three places, and it shares a guard block with the SRL self-authority
+ *   check, which emails compliance@ on a CRITICAL. A job a human reads on a
+ *   card, whose sibling sends mail, is human-facing. It had been firing at
+ *   03:00 UTC — 11 PM Eastern the PREVIOUS day — so the card's own label was
+ *   off by a calendar day, every day, and drifted an hour across DST.
  */
 
 /**
@@ -509,7 +516,10 @@ export function initCronJobs() {
     } catch (err) {
       log.error({ err }, "[Cron Daily] SRL self-authority check error:");
     }
-  }));
+    // T4 — genuinely 3 AM Eastern now. Without this the expression meant 03:00
+    // UTC, which is 11 PM Eastern the previous day and shifts an hour across
+    // DST; the dashboard card has always said "3 AM Eastern".
+  }), { timezone: "America/New_York" });
 
   // ─── Daily (6 AM): Identity/email/phone validation for pending carriers ──
   cron.schedule("0 6 * * *", () => withGuard("identity-validation", async () => {
