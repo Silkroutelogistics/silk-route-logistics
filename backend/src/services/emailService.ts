@@ -165,7 +165,7 @@ export async function sendPreTracingEmail(
       <tr><td style="padding:8px;border:1px solid #E2EAF2;font-weight:bold">Pickup Date</td><td style="padding:8px;border:1px solid #E2EAF2">${pickupDate.toLocaleDateString()}</td></tr>
     </table>
     <p><strong>Are you on time for pickup?</strong> Please log in to update your status.</p>
-    <a href="https://silkroutelogistics.ai/carrier/dashboard/loads" style="display:inline-block;background:#BA7517;color:#FFFFFF;padding:12px 24px;text-decoration:none;border-radius:6px;font-weight:bold;margin-top:8px">Update Status</a>
+    <a href="https://silkroutelogistics.ai/carrier/dashboard/my-loads" style="display:inline-block;background:#BA7517;color:#FFFFFF;padding:12px 24px;text-decoration:none;border-radius:6px;font-weight:bold;margin-top:8px">Update Status</a>
   `);
 
   await sendEmail(carrierEmail, `Pre-Tracing: Load ${loadRef} pickup in ${timeLabel}`, html);
@@ -426,7 +426,7 @@ export async function sendRateConfirmationEmail(
       <tr><td style="padding:8px;border:1px solid #E2EAF2;font-weight:bold">Load Reference</td><td style="padding:8px;border:1px solid #E2EAF2">${loadRef}</td></tr>
     </table>
     <p>If you have any questions, please contact your dispatcher or reply to this email.</p>
-    <a href="https://silkroutelogistics.ai/carrier/dashboard/loads" style="display:inline-block;background:#BA7517;color:#FFFFFF;padding:12px 24px;text-decoration:none;border-radius:6px;font-weight:bold;margin-top:8px">View in Dashboard</a>
+    <a href="https://silkroutelogistics.ai/carrier/dashboard/my-loads" style="display:inline-block;background:#BA7517;color:#FFFFFF;padding:12px 24px;text-decoration:none;border-radius:6px;font-weight:bold;margin-top:8px">View in Dashboard</a>
   `);
 
   await sendEmail(
@@ -612,14 +612,26 @@ export async function sendRemittanceEmail(carrierEmail: string, data: {
   await sendEmail(carrierEmail, `Payment Remittance: Load ${data.loadRef} — $${data.netPayment.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, html);
 }
 
-export async function sendPasswordExpiryReminder(email: string, firstName: string, daysLeft: number) {
+/**
+ * Sent to EVERY role — the scheduler's query has no role filter — so the
+ * destination has to follow the recipient. It previously pointed every carrier
+ * and shipper at the AE console's settings page.
+ */
+export function settingsPathForRole(role?: string | null): string {
+  if (role === "CARRIER") return "/carrier/dashboard/settings";
+  if (role === "SHIPPER") return "/shipper/dashboard/settings";
+  return "/dashboard/settings";
+}
+
+export async function sendPasswordExpiryReminder(email: string, firstName: string, daysLeft: number, role?: string | null) {
+  const settingsPath = settingsPathForRole(role);
   const urgency = daysLeft <= 2 ? "#dc2626" : daysLeft <= 7 ? "#f59e0b" : "#3b82f6";
   const html = wrap(`
     <h2 style="color:${urgency}">Password Expiring Soon</h2>
     <p>Hi ${firstName},</p>
     <p>Your Silk Route Logistics password will expire in <strong style="color:${urgency}">${daysLeft} day${daysLeft !== 1 ? "s" : ""}</strong>.</p>
     <p>Please update your password before it expires to avoid being locked out.</p>
-    <a href="https://silkroutelogistics.ai/dashboard/settings" style="display:inline-block;background:#BA7517;color:#FFFFFF;padding:12px 24px;text-decoration:none;border-radius:6px;font-weight:bold;margin-top:8px">Change Password</a>
+    <a href="https://silkroutelogistics.ai${settingsPath}" style="display:inline-block;background:#BA7517;color:#FFFFFF;padding:12px 24px;text-decoration:none;border-radius:6px;font-weight:bold;margin-top:8px">Change Password</a>
     <p style="color:#64748b;font-size:13px;margin-top:16px">If your password expires, you'll be prompted to create a new one at your next login.</p>
   `);
 

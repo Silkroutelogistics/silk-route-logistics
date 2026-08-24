@@ -1,4 +1,6 @@
 import { Router, Response } from "express";
+import { issueInvite } from "../services/onboardingInviteService";
+import { transitionToReviewing } from "../services/onboardingLifecycleService";
 import path from "path";
 import { uploadFile } from "../services/storageService";
 import {
@@ -272,6 +274,80 @@ router.post("/:id/read-coi", authorize("ADMIN", "CEO", "BROKER", "OPERATIONS"), 
 });
 
 router.put("/:id", authorize("ADMIN", "CEO"), validateBody(updateCarrierSchema), auditLog("UPDATE", "Carrier"), updateCarrier);
+
+// ── Arc 33: AE carrier invitations ──────────────────────────────────
+// Replaces the "Invite Carriers" anchor that pointed at /onboarding — the
+// carrier's own self-registration wizard, which invited nobody.
+//
+// ADMIN/CEO, matching the customer portal invite (v3.8.aqs) rather than the
+// wider set used for Quick Pay decisions: this creates an onboarding record
+// and sends outbound mail under SRL's name.
+const inviteSchema = z.object({
+  email: z.string().email(),
+  company: z.string().max(200).optional(),
+  mcNumber: z.string().max(50).optional(),
+  note: z.string().max(1000).optional(),
+});
+
+// Arc 33 Phase 2b — PENDING → REVIEWING. The transition that did not exist:
+// nothing moved a submitted application into review, so the carrier heard
+// nothing between the receipt email and a decision. Idempotent — an AE
+// opening the same file twice is not a state change.
+router.post(
+  "/:id/start-review",
+  authorize("ADMIN", "CEO", "OPERATIONS"),
+  auditLog("UPDATE", "Carrier"),
+  async (req: AuthRequest, res: Response) => {
+    try {
+      const out = await transitionToReviewing(req.params.id);
+      res.json({ ok: true, ...out });
+    } catch (err) {
+      res.status(404).json({ error: err instanceof Error ? err.message : "Carrier not found" });
+    }
+  },
+);
+
+router.post(
+  "/invite",
+  authorize("ADMIN", "CEO"),
+  validateBody(inviteSchema),
+  auditLog("CREATE", "OnboardingInvite"),
+  async (req: AuthRequest, res: Response) => {
+    const body = req.body as z.infer<typeof inviteSchema>;
+    const inviter = req.user
+      ? await prisma.user.findUnique({ where: { id: req.user.id }, select: { firstName: true, lastName: true } })
+      : null;
+
+    const result = await issueInvite({
+      email: body.email,
+      invitedById: req.user!.id,
+      company: body.company,
+      mcNumber: body.mcNumber,
+      note: body.note,
+      inviterName: inviter ? `${inviter.firstName} ${inviter.lastName}`.trim() : undefined,
+    });
+
+    if (!result.ok) {
+      // 409 with the real state. The caller is staff, so telling them exactly
+      // where this carrier already is IS the useful answer — the enumeration
+      // caution that governs the public routes does not apply behind an
+      // ADMIN/CEO gate.
+      res.status(409).json({ error: result.detail, code: result.reason });
+      return;
+    }
+
+    // The copy-link is returned even on a successful send, mirroring the
+    // driver-invite flow: mail is filtered often enough that an AE needs to be
+    // able to paste the link into a phone call.
+    res.status(201).json({
+      ok: true,
+      inviteUrl: result.inviteUrl,
+      emailSent: result.emailSent,
+      reissued: result.reissued,
+    });
+  },
+);
+
 
 // Full vetting — runs all checks in one call
 router.post("/:id/full-vet", authorize("ADMIN", "CEO", "OPERATIONS"), runFullVetting);

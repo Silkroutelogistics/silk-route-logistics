@@ -13,6 +13,182 @@ so it's searchable and never lost.
 
 ---
 
+## Fixed — 2026-08-24 (Arc 33: the "Invite Carriers" button invited nobody)
+
+- **Symptom:** the CTA on the AE carriers page was an anchor to `/onboarding` —
+  the carrier's own five-step self-registration wizard. No email was sent, no
+  token minted, no record created. An AE who used it filled in a carrier's
+  company, MC, insurance and password on their behalf.
+- **Where:** `frontend/src/app/dashboard/carriers/page.tsx:986`
+- **Severity:** P1 — a primary AE workflow that did not exist, wearing a label
+  that said it did.
+- **Interaction worth recording:** Arc 32's email-verification gate had already
+  turned this from quietly wrong into loudly broken, because an AE cannot read
+  the carrier's inbox to retrieve the code. Arc 32 closed an impersonation path
+  that ran through this button, and that is how the misroute surfaced.
+- **Status:** Fixed in v3.8.auq. A real invitation modal, a signed single-use
+  7-day link, and a separately-labelled "Open registration page" link kept for
+  the walk-in case — both labels now match their actions.
+- **Date noted:** 2026-08-24
+
+## Fixed — 2026-08-24 (Arc 33: an application went silent between receipt and decision)
+
+- **Symptom:** nothing in the codebase moved a carrier from PENDING to
+  REVIEWING. The transition did not exist, so there was no moment to email on,
+  and a submitted application produced no further contact until a decision.
+  From the carrier's side that is indistinguishable from being ignored.
+- **Where:** no owning file — the gap was the absence of a transition.
+- **Severity:** P2 — no data is wrong; the relationship is.
+- **Status:** Fixed in v3.8.auq. `transitionToReviewing` plus an AE
+  `POST /carriers/:id/start-review`, idempotent, with a link-encoded
+  exactly-once announcement.
+- **Date noted:** 2026-08-24
+
+## Fixed — 2026-08-24 (Arc 33: auto-approved carriers were never congratulated)
+
+- **Symptom:** the AE approval path called `approveCarrier`, which emails a
+  welcome. The Compass auto-approve path wrote `onboardingStatus` inline and
+  created only an in-app notification. Same moment, two outcomes — a carrier
+  could tell HOW they were approved by WHETHER they heard about it.
+- **Where:** `backend/src/controllers/carrierController.ts:674`
+- **Severity:** P2.
+- **Status:** Fixed in v3.8.auq. Both paths converge on `approveCarrier`;
+  `approvedById` is nullable because no human approves on the Compass path, and
+  the source is recorded internally while the carrier-facing email is identical.
+  Link-encoded dedup prevents a double congratulation when both paths run.
+- **Date noted:** 2026-08-24
+
+## Fixed — 2026-08-24 (Arc 33: answering or withdrawing an info request told the carrier nothing)
+
+- **Symptom:** resolving an info request emailed the AE only; cancelling one
+  emailed nobody. The carrier who did the work heard nothing, and a carrier
+  whose request was withdrawn kept chasing paperwork nobody needed.
+- **Where:** `backend/src/services/infoRequestService.ts`
+- **Severity:** P2 — the withdrawal case wastes the carrier's time directly.
+- **Status:** Fixed in v3.8.auq via `confirmInfoRequestAnswered` and
+  `notifyInfoRequestWithdrawn`, both link-encoded exactly-once.
+- **Date noted:** 2026-08-24
+
+## Fixed — 2026-08-24 (Arc 33: the public-surface self-test pinned to an array index)
+
+- **Symptom:** `probe-public-surfaces.mjs --self-test` built its fixtures from
+  `PROBES[0]`. Adding a probe at the top of the array silently re-pointed every
+  fixture at a different subject, and the self-test failed for a reason
+  unrelated to the harness.
+- **Where:** `backend/scripts/probe-public-surfaces.mjs`
+- **Severity:** P2 — it fails loudly rather than passing falsely, but a harness
+  that self-tests against an arbitrary array slot is one prepend away from
+  testing nothing.
+- **Status:** Fixed in v3.8.auq — pinned by name, with an explicit failure if
+  the named probe is ever removed.
+- **Found by:** adding the Arc 33 invitation probe.
+- **Date noted:** 2026-08-24
+
+## Fixed — 2026-08-24 (Arc 33: the Rate Confirmation email's button was a 404 for months)
+
+- **Symptom:** the "View in Dashboard" button in the Rate Confirmation email —
+  which every tendered carrier receives — pointed at
+  `/carrier/dashboard/loads`, which returns **HTTP 404**. The carrier load pages
+  are `my-loads`, `available-loads` and `loadboard`.
+- **Where:** `backend/src/services/emailService.ts:429` (plus `:168`
+  sendPreTracingEmail, `checkCallAutomation.ts:450`, `fallOffRecovery.ts:88`)
+- **Severity:** P1 — a dead link on the primary carrier-facing transactional
+  email.
+- **Introduced by the fix for the same class.** v3.8.abc (§13.3 Item 91) changed
+  `/dashboard/loads` → `/carrier/dashboard/loads`, correcting the AE-vs-carrier
+  prefix and landing on a carrier path that does not exist. Half-right, and
+  invisible in review because a wrong-but-plausible path looks like a right one.
+- **Status:** Fixed in v3.8.aup, along with 13 other broken destinations across
+  8 distinct paths. Every source confirmed 404 and every target confirmed 200 on
+  production before the edit.
+- **Held closed by:** `emailActionUrls.test.ts`, which derives the real route set
+  from the app router and fails naming any file:line that does not resolve.
+  Injection-verified against this exact defect.
+- **Date noted:** 2026-08-24
+
+## Fixed — 2026-08-24 (Arc 33: a carrier payment notification was a 404 AND the wrong console)
+
+- **Symptom:** `notificationService` sends the payment notification to
+  `payment.carrierId` — a carrier — with `actionUrl: "/dashboard/payments"`.
+  That path is the AE console, which a carrier cannot open, and it is also a 404.
+- **Where:** `backend/src/services/notificationService.ts:573`
+- **Severity:** P1 — money-related notification, wrong audience, dead link.
+- **Status:** Fixed in v3.8.aup → `/carrier/dashboard/payments`.
+- **Date noted:** 2026-08-24
+
+## Fixed — 2026-08-24 (Arc 33: the password-expiry reminder sent carriers and shippers to the AE console)
+
+- **Symptom:** `schedulerService`'s recipient query has **no role filter** — it
+  emails every role — while both the email CTA and the in-app `actionUrl` were
+  hardcoded to `/dashboard/settings`, the AE settings page. Carriers and
+  shippers were told to change their password and sent somewhere they cannot
+  open. `/carrier/dashboard/settings` and `/shipper/dashboard/settings` both
+  exist.
+- **Where:** `backend/src/services/schedulerService.ts:266` + `:271`,
+  `backend/src/services/emailService.ts` sendPasswordExpiryReminder
+- **Severity:** P2 — recoverable (the reader can navigate), but the reminder
+  exists to prevent a lockout and it pointed away from the fix.
+- **Status:** Fixed in v3.8.aup via `settingsPathForRole(role)`. `role` had to be
+  added to both recipient `select`s — without that the helper would always have
+  taken its default branch and nothing would have changed.
+- **Date noted:** 2026-08-24
+
+## Hardened — 2026-08-24 (Arc 32: an application could be submitted from any address, proven or not)
+
+- **Symptom:** the carrier onboarding wizard never verified that the applicant
+  could read the email address they typed. The five steps lived entirely in
+  React state and the only server write was `POST /carrier/register` at Submit,
+  so a typo'd address produced an application nobody could reply to, and a
+  deliberate one produced an application under someone else's name.
+- **Where:** `frontend/src/app/onboarding/page.tsx`, `POST /api/carrier/register`
+- **Severity:** P1 — not an outage; a data-quality and impersonation surface on
+  the platform's front door.
+- **Status:** Fixed in v3.8.auo. Step 1 persists an `OnboardingDraft` and sends a
+  6-digit code plus a one-click link; Step 2 does not open until either answers.
+  The gate at registration checks an HMAC receipt bound to `{email, nonce}` and
+  **fails closed** — no receipt, forged receipt, wrong address, or a nonce
+  rotated by an email edit all refuse with `EMAIL_NOT_VERIFIED`.
+- **Blast radius before the change:** none in flight. Production census read
+  3 APPROVED + 1 PENDING carrier profiles, of which one is real and non-test,
+  and that one is already past registration.
+- **Proof:** `_arc32-verification-proof.ts` 20/20 over the real router against a
+  real database; neutering the gate gives 15/20 with exactly the five gate
+  assertions failing.
+- **Date noted:** 2026-08-24
+
+## Caught before shipping — 2026-08-24 (Arc 32: the gate would have refused every legitimate application)
+
+- **Symptom (never reached production):** `validateBody` does
+  `req.body = result.data` and `z.object()` strips unknown keys, so a
+  `verificationReceipt` that is not DECLARED in `carrierRegisterSchema` arrives
+  at the controller as `undefined`. The gate would then have refused **every**
+  real applicant — no type error, no crash, carrier onboarding simply closed.
+- **Where:** `backend/src/validators/carrier.ts`, `backend/src/middleware/validate.ts`
+- **Severity:** would have been P0.
+- **Status:** declared in the schema, and held there behaviourally by
+  `onboardingReceipt.test.ts`. Injection-verified: deleting the declaration
+  turns the guard red with `expected undefined to be 'abc.def'`.
+- **Note:** this is §19 Sub-pattern 5, and the TONU 422 shipped in exactly this
+  shape. It was caught by reading `validate.ts` rather than assuming the field
+  would survive.
+- **Date noted:** 2026-08-24
+
+## Guard gap closed — 2026-08-24 (Arc 32: the rehearsal guard did not cover object storage)
+
+- **Symptom:** the arc-proof safety guard asserted `RESEND_API_KEY` and
+  `OPENPHONE_API_KEY` were explicitly empty, but the registration path also
+  **uploads documents**, and `storageService` enables S3 on
+  `S3_BUCKET_NAME && AWS_ACCESS_KEY_ID`. Object storage is an outbound channel
+  and no guard covered it.
+- **Where:** `backend/scripts/_arc32-verification-proof.ts` (and the guard shape
+  every arc proof copies)
+- **Severity:** P2 in practice — neither key is in `.env`, so the run took the
+  local-disk branch. But absence is not neutralization, which is the whole
+  Arc 15 lesson.
+- **Status:** the guard now requires all four explicitly empty, and the final
+  assertion checks all four rather than the two it named.
+- **Date noted:** 2026-08-24
+
 ## PRODUCTION OUTAGE — carrier authentication, 2026-08-21 14:59 UTC → 2026-08-22 15:09 UTC
 
 | | |

@@ -2193,6 +2193,94 @@ Each is a discrete sprint. Mix of operational, security, UX, and technical debt.
 
     **240.2 — decline notifies by email only.** `approvalService` writes a `Notification` row **and** emails; `rejectionService` emails only. A carrier whose mail is filtered learns of the decision by logging in — the reason *is* on the application-status page (`rejectionReason`, `rejectionNote`, `reapplyEligibleAt` are all selected), so it is recoverable, but the bell stays silent on the most consequential decision the platform makes about them. **P2**, ~5 LOC to match approve.
 
+241. **The email verification gate — an application can no longer come from an address nobody has proven they can read (Arc 32, 2026-08-24, `v3.8.auo`).**
+
+    **THE STEP 0b TRACE CHANGED THE BRIEF, in three ways worth recording because each was a premise rather than a detail.**
+
+    **(a) The wizard is entirely client-side.** All five steps live in one `useState<CarrierFormData>`, and the only server write in the whole flow is `POST /carrier/register` at Submit. The brief's "server-side enforcement on Steps 2-5" describes endpoints that do not exist — so enforcement is **one chokepoint**, not five. That is better than the brief assumed, not worse: a single gate cannot drift out of agreement with four siblings.
+
+    **(b) `OtpCode` could not carry this.** `OtpCode.userId` is a required FK to `User`, and the entire point of this gate is that verification happens BEFORE the account exists. The brief's "send via existing OtpCode infra (`ONBOARD:` prefix)" is impossible as written. `DriverPhoneVerification` hit the identical wall in Item 193 T2 and solved it with a purpose-specific row; `OnboardingDraft` follows that precedent.
+
+    **(c) Disposable domains were already handled.** `validateEmailDomain` populates the flag and `carrierVettingService:318` grades it `FAIL -10`. Adding a second Compass input would have double-counted one fact.
+
+    **Census first: zero blast radius.** Read-only against production — 3 APPROVED + 1 PENDING carrier profiles, of which exactly one is real and non-test, and that one is already past registration. Nobody is mid-application behind this change.
+
+    **WHAT SHIPPED.** `OnboardingDraft`, keyed `@@unique([email, mcNumber])` so re-submitting Step 1 updates rather than duplicates. Five public routes above the `router.use(authenticate)` boundary — public by necessity, since the subject has no account. Both paths reach the same outcome: a 6-digit code typed into the wizard, or a one-click link. **The link is not a convenience.** The carrier routinely opens the email on a phone while the half-finished form sits on a laptop, and the 5-second poll is what lets the laptop notice.
+
+    **THE RECEIPT IS BOUND, NOT MERELY SIGNED.** Enforcement could have looked the draft up by email and read `verifiedAt`. It must not: a browser that edits the address would then be checked against a *different* draft, and if that one happened to be verified it would pass. The receipt is an HMAC over `{email, verifiedAt, nonce}`, and the nonce rotates on every send — so editing the email, or re-sending, kills every receipt already issued. Deliberately **not a JWT**: a JWT here is one `verify()` mistake away from being accepted as a session, and this proves one narrow thing.
+
+    **A TRAP THAT WOULD HAVE CLOSED ONBOARDING ENTIRELY, caught by checking rather than assuming.** `validateBody` does `req.body = result.data` and `z.object()` strips unknown keys. Had `verificationReceipt` not been declared in `carrierRegisterSchema`, it would have arrived at the controller as `undefined` and the gate would have refused **every legitimate application** — no type error, no crash, just carrier onboarding silently shut. That is Sub-pattern 5, and the TONU 422 shipped in exactly this shape. `onboardingReceipt.test.ts` now holds the declaration behaviourally, injection-verified by deleting it (`expected undefined to be 'abc.def'`).
+
+    **A THIRD OUTBOUND CHANNEL THE SAFETY GUARD DID NOT COVER.** The rehearsal guard asserted Resend and OpenPhone were explicitly empty. The register path also **uploads documents**, and `storageService` keys off `S3_BUCKET_NAME && AWS_ACCESS_KEY_ID`. Neither is in `.env` today, so it took local disk — but *absence is not neutralization*, which is the whole Arc 15 lesson. The guard now demands all four be explicitly empty.
+
+    **PROOF — [`_arc32-verification-proof.ts`](../../backend/scripts/_arc32-verification-proof.ts), 20/20**, real router on a local port, real middleware chain, real Zod, real database, multipart registration so the field is proven to survive multer → normalizer → limiter → Zod. **Adversarial: neutering the gate gives 15/20**, and the five that fail are exactly the gate assertions while the eight verification-mechanics assertions still pass — the proof isolates its subject.
+
+    **MY FIXTURE WAS WRONG FOUR TIMES, and each failure looked like a code defect.** Missing `equipmentTypes`/`operatingRegions` → Zod 400'd ahead of the gate, failing assertions in BOTH directions. Then the v3.8.alc document gate 422'd, which actually *proved* the gate had passed the application through. Then a shared phone hit the v3.8.ala duplicate check. Then a fixed DOT collided with the **previous run**, because the container persists between runs. Every one was the test, not the code — and a proof whose fixture never reaches its subject is the same failure as a guard that does not check.
+
+    **Not built, deliberately:** rate limits are IP-keyed because there is no identity to key on yet, with the 60s per-draft cooldown as the real control; expired drafts are not swept (a cleanup cron belongs with Arc 34's session sweep rather than alone); the disposable flag is recorded and left to the existing Compass input.
+
+242. **Fourteen action URLs pointed at pages that do not exist — including the email every tendered carrier receives (Arc 33 Phase 2a, 2026-08-24, `v3.8.aup`).**
+
+    Arc 33's brief asked for *"every email's action URL verified against the real route it targets"*. Doing that against production rather than against the code found **14 broken destinations across 8 distinct paths**, every one live.
+
+    **The worst is the Rate Confirmation email.** Its "View in Dashboard" button pointed at `/carrier/dashboard/loads` — **HTTP 404**. The carrier load pages are `my-loads`, `available-loads` and `loadboard`; there is no `loads`. This is the email EVERY tendered carrier receives, and it has been a dead link since **v3.8.abc (§13.3 Item 91)**, the commit that set out to fix exactly this class. That fix correctly changed `/dashboard/loads` → `/carrier/dashboard/loads`, repairing the AE-vs-carrier prefix, and landed on a carrier path that does not exist. **Half-right, and invisible: a wrong-but-plausible path looks exactly like a right one in a diff.**
+
+    **A carrier payment notification was wrong in both directions at once.** `notificationService` sends it to `payment.carrierId` — a carrier — with `actionUrl: "/dashboard/payments"`, which is both the AE console and a 404. Fixed to `/carrier/dashboard/payments`.
+
+    **The password-expiry reminder goes to every role.** `schedulerService`'s query has no role filter, and both its email CTA and its in-app `actionUrl` were hardcoded to `/dashboard/settings`. Every carrier and shipper who ever received it was told to change their password and sent somewhere they cannot open. Now resolved through `settingsPathForRole(role)`, with `role` added to the two `select`s that fetch the recipients — without which the helper would always have taken its default branch and nothing would have changed.
+
+    **Full list, each source confirmed 404 and each target confirmed 200 on production before the edit:**
+
+    | Dead path | Sites | Now |
+    |---|---|---|
+    | `/carrier/dashboard/loads` | emailService ×2, checkCallAutomation, fallOffRecovery | `/carrier/dashboard/my-loads` |
+    | `/carrier/tenders` | emailTemplates | `/carrier/dashboard/tenders` |
+    | `/carrier/check-calls` | emailTemplates | `/carrier/dashboard/my-loads` |
+    | `/carrier/pod-upload` | emailTemplates | `/carrier/dashboard/my-loads` |
+    | `/carrier/load-board` | emailTemplates | `/carrier/dashboard/loadboard` |
+    | `/shipments` | emailTemplates | `/shipper/dashboard/shipments` |
+    | `/shipper/invoices` | arCollectionsService | `/shipper/dashboard/invoices` |
+    | `/invoices` | emailTemplates | `/shipper/dashboard/invoices` |
+    | `/dashboard/tenders` | notificationService | `/dashboard/loads` (AE) |
+    | `/dashboard/payments` | notificationService | `/carrier/dashboard/payments` |
+    | `/dashboard/disputes` ×3 | notificationService | `/accounting/disputes` |
+    | `/dashboard/credit` | notificationService | `/accounting/credit` |
+    | `/dashboard/accounting` | arCollectionsService | `/accounting` |
+    | `/dashboard/settings` | schedulerService + emailService | role-resolved |
+
+    **THE GUARD IS THE POINT.** Item 91 fixed this class and it returned, so the durable output is [`emailActionUrls.test.ts`](../../backend/__tests__/unit/routes/emailActionUrls.test.ts): it derives the real route set from the app router and the static pages, extracts every absolute link and `actionUrl` from the backend, and fails naming any `file:line` that does not resolve. Injection-verified by reverting one URL to the historical 404 — it names `emailService.ts:168`. It also **reports its own reach** (147 static URLs checked, 5 interpolated skipped) rather than implying it covered everything.
+
+    **A guard of mine was unsound and was removed rather than kept.** The first audience check flagged any `/dashboard/*` in a file whose name contained "carrier" or "shipper". It fired on `carrierLoads.ts` and `shipperNotificationService.ts` — whose notifications go to `load.posterId`, the **AE**, where `/dashboard/*` is correct. Recipient is not statically derivable in general, and a guard with false positives is one people learn to ignore (the Arc 21 lesson). Replaced with the one audience rule that can be judged statically: the all-roles sender must resolve its path from the recipient.
+
+    **Three more of its findings were my own false positives, caught by testing against production instead of trusting the route set:** `.html` variants (301/308 to their extensionless route), the legacy `/ae/*` surface (301), and `/logo-penguin.gif` (an asset, not a page). All now handled explicitly.
+
+    **Sub-agent undercount, again.** The Phase A agent reported the two `/carrier/dashboard/loads` sites in `emailService.ts`. The orchestrator's own grep found **four** — the same two plus `checkCallAutomation.ts:450` and `fallOffRecovery.ts:88`. That is the v3.8.alm lesson holding: a delegated audit's self-asserted completeness is not a substitute for running the completeness grep yourself.
+
+243. **The "Invite Carriers" button now invites a carrier (Arc 33, 2026-08-24, `v3.8.auq`).**
+
+    **THE MISROUTE.** `dashboard/carriers/page.tsx:986` was `<a href="/onboarding">Invite Carriers</a>` — a plain anchor to the carrier's own five-step self-registration wizard. It sent nothing to anybody. An AE who used it landed on a form asking for *their* company name, MC number, insurance and password, and filled it in on the carrier's behalf. **Arc 32's verification gate had already converted that from quietly wrong to loudly broken** — the AE cannot read the carrier's inbox — which is how the misroute surfaced at all. Two working invite flows existed (shipper portal v3.8.aqs, Driver Academy v3.8.amz); the carrier one never did.
+
+    **CLICKING THE LINK IS THE VERIFICATION.** The AE vouches for the address by typing it; the carrier proves they can read it by opening the mail. That is precisely what Arc 32's one-click link proves, so the click mints **the same receipt** and registration's gate needs no special case for invited carriers. Asking someone who just opened a link in their inbox to also type a code from that inbox proves the same fact twice.
+
+    **CONSUMPTION IS VERIFICATION, NOT COMPLETION.** Burning the token proves the mailbox; the draft persists and the wizard resumes. A second click answers *"already verified — continue"*, never an error, because re-opening a link you were sent is not a mistake.
+
+    **THE INVITE IS ITS OWN RECORD, and the reason is a column-meaning one.** `OnboardingInvite` carries the token hash, inviter, prefill, `expiresAt` and `consumedAt`. It is deliberately NOT fields on the draft: an invitation lives 7 days and the OTP lives 10 minutes, so sharing `codeExpiresAt` would have given the six-digit code a week of life. Stored SHA-256-hashed and single-use by `consumedAt` — a record, not a JWT, so revocation is a row update rather than a blacklist.
+
+    **THE FUNNEL IS A FIELD, NOT AN INFERENCE.** `OnboardingDraftStatus` — STARTED / INVITED / LINK_CLICKED / DRAFT_VERIFIED / SUBMITTED — with existing drafts backfilled to their derivable state **in the same migration**, so no row sits at a default that misdescribes it. It deliberately stops at SUBMITTED rather than mirroring review states: a second copy of `onboardingStatus` is the dual-status drift Item 194 D1 exists to warn about.
+
+    **THREE SILENCES CLOSED, on one principle: the email rides the STATUS TRANSITION, never the path.**
+    - **PENDING → REVIEWING did not exist.** No code moved an application into review, so a carrier heard nothing between the receipt email and a decision — indistinguishable, from their side, from being ignored.
+    - **Auto-approved carriers were never congratulated.** The AE path called `approveCarrier` (which emails); the Compass path wrote the columns inline and sent only an in-app notification. Both now converge on the one transition, with `approvedById: null` because no human approved it — inventing one would corrupt the audit answer to "who cleared this carrier". **The carrier-facing email is identical either way, deliberately: a carrier must not be able to infer HOW they were approved from WHETHER they were congratulated.**
+    - **Answering an info request told the carrier nothing** (the AE was emailed), and **withdrawing one told them nothing at all** — the worse of the two, because they keep chasing paperwork nobody needs.
+
+    Exactly-once is **link-encoded** — the notification's `actionUrl` carries the transition marker, so a repeat cannot re-announce. No migration; the `podReminderService` shape.
+
+    **PROOF — [`_arc33-invite-proof.ts`](../../backend/scripts/_arc33-invite-proof.ts), 21/21** over the real router with a real ADMIN cookie: issue → funnel shows INVITED before any click → click accepts and advances to LINK_CLICKED → **registers with no code step** → second click says already-verified → re-invite refreshes in place and the superseded link stops working → expiry refused → fresh-request notifies the AE and issues nothing → forged token refused → inviting an existing carrier returns their state → both approval paths congratulate **once**. Adversarial: neutering the dedup gives 20/21, failing exactly that assertion.
+
+    **A LATENT TRAP IN THE MONITOR, found by using it.** `probe-public-surfaces.mjs`'s self-test pinned its fixtures to `PROBES[0]`. Adding the invitation probe at the top silently re-pointed every fixture at a different subject, and the self-test failed for a reason that had nothing to do with the harness. Now pinned **by name** — a harness that tests itself against an arbitrary array slot is one prepend away from testing nothing.
+
+    **A correctness bug my own anchor introduced, caught by tsc.** The modal mount first landed inside `{selectedCarrier && (...)}`. That breaks JSX, but the worse half is semantic: inviting a *new* carrier means none is selected, so the header button would have opened nothing.
+
 ## §14 LEGAL / COMPLIANCE STATUS
 
 - Property broker under 49 U.S.C. §§ 13904, 13906

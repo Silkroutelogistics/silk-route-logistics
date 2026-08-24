@@ -15009,7 +15009,51 @@
 //   HOS was READ-never-WRITTEN against a source Arc 22 deleted. The display went
 //   with the page; the columns stay because eldService still reads them, and
 //   that service has a worse problem of its own (Item 239).
-export const SRL_VERSION = "3.8.aun";
+// v3.8.auo — Arc 32. An application can no longer be submitted from an email
+// address nobody has proven they can read. Step 1 now persists a draft and
+// sends a code; Step 2 does not open until the mailbox answers, by typed code
+// or by one-click link — the link because the carrier usually opens the email
+// on a different device from the one holding the half-finished form, and the
+// 5-second poll is what lets the laptop notice.
+//
+// The proof is a signed receipt bound to {email, nonce}, checked server-side
+// at POST /carrier/register — the ONE server write the whole five-step wizard
+// makes, since Steps 2-5 are React state until Submit. It fails closed.
+//
+// Two shape deviations from the brief, both forced and both reported: the
+// per-step endpoints it described do not exist (one chokepoint instead), and
+// OtpCode could not carry this because its userId is a required FK to a User
+// that by definition does not exist yet.
+// v3.8.aup — Arc 33 Phase 2a. Fourteen action URLs in emails and in-app
+// notifications pointed at pages that do not exist. The worst was the Rate
+// Confirmation email — the one EVERY tendered carrier receives — whose
+// "View in Dashboard" button had been a 404 since v3.8.abc corrected its
+// /dashboard prefix and landed on /carrier/dashboard/loads, which is not a
+// route. A carrier payment notification was both a 404 and addressed to the
+// wrong console. The password-expiry reminder goes to every role and sent
+// them all to the AE settings page.
+//
+// Item 91 fixed this class once and it came back, so the durable output is
+// the guard: it derives the real route set from the app router and fails
+// naming any file:line whose URL does not resolve.
+// v3.8.auq — Arc 33. The "Invite Carriers" button now invites a carrier.
+// It used to navigate the AE to /onboarding — the carrier's own five-step
+// self-registration wizard — where an AE would fill in someone else's
+// details and set their password. Arc 32's gate had already turned that
+// quiet wrongness into a loud failure, which is how it surfaced.
+//
+// Clicking the invitation IS the verification: the AE vouches for the address
+// by typing it, the carrier proves they can read it by opening the mail, and
+// asking them to also type a code from that same inbox would prove the same
+// fact twice. The click mints the Arc 32 receipt, so registration's gate
+// needs no special case.
+//
+// Also closes three silences: nothing moved an application to REVIEWING, so
+// carriers heard nothing between the receipt and a decision; auto-approved
+// carriers were never congratulated while manually-approved ones were; and
+// answering or having an info request withdrawn told the carrier nothing.
+// Lifecycle emails now ride the transition, not the path.
+export const SRL_VERSION = "3.8.auq";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

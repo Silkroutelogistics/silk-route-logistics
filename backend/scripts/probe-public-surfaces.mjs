@@ -80,6 +80,19 @@ export const PROBES = [
     hint: "A public carrier route is sitting behind auth middleware. Check the /carrier-auth mount in backend/src/routes/index.ts and the allowlist in backend/src/middleware/allowPublicCarrierAuth.ts. This is the Arc 27 outage — CLAUDE.md Item 236.",
   },
   {
+    name: "carrier invitation accept",
+    why: "Arc 33: an AE-issued invitation link is the ONLY way an invited carrier reaches onboarding. If this sits behind auth, every invitation SRL sends is dead on arrival and the AE has no way to know.",
+    method: "POST",
+    path: "/carrier/onboarding/invite/accept",
+    body: { token: "srl-monitor-probe-not-a-real-token" },
+    // 400 is the handler refusing an unknown token — the correct answer, and
+    // the one that proves the route is reachable without a session.
+    expectStatus: [400],
+    mustContain: ["accepted"],
+    mustNotContain: ["No token provided"],
+    hint: "The invitation-accept route has fallen behind auth middleware. It must sit ABOVE router.use(authenticate) in backend/src/routes/carrier.ts — an invited carrier has no account yet, which is the entire point.",
+  },
+  {
     name: "carrier OTP verify",
     why: "step 2 of login; same mount, went down with it",
     method: "POST",
@@ -366,29 +379,39 @@ function writeSummary(failures, total, fireDrill = false) {
  */
 async function selfTest() {
   console.log("ADVERSARIAL SELF-TEST — proving the harness detects a wrong shape.\n");
+  // Pinned BY NAME, not by index. This used to read PROBES[0], so prepending
+  // a probe silently re-pointed every fixture below at a different subject
+  // and the self-test failed for a reason that had nothing to do with the
+  // harness. Found by adding the Arc 33 invitation probe.
+  const FIXTURE = PROBES.find((p) => p.name === "carrier login");
+  if (!FIXTURE) {
+    console.log("SELF-TEST FAILED — the 'carrier login' probe it pins to is gone.");
+    process.exit(1);
+  }
+
   const cases = [
     {
       label: "a wrong status is detected",
-      probe: { ...PROBES[0], expectStatus: [999] },
+      probe: { ...FIXTURE, expectStatus: [999] },
       status: 401, body: '{"error":"Invalid credentials"}',
       expectProblem: /status 401, expected 999/,
     },
     {
       label: "a missing required string is detected",
-      probe: { ...PROBES[0], mustContain: ["a string production will never return"] },
+      probe: { ...FIXTURE, mustContain: ["a string production will never return"] },
       status: 401, body: '{"error":"Invalid credentials"}',
       expectProblem: /body is missing/,
     },
     {
       label: "THE OUTAGE SIGNATURE is detected",
-      probe: PROBES[0],
+      probe: FIXTURE,
       // The exact body production returned for 27 hours.
       status: 401, body: '{"error":"No token provided"}',
       expectProblem: /OUTAGE SIGNATURE/,
     },
     {
       label: "a healthy response produces NO problem (the harness is not just always-red)",
-      probe: PROBES[0],
+      probe: FIXTURE,
       status: 401, body: '{"error":"Invalid credentials"}',
       expectProblem: null,
     },

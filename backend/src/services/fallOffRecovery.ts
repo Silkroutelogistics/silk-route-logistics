@@ -85,7 +85,7 @@ export async function executeFallOffRecovery(loadId: string, reason?: string) {
           type: "LOAD_TENDERED",
           title: `Urgent Load Available: #${load.referenceNumber}`,
           message: `${load.originCity}, ${load.originState} → ${load.destCity}, ${load.destState}. Rate: $${load.carrierRate ?? 0}. Reply to accept.`,
-          actionUrl: `/carrier/dashboard/loads`,
+          actionUrl: `/carrier/dashboard/my-loads`,
         },
       });
 

@@ -17,6 +17,20 @@ vi.mock("../src/config/database", () => ({
       updateMany: vi.fn(),
       count: vi.fn(),
     },
+    // Arc 32 — the carrier onboarding draft. Every method the service calls
+    // is listed: a missing one throws "is not a function" at the CALL SITE,
+    // which reads as a code bug rather than a mock gap. That is what cost
+    // three commits of red CI in v3.8.alh.
+    onboardingDraft: {
+      findFirst: vi.fn(),
+      findUnique: vi.fn(),
+      findMany: vi.fn(),
+      create: vi.fn(),
+      update: vi.fn(),
+      upsert: vi.fn(),
+      deleteMany: vi.fn(),
+      count: vi.fn(),
+    },
     auditLog: {
       create: vi.fn(),
     },

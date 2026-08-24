@@ -2,6 +2,14 @@ import { z } from "zod";
 
 export const carrierRegisterSchema = z.object({
   email: z.string().email(),
+  // Arc 32 — proof the mailbox was reached, minted by the verification
+  // step between wizard Steps 1 and 2. DECLARED HERE ON PURPOSE: validateBody
+  // does `req.body = result.data` and z.object() strips, so an undeclared
+  // field arrives at the controller as undefined and the gate below would
+  // reject every legitimate registration. That is Sub-pattern 5, and it has
+  // already shipped once (the TONU 422). Optional at the schema layer so the
+  // controller can answer with its own message instead of a field error.
+  verificationReceipt: z.string().optional(),
   // v3.8.aix — γ "Very Strong" tier per frontend onboarding gate.
   // 14+ chars + 1 uppercase + 1 lowercase + 1 digit + 1 special.
   // Backend re-enforces composition rules as defense-in-depth (frontend

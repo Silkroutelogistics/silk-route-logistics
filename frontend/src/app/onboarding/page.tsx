@@ -277,6 +277,29 @@ export default function OnboardingPage() {
   // hibpStatus tracks the haveibeenpwned k-anonymity check lifecycle for
   // the strength meter (WEAK / STRONG / VERY_STRONG).
   const [confirmPassword, setConfirmPassword] = useState("");
+  // Arc 32 — email verification between Step 1 and Step 2. NOT a sixth step:
+  // the stepper still reads five, and this renders in place of the Step 1
+  // body. A sixth dot would tell every applicant the form got longer, when
+  // what actually happened is that one field now has to be proven.
+  //
+  // The receipt is held beside `form` rather than inside it because it is not
+  // something the carrier types, and because `verifiedEmail` has to be
+  // compared against the CURRENT email on every render — editing the address
+  // after verifying must re-gate, and a field inside `form` would be updated
+  // by the same `set()` call that changed the address.
+  const [verifyOpen, setVerifyOpen] = useState(false);
+  const [verifiedEmail, setVerifiedEmail] = useState<string | null>(null);
+  const [receipt, setReceipt] = useState<string | null>(null);
+  const [codeInput, setCodeInput] = useState("");
+  const [verifyError, setVerifyError] = useState<string | null>(null);
+  const [verifyBusy, setVerifyBusy] = useState(false);
+  const [cooldown, setCooldown] = useState(0);
+  // Arc 33 — arrived by AE invitation. The click already proved the mailbox, so
+  // the receipt is minted server-side and the OTP interstitial never opens.
+  // window.location rather than useSearchParams: the latter needs a Suspense
+  // boundary under static export, and this page has none.
+  const [inviteState, setInviteState] = useState<"none" | "checking" | "accepted" | "expired" | "bad">("none");
+  const [emailLocked, setEmailLocked] = useState(false);
   const [hibpStatus, setHibpStatus] = useState<"unknown" | "checking" | "safe" | "pwned" | "error">("unknown");
   const [hibpCount, setHibpCount] = useState(0);
   const hibpTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -365,6 +388,181 @@ export default function OnboardingPage() {
   }, [applyFmcsaData, fmcsaResult?.verified]);
 
   const set = (field: keyof CarrierFormData, value: unknown) => setForm((p) => ({ ...p, [field]: value }));
+
+  /* ── Arc 32: email verification ───────────────────────────────────── */
+
+  const apiBase = process.env.NEXT_PUBLIC_API_URL;
+  const emailNorm = form.email.trim().toLowerCase();
+  // Derived, never stored: an edited address is unverified the instant it
+  // differs, with no effect to remember to fire.
+  const emailIsVerified = !!receipt && verifiedEmail === emailNorm;
+
+  // Resend cooldown tick. Purely cosmetic — the server owns the real 60s
+  // window and will report a fresh one if this is bypassed.
+  useEffect(() => {
+    if (cooldown <= 0) return;
+    const t = setTimeout(() => setCooldown((c) => Math.max(0, c - 1000)), 1000);
+    return () => clearTimeout(t);
+  }, [cooldown]);
+
+  // The 5-second poll. This is the whole reason the link path works: the
+  // carrier opens the email on their phone, and this tab notices.
+  useEffect(() => {
+    if (!verifyOpen || emailIsVerified || !apiBase) return;
+    let live = true;
+    const tick = async () => {
+      try {
+        const q = new URLSearchParams({ email: emailNorm, mcNumber: form.mcNumber });
+        const r = await fetch(`${apiBase}/carrier/onboarding/status?${q}`);
+        if (!r.ok || !live) return;
+        const d = await r.json();
+        if (d.verified && d.receipt && live) {
+          setReceipt(d.receipt);
+          setVerifiedEmail(emailNorm);
+          setVerifyOpen(false);
+          setVerifyError(null);
+          setStep(1);
+        }
+      } catch {
+        // A failed poll is not worth a message — the code path still works
+        // and the next tick may succeed.
+      }
+    };
+    const id = setInterval(tick, 5000);
+    return () => { live = false; clearInterval(id); };
+  }, [verifyOpen, emailIsVerified, emailNorm, form.mcNumber, apiBase]);
+
+  useEffect(() => {
+    const token = new URLSearchParams(window.location.search).get("invite");
+    if (!token || !apiBase) return;
+    let live = true;
+    setInviteState("checking");
+    (async () => {
+      try {
+        const r = await fetch(`${apiBase}/carrier/onboarding/invite/accept`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ token }),
+        });
+        const d = await r.json().catch(() => ({}));
+        if (!live) return;
+        if (!r.ok || !d.accepted) {
+          setInviteState(d.reason === "expired" ? "expired" : "bad");
+          return;
+        }
+        // The click IS the verification — same receipt the typed code mints, so
+        // registration's gate needs no special case for invited carriers.
+        setReceipt(d.receipt);
+        setVerifiedEmail(String(d.email).trim().toLowerCase());
+        setEmailLocked(true);
+        setForm((prev) => ({
+          ...prev,
+          email: d.email,
+          company: d.prefill?.company || prev.company,
+          mcNumber: d.prefill?.mcNumber || prev.mcNumber,
+        }));
+        setInviteState("accepted");
+      } catch {
+        if (live) setInviteState("bad");
+      }
+    })();
+    return () => { live = false; };
+    // Mount-only: the token is read once from the URL it arrived on.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [apiBase]);
+
+  /** Editing an invited address voids the AE's vouch and re-gates through OTP. */
+  const unlockEmail = () => {
+    setEmailLocked(false);
+    setReceipt(null);
+    setVerifiedEmail(null);
+    setInviteState("none");
+  };
+
+  const requestFreshInvite = async () => {
+    const token = new URLSearchParams(window.location.search).get("invite");
+    if (!token || !apiBase) return;
+    try {
+      await fetch(`${apiBase}/carrier/onboarding/invite/request-fresh`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token }),
+      });
+    } catch {
+      // The banner already tells them to contact operations@ if this fails.
+    }
+    setInviteState("none");
+  };
+
+  const startVerification = async (resend = false) => {
+    if (!apiBase) {
+      setVerifyError("We couldn't reach the server. Please contact operations@silkroutelogistics.ai.");
+      return;
+    }
+    setVerifyBusy(true);
+    setVerifyError(null);
+    try {
+      const r = await fetch(`${apiBase}/carrier/onboarding/${resend ? "resend" : "draft"}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: emailNorm, mcNumber: form.mcNumber, dotNumber: form.dotNumber,
+          company: form.company, firstName: form.firstName, lastName: form.lastName,
+          phone: form.phone, address: form.address, city: form.city,
+          state: form.state, zip: form.zip,
+        }),
+      });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok) {
+        setVerifyError(d.error || "We couldn't send the code. Please try again.");
+        return;
+      }
+      if (d.cooldownMs > 0) setCooldown(d.cooldownMs);
+      setVerifyOpen(true);
+    } catch {
+      setVerifyError("We couldn't reach the server. Please check your connection and try again.");
+    } finally {
+      setVerifyBusy(false);
+    }
+  };
+
+  const submitCode = async () => {
+    if (!apiBase || codeInput.trim().length !== 6) return;
+    setVerifyBusy(true);
+    setVerifyError(null);
+    try {
+      const r = await fetch(`${apiBase}/carrier/onboarding/verify-code`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: emailNorm, code: codeInput.trim() }),
+      });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok || !d.verified) {
+        setVerifyError(d.error || "That code is not correct.");
+        setCodeInput("");
+        return;
+      }
+      setReceipt(d.receipt);
+      setVerifiedEmail(emailNorm);
+      setVerifyOpen(false);
+      setCodeInput("");
+      setStep(1);
+    } catch {
+      setVerifyError("We couldn't reach the server. Please try again.");
+    } finally {
+      setVerifyBusy(false);
+    }
+  };
+
+  /**
+   * The gate. Step 0 → Step 1 is the only transition that checks, because it
+   * is the only one where the email is known and the application has not yet
+   * been submitted — and the server enforces it again at submit regardless.
+   */
+  const handleNext = () => {
+    if (step === 0 && !emailIsVerified) { void startVerification(false); return; }
+    setStep(step + 1);
+  };
 
   // v3.8.aqj — fetch the canonical Broker-Carrier Agreement from the backend so
   // the Step 4 click-through renders ONE source (kills the drifted inline copy +
@@ -607,6 +805,11 @@ export default function OnboardingPage() {
         ...insurancePayload,
         ...(numTrucksStr ? { numberOfTrucks: numTrucksStr } : {}),
         ...(einFromForm ? { ein: einFromForm } : {}),
+        // Arc 32 — proof the mailbox was reached. Declared in
+        // carrierRegisterSchema, without which validateBody's
+        // `req.body = result.data` would strip it and the server gate would
+        // reject every legitimate application.
+        ...(receipt ? { verificationReceipt: receipt } : {}),
         // bcaVersion is deliberately NOT sent. The server stamps the version it
         // served; a request-supplied version on a consent record is the defect
         // the 409 guard on the signing routes exists to stop.
@@ -637,6 +840,22 @@ export default function OnboardingPage() {
 
       if (!res.ok) {
         const body = await res.json().catch(() => null);
+        // Arc 32 — the server rejected the receipt. Reopen the verification
+        // panel instead of leaving the carrier on Step 5 reading a message
+        // with no control that does anything about it. Reachable when the
+        // receipt aged out mid-application, or when a re-send rotated the
+        // nonce in another tab.
+        if (res.status === 403 && body?.code === "EMAIL_NOT_VERIFIED") {
+          setReceipt(null);
+          setVerifiedEmail(null);
+          setStep(0);
+          setVerifyOpen(true);
+          setVerifyError(
+            "Your email confirmation expired while you were filling this in. We've sent a fresh code.",
+          );
+          void startVerification(true);
+          return;
+        }
         throw new Error(body?.error || "Registration failed");
       }
 
@@ -1143,7 +1362,20 @@ export default function OnboardingPage() {
               <div className="grid sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-[#0A2540] mb-1">Email *</label>
-                  <input type="email" value={form.email} onChange={(e) => set("email", e.target.value)} className="w-full px-3 py-2 bg-white border border-[#EFE6D3] rounded-lg text-sm text-[#0A2540] focus:border-[#BA7517] focus:ring-2 focus:ring-[#BA7517]/15 outline-none transition placeholder:text-[#A7AEB8]" autoComplete="off" name="carrier-registration-email" />
+                  {/* Arc 33 — an invited address is read-only: the AE vouched
+                      for it and the click proved it. Changing it voids both, so
+                      it is an explicit act with a stated consequence rather than
+                      an editable field that silently re-gates. */}
+                  <input type="email" value={form.email} onChange={(e) => set("email", e.target.value)} readOnly={emailLocked} className={`w-full px-3 py-2 border border-[#EFE6D3] rounded-lg text-sm text-[#0A2540] focus:border-[#BA7517] focus:ring-2 focus:ring-[#BA7517]/15 outline-none transition placeholder:text-[#A7AEB8] ${emailLocked ? "bg-[#FBF7F0] cursor-not-allowed" : "bg-white"}`} autoComplete="off" name="carrier-registration-email" />
+                  {emailLocked && (
+                    <p className="mt-1 text-xs text-[#6B7685]">
+                      Confirmed from your invitation.{" "}
+                      <button type="button" onClick={unlockEmail} className="font-medium text-[#BA7517] underline underline-offset-2">
+                        Use a different address
+                      </button>{" "}
+                      — you&apos;ll need to confirm the new one with a code.
+                    </p>
+                  )}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-[#0A2540] mb-1">Phone *</label>
@@ -1934,6 +2166,116 @@ export default function OnboardingPage() {
             </div>
           )}
 
+          {/* Arc 33 — arrived by invitation. The confirmation matters: the
+              carrier is being told the code step was skipped ON PURPOSE, not
+              that something was missed. */}
+          {inviteState === "accepted" && (
+            <div className="mt-8 rounded-xl border border-[#2F7A4F]/40 bg-[#E6F0E9] p-5 print:hidden">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#2F7A4F]">
+                Invitation confirmed
+              </p>
+              <p className="mt-2 text-sm leading-relaxed text-[#3A4A5F]">
+                <strong>{form.email}</strong> is confirmed — opening the link did that, so there is
+                no code to enter. Carry on below.
+              </p>
+            </div>
+          )}
+
+          {inviteState === "expired" && (
+            <div className="mt-8 rounded-xl border border-[#B07A1A]/40 bg-[#FBEFD4] p-5 print:hidden">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#B07A1A]">
+                Invitation expired
+              </p>
+              <p className="mt-2 text-sm leading-relaxed text-[#3A4A5F]">
+                Invitation links last 7 days. Ask us for a fresh one and we&apos;ll send it — or
+                just fill in the form below and confirm your email with a code.
+              </p>
+              <button
+                type="button"
+                onClick={() => void requestFreshInvite()}
+                className="mt-3 rounded-md bg-[#BA7517] px-5 py-2 text-sm font-semibold text-[#FBF7F0] hover:bg-[#C5A572]"
+              >
+                Ask for a new link
+              </button>
+            </div>
+          )}
+
+          {inviteState === "bad" && (
+            <div className="mt-8 rounded-xl border border-[#EFE6D3] bg-[#FBF7F0] p-5 print:hidden">
+              <p className="text-sm leading-relaxed text-[#3A4A5F]">
+                We couldn&apos;t read that invitation link. You can still apply below — fill in your
+                details and we&apos;ll confirm your email with a code.
+              </p>
+            </div>
+          )}
+
+          {/* Arc 32 — verification interstitial. Renders OVER the step body
+              rather than as a sixth step: the stepper above still reads five,
+              because the application did not get longer, one field just has to
+              be proven. Both paths land here — typing the code, or the poll
+              noticing the link was clicked on another device. */}
+          {verifyOpen && !emailIsVerified && (
+            <div className="mt-8 rounded-xl border border-[#EFE6D3] bg-[#FBF7F0] p-6 print:hidden">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#BA7517]">
+                Confirm your email
+              </p>
+              <h3 className="mt-2 font-serif text-xl italic font-semibold text-[#0A2540]">
+                We sent a code to {form.email}
+              </h3>
+              <p className="mt-1.5 text-sm leading-relaxed text-[#3A4A5F]">
+                Enter the six digits below, or click the link in that email — either one
+                works, and the link works even if you opened it on your phone.
+              </p>
+
+              <div className="mt-5 flex flex-wrap items-center gap-3">
+                <input
+                  value={codeInput}
+                  onChange={(e) => setCodeInput(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                  onKeyDown={(e) => { if (e.key === "Enter" && codeInput.length === 6) void submitCode(); }}
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
+                  placeholder="000000"
+                  aria-label="Six-digit verification code"
+                  className="w-40 rounded-md border border-[#EFE6D3] bg-white px-4 py-2.5 text-center text-lg font-semibold tracking-[0.35em] text-[#0A2540] placeholder:text-[#A7AEB8] focus:border-[#BA7517] focus:ring-2 focus:ring-[#BA7517]/15"
+                />
+                <button
+                  type="button"
+                  onClick={() => void submitCode()}
+                  disabled={codeInput.length !== 6 || verifyBusy}
+                  className="rounded-md bg-[#BA7517] px-6 py-2.5 text-sm font-semibold text-[#FBF7F0] transition hover:bg-[#C5A572] disabled:opacity-40 disabled:hover:bg-[#BA7517]"
+                >
+                  {verifyBusy ? "Checking…" : "Confirm"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void startVerification(true)}
+                  disabled={cooldown > 0 || verifyBusy}
+                  className="text-sm font-medium text-[#BA7517] underline-offset-4 hover:underline disabled:text-[#A7AEB8] disabled:no-underline"
+                >
+                  {cooldown > 0 ? `Resend in ${Math.ceil(cooldown / 1000)}s` : "Resend the code"}
+                </button>
+              </div>
+
+              {verifyError && (
+                <p className="mt-3 rounded-md border-l-4 border-[#9B2C2C] bg-[#F6E3E3] px-3 py-2 text-sm text-[#9B2C2C]">
+                  {verifyError}
+                </p>
+              )}
+
+              <p className="mt-4 text-xs leading-relaxed text-[#6B7685]">
+                Wrong address?{" "}
+                <button
+                  type="button"
+                  onClick={() => { setVerifyOpen(false); setVerifyError(null); setCodeInput(""); }}
+                  className="font-medium text-[#BA7517] underline underline-offset-2"
+                >
+                  Go back and change it
+                </button>
+                . Nothing you have entered is lost — we saved it when you clicked Next.
+              </p>
+            </div>
+          )}
+
           {/* Navigation — gold-dark CTA matching .nav-login-btn canonical
               and the Sign In button in OnboardingNav above.
               v3.8.aja — print:hidden so Back/Next don't appear in
@@ -1944,7 +2286,7 @@ export default function OnboardingPage() {
               <ChevronLeft className="w-4 h-4" /> Back
             </button>
             {step < 4 ? (
-              <button onClick={() => setStep(step + 1)} disabled={!canNext()}
+              <button onClick={handleNext} disabled={!canNext() || verifyBusy}
                 className="flex items-center gap-1.5 px-6 py-2.5 bg-[#BA7517] text-[#FBF7F0] font-semibold text-sm rounded-md hover:bg-[#C5A572] disabled:opacity-40 disabled:hover:bg-[#BA7517] transition shadow-sm">
                 Next <ChevronRight className="w-4 h-4" />
               </button>

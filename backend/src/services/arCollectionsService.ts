@@ -86,7 +86,7 @@ export function generateReminderEmail(
   const dueStr = formatDate(invoice.dueDate);
   const daysOverdue = daysBetween(invoice.dueDate, new Date());
   const name = contactName || customerName || "Valued Customer";
-  const portalLink = "https://silkroutelogistics.ai/shipper/invoices";
+  const portalLink = "https://silkroutelogistics.ai/shipper/dashboard/invoices";
 
   let subject: string;
   let bodyContent: string;
@@ -322,7 +322,7 @@ export async function processArReminders(): Promise<{ processed: number; reminde
             type: "PAYMENT_UPDATE" as any,
             title: notificationTitle,
             message: notificationMessage,
-            actionUrl: "/dashboard/accounting",
+            actionUrl: "/accounting",
           },
         });
       }

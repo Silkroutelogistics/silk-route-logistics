@@ -367,7 +367,7 @@ export async function notifyTenderAction(
         "TENDER_RECEIVED",
         "Tender Counter Offer",
         `The carrier has countered your tender for load ${ref} (${lane}) with a rate of $${(tender.counterRate ?? tender.offeredRate).toLocaleString()}.`,
-        { actionUrl: "/dashboard/tenders" }
+        { actionUrl: "/dashboard/loads" }
       );
       if (aeEmail && tender.counterRate != null) {
         try {
@@ -570,7 +570,7 @@ export async function notifyPaymentEvent(
     typeMap[event],
     titleMap[event],
     messageMap[event],
-    { actionUrl: "/dashboard/payments" }
+    { actionUrl: "/carrier/dashboard/payments" }
   );
 }
 
@@ -678,7 +678,7 @@ export async function notifyDisputeEvent(
       "DISPUTE_FILED",
       "Dispute Filed",
       `Dispute ${disputeLabel} has been filed for load ${ref} — disputed amount: $${dispute.disputedAmount.toLocaleString()}.`,
-      { actionUrl: "/dashboard/disputes" }
+      { actionUrl: "/accounting/disputes" }
     );
 
     // If the filer is not the carrier, also notify the carrier
@@ -688,7 +688,7 @@ export async function notifyDisputeEvent(
         "DISPUTE_FILED",
         "Dispute Filed",
         `Dispute ${disputeLabel} has been filed regarding load ${ref}.`,
-        { actionUrl: "/dashboard/disputes" }
+        { actionUrl: "/accounting/disputes" }
       );
     }
   }
@@ -707,7 +707,7 @@ export async function notifyDisputeEvent(
           "DISPUTE_RESOLVED",
           "Dispute Resolved",
           `Dispute ${disputeLabel} for load ${ref} has been resolved (${dispute.status}).${resolutionMsg}`,
-          { actionUrl: "/dashboard/disputes" }
+          { actionUrl: "/accounting/disputes" }
         )
       )
     );
@@ -735,7 +735,7 @@ export async function notifyCreditAlert(shipperId: string, message: string) {
         "CREDIT_ALERT",
         "Credit Limit Alert",
         message,
-        { actionUrl: "/dashboard/credit" }
+        { actionUrl: "/accounting/credit" }
       )
     )
   );

@@ -6,6 +6,15 @@ import {
   getAllCarriers, getCarrierDetail, updateCarrier, setupAdminCarrierProfile, setAuthorityGrantDate,
 } from "../controllers/carrierController";
 import { authenticate, authorize, AuthRequest } from "../middleware/auth";
+import {
+  upsertDraft,
+  sendVerification,
+  verifyCode,
+  verifyLink,
+  draftStatus,
+} from "../services/onboardingDraftService";
+import type { VerifyFailureReason } from "../services/onboardingDraftService";
+import { acceptInvite, requestFreshInvite } from "../services/onboardingInviteService";
 import { prisma } from "../config/database";
 import { upload } from "../config/upload";
 import { auditLog } from "../middleware/audit";
@@ -199,6 +208,199 @@ router.post("/register",
   registerCarrier
 );
 
+
+// ── Arc 32: email verification between Step 1 and Step 2 ────────────
+// Public by necessity — the subject has no account yet, which is the whole
+// reason this gate exists. Every handler below answers NEUTRALLY: whether a
+// draft exists for an address is exactly the fact an enumerator wants, so a
+// send always reports sent and a status always reports a boolean.
+
+// Keyed on IP because there is no identity yet. Deliberately looser than
+// registerIpLimiter: a carrier legitimately re-sends a code two or three
+// times, and the 60s per-draft cooldown in the service is the real control.
+const onboardingSendLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Too many verification requests. Please try again shortly." },
+});
+
+// Tighter, and the reason is the 6-digit space: 5 attempts per draft is the
+// per-subject cap, this is the per-attacker one across many drafts.
+const onboardingVerifyLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 30,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Too many verification attempts. Please try again shortly." },
+});
+
+/**
+ * Step 1 submit. Persists the draft and sends the code in one call, because
+ * two calls means a draft can exist with nothing ever sent — a state the
+ * wizard would have to handle and nobody would ever test.
+ */
+router.post("/onboarding/draft", onboardingSendLimiter, async (req: Request, res: Response) => {
+  const { email, mcNumber } = req.body ?? {};
+  if (typeof email !== "string" || !email.includes("@") || typeof mcNumber !== "string" || !mcNumber.trim()) {
+    res.status(400).json({ error: "Email and MC number are required." });
+    return;
+  }
+  try {
+    const draft = await upsertDraft(req.body);
+    const sent = await sendVerification(draft.id, req);
+    // A cooldown is reported so the UI can show a countdown; it is not an
+    // error, and it leaks nothing an unauthenticated caller does not already
+    // know about their own address.
+    res.json({ ok: true, cooldownMs: sent.ok ? 0 : sent.cooldownMs });
+  } catch (err) {
+    log.error({ err }, "[Onboarding] draft upsert failed");
+    res.status(500).json({ error: "Could not start verification. Please try again." });
+  }
+});
+
+/** Resend. Same handler shape; the service owns the 60s cooldown. */
+router.post("/onboarding/resend", onboardingSendLimiter, async (req: Request, res: Response) => {
+  const { email, mcNumber } = req.body ?? {};
+  if (typeof email !== "string" || typeof mcNumber !== "string") {
+    res.status(400).json({ error: "Email and MC number are required." });
+    return;
+  }
+  try {
+    const draft = await prisma.onboardingDraft.findUnique({
+      where: { email_mcNumber: { email: email.trim().toLowerCase(), mcNumber } },
+    });
+    // No draft is reported as sent. The alternative tells a stranger which
+    // addresses have applications in flight.
+    if (!draft) {
+      res.json({ ok: true, cooldownMs: 0 });
+      return;
+    }
+    const sent = await sendVerification(draft.id, req);
+    res.json({ ok: true, cooldownMs: sent.ok ? 0 : sent.cooldownMs });
+  } catch (err) {
+    log.error({ err }, "[Onboarding] resend failed");
+    res.status(500).json({ error: "Could not resend. Please try again." });
+  }
+});
+
+/** Path A — the 6-digit code, typed into the wizard. */
+router.post("/onboarding/verify-code", onboardingVerifyLimiter, async (req: Request, res: Response) => {
+  const { email, code } = req.body ?? {};
+  if (typeof email !== "string" || typeof code !== "string") {
+    res.status(400).json({ error: "Email and code are required." });
+    return;
+  }
+  const out = await verifyCode(email, code, req);
+  if (out.ok) {
+    res.json({ verified: true, receipt: out.receipt });
+    return;
+  }
+  // Distinct messages here are deliberate and are NOT an enumeration leak:
+  // the caller already supplied the address, and a carrier who cannot tell
+  // "expired" from "wrong" retypes the same dead code until they give up.
+  // Typed to the service's own union, NOT Record<string, string>: the loose
+  // type let a rename slip through and the carrier got a 400 with an EMPTY
+  // message. Exhaustive by construction now — a renamed member fails the build.
+  const copy: Record<VerifyFailureReason, string> = {
+    onboarding_draft_missing: "That code is no longer valid. Request a new one.",
+    expired: "That code has expired. Request a new one.",
+    wrong_code: "That code is not correct. Check the email and try again.",
+    too_many_attempts: "Too many incorrect attempts. Request a new code.",
+  };
+  res.status(400).json({ verified: false, reason: out.reason, error: copy[out.reason] });
+});
+
+/** Path B — the one-click link, opened from any device. */
+router.post("/onboarding/verify-link", onboardingVerifyLimiter, async (req: Request, res: Response) => {
+  const { token } = req.body ?? {};
+  if (typeof token !== "string" || !token) {
+    res.status(400).json({ error: "Missing token." });
+    return;
+  }
+  const out = await verifyLink(token, req);
+  if (out.ok) {
+    res.json({ verified: true, receipt: out.receipt, email: out.email });
+    return;
+  }
+  res.status(400).json({
+    verified: false,
+    reason: out.reason,
+    error:
+      out.reason === "expired"
+        ? "That link has expired. Return to the application and request a new code."
+        : "That link is no longer valid — it may already have been used. Return to the application and request a new code.",
+  });
+});
+
+/**
+ * The 5-second poll. This is what closes the cross-device loop: the carrier
+ * clicks the link on their phone and the laptop tab notices without them
+ * touching it.
+ */
+router.get("/onboarding/status", async (req: Request, res: Response) => {
+  const email = String(req.query.email ?? "");
+  const mcNumber = String(req.query.mcNumber ?? "");
+  if (!email || !mcNumber) {
+    res.status(400).json({ error: "email and mcNumber are required." });
+    return;
+  }
+  res.json(await draftStatus(email, mcNumber));
+});
+
+/**
+ * Arc 33 — accept an AE invitation. PUBLIC: the whole point is that the
+ * recipient has no account yet.
+ *
+ * The click IS the verification, so this mints the same Arc 32 receipt the
+ * typed code produces and the wizard skips its OTP step. Asking someone who
+ * just opened a link in their inbox to also type a code from that inbox
+ * proves the same fact twice.
+ */
+router.post("/onboarding/invite/accept", onboardingVerifyLimiter, async (req: Request, res: Response) => {
+  const { token } = req.body ?? {};
+  if (typeof token !== "string" || !token) {
+    res.status(400).json({ error: "Missing invitation token." });
+    return;
+  }
+  const out = await acceptInvite(token);
+  if (out.ok) {
+    res.json({
+      accepted: true,
+      email: out.email,
+      receipt: out.receipt,
+      prefill: out.prefill,
+      alreadyUsed: out.alreadyUsed,
+    });
+    return;
+  }
+  res.status(400).json({
+    accepted: false,
+    reason: out.reason,
+    error:
+      out.reason === "expired"
+        ? "This invitation has expired. You can ask for a new one below."
+        : "We could not find that invitation. Ask your Silk Route contact to send a new one.",
+  });
+});
+
+/**
+ * Expired link → ask the inviting AE for a fresh one. Deliberately does NOT
+ * auto-issue: that would let anyone holding an old link mint new ones
+ * indefinitely, which is the opposite of what an expiry is for.
+ */
+router.post("/onboarding/invite/request-fresh", onboardingSendLimiter, async (req: Request, res: Response) => {
+  const { token } = req.body ?? {};
+  if (typeof token !== "string" || !token) {
+    res.status(400).json({ error: "Missing invitation token." });
+    return;
+  }
+  await requestFreshInvite(token);
+  // Always the same answer: whether a token maps to a real invitation is not
+  // something an unauthenticated caller should be able to probe.
+  res.json({ ok: true });
+});
 // Authenticated carrier
 router.use(authenticate);
 router.post("/documents", uploadLimiter, upload.array("files", 5), uploadCarrierDocuments);
