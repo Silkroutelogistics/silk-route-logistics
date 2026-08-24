@@ -2959,6 +2959,36 @@ Sprint 51 arc (51.b → 51.f, 5 hotfixes) is the canonical case study. Each iter
 
 The hotfix arc itself produced Sub-pattern 13's three-fire validation lineage — the methodology library generated its first ratification-layer sub-pattern by operating at maturity on a single user-facing surface (QP Override panel) across five iterations.
 
+
+##### Sub-pattern 17 — Verification-instrument failure (filed beside Item 230.3)
+
+- **Origin:** Arc 34 Step 0, 2026-08-24. Three consecutive wrong reports on one question.
+- **Layer:** Verification (with Sub-pattern 16 — but distinct: 16 is a guard that does not observe what it names; 17 is an *instrument* whose reach silently excludes the answer).
+- **Trigger:** any grep, scanner or extractor used to establish that something does NOT exist.
+
+**What happened.** Arc 34 asked which login paths write a `StaffSession` row. The scan was `grep -oE "staffSession\.[a-zA-Z]+"`, which requires the model and the method on the SAME LINE. This codebase's formatter wraps long Prisma chains:
+
+```ts
+await prisma.staffSession
+  .upsert({ ... })
+```
+
+So the writer at `ssoAuth.ts:186` was invisible, and the report read "no writer exists anywhere". **Production had 6 rows the entire time** — which is what eventually exposed it, not any amount of re-reading.
+
+**The corroboration was the trap.** The same broken pattern was run against `main`, `auth/sso` and `bench/carrier`. Three agreeing answers felt like confirmation; they were one blind spot counted three times. Repo-wide, 29 of 2495 Prisma call sites are wrapped — a **1.2%** blind spot that happened to contain the only site that mattered.
+
+> **Looking harder with the wrong instrument isn't looking harder.**
+
+**Then a second, opposite error.** With the writer found, the report became "the password path has a gap". It does not: `authController.ts:412` and `:855` carry an explicit comment saying no row is written *deliberately*, because the fail-closed branch turns an absent row into exactly the ruled 24h cap — and that *"adding a row here would be a regression, not a fix."* The absence was designed, and the design was documented inches away.
+
+> **Absence of code is not absence of intent; the comment next to the gap may be telling you it isn't one.**
+
+**Cost of not catching it:** Arc 34 Phase 2 was one step from silently reversing another session's documented decision, leaving their comment in place asserting that the new code was a regression — with no way for a later reader to tell which side was current.
+
+**The fix, as a tool rather than a resolution.** [`scripts/find-prisma-calls.ts`](../../backend/scripts/find-prisma-calls.ts) matches across line breaks, strips comments so prose is not mistaken for a call, flags each site inline-vs-wrapped, and **self-tests against a fixture reproducing `ssoAuth.ts:186` verbatim**. Item 230.3 fixed this same single-line assumption in the endpoint extractor; fixing it there did not fix it in a human's hands, which is the argument for the tool.
+
+**Going-forward gate:** a negative finding — "nothing does X", "no caller exists", "this is dead" — is only as good as the instrument's reach. Before reporting one: state the method, verify the instrument against a fixture drawn from the codebase's *actual* formatting, and check the claim against independent evidence (a row count, a live response) rather than a second run of the same pattern.
+
 #### 7. Design-system conformance audit (Sprint 40b/40c, ALWAYS-FIRE post-Sprint-44.5)
 - **Trigger:** sprint introduces or modifies a UI element belonging to a multi-surface class (drawers, modals, banners, tab rails, side panels, status badges, action buttons, form inputs, **nullable-data render paths**, **deploy-pipeline classes**, **fixture classes**).
 - **Action:** enumerate all surfaces in the class. Check the modification against canonical reference + skill. Document drift if found.
