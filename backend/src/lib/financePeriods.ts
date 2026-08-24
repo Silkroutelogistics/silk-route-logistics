@@ -19,15 +19,31 @@
 const ZONE = "America/New_York";
 
 /**
- * Milliseconds to SUBTRACT from a UTC-constructed wall clock to get the real
- * instant, at this moment in the year. Positive while ET is behind UTC.
+ * Milliseconds to ADD to a UTC-constructed wall clock to get the real instant.
+ * Positive while ET is behind UTC, so +4h on EDT and +5h on EST.
+ *
+ * ASKS Intl FOR THE OFFSET DIRECTLY rather than round-tripping through a
+ * formatted string. The previous implementation rendered the instant as an ET
+ * wall-clock string and re-parsed it with new Date(), which parses in the HOST
+ * timezone — so it only worked when the host was not itself Eastern, and it
+ * broke on precisely the days it existed to handle. On a DST transition day the
+ * wall clock is ambiguous: "1:00 AM" happens twice on the November Sunday, and
+ * the parser picks one. It returned SIX HOURS for an instant on 1 Nov 2026, an
+ * offset US Eastern has never had.
+ *
+ * formatToParts with longOffset reports the offset in force AT the instant,
+ * with no string round-trip and no dependence on where the server is.
  */
 function etOffsetMs(at: Date): number {
-  // Both strings describe the SAME instant, read in two zones. The gap between
-  // them parsed as if local is the offset.
-  const asUtc = new Date(at.toLocaleString("en-US", { timeZone: "UTC" }));
-  const asEt = new Date(at.toLocaleString("en-US", { timeZone: ZONE }));
-  return asUtc.getTime() - asEt.getTime();
+  const name = new Intl.DateTimeFormat("en-US", { timeZone: ZONE, timeZoneName: "longOffset" })
+    .formatToParts(at)
+    .find((x) => x.type === "timeZoneName")?.value;
+  // "GMT-04:00" / "GMT-05:00". Plain "GMT" means zero, which cannot happen for
+  // ET but is the honest reading if a runtime ever emits it.
+  const m = name ? /GMT([+-])([0-9]{2}):([0-9]{2})/.exec(name) : null;
+  if (!m) return 0;
+  const sign = m[1] === "-" ? -1 : 1;
+  return -(sign * (Number(m[2]) * 3600000 + Number(m[3]) * 60000));
 }
 
 /** The Y/M/D/h/m/s an ET wall clock shows at this instant. */
