@@ -5,6 +5,7 @@ import { syncCarrierSettled } from "../lib/settlementFlags";
 import { AuthRequest } from "../middleware/auth";
 import { log } from "../lib/logger";
 import { validateLoadStatusTransition } from "../lib/loadStateMachine";
+import { etStartOfMonth, etStartOfWeek } from "../lib/financePeriods";
 import { resolveLoadStem, withDocumentNumber } from "../lib/documentNumber";
 import { generateInvoicePdf } from "../services/pdfService";
 import { sendCustomerInvoiceEmail } from "../services/emailService";
@@ -4445,5 +4446,126 @@ export async function getQuickPayRevenue(req: AuthRequest, res: Response) {
   } catch (error: any) {
     log.error({ err: error }, "getQuickPayRevenue error:");
     res.status(500).json({ error: "Failed to fetch QP revenue", details: error.message });
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// GET /accounting/summary — the CEO dashboard's finance cards
+//
+// This endpoint did not exist. The dashboard has been calling it since it was
+// written; the router defines 56 routes and none of them matched, so every call
+// 404'd. The frontend had no .catch, so the rejection became `undefined`, and
+// `finance?.revenueMTD ?? 0` rendered a confident $0. Gross margin and cash
+// balance were zeroed by the same missing endpoint.
+//
+// SEMANTICS, stated because the old numbers disagreed with each other:
+//
+//   Revenue = INVOICED amounts. Not Load.rate — that column is a write-only
+//   mirror (§13.3 Item 227) whose meaning depends on which path created the
+//   load, and it is under a drop migration on hold/retire-load-rate.
+//
+//   Counted statuses: everything except DRAFT, VOID and REJECTED. A DRAFT has
+//   not been issued to anyone; VOID and REJECTED will never be collected.
+//   PAID is INCLUDED — this is billed revenue, not outstanding AR. (Note the
+//   sibling getDashboard sums a different set that excludes PAID: that figure
+//   is receivables, a different question with a legitimately different answer.)
+//
+//   Money field: totalAmount when present, else amount. Both describe the
+//   invoice's value; totalAmount is the itemised total and is nullable on
+//   older rows, so preferring it without a fallback silently reports zero.
+//
+//   Date anchor: createdAt, ONE field for every window. sentDate would be the
+//   truer "we billed it" moment but is nullable, and mixing anchors across
+//   windows is precisely how the $4,850-week / $0-month contradiction arose.
+//
+//   Windows are Eastern (lib/financePeriods), because the entity reports in ET
+//   while Render runs UTC.
+//
+// Anything not honestly derivable returns null, never 0. The dashboard renders
+// null as an em dash. A zero means "we looked and there was none"; a null means
+// "we cannot answer" — collapsing them is what made a dead endpoint look like a
+// business with no revenue.
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** Issued and potentially collectible. Excludes DRAFT / VOID / REJECTED. */
+const REVENUE_STATUSES = [
+  "SUBMITTED", "SENT", "PARTIAL", "UNDER_REVIEW",
+  "APPROVED", "FUNDED", "PAID", "OVERDUE",
+] as const;
+
+/** Money actually received. */
+const COLLECTED_STATUSES = ["PAID", "FUNDED"] as const;
+
+type InvoiceMoneyRow = { amount: number | null; totalAmount: number | null };
+
+/** totalAmount is the itemised total; amount is always populated. */
+function invoiceValue(i: InvoiceMoneyRow): number {
+  return i.totalAmount ?? i.amount ?? 0;
+}
+
+export async function getAccountingSummary(req: AuthRequest, res: Response) {
+  try {
+    const now = new Date();
+    const monthStart = etStartOfMonth(now);
+    const weekStart = etStartOfWeek(now);
+
+    // One query shape, two windows. Deriving both from the same source is what
+    // makes them consistent — the previous pair read different tables.
+    const [monthRows, weekRows, collectedRows] = await Promise.all([
+      prisma.invoice.findMany({
+        where: { status: { in: [...REVENUE_STATUSES] }, deletedAt: null, createdAt: { gte: monthStart } },
+        // Invoice carries no cost side at all, so margin comes from the linked
+        // load's carrierRate — the carrier-meaning field per §13.3 Item 227.
+        // Never Load.rate, whose meaning depends on the creation path.
+        select: { amount: true, totalAmount: true, load: { select: { carrierRate: true } } },
+      }),
+      prisma.invoice.findMany({
+        where: { status: { in: [...REVENUE_STATUSES] }, deletedAt: null, createdAt: { gte: weekStart } },
+        select: { amount: true, totalAmount: true },
+      }),
+      prisma.invoice.findMany({
+        where: { status: { in: [...COLLECTED_STATUSES] }, deletedAt: null },
+        select: { paidAmount: true, amount: true, totalAmount: true },
+      }),
+    ]);
+
+    const revenueMTD = monthRows.reduce((s, i) => s + invoiceValue(i), 0);
+    const revenueThisWeek = weekRows.reduce((s, i) => s + invoiceValue(i), 0);
+
+    // Margin needs BOTH sides. An invoice whose load has no carrierRate cannot
+    // contribute an honest margin, so it is excluded from the ratio rather than
+    // counted as 100% margin — which is what treating a null cost as zero does.
+    const withCost = monthRows.filter((i) => typeof i.load?.carrierRate === "number");
+    const costBase = withCost.reduce((s, i) => s + invoiceValue(i), 0);
+    const costTotal = withCost.reduce((s, i) => s + (i.load?.carrierRate ?? 0), 0);
+    const avgMarginPercent =
+      withCost.length > 0 && costBase > 0
+        ? ((costBase - costTotal) / costBase) * 100
+        : null;
+
+    // Collected-to-date. NOT a bank balance — SRL has no ledger or bank feed in
+    // this system, so a true cash position is not derivable and the field says
+    // so rather than inventing a number.
+    const collected = collectedRows.reduce(
+      (s, i) => s + (i.paidAmount ?? invoiceValue(i)),
+      0,
+    );
+
+    res.json({
+      periodStart: { month: monthStart.toISOString(), week: weekStart.toISOString() },
+      timezone: "America/New_York",
+      basis: "invoice",
+      revenueMTD,
+      revenueThisWeek,
+      avgMarginPercent,
+      // Not derivable: no bank/ledger integration exists. Explicitly null so the
+      // dashboard renders an em dash instead of asserting $0 in the bank.
+      cashBalance: null,
+      collectedToDate: collected,
+      invoiceCounts: { month: monthRows.length, week: weekRows.length },
+    });
+  } catch (error: any) {
+    log.error({ err: error }, "getAccountingSummary error:");
+    res.status(500).json({ error: "Failed to fetch accounting summary", details: error.message });
   }
 }

@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { authenticate, authorize } from "../middleware/auth";
 import {
+  getAccountingSummary,
   getDashboard,
   getInvoices,
   getInvoiceById,
@@ -64,6 +65,7 @@ const router = Router();
 router.use(authenticate);
 
 // --- Dashboard ---
+router.get("/summary", authorize("ADMIN", "CEO", "ACCOUNTING", "BROKER"), getAccountingSummary);
 router.get("/dashboard", authorize("ADMIN", "CEO", "ACCOUNTING", "BROKER"), getDashboard);
 router.get("/dashboard/enhanced", authorize("ADMIN", "CEO", "ACCOUNTING"), getAccountingDashboardEnhanced);
 
