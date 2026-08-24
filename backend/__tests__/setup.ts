@@ -74,6 +74,20 @@ vi.mock("../src/config/database", () => ({
       create: vi.fn(),
       update: vi.fn(),
     },
+    // B4 — the waterfall now reads the routing guide when scoring. A missing
+    // mock here does not fail loudly; it throws "findFirst is not a function"
+    // deep inside scoring, which reads like a scoring bug rather than a fixture
+    // gap.
+    routingGuide: {
+      findFirst: vi.fn(),
+      findMany: vi.fn(),
+      count: vi.fn(),
+    },
+    routingGuideEntry: {
+      findMany: vi.fn(),
+      count: vi.fn(),
+      groupBy: vi.fn(),
+    },
     customer: {
       findUnique: vi.fn(),
       findFirst: vi.fn(),

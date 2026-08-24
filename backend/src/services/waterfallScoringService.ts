@@ -585,26 +585,48 @@ export async function loadRoutingGuideRanks(ctx: LoadContext): Promise<Map<strin
   const ranks = new Map<string, number>();
   if (!ctx.originState || !ctx.destState || !ctx.equipmentType) return ranks;
 
+  // RoutingGuide.customerId is NULLABLE: a guide is either specific to one
+  // customer or global. That makes the customer filter two questions, not one,
+  // and getting it wrong fails in both directions — a customer filter alone
+  // misses the global guides, and NO filter lets one customer's negotiated
+  // ranking steer another customer's freight.
+  //
+  // A customer-specific guide WINS over a global one for the same lane, so ask
+  // for it first rather than trying to express the preference in one query.
+  const laneWhere = {
+    originState: ctx.originState,
+    destState: ctx.destState,
+    equipmentType: ctx.equipmentType,
+    isActive: true,
+    deletedAt: null,
+    OR: [{ expirationDate: null }, { expirationDate: { gte: new Date() } }],
+  };
+  const entrySelect = {
+    entries: {
+      where: { isActive: true },
+      select: { carrierId: true, rank: true },
+      orderBy: { rank: "asc" as const },
+    },
+  };
+
   try {
-    const guide = await prisma.routingGuide.findFirst({
-      where: {
-        originState: ctx.originState,
-        destState: ctx.destState,
-        equipmentType: ctx.equipmentType,
-        isActive: true,
-        deletedAt: null,
-        OR: [{ expirationDate: null }, { expirationDate: { gte: new Date() } }],
-        ...(ctx.customerId ? { customerId: ctx.customerId } : {}),
-      },
-      select: {
-        entries: {
-          where: { isActive: true },
-          select: { carrierId: true, rank: true },
-          orderBy: { rank: "asc" },
-        },
-      },
-      orderBy: { updatedAt: "desc" },
-    });
+    let guide = ctx.customerId
+      ? await prisma.routingGuide.findFirst({
+          where: { ...laneWhere, customerId: ctx.customerId },
+          select: entrySelect,
+          orderBy: { updatedAt: "desc" },
+        })
+      : null;
+
+    // Fall back to a guide that belongs to no customer. A load with no customer
+    // may ONLY ever see these.
+    if (!guide) {
+      guide = await prisma.routingGuide.findFirst({
+        where: { ...laneWhere, customerId: null },
+        select: entrySelect,
+        orderBy: { updatedAt: "desc" },
+      });
+    }
 
     for (const e of guide?.entries ?? []) {
       if (e.carrierId && typeof e.rank === "number") ranks.set(e.carrierId, e.rank);
