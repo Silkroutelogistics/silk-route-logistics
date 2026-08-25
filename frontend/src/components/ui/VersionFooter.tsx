@@ -15093,7 +15093,35 @@
 // click handler — a row that invited a click and did nothing, while actionUrl
 // sat on the type unread. Now clickable only when there is somewhere safe to
 // go, confined to the portal doing the rendering.
-export const SRL_VERSION = "3.8.aur";
+// v3.8.aus — B2, the status collapse. Four compliance sweeps were blind.
+//
+// CarrierProfile carries two overlapping status enums, and the schema's own
+// comment says to keep them in step. Twenty of twenty-four writers did not —
+// including approvalService, the canonical approve path, which sets
+// onboardingStatus and leaves status at its default. Four sweeps filtered on
+// status ALONE: the weekly sanctions rescan, the insurance-expiry sweep, the
+// CSA safety scan and ELD validation.
+//
+// So a carrier approved through the normal AE flow was outside all four,
+// permanently and silently. The OFAC sweep is also the code that suspends on
+// a hit, so the gap was not merely observational. It had not bitten because
+// the only dual-writing paths are DAT admin-setup and emergency-approve, every
+// fixture sets both, and production holds no live carriers — it goes live with
+// the first real carrier benched the normal way.
+//
+// Fixed as ONE resolver rather than four edited filters, because patching four
+// leaves the fifth to be written wrong. Monitoring errs inclusive (a wasted
+// OFAC call beats a sanctioned carrier on a customer's freight); dispatch errs
+// exclusive. All twenty writers now pair through one table, a structural guard
+// fails the twenty-first, and a drift repair run against production found two
+// of four rows already disagreeing.
+//
+// Two more found on the way: a daily cron still promoting carriers on the
+// retired volume-only model that v3.8.aii replaced, bypassing the locked
+// loads-and-days gate; and a guard demanding a carrierId for TENDERED, when a
+// tender row is what backs that status and the carrier is not assigned until
+// they accept.
+export const SRL_VERSION = "3.8.aus";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
