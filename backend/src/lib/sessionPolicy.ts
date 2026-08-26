@@ -141,7 +141,7 @@ export function resolveStaffSessionPolicy(args: {
   };
 }
 
-// ── Arc 34: ONE policy, applied to all four portals ─────────────────
+// ── Arc 34: ONE policy — THREE portals governed, one deliberately excluded ──
 //
 // The constants above govern the staff-only policy that preceded this and are
 // left intact so its tests keep passing. Everything below supersedes them.
@@ -159,7 +159,39 @@ export function resolveStaffSessionPolicy(args: {
 // production anyway (see the note on the missing writer), so tightening it
 // costs nothing today and would have been expensive to discover later.
 
-/** THE single source. Any other hardcoded lifetime is a CI failure. */
+/**
+ * THE single source. Any other hardcoded lifetime is a CI failure.
+ *
+ * ── GOVERNANCE: WHICH PORTALS THIS BINDS (ratified 2026-08-26) ──────────────
+ *
+ * GOVERNED — AE, CARRIER, SHIPPER. All three authenticate through
+ * `tryAuthenticateToken` in middleware/auth, which is the single place this
+ * policy is applied. Adding a fourth User-backed portal governs it for free.
+ *
+ * NOT GOVERNED — the DRIVER portal, DELIBERATELY. It authenticates through
+ * `middleware/driverAuth` with its own cookie, and its session lives for
+ * `DRIVER_SESSION_MS` (7 days) with no idle rule at all.
+ *
+ * WHY THE EXCEPTION IS DEFENSIBLE TODAY. The driver surface is training-only:
+ * a driver reads lessons and answers quizzes. It performs no money write, no
+ * compliance write, and no dispatch action — so an unattended driver session
+ * cannot move a dollar or clear a carrier. Against that, the 7-day token is
+ * load-bearing for the Academy's actual usage: drivers open training days
+ * apart, between loads, and a 30-minute idle would sign them out mid-course
+ * and make the product worse for no security gained.
+ *
+ * RE-RATIFICATION TRIGGER — THE MOMENT ANY NON-TRAINING WRITE LANDS ON THE
+ * DRIVER SURFACE, THIS EXCEPTION EXPIRES AND MUST BE RE-DECIDED. Concretely:
+ * a driver accepting or declining a load, uploading a POD, editing their own
+ * roster record, entering HOS, confirming a check call, or touching anything
+ * a settlement or a compliance verdict reads. Any of those turns the surface
+ * from "reads training content" into "acts on freight", and the reasoning
+ * above stops applying.
+ *
+ * Do not read the exception as an oversight — it was found by CI rather than
+ * by review (an earlier claim here said "all four portals" and was wrong), and
+ * the correction is recorded with its evidence at §13.3 Item 244.6.
+ */
 export const SESSION_IDLE_MINUTES = 30;
 export const SESSION_ABSOLUTE_HOURS = 12;
 
