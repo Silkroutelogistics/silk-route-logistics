@@ -15152,7 +15152,25 @@
 // timer still encoding the retired 30/60 split, and a frontend redirect gated
 // on SESSION_TIMEOUT — a code no policy has ever emitted, so anyone signed out
 // for inactivity bounced to login with no explanation at all.
-export const SRL_VERSION = "3.8.aut";
+// v3.8.auu — Carrier Bench slot 6.5: Load.rate leaves the frontend.
+//
+// 43 reads across 19 files. Load.rate is a write-only mirror whose meaning
+// depends on which path created the load, so every fallback to it was showing
+// one of two different numbers and could not say which. The carrier portal's
+// `carrierRate || rate` rendered SRL's revenue to the party we pay out of it.
+//
+// New frontend/src/lib/rateDisplay.ts is the single spelling: carrierPay (no
+// fallback), customerBilled (invoice over intent), margin (null unless BOTH
+// sides known), and money/perMile/pct that render an em-dash for absent rather
+// than $0. Rounding unified — the surfaces disagreed at the half-dollar.
+//
+// AE margin columns now say "Working margin" with a tooltip: customerRate minus
+// carrierRate is intent, not the settled figure. Settled needs invoicedTotal on
+// the /loads payload, which is ledgered.
+//
+// Guard walks to zero outside two Web-Speech playback fences. Both directions
+// proven with confirmed injections.
+export const SRL_VERSION = "3.8.auu";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
