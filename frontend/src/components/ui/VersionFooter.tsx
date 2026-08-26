@@ -15152,8 +15152,13 @@
 // timer still encoding the retired 30/60 split, and a frontend redirect gated
 // on SESSION_TIMEOUT — a code no policy has ever emitted, so anyone signed out
 // for inactivity bounced to login with no explanation at all.
-// v3.8.auu — logout revokes the session it ended, and a password change no
+// v3.8.auw — logout revokes the session it ended, and a password change no
 // longer signs you out.
+//
+// LETTER NOTE: written as auu, re-lettered to auw at push time — the concurrent
+// session claimed auu (and then auv) while this was in flight, which is exactly
+// why §2.2 says to re-derive from origin immediately before the commit rather
+// than from memory of what came last.
 //
 // CI caught this, not review: the reachability gate failed v3.8.aut with
 // `export revokeSession  DEAD  no consumer anywhere`. I had written it in the
@@ -15189,7 +15194,7 @@
 //
 // Guard walks to zero outside two Web-Speech playback fences. Both directions
 // proven with confirmed injections.
-export const SRL_VERSION = "3.8.auv";
+export const SRL_VERSION = "3.8.auw";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
