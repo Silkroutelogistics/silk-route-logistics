@@ -77,3 +77,44 @@ than a default — something promised to staff, or required by a control — the
 Arc 34's 12h is a tightening that needs its own ratification and this note is
 the wrong way round. Say so and Arc 34 will scope itself to
 carrier/shipper/driver, which it can do without touching a line you wrote.
+
+---
+
+## UPDATE 2026-08-26 — shipped as v3.8.aut, and what actually changed
+
+The note above described the plan. Two things about it turned out to be wrong,
+and you should have both.
+
+**The middleware did not simply "move over" — for staff it ran BOTH policies,
+legacy first, and legacy decided.** A proof harness ran red at 12/16 with every
+failure on a staff token and every carrier and shipper assertion passing. Your
+branch's throttled touch wrote `lastSeenAt = now` immediately before the uniform
+policy re-read that same row, so staff idle was unenforceable; the touch was
+also ungated by the background-poll marker. And `bypassLegacyIdle` was an early
+return, so a remembered session never reached the uniform policy at all.
+
+Same fixture, same 31-minute backdate, same request, differing only in role:
+
+| | HTTP | lastSeenAt after |
+|---|---|---|
+| ADMIN (staff) | 200 | refreshed to 0m |
+| CARRIER (non-staff) | 401 | row deleted by the refusal path |
+
+So the legacy evaluation is gone from the request path entirely. **The promise
+in this note held**: `resolveStaffSessionPolicy` still exists, is still
+exported, and all 24 of your cases still pass unmodified. It simply no longer
+decides anything.
+
+**Seven of your middleware cases in `staffSessionSweep.test.ts` were rewritten,
+none deleted.** Five went red on the removal. Two kept passing FOR THE WRONG
+REASON — "dies at the 30-day ceiling" now dies at 12 hours, "dies after 8 idle
+days" now dies after 30 minutes — which would have left them green while
+asserting a rule that no longer exists. Each carries both decisions and their
+dates. Your file's own injection discipline was honoured: neuter the policy and
+8 of 16 go red.
+
+Your comments at `authController.ts:412` and `:855` are now dated supersession
+records carrying both decisions, as promised. The 24h cap they relied on is
+12h, and fail-closed now means REFUSED rather than capped, because idle cannot
+be derived from a token — which is why the password path needs the row it
+deliberately did not write.
