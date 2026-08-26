@@ -11,7 +11,8 @@ import { setTokenCookie, clearTokenCookie } from "../utils/cookies";
 import { blacklistToken } from "../utils/tokenBlacklist";
 import { validatePassword } from "../utils/passwordPolicy";
 import { verifyTotpCode } from "../services/totpService";
-import { registerSession, removeSession } from "../middleware/auth";
+import { registerSession, removeSession, getTokenHash } from "../middleware/auth";
+import { revokeSession } from "../lib/sessionStore";
 import { log } from "../lib/logger";
 import { logAuthEvent } from "../lib/authEvents";
 import { caseInsensitiveEmailFilter } from "../lib/emailNormalization";
@@ -615,6 +616,12 @@ export async function logout(req: AuthRequest, res: Response) {
   // Remove from active sessions and blacklist token
   if (req.token) {
     removeSession(req.user!.id, req.token);
+    // Arc 34 — kill the PERSISTED row too, not just the in-memory Set. Without
+    // this the row outlived the logout that ended it: harmless (the token is
+    // blacklisted, and the policy would refuse it) but it left staff_sessions
+    // holding rows for sessions a person had explicitly ended, until a sweep.
+    // Logging out should mean the record of the session is gone.
+    await revokeSession(getTokenHash(req.token)).catch(() => {});
     await blacklistToken(req.token, req.user!.id, "logout").catch(() => {});
   }
 

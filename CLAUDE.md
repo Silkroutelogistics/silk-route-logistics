@@ -2284,7 +2284,7 @@ Each is a discrete sprint. Mix of operational, security, UX, and technical debt.
 
 244. **One session policy, and the branch that was quietly overriding it (Arc 34, 2026-08-26, `v3.8.aut`, merged `9e30d784`).**
 
-    Uniform session lifetime across all four portals — **30-minute idle, 12-hour absolute** — replacing four different answers, three of which were never actually enforced because the only idle store was a per-process Map that emptied on every deploy.
+    Uniform session lifetime across the three User-backed portals (AE, carrier, shipper) — **30-minute idle, 12-hour absolute** — replacing four different answers, three of which were never actually enforced because the only idle store was a per-process Map that emptied on every deploy.
 
     **244.1 — THE HARNESS RAN RED FIRST, AND THAT IS THE FINDING.** [`_arc34-proof-by-login.ts`](backend/scripts/_arc34-proof-by-login.ts) ran **12/16** before the fix and **16/16** after, against a real Postgres over real HTTP. Every failure was on a staff token; every carrier and shipper assertion passed. **That split was the whole diagnosis**: a legacy staff branch still ran AHEAD of the uniform policy and decided.
 
@@ -2306,6 +2306,14 @@ Each is a discrete sprint. Mix of operational, security, UX, and technical debt.
     - [`session-timeout.js`](frontend/public/js/session-timeout.js) still encodes the retired 30/60 split. **ORPHANED** — nothing loads it — so not a live contradiction, but 6.5KB waiting to be wired up wrong. Marked at the top rather than deleted, since the warning-modal work will want the file and must not want its numbers.
 
     **244.5 — DEAD STATE REMOVED WITH IT.** The `lastActivity` Map was **write-only**: `.set`, `.delete`, a 10-minute sweep, and **zero reads** repo-wide. `getSessionTimeout(role)`, sole reader of the 30/60/60 constants, had **no caller anywhere**. Both gone — a second, unreferenced set of numbers that disagrees with the live one is how a reader later cites the wrong one.
+
+    **244.6 — CORRECTION: "ALL FOUR PORTALS" IS TRUE OF THREE.** The merge commit and this item both claimed uniform coverage across four portals. That is right for AE, CARRIER and SHIPPER, which all route through `tryAuthenticateToken`. **It is NOT true of DRIVER**, and the CI reachability gate is what led me to the evidence.
+
+    Driver sessions use a separate middleware (`authenticateDriver`) and a separate cookie. It verifies the JWT, checks the blacklist, and gates on driver status, roster linkage and activation — and does **not** reference `resolveSessionPolicy`, `staff_sessions` or `lastSeenAt` at all. Driver login calls neither `registerSession` nor `createSession`, so no row is ever written for it. A driver session is therefore governed solely by its own token lifetime: **`DRIVER_SESSION_MS` = 7 days, with no idle enforcement whatsoever.**
+
+    The harness said as much and I read past it. Its scope note states plainly that driving `registerSession` "proves the mechanism for every portal that routes through it" and "does NOT re-prove that each login FLOW reaches the seam." For driver, the flow does not reach it — so the DRIVER assertion proved the portal MAPPING (a row written with `portal: "DRIVER"` when the function is called) and nothing about the driver login path. A scope caveat you write and then don't apply is worth no more than one you never wrote.
+
+    **Not fixed here, deliberately.** Extending the policy to driver means touching a second middleware and a token whose 7-day lifetime is load-bearing for the Academy's usage pattern — a driver opens training days apart, and a 30-minute idle would sign them out mid-course. Whether the uniform rule should apply to a training portal at all is a product decision, not a cleanup. Banked as the immediate next step with that question attached.
 
     **Migration additive** (`CREATE TYPE`, `ADD COLUMN NOT NULL DEFAULT 'AE'`, `CREATE INDEX`). **Census immediately before merge: 6 rows, all SSO staff, ZERO sign-ins in 7 days** — the AE default describes every existing row and the one-time rollout signed out nobody. Gates: backend tsc clean, suite **1168/1169** (the one red is `urlSafety > allows public hostnames`, a 5s timeout on a live call to hooks.slack.com — environmental, red on a clean tree), frontend tsc + build clean.
 
