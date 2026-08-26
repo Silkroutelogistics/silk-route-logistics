@@ -1,3 +1,20 @@
+/*
+ * SUPERSEDED NUMBERS — READ BEFORE WIRING THIS UP (2026-08-25, Arc 34).
+ *
+ * This file is currently ORPHANED: nothing loads it. The only reference to it
+ * in the repo is a comment in js/auth.js saying the inactivity timer "moved"
+ * here. It is therefore not a live contradiction today.
+ *
+ * But line ~27 still encodes the RETIRED split `isAE ? 30min : 60min`. Arc 34
+ * ratified ONE window for every portal: 30 minutes idle, 12 hours absolute,
+ * enforced server-side in backend/src/lib/sessionPolicy.ts.
+ *
+ * If this is ever wired up as-is, a carrier or shipper would watch their own
+ * countdown run to 60 minutes while the server refused them at 30 — signed out
+ * half an hour before their timer said so, with no explanation. Take the
+ * numbers from SESSION_IDLE_MINUTES / SESSION_WARNING_LEAD_MS, never from here.
+ */
+
 /**
  * SRL Session Timeout Manager
  * - 30 min inactivity for employees (AE portal)

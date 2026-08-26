@@ -15121,7 +15121,38 @@
 // loads-and-days gate; and a guard demanding a carrierId for TENDERED, when a
 // tender row is what backs that status and the carrier is not assigned until
 // they accept.
-export const SRL_VERSION = "3.8.aus";
+// v3.8.aut — Arc 34. One session policy, and the removal of the branch that
+// was quietly overriding it.
+//
+// The proof harness ran RED at 12/16 before this, and every failure was on a
+// staff token while every carrier and shipper assertion passed. That split was
+// the whole diagnosis: a legacy staff branch still ran AHEAD of the uniform
+// policy, and it decided. Its throttled touch wrote lastSeenAt = now moments
+// before the uniform rule re-read that same row, so staff idle was
+// unenforceable; the touch was also ungated by the background-poll marker, so
+// a 30-second poll kept an abandoned desk signed in. A second early return let
+// remembered sessions skip the policy entirely and keep a 7-day rolling idle.
+//
+// Proved by control rather than by reading. Same fixture, same 31-minute
+// backdate, same request, differing only in role: ADMIN returned 200 with the
+// row refreshed to 0m; CARRIER returned 401.
+//
+// Remember-me now shortens re-auth and never idle. The rollout constant was
+// re-dated to the merge instant — it had been set for a merge expected two days
+// earlier, which left it 28h stale against a 12h cap and made its own branch
+// dead code, because the ceiling always answered first.
+//
+// Seven of their tests were superseded, not deleted. Five went red on the
+// removal; two kept PASSING for the wrong reason — dies-at-30-days now dies at
+// 12 hours, dies-after-8-idle-days now dies after 30 minutes — which is the
+// vacuous-pass class and worse than a red. Each carries both decisions and
+// their dates. Injection-verified: neuter the policy and 8 of 16 go red.
+//
+// Two things the audit found that the brief did not name: an orphaned client
+// timer still encoding the retired 30/60 split, and a frontend redirect gated
+// on SESSION_TIMEOUT — a code no policy has ever emitted, so anyone signed out
+// for inactivity bounced to login with no explanation at all.
+export const SRL_VERSION = "3.8.aut";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

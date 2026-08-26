@@ -13,6 +13,46 @@ so it's searchable and never lost.
 
 ---
 
+## Fixed — 2026-08-26 (Arc 34: staff idle was unenforceable, and a poll kept an abandoned desk signed in)
+
+- **Symptom:** three defects in one seam, all invisible to review and all found
+  by a proof harness that ran RED at 12/16 before the fix and 16/16 after.
+  Every failure was on a staff token while every carrier and shipper assertion
+  passed — that split was the diagnosis.
+- **Where:** `backend/src/middleware/auth.ts` (the legacy staff branch that ran
+  ahead of the uniform policy), `backend/src/lib/sessionPolicy.ts`,
+  `frontend/src/lib/api.ts`.
+- **What was wrong:**
+  1. The legacy branch's throttled touch wrote `lastSeenAt = now` immediately
+     before the uniform policy re-read that same row, so staff idle could never
+     fire. Same fixture and a 31-minute backdate, differing only in role:
+     ADMIN → 200 with the row refreshed to 0m; CARRIER → 401.
+  2. That touch was ungated by the background-poll marker, so a 30-second poll
+     kept an abandoned desk signed in indefinitely.
+  3. `if (verdict.bypassLegacyIdle) return { ok: true }` was an early return, so
+     a remembered session never reached the policy and kept a 7-day idle.
+  4. `POLICY_ROLLOUT_AT_MS` was 28h stale against a 12h cap, so the ceiling
+     always answered first and `SESSION_REVOKED_POLICY_ROLLOUT` was dead code.
+  5. `frontend/src/lib/api.ts` gated its `?reason=timeout` redirect on
+     `SESSION_TIMEOUT` — a code no policy has ever emitted — so anyone signed
+     out for inactivity bounced to login with no explanation at all.
+- **Severity:** P1. Nobody was locked out and nothing leaked; the idle rule
+  simply did not apply to staff, and the rollout message could not be shown.
+- **Status:** Fixed in `9e30d784` (v3.8.aut). Verified in production: schema
+  applied 00:53:23, booted 00:54:13, `/api/auth/me` 401 tokenless, 17/17 public
+  surfaces healthy.
+- **Cost of the fix:** seven of the concurrent session's middleware tests were
+  superseded with dated wording, none deleted. Five went red on the removal and
+  **two were passing for the wrong reason** — "dies at the 30-day ceiling" now
+  dies at 12 hours — which is the more dangerous half, because nothing draws
+  your eye to a green test asserting a retired rule.
+- **Also fixed alongside:** `lastActivity` (a write-only Map with zero reads
+  repo-wide) and `getSessionTimeout` (zero callers, still encoding the retired
+  30/60/60 split) both removed.
+- **Date noted:** 2026-08-26
+
+---
+
 ## Fixed — 2026-08-24 (Arc 33: the "Invite Carriers" button invited nobody)
 
 - **Symptom:** the CTA on the AE carriers page was an anchor to `/onboarding` —

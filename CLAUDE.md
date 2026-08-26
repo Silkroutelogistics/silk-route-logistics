@@ -2281,6 +2281,35 @@ Each is a discrete sprint. Mix of operational, security, UX, and technical debt.
 
     **A correctness bug my own anchor introduced, caught by tsc.** The modal mount first landed inside `{selectedCarrier && (...)}`. That breaks JSX, but the worse half is semantic: inviting a *new* carrier means none is selected, so the header button would have opened nothing.
 
+
+244. **One session policy, and the branch that was quietly overriding it (Arc 34, 2026-08-26, `v3.8.aut`, merged `9e30d784`).**
+
+    Uniform session lifetime across all four portals — **30-minute idle, 12-hour absolute** — replacing four different answers, three of which were never actually enforced because the only idle store was a per-process Map that emptied on every deploy.
+
+    **244.1 — THE HARNESS RAN RED FIRST, AND THAT IS THE FINDING.** [`_arc34-proof-by-login.ts`](backend/scripts/_arc34-proof-by-login.ts) ran **12/16** before the fix and **16/16** after, against a real Postgres over real HTTP. Every failure was on a staff token; every carrier and shipper assertion passed. **That split was the whole diagnosis**: a legacy staff branch still ran AHEAD of the uniform policy and decided.
+
+    Three defects, none of which reasoning had found:
+    - **Staff idle was unenforceable, and it defeated the poll marker.** The legacy branch's throttled touch wrote `lastSeenAt = now` immediately before the uniform policy re-read that row, so the rule judged a timestamp the previous branch had just refreshed. Ungated by the background-poll marker, so a 30-second poll kept an abandoned desk signed in indefinitely.
+    - **Remember-me never reached the policy** — `if (verdict.bypassLegacyIdle) return { ok: true }` was an early return, preserving a 7-day rolling idle.
+    - **The rollout constant was dead code** — set for a merge expected two days earlier, 28h stale against a 12h cap, so the ceiling always answered first and `SESSION_REVOKED_POLICY_ROLLOUT` could never be returned. **A cutoff in the past is not a conservative default; it is a silently disabled feature.** Now re-dated at the merge instant and EXPORTED so the harness asserts the real value rather than a copy.
+
+    **Proved by control, not by reading.** Same fixture, same 31-minute backdate, same request, differing only in role: ADMIN → 200 with the row refreshed to 0m; CARRIER → 401.
+
+    **244.2 — SEVEN TESTS SUPERSEDED, NONE DELETED — AND TWO WERE THE DANGEROUS KIND.** Five went red on the removal. **Two kept PASSING FOR THE WRONG REASON**: "dies at the 30-day ceiling" now dies at 12 hours, "dies after 8 idle days" now dies after 30 minutes. Both would have stayed green while asserting a rule that no longer exists — the vacuous-pass class (§19 Sub-pattern 16), and worse than a red test because nothing draws your eye to it. Deleting them to go green would have destroyed the only middleware-level evidence that the policy is REACHED rather than merely computed. Injection-verified: neuter the refusal and 8 of 16 go red.
+
+    The concurrent session's 24 pure-function cases are untouched and green. `resolveStaffSessionPolicy` still exists and is exported; it simply no longer decides anything — exactly what [`seam-note-arc34-session-policy.md`](docs/internal/seam-note-arc34-session-policy.md) promised them in writing BEFORE the change landed.
+
+    **244.3 — A DESTRUCTIVE GIT MISTAKE, CAUGHT AND FULLY RECOVERED, WORTH BANKING.** `git checkout main 2>&1 | tail -2 && git reset --hard origin/main` — the checkout ABORTED, but piping it to `tail` meant `&&` saw *tail's* exit 0 and ran the reset **while still on the hold branch**, destroying the commit. Recovered in full from the reflog; nothing lost. **This is the identical shape as Item 228.5** (`npx tsc --noEmit | head -20 && echo "clean"` printing "clean" off `head`). Standing rule: **never pipe a state-changing command into another when its exit code gates what follows** — the pipeline reports the LAST command's status, not the one you care about.
+
+    **244.4 — TWO FINDINGS THE BRIEF DID NOT NAME**, both from a read-only audit fan-out that also independently confirmed every retention decision (`TOUCH_THROTTLE_MS` shared by both policies; `isStaffRole` with a surviving consumer):
+    - [`api.ts`](frontend/src/lib/api.ts) gated its `?reason=timeout` redirect on `SESSION_TIMEOUT` — **a code no policy has ever emitted**. The branch was dead, so anyone signed out for inactivity bounced to login with no explanation. All four real codes now map.
+    - [`session-timeout.js`](frontend/public/js/session-timeout.js) still encodes the retired 30/60 split. **ORPHANED** — nothing loads it — so not a live contradiction, but 6.5KB waiting to be wired up wrong. Marked at the top rather than deleted, since the warning-modal work will want the file and must not want its numbers.
+
+    **244.5 — DEAD STATE REMOVED WITH IT.** The `lastActivity` Map was **write-only**: `.set`, `.delete`, a 10-minute sweep, and **zero reads** repo-wide. `getSessionTimeout(role)`, sole reader of the 30/60/60 constants, had **no caller anywhere**. Both gone — a second, unreferenced set of numbers that disagrees with the live one is how a reader later cites the wrong one.
+
+    **Migration additive** (`CREATE TYPE`, `ADD COLUMN NOT NULL DEFAULT 'AE'`, `CREATE INDEX`). **Census immediately before merge: 6 rows, all SSO staff, ZERO sign-ins in 7 days** — the AE default describes every existing row and the one-time rollout signed out nobody. Gates: backend tsc clean, suite **1168/1169** (the one red is `urlSafety > allows public hostnames`, a 5s timeout on a live call to hooks.slack.com — environmental, red on a clean tree), frontend tsc + build clean.
+
+
 ## §14 LEGAL / COMPLIANCE STATUS
 
 - Property broker under 49 U.S.C. §§ 13904, 13906

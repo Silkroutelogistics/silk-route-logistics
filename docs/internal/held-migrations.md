@@ -30,7 +30,7 @@ That is Item 212 in one sentence: a column-drop reached production because it
 was held back by *position* rather than by a mechanism, and position is not a
 mechanism. Setup: [`render-deploy-gate-setup.md`](render-deploy-gate-setup.md).
 
-This one secret now gates **four** schema changes (hold 5 releases on evidence, not on the secret). It is the highest-leverage
+This one secret now gates **four** schema changes. (Hold 5 also appears below but is CLOSED — it released on evidence, not on the secret, and merged 2026-08-26.) It is the highest-leverage
 thing outstanding on the human side.
 
 ---
@@ -192,6 +192,26 @@ live table, nothing more. Anyone reading "retire asset drivers" and reaching for
 ---
 
 ## 5. `hold/arc34-session-policy` — uniform session lifetime (30m idle / 12h absolute)
+
+> **RELEASED 2026-08-26 as `9e30d784` (v3.8.aut). This entry is kept as the
+> record of what the hold was for and how it was discharged — the hold is
+> CLOSED and the branch is merged.**
+>
+> The release condition was met in full: the proof harness runs **16/16**
+> against a real Postgres over real HTTP. It first ran **RED at 12/16**, and
+> that red was the point — it caught three defects that reasoning had not,
+> including a legacy staff branch still running ahead of the uniform policy and
+> deciding. The load-bearing assertion passed on AE, CARRIER and SHIPPER, which
+> converted the `sets req.user and calls next for valid token` verdict from
+> "stale fixture" (diagnosis) to fact, exactly as this entry required.
+>
+> Census re-run immediately before merge, as instructed below: **6 rows, zero
+> sign-ins in 7 days, unchanged.** The rollout signed out nobody.
+>
+> All three "also outstanding" items were completed: dated supersession wording
+> (seven tests, not two — five went red and two were passing for the wrong
+> reason), the `authController.ts:412/:855` comments, and the rollout sweep,
+> now scheduled hourly and registered in `SCHEDULED_JOB_NAMES`.
 
 | | |
 |---|---|

@@ -5381,10 +5381,29 @@ model AuthEvent {
 ///
 /// The legacy in-memory map is untouched and still governs the 30/60-minute
 /// portal-role behaviour.
+/// Arc 34 — which front door a session came through.
+enum SessionPortal {
+  AE
+  CARRIER
+  SHIPPER
+  DRIVER
+}
+
+/// Arc 34 — now serves ALL FOUR portals, not just staff.
+///
+/// Model and table keep their original names deliberately: a rename reads
+/// better and would hand the concurrent session a conflict across the commits
+/// that reference `staffSession`. The name is the smaller cost.
 model StaffSession {
   id         String   @id @default(cuid())
+  /// Arc 34 — which front door minted this session. Defaults to AE so the six
+  /// rows predating this arc, all SSO staff logins, describe themselves
+  /// correctly with no backfill guess.
+  portal     SessionPortal @default(AE)
   /// sha256(token) — same hashing as TokenBlacklist, so the two can be joined.
   tokenHash  String   @unique
+  /// User.id for AE/CARRIER/SHIPPER; Driver.id when portal is DRIVER. Drivers
+  /// are deliberately not Users (§13.3 Item 193 T2) and no FK constrains this.
   userId     String
   /// Whether the session was minted with remember-me. Persisted rather than
   /// carried as a JWT claim: tryAuthenticateToken rejects any token bearing a
@@ -5392,10 +5411,15 @@ model StaffSession {
   /// exactly that class of mistake.
   rememberMe Boolean  @default(false)
   issuedAt   DateTime @default(now())
+  /// Touched by AUTHENTICATED, USER-INITIATED requests only. Background polls
+  /// are excluded by an explicit marker — a 30-second poll would otherwise keep
+  /// an abandoned desk signed in forever, which is the opposite of what an idle
+  /// timeout is for.
   lastSeenAt DateTime @default(now())
 
   @@index([userId])
   @@index([lastSeenAt])
+  @@index([portal])
   @@map("staff_sessions")
 }
 
