@@ -31,9 +31,10 @@ export default function ShipperDashboardLayout({ children }: { children: React.R
   const [checking, setChecking] = useState(true);
   const router = useRouter();
   const queryClient = useQueryClient();
+  // Timings come from the shared server mirror (30m idle / 2m warning). The
+  // explicit 60-minute override that used to sit here disagreed with the server,
+  // so the countdown could show time remaining on a session already refused.
   const { showWarning, countdown, extendSession, forceLogout } = useSessionTimeout({
-    timeoutMs: 60 * 60 * 1000,
-    warningBeforeMs: 2 * 60 * 1000,
     loginPath: "/shipper/login",
   });
 

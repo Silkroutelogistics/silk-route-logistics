@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "./useAuthStore";
+import { SESSION_IDLE_MS, SESSION_WARNING_LEAD_MS } from "@/lib/sessionPolicy";
 
 interface SessionTimeoutOptions {
   timeoutMs: number;       // Total inactivity before logout
@@ -11,9 +12,18 @@ interface SessionTimeoutOptions {
   onLogout?: () => void;   // Custom logout handler (for carrier/shipper portals)
 }
 
+/**
+ * Defaults come from the shared server mirror, NOT from per-caller numbers.
+ *
+ * Every caller used to pass its own timeout and every one of them was wrong: 60
+ * minutes against a server that cuts at 30. A carrier could watch a countdown
+ * showing 25 minutes remaining while the server had already refused them, which
+ * is worse than showing no countdown at all. Callers may still override, but the
+ * default is now the only number the server actually honours.
+ */
 export function useSessionTimeout({
-  timeoutMs = 60 * 60 * 1000,      // 60 minutes default (shippers)
-  warningBeforeMs = 2 * 60 * 1000, // 2 minutes warning
+  timeoutMs = SESSION_IDLE_MS,
+  warningBeforeMs = SESSION_WARNING_LEAD_MS,
   loginPath = "/shipper/login",
   onLogout,
 }: Partial<SessionTimeoutOptions> = {}) {
@@ -34,7 +44,11 @@ export function useSessionTimeout({
       clearAuth();
     }
     localStorage.removeItem("srl_last_activity");
-    router.replace(`${loginPath}?expired=1`);
+    // ?reason=timeout — the same param the API interceptor sends on a server 401.
+    // This was ?expired=1, so a client-side timeout and a server-side one landed
+    // on the same screen carrying different query params, and only one of them
+    // was ever read by anything.
+    router.replace(`${loginPath}?reason=timeout`);
   }, [clearAuth, router, loginPath, onLogout]);
 
   const extendSession = useCallback(() => {

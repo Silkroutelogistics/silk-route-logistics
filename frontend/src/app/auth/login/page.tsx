@@ -1,5 +1,6 @@
 "use client";
 
+import { SignedOutNotice } from "@/components/auth/SignedOutNotice";
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -377,6 +378,8 @@ export default function EmployeeLoginPage() {
               {successMsg}
             </div>
           )}
+
+          <SignedOutNotice />
 
           {totpSetupStep ? (
             <form onSubmit={handleTotpSetup}>

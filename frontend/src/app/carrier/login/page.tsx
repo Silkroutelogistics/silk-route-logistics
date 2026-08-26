@@ -1,5 +1,6 @@
 "use client";
 
+import { SignedOutNotice } from "@/components/auth/SignedOutNotice";
 import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
@@ -268,6 +269,8 @@ export default function CarrierLoginPage() {
               {otpSuccess}
             </div>
           )}
+
+          <SignedOutNotice />
 
           {pendingTotp ? (
             <form onSubmit={handleTotpSubmit}>

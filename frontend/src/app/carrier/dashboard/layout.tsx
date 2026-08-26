@@ -47,10 +47,11 @@ export default function CarrierDashboardLayout({ children }: { children: React.R
   const queryClient = useQueryClient();
   const pathname = usePathname();
   const { showWarning, countdown, extendSession } = useSessionTimeout({
-    // audit F2 — unified to 60 min (was an undocumented 45) to match the shipper
-    // portal + the useSessionTimeout default: one inactivity policy across portals.
-    timeoutMs: 60 * 60 * 1000,
-    warningBeforeMs: 2 * 60 * 1000,
+    // SUPERSEDED 2026-08-26. This read "unified to 60 min (was an undocumented
+    // 45) to match the shipper portal": correct then, since both portals and the
+    // hook agreed on 60. Arc 34 moved the SERVER to 30 for every portal, which
+    // made all three client numbers wrong at once. Timings now come from the
+    // shared mirror so there is one number, and it is the server's.
     loginPath: "/carrier/login",
     onLogout: logout,
   });
