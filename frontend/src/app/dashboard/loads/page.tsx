@@ -23,6 +23,7 @@ import { downloadCSV } from "@/lib/csvExport";
 import { NEXT_STATUS, STATUS_ACTIONS } from "@/lib/loadStatusActions";
 
 import type { Load as BaseLoad, LoadTender } from "@/types/entities";
+import { money, pct, perMile, customerBilled, carrierPay, margin, marginPct } from "@/lib/rateDisplay";
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -381,8 +382,10 @@ export default function LoadsPage() {
     const map = new Map<string, { count: number; totalRate: number }>();
     allLoads.forEach((l) => {
       const key = `${l.originState} → ${l.destState}`;
+      const billed = customerBilled(l);
+      if (billed === null) return; // an unpriced load must not drag the lane average
       const prev = map.get(key) || { count: 0, totalRate: 0 };
-      map.set(key, { count: prev.count + 1, totalRate: prev.totalRate + l.rate });
+      map.set(key, { count: prev.count + 1, totalRate: prev.totalRate + billed });
     });
     return Array.from(map.entries())
       .map(([lane, v]) => ({ lane, count: v.count, avgRate: Math.round(v.totalRate / v.count) }))
@@ -450,7 +453,9 @@ export default function LoadsPage() {
             onAdvancedDat={() => setShowDatAdvanced(true)}
             onQuickTender={(cId) => {
               setTenderCarrierId(cId);
-              setTenderRate(String(load.rate));
+              // Carrier-side figure: seed from carrierRate, never the customer's
+              // number, and leave it blank when nothing has been agreed.
+              setTenderRate(carrierPay(load) != null ? String(carrierPay(load)) : "");
               setShowTender(true);
               setComplianceResult(null);
             }}
@@ -509,7 +514,7 @@ export default function LoadsPage() {
             filteredLoads.map((l) => ({
               ref: l.referenceNumber, status: l.status,
               origin: `${l.originCity}, ${l.originState}`, dest: `${l.destCity}, ${l.destState}`,
-              equipment: l.equipmentType, rate: l.rate, distance: l.distance || "",
+              equipment: l.equipmentType, rate: customerBilled(l) ?? "", distance: l.distance || "",
               pickup: l.pickupDate?.split("T")[0] || "", delivery: l.deliveryDate?.split("T")[0] || "",
               commodity: l.commodity || "", weight: l.weight || "",
             })),
@@ -634,10 +639,10 @@ export default function LoadsPage() {
                 <div className="text-right shrink-0 ml-2">
                   <div className="flex items-center gap-1 text-[#C5A572]">
                     <DollarSign className="w-4 h-4" />
-                    <span className="text-lg font-bold">{ld.rate.toLocaleString()}</span>
+                    <span className="text-lg font-bold">{money(customerBilled(ld))}</span>
                   </div>
                   {ld.distance && (
-                    <p className="text-xs text-slate-500">${(ld.rate / ld.distance).toFixed(2)}/mi</p>
+                    <p className="text-xs text-slate-500">{perMile(customerBilled(ld), ld.distance)}</p>
                   )}
                 </div>
               </div>
@@ -1238,10 +1243,10 @@ function PanelDetails({ load, canSeeMargin }: { load: Load; canSeeMargin: boolea
         <h3 className="text-xs font-medium text-slate-500 uppercase tracking-wider mb-2">Rate</h3>
         <div className="flex items-center gap-2 text-[#C5A572]">
           <DollarSign className="w-5 h-5" />
-          <span className="text-2xl font-bold">{load.rate.toLocaleString()}</span>
+          <span className="text-2xl font-bold">{money(customerBilled(load))}</span>
         </div>
         {load.distance && (
-          <p className="text-xs text-slate-400 mt-1">${(load.rate / load.distance).toFixed(2)}/mile</p>
+          <p className="text-xs text-slate-400 mt-1">{perMile(customerBilled(load), load.distance)}</p>
         )}
         {canSeeMargin && load.tenders && load.tenders.length > 0 && (
           <div className="mt-2 p-2 bg-gray-100 rounded-lg border border-gray-200">
@@ -1249,13 +1254,17 @@ function PanelDetails({ load, canSeeMargin }: { load: Load; canSeeMargin: boolea
               const accepted = load.tenders.find((t) => t.status === "ACCEPTED");
               if (!accepted) return <p className="text-xs text-slate-500">No accepted tender yet</p>;
               const carrierCost = accepted.counterRate || accepted.offeredRate;
-              const margin = load.rate - carrierCost;
-              const pct = load.rate > 0 ? ((margin / load.rate) * 100).toFixed(1) : "0";
+              // WORKING margin — customerRate minus the accepted carrier cost.
+              // NOT settled margin: that needs the invoiced total, which this
+              // payload does not carry (ledgered follow-on).
+              const billed = customerBilled(load);
+              const workingMargin = margin(billed, carrierCost);
+              const workingPct = marginPct(billed, carrierCost);
               return (
                 <div className="flex items-center justify-between">
-                  <span className="text-xs text-gray-600">Margin</span>
-                  <span className={`text-sm font-medium ${margin >= 0 ? "text-[#256340]" : "text-[#9B2C2C]"}`}>
-                    ${margin.toLocaleString()} ({pct}%)
+                  <span className="text-xs text-gray-600" title="Customer rate minus the accepted carrier cost. Becomes settled margin once the load is invoiced.">Working margin</span>
+                  <span className={`text-sm font-medium ${workingMargin === null ? "text-slate-500" : workingMargin >= 0 ? "text-[#256340]" : "text-[#9B2C2C]"}`}>
+                  {workingMargin === null ? money(null) : `${money(workingMargin)} (${pct(workingPct)})`}
                   </span>
                 </div>
               );
@@ -1265,7 +1274,7 @@ function PanelDetails({ load, canSeeMargin }: { load: Load; canSeeMargin: boolea
       </section>
 
       {/* Lane Rate Intelligence */}
-      <LaneRateWidget originState={load.originState} destState={load.destState} equipment={load.equipmentType} currentRate={load.rate} />
+      <LaneRateWidget originState={load.originState} destState={load.destState} equipment={load.equipmentType} currentRate={customerBilled(load) ?? 0} />
 
       {/* Contact */}
       {(load.contactName || load.poster) && (

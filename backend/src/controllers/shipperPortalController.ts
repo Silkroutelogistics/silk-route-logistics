@@ -84,7 +84,10 @@ function mapLoadToShipment(load: any) {
     equipment: load.equipmentType || "—",
     pickDate: formatDate(load.pickupDate),
     delDate: formatDate(load.deliveryDate),
-    rate: load.customerRate ?? 0,
+    // 6.5 — null, not 0. A load with no customer rate showed the shipper $0,
+    // which reads as a priced shipment worth nothing. The portal renders an
+    // em-dash for null.
+    rate: load.customerRate ?? null,
     weight: load.weight ? `${Number(load.weight).toLocaleString()} lbs` : "—",
     distance: load.distance ? `${load.distance} mi` : "—",
     eta,

@@ -7,6 +7,7 @@ import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { ShipperCard, ShipperBadge, ShipmentDetailDrawer } from "@/components/shipper";
 import type { Shipment, ShipmentsResponse } from "@/components/shipper/shipperData";
+import { money } from "@/lib/rateDisplay";
 
 const filters = ["All", "In Transit", "Delivered", "Pending", "At Risk", "Picked Up"];
 
@@ -31,7 +32,7 @@ export default function ShipperShipmentsPage() {
       s.status || "",
       s.pickDate || "",
       s.delDate || "",
-      s.rate || "",
+      s.rate ?? "",
     ]);
     const csv = [headers.join(","), ...rows.map((r) => r.map((v) => `"${v}"`).join(","))].join("\n");
     const blob = new Blob([csv], { type: "text/csv" });
@@ -129,7 +130,7 @@ export default function ShipperShipmentsPage() {
                     <td className="px-3.5 py-3 text-gray-600 text-xs">{s.carrier}</td>
                     <td className="px-3.5 py-3 text-gray-500 text-xs">{s.equipment}</td>
                     <td className="px-3.5 py-3 text-gray-500 text-xs">{s.weight}</td>
-                    <td className="px-3.5 py-3 font-semibold text-[#0A2540]">${s.rate.toLocaleString()}</td>
+                    <td className="px-3.5 py-3 font-semibold text-[#0A2540]">{money(s.rate)}</td>
                     <td className="px-3.5 py-3 text-gray-500 text-xs">{s.pickDate}</td>
                     <td className="px-3.5 py-3 text-gray-500 text-xs">{s.delDate}</td>
                     <td className="px-3.5 py-3 min-w-[100px]">

@@ -34,6 +34,10 @@ export function LessonAudio({ title, bodyMarkdown }: { title: string; bodyMarkdo
   const [supported, setSupported] = useState(false);
   const [speaking, setSpeaking] = useState(false);
   const [paused, setPaused] = useState(false);
+  // NOT Load.rate. SpeechSynthesisUtterance playback speed, 0.5x-2x. Named
+  // here because the frontend Load.rate ratchet counts `.rate` reads as a
+  // deliberate superset, and a reader arriving from that guard should see
+  // immediately that this is a different thing entirely.
   const [rate, setRate] = useState(1);
   const rateRef = useRef(1);
 
@@ -48,7 +52,7 @@ export function LessonAudio({ title, bodyMarkdown }: { title: string; bodyMarkdo
     synth.cancel();
     const text = `${title}. ${lessonPlainText(bodyMarkdown)}`;
     const u = new SpeechSynthesisUtterance(text);
-    u.rate = r;
+    u.rate = r; // NOT Load.rate — Web Speech playback speed. See above.
     u.onend = () => { setSpeaking(false); setPaused(false); };
     u.onerror = () => { setSpeaking(false); setPaused(false); };
     synth.speak(u);

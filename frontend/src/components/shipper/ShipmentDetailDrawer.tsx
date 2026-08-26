@@ -6,6 +6,7 @@ import { X, FileText, Download, MessageSquare, Loader2 } from "lucide-react";
 import { api } from "@/lib/api";
 import { ShipperBadge } from "./ShipperBadge";
 import type { Shipment } from "./shipperData";
+import { money } from "@/lib/rateDisplay";
 
 export function ShipmentDetailDrawer({
   shipment,
@@ -126,7 +127,7 @@ export function ShipmentDetailDrawer({
         ["Equipment", shipment.equipment],
         ["Weight", shipment.weight],
         ["Distance", shipment.distance],
-        ["Rate", `$${shipment.rate.toLocaleString()}`],
+        ["Rate", money(shipment.rate)],
         ["Pickup", shipment.pickDate],
         ["Delivery", shipment.delDate],
         ["ETA", shipment.eta],

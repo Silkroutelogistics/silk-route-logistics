@@ -1,10 +1,13 @@
 "use client";
 
+import { money, pct, perMile, customerBilled, carrierPay, margin, marginPct } from "@/lib/rateDisplay";
+
 export function DetailsTab({ load }: { load: any }) {
-  const custRate = load.customerRate ?? load.rate ?? 0;
-  const carrRate = load.carrierRate ?? 0;
-  const margin = custRate - carrRate;
-  const marginPct = custRate > 0 ? (margin / custRate) * 100 : 0;
+  // 6.5 — all three may be unknown, and that is not the same as zero.
+  const custRate = customerBilled(load);
+  const carrRate = carrierPay(load);
+  const workingMargin = margin(custRate, carrRate);
+  const workingMarginPct = marginPct(custRate, carrRate);
   const distance = load.distance ?? 0;
 
   const fmt = (n: number) => n.toLocaleString(undefined, { style: "currency", currency: "USD", maximumFractionDigits: 0 });
@@ -39,9 +42,19 @@ export function DetailsTab({ load }: { load: any }) {
       </Section>
 
       <Section title="Pricing">
-        <Field label="Customer rate" value={`${fmt(custRate)}${distance ? ` · ${fmt(custRate / distance)}/mi` : ""}`} />
-        <Field label="Target carrier cost" value={fmt(carrRate)} />
-        <Field label="Target margin" value={`${fmt(margin)} · ${marginPct.toFixed(1)}%`} tone={margin > 0 ? "green" : "red"} />
+        <Field
+          label="Customer rate"
+          value={custRate === null ? money(null) : `${money(custRate)}${distance ? ` · ${perMile(custRate, distance)}` : ""}`}
+        />
+        <Field label="Target carrier cost" value={money(carrRate)} />
+        {/* WORKING margin — customerRate minus carrierRate. Not a settled
+            figure: it becomes settled margin only once an invoice exists, and
+            this payload does not carry one (ledgered follow-on). */}
+        <Field
+          label="Working margin"
+          value={workingMargin === null ? money(null) : `${money(workingMargin)} · ${pct(workingMarginPct)}`}
+          tone={workingMargin === null ? undefined : workingMargin > 0 ? "green" : "red"}
+        />
         <Field label="Fuel surcharge" value={fmt(load.fuelSurcharge ?? 0)} />
       </Section>
 

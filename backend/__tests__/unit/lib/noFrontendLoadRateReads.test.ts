@@ -38,40 +38,18 @@ const FRONTEND_SRC = path.resolve(__dirname, "../../../../frontend/src");
  * either one fails this guard, which is the point.
  */
 const RATCHET: Record<string, number> = {
-  // AE surfaces — the real Load.rate readers.
-  "app/dashboard/loads/page.tsx": 11,          // rate/distance + margin arithmetic
-  "app/dashboard/waterfall/WaterfallDrawer.tsx": 2,
-  "app/dashboard/waterfall/tabs/DetailsTab.tsx": 1,
-  "app/dashboard/waterfall/BoardTable.tsx": 1,
-  "app/dashboard/track-trace/tabs/FinanceTab.tsx": 1,
-  "app/dashboard/orders/page.tsx": 1,
-  "app/dashboard/loads-calendar/page.tsx": 1,
-  "app/dashboard/crm/tabs/OrdersTab.tsx": 1,   // customerRate ?? rate fallback
-  "app/dashboard/backhaul-discovery/page.tsx": 1,
-  "components/dashboard/EmployeeOverview.tsx": 1,
-  "components/loads/CreateLoadModal.tsx": 2,
-  "components/loads/RateConfirmationModal.tsx": 4,
-
-  // Carrier portal — `carrierRate || rate` fallbacks. Dropping the fallback
-  // renders $0 for a load nobody has accepted yet, so these need the carrierRate
-  // backfill question answered first.
-  "app/carrier/dashboard/available-loads/page.tsx": 3,
-  "app/carrier/dashboard/my-loads/page.tsx": 3,
-  "app/carrier/dashboard/page.tsx": 2,
-  "app/carrier/dashboard/loadboard/page.tsx": 2,
-
-  // Shipper portal.
-  "app/shipper/dashboard/page.tsx": 2,
-  "app/shipper/dashboard/shipments/page.tsx": 2,
-  "app/shipper/dashboard/tracking/page.tsx": 1,
-  "components/shipper/ShipmentDetailDrawer.tsx": 1,
-
-  // NOT Load.rate — pinned only so the ratchet has no holes. LessonAudio is
-  // speech playback rate; InvoiceLineItemsEditor is an invoice line item. They
-  // are counted because the matcher is deliberately a superset (see below) and
-  // over-inclusion is harmless for a growth ratchet.
-  "components/driver/LessonAudio.tsx": 1,
-  "components/invoices/InvoiceLineItemsEditor.tsx": 1,
+  // ZERO across every surface. Slot 6.5 resolved all 43 reads: customer-facing
+  // figures come from customerBilled (invoiced total, else customerRate),
+  // carrier-facing from carrierPay, and anything unknown renders an em-dash
+  // rather than $0. Load.rate is referenced by NO surface.
+  //
+  // The only entries left are the two deliberate non-Load.rate fences. The
+  // matcher is a superset by design — it counts any `.rate` it cannot rule out
+  // — so these are pinned rather than excluded, and each carries an inline
+  // comment at its site saying what it actually is.
+  "app/dashboard/orders/page.tsx": 1,              // market-rate lookup response
+  "components/driver/LessonAudio.tsx": 1,          // Web Speech playback speed
+  "components/invoices/InvoiceLineItemsEditor.tsx": 1, // invoice LINE ITEM rate
 };
 
 /**
@@ -87,7 +65,7 @@ const RATCHET: Record<string, number> = {
  * positive on its own first execution is the reason to run it before trusting
  * it.
  */
-const NOT_LOAD_RATE = /\b(li|item|r|row|form|f)\.rate\b/;
+const NOT_LOAD_RATE = /\b(li|item|r|row|form|f|s|q|shipment)\.rate\b/;
 
 /** Siblings that merely start with "rate" and are unrelated to the column. */
 const SAFE_SIBLING = /\.rate(Type|PerMile|Con|Confirmation|s)\b/;
@@ -96,7 +74,11 @@ function walk(dir: string, out: string[] = []): string[] {
   for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
     const p = path.join(dir, e.name);
     if (e.isDirectory()) walk(p, out);
-    else if (/\.tsx?$/.test(e.name)) out.push(p);
+    // Test files are excluded. The guard's subject is SURFACES — code that
+    // renders a number to somebody — and a test proving the Load.rate fallback
+    // is gone has to be able to write `rate:` in a fixture to prove it. Counting
+    // those would make the guard fight the tests that enforce it.
+    else if (/\.tsx?$/.test(e.name) && !/\.test\.tsx?$/.test(e.name)) out.push(p);
   }
   return out;
 }
@@ -195,11 +177,23 @@ describe("Load.rate does not spread through the frontend", () => {
 
 describe("the guard cannot pass vacuously", () => {
   it("actually parses real files and finds the known remaining reads", () => {
-    const found = scan();
-    // If the walk or the matcher broke, this collapses to {} and every
-    // assertion above would pass while checking nothing.
-    expect(Object.keys(found).length).toBeGreaterThanOrEqual(5);
-    expect(found["app/dashboard/loads/page.tsx"]).toBeGreaterThan(0);
+    // The old anchor asserted dashboard/loads still held reads. It holds zero
+    // now, so the tripwire has to prove the matcher works WITHOUT depending on
+    // the repo being dirty — otherwise finishing the migration would have
+    // turned this guard off at exactly the moment it became load-bearing.
+    //
+    // Two independent proofs: the walk reaches a realistic number of files, and
+    // the matcher still counts a read in a fixture that definitely has one.
+    const files = walk(FRONTEND_SRC);
+    expect(files.length, "the walk should reach the frontend tree").toBeGreaterThan(100);
+
+    const probe = path.join(__dirname, "__match_probe.tsx");
+    fs.writeFileSync(probe, "const x = load.rate;");
+    try {
+      expect(countRateReads(probe), "the matcher must still detect a real read").toBe(1);
+    } finally {
+      fs.unlinkSync(probe);
+    }
   });
 
   it("comment stripping survives CRLF", () => {

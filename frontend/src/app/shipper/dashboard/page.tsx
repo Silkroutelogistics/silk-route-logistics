@@ -6,6 +6,7 @@ import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { ShipperCard, ShipperBadge, Sparkline, SpendChart } from "@/components/shipper";
 import type { DashboardResponse } from "@/components/shipper/shipperData";
+import { money } from "@/lib/rateDisplay";
 
 export default function ShipperOverviewPage() {
   const { data, isLoading } = useQuery({
@@ -105,7 +106,7 @@ export default function ShipperOverviewPage() {
                     <td className="px-4 py-3"><ShipperBadge status={s.status} /></td>
                     <td className="px-4 py-3 text-gray-600 text-xs">{s.carrier}</td>
                     <td className="px-4 py-3 text-gray-500 text-xs">{s.equipment}</td>
-                    <td className="px-4 py-3 font-semibold text-[#0A2540]">${s.rate.toLocaleString()}</td>
+                    <td className="px-4 py-3 font-semibold text-[#0A2540]">{money(s.rate)}</td>
                     <td className={`px-4 py-3 text-xs ${s.eta === "Delayed" ? "text-[#9B2C2C] font-semibold" : "text-gray-500"}`}>{s.eta}</td>
                   </tr>
                 ))
@@ -140,6 +141,8 @@ export default function ShipperOverviewPage() {
                   <div className="text-[11px] text-gray-700">{q.id} &middot; {q.equipment} &middot; {q.distance}</div>
                 </div>
                 <div className="text-right">
+                  {/* NOT Load.rate — a QUOTE's rate, already formatted by the quote
+                      serializer. Fenced because the ratchet's matcher is a superset. */}
                   <div className="text-[13px] font-bold text-[#0A2540]">{q.rate}</div>
                   <ShipperBadge status={q.status} />
                 </div>

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { MapPin, DollarSign, X } from "lucide-react";
+import { money, perMile, carrierPay } from "@/lib/rateDisplay";
 
 interface BoardLoad {
   id: string;
@@ -91,10 +92,10 @@ export default function LoadboardPage() {
             <div className="text-right shrink-0">
               <div className="text-[10px] text-slate-500 uppercase">Posted rate</div>
               <div className="text-lg font-semibold text-[#BA7517]">
-                ${Number(l.carrierRate ?? l.rate ?? 0).toLocaleString()}
+                {money(carrierPay(l))}
               </div>
               <button
-                onClick={() => { setBidFor(l); setBidRate(String(l.carrierRate ?? l.rate ?? "")); }}
+                onClick={() => { setBidFor(l); setBidRate(l.carrierRate != null ? String(l.carrierRate) : ""); }}
                 className="mt-1 px-3 py-1 text-xs bg-[#BA7517] text-[#FBF7F0] font-semibold rounded hover:bg-[#854F0B]"
               >
                 Bid

@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { api } from "@/lib/api";
 import { cn } from "@/lib/utils";
+import { money, customerBilled } from "@/lib/rateDisplay";
 
 const STATUS_COLORS: Record<string, string> = {
   DRAFT: "bg-slate-500/20 text-slate-300 border-slate-500/30",
@@ -238,7 +239,7 @@ export default function LoadsCalendarPage() {
               <Truck className="w-3 h-3" /> {selectedLoad.equipmentType?.replace("_", " ")}
             </div>
             <div className="flex items-center gap-2 text-gray-400">
-              <DollarSign className="w-3 h-3" /> ${selectedLoad.rate?.toLocaleString()}
+              <DollarSign className="w-3 h-3" /> {money(customerBilled(selectedLoad))}
               {selectedLoad.distance && <span>· {Math.round(selectedLoad.distance)} mi</span>}
             </div>
             <div className="flex items-center gap-2 text-gray-400">

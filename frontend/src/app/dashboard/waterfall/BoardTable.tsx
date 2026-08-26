@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { MapPin } from "lucide-react";
 import type { BoardLoad, BoardPosition } from "./types";
+import { money, customerBilled } from "@/lib/rateDisplay";
 
 interface Props {
   loads: BoardLoad[];
@@ -125,7 +126,7 @@ export function BoardTable({ loads, onRowClick }: Props) {
                 </td>
                 <td className="px-3 py-3"><Countdown expiresAt={currentPos?.tenderExpiresAt ?? null} /></td>
                 <td className="px-3 py-3 text-gray-700 text-xs">
-                  ${(l.customerRate ?? l.rate ?? 0).toLocaleString()}
+                  {money(customerBilled(l))}
                 </td>
                 <td className="px-3 py-3">{statusBadge(l.status)}</td>
               </tr>
