@@ -330,6 +330,10 @@ export default function OrderBuilderPage() {
     })
       .then((res) => {
         const flat = res.data?.flatRate;
+        // NOT Load.rate. This is the rate-intelligence lookup's response:
+        // a per-mile market rate for the lane, not a figure stored on any
+        // load. Named because the Load.rate ratchet counts `.rate` as a
+        // deliberate superset and a reader arriving from it should see so.
         const perMile = res.data?.rate;
         const distance = parseFloat(form.distance || "0");
         const auto = flat ?? (perMile && distance ? perMile * distance : null);

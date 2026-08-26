@@ -12,6 +12,7 @@ import { MarketTab } from "./tabs/MarketTab";
 import { TendersTab } from "./tabs/TendersTab";
 import { NotesTab } from "./tabs/NotesTab";
 import { ActivityTab } from "./tabs/ActivityTab";
+import { money, customerBilled, carrierPay, margin } from "@/lib/rateDisplay";
 
 interface Props {
   loadId: string | null;
@@ -130,9 +131,9 @@ export function WaterfallDrawer({ loadId, onClose }: Props) {
                 )}
                 {load && (
                   <div className="text-[11px] text-gray-500 mt-0.5">
-                    Customer ${(load.customerRate ?? load.rate ?? 0).toLocaleString()} ·
+                    Customer {money(customerBilled(load))} ·
                     Target cost ${(load.carrierRate ?? 0).toLocaleString()} ·
-                    Margin ${((load.customerRate ?? load.rate ?? 0) - (load.carrierRate ?? 0)).toLocaleString()}
+                    Margin {money(margin(customerBilled(load), carrierPay(load)))}
                   </div>
                 )}
               </div>

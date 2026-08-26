@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { Plus } from "lucide-react";
+import { money, customerBilled } from "@/lib/rateDisplay";
 
 const FLOW = ["Quote", "Order", "Load", "Dispatch", "T&T", "Invoice"];
 
@@ -66,7 +67,7 @@ export function OrdersTab({ customerId }: { customerId: string }) {
             </div>
             <div className="text-right shrink-0">
               <div className="text-sm font-semibold text-gray-900">
-                ${Math.round(l.customerRate ?? l.rate ?? 0).toLocaleString()}
+                {money(customerBilled(l))}
               </div>
               <div className="text-[10px] text-gray-500">
                 {new Date(l.pickupDate).toLocaleDateString()}

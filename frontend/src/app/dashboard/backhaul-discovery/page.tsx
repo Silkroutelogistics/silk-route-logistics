@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { api } from "@/lib/api";
 import { cn } from "@/lib/utils";
+import { money, customerBilled } from "@/lib/rateDisplay";
 
 const US_STATES = ["AL","AK","AZ","AR","CA","CO","CT","DE","FL","GA","HI","ID","IL","IN","IA","KS","KY","LA","ME","MD","MA","MI","MN","MS","MO","MT","NE","NV","NH","NJ","NM","NY","NC","ND","OH","OK","OR","PA","RI","SC","SD","TN","TX","UT","VT","VA","WA","WV","WI","WY"];
 
@@ -144,7 +145,7 @@ export default function BackhaulDiscoveryPage() {
 
                 {/* Rate */}
                 <div className="text-right">
-                  <p className="text-sm font-medium text-white">${load.rate?.toLocaleString()}</p>
+                  <p className="text-sm font-medium text-white">{money(customerBilled(load))}</p>
                   {load.distance && <p className="text-[10px] text-gray-500">{Math.round(load.distance)} mi</p>}
                 </div>
 

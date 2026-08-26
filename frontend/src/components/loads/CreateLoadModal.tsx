@@ -74,7 +74,10 @@ export function CreateLoadModal({ open, onClose, cloneFrom }: Props) {
       weight: cloneFrom.weight ? String(cloneFrom.weight) : "",
       pieces: cloneFrom.pieces ? String(cloneFrom.pieces) : "",
       freightClass: String(cloneFrom.freightClass || ""),
-      rate: cloneFrom.rate ? String(cloneFrom.rate) : "",
+      // 6.5 — clone the CUSTOMER rate. Load.rate means different things on
+      // different creation paths, so cloning it copied whichever number the
+      // source load happened to carry.
+      rate: cloneFrom.customerRate ? String(cloneFrom.customerRate) : "",
       accessorials: Array.isArray(cloneFrom.accessorials) ? cloneFrom.accessorials as string[] : [],
       specialInstructions: String(cloneFrom.specialInstructions || ""),
       contactName: String(cloneFrom.contactName || ""),

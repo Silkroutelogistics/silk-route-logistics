@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Truck, DollarSign, Users, FileText, ChevronRight, Bell, MapPin, PieChart, Activity, MessageSquare, AlertCircle, CheckCheck } from "lucide-react";
 import { api } from "@/lib/api";
 import { useAuthStore } from "@/hooks/useAuthStore";
+import { money, customerBilled } from "@/lib/rateDisplay";
 
 export function EmployeeOverview() {
   const { user } = useAuthStore();
@@ -166,7 +167,7 @@ export function EmployeeOverview() {
               <Link href="/dashboard/loads" className="text-xs text-gold hover:text-gold/80">View all</Link>
             </div>
             <div className="space-y-3">
-              {loadsData?.loads?.slice(0, 5).map((load: { id: string; referenceNumber: string; originCity: string; originState: string; destCity: string; destState: string; status: string; rate: number }) => (
+              {loadsData?.loads?.slice(0, 5).map((load: { id: string; referenceNumber: string; originCity: string; originState: string; destCity: string; destState: string; status: string; customerRate: number | null }) => (
                 <div key={load.id} className="flex items-center justify-between p-3 rounded-lg bg-white/5 hover:bg-white/10 transition">
                   <div>
                     <p className="text-sm font-medium text-white">{load.originCity}, {load.originState} &rarr; {load.destCity}, {load.destState}</p>
@@ -177,7 +178,7 @@ export function EmployeeOverview() {
                       "text-slate-400"
                     }>{load.status}</span></p>
                   </div>
-                  <span className="text-sm font-semibold text-gold">${load.rate.toLocaleString()}</span>
+                  <span className="text-sm font-semibold text-gold">{money(customerBilled(load))}</span>
                 </div>
               ))}
               {!loadsData?.loads?.length && (

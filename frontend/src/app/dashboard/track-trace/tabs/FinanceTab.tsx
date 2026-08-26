@@ -2,6 +2,7 @@
 
 import { AlertTriangle } from "lucide-react";
 import { AccessorialReview } from "@/components/accessorials/AccessorialReview";
+import { carrierPay } from "@/lib/rateDisplay";
 import {
   type AccessorialRow,
   accessorialLabel, splitAccessorials, money, num,
@@ -46,7 +47,7 @@ export function FinanceTab({
   const customerTotal = round2(customerLinehaul + fuelSurcharge + acc.customerTotal);
 
   // Carrier side. `rate` is the carrier's accepted rate; carrierRate overrides it.
-  const carrierLinehaul = num(load.carrierRate ?? load.rate);
+  const carrierLinehaul = carrierPay(load) ?? 0;
   const carrierGross = round2(carrierLinehaul + fuelSurcharge + acc.carrierTotal);
 
   // The Quick Pay fee is never charged on an at-cost reimbursement, so the base

@@ -94,6 +94,37 @@ describe("shipperPortalController", () => {
     );
   });
 
+  it("getShipperShipments — an unpriced load sends null, not $0", async () => {
+    // 6.5. This serializer read `load.customerRate ?? 0`, so a shipment SRL
+    // had not priced yet arrived at the portal as a rate of zero — which
+    // renders as a real, free shipment rather than as one without a price.
+    // The portal's money() turns null into an em-dash; it cannot turn 0 into
+    // one, because 0 is a legitimate figure.
+    mockPrisma.customer.findUnique.mockResolvedValue(null);
+    mockPrisma.load.findMany.mockResolvedValue([
+      { id: "unpriced", referenceNumber: "SRL-200", status: "POSTED",
+        originCity: "Reno", originState: "NV", destCity: "Boise", destState: "ID",
+        customerRate: null, checkCalls: [] },
+      { id: "priced", referenceNumber: "SRL-201", status: "POSTED",
+        originCity: "Reno", originState: "NV", destCity: "Boise", destState: "ID",
+        customerRate: 5100, checkCalls: [] },
+    ] as any);
+    mockPrisma.load.count.mockResolvedValue(2);
+
+    const { req, res } = mockReqRes(
+      {}, { id: "shipper-1", role: "SHIPPER" }, {}, { page: "1", limit: "50" },
+    );
+    await getShipperShipments(req, res);
+
+    const body = (res.json as any).mock.calls[0][0];
+    const unpriced = body.shipments.find((x: any) => x.id === "SRL-200");
+    const priced = body.shipments.find((x: any) => x.id === "SRL-201");
+
+    expect(unpriced.rate, "an unpriced load must send null so the portal can dash it").toBeNull();
+    // Pins that the field is not simply always null — without this the fix
+    // could be `rate: null` and this test would still pass.
+    expect(priced.rate).toBe(5100);
+  });
   // ── getShipperInvoices ──────────────────────────────────
   it("getShipperInvoices — returns empty when no loads", async () => {
     // resolveShipperLoadWhere: no customer

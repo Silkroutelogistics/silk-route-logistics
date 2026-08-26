@@ -6,6 +6,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { ShipperCard, ShipperBadge } from "@/components/shipper";
 import type { TrackingResponse, TrackingShipment } from "@/components/shipper/shipperData";
+import { money } from "@/lib/rateDisplay";
 
 const STATUS_STEPS = ["Picked Up", "In Transit", "At Delivery", "Delivered"];
 
@@ -480,7 +481,7 @@ export default function ShipperTrackingPage() {
                       <td className="py-2.5 px-2 text-gray-500">
                         {s.deliveredAt ? new Date(s.deliveredAt).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : s.delDate}
                       </td>
-                      <td className="py-2.5 px-2 text-right font-medium text-[#0A2540]">${s.rate.toLocaleString()}</td>
+                      <td className="py-2.5 px-2 text-right font-medium text-[#0A2540]">{money(s.rate)}</td>
                       <td className="py-2.5 px-2 text-center">
                         <button
                           onClick={() => setTimelineLoadId(s.loadId)}

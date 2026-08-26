@@ -499,8 +499,8 @@ function initForm(load: any, user: any): FormState {
     trailerNumber: load?.trailerNumber || "",
 
     // 7 - Financials
-    customerRate: load?.customerRate ? String(load.customerRate) : (load?.rate ? String(load.rate) : ""),
-    carrierLineHaul: load?.carrierRate ? String(load.carrierRate) : (load?.rate ? String(load.rate) : ""),
+    customerRate: load?.customerRate ? String(load.customerRate) : "",
+    carrierLineHaul: load?.carrierRate ? String(load.carrierRate) : "",
     fuelSurcharge: load?.fuelSurcharge ? String(load.fuelSurcharge) : "0",
     // v3.8.aan — Sprint 35. Normalize legacy values to backend canonical
     // FLAT | PERCENTAGE. Defensive against any pre-fix records that may
