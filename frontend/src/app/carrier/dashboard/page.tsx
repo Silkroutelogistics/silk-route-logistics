@@ -7,6 +7,7 @@ import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { CarrierCard, CarrierBadge } from "@/components/carrier";
 import { useCarrierAuth } from "@/hooks/useCarrierAuth";
+import { money, perMile, carrierPay } from "@/lib/rateDisplay";
 
 // ─── Caravan Partner Program — Tier Mapping & Config (v3.7.a) ─────────────────
 
@@ -413,7 +414,7 @@ export default function CarrierOverviewPage() {
                   </div>
                 </div>
                 <div className="text-right flex items-center gap-3">
-                  <span className="text-xs font-bold text-[#0A2540]">${(load.carrierRate || load.rate || 0).toLocaleString()}</span>
+                  <span className="text-xs font-bold text-[#0A2540]">{money(carrierPay(load))}</span>
                   <CarrierBadge status={load.status} />
                 </div>
               </div>
@@ -441,7 +442,7 @@ export default function CarrierOverviewPage() {
                   </div>
                   <div className="text-[10px] text-gray-700 mt-0.5">{load.equipmentType} &middot; {load.weight ? `${Number(load.weight).toLocaleString()} lbs` : "\u2014"}</div>
                 </div>
-                <span className="text-xs font-bold text-[#BA7517]">${(load.carrierRate || load.rate || 0).toLocaleString()}</span>
+                <span className="text-xs font-bold text-[#BA7517]">{money(carrierPay(load))}</span>
               </div>
             ))
           )}

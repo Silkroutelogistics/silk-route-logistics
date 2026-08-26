@@ -7,6 +7,7 @@ import { api } from "@/lib/api";
 import { CarrierCard, CarrierBadge } from "@/components/carrier";
 import { BOLTemplate } from "@/components/templates";
 import type { BOLData } from "@/components/templates";
+import { money, carrierPay } from "@/lib/rateDisplay";
 
 const statusFilters = ["All", "BOOKED", "DISPATCHED", "AT_PICKUP", "LOADED", "IN_TRANSIT", "AT_DELIVERY", "DELIVERED"];
 const statusTransitions: Record<string, string[]> = {
@@ -133,7 +134,7 @@ export default function MyLoadsPage() {
                       {load.equipmentType} &middot; Pick: {new Date(load.pickupDate).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
                     </div>
                   </div>
-                  <span className="text-sm font-bold text-[#0A2540]">${(load.carrierRate || load.rate || 0).toLocaleString()}</span>
+                  <span className="text-sm font-bold text-[#0A2540]">{money(carrierPay(load))}</span>
                 </div>
               </CarrierCard>
             ))
@@ -171,7 +172,7 @@ export default function MyLoadsPage() {
                     <div><span className="text-gray-700">Weight</span><br />{detail.weight ? `${Number(detail.weight).toLocaleString()} lbs` : "—"}</div>
                     <div><span className="text-gray-700">Pickup</span><br />{new Date(detail.pickupDate).toLocaleDateString()}</div>
                     <div><span className="text-gray-700">Delivery</span><br />{detail.deliveryDate ? new Date(detail.deliveryDate).toLocaleDateString() : "—"}</div>
-                    <div><span className="text-gray-700">Rate</span><br /><span className="text-[#BA7517] font-bold">${(detail.carrierRate || detail.rate || 0).toLocaleString()}</span></div>
+                    <div><span className="text-gray-700">Rate</span><br /><span className="text-[#BA7517] font-bold">{money(carrierPay(detail))}</span></div>
                     <div><span className="text-gray-700">Distance</span><br />{detail.distance ? `${detail.distance} mi` : "—"}</div>
                   </div>
                   {detail.poster && (
@@ -197,7 +198,7 @@ export default function MyLoadsPage() {
 
               {/* Quick Pay election — the carrier's own choice on this load,
                   open until the rate confirmation is issued. */}
-              <QuickPayElection loadId={selectedId} loadRate={Number(detail.carrierRate || detail.rate || 0)} />
+              <QuickPayElection loadId={selectedId} loadRate={carrierPay(detail) ?? 0} />
 
               {/* Status Update */}
               {nextStatuses.length > 0 && (
@@ -410,9 +411,9 @@ const QP_SPEED_LABEL: Record<string, string> = {
   SAME_DAY: "Same-day Quick Pay",
 };
 
-function money(n: number): string {
-  return `$${Math.round(n).toLocaleString()}`;
-}
+// B2/6.5 — the local money() took a plain number and so could not express
+// "no rate agreed yet". Replaced by the shared helper, which rounds the same
+// way and returns an em-dash for null.
 
 function QuickPayElection({ loadId, loadRate }: { loadId: string; loadRate: number }) {
   const queryClient = useQueryClient();

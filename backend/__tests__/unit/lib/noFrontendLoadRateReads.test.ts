@@ -52,13 +52,19 @@ const RATCHET: Record<string, number> = {
   "components/loads/CreateLoadModal.tsx": 2,
   "components/loads/RateConfirmationModal.tsx": 4,
 
-  // Carrier portal — `carrierRate || rate` fallbacks. Dropping the fallback
-  // renders $0 for a load nobody has accepted yet, so these need the carrierRate
-  // backfill question answered first.
-  "app/carrier/dashboard/available-loads/page.tsx": 3,
-  "app/carrier/dashboard/my-loads/page.tsx": 3,
-  "app/carrier/dashboard/page.tsx": 2,
-  "app/carrier/dashboard/loadboard/page.tsx": 2,
+  // Carrier portal — ZERO. The `carrierRate || rate` fallbacks are gone.
+  //
+  // The note that used to sit here said dropping the fallback "renders $0 for a
+  // load nobody has accepted yet, so these need the carrierRate backfill
+  // question answered first". That framed the fallback as protective. It was
+  // not: Load.rate is the CUSTOMER rate on the primary creation path, so the
+  // fallback showed SRL's revenue to the carrier we pay out of it. The answer
+  // was never a backfill — it was that an un-accepted load has no carrier rate
+  // and should say so. They render an em-dash (lib/rateDisplay).
+  "app/carrier/dashboard/available-loads/page.tsx": 0,
+  "app/carrier/dashboard/my-loads/page.tsx": 0,
+  "app/carrier/dashboard/page.tsx": 0,
+  "app/carrier/dashboard/loadboard/page.tsx": 0,
 
   // Shipper portal.
   "app/shipper/dashboard/page.tsx": 2,
@@ -96,7 +102,11 @@ function walk(dir: string, out: string[] = []): string[] {
   for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
     const p = path.join(dir, e.name);
     if (e.isDirectory()) walk(p, out);
-    else if (/\.tsx?$/.test(e.name)) out.push(p);
+    // Test files are excluded. The guard's subject is SURFACES — code that
+    // renders a number to somebody — and a test proving the Load.rate fallback
+    // is gone has to be able to write `rate:` in a fixture to prove it. Counting
+    // those would make the guard fight the tests that enforce it.
+    else if (/\.tsx?$/.test(e.name) && !/\.test\.tsx?$/.test(e.name)) out.push(p);
   }
   return out;
 }

@@ -6,6 +6,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { CarrierCard, CarrierBadge } from "@/components/carrier";
 import type { Load } from "@/types/entities";
+import { money, perMile, carrierPay } from "@/lib/rateDisplay";
 
 export default function AvailableLoadsPage() {
   const [page, setPage] = useState(1);
@@ -135,9 +136,9 @@ export default function AvailableLoadsPage() {
                     </div>
                   </div>
                   <div className="text-right flex flex-col items-end gap-1">
-                    <span className="text-lg font-bold text-[#BA7517]">${(load.carrierRate || load.rate).toLocaleString()}</span>
+                    <span className="text-lg font-bold text-[#BA7517]">{money(carrierPay(load))}</span>
                     {load.distance && (
-                      <span className="text-[10px] text-gray-700">${((load.carrierRate || load.rate) / load.distance).toFixed(2)}/mi</span>
+                      <span className="text-[10px] text-gray-700">{perMile(carrierPay(load), load.distance)}</span>
                     )}
                     <ChevronRight size={16} className="text-gray-500 mt-1" />
                   </div>
@@ -197,7 +198,7 @@ export default function AvailableLoadsPage() {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-700">Rate</span>
-                  <span className="text-lg font-bold text-[#BA7517]">${(detail.carrierRate || detail.rate || 0).toLocaleString()}</span>
+                  <span className="text-lg font-bold text-[#BA7517]">{money(carrierPay(detail))}</span>
                 </div>
                 {detail.specialInstructions && (
                   <div>
