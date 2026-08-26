@@ -46,7 +46,13 @@ const employeeNav = [
   { href: "/dashboard/settlements", label: "Settlements", icon: ClipboardList },
   { href: "/dashboard/market", label: "Market Intel", icon: Activity },
   { href: "/dashboard/ai-insights", label: "AI Insights", icon: Brain },
+  // Both of these were added to aeViewGroups only, which renders for ADMIN and
+  // CEO alone — so they were CEO-visible by accident rather than by decision.
+  // Placed beside their conceptual peers: the funnel next to the other
+  // analytics, the Academy next to SOPs.
+  { href: "/dashboard/tender-analytics", label: "Tender Analytics", icon: Activity },
   { href: "/dashboard/sops", label: "SOPs", icon: BookOpen },
+  { href: "/dashboard/training-courses", label: "Driver Academy", icon: GraduationCap },
   { href: "/dashboard/edi", label: "EDI", icon: Zap },
   { href: "/dashboard/settings", label: "Settings", icon: Settings },
 ];

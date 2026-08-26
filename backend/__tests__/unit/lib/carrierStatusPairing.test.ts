@@ -115,7 +115,7 @@ function scanCarrierWriters(): Finding[] {
       const body = masked.slice(obj.start, obj.end + 1);
       out.push({
         file: rel,
-        line: text.slice(0, m.index).split("\n").length,
+        line: text.slice(0, m.index).split(/\r?\n/).length,
         value: m[1],
         paired: /(?:^|[{,\s])status\s*:/.test(body),
       });
@@ -197,7 +197,7 @@ describe("pairedApplicationStatus covers the whole onboarding enum", () => {
     const block = /enum OnboardingStatus \{([\s\S]*?)\}/.exec(schema);
     expect(block, "should have found the enum").not.toBeNull();
     const values = block![1]
-      .split("\n")
+      .split(/\r?\n/)
       .map((l) => l.replace(/\/\/.*$/, "").trim())
       .filter((l) => /^[A-Z_]+$/.test(l));
 

@@ -254,7 +254,7 @@ export function scanDrift(): DriftResult {
 
   for (const file of routeFiles) {
     const src = stripComments(read(file));
-    const lines = src.split("\n");
+    const lines = src.split(/\r?\n/);
 
     for (const m of src.matchAll(/router\.(post|put|patch|delete)\s*\(\s*["'`]([^"'`]+)["'`]/g)) {
       const callStart = m.index!;
@@ -263,7 +263,7 @@ export function scanDrift(): DriftResult {
       const vbInline = /validateBody\s*\(\s*z\s*\.object\s*\(/.exec(call);
       if (!vb && !vbInline) continue;
 
-      const lineNo = src.slice(0, callStart).split("\n").length;
+      const lineNo = src.slice(0, callStart).split(/\r?\n/).length;
       if (lines[lineNo - 2]?.includes("schema-drift-ok")) { suppressed++; continue; }
 
       const route = `${m[1].toUpperCase()} ${m[2]}`;

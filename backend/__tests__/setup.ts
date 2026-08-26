@@ -243,6 +243,19 @@ vi.mock("../src/config/database", () => ({
     systemLog: {
       create: vi.fn().mockResolvedValue({}),
     },
+    // Added when loadActivityService moved off its private PrismaClient onto
+    // the shared one — until then its writes never went through this mock at
+    // all. Same shape of gap as the `findFirst` omission in v3.8.alh: the mock
+    // silently lacks a method, the failure reads as a code defect, and Render's
+    // build chain does not run vitest so only `npm test` surfaces it.
+    loadActivity: {
+      create: vi.fn().mockResolvedValue({}),
+      findMany: vi.fn().mockResolvedValue([]),
+    },
+    customerActivity: {
+      create: vi.fn().mockResolvedValue({}),
+      findMany: vi.fn().mockResolvedValue([]),
+    },
     emailLog: {
       create: vi.fn().mockResolvedValue({}),
     },

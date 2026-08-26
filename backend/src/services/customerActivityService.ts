@@ -1,6 +1,9 @@
-import { PrismaClient, Prisma } from "@prisma/client";
-
-const prisma = new PrismaClient();
+// Same private-client defect as loadActivityService, found by sweeping for
+// `new PrismaClient` rather than trusting that the reported one was the only
+// one. Fixing a class member and leaving its sibling is how a closed item
+// reopens as a backlog row six weeks later.
+import { Prisma } from "@prisma/client";
+import { prisma } from "../config/database";
 
 export type ActorType = "USER" | "SYSTEM" | "CARRIER" | "DRIVER" | "SHIPPER";
 

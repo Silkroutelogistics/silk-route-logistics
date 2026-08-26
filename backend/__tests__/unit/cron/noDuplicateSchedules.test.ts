@@ -47,7 +47,7 @@ const FILES = {
 function scheduledCalls(src: string): Set<string> {
   const code = src
     .replace(/\/\*[\s\S]*?\*\//g, "")
-    .split("\n")
+    .split(/\r?\n/)
     .map((l) => l.replace(/\/\/.*$/, ""))
     .join("\n");
 

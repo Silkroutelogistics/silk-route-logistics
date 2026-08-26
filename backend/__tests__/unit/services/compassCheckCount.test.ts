@@ -48,7 +48,7 @@ function vettingCheckNames(): string[] {
   // Restrict to the region that actually builds the report, then take names
   // that are pushed onto `checks`.
   const pushed = new Set<string>();
-  const lines = src.split("\n");
+  const lines = src.split(/\r?\n/);
   lines.forEach((line, i) => {
     if (!/checks\.push\(/.test(line)) return;
     // name may be on this line or within the next few for a wrapped push
@@ -142,7 +142,7 @@ describe("Compass published check count", () => {
       if (!fs.existsSync(p)) { wrong.push(`${s.file} — MISSING`); continue; }
       const whole = fs.readFileSync(p, "utf8");
       const body = s.headLines
-        ? whole.split("\n").slice(0, s.headLines).join("\n")
+        ? whole.split(/\r?\n/).slice(0, s.headLines).join("\n")
         : whole;
       // Any "N-point" or "N points" claim near Compass wording.
       for (const m of body.matchAll(/(\d+)[- ]point/g)) {

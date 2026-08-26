@@ -85,7 +85,7 @@ describe("the route is mounted", () => {
     // checkouts by matching \n-anchored patterns against source.
     const src = fs
       .readFileSync(path.resolve(__dirname, "../../../src/routes/analytics.ts"), "utf8")
-      .split("\n")
+      .split(/\r?\n/)
       .map((l) => l.replace(/\r$/, ""))
       .join("\n");
     expect(src).toMatch(/"\/bench-board"/);

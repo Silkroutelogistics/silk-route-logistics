@@ -24,7 +24,7 @@ const read = (rel: string) => readFileSync(join(SRC, rel), "utf8");
 function blockAfter(source: string, marker: string, lines = 16): string {
   const idx = source.indexOf(marker);
   expect(idx, `expected to find query marker: ${marker}`).toBeGreaterThan(-1);
-  return source.slice(idx).split("\n").slice(0, lines).join("\n");
+  return source.slice(idx).split(/\r?\n/).slice(0, lines).join("\n");
 }
 
 describe("v3.8.aqw — soft-deleted loads must be operationally invisible", () => {

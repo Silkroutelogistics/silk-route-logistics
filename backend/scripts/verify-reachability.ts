@@ -77,7 +77,7 @@ function sourceCorpus(): { file: string; body: string }[] {
     "backend/src", "backend/scripts", "backend/prisma", "backend/__tests__",
     "frontend/src", "frontend/public", "e2e",
   ])
-    .split("\n")
+    .split(/\r?\n/)
     .map((f) => f.trim())
     .filter((f) => /\.(ts|tsx|js|jsx|html)$/.test(f));
   const out: { file: string; body: string }[] = [];
@@ -118,7 +118,7 @@ function addedLines(pathspec: string): { file: string; text: string }[] {
   const diff = git(["diff", BASELINE, "--unified=0", "--", pathspec]);
   const out: { file: string; text: string }[] = [];
   let current = "";
-  for (const line of diff.split("\n")) {
+  for (const line of diff.split(/\r?\n/)) {
     if (line.startsWith("+++ b/")) current = line.slice(6).trim();
     else if (line.startsWith("+") && !line.startsWith("+++")) out.push({ file: current, text: line.slice(1) });
   }
@@ -133,7 +133,7 @@ const redirectsPath = path.join(REPO, "frontend", "public", "_redirects");
 const redirectRules = fs.existsSync(redirectsPath)
   ? fs
       .readFileSync(redirectsPath, "utf8")
-      .split("\n")
+      .split(/\r?\n/)
       .map((l) => l.trim())
       .filter((l) => l && !l.startsWith("#"))
       .map((l) => {
@@ -156,7 +156,7 @@ function swallowedBy(routePath: string): string | null {
 }
 
 const newPages = git(["diff", BASELINE, "--name-only", "--diff-filter=A", "--", "frontend/src/app"])
-  .split("\n")
+  .split(/\r?\n/)
   .filter((f) => f.endsWith("/page.tsx"));
 
 for (const p of newPages) {

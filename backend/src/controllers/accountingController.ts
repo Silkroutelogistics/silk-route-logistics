@@ -23,6 +23,7 @@ import {
 // reading the APPROVED accessorial ledger. Shared with the delivery path, the
 // carrier portal and the manual carrier-pay route.
 import { atCostReimbursementsForLoad, carrierAccessorialsForLoad } from "../services/integrationService";
+import { BILLED_STATUSES, invoiceValue } from "../lib/invoiceTotals";
 
 // ============================================================
 // HELPERS
@@ -4488,20 +4489,15 @@ export async function getQuickPayRevenue(req: AuthRequest, res: Response) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 /** Issued and potentially collectible. Excludes DRAFT / VOID / REJECTED. */
-const REVENUE_STATUSES = [
-  "SUBMITTED", "SENT", "PARTIAL", "UNDER_REVIEW",
-  "APPROVED", "FUNDED", "PAID", "OVERDUE",
-] as const;
+// Extracted to lib/invoiceTotals so the loads board and this page cannot
+// disagree about which invoices count as billed. Re-exported under the old
+// name so every reader below is untouched.
+const REVENUE_STATUSES = BILLED_STATUSES;
 
 /** Money actually received. */
 const COLLECTED_STATUSES = ["PAID", "FUNDED"] as const;
 
-type InvoiceMoneyRow = { amount: number | null; totalAmount: number | null };
 
-/** totalAmount is the itemised total; amount is always populated. */
-function invoiceValue(i: InvoiceMoneyRow): number {
-  return i.totalAmount ?? i.amount ?? 0;
-}
 
 export async function getAccountingSummary(req: AuthRequest, res: Response) {
   try {

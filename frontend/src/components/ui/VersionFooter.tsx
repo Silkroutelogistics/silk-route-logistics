@@ -15217,7 +15217,29 @@
 // derived value is `any` and assigning null into a `number` compiled cleanly.
 // Widening CompassResult to nullable is what makes the absent case visible to
 // the compiler at all.
-export const SRL_VERSION = "3.8.aux";
+// v3.8.auy — housekeeping: the guards start working on a Windows checkout.
+//
+// core.autocrlf is true and there is no .gitattributes, so source lands CRLF
+// and every \n-anchored parser silently mis-parses. Two guards had been red for
+// weeks and were dismissed run after run as "the known CRLF failures" — one
+// counting its own prose, the other parsing ZERO probes and saved from a
+// vacuous pass only by its own tripwire. 24 split sites made \r-safe; the
+// backend suite goes from four reds to one.
+//
+// The new guard had the blind spot it was written to prevent: its needle was
+// the string .split("\n"), so it could not see a \n inside a split REGEX —
+// and publicSurfaceProbes, which uses exactly that, sat in its own list,
+// passed, and was still broken. 17 entries to 0 on a fresh clone.
+//
+// Also: the chrome injector wrote LF into CRLF pages, so every build left two
+// files permanently dirty with a diff that was PURE line-ending — it changed
+// nothing and masked everything. Activity services moved off private Prisma
+// clients onto the shared singleton, which is what lets an activity write
+// join a caller's transaction at all. Tender Analytics and the Driver Academy
+// reach the whole desk rather than ADMIN and CEO by accident. And the loads
+// board reports what a customer was actually billed — absent, never zero.
+
+export const SRL_VERSION = "3.8.auy";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

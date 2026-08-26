@@ -86,18 +86,23 @@ function walk(dir: string, out: string[] = []): string[] {
 /**
  * Count `.rate` reads in a file, comments stripped.
  *
- * The \r strip on the first line of the loop is load-bearing: split("\n") on a
- * CRLF file leaves \r at the end of every line, and JS regex `.` never matches
- * \r, so /\/\/.*$/ cannot match a comment that ends in one. Without it the
- * comment stripping silently no-ops and this guard reports its own prose.
+ * CRLF safety lives in the split. On a Windows checkout every line would
+ * otherwise carry a trailing \r, and JS regex `.` never matches \r, so
+ * /\/\/.*$/ cannot match a comment that ends in one — the comment stripping
+ * silently no-ops and the guard reports its own prose as findings.
+ *
+ * This originally stripped the \r per line AFTER a bare split. That worked,
+ * and it was still the wrong shape: crlfSafeParsers flagged this file because
+ * the idiom is what a reader copies, and the next copy will not remember to
+ * add the strip. One spelling, at the split, for every parser in the repo.
  */
 function countRateReads(file: string): number {
-  const lines = fs.readFileSync(file, "utf8").split("\n");
+  const lines = fs.readFileSync(file, "utf8").split(/\r?\n/);
   let inBlock = false;
   let count = 0;
 
   for (const rawLine of lines) {
-    let line = rawLine.replace(/\r$/, ""); // ← CRLF safety, before any matching
+    let line = rawLine;
     if (inBlock) {
       if (line.includes("*/")) { inBlock = false; line = line.slice(line.indexOf("*/") + 2); }
       else continue;

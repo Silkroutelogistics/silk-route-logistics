@@ -58,7 +58,7 @@ describe("Arc 28 — every public carrier-auth route has a monitor probe", () =>
     // The Arc 27 lesson, enforced. A probe with no body assertion would have
     // passed throughout the outage: the broken login and the fixed login both
     // return 401, and only the body separates them.
-    const entries = probeSource.split(/\n  \{\n/).slice(1);
+    const entries = probeSource.split(/\r?\n  \{\r?\n/).slice(1);
     expect(entries.length, "no probe entries parsed — the guard would be vacuous").toBeGreaterThan(10);
 
     const shapeless = entries
@@ -77,7 +77,7 @@ describe("Arc 28 — every public carrier-auth route has a monitor probe", () =>
     // "No token provided" appearing on a public route IS the outage. Every
     // carrier-auth probe must be watching for it specifically.
     const carrierAuthProbes = probeSource
-      .split(/\n  \{\n/)
+      .split(/\r?\n  \{\r?\n/)
       .slice(1)
       .filter((e) => e.includes("/carrier-auth/"));
 
@@ -131,7 +131,7 @@ describe("Arc 29 — the monitor's triggers are pinned so the channel stays trus
    */
   const stripComments = (s: string) =>
     s
-      .split("\n")
+      .split(/\r?\n/)
       .filter((l) => !/^\s*#/.test(l))
       .join("\n");
 

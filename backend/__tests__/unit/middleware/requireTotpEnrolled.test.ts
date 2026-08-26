@@ -155,7 +155,7 @@ describe("every carrier-portal router is actually behind the gate", () => {
   for (const mount of CARRIER_MOUNTS) {
     it(`/${mount} passes through requireTotpEnrolled`, () => {
       const line = routesFile
-        .split("\n")
+        .split(/\r?\n/)
         .find((l) => l.includes(`router.use("/${mount}"`));
       expect(line, `no mount line found for /${mount}`).toBeTruthy();
       expect(line).toContain("requireTotpEnrolled");

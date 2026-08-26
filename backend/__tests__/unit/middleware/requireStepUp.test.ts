@@ -118,7 +118,7 @@ describe("the gate is mounted where it was supposed to be", () => {
 
   it("guards the Quick Pay election — the one that moves money", () => {
     const line = carrierAuth
-      .split("\n")
+      .split(/\r?\n/)
       .find((l) => l.includes('router.post("/quickpay-election"'));
     expect(line, "quickpay-election route not found").toBeTruthy();
     expect(line).toContain('requireStepUp("quickpay-election")');
@@ -126,7 +126,7 @@ describe("the gate is mounted where it was supposed to be", () => {
 
   it("guards the insurance update — the one that moves the compliance gate", () => {
     const line = compliance
-      .split("\n")
+      .split(/\r?\n/)
       .find((l) => l.includes('router.patch("/insurance"'));
     expect(line, "insurance route not found").toBeTruthy();
     expect(line).toContain('requireStepUp("insurance-update")');
@@ -135,7 +135,7 @@ describe("the gate is mounted where it was supposed to be", () => {
   it("does not guard the endpoint that hands out step-ups", () => {
     // Requiring a step-up to obtain a step-up is a deadlock, and it would be an
     // easy one to add by pattern-matching the other routes.
-    const line = carrierAuth.split("\n").find((l) => l.includes('"/step-up"'));
+    const line = carrierAuth.split(/\r?\n/).find((l) => l.includes('"/step-up"'));
     expect(line).toBeTruthy();
     expect(line).not.toContain("requireStepUp(");
   });

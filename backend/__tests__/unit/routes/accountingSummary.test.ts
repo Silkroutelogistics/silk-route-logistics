@@ -85,7 +85,7 @@ describe("the route is mounted (the actual defect)", () => {
     // CRLF checkouts because they match \n-anchored patterns against source.
     const src = fs
       .readFileSync(path.resolve(__dirname, "../../../src/routes/accounting.ts"), "utf8")
-      .split("\n")
+      .split(/\r?\n/)
       .map((l) => l.replace(/\r$/, ""))
       .join("\n");
     expect(src).toMatch(/router\.get\(\s*"\/summary"/);

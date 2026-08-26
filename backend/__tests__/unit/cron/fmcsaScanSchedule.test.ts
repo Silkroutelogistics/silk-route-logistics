@@ -22,7 +22,7 @@ import path from "path";
 function readSource(rel: string): string {
   return fs
     .readFileSync(path.resolve(__dirname, rel), "utf8")
-    .split("\n")
+    .split(/\r?\n/)
     .map((l) => l.replace(/\r$/, ""))
     .join("\n");
 }

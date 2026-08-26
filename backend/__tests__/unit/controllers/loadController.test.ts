@@ -81,6 +81,7 @@ describe("loadController", () => {
       { id: "load-1", referenceNumber: "SRL-100", status: "POSTED" },
     ] as any);
     mockPrisma.load.count.mockResolvedValue(1);
+    mockPrisma.invoice.findMany.mockResolvedValue([] as any);
 
     const { req, res } = mockReqRes({}, { id: "user-1", role: "ADMIN" }, {}, {});
 
@@ -89,6 +90,45 @@ describe("loadController", () => {
     expect(res.json).toHaveBeenCalledWith(
       expect.objectContaining({ loads: expect.any(Array), total: 1, page: 1 })
     );
+  });
+
+  it("getLoads — an un-invoiced load reports null, never 0", async () => {
+    // `customerBilled()` on the frontend prefers invoicedTotal whenever it is
+    // not null, and 0 satisfies that — so a 0 here would replace the customer
+    // rate with $0 on every row of the board that has no invoice yet, which is
+    // most of them. Absent must stay absent.
+    mockPrisma.load.findMany.mockResolvedValue([
+      { id: "load-1", referenceNumber: "SRL-100", status: "POSTED" },
+    ] as any);
+    mockPrisma.load.count.mockResolvedValue(1);
+    mockPrisma.invoice.findMany.mockResolvedValue([] as any);
+
+    const { req, res } = mockReqRes({}, { id: "user-1", role: "ADMIN" }, {}, {});
+    await getLoads(req, res);
+
+    const body = (res.json as any).mock.calls[0][0];
+    expect(body.loads[0].invoicedTotal).toBeNull();
+  });
+
+  it("getLoads — sums issued invoices onto the right load", async () => {
+    // A load can hold several invoices: a base plus a SUPPLEMENTAL carrying
+    // only the accessorial delta. The billed total is their sum.
+    mockPrisma.load.findMany.mockResolvedValue([
+      { id: "load-1", referenceNumber: "SRL-100", status: "INVOICED" },
+      { id: "load-2", referenceNumber: "SRL-101", status: "POSTED" },
+    ] as any);
+    mockPrisma.load.count.mockResolvedValue(2);
+    mockPrisma.invoice.findMany.mockResolvedValue([
+      { loadId: "load-1", amount: 4100, totalAmount: null },
+      { loadId: "load-1", amount: 250, totalAmount: null },
+    ] as any);
+
+    const { req, res } = mockReqRes({}, { id: "user-1", role: "ADMIN" }, {}, {});
+    await getLoads(req, res);
+
+    const body = (res.json as any).mock.calls[0][0];
+    expect(body.loads[0].invoicedTotal).toBe(4350);
+    expect(body.loads[1].invoicedTotal, "a load with no invoice is untouched").toBeNull();
   });
 
   // ── getLoadById ─────────────────────────────────────────

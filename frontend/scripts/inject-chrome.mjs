@@ -433,6 +433,20 @@ const navRenderer = (attrs) => renderNav(attrs?.logo || "default");
 const footerRenderer = () => renderFooter();
 
 const files = await walkHtml(publicDir);
+/**
+ * Give `text` the dominant line ending of `sample`.
+ *
+ * Normalises first, so a file that arrived with mixed endings leaves
+ * consistent. "Dominant" rather than "any CRLF present" because a single
+ * stray CRLF in an otherwise-LF file should not flip the whole file.
+ */
+function matchEol(text, sample) {
+  const crlfCount = (sample.match(/\r\n/g) || []).length;
+  const lfCount = (sample.match(/\n/g) || []).length;
+  const normalised = text.replace(/\r\n/g, "\n");
+  return crlfCount * 2 > lfCount ? normalised.replace(/\n/g, "\r\n") : normalised;
+}
+
 let navHits = 0;
 let footerHits = 0;
 let changedFiles = 0;
@@ -457,7 +471,13 @@ for (const f of files) {
     process.exit(2);
   }
 
-  await writeFile(f, after, "utf8");
+  // Write back with the line endings the file arrived with. The rendered
+  // blocks are template literals, so they carry LF; splicing them into a CRLF
+  // file converted the touched regions and left `git status` permanently
+  // dirty on every Windows checkout. The diff was PURE line-ending —
+  // `git diff --ignore-cr-at-eol` was empty — so it changed nothing and
+  // masked everything, which is the worse half: real edits hide in the noise.
+  await writeFile(f, matchEol(after, before), "utf8");
   changedFiles += 1;
   if (n.touched) navHits += 1;
   if (fr.touched) footerHits += 1;

@@ -69,7 +69,7 @@ function findReads(): Read[] {
     const rel = path.relative(SRC, file).replace(/\\/g, "/");
     if (MIRROR_WRITE_SITES.includes(rel)) continue;
 
-    const lines = fs.readFileSync(file, "utf8").split("\n");
+    const lines = fs.readFileSync(file, "utf8").split(/\r?\n/);
     let inBlockComment = false;
 
     lines.forEach((raw, i) => {

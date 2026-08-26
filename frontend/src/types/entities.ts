@@ -29,6 +29,15 @@ export interface Load {
   rate: number;
   customerRate?: number;
   carrierRate?: number;
+  /**
+   * What the customer has actually been billed, summed across issued invoices
+   * for this load — null when none has been issued yet.
+   *
+   * customerRate is the intent; this is the fact, so `customerBilled()` prefers
+   * it. Null and 0 are NOT the same here: 0 would read as a real billed figure
+   * of nothing and replace the customer rate on the board.
+   */
+  invoicedTotal?: number | null;
   distance: number | null;
   pickupDate: string;
   deliveryDate?: string;

@@ -25,6 +25,7 @@ import { recordTonuObligation } from "../services/tonuBillingService";
 // so they shipped loads with no number at all. It owns a Postgres sequence, so
 // there must be exactly one path to it: lib/documentNumber.ts.
 import { generateLoadNumber, formatDocumentNumber } from "../lib/documentNumber";
+import { invoicedTotalsForLoads } from "../lib/invoiceTotals";
 
 const RELEASED_VALUE_BASIS_VALUES = ["PER_POUND", "PER_PIECE", "TOTAL", "NVD"] as const;
 type ReleasedValueBasisLiteral = (typeof RELEASED_VALUE_BASIS_VALUES)[number];
@@ -444,7 +445,23 @@ export async function getLoads(req: AuthRequest, res: Response) {
     prisma.load.count({ where }),
   ]);
 
-  res.json({ loads, total, page: query.page, totalPages: Math.ceil(total / query.limit) });
+  // What each load has actually been billed, where an issued invoice exists.
+  //
+  // One extra query for the page, not one per row. The board's money column
+  // reads customerRate — the INTENT — and an invoice is the billed FACT, so
+  // where one exists it should win. `customerBilled()` on the frontend already
+  // prefers this field and falls back to customerRate, so nothing there needs
+  // to change beyond the type.
+  //
+  // ABSENT, NEVER ZERO. `customerBilled` returns invoicedTotal whenever it is
+  // not null, and 0 satisfies that — so emitting 0 for an un-invoiced load
+  // would silently replace the customer rate with $0 on every row that has no
+  // invoice yet, which is most of the board. The Map omits those loads and the
+  // attach below leaves the field null.
+  const billed = await invoicedTotalsForLoads(loads.map((l) => l.id));
+  const withTotals = loads.map((l) => ({ ...l, invoicedTotal: billed.get(l.id) ?? null }));
+
+  res.json({ loads: withTotals, total, page: query.page, totalPages: Math.ceil(total / query.limit) });
 }
 
 export async function getLoadById(req: AuthRequest, res: Response) {
