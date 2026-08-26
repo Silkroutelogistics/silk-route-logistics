@@ -8,7 +8,12 @@ import { isTokenBlacklisted } from "../utils/tokenBlacklist";
 import { LEGACY_COOKIE_NAME } from "../utils/cookies";
 import { log } from "../lib/logger";
 import { logAuthEvent } from "../lib/authEvents";
-import { isStaffRole, resolveStaffSessionPolicy } from "../lib/sessionPolicy";
+// resolveStaffSessionPolicy and isStaffRole are deliberately NOT imported any
+// more — see the supersession note at the policy site below. They remain
+// exported from lib/sessionPolicy with their tests intact; they simply have no
+// place in the request path now that one policy governs every portal.
+import { resolveSessionPolicy } from "../lib/sessionPolicy";
+import { createSession, touchSession, type SessionPortalName } from "../lib/sessionStore";
 
 export interface AuthRequest extends Request<any, any, any, any> {
   user?: {
@@ -21,13 +26,62 @@ export interface AuthRequest extends Request<any, any, any, any> {
   token?: string; // Store raw token for blacklist on logout
 }
 
-// Server-side inactivity timeouts (ms)
-const SESSION_TIMEOUT_EMPLOYEE = 30 * 60 * 1000; // 30 minutes
-const SESSION_TIMEOUT_SHIPPER = 60 * 60 * 1000;  // 60 minutes
-const SESSION_TIMEOUT_CARRIER = 60 * 60 * 1000;  // 60 minutes
+// SUPERSEDED 2026-08-25 — the per-role inactivity timeouts and the in-memory
+// tracker that went with them lived here (employee 30m, shipper 60m, carrier
+// 60m, held in a `lastActivity` Map keyed by userId).
+//
+// They are gone rather than retained because they had already stopped being a
+// policy and had become a contradiction. Two proofs, not opinions:
+//
+//   1. The Map was WRITE-ONLY. Repo-wide it had `.set` and `.delete` and a
+//      10-minute sweep, and ZERO reads — nothing ever compared an entry
+//      against a timeout to refuse a request. It also lived in the process, so
+//      on Render every deploy silently refreshed everyone's idle clock; a rule
+//      any restart resets is not a rule.
+//   2. `getSessionTimeout(role)` — the only function that read these three
+//      numbers — had no caller anywhere in the repository.
+//
+// Under Arc 34 the answer is one number for every portal (SESSION_IDLE_MINUTES
+// in lib/sessionPolicy), measured off the PERSISTED lastSeenAt. Keeping a
+// second, unreferenced set of numbers that disagreed with it is how a reader
+// six months from now ends up citing the wrong one.
 
-// In-memory last-activity tracker (per userId)
-const lastActivity = new Map<string, number>();
+/**
+ * Arc 34 — when the uniform policy went live. Hardcoded rather than env-driven,
+ * matching the AUTHORITY_AGE_GATE_LIVE_AT precedent: a cutoff that can be moved
+ * by configuration is a cutoff nobody can reason about six months later.
+ *
+ * IT MUST BE THE MERGE INSTANT, and it was set at the merge rather than when
+ * this code was written. The first value here was 2026-08-24T20:00:00Z, chosen
+ * for a merge expected that day. The merge did not happen that day, and by the
+ * time the harness ran the constant was 28 hours stale — which made this branch
+ * DEAD, because any token predating the rollout was also past the 12h absolute
+ * cap, so the ceiling answered first and this code could never be reached.
+ *
+ * A cutoff in the past is not a conservative default. It is a silently disabled
+ * feature. If this ever needs re-dating, re-date it to the new merge instant.
+ *
+ * Exported so the proof harness asserts against THIS value rather than a copy
+ * of it — a test that hardcodes its own cutoff proves only that two literals
+ * match.
+ */
+export const POLICY_ROLLOUT_AT_MS = Date.parse("2026-08-26T00:30:00Z");
+
+/**
+ * Arc 34 — background polls authenticate but do NOT count as activity.
+ *
+ * A 30-second poll would keep an abandoned desk signed in indefinitely, which
+ * is the precise opposite of what an idle timeout is for. Declared by the
+ * CLIENT via this header, opt-in: an endpoint that forgets to declare itself
+ * merely keeps the session alive, whereas defaulting the other way would sign
+ * people out mid-task. Wrongly resetting is the smaller harm.
+ */
+export const BACKGROUND_POLL_HEADER = "x-srl-background-poll";
+
+export function isBackgroundPollRequest(req: { headers?: Record<string, unknown> }): boolean {
+  const v = req?.headers?.[BACKGROUND_POLL_HEADER];
+  return v === "1" || v === "true";
+}
 
 // Concurrent session tracking: userId → Set of active token hashes
 const activeSessions = new Map<string, Set<string>>();
@@ -46,7 +100,22 @@ function getMaxSessions(role: string): number {
   return MAX_SESSIONS_DEFAULT;
 }
 
-export function registerSession(userId: string, token: string, role: string): void {
+/** Role -> portal. FACTOR sits with staff: it is an internal counterparty
+ *  login, not one of the three self-service portals. */
+export function portalForRole(role: string): SessionPortalName {
+  if (role === "CARRIER") return "CARRIER";
+  if (role === "SHIPPER") return "SHIPPER";
+  if (role === "DRIVER") return "DRIVER";
+  return "AE";
+}
+
+/**
+ * @param persistSession  Set false when the CALLER already writes the session
+ *   row. The SSO callback does — it owns rememberMe, which nothing else knows —
+ *   and a second upsert here made two writers for one row on one path. Their
+ *   test caught it by asserting the write happens exactly once.
+ */
+export function registerSession(userId: string, token: string, role: string, rememberMe = false, persistSession = true): void {
   let sessions = activeSessions.get(userId);
   if (!sessions) {
     sessions = new Set();
@@ -61,6 +130,18 @@ export function registerSession(userId: string, token: string, role: string): vo
     if (oldest) sessions.delete(oldest);
   }
   sessions.add(hash);
+
+  // Arc 34 — the PERSISTED half. The Set above is per-process and empties on
+  // every restart, which on Render is every deploy; that is why idle timeout
+  // was never actually enforced for carrier, shipper or driver. Fire-and-forget
+  // because a login that already succeeded must not fail on a bookkeeping
+  // write, and because the policy fails closed: a missing row costs a re-auth,
+  // never an unbounded session.
+  if (persistSession) {
+    void createSession({ token, userId, portal: portalForRole(role), rememberMe }).catch((err) =>
+      log.error({ err, userId, role }, "[Session] persisted session write failed"),
+    );
+  }
 }
 
 export function removeSession(userId: string, token: string): void {
@@ -71,11 +152,10 @@ export function removeSession(userId: string, token: string): void {
   }
 }
 
-export function getSessionTimeout(role: string): number {
-  if (role === "SHIPPER") return SESSION_TIMEOUT_SHIPPER;
-  if (role === "CARRIER") return SESSION_TIMEOUT_CARRIER;
-  return SESSION_TIMEOUT_EMPLOYEE;
-}
+// SUPERSEDED 2026-08-25 — getSessionTimeout(role) returned the per-role idle
+// window (60m for SHIPPER/CARRIER, 30m otherwise). It was exported and had zero
+// callers. Ask lib/sessionPolicy instead: SESSION_IDLE_MS is the one answer,
+// and it is the same answer for every portal.
 
 /**
  * Sprint 53 (v3.8.aca) — Resolve the right portal-scoped JWT cookie for
@@ -179,9 +259,9 @@ function resolveCookieCandidates(req: AuthRequest): { tokens: string[]; meta: { 
  */
 type TryAuthResult =
   | { ok: true; user: NonNullable<AuthRequest["user"]>; token: string }
-  | { ok: false; reason: "invalid_jwt" | "blacklisted" | "user_not_found" | "user_inactive" | "session_replaced" | "session_timeout" | "session_ceiling" | "session_idle"; status: number; errorBody: { error: string; code?: string } };
+  | { ok: false; reason: "invalid_jwt" | "blacklisted" | "user_not_found" | "user_inactive" | "session_replaced" | "session_timeout" | "session_ceiling" | "session_idle" | "session_expired"; status: number; errorBody: { error: string; code?: string } };
 
-async function tryAuthenticateToken(token: string): Promise<TryAuthResult> {
+async function tryAuthenticateToken(token: string, isBackgroundPoll = false): Promise<TryAuthResult> {
   let payload: { userId?: unknown; purpose?: unknown; iat?: unknown };
   try {
     payload = jwt.verify(token, env.JWT_SECRET, { algorithms: ["HS256"] }) as { userId?: unknown; purpose?: unknown; iat?: unknown };
@@ -220,49 +300,81 @@ async function tryAuthenticateToken(token: string): Promise<TryAuthResult> {
     return { ok: false, reason: "session_replaced", status: 401, errorBody: { error: "Session ended — you logged in from another device", code: "SESSION_REPLACED" } };
   }
 
-  // ── Staff session policy: ceiling from iat, idle from the PERSISTED row ────
+  // ── SUPERSEDED 2026-08-25 — the staff-only session policy used to run HERE ──
   //
-  // The legacy idle check below is an in-memory Map that empties on every
-  // process restart, so on Render a deploy silently refreshed everyone's idle
-  // clock. Staff enforcement therefore runs here, off persisted state. A
-  // remember-me session then skips the legacy check entirely — its own 7-day
-  // rolling idle governs instead. Portal roles fall straight through.
-  if (isStaffRole(user.role)) {
-    const persisted = await prisma.staffSession
-      .findUnique({ where: { tokenHash }, select: { rememberMe: true, lastSeenAt: true } })
-      .catch(() => null);
+  // WHAT IT DID, and when it was correct. Until today a staff-role branch ran
+  // ahead of the block below: it read staff_sessions, called
+  // resolveStaffSessionPolicy, enforced a 24h ceiling (30d + a 7-day rolling
+  // idle for remember-me), touched lastSeenAt when stale, and returned early
+  // for remember-me sessions. Against a staff-only rule that was right, and
+  // its fail-closed design is what made an absent row safe rather than lucky.
+  //
+  // WHY IT IS GONE (Arc 34, ratified 2026-08-25: 30m idle / 12h absolute, all
+  // four portals). Two defects, both proved live rather than reasoned about:
+  //
+  //   A. Its throttled touch wrote lastSeenAt = now BEFORE the block below
+  //      re-read that same row, so the uniform idle rule judged a timestamp
+  //      the previous branch had just refreshed. Staff idle was unenforceable.
+  //      The touch was also ungated by the background-poll marker, so a 30s
+  //      poll kept an abandoned desk signed in indefinitely. Control, same
+  //      fixture and a 31-minute backdate, differing only in role:
+  //          ADMIN   (staff)     -> 200, lastSeenAt refreshed to 0m
+  //          CARRIER (non-staff) -> 401, row deleted by the refusal path
+  //
+  //   B. `if (verdict.bypassLegacyIdle) return { ok: true }` was an early
+  //      return, so a remembered session never reached the uniform policy at
+  //      all and kept its 7-day rolling idle.
+  //
+  // resolveStaffSessionPolicy still EXISTS and is still exported — its 24 tests
+  // describe a pure function and all still pass. It simply no longer sits in
+  // the request path. One judge, below, for every portal.
 
-    const iatMs = typeof payload.iat === "number" ? payload.iat * 1000 : null;
-    const verdict = resolveStaffSessionPolicy({ role: user.role, iatMs, now: Date.now(), session: persisted });
+  // ── Arc 34: ONE policy, every portal ────────────────────────────────
+  //
+  // Replaces the in-memory idle check for all roles. That Map lived in the
+  // process, so every deploy silently refreshed everyone's idle clock — a
+  // 30-minute rule that any restart reset. Carrier, shipper and driver had no
+  // enforced idle at all in practice.
+  //
+  // Absolute comes from the token's own iat and needs no row. Idle needs the
+  // persisted lastSeenAt, which is why registerSession now writes one.
+  const sessionRow = await prisma.staffSession
+    .findUnique({ where: { tokenHash }, select: { lastSeenAt: true } })
+    .catch(() => null);
 
-    if (!verdict.ok) {
-      lastActivity.delete(user.id);
-      removeSession(user.id, token);
-      await prisma.staffSession.delete({ where: { tokenHash } }).catch(() => {});
-      logAuthEvent(verdict.reason === "ceiling" ? "session.expired_ceiling" : "session.expired_idle", {
-        userId: user.id,
-        email: user.email,
-        role: user.role,
-      });
-      return { ok: false, reason: `session_${verdict.reason}`, status: 401, errorBody: { error: verdict.message, code: verdict.code } };
-    }
+  const verdict = resolveSessionPolicy({
+    iatMs: typeof payload.iat === "number" ? payload.iat * 1000 : null,
+    now: Date.now(),
+    lastActivityAt: sessionRow?.lastSeenAt ?? null,
+    sessionMissing: sessionRow === null,
+    policyRolloutAtMs: POLICY_ROLLOUT_AT_MS,
+  });
 
-    // Throttled: only written when genuinely stale, so this is not a
-    // per-request UPDATE. At 7-day granularity the lost precision is nil.
-    if (verdict.shouldTouch) {
-      await prisma.staffSession.update({ where: { tokenHash }, data: { lastSeenAt: new Date() } }).catch(() => {});
-    }
-
-    if (verdict.bypassLegacyIdle) return { ok: true, user, token };
-  }
-
-  const last = lastActivity.get(user.id);
-  const timeout = getSessionTimeout(user.role);
-  if (last && Date.now() - last > timeout) {
-    lastActivity.delete(user.id);
+  if (!verdict.ok) {
     removeSession(user.id, token);
-    return { ok: false, reason: "session_timeout", status: 401, errorBody: { error: "Session expired due to inactivity", code: "SESSION_TIMEOUT" } };
+    await prisma.staffSession.delete({ where: { tokenHash } }).catch(() => {});
+    logAuthEvent(
+      verdict.code === "SESSION_ABSOLUTE_EXPIRED" ? "session.expired_ceiling" : "session.expired_idle",
+      { userId: user.id, email: user.email, role: user.role },
+    );
+    return {
+      ok: false,
+      reason: "session_expired",
+      status: 401,
+      errorBody: { error: verdict.message, code: verdict.code },
+    };
   }
+
+  // THE ONLY TOUCH. Throttled by the policy, so this is not an UPDATE per
+  // request, and gated on the poll marker so a background poll authenticates
+  // without counting as activity.
+  //
+  // The previous comment here claimed "background polls never reach here —
+  // markBackgroundPoll short-circuits above". No such short-circuit existed;
+  // the gate is the `!isBackgroundPoll` on this line and always was. It is
+  // recorded because a comment describing a mechanism that does not exist is
+  // worse than none: it invites the next reader to trust a guard nobody wrote.
+  if (verdict.shouldTouch && !isBackgroundPoll) await touchSession(tokenHash);
 
   return { ok: true, user, token };
 }
@@ -272,9 +384,8 @@ export async function authenticate(req: AuthRequest, res: Response, next: NextFu
   const header = req.headers.authorization;
   if (header?.startsWith("Bearer ")) {
     const token = header.split(" ")[1];
-    const result = await tryAuthenticateToken(token);
+    const result = await tryAuthenticateToken(token, isBackgroundPollRequest(req));
     if (result.ok) {
-      lastActivity.set(result.user.id, Date.now());
       req.user = result.user;
       req.token = token;
       Sentry.setUser({ id: result.user.id, email: result.user.email });
@@ -300,9 +411,8 @@ export async function authenticate(req: AuthRequest, res: Response, next: NextFu
 
   let lastFailure: TryAuthResult | null = null;
   for (const candidate of tokens) {
-    const result = await tryAuthenticateToken(candidate);
+    const result = await tryAuthenticateToken(candidate, isBackgroundPollRequest(req));
     if (result.ok) {
-      lastActivity.set(result.user.id, Date.now());
       req.user = result.user;
       req.token = candidate;
       Sentry.setUser({ id: result.user.id, email: result.user.email });
@@ -325,14 +435,9 @@ export async function authenticate(req: AuthRequest, res: Response, next: NextFu
   Sentry.setTag("auth.portal_meta", JSON.stringify(meta));
 }
 
-// Cleanup stale entries periodically (every 10 min)
-setInterval(() => {
-  const now = Date.now();
-  const maxTimeout = 60 * 60 * 1000; // 1 hour max
-  for (const [userId, ts] of lastActivity) {
-    if (now - ts > maxTimeout) lastActivity.delete(userId);
-  }
-}, 10 * 60 * 1000);
+// SUPERSEDED 2026-08-25 — a 10-minute interval swept stale `lastActivity`
+// entries. With the Map gone it swept nothing. Expiry now lives in
+// sweepExpiredSessions (lib/sessionStore), which deletes real rows.
 
 // ─────────────────────────────────────────────────────────────────────────────
 // v3.8.aue — ACCOUNT_EXECUTIVE effective-permission resolution.

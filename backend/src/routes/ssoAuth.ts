@@ -169,7 +169,10 @@ router.get("/google/callback", async (req, res) => {
 
   // Mint a session identical in shape to the password path's.
   const token = signToken(user.id);
-  registerSession(user.id, token, user.role);
+  // persistSession:false — the upsert below owns this row. It carries
+  // rememberMe, which registerSession has no way to know, and two writers on
+  // one row is what their test refuses.
+  registerSession(user.id, token, user.role, false, false);
 
   // Persist the session row that the staff session policy reads.
   //

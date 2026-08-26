@@ -54,6 +54,7 @@ export const SCHEDULED_JOB_NAMES = [
   "check-call-reminders",
   "compass-score-recalc",
   "compliance-reminders",
+  "session-expiry-sweep",
   "csa-basic-update",
   "daily-cpp-cleanup",
   "driver-training-expiry-sms",
@@ -562,6 +563,27 @@ export function initCronJobs() {
       log.error({ err }, "[Cron Daily] Identity validation error:");
     }
   }));
+
+  // ─── Hourly (:15): expired session rows ────────────────────
+  //
+  // Arc 34. Two jobs in one, because they are the same delete: the ONE-TIME
+  // rollout sweep (sessions minted before the uniform policy) and the ongoing
+  // cleanup. A row past the absolute cap cannot be valid under any policy, and
+  // a row idle past the window can only ever be refused, so deleting either is
+  // not a judgement call.
+  //
+  // NOT load-bearing for correctness — the policy already refuses these rows on
+  // read, fail-closed. This stops staff_sessions growing without bound with
+  // rows that can only ever produce a 401.
+  cron.schedule("15 * * * *", () => withGuard("session-expiry-sweep", async () => {
+    try {
+      const { sweepExpiredSessions } = require("../lib/sessionStore");
+      const { absolute, idle } = await sweepExpiredSessions();
+      if (absolute || idle) log.info({ absolute, idle }, "[Cron Hourly] Swept expired sessions");
+    } catch (err) {
+      log.error({ err }, "[Cron Hourly] Session expiry sweep failed");
+    }
+  }), { timezone: "America/New_York" });
 
   // ─── Daily (5 AM): Compliance reminder emails ──────────────
   cron.schedule("0 5 * * *", () => withGuard("compliance-reminders", async () => {

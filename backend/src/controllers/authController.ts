@@ -409,10 +409,24 @@ export async function handleVerifyOtp(req: Request, res: Response) {
     },
   });
 
-  // Deliberately writes NO staff_sessions row. The password path has no
-  // remember-me, and the session policy's fail-closed branch turns an absent
-  // row into exactly the ruled 24h cap from iat. Adding a row here would be a
-  // regression, not a fix.
+  // SUPERSEDED 2026-08-25 (Arc 34). Both decisions, with their dates, because
+  // the earlier one was RIGHT and a reader needs to know when it stopped being.
+  //
+  // WAS, and was correct: "Deliberately writes NO staff_sessions row. The
+  // password path has no remember-me, and the session policy's fail-closed
+  // branch turns an absent row into exactly the ruled 24h cap from iat. Adding
+  // a row here would be a regression, not a fix." Under a staff-only policy
+  // whose fail-closed default WAS the intended ceiling, that reasoning holds
+  // exactly, and the absent row was the mechanism rather than an oversight.
+  //
+  // NOW: Arc 34 ratified one policy for all four portals — 30-minute idle,
+  // 12-hour absolute. Idle cannot be derived from a token; it needs a persisted
+  // lastActivity, so fail-closed now means REFUSED rather than "capped at 24h".
+  // A password login that wrote no row would authenticate once and then be
+  // turned away on its next request. registerSession below writes the row.
+  //
+  // The rule changed, not the reasoning. Do not restore the omission without
+  // also restoring the staff-only policy it depended on.
 
   registerSession(user.id, token, user.role);
   setTokenCookie(res, token, user.role);
@@ -852,10 +866,24 @@ export async function handleTotpLoginVerify(req: Request, res: Response) {
     },
   });
 
-  // Deliberately writes NO staff_sessions row. The password path has no
-  // remember-me, and the session policy's fail-closed branch turns an absent
-  // row into exactly the ruled 24h cap from iat. Adding a row here would be a
-  // regression, not a fix.
+  // SUPERSEDED 2026-08-25 (Arc 34). Both decisions, with their dates, because
+  // the earlier one was RIGHT and a reader needs to know when it stopped being.
+  //
+  // WAS, and was correct: "Deliberately writes NO staff_sessions row. The
+  // password path has no remember-me, and the session policy's fail-closed
+  // branch turns an absent row into exactly the ruled 24h cap from iat. Adding
+  // a row here would be a regression, not a fix." Under a staff-only policy
+  // whose fail-closed default WAS the intended ceiling, that reasoning holds
+  // exactly, and the absent row was the mechanism rather than an oversight.
+  //
+  // NOW: Arc 34 ratified one policy for all four portals — 30-minute idle,
+  // 12-hour absolute. Idle cannot be derived from a token; it needs a persisted
+  // lastActivity, so fail-closed now means REFUSED rather than "capped at 24h".
+  // A password login that wrote no row would authenticate once and then be
+  // turned away on its next request. registerSession below writes the row.
+  //
+  // The rule changed, not the reasoning. Do not restore the omission without
+  // also restoring the staff-only policy it depended on.
 
   registerSession(user.id, token, user.role);
   setTokenCookie(res, token, user.role);

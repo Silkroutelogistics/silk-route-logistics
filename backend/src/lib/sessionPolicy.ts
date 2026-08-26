@@ -49,7 +49,18 @@ export type PersistedSession = { rememberMe: boolean; lastSeenAt: Date } | null;
 
 export type PolicyOk = {
   ok: true;
-  /** Remember-me staff skip the legacy 30-minute in-memory idle entirely. */
+  /**
+   * Remember-me staff skip the legacy 30-minute in-memory idle entirely.
+   *
+   * SUPERSEDED 2026-08-25 (Arc 34) — NOTHING IN THE REQUEST PATH READS THIS.
+   * Its only production consumer was the early return in the staff branch of
+   * `tryAuthenticateToken`, and that branch is gone: skipping the idle check is
+   * exactly the behavior Arc 34 reversed, since a remembered session now idles
+   * out at 30 minutes like every other. The flag is retained because it is a
+   * required field on this type, returned at three sites and asserted by three
+   * live tests — but read it as "what the superseded policy WOULD have done",
+   * never as a live instruction.
+   */
   bypassLegacyIdle: boolean;
   /** Whether lastSeenAt is stale enough to be worth writing. */
   shouldTouch: boolean;
@@ -156,7 +167,19 @@ export const SESSION_IDLE_MS = SESSION_IDLE_MINUTES * 60 * 1000;
 export const SESSION_ABSOLUTE_MS = SESSION_ABSOLUTE_HOURS * 60 * 60 * 1000;
 
 /** Distinct so the sign-in screen can say WHY, rather than just "signed out". */
-export type SessionExpiryCode = "SESSION_IDLE_EXPIRED" | "SESSION_ABSOLUTE_EXPIRED";
+export type SessionExpiryCode =
+  | "SESSION_IDLE_EXPIRED"
+  | "SESSION_ABSOLUTE_EXPIRED"
+  /**
+   * Arc 34 rollout. A token minted before this policy existed has no session
+   * row, and never will — nothing was writing one for its portal. Reporting
+   * that as SESSION_IDLE_EXPIRED would be a lie on day one, to someone who was
+   * not idle, about a system they are meeting for the first time. The census
+   * says this costs nobody (zero sign-ins in the 7 days before the rollout), so
+   * it is cheap insurance rather than a necessity — which is the best moment to
+   * buy the honest answer rather than the convenient one.
+   */
+  | "SESSION_REVOKED_POLICY_ROLLOUT";
 
 export type PortalSessionVerdict =
   | { ok: true; shouldTouch: boolean }
@@ -180,6 +203,11 @@ export function resolveSessionPolicy(args: {
   lastActivityAt: Date | null;
   /** Absent row. Distinguished from a present row with a null timestamp. */
   sessionMissing?: boolean;
+  /**
+   * When the uniform policy went live. A token older than this never had a row
+   * to lose, so it gets the rollout code rather than being told it went idle.
+   */
+  policyRolloutAtMs?: number;
 }): PortalSessionVerdict {
   const { iatMs, now, lastActivityAt } = args;
 
@@ -201,11 +229,21 @@ export function resolveSessionPolicy(args: {
   }
 
   if (args.sessionMissing || lastActivityAt === null) {
-    return {
-      ok: false,
-      code: "SESSION_IDLE_EXPIRED",
-      message: "Your session has ended. Please sign in again.",
-    };
+    // Distinguish "minted before the policy" from "went idle". A token issued
+    // before the rollout cutoff predates session records entirely; anything
+    // after it lost its row to a sweep or a revoke.
+    const preRollout = typeof args.policyRolloutAtMs === "number" && iatMs < args.policyRolloutAtMs;
+    return preRollout
+      ? {
+          ok: false,
+          code: "SESSION_REVOKED_POLICY_ROLLOUT",
+          message: "We've updated how sessions work. Please sign in again — this is a one-time change.",
+        }
+      : {
+          ok: false,
+          code: "SESSION_IDLE_EXPIRED",
+          message: "Your session has ended. Please sign in again.",
+        };
   }
 
   const idleFor = now - lastActivityAt.getTime();

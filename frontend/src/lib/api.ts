@@ -53,7 +53,19 @@ api.interceptors.response.use(
             : path.startsWith("/driver/")
               ? "/driver/login" // v3.8.amz — Driver Academy portal
               : "/auth/login";
-        window.location.href = code === "SESSION_TIMEOUT" ? `${portalLogin}?reason=timeout` : portalLogin;
+        // Arc 34 (2026-08-25) — this used to test `code === "SESSION_TIMEOUT"`,
+        // a string NO backend policy has ever emitted. The branch was dead, so
+        // anyone signed out for inactivity bounced to the login page with no
+        // explanation at all. The emitted codes are the four below; carrying
+        // the reason through is the entire point of having distinct ones.
+        const SIGNED_OUT_REASON: Record<string, string> = {
+          SESSION_IDLE_EXPIRED: "timeout",
+          SESSION_ABSOLUTE_EXPIRED: "expired",
+          SESSION_REVOKED_POLICY_ROLLOUT: "policy",
+          SESSION_REPLACED: "replaced",
+        };
+        const reason = typeof code === "string" ? SIGNED_OUT_REASON[code] : undefined;
+        window.location.href = reason ? `${portalLogin}?reason=${reason}` : portalLogin;
       }
     }
     return Promise.reject(error);

@@ -17,7 +17,7 @@ import request from "supertest";
 import express from "express";
 import cookieParser from "cookie-parser";
 import jwt from "jsonwebtoken";
-import { authenticate, getTokenHash } from "../../../src/middleware/auth";
+import { authenticate, getTokenHash, POLICY_ROLLOUT_AT_MS } from "../../../src/middleware/auth";
 import { prisma } from "../../../src/config/database";
 
 const mockPrisma = prisma as any;
@@ -107,72 +107,124 @@ describe("blacklisted tokens are refused", () => {
   });
 });
 
-describe("staff session policy is enforced by the middleware, not just computed", () => {
-  it("no persisted row -> fail-closed at 24h, not an open session", async () => {
-    // The row is absent, so the policy cannot know this was a remember-me
-    // session. It must assume the shortest life, not the longest.
-    mockPrisma.staffSession.findUnique.mockResolvedValue(null);
-    const stale = await asAe(tokenIssuedAt(Date.now() - 25 * HOUR));
-    expect(stale.status).toBe(401);
+/**
+ * SUPERSEDED 2026-08-25 — this block asserted the STAFF-ONLY session policy.
+ *
+ * WHAT IT ASSERTED, and when that was right. Until Arc 34 a staff-role branch
+ * ran ahead of the uniform policy in `tryAuthenticateToken`: 24h ceiling from
+ * iat, 30d ceiling plus a 7-day rolling idle for remember-me, and an early
+ * return that let a remembered session skip the idle check entirely. These
+ * cases pinned that behavior over real HTTP and they were correct about it.
+ *
+ * WHAT CHANGED. Arc 34 ratified ONE policy for all four portals on 2026-08-25:
+ * 30-minute idle, 12-hour absolute, measured off the persisted `lastSeenAt`.
+ * The staff branch is gone from the request path (`resolveStaffSessionPolicy`
+ * still exists and its 24 pure-function cases in lib/sessionPolicy.test.ts all
+ * still pass — it simply no longer decides anything).
+ *
+ * WHY THESE WERE REWRITTEN RATHER THAN DELETED. Five of them went red on the
+ * removal and two kept passing FOR THE WRONG REASON — "dies at the 30-day
+ * ceiling" now dies at 12 hours, and "dies after 8 idle days" now dies after 30
+ * minutes. Both would have stayed green while asserting a rule that no longer
+ * exists, which is the vacuous-pass class (§19 Sub-pattern 16) and is worse
+ * than a red test. Deleting them to go green would have destroyed the only
+ * middleware-level evidence that the policy is REACHED rather than merely
+ * computed — the whole point of this file per its header.
+ */
+describe("the uniform session policy is enforced by the middleware, not just computed", () => {
+  // The rollout cutoff is a real instant, so a token minted at `now - 2h` is
+  // pre-cutoff today and post-cutoff tomorrow. Anchoring to the exported
+  // constant keeps these deterministic instead of quietly changing meaning as
+  // wall-clock time passes it.
+  const afterRollout = (ageMs: number) =>
+    tokenIssuedAt(Math.max(POLICY_ROLLOUT_AT_MS + MIN, Date.now() - ageMs));
 
-    const fresh = await asAe(tokenIssuedAt(Date.now() - 2 * HOUR));
-    expect(fresh.status).toBe(200);
+  it("no persisted row -> fail-closed, not an open session", async () => {
+    // Unchanged in spirit: an absent row must mean the shortest life, not the
+    // longest. Only the number moved — 24h became 12h, and a row-less session
+    // is now refused outright because idle cannot be established without one.
+    mockPrisma.staffSession.findUnique.mockResolvedValue(null);
+    expect((await asAe(afterRollout(13 * HOUR))).status).toBe(401);
+    expect((await asAe(afterRollout(2 * HOUR))).status).toBe(401);
   });
 
-  it("deleting the row mid-session drops an old remember-me session to 24h", async () => {
-    const iat = Date.now() - 10 * DAY;
-    // With the row: alive, because 10d is inside the 30d ceiling and the
-    // session was seen recently.
+  it("a session predating the rollout is told THAT, not that it went idle", async () => {
+    // The honest-message case. Same 401 either way, but a person who is signed
+    // out by a policy change deserves to be told a policy changed.
+    mockPrisma.staffSession.findUnique.mockResolvedValue(null);
+    const res = await asAe(tokenIssuedAt(POLICY_ROLLOUT_AT_MS - HOUR));
+    expect(res.status).toBe(401);
+    expect(res.body.code).toBe("SESSION_REVOKED_POLICY_ROLLOUT");
+  });
+
+  it("deleting the row mid-session refuses the very next request", async () => {
+    // SUPERSEDED: previously "drops an old remember-me session to 24h" — a 10d
+    // token stayed alive while the row existed. Under one policy a 10d token is
+    // past the 12h ceiling regardless, so the age is brought inside the cap to
+    // keep this testing REVOCATION rather than the ceiling.
     mockPrisma.staffSession.findUnique.mockResolvedValue({
       rememberMe: true,
       lastSeenAt: new Date(Date.now() - MIN),
     });
-    expect((await asAe(tokenIssuedAt(iat))).status).toBe(200);
+    expect((await asAe(afterRollout(2 * HOUR))).status).toBe(200);
 
-    // Row deleted (revoked server-side). Same token, now refused.
     mockPrisma.staffSession.findUnique.mockResolvedValue(null);
-    expect((await asAe(tokenIssuedAt(iat))).status).toBe(401);
+    expect((await asAe(afterRollout(2 * HOUR))).status).toBe(401);
   });
 
-  it("remember-me survives a 31-minute gap that kills a non-remembered session", async () => {
-    // 31 minutes is past the legacy 30-minute employee idle timeout. The
-    // remember-me path must bypass that in-memory check entirely — it empties
-    // on every process restart, so on Render a deploy silently refreshed
-    // everyone's idle clock.
-    const iat = Date.now() - 3 * DAY;
+  it("remember-me does NOT survive a 31-minute gap — it shortens re-auth, never idle", async () => {
+    // SUPERSEDED, and this is the reversal itself. It used to assert 200: the
+    // remembered session bypassed the idle check via an early return. Arc 34
+    // ratified that remember-me buys you not retyping a password, not an
+    // unattended session — so the same fixture must now be refused.
     mockPrisma.staffSession.findUnique.mockResolvedValue({
       rememberMe: true,
       lastSeenAt: new Date(Date.now() - 31 * MIN),
     });
-    expect((await asAe(tokenIssuedAt(iat))).status).toBe(200);
+    const res = await asAe(afterRollout(2 * HOUR));
+    expect(res.status).toBe(401);
+    expect(res.body.code).toBe("SESSION_IDLE_EXPIRED");
   });
 
-  it("remember-me dies at the 30-day ceiling however recently it was seen", async () => {
-    // Active one minute ago, but issued 31 days back. The ceiling is absolute:
-    // a rolling idle window must never be able to extend a session forever.
+  it("the absolute ceiling fires however recently the session was seen", async () => {
+    // SUPERSEDED: was "dies at the 30-day ceiling". The principle is identical
+    // and is why this case must not be deleted — a rolling idle window must
+    // never extend a session forever. Only the ceiling moved, 30d -> 12h.
+    // Asserting the CODE is what stops this passing for the wrong reason.
     mockPrisma.staffSession.findUnique.mockResolvedValue({
       rememberMe: true,
       lastSeenAt: new Date(Date.now() - MIN),
     });
-    const res = await asAe(tokenIssuedAt(Date.now() - 31 * DAY));
+    const res = await asAe(tokenIssuedAt(Date.now() - 13 * HOUR));
     expect(res.status).toBe(401);
+    expect(res.body.code).toBe("SESSION_ABSOLUTE_EXPIRED");
     expect(mockPrisma.staffSession.delete).toHaveBeenCalled();
   });
 
-  it("remember-me dies after 8 idle days, inside the ceiling", async () => {
+  it("idle and ceiling are distinguishable — they do not collapse into one refusal", async () => {
+    // SUPERSEDED: was "dies after 8 idle days, inside the ceiling". That case
+    // would now pass for the wrong reason, because 10 days is past the 12h
+    // ceiling and never reaches the idle branch at all. Rewritten with an age
+    // INSIDE the ceiling so it genuinely exercises idle, and asserting the code
+    // so the two refusals can never be confused again.
     mockPrisma.staffSession.findUnique.mockResolvedValue({
       rememberMe: true,
-      lastSeenAt: new Date(Date.now() - 8 * DAY),
+      lastSeenAt: new Date(Date.now() - 45 * MIN),
     });
-    expect((await asAe(tokenIssuedAt(Date.now() - 10 * DAY))).status).toBe(401);
+    const res = await asAe(afterRollout(3 * HOUR));
+    expect(res.status).toBe(401);
+    expect(res.body.code).toBe("SESSION_IDLE_EXPIRED");
   });
 
   it("touches lastSeenAt when stale, and does not write on every request", async () => {
+    // Still real, and still the only proof the throttle exists. Ages brought
+    // inside the 12h ceiling: previously a 1-DAY-old token reached the touch
+    // because the staff ceiling was 24h, and it now would not.
     mockPrisma.staffSession.findUnique.mockResolvedValue({
       rememberMe: true,
-      lastSeenAt: new Date(Date.now() - HOUR),
+      lastSeenAt: new Date(Date.now() - 10 * MIN), // past the 5m throttle
     });
-    await asAe(tokenIssuedAt(Date.now() - DAY));
+    await asAe(afterRollout(2 * HOUR));
     expect(mockPrisma.staffSession.update).toHaveBeenCalledTimes(1);
 
     vi.clearAllMocks();
@@ -182,28 +234,61 @@ describe("staff session policy is enforced by the middleware, not just computed"
       rememberMe: true,
       lastSeenAt: new Date(Date.now() - MIN), // seen a minute ago
     });
-    await asAe(tokenIssuedAt(Date.now() - DAY));
+    await asAe(afterRollout(2 * HOUR));
     expect(mockPrisma.staffSession.update).not.toHaveBeenCalled();
   });
 });
 
-describe("portal roles are untouched by the staff policy", () => {
-  it("a CARRIER with no staff_sessions row is not held to the staff ceiling", async () => {
+/**
+ * SUPERSEDED 2026-08-25 — this block asserted that portal roles FELL THROUGH
+ * the staff policy untouched. That was true and was the correct scope for a
+ * staff-only rule.
+ *
+ * Arc 34's entire purpose is that they no longer fall through. Carrier, shipper
+ * and driver had no enforced idle at all in practice — the only idle store was
+ * a per-process Map that emptied on every deploy. The case is inverted rather
+ * than removed, because "which roles the policy governs" is exactly the fact
+ * this file should keep pinning; only the answer changed.
+ */
+describe("portal roles are governed by the same policy as staff", () => {
+  const asCarrier = (iatMs: number) =>
+    request(app())
+      .get("/protected")
+      .set(
+        "Cookie",
+        `srl_token_carrier=${jwt.sign({ userId: "u-carrier", iat: Math.floor(iatMs / 1000) }, SECRET)}`,
+      );
+
+  beforeEach(() => {
     mockPrisma.user.findUnique.mockResolvedValue({
       ...STAFF,
       id: "u-carrier",
       role: "CARRIER",
       email: "carrier@example.com",
     });
+  });
+
+  it("a CARRIER with no row is refused — it no longer falls through", async () => {
     mockPrisma.staffSession.findUnique.mockResolvedValue(null);
-    const token = jwt.sign(
-      { userId: "u-carrier", iat: Math.floor((Date.now() - 25 * HOUR) / 1000) },
-      SECRET,
-    );
-    const res = await request(app())
-      .get("/protected")
-      .set("Cookie", `srl_token_carrier=${token}`);
-    // 25h old with no row would be a 401 for staff. Carriers fall through.
+    expect((await asCarrier(POLICY_ROLLOUT_AT_MS + MIN)).status).toBe(401);
+  });
+
+  it("a CARRIER idles out at the same 30 minutes as staff", async () => {
+    mockPrisma.staffSession.findUnique.mockResolvedValue({
+      rememberMe: false,
+      lastSeenAt: new Date(Date.now() - 31 * MIN),
+    });
+    const res = await asCarrier(Math.max(POLICY_ROLLOUT_AT_MS + MIN, Date.now() - 2 * HOUR));
+    expect(res.status).toBe(401);
+    expect(res.body.code).toBe("SESSION_IDLE_EXPIRED");
+  });
+
+  it("a CARRIER inside both windows still authenticates", async () => {
+    mockPrisma.staffSession.findUnique.mockResolvedValue({
+      rememberMe: false,
+      lastSeenAt: new Date(Date.now() - MIN),
+    });
+    const res = await asCarrier(Math.max(POLICY_ROLLOUT_AT_MS + MIN, Date.now() - 2 * HOUR));
     expect(res.status).toBe(200);
   });
 });
