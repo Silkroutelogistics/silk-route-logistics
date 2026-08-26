@@ -211,14 +211,26 @@ interface CompassCheck {
 }
 
 interface CompassResult {
-  score: number;
-  grade: string;
-  riskLevel: string;
-  recommendation: string;
+  // Nullable since 2026-08-26. These were `number`/`string` and were filled with
+  // locally-derived fallbacks when the engine did not run, which meant an AE
+  // could not tell a real verdict from an arithmetic guess. They are now null
+  // when the engine produced nothing, and the panel renders that as absent.
+  //
+  // tsc could NOT have caught the old behaviour: the response is typed `any`, so
+  // every value derived from it is `any` and assigning a null into a `number`
+  // compiled cleanly. Widening the type is what makes the absent case visible to
+  // the compiler at all.
+  score: number | null;
+  grade: string | null;
+  riskLevel: string | null;
+  recommendation: string | null;
   checks: CompassCheck[];
   flags: string[];
   trendDirection: string | null;
   vettedAt: string;
+  /** False when vetting was skipped or errored — render "could not run", not a score. */
+  vettingRan: boolean;
+  failureReason: string | null;
 }
 
 const RISK_COLORS: Record<string, string> = {
@@ -716,43 +728,37 @@ export default function CarrierPoolPage() {
       const eld = data.results?.eld?.data;
       const tin = data.results?.tin?.data;
 
-      // Build composite checks from the full-vet results
-      const checks: CompassCheck[] = [];
-      const addCheck = (name: string, key: string, resultObj: Record<string, unknown> | undefined) => {
-        if (!resultObj) {
-          const status = data.results?.[key]?.status;
-          checks.push({ name, result: status === "skipped" ? "WARNING" : "FAIL", detail: data.results?.[key]?.error || "Not available", deduction: -5 });
-        } else {
-          checks.push({ name, result: "PASS", detail: JSON.stringify(resultObj).slice(0, 80), deduction: 0 });
-        }
-      };
-
-      // Map results to checks
-      if (fmcsa) {
-        checks.push({ name: "Operating Authority", result: fmcsa.operatingStatus === "AUTHORIZED" ? "PASS" : "WARNING", detail: fmcsa.operatingStatus || "Unknown", deduction: fmcsa.operatingStatus === "AUTHORIZED" ? 0 : -10 });
-        checks.push({ name: "FMCSA Grade", result: "PASS", detail: `Grade ${fmcsa.grade}, Score ${fmcsa.score}`, deduction: 0 });
-      } else {
-        checks.push({ name: "Operating Authority", result: data.results?.fmcsa?.status === "skipped" ? "WARNING" : "FAIL", detail: data.results?.fmcsa?.error || "No DOT number", deduction: -10 });
-      }
-
-      checks.push({ name: "Identity Verification", result: identity ? "PASS" : "FAIL", detail: identity ? "Verified" : data.results?.identity?.error || "Failed", deduction: identity ? 0 : -10 });
-      checks.push({ name: "Chameleon Detection", result: chameleon ? (chameleon.riskLevel === "LOW" ? "PASS" : "WARNING") : "FAIL", detail: chameleon ? `Risk: ${chameleon.riskLevel}, Matches: ${chameleon.matches}` : "Check failed", deduction: chameleon && chameleon.riskLevel === "LOW" ? 0 : -5 });
-      checks.push({ name: "OFAC/SDN Screening", result: ofac ? "PASS" : "FAIL", detail: ofac ? "Clear" : data.results?.ofac?.error || "Failed", deduction: ofac ? 0 : -15 });
-      checks.push({ name: "ELD Validation", result: eld ? "PASS" : "WARNING", detail: eld ? "Validated" : data.results?.eld?.error || "Not validated", deduction: eld ? 0 : -5 });
-      checks.push({ name: "TIN Verification", result: tin ? "PASS" : "WARNING", detail: tin ? "Verified" : data.results?.tin?.error || "Not verified", deduction: tin ? 0 : -5 });
-      checks.push({ name: "CSA BASIC Scores", result: data.results?.csa?.status === "completed" ? "PASS" : "WARNING", detail: data.results?.csa?.status === "completed" ? "Updated" : data.results?.csa?.error || "Skipped", deduction: 0 });
-      checks.push({ name: "VIN Verification", result: data.results?.vin?.status === "completed" ? "PASS" : "WARNING", detail: data.results?.vin?.status === "completed" ? "Verified" : data.results?.vin?.error || "Not verified", deduction: 0 });
-
-      // Use the REAL backend Compass score if available (from vetAndStoreReport 31-check engine)
-      // The backend stores this in results.fmcsa.data.score/grade
+      // ── The composite check-builder that used to sit here is GONE (2026-08-26).
+      //
+      // WHAT IT DID. When the backend's real checks were unavailable it SYNTHESIZED
+      // a nine-row display and rendered it as if it were the vetting result. The
+      // synthesis was systematically more favourable than any real verdict:
+      //
+      //   - "FMCSA Grade" was a hardcoded `result: "PASS"` regardless of the actual
+      //     grade — an F-graded carrier displayed PASS.
+      //   - OFAC/SDN, ELD and TIN were marked PASS merely because a result object
+      //     EXISTED, never by reading what that object said. A carrier the engine
+      //     graded WARNING showed a green PASS badge.
+      //   - The generic helper rendered `JSON.stringify(resultObj).slice(0, 80)` —
+      //     a truncated raw JSON fragment — to a human as a compliance finding.
+      //   - It invented -5/-10/-15 deductions, then summed them into a fallback
+      //     SCORE that the AE read as the carrier's Compass score.
+      //
+      // WHY IT MATTERS AND WHY IT IS NOT WHAT THE ORIGINAL FINDING SAID. §13.3 Item
+      // 240 recorded this as the page ignoring the backend array outright. Verified
+      // against carrierVettingController: the backend DOES return
+      // `results.fmcsa.data.checks`, and the page already preferred it. So on the
+      // happy path the real checks rendered and the synthesis was discarded.
+      //
+      // The synthesis reached the screen only when FMCSA vetting was SKIPPED (no DOT
+      // number) or ERRORED — precisely when the AE has least information and most
+      // needs the display to be honest. That is the wrong moment to show invented
+      // PASS badges, so the fallback is deleted rather than corrected: an absent
+      // verdict now reads as absent.
       const backendScore = typeof fmcsa?.score === "number" ? fmcsa.score : null;
       const backendGrade = fmcsa?.grade || null;
 
-      // Fallback: calculate from frontend check results if backend score unavailable
-      const totalDeduction = checks.reduce((s, c) => s + c.deduction, 0);
-      const frontendScore = Math.max(0, Math.min(100, 100 + totalDeduction));
-
-      // Use REAL backend 31-check data if available
+      // Real backend checks — the ONLY source of check rows now.
       const backendChecks: CompassCheck[] = (fmcsa?.checks || []).map((c: { name: string; result: string; detail: string; deduction: number }) => ({
         name: c.name,
         result: c.result === "PASS" ? "PASS" : c.result === "WARNING" ? "WARNING" : "FAIL",
@@ -763,13 +769,26 @@ export default function CarrierPoolPage() {
       const backendRisk = fmcsa?.riskLevel || null;
       const backendRec = fmcsa?.recommendation || null;
 
-      // Use backend data if available, fall back to frontend-calculated
-      const finalChecks = backendChecks.length > 0 ? backendChecks : checks;
-      const score = (backendScore && backendScore > 0) ? backendScore : frontendScore;
-      const grade = backendGrade || (score >= 90 ? "A" : score >= 75 ? "B" : score >= 60 ? "C" : score >= 40 ? "D" : "F");
-      const riskLevel = backendRisk || (score >= 80 ? "LOW" : score >= 60 ? "MEDIUM" : score >= 40 ? "HIGH" : "CRITICAL");
-      const recommendation = backendRec || (score >= 75 ? "APPROVE" : score >= 50 ? "REVIEW" : "REJECT");
-      const flags = backendFlags.length > 0 ? backendFlags : checks.filter((c) => c.result === "FAIL").map((c) => c.name);
+      // No local fallbacks. Every figure below is the engine's or it is absent.
+      //
+      // A derived score/grade/recommendation is worse than none: an AE cannot tell
+      // a real verdict from an arithmetic guess, and this screen is where carriers
+      // get approved. When the engine did not run, `vettingRan` is false and the
+      // panel says so instead of showing a number nobody computed.
+      const vettingRan = backendChecks.length > 0 || backendScore !== null;
+      const failureReason: string | null = vettingRan
+        ? null
+        : data.results?.fmcsa?.error ||
+          (data.results?.fmcsa?.status === "skipped"
+            ? "No DOT number on file — FMCSA vetting could not run."
+            : "Vetting did not complete.");
+
+      const finalChecks = backendChecks;
+      const score = backendScore;
+      const grade = backendGrade;
+      const riskLevel = backendRisk;
+      const recommendation = backendRec;
+      const flags = backendFlags;
 
       const result: CompassResult = {
         score,
@@ -780,6 +799,8 @@ export default function CarrierPoolPage() {
         flags,
         trendDirection: "STABLE",
         vettedAt: new Date().toISOString(),
+        vettingRan,
+        failureReason,
       };
 
       setCompassResult(result);
@@ -970,7 +991,7 @@ export default function CarrierPoolPage() {
                     )}
                     {compassCarrierId === carrier.id && compassResult && !carrier.lastVettingScore && (
                       <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-[#C5A572]/10 text-[#C5A572] border border-[#C5A572]/20 flex items-center gap-0.5">
-                        <Compass className="w-2.5 h-2.5" /> {compassResult.score}
+                        <Compass className="w-2.5 h-2.5" /> {compassResult.score ?? "—"}
                       </span>
                     )}
                     <span className={`px-1.5 py-0.5 rounded text-[10px] ${STATUS_COLORS[carrier.onboardingStatus] || "bg-white/10 text-gray-600"}`}>
@@ -1675,30 +1696,51 @@ export default function CarrierPoolPage() {
 
                     {(compassCarrierId === selectedCarrier.id && compassResult) ? (
                       <div className="space-y-4">
+                        {!compassResult.vettingRan ? (
+                          /* The engine did not run. Say that, rather than showing a
+                             score nobody computed. Before 2026-08-26 this branch
+                             rendered a locally-synthesized nine-row check list with
+                             a hardcoded FMCSA PASS and an invented score — most
+                             favourable at exactly the moment the AE knew least. */
+                          <div className="bg-amber-50 border border-amber-300 rounded-lg p-4">
+                            <p className="text-sm font-semibold text-amber-900">Compass vetting did not run</p>
+                            <p className="text-xs text-amber-800 mt-1">
+                              {compassResult.failureReason || "The vetting engine returned no result."}
+                            </p>
+                            <p className="text-xs text-amber-800 mt-2">
+                              There is no score, grade or recommendation for this carrier. Resolve the cause
+                              and re-run Compass before approving — do not approve on an absent verdict.
+                            </p>
+                          </div>
+                        ) : (
                         <div className="bg-gray-100 rounded-lg p-4">
                           <div className="flex items-center gap-6 flex-wrap">
                             <div>
                               <span className="text-[10px] text-slate-500 uppercase">Score</span>
-                              <p className="text-2xl font-bold text-[#C5A572]">{compassResult.score}/100</p>
+                              <p className="text-2xl font-bold text-[#C5A572]">{compassResult.score ?? "—"}/100</p>
                             </div>
                             <div>
                               <span className="text-[10px] text-slate-500 uppercase">Grade</span>
-                              <p className={`text-2xl font-bold ${GRADE_COLORS[compassResult.grade] || "text-white"}`}>{compassResult.grade}</p>
+                              <p className={`text-2xl font-bold ${(compassResult.grade && GRADE_COLORS[compassResult.grade]) || "text-white"}`}>{compassResult.grade ?? "—"}</p>
                             </div>
                             <div>
                               <span className="text-[10px] text-slate-500 uppercase">Risk</span>
-                              <p className={`text-lg font-semibold ${RISK_COLORS[compassResult.riskLevel] || "text-white"}`}>{compassResult.riskLevel}</p>
+                              <p className={`text-lg font-semibold ${(compassResult.riskLevel && RISK_COLORS[compassResult.riskLevel]) || "text-white"}`}>{compassResult.riskLevel ?? "—"}</p>
                             </div>
                             <div>
                               <span className="text-[10px] text-slate-500 uppercase">Recommendation</span>
+                              {/* null must NOT fall through to the red REJECT style — an
+                                  absent recommendation is not a rejection. */}
                               <p className={`px-2 py-0.5 rounded text-xs font-bold mt-1 inline-block ${
                                 compassResult.recommendation === "APPROVE" ? "bg-green-500/20 text-green-400" :
                                 compassResult.recommendation === "REVIEW" ? "bg-yellow-500/20 text-yellow-400" :
-                                "bg-red-500/20 text-red-400"
-                              }`}>{compassResult.recommendation}</p>
+                                compassResult.recommendation ? "bg-red-500/20 text-red-400" :
+                                "bg-slate-500/20 text-slate-400"
+                              }`}>{compassResult.recommendation ?? "—"}</p>
                             </div>
                           </div>
                         </div>
+                        )}
 
                         <div className="space-y-1.5">
                           {compassResult.checks.map((check, i) => (

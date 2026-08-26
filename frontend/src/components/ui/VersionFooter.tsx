@@ -15194,7 +15194,30 @@
 //
 // Guard walks to zero outside two Web-Speech playback fences. Both directions
 // proven with confirmed injections.
-export const SRL_VERSION = "3.8.auw";
+// v3.8.aux — the AE stops approving carriers against a display the page invents.
+//
+// The carrier panel built its own nine-row Compass check list whenever the real
+// one was unavailable, and rendered it as the vetting result. The synthesis was
+// systematically more favourable than any real verdict: FMCSA Grade was a
+// hardcoded PASS regardless of the actual grade; OFAC, ELD and TIN were marked
+// PASS merely because a result object EXISTED rather than by reading it; the
+// generic helper printed a truncated raw JSON fragment to a human as a
+// compliance finding; and it invented deductions which it summed into a
+// fallback SCORE the AE read as that carrier's Compass score.
+//
+// §13.3 Item 240 recorded this as the page ignoring the backend array outright.
+// Verified against carrierVettingController: the backend DOES return
+// results.fmcsa.data.checks and the page already preferred it, so on the happy
+// path the real checks rendered. The synthesis reached the screen only when
+// FMCSA vetting was SKIPPED or ERRORED — exactly when the AE has least
+// information and most needs the display to be honest. Deleted rather than
+// corrected: an absent verdict now reads as absent, and the panel says so.
+//
+// tsc could not have caught any of this. The response is typed `any`, so every
+// derived value is `any` and assigning null into a `number` compiled cleanly.
+// Widening CompassResult to nullable is what makes the absent case visible to
+// the compiler at all.
+export const SRL_VERSION = "3.8.aux";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
