@@ -2328,6 +2328,23 @@ Each is a discrete sprint. Mix of operational, security, UX, and technical debt.
     **Migration additive** (`CREATE TYPE`, `ADD COLUMN NOT NULL DEFAULT 'AE'`, `CREATE INDEX`). **Census immediately before merge: 6 rows, all SSO staff, ZERO sign-ins in 7 days** — the AE default describes every existing row and the one-time rollout signed out nobody. Gates: backend tsc clean, suite **1168/1169** (the one red is `urlSafety > allows public hostnames`, a 5s timeout on a live call to hooks.slack.com — environmental, red on a clean tree), frontend tsc + build clean.
 
 
+
+245. **PITR settlement — CLOSED UNVERIFIED BY CHOICE (2026-08-26, final).**
+
+    **The question, one last time.** On 2026-08-20 (§13.3 Item 212) an unpushed column-drop migration was carried to production by a `git push` that took the commits above it. Three `CarrierProfile` URL columns — `w9Url`, `coiUrl`, `authorityLetterUrl` — were dropped without the row-count gate the migration's own header required. **Whether those columns held any data at the moment they were dropped is the open question, and it is now permanently unanswerable.**
+
+    **Why it closes here.** The only instrument that could answer it was Neon PITR, whose 7-day window expires 2026-08-27. Answering required a connection string for a branch snapshotted before 19:59:29 UTC on 2026-08-20 — production cannot stand in, because the columns are already gone there and the query errors rather than returning zero. **No such string was supplied across six consecutive sessions.** Roughly one day of window remains as this is written; it is recorded rather than relied on, because a settlement that depends on a string arriving inside the final hours is not a plan.
+
+    **This is a decision, not a lapse.** The alternative was to keep the item open, and an item that stays open past the last moment it could be actioned stops being a task and becomes a reproach. Closing it costs the certainty; leaving it open costs the credibility of every other open item.
+
+    **What is known without PITR, and it is not nothing.** Zero references to any of the three columns in `backend/src` or `frontend/src`, and `git log -S` returns **no commits touching any of them in src across the repository's entire history** — so nothing in this codebase has ever written one. A value could only have arrived from outside it. That is strong circumstantial evidence of harmlessness and it is **not proof**, and this entry does not upgrade it to proof.
+
+    **What is NOT closed.** The mechanism that caused it is fixed and stays fixed: §2.2's hold-branch rule (held work lives on a branch; merging is the release act), the pre-push `git log origin/main..HEAD` read, and `/api/health` reporting `schema.migration` so a migration is never again judged by the app's SHA. Item 212 remains the case study. **This closure is about the forensic question only.**
+
+    **If the columns did hold data**, the recovery path was always the same and is now gone: branch production to just before 19:59:29 UTC on 2026-08-20 and read them. Anyone who later needs those values should be told plainly that they are unrecoverable, rather than sent looking.
+
+
+
 ## §14 LEGAL / COMPLIANCE STATUS
 
 - Property broker under 49 U.S.C. §§ 13904, 13906
