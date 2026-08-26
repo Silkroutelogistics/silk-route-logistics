@@ -669,8 +669,16 @@ export async function changePassword(req: AuthRequest, res: Response) {
     await blacklistToken(req.token, req.user!.id, "password-change").catch(() => {});
   }
 
-  // Issue a fresh token so the user stays logged in on this session
+  // Issue a fresh token so the user stays logged in on this session.
+  //
+  // v3.8.auu — the registerSession here is what makes that comment TRUE. Since
+  // Arc 34 a token without a persisted staff_sessions row fails CLOSED, so this
+  // path was: blacklist the old token, mint a replacement, register nothing —
+  // and the user was signed out on their very next request, immediately after
+  // changing their password, with the code claiming the opposite. Found by the
+  // mint/register parity guard rather than by anyone hitting it.
   const newToken = signToken(req.user!.id);
+  registerSession(req.user!.id, newToken, user.role);
   setTokenCookie(res, newToken, user.role);
   res.json({ message: "Password updated successfully", token: newToken });
 }

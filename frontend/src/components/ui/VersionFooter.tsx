@@ -15152,7 +15152,8 @@
 // timer still encoding the retired 30/60 split, and a frontend redirect gated
 // on SESSION_TIMEOUT — a code no policy has ever emitted, so anyone signed out
 // for inactivity bounced to login with no explanation at all.
-// v3.8.auu — logout now revokes the session it ended, and a correction.
+// v3.8.auu — logout revokes the session it ended, and a password change no
+// longer signs you out.
 //
 // CI caught this, not review: the reachability gate failed v3.8.aut with
 // `export revokeSession  DEAD  no consumer anywhere`. I had written it in the

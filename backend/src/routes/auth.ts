@@ -120,6 +120,16 @@ router.post("/e2e-token", async (req, res) => {
   // automatically. Token also returned in JSON for explicit-header
   // callers (direct API requests in test).
   setTokenCookie(res, token, user.role);
+  // Arc 34 (v3.8.auu) — a token is not a session. Since the uniform policy,
+  // authenticating requires a persisted staff_sessions row: idle cannot be
+  // derived from a JWT, so a row-less token fails CLOSED on its very next
+  // request. Every real login path calls registerSession; this endpoint minted
+  // a token and skipped it, so E2E authenticated once and was refused
+  // thereafter (`B0: GET /carrier/all must succeed`).
+  //
+  // Calling it here is not a workaround for the policy — it is this endpoint
+  // finally doing what it claims to, which is stand in for a login.
+  registerSession(user.id, token, user.role);
   log.warn(`[E2E] /auth/e2e-token issued bypass token for ${email} — env E2E_BYPASS_OTP=true`);
   res.json({ token, user: { id: user.id, email: user.email, role: user.role, firstName: user.firstName, lastName: user.lastName } });
 });
