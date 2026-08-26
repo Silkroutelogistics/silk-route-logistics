@@ -15152,7 +15152,25 @@
 // timer still encoding the retired 30/60 split, and a frontend redirect gated
 // on SESSION_TIMEOUT — a code no policy has ever emitted, so anyone signed out
 // for inactivity bounced to login with no explanation at all.
-// v3.8.auu — Carrier Bench slot 6.5: Load.rate leaves the frontend.
+// v3.8.auu — logout now revokes the session it ended, and a correction.
+//
+// CI caught this, not review: the reachability gate failed v3.8.aut with
+// `export revokeSession  DEAD  no consumer anywhere`. I had written it in the
+// build and never wired it. Both logout handlers cleared the in-memory Set and
+// blacklisted the token while leaving the PERSISTED row alive until a sweep.
+// Harmless — the token was blacklisted and the policy would refuse it — but
+// logging out should mean the record of the session is gone.
+//
+// The gate did more than fail a build. Tracing why nothing consumed the
+// function led to the driver portal, and to a claim of mine that was wrong:
+// v3.8.aut said "all four portals". It is three. DRIVER uses a separate
+// middleware and cookie, references neither the policy nor staff_sessions, and
+// its login writes no row — so a driver session is governed only by its own
+// 7-day token, with no idle at all. My own harness said exactly this in its
+// scope note and I read past it. A caveat you write and do not apply is worth
+// no more than one you never wrote.
+
+// v3.8.auv — Carrier Bench slot 6.5: Load.rate leaves the frontend.
 //
 // 43 reads across 19 files. Load.rate is a write-only mirror whose meaning
 // depends on which path created the load, so every fallback to it was showing
@@ -15170,7 +15188,7 @@
 //
 // Guard walks to zero outside two Web-Speech playback fences. Both directions
 // proven with confirmed injections.
-export const SRL_VERSION = "3.8.auu";
+export const SRL_VERSION = "3.8.auv";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
