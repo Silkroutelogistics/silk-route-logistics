@@ -10,6 +10,7 @@
  */
 import { describe, it, expect } from "vitest";
 import {
+  resolveSessionPolicy,
   resolveStaffSessionPolicy,
   isStaffRole,
   REMEMBER_IDLE_MS,
@@ -173,4 +174,56 @@ describe("scope: portal roles are untouched", () => {
       expect(resolveStaffSessionPolicy({ role, iatMs: NOW - (DEFAULT_CEILING_MS + MIN), now: NOW, session: null }).ok).toBe(false);
     });
   }
+});
+
+/**
+ * Arc 34 — the uniform policy, asserted against an INJECTED clock.
+ *
+ * These live here rather than in the middleware suite because `now` is a
+ * parameter of `resolveSessionPolicy` and wall-clock time is not. The middleware
+ * version of the rollout assertion expired 12.8 hours after the merge — the
+ * rollout branch is reachable only in the window (rollout, rollout + 12h), which
+ * is by design: once everyone minted before the cutoff is past the ceiling, the
+ * friendlier message has nothing left to explain.
+ */
+describe("uniform policy — rollout message, clock injected", () => {
+  const ROLLOUT = Date.parse("2026-08-26T00:30:00Z");
+
+  it("inside the window, a row-less pre-rollout session is told a policy changed", () => {
+    const v = resolveSessionPolicy({
+      iatMs: ROLLOUT - 60 * 60 * 1000,
+      now: ROLLOUT + 60 * 60 * 1000, // 1h after the cutoff — inside the 12h cap
+      lastActivityAt: null,
+      sessionMissing: true,
+      policyRolloutAtMs: ROLLOUT,
+    });
+    expect(v.ok).toBe(false);
+    expect(v.ok === false && v.code).toBe("SESSION_REVOKED_POLICY_ROLLOUT");
+  });
+
+  it("past the window the ceiling answers first — the courtesy has expired, as designed", () => {
+    const v = resolveSessionPolicy({
+      iatMs: ROLLOUT - 60 * 60 * 1000,
+      now: ROLLOUT + 13 * 60 * 60 * 1000, // past the 12h cap
+      lastActivityAt: null,
+      sessionMissing: true,
+      policyRolloutAtMs: ROLLOUT,
+    });
+    expect(v.ok).toBe(false);
+    expect(v.ok === false && v.code).toBe("SESSION_ABSOLUTE_EXPIRED");
+  });
+
+  it("a POST-rollout row-less session is told it went idle, never that a policy changed", () => {
+    // The distinction the rollout code exists for: only sessions that predate
+    // the cutoff get the policy message. A newer one lost its row some other way.
+    const v = resolveSessionPolicy({
+      iatMs: ROLLOUT + 60 * 60 * 1000,
+      now: ROLLOUT + 2 * 60 * 60 * 1000,
+      lastActivityAt: null,
+      sessionMissing: true,
+      policyRolloutAtMs: ROLLOUT,
+    });
+    expect(v.ok).toBe(false);
+    expect(v.ok === false && v.code).toBe("SESSION_IDLE_EXPIRED");
+  });
 });

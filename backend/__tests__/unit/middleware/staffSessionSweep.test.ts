@@ -148,13 +148,31 @@ describe("the uniform session policy is enforced by the middleware, not just com
     expect((await asAe(afterRollout(2 * HOUR))).status).toBe(401);
   });
 
-  it("a session predating the rollout is told THAT, not that it went idle", async () => {
-    // The honest-message case. Same 401 either way, but a person who is signed
-    // out by a policy change deserves to be told a policy changed.
+  it("a session predating the rollout is refused (its MESSAGE is asserted at the unit level)", async () => {
+    // THE ROLLOUT BRANCH HAS A 12-HOUR LIFETIME BY CONSTRUCTION, and asserting
+    // its message HERE made this test expire with it.
+    //
+    // The branch is reachable only in the window (rollout, rollout + 12h): older
+    // than the cutoff, younger than the absolute cap. Outside that window the
+    // ceiling answers first and the code is SESSION_ABSOLUTE_EXPIRED. This test
+    // asserted the rollout code against real wall-clock time and duly went red
+    // 12.8 hours after the merge — correctly reporting that the branch had
+    // become unreachable.
+    //
+    // THAT EXPIRY IS THE DESIGN, NOT A DEFECT, and the distinction is worth
+    // keeping. A rollout courtesy SHOULD stop mattering: once everyone minted
+    // before the cutoff is past the 12h ceiling they would be signed out by the
+    // ceiling anyway, so the friendlier message has nothing left to explain.
+    // What was wrong earlier in Arc 34 was different — the constant expired
+    // BEFORE the merge, so the branch never got its window at all.
+    //
+    // The message is still asserted, against an INJECTED clock, in
+    // lib/sessionPolicy.test.ts where `now` is a parameter. Here we assert only
+    // what is true at any time: a pre-rollout session with no row is refused.
     mockPrisma.staffSession.findUnique.mockResolvedValue(null);
     const res = await asAe(tokenIssuedAt(POLICY_ROLLOUT_AT_MS - HOUR));
     expect(res.status).toBe(401);
-    expect(res.body.code).toBe("SESSION_REVOKED_POLICY_ROLLOUT");
+    expect(["SESSION_REVOKED_POLICY_ROLLOUT", "SESSION_ABSOLUTE_EXPIRED"]).toContain(res.body.code);
   });
 
   it("deleting the row mid-session refuses the very next request", async () => {
