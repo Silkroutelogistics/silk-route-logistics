@@ -2329,7 +2329,9 @@ Each is a discrete sprint. Mix of operational, security, UX, and technical debt.
 
 
 
-245. **PITR settlement — CLOSED UNVERIFIED BY CHOICE (2026-08-26, final).**
+245. **PITR settlement — CLOSED UNVERIFIED BY CHOICE (written 2026-08-26; WINDOW NOW EXPIRED 2026-08-27, final).**
+
+    **Window confirmed closed 2026-08-28.** When this was written a day of PITR window nominally remained and no string had been supplied; that day passed and none was. The closure below therefore stands as written rather than as a prediction — the question is now unanswerable in fact, not merely in practice. Nothing further is owed on it and it appears in no future command.
 
     **The question, one last time.** On 2026-08-20 (§13.3 Item 212) an unpushed column-drop migration was carried to production by a `git push` that took the commits above it. Three `CarrierProfile` URL columns — `w9Url`, `coiUrl`, `authorityLetterUrl` — were dropped without the row-count gate the migration's own header required. **Whether those columns held any data at the moment they were dropped is the open question, and it is now permanently unanswerable.**
 

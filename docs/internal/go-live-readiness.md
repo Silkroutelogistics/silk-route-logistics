@@ -1,3 +1,11 @@
+> **SUPERSEDED 2026-08-28 by [`launch-readiness.md`](launch-readiness.md).**
+>
+> This document was scoped to the DOCUMENT CHAIN only (BCA, rate confirmation,
+> BOL, invoice) and its outbound-safety claim was later proved false: it stated
+> outbound was neutralised by absence, when dotenv was in fact filling the key
+> from backend/.env. Kept as the record of the Arc 14 dress rehearsal; do not
+> read it as current readiness.
+
 # Go-live readiness — first-load dress rehearsal
 
 **Date:** 2026-08-21 · **Arc 14** (documents) → **15** (audit) → **16** (fixes) → **17** (interactive lifecycle) · Rehearsal load `SRL-140001`
