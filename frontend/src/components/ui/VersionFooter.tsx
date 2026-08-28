@@ -15239,7 +15239,28 @@
 // reach the whole desk rather than ADMIN and CEO by accident. And the loads
 // board reports what a customer was actually billed — absent, never zero.
 
-export const SRL_VERSION = "3.8.auy";
+// v3.8.auz — the AE console gets the warning every other portal already had,
+// and the two always-mounted polls stop holding sessions open.
+//
+// The AE console had NO session warning at all. Carrier and shipper each
+// carried their own inline copy of the modal; the portal whose users hold the
+// most authority was the one signed out mid-task with no notice. One shared
+// SessionWarningModal now, mounted on AE and carrier. The shipper keeps its own
+// visually distinct design — unifying that is a design decision, not a cleanup,
+// and this is not the arc for it.
+//
+// The poll marking is the other half of Arc 34 that was never built. Since the
+// uniform policy, ANY authenticated request resets the 30-minute idle clock, so
+// a layout polling notifications every two minutes kept an abandoned desk signed
+// in forever. The backend gate existed the whole time; nothing on the client
+// sent the header.
+//
+// Marked: the two ALWAYS-MOUNTED layout polls, which are the class that can hold
+// a session open indefinitely. NOT marked: roughly forty refetchInterval sites
+// on individual pages. Each needs a per-site judgement about whether it runs
+// unattended, and forty unreviewed edits to live query code is a worse trade
+// than a bounded fix — banked with that reasoning rather than pretended away.
+export const SRL_VERSION = "3.8.auz";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

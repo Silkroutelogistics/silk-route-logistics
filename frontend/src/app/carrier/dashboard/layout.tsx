@@ -4,9 +4,11 @@ import { useState, useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
+import { backgroundPoll } from "@/lib/backgroundPoll";
 import { CarrierSidebar } from "@/components/carrier";
 import { Search, Bell, X, LogOut, Clock } from "lucide-react";
 import { useCarrierAuth } from "@/hooks/useCarrierAuth";
+import { SessionWarningModal } from "@/components/auth/SessionWarningModal";
 import { useSessionTimeout } from "@/hooks/useSessionTimeout";
 import { Logo } from "@/components/ui/Logo";
 import { AuthRefreshBanner } from "@/components/ui/AuthRefreshBanner";
@@ -72,7 +74,10 @@ export default function CarrierDashboardLayout({ children }: { children: React.R
     // Fixed on the consumer rather than the endpoint: the endpoint's shape is
     // already correct for its longest-standing caller, and changing it would
     // have broken the one bell that works.
-    queryFn: () => api.get<Notification[]>("/notifications").then((r) => r.data),
+    // Arc final — marked a BACKGROUND POLL. This layout is mounted on every
+    // page of the portal, so without the header its two-minute refetch reset
+    // the idle clock forever and an abandoned desk never timed out.
+    queryFn: () => api.get<Notification[]>("/notifications", backgroundPoll).then((r) => r.data),
     enabled: !!user && user.carrierProfile?.onboardingStatus === "APPROVED",
     refetchInterval: 120000,
   });
@@ -328,32 +333,14 @@ export default function CarrierDashboardLayout({ children }: { children: React.R
       {isApproved && <MarcoPolo isAuthenticated={true} token={null} darkMode={false} />}
 
       {/* Session Timeout Warning */}
-      {showWarning && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[9999]">
-          <div className="bg-white rounded-xl p-6 max-w-sm w-full mx-4 shadow-2xl">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 rounded-full bg-[#FBEFD4] flex items-center justify-center">
-                <Clock size={20} className="text-[#B07A1A]" />
-              </div>
-              <div>
-                <h3 className="text-sm font-bold text-[#0A2540]">Session Expiring</h3>
-                <p className="text-xs text-gray-500">Your session will expire due to inactivity</p>
-              </div>
-            </div>
-            <div className="text-center py-3">
-              <span className="text-2xl font-mono font-bold text-[#9B2C2C]">{countdown}</span>
-            </div>
-            <div className="flex gap-3">
-              <button onClick={logout} className="flex-1 px-4 py-2 text-sm border border-[#EFE6D3] rounded-lg text-[#3A4A5F] hover:bg-[#FBF7F0]">
-                Logout
-              </button>
-              <button onClick={extendSession} className="flex-1 px-4 py-2 text-sm bg-[#BA7517] text-[#FBF7F0] rounded-lg font-semibold hover:bg-[#854F0B]">
-                Stay Logged In
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Was an inline copy of this markup; the shipper portal held a second and
+          the AE console held none. One definition now, so a fourth cannot appear. */}
+      <SessionWarningModal
+        open={showWarning}
+        countdown={countdown}
+        onExtend={extendSession}
+        onLogout={logout}
+      />
     </div>
   );
 }

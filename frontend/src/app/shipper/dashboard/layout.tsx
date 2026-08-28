@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
+import { backgroundPoll } from "@/lib/backgroundPoll";
 import { ShipperSidebar } from "@/components/shipper";
 import { Search, Bell, X } from "lucide-react";
 import { useAuthStore } from "@/hooks/useAuthStore";
@@ -44,7 +45,10 @@ export default function ShipperDashboardLayout({ children }: { children: React.R
     // bare array; this destructured a `notifications` key off it, got
     // undefined, and fell through to []. The shipper bell has never shown a
     // notification either.
-    queryFn: () => api.get<Notification[]>("/notifications").then((r) => r.data),
+    // Arc final — marked a BACKGROUND POLL. This layout is mounted on every
+    // page of the portal, so without the header its two-minute refetch reset
+    // the idle clock forever and an abandoned desk never timed out.
+    queryFn: () => api.get<Notification[]>("/notifications", backgroundPoll).then((r) => r.data),
     enabled: !!user,
     refetchInterval: 120000,
   });
