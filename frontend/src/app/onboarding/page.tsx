@@ -856,6 +856,29 @@ export default function OnboardingPage() {
           void startVerification(true);
           return;
         }
+        // Surface WHICH field was rejected, not just that something was.
+        //
+        // validateBody (middleware/validate.ts) returns
+        //   { error: "Validation failed", details: [{ field, message }] }
+        // and this read `body.error` alone, so an applicant saw the bare words
+        // "Validation failed" with nothing to act on — and so did we: diagnosing
+        // it meant probing the live endpoint from a terminal to make the server
+        // say what the screen already knew. The RC modal learned this lesson in
+        // Sprint 33 and onboarding never inherited it.
+        //
+        // Field names are rendered as-is rather than prettified. "dotNumber" is
+        // uglier than "DOT Number" and unambiguously identifies the input, which
+        // is what someone stuck on this screen actually needs.
+        const details = Array.isArray(body?.details) ? body.details : [];
+        if (details.length > 0) {
+          const named = details
+            .map((d: { field?: string; message?: string }) =>
+              d?.field ? `${d.field}: ${d.message || "invalid"}` : d?.message,
+            )
+            .filter(Boolean)
+            .join(" · ");
+          throw new Error(`${body?.error || "Validation failed"} — ${named}`);
+        }
         throw new Error(body?.error || "Registration failed");
       }
 

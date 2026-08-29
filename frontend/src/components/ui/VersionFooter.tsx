@@ -15260,7 +15260,18 @@
 // on individual pages. Each needs a per-site judgement about whether it runs
 // unattended, and forty unreviewed edits to live query code is a worse trade
 // than a bounded fix — banked with that reasoning rather than pretended away.
-export const SRL_VERSION = "3.8.auz";
+// v3.8.ava — the onboarding error names the field it rejected.
+//
+// A live test registration failed with the bare words "Validation failed" and
+// nothing else. The backend had said exactly which fields were wrong the whole
+// time — validateBody returns { error, details: [{ field, message }] } — and
+// this page read `body.error` alone and discarded the array.
+//
+// The cost of that is not cosmetic. Diagnosing one failed submission meant
+// probing the live endpoint from a terminal to make the server repeat what the
+// screen already knew, and an applicant on the other side has no terminal. The
+// RC modal learned this in Sprint 33; onboarding never inherited it.
+export const SRL_VERSION = "3.8.ava";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
