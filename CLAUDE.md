@@ -2347,6 +2347,31 @@ Each is a discrete sprint. Mix of operational, security, UX, and technical debt.
 
 
 
+246. **The mailbox is proven once, and the proof carries forward (2026-08-30, `v3.8.ava` + `v3.8.avb` + `v3.8.avc`).**
+
+    Two defects in the carrier acquisition funnel, both found by a real person attempting a real onboarding and neither by any gate. Every automated signal was green throughout.
+
+    **246.1 — THE REJECTION NAMED NO FIELD (`v3.8.ava`).** Submit failed with a bare "Validation failed". The backend was already returning `details[{field, message}]` per field; the client threw away everything but `error`. The applicant saw a wall with no door, and support had no way to help without a database query. Now the fields are named inline. **The reason the fix is small is the reason it mattered**: nothing was broken except the sentence, and the sentence was the entire product surface at that moment.
+
+    **246.2 — THE CARRIER PROVED THE SAME MAILBOX TWICE, AND THE SECOND PROOF WAS THE LOAD-BEARING ONE (`v3.8.avb`).** Arc 32 put a verification gate in front of registration: code or one-click link, HMAC receipt, and no registration without it. `registerCarrier` then **sent a second verification email** and created the User with `emailVerifiedAt` **null** — because that field predates the gate and had only ever been set by the old post-registration flow.
+
+    The consequence was not cosmetic. **Compass auto-approve reads `emailVerifiedAt`**, so a carrier who had already proved their mailbox to get through the door sat unapproved until they clicked a second link for the same address. The gate that was supposed to raise confidence was lowering throughput, and the failure was silent from both sides: the carrier saw a stalled application, the AE saw an unapproved carrier with no reason attached.
+
+    Registration now reads the verified draft — **after** the receipt is checked, never before, since the receipt is what binds the submission to a mailbox — and carries `emailVerifiedAt` plus the verifying IP and country onto the User. The second email is gone.
+
+    **246.3 — WHERE IT WAS PROVEN IS RECORDED, AND IS SERVER-EXTRACTED.** Both paths now capture IP, country and user agent at the verifying moment (additive migration, three nullable columns). The AE carrier panel already rendered a three-point geo baseline and raised a country-mismatch alert; the verification point of it had always been empty.
+
+    **The origin comes from the connection, never the body.** `validateBody` replaces `req.body` with the parsed result and `z.object()` strips undeclared keys, so a request carrying `verifiedFromCountry: "US"` cannot reach the service — **and that stripping is load-bearing security, not tidiness.** A guard pins that the schema must not declare these fields, because declaring them "for completeness" would quietly undo it. Enrichment runs in a try/catch: failing to resolve a country must never fail a verification.
+
+    **246.4 — MY OWN GUARD PASSED AN INJECTION IT SHOULD HAVE CAUGHT.** The pattern required `body` followed **directly** by `.`, so `(req as any).body?.verifiedFromCountry` sailed through and the test reported PASS on code accepting an applicant-supplied country. Optional chaining is the codebase's dominant syntax. Fixed to `\??\s*[.\[]`, re-injected, correct. **§19 Sub-pattern 17 committed by the guard written to prevent Sub-pattern 5** — and caught only because the injection was actually run rather than reasoned about.
+
+    **246.5 — A PROBE THAT LIED, AND WOULD HAVE SENT ME TO REWRITE WORKING CODE.** Diagnosing 246.1 by `curl -F` showed every field after `phone` as "Required", which reads exactly like the phone formatter corrupting the multipart stream. `--form-string` passed clean: **`curl -F` mis-parses parentheses**, and the formatter was fine. Had I trusted the instrument I would have "fixed" a working formatter and shipped a real defect chasing an imaginary one.
+
+    **246.6 — `auth_events` GOT ITS FIRST READER (`v3.8.avc`).** Recorded since Arc 5 — every verification, failed login, TOTP failure and reset, with IP and user agent — and readable only by hand-querying the database, which is literally how an earlier session in this arc diagnosed a failed onboarding. Now a read-only AE panel, **keyed by email rather than userId**, because the interesting entries predate the account. A session panel sits beside it showing count and freshness; **revocation is deliberately not duplicated** there, since logout and the expiry sweep already own it and a second delete path is a second place for the two to disagree. Empty states state facts ("no events recorded for this address"), never clearance.
+
+    **NOT RUN, AND OWED.** `_arcfix-verification-carryforward-proof.ts` is committed ready to run and **has never executed** — Docker was unavailable and the only reachable database was production. It says so in its own header. Five unit tests cover the shape; the proof covers the wire. Run it before treating 246.2 as verified end to end.
+
+
 ## §14 LEGAL / COMPLIANCE STATUS
 
 - Property broker under 49 U.S.C. §§ 13904, 13906

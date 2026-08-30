@@ -8,10 +8,21 @@ source. Dated **2026-08-28**, against `main` at the SHA recorded in §2.
 
 ## 1. The verdict
 
-> **SRL can run its first real load today. The platform's money, compliance and
-> document paths are built and proved; what stands between here and launch is not
+> **SRL can run its first real load today, and a carrier can now get all the way
+> through the door to be run for. The platform's money, compliance and document
+> paths are built and proved; what stands between here and launch is not
 > engineering but five inputs SRL does not yet hold, and two human passes nobody
 > has done.**
+
+The second clause is new as of **2026-08-30** and is the only change to this
+verdict since it was written. The acquisition funnel carried two defects when
+this report was first published, both found by a real person attempting a real
+onboarding rather than by any gate: a rejection that named no field, and a
+mailbox proved twice where the second proof was the one Compass auto-approve
+waited on. Both are closed (`v3.8.ava`, `v3.8.avb`). **"Last KNOWN defect" is
+doing real work in that sentence** — the funnel has still never been walked end
+to end by a human, which is exactly how both of these were found and why §3 still
+lists that walk as owed.
 
 That sentence is earned by §2 and is only as good as §3, which states plainly what
 was NOT re-verified in this session and why. Read both before acting on the first.
