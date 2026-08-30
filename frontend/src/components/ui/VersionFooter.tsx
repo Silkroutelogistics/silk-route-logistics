@@ -15338,7 +15338,27 @@
 // Injection-verified in three directions — restore the namespace defect, add a
 // hardcoded family, override the font in a nested layout. Each turns exactly the
 // right assertion red, and only that one.
-export const SRL_VERSION = "3.8.avj";
+// v3.8.avk — system emails speak as roles, never as persons.
+//
+// A generated email signed with a person's name reads as correspondence that
+// person wrote. They did not: a cron did, at 3am, to an address nobody read out
+// loud. When the recipient replies "as discussed with Wasi", there was no
+// discussion — and it puts one individual's name on a compliance demand issued
+// by the company, which is a liability shape as much as a tone problem.
+//
+// The COI verification request now signs "Compliance Department, Silk Route
+// Logistics Inc." and greets the AGENCY rather than the agent by first name.
+// Two other templates already signed as a team and now use the ratified wording.
+//
+// The one exemption is real: Lead Hunter outreach IS person-to-person, a founder
+// writing to a prospect deliberately (§3.10, §12). Those keep his name and his
+// signature block, and the guard allowlists exactly that surface.
+//
+// Also: names are trimmed at the validator. "Thank you, John ." was never a
+// template gap — the stored value carried the space. Trimming at the source
+// fixes the success screen, the confirmation email, the console and the PDFs
+// in one place instead of four.
+export const SRL_VERSION = "3.8.avk";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

@@ -167,7 +167,14 @@ export async function sendInsuranceVerificationEmail(carrierId: string) {
   if (!carrier.insuranceAgentEmail) throw new Error("No insurance agent email on file");
   if (!RESEND_API_KEY) { log.warn("[InsVerify] RESEND_API_KEY not set, skipping email"); return null; }
 
+  // v3.8.avk — the agent's name still identifies WHO was contacted in the audit
+  // and activity lines below. It is no longer used to address them in the body:
+  // a system-generated email speaks as SRL to an organisation, and greeting an
+  // individual by name makes a generated message read as personal correspondence
+  // from someone who did not write it.
   const agentName = carrier.insuranceAgentName || "Insurance Agent";
+  const agencyName = carrier.insuranceAgencyName?.trim() || null;
+  const salutation = agencyName ? `Dear ${agencyName} team,` : "Hello,";
   const carrierName = carrier.companyName || `${carrier.user.firstName} ${carrier.user.lastName}`;
   const validation = validateInsuranceCoverage(carrier);
 
@@ -202,7 +209,7 @@ export async function sendInsuranceVerificationEmail(carrierId: string) {
       </div>
 
       <div style="background:#FFFFFF;padding:24px;border:1px solid #E5E7EB;border-top:none;border-radius:0 0 8px 8px">
-        <p style="color:#374151;font-size:14px;line-height:1.6">Dear ${agentName},</p>
+        <p style="color:#374151;font-size:14px;line-height:1.6">${salutation}</p>
 
         <p style="color:#374151;font-size:14px;line-height:1.6">
           We are writing to verify the insurance coverage for the following motor carrier that operates under our brokerage authority:
@@ -252,8 +259,7 @@ export async function sendInsuranceVerificationEmail(carrierId: string) {
         </p>
 
         <div style="border-top:1px solid #E5E7EB;margin-top:24px;padding-top:16px;font-size:12px;color:#6B7280;line-height:1.6">
-          <strong style="color:#374151">Wasi Haider</strong><br/>
-          Compliance Department<br/>
+          <strong style="color:#374151">Compliance Department</strong><br/>
           ${ENTITY_NAME}<br/>
           ${MC_LABEL} | ${DOT_LABEL}<br/>
           ${PHONE} | ${COMPLIANCE_EMAIL}<br/>

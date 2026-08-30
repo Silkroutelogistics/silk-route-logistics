@@ -1545,7 +1545,7 @@ export async function dailyComplianceReminders() {
           <p><strong>Insurance Company:</strong> ${carrier.insuranceCompany || "N/A"}</p>
           <br/>
           <p>Please log into the Silk Route Logistics carrier portal to upload your updated documents.</p>
-          <p>Thank you,<br/>SRL Compliance Team</p>
+          <p>Thank you,<br/>Compliance Department, Silk Route Logistics Inc.</p>
         </div>
       `;
 
@@ -1642,7 +1642,7 @@ export async function checkAutoReversal() {
               <p>Your carrier account has been automatically reinstated after our system verified
               your FMCSA authority is active, no out-of-service status, and insurance is on file.</p>
               <p>You may now accept loads again.</p>
-              <p>— SRL Compliance Team</p>
+              <p>— Compliance Department, Silk Route Logistics Inc.</p>
             </div>`,
           );
         } catch { /* non-critical */ }

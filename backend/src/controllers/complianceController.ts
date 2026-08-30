@@ -333,7 +333,7 @@ export async function sendReminder(req: AuthRequest, res: Response) {
         </ul>
         ${carrier.insuranceExpiry ? `<p><strong>Insurance Expiry:</strong> ${carrier.insuranceExpiry.toISOString().split("T")[0]}</p>` : ""}
         <p>Log into your carrier portal to upload any updated documents.</p>
-        <p>Thank you,<br/>SRL Compliance Team</p>
+        <p>Thank you,<br/>Compliance Department, Silk Route Logistics Inc.</p>
       </div>
     `;
 

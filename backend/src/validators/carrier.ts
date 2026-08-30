@@ -21,8 +21,13 @@ export const carrierRegisterSchema = z.object({
     .regex(/[a-z]/, "Password must contain at least one lowercase letter")
     .regex(/[0-9]/, "Password must contain at least one digit")
     .regex(/[^A-Za-z0-9]/, "Password must contain at least one special character"),
-  firstName: z.string().min(1),
-  lastName: z.string().min(1),
+  // v3.8.avk — trim BEFORE min(1), so " " is rejected rather than stored as a
+  // name. The success screen renders `Thank you, {firstName}.` with no gap in
+  // the template; "Thank you, John ." was the stored value carrying the space,
+  // not a join defect. Fixing it here fixes every downstream render at once —
+  // screen, confirmation email, AE console, and the PDFs.
+  firstName: z.string().trim().min(1),
+  lastName: z.string().trim().min(1),
   company: z.string().min(1),
   phone: z.string().min(10, "Phone number is required"),
   mcNumber: z.string().min(1, "MC number is required"),
