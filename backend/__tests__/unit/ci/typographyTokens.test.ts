@@ -263,6 +263,22 @@ describe("typography guard — the drift lint", () => {
     }
   });
 
+  it("every halted heading-weight block states why it is halted", () => {
+    // 400 is a legal Playfair weight, so the weight check above passes these —
+    // and the skill's pattern for a section head is 700. That gap is how 46
+    // React page titles rendered light while this guard was green (v3.8.avj),
+    // and the static layer had the same blind spot until proof-by-render found
+    // four section heads at 400 on the homepage and /track.
+    const { headingAllowlist } = scanSerifWeightDrift();
+    const entries = Object.entries(headingAllowlist as Record<string, string>);
+    expect(entries.length).toBeGreaterThan(0);
+    for (const [sel, reason] of entries) {
+      expect(reason.length, `${sel} is allowlisted without a real reason`).toBeGreaterThan(40);
+      expect(reason, `${sel} must say it is halted or dead, not merely tolerated`)
+        .toMatch(/HALTED|DEAD/);
+    }
+  });
+
   it("the allowlist is reasoned, not a dumping ground", () => {
     const { allowlist } = scanFontDrift();
     for (const [file, reason] of Object.entries(allowlist as Record<string, string>)) {

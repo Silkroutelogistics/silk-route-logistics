@@ -464,3 +464,181 @@ Headless Chrome against production, cache-busted, after deploy.
 Assets serve `200 text/css` and `200 application/javascript`. That last row is the one worth noting: the custom property carried the per-page dynamic value through an inline attribute, so the page keeps its accent without `unsafe-inline` on `style-src-elem`.
 
 **A green build was never the proof here.** The typography arc's own lesson (§7.1) was a correct compiled bundle that still rendered the wrong face; these two rows stayed open specifically because nothing short of a browser could close them.
+
+---
+
+# Part III — serif conformance: weights, styles, loaders (v3.8.avh + v3.8.avj)
+
+Part II made every heading render Playfair. It never checked *which* Playfair.
+The skill is narrow — 400 and 700 only, no medium, no semibold — and sanctions
+italic solely for the document-tagline pattern. Every heading on `/onboarding`
+was rendering 600 in italic. Wasi caught it from a screenshot.
+
+## 13. The per-element walk
+
+The "89 hits" that opened this arc was a grep-shape estimate. Classifying
+properly gives **90 real elements** (comments excluded, each element counted
+once): 83 headings and 7 non-heading.
+
+| Class | Count | Verdict | Action |
+|---|---:|---|---|
+| HEADING-CLASS, already 700 | 15 | conformant | untouched |
+| HEADING-CLASS, italic and/or 600 | 22 | non-conformant | to `font-bold`, italic removed |
+| HEADING-CLASS, inherited 400 | 46 | **non-conformant** (see 13.1) | to `font-bold` in v3.8.avj |
+| BODY-SERIF, no weight (stat numerals, wordmarks) | 6 | allowed | untouched |
+| OTHER — BCA pane document *title* at `onboarding:1935` | 1 | non-conformant | to `font-bold`, italic removed |
+
+The one OTHER: a `<p>` in `--fg-1`, not the sanctioned `--gold-dark` document
+tagline. It is a title wearing a tagline's clothes, so it takes the title's rule.
+
+### 13.1 The 46, and why v3.8.avh got them wrong
+
+v3.8.avh classified an inherited-400 heading as **conformant**, reasoning that
+400 is a sanctioned Playfair weight. True, and the wrong test. Tailwind's
+preflight resets headings to `font-weight: inherit`, so a heading declaring no
+weight takes the body's 400 rather than the browser's bold — and the skill is
+explicit that heroes, page titles and section heads are 700.
+
+**Legality of the weight is not the same question as the pattern for the
+element.** 46 portal page titles were rendering light. Fixed in v3.8.avj; the
+guard now fails a serif heading that declares no weight at all.
+
+Caught by rendering `/carrier/login` after the avh deploy — "Carrier Sign In"
+computed 400 where a synthetic probe had returned 700. Proof-by-render again,
+finding what the build could not.
+
+## 14. The static layer was not clean either
+
+The homepage spot-check had implied it was. That check was accurate for the
+homepage and unrepresentative of the site: **77 Playfair blocks** across the
+shared CSS carried 11 at weight 600, one at 500, and five italic. Pruning the
+shared Google Fonts link without finding those would have left fifteen rules
+requesting faces that no longer load. Twelve corrected to 700.
+
+## 15. Loaders, both, to the same canon
+
+Their divergence was its own finding.
+
+| Loader | Before | After |
+|---|---|---|
+| `next/font` (React, 114 routes) | `["400","500","600","700"]` | `["400","700"]` |
+| Google Fonts link (14 static pages) | `0,400;0,500;0,600;0,700;1,400;1,500` | `0,400;0,700;1,400;1,500` |
+
+**One face above the "0,400;0,700;1,400 at most" specified, deliberately.**
+`1,500` is the nearest loaded italic the two halted taglines synthesise their
+700 from; dropping it changes how halted elements render, which is what halting
+them was meant to prevent. It goes when the halt resolves.
+
+Verified after: no page requests a face the link no longer carries.
+
+## 16. Proof by render — production, cache disabled, post-avj
+
+| Surface | Element | Family | Style | Weight | Verdict |
+|---|---|---|---|---|---|
+| `/onboarding` | `<h1>` "Carrier Registration" | Playfair Display | normal | 700 | CONFORMANT |
+| `/onboarding` | `<h2>` "Welcome to the Caravan." | Playfair Display | normal | 700 | CONFORMANT |
+| `/onboarding` | `<h3>` "Company Information" | Playfair Display | normal | 700 | CONFORMANT |
+| `/onboarding/verify` | `<h1>` | Playfair Display | normal | 700 | CONFORMANT |
+| `/auth/login` | `<h2>` "Employee Sign In" | Playfair Display | normal | 700 | CONFORMANT |
+| `/carrier/login` | `<h2>` "Carrier Sign In" | Playfair Display | normal | 700 | CONFORMANT |
+| `/shipper/login` | `<h2>` "Shipper Sign In" | Playfair Display | normal | 700 | CONFORMANT |
+| `/driver/login` | `<h1>` "SRL Driver Academy" | Playfair Display | normal | 700 | CONFORMANT |
+| `/` (control) | 15 Playfair headings | Playfair Display | normal | 11 at 700, 4 at 400 | see §17 |
+
+**23 Playfair headings rendered across the seven surfaces; every React heading
+conformant.** One page per portal layout is covered — AE, carrier, shipper and
+Driver University each answer through their own nested layout, and all four
+inherit correctly.
+
+### 16.1 Scope limit, stated rather than glossed
+
+Wizard steps 2-5 are client-side state behind form validation and were **not
+individually rendered**. Their headings were corrected in source and the
+classifier reports zero violations across all 90 elements, so they are covered
+by the guard — but they are covered by source and CI, not by a browser. Step 1,
+the verify page and the success page were rendered.
+
+## 17. The homepage control surfaced a fourth finding
+
+The control was supposed to prove nothing had moved, and it did — the same four
+`<h2>`s sat at 400 before and after. But rendering them made visible what source
+review had passed: **`.headline { font-weight: 400 }`** is the static
+section-head class, and the skill puts section heads at 700.
+
+This is §13.1 one layer over. The static half of the guard checked weight in
+{400, 700} and passed 400 happily — the identical blind spot the React half had
+before avj.
+
+Four blocks, three live: `index.css .headline` (4 homepage section heads),
+`track.css .hero h1`, `track.css .explainer-text h2`. `contact.css .headline` is
+dead — `contact.html` carries zero `.headline` elements.
+
+**All four HALTED, not fixed.** CLAUDE.md §20.6 records the homepage editorial
+register as locked (v3.8.aeq) and `/track` as swept clean (v3.8.amp). The skill
+says 700; a ratified page-lock has them at 400. Two canons disagree about the
+weight of the headline on the most-reviewed brand surface there is, which is the
+same shape as the shimmer-tagline conflict and the same answer: Wasi's call, not
+a cleanup.
+
+The guard now flags the class, with each halt carrying its reason, so it cannot
+hide again.
+
+## 18. Five italic blocks halted
+
+Two are the "Where Trust Travels." shimmer (`.srl-tagline`,
+`.ops-chip-tagline`). CLAUDE.md §20.8.2 ratifies that treatment as "Playfair
+italic bold with gold gradient" — a named, reusable project pattern. The skill
+says that exact sentence is "Georgia italic, `--gold-dark`, tracked +0.02em".
+Two canons disagree about one sentence.
+
+The other three (`.commitment-teaser`, `.tms-result`, `.heritage-line`) are
+editorial italic lines no sanctioned pattern covers in either direction.
+
+**What did not wait:** all three sat at weight 500, forbidden under either
+outcome, and 400 is the only sanctioned Playfair-italic weight. Moved to 400 as
+the interim.
+
+Worth knowing about the two taglines: they ask for **700 italic, which the link
+has never loaded**. They have been synthesised bold-italic all along.
+
+## 19. Out of scope, flagged not fixed
+
+**DM Sans 600.** The skill allows 400, 500 and 700 — not 600 — and the static
+link requests it. Roughly **1,077 uses** (140 in static CSS, 937 `font-semibold`
+in React). That is the dominant UI weight in the app; removing it is a change of
+a wholly different size and is not a serif question.
+
+**The section-head gold rule.** The skill pairs every section head with a thin
+gold rule. The site has none. Site-wide visual addition, its own arc.
+
+## 20. The guard learns two axes it was blind to
+
+`font-drift.js` held at **zero violations** throughout, because it asserts the
+FAMILY. Family was right; weight and style drifted freely underneath it.
+
+> **A guard proves the property it asserts, not the property you meant.**
+
+New `serif-weight-drift.js` asserts the other two axes and the loaders
+themselves, so a re-added 600 fails CI before any component can reach for it.
+Its allowlists require each entry to say HALTED and why, so a halt cannot be
+forgotten quietly.
+
+### Injection-verified, six directions, each executed
+
+| Injection | Expected | Result |
+|---|---|---|
+| italic back onto a serif heading | red | red — "italic on a serif element" |
+| `font-semibold` on a serif element | red | red, naming the class |
+| 600 back into the `next/font` loader | red | red, naming the loader |
+| remove `font-bold` from a serif heading | red | red — "declares no weight" |
+| drop a halted heading from the allowlist | red | red — `index.css [.headline]` |
+| a new 400-weight section head in static CSS | red | red — `carriers.css [.injected-section-title h2]` |
+
+Clean on every restore.
+
+## 21. Still not claimed
+
+The human eye-pass remains Wasi's. Nothing here certifies colour fidelity,
+optical weight at real display sizes, or whether a 700 section head *looks*
+right where a 400 one has stood since launch. The four halted heading blocks are
+exactly that question, which is why they are halted rather than decided.

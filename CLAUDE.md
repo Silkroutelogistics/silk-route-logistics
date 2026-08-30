@@ -3017,6 +3017,25 @@ Two corollaries worth carrying:
 - **Name a guard for what it asserts, not for the goal it serves.** "Font drift" implied coverage it never had; "font FAMILY drift" would have left the gap visible in its own filename.
 - **When a property decomposes, enumerate the axes before trusting a guard over it.** Typography decomposes into family / weight / style / size. Three of those were unguarded while one was.
 
+**SEVENTH FIRE — the same blind spot, twice, in the guard written to close it (2026-08-30, v3.8.avj and the arc's close-out).**
+
+The sixth fire's own fix carried the sixth fire's shape, in two layers, and each was found the same way — by rendering, never by the guard.
+
+**Layer one, React.** `serif-weight-drift.js` was written to close the weight axis and it passed a heading that declared *no* weight, on the reasoning that Playfair 400 is sanctioned. True, and the wrong test: Tailwind's preflight resets headings to `font-weight: inherit`, so 46 portal page titles took the body's 400 while the skill puts page titles at 700. **The new guard was green on the very axis it was built for.** Caught by rendering `/carrier/login` after the deploy — computed 400 where a synthetic probe had returned 700.
+
+**Layer two, static CSS.** The same check on the static side asserted weight in {400, 700} and passed `.headline { font-weight: 400 }` — the class on four homepage section heads. Caught by the homepage *control*, the probe whose whole job was to prove nothing had changed.
+
+> **Legality of a value is not the same question as the pattern for the element.**
+
+That sentence is the finer edge of the sixth fire's rule. Enumerating the axes is not enough; each axis then has a *legal range* and a *correct value for this element*, and a guard that checks only the range is exactly as green and exactly as blind.
+
+Three corollaries:
+- **The control is not ceremony.** It was there to prove absence of change and it produced the arc's fourth finding. A probe that can only confirm is worth less than one that can also surprise you.
+- **A guard's first version is the one most likely to carry the bug it was written against** — it is authored under the same mental model that missed the thing. Injection-verify it against the *original* defect, not a synthetic one.
+- **Render, then believe.** Every finding in this arc past the first came from a browser. Four separate times the build was clean, the guard was green, and production was wrong.
+
+
+
 Closed by `serif-weight-drift.js`, which asserts the other two axes *and* the loaders themselves, so a re-added 600 fails CI upstream of any component that could use it.
 
 **Relationship to Sub-pattern 11 (CI-parity).** Sub-pattern 11 asks whether the local gate matches the CI gate. Sub-pattern 16 asks whether *either* gate observes the claim it makes. Passing 11 and failing 16 is exactly the state all six fires above were in.

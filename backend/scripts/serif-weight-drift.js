@@ -36,6 +36,10 @@ const LAYOUT = path.join(REPO, "frontend", "src", "app", "layout.tsx");
 const INJECTOR = path.join(REPO, "frontend", "scripts", "inject-chrome.mjs");
 
 /** Tailwind weight utilities that are NOT 400 or 700. */
+/** Selectors that name a heading element or read as a heading class. */
+const HEADINGISH =
+  /(^|[s,>+~])h[1-6]([s,:.[{]|$)|headline|heading|hero-title|page-title|section-title|title/i;
+
 const FORBIDDEN_WEIGHT_CLASSES = [
   "font-thin", "font-extralight", "font-light",
   "font-medium", "font-semibold", "font-extrabold", "font-black",
@@ -65,6 +69,36 @@ const ITALIC_ALLOWLIST = {
     "HALTED — editorial result line on /. Same class of taste call.",
   ".heritage-line":
     "HALTED — editorial heritage line on /shippers. Same class of taste call.",
+};
+
+/**
+ * Static heading-class selectors permitted to carry Playfair 400, each with its
+ * reason.
+ *
+ * WHY THIS EXISTS. 400 is a sanctioned Playfair weight, so the weight check
+ * below passes it — and the skill's PATTERN for a section head is 700. That is
+ * the identical distinction that let 46 React page titles render light while
+ * this guard was green: legality of the weight is not the same question as the
+ * pattern for the element. The React half learned it in v3.8.avj; the static
+ * half was still blind, and proof-by-render caught it on the homepage.
+ *
+ * All four are HALTED rather than fixed. Three are live section heads on two
+ * pages whose editorial register CLAUDE.md §20.6 records as ratified — the
+ * homepage "full editorial register locked" (v3.8.aeq) and /track swept clean
+ * (v3.8.amp). The skill says 700; a ratified page-lock has them at 400. Two
+ * canons disagree, exactly as they do over the shimmer tagline, and resolving
+ * it changes the weight of the headline on the most-reviewed brand surface
+ * there is. That is Wasi's call, not a cleanup.
+ */
+const HEADING_WEIGHT_ALLOWLIST = {
+  "index .headline":
+    "HALTED — 4 live <h2> section heads on the homepage ('Freight Solutions for Every Lane', 'A new trade route, 48 states wide', 'The Caravan Partner Program', 'Khotan, Our TMS'). Skill says section heads are 700; CLAUDE.md §20.6 records the homepage editorial register as locked. Cross-canonical conflict, Wasi's call.",
+  "contact .headline":
+    "DEAD — contact.html carries zero .headline elements, so this rule renders nothing. Recorded rather than deleted; removing dead CSS is not this arc's scope.",
+  "track .hero h1":
+    "HALTED — page title on /track. Same conflict: skill says 700, §20.6 records /track as swept clean at v3.8.amp with the current weight.",
+  "track .explainer-text h2":
+    "HALTED — section head on /track. Same conflict.",
 };
 
 function walkFiles(dir, exts, out = []) {
@@ -171,6 +205,25 @@ function scanStaticSerif() {
           });
         }
       }
+
+      // A heading-class selector at an explicit 400. Legal weight, wrong pattern
+      // — the skill puts heroes, page titles and section heads at 700. Static
+      // pages get the browser's default bold when no weight is declared (no
+      // Tailwind preflight here), so only an EXPLICIT 400 is a finding; that
+      // keeps this at zero false positives.
+      if (w === "400" && HEADINGISH.test(sel)) {
+        const page = path.basename(rel, ".css");
+        const key = Object.keys(HEADING_WEIGHT_ALLOWLIST).find(
+          (k) => k.startsWith(page + " ") && sel.includes(k.slice(page.length + 1))
+        );
+        if (!key) {
+          violations.push({
+            file: rel, line: sel,
+            problem: "heading-class selector at Playfair 400 — the skill puts section heads and page titles at 700",
+            cls: sel,
+          });
+        }
+      }
     }
   }
   return { violations, blocks };
@@ -229,12 +282,14 @@ function scanSerifWeightDrift() {
       nextFontWeights: loaders.declared,
       staticSegment: loaders.staticSegment,
       italicAllowlisted: Object.keys(ITALIC_ALLOWLIST).length,
+      headingWeightAllowlisted: Object.keys(HEADING_WEIGHT_ALLOWLIST).length,
     },
     allowlist: ITALIC_ALLOWLIST,
+    headingAllowlist: HEADING_WEIGHT_ALLOWLIST,
   };
 }
 
-module.exports = { scanSerifWeightDrift, ITALIC_ALLOWLIST };
+module.exports = { scanSerifWeightDrift, ITALIC_ALLOWLIST, HEADING_WEIGHT_ALLOWLIST };
 
 if (require.main === module) {
   const { violations, stats } = scanSerifWeightDrift();
@@ -243,6 +298,7 @@ if (require.main === module) {
   console.log(`next/font Playfair weights: [${stats.nextFontWeights.join(", ")}]`);
   console.log(`static loader segment: ${stats.staticSegment}`);
   console.log(`italic blocks allowlisted (halted): ${stats.italicAllowlisted}`);
+  console.log(`heading-weight blocks allowlisted (halted): ${stats.headingWeightAllowlisted}`);
   if (violations.length === 0) {
     console.log("\nNo serif weight/style drift.");
     process.exit(0);
