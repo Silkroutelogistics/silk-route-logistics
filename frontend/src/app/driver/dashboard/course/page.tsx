@@ -228,7 +228,7 @@ function CourseContent() {
         <ArrowLeft size={14} /> All courses
       </button>
       <div className="flex items-center justify-between gap-3">
-        <h1 className="font-serif text-[17px] leading-tight text-[#0A2540]">{course.title}</h1>
+        <h1 className="font-serif font-bold text-[17px] leading-tight text-[#0A2540]">{course.title}</h1>
         <GamifyBar xp={gamify.xp} streak={gamify.streak} todayXp={gamify.todayXp} className="shrink-0" />
       </div>
     </div>

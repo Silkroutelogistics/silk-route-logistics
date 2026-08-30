@@ -55,7 +55,7 @@ export function ForgotPasswordForm({ variant, headline, subhead, backToLoginHref
             </Link>
           </div>
 
-          <h2 className="font-serif text-2xl text-[#0A2540]">{headline}</h2>
+          <h2 className="font-serif font-bold text-2xl text-[#0A2540]">{headline}</h2>
           <p className="text-gray-500 text-sm mt-1.5 mb-8">{subhead}</p>
 
           {error && (

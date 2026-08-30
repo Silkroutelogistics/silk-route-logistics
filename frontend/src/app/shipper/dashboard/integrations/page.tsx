@@ -13,7 +13,7 @@ const ediCodes = [
 export default function ShipperIntegrationsPage() {
   return (
     <div>
-      <h1 className="font-serif text-2xl text-[#0A2540] mb-1">API &amp; EDI Integration</h1>
+      <h1 className="font-serif font-bold text-2xl text-[#0A2540] mb-1">API &amp; EDI Integration</h1>
       <p className="text-[13px] text-gray-500 mb-6">Connect your TMS or ERP to automate freight shipment management</p>
 
       <div className="grid grid-cols-2 gap-5">

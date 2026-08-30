@@ -76,7 +76,7 @@ export default function ShipperDocumentsPage() {
 
   return (
     <div>
-      <h1 className="font-serif text-2xl text-[#0A2540] mb-1">Freight Document Vault</h1>
+      <h1 className="font-serif font-bold text-2xl text-[#0A2540] mb-1">Freight Document Vault</h1>
       <p className="text-[13px] text-gray-500 mb-6">All your BOLs, proof of delivery, rate confirmations, and freight claims in one secure location</p>
 
       <div className="grid grid-cols-4 gap-3 mb-6">

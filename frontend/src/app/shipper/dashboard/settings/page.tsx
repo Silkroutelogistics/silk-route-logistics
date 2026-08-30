@@ -144,7 +144,7 @@ export default function ShipperSettingsPage() {
 
   return (
     <div>
-      <h1 className="font-serif text-2xl text-[#0A2540] mb-6">Account Settings</h1>
+      <h1 className="font-serif font-bold text-2xl text-[#0A2540] mb-6">Account Settings</h1>
       <div className="grid grid-cols-[200px_1fr] gap-6">
         {/* Settings nav */}
         <div>

@@ -144,7 +144,7 @@ export default function ScorecardPage() {
       <div className="mb-6 flex items-center gap-3">
         <Trophy className="w-6 h-6 text-[#BA7517]" />
         <div>
-          <h1 className="font-serif text-2xl text-[#0A2540]">Performance Scorecard</h1>
+          <h1 className="font-serif font-bold text-2xl text-[#0A2540]">Performance Scorecard</h1>
           <p className="text-[13px] text-gray-500">Track your metrics, tier status, milestones, and bonus earnings</p>
         </div>
         <span className={`ml-auto px-3 py-1 rounded-full text-xs font-semibold border ${TIER_COLORS[currentTier] || TIER_COLORS.SILVER}`}>

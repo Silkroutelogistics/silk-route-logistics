@@ -83,7 +83,7 @@ export default function ShipperRegisterPage() {
             <div className="w-16 h-16 bg-[#E6F0E9] rounded-full flex items-center justify-center mx-auto mb-5">
               <CheckCircle2 className="w-8 h-8 text-[#2F7A4F]" />
             </div>
-            <h2 className="font-serif text-2xl text-[#0A2540] mb-2">Application Received</h2>
+            <h2 className="font-serif font-bold text-2xl text-[#0A2540] mb-2">Application Received</h2>
             <p className="text-[13px] text-gray-500 mb-6 leading-relaxed max-w-md mx-auto">
               Thanks for registering. Our team reviews new shipper accounts before activation. We&apos;ll email you once your account is approved (typically within 1 business day), and you can log in then to request quotes and track your shipments.
             </p>
@@ -134,7 +134,7 @@ export default function ShipperRegisterPage() {
         <div className="bg-white rounded-md border border-[#EFE6D3] p-9">
           {step === 1 && (
             <>
-              <h2 className="font-serif text-2xl text-[#0A2540] mb-1">Company Information</h2>
+              <h2 className="font-serif font-bold text-2xl text-[#0A2540] mb-1">Company Information</h2>
               <p className="text-[13px] text-gray-500 mb-7">Tell us about your business so we can tailor your experience.</p>
               <div className="grid grid-cols-2 gap-x-4">
                 <Field label="Company Name" required value={form.company} onChange={(v) => upd("company", v)} placeholder="Acme Manufacturing" />
@@ -187,7 +187,7 @@ export default function ShipperRegisterPage() {
 
           {step === 2 && (
             <>
-              <h2 className="font-serif text-2xl text-[#0A2540] mb-1">Shipping Profile</h2>
+              <h2 className="font-serif font-bold text-2xl text-[#0A2540] mb-1">Shipping Profile</h2>
               <p className="text-[13px] text-gray-500 mb-7">Help us understand your freight needs to optimize your experience.</p>
               <div className="grid grid-cols-2 gap-x-4">
                 <Field label="Avg. Monthly Shipments" required value={form.volume} onChange={(v) => upd("volume", v)} options={["1-10", "11-50", "51-100", "101-500", "500+"]} />
@@ -206,7 +206,7 @@ export default function ShipperRegisterPage() {
 
           {step === 3 && (
             <>
-              <h2 className="font-serif text-2xl text-[#0A2540] mb-1">Preferences &amp; Security</h2>
+              <h2 className="font-serif font-bold text-2xl text-[#0A2540] mb-1">Preferences &amp; Security</h2>
               <p className="text-[13px] text-gray-500 mb-7">Set up your portal access and notification preferences.</p>
               <div className="grid grid-cols-2 gap-x-4">
                 <Field label="Portal Username" required value={form.username} onChange={(v) => upd("username", v)} placeholder="jane.doe" icon={<User size={16} />} />
@@ -227,7 +227,7 @@ export default function ShipperRegisterPage() {
 
           {step === 4 && (
             <>
-              <h2 className="font-serif text-2xl text-[#0A2540] mb-1">Review &amp; Submit</h2>
+              <h2 className="font-serif font-bold text-2xl text-[#0A2540] mb-1">Review &amp; Submit</h2>
               <p className="text-[13px] text-gray-500 mb-7">Please confirm your details before creating your account.</p>
               {[
                 ["Company", form.company],

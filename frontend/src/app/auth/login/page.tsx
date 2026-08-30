@@ -364,7 +364,7 @@ export default function EmployeeLoginPage() {
             </Link>
           </div>
 
-          <h2 className="font-serif text-2xl text-gray-900">Employee Sign In</h2>
+          <h2 className="font-serif font-bold text-2xl text-gray-900">Employee Sign In</h2>
           <p className="text-gray-500 text-sm mt-1.5 mb-8">Access the operations dashboard</p>
 
           {/* Alerts */}

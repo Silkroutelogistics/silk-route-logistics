@@ -83,7 +83,7 @@ export default function CarrierMessagingPage() {
   return (
     <div>
       <div className="mb-6">
-        <h1 className="font-serif text-2xl text-[#0A2540] mb-1">Messages</h1>
+        <h1 className="font-serif font-bold text-2xl text-[#0A2540] mb-1">Messages</h1>
         <p className="text-[13px] text-gray-500">
           Communicate with your dispatcher and SRL operations team
           {totalUnread > 0 && <span className="ml-2 text-[#BA7517] font-semibold">{totalUnread} unread</span>}

@@ -96,7 +96,7 @@ export function ShipmentDetailDrawer({
       <div className="absolute inset-0 bg-black/20" onClick={onClose} aria-hidden="true" />
       <div className="absolute top-0 right-0 bottom-0 w-[420px] bg-white shadow-[-8px_0_30px_rgba(13,27,42,0.15)] overflow-y-auto p-6">
       <div className="flex justify-between items-center mb-6">
-        <h2 className="font-serif text-xl text-[#0A2540]">Shipment Details</h2>
+        <h2 className="font-serif font-bold text-xl text-[#0A2540]">Shipment Details</h2>
         <button onClick={onClose} className="text-gray-700 hover:text-gray-600" aria-label="Close">
           <X size={20} />
         </button>

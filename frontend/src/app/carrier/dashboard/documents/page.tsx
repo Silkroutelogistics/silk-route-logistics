@@ -123,7 +123,7 @@ export default function CarrierDocumentsPage() {
     <div>
       <div className="flex justify-between items-start mb-6">
         <div>
-          <h1 className="font-serif text-2xl text-[#0A2540] mb-1">Documents</h1>
+          <h1 className="font-serif font-bold text-2xl text-[#0A2540] mb-1">Documents</h1>
           <p className="text-[13px] text-gray-500">All your compliance documents, rate confirmations, BOLs, and PODs</p>
         </div>
         <button

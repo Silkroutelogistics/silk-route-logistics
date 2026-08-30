@@ -40,7 +40,7 @@ export default function DriverLoginPage() {
           <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-[#0A2540] mb-4">
             <GraduationCap size={28} className="text-[#C5A572]" />
           </div>
-          <h1 className="font-serif text-2xl text-[#0A2540]">SRL Driver Academy</h1>
+          <h1 className="font-serif font-bold text-2xl text-[#0A2540]">SRL Driver Academy</h1>
           <p className="text-sm text-[#6B7685] mt-1">Sign in with your phone number and PIN</p>
         </div>
 

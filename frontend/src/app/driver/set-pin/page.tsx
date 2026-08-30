@@ -45,7 +45,7 @@ function SetPinContent() {
     return (
       <div className="w-full max-w-md text-center">
         <div className="bg-white border border-gray-100 rounded-2xl p-8 shadow-sm">
-          <h1 className="font-serif text-xl text-[#0A2540] mb-2">Invalid setup link</h1>
+          <h1 className="font-serif font-bold text-xl text-[#0A2540] mb-2">Invalid setup link</h1>
           <p className="text-sm text-gray-500">
             This link is missing its setup code. Ask your carrier to send you a fresh SRL Driver Academy invite.
           </p>
@@ -59,7 +59,7 @@ function SetPinContent() {
       <div className="w-full max-w-md text-center">
         <div className="bg-white border border-gray-100 rounded-2xl p-8 shadow-sm">
           <CheckCircle2 size={40} className="mx-auto text-[#2F7A4F] mb-3" />
-          <h1 className="font-serif text-xl text-[#0A2540] mb-1">You&apos;re all set</h1>
+          <h1 className="font-serif font-bold text-xl text-[#0A2540] mb-1">You&apos;re all set</h1>
           <p className="text-sm text-gray-500">Taking you to your training portal…</p>
           <div className="mt-4 rounded-lg bg-[#FBF7F0] border border-[#EFE6D3] px-3 py-2.5">
             <p className="text-[11px] text-[#6B7685]">Next time, log in any time at</p>
@@ -77,7 +77,7 @@ function SetPinContent() {
         <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-[#0A2540] mb-4">
           <GraduationCap size={28} className="text-[#C5A572]" />
         </div>
-        <h1 className="font-serif text-2xl text-[#0A2540]">Set your PIN</h1>
+        <h1 className="font-serif font-bold text-2xl text-[#0A2540]">Set your PIN</h1>
         <p className="text-sm text-gray-500 mt-1">Create a 6-digit PIN to access your driver training</p>
       </div>
 

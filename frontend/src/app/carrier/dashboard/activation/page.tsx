@@ -306,7 +306,7 @@ export default function CarrierActivationPage() {
     <div className="max-w-3xl">
       {/* Header */}
       <div className="mb-6">
-        <h1 className="font-serif text-2xl text-[#0A2540] mb-1">Activate your account</h1>
+        <h1 className="font-serif font-bold text-2xl text-[#0A2540] mb-1">Activate your account</h1>
         <p className="text-[13px] text-gray-500">
           You&apos;re approved. Sign your Broker-Carrier Agreement to start hauling, and choose whether you want Quick Pay.
         </p>
@@ -334,7 +334,7 @@ export default function CarrierActivationPage() {
             </span>
           )}
         </div>
-        <h2 className="font-serif text-lg text-[#0A2540] mb-1 flex items-center gap-2">
+        <h2 className="font-serif font-bold text-lg text-[#0A2540] mb-1 flex items-center gap-2">
           <FileSignature size={18} className="text-[#BA7517]" /> Broker-Carrier Agreement
         </h2>
 
@@ -417,7 +417,7 @@ export default function CarrierActivationPage() {
             </span>
           )}
         </div>
-        <h2 className="font-serif text-lg text-[#0A2540] mb-1 flex items-center gap-2">
+        <h2 className="font-serif font-bold text-lg text-[#0A2540] mb-1 flex items-center gap-2">
           <Zap size={18} className="text-[#BA7517]" /> Quick Pay
           <span className="text-[10px] font-sans uppercase tracking-wide font-semibold text-[#B07A1A] bg-[#FBEFD4] border border-[#B07A1A]/30 rounded-full px-2 py-0.5">
             Limited pilot

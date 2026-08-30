@@ -57,7 +57,7 @@ export default function CarrierRevenuePage() {
       {/* Header */}
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 className="font-serif text-2xl text-[#0A2540] mb-1">Revenue &amp; Earnings</h1>
+          <h1 className="font-serif font-bold text-2xl text-[#0A2540] mb-1">Revenue &amp; Earnings</h1>
           <p className="text-[13px] text-gray-500">Track revenue performance across your loads</p>
         </div>
         <div className="flex bg-[#F5EEE0] rounded-lg p-0.5">

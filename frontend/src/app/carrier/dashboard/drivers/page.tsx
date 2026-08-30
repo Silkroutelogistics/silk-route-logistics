@@ -218,7 +218,7 @@ export default function CarrierDriversPage() {
       {/* Header */}
       <div className="flex justify-between items-start mb-6">
         <div>
-          <h1 className="font-serif text-2xl text-[#0A2540] mb-1">Drivers</h1>
+          <h1 className="font-serif font-bold text-2xl text-[#0A2540] mb-1">Drivers</h1>
           <p className="text-[13px] text-gray-500">
             Your driver roster. Drivers added here get access to SRL Driver Academy training.
           </p>

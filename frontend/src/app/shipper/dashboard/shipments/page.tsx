@@ -57,7 +57,7 @@ export default function ShipperShipmentsPage() {
     <div>
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 className="font-serif text-2xl text-[#0A2540] mb-1">Freight Shipments</h1>
+          <h1 className="font-serif font-bold text-2xl text-[#0A2540] mb-1">Freight Shipments</h1>
           <p className="text-[13px] text-gray-500">Manage and monitor all your truckload and LTL shipments</p>
         </div>
         <div className="flex gap-2">

@@ -169,7 +169,7 @@ export default function CarrierOverviewPage() {
   return (
     <div>
       <div className="mb-6">
-        <h1 className="font-serif text-2xl text-[#0A2540] mb-1">
+        <h1 className="font-serif font-bold text-2xl text-[#0A2540] mb-1">
           Welcome back{user?.firstName ? `, ${user.firstName}` : ""}
         </h1>
         <p className="text-[13px] text-gray-500">

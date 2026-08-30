@@ -51,7 +51,7 @@ export default function AvailableLoadsPage() {
     <div>
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="font-serif text-2xl text-[#0A2540] mb-1">Available Loads</h1>
+          <h1 className="font-serif font-bold text-2xl text-[#0A2540] mb-1">Available Loads</h1>
           <p className="text-[13px] text-gray-500">
             Loads matching your equipment and operating regions &middot; {data?.total || 0} available
           </p>

@@ -130,7 +130,7 @@ export default function CarrierSettingsPage() {
 
   return (
     <div>
-      <h1 className="font-serif text-2xl text-[#0A2540] mb-1">Account Settings</h1>
+      <h1 className="font-serif font-bold text-2xl text-[#0A2540] mb-1">Account Settings</h1>
       <p className="text-[13px] text-gray-500 mb-6">Manage your carrier account, notifications, and security settings</p>
 
       <div className="grid grid-cols-2 gap-4">

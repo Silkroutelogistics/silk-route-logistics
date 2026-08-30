@@ -255,7 +255,7 @@ export default function CarrierLoginPage() {
             </Link>
           </div>
 
-          <h2 className="font-serif text-2xl text-[#0A2540]">Carrier Sign In</h2>
+          <h2 className="font-serif font-bold text-2xl text-[#0A2540]">Carrier Sign In</h2>
           <p className="text-gray-500 text-sm mt-1.5 mb-8">Access your loads, payments, and performance</p>
 
           {error && (

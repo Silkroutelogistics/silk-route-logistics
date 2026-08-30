@@ -26,7 +26,7 @@ export default function ShipperAnalyticsPage() {
     <div>
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 className="font-serif text-2xl text-[#0A2540] mb-1">Transportation Analytics &amp; Insights</h1>
+          <h1 className="font-serif font-bold text-2xl text-[#0A2540] mb-1">Transportation Analytics &amp; Insights</h1>
           <p className="text-[13px] text-gray-500">Data-driven freight intelligence for your supply chain</p>
         </div>
         <div className="flex gap-2">

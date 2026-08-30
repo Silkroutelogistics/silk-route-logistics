@@ -125,7 +125,7 @@ export default function CarrierTrainingPage() {
     <div>
       <div className="mb-6 flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="font-serif text-2xl text-[#0A2540] mb-1">Driver Training</h1>
+          <h1 className="font-serif font-bold text-2xl text-[#0A2540] mb-1">Driver Training</h1>
           <p className="text-[13px] text-gray-500">
             SRL Driver Academy completion across your roster. Set required courses, track who&apos;s due, and export an audit-ready transcript.
           </p>

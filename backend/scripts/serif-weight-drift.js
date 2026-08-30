@@ -101,6 +101,29 @@ function scanReactSerif() {
           violations.push({ file: rel, line: i + 1, problem: `${w} — Playfair is 400 or 700 only`, cls });
         }
       }
+
+      // A serif HEADING with no weight class renders 400, not bold: Tailwind's
+      // preflight resets headings to `font-weight: inherit`, so they take the
+      // body's 400 rather than the browser's default bold. The skill is explicit
+      // that heroes, page titles and section heads are 700.
+      //
+      // This check was NOT in the first cut of this guard, which treated a
+      // weightless heading as conformant on the reasoning that 400 is a
+      // sanctioned Playfair weight. True, and the wrong test — 46 portal page
+      // titles were rendering light. Legality of the weight is not the same
+      // question as the pattern for the element.
+      const tag = (line.match(/<([a-zA-Z][a-zA-Z0-9]*)/) || [])[1] || "";
+      const isHeadingTag = /^h[1-6]$/i.test(tag);
+      const declaresWeight = new RegExp(
+        `\\bfont-(${["thin", "extralight", "light", "normal", "medium", "semibold", "bold", "extrabold", "black"].join("|")})\\b`
+      ).test(cls);
+      if (isHeadingTag && !declaresWeight) {
+        violations.push({
+          file: rel, line: i + 1,
+          problem: `<${tag}> serif heading declares no weight — renders 400 via Tailwind preflight; the skill specifies 700`,
+          cls,
+        });
+      }
     });
   }
   return { violations, elements };

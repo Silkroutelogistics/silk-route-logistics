@@ -122,7 +122,7 @@ export function LessonMarkdown({ text }: { text: string }) {
     if (line.startsWith("## ")) {
       flushPara(); flushBullets(); flushQuote();
       const key = `h${k++}`;
-      blocks.push(<h3 key={key} className="font-serif text-lg text-[#0A2540] pt-1">{renderInline(line.slice(3), key)}</h3>);
+      blocks.push(<h3 key={key} className="font-serif font-bold text-lg text-[#0A2540] pt-1">{renderInline(line.slice(3), key)}</h3>);
       continue;
     }
     flushBullets(); flushQuote();

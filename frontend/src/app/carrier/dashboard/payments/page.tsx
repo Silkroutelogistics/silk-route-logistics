@@ -156,7 +156,7 @@ export default function CarrierPaymentsPage() {
     <div>
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 className="font-serif text-2xl text-[#0A2540] mb-1">Payments &amp; Earnings</h1>
+          <h1 className="font-serif font-bold text-2xl text-[#0A2540] mb-1">Payments &amp; Earnings</h1>
           <p className="text-[13px] text-gray-500">Track your payment history, pending earnings, and QuickPay options</p>
         </div>
         <button onClick={exportCSV} className="inline-flex items-center gap-1.5 text-gray-500 text-[11px] font-semibold uppercase tracking-wider hover:text-[#BA7517]">

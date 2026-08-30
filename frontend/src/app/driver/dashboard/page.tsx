@@ -112,7 +112,7 @@ export default function DriverCoursesPage() {
     <div>
       <div className="mb-5 flex items-start justify-between gap-3">
         <div>
-          <h1 className="mb-1 font-serif text-[26px] leading-tight text-[#0A2540]">Welcome{driver ? `, ${driver.firstName}` : ""}</h1>
+          <h1 className="mb-1 font-serif font-bold text-[26px] leading-tight text-[#0A2540]">Welcome{driver ? `, ${driver.firstName}` : ""}</h1>
           <p className="text-[13px] text-[#6B7685]">Work through each course at your own pace. Pass the quiz to earn your certificate.</p>
         </div>
         <GamifyBar xp={gamify.xp} streak={gamify.streak} todayXp={gamify.todayXp} className="mt-1 shrink-0" />
@@ -216,7 +216,7 @@ export default function DriverCoursesPage() {
                           </span>
                           <StatusPill p={c.progress ?? null} />
                         </div>
-                        <h3 className="mb-1 font-serif text-[16px] leading-tight text-[#0A2540]">{c.title}</h3>
+                        <h3 className="mb-1 font-serif font-bold text-[16px] leading-tight text-[#0A2540]">{c.title}</h3>
                         {c.summary && <p className="mb-3 line-clamp-2 text-[12px] leading-relaxed text-[#6B7685]">{c.summary}</p>}
 
                         {inProgress && (

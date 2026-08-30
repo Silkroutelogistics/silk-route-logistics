@@ -20,7 +20,7 @@ export default function ShipperFacilitiesPage() {
     <div>
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 className="font-serif text-2xl text-[#0A2540] mb-1">Shipping Facilities Management</h1>
+          <h1 className="font-serif font-bold text-2xl text-[#0A2540] mb-1">Shipping Facilities Management</h1>
           <p className="text-[13px] text-gray-500">Manage your pickup, delivery, and warehouse locations</p>
         </div>
         <button className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#BA7517] text-[#FBF7F0] text-[11px] font-semibold uppercase tracking-[2px] rounded shadow-[0_4px_20px_rgba(186,117,23,0.3)]">

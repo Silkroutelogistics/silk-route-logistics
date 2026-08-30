@@ -74,7 +74,7 @@ export function LessonSlide(p: LessonSlideProps) {
               <div className="text-[11px] text-[#6B7685]">Lesson {p.lessonOrder} of {p.total} · ~{p.estMinutes} min</div>
             </div>
           </div>
-          <h2 className="mb-3 font-serif text-[22px] leading-tight text-[#0A2540]">{p.lessonTitle}</h2>
+          <h2 className="mb-3 font-serif font-bold text-[22px] leading-tight text-[#0A2540]">{p.lessonTitle}</h2>
           <div className="mb-4">
             <LessonAudio title={p.lessonTitle} bodyMarkdown={p.bodyMarkdown} />
           </div>

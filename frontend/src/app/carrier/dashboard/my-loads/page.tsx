@@ -82,7 +82,7 @@ export default function MyLoadsPage() {
   return (
     <div>
       <div className="mb-6">
-        <h1 className="font-serif text-2xl text-[#0A2540] mb-1">My Loads</h1>
+        <h1 className="font-serif font-bold text-2xl text-[#0A2540] mb-1">My Loads</h1>
         <p className="text-[13px] text-gray-500">Manage your assigned loads and update shipment status</p>
       </div>
 

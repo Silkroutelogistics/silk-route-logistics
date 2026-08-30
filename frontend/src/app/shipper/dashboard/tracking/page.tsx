@@ -138,7 +138,7 @@ export default function ShipperTrackingPage() {
     <div>
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="font-serif text-2xl text-[#0A2540]">Live Freight Tracking</h1>
+          <h1 className="font-serif font-bold text-2xl text-[#0A2540]">Live Freight Tracking</h1>
           <p className="text-xs text-gray-500 mt-1">Real-time shipment visibility &amp; status updates</p>
         </div>
         <span className="flex items-center gap-1.5 px-2.5 py-1 bg-[#E6F0E9] border border-[#2F7A4F]/30 rounded-full text-xs text-[#2F7A4F]">
