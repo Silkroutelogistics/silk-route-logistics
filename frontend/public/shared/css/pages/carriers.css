@@ -1535,7 +1535,7 @@
     }
     .cj-tab-name {
       font-family: 'Playfair Display', Georgia, serif; font-size: 16px;
-      font-weight: 600; color: #0A2540; transition: color 240ms;
+      font-weight: 700; color: #0A2540; transition: color 240ms;
     }
     /* Gold LED status dot — top-right of each tab. Invisible on
        inactive tabs; visible + blinking on the active tab. */
@@ -2016,7 +2016,7 @@
       color: #0A2540;
       margin: 0 0 12px 0;
       line-height: 1.25;
-      font-weight: 600;
+      font-weight: 700;
     }
     /* Brass divider line — matches homepage .card-divider canonical */
     .card-divider {
@@ -2036,7 +2036,7 @@
       color: #BA7517;
       line-height: 1.45;
       margin: 0 0 20px 0;
-      font-weight: 500;
+      font-weight: 400;
     }
     .commitment-flip-cta {
       margin-top: auto;
@@ -2055,7 +2055,7 @@
       color: #0A2540;
       margin: 0 0 12px 0;
       line-height: 1.25;
-      font-weight: 600;
+      font-weight: 700;
     }
     /* v3.8.amj — flip-card "How it works" backs as ›-bullets (Wasi directive:
        bullet the backs for site-wide symmetry). Supersedes the v3.8.aia

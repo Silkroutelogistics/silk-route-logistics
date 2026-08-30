@@ -50,7 +50,7 @@ export function StepUpPrompt({
             <ShieldCheck className="w-5 h-5 text-[#BA7517]" />
           </div>
           <div>
-            <h2 className="font-serif italic text-lg font-semibold text-[#0A2540]">{title}</h2>
+            <h2 className="font-serif text-lg font-bold text-[#0A2540]">{title}</h2>
             <p className="mt-1 text-sm text-[#3A4A5F] leading-relaxed">{description}</p>
           </div>
         </div>

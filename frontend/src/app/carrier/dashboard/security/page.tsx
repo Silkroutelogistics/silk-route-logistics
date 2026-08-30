@@ -125,7 +125,7 @@ export default function CarrierSecurityPage() {
               <ShieldCheck className="w-6 h-6 text-[#2F7A4F]" />
             </div>
             <div>
-              <h1 className="font-serif italic text-xl font-semibold text-[#0A2540]">
+              <h1 className="font-serif text-xl font-bold text-[#0A2540]">
                 Two-factor authentication is on
               </h1>
               <p className="mt-2 text-sm text-[#3A4A5F] leading-relaxed">
@@ -158,7 +158,7 @@ export default function CarrierSecurityPage() {
           <div className="flex items-start gap-3 mb-5">
             <CheckCircle2 className="w-6 h-6 text-[#2F7A4F] flex-shrink-0" />
             <div>
-              <h1 className="font-serif italic text-xl font-semibold text-[#0A2540]">
+              <h1 className="font-serif text-xl font-bold text-[#0A2540]">
                 Two-factor authentication is on
               </h1>
               <p className="mt-1 text-sm text-[#3A4A5F]">
@@ -240,7 +240,7 @@ export default function CarrierSecurityPage() {
             <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#BA7517]">
               Required
             </p>
-            <h1 className="mt-1 font-serif italic text-xl font-semibold text-[#0A2540]">
+            <h1 className="mt-1 font-serif text-xl font-bold text-[#0A2540]">
               Set up two-factor authentication
             </h1>
             <p className="mt-2 text-sm text-[#3A4A5F] leading-relaxed">

@@ -394,7 +394,7 @@
       font-size: clamp(36px, 5vw, 60px);
       color: var(--navy);
       font-family: 'Playfair Display', Georgia, serif;
-      font-weight: 600;
+      font-weight: 700;
       line-height: 1.05;
       letter-spacing: -0.5px;
       margin-bottom: 22px;
@@ -466,7 +466,7 @@
       font-family: var(--font-headline, 'Playfair Display', Georgia, serif);
       font-style: italic;
       font-size: 17px;
-      font-weight: 500;
+      font-weight: 400;
       line-height: 1.5;
       color: var(--gold-dark, #BA7517);
       margin: 0 0 18px 0;
@@ -513,7 +513,7 @@
     .operations-text h2 {
       font-family: 'Playfair Display', Georgia, serif;
       font-size: clamp(28px, 3.4vw, 40px);
-      font-weight: 500;
+      font-weight: 700;
       color: var(--navy);
       line-height: 1.15;
       letter-spacing: -0.3px;
@@ -908,7 +908,7 @@
     .ops-tab-name {
       font-family: var(--font-headline, 'Playfair Display', Georgia, serif);
       font-size: 16px;
-      font-weight: 600;
+      font-weight: 700;
       color: var(--navy, #0A2540);
       transition: color 240ms;
     }
@@ -1264,7 +1264,7 @@
     .profile-card h3 {
       font-family: var(--font-headline, 'Playfair Display', Georgia, serif);
       font-size: 22px;
-      font-weight: 600;
+      font-weight: 700;
       line-height: 1.32;
       color: var(--navy, #0A2540);
       margin: 0 0 14px 0;
@@ -1329,7 +1329,7 @@
     .system-card h3 {
       font-family: var(--font-headline, 'Playfair Display', Georgia, serif);
       font-size: 19px;
-      font-weight: 600;
+      font-weight: 700;
       line-height: 1.3;
       color: var(--navy, #0A2540);
       margin: 0 0 12px 0;
@@ -1458,7 +1458,7 @@
     .system-card-front h3 {
       font-family: var(--font-headline, 'Playfair Display', Georgia, serif);
       font-size: 21px;
-      font-weight: 600;
+      font-weight: 700;
       color: var(--navy, #0A2540);
       margin: 0;
       line-height: 1.25;
@@ -1484,7 +1484,7 @@
     .system-card-back h3 {
       font-family: var(--font-headline, 'Playfair Display', Georgia, serif);
       font-size: 19px;
-      font-weight: 600;
+      font-weight: 700;
       line-height: 1.3;
       color: var(--navy, #0A2540);
       margin: 0 0 12px 0;

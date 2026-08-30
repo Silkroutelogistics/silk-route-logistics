@@ -55,7 +55,7 @@ export default function LoadboardPage() {
   return (
     <div className="p-6 space-y-4">
       <div>
-        <h1 className="text-2xl font-serif font-semibold text-[#0A2540]">Load Board</h1>
+        <h1 className="text-2xl font-serif font-bold text-[#0A2540]">Load Board</h1>
         <p className="text-sm text-slate-700 mt-1">
           Browse available loads from The Caravan. Submit a bid to book.
         </p>

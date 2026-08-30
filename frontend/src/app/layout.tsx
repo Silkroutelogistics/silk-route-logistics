@@ -5,7 +5,10 @@ import { Providers } from "./providers";
 import { MaintenanceBanner } from "@/components/MaintenanceBanner";
 
 const dmSans = DM_Sans({ subsets: ["latin"], variable: "--font-dm-sans" });
-const playfair = Playfair_Display({ subsets: ["latin"], variable: "--font-playfair", weight: ["400", "500", "600", "700"] });
+// Playfair is 400 + 700 ONLY per the srl-brand-design skill — no medium, no
+// semibold. Pinned by backend/__tests__/unit/ci/typographyTokens.test.ts, so
+// re-adding 500 or 600 here fails CI before any component can use it.
+const playfair = Playfair_Display({ subsets: ["latin"], variable: "--font-playfair", weight: ["400", "700"] });
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://silkroutelogistics.ai"),

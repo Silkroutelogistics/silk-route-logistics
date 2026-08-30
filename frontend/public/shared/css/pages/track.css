@@ -329,7 +329,7 @@
       background: var(--gold-dark);
       color: var(--cream);
       font-family: var(--font-headline);
-      font-weight: 600;
+      font-weight: 700;
       font-size: 14px;
       display: inline-flex;
       align-items: center;
@@ -423,7 +423,7 @@
       font-family: var(--font-headline);
       font-size: 1.5rem;
       color: var(--navy);
-      font-weight: 600;
+      font-weight: 700;
     }
     .status-pills { display: flex; gap: 8px; flex-wrap: wrap; }
     .status-pill {

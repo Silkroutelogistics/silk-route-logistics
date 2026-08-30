@@ -28,6 +28,7 @@ import fs from "fs";
 import path from "path";
 
 const { scanFontDrift, readCanon } = require("../../../scripts/font-drift.js");
+const { scanSerifWeightDrift } = require("../../../scripts/serif-weight-drift.js");
 
 const REPO = path.resolve(__dirname, "..", "..", "..", "..");
 const GLOBALS = path.join(REPO, "frontend", "src", "app", "globals.css");
@@ -214,6 +215,52 @@ describe("typography guard — the drift lint", () => {
           `skill names. If a file is genuinely exempt, add it to ALLOWLIST in ` +
           `backend/scripts/font-drift.js WITH the reason.\n\n${report}\n`
     ).toBe(0);
+  });
+
+  it("no serif element carries a forbidden weight or an unsanctioned italic", () => {
+    // This is the check that did NOT exist while every heading in the React app
+    // rendered Playfair at 600 in italic. The family guard above was green
+    // throughout, because it asserts the family and nothing else. A guard proves
+    // the property it asserts, not the property you meant.
+    const { violations, stats } = scanSerifWeightDrift();
+
+    // Tripwires: a scan that stopped reaching files would make "no violations"
+    // meaningless in exactly the way this whole guard exists to prevent.
+    expect(stats.reactElements).toBeGreaterThan(50);
+    expect(stats.staticBlocks).toBeGreaterThan(50);
+
+    const report = violations
+      .map((v: any) => `  ${v.file} [${v.line}]\n      ${v.problem}`)
+      .join("\n");
+    expect(
+      violations.length,
+      violations.length === 0
+        ? ""
+        : `\n${violations.length} serif weight/style violation(s). Playfair is 400 or ` +
+          `700 only, and italic is sanctioned solely for the document-tagline ` +
+          `pattern. Fix the element, or — if a static block is a genuine ` +
+          `exception — add its selector to ITALIC_ALLOWLIST in ` +
+          `backend/scripts/serif-weight-drift.js WITH the reason.\n\n${report}\n`
+    ).toBe(0);
+  });
+
+  it("the loaders request only the sanctioned Playfair faces", () => {
+    // Pinned here so a re-added 500 or 600 fails CI before any component can
+    // reach for it — the loader is upstream of every element that could use it.
+    const { stats } = scanSerifWeightDrift();
+    expect(stats.nextFontWeights.sort()).toEqual(["400", "700"]);
+    expect(stats.staticSegment).not.toMatch(/0,500/);
+    expect(stats.staticSegment).not.toMatch(/0,600/);
+  });
+
+  it("every halted italic block states why it is halted", () => {
+    const { allowlist } = scanSerifWeightDrift();
+    const entries = Object.entries(allowlist as Record<string, string>);
+    expect(entries.length).toBeGreaterThan(0);
+    for (const [sel, reason] of entries) {
+      expect(reason.length, `${sel} is allowlisted without a real reason`).toBeGreaterThan(40);
+      expect(reason, `${sel} must say it is halted, not merely tolerated`).toMatch(/HALTED/);
+    }
   });
 
   it("the allowlist is reasoned, not a dumping ground", () => {

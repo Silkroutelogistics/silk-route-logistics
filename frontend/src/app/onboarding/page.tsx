@@ -935,7 +935,7 @@ export default function OnboardingPage() {
             <div className="w-20 h-20 bg-[#E6F0E9] rounded-full flex items-center justify-center mx-auto mb-5">
               <CheckCircle2 className="w-10 h-10 text-[#2F7A4F]" />
             </div>
-            <h2 className="font-serif italic font-semibold text-2xl text-[#0A2540] mb-2">Application Received</h2>
+            <h2 className="font-serif font-bold text-2xl text-[#0A2540] mb-2">Application Received</h2>
             <p className="text-[#3A4A5F] text-sm mb-4">
               Thank you, {form.firstName}. We&apos;ve sent a confirmation email to <strong className="text-[#0A2540]">{form.email}</strong>.
             </p>
@@ -964,7 +964,7 @@ export default function OnboardingPage() {
               application-status as a top-of-page warning banner until
               the carrier clicks the link in their inbox. */}
           <div className="bg-white rounded-2xl shadow-sm border-2 border-[#BA7517]/30 p-8 mb-6">
-            <h3 className="font-serif italic font-semibold text-xl text-[#0A2540] mb-4">Next Steps to Begin Your Caravan Journey</h3>
+            <h3 className="font-serif font-bold text-xl text-[#0A2540] mb-4">Next Steps to Begin Your Caravan Journey</h3>
             <div className="space-y-4">
               <div className="flex gap-3 items-start">
                 <div className="w-8 h-8 bg-[#BA7517] text-[#FBF7F0] rounded-full flex items-center justify-center text-sm font-bold shrink-0">1</div>
@@ -991,7 +991,7 @@ export default function OnboardingPage() {
               Review register. Summary cards use brand cream + cream-2
               border. */}
           <div className="bg-white rounded-2xl shadow-sm border border-[#EFE6D3] p-8 mb-6">
-            <h3 className="font-serif italic font-semibold text-xl text-[#0A2540] mb-4">Application Summary</h3>
+            <h3 className="font-serif font-bold text-xl text-[#0A2540] mb-4">Application Summary</h3>
             <div className="grid sm:grid-cols-2 gap-4 text-sm">
               <div className="p-3 bg-[#FBF7F0] border border-[#EFE6D3] rounded-lg">
                 <p className="text-[10px] uppercase tracking-[0.22em] font-semibold text-[#BA7517] mb-1">Company</p>
@@ -1033,7 +1033,7 @@ export default function OnboardingPage() {
               "Typical review time" warning chip swapped from Tailwind
               amber to §2.1 warning token. */}
           <div className="bg-white rounded-2xl shadow-sm border border-[#EFE6D3] p-8 mb-6">
-            <h3 className="font-serif italic font-semibold text-xl text-[#0A2540] mb-5">What Happens Next</h3>
+            <h3 className="font-serif font-bold text-xl text-[#0A2540] mb-5">What Happens Next</h3>
             <div className="space-y-5">
               <div className="flex gap-4">
                 <div className="w-8 h-8 bg-[#2F7A4F] text-[#FBF7F0] rounded-full flex items-center justify-center text-sm font-bold shrink-0">1</div>
@@ -1109,7 +1109,7 @@ export default function OnboardingPage() {
       <div className="bg-[#F5EEE0] border-b border-[#EFE6D3] print:hidden">
         <div className="max-w-3xl mx-auto px-6 py-5">
           <p className="text-[10px] uppercase tracking-[0.22em] font-semibold text-[#BA7517] mb-1">Caravan Partner Program</p>
-          <h1 className="font-serif italic font-semibold text-xl sm:text-2xl text-[#0A2540] leading-tight">Carrier Registration</h1>
+          <h1 className="font-serif font-bold text-xl sm:text-2xl text-[#0A2540] leading-tight">Carrier Registration</h1>
         </div>
       </div>
 
@@ -1162,7 +1162,7 @@ export default function OnboardingPage() {
             {/* Card A — Welcome (cream-2 #F5EEE0 + gold-dark top hairline) */}
             <div className="bg-[#F5EEE0] border-t-2 border-[#BA7517] rounded-2xl shadow-sm border-l border-r border-b border-[#EFE6D3] p-6 mb-5">
               <p className="text-xs uppercase tracking-[0.2em] font-semibold text-[#BA7517] mb-2">Caravan Partner Program</p>
-              <h2 className="font-serif italic font-semibold text-2xl text-[#0A2540] mb-3">Welcome to the Caravan.</h2>
+              <h2 className="font-serif font-bold text-2xl text-[#0A2540] mb-3">Welcome to the Caravan.</h2>
               <p className="text-sm text-[#3A4A5F] leading-relaxed">
                 Apply to join Silk Route Logistics as a Caravan Partner. Complete the five steps below to submit your application.
               </p>
@@ -1233,7 +1233,7 @@ export default function OnboardingPage() {
             <div className="space-y-6">
               <div className="pb-4 border-b border-[#EFE6D3]">
                 <p className="text-[10px] uppercase tracking-[0.22em] font-semibold text-[#BA7517] mb-1.5">Step 1 of 5</p>
-                <h2 className="font-serif italic font-semibold text-2xl text-[#0A2540] mb-2">Company Information</h2>
+                <h2 className="font-serif font-bold text-2xl text-[#0A2540] mb-2">Company Information</h2>
                 <p className="text-sm text-[#3A4A5F] leading-relaxed">Enter your DOT or MC number to auto-populate your company details from FMCSA.</p>
               </div>
 
@@ -1498,7 +1498,7 @@ export default function OnboardingPage() {
             <div className="space-y-6">
               <div className="pb-4 border-b border-[#EFE6D3]">
                 <p className="text-[10px] uppercase tracking-[0.22em] font-semibold text-[#BA7517] mb-1.5">Step 2 of 5</p>
-                <h2 className="font-serif italic font-semibold text-2xl text-[#0A2540] mb-2">Equipment &amp; Operating Regions</h2>
+                <h2 className="font-serif font-bold text-2xl text-[#0A2540] mb-2">Equipment &amp; Operating Regions</h2>
                 <p className="text-sm text-[#3A4A5F] leading-relaxed">Tell us your fleet size, what you haul, and where you run. The Compass Engine uses all three to match lanes.</p>
               </div>
               {/* v3.8.ait — # of Trucks moved here from Step 1 top grid.
@@ -1542,7 +1542,7 @@ export default function OnboardingPage() {
             <div className="space-y-6">
               <div className="pb-4 border-b border-[#EFE6D3]">
                 <p className="text-[10px] uppercase tracking-[0.22em] font-semibold text-[#BA7517] mb-1.5">Step 3 of 5</p>
-                <h2 className="font-serif italic font-semibold text-2xl text-[#0A2540] mb-2">Insurance &amp; Documents</h2>
+                <h2 className="font-serif font-bold text-2xl text-[#0A2540] mb-2">Insurance &amp; Documents</h2>
                 <p className="text-sm text-[#3A4A5F] leading-relaxed">Coverage minimums: Auto Liability $1M, Motor Cargo $100K, General Liability $1M. Workers&apos; Comp as required by law.</p>
               </div>
 
@@ -1901,7 +1901,7 @@ export default function OnboardingPage() {
             <div className="space-y-6">
               <div className="pb-4 border-b border-[#EFE6D3] print:hidden">
                 <p className="text-[10px] uppercase tracking-[0.22em] font-semibold text-[#BA7517] mb-1.5">Step 4 of 5</p>
-                <h2 className="font-serif italic font-semibold text-2xl text-[#0A2540] mb-2">Broker-Carrier Agreement</h2>
+                <h2 className="font-serif font-bold text-2xl text-[#0A2540] mb-2">Broker-Carrier Agreement</h2>
                 <p className="text-sm text-[#3A4A5F] leading-relaxed">Click-through agreement. The standalone executed Broker-Carrier Agreement + Caravan Quick Pay Agreement v2 supersede where signed separately.</p>
               </div>
               {/* v3.8.aja Sprint E — Print / Download PDF affordance.
@@ -1932,7 +1932,7 @@ export default function OnboardingPage() {
                 </p>
               </div>
               <div className="p-5 rounded-xl bg-[#FBF7F0] border border-[#EFE6D3] max-h-80 overflow-y-auto text-sm text-[#3A4A5F] leading-relaxed space-y-4 print:max-h-none print:overflow-visible print:bg-white print:border-0 print:p-0">
-                <p className="font-serif italic font-semibold text-[#0A2540] text-base">Silk Route Logistics — Broker-Carrier Agreement (Click-Through)</p>
+                <p className="font-serif font-bold text-[#0A2540] text-base">Silk Route Logistics — Broker-Carrier Agreement (Click-Through)</p>
                 {!bcaContent && bcaLoading ? (
                   <p className="text-[#6B7685]">Loading the agreement…</p>
                 ) : !bcaContent ? (
@@ -2025,7 +2025,7 @@ export default function OnboardingPage() {
                     Limited pilot
                   </span>
                 </div>
-                <h3 className="font-serif italic font-semibold text-lg text-[#0A2540] mb-2">Quick Pay</h3>
+                <h3 className="font-serif font-bold text-lg text-[#0A2540] mb-2">Quick Pay</h3>
                 <p className="text-sm text-[#3A4A5F] leading-relaxed mb-3">
                   Quick Pay pays you early on a load you choose, for a flat fee by tier, once we have your complete and
                   accurate paperwork. It is running as a limited pilot: you ask, we approve or decline, and we tell you
@@ -2092,7 +2092,7 @@ export default function OnboardingPage() {
             <div className="space-y-6">
               <div className="pb-4 border-b border-[#EFE6D3]">
                 <p className="text-[10px] uppercase tracking-[0.22em] font-semibold text-[#BA7517] mb-1.5">Step 5 of 5</p>
-                <h2 className="font-serif italic font-semibold text-2xl text-[#0A2540] mb-2">Review Your Application</h2>
+                <h2 className="font-serif font-bold text-2xl text-[#0A2540] mb-2">Review Your Application</h2>
                 <p className="text-sm text-[#3A4A5F] leading-relaxed">Confirm everything looks right before submission. The Compass Engine begins its 34-point check immediately on submit.</p>
               </div>
               <div className="grid gap-3">
@@ -2242,7 +2242,7 @@ export default function OnboardingPage() {
               <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#BA7517]">
                 Confirm your email
               </p>
-              <h3 className="mt-2 font-serif text-xl italic font-semibold text-[#0A2540]">
+              <h3 className="mt-2 font-serif text-xl font-bold text-[#0A2540]">
                 We sent a code to {form.email}
               </h3>
               <p className="mt-1.5 text-sm leading-relaxed text-[#3A4A5F]">

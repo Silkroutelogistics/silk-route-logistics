@@ -80,7 +80,7 @@ function VerifyBody() {
             <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#E6F0E9]">
               <CheckCircle2 className="h-6 w-6 text-[#2F7A4F]" />
             </div>
-            <h1 className="mt-5 font-serif text-2xl italic font-semibold text-[#0A2540]">
+            <h1 className="mt-5 font-serif text-2xl font-bold text-[#0A2540]">
               Email confirmed
             </h1>
             <p className="mt-2 text-sm leading-relaxed text-[#3A4A5F]">
@@ -103,7 +103,7 @@ function VerifyBody() {
             <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#F6E3E3]">
               <XCircle className="h-6 w-6 text-[#9B2C2C]" />
             </div>
-            <h1 className="mt-5 font-serif text-2xl italic font-semibold text-[#0A2540]">
+            <h1 className="mt-5 font-serif text-2xl font-bold text-[#0A2540]">
               This link didn&apos;t work
             </h1>
             <p className="mt-2 text-sm leading-relaxed text-[#3A4A5F]">{state.message}</p>

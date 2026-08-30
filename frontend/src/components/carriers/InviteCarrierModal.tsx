@@ -84,7 +84,7 @@ export function InviteCarrierModal({ open, onClose }: Props) {
             <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#BA7517]">
               Carrier network
             </p>
-            <h2 className="mt-1 font-serif text-xl italic font-semibold text-[#0A2540]">
+            <h2 className="mt-1 font-serif text-xl font-bold text-[#0A2540]">
               Invite a carrier to onboard
             </h2>
           </div>
