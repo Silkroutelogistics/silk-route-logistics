@@ -2372,6 +2372,27 @@ Each is a discrete sprint. Mix of operational, security, UX, and technical debt.
     **NOT RUN, AND OWED.** `_arcfix-verification-carryforward-proof.ts` is committed ready to run and **has never executed** — Docker was unavailable and the only reachable database was production. It says so in its own header. Five unit tests cover the shape; the proof covers the wire. Run it before treating 246.2 as verified end to end.
 
 
+247. **System emails speak as roles, never as persons (2026-08-30, `v3.8.avk`).**
+
+    **247.1 — THE DEFECT, AND WHY IT IS ONE.** The COI verification request — sent to a carrier's insurance agent, from `compliance@`, by a service — signed **"Wasi Haider"** above "Compliance Department". A generated email carrying a person's name reads as correspondence that person wrote. They did not: a cron did, at 3am. When the agent replies "as discussed with Wasi", there was no discussion — and it puts one individual's name on a compliance demand issued by the company, which is a liability shape as much as a tone problem.
+
+    **247.2 — THE TRACE, BEFORE ANY EDIT.** Four hits across `backend/src`: **one hardcoded template** (the defect); **one data-rendered** (`Dear ${agentName}` — the agent's person name from the application, not a bug but changed per the ratification); **three config/alias** — `CEO_NAME`, `whaider.html`, and `logo.png` (binary false positive). **Both `CEO_NAME` consumers were traced rather than assumed** — `sendMassEmail` and `processDueSequences`, both Lead Hunter. That mail IS person-to-person, a founder writing to a prospect deliberately (§3.10, §12), and correctly keeps his name.
+
+    **247.3 — THE FIX.** Salutation greets the **agency** (`Dear {agency} team,`) or `Hello,`; the agent's name survives in the audit and activity lines, where it records *who was contacted* rather than performing intimacy in the body. Signature leads with the department, keeps `ENTITY_NAME`/MC/DOT/phone/site. Two other templates already signed as a team and now use the ratified wording. **Scope taken deliberately: sign-offs that exist are normalised, none are invented** — most templates carry only the brand footer, and adding a block to ~30 of them is a copy project, not an identity fix.
+
+    **247.4 — THE TRAILING SPACE WAS NOT A TEMPLATE GAP.** The hypothesis was an empty `lastName` in a join. The success screen renders `Thank you, {firstName}.` with **no gap at all** — the *stored value* carried the space, because `firstName` had `min(1)` and no `.trim()`. Fixed at the validator, which fixes the screen, the confirmation email, the AE console and the PDFs **in one place instead of four**; whitespace-only names are now rejected rather than stored. Verified against the real schema: `"  John  "` → `"John"`, `"   "` refused.
+
+    **247.5 — THE GUARD WAS WRONG TWICE BEFORE IT WAS RIGHT, AND IT FAILED AGAINST CORRECT CODE.** Its first matcher built a regex inside a template literal, where `\s` is an escape evaluating to a bare `s` — so the pattern read `firstName:s*z.string().trim()`, matched nothing, and the guard went red against a validator that was **already correct**. Trusting it would have meant "fixing" working code. Rewritten as a literal substring: no regex, therefore no escaping to get wrong. **Third instrument failure of the day**, after `curl -F` mis-parsing parentheses and the version guard's stale origin read (below). Three injections executed, each turning exactly its own assertion red; vacuity tripwire asserts the walk sees >200 files AND can still find the name on the allowlisted surface; a stale allowlist entry fails the suite, because dead permission is an exemption granted to a file that moved.
+
+    **The guard catches THE name, not all names** — "is this string a person" is not decidable by grep, and its header says so rather than implying broader cover.
+
+    **247.6 — A FALSE COLLISION ALARM, WORTH RECORDING BECAUSE IT LOOKED REAL.** Mid-arc `git diff --stat` showed **43 modified files** I had never touched — frontend pages, auth forms, the version footer — which reads exactly like a concurrent session working in the same tree. It was **CRLF churn** that git had not yet settled: `--numstat` moments later reported 4 files, +19/−8, exactly mine. I had also run `git checkout --` on one file during an injection revert; a normalised diff against the pre-injection backup confirmed **nothing was lost**. The check that settled it was comparing content with line endings stripped, not reading the file list again.
+
+    **247.7 — AND MY STEP 0 LETTER READ WAS STALE.** I derived `avi` from commit *subjects* showing `avh` as the highest. HEAD's footer already said **`avj`** — origin had moved two commits during Step 0. The artifact (`git show origin/main:VersionFooter.tsx`) corrected the guard, not the reverse. Letter taken: `avk`. The guard's own `avk` warning at commit time was the documented §2.2 self-inflicted case — it reads the unstaged diff, and my own bump was in it.
+
+    **BANKED, NOT FIXED.** The COI template still carries legacy `#0D1B2A` navy and non-canonical `#C9A84C` gold — it was missed by the `amm`/`amn` colour sweeps. Belongs to a brand arc.
+
+
 ## §14 LEGAL / COMPLIANCE STATUS
 
 - Property broker under 49 U.S.C. §§ 13904, 13906
