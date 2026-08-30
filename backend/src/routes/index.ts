@@ -1,5 +1,7 @@
 import { buildInfo } from "../lib/buildInfo";
 import { schemaInfo } from "../lib/schemaInfo";
+import { storageStatus } from "../services/storageService";
+import { parserStatus } from "../services/coiReaderService";
 import { requireTotpEnrolled } from "../middleware/requireTotpEnrolled";
 import { makeAllowPublicCarrierAuth } from "../middleware/allowPublicCarrierAuth";
 import { Router, Response } from "express";
@@ -109,12 +111,27 @@ router.get("/health", async (_req, res) => {
   // THIS is the endpoint that matters for that: /api/health. The internal
   // /health in server.ts is a separate handler, and adding the field only there
   // — which is what v3.8.atj did — left the blindness exactly where it was.
+  // v3.8.avo — storage and parser answer the third blindness.
+  //
+  // The SHA says what code is running; `schema` says what the database is. Both
+  // were added after a deploy looked fine while something underneath was not.
+  // These two say whether the platform can KEEP and READ what a carrier hands
+  // it — and until 2026-08-30 the answer was no, silently: the production
+  // documents table held zero rows because storage refuses uploads when it is
+  // unconfigured, and nothing surfaced that (§13.3 Item 248).
+  //
+  // Both are READ from the services' own checks — storageStatus() returns the
+  // same `useS3` const the upload path branches on, parserStatus() reads the
+  // same env name extractCOIData reads. A second copy of "is this configured"
+  // is a second answer, and the one health reports would be the untested one.
   res.json({
     status: "ok",
     uptime: process.uptime(),
     timestamp: new Date().toISOString(),
     ...buildInfo(),
     schema: await schemaInfo(),
+    storage: storageStatus(),
+    parser: parserStatus(),
   });
 });
 

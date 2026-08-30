@@ -287,3 +287,23 @@ export async function runStorageSelfTest(): Promise<{
     steps,
   };
 }
+
+/**
+ * v3.8.avo — what /api/health reports about object storage.
+ *
+ * Deliberately reads the SAME `useS3` const the upload path branches on, rather
+ * than re-deriving the condition from env. A second copy of "is storage
+ * configured" is a second answer, and the one health reports would be the one
+ * nobody tested. If uploads work, this says configured; if uploads are being
+ * refused, this says they are.
+ *
+ * Reports the provider so a misconfiguration is legible: `s3-compatible` means
+ * S3_ENDPOINT is set (R2 or similar), and `local-disk` in production is the
+ * state where every upload is refused.
+ */
+export function storageStatus(): { configured: boolean; provider: string } {
+  return {
+    configured: useS3,
+    provider: useS3 ? (env.S3_ENDPOINT ? "s3-compatible" : "s3") : "local-disk",
+  };
+}

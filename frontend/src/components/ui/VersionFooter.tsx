@@ -15434,7 +15434,29 @@
 //
 // Phase 3 (storage readiness) is a concurrent session's work and is not here.
 
-export const SRL_VERSION = "3.8.avn";
+// v3.8.avo — the platform says whether it can keep and read what a carrier sends.
+//
+// /api/health gains storage and parser, both READ from the services' own checks
+// rather than re-derived: storageStatus() returns the same `useS3` const the
+// upload path branches on, parserStatus() reads the same env name extractCOIData
+// reads. A second copy of "is this configured" is a second answer, and health
+// would report the untested one.
+//
+// The AE console shows it too, above everything else on the overview, because it
+// changes how you read everything below it: if storage is unconfigured, a
+// carrier's DOCUMENTS (0) does not mean they sent nothing.
+//
+// PARSER CHAIN, traced: the downstream half is wired — extracted fields feed the
+// Compass Insurance Minimums and Insurance Expiry Proximity checks and the COI
+// verification email — but the TRIGGER is missing. The reader has one entry
+// point and no frontend calls it. Setting GEMINI_API_KEY is necessary and not
+// sufficient, and the checklist says so rather than implying a key turns it on.
+//
+// Also retired the second Rate Confirmation renderer. Two renderers for the
+// document a carrier signs is the Load.rate defect in document form. It was
+// dead — zero consumers anywhere — and it held the last non-canonical colour on
+// a carrier-facing document.
+export const SRL_VERSION = "3.8.avo";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

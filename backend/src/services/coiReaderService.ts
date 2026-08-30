@@ -5,6 +5,29 @@
  */
 import { log } from "../lib/logger";
 
+// v3.8.avo — degraded loudly, not quietly.
+//
+// Without a key this service falls back to a "very limited" text path that is
+// not the same capability, and the difference was visible nowhere: no boot line,
+// no health field, no AE surface. Storage learned this lesson first — it now
+// logs CRITICAL in production when object storage is missing, because the quiet
+// version let every carrier document be destroyed while everything looked fine
+// (§13.3 Item 248). The parser is the same shape of silence one step later: the
+// documents arrive and nothing reads them.
+//
+// Not fatal, deliberately. A missing key must not stop the server; it must stop
+// being invisible.
+if (!process.env.GEMINI_API_KEY) {
+  const where = process.env.NODE_ENV === "production" ? "in production" : "in this environment";
+  const emit = process.env.NODE_ENV === "production" ? log.error : log.info;
+  emit(
+    `[COIReader] COI parsing is NOT configured ${where}. GEMINI_API_KEY is unset, so ` +
+      "certificates of insurance WILL NOT be read: no coverage amounts, no expiry, no " +
+      "agent details extracted. Uploaded COIs are stored and shown to the AE, and nothing " +
+      "reads them. Set GEMINI_API_KEY to turn the reader on.",
+  );
+}
+
 export interface COIExtractedData {
   insurerName: string | null;
   policyNumber: string | null;
@@ -233,4 +256,16 @@ async function extractWithFallback(
     confidence: "LOW",
     rawText: rawText.substring(0, 5000),
   };
+}
+
+/**
+ * v3.8.avo — what /api/health reports about the COI parser.
+ *
+ * Reads the SAME env name extractCOIData reads (GEMINI_API_KEY) so the health
+ * field cannot drift from the thing it describes. Without the key the reader
+ * falls back to a very limited non-AI path, which is not the same capability —
+ * health should say so rather than implying the parser is live.
+ */
+export function parserStatus(): { configured: boolean } {
+  return { configured: !!process.env.GEMINI_API_KEY };
 }

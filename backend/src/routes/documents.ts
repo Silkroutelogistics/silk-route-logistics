@@ -1,5 +1,5 @@
 import { Router, Response } from "express";
-import { uploadDocuments, getDocuments, downloadDocument, generateRateConfirmation, deleteDocument } from "../controllers/documentController";
+import { uploadDocuments, getDocuments, downloadDocument, deleteDocument } from "../controllers/documentController";
 import { authenticate, authorize, AuthRequest } from "../middleware/auth";
 import { upload } from "../config/upload";
 import { prisma } from "../config/database";
@@ -75,12 +75,8 @@ router.get(
 // Download a document (any authenticated user with a valid role)
 router.get("/:id/download", authorize("ADMIN", "CEO", "BROKER", "DISPATCH", "OPERATIONS", "AE", "CARRIER", "SHIPPER") as any, downloadDocument as any);
 
-// Generate rate confirmation for a load
-router.post(
-  "/rate-con/:loadId",
-  authorize("ADMIN", "CEO", "BROKER", "DISPATCH", "OPERATIONS", "AE") as any,
-  generateRateConfirmation as any
-);
+// v3.8.avo — POST /rate-con/:loadId retired with its renderer. The Rate
+// Confirmation has one source: the PDF chrome. See documentController.
 
 // Delete a document (admin/management only)
 router.delete("/:id", authorize("ADMIN", "CEO") as any, deleteDocument as any);

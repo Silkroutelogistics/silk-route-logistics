@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useState, useCallback } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
+import { PlatformConfigBanner } from "./PlatformConfigBanner";
 import {
   DollarSign, Users, TrendingUp, TrendingDown,
   AlertTriangle, CheckCircle2, Shield, Clock,
@@ -329,6 +330,11 @@ export function CeoOverview() {
 
   return (
     <div className="p-6 space-y-6">
+      {/* v3.8.avo — above everything, because it changes how you read everything
+          below it. If storage is unconfigured, "DOCUMENTS (0)" on a carrier does
+          not mean they sent nothing. Renders nothing when both are configured. */}
+      <PlatformConfigBanner />
+
       {/* ─── Header Banner ─────────────────────────────────────────────────── */}
       <div className="bg-gradient-to-r from-gold/20 via-gold/10 to-transparent rounded-2xl p-6 md:p-8 border border-gold/10">
         <div className="flex items-center justify-between">
