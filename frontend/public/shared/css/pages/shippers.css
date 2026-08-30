@@ -463,8 +463,11 @@
        gold-dark, threads the Silk Road heritage pillar without rebranding
        the section. */
     .heritage-line {
+      /* v3.8.avm — roman. The skill sanctions Playfair italic for exactly two
+         patterns, the tagline and the document tagline; this is neither, and an
+         editorial italic no pattern covers is drift rather than a decision. */
       font-family: var(--font-headline, 'Playfair Display', Georgia, serif);
-      font-style: italic;
+      font-style: normal;
       font-size: 17px;
       font-weight: 400;
       line-height: 1.5;
@@ -1072,39 +1075,22 @@
     }
 
     /* Gold shimmer tagline (matches homepage .srl-tagline pattern) */
+    /* v3.8.avm — the skill's tagline pattern, same supersession of §20.8.2 as
+       .srl-tagline on the homepage. See index.css for the full note. */
     .ops-chip-tagline {
-      font-family: var(--font-headline, 'Playfair Display', Georgia, serif);
+      font-family: Georgia, 'Times New Roman', serif;
       font-style: italic;
       font-size: 13px;
-      font-weight: 700;
-      letter-spacing: 2.4px;
+      font-weight: 400;
+      letter-spacing: 0.02em;
       text-align: center;
       line-height: 1.2;
-      background: linear-gradient(
-        90deg,
-        var(--gold-dark, #BA7517) 0%,
-        var(--gold-dark, #BA7517) 38%,
-        #F2D89C 50%,
-        var(--gold-dark, #BA7517) 62%,
-        var(--gold-dark, #BA7517) 100%
-      );
-      background-size: 220% 100%;
-      background-position: 100% 0;
-      -webkit-background-clip: text;
-      background-clip: text;
-      -webkit-text-fill-color: transparent;
-      color: transparent;
-      animation: ops-tagline-shimmer 4.5s ease-in-out infinite;
-    }
-    @keyframes ops-tagline-shimmer {
-      0%   { background-position: 100% 0; }
-      100% { background-position: -120% 0; }
+      color: var(--gold-dark, #BA7517);
     }
 
     /* Reduced motion: kill rotation + shimmer + dash flow + pulse */
     @media (prefers-reduced-motion: reduce) {
       .ops-chip-mark { animation: none; }
-      .ops-chip-tagline { animation: none; background-position: 50% 0; }
       .ops-connector-line { animation: none; }
       .ops-chip-pulse { animation: none; opacity: 0.6; }
     }

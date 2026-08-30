@@ -15384,7 +15384,34 @@
 // And the success screen stopped telling carriers to wait for a confirmation
 // email that the carry-forward arc deleted, or for credentials that are never
 // issued.
-export const SRL_VERSION = "3.8.avl";
+// v3.8.avm — the halts resolve to the skill, and the guard learns a third blind spot.
+//
+// Nine blocks sat HALTED since v3.8.avj. All decided, all toward the skill.
+// Four heading blocks to 700 (one deleted as dead), both "Where Trust Travels."
+// taglines to Georgia italic --gold-dark, three editorial italics to roman.
+//
+// The argument that settled the taglines is worth keeping. CLAUDE.md §20.8.2
+// ratified them as "Playfair italic bold with gold gradient" — and neither
+// loader has EVER carried Playfair 700 italic. Every render since v3.8.agk was
+// a browser-synthesised approximation, so what shipped was never what the
+// pattern described and nobody had approved how it actually looked. A pattern
+// whose own render was an accident does not outrank the skill.
+//
+// Then the guard: HEADINGISH had lost its backslashes when it was written,
+// reading [s,>+~] rather than [\s,>+~], so its h1-h6 branch never matched. Both
+// injections that "verified" it used selectors containing the literal words
+// "headline" and "title" — green twice, on a regex that could not do its job.
+//
+// What it was missing: `.hero h1 em { font-style: italic }` on seven pages,
+// which INHERIT Playfair from each stylesheet global heading rule and so render
+// Playfair italic while declaring no family of their own. Third instance of one
+// shape: the check answered a narrower question than its name implied.
+//
+// So the font-link prune did NOT happen, and that is the instruction working.
+// Zero requests was the condition; seven pages still request Playfair italic, at
+// bold. Halted for Wasi — retiring that device changes seven heroes.
+
+export const SRL_VERSION = "3.8.avm";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

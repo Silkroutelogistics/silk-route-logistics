@@ -2030,8 +2030,11 @@
       margin: 0 0 18px 0;
     }
     .commitment-teaser {
+      /* v3.8.avm — roman. The skill sanctions Playfair italic for exactly two
+         patterns, the tagline and the document tagline; this is neither, and an
+         editorial italic no pattern covers is drift rather than a decision. */
       font-family: var(--font-display);
-      font-style: italic;
+      font-style: normal;
       font-size: 16px;
       color: #BA7517;
       line-height: 1.45;

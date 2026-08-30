@@ -75,9 +75,13 @@
       padding: 100px 0;
     }
 
+    /* v3.8.avm — 700 per the skill: heroes, page titles and section heads are
+       Playfair Bold. Was 400, which is a legal Playfair weight and the wrong
+       pattern for the element. Ratified 2026-08-30; supersedes the register
+       state CLAUDE.md §20.6 recorded at v3.8.aeq. */
     .headline {
       font-family: var(--font-headline);
-      font-weight: 400;
+      font-weight: 700;
       line-height: 1.2;
     }
 
@@ -1236,34 +1240,24 @@
       display: block;
     }
 
+    /* v3.8.avm — the skill's tagline pattern, adopted verbatim:
+       Georgia italic, --gold-dark, tracked +0.02em.
+
+       Supersedes CLAUDE.md §20.8.2, which specified "Playfair italic bold with
+       gold gradient". That spec named a face the loader has NEVER carried
+       (Playfair 700 italic), so what shipped was a synthesised bold-italic —
+       nobody has ever approved how this actually rendered. The gradient goes
+       with it: the skill names a solid colour, and background-clip:text
+       requires color:transparent, which is not --gold-dark by any reading. */
     .srl-tagline {
-      font-family: var(--font-headline);
+      font-family: Georgia, 'Times New Roman', serif;
       font-style: italic;
       font-size: 17px;
-      font-weight: 700;
-      letter-spacing: 2.8px;
+      font-weight: 400;
+      letter-spacing: 0.02em;
       text-align: center;
       line-height: 1.2;
-      background: linear-gradient(
-        90deg,
-        var(--gold-dark) 0%,
-        var(--gold-dark) 38%,
-        #F2D89C 50%,
-        var(--gold-dark) 62%,
-        var(--gold-dark) 100%
-      );
-      background-size: 220% 100%;
-      background-position: 100% 0;
-      -webkit-background-clip: text;
-      background-clip: text;
-      -webkit-text-fill-color: transparent;
-      color: transparent;
-      animation: srl-tagline-shimmer 4.5s ease-in-out infinite;
-    }
-
-    @keyframes srl-tagline-shimmer {
-      0%   { background-position: 100% 0; }
-      100% { background-position: -120% 0; }
+      color: var(--gold-dark);
     }
 
     /* .srl-wordmark — retired v3.8.agj; tagline now carries the bottom
@@ -1359,7 +1353,7 @@
         padding: 11px;
       }
       .srl-mark { max-width: 150px; }
-      .srl-tagline { font-size: 14px; letter-spacing: 2px; }
+      .srl-tagline { font-size: 14px; }
     }
 
     .coverage-caption {
@@ -1528,8 +1522,11 @@
        it visually as a workflow-time summary distinct from the bullet
        list below. Bottom hairline separates the result from features. */
     .tms-result {
+      /* v3.8.avm — roman. The skill sanctions Playfair italic for exactly two
+         patterns, the tagline and the document tagline; this is neither, and an
+         editorial italic no pattern covers is drift rather than a decision. */
       font-family: var(--font-headline);
-      font-style: italic;
+      font-style: normal;
       font-weight: 400;
       font-size: 0.95rem;
       line-height: 1.5;

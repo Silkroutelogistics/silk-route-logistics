@@ -129,9 +129,11 @@
       margin-bottom: 18px;
       position: relative;
     }
+    /* v3.8.avm — page title at 700 per the skill. Supersedes the /track sweep
+       state recorded at v3.8.amp. */
     .hero h1 {
       font-family: var(--font-headline);
-      font-weight: 400;
+      font-weight: 700;
       font-size: clamp(2.2rem, 5vw, 3.5rem);
       color: var(--navy);
       margin-bottom: 16px;
@@ -299,9 +301,10 @@
       font-weight: 700;
       margin-bottom: 12px;
     }
+    /* v3.8.avm — section head at 700 per the skill. */
     .explainer-text h2 {
       font-family: var(--font-headline);
-      font-weight: 400;
+      font-weight: 700;
       font-size: clamp(1.7rem, 3.2vw, 2.2rem);
       color: var(--navy);
       line-height: 1.25;

@@ -33,7 +33,6 @@
     }
 
     .container { max-width: var(--container); margin: 0 auto; padding: 0 24px; }
-    .headline { font-family: var(--font-headline); font-weight: 400; line-height: 1.2; }
 
     /* ======================================
        NAV

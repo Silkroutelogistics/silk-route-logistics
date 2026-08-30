@@ -253,11 +253,14 @@ describe("typography guard — the drift lint", () => {
     expect(stats.staticSegment).not.toMatch(/0,600/);
   });
 
-  it("every halted italic block states why it is halted", () => {
+  it("any allowlisted italic states why — and empty is the ratified end state", () => {
+    // Five blocks sat here as HALTED through v3.8.avj; all five resolved
+    // 2026-08-30. Empty is correct: the skill sanctions Playfair italic for
+    // exactly one pattern, the document tagline, and that lives in the PDF
+    // chrome rather than web CSS. So this asserts the SHAPE of any future
+    // entry rather than requiring one to exist.
     const { allowlist } = scanSerifWeightDrift();
-    const entries = Object.entries(allowlist as Record<string, string>);
-    expect(entries.length).toBeGreaterThan(0);
-    for (const [sel, reason] of entries) {
+    for (const [sel, reason] of Object.entries(allowlist as Record<string, string>)) {
       expect(reason.length, `${sel} is allowlisted without a real reason`).toBeGreaterThan(40);
       expect(reason, `${sel} must say it is halted, not merely tolerated`).toMatch(/HALTED/);
     }
@@ -271,11 +274,44 @@ describe("typography guard — the drift lint", () => {
     // four section heads at 400 on the homepage and /track.
     const { headingAllowlist } = scanSerifWeightDrift();
     const entries = Object.entries(headingAllowlist as Record<string, string>);
-    expect(entries.length).toBeGreaterThan(0);
     for (const [sel, reason] of entries) {
       expect(reason.length, `${sel} is allowlisted without a real reason`).toBeGreaterThan(40);
       expect(reason, `${sel} must say it is halted or dead, not merely tolerated`)
         .toMatch(/HALTED|DEAD/);
+    }
+  });
+
+  it("the heading-selector regex actually matches a bare heading tag", () => {
+    // This assertion exists because the regex it guards was BROKEN when written
+    // and nothing noticed. Inserted through a JS string, its backslashes were
+    // eaten: it read /(^|[s,>+~])h[1-6].../ rather than [\\s,>+~], so the
+    // h1-h6 branch never matched. Both injections that "verified" it happened to
+    // use selectors containing the literal words "headline" and "title", which
+    // matched a different alternative — so the guard passed for the wrong reason
+    // and seven Playfair italics stayed invisible.
+    //
+    // A selector that can ONLY match via the character-class branch.
+    const { INHERITED_ITALIC_ALLOWLIST } = require("../../../scripts/serif-weight-drift.js");
+    expect(INHERITED_ITALIC_ALLOWLIST).toBeTruthy();
+    const src = fs.readFileSync(
+      path.join(REPO, "backend", "scripts", "serif-weight-drift.js"), "utf8"
+    );
+    const m = src.match(/const HEADINGISH =\s*(\/.*\/i);/);
+    expect(m, "HEADINGISH must be a readable regex literal").toBeTruthy();
+    // eslint-disable-next-line no-eval
+    const re: RegExp = eval(m![1]);
+    expect(re.test(".promo-band h3"), "must match a bare heading tag").toBe(true);
+    expect(re.test(".hero h1 em"), "must match a heading with a descendant").toBe(true);
+    expect(re.test(".ops-chip-tagline"), "must NOT match a non-heading").toBe(false);
+  });
+
+  it("every halted inherited-Playfair italic states why, and the scan reaches them", () => {
+    const { inheritedItalicAllowlist, stats } = scanSerifWeightDrift();
+    // Tripwire: the scan finding nothing is exactly how this class hid before.
+    expect(stats.inheritedItalicChecked).toBeGreaterThan(0);
+    for (const [sel, reason] of Object.entries(inheritedItalicAllowlist as Record<string, string>)) {
+      expect(reason.length, `${sel} is allowlisted without a real reason`).toBeGreaterThan(40);
+      expect(reason, `${sel} must say it is halted`).toMatch(/HALTED/);
     }
   });
 

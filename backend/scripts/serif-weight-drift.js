@@ -23,6 +23,18 @@
  *   3. The LOADERS themselves request only sanctioned faces — so a re-added 600
  *      fails CI before any component can reach for it.
  *
+ * WHAT THIS DELIBERATELY DOES NOT CHECK: DM Sans weights.
+ *
+ * The skill allows DM Sans 400, 500 and 700 — not 600 — and both loaders
+ * request 600. Roughly 1,077 elements use it (140 in static CSS, 937
+ * font-semibold in React): it is the dominant UI weight in the product. A guard
+ * that failed on it would be red from the moment it was written, and a guard
+ * nobody can make green is one people learn to skip.
+ *
+ * So the gap is CHOSEN, not overlooked. It is on the post-launch register with
+ * an owner and a trigger (Design, the Oct 2026 hire). When that lands, extend
+ * scanReactSerif to the sans axis and delete this paragraph.
+ *
  * Runnable:  node backend/scripts/serif-weight-drift.js
  */
 
@@ -38,7 +50,7 @@ const INJECTOR = path.join(REPO, "frontend", "scripts", "inject-chrome.mjs");
 /** Tailwind weight utilities that are NOT 400 or 700. */
 /** Selectors that name a heading element or read as a heading class. */
 const HEADINGISH =
-  /(^|[s,>+~])h[1-6]([s,:.[{]|$)|headline|heading|hero-title|page-title|section-title|title/i;
+  /(^|[\s,>+~])h[1-6]([\s,:.\[{]|$)|headline|heading|hero-title|page-title|section-title|\btitle\b/i;
 
 const FORBIDDEN_WEIGHT_CLASSES = [
   "font-thin", "font-extralight", "font-light",
@@ -59,16 +71,22 @@ const FORBIDDEN_WEIGHT_CLASSES = [
  * the intent: the halt cannot be forgotten quietly.
  */
 const ITALIC_ALLOWLIST = {
-  ".srl-tagline":
-    "HALTED — 'Where Trust Travels.' shimmer. CLAUDE.md §20.8.2 ratifies Playfair italic bold; the skill says Georgia italic --gold-dark. Cross-canonical conflict, Wasi's call.",
-  ".ops-chip-tagline":
-    "HALTED — same shimmer treatment at 13px on /shippers. Same conflict.",
-  ".commitment-teaser":
-    "HALTED — editorial teaser line on /carriers. No sanctioned pattern covers an editorial italic; taste call.",
-  ".tms-result":
-    "HALTED — editorial result line on /. Same class of taste call.",
-  ".heritage-line":
-    "HALTED — editorial heritage line on /shippers. Same class of taste call.",
+  // Empty by design, and that is the ratified end state.
+  //
+  // The skill sanctions Playfair italic for exactly ONE pattern — the document
+  // tagline ("First Call…"), Playfair 400 italic, --gold-dark — which lives in
+  // the PDF chrome (backend/src/lib/srl-chrome.ts), not in web CSS. So zero
+  // entries here is correct, not an oversight.
+  //
+  // Five blocks sat here as HALTED through v3.8.avj. All five resolved
+  // 2026-08-30: the two "Where Trust Travels." taglines moved to the skill's
+  // Georgia italic --gold-dark (superseding CLAUDE.md §20.8.2, which named a
+  // Playfair 700 italic face the loader has never carried — what shipped was
+  // synthesised, so nobody had ever approved its render), and the three
+  // editorial italics no pattern covered moved to roman.
+  //
+  // Adding an entry here means claiming a NEW sanctioned italic pattern. Say
+  // which pattern, and say HALTED if it is pending a decision.
 };
 
 /**
@@ -91,14 +109,41 @@ const ITALIC_ALLOWLIST = {
  * there is. That is Wasi's call, not a cleanup.
  */
 const HEADING_WEIGHT_ALLOWLIST = {
-  "index .headline":
-    "HALTED — 4 live <h2> section heads on the homepage ('Freight Solutions for Every Lane', 'A new trade route, 48 states wide', 'The Caravan Partner Program', 'Khotan, Our TMS'). Skill says section heads are 700; CLAUDE.md §20.6 records the homepage editorial register as locked. Cross-canonical conflict, Wasi's call.",
-  "contact .headline":
-    "DEAD — contact.html carries zero .headline elements, so this rule renders nothing. Recorded rather than deleted; removing dead CSS is not this arc's scope.",
-  "track .hero h1":
-    "HALTED — page title on /track. Same conflict: skill says 700, §20.6 records /track as swept clean at v3.8.amp with the current weight.",
-  "track .explainer-text h2":
-    "HALTED — section head on /track. Same conflict.",
+  // Empty by design. Four blocks sat here as HALTED through v3.8.avj —
+  // index.css .headline (four homepage section heads), track.css .hero h1,
+  // track.css .explainer-text h2, and a dead contact.css copy. All resolved
+  // 2026-08-30: the three live ones moved to 700 per the skill, and the dead
+  // one was deleted (contact.html carries zero .headline elements).
+  //
+  // CLAUDE.md §20.6 recorded those pages' registers as locked at v3.8.aeq and
+  // v3.8.amp. That supersession is dated in §20.6 itself: the skill is canon,
+  // and the register captured a pre-skill state.
+};
+
+/**
+ * Selectors that carry `font-style: italic` on an element which INHERITS
+ * Playfair rather than declaring it, each with its reason.
+ *
+ * WHY A THIRD ALLOWLIST. The static check above only sees blocks that DECLARE
+ * font-family, so `.hero h1 em { font-style: italic }` was invisible to it —
+ * the em inherits Playfair from the page's `h1, h2, h3, h4` rule several hundred
+ * lines earlier. Seven pages render Playfair italic that way and the guard
+ * reported zero. Same blind spot as the weight axis (v3.8.avj) and the
+ * heading-pattern axis, now a third time: the check answered a narrower question
+ * than its name implied.
+ *
+ * Found by trying to prune the italic faces from the font link and asking what
+ * still requests them. The prune is what forced the question.
+ */
+const INHERITED_ITALIC_ALLOWLIST = {
+  "about.css .hero h1 em":
+    "HALTED — the hero-title emphasis device. Seven public pages set the second half of their page title in italic gold (Information <em>Security Policy</em>). The skill sanctions italic for taglines only, so by canon this is drift — but it is a deliberate, consistent, site-wide device on every legal and content page, and retiring it changes seven heroes. NOT covered by the 2026-08-30 ratification, which named three specific editorial italics. Wasi's call.",
+  "blog.css .hero h1 em": "HALTED — same hero-title emphasis device. See about.css for the full reason.",
+  "careers.css .hero h1 em": "HALTED — same hero-title emphasis device. See about.css for the full reason.",
+  "faq.css .hero h1 em": "HALTED — same hero-title emphasis device. See about.css for the full reason.",
+  "privacy.css .hero h1 em": "HALTED — same hero-title emphasis device. See about.css for the full reason.",
+  "security-policy.css .hero h1 em": "HALTED — same hero-title emphasis device. See about.css for the full reason.",
+  "terms.css .hero h1 em": "HALTED — same hero-title emphasis device. See about.css for the full reason.",
 };
 
 function walkFiles(dir, exts, out = []) {
@@ -229,6 +274,44 @@ function scanStaticSerif() {
   return { violations, blocks };
 }
 
+/**
+ * 2b. Italic applied to an element that INHERITS Playfair.
+ *
+ * A stylesheet whose global heading rule sets Playfair makes every h1-h4
+ * descendant a Playfair element, so an italic on one of those is a Playfair
+ * italic even though its own block names no family.
+ */
+function scanInheritedItalic() {
+  const violations = [];
+  let checked = 0;
+  for (const f of walkFiles(PUBLIC_CSS, [".css"])) {
+    const css = fs.readFileSync(f, "utf8");
+    if (!/h1,\s*h2[^{]*\{[^}]*Playfair/i.test(css)) continue;
+    const base = path.basename(f);
+    const rel = path.relative(REPO, f).split(path.sep).join("/");
+    const lines = css.split(/\r?\n/);
+    lines.forEach((ln, i) => {
+      if (!/font-style\s*:\s*italic/i.test(ln)) return;
+      let sel = "";
+      for (let j = i; j >= 0; j--) {
+        const m = lines[j].match(/^\s*([^{}]+)\{/);
+        if (m) { sel = m[1].trim(); break; }
+      }
+      if (!HEADINGISH.test(sel)) return;
+      checked += 1;
+      if (!INHERITED_ITALIC_ALLOWLIST[base + " " + sel]) {
+        violations.push({
+          file: rel,
+          line: i + 1,
+          problem: "italic on " + sel + " — inherits Playfair from this stylesheet global heading rule; the skill sanctions Playfair italic for taglines only",
+          cls: sel,
+        });
+      }
+    });
+  }
+  return { violations, checked };
+}
+
 /** 3. The loaders themselves. */
 function scanLoaders() {
   const violations = [];
@@ -273,9 +356,10 @@ function scanLoaders() {
 function scanSerifWeightDrift() {
   const react = scanReactSerif();
   const staticCss = scanStaticSerif();
+  const inherited = scanInheritedItalic();
   const loaders = scanLoaders();
   return {
-    violations: [...react.violations, ...staticCss.violations, ...loaders.violations],
+    violations: [...react.violations, ...staticCss.violations, ...inherited.violations, ...loaders.violations],
     stats: {
       reactElements: react.elements,
       staticBlocks: staticCss.blocks,
@@ -283,13 +367,16 @@ function scanSerifWeightDrift() {
       staticSegment: loaders.staticSegment,
       italicAllowlisted: Object.keys(ITALIC_ALLOWLIST).length,
       headingWeightAllowlisted: Object.keys(HEADING_WEIGHT_ALLOWLIST).length,
+      inheritedItalicChecked: inherited.checked,
+      inheritedItalicAllowlisted: Object.keys(INHERITED_ITALIC_ALLOWLIST).length,
     },
     allowlist: ITALIC_ALLOWLIST,
     headingAllowlist: HEADING_WEIGHT_ALLOWLIST,
+    inheritedItalicAllowlist: INHERITED_ITALIC_ALLOWLIST,
   };
 }
 
-module.exports = { scanSerifWeightDrift, ITALIC_ALLOWLIST, HEADING_WEIGHT_ALLOWLIST };
+module.exports = { scanSerifWeightDrift, ITALIC_ALLOWLIST, HEADING_WEIGHT_ALLOWLIST, INHERITED_ITALIC_ALLOWLIST };
 
 if (require.main === module) {
   const { violations, stats } = scanSerifWeightDrift();
@@ -299,6 +386,7 @@ if (require.main === module) {
   console.log(`static loader segment: ${stats.staticSegment}`);
   console.log(`italic blocks allowlisted (halted): ${stats.italicAllowlisted}`);
   console.log(`heading-weight blocks allowlisted (halted): ${stats.headingWeightAllowlisted}`);
+  console.log(`inherited-Playfair italics checked: ${stats.inheritedItalicChecked} (halted: ${stats.inheritedItalicAllowlisted})`);
   if (violations.length === 0) {
     console.log("\nNo serif weight/style drift.");
     process.exit(0);
