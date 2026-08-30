@@ -8,11 +8,35 @@ source. Dated **2026-08-28**, against `main` at the SHA recorded in §2.
 
 ## 1. The verdict
 
-> **SRL can run its first real load today, and a carrier can now get all the way
-> through the door to be run for — with the paperwork they sent actually arriving.
-> The platform’s money, compliance and document paths are built and proved; what
-> stands between here and launch is not engineering but five inputs SRL does not
-> yet hold, and two human passes nobody has done.**
+> **SRL can run its first real load today. A carrier can get through the door.
+> The paperwork they send now arrives — object storage is configured, verified
+> on the artifact rather than inferred. What the platform still does not do is
+> READ it: the COI reader is keyed and has never once been triggered.**
+
+Three clauses, and the third is the one still open.
+
+| Clause | State |
+|---|---|
+| A carrier can get through the door | **done** — the acquisition funnel's known defects are closed |
+| The paperwork they sent arrives | **configured, unproven** — `storage.configured: true, provider: s3` on `/api/health`; no registration has occurred since it was set, so the working path has never been exercised |
+| The platform reads it | **NOT DONE** — `parser.configured: true`, and nothing calls the reader. One entry point, zero frontend callers, no cron |
+
+**Clause two is pending a proof, not a change.** A single test-flagged
+registration with a real document, confirming both a `Document` row and the
+object itself, then deleting the artifacts. Configured is not working: a wrong
+bucket name or a key without `PutObject` reports `configured: true` and fails
+on the first real upload.
+
+**Clause three is pending a build.** The trigger is missing — see the chain
+verdict at §13.3 Item 249 — and the ratified parser-safety rules must land with
+it, because the one path that does exist (`?apply=true`) writes extracted values
+straight onto the carrier record with no review and no discrepancy flag.
+
+**A correction that belongs in the verdict.** An earlier revision said storage
+was unset in production. It is not, and was not: that was inferred from a local
+`.env` file with no bearing on Render. `/api/health` now answers it directly,
+which is the durable fix for the class of error that produced the wrong
+sentence.
 
 **One of those five inputs is now load-bearing in a way it was not before.**
 `S3_BUCKET_NAME` and `AWS_ACCESS_KEY_ID` are unset, and until 2026-08-30 that

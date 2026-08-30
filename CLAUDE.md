@@ -2412,6 +2412,39 @@ Each is a discrete sprint. Mix of operational, security, UX, and technical debt.
     **248.8 — SCOPE HELD, TWICE.** Part B (serif conformance) was **not done**: `serif-weight-drift.js` and `typographyTokens.test.ts` were being edited by a concurrent session mid-arc and the diff was precisely that work. §2.2 — if a file you need is being edited by another session, it is theirs. Their arc landed as `avm`. And [`documentController.ts:409`](backend/src/controllers/documentController.ts#L409) renders a standalone HTML Rate Confirmation on `#0D1B2A` plus a *third* non-canonical gold `#C8963E` — reported, not recoloured: it is a document surface governed by the skill's PDF chrome, and it raises a larger question about why a second RC renderer exists alongside the PDF one.
 
 
+249. **The configuration was already there, and I had inferred otherwise from my own `.env` (2026-08-30, `v3.8.avo` + `v3.8.avp`).**
+
+    **249.1 — CORRECTION TO ITEM 248.** That entry states *"the root cause remains open and is not code: `S3_BUCKET_NAME` and `AWS_ACCESS_KEY_ID` are unset"*. **That is wrong.** Production reports `storage: { configured: true, provider: "s3" }` and `parser: { configured: true }`. I read `backend/.env`, found them absent, and inferred production from a local file that has no bearing on it — **§19 Sub-pattern 17, the instrument's reach excluding the answer**, committed in the very entry that recorded two other instrument failures.
+
+    **What Item 248 got RIGHT and is unchanged:** the production `documents` table held **zero rows**; the refusal was swallowed by a fire-and-forget `.catch(log.error)`; `photoId`/`articlesOfInc` wrote rows with no `entityType`/`entityId` and were invisible to the drawer even on success. The mechanism and the fix stand.
+
+    **What reconciles the two facts.** The four carrier registrations are dated **Feb–Mar 2026** and **nobody has registered since**. Their uploads were refused at the time, the catch swallowed it, and no registration has occurred to exercise the working path. Whether storage was configured on those dates is not knowable from here — and that unknowability is the point: nothing recorded the attempt. The `UPLOAD_FAILED` row, the admin notification and the AE banner shipped in `v3.8.avl` exist so the next one cannot be ambiguous.
+
+    **249.2 — HEALTH NOW ANSWERS IT DIRECTLY.** `/api/health` gained `storage` and `parser`, both **read from the services' own checks** — `storageStatus()` returns the same `useS3` const the upload path branches on, `parserStatus()` reads the same env name `extractCOIData` reads. A second copy of "is this configured" is a second answer, and health would have reported the untested one. **This is the fix for the failure in 249.1**: the question I answered by reading a local file is now a field on a production endpoint.
+
+    **249.3 — PARSER CHAIN: the downstream half is wired, the TRIGGER is missing.**
+
+    | Link | Verdict | Evidence |
+    |---|---|---|
+    | document row → parser | **MISSING** | no call site exists |
+    | AE action → parser | **EXISTS-BUT-UNREACHABLE** | [`routes/carriers.ts:231`](backend/src/routes/carriers.ts#L231), zero frontend callers |
+    | cron → parser | **MISSING** | nothing references it |
+    | parser → CarrierProfile | WIRED (`?apply=true` only) | `routes/carriers.ts:245` |
+    | → Compass *Insurance Minimums* | WIRED | [`carrierVettingService.ts:236`](backend/src/services/carrierVettingService.ts#L236) |
+    | → Compass *Insurance Expiry Proximity* | WIRED | `carrierVettingService.ts:427` |
+    | → COI verification email | WIRED | `insuranceVerificationService` |
+    | W-9 TIN parser | **MISSING** | `documentOcrService`, zero callers |
+
+    **So `GEMINI_API_KEY` being set does not mean parsing happens.** It never has. The reader has one entry point and no UI calls it.
+
+    **249.4 — A LIVE HAZARD TO CLOSE BEFORE ANY TRIGGER IS WIRED.** The existing `?apply=true` path writes extracted values **straight onto `CarrierProfile`** — no confidence gate, no human review, no discrepancy flag against what the carrier typed. Wire a button to it and parser output silently overwrites the carrier's figures and feeds Compass as fact. The ratified safety rules (evidence-never-verdict; failed parse → human-review, never a silent zero; contradiction → visible discrepancy flag; never auto-fail Compass) must land **before** that button exists.
+
+    **249.5 — THE SECOND RATE CONFIRMATION RENDERER, RETIRED.** `documentController.generateRateConfirmation` + `buildRateConHTML` rendered a parallel HTML Rate Confirmation — for the document a carrier signs. Two renderers for one legal instrument is the `Load.rate` defect in document form. Dead to the Arc 22 standard (no caller in `backend/src`, `__tests__`, `scripts`, `e2e`, `frontend/src`; the only reference was its own route mount), and its name collided with the **live** `pdfService.generateRateConfirmation`. It also held the last non-canonical colour on a carrier-facing document — `#0D1B2A` and a third gold `#C8963E` — so retiring it took those with it. 134 lines out.
+
+    **249.6 — `/track` IS NOT BLOCKED; `/track?query` IS.** A fresh headless instrument got a NordVPN interstitial at `/track?cb=…` — correct URL, wrong document. But `/carriers` loaded fine in the same session and **`/track/ARCAVOPROOF1` — the actual QR and email shape — loaded correctly.** The block is client-side privacy tooling matching a path named "track" *plus a query string* as a tracking pixel. Nothing in the codebase emits that shape. **Going-forward rule, worth more than the finding: adding any query parameter to a tracking URL — `?utm_source`, `?ref` — would silently break it for every user running NordVPN, AdGuard, uBlock or Brave shields.** The path form is load-bearing.
+
+    **249.7 — AND THE BOOT LOG I ADDED CRASHED THE BOOT (`v3.8.avp`).** `const emit = isProd ? log.error : log.info` detaches pino's `this`; the first call dies on `Symbol(pino.msgPrefix)`. Production never hit it (the key is set, so the block does not run) — **E2E** takes the non-production branch and its web server died at boot. `tsc` types an aliased method happily and the module is imported only at server start, so no local gate could have caught it. **CI did.** Call the logger; never hold a reference to one of its methods.
+
 ## §14 LEGAL / COMPLIANCE STATUS
 
 - Property broker under 49 U.S.C. §§ 13904, 13906
