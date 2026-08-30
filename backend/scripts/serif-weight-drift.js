@@ -136,14 +136,19 @@ const HEADING_WEIGHT_ALLOWLIST = {
  * still requests them. The prune is what forced the question.
  */
 const INHERITED_ITALIC_ALLOWLIST = {
-  "about.css .hero h1 em":
-    "HALTED — the hero-title emphasis device. Seven public pages set the second half of their page title in italic gold (Information <em>Security Policy</em>). The skill sanctions italic for taglines only, so by canon this is drift — but it is a deliberate, consistent, site-wide device on every legal and content page, and retiring it changes seven heroes. NOT covered by the 2026-08-30 ratification, which named three specific editorial italics. Wasi's call.",
-  "blog.css .hero h1 em": "HALTED — same hero-title emphasis device. See about.css for the full reason.",
-  "careers.css .hero h1 em": "HALTED — same hero-title emphasis device. See about.css for the full reason.",
-  "faq.css .hero h1 em": "HALTED — same hero-title emphasis device. See about.css for the full reason.",
-  "privacy.css .hero h1 em": "HALTED — same hero-title emphasis device. See about.css for the full reason.",
-  "security-policy.css .hero h1 em": "HALTED — same hero-title emphasis device. See about.css for the full reason.",
-  "terms.css .hero h1 em": "HALTED — same hero-title emphasis device. See about.css for the full reason.",
+  // Empty, and that is the ratified end state.
+  //
+  // Seven .hero h1 em rules sat here as HALTED through v3.8.avm — the hero-title
+  // emphasis device on every legal and content page. Resolved 2026-08-30
+  // (v3.8.avn): roman, gold retained. The colour was always what carried the
+  // emphasis; the slant was a browser-synthesised approximation of a face
+  // neither loader has ever carried, so nobody had approved how it rendered.
+  //
+  // With this empty, NO element anywhere requests an italic Playfair face, which
+  // is what finally permitted pruning ital from the Google Fonts link.
+  //
+  // An entry here claims a new sanctioned italic pattern. Say which, and say
+  // HALTED if it is pending a decision.
 };
 
 function walkFiles(dir, exts, out = []) {
@@ -284,9 +289,11 @@ function scanStaticSerif() {
 function scanInheritedItalic() {
   const violations = [];
   let checked = 0;
+  let filesScanned = 0;
   for (const f of walkFiles(PUBLIC_CSS, [".css"])) {
     const css = fs.readFileSync(f, "utf8");
     if (!/h1,\s*h2[^{]*\{[^}]*Playfair/i.test(css)) continue;
+    filesScanned += 1;
     const base = path.basename(f);
     const rel = path.relative(REPO, f).split(path.sep).join("/");
     const lines = css.split(/\r?\n/);
@@ -309,7 +316,11 @@ function scanInheritedItalic() {
       }
     });
   }
-  return { violations, checked };
+  // filesScanned is the tripwire, not `checked`. Zero italic-on-heading hits
+  // is the CORRECT state once the device is retired; zero FILES reached would
+  // mean the scan had stopped working and was reporting clean for the wrong
+  // reason — which is the exact failure this whole guard exists to prevent.
+  return { violations, checked, filesScanned };
 }
 
 /** 3. The loaders themselves. */
@@ -368,6 +379,7 @@ function scanSerifWeightDrift() {
       italicAllowlisted: Object.keys(ITALIC_ALLOWLIST).length,
       headingWeightAllowlisted: Object.keys(HEADING_WEIGHT_ALLOWLIST).length,
       inheritedItalicChecked: inherited.checked,
+      inheritedItalicFilesScanned: inherited.filesScanned,
       inheritedItalicAllowlisted: Object.keys(INHERITED_ITALIC_ALLOWLIST).length,
     },
     allowlist: ITALIC_ALLOWLIST,
@@ -386,7 +398,7 @@ if (require.main === module) {
   console.log(`static loader segment: ${stats.staticSegment}`);
   console.log(`italic blocks allowlisted (halted): ${stats.italicAllowlisted}`);
   console.log(`heading-weight blocks allowlisted (halted): ${stats.headingWeightAllowlisted}`);
-  console.log(`inherited-Playfair italics checked: ${stats.inheritedItalicChecked} (halted: ${stats.inheritedItalicAllowlisted})`);
+  console.log(`inherited-Playfair italic scan: ${stats.inheritedItalicFilesScanned} stylesheets reached, ${stats.inheritedItalicChecked} italic heading(s), ${stats.inheritedItalicAllowlisted} halted`);
   if (violations.length === 0) {
     console.log("\nNo serif weight/style drift.");
     process.exit(0);

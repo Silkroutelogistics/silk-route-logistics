@@ -96,7 +96,17 @@
     .hero-content { position: relative; z-index: 1; max-width: 800px; margin: 0 auto; padding: 0 24px; }
     .hero-label { font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 3px; color: #BA7517; margin-bottom: 24px; }
     .hero h1 { font-size: clamp(40px, 6vw, 64px); color: var(--navy); margin-bottom: 24px; line-height: 1.1; }
-    .hero h1 em { font-style: italic; color: #BA7517; }
+    /* v3.8.avn — roman. The gold stays; the slant goes.
+
+       The skill sanctions Playfair italic for taglines only, and this is a page
+       title. It also asked for a face neither loader has ever carried: `.hero h1`
+       declares no weight, so the UA default makes these ems Playfair 700 — and
+       700 italic has never been loaded, so every render of this device since
+       v3.8.agk was a browser-synthesised slant. Nobody approved how it actually
+       looked, because what shipped was never what the CSS described.
+
+       Colour carries the emphasis on its own, which is what the device was for. */
+    .hero h1 em { font-style: normal; color: #BA7517; }
     .hero-text { font-size: 18px; color: #8899AA; line-height: 1.8; max-width: 620px; margin: 0 auto; }
     .hero-divider { width: 60px; height: 3px; background: linear-gradient(90deg, #C5A572, #E8B85E); border-radius: 2px; margin: 40px auto 0; }
 

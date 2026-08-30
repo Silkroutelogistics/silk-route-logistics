@@ -85,6 +85,86 @@ describe("a claim of notification traces to an actual send", () => {
     }
     expect(ctrl.includes("getTierConfig("), "the handler no longer reads the tier config").toBe(true);
   });
+
+  // ── the other two lifecycle transitions ──────────────────────────────────
+  //
+  // Approve was fixed in v3.8.avl. Decline had the identical defect one door
+  // over — "the carrier has been told" on every 200, with nothing sent — and
+  // withdraw takes a payment facility away from someone who was using it while
+  // telling them only if they happen to open the portal. Both send now, and
+  // both banners follow the report rather than the 200.
+  //
+  // Each assertion looks for the CALL inside its own handler, not the
+  // identifier anywhere in the file: the import line alone once satisfied this
+  // guard, which is how a deleted call stayed green.
+
+  const handlerOf = (name: string) => {
+    const i = ctrl.indexOf(`export async function ${name}`);
+    expect(i, `handler ${name} is gone — update this guard`).toBeGreaterThan(-1);
+    return ctrl.slice(i, i + 6000);
+  };
+
+  it("declining actually sends the carrier an email", () => {
+    expect(
+      handlerOf("declineQuickPayEnrollment").includes("await sendQuickPayDeclinedEmail({"),
+      "the decline no longer CALLS the email sender. The console says the " +
+        "carrier was told and given a reason; something has to make that true.",
+    ).toBe(true);
+  });
+
+  it("withdrawing actually sends the carrier an email", () => {
+    expect(
+      handlerOf("withdrawQuickPayEnrollment").includes("await sendQuickPayWithdrawnEmail({"),
+      "the withdrawal no longer CALLS the email sender. A carrier losing Quick " +
+        "Pay would learn it only by opening the portal.",
+    ).toBe(true);
+  });
+
+  it("both report per-channel delivery rather than a bare 200", () => {
+    for (const h of ["declineQuickPayEnrollment", "withdrawQuickPayEnrollment"]) {
+      expect(
+        /notified:\s*emailSent \|\| notifSent/.test(handlerOf(h)),
+        `${h} no longer reports whether anything was delivered`,
+      ).toBe(true);
+    }
+  });
+
+  it("both banners are conditional on that report", () => {
+    expect(
+      page.includes("Declined — but we could NOT reach the carrier"),
+      "the decline banner has no copy for a failed send, so it claims delivery " +
+        "unconditionally again",
+    ).toBe(true);
+    expect(
+      page.includes("Withdrawn — but we could NOT reach the carrier"),
+      "the withdrawal banner has no copy for a failed send",
+    ).toBe(true);
+  });
+
+  it("neither send failure is swallowed", () => {
+    for (const [h, label] of [
+      ["declineQuickPayEnrollment", "decline"],
+      ["withdrawQuickPayEnrollment", "withdraw"],
+    ] as const) {
+      expect(
+        handlerOf(h).includes(`[QuickPayPilot] ${label} EMAIL failed`),
+        `a failed ${label} email no longer logs — it is invisible again`,
+      ).toBe(true);
+    }
+  });
+
+  it("neither email hardcodes a Quick Pay figure", () => {
+    // Same rule as the approval email: a percentage written into a template is
+    // a pricing statement in writing to a carrier, and it goes stale silently.
+    const email = read(path.join(BE, "services/emailService.ts"));
+    for (const fn of ["sendQuickPayDeclinedEmail", "sendQuickPayWithdrawnEmail"]) {
+      const body = email.slice(email.indexOf(fn), email.indexOf(fn) + 4000);
+      for (const bad of ["3%", "2%", "1%", "5%", "4%"]) {
+        expect(body.includes(`>${bad}<`), `${fn} hardcodes ${bad}`).toBe(false);
+      }
+      expect(body.includes("netDays"), `${fn} does not read Net terms from config`).toBe(true);
+    }
+  });
 });
 
 describe("registration document loss is recorded, not swallowed", () => {

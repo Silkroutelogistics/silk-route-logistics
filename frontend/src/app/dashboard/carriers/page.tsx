@@ -511,10 +511,17 @@ export default function CarrierPoolPage() {
               ? "Approved. The carrier has been notified and can now sign the Quick Pay Agreement to turn it on."
               : "Approved — but we could NOT reach the carrier. They are in the pilot and will see it if they open the portal. Contact them directly, and check the notification logs."
             : vars.action === "decline"
-              ? "Declined. The carrier has been told, and given your reason."
+              // v3.8.avn — this said "the carrier has been told" on every 200
+              // while the handler sent nothing. Now it follows the report, the
+              // same way approve does.
+              ? (res as { notified?: boolean } | undefined)?.notified
+                ? "Declined. The carrier has been told, and given your reason."
+                : "Declined — but we could NOT reach the carrier. They have not been told why. Contact them directly, and check the notification logs."
               // Same correction as the confirm copy below: the fee survives on
               // any load that already carries one, funded or not.
-              : "Withdrawn. Loads that already carry a Quick Pay fee keep it and their payment date; loads with no fee recorded pay standard terms. No new Quick Pay elections.",
+              : (res as { notified?: boolean } | undefined)?.notified
+                ? "Withdrawn, and the carrier has been told. Loads that already carry a Quick Pay fee keep it and their payment date; loads with no fee recorded pay standard terms. No new Quick Pay elections."
+                : "Withdrawn — but we could NOT reach the carrier, so they do not know yet. Loads that already carry a Quick Pay fee keep it and their payment date; loads with no fee recorded pay standard terms. Contact them directly.",
       });
     },
     onError: (err: unknown) => {

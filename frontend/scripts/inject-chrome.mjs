@@ -47,9 +47,21 @@ const OLD_FONTS_RE = /<link[^>]*fonts\.googleapis\.com\/css2\?[^"]*(?:DM\+Serif\
 // during the migration period. Per-page CSS migration to canonical
 // tokens follows in subsequent atomic sprints (one per page).
 function renderDesignSystem() {
+  // v3.8.avn — the italic axis is GONE, and that is load-bearing rather than
+  // tidy. Playfair italic was requested by exactly one device: the .hero h1 em
+  // emphasis on seven pages. It asked for 700 italic, which this link has never
+  // carried, so every render of it was a browser-synthesised slant — nobody had
+  // approved how it actually looked. The device is roman now (colour carries the
+  // emphasis), the two taglines moved to Georgia, and the guard confirms zero
+  // elements request an italic Playfair face anywhere.
+  //
+  // Re-adding ital here means a new sanctioned italic pattern exists. The skill
+  // sanctions exactly one — the document tagline — and that lives in the PDF
+  // chrome, not in web CSS. backend/scripts/serif-weight-drift.js fails if an
+  // element starts asking for a face this link does not carry.
   return `<link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400;1,500&family=DM+Sans:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=DM+Sans:wght@400;500;600;700&display=swap">
   <link rel="stylesheet" href="/shared/css/srl-tokens.css">`;
 }
 

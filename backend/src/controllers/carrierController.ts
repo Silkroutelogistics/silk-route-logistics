@@ -14,7 +14,7 @@ import { onCarrierApproved } from "../services/integrationService";
 import { uploadFile } from "../services/storageService";
 import { runFmcsaScan, complianceCheck } from "../services/complianceMonitorService";
 import { vetAndStoreReport } from "../services/carrierVettingService";
-import { sendEmail, wrap, sendQuickPayApprovedEmail } from "../services/emailService";
+import { sendEmail, wrap, sendQuickPayApprovedEmail, sendQuickPayDeclinedEmail, sendQuickPayWithdrawnEmail } from "../services/emailService";
 import { getTierConfig, getEffectiveTier } from "../services/caravanService";
 import { runIdentityCheck } from "../services/identityVerificationService";
 import { screenCarrier } from "../services/ofacScreeningService";
@@ -2098,8 +2098,27 @@ export async function declineQuickPayEnrollment(req: AuthRequest, res: Response)
     },
   });
 
-  await prisma.notification
-    .create({
+  // v3.8.avn — the console said "the carrier has been told" while this sent
+  // nothing at all. Same shape as the approval defect, one transition over: an
+  // in-portal row is not being told, it is being findable, and the .catch()
+  // meant a failed row left no trace either.
+  const declineCfg = getTierConfig(getEffectiveTier({ tier: carrier.tier }));
+  let emailSent = false;
+  try {
+    await sendQuickPayDeclinedEmail({
+      to: carrier.contactEmail || carrier.user.email,
+      companyName: carrier.companyName || "your company",
+      reason: reason.slice(0, 400),
+      netDays: declineCfg.paymentTermsDays,
+    });
+    emailSent = true;
+  } catch (err) {
+    log.error({ err, carrierProfileId: carrier.id }, "[QuickPayPilot] decline EMAIL failed — the console will not claim it was sent");
+  }
+
+  let notifSent = false;
+  try {
+    await prisma.notification.create({
       data: {
         userId: carrier.userId,
         type: "GENERAL",
@@ -2107,11 +2126,14 @@ export async function declineQuickPayEnrollment(req: AuthRequest, res: Response)
         message: `We are not able to add you to the Quick Pay pilot right now. ${reason.slice(0, 400)} Your loads pay on your standard tier terms, at no fee, as always.`,
         actionUrl: "/carrier/dashboard/activation",
       },
-    })
-    .catch((err) => log.error({ err }, "[QuickPayPilot] decline notification failed"));
+    });
+    notifSent = true;
+  } catch (err) {
+    log.error({ err }, "[QuickPayPilot] decline notification failed");
+  }
 
-  log.info({ carrierProfileId: carrier.id, enrollmentId: updated.id, by: req.user!.id }, "[QuickPayPilot] declined");
-  res.json({ enrollment: updated });
+  log.info({ carrierProfileId: carrier.id, enrollmentId: updated.id, by: req.user!.id, emailSent, notifSent }, "[QuickPayPilot] declined");
+  res.json({ enrollment: updated, notified: emailSent || notifSent, emailSent, notifSent });
 }
 
 /**
@@ -2206,6 +2228,25 @@ export async function withdrawQuickPayEnrollment(req: AuthRequest, res: Response
     }),
   ]);
 
+  // v3.8.avn — withdrawal takes a payment facility away from a carrier who was
+  // using it. The banner never claimed a send, so this is not a parity fix; it
+  // is the approval's reasoning applied to the transition that COSTS them
+  // something, and which they otherwise learn only by opening the portal.
+  const wdCfg = getTierConfig(getEffectiveTier({ tier: carrier.tier }));
+  let emailSent = false;
+  try {
+    await sendQuickPayWithdrawnEmail({
+      to: carrier.contactEmail || carrier.user.email,
+      companyName: carrier.companyName || "your company",
+      reason: reason.slice(0, 400),
+      netDays: wdCfg.paymentTermsDays,
+    });
+    emailSent = true;
+  } catch (err) {
+    log.error({ err, carrierProfileId: carrier.id }, "[QuickPayPilot] withdraw EMAIL failed — the console will not claim it was sent");
+  }
+
+  let notifSent = false;
   await prisma.notification
     .create({
       data: {
@@ -2216,8 +2257,9 @@ export async function withdrawQuickPayEnrollment(req: AuthRequest, res: Response
         actionUrl: "/carrier/dashboard/activation",
       },
     })
+    .then(() => { notifSent = true; })
     .catch((err) => log.error({ err }, "[QuickPayPilot] withdrawal notification failed"));
 
-  log.info({ carrierProfileId: carrier.id, enrollmentId: updated.id, by: req.user!.id }, "[QuickPayPilot] withdrawn");
-  res.json({ enrollment: updated, quickPayEnabled: false });
+  log.info({ carrierProfileId: carrier.id, enrollmentId: updated.id, by: req.user!.id, emailSent, notifSent }, "[QuickPayPilot] withdrawn");
+  res.json({ enrollment: updated, quickPayEnabled: false, notified: emailSent || notifSent, emailSent, notifSent });
 }

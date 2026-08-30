@@ -312,8 +312,18 @@
       line-height: 1.1;
     }
 
+    /* v3.8.avn — roman. The gold stays; the slant goes.
+
+       The skill sanctions Playfair italic for taglines only, and this is a page
+       title. It also asked for a face neither loader has ever carried: `.hero h1`
+       declares no weight, so the UA default makes these ems Playfair 700 — and
+       700 italic has never been loaded, so every render of this device since
+       v3.8.agk was a browser-synthesised slant. Nobody approved how it actually
+       looked, because what shipped was never what the CSS described.
+
+       Colour carries the emphasis on its own, which is what the device was for. */
     .hero h1 em {
-      font-style: italic;
+      font-style: normal;
       color: #BA7517;
     }
 

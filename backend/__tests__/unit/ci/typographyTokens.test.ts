@@ -305,10 +305,18 @@ describe("typography guard — the drift lint", () => {
     expect(re.test(".ops-chip-tagline"), "must NOT match a non-heading").toBe(false);
   });
 
-  it("every halted inherited-Playfair italic states why, and the scan reaches them", () => {
+  it("any halted inherited-Playfair italic states why, and the scan reaches files", () => {
     const { inheritedItalicAllowlist, stats } = scanSerifWeightDrift();
-    // Tripwire: the scan finding nothing is exactly how this class hid before.
-    expect(stats.inheritedItalicChecked).toBeGreaterThan(0);
+    // The tripwire is FILES REACHED, not italics found.
+    //
+    // Seven .hero h1 em rules were halted here through v3.8.avm and resolved in
+    // v3.8.avn — roman, gold retained — so zero italic headings is now the
+    // CORRECT state. Asserting on the hit count would fail for the right outcome.
+    // Zero FILES reached is the thing that must never pass silently: that is the
+    // scan having stopped working while reporting clean, which is the exact
+    // failure this guard exists to catch.
+    expect(stats.inheritedItalicFilesScanned).toBeGreaterThan(0);
+    expect(stats.inheritedItalicChecked).toBe(0);
     for (const [sel, reason] of Object.entries(inheritedItalicAllowlist as Record<string, string>)) {
       expect(reason.length, `${sel} is allowlisted without a real reason`).toBeGreaterThan(40);
       expect(reason, `${sel} must say it is halted`).toMatch(/HALTED/);

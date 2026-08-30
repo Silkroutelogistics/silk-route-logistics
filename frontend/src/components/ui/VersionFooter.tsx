@@ -15411,7 +15411,30 @@
 // Zero requests was the condition; seven pages still request Playfair italic, at
 // bold. Halted for Wasi — retiring that device changes seven heroes.
 
-export const SRL_VERSION = "3.8.avm";
+// v3.8.avn — the last italic goes, the axis goes with it, and two more
+// transitions stop claiming a send they never made.
+//
+// PHASE 1. The hero-title emphasis on seven pages (.hero h1 em) is roman now,
+// gold retained. It asked for Playfair 700 italic — .hero h1 declares no weight
+// and static pages have no preflight, so the UA default made it bold — and 700
+// italic has never been loaded. Every render since v3.8.agk was a synthesised
+// slant. Colour was always what carried the emphasis.
+//
+// With that gone, NO element anywhere requests an italic Playfair face, which
+// finally permitted the prune the previous arc correctly refused:
+// ital,wght@0,400;0,700;1,400;1,500 -> wght@400;700.
+//
+// PHASE 2. The QP decline said "the carrier has been told, and given your
+// reason" on every 200 while sending nothing at all — the approval's defect one
+// transition over, with a .catch() that swallowed even the in-portal row's
+// failure. Decline and withdraw both send now, both report per channel, and
+// both banners follow the report rather than the 200. Withdraw was not a false
+// claim; it is the same reasoning applied to the transition that COSTS the
+// carrier something and which they otherwise learn only by opening the portal.
+//
+// Phase 3 (storage readiness) is a concurrent session's work and is not here.
+
+export const SRL_VERSION = "3.8.avn";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

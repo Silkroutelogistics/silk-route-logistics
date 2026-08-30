@@ -1229,3 +1229,115 @@ export async function sendQuickPayApprovedEmail(params: {
     replyTo: "operations@silkroutelogistics.ai",
   });
 }
+
+/**
+ * Quick Pay pilot — DECLINED.
+ *
+ * The AE console said "the carrier has been told" on every 200 while this
+ * transition sent nothing at all. Same defect the approval had, one door over:
+ * an in-portal row the carrier sees only if they happen to open the portal, and
+ * a .catch() that swallowed its own failure.
+ *
+ * The reason is included verbatim because a decline without one is unactionable
+ * — the carrier cannot fix what they are not told. No fee table here: there is
+ * no pilot to describe, and printing the terms they did NOT get would read as
+ * taunting.
+ */
+export async function sendQuickPayDeclinedEmail(params: {
+  to: string;
+  companyName: string;
+  reason: string;
+  netDays: number;
+}) {
+  const html = wrap(`
+    <h2 style="color:#0A2540">Your Quick Pay pilot request</h2>
+    <p style="color:#3A4A5F">We are not able to add ${params.companyName} to the Caravan Quick Pay
+    pilot right now.</p>
+
+    <div style="background:#F5EEE0;border:1px solid #E2EAF2;border-radius:8px;padding:16px;margin:16px 0">
+      <p style="margin:0 0 8px;font-size:12px;letter-spacing:1px;text-transform:uppercase;color:#BA7517;font-weight:600">Why</p>
+      <p style="margin:0;color:#3A4A5F;font-size:14px;line-height:1.6">${params.reason}</p>
+    </div>
+
+    <p style="color:#3A4A5F"><strong>Nothing about your pay changes.</strong> Your loads pay on your
+    standard tier terms — Net-${params.netDays} — at no fee, exactly as they always have. Quick Pay
+    was only ever an option on top of that, never a replacement for it.</p>
+
+    <p style="color:#3A4A5F">The pilot is limited and we do reconsider. If your situation changes,
+    ask us again through the portal or reply to this email.</p>
+
+    <p style="margin:24px 0">
+      <a href="https://silkroutelogistics.ai/carrier/dashboard/activation"
+         style="background:#BA7517;color:#FFFFFF;padding:12px 24px;border-radius:6px;text-decoration:none;font-weight:600">
+        Open your portal
+      </a>
+    </p>
+
+    <div style="border-top:1px solid #E2EAF2;margin-top:24px;padding-top:16px;font-size:12px;color:#6B7685;line-height:1.6">
+      <strong style="color:#3A4A5F">Operations</strong><br/>
+      Silk Route Logistics Inc.<br/>
+      MC# 1794414 | DOT# 4526880<br/>
+      (269) 220-6760 | operations@silkroutelogistics.ai<br/>
+      silkroutelogistics.ai
+    </div>
+  `);
+  return sendEmail(params.to, "Your Quick Pay pilot request — Silk Route Logistics", html, undefined, {
+    replyTo: "operations@silkroutelogistics.ai",
+  });
+}
+
+/**
+ * Quick Pay pilot — WITHDRAWN.
+ *
+ * Withdrawal takes a payment facility away from a carrier who was using it, and
+ * before this they learned only by opening the portal. The banner never claimed
+ * otherwise, so this is not a parity fix — it is the same reasoning that made
+ * the approval email necessary applied to the transition that costs the carrier
+ * something.
+ *
+ * The fee-survival sentence is load-bearing and is quoted from the in-portal
+ * copy deliberately: a carrier reading "withdrawn" will assume a load already
+ * priced with a Quick Pay fee just lost its money. It did not.
+ */
+export async function sendQuickPayWithdrawnEmail(params: {
+  to: string;
+  companyName: string;
+  reason: string;
+  netDays: number;
+}) {
+  const html = wrap(`
+    <h2 style="color:#0A2540">Quick Pay has been withdrawn</h2>
+    <p style="color:#3A4A5F">Quick Pay has been withdrawn from ${params.companyName}'s account.</p>
+
+    <div style="background:#F5EEE0;border:1px solid #E2EAF2;border-radius:8px;padding:16px;margin:16px 0">
+      <p style="margin:0 0 8px;font-size:12px;letter-spacing:1px;text-transform:uppercase;color:#BA7517;font-weight:600">Why</p>
+      <p style="margin:0;color:#3A4A5F;font-size:14px;line-height:1.6">${params.reason}</p>
+    </div>
+
+    <p style="color:#3A4A5F"><strong>Money already promised to you is not affected.</strong> Any load
+    that already carries a Quick Pay fee on its rate confirmation still pays at that fee and on that
+    schedule. This does not change a load you have already run, or one in flight right now.</p>
+
+    <p style="color:#3A4A5F">New loads pay your standard tier terms — Net-${params.netDays} — at no
+    fee. Standard pay has always been free and is unaffected by this.</p>
+
+    <p style="margin:24px 0">
+      <a href="https://silkroutelogistics.ai/carrier/dashboard/activation"
+         style="background:#BA7517;color:#FFFFFF;padding:12px 24px;border-radius:6px;text-decoration:none;font-weight:600">
+        Open your portal
+      </a>
+    </p>
+
+    <div style="border-top:1px solid #E2EAF2;margin-top:24px;padding-top:16px;font-size:12px;color:#6B7685;line-height:1.6">
+      <strong style="color:#3A4A5F">Operations</strong><br/>
+      Silk Route Logistics Inc.<br/>
+      MC# 1794414 | DOT# 4526880<br/>
+      (269) 220-6760 | operations@silkroutelogistics.ai<br/>
+      silkroutelogistics.ai
+    </div>
+  `);
+  return sendEmail(params.to, "Quick Pay has been withdrawn — Silk Route Logistics", html, undefined, {
+    replyTo: "operations@silkroutelogistics.ai",
+  });
+}
+
