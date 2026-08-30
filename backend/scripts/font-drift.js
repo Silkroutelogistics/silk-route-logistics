@@ -103,6 +103,9 @@ const ALLOWLIST = {
     "Orphan stylesheet — tracking.html does not exist in public/.",
   "frontend/public/js/session-timeout.js":
     "Marked ORPHANED at the top of the file; nothing loads it.",
+  "frontend/public/carrier/css/carrier-console.css":
+    "Orphan — the legacy carrier/*.html pages it styled were deleted in v3.8.ani; " +
+    "no HTML in public/ references it.",
   "frontend/public/logo.svg":
     "Brand asset, not a stylesheet. Changing the wordmark's embedded family is a " +
     "brand-asset decision (skill section 20.8: the live export Wasi supplies is " +
@@ -120,6 +123,8 @@ const ALLOWLIST = {
   "backend/src/services/healthDigestService.ts": "Email digest — webfonts unreliable in mail clients.",
   "backend/src/controllers/complianceController.ts": "Email body — webfonts unreliable in mail clients.",
   "backend/src/email/builder.ts": "Email chrome — webfonts unreliable in mail clients.",
+  "backend/src/templates/emailTemplates.ts": "Email wrapper — webfonts unreliable in mail clients.",
+  "backend/src/services/emailSequenceService.ts": "Outreach email body — webfonts unreliable in mail clients.",
   "backend/src/config/signatures/whaider.html": "Email signature — webfonts unreliable in mail clients.",
 };
 
@@ -128,7 +133,12 @@ const SCAN_ROOTS = ["frontend/src", "frontend/public", "backend/src"];
 
 function firstNamedFamily(stack) {
   for (const raw of stack.split(",")) {
-    const fam = raw.trim().replace(/^['"]|['"]$/g, "").trim().toLowerCase();
+    let fam = raw.trim().replace(/^['"]|['"]$/g, "").trim();
+    // A declaration inside an HTML style="..." attribute in a template literal
+    // runs on past the closing quote: `monospace">${x}</td>`. Cut the token at
+    // the first character that cannot appear in a font family name, AFTER the
+    // surrounding quotes have been stripped (so "Segoe UI" survives intact).
+    fam = fam.split(/["'`<>;{}$]/)[0].trim().toLowerCase();
     if (!fam) continue;
     if (GENERIC.has(fam)) continue;
     return fam;
@@ -143,11 +153,28 @@ function scanFile(abs, rel, canon, hits, stats) {
     const reFamily = /(?:font-family\s*[:=]|fontFamily\s*[:=])\s*(["'{]?)([^;}\n]*)/gi;
     let m;
     while ((m = reFamily.exec(line))) {
+      const opener = m[1];
       let stack = m[2];
       stats.declarations += 1;
       if (/var\(\s*--/.test(stack)) { stats.tokenized += 1; continue; }
-      // strip a leading quote/brace left by the JSX forms, and anything past the close
-      stack = stack.replace(/^\s*["'{]?\s*/, "").replace(/["'}].*$/, "");
+
+      // Terminate the value correctly, which depends on how it started.
+      //
+      // The first cut of this stripped from the first quote to end of line
+      // unconditionally. That silently truncated every CSS stack whose first
+      // family is unquoted — `-apple-system, BlinkMacSystemFont, "Segoe UI", …`
+      // became `-apple-system, BlinkMacSystemFont, `, both generic, so the scan
+      // reported no violation on a file that had four. The guard was blind to
+      // exactly the commonest shape: a system prefix hiding a non-brand family.
+      if (opener === '"' || opener === "'") {
+        // JSX: fontFamily: "Arial, sans-serif"  → value ends at the closing quote
+        const end = stack.indexOf(opener);
+        if (end !== -1) stack = stack.slice(0, end);
+      } else {
+        // CSS: font-family: a, b, c;  → the [^;}\n]* capture already ended it.
+        // Only trim a stray JSX brace.
+        stack = stack.replace(/\}.*$/, "");
+      }
       const fam = firstNamedFamily(stack);
       if (!fam) continue;
       if (canon.has(fam)) { stats.canonical += 1; continue; }

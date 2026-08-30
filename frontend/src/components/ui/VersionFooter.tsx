@@ -15338,7 +15338,7 @@
 // Injection-verified in three directions — restore the namespace defect, add a
 // hardcoded family, override the font in a nested layout. Each turns exactly the
 // right assertion red, and only that one.
-export const SRL_VERSION = "3.8.ave";
+export const SRL_VERSION = "3.8.avf";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
