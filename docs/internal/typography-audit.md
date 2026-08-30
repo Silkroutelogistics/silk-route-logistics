@@ -233,3 +233,187 @@ Every page is non-conforming, by area:
 **Two things a correction command must not assume.** Fixing the Tailwind namespace repairs mode 1 (80 sites → Playfair) and neutralizes mode 4, but does **nothing** for mode 2 — the 65 AE Console / Accounting / Admin routes have no font class to fix and will still render DM Sans headings. And the 14 inline-style workarounds (mode 3) then become redundant duplicates of a working utility, worth collapsing so the two do not drift apart later.
 
 **Also open, for a decision rather than a fix:** whether `global-error.tsx` should keep its system font, and whether the AE Console's serif-free heading treatment is deliberate house style for dense internal tooling or an oversight. This audit does not assume either way.
+
+---
+
+# PART II — The correction, and what it proved (2026-08-30)
+
+Shipped as **v3.8.avd → v3.8.ave → v3.8.avf**. Three commits rather than one, because the after-sweep found the first fix insufficient and the third found something neither the audit nor the guard had seen. That sequence is the finding, not an embarrassment to tidy away.
+
+## 7. Root causes — proven vs the audit's hypotheses
+
+The audit marked every root cause UNVERIFIED. Each was checked against source before anything was changed. **One was wrong, and one was incomplete in a way that mattered.**
+
+| # | Audit hypothesis | Verdict |
+|---|---|---|
+| 1 | React: `globals.css:382-383` declares `--font-family-*` inside Tailwind v4 `@theme`, where the namespace is `--font-*` | **CORRECT** — but **INCOMPLETE**; see 7.1 |
+| 2 | Static footer: `utilities.css` predates the token migration | **CORRECT** — confirmed at `utilities.css:350`, and the file's own comment dates the additive rule |
+| 3 | Backend pages: written before `srl-tokens.css` existed and never revisited | **WRONG** — see 7.2 |
+
+### 7.1 The namespace was real, and fixing it was not enough
+
+Renaming the three keys produced a compiled bundle that was, by inspection, correct: `--font-serif: var(--font-playfair), Georgia, "Times New Roman", serif`, the `.font-serif` utility emitted, the retired names gone, the Playfair variable referenced by a rule for the first time. tsc clean, build clean, guard green.
+
+**Every heading in production still rendered the wrong face.**
+
+`next/font` puts `--font-playfair` and `--font-dm-sans` on whatever element carries its `.variable` class — that was `<body>`. Tailwind's `@theme` declares `--font-serif` on `:root`, which is `<html>`, one level up. **A `var()` inside a custom property is substituted where the property is DECLARED, not where it is used.** So at `:root`, `--font-playfair` did not exist, `--font-serif` resolved to the guaranteed-invalid value, and *the invalid value is what inherited* into `<body>` and everything below. `font-family: var(--font-serif)` then had nothing to apply and fell back to the inherited face.
+
+Measured in the browser before changing anything:
+
+| Element | `--font-playfair` | `--font-serif` |
+|---|---|---|
+| `<html>` | **EMPTY** | **EMPTY** |
+| `<body>` | `"Playfair Display", …` | **EMPTY** — already poisoned upstream |
+
+Fixed in **v3.8.ave** by moving the `.variable` classes to `<html>`; `.className` stays on `<body>` as the inherited base face.
+
+**This is the whole argument for proof-by-render.** Every artifact-level check passed while the page was wrong. The audit named this exact limit on itself — *"no headless browser here; resolution is traced through the served cascade"* — and that is precisely the gap this fell through. A browser was launched for the after-sweep and caught it on the first probe.
+
+### 7.2 The backend pages were not off-brand. They were unstyled.
+
+Hypothesis 3 was wrong, and the truth is worse than the audit reported.
+
+`tenderAction.ts` and `driverPing.ts` emit their CSS in an inline `<style>` block. The backend's CSP sets `style-src-elem 'self' https://fonts.googleapis.com` — **no `'unsafe-inline'`**, removed on **2026-02-23** (`e89ce0bd`, "Remove unsafe-inline from CSP style-src by extracting all embedded styles to external CSS"). `tenderAction.ts` was written **2026-05-30**, three months later; `driverPing.ts` on **2026-08-21**, six months later. **Both were born blocked.**
+
+Confirmed in a browser against live production, not inferred from the policy text:
+
+| Probe | Result |
+|---|---|
+| `<style>` elements in the HTML | **1** |
+| Stylesheets in the CSSOM | **0** |
+| CSS rules applied | **0** |
+| `body` background | `rgba(0,0,0,0)` — transparent, not the cream the CSS specifies |
+| `body` / `h1` font | **`"Times New Roman"`** — the browser default |
+| `.card` border-radius | `0px` — the card styling is entirely absent |
+
+The tender magic-link landing — the page a carrier reaches from an Accept/Decline email — renders as **raw unstyled HTML**. Screenshot on file.
+
+Their font declarations are now canon-correct so the next pass need not redo them, but **these two rows are NOT claimed as render-fixed**, and the delivery question is deliberately left open (§9).
+
+## 8. After — every row re-swept against production, cache-busted
+
+Method upgraded from the audit's: real Chrome via CDP, `await document.fonts.ready`, `getComputedStyle`, plus a synthetic `.font-serif` probe so a result never depends on a page happening to use the class. `PLAYFAIR-CANON` below is the literal `"Playfair Display", "Playfair Display Fallback", Georgia, "Times New Roman", serif`.
+
+### 8.1 Static marketing pages (14)
+
+| Page | Headings | Body | Footer col headings | Off-brand families in HTML | Conforms |
+|---|---|---|---|---|---|
+| all 14 | Playfair ✅ | DM Sans ✅ | **DM Sans ✅** *(was browser-default sans)* | **0** ✅ | **YES** |
+
+Verified per page by curl: font link present on 14/14, zero occurrences of Plus Jakarta / DM Serif / Montserrat. Shared chrome confirmed on tokens — `utilities.css` `.footer-col h5` → `var(--font-body)`, `srl-logo.css` `.srl-logo-text` → `var(--font-body)`.
+
+Browser-verified on `/carriers`: fraud-banner heading `"Playfair Display", Georgia, "Times New Roman", serif` (**was** `"DM Serif Display", serif` → Times New Roman); footer heading `"DM Sans", sans-serif` (**was** `"Plus Jakarta Sans", sans-serif` → default sans); cookie banner `"DM Sans", sans-serif` (**was** Inter/Plus Jakarta → system-ui). Loaded face set: **only DM Sans and Playfair Display**.
+
+### 8.2 React app
+
+| Route | Before | After | Conforms |
+|---|---|---|---|
+| `/onboarding` — "Carrier Registration", "Welcome to the Caravan.", "Company Information" | Georgia | **PLAYFAIR-CANON** ✅ | YES |
+| `/auth/login` — "Employee Sign In" | Georgia | **PLAYFAIR-CANON** ✅ | YES |
+| `/carrier/login` — "Carrier Sign In" | Georgia | **PLAYFAIR-CANON** ✅ | YES |
+| `/driver/login` — "SRL Driver Academy" | Georgia | **PLAYFAIR-CANON** ✅ | YES |
+| `/shipper/register` — wordmark + "Company Information" | Georgia | **PLAYFAIR-CANON** ✅ | YES |
+| body face, all routes | DM Sans | DM Sans ✅ | YES |
+| `--font-serif` at `:root` | `ui-serif, Georgia, Cambria…` | **`"Playfair Display", …`** ✅ | YES |
+
+Whole-DOM sweep on `/shipper/register`: **zero** elements resolve to any of Plus Jakarta / DM Serif / Inter / Montserrat / Arial.
+
+**Portal interiors could not be rendered** — they need credentials this environment does not have. The inheritance claim rests on three verified legs rather than a direct render, and is stated as such: the root layout carries the variables (confirmed in the served HTML of every route sampled), the guard asserts no nested layout overrides a font, and the synthetic `.font-serif` probe returns PLAYFAIR-CANON on routes under each layout tree's parent — including `/carrier/dashboard/my-loads`, which redirects to `/carrier/login` unauthenticated.
+
+### 8.3 The Marco Polo widget — found by the after-sweep, missed by the audit
+
+Sweeping the deployed homepage element-by-element rather than trusting the scan found **32 elements resolving to Arial**. They were the Marco Polo assistant widget, injected on 12 marketing pages, asking for `-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial`. A system stack on the AI surface the brand is named for. `marco-polo.css` was in the audit's §5 list and was not in any failing *page* row, which is how it was passed over.
+
+Now `var(--font-body)`, with its mono row on `var(--font-mono)`. Shipped in **v3.8.avf**.
+
+### 8.4 The homepage, counted by winning family
+
+The strongest single check available without a human eye: for every element on the deployed homepage, which family actually *wins* its stack.
+
+| Winning family | Elements | Verdict |
+|---|---|---|
+| **DM Sans** | 463 | canonical body ✅ |
+| **Playfair Display** | 26 | canonical display ✅ |
+| **SF Mono** | 16 | canonical mono ✅ |
+| **Georgia** | 1 | canonical tagline ✅ |
+| Times New Roman | 32 | `html`, `head`, `meta`, `link`, `script`, `title` — non-rendering elements inheriting the browser default. Inert. |
+
+**Zero visible elements win with a non-canonical family.** Before this correction the same sweep returned 32 elements winning with Arial (the Marco Polo widget).
+
+Two things checked rather than assumed, both non-findings worth recording so nobody re-raises them:
+
+- **"Segoe UI" appears on 395 elements** — as the *fourth* entry in `body`'s stack (`"DM Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif`). DM Sans wins; Segoe UI is an unreached fallback. An ad-hoc regex matching anywhere in the stack flagged it; the scanner's first-named-family rule correctly does not. A reminder that *contains* and *wins* are different questions.
+- **21 `Inter` FontFace entries exist in `document.fonts`** — all with `status: "unloaded"`, sourced from no `@import`, no `@font-face`, no `<style>` tag and no stylesheet link on the page. They render on nothing. Environmental (the headless browser), not page-origin.
+
+### 8.5 Not claimed
+
+| Surface | Status |
+|---|---|
+| Tender magic-link landing | Source canon-correct; **still renders unstyled** — CSP (§7.2) |
+| Driver location-ping page | Same |
+| Legacy Rate-Con HTML view | Arial → DM Sans in source; artifact is uploaded to S3, not API-served, so not render-verified |
+| AE Console / Accounting / Admin headings | **Deliberately unchanged** — §9 |
+
+## 9. What was deliberately not fixed, and why
+
+**The AE Console, Accounting and Admin headings (65 of 114 routes) still inherit the body face.** The audit flagged this as a decision; it now has a measurement behind it.
+
+The only token-level repair available is a global `h1–h6 { font-family: var(--font-serif) }` rule, since those routes carry no font class to fix. Counting the heading elements first:
+
+| Scale | Count |
+|---|---|
+| Label-scale (`text-xs`, `text-sm`, `text-[10px]`) | **160** |
+| `text-lg` / `text-base` | 45 |
+| Display-scale (`text-xl`, `text-2xl`) | 64 |
+| **Total headings with a className** | **317** |
+
+Half of them are 12–14px or smaller. Playfair Display is a high-contrast display serif; at label scale in dense internal tables it is the wrong instrument, and a global rule would be a downgrade dressed as a fix. The 64 display-scale titles genuinely should be Playfair — but reaching only those requires per-element edits, which is exactly the per-page declaration this correction forbids.
+
+**So no token-level fix exists here that is not a regression.** Two honest options remain, both Wasi's call: accept serif-free headings as house style for dense internal tooling, or spend a sprint adding `font-serif` to the ~64 display-scale titles individually.
+
+*(An earlier count of 118 was from a narrower grep over `h1`–`h4` only; 160 is the correct figure over `h1`–`h6` across all three trees.)*
+
+**`global-error.tsx` keeps its system font** — it replaces the whole document when React itself fails, when webfonts may not have loaded. Allowlisted with that reason.
+
+**The backend CSP delivery is surfaced, not answered.** Making those two pages render styled means choosing between serving their CSS from `'self'`, adding a CSP hash, or converting to inline `style` attributes (which the deployed policy already permits via `style-src-attr 'unsafe-inline'`). That is a security-adjacent architecture decision on a deliberately hardened surface, and it is not a typography choice.
+
+## 10. The guard
+
+`backend/scripts/font-drift.js` + `backend/__tests__/unit/ci/typographyTokens.test.ts`, 11 assertions, in the backend suite CI already runs.
+
+**The canon is read out of the skill's own token stylesheet at run time**, never hardcoded — rename a face in `srl-brand-design` and the guard follows. It throws rather than defaulting if the skill is unreadable, because a guard that silently falls back to a guessed canon is worse than none.
+
+Two halves: the **token contract** (theme keys under the names Tailwind reads, carrying the brand faces; the font variables on `<html>` where `:root` sees them; no nested layout overriding the inherited font, so a new route inherits or fails; the injector shipping the font link and token stylesheet) and the **drift lint** (no `font-family` naming a family the skill does not name). Vacuity tripwires throughout — the scan asserts it reached 300+ files and 100+ declarations, the layout walk asserts it found the six nested layouts, and every allowlist entry must carry a reason of real length.
+
+### Injection-verified, four directions, each executed
+
+| Injection | Result |
+|---|---|
+| Restore the `--font-family-*` namespace defect | **2 failed / 9 passed** — exactly the token contract |
+| Add a hardcoded `Comic Sans MS` declaration | **1 failed** — the drift lint, naming file and line |
+| Override the font in a nested layout | **1 failed** — naming `dashboard/layout.tsx` |
+| Move the font variables back to `<body>` | **1 failed** — naming the `<html lang="en">` it found without them |
+
+All four reverted clean; the suite returns to 11/11.
+
+### The guard failed three times before it was right
+
+Recorded because the pattern matters more than the fixes.
+
+1. **It passed while production was broken.** The first version asserted the `.variable` classes appeared on `<body>` — which is exactly the arrangement that caused §7.1. It now asserts `<html>` specifically.
+2. **Its regex read prose instead of code.** The `<html>` assertion matched the word `<html>` inside the explanatory comment above the JSX and failed against correct code. Comments are stripped before matching now.
+3. **Its value terminator truncated the stacks it was meant to read.** It cut from the first quote to end of line unconditionally — right for the JSX form `fontFamily: "Arial, sans-serif"`, silently wrong for every CSS stack whose first family is unquoted. `-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif` became `-apple-system, BlinkMacSystemFont, `, both generic, so it reported **nothing on a file with four violations** — and that is the commonest shape a non-brand family hides in. Closing it surfaced the opposite defect (HTML `style="…"` attributes running past their closing quote, reporting families like `monospace">${valueHash}`), fixed by cutting family tokens at the first character that cannot appear in a family name.
+
+The scan reported **0 violations before that third fix and 7 after it, all real.** Four in the Marco Polo widget, one in an orphan, two in email.
+
+## 11. What programmatic checks still cannot certify
+
+Stated plainly, because the gates above are stronger than the audit's and still do not cover this.
+
+- **Colour fidelity.** Nothing here checks a single hex against the brand palette. Tokens were consumed, not colours verified.
+- **Print and PDF output.** The PDF chrome, its borders, the BOL and Rate Confirmation as they land on a carrier's printer — untouched and unverified. `BOLTemplate.tsx` gained the DM Sans stack its `InvoiceTemplate` sibling already had; whether the printed page is right is a separate question.
+- **Optical judgement.** Whether Playfair at these sizes and weights looks *right* — leading, tracking, the italic display headings against the cream — is not a thing a computed style can answer.
+- **Portal interiors.** No credentials here; §8.2 states what the claim rests on instead.
+- **Every route individually.** 114 React routes share one root layout and one utility. Representative routes from each tree were rendered; the rest inherit by a mechanism now guarded, not by inspection.
+
+**The human eye-pass remains Wasi's and is not claimed.**
