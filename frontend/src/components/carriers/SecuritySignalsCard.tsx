@@ -35,6 +35,28 @@ interface SecuritySignals {
     overriddenAt: string | null;
     overrideNote: string | null;
   };
+  /**
+   * auth_events for this address. Recorded since Arc 5 and surfaced for the
+   * first time here — every verification, failed login, TOTP failure and reset
+   * has been captured all along with its IP, readable only by hand.
+   *
+   * Keyed by EMAIL, not userId, because the most interesting entries predate
+   * the account: onboarding verification happens before a User exists.
+   */
+  authEvents?: Array<{
+    id: string;
+    type: string;
+    ip: string | null;
+    userAgent: string | null;
+    createdAt: string;
+  }>;
+  /** Active carrier-portal sessions. Read-only — revocation stays where it is. */
+  sessions?: Array<{
+    id: string;
+    issuedAt: string;
+    lastSeenAt: string;
+    rememberMe: boolean;
+  }>;
   events: Array<{
     id: string;
     type: "SYSTEM_LOG" | "DOCUMENT_UPLOAD" | "OTP_FAILURE";
@@ -170,6 +192,10 @@ export function SecuritySignalsCard({ carrierId, isAdmin }: { carrierId: string;
   }
 
   const { geo, events, chameleonMatches, unusualOtpSmsOverride } = data;
+  // Default to [] so a backend that predates these fields renders the honest
+  // empty state rather than crashing on .length of undefined.
+  const authEvents = data.authEvents ?? [];
+  const sessions = data.sessions ?? [];
   // The header used to count OPEN + REVIEWED together, so working the queue
   // never moved the number. Open is the only count that should drive urgency.
   const openMatchCount = chameleonMatches.filter((m) => m.status === "OPEN").length;
@@ -437,6 +463,58 @@ export function SecuritySignalsCard({ carrierId, isAdmin }: { carrierId: string;
             timestamp={geo.lastLoginAt}
           />
         </div>
+      </div>
+
+      {/* Auth timeline — auth_events, surfaced for the first time. */}
+      <div className="bg-gray-100 rounded-lg p-4">
+        <h4 className="text-xs font-semibold text-gray-700 uppercase tracking-wider mb-3">
+          Authentication history{" "}
+          <span className="font-normal normal-case text-gray-500">({authEvents.length})</span>
+        </h4>
+        {authEvents.length === 0 ? (
+          // Honest empty state. "No events recorded" is a fact; "no suspicious
+          // activity" would be a claim this panel cannot support.
+          <p className="text-xs text-gray-500">No authentication events recorded for this address.</p>
+        ) : (
+          <ul className="space-y-1.5 max-h-64 overflow-auto">
+            {authEvents.map((e) => (
+              <li key={e.id} className="flex items-start justify-between gap-3 text-xs border-b border-gray-200 pb-1.5 last:border-0">
+                <span className="font-medium text-[#0A2540] whitespace-nowrap">{e.type}</span>
+                <span className="flex items-center gap-2 text-gray-500 text-[10px] text-right">
+                  {e.ip && <span className="font-mono">{e.ip}</span>}
+                  <span>{formatDate(e.createdAt)}</span>
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+
+      {/* Active sessions. Count and freshness only — revocation is owned by
+          logout and the expiry sweep, and a second delete path here would be a
+          second place for the two to disagree. */}
+      <div className="bg-gray-100 rounded-lg p-4">
+        <h4 className="text-xs font-semibold text-gray-700 uppercase tracking-wider mb-3">
+          Active portal sessions{" "}
+          <span className="font-normal normal-case text-gray-500">({sessions.length})</span>
+        </h4>
+        {sessions.length === 0 ? (
+          <p className="text-xs text-gray-500">
+            No active carrier-portal sessions. Sessions end after 30 minutes idle or 12 hours.
+          </p>
+        ) : (
+          <ul className="space-y-1.5">
+            {sessions.map((s) => (
+              <li key={s.id} className="flex items-center justify-between gap-3 text-xs">
+                <span className="text-gray-600">
+                  Started {formatDate(s.issuedAt)}
+                  {s.rememberMe && <span className="ml-2 text-[10px] text-gray-400">remembered</span>}
+                </span>
+                <span className="text-gray-500 text-[10px]">last seen {formatDate(s.lastSeenAt)}</span>
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
 
       {/* Event timeline */}

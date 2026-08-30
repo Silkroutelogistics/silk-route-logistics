@@ -604,7 +604,44 @@ router.get("/:id/security-signals", authorize("ADMIN", "CEO", "BROKER", "OPERATI
     select: { id: true, reason: true, expiresAt: true, createdAt: true },
   });
 
+  // ── Arc launch-fix riders: two read-only AE panels over data that already
+  // existed and had no surface. Neither writes anything.
+
+  // AUTH TIMELINE. auth_events has been recorded since Arc 5 and this is its
+  // FIRST frontend consumer — every verification, failed login, TOTP failure
+  // and password reset for this address has been captured all along with its IP
+  // and user agent, readable only by querying the database by hand. An audit
+  // trail nobody can reach is not much of an audit trail.
+  //
+  // Keyed by EMAIL rather than userId because the most interesting events
+  // predate the account: onboarding verification happens before a User exists.
+  const authEvents = await (prisma as unknown as {
+    authEvent?: { findMany: (a: unknown) => Promise<unknown[]> };
+  }).authEvent
+    ?.findMany({
+      where: { email: carrier.user.email.toLowerCase() },
+      orderBy: { createdAt: "desc" },
+      take: 25,
+      select: { id: true, type: true, ip: true, userAgent: true, createdAt: true },
+    })
+    .catch(() => [])
+    ?? [];
+
+  // ACTIVE SESSIONS. Count and freshness only. Revocation is deliberately NOT
+  // duplicated here — logout and the expiry sweep already own it, and a second
+  // path to delete a session row is a second place for the two to disagree.
+  const sessions = await prisma.staffSession
+    .findMany({
+      where: { userId: carrier.user.id, portal: "CARRIER" },
+      orderBy: { lastSeenAt: "desc" },
+      take: 10,
+      select: { id: true, issuedAt: true, lastSeenAt: true, rememberMe: true },
+    })
+    .catch(() => []);
+
   res.json({
+    authEvents,
+    sessions,
     geo: {
       registrationCountry: carrier.registrationCountry,
       emailVerifiedAt: carrier.user.emailVerifiedAt,

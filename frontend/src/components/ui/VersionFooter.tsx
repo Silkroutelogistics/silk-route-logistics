@@ -15288,7 +15288,25 @@
 // The origin is SERVER-EXTRACTED and pinned by test — the verify endpoints take
 // a JSON body, so a request carrying its own verifiedFromCountry is one somebody
 // will eventually send, and a signal an applicant can set is not a signal.
-export const SRL_VERSION = "3.8.avb";
+// v3.8.avc — auth_events gets its first reader, and sessions get a surface.
+//
+// Two read-only panels on the carrier detail page over data that already
+// existed and had nowhere to be seen. Neither writes anything.
+//
+// auth_events has been recorded since Arc 5 — every verification, failed login,
+// TOTP failure and password reset for an address, with its IP and user agent —
+// and this is its FIRST frontend consumer. Until now the only way to read it was
+// to query the database by hand, which is how a session earlier in this arc had
+// to diagnose a failed onboarding. An audit trail nobody can reach is not much
+// of an audit trail.
+//
+// Keyed by EMAIL rather than userId, because the most interesting entries
+// predate the account: onboarding verification happens before a User exists.
+//
+// The session panel shows count and freshness only. Revocation is deliberately
+// NOT duplicated — logout and the expiry sweep already own it, and a second
+// delete path is a second place for the two to disagree.
+export const SRL_VERSION = "3.8.avc";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
