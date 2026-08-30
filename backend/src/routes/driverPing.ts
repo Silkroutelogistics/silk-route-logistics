@@ -49,28 +49,8 @@ function page(title: string, bodyHtml: string): string {
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex,nofollow">
 <title>${esc(title)} · Silk Route Logistics</title>
-<style>
-  :root { --navy:#0A2540; --gold:#C5A572; --gold-dark:#BA7517; --cream:#FBF7F0; --cream2:#F5EEE0; --fg2:#3A4A5F; }
-  *{box-sizing:border-box}
-  body{margin:0;background:var(--cream);color:var(--navy);
-       font:16px/1.55 'DM Sans',-apple-system,BlinkMacSystemFont,sans-serif;
-       display:flex;justify-content:center;padding:24px}
-  .card{width:100%;max-width:460px;background:#fff;border:1px solid var(--cream2);
-        border-radius:12px;padding:24px}
-  .rule{height:3px;background:var(--gold);border-radius:2px;margin:0 0 18px;width:56px}
-  h1{font-family:'Playfair Display',Georgia,'Times New Roman',serif;font-size:20px;margin:0 0 6px}
-  p{margin:0 0 14px;color:var(--fg2)}
-  .lane{background:var(--cream);border:1px solid var(--cream2);border-radius:8px;
-        padding:12px;margin:0 0 18px;font-size:15px;color:var(--navy)}
-  button{width:100%;padding:15px;font-size:17px;font-weight:600;border:0;border-radius:8px;
-         background:var(--gold-dark);color:#fff}
-  button:disabled{opacity:.5}
-  .consent{font-size:13px;color:var(--fg2);background:var(--cream);border:1px solid var(--cream2);
-           border-radius:8px;padding:12px;margin:16px 0 0}
-  .ok{color:#2F7A4F;font-weight:600}
-  .bad{color:#9B2C2C;font-weight:600}
-  .foot{margin-top:18px;font-size:12px;color:#6B7685}
-</style></head><body><div class="card"><div class="rule"></div>${bodyHtml}
+<link rel="stylesheet" href="/api/public-assets/brand.css">
+</head><body class="ping"><div class="card"><div class="rule"></div>${bodyHtml}
 <p class="foot">Silk Route Logistics Inc. · USDOT 4526880 · MC# 1794414<br>
 Questions: operations@silkroutelogistics.ai · (269) 220-6760</p></div></body></html>`;
 }
@@ -109,27 +89,7 @@ router.get("/:token", pingLimiter, (req: Request, res: Response) => {
        <div class="consent">Tapping the button sends your current position to Silk Route Logistics
           for this load only. We do not receive your location at any other time, and you can ignore
           this message with no effect on your load or your pay.</div>
-       <script>
-         var b=document.getElementById('go'), m=document.getElementById('msg');
-         b.onclick=function(){
-           if(!navigator.geolocation){m.className='bad';m.textContent='This browser cannot share location. Please reply to the text instead.';return;}
-           b.disabled=true; m.textContent='Getting your position…';
-           navigator.geolocation.getCurrentPosition(function(pos){
-             fetch(location.pathname,{method:'POST',headers:{'Content-Type':'application/json'},
-               body:JSON.stringify({latitude:pos.coords.latitude,longitude:pos.coords.longitude,accuracy:pos.coords.accuracy})})
-             .then(function(r){return r.json().then(function(j){return {s:r.status,j:j}})})
-             .then(function(o){
-               if(o.s===200){m.className='ok';m.textContent='Thank you — dispatch has your position. You can close this page.';}
-               else {m.className='bad';m.textContent=(o.j&&o.j.error)||'We could not record that. Please reply to the text instead.';b.disabled=false;}
-             })
-             .catch(function(){m.className='bad';m.textContent='Network problem. Please try again in a moment.';b.disabled=false;});
-           },function(){
-             m.className='bad';
-             m.textContent='Your phone did not allow location sharing. Nothing was sent. You can reply to the text instead.';
-             b.disabled=false;
-           },{enableHighAccuracy:true,timeout:20000,maximumAge:0});
-         };
-       </script>`,
+       <script src="/api/public-assets/driver-ping.js" defer></script>`,
     ),
   );
 });

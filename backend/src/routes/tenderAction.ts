@@ -43,19 +43,9 @@ function renderPage(opts: {
 <html lang="en"><head><meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Silk Route Logistics — Tender</title>
-<style>
-  body { margin:0; font-family:'DM Sans',-apple-system,BlinkMacSystemFont,sans-serif; background:${C.cream}; color:${C.navy}; }
-  .wrap { max-width:520px; margin:8vh auto; padding:0 20px; }
-  .card { background:#fff; border:1px solid rgba(10,37,64,0.10); border-radius:12px; padding:32px; box-shadow:0 8px 24px rgba(10,37,64,0.10); }
-  .bar { height:4px; border-radius:4px 4px 0 0; background:${opts.accent}; margin:-32px -32px 24px; }
-  h1 { font-family:'Playfair Display',Georgia,'Times New Roman',serif; font-size:20px; margin:0 0 12px; color:${opts.accent}; }
-  p { font-size:15px; line-height:1.6; color:#3A4A5F; margin:0 0 12px; }
-  .ref { font-family:"SF Mono",ui-monospace,Menlo,monospace; font-size:13px; color:${C.navy}; background:${C.cream}; padding:2px 6px; border-radius:4px; }
-  .foot { margin-top:24px; font-size:13px; color:#6B7685; }
-  a.cta { display:inline-block; margin-top:8px; background:${C.gold}; color:#fff; text-decoration:none; padding:10px 20px; border-radius:6px; font-weight:bold; font-size:14px; }
-  .brand { font-size:12px; color:#6B7685; letter-spacing:0.08em; text-transform:uppercase; margin-bottom:20px; }
-</style></head>
-<body><div class="wrap"><div class="card">
+<link rel="stylesheet" href="/api/public-assets/brand.css">
+</head>
+<body><div class="wrap"><div class="card" style="--accent:${opts.accent}">
   <div class="bar"></div>
   <div class="brand">Silk Route Logistics</div>
   <h1>${opts.heading}</h1>
