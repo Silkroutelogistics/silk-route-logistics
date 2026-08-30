@@ -349,8 +349,8 @@ Two things checked rather than assumed, both non-findings worth recording so nob
 
 | Surface | Status |
 |---|---|
-| Tender magic-link landing | Source canon-correct; **still renders unstyled** — CSP (§7.2) |
-| Driver location-ping page | Same |
+| Tender magic-link landing | ~~Source canon-correct; still renders unstyled — CSP (§7.2)~~ **CLOSED 2026-08-30, v3.8.avg — see §12** |
+| Driver location-ping page | ~~Same~~ **CLOSED 2026-08-30, v3.8.avg — see §12** |
 | Legacy Rate-Con HTML view | Arial → DM Sans in source; artifact is uploaded to S3, not API-served, so not render-verified |
 | AE Console / Accounting / Admin headings | **Deliberately unchanged** — §9 |
 
@@ -417,3 +417,50 @@ Stated plainly, because the gates above are stronger than the audit's and still 
 - **Every route individually.** 114 React routes share one root layout and one utility. Representative routes from each tree were rendered; the rest inherit by a mechanism now guarded, not by inspection.
 
 **The human eye-pass remains Wasi's and is not claimed.**
+
+---
+
+# PART III — the two CSP-blocked rows, closed (2026-08-30, v3.8.avg)
+
+§8.5 left two rows open: the tender magic-link landing and the driver location-ping page were canon-correct in source and still rendered unstyled, because a CSP that dropped `'unsafe-inline'` from `style-src` on 2026-02-23 discarded their inline `<style>` blocks. Both are now fixed and **proven by render**, not by build.
+
+## 12.1 Fixed within the policy, not by widening it
+
+Both files now load from `'self'`, which the deployed CSP already permitted. **The CSP is byte-for-byte unchanged** — verified on the live response after the deploy:
+
+```
+script-src      'self' https://browser.sentry-cdn.com https://cdn.jsdelivr.net
+style-src       'self' https://fonts.googleapis.com
+style-src-elem  'self' https://fonts.googleapis.com
+style-src-attr  'unsafe-inline'
+script-src-attr 'none'
+```
+
+No new directive, no hash or nonce machinery, and `'unsafe-inline'` stays gone from both `style-src-elem` and `script-src`.
+
+`backend/src/routes/publicAssets.ts` serves `/api/public-assets/brand.css` and `/driver-ping.js` from the public mount zone. The content is string constants rather than files on disk, deliberately: an asset under `src/` must be copied into `dist/` by the build chain, and this repo has shipped a missing-asset-at-runtime defect twice that way (§2.2, the `cp -r` trailing-dot lesson). A constant cannot be left behind by a build step.
+
+The one genuinely per-page value — the tender page's accent colour — rides on a `--accent` custom property set through an inline style **attribute**, which `style-src-attr` allows.
+
+## 12.2 A second defect found while tracing, worse than the styling
+
+The ping page also carried an inline `<script>`, and `script-src` has no `'unsafe-inline'` either. Its **"Share my location once" button had no handler attached** — the whole Arc 19 consented-location feature was inert in a browser, not merely unstyled. That was not in the work order. Fixing the CSS and leaving it would have shipped a page that looks right and does nothing. The handler was token-agnostic already (it POSTs to `location.pathname`), so one external file serves every ping link.
+
+## 12.3 Proof by render
+
+Headless Chrome against production, cache-busted, after deploy.
+
+| Measure | Before | After — driverPing | After — tenderAction |
+|---|---|---|---|
+| inline `<style>` elements | 1 | 0 | 0 |
+| stylesheets in the CSSOM | **0** | **1** (`brand.css`) | **1** (`brand.css`) |
+| CSS rules applied | **0** | **24** | **24** |
+| `body` background | `rgba(0,0,0,0)` | `rgb(251,247,240)` = `#FBF7F0` ✅ | `rgb(251,247,240)` ✅ |
+| `body` font | **Times New Roman** | `"DM Sans", -apple-system, …` ✅ | `"DM Sans", …` ✅ |
+| `h1` font | **Times New Roman** | `"Playfair Display", Georgia, "Times New Roman", serif` ✅ | same ✅ |
+| `.card` border-radius | `0px` | `12px` ✅ | `12px` ✅ |
+| accent | — | `.rule` `rgb(197,165,114)` = `#C5A572` ✅ | `--accent` on the card resolves `#9B2C2C`, bar and heading follow ✅ |
+
+Assets serve `200 text/css` and `200 application/javascript`. That last row is the one worth noting: the custom property carried the per-page dynamic value through an inline attribute, so the page keeps its accent without `unsafe-inline` on `style-src-elem`.
+
+**A green build was never the proof here.** The typography arc's own lesson (§7.1) was a correct compiled bundle that still rendered the wrong face; these two rows stayed open specifically because nothing short of a browser could close them.

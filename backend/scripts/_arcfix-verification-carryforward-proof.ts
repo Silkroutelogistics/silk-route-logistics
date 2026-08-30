@@ -326,6 +326,26 @@ async function main() {
       check("the cross-country mismatch alert fires",
         sig?.geo?.geoMismatch === true,
         `geoMismatch=${sig?.geo?.geoMismatch} (${sig?.geo?.registrationCountry} → ${sig?.geo?.emailVerifiedFromCountry})`);
+
+      // ── The two AE riders. Verified, not rebuilt — both shipped in v3.8.avc.
+      const ev = sig?.authEvents ?? [];
+      check("auth-timeline panel is populated for this carrier",
+        Array.isArray(ev) && ev.length > 0,
+        `${ev.length} event(s); types: ${[...new Set(ev.map((e: any) => e.type))].join(", ") || "(none)"}`);
+      check("auth events carry the shape the panel renders",
+        ev.length > 0 && ev.every((e: any) => e.type && e.createdAt),
+        ev.length ? `first: type=${ev[0].type} ip=${ev[0].ip ?? "(none)"} at=${ev[0].createdAt}` : "no events");
+      check("the timeline is keyed by EMAIL, so pre-account events are included",
+        ev.some((e: any) => String(e.type).startsWith("onboarding.")),
+        `onboarding.* events present: ${ev.filter((e: any) => String(e.type).startsWith("onboarding.")).length}` +
+        " — these predate the User row, which is why the panel keys on email");
+
+      // A carrier who has never signed in correctly has none. That is the empty
+      // state the panel renders, not a defect — asserted as a contract, not
+      // fabricated into a population.
+      check("session panel returns its contract (empty for a never-logged-in carrier)",
+        Array.isArray(sig?.sessions),
+        `sessions=${Array.isArray(sig?.sessions) ? sig.sessions.length : "(absent)"} — this fixture never signed in, so 0 is correct`);
     }
   }
 

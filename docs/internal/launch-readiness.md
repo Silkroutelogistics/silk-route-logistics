@@ -19,10 +19,35 @@ verdict since it was written. The acquisition funnel carried two defects when
 this report was first published, both found by a real person attempting a real
 onboarding rather than by any gate: a rejection that named no field, and a
 mailbox proved twice where the second proof was the one Compass auto-approve
-waited on. Both are closed (`v3.8.ava`, `v3.8.avb`). **"Last KNOWN defect" is
-doing real work in that sentence** — the funnel has still never been walked end
-to end by a human, which is exactly how both of these were found and why §3 still
-lists that walk as owed.
+waited on. Both are closed (`v3.8.ava`, `v3.8.avb`).
+
+**And as of the same day both are PROVEN, which is a different claim from
+shipped.** The carry-forward went out with a proof script that had been
+committed ready to run and never executed — no Docker in that session, and
+production is not somewhere you write to for a proof. It has now been run
+against a container migrated from zero: **32 of 32**, both verification paths
+walked over HTTP through the real router as an applicant would, with the wizard
+filled in from one context and the email opened from another. The proof was
+rewritten first, because as committed it would have reported a misleading pass —
+it drove the service rather than the routes, never touched registration, and its
+"no second verification email" check asserted a literal `true`. Injection-verified
+both directions: revert the carry-forward and six assertions go red; restore the
+second email and two more do.
+
+Two further defects were closed the same day, neither found by a gate. The tender
+magic-link landing and the driver location-ping page had been rendering as raw
+unstyled HTML in Times New Roman since the day each was written — a CSP that
+dropped `'unsafe-inline'` in February discarded their inline `<style>` blocks,
+and both pages were authored months after that. The ping page was worse than
+unstyled: its inline `<script>` was blocked too, so the "Share my location once"
+button had no handler and the whole consented-location feature was inert. Both
+now load from `'self'`, with the CSP **unchanged**, and both are proven by render
+rather than by build (`v3.8.avg`).
+
+**"Last KNOWN defect" is still doing real work in that sentence** — the funnel has
+never been walked end to end by a human, which is exactly how the first two were
+found and why §3 still lists that walk as owed. What has changed is that the
+machine-checkable half is now checked rather than assumed.
 
 That sentence is earned by §2 and is only as good as §3, which states plainly what
 was NOT re-verified in this session and why. Read both before acting on the first.
@@ -117,6 +142,8 @@ within 7 days**. The one-time policy rollout signed out nobody.
 
 Each carries an owner and a trigger, so nothing becomes forgotten by default.
 
+**On the AE-heading row, since "won't fix" needs its reasoning on the record.** The typography audit found that AE Console, Accounting and Admin headings inherit the body face instead of the brand display face. The only token-level repair available is a global `h1–h6` rule, because those routes carry no font class to fix. Measuring before acting killed it: of **317** heading elements across those three trees, **160 are label-scale** (`text-xs`, `text-sm`, `text-[10px]`) against 64 display-scale. Playfair Display is a high-contrast display serif; at 12px in a dense operations table it is the wrong instrument, and a global rule would be a downgrade dressed as a fix. Reaching only the 64 that genuinely want it needs per-element edits — the per-page declaration the correction explicitly forbade. So this is closed **won't-fix-as-specified**, not deferred for lack of time. Revisit when someone uses these screens all day and can say whether it reads as house style or as an oversight.
+
 | Item | Owner | Trigger |
 |---|---|---|
 | ~40 unmarked `refetchInterval` polls | Platform | A user reports a session that never times out |
@@ -128,6 +155,7 @@ Each carries an owner and a trigger, so nothing becomes forgotten by default.
 | Compass VIN/HOS checks | Compliance | Only if a carrier-owned equipment model is built |
 | Item 240 review-flow affirmative walk | Ops | Before the second carrier is approved |
 | Mid-wizard survival proof (Arc 34 1e) | Platform | Any change to the onboarding draft or the session policy |
+| **AE Console heading typography** — WON'T FIX AS SPECIFIED | Design | **The Oct 2026 AE/Compliance hire** — first person to use these screens daily |
 
 ---
 
