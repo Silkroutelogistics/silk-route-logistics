@@ -36,6 +36,7 @@ import { logAuthEvent } from "../lib/authEvents";
 type RequestLike = { ip?: string; headers?: unknown; socket?: { remoteAddress?: string } };
 import { sendEmail, wrap } from "./emailService";
 import { validateEmailDomain } from "./identityVerificationService";
+import { extractClientIp, resolveCountry } from "./geoService";
 
 export const CODE_TTL_MS = 10 * 60 * 1000;
 export const MAX_ATTEMPTS = 5;
@@ -244,12 +245,58 @@ export type VerifyOutcome =
   | { ok: true; receipt: string; email: string }
   | { ok: false; reason: VerifyFailureReason };
 
-async function markVerified(draft: { id: string; email: string; nonce: string }) {
+/**
+ * Record the proof, and WHERE it came from.
+ *
+ * The origin is captured here rather than at either call site so the code path
+ * and the link path cannot diverge — the whole point is that an AE reading the
+ * carrier panel sees the same three facts whichever way the carrier proved their
+ * mailbox. Both callers already hold `req`; neither has to remember to do
+ * anything.
+ *
+ * SERVER-EXTRACTED ONLY. `extractClientIp` reads the connection and the proxy
+ * headers Render sets; nothing here is taken from a request body. A
+ * self-reported origin is worth nothing as a fraud signal, and a field a client
+ * can set is a field a client will set. Pinned by test.
+ *
+ * Geo resolution is best-effort and must never cost the verification: an
+ * unresolvable IP stores a null country and the carrier still gets through. The
+ * same reasoning as logAuthEvent — enrichment never gates the act it describes.
+ */
+async function markVerified(
+  draft: { id: string; email: string; nonce: string },
+  req?: RequestLike,
+) {
   const verifiedAt = new Date();
+
+  let ip: string | null = null;
+  let country: string | null = null;
+  let userAgent: string | null = null;
+  if (req) {
+    try {
+      ip = extractClientIp(req as Parameters<typeof extractClientIp>[0]) || null;
+      country = resolveCountry(ip);
+      const raw = (req.headers as Record<string, unknown> | undefined)?.["user-agent"];
+      userAgent = typeof raw === "string" ? raw.slice(0, 500) : null;
+    } catch {
+      // A request shape that surprises the extractor drops the enrichment; it
+      // never fails the verification the carrier just completed.
+    }
+  }
+
   await prisma.onboardingDraft.update({
     where: { id: draft.id },
     // Code and link both cleared: single-use in both directions.
-    data: { verifiedAt, code: null, codeExpiresAt: null, linkTokenHash: null, attempts: 0 },
+    data: {
+      verifiedAt,
+      code: null,
+      codeExpiresAt: null,
+      linkTokenHash: null,
+      attempts: 0,
+      verifiedFromIp: ip,
+      verifiedFromCountry: country,
+      verifiedUserAgent: userAgent,
+    },
   });
   return mintReceipt({ email: draft.email, verifiedAt: verifiedAt.getTime(), nonce: draft.nonce });
 }
@@ -283,7 +330,7 @@ export async function verifyCode(email: string, code: string, req?: RequestLike)
     return { ok: false, reason: "wrong_code" };
   }
 
-  const receipt = await markVerified(draft);
+  const receipt = await markVerified(draft, req);
   logAuthEvent("onboarding.verified", { email: e, req });
   return { ok: true, receipt, email: e };
 }
@@ -300,7 +347,7 @@ export async function verifyLink(token: string, req?: RequestLike): Promise<Veri
     logAuthEvent("onboarding.verify_failed", { email: draft.email, req, reason: "expired_token" });
     return { ok: false, reason: "expired" };
   }
-  const receipt = await markVerified(draft);
+  const receipt = await markVerified(draft, req);
   logAuthEvent("onboarding.verified", { email: draft.email, req });
   return { ok: true, receipt, email: draft.email };
 }

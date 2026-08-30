@@ -15271,7 +15271,24 @@
 // probing the live endpoint from a terminal to make the server repeat what the
 // screen already knew, and an applicant on the other side has no terminal. The
 // RC modal learned this in Sprint 33; onboarding never inherited it.
-export const SRL_VERSION = "3.8.ava";
+// v3.8.avb — the mailbox is proven once, and the proof carries forward.
+//
+// A carrier verified the same address TWICE. Arc 32 proved it between wizard
+// Steps 1 and 2; registration then emailed a second verification link, and
+// User.emailVerifiedAt stayed null until they clicked it — which the Compass
+// auto-approve gate waits on. A carrier who ignored that second email sat
+// unapproved for a reason nobody surfaced anywhere.
+//
+// Registration now carries the draft proof onto the User: emailVerifiedAt plus
+// the IP and country captured server-side at the verifying click or code entry.
+// The second email is gone. The three-point geo baseline on the AE carrier panel
+// (registration / email-verify / last-login) now reflects the FIRST
+// verification instead of a second one the carrier had to be chased for.
+//
+// The origin is SERVER-EXTRACTED and pinned by test — the verify endpoints take
+// a JSON body, so a request carrying its own verifiedFromCountry is one somebody
+// will eventually send, and a signal an applicant can set is not a signal.
+export const SRL_VERSION = "3.8.avb";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

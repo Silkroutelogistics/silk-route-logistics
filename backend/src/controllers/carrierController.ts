@@ -14,14 +14,13 @@ import { onCarrierApproved } from "../services/integrationService";
 import { uploadFile } from "../services/storageService";
 import { runFmcsaScan, complianceCheck } from "../services/complianceMonitorService";
 import { vetAndStoreReport } from "../services/carrierVettingService";
-import { sendEmail, sendEmailVerificationEmail, wrap } from "../services/emailService";
+import { sendEmail, wrap } from "../services/emailService";
 import { runIdentityCheck } from "../services/identityVerificationService";
 import { screenCarrier } from "../services/ofacScreeningService";
 import { populateAuthorityGrantedDate } from "../services/fmcsaService";
 // The consent record names the version the server serves, never one the
 // request supplied. See the bcaVersion write below.
 import { BCA_VERSION } from "../data/agreements";
-import { createEmailVerificationToken } from "../services/otpService";
 import { resolveCountry, extractClientIp } from "../services/geoService";
 import { normalizePhoneE164 } from "../lib/phoneNormalization";
 import { normalizeEmail, caseInsensitiveEmailFilter } from "../lib/emailNormalization";
@@ -145,6 +144,18 @@ export async function registerCarrier(req: Request, res: Response) {
     return;
   }
 
+  // The verified draft behind that receipt. Read AFTER the receipt is proven,
+  // never as a substitute for proving it: the receipt is what binds this
+  // submission to a mailbox, and looking a draft up by email would check a
+  // browser-supplied address against whatever draft happened to match it.
+  const verifiedDraft = await prisma.onboardingDraft
+    .findFirst({
+      where: { email: data.email.trim().toLowerCase(), verifiedAt: { not: null } },
+      orderBy: { updatedAt: "desc" },
+      select: { verifiedAt: true, verifiedFromIp: true, verifiedFromCountry: true },
+    })
+    .catch(() => null);
+
   // v3.8.ala — Capture registration IP + country early so duplicate-hit
   // compliance flag dispatch (below) carries forensic context.
   const registrationIp = extractClientIp(req);
@@ -248,6 +259,24 @@ export async function registerCarrier(req: Request, res: Response) {
       // password (with the strong-password + HIBP gate), so there is nothing
       // to force-change. Mirrors authController.ts:135.
       passwordChangedAt: new Date(),
+      // THE MAILBOX IS ALREADY PROVEN — carry that proof forward rather than
+      // asking for it a second time.
+      //
+      // The carrier verified this exact address between wizard Steps 1 and 2,
+      // by typed code or by clicking the link, and `verifyReceipt` above has
+      // just confirmed the receipt binds to it. Leaving emailVerifiedAt null
+      // here meant the platform did not believe its own gate: the carrier was
+      // emailed a SECOND verification link after submitting, and the Compass
+      // auto-approve gate below refused to run until they clicked it. A carrier
+      // who ignored that email sat unapproved for a reason nobody told them.
+      //
+      // Geo comes from the draft, captured server-side at the verifying click.
+      // Both are null for a draft verified before that capture shipped, which
+      // is the honest answer — the AE panel shows an empty row rather than an
+      // invented origin.
+      emailVerifiedAt: verifiedDraft?.verifiedAt ?? null,
+      emailVerifiedFromIp: verifiedDraft?.verifiedFromIp ?? null,
+      emailVerifiedFromCountry: verifiedDraft?.verifiedFromCountry ?? null,
       firstName: data.firstName,
       lastName: data.lastName,
       company: data.company,
@@ -543,19 +572,37 @@ export async function registerCarrier(req: Request, res: Response) {
     `)
   ).catch((e) => log.error({ err: e }, "[Registration Email] Error:"));
 
-  // 1.5. v3.8.aje — Send email verification link.
-  // Mint a 24h `VERIFY:<token>` row in OtpCode + email the carrier a
-  // click link. The link lands at /carrier/verify-email?token=... where
-  // the frontend POSTs to /api/carrier-auth/verify-email — backend
-  // captures the click IP + resolves country via geoip-lite for the
-  // country-jump fraud signal. Fire-and-forget per the rest of the
-  // post-registration chain.
-  createEmailVerificationToken(user.id)
-    .then((token) => {
-      const verifyUrl = `https://silkroutelogistics.ai/carrier/verify-email?token=${token}`;
-      return sendEmailVerificationEmail(data.email, data.firstName, verifyUrl);
-    })
-    .catch((e) => log.error({ err: e }, "[Email Verification] Send error:"));
+  // 1.5. SUPERSEDED 2026-08-30 — the second verification email is GONE.
+  //
+  // WHAT IT DID, and when it was right. v3.8.aje minted a 24h `VERIFY:<token>`
+  // OtpCode row and emailed the carrier a click link landing at
+  // /carrier/verify-email. The click captured its IP and country for the
+  // country-jump fraud signal and set User.emailVerifiedAt. When it shipped,
+  // registration was the FIRST server write in the whole flow — there was no
+  // earlier moment at which a mailbox could have been proven, so proving it
+  // afterwards was the only option available.
+  //
+  // WHAT CHANGED. Arc 32 moved verification EARLIER, to between wizard Steps 1
+  // and 2, where nothing is submitted until the mailbox answers. Once that
+  // landed this became a second proof of a fact already established — and not a
+  // harmless one:
+  //
+  //   - the carrier verified the same address twice, the second time with no
+  //     explanation of why the first had not counted;
+  //   - User.emailVerifiedAt stayed null until they clicked it, so the Compass
+  //     auto-approve gate below refused to run;
+  //   - a carrier who ignored the second email sat unapproved indefinitely for
+  //     a reason nobody surfaced anywhere.
+  //
+  // WHAT REPLACED IT. The user create above carries emailVerifiedAt and the
+  // verifying IP and country straight off the draft, so the fraud signal keeps
+  // its three-point geo baseline (registration / email-verify / last-login) and
+  // now reflects the FIRST verification instead of a second one the carrier had
+  // to be chased for.
+  //
+  // The /carrier/verify-email route and its token minting REMAIN — they are the
+  // recovery path for an address changed after registration, and deleting them
+  // would take that with it. What is gone is sending one unprompted at signup.
 
   // 2. Notify all ADMIN users about the new application
   prisma.user.findMany({ where: { role: "ADMIN" } }).then((admins) => {

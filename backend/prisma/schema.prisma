@@ -5471,6 +5471,19 @@ model OnboardingDraft {
   nonce      String
   verifiedAt DateTime?
 
+  /// WHERE the mailbox was proven from, captured at the verifying click or code
+  /// entry and carried onto the User at registration.
+  ///
+  /// SERVER-EXTRACTED ONLY. Never accepted from a request body — a self-reported
+  /// origin is worth nothing as a fraud signal, and a field a client can set is
+  /// a field a client will set. Pinned by test.
+  ///
+  /// Nullable because drafts verified before this shipped have no answer, and
+  /// inventing one would be worse than an empty row on the AE panel.
+  verifiedFromIp        String?
+  verifiedFromCountry   String?
+  verifiedUserAgent     String?
+
   /// Recorded for audit and as an early signal. NOT a second Compass input —
   /// the engine already grades disposable domains via IdentityVerification.
   emailIsDisposable Boolean @default(false)
