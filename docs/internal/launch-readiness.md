@@ -9,10 +9,25 @@ source. Dated **2026-08-28**, against `main` at the SHA recorded in §2.
 ## 1. The verdict
 
 > **SRL can run its first real load today, and a carrier can now get all the way
-> through the door to be run for. The platform's money, compliance and document
-> paths are built and proved; what stands between here and launch is not
-> engineering but five inputs SRL does not yet hold, and two human passes nobody
-> has done.**
+> through the door to be run for — with the paperwork they sent actually arriving.
+> The platform’s money, compliance and document paths are built and proved; what
+> stands between here and launch is not engineering but five inputs SRL does not
+> yet hold, and two human passes nobody has done.**
+
+**One of those five inputs is now load-bearing in a way it was not before.**
+`S3_BUCKET_NAME` and `AWS_ACCESS_KEY_ID` are unset, and until 2026-08-30 that
+meant every document a carrier uploaded was silently destroyed: the production
+`documents` table held **zero rows**, across every carrier that had ever applied,
+while the AE drawer showed a clean `DOCUMENTS (0)` that read as "they sent
+nothing". Storage had already been hardened to refuse loudly; the caller caught
+the refusal and carried on.
+
+That is fixed in the sense that matters most — **the loss is no longer silent**.
+A failed upload now writes an `UPLOAD_FAILED` row, notifies admins, and shows the
+AE a banner naming the files and stating that the carrier did nothing wrong. But
+**uploads will keep failing until object storage is configured.** This is the one
+launch input where the absence does not merely block a feature; it destroys
+something a carrier hands you and cannot get back.
 
 The second clause is new as of **2026-08-30** and is the only change to this
 verdict since it was written. The acquisition funnel carried two defects when

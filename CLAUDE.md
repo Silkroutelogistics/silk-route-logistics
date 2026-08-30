@@ -2393,6 +2393,25 @@ Each is a discrete sprint. Mix of operational, security, UX, and technical debt.
     **BANKED, NOT FIXED.** The COI template still carries legacy `#0D1B2A` navy and non-canonical `#C9A84C` gold — it was missed by the `amm`/`amn` colour sweeps. Belongs to a brand arc.
 
 
+248. **The documents were never stored, and three surfaces said otherwise (2026-08-30, `v3.8.avl`).**
+
+    **248.1 — THE PRODUCTION `documents` TABLE HELD ZERO ROWS.** Not zero for one carrier — zero, across every carrier that has ever applied. Every W-9, COI, Authority letter and Workers' Comp certificate anyone uploaded is gone, and the AE drawer rendered `DOCUMENTS (0)`, which is indistinguishable from a carrier who submitted nothing.
+
+    **248.2 — TWO DEFECTS UNDER ONE SYMPTOM.** (a) [`carrierController.ts:457`](backend/src/controllers/carrierController.ts#L457) was `Promise.all(uploadPromises).catch(e => log.error(...))` — fire-and-forget with a log-only catch. `storageService` **refuses** uploads in production when object storage is unconfigured, deliberately and loudly at its own layer after an earlier arc hardened it; that refusal landed in this catch and stopped. **The storage layer was made loud and the caller stayed silent.** (b) `photoId` and `articlesOfInc` wrote Document rows with **no `entityType` and no `entityId`**, and the AE drawer queries on both — so even a *successful* upload of those two was invisible.
+
+    **248.3 — APP-07AS9V0A's FOUR FILES ARE TRULY GONE.** Never written to the database; with storage unconfigured there is no bucket holding orphans and no local-disk fallback in production. Nothing to recover, and saying so plainly is the only honest outcome.
+
+    **248.4 — THE FIX KEEPS THE APPLICATION SUCCEEDING.** A carrier must not lose a completed application because our env is wrong — that is our fault and the remedy is an env var, not a re-application. But a failure now writes an `UPLOAD_FAILED` row carrying the filename and an explanatory note, logs ERROR with the docType, notifies ADMIN/CEO, and renders a red AE banner naming the files and stating the carrier did nothing wrong. **Never a clean zero.** The root cause remains open and is not code: `S3_BUCKET_NAME` and `AWS_ACCESS_KEY_ID` are unset, and every upload will now fail *loudly* until they are set. That is the point.
+
+    **248.5 — THE QUICK PAY BANNER LIED.** The approve handler wrote an in-portal row, caught its own failure into a log line, and returned 200 — while the console said "the carrier has been notified". **No email was ever sent by that path.** A carrier could be admitted to the pilot and learn it only by happening to open the portal. It now sends an approval email whose every figure is read from `TIER_CONFIG` — fee by speed tier, auto-approve limit, monthly limit, Net terms — because a hardcoded percentage in a fee sentence is a pricing statement that goes stale *in writing, to a carrier*. The response reports `emailSent`/`notifSent` and the banner claims delivery only when something was delivered.
+
+    **248.6 — POST-SUBMIT COPY DESCRIBED A PLATFORM THAT NO LONGER EXISTS.** The success screen told carriers to watch for "Confirm your email" — deleted when verification moved to the gate. Two surfaces promised "login credentials" that are never issued; the password is the one they created in the wizard. Corrected on the screen and in the application-received email. The only surviving "Confirm your email" is the **gate** panel, which is correct.
+
+    **248.7 — THE GUARD WAS WRONG FIRST, FOR THE FIFTH TIME IN TWO DAYS.** It asserted the send function's identifier appeared in the file — and the **import line alone satisfied it**, so deleting the actual call left it green. *Presence is not function.* Rewritten to assert the CALL inside the handler, re-injected, correct. Three injections verified: suppress the send, make the banner unconditional, swallow the document failure.
+
+    **248.8 — SCOPE HELD, TWICE.** Part B (serif conformance) was **not done**: `serif-weight-drift.js` and `typographyTokens.test.ts` were being edited by a concurrent session mid-arc and the diff was precisely that work. §2.2 — if a file you need is being edited by another session, it is theirs. Their arc landed as `avm`. And [`documentController.ts:409`](backend/src/controllers/documentController.ts#L409) renders a standalone HTML Rate Confirmation on `#0D1B2A` plus a *third* non-canonical gold `#C8963E` — reported, not recoloured: it is a document surface governed by the skill's PDF chrome, and it raises a larger question about why a second RC renderer exists alongside the PDF one.
+
+
 ## §14 LEGAL / COMPLIANCE STATUS
 
 - Property broker under 49 U.S.C. §§ 13904, 13906
