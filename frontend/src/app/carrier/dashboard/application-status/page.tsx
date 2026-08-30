@@ -141,7 +141,7 @@ export default function ApplicationStatusPage() {
         <div className="flex items-start justify-between gap-4 flex-wrap">
           <div>
             <p className="text-[11px] font-semibold tracking-widest text-[#BA7517] uppercase mb-1">Caravan Partner Program</p>
-            <h1 className="text-2xl font-bold text-[#0A2540]" style={{ fontFamily: "Playfair Display, Georgia, serif" }}>
+            <h1 className="text-2xl font-bold text-[#0A2540] font-serif">
               Application Status
             </h1>
             <p className="mt-1 text-sm text-[#3A4A5F]">
@@ -253,7 +253,7 @@ export default function ApplicationStatusPage() {
 function PendingSection() {
   return (
     <div>
-      <h2 className="text-lg font-bold text-[#0A2540] mb-3" style={{ fontFamily: "Playfair Display, Georgia, serif" }}>
+      <h2 className="text-lg font-bold text-[#0A2540] mb-3 font-serif">
         Your application is in the queue
       </h2>
       <p className="text-sm text-[#3A4A5F] leading-relaxed">
@@ -276,7 +276,7 @@ function PendingSection() {
 function ReviewingSection() {
   return (
     <div>
-      <h2 className="text-lg font-bold text-[#0A2540] mb-3" style={{ fontFamily: "Playfair Display, Georgia, serif" }}>
+      <h2 className="text-lg font-bold text-[#0A2540] mb-3 font-serif">
         A reviewer is on your application
       </h2>
       <p className="text-sm text-[#3A4A5F] leading-relaxed">
@@ -321,7 +321,7 @@ function InfoRequestedSection() {
 
   return (
     <div>
-      <h2 className="text-lg font-bold text-[#0A2540] mb-3" style={{ fontFamily: "Playfair Display, Georgia, serif" }}>
+      <h2 className="text-lg font-bold text-[#0A2540] mb-3 font-serif">
         We need a little more from you
       </h2>
       <p className="text-sm text-[#3A4A5F] leading-relaxed">
@@ -568,7 +568,7 @@ function RejectedSection({ data }: { data: StatusResponse }) {
 
   return (
     <div>
-      <h2 className="text-lg font-bold text-[#0A2540] mb-3" style={{ fontFamily: "Playfair Display, Georgia, serif" }}>
+      <h2 className="text-lg font-bold text-[#0A2540] mb-3 font-serif">
         Application closed
       </h2>
       <p className="text-sm text-[#3A4A5F] leading-relaxed">
@@ -641,7 +641,7 @@ function ApprovedSection() {
   // stale browser tab lands here during the redirect cycle.
   return (
     <div>
-      <h2 className="text-lg font-bold text-[#0A2540] mb-3" style={{ fontFamily: "Playfair Display, Georgia, serif" }}>
+      <h2 className="text-lg font-bold text-[#0A2540] mb-3 font-serif">
         You&apos;re approved
       </h2>
       <p className="text-sm text-[#3A4A5F] leading-relaxed">

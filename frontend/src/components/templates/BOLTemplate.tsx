@@ -396,7 +396,7 @@ export function BOLTemplate({ data, onClose }: BOLTemplateProps) {
 const printStyles = `
   @page { size: letter; margin: 0.4in 0.5in; }
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 10px; color: #1a1a1a; line-height: 1.4; }
+  body { font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 10px; color: #1a1a1a; line-height: 1.4; }
 
   .bol-page { max-width: 7.5in; margin: 0 auto; }
   .no-print { display: none !important; }

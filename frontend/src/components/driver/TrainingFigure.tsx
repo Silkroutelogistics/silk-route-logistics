@@ -164,7 +164,7 @@ function DotPlacard({
         </g>
         <polygon points="50,4 96,50 50,96 4,50" fill="none" stroke="#1a1a1a" strokeWidth="4" strokeLinejoin="round" />
         <g transform="translate(50 38) scale(0.62)" fill={symbolColor} stroke="none">{symbol}</g>
-        <text x="50" y="84" textAnchor="middle" fontSize="20" fontWeight="700" fill={numColor ?? symbolColor} fontFamily="Arial, sans-serif">{num}</text>
+        <text x="50" y="84" textAnchor="middle" fontSize="20" fontWeight="700" fill={numColor ?? symbolColor} fontFamily="var(--font-dm-sans), sans-serif">{num}</text>
       </svg>
       <figcaption className="max-w-[88px] text-center text-[10px] font-medium leading-tight text-[#3A4A5F]">{label}</figcaption>
     </figure>
@@ -198,10 +198,10 @@ function PlacardAnatomy() {
     <svg viewBox="0 0 260 150" className="h-auto w-full max-w-[340px]" role="img" aria-label="Anatomy of a DOT placard">
       <polygon points="80,12 148,80 80,148 12,80" fill="#D0141E" stroke="#1a1a1a" strokeWidth="3" strokeLinejoin="round" />
       <g transform="translate(80 58) scale(0.7)" fill="#ffffff">{flamePath}</g>
-      <text x="80" y="128" textAnchor="middle" fontSize="22" fontWeight="700" fill="#ffffff" fontFamily="Arial, sans-serif">3</text>
+      <text x="80" y="128" textAnchor="middle" fontSize="22" fontWeight="700" fill="#ffffff" fontFamily="var(--font-dm-sans), sans-serif">3</text>
       <rect x="170" y="62" width="78" height="26" fill="#E8841A" stroke="#1a1a1a" strokeWidth="2" />
-      <text x="209" y="80" textAnchor="middle" fontSize="13" fontWeight="700" fill="#1a1a1a" fontFamily="Arial, sans-serif">UN 1203</text>
-      <g fontFamily="Arial, sans-serif" fontSize="9" fill="#3A4A5F">
+      <text x="209" y="80" textAnchor="middle" fontSize="13" fontWeight="700" fill="#1a1a1a" fontFamily="var(--font-dm-sans), sans-serif">UN 1203</text>
+      <g fontFamily="var(--font-dm-sans), sans-serif" fontSize="9" fill="#3A4A5F">
         <line x1="86" y1="44" x2="150" y2="30" stroke="#BA7517" strokeWidth="1.2" />
         <text x="154" y="32">Symbol (hazard type)</text>
         <line x1="92" y1="120" x2="150" y2="132" stroke="#BA7517" strokeWidth="1.2" />
@@ -1127,14 +1127,14 @@ const STRUCTURED: Record<string, { caption: string; body: React.ReactNode }> = {
         <circle cx="100" cy="80" r="62" fill="rgba(10,37,64,0.12)" stroke="#0A2540" strokeWidth="1.5" />
         <circle cx="160" cy="80" r="62" fill="rgba(186,117,23,0.12)" stroke="#BA7517" strokeWidth="1.5" />
         <circle cx="130" cy="130" r="62" fill="rgba(47,122,79,0.12)" stroke="#2F7A4F" strokeWidth="1.5" />
-        <text x="74" y="58" textAnchor="middle" fontSize="11" fontWeight="700" fill="#0A2540" fontFamily="Arial, sans-serif">VISUAL</text>
-        <text x="74" y="70" textAnchor="middle" fontSize="7.5" fill="#3A4A5F" fontFamily="Arial, sans-serif">eyes off road</text>
-        <text x="186" y="58" textAnchor="middle" fontSize="11" fontWeight="700" fill="#BA7517" fontFamily="Arial, sans-serif">MANUAL</text>
-        <text x="186" y="70" textAnchor="middle" fontSize="7.5" fill="#3A4A5F" fontFamily="Arial, sans-serif">hands off wheel</text>
-        <text x="130" y="162" textAnchor="middle" fontSize="11" fontWeight="700" fill="#2F7A4F" fontFamily="Arial, sans-serif">COGNITIVE</text>
-        <text x="130" y="174" textAnchor="middle" fontSize="7.5" fill="#3A4A5F" fontFamily="Arial, sans-serif">mind off drive</text>
-        <text x="130" y="100" textAnchor="middle" fontSize="9" fontWeight="700" fill="#9B2C2C" fontFamily="Arial, sans-serif">texting</text>
-        <text x="130" y="111" textAnchor="middle" fontSize="7" fill="#9B2C2C" fontFamily="Arial, sans-serif">= all three</text>
+        <text x="74" y="58" textAnchor="middle" fontSize="11" fontWeight="700" fill="#0A2540" fontFamily="var(--font-dm-sans), sans-serif">VISUAL</text>
+        <text x="74" y="70" textAnchor="middle" fontSize="7.5" fill="#3A4A5F" fontFamily="var(--font-dm-sans), sans-serif">eyes off road</text>
+        <text x="186" y="58" textAnchor="middle" fontSize="11" fontWeight="700" fill="#BA7517" fontFamily="var(--font-dm-sans), sans-serif">MANUAL</text>
+        <text x="186" y="70" textAnchor="middle" fontSize="7.5" fill="#3A4A5F" fontFamily="var(--font-dm-sans), sans-serif">hands off wheel</text>
+        <text x="130" y="162" textAnchor="middle" fontSize="11" fontWeight="700" fill="#2F7A4F" fontFamily="var(--font-dm-sans), sans-serif">COGNITIVE</text>
+        <text x="130" y="174" textAnchor="middle" fontSize="7.5" fill="#3A4A5F" fontFamily="var(--font-dm-sans), sans-serif">mind off drive</text>
+        <text x="130" y="100" textAnchor="middle" fontSize="9" fontWeight="700" fill="#9B2C2C" fontFamily="var(--font-dm-sans), sans-serif">texting</text>
+        <text x="130" y="111" textAnchor="middle" fontSize="7" fill="#9B2C2C" fontFamily="var(--font-dm-sans), sans-serif">= all three</text>
       </svg>
     ),
   },
@@ -1173,25 +1173,25 @@ const STRUCTURED: Record<string, { caption: string; body: React.ReactNode }> = {
     caption: "Put out your three warning triangles within 10 minutes (49 CFR 392.22). On a TWO-WAY highway: ~10 ft toward approaching traffic, ~100 ft behind, ~100 ft ahead. On a ONE-WAY or divided highway: ~10, 100, and 200 ft, all to the rear toward approaching traffic.",
     body: (
       <svg viewBox="0 0 320 184" className="mx-auto h-auto w-full max-w-[360px]" role="img" aria-label="Warning triangle placement on two-way vs one-way highways">
-        <text x="6" y="13" fontSize="10" fontWeight="700" fill="#0A2540" fontFamily="Arial, sans-serif">Two-way highway</text>
+        <text x="6" y="13" fontSize="10" fontWeight="700" fill="#0A2540" fontFamily="var(--font-dm-sans), sans-serif">Two-way highway</text>
         <line x1="10" y1="42" x2="312" y2="42" stroke="#C5A572" strokeWidth="1" strokeDasharray="6 5" />
         <rect x="150" y="34" width="34" height="14" rx="2" fill="#0A2540" />
-        <text x="167" y="44" textAnchor="middle" fontSize="7" fill="#FBF7F0" fontFamily="Arial, sans-serif">TRUCK</text>
+        <text x="167" y="44" textAnchor="middle" fontSize="7" fill="#FBF7F0" fontFamily="var(--font-dm-sans), sans-serif">TRUCK</text>
         <g fill="#9B2C2C">
-          <polygon points="136,33 142,44 130,44" /><text x="136" y="57" textAnchor="middle" fontSize="7.5" fill="#3A4A5F" fontFamily="Arial, sans-serif">10 ft</text>
-          <polygon points="82,33 88,44 76,44" /><text x="82" y="57" textAnchor="middle" fontSize="7.5" fill="#3A4A5F" fontFamily="Arial, sans-serif">100 ft</text>
-          <polygon points="252,33 258,44 246,44" /><text x="252" y="57" textAnchor="middle" fontSize="7.5" fill="#3A4A5F" fontFamily="Arial, sans-serif">100 ft ahead</text>
+          <polygon points="136,33 142,44 130,44" /><text x="136" y="57" textAnchor="middle" fontSize="7.5" fill="#3A4A5F" fontFamily="var(--font-dm-sans), sans-serif">10 ft</text>
+          <polygon points="82,33 88,44 76,44" /><text x="82" y="57" textAnchor="middle" fontSize="7.5" fill="#3A4A5F" fontFamily="var(--font-dm-sans), sans-serif">100 ft</text>
+          <polygon points="252,33 258,44 246,44" /><text x="252" y="57" textAnchor="middle" fontSize="7.5" fill="#3A4A5F" fontFamily="var(--font-dm-sans), sans-serif">100 ft ahead</text>
         </g>
-        <text x="6" y="100" fontSize="10" fontWeight="700" fill="#0A2540" fontFamily="Arial, sans-serif">One-way / divided highway</text>
+        <text x="6" y="100" fontSize="10" fontWeight="700" fill="#0A2540" fontFamily="var(--font-dm-sans), sans-serif">One-way / divided highway</text>
         <line x1="10" y1="130" x2="312" y2="130" stroke="#C5A572" strokeWidth="1" strokeDasharray="6 5" />
         <rect x="244" y="122" width="34" height="14" rx="2" fill="#0A2540" />
-        <text x="261" y="132" textAnchor="middle" fontSize="7" fill="#FBF7F0" fontFamily="Arial, sans-serif">TRUCK</text>
+        <text x="261" y="132" textAnchor="middle" fontSize="7" fill="#FBF7F0" fontFamily="var(--font-dm-sans), sans-serif">TRUCK</text>
         <g fill="#9B2C2C">
-          <polygon points="226,121 232,132 220,132" /><text x="226" y="145" textAnchor="middle" fontSize="7.5" fill="#3A4A5F" fontFamily="Arial, sans-serif">10 ft</text>
-          <polygon points="150,121 156,132 144,132" /><text x="150" y="145" textAnchor="middle" fontSize="7.5" fill="#3A4A5F" fontFamily="Arial, sans-serif">100 ft</text>
-          <polygon points="70,121 76,132 64,132" /><text x="70" y="145" textAnchor="middle" fontSize="7.5" fill="#3A4A5F" fontFamily="Arial, sans-serif">200 ft</text>
+          <polygon points="226,121 232,132 220,132" /><text x="226" y="145" textAnchor="middle" fontSize="7.5" fill="#3A4A5F" fontFamily="var(--font-dm-sans), sans-serif">10 ft</text>
+          <polygon points="150,121 156,132 144,132" /><text x="150" y="145" textAnchor="middle" fontSize="7.5" fill="#3A4A5F" fontFamily="var(--font-dm-sans), sans-serif">100 ft</text>
+          <polygon points="70,121 76,132 64,132" /><text x="70" y="145" textAnchor="middle" fontSize="7.5" fill="#3A4A5F" fontFamily="var(--font-dm-sans), sans-serif">200 ft</text>
         </g>
-        <text x="160" y="172" textAnchor="middle" fontSize="8" fill="#6B7685" fontFamily="Arial, sans-serif">red triangles placed toward approaching traffic</text>
+        <text x="160" y="172" textAnchor="middle" fontSize="8" fill="#6B7685" fontFamily="var(--font-dm-sans), sans-serif">red triangles placed toward approaching traffic</text>
       </svg>
     ),
   },
@@ -1199,15 +1199,15 @@ const STRUCTURED: Record<string, { caption: string; body: React.ReactNode }> = {
     caption: "Back toward the DRIVER's (left) side whenever you can — you can see down the length of the trailer out your window. A blind-side (right) back hides the danger zone behind the trailer; avoid it, or use a spotter. G.O.A.L. — Get Out And Look — on every back.",
     body: (
       <svg viewBox="0 0 320 158" className="mx-auto h-auto w-full max-w-[360px]" role="img" aria-label="Driver-side versus blind-side backing visibility">
-        <text x="80" y="14" textAnchor="middle" fontSize="10" fontWeight="700" fill="#2F7A4F" fontFamily="Arial, sans-serif">Driver-side (LEFT) back ✓</text>
+        <text x="80" y="14" textAnchor="middle" fontSize="10" fontWeight="700" fill="#2F7A4F" fontFamily="var(--font-dm-sans), sans-serif">Driver-side (LEFT) back ✓</text>
         <polygon points="20,72 62,42 62,102" fill="rgba(47,122,79,0.14)" stroke="#2F7A4F" strokeWidth="1" />
         <rect x="62" y="57" width="58" height="30" rx="2" fill="#15365A" /><rect x="120" y="62" width="22" height="20" rx="2" fill="#0A2540" />
-        <text x="86" y="122" textAnchor="middle" fontSize="8" fill="#2F7A4F" fontFamily="Arial, sans-serif">trailer-rear visible</text>
-        <text x="240" y="14" textAnchor="middle" fontSize="10" fontWeight="700" fill="#9B2C2C" fontFamily="Arial, sans-serif">Blind-side (RIGHT) back ✕</text>
+        <text x="86" y="122" textAnchor="middle" fontSize="8" fill="#2F7A4F" fontFamily="var(--font-dm-sans), sans-serif">trailer-rear visible</text>
+        <text x="240" y="14" textAnchor="middle" fontSize="10" fontWeight="700" fill="#9B2C2C" fontFamily="var(--font-dm-sans), sans-serif">Blind-side (RIGHT) back ✕</text>
         <polygon points="300,72 258,42 258,102" fill="rgba(155,44,44,0.14)" stroke="#9B2C2C" strokeWidth="1" strokeDasharray="4 3" />
         <rect x="200" y="57" width="58" height="30" rx="2" fill="#15365A" /><rect x="178" y="62" width="22" height="20" rx="2" fill="#0A2540" />
-        <text x="280" y="122" textAnchor="middle" fontSize="8" fill="#9B2C2C" fontFamily="Arial, sans-serif">hidden zone</text>
-        <text x="160" y="150" textAnchor="middle" fontSize="8" fill="#6B7685" fontFamily="Arial, sans-serif">the shaded wedge is what the driver can see from the cab</text>
+        <text x="280" y="122" textAnchor="middle" fontSize="8" fill="#9B2C2C" fontFamily="var(--font-dm-sans), sans-serif">hidden zone</text>
+        <text x="160" y="150" textAnchor="middle" fontSize="8" fill="#6B7685" fontFamily="var(--font-dm-sans), sans-serif">the shaded wedge is what the driver can see from the cab</text>
       </svg>
     ),
   },
@@ -1220,12 +1220,12 @@ const STRUCTURED: Record<string, { caption: string; body: React.ReactNode }> = {
         <rect x="187" y="52" width="113" height="16" fill="#E6F0E9" />
         <line x1="20" y1="52" x2="300" y2="52" stroke="#0A2540" strokeWidth="1" />
         {([["0", 20], ["30", 76], ["60", 132], ["100", 207], ["125", 254], ["150", 300]] as [string, number][]).map(([n, x], i) => (
-          <g key={i}><line x1={x} y1="68" x2={x} y2="74" stroke="#3A4A5F" strokeWidth="1" /><text x={x} y="86" textAnchor="middle" fontSize="8" fill="#3A4A5F" fontFamily="Arial, sans-serif">{n}</text></g>
+          <g key={i}><line x1={x} y1="68" x2={x} y2="74" stroke="#3A4A5F" strokeWidth="1" /><text x={x} y="86" textAnchor="middle" fontSize="8" fill="#3A4A5F" fontFamily="var(--font-dm-sans), sans-serif">{n}</text></g>
         ))}
-        <text x="48" y="46" textAnchor="middle" fontSize="7.5" fontWeight="700" fill="#9B2C2C" fontFamily="Arial, sans-serif">pop-out 20-45</text>
-        <text x="132" y="44" textAnchor="middle" fontSize="8" fontWeight="700" fill="#B07A1A" fontFamily="Arial, sans-serif">low-air warn ~60</text>
-        <text x="232" y="46" textAnchor="middle" fontSize="8" fontWeight="700" fill="#2F7A4F" fontFamily="Arial, sans-serif">governor 100 to 125</text>
-        <text x="160" y="104" textAnchor="middle" fontSize="8" fill="#6B7685" fontFamily="Arial, sans-serif">PSI · leak-down: under 2/3 psi/min released, 3/4 applied</text>
+        <text x="48" y="46" textAnchor="middle" fontSize="7.5" fontWeight="700" fill="#9B2C2C" fontFamily="var(--font-dm-sans), sans-serif">pop-out 20-45</text>
+        <text x="132" y="44" textAnchor="middle" fontSize="8" fontWeight="700" fill="#B07A1A" fontFamily="var(--font-dm-sans), sans-serif">low-air warn ~60</text>
+        <text x="232" y="46" textAnchor="middle" fontSize="8" fontWeight="700" fill="#2F7A4F" fontFamily="var(--font-dm-sans), sans-serif">governor 100 to 125</text>
+        <text x="160" y="104" textAnchor="middle" fontSize="8" fill="#6B7685" fontFamily="var(--font-dm-sans), sans-serif">PSI · leak-down: under 2/3 psi/min released, 3/4 applied</text>
       </svg>
     ),
   },
@@ -1237,9 +1237,9 @@ const STRUCTURED: Record<string, { caption: string; body: React.ReactNode }> = {
         <rect x="40" y="58" width="24" height="34" rx="3" fill="#0A2540" />
         <path d="M52 44 H150 V32 M150 100 V112 H52 V100 M255 50 V100" fill="none" stroke="#C5A572" strokeWidth="1.2" strokeDasharray="5 4" />
         {([["1", 50, 46], ["2", 100, 42], ["3", 160, 42], ["4", 255, 75], ["5", 160, 112], ["6", 100, 112], ["7", 64, 112], ["8", 52, 75]] as [string, number, number][]).map(([n, x, y], i) => (
-          <g key={i}><circle cx={x} cy={y} r="9" fill="#BA7517" /><text x={x} y={y + 3} textAnchor="middle" fontSize="9" fontWeight="700" fill="#FBF7F0" fontFamily="Arial, sans-serif">{n}</text></g>
+          <g key={i}><circle cx={x} cy={y} r="9" fill="#BA7517" /><text x={x} y={y + 3} textAnchor="middle" fontSize="9" fontWeight="700" fill="#FBF7F0" fontFamily="var(--font-dm-sans), sans-serif">{n}</text></g>
         ))}
-        <text x="150" y="138" textAnchor="middle" fontSize="8" fill="#6B7685" fontFamily="Arial, sans-serif">driver door → front → around back → passenger side → cab</text>
+        <text x="150" y="138" textAnchor="middle" fontSize="8" fill="#6B7685" fontFamily="var(--font-dm-sans), sans-serif">driver door → front → around back → passenger side → cab</text>
       </svg>
     ),
   },
@@ -1251,13 +1251,13 @@ const STRUCTURED: Record<string, { caption: string; body: React.ReactNode }> = {
         <line x1="10" y1="102" x2="290" y2="102" stroke="#6B7685" strokeWidth="2" />
         {[...Array(14)].map((_, i) => (<line key={i} x1={22 + i * 19} y1="88" x2={22 + i * 19} y2="106" stroke="#A7AEB8" strokeWidth="2" />))}
         <rect x="250" y="80" width="40" height="24" rx="3" fill="#0A2540" />
-        <text x="270" y="95" textAnchor="middle" fontSize="7" fill="#FBF7F0" fontFamily="Arial, sans-serif">TRAIN</text>
+        <text x="270" y="95" textAnchor="middle" fontSize="7" fill="#FBF7F0" fontFamily="var(--font-dm-sans), sans-serif">TRAIN</text>
         <path d="M248 92 H232 M238 87 L232 92 L238 97" fill="none" stroke="#9B2C2C" strokeWidth="2" />
         <rect x="120" y="84" width="30" height="16" rx="2" fill="#9B2C2C" />
-        <text x="135" y="78" textAnchor="middle" fontSize="7" fill="#9B2C2C" fontFamily="Arial, sans-serif">stalled</text>
+        <text x="135" y="78" textAnchor="middle" fontSize="7" fill="#9B2C2C" fontFamily="var(--font-dm-sans), sans-serif">stalled</text>
         <path d="M132 84 L178 42 M171 44 L178 42 L177 49" fill="none" stroke="#2F7A4F" strokeWidth="3" />
-        <text x="182" y="40" fontSize="9" fontWeight="700" fill="#2F7A4F" fontFamily="Arial, sans-serif">45° toward the train</text>
-        <text x="150" y="150" textAnchor="middle" fontSize="8" fill="#6B7685" fontFamily="Arial, sans-serif">debris flies the way the train travels — stay behind it</text>
+        <text x="182" y="40" fontSize="9" fontWeight="700" fill="#2F7A4F" fontFamily="var(--font-dm-sans), sans-serif">45° toward the train</text>
+        <text x="150" y="150" textAnchor="middle" fontSize="8" fill="#6B7685" fontFamily="var(--font-dm-sans), sans-serif">debris flies the way the train travels — stay behind it</text>
       </svg>
     ),
   },
@@ -1269,13 +1269,13 @@ const STRUCTURED: Record<string, { caption: string; body: React.ReactNode }> = {
         <rect x="20" y="48" width="40" height="28" rx="3" fill="#0A2540" />
         <circle cx="40" cy="86" r="8" fill="#3A4A5F" /><circle cx="58" cy="86" r="8" fill="#3A4A5F" />
         <circle cx="240" cy="86" r="8" fill="#3A4A5F" /><circle cx="262" cy="86" r="8" fill="#3A4A5F" />
-        <text x="49" y="110" textAnchor="middle" fontSize="8" fill="#0A2540" fontFamily="Arial, sans-serif">drives</text>
-        <text x="251" y="110" textAnchor="middle" fontSize="8" fill="#0A2540" fontFamily="Arial, sans-serif">trailer tandems</text>
+        <text x="49" y="110" textAnchor="middle" fontSize="8" fill="#0A2540" fontFamily="var(--font-dm-sans), sans-serif">drives</text>
+        <text x="251" y="110" textAnchor="middle" fontSize="8" fill="#0A2540" fontFamily="var(--font-dm-sans), sans-serif">trailer tandems</text>
         <path d="M232 126 H210 M216 122 L210 126 L216 130" fill="none" stroke="#BA7517" strokeWidth="2" />
-        <text x="150" y="130" fontSize="7.5" fill="#BA7517" fontFamily="Arial, sans-serif">forward → weight onto the tandems</text>
+        <text x="150" y="130" fontSize="7.5" fill="#BA7517" fontFamily="var(--font-dm-sans), sans-serif">forward → weight onto the tandems</text>
         <path d="M276 126 H298 M292 122 L298 126 L292 130" fill="none" stroke="#BA7517" strokeWidth="2" />
-        <text x="252" y="142" fontSize="7.5" fill="#BA7517" fontFamily="Arial, sans-serif">back → onto the drives</text>
-        <text x="40" y="30" textAnchor="middle" fontSize="7.5" fill="#2F7A4F" fontFamily="Arial, sans-serif">5th wheel fwd → steer</text>
+        <text x="252" y="142" fontSize="7.5" fill="#BA7517" fontFamily="var(--font-dm-sans), sans-serif">back → onto the drives</text>
+        <text x="40" y="30" textAnchor="middle" fontSize="7.5" fill="#2F7A4F" fontFamily="var(--font-dm-sans), sans-serif">5th wheel fwd → steer</text>
       </svg>
     ),
   },
@@ -1301,17 +1301,17 @@ const STRUCTURED: Record<string, { caption: string; body: React.ReactNode }> = {
     caption: "Airflow keeps the whole load in spec. Keep the return-air bulkhead at the front CLEAR and use the floor channels — don't floor-load solid product over the air chute. Block the bulkhead and you starve the cargo of cold air and create warm hot spots.",
     body: (
       <svg viewBox="0 0 320 134" className="mx-auto h-auto w-full max-w-[360px]" role="img" aria-label="Reefer airflow: clear bulkhead versus blocked">
-        <text x="80" y="13" textAnchor="middle" fontSize="9.5" fontWeight="700" fill="#2F7A4F" fontFamily="Arial, sans-serif">Clear bulkhead ✓</text>
+        <text x="80" y="13" textAnchor="middle" fontSize="9.5" fontWeight="700" fill="#2F7A4F" fontFamily="var(--font-dm-sans), sans-serif">Clear bulkhead ✓</text>
         <rect x="20" y="22" width="120" height="80" rx="3" fill="none" stroke="#15365A" strokeWidth="1.5" />
         <rect x="22" y="24" width="14" height="76" fill="#E2EAF2" />
         <rect x="50" y="34" width="86" height="56" fill="rgba(197,165,114,0.22)" />
         <path d="M40 30 H132 M132 30 V92 M132 92 H40 M40 92 V30" fill="none" stroke="#2F7A4F" strokeWidth="1.5" strokeDasharray="4 3" />
-        <text x="60" y="116" textAnchor="middle" fontSize="7.5" fill="#2F7A4F" fontFamily="Arial, sans-serif">air circulates around the load</text>
-        <text x="240" y="13" textAnchor="middle" fontSize="9.5" fontWeight="700" fill="#9B2C2C" fontFamily="Arial, sans-serif">Blocked ✕</text>
+        <text x="60" y="116" textAnchor="middle" fontSize="7.5" fill="#2F7A4F" fontFamily="var(--font-dm-sans), sans-serif">air circulates around the load</text>
+        <text x="240" y="13" textAnchor="middle" fontSize="9.5" fontWeight="700" fill="#9B2C2C" fontFamily="var(--font-dm-sans), sans-serif">Blocked ✕</text>
         <rect x="180" y="22" width="120" height="80" rx="3" fill="none" stroke="#15365A" strokeWidth="1.5" />
         <rect x="182" y="24" width="116" height="76" fill="rgba(197,165,114,0.22)" />
         <circle cx="202" cy="42" r="10" fill="rgba(155,44,44,0.5)" /><circle cx="282" cy="84" r="10" fill="rgba(155,44,44,0.5)" />
-        <text x="240" y="116" textAnchor="middle" fontSize="7.5" fill="#9B2C2C" fontFamily="Arial, sans-serif">hot spots — air cannot move</text>
+        <text x="240" y="116" textAnchor="middle" fontSize="7.5" fill="#9B2C2C" fontFamily="var(--font-dm-sans), sans-serif">hot spots — air cannot move</text>
       </svg>
     ),
   },

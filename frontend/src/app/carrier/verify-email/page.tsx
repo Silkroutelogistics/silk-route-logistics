@@ -65,7 +65,7 @@ function VerifyEmailContent() {
           {state === "loading" && (
             <div className="text-center">
               <Loader2 size={36} className="text-[#BA7517] animate-spin mx-auto mb-4" />
-              <h1 className="text-lg font-bold text-[#0A2540] mb-2" style={{ fontFamily: "Playfair Display, Georgia, serif" }}>
+              <h1 className="text-lg font-bold text-[#0A2540] mb-2 font-serif">
                 Verifying your email…
               </h1>
               <p className="text-sm text-[#6B7685]">One moment while we confirm your address.</p>
@@ -78,7 +78,7 @@ function VerifyEmailContent() {
                 <CheckCircle2 size={32} className="text-[#2F7A4F]" />
               </div>
               <p className="text-[11px] font-semibold tracking-widest text-[#BA7517] uppercase mb-1">Email verified</p>
-              <h1 className="text-2xl font-bold text-[#0A2540] mb-3" style={{ fontFamily: "Playfair Display, Georgia, serif" }}>
+              <h1 className="text-2xl font-bold text-[#0A2540] mb-3 font-serif">
                 You&apos;re all set
               </h1>
               <p className="text-sm text-[#3A4A5F] leading-relaxed mb-6">
@@ -99,7 +99,7 @@ function VerifyEmailContent() {
                 <CheckCircle2 size={32} className="text-[#2A5B8B]" />
               </div>
               <p className="text-[11px] font-semibold tracking-widest text-[#2A5B8B] uppercase mb-1">Already verified</p>
-              <h1 className="text-2xl font-bold text-[#0A2540] mb-3" style={{ fontFamily: "Playfair Display, Georgia, serif" }}>
+              <h1 className="text-2xl font-bold text-[#0A2540] mb-3 font-serif">
                 Email already confirmed
               </h1>
               <p className="text-sm text-[#3A4A5F] leading-relaxed mb-6">
@@ -120,7 +120,7 @@ function VerifyEmailContent() {
                 <XCircle size={32} className="text-[#B07A1A]" />
               </div>
               <p className="text-[11px] font-semibold tracking-widest text-[#B07A1A] uppercase mb-1">Link not valid</p>
-              <h1 className="text-2xl font-bold text-[#0A2540] mb-3" style={{ fontFamily: "Playfair Display, Georgia, serif" }}>
+              <h1 className="text-2xl font-bold text-[#0A2540] mb-3 font-serif">
                 Verification link expired
               </h1>
               <p className="text-sm text-[#3A4A5F] leading-relaxed mb-6">
@@ -141,7 +141,7 @@ function VerifyEmailContent() {
                 <XCircle size={32} className="text-[#9B2C2C]" />
               </div>
               <p className="text-[11px] font-semibold tracking-widest text-[#9B2C2C] uppercase mb-1">Verification failed</p>
-              <h1 className="text-2xl font-bold text-[#0A2540] mb-3" style={{ fontFamily: "Playfair Display, Georgia, serif" }}>
+              <h1 className="text-2xl font-bold text-[#0A2540] mb-3 font-serif">
                 We couldn&apos;t complete verification
               </h1>
               <p className="text-sm text-[#3A4A5F] leading-relaxed mb-6">

@@ -405,7 +405,7 @@ function buildRateConHTML(load: any): string {
 <html>
 <head><meta charset="utf-8"><title>Rate Confirmation - ${load.referenceNumber}</title>
 <style>
-body { font-family: Arial, sans-serif; margin: 0; padding: 20px; color: #333; }
+body { font-family: 'DM Sans',-apple-system,BlinkMacSystemFont,sans-serif; margin: 0; padding: 20px; color: #333; }
 .header { background: #0D1B2A; color: #C8963E; padding: 24px; margin: -20px -20px 24px; }
 .header h1 { margin: 0; font-size: 22px; }
 .header p { margin: 4px 0 0; color: #94a3b8; font-size: 13px; }

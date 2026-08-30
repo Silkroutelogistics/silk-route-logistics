@@ -134,7 +134,7 @@ export function InfoRequestModal({ carrierId, carrierCompany, open, onClose }: P
         <div className="flex items-start justify-between px-6 py-4 border-b border-[rgba(10,37,64,0.10)]">
           <div>
             <p className="text-[11px] font-semibold tracking-widest text-[#BA7517] uppercase mb-1">Request Info</p>
-            <h2 className="text-lg font-bold text-[#0A2540]" style={{ fontFamily: "Playfair Display, Georgia, serif" }}>
+            <h2 className="text-lg font-bold text-[#0A2540] font-serif">
               {carrierCompany}
             </h2>
           </div>

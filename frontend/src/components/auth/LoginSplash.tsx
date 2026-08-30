@@ -114,7 +114,7 @@ export default function LoginSplash({
                 textAnchor="middle"
                 fill="rgba(212,165,116,0.6)"
                 fontSize="10"
-                fontFamily="system-ui"
+                fontFamily="var(--font-dm-sans), sans-serif"
               >
                 {city.name}
               </text>

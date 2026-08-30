@@ -37,7 +37,7 @@
   s.background = "rgba(10,22,40,0.97)";
   s.borderTop = "1px solid rgba(197,165,114,0.18)";
   s.backdropFilter = "blur(10px)";
-  s.fontFamily = "'Inter','Plus Jakarta Sans',system-ui,sans-serif";
+  s.fontFamily = "var(--font-body)";
   s.transform = "translateY(100%)";
   s.transition = "transform 0.4s ease";
 

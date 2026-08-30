@@ -845,7 +845,7 @@ export default function OrderBuilderPage() {
         <div>
           <div className="flex items-center gap-2">
             <ClipboardEdit className="w-5 h-5 text-[#BA7517]" />
-            <h1 className="text-lg font-bold text-[#0A2540]" style={{ fontFamily: "'Playfair Display', Georgia, serif" }}>Order builder</h1>
+            <h1 className="text-lg font-bold text-[#0A2540] font-serif">Order builder</h1>
           </div>
           <p className="text-xs text-[#6B7685]">Create a new load</p>
         </div>

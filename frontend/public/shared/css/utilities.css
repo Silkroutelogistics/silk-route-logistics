@@ -347,7 +347,7 @@
    deferred to a separate refactor — these additive rules deliver
    the readability fix without touching page CSS files. */
 .footer-col h5 {
-  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-family: var(--font-body);
   font-size: 13px;
   font-weight: 600;
   text-transform: uppercase;

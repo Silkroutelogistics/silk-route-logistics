@@ -1,0 +1,208 @@
+/**
+ * TYPOGRAPHY GUARD — the brand font must reach every surface, and no new
+ * hardcoded family may be introduced outside the token layer.
+ *
+ * Why this exists. Playfair Display was downloaded on all 114 React routes and
+ * rendered on none of them, for months. The cause was a one-word naming error:
+ * `globals.css` declared `--font-family-serif` inside Tailwind v4's `@theme`,
+ * where the font namespace is `--font-*`. No utility was generated, Tailwind's
+ * stock stacks survived, and every `font-serif` heading in all four portals and
+ * every login screen rendered Georgia. Nothing failed. tsc was clean, the build
+ * was clean, CI was green. The marketing site rendered Playfair correctly, so
+ * the homepage looked right and nobody looked further.
+ *
+ * That class of failure is silent by construction, which is why it needs a
+ * guard rather than a fix. Full account: docs/internal/typography-audit.md.
+ *
+ * Two halves:
+ *   1. The token contract — the theme keys exist under the names Tailwind reads,
+ *      carry the brand families, and reach every route through the root layout.
+ *   2. The drift lint — no font-family naming a family the skill does not name.
+ *
+ * Both are injection-verified in the audit's close-out: removing the theme key
+ * turns half 1 red, and adding a hardcoded family turns half 2 red.
+ */
+
+import { describe, it, expect } from "vitest";
+import fs from "fs";
+import path from "path";
+
+const { scanFontDrift, readCanon } = require("../../../scripts/font-drift.js");
+
+const REPO = path.resolve(__dirname, "..", "..", "..", "..");
+const GLOBALS = path.join(REPO, "frontend", "src", "app", "globals.css");
+const ROOT_LAYOUT = path.join(REPO, "frontend", "src", "app", "layout.tsx");
+const INJECTOR = path.join(REPO, "frontend", "scripts", "inject-chrome.mjs");
+const APP_DIR = path.join(REPO, "frontend", "src", "app");
+const OUT_DIR = path.join(REPO, "frontend", "out");
+
+const read = (p: string) => fs.readFileSync(p, "utf8");
+
+describe("typography guard — the token contract", () => {
+  it("the font canon is readable from the skill, and is the brand's", () => {
+    const canon: Set<string> = readCanon();
+    // Tripwire: a parser that returns nothing would make every later check vacuous.
+    expect(canon.size).toBeGreaterThan(0);
+    expect(canon.has("playfair display")).toBe(true);
+    expect(canon.has("dm sans")).toBe(true);
+  });
+
+  it("globals.css declares the font keys under the names Tailwind v4 actually reads", () => {
+    const css = read(GLOBALS);
+
+    // The exact defect: --font-family-* matches no Tailwind namespace and
+    // silently generates nothing. It must never come back.
+    expect(css).not.toMatch(/--font-family-(serif|sans|mono)\s*:/);
+
+    // Tailwind v4 derives font-serif / font-sans / font-mono from --font-*.
+    expect(css).toMatch(/--font-serif\s*:/);
+    expect(css).toMatch(/--font-sans\s*:/);
+    expect(css).toMatch(/--font-mono\s*:/);
+  });
+
+  it("those keys carry the brand faces, not a stock stack", () => {
+    const css = read(GLOBALS);
+    const serif = css.match(/--font-serif\s*:\s*([^;]+);/)?.[1] ?? "";
+    const sans = css.match(/--font-sans\s*:\s*([^;]+);/)?.[1] ?? "";
+    const mono = css.match(/--font-mono\s*:\s*([^;]+);/)?.[1] ?? "";
+
+    expect(serif).toContain("--font-playfair");
+    expect(sans).toContain("--font-dm-sans");
+    expect(mono.toLowerCase()).toContain("sf mono");
+
+    // A stock stack in first position is the bug wearing the right variable name.
+    expect(serif.trim()).not.toMatch(/^ui-serif/);
+    expect(sans.trim()).not.toMatch(/^ui-sans-serif/);
+  });
+
+  it("the root layout puts both font variables AND a body face on every route", () => {
+    const layout = read(ROOT_LAYOUT);
+    expect(layout).toMatch(/next\/font\/google/);
+    expect(layout).toMatch(/variable:\s*["']--font-dm-sans["']/);
+    expect(layout).toMatch(/variable:\s*["']--font-playfair["']/);
+
+    // Every React route inherits from this one <body>. If the variables or the
+    // body face stop being applied here, no route has a brand font.
+    const body = layout.match(/<body[^>]*className=\{`([^`]*)`\}/)?.[1] ?? "";
+    expect(body).toContain(".variable");
+    expect(body).toContain(".className");
+  });
+
+  it("no nested layout overrides the inherited font — new routes inherit or this fails", () => {
+    const layouts: string[] = [];
+    const walk = (dir: string) => {
+      for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
+        const p = path.join(dir, e.name);
+        if (e.isDirectory()) walk(p);
+        else if (e.name === "layout.tsx" && p !== ROOT_LAYOUT) layouts.push(p);
+      }
+    };
+    walk(APP_DIR);
+
+    // Tripwire: this project has six nested layouts. Zero would mean the walk
+    // broke and the assertion below proved nothing.
+    expect(layouts.length).toBeGreaterThanOrEqual(6);
+
+    for (const l of layouts) {
+      const src = read(l);
+      const rel = path.relative(REPO, l).replace(/\\/g, "/");
+      // A nested layout may not re-declare a family. It inherits, or it drifts.
+      expect(
+        /font-family|fontFamily/.test(src),
+        `${rel} declares its own font-family; nested layouts must inherit from the root layout`
+      ).toBe(false);
+    }
+  });
+
+  it("the chrome injector ships the font link and the token stylesheet to static pages", () => {
+    const src = read(INJECTOR);
+    expect(src).toContain("fonts.googleapis.com/css2");
+    expect(src).toContain("Playfair+Display");
+    expect(src).toContain("DM+Sans");
+    expect(src).toContain("/shared/css/srl-tokens.css");
+  });
+});
+
+describe("typography guard — the built output", () => {
+  // The backend CI job does not build the frontend, so these run wherever a build
+  // exists (locally, and in the frontend job) and report their own reach rather
+  // than passing silently on an absent artifact.
+  const built = fs.existsSync(OUT_DIR);
+
+  it("reports whether a build was available to check", () => {
+    if (!built) {
+      console.warn(
+        "[typography guard] frontend/out/ absent — built-output assertions skipped. " +
+        "Source-contract assertions above still ran and are the CI-resident gate."
+      );
+    }
+    expect(true).toBe(true);
+  });
+
+  it.skipIf(!built)("the compiled CSS resolves font-serif to Playfair, not Georgia", () => {
+    const cssDir = path.join(OUT_DIR, "_next", "static", "css");
+    const files = fs.readdirSync(cssDir).filter((f) => f.endsWith(".css"));
+    expect(files.length).toBeGreaterThan(0);
+
+    const all = files.map((f) => read(path.join(cssDir, f))).join("\n");
+
+    // The retired names must be gone from the artifact, not merely from source.
+    expect(all).not.toContain("--font-family-serif");
+
+    const serif = all.match(/--font-serif:([^;}]+)/)?.[1] ?? "";
+    expect(serif).toContain("--font-playfair");
+    expect(all).toMatch(/\.font-serif\{font-family:var\(--font-serif\)\}/);
+  });
+
+  it.skipIf(!built)("every exported static page carries the font link and token stylesheet", () => {
+    const pages = fs
+      .readdirSync(OUT_DIR)
+      .filter((f) => f.endsWith(".html") && !["404.html"].includes(f));
+
+    // Tripwire: an empty page list would make the loop below assert nothing.
+    expect(pages.length).toBeGreaterThanOrEqual(10);
+
+    const missing: string[] = [];
+    for (const p of pages) {
+      const html = read(path.join(OUT_DIR, p));
+      // React-exported pages self-host via next/font and carry no link — correct.
+      if (html.includes("__className_")) continue;
+      if (!html.includes("fonts.googleapis.com/css2") || !html.includes("srl-tokens.css")) {
+        missing.push(p);
+      }
+    }
+    expect(missing, `static pages exported without the brand font chain: ${missing.join(", ")}`)
+      .toEqual([]);
+  });
+});
+
+describe("typography guard — the drift lint", () => {
+  it("no font-family names a family the brand skill does not name", () => {
+    const { violations, stats } = scanFontDrift();
+
+    // Tripwire: if the scan stops reaching files, "no violations" means nothing.
+    expect(stats.files).toBeGreaterThan(300);
+    expect(stats.declarations).toBeGreaterThan(100);
+
+    const report = violations
+      .map((v: any) => `  ${v.file}:${v.line} -> ${v.family}\n      ${v.text}`)
+      .join("\n");
+
+    expect(
+      violations.length,
+      violations.length === 0
+        ? ""
+        : `\n${violations.length} non-canonical font declaration(s). Use a token ` +
+          `(var(--font-body) / var(--font-display)) or a family the srl-brand-design ` +
+          `skill names. If a file is genuinely exempt, add it to ALLOWLIST in ` +
+          `backend/scripts/font-drift.js WITH the reason.\n\n${report}\n`
+    ).toBe(0);
+  });
+
+  it("the allowlist is reasoned, not a dumping ground", () => {
+    const { allowlist } = scanFontDrift();
+    for (const [file, reason] of Object.entries(allowlist as Record<string, string>)) {
+      expect(reason.length, `${file} is allowlisted without a real reason`).toBeGreaterThan(30);
+    }
+  });
+});

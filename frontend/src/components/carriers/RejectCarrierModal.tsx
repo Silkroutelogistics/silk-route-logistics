@@ -81,7 +81,7 @@ export function RejectCarrierModal({ carrierId, carrierCompany, open, onClose }:
         <div className="flex items-start justify-between px-6 py-4 border-b border-[rgba(10,37,64,0.10)]">
           <div>
             <p className="text-[11px] font-semibold tracking-widest text-[#9B2C2C] uppercase mb-1">Reject Application</p>
-            <h2 className="text-lg font-bold text-[#0A2540]" style={{ fontFamily: "Playfair Display, Georgia, serif" }}>
+            <h2 className="text-lg font-bold text-[#0A2540] font-serif">
               {carrierCompany}
             </h2>
           </div>

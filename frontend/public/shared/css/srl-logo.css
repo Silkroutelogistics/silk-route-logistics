@@ -25,7 +25,7 @@
 }
 
 .srl-logo-text {
-  font-family: 'Plus Jakarta Sans', -apple-system, sans-serif;
+  font-family: var(--font-body);
   font-size: 16px;
   font-weight: 700;
   letter-spacing: 1.8px;

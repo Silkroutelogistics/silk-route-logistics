@@ -53,12 +53,12 @@ function page(title: string, bodyHtml: string): string {
   :root { --navy:#0A2540; --gold:#C5A572; --gold-dark:#BA7517; --cream:#FBF7F0; --cream2:#F5EEE0; --fg2:#3A4A5F; }
   *{box-sizing:border-box}
   body{margin:0;background:var(--cream);color:var(--navy);
-       font:16px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+       font:16px/1.55 'DM Sans',-apple-system,BlinkMacSystemFont,sans-serif;
        display:flex;justify-content:center;padding:24px}
   .card{width:100%;max-width:460px;background:#fff;border:1px solid var(--cream2);
         border-radius:12px;padding:24px}
   .rule{height:3px;background:var(--gold);border-radius:2px;margin:0 0 18px;width:56px}
-  h1{font-size:20px;margin:0 0 6px}
+  h1{font-family:'Playfair Display',Georgia,'Times New Roman',serif;font-size:20px;margin:0 0 6px}
   p{margin:0 0 14px;color:var(--fg2)}
   .lane{background:var(--cream);border:1px solid var(--cream2);border-radius:8px;
         padding:12px;margin:0 0 18px;font-size:15px;color:var(--navy)}

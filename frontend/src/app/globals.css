@@ -379,8 +379,15 @@ input:-webkit-autofill:focus {
   --color-tier-gold: #FDE047;
   --color-silver: #94A3B8;
   --color-bronze: #D97706;
-  --font-family-serif: var(--font-playfair), ui-serif, Georgia, serif;
-  --font-family-sans: var(--font-dm-sans), ui-sans-serif, system-ui, sans-serif;
+  /* Font families. Tailwind v4 derives font-serif / font-sans / font-mono from
+     the --font-* namespace. These were previously named --font-family-*, which
+     matches no namespace, so no utility was generated and Tailwind stock stacks
+     survived: every font-serif rendered Georgia, and Playfair Display was
+     downloaded on every route and drawn on none. Stacks per the srl-brand-design
+     skill (references/tokens.md section 8). Do not rename these keys. */
+  --font-serif: var(--font-playfair), Georgia, 'Times New Roman', serif;
+  --font-sans: var(--font-dm-sans), -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: 'SF Mono', Menlo, Consolas, monospace;
 }
 
 /* ═══════════════════════════════════════════════════
@@ -440,7 +447,7 @@ input:-webkit-autofill:focus {
   border-top: none !important;
   border-radius: 0 0 0.5rem 0.5rem !important;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15) !important;
-  font-family: var(--font-family-sans);
+  font-family: var(--font-sans);
   z-index: 100000 !important;
   margin-top: -1px;
 }

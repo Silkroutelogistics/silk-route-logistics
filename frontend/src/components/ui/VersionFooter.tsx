@@ -15306,7 +15306,39 @@
 // The session panel shows count and freshness only. Revocation is deliberately
 // NOT duplicated — logout and the expiry sweep already own it, and a second
 // delete path is a second place for the two to disagree.
-export const SRL_VERSION = "3.8.avc";
+// v3.8.avd — Playfair reaches the portals; the drift that hid it is guarded.
+//
+// One naming error, months live. globals.css declared --font-family-serif inside
+// Tailwind v4 @theme, where the font namespace is --font-*. No utility was
+// generated, the stock stacks survived, and every font-serif heading across all
+// four portals and every login screen rendered Georgia — while Playfair Display
+// was downloaded on all 114 React routes and drawn on none of them.
+//
+// Nothing failed. tsc clean, build clean, CI green. The marketing site rendered
+// Playfair correctly, so the homepage looked right and nobody looked further.
+//
+// Fixed at the token layer, never per page: three theme keys renamed to the names
+// Tailwind actually reads, and the sole consumer of the retired name moved in the
+// same change so it could not break on the way out. 80 font-serif sites repaired
+// without editing any of them. The 14 inline-style workarounds that were the only
+// working Playfair in the app collapse onto the now-working utility, so the two
+// cannot drift apart later.
+//
+// The audit's hypotheses were checked before being trusted, and one was wrong.
+// The tender magic-link landing and the driver ping page were not merely
+// off-brand: their whole inline style block is discarded by a CSP that dropped
+// unsafe-inline on 2026-02-23 — three months before the first of those pages was
+// written, six before the second. They have never rendered styled. Source is now
+// canon-correct; the delivery question is surfaced, not silently answered.
+//
+// The guard caught something the audit missed: the cookie banner injected on 11
+// marketing pages asked for Inter and Plus Jakarta Sans, neither of which any
+// page loads. That is what a guard is for.
+//
+// Injection-verified in three directions — restore the namespace defect, add a
+// hardcoded family, override the font in a nested layout. Each turns exactly the
+// right assertion red, and only that one.
+export const SRL_VERSION = "3.8.avd";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

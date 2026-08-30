@@ -2011,7 +2011,7 @@
       flex-direction: column;
     }
     .commitment-card-body h3 {
-      font-family: 'DM Serif Display', 'Playfair Display', Georgia, serif;
+      font-family: var(--font-display);
       font-size: 22px;
       color: #0A2540;
       margin: 0 0 12px 0;
@@ -2030,7 +2030,7 @@
       margin: 0 0 18px 0;
     }
     .commitment-teaser {
-      font-family: 'DM Serif Display', 'Playfair Display', Georgia, serif;
+      font-family: var(--font-display);
       font-style: italic;
       font-size: 16px;
       color: #BA7517;
@@ -2050,7 +2050,7 @@
     }
     /* BACK FACE: h4 + divider + numbered steps + back CTA */
     .commitment-card-back h4 {
-      font-family: 'DM Serif Display', 'Playfair Display', Georgia, serif;
+      font-family: var(--font-display);
       font-size: 22px;
       color: #0A2540;
       margin: 0 0 12px 0;
