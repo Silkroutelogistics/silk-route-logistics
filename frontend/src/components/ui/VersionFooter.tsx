@@ -15456,7 +15456,17 @@
 // document a carrier signs is the Load.rate defect in document form. It was
 // dead — zero consumers anywhere — and it held the last non-canonical colour on
 // a carrier-facing document.
-export const SRL_VERSION = "3.8.avo";
+// v3.8.avp — the boot log I added crashed the boot.
+//
+// `const emit = isProd ? log.error : log.info` detaches pino's `this`, so the
+// first call dies reading Symbol(pino.msgPrefix). Call the logger; never hold a
+// reference to one of its methods.
+//
+// Production never hit it — GEMINI_API_KEY is set there, so the block does not
+// run — but E2E takes the non-production branch and its web server died at boot.
+// CI caught it; tsc types an aliased method happily, and the module is imported
+// at server start rather than by any unit test, so no local gate would have.
+export const SRL_VERSION = "3.8.avp";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

@@ -18,14 +18,17 @@ import { log } from "../lib/logger";
 // Not fatal, deliberately. A missing key must not stop the server; it must stop
 // being invisible.
 if (!process.env.GEMINI_API_KEY) {
-  const where = process.env.NODE_ENV === "production" ? "in production" : "in this environment";
-  const emit = process.env.NODE_ENV === "production" ? log.error : log.info;
-  emit(
-    `[COIReader] COI parsing is NOT configured ${where}. GEMINI_API_KEY is unset, so ` +
-      "certificates of insurance WILL NOT be read: no coverage amounts, no expiry, no " +
-      "agent details extracted. Uploaded COIs are stored and shown to the AE, and nothing " +
-      "reads them. Set GEMINI_API_KEY to turn the reader on.",
-  );
+  const isProd = process.env.NODE_ENV === "production";
+  const msg =
+    `[COIReader] COI parsing is NOT configured ${isProd ? "in production" : "in this environment"}. ` +
+    "GEMINI_API_KEY is unset, so certificates of insurance WILL NOT be read: no coverage " +
+    "amounts, no expiry, no agent details extracted. Uploaded COIs are stored and shown to " +
+    "the AE, and nothing reads them. Set GEMINI_API_KEY to turn the reader on.";
+  // Called on the logger, never aliased. `const emit = log.info` detaches pino's
+  // `this` and the first call dies on Symbol(pino.msgPrefix) — which crashed the
+  // E2E web server at boot, since that is the branch a non-production env takes.
+  if (isProd) log.error(msg);
+  else log.info(msg);
 }
 
 export interface COIExtractedData {
