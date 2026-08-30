@@ -1155,3 +1155,77 @@ export async function sendTenderExpiredEmail(params: TenderExpiredEmailParams): 
     { replyTo: "operations@silkroutelogistics.ai" },
   );
 }
+
+
+/**
+ * v3.8.avl — Quick Pay pilot approval.
+ *
+ * The AE banner used to say "the carrier has been notified" whether or not
+ * anything reached them. Nothing did: the handler wrote an in-portal row and
+ * sent no email at all, and its catch only logged, so a failed row said the
+ * same thing as a written one. A carrier could be admitted to the pilot and
+ * learn about it only by happening to open the portal.
+ *
+ * EVERY FIGURE HERE IS READ FROM TIER_CONFIG. Quoting a fee at a carrier is a
+ * pricing statement — if this template ever hardcodes a percentage it will be
+ * wrong the first time §8 moves, and it will be wrong in writing.
+ *
+ * Signed as Operations per the role convention (v3.8.avk): this is a generated
+ * message from the department that owns the mailbox, not a note from a person.
+ */
+export async function sendQuickPayApprovedEmail(params: {
+  to: string;
+  companyName: string;
+  tier: string;
+  fee7DayPct: number;
+  feeSameDayPct: number;
+  autoLimit: number;
+  monthlyLimit: number;
+  netDays: number;
+}) {
+  const money = (n: number) => `$${n.toLocaleString()}`;
+  const html = wrap(`
+    <h2 style="color:#0A2540">You are in the Quick Pay pilot</h2>
+    <p style="color:#3A4A5F">${params.companyName} has been approved to join the Caravan Quick Pay pilot.</p>
+
+    <p style="color:#3A4A5F"><strong>What this changes.</strong> Quick Pay is optional and elected
+    <em>per load</em> — you decide load by load whether you want the money early. Standard tier pay
+    stays free and is always available whether or not you use Quick Pay.</p>
+
+    <div style="background:#F5EEE0;border:1px solid #E2EAF2;border-radius:8px;padding:16px;margin:16px 0">
+      <p style="margin:0 0 10px;font-size:12px;letter-spacing:1px;text-transform:uppercase;color:#BA7517;font-weight:600">Your terms at ${params.tier}</p>
+      <table style="width:100%;border-collapse:collapse;font-size:14px;color:#3A4A5F">
+        <tr><td style="padding:6px 0">Standard pay (free, always)</td><td style="padding:6px 0;text-align:right;font-weight:600">Net-${params.netDays}</td></tr>
+        <tr><td style="padding:6px 0">Quick Pay — 7 day</td><td style="padding:6px 0;text-align:right;font-weight:600">${params.fee7DayPct}% of the load</td></tr>
+        <tr><td style="padding:6px 0">Quick Pay — same day</td><td style="padding:6px 0;text-align:right;font-weight:600">${params.feeSameDayPct}% of the load</td></tr>
+        <tr><td style="padding:6px 0">Auto-approved up to</td><td style="padding:6px 0;text-align:right;font-weight:600">${money(params.autoLimit)} per load</td></tr>
+        <tr><td style="padding:6px 0">Monthly limit</td><td style="padding:6px 0;text-align:right;font-weight:600">${money(params.monthlyLimit)}</td></tr>
+      </table>
+    </div>
+
+    <p style="color:#3A4A5F">The fee is fixed at the moment you elect it on a load. It does not move
+    afterwards, whatever happens to your tier in the meantime.</p>
+
+    <p style="color:#3A4A5F"><strong>One step left.</strong> Read and sign the Caravan Quick Pay
+    Agreement in your portal. Nothing turns on until you do — being approved admits you to the pilot;
+    signing is what activates it.</p>
+
+    <p style="margin:24px 0">
+      <a href="https://silkroutelogistics.ai/carrier/dashboard/activation"
+         style="background:#BA7517;color:#FFFFFF;padding:12px 24px;border-radius:6px;text-decoration:none;font-weight:600">
+        Review and sign the agreement
+      </a>
+    </p>
+
+    <div style="border-top:1px solid #E2EAF2;margin-top:24px;padding-top:16px;font-size:12px;color:#6B7685;line-height:1.6">
+      <strong style="color:#3A4A5F">Operations</strong><br/>
+      Silk Route Logistics Inc.<br/>
+      MC# 1794414 | DOT# 4526880<br/>
+      (269) 220-6760 | operations@silkroutelogistics.ai<br/>
+      silkroutelogistics.ai
+    </div>
+  `);
+  return sendEmail(params.to, "You are in the Quick Pay pilot — Silk Route Logistics", html, undefined, {
+    replyTo: "operations@silkroutelogistics.ai",
+  });
+}

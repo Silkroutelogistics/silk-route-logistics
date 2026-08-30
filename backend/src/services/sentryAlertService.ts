@@ -66,7 +66,7 @@ async function sendErrorSpikeAlert(errorType: string, endpoint: string, message:
   });
 
   const html = `
-    <div style="font-family:'Segoe UI',sans-serif;max-width:560px;margin:0 auto;background:#0D1B2A;color:#E0E7EE;padding:24px;border-radius:10px;border-left:4px solid #f87171;">
+    <div style="font-family:'Segoe UI',sans-serif;max-width:560px;margin:0 auto;background:#0A2540;color:#E0E7EE;padding:24px;border-radius:10px;border-left:4px solid #f87171;">
       <h2 style="color:#f87171;margin:0 0 12px;font-size:16px;">&#9888; Error Spike Alert</h2>
       <p style="margin:0 0 16px;color:#8899AA;font-size:13px;">
         ${count} errors of the same type detected within 5 minutes.

@@ -493,15 +493,23 @@ export default function CarrierPoolPage() {
   const qpDecision = useMutation({
     mutationFn: ({ id, action, body }: { id: string; action: "approve" | "decline" | "withdraw"; body: Record<string, string> }) =>
       api.post(`/carriers/${id}/quickpay/${action}`, body).then((r) => r.data),
-    onSuccess: (_res, vars) => {
+    onSuccess: (res, vars) => {
       queryClient.invalidateQueries({ queryKey: ["quickpay-enrollments"] });
       queryClient.invalidateQueries({ queryKey: ["carrier-all"] });
       resetQpForm();
       setQpMessage({
         tone: "success",
         text:
+          // v3.8.avl — the banner may only claim what actually happened.
+          // It used to say "the carrier has been notified" on every 200, while
+          // the handler sent no email at all and swallowed its own in-portal
+          // failure. An AE who reads this and moves on is the failure mode: they
+          // stop chasing a carrier who was never told. The response now reports
+          // what each channel did, and this text follows it.
           vars.action === "approve"
-            ? "Approved. The carrier has been notified and can now sign the Quick Pay Agreement to turn it on."
+            ? (res as { notified?: boolean } | undefined)?.notified
+              ? "Approved. The carrier has been notified and can now sign the Quick Pay Agreement to turn it on."
+              : "Approved — but we could NOT reach the carrier. They are in the pilot and will see it if they open the portal. Contact them directly, and check the notification logs."
             : vars.action === "decline"
               ? "Declined. The carrier has been told, and given your reason."
               // Same correction as the confirm copy below: the fee survives on
@@ -2071,6 +2079,26 @@ export default function CarrierPoolPage() {
                           </button>
                         )}
                       </div>
+
+                      {/* v3.8.avl — never a clean zero.
+                          A registration upload that storage refuses now writes an
+                          UPLOAD_FAILED row rather than nothing, because "0 documents"
+                          and "4 documents we lost" looked identical here and the
+                          second one is our fault. The banner names the files so an AE
+                          can ask for exactly those, and says plainly that the carrier
+                          did their part. */}
+                      {carrierDocs.some(d => d.status === "UPLOAD_FAILED") && (
+                        <div className="bg-[#F6E3E3] border border-[#9B2C2C]/40 rounded-lg p-3">
+                          <p className="text-xs font-semibold text-[#9B2C2C]">
+                            {carrierDocs.filter(d => d.status === "UPLOAD_FAILED").length} document(s) were submitted but NOT stored
+                          </p>
+                          <p className="text-[11px] text-[#9B2C2C]/90 mt-1 leading-relaxed">
+                            The carrier uploaded these during registration and our storage refused them.
+                            They did nothing wrong. Confirm object storage is configured before asking
+                            them to re-send: {carrierDocs.filter(d => d.status === "UPLOAD_FAILED").map(d => d.fileName).join(", ")}
+                          </p>
+                        </div>
+                      )}
 
                       {carrierDocs.length === 0 ? (
                         <div className="bg-gray-100 rounded-lg p-8 text-center">

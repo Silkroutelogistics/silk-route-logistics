@@ -117,7 +117,7 @@ export async function sendHealthDigest() {
   const overallEmoji: Record<string, string> = { HEALTHY: "&#9989;", DEGRADED: "&#9888;&#65039;", UNHEALTHY: "&#10060;" };
 
   const html = `
-    <div style="font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;max-width:640px;margin:0 auto;background:#0D1B2A;color:#E0E7EE;padding:32px;border-radius:12px;">
+    <div style="font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;max-width:640px;margin:0 auto;background:#0A2540;color:#E0E7EE;padding:32px;border-radius:12px;">
       <div style="text-align:center;margin-bottom:24px;">
         <h1 style="color:#C8963E;font-size:20px;margin:0;">SRL Daily Health Digest</h1>
         <p style="color:#8899AA;font-size:13px;margin:4px 0 0;">${now.toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" })} at ${now.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })}</p>

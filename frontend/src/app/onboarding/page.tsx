@@ -969,15 +969,21 @@ export default function OnboardingPage() {
               <div className="flex gap-3 items-start">
                 <div className="w-8 h-8 bg-[#BA7517] text-[#FBF7F0] rounded-full flex items-center justify-center text-sm font-bold shrink-0">1</div>
                 <div className="flex-1">
-                  <p className="font-semibold text-sm text-[#0A2540] mb-1">Verify your email address</p>
-                  <p className="text-[#3A4A5F] text-sm">Check your inbox for an email titled <strong>&ldquo;Confirm your email — Silk Route Logistics&rdquo;</strong> and click the verification link. This confirms you control the address you registered with.</p>
+                  {/* v3.8.avl — your email is ALREADY verified. This step used to
+                      tell carriers to watch for a "Confirm your email" message that
+                      no longer exists: verification now happens at the gate, before
+                      the wizard lets anyone past step 1, and the second email was
+                      removed with it. The instruction survived the removal and sent
+                      people to wait on an empty inbox. */}
+                  <p className="font-semibold text-sm text-[#0A2540] mb-1">Your email is already verified</p>
+                  <p className="text-[#3A4A5F] text-sm">You confirmed <strong className="text-[#0A2540]">{form.email}</strong> before you started the application, so there is nothing further to click. No confirmation email is coming.</p>
                 </div>
               </div>
               <div className="flex gap-3 items-start">
                 <div className="w-8 h-8 bg-[#BA7517] text-[#FBF7F0] rounded-full flex items-center justify-center text-sm font-bold shrink-0">2</div>
                 <div className="flex-1">
                   <p className="font-semibold text-sm text-[#0A2540] mb-1">Log in to track your application</p>
-                  <p className="text-[#3A4A5F] text-sm mb-3">Sign in to your carrier portal to see real-time status updates, respond to any information requests from our compliance team, and prepare for your first load.</p>
+                  <p className="text-[#3A4A5F] text-sm mb-3">Sign in with <strong className="text-[#0A2540]">{form.email}</strong> and the password you created in this application — we never send temporary credentials. From the portal you can follow your status, answer anything compliance asks for, and get ready for your first load.</p>
                   <Link href="/carrier/login" className="inline-block px-5 py-2.5 bg-[#BA7517] text-[#FBF7F0] font-semibold rounded-md hover:bg-[#854F0B] transition text-sm shadow-sm">
                     Go to Carrier Login →
                   </Link>
@@ -1053,7 +1059,7 @@ export default function OnboardingPage() {
                 <div className="w-8 h-8 bg-[#EFE6D3] text-[#6B7685] rounded-full flex items-center justify-center text-sm font-bold shrink-0">3</div>
                 <div>
                   <p className="font-semibold text-sm text-[#0A2540]">Approval &amp; Portal Access</p>
-                  <p className="text-[#3A4A5F] text-sm">Once approved, you&#39;ll receive login credentials and can start browsing available loads immediately.</p>
+                  <p className="text-[#3A4A5F] text-sm">You can sign in now with the password you created — we never send temporary credentials. Once approved, available loads appear in your portal.</p>
                 </div>
               </div>
             </div>

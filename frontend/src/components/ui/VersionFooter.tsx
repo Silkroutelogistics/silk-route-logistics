@@ -15358,7 +15358,33 @@
 // template gap — the stored value carried the space. Trimming at the source
 // fixes the success screen, the confirmation email, the console and the PDFs
 // in one place instead of four.
-export const SRL_VERSION = "3.8.avk";
+// v3.8.avl — the documents were never stored, and three surfaces said otherwise.
+//
+// The production documents table held ZERO rows. Every W-9, COI, Authority and
+// Workers' Comp any carrier had ever uploaded was gone, and the AE drawer showed
+// DOCUMENTS (0) — indistinguishable from a carrier who submitted nothing.
+//
+// Two defects under one symptom. Storage REFUSES uploads in production when
+// object storage is unconfigured, deliberately and loudly at its own layer — and
+// the caller caught that refusal in a fire-and-forget `.catch(log.error)` and
+// carried on. Separately, photoId and articlesOfInc wrote rows with no
+// entityType or entityId, so even a successful upload was invisible to the
+// drawer, which queries on both.
+//
+// The application still succeeds — a carrier must not lose a completed
+// application because our env is wrong — but a failure now writes an
+// UPLOAD_FAILED row, notifies admins, and shows the AE a red banner naming the
+// files, instead of a clean zero.
+//
+// Also: the Quick Pay approval banner said "the carrier has been notified" on
+// every 200 while the handler sent no email at all. It sends one now, built from
+// TIER_CONFIG so a fee is never hardcoded into a pricing statement, and the
+// banner only claims delivery when something was delivered.
+//
+// And the success screen stopped telling carriers to wait for a confirmation
+// email that the carry-forward arc deleted, or for credentials that are never
+// issued.
+export const SRL_VERSION = "3.8.avl";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

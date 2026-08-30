@@ -14,7 +14,8 @@ import { onCarrierApproved } from "../services/integrationService";
 import { uploadFile } from "../services/storageService";
 import { runFmcsaScan, complianceCheck } from "../services/complianceMonitorService";
 import { vetAndStoreReport } from "../services/carrierVettingService";
-import { sendEmail, wrap } from "../services/emailService";
+import { sendEmail, wrap, sendQuickPayApprovedEmail } from "../services/emailService";
+import { getTierConfig, getEffectiveTier } from "../services/caravanService";
 import { runIdentityCheck } from "../services/identityVerificationService";
 import { screenCarrier } from "../services/ofacScreeningService";
 import { populateAuthorityGrantedDate } from "../services/fmcsaService";
@@ -367,95 +368,175 @@ export async function registerCarrier(req: Request, res: Response) {
     include: { carrierProfile: true },
   });
 
-  // Handle file uploads (photoId, articlesOfInc) if present
+  // ── v3.8.avl — a failed upload is RECORDED, never silently dropped ──
+  //
+  // This block used to be `Promise.all(uploadPromises).catch(log.error)`: fire
+  // and forget, with a catch that only logged. In production storageService
+  // REFUSES uploads when object storage is unconfigured — deliberately, and
+  // loudly at its own layer — and that refusal landed in this catch and stopped.
+  // The application succeeded, no Document row was written, and the AE opened
+  // the carrier to DOCUMENTS (0) with nothing to distinguish "submitted
+  // nothing" from "submitted four and we lost them". The production documents
+  // table held ZERO rows across every carrier that had ever applied.
+  //
+  // Two things were wrong and both are fixed here:
+  //   1. the refusal was swallowed, so nobody learned anything
+  //   2. photoId and articlesOfInc wrote Document rows with NO entityType or
+  //      entityId, so even a SUCCESSFUL upload was invisible to the AE drawer,
+  //      which queries entityType=CARRIER + entityId=profileId
+  //
+  // The registration still succeeds. A carrier must not lose a completed
+  // application because our object store is misconfigured — that is our fault,
+  // not theirs, and the remedy is an env var, not a re-application. But the
+  // failure is now a row the AE can see, an admin notification, and an ERROR
+  // log, instead of a clean zero that reads like nothing was ever sent.
   const files = req.files as { [fieldname: string]: Express.Multer.File[] } | undefined;
   if (files && user.carrierProfile) {
     const profileId = user.carrierProfile.id;
-    const uploadPromises: Promise<void>[] = [];
+
+    type FlagField = "w9Uploaded" | "insuranceCertUploaded" | "authorityDocUploaded" | null;
+    interface PendingUpload {
+      file: Express.Multer.File;
+      storagePath: string;
+      docType: string;
+      flagField: FlagField;
+    }
+    const pending: PendingUpload[] = [];
+    const stamp = () => `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
     if (files.photoId?.[0]) {
-      const file = files.photoId[0];
-      const key = `carrier-docs/${profileId}/photo-id-${Date.now()}${path.extname(file.originalname)}`;
-      uploadPromises.push(
-        uploadFile(file.buffer, key, file.mimetype).then(async (url) => {
-          await prisma.document.create({
-            data: { fileName: file.originalname, fileUrl: url, fileType: file.mimetype, fileSize: file.size, userId: user.id },
-          });
-        })
-      );
+      const f = files.photoId[0];
+      pending.push({
+        file: f,
+        storagePath: `carrier-docs/${profileId}/photo-id-${stamp()}${path.extname(f.originalname)}`,
+        docType: "OTHER",
+        flagField: null,
+      });
     }
 
     if (files.articlesOfInc?.[0]) {
-      const file = files.articlesOfInc[0];
-      const key = `carrier-docs/${profileId}/articles-${Date.now()}${path.extname(file.originalname)}`;
-      uploadPromises.push(
-        uploadFile(file.buffer, key, file.mimetype).then(async (url) => {
-          await prisma.document.create({
-            data: { fileName: file.originalname, fileUrl: url, fileType: file.mimetype, fileSize: file.size, userId: user.id },
-          });
-          await prisma.carrierProfile.update({ where: { id: profileId }, data: { authorityDocUploaded: true } });
-        })
-      );
+      const f = files.articlesOfInc[0];
+      pending.push({
+        file: f,
+        storagePath: `carrier-docs/${profileId}/articles-${stamp()}${path.extname(f.originalname)}`,
+        docType: "REGISTRATION",
+        flagField: "authorityDocUploaded",
+      });
     }
 
-    // v3.8.ajr — Step 3 staged documents from /onboarding file picker.
-    // Pre-ajr these silently 401'd on a post-register authenticated
-    // upload attempt. Now bundled with the registration POST as `files[]`
-    // paired by index with `docTypes[]`. DOC_TYPE_MAP translates the
-    // frontend __docType tag (w9/insurance/authority/safety) into the
-    // canonical Document.docType value + the CarrierProfile boolean
-    // flag to flip (so the carrier-detail UI Document Completeness
-    // section reflects them).
+    // v3.8.ajr — Step 3 staged documents from the /onboarding file picker,
+    // bundled with the registration POST as `files[]` paired by index with
+    // `docTypes[]`. DOC_TYPE_MAP translates the frontend tag into the canonical
+    // Document.docType plus the CarrierProfile flag driving Document Completeness.
     const stagedFiles = (files.files || []) as Express.Multer.File[];
     const docTypesArr: string[] = Array.isArray((req.body as any).docTypes)
       ? (req.body as any).docTypes
       : ((req.body as any).docTypes ? [(req.body as any).docTypes] : []);
-    const DOC_TYPE_MAP: Record<string, { docType: string; flagField: "w9Uploaded" | "insuranceCertUploaded" | "authorityDocUploaded" | null }> = {
-      w9:        { docType: "W9",          flagField: "w9Uploaded" },
-      insurance: { docType: "COI",         flagField: "insuranceCertUploaded" },
-      authority: { docType: "AUTHORITY",   flagField: "authorityDocUploaded" },
-      // v3.8.aky — Workers' Comp added as canonical string docType value.
-      // Document.docType is a free-form String? column (NOT a Prisma enum);
-      // see schema.prisma:2009 documented enumeration. Queries can filter
-      // WHERE docType = 'WORKERS_COMP' directly without an enum migration.
-      // Path γ canonical per v3.8.aky directive (no enum, no migration).
+    const DOC_TYPE_MAP: Record<string, { docType: string; flagField: FlagField }> = {
+      w9:        { docType: "W9",           flagField: "w9Uploaded" },
+      insurance: { docType: "COI",          flagField: "insuranceCertUploaded" },
+      authority: { docType: "AUTHORITY",    flagField: "authorityDocUploaded" },
+      // v3.8.aky — Document.docType is a free-form String?, NOT a Prisma enum,
+      // so WORKERS_COMP needs no migration.
       wc:        { docType: "WORKERS_COMP", flagField: null },
-      safety:    { docType: "OTHER",       flagField: null }, // SAFETY_CERT not in Document.docType enum comment; classified OTHER + named in filename
+      safety:    { docType: "OTHER",        flagField: null },
     };
     for (let i = 0; i < stagedFiles.length; i++) {
-      const file = stagedFiles[i];
+      const f = stagedFiles[i];
       const tagKey = (docTypesArr[i] || "").toLowerCase();
       const mapped = DOC_TYPE_MAP[tagKey] || { docType: "OTHER", flagField: null };
-      const ext = path.extname(file.originalname).toLowerCase();
-      const storagePath = `carrier-docs/${profileId}/${tagKey || "other"}-${Date.now()}-${Math.random().toString(36).slice(2)}${ext}`;
-      uploadPromises.push(
-        uploadFile(file.buffer, storagePath, file.mimetype).then(async (url) => {
+      pending.push({
+        file: f,
+        storagePath: `carrier-docs/${profileId}/${tagKey || "other"}-${stamp()}${path.extname(f.originalname).toLowerCase()}`,
+        docType: mapped.docType,
+        flagField: mapped.flagField,
+      });
+    }
+
+    // Runs after the response, so the carrier is not held waiting on object
+    // storage — but every outcome is recorded before it finishes.
+    void (async () => {
+      const failures: string[] = [];
+
+      for (const u of pending) {
+        try {
+          const url = await uploadFile(u.file.buffer, u.storagePath, u.file.mimetype);
           await prisma.document.create({
             data: {
-              fileName: file.originalname,
+              fileName: u.file.originalname,
               fileUrl: url,
-              fileType: file.mimetype,
-              fileSize: file.size,
+              fileType: u.file.mimetype,
+              fileSize: u.file.size,
+              // entityType + entityId are what make the row visible to the AE
+              // drawer AND the carrier portal. Omitting them was defect (2).
               entityType: "CARRIER",
               entityId: profileId,
-              docType: mapped.docType,
+              docType: u.docType,
               status: "PENDING",
               uploadSource: "CARRIER_PORTAL",
               userId: user.id,
             },
           });
-          if (mapped.flagField) {
+          if (u.flagField) {
             await prisma.carrierProfile.update({
               where: { id: profileId },
-              data: { [mapped.flagField]: true },
+              data: { [u.flagField]: true },
             });
           }
-        })
-      );
-    }
+        } catch (err) {
+          failures.push(`${u.docType}:${u.file.originalname}`);
+          log.error(
+            { err, profileId, docType: u.docType, fileName: u.file.originalname },
+            "[Registration Files] PERSIST FAILED — recording an UPLOAD_FAILED row so the AE never sees a clean zero",
+          );
+          // The honest artifact: the document WAS submitted and we did not keep
+          // it. The empty fileUrl is deliberate — there is nothing to link to.
+          // The completeness flag is NOT set, so the carrier still reads as
+          // missing that document, which is true.
+          await prisma.document
+            .create({
+              data: {
+                fileName: u.file.originalname,
+                fileUrl: "",
+                fileType: u.file.mimetype,
+                fileSize: u.file.size,
+                entityType: "CARRIER",
+                entityId: profileId,
+                docType: u.docType,
+                status: "UPLOAD_FAILED",
+                uploadSource: "CARRIER_PORTAL",
+                userId: user.id,
+                notes: "Storage refused or failed at registration. The carrier submitted this file; it was not retained. Ask them to re-upload once storage is confirmed.",
+              },
+            })
+            .catch((e2) => log.error({ err: e2, profileId }, "[Registration Files] could not even record the failure"));
+        }
+      }
 
-    // Fire and forget — don't block response
-    Promise.all(uploadPromises).catch((e) => log.error({ err: e }, "[Registration Files] Upload error:"));
+      if (failures.length > 0) {
+        // An AE must learn this without reading logs.
+        try {
+          const admins = await prisma.user.findMany({
+            where: { role: { in: ["ADMIN", "CEO"] }, isActive: true },
+            select: { id: true },
+          });
+          await prisma.notification.createMany({
+            data: admins.map((a) => ({
+              userId: a.id,
+              type: "SYSTEM_ALERT",
+              title: "Carrier documents were NOT stored",
+              message:
+                `${data.company} submitted ${failures.length} document(s) that failed to store: ` +
+                `${failures.join(", ")}. The application was accepted. Object storage is likely ` +
+                `unconfigured — check S3_BUCKET_NAME / AWS_ACCESS_KEY_ID before asking the carrier to re-upload.`,
+              actionUrl: "/dashboard/carriers?status=PENDING",
+            })),
+          });
+        } catch (e) {
+          log.error({ err: e }, "[Registration Files] failed to notify admins of the document loss");
+        }
+      }
+    })();
   }
 
   // Store EIN in identity verification if provided
@@ -556,7 +637,7 @@ export async function registerCarrier(req: Request, res: Response) {
         </tr>
         <tr>
           <td style="padding:12px 0;vertical-align:top"><div style="width:28px;height:28px;background:#e2e8f0;color:#64748b;border-radius:50%;text-align:center;line-height:28px;font-weight:700;font-size:13px">3</div></td>
-          <td style="padding:12px 0;padding-left:12px"><strong style="color:#334155">Approval & Portal Access</strong><br><span style="color:#64748b;font-size:14px">Once approved, you'll receive your login credentials and can start browsing available loads immediately.</span></td>
+          <td style="padding:12px 0;padding-left:12px"><strong style="color:#334155">Approval &amp; Portal Access</strong><br><span style="color:#64748b;font-size:14px">You can sign in right now with this email address and the password you created during the application — we never send temporary credentials. Once approved, available loads appear in your portal.</span></td>
         </tr>
       </table>
 
@@ -1845,7 +1926,15 @@ export async function listQuickPayEnrollments(req: AuthRequest, res: Response) {
 async function loadPilotCarrier(carrierProfileId: string) {
   return prisma.carrierProfile.findUnique({
     where: { id: carrierProfileId },
-    select: { id: true, userId: true, companyName: true, quickPayEnabled: true },
+    // v3.8.avl — tier + a reachable address, because the approval now sends an
+    // email whose figures are read from the tier config rather than written
+    // into the template. contactEmail is the carrier dispatch alias where one
+    // exists; the login email is the fallback, per the carrier-email convention.
+    select: {
+      id: true, userId: true, companyName: true, quickPayEnabled: true,
+      tier: true, contactEmail: true,
+      user: { select: { email: true } },
+    },
   });
 }
 
@@ -1897,8 +1986,42 @@ export async function approveQuickPayEnrollment(req: AuthRequest, res: Response)
     },
   });
 
-  await prisma.notification
-    .create({
+  // ── v3.8.avl — the banner may only claim what actually happened ──
+  //
+  // This used to write an in-portal row, swallow its own failure, and return
+  // 200 regardless — while the AE console said "the carrier has been notified".
+  // No email was ever sent by this path at all. A carrier could be admitted to
+  // the pilot and find out only by happening to open the portal.
+  //
+  // Every figure in the email is read from TIER_CONFIG rather than written
+  // here. Quoting a fee to a carrier is a pricing statement in writing; a
+  // hardcoded percentage is wrong the moment §8 moves.
+  const tierKey = getEffectiveTier({ tier: carrier.tier });
+  const cfg = getTierConfig(tierKey);
+
+  let emailSent = false;
+  try {
+    await sendQuickPayApprovedEmail({
+      to: carrier.contactEmail || carrier.user.email,
+      companyName: carrier.companyName || "your company",
+      tier: tierKey,
+      fee7DayPct: Math.round(cfg.quickPayFee7Day * 1000) / 10,
+      feeSameDayPct: Math.round(cfg.quickPayFeeSameDay * 1000) / 10,
+      autoLimit: cfg.quickPayAutoLimit,
+      monthlyLimit: cfg.quickPayMonthlyLimit,
+      netDays: cfg.paymentTermsDays,
+    });
+    emailSent = true;
+  } catch (err) {
+    log.error({ err, carrierProfileId: carrier.id }, "[QuickPayPilot] approval EMAIL failed — the console will not claim it was sent");
+  }
+
+  // The in-portal row is a second channel, not the same one. Its actionUrl
+  // doubles as the dedup key: re-approving an already-APPROVED enrollment
+  // short-circuits above, so this cannot fire twice for one transition.
+  let notifSent = false;
+  try {
+    await prisma.notification.create({
       data: {
         userId: carrier.userId,
         type: "GENERAL",
@@ -1907,11 +2030,17 @@ export async function approveQuickPayEnrollment(req: AuthRequest, res: Response)
           "Your request to join the Quick Pay pilot has been approved. One step left: read and sign the Caravan Quick Pay Agreement in your portal, and Quick Pay turns on for your loads.",
         actionUrl: "/carrier/dashboard/activation",
       },
-    })
-    .catch((err) => log.error({ err }, "[QuickPayPilot] approval notification failed"));
+    });
+    notifSent = true;
+  } catch (err) {
+    log.error({ err }, "[QuickPayPilot] approval notification failed");
+  }
 
-  log.info({ carrierProfileId: carrier.id, enrollmentId: updated.id, by: req.user!.id }, "[QuickPayPilot] approved");
-  res.json({ enrollment: updated });
+  log.info(
+    { carrierProfileId: carrier.id, enrollmentId: updated.id, by: req.user!.id, emailSent, notifSent },
+    "[QuickPayPilot] approved",
+  );
+  res.json({ enrollment: updated, notified: emailSent || notifSent, emailSent, notifSent });
 }
 
 /**

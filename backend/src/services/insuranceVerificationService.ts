@@ -203,8 +203,8 @@ export async function sendInsuranceVerificationEmail(carrierId: string) {
 
   const html = `
     <div style="font-family:'Helvetica Neue',Arial,sans-serif;max-width:640px;margin:0 auto">
-      <div style="background:#0D1B2A;padding:20px 24px;border-radius:8px 8px 0 0">
-        <h1 style="color:#C9A84C;font-size:18px;margin:0">Silk Route Logistics Inc.</h1>
+      <div style="background:#0A2540;padding:20px 24px;border-radius:8px 8px 0 0">
+        <h1 style="color:#C5A572;font-size:18px;margin:0">Silk Route Logistics Inc.</h1>
         <p style="color:#94A3B8;font-size:12px;margin:4px 0 0">Certificate of Insurance Verification Request</p>
       </div>
 
@@ -255,7 +255,7 @@ export async function sendInsuranceVerificationEmail(carrierId: string) {
         </p>
 
         <p style="color:#374151;font-size:14px;line-height:1.6">
-          Please send updated COI to <a href="mailto:${COMPLIANCE_EMAIL}" style="color:#C9A84C">${COMPLIANCE_EMAIL}</a>
+          Please send updated COI to <a href="mailto:${COMPLIANCE_EMAIL}" style="color:#BA7517">${COMPLIANCE_EMAIL}</a>
         </p>
 
         <div style="border-top:1px solid #E5E7EB;margin-top:24px;padding-top:16px;font-size:12px;color:#6B7280;line-height:1.6">
