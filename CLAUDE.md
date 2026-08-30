@@ -2982,7 +2982,23 @@ Every prior fire was a guard failing to observe a thing that was wrong. This one
 
 **Corollary worth stating**, since it is what made this survivable: the deploy job's `needs` had frontend in it, so the failure **skipped the deploy** rather than shipping. A gate that fails loudly on the right signal is worth more than one that has been green for weeks on the wrong one.
 
-**Relationship to Sub-pattern 11 (CI-parity).** Sub-pattern 11 asks whether the local gate matches the CI gate. Sub-pattern 16 asks whether *either* gate observes the claim it makes. Passing 11 and failing 16 is exactly the state all three fires above were in.
+**SIXTH FIRE — the guard measured the right thing on the wrong axis (2026-08-30, v3.8.avh).**
+
+`font-drift.js` was built to stop typography drift and held at **zero violations** for three commits while every heading in the React app rendered Playfair at weight **600**, in **italic** — both explicitly forbidden by the skill. It was green the whole time, correctly: it asserts the FAMILY, and the family was right. Weight and style drifted freely underneath a guard whose name reads like it covers them.
+
+**Nothing automated found it. The founder did, from a screenshot**, asking whether three highlighted headings matched the design skill.
+
+This is the distinguishing shape in the Sub-pattern 16 family. Fires one to five were guards that failed to *observe* — a stale assertion, a text check on a mount line, a regex reading prose. This one observed perfectly and observed **one axis of a three-axis property**. Family, weight and style are independent; proving one says nothing about the others.
+
+> **A guard proves the property it asserts, not the property you meant.**
+
+Two corollaries worth carrying:
+- **Name a guard for what it asserts, not for the goal it serves.** "Font drift" implied coverage it never had; "font FAMILY drift" would have left the gap visible in its own filename.
+- **When a property decomposes, enumerate the axes before trusting a guard over it.** Typography decomposes into family / weight / style / size. Three of those were unguarded while one was.
+
+Closed by `serif-weight-drift.js`, which asserts the other two axes *and* the loaders themselves, so a re-added 600 fails CI upstream of any component that could use it.
+
+**Relationship to Sub-pattern 11 (CI-parity).** Sub-pattern 11 asks whether the local gate matches the CI gate. Sub-pattern 16 asks whether *either* gate observes the claim it makes. Passing 11 and failing 16 is exactly the state all six fires above were in.
 
 ###### Cumulative fire registry extension (post-Sprint-51.f, three new fires)
 

@@ -142,6 +142,12 @@ within 7 days**. The one-time policy rollout signed out nobody.
 
 Each carries an owner and a trigger, so nothing becomes forgotten by default.
 
+**On the gold rule.** The skill specifies section heads as *"Playfair 700, `--fg-1`, with thin gold rule (`border-bottom: 1px solid var(--gold)`)"*. No section head anywhere carries that rule — verified by computed style, `border-bottom-width: 0px` on every Playfair heading checked. It is absent site-wide rather than dropped on one page, which is the argument for treating it as a house deviation rather than a defect: the gold small-caps eyebrow that sits above most section heads (`CARAVAN PARTNER PROGRAM`, `STEP 1 OF 5`) already performs the separation the rule was specified to perform, and adding both would double the device. Recorded rather than changed, because "the eyebrow does the work" is a design judgement and not mine to make unilaterally.
+
+**On the five halted italic blocks.** Two are the "Where Trust Travels." shimmer (`.srl-tagline`, `.ops-chip-tagline`). §20.8.2 of CLAUDE.md ratifies that treatment as *"Playfair italic bold 17px with gold gradient"* — a named, reusable pattern. The skill says that exact string is *"Georgia italic, `--gold-dark`, tracked +0.02em"*. **Two project canons disagree about the same sentence.** Resolving that is a product decision. The other three (`.commitment-teaser`, `.tms-result`, `.heritage-line`) are editorial italic lines no sanctioned pattern covers either way. All five keep their italic; all three that sat at the forbidden weight 500 moved to 400, which is the only sanctioned Playfair-italic weight and is correct under either outcome. Worth knowing when the ruling comes: the two taglines request 700 italic, a face the loader has never carried, so they have been rendering synthesised all along.
+
+**On DM Sans 600.** The skill allows DM Sans at 400, 500 and 700 — not 600 — and the loader requests it. Roughly 1,077 usages (140 in static CSS, 937 `font-semibold` in React). That is the dominant UI weight in the product; removing it is a change of a wholly different order from the serif work and was deliberately left alone.
+
 **On the AE-heading row, since "won't fix" needs its reasoning on the record.** The typography audit found that AE Console, Accounting and Admin headings inherit the body face instead of the brand display face. The only token-level repair available is a global `h1–h6` rule, because those routes carry no font class to fix. Measuring before acting killed it: of **317** heading elements across those three trees, **160 are label-scale** (`text-xs`, `text-sm`, `text-[10px]`) against 64 display-scale. Playfair Display is a high-contrast display serif; at 12px in a dense operations table it is the wrong instrument, and a global rule would be a downgrade dressed as a fix. Reaching only the 64 that genuinely want it needs per-element edits — the per-page declaration the correction explicitly forbade. So this is closed **won't-fix-as-specified**, not deferred for lack of time. Revisit when someone uses these screens all day and can say whether it reads as house style or as an oversight.
 
 | Item | Owner | Trigger |
@@ -156,6 +162,9 @@ Each carries an owner and a trigger, so nothing becomes forgotten by default.
 | Item 240 review-flow affirmative walk | Ops | Before the second carrier is approved |
 | Mid-wizard survival proof (Arc 34 1e) | Platform | Any change to the onboarding draft or the session policy |
 | **AE Console heading typography** — WON'T FIX AS SPECIFIED | Design | **The Oct 2026 AE/Compliance hire** — first person to use these screens daily |
+| **Section-head gold rule** — absent site-wide | Design | Same Oct 2026 hire, or any visual refresh that touches section heads |
+| **Five italic Playfair blocks** — HALTED, see below | Product | Wasi ruling on the tagline canon conflict |
+| **DM Sans weight 600** — used ~1,077×, outside the skill's 400/500/700 | Design | Any decision to prune the DM Sans loader |
 
 ---
 
