@@ -75,16 +75,33 @@ describe("typography guard — the token contract", () => {
     expect(sans.trim()).not.toMatch(/^ui-sans-serif/);
   });
 
-  it("the root layout puts both font variables AND a body face on every route", () => {
+  it("the font variables sit on <html>, where :root can see them", () => {
     const layout = read(ROOT_LAYOUT);
     expect(layout).toMatch(/next\/font\/google/);
     expect(layout).toMatch(/variable:\s*["']--font-dm-sans["']/);
     expect(layout).toMatch(/variable:\s*["']--font-playfair["']/);
 
-    // Every React route inherits from this one <body>. If the variables or the
-    // body face stop being applied here, no route has a brand font.
-    const body = layout.match(/<body[^>]*className=\{`([^`]*)`\}/)?.[1] ?? "";
-    expect(body).toContain(".variable");
+    // This assertion exists because the first version of this guard did NOT make
+    // it, and passed while every heading in production was still wrong.
+    //
+    // Tailwind's @theme declares --font-serif on :root as `var(--font-playfair), …`.
+    // A var() inside a custom property is substituted where that property is
+    // DECLARED, not where it is used. With the font variables on <body>,
+    // --font-playfair was undefined at :root, so --font-serif resolved to the
+    // guaranteed-invalid value and inherited as invalid — and every font-serif
+    // heading fell back to the body face. The compiled CSS was correct throughout;
+    // only a browser could see it. Hence: on <html>, not merely somewhere.
+    // Match the JSX element, not the word "<html>" in a comment. The first cut of
+    // this matched the prose above the element and failed on correct code.
+    const src = layout.replace(/^\s*\/\/.*$/gm, "");
+    const html = src.match(/<html\s+lang=[^>]*>/)?.[0] ?? "";
+    expect(html, "<html> must carry the next/font .variable classes so :root sees them")
+      .toContain(".variable");
+    expect(html).toContain("dmSans.variable");
+    expect(html).toContain("playfair.variable");
+
+    // The body face is what every route inherits as its base font.
+    const body = layout.match(/<body[^>]*className=\{[^}]*\}/)?.[0] ?? "";
     expect(body).toContain(".className");
   });
 

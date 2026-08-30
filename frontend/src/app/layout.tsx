@@ -45,8 +45,15 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
-      <body className={`${dmSans.variable} ${playfair.variable} ${dmSans.className}`}>
+    // The font VARIABLES must sit on <html>, not <body>. Tailwind's @theme declares
+    // --font-serif / --font-sans on :root as `var(--font-playfair), …`, and a var()
+    // inside a custom property is substituted where that property is DECLARED. With
+    // the variables on <body>, --font-playfair was undefined at :root, so --font-serif
+    // resolved to the guaranteed-invalid value and inherited as invalid — every
+    // font-serif heading silently fell back to the body face. The compiled CSS was
+    // correct; only a browser could see it. Keep .variable on <html>.
+    <html lang="en" className={`${dmSans.variable} ${playfair.variable}`}>
+      <body className={dmSans.className}>
         <MaintenanceBanner />
         <Providers>{children}</Providers>
       </body>
