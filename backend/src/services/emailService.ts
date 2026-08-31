@@ -746,6 +746,38 @@ export interface CarrierTrainingCompletionParams {
   carrierName: string | null;
 }
 
+/**
+ * The executed copy, delivered to the person who signed it (decision 6).
+ *
+ * Deliberately plain: one line of body, no marketing, no CTA. This is a legal
+ * artefact arriving in someone's inbox, and anything that reads like a campaign
+ * makes it look less like a record. The attachment IS the message.
+ *
+ * The buffer is passed in rather than regenerated here, because the caller has
+ * just written that exact artefact to storage and the two must be the same
+ * bytes. Regenerating would produce a different file for the same execution —
+ * PDF renders are not byte-stable, which the v3.8.awj audit proved by getting
+ * two different hashes for one agreement at the same length.
+ *
+ * Throws on failure so the caller can record WHY on the row rather than logging
+ * into the dark.
+ */
+export async function sendExecutedAgreementEmail(
+  to: string,
+  params: { documentTitle: string; version: string; signedByName: string; pdf: Buffer; fileName: string },
+): Promise<string | undefined> {
+  const html = wrap(`
+    <p style="color:#0A2540;font-size:14px">Attached is your executed ${params.documentTitle} (version ${params.version}), signed by ${params.signedByName}. Keep it for your records.</p>
+  `);
+  return sendEmail(
+    to,
+    `Executed ${params.documentTitle} — version ${params.version}`,
+    html,
+    [{ filename: params.fileName, content: params.pdf, contentType: "application/pdf" }],
+    { replyTo: "operations@silkroutelogistics.ai", fromName: "Silk Route Logistics" },
+  );
+}
+
 export async function sendCarrierTrainingCompletionEmail(to: string, params: CarrierTrainingCompletionParams): Promise<string | undefined> {
   const fmt = (d: Date) => d.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
   const validity = params.expiresAt ? ` &middot; valid through ${fmt(params.expiresAt)}` : "";

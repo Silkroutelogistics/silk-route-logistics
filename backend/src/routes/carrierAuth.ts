@@ -24,7 +24,7 @@ import {
   consumeEmailVerificationToken,
   getEmailVerificationResendCooldown,
 } from "../services/otpService";
-import { sendOtpEmail, sendEmailVerificationEmail } from "../services/emailService";
+import { sendOtpEmail, sendEmailVerificationEmail, sendExecutedAgreementEmail } from "../services/emailService";
 import { resolveCountry, extractClientIp, detectUnusualActivity } from "../services/geoService";
 import { sendOtpSms } from "../services/openPhoneService";
 import { resolveInfoRequest, getCategoryLabel } from "../services/infoRequestService";
@@ -679,6 +679,61 @@ router.get("/application-status", authenticate, authorize("CARRIER"), async (req
 
 // Resolve the calling carrier's CarrierProfile (mirrors /me +
 // /application-status). Returns null -> caller responds 404.
+/**
+ * Where the executed copy goes. `contactEmail` first, login email as the
+ * fallback — the same precedence notifyBidAction and the tender emails use, so
+ * a carrier who nominated a dispatch address gets their paperwork there.
+ */
+async function resolveSignerEmail(userId: string): Promise<string | null> {
+  const u = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { email: true, carrierProfile: { select: { contactEmail: true } } },
+  });
+  return u?.carrierProfile?.contactEmail || u?.email || null;
+}
+
+/**
+ * Email the executed copy and record on the row whether it actually went.
+ *
+ * NEVER THROWS, and never rolls anything back. It runs after the signature row
+ * has committed and after the response has been sent, so the only thing a
+ * failure may do is be recorded. What it must not do is disappear: the calling
+ * blocks end in `.catch(() => {})`, so an error escaping this function would be
+ * swallowed by that and the carrier would silently never receive their
+ * agreement. Hence the internal try/catch and the persisted reason.
+ *
+ * The BUFFER IS PASSED IN, not regenerated. It is the same artefact just written
+ * to storage, and PDF renders are not byte-stable — regenerating would email a
+ * different file than the one on record for that execution.
+ */
+async function deliverExecutedCopy(
+  agreementId: string,
+  userId: string,
+  params: { documentTitle: string; version: string; signedByName: string; pdf: Buffer; fileName: string },
+): Promise<void> {
+  try {
+    const to = await resolveSignerEmail(userId);
+    if (!to) throw new Error("No email on file for the signer");
+    await sendExecutedAgreementEmail(to, params);
+    await prisma.carrierAgreement.update({
+      where: { id: agreementId },
+      data: { executedCopySent: true, executedCopySentAt: new Date(), executedCopySendError: null },
+    });
+  } catch (err: any) {
+    const reason = String(err?.message ?? err).slice(0, 500);
+    log.error({ err, agreementId }, "[Agreement] executed-copy email FAILED — recorded on the row, not swallowed");
+    await prisma.carrierAgreement
+      .update({
+        where: { id: agreementId },
+        data: { executedCopySent: false, executedCopySentAt: null, executedCopySendError: reason },
+      })
+      .catch(() => {
+        // If even the report cannot be written the log line above is the only
+        // record. Recording a failure must never itself throw into the caller.
+      });
+  }
+}
+
 async function loadActivationProfile(userId: string) {
   const user = await prisma.user.findUnique({
     where: { id: userId },
@@ -1144,6 +1199,15 @@ router.post("/sign-bca", authenticate, authorize("CARRIER"), validateBody(signBc
     });
     const url = await uploadFileToPath(buf, `agreements/bca-${agreement.id}.pdf`, "application/pdf");
     await prisma.carrierAgreement.update({ where: { id: agreement.id }, data: { documentUrl: url } });
+
+    // Decision 6 — the same bytes just stored, delivered to the signer.
+    await deliverExecutedCopy(agreement.id, req.user!.id, {
+      documentTitle: "Broker-Carrier Agreement",
+      version: bcaVersion,
+      signedByName,
+      pdf: buf,
+      fileName: `SRL-Broker-Carrier-Agreement-${bcaVersion}.pdf`,
+    });
   })().catch(() => {});
 
   res.status(201).json({ signed: true, agreement });
@@ -1334,6 +1398,15 @@ router.post("/quickpay-election", authenticate, authorize("CARRIER"), requireSte
         });
         const url = await uploadFileToPath(buf, `agreements/qp-${qpRow.id}.pdf`, "application/pdf");
         await prisma.carrierAgreement.update({ where: { id: qpRow.id }, data: { documentUrl: url } });
+
+        // Decision 6 — same bytes, delivered to the signer.
+        await deliverExecutedCopy(qpRow.id, req.user!.id, {
+          documentTitle: "Caravan Quick Pay Agreement",
+          version,
+          signedByName: signedByName!,
+          pdf: buf,
+          fileName: `SRL-Caravan-Quick-Pay-Agreement-${version}.pdf`,
+        });
       })().catch(() => {});
     }
     await prisma.carrierProfile.update({

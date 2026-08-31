@@ -170,6 +170,12 @@ interface CarrierAgreementRow {
   terminatedAt: string | null;
   terminationReason: string | null;
   documentUrl: string | null;
+  // v3.8.awn — did the executed copy actually reach the signer? null means the
+  // send was never attempted (everything before awn); false means it was tried
+  // and failed, and the reason must be visible rather than only in a log.
+  executedCopySent: boolean | null;
+  executedCopySentAt: string | null;
+  executedCopySendError: string | null;
 }
 
 interface CarrierDoc {
@@ -1613,6 +1619,19 @@ export default function CarrierPoolPage() {
                               <p className="mt-1 text-[11px] text-gray-600">
                                 Signed{ag.signedAt ? ` ${new Date(ag.signedAt).toLocaleDateString()}` : ""}
                                 {ag.signedByName ? ` by ${ag.signedByName}` : ""}
+                              </p>
+                            )}
+
+                            {/* A failed delivery is surfaced, not swallowed. Silence
+                                here would look identical to a successful send. */}
+                            {isSigned && ag.executedCopySent === false && (
+                              <p className="mt-1 text-[11px] text-[#9B2C2C]">
+                                Executed copy NOT delivered{ag.executedCopySendError ? ` — ${ag.executedCopySendError}` : ""}. The carrier does not have their signed agreement; re-send it or forward the stored copy.
+                              </p>
+                            )}
+                            {isSigned && ag.executedCopySent === true && ag.executedCopySentAt && (
+                              <p className="mt-1 text-[11px] text-[#2F7A4F]">
+                                Executed copy emailed {new Date(ag.executedCopySentAt).toLocaleDateString()}
                               </p>
                             )}
 

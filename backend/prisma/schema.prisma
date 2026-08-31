@@ -4899,6 +4899,15 @@ model CarrierAgreement {
   // ignored. NULL for everything executed before v3.8.awm.
   consentAt       DateTime?
 
+  // Did the executed copy actually reach the signer? NULL = never attempted
+  // (everything before v3.8.awn); true = delivered; false = attempted and
+  // failed, with the reason in executedCopySendError. Distinct from `sentAt`
+  // above, which means "sent out for signature" — the other end of the
+  // lifecycle. Never swallowed: a false here is surfaced on the AE console.
+  executedCopySent      Boolean?
+  executedCopySentAt    DateTime?
+  executedCopySendError String?
+
   expiresAt         DateTime?
   terminatedAt      DateTime?
   terminatedBy      String?

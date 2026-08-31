@@ -15823,7 +15823,29 @@
 // creating one, so for them it is the only record they accepted the
 // click-through. quickPayAgreedAt is read at carrierAuth.ts:965. The audit's
 // "zero readers" finding was wrong about both. Decision 9 stays open.
-export const SRL_VERSION = "3.8.awm";
+// v3.8.awn — the executed copy reaches the signer, and the row says whether it
+// actually did.
+//
+// Decision 6. Emailed at execution: operations@ reply-to, version in the subject,
+// one line of body, no marketing. THE SAME BUFFER that was just stored is the one
+// emailed — not a regeneration, because PDF renders are not byte-stable (awj got
+// two hashes for one agreement at identical length), so regenerating would send a
+// different file than the one on record for that execution.
+//
+// A failure is RECORDED: executedCopySent / SentAt / SendError on the row,
+// surfaced on the AE console in the danger token with the reason. The delivery
+// helper cannot throw, because the calling blocks end in .catch(() => {}) and an
+// escaping error would vanish there — the exact failure the report exists to
+// prevent. NULL is not false: never-attempted renders as nothing,
+// attempted-and-failed renders as a flag.
+//
+// ITEM 3 OF THIS SLICE WAS HALTED. Creating a CarrierAgreement row at
+// registration was implemented and reverted: onboarding collects no
+// electronic-records consent, so writing consentAt there would record an ESIGN
+// acknowledgement nobody gave; and a SIGNED row satisfies the tender gate, which
+// would make a carrier tenderable without the in-portal signing awm had just made
+// consent-gated. Both need a product decision. Decision 9 stays open.
+export const SRL_VERSION = "3.8.awn";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

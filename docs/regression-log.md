@@ -1468,3 +1468,77 @@ because it looks like consent was captured. `sign-bca` is called from the
 ### Decision 13 — closed by v3.8.awl
 
 Which IP is authoritative when a forwarded header is present. See the entry above.
+
+---
+
+## 2026-08-31 — Slice 3: the executed copy is delivered, and one item was halted
+
+**Shipped by v3.8.awn.** Decision 6 closed. **Item 3 halted** — see below.
+
+### "Zero readers" falsified a SECOND time — the pattern, not the instance
+
+Slice 2 recorded that audit Finding 14's "zero readers anywhere" was wrong about
+`bcaAgreedAt` and `quickPayAgreedAt`. This slice found the same finding's
+consequence again from the other direction, and the two together are worth naming
+as a class rather than two incidents.
+
+**The evidentiary stake, stated plainly:** three production carriers —
+**AMERICAN EAGLE FLEET INC**, **A FALCON EXPRESS LLC**, and one unnamed — hold a
+`bcaAgreedAt` with **no `CarrierAgreement` row at all**. For them that column is
+the *entire* record that they accepted the Broker-Carrier Agreement. There is
+nothing to reconstruct it from: `CarrierAgreement.signedAt` is null for all three,
+and the registration path that created their assent never wrote a row.
+
+Dropping the column, as instructed in slice 2, would have destroyed click-wrap
+consent evidence for three real carriers. Slice 3 was then instructed to close the
+gap forward by creating a row at registration — and that turned out to carry two
+consequences of its own. **The lesson is not about either column. It is that a
+"dead field" finding is a hypothesis about consumers, and consumers include the
+absence of an alternative record.**
+
+### Item 3 — HALTED, not shipped
+
+Creating a `CarrierAgreement` row at registration was implemented, then reverted
+before commit, because two verified consequences were not in the brief:
+
+1. **The onboarding page collects no electronic-records consent.** A grep for
+   `electronicRecordsConsent` in `frontend/src/app/onboarding/page.tsx` returns
+   **zero** — deliberately, because v3.8.awm refused to put a decorative checkbox
+   there. Writing `consentAt` on a registration row would therefore record an
+   ESIGN §101(c) acknowledgement that **was never given**. That is worse than the
+   decorative checkbox awm refused: it manufactures the record rather than the
+   appearance of one.
+
+2. **A SIGNED broker-carrier row satisfies the tender gate.** The gate looks for
+   exactly that, so a row created at registration would make a carrier tenderable
+   **without** the in-portal signing that awm had just made consent-gated — undoing
+   that guarantee one commit after establishing it.
+
+Both need a product decision before the row can honestly exist: either onboarding
+collects consent (and the row is fully truthful and SIGNED is right), or
+registration assent is recorded as something that is not a signed agreement.
+**Decision 9 stays open, with that as its actual question.**
+
+### Decision 6 — closed by v3.8.awn
+
+The executed PDF is emailed to the signer at execution, operations@ as reply-to,
+version in the subject, one line of body, no marketing, PDF attached.
+
+**The same buffer is emailed that was stored.** Not a regeneration: PDF renders
+are not byte-stable — the v3.8.awj audit got two different hashes for one
+agreement at identical length — so regenerating would send the carrier a different
+file than the one on record for that execution.
+
+**A failure is recorded, never swallowed.** `executedCopySent` / `executedCopySentAt`
+/ `executedCopySendError` on the row, surfaced on the AE console in the danger
+token with the reason. The delivery helper cannot throw, because the calling
+blocks end in `.catch(() => {})` and an escaping error would vanish there —
+which is the exact failure mode the report exists to prevent.
+
+**NULL is not false.** Never attempted (everything before awn) renders as nothing;
+attempted-and-failed renders as a visible flag. A default of `false` would have
+asserted a failed send that never happened.
+
+New columns rather than the existing `sentAt`, which already means "sent out for
+signature" (written by `carrierVettingController`) — the other end of the same
+lifecycle.
