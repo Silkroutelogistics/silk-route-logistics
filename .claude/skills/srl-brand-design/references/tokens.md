@@ -132,6 +132,34 @@ All four are licensed for commercial use:
 - **PDF/legal body**: 9.5pt DM Sans Regular for legal density
 - **Tabular numerals**: `font-variant-numeric: tabular-nums` on every rate sheet, invoice line, dashboard number, tracking timestamp, BOL freight column
 
+### UI type scale — ratified 2026-08-31
+
+Screen surfaces only. The display scale above is unchanged, and PDF/legal density
+(9.5pt) is a print concern that this does not touch.
+
+| Step | Size | Role |
+|---|---|---|
+| `--fs-label` | **11px** | small-caps labels — uppercase, tracked, DM Sans 500. Nothing else at this size. |
+| `--fs-dense` | **12px** | dense table cells and data grids, where a row count is the point |
+| `--fs-secondary` | **13px** | secondary body — captions, helper text, metadata under a title |
+| `--fs-body` | **14px** | body default. If a size is not obviously one of the others, it is this. |
+| `--fs-lead` | **16px** | lead paragraphs, panel intros, anything asking to be read first |
+
+**Hard floor: nothing renders below 11px on any surface.** Not a preference — 9px
+and 10px text was live in the AE portal, and at that size the difference between
+a 3 and an 8 in an MC number is a guess.
+
+**Why a scale at all.** There was none, and the absence had a measurable cost: the
+skill declared two font sizes bound to specific utilities and CLAUDE.md §2.1
+listed the scale as deferred, so every surface invented its own. The carrier
+drawer alone ran 9 / 10 / 11 / 12 / 14 / 15px, four of them arbitrary values
+alongside the Tailwind steps. See docs/audits/drawer-conformance-audit.md §7.
+
+**11px is the label size, and labels are the only thing that may use it.** A
+tracked uppercase label reads at 11px because it is three words in a fixed slot.
+The same 11px on a sentence does not, which is why the floor and the label step
+are the same number but not the same permission.
+
 ---
 
 ## 9. Spacing — 8px grid

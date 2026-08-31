@@ -13,6 +13,14 @@
  */
 
 :root {
+  /* UI type scale — ratified 2026-08-31. Screen only; the display scale and the
+     9.5pt PDF/legal density are unaffected. Hard floor: nothing below 11px. */
+  --fs-label:     11px;  /* small-caps labels ONLY — uppercase, tracked        */
+  --fs-dense:     12px;  /* dense table cells, data grids                      */
+  --fs-secondary: 13px;  /* captions, helper text, metadata                    */
+  --fs-body:      14px;  /* body default — the answer when unsure              */
+  --fs-lead:      16px;  /* lead paragraphs, panel intros                      */
+
   /* ============================================================
    * NAVY SCALE (10-stop)
    * ============================================================ */

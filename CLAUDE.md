@@ -197,7 +197,7 @@ Motion:
 **DEFERRED (not reconciled in v3.7.n)**
 
 - **Typography** — designer handoff declares Playfair Display (display), DM Sans (body), Georgia (tagline-only: "Where Trust Travels."), and SF Mono (mono). Current §2.1 documented Georgia as primary for legal PDFs (BOL v2.8, QP Agreement v2, rate confirmation). Role reassignment deferred — will be reconciled in a dedicated commit, likely folded into v3.7.o when BOL PDF font embedding work begins (v3.7.o requires `*.ttf` assets from `project/fonts/` to be checked into the repo and loaded by PDFKit).
-- **Type scale, line-height, letter-spacing tokens** — deferred alongside typography reconciliation.
+- ~~**Type scale, line-height, letter-spacing tokens** — deferred alongside typography reconciliation.~~ **SUPERSEDED 2026-08-31.** The UI type scale is ratified and lives in the brand skill (`references/tokens.md` §8 "UI type scale") — 11px labels / 12px dense cells / 13px secondary / 14px body / 16px lead, with a hard floor of 11px on every surface. Screen only; the display scale and the 9.5pt PDF/legal density are unchanged, so line-height and letter-spacing remain open. The deferral had a measurable cost: with nothing to conform to, the carrier drawer alone ran 9/10/11/12/14/15px — see `docs/audits/drawer-conformance-audit.md` §7.
 
 ---
 
