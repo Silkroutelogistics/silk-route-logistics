@@ -940,20 +940,34 @@ router.post("/:carrierId/documents", authorize("ADMIN", "CEO", "BROKER", "OPERAT
       // AWS SDK errors carry a `name` (AccessDenied, NoSuchBucket, InvalidAccessKeyId)
       // and an HTTP status. Both are safe to surface — they name the
       // misconfiguration without disclosing bucket, key or credential.
-      const e = storageErr as { name?: string; message?: string; $metadata?: { httpStatusCode?: number } };
+      const e = storageErr as {
+        name?: string; message?: string; Code?: string;
+        $metadata?: { httpStatusCode?: number };
+        $response?: { body?: unknown };
+      };
       const code = e?.name || "UnknownStorageError";
       const httpStatus = e?.$metadata?.httpStatusCode;
+      // v3.8.avw — pass the PROVIDER'S OWN sentence through.
+      //
+      // The code alone (InvalidArgument) says a request was refused; it does not
+      // say which argument. R2 puts that in `message` — "Checksum algorithm
+      // provided is not supported", "The specified bucket does not exist" — and
+      // we were discarding it, which turned a one-line diagnosis into an
+      // afternoon of hypotheses. It is a provider error string, not our data:
+      // safe to show, and it names the fix.
+      const providerMessage = (e?.message || "").slice(0, 300);
       log.error(
-        { err: storageErr, code, httpStatus, storagePath, carrierId: carrier.id },
+        { err: storageErr, code, httpStatus, providerMessage, storagePath, carrierId: carrier.id },
         "[Carrier Docs] STORAGE REJECTED the upload — the file was not retained",
       );
       res.status(502).json({
         error:
-          `Storage rejected the file (${code}${httpStatus ? ` / HTTP ${httpStatus}` : ""}). ` +
-          `The document was NOT saved. This is an object-storage configuration problem, not a problem with the file — ` +
-          `check S3_BUCKET_NAME, the region, and that the key has s3:PutObject.`,
+          `Storage rejected the file (${code}${httpStatus ? ` / HTTP ${httpStatus}` : ""})` +
+          `${providerMessage ? `: "${providerMessage}"` : ""}. ` +
+          `The document was NOT saved. This is an object-storage configuration problem, not a problem with the file.`,
         stage: "STORAGE",
         code,
+        providerMessage,
       });
       return;
     }

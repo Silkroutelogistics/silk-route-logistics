@@ -15547,7 +15547,19 @@
 // operation needs them — and is safe against real AWS S3, where it was the
 // default for years. Set unconditionally so a later provider change cannot
 // quietly bring it back.
-export const SRL_VERSION = "3.8.avv";
+// v3.8.avw — pass the provider's own sentence through.
+//
+// avv guessed at the cause of InvalidArgument and guessed wrong; the checksum
+// suppression was live and the error persisted. The reason that cost an hour is
+// that the code alone says a request was refused, never WHICH argument — and R2
+// puts exactly that in `message` ("Checksum algorithm provided is not
+// supported", "The specified bucket does not exist"), which the handler was
+// discarding.
+//
+// It is a provider error string about a request we made, not customer data, so
+// it is safe to show and it names the fix. Diagnosing from a code alone is
+// guessing with extra steps.
+export const SRL_VERSION = "3.8.avw";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
