@@ -15,6 +15,33 @@ router.get("/crons", authenticate, authorize("ADMIN"), listCronJobs as any);
 router.post("/crons/:name/run", authenticate, authorize("ADMIN"), manualRunCron as any);
 router.post("/crons/:name/toggle", authenticate, authorize("ADMIN"), toggleCron as any);
 
+// Document-chain self-test (admin only) — the seven links, end to end.
+//
+// v3.8.awi. The storage selftest above proves the bucket accepts a byte. This
+// proves the whole chain a carrier document travels: persisted, readable,
+// parsed, consumed by Compass, flagged when it disagrees, sent to human review
+// when it cannot be read, and cleaned up afterwards with the deletion verified.
+//
+// It exists because the chain could not be proved from a laptop: doing so needed
+// an admin session, bucket credentials to list and delete, and the ability to run
+// the Compass checks. None of that should be handed out to answer a yes/no
+// question, so the server answers it about itself.
+//
+// Self-cleaning and re-runnable. Everything is created under a reserved prefix
+// and torn down in a finally, including when a link fails. NOT for polling — it
+// makes three model calls per run.
+router.get("/document-chain/selftest", authenticate, authorize("ADMIN", "CEO"), async (req: AuthRequest, res: Response) => {
+  try {
+    const { runDocumentChainSelftest } = await import("../services/documentChainSelftest");
+    const report = await runDocumentChainSelftest(req.user!.id);
+    // 503 on failure so a monitor can read the status line, while the body
+    // carries the per-link evidence a human needs.
+    res.status(report.ok ? 200 : 503).json(report);
+  } catch (e: any) {
+    res.status(500).json({ ok: false, error: `Document-chain self-test failed to run: ${e.message}` });
+  }
+});
+
 // Storage self-test (admin only) — proves the live bucket credentials actually
 // permit PutObject/GetObject/DeleteObject, which isS3Active() cannot tell you.
 router.get("/storage/selftest", authenticate, authorize("ADMIN", "CEO"), async (_req: AuthRequest, res: Response) => {

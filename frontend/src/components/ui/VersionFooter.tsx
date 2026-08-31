@@ -15733,7 +15733,24 @@
 // The failure-path test was WRONG FIRST: it asserted the string record("FAILED")
 // was present, so neutering the call behind if(false) left it green. Rewritten
 // to exercise the function; the same injection now turns it red.
-export const SRL_VERSION = "3.8.awh";
+// v3.8.awi — the chain proves itself, on the server.
+//
+// The seven-link proof could not be run from a laptop: it needed an admin
+// session, bucket credentials to list and delete objects, and the ability to run
+// the Compass checks. None of that should be handed out to answer a yes/no
+// question, so the server answers it about itself.
+//
+// GET /api/monitoring/document-chain/selftest (ADMIN/CEO). Persists real
+// fixtures under a reserved prefix, parses them with the real parser, runs the
+// Compass check the ENGINE calls, asserts the discrepancy flag on a deliberately
+// mismatched COI and the review state on a corrupted one, then deletes
+// everything and VERIFIES the deletion. Self-cleaning, re-runnable.
+//
+// Local run: 7/7. The cleanup check was wrong first — it counted an openable
+// stream handle as a surviving object and reported 3 survivors after a clean
+// delete, because createReadStream opens a path that does not exist and only
+// errors on read. Opening a handle proves nothing; the read is the check.
+export const SRL_VERSION = "3.8.awi";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

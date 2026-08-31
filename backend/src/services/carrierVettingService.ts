@@ -957,55 +957,26 @@ export async function vetCarrier(
   // ── 33. COI Document Agreement (v3.8.awh) ──
   //
   // LAST deliberately. The PDF category map indexes checks by POSITION, so a
-  // check inserted mid-list re-points every heading after it — the map's own
-  // header records that happening. Appended, indices 1-32 stay put.
+  // check inserted mid-list re-points every heading after it.
   //
-  // Compares what a parser read out of the uploaded COI against what the carrier
-  // typed. This is EVIDENCE, never a verdict:
-  //
-  //   · a disagreement is a WARNING with a small deduction, never a FAIL. A
-  //     parser misreading a scanned fax must not be able to reject a carrier
-  //     whose paperwork is fine, and a broker who auto-rejects on an OCR result
-  //     will lose good capacity to a bad model.
-  //   · a failed or low-confidence read is a WARNING too, and explicitly NOT a
-  //     pass. Silence here would let a carrier through on a document nobody
-  //     read, which is worse than either other outcome.
-  //   · no extraction at all is NOT scored. Most carriers predate the trigger,
-  //     and penalising them for our own missing feature would be nonsense.
+  // The body lives in coiAgreementCheck so the document-chain selftest can
+  // assert the check the ENGINE runs, not a reimplementation of it. A selftest
+  // that reproduces the logic it verifies cannot fail when that logic is wrong.
   if (existingCarrier) {
-    const extraction = await prisma.documentExtraction.findFirst({
-      where: { carrierProfileId: existingCarrier.id, docType: "COI" },
-      orderBy: { createdAt: "desc" },
-    });
-    if (extraction) {
-      const disc = Array.isArray(extraction.discrepancies) ? extraction.discrepancies : [];
-      if (extraction.status === "FAILED" || extraction.status === "LOW_CONFIDENCE") {
-        checks.push({
-          name: "COI Document Agreement",
-          result: "WARNING",
-          detail: `COI could not be read with confidence — needs human review. ${extraction.error || ""}`.trim(),
-          deduction: 5,
-        });
-        score -= 5;
-      } else if (disc.length > 0) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const named = (disc as any[]).map((d) => d.field).join(", ");
-        const deduction = Math.min(15, 5 * disc.length);
-        checks.push({
-          name: "COI Document Agreement",
-          result: "WARNING",
-          detail: `COI disagrees with the typed values on: ${named}. Review before approving.`,
-          deduction,
-        });
-        score -= deduction;
-      } else {
-        checks.push({
-          name: "COI Document Agreement",
-          result: "PASS",
-          detail: "COI matches the typed insurance values",
-          deduction: 0,
-        });
-      }
+    const agreement = await coiAgreementCheck(existingCarrier.id);
+    if (agreement) {
+      // Name stated HERE, at the push site, not only inside the helper. The
+      // engine's list of checks should read completely from this function — and
+      // the published-count scanner reads it the same way a person does, by
+      // looking for a name next to a push. Hiding the name in a helper made the
+      // count silently drop by one.
+      checks.push({
+        name: "COI Document Agreement",
+        result: agreement.result,
+        detail: agreement.detail,
+        deduction: agreement.deduction,
+      });
+      score -= agreement.deduction;
     }
   }
 
@@ -1136,4 +1107,56 @@ export async function vetAndStoreReport(
   }
 
   return report;
+}
+
+/**
+ * Compass check 33 — does the COI reading agree with what the carrier typed?
+ *
+ * v3.8.awh. Exported so the document-chain selftest asserts THIS function rather
+ * than a copy of its rules.
+ *
+ * EVIDENCE, NEVER A VERDICT. A disagreement is a WARNING with a bounded
+ * deduction; a failed or low-confidence read is a WARNING too and explicitly not
+ * a pass; and no extraction at all is NOT SCORED, because most carriers predate
+ * the trigger and penalising them for a feature we had not built would be
+ * nonsense. A parser misreading a scanned fax must never be able to reject a
+ * carrier whose paperwork is fine.
+ *
+ * Returns null when there is nothing to say.
+ */
+export async function coiAgreementCheck(carrierProfileId: string): Promise<VettingCheck | null> {
+  const extraction = await prisma.documentExtraction.findFirst({
+    where: { carrierProfileId, docType: "COI" },
+    orderBy: { createdAt: "desc" },
+  });
+  if (!extraction) return null;
+
+  const disc = Array.isArray(extraction.discrepancies) ? extraction.discrepancies : [];
+
+  if (extraction.status === "FAILED" || extraction.status === "LOW_CONFIDENCE") {
+    return {
+      name: "COI Document Agreement",
+      result: "WARNING",
+      detail: `COI could not be read with confidence — needs human review. ${extraction.error || ""}`.trim(),
+      deduction: 5,
+    };
+  }
+  if (disc.length > 0) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const named = (disc as any[]).map((d) => d.field).join(", ");
+    return {
+      name: "COI Document Agreement",
+      result: "WARNING",
+      // Capped: a reader having a bad day should not be able to sink a score on
+      // its own. Five points a field, three fields' worth at most.
+      deduction: Math.min(15, 5 * disc.length),
+      detail: `COI disagrees with the typed values on: ${named}. Review before approving.`,
+    };
+  }
+  return {
+    name: "COI Document Agreement",
+    result: "PASS",
+    detail: "COI matches the typed insurance values",
+    deduction: 0,
+  };
 }
