@@ -15619,7 +15619,22 @@
 // The carrier rail moved onto the shared IconTabs, resolved UPWARD (icon 14→18,
 // rail 64→68) — unifying at the smaller size would have made four drawers worse
 // to fix one inconsistency, in an arc that exists because things read cramped.
-export const SRL_VERSION = "3.8.awa";
+// v3.8.awb — A3: the document preview fills the drawer, and shows a whole page.
+//
+// The frame was a hardcoded 500px. Against the old 720px drawer that was 606px
+// of content, where a US-Letter page renders 784px tall — 64% of one page, which
+// is why it always needed zooming.
+//
+// Height alone would not have fixed it: Chrome fits PDFs to WIDTH, so a wider
+// drawer renders the page wider AND taller and it still scrolls. #view=Fit asks
+// for fit-PAGE. Verified in HEADED Chrome against a real Letter BOL — whole and
+// unscrolled at 53% (1440) and 68% (1920). Headless has no PDF viewer, shows a
+// blank frame, and cannot prove this; the first attempt did exactly that.
+//
+// Height derived from measured chrome, not guessed: panel header 57px, preview
+// chrome ~150px, so max(420px, calc(100vh - 220px)) — 780px at a 1000px
+// viewport, which is what rendered.
+export const SRL_VERSION = "3.8.awb";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

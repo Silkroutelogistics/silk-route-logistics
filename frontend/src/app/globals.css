@@ -25,6 +25,17 @@
  */
 :root {
   --drawer-detail: clamp(640px, 60vw, 1100px);
+
+  /* v3.8.awb — the document preview fills the drawer instead of a fixed 500px.
+   *
+   * Derived from measured chrome, not guessed: the drawer is a full-height
+   * overlay, its panel header renders 57px, and the preview view above the frame
+   * costs ~150px (back link, title block, action row and the gaps between them).
+   * 220px leaves a little slack over that so the action row is never pushed out
+   * of view. The floor keeps the frame usable on a short laptop, where the
+   * document simply scrolls as it did before.
+   */
+  --doc-preview-h: max(420px, calc(100vh - 220px));
   --drawer-sm: 448px;   /* single-field forms — Tender, File Claim, New Course */
   --drawer-md: 512px;   /* short forms — dock appointment, fuel table row      */
   --drawer-lg: 576px;   /* wider forms — fuel index editor                     */

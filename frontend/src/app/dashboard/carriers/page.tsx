@@ -2166,9 +2166,39 @@ export default function CarrierPoolPage() {
                             <p className="text-xs">Opening…</p>
                           </div>
                         ) : previewDoc.fileType.startsWith("image/") ? (
-                          <img src={previewUrl} alt={previewDoc.fileName} className="w-full object-contain max-h-[500px]" />
+                          <img src={previewUrl} alt={previewDoc.fileName} className="w-full h-[var(--doc-preview-h)] object-contain" />
                         ) : previewDoc.fileType === "application/pdf" ? (
-                          <iframe src={previewUrl} className="w-full" style={{ height: 500 }} title={previewDoc.fileName} />
+                          /* v3.8.awb — height from the drawer, and #view=Fit.
+                           *
+                           * The box was a hardcoded 500px. Against the old 720px
+                           * drawer that was 606px of content, where a US-Letter
+                           * page renders 784px tall — 64% of one page, which is
+                           * why it always needed zooming.
+                           *
+                           * Height alone does not fix it. Chrome's PDF viewer
+                           * defaults to fit-WIDTH, so a wider drawer renders the
+                           * page wider AND taller and it still scrolls: at 1920
+                           * the content column is 1031px, where a Letter page is
+                           * 1334px tall against ~780px of room. #view=Fit asks
+                           * for fit-PAGE, so the whole sheet is shown and the
+                           * spare width becomes margin instead of overflow.
+                           *
+                           * Rendered whole and unscrolled at 53% (1440) and 68%
+                           * (1920), verified in HEADED Chrome against a real
+                           * Letter-size BOL. Headless has no PDF viewer at all,
+                           * so it shows a blank frame and cannot prove this — the
+                           * first attempt did exactly that and looked like a bug.
+                           *
+                           * pagemode=none is for Firefox PDF.js, which honours it
+                           * and drops the thumbnail rail. Chrome ignores it. Kept
+                           * because it helps one browser and costs nothing, and
+                           * named here so nobody reads Chrome still showing the
+                           * sidebar as this being broken. */
+                          <iframe
+                            src={`${previewUrl}#view=Fit&pagemode=none`}
+                            className="w-full h-[var(--doc-preview-h)]"
+                            title={previewDoc.fileName}
+                          />
                         ) : (
                           <div className="flex flex-col items-center justify-center py-12 text-gray-700">
                             <FileText className="w-10 h-10 mb-2" />
