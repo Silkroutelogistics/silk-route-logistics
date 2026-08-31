@@ -15664,7 +15664,22 @@
 // only 6 are genuine dense cells and 98 are body or helper text sitting at 12px
 // where the scale says 14px. Recommendation recorded; not bulk-edited on a
 // classification heuristic I would not trust to touch 206 sites unseen.
-export const SRL_VERSION = "3.8.awd";
+// v3.8.awe — B3: the 11px floor is guarded on the surfaces that meet it.
+//
+// Scoped to the twelve drawer surfaces B2 reconciled, not the portal. The rest
+// still has 431 sub-floor instances, some in containers that cannot take the
+// size, so a portal-wide guard would be red on arrival — and a guard that is red
+// on arrival gets skipped, then disabled, then deleted. Widen the list as each
+// area is reconciled and rendered.
+//
+// Allowlist is empty and asserted empty: an entry means the scale is missing a
+// size, which is a reason to revisit the scale rather than add a line.
+//
+// The guard was wrong first. It listed only 11px as an on-scale arbitrary value
+// and immediately reported three CONFORMANT lines in TrainingTab (12px and 13px
+// are scale steps) as violations. Fixed before shipping — a guard that cries
+// wolf is one people learn to skip.
+export const SRL_VERSION = "3.8.awe";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
