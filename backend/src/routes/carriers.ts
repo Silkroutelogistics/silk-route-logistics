@@ -924,7 +924,39 @@ router.post("/:carrierId/documents", authorize("ADMIN", "CEO", "BROKER", "OPERAT
 
     const ext = path.extname(file.originalname).toLowerCase();
     const storagePath = `carrier-docs/${Date.now()}-${Math.random().toString(36).slice(2)}${ext}`;
-    const fileUrl = await uploadFile(file.buffer, storagePath, file.mimetype);
+
+    // v3.8.avs — name the STAGE that failed.
+    //
+    // Storage and the database were both inside one try whose catch answered
+    // "Failed to upload document" for either. Those need completely different
+    // responses — a rejected PutObject is an env/permission problem, a failed
+    // insert is not — and the operator could not tell which they had. The
+    // production documents table has been empty since inception with nobody
+    // able to say why, and this is the reason nobody could.
+    let fileUrl: string;
+    try {
+      fileUrl = await uploadFile(file.buffer, storagePath, file.mimetype);
+    } catch (storageErr) {
+      // AWS SDK errors carry a `name` (AccessDenied, NoSuchBucket, InvalidAccessKeyId)
+      // and an HTTP status. Both are safe to surface — they name the
+      // misconfiguration without disclosing bucket, key or credential.
+      const e = storageErr as { name?: string; message?: string; $metadata?: { httpStatusCode?: number } };
+      const code = e?.name || "UnknownStorageError";
+      const httpStatus = e?.$metadata?.httpStatusCode;
+      log.error(
+        { err: storageErr, code, httpStatus, storagePath, carrierId: carrier.id },
+        "[Carrier Docs] STORAGE REJECTED the upload — the file was not retained",
+      );
+      res.status(502).json({
+        error:
+          `Storage rejected the file (${code}${httpStatus ? ` / HTTP ${httpStatus}` : ""}). ` +
+          `The document was NOT saved. This is an object-storage configuration problem, not a problem with the file — ` +
+          `check S3_BUCKET_NAME, the region, and that the key has s3:PutObject.`,
+        stage: "STORAGE",
+        code,
+      });
+      return;
+    }
 
     const doc = await prisma.document.create({
       data: {
@@ -949,8 +981,18 @@ router.post("/:carrierId/documents", authorize("ADMIN", "CEO", "BROKER", "OPERAT
 
     res.status(201).json({ document: doc });
   } catch (err) {
-    log.error({ err }, "[Carrier Docs] Upload error");
-    res.status(500).json({ error: "Failed to upload document" });
+    // Storage is handled above and returns before reaching here, so anything
+    // landing in this catch is post-upload: the object exists and the RECORD
+    // failed. That distinction matters — the file is in the bucket, orphaned,
+    // and re-uploading makes a second copy rather than fixing anything.
+    const e = err as { name?: string; code?: string; message?: string };
+    log.error({ err, carrierId: req.params.carrierId }, "[Carrier Docs] Upload error AFTER storage — object may be orphaned");
+    res.status(500).json({
+      error:
+        `The file reached storage but the record could not be saved (${e?.code || e?.name || "unknown"}). ` +
+        `Do not re-upload — tell an admin, since the file is already stored without a record.`,
+      stage: "RECORD",
+    });
   }
 });
 

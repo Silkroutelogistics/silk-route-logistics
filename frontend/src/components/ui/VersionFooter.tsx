@@ -15494,7 +15494,21 @@
 // have broken POD upload and the carrier's own documents page.
 //
 // The onError avq added is what made this visible at all, and it stays.
-export const SRL_VERSION = "3.8.avr";
+// v3.8.avs — the upload names which STAGE failed.
+//
+// Storage and the database sat inside one try whose catch answered "Failed to
+// upload document" for either. Those are opposite problems: a rejected PutObject
+// is an env or permission fault and the file is nowhere; a failed insert means
+// the object IS in the bucket and re-uploading just makes a second orphan.
+//
+// Storage failures now return 502 with the AWS error name (AccessDenied,
+// NoSuchBucket, InvalidAccessKeyId) and HTTP status — safe to show, since they
+// name the misconfiguration without disclosing bucket, key or credential. Record
+// failures return 500 and tell the operator NOT to retry.
+//
+// The production documents table has been empty since inception and nobody could
+// say why. This is the reason nobody could.
+export const SRL_VERSION = "3.8.avs";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
