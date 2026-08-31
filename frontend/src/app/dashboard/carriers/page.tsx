@@ -2144,6 +2144,15 @@ export default function CarrierPoolPage() {
                             They did nothing wrong. Confirm object storage is configured before asking
                             them to re-send: {carrierDocs.filter(d => d.status === "UPLOAD_FAILED").map(d => d.fileName).join(", ")}
                           </p>
+                          {/* v3.8.avt — the reason, not just the fact. The note carries the
+                              AWS error name (AccessDenied, NoSuchBucket, ExpiredToken…), which
+                              is the difference between a permission fix, a bucket-name fix and
+                              a lapsed account. Without it an AE has to go read Render logs. */}
+                          {carrierDocs.find(d => d.status === "UPLOAD_FAILED" && d.notes) && (
+                            <p className="text-[11px] font-mono text-[#9B2C2C] mt-2 bg-[#9B2C2C]/10 rounded px-2 py-1.5">
+                              {carrierDocs.find(d => d.status === "UPLOAD_FAILED" && d.notes)?.notes}
+                            </p>
+                          )}
                         </div>
                       )}
 

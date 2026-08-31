@@ -15508,7 +15508,19 @@
 //
 // The production documents table has been empty since inception and nobody could
 // say why. This is the reason nobody could.
-export const SRL_VERSION = "3.8.avs";
+// v3.8.avt — the failed-upload rows now say WHY, not just that they failed.
+//
+// avl made the loss visible: four UPLOAD_FAILED rows and a banner naming the
+// files, instead of a clean zero that read as "they sent nothing". But it
+// recorded only THAT storage refused, so an AE still had to open Render logs to
+// learn whether it was a permission, a wrong bucket name, or a lapsed account —
+// three completely different fixes.
+//
+// The AWS error name is now captured at the point of failure and written into
+// the document note (AccessDenied, NoSuchBucket, InvalidAccessKeyId,
+// ExpiredToken) and rendered under the banner. Safe to show: it names the
+// misconfiguration without disclosing bucket, key or credential.
+export const SRL_VERSION = "3.8.avt";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

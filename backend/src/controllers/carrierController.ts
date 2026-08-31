@@ -485,8 +485,17 @@ export async function registerCarrier(req: Request, res: Response) {
           }
         } catch (err) {
           failures.push(`${u.docType}:${u.file.originalname}`);
+          // v3.8.avt — capture WHY, not just THAT. The AWS SDK carries a `name`
+          // (AccessDenied, NoSuchBucket, InvalidAccessKeyId, ExpiredToken) and an
+          // HTTP status; both name the misconfiguration without disclosing the
+          // bucket, key or credential. Without this the AE sees four failed rows
+          // and has to go read Render logs to learn whether it is a permission,
+          // a bucket name, or a lapsed account.
+          const se = err as { name?: string; $metadata?: { httpStatusCode?: number } };
+          const storageCode = se?.name || "UnknownStorageError";
+          const storageHttp = se?.$metadata?.httpStatusCode;
           log.error(
-            { err, profileId, docType: u.docType, fileName: u.file.originalname },
+            { err, profileId, docType: u.docType, fileName: u.file.originalname, storageCode, storageHttp },
             "[Registration Files] PERSIST FAILED — recording an UPLOAD_FAILED row so the AE never sees a clean zero",
           );
           // The honest artifact: the document WAS submitted and we did not keep
@@ -506,7 +515,10 @@ export async function registerCarrier(req: Request, res: Response) {
                 status: "UPLOAD_FAILED",
                 uploadSource: "CARRIER_PORTAL",
                 userId: user.id,
-                notes: "Storage refused or failed at registration. The carrier submitted this file; it was not retained. Ask them to re-upload once storage is confirmed.",
+                notes:
+                  `Storage refused this file at registration (${storageCode}` +
+                  `${storageHttp ? ` / HTTP ${storageHttp}` : ""}). The carrier submitted it; it was not retained. ` +
+                  `Fix object storage, then ask them to re-upload.`,
               },
             })
             .catch((e2) => log.error({ err: e2, profileId }, "[Registration Files] could not even record the failure"));
