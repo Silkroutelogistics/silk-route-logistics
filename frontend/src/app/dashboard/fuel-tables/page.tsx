@@ -522,7 +522,7 @@ export default function FuelTablesPage() {
         open={drawerOpen && drawerMode === "create"}
         onClose={closeDrawer}
         title="New Fuel Surcharge Table"
-        width="max-w-xl"
+        width="max-w-[var(--drawer-lg)]"
       >
         <div className="space-y-5">
           {/* Name */}
@@ -676,7 +676,7 @@ export default function FuelTablesPage() {
         open={drawerOpen && drawerMode === "csv"}
         onClose={closeDrawer}
         title="Import CSV Tiers"
-        width="max-w-lg"
+        width="max-w-[var(--drawer-md)]"
       >
         <div className="space-y-5">
           <div className="rounded-lg bg-blue-50 border border-blue-100 p-4">

@@ -154,7 +154,7 @@ export default function TrainingCoursesPage() {
       )}
 
       {/* New course drawer */}
-      <SlideDrawer open={showNew} onClose={() => setShowNew(false)} title="New course" width="max-w-md">
+      <SlideDrawer open={showNew} onClose={() => setShowNew(false)} title="New course" width="max-w-[var(--drawer-sm)]">
         <div className="space-y-4">
           {newErr && <div className="px-3 py-2 bg-[#F6E3E3] border-l-4 border-[#9B2C2C] text-[#9B2C2C] text-sm rounded">{newErr}</div>}
           <div>

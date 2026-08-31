@@ -255,7 +255,7 @@ export default function ClaimsPage() {
       )}
 
       {/* New Claim Drawer */}
-      <SlideDrawer open={showNewModal} onClose={() => setShowNewModal(false)} title="File New Claim" width="max-w-md">
+      <SlideDrawer open={showNewModal} onClose={() => setShowNewModal(false)} title="File New Claim" width="max-w-[var(--drawer-sm)]">
             <div className="space-y-4">
             <input placeholder="Load ID" value={newForm.loadId} onChange={e => setNewForm(p => ({ ...p, loadId: e.target.value }))}
               className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm text-slate-700" />
@@ -278,7 +278,7 @@ export default function ClaimsPage() {
       </SlideDrawer>
 
       {/* Resolve Claim Drawer */}
-      <SlideDrawer open={!!resolveTarget} onClose={() => setResolveTarget(null)} title="Resolve Claim" width="max-w-md">
+      <SlideDrawer open={!!resolveTarget} onClose={() => setResolveTarget(null)} title="Resolve Claim" width="max-w-[var(--drawer-sm)]">
             <div className="space-y-4">
             {resolveTarget && (
               <>

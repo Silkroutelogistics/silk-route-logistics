@@ -15585,7 +15585,24 @@
 // this whole arc was spent on. The bytes come through the API instead and render
 // from a blob: URL: one CSP entry, no storage hostname in it, and the presigned
 // URL never reaches the browser to be forwarded out of the console.
-export const SRL_VERSION = "3.8.avy";
+// v3.8.avz — A1 of the drawer arc: one width token, five widths retired.
+//
+// 720px was the Owlery reference's 60%, measured once on a 1440px laptop and
+// frozen. Rendered, it was 59% of the content area at 1440, 42.4% at 1920 and
+// 30.8% at 2560 — a ratio turned into a constant, correct at one screen.
+//
+// --drawer-detail: clamp(640px, 60vw, 1100px). Measured after: 70.8 / 64.7 / 47.
+//
+// NOTE the spec'd 60vw is measured against the VIEWPORT while the audit's 60%
+// was against the CONTENT area (viewport minus the 220px sidebar), so the two
+// do not coincide — it overshoots the reference by ~11pp at 1440 and undershoots
+// by 13pp at 2560. Shipped as specified because it is an improvement at every
+// width; the sidebar-aware alternative is one line and is in the audit doc.
+//
+// The load board's stacked offset is now MEASURED from the secondary panel
+// (gap 0px at 1440 and 1920, verified) instead of two literals kept in sync by
+// a comment — which is what produced the 224px gap it warned about.
+export const SRL_VERSION = "3.8.avz";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

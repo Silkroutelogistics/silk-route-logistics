@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { useAuthStore } from "@/hooks/useAuthStore";
@@ -175,6 +175,34 @@ export default function LoadsPage() {
 
   /* ---- DAT state ---- */
   const [showDatAdvanced, setShowDatAdvanced] = useState(false);
+
+  // v3.8.avz — how far the primary drawer slides left when a secondary opens
+  // over it. Measured from the secondary's rendered width, never restated.
+  //
+  // Two reasons it cannot be a literal any more. The secondaries are different
+  // sizes (Tender is --drawer-sm, Advanced DAT takes the default), which is what
+  // produced the 224px gap when one number stood for both. And --drawer-detail
+  // is a clamp(), so its pixel value depends on the viewport — there is no
+  // constant to write down.
+  //
+  // The ResizeObserver matters for exactly that reason: dragging the window
+  // across a clamp boundary changes the secondary's width, and an offset
+  // measured once at open would then be wrong for the rest of the session.
+  const [secondaryWidth, setSecondaryWidth] = useState(0);
+  useEffect(() => {
+    if (!showTender && !showDatAdvanced) { setSecondaryWidth(0); return; }
+    let ro: ResizeObserver | null = null;
+    // The panel mounts on the same tick the flag flips, so measure after paint.
+    const raf = requestAnimationFrame(() => {
+      const panel = document.querySelector<HTMLElement>("[data-drawer-panel]");
+      if (!panel) return;
+      const apply = () => setSecondaryWidth(Math.round(panel.getBoundingClientRect().width));
+      apply();
+      ro = new ResizeObserver(apply);
+      ro.observe(panel);
+    });
+    return () => { cancelAnimationFrame(raf); ro?.disconnect(); };
+  }, [showTender, showDatAdvanced]);
   const [datAdvForm, setDatAdvForm] = useState({
     originCity: "", originState: "", destCity: "", destState: "",
     equipmentType: "", weight: "", rate: "", pickupDate: "",
@@ -600,7 +628,15 @@ export default function LoadsPage() {
       {/* ---- Main: Load list + Detail Panel ---- */}
       <div className="flex gap-0">
         {/* Load list */}
-        <div className={`space-y-3 transition-all duration-300 ${selectedLoadId ? "w-full lg:w-[45%] lg:shrink-0" : "w-full"}`}>
+        {/* v3.8.avz — the list narrows so its cards stay inside the strip left of
+            the open drawer. That is deliberate and is kept: the drawer is
+            `fixed inset-0`, out of flow, so nothing reflows around it, and a
+            full-width list would simply be clipped mid-card by the overlay.
+            What was wrong is the number. 45% was the Owlery split-pane's ratio,
+            and against a 720px drawer it overshot the visible strip by 49px at
+            1440 and wasted 215px at 1920. Deriving it from the same token makes
+            the list exactly the strip the drawer leaves, at every width. */}
+        <div className={`space-y-3 transition-all duration-300 ${selectedLoadId ? "w-full lg:w-[calc(100%-var(--drawer-detail))] lg:shrink-0" : "w-full"}`}>
           {filteredLoads.map((ld) => (
             <button
               key={ld.id}
@@ -703,18 +739,19 @@ export default function LoadsPage() {
                 new drawer covers the load context the AE is tendering FROM.
                 v3.8.ard — the shift must equal the OPEN drawer's ACTUAL width or
                 a gap opens between them. The two secondaries are not the same
-                size: Tender is width="max-w-md" (448px) and Advanced DAT takes
+                size: Tender is width="max-w-[var(--drawer-sm)]" (448px) and Advanced DAT takes
                 SlideDrawer's default max-w-2xl (672px). A single 672px shift
-                overshot Tender by 224px — exactly the gap Wasi flagged. Keep
-                these values in sync with the SlideDrawer width props below. */}
+                overshot Tender by 224px — exactly the gap Wasi flagged.
+
+                v3.8.avz — the offset is now MEASURED from the secondary panel
+                rather than restated here, so the two can no longer disagree.
+                The instruction to "keep these values in sync" was the defect: a
+                width written in two files stays correct only until someone
+                changes one of them, and --drawer-detail is a clamp() whose px
+                value depends on the viewport, so there is no literal to write. */}
             <div
-              className={`absolute top-0 bottom-0 right-0 w-full max-w-[720px] bg-[#161921] border-l border-gray-200 shadow-2xl flex flex-col overflow-hidden animate-slide-in-right transition-transform duration-300 ease-out ${
-                showTender
-                  ? "-translate-x-[448px]"
-                  : showDatAdvanced
-                    ? "-translate-x-[672px]"
-                    : "translate-x-0"
-              }`}
+              className="absolute top-0 bottom-0 right-0 w-full max-w-[var(--drawer-detail)] bg-[#161921] border-l border-gray-200 shadow-2xl flex flex-col overflow-hidden animate-slide-in-right transition-transform duration-300 ease-out"
+              style={{ transform: `translateX(-${secondaryWidth}px)` }}
             >
             {/* Mobile close bar */}
             <button onClick={() => setSelectedLoadId(null)} className="lg:hidden flex items-center gap-2 px-4 py-2 border-b border-gray-200 text-slate-400 hover:text-white shrink-0">
@@ -916,7 +953,7 @@ export default function LoadsPage() {
             open={showTender}
             onClose={() => { setShowTender(false); setComplianceResult(null); }}
             title="Tender Load to Carrier"
-            width="max-w-md"
+            width="max-w-[var(--drawer-sm)]"
           >
             <TenderForm
               load={load}

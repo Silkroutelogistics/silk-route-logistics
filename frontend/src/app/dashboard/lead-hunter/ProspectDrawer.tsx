@@ -66,7 +66,7 @@ export function ProspectDrawer({ prospect, onClose }: Props) {
         role="dialog"
         aria-modal="true"
         aria-labelledby="prospect-drawer-title"
-        className="absolute top-0 bottom-0 right-0 w-full max-w-[720px] bg-white shadow-2xl flex animate-slide-in-right"
+        className="absolute top-0 bottom-0 right-0 w-full max-w-[var(--drawer-detail)] bg-white shadow-2xl flex animate-slide-in-right"
       >
         <IconTabs tabs={TABS} active={tab} onChange={setTab} />
 

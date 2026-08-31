@@ -821,7 +821,7 @@ export default function DockSchedulingPage() {
             ? `${selected.facilityName} - ${selected.dockNumber}`
             : "Appointment Details"
         }
-        width="max-w-lg"
+        width="max-w-[var(--drawer-md)]"
       >
         {selected && (
           <DetailPanel
@@ -839,7 +839,7 @@ export default function DockSchedulingPage() {
         open={showCreate}
         onClose={() => setShowCreate(false)}
         title="New Dock Appointment"
-        width="max-w-lg"
+        width="max-w-[var(--drawer-md)]"
       >
         <CreateForm
           form={form}

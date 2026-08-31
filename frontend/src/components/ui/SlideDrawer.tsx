@@ -8,7 +8,7 @@ interface SlideDrawerProps {
   onClose: () => void;
   title: string;
   children: React.ReactNode;
-  /** Width class — default "max-w-2xl" */
+  /** Width class — defaults to the shared --drawer-detail token. */
   width?: string;
   /** Show from right (default) or left */
   side?: "right" | "left";
@@ -22,7 +22,7 @@ interface SlideDrawerProps {
  * - Smooth slide animation
  * - Scroll lock on body when open
  */
-export function SlideDrawer({ open, onClose, title, children, width = "max-w-2xl", side = "right" }: SlideDrawerProps) {
+export function SlideDrawer({ open, onClose, title, children, width = "max-w-[var(--drawer-detail)]", side = "right" }: SlideDrawerProps) {
   const drawerRef = useRef<HTMLDivElement>(null);
   const wasOpenRef = useRef(false);
 
@@ -74,6 +74,11 @@ export function SlideDrawer({ open, onClose, title, children, width = "max-w-2xl
         role="dialog"
         aria-modal="true"
         aria-labelledby="drawer-title"
+        // v3.8.avz — lets a page that stacks a secondary drawer over a primary
+        // MEASURE the secondary instead of hardcoding its width. Only SlideDrawer
+        // panels carry it, so the query is unambiguous even when the primary is
+        // itself a dialog. See the load board's stacked-offset effect.
+        data-drawer-panel
         className={`absolute top-0 bottom-0 ${slideClass} w-full ${width} bg-white shadow-2xl flex flex-col overflow-hidden`}
       >
         {/* Header */}

@@ -483,7 +483,7 @@ export function CarrierEngagementDrawer(props: CarrierEngagementDrawerProps) {
         role="dialog"
         aria-modal="true"
         aria-labelledby="carrier-drawer-title"
-        className="absolute top-0 bottom-0 right-0 w-full max-w-[720px] bg-white shadow-2xl flex flex-col animate-slide-in-right"
+        className="absolute top-0 bottom-0 right-0 w-full max-w-[var(--drawer-detail)] bg-white shadow-2xl flex flex-col animate-slide-in-right"
       >
         {/* Sprint 63 (v3.8.afi) — IconTabs dropped. 3-section drawer scrolls
             vertically; tabs canonical (§13.3 Item 63) was for ≥5 sections.

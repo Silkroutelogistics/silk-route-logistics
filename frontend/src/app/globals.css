@@ -8,6 +8,28 @@
    ═══════════════════════════════════════════════════ */
 
 /* LIGHT MODE (Default) */
+/* ── Drawer widths ─────────────────────────────────────────────────────────
+ * v3.8.avz — one place, because there were five.
+ *
+ * The AE portal ran 448/512/576/672/720px, none from a token, each picked at
+ * its call site. 720px was the Owlery reference's 60% measured once on a 1440px
+ * laptop and hardcoded: correct at exactly that width, and 42% of the content
+ * area at 1920, 31% at 2560 (measured, docs/audits/drawer-conformance-audit.md).
+ *
+ * clamp() restores the ratio the reference actually had. The floor keeps the
+ * drawer usable on a 1366px laptop; the ceiling stops line length running away
+ * on an ultrawide, where 60% would be 1400px+ of prose.
+ *
+ * These are deliberately OUTSIDE the [data-mode] theme blocks — a drawer is the
+ * same size in dark mode. Theme tokens live below; layout tokens live here.
+ */
+:root {
+  --drawer-detail: clamp(640px, 60vw, 1100px);
+  --drawer-sm: 448px;   /* single-field forms — Tender, File Claim, New Course */
+  --drawer-md: 512px;   /* short forms — dock appointment, fuel table row      */
+  --drawer-lg: 576px;   /* wider forms — fuel index editor                     */
+}
+
 :root, [data-mode="light"] {
   --srl-bg-deepest:    #EBE8E2;
   --srl-bg-base:       #F5F3EF;

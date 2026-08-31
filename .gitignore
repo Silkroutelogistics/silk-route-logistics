@@ -58,3 +58,9 @@ my-knowledge-base/raw/assets/*.zip
 docs/audit-reports/audit-*.md
 docs/audit-reports/brand-conformance-*.md
 .rehearsal-arc14/
+
+# Drawer render-proof output — screenshots + measurements from e2e/render-proof.mjs.
+# Kept local: the PNGs are for human eyes at review time and would be permanent
+# binary churn in git. The measured geometry that constitutes the proof is
+# transcribed into docs/audits/drawer-conformance-audit.md, where it is diffable.
+e2e/render-proof-out/
