@@ -2,35 +2,63 @@
 
 **Supersedes `go-live-readiness.md`** (Arc 14, 2026-08-21), which was scoped to the
 document chain alone and contained one claim later proved false. This is the single
-source. Dated **2026-08-28**, against `main` at the SHA recorded in §2.
+source. Dated **2026-08-31**, against `main` at the SHA recorded in §2.
 
 ---
 
 ## 1. The verdict
 
-> **SRL can run its first real load today. A carrier can get through the door.
-> The paperwork they send now arrives — object storage is configured, verified
-> on the artifact rather than inferred. What the platform still does not do is
-> READ it: the COI reader is keyed and has never once been triggered.**
+> **SRL can run its first real load today. A carrier can get through the door,
+> the paperwork they send arrives, and the platform reads it — each of the three
+> proved on production against real object storage and a live model, not
+> inferred from configuration. What remains is not engineering.**
 
-Three clauses, and the third is the one still open.
+Three clauses, and as of **2026-08-31** none of them is open.
 
 | Clause | State |
 |---|---|
 | A carrier can get through the door | **done** — the acquisition funnel's known defects are closed |
-| The paperwork they sent arrives | **configured, unproven** — `storage.configured: true, provider: s3` on `/api/health`; no registration has occurred since it was set, so the working path has never been exercised |
-| The platform reads it | **NOT DONE** — `parser.configured: true`, and nothing calls the reader. One entry point, zero frontend callers, no cron |
+| The paperwork they sent arrives | **PROVEN** — `storage/selftest` on production wrote, read back and deleted a real object |
+| The platform reads it | **PROVEN** — `document-chain/selftest` on production ran all seven links, 7/7 |
 
-**Clause two is pending a proof, not a change.** A single test-flagged
-registration with a real document, confirming both a `Document` row and the
-object itself, then deleting the artifacts. Configured is not working: a wrong
-bucket name or a key without `PutObject` reports `configured: true` and fails
-on the first real upload.
+### The evidence that closed clauses two and three
 
-**Clause three is pending a build.** The trigger is missing — see the chain
-verdict at §13.3 Item 249 — and the ratified parser-safety rules must land with
-it, because the one path that does exist (`?apply=true`) writes extracted values
-straight onto the carrier record with no review and no discrepancy flag.
+Both selftests were run by the founder from an admin session against production
+on **2026-08-31**, and both self-clean:
+
+```
+GET https://api.silkroutelogistics.ai/api/admin/storage/selftest
+GET https://api.silkroutelogistics.ai/api/admin/document-chain/selftest
+
+  ranAt    2026-08-31T12:48:10Z
+  result   7/7 links ok
+  elapsed  16.3s
+  cleanup  verified — documents 0 · extractions 0 · carrier rows 0 · objects readable 0
+```
+
+**These URLs are the resolved ones, and a guard pins them.** The monitoring
+router's sole mount is `/admin` (`routes/index.ts`), so anything published as
+`/api/` + `monitoring/...` is wrong — that exact error shipped in a commit
+message and a close-out summary before it was caught.
+`__tests__/unit/routes/selftestRouteUrls.test.ts` composes these URLs from the
+real mount and the real route definitions, and fails if this document names a
+path that would not resolve.
+
+**Why a monitor probe does not cover this.** A tokenless request cannot tell an
+existing route from a missing one on this API. Measured on production:
+`/api/admin/document-chain/selftest`, `/api/admin/no-such-route-xyz` and
+`/api/totally-made-up-namespace/x` all return a byte-identical
+`401 {"error":"No token provided"}`, sharing one etag. The cause is a catch-all —
+`router.use("/", tenderRoutes)` at `index.ts:315` authenticates internally, and
+`/admin` is mounted at `:349`, so an unmatched path is refused before routing
+ever reaches the admin router. **A 401 there proves middleware ran, not that the
+route exists** — so the check lives in CI, where it can discriminate, rather than
+in the monitor, where it could only ever be green.
+
+**What the proof does NOT cover.** The selftest exercises the chain with its own
+fixtures. It does not prove that a real carrier's scanned COI parses well, and it
+cannot: that is a judgment about document quality, which is exactly why the
+discrepancy flag and the human-review state exist.
 
 **A correction that belongs in the verdict.** An earlier revision said storage
 was unset in production. It is not, and was not: that was inferred from a local
@@ -38,23 +66,29 @@ was unset in production. It is not, and was not: that was inferred from a local
 which is the durable fix for the class of error that produced the wrong
 sentence.
 
-**One of those five inputs is now load-bearing in a way it was not before.**
-`S3_BUCKET_NAME` and `AWS_ACCESS_KEY_ID` are unset, and until 2026-08-30 that
-meant every document a carrier uploaded was silently destroyed: the production
-`documents` table held **zero rows**, across every carrier that had ever applied,
-while the AE drawer showed a clean `DOCUMENTS (0)` that read as "they sent
-nothing". Storage had already been hardened to refuse loudly; the caller caught
-the refusal and carried on.
+**That input is now set, and the whole chain behind it is proven.** For a period
+ending 2026-08-30, `S3_BUCKET_NAME` and `AWS_ACCESS_KEY_ID` were unset, and every
+document a carrier uploaded was silently destroyed: the production `documents`
+table held **zero rows**, across every carrier who had ever applied, while the AE
+drawer showed a clean `DOCUMENTS (0)` that read as "they sent nothing". Storage
+had already been hardened to refuse loudly; the caller caught the refusal and
+carried on.
 
-That is fixed in the sense that matters most — **the loss is no longer silent**.
-A failed upload now writes an `UPLOAD_FAILED` row, notifies admins, and shows the
-AE a banner naming the files and stating that the carrier did nothing wrong. But
-**uploads will keep failing until object storage is configured.** This is the one
-launch input where the absence does not merely block a feature; it destroys
+Two things changed. **The loss is no longer silent** — a failed upload writes an
+`UPLOAD_FAILED` row, notifies admins, and shows the AE a banner naming the files
+and stating that the carrier did nothing wrong. And **the credentials are now
+set and exercised**: `/api/health` reports `storage.functional: true` from a real
+put/read/delete round trip rather than from reading an env var, and the
+production `storage/selftest` confirmed the same on demand.
+
+The earlier sentence "uploads will keep failing until object storage is
+configured" is retired as of 2026-08-31. It was true when written and is not
+true now, and leaving it standing beside the correction above would have left
+this document contradicting itself on the one input where the absence destroys
 something a carrier hands you and cannot get back.
 
-The second clause is new as of **2026-08-30** and is the only change to this
-verdict since it was written. The acquisition funnel carried two defects when
+The second clause was added on **2026-08-30**; both it and the third closed on
+**2026-08-31**. The acquisition funnel carried two defects when
 this report was first published, both found by a real person attempting a real
 onboarding rather than by any gate: a rejection that named no field, and a
 mailbox proved twice where the second proof was the one Compass auto-approve
@@ -230,15 +264,26 @@ generator works and the AE can produce it; a driver cannot fetch it themselves.
 
 ---
 
-## 6. What would change this verdict
+## 6. What is left, and what would change this verdict
 
-State it plainly so the verdict cannot quietly rot:
+**Every remaining carve-out is human.** No engineering work is holding the
+first load:
+
+| Carve-out | Who | Why a machine cannot close it |
+|---|---|---|
+| **PDF eye-pass** | Wasi | Text extraction proves wording, citations and numbers; it cannot see colour, overprint, or a rule in the wrong hue on a document a carrier signs |
+| **Carrier-portal TOTP wall, walked with a real phone** | Wasi | The wall is unit-proven and was once mounted on six routers while gating one. An authenticator app on a real handset is the only proof that the enrolment, the challenge and the recovery path work as a sequence |
+| **QP agreement signature screen** | Wasi | The signature is the legally operative act; nobody has watched it happen on the screen a carrier will use |
+
+State it plainly so the verdict cannot quietly rot. It is falsified by:
 
 - A **failed human PDF pass** — a mis-rendered legal document is a launch blocker.
 - A **failed production carrier walk** — the one path never driven by a person.
 - **Counsel returning material changes** to either agreement.
 - Any **non-training write** landing on the driver surface without re-ratifying the
   session exception.
+- A **red `selftestRouteUrls` guard** — it means this document is naming a URL that
+  would not resolve, which is how the wrong path was published in the first place.
 
 Absent those, the engineering foundation is launch-ready and the remaining work is
-procurement, legal, and two afternoons of human verification.
+procurement, legal, and an afternoon of human verification.

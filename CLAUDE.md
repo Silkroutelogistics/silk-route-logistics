@@ -3247,6 +3247,64 @@ Proven by pinning the retired model and reading the endpoint: `configured: true`
 (where the old field stopped and declared health) alongside `functional: false`
 and the 404 naming its own successor.
 
+
+**ELEVENTH FIRE — a signal that reads the same whether the thing exists or not (2026-08-31, docs-only close-out).**
+
+Arc PARSER's close-out told the founder to open
+`/api/monitoring/document-chain/selftest`. **That path does not exist.** The
+monitoring router's sole mount is `/admin`, so the real URL is
+`/api/admin/document-chain/selftest` — and the wrong one went out in a commit
+message and a close-out summary.
+
+**What makes it a Sub-pattern 16 fire is not the typo. It is that I verified
+it.** I curled the wrong path, got `401 {"error":"No token provided"}`, and
+wrote down "the route exists and is admin-gated". The 401 was real. It came
+from somewhere else entirely.
+
+Measured on production when the doubt was finally raised:
+
+```
+GET /api/admin/document-chain/selftest  → 401 {"error":"No token provided"}
+GET /api/admin/no-such-route-xyz        → 401 {"error":"No token provided"}
+GET /api/totally-made-up-namespace/x    → 401 {"error":"No token provided"}
+```
+
+Byte-identical, sharing one `etag`. The cause is a catch-all:
+`router.use("/", tenderRoutes)` sits at `routes/index.ts:315`, `tenders.ts:12`
+is `router.use(authenticate)`, and `/admin` is mounted at `:349`. Any tokenless
+request not matched by an earlier mount falls into the tender router and is
+refused there, **before routing ever reaches the admin router**.
+
+> **A 401 proves that middleware ran. It says nothing about whether the route
+> behind it exists.**
+
+The earlier fires were guards that observed the wrong thing. The sixth measured
+family while weight drifted; the seventh checked that a value was legal rather
+than correct for its element. **This one is worse in a specific way: the signal
+is identical in the healthy and the broken state, so it has zero discriminating
+power.** No amount of reading it more carefully would have helped.
+
+**And the instinctive fix inherits the defect.** A monitor probe that hits the
+URL tokenless and asserts "JSON 401, not a plain-text `Cannot GET`" is the
+obvious way to make a missing admin route an alert. On this API it would be
+green whether or not the route existed — a guard written against Sub-pattern 16
+that is itself a Sub-pattern 16 instance. It was specified, traced, and **not
+shipped** for that reason.
+
+The check that works is a source guard
+([`selftestRouteUrls.test.ts`](backend/__tests__/unit/routes/selftestRouteUrls.test.ts)):
+it reads the real mount and the real route definitions, composes the URLs, and
+fails if the documentation names a path that would not resolve. Injection-verified
+both ways — reintroducing `/api/monitoring/` turns it red, and moving the mount
+turns it red while naming the new correct URL. It runs in CI, which is also
+*earlier* than a monitor could ever be: it fails before the deploy rather than
+after.
+
+**Going-forward rule.** Before trusting a probe as an existence test, ask what
+the negative case actually returns. If the healthy and broken responses are the
+same bytes, the probe is decoration. Establish the discriminating signal first —
+by probing a path you *know* is absent — and only then write the assertion.
+
 **Relationship to Sub-pattern 11 (CI-parity).** Sub-pattern 11 asks whether the local gate matches the CI gate. Sub-pattern 16 asks whether *either* gate observes the claim it makes. Passing 11 and failing 16 is exactly the state all six fires above were in.
 
 ###### Cumulative fire registry extension (post-Sprint-51.f, three new fires)
