@@ -595,19 +595,26 @@ export default function CarrierPoolPage() {
   });
 
   const uploadDocMutation = useMutation({
-    // v3.8.avq — the explicit Content-Type is dropped as tidying, NOT as a fix.
+    // THE EXPLICIT Content-Type IS LOAD-BEARING. DO NOT REMOVE IT.
     //
-    // I first removed it believing it stripped the multipart boundary. That was
-    // wrong and testing it said so: axios 1.14 emits
-    // `multipart/form-data; boundary=axios-1.14.0-boundary-…` whether the header
-    // is set or not, and in the browser it unsets Content-Type for FormData
-    // entirely so XHR supplies it. Harmless either way; axios handles FormData
-    // natively, so passing nothing is simply the idiom.
+    // `api` is created with `headers: { "Content-Type": "application/json" }` as
+    // an INSTANCE DEFAULT (lib/api.ts). Axios normally strips Content-Type for a
+    // FormData body so the browser can add the multipart boundary — but an
+    // instance default survives, so with no per-request override the FormData
+    // ships as application/json, multer parses nothing, req.file is undefined,
+    // and the endpoint answers 400 "No file uploaded".
     //
-    // THE ACTUAL DEFECT is below: no onError. A click that 400s and a click that
-    // does nothing were the same thing on screen.
+    // I removed this in v3.8.avq calling it tidying, and it broke this upload.
+    // The test that convinced me it was safe used a BARE `axios.post`, not this
+    // configured instance — measured against the real instance the two differ:
+    //   default only     -> application/json
+    //   explicit override -> multipart/form-data; boundary=axios-1.14.0-...
+    // Every other upload site in the app sets this header for the same reason.
+    // Restored in v3.8.avr.
     mutationFn: ({ carrierId, formData }: { carrierId: string; formData: FormData }) =>
-      api.post(`/carriers/${carrierId}/documents`, formData),
+      api.post(`/carriers/${carrierId}/documents`, formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      }),
     onSuccess: () => {
       setUploadError(null);
       refetchDocs(); setDocView("list"); setUploadFile(null); setUploadNotes(""); setUploadDocType("OTHER");

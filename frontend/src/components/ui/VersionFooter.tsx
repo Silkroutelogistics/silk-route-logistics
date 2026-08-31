@@ -15478,7 +15478,23 @@
 // browser unsets the header for FormData entirely — so the other eight call
 // sites carrying the same header were left alone rather than swept on a wrong
 // theory. The header is dropped here only as tidying.
-export const SRL_VERSION = "3.8.avq";
+// v3.8.avr — restores the Content-Type header avq removed, and it was my bug.
+//
+// `api` carries `Content-Type: application/json` as an INSTANCE DEFAULT. Axios
+// strips that header for a FormData body so the browser can add the multipart
+// boundary — but an instance default survives, so with no per-request override
+// the upload shipped as JSON, multer parsed nothing, and the endpoint answered
+// 400 "No file uploaded".
+//
+// avq called removing it "tidying" on the strength of a test that used a BARE
+// axios.post rather than this configured instance. Measured against the real
+// instance the two differ outright: application/json vs multipart/form-data with
+// a boundary. Third instrument-reach failure of the day, and the most expensive —
+// I nearly swept the same header out of eight other upload sites, which would
+// have broken POD upload and the carrier's own documents page.
+//
+// The onError avq added is what made this visible at all, and it stays.
+export const SRL_VERSION = "3.8.avr";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
