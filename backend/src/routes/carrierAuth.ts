@@ -1,3 +1,4 @@
+import { queueDocumentIntake } from "../services/documentIntakeService";
 import { Router, Request, Response } from "express";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
@@ -1621,6 +1622,18 @@ router.post(
             userId: req.user!.id,
             infoRequestId: request.id,
           },
+        });
+
+        // v3.8.awh — a carrier answering an info request is the OTHER way a COI
+        // arrives, and it went through a different route, so it needed the same
+        // notification. The service, not this route, decides whether to read it.
+        queueDocumentIntake({
+          documentId: doc.id,
+          docType: doc.docType,
+          entityType: doc.entityType,
+          entityId: doc.entityId,
+          fileUrl: doc.fileUrl,
+          fileType: doc.fileType,
         });
         uploadedDocs.push({ id: doc.id, fileName: doc.fileName, fileUrl: doc.fileUrl });
       }

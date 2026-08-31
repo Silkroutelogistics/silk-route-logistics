@@ -15715,7 +15715,25 @@
 //
 // Proven by pinning the retired model: configured true, functional FALSE, and
 // the 404 naming its own successor.
-export const SRL_VERSION = "3.8.awg";
+// v3.8.awh — the trigger, and the safety surfaces that were ratified with it.
+//
+// The COI reader had ONE entry point, an admin endpoint no UI called, so no
+// uploaded document was ever read. The W-9 reader had no caller at all. And the
+// one path that did exist wrote extracted values straight onto CarrierProfile
+// with no comparison and no confidence gate — a bad read would have silently
+// replaced what a carrier told us with what a model guessed.
+//
+// Now: one seam (documentIntakeService) that registration, the AE console and
+// the carrier portal all notify. Four rules, each pinned by a test that fails
+// when it is removed — a parse failure never fails the upload; extracted never
+// overwrites typed; a failed or low-confidence read is a REVIEW state, never a
+// silent zero and never an auto-pass; a disagreement is a visible flag and a
+// Compass WARNING, never an auto-fail.
+//
+// The failure-path test was WRONG FIRST: it asserted the string record("FAILED")
+// was present, so neutering the call behind if(false) left it green. Rewritten
+// to exercise the function; the same injection now turns it red.
+export const SRL_VERSION = "3.8.awh";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

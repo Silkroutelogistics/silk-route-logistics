@@ -762,8 +762,8 @@ enum PackageType {
 
 model User {
   /// Arc 33 — carrier onboarding invitations this user sent.
-  carrierInvitesSent OnboardingInvite[] @relation("CarrierInvitesSent")
-  id                       String    @id @default(cuid())
+  carrierInvitesSent       OnboardingInvite[] @relation("CarrierInvitesSent")
+  id                       String             @id @default(cuid())
   // v3.8.ale — citext type for native case-insensitive uniqueness. The
   // @unique constraint is the same `users_email_key` B-tree as before;
   // citext shifts the operator class to citext_ops so equality is
@@ -771,15 +771,15 @@ model User {
   // case-insensitively without mode: "insensitive". v3.8.ald callers
   // (findFirst + caseInsensitiveEmailFilter) stay working — mode:
   // insensitive becomes redundant but harmless on citext.
-  email                    String    @unique @db.Citext
+  email                    String             @unique @db.Citext
   passwordHash             String
   firstName                String
   lastName                 String
   company                  String?
   role                     UserRole
   phone                    String?
-  isVerified               Boolean   @default(false)
-  isActive                 Boolean   @default(true)
+  isVerified               Boolean            @default(false)
+  isActive                 Boolean            @default(true)
   lastLogin                DateTime?
   // v3.8.aje — Email verification gate.
   // emailVerifiedAt is the canonical "this carrier proved control of
@@ -806,8 +806,8 @@ model User {
   // password + email but not phone.
   lastLoginIp              String?
   lastLoginCountry         String?
-  createdAt                DateTime  @default(now())
-  updatedAt                DateTime  @updatedAt
+  createdAt                DateTime           @default(now())
+  updatedAt                DateTime           @updatedAt
 
   carrierProfile        CarrierProfile?
   eldDevices            ELDDeviceMapping[]
@@ -2341,13 +2341,14 @@ model Document {
   createdAt    DateTime  @default(now())
 
   userId        String
-  user          User           @relation(fields: [userId], references: [id], onDelete: Restrict)
+  user          User                @relation(fields: [userId], references: [id], onDelete: Restrict)
+  extraction    DocumentExtraction?
   loadId        String?
-  load          Load?          @relation(fields: [loadId], references: [id], onDelete: Cascade)
+  load          Load?               @relation(fields: [loadId], references: [id], onDelete: Cascade)
   invoiceId     String?
-  invoice       Invoice?       @relation(fields: [invoiceId], references: [id])
-  exceptionId   String?        @map("exception_id")
-  exception     LoadException? @relation("ExceptionDocs", fields: [exceptionId], references: [id], onDelete: SetNull)
+  invoice       Invoice?            @relation(fields: [invoiceId], references: [id])
+  exceptionId   String?             @map("exception_id")
+  exception     LoadException?      @relation("ExceptionDocs", fields: [exceptionId], references: [id], onDelete: SetNull)
   // v3.8.aji — Attachment linkage to InfoRequest. When a carrier resolves
   // an info request with file uploads (COI scan, voided check, etc.) each
   // file lands as a Document row with this FK set + docType=
@@ -2355,8 +2356,8 @@ model Document {
   // that deleting an InfoRequest doesn't cascade-delete the doc — the
   // attachment stays in the carrier's document history under the regular
   // documents tab even if the info-request thread is cleaned up.
-  infoRequestId String?        @map("info_request_id")
-  infoRequest   InfoRequest?   @relation(fields: [infoRequestId], references: [id], onDelete: SetNull)
+  infoRequestId String?             @map("info_request_id")
+  infoRequest   InfoRequest?        @relation(fields: [infoRequestId], references: [id], onDelete: SetNull)
 
   @@index([entityType, entityId])
   @@index([loadId, docType])
@@ -5395,13 +5396,13 @@ enum SessionPortal {
 /// better and would hand the concurrent session a conflict across the commits
 /// that reference `staffSession`. The name is the smaller cost.
 model StaffSession {
-  id         String   @id @default(cuid())
+  id         String        @id @default(cuid())
   /// Arc 34 — which front door minted this session. Defaults to AE so the six
   /// rows predating this arc, all SSO staff logins, describe themselves
   /// correctly with no backfill guess.
   portal     SessionPortal @default(AE)
   /// sha256(token) — same hashing as TokenBlacklist, so the two can be joined.
-  tokenHash  String   @unique
+  tokenHash  String        @unique
   /// User.id for AE/CARRIER/SHIPPER; Driver.id when portal is DRIVER. Drivers
   /// are deliberately not Users (§13.3 Item 193 T2) and no FK constrains this.
   userId     String
@@ -5409,13 +5410,13 @@ model StaffSession {
   /// carried as a JWT claim: tryAuthenticateToken rejects any token bearing a
   /// `purpose` claim, and widening the token payload for policy data invites
   /// exactly that class of mistake.
-  rememberMe Boolean  @default(false)
-  issuedAt   DateTime @default(now())
+  rememberMe Boolean       @default(false)
+  issuedAt   DateTime      @default(now())
   /// Touched by AUTHENTICATED, USER-INITIATED requests only. Background polls
   /// are excluded by an explicit marker — a 30-second poll would otherwise keep
   /// an abandoned desk signed in forever, which is the opposite of what an idle
   /// timeout is for.
-  lastSeenAt DateTime @default(now())
+  lastSeenAt DateTime      @default(now())
 
   @@index([userId])
   @@index([lastSeenAt])
@@ -5480,16 +5481,16 @@ model OnboardingDraft {
   ///
   /// Nullable because drafts verified before this shipped have no answer, and
   /// inventing one would be worse than an empty row on the AE panel.
-  verifiedFromIp        String?
-  verifiedFromCountry   String?
-  verifiedUserAgent     String?
+  verifiedFromIp      String?
+  verifiedFromCountry String?
+  verifiedUserAgent   String?
 
   /// Recorded for audit and as an early signal. NOT a second Compass input —
   /// the engine already grades disposable domains via IdentityVerification.
   emailIsDisposable Boolean @default(false)
 
   /// Arc 33 — the funnel state. Explicit, never inferred.
-  status OnboardingDraftStatus @default(STARTED)
+  status      OnboardingDraftStatus @default(STARTED)
   /// Set when an AE issued the invitation this draft came from.
   invitedById String?
   invitedAt   DateTime?
@@ -5563,4 +5564,41 @@ model OnboardingInvite {
   @@index([email])
   @@index([expiresAt])
   @@map("onboarding_invites")
+}
+
+/// v3.8.awh — what a parser read out of a document, kept BESIDE what the carrier
+/// typed and never on top of it.
+///
+/// The parser existed, had no trigger, and its only entry point wrote extracted
+/// values straight onto CarrierProfile with no confidence gate and no comparison
+/// — so a bad read would have silently replaced what the carrier told us with
+/// what a model guessed. Typed values are what the carrier attested to and are
+/// evidence; extracted values are a second reading of the same document. They
+/// belong side by side, with the disagreement visible, and a human deciding.
+model DocumentExtraction {
+  id         String   @id @default(cuid())
+  documentId String   @unique
+  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  /// Denormalised so the AE tab can load a carrier's extractions in one query.
+  carrierProfileId String?
+  docType          String
+
+  /// OK | LOW_CONFIDENCE | FAILED — FAILED and LOW_CONFIDENCE both mean a human
+  /// looks. Never a silent zero, never an auto-pass.
+  status        String
+  /// HIGH | MEDIUM | LOW, as the reader reported it.
+  confidence    String?
+  /// The reader's structured output, verbatim.
+  extracted     Json?
+  /// [{ field, typed, extracted }] — populated only where they disagree.
+  discrepancies Json?
+  /// Why a parse failed, for the AE reading the review state.
+  error         String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([carrierProfileId])
+  @@index([status])
 }

@@ -954,6 +954,61 @@ export async function vetCarrier(
     }
   }
 
+  // ── 33. COI Document Agreement (v3.8.awh) ──
+  //
+  // LAST deliberately. The PDF category map indexes checks by POSITION, so a
+  // check inserted mid-list re-points every heading after it — the map's own
+  // header records that happening. Appended, indices 1-32 stay put.
+  //
+  // Compares what a parser read out of the uploaded COI against what the carrier
+  // typed. This is EVIDENCE, never a verdict:
+  //
+  //   · a disagreement is a WARNING with a small deduction, never a FAIL. A
+  //     parser misreading a scanned fax must not be able to reject a carrier
+  //     whose paperwork is fine, and a broker who auto-rejects on an OCR result
+  //     will lose good capacity to a bad model.
+  //   · a failed or low-confidence read is a WARNING too, and explicitly NOT a
+  //     pass. Silence here would let a carrier through on a document nobody
+  //     read, which is worse than either other outcome.
+  //   · no extraction at all is NOT scored. Most carriers predate the trigger,
+  //     and penalising them for our own missing feature would be nonsense.
+  if (existingCarrier) {
+    const extraction = await prisma.documentExtraction.findFirst({
+      where: { carrierProfileId: existingCarrier.id, docType: "COI" },
+      orderBy: { createdAt: "desc" },
+    });
+    if (extraction) {
+      const disc = Array.isArray(extraction.discrepancies) ? extraction.discrepancies : [];
+      if (extraction.status === "FAILED" || extraction.status === "LOW_CONFIDENCE") {
+        checks.push({
+          name: "COI Document Agreement",
+          result: "WARNING",
+          detail: `COI could not be read with confidence — needs human review. ${extraction.error || ""}`.trim(),
+          deduction: 5,
+        });
+        score -= 5;
+      } else if (disc.length > 0) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const named = (disc as any[]).map((d) => d.field).join(", ");
+        const deduction = Math.min(15, 5 * disc.length);
+        checks.push({
+          name: "COI Document Agreement",
+          result: "WARNING",
+          detail: `COI disagrees with the typed values on: ${named}. Review before approving.`,
+          deduction,
+        });
+        score -= deduction;
+      } else {
+        checks.push({
+          name: "COI Document Agreement",
+          result: "PASS",
+          detail: "COI matches the typed insurance values",
+          deduction: 0,
+        });
+      }
+    }
+  }
+
   // ── Clamp Score & Calculate Results ──
   score = Math.max(0, Math.min(100, score));
   const riskLevel = getRiskLevel(score);

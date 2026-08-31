@@ -2733,7 +2733,7 @@ Cold-outreach copy MUST follow voice.md + §4 + §5:
 - No marketing softeners ("I'd love the opportunity", "see if we can add value", "would you be open to a brief call", "I'd be happy to").
 - No em-dashes in body copy (commas, colons, sentence breaks instead). Em-dashes acceptable only in list-separator context.
 - No "we track" / "we serve" / "we deliver to X retailers" implied-portfolio language unless the portfolio actually exists. Use industry-knowledge framing: "In refrigerated CPG, the operational signal that matters is..."
-- Compass Engine is a **34-point carrier vetting system** (re-derive this number before quoting it — `backend/__tests__/unit/services/compassCheckCount.test.ts` holds every surface to the code). Never describe as "AI-powered market intelligence" (per voice.md line 25 prohibition).
+- Compass Engine is a **33-point carrier vetting system** (re-derive this number before quoting it — `backend/__tests__/unit/services/compassCheckCount.test.ts` holds every surface to the code). Never describe as "AI-powered market intelligence" (per voice.md line 25 prohibition).
 - Authority line on every cold-outreach intro: `Michigan-licensed property broker (MC# 1794414, DOT# 4526880, BMC-84 bonded $75K, $100K contingent cargo through Hancock & Associates)`.
 - Sender identity: `Wasi Haider` / `whaider@silkroutelogistics.ai` (never `Wasih`). Single source of truth: `CEO_NAME` + `CEO_EMAIL` exports in [`backend/src/email/builder.ts`](backend/src/email/builder.ts) — startup log line surfaces a regression in production logs immediately.
 - Specific operational ask at close: "send a recent BOL on a tricky lane and I'll come back with a quote and the carrier's full Compass profile" — never "would you be open to a brief call this week?"
@@ -2756,7 +2756,7 @@ Hook structure rule (per voice.md, restated here for outreach scope):
   - Opening sentence: a company-specific operational signal that proves recipient research. Not credentials.
   - Authority line (MC#, BMC-84, contingent cargo): one line above signature. Not paragraph one.
   - Length: 4-5 short paragraphs. Tight beats long.
-  - Compass Engine described correctly (34-point carrier vetting — see §18.8 on re-deriving the count), never "AI-powered market intelligence".
+  - Compass Engine described correctly (33-point carrier vetting — see §18.8 on re-deriving the count), never "AI-powered market intelligence".
 
 Implementation guidance for Lead Hunter system prompts (touch1ColdChainTemplate, touch1WellnessTemplate, fallback): the system prompt must explicitly enumerate the banned constructions in §18.9 above and instruct the model to self-check before output. The audit is also applied at the test/preview stage — Little Spoon and MERIT preview render must pass §18.9 audit, not just §18.8 honest-framing.
 

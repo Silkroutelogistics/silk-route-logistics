@@ -96,7 +96,7 @@ interface CheckCategory {
 
 const CATEGORIES: CheckCategory[] = [
   { name: "FMCSA Authority & Safety", indices: [1, 2, 3, 4, 5, 6, 7] },
-  { name: "Insurance & Financial", indices: [8, 17, 21] },
+  { name: "Insurance & Financial", indices: [8, 17, 21, 33] },
   { name: "Identity & Fraud", indices: [11, 12, 13, 14, 15, 19, 22, 23, 29, 30] },
   { name: "Compliance & Documentation", indices: [16, 20, 24, 26, 28, 31, 32] },
   { name: "Performance & Operations", indices: [9, 10, 18, 25, 27] },

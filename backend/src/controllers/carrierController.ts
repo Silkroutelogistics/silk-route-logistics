@@ -1,3 +1,4 @@
+import { queueDocumentIntake } from "../services/documentIntakeService";
 import { Request, Response } from "express";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
@@ -461,7 +462,7 @@ export async function registerCarrier(req: Request, res: Response) {
       for (const u of pending) {
         try {
           const url = await uploadFile(u.file.buffer, u.storagePath, u.file.mimetype);
-          await prisma.document.create({
+          const createdDoc = await prisma.document.create({
             data: {
               fileName: u.file.originalname,
               fileUrl: url,
@@ -476,6 +477,17 @@ export async function registerCarrier(req: Request, res: Response) {
               uploadSource: "CARRIER_PORTAL",
               userId: user.id,
             },
+          });
+
+          // v3.8.awh — the trigger that was ratified and never built. Registration
+          // is where a COI first arrives, and until now nothing read it.
+          queueDocumentIntake({
+            documentId: createdDoc.id,
+            docType: createdDoc.docType,
+            entityType: createdDoc.entityType,
+            entityId: createdDoc.entityId,
+            fileUrl: createdDoc.fileUrl,
+            fileType: createdDoc.fileType,
           });
           if (u.flagField) {
             await prisma.carrierProfile.update({

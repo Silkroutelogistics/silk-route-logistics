@@ -1,5 +1,6 @@
 "use client";
 
+import { CoiReadingPanel } from "@/components/carriers/CoiReadingPanel";
 import { useDrawerBehavior } from "@/hooks/useDrawerBehavior";
 import { IconTabs, type IconTabDef } from "@/components/ui/IconTabs";
 import { useState, useEffect, useCallback } from "react";
@@ -1412,6 +1413,25 @@ export default function CarrierPoolPage() {
                     <InsuranceBlock title="CARGO INSURANCE" provider={selectedCarrier.cargoInsuranceProvider} policy={selectedCarrier.cargoInsurancePolicy} amount={selectedCarrier.cargoInsuranceAmount} expiry={selectedCarrier.cargoInsuranceExpiry} />
                     <InsuranceBlock title="GENERAL LIABILITY" provider={selectedCarrier.generalLiabilityProvider} policy={selectedCarrier.generalLiabilityPolicy} amount={selectedCarrier.generalLiabilityAmount} expiry={selectedCarrier.generalLiabilityExpiry} />
                     <InsuranceBlock title="WORKERS COMPENSATION" provider={selectedCarrier.workersCompProvider} policy={selectedCarrier.workersCompPolicy} amount={selectedCarrier.workersCompAmount} expiry={selectedCarrier.workersCompExpiry} />
+
+                    {/* v3.8.awh — what the parser read, beside what was typed.
+                        Deliberately BELOW the typed blocks: the carrier's own
+                        figures are the record, and the reading is corroboration. */}
+                    <CoiReadingPanel
+                      carrierId={selectedCarrier.id}
+                      typed={{
+                        autoLiabilityAmount: selectedCarrier.autoLiabilityAmount,
+                        cargoInsuranceAmount: selectedCarrier.cargoInsuranceAmount,
+                        generalLiabilityAmount: selectedCarrier.generalLiabilityAmount,
+                        workersCompAmount: selectedCarrier.workersCompAmount,
+                        insuranceExpiry: selectedCarrier.insuranceExpiry,
+                      }}
+                      onOpenDocument={(docId) => {
+                        setPanelTab("documents");
+                        setDocView("list");
+                        void docId;
+                      }}
+                    />
 
                     <div className="flex items-center gap-4 pt-3 border-t border-gray-200">
                       <span className={`text-xs flex items-center gap-1 ${selectedCarrier.additionalInsuredSRL ? "text-green-400" : "text-slate-600"}`}>

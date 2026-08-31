@@ -1,3 +1,4 @@
+import { queueDocumentIntake } from "../services/documentIntakeService";
 import { Router, Response } from "express";
 import { issueInvite } from "../services/onboardingInviteService";
 import { transitionToReviewing } from "../services/onboardingLifecycleService";
@@ -987,6 +988,17 @@ router.post("/:carrierId/documents", authorize("ADMIN", "CEO", "BROKER", "OPERAT
       },
     });
 
+    // v3.8.awh — same seam as registration and the portal. One service decides
+    // what a persisted document means; the routes only report that one arrived.
+    queueDocumentIntake({
+      documentId: doc.id,
+      docType: doc.docType,
+      entityType: doc.entityType,
+      entityId: doc.entityId,
+      fileUrl: doc.fileUrl,
+      fileType: doc.fileType,
+    });
+
     // Update carrier boolean flags if applicable
     const dt = (req.body.docType || "").toUpperCase();
     if (dt === "W9") await prisma.carrierProfile.update({ where: { id: carrier.id }, data: { w9Uploaded: true } });
@@ -1007,6 +1019,30 @@ router.post("/:carrierId/documents", authorize("ADMIN", "CEO", "BROKER", "OPERAT
         `Do not re-upload — tell an admin, since the file is already stored without a record.`,
       stage: "RECORD",
     });
+  }
+});
+
+// GET /api/carriers/:carrierId/extractions — what a parser read, beside what was typed
+//
+// v3.8.awh. Returns the most recent extraction per docType. The AE insurance tab
+// renders these ALONGSIDE the carrier's typed values, never instead of them: a
+// typed value is what the carrier attested to, an extracted value is a second
+// reading of the document, and where they disagree that is a finding for a human
+// rather than a fact to overwrite with.
+router.get("/:carrierId/extractions", authorize("ADMIN", "CEO", "BROKER", "OPERATIONS"), async (req: AuthRequest, res: Response) => {
+  try {
+    const rows = await prisma.documentExtraction.findMany({
+      where: { carrierProfileId: req.params.carrierId },
+      orderBy: { createdAt: "desc" },
+      include: { document: { select: { id: true, fileName: true, createdAt: true, fileUrl: true } } },
+    });
+    // Most recent per docType — an older COI is history, not the current answer.
+    const latest = new Map<string, (typeof rows)[number]>();
+    for (const r of rows) if (!latest.has(r.docType)) latest.set(r.docType, r);
+    res.json({ extractions: [...latest.values()] });
+  } catch (err) {
+    log.error({ err, carrierId: req.params.carrierId }, "[Carrier Docs] could not load extractions");
+    res.status(500).json({ error: "Could not load document readings." });
   }
 });
 

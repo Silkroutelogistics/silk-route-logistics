@@ -211,6 +211,20 @@ vi.mock("../src/config/database", () => ({
     message: {
       findMany: vi.fn(),
     },
+    // v3.8.awh — what a parser read, kept beside what was typed. The intake
+    // service upserts here on every COI, including on failure, which is the
+    // "never a silent zero" rule.
+    documentExtraction: {
+      findFirst: vi.fn(),
+      findUnique: vi.fn(),
+      findMany: vi.fn(),
+      upsert: vi.fn(),
+      create: vi.fn(),
+      update: vi.fn(),
+      delete: vi.fn(),
+      deleteMany: vi.fn(),
+      count: vi.fn(),
+    },
     document: {
       findMany: vi.fn(),
       // documentationReceivedAt reads the POD through this to start the
