@@ -302,3 +302,109 @@ like a broken preview.
   proves a literal is absent and a hook is called. It cannot prove a drawer renders
   at the right width — that is what the render proof is for, and the two should not
   be confused for one another.
+
+---
+
+# TYPE SCALE — ratified and conformed (v3.8.awd → awe)
+
+## The scale
+
+Ratified 2026-08-31 into the brand skill (`references/tokens.md` §8) and its
+`srl_tokens.css`. CLAUDE.md §2.1's "deferred" line is struck through and dated
+rather than deleted — the deferral is part of why the drift happened.
+
+| Step | Size | Role |
+|---|---|---|
+| `--fs-label` | 11px | small-caps labels — uppercase, tracked. Nothing else. |
+| `--fs-dense` | 12px | dense table cells, data grids |
+| `--fs-secondary` | 13px | captions, helper text, metadata |
+| `--fs-body` | 14px | body default |
+| `--fs-lead` | 16px | lead paragraphs, panel intros |
+
+**Hard floor: nothing below 11px.** 11px is both the floor and the label step, and
+those are not the same permission — a tracked uppercase label reads at 11px
+because it is three words in a fixed slot; a sentence does not.
+
+## What was reconciled
+
+**122 sub-floor instances across the drawer surfaces**, all raised to 11px. Zero
+remain. The shared `IconTabs` label moved 10→11 with them, so all five drawers
+using it gained it at once. One `text-[15px]` maps to `text-sm`.
+
+Checked before sweeping that none sat in a constrained container — the drawer
+surfaces have no small text inside a `w-3`/`w-4`/`w-5` box, so a 1px nudge cannot
+overflow anything.
+
+**Verified in the browser by COMPUTED font size, not by source.** Smallest text
+actually rendered in every changed component, both viewports:
+
+| Component | 1440 | 1920 | Below floor |
+|---|---|---|---|
+| `SecuritySignalsCard` | 11px | 11px | none |
+| `CarrierPreferencesPanel` | 11px | 11px | none |
+| `InfoRequestThread` | 11px | 11px | none |
+| `TrainingTab` | 11px | 11px | none |
+
+## `text-xs` — audited, not swept
+
+206 instances across drawer surfaces, classified by what they wrap:
+
+| Count | Role | On scale? |
+|---|---|---|
+| 6 | dense table cell | yes — 12px is the dense step |
+| 26 | chip / badge / pill | arguably |
+| 23 | button label | arguably |
+| **98** | **body or helper text** | **no — the scale says 14px** |
+| 53 | other | unclassified |
+
+**98 instances of body text at 12px where the scale says 14px is the default.**
+That is the substance of "the font is small", now with a number on it.
+
+Not bulk-edited, deliberately. The classification is a heuristic over surrounding
+markup and 53 land in "other"; touching 206 sites unseen on that basis is not
+defensible, and the drawer after the width and floor changes reads comfortably.
+Whether 12px body becomes 13 or 14 is an optical call — but it is now a call with
+evidence attached rather than an impression.
+
+## Scope deviation, stated plainly
+
+The arc asked for the floor "anywhere in the portals". **The portal has 553
+sub-floor instances; 122 were in drawer surfaces and were fixed. 431 remain
+outside them.** Several are in containers that cannot take the size:
+
+- 8px text inside a `w-3.5` (14px) circle — `onboarding/page.tsx`
+- notification count dots in `w-4 h-4` circles — carrier and shipper layouts
+- calendar day cells — `loads-calendar`
+- chart axis labels — `SpendChart`
+- `text-[7px]` sidebar tracking label — `ShipperSidebar`
+
+Sweeping those blind would ship visual breakage across ~30 pages no render in this
+arc covers, which is the failure §19 Sub-pattern 8 exists to prevent. The guard
+([`typeScale.test.ts`](../../frontend/src/components/ui/typeScale.test.ts)) is
+therefore scoped to the twelve reconciled surfaces, with an **empty allowlist that
+is asserted empty**. Widen `SURFACES` as each area is reconciled and rendered — a
+portal-wide guard that is red on arrival gets skipped, then disabled, then deleted.
+
+---
+
+# LEDGER
+
+**Split-pane revival → post-launch register.** The Owlery layout was a split pane;
+the portal is now overlay drawers at a ratio width. Reviving the split pane is a
+design decision, not a bug fix. Owner: Design. Trigger: the October hire. This
+audit is the foundation — §1 has the original dimensions.
+
+**The Owlery accent is not to revive.** `#C9A84C` is non-canonical. §2.1 puts
+structural gold at `#C5A572` and emphasis at `#BA7517`. If the split pane returns,
+the accent must not come with it.
+
+**Sidebar-aware width alternative**, if the optical pass wants the reference
+proportion exactly rather than the spec'd `60vw`:
+
+```css
+--drawer-detail: clamp(640px, calc((100vw - 220px) * 0.6), 1100px);
+```
+
+**Open, all optical, all Wasi's call:** whether 864px at 1440 looks right; whether
+53% is comfortable for reading a BOL; whether the 12-tab rail needs a scroll cue
+at 1366×768; whether 12px body should become 13 or 14.
