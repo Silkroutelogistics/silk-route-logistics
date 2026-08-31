@@ -130,12 +130,23 @@ function renderLegalAgreement(
   if (signature) {
     y += 6;
     if (y + 46 > CONTENT_BOTTOM) pageBreak();
+    // TIMEZONE. This previously rendered `toLocaleString` with no timeZone, so it
+    // printed the SERVER's local time with no label — "Aug 31, 2026, 07:46 AM"
+    // against a row storing 11:46:28.387Z. Four hours apart, on a legal document,
+    // with nothing on the page to reconcile them. Now pinned to UTC, labelled,
+    // and the stored ISO instant is printed beneath so the rendered string can
+    // always be checked back against the record.
+    const signedAtUtc = new Date(signature.signedAt);
     const attest =
       `Electronically signed by ${signature.signedByName}` +
       (signature.signedByTitle ? `, ${signature.signedByTitle}` : "") +
-      ` on ${new Date(signature.signedAt).toLocaleString("en-US", { year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}` +
+      ` on ${signedAtUtc.toLocaleString("en-US", {
+        year: "numeric", month: "short", day: "numeric",
+        hour: "2-digit", minute: "2-digit", timeZone: "UTC",
+      })} UTC` +
       (signature.signerIp ? ` · IP ${signature.signerIp}` : "") +
-      ` · Agreement version ${signature.version}. Executed as a legally binding electronic signature under the U.S. ESIGN Act and UETA.`;
+      ` · Agreement version ${signature.version}. Executed as a legally binding electronic signature under the U.S. ESIGN Act and UETA.` +
+      `\nSigned at (UTC, ISO 8601): ${signedAtUtc.toISOString()}`;
     doc.font(FONT_BODY_ITALIC, 8);
     const ah = doc.heightOfString(attest, { width: CONTENT_W - 20 });
     const boxH = ah + 16;

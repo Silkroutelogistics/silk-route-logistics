@@ -8,6 +8,7 @@ import { uploadFile, uploadFileToPath, getDownloadUrl, getFileStream, deleteFile
 import { validateAndNotifyPOD } from "../services/shipperNotificationService";
 import { onPODUploaded, syncSettlementDocFlags } from "../services/integrationService";
 import { log } from "../lib/logger";
+import { SHIPPER_VISIBLE_DOC_TYPES } from "./shipperPortalController";
 
 /**
  * Roles that operate SRL internally and legitimately need visibility across all
@@ -309,7 +310,12 @@ export async function getDocuments(req: AuthRequest, res: Response) {
 export async function downloadDocument(req: AuthRequest, res: Response) {
   const doc = await prisma.document.findUnique({
     where: { id: req.params.id },
-    include: { load: { select: { posterId: true, carrierId: true } } },
+    // customer.userId added 2026-08-31: the ownership check below never consulted
+    // it, so a shipper was admitted by authorize() and then refused for EVERY
+    // docType — including BOL — on loads they own. See the audit note there.
+    include: {
+      load: { select: { posterId: true, carrierId: true, customer: { select: { userId: true } } } },
+    },
   });
   if (!doc) {
     res.status(404).json({ error: "Document not found" });
@@ -322,7 +328,24 @@ export async function downloadDocument(req: AuthRequest, res: Response) {
   if (role !== "ADMIN" && role !== "CEO") {
     const isOwner = doc.userId === userId;
     const isLoadParticipant = doc.load && (doc.load.posterId === userId || doc.load.carrierId === userId);
-    if (!isOwner && !isLoadParticipant) {
+
+    // The customer of the load. STRICTLY ADDITIVE: the two checks above are
+    // untouched, so nothing that resolved before resolves differently now.
+    const isLoadCustomer = !!doc.load?.customer && doc.load.customer.userId === userId;
+
+    if (!isOwner && !isLoadParticipant && !isLoadCustomer) {
+      res.status(403).json({ error: "Not authorized to download this document" });
+      return;
+    }
+
+    // A document reached ONLY by customer-ownership is bounded by the same
+    // allowlist the shipper portal serves. Adding customerId to the participant
+    // match without this would hand a customer every docType on their load —
+    // RATE_CON included, which carries carrier pay. That is the margin exposure
+    // SHIPPER_VISIBLE_DOC_TYPES exists to prevent, and widening the match is
+    // exactly how it would have been introduced.
+    if (isLoadCustomer && !isOwner && !isLoadParticipant &&
+        !SHIPPER_VISIBLE_DOC_TYPES.includes(doc.docType ?? "")) {
       res.status(403).json({ error: "Not authorized to download this document" });
       return;
     }

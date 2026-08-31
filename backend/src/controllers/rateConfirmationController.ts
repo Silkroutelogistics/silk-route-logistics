@@ -14,6 +14,7 @@ import { sendRateConfirmationEmail, sendEmail, wrap } from "../services/emailSer
 import { resolveLoadStem, withDocumentNumber } from "../lib/documentNumber";
 import { resolveIssuedElection } from "../services/autoRateConfirmationService";
 import { log } from "../lib/logger";
+import { extractClientIp } from "../services/geoService";
 
 /**
  * formData for the renderer, with this RC's own document number folded in.
@@ -376,7 +377,10 @@ export async function downloadRateConfirmationPdf(req: AuthRequest, res: Respons
  * Sign a rate confirmation — stores signer details and sets signed=true.
  */
 export async function signRateConfirmation(req: AuthRequest, res: Response) {
-  const { signerName, signerTitle, ipAddress } = signRateConfirmationSchema.parse(req.body);
+  const { signerName, signerTitle } = signRateConfirmationSchema.parse(req.body);
+  // Server-derived, never from the body — see the note on the schema.
+  const signerIp = extractClientIp(req as any);
+  const signerUserAgent = String(req.headers["user-agent"] ?? "").slice(0, 400) || null;
 
   // v3.8.ajv C2 — Include load.carrierId in the lookup so we can verify
   // ownership before allowing sign. Pre-ajv the endpoint was authorized
@@ -406,7 +410,8 @@ export async function signRateConfirmation(req: AuthRequest, res: Response) {
     carrierSignature: signerName,
     carrierSignTitle: signerTitle,
     carrierSignDate: new Date().toISOString(),
-    carrierSignIP: ipAddress || req.ip,
+    carrierSignIP: signerIp,
+    carrierSignUserAgent: signerUserAgent,
   };
 
   const updated = await prisma.rateConfirmation.update({

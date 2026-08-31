@@ -1218,3 +1218,92 @@ had been broken in public the whole time.
 retirement is a Render config change rather than a deploy), all four call sites
 routed through it, zero literals remaining, injection-verified guard. Phase 2 of
 the same arc makes the monitor and the health field able to see this class.
+
+---
+
+## 2026-08-31 — E-sign audit: two findings the local pass falsified, and a decline split
+
+The first pass of `docs/audit-reports/audit-esign-and-document-custody.md` was
+code-side only. Running it against a migrated local container inverted two of its
+conclusions. Both are recorded here with the probe that did the inverting, because
+a wrong finding that is quietly corrected teaches nobody why it was wrong.
+
+### Finding 4 — FALSIFIED. The shipper cannot reach that route at all.
+
+**Claimed:** `GET /documents/:id/download` *"bypasses the shipper docType
+allowlist"* — a SHIPPER passing `isLoadParticipant` could pull any docType,
+including `RATE_CON`.
+
+**The probe that inverted it.** Run against a load the shipper genuinely owns
+(`E2E-SHIPPER-FIXTURE`, `customer.userId === shipper.userId`, printed
+`owner match: true`), the shipper got **403 on BOL** — an allowlisted type:
+
+```
+BOL       CARRIER(owner) -> 404 File not found   (authorized)
+          CARRIER(other) -> 403 Not authorized
+          SHIPPER        -> 403 Not authorized
+RATE_CON  SHIPPER        -> 403 Not authorized
+[contrast] SHIPPER GET /shipper-portal/documents -> 200 {"typeCounts":[{"type":"BOL","count":1}]}
+```
+
+The gate was `isOwner || load.posterId || load.carrierId`. **`customerId` was
+never consulted**, so a shipper was admitted by `authorize()` and then refused for
+every docType on loads they own — dead permission, not a hole. The claim was
+inverted: the route did not over-share, it excluded.
+
+**Two earlier runs of the same probe proved nothing and were discarded.** The
+first used a load with `customerId: null`, so the 403 was explained by ownership
+and said nothing about docType. The second returned `429 Too many uploads` on
+every request — **a 429 is not an authorization answer**; the limiter was cleared
+and the run repeated before anything was recorded.
+
+**Fixed here**, and the fix had to be careful in the opposite direction: adding
+`customerId` to the participant match *without* an allowlist would have handed
+customers every docType on their load, `RATE_CON` and its carrier pay included —
+creating the exact leak the finding wrongly alleged. The customer path is
+therefore bounded by `SHIPPER_VISIBLE_DOC_TYPES`, now exported from
+`shipperPortalController` so there is one list rather than two.
+
+### Finding 7 — FALSIFIED as written. The QP endpoint works.
+
+**Claimed:** *"The carrier's executed Quick Pay PDF becomes unreachable the moment
+they sign."*
+
+**The probe that inverted it.** After a real signature,
+`GET /carrier-auth/agreement/quick-pay/pdf` returned **200, 53,065 bytes**, and
+rendered the signature:
+
+```
+Electronically signed by QQQPNAME_MKS5XA, QQQPTITLE_MKS5XA on Aug 31, 2026, 07:50 AM
+· IP 127.0.0.1 · Agreement version 2026-08-16-v4
+```
+
+"Unreachable" is true only of the **button**. The finding's own last sentence —
+"the endpoint works; nothing calls it" — was the accurate part; the headline
+overstated it into an outage. The React surface was not exercised by this pass and
+remains a code-side read rather than a verified claim.
+
+### The decline split — no code change, deliberately
+
+The audit exercised `POST /tenders/:id/decline`
+([`tenderController.ts:474`](../backend/src/controllers/tenderController.ts#L474),
+routed [`tenders.ts:22`](../backend/src/routes/tenders.ts#L22)) and observed that
+it returns the bare tender row with **no per-channel report** — no
+`emailSent`/`notifSent` of the kind v3.8.avn added.
+
+**v3.8.avn B4 changed a different handler.** It touched Quick Pay *enrollment*:
+`declineQuickPayEnrollment`
+([`carrierController.ts:2082`](../backend/src/controllers/carrierController.ts#L2082))
+and `withdrawQuickPayEnrollment` (`:2211`), routed at
+[`carriers.ts:800,807`](../backend/src/routes/carriers.ts#L800). A third decline
+path exists at [`carrierLoads.ts:304`](../backend/src/routes/carrierLoads.ts#L304).
+
+So the transition that reports per channel and the transition the audit exercised
+are **not the same transition**, and wiring the tender decline to match would be a
+product change about what an AE is told, not a correctness fix. Left alone; the
+split is recorded so the next reader does not conclude v3.8.avn regressed.
+
+**Banked, not decided:** whether tender decline should report per channel at all.
+Today an AE cannot tell from the response whether the carrier was reached. That is
+a gap rather than a defect — there is no false claim to correct, because there is
+no claim.

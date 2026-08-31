@@ -192,10 +192,16 @@ export const sendRateConfirmationSchema = z.object({
   message: z.string().optional(),
 });
 
+// `ipAddress` was a declared field here and the controller wrote
+// `ipAddress || req.ip` — client value FIRST. A signing request from 127.0.0.1
+// carrying `"ipAddress":"10.52.0.9"` persisted 10.52.0.9, so the attributed
+// address on a signed Rate Confirmation was whatever the signer claimed.
+// Removed 2026-08-31: attribution is derived from the request, never accepted
+// from the body. `.strip()` (Zod's default) drops it, so an old client sending
+// it is not broken — the value is simply ignored.
 export const signRateConfirmationSchema = z.object({
   signerName: z.string().min(1),
   signerTitle: z.string().optional(),
-  ipAddress: z.string().optional(),
 });
 
 export const sendToShipperSchema = z.object({

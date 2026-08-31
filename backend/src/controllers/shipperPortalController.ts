@@ -768,7 +768,11 @@ export async function generateTrackingLink(req: AuthRequest, res: Response) {
  * rate confirmation — that is the carrier's pay document and it prints SRL's
  * margin.
  */
-const SHIPPER_VISIBLE_DOC_TYPES = ["BOL", "POD", "INVOICE"];
+// Exported so the shared /documents/:id/download route gates a shipper on the
+// SAME list this portal serves. A second copy would be a second answer to "what
+// may a customer see", and the two would drift — the dual-source-of-truth shape
+// this codebase keeps having to unpick.
+export const SHIPPER_VISIBLE_DOC_TYPES = ["BOL", "POD", "INVOICE"];
 export async function getShipperDocuments(req: AuthRequest, res: Response) {
   try {
     const userId = req.user!.id;

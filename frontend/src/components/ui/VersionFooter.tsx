@@ -15750,7 +15750,34 @@
 // stream handle as a surviving object and reported 3 survivors after a clean
 // delete, because createReadStream opens a path that does not exist and only
 // errors on read. Opening a handle proves nothing; the read is the check.
-export const SRL_VERSION = "3.8.awi";
+// v3.8.awj — a shipper can read their own paperwork; attribution stops taking
+// the signer's word for it; the signing time says which zone it is in.
+//
+// Three correctness fixes the e-sign audit's local pass found by running flows
+// rather than reading them. No product decisions.
+//
+// The document gate never consulted customerId, so a SHIPPER was admitted by
+// authorize() and then refused for EVERY docType — including BOL — on loads they
+// own. That inverted the audit's own first-pass finding, which had called the
+// route over-permissive. The fix adds the customer path and bounds it by
+// SHIPPER_VISIBLE_DOC_TYPES, now exported so there is one list: widening the
+// match without the allowlist would have handed customers RATE_CON and its
+// carrier pay, creating the leak the finding wrongly alleged.
+//
+// RC attribution accepted `ipAddress` from the body and wrote `ipAddress ||
+// req.ip` — client value first. A request from 127.0.0.1 carrying 10.52.0.9
+// persisted 10.52.0.9. Removed from the schema; IP and user agent are derived
+// from the request.
+//
+// The agreement PDF rendered toLocaleString with no timeZone: server-local,
+// unlabelled, "07:46 AM" against a row storing 11:46:28.387Z. Now pinned to UTC,
+// labelled, with the stored ISO instant printed beneath so the page can always be
+// checked back against the record.
+//
+// Each injection-verified. Tender decline was left alone deliberately — v3.8.avn
+// changed Quick Pay ENROLLMENT decline/withdraw, a different handler; the split
+// is in the regression log.
+export const SRL_VERSION = "3.8.awj";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

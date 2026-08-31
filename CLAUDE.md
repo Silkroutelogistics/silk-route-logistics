@@ -1644,6 +1644,26 @@ Each is a discrete sprint. Mix of operational, security, UX, and technical debt.
 
     **(b) Migration-aware health.** [`lib/schemaInfo.ts`](backend/src/lib/schemaInfo.ts) adds `schema: { migration, appliedAt }` to `/api/health`, read from `_prisma_migrations`. This closes the specific blindness Item 212 documented: the SHA reported the pre-migration commit at the moment the schema had already changed, because `migrate deploy` runs during the BUILD while the old process keeps serving. Cached per process (a migration cannot apply to a running one), never throws (the endpoint that reports an outage has to survive one), and does not cache a failure. Seven tests, adversarially verified by removing the wiring and watching the endpoint test go red.
 
+    **What that field describes, precisely (noted 2026-08-31).** `schemaInfo` reads
+    the most recently *applied* row of `_prisma_migrations`. It therefore reports
+    the **ledger**, not the schema, and the two agree only when the schema was
+    applied by `migrate`. **`db push` writes no ledger row**, so after a push the
+    field is silently stale while the database is current.
+
+    That is not hypothetical: CI's `Apply schema + seed` step uses `db push`
+    deliberately (a fresh container each run has no history to align), and any
+    local container built the same way inherits it. A local box seeded that way
+    reported `20260509170000_baseline_init` @ `2026-05-09` while carrying the
+    2026-08-30 schema — **three months stale and correct.**
+
+    Production is unaffected and the field is trustworthy there: Render's chain
+    runs `prisma migrate deploy`, so the ledger is the schema. Verified the same
+    day — production reported `20260830120000_add_draft_verification_geo` @
+    `2026-08-30T11:42:59.965Z`, with 48 ledger rows and **zero** failed or
+    pending. Worth stating because this field exists so nobody judges migration
+    state from the app, and on a `db push` target that is exactly what it would
+    invite.
+
     **Still owed, in order:** the PITR count before 2026-08-27; the deploy-gate secret, which ends the red-email streak and would have prevented Item 212 outright.
 
 
