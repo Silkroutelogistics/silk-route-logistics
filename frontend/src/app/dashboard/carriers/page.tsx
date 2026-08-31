@@ -10,7 +10,7 @@ import {
   TrendingUp, TrendingDown, DollarSign, Package, Award, ShieldAlert, Calendar,
   BarChart3, Percent, Hash, Compass, RefreshCw, ExternalLink, AlertTriangle, Download,
   User, CheckSquare, ClipboardList, Upload, Eye, ArrowLeft, FolderOpen,
-  MessageCircle, Sliders, FlaskConical, GraduationCap, Zap,
+  MessageCircle, Sliders, FlaskConical, GraduationCap, Zap, Loader2,
 } from "lucide-react";
 import { InfoRequestModal } from "@/components/carriers/InfoRequestModal";
 import { InfoRequestThread } from "@/components/carriers/InfoRequestThread";
@@ -426,6 +426,13 @@ export default function CarrierPoolPage() {
   // v3.8.avq — the upload had no error surface at all, so a 400 looked exactly
   // like a click that did nothing.
   const [uploadError, setUploadError] = useState<string | null>(null);
+  // v3.8.avx — a signed, short-lived URL for the document being previewed.
+  //
+  // fileUrl is `s3://bucket/key`, which a browser cannot load — so the moment
+  // storage started working, the first stored document rendered as a broken-file
+  // icon. The bytes live in R2; only a presigned URL can reach them.
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [previewUrlError, setPreviewUrlError] = useState<string | null>(null);
   const [uploadFile, setUploadFile] = useState<File | null>(null);
   // v3.8.aio — Authority grant date manual-entry form state.
   const [authorityGrantInput, setAuthorityGrantInput] = useState<string>("");
@@ -729,6 +736,27 @@ export default function CarrierPoolPage() {
       return () => document.removeEventListener("keydown", h);
     }
   }, [selectedCarrierId, closePanel]);
+
+  // v3.8.avx — sign a view URL when a document is opened.
+  //
+  // Signed on open rather than alongside the list: these expire in five minutes,
+  // so signing every row on every list render would hand out URLs that are stale
+  // before anyone clicks, and sign far more than are ever looked at.
+  useEffect(() => {
+    setPreviewUrl(null);
+    setPreviewUrlError(null);
+    if (!previewDoc || !selectedCarrierId || !previewDoc.fileUrl) return;
+    let cancelled = false;
+    api.get<{ url: string }>(`/carriers/${selectedCarrierId}/documents/${previewDoc.id}/url`)
+      .then((r) => { if (!cancelled) setPreviewUrl(r.data.url); })
+      .catch((err: { response?: { data?: { error?: string } } }) => {
+        if (!cancelled) setPreviewUrlError(err.response?.data?.error || "Could not open this document.");
+      });
+    // Cancellation matters here: clicking through several documents quickly would
+    // otherwise let a slower earlier response overwrite a newer one, and show the
+    // wrong file under the right filename.
+    return () => { cancelled = true; };
+  }, [previewDoc, selectedCarrierId]);
 
   function openEdit(c: Carrier) {
     setEditingCarrier(c);
@@ -2101,15 +2129,26 @@ export default function CarrierPoolPage() {
                               storage is confirmed working — re-uploading is the only way to fill this in.
                             </p>
                           </div>
+                        ) : previewUrlError ? (
+                          <div className="flex flex-col items-center justify-center py-12 px-6 text-center">
+                            <FileText className="w-10 h-10 mb-2 text-[#9B2C2C]" />
+                            <p className="text-sm font-semibold text-[#9B2C2C]">Could not open this document</p>
+                            <p className="text-xs text-gray-700 mt-1">{previewUrlError}</p>
+                          </div>
+                        ) : !previewUrl ? (
+                          <div className="flex flex-col items-center justify-center py-12 text-gray-700">
+                            <Loader2 className="w-6 h-6 mb-2 animate-spin" />
+                            <p className="text-xs">Opening…</p>
+                          </div>
                         ) : previewDoc.fileType.startsWith("image/") ? (
-                          <img src={previewDoc.fileUrl} alt={previewDoc.fileName} className="w-full object-contain max-h-[500px]" />
+                          <img src={previewUrl} alt={previewDoc.fileName} className="w-full object-contain max-h-[500px]" />
                         ) : previewDoc.fileType === "application/pdf" ? (
-                          <iframe src={previewDoc.fileUrl} className="w-full" style={{ height: 500 }} title={previewDoc.fileName} />
+                          <iframe src={previewUrl} className="w-full" style={{ height: 500 }} title={previewDoc.fileName} />
                         ) : (
                           <div className="flex flex-col items-center justify-center py-12 text-gray-700">
                             <FileText className="w-10 h-10 mb-2" />
                             <p className="text-xs">Preview not available</p>
-                            <a href={previewDoc.fileUrl} target="_blank" rel="noopener noreferrer"
+                            <a href={previewUrl} target="_blank" rel="noopener noreferrer"
                               className="text-xs text-[#C5A572] hover:underline mt-1">Download file</a>
                           </div>
                         )}

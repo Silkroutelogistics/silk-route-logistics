@@ -2,7 +2,7 @@ import { Router, Response } from "express";
 import { issueInvite } from "../services/onboardingInviteService";
 import { transitionToReviewing } from "../services/onboardingLifecycleService";
 import path from "path";
-import { uploadFile } from "../services/storageService";
+import { uploadFile, getDownloadUrl } from "../services/storageService";
 import {
   getAllCarriers, getCarrierDetail, registerCarrier, updateCarrier, verifyCarrier,
   getCarrierScore,
@@ -1007,6 +1007,44 @@ router.post("/:carrierId/documents", authorize("ADMIN", "CEO", "BROKER", "OPERAT
         `Do not re-upload — tell an admin, since the file is already stored without a record.`,
       stage: "RECORD",
     });
+  }
+});
+
+// GET /api/carriers/:carrierId/documents/:docId/url — signed, short-lived view URL
+//
+// v3.8.avx — the preview was embedding `fileUrl` directly, and once storage
+// actually worked that value became `s3://srl-documents/carrier-docs/...`. A
+// browser cannot load an s3:// scheme, so the first successfully stored document
+// rendered as a broken-file icon: upload fixed, read path never wired.
+//
+// Returns a presigned URL rather than proxying the bytes, so the iframe loads
+// from R2 directly and the API is not streaming PDFs. Signed URLs carry their own
+// authorisation, which is why this endpoint — not the URL — is the access gate.
+// Five minutes is deliberately short: it is long enough to open a document and
+// too short to be worth passing around.
+router.get("/:carrierId/documents/:docId/url", authorize("ADMIN", "CEO", "BROKER", "OPERATIONS"), async (req: AuthRequest, res: Response) => {
+  try {
+    const doc = await prisma.document.findFirst({
+      where: { id: req.params.docId, entityType: "CARRIER", entityId: req.params.carrierId },
+      select: { id: true, fileUrl: true, fileName: true, fileType: true },
+    });
+    if (!doc) { res.status(404).json({ error: "Document not found" }); return; }
+
+    // An UPLOAD_FAILED row has no file. Say so rather than signing a URL for
+    // an object that was never written.
+    if (!doc.fileUrl) {
+      res.status(409).json({
+        error: "This document has no stored file — it was submitted but storage refused it.",
+        code: "NO_STORED_FILE",
+      });
+      return;
+    }
+
+    const url = await getDownloadUrl(doc.fileUrl, 300);
+    res.json({ url, fileName: doc.fileName, fileType: doc.fileType });
+  } catch (err) {
+    log.error({ err, docId: req.params.docId }, "[Carrier Docs] could not sign a view URL");
+    res.status(500).json({ error: "Could not open this document. Try again." });
   }
 });
 

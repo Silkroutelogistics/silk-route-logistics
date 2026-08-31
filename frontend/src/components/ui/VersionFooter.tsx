@@ -15559,7 +15559,20 @@
 // It is a provider error string about a request we made, not customer data, so
 // it is safe to show and it names the fix. Diagnosing from a code alone is
 // guessing with extra steps.
-export const SRL_VERSION = "3.8.avw";
+// v3.8.avx — the read path, which nothing had ever exercised.
+//
+// The first successfully stored document rendered as a broken-file icon. Not a
+// regression: uploadFile returns `s3://bucket/key`, the preview embedded that
+// string directly, and a browser cannot load an s3:// scheme. It had simply
+// never been reachable before, because no upload had ever succeeded — the whole
+// read path was dead code that looked fine.
+//
+// New GET /carriers/:id/documents/:docId/url returns a presigned URL, so the
+// iframe loads from R2 directly and the API never streams PDFs. Signed on open
+// rather than per row: they last five minutes, so signing a whole list hands out
+// URLs that expire before anyone clicks. The fetch is cancellable, or clicking
+// quickly through documents can show the wrong file under the right name.
+export const SRL_VERSION = "3.8.avx";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
