@@ -32,6 +32,7 @@ import { logAuthEvent } from "../lib/authEvents";
 import { COMPLIANCE_EMAIL } from "../config/authority";
 import * as crypto from "crypto";
 import { pairedApplicationStatus } from "../lib/carrierOperational";
+import { clientIp } from "../lib/clientIp";
 
 // v3.8.ala — Fire-and-forget compliance flag dispatch on registration
 // duplicate hits. Sends a brief alert to COMPLIANCE_EMAIL +
@@ -341,8 +342,12 @@ export async function registerCarrier(req: Request, res: Response) {
           insuranceAgencyName: data.insuranceAgencyName,
           // v3.8.aja — BCA click-wrap audit trail captured server-side.
           // agreedAt = server-now (authoritative — not client-supplied).
-          // IP from req.ip (Render forwards x-forwarded-for via Express
-          // 'trust proxy' setting). UA from req.headers.
+          // IP from clientIp(req). This used to read req.ip with a raw
+          // forwarded-header fallback, which was wrong twice over: that header is
+          // client-writable, and production sits behind Cloudflare AND Render
+          // while trust proxy is 1, so req.ip was an edge address. Every BCA
+          // signed before v3.8.awk carries one. See lib/clientIp.ts.
+          // UA from req.headers.
           //
           // v3.8.asb — the version is now server-stamped too. It used to be
           // `data.bcaVersion || null`, a client-supplied string on a consent
@@ -360,7 +365,7 @@ export async function registerCarrier(req: Request, res: Response) {
           // is this version's text, and the server records the version it
           // actually serves. The request no longer decides.
           bcaAgreedAt: new Date(),
-          bcaAgreedFromIp: req.ip || (req.headers["x-forwarded-for"] as string)?.split(",")[0]?.trim() || null,
+          bcaAgreedFromIp: clientIp(req),
           bcaAgreedFromUserAgent: (req.headers["user-agent"] as string) || null,
           bcaVersion: BCA_VERSION,
         },

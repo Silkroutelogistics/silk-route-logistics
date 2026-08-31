@@ -110,10 +110,14 @@ describe("fix 2 — Rate Confirmation attribution is server-derived", () => {
   });
 
   it("the controller derives IP and user agent from the request", () => {
+    // Re-anchored in v3.8.awk. This asserted `req.headers["user-agent"]` and went
+    // red when that read moved behind clientUserAgent(req) — the guarded property
+    // (server-derived, never body-derived) is unchanged and now stronger, so the
+    // anchor moves rather than the assertion weakening.
     const src = fs.readFileSync(path.resolve(__dirname, "../../../src/controllers/rateConfirmationController.ts"), "utf8");
     expect(src).toContain("const signerIp = extractClientIp(req as any);");
     expect(src).toContain("carrierSignIP: signerIp,");
-    expect(src).toContain('req.headers["user-agent"]');
+    expect(src).toContain("clientUserAgent(req)");
     // The exact expression that made attribution client-controlled must not return.
     expect(src).not.toContain("ipAddress || req.ip");
   });

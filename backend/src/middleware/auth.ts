@@ -14,6 +14,7 @@ import { logAuthEvent } from "../lib/authEvents";
 // place in the request path now that one policy governs every portal.
 import { resolveSessionPolicy } from "../lib/sessionPolicy";
 import { createSession, touchSession, type SessionPortalName } from "../lib/sessionStore";
+import { clientIp } from "../lib/clientIp";
 
 export interface AuthRequest extends Request<any, any, any, any> {
   user?: {
@@ -532,7 +533,7 @@ export function authorize(...roles: string[]) {
             severity: "WARNING",
             source: "authorize",
             message: `Access denied: ${req.user.email} (${req.user.role}) attempted ${req.method} ${req.originalUrl} — ${reason}`,
-            ipAddress: (req.headers["x-forwarded-for"] as string) || req.ip || null,
+            ipAddress: clientIp(req),
           },
         }).catch((e) => log.warn({ err: e }, "[Auth] Audit log write failed:"));
       }

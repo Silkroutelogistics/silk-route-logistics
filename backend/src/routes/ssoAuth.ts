@@ -32,6 +32,7 @@ import { signToken } from "../controllers/authController";
 import { setTokenCookie } from "../utils/cookies";
 import { registerSession, getTokenHash } from "../middleware/auth";
 import { ssoClient, ssoConfigured, verifyGoogleIdToken } from "../services/ssoService";
+import { clientIp } from "../lib/clientIp";
 
 const router = Router();
 
@@ -206,7 +207,7 @@ router.get("/google/callback", async (req, res) => {
         action: "LOGIN",
         entity: "Session",
         changes: "SSO (Google Workspace)",
-        ipAddress: (req.headers["x-forwarded-for"] as string) || req.ip || "",
+        ipAddress: clientIp(req) || "",
         userAgent: req.headers["user-agent"] || "",
       },
     })

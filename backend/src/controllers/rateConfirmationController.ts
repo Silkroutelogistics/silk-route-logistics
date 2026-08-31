@@ -15,6 +15,7 @@ import { resolveLoadStem, withDocumentNumber } from "../lib/documentNumber";
 import { resolveIssuedElection } from "../services/autoRateConfirmationService";
 import { log } from "../lib/logger";
 import { extractClientIp } from "../services/geoService";
+import { clientUserAgent } from "../lib/clientIp";
 
 /**
  * formData for the renderer, with this RC's own document number folded in.
@@ -380,7 +381,7 @@ export async function signRateConfirmation(req: AuthRequest, res: Response) {
   const { signerName, signerTitle } = signRateConfirmationSchema.parse(req.body);
   // Server-derived, never from the body — see the note on the schema.
   const signerIp = extractClientIp(req as any);
-  const signerUserAgent = String(req.headers["user-agent"] ?? "").slice(0, 400) || null;
+  const signerUserAgent = clientUserAgent(req);
 
   // v3.8.ajv C2 — Include load.carrierId in the lookup so we can verify
   // ownership before allowing sign. Pre-ajv the endpoint was authorized

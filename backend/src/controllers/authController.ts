@@ -16,6 +16,7 @@ import { revokeSession } from "../lib/sessionStore";
 import { log } from "../lib/logger";
 import { logAuthEvent } from "../lib/authEvents";
 import { caseInsensitiveEmailFilter } from "../lib/emailNormalization";
+import { clientIp } from "../lib/clientIp";
 
 const PASSWORD_EXPIRY_DAYS = 60;
 // Exported for the SSO callback, which must mint a byte-identical session.
@@ -77,7 +78,7 @@ async function checkShipperApproval(
     where: { userId: user.id },
   });
 
-  const ipAddress = (req.headers["x-forwarded-for"] as string) || req.ip || null;
+  const ipAddress = clientIp(req);
 
   if (!customer) {
     // SHIPPER user without a linked customer record. Should not happen in
@@ -270,7 +271,7 @@ export async function login(req: Request, res: Response) {
         message: newAttempts >= MAX_FAILED_ATTEMPTS
           ? `Account locked for ${email} after ${newAttempts} failed attempts`
           : `Failed login attempt for ${email} (attempt ${newAttempts}/${MAX_FAILED_ATTEMPTS})`,
-        ipAddress: (req.headers["x-forwarded-for"] as string) || req.ip || null,
+        ipAddress: clientIp(req),
       },
     }).catch(() => {});
 
@@ -333,7 +334,7 @@ export async function handleVerifyOtp(req: Request, res: Response) {
         severity: "ERROR",
         source: "authController",
         message: `OTP lockout triggered for ${email} — too many failed attempts`,
-        ipAddress: (req.headers["x-forwarded-for"] as string) || req.ip || null,
+        ipAddress: clientIp(req),
       },
     }).catch(() => {});
 
@@ -395,7 +396,7 @@ export async function handleVerifyOtp(req: Request, res: Response) {
   }
 
   // Issue full JWT + audit log
-  const ipAddress = (req.headers["x-forwarded-for"] as string) || req.ip || "";
+  const ipAddress = clientIp(req) || "";
   const userAgent = req.headers["user-agent"] || "";
 
   const token = signToken(user.id);
@@ -507,7 +508,7 @@ export async function forceChangePassword(req: AuthRequest, res: Response) {
     data: { passwordHash, passwordChangedAt: new Date() },
   });
 
-  const ipAddress = (req.headers["x-forwarded-for"] as string) || req.ip || "";
+  const ipAddress = clientIp(req) || "";
   const userAgent = req.headers["user-agent"] || "";
 
   const fullToken = signToken(userId);
@@ -631,7 +632,7 @@ export async function logout(req: AuthRequest, res: Response) {
       userId: req.user!.id,
       action: "LOGOUT",
       entity: "Session",
-      ipAddress: (req.headers["x-forwarded-for"] as string) || req.ip || "",
+      ipAddress: clientIp(req) || "",
       userAgent: req.headers["user-agent"] || "",
     },
   }).catch(() => {});
@@ -865,7 +866,7 @@ export async function handleTotpLoginVerify(req: Request, res: Response) {
   }
 
   // Issue full JWT + audit log
-  const ipAddress = (req.headers["x-forwarded-for"] as string) || req.ip || "";
+  const ipAddress = clientIp(req) || "";
   const userAgent = req.headers["user-agent"] || "";
 
   const token = signToken(user.id);

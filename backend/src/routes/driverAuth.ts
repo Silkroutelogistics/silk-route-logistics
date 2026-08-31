@@ -15,6 +15,7 @@ import { blacklistToken, isTokenBlacklisted } from "../utils/tokenBlacklist";
 import { normalizePhoneE164 } from "../lib/phoneNormalization";
 import { isWeakPin } from "../lib/pinValidation";
 import { randomUUID } from "crypto";
+import { clientIp } from "../lib/clientIp";
 
 /**
  * v3.8.amz — SRL Driver Academy Sprint T2: driver phone + PIN authentication.
@@ -87,9 +88,8 @@ function publicDriver(d: { id: string; firstName: string; lastName: string }) {
   return { id: d.id, firstName: d.firstName, lastName: d.lastName };
 }
 
-function clientIp(req: Request): string | null {
-  return (req.headers["x-forwarded-for"] as string) || req.ip || null;
-}
+// The local clientIp() that used to live here read the forwarded header directly.
+// Removed in favour of lib/clientIp — its call sites below are unchanged.
 
 // POST /api/driver-auth/set-pin — consume invite token, set PIN, auto-login.
 router.post("/set-pin", setPinLimiter, validateBody(setPinSchema), async (req: Request, res: Response) => {

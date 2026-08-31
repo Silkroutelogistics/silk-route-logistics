@@ -1307,3 +1307,77 @@ split is recorded so the next reader does not conclude v3.8.avn regressed.
 Today an AE cannot tell from the response whether the carrier was reached. That is
 a gap rather than a defect — there is no false claim to correct, because there is
 no claim.
+
+---
+
+## 2026-08-31 — Every executed agreement on production carries a Cloudflare edge IP
+
+**Closed by v3.8.awk.** Not backfillable.
+
+### What was wrong
+
+`app.set("trust proxy", 1)` ([`server.ts:38`](../backend/src/server.ts#L38)) trusts
+one hop, which is correct — Render's load balancer is the only proxy the app can
+vouch for. But production sits behind **two**:
+
+```
+Server: cloudflare · CF-RAY: a33c2adaec578f1c-ORD · x-render-origin-server: Render
+api.silkroutelogistics.ai → silk-route-logistics.onrender.com
+```
+
+So Express resolved `req.ip` to the address Cloudflare connected from. Worse, all
+seventeen call sites read the client-writable forwarded header **first**, with
+`req.ip` only as a fallback — so a request carrying a forged header had that
+header persisted as the caller's address.
+
+### The evidence, read from production
+
+```
+carrier_profiles.bcaAgreedFromIp = 172.71.254.101   → Cloudflare 172.64.0.0/13
+carrier_profiles.bcaAgreedFromIp = 104.22.64.131    → Cloudflare 104.16.0.0/13
+carrier_profiles.bcaAgreedFromIp = 172.69.17.162    → Cloudflare 172.64.0.0/13
+```
+
+**Every one is an edge address.** These are the attribution IPs printed on
+executed Broker-Carrier Agreements under an ESIGN/UETA statement.
+
+### THE ROWS CANNOT BE BACKFILLED
+
+The client's address was never received by the application. It existed only in
+Cloudflare's `cf-connecting-ip` header on requests that completed months ago and
+were never logged. There is no source to recover it from — not the database, not
+`auth_events`, not the PDFs, which render the same wrong value.
+
+**Every agreement executed before v3.8.awk carries an edge IP, permanently.** If
+attribution is ever contested on one of them, the honest answer is that the IP on
+the document is Cloudflare's and the signer's was not recorded. The name, title,
+title, timestamp, version and user agent on those rows are unaffected.
+
+### The fix, and why not simply `trust proxy: 2`
+
+Raising the hop count would take the second-from-right XFF entry — but the app
+cannot verify Cloudflare is really that hop. Anything reaching Render directly
+would have its own forged entry trusted. **That trades a wrong IP for a spoofable
+one.**
+
+[`lib/clientIp.ts`](../backend/src/lib/clientIp.ts) instead believes
+`cf-connecting-ip` **only when `req.ip` is inside Cloudflare's published ranges**
+— vendored with the source URL and fetch date. A direct caller may send the header
+and it is ignored, because their `req.ip` is not an edge address. The header is
+trusted exactly when the transport proves who set it.
+
+The forwarded header is now read **nowhere**. `xff-drift` fails CI on any
+reappearance outside that one file.
+
+### Registered
+
+- **`CarrierProfile.bcaAgreedAt` and `quickPayAgreedAt`** — slated for removal in
+  slice 2. Both already exist, both have zero readers anywhere (audit Finding 14),
+  and `CarrierAgreement.signedAt` already records the instant of assent. Deciding
+  whether a distinct `agreedAt` means anything different is decision 9's substance;
+  until that is settled these two are a second answer nobody reads.
+- **Decision 12** — *"Whether a shipper may ever see an RC"* — **closed by v3.8.awj**.
+  The download route now admits a load's customer and bounds them to
+  `SHIPPER_VISIBLE_DOC_TYPES`, so a shipper gets BOL, POD and INVOICE on their own
+  loads and never `RATE_CON`. The decision's original framing ("the allowlist says
+  no; the download route says yes") described a conflict that no longer exists.

@@ -20,6 +20,7 @@ import { checkLoadCompliance, checkAllActiveLoadCompliance } from "../services/l
 import { buildFingerprint } from "../services/chameleonDetectionService";
 import { prisma } from "../config/database";
 import { log } from "../lib/logger";
+import { clientIp } from "../lib/clientIp";
 
 /**
  * POST /api/carriers/:id/full-vet
@@ -792,7 +793,7 @@ export async function signAgreement(req: AuthRequest, res: Response) {
       signedByName,
       signedByTitle: signedByTitle || null,
       signatureData,
-      signerIp: (req.headers["x-forwarded-for"] as string) || req.ip || "",
+      signerIp: clientIp(req) || "",
       signerUserAgent: req.headers["user-agent"] || "",
     },
   });

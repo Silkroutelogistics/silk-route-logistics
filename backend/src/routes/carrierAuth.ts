@@ -46,6 +46,7 @@ import path from "path";
 import { z } from "zod";
 import { uploadLimiter } from "../middleware/rateLimiters";
 import { log } from "../lib/logger";
+import { clientIp, clientUserAgent } from "../lib/clientIp";
 
 const router = Router();
 
@@ -156,7 +157,7 @@ router.post("/login", loginLimiter, validateBody(carrierLoginSchema), async (req
         message: newAttempts >= MAX_FAILED
           ? `Carrier account locked for ${email} after ${newAttempts} failed attempts`
           : `Failed carrier login attempt for ${email} (attempt ${newAttempts}/${MAX_FAILED})`,
-        ipAddress: (req.headers["x-forwarded-for"] as string) || req.ip || null,
+        ipAddress: clientIp(req),
       },
     }).catch(() => {});
 
@@ -351,7 +352,7 @@ router.post("/verify-otp", otpVerifyLimiter, validateBody(carrierOtpSchema), asy
       action: "LOGIN",
       entity: "Session",
       changes: "Carrier login via OTP",
-      ipAddress: (req.headers["x-forwarded-for"] as string) || req.ip || "",
+      ipAddress: clientIp(req) || "",
       userAgent: req.headers["user-agent"] || "",
     },
   }).catch(() => {});
@@ -439,7 +440,7 @@ router.post("/totp-verify", otpVerifyLimiter, validateBody(carrierTotpSchema), a
       action: "LOGIN",
       entity: "Session",
       changes: "Carrier login via OTP + 2FA",
-      ipAddress: (req.headers["x-forwarded-for"] as string) || req.ip || "",
+      ipAddress: clientIp(req) || "",
       userAgent: req.headers["user-agent"] || "",
     },
   }).catch(() => {});
@@ -1061,7 +1062,7 @@ router.post("/sign-bca", authenticate, authorize("CARRIER"), validateBody(signBc
   }
 
   const ip = extractClientIp(req);
-  const userAgent = (req.headers["user-agent"] as string) || "";
+  const userAgent = clientUserAgent(req) || "";
 
   const agreement = await prisma.carrierAgreement.create({
     data: {
@@ -1236,7 +1237,7 @@ router.post("/quickpay-election", authenticate, authorize("CARRIER"), requireSte
   };
   const now = new Date();
   const ip = extractClientIp(req);
-  const userAgent = (req.headers["user-agent"] as string) || "";
+  const userAgent = clientUserAgent(req) || "";
 
   // v3.8.asb — same fix as sign-bca above, and this path was worse: the
   // version was OPTIONAL and fell back with `qpVersion || QP_VERSION`, so a

@@ -2,6 +2,7 @@ import { Response, NextFunction } from "express";
 import { prisma } from "../config/database";
 import { AuthRequest } from "../middleware/auth";
 import { log } from "../lib/logger";
+import { clientIp } from "../lib/clientIp";
 
 export function auditLog(action: string, entity: string) {
   return async (req: AuthRequest, res: Response, next: NextFunction) => {
@@ -17,7 +18,7 @@ export function auditLog(action: string, entity: string) {
               action,
               entity,
               entityId: req.params.id || data?.id || null,
-              ipAddress: req.ip || req.headers["x-forwarded-for"]?.toString() || null,
+              ipAddress: clientIp(req),
               userAgent: req.headers["user-agent"] || null,
             },
           })

@@ -15740,7 +15740,7 @@
 // the Compass checks. None of that should be handed out to answer a yes/no
 // question, so the server answers it about itself.
 //
-// GET /api/monitoring/document-chain/selftest (ADMIN/CEO). Persists real
+// GET /api/admin/document-chain/selftest (ADMIN/CEO). Persists real
 // fixtures under a reserved prefix, parses them with the real parser, runs the
 // Compass check the ENGINE calls, asserts the discrepancy flag on a deliberately
 // mismatched COI and the review state on a corrupted one, then deletes
@@ -15777,7 +15777,30 @@
 // Each injection-verified. Tender decline was left alone deliberately — v3.8.avn
 // changed Quick Pay ENROLLMENT decline/withdraw, a different handler; the split
 // is in the regression log.
-export const SRL_VERSION = "3.8.awj";
+// v3.8.awl — every executed agreement on production carried Cloudflare's IP,
+// not the signer's.
+//
+// `trust proxy` is 1, which is right: Render's load balancer is the only hop the
+// app can vouch for. But production sits behind TWO — client → Cloudflare →
+// Render → app. So req.ip was the address Cloudflare connected from, and all
+// seventeen call sites read the client-writable forwarded header FIRST with
+// req.ip only as a fallback.
+//
+// Read from production: bcaAgreedFromIp = 172.71.254.101, 104.22.64.131,
+// 172.69.17.162 — all Cloudflare edge ranges, all printed on executed
+// Broker-Carrier Agreements under an ESIGN/UETA statement.
+//
+// Those rows CANNOT be backfilled. The client's address was never received by
+// the application; it existed only in a header on requests that completed months
+// ago and were never logged.
+//
+// Not fixed by raising the hop count: the app cannot verify Cloudflare is really
+// the second hop, so anything reaching Render directly would have its own forged
+// entry trusted. That trades a wrong IP for a spoofable one. lib/clientIp instead
+// believes cf-connecting-ip ONLY when req.ip is inside Cloudflare's published
+// ranges — vendored with source URL and fetch date. The forwarded header is now
+// read nowhere, and xff-drift fails CI on any reappearance.
+export const SRL_VERSION = "3.8.awl";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

@@ -21,6 +21,7 @@
 
 import geoip from "geoip-lite";
 import { log } from "../lib/logger";
+import { clientIp, IpBearingRequest } from "../lib/clientIp";
 
 export interface GeoResult {
   country: string;       // ISO 3166-1 alpha-2 (e.g. "US", "CA", "KR")
@@ -71,23 +72,20 @@ export function resolveCountry(ip: string | null | undefined): string | null {
 }
 
 /**
- * Extract the client IP from an Express request, accounting for
- * Render's load balancer (`app.set("trust proxy", 1)` at server.ts:35).
+ * Extract the client IP from an Express request.
  *
- * Prefers `req.ip` which Express derives from x-forwarded-for + trust
- * proxy setting. Falls back to raw x-forwarded-for first hop, then
- * remoteAddress. Returns empty string if all fail (caller treats as null).
+ * Delegates to `lib/clientIp`, which is the single place that decides. This
+ * previously read the raw forwarded header as a fallback — a
+ * client-writable value — and, because production sits behind Cloudflare AND
+ * Render while `trust proxy` is 1, `req.ip` was an edge address rather than the
+ * caller's. See the header of `lib/clientIp.ts` for the production evidence.
+ *
+ * Kept as a re-export rather than deleted: it has callers across the codebase,
+ * and changing where the answer comes from should not mean touching all of them.
+ * Returns "" rather than null so existing callers keep their current shape.
  */
-export function extractClientIp(req: {
-  ip?: string;
-  headers: Record<string, string | string[] | undefined>;
-  socket?: { remoteAddress?: string };
-}): string {
-  if (req.ip) return req.ip;
-  const xff = req.headers["x-forwarded-for"];
-  if (typeof xff === "string") return xff.split(",")[0]?.trim() || "";
-  if (Array.isArray(xff) && xff[0]) return xff[0].split(",")[0]?.trim() || "";
-  return req.socket?.remoteAddress || "";
+export function extractClientIp(req: IpBearingRequest): string {
+  return clientIp(req) || "";
 }
 
 // v3.8.ajf — Unusual-activity detection for login attempts.
