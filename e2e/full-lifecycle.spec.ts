@@ -121,6 +121,14 @@ test.describe("Full Load Lifecycle E2E", () => {
         signedByName: "Pending Applicant",
         signedByTitle: "Owner",
         agreed: true,
+        // v3.8.awm — ESIGN §101(c) consent is a separate act from agreeing to
+        // the document, and the endpoint now blocks without it. This fixture
+        // predated the requirement and was refused with
+        // "Electronic records consent not given" — the gate working, not a
+        // regression. The fixture catches up to what a real signer now does,
+        // the same way it had to enrol in TOTP when the 2FA wall started
+        // gating (Arc 15). Do NOT weaken the gate to make this pass.
+        electronicRecordsConsent: true,
         bcaVersion: "2026-06-27-v1",
       },
     });
