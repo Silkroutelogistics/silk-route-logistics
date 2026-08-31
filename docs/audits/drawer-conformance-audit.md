@@ -194,3 +194,111 @@ The preview box follows from (1): once the drawer is ratio-sized, the iframe sho
 - **Nothing was rendered.** Every number here is read from source. Widths, counts and arithmetic are exact; how they *look* has not been verified in a browser, and per §19 Sub-pattern 8 a layout change of this size needs a visual pass before it ships.
 - **Font-size figures are occurrence counts, not weighted by rendered text volume.** A `text-xs` used once on a long paragraph and once on a chip count the same. They establish which sizes are in play and that no scale governs them; they do not measure how much of the surface reads at 12px.
 - **No fix was applied.** This is the foundation for the resize decision, not the resize.
+
+---
+
+# AFTER — measured, not argued (2026-08-31, v3.8.avz → awc)
+
+Everything above was read from source; this section is read from a browser.
+Instrument: [`e2e/render-proof.mjs`](../../e2e/render-proof.mjs), which drives real
+Chromium at three viewports against a seeded local stack, opens each drawer, and
+measures geometry plus the interaction contract. **18/18 drawers opened** on every
+run reported here.
+
+Outbound was neutralised before any of it ran and proven in both directions: a
+naive local run resolves `DATABASE_URL` to production Neon **with a live Resend
+key**, because dotenv backfills an absent key from `backend/.env`. Keys were set
+explicitly EMPTY, not left absent, and the backend confirmed it at runtime —
+`storage.configured false`, `parser.configured false`.
+
+## Width — the ratio table, recomputed from rendered widths
+
+| Screen | Content | Before | Before % | After | After % | Owlery 60% of content |
+|---|---|---|---|---|---|---|
+| 1440 | 1220px | 720px | **59.0%** | 864px | **70.8%** | 732px |
+| 1920 | 1700px | 720px | **42.4%** | 1100px | **64.7%** | 1020px |
+| 2560 | 2340px | 720px | **30.8%** | 1100px | **47.0%** | 1404px |
+
+The before column reproduces §2's predicted table (59 / 42 / 31) from rendered
+geometry, which is the audit's arithmetic confirmed rather than restated.
+
+**The spec'd token does not hit 60% of content, and that is worth knowing before
+the optical pass.** `clamp(640px, 60vw, 1100px)` measures `60vw` against the
+**viewport**; the audit measured 60% against the **content area**, which is the
+viewport minus the 220px sidebar. So it overshoots the reference by ~11pp at 1440
+and undershoots by 13pp at 2560 where the ceiling binds. It is an improvement at
+every width, which is why it shipped as specified. The sidebar-aware alternative
+is one line and lands 60.0 / 60.0 / 47.0:
+
+```css
+--drawer-detail: clamp(640px, calc((100vw - 220px) * 0.6), 1100px);
+```
+
+## Contract — probed live, not inspected
+
+ESC is exercised by pressing it and checking the drawer closed. The rest are read
+off the rendered DOM.
+
+| Surface | Before | After (all three viewports) |
+|---|---|---|
+| crm · lead-hunter · track-trace · waterfall | dialog Y · aria Y · lock Y · esc Y | unchanged |
+| **carriers** | dialog **N** · aria **N** · lock **N** · esc Y | dialog Y · aria Y · lock Y · esc Y |
+| **loads** | dialog **N** · aria **N** · lock **N** · esc **N** | dialog Y · aria Y · lock Y · esc Y |
+
+## Stacked drawers — the 224px gap, closed
+
+| Viewport | Secondary width | Primary translateX | Gap |
+|---|---|---|---|
+| 1440 | 448px | −448px | **0px** |
+| 1920 | 448px | −448px | **0px** |
+
+The offset is measured from the secondary panel via a `data-drawer-panel` marker
+plus a `ResizeObserver`, so it cannot disagree with the panel it is compensating
+for. It could not remain a literal in any case: `--drawer-detail` is a `clamp()`,
+so there is no constant to write down.
+
+## The 12-tab rail — the stress case, and it found something
+
+| Viewport | Drawer | Rail | Tabs | Rail content | Scrolls | Last tab visible |
+|---|---|---|---|---|---|---|
+| 1024×700 | 640px (floor) | 68px | 12 | 852px | yes | no |
+| 1366×768 | 820px | 68px | 12 | 852px | yes | **no** |
+| 1440×1000 | 864px | 68px | 12 | 852px | no | yes |
+
+At **1366×768 — a standard laptop** — the twelfth tab sits below the fold. It is
+now reachable by scrolling; before the migration the rail had no overflow handling
+inside an `overflow-hidden` drawer, so that tab was **clipped and unreachable**.
+A scroll affordance is an optical call and was left for that pass rather than
+guessed at.
+
+## Document preview — a whole page, verified against a real PDF
+
+A Letter-size BOL was uploaded through the actual AE endpoint and opened in the
+drawer.
+
+| Viewport | Frame before | Frame after | Result |
+|---|---|---|---|
+| 1440 | fixed 500px tall | 738 × 780 | whole page, no scrolling, **53%** |
+| 1920 | fixed 500px tall | 974 × 780 | whole page, no scrolling, **68%** |
+
+Height alone would not have done it. Chrome fits PDFs to **width**, so a wider
+drawer renders the page wider *and* proportionally taller and it still scrolls —
+at 1920 a Letter page is 1334px tall against ~780px of room. `#view=Fit` asks for
+fit-**page**, and the spare width becomes margin.
+
+**Verified in HEADED Chrome.** Headless Chromium has no PDF viewer, renders a
+blank frame, and cannot prove this — the first attempt did exactly that and looked
+like a broken preview.
+
+## What this after-state still does not establish
+
+- **Nothing here is an optical judgment.** Every number is geometry. Whether 864px
+  at 1440 *looks* right, whether 53% is comfortable to read, and whether the rail
+  needs a scroll cue are all human calls and remain open.
+- **Screenshots are local, not committed.** They live under `e2e/render-proof-out/`
+  and are gitignored: the measured geometry is the durable, diffable artifact,
+  and the PNGs would be permanent binary churn.
+- **The guards are source-level.** [`drawerConformance.test.ts`](../../frontend/src/components/ui/drawerConformance.test.ts)
+  proves a literal is absent and a hook is called. It cannot prove a drawer renders
+  at the right width — that is what the render proof is for, and the two should not
+  be confused for one another.
