@@ -1628,3 +1628,86 @@ manufactured consent, and a tender-gate bypass. **A future session finding
 "registration creates no agreement row" in an old audit should not re-implement
 that shape** — the resolved shape is ACKNOWLEDGED, consent-free, signature-free,
 and it is above.
+
+### The attestation's date format changed — this is a wording change, not drift
+
+**If you are diffing an executed PDF signed before `0525f458` against one signed
+after it, the attestation line will differ and that is expected.** Recording it
+here so nobody reads it as tampering, a rendering bug, or an unreviewed edit.
+
+| | |
+|---|---|
+| Before | `Electronically signed by … on Aug 31, 2026, 11:46 AM UTC · IP …` |
+| After | `Electronically signed by … on 2026-08-31 11:46 UTC · IP …` |
+
+**Same instant, same zone, same record.** Only the formatting of the human line
+moved; the ISO instant printed beneath it (`Signed at (UTC, ISO 8601): …`) is
+unchanged, and the stored `signedAt` was never touched.
+
+**The reason is ICU, and it is not cosmetic.** The old line came from
+`toLocaleString`, whose output depends on the **ICU build of the machine
+rendering it** — month abbreviations, the comma before the year, the AM/PM
+spacing, and in some builds the digits themselves all vary by locale data
+version. That is tolerable when a string is only ever read. It is not tolerable
+once the string is **hashed**: the same signature row would produce a different
+`contentHash` on a developer's laptop, on Render, and on a future runner with a
+newer ICU — and a re-verification that fails on a machine difference is worse
+than no hash, because it reads as an altered document.
+
+So locale formatting is banned outright inside
+[`canonicalAgreementText.ts`](../backend/src/lib/canonicalAgreementText.ts), and
+a test asserts the ban against the compiled code rather than the comments.
+
+**A legal instrument's wording changed, so it is stated plainly rather than left
+in a commit body.** ISO-8601 is the less ambiguous form on a document that may be
+read in another country, and the two lines now agree in shape. No clause, party,
+figure, term or signature field moved.
+
+### Register — e-signature correctness batch
+
+| Decision | State | Where |
+|---|---|---|
+| 5 — RC terms version | **closed** | v3.8.awm |
+| 6 — executed copy emailed at execution | **closed** | v3.8.awn |
+| 8 — content hash, **carrier agreements** | **closed** | v3.8.awo · `0525f458` |
+| 8 — content hash, **rate confirmations** | **re-banked under decision 3** | see below |
+| 9 — persist assent explicitly | **closed** | v3.8.awo · `0525f458` |
+| 10 — explicit electronic-records consent | **closed** | v3.8.awm |
+| 12 — may a shipper ever see an RC | **closed** | v3.8.awj |
+| 13 — which IP is authoritative | **closed** | v3.8.awl |
+
+**Decision 8, agreements half — closed at `0525f458`.** `CarrierAgreement.contentHash`
+is sha256 over the canonical text, computed before the row is created and written
+in the same statement. Rows signed before that commit render **"unhashed"** on the
+AE console rather than a blank: computing one now would attest to *today's*
+assembly of a document signed months ago, which is a worse claim than no claim.
+
+**Decision 8, RC half — re-banked under decision 3, and it belongs there.** The
+RC generator is 1,081 lines of **grid** layout — meta strip, rate breakdown, lane
+pills, terms grid, stop table — not linear prose, so it cannot be assembled into
+canonical text without rewriting the document.
+
+But the deeper reason it belongs to decision 3 is that **the hash design is
+downstream of whether acceptance freezes bytes.** If acceptance mints an immutable
+artefact, the correct hash is over *those stored bytes* and the whole canonical-text
+apparatus is unnecessary for the RC. If the RC stays a live re-render, a byte hash
+is impossible (PDF bytes are not reproducible — 43,348 b, unequal sha256) and only
+canonical text can work, which means paying for the grid rewrite. **Choosing a hash
+design before decision 3 is answered would be building the expensive half of a
+choice nobody has made.**
+
+**Decision 9 — closed at `0525f458`.** Registration click-wrap writes a
+`CarrierAgreement` row with **`status: "ACKNOWLEDGED"`, no `consentAt`, signature
+fields null**. Each is deliberate: the tender gate accepts only `SIGNED`, so
+ACKNOWLEDGED cannot make a carrier tenderable on registration alone; onboarding
+collects no ESIGN §101(c) acknowledgement, so the absent `consentAt` is the honest
+record; and nobody typed a legal name, so filling the signature fields would dress
+acceptance up as execution.
+
+**Retirement trigger, dated from `0525f458` (2026-08-31): one full month, to
+2026-09-30**, of zero divergence between `CarrierProfile.bcaAgreedAt` and an
+ACKNOWLEDGED row on newly-registered carriers. The parallel write stays until
+then. The three historical carriers — AMERICAN EAGLE FLEET INC, A FALCON EXPRESS
+LLC, and one unnamed — hold `bcaAgreedAt` with **no row at all**, so that column
+remains their sole consent evidence and is not in scope for retirement at any
+date.

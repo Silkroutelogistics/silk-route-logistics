@@ -339,6 +339,16 @@ Corollaries worth stating, since each was a step in that failure:
   (`gh run list --json headSha,conclusion,databaseId` and match), then read the
   job list from that run id. Same failure family as §19 Sub-pattern 16: the check
   ran, and it was not watching what its name implied.
+
+  **Do NOT reach for `gh run list --commit <sha>`.** It is the obvious shortcut
+  for exactly this rule and it **returns `[]` silently** for a run that exists —
+  no error, no warning, indistinguishable from "CI has not started". In the
+  v3.8.awo arc it returned empty twice, minutes apart, while run `33425243512`
+  was in progress and plainly visible in `gh run list` with that `headSha`. An
+  empty result reads as "not started yet", and the natural next move is to fall
+  back to the latest run on main — which is the precise failure this rule exists
+  to prevent. **`--json headSha` with an explicit match is the only method that
+  has been observed to work.**
 - **`/api/health` does not tell you whether a migration landed.** `migrate deploy`
   runs during the BUILD while the previous process keeps serving, so the SHA can
   report the old commit while the schema has already changed. Read the `schema`
@@ -2504,6 +2514,74 @@ Each is a discrete sprint. Mix of operational, security, UX, and technical debt.
     **249.6 — `/track` IS NOT BLOCKED; `/track?query` IS.** A fresh headless instrument got a NordVPN interstitial at `/track?cb=…` — correct URL, wrong document. But `/carriers` loaded fine in the same session and **`/track/ARCAVOPROOF1` — the actual QR and email shape — loaded correctly.** The block is client-side privacy tooling matching a path named "track" *plus a query string* as a tracking pixel. Nothing in the codebase emits that shape. **Going-forward rule, worth more than the finding: adding any query parameter to a tracking URL — `?utm_source`, `?ref` — would silently break it for every user running NordVPN, AdGuard, uBlock or Brave shields.** The path form is load-bearing.
 
     **249.7 — AND THE BOOT LOG I ADDED CRASHED THE BOOT (`v3.8.avp`).** `const emit = isProd ? log.error : log.info` detaches pino's `this`; the first call dies on `Symbol(pino.msgPrefix)`. Production never hit it (the key is set, so the block does not run) — **E2E** takes the non-production branch and its web server died at boot. `tsc` types an aliased method happily and the module is imported only at server start, so no local gate could have caught it. **CI did.** Call the logger; never hold a reference to one of its methods.
+
+250. **E-signature and document custody — batch CLOSED except eight banked decisions (2026-08-31, `v3.8.awj` → `v3.8.awo`).**
+
+    The correctness batch from the 2026-08-31 e-signature and document-custody
+    audit is complete. Every defect the audit reproduced against a live database is
+    fixed and guarded; what remains is **decisions, not work** — and the two kinds
+    of remainder have different blockers, which is why they are listed separately.
+
+    **CLOSED — seven decisions, six commits.** Shipper RC exposure (12, `awj`);
+    RC signer attribution server-derived (`awk`); client IP attribution behind
+    Cloudflare (13, `awl`); RC terms version and the explicit electronic-records
+    consent step (5 + 10, `awm`); executed copy emailed at execution with a
+    persisted send report (6, `awn`); content hash over canonical text and
+    registration assent as ACKNOWLEDGED (8-agreements + 9, `awo` / `0525f458`).
+    Full detail in [`docs/regression-log.md`](docs/regression-log.md); the register
+    table there is the index.
+
+    **BLOCKED ON ONE PROOF — three decisions.** All three need the same thing:
+    **a production storage round-trip on an executed agreement artefact.**
+    `documentUrl` IS written by both signing paths
+    ([`carrierAuth.ts:1213`](backend/src/routes/carrierAuth.ts#L1213), `:1418`), and
+    v3.8.avo made `/api/health` prove storage put/read/delete for real rather than
+    reporting that a credential exists (Item 249). What has **not** been observed is
+    a production signing event whose `documentUrl` then resolves and serves. Until
+    it does, all three would be built on an assumption:
+
+    - **3 — is the RC frozen at acceptance?** Freezing means minting immutable
+      bytes, which presumes bytes can be durably stored and fetched back.
+      **The RC content hash rides here**, re-banked from decision 8: if acceptance
+      freezes bytes, the right hash is over *those bytes* and the canonical-text
+      apparatus is unnecessary for the RC; if the RC stays a live re-render, a byte
+      hash is impossible (PDF bytes are not reproducible) and only canonical text
+      works — which costs a rewrite of a 1,081-line grid document. Picking a hash
+      design before this decision is answered builds the expensive half of a choice
+      nobody has made.
+    - **7 — retention period.** There is no policy, no expiry and no deletion path.
+      A retention rule over artefacts presumes the artefacts durably exist and can
+      be enumerated and deleted.
+    - **11a — should the AE console expose the executed PDF?** `documentUrl` is
+      already returned by `getCarrierAgreements` and rendered nowhere. Wiring a
+      download button to a URL that has never been proven to resolve in production
+      would ship a button that 404s for the first AE who presses it.
+
+    **BLOCKED ON OWNER RATIFICATION — five decisions.** No technical blocker; each
+    is a product or legal call and none should be defaulted by a session:
+
+    - **1 — drawn vs typed signature.** `signatureData` is documented as "Base64
+      signature image or typed name" and is always a copy of the typed name.
+      Whether a drawn signature is ever required is an evidentiary standard, not an
+      implementation detail.
+    - **2 — does SRL countersign?** Every artefact is one-sided; the BCA button
+      says "executed" with no broker signature block filled. Whether a broker
+      signature is required goes to whether the instrument is complete as issued.
+    - **4 — should a signed RC lock the load?** No guard connects `updateLoad` to a
+      signed RC, so a load can be edited after its rate confirmation is signed.
+      Which fields may still move after signature is an operational policy.
+    - **11b — should the AE sign-on-behalf path survive at all?** Distinct from
+      11a and NOT storage-gated: this is whether an AE may execute a carrier's
+      signature, which is a legal question about attribution regardless of where
+      the artefact lands.
+    - **14 — should `signedByName` be constrained** to the carrier's officer of
+      record, rather than accepting any typed name.
+
+    **Nothing here is a hidden defect.** Each remaining item was surfaced by the
+    audit, verified, and deliberately not resolved. The batch's discipline was that
+    a verified premise beats an instructed one: two instructed column drops and one
+    instructed feature were refused mid-batch after verification falsified their
+    premises — see the `awm` and `awn` entries, and §19 Sub-pattern 15.
 
 ## §14 LEGAL / COMPLIANCE STATUS
 
