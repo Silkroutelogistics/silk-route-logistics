@@ -423,6 +423,9 @@ export default function CarrierPoolPage() {
   const [previewDoc, setPreviewDoc] = useState<CarrierDoc | null>(null);
   const [uploadDocType, setUploadDocType] = useState("OTHER");
   const [uploadNotes, setUploadNotes] = useState("");
+  // v3.8.avq — the upload had no error surface at all, so a 400 looked exactly
+  // like a click that did nothing.
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const [uploadFile, setUploadFile] = useState<File | null>(null);
   // v3.8.aio — Authority grant date manual-entry form state.
   const [authorityGrantInput, setAuthorityGrantInput] = useState<string>("");
@@ -592,9 +595,33 @@ export default function CarrierPoolPage() {
   });
 
   const uploadDocMutation = useMutation({
+    // v3.8.avq — the explicit Content-Type is dropped as tidying, NOT as a fix.
+    //
+    // I first removed it believing it stripped the multipart boundary. That was
+    // wrong and testing it said so: axios 1.14 emits
+    // `multipart/form-data; boundary=axios-1.14.0-boundary-…` whether the header
+    // is set or not, and in the browser it unsets Content-Type for FormData
+    // entirely so XHR supplies it. Harmless either way; axios handles FormData
+    // natively, so passing nothing is simply the idiom.
+    //
+    // THE ACTUAL DEFECT is below: no onError. A click that 400s and a click that
+    // does nothing were the same thing on screen.
     mutationFn: ({ carrierId, formData }: { carrierId: string; formData: FormData }) =>
-      api.post(`/carriers/${carrierId}/documents`, formData, { headers: { "Content-Type": "multipart/form-data" } }),
-    onSuccess: () => { refetchDocs(); setDocView("list"); setUploadFile(null); setUploadNotes(""); setUploadDocType("OTHER"); },
+      api.post(`/carriers/${carrierId}/documents`, formData),
+    onSuccess: () => {
+      setUploadError(null);
+      refetchDocs(); setDocView("list"); setUploadFile(null); setUploadNotes(""); setUploadDocType("OTHER");
+    },
+    // Without this the rejection went nowhere. A mutation that can fail and has
+    // no error surface is indistinguishable from one that did nothing — §13.3
+    // Item 43, the same silent-swallow class as the RC modal handlers.
+    onError: (err: { response?: { data?: { error?: string }; status?: number } }) => {
+      const status = err.response?.status;
+      setUploadError(
+        err.response?.data?.error ||
+          `Upload failed${status ? ` (${status})` : ""}. The file was not saved — try again, and tell an admin if it repeats.`,
+      );
+    },
   });
 
   const updateDocStatus = useMutation({
@@ -2013,9 +2040,15 @@ export default function CarrierPoolPage() {
                         <textarea value={uploadNotes} onChange={e => setUploadNotes(e.target.value)} rows={2}
                           className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-xs resize-none" placeholder="e.g. Received via email from carrier" />
                       </div>
+                      {uploadError && (
+                        <div className="bg-[#F6E3E3] border border-[#9B2C2C]/40 rounded-lg p-3">
+                          <p className="text-xs font-semibold text-[#9B2C2C]">{uploadError}</p>
+                        </div>
+                      )}
                       <button disabled={!uploadFile || uploadDocMutation.isPending}
                         onClick={() => {
                           if (!uploadFile) return;
+                          setUploadError(null);
                           const fd = new FormData();
                           fd.append("file", uploadFile);
                           fd.append("docType", uploadDocType);

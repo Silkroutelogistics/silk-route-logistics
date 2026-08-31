@@ -15466,7 +15466,19 @@
 // run — but E2E takes the non-production branch and its web server died at boot.
 // CI caught it; tsc types an aliased method happily, and the module is imported
 // at server start rather than by any unit test, so no local gate would have.
-export const SRL_VERSION = "3.8.avp";
+// v3.8.avq — the AE document upload could fail and say nothing.
+//
+// The mutation had onSuccess and no onError, so a rejected POST left the button
+// flipping back to idle with no message: a click that 400s and a click that did
+// nothing looked identical. That is why "it doesn't proceed at all" was the only
+// available description of the failure.
+//
+// I first blamed the explicit multipart Content-Type for stripping the boundary.
+// Testing it disproved that — axios 1.14 emits a boundary either way, and in the
+// browser unsets the header for FormData entirely — so the other eight call
+// sites carrying the same header were left alone rather than swept on a wrong
+// theory. The header is dropped here only as tidying.
+export const SRL_VERSION = "3.8.avq";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
