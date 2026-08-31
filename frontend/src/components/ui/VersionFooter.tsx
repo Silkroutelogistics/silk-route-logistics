@@ -15634,7 +15634,21 @@
 // Height derived from measured chrome, not guessed: panel header 57px, preview
 // chrome ~150px, so max(420px, calc(100vh - 220px)) — 780px at a 1000px
 // viewport, which is what rendered.
-export const SRL_VERSION = "3.8.awb";
+// v3.8.awc — A4: guards, so the two properties this arc fixed cannot drift back.
+//
+// Both were true once and drifted anyway. The portal ran five hardcoded drawer
+// widths, and the contract held on five of seven drawers while the two busiest
+// had none of it — regressions that actually happened here.
+//
+// Source guards, and the limit is stated in the file: they prove a literal is
+// absent and a hook is called, never that a drawer renders right or that ESC
+// closes it. That is what e2e/render-proof.mjs measures. Presence is not
+// function (§19 Sub-pattern 16).
+//
+// Adversarially verified: reintroduce max-w-[720px] on a drawer, strip the hook
+// from the load board, or re-add a local ESC listener — each turns it red naming
+// the exact file, and green on restore. Frontend suite 66 → 77.
+export const SRL_VERSION = "3.8.awc";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
