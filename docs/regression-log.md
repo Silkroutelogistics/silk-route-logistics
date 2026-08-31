@@ -1542,3 +1542,89 @@ asserted a failed send that never happened.
 New columns rather than the existing `sentAt`, which already means "sent out for
 signature" (written by `carrierVettingController`) — the other end of the same
 lifecycle.
+
+---
+
+## 2026-08-31 — Slice 4: content hash over canonical TEXT, and assent that is not a signature
+
+**Shipped by v3.8.awo.** Decision 8 closed for agreements; **the RC half halted at
+the sizing gate**. Decision 9 closed as resolved.
+
+### The RC generator split — HALTED, with the measurement
+
+`generateEnhancedRateConfirmation` is **1,081 lines** inside a 3,210-line file, and
+its content is a **grid** — meta strip, rate breakdown, lane pills, terms grid,
+stop table — not linear prose. The brief's shape ("the PDF layout step consumes
+that string's content") cannot hold for it without rewriting the document as
+linear text, which would destroy it. Well past the ~3-file estimate the gate
+named, so it halted there.
+
+`rate_confirmations` therefore gets **no `contentHash` column**: with no writer it
+would be the dead-field pattern this codebase keeps having to unpick. The
+agreement half stands on its own and is complete.
+
+### Decision 8 — closed by v3.8.awo for agreements; the RC half deferred
+
+#### Why the hash is over text and not over the PDF
+
+Re-measured this slice, on the page: rendering one executed agreement twice
+produced **43,348 bytes and `PDF bytes stable across renders? false`**. A hash
+over bytes could never re-verify, so it would fail on documents that had not
+changed — worse than no hash, because it would look like tampering.
+
+So `lib/canonicalAgreementText` assembles the text deterministically and the
+renderer **consumes that same assembly**. There is no second description of the
+document to drift from the hashed one — the inline attestation the renderer used
+to build was exactly such a second description, and it is gone.
+
+Determinism rules, each closing a way two assemblies could differ: explicit field
+order; ISO-8601 UTC only with **no locale formatting anywhere** (ICU builds differ
+between machines, so the same row could hash differently on two hosts);
+whitespace normalised; absent optional fields omitted rather than rendered as
+empty.
+
+**A document-wording change rides with this, and it is deliberate.** The
+attestation's human date was `Aug 31, 2026, 11:46 AM UTC` via `toLocaleString`;
+it is now `2026-08-31 11:46 UTC`. Locale formatting had to go for the hash to be
+stable across machines, and ISO is less ambiguous on a legal document anyway. The
+ISO instant line beneath it is unchanged.
+
+#### The hash is written in the same statement as the signature
+
+Computed before the `create` and included in it, not applied by a follow-up
+update — a second statement would leave a window in which a signature row exists
+with no hash of what was signed, which is the state the column exists to make
+impossible.
+
+### Decision 9 — closed by v3.8.awo, as resolved: ACKNOWLEDGED, not SIGNED
+
+Registration click-wrap now writes a `CarrierAgreement` row. **`status:
+"ACKNOWLEDGED"`, no `consentAt`, signature fields null.** Each of those three is
+one of the reasons v3.8.awn reverted this:
+
+- **No `consentAt`**, because onboarding collects no ESIGN §101(c)
+  acknowledgement. The absence is the honest record.
+- **Not `SIGNED`**, because the tender gate filters on exactly
+  `status = 'SIGNED' AND templateName = 'broker-carrier'`
+  ([`complianceMonitorService.ts:423-427`](../backend/src/services/complianceMonitorService.ts#L423)).
+  A SIGNED row would have made a carrier tenderable without the in-portal signing
+  awm had just made consent-gated. **A test asserts that gate condition is
+  unchanged**, so widening it later fails loudly.
+- **Null signature fields**, because nobody typed a legal name at registration.
+  Filling them from firstName/lastName would dress an acceptance up as an
+  execution.
+
+**Retirement trigger for the parallel `bcaAgreedAt` write: one full month from
+this commit with zero divergence** between the column and an ACKNOWLEDGED row on
+newly-registered carriers. The three historical rows — AMERICAN EAGLE FLEET INC,
+A FALCON EXPRESS LLC, one unnamed — are untouched and stay the sole record for
+those carriers.
+
+### The awn revert, recorded so it is not re-implemented as written
+
+v3.8.awn implemented the registration row as **SIGNED with a `consentAt`** and
+reverted it before commit. Both consequences were verified, not suspected:
+manufactured consent, and a tender-gate bypass. **A future session finding
+"registration creates no agreement row" in an old audit should not re-implement
+that shape** — the resolved shape is ACKNOWLEDGED, consent-free, signature-free,
+and it is above.

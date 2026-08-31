@@ -176,6 +176,10 @@ interface CarrierAgreementRow {
   executedCopySent: boolean | null;
   executedCopySentAt: string | null;
   executedCopySendError: string | null;
+  // sha256 of the canonical text as executed. Null on everything signed before
+  // v3.8.awo — those render "unhashed", which is honest: computing one now would
+  // attest to today's assembly of a document signed months ago.
+  contentHash: string | null;
 }
 
 interface CarrierDoc {
@@ -1619,6 +1623,16 @@ export default function CarrierPoolPage() {
                               <p className="mt-1 text-[11px] text-gray-600">
                                 Signed{ag.signedAt ? ` ${new Date(ag.signedAt).toLocaleDateString()}` : ""}
                                 {ag.signedByName ? ` by ${ag.signedByName}` : ""}
+                              </p>
+                            )}
+
+                            {/* The content hash, so an executed agreement can be
+                                checked against what it said. Historical rows say
+                                "unhashed" rather than showing a blank that reads
+                                like a missing value. */}
+                            {isSigned && (
+                              <p className="mt-1 text-[11px] text-gray-500 font-mono">
+                                {ag.contentHash ? `sha256 ${ag.contentHash.slice(0, 16)}…` : "unhashed"}
                               </p>
                             )}
 

@@ -15,6 +15,7 @@ import {
   FONT_BODY_ITALIC,
 } from "../lib/srl-chrome";
 import { type LegalAgreement } from "../data/agreements";
+import { assembleAgreementSegments, WITNESS_LINE, type AgreementSegment } from "../lib/canonicalAgreementText";
 
 type PDFDoc = InstanceType<typeof PDFDocument>;
 
@@ -72,8 +73,14 @@ function renderLegalAgreement(
     includeQr: false,
   });
 
+  // v3.8.awo — every drawn string below comes from assembleAgreementSegments,
+  // the same assembly the content hash is computed over. A string drawn from
+  // anywhere else would be text on the page the hash does not cover.
+  const segments = assembleAgreementSegments(agreement, { carrier, signature });
+  const seg = (kind: AgreementSegment["kind"]) => segments.filter((x) => x.kind === kind);
+
   doc.font(FONT_BODY_ITALIC, 8.5).fillColor(TOKENS.fg3)
-     .text(agreement.effectiveNote, MARGIN, y, { lineBreak: false });
+     .text(seg("effective-note")[0]?.text ?? "", MARGIN, y, { lineBreak: false });
   y += 20;
 
   const pageBreak = () => {
@@ -102,10 +109,12 @@ function renderLegalAgreement(
     y += 16;
   };
 
-  for (const p of agreement.preamble) block(p, { gap: 10 });
-  for (const s of agreement.sections) {
-    heading(s.heading);
-    for (const c of s.clauses) block(c);
+  // Order is preserved from the assembly, so heading/clause interleaving is the
+  // assembly's order rather than a second traversal of the source data.
+  for (const p of seg("preamble")) block(p.text, { gap: 10 });
+  for (const s of segments) {
+    if (s.kind === "heading") heading(s.text);
+    else if (s.kind === "clause") block(s.text);
   }
 
   // Keep the execution area together. Height must fit the taller column — the
@@ -115,10 +124,7 @@ function renderLegalAgreement(
   const sigHeight = 250;
   if (y + sigHeight + 56 > CONTENT_BOTTOM) pageBreak();
   else y += 14;
-  block(
-    "IN WITNESS WHEREOF, the parties have executed this Agreement as of the date of the last signature below.",
-    { font: FONT_BODY_ITALIC, size: 9, gap: 14, align: "left" },
-  );
+  block(seg("witness")[0]?.text ?? WITNESS_LINE, { font: FONT_BODY_ITALIC, size: 9, gap: 14, align: "left" });
 
   const prefilled: Record<string, string> = {};
   if (carrier) {
@@ -132,33 +138,13 @@ function renderLegalAgreement(
   if (signature) {
     y += 6;
     if (y + 46 > CONTENT_BOTTOM) pageBreak();
-    // TIMEZONE. This previously rendered `toLocaleString` with no timeZone, so it
-    // printed the SERVER's local time with no label — "Aug 31, 2026, 07:46 AM"
-    // against a row storing 11:46:28.387Z. Four hours apart, on a legal document,
-    // with nothing on the page to reconcile them. Now pinned to UTC, labelled,
-    // and the stored ISO instant is printed beneath so the rendered string can
-    // always be checked back against the record.
-    const signedAtUtc = new Date(signature.signedAt);
-    const attest =
-      `Electronically signed by ${signature.signedByName}` +
-      (signature.signedByTitle ? `, ${signature.signedByTitle}` : "") +
-      ` on ${signedAtUtc.toLocaleString("en-US", {
-        year: "numeric", month: "short", day: "numeric",
-        hour: "2-digit", minute: "2-digit", timeZone: "UTC",
-      })} UTC` +
-      (signature.signerIp ? ` · IP ${signature.signerIp}` : "") +
-      ` · Agreement version ${signature.version}. Executed as a legally binding electronic signature under the U.S. ESIGN Act and UETA.` +
-      `\nSigned at (UTC, ISO 8601): ${signedAtUtc.toISOString()}` +
-      // ESIGN §101(c) consent, rendered beneath the signature with the same UTC
-      // discipline as the signing time. Absent on everything executed before
-      // v3.8.awm — the line is omitted rather than implying a consent that was
-      // never recorded.
-      (signature.consentAt
-        ? `\nElectronic records and signatures consented to on ${new Date(signature.consentAt).toLocaleString("en-US", {
-            year: "numeric", month: "short", day: "numeric",
-            hour: "2-digit", minute: "2-digit", timeZone: "UTC",
-          })} UTC (${new Date(signature.consentAt).toISOString()}).`
-        : "");
+    // The attestation is the assembly's, not a second copy. It used to be built
+    // inline here with toLocaleString — which meant the text on the page and the
+    // text a hash would cover were two different constructions of the same
+    // sentence, free to drift. It is now one construction, and it is the hashed
+    // one. ISO-only inside the assembly; no locale formatting, because ICU
+    // builds differ between machines and the hash must not.
+    const attest = seg("attestation")[0]?.text ?? "";
     doc.font(FONT_BODY_ITALIC, 8);
     const ah = doc.heightOfString(attest, { width: CONTENT_W - 20 });
     const boxH = ah + 16;

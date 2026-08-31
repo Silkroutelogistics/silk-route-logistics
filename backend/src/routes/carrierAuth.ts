@@ -47,6 +47,7 @@ import { z } from "zod";
 import { uploadLimiter } from "../middleware/rateLimiters";
 import { log } from "../lib/logger";
 import { clientIp, clientUserAgent } from "../lib/clientIp";
+import { agreementContentHash } from "../lib/canonicalAgreementText";
 
 const router = Router();
 
@@ -1141,12 +1142,23 @@ router.post("/sign-bca", authenticate, authorize("CARRIER"), validateBody(signBc
   const ip = extractClientIp(req);
   const userAgent = clientUserAgent(req) || "";
 
+  // The hash is computed BEFORE the create and written IN it. One statement, so
+  // there is no window in which a signature row exists without the hash of what
+  // was signed — which a follow-up update would have left open on every failure
+  // between the two.
+  const bcaIdentity = await loadCarrierIdentity(profile.id);
+  const bcaContentHash = agreementContentHash(BROKER_CARRIER_AGREEMENT, {
+    carrier: bcaIdentity ?? undefined,
+    signature: { signedByName, signedByTitle: signedByTitle || null, signedAt: now, signerIp: ip || null, version: bcaVersion, consentAt },
+  });
+
   const agreement = await prisma.carrierAgreement.create({
     data: {
       carrierId: profile.id,
       version: bcaVersion,
       templateName: "broker-carrier",
       status: "SIGNED",
+      contentHash: bcaContentHash,
       signedAt: now,
       signedByName,
       signedByTitle: signedByTitle || null,
@@ -1369,8 +1381,14 @@ router.post("/quickpay-election", authenticate, authorize("CARRIER"), requireSte
       orderBy: { signedAt: "desc" },
     });
     if (!existingQp || existingQp.version !== version) {
+      const qpIdentity = await loadCarrierIdentity(profile.id);
+      const qpContentHash = agreementContentHash(CARAVAN_QUICK_PAY_AGREEMENT, {
+        carrier: qpIdentity ?? undefined,
+        signature: { signedByName: signedByName!, signedByTitle: signedByTitle || null, signedAt: now, signerIp: ip || null, version, consentAt },
+      });
       const qpRow = await prisma.carrierAgreement.create({
         data: {
+          contentHash: qpContentHash,
           carrierId: profile.id,
           version,
           templateName: "quick-pay",

@@ -124,12 +124,21 @@ describe("fix 2 — Rate Confirmation attribution is server-derived", () => {
 });
 
 describe("fix 3 — the agreement signing time carries its zone and its source value", () => {
-  const src = fs.readFileSync(path.resolve(__dirname, "../../../src/services/agreementPdfService.ts"), "utf8");
+  // RE-ANCHORED in v3.8.awo. The attestation moved out of the renderer and into
+  // lib/canonicalAgreementText, so the hash covers exactly the sentence that is
+  // drawn rather than a second construction of it. The guarded properties are
+  // unchanged — UTC-labelled and carrying the stored ISO instant — but the
+  // human part is now ISO-shaped ("2026-08-31 11:46 UTC") instead of
+  // toLocaleString's "Aug 31, 2026, 11:46 AM UTC", because locale formatting
+  // depends on the ICU build and the hash must not.
+  const src = fs.readFileSync(path.resolve(__dirname, "../../../src/lib/canonicalAgreementText.ts"), "utf8");
 
   it("renders in UTC, labelled, and prints the stored ISO instant", () => {
-    expect(src).toContain('timeZone: "UTC"');
     expect(src).toContain("} UTC`");
-    expect(src).toContain("Signed at (UTC, ISO 8601): ${signedAtUtc.toISOString()}");
+    expect(src).toContain("Signed at (UTC, ISO 8601): ${iso(signedAt)}");
+    // Locale formatting is now banned outright here, which is stronger than
+    // pinning timeZone on a toLocaleString call.
+    expect(src).not.toContain("toLocaleString(");
   });
 
   it("the rendered string parses back to the stored instant", () => {

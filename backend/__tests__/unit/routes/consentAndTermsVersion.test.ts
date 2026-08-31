@@ -93,10 +93,17 @@ describe("consentAt is server time, never body-supplied", () => {
   });
 
   it("is rendered beneath the signature with the awj UTC discipline", () => {
-    expect(agreementPdf).toContain("Electronic records and signatures consented to on");
-    expect(agreementPdf).toContain('timeZone: "UTC"');
-    // Omitted, not faked, when absent — pre-awm executions recorded no consent.
-    expect(agreementPdf).toContain("signature.consentAt\n");
+    // RE-ANCHORED in v3.8.awo. The attestation moved into the canonical assembly
+    // the renderer consumes, so the sentence that is hashed and the sentence
+    // that is drawn are one construction. Same guarantee — UTC-labelled, ISO
+    // instant, and OMITTED rather than faked when absent.
+    const canonical = fs.readFileSync(path.join(SRC, "lib/canonicalAgreementText.ts"), "utf8");
+    expect(canonical).toContain("Electronic records and signatures consented to on");
+    expect(canonical).toContain("iso(sig.consentAt)");
+    // Conditional, so an execution with no recorded consent renders no line.
+    expect(canonical).toContain("sig.consentAt");
+    // And the renderer draws that segment rather than rebuilding it.
+    expect(agreementPdf).toContain('seg("attestation")');
   });
 });
 

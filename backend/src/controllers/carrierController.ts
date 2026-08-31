@@ -32,7 +32,7 @@ import { logAuthEvent } from "../lib/authEvents";
 import { COMPLIANCE_EMAIL } from "../config/authority";
 import * as crypto from "crypto";
 import { pairedApplicationStatus } from "../lib/carrierOperational";
-import { clientIp } from "../lib/clientIp";
+import { clientIp, clientUserAgent } from "../lib/clientIp";
 
 // v3.8.ala — Fire-and-forget compliance flag dispatch on registration
 // duplicate hits. Sends a brief alert to COMPLIANCE_EMAIL +
@@ -373,6 +373,51 @@ export async function registerCarrier(req: Request, res: Response) {
     },
     include: { carrierProfile: true },
   });
+
+  // ── v3.8.awo — registration assent gets a row, as ACKNOWLEDGED ──
+  //
+  // Decision 9, resolved. v3.8.awn implemented this as a SIGNED row and reverted
+  // it before commit, for two reasons this version answers directly:
+  //
+  //   * It wrote consentAt for a consent nobody gave — onboarding collects no
+  //     ESIGN §101(c) acknowledgement. THIS ROW WRITES NO consentAt. The absence
+  //     is the honest record: they accepted the terms, they did not separately
+  //     consent to electronic records.
+  //   * A SIGNED row satisfies the tender gate, which would have made a carrier
+  //     tenderable without the in-portal signing awm had just made
+  //     consent-gated. ACKNOWLEDGED satisfies nothing — the gate filters on
+  //     SIGNED (complianceMonitorService.ts:423-427) and a test asserts that
+  //     condition is unchanged.
+  //
+  // Signature fields stay NULL because there is no signature: nobody typed a
+  // legal name here. Filling them from firstName/lastName would dress an
+  // acceptance up as an execution.
+  //
+  // Why this exists at all: three production carriers hold a bcaAgreedAt with no
+  // agreement row, and for them that column is the entire record. From here
+  // forward assent has a row. THE PARALLEL WRITE ABOVE CONTINUES so the two can
+  // be compared — retirement trigger is ONE FULL MONTH from this commit with
+  // zero divergence between bcaAgreedAt and an ACKNOWLEDGED row on
+  // newly-registered carriers. The three historical rows are not touched.
+  await prisma.carrierAgreement
+    .create({
+      data: {
+        carrierId: user.carrierProfile!.id,
+        templateName: "broker-carrier",
+        version: BCA_VERSION,
+        status: "ACKNOWLEDGED",
+        signedAt: new Date(),
+        signerIp: clientIp(req) || "",
+        signerUserAgent: clientUserAgent(req),
+        expiresAt: null,
+      },
+    })
+    .catch((err) => {
+      // Non-fatal: registration has already succeeded, and the profile mirror
+      // still holds the assent — the same state the three historical carriers
+      // are in. Logged so a divergence has a cause rather than a mystery.
+      log.error({ err, userId: user.id }, "[Register] ACKNOWLEDGED agreement row not created — profile mirror still holds assent");
+    });
 
   // ── v3.8.avl — a failed upload is RECORDED, never silently dropped ──
   //

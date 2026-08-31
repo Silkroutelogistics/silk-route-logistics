@@ -679,6 +679,13 @@ enum AgreementStatus {
   SIGNED
   EXPIRED
   TERMINATED
+  // v3.8.awo — assent recorded at registration click-wrap. NOT a signature and
+  // deliberately NOT SIGNED: the tender gate filters on status "SIGNED"
+  // (complianceMonitorService), so an ACKNOWLEDGED row records that the
+  // applicant accepted the terms WITHOUT making them tenderable. The in-portal
+  // signing step, with its typed name and its separate ESIGN consent, remains
+  // the only thing that satisfies the gate.
+  ACKNOWLEDGED
 }
 
 enum UcrStatus {
@@ -4907,6 +4914,13 @@ model CarrierAgreement {
   executedCopySent      Boolean?
   executedCopySentAt    DateTime?
   executedCopySendError String?
+
+  // sha256 of the CANONICAL TEXT of this agreement as executed — not of the PDF
+  // bytes, which are not stable (v3.8.awj got two hashes for one agreement at
+  // identical length, so a byte hash could never re-verify). Computed from the
+  // same assembly the renderer draws, in the same write as the signature. NULL
+  // for everything executed before v3.8.awo; those render "unhashed".
+  contentHash String?
 
   expiresAt         DateTime?
   terminatedAt      DateTime?

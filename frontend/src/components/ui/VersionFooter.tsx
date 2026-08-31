@@ -15823,6 +15823,42 @@
 // creating one, so for them it is the only record they accepted the
 // click-through. quickPayAgreedAt is read at carrierAuth.ts:965. The audit's
 // "zero readers" finding was wrong about both. Decision 9 stays open.
+// v3.8.awo — what the agreement said, hashed; and assent that is not a signature.
+//
+// Decision 8 (agreements half) and decision 9 (as resolved).
+//
+// THE HASH IS OVER TEXT, NOT OVER THE PDF, and the reason is measured: rendering
+// one executed agreement twice produces different bytes (43,348 b, unequal
+// sha256) because generation metadata differs per render. A byte hash could
+// never re-verify — it would fail on documents that had not changed, which reads
+// as tampering. So lib/canonicalAgreementText assembles the text
+// deterministically and the RENDERER CONSUMES THAT SAME ASSEMBLY. The inline
+// attestation the renderer used to build was a second description of one
+// sentence, free to drift from the hashed one; it is gone.
+//
+// Determinism rules, each closing a way two assemblies of one row could differ:
+// explicit field order; ISO-8601 UTC only, no locale formatting anywhere (ICU
+// builds differ between machines); whitespace normalised; absent optional fields
+// omitted rather than emptied. One consequence is visible on the page — the
+// attestation now reads "2026-08-31 11:46 UTC" instead of the locale-formatted
+// "Aug 31, 2026, 11:46 AM UTC". Less ambiguous on a legal document anyway.
+//
+// The hash is computed before the create and written IN it. A follow-up update
+// would leave a window where a signature exists with no hash of what was signed,
+// which is the state the column exists to make impossible.
+//
+// REGISTRATION ASSENT IS ACKNOWLEDGED, NEVER SIGNED. The tender gate accepts
+// exactly status = SIGNED, so a SIGNED row here would make a carrier tenderable
+// on registration alone, bypassing the consent-gated signing awm had just built.
+// No consentAt either: onboarding collects no ESIGN acknowledgement, and the
+// absence is the honest record. Signature fields stay null because nobody typed
+// a legal name. A test asserts the gate condition is unchanged.
+//
+// NOT SHIPPED, on purpose: rate_confirmations.contentHash. The RC generator is
+// 1,081 lines of grid layout inside a 3,210-line file, so it cannot be split
+// into linear canonical text without rewriting the document — well past the
+// sizing gate this slice was given. A column with no writer is the dead-field
+// pattern, so it was not added.
 // v3.8.awn — the executed copy reaches the signer, and the row says whether it
 // actually did.
 //
@@ -15845,7 +15881,7 @@
 // acknowledgement nobody gave; and a SIGNED row satisfies the tender gate, which
 // would make a carrier tenderable without the in-portal signing awm had just made
 // consent-gated. Both need a product decision. Decision 9 stays open.
-export const SRL_VERSION = "3.8.awn";
+export const SRL_VERSION = "3.8.awo";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
