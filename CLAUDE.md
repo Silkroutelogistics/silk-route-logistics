@@ -3192,6 +3192,41 @@ about what runs.**
 
 Closed by `serif-weight-drift.js`, which asserts the other two axes *and* the loaders themselves, so a re-added 600 fails CI upstream of any component that could use it.
 
+**TENTH FIRE — "configured is not functional", and it was green through a public outage (2026-08-31, v3.8.awf/awg).**
+
+Google retired `gemini-2.0-flash`. It was hardcoded in four files, so Marco Polo
+(the PUBLIC homepage chatbot), the shipper portal assistant and the COI parser
+all died at the same instant. `/api/health` reported `parser: {"configured": true}`
+throughout, because that field asked whether `GEMINI_API_KEY` was **set**. The
+credential was set. The model was gone.
+
+**A field named for a capability was reporting a credential.** I wrote that field
+myself, two arcs earlier, in the commit whose whole purpose was to make storage
+and parser readiness visible.
+
+The chatbot compounded it by failing GRACEFULLY: it caught the error and replied
+*"I'm having trouble connecting right now"* — a 200, a well-formed body, flat
+error rates, no alert, and a sentence a visitor reads as a transient blip. Broken
+and working were indistinguishable by every signal the platform owned. **Window
+unknown**, because nothing recorded a first failure — there was no failure to
+record. Found only because a document-chain proof went looking at the parser.
+
+> **A health field must observe the capability, not the credential.** Anything
+> that answers by reading an env var is reporting its own configuration back to
+> itself.
+
+Now: `{ configured, functional, model, checkedAt }`, where `functional` comes
+from a real call, cached with a short TTL, refreshed in the background so health
+stays fast and never throws. **`functional` is `null` until checked — never
+optimistically `true`**, because an optimistic default is how this happened.
+Storage got the same treatment: a genuine put/read/delete round trip, since
+`useS3` only says credentials existed at boot and cannot see a suspended account
+or a rotated key — both of which this codebase has hit.
+
+Proven by pinning the retired model and reading the endpoint: `configured: true`
+(where the old field stopped and declared health) alongside `functional: false`
+and the 404 naming its own successor.
+
 **Relationship to Sub-pattern 11 (CI-parity).** Sub-pattern 11 asks whether the local gate matches the CI gate. Sub-pattern 16 asks whether *either* gate observes the claim it makes. Passing 11 and failing 16 is exactly the state all six fires above were in.
 
 ###### Cumulative fire registry extension (post-Sprint-51.f, three new fires)

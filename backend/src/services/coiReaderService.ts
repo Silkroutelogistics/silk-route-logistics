@@ -4,7 +4,8 @@
  * Falls back to basic text extraction if no AI API key is available.
  */
 import { log } from "../lib/logger";
-import { geminiGenerateContentUrl } from "../config/ai";
+import { geminiGenerateContentUrl, GEMINI_MODEL } from "../config/ai";
+import { cachedCapability, type CapabilityResult } from "../lib/capabilityProbe";
 
 // v3.8.avo — degraded loudly, not quietly.
 //
@@ -270,6 +271,24 @@ async function extractWithFallback(
  * falls back to a very limited non-AI path, which is not the same capability —
  * health should say so rather than implying the parser is live.
  */
-export function parserStatus(): { configured: boolean } {
-  return { configured: !!process.env.GEMINI_API_KEY };
+export function parserStatus(): CapabilityResult & { model: string } {
+  const configured = !!process.env.GEMINI_API_KEY;
+  const r = cachedCapability("gemini", configured, async () => {
+    // The cheapest call that proves the MODEL answers, not that the key parses.
+    // A retired model returns 404 here exactly as it did in the outage this
+    // field failed to see, and the 404 body names the successor.
+    const res = await fetch(geminiGenerateContentUrl(process.env.GEMINI_API_KEY as string), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ contents: [{ parts: [{ text: "Reply with the single word: OK" }] }] }),
+    });
+    if (!res.ok) {
+      const body = await res.text();
+      return { ok: false, detail: `HTTP ${res.status}: ${body.slice(0, 140)}` };
+    }
+    const j = (await res.json()) as { candidates?: { content?: { parts?: { text?: string }[] } }[] };
+    const text = j?.candidates?.[0]?.content?.parts?.[0]?.text;
+    return text ? { ok: true } : { ok: false, detail: "200 but no completion returned" };
+  });
+  return { ...r, model: GEMINI_MODEL };
 }

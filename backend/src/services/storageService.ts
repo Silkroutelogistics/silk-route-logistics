@@ -1,3 +1,4 @@
+import { cachedCapability, type CapabilityResult } from "../lib/capabilityProbe";
 import { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import fs from "fs";
@@ -315,9 +316,28 @@ export async function runStorageSelfTest(): Promise<{
  * S3_ENDPOINT is set (R2 or similar), and `local-disk` in production is the
  * state where every upload is refused.
  */
-export function storageStatus(): { configured: boolean; provider: string } {
-  return {
-    configured: useS3,
-    provider: useS3 ? (env.S3_ENDPOINT ? "s3-compatible" : "s3") : "local-disk",
-  };
+export function storageStatus(): CapabilityResult & { provider: string } {
+  const provider = useS3 ? (env.S3_ENDPOINT ? "s3-compatible" : "s3") : "local-disk";
+  // v3.8.awg — a ROUND TRIP, not a config read. `useS3` only says credentials
+  // were present at boot; it cannot see a suspended account, a rotated key or a
+  // deleted bucket, and this codebase has hit the first two.
+  const r = cachedCapability("storage", useS3, async () => {
+    const key = `_healthcheck/${Date.now()}-${Math.random().toString(36).slice(2)}.txt`;
+    const url = await uploadFile(Buffer.from("srl health probe"), key, "text/plain");
+    try {
+      const stream = await getFileStream(url);
+      await new Promise<void>((resolve, reject) => {
+        let seen = 0;
+        stream.on("data", (chunk: Buffer) => { seen += chunk.length; });
+        stream.on("end", () => (seen > 0 ? resolve() : reject(new Error("object read back empty"))));
+        stream.on("error", reject);
+      });
+    } finally {
+      // Always clean up, including after a failed read — otherwise a broken read
+      // path quietly fills the bucket with probe objects.
+      await deleteFile(url).catch(() => {});
+    }
+    return { ok: true };
+  });
+  return { ...r, provider };
 }

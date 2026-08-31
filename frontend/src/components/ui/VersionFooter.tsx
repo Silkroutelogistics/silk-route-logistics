@@ -15696,7 +15696,26 @@
 // config change and not a deploy. Default is the successor Google named in the
 // 404, verified live (HTTP 200) before shipping rather than trusted from the
 // error text.
-export const SRL_VERSION = "3.8.awf";
+// v3.8.awg — the monitor and the health field can now SEE this class.
+//
+// The outage was invisible to everything: a 200, a well-formed body, flat error
+// rates, and /api/health saying parser configured: true — because that field
+// asked whether the KEY was set, not whether the model answered.
+//
+// Monitor: a Marco Polo probe whose mustNotContain is the fallback sentence
+// itself, plus a mustMatch over the equipment it must name — because broken and
+// working both return 200 with a "reply", and only the words differ.
+//
+// Health: { configured, functional, model, checkedAt }. functional comes from a
+// real call, cached with a short TTL and refreshed in the background so health
+// stays fast and never throws. It is null until checked, NEVER optimistically
+// true — an optimistic default is how this happened. Storage got a genuine
+// put/read/delete round trip for the same reason: useS3 only says credentials
+// existed at boot.
+//
+// Proven by pinning the retired model: configured true, functional FALSE, and
+// the 404 naming its own successor.
+export const SRL_VERSION = "3.8.awg";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

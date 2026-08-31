@@ -47,6 +47,7 @@
 // than trusting that the code which writes it runs. Presence is not function,
 // and a failure-only code path is where that bites hardest: it is never
 // exercised by a healthy run.
+import { pathToFileURL } from "url";
 import { appendFileSync } from "node:fs";
 
 const BASE = process.env.PROBE_BASE_URL || "https://api.silkroutelogistics.ai/api";
@@ -65,6 +66,27 @@ const TIMEOUT_MS = 20_000;
  *                    that understood the failure, for whoever is woken by it.
  */
 export const PROBES = [
+  // ── the AI surfaces (Arc: v3.8.awf) ─────────────────────────────────
+  {
+    name: "Marco Polo (public chatbot)",
+    why: "v3.8.awf: Google retired gemini-2.0-flash and this replied 'having trouble connecting' to every question — a 200, flat error rates, no alert. Window unknown.",
+    method: "POST",
+    path: "/chat/public",
+    body: { message: "What equipment types do you move?" },
+    expectStatus: [200],
+    // The outage signature, encoded. This is the whole point of the probe: the
+    // broken chatbot and the working chatbot BOTH return 200 with a "reply"
+    // field, and only the sentence separates them. A status check cannot see
+    // this class at all.
+    mustNotContain: ["having trouble connecting", "No token provided"],
+    // Positive proof the model actually answered rather than a fallback: the
+    // canonical prompt (§20.8.5) always names real equipment from the services
+    // whitelist. A generic apology never will.
+    mustContain: ["reply"],
+    mustMatch: /dry van|reefer|flatbed|temperature|equipment/i,
+    hint: "GEMINI_MODEL retired again? Check config/ai.ts, then /api/health parser.functional, then GEMINI_MODEL on Render — it is env-overridable so this is a config change, not a deploy.",
+  },
+
   // ── the six that were down (Arc 27) ────────────────────────────────
   {
     name: "carrier login",
@@ -260,6 +282,14 @@ function evaluate(p, status, text) {
     if (text.includes(s)) {
       problems.push(`body contains ${JSON.stringify(s)} — THIS IS THE OUTAGE SIGNATURE`);
     }
+  }
+  // v3.8.awg — mustMatch, for surfaces whose healthy body cannot be pinned to a
+  // fixed string. Marco Polo's answer varies with the model, so no literal
+  // proves it replied; a pattern over the equipment it must name does. Declared
+  // as a regex, checked here, because a probe field the runner does not read is
+  // a probe that silently checks nothing.
+  if (p.mustMatch && !p.mustMatch.test(text)) {
+    problems.push(`body does not match ${p.mustMatch} — the handler ran but did not answer`);
   }
   return problems;
 }
@@ -485,7 +515,19 @@ async function main() {
   }
 }
 
-main().catch((e) => {
-  console.error("probe harness itself failed:", e);
-  process.exit(1);
-});
+// v3.8.awg — only self-run when EXECUTED, not when imported.
+//
+// Without this the module probes production the moment anything imports it,
+// which is why the self-test guard reads this file as text instead. Text checks
+// can prove a probe is DECLARED; only importing `evaluate` can prove it would
+// actually catch an outage body. Guarding the entrypoint makes that possible
+// without changing what `node scripts/probe-public-surfaces.mjs` does.
+const isDirectRun = process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
+if (isDirectRun) {
+  main().catch((e) => {
+    console.error("probe harness itself failed:", e);
+    process.exit(1);
+  });
+}
+
+export { evaluate };
