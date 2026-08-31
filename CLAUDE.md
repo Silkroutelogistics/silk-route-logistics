@@ -293,6 +293,12 @@ and lost nothing, because that work was going to be held anyway. When their
 work has landed, restore YOUR file from `HEAD` and replay only their hunk —
 after verifying it verbatim in the tree first. Never the blanket checkout.
 
+**Audit reports must be named `audit-*.md` or they are not ignored.** The
+pattern in `.gitignore` is `docs/audit-reports/audit-*.md`. A report filed as
+`<subject>-audit.md` matches nothing, shows up untracked, and is then exactly
+the kind of file the shared-index rule above says gets swept into another
+session's commit. Check with `git check-ignore -v <path>` before writing.
+
 **Untracked files are not branch-scoped.** `git branch -D` leaves behind any
 directory the branch created. Arc 23 abandoned a hold branch and left a
 destructive migration sitting untracked in `prisma/migrations/` — the
@@ -339,8 +345,24 @@ Corollaries worth stating, since each was a step in that failure:
 
    ```powershell
    cd backend
-   npx prisma migrate dev --name <descriptive_name>
+   npm run prisma:migrate -- --name <descriptive_name>
    ```
+
+   **Use the npm script, not the raw `prisma` command.** Every schema-touching
+   script routes through `backend/scripts/prisma-target-guard.ts` first, which
+   resolves the URL the CLI will actually use and refuses any non-local host
+   unless `PRISMA_TARGET=production` is set on that one invocation.
+
+   **The trap it exists to close (2026-08-31):** `migrate` and `db push` read
+   **`directUrl`** (`schema.prisma:27`), not `url`. Exporting only
+   `DATABASE_URL` points the runtime at localhost while every migrate command
+   still reaches production through `DIRECT_URL` — and the shell looks local to
+   whoever typed it. The only tell is one substring in the hostname: no
+   `-pooler` means it is the direct Neon endpoint, not the pooled one.
+
+   Note the Render build chain calls `npx prisma migrate deploy` directly and is
+   deliberately unaffected — deploying to production is that command's job. The
+   guard protects a human at a terminal.
 
    Migration auto-applies to local DB + creates migration file at `prisma/migrations/<timestamp>_<name>/`. Commit migration file alongside `schema.prisma` changes. Render auto-deploys main branch → `migrate deploy` applies the migration in build chain.
 
@@ -3085,6 +3107,34 @@ Three corollaries:
 - **The control is not ceremony.** It was there to prove absence of change and it produced the arc's fourth finding. A probe that can only confirm is worth less than one that can also surprise you.
 - **A guard's first version is the one most likely to carry the bug it was written against** — it is authored under the same mental model that missed the thing. Injection-verify it against the *original* defect, not a synthetic one.
 - **Render, then believe.** Every finding in this arc past the first came from a browser. Four separate times the build was clean, the guard was green, and production was wrong.
+
+**EIGHTH FIRE — the probe collided with its own control (2026-08-31, e-signature audit).**
+
+Testing whether a signed Rate Confirmation renders its signature, the fixture
+used `"Jordan Probe"` as the signature name — and the carrier's person-name in
+the same fixture was also *Jordan Probe*. The string appeared in the PDF, the
+probe reported the signature RENDERED, and that would have shipped as a finding
+contradicting the truth.
+
+Re-run with `carrierSignature: "QQSIGNATUREQQ"` — a value that can only have
+come from the field under test — every signature field came back NOT RENDERED,
+while a control string from elsewhere in the same document still rendered. The
+second run is the one that counts.
+
+> **A value that also appears outside the field under test verifies nothing.**
+> **The probe must use a string whose only possible source is that field.**
+
+This is Sub-pattern 16 pointing at the fixture rather than the guard: the check
+ran, it observed a real string in a real artifact, and it was measuring
+something other than what its name said. Same shape as a guard satisfied by an
+import line, or a text assertion matching prose in its own comment — and the
+same remedy, which is to make the observation unambiguous by construction
+rather than to look harder at an ambiguous one.
+
+Corollary, since it generalises past PDFs: **when asserting that X put a value
+somewhere, the value must be unique to X.** Reusing a realistic-looking name
+across two roles in one fixture is the most natural way to write the test and
+the most reliable way to make it lie.
 
 
 
