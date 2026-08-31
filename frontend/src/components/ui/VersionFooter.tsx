@@ -15536,7 +15536,18 @@
 // And the preview rendered <iframe src=""> for those rows: a blank 500px frame
 // that reads as "the preview is broken" rather than "there is nothing to
 // preview". It now names the file and says storage refused it.
-export const SRL_VERSION = "3.8.avu";
+// v3.8.avv — the SDK was sending a checksum header R2 refuses.
+//
+// InvalidArgument / HTTP 400 with credentials that clearly worked: since
+// @aws-sdk/client-s3 v3.729 the SDK attaches x-amz-sdk-checksum-algorithm and
+// x-amz-checksum-crc32 to EVERY PutObject by default, and R2 rejects them. We
+// are on 3.998, so the swap to R2 landed straight into it.
+//
+// WHEN_REQUIRED restores the pre-3.729 behaviour — checksums only where the
+// operation needs them — and is safe against real AWS S3, where it was the
+// default for years. Set unconditionally so a later provider change cannot
+// quietly bring it back.
+export const SRL_VERSION = "3.8.avv";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

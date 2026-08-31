@@ -14,6 +14,20 @@ let s3: S3Client | null = null;
 if (useS3) {
   s3 = new S3Client({
     region: env.AWS_REGION,
+    // v3.8.avv — required for R2 and every other S3-compatible provider.
+    //
+    // Since @aws-sdk/client-s3 v3.729 the SDK computes and sends a checksum
+    // header (x-amz-sdk-checksum-algorithm + x-amz-checksum-crc32) on EVERY
+    // PutObject by default. R2 does not accept those and answers
+    // `InvalidArgument / HTTP 400` — credentials fine, request refused.
+    //
+    // WHEN_REQUIRED restores the pre-3.729 behaviour: checksums only on
+    // operations that genuinely need them. Safe against real AWS S3 too, since
+    // it was the default there for years. Set unconditionally rather than only
+    // when S3_ENDPOINT is present, so a future provider swap cannot reintroduce
+    // it.
+    requestChecksumCalculation: "WHEN_REQUIRED",
+    responseChecksumValidation: "WHEN_REQUIRED",
     // Unset endpoint = AWS S3. Set it (with AWS_REGION=auto) to point at any
     // S3-compatible provider such as Cloudflare R2 — config change, no code change.
     ...(env.S3_ENDPOINT ? { endpoint: env.S3_ENDPOINT } : {}),
