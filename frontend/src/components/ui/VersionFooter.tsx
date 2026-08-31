@@ -15602,7 +15602,24 @@
 // The load board's stacked offset is now MEASURED from the secondary panel
 // (gap 0px at 1440 and 1920, verified) instead of two literals kept in sync by
 // a comment — which is what produced the 224px gap it warned about.
-export const SRL_VERSION = "3.8.avz";
+// v3.8.awa — A2: the drawer contract is one implementation, not five of seven.
+//
+// ESC, browser-back and scroll lock extracted from SlideDrawer into
+// useDrawerBehavior, then given to the carrier pool and the load board — the two
+// busiest AE surfaces, which are inline rather than components and were the two
+// missing it. The load board had NO desktop keyboard escape at all.
+//
+// Extraction onto SlideDrawer was tried and rejected: it renders its own header
+// and a padded column, and both of those drawers need a horizontal layout with
+// an icon rail. Forcing layout to fit behaviour is the wrong way round.
+//
+// Measured after: dialog / aria-modal / scroll-lock / ESC all Y on all six
+// surfaces at 1440, 1920 and 2560. Before, two were N across the board.
+//
+// The carrier rail moved onto the shared IconTabs, resolved UPWARD (icon 14→18,
+// rail 64→68) — unifying at the smaller size would have made four drawers worse
+// to fix one inconsistency, in an arc that exists because things read cramped.
+export const SRL_VERSION = "3.8.awa";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

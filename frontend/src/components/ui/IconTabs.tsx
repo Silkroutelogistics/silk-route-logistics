@@ -31,7 +31,21 @@ interface IconTabsProps<T extends string> {
 
 export function IconTabs<T extends string>({ tabs, active, onChange }: IconTabsProps<T>) {
   return (
-    <div className="w-16 shrink-0 border-r border-gray-200 bg-gray-50 py-4 flex flex-col items-center gap-2">
+    /* v3.8.awa — rail 64→68px, icon container 28→36px, icon 14→18px.
+     *
+     * The carrier pool ran its own rail at 66px with 18px icons while this
+     * shared one was 64/14, so the two were four pixels of icon apart — close
+     * enough to look like a mistake, far enough to read as inconsistent when
+     * moving between drawers. Migrating the carrier pool onto this component
+     * resolves that, and it is resolved UPWARD deliberately: this arc exists
+     * because the drawers read as cramped, so unifying at the smaller of the
+     * two sizes would have made four drawers worse to fix one inconsistency.
+     *
+     * Overflow: the rail is a scroll-free column, so its ceiling is the tab
+     * count times ~54px. The carrier pool's twelve tabs are the stress case —
+     * verified against the drawer floor height, see the arc's render proof.
+     */
+    <div className="w-[68px] shrink-0 border-r border-gray-200 bg-gray-50 py-4 flex flex-col items-center gap-2 overflow-y-auto">
       {tabs.map(({ id, label, Icon, alert }) => {
         const isActive = active === id;
         return (
@@ -48,15 +62,15 @@ export function IconTabs<T extends string>({ tabs, active, onChange }: IconTabsP
               }`}
             />
             <span
-              className={`w-7 h-7 rounded-lg flex items-center justify-center transition-all duration-150 ${
+              className={`w-9 h-9 rounded-lg flex items-center justify-center transition-all duration-150 ${
                 isActive ? "bg-[#FAEEDA]" : "bg-white group-hover:bg-gray-100"
               }`}
             >
               <Icon
-                className={`w-[14px] h-[14px] ${
+                className={`w-[18px] h-[18px] ${
                   isActive ? "text-[#BA7517]" : alert ? "text-red-500" : "text-gray-400"
                 }`}
-                strokeWidth={1.5}
+                strokeWidth={isActive ? 2.5 : 1.5}
               />
             </span>
             <span className={`text-[10px] font-medium ${isActive ? "text-[#854F0B]" : "text-gray-500"}`}>

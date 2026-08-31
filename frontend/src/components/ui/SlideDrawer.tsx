@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useCallback, useRef } from "react";
+import { useRef } from "react";
+import { useDrawerBehavior } from "@/hooks/useDrawerBehavior";
 import { X } from "lucide-react";
 
 interface SlideDrawerProps {
@@ -24,38 +25,12 @@ interface SlideDrawerProps {
  */
 export function SlideDrawer({ open, onClose, title, children, width = "max-w-[var(--drawer-detail)]", side = "right" }: SlideDrawerProps) {
   const drawerRef = useRef<HTMLDivElement>(null);
-  const wasOpenRef = useRef(false);
 
-  const handleKeyDown = useCallback((e: KeyboardEvent) => {
-    if (e.key === "Escape") onClose();
-  }, [onClose]);
-
-  useEffect(() => {
-    if (open && !wasOpenRef.current) {
-      window.history.pushState({ drawer: true }, "");
-      const handlePopState = () => onClose();
-      window.addEventListener("popstate", handlePopState);
-      wasOpenRef.current = true;
-      return () => {
-        window.removeEventListener("popstate", handlePopState);
-        wasOpenRef.current = false;
-      };
-    }
-    if (!open && wasOpenRef.current) {
-      wasOpenRef.current = false;
-    }
-  }, [open, onClose]);
-
-  useEffect(() => {
-    if (open) {
-      document.addEventListener("keydown", handleKeyDown);
-      document.body.style.overflow = "hidden";
-    }
-    return () => {
-      document.removeEventListener("keydown", handleKeyDown);
-      document.body.style.overflow = "";
-    };
-  }, [open, handleKeyDown]);
+  // v3.8.awa — ESC, browser-back and scroll lock moved verbatim into
+  // useDrawerBehavior so the carrier pool and load board can have the same six
+  // behaviours without being forced through this component's layout. Nothing
+  // about SlideDrawer's behaviour changed; this is where the hook came from.
+  const { dialogProps, backdropProps } = useDrawerBehavior({ open, onClose });
 
   if (!open) return null;
 
@@ -66,13 +41,12 @@ export function SlideDrawer({ open, onClose, title, children, width = "max-w-[va
   return (
     <div className="fixed inset-0 z-50">
       {/* Backdrop — subtle dark overlay, NO blur */}
-      <div className="absolute inset-0 bg-black/20" onClick={onClose} />
+      <div className="absolute inset-0 bg-black/20" {...backdropProps} />
 
       {/* Drawer panel — clean white, matches Cerry */}
       <div
         ref={drawerRef}
-        role="dialog"
-        aria-modal="true"
+        {...dialogProps}
         aria-labelledby="drawer-title"
         // v3.8.avz — lets a page that stacks a secondary drawer over a primary
         // MEASURE the secondary instead of hardcoding its width. Only SlideDrawer

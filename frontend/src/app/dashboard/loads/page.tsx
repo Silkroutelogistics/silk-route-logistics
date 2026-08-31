@@ -1,5 +1,6 @@
 "use client";
 
+import { useDrawerBehavior } from "@/hooks/useDrawerBehavior";
 import { useState, useMemo, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
@@ -188,6 +189,21 @@ export default function LoadsPage() {
   // The ResizeObserver matters for exactly that reason: dragging the window
   // across a clamp boundary changes the secondary's width, and an offset
   // measured once at open would then be wrong for the rest of the session.
+  // v3.8.awa — the six-behaviour drawer contract. This surface had NONE of it:
+  // no role="dialog", no aria-modal, no scroll lock, no browser-back, and — the
+  // sharpest item in the audit — no ESC either. Its only close affordance was a
+  // `lg:hidden` back button, so on a desktop there was no keyboard route out of
+  // the drawer at all.
+  //
+  // Deliberately keyed on the PRIMARY drawer only. The secondaries are
+  // SlideDrawers that run the same hook themselves; binding this to them too
+  // would push two history entries for one drawer and make Back take two
+  // presses to leave a single panel.
+  const { dialogProps, backdropProps } = useDrawerBehavior({
+    open: !!selectedLoadId,
+    onClose: () => setSelectedLoadId(null),
+  });
+
   const [secondaryWidth, setSecondaryWidth] = useState(0);
   useEffect(() => {
     if (!showTender && !showDatAdvanced) { setSecondaryWidth(0); return; }
@@ -728,11 +744,7 @@ export default function LoadsPage() {
             exactly what Wasi reported against the CRM drawer. */}
         {selectedLoadId && load && (
           <div className="fixed inset-0 z-50">
-            <div
-              className="absolute inset-0 bg-black/20"
-              onClick={() => setSelectedLoadId(null)}
-              aria-hidden
-            />
+            <div className="absolute inset-0 bg-black/20" {...backdropProps} />
             {/* v3.8.arc — when a secondary drawer opens on top (Tender / DAT),
                 shift this one LEFT by that drawer's width instead of letting it
                 sit underneath. Both are right-anchored, so without the shift the
@@ -750,6 +762,8 @@ export default function LoadsPage() {
                 changes one of them, and --drawer-detail is a clamp() whose px
                 value depends on the viewport, so there is no literal to write. */}
             <div
+              {...dialogProps}
+              aria-label={`Load ${load.referenceNumber || load.id} details`}
               className="absolute top-0 bottom-0 right-0 w-full max-w-[var(--drawer-detail)] bg-[#161921] border-l border-gray-200 shadow-2xl flex flex-col overflow-hidden animate-slide-in-right transition-transform duration-300 ease-out"
               style={{ transform: `translateX(-${secondaryWidth}px)` }}
             >

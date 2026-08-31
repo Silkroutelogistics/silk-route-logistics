@@ -1,5 +1,7 @@
 "use client";
 
+import { useDrawerBehavior } from "@/hooks/useDrawerBehavior";
+import { IconTabs, type IconTabDef } from "@/components/ui/IconTabs";
 import { useState, useEffect, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
@@ -371,6 +373,37 @@ function ComplianceRow({ label, status }: { label: string; status: boolean }) {
   );
 }
 
+
+/**
+ * v3.8.awa — the carrier pool panel tabs, hoisted out of JSX so the shared
+ * IconTabs can render them. Keys are unchanged: they are read by every render
+ * branch below and by the drawer history-state, so renaming one would be a
+ * silent behaviour change dressed as a refactor. Labels carry the vocabulary
+ * settled in v3.8.akq/akh — "Activity", not "History"; "Documents", not "Docs".
+ */
+export type CarrierPanelTab =
+  | "profile" | "insurance" | "compliance" | "compass" | "inspections"
+  | "performance" | "history" | "documents" | "info-requests"
+  | "preferences" | "training" | "quickpay";
+
+const CARRIER_PANEL_TABS: IconTabDef<CarrierPanelTab>[] = [
+  { id: "profile",       label: "Profile",    Icon: User },
+  { id: "insurance",     label: "Insurance",  Icon: Shield },
+  { id: "compliance",    label: "Compliance", Icon: CheckSquare },
+  { id: "compass",       label: "Compass",    Icon: Compass },
+  { id: "inspections",   label: "Inspect",    Icon: ClipboardList },
+  { id: "performance",   label: "Perform",    Icon: BarChart3 },
+  { id: "history",       label: "Activity",   Icon: Clock },
+  { id: "documents",     label: "Documents",  Icon: FolderOpen },
+  { id: "info-requests", label: "Info Req",   Icon: MessageCircle },
+  { id: "preferences",   label: "Prefs",      Icon: Sliders },
+  { id: "training",      label: "Training",   Icon: GraduationCap },
+  // Hidden rather than disabled for roles that cannot act on it: the enrolment
+  // query is gated the same way, so a BROKER opening it would get an empty
+  // panel with no explanation.
+  { id: "quickpay",      label: "Quick Pay",  Icon: Zap },
+];
+
 export default function CarrierPoolPage() {
   const { user } = useAuthStore();
   const queryClient = useQueryClient();
@@ -388,7 +421,7 @@ export default function CarrierPoolPage() {
   // Gating the UI on isAdmin would hide working controls from the role that
   // uses them most.
   const canReviewQuickPay = user?.role === "ADMIN" || user?.role === "CEO" || user?.role === "OPERATIONS";
-  const [panelTab, setPanelTab] = useState<"profile" | "insurance" | "compliance" | "compass" | "inspections" | "performance" | "history" | "documents" | "info-requests" | "preferences" | "training" | "quickpay">("profile");
+  const [panelTab, setPanelTab] = useState<CarrierPanelTab>("profile");
   const [editingCarrier, setEditingCarrier] = useState<Carrier | null>(null);
   const [editingTab, setEditingTab] = useState<string | null>(null);
   const [editForm, setEditForm] = useState({
@@ -727,15 +760,17 @@ export default function CarrierPoolPage() {
 
 
 
-  // ESC to close panel
+  // v3.8.awa — the full drawer contract, not just ESC.
+  //
+  // This panel had ESC and a backdrop click, and was missing role="dialog",
+  // aria-modal, browser-back-to-close and body scroll lock — so a screen reader
+  // was never told a dialog had opened, Back left the page entirely, and the
+  // list kept scrolling behind the open drawer. Verified live before and after.
   const closePanel = useCallback(() => { setSelectedCarrierId(null); }, []);
-  useEffect(() => {
-    const h = (e: KeyboardEvent) => { if (e.key === "Escape") closePanel(); };
-    if (selectedCarrierId) {
-      document.addEventListener("keydown", h);
-      return () => document.removeEventListener("keydown", h);
-    }
-  }, [selectedCarrierId, closePanel]);
+  const { dialogProps, backdropProps } = useDrawerBehavior({
+    open: !!selectedCarrierId,
+    onClose: closePanel,
+  });
 
   // v3.8.avy — load the document itself when one is opened, and render it from a
   // blob: URL.
@@ -1157,58 +1192,22 @@ export default function CarrierPoolPage() {
              full-height, but it was the only drawer with no backdrop: clicking
              away did nothing and there was no dimming to signal modality. */
           <div className="fixed inset-0 z-40">
-            <div className="absolute inset-0 bg-black/20" onClick={closePanel} aria-hidden />
-            <div className="absolute top-0 right-0 bottom-0 w-full max-w-[var(--drawer-detail)] border-l border-gray-200 bg-white flex flex-row overflow-hidden shadow-2xl animate-slide-in-right">
-            {/* Vertical Icon Tab Strip */}
-            <div className="w-[66px] shrink-0 border-r border-gray-100 bg-gray-50/80 flex flex-col items-center pt-5 gap-3">
-              {([
-                { key: "profile", icon: User, label: "Profile" },
-                { key: "insurance", icon: Shield, label: "Insurance" },
-                { key: "compliance", icon: CheckSquare, label: "Compliance" },
-                { key: "compass", icon: Compass, label: "Compass" },
-                { key: "inspections", icon: ClipboardList, label: "Inspect" },
-                { key: "performance", icon: BarChart3, label: "Perform" },
-                // v3.8.akq §13.3 Item 63 P3-2 — "History" → "Activity".
-                // Aligns with the 4 right-drawers (ProspectDrawer +
-                // CustomerDrawer + LoadDetailDrawer + WaterfallDrawer)
-                // which all use "Activity". Key "history" preserved so
-                // existing consumer call sites + render branches stay
-                // untouched; only the user-facing label changes.
-                { key: "history", icon: Clock, label: "Activity" },
-                // v3.8.akh §13.3 Item 63 P3-3 — "Docs" → "Documents". Key
-                // stays "documents" (already canonical); only the label
-                // changes to match the canonical drawer vocabulary.
-                { key: "documents", icon: FolderOpen, label: "Documents" },
-                // v3.8.ajj — Info Requests thread tab. Unified view of
-                // open + resolved + cancelled requests with attachments.
-                { key: "info-requests", icon: MessageCircle, label: "Info Req" },
-                // v3.8.aki §13.3 Item 8.6 — Carrier preferences manual
-                // override admin UI. ADMIN/CEO write gate enforced
-                // server-side at routes/ai.ts PUT /preferences/:carrierId;
-                // panel itself is visible to all panel viewers but the
-                // form is read-only for non-admins.
-                { key: "preferences", icon: Sliders, label: "Prefs" },
-                // v3.8.and (T6) — SRL Driver Academy training visibility.
-                // Read-only roster × course completion matrix + expiry flags.
-                { key: "training", icon: GraduationCap, label: "Training" },
-                // v3.8.asb — Quick Pay pilot standing + the approve / decline /
-                // withdraw controls. Tab is hidden rather than disabled for
-                // roles that cannot act on it: the enrolment query is gated the
-                // same way, so a BROKER opening it would get an empty panel
-                // with no explanation.
-                { key: "quickpay", icon: Zap, label: "Quick Pay" },
-              ] as const)
-                .filter(({ key }) => key !== "quickpay" || canReviewQuickPay)
-                .map(({ key, icon: Icon, label }) => (
-                <button key={key} onClick={() => { setPanelTab(key); setEditingTab(null); setDocView("list"); setPreviewDoc(null); }} title={label}
-                  className="flex flex-col items-center gap-1.5 py-1 transition-all duration-150">
-                  <div className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-150 ${panelTab === key ? "bg-[#C5A572] text-[#0A2540] shadow-sm" : "text-gray-400 hover:bg-gray-200/80 hover:text-gray-600"}`}>
-                    <Icon className={`w-[18px] h-[18px] transition-all duration-150 ${panelTab === key ? "stroke-[2.5]" : "stroke-[1.5]"}`} />
-                  </div>
-                  <span className={`text-[10px] leading-none transition-all duration-150 ${panelTab === key ? "text-[#C5A572] font-semibold" : "text-gray-400 font-medium"}`}>{label}</span>
-                </button>
-              ))}
-            </div>
+            <div className="absolute inset-0 bg-black/20" {...backdropProps} />
+            <div
+              {...dialogProps}
+              aria-label={selectedCarrier ? `${selectedCarrier.company} details` : "Carrier details"}
+              className="absolute top-0 right-0 bottom-0 w-full max-w-[var(--drawer-detail)] border-l border-gray-200 bg-white flex flex-row overflow-hidden shadow-2xl animate-slide-in-right"
+            >
+            {/* v3.8.awa — the carrier pool was the one drawer not using the shared
+                rail. It ran its own at 66px with 18px icons against IconTabs 64/14,
+                two pixels of width and four of icon apart. Twelve tabs make it the
+                stress case for the shared component, which is why it is the one
+                that had to move rather than the four that already conform. */}
+            <IconTabs
+              tabs={CARRIER_PANEL_TABS.filter((t) => t.id !== "quickpay" || canReviewQuickPay)}
+              active={panelTab}
+              onChange={(id) => { setPanelTab(id); setEditingTab(null); setDocView("list"); setPreviewDoc(null); }}
+            />
 
             {/* Content Area */}
             <div className="flex-1 flex flex-col min-w-0">
