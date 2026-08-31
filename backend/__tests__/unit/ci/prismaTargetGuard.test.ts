@@ -131,22 +131,54 @@ describe("prisma target guard — the npm scripts actually route through it", ()
   );
 
   it("every schema-touching script calls the guard first", () => {
+    // Schema-MUTATING commands only. The seed is deliberately excluded — the
+    // dedicated case below records why chaining it was actively harmful.
     const mustGuard = Object.entries(pkg.scripts as Record<string, string>).filter(
-      ([, v]) => /prisma\s+(migrate|db\s+push)|prisma\/seed\.ts/.test(v),
+      ([, v]) => /prisma\s+(migrate|db\s+push)/.test(v),
     );
     // Tripwire: if the scripts are renamed away, this loop would assert nothing.
-    expect(mustGuard.length).toBeGreaterThanOrEqual(6);
+    expect(mustGuard.length).toBeGreaterThanOrEqual(5);
     for (const [name, cmd] of mustGuard) {
       expect(cmd, `${name} does not run prisma-target-guard before the prisma command`)
         .toContain("prisma-target-guard.ts");
       expect(cmd.indexOf("prisma-target-guard.ts")).toBeLessThan(
-        cmd.search(/prisma\s+(migrate|db\s+push)|ts-node prisma\/seed/),
+        cmd.search(/prisma\s+(migrate|db\s+push)/),
       );
     }
   });
 
-  it("package.json#prisma.seed is routed too — `prisma db seed` bypasses npm scripts", () => {
-    expect(pkg.prisma?.seed).toContain("prisma-target-guard.ts");
+  it("the seed is NOT chained through the guard — Prisma runs it without a shell", () => {
+    // This assertion is INVERTED from how it first shipped, because how it
+    // shipped broke CI. `prisma db seed` does not run its command through a
+    // shell, so `guard && ts-node seed.ts` was tokenised and the guard was
+    // handed "&&", "npx", "ts-node", "prisma/seed.ts" as ARGUMENTS. It read
+    // argv[2]="seed", passed, exited 0 — and the real seed never ran. Prisma
+    // reported "The seed command has been executed." 25ms later. No fixtures
+    // existed, so /api/auth/e2e-token 404'd and the E2E suite failed.
+    //
+    // The seed does not need the chain. prisma/seed.ts calls its own
+    // assertNotProduction() at the top of main(), before the TRUNCATE, and it
+    // fails CLOSED on an absent DATABASE_URL. That is strictly stronger here,
+    // and it cannot be defeated by how the command is invoked.
+    expect(pkg.prisma?.seed).toBe("npx ts-node prisma/seed.ts");
+    expect(pkg.scripts["prisma:seed"]).toBe("npx ts-node prisma/seed.ts");
+  });
+
+  it("the seed's own guard is CALLED before the TRUNCATE, not merely defined", () => {
+    // Presence is not function (§19 Sub-pattern 16). A definition with no call
+    // site protects nothing, and a call after the TRUNCATE protects nothing.
+    //
+    // Anchor on the EXECUTED statement, not the word. The first draft of this
+    // case searched for "TRUNCATE" and matched the header comment's phrase
+    // "before the TRUNCATE below" at byte 677 — prose, 2.4kB above the code it
+    // describes. A guard satisfied by a comment about itself is the same
+    // failure it is written to prevent.
+    const seed = fs.readFileSync(path.resolve(__dirname, "../../../prisma/seed.ts"), "utf8");
+    const call = seed.search(/^\s*assertNotProduction\(\);/m);
+    const truncate = seed.indexOf("$executeRawUnsafe(`TRUNCATE TABLE");
+    expect(call, "assertNotProduction() is never called").toBeGreaterThan(-1);
+    expect(truncate, "seed no longer executes TRUNCATE — re-check this guard's placement").toBeGreaterThan(-1);
+    expect(call, "the guard must run BEFORE the TRUNCATE executes").toBeLessThan(truncate);
   });
 
   it("generate is deliberately NOT guarded — it touches no database", () => {

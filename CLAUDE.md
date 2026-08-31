@@ -364,6 +364,16 @@ Corollaries worth stating, since each was a step in that failure:
    deliberately unaffected — deploying to production is that command's job. The
    guard protects a human at a terminal.
 
+   **The seed is deliberately NOT routed through it, and must not be.**
+   `package.json#prisma.seed` is the plain `npx ts-node prisma/seed.ts`, because
+   `prisma db seed` does **not** run its command through a shell: a
+   `guard && seed` chain is tokenised, the guard receives `&&` as an argument,
+   exits 0, and Prisma reports success while the seed never runs. That shipped
+   once and took the whole E2E suite down with a 404 three layers away — §19
+   Sub-pattern 16, ninth fire. The seed does not need it: `prisma/seed.ts` calls
+   its own `assertNotProduction()` before the TRUNCATE, fails closed on an
+   absent `DATABASE_URL`, and cannot be defeated by how it is invoked.
+
    Migration auto-applies to local DB + creates migration file at `prisma/migrations/<timestamp>_<name>/`. Commit migration file alongside `schema.prisma` changes. Render auto-deploys main branch → `migrate deploy` applies the migration in build chain.
 
 2. **EMERGENCY OVERRIDE — only for incident response:**
@@ -3135,6 +3145,48 @@ Corollary, since it generalises past PDFs: **when asserting that X put a value
 somewhere, the value must be unique to X.** Reusing a realistic-looking name
 across two roles in one fixture is the most natural way to write the test and
 the most reliable way to make it lie.
+
+**NINTH FIRE — a chained command that never ran, reported as success by the tool
+that ran it (2026-08-31, same day, and also mine).**
+
+The commit that added the Prisma target guard also routed
+`package.json#prisma.seed` through it as `guard && ts-node prisma/seed.ts`. Its
+test asserted `pkg.prisma.seed` **contains** `"prisma-target-guard.ts"`. It did.
+CI went red on the E2E suite.
+
+**`prisma db seed` does not run its command through a shell.** The string was
+tokenised, and the guard was handed `&&`, `npx`, `ts-node`, `prisma/seed.ts` as
+ARGUMENTS. It read `argv[2] === "seed"`, passed, exited 0 — and Prisma printed
+*"The seed command has been executed."* The seed never ran.
+
+**The tell was a timestamp, not an error.** Guard finished at `05:43:33.350`;
+Prisma declared success at `05:43:33.375`. Twenty-five milliseconds, against
+five seconds and eleven `✅ E2E fixtures:` lines on the previous green run.
+Nothing failed. No fixtures existed, so `/api/auth/e2e-token` returned 404 and
+every E2E test failed one layer downstream of the real cause.
+
+> **A guard that asserts a command STRING cannot know whether the command RAN.**
+> **`&&` is a shell operator; a runner that does not use a shell turns it into
+> an argument, and the half after it silently disappears.**
+
+Two further things this cost, both worth keeping:
+
+- **The audit layer would have prevented it entirely.** `prisma/seed.ts` has had
+  its own `assertNotProduction()` since v3.8.auf — fails closed, refuses the
+  production host, runs before the TRUNCATE. Reading the file I was "protecting"
+  would have shown the protection already existed and was stronger. Sub-pattern
+  15: check whether the thing already has a guard before adding one.
+- **The fix is structural, not another assertion.** The chain was deleted rather
+  than tested harder. A bug class that cannot occur beats a bug class that is
+  watched for — and the seed's intrinsic guard cannot be defeated by how the
+  command is invoked, which is exactly the property the chain lacked.
+
+**And the replacement test caught itself doing the same thing.** Its first draft
+anchored on `indexOf("TRUNCATE")`, which matched the header comment's phrase
+*"before the TRUNCATE below"* at byte 677 — prose, 2.4kB above the code it
+describes. It now anchors on `$executeRawUnsafe(\`TRUNCATE TABLE`, the executed
+statement. **Anchor on what runs, never on a word that also appears in a comment
+about what runs.**
 
 
 
