@@ -2,7 +2,7 @@ import { Router, Response } from "express";
 import { issueInvite } from "../services/onboardingInviteService";
 import { transitionToReviewing } from "../services/onboardingLifecycleService";
 import path from "path";
-import { uploadFile, getDownloadUrl } from "../services/storageService";
+import { uploadFile, getFileStream } from "../services/storageService";
 import {
   getAllCarriers, getCarrierDetail, registerCarrier, updateCarrier, verifyCarrier,
   getCarrierScore,
@@ -1010,19 +1010,26 @@ router.post("/:carrierId/documents", authorize("ADMIN", "CEO", "BROKER", "OPERAT
   }
 });
 
-// GET /api/carriers/:carrierId/documents/:docId/url — signed, short-lived view URL
+// GET /api/carriers/:carrierId/documents/:docId/file — stream a stored document
 //
 // v3.8.avx — the preview was embedding `fileUrl` directly, and once storage
 // actually worked that value became `s3://srl-documents/carrier-docs/...`. A
 // browser cannot load an s3:// scheme, so the first successfully stored document
 // rendered as a broken-file icon: upload fixed, read path never wired.
 //
-// Returns a presigned URL rather than proxying the bytes, so the iframe loads
-// from R2 directly and the API is not streaming PDFs. Signed URLs carry their own
-// authorisation, which is why this endpoint — not the URL — is the access gate.
-// Five minutes is deliberately short: it is long enough to open a document and
-// too short to be worth passing around.
-router.get("/:carrierId/documents/:docId/url", authorize("ADMIN", "CEO", "BROKER", "OPERATIONS"), async (req: AuthRequest, res: Response) => {
+// v3.8.avy — the first fix signed an R2 URL and handed it to the iframe. That is
+// blocked before it is ever requested: the site CSP is `frame-src
+// https://www.google.com`, and a frame blocked by CSP renders as an empty box
+// with nothing in it a user could act on. The obvious patch — add the R2 hostname
+// to frame-src — ties the browser's security policy to a backend storage setting,
+// so the day storage moves the preview goes silently blank again. That is the
+// exact failure shape this whole arc was spent on.
+//
+// So the bytes come through the API and the browser renders a blob: URL. One CSP
+// entry, no storage hostname in it, and the presigned URL never reaches the
+// browser at all — so it cannot be forwarded out of the console. These are COIs
+// and W-9s reviewed by an AE a few at a time; proxying them costs nothing.
+router.get("/:carrierId/documents/:docId/file", authorize("ADMIN", "CEO", "BROKER", "OPERATIONS"), async (req: AuthRequest, res: Response) => {
   try {
     const doc = await prisma.document.findFirst({
       where: { id: req.params.docId, entityType: "CARRIER", entityId: req.params.carrierId },
@@ -1030,8 +1037,8 @@ router.get("/:carrierId/documents/:docId/url", authorize("ADMIN", "CEO", "BROKER
     });
     if (!doc) { res.status(404).json({ error: "Document not found" }); return; }
 
-    // An UPLOAD_FAILED row has no file. Say so rather than signing a URL for
-    // an object that was never written.
+    // An UPLOAD_FAILED row has no file. Say so rather than reaching for an
+    // object that was never written.
     if (!doc.fileUrl) {
       res.status(409).json({
         error: "This document has no stored file — it was submitted but storage refused it.",
@@ -1040,10 +1047,27 @@ router.get("/:carrierId/documents/:docId/url", authorize("ADMIN", "CEO", "BROKER
       return;
     }
 
-    const url = await getDownloadUrl(doc.fileUrl, 300);
-    res.json({ url, fileName: doc.fileName, fileType: doc.fileType });
+    const stream = await getFileStream(doc.fileUrl);
+
+    // The filename is whatever the uploader's file was called, so it goes into a
+    // header only after quotes and newlines are stripped — a CR/LF in a filename
+    // is header injection, not a display bug.
+    const safeName = (doc.fileName || "document").replace(/[\r\n"\\]/g, "_").slice(0, 120);
+    res.setHeader("Content-Type", doc.fileType || "application/octet-stream");
+    res.setHeader("Content-Disposition", `inline; filename="${safeName}"`);
+    res.setHeader("Cache-Control", "private, no-store");
+    res.setHeader("X-Content-Type-Options", "nosniff");
+
+    // Once a byte is written the status line is gone, so a mid-stream failure
+    // cannot become a JSON error. Destroying the socket makes the client's
+    // request fail loudly instead of handing it a silently truncated PDF.
+    stream.on("error", (err) => {
+      log.error({ err, docId: req.params.docId }, "[Carrier Docs] stream failed mid-flight");
+      res.destroy();
+    });
+    stream.pipe(res);
   } catch (err) {
-    log.error({ err, docId: req.params.docId }, "[Carrier Docs] could not sign a view URL");
+    log.error({ err, docId: req.params.docId }, "[Carrier Docs] could not open a stored document");
     res.status(500).json({ error: "Could not open this document. Try again." });
   }
 });

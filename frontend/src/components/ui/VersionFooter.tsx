@@ -15572,7 +15572,20 @@
 // rather than per row: they last five minutes, so signing a whole list hands out
 // URLs that expire before anyone clicks. The fetch is cancellable, or clicking
 // quickly through documents can show the wrong file under the right name.
-export const SRL_VERSION = "3.8.avx";
+// v3.8.avy — the preview was blocked by our own CSP, not by storage.
+//
+// avx signed an R2 URL and handed it to the iframe. Prod serves
+// `frame-src https://www.google.com`, so that frame was refused before a request
+// was ever made — and a CSP-blocked frame is an empty box with nothing in it a
+// user can act on. Verified against the live response header, not inferred.
+//
+// The obvious patch is to add the R2 hostname to frame-src. That ties this
+// page's security policy to a backend storage setting, so the day storage moves
+// the preview goes blank again with no error — the same silent-failure shape
+// this whole arc was spent on. The bytes come through the API instead and render
+// from a blob: URL: one CSP entry, no storage hostname in it, and the presigned
+// URL never reaches the browser to be forwarded out of the console.
+export const SRL_VERSION = "3.8.avy";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

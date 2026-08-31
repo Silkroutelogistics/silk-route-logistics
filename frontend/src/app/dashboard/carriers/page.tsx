@@ -737,25 +737,51 @@ export default function CarrierPoolPage() {
     }
   }, [selectedCarrierId, closePanel]);
 
-  // v3.8.avx — sign a view URL when a document is opened.
+  // v3.8.avy — load the document itself when one is opened, and render it from a
+  // blob: URL.
   //
-  // Signed on open rather than alongside the list: these expire in five minutes,
-  // so signing every row on every list render would hand out URLs that are stale
-  // before anyone clicks, and sign far more than are ever looked at.
+  // avx signed an R2 URL and gave it to the iframe. The site CSP is `frame-src
+  // https://www.google.com`, so that frame is blocked before the request is even
+  // made, and a CSP-blocked frame is an empty box with nothing to act on. Adding
+  // the R2 hostname to frame-src would tie this page's security policy to a
+  // backend storage setting; a blob: URL is the same policy whatever storage is.
   useEffect(() => {
     setPreviewUrl(null);
     setPreviewUrlError(null);
     if (!previewDoc || !selectedCarrierId || !previewDoc.fileUrl) return;
+
     let cancelled = false;
-    api.get<{ url: string }>(`/carriers/${selectedCarrierId}/documents/${previewDoc.id}/url`)
-      .then((r) => { if (!cancelled) setPreviewUrl(r.data.url); })
-      .catch((err: { response?: { data?: { error?: string } } }) => {
-        if (!cancelled) setPreviewUrlError(err.response?.data?.error || "Could not open this document.");
+    let objectUrl: string | null = null;
+
+    api.get<Blob>(`/carriers/${selectedCarrierId}/documents/${previewDoc.id}/file`, { responseType: "blob" })
+      .then((r) => {
+        if (cancelled) return;
+        objectUrl = URL.createObjectURL(r.data);
+        setPreviewUrl(objectUrl);
+      })
+      .catch(async (err: { response?: { data?: unknown } }) => {
+        if (cancelled) return;
+        // responseType "blob" applies to error bodies too, so the server's JSON
+        // message arrives as a Blob and `err.response.data.error` is undefined.
+        // Read it back out rather than replacing a specific reason with a shrug.
+        let message = "Could not open this document.";
+        const body = err.response?.data;
+        if (body instanceof Blob) {
+          try { message = (JSON.parse(await body.text()) as { error?: string }).error || message; } catch { /* not JSON */ }
+        } else if (body && typeof body === "object" && "error" in body) {
+          message = String((body as { error?: string }).error || message);
+        }
+        setPreviewUrlError(message);
       });
-    // Cancellation matters here: clicking through several documents quickly would
-    // otherwise let a slower earlier response overwrite a newer one, and show the
-    // wrong file under the right filename.
-    return () => { cancelled = true; };
+
+    // Cancellation matters twice here: clicking quickly through documents would
+    // otherwise let a slower earlier response overwrite a newer one and show the
+    // wrong file under the right name, and every blob URL held for the lifetime
+    // of the tab holds the whole file in memory until it is revoked.
+    return () => {
+      cancelled = true;
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
   }, [previewDoc, selectedCarrierId]);
 
   function openEdit(c: Carrier) {
