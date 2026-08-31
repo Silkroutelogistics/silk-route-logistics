@@ -15520,7 +15520,23 @@
 // the document note (AccessDenied, NoSuchBucket, InvalidAccessKeyId,
 // ExpiredToken) and rendered under the banner. Safe to show: it names the
 // misconfiguration without disclosing bucket, key or credential.
-export const SRL_VERSION = "3.8.avt";
+// v3.8.avu — you cannot verify a document that does not exist, and a fileless
+// row says so instead of rendering an empty box.
+//
+// Two things the empty-storage failure exposed once the rows became visible:
+//
+// A row was already marked VERIFIED with an empty fileUrl — an Operating
+// Authority reading verified with no file behind it. That is the record that
+// looks clean in an audit and collapses the moment anyone asks to see the
+// document, and Document Completeness would have counted it as satisfied.
+// Blocked at the endpoint (409 NO_STORED_FILE), with the button disabled as a
+// hint. REJECTED stays allowed — refusing a document that never arrived is a
+// legitimate thing to record.
+//
+// And the preview rendered <iframe src=""> for those rows: a blank 500px frame
+// that reads as "the preview is broken" rather than "there is nothing to
+// preview". It now names the file and says storage refused it.
+export const SRL_VERSION = "3.8.avu";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

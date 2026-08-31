@@ -1010,6 +1010,29 @@ router.patch("/:carrierId/documents/:docId", authorize("ADMIN", "CEO", "BROKER",
       return;
     }
 
+    // v3.8.avu — a document with no stored file cannot be VERIFIED.
+    //
+    // An UPLOAD_FAILED row carries fileUrl "" by design: the carrier submitted
+    // the file and storage refused it. One such row had already been marked
+    // VERIFIED — an Operating Authority reading verified with nothing behind it.
+    // That is the record that looks clean in an audit and collapses the moment
+    // anyone asks to see the document, and the compliance panel would have
+    // counted it as satisfied.
+    //
+    // The UI disables the button, but a disabled button is a hint, not a gate.
+    // REJECTED stays allowed: refusing a document that never arrived is a
+    // legitimate thing to record.
+    if (status === "VERIFIED" && !doc.fileUrl) {
+      res.status(409).json({
+        error:
+          "This document has no stored file — it was submitted but storage refused it. " +
+          "It has to be re-uploaded, not verified. Marking it verified would record a " +
+          "document that does not exist.",
+        code: "NO_STORED_FILE",
+      });
+      return;
+    }
+
     const updated = await prisma.document.update({
       where: { id: doc.id },
       data: {

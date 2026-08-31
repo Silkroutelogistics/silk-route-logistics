@@ -2086,7 +2086,22 @@ export default function CarrierPoolPage() {
                       </div>
                       {previewDoc.notes && <p className="text-xs text-gray-500 italic">{previewDoc.notes}</p>}
                       <div className="bg-gray-100 rounded-lg overflow-hidden border border-gray-200" style={{ minHeight: 300 }}>
-                        {previewDoc.fileType.startsWith("image/") ? (
+                        {/* v3.8.avu — a row with no file says so, instead of rendering a
+                            blank frame. An UPLOAD_FAILED document has fileUrl "" by design
+                            (the file was submitted and storage refused it), and
+                            <iframe src=""> is a 500px empty box that reads as "the preview
+                            is broken" rather than "there is nothing to preview". */}
+                        {!previewDoc.fileUrl ? (
+                          <div className="flex flex-col items-center justify-center py-12 px-6 text-center">
+                            <FileText className="w-10 h-10 mb-2 text-[#9B2C2C]" />
+                            <p className="text-sm font-semibold text-[#9B2C2C]">There is no file to preview</p>
+                            <p className="text-xs text-gray-700 mt-1 max-w-sm leading-relaxed">
+                              The carrier submitted <strong>{previewDoc.fileName}</strong> and our storage
+                              refused it, so nothing was retained. Ask them to re-send it once object
+                              storage is confirmed working — re-uploading is the only way to fill this in.
+                            </p>
+                          </div>
+                        ) : previewDoc.fileType.startsWith("image/") ? (
                           <img src={previewDoc.fileUrl} alt={previewDoc.fileName} className="w-full object-contain max-h-[500px]" />
                         ) : previewDoc.fileType === "application/pdf" ? (
                           <iframe src={previewDoc.fileUrl} className="w-full" style={{ height: 500 }} title={previewDoc.fileName} />
@@ -2101,8 +2116,17 @@ export default function CarrierPoolPage() {
                       </div>
                       {isAdmin && (
                         <div className="flex gap-2">
-                          <button onClick={() => { updateDocStatus.mutate({ carrierId: selectedCarrier.id, docId: previewDoc.id, status: "VERIFIED" }); setPreviewDoc({ ...previewDoc, status: "VERIFIED" }); }}
-                            className="flex-1 px-3 py-1.5 bg-green-100 text-green-700 rounded-lg text-xs font-medium hover:bg-green-200 transition">
+                          {/* v3.8.avu — you cannot verify a document that does not exist.
+                              One of these rows was already marked VERIFIED with an empty
+                              fileUrl: an Operating Authority reading verified, with no file
+                              behind it. That is the record that looks clean in an audit and
+                              collapses the moment somebody asks to see the document. A
+                              fileless row has to be re-uploaded, not re-labelled. */}
+                          <button
+                            disabled={!previewDoc.fileUrl}
+                            title={!previewDoc.fileUrl ? "There is no stored file — this must be re-uploaded, not verified" : undefined}
+                            onClick={() => { updateDocStatus.mutate({ carrierId: selectedCarrier.id, docId: previewDoc.id, status: "VERIFIED" }); setPreviewDoc({ ...previewDoc, status: "VERIFIED" }); }}
+                            className="flex-1 px-3 py-1.5 bg-green-100 text-green-700 rounded-lg text-xs font-medium hover:bg-green-200 transition disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-green-100">
                             <CheckCircle2 className="w-3 h-3 inline mr-1" />Verify
                           </button>
                           <button onClick={() => { updateDocStatus.mutate({ carrierId: selectedCarrier.id, docId: previewDoc.id, status: "REJECTED" }); setPreviewDoc({ ...previewDoc, status: "REJECTED" }); }}
