@@ -278,7 +278,7 @@ function StatCard({ icon, label, value, sub }: { icon: React.ReactNode; label: s
         <div>
           <p className="text-2xl font-bold text-[#0A2540]">{value}</p>
           <p className="text-xs text-gray-600">{label}</p>
-          {sub && <p className="text-[10px] text-slate-500">{sub}</p>}
+          {sub && <p className="text-[11px] text-slate-500">{sub}</p>}
         </div>
       </div>
     </div>
@@ -342,7 +342,7 @@ function InsuranceBlock({ title, provider, policy, amount, expiry }: {
   const hasData = provider || policy || amount || expiry;
   return (
     <div className="bg-gray-100 rounded-lg p-4">
-      <h4 className="text-[10px] font-bold text-gray-600 uppercase tracking-wider mb-2">{title}</h4>
+      <h4 className="text-[11px] font-bold text-gray-600 uppercase tracking-wider mb-2">{title}</h4>
       {hasData ? (
         <div className="space-y-0.5">
           <InfoRow label="Provider" value={provider || "—"} />
@@ -366,7 +366,7 @@ function ComplianceRow({ label, status }: { label: string; status: boolean }) {
   return (
     <div className="flex items-center justify-between py-1.5 border-b border-white/5 last:border-0">
       <span className="text-xs text-slate-400">{label}</span>
-      <span className={`px-2 py-0.5 rounded text-[10px] font-medium ${status ? "bg-green-500/20 text-green-400" : "bg-red-500/20 text-red-400"}`}>
+      <span className={`px-2 py-0.5 rounded text-[11px] font-medium ${status ? "bg-green-500/20 text-green-400" : "bg-red-500/20 text-red-400"}`}>
         {status ? "Active" : "Not Verified"}
       </span>
     </div>
@@ -1028,7 +1028,7 @@ export default function CarrierPoolPage() {
                   <p className="text-xs font-semibold text-gray-900 truncate">
                     {e.carrierProfile?.companyName || "Unknown carrier"}
                     {e.carrierProfile?.isTestAccount && (
-                      <span className="ml-1.5 px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-100 text-amber-700 border border-amber-300">TEST</span>
+                      <span className="ml-1.5 px-1.5 py-0.5 rounded text-[11px] font-bold bg-amber-100 text-amber-700 border border-amber-300">TEST</span>
                     )}
                   </p>
                   <p className="text-[11px] text-gray-500">
@@ -1117,22 +1117,22 @@ export default function CarrierPoolPage() {
                         "Show test accounts" is on, since flagged carriers are
                         otherwise filtered out of this list). */}
                     {carrier.isTestAccount && (
-                      <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-500/20 text-amber-500 border border-amber-500/40 flex items-center gap-0.5">
+                      <span className="px-1.5 py-0.5 rounded text-[11px] font-bold bg-amber-500/20 text-amber-500 border border-amber-500/40 flex items-center gap-0.5">
                         <FlaskConical className="w-2.5 h-2.5" /> TEST
                       </span>
                     )}
-                    <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${TIER_COLORS[carrier.tier] || ""}`}>{carrier.tier}</span>
+                    <span className={`px-1.5 py-0.5 rounded text-[11px] font-bold ${TIER_COLORS[carrier.tier] || ""}`}>{carrier.tier}</span>
                     {carrier.lastVettingScore != null && (
-                      <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-[#C5A572]/10 text-[#C5A572] border border-[#C5A572]/20 flex items-center gap-0.5">
+                      <span className="px-1.5 py-0.5 rounded text-[11px] font-medium bg-[#C5A572]/10 text-[#C5A572] border border-[#C5A572]/20 flex items-center gap-0.5">
                         <Compass className="w-2.5 h-2.5" /> {carrier.lastVettingScore}
                       </span>
                     )}
                     {compassCarrierId === carrier.id && compassResult && !carrier.lastVettingScore && (
-                      <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-[#C5A572]/10 text-[#C5A572] border border-[#C5A572]/20 flex items-center gap-0.5">
+                      <span className="px-1.5 py-0.5 rounded text-[11px] font-medium bg-[#C5A572]/10 text-[#C5A572] border border-[#C5A572]/20 flex items-center gap-0.5">
                         <Compass className="w-2.5 h-2.5" /> {compassResult.score ?? "—"}
                       </span>
                     )}
-                    <span className={`px-1.5 py-0.5 rounded text-[10px] ${STATUS_COLORS[carrier.onboardingStatus] || "bg-white/10 text-gray-600"}`}>
+                    <span className={`px-1.5 py-0.5 rounded text-[11px] ${STATUS_COLORS[carrier.onboardingStatus] || "bg-white/10 text-gray-600"}`}>
                       {carrier.onboardingStatus.replace(/_/g, " ")}
                     </span>
                   </div>
@@ -1146,11 +1146,11 @@ export default function CarrierPoolPage() {
                   <div className="hidden sm:flex items-center gap-5 shrink-0">
                     <div className="text-right">
                       <p className="text-sm font-bold text-white">{carrier.completedLoads}</p>
-                      <p className="text-[10px] text-slate-500">Loads</p>
+                      <p className="text-[11px] text-slate-500">Loads</p>
                     </div>
                     <div className="text-right">
                       <p className="text-sm font-bold text-white">{carrier.acceptanceRate}%</p>
-                      <p className="text-[10px] text-slate-500">Accept</p>
+                      <p className="text-[11px] text-slate-500">Accept</p>
                     </div>
                   </div>
                 )}
@@ -1250,7 +1250,7 @@ export default function CarrierPoolPage() {
 
                     <div className="bg-gray-100 rounded-lg p-4 space-y-3">
                       <div>
-                        <span className="text-[10px] text-slate-500 uppercase tracking-wider">Equipment</span>
+                        <span className="text-[11px] text-slate-500 uppercase tracking-wider">Equipment</span>
                         <div className="flex flex-wrap gap-1 mt-1">
                           {selectedCarrier.equipmentTypes.map((eq) => (
                             <span key={eq} className="px-2 py-0.5 bg-white/10 rounded text-xs text-gray-700">{eq}</span>
@@ -1258,7 +1258,7 @@ export default function CarrierPoolPage() {
                         </div>
                       </div>
                       <div>
-                        <span className="text-[10px] text-slate-500 uppercase tracking-wider">Regions</span>
+                        <span className="text-[11px] text-slate-500 uppercase tracking-wider">Regions</span>
                         <div className="flex flex-wrap gap-1 mt-1">
                           {selectedCarrier.operatingRegions.map((r) => (
                             <span key={r} className="px-2 py-0.5 bg-white/10 rounded text-xs text-gray-700">{r}</span>
@@ -1428,7 +1428,7 @@ export default function CarrierPoolPage() {
                     {/* Insurance Agent */}
                     {(selectedCarrier.insuranceAgentName || selectedCarrier.insuranceAgentEmail || selectedCarrier.insuranceAgencyName) && (
                       <div className="bg-gray-100 rounded-lg p-3 mt-2">
-                        <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">Insurance Agent</span>
+                        <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Insurance Agent</span>
                         <div className="flex flex-wrap gap-3 mt-1 text-xs">
                           {selectedCarrier.insuranceAgentName && <span className="text-[#0A2540]">{selectedCarrier.insuranceAgentName}</span>}
                           {selectedCarrier.insuranceAgencyName && <span className="text-gray-600">({selectedCarrier.insuranceAgencyName})</span>}
@@ -1564,10 +1564,10 @@ export default function CarrierPoolPage() {
                                 <span className="text-xs font-semibold text-gray-800">
                                   {ag.templateName === "quick-pay" ? "Quick Pay Agreement" : "Broker-Carrier Agreement"}
                                 </span>
-                                <span className="ml-2 text-[10px] text-gray-500">v{ag.version}</span>
+                                <span className="ml-2 text-[11px] text-gray-500">v{ag.version}</span>
                               </div>
                               <span
-                                className={`px-2 py-0.5 rounded text-[10px] font-medium ${
+                                className={`px-2 py-0.5 rounded text-[11px] font-medium ${
                                   isTerminated
                                     ? "bg-red-500/20 text-red-700"
                                     : isSigned
@@ -1654,7 +1654,7 @@ export default function CarrierPoolPage() {
                                       </button>
                                     </div>
                                     {terminateReason.trim().length > 0 && terminateReason.trim().length < 10 && (
-                                      <p className="text-[10px] text-red-700">At least 10 characters.</p>
+                                      <p className="text-[11px] text-red-700">At least 10 characters.</p>
                                     )}
                                   </div>
                                 )}
@@ -1674,19 +1674,19 @@ export default function CarrierPoolPage() {
                     <div className="bg-gray-100 rounded-lg p-4 space-y-2">
                       <div className="flex items-center justify-between py-1 border-b border-white/5">
                         <span className="text-xs text-gray-600">W-9</span>
-                        <span className={`px-2 py-0.5 rounded text-[10px] font-medium ${selectedCarrier.w9Uploaded ? "bg-green-500/20 text-green-400" : "bg-red-500/20 text-red-400"}`}>
+                        <span className={`px-2 py-0.5 rounded text-[11px] font-medium ${selectedCarrier.w9Uploaded ? "bg-green-500/20 text-green-400" : "bg-red-500/20 text-red-400"}`}>
                           {selectedCarrier.w9Uploaded ? "Uploaded" : "Missing"}
                         </span>
                       </div>
                       <div className="flex items-center justify-between py-1 border-b border-white/5">
                         <span className="text-xs text-gray-600">Insurance Certificate</span>
-                        <span className={`px-2 py-0.5 rounded text-[10px] font-medium ${selectedCarrier.insuranceCertUploaded ? "bg-green-500/20 text-green-400" : "bg-red-500/20 text-red-400"}`}>
+                        <span className={`px-2 py-0.5 rounded text-[11px] font-medium ${selectedCarrier.insuranceCertUploaded ? "bg-green-500/20 text-green-400" : "bg-red-500/20 text-red-400"}`}>
                           {selectedCarrier.insuranceCertUploaded ? "Uploaded" : "Missing"}
                         </span>
                       </div>
                       <div className="flex items-center justify-between py-1">
                         <span className="text-xs text-gray-600">Operating Authority</span>
-                        <span className={`px-2 py-0.5 rounded text-[10px] font-medium ${selectedCarrier.authorityDocUploaded ? "bg-green-500/20 text-green-400" : "bg-red-500/20 text-red-400"}`}>
+                        <span className={`px-2 py-0.5 rounded text-[11px] font-medium ${selectedCarrier.authorityDocUploaded ? "bg-green-500/20 text-green-400" : "bg-red-500/20 text-red-400"}`}>
                           {selectedCarrier.authorityDocUploaded ? "Uploaded" : "Missing"}
                         </span>
                       </div>
@@ -1704,21 +1704,21 @@ export default function CarrierPoolPage() {
                     <div className="bg-gray-100 rounded-lg p-4 space-y-3">
                       <div className="flex items-center justify-between">
                         <span className="text-xs text-gray-600">Current value</span>
-                        <span className={`px-2 py-0.5 rounded text-[10px] font-medium ${selectedCarrier.authorityGrantedDate ? "bg-green-500/20 text-green-400" : "bg-amber-500/20 text-amber-700"}`}>
+                        <span className={`px-2 py-0.5 rounded text-[11px] font-medium ${selectedCarrier.authorityGrantedDate ? "bg-green-500/20 text-green-400" : "bg-amber-500/20 text-amber-700"}`}>
                           {selectedCarrier.authorityGrantedDate
                             ? new Date(selectedCarrier.authorityGrantedDate).toISOString().slice(0, 10)
                             : "Not set"}
                         </span>
                       </div>
                       {!selectedCarrier.authorityGrantedDate && (
-                        <p className="text-[10px] leading-relaxed text-gray-500">
+                        <p className="text-[11px] leading-relaxed text-gray-500">
                           A missing grant date causes the Item 182 authority-age gate to fire AUTHORITY_UNVERIFIED past the 24-hour grace window, hard-blocking this carrier at tender time. Set the date manually below if the FMCSA QCMobile lookup did not return a parseable GRANT entry.
                         </p>
                       )}
                       {isAdmin && (
                         <div className="space-y-2 pt-2 border-t border-white/5">
                           <div>
-                            <label className="block text-[10px] font-medium text-gray-600 mb-1">Grant date</label>
+                            <label className="block text-[11px] font-medium text-gray-600 mb-1">Grant date</label>
                             <input
                               type="date"
                               value={authorityGrantInput}
@@ -1728,7 +1728,7 @@ export default function CarrierPoolPage() {
                             />
                           </div>
                           <div>
-                            <label className="block text-[10px] font-medium text-gray-600 mb-1">Reason (required, min 10 characters)</label>
+                            <label className="block text-[11px] font-medium text-gray-600 mb-1">Reason (required, min 10 characters)</label>
                             <textarea
                               value={authorityGrantReason}
                               onChange={(e) => setAuthorityGrantReason(e.target.value)}
@@ -1737,7 +1737,7 @@ export default function CarrierPoolPage() {
                               placeholder="e.g. Verified on FMCSA SAFER snapshot dated YYYY-MM-DD; QCMobile authority endpoint returned no GRANT entry."
                               className="w-full text-xs px-2 py-1.5 rounded border border-gray-300 focus:outline-none focus:ring-1 focus:ring-[#C5A572] bg-white resize-none"
                             />
-                            <p className="text-[10px] text-gray-500 mt-0.5">{authorityGrantReason.trim().length}/500 chars</p>
+                            <p className="text-[11px] text-gray-500 mt-0.5">{authorityGrantReason.trim().length}/500 chars</p>
                           </div>
                           {authorityGrantMessage && (
                             <div className={`text-[11px] px-2 py-1.5 rounded ${authorityGrantMessage.tone === "success" ? "bg-green-50 text-green-700 border border-green-200" : "bg-red-50 text-red-700 border border-red-200"}`}>
@@ -1763,13 +1763,13 @@ export default function CarrierPoolPage() {
                           >
                             {setAuthorityGrantDate.isPending ? "Saving…" : "Save grant date + re-run compliance"}
                           </button>
-                          <p className="text-[10px] text-gray-500">
+                          <p className="text-[11px] text-gray-500">
                             Reason and previous + new values are written to the audit trail. The backend re-runs the canonical compliance check after the save; the verdict surfaces in the success message above.
                           </p>
                         </div>
                       )}
                       {!isAdmin && (
-                        <p className="text-[10px] text-gray-500">ADMIN or CEO role required to set the authority grant date manually.</p>
+                        <p className="text-[11px] text-gray-500">ADMIN or CEO role required to set the authority grant date manually.</p>
                       )}
                     </div>
 
@@ -1818,19 +1818,19 @@ export default function CarrierPoolPage() {
                         <div className="bg-gray-100 rounded-lg p-4">
                           <div className="flex items-center gap-6 flex-wrap">
                             <div>
-                              <span className="text-[10px] text-slate-500 uppercase">Score</span>
+                              <span className="text-[11px] text-slate-500 uppercase">Score</span>
                               <p className="text-2xl font-bold text-[#C5A572]">{compassResult.score ?? "—"}/100</p>
                             </div>
                             <div>
-                              <span className="text-[10px] text-slate-500 uppercase">Grade</span>
+                              <span className="text-[11px] text-slate-500 uppercase">Grade</span>
                               <p className={`text-2xl font-bold ${(compassResult.grade && GRADE_COLORS[compassResult.grade]) || "text-white"}`}>{compassResult.grade ?? "—"}</p>
                             </div>
                             <div>
-                              <span className="text-[10px] text-slate-500 uppercase">Risk</span>
+                              <span className="text-[11px] text-slate-500 uppercase">Risk</span>
                               <p className={`text-lg font-semibold ${(compassResult.riskLevel && RISK_COLORS[compassResult.riskLevel]) || "text-white"}`}>{compassResult.riskLevel ?? "—"}</p>
                             </div>
                             <div>
-                              <span className="text-[10px] text-slate-500 uppercase">Recommendation</span>
+                              <span className="text-[11px] text-slate-500 uppercase">Recommendation</span>
                               {/* null must NOT fall through to the red REJECT style — an
                                   absent recommendation is not a rejection. */}
                               <p className={`px-2 py-0.5 rounded text-xs font-bold mt-1 inline-block ${
@@ -1868,7 +1868,7 @@ export default function CarrierPoolPage() {
                         {compassResult.flags.length > 0 && (
                           <div className="flex flex-wrap gap-1.5">
                             {compassResult.flags.map((flag, i) => (
-                              <span key={i} className="px-2 py-0.5 bg-red-500/10 text-red-400 rounded text-[10px] font-medium border border-red-500/20">
+                              <span key={i} className="px-2 py-0.5 bg-red-500/10 text-red-400 rounded text-[11px] font-medium border border-red-500/20">
                                 {flag}
                               </span>
                             ))}
@@ -1880,19 +1880,19 @@ export default function CarrierPoolPage() {
                             className="flex items-center gap-1 px-2.5 py-1 text-xs text-gray-600 hover:text-[#0A2540] transition">
                             <RefreshCw className={`w-3 h-3 ${compassLoading === selectedCarrier.id ? "animate-spin" : ""}`} /> Re-run
                           </button>
-                          <span className="text-[10px] text-slate-600">Vetted: {new Date(compassResult.vettedAt).toLocaleString()}</span>
+                          <span className="text-[11px] text-slate-600">Vetted: {new Date(compassResult.vettedAt).toLocaleString()}</span>
                         </div>
                       </div>
                     ) : selectedCarrier.lastVettingScore != null ? (
                       <div className="bg-gray-100 rounded-lg p-4">
                         <div className="flex items-center gap-4">
                           <div>
-                            <span className="text-[10px] text-slate-500 uppercase">Last Score</span>
+                            <span className="text-[11px] text-slate-500 uppercase">Last Score</span>
                             <p className="text-2xl font-bold text-[#C5A572]">{selectedCarrier.lastVettingScore}/100</p>
                           </div>
                           {selectedCarrier.lastVettingGrade && (
                             <div>
-                              <span className="text-[10px] text-slate-500 uppercase">Grade</span>
+                              <span className="text-[11px] text-slate-500 uppercase">Grade</span>
                               <p className={`text-2xl font-bold ${GRADE_COLORS[selectedCarrier.lastVettingGrade] || "text-white"}`}>{selectedCarrier.lastVettingGrade}</p>
                             </div>
                           )}
@@ -1934,13 +1934,13 @@ export default function CarrierPoolPage() {
                     <h3 className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Crash History</h3>
                     <div className="bg-gray-100 rounded-lg p-4">
                       <div className="grid grid-cols-4 gap-3 text-center">
-                        <div><p className="text-lg font-bold text-[#0A2540]">&mdash;</p><p className="text-[10px] text-slate-500">Total</p></div>
-                        <div><p className="text-lg font-bold text-red-700">&mdash;</p><p className="text-[10px] text-slate-500">Fatal</p></div>
-                        <div><p className="text-lg font-bold text-yellow-700">&mdash;</p><p className="text-[10px] text-slate-500">Injury</p></div>
-                        <div><p className="text-lg font-bold text-gray-700">&mdash;</p><p className="text-[10px] text-slate-500">Towaway</p></div>
+                        <div><p className="text-lg font-bold text-[#0A2540]">&mdash;</p><p className="text-[11px] text-slate-500">Total</p></div>
+                        <div><p className="text-lg font-bold text-red-700">&mdash;</p><p className="text-[11px] text-slate-500">Fatal</p></div>
+                        <div><p className="text-lg font-bold text-yellow-700">&mdash;</p><p className="text-[11px] text-slate-500">Injury</p></div>
+                        <div><p className="text-lg font-bold text-gray-700">&mdash;</p><p className="text-[11px] text-slate-500">Towaway</p></div>
                       </div>
                     </div>
-                    <p className="text-[10px] text-slate-600">FMCSA data populated after Compass vetting with valid DOT number.</p>
+                    <p className="text-[11px] text-slate-600">FMCSA data populated after Compass vetting with valid DOT number.</p>
                   </div>
                 )}
 
@@ -1969,19 +1969,19 @@ export default function CarrierPoolPage() {
                     <div className="grid grid-cols-2 gap-3">
                       <div className="bg-gray-100 rounded-lg p-3 text-center">
                         <p className="text-xl font-bold text-[#0A2540]">{selectedCarrier.completedLoads}</p>
-                        <p className="text-[10px] text-slate-500">Completed Loads</p>
+                        <p className="text-[11px] text-slate-500">Completed Loads</p>
                       </div>
                       <div className="bg-gray-100 rounded-lg p-3 text-center">
                         <p className="text-xl font-bold text-blue-700">{selectedCarrier.activeLoads}</p>
-                        <p className="text-[10px] text-slate-500">Active Loads</p>
+                        <p className="text-[11px] text-slate-500">Active Loads</p>
                       </div>
                       <div className="bg-gray-100 rounded-lg p-3 text-center">
                         <p className="text-xl font-bold text-green-700">${(selectedCarrier.totalRevenue / 1000).toFixed(1)}k</p>
-                        <p className="text-[10px] text-slate-500">Revenue</p>
+                        <p className="text-[11px] text-slate-500">Revenue</p>
                       </div>
                       <div className="bg-gray-100 rounded-lg p-3 text-center">
                         <p className="text-xl font-bold text-gold">{selectedCarrier.acceptanceRate}%</p>
-                        <p className="text-[10px] text-slate-500">Accept Rate</p>
+                        <p className="text-[11px] text-slate-500">Accept Rate</p>
                       </div>
                     </div>
 
@@ -2003,7 +2003,7 @@ export default function CarrierPoolPage() {
                     ) : (
                       <div className="bg-gray-100 rounded-lg p-4 text-center">
                         <p className="text-xs text-slate-500">On-Time: —% | Avg Transit: — days</p>
-                        <p className="text-[10px] text-slate-600 mt-1">Performance data available after completing loads.</p>
+                        <p className="text-[11px] text-slate-600 mt-1">Performance data available after completing loads.</p>
                       </div>
                     )}
                   </div>
@@ -2131,11 +2131,11 @@ export default function CarrierPoolPage() {
                       <div className="flex items-center justify-between">
                         <div>
                           <h3 className="text-sm font-semibold text-gray-900 break-all">{previewDoc.fileName}</h3>
-                          <p className="text-[10px] text-gray-700 mt-0.5">
+                          <p className="text-[11px] text-gray-700 mt-0.5">
                             {DOC_CATEGORIES.find(c => c.key === previewDoc.docType)?.label || previewDoc.docType} &middot; {new Date(previewDoc.createdAt).toLocaleDateString()} &middot; {(previewDoc.fileSize / 1024).toFixed(0)} KB
                           </p>
                         </div>
-                        <span className={`px-2 py-0.5 rounded text-[10px] font-medium ${DOC_STATUS_COLORS[previewDoc.status] || ""}`}>{previewDoc.status}</span>
+                        <span className={`px-2 py-0.5 rounded text-[11px] font-medium ${DOC_STATUS_COLORS[previewDoc.status] || ""}`}>{previewDoc.status}</span>
                       </div>
                       {previewDoc.notes && <p className="text-xs text-gray-500 italic">{previewDoc.notes}</p>}
                       <div className="bg-gray-100 rounded-lg overflow-hidden border border-gray-200" style={{ minHeight: 300 }}>
@@ -2283,7 +2283,7 @@ export default function CarrierPoolPage() {
                       ) : (
                         grouped.map(group => (
                           <div key={group.key}>
-                            <h4 className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2">{group.label}</h4>
+                            <h4 className="text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-2">{group.label}</h4>
                             <div className="space-y-1.5">
                               {group.docs.map(doc => (
                                 <div key={doc.id} className="flex items-center gap-2 bg-gray-50 rounded-lg px-3 py-2 border border-gray-100 hover:border-gray-200 transition group">
@@ -2295,9 +2295,9 @@ export default function CarrierPoolPage() {
                                       className="text-xs font-medium text-gray-800 hover:text-[#C5A572] truncate block text-left w-full">
                                       {doc.fileName}
                                     </button>
-                                    <p className="text-[10px] text-gray-700">{new Date(doc.createdAt).toLocaleDateString()} &middot; {doc.user.firstName} {doc.user.lastName}</p>
+                                    <p className="text-[11px] text-gray-700">{new Date(doc.createdAt).toLocaleDateString()} &middot; {doc.user.firstName} {doc.user.lastName}</p>
                                   </div>
-                                  <span className={`px-1.5 py-0.5 rounded text-[9px] font-medium shrink-0 ${DOC_STATUS_COLORS[doc.status] || ""}`}>{doc.status}</span>
+                                  <span className={`px-1.5 py-0.5 rounded text-[11px] font-medium shrink-0 ${DOC_STATUS_COLORS[doc.status] || ""}`}>{doc.status}</span>
                                   <div className="flex gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition">
                                     <button onClick={() => { setPreviewDoc(doc); setDocView("preview"); }} title="Preview"
                                       className="p-1 rounded hover:bg-gray-200 text-gray-700 hover:text-gray-600"><Eye className="w-3 h-3" /></button>
@@ -2362,11 +2362,11 @@ export default function CarrierPoolPage() {
                           <Zap className="w-4 h-4 text-[#C5A572]" /> Quick Pay pilot
                         </h3>
                         {status ? (
-                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wide border ${QP_STATUS_STYLE[status]}`}>
+                          <span className={`px-2 py-0.5 rounded-full text-[11px] font-semibold uppercase tracking-wide border ${QP_STATUS_STYLE[status]}`}>
                             {QP_STATUS_LABEL[status]}
                           </span>
                         ) : (
-                          <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wide border bg-gray-100 text-gray-500 border-gray-300">
+                          <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold uppercase tracking-wide border bg-gray-100 text-gray-500 border-gray-300">
                             Never requested
                           </span>
                         )}
@@ -2509,7 +2509,7 @@ export default function CarrierPoolPage() {
                                   Decline request
                                 </button>
                                 <button onClick={resetQpForm} className="text-xs text-gray-500 hover:text-gray-700">Cancel</button>
-                                <span className="text-[10px] text-gray-400">{qpReason.trim().length}/10 minimum</span>
+                                <span className="text-[11px] text-gray-400">{qpReason.trim().length}/10 minimum</span>
                               </div>
                             </div>
                           )}
@@ -2568,7 +2568,7 @@ export default function CarrierPoolPage() {
                                   Confirm withdrawal
                                 </button>
                                 <button onClick={resetQpForm} className="text-xs text-gray-500 hover:text-gray-700">Cancel</button>
-                                <span className="text-[10px] text-gray-400">{qpReason.trim().length}/10 minimum</span>
+                                <span className="text-[11px] text-gray-400">{qpReason.trim().length}/10 minimum</span>
                               </div>
                             </div>
                           )}
@@ -2593,7 +2593,7 @@ export default function CarrierPoolPage() {
                             {history.map((h) => (
                               <div key={h.id} className="bg-gray-50 border border-gray-200 rounded px-3 py-2 text-xs text-gray-600">
                                 <div className="flex items-center justify-between gap-2">
-                                  <span className={`px-1.5 py-0.5 rounded text-[10px] font-semibold border ${QP_STATUS_STYLE[h.status]}`}>
+                                  <span className={`px-1.5 py-0.5 rounded text-[11px] font-semibold border ${QP_STATUS_STYLE[h.status]}`}>
                                     {QP_STATUS_LABEL[h.status]}
                                   </span>
                                   <span className="text-gray-400">{new Date(h.requestedAt).toLocaleDateString()}</span>

@@ -83,7 +83,7 @@ export function CustomerDrawer({ customerId, onClose, onCustomerChange, onSelect
     } else if (v === "REJECTED" || v === "SUSPENDED") {
       cls = "bg-[#F6E3E3] text-[#9B2C2C]";
     }
-    return <span className={`px-2 py-0.5 text-[10px] tracking-wide rounded ${cls}`}>{label}</span>;
+    return <span className={`px-2 py-0.5 text-[11px] tracking-wide rounded ${cls}`}>{label}</span>;
   };
 
   return (
@@ -106,7 +106,7 @@ export function CustomerDrawer({ customerId, onClose, onCustomerChange, onSelect
                 ) : (
                   <>
                     <div className="flex items-center gap-2 flex-wrap">
-                      <h2 className="text-[15px] font-semibold text-gray-900 truncate">{customer?.name ?? "Loading…"}</h2>
+                      <h2 className="text-sm font-semibold text-gray-900 truncate">{customer?.name ?? "Loading…"}</h2>
                       {customer && statusBadge(customer.onboardingStatus)}
                       {customer?.type && (
                         <span className="px-2 py-0.5 text-[11px] rounded bg-blue-50 text-blue-700 uppercase">{customer.type}</span>

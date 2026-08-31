@@ -158,17 +158,17 @@ function ThreadCard({ request, isAdmin, onCancelled }: { request: ThreadRequest;
       {/* Header strip */}
       <div className="flex items-center justify-between gap-2 px-3 py-2 bg-gray-50 border-b border-gray-200">
         <div className="flex items-center gap-2 min-w-0 flex-1">
-          <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded ${meta.bg} ${meta.text} text-[10px] font-semibold`}>
+          <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded ${meta.bg} ${meta.text} text-[11px] font-semibold`}>
             {meta.icon} {meta.label}
           </span>
           <span className="text-xs font-semibold text-gray-900 truncate">{request.categoryLabel}</span>
         </div>
-        <span className="text-[10px] text-gray-400 shrink-0">{formatDate(request.createdAt)}</span>
+        <span className="text-[11px] text-gray-400 shrink-0">{formatDate(request.createdAt)}</span>
       </div>
 
       {/* AE message */}
       <div className="px-3 py-2.5">
-        <div className="flex items-center gap-1.5 text-[10px] text-gray-400 uppercase tracking-wider mb-1">
+        <div className="flex items-center gap-1.5 text-[11px] text-gray-400 uppercase tracking-wider mb-1">
           <UserIcon size={10} />
           {request.createdBy.firstName} {request.createdBy.lastName}
         </div>
@@ -179,8 +179,8 @@ function ThreadCard({ request, isAdmin, onCancelled }: { request: ThreadRequest;
       {request.status === "RESOLVED" && request.resolvedNote && (
         <div className="px-3 py-2.5 bg-[#E6F0E9]/30 border-t border-[#2F7A4F]/20">
           <div className="flex items-center justify-between mb-1">
-            <span className="text-[10px] text-[#2F7A4F] uppercase tracking-wider font-semibold">Carrier response</span>
-            <span className="text-[10px] text-gray-400">{formatDate(request.resolvedAt)}</span>
+            <span className="text-[11px] text-[#2F7A4F] uppercase tracking-wider font-semibold">Carrier response</span>
+            <span className="text-[11px] text-gray-400">{formatDate(request.resolvedAt)}</span>
           </div>
           <p className="text-xs text-gray-700 leading-relaxed whitespace-pre-wrap">{request.resolvedNote}</p>
 
@@ -209,7 +209,7 @@ function ThreadCard({ request, isAdmin, onCancelled }: { request: ThreadRequest;
       {/* Cancelled metadata */}
       {request.status === "CANCELLED" && (
         <div className="px-3 py-2 bg-gray-100 border-t border-gray-200">
-          <p className="text-[10px] text-gray-500">
+          <p className="text-[11px] text-gray-500">
             Cancelled {formatDate(request.cancelledAt)}
             {request.cancelledBy && <> by {request.cancelledBy.firstName} {request.cancelledBy.lastName}</>}
           </p>
@@ -220,12 +220,12 @@ function ThreadCard({ request, isAdmin, onCancelled }: { request: ThreadRequest;
       {request.status === "OPEN" && isAdmin && (
         <div className="px-3 py-2 border-t border-gray-200 flex items-center justify-end">
           {cancelError && (
-            <p className="text-[10px] text-red-500 mr-2">{cancelError}</p>
+            <p className="text-[11px] text-red-500 mr-2">{cancelError}</p>
           )}
           <button
             onClick={() => cancelMutation.mutate()}
             disabled={cancelMutation.isPending}
-            className="inline-flex items-center gap-1 px-2 py-1 text-[10px] font-semibold text-gray-600 hover:text-red-600 disabled:opacity-50"
+            className="inline-flex items-center gap-1 px-2 py-1 text-[11px] font-semibold text-gray-600 hover:text-red-600 disabled:opacity-50"
           >
             <X size={10} />
             {cancelMutation.isPending ? "Cancelling…" : "Cancel Request"}

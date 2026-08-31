@@ -626,7 +626,7 @@ export function CarrierEngagementDrawer(props: CarrierEngagementDrawerProps) {
                       Offer to {selectedCarrier?.company ? `${selectedCarrier.company.split(" ")[0]}` : "this carrier"} ($)
                     </Label>
                     <Input type="number" step="0.01" {...register("offeredRate", { required: true })} />
-                    <div className="text-[10px] text-slate-500 mt-0.5">
+                    <div className="text-[11px] text-slate-500 mt-0.5">
                       Defaults to target. Edit to negotiate up or down for this specific carrier.
                     </div>
                   </div>
@@ -681,7 +681,7 @@ export function CarrierEngagementDrawer(props: CarrierEngagementDrawerProps) {
                 className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#C5A572]/40"
                 placeholder="Add notes…"
               />
-              <div className="mt-1.5 text-[10px] text-slate-500">{activeInstr.hint}</div>
+              <div className="mt-1.5 text-[11px] text-slate-500">{activeInstr.hint}</div>
             </section>
           </div>
 
@@ -847,7 +847,7 @@ function CarrierSection({ selected, onSelect }: CarrierSectionProps) {
             <div className="flex items-center gap-2">
               <span className="text-sm font-semibold text-slate-900 truncate">{selected.company ?? "Carrier"}</span>
               {selected.tier && (
-                <span className={`px-2 py-0.5 text-[10px] rounded font-medium ${selected.tier === "PLATINUM" || selected.tier === "GOLD" ? "bg-[#C5A572]/20 text-[#BA7517]" : "bg-slate-200 text-slate-700"}`}>
+                <span className={`px-2 py-0.5 text-[11px] rounded font-medium ${selected.tier === "PLATINUM" || selected.tier === "GOLD" ? "bg-[#C5A572]/20 text-[#BA7517]" : "bg-slate-200 text-slate-700"}`}>
                   {selected.tier}
                 </span>
               )}
@@ -896,7 +896,7 @@ function CarrierSection({ selected, onSelect }: CarrierSectionProps) {
                     <div className="text-[11px] text-slate-500">MC# {cleanMcNumber(c.mcNumber)} · DOT# {c.dotNumber ?? "n/a"}</div>
                   </div>
                   {c.tier && (
-                    <span className={`px-2 py-0.5 text-[10px] rounded font-medium shrink-0 ${c.tier === "PLATINUM" || c.tier === "GOLD" ? "bg-[#C5A572]/20 text-[#BA7517]" : "bg-slate-100 text-slate-600"}`}>
+                    <span className={`px-2 py-0.5 text-[11px] rounded font-medium shrink-0 ${c.tier === "PLATINUM" || c.tier === "GOLD" ? "bg-[#C5A572]/20 text-[#BA7517]" : "bg-slate-100 text-slate-600"}`}>
                       {c.tier}
                     </span>
                   )}

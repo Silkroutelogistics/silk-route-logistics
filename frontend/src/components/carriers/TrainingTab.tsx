@@ -100,8 +100,8 @@ export function TrainingTab({ carrierId }: { carrierId: string }) {
                 <td className="px-3 py-2.5 sticky left-0 bg-white z-10">
                   <div className="text-[13px] font-semibold text-[#0A2540]">{d.firstName} {d.lastName}</div>
                   {!d.activated
-                    ? <div className="text-[10px] text-amber-600">Not activated</div>
-                    : <div className="text-[10px] text-gray-400">{d.passedCount}/{courses.length} done</div>}
+                    ? <div className="text-[11px] text-amber-600">Not activated</div>
+                    : <div className="text-[11px] text-gray-400">{d.passedCount}/{courses.length} done</div>}
                 </td>
                 {courses.map((c) => {
                   const p = d.progress[c.id];
@@ -114,9 +114,9 @@ export function TrainingTab({ carrierId }: { carrierId: string }) {
                             <CheckCircle2 size={13} /> {p?.bestScorePct ?? 0}%
                           </span>
                           {p?.isExpired ? (
-                            <span className="text-[10px] font-semibold text-[#9B2C2C]">Expired</span>
+                            <span className="text-[11px] font-semibold text-[#9B2C2C]">Expired</span>
                           ) : p && p.daysUntilExpiry != null && p.daysUntilExpiry <= 30 ? (
-                            <span className="text-[10px] font-semibold text-[#B07A1A]">{p.daysUntilExpiry}d left</span>
+                            <span className="text-[11px] font-semibold text-[#B07A1A]">{p.daysUntilExpiry}d left</span>
                           ) : null}
                         </div>
                       ) : status === "IN_PROGRESS" ? (
@@ -146,9 +146,9 @@ function Stat({ label, value, sub, tone }: { label: string; value: string; sub?:
   const valueColor = tone === "danger" ? "text-[#9B2C2C]" : tone === "warn" ? "text-[#B07A1A]" : "text-[#0A2540]";
   return (
     <div className="bg-gray-50 border border-gray-100 rounded-lg p-3">
-      <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#BA7517]">{label}</div>
+      <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#BA7517]">{label}</div>
       <div className={`text-2xl font-semibold mt-0.5 ${valueColor}`}>{value}</div>
-      {sub && <div className="text-[10px] text-gray-400 mt-0.5">{sub}</div>}
+      {sub && <div className="text-[11px] text-gray-400 mt-0.5">{sub}</div>}
     </div>
   );
 }

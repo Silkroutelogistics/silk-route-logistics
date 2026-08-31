@@ -73,7 +73,7 @@ export function IconTabs<T extends string>({ tabs, active, onChange }: IconTabsP
                 strokeWidth={isActive ? 2.5 : 1.5}
               />
             </span>
-            <span className={`text-[10px] font-medium ${isActive ? "text-[#854F0B]" : "text-gray-500"}`}>
+            <span className={`text-[11px] font-medium ${isActive ? "text-[#854F0B]" : "text-gray-500"}`}>
               {label}
             </span>
             {alert && <span className="absolute top-0 right-3 w-1.5 h-1.5 rounded-full bg-red-500" />}

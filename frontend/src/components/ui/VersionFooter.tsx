@@ -15648,7 +15648,23 @@
 // Adversarially verified: reintroduce max-w-[720px] on a drawer, strip the hook
 // from the load board, or re-add a local ESC listener — each turns it red naming
 // the exact file, and green on restore. Frontend suite 66 → 77.
-export const SRL_VERSION = "3.8.awc";
+// v3.8.awd — B2: the drawer surfaces meet the 11px floor.
+//
+// 122 instances below it across the drawer surfaces — 9px and 10px — all raised
+// to the 11px label step. Zero remain. The shared IconTabs label went 10 to 11
+// with them, so all five drawers using it gain the change at once.
+//
+// Scoped to the drawer surfaces DELIBERATELY. The portal has 553 sub-floor
+// instances in total, and several outside the drawers sit in containers that
+// cannot take the size: 8px text inside a 14px circle, notification count dots,
+// calendar day cells. A blind sweep there would ship breakage across ~30 pages
+// no render in this arc covers. Counts and hazards are in the audit doc.
+//
+// text-xs AUDITED, not swept, as the arc asked: 206 in drawer surfaces, of which
+// only 6 are genuine dense cells and 98 are body or helper text sitting at 12px
+// where the scale says 14px. Recommendation recorded; not bulk-edited on a
+// classification heuristic I would not trust to touch 206 sites unseen.
+export const SRL_VERSION = "3.8.awd";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

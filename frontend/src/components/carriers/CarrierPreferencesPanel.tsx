@@ -206,11 +206,11 @@ export function CarrierPreferencesPanel({ carrierId, isAdmin }: { carrierId: str
           <h3 className="text-xs font-semibold text-gray-700 uppercase tracking-wider">Carrier preferences</h3>
         </div>
         <div className="flex items-center gap-2">
-          <span className={`text-[10px] font-semibold px-2 py-0.5 rounded ${lastUpdatedColor}`}>
+          <span className={`text-[11px] font-semibold px-2 py-0.5 rounded ${lastUpdatedColor}`}>
             Last updated by {lastUpdatedByBadge}
           </span>
           {data.isNew && (
-            <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-amber-50 text-amber-700">No row yet (defaults shown)</span>
+            <span className="text-[11px] font-semibold px-2 py-0.5 rounded bg-amber-50 text-amber-700">No row yet (defaults shown)</span>
           )}
         </div>
       </div>
@@ -222,10 +222,10 @@ export function CarrierPreferencesPanel({ carrierId, isAdmin }: { carrierId: str
             <Sparkles size={12} className="text-blue-600" />
             <p className="text-[11px] font-semibold text-blue-900 uppercase tracking-wider">Auto-learned signals</p>
           </div>
-          <pre className="text-[10px] text-blue-900 font-mono whitespace-pre-wrap break-all">
+          <pre className="text-[11px] text-blue-900 font-mono whitespace-pre-wrap break-all">
             {JSON.stringify(data.autoLearned, null, 2)}
           </pre>
-          <p className="text-[10px] text-blue-700 mt-2 italic">
+          <p className="text-[11px] text-blue-700 mt-2 italic">
             Manual overrides below take precedence over auto-learned values.
           </p>
         </div>
@@ -234,7 +234,7 @@ export function CarrierPreferencesPanel({ carrierId, isAdmin }: { carrierId: str
       {/* Form */}
       <div className="bg-white border border-gray-200 rounded-lg p-4 space-y-3">
         <div>
-          <label className="block text-[10px] font-semibold text-gray-700 uppercase tracking-wider mb-1">Preferred lanes</label>
+          <label className="block text-[11px] font-semibold text-gray-700 uppercase tracking-wider mb-1">Preferred lanes</label>
           <textarea
             value={form.preferredLanesRaw}
             onChange={(e) => setForm({ ...form, preferredLanesRaw: e.target.value })}
@@ -242,12 +242,12 @@ export function CarrierPreferencesPanel({ carrierId, isAdmin }: { carrierId: str
             placeholder="ORD → MIA, LAX → SEA, DAL → ATL"
             className="w-full px-2 py-1.5 bg-white border border-gray-300 rounded text-xs focus:outline-none focus:border-[#C5A572]"
           />
-          <p className="text-[10px] text-gray-500 mt-0.5">Format: <code>Origin → Dest</code>, comma-separated.</p>
+          <p className="text-[11px] text-gray-500 mt-0.5">Format: <code>Origin → Dest</code>, comma-separated.</p>
         </div>
 
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="block text-[10px] font-semibold text-gray-700 uppercase tracking-wider mb-1">Preferred regions</label>
+            <label className="block text-[11px] font-semibold text-gray-700 uppercase tracking-wider mb-1">Preferred regions</label>
             <input
               type="text"
               value={form.preferredRegionsRaw}
@@ -257,7 +257,7 @@ export function CarrierPreferencesPanel({ carrierId, isAdmin }: { carrierId: str
             />
           </div>
           <div>
-            <label className="block text-[10px] font-semibold text-gray-700 uppercase tracking-wider mb-1">Avoid regions</label>
+            <label className="block text-[11px] font-semibold text-gray-700 uppercase tracking-wider mb-1">Avoid regions</label>
             <input
               type="text"
               value={form.avoidRegionsRaw}
@@ -269,7 +269,7 @@ export function CarrierPreferencesPanel({ carrierId, isAdmin }: { carrierId: str
         </div>
 
         <div>
-          <label className="block text-[10px] font-semibold text-gray-700 uppercase tracking-wider mb-1">Preferred load types</label>
+          <label className="block text-[11px] font-semibold text-gray-700 uppercase tracking-wider mb-1">Preferred load types</label>
           <input
             type="text"
             value={form.preferredLoadTypesRaw}
@@ -281,7 +281,7 @@ export function CarrierPreferencesPanel({ carrierId, isAdmin }: { carrierId: str
 
         <div className="grid grid-cols-3 gap-3">
           <div>
-            <label className="block text-[10px] font-semibold text-gray-700 uppercase tracking-wider mb-1">Min rate / mile</label>
+            <label className="block text-[11px] font-semibold text-gray-700 uppercase tracking-wider mb-1">Min rate / mile</label>
             <input
               type="number"
               step="0.01"
@@ -292,7 +292,7 @@ export function CarrierPreferencesPanel({ carrierId, isAdmin }: { carrierId: str
             />
           </div>
           <div>
-            <label className="block text-[10px] font-semibold text-gray-700 uppercase tracking-wider mb-1">Max deadhead (mi)</label>
+            <label className="block text-[11px] font-semibold text-gray-700 uppercase tracking-wider mb-1">Max deadhead (mi)</label>
             <input
               type="number"
               value={form.maxDeadheadMiles}
@@ -302,7 +302,7 @@ export function CarrierPreferencesPanel({ carrierId, isAdmin }: { carrierId: str
             />
           </div>
           <div>
-            <label className="block text-[10px] font-semibold text-gray-700 uppercase tracking-wider mb-1">Typical radius (mi)</label>
+            <label className="block text-[11px] font-semibold text-gray-700 uppercase tracking-wider mb-1">Typical radius (mi)</label>
             <input
               type="number"
               value={form.typicalRadiusMiles}
@@ -315,7 +315,7 @@ export function CarrierPreferencesPanel({ carrierId, isAdmin }: { carrierId: str
 
         <div className="grid grid-cols-3 gap-3">
           <div>
-            <label className="block text-[10px] font-semibold text-gray-700 uppercase tracking-wider mb-1">Pay terms</label>
+            <label className="block text-[11px] font-semibold text-gray-700 uppercase tracking-wider mb-1">Pay terms</label>
             <select
               value={form.preferredPayTerms}
               onChange={(e) => setForm({ ...form, preferredPayTerms: e.target.value })}
@@ -326,7 +326,7 @@ export function CarrierPreferencesPanel({ carrierId, isAdmin }: { carrierId: str
             </select>
           </div>
           <div>
-            <label className="block text-[10px] font-semibold text-gray-700 uppercase tracking-wider mb-1">Notify method</label>
+            <label className="block text-[11px] font-semibold text-gray-700 uppercase tracking-wider mb-1">Notify method</label>
             <select
               value={form.notifyMethod}
               onChange={(e) => setForm({ ...form, notifyMethod: e.target.value })}
@@ -336,7 +336,7 @@ export function CarrierPreferencesPanel({ carrierId, isAdmin }: { carrierId: str
             </select>
           </div>
           <div>
-            <label className="block text-[10px] font-semibold text-gray-700 uppercase tracking-wider mb-1">Frequency</label>
+            <label className="block text-[11px] font-semibold text-gray-700 uppercase tracking-wider mb-1">Frequency</label>
             <select
               value={form.notifyFrequency}
               onChange={(e) => setForm({ ...form, notifyFrequency: e.target.value })}

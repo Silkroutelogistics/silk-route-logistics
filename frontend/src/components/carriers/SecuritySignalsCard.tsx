@@ -233,18 +233,18 @@ export function SecuritySignalsCard({ carrierId, isAdmin }: { carrierId: string;
                 <div className="flex items-center justify-between gap-2">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-1.5 mb-0.5">
-                    <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-red-100 text-red-700">
+                    <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-semibold bg-red-100 text-red-700">
                       {m.matchType}
                     </span>
-                    <span className="text-[10px] text-gray-500">risk {m.riskScore}/100</span>
+                    <span className="text-[11px] text-gray-500">risk {m.riskScore}/100</span>
                     {m.status === "OPEN" && (
-                      <span className="text-[10px] text-red-600 font-semibold">UNREVIEWED</span>
+                      <span className="text-[11px] text-red-600 font-semibold">UNREVIEWED</span>
                     )}
                     {m.status === "CONFIRMED_FRAUD" && (
-                      <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-red-600 text-white">CONFIRMED RISK</span>
+                      <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-bold bg-red-600 text-white">CONFIRMED RISK</span>
                     )}
                     {m.status === "REVIEWED" && (
-                      <span className="text-[10px] text-gray-500 font-semibold">REVIEWED</span>
+                      <span className="text-[11px] text-gray-500 font-semibold">REVIEWED</span>
                     )}
                   </div>
                   <p className="text-[11px] text-gray-700 truncate">
@@ -254,11 +254,11 @@ export function SecuritySignalsCard({ carrierId, isAdmin }: { carrierId: string;
                   </p>
                 </div>
                 <div className="flex items-center gap-2 whitespace-nowrap">
-                  <span className="text-[10px] text-gray-400">{formatDate(m.createdAt)}</span>
+                  <span className="text-[11px] text-gray-400">{formatDate(m.createdAt)}</span>
                   {isAdmin && m.status === "OPEN" && reviewOpenId !== m.id && (
                     <button
                       onClick={() => { setReviewOpenId(m.id); setReviewNote(""); setReviewError(null); }}
-                      className="text-[10px] font-semibold text-red-700 hover:text-red-900 underline"
+                      className="text-[11px] font-semibold text-red-700 hover:text-red-900 underline"
                     >
                       Review
                     </button>
@@ -267,7 +267,7 @@ export function SecuritySignalsCard({ carrierId, isAdmin }: { carrierId: string;
                 </div>
                 {reviewOpenId === m.id && (
                   <div className="mt-2 pt-2 border-t border-red-200">
-                    <label className="block text-[10px] font-semibold text-red-900 uppercase tracking-wider mb-1">Reviewer note (required)</label>
+                    <label className="block text-[11px] font-semibold text-red-900 uppercase tracking-wider mb-1">Reviewer note (required)</label>
                     <textarea
                       value={reviewNote}
                       onChange={(e) => setReviewNote(e.target.value)}
@@ -276,7 +276,7 @@ export function SecuritySignalsCard({ carrierId, isAdmin }: { carrierId: string;
                       placeholder="e.g. shared office address, unrelated companies; or same owner running a second MC..."
                       className="w-full px-2 py-1.5 bg-white border border-red-300 rounded text-xs focus:outline-none focus:border-red-500"
                     />
-                    {reviewError && <p className="mt-1 text-[10px] text-red-700">{reviewError}</p>}
+                    {reviewError && <p className="mt-1 text-[11px] text-red-700">{reviewError}</p>}
                     {/* Confirming records the reviewer finding. It deliberately does NOT
                         write CarrierProfile.chameleonRiskLevel: complianceMonitorService
                         reads that field as a BLOCK, and this action is a finding, not a
@@ -284,21 +284,21 @@ export function SecuritySignalsCard({ carrierId, isAdmin }: { carrierId: string;
                     <div className="mt-2 flex items-center justify-end gap-2">
                       <button
                         onClick={() => { setReviewOpenId(null); setReviewNote(""); setReviewError(null); }}
-                        className="text-[10px] text-gray-600 hover:text-gray-800"
+                        className="text-[11px] text-gray-600 hover:text-gray-800"
                       >
                         Cancel
                       </button>
                       <button
                         onClick={() => reviewMutation.mutate({ matchId: m.id, status: "DISMISSED" })}
                         disabled={reviewNote.trim().length < 5 || reviewMutation.isPending}
-                        className="px-2.5 py-1 bg-white border border-gray-400 text-gray-700 text-[10px] font-semibold rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="px-2.5 py-1 bg-white border border-gray-400 text-gray-700 text-[11px] font-semibold rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         Not a match
                       </button>
                       <button
                         onClick={() => reviewMutation.mutate({ matchId: m.id, status: "CONFIRMED_FRAUD" })}
                         disabled={reviewNote.trim().length < 5 || reviewMutation.isPending}
-                        className="px-2.5 py-1 bg-red-600 text-white text-[10px] font-semibold rounded hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="px-2.5 py-1 bg-red-600 text-white text-[11px] font-semibold rounded hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         {reviewMutation.isPending ? "Saving..." : "Confirm risk"}
                       </button>
@@ -323,14 +323,14 @@ export function SecuritySignalsCard({ carrierId, isAdmin }: { carrierId: string;
               </p>
             </div>
             {isAdmin && !overrideOpen && (
-              <button onClick={() => setOverrideOpen(true)} className="text-[10px] font-semibold text-amber-700 hover:text-amber-900 underline whitespace-nowrap">
+              <button onClick={() => setOverrideOpen(true)} className="text-[11px] font-semibold text-amber-700 hover:text-amber-900 underline whitespace-nowrap">
                 Override
               </button>
             )}
           </div>
           {overrideOpen && (
             <div className="mt-3 pl-6">
-              <label className="block text-[10px] font-semibold text-amber-900 uppercase tracking-wider mb-1">Justification (required)</label>
+              <label className="block text-[11px] font-semibold text-amber-900 uppercase tracking-wider mb-1">Justification (required)</label>
               <textarea
                 value={overrideNote}
                 onChange={(e) => setOverrideNote(e.target.value)}
@@ -340,18 +340,18 @@ export function SecuritySignalsCard({ carrierId, isAdmin }: { carrierId: string;
                 className="w-full px-2 py-1.5 bg-white border border-amber-300 rounded text-xs focus:outline-none focus:border-amber-500"
               />
               <div className="mt-2 flex items-center justify-end gap-2">
-                <button onClick={() => { setOverrideOpen(false); setOverrideNote(""); setOverrideError(null); }} className="text-[10px] text-amber-700 hover:text-amber-900">
+                <button onClick={() => { setOverrideOpen(false); setOverrideNote(""); setOverrideError(null); }} className="text-[11px] text-amber-700 hover:text-amber-900">
                   Cancel
                 </button>
                 <button
                   onClick={() => overrideMutation.mutate()}
                   disabled={overrideNote.trim().length < 5 || overrideMutation.isPending}
-                  className="px-3 py-1 bg-amber-600 text-white text-[10px] font-semibold rounded hover:bg-amber-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-3 py-1 bg-amber-600 text-white text-[11px] font-semibold rounded hover:bg-amber-700 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {overrideMutation.isPending ? "Saving…" : "Confirm Override"}
                 </button>
               </div>
-              {overrideError && <p className="mt-1 text-[10px] text-red-600">{overrideError}</p>}
+              {overrideError && <p className="mt-1 text-[11px] text-red-600">{overrideError}</p>}
             </div>
           )}
         </div>
@@ -364,7 +364,7 @@ export function SecuritySignalsCard({ carrierId, isAdmin }: { carrierId: string;
           <div className="flex-1 min-w-0">
             <p className="text-[11px] font-semibold text-gray-700">Country mismatch overridden by AE</p>
             {geo.overrideNote && <p className="text-[11px] text-gray-600 mt-0.5 italic whitespace-pre-wrap">&ldquo;{geo.overrideNote}&rdquo;</p>}
-            <p className="text-[10px] text-gray-400 mt-0.5">{formatDate(geo.overriddenAt)}</p>
+            <p className="text-[11px] text-gray-400 mt-0.5">{formatDate(geo.overriddenAt)}</p>
           </div>
         </div>
       )}
@@ -382,7 +382,7 @@ export function SecuritySignalsCard({ carrierId, isAdmin }: { carrierId: string;
           <div className="flex-1 min-w-0">
             <p className="text-[11px] font-semibold text-gray-700">Unusual-activity SMS suppressed</p>
             <p className="text-[11px] text-gray-600 mt-0.5 italic whitespace-pre-wrap">&ldquo;{unusualOtpSmsOverride.reason}&rdquo;</p>
-            <p className="text-[10px] text-gray-400 mt-0.5">
+            <p className="text-[11px] text-gray-400 mt-0.5">
               Expires {formatDate(unusualOtpSmsOverride.expiresAt)}
             </p>
           </div>
@@ -399,14 +399,14 @@ export function SecuritySignalsCard({ carrierId, isAdmin }: { carrierId: string;
                 </p>
               </div>
               {!smsOverrideOpen && (
-                <button onClick={() => setSmsOverrideOpen(true)} className="text-[10px] font-semibold text-blue-700 hover:text-blue-900 underline whitespace-nowrap">
+                <button onClick={() => setSmsOverrideOpen(true)} className="text-[11px] font-semibold text-blue-700 hover:text-blue-900 underline whitespace-nowrap">
                   Suppress (24h)
                 </button>
               )}
             </div>
             {smsOverrideOpen && (
               <div className="mt-3 pl-6">
-                <label className="block text-[10px] font-semibold text-blue-900 uppercase tracking-wider mb-1">Justification (required, min 10 chars)</label>
+                <label className="block text-[11px] font-semibold text-blue-900 uppercase tracking-wider mb-1">Justification (required, min 10 chars)</label>
                 <textarea
                   value={smsOverrideReason}
                   onChange={(e) => setSmsOverrideReason(e.target.value)}
@@ -416,18 +416,18 @@ export function SecuritySignalsCard({ carrierId, isAdmin }: { carrierId: string;
                   className="w-full px-2 py-1.5 bg-white border border-blue-300 rounded text-xs focus:outline-none focus:border-blue-500"
                 />
                 <div className="mt-2 flex items-center justify-end gap-2">
-                  <button onClick={() => { setSmsOverrideOpen(false); setSmsOverrideReason(""); setSmsOverrideError(null); }} className="text-[10px] text-blue-700 hover:text-blue-900">
+                  <button onClick={() => { setSmsOverrideOpen(false); setSmsOverrideReason(""); setSmsOverrideError(null); }} className="text-[11px] text-blue-700 hover:text-blue-900">
                     Cancel
                   </button>
                   <button
                     onClick={() => smsOverrideMutation.mutate()}
                     disabled={smsOverrideReason.trim().length < 10 || smsOverrideMutation.isPending}
-                    className="px-3 py-1 bg-blue-600 text-white text-[10px] font-semibold rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="px-3 py-1 bg-blue-600 text-white text-[11px] font-semibold rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {smsOverrideMutation.isPending ? "Saving…" : "Apply Suppression"}
                   </button>
                 </div>
-                {smsOverrideError && <p className="mt-1 text-[10px] text-red-600">{smsOverrideError}</p>}
+                {smsOverrideError && <p className="mt-1 text-[11px] text-red-600">{smsOverrideError}</p>}
               </div>
             )}
           </div>
@@ -480,7 +480,7 @@ export function SecuritySignalsCard({ carrierId, isAdmin }: { carrierId: string;
             {authEvents.map((e) => (
               <li key={e.id} className="flex items-start justify-between gap-3 text-xs border-b border-gray-200 pb-1.5 last:border-0">
                 <span className="font-medium text-[#0A2540] whitespace-nowrap">{e.type}</span>
-                <span className="flex items-center gap-2 text-gray-500 text-[10px] text-right">
+                <span className="flex items-center gap-2 text-gray-500 text-[11px] text-right">
                   {e.ip && <span className="font-mono">{e.ip}</span>}
                   <span>{formatDate(e.createdAt)}</span>
                 </span>
@@ -508,9 +508,9 @@ export function SecuritySignalsCard({ carrierId, isAdmin }: { carrierId: string;
               <li key={s.id} className="flex items-center justify-between gap-3 text-xs">
                 <span className="text-gray-600">
                   Started {formatDate(s.issuedAt)}
-                  {s.rememberMe && <span className="ml-2 text-[10px] text-gray-400">remembered</span>}
+                  {s.rememberMe && <span className="ml-2 text-[11px] text-gray-400">remembered</span>}
                 </span>
-                <span className="text-gray-500 text-[10px]">last seen {formatDate(s.lastSeenAt)}</span>
+                <span className="text-gray-500 text-[11px]">last seen {formatDate(s.lastSeenAt)}</span>
               </li>
             ))}
           </ul>
@@ -539,15 +539,15 @@ export function SecuritySignalsCard({ carrierId, isAdmin }: { carrierId: string;
                   <div className="flex items-center justify-between gap-2 mb-1">
                     <span className="flex items-center gap-1.5">
                       {typeIcon}
-                      <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold ${severity.bg} ${severity.text}`}>
+                      <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-semibold ${severity.bg} ${severity.text}`}>
                         {e.severity}
                       </span>
                     </span>
-                    <span className="text-[10px] text-gray-400">{formatDate(e.createdAt)}</span>
+                    <span className="text-[11px] text-gray-400">{formatDate(e.createdAt)}</span>
                   </div>
                   <p className="text-[11px] text-gray-700 leading-snug">{e.message}</p>
                   {e.ipAddress && (
-                    <p className="text-[10px] text-gray-400 mt-1">IP: {e.ipAddress}</p>
+                    <p className="text-[11px] text-gray-400 mt-1">IP: {e.ipAddress}</p>
                   )}
                 </li>
               );
@@ -574,8 +574,8 @@ function SignalRow({ icon, label, country, ip, timestamp }: {
       </span>
       <span className="flex items-center gap-2 text-gray-700">
         <span className="font-semibold">{country || "—"}</span>
-        {ip && <span className="text-gray-400 text-[10px] font-mono">{ip}</span>}
-        {timestamp && <span className="text-gray-400 text-[10px]">{formatDate(timestamp)}</span>}
+        {ip && <span className="text-gray-400 text-[11px] font-mono">{ip}</span>}
+        {timestamp && <span className="text-gray-400 text-[11px]">{formatDate(timestamp)}</span>}
       </span>
     </div>
   );
