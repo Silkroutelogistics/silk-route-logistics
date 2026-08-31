@@ -119,6 +119,9 @@ export default function CarrierActivationPage() {
   const [name, setName] = useState("");
   const [title, setTitle] = useState("");
   const [agreed, setAgreed] = useState(false);
+  // ESIGN §101(c) consent — a SEPARATE acknowledgement from agreeing to the
+  // document, so a separate box, unchecked by default, never bundled.
+  const [bcaEConsent, setBcaEConsent] = useState(false);
   const [bcaError, setBcaError] = useState<string | null>(null);
 
   const signBca = useMutation({
@@ -127,6 +130,7 @@ export default function CarrierActivationPage() {
         signedByName: name.trim(),
         signedByTitle: title.trim() || undefined,
         agreed: true,
+        electronicRecordsConsent: true,
         bcaVersion: bca?.version ?? "",
       }),
     onSuccess: () => {
@@ -140,6 +144,7 @@ export default function CarrierActivationPage() {
   // (parity with the BCA), not just a checkbox.
   const [showQpEnable, setShowQpEnable] = useState(false);
   const [qpAgreed, setQpAgreed] = useState(false);
+  const [qpEConsent, setQpEConsent] = useState(false);
   const [qpName, setQpName] = useState("");
   const [qpTitle, setQpTitle] = useState("");
   const [qpError, setQpError] = useState<string | null>(null);
@@ -159,6 +164,7 @@ export default function CarrierActivationPage() {
           ? {
               enabled: true,
               agreedToQpTerms: true,
+              electronicRecordsConsent: true,
               // The version served WITH the body above, never a local mirror.
               qpVersion: qp?.version ?? "",
               signedByName: qpName.trim(),
@@ -295,12 +301,12 @@ export default function CarrierActivationPage() {
       is never required to haul and has no effect on your tier, your Compass Score, or the loads you are offered.
     </p>
   );
-  const canSign = name.trim().length >= 2 && agreed && !!bca?.version && !signBca.isPending;
+  const canSign = name.trim().length >= 2 && agreed && bcaEConsent && !!bca?.version && !signBca.isPending;
   // v3.8.asa — fail CLOSED. No agreement body loaded means no version to stamp
   // and nothing the carrier can be said to have read, so there is nothing to
   // sign. Declining to sign costs the carrier nothing: standard tier terms are
   // free and Quick Pay is never a hauling gate.
-  const canSignQp = qpAgreed && qpName.trim().length >= 2 && !!qp?.version && !qpMutation.isPending;
+  const canSignQp = qpAgreed && qpEConsent && qpName.trim().length >= 2 && !!qp?.version && !qpMutation.isPending;
 
   return (
     <div className="max-w-3xl">
@@ -395,6 +401,13 @@ export default function CarrierActivationPage() {
               <input type="checkbox" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} className="mt-0.5 accent-[#BA7517]" />
               <span className="text-xs text-gray-600">
                 I have read and agree to the Broker-Carrier Agreement (v{bca?.version}) on behalf of my company. Typing my name above is my electronic signature.
+              </span>
+            </label>
+
+            <label className="flex items-start gap-2 mb-3 cursor-pointer">
+              <input type="checkbox" checked={bcaEConsent} onChange={(ev) => setBcaEConsent(ev.target.checked)} className="mt-0.5 accent-[#BA7517]" />
+              <span className="text-xs text-gray-600">
+                I consent to use electronic records and electronic signatures for this agreement, and to receive the executed copy electronically. I can request a paper copy from operations@silkroutelogistics.ai.
               </span>
             </label>
 
@@ -649,6 +662,12 @@ export default function CarrierActivationPage() {
                   <input type="checkbox" checked={qpAgreed} onChange={(e) => setQpAgreed(e.target.checked)} disabled={!qp} className="mt-0.5 accent-[#BA7517] disabled:opacity-40" />
                   <span className="text-xs text-gray-600">
                     I have read and agree to the Caravan Quick Pay Agreement{qp ? ` (v${qp.version})` : ""} on behalf of my company. Typing my name above is my electronic signature.
+                  </span>
+                </label>
+                <label className="flex items-start gap-2 mb-3 cursor-pointer">
+                  <input type="checkbox" checked={qpEConsent} onChange={(ev) => setQpEConsent(ev.target.checked)} disabled={!qp} className="mt-0.5 accent-[#BA7517] disabled:opacity-40" />
+                  <span className="text-xs text-gray-600">
+                    I consent to use electronic records and electronic signatures for this agreement, and to receive the executed copy electronically. I can request a paper copy from operations@silkroutelogistics.ai.
                   </span>
                 </label>
                 {qpError && <div className={errorBox}>{qpError}</div>}

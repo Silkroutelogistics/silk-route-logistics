@@ -2722,7 +2722,15 @@ export function generateEnhancedRateConfirmation(load: EnhancedRCLoadData, formD
   const rcPages = doc.bufferedPageRange();
   for (let i = 0; i < rcPages.count; i++) {
     doc.switchToPage(rcPages.start + i);
-    drawFooter(doc, { pageNum: i + 1, totalPages: rcPages.count, docId });
+    // "unversioned" rather than blank or today's constant: rate confirmations
+    // issued before v3.8.awm were issued under terms nobody recorded, and the
+    // document should say so instead of implying a version it cannot prove.
+    drawFooter(doc, {
+      pageNum: i + 1,
+      totalPages: rcPages.count,
+      docId,
+      termsVersion: fd.rcTermsVersion || "unversioned",
+    });
   }
   doc.flushPages();
 

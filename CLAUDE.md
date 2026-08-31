@@ -331,6 +331,14 @@ Corollaries worth stating, since each was a step in that failure:
 - **Re-read `git log origin/main..HEAD` immediately before every push.** If it
   contains anything you did not intend to release, stop. This is cheap and it is
   the last point at which the mistake above was catchable.
+- **A CI poll must target YOUR commit SHA, never "latest run on main".** With two
+  sessions pushing, the newest run belongs to whoever pushed last. In the v3.8.awl
+  arc the poll returned `d6ba6233 completed success` — a different session's
+  commit — while `2efdff12` was still in flight. Reporting that would have been
+  citing someone else's green as your own. Resolve the run by SHA
+  (`gh run list --json headSha,conclusion,databaseId` and match), then read the
+  job list from that run id. Same failure family as §19 Sub-pattern 16: the check
+  ran, and it was not watching what its name implied.
 - **`/api/health` does not tell you whether a migration landed.** `migrate deploy`
   runs during the BUILD while the previous process keeps serving, so the SHA can
   report the old commit while the schema has already changed. Read the `schema`

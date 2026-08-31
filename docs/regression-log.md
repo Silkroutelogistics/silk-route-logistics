@@ -1381,3 +1381,90 @@ reappearance outside that one file.
   `SHIPPER_VISIBLE_DOC_TYPES`, so a shipper gets BOL, POD and INVOICE on their own
   loads and never `RATE_CON`. The decision's original framing ("the allowlist says
   no; the download route says yes") described a conflict that no longer exists.
+
+---
+
+## 2026-08-31 — Slice 2: RC terms version, explicit consent, and two drops refused
+
+**Shipped by v3.8.awm.** Decisions 5 and 10 closed. **Decision 9 is NOT closed** —
+see below; the premise it rested on was falsified.
+
+### Two column drops were instructed and both were refused
+
+The slice brief called for dropping `CarrierProfile.bcaAgreedAt` and
+`quickPayAgreedAt` as dead mirrors, on audit Finding 14's "zero readers anywhere".
+It asked for a re-confirmation first. **The re-confirmation falsified both.**
+
+**`bcaAgreedAt` is not a mirror — for three carriers it is the ONLY record.**
+Production:
+
+```
+companyName                | bcaAgreedAt             | agreement_signed_at
+AMERICAN EAGLE FLEET INC   | 2026-08-31 02:20:04.21  | (none)
+A FALCON EXPRESS LLC       | 2026-08-30 21:11:58.645 | (none)
+(unnamed)                  | 2026-05-24 14:28:47.408 | (none)
+```
+
+There are **two** BCA acceptance paths. Registration
+([`carrierController.ts:367`](../backend/src/controllers/carrierController.ts#L367))
+writes this column and creates **no** `CarrierAgreement` row; only the portal
+`sign-bca` path creates one. All three carriers came through registration, so
+dropping the column **destroys their click-wrap consent evidence** — it is not
+recoverable from `CarrierAgreement.signedAt`, which is null for all of them.
+
+**`quickPayAgreedAt` has a live reader.**
+[`carrierAuth.ts:965`](../backend/src/routes/carrierAuth.ts#L965) returns it as
+`quickPay.agreedAt`, with the agreement row only as a fallback. Finding 14 was
+simply wrong about this one. Production has zero rows in it, so a drop would lose
+no data — but the stated justification does not hold, and the drop was not
+re-argued on other grounds.
+
+**Neither was dropped.** Both are recorded here so the next reader does not
+re-inherit the false premise.
+
+### Decision 9 — reopened rather than closed
+
+*"Is `agreed` worth persisting as an explicit assent column, separate from the
+name."* No `agreedAt` was added. The two existing columns are not the redundant
+mirrors the audit described, and `CarrierAgreement.signedAt` already records the
+instant of assent. Whether a distinct `agreedAt` means anything different is now a
+question about the **registration path**, which records assent with no agreement
+row at all — a different shape of gap than the one decision 9 was written about.
+
+### Decision 5 — RC terms version — closed by v3.8.awm
+
+`RC_TERMS_VERSION` sits beside `BCA_VERSION` and `QP_VERSION` but is deliberately
+**not** a `CURRENT_VERSIONS` entry: `assessVersions` reports any key with no signed
+row as `missing`, and no `CarrierAgreement` row is ever a rate confirmation, so
+adding it there would mark **every carrier** as missing a document that cannot
+exist. Stamped at **issuance**, not render — stamping at render would report
+today's version over yesterday's terms on a re-download. Injected for render from
+the row, exactly as `rateConNumber` is, so there is one persisted copy.
+
+Rate confirmations issued before this commit carry NULL and render
+**"unversioned"** — honest, because those terms were never recorded and cannot be
+reconstructed. **Registered as such: every RC issued before v3.8.awm is
+unversioned, permanently.**
+
+The footer renders it on its **own line**, not appended to the identity line: that
+line measures ~190pt against a tagline centred from ~268pt, so appending would
+overprint — §19 Sub-pattern 8.a, the failure that put "Standard Net-30" through the
+adjacent meta cell. Measured, not assumed.
+
+### Decision 10 — explicit consent step — closed by v3.8.awm
+
+A separate, unchecked-by-default checkbox on each of the BCA and Quick Pay
+activation blocks, its own label naming electronic records and signatures and
+offering a paper copy. Server writes `consentAt` from its own clock; absent or
+false blocks with **"Electronic records consent not given"**. Rendered beneath the
+signature with the awj UTC label plus the ISO instant.
+
+**Scope correction:** the brief said "the onboarding BCA step", but onboarding
+posts to `/carrier/register`, which has no consent column and no gate — a checkbox
+there would have been decorative, and a decorative consent box is worse than none
+because it looks like consent was captured. `sign-bca` is called from the
+**activation** page; both checkboxes are there.
+
+### Decision 13 — closed by v3.8.awl
+
+Which IP is authoritative when a forwarded header is present. See the entry above.

@@ -16,6 +16,7 @@ import { resolveIssuedElection } from "../services/autoRateConfirmationService";
 import { log } from "../lib/logger";
 import { extractClientIp } from "../services/geoService";
 import { clientUserAgent } from "../lib/clientIp";
+import { RC_TERMS_VERSION } from "../lib/agreementVersions";
 
 /**
  * formData for the renderer, with this RC's own document number folded in.
@@ -25,8 +26,16 @@ import { clientUserAgent } from "../lib/clientIp";
  * injected here at render time, so every render path prints the same number and
  * regenerating a PDF reproduces it exactly.
  */
-function renderFormData(rc: { rateConNumber: string | null; formData: unknown }): Record<string, any> {
-  return { ...(rc.formData as Record<string, any>), rateConNumber: rc.rateConNumber };
+function renderFormData(rc: { rateConNumber: string | null; rcTermsVersion?: string | null; formData: unknown }): Record<string, any> {
+  return {
+    ...(rc.formData as Record<string, any>),
+    rateConNumber: rc.rateConNumber,
+    // Same rule as the number: ONE persisted copy on the row, injected here for
+    // render. Never written into formData, which would let the two drift.
+    // Null is passed through so the renderer can say "unversioned" rather than
+    // silently printing today's version over yesterday's terms.
+    rcTermsVersion: rc.rcTermsVersion ?? null,
+  };
 }
 
 export async function createRateConfirmation(req: AuthRequest, res: Response) {
@@ -250,12 +259,19 @@ export async function sendRateConfirmation(req: AuthRequest, res: Response) {
   );
 
   // Update status to SENT, storing the exact formData that was rendered.
+  //
+  // rcTermsVersion is stamped HERE, at issuance, for the same reason the
+  // formData is frozen here: this is the moment the carrier is shown the
+  // document. Stamping at render instead would mean an RC re-downloaded after a
+  // terms change reported the NEW version over the OLD text — the version would
+  // describe the reader's day rather than the load's terms.
   await prisma.rateConfirmation.update({
     where: { id: rc.id },
     data: {
       status: "SENT",
       sentAt: new Date(),
       sentToEmail: recipientEmail,
+      rcTermsVersion: RC_TERMS_VERSION,
       formData: issuedFormData as any,
     },
   });

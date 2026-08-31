@@ -27,6 +27,31 @@ export const CURRENT_VERSIONS: Record<string, string> = {
   "quick-pay": QP_VERSION,
 };
 
+/**
+ * The version of the Rate Confirmation's governing terms.
+ *
+ * DELIBERATELY NOT A `CURRENT_VERSIONS` ENTRY. That map is keyed by
+ * `CarrierAgreement.templateName` and `assessVersions` reports any key with no
+ * signed row as `missing` — and no CarrierAgreement row is ever a rate
+ * confirmation. Adding it there would mark EVERY carrier as missing a document
+ * that cannot exist, which is a drift report that cries wolf on its first run.
+ *
+ * The RC is per-load, not per-carrier: the terms version belongs on the
+ * `RateConfirmation` row it was issued under, not on a carrier's signature
+ * history. Stamped at issuance (`sendRateConfirmation`), never at render, so
+ * re-rendering an old RC reproduces the terms version it was issued with rather
+ * than today's.
+ *
+ * BUMP THIS whenever the governing clauses change — they are built in
+ * `pdfService.governingClauses`, and several are interpolated from
+ * `accessorialPolicy`, so changing a constant there changes the terms too.
+ *
+ * v1 (2026-08-31) is the first version stamp. Rate confirmations issued before
+ * it carry NULL and render "unversioned", which is honest: the terms they were
+ * issued under were never recorded and cannot be reconstructed.
+ */
+export const RC_TERMS_VERSION = "2026-08-31-v1";
+
 export type DocumentKey = keyof typeof CURRENT_VERSIONS;
 
 export interface VersionDrift {

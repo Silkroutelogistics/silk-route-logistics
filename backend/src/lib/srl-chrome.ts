@@ -782,10 +782,26 @@ export function drawSignatureBlock(
  */
 export function drawFooter(
   doc: PDFDoc,
-  options: { pageNum: number; totalPages: number; /** accepted for call-site compatibility, never rendered — see above */ docId?: string } = { pageNum: 1, totalPages: 1 }
+  options: {
+    pageNum: number;
+    totalPages: number;
+    /** accepted for call-site compatibility, never rendered — see above */
+    docId?: string;
+    /**
+     * Version of the governing terms this document was ISSUED under. Rendered
+     * on its own line BELOW the identity line, not appended to it: the identity
+     * line already measures ~190pt against a tagline centred from ~268pt, so
+     * appending would overprint — the §19 Sub-pattern 8.a failure that put
+     * "Standard Net-30" through the adjacent meta cell. Measured, not assumed.
+     *
+     * Optional because most documents have no terms version; omitted, the
+     * footer is byte-identical to before.
+     */
+    termsVersion?: string | null;
+  } = { pageNum: 1, totalPages: 1 }
 ): void {
   // docId intentionally NOT destructured — nothing below may render it.
-  const { pageNum, totalPages } = options;
+  const { pageNum, totalPages, termsVersion } = options;
   const footerY = PAGE_H - MARGIN - 12;
 
   goldRule(doc, footerY - 4, { weight: 0.75 });
@@ -793,6 +809,11 @@ export function drawFooter(
   const leftText = `MC# ${BRAND.mc}  ·  DOT# ${BRAND.dot}  ·  ${BRAND.domain}`;
   doc.font(FONT_BODY, 7.5).fillColor(TOKENS.fg3)
      .text(leftText, MARGIN, footerY + 4, { lineBreak: false });
+
+  if (termsVersion) {
+    doc.font(FONT_BODY, 6.5).fillColor(TOKENS.fg3)
+       .text(`Terms version ${termsVersion}`, MARGIN, footerY + 13, { lineBreak: false });
+  }
 
   // Center tagline
   const tagline = BRAND.tagline;

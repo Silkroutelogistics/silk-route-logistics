@@ -15800,7 +15800,30 @@
 // believes cf-connecting-ip ONLY when req.ip is inside Cloudflare's published
 // ranges — vendored with source URL and fetch date. The forwarded header is now
 // read nowhere, and xff-drift fails CI on any reappearance.
-export const SRL_VERSION = "3.8.awl";
+// v3.8.awm — the rate confirmation says which terms governed it, and consent to
+// electronic records is its own act.
+//
+// Decision 5: RC_TERMS_VERSION sits beside BCA and QP but is deliberately NOT a
+// CURRENT_VERSIONS entry — assessVersions reports any key with no signed row as
+// missing, and no CarrierAgreement row is ever a rate confirmation, so adding it
+// there would mark every carrier as missing a document that cannot exist.
+// Stamped at ISSUANCE, not render: stamping at render reports today's version
+// over yesterday's terms. Pre-awm rate confirmations render "unversioned",
+// because those terms were never recorded and cannot be reconstructed.
+//
+// Decision 10: a separate unchecked box on each activation block. Server writes
+// consentAt from its own clock; absent or false blocks with "Electronic records
+// consent not given". The brief said to put one on onboarding too, but
+// onboarding posts to /carrier/register, which has no consent column and no gate
+// — a box there would be decorative, and a decorative consent box is worse than
+// none because it looks like consent was captured.
+//
+// TWO INSTRUCTED COLUMN DROPS WERE REFUSED. bcaAgreedAt is set on three
+// production carriers who have NO agreement row — registration writes it without
+// creating one, so for them it is the only record they accepted the
+// click-through. quickPayAgreedAt is read at carrierAuth.ts:965. The audit's
+// "zero readers" finding was wrong about both. Decision 9 stays open.
+export const SRL_VERSION = "3.8.awm";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

@@ -24,6 +24,8 @@ export interface AgreementSignature {
   signedAt: Date;
   signerIp?: string | null;
   version: string;
+  /** When electronic-records consent was separately acknowledged (ESIGN §101(c)). */
+  consentAt?: Date | null;
 }
 
 export interface AgreementCarrierIdentity {
@@ -146,7 +148,17 @@ function renderLegalAgreement(
       })} UTC` +
       (signature.signerIp ? ` · IP ${signature.signerIp}` : "") +
       ` · Agreement version ${signature.version}. Executed as a legally binding electronic signature under the U.S. ESIGN Act and UETA.` +
-      `\nSigned at (UTC, ISO 8601): ${signedAtUtc.toISOString()}`;
+      `\nSigned at (UTC, ISO 8601): ${signedAtUtc.toISOString()}` +
+      // ESIGN §101(c) consent, rendered beneath the signature with the same UTC
+      // discipline as the signing time. Absent on everything executed before
+      // v3.8.awm — the line is omitted rather than implying a consent that was
+      // never recorded.
+      (signature.consentAt
+        ? `\nElectronic records and signatures consented to on ${new Date(signature.consentAt).toLocaleString("en-US", {
+            year: "numeric", month: "short", day: "numeric",
+            hour: "2-digit", minute: "2-digit", timeZone: "UTC",
+          })} UTC (${new Date(signature.consentAt).toISOString()}).`
+        : "");
     doc.font(FONT_BODY_ITALIC, 8);
     const ah = doc.heightOfString(attest, { width: CONTENT_W - 20 });
     const boxH = ah + 16;

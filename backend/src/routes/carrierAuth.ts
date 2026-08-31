@@ -996,12 +996,19 @@ router.get("/activation-status", authenticate, authorize("CARRIER"), async (req:
 // (evergreen — BCAs terminate via clause, not an expiry date, so expiresAt
 // stays null and the gate never trips on expiry), which unblocks the
 // complianceCheck hard-gate. Idempotent on the same version.
+// `electronicRecordsConsent` MUST be declared here. validateBody replaces
+// req.body with the parsed result and z.object() strips undeclared keys, so an
+// undeclared field arrives at the handler as undefined — and since the handler
+// blocks on it being true, every execution would fail with the consent reason
+// while the client was sending it correctly. That is Sub-pattern 5, and the TONU
+// 422 shipped in exactly this shape.
 const signBcaSchema = z.object({
   signedByName: z.string().trim().min(2, "Enter your full legal name").max(120),
   signedByTitle: z.string().trim().max(120).optional(),
   agreed: z.boolean().refine((v) => v === true, {
     message: "You must agree to the Broker-Carrier Agreement to sign.",
   }),
+  electronicRecordsConsent: z.boolean().optional(),
   bcaVersion: z.string().trim().min(1).max(60),
 });
 router.post("/sign-bca", authenticate, authorize("CARRIER"), validateBody(signBcaSchema), async (req: AuthRequest, res: Response) => {
@@ -1049,6 +1056,21 @@ router.post("/sign-bca", authenticate, authorize("CARRIER"), validateBody(signBc
   const bcaVersion = BCA_VERSION;
   const now = new Date();
 
+  // ESIGN §101(c): consent to do business electronically is a SEPARATE act from
+  // agreeing to the document. Blocked, not defaulted — a consent nobody gave is
+  // worth less than no consent at all, because it looks like one.
+  if (req.body.electronicRecordsConsent !== true) {
+    res.status(400).json({
+      error: "Electronic records consent not given",
+      code: "ELECTRONIC_RECORDS_CONSENT_REQUIRED",
+    });
+    return;
+  }
+  // Server clock. A body-supplied consentAt is never read — the timestamp is
+  // evidence of when WE received the acknowledgement, not when a client says it
+  // happened.
+  const consentAt = now;
+
   // Idempotent: a current SIGNED, non-expired agreement of THIS version means
   // already-signed (return it). A different version (attorney updated the
   // doc) falls through and re-records consent to the new version.
@@ -1076,6 +1098,7 @@ router.post("/sign-bca", authenticate, authorize("CARRIER"), validateBody(signBc
       signatureData: signedByName, // typed-name e-signature
       signerIp: ip || "",
       signerUserAgent: userAgent,
+      consentAt,
       expiresAt: null, // evergreen — terminates via clause, not a date
       createdById: req.user!.id,
     },
@@ -1117,7 +1140,7 @@ router.post("/sign-bca", authenticate, authorize("CARRIER"), validateBody(signBc
     const identity = await loadCarrierIdentity(profile.id);
     const buf = await generateAgreementBuffer(BROKER_CARRIER_AGREEMENT, {
       carrier: identity,
-      signature: { signedByName, signedByTitle: signedByTitle || null, signedAt: now, signerIp: ip || null, version: bcaVersion },
+      signature: { signedByName, signedByTitle: signedByTitle || null, signedAt: now, signerIp: ip || null, version: bcaVersion, consentAt },
     });
     const url = await uploadFileToPath(buf, `agreements/bca-${agreement.id}.pdf`, "application/pdf");
     await prisma.carrierAgreement.update({ where: { id: agreement.id }, data: { documentUrl: url } });
@@ -1138,6 +1161,9 @@ const quickPayElectionSchema = z
     signedByName: z.string().trim().max(120).optional(),
     signedByTitle: z.string().trim().max(120).optional(),
     agreedToQpTerms: z.boolean().optional(),
+    // See the note on signBcaSchema: declared or it is stripped and every
+    // enable blocks on a consent the client did send.
+    electronicRecordsConsent: z.boolean().optional(),
     qpVersion: z.string().trim().max(60).optional(),
   })
   // v3.8.aqi — enabling Quick Pay now requires a typed-name e-signature (parity
@@ -1257,6 +1283,18 @@ router.post("/quickpay-election", authenticate, authorize("CARRIER"), requireSte
   }
   const version = QP_VERSION;
 
+  // ESIGN §101(c): consent to electronic records is a separate act from agreeing
+  // to the terms. Only gated on ENABLE — opting out records no consent and needs
+  // none. Blocked rather than defaulted, for the same reason as the BCA.
+  if (enabled && req.body.electronicRecordsConsent !== true) {
+    res.status(400).json({
+      error: "Electronic records consent not given",
+      code: "ELECTRONIC_RECORDS_CONSENT_REQUIRED",
+    });
+    return;
+  }
+  const consentAt = now; // server clock; a body-supplied value is never read
+
   if (enabled) {
     // Record the Quick Pay Agreement signature — a real typed-name e-signature
     // (parity with the BCA), persisted as a "quick-pay" CarrierAgreement row.
@@ -1279,6 +1317,7 @@ router.post("/quickpay-election", authenticate, authorize("CARRIER"), requireSte
           signatureData: signedByName!,
           signerIp: ip || "",
           signerUserAgent: userAgent,
+          consentAt,
           expiresAt: null,
           createdById: req.user!.id,
         },
@@ -1291,7 +1330,7 @@ router.post("/quickpay-election", authenticate, authorize("CARRIER"), requireSte
         const identity = await loadCarrierIdentity(profile.id);
         const buf = await generateAgreementBuffer(CARAVAN_QUICK_PAY_AGREEMENT, {
           carrier: identity,
-          signature: { signedByName: signedByName!, signedByTitle: signedByTitle || null, signedAt: now, signerIp: ip || null, version },
+          signature: { signedByName: signedByName!, signedByTitle: signedByTitle || null, signedAt: now, signerIp: ip || null, version, consentAt },
         });
         const url = await uploadFileToPath(buf, `agreements/qp-${qpRow.id}.pdf`, "application/pdf");
         await prisma.carrierAgreement.update({ where: { id: qpRow.id }, data: { documentUrl: url } });

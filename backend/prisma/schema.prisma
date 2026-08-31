@@ -1875,6 +1875,14 @@ model RateConfirmation {
   // Column already existed and had ZERO writers repo-wide as of v3.8.asb, so
   // it is claimed here rather than duplicated.
   rateConNumber String?   @unique
+
+  // Version of the governing terms this RC was ISSUED under (RC_TERMS_VERSION at
+  // send time), so a dispute over a specific load can establish which terms
+  // governed it. Stamped at issuance, never at render. NULL on everything issued
+  // before v3.8.awm: those terms were never recorded, and the PDF says
+  // "unversioned" rather than implying today's.
+  rcTermsVersion String?
+
   formData      Json
   pdfUrl        String?
   sentToEmail   String?
@@ -4884,6 +4892,12 @@ model CarrierAgreement {
   signatureData   String? // Base64 signature image or typed name
   signerIp        String? // IP address at time of signing
   signerUserAgent String?
+
+  // When the signer separately acknowledged doing business by electronic records
+  // and signatures — a distinct act from agreeing to the document, and ESIGN
+  // §101(c) treats it as one. Server clock only; a body-supplied value is
+  // ignored. NULL for everything executed before v3.8.awm.
+  consentAt       DateTime?
 
   expiresAt         DateTime?
   terminatedAt      DateTime?
