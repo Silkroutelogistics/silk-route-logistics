@@ -1,4 +1,5 @@
 import { Response } from "express";
+import { GEMINI_MODEL } from "../config/ai";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { AuthRequest } from "../middleware/auth";
 import { prisma } from "../config/database";
@@ -1154,7 +1155,7 @@ You represent Silk Route Logistics, a carrier-first freight brokerage based in G
     if (geminiClient) {
       try {
         const model = geminiClient.getGenerativeModel({
-          model: "gemini-2.0-flash",
+          model: GEMINI_MODEL,
           systemInstruction: systemPrompt,
         });
         const chatHistory = messages.slice(0, -1).map((m) => ({

@@ -4,6 +4,7 @@
  * Falls back to basic text extraction if no AI API key is available.
  */
 import { log } from "../lib/logger";
+import { geminiGenerateContentUrl } from "../config/ai";
 
 // v3.8.avo — degraded loudly, not quietly.
 //
@@ -120,7 +121,7 @@ async function extractWithGemini(
   };
 
   const response = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
+    geminiGenerateContentUrl(apiKey),
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },

@@ -15679,7 +15679,24 @@
 // and immediately reported three CONFORMANT lines in TrainingTab (12px and 13px
 // are scale steps) as violations. Fixed before shipping — a guard that cries
 // wolf is one people learn to skip.
-export const SRL_VERSION = "3.8.awe";
+// v3.8.awf — P0. Marco Polo was dead on the public homepage.
+//
+// Google retired models/gemini-2.0-flash. The string was hardcoded in four
+// files, so the public chatbot, the shipper portal assistant and the COI parser
+// all broke at the same instant.
+//
+// SILENT-GRACEFUL: the chatbot caught the failure and replied "I am having
+// trouble connecting right now" — a 200, no error rate, no alert, and a sentence
+// a visitor reads as a blip. /api/health said parser configured: true the whole
+// time, because that field checked whether the KEY was set, not whether the
+// model answered. Window unknown; nothing recorded a first failure precisely
+// because there was no failure to record.
+//
+// One GEMINI_MODEL constant, env-overridable so the next retirement is a Render
+// config change and not a deploy. Default is the successor Google named in the
+// 404, verified live (HTTP 200) before shipping rather than trusted from the
+// error text.
+export const SRL_VERSION = "3.8.awf";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

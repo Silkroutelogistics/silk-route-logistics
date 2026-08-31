@@ -1,4 +1,5 @@
 import { Response } from "express";
+import { GEMINI_MODEL } from "../config/ai";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { prisma } from "../config/database";
 import { env } from "../config/env";
@@ -280,7 +281,7 @@ async function callGeminiWithTools(
   if (!gemini) throw new Error("Gemini not configured");
 
   const model = gemini.getGenerativeModel({
-    model: "gemini-2.0-flash",
+    model: GEMINI_MODEL,
     systemInstruction: systemPrompt,
     tools: buildGeminiTools(),
   });
@@ -619,7 +620,7 @@ export async function publicChat(req: AuthRequest, res: Response) {
     let reply: string;
     if (gemini) {
       const model = gemini.getGenerativeModel({
-        model: "gemini-2.0-flash",
+        model: GEMINI_MODEL,
         systemInstruction: PUBLIC_SYSTEM_PROMPT,
       });
       const chatHistory = messages.slice(0, -1).map((m) => ({

@@ -1176,3 +1176,45 @@ All three flagged during v3.8.c visual polish pass. Deferred to post-Apollo work
 ### Owed
 - `backend/scripts/_arcfix-verification-carryforward-proof.ts` is committed and **has never run** (no Docker; the only reachable database was production). Five unit tests cover the shape; the proof covers the wire.
 - The onboarding funnel has still never been walked end to end by a human. Both defects above were found that way, which is the argument for doing it.
+
+---
+
+## 2026-08-31 — Marco Polo dead on the public homepage; retired Gemini model, four call sites
+
+- **Symptom:** the public chatbot replied *"I'm having trouble connecting right now. Please try the contact form on this page, or call us directly!"* to every question. Confirmed live against production before any change.
+- **Component:** `config/ai.ts` (new) · `chatController.ts` ×2 · `shipperPortalController.ts:1157` · `coiReaderService.ts:123`
+- **Severity: P0** — prospect-facing. Marco Polo is on `/index` and is a §4-whitelisted claim ("Marco Polo AI assistant is 24/7").
+- **Status:** Fixed in v3.8.awf.
+
+**Root cause.** Google retired `models/gemini-2.0-flash`. The API returns
+`404 — "This model models/gemini-2.0-flash is no longer available. Please update your code to use models/gemini-3.6-flash"`.
+The string was hardcoded in four files, so all four AI surfaces broke at the same
+instant: the public chatbot, the shipper portal assistant, and the COI parser
+(latent — it has no trigger, so nobody could have noticed there).
+
+**Class: SILENT-GRACEFUL.** This is the part worth keeping. The chatbot did not
+error, did not 500, and raised no alert. It caught the failure and returned a
+polite fallback that reads to a visitor as a transient blip and to a monitor as a
+successful 200. Every signal the platform owned said healthy:
+
+- `/api/health` reported `parser: {"configured": true}` throughout — because that
+  field checked whether `GEMINI_API_KEY` was **set**, not whether the model
+  **answered**. A credential check wearing a capability check's name.
+- The public-surface monitor probed status and shape but had no Marco Polo probe,
+  so the fallback sentence was never in any `mustNotContain`.
+- Error rates were flat. A graceful fallback is not an error.
+
+**WINDOW: UNKNOWN.** Google has not published a retirement date discoverable from
+here, and nothing on our side recorded a first-failure — precisely because the
+failure produced no error. The outage could be days or weeks old. **It cannot be
+bounded from the evidence available, and is recorded as unknown rather than
+guessed.** If a retirement date is found later, bound it then.
+
+**Discovered incidentally**, during a document-chain proof that was looking at the
+COI parser. The parser is the one surface where this was invisible; the chatbot
+had been broken in public the whole time.
+
+**Fixes shipped:** one `GEMINI_MODEL` constant (env-overridable, so the next
+retirement is a Render config change rather than a deploy), all four call sites
+routed through it, zero literals remaining, injection-verified guard. Phase 2 of
+the same arc makes the monitor and the health field able to see this class.
