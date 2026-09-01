@@ -2248,3 +2248,59 @@ then. The three historical carriers — AMERICAN EAGLE FLEET INC, A FALCON EXPRE
 LLC, and one unnamed — hold `bcaAgreedAt` with **no row at all**, so that column
 remains their sole consent evidence and is not in scope for retirement at any
 date.
+
+---
+
+## 2026-09-01 — the P0/P1 arc (`v3.8.aws` → `v3.8.awy`), and a gate that armed without firing
+
+Five regressions closed, all live on `9c6aabfc`. Full narrative at CLAUDE.md
+§13.3 Item 251; this records the defects and what stops each recurring.
+
+**A carrier could act on the compliance alerts raised against it.** Three routes
+in `compliance.ts` carried `authenticate` and no `authorize()`. Because
+`/api/compliance` is not a carrier-portal mount, the cookie resolver falls back
+to `srl_token_carrier`, so a carrier session authenticated successfully and then
+met nothing. **Prevented by** `routeAuthorizeCoverage.test.ts` — a frozen
+inventory of the 144 currently-ungated routes that may shrink and never grow. It
+is deliberately not an "every route must be gated" rule: most of the 144 are
+legitimately public, and a gate that fails on all of them is one that gets
+disabled.
+
+**The rate confirmation 404'd for every carrier.** The backend persisted a
+root-relative `/api/…` path into `Load.rateConfirmationPdfUrl`, and two carrier
+pages rendered it against the Cloudflare Pages host, which serves no API. The
+frontend was not at fault; the database held an unusable value. **Blast radius
+was one row** and it was the broken one. Fixed at the write site, backfilled, and
+the persisted value is now API-relative and resolved through `lib/api.ts`.
+**Prevented by** `browserTargetHosts.test.ts`, which covers the whole class —
+literal `/api/` targets, persisted `*Url` columns rendered into `href`/`src`, and
+unanchored `.replace("/api","")`. Writing that guard surfaced an **eighth**
+occurrence the audit had missed: the shipper portal returned a storage key as
+`url`, leaving a customer's own document links dead.
+
+**Carriers could not get a bill of lading at all.** The PDF route excluded
+CARRIER and the portal button pointed at an HTML preview component. Sequenced
+deliberately: the route was opened with an ownership check *first*, the button
+repointed *second*, and only then was `BOLTemplate.tsx` deleted. Reversing that
+order would have removed the only thing carriers had.
+
+**A scoped override code with a consumer and no writer.** Traced rather than
+guessed — the feature wanted the code allow-listed, not the button removed. The
+change tripped an existing guard, and the invariant was **tightened** in
+response: a scoped code must now be a real `blocked_code` or name a consumer file
+that is read and verified to mention it. A guard catching your change is evidence
+it works; loosening it to pass is how it stops working.
+
+**The deploy gate is armed and has not fired once.** `RENDER_DEPLOY_HOOK_URL`
+was created at 11:53:13Z. The run before it (33500745501) shows `Deploy to
+Render` green — but its log has `HOOK:` empty and `present=false`: that is the
+**quieted absent-secret path**, not a deploy. The run after it (33504788375)
+skipped the deploy job because the backend failed on an unrelated reachability
+gate. **Production reached HEAD through Render's own auto-deploy, which shipped a
+commit whose CI was red.**
+
+The lesson is the one this gate exists for and it is not yet collected: **a green
+deploy job means nothing until you have read which branch produced it.** Two
+greens, 47 minutes apart, meaning opposite things. Auto-deploy stays on until a
+gated green exists — turning it off first means nothing deploys and CI reports
+success about it.

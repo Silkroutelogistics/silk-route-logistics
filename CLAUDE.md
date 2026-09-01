@@ -2609,6 +2609,103 @@ Each is a discrete sprint. Mix of operational, security, UX, and technical debt.
     instructed feature were refused mid-batch after verification falsified their
     premises — see the `awm` and `awn` entries, and §19 Sub-pattern 15.
 
+
+251. **The five-phase P0/P1 arc, and the deploy gate armed but never fired (2026-09-01, `v3.8.aws` → `v3.8.awy`).**
+
+    Five atomic commits closing the P0s and P1s from
+    [`docs/audits/rc404-permissions-drawer-print-audit.md`](docs/audits/rc404-permissions-drawer-print-audit.md).
+    All five are live in production on `9c6aabfc`; both migrations applied clean
+    at 11:06:55 with zero failed or pending.
+
+    **`aws` — three compliance routes had no `authorize()`, and a carrier could
+    reach them.** `/api/compliance` is not a carrier-portal mount, so the cookie
+    resolver falls back to `srl_token_carrier` and `authenticate` passes with
+    `role: "CARRIER"`. The resolver's own comment names the safety net as
+    *"authorize() downstream"* — exactly what dismiss, resolve and `/stats`
+    lacked, so a carrier could dismiss the alert raised against itself. The guard
+    ([`routeAuthorizeCoverage.test.ts`](backend/__tests__/unit/routes/routeAuthorizeCoverage.test.ts))
+    is a **frozen inventory of 144 ungated routes that may shrink and never
+    grow**, not an "every route is gated" assertion — 144 of 788 are legitimately
+    public, and a gate red on all 144 is one nobody ships. Injection-verified in
+    three directions: removing a gate named it by `file:line` and failed two
+    tests; adding an ungated route failed; gating a listed one failed the
+    stale-entry rule.
+
+    **`awt` — the RC 404 was one case of a class.** Root cause was not a missing
+    frontend call: the backend **persisted a root-relative path into the
+    database**, so two carrier pages rendered `/api/…` against the Pages host,
+    which serves no API. Fixed at the write site and **backfilled** — production
+    holds exactly one row with this value and it was the broken shape; it now
+    reads `/rate-confirmations/…`, resolved through `lib/api.ts` by both
+    consumers. **The persisted value is API-RELATIVE by design, not absolute** —
+    the cleaner of the two options, since it is stored once and read by two
+    pages, and it keeps the host in one place. Also in the class: an unanchored
+    `.replace("/api","")` (verified by execution to produce
+    `https:/.silkroutelogistics.ai/api`), and nine `s3://` render sites —
+    **including an eighth the audit missed**, found while writing the guard,
+    where the shipper portal returned a storage key as `url` and left a
+    customer's own document links dead.
+
+    **`awu` — the carrier gets the real bill of lading, in the mandated order.**
+    (a) route admits CARRIER behind a per-record ownership check mirroring the RC
+    endpoint, (b) the portal button points at that PDF, (c) **only then**
+    `BOLTemplate.tsx` deleted, zero-consumer verified first. Doing (c) before (a)
+    would have left carriers with no bill of lading at all.
+
+    **`awx` — four P1s.** The SMS-override `checkCode` was **traced, not
+    guessed**: `carrierAuth` consumes the override and `carriers.ts` surfaces it,
+    so a consumer with no writer meant allow-listing was the fix rather than
+    deleting the button. **An existing guard caught that change**, and the
+    invariant was *sharpened* rather than loosened — a scoped code must now be a
+    `blocked_code` or name a consumer file that is read and checked to mention
+    it, plus stale-exemption detection and an absolutes-never-scoped rule.
+
+    **`awy` — CARRIER_REVIEWER as an allow-list.** The role inherits nothing;
+    `authorize()` resolves it entirely against `CARRIER_REVIEWER_ALLOW` and
+    refuses anything unmatched. Every rule carries a `methods` constraint,
+    because a bare path grant hands the role every verb its route family
+    exposes — and `DELETE /carriers/:id` lives in the same family as the reads it
+    legitimately needs. One limit is recorded in the code rather than glossed: it
+    bounds *gated* routes, not the 144 ungated ones. The enum value is live and
+    **0 users hold it** — nobody is assigned yet, by design.
+
+    **THE DUPLICATE `awx`, MY SIDE.** `56e0db42` (mine) and `3dafd980` (the
+    concurrent session's) both claim `v3.8.awx`. Mine was committed against a
+    letter the guard reported free; theirs landed in the same window. The
+    concurrent session has recorded the collision and the ritual gaps it exposed
+    in their own docs commit `4fe43dcf` — **that record is theirs and is not
+    duplicated here.** Neither commit was rewritten: both are pushed, and
+    rewriting published history across two sessions costs more than the
+    ambiguity.
+
+    **THE GATE IS ARMED AND HAS NEVER FIRED.** `RENDER_DEPLOY_HOOK_URL` was
+    created 2026-09-01T11:53:13Z. Two runs bracket it and **neither is the
+    genuine signal**:
+
+    - Run **33500745501** (11:06, tip `4fe43dcf`, covering all five of my
+      commits) — every job green *including* `Deploy to Render`. That green is
+      the **quieted absent-secret path**: the job log shows `HOOK:` empty,
+      `present=false`, the warning branch, nothing triggered.
+    - Run **33504788375** (11:53:31, HEAD `9c6aabfc`, 18s after the secret) —
+      backend **failed** on the reachability gate (`/loads/:id/release-carrier`
+      DEAD, the concurrent session's `axi` work caught by their own guard), so
+      `Deploy to Render` **skipped**. The gate never evaluated the secret.
+
+    **So production reached `9c6aabfc` through Render's own auto-deploy — which
+    shipped a commit whose CI was red.** That is the residual risk
+    [`render-deploy-gate-setup.md`](docs/internal/render-deploy-gate-setup.md)
+    names, in its live form, and it is the argument for finishing step 3. It is
+    **not** yet safe to finish it: turning auto-deploy off before a gated green
+    exists means nothing deploys and CI stays green about it. **Pipeline mode
+    remains the double-deploy interim.**
+
+    **Held migrations do NOT release here.** `hold/retire-load-rate` and
+    `hold/retire-fleet-module` were gated on two conditions, and only one is met.
+    The secret now exists; **CI gating the deploy has not been demonstrated
+    once.** Merging a destructive migration on the strength of a gate that has
+    never fired is trusting a green that has not happened. They need their own
+    arc, after auto-deploy is off and one gated deploy has gone green.
+
 ## §14 LEGAL / COMPLIANCE STATUS
 
 - Property broker under 49 U.S.C. §§ 13904, 13906
