@@ -33,6 +33,9 @@ export async function launchBroadcast(input: LaunchBroadcastInput) {
     throw new Error(`Cannot broadcast tender for load in ${load.status} status`);
   }
 
+  // ROW 4a — declare the fan-out BEFORE the tenders exist, or createTender
+  // refuses the second one. The flag is what makes simultaneous offers legal.
+  await prisma.load.update({ where: { id: loadId }, data: { tenderFanout: "PARALLEL" } });
   const expiresAt = new Date(Date.now() + expirationMinutes * 60 * 1000);
 
   // Create all tenders simultaneously

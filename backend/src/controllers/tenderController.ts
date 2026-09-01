@@ -66,15 +66,28 @@ export async function createTender(req: AuthRequest, res: Response) {
   // tender records which one. Without it, "was anything waived to put this
   // carrier on this load" is answerable only by matching timestamps against the
   // override table, which is guesswork at exactly the moment it matters.
-  const tender = await createTenderRow({
-    loadId: load.id,
-    carrierProfileId: carrierId,
-    offeredRate,
-    expiresAt,
-    actor: { id: req.user!.id, type: "USER" },
-    complianceOverrideId: compliance.appliedOverrideId ?? null,
-    reason: compliance.appliedOverrideId ? "created_under_compliance_override" : null,
-  });
+  let tender;
+  try {
+    tender = await createTenderRow({
+      loadId: load.id,
+      carrierProfileId: carrierId,
+      offeredRate,
+      expiresAt,
+      actor: { id: req.user!.id, type: "USER" },
+      complianceOverrideId: compliance.appliedOverrideId ?? null,
+      reason: compliance.appliedOverrideId ? "created_under_compliance_override" : null,
+    });
+  } catch (err) {
+    // ROW 4a — surfaced HERE rather than left to the error handler, which masks
+    // err.message in production. An AE told "Internal server error" cannot act;
+    // an AE told which tender is already live can settle it.
+    const e = err as Error & { code?: string; status?: number; liveTenderId?: string };
+    if (e.code === "SEQUENTIAL_TENDER_CONFLICT") {
+      res.status(409).json({ error: e.message, code: e.code, liveTenderId: e.liveTenderId });
+      return;
+    }
+    throw err;
+  }
 
   // Auto-advance load to TENDERED on first tender (if currently POSTED)
   if (load.status === "POSTED") {

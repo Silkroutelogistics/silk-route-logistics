@@ -179,6 +179,20 @@ enum QuickPayElectionStatus {
   VOIDED
 }
 
+// How a load offers itself to carriers.
+//
+// SEQUENTIAL is the default and the overwhelming majority: one live offer at a
+// time, so a load cannot be accepted twice. PARALLEL is broadcast tendering,
+// where every candidate is offered at once and the first to accept wins.
+//
+// The flag lives on the LOAD rather than on a waterfall because broadcast
+// creates no waterfall row at all -- a waterfall.parallel flag could not have
+// covered the case that actually produces multiple live tenders.
+enum TenderFanout {
+  SEQUENTIAL
+  PARALLEL
+}
+
 // Base invoice vs the supplemental accessorial invoice billed against the same
 // load. See the Invoice model for why this is a separate row and not a flag.
 enum InvoiceKind {
@@ -1549,6 +1563,9 @@ model Load {
 
   // Waterfall Dispatch (v3.4.d) — Caravan-first routing
   dispatchMethod              String?   @map("dispatch_method") @db.VarChar(20) // waterfall | loadboard | direct_tender | dat
+  // Set to PARALLEL by launchBroadcast before it creates its tenders. Anything
+  // else is SEQUENTIAL, and createTender refuses a second live offer on one.
+  tenderFanout       TenderFanout @default(SEQUENTIAL)
   visibility                  String    @default("waterfall") @db.VarChar(20) // waterfall | open | reserved | dat
   waterfallMode               String?   @map("waterfall_mode") @db.VarChar(20) // manual | semi_auto | full_auto
   directTenderCarrierId       String?   @map("direct_tender_carrier_id")

@@ -117,6 +117,35 @@ export async function createTender(input: CreateTenderInput, db: TenderDb = pris
   const expiresAt = input.expiresAt ?? new Date(Date.now() + tenderTtlMinutes() * 60_000);
   const status = input.status ?? "OFFERED";
 
+  // ROW 4a — one live offer at a time, unless the load is fanning out.
+  //
+  // A SEQUENTIAL load with two live tenders can be accepted twice, and the
+  // second acceptance lands on a load that already has a carrier. Broadcast
+  // sets PARALLEL before it creates its tenders, so the rule constrains the
+  // path that should be constrained and leaves the one that should not.
+  //
+  // LIVE is OFFERED or COUNTERED. A countered tender is still a live offer --
+  // that omission is what let six hand-rolled sibling sweeps disagree with each
+  // other before v3.8.axj consolidated them.
+  const load = await db.load.findUnique({
+    where: { id: input.loadId },
+    select: { tenderFanout: true },
+  });
+  if (load?.tenderFanout !== "PARALLEL") {
+    const live = await db.loadTender.findFirst({
+      where: { loadId: input.loadId, status: { in: ["OFFERED", "COUNTERED"] }, deletedAt: null },
+      select: { id: true, status: true },
+    });
+    if (live) {
+      const err = new Error(
+        `This load already has a live tender (${live.id}, ${live.status}). Settle it, or launch a broadcast if you mean to offer several carriers at once.`,
+      ) as Error & { status: number; code: string; liveTenderId: string };
+      err.status = 409;
+      err.code = "SEQUENTIAL_TENDER_CONFLICT";
+      err.liveTenderId = live.id;
+      throw err;
+    }
+  }
   const tender = await db.loadTender.create({
     data: {
       loadId: input.loadId,
