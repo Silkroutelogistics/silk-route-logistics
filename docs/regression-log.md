@@ -13,6 +13,33 @@ so it's searchable and never lost.
 
 ---
 
+## Known duplicate letter — 2026-09-01 (v3.8.awx used twice)
+
+- **Both commits are real and both stand.** Neither is corrected.
+
+  | Hash | Time | Subject |
+  |---|---|---|
+  | `56e0db42` | 00:26 | `fix(carriers): v3.8.awx — four P1s: a button that 403s, a feature that 400s, copy naming an unmounted control, and an asymmetry` |
+  | `3dafd980` | 00:33 | `feat(tender): v3.8.awx — the denominator still counted the offers SRL took back` |
+
+- **Cause:** `check-version-letter` reads the working tree, so it cannot see a
+  letter a concurrent session is about to claim — only one already written into a
+  file. The second commit's pre-commit check passed because at that moment only
+  its own files claimed `awx`. Same family as §2.2's `v3.8.aud` incident; the
+  guard narrows that window, it does not close it.
+- **Not corrected, deliberately.** Renumbering means rewriting shared history
+  while another session is actively committing to the same branch. The cost of
+  the duplicate is one ambiguous letter in `git log`; the cost of the fix is a
+  class of problem §2.2 exists to prevent.
+- **No impact on the version sequence.** `VersionFooter.SRL_VERSION` — the §3.1
+  source of truth — is continuous and correct. Only two commit *subjects* share
+  a letter.
+- **Mitigation shipped:** §19 Sub-pattern 19 makes a post-commit letter re-check
+  the closing step of the commit ritual, which catches exactly this case while
+  the commit is still `HEAD` and amendable.
+
+---
+
 ## Fixed — 2026-09-01 (v3.8.axc — a terminated carrier could still take a load off the board)
 
 - **Symptom (P1, found while consolidating, not looked for):**

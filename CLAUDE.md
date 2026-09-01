@@ -3611,6 +3611,58 @@ So the writer at `ssoAuth.ts:186` was invisible, and the report read "no writer 
 
 **Going-forward gate:** a negative finding — "nothing does X", "no caller exists", "this is dead" — is only as good as the instrument's reach. Before reporting one: state the method, verify the instrument against a fixture drawn from the codebase's *actual* formatting, and check the claim against independent evidence (a row count, a live response) rather than a second run of the same pattern.
 
+##### Sub-pattern 19 — the letter guard has a window, so re-check AFTER the commit
+
+**The closing step of the commit ritual, added 2026-09-01 after it failed.**
+
+`check-version-letter` reads the working tree. It cannot see a letter another
+session is about to claim, only one they have already written into a file. So
+there is a window between "guard says free" and "commit lands", and a concurrent
+session committing inside that window produces a duplicate the guard reported as
+clean.
+
+**It happened.** `v3.8.awx` was taken twice on 2026-09-01 — `56e0db42` at 00:26
+and `3dafd980` at 00:33. The guard passed for the second one because at check
+time only its own files claimed the letter. Same failure family as §2.2's
+`v3.8.aud` incident, which is what the guard was built for; the guard narrows the
+window, it does not close it.
+
+**Rule: run `check-version-letter <letter>` again IMMEDIATELY AFTER the commit,
+while it is still HEAD.** A collision found there is cheap — amend the message to
+the next free letter and bump the footer, both one command. A collision found
+after the next commit lands is history-rewriting across a concurrent session, and
+the honest move becomes documenting it rather than fixing it.
+
+Corollary: the check is on the COMMITTED subject, so it also catches the case the
+pre-commit run structurally cannot — the other session's commit arriving between
+your check and your commit.
+
+##### Sub-pattern 20 — a proof script runs with outbound keys explicitly EMPTY
+
+**Absence is not neutralization** — the Arc 15 lesson (§13.3 Item 221), relearned
+on the tender arc because it was nearly repeated.
+
+Every DB-backed proof in Phase B ran with `RESEND_API_KEY` present from
+`backend/.env`, and the app logged `Resend configured: true`. Nothing was sent,
+verified by grepping every captured output for `[Email] Sent to` and finding
+none — but that is luck about which code paths the proof happened to exercise,
+not a control. A proof that touched `acceptTender`'s notification fan-out would
+have emailed real carriers from a throwaway container.
+
+**Rule: invoke every DB-backed proof with the outbound keys explicitly empty**,
+not merely unset —
+
+```
+RESEND_API_KEY= QUO_API_KEY= OPENPHONE_API_KEY= npx tsx scripts/_proof.ts
+```
+
+— and **grep the captured output for `[Email] Sent to` afterwards, printing the
+count**, so the claim "nothing was sent" is measured rather than assumed. An
+empty string is falsy for the `configured` checks and survives `dotenv`, which an
+unset variable does not: `dotenv` fills an absent key from `.env`, which is
+exactly how the Arc 15 guard came to report "both absent" while holding the
+production key.
+
 ##### Sub-pattern 18 — `key:` regex undercounts by shorthand and by wrapped chain
 
 **A specialization of 17, and the one that actually fires.** 17 is the general
