@@ -167,7 +167,7 @@ column plus new `eventType` values — additive, no new table, and the drawer's
 | 5 | Accept atomic; siblings auto-**withdraw** | ✅ **CLOSED v3.8.aww** — all 3 sibling-on-accept sites write `WITHDRAWN`/`load_covered` | Denominator fix + backfill = 2b; cancel/skip sites = 2c |
 | 6 | `acceptTender` sole `carrierId` writer | ✅ **CLOSED v3.8.axa–axc** — one writer (`carrierAssignmentService`), 11 → 0, CI-guarded | `releaseCarrier` as sole clearer = commit 8 |
 | 7 | QuickPayElection pending on tender; RC deferred | Notice fires; no model; RC **not** deferred | New model + gate |
-| 8 | RC auto-fire idempotent, keyed to tender version | Fires ✅; **no `version` column** | Add `LoadTender.version` |
+| 8 | RC auto-fire idempotent, keyed to tender version | PARTIAL **v3.8.axh** — `LoadTender.version` exists; a counter bumps it and voids the stale RC | RC keyed to version = commit 11 |
 | 9 | Tokenized e-sign w/ name·ip·UA·hash → CONFIRMED | Session-authed `/sign`; none captured | Token route + 4 columns + PDF stamp |
 | 10 | BOL + shipper notify at CONFIRMED | Not gated on signature | Re-gate |
 | 11 | Rate change post-accept voids RC, reverts to OFFERED | No such path | Build |

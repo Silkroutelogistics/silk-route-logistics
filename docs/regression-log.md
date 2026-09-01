@@ -13,6 +13,42 @@ so it's searchable and never lost.
 
 ---
 
+## Fixed — 2026-09-01 (v3.8.axh — a countered tender had no way to be turned down)
+
+- **Symptom:** a carrier could counter, and an AE could *accept* that counter
+  (via `accept-on-behalf`, which admits `COUNTERED` and settles at the counter
+  rate). **Rejecting one had no path at all** — the tender sat at `COUNTERED`
+  until it expired, which reads to the carrier as being ignored.
+- **Status:** commit 7 of 12.
+- **Shape:** new `POST /tenders/:id/reject-counter` (AE-only — this is SRL's
+  decision, not the carrier's). State is **`WITHDRAWN`, never `DECLINED`**: the
+  carrier made an offer and SRL turned it down. `DECLINED` feeds
+  `tendersDeclined` and `acceptanceRate`, which §9 scores at 10% of Compass, so
+  recording SRL's refusal there would mark a carrier **for having negotiated**.
+- **It does not silently re-offer the original rate.** A carrier who countered
+  has said that number does not work for them; reviving it would be re-offering
+  something already refused. Re-tendering is a fresh decision through
+  `createTender`.
+- **`LoadTender.version` arrives with it** (gap row 8, additive migration,
+  default 1). A counter changes the **terms**, so the tender takes a new
+  revision. Without it, "which rate did the carrier sign for" was answerable
+  only by comparing timestamps.
+- **A counter VOIDs a live rate confirmation.** An RC names a rate; once
+  countered, a live RC states a number neither side is agreeing to — on the
+  document a dispute turns on. **`SIGNED` and `FINALIZED` are excluded**:
+  executed evidence of what was agreed at the time is not something a
+  counter-offer gets to rewrite.
+- **Verified:** `scripts/_counter-lifecycle-proof.ts` **13/13** against a real
+  database — version increments, live RC voided, signed RC untouched, settlement
+  follows the counter rate not the offer, and the refused carrier ends with a
+  decline count of 0 and nothing in the acceptance-rate denominator.
+  Adversarially verified: removing the executed-RC exclusion gives **12/13**.
+- **Outbound (§19 Sub-pattern 20):** keys explicitly empty; `[Email] Sent to`
+  count **0**, measured.
+- **Gates:** backend tsc clean, vitest **135/1**, frontend tsc + build clean.
+
+---
+
 ## Fixed — 2026-09-01 (v3.8.axg — the guard found two more mislabels on its first run)
 
 - **Status:** commit 6d of 12. Closes the `createTender` consolidation and ships

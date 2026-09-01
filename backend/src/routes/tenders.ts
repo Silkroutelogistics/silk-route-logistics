@@ -1,5 +1,5 @@
 import { Router, Response } from "express";
-import { createTender, acceptTender, acceptTenderOnBehalf, counterTender, declineTender, getCarrierTenders, getLoadTenders } from "../controllers/tenderController";
+import { createTender, acceptTender, acceptTenderOnBehalf, counterTender, rejectCounter, declineTender, getCarrierTenders, getLoadTenders } from "../controllers/tenderController";
 import { authenticate, authorize, AuthRequest } from "../middleware/auth";
 import { launchWaterfall, getWaterfallStatus, WaterfallCandidate } from "../services/waterfallTenderService";
 import { launchBroadcast, BroadcastCandidate } from "../services/broadcastTenderService";
@@ -19,6 +19,11 @@ router.post("/tenders/:id/accept", authorize("CARRIER", "BROKER", "ADMIN", "CEO"
 // queryable separately from organic carrier accepts.
 router.post("/tenders/:id/accept-on-behalf", authorize("ADMIN", "CEO"), acceptTenderOnBehalf);
 router.post("/tenders/:id/counter", authorize("CARRIER", "BROKER", "ADMIN", "CEO"), counterTender);
+// v3.8.axh — the AE side of a counter. Accepting one already works through
+// accept-on-behalf (which admits COUNTERED and settles at the counter rate);
+// rejecting one had no path at all, so a countered tender simply sat until it
+// expired. AE-only: this is SRL's decision, not the carrier's.
+router.post("/tenders/:id/reject-counter", authorize("BROKER", "ADMIN", "CEO", "DISPATCH", "OPERATIONS"), rejectCounter);
 router.post("/tenders/:id/decline", authorize("CARRIER", "BROKER", "ADMIN", "CEO"), declineTender);
 router.get("/carrier/tenders", authorize("CARRIER", "ADMIN", "CEO"), getCarrierTenders);
 

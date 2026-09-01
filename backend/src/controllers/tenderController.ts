@@ -12,6 +12,7 @@ import { log } from "../lib/logger";
 import { validateLoadStatusTransition } from "../lib/loadStateMachine";
 import { assignCarrier } from "../services/carrierAssignmentService";
 import { createTender as createTenderRow } from "../services/tenderCreationService";
+import { logTenderTransition } from "../services/waterfallEventService";
 
 export async function createTender(req: AuthRequest, res: Response) {
   const { carrierId, offeredRate, expiresAt } = createTenderSchema.parse(req.body);
@@ -450,9 +451,43 @@ export async function counterTender(req: AuthRequest, res: Response) {
     return;
   }
 
-  const updated = await prisma.loadTender.update({
-    where: { id: tender.id },
-    data: { status: "COUNTERED", counterRate, respondedAt: new Date() },
+  // v3.8.axh — a counter changes the TERMS, so the tender takes a new version
+  // and any rate confirmation issued under the old one is voided.
+  //
+  // An RC names a rate. The moment the carrier counters, an RC already issued
+  // says a number neither side is now agreeing to, and it is the document a
+  // dispute turns on. Leaving it live means the newest paper on the load
+  // contradicts the newest agreement.
+  //
+  // Terminal states are excluded from the void: a SIGNED or FINALIZED RC is
+  // executed evidence of what was agreed at the time, and rewriting the status
+  // of an executed document is not something a counter-offer gets to do.
+  const updated = await prisma.$transaction(async (tx) => {
+    const t = await tx.loadTender.update({
+      where: { id: tender.id },
+      data: {
+        status: "COUNTERED",
+        counterRate,
+        respondedAt: new Date(),
+        version: { increment: 1 },
+      },
+    });
+    await tx.rateConfirmation.updateMany({
+      where: { loadId: tender.loadId, status: { notIn: ["SIGNED", "FINALIZED", "VOID"] } },
+      data: { status: "VOID" },
+    });
+    return t;
+  });
+
+  await logTenderTransition({
+    tenderId: tender.id,
+    loadId: tender.loadId,
+    from: "OFFERED",
+    to: "COUNTERED",
+    reason: "carrier_counter",
+    actorType: "CARRIER",
+    actorId: req.user!.id,
+    metadata: { offeredRate: tender.offeredRate, counterRate, version: updated.version },
   });
 
   // v3.8.ajw H3 — Audit row so carrier counter-offers are queryable for
@@ -490,6 +525,55 @@ export async function counterTender(req: AuthRequest, res: Response) {
   // inside the helper, so AE sees the counter in the bell-icon
   // dropdown even if Resend is degraded.
   await notifyTenderAction(tender.id, "COUNTERED");
+
+  res.json(updated);
+}
+
+/**
+ * AE rejects a carrier's counter-offer.
+ *
+ * WITHDRAWN, never DECLINED. The carrier did not refuse anything here — they
+ * made an offer and SRL turned it down. DECLINED is carrier-initiated only,
+ * because it feeds tendersDeclined and acceptanceRate, and §9 scores acceptance
+ * at 10% of Compass; recording SRL's refusal there would mark a carrier for
+ * having negotiated.
+ *
+ * The counter is not re-offered at the original rate. A carrier who countered
+ * has said the original number does not work for them, so silently reviving it
+ * would be offering something already refused. Re-tendering is a fresh
+ * decision, and it goes through createTender like any other.
+ */
+export async function rejectCounter(req: AuthRequest, res: Response) {
+  const tender = await prisma.loadTender.findUnique({
+    where: { id: req.params.id },
+    include: { load: { select: { id: true } } },
+  });
+  if (!tender) { res.status(404).json({ error: "Tender not found" }); return; }
+  if (tender.status !== "COUNTERED") {
+    res.status(409).json({
+      error: `Only a countered tender can have its counter rejected (this one is ${tender.status}).`,
+      code: "NOT_COUNTERED",
+    });
+    return;
+  }
+
+  const reason = typeof req.body?.reason === "string" ? req.body.reason.trim().slice(0, 500) : null;
+
+  const updated = await prisma.loadTender.update({
+    where: { id: tender.id },
+    data: { status: "WITHDRAWN", statusReason: "counter_rejected" },
+  });
+
+  await logTenderTransition({
+    tenderId: tender.id,
+    loadId: tender.loadId,
+    from: "COUNTERED",
+    to: "WITHDRAWN",
+    reason: "counter_rejected",
+    actorType: "USER",
+    actorId: req.user!.id,
+    metadata: { counterRate: tender.counterRate, offeredRate: tender.offeredRate, note: reason },
+  });
 
   res.json(updated);
 }

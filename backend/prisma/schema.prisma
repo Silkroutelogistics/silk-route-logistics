@@ -1719,6 +1719,15 @@ model LoadTender {
   // Pre-ajz the backend silently dropped the field. Now persisted +
   // surfaced in AE-facing decline email + AuditLog changes blob.
   declineReason String?
+  // Which revision of the terms this tender is on.
+  //
+  // Starts at 1 and increments when the RATE CHANGES — today that means a
+  // carrier counter-offer. It exists so a rate confirmation can be tied to the
+  // exact terms it was issued under: an RC generated at version 1 is stale the
+  // moment the tender moves to version 2, and stale is the state a dispute
+  // turns on. Without it, "which rate did they sign for" is answerable only by
+  // timestamp comparison, which is guesswork.
+  version       Int      @default(1)
   // Why SRL ended this tender — the WITHDRAWN/RELEASED counterpart to the
   // carrier-supplied `declineReason` above.
   //

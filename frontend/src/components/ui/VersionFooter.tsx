@@ -1,3 +1,28 @@
+// v3.8.axh — A COUNTERED TENDER HAD NO WAY TO BE TURNED DOWN.
+//
+// A carrier could counter, and an AE could accept that counter through
+// accept-on-behalf. Rejecting one had no path at all: the tender simply sat at
+// COUNTERED until it expired, which reads to the carrier as being ignored.
+//
+// POST /tenders/:id/reject-counter closes it, and the state is WITHDRAWN, never
+// DECLINED. The carrier did not refuse anything here — they made an offer and
+// SRL turned it down. DECLINED feeds tendersDeclined and acceptanceRate, and §9
+// scores acceptance at 10% of Compass, so recording SRL's refusal there would
+// mark a carrier for having negotiated.
+//
+// It does not silently re-offer the original rate either. A carrier who
+// countered has said that number does not work for them; reviving it would be
+// re-offering something already refused. Re-tendering is a fresh decision and
+// goes through createTender like any other.
+//
+// LoadTender.version arrives with it. A counter changes the TERMS, so the tender
+// takes a new revision and any live rate confirmation is VOIDED — an RC names a
+// rate, and once countered a live one states a number neither side is agreeing
+// to, on the document a dispute turns on. SIGNED and FINALIZED are excluded:
+// executed evidence of what was agreed at the time is not something a
+// counter-offer gets to rewrite. Proven both ways — removing that exclusion
+// takes the proof to 12/13.
+//
 // v3.8.axg — THE GUARD FOUND TWO MORE MISLABELS ON ITS FIRST RUN.
 //
 // loadTenderWriters holds two invariants: only tenderCreationService may create
@@ -16294,7 +16319,7 @@
 // and a data: qrCodeDataUrl are all legitimate and a guard that flagged them
 // would be noise. Comments are blanked before matching — the fixes are explained
 // in comments that necessarily quote the banned patterns.
-export const SRL_VERSION = "3.8.axg";
+export const SRL_VERSION = "3.8.axh";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
