@@ -3391,6 +3391,58 @@ the negative case actually returns. If the healthy and broken responses are the
 same bytes, the probe is decoration. Establish the discriminating signal first —
 by probing a path you *know* is absent — and only then write the assertion.
 
+
+**TWELFTH FIRE — the test was named for the property it did not check (2026-08-31, v3.8.awp).**
+
+A live carrier logged in, was sent correctly to `/carrier/dashboard/security`,
+and sat on a spinner reading *"Redirecting to activation…"* that would never
+resolve. Reported from production with a screenshot; nothing errored, nothing
+failed a request, and no monitor could have seen it.
+
+Three gates redirect on the carrier layout — status routing, the activation
+wall, and enrollment. Enrollment outranks the other two, and the redirect
+EFFECT says so:
+
+```js
+if (mustEnroll) return;                    // activation effect
+```
+
+The render branch did not:
+
+```jsx
+{mustActivate && !onActivationPage ? <Redirecting to activation…> : children}
+```
+
+`mustActivate = isApproved && requiresActivation`. **No `mustEnroll` term.** So a
+carrier who was APPROVED with an unsigned BCA and no authenticator was redirected
+to the enrollment screen and then refused it — and that screen is the only thing
+that can clear `mustEnroll`. **The deadlock was permanent**, and it was reached by
+following the redirect the system itself issued.
+
+**The guard existed and was pointed at the wrong half.**
+`it("outranks the activation wall")` asserts `router.replace` was called with
+SECURITY and not ACTIVATION. It mounts at `/carrier/dashboard`, never at the
+destination, and passes `{null}` as children.
+
+> **A redirect test proves where the arrow points. It cannot prove that anything
+> is standing where it lands.** Arriving is not the same as being able to use it.
+
+Injection-verified by restoring the shipped precedence: **exactly one** of the
+eleven cases goes red — the new one that mounts at the destination — while the
+seven originals stay green. That green is the measurement. Those seven were
+written specifically about this precedence and could not see it break.
+
+**Fixed in the VALUE, not at the consumer**: `mustActivate` now carries
+`!mustEnroll`, so a consumer added later inherits the precedence instead of
+having to remember it. `showOperationalChrome` already had `&& !mustEnroll` —
+the chrome logic was written with enrollment in mind and the content branch was
+not, which is the entire defect in one line, and precisely the shape that
+"one seam, not per consumer" exists to prevent.
+
+**Going-forward rule.** When a test asserts a redirect, mount at the destination
+with real children and assert they render. A gate that sends someone somewhere
+unusable has not been tested by proving where it sent them.
+
 **Relationship to Sub-pattern 11 (CI-parity).** Sub-pattern 11 asks whether the local gate matches the CI gate. Sub-pattern 16 asks whether *either* gate observes the claim it makes. Passing 11 and failing 16 is exactly the state all six fires above were in.
 
 ###### Cumulative fire registry extension (post-Sprint-51.f, three new fires)
