@@ -18,6 +18,8 @@ import { atCostReimbursementsForLoad } from "../services/integrationService";
 // v3.8.asb — the Quick Pay pilot. One resolver for "is this carrier approved",
 // shared with the carrier-facing gate and the delivery pricing path.
 import { isQuickPayPilotApproved } from "../controllers/carrierController";
+import { record as recordQuickPayElection } from "../services/quickPayElectionService";
+import { extractClientIp } from "../services/geoService";
 
 const router = Router();
 
@@ -336,7 +338,55 @@ router.put("/loads/:loadId/quickpay-speed", async (req: AuthRequest, res: Respon
     }
   }
 
-  await prisma.load.update({ where: { id: result.load.id }, data: { quickPaySpeed: speed } });
+  // The election and the projection move TOGETHER or not at all.
+  //
+  // Load.quickPaySpeed is what the rate confirmation and the charge path read;
+  // the QuickPayElection row is the record of WHO chose it, WHEN and THROUGH
+  // WHAT CHANNEL. Before this the projection was written alone, so a carrier
+  // disputing a deduction could be shown a fee with nothing behind it -- while
+  // the BCA, the Quick Pay Agreement and the rate confirmation can each produce
+  // a name, an IP, a user agent and a timestamp. One transaction is what stops
+  // the two halves from disagreeing.
+  //
+  // A load with no tender still gets the projection: the election model is
+  // tender-scoped by design, and a directly-assigned load has nothing to scope
+  // to. That case is logged rather than silently skipped.
+  const governing = await prisma.loadTender.findFirst({
+    where: { loadId: result.load.id, status: { in: ["ACCEPTED", "RC_SENT", "CONFIRMED"] }, deletedAt: null },
+    orderBy: { createdAt: "desc" },
+    select: { id: true },
+  });
+
+  await prisma.$transaction(async (tx) => {
+    await tx.load.update({ where: { id: result.load.id }, data: { quickPaySpeed: speed } });
+    if (!governing) return;
+    const recorded = await recordQuickPayElection(
+      {
+        tenderId: governing.id,
+        loadId: result.load.id,
+        carrierProfileId: profile.id,
+        speed,
+        tier: profile.tier,
+        decidedVia: "PORTAL",
+        signerIp: extractClientIp(req),
+        signerUserAgent: req.headers["user-agent"] ?? null,
+      },
+      tx,
+    );
+    if (!recorded.ok) {
+      // Throwing rolls the projection back with it. A refusal here means the
+      // input was contradictory, and honouring half of it would leave the
+      // carrier elected with no record of having elected.
+      throw new Error(`[QuickPayElection] ${recorded.code}: ${recorded.error}`);
+    }
+  });
+
+  if (!governing) {
+    log.warn(
+      { loadId: result.load.id, speed },
+      "[QuickPayElection] projection written with no governing tender -- election not recorded",
+    );
+  }
 
   const tier = normalizeTier(profile.tier);
   // What it WILL cost. Not written to the load — the fee is recorded when the

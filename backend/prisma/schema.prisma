@@ -162,6 +162,23 @@ enum QuickPaySpeed {
   SAME_DAY
 }
 
+// How a Quick Pay election was made. ON_BEHALF is an AE recording a decision
+// the carrier made somewhere SRL cannot see, and it is the only channel that
+// requires evidence.
+enum QuickPayDecisionChannel {
+  PORTAL
+  CARVAN
+  EMAIL_LINK
+  ON_BEHALF
+}
+
+// An election is never deleted. Voiding keeps the record of what was chosen
+// while making clear it no longer governs the load.
+enum QuickPayElectionStatus {
+  ELECTED
+  VOIDED
+}
+
 // Base invoice vs the supplemental accessorial invoice billed against the same
 // load. See the Invoice model for why this is a separate row and not a flag.
 enum InvoiceKind {
@@ -953,6 +970,7 @@ model User {
   // reviewer and the withdrawer are frequently different people.
   reviewedQuickPayEnrollments  QuickPayEnrollment[] @relation("QuickPayReviewer")
   withdrawnQuickPayEnrollments QuickPayEnrollment[] @relation("QuickPayWithdrawer")
+  quickPayElections            QuickPayElection[] @relation("QuickPayElector")
 
   @@index([email])
   @@index([role])
@@ -1087,6 +1105,7 @@ model CarrierProfile {
   activatedAt                 DateTime?
 
   quickPayEnrollments QuickPayEnrollment[]
+  quickPayElections   QuickPayElection[]
 
   // Insurance Agent Contact
   insuranceAgentName  String?
@@ -1668,6 +1687,7 @@ model Load {
   rateConfirmations  RateConfirmation[]
   checkCalls         CheckCall[]
   quickPayOverride   LoadQuickPayOverride?
+  quickPayElections  QuickPayElection[]
   carrierPays        CarrierPay[]
   matchResults       MatchResult[]
   checkCallSchedules CheckCallSchedule[]
@@ -1818,10 +1838,15 @@ model LoadTender {
   // Transition history for this tender. See LoadActivity.tenderId for why the
   // shared load timeline carries tender events rather than a separate table.
   activity LoadActivity[]
+  quickPayElections QuickPayElection[]
 
   @@index([loadId])
   @@index([carrierId, status])
   @@index([waterfallPositionId])
+  // Both declared to match indexes created by the tender-lifecycle migrations
+  // (v3.8.axm, v3.8.axo). Undeclared, migrate diff wants to drop them.
+  @@index([complianceOverrideId])
+  @@index([status, statusChangedAt])
   @@map("load_tenders")
 }
 
@@ -2065,6 +2090,10 @@ model RateConfirmation {
   @@index([loadId])
   @@index([status])
   @@index([totalCharges])
+  // Declared to match the index the v3.8.axs migration created. Without it,
+  // a migrate-diff-generated migration would DROP the index the signing-token
+  // lookup depends on.
+  @@index([signTokenHash])
   @@map("rate_confirmations")
 }
 
@@ -2122,6 +2151,66 @@ model QuickPayEnrollment {
   @@index([status, requestedAt])
   @@index([carrierProfileId, status])
   @@map("quick_pay_enrollments")
+}
+
+// ─── Per-Tender Quick Pay Election (Row 7, tender-residue Phase B) ────────
+// THE RECORD OF THE DECISION. Load.quickPaySpeed and Load.quickPayFeePercent
+// remain the frozen projection that the charge path and the PDF read; this row
+// says WHO decided, WHEN, and THROUGH WHAT CHANNEL.
+//
+// Why a row rather than columns on LoadTender: the provenance fields (channel,
+// ip, user agent, evidence) only mean anything when an election was actually
+// made, and most loads never make one. As columns they would put eight mostly
+// null fields on the busiest row in the lifecycle.
+//
+// Why NOT `tenderId @unique`, which the Phase A audit proposed: a rate change
+// reverts the SAME tender row to OFFERED with bumpVersion (loadController
+// rate-change branch), so one tender can legitimately carry a second election
+// after re-acceptance. A PARTIAL UNIQUE INDEX in the migration enforces at most
+// one ELECTED row per tender instead, which still allows the history that 7c
+// asks for.
+model QuickPayElection {
+  id               String         @id @default(cuid())
+  tenderId         String         @map("tender_id")
+  tender           LoadTender     @relation(fields: [tenderId], references: [id], onDelete: Cascade)
+  loadId           String         @map("load_id")
+  load             Load           @relation(fields: [loadId], references: [id], onDelete: Cascade)
+  carrierProfileId String         @map("carrier_profile_id")
+  carrierProfile   CarrierProfile @relation(fields: [carrierProfileId], references: [id], onDelete: Cascade)
+
+  // Resolved against the tier AT DECISION TIME, so a later tier move does not
+  // silently reprice a decision the carrier already made.
+  speed      QuickPaySpeed
+  feePercent Float         @map("fee_percent")
+
+  status QuickPayElectionStatus @default(ELECTED)
+
+  decidedAt       DateTime                @default(now()) @map("decided_at")
+  decidedVia      QuickPayDecisionChannel @map("decided_via")
+  // Null when the carrier decided for themselves. Set to the AE only on the
+  // ON_BEHALF path, so "who decided" is answerable without inference.
+  decidedByUserId String?                 @map("decided_by_user_id")
+  decidedBy       User?                   @relation("QuickPayElector", fields: [decidedByUserId], references: [id], onDelete: SetNull)
+
+  // Required when decidedVia is ON_BEHALF, refused otherwise. Mirrors the
+  // v3.8.axq accept-on-behalf contract: an AE recording a decision made
+  // somewhere SRL cannot see must point at something a person can go and read.
+  evidenceType TenderEvidenceType? @map("evidence_type")
+  evidenceRef  String?             @map("evidence_ref")
+
+  signerIp        String? @map("signer_ip")
+  signerUserAgent String? @map("signer_user_agent")
+
+  voidedAt     DateTime? @map("voided_at")
+  voidedReason String?   @map("voided_reason")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([tenderId, status])
+  @@index([loadId])
+  @@index([carrierProfileId, decidedAt])
+  @@map("quick_pay_elections")
 }
 
 // ─── Per-Load Quick Pay Override (v3.7.a) ────────────────
