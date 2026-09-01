@@ -15918,7 +15918,43 @@
 // acknowledgement nobody gave; and a SIGNED row satisfies the tender gate, which
 // would make a carrier tenderable without the in-portal signing awm had just made
 // consent-gated. Both need a product decision. Decision 9 stays open.
-export const SRL_VERSION = "3.8.awq";
+// v3.8.aws — three compliance routes gain authorize(), and a guard so the class
+// cannot recur silently.
+//
+// compliance.ts:35-37 carried NO authorize() — only the file-level
+// authenticate(). PATCH /alerts/:id/dismiss, PATCH /alerts/:id/resolve and
+// GET /stats. Every sibling on both sides had an explicit role list, which is
+// what made the omission read as a decision rather than a gap.
+//
+// It was reachable by a CARRIER, and that is the part that made it P0 rather
+// than untidy. /api/compliance is not a carrier-portal mount, so
+// resolveCookieCandidates orders candidates [ae, carrier, shipper] and a
+// carrier's srl_token_carrier validates on the second try. That resolver's own
+// comment names the safety net — "role gating still enforced by authorize()
+// downstream" — which is exactly what these three routes did not have. A carrier
+// could dismiss the compliance alert raised against itself.
+//
+// Role sets are the consumers' actual needs, traced not guessed: the compliance
+// console calls /stats, /alerts, /scan, /dismiss and /resolve together, and
+// /alerts + /scan are ("ADMIN","OPERATIONS","CEO"). A wider /stats would load
+// for a BROKER whose /alerts on the same screen 403s.
+//
+// THE GUARD IS THE DELIVERABLE. routeAuthorizeCoverage.test.ts asserts every
+// route in src/routes/*.ts carries an explicit authorize() — at the route or via
+// a file-level router.use — unless it is on a documented inventory. 144 of 788
+// routes are ungated today; most are legitimately public. Failing on all 144
+// would be a gate nobody could ship, so the inventory is seeded from reality and
+// the rule is directional: it may shrink, never grow. A stale entry fails too,
+// so the list cannot rot into a rubber stamp.
+//
+// Injection-verified three ways, each producing its own message: removing
+// authorize() from /stats (fails the generic rule AND the named test), adding a
+// new ungated route (named by file:line), and gating a listed route (flagged as
+// a stale entry). The parser blanks comments first — carrier.ts carries
+// router.post("/register", ...) inside a comment and an earlier draft counted it
+// as real — and balances parens rather than reading to end-of-line, because
+// analytics.ts and automation.ts wrap the verb onto its own line.
+export const SRL_VERSION = "3.8.aws";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
