@@ -164,7 +164,7 @@ column plus new `eventType` values — additive, no new table, and the drawer's
 | 2 | All paths via one `createTender` | 6 creators, 28 write sites | **Largest item** |
 | 3 | No path writes `Load.status` directly | ≥5 paths do | Move into service |
 | 4 | One live OFFERED per load unless parallel | No uniqueness check anywhere | Add guard + `waterfall.parallel` flag |
-| 5 | Accept atomic; siblings auto-**withdraw** | Atomic ✅ but siblings → `DECLINED` | Semantic fix: the carrier didn't decline |
+| 5 | Accept atomic; siblings auto-**withdraw** | ✅ **CLOSED v3.8.aww** — all 3 sibling-on-accept sites write `WITHDRAWN`/`load_covered` | Denominator fix + backfill = 2b; cancel/skip sites = 2c |
 | 6 | `acceptTender` sole `carrierId` writer | **11 writers** | Consolidate; `releaseCarrier` sole clearer |
 | 7 | QuickPayElection pending on tender; RC deferred | Notice fires; no model; RC **not** deferred | New model + gate |
 | 8 | RC auto-fire idempotent, keyed to tender version | Fires ✅; **no `version` column** | Add `LoadTender.version` |

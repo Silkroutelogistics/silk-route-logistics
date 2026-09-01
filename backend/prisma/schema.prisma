@@ -217,8 +217,19 @@ enum TenderStatus {
   OFFERED
   ACCEPTED
   COUNTERED
+  // CARRIER-INITIATED REFUSAL, and only ever that.
+  //
+  // Nothing SRL does may write DECLINED. A carrier's decline count is read as
+  // a performance signal — `carrierController` derives `tendersDeclined` and an
+  // `acceptanceRate` from it, and §9 scores acceptance rate at 10% of Compass —
+  // so recording an SRL-side action here puts a mark against a carrier who did
+  // nothing. Use WITHDRAWN for anything SRL decides.
   DECLINED
   EXPIRED
+  // SRL PULLED THE OFFER. Covers "another carrier took it" (load_covered), a
+  // rejected counter, and any AE cancellation. Split from DECLINED in v3.8.aww
+  // precisely so the carrier-performance read above cannot conflate the two.
+  WITHDRAWN
 }
 
 enum LineItemType {
@@ -1705,6 +1716,20 @@ model LoadTender {
   // Pre-ajz the backend silently dropped the field. Now persisted +
   // surfaced in AE-facing decline email + AuditLog changes blob.
   declineReason String?
+  // Why SRL ended this tender — the WITHDRAWN/RELEASED counterpart to the
+  // carrier-supplied `declineReason` above.
+  //
+  // Deliberately a SECOND column rather than reusing `declineReason`: the two
+  // have different authors and different readers. `declineReason` is the
+  // carrier explaining themselves and feeds carrier-performance surfaces;
+  // this is SRL explaining itself and must never reach those. Overloading one
+  // column would put SRL's words into the carrier's performance record, which
+  // is the exact conflation WITHDRAWN exists to prevent.
+  //
+  // Fixed vocabulary so the timeline can be filtered without parsing prose:
+  // load_covered, counter_rejected, and (from the release work) carrier_fell_off,
+  // compliance_lapse, rate_dispute, customer_cancel, srl_error.
+  statusReason  String?
   createdAt     DateTime       @default(now())
   deletedAt     DateTime?
 

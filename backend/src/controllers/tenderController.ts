@@ -134,9 +134,14 @@ export async function acceptTender(req: AuthRequest, res: Response) {
         carrierRate: agreedRateFromTender(tender as any),
       },
     }),
+    // v3.8.aww — WITHDRAWN, not DECLINED. These carriers did not refuse
+    // anything; SRL pulled their offer because somebody else got there first.
+    // carrierController derives tendersDeclined and an acceptanceRate from
+    // this column and §9 scores acceptance at 10% of Compass, so writing
+    // DECLINED here put a mark on carriers who had done nothing.
     prisma.loadTender.updateMany({
       where: { loadId: tender.loadId, id: { not: tender.id }, status: "OFFERED" },
-      data: { status: "DECLINED" },
+      data: { status: "WITHDRAWN", statusReason: "load_covered" },
     }),
   ]);
 
@@ -313,9 +318,14 @@ export async function acceptTenderOnBehalf(req: AuthRequest, res: Response) {
         carrierRate: agreedRateFromTender(tender as any),
       },
     }),
+    // v3.8.aww — WITHDRAWN, not DECLINED. These carriers did not refuse
+    // anything; SRL pulled their offer because somebody else got there first.
+    // carrierController derives tendersDeclined and an acceptanceRate from
+    // this column and §9 scores acceptance at 10% of Compass, so writing
+    // DECLINED here put a mark on carriers who had done nothing.
     prisma.loadTender.updateMany({
       where: { loadId: tender.loadId, id: { not: tender.id }, status: "OFFERED" },
-      data: { status: "DECLINED" },
+      data: { status: "WITHDRAWN", statusReason: "load_covered" },
     }),
   ]);
 

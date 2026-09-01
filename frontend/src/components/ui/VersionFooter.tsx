@@ -1,3 +1,31 @@
+// v3.8.aww — LOSING A RACE WAS RECORDED AS REFUSING WORK.
+//
+// When a carrier accepted, every sibling offer on that load was marked
+// DECLINED — by SRL, on behalf of carriers who had done nothing. That is not a
+// labelling nicety. `carrierController` derives `tendersDeclined` and
+// `acceptanceRate = accepted / tenders.length` from this column, and §9 scores
+// acceptance rate at 10% of Compass. A carrier offered three waterfall loads
+// who wins one and loses two to faster carriers was being shown at 33%. The
+// proof measures exactly that, and 33% -> 100% is the size of the error.
+//
+// Three sites wrote it: acceptTender, acceptTenderOnBehalf, and the carrier
+// load-board accept. All three now write WITHDRAWN with statusReason
+// "load_covered", and none sets respondedAt, because nobody responded.
+//
+// statusReason is a SECOND column rather than a reuse of declineReason,
+// deliberately. The two have different authors and different readers —
+// declineReason is the carrier explaining themselves and feeds carrier
+// performance; statusReason is SRL explaining itself and must never reach
+// those surfaces. Merging them would recreate the conflation this fixes.
+//
+// Only WITHDRAWN was added to the enum. RC_SENT / CONFIRMED / RELEASED are
+// ratified but have no writer yet, and a value nothing writes is the dead-field
+// pattern this codebase keeps unpicking. They land with their writers.
+//
+// The migration is split in two because Postgres refuses to USE a new enum
+// value in the transaction that ADDED it — verified against a real database,
+// not assumed.
+//
 // v3.8.awv — A LOAD'S TENDER HISTORY WAS ONE UNDIFFERENTIATED LIST.
 //
 // `load_activity` is the timeline every load event writes to, and
@@ -16020,7 +16048,7 @@
 // and a data: qrCodeDataUrl are all legitimate and a guard that flagged them
 // would be noise. Comments are blanked before matching — the fixes are explained
 // in comments that necessarily quote the banned patterns.
-export const SRL_VERSION = "3.8.awv";
+export const SRL_VERSION = "3.8.aww";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

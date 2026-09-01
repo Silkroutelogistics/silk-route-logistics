@@ -13,6 +13,52 @@ so it's searchable and never lost.
 
 ---
 
+## Fixed — 2026-09-01 (v3.8.aww — losing a race was recorded as refusing work)
+
+- **Symptom:** when one carrier accepted a load, every sibling offer was marked
+  `DECLINED` — by SRL, on behalf of carriers who had done nothing.
+- **Why it is not cosmetic:** `carrierController:1481` derives `tendersDeclined`
+  and `:1540` derives `acceptanceRate = tendersAccepted / c.tenders.length` from
+  this column, and §9 scores acceptance rate at **10% of Compass**. A carrier
+  offered three waterfall loads who wins one and loses two to faster carriers
+  was shown at **33%**. Measured in the proof: 33% → 100%.
+- **Where:** three sibling-withdraw sites —
+  `tenderController.ts:139` (acceptTender), `:318` (acceptTenderOnBehalf), and
+  `carrierLoads.ts:267` (carrier load-board accept).
+- **Severity:** P1 — a live, quantifiable misrepresentation of carrier
+  performance on an AE-visible scorecard and a published scoring factor.
+- **Status:** Fixed in v3.8.aww (tender-lifecycle Phase B, commit 2a of 12).
+- **Shape:** new `TenderStatus.WITHDRAWN` + `LoadTender.statusReason`. All three
+  sites write `WITHDRAWN` / `load_covered` and none sets `respondedAt` — nobody
+  responded.
+- **`statusReason` is a second column, not a reuse of `declineReason`:** the two
+  have different authors and different readers. `declineReason` is the carrier
+  explaining themselves and feeds carrier-performance surfaces; `statusReason`
+  is SRL explaining itself and must never reach those. Merging them would
+  recreate the exact conflation being fixed.
+- **Only `WITHDRAWN` added.** `RC_SENT` / `CONFIRMED` / `RELEASED` are ratified
+  but have no writer yet; a value nothing writes is the dead-field pattern this
+  codebase keeps unpicking.
+- **Migration split in two**, because Postgres refuses to USE a new enum value
+  in the transaction that ADDED it. Verified against a real database rather
+  than assumed: `ERROR: unsafe use of new value "WITHDRAWN"`.
+- **Verified:** `scripts/_sibling-withdraw-proof.ts` **13/13** against a real
+  database; adversarially verified — reverting the writers to `DECLINED` takes
+  it to 6 failures including both decline-count assertions. An earlier version
+  of the rate assertion measured a carrier with *no* accepts, where 0/1 and 0/0
+  are both 0% — it proved nothing and said so; rebuilt around a carrier who won
+  one and lost two.
+- **Still open (banked for 2b/2c):** the *denominator* still counts withdrawals
+  (`c.tenders.length`), so acceptance rate is not yet honest — that plus the
+  historical backfill is 2b. Two further SRL-side `DECLINED` writers remain,
+  both different events rather than sibling-on-accept:
+  `integrationService.ts:1810` (load cancelled) and
+  `waterfallEngineService.ts:513` (position skipped) — 2c.
+  `waterfallEngineService.ts:433`, `tenderController.ts:506` and
+  `carrierLoads.ts:330` are genuine carrier declines and stay `DECLINED`.
+
+---
+
 ## Fixed — 2026-09-01 (v3.8.awv — tender history was one undifferentiated list)
 
 - **Symptom:** a load carrying several tenders — the ordinary waterfall case —

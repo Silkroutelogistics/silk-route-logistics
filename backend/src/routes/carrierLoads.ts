@@ -261,10 +261,20 @@ router.post("/:id/accept", validateBody(acceptSchema), async (req: AuthRequest, 
     },
   });
 
-  // Auto-decline any other active tenders for this load
+  // Auto-WITHDRAW any other active tenders for this load.
+  //
+  // v3.8.aww — was "auto-decline", and the word was the bug. These carriers
+  // did not refuse anything; SRL pulled their offers because this carrier took
+  // the load off the board first. carrierController derives tendersDeclined
+  // and acceptanceRate from this column, and §9 scores acceptance rate at 10%
+  // of Compass, so DECLINED here marked carriers who had done nothing.
+  //
+  // respondedAt is deliberately NOT set: nobody responded. Leaving it null also
+  // keeps the row distinguishable from a real decline for anything reading
+  // history later.
   await prisma.loadTender.updateMany({
     where: { loadId: load.id, status: { in: ["OFFERED", "COUNTERED"] } },
-    data: { status: "DECLINED", respondedAt: new Date() },
+    data: { status: "WITHDRAWN", statusReason: "load_covered" },
   });
 
   // Create notification for the poster/broker
