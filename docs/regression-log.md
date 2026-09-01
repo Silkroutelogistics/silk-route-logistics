@@ -13,6 +13,42 @@ so it's searchable and never lost.
 
 ---
 
+## Fixed — 2026-09-01 (v3.8.awv — tender history was one undifferentiated list)
+
+- **Symptom:** a load carrying several tenders — the ordinary waterfall case —
+  mixed every tender's history into a single load-scoped list. "What happened to
+  THIS tender" had no answer on any surface.
+- **Where:** `load_activity` (keyed to `load_id` only),
+  `services/waterfallEventService.ts`, `services/loadActivityService.ts`.
+- **Severity:** P2 — observability, not correctness. Nothing was lost; it was
+  unqueryable.
+- **Status:** Fixed in v3.8.awv (tender-lifecycle Phase B, commit 1 of 12).
+- **Shape:** nullable `load_activity.tender_id` + FK `ON DELETE SET NULL` +
+  composite `(tender_id, created_at)` index. New `logTenderTransition` is the
+  single writer for tender state changes; new `getTenderActivity` the scoped
+  reader.
+- **No new table, deliberately.** The audit
+  (`docs/audits/tender-lifecycle-audit.md` §7) looked for an existing table
+  modelling tender transitions before proposing `TenderEvent` and found this
+  model already was one — `waterfallEventService` has always been a wrapper over
+  `logLoadActivity`, and the `event_type` comment already listed `tender_sent`.
+  A second table would have split one timeline in two.
+- **SET NULL, not CASCADE:** a tender's history must outlive the tender row. The
+  reason an offer was withdrawn is most interesting once the offer is gone.
+- **Verified:** full 41-migration chain applied from an empty container;
+  column / FK delete-rule / index / ledger row each read back from
+  `information_schema` rather than inferred from the command exiting 0.
+  Behavioural proof `scripts/_tender-activity-proof.ts` **14/14** against a real
+  database. Adversarially verified — neutering the `tenderId` write takes it to
+  3 failures.
+- **A vacuous assertion caught in that adversarial run:** "no A event leaks into
+  B" used `.every()`, which an empty set satisfies, and it PASSED under the
+  injected defect on two empty histories. Strengthened with a non-empty
+  precondition and re-verified. §19 Sub-pattern 16 — a test green for a reason
+  unrelated to its name is worse than no test.
+
+---
+
 ## Fixed — 2026-08-26 (Arc 34: staff idle was unenforceable, and a poll kept an abandoned desk signed in)
 
 - **Symptom:** three defects in one seam, all invisible to review and all found

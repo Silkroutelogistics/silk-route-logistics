@@ -30,6 +30,15 @@ export interface LogLoadActivityInput {
   actorId?: string | null;
   actorName?: string | null;
   metadata?: Prisma.InputJsonValue;
+  /**
+   * The tender this event belongs to, when it belongs to one.
+   *
+   * Omit for load-level events (check calls, documents, geofence). Supply it
+   * for anything that happened TO a tender, so a load carrying several tenders
+   * can answer "what happened to this one" — see LoadActivity.tenderId in
+   * schema.prisma for why this lives here rather than in a separate table.
+   */
+  tenderId?: string | null;
 }
 
 /**
@@ -49,7 +58,23 @@ export async function logLoadActivity(input: LogLoadActivityInput, db: ActivityD
       actorId: input.actorId ?? null,
       actorName: input.actorName ?? null,
       metadata: input.metadata,
+      tenderId: input.tenderId ?? null,
     },
+  });
+}
+
+/**
+ * Read one tender's transition history, newest first.
+ *
+ * Deliberately narrower than `getLoadActivity`: a load in a waterfall carries
+ * several tenders, and the drawer's "Tender History" is asking about one of
+ * them. Served by the composite (tender_id, created_at) index.
+ */
+export async function getTenderActivity(tenderId: string, limit = 100) {
+  return prisma.loadActivity.findMany({
+    where: { tenderId },
+    orderBy: { createdAt: "desc" },
+    take: limit,
   });
 }
 

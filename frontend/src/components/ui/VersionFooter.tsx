@@ -1,3 +1,25 @@
+// v3.8.awv — A LOAD'S TENDER HISTORY WAS ONE UNDIFFERENTIATED LIST.
+//
+// `load_activity` is the timeline every load event writes to, and
+// `waterfallEventService` has always been a thin wrapper over it — the
+// eventType column comment already listed `tender_sent`. But the table is keyed
+// to load_id alone, so a load carrying several tenders (the ordinary waterfall
+// case) mixed their histories together. Nothing could answer "what happened to
+// THIS tender".
+//
+// The tender-lifecycle audit went looking for an existing table before
+// proposing a `TenderEvent` and found this one already was it. A second table
+// would have split one timeline across two stores, which is the dual-status
+// class this codebase keeps having to unpick. So: a nullable `tender_id`
+// column, an index ordered to serve the drawer's query, and one writer —
+// `logTenderTransition` — for every tender state change.
+//
+// ON DELETE SET NULL, deliberately, not CASCADE. A tender's history has to
+// outlive the tender row: the reason an offer was withdrawn is most
+// interesting precisely when the offer is gone. Proven against a real database
+// rather than a mock — a mocked Prisma returns what it is told and can say
+// nothing about whether a foreign key rule works.
+//
 // v3.8.awq — A CORRECT CODE WAS REJECTED, AND CORS WAS WHY.
 //
 // A carrier entered the right authenticator code on the Quick Pay signature
@@ -15998,7 +16020,7 @@
 // and a data: qrCodeDataUrl are all legitimate and a guard that flagged them
 // would be noise. Comments are blanked before matching — the fixes are explained
 // in comments that necessarily quote the banned patterns.
-export const SRL_VERSION = "3.8.awt";
+export const SRL_VERSION = "3.8.awv";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

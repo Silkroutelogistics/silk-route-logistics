@@ -1,0 +1,214 @@
+# Tender lifecycle — Phase A audit (read-only)
+
+**Baseline:** `23faaaa7` (v3.8.aws) · 2026-09-01 · no source changed in this phase.
+
+**Concurrent-session warning.** `backend/src/controllers/rateConfirmationController.ts`
+is **modified in the working tree by another session** (v3.8.aws RC-PDF-URL work,
+with an untracked migration `20260901000000_rc_pdf_url_api_relative`). It is
+squarely inside this sprint's Phase B scope. Per §2.2 that file is theirs until
+their work lands. Phase B must re-check `git status` before touching it.
+
+**Report location deviates from the brief.** The brief asked for
+`docs/audit-reports/tender-lifecycle-audit.md`. `git check-ignore` says that path
+is **not ignored** (`.gitignore` covers `docs/audit-reports/audit-*.md` only), so
+it would sit untracked next to an active concurrent session — the precise trap
+§2.2 describes. Filed at `docs/audits/`, matching the committed precedent
+`docs/audits/carrier-lifecycle-audit.md` (§13.3 Item 195).
+
+---
+
+## 1. Dispatch entry surfaces — there are six, not three
+
+Every one creates `LoadTender` rows independently. There is no shared service.
+
+| # | Surface | Route | Creates tender at | Writes `Load.status` directly? |
+|---|---|---|---|---|
+| 1 | Direct tender | `POST /loads/:id/tender` | `tenderController.ts:35` | **Yes** — POSTED→TENDERED |
+| 2 | Waterfall (manual) | `POST /loads/:id/waterfall` | `waterfallTenderService.ts:58` | via service |
+| 3 | Broadcast | `POST /loads/:id/broadcast` | `broadcastTenderService.ts:39` | **Yes** — `:67` `status:"TENDERED"` |
+| 4 | Load + tender (drawer) | `POST /loads/with-tender` | `withTenderController.ts:254` | **Yes** — `:224` `status:"TENDERED"` |
+| 5 | Waterfall engine (auto-pilot) | internal | `waterfallEngineService.ts:236` | **Yes** — `:172`, `:248` |
+| 6 | Loadboard bid accept | `loadBids.ts` accept handler | `loadBids.ts:291` | **Yes** — `:224` |
+
+**28 `LoadTender` write sites across 11 files.** Consolidating to one
+`createTender` is the largest single item in Phase B.
+
+## 2. Status enums — three parallel vocabularies
+
+- **`TenderStatus`** (5): `OFFERED · ACCEPTED · COUNTERED · DECLINED · EXPIRED`
+- **`LoadStatus`** (18): includes `TENDERED · CONFIRMED · BOOKED`
+- **`WaterfallPosition.status`** — a *third*, untyped lowercase string column:
+  `queued|tendered|accepted|declined|expired|skipped`. Not an enum; drifts freely.
+
+`LoadTender` has **no `version` column**, so the target's "rcVersion keyed to
+tender version" has nothing to key on today.
+
+### `Load.carrierId` writers — the invariant is false today
+
+The target says `acceptTender` is the only writer. **There are eleven**, across
+seven files:
+
+| Site | Value |
+|---|---|
+| `tenderController.ts:125` | `tender.carrier.userId` — accept ✅ |
+| `tenderController.ts:304` | `tender.carrier.userId` — accept-on-behalf ✅ |
+| `automation.ts:55` | `userId` |
+| `carrierLoads.ts:226` | `req.user!.id` — **carrier self-assigns** |
+| `loadBids.ts:224` | `bid.carrierId` |
+| `fallOffRecovery.ts:57` | `null` (clear) |
+| `fallOffRecovery.ts:169` | `carrierUserId` (reassign) |
+| `instantBookService.ts:131` | *(shorthand)* |
+| `loadComplianceService.ts:312` | *(shorthand)* |
+| `loadComplianceService.ts:322` | `existingLoad?.carrierId ?? null` |
+| `waterfallEngineService.ts:567` | `pos.carrierId` |
+
+> **Instrument note (§19 Sub-pattern 17).** My first scan required `carrierId:`
+> with a colon and reported **nine**. Object shorthand carries no colon, so
+> `instantBookService.ts:131` and `loadComplianceService.ts:312` were invisible —
+> the exact Arc 12 blind spot (§13.3 Item 218). The corrected scanner was
+> self-tested against shorthand *and* wrapped-chain fixtures before its output
+> was trusted. **The nine-writer answer looked complete and was wrong.**
+
+**ID-space hazard.** `Load.carrierId` holds a **`User.id`**; `LoadTender.carrierId`
+holds a **`CarrierProfile.id`**. Same field name, two ID spaces — the §13.3
+Item 57 class that made waterfall accept silently dead for months (Item 222.4).
+Any consolidation must not assume they are interchangeable.
+
+## 3. Drawer buttons — and a P0 I nearly reported that isn't one
+
+`frontend/src/app/dashboard/loads/page.tsx`:
+
+| Button | Line | Handler |
+|---|---|---|
+| Status advance (`"Confirm"` at TENDERED) | :836 | `updateStatus.mutate` → `PATCH /loads/:id/status` |
+| Rate Conf | :859 | `setShowRateConf(true)` — opens modal |
+| Rate Conf PDF | :866 | `downloadPdf` |
+| Accept on Behalf | :1709 | `POST /tenders/:id/accept-on-behalf` |
+
+`STATUS_ACTIONS` maps `TENDERED → "Confirm"` and `CONFIRMED → "Book Load"`, so
+the drawer does offer a manual walk toward BOOKED.
+
+> **Corrected finding.** I was about to file this as a P0 — an AE walking a load
+> to BOOKED with `carrierId` null. Reading twenty more lines disproved it:
+> `loadController.ts:567` has `requiresCarrier = ["CONFIRMED","BOOKED"]` and
+> **400s without an assigned carrier**. v3.8.j already removed the carrier
+> auto-assign, and a separate guard blocks TENDERED without a live tender.
+> The Confirm button is therefore a **dead button that returns an error**, not a
+> data-integrity hole. The target still removes it — for UX, not corruption.
+> Severity **P2, not P0.**
+
+## 4. Rate confirmation — auto-fire exists, e-sign does not
+
+- **Auto-generation already ships.** `acceptTender` calls
+  `autoGenerateRateConfirmation(load.id, tender.id, load.posterId)` (v3.8.acd),
+  non-blocking, with a `SystemLog` WARNING on failure.
+- **Quick Pay notice already ships.** `notifyQuickPayElectionOpen(load.id)`
+  fires at accept (v3.8.asb).
+- **No `QuickPayElection` model.** State lives as `Load.quickPaySpeed` +
+  `quickPayFeePercent` + `LoadQuickPayOverride`. Nothing is *pending on the
+  tender*, and nothing gates RC send on an answer.
+- **`/sign` is session-authed, not tokenized.** `rateConfirmations.ts:25` sits
+  behind `authenticate` + `authorize(...)`. RC has `signed`, `signedAt`,
+  `signedUrl`, `rcTermsVersion` — and **no `signerName`, `signerIp`,
+  `signerUserAgent`, `contentHash`, or sign token**. This matches §250's standing
+  note that the RC is the weakest evidentiary link.
+- **`RateConfirmation.status` is an untyped `String`** defaulting `"DRAFT"` — a
+  fourth status vocabulary.
+
+## 5. Surface consistency — the two lists overlap by six statuses
+
+| Surface | Filter | Source |
+|---|---|---|
+| Load Board | `status notIn [DELIVERED, POD_RECEIVED, INVOICED, COMPLETED, TONU, CANCELLED]` | `loadController.ts:410` |
+| Track & Trace `active` | `[BOOKED, DISPATCHED, AT_PICKUP, LOADED, IN_TRANSIT, AT_DELIVERY]` | `trackTraceBoard.ts:14` |
+| Track & Trace `tendered` | `[TENDERED, CONFIRMED]` | `trackTraceBoard.ts:17` |
+
+**BOOKED → AT_DELIVERY appears on both boards.** Both read `Load.status`;
+**neither reads tender status**, so no surface today derives status the way the
+target requires.
+
+`needs_attention` **already exists** (`trackTraceBoard.ts:284`) but filters on
+exceptions / calls due / stale GPS / awaiting POD / alert level — **zero overlap**
+with the target's tender-centric bucket (EXPIRED, RC_SENT past SLA, RELEASED <24h).
+
+## 6. `audit-completeness.ts`
+
+`Pass 1: 0 UNRESOLVED · 16 DISPOSITIONED · 10 PATTERN · 86 EXACT` — **no orphan
+tender endpoints.** Every tender route has a live caller.
+
+Pass 2 `BACKEND_ONLY` (no UI surface) in scope: `Load.tenderedAt`,
+`Load.tenderedById`, `WaterfallPosition.tenderSentAt`,
+`RateConfirmation.rateConNumber`, `rcTermsVersion`, `signedUrl`, `autoGenerated`.
+The last two matter — an AE cannot see whether an RC is signed or auto-drafted.
+
+## 7. Existing table that already models tender events — **reuse `LoadActivity`**
+
+**Do not create a `TenderEvent` table.** `waterfallEventService.ts` is a thin
+wrapper over `logLoadActivity` → **`LoadActivity`**, which already carries
+`eventType · description · actorType · actorId · actorName · metadata · createdAt`
+and whose own column comment already lists `tender_sent`. It already records
+`position_tendered / accepted / declined / expired / skipped`.
+
+**Gap:** it is keyed to `loadId`, not `tenderId`, so a load with several tenders
+mixes their histories. The cheapest correct change is a nullable `tenderId`
+column plus new `eventType` values — additive, no new table, and the drawer's
+"Tender History" filters on it.
+
+---
+
+## Gap table vs TARGET
+
+| # | Target invariant | Today | Gap |
+|---|---|---|---|
+| 1 | 7 tender states | 5, and `COUNTERED`/`DECLINED` aren't in the target | Add `RC_SENT · CONFIRMED · WITHDRAWN · RELEASED`; **decide COUNTERED/DECLINED — they are live carrier states** |
+| 2 | All paths via one `createTender` | 6 creators, 28 write sites | **Largest item** |
+| 3 | No path writes `Load.status` directly | ≥5 paths do | Move into service |
+| 4 | One live OFFERED per load unless parallel | No uniqueness check anywhere | Add guard + `waterfall.parallel` flag |
+| 5 | Accept atomic; siblings auto-**withdraw** | Atomic ✅ but siblings → `DECLINED` | Semantic fix: the carrier didn't decline |
+| 6 | `acceptTender` sole `carrierId` writer | **11 writers** | Consolidate; `releaseCarrier` sole clearer |
+| 7 | QuickPayElection pending on tender; RC deferred | Notice fires; no model; RC **not** deferred | New model + gate |
+| 8 | RC auto-fire idempotent, keyed to tender version | Fires ✅; **no `version` column** | Add `LoadTender.version` |
+| 9 | Tokenized e-sign w/ name·ip·UA·hash → CONFIRMED | Session-authed `/sign`; none captured | Token route + 4 columns + PDF stamp |
+| 10 | BOL + shipper notify at CONFIRMED | Not gated on signature | Re-gate |
+| 11 | Rate change post-accept voids RC, reverts to OFFERED | No such path | Build |
+| 12 | Override needs userId·reason·ts; refused on HARD_FAIL | `OverrideComplianceModal` exists; **no HARD_FAIL refusal at tender time** | Verify against §14 absolute set |
+| 13 | Load Board = no tender ≥ACCEPTED | Reads `Load.status`; **overlaps T&T by 6** | Re-query both |
+| 14 | Needs Attention = tender-centric | Exists, unrelated filters | Extend |
+| 15 | TTL from `TENDER_TTL_MINUTES` (120) | **No env var**; caller supplies `expiresAt` | Add env + default |
+| 16 | Expiry advances waterfall / flags | Sweep ships (Item 141), reverts to POSTED | Add advance + flag |
+| 17 | Every transition → event row | ✅ **CLOSED v3.8.awv** — `LoadActivity.tenderId` + `logTenderTransition` as sole writer | Drawer read deferred to 1b |
+| 18 | Remove Confirm + Rate Conf send; add Withdraw/Release/Resend/View | Confirm is a dead button; no Withdraw/Release/Resend | Replace |
+| 19 | Card + header read same derived status | Both read `Load.status` (consistent), but **no derived status exists** | Build derivation |
+
+### Files touched — estimate
+
+| Area | Files | Notes |
+|---|---|---|
+| Schema + migration | 2 | enum values, `LoadTender.version`, `LoadActivity.tenderId`, `QuickPayElection`, 4 RC signature columns |
+| `createTender` consolidation | ~8 | 6 creators + service + validators |
+| `carrierId` consolidation | ~7 | 11 sites |
+| RC auto-fire + e-sign | ~5 | ⚠️ **includes the concurrently-edited `rateConfirmationController.ts`** |
+| TTL + expiry | ~3 | cron, controller, env |
+| Query changes | ~3 | loadController, trackTraceBoard, frontend |
+| Drawer buttons | ~2 | `loads/page.tsx`, `loadStatusActions.ts` |
+| Guards + tests | ~8 | one per invariant |
+| **Total** | **~38** | far past the 4-file/100-LOC threshold → **≥10 commits** |
+
+## Recommendations before Phase B
+
+1. **Decide `COUNTERED` / `DECLINED`.** The target lists neither. Both are live
+   carrier actions with UI, an email, and a persisted `declineReason`. Dropping
+   them is a product decision, not a migration detail.
+2. **Reuse `LoadActivity`; add `tenderId`.** No new table.
+3. **`Load.carrierId` (User) ≠ `LoadTender.carrierId` (CarrierProfile).** Pin
+   this in a test before consolidating, per Item 222.4.
+4. **Sequence RC work last** — that file belongs to another session right now.
+5. Invariants 5 (siblings→WITHDRAWN) and 6 (single writer) are the highest-value,
+   lowest-risk first commits.
+
+## Not verified in this phase
+
+- Runtime behaviour — nothing was executed against a database.
+- Whether `automation.ts:55` and `instantBookService.ts:131` are reachable in
+  production (both write `carrierId`; neither was traced to a live caller).
+- Frontend Track & Trace drawer button inventory (backend queries only).

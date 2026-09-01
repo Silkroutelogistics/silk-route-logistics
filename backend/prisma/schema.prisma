@@ -1712,6 +1712,10 @@ model LoadTender {
   waterfallPositionId String?            @map("waterfall_position_id")
   waterfallPosition   WaterfallPosition? @relation(fields: [waterfallPositionId], references: [id], onDelete: SetNull)
 
+  // Transition history for this tender. See LoadActivity.tenderId for why the
+  // shared load timeline carries tender events rather than a separate table.
+  activity LoadActivity[]
+
   @@index([loadId])
   @@index([carrierId, status])
   @@index([waterfallPositionId])
@@ -4751,8 +4755,30 @@ model LoadActivity {
   metadata    Json?
   createdAt   DateTime @default(now()) @map("created_at")
 
+  // Which tender this event belongs to, when it belongs to one.
+  //
+  // WHY THIS COLUMN AND NOT A `TenderEvent` TABLE. The tender-lifecycle audit
+  // (docs/audits/tender-lifecycle-audit.md §7) looked for an existing table
+  // modelling tender transitions before proposing a new one and found this
+  // model already is it: `waterfallEventService` is a thin wrapper over
+  // `logLoadActivity`, and the eventType comment above already lists
+  // `tender_sent`. A second table would have split one timeline in two.
+  //
+  // The gap it closes: this model is keyed to loadId, so a load carrying
+  // several tenders — the normal waterfall case — mixes their histories into
+  // one undifferentiated list. Nothing could answer "what happened to THIS
+  // tender".
+  //
+  // Nullable because most load events are not tender events (check calls,
+  // document uploads, geofence hits). SetNull rather than Cascade because a
+  // tender's history must outlive the tender row: the reason an offer was
+  // withdrawn is most interesting precisely when the offer is gone.
+  tenderId String?     @map("tender_id")
+  tender   LoadTender? @relation(fields: [tenderId], references: [id], onDelete: SetNull)
+
   @@index([loadId, createdAt])
   @@index([eventType])
+  @@index([tenderId, createdAt])
   @@map("load_activity")
 }
 
