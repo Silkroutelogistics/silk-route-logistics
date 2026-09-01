@@ -26,6 +26,7 @@ import { recordTonuObligation } from "../services/tonuBillingService";
 // there must be exactly one path to it: lib/documentNumber.ts.
 import { generateLoadNumber, formatDocumentNumber } from "../lib/documentNumber";
 import { invoicedTotalsForLoads } from "../lib/invoiceTotals";
+import { heldByCarrier, notHeldByCarrier } from "../lib/tenderLifecycle";
 
 const RELEASED_VALUE_BASIS_VALUES = ["PER_POUND", "PER_PIECE", "TOTAL", "NVD"] as const;
 type ReleasedValueBasisLiteral = (typeof RELEASED_VALUE_BASIS_VALUES)[number];
@@ -409,6 +410,12 @@ export async function getLoads(req: AuthRequest, res: Response) {
   } else if (query.activeOnly) {
     where.status = { notIn: ["DELIVERED", "POD_RECEIVED", "INVOICED", "COMPLETED", "TONU", "CANCELLED"] };
   }
+  // v3.8.axo — the board and Track & Trace are exact complements, derived from
+  // one predicate. They used to be two hand-written status lists that OVERLAPPED
+  // BY SIX, so a load could appear on both at once.
+  if (query.held === "false") Object.assign(where, notHeldByCarrier);
+  else if (query.held === "true") Object.assign(where, heldByCarrier);
+
   if (query.originState) where.originState = query.originState;
   if (query.destState) where.destState = query.destState;
   if (query.equipmentType) where.equipmentType = query.equipmentType;

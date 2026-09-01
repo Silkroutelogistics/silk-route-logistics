@@ -13,6 +13,74 @@ so it's searchable and never lost.
 
 ---
 
+## Fixed — 2026-09-01 (v3.8.axo — the Load Board and Track & Trace overlapped by six statuses)
+
+- **Status:** commit 10a of 12 (backend). The frontend selector and the drawer
+  action matrix are 10b; accept-on-behalf evidence is 10c.
+- **Symptom:** each surface kept its own hand-written list of load statuses, and
+  the lists **shared six entries** — so a load could sit on the Load Board and in
+  Track & Trace at the same time. Two surfaces disagreeing about whether a truck
+  is booked.
+- **Shape:** `lib/tenderLifecycle.ts` holds the vocabulary once — `HOLDS_LOAD`,
+  `LIVE_STATES`, `SETTLED_STATES`, `rcSignSlaHours()`, and the `heldByCarrier` /
+  `notHeldByCarrier` Prisma fragments. `GET /loads?held=true|false` is the
+  partition; the two fragments are **exact complements by construction** rather
+  than by two people keeping two lists in step.
+- **ACCEPTED is where a load leaves the board** — not RC_SENT, not CONFIRMED.
+  The paperwork state says how far the terms have got; it does not change who has
+  the truck. Putting a load back because the RC is unsigned would offer freight
+  that is already committed.
+- **`Load.carrierId` is in the predicate alongside the tenders.** Direct
+  assignment is a real path — an AE can put a carrier on a load with no tender
+  ever existing — and reading only tenders would have dropped those loads out of
+  Track & Trace entirely. Trucks in transit, invisible: a worse failure than the
+  overlap being replaced.
+- **Needs Attention asks about tenders instead of guessing from the load.** It
+  read *"posted within 48h of pickup"* and *"booked past its pickup date"*, both
+  proxies for something nobody had measured. The four reasons are facts: an
+  expiry with nothing live behind it, an RC unsigned past `RC_SIGN_SLA_HOURS`
+  (env, default 4, bounded 1..168), a release inside the last 24h, a counter
+  waiting on SRL. Each names itself, so the AE does not re-derive what the queue
+  already knew. `GET /loads/needs-attention`, AE-gated.
+- **`LoadTender.statusChangedAt`** (migration
+  `20260901080000_load_tender_status_changed_at`), because *"how long has this
+  been sitting in this state"* was unanswerable without parsing the activity log
+  — and it is the question every SLA asks. Written by the transition service and
+  nowhere else, so it means the same thing on every row. Nullable with no
+  backfill: a historical tender genuinely has no recorded moment, and back-dating
+  one from `createdAt` would put a confident-looking timestamp on a guess.
+- **`RC_SENT` and `CONFIRMED` join the enum here with NO WRITER**, deliberately
+  and for one commit (migration `20260901070000_tender_status_rc_sent_confirmed`,
+  its own file because Postgres refuses to *use* a new enum value in the
+  transaction that added it). The selector and the partition are written against
+  the full ratified set now, so the commit that adds the writers is additive
+  rather than a rewrite of the queries.
+- **Proof:** `_board-partition-proof.ts`, **19/19** against a real database over
+  the real router, on a set built to break the partition (bare load, live offer,
+  accepted, RC-sent, all-expired, directly-assigned). Asserts both that nothing
+  appears on both AND that nothing falls through the gap.
+- **Adversarial, both executed:** narrowing `HOLDS_LOAD` to `CONFIRMED` puts an
+  accepted load back on the board (**17/19**); dropping the direct-assignment
+  half makes the complement inexact and a load appears on both (**18/19**).
+- **The status-writer guard went blind again, in a new costume.** It reads
+  literal keys, and the transition service now writes `data: { ...data, ... }` —
+  a literal whose interesting half is elsewhere. It reported **the single busiest
+  status writer in the codebase as writing no status at all**. Its own
+  stale-entry check caught it, for the second time: first a bare `data`
+  parameter, now a spread. Both count as status writes now, because the
+  alternative is a guard with a documented bypass.
+- **`routeAuthorizeCoverage` caught the new endpoint ungated** on its first run
+  and it was gated before commit — the guard working exactly as intended.
+- **Threshold deviation, stated:** seven source files and two migrations against
+  the four-file rule. The enum, the vocabulary and the queries are one change —
+  splitting them would ship an enum nothing references and a partition that
+  cannot express the ratified states.
+- **Outbound (§19 Sub-pattern 20):** keys explicitly empty. `[Email] Sent to`
+  count: **0**, measured.
+- **Gates:** backend tsc clean; backend vitest **1426 pass / 1 fail** (known
+  `urlSafety` DNS red); frontend tsc clean; frontend build clean. Both migrations
+  applied cleanly to a local container before commit.
+
 ## Fixed — 2026-09-01 (v3.8.axn — the compliance gate put a carrier on a load so it could check them, then took them off again)
 
 - **Status:** commit 9c of 12. Closes the staging write banked at v3.8.axc.

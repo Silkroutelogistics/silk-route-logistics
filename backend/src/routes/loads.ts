@@ -40,6 +40,16 @@ router.get("/distance", getDistance);
 router.post("/with-tender", authorize("BROKER", "ADMIN", "CEO", "DISPATCH", "OPERATIONS"), auditLog("CREATE", "Load"), createLoadWithTender);
 
 router.post("/", authorize("BROKER", "SHIPPER", "ADMIN", "CEO"), validateBody(createLoadSchema), auditLog("CREATE", "Load"), createLoad);
+// GET /api/loads/needs-attention — the tender-centric queue.
+//
+// Mounted ABOVE the "/:id" routes, because Express matches in order and
+// "needs-attention" is a perfectly good cuid as far as a path parameter is
+// concerned.
+router.get("/needs-attention", authorize("BROKER", "ADMIN", "CEO", "DISPATCH", "OPERATIONS", "ACCOUNT_EXECUTIVE"), async (_req: AuthRequest, res: Response) => {
+  const { loadsNeedingAttention } = await import("../services/needsAttentionService");
+  res.json(await loadsNeedingAttention());
+});
+
 router.get("/", validateQuery(loadQuerySchema), getLoads);
 router.get("/:id", getLoadById);
 router.put("/:id", authorize("BROKER", "ADMIN", "CEO", "DISPATCH"), validateBody(updateLoadSchema), auditLog("UPDATE", "Load"), updateLoad);

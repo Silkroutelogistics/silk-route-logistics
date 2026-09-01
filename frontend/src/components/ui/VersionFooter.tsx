@@ -1,3 +1,57 @@
+// v3.8.axo — THE LOAD BOARD AND TRACK & TRACE OVERLAPPED BY SIX STATUSES.
+//
+// Each was a hand-written list of load statuses kept at its own call site, and
+// the lists shared six entries — so a load could sit on the board and in Track
+// & Trace at once. That is not a display bug so much as two surfaces
+// disagreeing about whether a truck is booked.
+//
+// The partition is a property of the TENDER, not the load. A load leaves the
+// board the moment a carrier holds it and enters Track & Trace for exactly the
+// same reason, so both derive from one predicate and are complements by
+// construction rather than by two people keeping two lists in step.
+//
+// ACCEPTED is where a load leaves the board — not RC_SENT, not CONFIRMED. The
+// paperwork state says how far the terms have got; it does not change who has
+// the truck. Putting a load back because the RC is unsigned would offer freight
+// that is already committed.
+//
+// Load.carrierId is in the predicate alongside the tenders, because direct
+// assignment is a real path: an AE can put a carrier on a load with no tender
+// ever existing. Reading only tenders would have made trucks in transit
+// invisible — a worse failure than the overlap being replaced.
+//
+// NEEDS ATTENTION now asks about tenders instead of guessing from the load. It
+// read "posted within 48h of pickup" and "booked past its pickup date", both
+// proxies for something nobody had measured. The four reasons are facts: an
+// expiry with nothing live behind it, an RC unsigned past RC_SIGN_SLA_HOURS, a
+// release inside the last day, a counter waiting on SRL. Each names itself, so
+// the AE does not re-derive what the queue already knew.
+//
+// LoadTender.statusChangedAt, because "how long has this been sitting in this
+// state" was unanswerable without parsing the activity log — and it is the
+// question every SLA asks. Written by the transition service and nowhere else.
+// Nullable with no backfill: a historical tender genuinely has no recorded
+// moment, and back-dating one from createdAt would put a confident-looking
+// timestamp on a guess.
+//
+// RC_SENT and CONFIRMED join the enum here with NO WRITER, deliberately and
+// for one commit. The selector and the partition are written against the full
+// ratified set now, so the commit that adds the writers is additive rather than
+// a rewrite of the queries.
+//
+// Proof: _board-partition-proof.ts, 19/19 against a real database over the real
+// router, on a set built to break the partition. Injections: narrowing
+// HOLDS_LOAD to CONFIRMED puts an accepted load back on the board (17/19);
+// dropping the direct-assignment half makes the complement inexact and a load
+// appears on both (18/19).
+//
+// AND THE STATUS-WRITER GUARD WENT BLIND AGAIN, IN A NEW COSTUME. It reads
+// literal keys, and the transition service now writes `data: { ...data, ... }`
+// — a literal whose interesting half is elsewhere. It reported the single
+// busiest status writer in the codebase as writing no status at all. Its own
+// stale-entry check caught it, for the second time: first a bare `data`
+// parameter, now a spread. Both now count as status writes, because the
+// alternative is a guard with a documented bypass.
 // v3.8.axn — THE COMPLIANCE GATE PUT A CARRIER ON A LOAD SO IT COULD CHECK THEM,
 // THEN TOOK THEM OFF AGAIN.
 //
@@ -16541,7 +16595,7 @@
 // and a data: qrCodeDataUrl are all legitimate and a guard that flagged them
 // would be noise. Comments are blanked before matching — the fixes are explained
 // in comments that necessarily quote the banned patterns.
-export const SRL_VERSION = "3.8.axn";
+export const SRL_VERSION = "3.8.axo";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

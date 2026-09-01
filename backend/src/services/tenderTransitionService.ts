@@ -124,7 +124,10 @@ async function applySettle(
   const ids = snapshot.map((t) => t.id);
   const updated = await db.loadTender.updateMany({
     where: { id: { in: ids }, ...statusRail },
-    data,
+    // statusChangedAt is stamped here rather than left to callers, for the same
+    // reason the transition row is: a caller that forgets makes the column lie,
+    // and a column that is right most of the time is worse than no column.
+    data: { ...data, statusChangedAt: new Date() },
   });
 
   let moved = snapshot;

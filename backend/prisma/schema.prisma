@@ -228,6 +228,15 @@ enum TenderStatus {
   // so recording an SRL-side action here puts a mark against a carrier who did
   // nothing. Use WITHDRAWN for anything SRL decides.
   DECLINED
+  // The rate confirmation is out and unsigned.
+  //
+  // The carrier holds the load from ACCEPTED onward -- it is off the board at
+  // that point -- but nothing is executed until they sign. That gap is what the
+  // Needs Attention queue watches: an RC_SENT tender older than
+  // RC_SIGN_SLA_HOURS is a truck nobody has a signature from.
+  RC_SENT
+  // Signed. The terms are executed and the load is dispatchable.
+  CONFIRMED
   EXPIRED
   // SRL PULLED THE OFFER. Covers "another carrier took it" (load_covered), a
   // rejected counter, and any AE cancellation. Split from DECLINED in v3.8.aww
@@ -1736,6 +1745,14 @@ model LoadTender {
   // turns on. Without it, "which rate did they sign for" is answerable only by
   // timestamp comparison, which is guesswork.
   version              Int                 @default(1)
+  // When this tender last MOVED, as opposed to when the row last changed.
+  //
+  // "How long has this been sitting in this state" was unanswerable without
+  // parsing the activity log, and it is the question every SLA asks: an RC out
+  // longer than RC_SIGN_SLA_HOURS, a release inside the last day, an offer
+  // approaching expiry. Written by the transition service and nowhere else, so
+  // it means the same thing on every row.
+  statusChangedAt      DateTime?
   // The override this tender was created under, if it took one.
   //
   // A FK rather than three copied columns. ComplianceOverride already holds

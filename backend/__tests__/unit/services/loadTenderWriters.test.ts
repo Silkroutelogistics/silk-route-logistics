@@ -74,10 +74,17 @@ export function findLoadTenderWrites(root = SRC, sources?: Map<string, string>):
       const dataIdx = Math.max(body.indexOf("data:"), body.indexOf("create:"));
       const data = dataIdx >= 0 ? body.slice(dataIdx) : "";
       // Is the payload written out here, or handed in from somewhere else?
-      // `data: { ... }` can be read. `data` (shorthand) or `data: payload`
-      // cannot, and a scanner that answers "no status key" for those is a
-      // scanner a hoisted object walks straight past.
-      const literal = /^(?:data|create)\s*:\s*\{/.test(data.trimStart());
+      //
+      // `data: { ... }` can be read — UNLESS it spreads something, because
+      // `data: { ...payload, x: 1 }` is a literal whose interesting half is not
+      // here. Both forms have now gone blind on this scanner in turn: first a
+      // bare `data` parameter, then a spread. Its own stale-entry check caught
+      // each, which is the only reason either was noticed.
+      //
+      // `data` (shorthand) and `data: payload` are unreadable outright.
+      const looksLiteral = /^(?:data|create)\s*:\s*\{/.test(data.trimStart());
+      const spreadsSomething = /\.\.\.\s*[A-Za-z_$]/.test(data);
+      const literal = looksLiteral && !spreadsSomething;
       hits.push({
         file: path.relative(SRC, f).replace(/\\/g, "/"),
         line: src.slice(0, m.index).split("\n").length,
@@ -196,6 +203,18 @@ describe("LoadTender rows have one creator", () => {
     const fx = new Map([[path.join(SRC, "__cm__.ts"),
       `// await prisma.loadTender.create({ data: { status: "OFFERED" } });\n/* prisma.loadTender.update({ data: { status } }) */\n`]]);
     expect(findLoadTenderWrites(SRC, fx)).toHaveLength(0);
+  });
+
+  it("counts a literal that SPREADS an unreadable object as a status write", () => {
+    // `data: { ...payload }` looks like a literal and is not one. This is the
+    // second time this scanner went blind in the same direction; the first was
+    // a bare `data` parameter.
+    const fx = new Map([[path.join(SRC, "__spread__.ts"),
+      `await prisma.loadTender.updateMany({ where: { id }, data: { ...payload, respondedAt } });
+`]]);
+    const hits = findLoadTenderWrites(SRC, fx);
+    expect(hits).toHaveLength(1);
+    expect(hits[0].writesStatus, "a spread payload must count as a status write").toBe(true);
   });
 
   it("counts a payload it cannot read as a status write", () => {
