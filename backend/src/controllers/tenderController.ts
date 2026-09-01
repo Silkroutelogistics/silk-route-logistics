@@ -16,6 +16,7 @@ import { complianceCheck } from "../services/complianceMonitorService";
 import { notifyTenderAction, notifyQuickPayElectionOpen } from "../services/notificationService";
 import { autoGenerateRateConfirmation } from "../services/autoRateConfirmationService";
 import { voidLiveRateConfirmations } from "../services/rateConfirmationVoidService";
+import { voidForTender as voidQuickPayElection, record as recordQuickPayElection } from "../services/quickPayElectionService";
 import { hooks } from "../lib/hooks";
 import { log } from "../lib/logger";
 import { validateLoadStatusTransition } from "../lib/loadStateMachine";
@@ -426,6 +427,40 @@ export async function acceptTenderOnBehalf(req: AuthRequest, res: Response) {
     return;
   }
 
+  // row 7b — an AE may also record the Quick Pay election the carrier made in
+  // the same conversation, on the SAME evidence the accept already required.
+  // Optional: most on-behalf accepts carry no election, and standard terms are
+  // free, so an absent speed means the carrier chose nothing rather than that
+  // the AE forgot.
+  const obSpeed = String(req.body?.quickPaySpeed ?? "").toUpperCase();
+  if (["STANDARD", "SEVEN_DAY", "SAME_DAY"].includes(obSpeed)) {
+    const prof = await prisma.carrierProfile.findUnique({
+      where: { id: tender.carrierId },
+      select: { tier: true, quickPayVersion: true },
+    });
+    const recorded = await recordQuickPayElection({
+      tenderId: tender.id,
+      loadId: tender.loadId,
+      carrierProfileId: tender.carrierId,
+      speed: obSpeed as "STANDARD" | "SEVEN_DAY" | "SAME_DAY",
+      tier: prof?.tier ?? null,
+      decidedVia: "ON_BEHALF",
+      decidedByUserId: req.user!.id,
+      evidenceType: evidence.type,
+      evidenceRef: evidence.ref,
+      quickPayVersion: prof?.quickPayVersion ?? null,
+    });
+    if (!recorded.ok) {
+      // Logged, not thrown. The accept has already committed; failing it now
+      // would take back a booking over a fee election, which is the wrong
+      // trade. The AE can record the election from the load afterwards.
+      log.error(
+        { tenderId: tender.id, code: recorded.code },
+        "[Tender] on-behalf Quick Pay election refused",
+      );
+    }
+  }
+
   // Distinct audit-log action so on-behalf overrides stay queryable apart from
   // organic carrier accepts. Non-blocking: the accept has already happened, and
   // losing the audit row must not fail it.
@@ -488,6 +523,9 @@ export async function counterTender(req: AuthRequest, res: Response) {
     );
     const t = await tx.loadTender.findUniqueOrThrow({ where: { id: tender.id } });
     await voidLiveRateConfirmations(tender.loadId, tx);
+    // row 7c — a countered tender is being turned down, so the election made
+    // against it stops governing with it.
+    await voidQuickPayElection(tender.id, "counter_rejected", tx);
     return t;
   });
 

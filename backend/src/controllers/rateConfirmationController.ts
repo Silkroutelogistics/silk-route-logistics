@@ -16,6 +16,7 @@ import { uploadFileToPath } from "../services/storageService";
 import { settleTender } from "../services/tenderTransitionService";
 import { resolveLoadStem, withDocumentNumber } from "../lib/documentNumber";
 import { resolveIssuedElection } from "../services/autoRateConfirmationService";
+import { liveElectionForTender } from "../services/quickPayElectionService";
 import { log } from "../lib/logger";
 import { extractClientIp } from "../services/geoService";
 import { clientUserAgent } from "../lib/clientIp";
@@ -169,7 +170,7 @@ export async function sendRateConfirmation(req: AuthRequest, res: Response) {
           // carrierProfile.tier prices the election: §8 says the speed decides
           // how fast and the tier decides how much, so the freeze cannot be
           // resolved without it.
-          carrier: { select: { firstName: true, lastName: true, company: true, phone: true, carrierProfile: { select: { mcNumber: true, dotNumber: true, tier: true } } } },
+          carrier: { select: { firstName: true, lastName: true, company: true, phone: true, carrierProfile: { select: { id: true, mcNumber: true, dotNumber: true, tier: true, quickPayEnabled: true } } } },
           customer: true,
           // Sprint 49 (Item 119) — poster relation for AE header sub-line.
           poster: { select: { firstName: true, lastName: true, phone: true } },
@@ -214,7 +215,45 @@ export async function sendRateConfirmation(req: AuthRequest, res: Response) {
   // field at all. It is never the legacy PaymentTier reporting label.
   const fd = (rc.formData as Record<string, any>) || {};
   const carrierTier = fd.carrierPaymentTier ?? rc.load.carrier?.carrierProfile?.tier ?? "SILVER";
-  const election = resolveIssuedElection(fd, carrierTier);
+  // v3.8 row 7b — THE ELECTION ROW IS THE SOURCE, not AE formData.
+  //
+  // The pair-resolution and the 422 on a contradiction are unchanged; only what
+  // feeds them moved. AE formData could say one thing while the carrier had
+  // chosen another, and nothing reconciled the two. The carrier decides how
+  // their own load is paid, so the row they wrote is what the document states.
+  const governingTender = await prisma.loadTender.findFirst({
+    where: { loadId: rc.loadId, status: { in: ["ACCEPTED", "RC_SENT", "CONFIRMED"] }, deletedAt: null },
+    orderBy: { createdAt: "desc" },
+    select: { id: true },
+  });
+  const electionRow = governingTender ? await liveElectionForTender(governingTender.id) : null;
+
+  // No election means STANDARD terms, which is free. It does NOT block the
+  // send: refusing to issue a rate confirmation because nobody elected a paid
+  // option would hold up a load over the absence of an upsell.
+  //
+  // Warned rather than silent when the carrier IS in the pilot, because that is
+  // the case worth a human look. It also covers the transitional window: a
+  // carrier who elected through the portal BEFORE this shipped has
+  // Load.quickPaySpeed set and no election row, and will issue at standard
+  // terms. That fails toward NOT charging a fee (§14), which is the safe
+  // direction, but it is a service miss and the AE should see it.
+  if (!electionRow && rc.load.carrier?.carrierProfile?.quickPayEnabled === true) {
+    log.warn(
+      {
+        rateConfirmationId: rc.id,
+        loadId: rc.loadId,
+        tenderId: governingTender?.id ?? null,
+        loadQuickPaySpeed: rc.load.quickPaySpeed ?? null,
+      },
+      "[RC] pilot carrier has no live Quick Pay election at issuance — issuing at standard terms",
+    );
+  }
+
+  const electionSource = electionRow
+    ? { quickPaySpeed: electionRow.speed, quickPayFeePercent: electionRow.feePercent }
+    : {};
+  const election = resolveIssuedElection(electionSource, carrierTier);
   if (!election.ok) {
     res.status(422).json({ error: election.error, code: election.code });
     return;

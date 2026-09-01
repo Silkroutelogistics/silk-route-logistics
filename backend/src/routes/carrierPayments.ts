@@ -213,7 +213,7 @@ router.get("/loads/:loadId/quickpay-speed", async (req: AuthRequest, res: Respon
 
   const profile = await prisma.carrierProfile.findUnique({
     where: { userId: req.user!.id },
-    select: { id: true, tier: true, quickPayEnabled: true },
+    select: { id: true, tier: true, quickPayEnabled: true, quickPayVersion: true },
   });
   const tier = normalizeTier(profile?.tier);
 
@@ -244,6 +244,16 @@ router.get("/loads/:loadId/quickpay-speed", async (req: AuthRequest, res: Respon
     // speed costs THEM. §8: same-day is the seven-day fee plus two points.
     eligible,
     tier,
+    // The agreement version the attestation is made under, so the portal
+    // states which text the carrier is electing beneath rather than implying
+    // the current one. Counsel will replace that body (§16 #2).
+    quickPayVersion: profile?.quickPayVersion ?? null,
+    // Written here rather than in the component so the wording lives beside
+    // the agreement it quotes. No em dashes and no contractions, per the
+    // brand voice rules for carrier-facing copy.
+    attestation: eligible
+      ? `I elect this Quick Pay option for this load under the Caravan Quick Pay Agreement${profile.quickPayVersion ? ` (version ${profile.quickPayVersion})` : ""}. The fee shown applies to this load only. Standard tier pay remains free and is not affected.`
+      : null,
     options: eligible
       ? [
           { speed: "STANDARD", feePercent: 0, label: `Standard — free, Net-${standardNetDays(tier)}` },
@@ -294,7 +304,7 @@ router.put("/loads/:loadId/quickpay-speed", async (req: AuthRequest, res: Respon
 
   const profile = await prisma.carrierProfile.findUnique({
     where: { userId: req.user!.id },
-    select: { id: true, tier: true, quickPayEnabled: true },
+    select: { id: true, tier: true, quickPayEnabled: true, quickPayVersion: true },
   });
   if (!profile) {
     res.status(404).json({ error: "Carrier profile not found" });
@@ -370,6 +380,7 @@ router.put("/loads/:loadId/quickpay-speed", async (req: AuthRequest, res: Respon
         decidedVia: "PORTAL",
         signerIp: extractClientIp(req),
         signerUserAgent: req.headers["user-agent"] ?? null,
+        quickPayVersion: profile.quickPayVersion,
       },
       tx,
     );

@@ -44,6 +44,13 @@ export interface RecordElectionInput {
   evidenceRef?: string | null;
   signerIp?: string | null;
   signerUserAgent?: string | null;
+  /**
+   * The Quick Pay Agreement version the carrier was attested against, from
+   * CarrierProfile.quickPayVersion. Recorded at decision time so the row says
+   * which text the election was made under rather than which text is current
+   * when it is read back (§16 #2 will replace that body).
+   */
+  quickPayVersion?: string | null;
 }
 
 export type RecordElectionResult =
@@ -136,6 +143,7 @@ export async function record(input: RecordElectionInput, db: Db = prisma): Promi
         evidenceRef: ref,
         signerIp: input.signerIp ?? null,
         signerUserAgent: input.signerUserAgent ?? null,
+        quickPayVersion: input.quickPayVersion ?? null,
       },
       select: { id: true },
     });
@@ -175,6 +183,6 @@ export async function liveElectionForTender(tenderId: string, db: Db = prisma) {
   return db.quickPayElection.findFirst({
     where: { tenderId, status: "ELECTED" },
     orderBy: { decidedAt: "desc" },
-    select: { id: true, speed: true, feePercent: true, decidedVia: true, decidedAt: true, decidedByUserId: true },
+    select: { id: true, speed: true, feePercent: true, decidedVia: true, decidedAt: true, decidedByUserId: true, quickPayVersion: true },
   });
 }

@@ -2198,6 +2198,13 @@ model QuickPayElection {
   evidenceType TenderEvidenceType? @map("evidence_type")
   evidenceRef  String?             @map("evidence_ref")
 
+  // The Quick Pay Agreement version the carrier was attested against at
+  // DECISION time, copied from CarrierProfile.quickPayVersion. Counsel will
+  // replace that agreement body (§16 #2); an election recorded today has to
+  // say which text it was made under, not which text is current when somebody
+  // reads the row back.
+  quickPayVersion String? @map("quick_pay_version")
+
   signerIp        String? @map("signer_ip")
   signerUserAgent String? @map("signer_user_agent")
 

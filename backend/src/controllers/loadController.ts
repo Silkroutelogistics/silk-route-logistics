@@ -3,6 +3,7 @@ import { z } from "zod";
 import { PackageType } from "@prisma/client";
 import { prisma } from "../config/database";
 import { voidLiveRateConfirmations } from "../services/rateConfirmationVoidService";
+import { voidForTender as voidQuickPayElection } from "../services/quickPayElectionService";
 import { settleTender } from "../services/tenderTransitionService";
 
 import { AuthRequest } from "../middleware/auth";
@@ -1042,6 +1043,12 @@ export async function updateLoad(req: AuthRequest, res: Response) {
       });
       if (held) {
         await voidLiveRateConfirmations(existing.id);
+        // row 7c — the rate the election was made against has changed, so the
+        // election no longer describes a decision anyone made. The tender
+        // reverts to OFFERED below and a fresh election may be recorded against
+        // the same row; the partial unique index allows that because this one
+        // is VOIDED first.
+        await voidQuickPayElection(held.id, "rate_changed");
         await settleTender({
           tenderId: held.id,
           to: "OFFERED",

@@ -137,6 +137,75 @@ async function main() {
   const total = await prisma.quickPayElection.count({ where: { tenderId: tender.id } });
   check("the history survives", total >= 3, `${total} rows`);
 
+  console.log("\n[7] release voids the election AND nulls the Load projection");
+  // Re-elect first, so there is something live for the release to settle.
+  await record({
+    tenderId: tender.id, loadId: load.id, carrierProfileId: profile.id,
+    speed: "SEVEN_DAY", tier: profile.tier, decidedVia: "PORTAL",
+  });
+  await prisma.load.update({
+    where: { id: load.id },
+    data: { quickPaySpeed: "SEVEN_DAY", quickPayFeePercent: 2, status: "BOOKED", carrierId: user.id },
+  });
+  await prisma.loadTender.update({ where: { id: tender.id }, data: { status: "ACCEPTED" } });
+  const { releaseCarrier } = await import("../src/services/carrierReleaseService");
+  await releaseCarrier({ loadId: load.id, reason: "srl_error", actorId: user.id });
+  const afterRelease = await prisma.load.findUnique({
+    where: { id: load.id },
+    select: { quickPaySpeed: true, quickPayFeePercent: true, carrierId: true },
+  });
+  check("the carrier is off the load", afterRelease?.carrierId === null);
+  check("Load.quickPaySpeed is nulled", afterRelease?.quickPaySpeed === null, String(afterRelease?.quickPaySpeed));
+  check("Load.quickPayFeePercent is nulled", afterRelease?.quickPayFeePercent === null, String(afterRelease?.quickPayFeePercent));
+  check("no live election survives the release", (await liveElectionForTender(tender.id)) === null);
+
+  console.log("\n[8] a second carrier elects without touching the first record");
+  const firstRows = await prisma.quickPayElection.count({ where: { tenderId: tender.id } });
+  const user2 = await prisma.user.create({
+    data: { email: `qpe2-${stamp}@srl.invalid`, passwordHash: "x", firstName: "R", lastName: "S", role: "CARRIER" },
+    select: { id: true },
+  });
+  const profile2 = await prisma.carrierProfile.create({
+    data: {
+      userId: user2.id, mcNumber: `MC-QPE2${stamp}`, dotNumber: `${stamp + 1}`.slice(-7),
+      companyName: "Second Proof Carrier", contactName: "R S", contactPhone: "(269) 555-0101",
+      onboardingStatus: "APPROVED", status: "APPROVED", approvedAt: new Date(), tier: "SILVER", cppTier: "SILVER",
+    },
+    select: { id: true, tier: true },
+  });
+  const tender2 = await prisma.loadTender.create({
+    data: { loadId: load.id, carrierId: profile2.id, status: "ACCEPTED", offeredRate: 4200, expiresAt: new Date(Date.now() + 86400000) },
+    select: { id: true },
+  });
+  const r8 = await record({
+    tenderId: tender2.id, loadId: load.id, carrierProfileId: profile2.id,
+    speed: "SEVEN_DAY", tier: profile2.tier, decidedVia: "PORTAL",
+  });
+  check("the second carrier records an election", r8.ok === true);
+  // SILVER 7-day is 3 per the LOCKED ladder, so the second carrier is priced on
+  // THEIR tier and not on the first carrier tier.
+  check("priced on the SECOND carrier tier (SILVER = 3)", r8.ok === true && r8.feePercent === 3, r8.ok === true ? String(r8.feePercent) : "");
+  check("the first tender rows are untouched", (await prisma.quickPayElection.count({ where: { tenderId: tender.id } })) === firstRows);
+  check("the first tender still has nothing live", (await liveElectionForTender(tender.id)) === null);
+
+  console.log("\n[9] issuance resolves the pair FROM the election row");
+  const { resolveIssuedElection } = await import("../src/services/autoRateConfirmationService");
+  const liveRow = await liveElectionForTender(tender2.id);
+  const resolved = resolveIssuedElection(
+    { quickPaySpeed: liveRow!.speed, quickPayFeePercent: liveRow!.feePercent },
+    profile2.tier,
+  );
+  check("resolves ok", resolved.ok === true);
+  check("speed matches the row", resolved.ok === true && resolved.speed === liveRow!.speed);
+  check("fee matches the row", resolved.ok === true && resolved.feePercent === liveRow!.feePercent);
+  const noElection = resolveIssuedElection({}, profile2.tier);
+  check("no election resolves to STANDARD at zero, never a block", noElection.ok === true && noElection.speed === "STANDARD" && noElection.feePercent === 0);
+
+  await prisma.quickPayElection.deleteMany({ where: { tenderId: tender2.id } });
+  await prisma.loadTender.deleteMany({ where: { loadId: load.id } });
+  await prisma.carrierProfile.delete({ where: { id: profile2.id } });
+  await prisma.user.delete({ where: { id: user2.id } });
+
   // Cleanup, so a re-run is not polluted by the last one (§ the dirty-database
   // lesson: stale rows make a correct fix look broken).
   await prisma.quickPayElection.deleteMany({ where: { tenderId: tender.id } });

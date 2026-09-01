@@ -1,0 +1,12 @@
+-- The Quick Pay Agreement version an election was made under.
+--
+-- ADDITIVE, nullable, NO BACKFILL. Elections recorded before this column
+-- existed were made under whatever version was current then, and there is no
+-- record of which; writing today's version onto them would put a confident
+-- value on a guess, on rows a fee dispute would read.
+--
+-- ROW COUNT GATE (run against the target BEFORE deploying):
+--   SELECT count(*) FROM quick_pay_elections WHERE quick_pay_version IS NULL;
+-- A non-zero count is expected and correct on any environment that recorded an
+-- election between v3.8.ayc and this migration.
+ALTER TABLE "quick_pay_elections" ADD COLUMN "quick_pay_version" TEXT;

@@ -1,5 +1,6 @@
 import { prisma } from "../config/database";
 import { voidLiveRateConfirmations } from "./rateConfirmationVoidService";
+import { voidForTender as voidQuickPayElection } from "./quickPayElectionService";
 import { clearCarrier } from "./carrierAssignmentService";
 import { logTenderTransition } from "./waterfallEventService";
 import { log } from "../lib/logger";
@@ -134,8 +135,22 @@ export async function releaseCarrier(input: ReleaseCarrierInput): Promise<Releas
     await clearCarrier({
       loadId,
       status: "POSTED",
-      extra: { driverName: null, driverPhone: null, truckNumber: null, trailerNumber: null },
+      // v3.8 row 7c — the Quick Pay projection is nulled WITH the carrier.
+      //
+      // Load.quickPaySpeed and quickPayFeePercent survived a release, so a load
+      // re-offered to a DIFFERENT carrier carried the first carrier's elected
+      // fee. The next issuance re-resolves and overwrites it, so the stale value
+      // was only readable in the window between release and the next rate
+      // confirmation -- but a fee attributable to nobody is not a thing to leave
+      // readable at all, and the charge path reads this projection.
+      extra: {
+        driverName: null, driverPhone: null, truckNumber: null, trailerNumber: null,
+        quickPaySpeed: null, quickPayFeePercent: null,
+      },
     }, tx);
+    // The election settles with the tender it belonged to. Voided, never
+    // deleted: what a dispute asks is what was chosen and when.
+    if (activeTender) await voidQuickPayElection(activeTender.id, "carrier_released", tx);
 
     if (activeTender) {
       await tx.loadTender.update({
