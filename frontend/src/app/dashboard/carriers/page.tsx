@@ -1174,12 +1174,20 @@ export default function CarrierPoolPage() {
               <h3 className="text-lg font-semibold text-white mb-1">No carriers match your criteria</h3>
               <p className="text-sm text-slate-400 mb-4 max-w-sm">Invite carriers to join your network</p>
               <div className="flex items-center gap-3">
+                {/* v3.8.awx — isAdmin gate added. The header twin has always had
+                    one; this empty-state copy did not, so the first non-admin
+                    hire's first click on an empty carrier list would have been a
+                    403 from POST /carriers/invite (ADMIN, CEO). A button that
+                    renders for a role the route refuses is worse than no button:
+                    it reads as a broken product rather than a permission. */}
+                {isAdmin && (
                 <button
                   onClick={() => setInviteModalOpen(true)}
                   className="px-4 py-2 bg-gold text-navy rounded-lg text-sm font-medium"
                 >
                   Invite Carrier
                 </button>
+                )}
                 {/* Kept, and separately labelled: an AE with a carrier on the
                     phone sometimes walks them through the public form. The old
                     control did THIS while saying it did the other thing. */}
@@ -2375,7 +2383,21 @@ export default function CarrierPoolPage() {
 
                 {/* ===== v3.8.ajj — INFO REQUESTS THREAD TAB ===== */}
                 {panelTab === "info-requests" && selectedCarrier && (
-                  <InfoRequestThread carrierId={selectedCarrier.id} isAdmin={isAdmin} />
+                  // v3.8.awx — the opener is passed in so the empty state can own
+                  // its own CTA. Its old copy pointed at the Profile tab's button,
+                  // which is unmounted whenever this panel is showing.
+                  // canRequestInfo mirrors that button's status gate exactly, so
+                  // the two surfaces cannot drift apart.
+                  <InfoRequestThread
+                    carrierId={selectedCarrier.id}
+                    isAdmin={isAdmin}
+                    onRequestInfo={() => setInfoRequestModalOpen(true)}
+                    canRequestInfo={
+                      selectedCarrier.onboardingStatus !== "APPROVED" &&
+                      selectedCarrier.onboardingStatus !== "REJECTED" &&
+                      selectedCarrier.onboardingStatus !== "SUSPENDED"
+                    }
+                  />
                 )}
 
                 {/* v3.8.aki §13.3 Item 8.6 — Carrier preferences manual

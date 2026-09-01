@@ -423,7 +423,27 @@ const NEVER_OVERRIDABLE_CHECK_CODES = [
   "AGREEMENT_TERMINATED",
 ] as const;
 
-const SCOPED_CHECK_CODES = ["AUTHORITY_TOO_YOUNG", "CHAMELEON_UNREVIEWED"];
+// v3.8.awx — UNUSUAL_OTP_SMS_DISABLE added. It was missing, and the omission
+// made a shipped feature inert: the AE's "suppress unusual-activity SMS" button
+// on SecuritySignalsCard posts this checkCode here, hit the allow-list below,
+// and 400'd for every role including CEO.
+//
+// Traced before adding rather than assumed. Two of the feature's three paths are
+// already wired and only the WRITE was blocked:
+//   consume — carrierAuth.ts login looks for an active override with this code
+//             and suppresses the SMS dispatch when it finds one
+//   surface — carriers.ts reads it back to render the active-override state
+//   write   — this endpoint, which refused it
+// A read and a consumer with no writer is a feature that cannot be turned on, so
+// the fix is the allow-list, not deleting the button. It exists because
+// cross-border owner-operators legitimately log in from several countries and
+// otherwise hit the SMS gate on every login.
+//
+// Safe as a scoped code: it is not a blocked_code, so minting it releases no
+// compliance block. It only makes a row the login path already looks for. It is
+// absent from NEVER_OVERRIDABLE above, correctly — the five absolutes are facts
+// held by other parties, and this is an SRL notification preference.
+const SCOPED_CHECK_CODES = ["AUTHORITY_TOO_YOUNG", "CHAMELEON_UNREVIEWED", "UNUSUAL_OTP_SMS_DISABLE"];
 
 // v3.8.ahn — extended to accept optional checkCode for scoped overrides
 // (Item 182 sprint 4). When checkCode is "AUTHORITY_TOO_YOUNG" the

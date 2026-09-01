@@ -62,17 +62,83 @@ describe("BlockedCode mirror", () => {
     ).toEqual(backend);
   });
 
-  it("every scoped code the endpoint accepts is a real blocked_code", () => {
-    // The allow-list and the union are separate declarations; a code accepted
-    // by the endpoint but never emitted would mint overrides that release
-    // nothing, which is the failure the allow-list was added to prevent.
+  /**
+   * Scoped codes that are deliberately NOT blocked_codes.
+   *
+   * v3.8.awx — this category did not exist when the guard was written, and the
+   * original rule ("every scoped code is a blocked_code") was right about its
+   * reason and wrong about its scope. The reason is that a code releasing
+   * nothing mints a useless override. But "releases nothing" and "is not a
+   * blocked_code" are not the same statement: an override can be consumed
+   * somewhere other than complianceCheck.
+   *
+   * UNUSUAL_OTP_SMS_DISABLE is consumed by the carrier login path, which
+   * suppresses unusual-activity SMS for cross-border carriers who would
+   * otherwise hit the gate on every login. It waives a notification, not a
+   * compliance block, so it correctly appears in no blocked_codes array.
+   *
+   * The blanket-fallback risk this file exists to catch does not apply to this
+   * category: OverrideComplianceModal maps a blocked_code to a checkCode and is
+   * the surface with the un-recognised-code fallback. These are posted
+   * explicitly by their own UI, so a missing mirror entry cannot silently widen
+   * them into a blanket override.
+   *
+   * The rule below is stricter than the one it replaces: membership here is not
+   * a free pass, it requires PROVING a consumer exists.
+   */
+  const NON_COMPLIANCE_SCOPED_CODES: Record<string, { consumerFile: string; why: string }> = {
+    UNUSUAL_OTP_SMS_DISABLE: {
+      consumerFile: "src/routes/carrierAuth.ts",
+      why: "carrier login suppresses unusual-activity SMS dispatch while an active override exists",
+    },
+  };
+
+  it("every scoped code the endpoint accepts either is a blocked_code or has a proven consumer", () => {
+    // A code accepted by the endpoint but read by nothing mints overrides that
+    // do nothing at all — the failure the allow-list was added to prevent. A
+    // blocked_code is read by complianceCheck; anything else has to show its
+    // reader, or it is exactly that failure wearing an exemption.
     const ctrl = fs.readFileSync(path.join(BACKEND, "src/controllers/complianceController.ts"), "utf8");
     const m = /const SCOPED_CHECK_CODES\s*=\s*\[([^\]]+)\]/.exec(ctrl);
     expect(m, "SCOPED_CHECK_CODES should exist in complianceController").toBeTruthy();
     const scoped = [...m![1].matchAll(/"([A-Z_]+)"/g)].map((x) => x[1]);
     expect(scoped.length).toBeGreaterThan(0);
+
     for (const c of scoped) {
-      expect(backend, `${c} is accepted as a scoped override but is not a BlockedCode`).toContain(c);
+      const exempt = NON_COMPLIANCE_SCOPED_CODES[c];
+      if (!exempt) {
+        expect(
+          backend,
+          `${c} is accepted as a scoped override but is not a BlockedCode, and is not declared as a non-compliance code with a consumer. Either emit it from complianceCheck, or add it to NON_COMPLIANCE_SCOPED_CODES naming the file that reads it.`,
+        ).toContain(c);
+        continue;
+      }
+      // Declared non-compliance: prove the named consumer actually reads it.
+      const consumer = fs.readFileSync(path.join(BACKEND, exempt.consumerFile), "utf8");
+      expect(
+        consumer.includes(`"${c}"`),
+        `${c} is exempted as a non-compliance scoped code on the grounds that ${exempt.consumerFile} reads it (${exempt.why}), but that file does not mention it. Either the consumer moved or the exemption is stale — a scoped code nothing reads mints overrides that do nothing.`,
+      ).toBe(true);
     }
+  });
+
+  it("the non-compliance exemption list has no stale entries", () => {
+    // An exemption for a code the endpoint no longer accepts is dead permission.
+    const ctrl = fs.readFileSync(path.join(BACKEND, "src/controllers/complianceController.ts"), "utf8");
+    const m = /const SCOPED_CHECK_CODES\s*=\s*\[([^\]]+)\]/.exec(ctrl);
+    const scoped = [...m![1].matchAll(/"([A-Z_]+)"/g)].map((x) => x[1]);
+    const stale = Object.keys(NON_COMPLIANCE_SCOPED_CODES).filter((c) => !scoped.includes(c));
+    expect(stale, stale.length ? `Exemption(s) for code(s) SCOPED_CHECK_CODES no longer accepts: ${stale.join(", ")}. Delete them.` : "").toEqual([]);
+  });
+
+  it("no absolute is reachable as a scoped code", () => {
+    // Independent of the categories above: the five §14 absolutes must never be
+    // mintable, whichever list a future code lands on.
+    const ctrl = fs.readFileSync(path.join(BACKEND, "src/controllers/complianceController.ts"), "utf8");
+    const scoped = [...(/const SCOPED_CHECK_CODES\s*=\s*\[([^\]]+)\]/.exec(ctrl)![1]).matchAll(/"([A-Z_]+)"/g)].map((x) => x[1]);
+    const never = [...(/const NEVER_OVERRIDABLE_CHECK_CODES\s*=\s*\[([^\]]+)\]/.exec(ctrl)![1]).matchAll(/"([A-Z_]+)"/g)].map((x) => x[1]);
+    expect(never.length, "NEVER_OVERRIDABLE_CHECK_CODES should list the five absolutes").toBe(5);
+    const overlap = scoped.filter((c) => never.includes(c));
+    expect(overlap, overlap.length ? `Absolute(s) accepted as scoped overrides: ${overlap.join(", ")}` : "").toEqual([]);
   });
 });

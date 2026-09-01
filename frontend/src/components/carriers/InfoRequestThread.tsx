@@ -81,7 +81,34 @@ function formatBytes(bytes: number): string {
   return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
 }
 
-export function InfoRequestThread({ carrierId, isAdmin }: { carrierId: string; isAdmin: boolean }) {
+/**
+ * v3.8.awx — `onRequestInfo` / `canRequestInfo` added so the empty state can own
+ * its own call to action.
+ *
+ * It used to read "Use the 'Request Info' button above", and that button lives
+ * inside the Profile tab's `panelTab === "profile"` branch while this component
+ * mounts under `panelTab === "info-requests"`. Those are mutually exclusive, so
+ * the named control was unmounted 100% of the time the message was on screen —
+ * for every role, in every carrier status. "Above" also pointed at nothing: the
+ * drawer's tab rail is a LEFT sibling, and the only thing above this panel is the
+ * carrier name and a close X.
+ *
+ * The seven empty states in this codebase that work all own their action; this
+ * was the one that delegated to a control in a sibling branch it could not see,
+ * so its copy had to describe the button by position and the position it guessed
+ * was never true. Passing the opener in fixes the class, not just the sentence.
+ */
+export function InfoRequestThread({
+  carrierId,
+  isAdmin,
+  onRequestInfo,
+  canRequestInfo = true,
+}: {
+  carrierId: string;
+  isAdmin: boolean;
+  onRequestInfo?: () => void;
+  canRequestInfo?: boolean;
+}) {
   const queryClient = useQueryClient();
 
   const { data, isLoading, isError } = useQuery({
@@ -113,7 +140,31 @@ export function InfoRequestThread({ carrierId, isAdmin }: { carrierId: string; i
       <div className="p-6 text-center">
         <MessageCircle size={32} className="text-gray-300 mx-auto mb-3" />
         <p className="text-sm font-semibold text-gray-700">No info requests yet</p>
-        <p className="text-xs text-gray-500 mt-1">Use the &ldquo;Request Info&rdquo; button above to ask this carrier for additional documents or clarification.</p>
+        {/* Role-aware, because the endpoint is. POST /info-requests is
+            authorize("ADMIN","CEO"), so telling an OPERATIONS or BROKER reader to
+            press a button would name a control they could never be shown. The old
+            copy was rendered unguarded even though this component already
+            receives isAdmin and uses it for Cancel further down. */}
+        {isAdmin && canRequestInfo && onRequestInfo ? (
+          <>
+            <p className="text-xs text-gray-500 mt-1">Ask this carrier for additional documents or clarification.</p>
+            <button
+              type="button"
+              onClick={onRequestInfo}
+              className="mt-3 inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-500/20 text-amber-400 rounded-lg text-xs hover:bg-amber-500/30 transition"
+            >
+              <MessageCircle className="w-3.5 h-3.5" /> Request Info
+            </button>
+          </>
+        ) : isAdmin && !canRequestInfo ? (
+          // The status exclusion is a front-end product decision, not a server
+          // one — POST /info-requests performs no onboardingStatus check. Say
+          // which state is blocking rather than showing a button that is absent
+          // for reasons the reader cannot see.
+          <p className="text-xs text-gray-500 mt-1">Info requests are available while an application is under review.</p>
+        ) : (
+          <p className="text-xs text-gray-500 mt-1">An admin can request additional documents or clarification from this carrier.</p>
+        )}
       </div>
     );
   }

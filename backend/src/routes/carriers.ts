@@ -407,7 +407,19 @@ router.post("/:id/agreements", authorize("ADMIN", "CEO", "OPERATIONS"), createAg
 // requires signedByName + signatureData, so it now 400s instead — still broken,
 // pre-existing, but reachable for the first time. Nothing in frontend/src, e2e,
 // backend/scripts or backend/__tests__ referenced either path.
-router.post("/:id/agreements/:agreementId/sign", authorize("ADMIN", "CEO", "OPERATIONS"), signAgreement);
+// v3.8.awx — OPERATIONS narrowed OUT, matching terminate below.
+//
+// Signing a new agreement is what CLEARS the AGREEMENT_TERMINATED block: the
+// gate reads the latest SIGNED row, so a fresh signature un-terminates a carrier.
+// Termination is ADMIN+CEO precisely because it hard-blocks every tender. Leaving
+// sign at OPERATIONS meant a role that cannot terminate a carrier could
+// un-terminate one — and through a route with no UI, so it left no trace anyone
+// would look at.
+//
+// Not an override and not a §14 breach: signing changes the underlying fact,
+// which §14 names as the legitimate remedy. The defect was the asymmetry, and
+// the fix is to make the pair match.
+router.post("/:id/agreements/:agreementId/sign", authorize("ADMIN", "CEO"), signAgreement);
 
 // Terminate a signed agreement. ADMIN + CEO only — narrower than create/sign
 // above, because terminating a BCA hard-blocks the carrier from every tender,
