@@ -4,8 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  Home, Package, Send, Truck, Users, GraduationCap, Shield, DollarSign, FileText, MessageSquare, Settings, ExternalLink, Menu, X,
-} from "lucide-react";
+  Home, Package, Send, Truck, Users, GraduationCap, Shield, DollarSign, FileText, MessageSquare, Settings, ExternalLink, Menu, X, History } from "lucide-react";
 
 // Sprint 52.hotfix.b — Tenders nav entry added at position 3 between
 // Available Loads and My Loads. Reflects workflow: scout available loads
@@ -16,6 +15,11 @@ const nav = [
   { id: "overview", href: "/carrier/dashboard", icon: Home, label: "Dashboard" },
   { id: "available", href: "/carrier/dashboard/available-loads", icon: Package, label: "Available Loads" },
   { id: "tenders", href: "/carrier/dashboard/tenders", icon: Send, label: "Tenders" },
+  // v3.8.axr — what happened to everything else. The portal showed only live
+  // offers, so a load lost to a faster carrier simply vanished from the
+  // carrier's view. It sits next to Tenders because it answers the question
+  // the Tenders page raises and cannot answer.
+  { id: "tender-history", href: "/carrier/dashboard/tender-history", icon: History, label: "History" },
   { id: "myloads", href: "/carrier/dashboard/my-loads", icon: Truck, label: "My Loads" },
   // v3.8.amw — Driver Academy T1: roster entry between operational loads
   // and compliance (drivers are the people side of compliance).

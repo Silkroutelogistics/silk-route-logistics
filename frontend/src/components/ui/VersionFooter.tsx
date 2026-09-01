@@ -1,3 +1,48 @@
+// v3.8.axr — A LOAD A CARRIER LOST SIMPLY VANISHED FROM THEIR VIEW.
+//
+// The portal showed only LIVE offers. A carrier could see what they were being
+// asked to take and nothing at all about what became of anything else, so three
+// loads lost to faster carriers looked, from their side, like three loads that
+// disappeared.
+//
+// That is the surface the DECLINED/WITHDRAWN split was built for. SRL pulling
+// an offer because somebody else got there first is not the carrier refusing
+// work, and §9 scores acceptance rate at 10% of Compass — so the distinction is
+// money to them. Keeping it only in our database is asking them to trust a
+// number they cannot check.
+//
+// GET /carrier-tenders/history, scoped to their own profile id, and a read-only
+// page. Read-only deliberately: everything here is settled or is already
+// actionable on the Tenders page, and a second place to act on a live offer is
+// a second place for the two to disagree about what state it is in.
+//
+// Wording per outcome, through the same helper the AE side uses: "Load
+// covered", their own decline with the reason THEY gave, "Offer expired", and a
+// release by reason code — srl_error reads "Released by SRL", because that
+// reason records no fall-off against them and the wording must not contradict
+// the record.
+//
+// Tone by outcome, not by status name. A withdrawal and a decline are both "the
+// load went elsewhere" from a carrier's side, but only one is something they
+// did — colouring SRL's own withdrawal like a refusal would undo in the palette
+// exactly what the wording is there to fix.
+//
+// THE PROOF FOUND A REAL GAP, not a fixture problem. settleTender persisted
+// statusReason only for WITHDRAWN, so a RELEASED tender lost the reason the
+// carrier-facing wording reads and fell back to a bare "Released". Widened to
+// both. RELEASED also joins the SettleTo union — leaving it out meant callers
+// reached it through an `as never` cast, which is how that gap went unnoticed.
+//
+// Proof: _carrier-history-proof.ts, 12/12 over the real router. Injection:
+// unscoping the query leaks another carrier's tender and the isolation
+// assertion names it.
+//
+// Two guards caught me. The 403 on the first run was the Arc 15 mandatory-2FA
+// wall — the fixture now ENROLS rather than bypassing, because a proof that
+// walks around the wall is not walking the path a real carrier walks. And the
+// Load.rate ratchet flagged a field I had called `rate`; renamed tenderRate,
+// because a bare `rate` beside a column under a drop migration is exactly the
+// ambiguity that retirement exists to remove.
 // v3.8.axq — AN AE COULD ACCEPT FOR A CARRIER ON NOBODY'S WORD.
 //
 // An accept-on-behalf records a decision the carrier made somewhere SRL cannot
@@ -16683,7 +16728,7 @@
 // and a data: qrCodeDataUrl are all legitimate and a guard that flagged them
 // would be noise. Comments are blanked before matching — the fixes are explained
 // in comments that necessarily quote the banned patterns.
-export const SRL_VERSION = "3.8.axq";
+export const SRL_VERSION = "3.8.axr";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

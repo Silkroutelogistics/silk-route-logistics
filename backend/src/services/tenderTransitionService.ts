@@ -64,7 +64,22 @@ export type Actor = {
 };
 
 /** Every state a live tender can settle into. */
-export type SettleTo = "ACCEPTED" | "DECLINED" | "COUNTERED" | "EXPIRED" | "WITHDRAWN";
+/**
+ * Every state a live tender can settle into.
+ *
+ * RELEASED is here even though carrierReleaseService owns the release ACT.
+ * That service does six things together -- carrier off, paper voided, load
+ * returned, fall-off recorded -- and this is only the state move it performs.
+ * Leaving RELEASED out of the union meant callers reached it through an `as
+ * never` cast, which is how the statusReason gap below went unnoticed.
+ */
+export type SettleTo =
+  | "ACCEPTED"
+  | "DECLINED"
+  | "COUNTERED"
+  | "EXPIRED"
+  | "WITHDRAWN"
+  | "RELEASED";
 
 /**
  * DECLINED is carrier-initiated, and this is where that stops being a rule
@@ -216,7 +231,14 @@ export async function settleTender(
     fromStates,
     {
       status: input.to as never,
-      ...(input.to === "WITHDRAWN" && input.reason ? { statusReason: input.reason } : {}),
+      // WITHDRAWN and RELEASED both, because statusReason is what the
+      // carrier-facing wording reads: "Load covered" rather than "Offer
+      // withdrawn", "Released by SRL" rather than a bare "Released". Persisting
+      // it for one and not the other made a release fall back to the generic
+      // label -- found by the carrier-history proof, not by reasoning.
+      ...((input.to === "WITHDRAWN" || input.to === "RELEASED") && input.reason
+        ? { statusReason: input.reason }
+        : {}),
       ...(input.declineReason !== undefined ? { declineReason: input.declineReason } : {}),
       ...(input.counterRate !== undefined ? { counterRate: input.counterRate } : {}),
       ...(input.bumpVersion ? { version: { increment: 1 } } : {}),
@@ -272,7 +294,14 @@ export async function settleTenders(
     LIVE,
     {
       status: input.to as never,
-      ...(input.to === "WITHDRAWN" && input.reason ? { statusReason: input.reason } : {}),
+      // WITHDRAWN and RELEASED both, because statusReason is what the
+      // carrier-facing wording reads: "Load covered" rather than "Offer
+      // withdrawn", "Released by SRL" rather than a bare "Released". Persisting
+      // it for one and not the other made a release fall back to the generic
+      // label -- found by the carrier-history proof, not by reasoning.
+      ...((input.to === "WITHDRAWN" || input.to === "RELEASED") && input.reason
+        ? { statusReason: input.reason }
+        : {}),
       ...(input.respondedAt ? { respondedAt: input.respondedAt } : {}),
     },
     input.to,

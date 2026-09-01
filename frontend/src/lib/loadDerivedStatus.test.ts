@@ -95,6 +95,25 @@ describe("what the carrier is told", () => {
     expect(carrierTenderLabel("DECLINED", null)).toBe("You declined");
   });
 
+  it("an expiry says it was the offer that ran out", () => {
+    // "Expired" alone reads as though something of theirs lapsed.
+    expect(carrierTenderLabel("EXPIRED", null)).toBe("Offer expired");
+  });
+
+  it("a release SRL caused says so, and does not imply the carrier's fault", () => {
+    // srl_error records no fall-off against the carrier. The wording must not
+    // contradict the record.
+    expect(carrierTenderLabel("RELEASED", "srl_error")).toBe("Released by SRL");
+    expect(carrierTenderLabel("RELEASED", "customer_cancel")).toBe("Load cancelled by customer");
+    expect(carrierTenderLabel("RELEASED", "carrier_fell_off")).toBe("You released this load");
+  });
+
+  it("every release reason has words of its own", () => {
+    const reasons = ["carrier_fell_off", "compliance_lapse", "rate_dispute", "customer_cancel", "srl_error"];
+    const labels = reasons.map((r) => carrierTenderLabel("RELEASED", r));
+    expect(new Set(labels).size, "two reasons sharing a label is a reason nobody can act on").toBe(reasons.length);
+  });
+
   it("every withdraw reason has words of its own", () => {
     const reasons = ["load_covered", "counter_rejected", "load_cancelled", "position_skipped", "compliance_block"];
     const labels = reasons.map((r) => carrierTenderLabel("WITHDRAWN", r));
@@ -104,6 +123,14 @@ describe("what the carrier is told", () => {
 });
 
 describe("nothing bypasses the selector", () => {
+  // The carrier portal is in this list on purpose. It is the surface where the
+  // DECLINED/WITHDRAWN split is actually paid out -- a carrier reading
+  // "WITHDRAWN" where SRL means "somebody else took it" is the exact harm the
+  // split exists to prevent, and it is invisible from the AE side.
+  const CARRIER_SURFACES = [
+    "src/app/carrier/dashboard/tender-history/page.tsx",
+  ];
+
   const SURFACES = [
     "src/app/dashboard/loads/page.tsx",
     "src/app/dashboard/track-trace/BoardTable.tsx",
@@ -132,12 +159,28 @@ describe("nothing bypasses the selector", () => {
     }
   });
 
+  it("the carrier portal speaks through the wording helper", () => {
+    for (const rel of CARRIER_SURFACES) {
+      const raw = fs.readFileSync(path.resolve(__dirname, "..", "..", rel), "utf8");
+      expect(raw, rel + " must import carrierTenderLabel").toContain("carrierTenderLabel");
+      const src = strip(raw);
+      // A raw status rendered to a CARRIER is the failure this whole split
+      // exists to prevent: "WITHDRAWN" reads as though they refused the load.
+      const rawStatus = src.match(/\{\s*\w+\.status\s*\}|\w+\.status\.replace\(/g) ?? [];
+      expect(rawStatus, rel + " renders a raw tender status to a carrier").toEqual([]);
+    }
+  });
+
   it("the surface list is not silently empty (vacuity tripwire)", () => {
     // A guard over files that have moved reports a clean tree forever.
     for (const rel of SURFACES) {
       const p = path.resolve(__dirname, "..", "..", rel);
       expect(fs.existsSync(p), `${rel} no longer exists — update SURFACES`).toBe(true);
       expect(fs.readFileSync(p, "utf8")).toContain("deriveLoadStatus");
+    }
+    for (const rel of CARRIER_SURFACES) {
+      const p = path.resolve(__dirname, "..", "..", rel);
+      expect(fs.existsSync(p), rel + " no longer exists -- update CARRIER_SURFACES").toBe(true);
     }
   });
 });

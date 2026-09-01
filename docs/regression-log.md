@@ -13,6 +13,62 @@ so it's searchable and never lost.
 
 ---
 
+## Fixed — 2026-09-01 (v3.8.axr — a load a carrier lost simply vanished from their view)
+
+- **Status:** commit 10d of 12. Closes commit 10. Commit 11 is the RC lifecycle.
+- **Symptom:** the portal showed only LIVE offers. A carrier could see what they
+  were being asked to take and **nothing at all** about what became of anything
+  else — so three loads lost to faster carriers looked, from their side, like
+  three loads that disappeared.
+- **Why it matters more than a missing screen:** this is the surface the
+  DECLINED/WITHDRAWN split was built for. SRL pulling an offer because somebody
+  else got there first is not the carrier refusing work, and §9 scores acceptance
+  rate at 10% of Compass — so the distinction is money to them. Keeping it only
+  in our database is asking them to trust a number they cannot check.
+- **Shape:** `GET /carrier-tenders/history`, scoped to the authed carrier's own
+  profile id, soft-deleted rows excluded; a read-only page at
+  `/carrier/dashboard/tender-history` with a sidebar entry beside Tenders.
+- **Read-only, deliberately.** Everything here is settled or is already
+  actionable on the Tenders page, and a second place to act on a live offer is a
+  second place for the two to disagree about what state it is in.
+- **Wording per outcome, through the same helper the AE side uses:** "Load
+  covered"; their own decline with the reason **they** gave; "Offer expired";
+  and a release by reason code — `srl_error` reads **"Released by SRL"**, because
+  that reason records no fall-off against them and the wording must not
+  contradict the record.
+- **Tone by outcome, not by status name.** A withdrawal and a decline are both
+  "the load went elsewhere" from a carrier's side, but only one is something they
+  did — colouring SRL's own withdrawal like a refusal would undo in the palette
+  exactly what the wording is there to fix.
+- **The proof found a real gap, not a fixture problem.** `settleTender` persisted
+  `statusReason` only for `WITHDRAWN`, so a RELEASED tender lost the reason the
+  carrier-facing wording reads and fell back to a bare "Released". Widened to
+  both. **`RELEASED` also joins the `SettleTo` union** — leaving it out meant
+  callers reached it through an `as never` cast, which is precisely how that gap
+  went unnoticed.
+- **Structural guard:** the carrier surface must import `carrierTenderLabel` and
+  must print no raw tender status. A raw `WITHDRAWN` shown to a carrier reads as
+  though they refused the load, which is the whole harm the split prevents.
+  Injection-verified.
+- **The guard's first version was vacuous and was caught.** Its regex lost its
+  backslashes in transit and matched nothing, so it passed over a surface it was
+  not reading. Fixed, then re-injected.
+- **Proof:** `_carrier-history-proof.ts`, **12/12** over the real router.
+  Injection: unscoping the query leaks another carrier's tender and the isolation
+  assertion names it.
+- **Two existing guards caught me, and both were right.** The 403 on the first
+  run was the Arc 15 mandatory-2FA wall — the fixture now **enrols** rather than
+  bypassing, because a proof that walks around the wall is not walking the path a
+  real carrier walks. And the `Load.rate` ratchet (§13.3 Item 227) flagged a
+  field I had called `rate`; renamed `tenderRate`, because a bare `rate` beside a
+  column under a drop migration is exactly the ambiguity that retirement exists
+  to remove.
+- **Outbound (§19 Sub-pattern 20):** keys explicitly empty. `[Email] Sent to`
+  count: **0**, measured.
+- **Gates:** backend tsc clean, vitest **1426 pass / 1 fail** (known `urlSafety`
+  DNS red); frontend tsc + vitest **114/114** + build clean, with the new route
+  confirmed in the static export.
+
 ## Fixed — 2026-09-01 (v3.8.axq — an AE could accept for a carrier on nobody's word)
 
 - **Status:** commit 10c of 12. Carrier-facing tender history is 10d.

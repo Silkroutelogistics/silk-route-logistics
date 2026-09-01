@@ -218,8 +218,23 @@ export function carrierTenderLabel(status: string, statusReason?: string | null)
       default: return "Offer withdrawn";
     }
   }
-  if (status === "RELEASED") return "Released";
-  if (status === "EXPIRED") return "Expired";
+  if (status === "RELEASED") {
+    // A release is not one event to a carrier. Coming off a load because their
+    // insurance lapsed, because the customer cancelled, and because SRL made a
+    // mistake are three different things — and only the first is theirs. The
+    // srl_error case says so plainly rather than leaving them to assume fault:
+    // that reason records NO fall-off against them, and the wording should not
+    // contradict the record.
+    switch (statusReason) {
+      case "carrier_fell_off": return "You released this load";
+      case "compliance_lapse": return "Released — compliance";
+      case "rate_dispute": return "Released — rate dispute";
+      case "customer_cancel": return "Load cancelled by customer";
+      case "srl_error": return "Released by SRL";
+      default: return "Released";
+    }
+  }
+  if (status === "EXPIRED") return "Offer expired";
   if (status === "DECLINED") return "You declined";
   if (status === "RC_SENT") return "Rate confirmation sent";
   if (status === "CONFIRMED") return "Confirmed";
