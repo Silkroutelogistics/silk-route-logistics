@@ -222,6 +222,35 @@ export async function downloadBOLFromLoad(req: AuthRequest, res: Response) {
       return;
     }
 
+    // ── AND THE RATE CONFIRMATION MUST BE SIGNED FIRST ──
+    //
+    // The bill of lading is the document that sends a truck to a shipper's
+    // dock. Handing it to a carrier who has not signed the rate confirmation
+    // means freight moves on terms nobody executed -- and if it then goes
+    // wrong, the only paper SRL holds is a rate confirmation the carrier never
+    // agreed to. Signing is a few minutes; unwinding an unpapered load is not.
+    //
+    // CARRIER ONLY. AE roles need the BOL while they are arranging the
+    // signature, and gating them would make the document unreachable by
+    // exactly the person chasing it. Same split as the rate-confirmation
+    // download and the driver-verification gate above it.
+    if (req.user!.role === "CARRIER") {
+      const confirmed = await prisma.loadTender.findFirst({
+        where: { loadId: load.id, status: "CONFIRMED", deletedAt: null },
+        select: { id: true },
+      });
+      if (!confirmed) {
+        res.status(403).json({
+          error: "RC_NOT_SIGNED",
+          message:
+            "Sign the rate confirmation before downloading the bill of lading. The signing link is in " +
+            "the rate confirmation email; if it has expired, ask your dispatcher to send a new one.",
+          action: { href: "/carrier/dashboard/my-loads", label: "View this load" },
+        });
+        return;
+      }
+    }
+
     // Phase 5E.a: auto-generate (or reuse) a STATUS_ONLY ShipperTrackingToken
     // on every BOL-print event. Token is plumbed through generateBOLFromLoad
     // context for 5E.b to encode into the QR. Idempotent per loadId — BOL

@@ -15,6 +15,7 @@ import { nextShipmentNumber } from "./shipmentController";
 import { complianceCheck } from "../services/complianceMonitorService";
 import { notifyTenderAction, notifyQuickPayElectionOpen } from "../services/notificationService";
 import { autoGenerateRateConfirmation } from "../services/autoRateConfirmationService";
+import { voidLiveRateConfirmations } from "../services/rateConfirmationVoidService";
 import { hooks } from "../lib/hooks";
 import { log } from "../lib/logger";
 import { validateLoadStatusTransition } from "../lib/loadStateMachine";
@@ -473,10 +474,7 @@ export async function counterTender(req: AuthRequest, res: Response) {
       tx,
     );
     const t = await tx.loadTender.findUniqueOrThrow({ where: { id: tender.id } });
-    await tx.rateConfirmation.updateMany({
-      where: { loadId: tender.loadId, status: { notIn: ["SIGNED", "FINALIZED", "VOID"] } },
-      data: { status: "VOID" },
-    });
+    await voidLiveRateConfirmations(tender.loadId, tx);
     return t;
   });
 

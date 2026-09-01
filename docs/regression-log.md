@@ -13,6 +13,58 @@ so it's searchable and never lost.
 
 ---
 
+## Fixed — 2026-09-01 (v3.8.axv — changing the rate left a carrier booked at a number they never agreed to)
+
+- **Status:** commit 11d of 12. 11e moves the customer tracking fan-out to
+  CONFIRMED and wires resend/view.
+- **Symptom:** an AE could change `carrierRate` on an accepted load and nothing
+  moved. The tender stayed ACCEPTED, so the load looked booked; the rate
+  confirmation stayed SENT, so the document a carrier could **still sign** stated
+  the old price. A carrier who signed it would have executed terms SRL had
+  already changed.
+- **Shape:** a rate change on a load held at ACCEPTED or RC_SENT voids the live
+  rate confirmation and returns the tender to OFFERED **at the new rate**, with a
+  version bump. That is a re-offer, not a cancellation: same carrier, same load,
+  a number they have not agreed to yet. They may still say no, which is the
+  point — the alternative is binding them to a rate they never saw.
+- **`respondedAt` and `counterRate` are cleared on any re-offer.** A stale
+  `respondedAt` makes a carrier who has not answered look like they already had,
+  which is an accepted row wearing OFFERED rather than a live offer.
+- **THE VOID NOW KILLS THE SIGNING TOKEN, and that is the load-bearing half.** A
+  voided document that is still signable is worse than one left live: the link is
+  already in the carrier's inbox, and the signature would be genuine on terms
+  nobody meant them to see. Isolated by injection — voiding the status alone
+  leaves the dead link answering **200**.
+- **One void rule, one place.** Three callers needed it (carrier counter, carrier
+  release, and now the rate change) and each had its own copy of the same
+  `notIn: [SIGNED, FINALIZED, VOID]` predicate. Three copies of one rule is how
+  the six hand-rolled sibling-withdraw blocks came to disagree about whether
+  COUNTERED counts as live — the defect this arc opened by fixing. Extracted to
+  `voidLiveRateConfirmations`, and VOID stays in the exclusion list so a re-void
+  is a no-op and every caller is idempotent without remembering to be.
+- **SIGNED and FINALIZED are never touched.** Voiding an executed rate
+  confirmation would not undo the agreement; it would destroy the record OF the
+  agreement while leaving the agreement intact, which is strictly worse than a
+  stale document standing. A rate change after execution therefore leaves both
+  the document and the CONFIRMED tender alone. Whether an executed load should be
+  re-rateable at all is a policy question, not a wiring one.
+- **The bill of lading now waits for the signature.** It is the document that
+  sends a truck to a shipper's dock, and handing it to a carrier who has not
+  signed means freight moves on terms nobody executed — leaving SRL holding only
+  a rate confirmation the carrier never agreed to. **CARRIER only:** the AE needs
+  the BOL while arranging the signature, and gating them would make it
+  unreachable by exactly the person chasing it. Same split as the
+  rate-confirmation download and the driver-verification gate beside it.
+- **The refusal names the remedy and where to do it**, because a 403 that does
+  not is a dead end — the v3.8.awy lesson from the driver-verification message.
+- **Proof:** `_arc-rate-change-proof.ts`, **16/16** over the real router.
+  Injections, both executed: suppressing the revert gives 10/16; voiding without
+  clearing the token gives 14/16 and names the still-working link.
+- **Outbound (§19 Sub-pattern 20):** keys explicitly empty. `[Email] Sent to`
+  count: **0**, measured.
+- **Gates:** backend tsc clean, vitest **1440 pass / 1 fail** (known `urlSafety`
+  DNS red); frontend tsc clean.
+
 ## Fixed — 2026-09-01 (v3.8.axu — a rate confirmation could be "signed" by anyone with a session, and the record was a name in a JSON blob)
 
 - **Status:** commit 11c of 12. Closes gap-table row 9. 11d lands the rate-change

@@ -1,3 +1,24 @@
+// v3.8.axv — CHANGING THE RATE LEFT A CARRIER BOOKED AT A NUMBER THEY NEVER
+// AGREED TO.
+//
+// An AE could change carrierRate on an accepted load and nothing moved. The
+// tender stayed ACCEPTED so the load looked booked, and the rate confirmation
+// stayed SENT so the document the carrier could still sign stated the old price.
+//
+// Now the live rate confirmation is voided and the tender goes back to OFFERED
+// at the new rate with a version bump. A re-offer, not a cancellation: same
+// carrier, same load, a number they have not agreed to yet. They may still say
+// no, which is the point.
+//
+// The void also kills the signing token, and that is the load-bearing half: a
+// voided document that is still signable is worse than one left live, because
+// the link is already in the carrier's inbox. Isolated by injection -- voiding
+// the status alone leaves the dead link answering 200.
+//
+// One void rule in one place, now that three callers need it. And the bill of
+// lading waits for the signature, because it is the document that sends a truck
+// to a shipper's dock.
+
 // v3.8.axu — A RATE CONFIRMATION COULD BE "SIGNED" BY ANYONE WITH A SESSION, AND
 // THE RECORD WAS A NAME IN A JSON BLOB.
 //
@@ -16794,7 +16815,7 @@
 // and a data: qrCodeDataUrl are all legitimate and a guard that flagged them
 // would be noise. Comments are blanked before matching — the fixes are explained
 // in comments that necessarily quote the banned patterns.
-export const SRL_VERSION = "3.8.axu";
+export const SRL_VERSION = "3.8.axv";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

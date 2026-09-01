@@ -1,4 +1,5 @@
 import { prisma } from "../config/database";
+import { voidLiveRateConfirmations } from "./rateConfirmationVoidService";
 import { clearCarrier } from "./carrierAssignmentService";
 import { logTenderTransition } from "./waterfallEventService";
 import { log } from "../lib/logger";
@@ -147,11 +148,7 @@ export async function releaseCarrier(input: ReleaseCarrierInput): Promise<Releas
     // touch them: an executed rate confirmation is evidence of what was agreed,
     // and a release does not get to rewrite it. What it does is stop the
     // document being live.
-    const voided = await tx.rateConfirmation.updateMany({
-      where: { loadId, status: { notIn: ["SIGNED", "FINALIZED", "VOID"] } },
-      data: { status: "VOID" },
-    });
-    return voided.count;
+    return voidLiveRateConfirmations(loadId, tx);
   });
 
   if (activeTender) {

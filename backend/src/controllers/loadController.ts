@@ -2,6 +2,9 @@ import { Response } from "express";
 import { z } from "zod";
 import { PackageType } from "@prisma/client";
 import { prisma } from "../config/database";
+import { voidLiveRateConfirmations } from "../services/rateConfirmationVoidService";
+import { settleTender } from "../services/tenderTransitionService";
+
 import { AuthRequest } from "../middleware/auth";
 import { createLoadSchema, updateLoadStatusSchema, loadQuerySchema } from "../validators/load";
 import { autoGenerateInvoice } from "../services/invoiceService";
@@ -1009,6 +1012,53 @@ export async function updateLoad(req: AuthRequest, res: Response) {
 
     if (Object.keys(shipmentSync).length > 0) {
       await prisma.shipment.update({ where: { id: linkedShipment.id }, data: shipmentSync });
+    }
+  }
+
+  // ── A RATE CHANGE AFTER ACCEPTANCE UNDOES THE ACCEPTANCE ──
+  //
+  // A carrier accepted a number. Changing that number does not produce a
+  // carrier who accepted the new one -- it produces a carrier who agreed to
+  // something no longer on offer, and a rate confirmation stating terms
+  // neither side holds. Left alone the load looks booked, and the document the
+  // carrier can still sign says the wrong price.
+  //
+  // So the live rate confirmation is voided and the tender goes back to
+  // OFFERED at the new rate. That is a re-offer, not a cancellation: same
+  // carrier, same load, a number they have not agreed to yet. They may still
+  // say no, which is the point -- the alternative is binding them to a rate
+  // they never saw.
+  //
+  // SIGNED and FINALIZED are untouched by the void helper, so a rate change
+  // after execution cannot rewrite the evidence of what was agreed. Whether an
+  // executed load should be re-rateable at all is a policy question; today the
+  // document survives and the tender stays CONFIRMED.
+  if (carrierRate !== undefined && existing.carrierRate !== null && carrierRate !== existing.carrierRate) {
+    try {
+      const held = await prisma.loadTender.findFirst({
+        where: { loadId: existing.id, status: { in: ["ACCEPTED", "RC_SENT"] }, deletedAt: null },
+        orderBy: { createdAt: "desc" },
+        select: { id: true, status: true },
+      });
+      if (held) {
+        await voidLiveRateConfirmations(existing.id);
+        await settleTender({
+          tenderId: held.id,
+          to: "OFFERED",
+          from: held.status as never,
+          offeredRate: carrierRate,
+          bumpVersion: true,
+          reason: "rate_changed",
+          actor: { id: req.user!.id, type: "USER" },
+          metadata: { previousRate: existing.carrierRate, newRate: carrierRate },
+        });
+      }
+    } catch (err) {
+      // Non-blocking: the rate change is already committed, and failing to
+      // revert must not roll back an edit the AE has been told landed. Logged
+      // at error because a load left ACCEPTED at a rate nobody agreed to is a
+      // real inconsistency a human has to resolve.
+      log.error({ err, loadId: existing.id }, "[Load] rate-change tender revert failed");
     }
   }
 

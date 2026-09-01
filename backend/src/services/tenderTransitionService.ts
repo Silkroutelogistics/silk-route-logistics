@@ -80,6 +80,10 @@ export type Actor = {
  * never` cast, which is how the statusReason gap below went unnoticed.
  */
 export type SettleTo =
+  // A re-offer. Reached when a rate changes after acceptance: the carrier agreed
+  // to a number that no longer stands, so the tender goes back to them at the
+  // new one rather than binding them to a rate they never saw.
+  | "OFFERED"
   | "ACCEPTED"
   | "RC_SENT"
   | "CONFIRMED"
@@ -200,6 +204,16 @@ export async function settleTender(
     /** The carrier's own words. DECLINED only. */
     declineReason?: string | null;
     counterRate?: number;
+    /**
+     * A NEW rate on a re-offer.
+     *
+     * Distinct from counterRate, which is the carrier's number. This is SRL's:
+     * when a rate changes after acceptance the tender goes back to the carrier
+     * at the new figure, and without writing it the tender would return to
+     * OFFERED still showing the rate they already agreed to -- which is the
+     * rate that no longer stands.
+     */
+    offeredRate?: number;
     /** A counter changes the terms, so it takes a new version. */
     bumpVersion?: boolean;
     respondedAt?: Date | null;
@@ -250,6 +264,12 @@ export async function settleTender(
         : {}),
       ...(input.declineReason !== undefined ? { declineReason: input.declineReason } : {}),
       ...(input.counterRate !== undefined ? { counterRate: input.counterRate } : {}),
+      ...(input.offeredRate !== undefined ? { offeredRate: input.offeredRate } : {}),
+      // A re-offer is not a response. Clearing these is what makes the tender
+      // genuinely live again rather than an accepted row wearing OFFERED: a
+      // stale respondedAt would make a carrier who has not answered yet look
+      // like they already had.
+      ...(input.to === "OFFERED" ? { respondedAt: null, counterRate: null } : {}),
       ...(input.bumpVersion ? { version: { increment: 1 } } : {}),
       ...(input.respondedAt !== undefined && input.respondedAt !== null
         ? { respondedAt: input.respondedAt }
