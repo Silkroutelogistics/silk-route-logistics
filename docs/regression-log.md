@@ -13,6 +13,50 @@ so it's searchable and never lost.
 
 ---
 
+## Fixed — 2026-09-01 (v3.8.axy — a migration reached production from a local shell, and the rail that closes it)
+
+- **Status:** commit 12a of the sprint close. 12b is the guard sweep, 12c the
+  signature on auto-dispatch paths, 12d the close.
+- **Symptom:** `backend/.env` held the production Neon `DATABASE_URL` and
+  `DIRECT_URL`, so `npx prisma migrate deploy` typed for a local container
+  applied `20260901100000` to **production** at 15:11:07 UTC on 2026-09-01.
+  Confirmed by reading `_prisma_migrations` directly.
+- **Harm: none.** Strictly additive — eight nullable columns and one index, no
+  backfill, no drop — and no production code read them at the time.
+  Schema-ahead-of-code is the ordering §13.3 Item 213 prescribes.
+- **Why: a rule with no mechanism.** §2.2 already said to use the npm script so
+  `prisma-target-guard` runs. The raw command bypassed it. Item 212 class.
+- **The rail:** `.env` targets the local container; production moved to
+  `.env.production.local` (gitignored, `git check-ignore` verified); nothing
+  loads it automatically because Prisma reads `.env` and never `.env.*.local`.
+  A raw `npx prisma migrate status` now reports `127.0.0.1:55473` — verified.
+- **Two named loaders**, `prisma:deploy:production` and the read-only
+  `prisma:status:production`, both running the guard against the environment they
+  have already built. A `railBreach` preflight refuses when both files resolve to
+  the same non-local host — the single way the separation can be undone.
+- **The escape hatch moved from a flag to a script name.** `PRISMA_TARGET=production`
+  was meant to be typed so the widening is visible; in the script the visibility
+  lives in the name, which unlike an exported variable cannot linger in a shell
+  and catch the next command.
+- **THE GUARD'S PREDICATE WAS WRONG THREE TIMES, each in the direction that
+  matters.** Matching any *mention* flagged `prisma-target-guard.ts`, which reads
+  the file to compare hostnames and loads nothing — allow-listing it would have
+  exempted the one file whose job is policing the rail. A proximity regex then
+  reported both legitimate loaders as **clean**, because `import dotenv` sits
+  forty lines above a `dotenv.config({ path: PROD_FILE })` that never repeats
+  the filename (§19 Sub-pattern 17). Comment-stripping fixed the third.
+- **Guard:** `productionRail.test.ts`, 12 cases. The cases that read `.env`
+  **skip** rather than pass where it is absent (CI), because a check that
+  silently passes on a missing input is the vacuous-green shape.
+- **Injection-verified both ways:** pasting production back into `.env` turns the
+  suite red AND makes the CLI guard refuse; a new file loading the production
+  datasource is named by path.
+- **Stated rather than implied:** `psql` and GUI clients remain outside the
+  guard and always were. What changed is that they can no longer pick production
+  up from `backend/.env`.
+- **Gates:** backend tsc clean, vitest **1452 pass / 1 fail** (known `urlSafety`
+  DNS red).
+
 ## Fixed — 2026-09-01 (v3.8.axx — two ratified actions had been filtered off the panel for four commits)
 
 - **Status:** commit 11f of 12. **Closes commit 11.** Commit 12 is the guard

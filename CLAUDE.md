@@ -388,6 +388,36 @@ Corollaries worth stating, since each was a step in that failure:
    whoever typed it. The only tell is one substring in the hostname: no
    `-pooler` means it is the direct Neon endpoint, not the pooled one.
 
+   **THE PRODUCTION RAIL (v3.8.axy). `backend/.env` resolves to the LOCAL
+   container and nothing else.** The production `DATABASE_URL` and `DIRECT_URL`
+   live only in **`backend/.env.production.local`**, which is gitignored
+   (`.gitignore:14`) and which nothing loads automatically — Prisma reads
+   `.env`, never `.env.*.local`. So a raw `npx prisma migrate deploy` typed by
+   a human now reaches the local container **by construction** rather than
+   because they remembered a rule.
+
+   That rule was not enough: a migration reached production from a local shell
+   at 15:11:07 on 2026-09-01 because `.env` held the production pair and the
+   raw command bypassed the guard entirely (§13.3 Item 252).
+
+   **Reaching production is now two named commands**, both of which run the
+   target guard against the environment they have already built:
+
+   ```powershell
+   npm run prisma:status:production   # read-only
+   npm run prisma:deploy:production   # applies pending migrations
+   ```
+
+   The guard also refuses when `.env` and `.env.production.local` resolve to the
+   same non-local host — the one way the separation can be silently undone, by
+   pasting the production URL back into `.env`.
+
+   **`psql`, GUI clients and any script that carries its own connection string
+   remain OUTSIDE the guard, and always were.** What changed is that they can no
+   longer pick production up from `backend/.env`; the credentials are only in
+   `.env.production.local`. A human who copies that string into `psql` is making
+   a deliberate choice, which is the most the rail can offer.
+
    Note the Render build chain calls `npx prisma migrate deploy` directly and is
    deliberately unaffected — deploying to production is that command's job. The
    guard protects a human at a terminal.
@@ -922,6 +952,7 @@ The Caravan Partner Program advances carriers through 3 tiers (Silver / Gold / P
 | v3.8.axv | 2026-09-01 | **Tender lifecycle Phase B, commit 11d of 12 — changing the rate left a carrier booked at a number they never agreed to.** An AE could change `carrierRate` on an accepted load and nothing moved: the tender stayed ACCEPTED so the load looked booked, and the rate confirmation stayed SENT so the document the carrier could **still sign** stated the old price. Now the live RC is voided and the tender returns to **OFFERED at the new rate** with a version bump and a cleared `respondedAt` — a re-offer, not a cancellation: same carrier, same load, a number they have not agreed to yet, and they may still say no, which is the point. **The void also kills the signing token, the load-bearing half** — a voided document that is still signable is worse than one left live, because the link is already in the carrier's inbox; isolated by injection, where voiding the status alone leaves the dead link answering **200**. **One void rule, one place:** three callers needed it (counter, release, rate change) each with its own copy of the same predicate, which is how the six hand-rolled sibling-withdraw blocks came to disagree about whether COUNTERED counts as live — extracted to `voidLiveRateConfirmations`, with VOID kept in the exclusion list so a re-void is a no-op and every caller is idempotent without remembering to be. **SIGNED and FINALIZED are never touched:** voiding an executed RC would not undo the agreement, only destroy the record of it. **The BOL now waits for the signature** — it is the document that sends a truck to a shipper's dock, and handing it to an unsigned carrier means freight moves on terms nobody executed; **CARRIER only**, since gating the AE would make it unreachable by the person chasing the signature, and the refusal names the remedy and where to do it (the v3.8.awy dead-end lesson). **Proof** `_arc-rate-change-proof.ts` **16/16**; injections executed — suppressing the revert 10/16, voiding without clearing the token 14/16. Outbound keys empty, `[Email] Sent to` count **0**. **Closes gap-table row 11.** **Gates:** backend tsc clean, vitest **1440/1** (known `urlSafety` DNS red); frontend tsc clean. |
 | v3.8.axw | 2026-09-01 | **Tender lifecycle Phase B, commit 11e of 12 — the customer was told a carrier was on their load before anyone had signed.** `sendTrackingLinkToCrmContacts` fired at accept, so a customer's operations and AP contacts learned a carrier was on their load while nothing was executed — and after v3.8.axv that got worse, since a rate change re-offers the tender and the customer could be holding a link naming a carrier no longer on the load. It could also tell them **twice**: `Load.trackingLinkSent` was written at the end of the function and read by nobody. Direct paths now announce at **CONFIRMED**; the fan-out is idempotent on the flag it already maintained. **THE ASYMMETRY IS THE DESIGN, and moving everything would have been the regression** — waterfall and loadboard-bid dispatch **without a signature** (§2's own divergence table records that accept means dispatch there), so a load that never reaches CONFIRMED would have been left with no tracking link at all; the brief said to move the notification to CONFIRMED, and doing that everywhere would have silently stranded every auto-dispatched customer. **Supersedes the Sprint 39 α resolution in §2, which is rewritten rather than left contradicting the code:** its reasoning still holds (tie the fan-out to the *event* that means committed, not a later *state*) — what changed is which event that is, because RC_SENT and CONFIRMED did not exist then and accept was the latest signal available. **The proof asserts BOTH halves**, reading the source of all four call sites, because proving the direct path waits says nothing about whether auto-dispatch was stranded. **Proof** `_arc-fanout-proof.ts` **11/11**; injections executed — dropping idempotency gives 9/11 with a second email sent, removing the waterfall fan-out gives 10/11 and names the stranded path. **A fixture bug of mine twice in one line:** `trackingToken` is `.slice(-12)` and I twice put the varying part ahead of a 13-digit timestamp, so both loads got identical tokens; the tail is what `-12` keeps. Outbound keys empty, `[Email] Sent to` count **0**. **Closes gap-table row 10.** **Gates:** backend tsc clean, vitest **1440/1** (known `urlSafety` DNS red); frontend tsc clean. |
 | v3.8.axx | 2026-09-01 | **Tender lifecycle Phase B, commit 11f of 12 — two ratified actions had been filtered off the panel for four commits. CLOSES COMMIT 11.** `RESEND_RC` and `VIEW_RC` sat in the ratified action matrix and out of `WIRED_ACTIONS`, because until the rate-confirmation lifecycle existed there was nothing behind them — right at the time, no longer true. Both now have endpoints: resend looks the RC up **by load** (a load can carry several over its life, since a counter or a rate change voids one and issues another, and only the newest non-VOID one is worth acting on) and re-sends **without regenerating the document** (v3.8.axt — same bytes, same hash; only the signing link is fresh, because the old secret is unrecoverable from the stored hash by design). View streams the stored PDF **through the api client rather than a bare `href`**, because that endpoint returns JSON errors an AE is meant to act on (`DRIVER_NOT_VERIFIED`, `RC_NOT_SIGNED`) and a raw link renders those as raw JSON in a tab (§13.3 Item 251); it does **not** ask to confirm, since a download changes nothing and confirming a read teaches an AE to click through dialogs without reading them. **THE GUARD NOW CHECKS WHAT THE CONSTANT IS FOR:** the existing case asserted a wired action appears in the *matrix*, which proves it is spec'd rather than that it works — exactly the distinction that let these two sit ratified but unimplemented for four commits; the new case reads the dispatcher and fails if a wired action has no `case`, injection-verified. **Two comments left false by the change were corrected rather than left to drift.** **Closes gap-table row 18.** **Gates:** frontend tsc clean, vitest **116/116**, `npm run build` clean — the prebuild injector runs, which `npx next build` alone does not (§19 Sub-pattern 11). |
+| v3.8.axy | 2026-09-01 | **Sprint close, commit 12a — a migration reached production from a local shell, and the rail that closes it.** `backend/.env` held the production Neon pair, so `npx prisma migrate deploy` typed for a local container applied `20260901100000` to **production** at 15:11:07 UTC (§13.3 Item 252). **Harm none** — strictly additive, no backfill, no drop, no reader at the time; schema-ahead-of-code is the ordering Item 213 prescribes. **Why: a rule with no mechanism** — §2.2 already said to use the npm script so `prisma-target-guard` runs, and the raw command bypassed it, which is the Item 212 class. **The rail:** `.env` targets the local container, production moved to `.env.production.local` (gitignored, `git check-ignore` verified), and nothing loads it automatically because Prisma reads `.env` and never `.env.*.local` — so a raw `npx prisma` now reaches the container **by construction**, verified reporting `127.0.0.1:55473`. Two named loaders (`prisma:deploy:production`, read-only `prisma:status:production`) both run the guard against the environment they have already built, and a `railBreach` preflight refuses when both files resolve to the same non-local host — the one way the separation can be silently undone. The escape hatch moved from a flag to a **script name**, which unlike an exported variable cannot linger in a shell and catch the next command. **THE GUARD'S PREDICATE WAS WRONG THREE TIMES:** matching any *mention* flagged `prisma-target-guard.ts`, which reads the file to compare hostnames and loads nothing — allow-listing it would have exempted the one file whose job is policing the rail; a proximity regex then reported both legitimate loaders as **clean**, because `import dotenv` sits forty lines above a `dotenv.config({ path: PROD_FILE })` that never repeats the filename (§19 Sub-pattern 17); comment-stripping fixed the third. **Guard** `productionRail.test.ts` 12 cases, with the `.env`-reading cases **skipping** rather than passing where the file is absent (CI). Injection-verified both ways — pasting production back into `.env` turns the suite red AND makes the CLI refuse; a new loader is named by path. `psql` and GUI clients remain outside the guard and always were; what changed is they can no longer pick production up from `backend/.env`. **Gates:** backend tsc clean, vitest **1452/1** (known `urlSafety` DNS red). |
 
 **Phase 6.1 closed** at v3.8.e.2 (T&T status controls + SHIPPER gate + sidebar link). Total Phase 6.1: 8 files / +342 / −26 across three commits.
 
@@ -2844,6 +2875,75 @@ Each is a discrete sprint. Mix of operational, security, UX, and technical debt.
 
     Failing any one, they wait. The cost of waiting is that two dead columns stay
     in the schema; the cost of being wrong is unrecoverable, and PITR is 7 days.
+
+252. **INCIDENT — a migration reached production from a local shell, and the rail that closes it (2026-09-01, v3.8.axy).**
+
+    **What happened.** During commit 11a I ran `npx prisma migrate deploy`
+    intending a local container. `backend/.env` held the production Neon
+    `DATABASE_URL` and `DIRECT_URL`, so the command resolved to **production**
+    and applied `20260901100000_rc_esignature_record` at **15:11:07 UTC**.
+    Confirmed by reading `_prisma_migrations` directly: `applied_steps_count: 1`.
+
+    **Harm: none, and the outcome is the ordering the repo mandates.** The
+    migration is strictly additive — eight nullable columns with no default plus
+    one index, no backfill, no drop, nothing changes meaning. No production code
+    read or wrote those columns at the time (11a shipped only the columns and a
+    library; the writers were uncommitted). Schema-ahead-of-code is the safe
+    direction and is exactly what Item 213 prescribes. Production was where the
+    next deploy would have put it.
+
+    **Why it happened, precisely.** §2.2 says to use the npm script rather than
+    the raw `prisma` command, because every schema-touching script routes
+    through `prisma-target-guard` first, which refuses a non-local host. I used
+    the raw command, so the guard never ran. That is the Item 212 class: a rule
+    that depends on a future session remembering an unenforced constraint. The
+    guard existed; nothing made me pass through it.
+
+    **THE RAIL THAT CLOSES IT.** Remembering is no longer part of the mechanism:
+
+    - **`backend/.env` resolves to the local container**, always. The production
+      pair moved to **`backend/.env.production.local`**, gitignored via
+      `.gitignore:14` (`.env.*.local`), verified with `git check-ignore -v`.
+    - **Nothing loads that file automatically.** Prisma reads `.env`, never
+      `.env.*.local`. So a raw `npx prisma migrate deploy` now reaches the local
+      container **by construction** — verified: it reports `127.0.0.1:55473`.
+    - **Two named scripts are the only loaders:**
+      `npm run prisma:deploy:production` and the read-only
+      `npm run prisma:status:production`. Both run the target guard first, against
+      the environment they have already built, so it reports the host the command
+      will actually use.
+    - **A rail-breach preflight** (`railBreach`) refuses when `.env` and
+      `.env.production.local` resolve to the same non-local host — the single way
+      the separation can be silently undone, by pasting the production URL back
+      into `.env`. It fires at both layers: the CLI guard refuses to run, and the
+      test suite goes red.
+    - **The escape hatch moved from a flag to a script name.** `PRISMA_TARGET=production`
+      was designed to be typed in front of a command so widening the blast radius
+      is visible. The deploy script sets it internally; the visibility now lives
+      in the name, which cannot linger in a shell and catch the next command the
+      way an exported variable can.
+
+    **Guard:** [`productionRail.test.ts`](backend/__tests__/unit/ci/productionRail.test.ts),
+    12 cases. Injection-verified in both directions: pasting production back into
+    `.env` turns the suite red AND makes the CLI guard refuse; a new file loading
+    the production datasource is named by path.
+
+    **The guard's predicate was wrong three times before it was right**, each
+    time in the direction that matters. Matching any *mention* of the file
+    flagged `prisma-target-guard.ts`, which READS it to compare hostnames and
+    never loads a credential — allow-listing that would have exempted the one
+    file whose job is policing the rail. A proximity regex then reported both
+    legitimate loaders as clean, because `import dotenv` sits forty lines above a
+    `dotenv.config({ path: PROD_FILE })` that never repeats the filename
+    (§19 Sub-pattern 17). And reading prose as code flagged the guard again,
+    which comment-stripping fixed.
+
+    **Still outside the rail, and stated rather than implied:** `psql`, GUI
+    clients, and any script that reads a connection string from somewhere else
+    are not covered by `prisma-target-guard` and never were. What changed is that
+    they can no longer reach production by picking up `backend/.env` — the
+    credentials are only in `.env.production.local`, which nothing loads unless
+    told to. Recorded in §2.2.
 
 ## §14 LEGAL / COMPLIANCE STATUS
 

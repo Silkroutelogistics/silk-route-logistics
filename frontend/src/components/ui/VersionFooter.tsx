@@ -1,3 +1,20 @@
+// v3.8.axy — A MIGRATION REACHED PRODUCTION FROM A LOCAL SHELL, AND THE RAIL
+// THAT CLOSES IT.
+//
+// backend/.env held the production Neon pair, so `npx prisma migrate deploy`
+// typed for a local container applied to production at 15:11:07 on 2026-09-01.
+// Additive and harmless, and schema-ahead-of-code is the ordering the repo
+// mandates — but the next one might not be. §2.2 already said to use the npm
+// script so the target guard runs; the raw command bypassed it, which is the
+// Item 212 class: a rule depending on somebody remembering.
+//
+// Remembering is no longer part of it. .env resolves to the local container;
+// production lives only in .env.production.local, which nothing loads
+// automatically because Prisma reads .env and never .env.*.local. A raw prisma
+// command now hits the container BY CONSTRUCTION. Two named scripts are the
+// only loaders, and a preflight refuses when both files name the same host --
+// the single way the separation can be silently undone.
+
 // v3.8.axx — TWO RATIFIED ACTIONS HAD BEEN FILTERED OFF THE PANEL FOR FOUR
 // COMMITS.
 //
@@ -16852,7 +16869,7 @@
 // and a data: qrCodeDataUrl are all legitimate and a guard that flagged them
 // would be noise. Comments are blanked before matching — the fixes are explained
 // in comments that necessarily quote the banned patterns.
-export const SRL_VERSION = "3.8.axx";
+export const SRL_VERSION = "3.8.axy";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

@@ -17,7 +17,9 @@
     "prisma:migrate:deploy": "npx tsx scripts/prisma-target-guard.ts migrate && prisma migrate deploy",
     "prisma:migrate:status": "npx tsx scripts/prisma-target-guard.ts migrate && prisma migrate status",
     "prisma:migrate:reset": "npx tsx scripts/prisma-target-guard.ts migrate && prisma migrate reset",
-    "prisma:db:push": "npx tsx scripts/prisma-target-guard.ts push && prisma db push"
+    "prisma:db:push": "npx tsx scripts/prisma-target-guard.ts push && prisma db push",
+    "prisma:deploy:production": "npx tsx scripts/prisma-deploy-production.ts",
+    "prisma:status:production": "npx tsx scripts/prisma-status-production.ts"
   },
   "engines": {
     "node": "^24.0.0"

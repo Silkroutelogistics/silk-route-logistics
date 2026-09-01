@@ -129,12 +129,69 @@ export function evaluate(cls: CommandClass, env: NodeJS.ProcessEnv, envFile: str
   };
 }
 
+/**
+ * THE PRODUCTION RAIL, and the one way it can be silently undone.
+ *
+ * Since v3.8 commit 12a the production datasource lives ONLY in
+ * .env.production.local, and backend/.env points at the local container. That
+ * is what makes a raw `npx prisma migrate deploy` safe by construction rather
+ * than by the typist remembering a rule -- which is the failure that put a
+ * migration on production at 15:11:07 on 2026-09-01 (§13.3 Item 252).
+ *
+ * The rail has exactly one failure mode: somebody pastes the production URL
+ * back into .env, at which point both files name the same host and the
+ * separation is gone while every command still looks fine. So the guard checks
+ * for it, and treats agreement between the two files as the alarm.
+ *
+ * Returns null when the rail is intact or when there is nothing to compare.
+ */
+export function railBreach(
+  envFile: string,
+  prodFile: string,
+): { host: string } | null {
+  if (!fs.existsSync(prodFile)) return null;
+  for (const key of ["DIRECT_URL", "DATABASE_URL"]) {
+    const a = readFromEnvFile(envFile, key);
+    const b = readFromEnvFile(prodFile, key);
+    if (!a || !b) continue;
+    const ha = hostOf(a);
+    // Local on both sides is not a breach -- it is a developer who has pointed
+    // the production file at a container, which is harmless.
+    if (isLocalHost(ha)) continue;
+    if (ha === hostOf(b)) return { host: ha };
+  }
+  return null;
+}
+
 /* ── CLI ─────────────────────────────────────────────────────────────────── */
 // `require` is undefined under vitest ESM; this block is CLI-only.
 const isCli = typeof require !== "undefined" && typeof module !== "undefined" && require.main === module;
 if (isCli) {
   const cls = (process.argv[2] as CommandClass) || "migrate";
   const envFile = path.resolve(__dirname, "..", ".env");
+  const prodFile = path.resolve(__dirname, "..", ".env.production.local");
+
+  // Checked BEFORE the verdict. A breach makes the verdict meaningless: if
+  // .env has been repointed at production then "local target" is a sentence
+  // about the wrong database.
+  const breach = railBreach(envFile, prodFile);
+  if (breach) {
+    console.error("");
+    console.error("  ┌─ REFUSING TO RUN — PRODUCTION RAIL BREACHED ─────────────────────");
+    console.error(`  │ backend/.env and .env.production.local both resolve to`);
+    console.error(`  │   ${breach.host}`);
+    console.error("  │");
+    console.error("  │ The rail is that .env targets the LOCAL container and the");
+    console.error("  │ production datasource lives only in .env.production.local. With");
+    console.error("  │ both naming one host, a raw `npx prisma` reaches production while");
+    console.error("  │ the shell looks entirely local — which is how a migration landed");
+    console.error("  │ on Neon by accident (§13.3 Item 252).");
+    console.error("  │");
+    console.error("  │ Point backend/.env back at the local container.");
+    console.error("  └──────────────────────────────────────────────────────────────────");
+    process.exit(1);
+  }
+
   const v = evaluate(cls, process.env, envFile);
 
   console.log(`[prisma-target-guard] command class : ${cls}`);
