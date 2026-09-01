@@ -1,3 +1,32 @@
+// v3.8.axm — "WAS ANYTHING WAIVED TO PUT THIS CARRIER ON THIS LOAD?" NOW HAS AN
+// ANSWER ON THE TENDER.
+//
+// An override that released a block left no mark on the tender it enabled. The
+// question was answerable only by matching timestamps against the override
+// table — guesswork, at exactly the moment it matters.
+//
+// LoadTender.complianceOverrideId, and the transition metadata alongside it.
+// A FK, not three copied columns: ComplianceOverride already holds who
+// (adminId), why (reason) and when (createdAt), and duplicating them would
+// create a second answer to "who waived this" that can drift from the first.
+//
+// RECORDED ONLY WHEN AN OVERRIDE ACTUALLY RELEASED SOMETHING. A live override
+// that waived nothing did not put this carrier on this load, and stamping it
+// would make an audit read a waiver into an ordinary tender. Both directions
+// are asserted — the clean tender must come back null.
+//
+// No backfill. A historical tender genuinely has no recorded override, and
+// inventing one is worse than the gap.
+//
+// Proof: _hard-fail-refusal-proof.ts extended to 23/23. Injection: dropping the
+// one argument that carries it takes it to 21/23.
+//
+// AND ONE OF MY OWN ASSERTIONS WAS VACUOUS. The history check compared the
+// metadata field against the id — and when the id was null it matched a
+// metadata field that was also null, passing while proving nothing. It now
+// requires the id to be non-null first. The fixture was wrong too: it cleared
+// the absolute but left no WAIVABLE block, so there was nothing for the
+// override to release and the case could not have tested what it claimed.
 // v3.8.axl — A SIXTH ABSOLUTE, AND SIX BLOCKS THAT WERE REFUSED AS TYPOS.
 //
 // Expired insurance joins the §14 set no override waives. Whether cover is in
@@ -16487,7 +16516,7 @@
 // and a data: qrCodeDataUrl are all legitimate and a guard that flagged them
 // would be noise. Comments are blanked before matching — the fixes are explained
 // in comments that necessarily quote the banned patterns.
-export const SRL_VERSION = "3.8.axl";
+export const SRL_VERSION = "3.8.axm";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

@@ -13,6 +13,43 @@ so it's searchable and never lost.
 
 ---
 
+## Fixed — 2026-09-01 (v3.8.axm — "was anything waived to put this carrier on this load?" now has an answer on the tender)
+
+- **Status:** commit 9b of 12. `candidateCarrierId` is 9c.
+- **Symptom:** an override that released a block left no mark on the tender it
+  enabled. The question was answerable only by matching timestamps against the
+  override table — guesswork, at exactly the moment it matters.
+- **Shape:** `LoadTender.complianceOverrideId` (additive, nullable, migration
+  `20260901060000_load_tender_compliance_override`), written by
+  `tenderCreationService` and mirrored into the opening transition's metadata.
+  `complianceCheck` now returns `appliedOverrideId` so the caller does not have
+  to re-derive which override was in force.
+- **A FK, not three copied columns.** `ComplianceOverride` already holds who
+  (`adminId`), why (`reason`) and when (`createdAt`). Copying them onto the
+  tender would create a second answer to "who waived this" that can drift from
+  the first — the dual-column class this schema keeps having to unpick.
+- **Recorded only when an override actually released something.** A live
+  override that waived nothing did not put this carrier on this load, and
+  stamping it would make an audit read a waiver into an ordinary tender. Both
+  directions are asserted: the clean tender must come back null.
+- **No backfill.** A historical tender genuinely has no recorded override, and
+  inventing one is worse than the gap. `ON DELETE SET NULL` so that if an
+  override row is ever removed, losing the link does not take the tender.
+- **Proof:** `_hard-fail-refusal-proof.ts` extended to **23/23**. Adversarial:
+  dropping the single argument that carries it → **21/23**.
+- **One of my own assertions was vacuous, and the fixture could not have tested
+  what it claimed.** The history check compared the metadata field against the
+  id; when the id was null it matched a metadata field that was also null and
+  **passed while proving nothing**. It now requires the id to be non-null first.
+  And the fixture cleared the absolute but left no *waivable* block standing, so
+  there was nothing for the override to release — a critical vetting score (a
+  judgement call, which is what an override is for) replaces it.
+- **Outbound (§19 Sub-pattern 20):** keys explicitly empty. `[Email] Sent to`
+  count: **0**, measured.
+- **Gates:** backend tsc clean; backend vitest **1423 pass / 1 fail** (known
+  `urlSafety` DNS red); frontend tsc clean; frontend build clean. Migration
+  applied cleanly to a local container before commit.
+
 ## Fixed — 2026-09-01 (v3.8.axl — a sixth absolute, and six blocks that were refused as typos)
 
 - **Status:** commit 9a of 12. The override-provenance half of commit 9 is 9b;

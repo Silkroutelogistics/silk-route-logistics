@@ -181,6 +181,68 @@ async function main() {
      "the grace period is SRL granting time deliberately, with an end date — not an AE waving a lapse through");
   ok("it warns instead", v5.warnings.some((w) => /grace period active/.test(w)));
 
+  // 6. an override that DOES release is recorded on the tender
+  console.log("\n[6] a tender created under an override says so, on the tender");
+  await prisma.carrierProfile.update({
+    where: { id: carrier.id },
+    // Clear the absolute and leave a WAIVABLE block standing: a critical
+    // vetting score is a judgement call, which is exactly what an override is
+    // for. Without one there is nothing to release and the case proves nothing.
+    data: {
+      insuranceExpiry: new Date(Date.now() + 365 * 86_400_000),
+      insuranceGracePeriodEnd: null,
+      lastVettingScore: 30,
+      lastVettedAt: new Date(),
+    },
+  });
+  const v6 = await complianceCheck(carrier.id);
+  ok("with the absolute cleared, the blanket override now releases something",
+     v6.allowed === true && !!v6.appliedOverrideId,
+     `allowed=${v6.allowed} released=${JSON.stringify(v6.released)} id=${v6.appliedOverrideId}`);
+
+  const res6 = await fetch(`${BASE}/loads/${load.id}/tender`, {
+    method: "POST",
+    headers: { Cookie: cookie, "Content-Type": "application/json" },
+    body: JSON.stringify({ carrierId: carrier.id, offeredRate: 4100, expiresAt: new Date(Date.now() + 7.2e6).toISOString() }),
+  });
+  ok("the tender is created", res6.status === 201, `status=${res6.status}`);
+  const t6 = await prisma.loadTender.findFirst({ where: { loadId: load.id } });
+  ok("and it records WHICH override let it happen",
+     !!t6?.complianceOverrideId && t6.complianceOverrideId === v6.appliedOverrideId,
+     `tender.complianceOverrideId=${t6?.complianceOverrideId}`);
+  const hist6 = await prisma.loadActivity.findMany({ where: { tenderId: t6!.id } });
+  // Compared against a NON-NULL id on purpose. The first version compared
+  // against v6.appliedOverrideId directly, and when that was null the
+  // assertion matched a metadata field that was also null -- passing while
+  // proving nothing.
+  ok("the history says so too, at the moment it happened",
+     !!v6.appliedOverrideId &&
+       hist6.some((a) => ((a.metadata ?? {}) as Record<string, unknown>).complianceOverrideId === v6.appliedOverrideId));
+
+  console.log("\n[7] an ordinary compliant tender records NO override");
+  await prisma.complianceOverride.deleteMany({ where: { carrierId: carrier.id } });
+  await prisma.carrierProfile.update({ where: { id: carrier.id }, data: { lastVettingScore: 90 } });
+  const load7 = await prisma.load.create({
+    data: {
+      referenceNumber: `HF7-${stamp}`, posterId: admin.id, status: "POSTED",
+      originCity: "Lebanon", originState: "NH", originZip: "03766",
+      destCity: "North Lake", destState: "TX", destZip: "75568",
+      pickupDate: new Date(), deliveryDate: new Date(Date.now() + 864e5),
+      equipmentType: "Reefer", rate: 4100, carrierRate: 4100,
+    },
+  });
+  madeLoads.push(load7.id);
+  const res7 = await fetch(`${BASE}/loads/${load7.id}/tender`, {
+    method: "POST",
+    headers: { Cookie: cookie, "Content-Type": "application/json" },
+    body: JSON.stringify({ carrierId: carrier.id, offeredRate: 4100, expiresAt: new Date(Date.now() + 7.2e6).toISOString() }),
+  });
+  ok("a clean tender is created", res7.status === 201, `status=${res7.status}`);
+  const t7 = await prisma.loadTender.findFirst({ where: { loadId: load7.id } });
+  ok("and records NO override -- null must mean nothing was waived",
+     t7?.complianceOverrideId === null,
+     "an override recorded on an ordinary tender would make an audit read a waiver into a clean one");
+
   console.log(`\n${pass}/${pass + fail} passed`);
   // closeAllConnections as well as close: an idle keep-alive socket holds the
   // event loop open and the script hangs after its last assertion, which reads

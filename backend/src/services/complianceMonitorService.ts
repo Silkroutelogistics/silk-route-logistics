@@ -104,7 +104,9 @@ export interface BlockedCode {
  */
 export interface ComplianceBundle {
   carrier: Awaited<ReturnType<typeof fetchCarrierForCompliance>>;
-  overrides: Array<{ checkCode: string | null; expiresAt: Date }>;
+  // `id` is carried so a released block can name the override that released
+  // it. The prefetch already selects whole rows; only this type was narrower.
+  overrides: Array<{ id: string; checkCode: string | null; expiresAt: Date }>;
   agreements: Array<{
     status: string;
     templateName: string;
@@ -174,6 +176,15 @@ export async function complianceCheck(carrierId: string, pre?: ComplianceBundle)
   allowed: boolean;
   blocked_reasons: string[];
   blocked_codes: BlockedCode[];
+  /**
+   * The override row that released something, if one did.
+   *
+   * Optional so the hand-written verdict literals elsewhere keep compiling, and
+   * null rather than absent when nothing was waived — the caller persists this
+   * onto the tender, and "no override" has to be distinguishable from "we did
+   * not look".
+   */
+  appliedOverrideId?: string | null;
   /**
    * Blocks a blanket override waived on THIS evaluation. Empty unless a blanket
    * override is active. Recomputed every call, so it can differ from what the
@@ -617,6 +628,10 @@ export async function complianceCheck(carrierId: string, pre?: ComplianceBundle)
     blocked_codes: keptCodes,
     released,
     warnings,
+    // Only when it actually released something. An override that was live but
+    // waived nothing did not put this carrier on this load, and recording it as
+    // though it had would make an audit read a waiver into an ordinary tender.
+    appliedOverrideId: blanketActive && released.length > 0 ? activeBlanketOverride!.id : null,
   };
 }
 

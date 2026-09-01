@@ -95,6 +95,14 @@ export interface CreateTenderInput {
   actor?: { id?: string | null; name?: string | null; type?: "USER" | "SYSTEM" | "CARRIER" | "SHIPPER" };
   /** Free-form context recorded on the transition row. */
   reason?: string | null;
+  /**
+   * The compliance override this tender was created under, if any.
+   *
+   * Recorded on the row AND in the transition metadata. The row answers "was
+   * anything waived for this tender" from the tender itself; the history answers
+   * it at the moment it happened, which is the one a dispute reads.
+   */
+  complianceOverrideId?: string | null;
 }
 
 /**
@@ -118,6 +126,7 @@ export async function createTender(input: CreateTenderInput, db: TenderDb = pris
       status,
       ...(input.waterfallPositionId ? { waterfallPositionId: input.waterfallPositionId } : {}),
       ...(input.respondedAt ? { respondedAt: input.respondedAt } : {}),
+      ...(input.complianceOverrideId ? { complianceOverrideId: input.complianceOverrideId } : {}),
     },
   });
 
@@ -130,7 +139,11 @@ export async function createTender(input: CreateTenderInput, db: TenderDb = pris
     actorType: input.actor?.type ?? "SYSTEM",
     actorId: input.actor?.id ?? null,
     actorName: input.actor?.name ?? null,
-    metadata: { offeredRate: input.offeredRate, expiresAt: expiresAt.toISOString() },
+    metadata: {
+      offeredRate: input.offeredRate,
+      expiresAt: expiresAt.toISOString(),
+      complianceOverrideId: input.complianceOverrideId ?? null,
+    },
   }, db);
 
   return tender;
