@@ -12,7 +12,7 @@
 
 import { prisma } from "../config/database";
 import { createNotification } from "./notificationService";
-import { assignCarrier, clearCarrier } from "./carrierAssignmentService";
+
 
 // ────────────────────────────────────────────────────────────
 // Types
@@ -54,7 +54,18 @@ const INSURANCE_GRACE_WARNING_DAYS = 14;
  *  4. No active OOS (from FMCSA auto-suspend status)
  *  5. OFAC status is CLEAR
  */
-export async function checkLoadCompliance(loadId: string): Promise<LoadComplianceResult> {
+export async function checkLoadCompliance(
+  loadId: string,
+  /**
+   * Check THIS carrier instead of the one on the load. A **User.id**, matching
+   * `Load.carrierId` — not a CarrierProfile.id.
+   *
+   * v3.8.axn — this argument is what lets the pre-assignment gate ask "would
+   * this carrier be compliant on this load" without writing them onto it first.
+   * See onLoadAssigned.
+   */
+  candidateCarrierId?: string,
+): Promise<LoadComplianceResult> {
   const now = new Date();
 
   const load = await prisma.load.findUnique({
@@ -73,7 +84,11 @@ export async function checkLoadCompliance(loadId: string): Promise<LoadComplianc
     };
   }
 
-  if (!load.carrierId) {
+  // The candidate wins when supplied: the caller is asking about a carrier that
+  // is not on the load yet, which is the whole point of the argument.
+  const subjectCarrierId = candidateCarrierId ?? load.carrierId;
+
+  if (!subjectCarrierId) {
     return {
       loadId,
       carrierId: null,
@@ -85,7 +100,7 @@ export async function checkLoadCompliance(loadId: string): Promise<LoadComplianc
   }
 
   const carrier = await prisma.carrierProfile.findUnique({
-    where: { userId: load.carrierId },
+    where: { userId: subjectCarrierId },
     select: {
       id: true,
       userId: true,
@@ -291,51 +306,30 @@ export async function checkAllActiveLoadCompliance(): Promise<BatchComplianceSta
 // ────────────────────────────────────────────────────────────
 
 /**
- * Called when a load is assigned to a carrier.
- * Runs an immediate compliance check. If CRITICAL, throws an error
- * to prevent the assignment.
+ * Post-assignment load-level compliance scan for a carrier being put on a load.
+ *
+ * READ-ONLY as of v3.8.axn. It used to mutate `Load.carrierId` so the check
+ * could find the carrier and then roll it back — a STAGING WRITE, which meant
+ * that for the duration of the check any concurrent reader saw a carrier on a
+ * load they had not accepted, and a crash mid-check left them there. Passing
+ * the candidate as an argument removes the write and the rollback together.
+ *
+ * WHAT IT DOES AND DOES NOT DO, stated because the previous docstring said
+ * otherwise. It says it "throws an error to prevent the assignment", and it
+ * does throw — but its only caller invokes it fire-and-forget with a
+ * `.catch(log.error)`, so the throw is logged and nothing is prevented. The
+ * real gate is the synchronous `complianceCheck` immediately above that call,
+ * which 403s. This is a scan that raises the alarm; treating it as the gate is
+ * how a load ends up assigned to a carrier somebody believed had been blocked.
  */
 export async function onLoadAssigned(
   loadId: string,
+  /** A **User.id** — the same id space as `Load.carrierId`. */
   carrierId: string
 ): Promise<LoadComplianceResult> {
-  // Temporarily set the carrierId on the load so checkLoadCompliance can find it
-  // (the caller may not have persisted the assignment yet)
-  const existingLoad = await prisma.load.findUnique({
-    where: { id: loadId },
-    select: { carrierId: true },
-  });
+  const result = await checkLoadCompliance(loadId, carrierId);
 
-  const carrierWasAlreadySet = existingLoad?.carrierId === carrierId;
-
-  // If the carrier isn't set yet, temporarily set it for the check.
-  //
-  // v3.8.axc — routed through assignCarrier so Load.carrierId keeps exactly one
-  // writer, with no allow-listed exception. A guard with no exceptions is much
-  // stronger than one carrying a special case.
-  //
-  // BANKED SMELL, recorded rather than quietly normalised: this is a STAGING
-  // write, not an assignment. It mutates a persisted column so a read-only
-  // check can run, then rolls it back — which means that for the duration of
-  // the check, any concurrent reader sees a carrier on a load that has not
-  // accepted it. Threading the candidate carrier through checkLoadCompliance as
-  // an argument would remove the write entirely. Out of scope here; that is a
-  // refactor of the compliance path, not of carrier assignment.
-  if (!carrierWasAlreadySet) {
-    await assignCarrier({ loadId, carrierUserId: carrierId });
-  }
-
-  const result = await checkLoadCompliance(loadId);
-
-  // If CRITICAL and we temporarily set the carrier, roll it back
-  if (result.severity === "CRITICAL" && !carrierWasAlreadySet) {
-    // v3.8.axc — the rollback half of the staging write above. clearCarrier
-    // when there was no prior carrier; restore the previous one otherwise.
-    if (existingLoad?.carrierId) {
-      await assignCarrier({ loadId, carrierUserId: existingLoad.carrierId });
-    } else {
-      await clearCarrier({ loadId });
-    }
+  if (result.severity === "CRITICAL") {
     throw new Error(
       `Cannot assign carrier to load — CRITICAL compliance issues: ${result.issues.join("; ")}`
     );

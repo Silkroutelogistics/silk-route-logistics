@@ -90,7 +90,51 @@ export function findCarrierIdWriters(root = SRC, sources?: Map<string, string>) 
  */
 const SANCTIONED = new Set(["services/carrierAssignmentService.ts"]);
 
+/**
+ * Taking a carrier OFF a load is one act, in one place.
+ *
+ * Putting one ON has seven legitimate callers — accept, on-behalf, bid accept,
+ * waterfall, instant book, automation, fall-off re-assign — and they are all
+ * assignments. Taking one off is not symmetric with that: it settles the
+ * tender, voids live paper, returns the load to where it came from and records
+ * a fall-off. A second place doing part of that is a load in a state nobody
+ * meant.
+ *
+ * It was two until v3.8.axn. The other was a STAGING write in the compliance
+ * gate that put a carrier on a load so a read-only check could find them and
+ * then rolled it back — so for the duration of the check a concurrent reader
+ * saw a carrier on a load they had not accepted, and a crash mid-check left
+ * them there. Passing the candidate as an argument removed the write and its
+ * rollback together.
+ */
+function findClearCarrierCallers(): string[] {
+  const out: string[] = [];
+  for (const f of walk(SRC)) {
+    const rel = path.relative(SRC, f).replace(/\\/g, "/");
+    if (rel === "services/carrierAssignmentService.ts") continue; // the definition
+    const body = stripComments(fs.readFileSync(f, "utf8"));
+    if (/\bclearCarrier\s*\(/.test(body)) out.push(rel);
+  }
+  return out;
+}
+
 describe("Load.carrierId has one writer", () => {
+  it("only carrierReleaseService takes a carrier OFF a load", () => {
+    const callers = findClearCarrierCallers();
+    expect(
+      callers,
+      "clearCarrier settles the tender, voids paper and records a fall-off. A " +
+        "second caller doing part of that leaves a load in a state nobody meant. " +
+        "Caller(s)",
+    ).toEqual(["services/carrierReleaseService.ts"]);
+  });
+
+  it("the clearCarrier scanner is not silently matching nothing", () => {
+    // A scanner that has stopped matching reports a perfectly clean tree, and
+    // the assertion above would pass with an empty array if the name changed.
+    expect(findClearCarrierCallers().length).toBeGreaterThan(0);
+  });
+
   it("nothing outside carrierAssignmentService writes it", () => {
     const offenders = findCarrierIdWriters().filter((h) => !SANCTIONED.has(h.file));
     expect(

@@ -1,3 +1,28 @@
+// v3.8.axn — THE COMPLIANCE GATE PUT A CARRIER ON A LOAD SO IT COULD CHECK THEM,
+// THEN TOOK THEM OFF AGAIN.
+//
+// onLoadAssigned wrote the candidate into Load.carrierId, ran a READ-ONLY
+// check, and rolled the write back on failure. For the duration of the check
+// any concurrent reader saw a carrier on a load they had never accepted, and a
+// crash between the two left them there permanently.
+//
+// checkLoadCompliance now takes the candidate as an argument. The write and its
+// rollback are both gone, and the function is read-only.
+//
+// clearCarrier is down to ONE caller: carrierReleaseService. Putting a carrier
+// on a load has seven legitimate callers and they are all assignments. Taking
+// one off is not symmetric with that — it settles the tender, voids live paper,
+// returns the load to where it came from and records a fall-off — so a second
+// place doing part of it leaves a load in a state nobody meant. Guarded, with
+// a vacuity tripwire, injection-verified.
+//
+// AND THE DOCSTRING WAS WRONG ABOUT WHAT THIS FUNCTION IS. It said it "throws
+// an error to prevent the assignment". It does throw — and its only caller
+// invokes it fire-and-forget with a .catch(log.error), so the throw is logged
+// and nothing is prevented. The real gate is the synchronous complianceCheck
+// immediately above that call, which 403s. Corrected rather than left, because
+// believing this is the gate is how a load ends up assigned to a carrier
+// somebody thought had been blocked.
 // v3.8.axm — "WAS ANYTHING WAIVED TO PUT THIS CARRIER ON THIS LOAD?" NOW HAS AN
 // ANSWER ON THE TENDER.
 //
@@ -16516,7 +16541,7 @@
 // and a data: qrCodeDataUrl are all legitimate and a guard that flagged them
 // would be noise. Comments are blanked before matching — the fixes are explained
 // in comments that necessarily quote the banned patterns.
-export const SRL_VERSION = "3.8.axm";
+export const SRL_VERSION = "3.8.axn";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

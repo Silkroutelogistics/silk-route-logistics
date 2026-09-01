@@ -13,6 +13,42 @@ so it's searchable and never lost.
 
 ---
 
+## Fixed — 2026-09-01 (v3.8.axn — the compliance gate put a carrier on a load so it could check them, then took them off again)
+
+- **Status:** commit 9c of 12. Closes the staging write banked at v3.8.axc.
+- **Symptom:** `onLoadAssigned` wrote the candidate into `Load.carrierId`, ran a
+  **read-only** check, and rolled the write back on failure. For the duration of
+  the check any concurrent reader saw a carrier on a load they had never
+  accepted, and a crash between the write and the rollback left them there
+  permanently.
+- **Shape:** `checkLoadCompliance(loadId, candidateCarrierId?)`. The candidate
+  wins over `load.carrierId` when supplied, so the pre-assignment question —
+  *would this carrier be compliant on this load* — is answerable without writing
+  anything. The staging write and its rollback are both deleted;
+  `loadComplianceService` no longer imports the assignment service at all.
+- **`clearCarrier` is down to ONE caller: `carrierReleaseService`.** Putting a
+  carrier *on* a load has seven legitimate callers and they are all assignments.
+  Taking one *off* is not symmetric with that — it settles the tender, voids
+  live paper, returns the load to where it came from and records a fall-off — so
+  a second place doing part of that leaves a load in a state nobody meant.
+- **Guarded, not just asserted once.** `carrierIdWriterDrift` gains a caller
+  census for `clearCarrier` with a vacuity tripwire (a scanner that stops
+  matching would otherwise report a clean tree and the equality assertion would
+  pass on an empty array). Injection-verified: a second caller is named.
+- **`assignCarrier` callers drop 9 → 7**, and the sanctioned writer set for
+  `Load.carrierId` stays at length one.
+- **The docstring was wrong about what this function is, and that is corrected
+  rather than left.** It said it *"throws an error to prevent the assignment"*.
+  It does throw — and its only caller invokes it fire-and-forget with a
+  `.catch(log.error)`, so the throw is logged and nothing is prevented. The real
+  gate is the synchronous `complianceCheck` immediately above that call, which
+  403s. Believing this is the gate is how a load ends up assigned to a carrier
+  somebody thought had been blocked.
+- **Gates:** backend tsc clean; backend vitest **1425 pass / 1 fail** (known
+  `urlSafety` DNS red); frontend tsc clean; frontend build clean. No database
+  proof needed — this commit removes writes rather than adding them, and the
+  removal is what the guard asserts.
+
 ## Fixed — 2026-09-01 (v3.8.axm — "was anything waived to put this carrier on this load?" now has an answer on the tender)
 
 - **Status:** commit 9b of 12. `candidateCarrierId` is 9c.
