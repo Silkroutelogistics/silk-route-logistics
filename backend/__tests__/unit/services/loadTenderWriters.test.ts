@@ -73,12 +73,18 @@ export function findLoadTenderWrites(root = SRC, sources?: Map<string, string>):
       const body = src.slice(m.index, end + 1);
       const dataIdx = Math.max(body.indexOf("data:"), body.indexOf("create:"));
       const data = dataIdx >= 0 ? body.slice(dataIdx) : "";
+      // Is the payload written out here, or handed in from somewhere else?
+      // `data: { ... }` can be read. `data` (shorthand) or `data: payload`
+      // cannot, and a scanner that answers "no status key" for those is a
+      // scanner a hoisted object walks straight past.
+      const literal = /^(?:data|create)\s*:\s*\{/.test(data.trimStart());
       hits.push({
         file: path.relative(SRC, f).replace(/\\/g, "/"),
         line: src.slice(0, m.index).split("\n").length,
         method: m[1],
-        // colon form OR shorthand
-        writesStatus: /\bstatus\s*(:|,|\}|\r?$)/m.test(data),
+        // Colon form OR shorthand when the object is right here; UNKNOWN counts
+        // as yes, because the alternative is a guard with a documented bypass.
+        writesStatus: literal ? /\bstatus\s*(:|,|\}|\r?$)/m.test(data) : true,
       });
     }
   }
@@ -97,36 +103,30 @@ const CREATORS = new Set(["services/tenderCreationService.ts"]);
  * guard exists to make deliberate.
  */
 const STATE_WRITERS = new Set([
-  "services/tenderCreationService.ts",
-  "services/tenderTransitionService.ts",  // v3.8.axj — bulk withdraw, the consolidation target
-  "services/carrierReleaseService.ts",    // release (ACCEPTED -> RELEASED) + single withdraw
-  // ---- migrating out, one commit at a time ----
-  "controllers/tenderController.ts",      // accept / on-behalf / counter / decline / expiry sweep
-  "routes/carrierLoads.ts",               // carrier decline
-  "services/waterfallEngineService.ts",   // cascade decline / accept / position expiry
-  "routes/waterfalls.ts",                 // AE skips a cascade position -> withdraw
+  "services/tenderCreationService.ts",     // a tender is born
+  "services/tenderTransitionService.ts",   // it moves
+  "services/carrierReleaseService.ts",     // it is taken back
 ]);
 
 /**
- * THE TARGET IS THREE, and the number is asserted so the shrink is visible.
+ * THREE, reached in v3.8.axk. A tender is born in one place, moves in one
+ * place, and is taken back in one place.
  *
- * Three because a tender is born in one place, moves in one place, and is taken
- * back in one place: tenderCreationService, tenderTransitionService,
- * carrierReleaseService. Everything above the divider is a file that still
- * moves a tender itself and has not been migrated yet.
+ * It was eleven when the audit ran, and the number is asserted rather than only
+ * the membership because membership alone is satisfied by ADDING a file --
+ * which is exactly the drift the list exists to prevent. A count has to be
+ * edited deliberately and shows up in a diff as a number going the wrong way.
  *
- * Asserting the LENGTH rather than only the membership is what makes this
- * useful. Membership alone is satisfied by adding a file, which is exactly the
- * drift the list exists to prevent; the count has to be edited deliberately and
- * shows up in a diff as a number going the wrong way.
+ * A fourth entry is not forbidden. It is a decision, and this is where somebody
+ * has to make it in writing.
  */
 const STATE_WRITER_TARGET = 3;
 
 /**
- * Each entry above the divider was read before it was added, and each genuinely
- * moves a tender between states today. The guard has already earned its place
- * at that size: it caught two EXPIRED mislabels on its first run, and it caught
- * carrierReleaseService arriving unlisted on the next commit.
+ * The guard earned its place on the way down: it caught two EXPIRED mislabels
+ * on its first run, caught carrierReleaseService arriving unlisted on the next
+ * commit, and its stale-entry check fired the moment integrationService and
+ * broadcastTenderService stopped writing status.
  */
 
 describe("LoadTender rows have one creator", () => {
@@ -152,16 +152,14 @@ describe("LoadTender rows have one creator", () => {
     ).toEqual([]);
   });
 
-  it("the state-writer list is shrinking toward one transition service", () => {
+  it("exactly three files may move a tender", () => {
     // Growth means a new file learned to move a tender. That is the thing this
     // guard exists to make deliberate, so it fails rather than warns.
     expect(
       [...STATE_WRITERS].sort(),
-      "Files that may write tender status. Target is " + STATE_WRITER_TARGET +
-        " (create / transition / release). Adding one is a decision; removing " +
-        "one is the plan.",
-    ).toHaveLength(7);
-    expect(STATE_WRITER_TARGET).toBe(3);
+      "Files that may write tender status. Three: create / transition / " +
+        "release. A fourth is a decision, not an accident -- say why here.",
+    ).toHaveLength(STATE_WRITER_TARGET);
   });
 
   it("the allow-lists have no stale entries", () => {
@@ -198,6 +196,20 @@ describe("LoadTender rows have one creator", () => {
     const fx = new Map([[path.join(SRC, "__cm__.ts"),
       `// await prisma.loadTender.create({ data: { status: "OFFERED" } });\n/* prisma.loadTender.update({ data: { status } }) */\n`]]);
     expect(findLoadTenderWrites(SRC, fx)).toHaveLength(0);
+  });
+
+  it("counts a payload it cannot read as a status write", () => {
+    // The consolidation put the update behind a helper that takes `data` as a
+    // parameter, and the scanner reported the transition service as writing no
+    // status at all — its own stale-entry check caught that. Left alone, any
+    // file could have hoisted its payload into a variable and passed.
+    const fx = new Map([[path.join(SRC, "__hoist__.ts"),
+      `const payload = { status: "DECLINED" };
+await prisma.loadTender.update({ where: { id }, data: payload });
+`]]);
+    const hits = findLoadTenderWrites(SRC, fx);
+    expect(hits).toHaveLength(1);
+    expect(hits[0].writesStatus, "an unreadable payload must count as a status write").toBe(true);
   });
 
   it("does NOT treat a where-clause match as a status write", () => {

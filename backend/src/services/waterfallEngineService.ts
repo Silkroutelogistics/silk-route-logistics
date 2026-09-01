@@ -29,6 +29,7 @@ import { validateLoadStatusTransition } from "../lib/loadStateMachine";
 import { broadcastSSE } from "../routes/trackTraceSSE";
 import { assignCarrier } from "./carrierAssignmentService";
 import { createTender } from "./tenderCreationService";
+import { settleTenders, withdrawLiveTenders } from "./tenderTransitionService";
 
 const TENDER_WINDOW_MS = 20 * 60 * 1000;            // 20 minutes per position
 const LOADBOARD_FALLBACK_WINDOW_MS = 2 * 60 * 60 * 1000; // 2h before DAT
@@ -421,7 +422,12 @@ export async function advanceWaterfall(waterfallId: string, nextPosition: number
  * Mark a position declined + advance. Called from the carrier-portal
  * decline endpoint and the /positions/:id/skip endpoint.
  */
-export async function declinePosition(positionId: string, reason: string | null, actorId?: string | null) {
+export async function declinePosition(
+  positionId: string,
+  reason: string | null,
+  actorId?: string | null,
+  opts?: { onBehalf?: boolean },
+) {
   const pos = await prisma.waterfallPosition.findUnique({
     where: { id: positionId },
     include: { waterfall: { select: { id: true, loadId: true } } },
@@ -434,9 +440,13 @@ export async function declinePosition(positionId: string, reason: string | null,
   });
 
   // Mark matching LoadTender as DECLINED
-  await prisma.loadTender.updateMany({
-    where: { waterfallPositionId: positionId, status: "OFFERED" },
-    data: { status: "DECLINED", respondedAt: new Date() },
+  await settleTenders({
+    waterfallPositionId: positionId,
+    to: "DECLINED",
+    respondedAt: new Date(),
+    onBehalf: opts?.onBehalf,
+    actor: { id: actorId ?? null, type: opts?.onBehalf ? "USER" : "CARRIER" },
+    metadata: { reason },
   });
 
   await logWaterfallEvent({
@@ -523,9 +533,9 @@ export async function acceptPosition(positionId: string, actorId?: string | null
     // respondedAt is left unset: the carrier's response was an acceptance, and
     // stamping a response time on a row now labelled a withdrawal would be
     // recording SRL's block as the carrier's answer.
-    await prisma.loadTender.updateMany({
-      where: { waterfallPositionId: positionId, status: "OFFERED" },
-      data: { status: "WITHDRAWN", statusReason: "compliance_block" },
+    await withdrawLiveTenders({
+      waterfallPositionId: positionId,
+      reason: "compliance_block",
     });
     // Reuse existing "position_skipped" event type (defined in
     // waterfallEventService union); description prefix carries the
@@ -558,9 +568,11 @@ export async function acceptPosition(positionId: string, actorId?: string | null
     where: { id: positionId },
     data: { status: "accepted", respondedAt: now },
   });
-  await prisma.loadTender.updateMany({
-    where: { waterfallPositionId: positionId, status: "OFFERED" },
-    data: { status: "ACCEPTED", respondedAt: now },
+  await settleTenders({
+    waterfallPositionId: positionId,
+    to: "ACCEPTED",
+    respondedAt: now,
+    actor: { id: actorId ?? pos.carrierId, type: "CARRIER" },
   });
 
   // Cancel any remaining queued positions
@@ -675,9 +687,11 @@ export async function expireStalePositions() {
       where: { id: pos.id },
       data: { status: "expired", respondedAt: now },
     });
-    await prisma.loadTender.updateMany({
-      where: { waterfallPositionId: pos.id, status: "OFFERED" },
-      data: { status: "EXPIRED", respondedAt: now },
+    await settleTenders({
+      waterfallPositionId: pos.id,
+      to: "EXPIRED",
+      reason: "ttl_elapsed",
+      respondedAt: now,
     });
 
     await logWaterfallEvent({

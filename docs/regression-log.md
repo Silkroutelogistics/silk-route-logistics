@@ -13,6 +13,74 @@ so it's searchable and never lost.
 
 ---
 
+## Fixed — 2026-09-01 (v3.8.axk — the allow-list said "carrier declines a cascade offer"; the route behind it let an AE do it)
+
+- **Status:** commit 8c of 12. Closes the consolidation begun in 8b.
+- **Shape:** `settleTender` (one tender, rich) and `settleTenders` (a set, or a
+  cascade position) join `withdrawLiveTenders` in
+  `services/tenderTransitionService.ts`; all three share one `applySettle`
+  helper. `tenderController`, `routes/carrierLoads.ts`,
+  `services/waterfallEngineService.ts` and `routes/waterfalls.ts` all migrate.
+  **Eleven files could move a tender when the audit ran. Three can now** — one
+  creates, one transitions, one releases — and `loadTenderWriters` asserts the
+  count, not just the membership.
+- **THE FINDING, and the consolidation is what surfaced it.**
+  `tenderDeclineWriters` is a static guard over which FILES may write
+  `DECLINED`. It was green on `waterfallEngineService` with an allow-list entry
+  reading *"declinePosition — carrier declines a cascade offer"*. The route
+  behind it is `authorize("CARRIER", ...AE_ROLES)`, so **an AE clicking decline
+  wrote a real refusal onto that carrier's acceptance rate** — §9 scores
+  acceptance at 10% of Compass — and the guard was green about it. A list of
+  files cannot see who is calling. §19 Sub-pattern 16: presence is not function.
+- **The check moved to where the actor is known.** `settleTender` refuses
+  `DECLINED` unless `actor.type === "CARRIER"` or the caller passes `onBehalf`.
+  An AE may still record a decline a carrier phoned in — that is a real
+  operational act, the same shape as accept-on-behalf — but it has to say so,
+  and the transition row keeps the distinction rather than presenting it as the
+  carrier's own click. `waterfalls.ts` now derives the flag from the caller's
+  role and passes it down through `declinePosition`.
+- **The expiry sweep gained history it never had.** `processExpiredTenders`
+  flipped rows with `updateMany` and wrote nothing, so a tender that ran out of
+  time left no trace of having done so and the drawer showed an offer that
+  simply stopped. Routed through `settleTenders`, it now records each one.
+- **Scanner blind spot #1, found by the guard's own stale-entry check.** The
+  consolidation put the update behind a helper that takes `data` as a
+  parameter, and a scanner that reads literal keys reported the transition
+  service as writing no status at all. Left alone, any file could have hoisted
+  its payload into a variable and walked past. **An unreadable payload now
+  counts as a status write** — the alternative is a guard with a documented
+  bypass. Fixture added for the hoisted form.
+- **Scanner blind spot #2.** The `DECLINED` allow-list is now **empty** rather
+  than one entry, because the service writes `status: input.to` and the literal
+  appears in no payload anywhere. The test asserts the emptiness, so a name back
+  on that list means somebody wrote a direct decline again and has to justify it.
+- **A defect the type system could not see, found by the proof.**
+  `settleTender` first defaulted its FROM rail to every non-terminal state by
+  name, **including `RC_SENT` and `CONFIRMED`** — ratified states that are not
+  in the Prisma enum until commit 11 — so every call without an explicit rail
+  died on *"Invalid value for argument `in`"*. TypeScript could not see it: the
+  list is cast through `as never` to reach Prisma's generated enum type, and a
+  cast is a promise that the check is unnecessary. Only the real database knew.
+  Omitting the rail now means "whatever it is now".
+- **The FROM rail is a safety rail, not an optimisation.** Naming a state means
+  the tender only moves if it is still in it, so an accept that raced a decline
+  settles nothing instead of overwriting it. Proven.
+- **Proof:** `_withdraw-consolidation-proof.ts`, extended to **35/35** against a
+  real database.
+- **Adversarial, four injections, each executed:** a new file writing status is
+  named by file and line; a hoisted payload in a non-listed file is named;
+  removing the carrier-initiation check turns exactly the two refusal cases red
+  and leaves the five others green; and the FROM rail case fails if the rail is
+  ignored.
+- **Threshold deviation, stated:** five source files against the four-file rule.
+  Splitting them would leave the guard unable to reach three — the commit's
+  stated deliverable — and would leave a half-migrated state where the
+  carrier-initiation check exists but two of its callers bypass it.
+- **Outbound (§19 Sub-pattern 20):** keys explicitly empty. `[Email] Sent to`
+  count: **0**, measured from the captured output.
+- **Gates:** backend tsc clean; backend vitest **1423 pass / 1 fail** (the known
+  `urlSafety` DNS red, sandbox-only); frontend tsc clean; frontend build clean.
+
 ## Fixed — 2026-09-01 (v3.8.axj — six places withdrew sibling tenders, and all six missed the same one)
 
 - **Symptom:** accept, accept-on-behalf, broadcast accept, load cancelled,

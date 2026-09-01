@@ -164,7 +164,7 @@ column plus new `eventType` values — additive, no new table, and the drawer's
 | 2 | All paths via one `createTender` | CLOSED **v3.8.axd–axg** — one creator, CI-guarded (creation + state) | — |
 | 3 | No path writes `Load.status` directly | ≥5 paths do | Move into service |
 | 4 | One live OFFERED per load unless parallel | No uniqueness check anywhere | Add guard + `waterfall.parallel` flag |
-| 5 | Accept atomic; siblings auto-**withdraw** | ✅ **CLOSED v3.8.aww → axj** — one `withdrawLiveTenders`; takes OFFERED **and COUNTERED**, which all six hand-rolled copies missed | — |
+| 5 | Accept atomic; siblings auto-**withdraw** | ✅ **CLOSED v3.8.aww → axk** — one transition service; withdraw takes OFFERED **and COUNTERED**, which all six hand-rolled copies missed. Tender-state writers 11 → **3**, count asserted | — |
 | 6 | `acceptTender` sole `carrierId` writer | ✅ **CLOSED v3.8.axa–axc** — one writer (`carrierAssignmentService`), 11 → 0, CI-guarded | `releaseCarrier` as sole clearer = commit 8 |
 | 7 | QuickPayElection pending on tender; RC deferred | Notice fires; no model; RC **not** deferred | New model + gate |
 | 8 | RC auto-fire idempotent, keyed to tender version | PARTIAL **v3.8.axh** — `LoadTender.version` exists; a counter bumps it and voids the stale RC | RC keyed to version = commit 11 |
@@ -176,7 +176,7 @@ column plus new `eventType` values — additive, no new table, and the drawer's
 | 14 | Needs Attention = tender-centric | Exists, unrelated filters | Extend |
 | 15 | TTL from `TENDER_TTL_MINUTES` (120) | CLOSED **v3.8.axd** — env-driven, bounded 15..10080 | — |
 | 16 | Expiry advances waterfall / flags | Sweep ships (Item 141), reverts to POSTED | Add advance + flag |
-| 17 | Every transition → event row | ✅ **CLOSED v3.8.awv** — `LoadActivity.tenderId` + `logTenderTransition` as sole writer | Drawer read deferred to 1b |
+| 17 | Every transition → event row | ✅ **CLOSED v3.8.awv → axk** — every state write now runs through the transition service, so the expiry sweep and the cascade log too (neither did before) | Drawer read = commit 10 |
 | 18 | Remove Confirm + Rate Conf send; add Withdraw/Release/Resend/View | Confirm is a dead button; no Withdraw/Release/Resend | Replace |
 | 19 | Card + header read same derived status | Both read `Load.status` (consistent), but **no derived status exists** | Build derivation |
 

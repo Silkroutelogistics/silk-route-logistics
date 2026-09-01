@@ -26,6 +26,7 @@ import { complianceCheck } from "../services/complianceMonitorService";
 import { createTender } from "../services/tenderCreationService";
 import { acceptTender } from "../controllers/tenderController";
 import { makeCaptureRes } from "../lib/captureResponse";
+import { settleTender } from "../services/tenderTransitionService";
 
 const router = Router();
 
@@ -356,9 +357,10 @@ router.post("/:id/decline", async (req: AuthRequest, res: Response) => {
   });
 
   if (tender) {
-    await prisma.loadTender.update({
-      where: { id: tender.id },
-      data: { status: "DECLINED", respondedAt: new Date() },
+    await settleTender({
+      tenderId: tender.id, to: "DECLINED", from: ["OFFERED", "COUNTERED"],
+      respondedAt: new Date(),
+      actor: { id: req.user!.id, type: "CARRIER" },
     });
   }
 

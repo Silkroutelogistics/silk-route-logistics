@@ -12,8 +12,7 @@ import { log } from "../lib/logger";
 import { validateLoadStatusTransition } from "../lib/loadStateMachine";
 import { assignCarrier } from "../services/carrierAssignmentService";
 import { createTender as createTenderRow } from "../services/tenderCreationService";
-import { logTenderTransition } from "../services/waterfallEventService";
-import { withdrawLiveTenders } from "../services/tenderTransitionService";
+import { withdrawLiveTenders, settleTender, settleTenders } from "../services/tenderTransitionService";
 
 export async function createTender(req: AuthRequest, res: Response) {
   const { carrierId, offeredRate, expiresAt } = createTenderSchema.parse(req.body);
@@ -88,7 +87,10 @@ export async function acceptTender(req: AuthRequest, res: Response) {
 
   // Block action on expired tenders
   if (tender.expiresAt && new Date() > tender.expiresAt) {
-    await prisma.loadTender.update({ where: { id: tender.id }, data: { status: "EXPIRED" } });
+    await settleTender({
+      tenderId: tender.id, to: "EXPIRED", from: ["OFFERED", "COUNTERED"],
+      reason: "ttl_elapsed", respondedAt: new Date(),
+    });
     res.status(400).json({ error: "This tender has expired" });
     return;
   }
@@ -131,10 +133,13 @@ export async function acceptTender(req: AuthRequest, res: Response) {
   // history row) and issues one transition per sibling, which an array of
   // composable promises cannot express.
   const updated = await prisma.$transaction(async (tx) => {
-    const accepted = await tx.loadTender.update({
-      where: { id: tender.id },
-      data: { status: "ACCEPTED", respondedAt: new Date() },
-    });
+    await settleTender(
+      {
+        tenderId: tender.id, to: "ACCEPTED", from: "OFFERED",
+        respondedAt: new Date(), actor: { id: req.user!.id, type: "USER" },
+      },
+      tx,
+    );
     // v3.8.axa — the single writer of Load.carrierId, on the caller's
     // transaction client so the assignment stays atomic with the tender flip
     // (Sprint 38 Item 53). ARC 16: carrierRate is persisted at the
@@ -167,7 +172,9 @@ export async function acceptTender(req: AuthRequest, res: Response) {
       },
       tx,
     );
-    return accepted;
+    // settleTender reports what moved, not the row. Re-read inside the same
+    // transaction so the response body is the tender as it now stands.
+    return tx.loadTender.findUniqueOrThrow({ where: { id: tender.id } });
   });
 
   await hooks.run("PostLoadStateChange", { loadId: load.id, from: load.status, to: "BOOKED", actor: req.user!.id });
@@ -295,7 +302,10 @@ export async function acceptTenderOnBehalf(req: AuthRequest, res: Response) {
   }
 
   if (tender.expiresAt && new Date() > tender.expiresAt) {
-    await prisma.loadTender.update({ where: { id: tender.id }, data: { status: "EXPIRED" } });
+    await settleTender({
+      tenderId: tender.id, to: "EXPIRED", from: ["OFFERED", "COUNTERED"],
+      reason: "ttl_elapsed", respondedAt: new Date(),
+    });
     res.status(400).json({ error: "This tender has expired" });
     return;
   }
@@ -326,10 +336,13 @@ export async function acceptTenderOnBehalf(req: AuthRequest, res: Response) {
   // Atomic txn (Sprint 38 Item 53 pattern). Same three writes as acceptTender:
   // tender → ACCEPTED, load → BOOKED + carrierId, live siblings withdrawn.
   const updated = await prisma.$transaction(async (tx) => {
-    const accepted = await tx.loadTender.update({
-      where: { id: tender.id },
-      data: { status: "ACCEPTED", respondedAt: new Date() },
-    });
+    await settleTender(
+      {
+        tenderId: tender.id, to: "ACCEPTED", from: "OFFERED",
+        respondedAt: new Date(), actor: { id: req.user!.id, type: "USER" },
+      },
+      tx,
+    );
     // v3.8.axa — the single writer of Load.carrierId, on the caller's
     // transaction client so the assignment stays atomic with the tender flip
     // (Sprint 38 Item 53). ARC 16: carrierRate is persisted at the
@@ -362,7 +375,9 @@ export async function acceptTenderOnBehalf(req: AuthRequest, res: Response) {
       },
       tx,
     );
-    return accepted;
+    // settleTender reports what moved, not the row. Re-read inside the same
+    // transaction so the response body is the tender as it now stands.
+    return tx.loadTender.findUniqueOrThrow({ where: { id: tender.id } });
   });
 
   // Distinct audit-log action so on-behalf overrides are queryable.
@@ -468,7 +483,10 @@ export async function counterTender(req: AuthRequest, res: Response) {
 
   // Block action on expired tenders
   if (tender.expiresAt && new Date() > tender.expiresAt) {
-    await prisma.loadTender.update({ where: { id: tender.id }, data: { status: "EXPIRED" } });
+    await settleTender({
+      tenderId: tender.id, to: "EXPIRED", from: ["OFFERED", "COUNTERED"],
+      reason: "ttl_elapsed", respondedAt: new Date(),
+    });
     res.status(400).json({ error: "This tender has expired" });
     return;
   }
@@ -485,31 +503,22 @@ export async function counterTender(req: AuthRequest, res: Response) {
   // executed evidence of what was agreed at the time, and rewriting the status
   // of an executed document is not something a counter-offer gets to do.
   const updated = await prisma.$transaction(async (tx) => {
-    const t = await tx.loadTender.update({
-      where: { id: tender.id },
-      data: {
-        status: "COUNTERED",
-        counterRate,
-        respondedAt: new Date(),
-        version: { increment: 1 },
+    await settleTender(
+      {
+        tenderId: tender.id, to: "COUNTERED", from: "OFFERED",
+        counterRate, bumpVersion: true, respondedAt: new Date(),
+        reason: "carrier_counter",
+        actor: { id: req.user!.id, type: "CARRIER" },
+        metadata: { offeredRate: tender.offeredRate },
       },
-    });
+      tx,
+    );
+    const t = await tx.loadTender.findUniqueOrThrow({ where: { id: tender.id } });
     await tx.rateConfirmation.updateMany({
       where: { loadId: tender.loadId, status: { notIn: ["SIGNED", "FINALIZED", "VOID"] } },
       data: { status: "VOID" },
     });
     return t;
-  });
-
-  await logTenderTransition({
-    tenderId: tender.id,
-    loadId: tender.loadId,
-    from: "OFFERED",
-    to: "COUNTERED",
-    reason: "carrier_counter",
-    actorType: "CARRIER",
-    actorId: req.user!.id,
-    metadata: { offeredRate: tender.offeredRate, counterRate, version: updated.version },
   });
 
   // v3.8.ajw H3 — Audit row so carrier counter-offers are queryable for
@@ -581,23 +590,14 @@ export async function rejectCounter(req: AuthRequest, res: Response) {
 
   const reason = typeof req.body?.reason === "string" ? req.body.reason.trim().slice(0, 500) : null;
 
-  const updated = await prisma.loadTender.update({
-    where: { id: tender.id },
-    data: { status: "WITHDRAWN", statusReason: "counter_rejected" },
-  });
-
-  await logTenderTransition({
-    tenderId: tender.id,
-    loadId: tender.loadId,
-    from: "COUNTERED",
-    to: "WITHDRAWN",
+  await settleTender({
+    tenderId: tender.id, to: "WITHDRAWN", from: "COUNTERED",
     reason: "counter_rejected",
-    actorType: "USER",
-    actorId: req.user!.id,
+    actor: { id: req.user!.id, type: "USER" },
     metadata: { counterRate: tender.counterRate, offeredRate: tender.offeredRate, note: reason },
   });
 
-  res.json(updated);
+  res.json(await prisma.loadTender.findUniqueOrThrow({ where: { id: tender.id } }));
 }
 
 export async function declineTender(req: AuthRequest, res: Response) {
@@ -616,17 +616,19 @@ export async function declineTender(req: AuthRequest, res: Response) {
 
   // Already expired — just mark it
   if (tender.expiresAt && new Date() > tender.expiresAt) {
-    await prisma.loadTender.update({ where: { id: tender.id }, data: { status: "EXPIRED" } });
+    await settleTender({
+      tenderId: tender.id, to: "EXPIRED", from: ["OFFERED", "COUNTERED"],
+      reason: "ttl_elapsed", respondedAt: new Date(),
+    });
   }
 
-  const updated = await prisma.loadTender.update({
-    where: { id: tender.id },
-    data: {
-      status: "DECLINED",
-      respondedAt: new Date(),
-      declineReason: declineReason ?? null,
-    },
+  await settleTender({
+    tenderId: tender.id, to: "DECLINED", from: ["OFFERED", "COUNTERED"],
+    declineReason: declineReason ?? null,
+    respondedAt: new Date(),
+    actor: { id: req.user!.id, type: "CARRIER" },
   });
+  const updated = await prisma.loadTender.findUniqueOrThrow({ where: { id: tender.id } });
 
   // v3.8.ajw H3 + v3.8.ajz Item 90 — Audit row now includes the decline
   // reason in the changes blob. Closes the gap where carrier decline
@@ -733,9 +735,14 @@ export async function processExpiredTenders() {
   if (expired.length === 0) return { expired: 0, loadsReverted: 0 };
 
   // Batch-expire them
-  await prisma.loadTender.updateMany({
-    where: { id: { in: expired.map((t) => t.id) } },
-    data: { status: "EXPIRED", respondedAt: now },
+  // v3.8.axk — through the transition service, which also gives the sweep the
+  // history rows it never wrote. A tender that expired left no trace of having
+  // done so, so the drawer showed an offer that simply stopped.
+  await settleTenders({
+    tenderIds: expired.map((t) => t.id),
+    to: "EXPIRED",
+    reason: "ttl_elapsed",
+    respondedAt: now,
   });
 
   // Sprint 52a (Item 141) — fan-out EXPIRED email notification per tender

@@ -1,3 +1,53 @@
+// v3.8.axk — THE ALLOW-LIST SAID "CARRIER DECLINES A CASCADE OFFER". THE ROUTE
+// BEHIND IT LET AN AE DO IT.
+//
+// Eleven files could move a tender when the audit ran. Three can now: one
+// creates, one transitions, one releases. tenderController, carrierLoads,
+// waterfallEngineService and the waterfalls route all go through the service.
+//
+// The consolidation is what surfaced the finding. tenderDeclineWriters is a
+// static guard over which FILES may write DECLINED, and it was green on
+// waterfallEngineService with an entry reading "declinePosition — carrier
+// declines a cascade offer". The route is authorize("CARRIER", ...AE_ROLES),
+// so an AE clicking decline wrote a real refusal onto that carrier's
+// acceptance rate — scored at 10% of Compass — and the guard could not see it,
+// because a list of files cannot see who is calling.
+//
+// The check moved to settleTender, where the actor is known. An AE may still
+// record a decline a carrier phoned in; that is a real operational act, the
+// same shape as accept-on-behalf. It must say onBehalf, and the transition row
+// keeps the distinction rather than presenting it as the carrier's own click.
+//
+// The expiry sweep gained history it never had. A tender that ran out of time
+// left no trace of having done so, so the drawer showed an offer that simply
+// stopped.
+//
+// TWO SCANNER BLIND SPOTS, both found by the guards themselves.
+//
+// The consolidation put the update behind a helper that takes `data` as a
+// parameter, and the scanner — which reads literal keys — reported the
+// transition service as writing no status at all. Its own stale-entry check
+// caught that. Left alone, any file could have hoisted its payload into a
+// variable and walked past. An unreadable payload now counts as a status
+// write: the alternative is a guard with a documented bypass.
+//
+// And the DECLINED allow-list is now EMPTY rather than one-entry, because the
+// service writes `status: input.to` and the literal appears nowhere. A name
+// back on that list means somebody wrote a direct decline again.
+//
+// A DEFECT THE TYPE SYSTEM COULD NOT SEE. settleTender first defaulted its
+// FROM rail to every non-terminal state by name, including RC_SENT and
+// CONFIRMED — ratified, but not in the Prisma enum until commit 11 — so every
+// call without an explicit rail died on "Invalid value for argument `in`".
+// The list is cast through `as never` to reach the generated enum type, and a
+// cast is a promise that the check is unnecessary. Only the real database
+// knew. Omitting the rail now means "whatever it is now".
+//
+// Proof: _withdraw-consolidation-proof.ts, 35/35 against a real database.
+// Four injections, each run: a new file writing status is named; a hoisted
+// payload in a non-listed file is named; dropping the carrier-initiation check
+// turns exactly the two refusal cases red; and the FROM rail proves an accept
+// that raced a decline settles nothing rather than overwriting it.
 // v3.8.axj — SIX PLACES WITHDREW SIBLING TENDERS, AND ALL SIX MISSED THE SAME ONE.
 //
 // Accept, accept-on-behalf, broadcast accept, load cancelled, cascade position
@@ -16389,7 +16439,7 @@
 // and a data: qrCodeDataUrl are all legitimate and a guard that flagged them
 // would be noise. Comments are blanked before matching — the fixes are explained
 // in comments that necessarily quote the banned patterns.
-export const SRL_VERSION = "3.8.axj";
+export const SRL_VERSION = "3.8.axk";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

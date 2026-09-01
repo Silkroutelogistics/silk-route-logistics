@@ -14,7 +14,7 @@
  * Local-only: it writes and deletes rows.
  */
 import { prisma } from "../src/config/database";
-import { withdrawLiveTenders } from "../src/services/tenderTransitionService";
+import { withdrawLiveTenders, settleTender, settleTenders } from "../src/services/tenderTransitionService";
 
 const url = process.env.DATABASE_URL ?? "";
 if (!/localhost|127\.0\.0\.1/.test(url)) {
@@ -46,12 +46,14 @@ async function makeLoad(ref: string) {
 }
 
 let carrierSeq = 0;
+let seedCarrierUser = "";
 async function makeTender(loadId: string, status: string, extra: Record<string, unknown> = {}) {
   const n = ++carrierSeq;
   const u = await prisma.user.create({
     data: { email: `w8b-${n}-${stamp}@srl.invalid`, passwordHash: "x", firstName: `C${n}`, lastName: "Co", role: "CARRIER" },
   });
   const p = await prisma.carrierProfile.create({ data: { userId: u.id, companyName: `W8B ${n} ${stamp}` } });
+  if (!seedCarrierUser) seedCarrierUser = u.id;
   return prisma.loadTender.create({
     data: {
       loadId, carrierId: p.id, offeredRate: 4100,
@@ -172,6 +174,56 @@ async function main() {
   ok("position scope withdraws only that position", r5.count === 1 && (await after(inPos.id)).status === "WITHDRAWN",
      `count=${r5.count}`);
   ok("a tender elsewhere on the same load is untouched", (await after(seed.id)).status === "OFFERED");
+
+  // 6. settleTender / settleTenders — the rest of the consolidation (8c)
+  console.log("\n[6] single and bulk settles, and who is allowed to decline");
+  const l6 = await makeLoad("W8B-F");
+  const t6 = await makeTender(l6.id, "OFFERED");
+
+  // The `from` rail: a settle that names a state the tender is no longer in
+  // moves nothing, rather than overwriting whatever happened first.
+  const stale = await settleTender({ tenderId: t6.id, to: "ACCEPTED", from: "COUNTERED" });
+  ok("a settle naming the wrong FROM state moves nothing", stale.count === 0 && (await after(t6.id)).status === "OFFERED",
+     "an accept that raced a decline must settle nothing, not overwrite it");
+
+  await settleTender({
+    tenderId: t6.id, to: "DECLINED", from: "OFFERED",
+    declineReason: "rate too low", respondedAt: new Date(),
+    actor: { id: seedCarrierUser, type: "CARRIER" },
+  });
+  const d6 = await after(t6.id);
+  ok("a carrier decline lands with its reason", d6.status === "DECLINED" && d6.declineReason === "rate too low");
+  const h6 = await history(t6.id);
+  ok("and it left one transition row", h6.length === 1, `rows=${h6.length}`);
+  ok("recorded as the carrier's own, not on-behalf",
+     ((h6[0]?.metadata ?? {}) as Record<string, unknown>).onBehalf === false);
+
+  // The case the file-level allow-list could not see.
+  const l7 = await makeLoad("W8B-G");
+  const t7 = await makeTender(l7.id, "OFFERED");
+  let refusedDecline = false;
+  try {
+    await settleTender({ tenderId: t7.id, to: "DECLINED", actor: { id: posterId, type: "USER" } });
+  } catch (e) { refusedDecline = (e as { code?: string }).code === "DECLINE_NOT_CARRIER_INITIATED"; }
+  ok("an AE cannot silently record a decline as the carrier's own", refusedDecline);
+  ok("and the tender is untouched by the refusal", (await after(t7.id)).status === "OFFERED");
+
+  await settleTender({
+    tenderId: t7.id, to: "DECLINED", onBehalf: true,
+    actor: { id: posterId, type: "USER" },
+  });
+  const h7 = await history(t7.id);
+  ok("an AE may record one the carrier gave, marked as on-behalf",
+     ((h7[0]?.metadata ?? {}) as Record<string, unknown>).onBehalf === true);
+
+  // The expiry sweep, which never wrote history at all before this.
+  const l8 = await makeLoad("W8B-H");
+  const t8a = await makeTender(l8.id, "OFFERED");
+  const t8b = await makeTender(l8.id, "COUNTERED");
+  const r8 = await settleTenders({ tenderIds: [t8a.id, t8b.id], to: "EXPIRED", reason: "ttl_elapsed", respondedAt: new Date() });
+  ok("a bulk expire moves both", r8.count === 2, `count=${r8.count}`);
+  ok("and each one now leaves a trace it never used to",
+     (await history(t8a.id)).length === 1 && (await history(t8b.id)).length === 1);
 
   console.log(`\n${pass}/${pass + fail} passed`);
   if (fail) process.exitCode = 1;

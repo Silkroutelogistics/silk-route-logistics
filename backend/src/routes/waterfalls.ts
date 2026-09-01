@@ -11,6 +11,7 @@ import {
 } from "../services/waterfallEngineService";
 import { scoreCarriersForLoad, loadLoadContext } from "../services/waterfallScoringService";
 import { logWaterfallEvent } from "../services/waterfallEventService";
+import { withdrawLiveTenders } from "../services/tenderTransitionService";
 import { log } from "../lib/logger";
 
 const router = Router();
@@ -313,9 +314,10 @@ router.patch(
       // An AE skipping a cascade position is SRL withdrawing the offer; the
       // carrier neither ran out of time nor responded. Found by the
       // loadTenderWriters guard.
-      await prisma.loadTender.updateMany({
-        where: { waterfallPositionId: pos.id, status: "OFFERED" },
-        data: { status: "WITHDRAWN", statusReason: "position_skipped" },
+      await withdrawLiveTenders({
+        waterfallPositionId: pos.id,
+        reason: "position_skipped",
+        actor: { id: req.user?.id ?? null, type: "USER" },
       });
 
       const wf = await prisma.waterfall.findUnique({
@@ -534,7 +536,13 @@ router.post(
   async (req: AuthRequest, res: Response) => {
     try {
       const { reason } = req.body as { reason?: string };
-      await declinePosition(req.params.positionId, reason ?? null, req.user?.id);
+      // v3.8.axk — the route is authorize("CARRIER", ...AE_ROLES), so this is
+      // reached by an AE as well as by the carrier. Recording an AE's click as
+      // the carrier's own decline marks that carrier's acceptance rate (§9, 10%
+      // of Compass) for a refusal they did not make. The flag is passed down so
+      // the transition row says which it was.
+      const onBehalf = req.user?.role !== "CARRIER";
+      await declinePosition(req.params.positionId, reason ?? null, req.user?.id, { onBehalf });
       res.json({ ok: true });
     } catch (err) {
       log.error({ err }, "[Waterfall] decline error");

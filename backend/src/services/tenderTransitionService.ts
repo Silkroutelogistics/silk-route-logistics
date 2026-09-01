@@ -57,6 +57,213 @@ const LIVE: TenderState[] = ["OFFERED", "COUNTERED"];
 
 export type TenderDb = Prisma.TransactionClient | typeof prisma;
 
+export type Actor = {
+  id?: string | null;
+  name?: string | null;
+  type?: "USER" | "SYSTEM" | "CARRIER" | "SHIPPER";
+};
+
+/** Every state a live tender can settle into. */
+export type SettleTo = "ACCEPTED" | "DECLINED" | "COUNTERED" | "EXPIRED" | "WITHDRAWN";
+
+/**
+ * DECLINED is carrier-initiated, and this is where that stops being a rule
+ * somebody has to remember.
+ *
+ * There is a static guard (tenderDeclineWriters) over which FILES may write it,
+ * and a file-level allow-list cannot see who is calling. It has an entry for
+ * waterfallEngineService reading "carrier declines a cascade offer" -- and the
+ * route behind it is authorize("CARRIER", ...AE_ROLES), so an AE declining on a
+ * carrier's behalf satisfied the allow-list and wrote a real decline onto that
+ * carrier's acceptance rate. Presence is not function.
+ *
+ * So the check moved to where the caller is known. An AE may still record a
+ * decline a carrier phoned in -- that is a real operational act, the same shape
+ * as accept-on-behalf -- but it must say so, and the history row records that it
+ * was on-behalf rather than presenting it as the carrier's own click.
+ */
+function assertDeclineIsCarrierInitiated(to: SettleTo, actor?: Actor, onBehalf?: boolean) {
+  if (to !== "DECLINED") return;
+  if (actor?.type === "CARRIER" || onBehalf) return;
+  const e = new Error(
+    "DECLINED is carrier-initiated. Pass actor.type CARRIER, or onBehalf: true to " +
+      "record a decline the carrier gave outside the portal. SRL refusing a carrier " +
+      "is WITHDRAWN with a coded reason.",
+  );
+  (e as Error & { code?: string }).code = "DECLINE_NOT_CARRIER_INITIATED";
+  throw e;
+}
+
+/**
+ * Read the rows, move them, and log only what actually moved.
+ *
+ * The read is needed because a history row wants each tender's id and its FROM
+ * state and `updateMany` returns neither. Inside a transaction the pair is
+ * atomic. Outside one a tender could settle in between, so the update is scoped
+ * to the states we believed we saw and, when the counts disagree, the rows that
+ * really moved are re-read before anything is written to history.
+ */
+async function applySettle(
+  db: TenderDb,
+  scope: Prisma.LoadTenderWhereInput,
+  /** Undefined means "whatever it is now". A list is a safety rail. */
+  fromStates: TenderState[] | undefined,
+  data: Prisma.LoadTenderUpdateManyMutationInput,
+  to: SettleTo,
+  reason: string | null,
+  actor: Actor | undefined,
+  metadata: Record<string, unknown>,
+): Promise<{ count: number; tenderIds: string[] }> {
+  const statusRail = fromStates ? { status: { in: fromStates as never } } : {};
+  const snapshot = await db.loadTender.findMany({
+    where: { ...scope, ...statusRail },
+    select: { id: true, loadId: true, status: true },
+  });
+  if (snapshot.length === 0) return { count: 0, tenderIds: [] };
+
+  const ids = snapshot.map((t) => t.id);
+  const updated = await db.loadTender.updateMany({
+    where: { id: { in: ids }, ...statusRail },
+    data,
+  });
+
+  let moved = snapshot;
+  if (updated.count !== snapshot.length) {
+    const after = await db.loadTender.findMany({
+      where: { id: { in: ids }, status: to as never },
+      select: { id: true },
+    });
+    const movedIds = new Set(after.map((t) => t.id));
+    moved = snapshot.filter((t) => movedIds.has(t.id));
+  }
+
+  for (const t of moved) {
+    await logTenderTransition(
+      {
+        tenderId: t.id,
+        loadId: t.loadId,
+        from: t.status as TenderState,
+        to,
+        reason,
+        actorType: actor?.type ?? (actor?.id ? "USER" : "SYSTEM"),
+        actorId: actor?.id ?? null,
+        actorName: actor?.name ?? null,
+        metadata,
+      },
+      db,
+    );
+  }
+
+  return { count: moved.length, tenderIds: moved.map((t) => t.id) };
+}
+
+/**
+ * Settle one tender by id.
+ *
+ * `from` is optional and is a safety rail rather than an optimisation: supply
+ * it and the tender only moves if it is still in that state, so an accept that
+ * raced a decline settles nothing instead of overwriting it.
+ */
+export async function settleTender(
+  input: {
+    tenderId: string;
+    to: SettleTo;
+    from?: TenderState | TenderState[];
+    /** Coded reason. Persisted on the row for WITHDRAWN, always in history. */
+    reason?: string | null;
+    /** The carrier's own words. DECLINED only. */
+    declineReason?: string | null;
+    counterRate?: number;
+    /** A counter changes the terms, so it takes a new version. */
+    bumpVersion?: boolean;
+    respondedAt?: Date | null;
+    onBehalf?: boolean;
+    actor?: Actor;
+    metadata?: Record<string, unknown>;
+  },
+  db: TenderDb = prisma,
+): Promise<{ count: number; tenderIds: string[] }> {
+  assertDeclineIsCarrierInitiated(input.to, input.actor, input.onBehalf);
+
+  // Omitting `from` means "whatever it is now" rather than a default list.
+  //
+  // The first version defaulted to every non-terminal state by name, including
+  // RC_SENT and CONFIRMED — which are ratified but are NOT in the Prisma enum
+  // until commit 11, so every call with no rail died on "Invalid value for
+  // argument `in`". TypeScript could not see it: the list is cast through
+  // `as never` to reach Prisma's generated enum type, and a cast is a promise
+  // that the check is unnecessary. The real database was the only thing that
+  // knew. Naming states a schema does not have is a bug the day a state is
+  // ratified before it is migrated, which is exactly this arc.
+  const fromStates = input.from
+    ? (Array.isArray(input.from) ? input.from : [input.from])
+    : undefined;
+
+  return applySettle(
+    db,
+    { id: input.tenderId },
+    fromStates,
+    {
+      status: input.to as never,
+      ...(input.to === "WITHDRAWN" && input.reason ? { statusReason: input.reason } : {}),
+      ...(input.declineReason !== undefined ? { declineReason: input.declineReason } : {}),
+      ...(input.counterRate !== undefined ? { counterRate: input.counterRate } : {}),
+      ...(input.bumpVersion ? { version: { increment: 1 } } : {}),
+      ...(input.respondedAt !== undefined && input.respondedAt !== null
+        ? { respondedAt: input.respondedAt }
+        : {}),
+    },
+    input.to,
+    input.reason ?? null,
+    input.actor,
+    { onBehalf: !!input.onBehalf, ...(input.metadata ?? {}) },
+  );
+}
+
+/**
+ * Settle every live tender in a scope -- a cascade position, or a known set of
+ * ids. Used by the cascade (accept / decline / expire at a position) and by the
+ * expiry sweep.
+ */
+export async function settleTenders(
+  input: {
+    tenderIds?: string[];
+    waterfallPositionId?: string;
+    to: SettleTo;
+    reason?: string | null;
+    respondedAt?: Date | null;
+    onBehalf?: boolean;
+    actor?: Actor;
+    metadata?: Record<string, unknown>;
+  },
+  db: TenderDb = prisma,
+): Promise<{ count: number; tenderIds: string[] }> {
+  assertDeclineIsCarrierInitiated(input.to, input.actor, input.onBehalf);
+  if (!input.tenderIds && !input.waterfallPositionId) {
+    throw new Error("settleTenders needs tenderIds or a waterfallPositionId");
+  }
+  if (input.tenderIds && input.tenderIds.length === 0) return { count: 0, tenderIds: [] };
+
+  return applySettle(
+    db,
+    {
+      ...(input.tenderIds ? { id: { in: input.tenderIds } } : {}),
+      ...(input.waterfallPositionId ? { waterfallPositionId: input.waterfallPositionId } : {}),
+      deletedAt: null,
+    },
+    LIVE,
+    {
+      status: input.to as never,
+      ...(input.to === "WITHDRAWN" && input.reason ? { statusReason: input.reason } : {}),
+      ...(input.respondedAt ? { respondedAt: input.respondedAt } : {}),
+    },
+    input.to,
+    input.reason ?? null,
+    input.actor,
+    { onBehalf: !!input.onBehalf, ...(input.metadata ?? {}) },
+  );
+}
+
 export interface WithdrawLiveTendersInput {
   /** Withdraw every live tender on this load. */
   loadId?: string;
@@ -99,60 +306,26 @@ export async function withdrawLiveTenders(
     throw new Error("withdrawLiveTenders needs a loadId or a waterfallPositionId");
   }
 
-  const scope: Prisma.LoadTenderWhereInput = {
-    ...(loadId ? { loadId } : {}),
-    ...(waterfallPositionId ? { waterfallPositionId } : {}),
-    ...(exceptTenderId ? { id: { not: exceptTenderId } } : {}),
-    status: { in: LIVE as never },
-    deletedAt: null,
-  };
-
-  const snapshot = await db.loadTender.findMany({
-    where: scope,
-    select: { id: true, loadId: true, status: true },
-  });
-  if (snapshot.length === 0) return { count: 0, tenderIds: [] };
-
-  const ids = snapshot.map((t) => t.id);
-  const updated = await db.loadTender.updateMany({
-    where: { id: { in: ids }, status: { in: LIVE as never } },
-    data: {
+  // respondedAt is deliberately NOT set. Nobody responded -- SRL pulled the
+  // offer -- and stamping a response time would make the carrier look like they
+  // answered when they were never given the chance.
+  return applySettle(
+    db,
+    {
+      ...(loadId ? { loadId } : {}),
+      ...(waterfallPositionId ? { waterfallPositionId } : {}),
+      ...(exceptTenderId ? { id: { not: exceptTenderId } } : {}),
+      deletedAt: null,
+    },
+    LIVE,
+    {
       status: "WITHDRAWN",
       statusReason: reason,
       ...(softDelete ? { deletedAt: new Date() } : {}),
     },
-  });
-
-  // respondedAt is deliberately NOT set. Nobody responded -- SRL pulled the
-  // offer -- and stamping a response time would make the carrier look like they
-  // answered when they were never given the chance.
-
-  let moved = snapshot;
-  if (updated.count !== snapshot.length) {
-    const after = await db.loadTender.findMany({
-      where: { id: { in: ids }, status: "WITHDRAWN", statusReason: reason },
-      select: { id: true },
-    });
-    const movedIds = new Set(after.map((t) => t.id));
-    moved = snapshot.filter((t) => movedIds.has(t.id));
-  }
-
-  for (const t of moved) {
-    await logTenderTransition(
-      {
-        tenderId: t.id,
-        loadId: t.loadId,
-        from: t.status as TenderState,
-        to: "WITHDRAWN",
-        reason,
-        actorType: input.actor?.type ?? (input.actor?.id ? "USER" : "SYSTEM"),
-        actorId: input.actor?.id ?? null,
-        actorName: input.actor?.name ?? null,
-        metadata: { exceptTenderId: exceptTenderId ?? null, softDeleted: !!softDelete },
-      },
-      db,
-    );
-  }
-
-  return { count: moved.length, tenderIds: moved.map((t) => t.id) };
+    "WITHDRAWN",
+    reason,
+    input.actor,
+    { exceptTenderId: exceptTenderId ?? null, softDeleted: !!softDelete },
+  );
 }

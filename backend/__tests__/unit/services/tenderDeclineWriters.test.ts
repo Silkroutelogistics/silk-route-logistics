@@ -13,9 +13,20 @@
  * it would be invisible: nothing errors, no test fails, a number on a scorecard
  * just quietly gets worse for carriers who did nothing wrong.
  *
- * WHAT IT ASSERTS. Every `prisma.loadTender.update*` call whose data block sets
- * `status: "DECLINED"` must sit in the allow-list below — the paths where a
- * CARRIER refused. A new writer anywhere else fails this test by file and line.
+ * WHAT IT ASSERTS, IN TWO PARTS, AND THE SECOND IS THE ONE THAT MATTERS.
+ *
+ * Statically: only the transition service may write the literal. That is now
+ * nearly trivial to satisfy and is kept as a tripwire against a new direct
+ * write appearing.
+ *
+ * Behaviourally: `settleTender` refuses DECLINED unless the actor is the
+ * carrier or the caller says `onBehalf`. This is the half with teeth, and it
+ * exists because the file-level list was SATISFIED BY A ROUTE THAT ADMITS AEs.
+ * The entry read "declinePosition — carrier declines a cascade offer"; the
+ * route behind it is `authorize("CARRIER", ...AE_ROLES)`, so an AE clicking
+ * decline wrote a real refusal onto that carrier's acceptance rate and the
+ * guard was green about it. Presence is not function (§19 Sub-pattern 16) —
+ * an allow-list over FILES cannot see who is calling.
  *
  * The scanner is multi-line-aware and strips comments, per §19 Sub-pattern 18:
  * a pattern requiring model and method on one line misses this codebase's
@@ -24,9 +35,11 @@
  * fixture, so a scanner that has stopped matching anything fails loudly rather
  * than reporting a clean tree.
  */
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, beforeEach, vi } from "vitest";
 import fs from "fs";
 import path from "path";
+import { prisma } from "../../../src/config/database";
+import { settleTender } from "../../../src/services/tenderTransitionService";
 
 const SRC = path.resolve(__dirname, "..", "..", "..", "src");
 
@@ -76,16 +89,23 @@ export function findDeclineWriters(root = SRC, sources?: Map<string, string>) {
 }
 
 /**
- * The only paths a carrier's own refusal travels. Each was read and confirmed
- * carrier-initiated; adding to this list is asserting the same of a new one.
+ * EMPTY, and that is the point.
+ *
+ * No file writes the literal any more: the transition service writes
+ * `status: input.to`, so the string "DECLINED" appears in no Prisma payload
+ * anywhere. A name back on this list means somebody has written a direct
+ * decline again, and they have to justify it here.
  */
-const CARRIER_INITIATED = new Set([
-  "controllers/tenderController.ts",   // declineTender — carrier declines in portal
-  "routes/carrierLoads.ts",            // carrier declines from the load board
-  "services/waterfallEngineService.ts", // declinePosition — carrier declines a cascade offer
-]);
+const CARRIER_INITIATED = new Set<string>([]);
 
 describe("DECLINED is carrier-initiated", () => {
+  beforeEach(() => {
+    // The behavioural cases are about the refusal, not about the database. An
+    // empty snapshot makes every permitted settle a no-op that still resolves,
+    // so a rejection can only have come from the check under test.
+    (prisma.loadTender.findMany as unknown as ReturnType<typeof vi.fn>).mockResolvedValue([]);
+  });
+
   it("no SRL-side path writes DECLINED onto a tender", () => {
     const offenders = findDeclineWriters().filter((h) => !CARRIER_INITIATED.has(h.file));
     expect(
@@ -96,11 +116,45 @@ describe("DECLINED is carrier-initiated", () => {
     ).toEqual([]);
   });
 
-  it("the allow-listed carrier paths still exist (no stale entry)", () => {
-    // A permission granted to a file that has moved is dead permission, and it
-    // would silently widen this guard the day something else takes that path.
+  it("the allow-list is empty, and stays honest if it is not", () => {
+    // Dead permission silently widens a guard the day something else takes that
+    // path, so an entry here must correspond to a real writer.
     const seen = new Set(findDeclineWriters().map((h) => h.file));
+    expect([...CARRIER_INITIATED], "nothing should need direct-decline permission").toEqual([]);
     for (const f of CARRIER_INITIATED) expect(seen, `allow-listed ${f} no longer writes DECLINED`).toContain(f);
+  });
+
+  it("settleTender refuses DECLINED from an AE", async () => {
+    // The case the file-level list could not see: an AE on a route that admits
+    // both. Refused by code, at the call, where the actor is known.
+    await expect(
+      settleTender({ tenderId: "t1", to: "DECLINED", actor: { id: "u1", type: "USER" } }),
+    ).rejects.toMatchObject({ code: "DECLINE_NOT_CARRIER_INITIATED" });
+  });
+
+  it("settleTender refuses DECLINED from the system", async () => {
+    await expect(settleTender({ tenderId: "t1", to: "DECLINED" }))
+      .rejects.toMatchObject({ code: "DECLINE_NOT_CARRIER_INITIATED" });
+  });
+
+  it("a carrier may decline, and an AE may record one they were given", async () => {
+    // Not a loophole. An AE recording a decline a carrier phoned in is a real
+    // operational act, the same shape as accept-on-behalf — but it has to say
+    // so, and the transition row keeps that distinction.
+    await expect(
+      settleTender({ tenderId: "t1", to: "DECLINED", actor: { id: "c1", type: "CARRIER" } }),
+    ).resolves.toBeDefined();
+    await expect(
+      settleTender({ tenderId: "t1", to: "DECLINED", onBehalf: true, actor: { id: "u1", type: "USER" } }),
+    ).resolves.toBeDefined();
+  });
+
+  it("nothing else is refused — the check is scoped to DECLINED", async () => {
+    // A guard that refused every settle would pass the two tests above while
+    // being useless, so this is the tripwire on the refusal itself.
+    await expect(settleTender({ tenderId: "t1", to: "WITHDRAWN", reason: "ae_withdrew" }))
+      .resolves.toBeDefined();
+    await expect(settleTender({ tenderId: "t1", to: "EXPIRED" })).resolves.toBeDefined();
   });
 
   it("the scanner actually matches — wrapped chains and all (vacuity tripwire)", () => {
