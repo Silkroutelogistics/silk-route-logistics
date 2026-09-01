@@ -1,3 +1,23 @@
+// v3.8.axz — THE GUARD SWEEP, AND THE THREE ROWS A GUARD CANNOT CLOSE.
+//
+// One guard block per remaining open gap-table row. Rows 1 and 8 close. Row 4
+// closes the half that matters and says which half it cannot: its target is
+// conditional on waterfall.parallel, which does not exist.
+//
+// Row 3 is FROZEN, not closed: 28 sites still write Load.status, and asserting
+// zero would be red against correct code, because enforcing the canonical
+// machine today breaks auto-pilot dispatch and fall-off recovery. The
+// population may shrink and never grow.
+//
+// Rows 7 and 16 are BUILDS, not invariants -- there is no QuickPayElection row
+// to assert about, and the cascade advance does not exist. A guard over absent
+// behaviour fails by design, and a permanently-red guard is one people ignore.
+// The reason is written into each row rather than a commit message.
+//
+// A guard of mine asserted something false about correct code: the accept-path
+// list was hardcoded and flagged withTenderController, which CREATES a load and
+// so has no siblings. The set is now derived from source.
+
 // v3.8.axy — A MIGRATION REACHED PRODUCTION FROM A LOCAL SHELL, AND THE RAIL
 // THAT CLOSES IT.
 //
@@ -16869,7 +16889,7 @@
 // and a data: qrCodeDataUrl are all legitimate and a guard that flagged them
 // would be noise. Comments are blanked before matching — the fixes are explained
 // in comments that necessarily quote the banned patterns.
-export const SRL_VERSION = "3.8.axy";
+export const SRL_VERSION = "3.8.axz";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

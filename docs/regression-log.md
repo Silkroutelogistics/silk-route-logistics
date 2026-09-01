@@ -13,6 +13,60 @@ so it's searchable and never lost.
 
 ---
 
+## Fixed — 2026-09-01 (v3.8.axz — the guard sweep, and the three rows a guard cannot close)
+
+- **Status:** commit 12b of the sprint close. 12c is the signature on
+  auto-dispatch paths; 12d closes the arc.
+- **Shape:** one guard block per remaining open gap-table row, structural where
+  the invariant is a vocabulary or a writer set and behavioural (in a DB proof)
+  where it is behaviour under real data. Twelve cases; four injections executed.
+- **Row 1 — CLOSED.** The state set is **nine, not the seven** the target named:
+  it left COUNTERED and DECLINED undecided and both are real carrier-initiated
+  states, so both stayed. The enum is frozen, and a second case asserts
+  `SettleTo` carries every member — a state the transition service cannot reach
+  forces callers through `as never`, which is precisely how RELEASED lost its
+  `statusReason` earlier in this arc.
+- **Row 8 — CLOSED.** A re-send reuses the frozen artifact; the guard asserts the
+  generator sits inside the not-yet-issued branch, because a re-render produces
+  different bytes for identical terms (v3.8.awj).
+- **Row 4 — PARTIAL, and the row says which half.** Accepting settles every
+  sibling including COUNTERED, proven against a real database and guarded
+  structurally. The row's own target cannot be asserted: it is conditional on
+  `waterfall.parallel`, which does not exist, so a general uniqueness rule would
+  make broadcast tendering illegal.
+- **Row 3 — OPEN, frozen rather than closed.** 28 sites across 18 files still
+  write `Load.status`. A guard asserting zero would be red against correct code:
+  §13.3 Item 194 established that enforcing the canonical machine today **breaks
+  production**, because auto-pilot legitimately skips BOOKED and fall-off
+  recovery legitimately moves backwards. The guard freezes the population — it
+  may shrink, never grow — which stops the problem worsening while the
+  reconciliation is pending.
+- **Rows 7 and 16 — OPEN, and not closeable by a guard at all.** Both are
+  BUILDS, not invariants. There is no `QuickPayElection` row to assert anything
+  about, and the cascade advance on expiry does not exist; a guard over absent
+  behaviour can only fail by design, and a permanently-red guard is one people
+  learn to ignore. **The reason is written into each row**, not left in a commit
+  message where the next reader will not find it.
+- **A GUARD OF MINE ASSERTED SOMETHING FALSE ABOUT CORRECT CODE.** The row-4
+  block first hardcoded three "accept paths" and flagged
+  `withTenderController` — which CREATES a load and tenders it, so there are no
+  siblings and calling the helper would be meaningless. A hand-kept list of
+  accept paths is exactly the artefact that goes stale, and it fails in the worse
+  direction by omitting whatever is added next. The set is now **derived from
+  source**: a file that settles a tender to ACCEPTED is an accept path, by
+  definition. Two exist and both route through the helper.
+- **Injections, all four executed:** a tenth enum state fails two cases;
+  dropping COUNTERED from `LIVE` names it; removing the `alreadyIssued` guard
+  fails the re-send case; a new `Load.status` writer moves the count 18 → 19 and
+  the failure message lists every file.
+- **Letter note:** the version guard reported `axz` as claimed. Both hits were my
+  own gap-table text citing the version, and `git status` showed no foreign
+  files — the self-inflicted case §2.2 documents. Checked rather than dismissed,
+  because Arc 26's collision was real and was nearly missed for this reason.
+  Taking the guard's "next free" would have skipped a letter, which §3.1 forbids.
+- **Gates:** backend tsc clean, vitest **1464 pass / 1 fail** (known `urlSafety`
+  DNS red).
+
 ## Fixed — 2026-09-01 (v3.8.axy — a migration reached production from a local shell, and the rail that closes it)
 
 - **Status:** commit 12a of the sprint close. 12b is the guard sweep, 12c the
