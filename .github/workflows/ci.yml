@@ -142,6 +142,18 @@ jobs:
     runs-on: ubuntu-latest
     needs: [backend, frontend]
 
+    # A Playwright browser download once hung for 6h02m (§13.3 Item 198),
+    # which is why E2E is not in the deploy gate. A hang should FAIL rather
+    # than burn a runner for hours and leave the result ambiguous.
+    timeout-minutes: 25
+
+    # Job-level permissions REPLACE the default for this job, so `contents:
+    # read` has to be restated for actions/checkout. `issues: write` is only
+    # for the pinned E2E-red issue below; no other job gets it.
+    permissions:
+      contents: read
+      issues: write
+
     services:
       postgres:
         image: postgres:16
@@ -257,6 +269,69 @@ jobs:
           name: playwright-report
           path: playwright-report/
           retention-days: 7
+
+      # ── E2E visibility (Item 254) ──────────────────────────────────────
+      # E2E stays OUTSIDE the deploy gate. That exclusion is deliberate and
+      # correct — v3.8.asv removed it after a Playwright browser-download
+      # hang ran six hours, and gating deploys on an infrastructure flake is
+      # worse than not gating them.
+      #
+      # What the exclusion cost was VISIBILITY, not safety. A red E2E blocks
+      # nothing and colours no gating job, so the workflow reads green while
+      # the suite is broken. It went unread for fourteen commits.
+      #
+      # A single pinned issue is the signal: opened on the first red, updated
+      # rather than duplicated on each subsequent red, and closed on the next
+      # green. The issue list therefore carries exactly one row while E2E is
+      # broken and none when it is not — which is a state a person can check
+      # at a glance, unlike a job buried in a green run.
+      #
+      # Push-to-main only. On a pull request a red E2E is already attached to
+      # the PR the author is looking at, and commenting there too would train
+      # people to ignore the issue.
+      - name: Open or update the E2E red issue
+        if: failure() && github.event_name == 'push' && github.ref == 'refs/heads/main'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          TITLE="E2E red"
+          # Exact-title match over the open list rather than `--search`: the
+          # search index is eventually consistent, so a search can miss an
+          # issue opened minutes ago and duplicate it.
+          NUM=$(gh issue list --state open --limit 100 --json number,title \
+                  --jq "map(select(.title == \"$TITLE\")) | .[0].number // empty")
+          BODY=$(printf '%s\n\n%s\n\n%s\n' \
+            "E2E - Full Lifecycle Smoke failed on \`$GITHUB_SHA\`." \
+            "Run: $RUN_URL" \
+            "E2E is outside the deploy gate by design, so this failure blocks no deploy and colours no gating job. This issue is the signal. It closes automatically on the next green E2E run on main.")
+          if [ -n "$NUM" ]; then
+            echo "Updating existing issue #$NUM"
+            gh issue comment "$NUM" --body "$BODY"
+          else
+            echo "Opening the E2E red issue"
+            gh issue create --title "$TITLE" --body "$BODY"
+          fi
+
+      - name: Close the E2E red issue
+        if: success() && github.event_name == 'push' && github.ref == 'refs/heads/main'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          TITLE="E2E red"
+          NUM=$(gh issue list --state open --limit 100 --json number,title \
+                  --jq "map(select(.title == \"$TITLE\")) | .[0].number // empty")
+          if [ -n "$NUM" ]; then
+            echo "Closing issue #$NUM"
+            gh issue close "$NUM" --comment "Green again on \`$GITHUB_SHA\`. Run: $RUN_URL"
+          else
+            echo "No open E2E red issue — nothing to close."
+          fi
 
   # ─── Deploy ────────────────────────────────────────────────────────────
   # Gates the Render deploy on CI instead of letting a push deploy straight to

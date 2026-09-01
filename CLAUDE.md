@@ -3040,6 +3040,85 @@ Each is a discrete sprint. Mix of operational, security, UX, and technical debt.
     predicates that flagged correct code. Sub-pattern 17 fired on a local selftest
     that ran in local-disk mode and proved nothing about production.
 
+254. **E2E was red for fourteen commits and every gating signal was green (2026-09-01).**
+
+    **What happened.** `E2E - Full Lifecycle Smoke` failed continuously from
+    `c4a45129` (v3.8.axn, tender-lifecycle commit 9c) until `3d8468f2` — fourteen
+    commits, all mine. Backend, Frontend and Deploy were green on every one of
+    them, production was healthy throughout, and the gated deploy fired
+    correctly. Nothing anywhere reported a problem. It surfaced only because the
+    12d close-out instructed me to verify production against HEAD, and checking
+    CI at all was incidental to that.
+
+    **The structural cause is not a bug and is not being fixed.** E2E is
+    deliberately outside `deploy.needs` (v3.8.asv), because Item 198 records a
+    Playwright browser download hanging for 6h02m and gating every deploy on an
+    infrastructure flake is worse than not gating. The consequence is that the
+    workflow's aggregate colour **cannot** report E2E: green means *everything
+    that gates passed*, which is a different claim from *everything passed*. That
+    is §19 Sub-pattern 16's shape — a signal with no discriminating power —
+    applied to gate composition. The exclusion stays; the blindness it created is
+    what gets closed.
+
+    **TWO ROOT CAUSES FOR THE FAILURES THEMSELVES, and neither was a defect in
+    the code under test.** This is the part worth remembering, because it means a
+    red E2E here was not "something is broken" but "the suite has fallen behind
+    the platform", which is exactly the kind of red that is easy to leave sitting.
+
+    - **A contract change (commit 10c, v3.8.axq).** Accept-on-behalf began
+      requiring evidence that the carrier actually agreed — an evidence type and
+      a reference pointing somewhere a person can go and look — because without
+      it an accept-on-behalf and an AE simply booking a carrier who never agreed
+      are the same row. The E2E predated that contract and sent neither field, so
+      it received the 400 the contract exists to produce. **The test was
+      correct-for-yesterday.** Repaired by sending real evidence AND asserting
+      the refusal, so the contract is locked in both directions rather than
+      merely satisfied.
+    - **A retired policy (v3.8.axl, with Arc 26).** B6.5b asserted *"the override
+      must unblock the carrier"* against a fixture blocked by expired insurance.
+      v3.8.axl made `INSURANCE_EXPIRED` **absolute** and Arc 26 stopped blanket
+      overrides short-circuiting the check, so an override correctly releases
+      nothing there. Probed against a real database before anything was touched:
+      `allowed:false`, `INSURANCE_EXPIRED / overridable:false`, with a live and
+      correctly-inert override. **The test asserted a rule this codebase had
+      deliberately retired** — §13.3 Item 244.2's superseded-test shape — and it
+      went red rather than passing vacuously, which is the good outcome.
+
+      Repaired by giving the fixture **one block of each kind** (one seed line, a
+      14-month authority, waivable in the 12-18 band), so the smoke now locks the
+      richer property: the **partition**. The override releases the waivable
+      block and names it in `released`; the insurance fact stands and keeps the
+      carrier blocked. That property had **no CI coverage at all** beforehand —
+      only DB proofs, which CI does not run — so this is a net increase in what
+      CI protects rather than a repair back to parity. Injection-verified:
+      reintroducing the pre-Arc-26 defect turns the suite red on exactly that
+      assertion, by name.
+
+    **What shipped to close the visibility gap** (housekeeping commit, unversioned
+    per §3.1 — CI configuration and docs, no deployed artifact):
+
+    - `timeout-minutes: 25` on the E2E job, so an Item 198-class hang **fails**
+      rather than burning a runner for hours and leaving the result ambiguous.
+    - A single pinned issue titled **"E2E red"**: opened on the first red on
+      main, updated rather than duplicated on each subsequent red, closed
+      automatically on the next green. The issue list therefore carries exactly
+      one row while E2E is broken and none when it is not — a state a person can
+      check at a glance, unlike a job buried inside a green run. Push-to-main
+      only, because on a PR the failure is already attached to the thing the
+      author is looking at, and commenting twice trains people to ignore the
+      issue. Exact-title match over the open list rather than `--search`, whose
+      index is eventually consistent and would duplicate an issue opened minutes
+      earlier.
+    - The **rule** at §19 Sub-pattern 11 case study #4: the per-commit gate
+      includes reading the E2E job's own result **by name**, never the workflow's
+      aggregate conclusion. That half does not depend on the automation working,
+      which is the point of writing it down as well as building it.
+
+    **Not done, deliberately:** E2E is still not in `deploy.needs`, and
+    `deployGate.test.ts` still pins that it is not. Adding it would trade a
+    visibility problem for an availability one, and the visibility problem now
+    has two independent answers.
+
 ## §14 LEGAL / COMPLIANCE STATUS
 
 - Property broker under 49 U.S.C. §§ 13904, 13906
@@ -3545,6 +3624,7 @@ Future sub-patterns banked into §19 must explicitly attribute layer so the meth
 - **Case study #1 (origin):** Sprint 51 `verify/page.tsx:158` had `doesn't` (ASCII apostrophe) in JSX text. Next.js default ESLint has `react/no-unescaped-entities` set to `error`. Sprint 51 pre-commit ran `tsc --noEmit` clean on both backend + frontend; tsc passed. CI Lint & Build failed at 26 seconds; E2E job skipped. Required CI hotfix commit `013883d` to swap `doesn't` → `does not`.
 - **Case study #2 (retrospective, banked 2026-05-24):** Sprint v3.8.ajg added `directUrl = env("DIRECT_URL")` to `backend/prisma/schema.prisma`. Updated Render dashboard env vars + local `backend/.env` + CLAUDE.md §2.2 docs — but missed `.github/workflows/ci.yml` env blocks. Backend CI job failed at `npx prisma validate` (step 4) with `P1012: Environment variable not found: DIRECT_URL` in 24 seconds; E2E job auto-skipped via `needs: [backend, frontend]`. Frontend job unaffected (doesn't touch Prisma). Reproduced locally with `unset DIRECT_URL && DATABASE_URL=... npx prisma validate` → same P1012. Hotfix commit `5504c81` added `DIRECT_URL: postgresql://ci:ci@localhost:5432/ci` to both backend job env block and e2e job env block. CI's plain Postgres container has no pooler, so DIRECT_URL and DATABASE_URL can point at the same connection string. **Banked sub-pattern extension:** when adding any `env()` reference to `schema.prisma`, the env block must be updated in FOUR locations: (1) local `backend/.env`, (2) Render dashboard env vars, (3) CI workflow env blocks for every job that runs Prisma, (4) CLAUDE.md §2.2 canonical env var list. ajg updated 1+2+4, missed 3. The four-location checklist is canonical going forward for schema env() reference additions.
 - **Case study #3 (banked 2026-05-27, v3.8.alh):** Sprint v3.8.ald swapped 5 callsites in `authController.ts` from `findUnique` → `findFirst` (lines 126, 169, 258, 374, 584) for case-insensitive email lookup. Pre-commit gate ran `npx tsc --noEmit` clean + `npx next build` clean + declared green. Did NOT run `npm test`. CI's backend job runs `npm test` and failed at 10 cases in `authController.test.ts` with `TypeError: prisma.user.findFirst is not a function` because `__tests__/setup.ts:6-11` defined the `prisma.user` mock without `findFirst`. CI red across ald → alf → alg push window (~24h, 3 commits) because Render's build chain doesn't run vitest — production stayed green, CI stayed red, the divergence went unnoticed until Wasi surfaced the GitHub Actions failure notification on the alg push. v3.8.alh hotfix shape: (a) added `findFirst: vi.fn()` to setup.ts user mock (matches every other model — otpCode/shipment/invoice/loadTender all already carry both); (b) re-pointed 6 test mocks from `findUnique.mockResolvedValue(...)` → `findFirst.mockResolvedValue(...)` to match what the controller now calls. Second wave caught a mock-state-leakage subtletly — vitest's `clearAllMocks` clears call history but NOT `mockResolvedValue`, so a 7th test needed re-pointing to explicit null because the truthy user from the prior test leaked across. **Banked sub-pattern extension #2:** the four-location checklist for `env()` schema references (case study #2) extends to a parallel gate inventory — `npm test` is now part of the canonical pre-commit gate per CLAUDE.md §3.3. Local verification must include vitest for any backend change touching controllers/services/routes the test suite covers. **Banked observation #1 (Render-vs-CI gate divergence):** Render's build chain runs `npm install + tsc + check-direct-url.js + prisma migrate deploy/status + cp -r` — but NOT vitest. A passing Render deploy is NOT evidence of a passing test suite. The two surfaces are independent gates; both must be green. Going-forward implication: when CI fails on a push that Render passed, the failure is NOT necessarily about production breakage — it can be a test/mock/setup gap that production-runtime doesn't exercise. Diagnose before assuming production impact.
+- **Case study #4 (banked 2026-09-01, Item 254) — reading the workflow COLOUR is not reading the GATE.** The tender-lifecycle arc pushed **fourteen** commits over a red `E2E - Full Lifecycle Smoke`. Backend, Frontend and Deploy were green on every one, and E2E is deliberately outside the deploy gate (v3.8.asv, after the Item 198 six-hour Playwright hang), so nothing in the workflow's aggregate colour, the deploy's success, or production's health reflected it. **Neither cause was a defect in the code under test.** (a) Commit 10c (v3.8.axq) added an evidence requirement to accept-on-behalf; the E2E predated that contract and sent none, so it got the 400 the contract exists to produce — a test lagging a deliberate contract change. (b) B6.5b asserted *"the override must unblock the carrier"* against a rule **v3.8.axl had retired** when it made expired insurance absolute and Arc 26 stopped blanket overrides short-circuiting — a test asserting policy the platform had intentionally changed (§13.3 Item 244.2's superseded-test shape, and it went red rather than passing vacuously, which is the good outcome). **GOING-FORWARD RULE: the per-commit gate includes reading the E2E job's OWN result BY NAME — `gh run view <id> --json jobs --jq '.jobs[] | "\(.conclusion)\t\(.name)"'` and read the `E2E - Full Lifecycle Smoke` row — never the workflow's aggregate conclusion and never the deploy job's colour.** A workflow whose deploy gate excludes a job is a workflow whose colour structurally cannot report that job: green means "everything that gates passed", which is a different claim from "everything passed". That is §19 Sub-pattern 16's shape — a signal with no discriminating power — applied to gate COMPOSITION rather than to a guard's subject. Item 254 adds pinned-issue automation as the mechanical half; **this rule is the half that does not depend on that automation working.**
 - **Prevention value:** catches "passed tsc, failed CI" bugs. Local verify cost: ~30-45s per sprint. CI hotfix cycle cost: ~5 min wall-clock + E2E job re-run. Net wall-clock savings compound across sprints. Three-fire validation lineage now achieved (Sprint 51 JSX escape, v3.8.ajg env() missing in CI, v3.8.ald `findFirst` mock gap) — Sub-pattern 11 was already canonical at origin per Item 148; the three fires demonstrate distinct operational contexts where the mechanic recurs (ESLint, Prisma config, vitest mock). Fire count for next quarterly §19 review: 19 → 20 → 21. **Sub-rule c registry advances:** 32 → 33 with the v3.8.alh fire — every authoritative-source check on the failure shape (CI log → exact failing tests → exact mock definition → exact controller call site) was load-bearing for diagnosing this in <5 min without a blind fix.
 
 ##### Sub-pattern 12 — Write-read-dataflow-audit
