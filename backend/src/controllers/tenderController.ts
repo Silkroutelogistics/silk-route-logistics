@@ -2,7 +2,15 @@ import { Response } from "express";
 import { prisma } from "../config/database";
 import { agreedRateFromTender } from "../lib/agreedCarrierRate";
 import { AuthRequest } from "../middleware/auth";
-import { createTenderSchema, counterTenderSchema, declineTenderSchema } from "../validators/tender";
+import { createTenderSchema, counterTenderSchema, declineTenderSchema, acceptOnBehalfSchema } from "../validators/tender";
+import { makeCaptureRes } from "../lib/captureResponse";
+
+/** The wire vocabulary is lower-case; the column is an enum. One map, here. */
+const EVIDENCE_TYPE_MAP = {
+  email_subject: "EMAIL_SUBJECT",
+  call_timestamp: "CALL_TIMESTAMP",
+  quo_message_id: "QUO_MESSAGE_ID",
+} as const;
 import { nextShipmentNumber } from "./shipmentController";
 import { complianceCheck } from "../services/complianceMonitorService";
 import { notifyTenderAction, notifyQuickPayElectionOpen } from "../services/notificationService";
@@ -103,6 +111,17 @@ export async function createTender(req: AuthRequest, res: Response) {
 }
 
 export async function acceptTender(req: AuthRequest, res: Response) {
+  // Set only by acceptTenderOnBehalf, which delegates here with a synthetic
+  // carrier actor. Absent on an organic carrier accept, which is the ordinary
+  // case and needs no evidence: the carrier clicked it themselves.
+  const onBehalf = (req as unknown as {
+    onBehalf?: {
+      actorId: string;
+      reason: string;
+      evidence: { type: "EMAIL_SUBJECT" | "CALL_TIMESTAMP" | "QUO_MESSAGE_ID"; ref: string };
+    };
+  }).onBehalf;
+
   const tender = await prisma.loadTender.findUnique({ where: { id: req.params.id }, include: { carrier: true } });
   if (!tender) { res.status(404).json({ error: "Tender not found" }); return; }
   if (tender.carrier.userId !== req.user!.id) { res.status(403).json({ error: "Not authorized" }); return; }
@@ -159,10 +178,25 @@ export async function acceptTender(req: AuthRequest, res: Response) {
   // history row) and issues one transition per sibling, which an array of
   // composable promises cannot express.
   const updated = await prisma.$transaction(async (tx) => {
+    // v3.8.axq — an AE accepting for a carrier arrives here through the same
+    // path, carrying the evidence that the carrier agreed. The actor stays the
+    // CARRIER, because that is whose acceptance this is; onBehalf records who
+    // pressed the button and what they are relying on.
     await settleTender(
       {
-        tenderId: tender.id, to: "ACCEPTED", from: "OFFERED",
-        respondedAt: new Date(), actor: { id: req.user!.id, type: "USER" },
+        tenderId: tender.id,
+        to: "ACCEPTED",
+        from: ["OFFERED", "COUNTERED"],
+        respondedAt: new Date(),
+        actor: { id: req.user!.id, type: "CARRIER" },
+        ...(onBehalf
+          ? {
+              onBehalf: true,
+              evidence: onBehalf.evidence,
+              reason: "accepted_on_behalf",
+              metadata: { onBehalfActorId: onBehalf.actorId, onBehalfReason: onBehalf.reason },
+            }
+          : {}),
       },
       tx,
     );
@@ -319,190 +353,85 @@ export async function acceptTenderOnBehalf(req: AuthRequest, res: Response) {
     return;
   }
 
-  const tender = await prisma.loadTender.findUnique({ where: { id: req.params.id }, include: { carrier: true } });
+  // v3.8.axq — EVIDENCE IS REQUIRED, and it is the point of this endpoint.
+  //
+  // An accept-on-behalf records a decision the carrier made somewhere SRL
+  // cannot see. Without a pointer to it, an accept-on-behalf and an AE simply
+  // booking a carrier who never agreed are the same row — and the carrier is
+  // the one left holding a signed rate confirmation for a load they did not
+  // take. The type constrains the reference to something findable (an inbox, a
+  // phone log, a thread) rather than prose nobody can follow in a dispute.
+  const parsed = acceptOnBehalfSchema.safeParse(req.body ?? {});
+  if (!parsed.success) {
+    res.status(400).json({
+      error:
+        "Accepting for a carrier needs evidence they agreed: evidenceType " +
+        "(email_subject | call_timestamp | quo_message_id) and evidenceRef.",
+      code: "EVIDENCE_REQUIRED",
+      details: parsed.error.issues.map((i: { path: (string | number)[]; message: string }) => ({
+        field: i.path.join("."),
+        message: i.message,
+      })),
+    });
+    return;
+  }
+  const evidence = {
+    type: EVIDENCE_TYPE_MAP[parsed.data.evidenceType],
+    ref: parsed.data.evidenceRef.trim(),
+  };
+
+  const tender = await prisma.loadTender.findUnique({
+    where: { id: req.params.id },
+    include: { carrier: true },
+  });
   if (!tender) { res.status(404).json({ error: "Tender not found" }); return; }
 
-  if (tender.status !== "OFFERED" && tender.status !== "COUNTERED") {
-    res.status(400).json({ error: `Cannot accept tender in status ${tender.status}` });
+  // v3.8.axq — DELEGATES to acceptTender rather than reimplementing it.
+  //
+  // This handler was a ~190-line copy of the accept path: compliance gate,
+  // status-transition validator, atomic accept, shipment creation, auto-RC,
+  // notification, tracking-link fan-out. Two copies of the accept path is two
+  // places for the rules to drift, and they already had — the copy carried its
+  // own SystemLog wording and its own note about which status it flips to.
+  //
+  // The synthetic actor is the CARRIER, because that is whose acceptance this
+  // records. acceptTender's ownership gate then passes for the right reason
+  // rather than being bypassed. Same shim the magic-link route uses.
+  const syntheticReq = {
+    params: { id: tender.id },
+    user: { id: tender.carrier.userId, email: "", role: "CARRIER" },
+    body: {},
+    onBehalf: { actorId: req.user!.id, reason: reasonRaw, evidence },
+  } as unknown as AuthRequest;
+
+  const captured = makeCaptureRes();
+  await acceptTender(syntheticReq, captured.shim);
+
+  if (captured.state.statusCode >= 400) {
+    res.status(captured.state.statusCode).json(captured.state.body);
     return;
   }
 
-  if (tender.expiresAt && new Date() > tender.expiresAt) {
-    await settleTender({
-      tenderId: tender.id, to: "EXPIRED", from: ["OFFERED", "COUNTERED"],
-      reason: "ttl_elapsed", respondedAt: new Date(),
-    });
-    res.status(400).json({ error: "This tender has expired" });
-    return;
-  }
-
-  const compliance = await complianceCheck(tender.carrierId);
-  if (!compliance.allowed) {
-    res.status(403).json({
-      error: "Carrier is no longer compliant",
-      blocked_reasons: compliance.blocked_reasons,
-      blocked_codes: compliance.blocked_codes,
-    });
-    return;
-  }
-
-  const load = await prisma.load.findUnique({ where: { id: tender.loadId } });
-  if (!load) { res.status(404).json({ error: "Load not found" }); return; }
-
-  // v3.8.akd Item 159 Sprint 2 — validate load.status → BOOKED transition
-  // BEFORE the atomic transaction. Same defense-in-depth as the
-  // acceptTender wiring; on-behalf endpoint is an AE override and the
-  // validator's AE actor map is the appropriate authority gate.
-  const onBehalfTransition = validateLoadStatusTransition(load.status, "BOOKED", "AE");
-  if (!onBehalfTransition.allowed) {
-    res.status(422).json({
-      error: onBehalfTransition.reason ?? `Cannot accept tender on-behalf — load is in status ${load.status} which doesn't accept BOOKED transition.`,
-      code: onBehalfTransition.code,
-      allowed: onBehalfTransition.allowedNext ?? [],
-    });
-    return;
-  }
-
-  // Atomic txn (Sprint 38 Item 53 pattern). Same three writes as acceptTender:
-  // tender → ACCEPTED, load → BOOKED + carrierId, live siblings withdrawn.
-  const updated = await prisma.$transaction(async (tx) => {
-    await settleTender(
-      {
-        tenderId: tender.id, to: "ACCEPTED", from: "OFFERED",
-        respondedAt: new Date(), actor: { id: req.user!.id, type: "USER" },
-      },
-      tx,
-    );
-    // v3.8.axa — the single writer of Load.carrierId, on the caller's
-    // transaction client so the assignment stays atomic with the tender flip
-    // (Sprint 38 Item 53). ARC 16: carrierRate is persisted at the
-    // moment of accept, or settlement falls back to load.rate, which is the
-    // CUSTOMER rate on the primary creation path (§13.3 Item 221.1).
-    //
-    // carrierUserId, not carrierId: Load.carrierId is a User.id while
-    // LoadTender.carrierId is a CarrierProfile.id. Confusing them is what made
-    // waterfall accept silently dead for months (§13.3 Item 222.4).
-    await assignCarrier(
-      {
-        loadId: tender.loadId,
-        carrierUserId: tender.carrier.userId,
-        status: "BOOKED",
-        carrierRate: agreedRateFromTender(tender as any),
-      },
-      tx,
-    );
-    // v3.8.aww — WITHDRAWN, not DECLINED. These carriers did not refuse
-    // anything; SRL pulled their offer because somebody else got there first.
-    // carrierController derives tendersDeclined and an acceptanceRate from
-    // this column and §9 scores acceptance at 10% of Compass, so writing
-    // DECLINED here put a mark on carriers who had done nothing.
-    await withdrawLiveTenders(
-      {
-        loadId: tender.loadId,
-        exceptTenderId: tender.id,
-        reason: "load_covered",
-        actor: { id: req.user!.id, type: "USER" },
-      },
-      tx,
-    );
-    // settleTender reports what moved, not the row. Re-read inside the same
-    // transaction so the response body is the tender as it now stands.
-    return tx.loadTender.findUniqueOrThrow({ where: { id: tender.id } });
-  });
-
-  // Distinct audit-log action so on-behalf overrides are queryable.
-  await prisma.auditLog.create({
+  // Distinct audit-log action so on-behalf overrides stay queryable apart from
+  // organic carrier accepts. Non-blocking: the accept has already happened, and
+  // losing the audit row must not fail it.
+  prisma.auditLog.create({
     data: {
       userId: req.user!.id,
       action: "TENDER_ACCEPTED_ON_BEHALF",
       entity: "LoadTender",
       entityId: tender.id,
       changes: JSON.stringify({
-        loadId: load.id,
+        loadId: tender.loadId,
         carrierProfileId: tender.carrierId,
-        carrierUserId: tender.carrier.userId,
-        offeredRate: tender.offeredRate,
         reason: reasonRaw,
+        evidenceType: evidence.type,
+        evidenceRef: evidence.ref,
       }),
     },
-  });
+  }).catch((err) => log.error({ err, tenderId: tender.id }, "[Tender] auditLog on-behalf failed"));
 
-  await hooks.run("PostLoadStateChange", { loadId: load.id, from: load.status, to: "BOOKED", actor: req.user!.id });
-  await hooks.run("PostTenderAccept", { tenderId: tender.id, loadId: load.id, carrierId: tender.carrierId, rate: tender.offeredRate, actor: req.user!.id, onBehalf: true });
-
-  // Auto-create Shipment (mirrors acceptTender).
-  const shipmentNumber = await nextShipmentNumber();
-  await prisma.shipment.create({
-    data: {
-      shipmentNumber,
-      loadId: load.id,
-      status: "BOOKED",
-      originCity: load.originCity,
-      originState: load.originState,
-      originZip: load.originZip,
-      destCity: load.destCity,
-      destState: load.destState,
-      destZip: load.destZip,
-      equipmentType: load.equipmentType,
-      commodity: load.commodity,
-      weight: load.weight,
-      pieces: load.pieces,
-      rate: tender.offeredRate,
-      distance: load.distance,
-      specialInstructions: load.specialInstructions,
-      customerId: load.customerId,
-      pickupDate: load.pickupDate,
-      deliveryDate: load.deliveryDate,
-    },
-  });
-
-  // Sprint Phase 2 (v3.8.acd) — auto-RC generation on AE accept-on-behalf.
-  // Mirrors acceptTender wiring. Non-blocking try/catch.
-  let autoRcId: string | undefined;
-  try {
-    const rc = await autoGenerateRateConfirmation(load.id, tender.id, load.posterId);
-    autoRcId = rc?.id;
-    // v3.8.asb — the Quick Pay election window opens HERE and closes when the
-    // AE sends that draft. Quick Pay defaults off per load, so a carrier who
-    // wants it has to ask, and nothing used to tell them the chance existed.
-    // Fire-and-forget: a failed notice must never fail an accept.
-    void notifyQuickPayElectionOpen(load.id);
-  } catch (err) {
-    log.error({ err, tenderId: tender.id, loadId: load.id }, "[Tender] auto-RC generation failed (on-behalf)");
-    // v3.8.ajw C8 — Mirror direct-accept SystemLog WARNING. Same queryable
-    // shape so the ops query can pick up both paths from a single
-    // source filter.
-    prisma.systemLog.create({
-      data: {
-        logType: "INTEGRATION",
-        severity: "WARNING",
-        source: "auto-rc-generation",
-        message: `Auto-RC generation failed for tender ${tender.id} on load ${load.id} (on-behalf path) — manual RC required`,
-        details: {
-          tenderId: tender.id,
-          loadId: load.id,
-          loadReferenceNumber: load.referenceNumber,
-          onBehalf: true,
-          err: err instanceof Error ? err.message : String(err),
-        },
-      },
-    }).catch(() => { /* swallow */ });
-  }
-
-  // Notification (Sprint 38 Item 51 pattern + Sprint Phase 2 rcId deep-link).
-  await notifyTenderAction(tender.id, "ACCEPTED", { rcId: autoRcId });
-
-  // Tracking-link fan-out at BOOKED (Sprint 38 Item 52 pattern, α
-  // resolution: fire on accept regardless of P3 status semantics —
-  // shipper wants tracking link when carrier confirms).
-  try {
-    const { sendTrackingLinkToCrmContacts } = await import("../services/shipperLoadNotifyService");
-    await sendTrackingLinkToCrmContacts(load.id);
-  } catch (err) {
-    log.error({ err }, "[Tender on-behalf] tracking-link fan-out failed");
-  }
-
-  res.json({ ...updated, onBehalf: true });
+  res.status(captured.state.statusCode || 200).json({ ...(captured.state.body as object), onBehalf: true });
 }
 
 export async function counterTender(req: AuthRequest, res: Response) {

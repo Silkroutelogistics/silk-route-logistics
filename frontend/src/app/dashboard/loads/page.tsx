@@ -23,7 +23,7 @@ import { TagManagementPanel } from "@/components/loads/TagManagementPanel";
 import { SlideDrawer } from "@/components/ui/SlideDrawer";
 import { downloadCSV } from "@/lib/csvExport";
 import { NEXT_STATUS, STATUS_ACTIONS } from "@/lib/loadStatusActions";
-import { deriveLoadStatus, ATTENTION_LABEL, actionsFor, ACTION_LABEL, WIRED_ACTIONS, RELEASE_REASONS, type TenderAction, carrierTenderLabel } from "@/lib/loadDerivedStatus";
+import { deriveLoadStatus, ATTENTION_LABEL, actionsFor, ACTION_LABEL, WIRED_ACTIONS, RELEASE_REASONS, type TenderAction, carrierTenderLabel, EVIDENCE_LABEL } from "@/lib/loadDerivedStatus";
 
 import type { Load as BaseLoad, LoadTender } from "@/types/entities";
 import { money, pct, perMile, customerBilled, carrierPay, margin, marginPct } from "@/lib/rateDisplay";
@@ -1622,6 +1622,19 @@ function PanelHistory({ load }: { load: Load }) {
                 <span className={`px-2 py-0.5 rounded text-xs font-medium shrink-0 ${TENDER_COLORS[t.status] || "bg-slate-500/20 text-gray-600"}`}>
                   {carrierTenderLabel(t.status, (t as { statusReason?: string | null }).statusReason)}
                 </span>
+                {/* v3.8.axq — an accept-on-behalf shows what SRL is relying on.
+                    Without it, an accept-on-behalf and an AE booking a carrier
+                    who never agreed look the same on this row. */}
+                {(t as { evidenceRef?: string | null }).evidenceRef && (
+                  <span
+                    className="px-2 py-0.5 rounded text-[11px] bg-[#FBEFD4] text-[#854F0B] border border-[#B07A1A]/25 shrink-0"
+                    title={`Accepted on behalf — evidence: ${(t as { evidenceRef?: string }).evidenceRef}`}
+                  >
+                    {EVIDENCE_LABEL[(t as { evidenceType?: string }).evidenceType ?? ""] ?? "on behalf"}
+                    {": "}
+                    {(t as { evidenceRef?: string }).evidenceRef}
+                  </span>
+                )}
               </div>
             ))}
           </>

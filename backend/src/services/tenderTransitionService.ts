@@ -181,6 +181,14 @@ export async function settleTender(
     bumpVersion?: boolean;
     respondedAt?: Date | null;
     onBehalf?: boolean;
+    /**
+     * How SRL knows the carrier agreed, for an accept-on-behalf.
+     *
+     * Recorded on the row AND in the transition metadata: the row answers the
+     * question from the tender itself, the history answers it at the moment it
+     * happened, which is the one a dispute reads.
+     */
+    evidence?: { type: "EMAIL_SUBJECT" | "CALL_TIMESTAMP" | "QUO_MESSAGE_ID"; ref: string };
     actor?: Actor;
     metadata?: Record<string, unknown>;
   },
@@ -215,11 +223,18 @@ export async function settleTender(
       ...(input.respondedAt !== undefined && input.respondedAt !== null
         ? { respondedAt: input.respondedAt }
         : {}),
+      ...(input.evidence
+        ? { evidenceType: input.evidence.type as never, evidenceRef: input.evidence.ref }
+        : {}),
     },
     input.to,
     input.reason ?? null,
     input.actor,
-    { onBehalf: !!input.onBehalf, ...(input.metadata ?? {}) },
+    {
+      onBehalf: !!input.onBehalf,
+      ...(input.evidence ? { evidenceType: input.evidence.type, evidenceRef: input.evidence.ref } : {}),
+      ...(input.metadata ?? {}),
+    },
   );
 }
 

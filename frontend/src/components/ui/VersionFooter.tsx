@@ -1,3 +1,41 @@
+// v3.8.axq — AN AE COULD ACCEPT FOR A CARRIER ON NOBODY'S WORD.
+//
+// An accept-on-behalf records a decision the carrier made somewhere SRL cannot
+// see — an email, a phone call, a message. Without a pointer to it, an
+// accept-on-behalf and an AE simply booking a carrier who never agreed are the
+// SAME ROW, and the carrier is the one left holding a signed rate confirmation
+// for a load they did not take.
+//
+// evidenceType + evidenceRef are required at accept time; 400 EVIDENCE_REQUIRED
+// without them. The type is an enum (email subject, call timestamp, Quo message
+// id) rather than free text, because the reference has to be FINDABLE — prose
+// passes a length check and answers nothing in a dispute.
+//
+// AND THE HANDLER NOW DELEGATES TO acceptTender INSTEAD OF REIMPLEMENTING IT.
+//
+// It was a ~190-line copy: compliance gate, transition validator, atomic accept,
+// shipment creation, auto-RC, notification, tracking-link fan-out. Two copies of
+// the accept path is two places for the rules to drift, and they already had —
+// the copy carried its own SystemLog wording and its own note about which status
+// it flips to. 192 lines out, 84 in.
+//
+// The synthetic actor is the CARRIER, because that is whose acceptance this
+// records; acceptTender's ownership gate then passes for the right reason
+// rather than being bypassed. Who pressed the button is recorded separately, as
+// onBehalfActorId, which is the honest shape: the carrier agreed, the AE typed.
+//
+// A carrier accepting for themselves needs no evidence and records none. Null
+// means nobody vouched, which is correct when the carrier clicked it.
+//
+// Proof: _onbehalf-evidence-proof.ts, 21/21 over the real router against a real
+// database. Injection: making the 4xx never fire gives status=200 on a request
+// with no evidence at all, and eight assertions go red.
+//
+// The FIRST injection attempt was rejected rather than accepted: making the
+// schema optional crashed the handler on a TypeError, so the proof died before
+// any assertion ran. A crash is a detection, but it does not say WHICH property
+// failed — the second injection lets the request through cleanly, which is the
+// defect as it would actually appear.
 // v3.8.axp — FOUR SURFACES, FOUR STATUS-TO-COLOUR MAPS, AND THEY DISAGREED.
 //
 // BOOKED rendered violet on the Track & Trace board, purple on the Load Board
@@ -16645,7 +16683,7 @@
 // and a data: qrCodeDataUrl are all legitimate and a guard that flagged them
 // would be noise. Comments are blanked before matching — the fixes are explained
 // in comments that necessarily quote the banned patterns.
-export const SRL_VERSION = "3.8.axp";
+export const SRL_VERSION = "3.8.axq";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

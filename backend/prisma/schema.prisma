@@ -252,6 +252,24 @@ enum TenderStatus {
   RELEASED
 }
 
+/**
+ * Where the proof of a carrier's agreement lives, for an accept-on-behalf.
+ */
+enum TenderEvidenceType {
+  /**
+   * Subject line of the email the carrier sent. Findable in the shared inbox.
+   */
+  EMAIL_SUBJECT
+  /**
+   * ISO timestamp of the call. Findable in the phone log.
+   */
+  CALL_TIMESTAMP
+  /**
+   * Quo message id. Findable in the thread.
+   */
+  QUO_MESSAGE_ID
+}
+
 enum LineItemType {
   LINEHAUL
   FUEL_SURCHARGE
@@ -1753,6 +1771,16 @@ model LoadTender {
   // approaching expiry. Written by the transition service and nowhere else, so
   // it means the same thing on every row.
   statusChangedAt      DateTime?
+  // How SRL knows the carrier agreed, when an AE accepted on their behalf.
+  //
+  // An accept-on-behalf records a decision the carrier made somewhere SRL
+  // cannot see -- an email, a phone call, a message. Without a pointer to it,
+  // an accept-on-behalf and an AE simply booking a carrier who never agreed are
+  // the same row, and the carrier is the one holding a signed rate confirmation
+  // for a load they did not take. The reference is required at accept time; the
+  // type constrains it to something findable rather than free-form prose.
+  evidenceType         TenderEvidenceType?
+  evidenceRef          String?
   // The override this tender was created under, if it took one.
   //
   // A FK rather than three copied columns. ComplianceOverride already holds

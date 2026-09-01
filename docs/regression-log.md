@@ -13,6 +13,54 @@ so it's searchable and never lost.
 
 ---
 
+## Fixed — 2026-09-01 (v3.8.axq — an AE could accept for a carrier on nobody's word)
+
+- **Status:** commit 10c of 12. Carrier-facing tender history is 10d.
+- **Symptom:** an accept-on-behalf records a decision the carrier made somewhere
+  SRL cannot see. Without a pointer to it, **an accept-on-behalf and an AE simply
+  booking a carrier who never agreed are the same row** — and the carrier is the
+  one left holding a signed rate confirmation for a load they did not take.
+- **Shape:** `LoadTender.evidenceType` + `evidenceRef` (additive, nullable,
+  migration `20260901090000_tender_onbehalf_evidence`), required at accept time
+  on the on-behalf path; `400 EVIDENCE_REQUIRED` without them. Written through
+  `settleTender` like every other tender field, and mirrored into the transition
+  metadata so the history answers the question at the moment it happened.
+- **The type is an enum, not free text.** Email subject, call timestamp, Quo
+  message id — each points at somewhere a person can go and look. Prose passes a
+  length check and answers nothing in a dispute, which is the whole reason the
+  field exists.
+- **The handler now delegates to `acceptTender` instead of reimplementing it.**
+  It was a ~190-line copy: compliance gate, transition validator, atomic accept,
+  shipment creation, auto-RC, notification, tracking-link fan-out. Two copies of
+  the accept path is two places for the rules to drift, and they already had —
+  the copy carried its own SystemLog wording and its own note about which status
+  it flips to. **192 lines out, 84 in.**
+- **The synthetic actor is the CARRIER**, because that is whose acceptance this
+  records; `acceptTender`'s ownership gate then passes for the right reason
+  rather than being bypassed. Who pressed the button is recorded separately as
+  `onBehalfActorId`, which is the honest shape: the carrier agreed, the AE typed.
+- **A carrier accepting for themselves needs no evidence and records none.**
+  Null means nobody vouched, which is correct when the carrier clicked it — and
+  both directions are asserted.
+- **Rendered on the AE tender row**, so an accept-on-behalf and an ordinary
+  accept do not look the same at a glance.
+- **Proof:** `_onbehalf-evidence-proof.ts`, **21/21** over the real router
+  against a real database. It asserts the refusal, the vocabulary check, the
+  minimum length, the row, the history, the audit row, and that the shared path
+  still creates the shipment.
+- **Adversarial:** making the 4xx never fire gives `status=200` on a request with
+  no evidence at all, and eight assertions go red.
+- **The first injection was rejected rather than accepted.** Making the schema
+  `.partial()` crashed the handler on a TypeError, so the proof died before any
+  assertion ran. A crash IS a detection, but it does not say which property
+  failed — the second injection lets the request through cleanly, which is the
+  defect as it would actually appear in production.
+- **Outbound (§19 Sub-pattern 20):** keys explicitly empty. `[Email] Sent to`
+  count: **0**, measured.
+- **Gates:** backend tsc clean; backend vitest **1426 pass / 1 fail** (known
+  `urlSafety` DNS red); frontend tsc + vitest **110/110** + build clean.
+  Migration applied cleanly to a local container before commit.
+
 ## Fixed — 2026-09-01 (v3.8.axp — four surfaces, four status-to-colour maps, and they disagreed)
 
 - **Status:** commit 10b of 12 (frontend). Accept-on-behalf evidence is 10c.

@@ -235,3 +235,16 @@ export const ATTENTION_LABEL: Record<string, string> = {
   RECENTLY_RELEASED: "Carrier released",
   COUNTER_AWAITING_AE: "Counter awaiting your answer",
 };
+
+/**
+ * Where the proof of an on-behalf acceptance lives.
+ *
+ * Short labels because the reference itself is the useful half -- an AE
+ * scanning the row wants to see the subject line or the timestamp, not the
+ * word describing what kind of thing it is.
+ */
+export const EVIDENCE_LABEL: Record<string, string> = {
+  EMAIL_SUBJECT: "email",
+  CALL_TIMESTAMP: "call",
+  QUO_MESSAGE_ID: "Quo",
+};
