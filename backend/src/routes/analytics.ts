@@ -404,7 +404,17 @@ router.get("/tender-funnel", authorize("ADMIN", "CEO", "BROKER", "OPERATIONS") a
     const countered = by("COUNTERED");
     const expired = by("EXPIRED");
     const pending = by("OFFERED");
+    // v3.8.awx — WITHDRAWN must appear here or the funnel silently loses rows.
+    // Before v3.8.aww these were counted as `declined`; now they are their own
+    // status, and without this line they would fall into no bucket at all and
+    // the parts would stop summing to `total`.
+    const withdrawn = by("WITHDRAWN");
     const responded = accepted + declined + countered;
+    // Offers the carrier could actually act on. A withdrawn offer was pulled
+    // back by SRL and never gave anyone the chance to respond, so counting it
+    // understates both rates below — it measures our dispatch churn as if it
+    // were carrier behaviour.
+    const actionable = total - withdrawn;
 
     // Response time (minutes) for tenders that got a response.
     const respTimes = tenders
@@ -450,11 +460,15 @@ router.get("/tender-funnel", authorize("ADMIN", "CEO", "BROKER", "OPERATIONS") a
 
     res.json({
       periodDays: days,
-      funnel: { total, accepted, declined, countered, expired, pending, responded },
+      funnel: { total, accepted, declined, countered, expired, pending, withdrawn, responded },
       conversion: {
-        acceptanceRateOfTotal: total ? Math.round((accepted / total) * 100) : 0,
+        // Denominators are `actionable`, not `total`: an offer SRL withdrew was
+        // never a chance to convert, and leaving it in understates both rates.
+        // acceptanceRateOfResponded already excluded withdrawals implicitly,
+        // since `responded` only counts carriers who actually answered.
+        acceptanceRateOfTotal: actionable ? Math.round((accepted / actionable) * 100) : 0,
         acceptanceRateOfResponded: responded ? Math.round((accepted / responded) * 100) : 0,
-        responseRate: total ? Math.round((responded / total) * 100) : 0,
+        responseRate: actionable ? Math.round((responded / actionable) * 100) : 0,
       },
       avgResponseMinutes,
       declineReasons: Object.entries(declineReasons)

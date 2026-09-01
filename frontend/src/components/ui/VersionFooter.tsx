@@ -1,3 +1,29 @@
+// v3.8.awx — THE DENOMINATOR STILL COUNTED THE OFFERS SRL TOOK BACK.
+//
+// v3.8.aww stopped SRL writing DECLINED on carriers who lost a race, but the
+// rate was `accepted / c.tenders.length`, so a withdrawn offer still counted
+// against the carrier — just under a different name. The carrier who wins one
+// of three still read 33%. Renaming the status without fixing the denominator
+// would have been a cosmetic fix to a scoring problem.
+//
+// Withdrawals now leave the denominator on both surfaces that judge on it: the
+// per-carrier rate in carrierController, and the platform funnel in
+// analytics.ts. EXPIRED deliberately STAYS in: the carrier was given the offer
+// and the window, and letting it lapse is a response.
+//
+// The funnel needed a `withdrawn` bucket for a second reason — before aww these
+// rows counted as `declined`, so without a bucket of their own they would fall
+// into none at all and the parts would stop summing to the total. It renders
+// SLATE, not red: colouring SRL's own withdrawal like a carrier refusal would
+// reintroduce at a glance the confusion aww removed from the data.
+//
+// The backfill reclassifies the rows already written. Its one ambiguity is
+// stated in the migration rather than hidden: a genuine pre-v3.8.ajz decline
+// also has a null reason and, on a covered load, is indistinguishable from a
+// withdrawal. It gets converted. That direction is chosen deliberately —
+// converting a real decline REMOVES a mark from a carrier, while leaving SRL's
+// mass-withdrawals in place ADDS marks to carriers who did nothing.
+//
 // v3.8.aww — LOSING A RACE WAS RECORDED AS REFUSING WORK.
 //
 // When a carrier accepted, every sibling offer on that load was marked
@@ -16048,7 +16074,7 @@
 // and a data: qrCodeDataUrl are all legitimate and a guard that flagged them
 // would be noise. Comments are blanked before matching — the fixes are explained
 // in comments that necessarily quote the banned patterns.
-export const SRL_VERSION = "3.8.aww";
+export const SRL_VERSION = "3.8.awx";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

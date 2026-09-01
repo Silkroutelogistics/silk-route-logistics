@@ -13,6 +13,48 @@ so it's searchable and never lost.
 
 ---
 
+## Fixed — 2026-09-01 (v3.8.awx — the denominator still counted the offers SRL took back)
+
+- **Symptom:** v3.8.aww stopped SRL writing `DECLINED` on carriers who lost a
+  race, but `acceptanceRate` was `accepted / c.tenders.length`, so a withdrawn
+  offer still counted against the carrier under a different name. The carrier
+  who wins one of three still read **33%**.
+- **Where:** `carrierController.ts:1540` (per-carrier) and
+  `routes/analytics.ts:455-457` (platform funnel).
+- **Severity:** P1 — same scoring harm as aww; renaming the status without
+  fixing the denominator would have been cosmetic.
+- **Status:** Fixed in v3.8.awx (tender-lifecycle Phase B, commit 2b of 12).
+- **Shape:** withdrawals leave the denominator on both surfaces. `EXPIRED`
+  deliberately stays in — the carrier was given the offer and the window, and
+  letting it lapse is a response.
+- **A reporting gap aww created, closed here:** `WITHDRAWN` had no funnel
+  bucket, so those rows fell into none at all and the parts stopped summing to
+  the total. Added to the API and to the page, rendered **slate not red** —
+  colouring SRL's own withdrawal like a carrier refusal would reintroduce at a
+  glance the confusion aww removed from the data.
+- **Backfill** (`20260901030000`) reclassifies rows already written. Predicate:
+  `DECLINED` + null `declineReason` + a different tender on the same load
+  reached `ACCEPTED`.
+- **Its one ambiguity, stated not hidden:** a genuine pre-v3.8.ajz decline also
+  has a null reason and, on a covered load, is indistinguishable from a
+  withdrawal — it gets converted. Chosen deliberately: converting a real decline
+  REMOVES a mark from a carrier, while leaving SRL's mass-withdrawals in place
+  ADDS marks to carriers who did nothing. `respondedAt` was rejected as the
+  discriminator despite looking sharper, because `carrierLoads.ts:267` set it,
+  so that predicate would have missed every withdrawal from the load-board path.
+- **Verified** on a container seeded with all four shapes: sibling withdrawal
+  converted; genuine decline (reason set) untouched; reasonless decline on a
+  load nobody accepted untouched; winner untouched; idempotent re-run matches 0.
+  Row-count gate is in the migration header and **must be run against the target
+  before deploy** — it is the only chance to know what changed.
+- **Gate note:** frontend `next build` is RED, and not from this commit — a
+  concurrent session's uncommitted `Sidebar.tsx` (their v3.8.awy) has a JSX
+  comment inside a ternary chain. The broken line does not exist at HEAD and the
+  build reported exactly that one error. **Push is blocked until they land or
+  revert it**; backend tsc, backend vitest 131/1, and frontend tsc are clean.
+
+---
+
 ## Fixed — 2026-09-01 (v3.8.aww — losing a race was recorded as refusing work)
 
 - **Symptom:** when one carrier accepted a load, every sibling offer was marked

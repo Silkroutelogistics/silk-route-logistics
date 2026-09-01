@@ -24,7 +24,11 @@ const PERIOD_OPTIONS = [
 interface Bucket { key: string; total: number; accepted: number; declined: number; expired: number; acceptanceRate: number; }
 interface FunnelData {
   periodDays: number;
-  funnel: { total: number; accepted: number; declined: number; countered: number; expired: number; pending: number; responded: number };
+  // `withdrawn` added v3.8.awx. Offers SRL pulled back (another carrier covered
+  // the load, a counter was rejected). Before v3.8.aww these were miscounted as
+  // `declined`; without a card of their own they would vanish from the funnel
+  // and the parts would stop summing to `total`.
+  funnel: { total: number; accepted: number; declined: number; countered: number; expired: number; pending: number; withdrawn: number; responded: number };
   conversion: { acceptanceRateOfTotal: number; acceptanceRateOfResponded: number; responseRate: number };
   avgResponseMinutes: number | null;
   declineReasons: { reason: string; count: number }[];
@@ -87,11 +91,16 @@ export default function TenderAnalyticsPage() {
       {!isLoading && f && f.total > 0 && data && (
         <>
           {/* Funnel stat cards */}
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3">
             <StatCard label="Offered" value={f.total} icon={<Hash className="w-4 h-4" />} tone="neutral" />
             <StatCard label="Accepted" value={f.accepted} icon={<CheckCircle2 className="w-4 h-4" />} tone="green" />
             <StatCard label="Countered" value={f.countered} icon={<RefreshCw className="w-4 h-4" />} tone="gold" />
             <StatCard label="Declined" value={f.declined} icon={<XCircle className="w-4 h-4" />} tone="red" />
+            {/* Withdrawn is tonally SLATE, not red, on purpose: this is SRL
+                pulling an offer back, not a carrier refusing. Colouring it like
+                Declined would reintroduce the confusion at a glance that
+                v3.8.aww removed from the data. */}
+            <StatCard label="Withdrawn" value={f.withdrawn} icon={<RefreshCw className="w-4 h-4" />} tone="slate" />
             <StatCard label="Expired" value={f.expired} icon={<Clock className="w-4 h-4" />} tone="slate" />
             <StatCard label="Pending" value={f.pending} icon={<Clock className="w-4 h-4" />} tone="blue" />
             <StatCard label="Avg response" value={fmtDuration(data.avgResponseMinutes)} icon={<Clock className="w-4 h-4" />} tone="neutral" small />
