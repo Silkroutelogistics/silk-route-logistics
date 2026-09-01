@@ -508,9 +508,18 @@ export async function acceptPosition(positionId: string, actorId?: string | null
       where: { id: positionId },
       data: { status: "skipped", respondedAt: new Date() },
     });
+    // v3.8.awz — WITHDRAWN, not DECLINED, and this was the worst of the three
+    // SRL-side writers. The carrier reached this line by TRYING TO ACCEPT; the
+    // compliance re-check above blocked them. Recording that as a decline says
+    // the carrier refused the load when they had actively taken it — and then
+    // charges them for it, since §9 scores acceptance rate at 10% of Compass.
+    //
+    // respondedAt is left unset: the carrier's response was an acceptance, and
+    // stamping a response time on a row now labelled a withdrawal would be
+    // recording SRL's block as the carrier's answer.
     await prisma.loadTender.updateMany({
       where: { waterfallPositionId: positionId, status: "OFFERED" },
-      data: { status: "DECLINED", respondedAt: new Date() },
+      data: { status: "WITHDRAWN", statusReason: "compliance_block" },
     });
     // Reuse existing "position_skipped" event type (defined in
     // waterfallEventService union); description prefix carries the

@@ -1805,9 +1805,18 @@ export async function onLoadCancelledOrTONU(loadId: string, reason?: string) {
   if (!load) return;
 
   // 1. Cancel all active tenders for this load
+  //
+  // v3.8.awz — WITHDRAWN, not DECLINED. The load was cancelled; these carriers
+  // never got the chance to answer. Recording it as a decline put a mark on
+  // their acceptance rate (§9 scores it at 10% of Compass) for a load SRL
+  // pulled out from under them.
+  //
+  // respondedAt is no longer set for the same reason it is not set on the
+  // sibling-withdraw path: nobody responded. deletedAt stays — soft-deleting a
+  // cancelled load's tenders is a separate, correct behaviour.
   await prisma.loadTender.updateMany({
     where: { loadId, status: { in: ["OFFERED", "COUNTERED"] }, deletedAt: null },
-    data: { status: "DECLINED", respondedAt: new Date(), deletedAt: new Date() },
+    data: { status: "WITHDRAWN", statusReason: "load_cancelled", deletedAt: new Date() },
   });
 
   // 2. Reverse shipper credit utilization if it was incremented on delivery

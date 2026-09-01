@@ -1,3 +1,28 @@
+// v3.8.awz — THE LAST TWO PATHS THAT DECLINED ON A CARRIER'S BEHALF.
+//
+// aww fixed the three sibling-on-accept writers. Two more remained, and they
+// were different events rather than the same one repeated:
+//
+//   integrationService.onLoadCancelledOrTONU — the load was cancelled, and
+//   every carrier still holding an offer was marked as having declined it.
+//
+//   waterfallEngineService compliance skip — the worst of the five. The carrier
+//   reached that line BY TRYING TO ACCEPT; the compliance re-check blocked
+//   them. Recording that as a decline says the carrier refused a load they had
+//   actively taken, and then charges them for it, since §9 scores acceptance
+//   rate at 10% of Compass.
+//
+// Both now write WITHDRAWN with a reason (load_cancelled, compliance_block).
+// Neither sets respondedAt: in the first nobody answered, and in the second the
+// answer was an acceptance — stamping a response time on a row now labelled a
+// withdrawal would record SRL's block as the carrier's reply.
+//
+// Every SRL-side DECLINED writer on LoadTender is now gone. The three that
+// remain are genuine carrier refusals, and a guard holds it that way: the fix
+// was five edits, and without a guard the sixth is one refactor away and would
+// be invisible — nothing errors, no test fails, a number on a scorecard just
+// quietly gets worse for carriers who did nothing wrong.
+//
 // v3.8.awx — THE DENOMINATOR STILL COUNTED THE OFFERS SRL TOOK BACK.
 //
 // v3.8.aww stopped SRL writing DECLINED on carriers who lost a race, but the
@@ -16074,7 +16099,7 @@
 // and a data: qrCodeDataUrl are all legitimate and a guard that flagged them
 // would be noise. Comments are blanked before matching — the fixes are explained
 // in comments that necessarily quote the banned patterns.
-export const SRL_VERSION = "3.8.awx";
+export const SRL_VERSION = "3.8.awz";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

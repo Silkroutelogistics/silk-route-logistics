@@ -13,6 +13,48 @@ so it's searchable and never lost.
 
 ---
 
+## Fixed — 2026-09-01 (v3.8.awz — the last two paths that declined on a carrier's behalf)
+
+- **Symptom:** two SRL-side paths still wrote `DECLINED` onto tenders. Different
+  events from the sibling-on-accept case, so aww did not reach them.
+- **Where:** `integrationService.ts:1810` (`onLoadCancelledOrTONU` — the load was
+  cancelled and every carrier still holding an offer was marked as having
+  declined it) and `waterfallEngineService.ts:513` (the compliance skip).
+- **The waterfall one is the worst of the five.** The carrier reached that line
+  **by trying to accept**; the compliance re-check blocked them. Recording it as
+  a decline says the carrier refused a load they had actively taken — and then
+  charges them for it, since §9 scores acceptance rate at 10% of Compass.
+- **Severity:** P1, same scoring harm.
+- **Status:** Fixed in v3.8.awz (tender-lifecycle Phase B, commit 2c of 12).
+- **Shape:** both write `WITHDRAWN` with a reason (`load_cancelled`,
+  `compliance_block`). Neither sets `respondedAt` — in the first nobody
+  answered, and in the second the answer was an *acceptance*, so stamping a
+  response time on a row now labelled a withdrawal would record SRL's block as
+  the carrier's reply. `deletedAt` on the cancellation path is unchanged; soft-
+  deleting a cancelled load's tenders is separate and correct.
+- **Every SRL-side `DECLINED` writer on `LoadTender` is now gone.** The three
+  that remain are genuine carrier refusals (`tenderController:506`,
+  `carrierLoads:330`, `waterfallEngineService:433`);
+  `carrierController:2185` is `quickPayEnrollment`, a different model.
+- **Guarded:** `__tests__/unit/services/tenderDeclineWriters.test.ts` scans for
+  any `loadTender` write setting `status: "DECLINED"` and fails by file:line on
+  anything outside the carrier-initiated allow-list. The fix was five edits;
+  without a guard the sixth is one refactor away and would be invisible —
+  nothing errors, no test fails, a number on a scorecard just quietly gets worse.
+  Multi-line-aware and comment-stripping per §19 Sub-pattern 18, with a vacuity
+  tripwire (a scanner matching nothing would otherwise report a clean tree) and
+  a stale-allow-list check (dead permission silently widens a guard).
+- **Adversarially verified:** reintroducing the `integrationService` writer fails
+  the guard and names the site.
+- **Gate note:** the frontend build failed twice on `ENOENT
+  .next/server/pages-manifest.json` — shared-`.next` contention with a
+  concurrent session's in-flight build, not a code error. Confirmed by sampling
+  `.next` (10 → 14 entries between samples). Waited for it to settle rather than
+  cleaning the directory and clobbering their build; it then passed. Shared
+  build output is shared state in the same way `.git/index` is.
+
+---
+
 ## Fixed — 2026-09-01 (v3.8.awx — the denominator still counted the offers SRL took back)
 
 - **Symptom:** v3.8.aww stopped SRL writing `DECLINED` on carriers who lost a
