@@ -10,6 +10,7 @@ import { calcDocTimeliness } from "../lib/docTimeliness";
 import { log } from "../lib/logger";
 import { resolveTonuBilling } from "../lib/tonuPolicy";
 import { raiseTonuCustomerCharge } from "./invoiceService";
+import { withdrawLiveTenders } from "./tenderTransitionService";
 import {
   standardNetDays,
   quickPayAutoApprovePerLoad,
@@ -1814,10 +1815,7 @@ export async function onLoadCancelledOrTONU(loadId: string, reason?: string) {
   // respondedAt is no longer set for the same reason it is not set on the
   // sibling-withdraw path: nobody responded. deletedAt stays — soft-deleting a
   // cancelled load's tenders is a separate, correct behaviour.
-  await prisma.loadTender.updateMany({
-    where: { loadId, status: { in: ["OFFERED", "COUNTERED"] }, deletedAt: null },
-    data: { status: "WITHDRAWN", statusReason: "load_cancelled", deletedAt: new Date() },
-  });
+  await withdrawLiveTenders({ loadId, reason: "load_cancelled", softDelete: true });
 
   // 2. Reverse shipper credit utilization if it was incremented on delivery
   if (load.customerId && ["DELIVERED", "POD_RECEIVED", "INVOICED"].includes(load.status)) {

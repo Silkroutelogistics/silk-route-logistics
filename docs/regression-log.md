@@ -13,6 +13,72 @@ so it's searchable and never lost.
 
 ---
 
+## Fixed — 2026-09-01 (v3.8.axj — six places withdrew sibling tenders, and all six missed the same one)
+
+- **Symptom:** accept, accept-on-behalf, broadcast accept, load cancelled,
+  cascade position skipped and compliance block each ran their own sibling
+  `updateMany`. Every one of them filtered on `status: "OFFERED"` alone, so a
+  **COUNTERED** sibling survived being covered by another carrier: it stayed
+  live, and an AE could afterwards accept that counter onto a load that was
+  already booked.
+- **Status:** commit 8b of 12. The remaining migrations are 8c.
+- **Shape:** new `services/tenderTransitionService.ts`. `withdrawLiveTenders`
+  withdraws every live tender in a scope (a load, or a cascade position),
+  optionally sparing the winner, with a coded reason and one transition row per
+  tender. `LIVE` is `OFFERED | COUNTERED`, which is what all six call sites
+  meant. Migrated in this commit: both accept paths in `tenderController`,
+  `broadcastTenderService`, `integrationService`.
+- **The gap did not need finding.** It needed the six copies to become one place
+  where the question is asked once. A vocabulary that six files each maintain
+  separately is not a vocabulary — which is how `EXPIRED` came to mean "SRL
+  pulled the offer" in two of them and `DECLINED` in two others, every one a
+  mark on a carrier's acceptance rate (§9, 10% of Compass) for doing nothing.
+- **`respondedAt` is deliberately never set on a withdraw.** Nobody responded.
+  Stamping a response time would make a carrier look like they answered when
+  they were never given the chance.
+- **`softDelete` is opt-in rather than implied.** Only the cancelled-load path
+  wants it: soft-deleting a tender hides it from the carrier's own history,
+  which is right when the load is gone and wrong every other time.
+- **The accept paths move from an array `$transaction` to an interactive one.**
+  The helper reads before it writes — a history row needs each sibling's id and
+  its FROM state, and `updateMany` returns neither — and issues one transition
+  per sibling, which an array of composable promises cannot express.
+- **The race is handled rather than assumed away.** Outside a transaction a
+  sibling could be accepted between the read and the write. The update is scoped
+  to the live states so such a tender is never clobbered, and when the counts
+  disagree the rows that actually moved are re-read before anything is logged. A
+  history row describing a transition that did not happen is worse than an extra
+  query.
+- **Guard:** `loadTenderWriters` now asserts the **length** of the state-writer
+  list, not only its membership. Membership alone is satisfied by adding a file,
+  which is the drift the list exists to prevent; a count has to be edited
+  deliberately and shows up in a diff as a number going the wrong way. Seven
+  today (was eight), target three — create, transition, release.
+- **The guard's stale-entry check earned its place immediately**, failing on
+  `integrationService` and `broadcastTenderService` the moment they stopped
+  writing status. Dead permission silently widens a guard the day something else
+  takes that path.
+- **Proof:** `_withdraw-consolidation-proof.ts`, **26/26** against a real
+  database, calling the real helper through the real singleton client rather
+  than a copy of the write (§13.3 Item 222.5 — the earlier sibling proof
+  inlined the write it was testing).
+- **Adversarial:** reverting `LIVE` to `OFFERED`-only takes it to **18/26** and
+  names the countered sibling first.
+- **Worth recording — an assertion whose stated reason did not match what it
+  detects.** Dropping the `db` argument from the transition write leaves the
+  commit assertion **green** and turns only the rollback one red. Unlike
+  `createTender`, the tender here already exists and is committed, so the
+  foreign key holds either way and the row lands; the only thing that separates
+  them is whether it survives a rollback. The note in the proof now says which
+  case actually catches it, because a green assertion pointing at the wrong
+  mechanism is the same shape as a guard that observes the wrong thing (§19
+  Sub-pattern 16).
+- **Outbound (§19 Sub-pattern 20):** keys explicitly empty. `[Email] Sent to`
+  count: **0**, measured from the captured output.
+- **Gates:** backend tsc clean; backend vitest **1418 pass / 1 fail** (the known
+  `urlSafety` DNS red, sandbox-only, red on a clean tree); frontend tsc clean;
+  frontend build clean.
+
 ## Fixed — 2026-09-01 (v3.8.axi — a load could be back on the board with a tender still claiming it)
 
 - **Symptom:** `fallOffRecovery` cleared the carrier and re-posted the load, and

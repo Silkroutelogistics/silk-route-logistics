@@ -164,7 +164,7 @@ column plus new `eventType` values — additive, no new table, and the drawer's
 | 2 | All paths via one `createTender` | CLOSED **v3.8.axd–axg** — one creator, CI-guarded (creation + state) | — |
 | 3 | No path writes `Load.status` directly | ≥5 paths do | Move into service |
 | 4 | One live OFFERED per load unless parallel | No uniqueness check anywhere | Add guard + `waterfall.parallel` flag |
-| 5 | Accept atomic; siblings auto-**withdraw** | ✅ **CLOSED v3.8.aww** — all 3 sibling-on-accept sites write `WITHDRAWN`/`load_covered` | Denominator fix + backfill = 2b; cancel/skip sites = 2c |
+| 5 | Accept atomic; siblings auto-**withdraw** | ✅ **CLOSED v3.8.aww → axj** — one `withdrawLiveTenders`; takes OFFERED **and COUNTERED**, which all six hand-rolled copies missed | — |
 | 6 | `acceptTender` sole `carrierId` writer | ✅ **CLOSED v3.8.axa–axc** — one writer (`carrierAssignmentService`), 11 → 0, CI-guarded | `releaseCarrier` as sole clearer = commit 8 |
 | 7 | QuickPayElection pending on tender; RC deferred | Notice fires; no model; RC **not** deferred | New model + gate |
 | 8 | RC auto-fire idempotent, keyed to tender version | PARTIAL **v3.8.axh** — `LoadTender.version` exists; a counter bumps it and voids the stale RC | RC keyed to version = commit 11 |

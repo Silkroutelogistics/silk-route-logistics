@@ -1,3 +1,43 @@
+// v3.8.axj — SIX PLACES WITHDREW SIBLING TENDERS, AND ALL SIX MISSED THE SAME ONE.
+//
+// Accept, accept-on-behalf, broadcast accept, load cancelled, cascade position
+// skipped and compliance block each ran their own sibling updateMany. Every one
+// of them filtered on status "OFFERED" alone, so a COUNTERED sibling survived
+// being covered by another carrier: it stayed live, and an AE could afterwards
+// accept that counter onto a load that was already booked.
+//
+// withdrawLiveTenders takes OFFERED and COUNTERED both, which is what all six
+// call sites meant. The gap did not need finding — it needed the six copies to
+// become one place where the question is asked once.
+//
+// It is not tidying. A vocabulary six files each maintain separately is not a
+// vocabulary, which is how EXPIRED came to mean "SRL pulled the offer" in two
+// of them and DECLINED in two others — every one a mark on a carrier's
+// acceptance rate, scored at 10% of Compass, for doing nothing.
+//
+// respondedAt is deliberately never set on a withdraw. Nobody responded.
+//
+// The accept paths move from an array $transaction to an interactive one. The
+// helper reads before it writes (a history row needs each sibling's id and its
+// FROM state, and updateMany returns neither) and issues one transition per
+// sibling, which an array of composable promises cannot express.
+//
+// GUARD: loadTenderWriters now asserts the LENGTH of the state-writer list, not
+// only its membership. Membership alone is satisfied by adding a file, which is
+// the drift the list exists to prevent. Seven today, target three — create,
+// transition, release — and the count has to be edited deliberately.
+//
+// Proof: _withdraw-consolidation-proof.ts, 26/26 against a real database,
+// calling the real helper rather than a copy of it. Injection: reverting LIVE
+// to OFFERED-only takes it to 18/26 and names the countered sibling first.
+//
+// Worth recording — dropping the db argument from the transition write leaves
+// the commit assertion GREEN and turns only the rollback one red. Unlike
+// createTender, the tender here already exists, so the foreign key holds either
+// way; the only thing that separates them is whether the row survives a
+// rollback. An assertion whose stated reason does not match what it detects is
+// the same shape as a guard that observes the wrong thing, so the note in the
+// proof says which case actually catches it.
 // v3.8.axi — A LOAD COULD BE BACK ON THE BOARD WITH A TENDER STILL CLAIMING IT.
 //
 // fallOffRecovery cleared the carrier and re-posted the load, and left the
@@ -16349,7 +16389,7 @@
 // and a data: qrCodeDataUrl are all legitimate and a guard that flagged them
 // would be noise. Comments are blanked before matching — the fixes are explained
 // in comments that necessarily quote the banned patterns.
-export const SRL_VERSION = "3.8.axi";
+export const SRL_VERSION = "3.8.axj";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

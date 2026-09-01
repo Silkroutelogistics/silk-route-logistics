@@ -98,28 +98,35 @@ const CREATORS = new Set(["services/tenderCreationService.ts"]);
  */
 const STATE_WRITERS = new Set([
   "services/tenderCreationService.ts",
-  "controllers/tenderController.ts",     // accept / accept-on-behalf / counter / decline / expiry sweep
-  "routes/carrierLoads.ts",              // carrier decline + sibling withdraw on self-accept
-  "services/waterfallEngineService.ts",  // cascade decline / compliance skip
-  "services/integrationService.ts",      // load cancelled -> withdraw
-  "services/broadcastTenderService.ts",  // broadcast accepted -> siblings withdrawn
-  "routes/waterfalls.ts",                // AE skips a cascade position -> withdraw
-  "services/carrierReleaseService.ts",   // release (ACCEPTED -> RELEASED) + withdraw
+  "services/tenderTransitionService.ts",  // v3.8.axj — bulk withdraw, the consolidation target
+  "services/carrierReleaseService.ts",    // release (ACCEPTED -> RELEASED) + single withdraw
+  // ---- migrating out, one commit at a time ----
+  "controllers/tenderController.ts",      // accept / on-behalf / counter / decline / expiry sweep
+  "routes/carrierLoads.ts",               // carrier decline
+  "services/waterfallEngineService.ts",   // cascade decline / accept / position expiry
+  "routes/waterfalls.ts",                 // AE skips a cascade position -> withdraw
 ]);
 
 /**
- * SEVEN is too many, and that is recorded rather than hidden.
+ * THE TARGET IS THREE, and the number is asserted so the shrink is visible.
  *
- * The list is honest about today: each of these genuinely moves a tender
- * between states, and each was read before being added. But the target is one
- * transition service, and every entry here is a place that could word a
- * transition differently from the others — which is exactly how EXPIRED came to
- * mean "SRL pulled the offer" in two of them.
+ * Three because a tender is born in one place, moves in one place, and is taken
+ * back in one place: tenderCreationService, tenderTransitionService,
+ * carrierReleaseService. Everything above the divider is a file that still
+ * moves a tender itself and has not been migrated yet.
  *
- * The guard still earns its place at seven: it caught those two on its first
- * run, and it makes the eighth entry a deliberate act rather than an accident.
- * Consolidating the withdraw paths behind one helper is commit 8's work
- * (releaseCarrier + withdraw), and this list should shrink when it lands.
+ * Asserting the LENGTH rather than only the membership is what makes this
+ * useful. Membership alone is satisfied by adding a file, which is exactly the
+ * drift the list exists to prevent; the count has to be edited deliberately and
+ * shows up in a diff as a number going the wrong way.
+ */
+const STATE_WRITER_TARGET = 3;
+
+/**
+ * Each entry above the divider was read before it was added, and each genuinely
+ * moves a tender between states today. The guard has already earned its place
+ * at that size: it caught two EXPIRED mislabels on its first run, and it caught
+ * carrierReleaseService arriving unlisted on the next commit.
  */
 
 describe("LoadTender rows have one creator", () => {
@@ -143,6 +150,18 @@ describe("LoadTender rows have one creator", () => {
       "Moving a tender between states outside the known writers means the move " +
         "is not recorded. Offending site(s)",
     ).toEqual([]);
+  });
+
+  it("the state-writer list is shrinking toward one transition service", () => {
+    // Growth means a new file learned to move a tender. That is the thing this
+    // guard exists to make deliberate, so it fails rather than warns.
+    expect(
+      [...STATE_WRITERS].sort(),
+      "Files that may write tender status. Target is " + STATE_WRITER_TARGET +
+        " (create / transition / release). Adding one is a decision; removing " +
+        "one is the plan.",
+    ).toHaveLength(7);
+    expect(STATE_WRITER_TARGET).toBe(3);
   });
 
   it("the allow-lists have no stale entries", () => {

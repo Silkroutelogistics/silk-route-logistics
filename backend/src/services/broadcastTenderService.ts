@@ -3,6 +3,7 @@ import { log } from "../lib/logger";
 import { validateLoadStatusTransition } from "../lib/loadStateMachine";
 import { LoadStatus } from "@prisma/client";
 import { createTender } from "./tenderCreationService";
+import { withdrawLiveTenders } from "./tenderTransitionService";
 
 export interface BroadcastCandidate {
   carrierId: string;
@@ -101,13 +102,10 @@ export async function handleBroadcastAcceptance(tenderId: string, loadId: string
   // refusal — but it is still wrong in the numbers. analytics.ts computes
   // acceptance over `actionable = total - withdrawn`, so these rows stayed in
   // the denominator and understated how often broadcast carriers accept.
-  const withdrawn = await prisma.loadTender.updateMany({
-    where: {
-      loadId,
-      id: { not: tenderId },
-      status: "OFFERED",
-    },
-    data: { status: "WITHDRAWN", statusReason: "load_covered" },
+  const withdrawn = await withdrawLiveTenders({
+    loadId,
+    exceptTenderId: tenderId,
+    reason: "load_covered",
   });
 
   log.info({ loadId, acceptedTenderId: tenderId, withdrawnCount: withdrawn.count }, "[Broadcast] Accepted — others withdrawn");

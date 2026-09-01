@@ -13,6 +13,7 @@ import { validateLoadStatusTransition } from "../lib/loadStateMachine";
 import { assignCarrier } from "../services/carrierAssignmentService";
 import { createTender as createTenderRow } from "../services/tenderCreationService";
 import { logTenderTransition } from "../services/waterfallEventService";
+import { withdrawLiveTenders } from "../services/tenderTransitionService";
 
 export async function createTender(req: AuthRequest, res: Response) {
   const { carrierId, offeredRate, expiresAt } = createTenderSchema.parse(req.body);
@@ -120,41 +121,54 @@ export async function acceptTender(req: AuthRequest, res: Response) {
   }
 
   // Sprint 38 (Item 53) — atomic accept. Was Promise.all (concurrent, NOT
-  // atomic). On partial failure (e.g., load update succeeds, tender update
-  // throws) state diverged: load BOOKED while tender still OFFERED, or
-  // sibling tenders left OFFERED. prisma.$transaction guarantees all-or-
-  // nothing. Three operations: tender→ACCEPTED, load→BOOKED+carrierId,
-  // sibling tenders→DECLINED.
-  const [updated] = await prisma.$transaction([
-    prisma.loadTender.update({
+  // atomic). On partial failure state diverged: load BOOKED while the tender
+  // still read OFFERED, or siblings left live. Three writes, all-or-nothing:
+  // this tender → ACCEPTED, load → BOOKED + carrierId, every live sibling
+  // withdrawn.
+  //
+  // v3.8.axj — interactive rather than an array transaction. withdrawLiveTenders
+  // reads before it writes (it needs each sibling's id and FROM state for the
+  // history row) and issues one transition per sibling, which an array of
+  // composable promises cannot express.
+  const updated = await prisma.$transaction(async (tx) => {
+    const accepted = await tx.loadTender.update({
       where: { id: tender.id },
       data: { status: "ACCEPTED", respondedAt: new Date() },
-    }),
-    // v3.8.axa — the single writer of Load.carrierId. Composed into the
-    // transaction rather than awaited, so the assignment stays atomic with the
-    // tender flip (Sprint 38 Item 53). ARC 16: carrierRate is persisted at the
+    });
+    // v3.8.axa — the single writer of Load.carrierId, on the caller's
+    // transaction client so the assignment stays atomic with the tender flip
+    // (Sprint 38 Item 53). ARC 16: carrierRate is persisted at the
     // moment of accept, or settlement falls back to load.rate, which is the
     // CUSTOMER rate on the primary creation path (§13.3 Item 221.1).
     //
     // carrierUserId, not carrierId: Load.carrierId is a User.id while
     // LoadTender.carrierId is a CarrierProfile.id. Confusing them is what made
     // waterfall accept silently dead for months (§13.3 Item 222.4).
-    assignCarrier({
-      loadId: tender.loadId,
-      carrierUserId: tender.carrier.userId,
-      status: "BOOKED",
-      carrierRate: agreedRateFromTender(tender as any),
-    }),
+    await assignCarrier(
+      {
+        loadId: tender.loadId,
+        carrierUserId: tender.carrier.userId,
+        status: "BOOKED",
+        carrierRate: agreedRateFromTender(tender as any),
+      },
+      tx,
+    );
     // v3.8.aww — WITHDRAWN, not DECLINED. These carriers did not refuse
     // anything; SRL pulled their offer because somebody else got there first.
     // carrierController derives tendersDeclined and an acceptanceRate from
     // this column and §9 scores acceptance at 10% of Compass, so writing
     // DECLINED here put a mark on carriers who had done nothing.
-    prisma.loadTender.updateMany({
-      where: { loadId: tender.loadId, id: { not: tender.id }, status: "OFFERED" },
-      data: { status: "WITHDRAWN", statusReason: "load_covered" },
-    }),
-  ]);
+    await withdrawLiveTenders(
+      {
+        loadId: tender.loadId,
+        exceptTenderId: tender.id,
+        reason: "load_covered",
+        actor: { id: req.user!.id, type: "USER" },
+      },
+      tx,
+    );
+    return accepted;
+  });
 
   await hooks.run("PostLoadStateChange", { loadId: load.id, from: load.status, to: "BOOKED", actor: req.user!.id });
   await hooks.run("PostTenderAccept", { tenderId: tender.id, loadId: load.id, carrierId: tender.carrierId, rate: tender.offeredRate, actor: req.user!.id });
@@ -309,39 +323,47 @@ export async function acceptTenderOnBehalf(req: AuthRequest, res: Response) {
     return;
   }
 
-  // Atomic txn (Sprint 38 Item 53 pattern). Same three operations as
-  // acceptTender — tender→ACCEPTED, load→BOOKED+carrierId, sibling
-  // tenders→DECLINED.
-  const [updated] = await prisma.$transaction([
-    prisma.loadTender.update({
+  // Atomic txn (Sprint 38 Item 53 pattern). Same three writes as acceptTender:
+  // tender → ACCEPTED, load → BOOKED + carrierId, live siblings withdrawn.
+  const updated = await prisma.$transaction(async (tx) => {
+    const accepted = await tx.loadTender.update({
       where: { id: tender.id },
       data: { status: "ACCEPTED", respondedAt: new Date() },
-    }),
-    // v3.8.axa — the single writer of Load.carrierId. Composed into the
-    // transaction rather than awaited, so the assignment stays atomic with the
-    // tender flip (Sprint 38 Item 53). ARC 16: carrierRate is persisted at the
+    });
+    // v3.8.axa — the single writer of Load.carrierId, on the caller's
+    // transaction client so the assignment stays atomic with the tender flip
+    // (Sprint 38 Item 53). ARC 16: carrierRate is persisted at the
     // moment of accept, or settlement falls back to load.rate, which is the
     // CUSTOMER rate on the primary creation path (§13.3 Item 221.1).
     //
     // carrierUserId, not carrierId: Load.carrierId is a User.id while
     // LoadTender.carrierId is a CarrierProfile.id. Confusing them is what made
     // waterfall accept silently dead for months (§13.3 Item 222.4).
-    assignCarrier({
-      loadId: tender.loadId,
-      carrierUserId: tender.carrier.userId,
-      status: "BOOKED",
-      carrierRate: agreedRateFromTender(tender as any),
-    }),
+    await assignCarrier(
+      {
+        loadId: tender.loadId,
+        carrierUserId: tender.carrier.userId,
+        status: "BOOKED",
+        carrierRate: agreedRateFromTender(tender as any),
+      },
+      tx,
+    );
     // v3.8.aww — WITHDRAWN, not DECLINED. These carriers did not refuse
     // anything; SRL pulled their offer because somebody else got there first.
     // carrierController derives tendersDeclined and an acceptanceRate from
     // this column and §9 scores acceptance at 10% of Compass, so writing
     // DECLINED here put a mark on carriers who had done nothing.
-    prisma.loadTender.updateMany({
-      where: { loadId: tender.loadId, id: { not: tender.id }, status: "OFFERED" },
-      data: { status: "WITHDRAWN", statusReason: "load_covered" },
-    }),
-  ]);
+    await withdrawLiveTenders(
+      {
+        loadId: tender.loadId,
+        exceptTenderId: tender.id,
+        reason: "load_covered",
+        actor: { id: req.user!.id, type: "USER" },
+      },
+      tx,
+    );
+    return accepted;
+  });
 
   // Distinct audit-log action so on-behalf overrides are queryable.
   await prisma.auditLog.create({
