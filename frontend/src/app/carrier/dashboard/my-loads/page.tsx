@@ -5,8 +5,6 @@ import { MapPin, Phone, FileText, CheckCircle, Clock, AlertCircle, Printer, Came
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { CarrierCard, CarrierBadge } from "@/components/carrier";
-import { BOLTemplate } from "@/components/templates";
-import type { BOLData } from "@/components/templates";
 import { money, carrierPay } from "@/lib/rateDisplay";
 import { openPdfFromApi, extractApiError, apiHref } from "@/lib/download";
 
@@ -25,7 +23,9 @@ export default function MyLoadsPage() {
   const [page, setPage] = useState(1);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [checkCallForm, setCheckCallForm] = useState({ city: "", state: "", notes: "" });
-  const [showBOL, setShowBOL] = useState(false);
+  // v3.8.awu — showBOL/BOLTemplate removed with the HTML BOL renderer.
+  const [bolError, setBolError] = useState<string | null>(null);
+  const [bolOpening, setBolOpening] = useState(false);
   // v3.8.awt — the rate-confirmation link is fetched, not navigated to, so its
   // failures need somewhere to land. The endpoint answers 403
   // DRIVER_NOT_VERIFIED with an instruction the carrier has to follow; before
@@ -215,12 +215,37 @@ export default function MyLoadsPage() {
                       )}
                     </>
                   )}
+                  {/* v3.8.awu — was a client-side HTML re-render of the BOL.
+                      That component was a SECOND renderer for a legal document:
+                      off-brand, carrying a hardcoded whaider@ and a banner
+                      admitting it was pre-v2.9, while the real BOL is generated
+                      by pdfService. Two renderers for one instrument is the
+                      Load.rate defect in document form — nobody knows which is
+                      authoritative until the two disagree in front of a shipper.
+                      This now fetches the same PDF the AE sends. */}
                   <button
-                    onClick={() => setShowBOL(true)}
-                    className="flex items-center gap-1.5 text-[#BA7517] font-semibold mt-2 hover:underline text-xs"
+                    type="button"
+                    disabled={bolOpening}
+                    onClick={async () => {
+                      setBolError(null);
+                      setBolOpening(true);
+                      try {
+                        await openPdfFromApi(`/pdf/bol-load/${detail.id}`);
+                      } catch (err) {
+                        setBolError(await extractApiError(err, "Couldn't open the bill of lading."));
+                      } finally {
+                        setBolOpening(false);
+                      }
+                    }}
+                    className="flex items-center gap-1.5 text-[#BA7517] font-semibold mt-2 hover:underline text-xs disabled:opacity-60"
                   >
-                    <Printer size={14} /> Print Bill of Lading
+                    <Printer size={14} /> {bolOpening ? "Opening…" : "Bill of Lading"}
                   </button>
+                  {bolError && (
+                    <p className="mt-1.5 text-[11px] text-[#9B2C2C] bg-[#F6E3E3] border border-[#9B2C2C]/30 rounded px-2 py-1.5">
+                      {bolError}
+                    </p>
+                  )}
                 </div>
               </CarrierCard>
 
@@ -349,65 +374,6 @@ export default function MyLoadsPage() {
         </div>
       </div>
 
-      {/* BOL Template Modal */}
-      {showBOL && detail && (
-        <BOLTemplate
-          onClose={() => setShowBOL(false)}
-          data={{
-            referenceNumber: detail.referenceNumber || "",
-            loadNumber: detail.loadNumber,
-            shipperReference: detail.shipperReference,
-            deliveryReference: detail.deliveryReference,
-            originCompany: detail.originCompany,
-            originAddress: detail.originAddress,
-            originCity: detail.originCity || "",
-            originState: detail.originState || "",
-            originZip: detail.originZip || "",
-            originContactName: detail.originContactName,
-            originContactPhone: detail.originContactPhone,
-            destCompany: detail.destCompany,
-            destAddress: detail.destAddress,
-            destCity: detail.destCity || "",
-            destState: detail.destState || "",
-            destZip: detail.destZip || "",
-            destContactName: detail.destContactName,
-            destContactPhone: detail.destContactPhone,
-            carrierCompany: detail.carrier?.companyName || detail.carrier?.company,
-            carrierMC: detail.carrier?.mcNumber,
-            carrierDOT: detail.carrier?.dotNumber,
-            driverName: detail.driverName,
-            driverPhone: detail.driverPhone,
-            truckNumber: detail.truckNumber,
-            trailerNumber: detail.trailerNumber,
-            pickupDate: detail.pickupDate,
-            pickupTimeStart: detail.pickupTimeStart,
-            pickupTimeEnd: detail.pickupTimeEnd,
-            deliveryDate: detail.deliveryDate,
-            deliveryTimeStart: detail.deliveryTimeStart,
-            deliveryTimeEnd: detail.deliveryTimeEnd,
-            commodity: detail.commodity,
-            weight: detail.weight,
-            pieces: detail.pieces,
-            pallets: detail.pallets,
-            equipmentType: detail.equipmentType || "",
-            freightClass: detail.freightClass,
-            stackable: detail.stackable,
-            dimensionsLength: detail.dimensionsLength,
-            dimensionsWidth: detail.dimensionsWidth,
-            dimensionsHeight: detail.dimensionsHeight,
-            hazmat: detail.hazmat,
-            hazmatUnNumber: detail.hazmatUnNumber,
-            hazmatClass: detail.hazmatClass,
-            hazmatEmergencyContact: detail.hazmatEmergencyContact,
-            temperatureControlled: detail.temperatureControlled,
-            tempMin: detail.tempMin,
-            tempMax: detail.tempMax,
-            pickupInstructions: detail.pickupInstructions,
-            deliveryInstructions: detail.deliveryInstructions,
-            specialInstructions: detail.specialInstructions,
-          } as BOLData}
-        />
-      )}
     </div>
   );
 }

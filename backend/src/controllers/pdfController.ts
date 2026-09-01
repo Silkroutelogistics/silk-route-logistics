@@ -199,6 +199,29 @@ export async function downloadBOLFromLoad(req: AuthRequest, res: Response) {
 
     if (!load) { res.status(404).json({ error: "Load not found" }); return; }
 
+    // v3.8.awu — per-record ownership gate, so CARRIER can be admitted at the
+    // route without admitting carriers to each other's freight.
+    //
+    // Until now the BOL had NO carrier-portal path at all: this route excluded
+    // CARRIER and Load.bolPdfUrl is written by nothing, so the only bill of
+    // lading a carrier could reach was an off-brand HTML re-render in the portal
+    // (§13.3 Item 221 banked the seam; the audit found the renderer). The AE was
+    // the only route to the dock.
+    //
+    // Mirrors rateConfirmationController's C1 gate exactly, and for the same
+    // reason: `authorize()` proves a ROLE, never a RELATIONSHIP. Without this,
+    // admitting CARRIER would let any logged-in carrier enumerate load ids and
+    // pull the BOL for freight that is not theirs — shipper and consignee
+    // identity, addresses, contacts and appointment windows.
+    //
+    // AE-side roles bypass deliberately: they need any load's BOL during normal
+    // dispatch. The check keys on Load.carrierId, which is a User id (the same
+    // convention the RC gate uses).
+    if (req.user!.role === "CARRIER" && load.carrierId !== req.user!.id) {
+      res.status(403).json({ error: "Not authorized to download this bill of lading" });
+      return;
+    }
+
     // Phase 5E.a: auto-generate (or reuse) a STATUS_ONLY ShipperTrackingToken
     // on every BOL-print event. Token is plumbed through generateBOLFromLoad
     // context for 5E.b to encode into the QR. Idempotent per loadId — BOL

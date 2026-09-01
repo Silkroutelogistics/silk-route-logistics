@@ -10,7 +10,7 @@
  * Pre-akg every consumer hardcoded these values inline, which produced
  * the §13.3 Item 8.8 leading-zero MC# typo that propagated to ~17
  * surfaces (CLAUDE.md §1 + §4 line 410 + 6 backend services + the
- * BOLTemplate.tsx React mirror + 10 public HTML pages — last item
+ * BOLTemplate.tsx React mirror (deleted v3.8.awu) + 10 public HTML pages — last
  * auto-corrected via site-chrome.json + _partials/footer.html since
  * v3.8.aih). akg consolidates into this module so any future
  * legal-identity change is a one-edit operation, NOT a 17-surface
@@ -30,8 +30,9 @@
  *   - Governing law + venue: CLAUDE.md §14 + Caravan Quick Pay
  *     Agreement v2 Article 18
  *
- * Mirror at frontend/src/lib/authority.ts for client surfaces
- * (BOLTemplate.tsx + RC modal). Both modules MUST stay in sync;
+ * Mirror at frontend/src/lib/authority.ts for client surfaces (the RC modal;
+ * BOLTemplate.tsx was the other and was deleted in v3.8.awu along with the
+ * second BOL renderer). Both modules MUST stay in sync;
  * any value-change to one requires the same change to the other.
  */
 
