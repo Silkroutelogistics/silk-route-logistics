@@ -202,7 +202,22 @@ export default function CarrierDashboardLayout({ children }: { children: React.R
   const isApproved = user?.carrierProfile?.onboardingStatus === "APPROVED";
   // v3.8.aqi — hard activation gate. Until the BCA is signed, an approved carrier
   // sees ONLY the activation page: no sidebar, search, notifications, or content.
-  const mustActivate = isApproved && !!activationData?.requiresActivation;
+  //
+  // `!mustEnroll` IS THE PRECEDENCE, AND IT BELONGS HERE RATHER THAN AT THE
+  // CONSUMERS. The redirect effect above stands down for enrollment; the render
+  // branch below did not, and the two disagreeing bricked a live carrier:
+  // APPROVED + BCA unsigned + 2FA unenrolled was sent to the enrollment screen
+  // (correct) and then refused it, because `mustActivate` was true while the
+  // pathname was not the activation page. A spinner reading "Redirecting to
+  // activation…" that never resolved, on the one screen that could have let
+  // them out — so enrollment could never complete and the deadlock was permanent.
+  //
+  // Approving a carrier BEFORE they arm 2FA is what triggers it, and that is the
+  // normal order: the AE approves from the console while the carrier has not yet
+  // logged in. Carrying the precedence in the VALUE means a consumer added later
+  // inherits it instead of having to remember it — the effect and the render had
+  // to agree, and nothing made them.
+  const mustActivate = isApproved && !mustEnroll && !!activationData?.requiresActivation;
   const onActivationPage = pathname === ACTIVATION_PAGE;
   // Arc 11 — the enrollment wall hides the chrome too. There is exactly one
   // reachable route until the authenticator is armed, so there is no nav to

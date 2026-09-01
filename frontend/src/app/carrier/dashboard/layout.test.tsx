@@ -155,3 +155,72 @@ describe("precedence — the silent failure this exists for", () => {
     await waitFor(() => expect(replace).toHaveBeenCalledWith(STATUS));
   });
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ARRIVING is not the same as BEING ABLE TO USE IT.
+//
+// Every test above asserts where router.replace POINTS. None of them mounts at
+// the destination, and mount() passes {null} as children, so none could see
+// whether the destination renders. It does not, and a live carrier was bricked
+// by the difference: AEROSWIFT LLC, APPROVED, BCA unsigned, 2FA unenrolled,
+// sent correctly to /carrier/dashboard/security and then shown a spinner
+// reading "Redirecting to activation…" that would never resolve — because
+// `mustActivate` was true and the pathname was not the activation page.
+//
+// The enrollment screen was the one page that could have cleared `mustEnroll`.
+// Refusing to render it made the deadlock permanent.
+//
+// §19 Sub-pattern 16: the test named "outranks the activation wall" proved the
+// REDIRECT outranks it. The render did not, and the assertion could not tell.
+// ─────────────────────────────────────────────────────────────────────────────
+describe("the destination actually renders", () => {
+  async function mountAt(path: string) {
+    pathname.value = path;
+    const r = render(
+      <CarrierDashboardLayout>
+        <div data-testid="page-body">the screen</div>
+      </CarrierDashboardLayout>,
+    );
+    await waitFor(() => {});
+    return r;
+  }
+
+  it("THE CASE — an approved, unsigned, unenrolled carrier can see the enrollment screen", async () => {
+    // Approved before arming 2FA, which is the normal order: the AE approves
+    // from the console while the carrier has not yet logged in.
+    activationData.value = { requiresTotpEnrollment: true, requiresActivation: true };
+
+    const { queryByTestId, queryByText } = await mountAt(SECURITY) as any;
+
+    expect(queryByText(/Redirecting to activation/i)).toBeNull();
+    expect(queryByTestId("page-body")).not.toBeNull();
+  });
+
+  it("still holds the activation wall once enrollment is done", async () => {
+    // Standing down must be conditional. If the fix disabled the activation
+    // wall outright, an enrolled carrier would reach operational surfaces with
+    // an unsigned BCA — trading a lockout for a hole.
+    activationData.value = { requiresTotpEnrollment: false, requiresActivation: true };
+
+    const { queryByTestId, queryByText } = await mountAt("/carrier/dashboard/my-loads") as any;
+
+    expect(queryByText(/Redirecting to activation/i)).not.toBeNull();
+    expect(queryByTestId("page-body")).toBeNull();
+  });
+
+  it("renders the activation page itself to an unsigned, enrolled carrier", async () => {
+    activationData.value = { requiresTotpEnrollment: false, requiresActivation: true };
+
+    const { queryByTestId } = await mountAt(ACTIVATION) as any;
+
+    expect(queryByTestId("page-body")).not.toBeNull();
+  });
+
+  it("renders ordinary pages once both walls are down", async () => {
+    activationData.value = { requiresTotpEnrollment: false, requiresActivation: false };
+
+    const { queryByTestId } = await mountAt("/carrier/dashboard/my-loads") as any;
+
+    expect(queryByTestId("page-body")).not.toBeNull();
+  });
+});

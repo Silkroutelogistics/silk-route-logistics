@@ -1,3 +1,21 @@
+// v3.8.awp — THE ENROLLMENT SCREEN REFUSED TO RENDER ITSELF.
+//
+// A live carrier logged in, was correctly sent to /carrier/dashboard/security,
+// and sat on a spinner reading "Redirecting to activation…" that would never
+// resolve. The redirect effect stood down for enrollment; the render branch did
+// not. `mustActivate` was true and the pathname was not the activation page, so
+// the layout refused to render the one screen that could have cleared the
+// enrollment flag — a permanent deadlock, on the account of a carrier who had
+// done nothing wrong.
+//
+// Trigger: APPROVED before 2FA is armed, which is the normal order — the AE
+// approves from the console while the carrier has not yet logged in.
+//
+// Fixed in the VALUE, not at the consumer: `mustActivate` now carries
+// `!mustEnroll`, so any consumer added later inherits the precedence rather
+// than having to remember it. The effect and the render had to agree and
+// nothing made them.
+//
 "use client";
 
 // Version: MAJOR.MINOR.letter (a-z, then bump minor)
@@ -15823,7 +15841,7 @@
 // creating one, so for them it is the only record they accepted the
 // click-through. quickPayAgreedAt is read at carrierAuth.ts:965. The audit's
 // "zero readers" finding was wrong about both. Decision 9 stays open.
-// v3.8.awo — what the agreement said, hashed; and assent that is not a signature.
+// v3.8.awp — what the agreement said, hashed; and assent that is not a signature.
 //
 // Decision 8 (agreements half) and decision 9 (as resolved).
 //
@@ -15881,7 +15899,7 @@
 // acknowledgement nobody gave; and a SIGNED row satisfies the tender gate, which
 // would make a carrier tenderable without the in-portal signing awm had just made
 // consent-gated. Both need a product decision. Decision 9 stays open.
-export const SRL_VERSION = "3.8.awo";
+export const SRL_VERSION = "3.8.awp";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
