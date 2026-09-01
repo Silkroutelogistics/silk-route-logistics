@@ -1,3 +1,21 @@
+// v3.8.axw — THE CUSTOMER WAS TOLD A CARRIER WAS ON THEIR LOAD BEFORE ANYONE
+// HAD SIGNED.
+//
+// The tracking fan-out fired at accept, so a customer's operations and AP
+// contacts learned a carrier was on their load while nothing was executed. After
+// axv that got worse: a rate change re-offers the tender, so they could be
+// holding a link naming a carrier no longer on the load. And it could tell them
+// twice, because trackingLinkSent was written and read by nobody.
+//
+// Direct paths now announce at CONFIRMED. Auto-dispatch paths still announce at
+// accept, deliberately: waterfall and loadboard dispatch WITHOUT a signature, so
+// moving them would leave those customers with no tracking link at all. Moving
+// everything, as the brief said, would have been the regression.
+//
+// Idempotent on the flag it already maintained, so a load that hits both
+// triggers announces once. Supersedes the Sprint 39 alpha resolution in §2,
+// which is rewritten rather than left contradicting the code.
+
 // v3.8.axv — CHANGING THE RATE LEFT A CARRIER BOOKED AT A NUMBER THEY NEVER
 // AGREED TO.
 //
@@ -16815,7 +16833,7 @@
 // and a data: qrCodeDataUrl are all legitimate and a guard that flagged them
 // would be noise. Comments are blanked before matching — the fixes are explained
 // in comments that necessarily quote the banned patterns.
-export const SRL_VERSION = "3.8.axv";
+export const SRL_VERSION = "3.8.axw";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

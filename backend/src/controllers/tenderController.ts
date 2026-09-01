@@ -321,12 +321,25 @@ export async function acceptTender(req: AuthRequest, res: Response) {
   // waterfall path). Direct accept was the only tender accept path that
   // skipped it. Non-blocking: errors are logged, not thrown — the tender
   // is already accepted at this point, fan-out is best-effort.
-  try {
-    const { sendTrackingLinkToCrmContacts } = await import("../services/shipperLoadNotifyService");
-    await sendTrackingLinkToCrmContacts(load.id);
-  } catch (err) {
-    log.error({ err }, "[Tender] tracking-link fan-out failed");
-  }
+  // THE FAN-OUT MOVED TO THE SIGNATURE, and no longer fires here.
+  //
+  // Telling a customer their load has a carrier is a commitment, and until the
+  // rate confirmation is signed there is nothing executed to commit to. An
+  // accept that is later re-offered at a different rate -- which a rate change
+  // now does -- would leave the customer holding a tracking link and an
+  // announcement about a carrier who is no longer on the load.
+  //
+  // This SUPERSEDES the Sprint 39 alpha resolution recorded in CLAUDE.md §2,
+  // which tied the fan-out to the accept EVENT rather than the DISPATCHED
+  // state. That reasoning still holds; what changed is which event means
+  // committed. Sprint 39 chose accept because RC_SENT and CONFIRMED did not
+  // exist, so accept was the latest signal available. It is not any more.
+  //
+  // The auto-dispatch paths (waterfall, loadboard bid) STILL fire at accept and
+  // deliberately so: they dispatch without a signature, so a load that never
+  // reaches CONFIRMED would otherwise leave its customer with no tracking link
+  // at all. The fan-out is idempotent on Load.trackingLinkSent, so an
+  // auto-dispatched load whose RC is later signed does not announce twice.
 
   res.json(updated);
 }

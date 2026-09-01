@@ -292,11 +292,10 @@ export async function createLoadWithTender(req: AuthRequest, res: Response) {
       log.error({ err, tenderId: result.tender.id }, "[with-tender] notifyTenderAction failed"),
     );
 
-    if (loadFields.trackingLinkAutoSend !== false) {
-      import("../services/shipperLoadNotifyService")
-        .then(({ sendTrackingLinkToCrmContacts }) => sendTrackingLinkToCrmContacts(result.load.id))
-        .catch((err) => log.error({ err, loadId: result.load.id }, "[with-tender] tracking link fan-out failed"));
-    }
+    // The tracking fan-out moved to the signature (v3.8 commit 11e). This is
+    // the direct path -- an AE builds a load and tenders it -- so the carrier
+    // signs before the customer is told. `trackingLinkAutoSend` still governs
+    // whether it happens at all; only the moment changed.
 
     logLoadActivity({
       loadId: result.load.id,

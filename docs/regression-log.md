@@ -13,6 +13,48 @@ so it's searchable and never lost.
 
 ---
 
+## Fixed — 2026-09-01 (v3.8.axw — the customer was told a carrier was on their load before anyone had signed)
+
+- **Status:** commit 11e of 12. 11f wires resend/view into `WIRED_ACTIONS`.
+- **Symptom:** `sendTrackingLinkToCrmContacts` fired at the accept moment, so a
+  customer's operations and AP contacts were told a carrier was on their load
+  while nothing had been executed. After v3.8.axv that became worse: a rate
+  change re-offers the tender, so the customer could be holding a tracking link
+  naming a carrier who is no longer on the load.
+- **And it could tell them twice.** `Load.trackingLinkSent` was written at the
+  end of the function and read by nobody, so two triggers meant two emails to the
+  same contacts about one load.
+- **Shape:** the direct paths announce at **CONFIRMED**, from the signature
+  handler. The auto-dispatch paths still announce at **accept**. The fan-out is
+  now idempotent on the flag it already maintained.
+- **THE ASYMMETRY IS THE DESIGN, and moving everything would have been the
+  regression.** Waterfall and loadboard-bid dispatch **without a signature** —
+  §2's own divergence table records that accept means dispatch on those paths —
+  so a load that never reaches CONFIRMED would have been left with no tracking
+  link at all. The brief said to move the notification to CONFIRMED; doing that
+  everywhere would have silently stranded every auto-dispatched customer.
+- **This supersedes the Sprint 39 α resolution in §2, and that entry is
+  rewritten rather than left contradicting the code.** Sprint 39's reasoning
+  still holds — tie the fan-out to the *event* that means committed, not to a
+  later *state*. What changed is which event that is: RC_SENT and CONFIRMED did
+  not exist then, so accept was the latest signal available.
+- **The proof asserts BOTH halves**, because proving the direct path waits says
+  nothing about whether auto-dispatch was stranded. It reads the source of all
+  four call sites: the two direct ones must no longer announce, and the two auto
+  ones must still do so.
+- **Proof:** `_arc-fanout-proof.ts`, **11/11**. Injections, both executed:
+  dropping the idempotency guard gives 9/11 with a second email sent; removing
+  the waterfall fan-out gives 10/11 and names the stranded path.
+- **A fixture bug of mine, twice, in the same line.** `trackingToken` is
+  `.slice(-12)`, and I first put the varying part in front of a 13-digit
+  timestamp — so both loads got identical tokens and the unique constraint fired.
+  Fixed once by moving the random part, which was still in front. The tail is
+  what `-12` keeps.
+- **Outbound (§19 Sub-pattern 20):** keys explicitly empty. `[Email] Sent to`
+  count: **0**, measured.
+- **Gates:** backend tsc clean, vitest **1440 pass / 1 fail** (known `urlSafety`
+  DNS red); frontend tsc clean.
+
 ## Fixed — 2026-09-01 (v3.8.axv — changing the rate left a carrier booked at a number they never agreed to)
 
 - **Status:** commit 11d of 12. 11e moves the customer tracking fan-out to

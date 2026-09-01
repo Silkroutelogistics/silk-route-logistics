@@ -263,6 +263,28 @@ router.post("/:token", async (req: Request, res: Response) => {
     }).catch((err) => log.error({ err, rcId: rc.id }, "[RC] CONFIRMED transition failed"));
   }
 
+  // ── AND NOW THE CUSTOMER IS TOLD ──
+  //
+  // The signature is the commitment, so this is where the customer learns a
+  // carrier is on their load. It used to fire at accept, which announced a
+  // carrier who might still be re-offered at a different rate.
+  //
+  // `trackingLinkAutoSend` still governs whether it happens at all -- only the
+  // moment moved -- and the fan-out is idempotent on Load.trackingLinkSent, so
+  // a load auto-dispatched (which still announces at accept) and later signed
+  // does not announce twice.
+  //
+  // Fire-and-forget: a mail failure must not tell a carrier their signature did
+  // not land when it did.
+  prisma.load
+    .findUnique({ where: { id: rc.loadId }, select: { trackingLinkAutoSend: true } })
+    .then(async (l) => {
+      if (l?.trackingLinkAutoSend === false) return;
+      const { sendTrackingLinkToCrmContacts } = await import("../services/shipperLoadNotifyService");
+      await sendTrackingLinkToCrmContacts(rc.loadId);
+    })
+    .catch((err) => log.error({ err, loadId: rc.loadId }, "[RC] tracking-link fan-out failed"));
+
   res.type("html").send(page({
     title: "Signed",
     body: `<h1>Signed &mdash; thank you</h1>

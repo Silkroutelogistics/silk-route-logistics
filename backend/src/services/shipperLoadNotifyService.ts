@@ -303,9 +303,22 @@ export async function sendTrackingLinkToCrmContacts(loadId: string) {
       customerId: true,
       customer: { select: { id: true, name: true } },
       carrier: { select: { company: true, firstName: true, lastName: true } },
+      trackingLinkSent: true,
     },
   });
   if (!load || !load.customerId) return { sent: 0, skipped: "no_customer" };
+
+  // SEND ONCE PER LOAD.
+  //
+  // `trackingLinkSent` was written at the end of this function and read by
+  // nobody, so calling twice mailed the customer's operations and AP contacts
+  // twice about one load. That became reachable the moment a second trigger
+  // existed: v3.8 commit 11e fires this at CONFIRMED on the direct path while
+  // the auto-dispatch paths still fire at accept, and an auto-dispatched load
+  // whose rate confirmation is later signed would hit both.
+  //
+  // The flag it already maintained is the guard; nothing new to keep in sync.
+  if (load.trackingLinkSent) return { sent: 0, skipped: "already_sent" };
 
   const contacts = await prisma.customerContact.findMany({
     where: { customerId: load.customerId, receivesTrackingLink: true },
