@@ -13,6 +13,42 @@ so it's searchable and never lost.
 
 ---
 
+## Fixed — 2026-09-01 (v3.8.axf — a carrier could take a load off the board and leave no paper trail)
+
+- **Symptom:** `POST /carrier-loads/:id/accept` reimplemented acceptance instead
+  of using it — assigning the carrier, creating the shipment, withdrawing
+  siblings and notifying the AE itself — and still produced a load with a
+  carrier and **no tender**. No OFFERED row, no tender history, no rate
+  confirmation, nothing for the lifecycle to reason about.
+- **The copies had already drifted:** this one created the shipment at
+  `load.carrierRate ?? 0` while `acceptTender` uses the tender's agreed rate.
+- **Status:** commit 6c of 12. Entry surfaces through `createTender`: **6 of 6**.
+- **Shape:** `createTender` (OFFERED) then delegate to `acceptTender` via the
+  response-capturing shim the magic-link route already uses — reusing compliance
+  re-check, atomic transaction, carrier assignment, sibling withdrawal,
+  shipment, auto-RC, notifications and tracking-link fan-out with no
+  duplication. `acceptTender`'s ownership gate is satisfied because this carrier
+  *is* the requesting user. Driver fields and CPP stats stay local; they are this
+  route's alone.
+- **The shim moved to `lib/captureResponse.ts`** rather than being copied into
+  the second caller — two copies would be two shims free to drift.
+- **Extracting `acceptTender` into a service was considered and rejected:** it
+  reads `req.user`, `req.params` and `req.body` throughout, so extraction is a
+  large refactor of the most safety-critical path in the lifecycle. Reusing it
+  whole is the lower-risk way to get one accept path instead of three.
+- **A guard caught a live mistake mid-change.** The first version quoted
+  `load.carrierRate ?? load.rate ?? 0`, and `noLoadRateReads` failed.
+  `Load.rate` is a retired write-only mirror of the **customer** rate (§13.3
+  Item 227), so that fallback would have offered the carrier what the shipper is
+  charged — the Item 221.2 harm, on the one path where a carrier accepts the
+  number on sight. Now refuses with **409 `NO_CARRIER_RATE`** when unset: §14
+  says fail toward not paying rather than toward the wrong number.
+- **Gates:** backend tsc clean, vitest **134** pass (urlSafety DNS red, plus the
+  `loadTenderWriters` guard which is deliberately uncommitted until 6d fixes the
+  two writers it found), frontend tsc + build clean.
+
+---
+
 ## Fixed — 2026-09-01 (v3.8.axe — create a tender in a transaction and its history vanished)
 
 - **Status:** passes 2 and 3 in v3.8.axe. Creators **3 → 0**; all six entry

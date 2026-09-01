@@ -23,6 +23,9 @@ import { actualEventStamps } from "../lib/loadEventStamps";
 import { uploadLimiter } from "../middleware/rateLimiters";
 import { assignCarrier } from "../services/carrierAssignmentService";
 import { complianceCheck } from "../services/complianceMonitorService";
+import { createTender } from "../services/tenderCreationService";
+import { acceptTender } from "../controllers/tenderController";
+import { makeCaptureRes } from "../lib/captureResponse";
 
 const router = Router();
 
@@ -248,19 +251,65 @@ router.post("/:id/accept", validateBody(acceptSchema), async (req: AuthRequest, 
 
   const { driverName, driverPhone, truckNumber, trailerNumber } = req.body;
 
-  // v3.8.axc — through assignCarrier, the single writer of Load.carrierId.
-  // req.user!.id is a User.id, which is the ID space this column wants.
+  // v3.8.axf — the self-assign becomes a real tender: createTender, then the
+  // ordinary acceptTender path.
   //
-  // NOTE: this remains a self-assign that does not create a LoadTender, so it
-  // bypasses the tender lifecycle (no OFFERED row, no tender history, no
-  // auto-RC). Routing it through createTender + acceptTender is commit 6's
-  // job — the entry-surface consolidation. This commit closes the carrierId
-  // and compliance holes without pretending to have done that.
-  const updated = await assignCarrier({
+  // This route used to reimplement acceptance: it assigned the carrier itself,
+  // created the shipment itself, withdrew siblings itself, notified the AE
+  // itself. Four copies of logic that already existed, and it still produced a
+  // load with a carrier and NO tender — so no OFFERED row, no tender history,
+  // no rate confirmation, and nothing for the lifecycle to reason about. A
+  // carrier who took a load off the board simply had no paper trail.
+  //
+  // Now the offer is recorded and immediately accepted. Delegation is via the
+  // response-capturing shim already used by the magic-link route
+  // (routes/tenderAction.ts), which reuses the whole battle-tested accept path
+  // — compliance re-check, atomic transaction, carrier assignment, sibling
+  // withdrawal, shipment, auto-RC, notifications, tracking-link fan-out — with
+  // no duplication. acceptTender's ownership gate is satisfied because this
+  // carrier IS the requesting user.
+  // The carrier rate, and ONLY the carrier rate.
+  //
+  // The first version of this read `load.carrierRate ?? load.rate ?? 0`, and the
+  // noLoadRateReads guard caught it. Load.rate is a retired write-only mirror of
+  // the CUSTOMER rate (§13.3 Item 227), so that fallback would have offered the
+  // carrier what the shipper is being charged — the §13.3 Item 221.2 harm, on
+  // the one path where the carrier accepts the number on sight.
+  //
+  // No fallback to 0 either. §14: fail toward not paying rather than toward the
+  // wrong number. A load on the board with no carrier rate is a data problem an
+  // AE must fix; quoting zero would let a carrier accept a load worth nothing.
+  if (load.carrierRate == null) {
+    res.status(409).json({
+      error: "This load has no carrier rate set yet. Contact your SRL rep.",
+      code: "NO_CARRIER_RATE",
+    });
+    return;
+  }
+
+  const selfTender = await createTender({
     loadId: load.id,
-    carrierUserId: req.user!.id,
-    status: "BOOKED",
-    extra: {
+    carrierProfileId: profile.id,
+    offeredRate: load.carrierRate,
+    actor: { id: req.user!.id, type: "CARRIER" },
+    reason: "load_board_self_accept",
+  });
+
+  const cap = makeCaptureRes();
+  await acceptTender({ ...req, params: { id: selfTender.id } } as AuthRequest, cap.shim);
+  if (cap.state.statusCode >= 400) {
+    // acceptTender refused (expired, compliance, illegal status). The OFFERED
+    // row stays as the record that the attempt happened, and the carrier is
+    // told why in acceptTender's own words rather than a generic message.
+    res.status(cap.state.statusCode).json(cap.state.body);
+    return;
+  }
+
+  // Driver details are this route's alone — acceptTender has no notion of them.
+  // Not a carrierId write, so it does not belong in carrierAssignmentService.
+  const updated = await prisma.load.update({
+    where: { id: load.id },
+    data: {
       driverName: driverName || null,
       driverPhone: driverPhone || null,
       truckNumber: truckNumber || null,
@@ -268,61 +317,10 @@ router.post("/:id/accept", validateBody(acceptSchema), async (req: AuthRequest, 
     },
   });
 
-  // Auto-create linked Shipment (same as tender acceptance path)
-  const shipmentNumber = await nextShipmentNumber();
-  await prisma.shipment.create({
-    data: {
-      shipmentNumber,
-      loadId: load.id,
-      status: "BOOKED",
-      originCity: load.originCity,
-      originState: load.originState,
-      originZip: load.originZip,
-      destCity: load.destCity,
-      destState: load.destState,
-      destZip: load.destZip,
-      equipmentType: load.equipmentType,
-      commodity: load.commodity,
-      weight: load.weight,
-      pieces: load.pieces,
-      rate: load.carrierRate ?? 0,
-      distance: load.distance,
-      specialInstructions: load.specialInstructions,
-      customerId: load.customerId,
-      pickupDate: load.pickupDate,
-      deliveryDate: load.deliveryDate,
-    },
-  });
-
-  // Auto-WITHDRAW any other active tenders for this load.
-  //
-  // v3.8.aww — was "auto-decline", and the word was the bug. These carriers
-  // did not refuse anything; SRL pulled their offers because this carrier took
-  // the load off the board first. carrierController derives tendersDeclined
-  // and acceptanceRate from this column, and §9 scores acceptance rate at 10%
-  // of Compass, so DECLINED here marked carriers who had done nothing.
-  //
-  // respondedAt is deliberately NOT set: nobody responded. Leaving it null also
-  // keeps the row distinguishable from a real decline for anything reading
-  // history later.
-  await prisma.loadTender.updateMany({
-    where: { loadId: load.id, status: { in: ["OFFERED", "COUNTERED"] } },
-    data: { status: "WITHDRAWN", statusReason: "load_covered" },
-  });
-
-  // Create notification for the poster/broker
-  if (load.posterId) {
-    await prisma.notification.create({
-      data: {
-        userId: load.posterId,
-        type: "LOAD_UPDATE",
-        title: "Load Accepted",
-        message: `Load ${load.referenceNumber} has been accepted by carrier. Shipment ${shipmentNumber} created for tracking.`,
-        actionUrl: "/dashboard/tracking",
-      },
-    });
-  }
-
+  // Shipment creation, sibling withdrawal and the AE notification all happened
+  // inside acceptTender above. They used to be duplicated here, and the copies
+  // had already drifted: this one created the shipment at `load.carrierRate ?? 0`
+  // while acceptTender uses the tender's agreed rate.
   // Update CPP stats
   await prisma.carrierProfile.update({
     where: { id: profile.id },

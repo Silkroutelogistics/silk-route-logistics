@@ -1,3 +1,31 @@
+// v3.8.axf — A CARRIER COULD TAKE A LOAD OFF THE BOARD AND LEAVE NO PAPER TRAIL.
+//
+// The load-board self-accept reimplemented acceptance instead of using it. It
+// assigned the carrier itself, created the shipment itself, withdrew siblings
+// itself, notified the AE itself — four copies of logic that already existed —
+// and still produced a load with a carrier and NO tender. No OFFERED row, no
+// tender history, no rate confirmation, nothing for the lifecycle to reason
+// about. A carrier who took a load off the board simply had no paper trail.
+//
+// Now the offer is recorded and immediately accepted, delegating to acceptTender
+// through the response-capturing shim the magic-link route already uses. That
+// reuses the whole path — compliance re-check, atomic transaction, carrier
+// assignment, sibling withdrawal, shipment, auto-RC, notifications,
+// tracking-link fan-out — with no duplication. The copies had already drifted:
+// this one created the shipment at load.carrierRate ?? 0 while acceptTender uses
+// the tender's agreed rate.
+//
+// The shim moved to lib rather than being copied into the second caller. Two
+// copies would have been two shims free to drift, which is the thing this whole
+// arc is about.
+//
+// One correction caught by a guard mid-change: the first version quoted
+// `load.carrierRate ?? load.rate ?? 0`. Load.rate is a retired write-only mirror
+// of the CUSTOMER rate, so that fallback would have offered the carrier what the
+// shipper is charged — on the one path where a carrier accepts the number on
+// sight. It now refuses with 409 when no carrier rate is set: §14 says fail
+// toward not paying rather than toward the wrong number.
+//
 // v3.8.axe — CREATE A TENDER IN A TRANSACTION AND ITS HISTORY VANISHED.
 //
 // The last three creators move onto createTender: the waterfall auto-pilot, the
@@ -16242,7 +16270,7 @@
 // and a data: qrCodeDataUrl are all legitimate and a guard that flagged them
 // would be noise. Comments are blanked before matching — the fixes are explained
 // in comments that necessarily quote the banned patterns.
-export const SRL_VERSION = "3.8.axe";
+export const SRL_VERSION = "3.8.axf";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

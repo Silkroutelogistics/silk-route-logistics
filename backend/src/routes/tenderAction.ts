@@ -4,6 +4,7 @@ import { AuthRequest } from "../middleware/auth";
 import { acceptTender, declineTender } from "../controllers/tenderController";
 import { verifyTenderActionToken } from "../lib/tenderActionToken";
 import { log } from "../lib/logger";
+import { makeCaptureRes } from "../lib/captureResponse";
 
 /**
  * v3.8.als §13.3 Item 142 — magic-link tender accept/decline (no login).
@@ -61,15 +62,9 @@ function send(res: Response, status: number, html: string) {
 // Minimal response shim — captures status + json body so we can delegate to
 // the existing controllers (which respond via res.status().json()) and then
 // render HTML based on the captured outcome.
-function makeCaptureRes() {
-  const state: { statusCode: number; body: any } = { statusCode: 200, body: null };
-  const shim: any = {
-    status(code: number) { state.statusCode = code; return shim; },
-    json(b: any) { state.body = b; return shim; },
-    send(b: any) { state.body = b; return shim; },
-  };
-  return { shim: shim as Response, state };
-}
+// v3.8.axf — moved to lib/captureResponse when the carrier load-board
+// self-accept became a second consumer. Two copies would have been two shims
+// free to drift.
 
 router.get("/:token", async (req: Request, res: Response) => {
   const payload = verifyTenderActionToken(String(req.params.token));
