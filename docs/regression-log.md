@@ -13,6 +13,64 @@ so it's searchable and never lost.
 
 ---
 
+## Fixed — 2026-09-01 (v3.8.aya — an auto-dispatched carrier had nothing to sign, so the customer was told before anyone had committed)
+
+- **Status:** commit 12c of the sprint close. 12d closes the arc.
+- **Symptom:** commit 11e moved the customer announcement to the signature on the
+  direct paths and deliberately left the auto paths announcing at accept, because
+  those paths **could not reach CONFIRMED**. The reason turned out to be simpler
+  and worse than "no signature yet": **the waterfall issued no rate confirmation
+  at all, and the loadboard-bid path drafted one and stopped.** No signing link
+  ever reached those carriers. A signature was not late — it was impossible.
+- **So the fix is not moving the notification.** It is giving those carriers
+  something to sign. Both auto paths now ISSUE the rate confirmation — freeze the
+  bytes, hash the stored artifact, mint a single-use link, email it, move the
+  tender to RC_SENT — and the customer is told when the carrier signs, uniformly.
+- **It delegates rather than reimplementing.** Issuing is not one step: it
+  resolves the Quick Pay election and refuses a contradictory one, freezes,
+  hashes, mints, emails, stamps the terms version and transitions the tender. A
+  second copy would be a second place for the rules to drift, which this arc has
+  spent eleven commits removing. The `makeCaptureRes` shim (v3.8.axf) reuses the
+  AE send handler whole and unchanged.
+- **THE BRIEF'S MECHANISM DOES NOT FIT ONE PATH, and that is a finding rather
+  than a shortfall.** It specified inline signing "in the same session" for both
+  auto paths. **The loadboard bid accept is AE-only** (`authorize(...AE_ROLES)`):
+  a carrier submits a bid and an AE accepts it, typically hours later, so there
+  is no carrier session to present a signing step in. The emailed link — already
+  built in 11c — is the mechanism that works on every path, which is why issuing
+  rather than drafting is the load-bearing change.
+- **Acting as the load's poster**, not a synthetic system user. The transition
+  history should name a real person accountable for the load. What is automatic
+  here is the TIMING, not the authority.
+- **A carrier who abandons is chaseable, not silent.** The tender parks at
+  RC_SENT and Needs Attention surfaces it on `RC_SIGN_SLA_HOURS` — asserted, not
+  assumed, because trading a wrong announcement for a stalled load would be no
+  improvement.
+- **§2's fan-out entry rewritten to the uniform rule**, retiring both the Sprint
+  39 α resolution and 11e's asymmetry, with a table of what each path does.
+- **Proof:** `_arc-autopath-sign-proof.ts`, **20/20** over the real router.
+- **MY FIRST INJECTION WAS A NO-OP AND I ALMOST REPORTED ITS GREEN AS
+  VERIFICATION.** A multi-line anchor used `
+` against a CRLF file, so it never
+  applied and the suite passed for the obvious reason. Redone with a matching
+  anchor it gives 17/20, failing exactly the three announce-at-accept assertions.
+  §19 Sub-pattern 16 — an injection that does not inject proves nothing.
+- **The fixture was wrong before the code was:** the first carrier omitted
+  approval, tier, equipment, regions and the BCA, so `acceptPosition` correctly
+  SKIPPED the position and returned the tender as WITHDRAWN. That read as a code
+  defect and was the compliance gate working.
+- **My own 11a guard caught the new service** — `select: { signTokenHash: true }`
+  read as a write. Widened to exclude reserved-word RHS values, which cannot name
+  a variable, and re-verified that it still catches a real raw-token writer.
+- **Banked, deliberately not built:** the inline signing step for a carrier who
+  IS present. It needs a frontend surface, and the variant returning a live
+  signing secret has no consumer yet — shipping an unused export that hands out a
+  secret is the shape refused twice already in this arc.
+- **Outbound (§19 Sub-pattern 20):** keys explicitly empty. `[Email] Sent to`
+  count: **0**, measured.
+- **Gates:** backend tsc clean, vitest **1464 pass / 1 fail** (known `urlSafety`
+  DNS red); frontend tsc clean, `npm run build` clean.
+
 ## Fixed — 2026-09-01 (v3.8.axz — the guard sweep, and the three rows a guard cannot close)
 
 - **Status:** commit 12b of the sprint close. 12c is the signature on

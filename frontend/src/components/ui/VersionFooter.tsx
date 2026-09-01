@@ -1,3 +1,25 @@
+// v3.8.aya — AN AUTO-DISPATCHED CARRIER HAD NOTHING TO SIGN, SO THE CUSTOMER
+// WAS TOLD BEFORE ANYONE HAD COMMITTED.
+//
+// Commit 11e left the auto paths announcing at accept because they could not
+// reach CONFIRMED. The reason was simpler and worse than "no signature yet":
+// the waterfall issued no rate confirmation AT ALL, and the loadboard-bid path
+// drafted one and stopped. No signing link ever reached those carriers, so a
+// signature was not late — it was impossible.
+//
+// So the fix is not moving the notification. It is giving those carriers
+// something to sign. Both auto paths now ISSUE the document, and the customer
+// is told at the signature, uniformly.
+//
+// The brief's mechanism does not fit one path, and that is a finding: the
+// loadboard bid accept is AE-ONLY, so there is no carrier session to present an
+// inline signing step in. The emailed link works on every path, which is why
+// issuing rather than drafting is the load-bearing change.
+//
+// A carrier who abandons parks at RC_SENT and Needs Attention chases them —
+// asserted, not assumed, because trading a wrong announcement for a stalled
+// load would be no improvement.
+
 // v3.8.axz — THE GUARD SWEEP, AND THE THREE ROWS A GUARD CANNOT CLOSE.
 //
 // One guard block per remaining open gap-table row. Rows 1 and 8 close. Row 4
@@ -16889,7 +16911,7 @@
 // and a data: qrCodeDataUrl are all legitimate and a guard that flagged them
 // would be noise. Comments are blanked before matching — the fixes are explained
 // in comments that necessarily quote the banned patterns.
-export const SRL_VERSION = "3.8.axz";
+export const SRL_VERSION = "3.8.aya";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

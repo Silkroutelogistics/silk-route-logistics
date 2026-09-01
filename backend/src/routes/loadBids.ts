@@ -261,13 +261,17 @@ router.patch(
           await createCheckCallSchedule(loadId);
         } catch {}
 
-        // CRM tracking-link fan-out (v3.4.p)
-        try {
-          const { sendTrackingLinkToCrmContacts } = await import("../services/shipperLoadNotifyService");
-          await sendTrackingLinkToCrmContacts(loadId);
-        } catch (err) {
-          log.error({ err }, "[Bids] tracking-link fan-out failed");
-        }
+        // THE CUSTOMER IS NO LONGER TOLD HERE. The announcement moved to the
+        // signature (v3.8 commit 12c), and it could only move once this path
+        // ISSUED the rate confirmation below rather than drafting one and
+        // stopping — before that, no signing link reached the carrier and a
+        // signature was impossible, not merely late.
+        //
+        // Note this accept is AE-only: a carrier submits a bid and an AE
+        // accepts it, often hours later, so there is no carrier session to
+        // present a signing step in. The emailed link is the whole mechanism
+        // here, which is why issuing rather than drafting is the load-bearing
+        // change on this path.
 
         // v3.8.alp Item 51.b — notify the winning carrier (in-app + email).
         // Closes the loadboard-bid notification gap: direct/on-behalf/waterfall
@@ -311,7 +315,16 @@ router.patch(
               reason: "bid_accepted",
             });
             const { autoGenerateRateConfirmation } = await import("../services/autoRateConfirmationService");
-            await autoGenerateRateConfirmation(loadId, syntheticTender.id, posterLoad.posterId);
+            const { autoIssueRateConfirmation } = await import("../services/rateConfirmationAutoIssue");
+            const rc = await autoGenerateRateConfirmation(loadId, syntheticTender.id, posterLoad.posterId);
+            // Draft, then ISSUE. A draft is not a document a carrier can sign,
+            // and this path has no session in which to hand them one.
+            if (rc?.id) {
+              const issued = await autoIssueRateConfirmation(loadId, rc.id, posterLoad.posterId);
+              if (!issued.issued) {
+                log.error({ loadId, reason: issued.reason }, "[Bids] rate confirmation not issued");
+              }
+            }
           } else {
             log.warn({ loadId }, "[Bids] no posterId — skipping RC generation on bid-accept");
           }

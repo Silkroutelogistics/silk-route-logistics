@@ -656,13 +656,43 @@ export async function acceptPosition(positionId: string, actorId?: string | null
     }
   }
 
-  // CRM tracking-link fan-out: email tracking URL to any customer
-  // contact flagged receivesTrackingLink=true. Non-blocking.
-  try {
-    const { sendTrackingLinkToCrmContacts } = await import("./shipperLoadNotifyService");
-    await sendTrackingLinkToCrmContacts(pos.waterfall.loadId);
-  } catch (err) {
-    log.error({ err }, "[Waterfall] tracking-link fan-out failed");
+  // ── ISSUE THE RATE CONFIRMATION, so there is something to sign ──
+  //
+  // The customer is NO LONGER told here. That announcement moved to the
+  // signature, the same as the direct paths, and it could only move once this
+  // path gave the carrier a document to sign — before v3.8 commit 12c the
+  // waterfall generated no rate confirmation at all, so a signature was not
+  // merely late, it was impossible.
+  //
+  // Issuing freezes the bytes, hashes them, mints a single-use signing link,
+  // emails it, and moves the tender to RC_SENT. If the carrier never signs, the
+  // tender sits at RC_SENT and Needs Attention chases it on RC_SIGN_SLA_HOURS
+  // exactly as on the direct path — which is a visible, chaseable state rather
+  // than a load that looks finished and is not.
+  //
+  // Non-blocking: the accept is already committed, and a mail or storage
+  // failure must not undo a carrier's acceptance. It is logged at error
+  // because an accepted load with no issued rate confirmation needs a human.
+  if (acceptedTender) {
+    try {
+      const { autoGenerateRateConfirmation } = await import("./autoRateConfirmationService");
+      const { autoIssueRateConfirmation } = await import("./rateConfirmationAutoIssue");
+      const load = await prisma.load.findUnique({
+        where: { id: pos.waterfall.loadId },
+        select: { posterId: true },
+      });
+      if (load?.posterId) {
+        const rc = await autoGenerateRateConfirmation(pos.waterfall.loadId, acceptedTender.id, load.posterId);
+        if (rc?.id) {
+          const r = await autoIssueRateConfirmation(pos.waterfall.loadId, rc.id, load.posterId);
+          if (!r.issued) {
+            log.error({ loadId: pos.waterfall.loadId, reason: r.reason }, "[Waterfall] rate confirmation not issued");
+          }
+        }
+      }
+    } catch (err) {
+      log.error({ err, loadId: pos.waterfall.loadId }, "[Waterfall] auto-issue failed");
+    }
   }
 }
 

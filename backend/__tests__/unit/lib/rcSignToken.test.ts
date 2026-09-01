@@ -100,7 +100,16 @@ describe("the secret never reaches the database", () => {
   const strip = (s: string) =>
     s.replace(/\/\*[\s\S]*?\*\//g, "").replace(/(^|[^:])\/\/[^\n]*/g, "$1");
 
-  const TYPE_KEYWORDS = new Set(["string", "Date", "number", "boolean", "null", "undefined", "any", "unknown"]);
+  // RHS values that CANNOT name a variable, and so can never be a write.
+  //
+  // Two non-write positions read identically to an assignment: a type
+  // annotation (`signTokenHash: string | null` in a parameter) and a Prisma
+  // SELECT (`select: { signTokenHash: true }`). Every entry here is either a
+  // reserved word or a type name, so excluding them cannot hide a real writer.
+  const NOT_A_WRITE = new Set([
+    "string", "Date", "number", "boolean", "null", "undefined", "any", "unknown",
+    "true", "false",
+  ]);
 
   it("no writer persists signTokenHash from anything but the hash helper", () => {
     // The failure this prevents is a one-character slip -- `signTokenHash:
@@ -118,7 +127,7 @@ describe("the secret never reaches the database", () => {
         // variable called `string` would not survive review, let alone compile
         // in the position that matters. Stated rather than hidden, because the
         // guard is blind to a variable that happens to bear one of these names.
-        if (TYPE_KEYWORDS.has(rhs)) continue;
+        if (NOT_A_WRITE.has(rhs)) continue;
         const okRhs = /tokenHash$/.test(rhs) || /^hashRcSignToken/.test(rhs);
         if (!okRhs) offenders.push(`${path.relative(SRC, f)} -> signTokenHash: ${rhs}`);
       }
