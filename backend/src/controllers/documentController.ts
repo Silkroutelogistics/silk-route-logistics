@@ -352,7 +352,43 @@ export async function downloadDocument(req: AuthRequest, res: Response) {
   }
 
   // S3 files: redirect to presigned URL
+  //
+  // v3.8.awt — ?inline=1 PROXIES the bytes instead of redirecting, and the
+  // difference is not cosmetic: it decides whether a preview can render at all.
+  //
+  // A redirect works for a download, because a top-level navigation follows it
+  // and the auth cookie rides along (sameSite=strict, but SameSite is scoped to
+  // the registrable domain, so silkroutelogistics.ai -> api.silkroutelogistics.ai
+  // is same-site). It does NOT work for a preview. An <iframe> pointing at the
+  // API host is refused by `frame-src 'self' blob:`, and fetching the bytes with
+  // XHR to build a blob: URL dies on the second hop, because `connect-src` lists
+  // api.silkroutelogistics.ai and no storage host. So a preview needs the bytes
+  // from this origin, and then a blob: URL — which frame-src does allow.
+  //
+  // That is the same conclusion v3.8.avy reached for the carrier-document
+  // preview, where it was solved with a dedicated proxy route. This is that fix
+  // generalized onto the endpoint every document already has, so the IDOR check
+  // and the SHIPPER_VISIBLE_DOC_TYPES allowlist above are not reimplemented
+  // per-surface — the alternative was a byte-proxy per scope, each with its own
+  // copy of an authorization rule that has already been wrong once.
+  //
+  // Adding the storage hostname to frame-src was rejected for the reason avy
+  // gives: it ties the browser's security policy to a backend storage setting,
+  // so the day storage moves the preview goes silently blank.
   if (isS3Url(doc.fileUrl)) {
+    if (req.query.inline === "1") {
+      const presignedUrl = await getDownloadUrl(doc.fileUrl);
+      const upstream = await fetch(presignedUrl);
+      if (!upstream.ok || !upstream.body) {
+        res.status(502).json({ error: "Could not read the stored file." });
+        return;
+      }
+      res.setHeader("Content-Type", doc.fileType || "application/octet-stream");
+      // inline, not attachment — the caller is rendering it, not saving it.
+      res.setHeader("Content-Disposition", "inline");
+      res.send(Buffer.from(await upstream.arrayBuffer()));
+      return;
+    }
     const presignedUrl = await getDownloadUrl(doc.fileUrl);
     res.redirect(presignedUrl);
     return;

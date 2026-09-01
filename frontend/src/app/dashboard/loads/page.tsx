@@ -1,5 +1,6 @@
 "use client";
 
+import { apiHref } from "@/lib/download";
 import { useDrawerBehavior } from "@/hooks/useDrawerBehavior";
 import { useState, useMemo, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -1441,7 +1442,7 @@ function PanelDocuments({ load }: { load: Load }) {
           {load.documents.map((doc) => (
             <a
               key={doc.id}
-              href={doc.fileUrl}
+              href={apiHref(`/documents/${doc.id}/download`)}
               target="_blank"
               rel="noreferrer"
               className="flex items-center gap-2 text-sm text-gray-700 hover:text-[#C5A572] p-2 bg-gray-100 rounded-lg border border-gray-200 transition"

@@ -295,10 +295,37 @@ export async function sendRateConfirmation(req: AuthRequest, res: Response) {
   //
   // §13.3 Item 170 closed by this change — the endpoint was shipped in
   // v3.8.aji-era work but the carrier could never reach it.
+  //
+  // v3.8.awt — THE PATH IS API-CLIENT-RELATIVE, and the leading `/api` is gone
+  // on purpose. Read the next paragraph before "restoring" it.
+  //
+  // The comment above says the cookie "auths it automatically when the link is
+  // clicked from the portal." That holds only if portal and API share an origin.
+  // They do not: the portal is a Cloudflare Pages static export on
+  // silkroutelogistics.ai, the API is Render on api.silkroutelogistics.ai. So a
+  // stored `/api/...` rendered into an href resolved against the PAGES host and
+  // returned the Next.js 404 page where a PDF belonged — on every load with a
+  // sent RC, on two carrier pages, since v3.8.ajt.
+  //
+  // Two ways to fix it. Writing an absolute API-host URL would work (the cookie
+  // is sameSite=strict but SameSite is scoped to the registrable domain, so
+  // silkroutelogistics.ai -> api.silkroutelogistics.ai is same-site and the
+  // cookie is sent). It was rejected: it bakes a hostname into every stored row,
+  // so the day the API moves, every historical row is wrong and needs a data
+  // migration; and a bare href renders the endpoint's JSON errors as raw JSON in
+  // a tab. This endpoint returns 403 DRIVER_NOT_VERIFIED with a message the
+  // carrier is supposed to act on.
+  //
+  // So the column holds the path the api client consumes — no host, no `/api`
+  // prefix — and both carrier surfaces fetch it through that client and render
+  // the error text. Matches the four existing precedents for reaching a PDF in
+  // this codebase (RateConfirmationModal, ShipmentDetailDrawer, the carrier
+  // activation page, lib/download.ts). Existing rows are converted by migration
+  // 20260901000000_rc_pdf_url_api_relative.
   await prisma.load.update({
     where: { id: rc.loadId },
     data: {
-      rateConfirmationPdfUrl: `/api/rate-confirmations/${rc.id}/pdf`,
+      rateConfirmationPdfUrl: `/rate-confirmations/${rc.id}/pdf`,
       quickPayFeePercent: election.feePercent,
       quickPaySpeed: election.speed,
     },

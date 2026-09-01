@@ -5,8 +5,14 @@ import { File, Download, Search, Shield, FileText, CheckCircle, Upload, X, Loade
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { CarrierCard } from "@/components/carrier";
+import { apiHref, openPdfFromApi, extractApiError } from "@/lib/download";
 
-interface DocItem { id: string; fileName: string; fileUrl: string; docType?: string; type?: string; loadRef?: string; createdAt?: string; uploaded?: string; uploadedAt?: string }
+// v3.8.awt — `fileUrl` is now optional and is NOT a browser target. For stored
+// documents it holds `s3://bucket/key`, which nothing in a browser can open; the
+// row is reached by id through /documents/:id/download instead. `pdfPath` is the
+// api-relative path for generated PDFs that have no Document row (the rate
+// confirmation).
+interface DocItem { id: string; fileName: string; fileUrl?: string; pdfPath?: string; docType?: string; type?: string; loadRef?: string; createdAt?: string; uploaded?: string; uploadedAt?: string }
 interface LoadWithDocs { id: string; referenceNumber: string; status?: string; originCity?: string; originState?: string; destCity?: string; destState?: string; documents?: DocItem[]; rateConfirmationPdfUrl?: string; podUrl?: string; bolPdfUrl?: string }
 
 const DOC_TYPE_OPTIONS = [
@@ -29,6 +35,9 @@ export default function CarrierDocumentsPage() {
   const [uploadLoadId, setUploadLoadId] = useState("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [dragOver, setDragOver] = useState(false);
+  // v3.8.awt — opening a generated PDF is a fetch now, so its failures need a
+  // surface. Previously a broken link simply opened a tab onto a 404 page.
+  const [docError, setDocError] = useState<string | null>(null);
 
   const { data: compliance } = useQuery({
     queryKey: ["carrier-compliance-docs"],
@@ -90,12 +99,18 @@ export default function CarrierDocumentsPage() {
         loadDocs.push({ ...doc, loadRef: load.referenceNumber });
       });
     }
+    // v3.8.awt — the rate confirmation is a GENERATED pdf, not an uploaded file,
+    // so it has no Document row and is reached by its api path. `pdfPath` marks
+    // it as fetch-and-open rather than navigate.
     if (load.rateConfirmationPdfUrl) {
-      loadDocs.push({ id: `rc-${load.id}`, fileName: `RateCon_${load.referenceNumber}.pdf`, fileUrl: load.rateConfirmationPdfUrl, docType: "RATE_CON", loadRef: load.referenceNumber });
+      loadDocs.push({ id: `rc-${load.id}`, fileName: `RateCon_${load.referenceNumber}.pdf`, pdfPath: load.rateConfirmationPdfUrl, docType: "RATE_CON", loadRef: load.referenceNumber });
     }
-    if (load.podUrl) {
-      loadDocs.push({ id: `pod-${load.id}`, fileName: `POD_${load.referenceNumber}.pdf`, fileUrl: load.podUrl, docType: "POD", loadRef: load.referenceNumber });
-    }
+    // The synthetic POD row is gone. It was built from Load.podUrl, which holds
+    // `s3://bucket/key` in production — a scheme no browser can load, so the row
+    // rendered a View/Download pair that could never resolve. It was also
+    // redundant: the POD upload creates a real Document row (carrierLoads.ts:545)
+    // and the loads query already includes docType POD, so the same file is in
+    // load.documents above with an id that /documents/:id/download can serve.
   });
 
   const allDocs = [...complianceDocs, ...loadDocs];
@@ -278,6 +293,11 @@ export default function CarrierDocumentsPage() {
         <div className="px-5 py-4 border-b border-[#F5EEE0]">
           <h3 className="text-[15px] font-bold text-[#0A2540]">Load Documents</h3>
         </div>
+        {docError && (
+          <div className="mx-5 mt-3 text-[12px] text-[#9B2C2C] bg-[#F6E3E3] border border-[#9B2C2C]/30 rounded px-3 py-2">
+            {docError}
+          </div>
+        )}
         {loadDocs.length === 0 ? (
           <div className="px-5 py-12 text-center text-sm text-gray-700">No load documents yet</div>
         ) : (
@@ -293,12 +313,36 @@ export default function CarrierDocumentsPage() {
                 </div>
               </div>
               <div className="flex gap-2">
-                {doc.fileUrl && (
+                {/* v3.8.awt — two mechanisms, because the two kinds of row are
+                    reached differently. A generated PDF (pdfPath) is fetched
+                    through the api client and opened as a blob, so its errors
+                    are readable. A stored document is NAVIGATED to on the API
+                    host, because /documents/:id/download 302s to presigned
+                    storage and an XHR cannot follow that hop — connect-src
+                    lists no storage host. Neither is a bare fileUrl any more:
+                    that held `s3://…`, which a browser cannot open at all. */}
+                {doc.pdfPath && (
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      setDocError(null);
+                      try {
+                        await openPdfFromApi(doc.pdfPath!);
+                      } catch (err) {
+                        setDocError(await extractApiError(err, "Couldn't open this document."));
+                      }
+                    }}
+                    className="inline-flex items-center gap-1 text-gray-500 text-[11px] font-semibold uppercase tracking-wider hover:text-[#BA7517]"
+                  >
+                    <Search size={14} /> View
+                  </button>
+                )}
+                {!doc.pdfPath && !doc.id.startsWith("rc-") && (
                   <>
-                    <a href={doc.fileUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-gray-500 text-[11px] font-semibold uppercase tracking-wider hover:text-[#BA7517]">
+                    <a href={apiHref(`/documents/${doc.id}/download`)} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-gray-500 text-[11px] font-semibold uppercase tracking-wider hover:text-[#BA7517]">
                       <Search size={14} /> View
                     </a>
-                    <a href={doc.fileUrl} download className="inline-flex items-center gap-1 text-gray-500 text-[11px] font-semibold uppercase tracking-wider hover:text-[#BA7517]">
+                    <a href={apiHref(`/documents/${doc.id}/download`)} className="inline-flex items-center gap-1 text-gray-500 text-[11px] font-semibold uppercase tracking-wider hover:text-[#BA7517]">
                       <Download size={14} />
                     </a>
                   </>

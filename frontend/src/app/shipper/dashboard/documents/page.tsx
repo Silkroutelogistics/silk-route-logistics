@@ -1,5 +1,6 @@
 "use client";
 
+import { apiHref } from "@/lib/download";
 import { useRef, useState } from "react";
 import { File, Check, FileText, Shield, Download, Search, Loader2, Upload } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -184,12 +185,20 @@ export default function ShipperDocumentsPage() {
                 </div>
               </div>
               <div className="flex gap-2">
-                {doc.url && (
+                {/* v3.8.awt — was href={doc.url}, which the API populated from
+                    Document.fileUrl: `s3://bucket/key` in production, a scheme
+                    the browser cannot open. Every View/Download on a customer's
+                    own document has been dead since storage went live. Now by id
+                    through /documents/:id/download, which authorizes SHIPPER and
+                    enforces both the customer-ownership check and the
+                    SHIPPER_VISIBLE_DOC_TYPES allowlist that keeps carrier pay
+                    off a customer's screen. */}
+                {doc.id && (
                   <>
-                    <a href={doc.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-gray-500 text-[11px] font-semibold uppercase tracking-wider hover:text-[#BA7517]">
+                    <a href={apiHref(`/documents/${doc.id}/download`)} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-gray-500 text-[11px] font-semibold uppercase tracking-wider hover:text-[#BA7517]">
                       <Search size={14} /> View
                     </a>
-                    <a href={doc.url} download className="inline-flex items-center gap-1 text-gray-500 text-[11px] font-semibold uppercase tracking-wider hover:text-[#BA7517]">
+                    <a href={apiHref(`/documents/${doc.id}/download`)} download className="inline-flex items-center gap-1 text-gray-500 text-[11px] font-semibold uppercase tracking-wider hover:text-[#BA7517]">
                       <Download size={14} /> Download
                     </a>
                   </>

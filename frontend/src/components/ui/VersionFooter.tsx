@@ -15954,7 +15954,51 @@
 // router.post("/register", ...) inside a comment and an earlier draft counted it
 // as real — and balances parens rather than reading to end-of-line, because
 // analytics.ts and automation.ts wrap the verb onto its own line.
-export const SRL_VERSION = "3.8.aws";
+// v3.8.awt — the carrier's rate confirmation 404'd, and it was one instance of a
+// class: a value out of the database used as a browser target.
+//
+// THE P0. rateConfirmationController wrote `/api/rate-confirmations/{id}/pdf`
+// into Load.rateConfirmationPdfUrl and two carrier pages rendered it into an
+// href. The portal is a Pages static export on silkroutelogistics.ai; the API is
+// Render on api.silkroutelogistics.ai. The browser resolved it against the Pages
+// host and returned the Next.js 404 page where a PDF belonged. Three link sites,
+// two pages, one stored value, since v3.8.ajt.
+//
+// Fixed at the write site rather than by absolutising the URL. An absolute URL
+// would have worked — sameSite is strict but SameSite is scoped to the
+// registrable domain, so the cookie is sent — and was rejected twice over: it
+// bakes a hostname into every row, so moving the API means a data migration; and
+// a bare href renders this endpoint's JSON errors as raw JSON in a tab, when it
+// answers 403 DRIVER_NOT_VERIFIED with an instruction the carrier must follow.
+// The column now holds the api-client path; existing rows convert in migration
+// 20260901000000. Verified against the one production row before writing it.
+//
+// THE CLASS, all of it. Unanchored `.replace("/api","")` — the first `/api` in
+// "https://api.silkroutelogistics.ai/api" is inside `https://api`, so the base
+// became "https:/.silkroutelogistics.ai/api"; localhost has one, which is why
+// dev never showed it. Nine sites rendering `s3://bucket/key` into href/src.
+// And an eighth s3 site the audit missed, found by writing the guard: the
+// shipper portal API returned a storage key as `url` and the customer's own
+// View/Download links have been dead since storage went live.
+//
+// Two mechanisms, chosen per surface rather than uniformly. Downloads NAVIGATE
+// to /documents/:id/download, because that endpoint 302s to presigned storage
+// and an XHR cannot follow the hop — connect-src names no storage host.
+// Previews fetch ?inline=1, which proxies bytes so a blob: URL can be built,
+// because frame-src allows blob: and not the API host. That is the conclusion
+// v3.8.avy reached for one surface; this generalizes it onto the endpoint every
+// document already has, so the IDOR check and the SHIPPER_VISIBLE_DOC_TYPES
+// allowlist are not reimplemented per-surface.
+//
+// GUARD: browserTargetHosts.test.ts. No browser target may be a literal /api/
+// path, render a persisted *Url column, or derive a base by unanchored strip;
+// plus a frozen inventory of the seven files that assemble the base by hand.
+// Injection-verified on all three rules. It bans specific DB column names rather
+// than a generic *Url match, because a blob previewUrl, an external profileUrl
+// and a data: qrCodeDataUrl are all legitimate and a guard that flagged them
+// would be noise. Comments are blanked before matching — the fixes are explained
+// in comments that necessarily quote the banned patterns.
+export const SRL_VERSION = "3.8.awt";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

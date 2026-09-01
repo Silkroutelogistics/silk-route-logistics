@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
+import { apiHref } from "@/lib/download";
 import { Search, FileText, BookOpen, Plus, Download, Trash2, X, Upload, Clock, User } from "lucide-react";
 import { SlideDrawer } from "@/components/ui/SlideDrawer";
 import { useAuthStore } from "@/hooks/useAuthStore";
@@ -82,7 +83,35 @@ export default function SOPsPage() {
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["sops"] }); setSelectedSOP(null); },
   });
 
-  const baseUrl = (process.env.NEXT_PUBLIC_API_URL || "https://api.silkroutelogistics.ai/api").replace("/api", "");
+  // v3.8.awt — the `baseUrl` const that used to live here is gone. It was
+  // `(NEXT_PUBLIC_API_URL || "…/api").replace("/api", "")`, and the replace is
+  // unanchored: the first `/api` in "https://api.silkroutelogistics.ai/api" sits
+  // inside `https://api`, so the base became "https:/.silkroutelogistics.ai/api".
+  // Localhost has only one `/api`, which is why dev never showed it. Use
+  // apiHref(), which concatenates an api-relative path onto the base and does no
+  // string surgery at all.
+  //
+  // The uploaded file is fetched as a blob because the preview is an <iframe>
+  // and `frame-src` lists 'self' and blob:, not the API host.
+  const [sopFileBlobUrl, setSopFileBlobUrl] = useState<string | null>(null);
+  useEffect(() => {
+    setSopFileBlobUrl(null);
+    if (!selectedSOP?.id || !selectedSOP.fileUrl) return;
+    let revoked = false;
+    let objectUrl: string | null = null;
+    api
+      .get(`/sops/${selectedSOP.id}/file`, { responseType: "blob" })
+      .then((res) => {
+        if (revoked) return;
+        objectUrl = URL.createObjectURL(res.data as Blob);
+        setSopFileBlobUrl(objectUrl);
+      })
+      .catch(() => setSopFileBlobUrl(null));
+    return () => {
+      revoked = true;
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [selectedSOP?.id, selectedSOP?.fileUrl]);
 
   return (
     <div className="p-6 space-y-6">
@@ -179,14 +208,24 @@ export default function SOPsPage() {
               )}
               {selectedSOP.fileUrl && (
                 <div className="space-y-2">
-                  <iframe src={`${baseUrl}${selectedSOP.fileUrl}`} className="w-full h-48 rounded-lg bg-slate-900 border border-gray-200" title="SOP Preview" />
-                  <a href={`${baseUrl}${selectedSOP.fileUrl}`} download className="flex items-center justify-center gap-2 w-full px-4 py-2.5 bg-gold text-navy font-medium rounded-lg text-sm hover:bg-gold/90 cursor-pointer">
+                  {/* v3.8.awt — was `${baseUrl}${selectedSOP.fileUrl}`, broken
+                      twice: the base was mangled by an unanchored replace, and
+                      fileUrl holds `s3://bucket/key`, which no browser opens.
+                      The bytes now come from GET /sops/:id/file. The iframe uses
+                      the blob because frame-src does not list the API host; the
+                      download is a navigation, which needs no blob. */}
+                  <iframe src={sopFileBlobUrl ?? undefined} className="w-full h-48 rounded-lg bg-slate-900 border border-gray-200" title="SOP Preview" />
+                  <a href={apiHref(`/sops/${selectedSOP.id}/file`)} download className="flex items-center justify-center gap-2 w-full px-4 py-2.5 bg-gold text-navy font-medium rounded-lg text-sm hover:bg-gold/90 cursor-pointer">
                     <Download className="w-4 h-4" /> Download
                   </a>
                 </div>
               )}
               {/* Branded PDF Download — always available */}
-              <a href={`${baseUrl}/sops/${selectedSOP.id}/pdf`} download className="flex items-center justify-center gap-2 w-full px-4 py-2.5 bg-[#C5A572] text-[#0F1117] font-semibold rounded-lg text-sm hover:bg-[#d4b65c] cursor-pointer transition">
+              {/* v3.8.awt — this one had a SECOND defect on top of the mangled
+                  base: `${baseUrl}/sops/...` omitted the `/api` prefix, so even
+                  a correct base produced api.silkroutelogistics.ai/sops/... and
+                  404'd. apiHref takes the api-relative path and adds the base. */}
+              <a href={apiHref(`/sops/${selectedSOP.id}/pdf`)} download className="flex items-center justify-center gap-2 w-full px-4 py-2.5 bg-[#C5A572] text-[#0F1117] font-semibold rounded-lg text-sm hover:bg-[#d4b65c] cursor-pointer transition">
                 <Download className="w-4 h-4" /> Download Branded PDF
               </a>
 

@@ -17,6 +17,7 @@
 // responses via the resolved-request email + attachments via the
 // separate documents tab. Now both surfaces unify here.
 
+import { apiHref } from "@/lib/download";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { CheckCircle2, Clock, XCircle, Paperclip, ExternalLink, User as UserIcon, MessageCircle, X } from "lucide-react";
@@ -190,7 +191,7 @@ function ThreadCard({ request, isAdmin, onCancelled }: { request: ThreadRequest;
                 <li key={att.id} className="flex items-center gap-1.5 text-[11px]">
                   <Paperclip size={10} className="text-[#BA7517] flex-shrink-0" />
                   <a
-                    href={att.fileUrl}
+                    href={apiHref(`/documents/${att.id}/download`)}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-[#BA7517] hover:underline truncate"

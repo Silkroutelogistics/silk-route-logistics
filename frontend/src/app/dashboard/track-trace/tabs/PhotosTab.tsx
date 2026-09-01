@@ -1,5 +1,6 @@
 "use client";
 
+import { apiHref } from "@/lib/download";
 import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { api } from "@/lib/api";
@@ -62,7 +63,9 @@ export function PhotosTab({ load, loadId, onChange }: Props) {
       <div className="space-y-3">
         <button onClick={() => setPreview(null)} className="text-xs text-[#C5A572] hover:underline">← Back</button>
         <div className="font-medium">{preview.fileName}</div>
-        <img src={preview.fileUrl} alt={preview.fileName} className="w-full border border-gray-200 rounded-lg" />
+        {/* v3.8.awt — fileUrl is `s3://…`, unloadable. img-src allows https:, so the
+            API endpoint works directly here and follows its own redirect. */}
+        <img src={apiHref(`/documents/${preview.id}/download`)} alt={preview.fileName} className="w-full border border-gray-200 rounded-lg" />
       </div>
     );
   }
@@ -84,7 +87,7 @@ export function PhotosTab({ load, loadId, onChange }: Props) {
                   {existing ? (
                     <button onClick={() => setPreview(existing)} className="block w-full">
                       <div className="aspect-square bg-gray-100 rounded flex items-center justify-center overflow-hidden">
-                        <img src={existing.fileUrl} alt={p.label} className="object-cover w-full h-full" />
+                        <img src={apiHref(`/documents/${existing.id}/download`)} alt={p.label} className="object-cover w-full h-full" />
                       </div>
                     </button>
                   ) : (

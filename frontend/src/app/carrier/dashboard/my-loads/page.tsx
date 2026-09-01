@@ -8,6 +8,7 @@ import { CarrierCard, CarrierBadge } from "@/components/carrier";
 import { BOLTemplate } from "@/components/templates";
 import type { BOLData } from "@/components/templates";
 import { money, carrierPay } from "@/lib/rateDisplay";
+import { openPdfFromApi, extractApiError, apiHref } from "@/lib/download";
 
 const statusFilters = ["All", "BOOKED", "DISPATCHED", "AT_PICKUP", "LOADED", "IN_TRANSIT", "AT_DELIVERY", "DELIVERED"];
 const statusTransitions: Record<string, string[]> = {
@@ -25,6 +26,12 @@ export default function MyLoadsPage() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [checkCallForm, setCheckCallForm] = useState({ city: "", state: "", notes: "" });
   const [showBOL, setShowBOL] = useState(false);
+  // v3.8.awt — the rate-confirmation link is fetched, not navigated to, so its
+  // failures need somewhere to land. The endpoint answers 403
+  // DRIVER_NOT_VERIFIED with an instruction the carrier has to follow; before
+  // this the link went to the Pages host and 404'd with nothing to read.
+  const [rcError, setRcError] = useState<string | null>(null);
+  const [rcOpening, setRcOpening] = useState(false);
   const queryClient = useQueryClient();
 
   const query = new URLSearchParams();
@@ -182,10 +189,31 @@ export default function MyLoadsPage() {
                     </div>
                   )}
                   {detail.rateConfirmationPdfUrl && (
-                    <a href={detail.rateConfirmationPdfUrl} target="_blank" rel="noopener noreferrer"
-                      className="flex items-center gap-1.5 text-[#BA7517] font-semibold mt-2">
-                      <FileText size={14} /> View Rate Confirmation
-                    </a>
+                    <>
+                      <button
+                        type="button"
+                        disabled={rcOpening}
+                        onClick={async () => {
+                          setRcError(null);
+                          setRcOpening(true);
+                          try {
+                            await openPdfFromApi(detail.rateConfirmationPdfUrl!);
+                          } catch (err) {
+                            setRcError(await extractApiError(err, "Couldn't open the rate confirmation."));
+                          } finally {
+                            setRcOpening(false);
+                          }
+                        }}
+                        className="flex items-center gap-1.5 text-[#BA7517] font-semibold mt-2 hover:underline disabled:opacity-60"
+                      >
+                        <FileText size={14} /> {rcOpening ? "Opening…" : "View Rate Confirmation"}
+                      </button>
+                      {rcError && (
+                        <p className="mt-1.5 text-[11px] text-[#9B2C2C] bg-[#F6E3E3] border border-[#9B2C2C]/30 rounded px-2 py-1.5">
+                          {rcError}
+                        </p>
+                      )}
+                    </>
                   )}
                   <button
                     onClick={() => setShowBOL(true)}
@@ -234,7 +262,19 @@ export default function MyLoadsPage() {
                     <div className="flex items-center gap-2 p-3 bg-[#E6F0E9] rounded-lg">
                       <CheckCircle size={16} className="text-[#2F7A4F]" />
                       <span className="text-xs text-[#2F7A4F] font-medium">POD uploaded</span>
-                      <a href={detail.podUrl} target="_blank" rel="noreferrer" className="text-xs text-[#2A5B8B] underline ml-auto">View</a>
+                      {/* v3.8.awt — was href={detail.podUrl}, which holds
+                          `s3://bucket/key` in production: a scheme no browser can
+                          open, so this link has never resolved. The POD upload
+                          also creates a real Document row (carrierLoads.ts:545)
+                          and the query already includes docType POD, so the same
+                          file is reachable by id. If that row is missing the link
+                          is not rendered, rather than rendered dead. */}
+                      {(() => {
+                        const podDoc = (detail.documents ?? []).find((d: { id: string; docType?: string }) => d.docType === "POD");
+                        return podDoc ? (
+                          <a href={apiHref(`/documents/${podDoc.id}/download`)} target="_blank" rel="noreferrer" className="text-xs text-[#2A5B8B] underline ml-auto">View</a>
+                        ) : null;
+                      })()}
                     </div>
                   ) : (
                     <label className="flex flex-col items-center justify-center gap-2 p-6 border-2 border-dashed border-[#EFE6D3] rounded-lg cursor-pointer hover:border-[#C5A572] hover:bg-gray-50 transition">

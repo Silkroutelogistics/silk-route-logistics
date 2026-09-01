@@ -6,6 +6,7 @@ import {
   FileText, Image, Trash2, Upload, Download, Search, Filter, Calendar,
   FolderOpen, File, Shield, Receipt, Package, ChevronDown, ChevronUp, Eye,
 } from "lucide-react";
+import { apiHref } from "@/lib/download";
 import { api } from "@/lib/api";
 import { useAuthStore } from "@/hooks/useAuthStore";
 import { FileUpload } from "@/components/ui/FileUpload";
@@ -106,10 +107,20 @@ export default function DocumentsPage() {
   });
   const totalSize = allDocs.reduce((s, d) => s + d.fileSize, 0);
 
+  // v3.8.awt — this was broken twice over and neither half was visible in dev.
+  //
+  // First, `.replace("/api", "")` is unanchored, and the FIRST `/api` in
+  // "https://api.silkroutelogistics.ai/api" is the one inside `https://api`.
+  // The base became "https:/.silkroutelogistics.ai/api" — a URL that resolves to
+  // nothing. Localhost has only one `/api`, so dev was fine and production was
+  // not. Second, it then appended doc.fileUrl, which holds `s3://bucket/key` in
+  // production — a scheme no browser can open even given a correct base.
+  //
+  // Both go away by asking the API for the document by id: /documents/:id/download
+  // owns the presigning, and apiHref builds the base without string surgery.
   const downloadDoc = (doc: Doc) => {
-    const backendUrl = (process.env.NEXT_PUBLIC_API_URL || "https://api.silkroutelogistics.ai/api").replace("/api", "");
     const a = document.createElement("a");
-    a.href = `${backendUrl}${doc.fileUrl}`;
+    a.href = apiHref(`/documents/${doc.id}/download`);
     a.download = doc.fileName;
     a.target = "_blank";
     a.click();

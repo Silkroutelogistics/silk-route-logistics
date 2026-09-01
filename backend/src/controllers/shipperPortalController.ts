@@ -816,7 +816,19 @@ export async function getShipperDocuments(req: AuthRequest, res: Response) {
       shipment: doc.load?.referenceNumber || "—",
       date: formatDate(doc.createdAt),
       size: doc.fileSize || 0,
-      url: doc.fileUrl,
+      // v3.8.awt — `url` no longer carries doc.fileUrl. That holds
+      // `s3://bucket/key` in production, and the shipper portal rendered it
+      // straight into an href, so every View/Download on a customer's own
+      // document has been dead since object storage went live. The id is what
+      // the portal needs: GET /documents/:id/download authorizes SHIPPER and
+      // already enforces both the customer-ownership check and the
+      // SHIPPER_VISIBLE_DOC_TYPES allowlist that keeps carrier pay off a
+      // customer's screen. Sending the raw storage key also handed the browser
+      // a value it had no business seeing.
+      //
+      // Field kept (nulled) rather than deleted so an older cached bundle
+      // renders no link instead of throwing on a missing property.
+      url: null,
     }));
 
     res.json({ typeCounts, documents: recent });

@@ -1,5 +1,6 @@
 "use client";
 
+import { useInlineDocumentUrl } from "@/lib/useInlineDocument";
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { api } from "@/lib/api";
@@ -59,16 +60,24 @@ export function DocsTab({ customerId, onChange }: { customerId: string; onChange
     return <span className="inline-flex items-center gap-1 text-[11px] text-amber-700"><Clock className="w-3 h-3" /> Pending</span>;
   };
 
+  // v3.8.awt — called before the early return below so the hook order is stable.
+  // preview.fileUrl is `s3://bucket/key` in production and rendered a broken box;
+  // the bytes now come from the API and are shown as a blob: URL, which is what
+  // frame-src actually permits.
+  const previewUrl = useInlineDocumentUrl(preview?.id);
+
   if (preview) {
     return (
       <div className="space-y-3">
         <button onClick={() => setPreview(null)} className="text-xs text-[#C5A572] hover:underline">← Back to list</button>
         <div className="font-medium text-white">{preview.fileName}</div>
         <div className="border border-gray-200 rounded-lg overflow-hidden bg-gray-50">
-          {preview.fileType?.includes("pdf") ? (
-            <iframe src={preview.fileUrl} className="w-full h-[520px]" title={preview.fileName} />
+          {!previewUrl ? (
+            <div className="h-[520px] flex items-center justify-center text-xs text-gray-500">Loading document…</div>
+          ) : preview.fileType?.includes("pdf") ? (
+            <iframe src={previewUrl} className="w-full h-[520px]" title={preview.fileName} />
           ) : (
-            <img src={preview.fileUrl} alt={preview.fileName} className="w-full" />
+            <img src={previewUrl} alt={preview.fileName} className="w-full" />
           )}
         </div>
       </div>
