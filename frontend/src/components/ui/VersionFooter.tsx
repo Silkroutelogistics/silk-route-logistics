@@ -1,3 +1,30 @@
+// v3.8.axd — SIX PLACES COULD CONJURE A TENDER. PASS 1 OF 3.
+//
+// A state machine over rows that six independent places can create is a state
+// machine in name only. Direct tender, waterfall (manual), waterfall
+// (auto-pilot), broadcast, the load+tender drawer, and the load-board bid
+// accept each had their own idea of what a tender is: some set status
+// explicitly, some relied on the column default, one staggered expiry, one took
+// expiresAt straight from a request body with no bound at all. None guaranteed
+// a transition row, so a tender could exist with no history of being created.
+//
+// tenderCreationService.createTender is now the single writer. Three of the six
+// move here; the remaining three are in the next pass.
+//
+// It is ASYNC rather than a composable PrismaPromise like assignCarrier, and
+// the difference is deliberate: creating a tender has a mandatory side effect —
+// the transition row — and returning a bare promise would make that the
+// caller's job to remember. It isn't. Callers needing atomicity pass a
+// transaction client instead.
+//
+// TENDER_TTL_MINUTES lands here too (default 120), bounded 15..10080. An
+// unbounded env value silently disables the expiry sweep for that row, which is
+// the kind of thing nobody notices until a tender has been live for a month.
+//
+// carrierProfileId, not carrierId: LoadTender.carrierId is a CarrierProfile.id
+// while Load.carrierId is a User.id. The name states which one it wants at the
+// call site, where the mistake actually gets made.
+//
 // v3.8.axc — A TERMINATED CARRIER COULD STILL TAKE A LOAD OFF THE BOARD.
 //
 // Consolidating the last carrierId writers surfaced a live hole rather than a
@@ -16184,7 +16211,7 @@
 // and a data: qrCodeDataUrl are all legitimate and a guard that flagged them
 // would be noise. Comments are blanked before matching — the fixes are explained
 // in comments that necessarily quote the banned patterns.
-export const SRL_VERSION = "3.8.axc";
+export const SRL_VERSION = "3.8.axd";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

@@ -2,6 +2,7 @@ import { prisma } from "../config/database";
 import { log } from "../lib/logger";
 import { validateLoadStatusTransition } from "../lib/loadStateMachine";
 import { LoadStatus } from "@prisma/client";
+import { createTender } from "./tenderCreationService";
 
 export interface BroadcastCandidate {
   carrierId: string;
@@ -36,14 +37,14 @@ export async function launchBroadcast(input: LaunchBroadcastInput) {
   // Create all tenders simultaneously
   const tenders = await Promise.all(
     candidates.map((c) =>
-      prisma.loadTender.create({
-        data: {
-          loadId,
-          carrierId: c.carrierId,
-          offeredRate: c.offeredRate,
-          status: "OFFERED",
-          expiresAt,
-        },
+      // v3.8.axd — through createTender, the single writer of LoadTender.
+      createTender({
+        loadId,
+        carrierProfileId: c.carrierId,
+        offeredRate: c.offeredRate,
+        expiresAt,
+        actor: { id: createdById, type: "USER" },
+        reason: "broadcast",
       })
     )
   );

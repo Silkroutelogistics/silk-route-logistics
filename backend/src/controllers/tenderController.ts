@@ -11,6 +11,7 @@ import { hooks } from "../lib/hooks";
 import { log } from "../lib/logger";
 import { validateLoadStatusTransition } from "../lib/loadStateMachine";
 import { assignCarrier } from "../services/carrierAssignmentService";
+import { createTender as createTenderRow } from "../services/tenderCreationService";
 
 export async function createTender(req: AuthRequest, res: Response) {
   const { carrierId, offeredRate, expiresAt } = createTenderSchema.parse(req.body);
@@ -33,8 +34,13 @@ export async function createTender(req: AuthRequest, res: Response) {
     return;
   }
 
-  const tender = await prisma.loadTender.create({
-    data: { loadId: load.id, carrierId, offeredRate, expiresAt },
+  // v3.8.axd — through createTender, the single writer of LoadTender.
+  const tender = await createTenderRow({
+    loadId: load.id,
+    carrierProfileId: carrierId,
+    offeredRate,
+    expiresAt,
+    actor: { id: req.user!.id, type: "USER" },
   });
 
   // Auto-advance load to TENDERED on first tender (if currently POSTED)

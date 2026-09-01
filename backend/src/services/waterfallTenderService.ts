@@ -7,6 +7,7 @@
 
 import { prisma } from "../config/database";
 import { complianceCheck } from "./complianceMonitorService";
+import { createTender } from "./tenderCreationService";
 
 export interface WaterfallCandidate {
   carrierId: string;       // CarrierProfile.id
@@ -55,14 +56,14 @@ export async function launchWaterfall(config: WaterfallConfig) {
       ? new Date(Date.now() + expirationMinutes * 60 * 1000)
       : new Date(Date.now() + (i + 1) * expirationMinutes * 60 * 1000); // stagger
 
-    const tender = await prisma.loadTender.create({
-      data: {
-        loadId,
-        carrierId: c.carrierId,
-        offeredRate: c.offeredRate,
-        status: "OFFERED",
-        expiresAt,
-      },
+    // v3.8.axd — through createTender, the single writer of LoadTender.
+    const tender = await createTender({
+      loadId,
+      carrierProfileId: c.carrierId,
+      offeredRate: c.offeredRate,
+      expiresAt,
+      actor: { id: createdById, type: "USER" },
+      reason: "waterfall_launch",
     });
 
     tenders.push({ ...tender, sequence: i + 1, companyName: c.companyName });

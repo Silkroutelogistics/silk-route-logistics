@@ -13,6 +13,36 @@ so it's searchable and never lost.
 
 ---
 
+## Fixed — 2026-09-01 (v3.8.axd — six places could conjure a tender, pass 1 of 3)
+
+- **Symptom:** six independent `LoadTender` creators across six files, part of
+  28 `LoadTender` write sites. A state machine over rows that six places can
+  create is a state machine in name only.
+- **What differed between them:** some set `status` explicitly, some relied on
+  the column default; one staggered expiry; one took `expiresAt` straight from a
+  request body with no bound. **None guaranteed a transition row**, so a tender
+  could exist with no record of having been created.
+- **Status:** pass 1 of 3 in v3.8.axd. Migrated: direct tender
+  (`tenderController`), broadcast, waterfall manual launch. Creators **6 → 3**.
+- **Shape:** new `services/tenderCreationService.ts`. `createTender` is **async,
+  not a composable PrismaPromise** like `assignCarrier` — deliberately, because
+  creating a tender has a mandatory side effect (the transition row) and
+  returning a bare promise would make that the caller's job to remember.
+  Callers needing atomicity pass a transaction client.
+- **`TENDER_TTL_MINUTES` lands here** (gap row 15), default 120, bounded
+  15..10080. An unbounded env value silently disables the expiry sweep for that
+  row — the kind of thing nobody notices until a tender has been live a month.
+- **`carrierProfileId`, not `carrierId`:** `LoadTender.carrierId` is a
+  `CarrierProfile.id` while `Load.carrierId` is a `User.id`. The name states
+  which one it wants at the call site, where the mistake gets made.
+- **A naming collision caught by the compiler, worth recording:**
+  `tenderController` already exports an HTTP handler named `createTender`, so
+  the first substitution made the handler call *itself*. Imported as
+  `createTenderRow` at the call site.
+- **Gates:** backend tsc clean, vitest **134/1**, frontend tsc + build clean.
+
+---
+
 ## Known duplicate letter — 2026-09-01 (v3.8.awx used twice)
 
 - **Both commits are real and both stand.** Neither is corrected.
