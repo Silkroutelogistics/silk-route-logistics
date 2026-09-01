@@ -1,3 +1,53 @@
+// v3.8.axp — FOUR SURFACES, FOUR STATUS-TO-COLOUR MAPS, AND THEY DISAGREED.
+//
+// BOOKED rendered violet on the Track & Trace board, purple on the Load Board
+// and grey in the drawer — for the same load on the same refresh. Each surface
+// read load.status and mapped it with its own switch, and the switches drifted.
+//
+// deriveLoadStatus is the one selector, and it reads BOTH the load and its
+// tenders. load.status is the operational stage; who holds the load and how far
+// the paperwork got are properties of the TENDER. A load left reading BOOKED
+// after its tender was released is not booked, and no amount of care in a
+// status switch will say so — it now reads "Needs carrier".
+//
+// Two states that looked identical no longer do: a load nobody has bid on and a
+// load whose every offer died both read "Posted", and only one of them needs a
+// human. And ACCEPTED reads "Accepted — RC pending" rather than "Booked",
+// because it is still the AE's move.
+//
+// THE ACTION MATRIX is keyed by tender state, so the Load Board panel and the
+// Track & Trace drawer cannot offer different actions on the same tender. A
+// settled tender offers nothing — there is no acting on a decline or an expiry.
+// RELEASE on a CONFIRMED tender is pre-pickup only, applied by actionsFor
+// rather than written into the map, because a conditional entry in a flat map
+// is a lie the caller has to know to correct.
+//
+// The standalone "Rate Conf" button is gone. It was reachable on any non-draft
+// load whether or not a carrier had accepted, and it acted on the LOAD rather
+// than a tender — so on a load with two live offers it could not say whose rate
+// it was confirming.
+//
+// RESEND_RC and VIEW_RC are in the ratified matrix and filtered out of the
+// rendered set rather than shipped dead. A button that does nothing teaches an
+// AE to distrust the row it sits in; they land with the RC lifecycle.
+//
+// "LOAD COVERED", not "withdrawn", and now on the AE side too. That wording is
+// the entire point of splitting WITHDRAWN from DECLINED — the carrier did not
+// refuse anything — and a tender reading WITHDRAWN to the AE while the carrier
+// sees "Load covered" is two accounts of one event, with the AE the one who has
+// to explain it on the phone. WITHDRAWN and RELEASED also had no colour entry
+// at all and rendered blank: the two states the split exists to distinguish.
+//
+// NEEDS ATTENTION is served by the backend now and the dot says WHY, because
+// "needs attention" with no reason makes the AE open the load to find out what
+// the queue already knew.
+//
+// GUARD: loadDerivedStatus.test.ts — 16 cases. Behavioural for the ordering
+// decisions, structural for the rule that no surface builds its own map or
+// prints a raw status, with a vacuity tripwire so a moved file cannot make it
+// report a clean tree. It caught STATUS_COLORS still standing "for one
+// consumer" and that consumer was deleted instead: a map that exists is a map
+// somebody reaches for, which is how four of them came to disagree.
 // v3.8.axo — THE LOAD BOARD AND TRACK & TRACE OVERLAPPED BY SIX STATUSES.
 //
 // Each was a hand-written list of load statuses kept at its own call site, and
@@ -16595,7 +16645,7 @@
 // and a data: qrCodeDataUrl are all legitimate and a guard that flagged them
 // would be noise. Comments are blanked before matching — the fixes are explained
 // in comments that necessarily quote the banned patterns.
-export const SRL_VERSION = "3.8.axo";
+export const SRL_VERSION = "3.8.axp";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

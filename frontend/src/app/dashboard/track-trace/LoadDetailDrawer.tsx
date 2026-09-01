@@ -5,6 +5,7 @@ import { X, ChevronRight, BellOff, Bell } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { getNextStatusAction } from "@/lib/loadStatusActions";
+import { deriveLoadStatus, type DeriveInput } from "@/lib/loadDerivedStatus";
 import { IconTabs } from "./IconTabs";
 import { DetailsTab } from "./tabs/DetailsTab";
 import { TrackingTab } from "./tabs/TrackingTab";
@@ -107,13 +108,20 @@ export function LoadDetailDrawer({ loadId, onClose, initialTab = "details" }: Pr
     (a: any) => String(a.status).toUpperCase() === "PENDING",
   ).length;
 
-  const statusBadge = (s: string) => {
-    const map: Record<string, string> = {
-      IN_TRANSIT: "bg-cyan-100 text-cyan-700",
-      DELIVERED:  "bg-green-100 text-green-700",
-      AT_PICKUP:  "bg-amber-100 text-amber-700",
-    };
-    return <span className={`px-2 py-0.5 text-[11px] rounded ${map[s] ?? "bg-gray-100 text-gray-700"}`}>{(s || "").replace(/_/g, " ")}</span>;
+  /**
+   * v3.8.axp — the derived status, not the raw column and not a third colour
+   * map. This drawer had three statuses in its map and fell through to grey for
+   * every other one, so a load reading "Accepted — RC pending" on the Load
+   * Board read a plain grey "BOOKED" here. One selector, one vocabulary.
+   */
+  const statusBadge = () => {
+    if (!load) return null;
+    const d = deriveLoadStatus(load as unknown as DeriveInput);
+    return (
+      <span className={`px-2 py-0.5 text-[11px] rounded ${d.tone}`}>
+        {d.label}
+      </span>
+    );
   };
 
   const distance = load?.distance ? `${Math.round(load.distance).toLocaleString()} mi` : null;
@@ -146,7 +154,7 @@ export function LoadDetailDrawer({ loadId, onClose, initialTab = "details" }: Pr
                   <h2 className="text-lg font-semibold text-gray-900 truncate">
                     {load?.loadNumber ?? load?.referenceNumber?.slice(0, 8) ?? "Loading…"}
                   </h2>
-                  {load && statusBadge(load.status)}
+                  {statusBadge()}
                   {load?.urgencyLevel && load.urgencyLevel !== "STANDARD" && (
                     <span className="px-2 py-0.5 text-[11px] rounded bg-red-100 text-red-700">{load.urgencyLevel}</span>
                   )}

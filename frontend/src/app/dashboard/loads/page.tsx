@@ -23,6 +23,7 @@ import { TagManagementPanel } from "@/components/loads/TagManagementPanel";
 import { SlideDrawer } from "@/components/ui/SlideDrawer";
 import { downloadCSV } from "@/lib/csvExport";
 import { NEXT_STATUS, STATUS_ACTIONS } from "@/lib/loadStatusActions";
+import { deriveLoadStatus, ATTENTION_LABEL, actionsFor, ACTION_LABEL, WIRED_ACTIONS, RELEASE_REASONS, type TenderAction, carrierTenderLabel } from "@/lib/loadDerivedStatus";
 
 import type { Load as BaseLoad, LoadTender } from "@/types/entities";
 import { money, pct, perMile, customerBilled, carrierPay, margin, marginPct } from "@/lib/rateDisplay";
@@ -54,22 +55,16 @@ interface Load extends BaseLoad {
 /*  Constants                                                          */
 /* ------------------------------------------------------------------ */
 
-const STATUS_COLORS: Record<string, string> = {
-  DRAFT: "bg-slate-500/20 text-gray-600", POSTED: "bg-[#E2EAF2] text-[#2A5B8B]",
-  TENDERED: "bg-[#E2EAF2] text-[#2A5B8B]", CONFIRMED: "bg-[#E2EAF2] text-[#0A2540]",
-  BOOKED: "bg-violet-500/20 text-violet-400", DISPATCHED: "bg-orange-500/20 text-orange-400",
-  AT_PICKUP: "bg-amber-500/20 text-amber-400", LOADED: "bg-[#FBEFD4] text-[#854F0B]",
-  PICKED_UP: "bg-[#FBEFD4] text-[#854F0B]", IN_TRANSIT: "bg-cyan-500/20 text-cyan-400",
-  AT_DELIVERY: "bg-teal-500/20 text-teal-400", DELIVERED: "bg-[#E6F0E9] text-[#256340] border border-[#2F7A4F]/25",
-  POD_RECEIVED: "bg-emerald-500/20 text-emerald-400", INVOICED: "bg-lime-500/20 text-lime-400",
-  COMPLETED: "bg-emerald-500/20 text-emerald-400",
-  TONU: "bg-[#F6E3E3] text-[#9B2C2C]", CANCELLED: "bg-[#F6E3E3] text-[#9B2C2C]",
-};
-
 const TENDER_COLORS: Record<string, string> = {
   OFFERED: "bg-[#E2EAF2] text-[#2A5B8B]", ACCEPTED: "bg-[#E6F0E9] text-[#256340] border border-[#2F7A4F]/25",
   COUNTERED: "bg-[#FBEFD4] text-[#854F0B]", DECLINED: "bg-[#F6E3E3] text-[#9B2C2C]",
   EXPIRED: "bg-slate-500/20 text-gray-600",
+  // v3.8.axp — WITHDRAWN and RELEASED had no entry and fell through to blank.
+  // The two states the whole DECLINED split exists to distinguish rendered
+  // with no colour at all.
+  WITHDRAWN: "bg-slate-500/20 text-gray-600",
+  RELEASED: "bg-[#F6E3E3] text-[#9B2C2C]",
+  RC_SENT: "bg-[#FBEFD4] text-[#854F0B]", CONFIRMED: "bg-[#E6F0E9] text-[#256340] border border-[#2F7A4F]/25",
 };
 
 // v3.8.aue — ACCOUNT_EXECUTIVE granted margin/P&L READ (money movement stays denied).
@@ -108,20 +103,37 @@ const STATUS_PIPELINE = [
 /*  Helpers                                                            */
 /* ------------------------------------------------------------------ */
 
-function needsAttention(l: Load): boolean {
-  const now = Date.now();
-  const pickup = new Date(l.pickupDate).getTime();
-  const h48 = 48 * 60 * 60 * 1000;
-  if (l.status === "POSTED" && pickup - now < h48 && !l.carrier) return true;
-  if (l.status === "BOOKED" && pickup < now) return true;
-  return false;
+/**
+ * v3.8.axp — Needs Attention is served by the backend now, from the TENDERS.
+ *
+ * It used to be two guesses about the load: "posted and pickup is close" and
+ * "booked and pickup has passed". Both are proxies for something nobody had
+ * measured, and neither says what to do. The four backend reasons are facts —
+ * offers expired with nothing live, an RC unsigned past its SLA, a release
+ * inside the last day, a counter waiting on SRL — and each names itself.
+ *
+ * This set is the ids the endpoint returned; the tab filters against it.
+ */
+function needsAttention(l: Load, attentionIds: Set<string>): boolean {
+  return attentionIds.has(l.id);
 }
 
-function matchesTab(l: Load, tab: StatusTab): boolean {
+/**
+ * Tabs read the DERIVED status, not the raw column.
+ *
+ * "Tendered" used to mean `status IN (TENDERED, CONFIRMED)` — a list that had
+ * to be remembered — and it disagreed with what the badge on the same row said.
+ * Now both come from the same selector, so a row cannot show one word and sort
+ * under another.
+ */
+function matchesTab(l: Load, tab: StatusTab, attentionIds: Set<string>): boolean {
   if (tab === "all") return true;
-  if (tab === "attention") return needsAttention(l);
-  if (tab === "TENDERED") return ["TENDERED", "CONFIRMED"].includes(l.status);
-  return l.status === tab;
+  if (tab === "attention") return needsAttention(l, attentionIds);
+  const d = deriveLoadStatus(l);
+  if (tab === "TENDERED") return ["OFFERED", "COUNTERED"].includes(d.key);
+  if (tab === "BOOKED") return ["ACCEPTED", "RC_SENT", "CONFIRMED", "ASSIGNED"].includes(d.key);
+  if (tab === "POSTED") return ["POSTED", "NEEDS_CARRIER"].includes(d.key);
+  return d.key === tab;
 }
 
 /* ================================================================== */
@@ -408,20 +420,88 @@ export default function LoadsPage() {
     window.URL.revokeObjectURL(url);
   };
 
+  /**
+   * One mutation for every tender action, because they are one act with
+   * different endpoints: an AE decided something about a tender, and the load
+   * list and its detail both need to reflect it.
+   *
+   * Release asks for a reason. The others do not, and that asymmetry is the
+   * point — releasing takes back a load a carrier has committed to, and the
+   * reason feeds the carrier's fall-off record. Withdrawing an offer nobody
+   * accepted costs nothing and undoes nothing, so demanding a justification
+   * there is friction that pushes AEs toward leaving dead offers live.
+   */
+  const tenderAction = useMutation({
+    mutationFn: async (v: { tenderId: string; action: TenderAction; loadId: string; reason?: string }) => {
+      switch (v.action) {
+        case "WITHDRAW":
+          return (await api.post(`/tenders/${v.tenderId}/withdraw`, {})).data;
+        case "REJECT_COUNTER":
+          return (await api.post(`/tenders/${v.tenderId}/reject-counter`, {})).data;
+        case "ACCEPT_COUNTER":
+          // Accept-on-behalf admits a COUNTERED tender and settles at the
+          // agreed rate, which for a counter is the counter. Accepting at the
+          // original number would be paying less than what was signed.
+          return (await api.post(`/tenders/${v.tenderId}/accept-on-behalf`, {})).data;
+        case "RELEASE":
+          return (await api.post(`/loads/${v.loadId}/release-carrier`, {
+            reason: v.reason, note: null,
+          })).data;
+        default:
+          throw new Error(`${v.action} has no endpoint yet`);
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["loads"] });
+      queryClient.invalidateQueries({ queryKey: ["loads-needs-attention"] });
+    },
+  });
+
+  const runTenderAction = (tenderId: string, action: TenderAction, loadId: string) => {
+    if (action === "RELEASE") {
+      const reason = window.prompt(
+        "Why is this carrier coming off the load?\n\n" +
+          RELEASE_REASONS.join(" | ") +
+          "\n\nsrl_error records no fall-off against the carrier.",
+        "carrier_fell_off",
+      );
+      if (!reason || !RELEASE_REASONS.includes(reason)) return;
+      tenderAction.mutate({ tenderId, action, loadId, reason });
+      return;
+    }
+    if (!window.confirm(`${ACTION_LABEL[action]}?`)) return;
+    tenderAction.mutate({ tenderId, action, loadId });
+  };
+
   /* ---- Derived data ---- */
   const allLoads = data?.loads || [];
 
+  // v3.8.axp — Needs Attention comes from the backend, which asks about the
+  // TENDERS. The reasons ride along so the tab can say WHY a load is in it
+  // rather than only that it is.
+  const { data: attention } = useQuery<Array<{ loadId: string; reasons: string[] }>>({
+    queryKey: ["loads-needs-attention"],
+    queryFn: async () => (await api.get("/loads/needs-attention")).data,
+    staleTime: 60_000,
+  });
+  const attentionIds = useMemo(
+    () => new Set((attention ?? []).map((a) => a.loadId)),
+    [attention],
+  );
+  const attentionReasons = useMemo(
+    () => new Map((attention ?? []).map((a) => [a.loadId, a.reasons])),
+    [attention],
+  );
+
+  // Counts are derived through the same predicate the tabs filter with, so a
+  // badge saying 3 and a tab showing 5 rows is not expressible.
   const tabCounts = useMemo(() => {
     const c = { attention: 0, DRAFT: 0, POSTED: 0, TENDERED: 0, BOOKED: 0, all: allLoads.length };
-    allLoads.forEach((l) => {
-      if (needsAttention(l)) c.attention++;
-      if (l.status === "DRAFT") c.DRAFT++;
-      if (l.status === "POSTED") c.POSTED++;
-      if (["TENDERED", "CONFIRMED"].includes(l.status)) c.TENDERED++;
-      if (l.status === "BOOKED") c.BOOKED++;
+    (["attention", "DRAFT", "POSTED", "TENDERED", "BOOKED"] as const).forEach((tab) => {
+      c[tab] = allLoads.filter((l) => matchesTab(l, tab, attentionIds)).length;
     });
     return c;
-  }, [allLoads]);
+  }, [allLoads, attentionIds]);
 
   const laneCards = useMemo(() => {
     const map = new Map<string, { count: number; totalRate: number }>();
@@ -439,10 +519,10 @@ export default function LoadsPage() {
   }, [allLoads]);
 
   const filteredLoads = useMemo(() => {
-    let list = allLoads.filter((l) => matchesTab(l, activeTab));
+    let list = allLoads.filter((l) => matchesTab(l, activeTab, attentionIds));
     if (laneFilter) list = list.filter((l) => `${l.originState} → ${l.destState}` === laneFilter);
     return list;
-  }, [allLoads, activeTab, laneFilter]);
+  }, [allLoads, activeTab, laneFilter, attentionIds]);
 
   const load = loadDetail;
 
@@ -668,11 +748,19 @@ export default function LoadsPage() {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1">
                     <span className="font-mono text-sm text-slate-400 truncate">{ld.referenceNumber}</span>
-                    <span className={`px-2 py-0.5 rounded text-xs font-medium shrink-0 ${STATUS_COLORS[ld.status] || "bg-white/10 text-white"}`}>
-                      {ld.status.replace(/_/g, " ")}
+                    <span className={`px-2 py-0.5 rounded text-xs font-medium shrink-0 ${deriveLoadStatus(ld).tone}`}>
+                      {deriveLoadStatus(ld).label}
                     </span>
-                    {needsAttention(ld) && (
-                      <span className="w-2 h-2 rounded-full bg-red-500 shrink-0 animate-pulse" title="Needs attention" />
+                    {needsAttention(ld, attentionIds) && (
+                      <span
+                        className="w-2 h-2 rounded-full bg-red-500 shrink-0 animate-pulse"
+                        // The dot said only THAT something was wrong. It now says
+                        // what, because "needs attention" with no reason makes the
+                        // AE open the load to find out what the queue already knew.
+                        title={(attentionReasons.get(ld.id) ?? [])
+                          .map((r) => ATTENTION_LABEL[r] ?? r)
+                          .join(" · ") || "Needs attention"}
+                      />
                     )}
                   </div>
                   <div className="flex items-center gap-2 text-white text-sm">
@@ -799,8 +887,8 @@ export default function LoadsPage() {
                   <div className="min-w-0">
                     <div className="flex items-center gap-2 mb-1">
                       <h2 className="text-lg font-bold text-white truncate">{load.referenceNumber}</h2>
-                      <span className={`px-2 py-0.5 rounded text-xs font-medium shrink-0 ${STATUS_COLORS[load.status] || ""}`}>
-                        {load.status.replace(/_/g, " ")}
+                      <span className={`px-2 py-0.5 rounded text-xs font-medium shrink-0 ${deriveLoadStatus(load).tone}`}>
+                        {deriveLoadStatus(load).label}
                       </span>
                     </div>
                     <p className="text-sm text-slate-400">
@@ -850,16 +938,13 @@ export default function LoadsPage() {
                     >
                       <Download className="w-3 h-3 inline mr-1" />BOL
                     </button>
-                    {/* Rate Conf */}
-                    {canCreate && !["DRAFT", "CANCELLED", "TONU"].includes(load.status) && (
-                      <button
-                        onClick={() => setShowRateConf(true)}
-                        className="px-3 py-1.5 bg-[#E2EAF2] text-[#2A5B8B] border border-[#2A5B8B]/20 rounded-lg text-xs hover:bg-[#d3e0ee]"
-                        title="Rate Confirmation"
-                      >
-                        <ClipboardCheck className="w-3 h-3 inline mr-1" />Rate Conf
-                      </button>
-                    )}
+                    {/* v3.8.axp — the standalone "Rate Conf" button is gone.
+                        It was reachable on any non-draft load regardless of
+                        whether a carrier had accepted, and it acted on the LOAD
+                        rather than on a tender — so on a load with two live
+                        offers it could not say whose rate it was confirming.
+                        The per-tender actions below know which tender they are
+                        acting on, because the matrix is keyed by tender state. */}
                     {/* Rate Conf PDF */}
                     {canCreate && !["DRAFT", "POSTED", "CANCELLED", "TONU"].includes(load.status) && (
                       <button
@@ -869,6 +954,33 @@ export default function LoadsPage() {
                       >
                         <FileText className="w-3 h-3 inline mr-1" />PDF
                       </button>
+                    )}
+                    {/* v3.8.axp — what an AE may do, keyed by TENDER state.
+                        One matrix (lib/loadDerivedStatus) is the authority, so
+                        this panel and the Track & Trace drawer cannot offer
+                        different actions on the same tender. A settled tender
+                        offers nothing — there is no acting on a decline or an
+                        expiry — so the row simply does not render.
+
+                        RESEND_RC and VIEW_RC are in the ratified matrix and are
+                        filtered out here rather than rendered dead: the rate
+                        confirmation lifecycle lands in the next commit, and a
+                        button that does nothing teaches an AE to distrust the
+                        row it sits in. */}
+                    {canCreate && (load.tenders ?? []).flatMap((t) =>
+                      actionsFor(t.status, load.status)
+                        .filter((a) => WIRED_ACTIONS.includes(a))
+                        .map((a) => (
+                          <button
+                            key={`${t.id}-${a}`}
+                            onClick={() => runTenderAction(t.id, a, load.id)}
+                            disabled={tenderAction.isPending}
+                            className="px-3 py-1.5 bg-[#FBEFD4] text-[#854F0B] border border-[#B07A1A]/25 rounded-lg text-xs hover:bg-[#f6e5c4] disabled:opacity-50"
+                            title={`${ACTION_LABEL[a]} — ${t.carrier?.user?.company ?? "carrier"}`}
+                          >
+                            {ACTION_LABEL[a]}
+                          </button>
+                        )),
                     )}
                     {/* DAT post */}
                     {canCreate && load.status === "POSTED" && !load.datPostId && (
@@ -1481,11 +1593,14 @@ function PanelHistory({ load }: { load: Load }) {
           </div>
         )}
         <div className="flex items-center gap-3 p-3 bg-gray-100 rounded-lg border border-gray-200">
+          {/* v3.8.axp — the last two consumers of STATUS_COLORS, and the reason
+              it is deleted rather than kept for them. A map that exists is a map
+              somebody reaches for, which is how four of them came to disagree. */}
           <div className={`w-3 h-3 rounded-full shrink-0 ${
-            STATUS_COLORS[load.status]?.includes("green") ? "bg-green-500" : "bg-[#C5A572]"
+            deriveLoadStatus(load).tone.includes("#256340") ? "bg-green-500" : "bg-[#C5A572]"
           }`} />
           <div>
-            <p className="text-sm text-[#0A2540]">Current status: {load.status.replace(/_/g, " ")}</p>
+            <p className="text-sm text-[#0A2540]">Current status: {deriveLoadStatus(load).label}</p>
           </div>
         </div>
         {load.tenders && load.tenders.length > 0 && (
@@ -1500,8 +1615,12 @@ function PanelHistory({ load }: { load: Load }) {
                   </p>
                   <p className="text-xs text-gray-600">{new Date(t.createdAt).toLocaleString()}</p>
                 </div>
-                <span className={`px-2 py-0.5 rounded text-xs font-medium shrink-0 ${TENDER_COLORS[t.status] || ""}`}>
-                  {t.status}
+                {/* v3.8.axp — the same words the carrier is shown. A tender that
+                    reads "WITHDRAWN" to the AE and "Load covered" to the carrier
+                    is two accounts of one event, and the AE is the one who has to
+                    explain it on the phone. */}
+                <span className={`px-2 py-0.5 rounded text-xs font-medium shrink-0 ${TENDER_COLORS[t.status] || "bg-slate-500/20 text-gray-600"}`}>
+                  {carrierTenderLabel(t.status, (t as { statusReason?: string | null }).statusReason)}
                 </span>
               </div>
             ))}

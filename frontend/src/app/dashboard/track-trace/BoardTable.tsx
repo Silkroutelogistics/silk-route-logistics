@@ -3,6 +3,7 @@
 import { MapPin, PhoneCall, AlertTriangle } from "lucide-react";
 import type { BoardLoad, ProgressState } from "./types";
 import { STRIPE_COLORS } from "./types";
+import { deriveLoadStatus, type DeriveInput } from "@/lib/loadDerivedStatus";
 
 interface BoardTableProps {
   loads: BoardLoad[];
@@ -24,22 +25,20 @@ const gpsPill = (gps: BoardLoad["gpsStatus"]) => {
   return <span className="text-xs text-gray-400">—</span>;
 };
 
-const statusBadge = (status: string) => {
-  const map: Record<string, string> = {
-    TENDERED: "bg-indigo-100 text-indigo-700",
-    CONFIRMED: "bg-purple-100 text-purple-700",
-    BOOKED: "bg-violet-100 text-violet-700",
-    DISPATCHED: "bg-orange-100 text-orange-700",
-    AT_PICKUP: "bg-amber-100 text-amber-700",
-    LOADED: "bg-yellow-100 text-yellow-700",
-    IN_TRANSIT: "bg-cyan-100 text-cyan-700",
-    AT_DELIVERY: "bg-teal-100 text-teal-700",
-    DELIVERED: "bg-green-100 text-green-700",
-    POD_RECEIVED: "bg-emerald-100 text-emerald-700",
-    COMPLETED: "bg-emerald-100 text-emerald-700",
-  };
-  const cls = map[status] ?? "bg-gray-100 text-gray-700";
-  return <span className={`inline-block px-2 py-0.5 text-[11px] font-medium rounded ${cls}`}>{status.replace(/_/g, " ")}</span>;
+/**
+ * v3.8.axp — one selector for the label AND the colour.
+ *
+ * This was the third independent status-to-colour map in the app, and it was
+ * the one that disagreed most: BOOKED rendered violet here, purple on the Load
+ * Board and grey in the drawer, for the same load on the same screen refresh.
+ */
+const statusBadge = (row: DeriveInput) => {
+  const d = deriveLoadStatus(row);
+  return (
+    <span className={`inline-block px-2 py-0.5 text-[11px] font-medium rounded ${d.tone}`}>
+      {d.label}
+    </span>
+  );
 };
 
 const abbreviateLane = (l: BoardLoad) => {
@@ -92,7 +91,7 @@ export function BoardTable({ loads, onRowClick }: BoardTableProps) {
                   )}
                 </div>
               </td>
-              <td className="px-3 py-3">{statusBadge(l.status)}</td>
+              <td className="px-3 py-3">{statusBadge(l as unknown as DeriveInput)}</td>
               <td className="px-3 py-3">
                 <div className="flex gap-1">
                   <div className={`h-2 flex-1 rounded-l ${progressSegmentClass(l.progress.booked)}`} />
