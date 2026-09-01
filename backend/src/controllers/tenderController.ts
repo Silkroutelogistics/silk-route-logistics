@@ -730,12 +730,29 @@ export async function getLoadTenders(req: AuthRequest, res: Response) {
 export async function processExpiredTenders() {
   const now = new Date();
 
-  // Find all OFFERED tenders past their expiration
+  // Tenders THIS sweep owns: the direct ones. A waterfall tender is owned by
+  // the cascade, which expires it in expireStalePositions and then ADVANCES to
+  // the next position.
+  //
+  // Without waterfallPositionId: null the two sweeps race over the same rows,
+  // because waterfallEngineService writes the SAME instant to LoadTender
+  // .expiresAt and WaterfallPosition.tenderExpiresAt, so both become eligible
+  // at once and only scheduler order decides. When the ticker wins, this sweep
+  // finds nothing because the tender is already EXPIRED, and all is well. When
+  // this hourly cron wins, it expires the tender and -- finding no live tender
+  // left on the load -- reverts the load to POSTED while the waterfall is still
+  // ACTIVE. The ticker then advances the cascade and tenders the next carrier
+  // on a load that is back on the open board.
+  //
+  // Not merged with expireStalePositions, deliberately: one returns a load to
+  // the board and the other walks a cascade, and merging would put cascade
+  // knowledge into a path that has none.
   const expired = await prisma.loadTender.findMany({
     where: {
       status: { in: ["OFFERED", "COUNTERED"] },
       expiresAt: { lt: now },
       deletedAt: null,
+      waterfallPositionId: null,
     },
     select: { id: true, loadId: true, carrierId: true },
   });
