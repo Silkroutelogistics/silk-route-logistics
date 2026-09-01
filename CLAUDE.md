@@ -2739,16 +2739,31 @@ Each is a discrete sprint. Mix of operational, security, UX, and technical debt.
     demonstrated green, and only then auto-deploy off. Reversed, nothing deploys
     and CI reports success about it.
 
-    **What this session could NOT observe, stated so nobody reads more into the
-    evidence than it carries.** The authoritative deploy count lives in the
-    Render dashboard, which is not reachable from here. Boot timing is
-    *consistent* with a single hook-triggered deploy — on `a6904a99` the hook
-    completed 12:34:38Z and production booted 12:36:03Z, an 85-second gap — but
-    it is not *exclusive*: an auto-deploy boot would simply have been superseded
-    by the hook's, producing the same final observation. The disabling is
-    therefore recorded on Wasi's confirmation, not on an inference this session
-    is able to make.
+    **SINGLE-DEPLOY MODE, PROVEN BY ARTIFACT (2026-09-01, run 33520095416).**
+    The first close-out of this could only say boot timing was *consistent* with
+    hook-only, not *exclusive* — an auto-deploy boot would have been superseded
+    by the hook's and produced the same final observation. A better discriminator
+    exists and was used: **sample production continuously between the push and
+    the hook.** An auto-deploy starts at push; the hook fires ~90s later. If the
+    running process never restarts in that window, nothing deployed at push.
 
+    | Time | Observation |
+    |---|---|
+    | 14:32:21Z | push `213b3de7..89947701` |
+    | 14:33:53Z | hook fired — `HTTP 200`, `dep-dabe4kad0e5s73e6kol0` |
+    | 14:34:30 → 14:36:13 | still `213b3de7`, uptime **2079 → 2182s unbroken** |
+    | 14:35:55Z | new process booted, 122s after the hook |
+    | 14:36:43Z | cutover, `sha=89947701` = HEAD |
+
+    The old process ran continuously from 13:59:51 through the whole post-push
+    window. **Nothing deployed at push time; exactly one boot followed the hook.**
+
+    **The residual limit, stated precisely.** This proves no *successful* deploy
+    occurred other than the hook's — a deploy that ships nothing produces no
+    boot. Whether Render recorded a cancelled or failed deploy alongside it is
+    visible only in its dashboard. For the question that matters — can anything
+    still reach production without passing CI — the answer is now no, and it is
+    evidenced rather than assumed.
     **THE SEVEN MIGRATIONS IN THAT RELEASE, AS APPLIED.** Classified after the
     fact rather than as a pre-push gate — the push had already happened when this
     arc began, which is itself the finding. Production's own `migrate deploy`
@@ -2799,9 +2814,11 @@ Each is a discrete sprint. Mix of operational, security, UX, and technical debt.
        its durability. Days catch what an hour cannot: a rotated hook, an expired
        credential, a Render-side change.
     3. **zero deploys reaching production by any path other than the hook** —
-       verified in the Render dashboard, since this is the one fact a session
-       cannot see. A single auto-deploy slipping through means hook-only mode is
-       not actually in force and the gate is decorative again.
+       and this is now *observable from a session*, not dashboard-only: sample
+       `/api/health` between the push and the hook firing, and confirm `uptime`
+       climbs unbroken. An auto-deploy starts at push, so a restart in that
+       window means a second path is live. A single auto-deploy slipping through
+       means hook-only mode is not in force and the gate is decorative again.
     4. **the row-count gate in each migration's own header run against
        production immediately before merge** — not at authoring time, not on a
        container. Item 212's gate was run *after* the drop, when the question it
