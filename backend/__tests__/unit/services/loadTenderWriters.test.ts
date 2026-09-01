@@ -104,6 +104,7 @@ const STATE_WRITERS = new Set([
   "services/integrationService.ts",      // load cancelled -> withdraw
   "services/broadcastTenderService.ts",  // broadcast accepted -> siblings withdrawn
   "routes/waterfalls.ts",                // AE skips a cascade position -> withdraw
+  "services/carrierReleaseService.ts",   // release (ACCEPTED -> RELEASED) + withdraw
 ]);
 
 /**

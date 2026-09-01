@@ -1,3 +1,33 @@
+// v3.8.axi — A LOAD COULD BE BACK ON THE BOARD WITH A TENDER STILL CLAIMING IT.
+//
+// fallOffRecovery cleared the carrier and re-posted the load, and left the
+// tender reading ACCEPTED forever. Nothing in the data said the carrier had
+// gone. That was the only path that took a carrier off a load at all.
+//
+// releaseCarrier does the whole act: the carrier comes off, the tender settles
+// to RELEASED with a coded reason, live rate confirmations are voided, the load
+// returns to wherever it came from, the history records who and why, and — for
+// every reason but one — the carrier's fall-off record grows.
+//
+// RELEASE IS NOT WITHDRAW, and they are separate functions on purpose. Withdraw
+// pulls an offer nobody accepted: cheap, reversible, no reason required.
+// Release takes back a load a carrier has committed to, where a truck may be
+// routed, a driver dispatched and paper signed. Collapsing the two would make
+// the cheap act carry the expensive one's consequences — so withdrawTender
+// refuses an ACCEPTED tender outright and tells the caller to release instead.
+//
+// srl_error records NO fall-off. Fall-off count feeds carrier standing, so
+// marking a carrier for a load SRL took away by mistake is not cosmetic — it is
+// charging them for our error. customer_cancel and compliance_lapse do count:
+// the first because the load still fell off and the operational record should
+// say so, the second because it is the carrier's own paperwork. Whether those
+// should WEIGH the same as walking away is a scoring question, and scoring is
+// not this service's job.
+//
+// A waterfall load returns to its cascade, a board load to the board. Sending a
+// waterfall load to POSTED would strand it: the cascade is what drives it, and
+// nothing re-enters a cascade from POSTED.
+//
 // v3.8.axh — A COUNTERED TENDER HAD NO WAY TO BE TURNED DOWN.
 //
 // A carrier could counter, and an AE could accept that counter through
@@ -16319,7 +16349,7 @@
 // and a data: qrCodeDataUrl are all legitimate and a guard that flagged them
 // would be noise. Comments are blanked before matching — the fixes are explained
 // in comments that necessarily quote the banned patterns.
-export const SRL_VERSION = "3.8.axh";
+export const SRL_VERSION = "3.8.axi";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

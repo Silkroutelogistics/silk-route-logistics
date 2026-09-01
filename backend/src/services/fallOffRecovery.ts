@@ -1,7 +1,8 @@
 import { prisma } from "../config/database";
 import { matchCarriersForLoad } from "./smartMatchService";
 import { log } from "../lib/logger";
-import { assignCarrier, clearCarrier } from "./carrierAssignmentService";
+import { assignCarrier } from "./carrierAssignmentService";
+import { releaseCarrier } from "./carrierReleaseService";
 
 /**
  * C.4 — Carrier Fall-Off Recovery
@@ -56,20 +57,15 @@ export async function executeFallOffRecovery(loadId: string, reason?: string) {
 
   // Unassign the carrier from the load.
   //
-  // v3.8.axa — through clearCarrier, the single writer of Load.carrierId.
-  // Status rides in the same update rather than a second one, so the load is
-  // never briefly carrier-less while still reading BOOKED.
-  await clearCarrier({
-    loadId,
-    status: "POSTED",
-    extra: {
-      driverName: null,
-      driverPhone: null,
-      truckNumber: null,
-      trailerNumber: null,
-      statusUpdatedAt: new Date(),
-    },
-  });
+  // v3.8.axi — through releaseCarrier rather than clearCarrier directly. This
+  // path used to clear the carrier and re-post the load while leaving the
+  // tender reading ACCEPTED forever: a load back on the board with a tender
+  // still claiming a carrier had taken it. releaseCarrier settles the tender to
+  // RELEASED, voids live paper, and records the fall-off, all in one place.
+  //
+  // carrier_fell_off is the right code here by definition — this whole service
+  // exists because a carrier backed out.
+  await releaseCarrier({ loadId, reason: "carrier_fell_off", note: reason ?? null });
 
   // 2. AUTO-MATCH TOP 3 BACKUP CARRIERS
   let backupsSent = 0;

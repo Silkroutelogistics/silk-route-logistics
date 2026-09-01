@@ -1,0 +1,26 @@
+-- Tender lifecycle commit 8 — RELEASED: the carrier came off a load they had taken.
+--
+-- WHY IT IS NOT WITHDRAWN. WITHDRAWN pulls an offer nobody accepted: cheap,
+-- reversible, nothing committed to. RELEASED takes back a load a carrier has
+-- already accepted, where a truck may be routed, a driver dispatched, and a
+-- rate confirmation signed. The two carry different consequences — a release
+-- requires a reason, voids live paper, and usually records a fall-off against
+-- the carrier — so collapsing them would make the cheap act carry the expensive
+-- act's weight.
+--
+-- WHAT IT FIXES. Before this, `fallOffRecovery` cleared the carrier and
+-- re-posted the load but left the tender reading ACCEPTED forever. A load could
+-- sit back on the board while its tender still claimed a carrier had taken it,
+-- and nothing in the data said otherwise.
+--
+-- ADDITIVE. No existing row changes meaning: nothing has ever been released,
+-- because there was no mechanism to release it. No backfill is possible — a
+-- historical fall-off left no marker distinguishing it from a live acceptance,
+-- which is the defect itself.
+--
+-- Note this is the value's own migration rather than riding with the writer.
+-- Postgres refuses to USE a new enum value in the transaction that ADDED it, so
+-- the writer in carrierReleaseService can only reference RELEASED once this has
+-- committed. Verified the hard way in 20260901020000.
+
+ALTER TYPE "public"."TenderStatus" ADD VALUE 'RELEASED';

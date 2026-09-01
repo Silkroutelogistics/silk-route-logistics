@@ -13,6 +13,51 @@ so it's searchable and never lost.
 
 ---
 
+## Fixed — 2026-09-01 (v3.8.axi — a load could be back on the board with a tender still claiming it)
+
+- **Symptom:** `fallOffRecovery` cleared the carrier and re-posted the load, and
+  left the tender reading `ACCEPTED` **forever**. Nothing in the data said the
+  carrier had gone. It was also the *only* path that took a carrier off a load.
+- **Status:** commit 8a of 12.
+- **Shape:** new `services/carrierReleaseService.ts`. `releaseCarrier` does the
+  whole act in one transaction — carrier off, tender → `RELEASED` with a coded
+  reason, live RCs voided, load returned to its origin path, history written,
+  fall-off recorded. New `TenderStatus.RELEASED` (own migration: Postgres
+  refuses to *use* a new enum value in the transaction that added it).
+- **Reason codes:** `carrier_fell_off`, `compliance_lapse`, `rate_dispute`,
+  `customer_cancel`, `srl_error`.
+- **`srl_error` records NO fall-off.** Fall-off count feeds carrier standing, so
+  marking a carrier for a load SRL took away by mistake is not cosmetic — it is
+  charging them for our error. `customer_cancel` and `compliance_lapse` **do**
+  count: the first because the load still fell off and the record should say so,
+  the second because it is the carrier's own paperwork. Whether those should
+  *weigh* the same as walking away is a scoring question, and scoring is not
+  this service's job.
+- **Release is not withdraw, and they are separate functions on purpose.**
+  Withdraw pulls an offer nobody accepted: cheap, reversible, no reason
+  required. Release takes back a load a carrier has committed to — truck routed,
+  driver dispatched, paper possibly signed. `withdrawTender` therefore **refuses
+  an ACCEPTED tender** and tells the caller to release instead.
+- **Origin-aware return:** a waterfall load goes back to its cascade, a board
+  load to the board. Sending a waterfall load to `POSTED` would strand it —
+  the cascade drives it, and nothing re-enters a cascade from `POSTED`.
+- **Executed paper is untouched.** `SIGNED`/`FINALIZED` RCs are excluded from
+  the void for the same reason a counter does not touch them.
+- **Idempotent:** releasing a load with no carrier returns `released: false`
+  rather than throwing — two AEs pressing the same button should not give the
+  second one an error for work already done — and records no second fall-off.
+- **Verified:** `scripts/_release-carrier-proof.ts` **24/24** against a real
+  database. Adversarially verified — removing `srl_error` from the no-fault set
+  gives **22/24**.
+- **The guard caught the new writer** (`carrierReleaseService` writes tender
+  status and was not allow-listed) — working as designed. Allow-list now 8; the
+  bulk-withdraw consolidation that shrinks it is 8b.
+- **Outbound (§19 Sub-pattern 20):** keys explicitly empty; `[Email] Sent to`
+  count **0**, measured.
+- **Gates:** backend tsc clean, vitest **135/1**, frontend tsc + build clean.
+
+---
+
 ## Fixed — 2026-09-01 (v3.8.axh — a countered tender had no way to be turned down)
 
 - **Symptom:** a carrier could counter, and an AE could *accept* that counter

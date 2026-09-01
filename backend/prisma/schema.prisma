@@ -233,6 +233,14 @@ enum TenderStatus {
   // rejected counter, and any AE cancellation. Split from DECLINED in v3.8.aww
   // precisely so the carrier-performance read above cannot conflate the two.
   WITHDRAWN
+  // The carrier came OFF a load they had already been assigned to.
+  //
+  // Distinct from WITHDRAWN, which pulls an offer nobody accepted. By the time a
+  // tender is RELEASED a truck may have been routed, a driver dispatched and a
+  // rate confirmation signed — so a release carries a required reason, voids
+  // live paper, and usually counts against the carrier. See
+  // services/carrierReleaseService.ts.
+  RELEASED
 }
 
 enum LineItemType {
