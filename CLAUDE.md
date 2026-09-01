@@ -2982,6 +2982,12 @@ Naming convention: sub-patterns enumerate 1 → 9 below in chronological origin 
 - **Going-forward check, cheap:** when adding or changing a field the handler reads, grep the route's schema for that field name before writing the handler logic. When adding a gate that rejects on a missing field, write one test that parses a body *containing* it — the test that would have caught this is four lines long.
 - **Guard shipped:** [`backend/__tests__/unit/validators/updateLoadStatusSchema.test.ts`](backend/__tests__/unit/validators/updateLoadStatusSchema.test.ts) pins that the schema carries every field the handler reads, in both directions.
 - **Filing note:** recorded here rather than as a new lens in §20.3. That list is scoped by §20.1 to public marketing pages and explicitly excludes internal/backend surfaces, so a Zod-stripping lens belongs to the §19 methodology library — and Sub-pattern 5 already *is* this lens. A second entry would have split one pattern across two homes, which is the cross-canonical misfiling already banked in the sub-rule c candidate list.
+- **FIRE #3 — the contract crossed the network, and only one side was told (2026-08-31, v3.8.awq, P0).** The first two fires were both inside one process: frontend-writes vs validator, then validator vs handler-reads. This one is the same shape across the CORS boundary, and it was invisible in a way neither of those was. Arc 11 added `x-step-up-token` on the CLIENT — `useStepUp` replays the original write with it once a code is accepted — and `Access-Control-Allow-Headers` was never updated. The browser refused the preflight and **blocked every step-up-gated write before it was sent**: the Quick Pay election and `PATCH /carrier-compliance/insurance`, neither of which had ever worked from a browser since the gate shipped. Measured on production: `Access-Control-Request-Headers: content-type,x-step-up-token` answered `Content-Type,Authorization,X-Requested-With`.
+- **Why no signal existed at all.** The request never reached the server, so there was no log line, no error rate, no failed request to count — the *absence* of a request is not something any backend instrument can observe. It surfaced only because a carrier sent a screenshot. Both of this session's production defects were found that way, and neither moved a monitor.
+- **And the message named the wrong subsystem, which is what made it expensive.** `submitCode` wrapped the verify call and the replay in ONE try. A blocked preflight throws with no response, so `e.response.data.error` was undefined and the hook fell through to *"We could not confirm that code"* — telling a carrier entering a correct code that the code was wrong, on the one screen where all they can do is re-read it. **A diagnostic that points away from the defect converts a one-line fix into a production incident.** Split into two catches: past the verify call the server has accepted the code, and nothing failing afterwards may blame it.
+- **What identified it before any code was read.** The step-up endpoint returns *"That code did not match…"* and `requireStepUp` returns *"Enter the code from your authenticator app…"* — both with an `error` field. The carrier saw NEITHER, only the frontend's generic fallback. That could only mean the verify succeeded and something after it failed with no response body, which points at the network layer rather than the auth layer.
+- **Trigger, extended again:** any contract whose two ends live in different deployables — a custom request header and its CORS allow-list, a cookie name and its `sameSite`/domain, a field name and its serializer. The in-process fires at least fail loudly at the boundary; this class fails in the *browser*, before either side runs.
+- **Guard shipped:** [`backend/__tests__/unit/middleware/corsAllowedHeaders.test.ts`](backend/__tests__/unit/middleware/corsAllowedHeaders.test.ts) walks `frontend/src` for every custom `x-*` request header and asserts each is in `ALLOWED_REQUEST_HEADERS`, deriving the requirement from source rather than a second list that would drift the same way. It also pins that BOTH CORS surfaces build from one constant — the explicit `app.options("*")` handler runs first and is what a browser reads, `cors(corsOptions)` covers the real request, and they had been separate literals agreeing only because nobody had added a header since. Paired with [`frontend/src/hooks/useStepUp.test.ts`](frontend/src/hooks/useStepUp.test.ts) for the diagnostic half. Injection-verified in both directions.
 
 ##### Sub-pattern 6 — Concurrent-sprint-coordination
 - **Origin:** Item 136, Sprint 49 (commit `0f6f135`, v3.8.abk)
@@ -3146,6 +3152,56 @@ This is the methodology library's first principle that operates at the ratificat
 **Audit-layer distinction:** Sub-patterns 1-12 + 14 + 8.a operate at the **execution layer** (Claude Code during Phase B). Sub-pattern 13 operates at the **ratification layer** (chat-side, between Phase A surface and directive draft). Sub-pattern 15 operates at the **audit layer** — gates the *information* the Phase A audit relies on, before the audit findings even inform a directive. The three layers stack: audit → ratification → execution. A miss at the audit layer corrupts the ratification and execution layers downstream.
 
 **Going-forward gate canonical text:** *"Sprint Phase A audits that consult §13.3 backlog row text MUST cross-reference each item against §11 history rows (grep for `closes.*Item N` or `§13\.3 Item N.*CLOSED`) AND verbatim against the file:line references in the row's text, BEFORE relying on the row's 'Fix shape' or 'Sprint shape' framing. §13.3 rows are signals, not authoritative state. The going-forward maintenance discipline: when shipping a closure, update both the §11 history row AND the §13.3 backlog row in the same commit."*
+
+
+**FOURTH FIRE — a "NOT built" list, and I walked into it in the same session I cited the pattern (2026-08-31, v3.8.awr).**
+
+The three canonical fires were all §13.3 backlog rows. This one is §21.1's
+**"Ratified-pending — NOT built"** list, and the shape is worse, because of what
+that kind of list is *for*.
+
+v3.8.asb built `POST /api/carrier-auth/quickpay-pilot-request` — APPROVED-only,
+idempotent, re-requestable from DECLINED or WITHDRAWN, notifying the desk — and
+wired it to the carrier portal. It applied the pilot migration in the same arc.
+Nobody returned to the list. For two weeks §21.1 read:
+
+> *"There is no carrier-side request endpoint... Until
+> `POST /carrier-auth/quickpay-request` lands, the portal routes those carriers
+> to operations@."*
+
+I read that as current, **quoted it to Wasi twice as a live gap**, offered to
+build it, and was told to close it. The audit that should have preceded the
+build found the endpoint already there, already called from
+`activation/page.tsx`. One more step and I would have shipped a second endpoint
+for a working feature.
+
+Two of the three claims in that list were stale; the third — *approval alone does
+not enable Quick Pay* — was verified and is still true. **Correcting a stale list
+by deleting it is the opposite failure**, so the guard pins the surviving claim
+as well as the retired ones.
+
+> **A "NOT built" list is the most dangerous documentation to leave unmaintained,
+> because it is read precisely when someone is deciding whether to build
+> something. A stale entry there does not merely misinform — it commissions
+> duplicate work.**
+
+**Widened trigger.** Sub-pattern 15 was scoped to §13.3 rows. It covers **any
+prose claim about what the code does or does not contain** — §21 ratified-pending
+lists, §16 blockers, §14 ledger entries, README capability lists. All are read as
+current and none is verified by anything.
+
+**Guard shipped:**
+[`quickPayPilotDocClaims.test.ts`](backend/__tests__/unit/routes/quickPayPilotDocClaims.test.ts)
+turns the section's claims into assertions against source — the endpoint exists,
+the portal calls it, the migration is live rather than pending, the still-true
+claim is still stated, and `approve` still does not write `quickPayEnabled`.
+Strikethrough spans are excluded so correction history keeps working. Injection-
+verified three ways: reinstating the stale claim unstruck, deleting the true one,
+and renaming the endpoint away each turn it red.
+
+**And the cheap habit that would have saved the whole detour:** before acting on
+a doc's claim that something is missing, grep for it. One command, ahead of a
+sprint's worth of duplicate work.
 
 **Prevention value:** stops sprint scope-padding from stale-row signals. Today's v3.8.akw Item 51+52+53 "bundle of three" would have been three sprints' worth of work if not caught at Phase A audit — instead it's one ~15-LOC source change + two docs-only closures. Saves multi-sprint cycle on stale signals.
 
@@ -3946,27 +4002,42 @@ of `POST /carrier-auth/quickpay-election`; Caravan Quick Pay Agreement
 surfaces — onboarding request, AE pending queue + per-carrier tab, carrier
 activation, carrier payments, `/carriers`, `/faq`.
 
-**Ratified-pending — NOT built.** Read this list before assuming the loop closes:
+**Ratified-pending — and TWO of these were stale for two weeks.** Corrected
+2026-08-31 after this list was read as current, quoted to Wasi as a live gap,
+and very nearly used to justify rebuilding an endpoint that already exists:
 
-- **The migration is authored but NOT applied.** Per §2.2 nothing was run against
-  Neon. Until it is, every enrolment read returns nothing and every surface
-  correctly renders "never requested".
-- **There is no carrier-side request endpoint.** The only way to ask is the
-  onboarding tick. A carrier who did not tick, or who was declined and wants to
-  ask again, has no control — and the portal deliberately does not offer one,
-  because a button with no endpoint is worse than none. Both the enable-path 403
-  (`action.href: /carrier/dashboard/activation`) and the approve-path 409 ("They
-  can request it from their portal") already describe a control that does not
-  exist. Until `POST /carrier-auth/quickpay-request` lands, the portal routes
-  those carriers to `operations@silkroutelogistics.ai`, which does work.
-- **Approval does not switch Quick Pay on.** Approval admits; the carrier still
-  signs the Caravan Quick Pay Agreement, and only that sets `quickPayEnabled`.
-  An AE reading "approved" is looking at a half-done state, and the AE tab says
-  so.
-- **`CarrierProfile.quickPayEnabled` is now a denormalised mirror** of "has an
+- ~~**The migration is authored but NOT applied.**~~ **APPLIED.**
+  `20260816120000_document_numbers_quickpay_pilot_accessorial_uniqueness` sits in
+  the live `prisma/migrations/` directory, not `_pending_migrations/`, and
+  production reports a later migration as applied — Prisma applies in order, so
+  this one landed with it. Enrolment reads return real rows.
+- ~~**There is no carrier-side request endpoint.**~~ **BUILT, AND WIRED.**
+  `POST /api/carrier-auth/quickpay-pilot-request` shipped in v3.8.asb
+  ([`routes/carrierAuth.ts`](backend/src/routes/carrierAuth.ts)) — APPROVED-only,
+  idempotent while a request is open, allows a fresh request from DECLINED or
+  WITHDRAWN, and notifies the desk. The carrier portal calls it from
+  [`activation/page.tsx`](frontend/src/app/carrier/dashboard/activation/page.tsx).
+  The enable-path 403's `action.href` and the approve-path 409's "they can
+  request it from their portal" both now describe a control that exists.
+- **Approval does not switch Quick Pay on.** STILL TRUE, verified.
+  `POST /carriers/:id/quickpay/approve` sets `QuickPayEnrollment.status` and
+  nothing else; the only writer of `quickPayEnabled: true` is the signature path
+  at [`carrierAuth.ts`](backend/src/routes/carrierAuth.ts) `quickpay-election`.
+  Approval admits; the carrier still signs the Caravan Quick Pay Agreement. An AE
+  reading "approved" is looking at a half-done state, and the AE tab says so.
+- **`CarrierProfile.quickPayEnabled` is a denormalised mirror** of "has an
   APPROVED enrolment", not an independent switch. It stays the read-gate every
   charge path already checks. Write it only in the same transaction as an
   enrolment transition. Anything else re-opens the drift this model closed.
+
+**Why this went stale, and what now catches it.** v3.8.asb built the endpoint and
+applied the migration; nobody came back to this list. A "NOT built" list is the
+most dangerous kind of documentation to leave unmaintained, because it is read
+precisely when somebody is deciding whether to build something — so a stale entry
+does not merely misinform, it commissions duplicate work.
+[`quickPayPilotDocClaims.test.ts`](backend/__tests__/unit/routes/quickPayPilotDocClaims.test.ts)
+now fails if this section claims a route is missing while that route exists in
+the source. §19 Sub-pattern 15.
 
 ### §21.2 — Document numbering: suffix on a shared stem
 
