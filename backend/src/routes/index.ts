@@ -134,6 +134,12 @@ router.get("/health", async (_req, res) => {
     schema: await schemaInfo(),
     storage: storageStatus(),
     parser: parserStatus(),
+    // row 3b — the enforcement gate for Item 194. The canonical Load.status
+    // machine runs LOG-ONLY, because enforcing it today breaks auto-pilot
+    // dispatch and fall-off recovery. unexpected_since_boot is the number that
+    // decides: violations the AUTO map does NOT account for. Enforce once a
+    // full deploy cycle keeps it at zero.
+    status_machine: statusMachineCounters(),
   });
 });
 
