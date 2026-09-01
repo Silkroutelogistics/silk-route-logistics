@@ -161,7 +161,7 @@ column plus new `eventType` values — additive, no new table, and the drawer's
 | # | Target invariant | Today | Gap |
 |---|---|---|---|
 | 1 | 7 tender states | 5, and `COUNTERED`/`DECLINED` aren't in the target | Add `RC_SENT · CONFIRMED · WITHDRAWN · RELEASED`; **decide COUNTERED/DECLINED — they are live carrier states** |
-| 2 | All paths via one `createTender` | 6 creators, 28 write sites | **Largest item** |
+| 2 | All paths via one `createTender` | CLOSED **v3.8.axd–axg** — one creator, CI-guarded (creation + state) | — |
 | 3 | No path writes `Load.status` directly | ≥5 paths do | Move into service |
 | 4 | One live OFFERED per load unless parallel | No uniqueness check anywhere | Add guard + `waterfall.parallel` flag |
 | 5 | Accept atomic; siblings auto-**withdraw** | ✅ **CLOSED v3.8.aww** — all 3 sibling-on-accept sites write `WITHDRAWN`/`load_covered` | Denominator fix + backfill = 2b; cancel/skip sites = 2c |
@@ -174,7 +174,7 @@ column plus new `eventType` values — additive, no new table, and the drawer's
 | 12 | Override needs userId·reason·ts; refused on HARD_FAIL | `OverrideComplianceModal` exists; **no HARD_FAIL refusal at tender time** | Verify against §14 absolute set |
 | 13 | Load Board = no tender ≥ACCEPTED | Reads `Load.status`; **overlaps T&T by 6** | Re-query both |
 | 14 | Needs Attention = tender-centric | Exists, unrelated filters | Extend |
-| 15 | TTL from `TENDER_TTL_MINUTES` (120) | **No env var**; caller supplies `expiresAt` | Add env + default |
+| 15 | TTL from `TENDER_TTL_MINUTES` (120) | CLOSED **v3.8.axd** — env-driven, bounded 15..10080 | — |
 | 16 | Expiry advances waterfall / flags | Sweep ships (Item 141), reverts to POSTED | Add advance + flag |
 | 17 | Every transition → event row | ✅ **CLOSED v3.8.awv** — `LoadActivity.tenderId` + `logTenderTransition` as sole writer | Drawer read deferred to 1b |
 | 18 | Remove Confirm + Rate Conf send; add Withdraw/Release/Resend/View | Confirm is a dead button; no Withdraw/Release/Resend | Replace |

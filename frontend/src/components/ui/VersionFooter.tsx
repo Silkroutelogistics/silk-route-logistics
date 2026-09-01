@@ -1,3 +1,27 @@
+// v3.8.axg — THE GUARD FOUND TWO MORE MISLABELS ON ITS FIRST RUN.
+//
+// loadTenderWriters holds two invariants: only tenderCreationService may create
+// a tender, and only a known set may move one between states. Written to lock in
+// the consolidation, it immediately found two writers the manual audit had
+// missed — both the same mislabel class as the DECLINED problem, wearing a
+// different word.
+//
+// broadcastTenderService marked losing broadcast offers EXPIRED when one was
+// accepted. routes/waterfalls did the same when an AE skipped a cascade
+// position, and stamped respondedAt as well. Neither carrier ran out of time and
+// neither responded; SRL pulled the offer.
+//
+// EXPIRED is less obviously harmful than DECLINED — nobody reads it as a refusal
+// — but it is still wrong in the numbers, because analytics computes acceptance
+// over `actionable = total - withdrawn`, so these rows stayed in the denominator
+// and understated how often those carriers accept.
+//
+// The allow-list stands at seven state writers, which is too many, and the guard
+// says so in its own comment rather than implying seven is the target. It earns
+// its place at seven anyway: it caught these two, and it makes the eighth entry
+// a deliberate act instead of an accident. Commit 8 consolidates the withdraw
+// paths and should shrink the list.
+//
 // v3.8.axf — A CARRIER COULD TAKE A LOAD OFF THE BOARD AND LEAVE NO PAPER TRAIL.
 //
 // The load-board self-accept reimplemented acceptance instead of using it. It
@@ -16270,7 +16294,7 @@
 // and a data: qrCodeDataUrl are all legitimate and a guard that flagged them
 // would be noise. Comments are blanked before matching — the fixes are explained
 // in comments that necessarily quote the banned patterns.
-export const SRL_VERSION = "3.8.axf";
+export const SRL_VERSION = "3.8.axg";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

@@ -309,9 +309,13 @@ router.patch(
         where: { id: pos.id },
         data: { status: "skipped", respondedAt: new Date() },
       });
+      // v3.8.axg — WITHDRAWN, not EXPIRED, and respondedAt is no longer set.
+      // An AE skipping a cascade position is SRL withdrawing the offer; the
+      // carrier neither ran out of time nor responded. Found by the
+      // loadTenderWriters guard.
       await prisma.loadTender.updateMany({
         where: { waterfallPositionId: pos.id, status: "OFFERED" },
-        data: { status: "EXPIRED", respondedAt: new Date() },
+        data: { status: "WITHDRAWN", statusReason: "position_skipped" },
       });
 
       const wf = await prisma.waterfall.findUnique({

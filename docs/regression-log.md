@@ -13,6 +13,40 @@ so it's searchable and never lost.
 
 ---
 
+## Fixed — 2026-09-01 (v3.8.axg — the guard found two more mislabels on its first run)
+
+- **Status:** commit 6d of 12. Closes the `createTender` consolidation and ships
+  the `loadTenderWriters` guard.
+- **What the guard found immediately:** two SRL-side writes marking offers
+  `EXPIRED` that neither expired nor were answered —
+  `broadcastTenderService.ts:95` (a broadcast offer that lost the race when
+  another was accepted) and `routes/waterfalls.ts:312` (an AE skipping a cascade
+  position, which also stamped `respondedAt`).
+- **Same mislabel class as the `DECLINED` problem (v3.8.aww), wearing a different
+  word.** `EXPIRED` is less obviously harmful — nobody reads it as a refusal —
+  but it is still wrong in the numbers: `analytics.ts` computes acceptance over
+  `actionable = total - withdrawn`, so these rows stayed in the denominator and
+  understated how often those carriers accept. Both now write `WITHDRAWN` with a
+  reason (`load_covered`, `position_skipped`), and the waterfall one no longer
+  stamps `respondedAt`.
+- **The guard holds two invariants:** only `tenderCreationService` may create a
+  tender (so every tender gets a transition row and a bounded expiry), and only
+  a known set may write `status` (so a state move is always recorded). Sites
+  touching other columns — `respondedAt` alone, `counterRate`, `declineReason`,
+  soft deletes — are deliberately unrestricted; this is about the state machine,
+  not the table.
+- **The allow-list stands at seven state writers, which is too many, and the
+  guard says so in its own comment** rather than implying seven is the target.
+  It earns its place at seven anyway: it caught these two, and it makes an
+  eighth entry a deliberate act instead of an accident. Commit 8 consolidates
+  the withdraw paths and should shrink it.
+- **Adversarially verified:** injecting a rogue `loadTender.create` in
+  `automation.ts` fails both invariants and names the site. Scanner self-tests
+  cover shorthand, wrapped chains, comments, and where-clause-only matches.
+- **Gates:** backend tsc clean, vitest **135/1**, frontend tsc + build clean.
+
+---
+
 ## Fixed — 2026-09-01 (v3.8.axf — a carrier could take a load off the board and leave no paper trail)
 
 - **Symptom:** `POST /carrier-loads/:id/accept` reimplemented acceptance instead

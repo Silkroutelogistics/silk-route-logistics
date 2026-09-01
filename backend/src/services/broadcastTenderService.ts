@@ -92,15 +92,24 @@ export async function launchBroadcast(input: LaunchBroadcastInput) {
  */
 export async function handleBroadcastAcceptance(tenderId: string, loadId: string) {
   // Expire all other OFFERED tenders for this load
-  const expired = await prisma.loadTender.updateMany({
+  // v3.8.axg — WITHDRAWN, not EXPIRED. Found by the loadTenderWriters guard on
+  // its first run, and it is the same mislabel class as the DECLINED one fixed
+  // in v3.8.aww: a broadcast offer that loses the race did not run out of time,
+  // SRL pulled it because somebody else took the load.
+  //
+  // EXPIRED is less obviously harmful than DECLINED — it is not counted as a
+  // refusal — but it is still wrong in the numbers. analytics.ts computes
+  // acceptance over `actionable = total - withdrawn`, so these rows stayed in
+  // the denominator and understated how often broadcast carriers accept.
+  const withdrawn = await prisma.loadTender.updateMany({
     where: {
       loadId,
       id: { not: tenderId },
       status: "OFFERED",
     },
-    data: { status: "EXPIRED" },
+    data: { status: "WITHDRAWN", statusReason: "load_covered" },
   });
 
-  log.info({ loadId, acceptedTenderId: tenderId, expiredCount: expired.count }, "[Broadcast] Accepted — others expired");
-  return expired.count;
+  log.info({ loadId, acceptedTenderId: tenderId, withdrawnCount: withdrawn.count }, "[Broadcast] Accepted — others withdrawn");
+  return withdrawn.count;
 }
