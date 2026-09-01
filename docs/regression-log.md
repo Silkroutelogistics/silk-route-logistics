@@ -13,6 +13,74 @@ so it's searchable and never lost.
 
 ---
 
+## Fixed — 2026-09-01 (v3.8.axt — the rate confirmation was re-rendered every time, so nobody could say what a carrier had signed)
+
+- **Status:** commit 11b of 12. Issuance side. 11c lands the sign route, the
+  rate-change void and the CONFIRMED gates.
+- **Symptom:** sending a rate confirmation rendered a PDF, emailed it, and kept
+  nothing. Downloading it later rendered a **different** PDF. Nothing anywhere
+  recorded which bytes a carrier had actually signed, so in a dispute the
+  question "what did they agree to" had no answer beyond a JSON blob of field
+  values.
+- **Why re-rendering is not equivalent:** PDFKit output is not reproducible —
+  v3.8.awj got two different hashes for one agreement at identical byte length.
+  That is why `CarrierAgreement` hashes canonical text. The rate confirmation can
+  hash bytes only because, from this commit, the bytes are **stored** and served
+  back rather than regenerated.
+- **Shape:** issuing stores the PDF, hashes the stored artifact, mints a
+  single-use signing token, and moves the tender ACCEPTED → RC_SENT through the
+  transition service. The download endpoint now streams the stored object.
+- **RC_SENT is written on the SEND, not on the accept**, which is where the
+  brief placed it. The Quick Pay election window opens when the auto-draft is
+  created and closes when the AE sends it (v3.8.asb), so a tender marked RC_SENT
+  at accept would claim the document was out while nothing had been sent and the
+  carrier could still change the terms it prints. RC_SENT means the carrier is
+  holding it.
+- **Through the transition service**, so the move gets a history row and a
+  `statusChangedAt` — the timestamp Needs Attention measures
+  `RC_SIGN_SLA_HOURS` against. A direct update would leave an unsigned RC with
+  nothing to age and the queue that chases it blind.
+- **THE PROOF FOUND A REAL DEFECT IN THIS COMMIT, not a fixture problem.** The
+  first implementation re-rendered on every send, so a second send produced
+  different bytes and a different hash for an unchanged document — the v3.8.awj
+  phenomenon reproducing itself inside the fix for it. A carrier who signed on
+  Monday and re-opened the link on Tuesday would have held a document whose hash
+  no longer matched the row. Re-send now reuses the frozen artifact; re-issuing
+  is a separate act with its own path (a rate change voids and re-issues).
+- **A fresh token on every send, and the previous one dies.** The brief asked for
+  the same token to be re-sent while live, which is impossible without storing a
+  recoverable secret — the one property the token design exists to deny. Minting
+  again costs the carrier nothing: the DOCUMENT is untouched, same bytes and same
+  hash, only the link changes. `signTokenUsedAt` is cleared with it, because it
+  belonged to the token that just died.
+- **An existing test caught the change and was right to.** `rcTermsVersion` was
+  restamped on **every** send, so a re-send after a terms change wrote today's
+  version over yesterday's text — exactly what that test's own comment forbids
+  one layer up. It passed anyway because it matched a literal string rather than
+  the property. The stamp is now guarded on `alreadyIssued`, and a **new** case
+  asserts the guard rather than the text, injection-verified against the old
+  behaviour.
+- **The signing link is deliberately NOT in the email yet.** The token is minted
+  and recorded, but the route that redeems it lands in 11c, and a "Review and
+  sign" button pointing at a 404 is worse than no button — it teaches a carrier
+  that our links do not work, on the one document we need them to act on. Each
+  commit has to be safe to ship on its own.
+- **Storage failure is fatal at issuance, tolerated at download.** Emailing a
+  document we cannot produce again would leave the carrier holding the only copy
+  of what they signed. Reading it back is different: a carrier who cannot open
+  their rate confirmation because the object store is briefly unhappy is a
+  stopped truck, so the download falls through to a re-render and logs at error.
+- **Proof:** `_arc-rc-freeze-proof.ts`, **16/16** over the real router — the
+  stored object hashes to the recorded hash, and the download returns those exact
+  bytes rather than a fresh render that resembles them. Injections, both
+  executed: removing the hash write gives 13/16 naming the three hash assertions;
+  suppressing the RC_SENT transition gives 14/16 naming the tender and its
+  history row.
+- **Outbound (§19 Sub-pattern 20):** keys explicitly empty. `[Email] Sent to`
+  count: **0**, measured.
+- **Gates:** backend tsc clean, vitest **1440 pass / 1 fail** (known `urlSafety`
+  DNS red); frontend tsc clean.
+
 ## Fixed — 2026-09-01 (v3.8.axs — the document a carrier signs carried the weakest evidence of any of them)
 
 - **Status:** commit 11a of 12. Primitives only; no behaviour change. 11b writes

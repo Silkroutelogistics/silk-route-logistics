@@ -123,10 +123,27 @@ describe("RC terms version", () => {
 
   it("is stamped at ISSUANCE, not at render", () => {
     const send = rcController.slice(rcController.indexOf("export async function sendRateConfirmation"));
-    expect(send).toContain("rcTermsVersion: RC_TERMS_VERSION,");
+    expect(send).toContain("rcTermsVersion: RC_TERMS_VERSION");
     // The renderer must not reach for the constant — that would report today's
     // version over yesterday's terms on a re-download.
     expect(pdfService).not.toContain("RC_TERMS_VERSION");
+  });
+
+  it("a re-send cannot restamp an already-issued document", () => {
+    // The assertion above used to match a bare `rcTermsVersion:
+    // RC_TERMS_VERSION,` and passed while the send handler restamped on EVERY
+    // send -- so a re-send after a terms change wrote today's version over
+    // yesterday's text, which is precisely what the comment above forbids one
+    // layer up. The test named the property and checked a string.
+    //
+    // v3.8 commit 11b guards the stamp on `alreadyIssued`. This asserts the
+    // guard rather than the literal, so the property cannot regress behind a
+    // passing text match again.
+    const send = rcController.slice(rcController.indexOf("export async function sendRateConfirmation"));
+    const stampAt = send.indexOf("rcTermsVersion: RC_TERMS_VERSION");
+    expect(stampAt).toBeGreaterThan(-1);
+    const guarded = send.slice(Math.max(0, stampAt - 200), stampAt).includes("alreadyIssued");
+    expect(guarded, "the terms version must be stamped only on first issuance").toBe(true);
   });
 
   it("is injected for render from the row, not stored in formData", () => {

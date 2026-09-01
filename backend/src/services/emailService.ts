@@ -415,6 +415,13 @@ export async function sendRateConfirmationEmail(
   loadRef: string,
   pdfBuffer: Buffer,
   customMessage?: string,
+  /**
+   * The single-use signing link. Optional so the signature stays compatible
+   * with any caller that has not been given one, but a rate confirmation sent
+   * without it asks a carrier to sign a document and gives them nowhere to do
+   * it.
+   */
+  signUrl?: string,
 ) {
   const html = wrap(`
     <h2 style="color:#0A2540">Rate Confirmation — Load ${loadRef}</h2>
@@ -426,7 +433,10 @@ export async function sendRateConfirmationEmail(
       <tr><td style="padding:8px;border:1px solid #E2EAF2;font-weight:bold">Load Reference</td><td style="padding:8px;border:1px solid #E2EAF2">${loadRef}</td></tr>
     </table>
     <p>If you have any questions, please contact your dispatcher or reply to this email.</p>
-    <a href="https://silkroutelogistics.ai/carrier/dashboard/my-loads" style="display:inline-block;background:#BA7517;color:#FFFFFF;padding:12px 24px;text-decoration:none;border-radius:6px;font-weight:bold;margin-top:8px">View in Dashboard</a>
+    ${signUrl
+      ? `<a href="${signUrl}" style="display:inline-block;background:#BA7517;color:#FFFFFF;padding:12px 24px;text-decoration:none;border-radius:6px;font-weight:bold;margin-top:8px">Review and sign</a>
+         <p style="color:#6B7685;font-size:13px;margin-top:12px">This link signs this rate confirmation once and then stops working. If it has expired, ask your dispatcher to send a new one.</p>`
+      : `<a href="https://silkroutelogistics.ai/carrier/dashboard/my-loads" style="display:inline-block;background:#BA7517;color:#FFFFFF;padding:12px 24px;text-decoration:none;border-radius:6px;font-weight:bold;margin-top:8px">View in Dashboard</a>`}
   `);
 
   await sendEmail(

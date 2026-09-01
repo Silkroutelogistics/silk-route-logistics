@@ -1,3 +1,24 @@
+// v3.8.axt — THE RATE CONFIRMATION WAS RE-RENDERED EVERY TIME, SO NOBODY COULD
+// SAY WHAT A CARRIER HAD SIGNED.
+//
+// Sending rendered a PDF, emailed it, and kept nothing. Downloading it later
+// rendered a different PDF. PDFKit output is not reproducible, so those were
+// genuinely different bytes for the same terms, and in a dispute the question
+// "what did they agree to" had no answer beyond a blob of field values.
+//
+// Issuing now stores the PDF, hashes the stored artifact, mints a single-use
+// signing token, and moves the tender ACCEPTED -> RC_SENT through the transition
+// service so the move gets a history row and a statusChangedAt for Needs
+// Attention to age. The download streams the stored object.
+//
+// RC_SENT is written on the SEND, not the accept. The Quick Pay election window
+// closes when the AE sends, so a tender marked RC_SENT at accept would claim the
+// document was out while the carrier could still change the terms it prints.
+//
+// The proof found a real defect in this commit: the first version re-rendered on
+// every send, so a second send produced a different hash for an unchanged
+// document. Re-send now reuses the frozen artifact.
+
 // v3.8.axs — THE DOCUMENT A CARRIER SIGNS CARRIED THE WEAKEST EVIDENCE OF ANY.
 //
 // The 2026-08-31 e-signature audit found the per-load rate confirmation
@@ -16751,7 +16772,7 @@
 // and a data: qrCodeDataUrl are all legitimate and a guard that flagged them
 // would be noise. Comments are blanked before matching — the fixes are explained
 // in comments that necessarily quote the banned patterns.
-export const SRL_VERSION = "3.8.axs";
+export const SRL_VERSION = "3.8.axt";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

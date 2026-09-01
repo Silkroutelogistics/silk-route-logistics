@@ -67,6 +67,12 @@ export type Actor = {
 /**
  * Every state a live tender can settle into.
  *
+ * RC_SENT and CONFIRMED are here for the same reason RELEASED is. The rate
+ * confirmation controller owns issuing and signing the document; these are only
+ * the state moves those acts perform, and routing them through here is what
+ * gives an unsigned RC a transition row and a statusChangedAt for Needs
+ * Attention to measure its SLA against.
+ *
  * RELEASED is here even though carrierReleaseService owns the release ACT.
  * That service does six things together -- carrier off, paper voided, load
  * returned, fall-off recorded -- and this is only the state move it performs.
@@ -75,6 +81,8 @@ export type Actor = {
  */
 export type SettleTo =
   | "ACCEPTED"
+  | "RC_SENT"
+  | "CONFIRMED"
   | "DECLINED"
   | "COUNTERED"
   | "EXPIRED"
@@ -214,8 +222,9 @@ export async function settleTender(
   // Omitting `from` means "whatever it is now" rather than a default list.
   //
   // The first version defaulted to every non-terminal state by name, including
-  // RC_SENT and CONFIRMED — which are ratified but are NOT in the Prisma enum
-  // until commit 11, so every call with no rail died on "Invalid value for
+  // RC_SENT and CONFIRMED — which at the time were ratified but not yet in the
+  // Prisma enum (they landed in commit 10a), so every call with no rail died on
+  // "Invalid value for
   // argument `in`". TypeScript could not see it: the list is cast through
   // `as never` to reach Prisma's generated enum type, and a cast is a promise
   // that the check is unnecessary. The real database was the only thing that

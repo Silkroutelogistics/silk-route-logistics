@@ -11,6 +11,9 @@ import {
 } from "../validators/rateConfirmation";
 import { generateEnhancedRateConfirmation, generateShipperLoadConfirmation } from "../services/pdfService";
 import { sendRateConfirmationEmail, sendEmail, wrap } from "../services/emailService";
+import { mintRcSignToken, hashPdfBytes } from "../lib/rcSignToken";
+import { uploadFileToPath } from "../services/storageService";
+import { settleTender } from "../services/tenderTransitionService";
 import { resolveLoadStem, withDocumentNumber } from "../lib/documentNumber";
 import { resolveIssuedElection } from "../services/autoRateConfirmationService";
 import { log } from "../lib/logger";
@@ -239,17 +242,83 @@ export async function sendRateConfirmation(req: AuthRequest, res: Response) {
     // read this, and the string it produced would have overprinted TERMS.
   };
 
-  // Generate PDF buffer
-  const pdfDoc = generateEnhancedRateConfirmation(rc.load, { ...issuedFormData, rateConNumber: rc.rateConNumber });
-  const chunks: Buffer[] = [];
-  await new Promise<void>((resolve, reject) => {
-    pdfDoc.on("data", (chunk: Buffer) => chunks.push(chunk));
-    pdfDoc.on("end", resolve);
-    pdfDoc.on("error", reject);
-  });
-  const pdfBuffer = Buffer.concat(chunks);
+  // ── Step 3a: RE-SEND REUSES THE FROZEN DOCUMENT ──
+  //
+  // A rate confirmation is issued ONCE. Re-sending it puts the same artifact
+  // in front of the carrier again; it does not make a new one.
+  //
+  // This is not an optimisation. PDFKit output is not reproducible -- v3.8.awj
+  // got two different hashes for one agreement at identical byte length -- so
+  // rendering again produces DIFFERENT BYTES for identical terms. A carrier
+  // who signed on Monday and re-opened the link on Tuesday would be holding a
+  // document whose hash no longer matched the one on the row, and the record of
+  // what they signed would be gone. The proof for this commit caught exactly
+  // that: contentHash changed across two sends of an unchanged document.
+  //
+  // Re-issuing IS a real act, and it has its own path: a rate change after
+  // acceptance voids the rate confirmation and reverts the tender, which
+  // produces a new document with a new number and a new hash. That is a
+  // different event from an AE clicking send twice.
+  const alreadyIssued = !!(rc.contentHash && rc.pdfUrl && rc.status !== "DRAFT");
 
-  // Send email with PDF attachment
+  let pdfBuffer: Buffer;
+  let contentHash: string;
+  let storedPdfUrl: string;
+
+  if (alreadyIssued) {
+    const { getFileStream } = await import("../services/storageService");
+    const stream = await getFileStream(rc.pdfUrl!);
+    const parts: Buffer[] = [];
+    await new Promise<void>((resolve, reject) => {
+      stream.on("data", (c: Buffer) => parts.push(c));
+      stream.on("end", resolve);
+      stream.on("error", reject);
+    });
+    pdfBuffer = Buffer.concat(parts);
+    contentHash = rc.contentHash!;
+    storedPdfUrl = rc.pdfUrl!;
+  } else {
+    const pdfDoc = generateEnhancedRateConfirmation(rc.load, { ...issuedFormData, rateConNumber: rc.rateConNumber });
+    const chunks: Buffer[] = [];
+    await new Promise<void>((resolve, reject) => {
+      pdfDoc.on("data", (chunk: Buffer) => chunks.push(chunk));
+      pdfDoc.on("end", resolve);
+      pdfDoc.on("error", reject);
+    });
+    pdfBuffer = Buffer.concat(chunks);
+
+    // Storage failure is fatal here on purpose. Everything downstream -- the
+    // signature, the hash, "view the document you signed" -- rests on the bytes
+    // existing. Emailing a document we cannot produce again would leave the
+    // carrier holding the only copy of what they signed.
+    contentHash = hashPdfBytes(pdfBuffer);
+    storedPdfUrl = await uploadFileToPath(
+      pdfBuffer,
+      `rate-confirmations/rc-${rc.id}-${contentHash.slice(0, 12)}.pdf`,
+      "application/pdf",
+    );
+  }
+
+  // ── Step 3c: the signing link ──
+  //
+  // A FRESH token every send, and the prior one dies. The brief asked for the
+  // same token to be re-sent while it is still live, and that is not possible
+  // without storing a recoverable secret -- which is the one property the token
+  // design exists to deny (only the sha256 is persisted, so a leaked row yields
+  // no working link). Minting again costs the carrier nothing: the DOCUMENT is
+  // untouched, same bytes and same hash, and only the link changes. The
+  // literal reading would have traded the security property for an
+  // implementation detail nobody can observe.
+  const signToken = mintRcSignToken();
+
+  // Send email with PDF attachment.
+  //
+  // The signing LINK is deliberately not passed yet. The token above is minted
+  // and recorded, but the route that redeems it lands in the next commit, and a
+  // "Review and sign" button pointing at a 404 is worse than no button: it
+  // teaches a carrier that our links do not work, on the one document we need
+  // them to act on. Each commit has to be safe to ship on its own, so the link
+  // arrives with the route rather than ahead of it.
   await sendRateConfirmationEmail(
     recipientEmail,
     recipientName || "Carrier",
@@ -271,10 +340,59 @@ export async function sendRateConfirmation(req: AuthRequest, res: Response) {
       status: "SENT",
       sentAt: new Date(),
       sentToEmail: recipientEmail,
-      rcTermsVersion: RC_TERMS_VERSION,
+      // Stamped at ISSUANCE only. The existing note below argues that stamping
+      // at render would make the version describe the reader's day rather than
+      // the load's terms -- and a re-send after a terms change did exactly that,
+      // restamping an already-issued document with today's version over
+      // yesterday's text. Frozen with the bytes.
+      ...(alreadyIssued ? {} : { rcTermsVersion: RC_TERMS_VERSION }),
       formData: issuedFormData as any,
+      // The frozen artifact and its hash, written in the same statement as the
+      // status that says it was issued. pdfUrl is the stored object; the
+      // download endpoint serves THIS rather than re-rendering.
+      pdfUrl: storedPdfUrl,
+      contentHash,
+      // A re-send supersedes the previous link. signTokenUsedAt is cleared with
+      // it because it belongs to the token that just died, not to this one --
+      // leaving a stale used-marker behind would make a brand new link read as
+      // already spent.
+      signTokenId: signToken.tokenId,
+      signTokenHash: signToken.tokenHash,
+      signTokenExpiresAt: signToken.expiresAt,
+      signTokenUsedAt: null,
     },
   });
+
+  // ── Step 3d: the tender says the document is out ──
+  //
+  // Through the transition service, so the move gets a history row and a
+  // statusChangedAt -- which is the timestamp Needs Attention measures
+  // RC_SIGN_SLA_HOURS against. A direct update here would leave an unsigned RC
+  // with nothing to age, and the queue that chases it blind.
+  //
+  // Fire-and-forget: an accepted load with an emailed rate confirmation must not
+  // be rolled back because a history row failed to write. The RC row above is
+  // the record that matters and it is already committed.
+  //
+  // NOT written at accept, which is where the brief placed it. The Quick Pay
+  // election window opens when the auto-draft is created and closes HERE
+  // (v3.8.asb), so a tender marked RC_SENT at accept would claim the document
+  // was out while nothing had been sent and the carrier could still change the
+  // terms it prints. RC_SENT means the carrier is holding it.
+  const liveTender = await prisma.loadTender.findFirst({
+    where: { loadId: rc.loadId, status: "ACCEPTED", deletedAt: null },
+    orderBy: { createdAt: "desc" },
+    select: { id: true },
+  });
+  if (liveTender) {
+    settleTender({
+      tenderId: liveTender.id,
+      to: "RC_SENT",
+      from: "ACCEPTED",
+      actor: { id: req.user!.id, type: "USER" },
+      metadata: { rateConfirmationId: rc.id, signTokenId: signToken.tokenId },
+    }).catch((err) => log.error({ err, rcId: rc.id }, "[RC] RC_SENT transition failed"));
+  }
 
   // ── Step 4: the freeze ──
   //
@@ -419,7 +537,6 @@ export async function downloadRateConfirmationPdf(req: AuthRequest, res: Respons
     }
   }
 
-  const doc = generateEnhancedRateConfirmation(rc.load, renderFormData(rc));
   // Filename now carries the RC's own number, so a re-issue downloads as
   // SRL-121485R2.pdf instead of overwriting the original in the AE's downloads
   // folder under an identical name.
@@ -427,6 +544,38 @@ export async function downloadRateConfirmationPdf(req: AuthRequest, res: Respons
 
   res.setHeader("Content-Type", "application/pdf");
   res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+
+  // SERVE THE FROZEN ARTIFACT, not a fresh render.
+  //
+  // This is what makes contentHash a fact rather than a decoration. Once the
+  // rate confirmation has been issued, the bytes a carrier signed are stored,
+  // and re-rendering here would hand back a DIFFERENT document that happens to
+  // agree -- PDFKit output is not reproducible, so it would not even hash the
+  // same (v3.8.awj). In a dispute the question is what the carrier actually
+  // signed, and only the stored copy answers it.
+  //
+  // The fallback is not a safety net for issued documents. A DRAFT has never
+  // been sent and so has no frozen bytes by definition, and rate confirmations
+  // issued before this commit were never stored. Both re-render, which is the
+  // only thing available and is honest for a document nobody has signed.
+  if (rc.pdfUrl && rc.contentHash) {
+    try {
+      const { getFileStream } = await import("../services/storageService");
+      const stream = await getFileStream(rc.pdfUrl);
+      res.setHeader("X-SRL-Content-Hash", rc.contentHash);
+      stream.pipe(res);
+      return;
+    } catch (err) {
+      // Fall through to a re-render rather than 500. A carrier who cannot open
+      // their rate confirmation because our object store is briefly unhappy is
+      // a stopped truck; a re-render is the wrong bytes but the right document.
+      // Logged at error because a stored artifact that cannot be read is a real
+      // failure even when this request survives it.
+      log.error({ err, rcId: rc.id, pdfUrl: rc.pdfUrl }, "[RC] stored PDF unreadable, re-rendering");
+    }
+  }
+
+  const doc = generateEnhancedRateConfirmation(rc.load, renderFormData(rc));
   doc.pipe(res);
 }
 
