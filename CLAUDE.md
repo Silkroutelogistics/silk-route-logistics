@@ -964,6 +964,7 @@ The Caravan Partner Program advances carriers through 3 tiers (Silver / Gold / P
 | v3.8.axy | 2026-09-01 | **Sprint close, commit 12a — a migration reached production from a local shell, and the rail that closes it.** `backend/.env` held the production Neon pair, so `npx prisma migrate deploy` typed for a local container applied `20260901100000` to **production** at 15:11:07 UTC (§13.3 Item 252). **Harm none** — strictly additive, no backfill, no drop, no reader at the time; schema-ahead-of-code is the ordering Item 213 prescribes. **Why: a rule with no mechanism** — §2.2 already said to use the npm script so `prisma-target-guard` runs, and the raw command bypassed it, which is the Item 212 class. **The rail:** `.env` targets the local container, production moved to `.env.production.local` (gitignored, `git check-ignore` verified), and nothing loads it automatically because Prisma reads `.env` and never `.env.*.local` — so a raw `npx prisma` now reaches the container **by construction**, verified reporting `127.0.0.1:55473`. Two named loaders (`prisma:deploy:production`, read-only `prisma:status:production`) both run the guard against the environment they have already built, and a `railBreach` preflight refuses when both files resolve to the same non-local host — the one way the separation can be silently undone. The escape hatch moved from a flag to a **script name**, which unlike an exported variable cannot linger in a shell and catch the next command. **THE GUARD'S PREDICATE WAS WRONG THREE TIMES:** matching any *mention* flagged `prisma-target-guard.ts`, which reads the file to compare hostnames and loads nothing — allow-listing it would have exempted the one file whose job is policing the rail; a proximity regex then reported both legitimate loaders as **clean**, because `import dotenv` sits forty lines above a `dotenv.config({ path: PROD_FILE })` that never repeats the filename (§19 Sub-pattern 17); comment-stripping fixed the third. **Guard** `productionRail.test.ts` 12 cases, with the `.env`-reading cases **skipping** rather than passing where the file is absent (CI). Injection-verified both ways — pasting production back into `.env` turns the suite red AND makes the CLI refuse; a new loader is named by path. `psql` and GUI clients remain outside the guard and always were; what changed is they can no longer pick production up from `backend/.env`. **Gates:** backend tsc clean, vitest **1452/1** (known `urlSafety` DNS red). |
 | v3.8.axz | 2026-09-01 | **Sprint close, commit 12b — the guard sweep, and the three rows a guard cannot close.** One block per remaining open gap-table row; twelve cases, four injections executed. **Row 1 CLOSED** — the state set is **nine, not the seven** the target named (it left COUNTERED and DECLINED undecided and both are real carrier-initiated states), the enum is frozen, and a second case asserts `SettleTo` carries every member, because a state the transition service cannot reach forces callers through `as never` — which is how RELEASED lost its `statusReason` earlier in this arc. **Row 8 CLOSED** — the generator must sit inside the not-yet-issued branch, since a re-render produces different bytes for identical terms (v3.8.awj). **Row 4 PARTIAL, and the row says which half:** accepting settles every sibling including COUNTERED (proven + guarded), but the row's target is conditional on `waterfall.parallel`, which does not exist, so a general uniqueness rule would make broadcast tendering illegal. **Row 3 OPEN — FROZEN, not closed:** 28 sites across 18 files write `Load.status`, and asserting zero would be red against correct code because §13.3 Item 194 established that enforcing the canonical machine today **breaks production** (auto-pilot legitimately skips BOOKED, fall-off recovery legitimately moves backwards); the guard freezes the population — may shrink, never grow. **Rows 7 and 16 OPEN and not closeable by a guard at all:** both are BUILDS rather than invariants — there is no `QuickPayElection` row to assert about and the cascade advance does not exist, and a guard over absent behaviour fails by design, which is a permanently-red guard nobody reads. **The reason is written into each row**, not left in a commit message. **A GUARD OF MINE ASSERTED SOMETHING FALSE ABOUT CORRECT CODE:** the row-4 block hardcoded three accept paths and flagged `withTenderController`, which CREATES a load and tenders it, so there are no siblings; a hand-kept list is exactly the artefact that goes stale, and it fails in the worse direction by omitting whatever is added next — the set is now **derived from source**. **Injections:** a tenth enum state fails two cases; dropping COUNTERED from `LIVE` names it; removing `alreadyIssued` fails the re-send case; a new `Load.status` writer moves 18 → 19 and lists every file. **Letter note:** the guard flagged `axz` as claimed; both hits were my own gap-table text and `git status` showed no foreign files — the self-inflicted case §2.2 documents, checked rather than dismissed. **Gates:** backend tsc clean, vitest **1464/1** (known `urlSafety` DNS red). |
 | v3.8.aya | 2026-09-01 | **Sprint close, commit 12c — an auto-dispatched carrier had nothing to sign, so the customer was told before anyone had committed.** Commit 11e moved the announcement to the signature on the direct paths and deliberately left the auto paths at accept because they could not reach CONFIRMED. The reason was simpler and worse than "no signature yet": **the waterfall issued no rate confirmation at all, and the loadboard-bid path drafted one and stopped** — no signing link ever reached those carriers, so a signature was not late, it was impossible. **So the fix is not moving the notification; it is giving those carriers something to sign.** Both auto paths now ISSUE the RC (freeze, hash, mint a single-use link, email it, tender → RC_SENT) and the customer is told at the signature, uniformly. **It delegates rather than reimplementing** — issuing resolves the Quick Pay election, freezes, hashes, mints, emails, stamps the terms version and transitions the tender, and a second copy would be a second place for the rules to drift; the `makeCaptureRes` shim (v3.8.axf) reuses the AE send handler whole. **THE BRIEF'S MECHANISM DOES NOT FIT ONE PATH, and that is a finding:** it specified inline signing "in the same session", but **the loadboard bid accept is AE-only** — a carrier submits a bid and an AE accepts it hours later, so there is no carrier session; the emailed link (11c) is what works everywhere. **Acts as the load's poster**, not a synthetic system user: what is automatic is the timing, not the authority. **A carrier who abandons parks at RC_SENT and Needs Attention surfaces it** — asserted, because trading a wrong announcement for a stalled load is no improvement. §2's fan-out entry rewritten to the uniform rule, retiring both Sprint 39 α and 11e's asymmetry. **Proof** `_arc-autopath-sign-proof.ts` **20/20**. **MY FIRST INJECTION WAS A NO-OP AND I ALMOST REPORTED ITS GREEN AS VERIFICATION** — a multi-line anchor used `
+| v3.8.ayb | 2026-09-01 | **Sprint close, commit 12d — Unified Tender Lifecycle ARC CLOSED.** `23faaaa7` → `ee838a3d`, 26 commits. **Gap-table residue: 15 closed, 1 partial, 3 open** — rows 3 (frozen: enforcing the canonical `Load.status` machine today breaks auto-pilot dispatch and fall-off recovery), 4 (partial: `waterfall.parallel` does not exist), 7 and 16 (BUILDS, not invariants — no row to assert about, and a guard over absent behaviour fails by design). **Every open row carries its reason IN THE ROW**, because a reason living only in a commit message is one the next reader will not find. Banked items enumerated by number at §13.3 Item 253: SRL countersign, sign-on-behalf retirement, drawn signature, inline signing for a present carrier, carrier-history label parity, and the RC evidence gaps from Item 250 that this arc unblocked. **`loadComplianceService` residue: none** — v3.8.axn removed the staging write and `clearCarrier` is down to one guarded caller. **This commit also repairs an error of mine:** 12b's patch matched the FIRST table in the audit report rather than the gap table, overwriting three rows of the path inventory; restored from git and re-applied to the correct table. **Gates:** backend tsc clean, vitest **1464/1** (known `urlSafety` DNS red); frontend tsc + `npm run build` clean. |
 ` against a CRLF file; redone it gives 17/20, failing exactly the three announce-at-accept assertions (§19 Sub-pattern 16). The fixture was also wrong before the code was: an under-specified carrier was correctly SKIPPED by the compliance gate and read as a defect. **My own 11a guard caught the new service** (`select: { signTokenHash: true }` read as a write); widened to exclude reserved-word RHS and re-verified it still catches a real raw-token writer. **Banked:** the inline signing step for a carrier who is present — it needs a frontend surface and the variant returning a live secret has no consumer yet. **Closes gap-table row 10.** Outbound keys empty, `[Email] Sent to` count **0**. **Gates:** backend tsc clean, vitest **1464/1** (known `urlSafety` DNS red); frontend tsc + `npm run build` clean. |
 
 **Phase 6.1 closed** at v3.8.e.2 (T&T status controls + SHIPPER gate + sidebar link). Total Phase 6.1: 8 files / +342 / −26 across three commits.
@@ -2956,6 +2957,88 @@ Each is a discrete sprint. Mix of operational, security, UX, and technical debt.
     they can no longer reach production by picking up `backend/.env` — the
     credentials are only in `.env.production.local`, which nothing loads unless
     told to. Recorded in §2.2.
+
+253. **Unified Tender Lifecycle — ARC CLOSED (2026-09-01, `23faaaa7` → `ee838a3d`, v3.8.aws → v3.8.ayb).**
+
+    Report: [`docs/audits/tender-lifecycle-audit.md`](docs/audits/tender-lifecycle-audit.md),
+    whose header carries the closing hashes and the full residue table.
+
+    **Gap-table residue: 15 closed, 1 partial, 3 open.** Every open row carries
+    its reason IN THE ROW, because a reason that lives only in a commit message
+    is a reason the next reader will not find.
+
+    | Row | State | Blocked on |
+    |---|---|---|
+    | 3 — no direct `Load.status` writes | OPEN, population frozen | reconciling the canonical map with an AUTO/SYSTEM actor (Item 159 Sprint 3); enforcing today breaks auto-pilot dispatch and fall-off recovery |
+    | 4 — one live OFFERED unless parallel | PARTIAL | `waterfall.parallel` does not exist; the operational half is closed and proven |
+    | 7 — QuickPayElection on tender | OPEN | a BUILD, not an invariant — no row exists to assert about |
+    | 16 — expiry advances the cascade | OPEN | a BUILD; the sweep reverts to POSTED but does not advance the position |
+
+    **BANKED, by number.** Each was reached deliberately and left undone with a
+    reason, not overlooked:
+
+    253.1 **SRL countersign.** Every executed artifact is one-sided; the BCA
+    button says "executed" with no broker signature block filled. Whether a
+    broker signature is required goes to whether the instrument is complete as
+    issued — a legal question, not a wiring one. Rides with §16 #1.
+
+    253.2 **Sign-on-behalf retirement.** An AE can mark a rate confirmation
+    signed. Since v3.8.axu a carrier signs through a single-use link that captures
+    name, IP, user agent, timestamp and token id, so the on-behalf path is now the
+    weakest evidence in the system and is the one an adversary would use. Retiring
+    it is a policy decision about attribution.
+
+    253.3 **Drawn signature.** `signatureData` is documented as "Base64
+    signature image or typed name" and is always a copy of the typed name.
+    Whether a drawn signature is ever required is an evidentiary standard.
+
+    253.4 **Inline signing for a carrier who is present.** The emailed link works
+    on every path (v3.8.aya), and a carrier who accepted in their own session
+    could be shown the signing step immediately, which would materially raise
+    signature rates. Not built: it needs a frontend surface, and the variant that
+    returns a live signing secret has no consumer yet — shipping an unused export
+    that hands out a secret is the shape this arc refused twice.
+    **Does not apply to loadboard bids**, where the accept is AE-only and the
+    carrier is not present.
+
+    253.5 **`loadComplianceService` residue: none.** v3.8.axn removed the staging
+    write and its rollback; `checkLoadCompliance` takes `candidateCarrierId` and
+    is read-only. `clearCarrier` is down to one caller, guarded by a caller
+    census. Recorded because the brief asked whether residue remained: it does
+    not. What DOES remain is that its only caller invokes it fire-and-forget, so
+    the throw prevents nothing — the real gate is the synchronous
+    `complianceCheck` above it, and the docstring now says so.
+
+    253.6 **Carrier-facing history label parity.** `carrierTenderLabel` is the
+    single wording helper and a guard fails any carrier surface printing a raw
+    status. Parity is held on the tender-history page; the my-loads and tenders
+    pages were not brought under the same guard, so a raw status added there
+    would not be caught.
+
+    253.7 **The RC's own evidence gaps**, from the 2026-08-31 e-signature audit
+    (§13.3 Item 250): whether a signed RC should lock the load against edits,
+    retention policy for executed artifacts, and whether the AE console should
+    expose the executed PDF. All three were storage-gated at Item 250 and are now
+    unblocked — `documentUrl` and `pdfUrl` resolve and serve, proven by the
+    freeze proof reading bytes back and hashing them.
+
+    **Three findings the brief did not predict**, each recorded at its commit:
+    the waterfall accept had been **silently dead since the commit that added its
+    compliance check** (a User id passed to a `CarrierProfile` lookup, so every
+    position skipped); a **terminated carrier could still take a load off the
+    board**, because the load-board accept checked `onboardingStatus` rather than
+    `complianceCheck`; and the auto-dispatch paths **could not reach CONFIRMED at
+    all**, which is why 11e's asymmetry was correct when written and wrong a
+    commit later.
+
+    **Methodology, banked to §19:** Sub-pattern 16 fired repeatedly and mostly
+    against my own proofs — a single-use claim that stayed green with its
+    mechanism removed (caught only by running the injection); an injection whose
+    anchor used `
+` against a CRLF file and therefore never applied; a guard
+    asserting a file was present rather than that it ran; and three successive
+    predicates that flagged correct code. Sub-pattern 17 fired on a local selftest
+    that ran in local-disk mode and proved nothing about production.
 
 ## §14 LEGAL / COMPLIANCE STATUS
 

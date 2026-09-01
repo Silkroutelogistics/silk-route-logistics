@@ -1,3 +1,23 @@
+// v3.8.ayb — UNIFIED TENDER LIFECYCLE, ARC CLOSED.
+//
+// 23faaaa7 -> ee838a3d, 26 commits. Gap-table residue: 15 closed, 1 partial,
+// 3 open, each open row carrying its reason in the row rather than in a commit
+// message the next reader will not find.
+//
+// One creator and one transition service for tenders. One Load.carrierId
+// writer. A rate confirmation frozen at issuance, hashed over the stored bytes,
+// signed through a single-use link capturing name, IP, user agent, timestamp
+// and token id. A customer told a carrier is on their load only once that
+// carrier has signed, on every path.
+//
+// The change with money attached: SRL's own withdrawals stopped being recorded
+// as carrier declines. §9 scores acceptance at 10% of Compass, so a carrier who
+// won one of three waterfall loads read at 33% when the truth was 100%.
+//
+// This commit also repairs an error of mine: 12b's patch matched the first
+// table in the audit report rather than the gap table, overwriting three rows
+// of the path inventory. Restored from git and re-applied to the right table.
+
 // v3.8.aya — AN AUTO-DISPATCHED CARRIER HAD NOTHING TO SIGN, SO THE CUSTOMER
 // WAS TOLD BEFORE ANYONE HAD COMMITTED.
 //
@@ -16911,7 +16931,7 @@
 // and a data: qrCodeDataUrl are all legitimate and a guard that flagged them
 // would be noise. Comments are blanked before matching — the fixes are explained
 // in comments that necessarily quote the banned patterns.
-export const SRL_VERSION = "3.8.aya";
+export const SRL_VERSION = "3.8.ayb";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

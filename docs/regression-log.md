@@ -13,6 +13,39 @@ so it's searchable and never lost.
 
 ---
 
+## ARC SUMMARY — Unified Tender Lifecycle, closed 2026-09-01 (v3.8.ayb)
+
+- **Span:** `23faaaa7` (v3.8.aws, Phase A) → `ee838a3d` (v3.8.aya), 26 commits.
+  Report: `docs/audits/tender-lifecycle-audit.md`. **Residue: 15 closed, 1
+  partial, 3 open**, each open row carrying its reason in the row.
+- **What it changed.** One creator and one transition service for tenders (state
+  writers 11 → 3, count asserted). One `Load.carrierId` writer (11 → 0 outside
+  the assignment service). A rate confirmation frozen at issuance, hashed over
+  the **stored** bytes, and signed through a single-use link that captures typed
+  name, IP, user agent, timestamp and token id. A customer told a carrier is on
+  their load **only once that carrier has signed**, on every path.
+- **The change with money attached:** SRL's own withdrawals stopped being
+  recorded as carrier declines. §9 scores acceptance rate at 10% of Compass, so a
+  carrier who won one of three waterfall loads read at **33%** when the honest
+  figure was **100%**.
+- **Three defects nobody was looking for.** The waterfall accept had been
+  **silently dead since the commit that added its compliance check** — a User id
+  passed to a `CarrierProfile` lookup, so every position skipped and the log read
+  like ordinary compliance churn. A **terminated carrier could still take a load
+  off the board**, because that path checked `onboardingStatus` and not
+  `complianceCheck`. And the auto-dispatch paths **could not reach CONFIRMED at
+  all**, because one issued no rate confirmation and the other drafted one and
+  stopped.
+- **One incident, self-inflicted and recorded in full** (§13.3 Item 252): a
+  migration reached production from a local shell because `backend/.env` held the
+  production pair. Additive, no harm, and now closed by a rail rather than a rule.
+- **The methodology cost, honestly.** §19 Sub-pattern 16 fired repeatedly and
+  mostly against my own work: a single-use claim that stayed green with its
+  mechanism removed; an injection whose anchor never matched, whose green I
+  almost reported as verification; a guard asserting a string was present rather
+  than that it ran; three successive predicates that flagged correct code. Every
+  one was caught by running the injection rather than reasoning about it.
+
 ## Fixed — 2026-09-01 (v3.8.aya — an auto-dispatched carrier had nothing to sign, so the customer was told before anyone had committed)
 
 - **Status:** commit 12c of the sprint close. 12d closes the arc.

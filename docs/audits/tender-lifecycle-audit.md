@@ -2,6 +2,29 @@
 
 **Baseline:** `23faaaa7` (v3.8.aws) · 2026-09-01 · no source changed in this phase.
 
+---
+
+## ARC CLOSED — 2026-09-01
+
+**Closing code commit:** `ee838a3d` (v3.8.aya) · **closing docs commit:** v3.8.ayb
+**Span:** `23faaaa7` (v3.8.aws, Phase A) → `ee838a3d` (v3.8.aya) · 26 commits
+
+**Gap-table residue: 15 closed, 1 partially closed, 3 open.**
+
+| Row | State | Why it is still open |
+|---|---|---|
+| **3** — no path writes `Load.status` directly | **OPEN, frozen** | 28 sites across 18 files. Enforcing the canonical machine **today breaks production**: auto-pilot legitimately skips BOOKED (§2 dispatch divergence) and fall-off recovery legitimately moves backwards, and the AE map allows neither. A guard asserting zero would be red against correct code. The population is frozen instead — it may shrink, never grow. Needs the map reconciled with an AUTO/SYSTEM actor first (Item 159 Sprint 3). |
+| **4** — one live OFFERED unless parallel | **PARTIAL** | The operational half is closed and proven: accepting settles every sibling including COUNTERED. The row's own target is conditional on `waterfall.parallel`, which **does not exist**, so a general uniqueness rule would make broadcast tendering illegal. Needs the flag before the rule. |
+| **7** — QuickPayElection pending on tender | **OPEN** | The RC half is done (the election window opens at the draft and closes at send, and a contradictory pair is refused before the PDF is built). The model half is a BUILD, not an invariant: there is no row to assert about, and a guard over an absent model can only restate the gap. |
+| **16** — expiry advances the waterfall | **OPEN** | The sweep ships and reverts the load to POSTED so it returns to the board. Advancing the CASCADE to the next position is behaviour that does not yet exist, and a guard over absent behaviour fails by design — a permanently-red guard is one people learn to ignore. |
+
+**What the arc changed, in one line each:** one creator and one transition service for tenders (11 state writers → 3, count asserted); one `Load.carrierId` writer (11 → 0 outside the assignment service); SRL's own withdrawals stopped being recorded as carrier declines, which §9 scores at 10% of Compass; six absolute compliance codes that no override waives; a rate confirmation that is frozen at issuance, hashed over the stored bytes, and signed through a single-use link capturing name, IP, user agent, timestamp and token id; and a customer who is told a carrier is on their load **only once that carrier has signed**, on every path.
+
+**The three findings the brief did not predict**, each recorded where it happened: the waterfall accept had been **silently dead since the commit that added its compliance check** (a User id passed to a `CarrierProfile` lookup); a **terminated carrier could still take a load off the board**, because the load-board accept checked `onboardingStatus` and not `complianceCheck`; and the auto-dispatch paths **could not reach CONFIRMED at all**, because one issued no rate confirmation and the other drafted one and stopped.
+
+---
+
+
 **Concurrent-session warning.** `backend/src/controllers/rateConfirmationController.ts`
 is **modified in the working tree by another session** (v3.8.aws RC-PDF-URL work,
 with an untracked migration `20260901000000_rc_pdf_url_api_relative`). It is
@@ -23,10 +46,10 @@ Every one creates `LoadTender` rows independently. There is no shared service.
 
 | # | Surface | Route | Creates tender at | Writes `Load.status` directly? |
 |---|---|---|---|---|
-| 1 | 7 tender states | ✅ **CLOSED v3.8.axz** — nine, not seven: the target left COUNTERED and DECLINED undecided and both are real carrier-initiated states, so both stayed. The enum is frozen by guard, and a second case asserts `SettleTo` carries every member — a state the transition service cannot reach forces callers through `as never`, which is how RELEASED lost its statusReason | — |
+| 1 | Direct tender | `POST /loads/:id/tender` | `tenderController.ts:35` | **Yes** — POSTED→TENDERED |
 | 2 | Waterfall (manual) | `POST /loads/:id/waterfall` | `waterfallTenderService.ts:58` | via service |
-| 3 | No path writes `Load.status` directly | **OPEN — frozen, not closed (v3.8.axz).** 28 sites across 18 files still do. A guard cannot close this row: §13.3 Item 194's log-first investigation established that enforcing the canonical machine over them today **breaks production** — the auto-pilot paths legitimately skip BOOKED (§2 dispatch divergence) and fall-off recovery legitimately moves backwards, and the AE map allows neither. The guard freezes the population instead: it may shrink, never grow | Reconcile the map with an AUTO/SYSTEM actor, then enforce — Item 159 Sprint 3 |
-| 4 | One live OFFERED per load unless parallel | **PARTIALLY CLOSED v3.8.axz.** The half that matters operationally is closed and proven: accepting settles every sibling, including COUNTERED (`_withdraw-consolidation-proof.ts`), and a guard derives the accept set from source and asserts each routes through the one helper. The row's own target cannot be asserted: it is conditional on `waterfall.parallel`, which **does not exist**, so a general uniqueness rule would make broadcast tendering illegal | Add `waterfall.parallel`, then assert uniqueness outside it |
+| 3 | Broadcast | `POST /loads/:id/broadcast` | `broadcastTenderService.ts:39` | **Yes** — `:67` `status:"TENDERED"` |
+| 4 | Load + tender (drawer) | `POST /loads/with-tender` | `withTenderController.ts:254` | **Yes** — `:224` `status:"TENDERED"` |
 | 5 | Waterfall engine (auto-pilot) | internal | `waterfallEngineService.ts:236` | **Yes** — `:172`, `:248` |
 | 6 | Loadboard bid accept | `loadBids.ts` accept handler | `loadBids.ts:291` | **Yes** — `:224` |
 
@@ -160,10 +183,10 @@ column plus new `eventType` values — additive, no new table, and the drawer's
 
 | # | Target invariant | Today | Gap |
 |---|---|---|---|
-| 1 | 7 tender states | 5, and `COUNTERED`/`DECLINED` aren't in the target | Add `RC_SENT · CONFIRMED · WITHDRAWN · RELEASED`; **decide COUNTERED/DECLINED — they are live carrier states** |
+| 1 | 7 tender states | ✅ **CLOSED v3.8.axz** — nine, not seven: the target left COUNTERED and DECLINED undecided and both are real carrier-initiated states, so both stayed. The enum is frozen by guard, and a second case asserts `SettleTo` carries every member — a state the transition service cannot reach forces callers through `as never`, which is how RELEASED lost its statusReason | — |
 | 2 | All paths via one `createTender` | CLOSED **v3.8.axd–axg** — one creator, CI-guarded (creation + state) | — |
-| 3 | No path writes `Load.status` directly | ≥5 paths do | Move into service |
-| 4 | One live OFFERED per load unless parallel | No uniqueness check anywhere | Add guard + `waterfall.parallel` flag |
+| 3 | No path writes `Load.status` directly | **OPEN — frozen, not closed (v3.8.axz).** 28 sites across 18 files still do. A guard cannot close this row: §13.3 Item 194's log-first investigation established that enforcing the canonical machine today **breaks production** — the auto-pilot paths legitimately skip BOOKED (§2 dispatch divergence) and fall-off recovery legitimately moves backwards, and the AE map allows neither. The guard freezes the population instead: it may shrink, never grow | Reconcile the map with an AUTO/SYSTEM actor, then enforce — Item 159 Sprint 3 |
+| 4 | One live OFFERED per load unless parallel | **PARTIALLY CLOSED v3.8.axz.** The half that matters operationally is closed and proven: accepting settles every sibling, including COUNTERED (`_withdraw-consolidation-proof.ts`), and a guard derives the accept set from source and asserts each routes through the one helper. The row's own target cannot be asserted: it is conditional on `waterfall.parallel`, which **does not exist**, so a general uniqueness rule would make broadcast tendering illegal | Add `waterfall.parallel`, then assert uniqueness outside it |
 | 5 | Accept atomic; siblings auto-**withdraw** | ✅ **CLOSED v3.8.aww → axk** — one transition service; withdraw takes OFFERED **and COUNTERED**, which all six hand-rolled copies missed. Tender-state writers 11 → **3**, count asserted | — |
 | 6 | `acceptTender` sole `carrierId` writer | ✅ **CLOSED v3.8.axa–axc** — one writer (`carrierAssignmentService`), 11 → 0, CI-guarded | `releaseCarrier` as sole clearer = commit 8 |
 | 7 | QuickPayElection pending on tender; RC deferred | **OPEN — not closeable by a guard (v3.8.axz).** The RC half is done: the election window opens at the auto-draft and closes at send, and `resolveIssuedElection` refuses a contradictory pair before the PDF is built (§21.1). The model half is a BUILD, not an invariant — there is no `QuickPayElection` row to assert anything about, and a guard over an absent model can only assert its absence, which is a restatement of the gap rather than a defence against it | New model + gate |
@@ -171,14 +194,14 @@ column plus new `eventType` values — additive, no new table, and the drawer's
 | 9 | Tokenized e-sign w/ name·ip·UA·hash → CONFIRMED | ✅ **CLOSED v3.8.axs–axu** — single-use expiring token on a public route, typed name + attestation, name·IP·UA·timestamp·tokenId captured as columns, hash over the frozen bytes, certificate naming that hash, tender → CONFIRMED via the transition service. Concurrency-proven single use | — |
 | 10 | BOL + shipper notify at CONFIRMED | ✅ **CLOSED v3.8.axv → aya** — the carrier's BOL download requires a CONFIRMED tender (AE exempt), and the customer announcement fires at the signature on **every** path. The auto paths reached CONFIRMED only once they ISSUED the RC rather than drafting it: before v3.8.aya the waterfall generated none at all and the loadboard-bid path drafted and stopped, so no signing link reached those carriers | — |
 | 11 | Rate change post-accept voids RC, reverts to OFFERED | ✅ **CLOSED v3.8.axv** — voids the live RC **and kills its signing token**, returns the tender to OFFERED at the new rate with a version bump and a cleared respondedAt. SIGNED/FINALIZED untouched | — |
-| 12 | Override needs userId·reason·ts; refused on HARD_FAIL | `OverrideComplianceModal` exists; **no HARD_FAIL refusal at tender time** | Verify against §14 absolute set |
-| 13 | Load Board = no tender ≥ACCEPTED | Reads `Load.status`; **overlaps T&T by 6** | Re-query both |
-| 14 | Needs Attention = tender-centric | Exists, unrelated filters | Extend |
+| 12 | Override needs userId·reason·ts; refused on HARD_FAIL | ✅ **CLOSED v3.8.axl–axm** — six absolute codes refused at tender time with **no tender row and no LoadActivity row** written, the override id persisted on the tender it enabled, and the absolutes checked ahead of the scoped allow-list (they were being refused as `UNKNOWN_CHECK_CODE`, telling an AE they had made a typo when what they hit was policy) | — |
+| 13 | Load Board = no tender ≥ACCEPTED | ✅ **CLOSED v3.8.axo** — one vocabulary (`lib/tenderLifecycle`), and the board and Track & Trace are exact complements by construction. They had overlapped by **six statuses**, so a load could sit on both at once. `Load.carrierId` is in the predicate alongside the tenders, because direct assignment is a real path and reading only tenders would have made trucks in transit invisible | — |
+| 14 | Needs Attention = tender-centric | ✅ **CLOSED v3.8.axo** — four tender-derived reasons, each naming itself: expiry with nothing live behind it, an RC unsigned past `RC_SIGN_SLA_HOURS`, a release inside 24h, and a counter awaiting SRL. It previously guessed from the load ("posted within 48h of pickup"), which are proxies rather than the question | — |
 | 15 | TTL from `TENDER_TTL_MINUTES` (120) | CLOSED **v3.8.axd** — env-driven, bounded 15..10080 | — |
 | 16 | Expiry advances waterfall / flags | **OPEN — not closeable by a guard (v3.8.axz).** The sweep ships (Item 141) and reverts the load to POSTED so it returns to the board; what is missing is advancing the CASCADE to the next position, which is behaviour that does not yet exist. A guard can only assert what a system does, and asserting the absent advance would be a test that fails by design — a permanently-red guard is one people learn to ignore | Add the advance + the flag |
 | 17 | Every transition → event row | ✅ **CLOSED v3.8.awv → axk** — every state write now runs through the transition service, so the expiry sweep and the cascade log too (neither did before) | Drawer read = commit 10 |
 | 18 | Remove Confirm + Rate Conf send; add Withdraw/Release/Resend/View | ✅ **CLOSED v3.8.axp → axx** — Confirm and the standalone Rate Conf send are gone; Withdraw, Accept/Reject counter and Release shipped in axp, and Resend/View joined `WIRED_ACTIONS` once they had endpoints. A guard now fails if a wired action has no dispatcher case | — |
-| 19 | Card + header read same derived status | Both read `Load.status` (consistent), but **no derived status exists** | Build derivation |
+| 19 | Card + header read same derived status | ✅ **CLOSED v3.8.axp** — one `deriveLoadStatus`, and a guard fails any surface that builds its own map or prints a raw status. Four independent colour maps existed and disagreed: BOOKED rendered violet, purple and grey for the same load on the same refresh. It reads BOTH the load and its tenders, because a load left reading BOOKED after its tender was released **is not booked** | — |
 
 ### Files touched — estimate
 
