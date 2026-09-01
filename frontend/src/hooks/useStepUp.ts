@@ -68,19 +68,47 @@ export function useStepUp(action: StepUpAction) {
       if (!pending) return;
       setVerifying(true);
       setError(null);
+
+      // TWO CALLS, TWO CATCHES, AND THE SPLIT IS THE POINT.
+      //
+      // These were wrapped in one try. So when the REPLAY failed, the carrier
+      // was told their code was wrong — and a correct code kept being rejected
+      // by a message about the code. That is how a CORS misconfiguration
+      // (X-Step-Up-Token was not in Access-Control-Allow-Headers, so the browser
+      // blocked the replay before sending it) surfaced for a live carrier as
+      // "We could not confirm that code", and why it took a screenshot from
+      // production to find rather than an error anyone could read.
+      //
+      // A blocked preflight throws a network error with NO response, so the
+      // `e.response.data.error` fallback produced the generic code message —
+      // the least accurate sentence available. Past this first block the code
+      // has been ACCEPTED by the server, and nothing that fails afterwards is
+      // allowed to blame it.
+      let stepUpToken: string;
       try {
         const { data } = await api.post("/carrier-auth/step-up", { code: code.trim(), action });
+        stepUpToken = data.stepUpToken;
+      } catch (e: any) {
+        setError(
+          e?.response?.data?.error ||
+            "We could not confirm that code. Check your authenticator app and try the current one.",
+        );
+        setVerifying(false);
+        return;
+      }
+
+      try {
         // Header, not body: it keeps the credential out of request payloads that
         // get logged, and out of reach of the Zod body-stripping that would drop
         // an undeclared field on any route whose schema forgot it.
-        await pending.fn({ "x-step-up-token": data.stepUpToken });
+        await pending.fn({ "x-step-up-token": stepUpToken });
         setPrompting(false);
         setPending(null);
         pending.resolve(true);
       } catch (e: any) {
         setError(
           e?.response?.data?.error ||
-            "We could not confirm that code. Check your authenticator app and try the current one.",
+            "Your code was accepted, but the change could not be saved. Please try again, or contact operations@silkroutelogistics.ai if it keeps happening.",
         );
       } finally {
         setVerifying(false);

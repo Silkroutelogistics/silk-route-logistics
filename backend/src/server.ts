@@ -87,6 +87,28 @@ if (env.CORS_ORIGIN) {
     }
   }
 }
+/**
+ * Request headers the browser is allowed to send us.
+ *
+ * ONE LIST, BECAUSE THERE ARE TWO PLACES THAT ANSWER A PREFLIGHT. The explicit
+ * app.options("*") handler below runs FIRST and is what a browser actually
+ * reads; cors(corsOptions) covers the real request. They were separate literals
+ * and they agreed only because nobody had added a header since — which is not
+ * agreement, it is luck.
+ *
+ * `X-Step-Up-Token` was missing from both. Arc 11 added the header on the CLIENT
+ * (useStepUp replays the original write with it) and nothing here was updated, so
+ * every step-up-gated write was blocked by the browser BEFORE it was sent. The
+ * carrier saw "We could not confirm that code" while entering a correct code,
+ * because a blocked preflight produces a network error with no response body and
+ * the hook fell through to its generic message. Sub-pattern 5: the write end and
+ * the read end of a contract, changed one at a time.
+ *
+ * Adding a custom header on the client means adding it here. A guard asserts
+ * that (server.cors.test.ts) by reading the frontend source rather than a list
+ * somebody has to remember to update.
+ */
+const ALLOWED_REQUEST_HEADERS = ["Content-Type", "Authorization", "X-Requested-With", "X-Step-Up-Token"];
 const corsOptions: cors.CorsOptions = {
   origin: (origin, callback) => {
     // Allow requests with no origin (server-to-server, health checks)
@@ -100,7 +122,7 @@ const corsOptions: cors.CorsOptions = {
   },
   credentials: true,
   methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
+  allowedHeaders: ALLOWED_REQUEST_HEADERS,
   exposedHeaders: ["Content-Disposition", "X-Request-ID"],
   maxAge: 86400,
 };
@@ -112,7 +134,7 @@ app.options("*", (req, res) => {
     res.setHeader("Access-Control-Allow-Origin", origin);
     res.setHeader("Access-Control-Allow-Credentials", "true");
     res.setHeader("Access-Control-Allow-Methods", "GET,POST,PUT,PATCH,DELETE,OPTIONS");
-    res.setHeader("Access-Control-Allow-Headers", "Content-Type,Authorization,X-Requested-With");
+    res.setHeader("Access-Control-Allow-Headers", ALLOWED_REQUEST_HEADERS.join(","));
     res.setHeader("Access-Control-Max-Age", "86400");
   }
   res.sendStatus(204);

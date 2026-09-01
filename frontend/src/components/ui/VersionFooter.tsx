@@ -1,4 +1,23 @@
-// v3.8.awp — THE ENROLLMENT SCREEN REFUSED TO RENDER ITSELF.
+// v3.8.awq — A CORRECT CODE WAS REJECTED, AND CORS WAS WHY.
+//
+// A carrier entered the right authenticator code on the Quick Pay signature
+// and was told it was wrong, repeatedly. The code was fine. Arc 11 added
+// `x-step-up-token` on the CLIENT — useStepUp replays the original write with
+// it once a code is accepted — and Access-Control-Allow-Headers was never
+// updated, so the browser blocked the replay before sending it. Proven on
+// production: OPTIONS with Access-Control-Request-Headers
+// `content-type,x-step-up-token` answered `Content-Type,Authorization,
+// X-Requested-With`.
+//
+// It read as a bad code because submitCode wrapped the verify call and the
+// replay in ONE try, and a blocked preflight throws with no response — so the
+// generic code message was the fallback. Two bugs, and the second is what made
+// the first take a screenshot from production to find.
+//
+// Both step-up-gated writes were affected: the Quick Pay election and
+// PATCH /carrier-compliance/insurance. Neither has ever worked from a browser.
+//
+// v3.8.awq — THE ENROLLMENT SCREEN REFUSED TO RENDER ITSELF.
 //
 // A live carrier logged in, was correctly sent to /carrier/dashboard/security,
 // and sat on a spinner reading "Redirecting to activation…" that would never
@@ -15841,7 +15860,7 @@
 // creating one, so for them it is the only record they accepted the
 // click-through. quickPayAgreedAt is read at carrierAuth.ts:965. The audit's
 // "zero readers" finding was wrong about both. Decision 9 stays open.
-// v3.8.awp — what the agreement said, hashed; and assent that is not a signature.
+// v3.8.awq — what the agreement said, hashed; and assent that is not a signature.
 //
 // Decision 8 (agreements half) and decision 9 (as resolved).
 //
@@ -15899,7 +15918,7 @@
 // acknowledgement nobody gave; and a SIGNED row satisfies the tender gate, which
 // would make a carrier tenderable without the in-portal signing awm had just made
 // consent-gated. Both need a product decision. Decision 9 stays open.
-export const SRL_VERSION = "3.8.awp";
+export const SRL_VERSION = "3.8.awq";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
