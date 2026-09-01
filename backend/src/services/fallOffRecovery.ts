@@ -1,6 +1,7 @@
 import { prisma } from "../config/database";
 import { matchCarriersForLoad } from "./smartMatchService";
 import { log } from "../lib/logger";
+import { assignCarrier, clearCarrier } from "./carrierAssignmentService";
 
 /**
  * C.4 — Carrier Fall-Off Recovery
@@ -53,12 +54,15 @@ export async function executeFallOffRecovery(loadId: string, reason?: string) {
     );
   } catch { /* non-blocking */ }
 
-  // Unassign the carrier from the load
-  await prisma.load.update({
-    where: { id: loadId },
-    data: {
-      carrierId: null,
-      status: "POSTED",
+  // Unassign the carrier from the load.
+  //
+  // v3.8.axa — through clearCarrier, the single writer of Load.carrierId.
+  // Status rides in the same update rather than a second one, so the load is
+  // never briefly carrier-less while still reading BOOKED.
+  await clearCarrier({
+    loadId,
+    status: "POSTED",
+    extra: {
       driverName: null,
       driverPhone: null,
       truckNumber: null,
@@ -165,12 +169,16 @@ export async function handleFallOffAcceptance(loadId: string, carrierUserId: str
   });
   if (!event) return null;
 
-  // Assign the carrier
-  await prisma.load.update({
-    where: { id: loadId },
-    data: {
-      carrierId: carrierUserId,
-      status: "BOOKED",
+  // Assign the carrier.
+  //
+  // v3.8.axa — through assignCarrier. The parameter was already named
+  // carrierUserId here, which is the correct ID space: Load.carrierId is a
+  // User.id, not a CarrierProfile.id.
+  await assignCarrier({
+    loadId,
+    carrierUserId,
+    status: "BOOKED",
+    extra: {
       statusUpdatedAt: new Date(),
     },
   });

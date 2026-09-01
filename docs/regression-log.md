@@ -13,6 +13,47 @@ so it's searchable and never lost.
 
 ---
 
+## Fixed — 2026-09-01 (v3.8.axa — eleven places decided which carrier was on a load, pass 1)
+
+- **Symptom:** `Load.carrierId` had **eleven writers across seven files**,
+  including `carrierLoads.ts:226` where a carrier assigned *themselves*.
+- **Why it matters:** that column decides who gets paid, who the rate
+  confirmation names, who the BOL names, and who the shipper is told is coming.
+  Eleven writers is eleven places for the answer to differ.
+- **Severity:** P1 — correctness of the money and document path.
+- **Status:** Pass 1 in v3.8.axa (4 of 11 migrated). Pass 2 + CI guard next.
+- **Shape:** new `services/carrierAssignmentService.ts` with `assignCarrier` /
+  `clearCarrier`. Migrated: `tenderController` ×2 (accept, accept-on-behalf) and
+  `fallOffRecovery` ×2 (clear on fall-off, assign on recovery). Writer count
+  **11 → 7**.
+- **The parameter is `carrierUserId`, not `carrierId`, deliberately.**
+  `Load.carrierId` is a `User.id`; `LoadTender.carrierId` is a
+  `CarrierProfile.id`. Confusing them made waterfall accept silently dead for
+  months (§13.3 Item 222.4). The name forces the question at the call site.
+- **Helpers return an un-awaited PrismaPromise** so `acceptTender` can compose
+  them into `$transaction([...])`. An `async` helper would have to be awaited
+  before the array is built, executing the write *outside* the transaction and
+  undoing the atomicity Sprint 38 added deliberately (Item 53).
+- **Verified:** `scripts/_carrier-assignment-proof.ts` **10/10** against a real
+  database — including that a failing sibling operation rolls the assignment
+  back. A unit test cannot check this: with Prisma mocked, every composition
+  "works".
+- **The proof's first run FAILED that assertion, and the test was wrong, not the
+  code.** It used `new PrismaClient()` while the service used the app singleton,
+  and **a PrismaPromise from one client cannot be enrolled in another client's
+  `$transaction`** — it executes independently and survives the rollback,
+  silently, with no error. Fixed to use the singleton (which is what production
+  does) and the footgun is now documented in the service, because the next
+  caller to hit it will get no warning either.
+- **Still open:** 7 writers remain — `automation:55`, `carrierLoads:226`
+  (self-assign; must route through `acceptTender`), `loadBids:224`,
+  `instantBookService:131`, `loadComplianceService:312`/`:322`,
+  `waterfallEngineService:576`. `loadComplianceService` is a
+  *temporarily-set-then-roll-back* staging pattern rather than an assignment, so
+  it needs a decision rather than a mechanical migration.
+
+---
+
 ## Fixed — 2026-09-01 (v3.8.awz — the last two paths that declined on a carrier's behalf)
 
 - **Symptom:** two SRL-side paths still wrote `DECLINED` onto tenders. Different

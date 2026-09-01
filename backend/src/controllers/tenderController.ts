@@ -10,6 +10,7 @@ import { autoGenerateRateConfirmation } from "../services/autoRateConfirmationSe
 import { hooks } from "../lib/hooks";
 import { log } from "../lib/logger";
 import { validateLoadStatusTransition } from "../lib/loadStateMachine";
+import { assignCarrier } from "../services/carrierAssignmentService";
 
 export async function createTender(req: AuthRequest, res: Response) {
   const { carrierId, offeredRate, expiresAt } = createTenderSchema.parse(req.body);
@@ -122,17 +123,20 @@ export async function acceptTender(req: AuthRequest, res: Response) {
       where: { id: tender.id },
       data: { status: "ACCEPTED", respondedAt: new Date() },
     }),
-    prisma.load.update({
-      where: { id: tender.loadId },
-        // ARC 16 — persist the agreed carrier rate at the moment of accept.
-        // Without this, carrierRate stayed null all the way to settlement and
-        // createCarrierPayOnDelivery fell back to load.rate, which is the
-        // CUSTOMER rate on the primary creation path. §13.3 Item 221.1.
-      data: {
-        status: "BOOKED",
-        carrierId: tender.carrier.userId,
-        carrierRate: agreedRateFromTender(tender as any),
-      },
+    // v3.8.axa — the single writer of Load.carrierId. Composed into the
+    // transaction rather than awaited, so the assignment stays atomic with the
+    // tender flip (Sprint 38 Item 53). ARC 16: carrierRate is persisted at the
+    // moment of accept, or settlement falls back to load.rate, which is the
+    // CUSTOMER rate on the primary creation path (§13.3 Item 221.1).
+    //
+    // carrierUserId, not carrierId: Load.carrierId is a User.id while
+    // LoadTender.carrierId is a CarrierProfile.id. Confusing them is what made
+    // waterfall accept silently dead for months (§13.3 Item 222.4).
+    assignCarrier({
+      loadId: tender.loadId,
+      carrierUserId: tender.carrier.userId,
+      status: "BOOKED",
+      carrierRate: agreedRateFromTender(tender as any),
     }),
     // v3.8.aww — WITHDRAWN, not DECLINED. These carriers did not refuse
     // anything; SRL pulled their offer because somebody else got there first.
@@ -306,17 +310,20 @@ export async function acceptTenderOnBehalf(req: AuthRequest, res: Response) {
       where: { id: tender.id },
       data: { status: "ACCEPTED", respondedAt: new Date() },
     }),
-    prisma.load.update({
-      where: { id: tender.loadId },
-        // ARC 16 — persist the agreed carrier rate at the moment of accept.
-        // Without this, carrierRate stayed null all the way to settlement and
-        // createCarrierPayOnDelivery fell back to load.rate, which is the
-        // CUSTOMER rate on the primary creation path. §13.3 Item 221.1.
-      data: {
-        status: "BOOKED",
-        carrierId: tender.carrier.userId,
-        carrierRate: agreedRateFromTender(tender as any),
-      },
+    // v3.8.axa — the single writer of Load.carrierId. Composed into the
+    // transaction rather than awaited, so the assignment stays atomic with the
+    // tender flip (Sprint 38 Item 53). ARC 16: carrierRate is persisted at the
+    // moment of accept, or settlement falls back to load.rate, which is the
+    // CUSTOMER rate on the primary creation path (§13.3 Item 221.1).
+    //
+    // carrierUserId, not carrierId: Load.carrierId is a User.id while
+    // LoadTender.carrierId is a CarrierProfile.id. Confusing them is what made
+    // waterfall accept silently dead for months (§13.3 Item 222.4).
+    assignCarrier({
+      loadId: tender.loadId,
+      carrierUserId: tender.carrier.userId,
+      status: "BOOKED",
+      carrierRate: agreedRateFromTender(tender as any),
     }),
     // v3.8.aww — WITHDRAWN, not DECLINED. These carriers did not refuse
     // anything; SRL pulled their offer because somebody else got there first.

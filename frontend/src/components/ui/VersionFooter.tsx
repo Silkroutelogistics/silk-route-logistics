@@ -1,3 +1,33 @@
+// v3.8.axa — ELEVEN PLACES DECIDED WHICH CARRIER WAS ON A LOAD. PASS 1 OF 2.
+//
+// Which carrier is on a load decides who gets paid, who the rate confirmation
+// names, who the BOL names, and who the shipper is told is coming. Eleven
+// independent writers for that is not a style problem — it is eleven places for
+// the answer to differ, and one of them let a carrier assign themselves.
+//
+// carrierAssignmentService is now the single writer. Four of the eleven move
+// here in this pass: both accept paths, and both fall-off paths.
+//
+// THE PARAMETER IS NAMED carrierUserId, NOT carrierId, ON PURPOSE.
+// Load.carrierId is a User.id; LoadTender.carrierId is a CarrierProfile.id.
+// Same field name, two tables. Confusing them made waterfall accept silently
+// dead for months — every accept failed as "Carrier not found", skipped the
+// position and advanced, in the shape of an ordinary compliance decline, from
+// the very commit that added the check (§13.3 Item 222.4). The name forces the
+// question at the call site instead of at 2am.
+//
+// The helpers return an UN-AWAITED PrismaPromise so acceptTender can compose
+// them into $transaction([...]) — the array form. An async helper would have to
+// be awaited before the array is built, executing the write outside the
+// transaction and quietly undoing the atomicity Sprint 38 added deliberately.
+//
+// That design is the risk of this commit, so it is proven rather than reasoned
+// about: a real database, a real rollback. The proof's first run FAILED the
+// atomicity assertion — because the test used its own PrismaClient while the
+// service used the singleton, and a promise from one client cannot enrol in
+// another's transaction. The code was right; the test was wrong. The footgun is
+// now documented in the service, because it fails silently.
+//
 // v3.8.awz — THE LAST TWO PATHS THAT DECLINED ON A CARRIER'S BEHALF.
 //
 // aww fixed the three sibling-on-accept writers. Two more remained, and they
@@ -16099,7 +16129,7 @@
 // and a data: qrCodeDataUrl are all legitimate and a guard that flagged them
 // would be noise. Comments are blanked before matching — the fixes are explained
 // in comments that necessarily quote the banned patterns.
-export const SRL_VERSION = "3.8.awz";
+export const SRL_VERSION = "3.8.axa";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
