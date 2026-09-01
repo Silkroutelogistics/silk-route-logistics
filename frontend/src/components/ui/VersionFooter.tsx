@@ -16931,7 +16931,7 @@
 // and a data: qrCodeDataUrl are all legitimate and a guard that flagged them
 // would be noise. Comments are blanked before matching — the fixes are explained
 // in comments that necessarily quote the banned patterns.
-export const SRL_VERSION = "3.8.ayg";
+export const SRL_VERSION = "3.8.ayh";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

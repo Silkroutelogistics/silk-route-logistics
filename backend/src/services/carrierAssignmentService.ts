@@ -1,4 +1,5 @@
-import { Prisma } from "@prisma/client";
+import { Prisma, LoadStatus } from "@prisma/client";
+import { ActorRole } from "../lib/loadStateMachine";
 import { prisma } from "../config/database";
 
 /**
@@ -71,7 +72,21 @@ export interface AssignCarrierInput {
   /** A **User.id**. See the ID-space note above — this is not a CarrierProfile id. */
   carrierUserId: string;
   /** Load status to move to alongside the assignment, when the caller owns that decision. */
-  status?: string;
+  /**
+   * WHICH RULE SET governs this transition, not who pressed the button.
+   *
+   * AE is a person moving a load through the ordinary pipeline. AUTO is the
+   * platform dispatching or recovering: waterfall accept, loadboard-bid accept,
+   * instant book, fall-off recovery, release. A loadboard bid is accepted BY an
+   * AE and is still AUTO, because what follows is auto-pilot dispatch semantics
+   * rather than the AE-curated BOOKED checkpoint (§2).
+   *
+   * Typed so the callers that fan in here cannot disagree silently. RECORDED,
+   * NOT ENFORCED: Item 194 established that enforcing the canonical map today
+   * breaks bulk dispatch and fall-off recovery.
+   */
+  actor: ActorRole;
+  status?: LoadStatus;
   /** The rate agreed with this carrier, when the caller knows it. */
   carrierRate?: number | null;
   /** Extra columns the calling path owns (dispatchedAt, driver fields, ...). */
@@ -90,7 +105,7 @@ export function assignCarrier(input: AssignCarrierInput, db: AssignmentDb = pris
     where: { id: loadId },
     data: {
       carrierId: carrierUserId,
-      ...(status ? { status: status as never } : {}),
+      ...(status ? { status } : {}),
       ...(carrierRate !== undefined ? { carrierRate } : {}),
       ...(extra ?? {}),
     },
@@ -100,7 +115,21 @@ export function assignCarrier(input: AssignCarrierInput, db: AssignmentDb = pris
 export interface ClearCarrierInput {
   loadId: string;
   /** Status to move the load to once the carrier is off it — usually POSTED. */
-  status?: string;
+  /**
+   * WHICH RULE SET governs this transition, not who pressed the button.
+   *
+   * AE is a person moving a load through the ordinary pipeline. AUTO is the
+   * platform dispatching or recovering: waterfall accept, loadboard-bid accept,
+   * instant book, fall-off recovery, release. A loadboard bid is accepted BY an
+   * AE and is still AUTO, because what follows is auto-pilot dispatch semantics
+   * rather than the AE-curated BOOKED checkpoint (§2).
+   *
+   * Typed so the callers that fan in here cannot disagree silently. RECORDED,
+   * NOT ENFORCED: Item 194 established that enforcing the canonical map today
+   * breaks bulk dispatch and fall-off recovery.
+   */
+  actor: ActorRole;
+  status?: LoadStatus;
   /** Extra columns the calling path owns (clearing driver name/phone, etc). */
   extra?: Prisma.LoadUncheckedUpdateInput;
 }
@@ -119,7 +148,7 @@ export function clearCarrier(input: ClearCarrierInput, db: AssignmentDb = prisma
     where: { id: loadId },
     data: {
       carrierId: null,
-      ...(status ? { status: status as never } : {}),
+      ...(status ? { status } : {}),
       ...(extra ?? {}),
     },
   });

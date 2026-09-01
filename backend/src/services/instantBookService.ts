@@ -134,6 +134,8 @@ export async function instantBook(
     // writers missing from the audit's first count of nine (§19 Sub-pattern 18).
     await assignCarrier({
       loadId,
+      // instant book is auto-pilot
+      actor: "AUTO",
       carrierUserId: carrierId,
       status: "BOOKED",
       carrierRate: rate,

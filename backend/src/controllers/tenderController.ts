@@ -227,6 +227,8 @@ export async function acceptTender(req: AuthRequest, res: Response) {
     await assignCarrier(
       {
         loadId: tender.loadId,
+        // the carrier accepted in their own session; BOOKED is the AE-curated checkpoint
+        actor: "CARRIER",
         carrierUserId: tender.carrier.userId,
         status: "BOOKED",
         carrierRate: agreedRateFromTender(tender as any),

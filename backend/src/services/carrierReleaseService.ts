@@ -134,6 +134,8 @@ export async function releaseCarrier(input: ReleaseCarrierInput): Promise<Releas
   const rcVoided = await prisma.$transaction(async (tx) => {
     await clearCarrier({
       loadId,
+      // a release returns the load to the board, which the AE map does not allow
+      actor: "AUTO",
       status: "POSTED",
       // v3.8 row 7c — the Quick Pay projection is nulled WITH the carrier.
       //

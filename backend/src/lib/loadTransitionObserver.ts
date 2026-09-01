@@ -58,6 +58,26 @@ function isKnown(from: LoadStatus, to: LoadStatus): string | null {
   return hit ? hit.why : null;
 }
 
+/**
+ * Violations observed since this process booted, surfaced on /api/health as
+ * status_machine.violations_since_boot (row 3b).
+ *
+ * The number is the ENFORCEMENT GATE. Item 194 ruled that enforcing the
+ * canonical map today breaks production, so the plan is: log-only until a full
+ * deploy cycle shows no UNEXPECTED edges, then enforce. Counting them in memory
+ * rather than querying logs is what makes "has it been clean" answerable at a
+ * glance instead of by a log search nobody runs.
+ *
+ * Per-process and resets on boot, which is honest: it answers "since this
+ * process started", and the field name says so.
+ */
+let violationsSinceBoot = 0;
+let unexpectedSinceBoot = 0;
+
+export function statusMachineCounters() {
+  return { violations_since_boot: violationsSinceBoot, unexpected_since_boot: unexpectedSinceBoot };
+}
+
 export interface TransitionObservation {
   from: LoadStatus;
   to: LoadStatus;
@@ -85,7 +105,14 @@ export function observeLoadTransition(obs: TransitionObservation): void {
     const verdict = validateLoadStatusTransition(from, to, "AE");
     if (verdict.allowed) return;
 
+    // EXPECTED means the AUTO map allows it -- auto-pilot dispatch or a
+    // recovery re-post. Derived from the map rather than read from the list,
+    // so the two cannot drift: the list now only supplies the human-readable
+    // reason, and a guard asserts every entry is genuinely AUTO-allowed.
+    const autoAllows = validateLoadStatusTransition(from, to, "AUTO").allowed;
     const known = isKnown(from, to);
+    violationsSinceBoot += 1;
+    if (!autoAllows) unexpectedSinceBoot += 1;
     log.warn(
       {
         loadTransition: `${from}->${to}`,
@@ -95,7 +122,7 @@ export function observeLoadTransition(obs: TransitionObservation): void {
         operation: obs.operation,
         code: verdict.code,
         // grep `expected:false` for the transitions nobody has accounted for.
-        expected: Boolean(known),
+        expected: autoAllows,
         why: known ?? undefined,
       },
       `[LoadTransition] ${from} -> ${to} not in AE map`,

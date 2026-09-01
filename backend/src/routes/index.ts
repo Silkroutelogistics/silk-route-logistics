@@ -1,5 +1,6 @@
 import { buildInfo } from "../lib/buildInfo";
 import { schemaInfo } from "../lib/schemaInfo";
+import { statusMachineCounters } from "../lib/loadTransitionObserver";
 import { storageStatus } from "../services/storageService";
 import { parserStatus } from "../services/coiReaderService";
 import { requireTotpEnrolled } from "../middleware/requireTotpEnrolled";

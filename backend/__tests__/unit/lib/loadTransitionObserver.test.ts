@@ -106,3 +106,48 @@ describe("the known-divergence list cannot go stale silently", () => {
     expect(pairs).toContain("DISPATCHED->POSTED");
   });
 });
+
+/**
+ * Row 3a — the AUTO map and the documented divergences must agree.
+ *
+ * Before this, `expected: true` came from a hand-kept list while the map knew
+ * nothing about those edges. Two descriptions of the same four transitions is
+ * two things to keep in step, and the list is the one that would quietly go
+ * stale. The observer now DERIVES `expected` from the map; the list survives
+ * only to supply the human-readable reason.
+ */
+describe("the AUTO map is the source of `expected`", () => {
+  it("every documented divergence is allowed under AUTO", () => {
+    for (const d of __KNOWN_DIVERGENCES) {
+      const v = validateLoadStatusTransition(d.from, d.to, "AUTO");
+      expect(
+        v.allowed,
+        `${d.from} -> ${d.to} is documented as expected (${d.why}) but the AUTO ` +
+          `map rejects it. The list and the map have drifted -- fix the map, or ` +
+          `drop the entry.`,
+      ).toBe(true);
+    }
+  });
+
+  it("and still rejected under AE, which is why it is a divergence at all", () => {
+    for (const d of __KNOWN_DIVERGENCES) {
+      expect(
+        validateLoadStatusTransition(d.from, d.to, "AE").allowed,
+        `${d.from} -> ${d.to} is now allowed for an AE. If that is intended it is ` +
+          `no longer a divergence and should leave this list.`,
+      ).toBe(false);
+    }
+  });
+
+  it("AUTO is not a superset of AE", () => {
+    // The BOOKED checkpoint exists so an AE can review before committing
+    // dispatch (§2). If AUTO simply widened AE, a human would inherit the right
+    // to skip it and a deliberate control would disappear silently.
+    expect(validateLoadStatusTransition("POSTED", "DISPATCHED", "AE").allowed).toBe(false);
+    expect(validateLoadStatusTransition("POSTED", "DISPATCHED", "AUTO").allowed).toBe(true);
+  });
+
+  it("the divergence list is not empty (vacuity tripwire)", () => {
+    expect(__KNOWN_DIVERGENCES.length).toBeGreaterThan(0);
+  });
+});

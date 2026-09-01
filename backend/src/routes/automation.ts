@@ -56,6 +56,8 @@ router.post(
       // v3.8.axb — through assignCarrier, the single writer of Load.carrierId.
       await assignCarrier({
         loadId: req.params.loadId,
+        // auto-match dispatch
+        actor: "AUTO",
         carrierUserId: userId,
         status: "BOOKED",
         extra: { statusUpdatedAt: new Date() },

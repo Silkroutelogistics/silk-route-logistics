@@ -25,7 +25,17 @@
 
 import { LoadStatus } from "@prisma/client";
 
-export type ActorRole = "CARRIER" | "AE";
+/**
+ * WHO the rules are being applied FOR -- which is the RULE SET that governs the
+ * transition, not the human who pressed the button.
+ *
+ * AE is a person moving a load through the ordinary pipeline. AUTO is the
+ * PLATFORM performing a dispatch or a recovery move: auto-pilot accept,
+ * loadboard-bid accept, fall-off recovery, release. A loadboard bid is accepted
+ * by an AE and is still AUTO, because what happens next is auto-pilot dispatch
+ * semantics rather than the AE-curated BOOKED checkpoint.
+ */
+export type ActorRole = "CARRIER" | "AE" | "AUTO";
 
 /**
  * Carrier-side transitions: what a logged-in carrier may transition a load
@@ -82,6 +92,33 @@ const AE_ALLOWED_TRANSITIONS: Partial<Record<LoadStatus, LoadStatus[]>> = {
   CANCELLED: [],
 };
 
+/**
+ * Auto-pilot and recovery transitions.
+ *
+ * DELIBERATELY NOT A SUPERSET OF AE. These are a DIFFERENT set, not a wider
+ * one: the auto paths may skip BOOKED and may move backwards to POSTED, and a
+ * human AE must inherit neither. The BOOKED checkpoint exists so an AE can
+ * review before committing dispatch (§2), and letting an AE skip it silently
+ * would erase a deliberate control.
+ *
+ * The four edges the AE map lacks, and why each is correct:
+ *   POSTED -> DISPATCHED      §2 auto-pilot divergence: bulk accept IS dispatch,
+ *   TENDERED -> DISPATCHED    and dispatchedAt feeds the dispatched-today views.
+ *   BOOKED -> POSTED          a fallen-off or released load returns to the board.
+ *   DISPATCHED -> POSTED      same.
+ *
+ * Item 194 established that enforcing the AE map over these breaks production.
+ * This map is what makes them expressible; enforcement is a later step.
+ */
+const AUTO_ALLOWED_TRANSITIONS: Partial<Record<LoadStatus, LoadStatus[]>> = {
+  DRAFT: ["POSTED", "CANCELLED"],
+  POSTED: ["TENDERED", "BOOKED", "DISPATCHED", "CANCELLED"],
+  TENDERED: ["CONFIRMED", "BOOKED", "DISPATCHED", "POSTED", "CANCELLED"],
+  CONFIRMED: ["BOOKED", "DISPATCHED", "POSTED", "CANCELLED"],
+  BOOKED: ["DISPATCHED", "POSTED", "CANCELLED", "TONU"],
+  DISPATCHED: ["AT_PICKUP", "POSTED", "CANCELLED", "TONU"],
+};
+
 export interface TransitionResult {
   allowed: boolean;
   reason?: string;
@@ -118,7 +155,10 @@ export function validateLoadStatusTransition(
   }
 
   // Pick the right transition map by actor.
-  const map = actor === "AE" ? AE_ALLOWED_TRANSITIONS : CARRIER_ALLOWED_TRANSITIONS;
+  const map =
+    actor === "AE" ? AE_ALLOWED_TRANSITIONS
+    : actor === "AUTO" ? AUTO_ALLOWED_TRANSITIONS
+    : CARRIER_ALLOWED_TRANSITIONS;
   const allowedNext = map[from];
 
   if (!allowedNext) {

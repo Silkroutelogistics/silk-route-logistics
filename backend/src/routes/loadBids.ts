@@ -228,6 +228,8 @@ router.patch(
         // BOOKED is the deliberate auto-pilot divergence documented in §2.
         await assignCarrier({
           loadId,
+          // an AE accepts the bid, but what follows is auto-pilot dispatch (§2)
+          actor: "AUTO",
           carrierUserId: bid.carrierId,
           status: "DISPATCHED",
           // ARC 16 — the bid the AE accepted is the agreed rate. §13.3 Item 221.1.

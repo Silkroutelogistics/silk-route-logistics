@@ -597,6 +597,8 @@ export async function acceptPosition(positionId: string, actorId?: string | null
   // very service got wrong once before (§13.3 Item 222.4).
   await assignCarrier({
     loadId: pos.waterfall.loadId,
+    // cascade dispatch (§2 divergence)
+    actor: "AUTO",
     carrierUserId: pos.carrierId!,
     status: "DISPATCHED",
     // ARC 16 — the agreed rate for a waterfall position. §13.3 Item 221.1.

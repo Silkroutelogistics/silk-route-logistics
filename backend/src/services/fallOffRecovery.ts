@@ -172,6 +172,8 @@ export async function handleFallOffAcceptance(loadId: string, carrierUserId: str
   // User.id, not a CarrierProfile.id.
   await assignCarrier({
     loadId,
+    // recovery re-assign
+    actor: "AUTO",
     carrierUserId,
     status: "BOOKED",
     extra: {
