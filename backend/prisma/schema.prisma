@@ -52,6 +52,9 @@ enum UserRole {
   /// resolved centrally in middleware/auth.ts as (BROKER ∪ OPERATIONS) minus
   /// ACCOUNT_EXECUTIVE_DENY, with DENY evaluated BEFORE any grant.
   ACCOUNT_EXECUTIVE
+  // v3.8.awy — narrow carrier-queue role. Inherits NOTHING; its entire reach is
+  // the allow-list in middleware/auth.ts. See CARRIER_REVIEWER_ALLOW there.
+  CARRIER_REVIEWER
 }
 
 /// How an account is allowed to authenticate.

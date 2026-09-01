@@ -436,6 +436,9 @@ export function Sidebar() {
                     : user.role === "DISPATCH" ? "Dispatch"
                     : user.role === "OPERATIONS" ? "Operations"
                     : user.role === "ACCOUNTING" ? "Accounting"
+                    // v3.8.awy — without this the fallback lowercases the enum
+                    // and the seat reads "carrier_reviewer".
+                    : user.role === "CARRIER_REVIEWER" ? "Carrier Reviewer"
                     : user.role === "CARRIER" ? "Carrier"
                     : user.role === "SHIPPER" ? "Shipper"
                     : user.role?.toLowerCase()}

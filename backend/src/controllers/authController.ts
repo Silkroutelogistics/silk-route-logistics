@@ -38,6 +38,11 @@ export function signToken(userId: string): string {
 // (The legacy AE value is absent and therefore unloggable-in — see schema.prisma.)
 const AE_ROLES = new Set([
   "ADMIN", "CEO", "BROKER", "DISPATCH", "OPERATIONS", "ACCOUNTING", "ACCOUNT_EXECUTIVE",
+  // v3.8.awy — CARRIER_REVIEWER signs in through the AE portal. Omitting it is
+  // exactly the trap the comment above records for the legacy AE value: the role
+  // would exist, the allow-list would grant it routes, and it could not reach the
+  // login form.
+  "CARRIER_REVIEWER",
 ]);
 function rolesMatch(userRole: string, expectedRole: "AE" | "SHIPPER"): boolean {
   if (expectedRole === "AE") return AE_ROLES.has(userRole);

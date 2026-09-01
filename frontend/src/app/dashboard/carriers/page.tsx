@@ -1,5 +1,6 @@
 "use client";
 
+import { canReviewCarriers } from "@/lib/roles";
 import { CoiReadingPanel } from "@/components/carriers/CoiReadingPanel";
 import { useDrawerBehavior } from "@/hooks/useDrawerBehavior";
 import { IconTabs, type IconTabDef } from "@/components/ui/IconTabs";
@@ -419,6 +420,23 @@ export default function CarrierPoolPage() {
   const { user } = useAuthStore();
   const queryClient = useQueryClient();
   const isAdmin = user?.role === "ADMIN" || user?.role === "CEO";
+  // v3.8.awy — the queue-work gate, deliberately WIDER than isAdmin and
+  // deliberately narrower than "everything on this page".
+  //
+  // isAdmin gates ~20 controls here, which is why an OPERATIONS employee saw
+  // almost nothing while the backend admitted them on 15+ carrier-mutating
+  // routes. CARRIER_REVIEWER is the ratified answer: the reversible queue
+  // actions — approve, decline, start review, request info, lift rejection,
+  // re-vet, document verify/reject/upload — and nothing else.
+  //
+  // What stays on isAdmin, because CARRIER_REVIEWER_ALLOW refuses it and a
+  // button that 403s is worse than no button: terminate an agreement, either
+  // compliance override, authority-grant-date, tier and profile edits, the
+  // test-account flag. Quick Pay keeps its own wider gate above.
+  //
+  // The two must agree. If a control moves between them, move the matching
+  // rule in CARRIER_REVIEWER_ALLOW in the same change.
+  const canReviewCarrier = canReviewCarriers(user?.role);
   const [search, setSearch] = useState("");
   const [tierFilter, setTierFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
@@ -1296,13 +1314,13 @@ export default function CarrierPoolPage() {
                       <a href="/dashboard/loads" className="flex items-center gap-1.5 px-3 py-1.5 bg-gold/20 text-gold rounded-lg text-xs hover:bg-gold/30 transition">
                         <FileText className="w-3.5 h-3.5" /> Tender Load
                       </a>
-                      {isAdmin && selectedCarrier.onboardingStatus !== "APPROVED" && (
+                      {canReviewCarrier && selectedCarrier.onboardingStatus !== "APPROVED" && (
                         <button onClick={() => setConfirmAction({ id: selectedCarrier.id, status: "APPROVED", company: selectedCarrier.company })}
                           className="flex items-center gap-1.5 px-3 py-1.5 bg-green-500/20 text-green-400 rounded-lg text-xs hover:bg-green-500/30 transition">
                           <CheckCircle2 className="w-3.5 h-3.5" /> Approve
                         </button>
                       )}
-                      {isAdmin && selectedCarrier.onboardingStatus !== "REJECTED" && (
+                      {canReviewCarrier && selectedCarrier.onboardingStatus !== "REJECTED" && (
                         <button onClick={() => setRejectModalOpen(true)}
                           className="flex items-center gap-1.5 px-3 py-1.5 bg-red-500/20 text-red-400 rounded-lg text-xs hover:bg-red-500/30 transition">
                           <AlertCircle className="w-3.5 h-3.5" /> Reject
@@ -1313,7 +1331,7 @@ export default function CarrierPoolPage() {
                           application sat silent until a decision. Idempotent
                           server-side, but showing it past PENDING would imply
                           an action with no effect. */}
-                      {isAdmin && selectedCarrier.onboardingStatus === "PENDING" && (
+                      {canReviewCarrier && selectedCarrier.onboardingStatus === "PENDING" && (
                         <button
                           onClick={() => startReview.mutate(selectedCarrier.id)}
                           disabled={startReview.isPending}
@@ -1327,7 +1345,7 @@ export default function CarrierPoolPage() {
                           not APPROVED (already cleared) and not REJECTED
                           (terminal). SUSPENDED carriers also excluded — they
                           shouldn't be receiving info requests while suspended. */}
-                      {isAdmin && selectedCarrier.onboardingStatus !== "APPROVED" && selectedCarrier.onboardingStatus !== "REJECTED" && selectedCarrier.onboardingStatus !== "SUSPENDED" && (
+                      {canReviewCarrier && selectedCarrier.onboardingStatus !== "APPROVED" && selectedCarrier.onboardingStatus !== "REJECTED" && selectedCarrier.onboardingStatus !== "SUSPENDED" && (
                         <button onClick={() => setInfoRequestModalOpen(true)}
                           className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-500/20 text-amber-400 rounded-lg text-xs hover:bg-amber-500/30 transition">
                           <MessageCircle className="w-3.5 h-3.5" /> Request Info
@@ -1336,7 +1354,7 @@ export default function CarrierPoolPage() {
                       {/* v3.8.ajn — Lift Rejection. Only shown for REJECTED carriers.
                           Restores to REVIEWING + clears all 5 rejection fields +
                           notifies carrier their application is back under review. */}
-                      {isAdmin && selectedCarrier.onboardingStatus === "REJECTED" && (
+                      {canReviewCarrier && selectedCarrier.onboardingStatus === "REJECTED" && (
                         <button onClick={async () => {
                           if (!confirm(`Lift rejection for ${selectedCarrier.company}? The carrier will be notified and their application returns to REVIEWING.`)) return;
                           try {
@@ -1844,7 +1862,7 @@ export default function CarrierPoolPage() {
                 {panelTab === "compass" && (
                   <div className="space-y-4">
                     <div className="flex items-center gap-2">
-                      {isAdmin && (
+                      {canReviewCarrier && (
                         <button onClick={() => runCompass(selectedCarrier.id)} disabled={compassLoading === selectedCarrier.id}
                           className="flex items-center gap-1.5 px-3 py-1.5 border border-[#C5A572] text-[#C5A572] rounded-lg text-xs hover:bg-[#C5A572]/10 transition disabled:opacity-50">
                           {compassLoading === selectedCarrier.id ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Compass className="w-3.5 h-3.5" />}
@@ -2298,7 +2316,7 @@ export default function CarrierPoolPage() {
                     <div className="space-y-4">
                       <div className="flex items-center justify-between">
                         <h3 className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Documents ({carrierDocs.length})</h3>
-                        {isAdmin && (
+                        {canReviewCarrier && (
                           <button onClick={() => setDocView("upload")}
                             className="flex items-center gap-1 px-2.5 py-1 bg-[#C5A572]/10 text-[#C5A572] rounded-lg text-xs font-medium hover:bg-[#C5A572]/20 transition">
                             <Upload className="w-3 h-3" /> Upload
@@ -2339,7 +2357,7 @@ export default function CarrierPoolPage() {
                         <div className="bg-gray-100 rounded-lg p-8 text-center">
                           <FolderOpen className="w-8 h-8 text-gray-500 mx-auto mb-2" />
                           <p className="text-xs text-gray-700">No documents on file.</p>
-                          {isAdmin && <button onClick={() => setDocView("upload")} className="text-xs text-[#C5A572] hover:underline mt-1">Upload the first document</button>}
+                          {canReviewCarrier && <button onClick={() => setDocView("upload")} className="text-xs text-[#C5A572] hover:underline mt-1">Upload the first document</button>}
                         </div>
                       ) : (
                         grouped.map(group => (
@@ -2362,11 +2380,11 @@ export default function CarrierPoolPage() {
                                   <div className="flex gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition">
                                     <button onClick={() => { setPreviewDoc(doc); setDocView("preview"); }} title="Preview"
                                       className="p-1 rounded hover:bg-gray-200 text-gray-700 hover:text-gray-600"><Eye className="w-3 h-3" /></button>
-                                    {isAdmin && doc.status !== "VERIFIED" && (
+                                    {canReviewCarrier && doc.status !== "VERIFIED" && (
                                       <button onClick={() => updateDocStatus.mutate({ carrierId: selectedCarrier.id, docId: doc.id, status: "VERIFIED" })} title="Verify"
                                         className="p-1 rounded hover:bg-green-100 text-gray-700 hover:text-green-600"><CheckCircle2 className="w-3 h-3" /></button>
                                     )}
-                                    {isAdmin && doc.status !== "REJECTED" && (
+                                    {canReviewCarrier && doc.status !== "REJECTED" && (
                                       <button onClick={() => updateDocStatus.mutate({ carrierId: selectedCarrier.id, docId: doc.id, status: "REJECTED" })} title="Reject"
                                         className="p-1 rounded hover:bg-red-100 text-gray-700 hover:text-red-600"><X className="w-3 h-3" /></button>
                                     )}
@@ -2390,7 +2408,10 @@ export default function CarrierPoolPage() {
                   // the two surfaces cannot drift apart.
                   <InfoRequestThread
                     carrierId={selectedCarrier.id}
-                    isAdmin={isAdmin}
+                    // v3.8.awy — the thread's `isAdmin` prop gates its Request
+                    // Info CTA and its Cancel button, and both are on
+                    // CARRIER_REVIEWER_ALLOW, so it takes the queue-work gate.
+                    isAdmin={canReviewCarrier}
                     onRequestInfo={() => setInfoRequestModalOpen(true)}
                     canRequestInfo={
                       selectedCarrier.onboardingStatus !== "APPROVED" &&

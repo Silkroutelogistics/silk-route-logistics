@@ -1,0 +1,33 @@
+-- v3.8.awy — add CARRIER_REVIEWER to the UserRole enum.
+--
+-- A narrow role for working the carrier-approval queue: approve, decline,
+-- request info, cancel an info request, start review, re-vet, and verify or
+-- reject documents. Every one of those is reversible from the same seat, which
+-- is what makes the set safe to delegate to a first hire — it is a
+-- queue-working capability, not a policy one.
+--
+-- It deliberately does NOT reach: terminate or sign an agreement, either kind of
+-- compliance override, anything touching the five §14 absolutes or their inputs
+-- (authority-grant-date), Quick Pay FEE changes, insurance grace periods,
+-- suspend, soft-delete/restore, emergency-approve, or the test-account flag.
+--
+-- The role inherits nothing. Its entire reach is CARRIER_REVIEWER_ALLOW in
+-- middleware/auth.ts, so what it can do is readable in one file rather than
+-- spread across the ~520 authorize() call sites.
+--
+-- Additive and non-destructive: no row is written, no default changes, no column
+-- is altered. Nothing holds the value when this lands — assigning it to a user
+-- is a separate, deliberate act — so there is no backfill and no data-loss
+-- surface.
+--
+-- Postgres note, same as the ACCOUNT_EXECUTIVE migration this mirrors:
+-- ALTER TYPE ... ADD VALUE is permitted inside a transaction block from PG12
+-- onward PROVIDED the new value is not USED in that same transaction. Prisma
+-- wraps each migration in one, and this file only adds the label. Do NOT add an
+-- UPDATE writing 'CARRIER_REVIEWER' here — it would fail with "unsafe use of new
+-- value of enum type".
+--
+-- Appended at the end of the enum deliberately, matching the ordering Prisma's
+-- own migrate diff emits, so no BEFORE/AFTER clause is needed.
+
+ALTER TYPE "UserRole" ADD VALUE 'CARRIER_REVIEWER';

@@ -397,9 +397,22 @@ export async function downloadRateConfirmationPdf(req: AuthRequest, res: Respons
     if (!(await isDriverPhoneVerified(rc.loadId))) {
       res.status(403).json({
         error: "DRIVER_NOT_VERIFIED",
+        // v3.8.awy — names the FIRST step, not the second.
+        //
+        // The old wording said "confirm the driver mobile number", which assumes
+        // a driver is already on the load. On a freshly booked load none is
+        // assigned, so the carrier was told to confirm a number that does not
+        // exist yet and had nowhere to go. The audit hit this directly: the
+        // reported load was BOOKED with driverName, driverPhone and
+        // driverPhoneVerified all null, so fixing the link that 404'd would have
+        // moved the carrier from "page not found" to an instruction they could
+        // not follow.
+        //
+        // Both steps, in order, and where to do them.
         message:
-          "Confirm the driver mobile number before downloading the rate confirmation. We text a code " +
-          "to the driver; entering it proves we can reach the person hauling this load.",
+          "Assign a driver to this load and verify their mobile number first — both are on the " +
+          "load in My Loads. We text a code to that number; entering it proves we can reach the " +
+          "person hauling the load before the rate confirmation is released.",
         action: { href: "/carrier/dashboard/my-loads", label: "Verify the driver" },
       });
       return;

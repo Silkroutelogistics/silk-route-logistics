@@ -523,6 +523,109 @@ export function matchAccountExecutiveDeny(method: string, originalUrl: string): 
   return null;
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// v3.8.awy — CARRIER_REVIEWER effective-permission resolution.
+//
+// The mirror image of ACCOUNT_EXECUTIVE above. That role INHERITS broadly and is
+// narrowed by a deny-list; this one inherits NOTHING and is widened by an
+// allow-list:
+//
+//     CARRIER_REVIEWER = ∅ ∪ CARRIER_REVIEWER_ALLOW
+//
+// An allow-list rather than a deny-list because the role is defined by the short
+// list of things it may do, not the long list it may not. Modelling it as
+// "OPERATIONS minus everything dangerous" would mean every future grant to
+// OPERATIONS silently widened it too — which is the failure mode a first-hire
+// role can least afford.
+//
+// It is NOT enumerated at call sites, for the reason ACCOUNT_EXECUTIVE is not:
+// the role's true reach must stay readable in one place. Do not add
+// "CARRIER_REVIEWER" to individual authorize() lists.
+//
+// WHAT IT MAY DO — approve, decline, start review, request info, cancel an info
+// request, re-vet, and verify/reject/upload carrier documents. Every one is
+// reversible from this same seat (a decline is undone by lift-rejection), which
+// is what makes the set delegable: it is queue work, not policy.
+//
+// WHAT IT MAY NEVER DO, and why each is excluded rather than merely absent:
+//   terminate an agreement   — hard-blocks the carrier from every tender
+//   sign/create an agreement — signing CLEARS AGREEMENT_TERMINATED, so granting
+//                              it would let this role un-terminate a carrier it
+//                              cannot terminate (the awx asymmetry, not repeated)
+//   any compliance override  — scoped or blanket; §14 reserves the judgment call
+//   authority-grant-date     — an INPUT to the <12-month absolute. Excluding the
+//                              block but not its input would be theatre
+//   quickpay-override        — the per-load FEE. Quick Pay ENROLMENT is a
+//                              different thing and is also excluded here, being
+//                              a money decision rather than a queue decision
+//   grace-period, suspend, delete/restore, emergency-approve, test-account flag
+//
+// Deny-by-default: anything not matched below is refused, so a new carrier route
+// does not silently join this role's reach by resembling one that did.
+//
+// ONE HONEST LIMIT, stated because the allow-list reads stronger than it is.
+// This resolution runs INSIDE authorize(), so it bounds the routes that HAVE an
+// authorize() gate. It does not bound the 144 routes that have none — those are
+// reachable by any authenticated principal, and CARRIER_REVIEWER is no exception.
+// That is not a hole this role opens (every employee role has the same reach
+// there) and it is not a reason to delay the role, but "the allow-list is its
+// entire reach" is only true of gated routes. The ungated inventory is
+// enumerated and frozen in routeAuthorizeCoverage.test.ts; as it shrinks, this
+// caveat shrinks with it.
+// ─────────────────────────────────────────────────────────────────────────────
+
+export const CARRIER_REVIEWER = "CARRIER_REVIEWER";
+
+type AllowRule = { name: string; re: RegExp; methods?: string[] };
+
+/**
+ * The complete reach of CARRIER_REVIEWER. Matched against the NORMALIZED path
+ * (see normalizeRoutePath), so patterns are lowercase and carry no trailing
+ * slash. `methods` is required on every rule: a bare path grant would hand this
+ * role every verb the route family exposes, and DELETE /carriers/:id lives in
+ * the same family as the reads it legitimately needs.
+ */
+export const CARRIER_REVIEWER_ALLOW: readonly AllowRule[] = [
+  // ── Reading the queue ─────────────────────────────────────────────────────
+  { name: "carriers-list", re: /^\/api\/carriers$/, methods: ["GET"] },
+  { name: "carrier-detail", re: /^\/api\/carriers\/[^/]+$/, methods: ["GET"] },
+  { name: "carrier-score", re: /^\/api\/carriers\/[^/]+\/score$/, methods: ["GET"] },
+  { name: "vetting-report", re: /^\/api\/carriers\/[^/]+\/vetting-report$/, methods: ["GET"] },
+  { name: "vetting-history", re: /^\/api\/carriers\/[^/]+\/(vetting-history|compass-history)$/, methods: ["GET"] },
+  { name: "carrier-inspections", re: /^\/api\/carriers\/[^/]+\/inspections$/, methods: ["GET"] },
+  { name: "carrier-agreements-read", re: /^\/api\/carriers\/[^/]+\/agreements$/, methods: ["GET"] },
+  { name: "carrier-documents-read", re: /^\/api\/carriers\/[^/]+\/documents$/, methods: ["GET"] },
+  { name: "carrier-document-file", re: /^\/api\/carriers\/[^/]+\/documents\/[^/]+\/file$/, methods: ["GET"] },
+  { name: "compliance-carrier-read", re: /^\/api\/compliance\/carrier\/[^/]+$/, methods: ["GET"] },
+
+  // ── Working the queue ─────────────────────────────────────────────────────
+  { name: "start-review", re: /^\/api\/carriers\/[^/]+\/start-review$/, methods: ["POST"] },
+  { name: "approve", re: /^\/api\/carriers\/[^/]+\/approve$/, methods: ["POST"] },
+  { name: "reject", re: /^\/api\/carriers\/[^/]+\/reject$/, methods: ["POST"] },
+  { name: "lift-rejection", re: /^\/api\/carriers\/[^/]+\/lift-rejection$/, methods: ["POST"] },
+  { name: "full-vet", re: /^\/api\/carriers\/[^/]+\/full-vet$/, methods: ["POST"] },
+
+  // ── Info requests ─────────────────────────────────────────────────────────
+  { name: "info-requests-list", re: /^\/api\/info-requests$/, methods: ["GET"] },
+  { name: "info-request-create", re: /^\/api\/info-requests$/, methods: ["POST"] },
+  { name: "info-request-cancel", re: /^\/api\/info-requests\/[^/]+\/cancel$/, methods: ["PATCH"] },
+
+  // ── Documents on the application ──────────────────────────────────────────
+  { name: "carrier-document-upload", re: /^\/api\/carriers\/[^/]+\/documents$/, methods: ["POST"] },
+  { name: "carrier-document-verify", re: /^\/api\/carriers\/[^/]+\/documents\/[^/]+$/, methods: ["PATCH"] },
+];
+
+/** Returns the AllowRule permitting this request, or null if none does. */
+export function matchCarrierReviewerAllow(method: string, originalUrl: string): AllowRule | null {
+  const path = normalizeRoutePath(originalUrl);
+  const verb = (method || "").toUpperCase();
+  for (const rule of CARRIER_REVIEWER_ALLOW) {
+    if (rule.methods && !rule.methods.includes(verb)) continue;
+    if (rule.re.test(path)) return rule;
+  }
+  return null;
+}
+
 export function authorize(...roles: string[]) {
   return (req: AuthRequest, res: Response, next: NextFunction) => {
     const deny = (reason: string) => {
@@ -552,6 +655,22 @@ export function authorize(...roles: string[]) {
         deny(`ACCOUNT_EXECUTIVE denied by rule: ${rule.name}`);
         return;
       }
+    }
+
+    // v3.8.awy — CARRIER_REVIEWER resolves ENTIRELY here, and deny-by-default.
+    //
+    // It inherits nothing, so `roles.includes(...)` can never grant it: the role
+    // is not named at any call site by design. The allow-list is its whole reach,
+    // and anything unmatched is refused — so a carrier route added later does not
+    // join this role by resembling one that did.
+    if (req.user.role === CARRIER_REVIEWER) {
+      const allow = matchCarrierReviewerAllow(req.method, req.originalUrl);
+      if (!allow) {
+        deny("CARRIER_REVIEWER: not on the carrier-review allow-list");
+        return;
+      }
+      next();
+      return;
     }
 
     const granted =
