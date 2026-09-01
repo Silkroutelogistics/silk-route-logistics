@@ -1559,6 +1559,7 @@ Seed complete:
       where: { userId: blockedCarrierUser.id },
       update: {
         insuranceExpiry: new Date(Date.now() - 30 * day),
+        authorityGrantedDate: new Date(Date.now() - 455 * day),
         onboardingStatus: "APPROVED",
         status: "APPROVED",
       },
@@ -1580,12 +1581,19 @@ Seed complete:
         // Insurance expired 30 days ago, no grace period — complianceCheck
         // returns blocked_reasons: ["Insurance has expired"].
         insuranceExpiry: new Date(Date.now() - 30 * day),
+        // A SECOND block, deliberately waivable. Insurance expired is
+        // ABSOLUTE since v3.8.axl, so with only that block a blanket override
+        // correctly releases nothing and B6.5b could no longer show an override
+        // doing anything. A 15-month authority is blocked but overridable
+        // (12-18 band), so the pair proves the Arc 26 PARTITION: the judgment
+        // call is released, the fact stands.
+        authorityGrantedDate: new Date(Date.now() - 455 * day),
         w9Uploaded: true,
         insuranceCertUploaded: true,
         authorityDocUploaded: true,
       },
     });
-    console.log("✅ E2E fixtures: blocked-carrier@srl.invalid (APPROVED but insurance expired) for compliance-override smoke");
+    console.log("✅ E2E fixtures: blocked-carrier@srl.invalid (APPROVED, insurance expired + authority 15mo) for compliance-override smoke");
 
     // v3.8 (E2E onboarding→in-transit coverage) — a PENDING carrier so the
     // lifecycle smoke (B0) can exercise approve → sign-bca (activation) before

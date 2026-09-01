@@ -369,14 +369,34 @@ test.describe("Full Load Lifecycle E2E", () => {
     });
     expect(shortReasonResp.status(), "Sprint 39 Item 54: reason < 10 chars must return 400").toBe(400);
 
-    // Happy path: AE (CEO) accepts on behalf with valid reason
+    // Happy path: AE (CEO) accepts on behalf, WITH EVIDENCE.
+    //
+    // v3.8.axq made evidence mandatory, and this test going red is the contract
+    // change landing rather than a regression. An accept-on-behalf records a
+    // decision the carrier made somewhere SRL cannot see; without a pointer to
+    // it, that request and an AE simply booking a carrier who never agreed are
+    // the same row, and the carrier is left holding a signed rate confirmation
+    // for a load they did not take.
     const onBehalfResp = await request.post(`${BACKEND_API}/tenders/${tender2.id}/accept-on-behalf`, {
       headers: authHeaders,
-      data: { reason: "Carrier portal unreachable; AE override per Sprint 39 directive" },
+      data: {
+        reason: "Carrier portal unreachable; AE override per Sprint 39 directive",
+        evidenceType: "email_subject",
+        evidenceRef: "RE: Load acceptance — confirming 4100 all-in",
+      },
     });
     expect(onBehalfResp.ok(), `Sprint 39 Item 54: accept-on-behalf must succeed; got ${onBehalfResp.status()} ${await onBehalfResp.text()}`).toBeTruthy();
     const onBehalfBody = await onBehalfResp.json();
     expect(onBehalfBody.onBehalf, "Item 54: response flag onBehalf=true").toBe(true);
+
+    // v3.8.axq — and the evidence must be REQUIRED, not merely accepted. A gate
+    // that only proves the happy path says nothing about whether the absence is
+    // refused, which is the half that matters.
+    const noEvidenceResp = await request.post(`${BACKEND_API}/tenders/${tender2.id}/accept-on-behalf`, {
+      headers: authHeaders,
+      data: { reason: "No evidence supplied; this must be refused" },
+    });
+    expect(noEvidenceResp.status(), "v3.8.axq: accept-on-behalf without evidence must be refused").toBe(400);
 
     // Verify load2 status flip (Item 55 P3 — direct path stays BOOKED)
     const load2AcceptedResp = await request.get(`${BACKEND_API}/loads/${load2.id}`, { headers: authHeaders });
@@ -511,6 +531,10 @@ test.describe("Full Load Lifecycle E2E", () => {
     const preBody = await preCheck.json();
     expect(preBody.allowed, "Item 58 pre: blocked carrier must be blocked").toBe(false);
     expect(preBody.blocked_reasons.some((r: string) => r.toLowerCase().includes("insurance")), "blocked reason must mention insurance").toBe(true);
+    expect(
+      (preBody.blocked_codes || []).some((c: any) => c.code === "AUTHORITY_TOO_YOUNG" && c.overridable === true),
+      "§14: the fixture must also carry a WAIVABLE block, or the override below releases nothing",
+    ).toBe(true);
 
     // 2. Apply override (whaider is CEO per seed; Sprint 40 widened gate to ADMIN+CEO)
     const overrideResp = await request.post(`${BACKEND_API}/compliance/carrier/${blockedCarrier.id}/override-block`, {
@@ -521,10 +545,28 @@ test.describe("Full Load Lifecycle E2E", () => {
     const overrideBody = await overrideResp.json();
     expect(overrideBody.override?.id, "override record must be created").toBeTruthy();
 
-    // 3. Post-condition: complianceCheck returns allowed with override warning
+    // 3. Post-condition. This asserted "the override unblocks the
+    //    carrier", and that assertion has been retired by policy rather than
+    //    broken by a defect. Insurance-expired became ABSOLUTE in v3.8.axl, and
+    //    Arc 26 stopped a blanket override short-circuiting the check, so an
+    //    override no longer releases it — correctly. §14: "an override releases
+    //    a JUDGMENT CALL, never a FACT."
+    //
+    //    The fixture carries one block of each kind, so the richer property is
+    //    now assertable here and is what this locks: the PARTITION. The waivable
+    //    authority block is released and named; the insurance fact stands and
+    //    keeps the carrier blocked.
     const postCheck = await request.post(`${BACKEND_API}/compliance/carrier/${blockedCarrier.id}/check`, { headers: authHeaders });
     const postBody = await postCheck.json();
-    expect(postBody.allowed, "Item 58 post: override must unblock the carrier").toBe(true);
+    expect(postBody.allowed, "Item 58 post: an absolute block is not waivable, so the carrier stays blocked").toBe(false);
+    expect(
+      (postBody.released || []).some((r: string) => r.toLowerCase().includes("authority")),
+      `§14: the override must RELEASE the waivable authority block; released=${JSON.stringify(postBody.released)}`,
+    ).toBe(true);
+    expect(
+      (postBody.blocked_codes || []).some((c: any) => c.code === "INSURANCE_EXPIRED" && c.overridable === false),
+      "§14: the insurance fact must survive the override, still flagged non-overridable",
+    ).toBe(true);
     expect(postBody.warnings.some((w: string) => w.toLowerCase().includes("override")), "warning must mention override").toBe(true);
 
     // 4. Quota status endpoint (Sprint 40 new endpoint)
