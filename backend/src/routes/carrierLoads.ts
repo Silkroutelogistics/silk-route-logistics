@@ -21,6 +21,8 @@ import { validateLoadStatusTransition } from "../lib/loadStateMachine";
 import { markScheduledCheckCallsAnswered } from "../services/checkCallAutomation";
 import { actualEventStamps } from "../lib/loadEventStamps";
 import { uploadLimiter } from "../middleware/rateLimiters";
+import { assignCarrier } from "../services/carrierAssignmentService";
+import { complianceCheck } from "../services/complianceMonitorService";
 
 const router = Router();
 
@@ -221,13 +223,44 @@ router.post("/:id/accept", validateBody(acceptSchema), async (req: AuthRequest, 
     return;
   }
 
+  // v3.8.axc — the full compliance gate, which this path never ran.
+  //
+  // It checked onboardingStatus === "APPROVED" and nothing else, while the
+  // router-level gate checks only SUSPENDED. complianceCheck covers far more:
+  // insurance expiry, FMCSA authority revoked, out-of-service, chameleon risk,
+  // authority age, vetting score — and AGREEMENT_TERMINATED.
+  //
+  // That last one made this a live contradiction of ratified policy. §14 says
+  // terminating a Broker-Carrier Agreement blocks future tenders; acceptTender
+  // enforces that. But a terminated carrier could still walk up to the load
+  // board and TAKE a posted load, because this path never asked. Same for a
+  // carrier whose insurance lapsed but whose auto-suspend cron had not yet run:
+  // an AE tendering them the very same load would have been blocked.
+  const compliance = await complianceCheck(profile.id);
+  if (!compliance.allowed) {
+    res.status(403).json({
+      error: "Your account cannot accept loads right now.",
+      blocked_reasons: compliance.blocked_reasons,
+      blocked_codes: compliance.blocked_codes,
+    });
+    return;
+  }
+
   const { driverName, driverPhone, truckNumber, trailerNumber } = req.body;
 
-  const updated = await prisma.load.update({
-    where: { id: load.id },
-    data: {
-      carrierId: req.user!.id,
-      status: "BOOKED",
+  // v3.8.axc — through assignCarrier, the single writer of Load.carrierId.
+  // req.user!.id is a User.id, which is the ID space this column wants.
+  //
+  // NOTE: this remains a self-assign that does not create a LoadTender, so it
+  // bypasses the tender lifecycle (no OFFERED row, no tender history, no
+  // auto-RC). Routing it through createTender + acceptTender is commit 6's
+  // job — the entry-surface consolidation. This commit closes the carrierId
+  // and compliance holes without pretending to have done that.
+  const updated = await assignCarrier({
+    loadId: load.id,
+    carrierUserId: req.user!.id,
+    status: "BOOKED",
+    extra: {
       driverName: driverName || null,
       driverPhone: driverPhone || null,
       truckNumber: truckNumber || null,

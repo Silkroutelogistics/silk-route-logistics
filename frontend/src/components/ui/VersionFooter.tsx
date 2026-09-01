@@ -1,3 +1,37 @@
+// v3.8.axc — A TERMINATED CARRIER COULD STILL TAKE A LOAD OFF THE BOARD.
+//
+// Consolidating the last carrierId writers surfaced a live hole rather than a
+// tidy-up. POST /carrier-loads/:id/accept — a carrier taking a POSTED load
+// directly — checked onboardingStatus === "APPROVED" and nothing else. The
+// router gate above it checks only SUSPENDED. Neither is complianceCheck.
+//
+// So everything complianceCheck refuses, that path allowed: lapsed insurance
+// before the auto-suspend cron catches it, FMCSA authority revoked,
+// out-of-service, HIGH chameleon risk, authority under twelve months, a vetting
+// score below the floor — and AGREEMENT_TERMINATED.
+//
+// That last one contradicted ratified policy outright. §14 says terminating a
+// Broker-Carrier Agreement blocks future tenders, and acceptTender enforces it.
+// But the same carrier could walk up to the load board and simply TAKE a load.
+// An AE was forbidden to tender it to them; they could help themselves.
+//
+// Verified against a real database: signed BCA -> allowed; terminated ->
+// refused with AGREEMENT_TERMINATED, overridable false.
+//
+// Load.carrierId now has exactly ONE writer, 11 -> 0 outside the service, and a
+// guard holds it there. The guard matches object SHORTHAND as well as `key:`,
+// because shorthand is precisely what made the audit's first count read nine
+// when the truth was eleven — a plausible number invites no second look. It is
+// adversarially verified against an injected shorthand writer, and carries
+// fixtures for wrapped chains, comments, and where-clauses so it cannot pass by
+// having quietly stopped matching anything.
+//
+// loadComplianceService's two writes went through the service too, so the guard
+// needs no allow-listed exception — a guard with no exceptions is much stronger
+// than one carrying a special case. Its staging smell (mutating a persisted
+// column so a read-only check can run, then rolling back) is recorded in place
+// rather than normalised.
+//
 // v3.8.axb — CARRIER-ID CONSOLIDATION, PASS 2: THE FOUR MECHANICAL SITES.
 //
 // automation (auto-match assignment), loadBids (AE accepts a bid),
@@ -16150,7 +16184,7 @@
 // and a data: qrCodeDataUrl are all legitimate and a guard that flagged them
 // would be noise. Comments are blanked before matching — the fixes are explained
 // in comments that necessarily quote the banned patterns.
-export const SRL_VERSION = "3.8.axb";
+export const SRL_VERSION = "3.8.axc";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

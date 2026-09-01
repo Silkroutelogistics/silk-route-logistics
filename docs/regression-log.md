@@ -13,6 +13,53 @@ so it's searchable and never lost.
 
 ---
 
+## Fixed — 2026-09-01 (v3.8.axc — a terminated carrier could still take a load off the board)
+
+- **Symptom (P1, found while consolidating, not looked for):**
+  `POST /carrier-loads/:id/accept` — a carrier taking a POSTED load directly —
+  checked `onboardingStatus === "APPROVED"` and nothing else. The router gate
+  above it checks only `SUSPENDED`. **Neither is `complianceCheck`.**
+- **What that allowed:** lapsed insurance before the auto-suspend cron catches
+  it, FMCSA authority revoked, out-of-service, HIGH chameleon risk, authority
+  under 12 months, vetting score below the floor — and `AGREEMENT_TERMINATED`.
+- **It contradicted ratified policy.** §14 (Arc 18) says terminating a
+  Broker-Carrier Agreement blocks future tenders, and `acceptTender` enforces
+  that. The same carrier could walk up to the load board and **take** a load. An
+  AE was forbidden to tender it to them; they could help themselves.
+- **Status:** Fixed in v3.8.axc (tender-lifecycle Phase B, commit 5b of 12).
+- **Verified against a real database:** signed BCA → `allowed: true`;
+  terminated → `allowed: false`, `AGREEMENT_TERMINATED`, `overridable: false`.
+- **`Load.carrierId` now has exactly one writer — 11 → 0 outside the service.**
+  `carrierLoads:226` and `loadComplianceService:312`/`:322` migrated.
+- **Guard:** `__tests__/unit/services/carrierIdWriterDrift.test.ts`. Matches
+  object **shorthand** as well as `key:` — shorthand is what made the audit's
+  first count read nine when the truth was eleven, and a plausible number
+  invites no second look (§19 Sub-pattern 18). Six cases: the invariant, a
+  stale-allow-list check, and fixtures for shorthand, wrapped chains, comments,
+  and where-clauses, so it cannot pass by having quietly stopped matching.
+  **Adversarially verified** against an injected shorthand writer — fails and
+  names the site.
+- **No allow-listed exception.** `loadComplianceService`'s writes went through
+  the service too, so the sanctioned set is length 1. A guard with no exceptions
+  is much stronger than one carrying a special case. Its *staging* smell
+  (mutating a persisted column so a read-only check can run, then rolling back —
+  so a concurrent reader briefly sees a carrier on a load that has not accepted
+  it) is recorded in place rather than normalised; removing the write means
+  threading the candidate through `checkLoadCompliance`, a compliance-path
+  refactor.
+- **Still not done, and not claimed:** this path still does not create a
+  `LoadTender`, so it has no tender history and no auto-RC. Routing it through
+  `createTender` + `acceptTender` is commit 6, the entry-surface consolidation.
+- **Outbound-safety note:** the proof scripts ran with `RESEND_API_KEY` present
+  from `.env` (the log prints `Resend configured: true`). No `[Email] Sent to`
+  line appears in any captured output, so nothing was sent — but that is luck
+  about which code paths ran, not a control. Same shape as the Arc 15 near-miss
+  (§13.3 Item 221). Future DB-backed proofs should run with outbound keys
+  explicitly empty.
+- **Gates:** backend tsc clean, vitest **134/1**, frontend tsc + build clean.
+
+---
+
 ## Fixed — 2026-09-01 (v3.8.axb — carrier-id consolidation, pass 2: the four mechanical sites)
 
 - **Status:** tender-lifecycle Phase B, commit 5a of 12. Writer count **7 → 3**

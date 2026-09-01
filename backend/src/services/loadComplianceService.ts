@@ -12,6 +12,7 @@
 
 import { prisma } from "../config/database";
 import { createNotification } from "./notificationService";
+import { assignCarrier, clearCarrier } from "./carrierAssignmentService";
 
 // ────────────────────────────────────────────────────────────
 // Types
@@ -307,22 +308,34 @@ export async function onLoadAssigned(
 
   const carrierWasAlreadySet = existingLoad?.carrierId === carrierId;
 
-  // If the carrier isn't set yet, temporarily set it for the check
+  // If the carrier isn't set yet, temporarily set it for the check.
+  //
+  // v3.8.axc — routed through assignCarrier so Load.carrierId keeps exactly one
+  // writer, with no allow-listed exception. A guard with no exceptions is much
+  // stronger than one carrying a special case.
+  //
+  // BANKED SMELL, recorded rather than quietly normalised: this is a STAGING
+  // write, not an assignment. It mutates a persisted column so a read-only
+  // check can run, then rolls it back — which means that for the duration of
+  // the check, any concurrent reader sees a carrier on a load that has not
+  // accepted it. Threading the candidate carrier through checkLoadCompliance as
+  // an argument would remove the write entirely. Out of scope here; that is a
+  // refactor of the compliance path, not of carrier assignment.
   if (!carrierWasAlreadySet) {
-    await prisma.load.update({
-      where: { id: loadId },
-      data: { carrierId },
-    });
+    await assignCarrier({ loadId, carrierUserId: carrierId });
   }
 
   const result = await checkLoadCompliance(loadId);
 
   // If CRITICAL and we temporarily set the carrier, roll it back
   if (result.severity === "CRITICAL" && !carrierWasAlreadySet) {
-    await prisma.load.update({
-      where: { id: loadId },
-      data: { carrierId: existingLoad?.carrierId ?? null },
-    });
+    // v3.8.axc — the rollback half of the staging write above. clearCarrier
+    // when there was no prior carrier; restore the previous one otherwise.
+    if (existingLoad?.carrierId) {
+      await assignCarrier({ loadId, carrierUserId: existingLoad.carrierId });
+    } else {
+      await clearCarrier({ loadId });
+    }
     throw new Error(
       `Cannot assign carrier to load — CRITICAL compliance issues: ${result.issues.join("; ")}`
     );
