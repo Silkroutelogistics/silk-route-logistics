@@ -2613,7 +2613,7 @@ Each is a discrete sprint. Mix of operational, security, UX, and technical debt.
     premises — see the `awm` and `awn` entries, and §19 Sub-pattern 15.
 
 
-251. **The five-phase P0/P1 arc, and the deploy gate armed but never fired (2026-09-01, `v3.8.aws` → `v3.8.awy`).**
+251. **The five-phase P0/P1 arc, and the gate that fired (2026-09-01, `v3.8.aws` → `v3.8.awy`).**
 
     Five atomic commits closing the P0s and P1s from
     [`docs/audits/rc404-permissions-drawer-print-audit.md`](docs/audits/rc404-permissions-drawer-print-audit.md).
@@ -2728,12 +2728,49 @@ Each is a discrete sprint. Mix of operational, security, UX, and technical debt.
     doc describes. **The remaining step is now safe and was not before:** with a
     gated green on the board, auto-deploy can be turned off, and only then does
     `Deploy to Render` become the sole path to production.
-    **Held migrations do NOT release here.** `hold/retire-load-rate` and
-    `hold/retire-fleet-module` were gated on two conditions, and only one is met.
-    The secret now exists; **CI gating the deploy has not been demonstrated
-    once.** Merging a destructive migration on the strength of a gate that has
-    never fired is trusting a green that has not happened. They need their own
-    arc, after auto-deploy is off and one gated deploy has gone green.
+    **THE SEVEN MIGRATIONS IN THAT RELEASE, AS APPLIED.** Classified after the
+    fact rather than as a pre-push gate — the push had already happened when this
+    arc began, which is itself the finding. Production's own `migrate deploy`
+    applied all seven with **0 failed, 0 pending**, verified read-only:
+
+    | Migration | Class | Effect |
+    |---|---|---|
+    | `..000000_rc_pdf_url_api_relative` | **data-mutating** | strips the `/api` prefix from `loads.rateConfirmationPdfUrl` |
+    | `..010000_add_carrier_reviewer_role` | additive | adds `CARRIER_REVIEWER` to `UserRole` |
+    | `..010000_load_activity_tender_id` | additive | nullable `tender_id` + FK `ON DELETE SET NULL` |
+    | `..020000_tender_status_withdrawn` | additive | adds `WITHDRAWN` + `statusReason` |
+    | `..030000_backfill_sibling_withdrawn` | **data-mutating** | relabels reason-less `DECLINED` siblings on covered loads to `WITHDRAWN` |
+    | `..040000_load_tender_version` | additive | `version INTEGER NOT NULL DEFAULT 1` |
+    | `..050000_tender_status_released` | additive | adds `RELEASED` |
+
+    **None destructive.** The two data-mutating ones are the pair worth naming:
+    the RC backfill touched **exactly one row**, sized read-only before release
+    and confirmed after; the sibling backfill is the concurrent session's and is
+    documented in their own arc.
+
+    **THE RC BACKFILL'S SHAPE, AND A DELIBERATE DEVIATION.** The release command
+    expected the persisted value to become an **absolute API-host URL**. It is
+    **API-relative** instead — `/rate-confirmations/{id}/pdf`, resolved through
+    `lib/api.ts` by both consumers. That was the other branch the work order
+    offered, and it is the cleaner one **because the value is persisted**: an
+    absolute URL bakes the API host into a database column, so the host then
+    lives in two places and a host change becomes a data migration. Keeping it
+    relative leaves exactly one definition of where the API is, in the client
+    that already owns that question. The guard
+    (`browserTargetHosts.test.ts`) enforces the rule either way — a persisted
+    `*Url` rendered into an `href` must be absolute-with-API-host **or** go
+    through the api client, and this takes the second door.
+
+    **Held migrations: release condition MET, still not released.**
+    `hold/retire-load-rate` and `hold/retire-fleet-module` were gated on the
+    secret existing **and** CI gating the deploy. Both became true at 12:02 on
+    2026-09-01. **They still do not release here, and the reason is a different
+    one from before:** the gate has fired twice, in one session, minutes apart.
+    That is a demonstration, not a soak. These migrations drop columns and
+    tables, and Item 212 is the record of what a destructive migration costs when
+    it ships on an assumption rather than a verification. Status: **gate live
+    since 2026-09-01, awaiting soak — own arc**, with the row-count gate in each
+    migration's header run against production immediately before release.
 
 ## §14 LEGAL / COMPLIANCE STATUS
 
@@ -3735,6 +3772,44 @@ Sprint 51 arc (51.b → 51.f, 5 hotfixes) is the canonical case study. Each iter
 
 The hotfix arc itself produced Sub-pattern 13's three-fire validation lineage — the methodology library generated its first ratification-layer sub-pattern by operating at maturity on a single user-facing surface (QP Override panel) across five iterations.
 
+
+**THIRTEENTH FIRE — three greens on one job, one of them real, and only the log tells them apart (2026-09-01, `v3.8.aws`→`awy` release).**
+
+The deploy job reported **success** on a run where it had deployed nothing. Not
+a bug — the designed behaviour from `v3.8.asv`, which quieted the absent-secret
+case to a warning after seven unactionable red emails. But it means
+`Deploy to Render = success` is **two different facts wearing one tick**, and
+for seven weeks only the decorative one had ever occurred.
+
+Three outcomes inside 56 minutes, all on the same job:
+
+| Run | Deploy job | What it actually did |
+|---|---|---|
+| 33500745501 (11:06) | **success** | `HOOK:` empty, `present=false` — warned, deployed nothing |
+| 33504788375 (11:53) | **skipped** | backend red; the secret was never even read |
+| 33505366194 (12:02) | **success** | `Deploy hook secret present.` → `HTTP 200` → a real deploy id |
+
+The first and third are indistinguishable at the API — same job name, same
+conclusion string, same colour in the UI. The **only** discriminator is a log
+line, and the run that mattered was 47 minutes after the one that did not.
+
+**Counting the tick would have reported the 11:06 run as the first gated deploy.
+It deployed nothing.** That is the same shape as the eleventh fire (a 401 that
+reads identically whether the route exists or not): a signal with no
+discriminating power, which no amount of reading it more carefully improves.
+
+**Going-forward rule: when a job has a quieted branch and a real branch that
+share a conclusion, the conclusion is not evidence. Read the line that
+distinguishes them, and cite it.** Applies to any check that degrades gracefully
+— a skipped upload, a no-op sync, a guard that exits 0 when its input is absent.
+The graceful degradation is usually right; what it costs is the ability to tell
+success from abstention, and that has to be bought back at the log.
+
+**Corollary, from the same hour.** Production reached `9c6aabfc` while that
+commit's CI backend was **failing** and its deploy job had **skipped** — Render's
+auto-deploy shipping a red build, which is the residual risk `v3.8.asv` names in
+its own comment. A gate that can refuse is worth nothing while a second,
+ungated path to production remains open beside it.
 
 ##### Sub-pattern 17 — Verification-instrument failure (filed beside Item 230.3)
 

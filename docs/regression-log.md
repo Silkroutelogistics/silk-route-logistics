@@ -2494,3 +2494,27 @@ deploy job means nothing until you have read which branch produced it.** Two
 greens, 47 minutes apart, meaning opposite things. Auto-deploy stays on until a
 gated green exists — turning it off first means nothing deploys and CI reports
 success about it.
+
+### Correction, same day: it fired
+
+The paragraph above says the gate "has not fired once." True when written,
+false 40 minutes later, so it is corrected here rather than edited away.
+
+Pushing the docs commit that carried the entry produced the signal — a docs-only
+diff gives the reachability gate nothing to check, so the backend went green
+where the previous run had failed on an unrelated dead endpoint, and the deploy
+job ran for the first time with the secret present.
+
+**Run 33505366194, SHA `32c91846`, 2026-09-01T12:02:18Z.** All four jobs green
+including E2E. The deploy log reads `Deploy hook secret present.` — the branch,
+not the warning — then `HTTP 200` and `{"deploy":{"id":"dep-dabbtih42hec73agkee0"}}`.
+Production booted `32c91846` at 12:03:46Z. It reproduced on the next push
+(33505945483 / `5f1a0f70`).
+
+**That is the first fully-gated deploy in project history.** It was still a
+double deploy: Render auto-deploy remained on, so the push shipped twice.
+
+The lesson is filed at §19 Sub-pattern 16, thirteenth fire. Short form: this job
+has a quieted branch and a real branch that report the same conclusion, so the
+tick is not evidence — three greens in 56 minutes, one of which deployed
+anything.
