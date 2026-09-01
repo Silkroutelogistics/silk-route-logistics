@@ -146,6 +146,20 @@ button {
   cursor: pointer;
 }
 button:disabled { opacity: .5; cursor: default; }
+
+/* v3.8 commit 11c — the rate-confirmation signing form.
+   Lives here rather than inline on the page because style-src-elem is 'self'
+   with no 'unsafe-inline': a <style> block on an API-served page would be
+   dropped by the CSP and the form would render unstyled. */
+label.field { display: block; font-weight: 600; margin: 18px 0 6px; color: var(--navy); }
+input[type=text] {
+  width: 100%; box-sizing: border-box; padding: 12px;
+  border: 1px solid var(--cream-2); border-radius: 8px;
+  font-family: var(--font-body); font-size: 16px; color: var(--navy);
+}
+input[type=text]:focus { outline: none; border-color: var(--gold-dark); }
+.kv { display: flex; justify-content: space-between; gap: 12px; padding: 4px 0; font-size: 14px; }
+.kv span:first-child { color: var(--fg-3); }
 .consent {
   font-size: 13px;
   color: var(--fg-2);

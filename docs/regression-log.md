@@ -13,6 +13,66 @@ so it's searchable and never lost.
 
 ---
 
+## Fixed — 2026-09-01 (v3.8.axu — a rate confirmation could be "signed" by anyone with a session, and the record was a name in a JSON blob)
+
+- **Status:** commit 11c of 12. Closes gap-table row 9. 11d lands the rate-change
+  void, the CONFIRMED gates and the fan-out move.
+- **Symptom:** signing was a session-authed `POST /:id/sign` that wrote a typed
+  name into `formData`. There was no link a carrier could act on from an email,
+  no single-use control, and the "signature" carried no IP, no user agent and no
+  binding to the bytes that were signed.
+- **Shape:** a public `/api/rc-sign/:token` — GET renders the form, POST records
+  the signature and moves the tender RC_SENT → CONFIRMED through the transition
+  service. Captured: typed name, IP, user agent, server timestamp, and the id of
+  the token redeemed, alongside the content hash of the exact bytes issued.
+- **Public by necessity, and the token IS the authorization.** A carrier opens
+  this from an email, routinely on a phone. A login wall between a carrier and
+  the document we need signed is how an RC ages past its SLA for reasons that
+  have nothing to do with the carrier. The token is single-use, expiring, and
+  bound to one rate confirmation, so it authorizes exactly one act — the same
+  shape as `/tender-action` and `/ping`. Allow-listed in
+  `routeAuthorizeCoverage` with that reasoning rather than silently.
+- **THE CERTIFICATE IS A SEPARATE DOCUMENT, not a stamp on the original.** The
+  brief asked for the PDF to be stamped with name, timestamp and hash. Stamping
+  would change the issued bytes — and those bytes ARE the evidence, because
+  `contentHash` describes them. A rate confirmation whose hash no longer matches
+  what was signed is worse than one with no stamp at all. PDFKit also cannot
+  append to an existing PDF, so an overlay means re-rendering, which is the
+  defect v3.8.axt just closed. The certificate **names** the hash instead, which
+  binds the signature to one specific artifact rather than to a fresh render that
+  resembles it.
+- **THE PROOF ASSERTED A MECHANISM IT NEVER EXERCISED, and the injection caught
+  it.** Section [4] was titled "single use is enforced by the database, not by a
+  flag" — and removing the scoped write left it **entirely green**, because a
+  sequential replay is refused by the pre-check before the write is reached. A
+  concurrency case was added: six simultaneous submissions. With the scoping,
+  exactly one is accepted. Without it, **five of six succeeded**, each
+  overwriting the signer. §19 Sub-pattern 16, in my own proof, found only because
+  the injection was actually run.
+- **The attestation is checked server-side**, not left to the `required`
+  attribute. A signature taken from someone who did not tick it is a signature
+  nobody agreed to give.
+- **Certificate failure is non-fatal.** The signature is already recorded on the
+  row with everything a dispute needs; the certificate is a rendering of that
+  record, and failing to draw it must not undo the act or tell a carrier their
+  signature did not land when it did.
+- **Two guards caught the new page and both were right.** The typography guard
+  found an inline font stack naming "Segoe UI" and Roboto — families the brand
+  skill does not name, on the one page where looking unofficial matters most. The
+  page now links `/api/public-assets/brand.css`, which exists for exactly this
+  and which `/ping` already uses; the form's own rules went **into that
+  stylesheet** rather than an inline `<style>`, because `style-src-elem` is
+  `'self'` with no `'unsafe-inline'` and an inline block would have been dropped
+  by the CSP and rendered the form unstyled.
+- **Proof:** `_arc-rc-sign-proof.ts`, **22/22** over the real router. Injections,
+  both executed: removing the single-use scoping gives 21/22 reporting **5 of 6**
+  concurrent signatures accepted; dropping the IP capture gives 21/22 naming the
+  unattributable signature.
+- **Outbound (§19 Sub-pattern 20):** keys explicitly empty. `[Email] Sent to`
+  count: **0**, measured.
+- **Gates:** backend tsc clean, vitest **1440 pass / 1 fail** (known `urlSafety`
+  DNS red); frontend tsc clean.
+
 ## Fixed — 2026-09-01 (v3.8.axt — the rate confirmation was re-rendered every time, so nobody could say what a carrier had signed)
 
 - **Status:** commit 11b of 12. Issuance side. 11c lands the sign route, the

@@ -168,7 +168,7 @@ column plus new `eventType` values — additive, no new table, and the drawer's
 | 6 | `acceptTender` sole `carrierId` writer | ✅ **CLOSED v3.8.axa–axc** — one writer (`carrierAssignmentService`), 11 → 0, CI-guarded | `releaseCarrier` as sole clearer = commit 8 |
 | 7 | QuickPayElection pending on tender; RC deferred | Notice fires; no model; RC **not** deferred | New model + gate |
 | 8 | RC auto-fire idempotent, keyed to tender version | PARTIAL **v3.8.axh → axt** — `LoadTender.version` exists and a counter voids the stale RC; a re-send now reuses the frozen artifact rather than re-rendering, so an unchanged document keeps one hash | Re-issue on rate change = 11c |
-| 9 | Tokenized e-sign w/ name·ip·UA·hash → CONFIRMED | PARTIAL **v3.8.axs–axt** — 8 columns, token library, and issuance now FREEZES the document: bytes stored, hash over the stored artifact, tender → RC_SENT via the transition service. Sign route not yet built | Sign route + CONFIRMED writer + PDF stamp = 11c |
+| 9 | Tokenized e-sign w/ name·ip·UA·hash → CONFIRMED | ✅ **CLOSED v3.8.axs–axu** — single-use expiring token on a public route, typed name + attestation, name·IP·UA·timestamp·tokenId captured as columns, hash over the frozen bytes, certificate naming that hash, tender → CONFIRMED via the transition service. Concurrency-proven single use | — |
 | 10 | BOL + shipper notify at CONFIRMED | Not gated on signature | Re-gate |
 | 11 | Rate change post-accept voids RC, reverts to OFFERED | No such path | Build |
 | 12 | Override needs userId·reason·ts; refused on HARD_FAIL | `OverrideComplianceModal` exists; **no HARD_FAIL refusal at tender time** | Verify against §14 absolute set |

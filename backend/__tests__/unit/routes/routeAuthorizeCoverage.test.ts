@@ -230,6 +230,14 @@ const KNOWN_UNGATED: readonly string[] = [
   "sops.ts GET /:id/pdf",
   "ssoAuth.ts GET /google",
   "ssoAuth.ts GET /google/callback",
+  // v3.8 commit 11c — the rate-confirmation e-signature. PUBLIC by necessity:
+  // a carrier opens this from an email, routinely on a phone, and a login wall
+  // between a carrier and the document we need signed is how an RC ages past its
+  // SLA for reasons that have nothing to do with the carrier. The single-use,
+  // expiring, RC-bound token IS the authorization and it authorizes exactly one
+  // act. Same shape as tenderAction and driverPing directly above/below.
+  "rcSign.ts GET /:token",
+  "rcSign.ts POST /:token",
   "tenderAction.ts GET /:token",
   "trackTraceBoard.ts GET /tracking-token/:loadId",
   "tracking.ts GET /:token",

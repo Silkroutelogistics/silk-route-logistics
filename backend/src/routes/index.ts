@@ -79,6 +79,7 @@ import crmCustomerRoutes from "./crmCustomer";
 import ordersRoutes from "./orders";
 import quoteApproveRoutes from "./quoteApprove"; // v3.8.akn Item 180.4 — PUBLIC magic-link approval endpoint
 import tenderActionRoutes from "./tenderAction"; // v3.8.als Item 142 — PUBLIC magic-link tender accept/decline endpoint
+import rcSignRoutes from "./rcSign"; // v3.8 commit 11c — PUBLIC rate-confirmation e-signature (the single-use token IS the auth)
 import externalIntegrations from "./externalIntegrations";
 import contractRateRoutes from "./contractRates";
 import rfpRoutes from "./rfp";
@@ -226,6 +227,7 @@ router.use("/webhook-subscriptions", webhookSubscriptionRoutes);
 router.use("/email-tracking", emailTrackingRoutes); // Resend webhook (public)
 router.use("/quote-approve", quoteApproveRoutes); // v3.8.akn Item 180.4 — magic-link approval (public; JWT IS the auth)
 router.use("/tender-action", tenderActionRoutes); // v3.8.als Item 142 — magic-link tender accept/decline (public; JWT IS the auth)
+router.use("/rc-sign", rcSignRoutes); // v3.8 commit 11c — rate-confirmation e-signature (public; the single-use token IS the auth)
 router.use("/ping", driverPingRoutes); // ARC 19 — driver location ping (public; the load-scoped token IS the auth)
 router.use("/public-assets", publicAssetRoutes); // brand CSS + the ping script, served from 'self' so the CSP can load them
 router.use("/", websiteRoutes);

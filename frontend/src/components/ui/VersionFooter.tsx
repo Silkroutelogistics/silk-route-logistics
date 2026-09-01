@@ -1,3 +1,25 @@
+// v3.8.axu — A RATE CONFIRMATION COULD BE "SIGNED" BY ANYONE WITH A SESSION, AND
+// THE RECORD WAS A NAME IN A JSON BLOB.
+//
+// Signing was a session-authed POST that wrote a typed name into formData. No
+// link a carrier could act on from an email, no single-use control, no IP, no
+// user agent, and no binding to the bytes that were signed.
+//
+// Now a public /api/rc-sign/:token — the single-use, expiring, RC-bound token IS
+// the authorization, because a login wall between a carrier and the document we
+// need signed is how an RC ages past its SLA for reasons that are not the
+// carrier's. Captures name, IP, user agent, timestamp and the token redeemed,
+// and moves the tender RC_SENT -> CONFIRMED through the transition service.
+//
+// The certificate is a SEPARATE document that NAMES the content hash, rather
+// than a stamp on the original: stamping would change the very bytes the hash
+// describes, and destroy the thing it was meant to certify.
+//
+// The proof asserted a mechanism it never exercised. "Single use is enforced by
+// the database" stayed green with the scoped write removed, because a sequential
+// replay is refused by the pre-check. A concurrency case now runs six at once:
+// without the scoping, five of six succeeded.
+
 // v3.8.axt — THE RATE CONFIRMATION WAS RE-RENDERED EVERY TIME, SO NOBODY COULD
 // SAY WHAT A CARRIER HAD SIGNED.
 //
@@ -16772,7 +16794,7 @@
 // and a data: qrCodeDataUrl are all legitimate and a guard that flagged them
 // would be noise. Comments are blanked before matching — the fixes are explained
 // in comments that necessarily quote the banned patterns.
-export const SRL_VERSION = "3.8.axt";
+export const SRL_VERSION = "3.8.axu";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

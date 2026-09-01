@@ -11,7 +11,7 @@ import {
 } from "../validators/rateConfirmation";
 import { generateEnhancedRateConfirmation, generateShipperLoadConfirmation } from "../services/pdfService";
 import { sendRateConfirmationEmail, sendEmail, wrap } from "../services/emailService";
-import { mintRcSignToken, hashPdfBytes } from "../lib/rcSignToken";
+import { mintRcSignToken, hashPdfBytes, rcSignUrl } from "../lib/rcSignToken";
 import { uploadFileToPath } from "../services/storageService";
 import { settleTender } from "../services/tenderTransitionService";
 import { resolveLoadStem, withDocumentNumber } from "../lib/documentNumber";
@@ -311,20 +311,19 @@ export async function sendRateConfirmation(req: AuthRequest, res: Response) {
   // implementation detail nobody can observe.
   const signToken = mintRcSignToken();
 
-  // Send email with PDF attachment.
+  // Send the document and the link that signs it.
   //
-  // The signing LINK is deliberately not passed yet. The token above is minted
-  // and recorded, but the route that redeems it lands in the next commit, and a
-  // "Review and sign" button pointing at a 404 is worse than no button: it
-  // teaches a carrier that our links do not work, on the one document we need
-  // them to act on. Each commit has to be safe to ship on its own, so the link
-  // arrives with the route rather than ahead of it.
+  // The link is the whole point of the email. A rate confirmation that asks a
+  // carrier to sign and gives them nowhere to do it sends them back to a
+  // dispatcher, which is how an unsigned RC ends up aging past its SLA for
+  // reasons that have nothing to do with the carrier.
   await sendRateConfirmationEmail(
     recipientEmail,
     recipientName || "Carrier",
     rc.load.referenceNumber,
     pdfBuffer,
     message,
+    rcSignUrl(signToken.token),
   );
 
   // Update status to SENT, storing the exact formData that was rendered.
