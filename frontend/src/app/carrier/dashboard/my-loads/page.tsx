@@ -409,6 +409,10 @@ interface QpElection {
   eligible: boolean;
   tier: string;
   options: QpOption[];
+  /** Server-rendered attestation line, null when the carrier is not eligible. */
+  attestation: string | null;
+  /** The Quick Pay Agreement version the attestation is made under. */
+  quickPayVersion: string | null;
 }
 
 const QP_SPEED_LABEL: Record<string, string> = {
@@ -499,6 +503,16 @@ function QuickPayElection({ loadId, loadRate }: { loadId: string; loadRate: numb
       <p className="text-[11px] text-gray-500 mb-3">
         Your choice on this load only. Change it any time before we issue the rate confirmation.
       </p>
+
+      {/* row 7d — the attestation, above the control that commits the choice.
+          Server-rendered copy: the wording lives beside the agreement it
+          quotes, and the version says which text the carrier is electing under
+          rather than implying the current one. */}
+      {data.attestation ? (
+        <p className="text-[11px] leading-relaxed text-[#3A4A5F] bg-[#F5EEE0] border border-[rgba(10,37,64,0.10)] rounded-md px-3 py-2 mb-3">
+          {data.attestation}
+        </p>
+      ) : null}
 
       <div className="space-y-1.5">
         {data.options.map((opt) => {

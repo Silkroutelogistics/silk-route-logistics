@@ -681,9 +681,18 @@ export function RateConfirmationModal({ open, onClose, load }: RateConfirmationM
       // Number("0") = 0 still works correctly for explicit zero-fee
       // STANDARD tier). Path β cycle complete: Sprint 32 (error UI) →
       // Sprint 33 (extractor widening) → Sprint 34 (this fix).
-      quickPayFeePercent: form.quickPayFeePercent !== ""
-        ? Number(form.quickPayFeePercent)
-        : undefined,
+      // v3.8 row 7b - THE AE NO LONGER SENDS THE ELECTION.
+      //
+      // The carrier decides how their own load is paid, and that decision now
+      // lives on a QuickPayElection row carrying the channel, the IP, the user
+      // agent and the agreement version. Issuance resolves from that row.
+      // Sending a fee from here would let an AE state a number the carrier
+      // never chose, on the document the carrier signs, with nothing recording
+      // who chose it.
+      //
+      // The field is still READ for display, so the modal shows what was
+      // recorded. The only AE write path is accept-on-behalf, which demands
+      // evidence under the same contract as an on-behalf acceptance.
       accessorials: form.accessorials
         .filter((a) => a.description.trim())
         .map((a) => ({ description: a.description, amount: toNum(a.amount) })),

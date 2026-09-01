@@ -20,7 +20,7 @@ that table is the thing a future session would build from.
 
 | Row | Gap table says | Actually true | Proposal |
 |---|---|---|---|
-| **7** | QuickPayElection model absent; a build, not an invariant | The **election exists** on the Load and is frozen at issuance. What is absent is **provenance** and **the carrier's own act** | Do **not** add a parallel model. Add provenance + a carrier surface |
+| **7** | QuickPayElection model absent; a build, not an invariant | The **election exists** on the Load, is frozen at issuance, and the carrier **can already elect it** (see the CORRECTION below) | Do **not** add a parallel model. Add provenance to the path that exists |
 | **16** | "Advancing the cascade does not exist" | **It exists** — `expireStalePositions` advances via `advanceWaterfall`. The real gap is **two sweeps racing over the same rows** | Scope the direct sweep out of waterfall tenders |
 | **4** | Needs `waterfall.parallel` before a uniqueness rule | Broadcast creates **no Waterfall row at all**, so a `waterfall.*` flag cannot cover it | Put the flag on the **Load**, not the waterfall |
 | **3** | 28 sites / 18 files; enforcing today breaks production | Accurate. But 28 *sites* understates the *transitions* — `assignCarrier` fans in 6 callers | Add an `AUTO` actor with 4 named edges |
@@ -69,12 +69,40 @@ creation "charged carriers under documents they had never been shown."
 and `load.quickPaySpeed` (both frozen), the **enrolment** for pilot state, and
 `profile.quickPayEnabled`. It no longer falls back to `rc.formData`.
 
-### The carrier never elects
+### ~~The carrier never elects~~ — CORRECTED 2026-09-01, this claim was WRONG
 
-`frontend/src/app/carrier/dashboard/tenders/page.tsx` contains **zero** Quick Pay
-references. The carrier accepts; the **AE** makes the election in the RC modal's
-`formData`. The carrier-facing half of Quick Pay described in the original brief
-does not exist on the accept path.
+> **What this section said, and it was false:** *the carrier accepts; the AE makes
+> the election in the RC modal formData; the carrier-facing half does not exist.*
+
+**The carrier CAN elect, per load, and could when this audit was written.**
+`PUT /carrier-payments/loads/:loadId/quickpay-speed` is live, has a GET beside it
+returning the three speeds priced for the tier, refuses with `QP_NOT_ENABLED`
+when the carrier is not in the pilot, reports `locked` once the fee is frozen,
+and is wired to `/carrier/dashboard/my-loads` with the dollar figures shown so
+the choice reads as three prices rather than three words.
+
+**How the claim was made.** I grepped ONE page -- the tenders/accept page -- found
+no Quick Pay reference, and generalised from it to the platform. The narrow
+finding was true and is still true: there is no election step at accept time. The
+inference drawn from it was not.
+
+**This is §19 Sub-pattern 17** (verification-instrument failure: the reach of the
+instrument excluded the answer), committed inside the audit whose whole purpose
+was to check claims before anyone built on them. It is the same shape the
+sub-pattern was written for, and worth recording precisely because an audit is
+the last place it should happen -- a wrong claim here does not merely misinform,
+it commissions work. The directive for Phase B was written on this section, and
+7d as originally cut described building a surface that already existed.
+
+**What was genuinely missing, and what row 7 therefore shipped:** PROVENANCE. The
+endpoint wrote `Load.quickPaySpeed` alone, so a fee could be shown to a carrier
+with no record of who chose it, when, or through what channel -- while the BCA,
+the Quick Pay Agreement and the rate confirmation each capture name, IP, user
+agent and timestamp. That finding stands unchanged and was the right one.
+
+**Going-forward rule, from this:** a claim of the form *"the platform does not do
+X"* needs a search across the surfaces that COULD do X, not one where X was
+expected to be. Grep the endpoint layer before concluding a capability is absent.
 
 ### Two real gaps, and one of them is evidentiary
 
