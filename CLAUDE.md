@@ -2678,7 +2678,8 @@ Each is a discrete sprint. Mix of operational, security, UX, and technical debt.
     rewriting published history across two sessions costs more than the
     ambiguity.
 
-    **THE GATE IS ARMED AND HAS NEVER FIRED.** `RENDER_DEPLOY_HOOK_URL` was
+    **THE GATE ARMED, THEN FIRED — the first genuinely gated deploy in project
+    history.** `RENDER_DEPLOY_HOOK_URL` was
     created 2026-09-01T11:53:13Z. Two runs bracket it and **neither is the
     genuine signal**:
 
@@ -2699,6 +2700,31 @@ Each is a discrete sprint. Mix of operational, security, UX, and technical debt.
     exists means nothing deploys and CI stays green about it. **Pipeline mode
     remains the double-deploy interim.**
 
+
+    **IT THEN FIRED, AND THIS IS THE RECORD.** Pushing the docs commit that
+    carries this entry produced the signal, because a docs-only commit adds no
+    endpoints for the reachability gate to find, so backend went green and the
+    deploy job ran for the first time with the secret present:
+
+    | | |
+    |---|---|
+    | Run | **33505366194**, all four jobs green (backend, frontend, deploy, E2E) |
+    | Deploy job | **99848539371** |
+    | SHA | **`32c91846`** |
+    | Fired | 2026-09-01T12:02:18Z |
+    | Render | `HTTP 200`, `{"deploy":{"id":"dep-dabbtih42hec73agkee0"}}` |
+    | Live | production booted `32c91846` at 12:03:46Z |
+
+    The log line that distinguishes it from every prior green is
+    `Deploy hook secret present.` — the branch, not the warning. **This is the
+    first fully-gated deploy in project history** (2026-09-01, `32c91846`).
+
+    **It was nonetheless a DOUBLE deploy.** Render's own auto-deploy is still on,
+    so the same push shipped twice — once by Render's trigger and once by the
+    hook. Harmless here (idempotent, docs-only) and it is the interim the setup
+    doc describes. **The remaining step is now safe and was not before:** with a
+    gated green on the board, auto-deploy can be turned off, and only then does
+    `Deploy to Render` become the sole path to production.
     **Held migrations do NOT release here.** `hold/retire-load-rate` and
     `hold/retire-fleet-module` were gated on two conditions, and only one is met.
     The secret now exists; **CI gating the deploy has not been demonstrated
