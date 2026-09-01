@@ -84,6 +84,26 @@ describe("the action matrix", () => {
   });
 });
 
+describe("a wired action has somewhere to go", () => {
+  // WIRED_ACTIONS exists to keep dead buttons off the panel, and it can only
+  // do that if membership implies an endpoint. Checking that an action appears
+  // in the matrix (above) proves it is SPEC'd, not that it WORKS -- which is
+  // exactly the distinction that let RESEND_RC and VIEW_RC sit ratified but
+  // unimplemented for four commits. This reads the dispatcher.
+  const page = fs.readFileSync(path.resolve(__dirname, "..", "app/dashboard/loads/page.tsx"), "utf8");
+
+  it("every wired action has a case in the mutation", () => {
+    const missing = WIRED_ACTIONS.filter((a) => !page.includes(`case "${a}"`));
+    expect(missing, "wired with no endpoint -- it would render and then throw").toEqual([]);
+  });
+
+  it("the dispatcher is actually being read (vacuity tripwire)", () => {
+    // A path that has moved would make the check above pass on an empty string.
+    expect(page).toContain("tenderAction");
+    expect(WIRED_ACTIONS.length).toBeGreaterThan(3);
+  });
+});
+
 describe("what the carrier is told", () => {
   it("a lost race is 'Load covered', not 'withdrawn'", () => {
     // The whole point of splitting WITHDRAWN from DECLINED: the carrier did not

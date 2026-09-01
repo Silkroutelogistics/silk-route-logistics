@@ -13,6 +13,42 @@ so it's searchable and never lost.
 
 ---
 
+## Fixed — 2026-09-01 (v3.8.axx — two ratified actions had been filtered off the panel for four commits)
+
+- **Status:** commit 11f of 12. **Closes commit 11.** Commit 12 is the guard
+  sweep over the remaining gap-table rows.
+- **Symptom:** `RESEND_RC` and `VIEW_RC` were in the ratified action matrix and
+  filtered out of `WIRED_ACTIONS`, because until the rate-confirmation lifecycle
+  existed there was nothing behind them. That was the right call at the time and
+  is no longer true.
+- **Shape:** both now have endpoints. Resend looks the rate confirmation up by
+  load and re-sends it; view streams the stored PDF through the api client.
+- **Looked up by load, not carried on the tender**, because a load can have
+  several rate confirmations over its life — a counter or a rate change voids one
+  and issues another — and only the newest non-VOID one is worth acting on.
+- **A re-send does not regenerate the document** (v3.8.axt): same bytes, same
+  hash. It does mint a fresh signing link, because the old secret is
+  unrecoverable from the stored hash by design.
+- **View goes through the api client, not a bare `href`.** That endpoint returns
+  JSON errors an AE is meant to act on — `DRIVER_NOT_VERIFIED`, `RC_NOT_SIGNED` —
+  and a raw link renders those as raw JSON in a tab (§13.3 Item 251).
+- **View does not ask for confirmation.** A download changes nothing, and
+  confirming a read is friction that teaches an AE to click through dialogs
+  without reading them.
+- **THE GUARD NOW CHECKS THE THING THE CONSTANT IS FOR.** The existing case
+  asserted a wired action appears in the matrix — which proves it is *spec'd*,
+  not that it *works*, and is exactly the distinction that let these two sit
+  ratified but unimplemented for four commits. The new case reads the dispatcher
+  and fails if a wired action has no `case`. Injection-verified: renaming
+  `VIEW_RC`'s case names it.
+- **Two comments were left false by this change and were corrected**, not left to
+  drift: the panel's "filtered out here rather than rendered dead" and the
+  constant's "the rate-confirmation actions land with the RC lifecycle". Both now
+  read as history.
+- **Gates:** frontend tsc clean, vitest **116/116**, `npm run build` clean (the
+  prebuild injector runs, which `npx next build` alone does not — §19
+  Sub-pattern 11).
+
 ## Fixed — 2026-09-01 (v3.8.axw — the customer was told a carrier was on their load before anyone had signed)
 
 - **Status:** commit 11e of 12. 11f wires resend/view into `WIRED_ACTIONS`.

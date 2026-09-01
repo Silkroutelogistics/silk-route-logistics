@@ -177,7 +177,7 @@ column plus new `eventType` values — additive, no new table, and the drawer's
 | 15 | TTL from `TENDER_TTL_MINUTES` (120) | CLOSED **v3.8.axd** — env-driven, bounded 15..10080 | — |
 | 16 | Expiry advances waterfall / flags | Sweep ships (Item 141), reverts to POSTED | Add advance + flag |
 | 17 | Every transition → event row | ✅ **CLOSED v3.8.awv → axk** — every state write now runs through the transition service, so the expiry sweep and the cascade log too (neither did before) | Drawer read = commit 10 |
-| 18 | Remove Confirm + Rate Conf send; add Withdraw/Release/Resend/View | Confirm is a dead button; no Withdraw/Release/Resend | Replace |
+| 18 | Remove Confirm + Rate Conf send; add Withdraw/Release/Resend/View | ✅ **CLOSED v3.8.axp → axx** — Confirm and the standalone Rate Conf send are gone; Withdraw, Accept/Reject counter and Release shipped in axp, and Resend/View joined `WIRED_ACTIONS` once they had endpoints. A guard now fails if a wired action has no dispatcher case | — |
 | 19 | Card + header read same derived status | Both read `Load.status` (consistent), but **no derived status exists** | Build derivation |
 
 ### Files touched — estimate

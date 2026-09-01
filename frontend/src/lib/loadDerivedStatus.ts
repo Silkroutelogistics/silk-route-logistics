@@ -174,11 +174,19 @@ export function actionsFor(tenderStatus: string, loadStatus: string): TenderActi
  * The matrix above is the RATIFIED spec and stays complete; this is what is
  * wired. Rendering a button with nothing behind it teaches an AE to distrust
  * the row it sits in, and filtering here rather than trimming the matrix keeps
- * the spec readable as a spec. The rate-confirmation actions land with the RC
- * lifecycle.
+ * the spec readable as a spec.
+ *
+ * As of v3.8 commit 11f the two lists agree: the rate-confirmation actions got
+ * their endpoints, so nothing in the ratified matrix is filtered out any more.
+ * The filter stays because the NEXT action to be ratified will need it.
  */
 export const WIRED_ACTIONS: TenderAction[] = [
   "WITHDRAW", "ACCEPT_COUNTER", "REJECT_COUNTER", "RELEASE",
+  // v3.8 commit 11f — the rate-confirmation lifecycle landed, so these two
+  // stop being filtered out. They were held back deliberately rather than
+  // rendered dead: a button that does nothing teaches an AE to distrust the
+  // row it sits in.
+  "RESEND_RC", "VIEW_RC",
 ];
 
 /** Why a carrier came off. Mirrors RELEASE_REASONS in carrierReleaseService. */

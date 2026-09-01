@@ -5,6 +5,7 @@ import { useDrawerBehavior } from "@/hooks/useDrawerBehavior";
 import { useState, useMemo, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
+import { downloadFromApi } from "@/lib/download";
 import { useAuthStore } from "@/hooks/useAuthStore";
 import { isCarrier } from "@/lib/roles";
 import {
@@ -447,6 +448,33 @@ export default function LoadsPage() {
           return (await api.post(`/loads/${v.loadId}/release-carrier`, {
             reason: v.reason, note: null,
           })).data;
+        case "RESEND_RC": {
+          // The rate confirmation is looked up by load rather than carried on
+          // the tender, because a load can have several over its life (a counter
+          // or a rate change voids one and issues another) and the newest is the
+          // only one worth re-sending. Newest-first is the endpoint's own order.
+          const rcs = (await api.get(`/rate-confirmations/load/${v.loadId}`)).data as
+            Array<{ id: string; status: string; sentToEmail: string | null }>;
+          const rc = rcs?.find((r) => r.status !== "VOID");
+          if (!rc) throw new Error("No rate confirmation on this load yet.");
+          // A re-send does not regenerate the document (v3.8.axt) -- same bytes,
+          // same hash -- but it does mint a fresh signing link, because the old
+          // secret is unrecoverable by design.
+          const to = rc.sentToEmail ?? window.prompt("Send the rate confirmation to which address?");
+          if (!to) throw new Error("cancelled");
+          return (await api.post(`/rate-confirmations/${rc.id}/send`, { recipientEmail: to })).data;
+        }
+        case "VIEW_RC": {
+          const rcs = (await api.get(`/rate-confirmations/load/${v.loadId}`)).data as
+            Array<{ id: string; status: string }>;
+          const rc = rcs?.find((r) => r.status !== "VOID");
+          if (!rc) throw new Error("No rate confirmation on this load yet.");
+          // Through the api client, not a bare href: the endpoint returns JSON
+          // errors an AE is meant to act on, and a raw link renders those as raw
+          // JSON in a tab (§13.3 Item 251).
+          await downloadFromApi(`/rate-confirmations/${rc.id}/pdf`, `RC-${v.loadId}.pdf`);
+          return null;
+        }
         default:
           throw new Error(`${v.action} has no endpoint yet`);
       }
@@ -469,7 +497,9 @@ export default function LoadsPage() {
       tenderAction.mutate({ tenderId, action, loadId, reason });
       return;
     }
-    if (!window.confirm(`${ACTION_LABEL[action]}?`)) return;
+    // A download changes nothing, so it does not ask. Confirming a read is
+    // friction that teaches an AE to click through dialogs without reading them.
+    if (action !== "VIEW_RC" && !window.confirm(`${ACTION_LABEL[action]}?`)) return;
     tenderAction.mutate({ tenderId, action, loadId });
   };
 
@@ -962,11 +992,10 @@ export default function LoadsPage() {
                         offers nothing — there is no acting on a decline or an
                         expiry — so the row simply does not render.
 
-                        RESEND_RC and VIEW_RC are in the ratified matrix and are
-                        filtered out here rather than rendered dead: the rate
-                        confirmation lifecycle lands in the next commit, and a
-                        button that does nothing teaches an AE to distrust the
-                        row it sits in. */}
+                        RESEND_RC and VIEW_RC were held out of WIRED_ACTIONS
+                        until they had endpoints, because a button that does
+                        nothing teaches an AE to distrust the row it sits in.
+                        They landed in v3.8 commit 11f. */}
                     {canCreate && (load.tenders ?? []).flatMap((t) =>
                       actionsFor(t.status, load.status)
                         .filter((a) => WIRED_ACTIONS.includes(a))

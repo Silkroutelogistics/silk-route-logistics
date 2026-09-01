@@ -1,3 +1,22 @@
+// v3.8.axx — TWO RATIFIED ACTIONS HAD BEEN FILTERED OFF THE PANEL FOR FOUR
+// COMMITS.
+//
+// RESEND_RC and VIEW_RC were in the ratified matrix and held out of
+// WIRED_ACTIONS, because until the rate-confirmation lifecycle existed there was
+// nothing behind them. Right at the time; no longer true.
+//
+// Resend looks the rate confirmation up by load (a load can have several over
+// its life, and only the newest non-VOID one is worth acting on) and re-sends it
+// without regenerating the document. View streams the stored PDF through the api
+// client rather than a bare href, because that endpoint returns JSON errors an
+// AE is meant to act on. View does not ask to confirm: a download changes
+// nothing, and confirming a read teaches an AE to click through dialogs.
+//
+// The guard now checks what the constant is FOR. Asserting a wired action
+// appears in the matrix proves it is spec'd, not that it works -- the exact
+// distinction that let these two sit ratified but unimplemented. It now reads
+// the dispatcher and fails if a wired action has no case.
+
 // v3.8.axw — THE CUSTOMER WAS TOLD A CARRIER WAS ON THEIR LOAD BEFORE ANYONE
 // HAD SIGNED.
 //
@@ -16833,7 +16852,7 @@
 // and a data: qrCodeDataUrl are all legitimate and a guard that flagged them
 // would be noise. Comments are blanked before matching — the fixes are explained
 // in comments that necessarily quote the banned patterns.
-export const SRL_VERSION = "3.8.axw";
+export const SRL_VERSION = "3.8.axx";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
