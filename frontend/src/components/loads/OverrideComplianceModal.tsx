@@ -28,7 +28,12 @@ export interface BlockedCode {
     // Arc 27 — federal absolutes. Never overridable, scoped or blanket. §14.
     | "OFAC_MATCH"
     | "FMCSA_REVOKED"
-    | "OUT_OF_SERVICE";
+    | "OUT_OF_SERVICE"
+    // v3.8.axl — sixth absolute. Cover is a fact held by the insurer, and a
+    // broker putting freight on an uninsured truck is the one uncovered loss
+    // nobody can claw back. The grace period stays a WARNING, because that is
+    // SRL deliberately granting time, not an AE waving a lapse through.
+    | "INSURANCE_EXPIRED";
   ageMonths?: number;
   overridable: boolean;
 }

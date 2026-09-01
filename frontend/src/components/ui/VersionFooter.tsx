@@ -1,3 +1,51 @@
+// v3.8.axl — A SIXTH ABSOLUTE, AND SIX BLOCKS THAT WERE REFUSED AS TYPOS.
+//
+// Expired insurance joins the §14 set no override waives. Whether cover is in
+// force is a fact held by the insurer, not a judgement an AE gets to make, and
+// it is the one uncovered loss nobody claws back afterwards: a broker who put
+// freight on an uninsured truck has no bond, no cargo policy, no defence.
+//
+// Mirrored in all four places §14 requires, because half a mirror is the
+// failure mode it names: overridable:false in the gate, the reason in the
+// absolute set, 409 from the endpoint, and the code in the modal's union so
+// submit disables. Marking it un-waivable in one and minting it in another is
+// the contradiction, whichever way round it points.
+//
+// THE GRACE PERIOD IS UNTOUCHED and stays a warning. That is SRL deliberately
+// granting time against a renewal already in motion — granted once, with an end
+// date — not an AE waving a lapse through at tender time. The distinction is
+// the difference between a policy and a loophole.
+//
+// A DEFECT THE TIGHTENED ASSERTION FOUND, and it was there for all six.
+// The endpoint checked the scoped ALLOW-LIST before the absolutes. An absolute
+// is not a scoped code either, so every one of the six came back 400 "Unknown
+// checkCode" — telling an AE they made a typo when what they hit was policy.
+// Both answers refuse and nothing unsafe happened, but a block that names the
+// wrong remedy sends somebody to re-type a code that was correct. Absolutes are
+// now checked first.
+//
+// The compliance refusal also carries blocked_codes now, not only prose. The
+// modal derives its disabled state from those codes, so without them it offered
+// an override for a terminated agreement and the AE learned otherwise by having
+// the mint refused.
+//
+// Proof: _hard-fail-refusal-proof.ts, 17/17, real router over HTTP against a
+// real database. It asserts the three things that must hold together — 4xx, no
+// tender row, and no LoadActivity row — because createTender writes a tender
+// AND its opening transition, so a gate that let the write begin would leave
+// history for a tender nobody has.
+//
+// TWO THINGS ABOUT THE VERIFICATION, both worth keeping.
+//
+// The first injection reported NO CHANGE. It had not applied: a perl -0pi
+// pattern silently missed on CRLF, and "no change" reads exactly like a proof
+// that cannot see the defect. Re-run with a match assertion it gave 11/17 and
+// status=201 — a tender created for an uninsured carrier.
+//
+// And the endpoint assertion originally accepted "409 or 400". That version
+// stayed 17/17 while the endpoint half of the mirror was deleted, because the
+// unknown-code path also refuses. Tightened to the exact code and message, it
+// fails — and it was tightening it that surfaced the ordering defect above.
 // v3.8.axk — THE ALLOW-LIST SAID "CARRIER DECLINES A CASCADE OFFER". THE ROUTE
 // BEHIND IT LET AN AE DO IT.
 //
@@ -16439,7 +16487,7 @@
 // and a data: qrCodeDataUrl are all legitimate and a guard that flagged them
 // would be noise. Comments are blanked before matching — the fixes are explained
 // in comments that necessarily quote the banned patterns.
-export const SRL_VERSION = "3.8.axk";
+export const SRL_VERSION = "3.8.axl";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

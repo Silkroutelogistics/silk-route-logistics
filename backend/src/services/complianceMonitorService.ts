@@ -76,7 +76,12 @@ export interface BlockedCode {
     // Arc 27 — federal absolutes. Never overridable, scoped or blanket. §14.
     | "OFAC_MATCH"
     | "FMCSA_REVOKED"
-    | "OUT_OF_SERVICE";
+    | "OUT_OF_SERVICE"
+    // v3.8.axl — sixth absolute. Cover is a fact held by the insurer, and a
+    // broker putting freight on an uninsured truck is the one uncovered loss
+    // nobody can claw back. The grace period stays a WARNING, because that is
+    // SRL deliberately granting time, not an AE waving a lapse through.
+    | "INSURANCE_EXPIRED";
   ageMonths?: number;
   overridable: boolean;
 }
@@ -207,6 +212,7 @@ export async function complianceCheck(carrierId: string, pre?: ComplianceBundle)
    *   OFAC_MATCH                   Arc 27 — ratified as policy
    *   FMCSA_REVOKED                Arc 27 — ratified as policy
    *   OUT_OF_SERVICE               Arc 27 — ratified as policy
+   *   INSURANCE_EXPIRED            v3.8.axl — ratified as policy
    *
    * The first two were already declared un-waivable elsewhere and the gate was
    * simply disagreeing. The last three are a decision: an override releases a
@@ -257,13 +263,25 @@ export async function complianceCheck(carrierId: string, pre?: ComplianceBundle)
   }
 
   // HARD BLOCK: expired insurance (with grace period check)
+  //
+  // v3.8.axl — ABSOLUTE. Whether cover is in force is a fact held by the
+  // insurer, not a judgement an AE gets to make, and it is the one uncovered
+  // loss nobody can claw back afterwards: a broker who put freight on an
+  // uninsured truck has no bond, no cargo policy and no defence.
+  //
+  // The GRACE PERIOD is untouched and stays a warning. That is SRL
+  // deliberately granting time against a renewal already in motion, granted
+  // once, with an end date — not an AE waving a lapse through at tender time.
   if (carrier.insuranceExpiry && carrier.insuranceExpiry <= now) {
     // Check for active insurance grace period
     if (carrier.insuranceGracePeriodEnd && carrier.insuranceGracePeriodEnd > now) {
       const graceDaysLeft = Math.ceil((carrier.insuranceGracePeriodEnd.getTime() - now.getTime()) / 86_400_000);
       warnings.push(`Insurance expired but grace period active (${graceDaysLeft} days remaining)`);
     } else {
-      blocked_reasons.push("Insurance has expired");
+      const reason = "Insurance has expired";
+      blocked_reasons.push(reason);
+      absoluteReasons.add(reason);
+      blocked_codes.push({ code: "INSURANCE_EXPIRED", overridable: false });
     }
   }
 
@@ -484,7 +502,14 @@ export async function complianceCheck(carrierId: string, pre?: ComplianceBundle)
   // SOFT WARNING: document expiry (COI, W-9, authority)
   const thirtyDaysFromNow = new Date(now.getTime() + 30 * 86_400_000);
   if (carrier.coiExpiryDate && new Date(carrier.coiExpiryDate) < now) {
-    blocked_reasons.push("Certificate of Insurance expired");
+    // Same absolute, reached by the other door. The COI is the evidence of the
+    // cover; an expired certificate and an expired policy are the same fact
+    // about whether a claim would be paid, so treating one as waivable and the
+    // other as absolute would be a contradiction an AE could route around.
+    const coiReason = "Certificate of Insurance expired";
+    blocked_reasons.push(coiReason);
+    absoluteReasons.add(coiReason);
+    blocked_codes.push({ code: "INSURANCE_EXPIRED", overridable: false });
   } else if (carrier.coiExpiryDate && new Date(carrier.coiExpiryDate) < thirtyDaysFromNow) {
     warnings.push(`Certificate of Insurance expiring ${new Date(carrier.coiExpiryDate).toISOString().split("T")[0]}`);
   }

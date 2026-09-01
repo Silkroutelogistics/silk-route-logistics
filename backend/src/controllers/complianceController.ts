@@ -421,6 +421,11 @@ const NEVER_OVERRIDABLE_CHECK_CODES = [
   "FMCSA_REVOKED",
   "OUT_OF_SERVICE",
   "AGREEMENT_TERMINATED",
+  // v3.8.axl — the endpoint half of the sixth absolute. Marking it
+  // overridable: false in the gate without refusing it here would leave this
+  // endpoint happily minting an override the gate ignores, which is the
+  // half-mirrored state §14 names as the failure mode.
+  "INSURANCE_EXPIRED",
 ] as const;
 
 // v3.8.awx — UNUSUAL_OTP_SMS_DISABLE added. It was missing, and the omission
@@ -505,6 +510,24 @@ export async function overrideBlock(req: AuthRequest, res: Response) {
     // to succeed, counted against the carrier's 30-day quota, and released
     // nothing. Silent no-ops are the worst kind of override. Allow-list it, and
     // keep null/absent meaning the legacy blanket override.
+    // v3.8.axl — the absolutes are checked BEFORE the allow-list, and the order
+    // is the whole point. An absolute is not in SCOPED_CHECK_CODES either, so
+    // with the allow-list first every one of the six was refused as
+    // "Unknown checkCode" — which tells an AE they made a typo when what they
+    // actually hit was policy. Both answers are refusals and nothing unsafe
+    // happened, but a block that names the wrong remedy sends somebody to
+    // re-type a code that was correct.
+    //
+    // Found by tightening a proof assertion from "some 4xx" to this exact code.
+    // The loose version passed while the mirror was half removed.
+    if (checkCode && (NEVER_OVERRIDABLE_CHECK_CODES as readonly string[]).includes(checkCode)) {
+      res.status(409).json({
+        code: "HARD_FLOOR_NOT_OVERRIDABLE",
+        error: `${checkCode} cannot be overridden. It is a fact held by another party — the remedy is to change the fact, not SRL's record of it.`,
+      });
+      return;
+    }
+
     if (checkCode && !SCOPED_CHECK_CODES.includes(checkCode)) {
       res.status(400).json({
         code: "UNKNOWN_CHECK_CODE",
@@ -574,18 +597,6 @@ export async function overrideBlock(req: AuthRequest, res: Response) {
           "[Compliance] Could not compute released-at-grant for blanket override; minting anyway",
         );
       }
-    }
-
-    // Arc 27 — refuse to mint against a federal absolute. Same 409 the
-    // authority hard floor already returns, because it is the same answer: this
-    // is not a thing an override can act on, and issuing one would spend the
-    // carrier's monthly quota to change nothing.
-    if (checkCode && (NEVER_OVERRIDABLE_CHECK_CODES as readonly string[]).includes(checkCode)) {
-      res.status(409).json({
-        code: "HARD_FLOOR_NOT_OVERRIDABLE",
-        error: `${checkCode} cannot be overridden. It is a fact held by another party — the remedy is to change the fact, not SRL's record of it.`,
-      });
-      return;
     }
 
     // Create override with 24hr expiry. checkCode is persisted as null

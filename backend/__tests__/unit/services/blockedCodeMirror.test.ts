@@ -132,12 +132,22 @@ describe("BlockedCode mirror", () => {
   });
 
   it("no absolute is reachable as a scoped code", () => {
-    // Independent of the categories above: the five §14 absolutes must never be
+    // Independent of the categories above: the §14 absolutes must never be
     // mintable, whichever list a future code lands on.
+    //
+    // The count is asserted as well as the overlap. Overlap alone is satisfied
+    // by DELETING an entry from NEVER_OVERRIDABLE, which is the direction that
+    // quietly makes an absolute waivable again — so the number has to be
+    // edited on purpose and §14 updated with it.
     const ctrl = fs.readFileSync(path.join(BACKEND, "src/controllers/complianceController.ts"), "utf8");
     const scoped = [...(/const SCOPED_CHECK_CODES\s*=\s*\[([^\]]+)\]/.exec(ctrl)![1]).matchAll(/"([A-Z_]+)"/g)].map((x) => x[1]);
     const never = [...(/const NEVER_OVERRIDABLE_CHECK_CODES\s*=\s*\[([^\]]+)\]/.exec(ctrl)![1]).matchAll(/"([A-Z_]+)"/g)].map((x) => x[1]);
-    expect(never.length, "NEVER_OVERRIDABLE_CHECK_CODES should list the five absolutes").toBe(5);
+    expect(
+      never.length,
+      "NEVER_OVERRIDABLE_CHECK_CODES should list the six §14 absolutes. Changing " +
+        "this number means changing policy — update §14 in the same commit.",
+    ).toBe(6);
+    expect(never, "INSURANCE_EXPIRED is absolute as of v3.8.axl").toContain("INSURANCE_EXPIRED");
     const overlap = scoped.filter((c) => never.includes(c));
     expect(overlap, overlap.length ? `Absolute(s) accepted as scoped overrides: ${overlap.join(", ")}` : "").toEqual([]);
   });

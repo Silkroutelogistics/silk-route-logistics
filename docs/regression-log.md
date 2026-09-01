@@ -13,6 +13,62 @@ so it's searchable and never lost.
 
 ---
 
+## Fixed — 2026-09-01 (v3.8.axl — a sixth absolute, and six blocks that were refused as typos)
+
+- **Status:** commit 9a of 12. The override-provenance half of commit 9 is 9b;
+  `candidateCarrierId` is 9c.
+- **Expired insurance joins the §14 absolute set.** Whether cover is in force is
+  a **fact held by the insurer**, not a judgement an AE gets to make — §14's own
+  admission test — and it is the one uncovered loss nobody claws back
+  afterwards: a broker who put freight on an uninsured truck has no bond, no
+  cargo policy and no defence. Six absolutes now.
+- **Mirrored in all four places §14 requires**, because half a mirror is the
+  failure mode §14 names: `overridable: false` where the code is pushed, the
+  reason in `absoluteReasons`, a 409 from the override endpoint, and the code in
+  the modal's union so submit disables. Both doors are covered — an expired
+  *policy* and an expired *COI* are the same fact about whether a claim would be
+  paid, so treating one as waivable would be a route around the other.
+- **The grace period is untouched and stays a warning.** That is SRL
+  deliberately granting time against a renewal already in motion — granted once,
+  with an end date — not an AE waving a lapse through at tender time. Proven, so
+  it cannot be quietly folded into the block later.
+- **A defect the tightened assertion found, and it was there for all six.** The
+  endpoint checked the scoped **allow-list** before the absolutes. An absolute is
+  not a scoped code either, so every one of the six was refused as
+  `400 UNKNOWN_CHECK_CODE` — *"Unknown checkCode"* — telling an AE they made a
+  typo when what they hit was policy. Both answers refuse and nothing unsafe
+  happened, but **a block that names the wrong remedy sends somebody to re-type
+  a code that was correct**. Absolutes are now checked first.
+- **The compliance refusal carries `blocked_codes`, not only prose.** The modal
+  derives its disabled state from those codes, so without them it offered an
+  override for a terminated agreement or an expired policy and the AE found out
+  by having the mint refused. Applied to `createTender` and both accept paths.
+- **Proof:** `_hard-fail-refusal-proof.ts`, **17/17**, real router over HTTP
+  against a real database. It asserts the three things that must hold together —
+  4xx, **no tender row, and no LoadActivity row** — because `createTender` writes
+  a tender *and* its opening transition, so a gate that let the write begin would
+  leave history for a tender nobody has.
+- **VERIFICATION NOTE 1 — an injection that reported no change had not applied.**
+  A `perl -0pi` pattern silently missed on CRLF, and *"no change"* reads exactly
+  like a proof that cannot see the defect. Re-run with a match assertion it gave
+  **11/17** and `status=201` — a tender created for an uninsured carrier.
+  Injections are now applied through a helper that fails loudly when the pattern
+  matches zero times.
+- **VERIFICATION NOTE 2 — a loose assertion passed while the mirror was half
+  gone.** The endpoint case originally accepted *"409 or 400"*. Deleting the
+  endpoint half of the mirror left it **17/17**, because the unknown-code path
+  also refuses. Tightened to the exact code and message it fails — and
+  tightening it is what surfaced the ordering defect above. §19 Sub-pattern 16:
+  the check ran, and it was not checking what its name implied.
+- **Guard:** `blockedCodeMirror` now asserts the absolute **count** as well as
+  the overlap. Overlap alone is satisfied by *deleting* an entry from
+  `NEVER_OVERRIDABLE`, which is the direction that quietly makes an absolute
+  waivable again.
+- **Outbound (§19 Sub-pattern 20):** keys explicitly empty. `[Email] Sent to`
+  count: **0**, measured from the captured output.
+- **Gates:** backend tsc clean; backend vitest **1423 pass / 1 fail** (the known
+  `urlSafety` DNS red, sandbox-only); frontend tsc clean; frontend build clean.
+
 ## Fixed — 2026-09-01 (v3.8.axk — the allow-list said "carrier declines a cascade offer"; the route behind it let an AE do it)
 
 - **Status:** commit 8c of 12. Closes the consolidation begun in 8b.

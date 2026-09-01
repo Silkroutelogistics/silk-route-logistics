@@ -28,10 +28,26 @@ export async function createTender(req: AuthRequest, res: Response) {
   const carrier = await prisma.carrierProfile.findUnique({ where: { id: carrierId } });
   if (!carrier) { res.status(404).json({ error: "Carrier not found" }); return; }
 
-  // Compliance gate: block non-compliant carriers
+  // Compliance gate: block non-compliant carriers.
+  //
+  // v3.8.axl — the refusal carries blocked_codes as well as prose. Without
+  // them the client cannot tell a block it may waive from one no override
+  // touches, so the modal offers an override for a terminated agreement or an
+  // expired policy and the AE finds out by having the mint refused. The codes
+  // are what the modal already renders its disabled state from; this response
+  // simply had not been passing them on.
+  //
+  // No tender is written, and no LoadActivity row either — createTender writes
+  // a tender AND its opening transition, so a gate that let the write begin
+  // would leave history for a tender nobody has. Proven, not assumed:
+  // _hard-fail-refusal-proof.ts asserts both counts are zero after the refusal.
   const compliance = await complianceCheck(carrierId);
   if (!compliance.allowed) {
-    res.status(403).json({ error: "Carrier is non-compliant", blocked_reasons: compliance.blocked_reasons });
+    res.status(403).json({
+      error: "Carrier is non-compliant",
+      blocked_reasons: compliance.blocked_reasons,
+      blocked_codes: compliance.blocked_codes,
+    });
     return;
   }
 
@@ -98,7 +114,11 @@ export async function acceptTender(req: AuthRequest, res: Response) {
   // Compliance gate: re-check at acceptance time (carrier may have become non-compliant)
   const compliance = await complianceCheck(tender.carrierId);
   if (!compliance.allowed) {
-    res.status(403).json({ error: "Carrier is no longer compliant", blocked_reasons: compliance.blocked_reasons });
+    res.status(403).json({
+      error: "Carrier is no longer compliant",
+      blocked_reasons: compliance.blocked_reasons,
+      blocked_codes: compliance.blocked_codes,
+    });
     return;
   }
 
@@ -312,7 +332,11 @@ export async function acceptTenderOnBehalf(req: AuthRequest, res: Response) {
 
   const compliance = await complianceCheck(tender.carrierId);
   if (!compliance.allowed) {
-    res.status(403).json({ error: "Carrier is no longer compliant", blocked_reasons: compliance.blocked_reasons });
+    res.status(403).json({
+      error: "Carrier is no longer compliant",
+      blocked_reasons: compliance.blocked_reasons,
+      blocked_codes: compliance.blocked_codes,
+    });
     return;
   }
 
