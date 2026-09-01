@@ -2705,7 +2705,7 @@ Each is a discrete sprint. Mix of operational, security, UX, and technical debt.
     names, in its live form, and it is the argument for finishing step 3. It is
     **not** yet safe to finish it: turning auto-deploy off before a gated green
     exists means nothing deploys and CI stays green about it. **Pipeline mode
-    remains the double-deploy interim.**
+    remained the double-deploy interim — retired 2026-09-01, see below.**
 
 
     **IT THEN FIRED, AND THIS IS THE RECORD.** Pushing the docs commit that
@@ -2726,12 +2726,29 @@ Each is a discrete sprint. Mix of operational, security, UX, and technical debt.
     `Deploy hook secret present.` — the branch, not the warning. **This is the
     first fully-gated deploy in project history** (2026-09-01, `32c91846`).
 
-    **It was nonetheless a DOUBLE deploy.** Render's own auto-deploy is still on,
-    so the same push shipped twice — once by Render's trigger and once by the
-    hook. Harmless here (idempotent, docs-only) and it is the interim the setup
-    doc describes. **The remaining step is now safe and was not before:** with a
-    gated green on the board, auto-deploy can be turned off, and only then does
-    `Deploy to Render` become the sole path to production.
+    **IT WAS A DOUBLE DEPLOY, AND THAT IS NOW RETIRED.** At the moment it fired,
+    Render's own auto-deploy was still on, so that push shipped twice — once by
+    Render's trigger and once by the hook. Harmless (idempotent, docs-only), and
+    it was the interim the setup doc describes.
+
+    **HOOK-ONLY MODE — auto-deploy disabled 2026-09-01, confirmed by Wasi.**
+    `Deploy to Render` is now the sole path to production. The run that earned
+    the switch is **33505366194** (`32c91846`, 12:02:18Z), whose deploy log reads
+    `Deploy hook secret present.` rather than the warning branch. The ordering the
+    setup doc insists on was followed and matters: the secret first, then a
+    demonstrated green, and only then auto-deploy off. Reversed, nothing deploys
+    and CI reports success about it.
+
+    **What this session could NOT observe, stated so nobody reads more into the
+    evidence than it carries.** The authoritative deploy count lives in the
+    Render dashboard, which is not reachable from here. Boot timing is
+    *consistent* with a single hook-triggered deploy — on `a6904a99` the hook
+    completed 12:34:38Z and production booted 12:36:03Z, an 85-second gap — but
+    it is not *exclusive*: an auto-deploy boot would simply have been superseded
+    by the hook's, producing the same final observation. The disabling is
+    therefore recorded on Wasi's confirmation, not on an inference this session
+    is able to make.
+
     **THE SEVEN MIGRATIONS IN THAT RELEASE, AS APPLIED.** Classified after the
     fact rather than as a pre-push gate — the push had already happened when this
     arc began, which is itself the finding. Production's own `migrate deploy`
@@ -2765,16 +2782,33 @@ Each is a discrete sprint. Mix of operational, security, UX, and technical debt.
     `*Url` rendered into an `href` must be absolute-with-API-host **or** go
     through the api client, and this takes the second door.
 
-    **Held migrations: release condition MET, still not released.**
-    `hold/retire-load-rate` and `hold/retire-fleet-module` were gated on the
-    secret existing **and** CI gating the deploy. Both became true at 12:02 on
-    2026-09-01. **They still do not release here, and the reason is a different
-    one from before:** the gate has fired twice, in one session, minutes apart.
-    That is a demonstration, not a soak. These migrations drop columns and
-    tables, and Item 212 is the record of what a destructive migration costs when
-    it ships on an assumption rather than a verification. Status: **gate live
-    since 2026-09-01, awaiting soak — own arc**, with the row-count gate in each
-    migration's header run against production immediately before release.
+    **Held migrations: release condition MET, and a soak criterion rather than a
+    feeling.** `hold/retire-load-rate` and `hold/retire-fleet-module` were gated
+    on the secret existing **and** CI gating the deploy. Both became true at
+    12:02 on 2026-09-01, and hook-only mode landed the same day. They still do
+    not go, because two firings minutes apart in one session is a demonstration,
+    not evidence that the path is durable — and these drop columns and tables,
+    which is the class Item 212 records the cost of.
+
+    **PROPOSED SOAK — release when ALL FOUR hold:**
+
+    1. **≥ 10 green gated deploys** — enough that a flake would likely have shown
+       once. Counted from run **33505366194** (2026-09-01).
+    2. **spanning ≥ 3 distinct calendar days** — a count alone can be spent in an
+       afternoon by one busy session, which tests the gate's throughput and not
+       its durability. Days catch what an hour cannot: a rotated hook, an expired
+       credential, a Render-side change.
+    3. **zero deploys reaching production by any path other than the hook** —
+       verified in the Render dashboard, since this is the one fact a session
+       cannot see. A single auto-deploy slipping through means hook-only mode is
+       not actually in force and the gate is decorative again.
+    4. **the row-count gate in each migration's own header run against
+       production immediately before merge** — not at authoring time, not on a
+       container. Item 212's gate was run *after* the drop, when the question it
+       existed to answer had already become unanswerable.
+
+    Failing any one, they wait. The cost of waiting is that two dead columns stay
+    in the schema; the cost of being wrong is unrecoverable, and PITR is 7 days.
 
 ## §14 LEGAL / COMPLIANCE STATUS
 
