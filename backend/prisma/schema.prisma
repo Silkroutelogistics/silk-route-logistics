@@ -2006,6 +2006,41 @@ model RateConfirmation {
   signedUrl   String?
   status      String    @default("DRAFT")
 
+  // v3.8 commit 11a -- the RC e-signature record, promoted out of formData.
+  //
+  // The 2026-08-31 e-signature audit found the per-load document a carrier
+  // signs carried WEAKER evidence than the master agreements: the BCA and the
+  // Quick Pay Agreement each capture typed name + IP + user agent + version +
+  // an executed PDF, while the RC recorded a name in a JSON blob and nothing
+  // else. A dispute turns on the RC, so these are columns.
+  //
+  // contentHash is over the STORED PDF BYTES, and that is deliberately unlike
+  // CarrierAgreement.contentHash, which hashes canonical text. The reason is
+  // the difference between the two artifacts, not a change of mind: an
+  // agreement is RE-RENDERED on demand and PDFKit output is not reproducible
+  // (v3.8.awj got two hashes for one agreement at identical length), so a byte
+  // hash there could never re-verify. The RC is FROZEN at issuance -- the
+  // bytes are stored and served back -- so hashing the stored artifact
+  // re-verifies by construction. Closes the open half of CLAUDE.md §13.3 Item
+  // 250 decision 3.
+  //
+  // No separate ESIGN consent column here, unlike CarrierAgreement.consentAt.
+  // The carrier consented to electronic records when they signed the BCA, and
+  // the RC is governed by that agreement; a per-load re-consent would record
+  // the same act again rather than a new one.
+  //
+  // signTokenHash, never the token: a stolen database row must not yield a
+  // working signing link. Single-use is signTokenUsedAt -- a row update, not a
+  // blacklist -- mirroring OnboardingInvite (Arc 33).
+  contentHash        String?
+  signTokenId        String?
+  signTokenHash      String?
+  signTokenExpiresAt DateTime?
+  signTokenUsedAt    DateTime?
+  signerName         String?
+  signerIp           String?
+  signerUserAgent    String?
+
   // Indexed financial columns
   carrierRate      Float?
   fuelSurcharge    Float?

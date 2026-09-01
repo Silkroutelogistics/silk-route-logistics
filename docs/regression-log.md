@@ -13,6 +13,67 @@ so it's searchable and never lost.
 
 ---
 
+## Fixed — 2026-09-01 (v3.8.axs — the document a carrier signs carried the weakest evidence of any of them)
+
+- **Status:** commit 11a of 12. Primitives only; no behaviour change. 11b writes
+  RC_SENT and the signature, 11c wires resend/view, the rate-change void and the
+  CONFIRMED gates.
+- **Symptom:** the 2026-08-31 e-signature audit found the per-load document a
+  carrier signs recorded a typed name in a JSON blob and nothing else, while the
+  master agreements each capture typed name + IP + user agent + version + an
+  executed PDF. **A dispute turns on the rate confirmation**, so the artifact
+  with the most at stake had the least behind it.
+- **Shape:** eight nullable columns on `rate_confirmations`, a signing-token
+  library, and a guard. Additive migration, no backfill — NULL reads as "issued
+  before there was a signature record", never as "unsigned".
+- **Why no backfill:** the IP and user agent of a signature taken before this
+  commit were never captured. Inventing them would put a confident-looking value
+  on a guess, on the one record a dispute reads. Rows signed earlier keep their
+  evidence where it has always been, in `formData`, and are not migrated into
+  the columns for the same reason — that would imply the columns were the source
+  when they were not.
+- **The token is a record, not a JWT.** The sibling magic link
+  (`tenderActionToken`) is a signed JWT because it only proves who is asking. A
+  signing token needs three things a JWT cannot give alone: single use,
+  revocation the instant the RC is re-issued, and its use being part of the
+  evidence. All three are row state, so the row is the token — mirroring
+  `OnboardingInvite` (Arc 33), where revocation is an update rather than a
+  blacklist entry. **Only the sha256 reaches the database**, so a leaked row does
+  not yield a working link.
+- **Expiry is `RC_SIGN_SLA_HOURS`, the same constant Needs Attention chases an
+  unsigned RC on.** One number, deliberately: an AE told the RC is overdue at the
+  moment the carrier link stops working is chasing something still fixable. Two
+  numbers means chasing a carrier whose link died hours ago, or holding a live
+  link on an RC nobody is watching.
+- **Ordering is the design.** `ALREADY_USED` outranks `EXPIRED`, because a
+  carrier who signed and clicks their old link must be told the signature landed
+  — "expired" sends them chasing an AE over work that is done.
+- **This resolves the open half of §13.3 Item 250 decision 3.** That decision
+  could not be taken because the RC hash design depends on whether the RC is
+  frozen: a byte hash over a **re-render** is impossible (v3.8.awj got two hashes
+  for one agreement at identical length, which is why `CarrierAgreement` hashes
+  canonical text), while a byte hash over a **stored artifact** re-verifies by
+  construction. The RC is frozen at issuance and served back, so it hashes bytes
+  — and the canonical-text apparatus, which would have cost a rewrite of a
+  1,081-line grid document, is unnecessary.
+- **No per-load ESIGN consent column**, unlike `CarrierAgreement.consentAt`. The
+  carrier consented to electronic records when they signed the BCA and the RC is
+  governed by that agreement; a per-load re-consent records the same act again
+  rather than a new one.
+- **Guard:** 13 cases. The structural half asserts the secret never reaches the
+  database — the failure it prevents is a one-character slip
+  (`signTokenHash: token` for `signTokenHash: tokenHash`) which compiles,
+  passes every behavioural test, and puts a working signing link in a column any
+  read-only report can see. Injection-verified: it names the file and the value.
+- **The guard was wrong first and was caught.** Its regex read a **type
+  annotation** as a write — `signTokenHash: string | null` in a parameter — so it
+  went red against correct code on a tree with no writers at all. Narrowed by
+  RHS, with the residual blindness (a variable literally named `string`) stated
+  in the test rather than hidden.
+- **Gates:** backend tsc clean, vitest **1439 pass / 1 fail** (known `urlSafety`
+  DNS red); frontend tsc + vitest **114/114**. Migration applied to a real
+  database before commit.
+
 ## Fixed — 2026-09-01 (v3.8.axr — a load a carrier lost simply vanished from their view)
 
 - **Status:** commit 10d of 12. Closes commit 10. Commit 11 is the RC lifecycle.

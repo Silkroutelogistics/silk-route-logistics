@@ -168,7 +168,7 @@ column plus new `eventType` values — additive, no new table, and the drawer's
 | 6 | `acceptTender` sole `carrierId` writer | ✅ **CLOSED v3.8.axa–axc** — one writer (`carrierAssignmentService`), 11 → 0, CI-guarded | `releaseCarrier` as sole clearer = commit 8 |
 | 7 | QuickPayElection pending on tender; RC deferred | Notice fires; no model; RC **not** deferred | New model + gate |
 | 8 | RC auto-fire idempotent, keyed to tender version | PARTIAL **v3.8.axh** — `LoadTender.version` exists; a counter bumps it and voids the stale RC | RC keyed to version = commit 11 |
-| 9 | Tokenized e-sign w/ name·ip·UA·hash → CONFIRMED | Session-authed `/sign`; none captured | Token route + 4 columns + PDF stamp |
+| 9 | Tokenized e-sign w/ name·ip·UA·hash → CONFIRMED | PARTIAL **v3.8.axs** — 8 columns + token library + byte hash land; the token is a single-use ROW (revocable by update), not a JWT. Route still session-authed | Sign route + RC_SENT/CONFIRMED writers + PDF stamp = 11b |
 | 10 | BOL + shipper notify at CONFIRMED | Not gated on signature | Re-gate |
 | 11 | Rate change post-accept voids RC, reverts to OFFERED | No such path | Build |
 | 12 | Override needs userId·reason·ts; refused on HARD_FAIL | `OverrideComplianceModal` exists; **no HARD_FAIL refusal at tender time** | Verify against §14 absolute set |

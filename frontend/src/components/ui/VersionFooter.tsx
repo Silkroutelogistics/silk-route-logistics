@@ -1,3 +1,26 @@
+// v3.8.axs — THE DOCUMENT A CARRIER SIGNS CARRIED THE WEAKEST EVIDENCE OF ANY.
+//
+// The 2026-08-31 e-signature audit found the per-load rate confirmation
+// recorded a typed name in a JSON blob and nothing else, while the master
+// agreements each capture typed name, IP, user agent, version and an executed
+// PDF. A dispute turns on the rate confirmation, so the artifact with the most
+// at stake had the least behind it.
+//
+// Eight nullable columns, a signing-token library and a guard. Additive, no
+// backfill: the IP of a signature taken before this commit was never captured,
+// and inventing one would put a confident-looking value on a guess.
+//
+// The token is a ROW, not a JWT. A signing token must be single-use, revocable
+// the instant the RC is re-issued, and its use must be part of the evidence.
+// All three are row state. Only the sha256 is stored, so a leaked row does not
+// yield a working link.
+//
+// The hash is over the STORED PDF BYTES, unlike CarrierAgreement, which hashes
+// canonical text because it is re-rendered and PDFKit output is not
+// reproducible. The RC is frozen at issuance and served back, so hashing the
+// stored artifact re-verifies by construction. Closes the open half of §13.3
+// Item 250 decision 3.
+
 // v3.8.axr — A LOAD A CARRIER LOST SIMPLY VANISHED FROM THEIR VIEW.
 //
 // The portal showed only LIVE offers. A carrier could see what they were being
@@ -16728,7 +16751,7 @@
 // and a data: qrCodeDataUrl are all legitimate and a guard that flagged them
 // would be noise. Comments are blanked before matching — the fixes are explained
 // in comments that necessarily quote the banned patterns.
-export const SRL_VERSION = "3.8.axr";
+export const SRL_VERSION = "3.8.axs";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
