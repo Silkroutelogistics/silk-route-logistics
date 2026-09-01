@@ -27,6 +27,7 @@ import {
 import { logWaterfallEvent } from "./waterfallEventService";
 import { validateLoadStatusTransition } from "../lib/loadStateMachine";
 import { broadcastSSE } from "../routes/trackTraceSSE";
+import { assignCarrier } from "./carrierAssignmentService";
 
 const TENDER_WINDOW_MS = 20 * 60 * 1000;            // 20 minutes per position
 const LOADBOARD_FALLBACK_WINDOW_MS = 2 * 60 * 60 * 1000; // 2h before DAT
@@ -573,13 +574,17 @@ export async function acceptPosition(positionId: string, actorId?: string | null
   });
 
   // Dispatch the load — status=DISPATCHED per Karpathy state machine
-  await prisma.load.update({
-    where: { id: pos.waterfall.loadId },
-    data: {
-      status: "DISPATCHED",
-      carrierId: pos.carrierId,
-      // ARC 16 — the agreed rate for a waterfall position. §13.3 Item 221.1.
-      carrierRate: agreedRateFromValue(pos.offeredRate),
+  // v3.8.axb — through assignCarrier. pos.carrierId is a User.id: buildWaterfall
+  // stores User.id deliberately "since Load.carrierId references User". Naming
+  // it carrierUserId makes that explicit at the call site — the ID space this
+  // very service got wrong once before (§13.3 Item 222.4).
+  await assignCarrier({
+    loadId: pos.waterfall.loadId,
+    carrierUserId: pos.carrierId!,
+    status: "DISPATCHED",
+    // ARC 16 — the agreed rate for a waterfall position. §13.3 Item 221.1.
+    carrierRate: agreedRateFromValue(pos.offeredRate),
+    extra: {
       dispatchedAt: now,
       dispatchedCarrierId: pos.carrierId,
       statusUpdatedAt: now,

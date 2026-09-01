@@ -6,6 +6,7 @@ import { logWaterfallEvent } from "../services/waterfallEventService";
 import { createCheckCallSchedule } from "../services/checkCallAutomation";
 import { complianceCheck } from "../services/complianceMonitorService";
 import { log } from "../lib/logger";
+import { assignCarrier } from "../services/carrierAssignmentService";
 
 const router = Router();
 router.use(authenticate);
@@ -221,13 +222,16 @@ router.patch(
         });
 
         // Dispatch the load — Karpathy state machine
-        await prisma.load.update({
-          where: { id: loadId },
-          data: {
-            status: "DISPATCHED",
-            carrierId: bid.carrierId,
-            // ARC 16 — the bid the AE accepted is the agreed rate. §13.3 Item 221.1.
-            carrierRate: agreedRateFromValue(bid.bidRate),
+        // v3.8.axb — through assignCarrier. bid.carrierId is a User.id here,
+        // which is the ID space Load.carrierId wants. DISPATCHED rather than
+        // BOOKED is the deliberate auto-pilot divergence documented in §2.
+        await assignCarrier({
+          loadId,
+          carrierUserId: bid.carrierId,
+          status: "DISPATCHED",
+          // ARC 16 — the bid the AE accepted is the agreed rate. §13.3 Item 221.1.
+          carrierRate: agreedRateFromValue(bid.bidRate),
+          extra: {
             dispatchedAt: now,
             dispatchedCarrierId: bid.carrierId,
             statusUpdatedAt: now,

@@ -16,6 +16,7 @@ import { parseCheckCallReply } from "../automation/webhooks/checkcall-parser";
 import { processDocument } from "../automation/webhooks/pod-processor";
 import { generateMorningBriefing } from "../automation/tools/morning-briefing";
 import { isFeatureUnlocked } from "../ai/volumeGates";
+import { assignCarrier } from "../services/carrierAssignmentService";
 
 const router = Router();
 router.use(authenticate);
@@ -52,13 +53,12 @@ router.post(
       await trackMatchAssignment(req.params.loadId, userId);
 
       // Assign carrier to load
-      await prisma.load.update({
-        where: { id: req.params.loadId },
-        data: {
-          carrierId: userId,
-          status: "BOOKED",
-          statusUpdatedAt: new Date(),
-        },
+      // v3.8.axb — through assignCarrier, the single writer of Load.carrierId.
+      await assignCarrier({
+        loadId: req.params.loadId,
+        carrierUserId: userId,
+        status: "BOOKED",
+        extra: { statusUpdatedAt: new Date() },
       });
 
       // Auto-create check-call schedule

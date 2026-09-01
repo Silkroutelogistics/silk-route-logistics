@@ -13,6 +13,34 @@ so it's searchable and never lost.
 
 ---
 
+## Fixed — 2026-09-01 (v3.8.axb — carrier-id consolidation, pass 2: the four mechanical sites)
+
+- **Status:** tender-lifecycle Phase B, commit 5a of 12. Writer count **7 → 3**
+  (11 → 3 across both passes).
+- **Migrated:** `automation.ts:55` (auto-match assignment), `loadBids.ts:224`
+  (AE accepts a carrier's bid), `instantBookService.ts:131`,
+  `waterfallEngineService.ts:576` (auto-pilot dispatch).
+- **`instantBookService` is the one worth noticing:** it wrote `carrierId` in
+  object **shorthand**, with no colon, so the audit's first scan could not see
+  it and reported nine writers where there were eleven. It and
+  `loadComplianceService` were the two invisible ones — §19 Sub-pattern 18, and
+  the reason the guard matches shorthand as well as `key:`.
+- **Both DISPATCHED sites keep DISPATCHED, not BOOKED.** That divergence is
+  deliberate and documented in §2 — bulk paths dispatch, the direct path books,
+  and `dispatchedAt` feeds the dispatched-today analytics.
+- **Three remain, neither mechanical:** `carrierLoads.ts:226` (a carrier
+  self-assigning; must route through `acceptTender` rather than write the
+  column) and `loadComplianceService.ts:312`/`:322` (a
+  temporarily-set-then-roll-back *staging* pattern, not an assignment — it needs
+  a decision, not a migration).
+- **Environment note:** the working tree is **CRLF**, so a scripted
+  search/replace written with `\n` matches nothing and reports "found 0" —
+  which reads exactly like "the code has changed" rather than "my pattern is
+  wrong". Cost one wasted cycle; the substitution helper is now EOL-aware.
+- **Gates:** backend tsc clean, vitest **133/1**, frontend tsc + build clean.
+
+---
+
 ## Fixed — 2026-09-01 (v3.8.axa — eleven places decided which carrier was on a load, pass 1)
 
 - **Symptom:** `Load.carrierId` had **eleven writers across seven files**,

@@ -1,4 +1,5 @@
 import { prisma } from "../config/database";
+import { assignCarrier } from "./carrierAssignmentService";
 
 /**
  * Instant Book Service — One-click load booking for qualified carriers.
@@ -128,13 +129,14 @@ export async function instantBook(
 
   // Book the load
   try {
-    await prisma.load.update({
-      where: { id: loadId },
-      data: {
-        carrierId,
-        carrierRate: rate,
-        status: "BOOKED",
-      },
+    // v3.8.axb — through assignCarrier. This site wrote carrierId in object
+    // SHORTHAND, which a colon-only scan cannot see: it was one of the two
+    // writers missing from the audit's first count of nine (§19 Sub-pattern 18).
+    await assignCarrier({
+      loadId,
+      carrierUserId: carrierId,
+      status: "BOOKED",
+      carrierRate: rate,
     });
 
     const timeToBook = (Date.now() - startTime) / 1000;

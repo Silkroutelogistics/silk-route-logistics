@@ -1,3 +1,24 @@
+// v3.8.axb — CARRIER-ID CONSOLIDATION, PASS 2: THE FOUR MECHANICAL SITES.
+//
+// automation (auto-match assignment), loadBids (AE accepts a bid),
+// instantBookService, and waterfallEngineService (auto-pilot dispatch) all move
+// onto assignCarrier. Writer count 11 -> 3.
+//
+// instantBookService is the one worth noticing: it wrote `carrierId` in object
+// SHORTHAND, with no colon, so the audit's first scan could not see it and
+// reported nine writers when there were eleven. It and loadComplianceService
+// were the two invisible ones. That is §19 Sub-pattern 18, and it is why the
+// guard in the next commit matches shorthand as well as `key:`.
+//
+// Both DISPATCHED sites keep DISPATCHED rather than BOOKED. That divergence is
+// deliberate and documented in §2: bulk paths dispatch, the direct path books,
+// and `dispatchedAt` feeds the dispatched-today analytics.
+//
+// Three remain, and neither is mechanical: carrierLoads' self-assign has to
+// route through acceptTender rather than write the column, and
+// loadComplianceService's two writes are a temporarily-set-then-roll-back
+// staging pattern, not an assignment.
+//
 // v3.8.axa — ELEVEN PLACES DECIDED WHICH CARRIER WAS ON A LOAD. PASS 1 OF 2.
 //
 // Which carrier is on a load decides who gets paid, who the rate confirmation
@@ -16129,7 +16150,7 @@
 // and a data: qrCodeDataUrl are all legitimate and a guard that flagged them
 // would be noise. Comments are blanked before matching — the fixes are explained
 // in comments that necessarily quote the banned patterns.
-export const SRL_VERSION = "3.8.axa";
+export const SRL_VERSION = "3.8.axb";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
