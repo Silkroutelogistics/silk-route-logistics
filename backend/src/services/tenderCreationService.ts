@@ -31,6 +31,25 @@ import { logTenderTransition } from "./waterfallEventService";
  * row — and returning a composable promise would make that side effect the
  * caller's job to remember. It isn't. Callers that need atomicity with other
  * writes pass an interactive transaction client as `db`.
+ *
+ * THAT `db` IS THREADED INTO THE TRANSITION WRITE, and it has to be.
+ *
+ * The activity row carries a foreign key to the tender. Written on the SHARED
+ * client while the tender is still uncommitted inside a caller's transaction,
+ * it points at a row nothing outside that transaction can see, and Postgres
+ * rejects the insert.
+ *
+ * The consequence is worse than an error, which is the part worth stating.
+ * `logTenderTransition` is deliberately non-throwing — a history write must
+ * never fail the transition it describes — so it SWALLOWS that rejection. The
+ * tender commits perfectly happily with no history at all. Nothing fails,
+ * nothing logs at error level, and the drawer simply shows an empty timeline.
+ *
+ * Verified by injection rather than reasoning: reverting this one `db` argument
+ * takes _create-tender-proof.ts to 16/17, and the assertion that fails is "the
+ * transition row committed WITH the transaction", reporting zero rows. TypeScript
+ * cannot see it (both calls compile) and a mocked Prisma cannot either (a mock
+ * has no foreign keys). Only a real database shows it.
  */
 
 /**
@@ -66,6 +85,12 @@ export interface CreateTenderInput {
    */
   status?: TenderStatus;
   waterfallPositionId?: string | null;
+  /**
+   * Only meaningful alongside a settled `status`. A tender created already
+   * ACCEPTED (the bid-accept case) responded at the moment it was created;
+   * leaving this null would make it look like nobody ever answered.
+   */
+  respondedAt?: Date | null;
   /** Who caused this, for the transition row. Omit for system-initiated. */
   actor?: { id?: string | null; name?: string | null; type?: "USER" | "SYSTEM" | "CARRIER" | "SHIPPER" };
   /** Free-form context recorded on the transition row. */
@@ -92,6 +117,7 @@ export async function createTender(input: CreateTenderInput, db: TenderDb = pris
       expiresAt,
       status,
       ...(input.waterfallPositionId ? { waterfallPositionId: input.waterfallPositionId } : {}),
+      ...(input.respondedAt ? { respondedAt: input.respondedAt } : {}),
     },
   });
 
@@ -105,7 +131,7 @@ export async function createTender(input: CreateTenderInput, db: TenderDb = pris
     actorId: input.actor?.id ?? null,
     actorName: input.actor?.name ?? null,
     metadata: { offeredRate: input.offeredRate, expiresAt: expiresAt.toISOString() },
-  });
+  }, db);
 
   return tender;
 }

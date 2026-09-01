@@ -13,6 +13,53 @@ so it's searchable and never lost.
 
 ---
 
+## Fixed — 2026-09-01 (v3.8.axe — create a tender in a transaction and its history vanished)
+
+- **Status:** passes 2 and 3 in v3.8.axe. Creators **3 → 0**; all six entry
+  surfaces now go through `createTender`.
+- **Migrated:** waterfall auto-pilot (`waterfallEngineService`), load+tender
+  drawer (`withTenderController`), load-board bid accept (`loadBids`).
+- **The auto-pilot needed its `$transaction` converted from the ARRAY form to the
+  INTERACTIVE one.** `createTender` is async because it must write a transition
+  row, and an async call cannot be an element of `$transaction([...])` — awaiting
+  it to build the array would run the insert outside the transaction and lose
+  atomicity with the status flip.
+- **That conversion exposed a bug introduced in the same arc.** `createTender`
+  writes two rows: the tender, and an activity row with a foreign key to it. The
+  `db` argument reached the tender insert but **not** the transition write, so
+  inside a caller transaction the history row referenced a tender nothing outside
+  could see, and Postgres rejected the insert.
+- **The consequence is worse than an error, which is the point.**
+  `logTenderTransition` is deliberately non-throwing, so it **swallowed** the
+  rejection: the tender committed with no history at all. Nothing failed, nothing
+  logged at error level, the drawer just showed an empty timeline. TypeScript
+  cannot see it (both calls compile); a mocked Prisma cannot either (no foreign
+  keys). Only a real database shows it.
+- **Verified:** `scripts/_create-tender-proof.ts` **17/17**, including
+  transaction enrolment and full rollback of both rows. Adversarially verified —
+  reverting the single `db` argument gives **16/17**, failing exactly "the
+  transition row committed WITH the transaction" with zero rows.
+- **An existing invariant test went red — a mock gap, not a logic break.**
+  `waterfallTenderInvariant` mocks `waterfallEventService` and did not define
+  `logTenderTransition`; same shape as §19 Sub-pattern 11 case study 3. Added to
+  the mock **without aliasing it to `logWaterfallEvent`**, because aliasing hides
+  exactly the divergence the gap surfaced.
+- **Three of its assertions were re-aimed from the array SHAPE to the intent**
+  (`Array.isArray(batch) && length === 2` → a transaction is opened and both
+  writes happen). **Re-aimed, not relaxed:** removing the status flip from the
+  transaction still turns two of them red, verified by injection. What a unit
+  test can prove here is that a transaction is opened at all; that a rollback
+  actually rolls back is proven against a real database in the proof script.
+- **Threshold note:** five source files, one over. Splitting the `db`-threading
+  fix from the two transaction callers that need it would have left a committed
+  intermediate state with the silent-history-loss bug live. The threshold serves
+  reviewability; a knowingly broken intermediate commit serves nothing.
+- **Outbound (§19 Sub-pattern 20):** proof run with `RESEND_API_KEY=` and
+  `OPENPHONE_API_KEY=` explicitly empty; `[Email] Sent to` count **0**, measured.
+- **Gates:** backend tsc clean, vitest **134/1**, frontend tsc + build clean.
+
+---
+
 ## Fixed — 2026-09-01 (v3.8.axd — six places could conjure a tender, pass 1 of 3)
 
 - **Symptom:** six independent `LoadTender` creators across six files, part of

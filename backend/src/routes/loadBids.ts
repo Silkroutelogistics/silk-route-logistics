@@ -7,6 +7,7 @@ import { createCheckCallSchedule } from "../services/checkCallAutomation";
 import { complianceCheck } from "../services/complianceMonitorService";
 import { log } from "../lib/logger";
 import { assignCarrier } from "../services/carrierAssignmentService";
+import { createTender } from "../services/tenderCreationService";
 
 const router = Router();
 router.use(authenticate);
@@ -292,15 +293,22 @@ router.patch(
         try {
           const posterLoad = await prisma.load.findUnique({ where: { id: loadId }, select: { posterId: true } });
           if (posterLoad?.posterId) {
-            const syntheticTender = await prisma.loadTender.create({
-              data: {
-                loadId,
-                carrierId: carrierProfile.id,
-                offeredRate: Number(bid.bidRate),
-                status: "ACCEPTED",
-                respondedAt: now,
-                expiresAt: now,
-              },
+            // v3.8.axe — through createTender, the single writer of LoadTender.
+            //
+            // This row is created already ACCEPTED, which is the one legitimate
+            // exception to the OFFERED default: an AE accepting a carrier's bid
+            // means there was never an offer to accept. The row exists to give
+            // the load the tender the rest of the lifecycle assumes — an RC to
+            // generate from, and a history to read.
+            const syntheticTender = await createTender({
+              loadId,
+              carrierProfileId: carrierProfile.id,
+              offeredRate: Number(bid.bidRate),
+              status: "ACCEPTED",
+              respondedAt: now,
+              expiresAt: now,
+              actor: { id: req.user?.id ?? null, type: "USER" },
+              reason: "bid_accepted",
             });
             const { autoGenerateRateConfirmation } = await import("../services/autoRateConfirmationService");
             await autoGenerateRateConfirmation(loadId, syntheticTender.id, posterLoad.posterId);

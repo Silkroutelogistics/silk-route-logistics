@@ -9,6 +9,7 @@ import { logLoadActivity } from "../services/loadActivityService";
 import { checkCustomerActive } from "../lib/customerActive";
 import { generateLoadNumber, formatDocumentNumber } from "../lib/documentNumber";
 import { log } from "../lib/logger";
+import { createTender } from "../services/tenderCreationService";
 
 /**
  * Sprint 59 (v3.8.acj) Item 176 — POST /api/loads/with-tender
@@ -251,14 +252,17 @@ export async function createLoadWithTender(req: AuthRequest, res: Response) {
       });
 
       // 2. LoadTender.create
-      const loadTender = await tx.loadTender.create({
-        data: {
-          loadId: load.id,
-          carrierId: tender.carrierId,
-          offeredRate: tender.offeredRate,
-          expiresAt: tender.expiresAt,
-        },
-      });
+      // v3.8.axe — through createTender, the single writer of LoadTender.
+      // Already inside an interactive transaction, so tx enrols the insert and
+      // the transition row alongside the load create above it.
+      const loadTender = await createTender({
+        loadId: load.id,
+        carrierProfileId: tender.carrierId,
+        offeredRate: tender.offeredRate,
+        expiresAt: tender.expiresAt,
+        actor: { id: req.user!.id, type: "USER" },
+        reason: "load_with_tender",
+      }, tx);
 
       // 3. autoGenerateRateConfirmation — passes tx for transaction enrollment
       //    on the RC.create write per Sprint 59 Risk 4 resolution.

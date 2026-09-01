@@ -1,3 +1,34 @@
+// v3.8.axe — CREATE A TENDER IN A TRANSACTION AND ITS HISTORY VANISHED.
+//
+// The last three creators move onto createTender: the waterfall auto-pilot, the
+// load+tender drawer, and the load-board bid accept. Six to zero.
+//
+// The auto-pilot needed its $transaction converted from the ARRAY form to the
+// INTERACTIVE one. createTender is async because it must write a transition
+// row, and an async call cannot be an element of $transaction([...]) — awaiting
+// it to build the array would run the insert outside the transaction and lose
+// atomicity with the status flip.
+//
+// That conversion exposed a bug I had just written. createTender writes two
+// rows: the tender, and an activity row carrying a foreign key to it. The db
+// argument reached the tender insert but not the transition write, so inside a
+// caller transaction the history row pointed at a tender nothing outside could
+// see yet, and Postgres rejected it.
+//
+// The consequence is worse than an error. logTenderTransition is deliberately
+// non-throwing — a history write must never fail the transition it describes —
+// so it SWALLOWED the rejection. The tender committed happily with no history at
+// all. Nothing failed, nothing logged at error level, and the drawer simply
+// showed an empty timeline. TypeScript could not see it (both calls compile) and
+// a mocked Prisma could not either (a mock has no foreign keys). Reverting that
+// one db argument takes the DB-backed proof to 16/17.
+//
+// An existing invariant test then went red — a mock gap, not a logic break, and
+// the same shape as §19 Sub-pattern 11 case study 3. It also asserted the ARRAY
+// shape specifically, so three assertions were re-aimed from the form to the
+// intent. Re-aimed, not relaxed: removing the status flip from the transaction
+// still turns two of them red.
+//
 // v3.8.axd — SIX PLACES COULD CONJURE A TENDER. PASS 1 OF 3.
 //
 // A state machine over rows that six independent places can create is a state
@@ -16211,7 +16242,7 @@
 // and a data: qrCodeDataUrl are all legitimate and a guard that flagged them
 // would be noise. Comments are blanked before matching — the fixes are explained
 // in comments that necessarily quote the banned patterns.
-export const SRL_VERSION = "3.8.axd";
+export const SRL_VERSION = "3.8.axe";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

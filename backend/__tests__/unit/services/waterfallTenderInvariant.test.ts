@@ -31,6 +31,10 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 // real connection under test. Stubbed at the wrapper seam.
 vi.mock("../../../src/services/waterfallEventService", () => ({
   logWaterfallEvent: vi.fn().mockResolvedValue(undefined),
+  // v3.8.axe — createTender records an opening transition through this export.
+  // Deliberately NOT aliased to logWaterfallEvent: aliasing would hide exactly
+  // the kind of divergence this mock gap just surfaced (§19 Sub-pattern 11).
+  logTenderTransition: vi.fn().mockResolvedValue(undefined),
 }));
 vi.mock("../../../src/routes/trackTraceSSE", () => ({
   broadcastSSE: vi.fn(),
@@ -146,12 +150,25 @@ describe("the invariant: TENDERED implies a LoadTender exists", () => {
 
     await startWaterfall(WF_ID);
 
-    // Both operations handed to $transaction together — so a failure to create
-    // the tender cannot leave the status flipped behind it.
+    // Both operations go through ONE $transaction, so a failure to create the
+    // tender cannot leave the status flipped behind it.
+    //
+    // v3.8.axe — re-aimed from the ARRAY SHAPE to the invariant. This asserted
+    // `Array.isArray(batch) && batch.length === 2`, which pinned an
+    // implementation detail: the cascade now uses the interactive form, because
+    // createTender is async (it must write a transition row) and an async call
+    // cannot be an element of $transaction([...]). The intent — one transaction
+    // containing both writes — is unchanged, so the assertion follows the
+    // intent rather than the form.
+    //
+    // What a unit test can prove here is that a transaction is opened at all;
+    // with Prisma mocked, "inside" and "outside" the callback are the same
+    // object. That a rollback actually rolls back is proven against a real
+    // database in scripts/_create-tender-proof.ts, case 4.
     expect(mockPrisma.$transaction).toHaveBeenCalledTimes(1);
-    const batch = mockPrisma.$transaction.mock.calls[0][0];
-    expect(Array.isArray(batch)).toBe(true);
-    expect(batch).toHaveLength(2);
+    expect(typeof mockPrisma.$transaction.mock.calls[0][0]).toBe("function");
+    expect(mockPrisma.loadTender.create).toHaveBeenCalledTimes(1);
+    expect(wroteTendered()).toBe(true);
   });
 
   it("startWaterfall itself writes visibility but never status", async () => {
@@ -172,8 +189,10 @@ describe("the invariant: TENDERED implies a LoadTender exists", () => {
     await startWaterfall(WF_ID);
 
     expect(mockPrisma.loadTender.create).toHaveBeenCalledTimes(1);
-    const batch = mockPrisma.$transaction.mock.calls[0][0];
-    expect(batch).toHaveLength(1); // tender only
+    // v3.8.axe — the tender records; the status must NOT move a second time.
+    // Was `batch.length === 1`; now asserts the absence of the flip directly,
+    // which is what the title claims and survives the array/interactive change.
+    expect(wroteTendered()).toBe(false);
   });
 
   it("an illegal starting state does not get flipped to TENDERED", async () => {
@@ -184,8 +203,8 @@ describe("the invariant: TENDERED implies a LoadTender exists", () => {
 
     await startWaterfall(WF_ID);
 
-    const batch = mockPrisma.$transaction.mock.calls[0][0];
-    expect(batch).toHaveLength(1);
+    // v3.8.axe — the offer still records; the illegal flip must not happen.
+    expect(mockPrisma.loadTender.create).toHaveBeenCalledTimes(1);
     expect(wroteTendered()).toBe(false);
   });
 });

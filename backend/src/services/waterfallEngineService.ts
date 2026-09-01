@@ -28,6 +28,7 @@ import { logWaterfallEvent } from "./waterfallEventService";
 import { validateLoadStatusTransition } from "../lib/loadStateMachine";
 import { broadcastSSE } from "../routes/trackTraceSSE";
 import { assignCarrier } from "./carrierAssignmentService";
+import { createTender } from "./tenderCreationService";
 
 const TENDER_WINDOW_MS = 20 * 60 * 1000;            // 20 minutes per position
 const LOADBOARD_FALLBACK_WINDOW_MS = 2 * 60 * 60 * 1000; // 2h before DAT
@@ -233,26 +234,30 @@ async function tenderPosition(waterfallId: string, position: number) {
     loadNow.status !== "TENDERED" &&
     validateLoadStatusTransition(loadNow.status, "TENDERED", "AE").allowed;
 
-  const [tender] = await prisma.$transaction([
-    prisma.loadTender.create({
-      data: {
-        loadId: pos.waterfall.loadId,
-        carrierId: profile.id,
-        status: "OFFERED",
-        offeredRate: Number(pos.offeredRate ?? 0),
-        expiresAt,
-        waterfallPositionId: pos.id,
-      },
-    }),
-    ...(needsFlip
-      ? [
-          prisma.load.update({
-            where: { id: pos.waterfall.loadId },
-            data: { status: "TENDERED", tenderedAt: now },
-          }),
-        ]
-      : []),
-  ]);
+  // v3.8.axe — through createTender, the single writer of LoadTender.
+  //
+  // Converted from the ARRAY $transaction form to the INTERACTIVE one.
+  // createTender is async because it must write the transition row, and an
+  // async call cannot be an element of $transaction([...]) — awaiting it to
+  // build the array would run the insert OUTSIDE the transaction and lose the
+  // atomicity with the status flip below. Interactive keeps both in one unit.
+  const tender = await prisma.$transaction(async (tx) => {
+    const t = await createTender({
+      loadId: pos.waterfall.loadId,
+      carrierProfileId: profile.id,
+      offeredRate: Number(pos.offeredRate ?? 0),
+      expiresAt,
+      waterfallPositionId: pos.id,
+      reason: "waterfall_cascade",
+    }, tx);
+    if (needsFlip) {
+      await tx.load.update({
+        where: { id: pos.waterfall.loadId },
+        data: { status: "TENDERED", tenderedAt: now },
+      });
+    }
+    return t;
+  });
 
   await prisma.waterfallPosition.update({
     where: { id: pos.id },

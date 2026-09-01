@@ -1,4 +1,5 @@
-import { logLoadActivity } from "./loadActivityService";
+import { logLoadActivity, type ActivityDb } from "./loadActivityService";
+import { prisma } from "../config/database";
 import { log } from "../lib/logger";
 import type { Prisma } from "@prisma/client";
 
@@ -102,7 +103,7 @@ export async function logTenderTransition(params: {
   actorId?: string | null;
   actorName?: string | null;
   metadata?: Record<string, unknown>;
-}) {
+}, db: ActivityDb = prisma) {
   const arrow = params.from ? `${params.from} → ${params.to}` : `→ ${params.to}`;
   try {
     return await logLoadActivity({
@@ -119,7 +120,7 @@ export async function logTenderTransition(params: {
         reason: params.reason ?? null,
         ...params.metadata,
       } as Prisma.InputJsonValue,
-    });
+    }, db);
   } catch (err) {
     log.error(
       { err, tenderId: params.tenderId, from: params.from, to: params.to },
