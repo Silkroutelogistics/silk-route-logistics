@@ -227,3 +227,105 @@ describe("uniform policy — rollout message, clock injected", () => {
     expect(v.ok === false && v.code).toBe("SESSION_IDLE_EXPIRED");
   });
 });
+
+/**
+ * The grace window on a missing row.
+ *
+ * registerSession persists fire-and-forget, so a login answered fast enough
+ * leaves an upsert in flight and the next request reads no row. Calling that
+ * "idle expired" is false on its face for a token seconds old, and these cases
+ * pin both halves: the grace is narrow, and it applies to a MISSING row only.
+ */
+describe("resolveSessionPolicy — grace for a row that has not landed", () => {
+  const NOW = Date.UTC(2026, 8, 1, 12, 0, 0);
+
+  it("a fresh token with a missing row is allowed", () => {
+    const v = resolveSessionPolicy({
+      iatMs: NOW - 2_000,
+      now: NOW,
+      lastActivityAt: null,
+      sessionMissing: true,
+    });
+    expect(v.ok, "a two-second-old token has not been idle for thirty minutes").toBe(true);
+  });
+
+  it("a token past the window with a missing row is refused", () => {
+    const v = resolveSessionPolicy({
+      iatMs: NOW - 31_000,
+      now: NOW,
+      lastActivityAt: null,
+      sessionMissing: true,
+    });
+    expect(v.ok).toBe(false);
+    expect(v.ok === false && v.code).toBe("SESSION_IDLE_EXPIRED");
+  });
+
+  it("a fresh token with a PRESENT but stale row is still refused by the idle rule", () => {
+    // The grace must not leak into the branch it was never for. A row that
+    // exists and has gone stale is a genuinely idle session, whatever the
+    // token's age -- and a long-lived token refreshed by a remember-me flow
+    // would otherwise be granted an unbounded session by freshness alone.
+    const v = resolveSessionPolicy({
+      iatMs: NOW - 2_000,
+      now: NOW,
+      lastActivityAt: new Date(NOW - 40 * 60 * 1000),
+      sessionMissing: false,
+    });
+    expect(v.ok).toBe(false);
+    expect(v.ok === false && v.code).toBe("SESSION_IDLE_EXPIRED");
+  });
+
+  it("a malformed iat gets no grace (fail closed)", () => {
+    // No provable age means no provable freshness. This is refused above the
+    // branch entirely, which is why the grace can read iatMs unguarded.
+    for (const bad of [null, NaN, Infinity]) {
+      const v = resolveSessionPolicy({
+        iatMs: bad as number | null,
+        now: NOW,
+        lastActivityAt: null,
+        sessionMissing: true,
+      });
+      expect(v.ok, "iatMs=" + String(bad) + " must not be granted grace").toBe(false);
+    }
+  });
+
+  it("the grace does not override the absolute ceiling", () => {
+    // Ordering matters: absolute expiry is checked first and derives from the
+    // token's own iat, so a very old token whose row was swept must not be
+    // rescued by any later branch.
+    const v = resolveSessionPolicy({
+      iatMs: NOW - 13 * 60 * 60 * 1000,
+      now: NOW,
+      lastActivityAt: null,
+      sessionMissing: true,
+    });
+    expect(v.ok).toBe(false);
+    expect(v.ok === false && v.code).toBe("SESSION_ABSOLUTE_EXPIRED");
+  });
+
+  it("SESSION_GRACE_SECONDS is bounded, and 0 disables it", () => {
+    const prev = process.env.SESSION_GRACE_SECONDS;
+    try {
+      process.env.SESSION_GRACE_SECONDS = "0";
+      expect(
+        resolveSessionPolicy({ iatMs: NOW - 500, now: NOW, lastActivityAt: null, sessionMissing: true }).ok,
+        "0 must switch the grace off entirely, not fall back to the default",
+      ).toBe(false);
+
+      process.env.SESSION_GRACE_SECONDS = "99999";
+      expect(
+        resolveSessionPolicy({ iatMs: NOW - 400_000, now: NOW, lastActivityAt: null, sessionMissing: true }).ok,
+        "an unbounded env value would turn a grace into an unbounded session",
+      ).toBe(false);
+
+      process.env.SESSION_GRACE_SECONDS = "not-a-number";
+      expect(
+        resolveSessionPolicy({ iatMs: NOW - 2_000, now: NOW, lastActivityAt: null, sessionMissing: true }).ok,
+        "a garbage value falls back to the default rather than to zero or infinity",
+      ).toBe(true);
+    } finally {
+      if (prev === undefined) delete process.env.SESSION_GRACE_SECONDS;
+      else process.env.SESSION_GRACE_SECONDS = prev;
+    }
+  });
+});

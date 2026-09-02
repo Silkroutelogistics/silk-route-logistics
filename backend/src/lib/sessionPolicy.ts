@@ -218,6 +218,34 @@ export type PortalSessionVerdict =
   | { ok: false; code: SessionExpiryCode; message: string };
 
 /**
+ * Grace for a session row that has not landed yet.
+ *
+ * registerSession persists fire-and-forget, deliberately, so a login answered
+ * fast enough leaves an upsert in flight and the very next request can read no
+ * row at all. The missing-row branch below calls that IDLE EXPIRED, and for a
+ * token issued seconds ago that reading is false on its face: a twenty-second-
+ * old token has not been idle for thirty minutes.
+ *
+ * So this does not relax the idle rule. It stops the code asserting something
+ * it cannot know.
+ *
+ * Small on purpose. It has to clear one database round trip and nothing more,
+ * and keeping it far below the idle window keeps the revocation reasoning tight
+ * even if the invariant it leans on were ever broken -- revocation is caught by
+ * the blacklist, one step EARLIER than the row read, which is what makes a
+ * grace here safe at all. That invariant is pinned by a guard.
+ *
+ * Bounded, and 0 disables it: an unbounded env value could silently turn a
+ * grace into an unbounded session.
+ */
+const SESSION_GRACE_DEFAULT_SECONDS = 30;
+function graceMs(): number {
+  const raw = Number(process.env.SESSION_GRACE_SECONDS);
+  const secs = Number.isFinite(raw) ? Math.min(300, Math.max(0, Math.trunc(raw))) : SESSION_GRACE_DEFAULT_SECONDS;
+  return secs * 1000;
+}
+
+/**
  * Uniform across staff, carrier, shipper and driver.
  *
  * ABSOLUTE is stateless — derived from the token's own `iat`, so it holds even
@@ -261,6 +289,20 @@ export function resolveSessionPolicy(args: {
   }
 
   if (args.sessionMissing || lastActivityAt === null) {
+    // The row may simply not have landed yet -- see graceMs above. This is the
+    // ONLY branch it applies to, and only for a genuinely MISSING row: a row
+    // that exists with a stale lastSeenAt falls through to the idle rule below,
+    // unchanged. A token with no usable iat never reaches here; it was refused
+    // above, which is the fail-closed half.
+    if (args.sessionMissing === true && now - iatMs <= graceMs()) {
+      // shouldTouch is FALSE, not an oversight: there is no row to advance the
+      // clock on, and the upsert still in flight sets lastSeenAt to now anyway.
+      // touchSession would swallow the miss, so this costs correctness rather
+      // than safety -- but a write that can only ever match nothing is still a
+      // round trip on every graced request.
+      return { ok: true, shouldTouch: false };
+    }
+
     // Distinguish "minted before the policy" from "went idle". A token issued
     // before the rollout cutoff predates session records entirely; anything
     // after it lost its row to a sweep or a revoke.

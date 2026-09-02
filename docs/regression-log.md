@@ -3368,3 +3368,50 @@ failing precisely `THE ROW SURVIVES` and `the retry SUCCEEDS` (status 401), whil
 the CONTROL and the ordinary-transient cases stay green.
 
 Outbound keys explicitly empty; `Resend configured: false`.
+
+---
+
+## v3.8.ayk — a missing session row was being called "idle expired" for a token twenty seconds old
+
+**Session race, commit 2 of 3.** `registerSession` persists fire-and-forget,
+deliberately, so a login answered fast enough leaves an upsert in flight and the
+very next request reads no row. The missing-row branch called that
+`SESSION_IDLE_EXPIRED` — and for a token issued seconds ago that reading is
+**false on its face**: a twenty-second-old token has not been idle for thirty
+minutes. The code was conflating *not written yet* with *long abandoned*.
+
+`resolveSessionPolicy` now allows a **missing** row when the token is within
+`SESSION_GRACE_SECONDS` (env, default 30, bounded 0–300, and 0 disables it).
+This does not relax the idle rule; it stops the code asserting something it
+cannot know.
+
+**Deliberately narrow.** It applies to the missing-row branch only — a row that
+exists with a stale `lastSeenAt` falls through to the idle rule unchanged, so a
+long-lived token cannot buy an unbounded session on freshness alone. A token
+with no usable `iat` is refused above the branch entirely, which is the
+fail-closed half. The absolute ceiling is checked first and is untouched.
+
+**`shouldTouch` is FALSE in the grace branch**, which is a correctness point
+rather than an oversight: there is no row to advance the clock on, and the
+in-flight upsert sets `lastSeenAt` anyway. `touchSession` would have swallowed
+the miss, so this costs a pointless round trip rather than safety.
+
+**Why the grace is safe, and it rests on an invariant.** A token revoked during
+the window is still refused, by the **blacklist**, which is checked one step
+*earlier* than the row read. That is asserted in the proof, and commit 3 pins the
+ordering it depends on.
+
+**Proof: 13/13.** The maximal delay is exercised — no row at all when the request
+arrives, strictly worse than any real in-flight upsert. Adversarial: disabling
+the grace gives **12/13**, failing precisely `a fresh token with NO row is
+allowed` (401).
+
+**Two proof failures during this commit were my fixture, not the code, and the
+cause is worth keeping.** `jwt.sign` is deterministic: the same payload and
+secret produce a byte-identical token, and `iat` is floored to the second — so
+two `mint(PAST_GRACE)` calls inside one second returned **the same token**, and a
+row created for the first silently satisfied the second. Two sections that
+believed they held different tokens were sharing one. A nonce now makes each
+mint distinct, with the reason recorded in place.
+
+Outbound keys explicitly empty; `Resend configured: false`.

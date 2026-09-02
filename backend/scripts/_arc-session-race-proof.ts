@@ -59,6 +59,7 @@ const ok = (n: string, c: boolean, d = "") => {
 async function main() {
   const { prisma } = await import("../src/config/database");
   const { createSession, sessionTokenHash } = await import("../src/lib/sessionStore");
+  const { blacklistToken } = await import("../src/utils/tokenBlacklist");
   const express = (await import("express")).default;
   const cookieParser = (await import("cookie-parser")).default;
   const routes = (await import("../src/routes")).default;
@@ -83,6 +84,26 @@ async function main() {
   const secret = process.env.JWT_SECRET as string;
   const call = (tok: string) =>
     fetch(BASE + "/auth/me", { headers: { Cookie: "srl_token_ae=" + tok } });
+  // Ages are EXPLICIT because the grace window is age-sensitive. A token minted
+  // now sits inside it, so the refusal-path sections below deliberately mint
+  // OUTSIDE it -- otherwise they would stop exercising the delete at all and
+  // would silently stop proving the thing they are named for.
+  // The nonce is load-bearing, not decoration. jwt.sign is DETERMINISTIC: the
+  // same payload and secret produce a byte-identical token, and iat is floored
+  // to the second -- so two mint(PAST_GRACE) calls inside the same second
+  // returned THE SAME TOKEN. Two sections that believed they held different
+  // tokens were sharing one, and a row created for the first silently satisfied
+  // the second. Both fixture failures in this proof came from that, not from
+  // the code under test.
+  let mintSeq = 0;
+  const mint = (ageMs = 0) =>
+    jwt.sign(
+      { userId: ae.id, n: ++mintSeq, iat: Math.floor((Date.now() - ageMs) / 1000) },
+      secret,
+      { expiresIn: "12h" },
+    );
+  const PAST_GRACE = 60_000;
+
   const rowFor = (tok: string) =>
     prisma.staffSession.findUnique({ where: { tokenHash: sessionTokenHash(tok) } });
 
@@ -90,7 +111,7 @@ async function main() {
   // Without this, "the row survived" in [2] could equally mean the delete is
   // simply broken, which would be a different and worse defect.
   console.log("[1] CONTROL: a genuinely idle session is still cleaned up");
-  const idleTok = jwt.sign({ userId: ae.id }, secret, { expiresIn: "12h" });
+  const idleTok = mint();
   await createSession({ token: idleTok, userId: ae.id, portal: "AE" });
   await prisma.staffSession.update({
     where: { tokenHash: sessionTokenHash(idleTok) },
@@ -103,7 +124,7 @@ async function main() {
 
   // ── 2. THE PERMANENT KILL, reproduced deterministically ──
   console.log("\n[2] the delayed upsert lands between the read and the delete");
-  const raceTok = jwt.sign({ userId: ae.id }, secret, { expiresIn: "12h" });
+  const raceTok = mint(PAST_GRACE);
   const delegate = prisma.staffSession as unknown as Record<string, any>;
   const origFindUnique = delegate.findUnique.bind(delegate);
   let injected = 0;
@@ -146,18 +167,45 @@ async function main() {
   // pinned: a refusal that reads nothing and races nothing must still refuse,
   // and must still recover once the row lands.
   console.log("\n[3] the ordinary case: no row yet, nothing racing");
-  const plainTok = jwt.sign({ userId: ae.id }, secret, { expiresIn: "12h" });
+  const plainTok = mint(PAST_GRACE);
   const r4 = await call(plainTok);
   ok("refused while the row is absent", r4.status === 401, "status=" + r4.status);
   await createSession({ token: plainTok, userId: ae.id, portal: "AE" });
   const r5 = await call(plainTok);
   ok("succeeds once the row lands", r5.status === 200, "status=" + r5.status);
 
+  // ── 4. the grace window ──
+  console.log(String.fromCharCode(10) + "[4] the grace: a login whose row has not landed yet");
+  // The maximal delay: no row exists AT ALL when the request arrives, which is
+  // strictly worse than any real in-flight upsert could be.
+  const freshTok = mint();
+  const g1 = await call(freshTok);
+  ok("a fresh token with NO row is allowed", g1.status === 200,
+    "this is the login the race was breaking; status=" + g1.status);
+  ok("and no row was conjured for it", (await rowFor(freshTok)) === null,
+    "the grace must not write a session -- the in-flight upsert owns that row");
+
+  // Revocation during the grace. This is the load-bearing safety question: the
+  // grace is only defensible because revocation is caught EARLIER, by the
+  // blacklist, before the row is ever read. Commit 3 pins that ordering.
+  const revokedTok = mint();
+  await blacklistToken(revokedTok, ae.id, "proof-revocation-during-grace");
+  const g2 = await call(revokedTok);
+  ok("a token revoked INSIDE the grace is still refused", g2.status === 401,
+    "if this ever passes the grace has opened a revocation gap; status=" + g2.status);
+
+  // And the window really is a window.
+  const staleTok = mint(PAST_GRACE);
+  const g3 = await call(staleTok);
+  ok("a token past the window with no row is refused", g3.status === 401,
+    "the grace clears a database round trip, not an absence; status=" + g3.status);
+
   console.log("\n" + pass + "/" + (pass + fail) + " passed");
   server.closeAllConnections?.();
   server.close();
 
   await prisma.staffSession.deleteMany({ where: { userId: ae.id } });
+  await prisma.tokenBlacklist.deleteMany({ where: { userId: ae.id } }).catch(() => {});
   await prisma.authEvent?.deleteMany?.({ where: { userId: ae.id } }).catch(() => {});
   await prisma.user.delete({ where: { id: ae.id } }).catch(() => {});
   await prisma.$disconnect();
