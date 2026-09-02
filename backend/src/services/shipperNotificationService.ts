@@ -8,12 +8,39 @@ import {
   shipperPODHtml,
 } from "./emailService";
 import { log } from "../lib/logger";
+import { resolveOperationalRecipients } from "./customerRecipientResolver";
 
 // go-live audit R4: shipper-facing emails reply to operations@ (a monitored
 // inbox), not the noreply@ From address — so a shipper's reply doesn't vanish.
 const SHIPPER_REPLY_TO = { replyTo: "operations@silkroutelogistics.ai" };
 function sendShipperEmail(to: string, subject: string, html: string, attachments?: any[]) {
   return sendEmail(to, subject, html, attachments, SHIPPER_REPLY_TO);
+}
+
+/**
+ * Every operational send in this file goes through here.
+ *
+ * Until v3.8.ayq each of the six senders below addressed its mail with
+ * `load.customer.email` — a single scalar column that also holds the INVOICE
+ * recipient. On 2026-09-02 that put three milestones and a CRITICAL DELAY into
+ * accountspayable@beekeepersnaturals.com for loads that were test data, and no
+ * CRM field an AE could edit changed it (§13.3 Item 8.3).
+ *
+ * The resolver decides who; this decides how many. An empty result is a
+ * deliberate outcome, not an error — the resolver has already logged the reason
+ * naming the load, so callers return quietly rather than logging twice.
+ */
+async function sendOperational(
+  loadId: string,
+  subject: string,
+  html: string,
+  attachments?: any[],
+): Promise<string[]> {
+  const recipients = await resolveOperationalRecipients(loadId);
+  for (const r of recipients) {
+    await sendShipperEmail(r.email, subject, html, attachments);
+  }
+  return recipients.map((r) => r.email);
 }
 
 /**
@@ -27,7 +54,8 @@ export async function sendShipperPickupEmail(loadId: string) {
       carrier: { select: { company: true, firstName: true, lastName: true } },
     },
   });
-  if (!load?.customer?.email) return;
+  // The customer must exist for the body; WHO gets it is the resolver's call.
+  if (!load?.customer) return;
 
   // Dedup: check if already sent in last 2 hours
   const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000);
@@ -46,7 +74,8 @@ export async function sendShipperPickupEmail(loadId: string) {
   const eta = load.deliveryDate ? load.deliveryDate.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" }) : "TBD";
 
   const html = shipperPickupHtml(load.referenceNumber, origin, dest, carrierName, eta);
-  await sendShipperEmail(load.customer.email, `Shipment Picked Up: ${load.referenceNumber}`, html);
+  const sent = await sendOperational(loadId, `Shipment Picked Up: ${load.referenceNumber}`, html);
+  if (sent.length === 0) return;
 
   // Record notification for dedup
   await prisma.notification.create({
@@ -54,12 +83,12 @@ export async function sendShipperPickupEmail(loadId: string) {
       userId: load.posterId,
       type: "LOAD_UPDATE",
       title: `Shipper Pickup: ${load.referenceNumber}`,
-      message: `Pickup email sent to ${load.customer.email} for load ${load.referenceNumber}`,
+      message: `Pickup email sent to ${sent.join(", ")} for load ${load.referenceNumber}`,
       actionUrl: "/dashboard/loads",
     },
   });
 
-  log.info(`[ShipperNotify] Pickup email sent to ${load.customer.email} for ${load.referenceNumber}`);
+  log.info(`[ShipperNotify] Pickup email sent to ${sent.join(", ")} for ${load.referenceNumber}`);
 }
 
 /**
@@ -73,7 +102,8 @@ export async function sendShipperTransitUpdate(loadId: string) {
       checkCalls: { orderBy: { createdAt: "desc" }, take: 5 },
     },
   });
-  if (!load?.customer?.email) return;
+  // The customer must exist for the body; WHO gets it is the resolver's call.
+  if (!load?.customer) return;
 
   // Dedup: check if transit update already sent in last 6 hours
   const sixHoursAgo = new Date(Date.now() - 6 * 60 * 60 * 1000);
@@ -109,7 +139,8 @@ export async function sendShipperTransitUpdate(loadId: string) {
   }));
 
   const html = shipperTransitHtml(load.referenceNumber, origin, dest, lastLocation, etaStr, percentComplete, ccForEmail);
-  await sendShipperEmail(load.customer.email, `Transit Update: ${load.referenceNumber} — ${percentComplete}% Complete`, html);
+  const sent = await sendOperational(loadId, `Transit Update: ${load.referenceNumber} — ${percentComplete}% Complete`, html);
+  if (sent.length === 0) return;
 
   // Record notification for dedup
   await prisma.notification.create({
@@ -117,12 +148,12 @@ export async function sendShipperTransitUpdate(loadId: string) {
       userId: load.posterId,
       type: "LOAD_UPDATE",
       title: `Shipper Transit: ${load.referenceNumber}`,
-      message: `Transit update sent to ${load.customer.email} — ${percentComplete}% complete`,
+      message: `Transit update sent to ${sent.join(", ")} — ${percentComplete}% complete`,
       actionUrl: "/dashboard/loads",
     },
   });
 
-  log.info(`[ShipperNotify] Transit update sent to ${load.customer.email} for ${load.referenceNumber} (${percentComplete}%)`);
+  log.info(`[ShipperNotify] Transit update sent to ${sent.join(", ")} for ${load.referenceNumber} (${percentComplete}%)`);
 }
 
 /**
@@ -135,7 +166,8 @@ export async function sendShipperDeliveryEmail(loadId: string) {
       customer: { select: { name: true, email: true } },
     },
   });
-  if (!load?.customer?.email) return;
+  // The customer must exist for the body; WHO gets it is the resolver's call.
+  if (!load?.customer) return;
 
   // Dedup
   const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000);
@@ -153,19 +185,20 @@ export async function sendShipperDeliveryEmail(loadId: string) {
   const deliveredAt = new Date().toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" });
 
   const html = shipperDeliveryHtml(load.referenceNumber, origin, dest, deliveredAt);
-  await sendShipperEmail(load.customer.email, `Shipment Delivered: ${load.referenceNumber}`, html);
+  const sent = await sendOperational(loadId, `Shipment Delivered: ${load.referenceNumber}`, html);
+  if (sent.length === 0) return;
 
   await prisma.notification.create({
     data: {
       userId: load.posterId,
       type: "LOAD_UPDATE",
       title: `Shipper Delivery: ${load.referenceNumber}`,
-      message: `Delivery email sent to ${load.customer.email} for load ${load.referenceNumber}`,
+      message: `Delivery email sent to ${sent.join(", ")} for load ${load.referenceNumber}`,
       actionUrl: "/dashboard/loads",
     },
   });
 
-  log.info(`[ShipperNotify] Delivery email sent to ${load.customer.email} for ${load.referenceNumber}`);
+  log.info(`[ShipperNotify] Delivery email sent to ${sent.join(", ")} for ${load.referenceNumber}`);
 }
 
 /**
@@ -178,13 +211,15 @@ export async function sendShipperPODEmail(loadId: string, podUrl: string) {
       customer: { select: { name: true, email: true } },
     },
   });
-  if (!load?.customer?.email) return;
+  // The customer must exist for the body; WHO gets it is the resolver's call.
+  if (!load?.customer) return;
 
   const fullPodUrl = `https://silkroutelogistics.ai${podUrl}`;
   const html = shipperPODHtml(load.referenceNumber, fullPodUrl);
-  await sendShipperEmail(load.customer.email, `POD Available: ${load.referenceNumber}`, html);
+  const sent = await sendOperational(loadId, `POD Available: ${load.referenceNumber}`, html);
+  if (sent.length === 0) return;
 
-  log.info(`[ShipperNotify] POD email sent to ${load.customer.email} for ${load.referenceNumber}`);
+  log.info(`[ShipperNotify] POD email sent to ${sent.join(", ")} for ${load.referenceNumber}`);
 }
 
 /**
@@ -244,7 +279,8 @@ export async function sendShipperMilestoneEmail(loadId: string, newStatus: strin
       carrier: { select: { firstName: true, company: true } },
     },
   });
-  if (!load?.customer?.email) return;
+  // The customer must exist for the body; WHO gets it is the resolver's call.
+  if (!load?.customer) return;
 
   const milestoneLabels: Record<string, string> = {
     BOOKED: "Carrier Assigned",
@@ -288,8 +324,9 @@ export async function sendShipperMilestoneEmail(loadId: string, newStatus: strin
     <p style="color:#94a3b8;font-size:12px;margin-top:20px">You are receiving this email because you have an active shipment with Silk Route Logistics.</p>
   `;
 
-  await sendShipperEmail(load.customer.email, `Shipment ${label}: ${load.referenceNumber}`, wrap(body));
-  log.info(`[ShipperNotify] Milestone email "${label}" sent to ${load.customer.email} for ${load.referenceNumber}`);
+  const sent = await sendOperational(loadId, `Shipment ${label}: ${load.referenceNumber}`, wrap(body));
+  if (sent.length === 0) return;
+  log.info(`[ShipperNotify] Milestone email "${label}" sent to ${sent.join(", ")} for ${load.referenceNumber}`);
 }
 
 /**
@@ -301,19 +338,13 @@ export async function sendShipperDelayNotification(
   alert: { level: string; reason: string; eta?: Date | null; bufferHours?: number },
   deliveryStop: any
 ) {
-  // Resolve shipper email from customer or poster
-  let shipperEmail: string | null = null;
-  if (load.customer?.email) {
-    shipperEmail = load.customer.email;
-  } else if (load.customerId) {
-    const customer = await prisma.customer.findUnique({
-      where: { id: load.customerId },
-      select: { email: true },
-    });
-    shipperEmail = customer?.email || null;
-  }
-
-  if (!shipperEmail) return;
+  // This is the send that reached accountspayable@ with a CRITICAL DELAY on
+  // 2026-09-02, so it resolves exactly like every other operational send. The
+  // old code here was worse than the others: it fell back to a second query
+  // against customers.email, so even a caller that had deliberately omitted the
+  // customer relation still ended up at the billing address.
+  const recipients = await resolveOperationalRecipients(load.id);
+  if (recipients.length === 0) return;
 
   // Dedup: check if delay notification already sent in last 2 hours
   const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000);
@@ -366,7 +397,10 @@ export async function sendShipperDelayNotification(
     </div>
   `;
 
-  await sendShipperEmail(shipperEmail, `${levelLabel}: Shipment ${refNum}`, wrap(body));
+  for (const r of recipients) {
+    await sendShipperEmail(r.email, `${levelLabel}: Shipment ${refNum}`, wrap(body));
+  }
+  const sentTo = recipients.map((r) => r.email).join(", ");
 
   // Record notification for dedup
   if (load.posterId) {
@@ -375,13 +409,13 @@ export async function sendShipperDelayNotification(
         userId: load.posterId,
         type: "LOAD_UPDATE",
         title: `Shipper Delay ${alert.level}: ${refNum}`,
-        message: `Delay alert sent to ${shipperEmail} — ${alert.reason}`,
+        message: `Delay alert sent to ${sentTo} — ${alert.reason}`,
         actionUrl: "/dashboard/tracking",
       },
     });
   }
 
-  log.info(`[ShipperNotify] ${alert.level} delay alert sent to ${shipperEmail} for ${refNum}`);
+  log.info(`[ShipperNotify] ${alert.level} delay alert sent to ${sentTo} for ${refNum}`);
 }
 
 /**
