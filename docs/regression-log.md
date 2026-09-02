@@ -3325,3 +3325,46 @@ The lesson is filed at §19 Sub-pattern 16, thirteenth fire. Short form: this jo
 has a quieted branch and a real branch that report the same conclusion, so the
 tick is not evidence — three greens in 56 minutes, one of which deployed
 anything.
+
+---
+
+## v3.8.ayj — a refusal that read nothing was deleting the row a login had just written
+
+**Session race, commit 1 of 3.** Phase A (`8be7a561`) found that the reported
+symptom — a fresh login being told *"Your session has ended."* — was the mild
+half. The refusal path deleted unconditionally:
+
+```
+await prisma.staffSession.delete({ where: { tokenHash } }).catch(() => {});
+```
+
+The `findUnique` directly above it had already returned `null` in the case that
+matters, so **that delete could only ever destroy a row written concurrently**.
+`registerSession` persists fire-and-forget, so a login answered fast enough
+leaves an upsert in flight; if it landed between the read and the delete, the
+row that had just been written was removed and the session was **dead until
+re-login** rather than failing once and working on retry.
+
+Now it deletes only when `sessionRow !== null`. A refusal that read nothing
+removes nothing.
+
+**Reproduced deterministically, not hoped for.** The window is a few
+milliseconds wide, so
+[`_arc-session-race-proof.ts`](../backend/scripts/_arc-session-race-proof.ts)
+intercepts the real `findUnique`, lets it perform its real read, and lands the
+delayed upsert (through the real `createSession`) before it returns. The
+middleware then runs its own unmodified logic on top — only the TIMING of a
+dependency is controlled, so this is not a proof reimplementing its subject
+(§13.3 Item 222.5). **9/9** over the real router with a real database.
+
+**The CONTROL is what makes "the row survived" mean anything.** A genuinely idle
+session is refused and its row *is* removed — without that case, a surviving row
+could equally have meant the delete was simply broken, which would be a
+different and worse defect. A vacuity tripwire asserts the injection fired
+exactly once and that the read genuinely saw `null`.
+
+**Adversarial: reverting the conditional reproduces the kill exactly** — 7/9,
+failing precisely `THE ROW SURVIVES` and `the retry SUCCEEDS` (status 401), while
+the CONTROL and the ordinary-transient cases stay green.
+
+Outbound keys explicitly empty; `Resend configured: false`.

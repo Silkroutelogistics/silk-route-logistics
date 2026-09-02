@@ -353,7 +353,21 @@ async function tryAuthenticateToken(token: string, isBackgroundPoll = false): Pr
 
   if (!verdict.ok) {
     removeSession(user.id, token);
-    await prisma.staffSession.delete({ where: { tokenHash } }).catch(() => {});
+    // ONLY when a row was actually read.
+    //
+    // This delete used to run unconditionally, and the read directly above had
+    // already returned null in the case that matters -- so there was nothing
+    // for it to remove and it could ONLY ever destroy a row written
+    // concurrently. registerSession persists fire-and-forget, so a login that
+    // loses the race has an upsert in flight: if it landed between the
+    // findUnique and this line, the delete removed the row that had just been
+    // written and the session was dead for good rather than failing once and
+    // working on retry.
+    //
+    // A refusal that read nothing removes nothing.
+    if (sessionRow !== null) {
+      await prisma.staffSession.delete({ where: { tokenHash } }).catch(() => {});
+    }
     logAuthEvent(
       verdict.code === "SESSION_ABSOLUTE_EXPIRED" ? "session.expired_ceiling" : "session.expired_idle",
       { userId: user.id, email: user.email, role: user.role },
