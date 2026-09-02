@@ -1,4 +1,5 @@
 import { prisma } from "../config/database";
+import { resolveBillingRecipients } from "./customerRecipientResolver";
 import { sendEmail, wrap } from "./emailService";
 import { log } from "../lib/logger";
 
@@ -216,6 +217,12 @@ export async function processArReminders(): Promise<{ processed: number; reminde
       status: { in: unpaidStatuses as any[] },
       dueDate: { not: null },
       deletedAt: null,
+      // The deletedAt above is the INVOICE s. Without these two the load could be
+      // cancelled and soft-deleted and dunning would continue -- neither
+      // cancelling nor deleting a load stopped it, because nothing here looked
+      // at the load at all. Surfaced by the 2026-09-02 BKN incident, where the
+      // only thing that saved us was that customer having no invoices.
+      load: { is: { deletedAt: null, status: { not: "CANCELLED" } } },
     },
     include: {
       load: {
@@ -233,7 +240,7 @@ export async function processArReminders(): Promise<{ processed: number; reminde
   let errors = 0;
 
   for (const inv of invoices) {
-    if (!inv.dueDate || !inv.load?.customer?.email) continue;
+    if (!inv.dueDate || !inv.load?.customer?.id) continue;
 
     const daysToDue = daysBetween(now, inv.dueDate); // positive = before due
     const daysOverdue = -daysToDue;
@@ -292,7 +299,11 @@ export async function processArReminders(): Promise<{ processed: number; reminde
         stage,
       );
 
-      await sendEmail(inv.load.customer.email, subject, html);
+      const billTo = await resolveBillingRecipients(inv.load.customer.id);
+      if (billTo.length === 0) continue;
+      for (const r of billTo) {
+        await sendEmail(r.email, subject, html);
+      }
 
       // Update invoice reminder flag
       const updateData: Record<string, any> = {
@@ -342,13 +353,13 @@ export async function processArReminders(): Promise<{ processed: number; reminde
             daysOverdue: daysOverdue > 0 ? daysOverdue : 0,
             stage,
             customerName: inv.load.customer.name,
-            customerEmail: inv.load.customer.email,
+            customerEmail: billTo.map((r) => r.email).join(", "),
           },
         },
       });
 
       sent++;
-      log.info(`[ARCollections] ${stageLabel(stage)}: ${inv.invoiceNumber} → ${inv.load.customer.email}`);
+      log.info(`[ARCollections] ${stageLabel(stage)}: ${inv.invoiceNumber} → ${billTo.map((r) => r.email).join(", ")}`);
     } catch (err) {
       errors++;
       log.error({ err: err }, `[ARCollections] Error processing ${inv.invoiceNumber}:`);

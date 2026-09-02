@@ -1,5 +1,6 @@
 import { Response } from "express";
 import { prisma } from "../config/database";
+import { resolveBillingRecipients } from "../services/customerRecipientResolver";
 import { AuthRequest } from "../middleware/auth";
 import { createInvoiceSchema, submitForFactoringSchema, updateLineItemsSchema, batchInvoiceStatusSchema } from "../validators/invoice";
 import { generateInvoicePdf } from "../services/pdfService";
@@ -329,8 +330,14 @@ export async function generateInvoiceFromLoad(req: AuthRequest, res: Response) {
     log.error({ err: e }, "[Invoice] PDF generation error:");
   }
 
-  // Email to shipper if requested
-  if (load.customer?.email) {
+  // Email to shipper if requested. Billing chain: an isBilling CRM contact
+  // first, then billingContactEmail, billingEmail, and customers.email last.
+  // Unlike operational mail this DOES end at customers.email — AP belongs there,
+  // and today every customer resolves at that tier because tiers 1-3 are empty.
+  const invoiceRecipients = load.customerId
+    ? await resolveBillingRecipients(load.customerId)
+    : [];
+  if (invoiceRecipients.length > 0 && load.customer) {
     const shipperName = load.customer.contactName || load.customer.name;
     const body = `
       <h2 style="color:#1e293b;margin:0 0 12px">Invoice ${invoiceNumber}</h2>
@@ -348,7 +355,9 @@ export async function generateInvoiceFromLoad(req: AuthRequest, res: Response) {
       </table>
       <p style="color:#94a3b8;font-size:12px">If you have questions, contact us at info@silkroutelogistics.ai</p>
     `;
-    await sendEmail(load.customer.email, `Invoice ${invoiceNumber} — ${load.referenceNumber}`, wrap(body)).catch((e: any) => log.error({ err: e }, "[Invoice] Email error:"));
+    for (const r of invoiceRecipients) {
+      await sendEmail(r.email, `Invoice ${invoiceNumber} — ${load.referenceNumber}`, wrap(body)).catch((e: any) => log.error({ err: e }, "[Invoice] Email error:"));
+    }
 
     await prisma.invoice.update({ where: { id: invoice!.id }, data: { status: "SENT", sentDate: new Date() } });
 
