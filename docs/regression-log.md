@@ -3415,3 +3415,43 @@ believed they held different tokens were sharing one. A nonce now makes each
 mint distinct, with the reason recorded in place.
 
 Outbound keys explicitly empty; `Resend configured: false`.
+
+---
+
+## Session race, commit 3 of 3 — pinning the invariant the grace window rests on
+
+Unversioned per §3.1: a test and documentation, no deployed artifact.
+
+The v3.8.ayk grace lets a request through when the session row has not landed
+yet. That is only defensible because a **revoked** token is refused one step
+*earlier*, by the blacklist, before the row is ever read. The Phase A audit
+established that and said plainly that **nothing enforced it** — a future
+revocation path that only deleted the row, or a reordering of the two checks,
+would silently open the gap the audit says is closed, and the grace would quietly
+become unsafe.
+
+[`blacklistInvariant.test.ts`](../backend/__tests__/unit/middleware/blacklistInvariant.test.ts)
+pins both halves:
+
+1. `isTokenBlacklisted` precedes the `staffSession` read inside
+   `tryAuthenticateToken`.
+2. Every file calling `revokeSession` also calls `blacklistToken` in the same
+   handler scope.
+
+**Structure is found by walking braces, not by matching a regex.** Reformatting,
+a wrapped call chain or an added argument cannot silently turn this into a guard
+that matches nothing — the failure that has bitten three separate guards here
+(§19 Sub-patterns 16 and 18). It carries a brace-walker self-test, a
+paired-versus-unpaired self-test, and vacuity tripwires on both halves: if
+`revokeSession` were renamed, the caller set would be empty and the second
+assertion would pass over nothing.
+
+**Adversarially verified in both directions**, each naming its offender:
+physically moving the blacklist check below the row read fails 1 of 6 and names
+`tryAuthenticateToken` with the consequence; adding a revoke-only call site fails
+1 of 6 and names the file.
+
+Closes §13.3 Item 255 across `b70cdab7` → `0df0f142` → this commit. `ssoAuth.ts`
+is recorded there as the path that was already immune — it opts out of the
+fire-and-forget persist and awaits its own upsert, so one of the thirteen mint
+sites had been doing the safe thing all along.

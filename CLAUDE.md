@@ -3125,6 +3125,76 @@ Each is a discrete sprint. Mix of operational, security, UX, and technical debt.
     visibility problem for an availability one, and the visibility problem now
     has two independent answers.
 
+255. **The session race — a fresh login was told its session had ended, and the refusal could kill it for good (2026-09-01, `v3.8.ayj` + `v3.8.ayk` + this commit).**
+
+    Phase A: [`docs/audits/session-race-audit.md`](docs/audits/session-race-audit.md).
+    Reported as an intermittent E2E failure on `6a0ff6ee`, which had nothing to do
+    with that commit.
+
+    **255.1 — THE REPORTED SYMPTOM WAS THE MILD HALF.** `registerSession` writes
+    the in-memory Set synchronously and issues the persisted row as
+    `void createSession(...)`, deliberately, so a login that has already succeeded
+    cannot fail on a bookkeeping write. The response therefore goes out with the
+    upsert still in flight, and a client fast enough to ask again first reads no
+    row. The policy called that **idle expired** — which for a token twenty
+    seconds old is false on its face. The code was conflating *not written yet*
+    with *long abandoned*.
+
+    **255.2 — AND THE REFUSAL DELETED UNCONDITIONALLY.** `findUnique` had already
+    returned `null` in exactly the case that matters, so that delete could **only
+    ever destroy a row written concurrently**. When the in-flight upsert landed
+    between the read and the delete it removed the row that had just been written,
+    and the token was **dead until re-login** rather than working on the retry.
+    Fixed first and independently in `v3.8.ayj`: it is two lines and it removes the
+    permanent half whichever way the rest goes.
+
+    **255.3 — THE GRACE, AND WHY IT IS NOT A RELAXATION.** `v3.8.ayk` allows a
+    **missing** row when the token is within `SESSION_GRACE_SECONDS` (default 30,
+    bounded 0-300, and 0 disables it). It does not weaken the idle rule: a row that
+    EXISTS with a stale `lastSeenAt` is judged by that rule unchanged, so freshness
+    alone can never buy an unbounded session. A token with no usable `iat` is
+    refused above the branch entirely, and the absolute ceiling is checked first.
+    Chosen over awaiting the write, which is a 12-site signature change and
+    reintroduces the exact failure mode the fire-and-forget comment exists to
+    prevent.
+
+    **255.4 — THE INVARIANT IT RESTS ON IS NOW ENFORCED.** A token revoked during
+    the grace is still refused, by the **blacklist**, which is consulted one step
+    EARLIER than the row read. That was true when the audit concluded it and
+    **nothing enforced it** — a future revocation path that only deleted the row,
+    or a reordering of the two checks, would have silently opened the gap the audit
+    says is closed.
+    [`blacklistInvariant.test.ts`](backend/__tests__/unit/middleware/blacklistInvariant.test.ts)
+    pins both halves by walking braces rather than matching a regex, with
+    self-tests and vacuity tripwires. Adversarially verified in both directions:
+    physically reordering the checks names the function, and a revoke-only call
+    site names the file.
+
+    **255.5 — `ssoAuth.ts` WAS ALREADY IMMUNE, and had been all along.** It passes
+    `persistSession: false` and then `await`s its own upsert before responding. One
+    of the thirteen mint sites had been doing the safe thing the whole time, which
+    is worth recording: this generalises a property that already existed rather
+    than inventing one. DRIVER is unaffected (Item 244.6) — no session row, no idle
+    window. Absolute expiry and the concurrent-session limit are unaffected too:
+    one derives from the token, the other from the in-memory Set that is written
+    synchronously.
+
+    **255.6 — WHY CI SAW IT AND PRODUCTION DID NOT.** The race is lost when the
+    client beats a database round trip. E2E mints and uses a token from the same
+    runner at roughly 1ms against a multi-millisecond upsert; a browser is 50-300ms
+    away and usually wins. **A defect only a fast client can reach is one only CI
+    can find** — which is the argument for reading the E2E job by name rather than
+    treating an intermittent red as noise (Item 254).
+
+    **255.7 — TWO PROOF FAILURES WERE MY FIXTURE, and the cause generalises.**
+    `jwt.sign` is deterministic and `iat` is floored to the second, so two mints
+    inside one second returned a **byte-identical token**. Two sections that
+    believed they held different tokens were sharing one, and a row created for the
+    first silently satisfied the second — so the failures looked exactly like a
+    code defect. Same family as §19 Sub-pattern 16's eighth fire: **a value that is
+    not unique to the thing under test proves nothing about it.** A nonce now makes
+    each mint distinct, with the reason recorded in the proof.
+
 ## §14 LEGAL / COMPLIANCE STATUS
 
 - Property broker under 49 U.S.C. §§ 13904, 13906
