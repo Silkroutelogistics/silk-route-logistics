@@ -15,7 +15,10 @@ import {
   FONT_BODY_ITALIC,
 } from "../lib/srl-chrome";
 import { type LegalAgreement } from "../data/agreements";
-import { assembleAgreementSegments, WITNESS_LINE, type AgreementSegment } from "../lib/canonicalAgreementText";
+import {
+  assembleAgreementSegments, WITNESS_LINE, CELL_SEP, ROW_SEP,
+  type AgreementSegment,
+} from "../lib/canonicalAgreementText";
 
 type PDFDoc = InstanceType<typeof PDFDocument>;
 
@@ -102,6 +105,37 @@ function renderLegalAgreement(
     y += h + (o.gap ?? 8);
   };
 
+  // Drawn by splitting the hashed segment back apart, NOT by re-reading
+  // agreement.sections. Same rule as every other string on the page: what is
+  // drawn is what is hashed, so a table cannot be text the hash does not cover
+  // (v3.8.awo). The assembly refuses any cell containing a separator, which is
+  // what makes this split lossless.
+  const table = (packed: string) => {
+    const rows = packed.split(ROW_SEP).map((r) => r.split(CELL_SEP));
+    const cols = Math.max(...rows.map((r) => r.length));
+    const colW = CONTENT_W / cols;
+    const ROW_H = 18;
+    const needed = ROW_H * rows.length + 10;
+    if (y + needed > CONTENT_BOTTOM) pageBreak();
+    y += 4;
+    rows.forEach((cells, i) => {
+      const isHeader = i === 0;
+      doc.font(isHeader ? FONT_BODY_BOLD : FONT_BODY, 9)
+         .fillColor(isHeader ? TOKENS.navy : TOKENS.fg1);
+      cells.forEach((cell, c) => {
+        doc.text(cell, MARGIN + c * colW + 4, y + 5, { width: colW - 8, lineBreak: false });
+      });
+      // A rule under the header only. Body rows are separated by spacing, which
+      // keeps a short terms table from reading like a spreadsheet.
+      if (isHeader) {
+        doc.save().strokeColor(TOKENS.gold).lineWidth(0.6)
+           .moveTo(MARGIN, y + ROW_H - 2).lineTo(MARGIN + CONTENT_W, y + ROW_H - 2).stroke().restore();
+      }
+      y += ROW_H;
+    });
+    y += 8;
+  };
+
   const heading = (text: string) => {
     if (y + 26 > CONTENT_BOTTOM) pageBreak();
     y += 6;
@@ -115,6 +149,7 @@ function renderLegalAgreement(
   for (const s of segments) {
     if (s.kind === "heading") heading(s.text);
     else if (s.kind === "clause") block(s.text);
+    else if (s.kind === "table") table(s.text);
   }
 
   // Keep the execution area together. Height must fit the taller column — the

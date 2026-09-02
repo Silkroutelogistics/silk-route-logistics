@@ -28,7 +28,7 @@ import type { LegalAgreement } from "../data/agreements";
 
 /** A drawable unit. `kind` selects the style; `text` is what is both drawn and hashed. */
 export interface AgreementSegment {
-  kind: "effective-note" | "preamble" | "heading" | "clause" | "witness" | "attestation";
+  kind: "effective-note" | "preamble" | "heading" | "clause" | "table" | "witness" | "attestation";
   text: string;
 }
 
@@ -47,6 +47,10 @@ export interface CanonicalCarrier {
   dotNumber?: string | null;
   ein?: string | null;
 }
+
+/** Table separators. Reserved: the assembly refuses any cell containing one. */
+export const CELL_SEP = " │ ";
+export const ROW_SEP = " ║ ";
 
 /** CRLF/CR to LF, collapse space runs, trim. Never changes word order or content. */
 function norm(s: string): string {
@@ -102,6 +106,25 @@ export function assembleAgreementSegments(
   for (const s of agreement.sections) {
     out.push({ kind: "heading", text: norm(s.heading) });
     for (const c of s.clauses) out.push({ kind: "clause", text: norm(c) });
+    // A table is hashed as one deterministic segment. The separators are
+    // arbitrary but FIXED: what matters is that two different tables can never
+    // flatten to the same string, so a cell moving between columns changes the
+    // hash rather than surviving it.
+    if (s.table) {
+      const cells = [s.table.headers, ...s.table.rows];
+      // The renderer splits this segment back apart to draw it, so that what is
+      // DRAWN is exactly what is HASHED (v3.8.awo). That is only lossless while
+      // no cell contains a separator, so refuse rather than corrupt: a silently
+      // mis-split table is wrong figures on a signed instrument.
+      for (const row of cells) {
+        for (const c of row) {
+          if (c.includes(CELL_SEP) || c.includes(ROW_SEP)) {
+            throw new Error("agreement table cell contains a reserved separator: " + JSON.stringify(c));
+          }
+        }
+      }
+      out.push({ kind: "table", text: cells.map((r) => r.map(norm).join(CELL_SEP)).join(ROW_SEP) });
+    }
   }
   out.push({ kind: "witness", text: WITNESS_LINE });
   if (opts.signature) out.push({ kind: "attestation", text: attestationText(opts.signature) });

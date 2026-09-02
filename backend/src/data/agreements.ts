@@ -24,9 +24,23 @@
 // both of which stopped being true a while before anyone read it again. Do not
 // reintroduce a frontend copy of either the body or a version.
 
+/**
+ * A small two-or-more column table inside a clause body -- Schedule A's tier
+ * payment terms are the first. Kept structured rather than flattened into
+ * prose because these are the figures a carrier is agreeing to: turning
+ * `| Silver | Net-30 |` into a sentence is a rewrite of a signed instrument,
+ * and doing it silently is worse than not supporting tables at all.
+ */
+export interface LegalTable {
+  headers: string[];
+  rows: string[][];
+}
+
 export interface LegalSection {
   heading: string;
   clauses: string[];
+  /** Drawn after the clauses, and covered by the content hash like everything else. */
+  table?: LegalTable;
 }
 
 export interface LegalAgreement {
