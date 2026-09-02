@@ -1,6 +1,7 @@
 import { prisma } from "../config/database";
 import { sendEmail, wrap } from "./emailService";
 import { log } from "../lib/logger";
+import { resolveOperationalRecipients } from "./customerRecipientResolver";
 
 const PORTAL_BASE = "https://silkroutelogistics.ai";
 
@@ -12,20 +13,16 @@ function sendShipperEmail(to: string, subject: string, html: string, attachments
 }
 
 /**
- * Resolve the shipper notification email for a load.
- * Priority: load.contactEmail > customer.email
+ * Who receives operational mail for this load.
+ *
+ * Was `load.contactEmail > customer.email > a second query for customer.email`.
+ * That last fallthrough is what addressed operational mail with the BILLING
+ * address, because customers.email is also the invoice recipient (13.3 Item
+ * 8.3). The resolver keeps contactEmail first and stops before customers.email.
  */
-async function resolveRecipient(load: any): Promise<string | null> {
-  if (load.contactEmail) return load.contactEmail;
-  if (load.customer?.email) return load.customer.email;
-  if (load.customerId) {
-    const customer = await prisma.customer.findUnique({
-      where: { id: load.customerId },
-      select: { email: true },
-    });
-    return customer?.email || null;
-  }
-  return null;
+async function resolveRecipients(load: any): Promise<string[]> {
+  const list = await resolveOperationalRecipients(load.id);
+  return list.map((r) => r.email);
 }
 
 /** Fetch load with all needed relations for notification emails. */
@@ -76,72 +73,23 @@ function loadInfoTable(load: any, extras?: { label: string; value: string }[]): 
   return `<table style="width:100%;border-collapse:collapse;margin:16px 0">${rowHtml}</table>`;
 }
 
-// ─── 1. Pickup Notification ────────────────────────────────────
-
-export async function sendPickupNotification(loadId: string) {
-  const load = await fetchLoadForNotify(loadId);
-  if (!load) return;
-  const to = await resolveRecipient(load);
-  if (!to) return;
-
-  const origin = `${load.originCity}, ${load.originState}`;
-  const eta = formatDate(load.deliveryDate);
-
-  const html = wrap(`
-    <h2 style="color:#0f172a">Load ${load.referenceNumber} &mdash; Picked Up</h2>
-    <p>Your shipment <strong>${load.referenceNumber}</strong> from <strong>${origin}</strong> has been picked up.</p>
-    ${loadInfoTable(load, [{ label: "Est. Delivery", value: eta }])}
-    <p>Carrier: <strong>${carrierDisplayName(load.carrier)}</strong>. Estimated delivery: <strong>${eta}</strong>.</p>
-    <p>You will receive transit updates as the shipment progresses.</p>
-    ${trackingLink(load)}
-    <p style="color:#94a3b8;font-size:12px;margin-top:20px">You are receiving this email because your contact email is associated with this shipment on Silk Route Logistics.</p>
-  `);
-
-  await sendShipperEmail(to, `Load ${load.referenceNumber} — Picked Up`, html);
-  log.info(`[ShipperLoadNotify] Pickup sent to ${to} for ${load.referenceNumber}`);
-}
-
-// ─── 2. In-Transit Update ──────────────────────────────────────
-
-export async function sendInTransitUpdate(loadId: string) {
-  const load = await fetchLoadForNotify(loadId);
-  if (!load) return;
-  const to = await resolveRecipient(load);
-  if (!to) return;
-
-  const lastCC = load.checkCalls[0];
-  const lastLocation = lastCC?.location || (lastCC?.city ? `${lastCC.city}, ${lastCC.state}` : "En route");
-  const eta = formatDate(load.deliveryDate);
-
-  // Calculate if on schedule
-  const now = Date.now();
-  const deliveryTime = load.deliveryDate?.getTime() || now;
-  const isDelayed = now > deliveryTime;
-  const etaStatus = isDelayed ? '<span style="color:#dc2626;font-weight:600">Delayed</span>' : '<span style="color:#22c55e;font-weight:600">On Schedule</span>';
-
-  const html = wrap(`
-    <h2 style="color:#0f172a">Load ${load.referenceNumber} &mdash; In Transit Update</h2>
-    <p>Your shipment <strong>${load.referenceNumber}</strong> is in transit.</p>
-    ${loadInfoTable(load, [
-      { label: "Current Location", value: lastLocation },
-      { label: "Est. Delivery", value: eta },
-      { label: "ETA Status", value: etaStatus },
-    ])}
-    ${trackingLink(load)}
-    <p style="color:#94a3b8;font-size:12px;margin-top:20px">You are receiving this email because your contact email is associated with this shipment on Silk Route Logistics.</p>
-  `);
-
-  await sendShipperEmail(to, `Load ${load.referenceNumber} — In Transit Update`, html);
-  log.info(`[ShipperLoadNotify] InTransit sent to ${to} for ${load.referenceNumber}`);
-}
+// Sections 1, 2, 4 and 5 -- sendPickupNotification, sendInTransitUpdate,
+// sendArrivedAtDelivery and sendDeliveredWithPOD -- were deleted in v3.8.ays.
+//
+// They had ZERO callers anywhere in backend/src, e2e or scripts. loadController
+// records why in its own comment at the status-change site: they duplicated the
+// milestone email, so a shipper received two or three messages per milestone,
+// and the go-live audit removed the call sites without removing the functions.
+// Four dead senders resolving recipients their own way is four places for the
+// next drift to hide, which is the defect this arc exists to close.
 
 // ─── 3. Delivery ETA Update (daily noon for IN_TRANSIT loads) ──
 
 export async function sendDeliveryETAUpdate(loadId: string) {
   const load = await fetchLoadForNotify(loadId);
   if (!load) return;
-  const to = await resolveRecipient(load);
-  if (!to) return;
+  const to = await resolveRecipients(load);
+  if (to.length === 0) return;
 
   const lastCC = load.checkCalls[0];
   const lastLocation = lastCC?.location || (lastCC?.city ? `${lastCC.city}, ${lastCC.state}` : "En route");
@@ -164,60 +112,10 @@ export async function sendDeliveryETAUpdate(loadId: string) {
     <p style="color:#94a3b8;font-size:12px;margin-top:20px">You are receiving this email because your contact email is associated with this shipment on Silk Route Logistics.</p>
   `);
 
-  await sendShipperEmail(to, `Load ${load.referenceNumber} — In Transit Update`, html);
-  log.info(`[ShipperLoadNotify] ETA update sent to ${to} for ${load.referenceNumber}`);
-}
-
-// ─── 4. Arrived at Delivery ────────────────────────────────────
-
-export async function sendArrivedAtDelivery(loadId: string) {
-  const load = await fetchLoadForNotify(loadId);
-  if (!load) return;
-  const to = await resolveRecipient(load);
-  if (!to) return;
-
-  const dest = `${load.destCity}, ${load.destState}`;
-
-  const html = wrap(`
-    <h2 style="color:#0f172a">Load ${load.referenceNumber} &mdash; Arrived at Destination</h2>
-    <p>Your shipment <strong>${load.referenceNumber}</strong> has arrived at <strong>${dest}</strong>.</p>
-    ${loadInfoTable(load)}
-    <p>Awaiting unload confirmation. You will be notified once delivery is complete.</p>
-    ${trackingLink(load)}
-    <p style="color:#94a3b8;font-size:12px;margin-top:20px">You are receiving this email because your contact email is associated with this shipment on Silk Route Logistics.</p>
-  `);
-
-  await sendShipperEmail(to, `Load ${load.referenceNumber} — Arrived at Destination`, html);
-  log.info(`[ShipperLoadNotify] ArrivedAtDelivery sent to ${to} for ${load.referenceNumber}`);
-}
-
-// ─── 5. Delivered (with optional POD) ──────────────────────────
-
-export async function sendDeliveredWithPOD(loadId: string, podUrl?: string) {
-  const load = await fetchLoadForNotify(loadId);
-  if (!load) return;
-  const to = await resolveRecipient(load);
-  if (!to) return;
-
-  const dest = `${load.destCity}, ${load.destState}`;
-  const deliveredAt = (load.actualDeliveryDatetime || new Date()).toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" });
-  const resolvedPodUrl = podUrl || load.podUrl;
-
-  const podSection = resolvedPodUrl
-    ? `<p style="text-align:center;margin:20px 0"><a href="${PORTAL_BASE}${resolvedPodUrl.startsWith("/") ? "" : "/"}${resolvedPodUrl}" style="display:inline-block;padding:12px 28px;background:#22c55e;color:#fff;text-decoration:none;border-radius:6px;font-weight:600">View / Download POD</a></p>`
-    : `<p style="color:#64748b">Proof of Delivery (POD) will be sent once validated.</p>`;
-
-  const html = wrap(`
-    <h2 style="color:#22c55e">Load ${load.referenceNumber} &mdash; Delivered &#x2713;</h2>
-    <p>Your shipment <strong>${load.referenceNumber}</strong> has been delivered to <strong>${dest}</strong> on <strong>${deliveredAt}</strong>.</p>
-    ${loadInfoTable(load, [{ label: "Delivered At", value: deliveredAt }])}
-    ${podSection}
-    ${trackingLink(load)}
-    <p style="color:#94a3b8;font-size:12px;margin-top:20px">You are receiving this email because your contact email is associated with this shipment on Silk Route Logistics.</p>
-  `);
-
-  await sendShipperEmail(to, `Load ${load.referenceNumber} — Delivered ✓`, html);
-  log.info(`[ShipperLoadNotify] Delivered sent to ${to} for ${load.referenceNumber}`);
+  for (const addr of to) {
+    await sendShipperEmail(addr, `Load ${load.referenceNumber} — In Transit Update`, html);
+  }
+  log.info(`[ShipperLoadNotify] ETA update sent to ${to.join(", ")} for ${load.referenceNumber}`);
 }
 
 // ─── 6. POD Uploaded Notification ──────────────────────────────
@@ -225,8 +123,8 @@ export async function sendDeliveredWithPOD(loadId: string, podUrl?: string) {
 export async function sendPODToContact(loadId: string) {
   const load = await fetchLoadForNotify(loadId);
   if (!load) return;
-  const to = await resolveRecipient(load);
-  if (!to) return;
+  const to = await resolveRecipients(load);
+  if (to.length === 0) return;
 
   const podUrl = load.podUrl;
   if (!podUrl) return;
@@ -244,8 +142,10 @@ export async function sendPODToContact(loadId: string) {
     <p style="color:#94a3b8;font-size:12px;margin-top:20px">You are receiving this email because your contact email is associated with this shipment on Silk Route Logistics.</p>
   `);
 
-  await sendShipperEmail(to, `Load ${load.referenceNumber} — Proof of Delivery`, html);
-  log.info(`[ShipperLoadNotify] POD email sent to ${to} for ${load.referenceNumber}`);
+  for (const addr of to) {
+    await sendShipperEmail(addr, `Load ${load.referenceNumber} — Proof of Delivery`, html);
+  }
+  log.info(`[ShipperLoadNotify] POD email sent to ${to.join(", ")} for ${load.referenceNumber}`);
 }
 
 // ─── Daily ETA Updates Cron Handler ────────────────────────────
@@ -320,12 +220,14 @@ export async function sendTrackingLinkToCrmContacts(loadId: string) {
   // The flag it already maintained is the guard; nothing new to keep in sync.
   if (load.trackingLinkSent) return { sent: 0, skipped: "already_sent" };
 
-  const contacts = await prisma.customerContact.findMany({
-    where: { customerId: load.customerId, receivesTrackingLink: true },
-    select: { id: true, name: true, email: true },
-  });
-
-  const toSend = contacts.filter((c) => !!c.email);
+  // Eligibility is the resolver s call, not this file s. The query that used
+  // to sit here filtered receivesTrackingLink and NOTHING ELSE -- so a contact an
+  // AE had marked do-not-contact still received tracking links, which is the
+  // same class of defect as the incident this arc closes. requireTrackingLink
+  // keeps the historical behaviour that tracking links go to tagged CRM
+  // contacts only and never to Load.contactEmail.
+  const toSend = (await resolveOperationalRecipients(loadId, { requireTrackingLink: true }))
+    .map((r) => ({ id: r.contactId ?? null, name: r.name ?? "there", email: r.email }));
   if (toSend.length === 0) return { sent: 0, skipped: "no_recipients" };
 
   // Use the existing trackingToken (shipper token seeded at load create)
@@ -364,7 +266,7 @@ export async function sendTrackingLinkToCrmContacts(loadId: string) {
         </p>
       `);
 
-      await sendShipperEmail(contact.email!, `Tracking: Load ${load.loadNumber ?? load.referenceNumber} · ${origin} → ${dest}`, html);
+      await sendShipperEmail(contact.email, `Tracking: Load ${load.loadNumber ?? load.referenceNumber} · ${origin} → ${dest}`, html);
       sent++;
 
       await logLoadActivity({

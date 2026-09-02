@@ -4,6 +4,7 @@ import { AuthRequest } from "../middleware/auth";
 import { createClaimSchema, updateClaimSchema } from "../validators/claim";
 import { sendEmail, wrap } from "../services/emailService";
 import { log } from "../lib/logger";
+import { resolveOperationalRecipients } from "../services/customerRecipientResolver";
 
 export async function createClaim(req: AuthRequest, res: Response) {
   const data = createClaimSchema.parse(req.body);
@@ -53,14 +54,19 @@ export async function createClaim(req: AuthRequest, res: Response) {
     sendEmail(load.carrier.email, `Claim Filed: ${claimNumber} — Load ${load.referenceNumber}`, wrap(body)).catch((e: any) => log.error({ err: e }, "[Claims] Carrier email error:"));
   }
 
-  // Notify shipper
-  if (load.customer?.email) {
+  // Notify shipper. A claim on their freight is operational mail, so it resolves
+  // to the operations contact rather than customers.email — which for at least
+  // one customer is the AP address (§13.3 Item 8.3).
+  const claimRecipients = await resolveOperationalRecipients(data.loadId);
+  if (claimRecipients.length > 0) {
     const body = `
       <h2 style="color:#1e293b">Claim Filed: ${claimNumber}</h2>
       <p style="color:#475569">A claim has been filed for your shipment <strong>${load.referenceNumber}</strong>. We will keep you updated on the investigation.</p>
       <p style="color:#475569"><strong>Type:</strong> ${data.claimType}<br><strong>Estimated Value:</strong> ${data.estimatedValue ? '$' + data.estimatedValue.toLocaleString() : 'TBD'}</p>
     `;
-    sendEmail(load.customer.email, `Claim Filed: ${claimNumber} — Shipment ${load.referenceNumber}`, wrap(body)).catch((e: any) => log.error({ err: e }, "[Claims] Shipper email error:"));
+    for (const r of claimRecipients) {
+      sendEmail(r.email, `Claim Filed: ${claimNumber} — Shipment ${load.referenceNumber}`, wrap(body)).catch((e: any) => log.error({ err: e }, "[Claims] Shipper email error:"));
+    }
   }
 
   res.status(201).json(claim);
@@ -179,8 +185,8 @@ export async function updateClaim(req: AuthRequest, res: Response) {
     if (existing.load.carrier?.email) {
       sendEmail(existing.load.carrier.email, `Claim ${data.status}: ${existing.claimNumber}`, wrap(body)).catch(() => {});
     }
-    if (existing.load.customer?.email) {
-      sendEmail(existing.load.customer.email, `Claim ${data.status}: ${existing.claimNumber}`, wrap(body)).catch(() => {});
+    for (const r of await resolveOperationalRecipients(existing.load.id)) {
+      sendEmail(r.email, `Claim ${data.status}: ${existing.claimNumber}`, wrap(body)).catch(() => {});
     }
   }
 

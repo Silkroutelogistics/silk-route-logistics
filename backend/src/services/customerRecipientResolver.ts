@@ -57,6 +57,9 @@ export interface ResolvedRecipient {
   email: string;
   name: string | null;
   source: RecipientSource;
+  /** The CustomerContact row this came from, when it came from one. Callers
+   *  that log per-contact activity need it; raw-column tiers have none. */
+  contactId?: string | null;
 }
 
 /** Normalised for comparison only -- never for sending. */
@@ -70,6 +73,7 @@ function clean(email: string | null | undefined): string | null {
 }
 
 interface ContactRow {
+  id: string;
   name: string | null;
   email: string | null;
   isPrimary: boolean;
@@ -79,6 +83,7 @@ interface ContactRow {
 }
 
 const CONTACT_SELECT = {
+  id: true,
   name: true,
   email: true,
   isPrimary: true,
@@ -96,7 +101,7 @@ function suppressed(contacts: ContactRow[]): Set<string> {
 
 function toRecipient(c: ContactRow, source: RecipientSource): ResolvedRecipient | null {
   const e = clean(c.email);
-  return e ? { email: e, name: c.name ?? null, source } : null;
+  return e ? { email: e, name: c.name ?? null, source, contactId: c.id } : null;
 }
 
 /** Deduplicate on the normalised address, keeping the first (highest-tier) hit. */
