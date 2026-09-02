@@ -3590,3 +3590,50 @@ Verified locally before this push: **1 passed (1.3m)**.
 One §14.1 trap on the way: the first local run failed with `port 3010 already
 used` — a stale backend from an earlier arc. `pkill` is inert in this shell, so
 it needs `netstat -ano` plus `taskkill //F //PID`.
+
+---
+
+## 2026-09-02 — operational email addressed with the billing address (BKN)
+
+**Reported by the owner, not by a monitor.** Three milestone emails and a
+`CRITICAL DELAY` reached `accountspayable@beekeepersnaturals.com` about loads
+that were test data. The AE had already removed the tag on the `logistics@` CRM
+contact and the emails did not stop.
+
+| | |
+|---|---|
+| Window | at least 2026-09-01 → 2026-09-02, 4 emails to AP in `email_logs` |
+| Root cause | `shipperNotificationService` resolved every recipient from `load.customer.email` and never opened `CustomerContact` |
+| Why the tag did nothing | that tag drives `sendTrackingLinkToCrmContacts` only — a different service |
+| Why AP was the address | `customers.email` is also the **invoice** recipient, read at 47 sites |
+| Known since | 2026-05-01, §13.3 Item 8.3 — whose own text predicted this outcome |
+
+**Two systems, opposite logic.** The tracking-link fan-out queries
+`CustomerContact where receivesTrackingLink: true`, so the AE's change worked
+there — tracking mail to `logistics@` stopped on 09-01. The six milestone senders
+read a scalar column, so they carried on. One address served both operations and
+billing, and no field an AE could edit changed it.
+
+**Contained same day.** The three loads were `CANCELLED` + soft-deleted, which
+empties both cron selections. Cancelling was load-bearing on its own:
+`processShipperTransitUpdates` filters status only and **has no `deletedAt`
+guard**, so soft-deleting alone would have left it emailing AP twice daily.
+
+**A second live exposure found while verifying.** `trackingController` has zero
+`deletedAt` checks, so the tracking links already in the customer's inbox still
+returned **HTTP 200** for cancelled, soft-deleted loads — verified against
+production, then closed by nulling `Load.trackingToken` and re-verified as 404.
+
+**Fixed in v3.8.ayq → v3.8.ayt.** One resolver, two chains; operational never
+falls through to `customers.email`. Collateral closed in the same arc: the
+tracking fan-out ignored `doNotContact`; `processArReminders` filtered
+`deletedAt` on the invoice and never the load, so neither cancelling nor deleting
+a load stopped dunning — BKN was spared only by having zero invoices. Four dead
+senders deleted. Two customers that would have been silenced by the new rule were
+backfilled a primary contact first; BKN was deliberately skipped, since
+backfilling *its* `customers.email` would have reinstated the AP address.
+
+**What this cost that a guard would not have.** Every automated signal was green
+throughout — no error, no failed request, flat rates. A 200 with the wrong
+recipient is indistinguishable from a 200 with the right one. Both production
+defects found this session were reported by a human looking at a screen.
