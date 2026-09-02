@@ -71,6 +71,14 @@ export const TOKENS = {
   // (doc.strokeOpacity) a missed call site fails to fully-opaque navy, which is
   // a different and less obvious wrong. Where a border sits on a cream-2 panel
   // the composite runs marginally cool, imperceptible at 0.5pt hairline weight.
+  // Body ink on the document shell. Deliberately NOT navy: the Design System
+  // sets running text in --ink #1D2939 and reserves navy for headings and
+  // structure, which is what stops a page of justified 9.5pt reading as a
+  // wall of brand colour.
+  ink:         '#1D2939',
+  // The shell's hairline: rgba(10,37,64,.12) over white. One notch darker
+  // than border1 (.10), and it is the value the shell actually specifies.
+  rule:        '#E2E5E8',
   border1:     '#E7E9EC',  // rgba(10,37,64,0.10) over white
   border2:     '#D8DCE0',  // rgba(10,37,64,0.16) over white
   borderStrong:'#B1B9C2',  // rgba(10,37,64,0.32) over white
@@ -122,6 +130,14 @@ export const BRAND = {
 export const PAGE_W = 612;
 export const PAGE_H = 792;
 export const MARGIN = 36;
+/**
+ * The document-shell margin: 0.75in, per the Design System page box.
+ * Wider than MARGIN (0.5in) because the shell is a signed legal instrument
+ * rather than an operational form, and it is opt-in for exactly that reason
+ * -- applying it to the Rate Confirmation or the BOL would reflow both.
+ */
+export const SHELL_MARGIN = 54;
+export const SHELL_CONTENT_W = PAGE_W - 2 * SHELL_MARGIN;
 export const CONTENT_W = PAGE_W - 2 * MARGIN;
 
 // Sprint 47 (v3.8.abf, Item 101) — Skill canonical fonts per tokens.md:
@@ -146,6 +162,15 @@ export const CONTENT_W = PAGE_W - 2 * MARGIN;
 export const FONT_BODY = 'DMSans-Regular';
 export const FONT_BODY_BOLD = 'DMSans-Bold';
 export const FONT_BODY_ITALIC = 'DMSans-Italic';
+// Registered since BOL v2.9, never exported. The shell sets its small caps,
+// identity lines and table values at weight 500, which is Medium -- not Regular
+// and not Bold.
+export const FONT_BODY_MEDIUM = 'DMSans-Medium';
+// Playfair REGULAR. Registered since the BOL v2.9 work and never exported,
+// so nothing could ask for it. The Design System cover sets its title at
+// font-weight:400, and a bold face there is a different typeface, not a
+// heavier one -- the shell would have been unportable without this.
+export const FONT_DISPLAY = 'Playfair-Regular';
 export const FONT_DISPLAY_BOLD = 'Playfair-Bold';
 export const FONT_DISPLAY_ITALIC = 'Playfair-Italic';
 export const FONT_MONO = 'Courier';
@@ -1656,4 +1681,125 @@ export function drawLaneEconomics(
   });
 
   return yTop + boxH + 8;
+}
+
+// ============================================================================
+// PUBLIC: DOCUMENT SHELL — AGREEMENT COVER PAGE
+// ============================================================================
+//
+// Ported from docs/design/bca.html, whose printed form is
+// docs/design/Silk_Route_Logistics_Design_System.pdf. That HTML is a
+// SPECIFICATION, not a runtime artifact: there is no HTML-to-PDF renderer in
+// this codebase and introducing one would put a second rendering path under a
+// legal document, which is the dual-renderer problem v3.8.avo removed for the
+// Rate Confirmation.
+//
+// CSS pixels convert at 0.75 (96dpi -> 72pt), inches at 72. Where a value below
+// looks arbitrary it is the shell's, converted: 1.5in top padding, an 88px gold
+// rule, a 5.1in seal at 15% bleeding 1.7in past the right edge.
+//
+// OPT-IN. Nothing calls this unless asked. The Quick Pay Agreement shares the
+// agreement renderer, so a cover applied by default would restyle a second
+// signed instrument nobody asked to restyle.
+
+export interface AgreementCoverOptions {
+  /** Display title, set in Playfair REGULAR at 52pt. */
+  title: string;
+  /** Small gold eyebrow under the rule, e.g. "Foundation Edition". */
+  edition: string;
+  /** Four meta cells across the foot of the identity block. */
+  cells: { label: string; value: string }[];
+}
+
+/** Uppercase small-caps run with letter-spacing given in em, as the shell does. */
+function capsRun(
+  doc: PDFDoc,
+  text: string,
+  x: number,
+  y: number,
+  o: { size: number; em: number; color: string; font?: string; width?: number },
+): void {
+  doc.font(o.font ?? FONT_BODY_MEDIUM, o.size)
+     .fillColor(o.color)
+     .text(text.toUpperCase(), x, y, {
+       characterSpacing: o.em * o.size,
+       lineBreak: false,
+       width: o.width ?? SHELL_CONTENT_W,
+     });
+}
+
+/**
+ * The cover. Draws onto the CURRENT page and does not add one, so the caller
+ * decides where it sits in the document.
+ */
+export function drawAgreementCoverPage(doc: PDFDoc, o: AgreementCoverOptions): void {
+  const L = SHELL_MARGIN;
+  const R = PAGE_W - SHELL_MARGIN;
+  const W = SHELL_CONTENT_W;
+
+  // ── c-top: mark + company, baseline-aligned on a 24pt mark ──
+  drawCompassMark(doc, L, SHELL_MARGIN, 24);
+  capsRun(doc, BRAND.legalName, L + 24 + 10.5, SHELL_MARGIN + 8, {
+    size: 8.5, em: 0.22, color: TOKENS.navy,
+  });
+
+  // ── c-mid: 1.5in of air, then the display title ──
+  let y = SHELL_MARGIN + 24 + 108;
+
+  doc.font(FONT_DISPLAY, 52).fillColor(TOKENS.navy);
+  const titleW = 403.2; // 5.6in max-width
+  const titleH = doc.heightOfString(o.title, { width: titleW, lineGap: -6 });
+  doc.text(o.title, L, y, { width: titleW, lineGap: -6 });
+  y += titleH + 19.5;
+
+  doc.save().strokeColor(TOKENS.gold).lineWidth(1)
+     .moveTo(L, y).lineTo(L + 66, y).stroke().restore();
+  y += 16.5;
+
+  capsRun(doc, o.edition, L, y, { size: 8, em: 0.26, color: TOKENS.goldDark });
+  y += 8 + 16.5;
+
+  doc.font(FONT_BODY_MEDIUM, 8.5).fillColor(TOKENS.navy)
+     .text("MC# " + BRAND.mc + "  ·  USDOT# " + BRAND.dot, L, y, { characterSpacing: 0.05 * 8.5, lineBreak: false });
+  y += 14.5;
+  doc.font(FONT_BODY, 8.5).fillColor(TOKENS.fg2)
+     .text(BRAND.address + "  ·  " + BRAND.domain, L, y, { characterSpacing: 0.02 * 8.5, lineBreak: false });
+  y += 14.5 + 39.6; // + 0.55in bottom padding
+
+  // ── c-grid: four cells between gold rules ──
+  const gridTop = y;
+  const colW = W / 4;
+  const CELL_H = 46;
+  doc.save().strokeColor(TOKENS.gold).lineWidth(1)
+     .moveTo(L, gridTop).lineTo(R, gridTop).stroke().restore();
+
+  o.cells.slice(0, 4).forEach((c, i) => {
+    const cx = L + i * colW;
+    capsRun(doc, c.label, cx, gridTop + 9, {
+      size: 6.5, em: 0.16, color: TOKENS.goldDark, width: colW - 10.5,
+    });
+    doc.font(FONT_BODY_MEDIUM, 9.5).fillColor(TOKENS.navy)
+       .text(c.value, cx, gridTop + 9 + 6.5 + 4.5, {
+         width: colW - 10.5, characterSpacing: 0.02 * 9.5,
+       });
+    if (i < Math.min(o.cells.length, 4) - 1) {
+      doc.save().strokeColor(TOKENS.gold).lineWidth(0.5)
+         .moveTo(cx + colW - 10.5, gridTop + 6).lineTo(cx + colW - 10.5, gridTop + CELL_H - 6)
+         .stroke().restore();
+    }
+  });
+
+  const gridBottom = gridTop + CELL_H;
+  doc.save().strokeColor(TOKENS.gold).lineWidth(1)
+     .moveTo(L, gridBottom).lineTo(R, gridBottom).stroke().restore();
+
+  // ── seal: 5.1in at 15%, bleeding 1.7in past the right edge ──
+  const SEAL = 367.2;
+  doc.save().opacity(0.15);
+  drawCompassMark(doc, R + 122.4 - SEAL, gridBottom + 25.2, SEAL);
+  doc.restore();
+
+  // ── c-bot: the tagline, italic gold, on the bottom margin ──
+  doc.font(FONT_BODY_ITALIC, 9).fillColor(TOKENS.goldDark)
+     .text(BRAND.tagline, L, PAGE_H - SHELL_MARGIN - 11, { lineBreak: false });
 }

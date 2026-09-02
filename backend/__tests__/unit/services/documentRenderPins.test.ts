@@ -100,6 +100,9 @@ const DOCUMENTS: Record<string, () => Promise<Buffer>> = {
   "invoice": async () => collect(generateInvoicePDF(INVOICE_FIXTURE)),
   "settlement": async () => collect(generateSettlementPDF(SETTLEMENT_FIXTURE)),
   "agreement-bca": () => generateAgreementBuffer(BROKER_CARRIER_AGREEMENT, {}),
+  // The shell is opt-in, so the plain BCA pin above still guards the
+  // un-shelled render. This one guards the shell itself.
+  "agreement-bca-shell": () => generateAgreementBuffer(BROKER_CARRIER_AGREEMENT, { shell: true }),
   "agreement-qp": () => generateAgreementBuffer(CARAVAN_QUICK_PAY_AGREEMENT, {}),
   "agreement-qp-executed": () =>
     generateAgreementBuffer(CARAVAN_QUICK_PAY_AGREEMENT, { carrier: PIN_CARRIER, signature: PIN_SIGNATURE }),

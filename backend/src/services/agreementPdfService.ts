@@ -5,6 +5,7 @@ import {
   drawContinuationHeader,
   drawSignatureBlock,
   drawFooter,
+  drawAgreementCoverPage,
   MASTER_AGREEMENT_SIGNATURE_ROLES,
   MARGIN,
   CONTENT_W,
@@ -62,12 +63,29 @@ const DOC_ID_PREFIX: Record<string, string> = {
 function renderLegalAgreement(
   doc: PDFDoc,
   agreement: LegalAgreement,
-  opts: { carrier?: AgreementCarrierIdentity; signature?: AgreementSignature } = {},
+  opts: { carrier?: AgreementCarrierIdentity; signature?: AgreementSignature; shell?: boolean } = {},
 ): void {
   registerSkillFonts(doc);
   const { carrier, signature } = opts;
+  const shell = opts.shell === true;
   const docId = `${DOC_ID_PREFIX[agreement.templateName] ?? "AGR"}-${agreement.version}`;
   const CONTENT_BOTTOM = PAGE_H - MARGIN - 40;
+
+  // The cover is its own page and carries no running header or footer, which
+  // is why the footer loop below skips page 1 when it is drawn.
+  if (shell) {
+    drawAgreementCoverPage(doc, {
+      title: agreement.title,
+      edition: agreement.subtitle,
+      cells: [
+        { label: "Reference", value: docId },
+        { label: "Effective Date", value: signature ? new Date(signature.signedAt).toISOString().slice(0, 10) : "" },
+        { label: "Term", value: "One year · auto-renewing" },
+        { label: "Governing Law", value: "State of Michigan" },
+      ],
+    });
+    doc.addPage();
+  }
 
   let y = drawHeaderFirstPage(doc, {
     docTitle: agreement.title,
@@ -198,6 +216,9 @@ function renderLegalAgreement(
   // Per-page footers with correct total (bufferPages must be enabled on the doc)
   const range = doc.bufferedPageRange();
   for (let i = 0; i < range.count; i++) {
+    // Page 1 is the cover when the shell is on, and the cover carries no
+    // footer -- the Design System puts only the tagline there.
+    if (shell && i === 0) continue;
     doc.switchToPage(range.start + i);
     drawFooter(doc, { pageNum: i + 1, totalPages: range.count, docId });
   }
@@ -206,6 +227,13 @@ function renderLegalAgreement(
 export type AgreementPdfOptions = {
   carrier?: AgreementCarrierIdentity;
   signature?: AgreementSignature;
+  /**
+   * Draw the Design System document shell -- cover page and, from B7, the
+   * interior master. OPT-IN and default off: the Quick Pay Agreement renders
+   * through this same function, and a shell applied by default would restyle
+   * a second signed instrument nobody asked to restyle.
+   */
+  shell?: boolean;
 };
 
 /**
