@@ -6,6 +6,11 @@ import {
   drawSignatureBlock,
   drawFooter,
   drawAgreementCoverPage,
+  drawShellRunningHeader,
+  drawShellFooter,
+  drawShellHeading,
+  SHELL_MARGIN,
+  SHELL_CONTENT_W,
   MASTER_AGREEMENT_SIGNATURE_ROLES,
   MARGIN,
   CONTENT_W,
@@ -22,6 +27,9 @@ import {
 } from "../lib/canonicalAgreementText";
 
 type PDFDoc = InstanceType<typeof PDFDocument>;
+
+/** Running-head owner line. Upper-cased once rather than at every page. */
+const BRAND_LINE = "SILK ROUTE LOGISTICS INC.";
 
 export interface AgreementSignature {
   signedByName: string;
@@ -69,7 +77,12 @@ function renderLegalAgreement(
   const { carrier, signature } = opts;
   const shell = opts.shell === true;
   const docId = `${DOC_ID_PREFIX[agreement.templateName] ?? "AGR"}-${agreement.version}`;
-  const CONTENT_BOTTOM = PAGE_H - MARGIN - 40;
+  // The shell runs a wider margin and a lighter footer than the operational
+  // chrome, so every geometry constant below is shell-aware rather than the
+  // renderer having two copies.
+  const M = shell ? SHELL_MARGIN : MARGIN;
+  const CW = shell ? SHELL_CONTENT_W : CONTENT_W;
+  const CONTENT_BOTTOM = PAGE_H - M - (shell ? 34 : 40);
 
   // The cover is its own page and carries no running header or footer, which
   // is why the footer loop below skips page 1 when it is drawn.
@@ -87,12 +100,23 @@ function renderLegalAgreement(
     doc.addPage();
   }
 
-  let y = drawHeaderFirstPage(doc, {
-    docTitle: agreement.title,
-    subtitle: agreement.subtitle,
-    loadId: docId,
-    includeQr: false,
-  });
+  const runHead = () =>
+    drawShellRunningHeader(doc, {
+      left: BRAND_LINE + " · " + agreement.title,
+      right: agreement.subtitle,
+    });
+
+  // With the shell, EVERY content page carries the same light running head --
+  // there is no heavier first-page variant. A fourteen-page signed agreement
+  // does not want an operational header repeated on all of them.
+  let y = shell
+    ? runHead()
+    : drawHeaderFirstPage(doc, {
+        docTitle: agreement.title,
+        subtitle: agreement.subtitle,
+        loadId: docId,
+        includeQr: false,
+      });
 
   // v3.8.awo — every drawn string below comes from assembleAgreementSegments,
   // the same assembly the content hash is computed over. A string drawn from
@@ -106,7 +130,7 @@ function renderLegalAgreement(
 
   const pageBreak = () => {
     doc.addPage();
-    y = drawContinuationHeader(doc, agreement.title, docId);
+    y = shell ? runHead() : drawContinuationHeader(doc, agreement.title, docId);
   };
 
   const block = (
@@ -116,11 +140,15 @@ function renderLegalAgreement(
     const font = o.font ?? FONT_BODY;
     const size = o.size ?? 9.5;
     const align = o.align ?? "justify";
+    // line-height 1.6 on the shell; TOKENS.ink rather than navy, because the
+    // shell reserves navy for headings and structure.
+    const lineGap = shell ? size * 0.6 - size * 0.35 : 0;
     doc.font(font, size);
-    const h = doc.heightOfString(text, { width: CONTENT_W, align });
+    const h = doc.heightOfString(text, { width: CW, align, lineGap });
     if (y + h > CONTENT_BOTTOM) pageBreak();
-    doc.fillColor(o.color ?? TOKENS.fg1).text(text, MARGIN, y, { width: CONTENT_W, align });
-    y += h + (o.gap ?? 8);
+    doc.fillColor(o.color ?? (shell ? TOKENS.ink : TOKENS.fg1))
+       .text(text, M, y, { width: CW, align, lineGap });
+    y += h + (o.gap ?? (shell ? 6.75 : 8));
   };
 
   // Drawn by splitting the hashed segment back apart, NOT by re-reading
@@ -156,6 +184,12 @@ function renderLegalAgreement(
 
   const heading = (text: string) => {
     if (y + 26 > CONTENT_BOTTOM) pageBreak();
+    if (shell) {
+      y += 18; // h2 margin-top 24px
+      drawShellHeading(doc, text, M, y);
+      y += 9 + 7.5; // font + margin-bottom 10px
+      return;
+    }
     y += 6;
     doc.font(FONT_BODY_BOLD, 10.5).fillColor(TOKENS.navy).text(text, MARGIN, y, { lineBreak: false });
     y += 16;
@@ -220,7 +254,8 @@ function renderLegalAgreement(
     // footer -- the Design System puts only the tagline there.
     if (shell && i === 0) continue;
     doc.switchToPage(range.start + i);
-    drawFooter(doc, { pageNum: i + 1, totalPages: range.count, docId });
+    if (shell) drawShellFooter(doc, { pageNum: i + 1, totalPages: range.count });
+    else drawFooter(doc, { pageNum: i + 1, totalPages: range.count, docId });
   }
 }
 

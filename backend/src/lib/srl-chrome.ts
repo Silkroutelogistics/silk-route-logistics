@@ -1803,3 +1803,85 @@ export function drawAgreementCoverPage(doc: PDFDoc, o: AgreementCoverOptions): v
   doc.font(FONT_BODY_ITALIC, 9).fillColor(TOKENS.goldDark)
      .text(BRAND.tagline, L, PAGE_H - SHELL_MARGIN - 11, { lineBreak: false });
 }
+
+// ============================================================================
+// PUBLIC: DOCUMENT SHELL — INTERIOR PAGE MASTER
+// ============================================================================
+//
+// The shell's interior is deliberately lighter than drawHeaderFirstPage /
+// drawContinuationHeader: a thin rule, a document name, an edition, and nothing
+// else. A signed agreement running to fourteen pages should not repeat a full
+// operational header on every one of them.
+//
+// These are SEPARATE functions rather than options on the existing ones,
+// because drawContinuationHeader and drawFooter are shared with the Rate
+// Confirmation, BOL, Invoice and Settlement. Adding a mode to them would put a
+// branch in the path of four document families to serve one.
+
+/** Top rule + document identity. Returns the y where body content may start. */
+export function drawShellRunningHeader(
+  doc: PDFDoc,
+  o: { left: string; right: string },
+): number {
+  const L = SHELL_MARGIN;
+  const R = PAGE_W - SHELL_MARGIN;
+  const y = SHELL_MARGIN;
+
+  doc.font(FONT_BODY_MEDIUM, 7.5).fillColor(TOKENS.navy)
+     .text(o.left, L, y, { characterSpacing: 0.06 * 7.5, lineBreak: false });
+  doc.font(FONT_BODY, 7.5).fillColor(TOKENS.fg3)
+     .text(o.right, L, y, {
+       characterSpacing: 0.04 * 7.5, width: R - L, align: "right", lineBreak: false,
+     });
+
+  const ruleY = y + 7.5 + 5.25; // font + padding-bottom 7px
+  doc.save().strokeColor(TOKENS.gold).lineWidth(0.7)
+     .moveTo(L, ruleY).lineTo(R, ruleY).stroke().restore();
+
+  return ruleY + 22.5; // body padding-top 30px
+}
+
+/** Bottom rule + identity, tagline, page number. Three columns, centre-weighted. */
+export function drawShellFooter(
+  doc: PDFDoc,
+  o: { pageNum: number; totalPages: number },
+): void {
+  const L = SHELL_MARGIN;
+  const R = PAGE_W - SHELL_MARGIN;
+  const W = R - L;
+  const ruleY = PAGE_H - SHELL_MARGIN - 14;
+
+  doc.save().strokeColor(TOKENS.gold).lineWidth(0.7)
+     .moveTo(L, ruleY).lineTo(R, ruleY).stroke().restore();
+
+  const ty = ruleY + 6; // padding-top 8px
+  doc.font(FONT_BODY, 7).fillColor(TOKENS.fg3)
+     .text("MC# " + BRAND.mc + " · DOT# " + BRAND.dot + " · " + BRAND.domain, L, ty, { lineBreak: false });
+  doc.font(FONT_BODY_ITALIC, 7).fillColor(TOKENS.goldDark)
+     .text(BRAND.tagline, L, ty, { width: W, align: "center", lineBreak: false });
+  doc.font(FONT_BODY, 7).fillColor(TOKENS.fg3)
+     .text("Page " + o.pageNum + " of " + o.totalPages, L, ty, { width: W, align: "right", lineBreak: false });
+}
+
+/**
+ * A numbered section heading, shell style: the number in gold, the title in
+ * navy small caps. Splits "12. Insurance" the way the shell marks it up, and
+ * falls back to drawing the whole string as the title when there is no number
+ * -- Schedule A has none.
+ */
+export function drawShellHeading(doc: PDFDoc, heading: string, x: number, y: number): void {
+  const m = /^(\d+\.)\s+(.*)$/.exec(heading);
+  const num = m ? m[1] : "";
+  const title = m ? m[2] : heading;
+
+  let cx = x;
+  if (num) {
+    doc.font(FONT_BODY_BOLD, 9).fillColor(TOKENS.goldDark)
+       .text(num, cx, y, { characterSpacing: 0.02 * 9, lineBreak: false });
+    cx += doc.widthOfString(num) + 6; // margin-right 8px
+  }
+  doc.font(FONT_BODY_BOLD, 9).fillColor(TOKENS.navy)
+     .text(title.toUpperCase(), cx, y, {
+       characterSpacing: 0.12 * 9, width: PAGE_W - SHELL_MARGIN - cx, lineBreak: false,
+     });
+}
