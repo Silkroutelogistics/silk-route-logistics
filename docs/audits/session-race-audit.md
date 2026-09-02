@@ -1,9 +1,10 @@
 # Session race — Phase A audit (read-only)
 
 **Baseline:** `e3ece558` · 2026-09-01 · **no source changed in this phase.**
-**CLOSED:** `b70cdab7` (v3.8.ayj, conditional delete) + `0df0f142` (v3.8.ayk,
-grace window) + the guard commit. Recommendation (a) was ratified and shipped
-with both companions. §13.3 Item 255 carries the closing account.
+**CLOSED:** `8be7a561` → `e98476af`. Conditional delete `b70cdab7` (v3.8.ayj),
+grace window `0df0f142` (v3.8.ayk), blacklist-invariant guard `e98476af`
+(unversioned). Recommendation (a) was ratified and shipped with both
+companions. §13.3 Item 255 carries the closing account.
 **Trigger:** `SESSION_IDLE_EXPIRED` on a freshly minted token, surfaced by an
 intermittent E2E failure on `6a0ff6ee` (row 4a), which had nothing to do with
 that commit.

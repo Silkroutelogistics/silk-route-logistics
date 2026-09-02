@@ -3125,7 +3125,7 @@ Each is a discrete sprint. Mix of operational, security, UX, and technical debt.
     visibility problem for an availability one, and the visibility problem now
     has two independent answers.
 
-255. **The session race — a fresh login was told its session had ended, and the refusal could kill it for good (2026-09-01, `v3.8.ayj` + `v3.8.ayk` + this commit).**
+255. **The session race — a fresh login was told its session had ended, and the refusal could kill it for good. CLOSED (2026-09-01, `8be7a561` → `e98476af`, v3.8.ayj + v3.8.ayk + an unversioned guard commit).**
 
     Phase A: [`docs/audits/session-race-audit.md`](docs/audits/session-race-audit.md).
     Reported as an intermittent E2E failure on `6a0ff6ee`, which had nothing to do
@@ -3168,7 +3168,14 @@ Each is a discrete sprint. Mix of operational, security, UX, and technical debt.
     pins both halves by walking braces rather than matching a regex, with
     self-tests and vacuity tripwires. Adversarially verified in both directions:
     physically reordering the checks names the function, and a revoke-only call
-    site names the file.
+    site names the file. Shipped `e98476af`, and it runs in CI.
+
+    **Closing state.** Phase A `8be7a561`; conditional delete `b70cdab7`;
+    grace window `0df0f142`; guard `e98476af`. Proof **13/13** with both
+    adversarial injections executed and each failing exactly its own
+    assertion. Nothing is left open on this item — the residual risk it names
+    is a write delay beyond `SESSION_GRACE_SECONDS`, which is a recoverable
+    401 rather than the dead session it used to be.
 
     **255.5 — `ssoAuth.ts` WAS ALREADY IMMUNE, and had been all along.** It passes
     `persistSession: false` and then `await`s its own upsert before responding. One
@@ -4351,6 +4358,72 @@ breaks, (c) strip comments so prose is not read as code, and (d) be
 **self-tested against fixtures of both shapes before its output is trusted** —
 the fixture is the gate, not the plausibility of the number. Commit 5's
 `carrier-id-writer-drift` guard is the enforced form of this rule.
+
+##### Sub-pattern 21 — a fixture value that is not unique to its role proves nothing
+
+- **Origin:** the session race arc, 2026-09-01 (§13.3 Item 255.7). Two proof
+  failures, both mine, both looking exactly like a code defect.
+- **Layer:** Verification.
+- **Trigger:** any fixture minting two values that the test believes are
+  distinct.
+
+**`jwt.sign` is deterministic.** The same payload and the same secret produce a
+byte-identical token, and `iat` is floored to the second — so two mints inside
+one second returned **the same token**. Two sections of a proof that believed
+they held different tokens were sharing one, and a session row created for the
+first silently satisfied the second.
+
+The failures did not look like a fixture problem. They looked like the grace
+window letting through a token it should have refused, which is precisely the
+defect under test — so the natural next move is to go and "fix" working code.
+Isolating it took an instrumented run printing the actual token age at request
+time.
+
+> **A value shared between two roles in one fixture cannot distinguish them.**
+
+This is the eighth fire of Sub-pattern 16 pointed at the fixture rather than the
+guard: the check ran, it observed a real value, and it was measuring something
+other than what its name said. Same remedy as there — make the observation
+unambiguous **by construction** rather than looking harder at an ambiguous one.
+A monotonic nonce in the payload is one line and removes the class.
+
+**Going-forward rule.** When a fixture mints more than one of anything that must
+be distinct — a token, a hash, a reference number, a slug, an idempotency key —
+vary it explicitly rather than relying on wall-clock time to do it. Any
+generator whose input is a second-resolution timestamp will collide inside a
+fast test, and the collision surfaces as a plausible failure of the subject.
+
+##### Sub-pattern 22 — a patch script asserts its anchor, or it lies
+
+- **Origin:** the same arc, 2026-09-01. Fired repeatedly in a single session.
+- **Layer:** Verification.
+- **Trigger:** any scripted edit — `String.replace`, `sed`, a one-shot `node -e`.
+
+**An unguarded `String.replace` that matches nothing returns the original string
+and the script then reports success.** In this arc a debug-instrumentation patch
+printed `dbg on`, changed nothing, and the run that followed was read as evidence
+about the code. It was evidence about an unpatched file.
+
+The miss is rarely a typo. In this codebase it is almost always **line endings**:
+a multi-line anchor written with `\n` against a CRLF file, or CRLF against a file
+a heredoc just created with LF (§14.1). Both fail silently and both look like the
+code has changed underneath you.
+
+**Going-forward rule.** Every scripted edit must (a) assert the anchor is present
+BEFORE replacing and `exit 1` on a miss, (b) prefer line-wise editing
+(`split(/\r?\n/)`) over multi-line string anchors, so line endings cannot decide
+the outcome, and (c) print what it changed, not merely that it ran.
+
+**Two corollaries from the same arc, both cheap and both cost a cycle:**
+
+- **Do not build a matcher inside `node -e` or `sed`.** Escapes are eaten on the
+  way in — four times in this arc, turning `\n` into a real newline and `\s` into
+  a bare `s`. Write the script to a file, or use `String.fromCharCode`.
+- **Do not chain a state-changing command into one whose exit code you then
+  read.** `node patch.js && npx tsc | head; echo ${PIPESTATUS[0]}` reports the
+  FAILED PATCH's status as though it were the typecheck's. Twice in this arc that
+  read as a compile error that did not exist. Same shape as §13.3 Items 228.5 and
+  244.3.
 
 #### 7. Design-system conformance audit (Sprint 40b/40c, ALWAYS-FIRE post-Sprint-44.5)
 - **Trigger:** sprint introduces or modifies a UI element belonging to a multi-surface class (drawers, modals, banners, tab rails, side panels, status badges, action buttons, form inputs, **nullable-data render paths**, **deploy-pipeline classes**, **fixture classes**).
