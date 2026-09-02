@@ -19,6 +19,7 @@
     "db:studio": "cd backend && npx prisma studio",
     "install:all": "npm install && cd backend && npm install && cd ../frontend && npm install",
     "test:e2e": "playwright test",
+    "test:e2e:local": "node e2e/run-local.mjs",
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:install": "playwright install chromium"
   },

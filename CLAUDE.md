@@ -3125,6 +3125,45 @@ Each is a discrete sprint. Mix of operational, security, UX, and technical debt.
     visibility problem for an availability one, and the visibility problem now
     has two independent answers.
 
+    **THE PRE-PUSH HALF — `npm run test:e2e:local` (2026-09-02).** Everything
+    above makes a red E2E *visible*. It was still only visible AFTER a push,
+    and the shape of the failures says that is the wrong end: of the four root
+    causes across those eighteen red runs, **three were a contract changing
+    without its fixture** — an added required field, a new consent step, a
+    retired override policy. Every one was about a minute of local work to
+    catch. None was caught, because "run it locally" meant hand-assembling a
+    Postgres container, a citext extension, a schema push, a seed, a frontend
+    rebuild and ten environment variables.
+
+    **The old `e2e/README.md` did not merely omit that — it produced a red on a
+    healthy tree.** Its build step had no `NEXT_PUBLIC_API_URL`, which Next.js
+    inlines at build time, so the browser called the wrong origin and the run
+    died at B5 with `element(s) not found`, indistinguishable from a frontend
+    regression. Verified by following it: it fails exactly that way. A local
+    gate whose instructions produce a misleading red is worse than none, because
+    the lesson it teaches is that the suite is unreliable.
+
+    [`e2e/run-local.mjs`](e2e/run-local.mjs) does the whole setup in one
+    command. Two design points are the load-bearing ones. It **reads the e2e
+    job's `env:` block out of `ci.yml` rather than copying it** — a second
+    hand-kept copy drifts, and a drifted copy shows up as a local PASS over a CI
+    FAILURE, the one outcome that teaches you to stop trusting the red; if that
+    block stops carrying a key the runner needs, it fails and names the key. And
+    it **refuses rather than kills** when a stale server holds port 3010 or 4000,
+    naming the port and the command to find the process — that stale process is
+    the §14.1 trap, and killing something somebody else is using to save them one
+    command is not a trade a script makes on their behalf.
+
+    Two traps it closes by verifying the artifact rather than trusting a proxy,
+    both of which cost a cycle while building it: it greps the built chunks for
+    the API URL and rebuilds only when it is genuinely absent, and it counts the
+    seed's `E2E fixtures:` lines rather than believing "The seed command has
+    been executed" (§19 Sub-pattern 16, ninth fire). A third was found by running
+    it — the readiness probe used `pg_isready`, which answers yes to the
+    TEMPORARY server the Postgres entrypoint runs during initdb, so the first
+    real statement failed with a bare exit 2; it now probes with an actual query.
+    **Ask the database the question you need answered, not a question near it.**
+
 255. **The session race — a fresh login was told its session had ended, and the refusal could kill it for good. CLOSED (2026-09-01, `8be7a561` → `e98476af`, v3.8.ayj + v3.8.ayk + an unversioned guard commit).**
 
     Phase A: [`docs/audits/session-race-audit.md`](docs/audits/session-race-audit.md).
