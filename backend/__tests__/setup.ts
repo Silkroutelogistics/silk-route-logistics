@@ -39,6 +39,7 @@ vi.mock("../src/config/database", () => ({
     },
     load: {
       findMany: vi.fn(),
+      findFirst: vi.fn(),
       findUnique: vi.fn(),
       create: vi.fn(),
       update: vi.fn(),
@@ -111,6 +112,16 @@ vi.mock("../src/config/database", () => ({
       create: vi.fn(),
       update: vi.fn(),
       count: vi.fn(),
+    },
+    // Arc: the public tracking endpoint reads this. A missing method throws
+    // "is not a function" at the CALL SITE, which reads as a code bug rather
+    // than a mock gap -- that cost three commits of red CI in v3.8.alh.
+    shipperTrackingToken: {
+      findFirst: vi.fn(),
+      findUnique: vi.fn(),
+      findMany: vi.fn(),
+      updateMany: vi.fn(),
+      update: vi.fn(),
     },
     settlement: {
       findFirst: vi.fn(),

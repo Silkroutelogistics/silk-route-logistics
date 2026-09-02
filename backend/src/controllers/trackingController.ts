@@ -35,8 +35,10 @@ export async function getPublicTracking(req: Request, res: Response) {
   let loadId: string | null = null;
   let accessLevel: string = "STATUS_ONLY";
 
-  const shipperToken = await prisma.shipperTrackingToken.findUnique({
-    where: { token },
+  // deletedAt is on the LOAD, not on the token row -- ShipperTrackingToken has
+  // no soft-delete column of its own, so the guard rides the relation.
+  const shipperToken = await prisma.shipperTrackingToken.findFirst({
+    where: { token, load: { deletedAt: null } },
   });
 
   if (shipperToken) {
@@ -138,20 +140,21 @@ export async function getPublicTracking(req: Request, res: Response) {
 
   let load: any;
   if (loadId) {
-    load = await prisma.load.findUnique({ where: { id: loadId }, select: loadSelect });
+    load = await prisma.load.findFirst({ where: { id: loadId, deletedAt: null }, select: loadSelect });
   } else {
     // Fallback lookups: trackingToken (legacy uuid) → shipperCode (6-char) → BOL → reference
-    load = await prisma.load.findUnique({ where: { trackingToken: token }, select: loadSelect });
+    load = await prisma.load.findFirst({ where: { trackingToken: token, deletedAt: null }, select: loadSelect });
     if (!load) {
-      load = await prisma.load.findFirst({ where: { shipperCode: token }, select: loadSelect });
+      load = await prisma.load.findFirst({ where: { shipperCode: token, deletedAt: null }, select: loadSelect });
     }
     if (!load) {
       const upper = token.toUpperCase().replace(/^BOL-/, "");
-      load = await prisma.load.findFirst({ where: { bolNumber: upper }, select: loadSelect });
+      load = await prisma.load.findFirst({ where: { bolNumber: upper, deletedAt: null }, select: loadSelect });
     }
     if (!load) {
       load = await prisma.load.findFirst({
         where: {
+          deletedAt: null,
           OR: [
             { referenceNumber: token },
             { loadNumber: token },
