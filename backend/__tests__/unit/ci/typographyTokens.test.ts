@@ -27,8 +27,26 @@ import { describe, it, expect } from "vitest";
 import fs from "fs";
 import path from "path";
 
-const { scanFontDrift, readCanon } = require("../../../scripts/font-drift.js");
-const { scanSerifWeightDrift } = require("../../../scripts/serif-weight-drift.js");
+const { scanFontDrift: runFontDrift, readCanon } = require("../../../scripts/font-drift.js");
+const { scanSerifWeightDrift: runSerifWeightDrift } = require("../../../scripts/serif-weight-drift.js");
+
+/**
+ * Both scanners walk the whole repo, and between them the cases below called
+ * them SEVEN times — twice for font drift, five for serif weight. Each walk
+ * costs ~750ms in isolation and far more under the parallel load of the full
+ * suite, so once the suite grew past ~1,560 tests these cases began exceeding
+ * vitest's default 5s timeout and failed intermittently, naming a different
+ * case each run. Nothing in the tree changes between cases within a run, so one
+ * walk each is the identical answer for a seventh of the cost.
+ *
+ * Memoised rather than given a longer timeout on purpose: a raised timeout
+ * hides the cost and lets it grow again the next time the suite does. This
+ * removes it. What the cases assert is untouched.
+ */
+let fontDriftCache: any = null;
+const scanFontDrift = () => (fontDriftCache ??= runFontDrift());
+let serifDriftCache: any = null;
+const scanSerifWeightDrift = () => (serifDriftCache ??= runSerifWeightDrift());
 
 const REPO = path.resolve(__dirname, "..", "..", "..", "..");
 const GLOBALS = path.join(REPO, "frontend", "src", "app", "globals.css");
