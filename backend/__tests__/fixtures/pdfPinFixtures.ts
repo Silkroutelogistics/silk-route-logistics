@@ -6,6 +6,14 @@
  * change the bytes and the pin would fail every day for no reason, which is the
  * fastest way to teach someone to ignore it.
  *
+ * AND THE SUITE RUNS IN UTC (vitest.config.ts). Every generator formats dates
+ * with toLocaleDateString, so a date at midnight UTC prints one day earlier on
+ * a negative-offset machine. That is not hypothetical: the settlement fixture
+ * below originally used midnight and the pin passed locally in America/New_York
+ * while failing on the UTC runner -- the same document, two printed dates. If
+ * you add a date here, it is deterministic because the suite is pinned, not
+ * because the value avoids a boundary.
+ *
  * These are deliberately minimal -- only what each renderer actually draws.
  * If a renderer starts reading a new field, it will throw here rather than
  * silently drawing an empty string, which is the outcome we want.
