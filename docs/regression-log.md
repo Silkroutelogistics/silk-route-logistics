@@ -3455,3 +3455,53 @@ Closes §13.3 Item 255 across `b70cdab7` → `0df0f142` → this commit. `ssoAut
 is recorded there as the path that was already immune — it opts out of the
 fire-and-forget persist and awaits its own upsert, so one of the thirteen mint
 sites had been doing the safe thing all along.
+
+---
+
+## v3.8.aym — the outgoing BCA body is archived, because two carriers already signed it
+
+The B4 precondition failed. A read-only production count found **two executed
+Broker-Carrier Agreements at `2026-06-27-v1`** — AEROSWIFT LLC (MC-1692309,
+signed 2026-09-01, "Stu Cook") and AMERICAN EAGLE FLEET INC (MC-1552421, signed
+2026-09-02, "Chad") — plus one ACKNOWLEDGED registration assent. The Phase A
+report predicted zero, citing the Arc 15 and Item 195 censuses; that was true
+when those ran, and carriers have signed since. The verification is what caught
+it.
+
+Only one CURRENT body per agreement lives in the code, so swapping in the
+Foundation Edition would have left both stored `contentHash` values
+un-recomputable. The executed PDFs survive either way; what would have been lost
+is the ability to demonstrate that a stored hash corresponds to the text those
+two signed.
+
+**Verified against production, not asserted.** A read-only script re-derives each
+stored hash from the resolved body. It reproduced both **before** the archive and
+reproduces both **after** it, from the archived constant:
+
+```
+MATCH  AEROSWIFT LLC             stored=ae070c022cc931fa  recomputed=ae070c022cc931fa
+MATCH  AMERICAN EAGLE FLEET INC  stored=1b6f7de094d53547  recomputed=1b6f7de094d53547
+```
+
+**Two things had to be frozen or the archive would defeat itself.** The version
+and effectiveNote are literals rather than `BCA_VERSION`, so the B4 bump cannot
+drag the archived text along with it. And the paperwork clause interpolated
+`PAPERWORK_DUE_HOURS`; the live body should keep doing that so the clause and the
+Compass grading window cannot drift apart (v3.8.asc), but an archive must not
+track a moving constant — a change there would silently alter frozen text. It is
+now the literal `24 hours`, and the production re-derivation confirms that
+reproduces the interpolated original exactly.
+
+`getAgreement(templateName, version?)` resolves it. An unknown version falls back
+to the current body rather than returning null: every row signed before archiving
+existed carries a version no archive entry will ever exist for, and returning
+null there would turn a lookup into a crash.
+
+Eight guard cases, including a pinned content hash over fixed inputs so any edit
+to a body nobody should be editing fails by name.
+
+**Deferred data-hygiene item, deliberately NOT actioned here:** both rows carry
+`isTestAccount = false` while the owner believes they are test carriers. The flag
+is not changed. If they are in fact test accounts, that is a data correction to
+make deliberately — and it does not alter anything above, because the archive is
+required either way while the rows exist.

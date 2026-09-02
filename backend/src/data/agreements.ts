@@ -59,6 +59,7 @@ export interface LegalAgreement {
 // a carrier signs is unchanged; bumping would 409 every open tab and invalidate
 // nothing meaningful. Bump when the WORDS change, not when their source does.
 import { PAPERWORK_DUE_HOURS } from "../lib/accessorialPolicy";
+import { BROKER_CARRIER_AGREEMENT_2026_06_27_V1 } from "./archive/brokerCarrierAgreement.2026-06-27-v1";
 
 export const BCA_VERSION = "2026-06-27-v1";
 
@@ -500,8 +501,40 @@ export const CARAVAN_QUICK_PAY_AGREEMENT: LegalAgreement = {
   ],
 };
 
-export function getAgreement(templateName: string): LegalAgreement | null {
-  if (templateName === "broker-carrier" || templateName === "bca") return BROKER_CARRIER_AGREEMENT;
+/**
+ * Superseded bodies, kept because signatures were taken against them.
+ *
+ * Only one CURRENT body per agreement lives in the code. Replacing one without
+ * archiving it leaves every stored contentHash taken against the outgoing text
+ * un-recomputable -- the executed PDF survives, but the ability to demonstrate
+ * that the hash corresponds to what was signed does not. Archiving is cheap
+ * before a swap and impossible after.
+ *
+ * Keyed by the version string stored on the CarrierAgreement row.
+ */
+const ARCHIVED: Record<string, Record<string, LegalAgreement>> = {
+  "broker-carrier": {
+    "2026-06-27-v1": BROKER_CARRIER_AGREEMENT_2026_06_27_V1,
+  },
+};
+
+/**
+ * Resolve an agreement body. With no version, the CURRENT body -- which is what
+ * every signing path wants. With a version, the body as it stood at that
+ * version, so a stored hash can be re-derived years later.
+ *
+ * An unknown version falls back to the current body rather than returning null:
+ * callers that pass a version are asking "resolve this if you can", and every
+ * pre-archive row carries a version no archive entry will ever exist for.
+ */
+export function getAgreement(templateName: string, version?: string): LegalAgreement | null {
+  if (templateName === "broker-carrier" || templateName === "bca") {
+    if (version) {
+      const archived = ARCHIVED["broker-carrier"]?.[version];
+      if (archived) return archived;
+    }
+    return BROKER_CARRIER_AGREEMENT;
+  }
   // Aliases mirror the CarrierAgreement.templateName written by the
   // /quickpay-election signing path ("quick-pay") plus the shorthands the
   // portal and support tooling use.
