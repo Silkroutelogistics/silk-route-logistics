@@ -516,6 +516,18 @@ Content sweeps that verify only the diff are the bug that produced the v3.7.c st
 - Each commit description fits in one sentence; if it needs a paragraph, the commit is too big.
 - Halt + smoke test between each sub-phase. Wait for user sign-off before the next.
 - Pre-commit: `npx tsc --noEmit` from `backend/` + `npm test` from `backend/` + `npx next build` from `frontend/` must all pass clean. `npm test` added to the canonical gate at v3.8.alh after ald/alf/alg shipped with CI red because tsc was green but vitest was not — Sub-pattern 11 third fire. CI runs `npm test` on every push; local gate must mirror.
+- **AND `npm run test:e2e:local` from the repo root, on any commit that changes a
+  contract E2E exercises** — an endpoint's request or response shape, an
+  agreement version, a compliance verdict, an auth or signing path. Added
+  2026-09-02 after a factual count: **4 of the last 20 CI runs on `main` were
+  red, and 3 of those 4 were E2E** — the one job the gate above never ran.
+  Backend, frontend and deploy were green on all three. That is not bad luck;
+  it is a gate that omits the only job exercising the full wire (real HTTP, real
+  database, real contracts between services), so a contract change lands red
+  *after* push by construction. The runner already existed (`a63876d4`, "the
+  suite that kept going red is now runnable before the push") and was not being
+  used. It costs ~1.5 minutes and it is not optional. Sub-pattern 11, fourth
+  operational context.
 
 ### §3.4 Halt > ship
 

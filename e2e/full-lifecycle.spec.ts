@@ -115,6 +115,18 @@ test.describe("Full Load Lifecycle E2E", () => {
     const { token: pendingToken } = await pendingTokenResp.json();
     const pendingAuth = { Authorization: `Bearer ${pendingToken}` };
 
+    // The version is FETCHED, not hardcoded. It used to be the literal
+    // "2026-06-27-v1", and the v3.8.ayn body swap turned that into a 409
+    // AGREEMENT_VERSION_STALE — the gate working exactly as designed, refusing a
+    // signature against a body the client did not have. Hardcoding the NEW
+    // version would only move the breakage to the next bump; a real signer reads
+    // the body first and posts back the version it was served with, so the
+    // fixture now does that too. Do NOT weaken the 409 to make this pass.
+    const bodyResp = await request.get(`${BACKEND_API}/carrier-auth/agreement/broker-carrier`);
+    expect(bodyResp.ok(), "B0: the BCA body must be fetchable before signing").toBeTruthy();
+    const served = await bodyResp.json();
+    expect(served.version, "B0: the served BCA must carry a version to sign against").toBeTruthy();
+
     const signResp = await request.post(`${BACKEND_API}/carrier-auth/sign-bca`, {
       headers: pendingAuth,
       data: {
@@ -129,7 +141,7 @@ test.describe("Full Load Lifecycle E2E", () => {
         // the same way it had to enrol in TOTP when the 2FA wall started
         // gating (Arc 15). Do NOT weaken the gate to make this pass.
         electronicRecordsConsent: true,
-        bcaVersion: "2026-06-27-v1",
+        bcaVersion: served.version,
       },
     });
     expect(signResp.ok(), `B0: POST /carrier-auth/sign-bca must succeed after approval; got ${signResp.status()} ${await signResp.text()}`).toBeTruthy();

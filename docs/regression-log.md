@@ -3547,3 +3547,46 @@ invariant is whether a kind reaches the page; how it is drawn is not the
 invariant, and encoding it made the guard fail against working code — which is
 worse than not checking, because the instinctive fix is to bend the renderer to
 satisfy the test.
+
+---
+
+## E2E fixture signs the version it was served — and the pre-push gate gains E2E
+
+**The immediate fix.** The E2E hardcoded `bcaVersion: "2026-06-27-v1"`, so the
+v3.8.ayn body swap turned it into a `409 AGREEMENT_VERSION_STALE` — the gate
+working exactly as designed, refusing a signature against a body the client did
+not have. Hardcoding the *new* version would have moved the breakage to the next
+bump. A real signer reads the body first and posts back the version it was served
+with, so the fixture now does that: it GETs
+`/carrier-auth/agreement/broker-carrier` and signs `served.version`. It will not
+break on any future bump.
+
+**The root cause, which is a process failure and worth naming.** Four of the last
+twenty CI runs on `main` were red:
+
+| Commit | Failed job | Cause |
+|---|---|---|
+| `6a0ff6ee` | E2E | session race (intermittent) |
+| `8be7a561` | E2E | same race — on a **docs-only** commit |
+| `19274faa` | Backend | settlement timezone: local `America/New_York` vs CI UTC |
+| `4d964353` | E2E | BCA version bump vs hardcoded fixture |
+
+**Three of four were E2E — the one job the canonical §3.3 gate never ran.**
+Backend, frontend and deploy were green on all three. That is not flakiness; a
+gate that omits the only job exercising the full wire will let every contract
+change land red after the push, by construction. The fourth is the same shape one
+level down: the local suite matched CI but the *environment* did not, so it was
+not running what CI runs either.
+
+Both classes are now closed. The intermittent race was fixed in v3.8.ayj/ayk; the
+timezone drift in the vitest UTC pin. What remained was the gap in the gate, so
+§3.3 now requires `npm run test:e2e:local` on any commit touching a contract E2E
+exercises. **The runner already existed** — the concurrent session shipped it in
+`a63876d4` saying precisely "the suite that kept going red is now runnable before
+the push" — and it was not being used. It costs ~1.5 minutes.
+
+Verified locally before this push: **1 passed (1.3m)**.
+
+One §14.1 trap on the way: the first local run failed with `port 3010 already
+used` — a stale backend from an earlier arc. `pkill` is inert in this shell, so
+it needs `netstat -ano` plus `taskkill //F //PID`.
