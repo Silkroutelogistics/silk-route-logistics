@@ -3505,3 +3505,45 @@ to a body nobody should be editing fails by name.
 is not changed. If they are in fact test accounts, that is a data correction to
 make deliberately — and it does not alter anything above, because the archive is
 required either way while the rows exist.
+
+---
+
+## v3.8.ayn — the BCA body becomes the Foundation Edition
+
+The clean swap, unblocked by v3.8.aym archiving the outgoing text. The literal
+body is replaced by a composition over the generated module, so the words live in
+exactly one place and the parity test holds that place to the markdown.
+
+**11 sections → 41. 152 clauses. Two tables**, carrying the accessorial figures
+(detention, layover, TONU, the four-hour carrier release window) and Schedule A's
+tier terms — figures that would have been lost or reworded without the table
+support added in v3.8.ayl.
+
+`BCA_VERSION` moves `2026-06-27-v1` → `2026-09-01-F10`, read from the document's
+own reference rather than chosen. Open tabs holding the previous body now get
+`409 AGREEMENT_VERSION_STALE`, which is the designed behaviour: it stops a
+carrier signing text nobody can reproduce.
+
+**The archive was verified after the swap, not just before.** Both production
+hashes still re-derive from `getAgreement("broker-carrier", "2026-06-27-v1")`,
+which is the whole reason the archive exists:
+
+```
+MATCH  AEROSWIFT LLC             stored=ae070c022cc931fa  recomputed=ae070c022cc931fa
+MATCH  AMERICAN EAGLE FLEET INC  stored=1b6f7de094d53547  recomputed=1b6f7de094d53547
+```
+
+**Exactly one pin moved.** `agreement-bca`, deliberately. Both Quick Pay pins
+hold, and so do BOL, Rate Confirmation, Invoice and Settlement — the shared
+chrome was not touched.
+
+**A pre-existing guard failed against correct code, and the guard was wrong.**
+`canonicalAgreementText.test.ts` asserts every assembled segment kind is drawn,
+but it hard-coded WHICH kinds are drawn in the ordered loop versus pulled out by
+hand via `seg()`. That list went stale the moment a fourth loop-drawn kind
+appeared: `table` is drawn in the loop and the guard reported it as never drawn
+while it was drawing correctly. Either style now counts for every kind. The
+invariant is whether a kind reaches the page; how it is drawn is not the
+invariant, and encoding it made the guard fail against working code — which is
+worse than not checking, because the instinctive fix is to bend the renderer to
+satisfy the test.

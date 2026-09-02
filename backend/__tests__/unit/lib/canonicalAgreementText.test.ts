@@ -139,11 +139,19 @@ describe("the renderer consumes the assembly it is hashed from", () => {
   });
 
   it("every segment kind the assembly can emit is drawn", () => {
+    // EITHER drawing style counts, for every kind. This used to hard-code which
+    // kinds were drawn in the ordered loop (`s.kind === "x"`) and which were
+    // pulled out by hand (`seg("x")`), and that list went stale the moment a
+    // fourth loop-drawn kind appeared: "table" is drawn in the loop, so the
+    // guard reported it as never drawn while it was being drawn correctly.
+    //
+    // The question this case exists to ask is whether a kind reaches the page at
+    // all. HOW it is drawn is not the invariant, and encoding it made the guard
+    // fail against correct code -- which is worse than not checking, because the
+    // instinctive fix is to bend the renderer to satisfy the test.
     const kinds = new Set(assembleAgreementSegments(BROKER_CARRIER_AGREEMENT, opts).map((s) => s.kind));
     for (const k of kinds) {
-      const drawn = k === "preamble" || k === "heading" || k === "clause"
-        ? renderer.includes(`s.kind === "${k}"`) || renderer.includes(`seg("${k}")`)
-        : renderer.includes(`seg("${k}")`);
+      const drawn = renderer.includes(`s.kind === "${k}"`) || renderer.includes(`seg("${k}")`);
       expect(drawn, `segment kind ${k} is assembled but never drawn`).toBe(true);
     }
   });
