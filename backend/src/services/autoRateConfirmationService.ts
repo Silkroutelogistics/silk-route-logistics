@@ -30,6 +30,7 @@
  */
 import type { PrismaClient, QuickPaySpeed } from "@prisma/client";
 import { prisma } from "../config/database";
+import { ENTITY_NAME, PHONE, OPERATIONS_EMAIL } from "../config/authority";
 import { log } from "../lib/logger";
 import { quickPayFeePercent, standardNetDays, normalizeTier } from "../lib/quickPayPricing";
 import { resolveLoadStem, withDocumentNumber } from "../lib/documentNumber";
@@ -50,11 +51,15 @@ const PAYMENT_TERMS_BY_TIER: Record<string, string> = {
   SILVER: "Net-30",
 };
 
-const SRL_BROKER = {
-  name: "Silk Route Logistics",
-  phone: "(269) 220-6760",
-  email: "operations@silkroutelogistics.ai",
-};
+// v3.8.azg C2 — SRL_BROKER folded into config/authority. Broker identity is one
+// fact; this was a fourth copy of it, and its name was missing the "Inc." the
+// entity actually carries, so a stored rate confirmation recorded the broker
+// under a name the company does not have.
+//
+// This value is STORED on the RateConfirmation row and is NOT printed: the RC
+// renderer draws broker identity from the srl-chrome BRAND constants and never
+// reads fd.brokerName. Checked rather than assumed — which is also why the
+// rate-confirmation render pin does not move on this commit.
 
 function timeWindow(start?: string | null, end?: string | null): string | undefined {
   if (!start && !end) return undefined;
@@ -494,10 +499,10 @@ export async function autoGenerateRateConfirmation(
     // Section 1 — Broker / Load Information
     referenceNumber: load.referenceNumber,
     loadNumber: load.loadNumber ?? load.referenceNumber,
-    brokerName: SRL_BROKER.name,
+    brokerName: ENTITY_NAME,
     brokerContact: brokerContact(load.poster),
-    brokerPhone: SRL_BROKER.phone,
-    brokerEmail: SRL_BROKER.email,
+    brokerPhone: PHONE,
+    brokerEmail: OPERATIONS_EMAIL,
 
     // Section 2 — Shipper / Pickup
     shipperName: load.originCompany ?? "",
