@@ -33,7 +33,7 @@
   // this pool and would have made a near-duplicate tile.
   var facts = [
     { t: 'Cold-chain capable',        i: 'thermometer-snowflake', c: 'warm' },
-    { t: 'Quick Pay, day one',        i: 'banknote',              c: 'warm' },
+    { t: 'Quick Pay pilot, by request', i: 'banknote',            c: 'warm' },
     { t: '33-point vetting',          i: 'shield-check',          c: 'cool' },
     { t: '48 contiguous states',      i: 'map',                   c: 'warm' },
     { t: 'BMC-84 bonded',             i: 'badge-check',           c: 'cool' },
@@ -54,7 +54,7 @@
     { t: 'Performance pay',           i: 'trophy',                c: 'warm' },
     { t: 'Itemized rate cons',        i: 'list-checks',           c: 'cool' },
     { t: 'Continuous temp logs',      i: 'thermometer',           c: 'warm' },
-    { t: 'Same-day pay',              i: 'wallet',                c: 'warm' },
+    { t: 'Same-day pay, in pilot',    i: 'wallet',                c: 'warm' },
     { t: 'Caravan partner tiers',     i: 'layers',                c: 'warm' },
     { t: 'Backhaul matched',          i: 'route',                 c: 'warm' },
     { t: 'OTIF / MABD aware',         i: 'warehouse',             c: 'warm' }
