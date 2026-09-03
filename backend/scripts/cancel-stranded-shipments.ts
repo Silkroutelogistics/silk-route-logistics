@@ -34,10 +34,25 @@ import path from "path";
 import { PrismaClient } from "@prisma/client";
 import { hostOf, isLocalHost } from "./prisma-target-guard";
 
-/** The two stranded rows, identified 2026-09-02 against production. */
+/**
+ * The stranded rows, identified against production and cancelled by explicit
+ * per-id authorisation. Ids rather than a predicate on purpose — see the header.
+ *
+ * The third was found by this script's own broader sweep while running the first
+ * two, and was deliberately NOT swept up in that run: a data run authorised for
+ * two known rows should not quietly become three. It is here under a separate
+ * authorisation, which is the difference between finding something and acting on
+ * it.
+ */
 const TARGET_IDS = [
-  "cmti2gsc20085md2de8kg2gc0", // SRL-121488, BOOKED
-  "cmtjiw5oa003onf2dksqbt4dm", // SRL-121489, IN_TRANSIT
+  "cmti2gsc20085md2de8kg2gc0", // SRL-121488  (BKN)              BOOKED     — 2026-09-03
+  "cmtjiw5oa003onf2dksqbt4dm", // SRL-121489  (BKN)              IN_TRANSIT — 2026-09-03
+  // Two months older than the BKN incident: load soft-deleted 2026-07-07 and its
+  // status never moved off DISPATCHED, so the shipment stayed DISPATCHED under a
+  // load nobody could see. v3.8.ayw's load filter already excluded it from both
+  // jobs, so it was sending nothing — this closes the row itself rather than
+  // relying on every future reader to keep filtering it out.
+  "cmpebkrg6000xb02fwd9auqzv", // L9180992591 (Graphic Packaging) DISPATCHED — added 2026-09-03
 ];
 
 const COMMIT = process.argv.includes("--commit");
