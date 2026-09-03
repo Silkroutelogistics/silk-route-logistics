@@ -49,6 +49,7 @@ vi.mock("../src/config/database", () => ({
     },
     shipment: {
       findMany: vi.fn(),
+      updateMany: vi.fn(),
       findFirst: vi.fn(),
       update: vi.fn(),
       aggregate: vi.fn(),
