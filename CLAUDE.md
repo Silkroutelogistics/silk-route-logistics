@@ -1086,6 +1086,40 @@ Each is a discrete sprint. Mix of operational, security, UX, and technical debt.
 
 **Still true and worth knowing:** `doNotContact`, `isBilling` and `salesRole` had **zero read sites** before this arc; `doNotContact` and `isBilling` now have one each. `salesRole` and `introducedVia` remain write-only CRM decoration.
 
+8.4. **Cancellation cascade contract, and the 26 children it still does not reach.** Added 2026-09-03 in v3.8.ayu → v3.8.ayw.
+
+**THE GAP.** `Load` has **31 child models** holding a foreign key to it — 28 `onDelete: Cascade`, 3 `Restrict` (verified against `schema.prisma`, not inferred). `deleteLoad` soft-deletes **three**: `LoadTender`, `CheckCall`, `Invoice`. Everything else keeps whatever state it had, and two survivors were LIVE SURFACES rather than dormant rows:
+
+| Survivor | What it kept doing |
+|---|---|
+| `Shipment` | `schedulerService` selects on `Shipment.status` and never looked at the load, so `runLateDetection` emailed the broker every 30 minutes about freight that no longer existed |
+| `ShipperTrackingToken` + `Load.trackingToken` | the public tracking page stayed open — verified **HTTP 200** against production on a cancelled, soft-deleted load |
+
+**THE CONTRACT** — [`services/cancelCascade.ts`](backend/src/services/cancelCascade.ts), `cascadeLoadCancellation(loadId, db, opts)`, called from `deleteLoad` (inside its transaction) and from the CANCELLED branch of the status update:
+
+1. every `Shipment` on the load → `CANCELLED` — `updateMany`, not the `findFirst` the status path used, which left a second shipment running
+2. `Load.trackingToken` → null
+3. every `ShipperTrackingToken` → `expiresAt = now()` — **expired, never deleted**; the record of what was issued outlives the link it granted
+4. one `LoadActivity` row, `eventType: "cancel_cascade"`
+
+**IT NEVER TOUCHES `carrierId`.** Assignment is written by `carrierAssignmentService` and released by `carrierReleaseService`, which settles the tender, voids live paper, returns the load to its origin path and records a fall-off. Clearing the column here would do a tenth of that silently and would mark a carrier as having fallen off a load SRL cancelled. **Cancelling a load and releasing its carrier are different events.**
+
+**Idempotent by scoping**, not by a caller guard — shipments matched on `status not CANCELLED`, the token on `not null`, the rows on `expiresAt > now`. Both call paths can fire for one load, so a second call has to be free.
+
+**A TONU IS NOT A CANCELLATION.** The enclosing branch is `TONU || CANCELLED`; the cascade is gated on CANCELLED alone, because a TONU had real freight and a real truck and its shipment must not be torn down.
+
+**BANKED, NOT FIXED — the other 26.** This arc adds `Shipment` and `ShipperTrackingToken` to the three `deleteLoad` already handled. That leaves **26 child models** whose rows survive a load's deletion untouched:
+
+> `Waterfall`, `LoadBid`, `LoadNote`, `QuickPayElection`, `LoadQuickPayOverride`, `Document`, `Message`, `EDITransaction`, `MatchResult`, `CheckCallSchedule`, `RiskLog`, `FallOffEvent`, `Claim`, `LoadDelay`, `LoadStop`, `DriverPhoneVerification`, `LoadTrackingEvent`, `LoadAccessorial`, `LoadLineItem`, `LoadException`, `LoadActivity`, `GeofenceEvent`, `DetentionRecord`, `ELDEvent`, plus `RateConfirmation` and `CarrierPay` (both `Restrict`).
+
+Most are inert history and **should** survive — `LoadActivity` and `LoadTrackingEvent` ARE the record of what happened and erasing them would be worse than leaving them. The ones worth auditing are the ones something still *reads*: `CheckCallSchedule` (a cron selects on it), `Waterfall` (the cascade engine), `QuickPayElection`, and `LoadStop` (detention).
+
+**The rule this arc establishes is not "cascade everything".** It is that **a child which a scheduled job or a public endpoint READS must be stopped when its load is.** Auditing the remaining 26 against that single test is the follow-on, and it is a reading exercise before it is a coding one.
+
+**Also closed here:** `trackingController` had **zero** `deletedAt` filters across six lookups (v3.8.ayu — three `findUnique` became `findFirst`, because `findUnique` accepts only unique fields in `where` and therefore cannot carry the filter at all), and the two shipment-selecting scheduler jobs now guard on the load (v3.8.ayw) as a backstop for rows created before the cascade existed. One data run cancelled the two shipments already stranded.
+
+**A third stranded row is knowingly left alone:** Graphic Packaging's `L9180992591`, shipment `DISPATCHED` under a load soft-deleted 2026-07-07 whose status was never moved off `DISPATCHED`. The v3.8.ayw load filter already excludes it from both jobs, so it sends nothing. It is recorded rather than swept up — a data run authorised for two known rows should not quietly become three.
+
 8.3.b. **`receivesOperationalUpdates` column on `CustomerContact`** — follow-on from 8.3, **deferred until the Item 194 soak clears**. Today operational eligibility is `isPrimary OR receivesTrackingLink`, which conflates two questions: *is this the operations contact* and *do they want tracking links*. An AE cannot currently make a contact receive milestone mail but not tracking links, or the reverse, without also changing whether they are primary. A dedicated column separates them cleanly. It is a schema change, so it sits behind the same gate as the two held migrations. Until then the conflation is documented in the resolver's header rather than worked around.
 
 8.3-original. **Wire shipper notifications through `CustomerContact[]` with role-based routing.** Surfaced 2026-05-01 during BKN email recipient audit. Today both `shipperLoadNotifyService` (pickup/transit/arrived/delivered) and `shipperNotificationService` (milestone/pickup/delivery/POD) bypass the `CustomerContact[]` relation entirely — they read from `Load.contactEmail` (priority) then `Customer.email` (fallback), both single-field columns. The CRM contact list (with role tags like AP/Logistics/Procurement and `doNotContact` flag) is decoupled from the actual notification path. Net effect: AE can carefully maintain a multi-contact CRM list and **none of those rows affect who actually receives shipment notifications**. Same class of architecture bug as v3.8.j (data plumbing exists but UI/code don't connect). Sprint shape: add a contact-resolution helper that routes by role tag — pickup/transit/delivery → `OPERATIONS`/`LOGISTICS`-tagged contacts, invoice → `AP`/`BILLING` contacts, quote/RFP → `PROCUREMENT` contacts; fall back to `Customer.email` only when no role-tagged contact exists; honor `doNotContact` flag per row. Touches both notification service files + 1 helper. ~150-200 lines, single sprint.

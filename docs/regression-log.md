@@ -3637,3 +3637,59 @@ backfilling *its* `customers.email` would have reinstated the AP address.
 throughout — no error, no failed request, flat rates. A 200 with the wrong
 recipient is indistinguishable from a 200 with the right one. Both production
 defects found this session were reported by a human looking at a screen.
+
+---
+
+## 2026-09-02/03 — a cancelled load kept driving things it no longer owned
+
+Two findings from cleaning up after the BKN incident, neither of which reached a
+customer, and one of which was quiet only by accident.
+
+**`runLateDetection` was emailing about freight that did not exist.**
+`deleteLoad` cascades `deletedAt` to **3 of Load's 31 children** and `Shipment`
+is not one of them, so SRL-121489's shipment sat `IN_TRANSIT` with a stale
+`lastLocationAt` under a load cancelled and soft-deleted hours earlier. The job
+selects on `Shipment.status` and never looked at the load, so it emailed the
+broker **every 30 minutes** — a meaningful share of the 108 emails to `whaider@`
+in the 90-day window. Internal noise, not exposure, which is exactly why nobody
+noticed.
+
+**`runPreTracing` was quiet by accident of a date.** Its window is
+`pickupDate lte +48h AND gte now`, and both BKN pickups had already passed. A
+cancelled load with a **future** pickup would have emailed the carrier "are you
+on time?" about a load that no longer exists. Nothing has hit that yet. Being
+saved by a date is not the same as being safe.
+
+**A third stranded shipment, knowingly left alone.** Graphic Packaging's
+`L9180992591` — shipment `DISPATCHED` under a load soft-deleted on 2026-07-07
+whose status was never moved off `DISPATCHED`. Two months older than this
+incident, excluded from both jobs by the new load filter, sends nothing. Recorded
+rather than swept into a data run authorised for two specific ids.
+
+**Fixed in v3.8.ayu → v3.8.ayw.** `trackingController` gained `deletedAt` on all
+six lookups (three `findUnique` had to become `findFirst` — `findUnique` accepts
+only unique fields in `where`, so it cannot carry the filter at all). A single
+`cascadeLoadCancellation` now cancels every shipment, nulls the tracking token
+and expires the shipper links, called from both the delete and the CANCELLED
+status path. The two scheduler jobs guard on the load as a backstop for rows
+created before the cascade existed. One data run cleared the two already
+stranded: **0 BOOKED or IN_TRANSIT shipments remain under a cancelled or deleted
+load, and `runLateDetection` now selects zero.**
+
+**Two test-infrastructure defects surfaced on the way, both pre-existing.**
+
+The typography guard ran its whole-repo scan **seven times** across its cases,
+and once the suite passed ~1,560 tests those cases began exceeding vitest's 5s
+default and failing intermittently, naming a different case each run — while
+passing 17/17 in isolation. Memoised rather than given a longer timeout: a raised
+timeout hides the cost and lets it return.
+
+And the `bol` and `rate-confirmation` render pins **were changing at every UTC
+midnight**. `pdfPinFixtures.ts` freezes every value it owns and says so, but
+cannot freeze the renderer's clock: `pdfService.ts` calls `new Date()` while
+drawing, so today's date lands in the content stream the pin hashes. Found at
+02:10 UTC on 2026-09-03 when two pins went red during an arc that touched neither
+`srl-chrome.ts` nor `pdfService.ts` — and identified rather than guessed, because
+the two that moved are exactly the two that print today's date while Invoice and
+Settlement render the fixture's frozen ones. The clock is now pinned, so the
+input is gone rather than chased.
