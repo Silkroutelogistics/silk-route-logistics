@@ -60,7 +60,9 @@ interface FormState {
   notifyFrequency: string;
 }
 
-const PAY_TERMS = ["Net-7", "Net-14", "Net-21", "Net-30", "Quick Pay 1%", "Quick Pay 2%", "Quick Pay 3%"];
+// Net-7 removed v3.8.ayz — it is not a term in any tier ladder (§8 is
+// Net-30 / Net-21 / Net-14) and no carrier could ever have been paid on it.
+const PAY_TERMS = ["Net-14", "Net-21", "Net-30", "Quick Pay 1%", "Quick Pay 2%", "Quick Pay 3%"];
 const NOTIFY_METHODS = ["EMAIL", "SMS", "BOTH", "NONE"];
 const NOTIFY_FREQUENCIES = ["IMMEDIATE", "HOURLY_DIGEST", "DAILY_DIGEST"];
 

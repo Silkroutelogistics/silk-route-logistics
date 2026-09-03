@@ -16,7 +16,6 @@ Hand-authored SVG illustrations used across the marketing site. Each file is pur
 |---|---|---|
 | `route-trace.svg` | `/track` | Live shipment route — origin, gold-marker current position, dotted future trail, destination |
 | `compass-seven.svg` | `/carriers` | Compass Score 7-factor formula (per CLAUDE.md §9): 20/20/15/15/10/10/10 weight petals |
-| `caravan-tiers.svg` | `/carriers` + `/shippers` | Three Caravan tiers (Silver/Gold/Platinum) with published Quick Pay fees + free-pay terms per §8 |
 | `trust-stamp.svg` | `/shippers` | BOL document with gold authentication seal — "Where Trust Travels" stamp |
 | `silk-road.svg` | `/about` | Stylized Silk Road trade curve across abstract continents — brand origin |
 | `signal-converge.svg` | `/contact` | Three channels (phone/email/chat) converging on a central operations compass |
