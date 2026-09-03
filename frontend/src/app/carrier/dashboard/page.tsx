@@ -163,8 +163,9 @@ export default function CarrierOverviewPage() {
   // Quick Pay data from payment summary or defaults
   const qpBalance = paymentSummary?.quickPay?.availableBalance ?? 0;
   const qpUsedThisMonth = paymentSummary?.quickPay?.usedThisMonth ?? 0;
-  const qpMonthlyLimit = paymentSummary?.quickPay?.monthlyLimit ?? 5000;
-  const qpUsagePercent = qpMonthlyLimit > 0 ? Math.min((qpUsedThisMonth / qpMonthlyLimit) * 100, 100) : 0;
+  // v3.8.ayy — no fallback. The ceiling is per tier ($15K/$40K/$80K, Quick Pay Agreement §6) and a flat 5000 was wrong on every one: it understated Silver by 10K and Platinum by 75K, and it was the only monthly-limit figure a carrier could see anywhere. With the field absent we show the amount used and no ceiling, not a confident wrong one.
+  const qpMonthlyLimit = paymentSummary?.quickPay?.monthlyLimit ?? null;
+  const qpUsagePercent = qpMonthlyLimit && qpMonthlyLimit > 0 ? Math.min((qpUsedThisMonth / qpMonthlyLimit) * 100, 100) : 0;
 
   return (
     <div>
@@ -226,9 +227,9 @@ export default function CarrierOverviewPage() {
             </div>
             <div className="flex justify-between items-center">
               <span className="text-gray-700">Monthly Usage</span>
-              <span className="font-semibold text-[#0A2540]">${qpUsedThisMonth.toLocaleString()} / ${qpMonthlyLimit.toLocaleString()}</span>
+              <span className="font-semibold text-[#0A2540]">{qpMonthlyLimit ? `${qpUsedThisMonth.toLocaleString()} / ${qpMonthlyLimit.toLocaleString()}` : `${qpUsedThisMonth.toLocaleString()} used`}</span>
             </div>
-            <div className="h-1.5 bg-[#F5EEE0] rounded-full overflow-hidden">
+            <div className="h-1.5 bg-[#F5EEE0] rounded-full overflow-hidden" hidden={!qpMonthlyLimit}>
               <div className={`h-full rounded-full transition-all ${qpUsagePercent > 80 ? "bg-[#9B2C2C]" : qpUsagePercent > 50 ? "bg-[#B07A1A]" : "bg-[#2F7A4F]"}`} style={{ width: `${qpUsagePercent}%` }} />
             </div>
           </div>
@@ -255,7 +256,7 @@ export default function CarrierOverviewPage() {
             </div>
           </div>
           <p className="text-[11px] text-gray-500 mt-3 leading-relaxed">
-            Same-day Quick Pay is available on any load at every tier, at your tier fee plus 2%.
+            For carriers in the Quick Pay pilot, same-day is available on any load at every tier, at your tier fee plus 2%.
           </p>
         </CarrierCard>
       </div>

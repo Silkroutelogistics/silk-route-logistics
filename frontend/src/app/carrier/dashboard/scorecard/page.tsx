@@ -187,7 +187,7 @@ export default function ScorecardPage() {
             ))}
           </div>
           <p className="text-xs text-gray-600 leading-relaxed">
-            Same-day Quick Pay is available on any load at every tier, at your tier fee plus 2%.
+            For carriers in the Quick Pay pilot, same-day is available on any load at every tier, at your tier fee plus 2%.
           </p>
           <div className="mt-3 pt-3 border-t border-[#F5EEE0]">
             <p className="text-xs text-gray-600 leading-relaxed">

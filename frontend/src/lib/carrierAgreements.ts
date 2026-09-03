@@ -52,7 +52,7 @@
 // Trigger wording tracks Quick Pay Agreement §5 + BCA §5 ("complete and
 // accurate documentation"). Do not narrow it back to POD alone.
 export const QP_SUMMARY =
-  "Quick Pay is optional. Your standard pay by tier is always free: Silver Net-30, Gold Net-21, Platinum Net-14. When you want your money sooner, Quick Pay pays you early on a load you choose, for a flat fee by tier, once we have your complete and accurate paperwork. Turn it on or off anytime. It never affects your eligibility to haul.";
+  "Quick Pay is optional. Your standard pay by tier is always free: Silver Net-30, Gold Net-21, Platinum Net-14. When you want your money sooner, Quick Pay pays you early on a load you choose, for a flat fee by tier, once we have your complete and accurate paperwork. It is a limited pilot: you ask to join, we approve or decline, and you can stop at any time. It never affects your eligibility to haul.";
 
 export interface QpTierTerm {
   tier: string;

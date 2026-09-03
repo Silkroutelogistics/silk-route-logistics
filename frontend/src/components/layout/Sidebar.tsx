@@ -223,6 +223,20 @@ export function Sidebar() {
   // v3.8.aue — ACCOUNT_EXECUTIVE reaches invoicing + P&L, so it needs the
   // Accounting nav. The backend still denies fund/payments/credit.
   const hasAccountingAccess = admin || broker || user?.role === "ACCOUNTING" || user?.role === "ACCOUNT_EXECUTIVE";
+  // v3.8.ayy — the Quick Pay label below was an unconditional claim: it read
+  // "Quick Pay Available" for every carrier, including one who has never asked
+  // for the pilot and one whose request was declined. Quick Pay is admission by
+  // request (Quick Pay Agreement §3 cl.1), so availability is a per-carrier fact
+  // and has to be read, not asserted. Query only fires for a carrier session.
+  const { data: qpActivation } = useQuery<{ quickPay?: { enabled?: boolean } }>({
+    queryKey: ["sidebar-qp-activation"],
+    queryFn: () => api.get("/carrier-auth/activation-status").then((r) => r.data),
+    enabled: carrier,
+    staleTime: 5 * 60 * 1000,
+    retry: false,
+  });
+  const quickPayOn = qpActivation?.quickPay?.enabled === true;
+
   const flatNav = getNav(user?.role, viewMode);
   const useGrouped = admin && viewMode === "ae";
 
@@ -459,11 +473,11 @@ export function Sidebar() {
 
       {/* Bottom section */}
       <div className={cn("border-t border-[#2A2F42] space-y-1", collapsed ? "px-1.5 py-3" : "px-3 py-4")}>
-        {carrier && !collapsed && (
+        {carrier && !collapsed && quickPayOn && (
           <div className="px-3 py-2">
             <div className="flex items-center gap-2">
               <DollarSign className="w-4 h-4 text-gold" />
-              <span className="text-xs text-slate-500">Quick Pay Available</span>
+              <span className="text-xs text-slate-500">Quick Pay active</span>
             </div>
           </div>
         )}
