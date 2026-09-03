@@ -82,6 +82,24 @@ export const TOKENS = {
   border1:     '#E7E9EC',  // rgba(10,37,64,0.10) over white
   border2:     '#D8DCE0',  // rgba(10,37,64,0.16) over white
   borderStrong:'#B1B9C2',  // rgba(10,37,64,0.32) over white
+
+  // v3.8.azh C3 — semantic status pair, verbatim from CLAUDE.md §2.1. The
+  // tender-expiry banner in pdfService carried these four as inline hex under a
+  // comment saying there was "no TOKENS export for these yet". There is now.
+  //
+  // Values were checked against §2.1 BEFORE moving, not after: --warning
+  // #B07A1A / --warning-bg #FBEFD4 and --danger #9B2C2C / --danger-bg #F6E3E3,
+  // identical to what the banner already drew. That equality is why the
+  // rate-confirmation pin does not move on this commit — a token swap that
+  // changes a value is a render change wearing a refactor's clothes, and
+  // v3.8.aru is what that costs when nobody checks.
+  //
+  // --success and --info are NOT added. §2.1 defines them and no PDF draws
+  // them; a palette entry nothing consumes is the next thing to drift.
+  warning:     '#B07A1A',
+  warningBg:   '#FBEFD4',
+  danger:      '#9B2C2C',
+  dangerBg:    '#F6E3E3',
 } as const;
 
 // v3.8.akg §13.3 Item 8.9 — BRAND values sourced from canonical

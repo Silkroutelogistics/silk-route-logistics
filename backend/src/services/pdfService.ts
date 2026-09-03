@@ -2642,8 +2642,9 @@ export function generateEnhancedRateConfirmation(load: EnhancedRCLoadData, formD
   // deadline above signature block so carrier sees expiry at point of
   // commitment. Defensive: renders ONLY when active tender exists with
   // expiresAt > now. <2h until expiry escalates from warning (amber) to
-  // danger (red). Semantic colors per CLAUDE.md §2.1 (no TOKENS export for
-  // these yet — inline hex avoids skill-canonical drift).
+  // danger (red). Semantic colours are TOKENS.warning/warningBg and
+  // TOKENS.danger/dangerBg since v3.8.azh — the values are unchanged, they just
+  // stopped being a private copy of §2.1 living in this function.
   const activeTender = load.tenders?.find((t) =>
     (t.status === "OFFERED" || t.status === "ACCEPTED")
     && new Date(t.expiresAt) > new Date(),
@@ -2652,8 +2653,8 @@ export function generateEnhancedRateConfirmation(load: EnhancedRCLoadData, formD
     const expiresAt = new Date(activeTender.expiresAt);
     const hoursUntilExpiry = (expiresAt.getTime() - Date.now()) / (1000 * 60 * 60);
     const isUrgent = hoursUntilExpiry < 2;
-    const bannerBg = isUrgent ? "#F6E3E3" : "#FBEFD4";
-    const bannerFg = isUrgent ? "#9B2C2C" : "#B07A1A";
+    const bannerBg = isUrgent ? TOKENS.dangerBg : TOKENS.warningBg;
+    const bannerFg = isUrgent ? TOKENS.danger : TOKENS.warning;
     const bannerH = 28;
     doc.save()
       .fillColor(bannerBg)
