@@ -2,6 +2,7 @@ import { Response } from "express";
 import { z } from "zod";
 import { PackageType } from "@prisma/client";
 import { prisma } from "../config/database";
+import { cascadeLoadCancellation } from "../services/cancelCascade";
 import { voidLiveRateConfirmations } from "../services/rateConfirmationVoidService";
 import { voidForTender as voidQuickPayElection } from "../services/quickPayElectionService";
 import { settleTender } from "../services/tenderTransitionService";
@@ -674,6 +675,23 @@ export async function updateLoadStatus(req: AuthRequest, res: Response) {
   if (status === "TONU" || status === "CANCELLED") {
     const reason = req.body.reason || req.body.cancellationReason;
 
+    // Stop the downstream surfaces. The shipment sync above handles ONE
+    // shipment via findFirst and touches neither tracking token, so a load with
+    // a second shipment — or any tracking link — was left live.
+    //
+    // AWAITED AND UNTRANSACTED, deliberately: this handler has no transaction to
+    // join (the status write above is a bare update), and wrapping the whole
+    // status path is a refactor of the most-trafficked handler in the file.
+    // Awaiting at least guarantees the cascade lands before the fire-and-forget
+    // reversal below, and before the response.
+    if (status === "CANCELLED") {
+      await cascadeLoadCancellation(load.id, prisma, {
+        reason,
+        actorId: req.user!.id,
+        actorName: `${req.user!.firstName ?? ""} ${req.user!.lastName ?? ""}`.trim() || null,
+      }).catch((e) => log.error({ err: e }, "[CancelCascade] status-path cascade error:"));
+    }
+
     // Arc 2 Item 5 — a TONU must say whose failure it was. The two-sided rule
     // ratified 2026-08-15 bills the customer or pays the carrier depending
     // entirely on the fault side, so recording a TONU without one produces a
@@ -1087,8 +1105,11 @@ export async function deleteLoad(req: AuthRequest, res: Response) {
   const deletedBy = req.user!.email || req.user!.id;
   const reason = req.body?.reason || null;
 
-  await Promise.all([
-    prisma.load.update({
+  // Was a Promise.all. It is a transaction now because the cascade has to be
+  // atomic with the delete: a load cancelled while its shipment stays IN_TRANSIT
+  // is the state that kept runLateDetection emailing for hours on 2026-09-02.
+  await prisma.$transaction(async (tx) => {
+    await tx.load.update({
       where: { id: load.id },
       data: {
         deletedAt: now,
@@ -1096,11 +1117,19 @@ export async function deleteLoad(req: AuthRequest, res: Response) {
         cancellationReason: reason,
         status: "CANCELLED",
       },
-    }),
-    prisma.loadTender.updateMany({ where: { loadId: load.id, deletedAt: null }, data: { deletedAt: now } }),
-    prisma.checkCall.updateMany({ where: { loadId: load.id, deletedAt: null }, data: { deletedAt: now } }),
-    prisma.invoice.updateMany({ where: { loadId: load.id, deletedAt: null }, data: { deletedAt: now } }),
-  ]);
+    });
+    await tx.loadTender.updateMany({ where: { loadId: load.id, deletedAt: null }, data: { deletedAt: now } });
+    await tx.checkCall.updateMany({ where: { loadId: load.id, deletedAt: null }, data: { deletedAt: now } });
+    await tx.invoice.updateMany({ where: { loadId: load.id, deletedAt: null }, data: { deletedAt: now } });
+
+    // The other 28 children this soft-delete does NOT reach are banked at
+    // §13.3; these three are the ones that keep sending.
+    await cascadeLoadCancellation(load.id, tx, {
+      reason,
+      actorId: req.user!.id,
+      actorName: `${req.user!.firstName ?? ""} ${req.user!.lastName ?? ""}`.trim() || null,
+    });
+  });
 
   // Full cleanup: reverse credit, void AP, reverse fund entries
   onLoadCancelledOrTONU(load.id, reason).catch((e) =>
