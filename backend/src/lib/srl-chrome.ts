@@ -477,7 +477,22 @@ export function drawHeaderFirstPage(doc: PDFDoc, options: HeaderOptions): number
   const { docTitle, subtitle, loadId, qrBuffer, includeQr = false, yTop = MARGIN } = options;
 
   // Compass mark
-  drawCompassMark(doc, MARGIN, yTop, 55);
+  //
+  // v3.8.azi C4 — 55 -> 72. Two consequences worth knowing, both measured:
+  //
+  // (1) The PNG SOURCE CHANGES. resolveCompassPng picks the smallest bundled
+  //     asset >= the target, so 55 took srl_compass_60.png and 72 takes
+  //     srl_compass_120.png scaled down. A different embedded image is a
+  //     different content stream, so every document drawing this header moves
+  //     its render pin. That is the expected diff, not a surprise.
+  //
+  // (2) IT NOW REACHES THE INFO BLOCK. The mark occupies [x, x+size] exactly
+  //     (doc.image with width/height = size), so at 72 it spans MARGIN..MARGIN+72
+  //     while infoX below is MARGIN + 70 — a 2pt overlap of image and company
+  //     name. infoX is deliberately NOT moved here: this commit ships the
+  //     compass alone so its pin diff is legible, and the gutter is a
+  //     shared-chrome decision for the C5 review.
+  drawCompassMark(doc, MARGIN, yTop, 72);
 
   // Company info block
   const infoX = MARGIN + 70;
