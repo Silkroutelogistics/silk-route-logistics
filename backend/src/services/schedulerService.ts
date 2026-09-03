@@ -77,6 +77,18 @@ async function runPreTracing() {
       status: { in: ["BOOKED", "DISPATCHED"] },
       pickupDate: { lte: in48h, gte: now },
       loadId: { not: null },
+      // The load is the authority on whether this shipment still matters. These
+      // jobs select on Shipment.status and never looked at it, so a shipment
+      // left active under a cancelled or soft-deleted load kept firing —
+      // verified 2026-09-02, two BKN shipments still BOOKED and IN_TRANSIT under
+      // loads cancelled hours earlier. This one was quiet only by accident of a
+      // date: `gte: now` excluded them because the pickup had already passed. A
+      // cancelled load with a FUTURE pickup would have emailed the carrier
+      // "are you on time?" about a load that no longer exists.
+      //
+      // v3.8.ayv cascades the shipment to CANCELLED at the source; this is the
+      // backstop for rows created before that cascade existed.
+      load: { is: { deletedAt: null, status: { not: "CANCELLED" } } },
     },
     include: {
       load: {
@@ -151,6 +163,12 @@ async function runLateDetection() {
         { lastLocationAt: null },
       ],
       loadId: { not: null },
+      // THIS is the one that was actually firing. SRL-121489's shipment sat
+      // IN_TRANSIT with a stale lastLocationAt under a load cancelled and
+      // soft-deleted hours earlier, so this job emailed the broker every 30
+      // minutes about freight that no longer existed — a meaningful share of the
+      // 108 emails to whaider@ in the 90-day window.
+      load: { is: { deletedAt: null, status: { not: "CANCELLED" } } },
     },
     include: {
       load: {
