@@ -1132,11 +1132,82 @@ export interface RemitTo {
   swift?: string;
 }
 
+// ── The navy section tab ────────────────────────────────────────────────────
+//
+// docs/design/invoice.html.html and rc.html.html both end with an override
+// block commented "navy section tabs, matching the RC", and it is the single
+// most visible change the locked design makes to an SRL document:
+//
+//     .sec           { background: navy; color: cream; padding: 3px 10px 2px;
+//                      font-size: 6.5pt; letter-spacing: .2em; margin: 0 0 8px }
+//     .two .col > .k { background: navy; color: gold;  ...same box... }
+//
+// A section heading stops being gold text on white and becomes a filled navy
+// chip. Two variants, and the difference is not decorative: CREAM text marks a
+// top-level section of the document (BILL TO, CHARGES, REMIT TO), GOLD text
+// marks a column heading inside one (SHIPPER, RECEIVER). Getting those the
+// wrong way round reads as a hierarchy error rather than a colour error.
+//
+// Inline key labels are NOT tabs. The design keeps `.k` as bare gold-dark
+// small caps wherever it sits inside a key/value pair, which is why
+// CUSTOMER ACCOUNT and ACH / WIRE below still call drawLabel.
+//
+// GEOMETRY. The design pads 3 top / 2 bottom and that asymmetry is honored
+// rather than averaged away: a line box carries descender space below the
+// baseline that uppercase text never uses, so equal padding renders visibly
+// bottom-heavy. Measured on DM Sans Bold at 6.5pt, ascent 6.45 and descent
+// 2.02 give an 8.46pt line and a 13.46pt box, which is within a rounding of
+// what the CSS produces at 6.5pt.
+//
+// The box is sized from currentLineHeight() rather than a hand-guessed cap
+// height, so a font substitution grows the box instead of clipping the text.
+//
+// The trailing character space is excluded from the box width on purpose.
+// PDFKit's characterSpacing applies AFTER the final glyph too, so including it
+// would leave a visibly wider right pad than left on every tab.
+const TAB_TRACKING = 0.2;   // .2em, per the design override
+const TAB_PAD_X = 10;       // 10px -> 10pt, the 1:1 mapping ratified in C4
+const TAB_PAD_TOP = 3;      // padding: 3px 10px 2px, per the design
+const TAB_PAD_BOTTOM = 2;
+const TAB_GAP_BELOW = 8;    // margin-bottom: 8px
+
+/**
+ * Draws a navy section tab and returns the y at which content below it starts,
+ * with the design's 8pt gap already applied.
+ *
+ * @param variant 'cream' for a document section, 'gold' for a column heading.
+ */
+export function drawSectionTab(
+  doc: PDFDoc,
+  text: string,
+  x: number,
+  y: number,
+  options: { variant?: 'cream' | 'gold'; size?: number } = {},
+): number {
+  const { variant = 'cream', size = 6.5 } = options;
+  const label = text.toUpperCase();
+  const tracking = size * TAB_TRACKING;
+
+  doc.font(FONT_BODY_BOLD, size);
+  const glyphW = doc.widthOfString(label) + tracking * Math.max(0, label.length - 1);
+  const lineH = doc.currentLineHeight();
+  const boxW = glyphW + TAB_PAD_X * 2;
+  const boxH = lineH + TAB_PAD_TOP + TAB_PAD_BOTTOM;
+
+  doc.save().fillColor(TOKENS.navy).rect(x, y, boxW, boxH).fill().restore();
+  doc.save()
+     .fillColor(variant === 'gold' ? TOKENS.gold : TOKENS.cream)
+     .font(FONT_BODY_BOLD, size)
+     .text(label, x + TAB_PAD_X, y + TAB_PAD_TOP, { characterSpacing: tracking, lineBreak: false })
+     .restore();
+
+  return y + boxH + TAB_GAP_BELOW;
+}
+
 export function drawBillToBlock(
   doc: PDFDoc, billTo: BillTo, yTop: number
 ): number {
-  drawLabel(doc, 'BILL TO', MARGIN, yTop, { color: TOKENS.goldDark, size: 7 });
-  let curY = yTop + 14;
+  let curY = drawSectionTab(doc, 'BILL TO', MARGIN, yTop);
 
   doc.font(FONT_BODY_BOLD, 12).fillColor(TOKENS.navy)
      .text(billTo.name, MARGIN, curY, { lineBreak: false });
@@ -1197,21 +1268,25 @@ export function drawLaneReferenceRow(
   goldRule(doc, yTop, { weight: 0.5 });
 
   const colW = CONTENT_W / 2;
-
-  drawLabel(doc, 'SHIPPER', MARGIN, yTop + 6, { color: TOKENS.goldDark, size: 6.5 });
-  doc.font(FONT_BODY_BOLD, 10).fillColor(TOKENS.navy)
-     .text(shipperName, MARGIN, yTop + 18, { lineBreak: false });
-  doc.font(FONT_BODY, 9).fillColor(TOKENS.fg2)
-     .text(shipperCity, MARGIN, yTop + 30, { lineBreak: false });
-
   const rcvX = MARGIN + colW;
-  drawLabel(doc, 'RECEIVER', rcvX, yTop + 6, { color: TOKENS.goldDark, size: 6.5 });
-  doc.font(FONT_BODY_BOLD, 10).fillColor(TOKENS.navy)
-     .text(receiverName, rcvX, yTop + 18, { lineBreak: false });
-  doc.font(FONT_BODY, 9).fillColor(TOKENS.fg2)
-     .text(receiverCity, rcvX, yTop + 30, { lineBreak: false });
 
-  const bottomY = yTop + 42;
+  // Column headings, so GOLD on navy per `.two .col > .k` in the design — a
+  // cream tab here would read as a second top-level section rather than as two
+  // columns of one.
+  const nameY = drawSectionTab(doc, 'SHIPPER', MARGIN, yTop + 6, { variant: 'gold' });
+  drawSectionTab(doc, 'RECEIVER', rcvX, yTop + 6, { variant: 'gold' });
+
+  doc.font(FONT_BODY_BOLD, 10).fillColor(TOKENS.navy)
+     .text(shipperName, MARGIN, nameY, { lineBreak: false })
+     .text(receiverName, rcvX, nameY, { lineBreak: false });
+  const cityY = nameY + 12;
+  doc.font(FONT_BODY, 9).fillColor(TOKENS.fg2)
+     .text(shipperCity, MARGIN, cityY, { lineBreak: false })
+     .text(receiverCity, rcvX, cityY, { lineBreak: false });
+
+  // Derived, not fixed. The tab is taller than the bare label it replaced, and
+  // a hardcoded +42 would have drawn the closing rule THROUGH the city line.
+  const bottomY = cityY + doc.currentLineHeight() + 4;
   goldRule(doc, bottomY, { weight: 0.5 });
   return bottomY + 8;
 }
@@ -1222,8 +1297,7 @@ export function drawChargesBlock(
 ): number {
   const xStart = PAGE_W - MARGIN - width;
 
-  drawLabel(doc, 'CHARGES', xStart, yTop, { color: TOKENS.goldDark, size: 7 });
-  let curY = yTop + 16;
+  let curY = drawSectionTab(doc, 'CHARGES', xStart, yTop);
 
   const lineH = 16;
   for (const ch of charges) {
@@ -1308,8 +1382,7 @@ export function drawSettlementSummary(
 export function drawRemitToBlock(
   doc: PDFDoc, remit: RemitTo, yTop: number
 ): number {
-  drawLabel(doc, 'REMIT TO', MARGIN, yTop, { color: TOKENS.goldDark, size: 7 });
-  let curY = yTop + 14;
+  let curY = drawSectionTab(doc, 'REMIT TO', MARGIN, yTop);
 
   doc.font(FONT_BODY_BOLD, 10).fillColor(TOKENS.navy)
      .text(remit.legalName, MARGIN, curY, { lineBreak: false });
@@ -1358,22 +1431,22 @@ export function drawPaymentReference(
   const boxW = textW + 24;
   const boxH = 22;
 
-  drawLabel(doc, 'PAYMENT REFERENCE (WIRE MEMO)', MARGIN, yTop, {
-    color: TOKENS.goldDark, size: 6.5,
-  });
+  const boxY = drawSectionTab(doc, 'PAYMENT REFERENCE (WIRE MEMO)', MARGIN, yTop);
 
   doc.save()
      .fillColor(TOKENS.cream2)
      .strokeColor(TOKENS.goldDark)
      .lineWidth(0.5)
-     .roundedRect(MARGIN, yTop + 12, boxW, boxH, 4)
+     .roundedRect(MARGIN, boxY, boxW, boxH, 4)
      .fillAndStroke()
      .restore();
 
+  // 7pt from the box top is where the 9.5pt mono line sits centred in a 22pt
+  // box; it was measured against the pre-tab layout and is unchanged.
   doc.font(FONT_MONO_BOLD, 9.5).fillColor(TOKENS.fg1)
-     .text(refStr, MARGIN + 12, yTop + 19, { lineBreak: false });
+     .text(refStr, MARGIN + 12, boxY + 7, { lineBreak: false });
 
-  return yTop + boxH + 20;
+  return boxY + boxH + 8;
 }
 
 // ============================================================================

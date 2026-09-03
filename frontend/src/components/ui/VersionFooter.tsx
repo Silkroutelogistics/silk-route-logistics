@@ -16931,7 +16931,23 @@
 // and a data: qrCodeDataUrl are all legitimate and a guard that flagged them
 // would be noise. Comments are blanked before matching — the fixes are explained
 // in comments that necessarily quote the banned patterns.
-export const SRL_VERSION = "3.8.azk";
+// v3.8.azl C6 — THE NAVY SECTION TAB, the locked design's most visible change.
+//
+// Both operational design references end with an override block commented
+// "navy section tabs, matching the RC": a section heading stops being gold text
+// on white and becomes a filled navy chip. Two variants, and the distinction is
+// hierarchy rather than decoration — CREAM text marks a document section
+// (BILL TO, CHARGES, REMIT TO, PAYMENT REFERENCE), GOLD text marks a column
+// heading inside one (SHIPPER, RECEIVER). Inline key labels stay bare gold-dark,
+// which is what the design does and what keeps a tab meaning "section".
+//
+// Adopted only in the invoice-only blocks this commit, so exactly one pin moved:
+// invoice. The RC picks the same primitive up in C9.
+//
+// The lane row had to stop hardcoding its closing rule at yTop + 42. The tab is
+// taller than the bare label it replaced, so the fixed offset would have drawn
+// that rule THROUGH the city line; it is derived from the content now.
+export const SRL_VERSION = "3.8.azl";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
