@@ -1121,6 +1121,10 @@ export interface BillTo {
 export interface InvoiceCharge {
   label: string;
   amount: number;
+  /** The design's `<small>` sub-line under a description. Optional, and left
+   *  absent rather than filled with a restatement of the label: an invoice
+   *  line that explains nothing should print nothing. */
+  note?: string;
 }
 
 export interface RemitTo {
@@ -1291,92 +1295,156 @@ export function drawLaneReferenceRow(
   return bottomY + 8;
 }
 
+/**
+ * The charges table, in the design's `table.ch.open` register.
+ *
+ *     thead th   transparent, gold-dark 6.5pt small caps, gold rule beneath
+ *     tbody td   8pt padding, 9.5pt navy, hairline rule between rows
+ *     td small   8pt ink-2 sub-line under the description
+ *     last row   gold rule beneath
+ *     tfoot .bal cream-2 fill, 1.5pt navy above, gold below, 17pt figure
+ *
+ * The total stays HERE rather than moving to the balance card as the design's
+ * markup does. The card only renders on a partially-paid invoice, so following
+ * the markup literally would leave a fully-unpaid invoice — the common case —
+ * printing charges and no total. The `tfoot tr.bal` styling is the design's
+ * own, applied to the row the document actually needs.
+ */
 export function drawChargesBlock(
   doc: PDFDoc, charges: InvoiceCharge[],
   yTop: number, width: number = 280
 ): number {
   const xStart = PAGE_W - MARGIN - width;
-
+  const right = xStart + width;
   let curY = drawSectionTab(doc, 'CHARGES', xStart, yTop);
 
-  const lineH = 16;
-  for (const ch of charges) {
-    doc.font(FONT_BODY, 10).fillColor(TOKENS.fg2)
+  // Open header: no fill, gold-dark labels, gold rule beneath.
+  const headSize = 6.5, headTrack = headSize * 0.1;
+  doc.save().fillColor(TOKENS.goldDark).font(FONT_BODY_MEDIUM, headSize);
+  doc.text('DESCRIPTION', xStart, curY, { characterSpacing: headTrack, lineBreak: false });
+  const amtHead = 'AMOUNT';
+  const amtHeadW = doc.widthOfString(amtHead) + headTrack * (amtHead.length - 1);
+  doc.text(amtHead, right - amtHeadW, curY, { characterSpacing: headTrack, lineBreak: false });
+  doc.restore();
+  curY += doc.currentLineHeight() + 6;
+  doc.save().strokeColor(TOKENS.gold).lineWidth(0.5)
+     .moveTo(xStart, curY).lineTo(right, curY).stroke().restore();
+
+  const money = (n: number) =>
+    `$${n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+  charges.forEach((ch, i) => {
+    curY += 8;                                   // tbody td padding-top
+    doc.font(FONT_BODY, 9.5).fillColor(TOKENS.navy)
        .text(ch.label, xStart, curY, { lineBreak: false });
-    const amt = `$${ch.amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-    doc.font(FONT_BODY, 10).fillColor(TOKENS.fg1);
+    const amt = money(ch.amount);
     const amtW = doc.widthOfString(amt);
-    doc.text(amt, xStart + width - amtW, curY, { lineBreak: false });
-    curY += lineH;
-  }
+    doc.text(amt, right - amtW, curY, { lineBreak: false });
+    curY += doc.currentLineHeight();
+    if (ch.note) {
+      curY += 2;
+      doc.font(FONT_BODY, 8).fillColor(TOKENS.fg2)
+         .text(ch.note, xStart, curY, { width: width - 90, lineGap: 0 });
+      // text() with a width advances doc.y itself; trust it over an assumed
+      // single line, because a long lane wraps and a fixed increment would
+      // print the next row on top of it.
+      curY = doc.y;
+    }
+    curY += 8;                                   // tbody td padding-bottom
+    // Hairline between rows, gold under the last — `tr:last-child td`.
+    const last = i === charges.length - 1;
+    doc.save().strokeColor(last ? TOKENS.gold : TOKENS.rule).lineWidth(0.5)
+       .moveTo(xStart, curY).lineTo(right, curY).stroke().restore();
+  });
 
-  curY += 2;
-  doc.save()
-     .strokeColor(TOKENS.border2)
-     .lineWidth(0.5)
-     .dash(2, { space: 2 })
-     .moveTo(xStart, curY).lineTo(xStart + width, curY).stroke()
-     .undash()
-     .restore();
-  curY += 8;
-
+  // tfoot tr.bal — the one filled row on the block.
+  const balPadTop = 10, balPadBottom = 10;
   const total = charges.reduce((s, ch) => s + ch.amount, 0);
-  const totalStr = `$${total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-  doc.font(FONT_BODY_BOLD, 11).fillColor(TOKENS.fg1)
-     .text('Total USD', xStart, curY, { lineBreak: false });
-  doc.font(FONT_BODY_BOLD, 12);
-  const totalW = doc.widthOfString(totalStr);
-  doc.text(totalStr, xStart + width - totalW, curY, { lineBreak: false });
-  curY += lineH;
+  const totalStr = money(total);
+  doc.font(FONT_BODY_BOLD, 17);
+  const balH = doc.currentLineHeight() + balPadTop + balPadBottom;
+  doc.save().fillColor(TOKENS.cream2).rect(xStart, curY, width, balH).fill().restore();
+  doc.save().strokeColor(TOKENS.navy).lineWidth(1.5)
+     .moveTo(xStart, curY).lineTo(right, curY).stroke().restore();
+  doc.save().strokeColor(TOKENS.gold).lineWidth(0.5)
+     .moveTo(xStart, curY + balH).lineTo(right, curY + balH).stroke().restore();
 
-  return curY;
+  const totalW = doc.widthOfString(totalStr);
+  doc.font(FONT_BODY_BOLD, 17).fillColor(TOKENS.navy)
+     .text(totalStr, right - 8 - totalW, curY + balPadTop, { lineBreak: false });
+  // The label is baseline-aligned with the figure, not top-aligned: at 7.5pt
+  // against 17pt the difference is visible.
+  const labelSize = 7.5;
+  doc.font(FONT_BODY_BOLD, labelSize);
+  const labelDrop = 17 * 0.72 - labelSize * 0.72;   // cap-height difference
+  doc.fillColor(TOKENS.navy)
+     .text('TOTAL USD', xStart + 8, curY + balPadTop + labelDrop, {
+       characterSpacing: labelSize * 0.16, lineBreak: false,
+     });
+
+  return curY + balH;
 }
 
+/**
+ * The balance card, in the design's `.card` register.
+ *
+ *     .card       cream fill, rule-2 border, 1.5px NAVY top border, square
+ *     .card .k    gold-dark 6.5pt small caps
+ *     .card .big  24pt navy, the figure that answers "what do I owe"
+ *     .card .crow 8.5pt ink-2 label / navy value, hairline above
+ *     .crow.due   gold rule above, navy text
+ *
+ * Square corners are the design, not an omission: every other panel in this
+ * library rounds at 6-8pt, and the card is the one element that does not. That
+ * is what makes it read as a stamped total rather than another panel.
+ */
 export function drawSettlementSummary(
   doc: PDFDoc,
   invoiceAmount: number, amountPaid: number,
   yTop: number, width: number = 280
 ): number {
   const xStart = PAGE_W - MARGIN - width;
-  const height = 70;
+  const padX = 16, padTop = 14, padBottom = 12;
+  const money = (n: number) =>
+    `$${n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
-  doc.save()
-     .fillColor(TOKENS.cream2)
-     .strokeColor(TOKENS.border1)
-     .lineWidth(0.5)
-     .roundedRect(xStart, yTop, width, height, 6)
-     .fillAndStroke()
-     .restore();
+  // Measure first: the card is sized from its content so a longer figure or an
+  // extra row grows it rather than overflowing a fixed height.
+  doc.font(FONT_BODY_BOLD, 6.5); const labelH = doc.currentLineHeight();
+  doc.font(FONT_BODY_BOLD, 24);  const bigH = doc.currentLineHeight();
+  doc.font(FONT_BODY, 8.5);      const rowH = doc.currentLineHeight() + 10;  // 5pt padding each side
+  const cardH = padTop + labelH + 6 + bigH + 12 + rowH * 2 + padBottom;
 
-  const pad = 12;
-  let curY = yTop + 18;
-  const lineH = 16;
+  doc.save().fillColor(TOKENS.cream).rect(xStart, yTop, width, cardH).fill().restore();
+  doc.save().strokeColor(TOKENS.border2).lineWidth(0.5)
+     .rect(xStart, yTop, width, cardH).stroke().restore();
+  doc.save().strokeColor(TOKENS.navy).lineWidth(1.5)
+     .moveTo(xStart, yTop).lineTo(xStart + width, yTop).stroke().restore();
 
-  const drawRow = (label: string, amount: number, bold: boolean = false, color: string = TOKENS.fg1) => {
-    doc.font(bold ? FONT_BODY_BOLD : FONT_BODY, 10).fillColor(bold ? color : TOKENS.fg2)
-       .text(label, xStart + pad, curY, { lineBreak: false });
-    const amtStr = `$${amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-    doc.font(bold ? FONT_BODY_BOLD : FONT_BODY, 10).fillColor(color);
-    const amtW = doc.widthOfString(amtStr);
-    doc.text(amtStr, xStart + width - pad - amtW, curY, { lineBreak: false });
-    curY += lineH;
-  };
+  let curY = yTop + padTop;
+  drawLabel(doc, 'BALANCE DUE', xStart + padX, curY, { color: TOKENS.goldDark, size: 6.5 });
+  curY += labelH + 6;
 
   const balance = invoiceAmount - amountPaid;
-  drawRow('Invoice Amount', invoiceAmount);
-  drawRow('Amount Paid', amountPaid);
+  doc.font(FONT_BODY_BOLD, 24).fillColor(TOKENS.navy)
+     .text(money(balance), xStart + padX, curY, { lineBreak: false });
+  curY += bigH + 12;
 
-  // Divider above Balance Due
-  doc.save()
-     .strokeColor(TOKENS.goldDark)
-     .lineWidth(0.6)
-     .moveTo(xStart + pad, curY - 5)
-     .lineTo(xStart + width - pad, curY - 5)
-     .stroke()
-     .restore();
+  const crow = (label: string, value: string, gold: boolean) => {
+    doc.save().strokeColor(gold ? TOKENS.gold : TOKENS.rule).lineWidth(0.5)
+       .moveTo(xStart + padX, curY).lineTo(xStart + width - padX, curY).stroke().restore();
+    curY += 5;
+    doc.font(FONT_BODY, 8.5).fillColor(gold ? TOKENS.navy : TOKENS.fg2)
+       .text(label, xStart + padX, curY, { lineBreak: false });
+    doc.font(FONT_BODY_MEDIUM, 8.5).fillColor(TOKENS.navy);
+    const vW = doc.widthOfString(value);
+    doc.text(value, xStart + width - padX - vW, curY, { lineBreak: false });
+    curY += doc.currentLineHeight() + 5;
+  };
+  crow('Invoice total', money(invoiceAmount), false);
+  crow('Amount received', money(amountPaid), true);
 
-  drawRow('Balance Due', balance, true, TOKENS.goldDark);
-  return yTop + height + 8;
+  return yTop + cardH + 8;
 }
 
 export function drawRemitToBlock(

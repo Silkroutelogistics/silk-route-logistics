@@ -2975,7 +2975,9 @@ export function generateInvoicePDF(invoice: InvoiceData): PDFDoc {
   // Charges — prefer the structured line-haul / FSC / accessorial columns
   // (the old plain layout ignored them). Fall back to line items, then rate.
   const charges: InvoiceCharge[] = [];
-  if (invoice.lineHaulAmount != null) charges.push({ label: "Line Haul", amount: invoice.lineHaulAmount });
+  const laneNote = `${invoice.load.originCity}, ${invoice.load.originState} to ${invoice.load.destCity}, ${invoice.load.destState}`;
+  if (invoice.lineHaulAmount != null)
+    charges.push({ label: "Line Haul", amount: invoice.lineHaulAmount, note: laneNote });
   if (invoice.fuelSurchargeAmount != null && invoice.fuelSurchargeAmount > 0)
     charges.push({ label: "Fuel Surcharge", amount: invoice.fuelSurchargeAmount });
   if (invoice.accessorialsAmount != null && invoice.accessorialsAmount > 0)
@@ -2987,7 +2989,7 @@ export function generateInvoicePDF(invoice: InvoiceData): PDFDoc {
   if (charges.length === 0)
     // ARC 21 — an invoice bills the CUSTOMER, so its line haul is the customer
   // rate. The load's legacy column is gone from this interface entirely.
-  charges.push({ label: "Line Haul", amount: invoice.totalAmount ?? invoice.amount });
+  charges.push({ label: "Line Haul", amount: invoice.totalAmount ?? invoice.amount, note: laneNote });
   const chargesBottom = drawChargesBlock(doc, charges, y, 280);
 
   y = Math.max(billBottom, chargesBottom) + 16;
@@ -3018,10 +3020,16 @@ export function generateInvoicePDF(invoice: InvoiceData): PDFDoc {
   );
   y += 4;
 
-  doc.font(FONT_BODY_ITALIC, 8.5).fillColor(TOKENS.fg3)
+  // `.fine` in the design: a hairline rule, then 7.5pt tertiary ink. Not
+  // italic — the design reserves italic for the tagline, and a whole
+  // paragraph of it reads as an aside rather than as terms.
+  doc.save().strokeColor(TOKENS.rule).lineWidth(0.5)
+     .moveTo(MARGIN, y).lineTo(MARGIN + CONTENT_W, y).stroke().restore();
+  y += 10;
+  doc.font(FONT_BODY, 7.5).fillColor(TOKENS.fg3)
      .text(`Please remit payment per terms (${terms}). Questions: ${COMPANY.email}.`, MARGIN, y, {
        width: CONTENT_W,
-       lineBreak: true,
+       lineGap: 1.5,
      });
 
   drawFooter(doc, { pageNum: 1, totalPages: 1, docId });

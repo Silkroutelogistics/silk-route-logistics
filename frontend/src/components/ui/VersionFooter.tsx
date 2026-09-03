@@ -16947,7 +16947,22 @@
 // The lane row had to stop hardcoding its closing rule at yTop + 42. The tab is
 // taller than the bare label it replaced, so the fixed offset would have drawn
 // that rule THROUGH the city line; it is derived from the content now.
-export const SRL_VERSION = "3.8.azl";
+// v3.8.azm C7 — the charges table and the balance card, in the design's register.
+//
+// `table.ch.open`: transparent header with gold-dark small caps and a gold rule
+// beneath, 9.5pt navy rows, an 8pt sub-line under a description, hairlines
+// between rows and gold under the last. Then `tfoot tr.bal` — the one filled
+// row on the block: cream-2, 1.5pt navy above, gold below, 17pt figure.
+//
+// THE TOTAL STAYS IN THE CHARGES BLOCK rather than moving into the card as the
+// design's markup does. The card renders only on a partially-paid invoice, so
+// following the markup literally would leave a fully-unpaid invoice — the
+// common case — printing charges and no total.
+//
+// The card is the design's `.card`: cream, 1.5pt navy top border, SQUARE. Every
+// other panel in this library rounds at 6-8pt; the card is the one that does
+// not, and that is what makes it read as a stamped total.
+export const SRL_VERSION = "3.8.azm";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
