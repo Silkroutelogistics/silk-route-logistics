@@ -133,7 +133,10 @@ function makeLoad(o: { rows?: number; longSi?: boolean; reefer?: boolean; longNa
     pickupDate: new Date("2026-08-13"), deliveryDate: new Date("2026-08-17"),
     equipmentType: o.reefer ? "Reefer 53'" : "Dry Van 53'",
     temperatureControlled: !!o.reefer, tempMin: o.reefer ? 34 : null, tempMax: o.reefer ? 38 : null,
-    commodity: "Mixed", weight: 16500, pieces: 26, distance: 1350, rate: 4100, customerRate: 4850,
+    // carrierRate, not `rate`: Arc 21 retired Load.rate to a write-only mirror
+    // and nothing reads it, so a fixture carrying it describes a column the
+    // renderer cannot see.
+    commodity: "Mixed", weight: 16500, pieces: 26, distance: 1350, carrierRate: 4100, customerRate: 4850,
     specialInstructions: o.longSi
       ? "Driver Assist is Needed. Call ahead 2 hours before arrival. Dock 26 only; overnight parking not permitted; PPE required inside the facility; lumper receipt must accompany the POD; driver must reseal after each stop and record the seal number on the bill of lading."
       : "Driver Assist is Needed",
@@ -280,7 +283,22 @@ function makeLoad(o: { rows?: number; longSi?: boolean; reefer?: boolean; longNa
   for (const [name, load, extra, texts] of cases) {
     try {
       const wantCapture = !!dumpSel && (dumpAll || dumpSel.includes(name));
-      const fd = { carrierRate: 4100, fuelSurcharge: 0, totalCarrierPay: 4100, ...extra };
+      // FORM DATA AS autoRateConfirmationService ACTUALLY WRITES IT.
+      //
+      // This was `{ carrierRate, fuelSurcharge, totalCarrierPay }` and TWO of
+      // those three are keys the renderer never reads: it takes
+      // `fd.lineHaulRate ?? load.carrierRate` and `fd.totalCharges`. The load
+      // fixture meanwhile carried `rate`, the mirror Arc 21 retired. So every
+      // fixture in this matrix rendered a rate confirmation reading
+      // "Linehaul $0.00 / Total Carrier Pay $0.00" — a document no carrier
+      // would ever receive — and the gate measured its fit and its money
+      // against that. The Quick Pay dollar assertions had been reported as
+      // MISSING for the same reason: 3% of nothing is nothing.
+      //
+      // Keys below are the ones autoRateConfirmationService writes at the
+      // Section 7 block, so the fixture now fails the way production would.
+      const fd = { lineHaulRate: 4100, fuelSurcharge: 0, accessorials: [], totalCharges: 4100,
+                   customerRate: 4850, ...extra };
       const doc = generateEnhancedRateConfirmation(load, fd);
       const chunks: Buffer[] = []; doc.on("data", (c: Buffer) => chunks.push(c));
       await new Promise<void>((r) => doc.on("end", () => r()));
@@ -292,13 +310,27 @@ function makeLoad(o: { rows?: number; longSi?: boolean; reefer?: boolean; longNa
         const tc = await (await d.getPage(pn)).getTextContent();
         const bands = new Map<number, { x: number; s: string }[]>();
         let maxY = 0;
+        // Tripwire: if the filter above stops matching anything, maxY becomes
+        // body-only by accident and every case passes for the wrong reason.
+        let sawFooterChrome = false;
         for (const it of tc.items as any[]) {
           const s = String(it.str).trim(); if (!s) continue;
           allText += s + " ";
           const yTop = Math.round((792 - it.transform[5]) * 2) / 2;
           if (s.includes("Broker-Carrier Agreement")) sawBca = true;
           if (s.includes("accounting@silkroutelogistics.ai")) sawInvoicing = true;
-          const isFooter = s.includes("Page ") || s.startsWith("MC# 1794414 · DOT#") || s.startsWith("Where Trust Travels");
+          // FOOTER CHROME, not body. This list must track drawFooter, and it
+          // did not: `Terms version …` sits at footerY + 13 by design and was
+          // being counted as body, so EVERY page of EVERY case reported a
+          // collision at a constant 763.5 and this gate was uniformly red for
+          // reasons that had nothing to do with the document. A gate nobody
+          // can read a signal from is a gate that is off (§19 Sub-pattern 16).
+          const isFooter =
+            s.includes("Page ") ||
+            s.startsWith("MC# 1794414 · DOT#") ||
+            s.startsWith("Where Trust Travels") ||
+            s.startsWith("Terms version ");
+          if (isFooter) sawFooterChrome = true;
           if (!isFooter) maxY = Math.max(maxY, yTop);
           if (wantCapture) {
             if (!bands.has(yTop)) bands.set(yTop, []);
@@ -310,6 +342,7 @@ function makeLoad(o: { rows?: number; longSi?: boolean; reefer?: boolean; longNa
             y, text: items.sort((a, b) => a.x - b.x).map((i) => i.s).join(" ⟂ "),
           })));
         }
+        if (!sawFooterChrome) problems.push("p" + pn + " has no recognisable footer chrome — either the page lost its footer or the isFooter list above has gone stale");
         dead.push(Math.round(738 - maxY));
         // v3.8.arm — the footer text baseline lands at ≈755.5.
         // v3.8.ary — this comment used to say the footer RULE was at y≈755 too.
@@ -343,6 +376,33 @@ function makeLoad(o: { rows?: number; longSi?: boolean; reefer?: boolean; longNa
       }
       for (const nope of texts?.forbid ?? []) {
         if (hasText(allText, nope)) problems.push('FORBIDDEN TEXT PRESENT: "' + nope + '"');
+      }
+
+      // ── Two things true of EVERY carrier-facing rate confirmation ────────
+      //
+      // (1) THE MONEY IS ON THE PAGE. This is the tripwire for the defect this
+      // gate shipped with: the fixture wrote formData keys the renderer does
+      // not read, so all fifteen cases rendered "Linehaul $0.00" and the
+      // matrix measured fit and money against a document nobody receives.
+      // Without an assertion the same drift returns silently, because a
+      // zero-money RC lays out perfectly well.
+      if (!hasText(allText, "$4,100.00")) {
+        problems.push(
+          'MONEY MISSING: the fixture line haul $4,100.00 is not on the page. The ' +
+          'formData keys have drifted from what generateEnhancedRateConfirmation ' +
+          'reads (fd.lineHaulRate ?? load.carrierRate) — fix the fixture, not this check.',
+        );
+      }
+
+      // (2) SRL REVENUE IS NOT. The fixture carries customerRate 4850 exactly
+      // so this can be asserted: the carrier sees what they are paid, never
+      // what the customer is billed. Same class as the shipper document that
+      // returned the carrier rate confirmation (§13.3 Item 221).
+      if (hasText(allText, "4,850")) {
+        problems.push(
+          'CUSTOMER RATE LEAKED: 4,850 is SRL revenue and must never appear on a ' +
+          'carrier-facing document.',
+        );
       }
       if (problems.length) fails++;
       if (wantCapture && !problems.length) { captured.push(captureBlock(name, pages)); dumpedNames.push(name); }

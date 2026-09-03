@@ -516,6 +516,15 @@ Content sweeps that verify only the diff are the bug that produced the v3.7.c st
 - Each commit description fits in one sentence; if it needs a paragraph, the commit is too big.
 - Halt + smoke test between each sub-phase. Wait for user sign-off before the next.
 - Pre-commit: `npx tsc --noEmit` from `backend/` + `npm test` from `backend/` + `npx next build` from `frontend/` must all pass clean. `npm test` added to the canonical gate at v3.8.alh after ald/alf/alg shipped with CI red because tsc was green but vitest was not — Sub-pattern 11 third fire. CI runs `npm test` on every push; local gate must mirror.
+- **AND `npm run verify:rc` from `backend/`, on any commit that touches the Rate
+  Confirmation or the shared chrome it draws with.** The fit matrix renders
+  fifteen fixtures and asserts page count, footer clearance, required and
+  forbidden text, that the line haul is on the page at all, and that SRL's
+  customer rate is not. It is a script rather than a vitest file because it
+  needs pdfjs and takes seconds per fixture, so it does not belong in the unit
+  run — but it was therefore also not in ANY gate, and it sat red for fifteen
+  of fifteen cases for an entire arc while nobody was obliged to look. A gate
+  nobody runs is a gate that is off. Now it has a name and a place in this list.
 - **AND `npm run test:e2e:local` from the repo root, on any commit that changes a
   contract E2E exercises** — an endpoint's request or response shape, an
   agreement version, a compliance verdict, an auth or signing path. Added

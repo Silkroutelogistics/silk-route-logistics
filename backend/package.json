@@ -8,6 +8,7 @@
     "start": "node dist/backend/src/server.js",
     "lint": "eslint src --ext .ts",
     "test": "vitest run",
+    "verify:rc": "npx tsx scripts/verify-rc-matrix.ts",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "prisma:generate": "prisma generate",
