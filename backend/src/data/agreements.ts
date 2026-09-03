@@ -279,7 +279,14 @@ export const BROKER_CARRIER_AGREEMENT: LegalAgreement = {
 //                            check and a compliance check on all three charge
 //                            paths; do that BEFORE restating them as automatic.
 //   §5 same/next bus. day  → integrationService.sameDayQuickPayDueDate,
-//                            using the §6 published hours (Mon-Fri 7-19 ET)
+///                            using BUSINESS_OPEN_HOUR / BUSINESS_CLOSE_HOUR in
+//                            that file (Mon-Fri 07-19 ET). NOT §6 — §6 is
+//                            Approval Limits and states no hours. §5 cl.3 defers
+//                            to "Broker's published business hours" and the
+//                            agreement never publishes them; the only published
+//                            statement is on /contact and /carriers. A carrier
+//                            reading the signed instrument alone cannot find the
+//                            cutoff that decides same-day vs next-day.
 //   §6 auto-approve        → lib/quickPayPricing.quickPayAutoApprovePerLoad and
 //      ceilings              .quickPayMonthlyLimit. §6 says a request over
 //                            EITHER ceiling "is not refused", so both ceilings

@@ -78,6 +78,10 @@ const SURFACES: Array<{ file: string; label: string; headLines?: number }> = [
   { file: "frontend/public/js/capabilities-wall.js", label: "homepage tile pool" },
   { file: "frontend/public/shippers.html", label: "/shippers body copy + ops loop" },
   { file: "frontend/src/app/dashboard/lead-hunter/page.tsx", label: "Lead Hunter templates" },
+  // Promoted out of DEFERRED in v3.8.aza: the concurrent session that owned this
+  // file finished, the count was corrected to 33, and the inverted assertion
+  // fired exactly as designed to say so. It is a guarded surface again.
+  { file: "frontend/src/app/onboarding/page.tsx", label: "carrier onboarding review step" },
 ];
 
 /**
@@ -93,14 +97,7 @@ const SURFACES: Array<{ file: string; label: string; headLines?: number }> = [
  * that cannot outlive its own reason is the only kind worth having — a plain
  * allowlist would quietly become permanent.
  */
-const DEFERRED: Array<{ file: string; label: string; staleCount: number; why: string }> = [
-  {
-    file: "frontend/src/app/onboarding/page.tsx",
-    label: "carrier onboarding review step",
-    staleCount: 34,
-    why: "owned by the concurrent session during the bench/carrier arc",
-  },
-];
+const DEFERRED: Array<{ file: string; label: string; staleCount: number; why: string }> = [];
 
 describe("Compass published check count", () => {
   const names = vettingCheckNames();
