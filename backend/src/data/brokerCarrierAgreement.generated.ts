@@ -1,6 +1,6 @@
 // GENERATED FILE -- DO NOT EDIT BY HAND.
 //
-// Source:    docs/legal/bca-content-F10.md
+// Source:    docs/legal/bca-content-F11.md
 // Regenerate: npx tsx scripts/generate-agreement-content.ts
 //
 // Editing this file directly makes the committed text disagree with the
@@ -9,13 +9,13 @@
 import type { LegalSection } from "./agreements";
 
 /** Reference version carried in the document itself. */
-export const BCA_F10_VERSION = "2026-09-01-F10";
+export const BCA_F11_VERSION = "2026-09-03-F11";
 
-export const BCA_F10_TITLE = "Broker-Carrier Agreement";
-export const BCA_F10_SUBTITLE = "FOUNDATION EDITION · 1 SEPTEMBER 2026";
-export const BCA_F10_EFFECTIVE_NOTE = "Silk Route Logistics Inc. · MC# 1794414 · USDOT# 4526880 · 2317 S 35th St, Galesburg, Michigan 49053 · Reference BCA-2026-09-01-F10";
+export const BCA_F11_TITLE = "Broker-Carrier Agreement";
+export const BCA_F11_SUBTITLE = "FOUNDATION EDITION · 3 SEPTEMBER 2026";
+export const BCA_F11_EFFECTIVE_NOTE = "Silk Route Logistics Inc. · MC# 1794414 · USDOT# 4526880 · 2317 S 35th St, Galesburg, Michigan 49053 · Reference BCA-2026-09-03-F11";
 
-export const BCA_F10_PREAMBLE: string[] = [
+export const BCA_F11_PREAMBLE: string[] = [
   "THIS AGREEMENT is made and entered into by and between ________________________________ (\"CARRIER\") and Silk Route Logistics, Inc., a Michigan corporation (\"BROKER\"), effective as of the date of the last signature in the execution section at the end of this Agreement (the \"Effective Date\").",
   "WHEREAS, BROKER is licensed by the Federal Motor Carrier Safety Administration as a property broker under 49 U.S.C. sections 13904 and 13906, MC# 1794414, USDOT# 4526880; and",
   "WHEREAS, CARRIER is registered with the FMCSA as a motor carrier with authority to operate in interstate, intrastate and/or foreign commerce and is qualified to transport freight as required by BROKER; and",
@@ -23,7 +23,7 @@ export const BCA_F10_PREAMBLE: string[] = [
   "NOW THEREFORE, intending to be legally bound, the parties agree as follows.",
 ];
 
-export const BCA_F10_SECTIONS: LegalSection[] = [
+export const BCA_F11_SECTIONS: LegalSection[] = [
     {
       heading: "1. Term",
       clauses: [
@@ -240,7 +240,7 @@ export const BCA_F10_SECTIONS: LegalSection[] = [
           ["Detention", "Two (2) hours free at each stop, measured from arrival. Free time is per stop and does not carry over between stops. After free time, $50.00 per hour, capped at $250.00 per stop. Detention is not payable if CARRIER arrived outside the appointment window. CARRIER shall notify BROKER thirty (30) minutes before detention begins and again on departure."],
           ["Layover", "$250.00 per day where CARRIER is required to stay overnight at BROKER's or the shipper's request through no fault of CARRIER. Where detention has reached the per-stop cap, the first layover day begins at that point, and detention and layover do not both run for the same hours."],
           ["Truck Order Not Used", "$200.00 where BROKER or the shipper cancels a confirmed load on the same day as the scheduled pickup, or after CARRIER has been dispatched. No TONU is owed where cancellation results from CARRIER's late arrival, unavailable or non-compliant equipment, insurance lapse or other CARRIER breach."],
-          ["Carrier release window", "CARRIER may release a load without penalty by giving notice not less than four (4) hours before the scheduled pickup appointment. This is CARRIER's right to withdraw. It does not limit BROKER's TONU obligation above."],
+          ["Carrier release window", "CARRIER may release a load without penalty by giving notice not less than twenty-four (24) hours before the scheduled pickup appointment. This is CARRIER's right to withdraw. It does not limit BROKER's TONU obligation above."],
           ["Lumper", "Reimbursed at cost against a legible receipt. No markup."],
         ],
       },

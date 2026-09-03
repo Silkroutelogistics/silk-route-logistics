@@ -1,6 +1,6 @@
 # Broker-Carrier Agreement
-*FOUNDATION EDITION · 1 SEPTEMBER 2026*
-*Silk Route Logistics Inc. · MC# 1794414 · USDOT# 4526880 · 2317 S 35th St, Galesburg, Michigan 49053 · Reference BCA-2026-09-01-F10*
+*FOUNDATION EDITION · 3 SEPTEMBER 2026*
+*Silk Route Logistics Inc. · MC# 1794414 · USDOT# 4526880 · 2317 S 35th St, Galesburg, Michigan 49053 · Reference BCA-2026-09-03-F11*
 
 THIS AGREEMENT is made and entered into by and between ________________________________ ("CARRIER") and Silk Route Logistics, Inc., a Michigan corporation ("BROKER"), effective as of the date of the last signature in the execution section at the end of this Agreement (the "Effective Date").
 WHEREAS, BROKER is licensed by the Federal Motor Carrier Safety Administration as a property broker under 49 U.S.C. sections 13904 and 13906, MC# 1794414, USDOT# 4526880; and
@@ -175,7 +175,7 @@ The following accessorial terms apply uniformly to every carrier and every equip
 | Detention | Two (2) hours free at each stop, measured from arrival. Free time is per stop and does not carry over between stops. After free time, $50.00 per hour, capped at $250.00 per stop. Detention is not payable if CARRIER arrived outside the appointment window. CARRIER shall notify BROKER thirty (30) minutes before detention begins and again on departure. |
 | Layover | $250.00 per day where CARRIER is required to stay overnight at BROKER's or the shipper's request through no fault of CARRIER. Where detention has reached the per-stop cap, the first layover day begins at that point, and detention and layover do not both run for the same hours. |
 | Truck Order Not Used | $200.00 where BROKER or the shipper cancels a confirmed load on the same day as the scheduled pickup, or after CARRIER has been dispatched. No TONU is owed where cancellation results from CARRIER's late arrival, unavailable or non-compliant equipment, insurance lapse or other CARRIER breach. |
-| Carrier release window | CARRIER may release a load without penalty by giving notice not less than four (4) hours before the scheduled pickup appointment. This is CARRIER's right to withdraw. It does not limit BROKER's TONU obligation above. |
+| Carrier release window | CARRIER may release a load without penalty by giving notice not less than twenty-four (24) hours before the scheduled pickup appointment. This is CARRIER's right to withdraw. It does not limit BROKER's TONU obligation above. |
 | Lumper | Reimbursed at cost against a legible receipt. No markup. |
 
 
@@ -301,4 +301,4 @@ BROKER may update this Schedule from time to time on thirty (30) days' written n
 1. Standard tier payment is free of charge and is always available, measured from BROKER's receipt of a clean, complete invoice with signed bill of lading and Proof of Delivery. 2. Tier advancement is performance-based and independent of fleet size. 3. Every approved carrier starts at Silver from the first load. 4. Quick Pay, where offered, is a limited pilot governed exclusively by the separately executed Caravan Quick Pay Agreement under paragraph 25, and no Quick Pay term appears in this Schedule.
 
 
-Silk Route Logistics Inc. · Broker-Carrier Agreement, Foundation Edition, 2026-09-01-F10 · Where Trust Travels. · MC# 1794414 · USDOT# 4526880
+Silk Route Logistics Inc. · Broker-Carrier Agreement, Foundation Edition, 2026-09-03-F11 · Where Trust Travels. · MC# 1794414 · USDOT# 4526880

@@ -60,12 +60,12 @@ export interface LegalAgreement {
 // nothing meaningful. Bump when the WORDS change, not when their source does.
 import { PAPERWORK_DUE_HOURS } from "../lib/accessorialPolicy";
 import {
-  BCA_F10_VERSION, BCA_F10_TITLE, BCA_F10_SUBTITLE, BCA_F10_EFFECTIVE_NOTE,
-  BCA_F10_PREAMBLE, BCA_F10_SECTIONS,
+  BCA_F11_VERSION, BCA_F11_TITLE, BCA_F11_SUBTITLE, BCA_F11_EFFECTIVE_NOTE,
+  BCA_F11_PREAMBLE, BCA_F11_SECTIONS,
 } from "./brokerCarrierAgreement.generated";
 import { BROKER_CARRIER_AGREEMENT_2026_06_27_V1 } from "./archive/brokerCarrierAgreement.2026-06-27-v1";
 
-export const BCA_VERSION = BCA_F10_VERSION;
+export const BCA_VERSION = BCA_F11_VERSION;
 
 // v3.8.art — QP_VERSION bumped 2026-05-24-v1 → 2026-08-15-v1. The prior string
 // was set when NO Quick Pay body existed anywhere in the repo: the activation
@@ -189,7 +189,7 @@ export const BCA_VERSION = BCA_F10_VERSION;
 export const QP_VERSION = "2026-08-16-v4";
 
 // v3.8.ayn — the body is the Foundation Edition, generated from
-// docs/legal/bca-content-F10.md. It is composed here rather than pasted so
+// docs/legal/bca-content-F11.md. It is composed here rather than pasted so
 // there is exactly one copy of the text: the generated module is the only
 // place it lives, and a parity test fails if that module stops matching the
 // markdown it came from.
@@ -199,12 +199,12 @@ export const QP_VERSION = "2026-08-16-v4";
 // through getAgreement("broker-carrier", "2026-06-27-v1") -- see v3.8.aym.
 export const BROKER_CARRIER_AGREEMENT: LegalAgreement = {
   templateName: "broker-carrier",
-  title: BCA_F10_TITLE,
-  subtitle: BCA_F10_SUBTITLE,
+  title: BCA_F11_TITLE,
+  subtitle: BCA_F11_SUBTITLE,
   version: BCA_VERSION,
-  effectiveNote: BCA_F10_EFFECTIVE_NOTE,
-  preamble: BCA_F10_PREAMBLE,
-  sections: BCA_F10_SECTIONS,
+  effectiveNote: BCA_F11_EFFECTIVE_NOTE,
+  preamble: BCA_F11_PREAMBLE,
+  sections: BCA_F11_SECTIONS,
 };
 
 // v3.8.art — Caravan Quick Pay Agreement.
