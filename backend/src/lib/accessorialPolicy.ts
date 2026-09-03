@@ -69,9 +69,15 @@ export const TONU_AMOUNT = 200;
  * signed page. Reframed, they govern different parties: this is the carrier
  * backing out, TONU is SRL or the shipper backing out.
  *
- * RATIFIED 2026-08-15, NOT ENFORCED by any writer.
+ * RATIFIED 2026-08-15 at four (4) hours; WIDENED to twenty-four (24) 2026-09-03.
+ * The agreement text moved first (W1, BCA Foundation Edition F11) and this
+ * constant follows in the very next commit — the document a carrier signs
+ * leads, the code that prints it follows, never the other way round.
+ *
+ * STILL NOT ENFORCED by any writer. This is the figure the Rate Confirmation
+ * prints and the BCA states; nothing rejects a late release.
  */
-export const CARRIER_RELEASE_WINDOW_HOURS = 4;
+export const CARRIER_RELEASE_WINDOW_HOURS = 24;
 
 /** Hours after delivery in which signed BOL, POD and supporting paperwork are due. */
 export const PAPERWORK_DUE_HOURS = 24;

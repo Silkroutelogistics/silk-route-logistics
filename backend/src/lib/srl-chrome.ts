@@ -1605,9 +1605,16 @@ export function drawRateConTerms(
   if (terms.lumperReimbursement !== false)
     items.push(['LUMPER', 'Reimbursed with original receipt']);
   // The window is the CARRIER'S right to release, not SRL's right to cancel — see
-  // CLAUDE.md §5. The label still does not name the party; naming it is pending the
-  // implementation, and e2e/helpers/pdf.ts pins this string character for character,
-  // so both move in the same change.
+  // CLAUDE.md §5. The label still does not name the party; naming it is pending
+  // the implementation.
+  //
+  // v3.8.aze — the previous note here said e2e/helpers/pdf.ts pins this string
+  // character for character. It does not, and did not: grepping "notice without
+  // penalty" across e2e/, __tests__/ and scripts/ returns nothing. The only
+  // thing that moves when this text changes is the rate-confirmation render
+  // pin, which hashes the whole document rather than this string. Recorded
+  // because a comment that names a guard nobody has is worse than no comment —
+  // it invites the next reader to trust a check that will not fire.
   items.push(['CANCELLATION',
     `${Math.floor(terms.cancellationWindowHours ?? CARRIER_RELEASE_WINDOW_HOURS)}-hour notice without penalty`]);
 
