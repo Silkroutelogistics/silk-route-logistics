@@ -37,7 +37,7 @@
  * after confirming the change was intended, and say in the commit which document
  * moved and why. A pin updated reflexively is worse than no pin.
  */
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, beforeAll, afterAll, vi } from "vitest";
 import crypto from "crypto";
 import zlib from "zlib";
 import fs from "fs";
@@ -109,6 +109,39 @@ const DOCUMENTS: Record<string, () => Promise<Buffer>> = {
 };
 
 const golden: Record<string, string> = JSON.parse(fs.readFileSync(GOLDEN, "utf8"));
+
+/**
+ * THE CLOCK IS AN INPUT TO THESE RENDERS, AND IT HAS TO BE FROZEN TOO.
+ *
+ * pdfPinFixtures.ts freezes every value it owns — its header says so — but it
+ * cannot freeze the renderer's own clock. `pdfService.ts` calls `new Date()`
+ * while drawing: line 619 stamps "DATE ISSUED" on the BOL and line 1741 stamps
+ * the Rate Confirmation. Those strings land in the content stream the pin
+ * hashes, so the `bol` and `rate-confirmation` pins CHANGED AT EVERY UTC
+ * MIDNIGHT and the suite went red on a tree nobody had touched.
+ *
+ * That is what happened on 2026-09-03 at 02:10 UTC: two pins moved during an arc
+ * that touched neither srl-chrome.ts nor pdfService.ts. Invoice and Settlement
+ * were unaffected because they render the fixture's frozen dates rather than the
+ * wall clock — which is precisely how the cause was identified.
+ *
+ * Updating the goldens would have "fixed" it until the next midnight. Freezing
+ * the clock removes the input. Same shape as the TZ=UTC pin in vitest.config.ts,
+ * one level deeper: that fixed WHICH timezone the date renders in, this fixes
+ * WHICH DAY it is.
+ *
+ * shouldAdvanceTime keeps timers moving so PDFKit's async stream work still
+ * completes; only the wall clock is pinned.
+ */
+const RENDER_CLOCK = new Date("2026-09-15T12:00:00.000Z");
+
+beforeAll(() => {
+  vi.useFakeTimers({ shouldAdvanceTime: true });
+  vi.setSystemTime(RENDER_CLOCK);
+});
+afterAll(() => {
+  vi.useRealTimers();
+});
 
 describe("document render pins", () => {
   it.each(Object.keys(DOCUMENTS))("%s renders as pinned", async (name) => {
