@@ -838,6 +838,39 @@ export function drawSignatureBlock(
  * files this module does not own. Verified empirically, not assumed. If those five
  * call sites are ever cleaned up, delete this property in the same commit.
  */
+/**
+ * THE footer content line. One implementation, two geometries.
+ *
+ * v3.8.azj C5 — drawFooter and drawShellFooter each carried their own copy of
+ * the same three-part line (identity left, tagline centred, page right). Two
+ * copies of one line is how they drifted: the operational footer separated with
+ * a double space and centred the tagline by measuring it, the shell used a
+ * single space and align:"center", and the two set different fonts and sizes for
+ * text saying the same thing on documents a carrier receives together.
+ *
+ * GEOMETRY IS A PARAMETER; STYLE IS NOT. The fork that mattered is the margin —
+ * operational documents sit at MARGIN (36), the shell at SHELL_MARGIN (54). That
+ * difference is real and stays. The rest was accident, settled here once.
+ *
+ * Callers keep their own rule: the operational footer draws goldRule at 0.75,
+ * the shell strokes its own at 0.7. Only the text line is shared.
+ */
+function drawFooterContentLine(
+  doc: PDFDoc,
+  g: { left: number; width: number; y: number; pageNum: number; totalPages: number },
+): void {
+  const { left, width, y, pageNum, totalPages } = g;
+
+  doc.font(FONT_BODY, 7).fillColor(TOKENS.fg3)
+     .text(`MC# ${BRAND.mc} · DOT# ${BRAND.dot} · ${BRAND.domain}`, left, y, { lineBreak: false });
+
+  doc.font(FONT_BODY_ITALIC, 7).fillColor(TOKENS.goldDark)
+     .text(BRAND.tagline, left, y, { width, align: "center", lineBreak: false });
+
+  doc.font(FONT_BODY, 7).fillColor(TOKENS.fg3)
+     .text(`Page ${pageNum} of ${totalPages}`, left, y, { width, align: "right", lineBreak: false });
+}
+
 export function drawFooter(
   doc: PDFDoc,
   options: {
@@ -864,26 +897,24 @@ export function drawFooter(
 
   goldRule(doc, footerY - 4, { weight: 0.75 });
 
-  const leftText = `MC# ${BRAND.mc}  ·  DOT# ${BRAND.dot}  ·  ${BRAND.domain}`;
-  doc.font(FONT_BODY, 7.5).fillColor(TOKENS.fg3)
-     .text(leftText, MARGIN, footerY + 4, { lineBreak: false });
+  // Operational geometry: MARGIN (36), never SHELL_MARGIN. An operational
+  // document that adopted the shell margin would indent its footer 18pt past
+  // its own body.
+  drawFooterContentLine(doc, {
+    left: MARGIN,
+    width: PAGE_W - MARGIN * 2,
+    y: footerY + 4,
+    pageNum,
+    totalPages,
+  });
 
+  // Terms version stays out of the shared line: only operational documents
+  // carry one, and it sits on its OWN line below because the identity line
+  // already measures ~190pt against a tagline centred from ~268pt.
   if (termsVersion) {
     doc.font(FONT_BODY, 6.5).fillColor(TOKENS.fg3)
        .text(`Terms version ${termsVersion}`, MARGIN, footerY + 13, { lineBreak: false });
   }
-
-  // Center tagline
-  const tagline = BRAND.tagline;
-  doc.font(FONT_DISPLAY_ITALIC, 8).fillColor(TOKENS.goldDark);
-  const taglineW = doc.widthOfString(tagline);
-  doc.text(tagline, (PAGE_W - taglineW) / 2, footerY + 4, { lineBreak: false });
-
-  // Right page number
-  doc.font(FONT_BODY, 7.5).fillColor(TOKENS.fg3);
-  const pageText = `Page ${pageNum} of ${totalPages}`;
-  const pageW = doc.widthOfString(pageText);
-  doc.text(pageText, PAGE_W - MARGIN - pageW, footerY + 4, { lineBreak: false });
 }
 
 // ============================================================================
@@ -1894,13 +1925,15 @@ export function drawShellFooter(
   doc.save().strokeColor(TOKENS.gold).lineWidth(0.7)
      .moveTo(L, ruleY).lineTo(R, ruleY).stroke().restore();
 
-  const ty = ruleY + 6; // padding-top 8px
-  doc.font(FONT_BODY, 7).fillColor(TOKENS.fg3)
-     .text("MC# " + BRAND.mc + " · DOT# " + BRAND.dot + " · " + BRAND.domain, L, ty, { lineBreak: false });
-  doc.font(FONT_BODY_ITALIC, 7).fillColor(TOKENS.goldDark)
-     .text(BRAND.tagline, L, ty, { width: W, align: "center", lineBreak: false });
-  doc.font(FONT_BODY, 7).fillColor(TOKENS.fg3)
-     .text("Page " + o.pageNum + " of " + o.totalPages, L, ty, { width: W, align: "right", lineBreak: false });
+  // Shell geometry: SHELL_MARGIN (54), its own rule weight. The content line is
+  // the shared one.
+  drawFooterContentLine(doc, {
+    left: L,
+    width: W,
+    y: ruleY + 6, // padding-top 8px
+    pageNum: o.pageNum,
+    totalPages: o.totalPages,
+  });
 }
 
 /**

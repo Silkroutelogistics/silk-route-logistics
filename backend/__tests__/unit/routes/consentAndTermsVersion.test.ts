@@ -158,9 +158,18 @@ describe("RC terms version", () => {
   it("the footer renders it on its own line, not appended to the identity line", () => {
     // Sub-pattern 8.a: the identity line measures ~190pt against a tagline
     // centred from ~268pt. Appending would overprint.
+    // v3.8.azj — this asserted a local named `leftText` sitting above
+    // `footerY + 4`. C5 dissolved that local into drawFooterContentLine, the
+    // shared line used by both footers, so the name is gone while the property
+    // it guarded is intact. Re-aimed at the property: the identity line renders
+    // at footerY + 4 and the terms version at footerY + 13, on its own line
+    // below it. Asserting the vanished variable would fail against correct code;
+    // deleting the case would drop the only check that they are separate lines.
     const footer = chrome.slice(chrome.indexOf("export function drawFooter"));
     expect(footer).toContain("footerY + 13");
-    expect(footer).toMatch(/leftText[\s\S]*footerY \+ 4/);
+    expect(footer).toMatch(/drawFooterContentLine\([\s\S]*footerY \+ 4/);
+    // and the shared line still draws the identity text it took over
+    expect(chrome).toMatch(/function drawFooterContentLine\([\s\S]*MC# \$\{BRAND\.mc\}/);
   });
 
   it("other documents are unaffected — termsVersion is optional", () => {
