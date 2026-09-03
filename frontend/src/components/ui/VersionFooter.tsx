@@ -16962,7 +16962,22 @@
 // The card is the design's `.card`: cream, 1.5pt navy top border, SQUARE. Every
 // other panel in this library rounds at 6-8pt; the card is the one that does
 // not, and that is what makes it read as a stamped total.
-export const SRL_VERSION = "3.8.azm";
+// v3.8.azn C8 — the invoice fits one page, and a gate proves it.
+//
+// C6 and C7 restyled the invoice and cost it ~168pt of vertical budget. At
+// realistic data that was not a near miss: with four line items the last line
+// rendered 44pt BELOW the footer rule, and with eight the document split onto a
+// second page carrying no header and no footer while page one went on printing
+// "Page 1 of 1". A regression I introduced, found by writing the gate rather
+// than by review.
+//
+// Fixed through the layout, per the design's own pairings: BILL TO beside
+// REMIT TO (`.two`), the charges table beside the balance card (`.cgrid`). Then
+// the charges block became floor-aware — it is told the y it must not pass and
+// caps its rows with a notice, the way the BOL caps its freight table. The
+// TOTAL sums every charge, printed or not: a capped invoice under-lists, it
+// never under-bills.
+export const SRL_VERSION = "3.8.azn";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

@@ -41,6 +41,7 @@ import {
   drawSettlementSummary,
   drawRemitToBlock,
   drawPaymentReference,
+  paymentReferenceHeight,
   drawLaneReferenceRow,
   FONT_BODY,
   FONT_BODY_BOLD,
@@ -2970,7 +2971,37 @@ export function generateInvoicePDF(invoice: InvoiceData): PDFDoc {
     addressLines: billLines.length ? billLines : ["—"],
     attention: attn && attn !== billName ? attn : undefined,
   };
-  const billBottom = drawBillToBlock(doc, billTo, y);
+  // ── The design's two-column pairings ──────────────────────────────────────
+  //
+  // `.two`   BILL TO | REMIT TO, column-gap 40
+  // `.cgrid` CHARGES | balance card, card 2.4in, column-gap 28
+  //
+  // These are not cosmetic. Stacking the four blocks vertically — which is what
+  // this document did before the restyle — spends about 190pt of page on
+  // whitespace and block headers, and the restyled blocks are taller than the
+  // ones they replaced. Measured on a realistic invoice, the stacked version
+  // rendered its last line 44pt BELOW the footer rule with only four line
+  // items, and split onto a phantom second page carrying no header and no
+  // footer at eight, while page one went on claiming "Page 1 of 1". Pairing
+  // them, as the design does, is what makes the page fit.
+  const TWO_GAP = 40;
+  const twoColW = (CONTENT_W - TWO_GAP) / 2;
+  const CARD_W = 173;          // 2.4in
+  const CGRID_GAP = 28;
+  const chargesW = CONTENT_W - CARD_W - CGRID_GAP;
+
+  const billBottom = drawBillToBlock(doc, billTo, y, MARGIN, twoColW);
+
+  // REMIT TO (Silk Route Logistics). COMPANY.address is already the full
+  // one-line address (street + city/state/zip), so don't repeat cityStateZip.
+  const remitBottom = drawRemitToBlock(
+    doc,
+    { legalName: COMPANY.name, mailAddress: [COMPANY.address, COMPANY.email] },
+    y,
+    MARGIN + twoColW + TWO_GAP,
+    twoColW,
+  );
+  y = Math.max(billBottom, remitBottom) + 14;
 
   // Charges — prefer the structured line-haul / FSC / accessorial columns
   // (the old plain layout ignored them). Fall back to line items, then rate.
@@ -2988,27 +3019,39 @@ export function generateInvoicePDF(invoice: InvoiceData): PDFDoc {
   }
   if (charges.length === 0)
     // ARC 21 — an invoice bills the CUSTOMER, so its line haul is the customer
-  // rate. The load's legacy column is gone from this interface entirely.
-  charges.push({ label: "Line Haul", amount: invoice.totalAmount ?? invoice.amount, note: laneNote });
-  const chargesBottom = drawChargesBlock(doc, charges, y, 280);
+    // rate. The load's legacy column is gone from this interface entirely.
+    charges.push({ label: "Line Haul", amount: invoice.totalAmount ?? invoice.amount, note: laneNote });
 
-  y = Math.max(billBottom, chargesBottom) + 16;
+  // 738 is the same floor verify-rc-matrix holds the Rate Confirmation to:
+  // drawFooter puts its gold rule at PAGE_H - MARGIN - 16 = 740, and 738 buys
+  // 2pt of baseline clearance above it.
+  //
+  // The charges block is NOT the last thing on the page, so it cannot be given
+  // the page floor. It gets the floor MINUS everything that follows —
+  // measured, not estimated, because the fine print wraps to a different number
+  // of lines with the terms string and a guessed constant would be wrong on
+  // exactly the invoices that are already tight.
+  const FOOTER_FLOOR = 738;
+  const fineText = `Please remit payment per terms (${terms}). Questions: ${COMPANY.email}.`;
+  doc.font(FONT_BODY, 7.5);
+  const tailH =
+    14                                              // gap after the charges row
+    + paymentReferenceHeight(doc)
+    + 10                                            // .fine rule + padding-top
+    + doc.heightOfString(fineText, { width: CONTENT_W, lineGap: 1.5 });
+  const chargesBottom = drawChargesBlock(doc, charges, y, chargesW, MARGIN, FOOTER_FLOOR - tailH);
 
-  // Partial-payment balance-due summary, when applicable
+  // Partial-payment balance card, beside the charges rather than under them.
+  // `.card` carries margin-top: 22 in the design, which is what drops it clear
+  // of the CHARGES tab and lines it up with the first charge row.
+  let cardBottom = y;
   if (invoice.paidAmount != null && invoice.paidAmount > 0) {
     const invTotal = invoice.totalAmount ?? invoice.amount;
-    y = drawSettlementSummary(doc, invTotal, invoice.paidAmount, y, 280);
-    y += 8;
+    cardBottom = drawSettlementSummary(
+      doc, invTotal, invoice.paidAmount, y + 22, CARD_W, MARGIN + chargesW + CGRID_GAP,
+    );
   }
-
-  // REMIT TO (Silk Route Logistics). COMPANY.address is already the full
-  // one-line address (street + city/state/zip), so don't repeat cityStateZip.
-  y = drawRemitToBlock(
-    doc,
-    { legalName: COMPANY.name, mailAddress: [COMPANY.address, COMPANY.email] },
-    y,
-  );
-  y += 6;
+  y = Math.max(chargesBottom, cardBottom) + 14;
 
   // Wire payment reference memo
   y = drawPaymentReference(
@@ -3027,7 +3070,7 @@ export function generateInvoicePDF(invoice: InvoiceData): PDFDoc {
      .moveTo(MARGIN, y).lineTo(MARGIN + CONTENT_W, y).stroke().restore();
   y += 10;
   doc.font(FONT_BODY, 7.5).fillColor(TOKENS.fg3)
-     .text(`Please remit payment per terms (${terms}). Questions: ${COMPANY.email}.`, MARGIN, y, {
+     .text(fineText, MARGIN, y, {
        width: CONTENT_W,
        lineGap: 1.5,
      });

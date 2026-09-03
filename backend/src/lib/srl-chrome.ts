@@ -1175,6 +1175,27 @@ const TAB_PAD_TOP = 3;      // padding: 3px 10px 2px, per the design
 const TAB_PAD_BOTTOM = 2;
 const TAB_GAP_BELOW = 8;    // margin-bottom: 8px
 
+
+/** The mono wire-memo box. Fixed: the string inside it is a single line. */
+const PAYMENT_REF_BOX_H = 22;
+
+/**
+ * The vertical space a section tab occupies, INCLUDING its gap below.
+ *
+ * Exported so a caller that must budget a page can measure the tab without
+ * drawing it. One definition: a second copy of this arithmetic in a caller is
+ * how a layout budget silently stops matching the layout.
+ */
+export function sectionTabHeight(doc: PDFDoc, size: number = 6.5): number {
+  doc.font(FONT_BODY_BOLD, size);
+  return doc.currentLineHeight() + TAB_PAD_TOP + TAB_PAD_BOTTOM + TAB_GAP_BELOW;
+}
+
+/** The fixed height of the payment-reference block, tab and trailing gap included. */
+export function paymentReferenceHeight(doc: PDFDoc): number {
+  return sectionTabHeight(doc) + PAYMENT_REF_BOX_H + 8;
+}
+
 /**
  * Draws a navy section tab and returns the y at which content below it starts,
  * with the design's 8pt gap already applied.
@@ -1209,32 +1230,33 @@ export function drawSectionTab(
 }
 
 export function drawBillToBlock(
-  doc: PDFDoc, billTo: BillTo, yTop: number
+  doc: PDFDoc, billTo: BillTo, yTop: number,
+  xStart: number = MARGIN, width: number = CONTENT_W
 ): number {
-  let curY = drawSectionTab(doc, 'BILL TO', MARGIN, yTop);
+  let curY = drawSectionTab(doc, 'BILL TO', xStart, yTop);
 
   doc.font(FONT_BODY_BOLD, 12).fillColor(TOKENS.navy)
-     .text(billTo.name, MARGIN, curY, { lineBreak: false });
-  curY += 14;
+     .text(billTo.name, xStart, curY, { width });
+  curY = doc.y + 2;   // doc.y, not a fixed 14: a half-width column wraps
 
   if (billTo.attention) {
     doc.font(FONT_BODY, 9).fillColor(TOKENS.fg2)
-       .text(`Attn: ${billTo.attention}`, MARGIN, curY, { lineBreak: false });
+       .text(`Attn: ${billTo.attention}`, xStart, curY, { lineBreak: false });
     curY += 11;
   }
 
   doc.font(FONT_BODY, 9.5).fillColor(TOKENS.fg1);
   for (const line of billTo.addressLines) {
-    doc.text(line, MARGIN, curY, { lineBreak: false });
-    curY += 11;
+    doc.text(line, xStart, curY, { width });
+    curY = doc.y;
   }
 
   if (billTo.customerAccount) {
     curY += 4;
-    drawLabel(doc, 'CUSTOMER ACCOUNT', MARGIN, curY, { color: TOKENS.goldDark, size: 6.5 });
+    drawLabel(doc, 'CUSTOMER ACCOUNT', xStart, curY, { color: TOKENS.goldDark, size: 6.5 });
     curY += 12;
     doc.font(FONT_MONO_BOLD, 10).fillColor(TOKENS.fg1)
-       .text(billTo.customerAccount, MARGIN, curY, { lineBreak: false });
+       .text(billTo.customerAccount, xStart, curY, { lineBreak: false });
     curY += 6;
   }
 
@@ -1312,9 +1334,22 @@ export function drawLaneReferenceRow(
  */
 export function drawChargesBlock(
   doc: PDFDoc, charges: InvoiceCharge[],
-  yTop: number, width: number = 280
+  yTop: number, width: number = 280,
+  xStart: number = PAGE_W - MARGIN - width,
+  /**
+   * The y this block must not draw past. Rows stop and an overflow line is
+   * printed instead, the way the BOL caps its freight table.
+   *
+   * Optional, but the invoice always passes it. A long accessorial list used
+   * to spill onto a second page carrying no header and no footer, while page
+   * one went on printing "Page 1 of 1" — so the overflow was invisible both
+   * on the document and in its own page count.
+   *
+   * The TOTAL sums EVERY charge, not the printed ones. A capped invoice
+   * under-lists; it never under-bills.
+   */
+  floorY?: number
 ): number {
-  const xStart = PAGE_W - MARGIN - width;
   const right = xStart + width;
   let curY = drawSectionTab(doc, 'CHARGES', xStart, yTop);
 
@@ -1333,7 +1368,39 @@ export function drawChargesBlock(
   const money = (n: number) =>
     `$${n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
+  // How many rows fit — decided BEFORE drawing any, by measurement.
+  //
+  // A first version decided row by row as it drew and it was wrong in a way
+  // that only a rendered document showed: it reserved the balance row but not
+  // the overflow NOTICE, so a capped block overshot by the notice height and
+  // pushed the fine print through the footer. Reserving after the fact is not
+  // possible — the rows are already on the page.
+  doc.font(FONT_BODY_BOLD, 17);
+  const balReserve = doc.currentLineHeight() + 20;
+  const rowHeights = charges.map((ch) => {
+    doc.font(FONT_BODY, 9.5);
+    let h = 8 + doc.currentLineHeight() + 8;
+    if (ch.note) {
+      doc.font(FONT_BODY, 8);
+      h += 2 + doc.heightOfString(ch.note, { width: width - 90, lineGap: 0 });
+    }
+    return h;
+  });
+  doc.font(FONT_BODY_ITALIC, 8);
+  const noticeReserve = 6 + doc.currentLineHeight() + 6;
+
+  let drawn = charges.length;
+  if (floorY != null) {
+    const fits = (n: number) => {
+      const rows = rowHeights.slice(0, n).reduce((a, b) => a + b, 0);
+      const notice = n < charges.length ? noticeReserve : 0;
+      return curY + rows + notice + balReserve <= floorY;
+    };
+    while (drawn > 0 && !fits(drawn)) drawn--;
+  }
+
   charges.forEach((ch, i) => {
+    if (i >= drawn) return;
     curY += 8;                                   // tbody td padding-top
     doc.font(FONT_BODY, 9.5).fillColor(TOKENS.navy)
        .text(ch.label, xStart, curY, { lineBreak: false });
@@ -1357,8 +1424,23 @@ export function drawChargesBlock(
        .moveTo(xStart, curY).lineTo(right, curY).stroke().restore();
   });
 
+  const omitted = charges.length - drawn;
+  if (omitted > 0) {
+    curY += 6;
+    doc.font(FONT_BODY_ITALIC, 8).fillColor(TOKENS.fg2)
+       .text(
+         `+ ${omitted} further ${omitted === 1 ? 'charge' : 'charges'}, itemised on the attached detail. `
+         + `The total below includes ${omitted === 1 ? 'it' : 'them'}.`,
+         xStart, curY, { width },
+       );
+    curY = doc.y + 6;
+    doc.save().strokeColor(TOKENS.gold).lineWidth(0.5)
+       .moveTo(xStart, curY).lineTo(right, curY).stroke().restore();
+  }
+
   // tfoot tr.bal — the one filled row on the block.
   const balPadTop = 10, balPadBottom = 10;
+  // Every charge, printed or capped. See floorY.
   const total = charges.reduce((s, ch) => s + ch.amount, 0);
   const totalStr = money(total);
   doc.font(FONT_BODY_BOLD, 17);
@@ -1401,9 +1483,9 @@ export function drawChargesBlock(
 export function drawSettlementSummary(
   doc: PDFDoc,
   invoiceAmount: number, amountPaid: number,
-  yTop: number, width: number = 280
+  yTop: number, width: number = 280,
+  xStart: number = PAGE_W - MARGIN - width
 ): number {
-  const xStart = PAGE_W - MARGIN - width;
   const padX = 16, padTop = 14, padBottom = 12;
   const money = (n: number) =>
     `$${n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -1448,40 +1530,41 @@ export function drawSettlementSummary(
 }
 
 export function drawRemitToBlock(
-  doc: PDFDoc, remit: RemitTo, yTop: number
+  doc: PDFDoc, remit: RemitTo, yTop: number,
+  xStart: number = MARGIN, width: number = CONTENT_W
 ): number {
-  let curY = drawSectionTab(doc, 'REMIT TO', MARGIN, yTop);
+  let curY = drawSectionTab(doc, 'REMIT TO', xStart, yTop);
 
   doc.font(FONT_BODY_BOLD, 10).fillColor(TOKENS.navy)
-     .text(remit.legalName, MARGIN, curY, { lineBreak: false });
+     .text(remit.legalName, xStart, curY, { lineBreak: false });
   curY += 13;
 
   doc.font(FONT_BODY, 9).fillColor(TOKENS.fg2);
   for (const line of remit.mailAddress) {
-    doc.text(line, MARGIN, curY, { lineBreak: false });
-    curY += 10;
+    doc.text(line, xStart, curY, { width });
+    curY = doc.y;
   }
 
   if (remit.bankName || remit.routingAba || remit.accountNumber) {
     curY += 6;
-    drawLabel(doc, 'ACH / WIRE', MARGIN, curY, { color: TOKENS.goldDark, size: 6.5 });
+    drawLabel(doc, 'ACH / WIRE', xStart, curY, { color: TOKENS.goldDark, size: 6.5 });
     curY += 12;
     doc.font(FONT_BODY, 9).fillColor(TOKENS.fg1);
     if (remit.bankName) {
-      doc.text(`Bank: ${remit.bankName}`, MARGIN, curY, { lineBreak: false });
+      doc.text(`Bank: ${remit.bankName}`, xStart, curY, { lineBreak: false });
       curY += 11;
     }
     if (remit.routingAba) {
       doc.font(FONT_MONO, 9);
-      doc.text(`ABA / Routing #: ${remit.routingAba}`, MARGIN, curY, { lineBreak: false });
+      doc.text(`ABA / Routing #: ${remit.routingAba}`, xStart, curY, { lineBreak: false });
       curY += 11;
     }
     if (remit.accountNumber) {
-      doc.text(`Account #: ${remit.accountNumber}`, MARGIN, curY, { lineBreak: false });
+      doc.text(`Account #: ${remit.accountNumber}`, xStart, curY, { lineBreak: false });
       curY += 11;
     }
     if (remit.swift) {
-      doc.text(`SWIFT: ${remit.swift}`, MARGIN, curY, { lineBreak: false });
+      doc.text(`SWIFT: ${remit.swift}`, xStart, curY, { lineBreak: false });
       curY += 11;
     }
   }
@@ -1497,7 +1580,7 @@ export function drawPaymentReference(
   doc.font(FONT_MONO_BOLD, 9.5);
   const textW = doc.widthOfString(refStr);
   const boxW = textW + 24;
-  const boxH = 22;
+  const boxH = PAYMENT_REF_BOX_H;
 
   const boxY = drawSectionTab(doc, 'PAYMENT REFERENCE (WIRE MEMO)', MARGIN, yTop);
 
