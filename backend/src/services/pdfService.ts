@@ -1617,10 +1617,16 @@ export function buildRateConOperationalTerms(
     // Reframed, they govern different parties and can coexist.
     //
     // Still open, and deliberately not fixed here: the grid renders the line as
-    // "4-hour notice without penalty" without naming the releasing party. It must
-    // name the carrier when the rule is actually enforced by a writer — nothing
-    // enforces it today. e2e/helpers/pdf.ts pins that string character for
-    // character, so the label and the test move in the same change.
+    // "24-hour notice without penalty" without naming the releasing party. It
+    // must name the carrier when the rule is actually enforced by a writer —
+    // nothing enforces it today.
+    //
+    // v3.8.azf — the figure above was 4 until W1/W2 widened the window to
+    // twenty-four hours. The claim that "e2e/helpers/pdf.ts pins that string
+    // character for character" was removed rather than updated: it was never
+    // true. Grepping "notice without penalty" across e2e/, __tests__/ and
+    // scripts/ returns nothing. What actually moves is the rate-confirmation
+    // render pin, which hashes the whole document.
     cancellationWindowHours: CARRIER_RELEASE_WINDOW_HOURS,
     quickPayTier: qpTier,
   };
