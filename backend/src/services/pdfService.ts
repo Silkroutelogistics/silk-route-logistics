@@ -41,6 +41,7 @@ import {
   drawSettlementSummary,
   drawRemitToBlock,
   drawPaymentReference,
+  drawSectionHeading,
   paymentReferenceHeight,
   drawLaneReferenceRow,
   FONT_BODY,
@@ -2330,9 +2331,11 @@ export function generateEnhancedRateConfirmation(load: EnhancedRCLoadData, formD
   // were the seal protocol, the check-call schedule, and the phone number a
   // driver is told to call when a document looks forged.
   const drawDockBlock = (): void => {
-    doc.font(FONT_BODY_BOLD, 7).fillColor(TOKENS.goldDark);
-    doc.text("DOCK & DISPATCH", MARGIN, y, { characterSpacing: 7 * 0.08, lineBreak: false });
-    y += 12;
+    // Art. 20 food safety, 21 seals, 22 tracking and check calls, 23 incident
+    // reporting — checked clause by clause against docs/legal/bca-content-F11.md
+    // rather than copied from the design, whose own Requirements block cites 19
+    // to 22. Temperature (19) is deliberately absent: it has its own block here.
+    y = drawSectionHeading(doc, "DOCK & DISPATCH", MARGIN, y, { ref: "BCA Art. 20 to 23" }) - 2;
     doc.font(FONT_BODY, 7.5).fillColor(TOKENS.fg2);
     doc.text(dockLines.join("\n"), MARGIN, y, { width: CONTENT_W, lineGap: 0.5, paragraphGap: 1.5 });
     y = doc.y;
@@ -2454,12 +2457,12 @@ export function generateEnhancedRateConfirmation(load: EnhancedRCLoadData, formD
   // reminders remain. E2E RC_PDF_REQUIRED updated in the same commit — the
   // governing-law + venue strings ("State of Michigan", "Kalamazoo County")
   // now assert on the BCA, not the RC; "BCA v3.1" added to RC_PDF_FORBIDDEN.
-  doc.font(FONT_BODY_BOLD, 7).fillColor(TOKENS.goldDark);
-  doc.text("GOVERNING TERMS", MARGIN, y, {
-    characterSpacing: 7 * 0.08,
-    lineBreak: false,
-  });
-  y += 14;
+  // Art. 8 this Agreement governs, 24 rates and accessorials, 25 documentation
+  // and payment — the three the clauses below actually rest on. The design cites
+  // 8, 24, 25, 29, 31 for its Conditions block, and 29 (service standards) and
+  // 31 (double brokering) are NOT in this block, so citing them would send a
+  // carrier to articles this text does not derive from.
+  y = drawSectionHeading(doc, "GOVERNING TERMS", MARGIN, y, { ref: "BCA Art. 8, 24, 25" }) + 2;
 
   const governingClauses = [
     // v3.8.arl — 49 CFR 371.7 requires a broker to operate under its registered

@@ -1229,6 +1229,53 @@ export function drawSectionTab(
   return y + boxH + TAB_GAP_BELOW;
 }
 
+/**
+ * A section heading in the RATE CONFIRMATION's register, per `.sec` in
+ * docs/design/rc.html.html:
+ *
+ *     .sec    7pt, .16em, weight 700, NAVY, margin-bottom 6
+ *     .sec .r right-floated, ink-3, .06em — the governing BCA articles
+ *
+ * NOT drawSectionTab. The two documents genuinely differ: the invoice's final
+ * override fills `.sec` navy with cream text, and the RC keeps it as navy TEXT
+ * and puts its navy into the label rail and the terms table head instead. The
+ * invoice override's own comment says "matching the RC", meaning it borrowed
+ * the RC's navy IDEA — not that the two elements are the same element.
+ *
+ * `ref` is the design's most useful addition and the reason this is worth a
+ * helper: every section on the terms page names the Broker-Carrier Agreement
+ * articles it derives from, so a carrier reading a clause can find the
+ * governing text rather than take the Rate Confirmation's word for it.
+ */
+export function drawSectionHeading(
+  doc: PDFDoc,
+  text: string,
+  x: number,
+  y: number,
+  options: { width?: number; ref?: string; size?: number } = {},
+): number {
+  const { width = CONTENT_W, ref, size = 7 } = options;
+  doc.save().fillColor(TOKENS.navy).font(FONT_BODY_BOLD, size)
+     .text(text.toUpperCase(), x, y, { characterSpacing: size * 0.16, lineBreak: false })
+     .restore();
+
+  if (ref) {
+    const refSize = size;
+    const refTrack = refSize * 0.06;
+    doc.font(FONT_BODY, refSize);
+    // widthOfString excludes character spacing, which is applied after every
+    // glyph including the last; the trailing one is blank, so it is left out of
+    // the right-alignment or the text drifts left of the margin.
+    const refW = doc.widthOfString(ref) + refTrack * Math.max(0, ref.length - 1);
+    doc.save().fillColor(TOKENS.fg3).font(FONT_BODY, refSize)
+       .text(ref, x + width - refW, y, { characterSpacing: refTrack, lineBreak: false })
+       .restore();
+  }
+
+  doc.font(FONT_BODY_BOLD, size);
+  return y + doc.currentLineHeight() + 6;
+}
+
 export function drawBillToBlock(
   doc: PDFDoc, billTo: BillTo, yTop: number,
   xStart: number = MARGIN, width: number = CONTENT_W

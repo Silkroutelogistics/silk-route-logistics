@@ -23,9 +23,19 @@
  *
  * These are SRL's contractual minimums and are deliberately NOT the FMCSA
  * financial-responsibility floors, which are a different instrument with a
- * different purpose. Broker-Carrier Agreement paragraph 2 is the governing
+ * different purpose. BROKER-CARRIER AGREEMENT ARTICLE 12 is the governing
  * statement; changing a figure here without changing the agreement makes the
  * agreement false, so move both in the same commit.
+ *
+ * The citation used to read "paragraph 2". Article 2 is Carrier qualification
+ * and compliance; Article 12 is Insurance. Corrected when the Rate
+ * Confirmation started citing articles and each one had to be checked.
+ *
+ * workersComp was here at 500_000 and is REMOVED. Nothing read it, and it
+ * disagreed with the agreement it claimed to encode: Article 12 requires
+ * Workers' Compensation at STATUTORY limits plus Employer's Liability of not
+ * less than $1,000,000 — not a single $500,000 figure. An unread constant
+ * that contradicts the contract is the next thing somebody cites.
  */
 
 /** Minimum coverage, in whole dollars, per Broker-Carrier Agreement paragraph 2. */
@@ -34,10 +44,10 @@ export const INSURANCE_MINIMUMS = {
   autoLiability: 1_000_000,
   /** All-risk broad form Motor Truck Cargo Legal Liability, each occurrence. */
   cargoInsurance: 100_000,
-  /** Commercial General Liability, per occurrence. */
+  /** Commercial General Liability, per occurrence. Article 12 also sets a
+   *  $2,000,000 aggregate, which no SRL surface prints or enforces and which
+   *  is therefore deliberately not carried here. */
   generalLiability: 1_000_000,
-  /** Workers' Compensation, where applicable. */
-  workersComp: 500_000,
 } as const;
 
 /**

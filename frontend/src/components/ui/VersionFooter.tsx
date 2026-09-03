@@ -16977,7 +16977,26 @@
 // caps its rows with a notice, the way the BOL caps its freight table. The
 // TOTAL sums every charge, printed or not: a capped invoice under-lists, it
 // never under-bills.
-export const SRL_VERSION = "3.8.azn";
+// v3.8.azo C10 — the RC's section headings in the design's register, and the
+// reference capture regenerated at last.
+//
+// `.sec` in rc.html.html is navy TEXT at 7pt / .16em with a right-floated
+// governing-article reference in tertiary ink — NOT the navy tab the invoice
+// uses. The two documents genuinely differ, and the invoice override's own
+// comment ("matching the RC") means it borrowed the RC's navy IDEA rather than
+// that the elements are the same element.
+//
+// Every article reference was checked clause by clause against
+// docs/legal/bca-content-F11.md rather than copied from the design. GOVERNING
+// TERMS cites Art. 8, 24, 25 where the design's Conditions block cites
+// 8, 24, 25, 29, 31 — because 29 and 31 are not in this block, and a citation
+// that sends a carrier to an article the text does not rest on is worse than
+// no citation.
+//
+// Checking them found a wrong one of my own: insurancePolicy.ts cited
+// "Broker-Carrier Agreement paragraph 2" for the minimums. Article 2 is Carrier
+// qualification; Article 12 is Insurance.
+export const SRL_VERSION = "3.8.azo";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
