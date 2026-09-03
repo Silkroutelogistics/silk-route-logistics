@@ -486,16 +486,30 @@ export function drawHeaderFirstPage(doc: PDFDoc, options: HeaderOptions): number
   //     different content stream, so every document drawing this header moves
   //     its render pin. That is the expected diff, not a surprise.
   //
-  // (2) IT NOW REACHES THE INFO BLOCK. The mark occupies [x, x+size] exactly
-  //     (doc.image with width/height = size), so at 72 it spans MARGIN..MARGIN+72
-  //     while infoX below is MARGIN + 70 — a 2pt overlap of image and company
-  //     name. infoX is deliberately NOT moved here: this commit ships the
-  //     compass alone so its pin diff is legible, and the gutter is a
-  //     shared-chrome decision for the C5 review.
+  // (2) The mark occupies [x, x+size] exactly (doc.image with width/height =
+  //     size), so at 72 it spans MARGIN..MARGIN+72 = 36..108. infoX was
+  //     MARGIN + 70 = 106, a 2pt overlap of image and company name; C5.5 moved
+  //     it clear — see below.
   drawCompassMark(doc, MARGIN, yTop, 72);
 
   // Company info block
-  const infoX = MARGIN + 70;
+  // v3.8.azk C5.5 — the letterhead gutter, derived from the locked design
+  // rather than picked. docs/design/rc.html.html sets the letterhead as
+  //
+  //     .lh { grid-template-columns: auto minmax(max-content,1fr) max-content;
+  //           column-gap: 14px }
+  //
+  // three columns — mark, identity, reference block — with a 14px gutter, and
+  // .compass { width:72px }. C4 already mapped that 72 to 72 POINTS, so the same
+  // 1:1 mapping gives a 14pt gutter and infoX = MARGIN + 72 + 14 = MARGIN + 86.
+  // (Under a strict CSS 96dpi reading the design would instead be a 54pt mark
+  // and a 10.5pt gutter; the 1:1 mapping is the one already ratified in C4, and
+  // mixing the two would put a 72pt mark against a 10.5pt gutter.)
+  //
+  // Measured against real data at 86, widest line is the phone/email/domain
+  // contact line at 294.8pt, ending at 416.8pt. The QR frame starts at 498pt,
+  // so clearance is 81.2pt. Without a QR nothing occupies the right at all.
+  const infoX = MARGIN + 86;
   const infoY = yTop + 4;
 
   doc.fillColor(TOKENS.navy).font(FONT_BODY_BOLD, 13)
