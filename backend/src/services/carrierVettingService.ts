@@ -13,6 +13,7 @@
  */
 
 import { prisma } from "../config/database";
+import { INSURANCE_MINIMUMS } from "../lib/insurancePolicy";
 import { verifyCarrierWithFMCSA } from "./fmcsaService";
 import { screenCarrier } from "./ofacScreeningService";
 import { validateEldProvider } from "./eldValidationService";
@@ -223,11 +224,11 @@ export async function vetCarrier(
   let insuranceDeduction = 0;
   const insuranceDetails: string[] = [];
   if (existingCarrier) {
-    if (existingCarrier.autoLiabilityAmount && existingCarrier.autoLiabilityAmount < 1000000) {
+    if (existingCarrier.autoLiabilityAmount && existingCarrier.autoLiabilityAmount < INSURANCE_MINIMUMS.autoLiability) {
       insuranceDeduction += 10;
       insuranceDetails.push(`Auto liability $${existingCarrier.autoLiabilityAmount.toLocaleString()} < $1M minimum`);
     }
-    if (existingCarrier.cargoInsuranceAmount && existingCarrier.cargoInsuranceAmount < 100000) {
+    if (existingCarrier.cargoInsuranceAmount && existingCarrier.cargoInsuranceAmount < INSURANCE_MINIMUMS.cargoInsurance) {
       insuranceDeduction += 10;
       insuranceDetails.push(`Cargo insurance $${existingCarrier.cargoInsuranceAmount.toLocaleString()} < $100K minimum`);
     }

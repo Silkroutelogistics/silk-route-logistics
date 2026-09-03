@@ -1,4 +1,5 @@
 import { prisma } from "../config/database";
+import { INSURANCE_MINIMUMS } from "../lib/insurancePolicy";
 import { log } from "../lib/logger";
 import { monitoredCarrierWhere } from "../lib/carrierOperational";
 import {
@@ -17,12 +18,10 @@ const SENDER_EMAIL = "compliance@silkroutelogistics.ai";
 
 // ─── Minimum Coverage Requirements ─────────────────────
 
-export const MIN_COVERAGE = {
-  autoLiability: 1_000_000,    // $1M minimum
-  cargoInsurance: 100_000,     // $100K minimum
-  generalLiability: 1_000_000, // $1M minimum
-  workersComp: 500_000,        // $500K minimum (if applicable)
-};
+// v3.8.azc C1 — the figures moved to lib/insurancePolicy so the document that
+// PRINTS them and the gate that ENFORCES them cannot drift. Re-exported under
+// the existing name because six call sites in this file read MIN_COVERAGE.
+export const MIN_COVERAGE = INSURANCE_MINIMUMS;
 
 export interface InsuranceCoverageResult {
   isCompliant: boolean;

@@ -1,4 +1,5 @@
 import PDFDocument from "pdfkit";
+import { INSURANCE_MINIMUMS } from "../lib/insurancePolicy";
 import * as path from "path";
 import * as fs from "fs";
 import bwipjs from "bwip-js";
@@ -2370,9 +2371,9 @@ export function generateEnhancedRateConfirmation(load: EnhancedRCLoadData, formD
   // application (Phase A correction: tracking is preconditions-tier, not
   // legal exposure tier — belongs alongside insurance minimums, not in T&C).
   const reqs: CarrierRequirements = {
-    cargoInsuranceMin: 100_000,
-    autoLiabilityMin: 1_000_000,
-    generalLiabilityMin: 1_000_000,
+    cargoInsuranceMin: INSURANCE_MINIMUMS.cargoInsurance,
+    autoLiabilityMin: INSURANCE_MINIMUMS.autoLiability,
+    generalLiabilityMin: INSURANCE_MINIMUMS.generalLiability,
     trackingAcceptance: true,
   };
   y = drawCarrierRequirements(doc, reqs, y);
