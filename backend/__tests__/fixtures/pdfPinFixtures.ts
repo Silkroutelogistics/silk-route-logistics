@@ -98,3 +98,54 @@ export const PIN_SIGNATURE = {
 export const PIN_CARRIER = {
   legalName: "Pin Carrier LLC", mcNumber: "MC-999001", dotNumber: "9990011", ein: "99-9990011",
 };
+
+/**
+ * Shipper Load Confirmation. Reuses RC_FIXTURE for the load (same
+ * EnhancedRCLoadData shape) and carries its own formData, because the SLC draws
+ * eighteen fd.* fields the RC form data does not have. Populated rather than
+ * minimal on purpose: a fixture missing them pins a page of em-dashes, which is
+ * stable and proves nothing about the document anyone receives.
+ *
+ * customerRate only. This document is customer-facing and must never show
+ * carrier cost -- the pin is the thing that notices if it starts to.
+ */
+export const SLC_FORM_DATA: Record<string, unknown> = {
+  shipperName: "Pin Shipper Co.", shipperAddress: "12 Mill Road",
+  shipperCity: "Lebanon", shipperState: "NH", shipperZip: "03766",
+  consigneeName: "Pin Consignee Inc.", consigneeAddress: "980 Depot Street",
+  consigneeCity: "North Lake", consigneeState: "TX", consigneeZip: "75568",
+  pickupDate: PICKUP, deliveryDate: DELIVERY,
+  pickupTimeWindow: "08:00-12:00", deliveryTimeWindow: "13:00-17:00",
+  equipmentType: "Reefer", commodity: "Frozen dairy",
+  customerRate: 5100,
+  specialInstructions: "Continuous reefer at 38F. Lumper paid by consignee.",
+};
+
+/**
+ * Training certificate, two variants that between them exercise every
+ * conditional branch in generateTrainingCertificate in both directions:
+ * expiresAt, carrierName and verifyQrPng. FULL has all three, MINIMAL has none.
+ *
+ * The QR is a real generated PNG, not a stub. generateCertVerifyQRBuffer is
+ * deterministic -- verified before pinning: same code gives identical bytes,
+ * a different code gives different bytes. A nondeterministic image would make
+ * this pin flap daily, which is the failure the frozen clock exists to prevent.
+ */
+export const CERT_VERIFY_CODE = "a1b2c3d4e5f60718";
+
+export const CERT_FULL = {
+  driverName: "Jordan Pin", courseTitle: "Hazmat & Dangerous Goods Awareness",
+  courseCategory: "Hazardous Materials", scorePct: 92,
+  completedAt: new Date("2026-06-01T12:00:00.000Z"),
+  expiresAt: new Date("2027-06-01T12:00:00.000Z"),
+  carrierName: "Pin Carrier LLC", certId: "PIN123-HAZMAT-AWARENESS",
+  verifyCode: CERT_VERIFY_CODE,
+};
+
+export const CERT_MINIMAL = {
+  driverName: "Jordan Pin", courseTitle: "Hours of Service Fundamentals",
+  courseCategory: "Compliance", scorePct: 80,
+  completedAt: new Date("2026-06-01T12:00:00.000Z"),
+  expiresAt: null, carrierName: null, certId: "PIN124-HOS-FUNDAMENTALS",
+  verifyCode: CERT_VERIFY_CODE, verifyQrPng: null,
+};

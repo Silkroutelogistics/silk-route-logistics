@@ -48,13 +48,17 @@ import {
   generateBOLFromLoad,
   generateEnhancedRateConfirmation,
   generateInvoicePDF,
+  generateShipperLoadConfirmation,
   generateSettlementPDF,
 } from "../../../src/services/pdfService";
 import { generateAgreementBuffer } from "../../../src/services/agreementPdfService";
+import { generateTrainingCertificate } from "../../../src/services/certificatePdfService";
+import { generateCertVerifyQRBuffer } from "../../../src/utils/qrGenerator";
 import { BROKER_CARRIER_AGREEMENT, CARAVAN_QUICK_PAY_AGREEMENT } from "../../../src/data/agreements";
 import {
   BOL_FIXTURE, RC_FIXTURE, RC_FORM_DATA, INVOICE_FIXTURE, SETTLEMENT_FIXTURE,
   PIN_SIGNATURE, PIN_CARRIER,
+  SLC_FORM_DATA, CERT_FULL, CERT_MINIMAL, CERT_VERIFY_CODE,
 } from "../../fixtures/pdfPinFixtures";
 
 const GOLDEN = path.resolve(__dirname, "../../fixtures/document-render-pins.json");
@@ -106,6 +110,19 @@ const DOCUMENTS: Record<string, () => Promise<Buffer>> = {
   "agreement-qp": () => generateAgreementBuffer(CARAVAN_QUICK_PAY_AGREEMENT, {}),
   "agreement-qp-executed": () =>
     generateAgreementBuffer(CARAVAN_QUICK_PAY_AGREEMENT, { carrier: PIN_CARRIER, signature: PIN_SIGNATURE }),
+  // v3.8.azb — three renders that shared srl-chrome already reached and no
+  // pin was watching. The SLC is customer-facing and must never show carrier
+  // cost; the two certificate variants differ only in whether expiresAt,
+  // carrierName and verifyQrPng are set, so together they cover every
+  // conditional branch in that generator in both directions.
+  "shipper-load-confirmation": async () =>
+    collect(generateShipperLoadConfirmation(RC_FIXTURE, SLC_FORM_DATA)),
+  "certificate": async () =>
+    collect(generateTrainingCertificate({
+      ...CERT_FULL,
+      verifyQrPng: await generateCertVerifyQRBuffer(CERT_VERIFY_CODE),
+    })),
+  "certificate-minimal": async () => collect(generateTrainingCertificate(CERT_MINIMAL)),
 };
 
 const golden: Record<string, string> = JSON.parse(fs.readFileSync(GOLDEN, "utf8"));
