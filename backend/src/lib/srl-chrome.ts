@@ -719,18 +719,37 @@ export const BOL_SIGNATURE_ROLES: SignatureRole[] = [
  * of issuing the document is the Broker signature; only the Carrier
  * countersigns to accept the rate and bind the load.
  */
+/**
+ * The Rate Confirmation acceptance strip, per `.sig-grid.open` in
+ * docs/design/rc.html.html: TWO columns, four signing fields each.
+ *
+ * IT USED TO BE ONE COLUMN OF SEVEN, and the extra three were CARRIER LEGAL
+ * NAME / MC # / DOT # — a second printing of what the CARRIER band on page one
+ * already states. Seven ruled rows do not fit beside the terms, which is why
+ * the acceptance kept spilling onto a third page carrying almost nothing else.
+ *
+ * The identity did not vanish; it moved to where the design puts it, in the
+ * party sub-line (`certification`) rather than as rows a carrier would be
+ * asked to sign under. pdfService fills the carrier's from the load at render
+ * time, so a page returned on its own still says who signed.
+ *
+ * The BROKER column is new and is the point of B9a: SRL is a party to this
+ * document, and a rate confirmation with one signature column reads as
+ * something the carrier issues. Role-scoped prefills are what make it possible
+ * to fill this column without also filling the carrier's.
+ */
 export const RATE_CON_SIGNATURE_ROLES: SignatureRole[] = [
   {
     title: 'CARRIER · ACCEPTANCE',
-    // Sprint 50 (Item 122) — prose paragraph removed. Both sentences were
-    // verbatim duplicates of T&C body clauses (1) and (9). Header label
-    // retained as structural section anchor; drawSignatureBlock guards the
-    // certification render path when empty (yTop+20 field start vs the
-    // post-cert doc.y + 12 path).
+    // Filled per-render with the assigned carrier's identity. Empty here
+    // because this constant cannot know the load.
     certification: '',
-    fields: ['CARRIER LEGAL NAME', 'MC #', 'DOT #',
-             'AUTHORIZED SIGNATORY (PRINT)', 'TITLE',
-             'SIGNATURE', 'DATE'],
+    fields: ['AUTHORIZED SIGNATORY (PRINT)', 'TITLE', 'SIGNATURE', 'DATE'],
+  },
+  {
+    title: 'BROKER · SILK ROUTE LOGISTICS INC.',
+    certification: '',
+    fields: ['PRINT NAME', 'TITLE', 'SIGNATURE', 'DATE'],
   },
 ];
 

@@ -1,6 +1,6 @@
 SRL RATE CONFIRMATION — RENDERED CAPTURE
 
-Generated 2026-09-04 from v3.8.azp (commit 5a2b3eb8).
+Generated 2026-09-04 from no version letter in HEAD subject (commit e750af87) PLUS uncommitted changes to backend/src/lib/srl-chrome.ts, backend/src/services/pdfService.ts.
 Regenerate:  cd backend && npx tsx scripts/verify-rc-matrix.ts --dump
 
 Y coordinates are top-down from the page top, rounded to 0.5pt. Items sharing
@@ -74,10 +74,11 @@ read as a page map and taught the wrong one for several sprints.
     755  MC# 1794414 · DOT# 4526880 · silkroutelogistics.ai ⟂ Where Trust Travels. ⟂ Page 1 of 3
   763.5  Terms version unversioned
 
-─────────── PAGE 2 ───────────
-     49  SRL-121488R
-     51  SILK ROUTE LOGISTICS INC.
-     60  SRL-121488R · Rate Confirmation (continued)
+─────────
+wrote ..\docs\rc-references\_CURRENT_SRL_RC_RENDERED.txt — 3 case(s): baseline 1 line, reefer, qp 7-day
+
+ALL CASES PASS
+R · Rate Confirmation (continued)
      95  D O C K & D I S PAT C H ⟂ BCA Art. 20 to 23
   108.5  Before pickup: Driver ____________ Cell ____________ Truck # ________ Trailer # ________
   120.5  Check in at both stops as Silk Route Logistics, load SRL-121488. The BOL must name SRL as broker. If it names another company or MC number, do not load.
@@ -114,6 +115,15 @@ read as a page map and taught the wrong one for several sprints.
   554.5  SRL before you leave.
   566.5  Carrier shall report any discrepancy between this Rate Confirmation and the Bill of Lading to SRL before proceeding. Signed BOL, POD, and supporting
     577  paperwork are due within 24 hours of delivery.
+    598  INVOICING
+  610.5  Send to: accounting@silkroutelogistics.ai
+  622.5  Subject: Invoice · Load SRL-121488 · MC 596655
+    634  Attach a signed copy of this Rate Confirmation, the signed BOL, a clean POD, and original receipts for any approved lumper or accessorial charge.
+    646  Put the SRL load number on the invoice. One invoice per load; do not batch loads onto one invoice.
+  657.5  Your invoice must match this Rate Confirmation. If you think a figure here is wrong, call SRL before you invoice rather than billing a different number.
+  669.5  Payment terms run from the date SRL receives a complete packet. An incomplete packet does not start the clock.
+  690.5  SRL sends rate confirmations only from @silkroutelogistics.ai. We will never change our remit-to address or banking details by email. If anything here looks wrong, call SRL at
+  699.5  (269) 220-6760. If you have any doubt this document is genuine, verify us independently against our FMCSA record for MC# 1794414 before you move the freight.
     755  MC# 1794414 · DOT# 4526880 · silkroutelogistics.ai ⟂ Where Trust Travels. ⟂ Page 2 of 3
   763.5  Terms version unversioned
 
@@ -121,27 +131,15 @@ read as a page map and taught the wrong one for several sprints.
      49  SRL-121488R
      51  SILK ROUTE LOGISTICS INC.
      60  SRL-121488R · Rate Confirmation (continued)
-     97  INVOICING
-  107.5  Send to: accounting@silkroutelogistics.ai
-    119  Subject: Invoice · Load SRL-121488 · MC 596655
-    131  Attach a signed copy of this Rate Confirmation, the signed BOL, a clean POD, and original receipts for any approved lumper or accessorial charge.
-  142.5  Put the SRL load number on the invoice. One invoice per load; do not batch loads onto one invoice.
-  154.5  Your invoice must match this Rate Confirmation. If you think a figure here is wrong, call SRL before you invoice rather than billing a different number.
-  166.5  Payment terms run from the date SRL receives a complete packet. An incomplete packet does not start the clock.
-  187.5  SRL sends rate confirmations only from @silkroutelogistics.ai. We will never change our remit-to address or banking details by email. If anything here looks wrong, call SRL at
-  196.5  (269) 220-6760. If you have any doubt this document is genuine, verify us independently against our FMCSA record for MC# 1794414 before you move the freight.
-    218  CARRIER · ACCEPTANCE
-  237.5  CARRIER LEGAL NAME
-  249.5  ZO Enterprises LLC
-  263.5  MC #
-  275.5  596655
-  289.5  DOT #
-  301.5  1911857
-  315.5  AUTHORIZED SIGNATORY (PRINT)
-  341.5  TITLE
-  367.5  SIGNATURE
-  393.5  DATE
-  432.5  Sign and return this page to operations@silkroutelogistics.ai before dispatch. A signed copy also travels with your invoice.
+     95  CARRIER · ACCEPTANCE ⟂ BROKER · SILK ROUTE LOGISTICS INC.
+  111.5  ZO Enterprises LLC · MC 596655 · DOT 1911857 ⟂ 2317 S 35th St, Galesburg, MI 49053 · MC# 1794414 · USDOT# 4526880
+    133  AUTHORIZED SIGNATORY (PRINT) ⟂ PRINT NAME
+    145  Wasi Haider
+    159  TITLE ⟂ TITLE
+    171  President
+    185  SIGNATURE ⟂ SIGNATURE
+    211  DATE ⟂ DATE
+  241.5  Sign and return this page to operations@silkroutelogistics.ai before dispatch. A signed copy also travels with your invoice.
     755  MC# 1794414 · DOT# 4526880 · silkroutelogistics.ai ⟂ Where Trust Travels. ⟂ Page 3 of 3
   763.5  Terms version unversioned
 
@@ -248,7 +246,7 @@ read as a page map and taught the wrong one for several sprints.
      49  SRL-121488R
      51  SILK ROUTE LOGISTICS INC.
      60  SRL-121488R · Rate Confirmation (continued)
-     97  INVOICING
+     95  INVOICING
   107.5  Send to: accounting@silkroutelogistics.ai
     119  Subject: Invoice · Load SRL-121488 · MC 596655
     131  Attach a signed copy of this Rate Confirmation, the signed BOL, a clean POD, and original receipts for any approved lumper or accessorial charge.
@@ -257,18 +255,15 @@ read as a page map and taught the wrong one for several sprints.
   166.5  Payment terms run from the date SRL receives a complete packet. An incomplete packet does not start the clock.
   187.5  SRL sends rate confirmations only from @silkroutelogistics.ai. We will never change our remit-to address or banking details by email. If anything here looks wrong, call SRL at
   196.5  (269) 220-6760. If you have any doubt this document is genuine, verify us independently against our FMCSA record for MC# 1794414 before you move the freight.
-    218  CARRIER · ACCEPTANCE
-  237.5  CARRIER LEGAL NAME
-  249.5  ZO Enterprises LLC
-  263.5  MC #
-  275.5  596655
-  289.5  DOT #
-  301.5  1911857
-  315.5  AUTHORIZED SIGNATORY (PRINT)
-  341.5  TITLE
-  367.5  SIGNATURE
-  393.5  DATE
-  432.5  Sign and return this page to operations@silkroutelogistics.ai before dispatch. A signed copy also travels with your invoice.
+    218  CARRIER · ACCEPTANCE ⟂ BROKER · SILK ROUTE LOGISTICS INC.
+  234.5  ZO Enterprises LLC · MC 596655 · DOT 1911857 ⟂ 2317 S 35th St, Galesburg, MI 49053 · MC# 1794414 · USDOT# 4526880
+  256.5  AUTHORIZED SIGNATORY (PRINT) ⟂ PRINT NAME
+  268.5  Wasi Haider
+  282.5  TITLE ⟂ TITLE
+  294.5  President
+  308.5  SIGNATURE ⟂ SIGNATURE
+  334.5  DATE ⟂ DATE
+  364.5  Sign and return this page to operations@silkroutelogistics.ai before dispatch. A signed copy also travels with your invoice.
     755  MC# 1794414 · DOT# 4526880 · silkroutelogistics.ai ⟂ Where Trust Travels. ⟂ Page 3 of 3
   763.5  Terms version unversioned
 
@@ -365,6 +360,15 @@ read as a page map and taught the wrong one for several sprints.
   554.5  SRL before you leave.
   566.5  Carrier shall report any discrepancy between this Rate Confirmation and the Bill of Lading to SRL before proceeding. Signed BOL, POD, and supporting
     577  paperwork are due within 24 hours of delivery.
+    598  INVOICING
+  610.5  Send to: accounting@silkroutelogistics.ai
+  622.5  Subject: Invoice · Load SRL-121488 · MC 596655
+    634  Attach a signed copy of this Rate Confirmation, the signed BOL, a clean POD, and original receipts for any approved lumper or accessorial charge.
+    646  Put the SRL load number on the invoice. One invoice per load; do not batch loads onto one invoice.
+  657.5  Your invoice must match this Rate Confirmation. If you think a figure here is wrong, call SRL before you invoice rather than billing a different number.
+  669.5  Payment terms run from the date SRL receives a complete packet. An incomplete packet does not start the clock.
+  690.5  SRL sends rate confirmations only from @silkroutelogistics.ai. We will never change our remit-to address or banking details by email. If anything here looks wrong, call SRL at
+  699.5  (269) 220-6760. If you have any doubt this document is genuine, verify us independently against our FMCSA record for MC# 1794414 before you move the freight.
     755  MC# 1794414 · DOT# 4526880 · silkroutelogistics.ai ⟂ Where Trust Travels. ⟂ Page 2 of 3
   763.5  Terms version unversioned
 
@@ -372,26 +376,14 @@ read as a page map and taught the wrong one for several sprints.
      49  SRL-121488R
      51  SILK ROUTE LOGISTICS INC.
      60  SRL-121488R · Rate Confirmation (continued)
-     97  INVOICING
-  107.5  Send to: accounting@silkroutelogistics.ai
-    119  Subject: Invoice · Load SRL-121488 · MC 596655
-    131  Attach a signed copy of this Rate Confirmation, the signed BOL, a clean POD, and original receipts for any approved lumper or accessorial charge.
-  142.5  Put the SRL load number on the invoice. One invoice per load; do not batch loads onto one invoice.
-  154.5  Your invoice must match this Rate Confirmation. If you think a figure here is wrong, call SRL before you invoice rather than billing a different number.
-  166.5  Payment terms run from the date SRL receives a complete packet. An incomplete packet does not start the clock.
-  187.5  SRL sends rate confirmations only from @silkroutelogistics.ai. We will never change our remit-to address or banking details by email. If anything here looks wrong, call SRL at
-  196.5  (269) 220-6760. If you have any doubt this document is genuine, verify us independently against our FMCSA record for MC# 1794414 before you move the freight.
-    218  CARRIER · ACCEPTANCE
-  237.5  CARRIER LEGAL NAME
-  249.5  ZO Enterprises LLC
-  263.5  MC #
-  275.5  596655
-  289.5  DOT #
-  301.5  1911857
-  315.5  AUTHORIZED SIGNATORY (PRINT)
-  341.5  TITLE
-  367.5  SIGNATURE
-  393.5  DATE
-  432.5  Sign and return this page to operations@silkroutelogistics.ai before dispatch. A signed copy also travels with your invoice.
+     95  CARRIER · ACCEPTANCE ⟂ BROKER · SILK ROUTE LOGISTICS INC.
+  111.5  ZO Enterprises LLC · MC 596655 · DOT 1911857 ⟂ 2317 S 35th St, Galesburg, MI 49053 · MC# 1794414 · USDOT# 4526880
+    133  AUTHORIZED SIGNATORY (PRINT) ⟂ PRINT NAME
+    145  Wasi Haider
+    159  TITLE ⟂ TITLE
+    171  President
+    185  SIGNATURE ⟂ SIGNATURE
+    211  DATE ⟂ DATE
+  241.5  Sign and return this page to operations@silkroutelogistics.ai before dispatch. A signed copy also travels with your invoice.
     755  MC# 1794414 · DOT# 4526880 · silkroutelogistics.ai ⟂ Where Trust Travels. ⟂ Page 3 of 3
   763.5  Terms version unversioned

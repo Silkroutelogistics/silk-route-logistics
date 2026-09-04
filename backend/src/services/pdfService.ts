@@ -30,6 +30,7 @@ import {
   drawRateConTerms,
   drawSignatureBlock,
   RATE_CON_SIGNATURE_ROLES,
+  roleFieldKey,
   drawFooter,
   drawContinuationHeader,
   drawPanel,
@@ -97,6 +98,8 @@ import {
   DOMAIN,
   MC_NUMBER,
   DOT_NUMBER,
+  SIGNATORY_NAME,
+  SIGNATORY_TITLE,
 } from "../config/authority";
 
 const COMPANY = {
@@ -2584,15 +2587,6 @@ export function generateEnhancedRateConfirmation(load: EnhancedRCLoadData, formD
   // send it, what to attach, or when the payment clock starts. That left an
   // undefined clock underneath a PUBLISHED §8 Net-30/21/14 commitment.
   // Operational only: no new contractual obligation is created here.
-  doc.font(FONT_BODY_BOLD, 7).fillColor(TOKENS.goldDark);
-  // v3.8.arp — reserve INVOICING (~90pt) plus the anti-fraud line and tender
-  // banner (~62pt) that follow it, so the payment instructions never split
-  // across a page. Deliberately NOT sized to include the signature block: that
-  // has its own guard below, and reserving for both here pushed every case to
-  // three pages with page 2 nearly empty.
-  rcEnsureRoom(160);
-  doc.text("INVOICING", MARGIN, y, { characterSpacing: 7 * 0.08, lineBreak: false });
-  y += 12;
 
   const invoiceMcRaw = String(
     fd.carrierMcNumber || load.carrier?.carrierProfile?.mcNumber || "",
@@ -2620,6 +2614,48 @@ export function generateEnhancedRateConfirmation(load: EnhancedRCLoadData, formD
     "Payment terms run from the date SRL receives a complete packet. An incomplete packet does not start the clock.",
   ].join("\n");
 
+  // v3.8.azu — hoisted to a const so the reserve below can MEASURE it. It was
+  // an inline literal, which is why the reserve above was a hardcoded guess.
+  const antiFraudText =
+    // v3.8.arp — reworded from a NEGATION to an ESCALATION. This line used to
+    // read "do not call the number printed on this document", which flatly
+    // contradicted the two places on page 1 that tell a driver to call
+    // (269) 220-6760 the moment something looks wrong. On a legitimate document
+    // that made the fastest correct action look forbidden; the contradiction was
+    // the defect, not the number. Wasi's call (2026-08-14): keep the number.
+    // The independent-verification path still exists for the case it was written
+    // for — a FORGED rate confirmation, where every printed contact detail is
+    // the forger's — but now as a second step rather than a denial of the first.
+    "SRL sends rate confirmations only from @silkroutelogistics.ai. We will never change our remit-to address or banking details by email. If anything here looks wrong, call SRL at (269) 220-6760. If you have any doubt this document is genuine, verify us independently against our FMCSA record for MC# 1794414 before you move the freight.";
+
+  // v3.8.azu — the payment-instruction reserve, MEASURED rather than guessed.
+  //
+  // It was rcEnsureRoom(160) — a worst-case estimate written when the block was
+  // an unmeasurable pile of inline literals. Measured against the 15 matrix
+  // fixtures the real chain is 116.9pt, so 160 over-reserved by 43pt and there
+  // were 146.9pt available: the block FIT and was pushed to a third page anyway,
+  // by 13.1pt of guess. That third page then carried 374pt of dead space.
+  //
+  // This is NOT a loosening of the split-prevention the reserve exists for. It
+  // reserves exactly what the next four draws consume, including the tender
+  // banner only when a live tender will actually render it — so it is also
+  // STRICTER than 160 in the case a long invoice packet plus a banner would
+  // have overrun the old guess.
+  const activeTender = load.tenders?.find((t) =>
+    (t.status === "OFFERED" || t.status === "ACCEPTED")
+    && new Date(t.expiresAt) > new Date(),
+  );
+  doc.font(FONT_BODY, 7.5);
+  const invoiceBodyH = doc.heightOfString(invoiceLines, { width: CONTENT_W, lineGap: 0.5, paragraphGap: 1.5 });
+  doc.font(FONT_BODY, 6.75);
+  const antiFraudH = doc.heightOfString(antiFraudText, { width: CONTENT_W, lineGap: 0.5 });
+  const invoicingChainH = 12 + invoiceBodyH + 10 + antiFraudH + 12 + (activeTender ? 40 : 0);
+  rcEnsureRoom(invoicingChainH);
+
+  doc.font(FONT_BODY_BOLD, 7).fillColor(TOKENS.goldDark);
+  doc.text("INVOICING", MARGIN, y, { characterSpacing: 7 * 0.08, lineBreak: false });
+  y += 12;
+
   doc.font(FONT_BODY, 7.5).fillColor(TOKENS.fg2);
   doc.text(invoiceLines, MARGIN, y, { width: CONTENT_W, lineGap: 0.5, paragraphGap: 1.5 });
   y = doc.y + 10;
@@ -2634,19 +2670,7 @@ export function generateEnhancedRateConfirmation(load: EnhancedRCLoadData, formD
   // mean something. The last sentence is deliberately self-distrusting:
   // every contact detail on a forged rate confirmation is chosen by the forger.
   doc.font(FONT_BODY, 6.75).fillColor(TOKENS.fg3);
-  doc.text(
-    // v3.8.arp — reworded from a NEGATION to an ESCALATION. This line used to
-    // read "do not call the number printed on this document", which flatly
-    // contradicted the two places on page 1 that tell a driver to call
-    // (269) 220-6760 the moment something looks wrong. On a legitimate document
-    // that made the fastest correct action look forbidden; the contradiction was
-    // the defect, not the number. Wasi's call (2026-08-14): keep the number.
-    // The independent-verification path still exists for the case it was written
-    // for — a FORGED rate confirmation, where every printed contact detail is
-    // the forger's — but now as a second step rather than a denial of the first.
-    "SRL sends rate confirmations only from @silkroutelogistics.ai. We will never change our remit-to address or banking details by email. If anything here looks wrong, call SRL at (269) 220-6760. If you have any doubt this document is genuine, verify us independently against our FMCSA record for MC# 1794414 before you move the freight.",
-    MARGIN, y, { width: CONTENT_W, lineGap: 0.5 },
-  );
+  doc.text(antiFraudText, MARGIN, y, { width: CONTENT_W, lineGap: 0.5 });
   y = doc.y + 12;
 
   // Tender expiration banner (Sprint 48 Item 108) — surfaces tender SLA
@@ -2656,10 +2680,6 @@ export function generateEnhancedRateConfirmation(load: EnhancedRCLoadData, formD
   // danger (red). Semantic colours are TOKENS.warning/warningBg and
   // TOKENS.danger/dangerBg since v3.8.azh — the values are unchanged, they just
   // stopped being a private copy of §2.1 living in this function.
-  const activeTender = load.tenders?.find((t) =>
-    (t.status === "OFFERED" || t.status === "ACCEPTED")
-    && new Date(t.expiresAt) > new Date(),
-  );
   if (activeTender) {
     const expiresAt = new Date(activeTender.expiresAt);
     const hoursUntilExpiry = (expiresAt.getTime() - Date.now()) / (1000 * 60 * 60);
@@ -2697,26 +2717,46 @@ export function generateEnhancedRateConfirmation(load: EnhancedRCLoadData, formD
   // the same hybrid sources used by the page-1 CARRIER · ASSIGNED block.
   // Carrier writes only AUTHORIZED SIGNATORY / TITLE / SIGNATURE / DATE at
   // signing time. Industry-standard RC pattern (CHR / Coyote / RXO).
-  const sigPrefill: Record<string, string> = {};
-  if (carrierName && carrierName !== "—") sigPrefill["CARRIER LEGAL NAME"] = carrierName;
-  if (carrierMc && carrierMc !== "—") sigPrefill["MC #"] = carrierMc;
-  if (carrierDot && carrierDot !== "—") sigPrefill["DOT #"] = carrierDot;
-  // Sprint 49.b (Item 139) — block height 180 → 210 to accommodate 26pt
-  // row spacing × 7 RC fields = 182pt + certification + label header.
+  // ── ACCEPTANCE STRIP, two columns per the locked design ──────────────────
   //
-  // v3.8.arp — the signature block must never straddle a page boundary. It is
-  // the tallest element on the document and the one a carrier signs; half a
+  // The carrier's identity is the party sub-line, not four more ruled rows: the
+  // CARRIER band above already states it, and seven rows is what kept pushing
+  // this block onto a third page carrying nothing else.
+  //
+  // The BROKER column is prefilled on every render, ROLE-SCOPED. Both columns
+  // carry a field called TITLE and one called SIGNATURE; a bare key would print
+  // the broker's officer on the line the carrier signs.
+  const carrierIdentityLine = [
+    carrierName && carrierName !== "—" ? carrierName : null,
+    carrierMc && carrierMc !== "—" ? `MC ${carrierMc}` : null,
+    carrierDot && carrierDot !== "—" ? `DOT ${carrierDot}` : null,
+  ].filter(Boolean).join(" · ");
+
+  const rcRoles = RATE_CON_SIGNATURE_ROLES.map((r, i) =>
+    i === 0
+      ? { ...r, certification: carrierIdentityLine }
+      : { ...r, certification: `${COMPANY.address} · MC# ${MC_NUMBER} · USDOT# ${DOT_NUMBER}` },
+  );
+
+  const sigPrefill: Record<string, string> = {
+    [roleFieldKey(rcRoles[1].title, "PRINT NAME")]: SIGNATORY_NAME,
+    [roleFieldKey(rcRoles[1].title, "TITLE")]: SIGNATORY_TITLE,
+  };
+
+  // v3.8.azu C11 — 210 -> 150. Four fields at 26pt is 104, plus the title row
+  // and the party sub-line. The reserve below it is the block plus the return
+  // instruction, and it is what keeps the strip off a page boundary: half a
   // signature block at the foot of one page with the ruled fields on the next
-  // is how a returned copy comes back unsigned. 214 = the declared 210 height
-  // (which already covers the CARRIER · ACCEPTANCE label — measured 508.5 to
-  // ~700 in a rendered doc) plus 4pt of slack. An earlier 232 padded for a
-  // label header twice and tipped every fixture to three pages with page 2
-  // nearly empty, which is the opposite of the problem being solved.
-  // v3.8.art — 214 -> 232 to reserve the return-instruction line below the block.
-  rcEnsureRoom(232);
+  // is how a returned copy comes back unsigned (v3.8.arp).
+  // Measured, not guessed: title at +0, party sub-line at +16, four field
+  // rows at 26pt starting +38, last underline at +136.
+  const RC_SIG_H = 140;
+  // The block plus the return instruction, which must not be orphaned from
+  // the signature it belongs to.
+  rcEnsureRoom(RC_SIG_H + 24);
   drawSignatureBlock(doc, y, {
-    roles: RATE_CON_SIGNATURE_ROLES,
-    height: 210,
+    roles: rcRoles,
+    height: RC_SIG_H,
     prefilledValues: sigPrefill,
   });
 
@@ -2729,7 +2769,7 @@ export function generateEnhancedRateConfirmation(load: EnhancedRCLoadData, formD
   doc.font(FONT_BODY, 7.5).fillColor(TOKENS.fg2);
   doc.text(
     "Sign and return this page to operations@silkroutelogistics.ai before dispatch. A signed copy also travels with your invoice.",
-    MARGIN, y + 214, { width: CONTENT_W, lineGap: 0.5 },
+    MARGIN, y + RC_SIG_H + 6, { width: CONTENT_W, lineGap: 0.5 },
   );
 
   // v3.8.aro — stamp every buffered page with a truthful "Page N of M". Before
