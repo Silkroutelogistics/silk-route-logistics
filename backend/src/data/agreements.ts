@@ -60,6 +60,7 @@ export interface LegalAgreement {
 // nothing meaningful. Bump when the WORDS change, not when their source does.
 import { PAPERWORK_DUE_HOURS } from "../lib/accessorialPolicy";
 import { standardNetDays, quickPayFeePercent, SAME_DAY_PREMIUM } from "../lib/quickPayPricing";
+import { BUSINESS_HOURS_SENTENCE } from "../lib/businessHours";
 import {
   BCA_F11_VERSION, BCA_F11_TITLE, BCA_F11_SUBTITLE, BCA_F11_EFFECTIVE_NOTE,
   BCA_F11_PREAMBLE, BCA_F11_SECTIONS,
@@ -280,15 +281,18 @@ export const BROKER_CARRIER_AGREEMENT: LegalAgreement = {
 //                            code does not do. Enforcing them means a claim
 //                            check and a compliance check on all three charge
 //                            paths; do that BEFORE restating them as automatic.
-//   §5 same/next bus. day  → integrationService.sameDayQuickPayDueDate,
-///                            using BUSINESS_OPEN_HOUR / BUSINESS_CLOSE_HOUR in
-//                            that file (Mon-Fri 07-19 ET). NOT §6 — §6 is
-//                            Approval Limits and states no hours. §5 cl.3 defers
-//                            to "Broker's published business hours" and the
-//                            agreement never publishes them; the only published
-//                            statement is on /contact and /carriers. A carrier
-//                            reading the signed instrument alone cannot find the
-//                            cutoff that decides same-day vs next-day.
+//   §5 same/next bus. day  → lib/businessHours.BUSINESS_OPEN_HOUR /
+//                            BUSINESS_CLOSE_HOUR (Mon-Fri 07-19 ET), read BOTH
+//                            by integrationService.sameDayQuickPayDueDate, which
+//                            enforces the cutoff, AND by §5 cl.3, which is
+//                            GENERATED from them. NOT §6 — §6 is Approval Limits
+//                            and states no hours. GAP CLOSED v3.8.bac: cl.3 used
+//                            to defer to "Broker's published business hours"
+//                            while the agreement published them nowhere, so a
+//                            carrier reading the signed instrument alone could
+//                            not find the cutoff deciding when they are paid.
+//                            The clause now states the window inline and cannot
+//                            drift from the code that funds against it.
 //   §6 auto-approve        → lib/quickPayPricing.quickPayAutoApprovePerLoad and
 //      ceilings              .quickPayMonthlyLimit. §6 says a request over
 //                            EITHER ceiling "is not refused", so both ceilings
@@ -399,7 +403,13 @@ export const CARAVAN_QUICK_PAY_AGREEMENT: LegalAgreement = {
       clauses: [
         "All Quick Pay timing runs from Broker’s receipt of complete and accurate documentation for the load, the same trigger stated in Section 5 of the Broker-Carrier Agreement. Documentation is complete when Broker has received the items required by that section, including a clean signed Bill of Lading, Proof of Delivery, and any lumper or accessorial receipts.",
         "7-day Quick Pay is paid within seven (7) calendar days of that trigger.",
-        "Same-day Quick Pay is paid on the same business day when complete and accurate documentation is received during Broker’s published business hours, and on the next business day when it is received outside them.",
+        // v3.8.bac — the hours are STATED, and generated from the constants
+        // integrationService.sameDayQuickPayDueDate funds against. This
+        // clause used to defer to “Broker’s published business hours” and the
+        // agreement never published them, so a carrier reading the signed
+        // instrument alone could not find the cutoff deciding when they are
+        // paid. agreements.ts:282 recorded that gap; it is now closed.
+        `Same-day Quick Pay is paid on the same business day when complete and accurate documentation is received during Broker’s business hours, which are ${BUSINESS_HOURS_SENTENCE}, and on the next business day when it is received outside them.`,
         "If documentation is incomplete or inaccurate, the timing clock has not started. Broker will identify what is missing. The clock starts when the deficiency is cured, and the load remains eligible for Quick Pay on the same terms.",
       ],
     },

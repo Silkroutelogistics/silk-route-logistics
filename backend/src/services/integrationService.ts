@@ -417,9 +417,13 @@ function round2(n: number): number {
 }
 
 // Published business hours, CLAUDE.md §6 — Mon-Fri, 7:00 AM to 7:00 PM Eastern.
-const BUSINESS_TZ = "America/New_York";
-const BUSINESS_OPEN_HOUR = 7;
-const BUSINESS_CLOSE_HOUR = 19;
+//
+// v3.8.bac — moved to lib/businessHours and RE-EXPORTED here, so the Quick Pay
+// Agreement can state the cutoff it funds against without a legal-text data
+// module importing this service and the whole operational graph behind it.
+// Existing consumers of these names are unaffected.
+export { BUSINESS_TZ, BUSINESS_OPEN_HOUR, BUSINESS_CLOSE_HOUR } from "../lib/businessHours";
+import { BUSINESS_TZ, BUSINESS_OPEN_HOUR, BUSINESS_CLOSE_HOUR } from "../lib/businessHours";
 
 /** Eastern-time calendar parts for an instant. */
 function easternParts(d: Date): { year: number; month: number; day: number; hour: number; dow: number } {
