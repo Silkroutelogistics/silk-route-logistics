@@ -361,68 +361,30 @@ export async function generateBOLFromLoad(
   // ========================= PAGE 1 =========================
   // PDFKit: Y=0 is TOP, increases downward.
 
-  // Header region — white background (page default) through bottom of QR+BOL#.
-  // v3.8.b pivot: the cream band (CREAM_2) was dropped because it created a
-  // visible boundary the logo chip didn't integrate into. White page background
-  // keeps the compass mark visually unified with the company block.
-  // v3.8.ark — 60pt (~0.83"): frees 29pt of band height for the content budget
-  // below while remaining comfortably phone-scannable at dock distance (short
-  // tracking URL = low-density QR). Was 95.
-  const qrSize = 60;
-  const qrColX = R - 86;
-  const qrColW = 86;
-  const qrFrameX = qrColX + (qrColW - qrSize) / 2;
-  const qrFrameY = 12;
-  const headerBandH = qrFrameY + qrSize + 24; // QR + TRACK label + BOL# with breathing room
-
-  // Gold accent bar at top (very thin)
-  doc.rect(0, 0, 612, 3).fill(GOLD);
-
-  // Logo — transparent variant if available (no white chip over cream band).
-  // Fallback to the opaque logo.png keeps legacy behavior if the transparent
-  // asset is missing for any reason.
-  const logoAsset = hasLogoTransparent ? LOGO_TRANSPARENT_PATH : LOGO_PATH;
-  if (hasLogo || hasLogoTransparent) {
-    doc.image(logoAsset, M, 12, { width: 84, height: 84, fit: [84, 84] });
-  }
-
-  // Company block at (M+86, 15) — 5 lines. Shifted 3pt down from prior 12pt
-  // to visually balance against the larger 84pt logo.
-  const companyX = M + 86;
-  doc.font("Playfair-Bold").fontSize(14).fillColor(NAVY)
-    .text("SILK ROUTE LOGISTICS INC.", companyX, 15, { lineBreak: false });
-  doc.font("DMSans-Regular").fontSize(8).fillColor(FG_2)
-    .text(COMPANY.address, companyX, 34, { lineBreak: false });
-  doc.text(
-    `${COMPANY.phone}  |  ${COMPANY.email}  |  ${COMPANY.website}`,
-    companyX, 46, { lineBreak: false },
-  );
-  doc.font("DMSans-Medium").fontSize(8).fillColor(NAVY)
-    .text(`MC# ${COMPANY.mc} ${MIDDOT} DOT# ${COMPANY.dot}`, companyX, 58, { lineBreak: false });
-  doc.font("DMSans-Italic").fontSize(8).fillColor(GOLD_DARK)
-    .text("Where Trust Travels.", companyX, 70, { lineBreak: false });
-
-  // QR container — rounded cream rect, BORDER_2 stroke, QR image inside
-  doc.roundedRect(qrFrameX, qrFrameY, qrSize, qrSize, 3).fill(CREAM);
-  doc.lineWidth(0.75).strokeColor(BORDER_2)
-    .roundedRect(qrFrameX, qrFrameY, qrSize, qrSize, 3).stroke();
-  if (qrBuffer) {
-    doc.image(qrBuffer, qrFrameX + 3, qrFrameY + 3, { width: qrSize - 6, height: qrSize - 6 });
-  }
-
-  // TRACK label below QR
-  doc.font("DMSans-SemiBold").fontSize(6.5).fillColor(GOLD_DARK)
-    .text("TRACK", qrColX, qrFrameY + qrSize + 3, {
-      width: qrColW, align: "center", characterSpacing: 1.2, lineBreak: false,
-    });
-  // BOL number — 8pt, drop to 7pt if too wide for the 86pt column
-  const bolWidth8 = doc.font("DMSans-Bold").fontSize(8).widthOfString(bolNum);
-  const bolFontSize = bolWidth8 > qrColW - 4 ? 7 : 8;
-  doc.font("DMSans-Bold").fontSize(bolFontSize).fillColor(NAVY)
-    .text(bolNum, qrColX, qrFrameY + qrSize + 12, {
-      width: qrColW, align: "center", lineBreak: false,
-    });
-
+  // v3.8.baj — THE LETTERHEAD IS SHARED. Compass, company block, tagline, QR
+  // frame, TRACK label, document number and the gold rule all come from
+  // drawHeaderFirstPage — the same call the Rate Confirmation and Invoice make.
+  //
+  // WHAT CHANGED VISUALLY: the 84pt logo.png raster becomes the 72pt drawn
+  // compass mark. That is the operational register, and it is why this
+  // commit's render pin moves.
+  //
+  // WHY yTop IS 18 AND NOT MARGIN. The chrome puts its rule at yTop + 80; the
+  // BOL's sat at 98, so 18 lands it exactly where v2.9 had it and every body
+  // anchor below is undisturbed. Passing MARGIN would push the whole body down
+  // 18pt on a document fit-gated to ONE page whose adaptive budget already
+  // saturates at four line items. The letterhead is therefore identical to the
+  // RC and Invoice in COMPOSITION and sits 18pt higher on the page — the only
+  // arrangement under which both halves of the parity criterion hold.
+  //
+  // The title row is NOT taken from the chrome: it draws 22pt at MARGIN, the
+  // BOL's is 24pt at 34. Both are body geometry, both v2.9 canon.
+  const headerBottom = drawHeaderFirstPage(doc, {
+    includeQr: true,
+    qrBuffer: qrBuffer ?? undefined,
+    loadId: bolNum,
+    yTop: 18,
+  });
   // ── v3.8.ark — ADAPTIVE ONE-PAGE BUDGET ─────────────────────────────────
   // The arj layout fit exactly ONE line item; the fit matrix showed 3 rows
   // overlapping the terms strip, 4 rows crashing the footer, 5 rows exploding
@@ -460,10 +422,9 @@ export async function generateBOLFromLoad(
   let shavePool = bolDeficit;
   const take = (max: number): number => { const t = Math.min(max, shavePool); shavePool -= t; return t; };
 
-  // Gold rule below header band
-  let y = headerBandH + 2;
-  doc.lineWidth(1.75).strokeColor(GOLD).moveTo(M, y).lineTo(R, y).stroke();
-  y += 10; // v3.8.arj — was 14; top-zone compression per measured spacing audit
+  // The gold rule is drawn by drawHeaderFirstPage above; headerBottom is the
+  // y just beneath it, matching what `headerBandH + 2` then `+= 10` produced.
+  let y = headerBottom;
 
   // Title row
   doc.font("Playfair-Bold").fontSize(24).fillColor(NAVY)

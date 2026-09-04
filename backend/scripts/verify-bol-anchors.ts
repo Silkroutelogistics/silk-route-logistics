@@ -64,7 +64,9 @@ type Baseline = { capturedAt: string; body: Record<string, Anchor>; letterhead: 
 const squeeze = (s: string) => s.replace(/\s+/g, "").toUpperCase();
 
 async function measure(): Promise<{ body: Record<string, Anchor>; letterhead: Record<string, Anchor>; pages: number }> {
-  const doc = await generateBOLFromLoad(BOL_FIXTURE as never);
+  // Same token the render pin uses: every production BOL has one, so the
+  // gate must measure the shape carriers actually receive.
+  const doc = await generateBOLFromLoad(BOL_FIXTURE as never, { trackingToken: "PINTOKEN0001" });
   const chunks: Buffer[] = [];
   const buf: Buffer = await new Promise((res, rej) => {
     doc.on("data", (c: Buffer) => chunks.push(c));

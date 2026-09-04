@@ -444,7 +444,17 @@ export function drawCompassMark(doc: PDFDoc, x: number, y: number, size: number 
 // ============================================================================
 
 export interface HeaderOptions {
-  docTitle: string;
+  /**
+   * Omit to draw the LETTERHEAD ONLY — compass, company block, tagline, QR,
+   * gold rule — and nothing below it. The return is then the y just under
+   * the rule, so the caller continues from there.
+   *
+   * The Bill of Lading needs this. Its title is Playfair 24pt at x34; the
+   * chrome draws 22pt at MARGIN (36). Both are body geometry on a document
+   * whose body is pixel-verified v2.9 canon and is not what this migration
+   * is moving, so the BOL takes the letterhead and keeps its own title row.
+   */
+  docTitle?: string;
   subtitle?: string;
   qrUrl?: string;
   loadId?: string;
@@ -565,6 +575,9 @@ export function drawHeaderFirstPage(doc: PDFDoc, options: HeaderOptions): number
   goldRule(doc, ruleY);
 
   // Document title and subtitle
+  // Letterhead-only: the caller draws its own title row below the rule.
+  if (!docTitle) return ruleY + 10;
+
   const titleY = ruleY + 12;
   doc.font(FONT_DISPLAY_BOLD, 22)
      .fillColor(TOKENS.navy)

@@ -100,7 +100,12 @@ function collect(doc: InstanceType<typeof PDFDocument>): Promise<Buffer> {
 
 /** Every pinned document, by the name that appears in the golden file. */
 const DOCUMENTS: Record<string, () => Promise<Buffer>> = {
-  "bol": async () => collect(await generateBOLFromLoad(BOL_FIXTURE)),
+  // v3.8.baj — the pin renders WITH a tracking token, because every production
+  // BOL has one: downloadBOLFromLoad mints one per print event, and both fit
+  // gates pass one. Without it the chrome letterhead takes its no-QR branch and
+  // the pin covered a shape no carrier receives — the QR frame and TRACK label
+  // absent, a filing reference in their place.
+  "bol": async () => collect(await generateBOLFromLoad(BOL_FIXTURE, { trackingToken: "PINTOKEN0001" })),
   "rate-confirmation": async () => collect(generateEnhancedRateConfirmation(RC_FIXTURE, RC_FORM_DATA)),
   "invoice": async () => collect(generateInvoicePDF(INVOICE_FIXTURE)),
   "settlement": async () => collect(generateSettlementPDF(SETTLEMENT_FIXTURE)),
