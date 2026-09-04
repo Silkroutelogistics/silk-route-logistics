@@ -3593,6 +3593,37 @@ Most are inert history and **should** survive — `LoadActivity` and `LoadTracki
     one mechanism can produce each.
 
 
+258. **DEFERRED HYGIENE — AEROSWIFT LLC is SUSPENDED with Quick Pay still enabled (2026-09-04, flag untouched).**
+
+    Surfaced by the Phase B commit 2 precondition read, recorded for the owner's
+    decision rather than acted on. Read-only from production:
+
+    | | |
+    |---|---|
+    | carrier | AEROSWIFT LLC, MC-1692309 |
+    | `onboardingStatus` | **SUSPENDED** |
+    | `quickPayEnabled` | **true** |
+    | `isTestAccount` | false — a real carrier |
+    | executed QP | 2026-08-16-v4, Stu Cook, President, 2026-09-01 |
+
+    **Nothing was changed.** The flag is left exactly as found, because
+    `quickPayEnabled` is the denormalised mirror of "has an APPROVED enrolment"
+    (§21.1) and flipping it is a commercial act, not cleanup.
+
+    **It is probably harmless today and the reason is worth stating**, because
+    it is what makes deferring defensible: every charge path checks the §3
+    three-condition gate, and a SUSPENDED carrier cannot be tendered a load at
+    all — `complianceCheck` blocks on `onboardingStatus`, so no load reaches the
+    point where a Quick Pay fee could be deducted. The stale flag is a
+    reporting inconsistency rather than a live money path.
+
+    **What the owner has to decide** is whether suspension should clear the
+    pilot enrolment. It does not today: suspension and enrolment are independent
+    states, so a carrier reinstated tomorrow resumes Quick Pay without anyone
+    re-approving them for the pilot. That may be intended — the enrolment was
+    granted and suspension is a separate matter — or it may not.
+
+
 ## §14 LEGAL / COMPLIANCE STATUS
 
 - Property broker under 49 U.S.C. §§ 13904, 13906

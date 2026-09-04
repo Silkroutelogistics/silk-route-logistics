@@ -64,6 +64,7 @@ import {
   BCA_F11_PREAMBLE, BCA_F11_SECTIONS,
 } from "./brokerCarrierAgreement.generated";
 import { BROKER_CARRIER_AGREEMENT_2026_06_27_V1 } from "./archive/brokerCarrierAgreement.2026-06-27-v1";
+import { CARAVAN_QUICK_PAY_AGREEMENT_2026_08_16_V4 } from "./archive/caravanQuickPayAgreement.2026-08-16-v4";
 
 export const BCA_VERSION = BCA_F11_VERSION;
 
@@ -440,6 +441,9 @@ const ARCHIVED: Record<string, Record<string, LegalAgreement>> = {
   "broker-carrier": {
     "2026-06-27-v1": BROKER_CARRIER_AGREEMENT_2026_06_27_V1,
   },
+  "quick-pay": {
+    "2026-08-16-v4": CARAVAN_QUICK_PAY_AGREEMENT_2026_08_16_V4,
+  },
 };
 
 /**
@@ -463,6 +467,12 @@ export function getAgreement(templateName: string, version?: string): LegalAgree
   // /quickpay-election signing path ("quick-pay") plus the shorthands the
   // portal and support tooling use.
   if (templateName === "quick-pay" || templateName === "quickpay" || templateName === "qp") {
+    if (version) {
+      // Keyed on the canonical "quick-pay", not on whichever alias the caller
+      // used, so an archived body resolves the same way through all three.
+      const archived = ARCHIVED["quick-pay"]?.[version];
+      if (archived) return archived;
+    }
     return CARAVAN_QUICK_PAY_AGREEMENT;
   }
   return null;
