@@ -3693,3 +3693,79 @@ drawing, so today's date lands in the content stream the pin hashes. Found at
 the two that moved are exactly the two that print today's date while Invoice and
 Settlement render the fixture's frozen ones. The clock is now pinned, so the
 input is gone rather than chased.
+
+---
+
+## 2026-09-04 — SRL countersigns, and the execution page stops being blank (B8–B11)
+
+Ratified: **SRL countersigns agreements by system-applied countersignature at
+carrier acceptance.** §13.3 item 253.1 is decided, not open.
+
+**The defect this closes is that every executed BCA has shipped with a blank
+broker column**, and the reason was structural rather than an oversight
+downstream. `drawSignatureBlock` resolved prefills by BARE FIELD NAME, and both
+roles of a master agreement carry fields called `PRINT NAME`, `TITLE`,
+`SIGNATURE` and `DATE`. Filling the broker's therefore also filled the
+CARRIER's — printing the broker signatory on the line the carrier signs. Blank
+was the only safe option the API offered.
+
+**Role-scoping (B9a) was shipped as a pure widening and the pins are the
+proof.** Role-scoped key first, bare key as fallback, so with no scoped key the
+resolution is byte-identical; all 14 render pins held on that commit, both
+Quick Pay pins included.
+
+**The countersignature is inside the content hash.** It is a segment in
+`assembleAgreementSegments`, the file whose header calls itself "the contract
+between what is shown and what is signed", placed between the witness line and
+the attestation. It is also DRAWN, because a segment inside the hash and absent
+from the page would bind a carrier to a sentence their copy does not carry.
+Built before the hash and written in the same `create`, so no window exists in
+which a signature row lacks the countersignature its hash covers.
+
+**Stored on the row, not resolved at render.** Changing the officer in
+`config/authority.ts` must not restate who bound the company on agreements
+already executed.
+
+**The two BCAs on the archived 2026-06-27-v1 body are untouched.** Additive
+nullable columns, no backfill: neither was countersigned, and writing one now
+would manufacture an execution record for an act that did not happen, under a
+name and a timestamp, on rows a dispute could turn on. Their stored
+`contentHash` is likewise safe — the hash is computed once at signing and
+nothing in the codebase recomputes or re-verifies it, verified by grep before
+the migration was written rather than inferred from a column comment.
+
+**A guard collision worth recording, because both rules were right.**
+`emailIdentity.test.ts` bans the founder's name across `src`, since a system
+email signed by a person reads as correspondence that person wrote. Its scan is
+src-wide while its reason is email-shaped, so it flags `config/authority.ts` on
+sight. Adding that path to `PERSONAL_IDENTITY_ALLOWED` would have justified it
+with "a human intends to be the sender", which is false. A second list says the
+true thing instead — a named officer executes documents — and carries teeth: no
+module that sends email may read those constants. Without the teeth the
+exemption is a back door, and an email body reading `SIGNATORY_NAME` would have
+passed every other assertion in that file, because the literal name never
+appears in the email module at all.
+
+**Three guards of mine went red across the arc and every one was right to.** A
+count of `countersign:` occurrences broke when B10 also passed the object to the
+render calls; a pinned literal argument list broke when a third option was
+threaded through; and a scanner built its regex as `` `\b${col}\s*:` `` in a
+TEMPLATE LITERAL, where `\b` is the backspace escape — so it compiled to a
+regex matching a control character and flagged nothing. That last one PASSED its
+adversarial injection on the first attempt, and was found only because the
+injection was actually run and checked rather than believed. Its self-test had
+passed throughout, because the self-test used a regex LITERAL while the code
+under test used a template: **a self-test that does not share the construction
+it is testing proves nothing about it.**
+
+**Proof:** `scripts/_b11-countersign-proof.ts`, **29/29** against a throwaway
+container with the full 68-migration chain applied from zero, columns read back
+from `information_schema`. Adversarial in both directions — putting the
+countersign on the carrier columns fails exactly the three carrier assertions;
+dropping the segment from the assembly fails the hash comparisons and the
+rendered line on both documents.
+
+**Also on this arc:** the Rate Confirmation title descriptor read
+`CARRIER-ISSUED · BINDING`. SRL issues the Rate Confirmation and tenders it to
+the carrier, so the document was describing its own provenance backwards, in the
+one line whose job is to say what it is.

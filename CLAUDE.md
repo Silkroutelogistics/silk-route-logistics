@@ -3059,10 +3059,40 @@ Most are inert history and **should** survive — `LoadActivity` and `LoadTracki
     **BANKED, by number.** Each was reached deliberately and left undone with a
     reason, not overlooked:
 
-    253.1 **SRL countersign.** Every executed artifact is one-sided; the BCA
-    button says "executed" with no broker signature block filled. Whether a
-    broker signature is required goes to whether the instrument is complete as
-    issued — a legal question, not a wiring one. Rides with §16 #1.
+    253.1 ~~**SRL countersign.**~~ **CLOSED 2026-09-04 as DECIDED, not open
+    (v3.8.azq → v3.8.azt).** Ratified: SRL countersigns by system-applied
+    countersignature at carrier acceptance. The carrier's acceptance is the last
+    act needed to form the agreement, so that instant is when the company is
+    bound and the instant to record binding it.
+
+    **It is not a claim that anyone typed anything**, and the document says so:
+    name and title come from `config/authority.ts` (`SIGNATORY_NAME`,
+    `SIGNATORY_TITLE`), the timestamp is the server clock, and the rendered line
+    reads "applied automatically on the Carrier's acceptance".
+
+    **Three things make it evidence rather than decoration.** It is inside the
+    content hash, as a segment in `assembleAgreementSegments` between the witness
+    line and the attestation. It is drawn on the page, because a segment inside
+    the hash and absent from the copy would bind a carrier to a sentence they
+    never received. And it is stored on the row
+    (`counterSignedByName`/`Title`/`At`) rather than resolved at render, so
+    changing the officer cannot restate who bound the company on agreements
+    already executed.
+
+    **The blocker was `drawSignatureBlock`, and it was structural.** Prefills
+    resolved by bare field name and both roles carry `PRINT NAME`/`TITLE`/
+    `SIGNATURE`/`DATE`, so filling the broker's also filled the carrier's. B9a
+    role-scoped it as a pure widening — all 14 render pins held on that commit,
+    which is the proof.
+
+    **The two BCAs on the archived body stay NULL and keep their stored hashes.**
+    Backfilling would manufacture an execution record for an act that did not
+    happen. Verified before the migration that nothing recomputes a stored hash.
+
+    Proof: `backend/scripts/_b11-countersign-proof.ts`, 29/29 against a real
+    database, adversarial both ways. What remains with counsel (§16 #1) is
+    whether the BCA text should describe the countersignature — the platform
+    behaviour is decided.
 
     253.2 **Sign-on-behalf retirement.** An AE can mark a rate confirmation
     signed. Since v3.8.axu a carrier signs through a single-use link that captures
