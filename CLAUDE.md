@@ -3642,6 +3642,36 @@ Most are inert history and **should** survive — `LoadActivity` and `LoadTracki
     re-approving them for the pilot. That may be intended — the enrolment was
     granted and suspension is a separate matter — or it may not.
 
+259. **BOL chrome migration — CLOSED AT COMMIT 5 by owner ruling (2026-09-04, v3.8.baf → v3.8.bal).** The Bill of Lading draws its **letterhead, footer and font registration** from the shared operational chrome. Its **body stays BOL-local as v2.9 canon.** Commits 6-9 of the planned sequence are **not required** and should not be re-proposed without re-reading this entry.
+
+    **What shipped:** legacy shipment-keyed `generateBOL` retired (`baf`, zero callers across backend/frontend/e2e); `verify:bol` naming the two orphaned fit gates plus a new anchor-parity gate (`bag`); `footerY` optional on `drawFooter` (`bah`); `registerSkillFonts` replacing nine duplicate `registerFont` calls and a 60-line duplicate ligature patch (`bai`, **the pin did not move** — byte-identical content stream, which is the proof the faces were the same); the letterhead at `yTop: 18` (`baj`); the footer at `fyLine + 4` (`bak`).
+
+    **THE RULING, and the reason it is not a preference.** The four body primitives that share names with the BOL's sections are different components:
+
+    | | chrome | BOL |
+    |---|---|---|
+    | meta strip | gold rules top/bottom, no dividers | bordered 6-cell grid with vertical dividers |
+    | parties | **two** panels, content at `x+10` (44 / 322) | **one** cream container, two 12pt-padded columns (46 / 312) |
+    | shipment table | `rowH 18`, square navy band | `BOL_ROW_H 22`, rounded clip, dashed separators, distinct totals row |
+    | signature | `CONTENT_W/3` from `MARGIN` | three columns at 34 / 219.3 / 404.7 |
+
+    All four hardcode `MARGIN`/`CONTENT_W`, so adopting any of them also shifts the body 2pt and narrows it 4pt. `BOL_ROW_H = 22` is the **input to the adaptive one-page budget**, so `rowH 18` re-tunes the entire fit of a document gated to one page.
+
+    **The signature strip differs in COMPLIANCE CONTENT, not styling**, and that is the finding that settles it rather than merely informing it. `BOL_SIGNATURE_ROLES` omitted *"Required placards received; emergency response info available (49 CFR 172)"* from the carrier certification, the TRAILER LOADED / FREIGHT COUNTED by-shipper/by-driver checkboxes, and *"The carrier shall not make delivery of this shipment without payment of freight and all other lawful charges."* Adopting it would have removed hazmat certification text from the document a driver signs at a dock.
+
+    **A shared primitive carrying per-document `x`, `width`, `rowH`, container-style, separator-style and totals-style overrides is not shared chrome — it is one document's code living in another file.** Either the BOL changes or the chrome dilutes. The letterhead and footer are genuinely one component across documents; the body is not. That is the dividing line, and it is where the migration stops.
+
+    **`BOL_SIGNATURE_ROLES` is DELETED** (`bal`), so no future session adopts it. It was never consumed — all three `drawSignatureBlock` callers pass their own roles, so it survived only as an unreachable default, and `roles` is now required. **`includeQr` and its BOL-only docstring are kept**: the QR is operational, belongs on the document that travels with the freight, and the BOL is the only caller that passes it.
+
+    **Commit 9 (SHAVE_CAPACITY / BASE_SLACK retune) is NOT REQUIRED, with evidence.** The budget was never disturbed: across all six matrix cases `maxContentY` is byte-identical before and after the migration — 723.5 / 721.5 / 734.5 / 731.5 / 717.5 / 729.5 against a 768 floor, one page each. Three parity renders (1-row, 4-row + hazmat, wrapped instructions) confirm the shave absorbing growth as designed, with the Released Value Declaration on page 1 below instructions and above signatures in every case, per 49 U.S.C. § 14706(c).
+
+    **A methodology miss worth keeping (§19 Sub-pattern 15, my own audit).** The Phase A report called all four body primitives a "direct" fit. That assessment was made from export names and section headings rather than from the drawing code, and it was wrong on all four. The cost was three commits planned on a false premise, caught before any of them shipped — but the cheaper check was available the whole time: read what the function DRAWS, not what it is called.
+
+    **Banked, not fixed:** `docs/design/rc.html.html` and `invoice.html.html` are cited by path from `srl-chrome.ts` in five places and are **untracked in git**. A referenced design source that is not in the repository can vanish without anything noticing. Worth `git add`-ing.
+
+
+
+---
 
 ## §14 LEGAL / COMPLIANCE STATUS
 

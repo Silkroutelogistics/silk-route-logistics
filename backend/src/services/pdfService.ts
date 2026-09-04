@@ -12,12 +12,23 @@ import { decodeHtmlEntities } from "../utils/htmlEntities";
 // pure reads: the number is allocated and persisted where the document is
 // CREATED, never here, so regenerating a PDF reproduces the same number.
 import { documentNumberFor, resolveLoadStem } from "../lib/documentNumber";
-// Sprint 45-RC (v3.8.abd) — Item 48 close. Skill chrome library imported from
-// backend/src/lib/srl-chrome.ts (mirrored from .claude/skills/srl-brand-design/
-// scripts/srl_chrome.ts at session HEAD; manually sync when skill ships canonical
-// updates). Path β1 per D6 — sets up Sprint 45-RC2 (Invoice) + 45-RC3 (Settlement
-// + ShipperLoadConf) reuse. Other generators in this file (BOL/Invoice/Settlement)
-// keep their inline canonical until their dedicated migration sprint.
+// Skill chrome library imported from backend/src/lib/srl-chrome.ts (mirrored
+// from .claude/skills/srl-brand-design/scripts/srl_chrome.ts at session HEAD;
+// manually sync when the skill ships canonical updates).
+//
+// EVERY GENERATOR IN THIS FILE IS NOW ON THE SHARED CHROME. Invoice and
+// Settlement migrated at v3.8.aqg; the Bill of Lading at v3.8.baf-bak. This
+// comment used to say the BOL "keeps its inline canonical until its dedicated
+// migration sprint" — that sprint has happened and closed.
+//
+// WHAT THE BOL TOOK, AND WHAT IT DID NOT. It draws the letterhead
+// (drawHeaderFirstPage, includeQr), the footer (drawFooter, footerY override)
+// and its fonts (registerSkillFonts) from the chrome, so every future fix to
+// those reaches it. Its BODY — meta strip, parties block, shipment table,
+// signature strip — stays here as pixel-verified v2.9 canon, because those four
+// are genuinely different components from the chrome primitives that share
+// their names, and one of them differs in compliance content rather than
+// styling. §13.3 carries the ruling and the measurements.
 import {
   drawHeaderFirstPage,
   drawMetaStrip,

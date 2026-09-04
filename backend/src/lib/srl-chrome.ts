@@ -11,7 +11,7 @@
  *   import {
  *     registerSkillFonts,
  *     drawHeaderFirstPage, drawMetaStrip, drawPartiesBlock,
- *     drawSignatureBlock, drawFooter, BOL_SIGNATURE_ROLES,
+ *     drawSignatureBlock, drawFooter,
  *     PAGE_W, PAGE_H, MARGIN
  *   } from './srl_chrome';
  *
@@ -705,26 +705,29 @@ export interface SignatureRole {
   fields: string[];
 }
 
-export const BOL_SIGNATURE_ROLES: SignatureRole[] = [
-  {
-    title: 'SHIPPER · REPRESENTATIVE',
-    certification:
-      'Certifies contents are properly classified, packaged, marked, and labeled per DOT regulations (49 CFR 172).',
-    fields: ['SIGNATURE', 'PRINT NAME', 'PIECES TENDERED', 'DATE'],
-  },
-  {
-    title: 'CARRIER · DRIVER',
-    certification: 'Acknowledges receipt of shipment in apparent good order, except as noted.',
-    fields: ['CARRIER LEGAL NAME', 'MC #', 'DOT #', 'DRIVER NAME',
-             'SIGNATURE', 'TRUCK #', 'TRAILER #', 'SEAL #', 'DATE'],
-  },
-  {
-    title: 'CONSIGNEE · RECEIVER',
-    certification: 'Acknowledges delivery — any exceptions noted above.',
-    fields: ['SIGNATURE', 'PRINT NAME', 'PIECES RECEIVED', 'DATE'],
-  },
-];
-
+// BOL_SIGNATURE_ROLES was deleted here (v3.8.bal). DO NOT REINSTATE IT.
+//
+// It was written for a Bill of Lading migration that has now closed at the
+// letterhead and footer, and it was never consumed: all three
+// drawSignatureBlock callers pass their own roles, so it survived only as an
+// unreachable default.
+//
+// It was also a THINNER document than the BOL actually renders, and the gap
+// is compliance content rather than styling. Adopting it would have dropped:
+//
+//   "Required placards received; emergency response info available
+//    (49 CFR 172)" from the carrier certification
+//   the TRAILER LOADED / FREIGHT COUNTED by-shipper/by-driver checkboxes
+//   "The carrier shall not make delivery of this shipment without payment
+//    of freight and all other lawful charges."
+//
+// Those are on the document a driver signs at a dock. A constant that looks
+// like the BOL's signature strip and quietly omits them is worse than no
+// constant at all, because the next session to find it would reasonably
+// assume it was the canonical one.
+//
+// The BOL's signature strip lives in pdfService.generateBOLFromLoad and stays
+// there. See §13.3 for the ruling.
 /**
  * Rate Confirmation signature — single block, Carrier acceptance only.
  * A Rate Con is a binding agreement between Broker and Carrier on rate +
@@ -799,7 +802,7 @@ export function roleFieldKey(roleTitle: string, field: string): string {
 export function drawSignatureBlock(
   doc: PDFDoc,
   yTop: number,
-  options: { roles?: SignatureRole[]; height?: number; prefilledValues?: Record<string, string> } = {}
+  options: { roles: SignatureRole[]; height?: number; prefilledValues?: Record<string, string> }
 ): number {
   // Sprint 48.c (v3.8.abj) — added prefilledValues option. Pre-fill SRL-known
   // carrier identity fields (CARRIER LEGAL NAME / MC # / DOT #) so the carrier
@@ -808,7 +811,7 @@ export function drawSignatureBlock(
   // When a field is in prefilledValues, the value renders above the underline
   // in fg1 (primary text), otherwise underline stays bare for handwriting.
   // Local mirror — propagate to skill canonical srl_chrome.ts at next sync.
-  const { roles = BOL_SIGNATURE_ROLES, height = 220, prefilledValues = {} } = options;
+  const { roles, height = 220, prefilledValues = {} } = options;
   const n = roles.length;
   const colW = CONTENT_W / n;
 
