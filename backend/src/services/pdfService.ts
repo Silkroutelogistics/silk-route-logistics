@@ -1712,7 +1712,14 @@ export function generateEnhancedRateConfirmation(load: EnhancedRCLoadData, formD
   // Header (no QR — RC carrier-portal artifact, no scan event per skill)
   let y = drawHeaderFirstPage(doc, {
     docTitle: "Rate Confirmation",
-    subtitle: "Carrier-Issued · Binding",
+    // "Carrier dispatch · binding on acceptance", verbatim from `.title-row .sub`
+    // in docs/design/rc.html.html. The old descriptor said CARRIER-ISSUED, which
+    // is factually wrong on the face of the document: SRL issues the Rate
+    // Confirmation and tenders it to the carrier. Measured before changing —
+    // drawHeaderFirstPage draws this with lineBreak:false, so a longer string
+    // overprints rather than wraps. 192.7pt of 540pt at Playfair Italic 8.5,
+    // against 112.6pt before, and nothing else renders on that row.
+    subtitle: "Carrier dispatch · Binding on acceptance",
     loadId: docId,
     includeQr: false,
   });

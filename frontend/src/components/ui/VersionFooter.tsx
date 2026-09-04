@@ -16996,7 +16996,18 @@
 // Checking them found a wrong one of my own: insurancePolicy.ts cited
 // "Broker-Carrier Agreement paragraph 2" for the minimums. Article 2 is Carrier
 // qualification; Article 12 is Insurance.
-export const SRL_VERSION = "3.8.azo";
+// v3.8.azp C10.9 — the Rate Confirmation said CARRIER-ISSUED. It is not.
+//
+// SRL issues the Rate Confirmation and tenders it to the carrier. The
+// descriptor under the title claimed the opposite, on the face of a binding
+// document, in the one line whose job is to say what the document is.
+//
+// "Carrier dispatch · Binding on acceptance", from `.title-row .sub` in the
+// locked design. Measured before changing: drawHeaderFirstPage draws the
+// subtitle with lineBreak:false, so a longer string overprints rather than
+// wraps — 192.7pt of 540pt at Playfair Italic 8.5 against 112.6pt before, and
+// nothing else renders on that row.
+export const SRL_VERSION = "3.8.azp";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

@@ -1,6 +1,6 @@
 SRL RATE CONFIRMATION — RENDERED CAPTURE
 
-Generated 2026-09-03 from no version letter in HEAD subject (commit 531af395) PLUS uncommitted changes to backend/src/lib/srl-chrome.ts, backend/src/services/pdfService.ts.
+Generated 2026-09-04 from v3.8.azp (commit 5a2b3eb8).
 Regenerate:  cd backend && npx tsx scripts/verify-rc-matrix.ts --dump
 
 Y coordinates are top-down from the page top, rounded to 0.5pt. Items sharing
@@ -34,7 +34,7 @@ read as a page map and taught the wrong one for several sprints.
    88.5  MC# 1794414 · DOT# 4526880
   101.5  Where Trust Travels.
     152  Rate Confirmation
-    165  CARRIER-ISSUED · BINDING
+    165  CARRIER DISPATCH · BINDING ON ACCEPTANCE
     178  AE: Wasi Haider · (269) 220-6760
   189.5  Verify this RC: silkroutelogistics.ai/verify/ba4559b419fb
   202.5  DATE ISSUED ⟂ LOAD REF ⟂ PICKUP ⟂ DELIVERY ⟂ PICKUP # ⟂ PO # ⟂ QUICK PAY ⟂ TERMS
@@ -157,7 +157,7 @@ read as a page map and taught the wrong one for several sprints.
    88.5  MC# 1794414 · DOT# 4526880
   101.5  Where Trust Travels.
     152  Rate Confirmation
-    165  CARRIER-ISSUED · BINDING
+    165  CARRIER DISPATCH · BINDING ON ACCEPTANCE
     178  AE: Wasi Haider · (269) 220-6760
   189.5  Verify this RC: silkroutelogistics.ai/verify/ba4559b419fb
   202.5  DATE ISSUED ⟂ LOAD REF ⟂ PICKUP ⟂ DELIVERY ⟂ PICKUP # ⟂ PO # ⟂ QUICK PAY ⟂ TERMS
@@ -284,7 +284,7 @@ read as a page map and taught the wrong one for several sprints.
    88.5  MC# 1794414 · DOT# 4526880
   101.5  Where Trust Travels.
     152  Rate Confirmation
-    165  CARRIER-ISSUED · BINDING
+    165  CARRIER DISPATCH · BINDING ON ACCEPTANCE
     178  AE: Wasi Haider · (269) 220-6760
   189.5  Verify this RC: silkroutelogistics.ai/verify/ba4559b419fb
   202.5  DATE ISSUED ⟂ LOAD REF ⟂ PICKUP ⟂ DELIVERY ⟂ PICKUP # ⟂ PO # ⟂ QUICK PAY ⟂ TERMS
