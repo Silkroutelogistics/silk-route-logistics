@@ -935,6 +935,24 @@ export function drawFooter(
     /** accepted for call-site compatibility, never rendered — see above */
     docId?: string;
     /**
+     * Y of the footer's gold rule baseline, PDFKit top-down. Defaults to
+     * PAGE_H - MARGIN - 12 = 744, which every document drew before this
+     * existed and every document still draws when the option is omitted.
+     *
+     * WHY IT IS OVERRIDABLE. The Bill of Lading puts its rule at 770. That is
+     * not a style choice: the BOL is fit-gated to ONE page and its adaptive
+     * budget already saturates at four line items, so adopting 744 would
+     * spend 30pt of a ~67pt elasticity and cost roughly a row and a half of
+     * freight. The alternative was to leave the BOL drawing its own footer,
+     * which is the drift the chrome exists to end.
+     *
+     * Omitting it is byte-identical to before — asserted by footerYDefault
+     * and by every render pin, which is the real proof since all seven
+     * existing call sites omit it.
+     */
+    footerY?: number;
+
+    /**
      * Version of the governing terms this document was ISSUED under. Rendered
      * on its own line BELOW the identity line, not appended to it: the identity
      * line already measures ~190pt against a tagline centred from ~268pt, so
@@ -948,8 +966,8 @@ export function drawFooter(
   } = { pageNum: 1, totalPages: 1 }
 ): void {
   // docId intentionally NOT destructured — nothing below may render it.
-  const { pageNum, totalPages, termsVersion } = options;
-  const footerY = PAGE_H - MARGIN - 12;
+  const { pageNum, totalPages, termsVersion, footerY: footerYOverride } = options;
+  const footerY = footerYOverride ?? PAGE_H - MARGIN - 12;
 
   goldRule(doc, footerY - 4, { weight: 0.75 });
 
