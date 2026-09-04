@@ -112,7 +112,17 @@ describe("the countersign is hashed, and it is the broker's", () => {
       path.resolve(__dirname, "../../../src/routes/carrierAuth.ts"), "utf8");
     expect((src.match(/counterSignedByName:/g) ?? []).length,
       "expected the BCA and Quick Pay paths to each write a countersignature").toBe(2);
-    expect((src.match(/countersign: \w+Countersign/g) ?? []).length,
-      "expected both paths to feed the countersign into the content hash").toBe(2);
+
+    // EVERY hash call carries one. Counting occurrences of the identifier was
+    // the first version, and it broke the moment B10 also passed the object to
+    // the RENDER calls — a count is a proxy for the property, and the property
+    // is that nothing hashes an agreement while omitting the countersignature
+    // the row will go on to claim.
+    const hashCalls = src.split("agreementContentHash(").slice(1)
+      .map((tail) => tail.slice(0, tail.indexOf("});")));
+    expect(hashCalls.length, "expected two agreementContentHash call sites").toBe(2);
+    for (const call of hashCalls) {
+      expect(call, "an agreementContentHash call omits the countersign").toContain("countersign:");
+    }
   });
 });

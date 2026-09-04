@@ -17045,7 +17045,23 @@
 // BCAs on the archived body stay NULL and keep their stored hashes — nothing
 // recomputes them, and inventing a countersignature for them would be
 // manufacturing an execution record.
-export const SRL_VERSION = "3.8.azs";
+// v3.8.azt B10 — the execution page stops being blank.
+//
+// The broker column is prefilled on EVERY render including an unsigned
+// specimen: SRL knows who signs for SRL before anyone has signed anything, so
+// a blank there read as a party that had not decided who binds it. Role-scoped
+// per B9a — a bare key would print the broker signatory on the carrier's line.
+//
+// On an executed copy the broker DATE fills and the countersign line is DRAWN,
+// because it is HASHED, and a segment inside the hash but absent from the page
+// would bind a carrier to a sentence their copy does not carry.
+//
+// The cover's EFFECTIVE DATE now reads "Upon execution" when unsigned. It was
+// an empty string beside a printed label, which reads as a field somebody
+// forgot; an em-dash would have read as "not applicable". The preamble says the
+// Effective Date IS the date of the last signature, so the honest value on a
+// blank form is the rule itself.
+export const SRL_VERSION = "3.8.azt";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

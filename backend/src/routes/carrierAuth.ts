@@ -836,7 +836,19 @@ router.get("/agreement/:type/pdf", authenticate, authorize("CARRIER"), async (re
           version: signed.version,
         }
       : undefined;
-  const doc = generateAgreementPdf(agreement, { carrier: identity, signature });
+  // The countersignature comes from the STORED ROW, so a copy downloaded
+  // years later still names whoever bound the company at the time. NULL on
+  // the two agreements executed before B8, which render without it — which
+  // is true of them.
+  const countersign =
+    signed && signed.counterSignedByName && signed.counterSignedByTitle && signed.counterSignedAt
+      ? {
+          name: signed.counterSignedByName,
+          title: signed.counterSignedByTitle,
+          at: signed.counterSignedAt,
+        }
+      : undefined;
+  const doc = generateAgreementPdf(agreement, { carrier: identity, signature, countersign });
   res.setHeader("Content-Type", "application/pdf");
   res.setHeader("Content-Disposition", `inline; filename="${agreementPdfFilename(agreement)}"`);
   doc.pipe(res);
@@ -1225,6 +1237,10 @@ router.post("/sign-bca", authenticate, authorize("CARRIER"), validateBody(signBc
     const buf = await generateAgreementBuffer(BROKER_CARRIER_AGREEMENT, {
       carrier: identity,
       signature: { signedByName, signedByTitle: signedByTitle || null, signedAt: now, signerIp: ip || null, version: bcaVersion, consentAt },
+      // The SAME countersign object the hash was taken over. Rebuilding it
+      // here would be a second construction of one fact, free to drift from
+      // the hash that is supposed to cover it.
+      countersign: bcaCountersign,
     });
     const url = await uploadFileToPath(buf, `agreements/bca-${agreement.id}.pdf`, "application/pdf");
     await prisma.carrierAgreement.update({ where: { id: agreement.id }, data: { documentUrl: url } });
@@ -1438,6 +1454,7 @@ router.post("/quickpay-election", authenticate, authorize("CARRIER"), requireSte
       void (async () => {
         const identity = await loadCarrierIdentity(profile.id);
         const buf = await generateAgreementBuffer(CARAVAN_QUICK_PAY_AGREEMENT, {
+          countersign: qpCountersign,
           carrier: identity,
           signature: { signedByName: signedByName!, signedByTitle: signedByTitle || null, signedAt: now, signerIp: ip || null, version, consentAt },
         });

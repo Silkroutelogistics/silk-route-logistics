@@ -127,7 +127,15 @@ describe("one changed character changes the hash", () => {
 
 describe("the renderer consumes the assembly it is hashed from", () => {
   it("draws from segments, not from a second traversal of the source", () => {
-    expect(renderer).toContain("assembleAgreementSegments(agreement, { carrier, signature })");
+    // Asserted as a PROPERTY, not as one exact argument list. The literal
+    // string was pinned here and went stale the moment B10 threaded the
+    // countersign through — a guard that fails against correct code for a
+    // reason unrelated to what it is named for.
+    expect(renderer).toContain("assembleAgreementSegments(agreement, {");
+    // And the countersign specifically, because it is the newest thing the
+    // hash covers: a render that omitted it would put a carrier on the hook
+    // for a sentence their copy does not carry.
+    expect(renderer).toContain("countersign");
     expect(renderer).toContain('seg("effective-note")');
     expect(renderer).toContain('seg("witness")');
     expect(renderer).toContain('seg("attestation")');

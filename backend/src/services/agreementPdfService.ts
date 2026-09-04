@@ -23,8 +23,10 @@ import {
 import { type LegalAgreement } from "../data/agreements";
 import {
   assembleAgreementSegments, WITNESS_LINE, CELL_SEP, ROW_SEP,
-  type AgreementSegment,
+  type AgreementSegment, type CanonicalCountersign,
 } from "../lib/canonicalAgreementText";
+import { SIGNATORY_NAME, SIGNATORY_TITLE } from "../config/authority";
+import { roleFieldKey } from "../lib/srl-chrome";
 
 type PDFDoc = InstanceType<typeof PDFDocument>;
 
@@ -71,10 +73,10 @@ const DOC_ID_PREFIX: Record<string, string> = {
 function renderLegalAgreement(
   doc: PDFDoc,
   agreement: LegalAgreement,
-  opts: { carrier?: AgreementCarrierIdentity; signature?: AgreementSignature; shell?: boolean } = {},
+  opts: AgreementPdfOptions = {},
 ): void {
   registerSkillFonts(doc);
-  const { carrier, signature } = opts;
+  const { carrier, signature, countersign } = opts;
   const shell = opts.shell === true;
   const docId = `${DOC_ID_PREFIX[agreement.templateName] ?? "AGR"}-${agreement.version}`;
   // The shell runs a wider margin and a lighter footer than the operational
@@ -92,7 +94,15 @@ function renderLegalAgreement(
       edition: agreement.subtitle,
       cells: [
         { label: "Reference", value: docId },
-        { label: "Effective Date", value: signature ? new Date(signature.signedAt).toISOString().slice(0, 10) : "" },
+        // NEVER BLANK. An empty cell beside a printed label reads as a field
+        // somebody forgot, and an em-dash reads as "not applicable" — neither
+        // is true. The preamble says the Effective Date IS the date of the last
+        // signature, so on an unsigned specimen the honest value is the rule
+        // itself: it takes effect when it is executed.
+        {
+          label: "Effective Date",
+          value: signature ? new Date(signature.signedAt).toISOString().slice(0, 10) : "Upon execution",
+        },
         { label: "Term", value: "One year · auto-renewing" },
         { label: "Governing Law", value: "State of Michigan" },
       ],
@@ -121,7 +131,7 @@ function renderLegalAgreement(
   // v3.8.awo — every drawn string below comes from assembleAgreementSegments,
   // the same assembly the content hash is computed over. A string drawn from
   // anywhere else would be text on the page the hash does not cover.
-  const segments = assembleAgreementSegments(agreement, { carrier, signature });
+  const segments = assembleAgreementSegments(agreement, { carrier, signature, countersign });
   const seg = (kind: AgreementSegment["kind"]) => segments.filter((x) => x.kind === kind);
 
   doc.font(FONT_BODY_ITALIC, 8.5).fillColor(TOKENS.fg3)
@@ -214,6 +224,25 @@ function renderLegalAgreement(
   block(seg("witness")[0]?.text ?? WITNESS_LINE, { font: FONT_BODY_ITALIC, size: 9, gap: 14, align: "left" });
 
   const prefilled: Record<string, string> = {};
+
+  // THE BROKER COLUMN, on EVERY render including an unsigned specimen.
+  //
+  // SRL knows who signs for SRL before anyone has signed anything, so leaving
+  // it blank was never honest — it read as a party that had not decided who
+  // binds it. Role-scoped (B9a): a bare "PRINT NAME" key would fill the
+  // CARRIER column too, printing the broker signatory on the line the carrier
+  // signs, which is exactly why this could not be done before.
+  const BROKER_ROLE = MASTER_AGREEMENT_SIGNATURE_ROLES[0].title;
+  prefilled[roleFieldKey(BROKER_ROLE, "PRINT NAME")] = SIGNATORY_NAME;
+  prefilled[roleFieldKey(BROKER_ROLE, "TITLE")] = SIGNATORY_TITLE;
+
+  // The DATE fills only once there is one. On a specimen the broker date line
+  // stays open, because the agreement has no date until it is executed.
+  if (countersign) {
+    prefilled[roleFieldKey(BROKER_ROLE, "DATE")] =
+      new Date(countersign.at).toISOString().slice(0, 10);
+  }
+
   if (carrier) {
     prefilled["CARRIER LEGAL NAME"] = carrier.legalName;
     if (carrier.mcNumber) prefilled["MC #"] = carrier.mcNumber;
@@ -221,6 +250,18 @@ function renderLegalAgreement(
     if (carrier.ein) prefilled["EIN"] = carrier.ein;
   }
   y = drawSignatureBlock(doc, y, { roles: MASTER_AGREEMENT_SIGNATURE_ROLES, height: sigHeight, prefilledValues: prefilled });
+
+  // The countersign line, DRAWN because it is HASHED. canonicalAgreementText
+  // calls its segment list "the contract between what is shown and what is
+  // signed"; a segment inside the hash and absent from the page would break
+  // that in the direction that matters — the carrier would be bound to a
+  // sentence their copy does not carry.
+  const countersignSeg = seg("countersign")[0]?.text;
+  if (countersignSeg) {
+    y += 6;
+    if (y + 30 > CONTENT_BOTTOM) pageBreak();
+    block(countersignSeg, { font: FONT_BODY_ITALIC, size: 8, color: TOKENS.fg2, align: "left" });
+  }
 
   if (signature) {
     y += 6;
@@ -269,6 +310,13 @@ export type AgreementPdfOptions = {
    * a second signed instrument nobody asked to restyle.
    */
   shell?: boolean;
+  /**
+   * SRL's countersignature, when this render is of an EXECUTED agreement.
+   * Read from the stored row, never rebuilt from authority.ts at render time:
+   * changing the officer must not restate who bound the company on an
+   * agreement already executed.
+   */
+  countersign?: CanonicalCountersign;
 };
 
 /**

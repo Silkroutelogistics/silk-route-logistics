@@ -135,14 +135,20 @@ describe("system emails speak as roles, never persons", () => {
     ).toEqual([]);
   });
 
-  // The complement — "something actually READS these constants" — lands with
-  // B10, which is the commit that wires the execution page to them. Asserting
-  // it here would ship a red gate for two commits, and a gate nobody can read
-  // a signal from is a gate that is off.
-  //
-  // Until then the rule above is UNEXERCISED: zero modules read the constants,
-  // so it cannot yet fail. That is expected, and it is said out loud because a
-  // zero here must not later be mistaken for a clean pass.
+  it("the legal signatory is actually consumed by a document renderer", () => {
+    // The complement of the rule above, and what stops it being vacuous: a
+    // constant nothing reads is the next thing to drift — the workersComp
+    // figure removed in v3.8.azo had been exactly that.
+    const consumers = files
+      .filter((f) => f.endsWith(".ts") && rel(f) !== "config/authority.ts")
+      .filter((f) => /\bSIGNATORY_(NAME|TITLE)\b/.test(read(f)))
+      .map(rel);
+    expect(
+      consumers.length,
+      "nothing reads SIGNATORY_NAME/TITLE — either wire it up or delete it",
+    ).toBeGreaterThan(0);
+  });
+
   it("the COI verification email signs as a department", () => {
     const s = read(path.join(SRC, "services/insuranceVerificationService.ts"));
     expect(/<strong[^>]*>Compliance Department<\/strong>/.test(s),
