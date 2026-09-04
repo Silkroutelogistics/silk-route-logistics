@@ -1,0 +1,59 @@
+{
+  "capturedAt": "2026-09-04",
+  "body": {
+    "Bill of Lading": {
+      "y": 658,
+      "x": 34
+    },
+    "PARTIES": {
+      "y": 586.1,
+      "x": 34
+    },
+    "SHIPMENT DETAILS": {
+      "y": 471.1,
+      "x": 34
+    },
+    "TOTALS:": {
+      "y": 412.1,
+      "x": 40
+    },
+    "SPECIAL INSTRUCTIONS": {
+      "y": 377.3,
+      "x": 44
+    },
+    "RELEASED VALUE": {
+      "y": 343.3,
+      "x": 44
+    },
+    "Per 49 U.S.C.": {
+      "y": 309.1,
+      "x": 34
+    },
+    "SHIPPER · REPRESENTATIVE": {
+      "y": 297.6,
+      "x": 34
+    },
+    "CARRIER · DRIVER": {
+      "y": 297.6,
+      "x": 219.3
+    },
+    "CONSIGNEE · RECEIVER": {
+      "y": 297.6,
+      "x": 404.7
+    }
+  },
+  "letterhead": {
+    "SILK ROUTE LOGISTICS INC.": {
+      "y": 761.9,
+      "x": 120
+    },
+    "Where Trust Travels.": {
+      "y": 714.1,
+      "x": 120
+    },
+    "TRACK": {
+      "y": 710.6,
+      "x": 521.5
+    }
+  }
+}

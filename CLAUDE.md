@@ -525,6 +525,25 @@ Content sweeps that verify only the diff are the bug that produced the v3.7.c st
   run — but it was therefore also not in ANY gate, and it sat red for fifteen
   of fifteen cases for an entire arc while nobody was obliged to look. A gate
   nobody runs is a gate that is off. Now it has a name and a place in this list.
+- **AND `npm run verify:bol` from `backend/`, on any commit that touches the
+  Bill of Lading or the shared chrome it draws with.** Three gates behind one
+  name: the fit matrix (six line-item shapes, one page each, terms strip below
+  content, content above the footer rule), the one-page smoke, and the anchor
+  parity gate.
+
+  **The anchor gate exists because a render pin cannot answer the question the
+  BOL migration asks.** Moving the BOL onto shared chrome moves its pin by
+  construction on nearly every commit, and a moved pin proves only that
+  something changed. Acceptance is PARITY, so the gate measures it: body
+  anchors must hold to pixel-verified v2.9 canon, while letterhead anchors are
+  expected to move once to the operational register and are reported rather
+  than enforced. Re-capture deliberately with `--capture`, and say in the commit
+  what moved and why.
+
+  Same reasoning as `verify:rc` above, and the same history: these two BOL
+  gates existed for months wired to nothing — no npm script, no CI job — so
+  they ran only when somebody remembered. A gate nobody runs is a gate that is
+  off.
 - **AND `npm run test:e2e:local` from the repo root, on any commit that changes a
   contract E2E exercises** — an endpoint's request or response shape, an
   agreement version, a compliance verdict, an auth or signing path. Added
