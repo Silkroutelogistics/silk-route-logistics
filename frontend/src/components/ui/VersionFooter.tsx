@@ -17007,7 +17007,19 @@
 // subtitle with lineBreak:false, so a longer string overprints rather than
 // wraps — 192.7pt of 540pt at Playfair Italic 8.5 against 112.6pt before, and
 // nothing else renders on that row.
-export const SRL_VERSION = "3.8.azp";
+// v3.8.azq B9a — signature prefills become role-scoped.
+//
+// Both roles of a master agreement carry fields named PRINT NAME, TITLE,
+// SIGNATURE and DATE, and drawSignatureBlock resolved prefills by bare field
+// name. Filling the broker's PRINT NAME therefore also filled the CARRIER's —
+// printing the broker's signatory on the line the carrier signs. That is why
+// the broker block could not be prefilled at all, and why every executed BCA
+// has shipped with a blank broker column.
+//
+// A PURE WIDENING: role-scoped key first, bare key as fallback, so with no
+// scoped key the resolution is byte-identical. All 14 render pins hold on this
+// commit — including both Quick Pay pins, which is the proof.
+export const SRL_VERSION = "3.8.azq";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

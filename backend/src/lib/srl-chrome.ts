@@ -752,6 +752,18 @@ export const MASTER_AGREEMENT_SIGNATURE_ROLES: SignatureRole[] = [
   },
 ];
 
+/**
+ * Key for a role-scoped prefill: roleFieldKey(role.title, 'PRINT NAME').
+ *
+ * Exported so no caller hand-concatenates. A separator typo yields a key that
+ * matches nothing, and a prefill that silently fails to appear is the hardest
+ * kind of blank to notice on a signature page — it looks exactly like a field
+ * that was meant to be signed by hand.
+ */
+export function roleFieldKey(roleTitle: string, field: string): string {
+  return roleTitle + '::' + field;
+}
+
 export function drawSignatureBlock(
   doc: PDFDoc,
   yTop: number,
@@ -811,7 +823,18 @@ export function drawSignatureBlock(
       // Pre-filled value (if present) renders just above the underline in
       // primary text color. Caller passes a field-name → value map; bare
       // fields fall through to underline-only for handwritten entry.
-      const preVal = prefilledValues[f];
+      // ROLE-SCOPED FIRST, bare field name second.
+      //
+      // Both roles of a master agreement carry fields called PRINT NAME,
+      // TITLE, SIGNATURE and DATE. A bare key therefore fills BOTH columns:
+      // a bare prefilledValues["PRINT NAME"] would print the BROKER signatory
+      // in the CARRIER column too, on a document the carrier signs. That is why
+      // the broker block could not be prefilled before this.
+      //
+      // The bare lookup is kept as the fallback, so this is a PURE WIDENING:
+      // with no role-scoped key present the resolution is byte-identical to
+      // before, which is what the unmoved pins on this commit prove.
+      const preVal = prefilledValues[roleFieldKey(role.title, f)] ?? prefilledValues[f];
       if (preVal) {
         doc.font(FONT_BODY, 8.5).fillColor(TOKENS.fg1);
         doc.text(preVal, x, fieldY + 10, { width: colInnerW, lineBreak: false });
