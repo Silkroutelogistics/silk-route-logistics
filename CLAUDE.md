@@ -3347,6 +3347,46 @@ Most are inert history and **should** survive — `LoadActivity` and `LoadTracki
     not unique to the thing under test proves nothing about it.** A nonce now makes
     each mint distinct, with the reason recorded in the proof.
 
+254. **RC page-1 band rail — HALTED with the geometry measured (2026-09-04, C12).**
+
+    `docs/design/rc.html` puts a navy vertical rail on the left of each page-1
+    band. The measurements, so the sequence starts from facts rather than
+    re-deriving them: `.ka-band { grid-template-columns: .44in 1fr; margin-top:
+    7px; border-top: 1px solid var(--gold) }`; `.ka-lbl` is navy fill, cream
+    text, `writing-mode: vertical-rl` + `rotate(180deg)` (reads bottom-to-top),
+    6.5pt, `.24em` tracking, uppercase bold, `padding: 12px 0`; `.ka-body {
+    padding: 8px 0 8px 20px }`. In points: rail **31.68pt** at `x = MARGIN`,
+    body at `x = MARGIN + 51.68`, body width **488.32** (from 540).
+
+    **The rail and the body rewrite are one change.** The rail is only chrome if
+    the body stays where it is, and it does not — every draw in the page-1 body
+    shifts right and narrows. That is 36 geometry sites (22 `MARGIN`, 14
+    `CONTENT_W`) between the header and the `addPage`, and every
+    `lineBreak: false` string in them needs re-measuring against 488 rather than
+    540, which `verify-rc-matrix` cannot catch because it detects footer
+    collision and missing strings, not intra-line overprint.
+
+    **The harder half is that the bands are not the sections.** The design's
+    five bands are Contacts, Carrier, Shipment, Stops, Rate. The RC has no
+    contacts band, and it leads with the stops. Reaching the design reorders
+    what a carrier reads first on a document that binds them — a content
+    decision that belongs to whoever owns the document, not to a layout pass.
+
+    **Why nothing shipped.** A rail on the sections that happen to have labels
+    already and not on the rest is visually worse than none; and a
+    `drawKaBand` primitive with no caller is dead code the reachability gate
+    flags. So the sequence is: decide the band order and the contacts content,
+    then shift the body, then re-measure the strings, then the rail is a small
+    commit at the end.
+
+    **Downstream:** `EXPECTED_PAGES` in `verify-rc-matrix.ts` stays at **3**
+    until this lands. Page 2 has 39pt free after C11 and the acceptance strip
+    needs 164; the ~125pt comes from folding the INVOICING block into the
+    page-1 fine print, which is where the design puts it and which is part of
+    this rewrite. Loosening the 738 floor instead would make the gate pass
+    while the document got worse.
+
+
 ## §14 LEGAL / COMPLIANCE STATUS
 
 - Property broker under 49 U.S.C. §§ 13904, 13906

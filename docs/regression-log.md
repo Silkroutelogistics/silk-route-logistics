@@ -3769,3 +3769,76 @@ rendered line on both documents.
 `CARRIER-ISSUED · BINDING`. SRL issues the Rate Confirmation and tenders it to
 the carrier, so the document was describing its own provenance backwards, in the
 one line whose job is to say what it is.
+
+---
+
+## 2026-09-04 — C11: a 13pt guess was buying a 374pt page
+
+**The Rate Confirmation's acceptance block had one column.** It printed
+`CARRIER · ASSIGNED` and nothing for the broker, so the document a carrier signs
+named no counterparty. It now prints two, through the role-scoped
+`drawSignatureBlock` widened in B9a, with the broker side prefilled from
+`SIGNATORY_NAME` / `SIGNATORY_TITLE` in `config/authority.ts` — the same
+identity source as the agreements, so a Rate Confirmation and a BCA cannot name
+different officers of the same company.
+
+**The third page was not the signature block, and shrinking it proved that.**
+Bracketing the signature reserve at 150 / 130 / 110 / 90 produced **0 of 15
+fixtures at two pages**. Instrumenting `y` at the signature call returned
+**211.2 with 526.8pt available** — the block was already on page 3, carried
+there by something upstream.
+
+That something was `rcEnsureRoom(160)` ahead of INVOICING:
+
+| | |
+|---|---|
+| available on page 2 | **146.9pt** |
+| reserved | **160pt** |
+| actually consumed by the chain | **116.9pt** |
+
+A 43pt over-estimate, short by **13.1pt**, opening a third page that then
+carried **374pt of dead space**. The reserve was written when the block was an
+unmeasurable pile of inline literals, and its own comment says it was sized
+"~90pt plus ~62pt" — a guess, honestly labelled as one, that nobody had
+re-measured since.
+
+**The fix measures instead of guessing.** The anti-fraud paragraph was hoisted
+to a const so it can be measured at all, and the reserve is now
+`heightOfString` over the invoice packet plus the anti-fraud line plus the
+tender banner **only when a live tender will actually draw it**. This is not a
+loosening of the split-prevention the reserve exists for — it reserves exactly
+what the next four draws consume, so it is also **stricter** than 160 in the
+case a long packet plus a banner would have overrun the old guess. Page 2 dead
+space fell from **161pt to 39pt**.
+
+**The lesson is the shape of the search, not the arithmetic.** Four rounds were
+spent tuning the thing at the bottom of the page because that is where the
+symptom was. The measurement that ended it — print `y` at the call site — took
+one line and should have been the first move. When a block "does not fit", the
+first question is whether it was ever asked to.
+
+## 2026-09-04 — C12 HALTED: the rail cannot land without reordering a binding document
+
+`docs/design/rc.html` puts a navy vertical rail (`.ka-band`, `.44in` wide,
+cream label set bottom-to-top) on the left of each page-1 band, with the body
+indented 20pt beyond it. Shipping the rail therefore shifts the page-1 body
+right by 51.68pt and narrows it from 540 to 488 — which is the body rewrite,
+not chrome around it. The two clauses of C12 are one change.
+
+**And the bands are not the sections the RC currently has.** The design's five
+bands are Contacts, Carrier, Shipment, Stops, Rate. The document leads with the
+stops and has no contacts band at all. Reaching the design means reordering
+what a carrier reads first on a document that binds them — a content decision,
+not a layout one.
+
+Halted rather than half-applied. A rail on three of six sections is worse than
+no rail, and a primitive with no caller is dead code this repo's own
+reachability gate would flag. Recorded at §13.3 Item 254 with the geometry, so
+the sequence can start from measurements rather than re-derive them.
+
+**EXPECTED_PAGES stays at 3** for the same reason. With INVOICING now on page 2
+there are 39pt free and the acceptance needs 164; two pages requires removing
+~125pt, and the design shows where it goes — the invoicing instructions fold
+into the page-1 fine print, which is the rewrite above. The alternative was
+loosening the 738 floor, which the directive forbids and which would have
+turned a real constraint into a passing number.
