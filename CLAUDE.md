@@ -3352,7 +3352,7 @@ Most are inert history and **should** survive — `LoadActivity` and `LoadTracki
     not unique to the thing under test proves nothing about it.** A nonce now makes
     each mint distinct, with the reason recorded in the proof.
 
-256. **RC page-1 band rail — DECIDED, then halted again on measurement (2026-09-04, C12).**
+256. **RC page-1 band rail — measured, re-scoped to the gutter, SHIPPED (2026-09-04, C12).**
 
     `docs/design/rc.html` puts a navy vertical rail on the left of each page-1
     band. The measurements, so the sequence starts from facts rather than
@@ -3470,6 +3470,39 @@ Most are inert history and **should** survive — `LoadActivity` and `LoadTracki
     with the arithmetic above in hand. Nothing was shipped for the rail or the
     fold; the carrier-column prefill from the same instruction shipped
     separately as v3.8.azy, being independent of all of this.
+
+
+    **RESOLVED 2026-09-04 by the owner, on the measurements above.**
+
+    **The two-page map is RETIRED. The RC stays three pages, `EXPECTED_PAGES`
+    stays 3, and page 3 is the acceptance page BY DESIGN rather than by
+    overflow.** Recorded here so it is not re-proposed: two pages needs 140.3pt
+    freed from page 2 while the entire invoicing chain is 123.2pt, and page 1
+    has 20.0pt of slack against a 738 floor with DOCK & DISPATCH (160.4pt)
+    already deferring to page 2. The fold has nowhere to land and would be 17pt
+    short if it did. Reaching two pages therefore means removing content from
+    page 1 — a content decision, declined.
+
+    **The rail SHIPS, in the gutter rather than the body.** Drawn on RC page 1
+    only, inside the left margin at x = 6 width 22, spanning from 8pt below the
+    letterhead gold rule (`MARGIN + 80`) to 8pt above the footer gold rule
+    (`PAGE_H - MARGIN - 16`). The body stays at `MARGIN` and `CONTENT_W`.
+
+    That placement is what makes it affordable: no shared helper is widened,
+    none of the 28 `lineBreak: false` sites needs re-measuring, and page-1
+    content does not grow on a page with 20pt of slack. `srl-chrome.ts` is not
+    touched at all, which is why exactly ONE render pin can move.
+
+    **Verified rather than asserted.** The pin diff is exactly
+    `rate-confirmation`; the other ten hold. Removing the rail block returns all
+    fourteen pins to baseline, which proves the rail is solely what moved it.
+    `verify-rc-matrix` passes all 15 cases with page counts AND dead-space
+    figures identical to before, which is the evidence the body did not move.
+    Collision checked on seven fixtures: the minimum x of any text run on page 1
+    is 36.0, so the rail's right edge clears by 8pt everywhere.
+
+    **No label on the rail**, deliberately: the design's rail names the ONE band
+    it borders, and a page-spanning rail borders all of them.
 
 
 257. ~~**AUTO-DEPLOY IS STILL ON, THE GATE IS DECORATIVE, AND A RED-CI COMMIT

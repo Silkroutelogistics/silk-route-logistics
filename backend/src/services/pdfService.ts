@@ -1727,6 +1727,47 @@ export function generateEnhancedRateConfirmation(load: EnhancedRCLoadData, formD
     includeQr: false,
   });
 
+  // ── v3.8.azz — THE .ka-band RAIL, IN THE GUTTER ─────────────────────────
+  //
+  // docs/design/rc.html puts a navy rail down the left of each page-1 band,
+  // with the body indented past it. That version was measured and retired:
+  // every page-1 helper hardcodes MARGIN and CONTENT_W inside srl-chrome.ts,
+  // two of them are shared with other generators, and moving the body to
+  // MARGIN + 51.68 meant widening seven shared helpers and re-measuring 28
+  // lineBreak:false sites by hand against 488.32 — on a page with 20pt of
+  // slack, which narrowing would have consumed. §13.3 Item 256 carries the
+  // arithmetic.
+  //
+  // The rail lands in the LEFT MARGIN instead. The body does not move, no
+  // shared helper is touched, no string is re-measured, and nothing outside
+  // this function can change — which is why exactly one render pin moves.
+  //
+  // GEOMETRY, derived rather than hardcoded so it tracks MARGIN:
+  //   top    = the letterhead gold rule (yTop + 80, i.e. MARGIN + 80) + 8
+  //   bottom = the footer gold rule (PAGE_H - MARGIN - 16) - 8
+  //   x      = 6, width 22, so its right edge sits 8pt clear of MARGIN.
+  //
+  // Page 1 only, and drawn here rather than in the footer pass because that
+  // pass runs over every buffered page.
+  //
+  // Print note, recorded rather than silently designed around: x=6 puts the
+  // rail's left edge inside the non-printable margin of most desk printers,
+  // so a printed copy may show a narrower bar than the PDF. It degrades to a
+  // thinner rail rather than breaking, and moving it right would be a
+  // deviation from the ratified geometry rather than a fix.
+  //
+  // NO LABEL, deliberately. The design's rail carries the band name because
+  // each rail borders ONE band. This one spans the whole page and borders all
+  // of them, so a band name would be false and the document title would just
+  // be the title again, 90 degrees rotated.
+  const RAIL_TOP = MARGIN + 80 + 8;
+  const RAIL_BOTTOM = PAGE_H - MARGIN - 16 - 8;
+  doc.save()
+     .fillColor(TOKENS.navy)
+     .rect(6, RAIL_TOP, 22, RAIL_BOTTOM - RAIL_TOP)
+     .fill()
+     .restore();
+
   // Sprint 49 (Item 119) — AE header sub-line. Renders below the subtitle
   // when poster relation is included on the load. Skips cleanly when null
   // (older RCs pre-Sprint-49 controller include extension, or system-generated
