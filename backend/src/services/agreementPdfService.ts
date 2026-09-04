@@ -169,26 +169,78 @@ function renderLegalAgreement(
   const table = (packed: string) => {
     const rows = packed.split(ROW_SEP).map((r) => r.split(CELL_SEP));
     const cols = Math.max(...rows.map((r) => r.length));
-    const colW = CONTENT_W / cols;
-    const ROW_H = 18;
-    const needed = ROW_H * rows.length + 10;
-    if (y + needed > CONTENT_BOTTOM) pageBreak();
-    y += 4;
-    rows.forEach((cells, i) => {
-      const isHeader = i === 0;
+
+    // v3.8.aza T1 — M/CW, not MARGIN/CONTENT_W. Every other block in this
+    // renderer is shell-aware; the table was not, so on the shell path it drew
+    // 18pt left of the body and 18pt wider on each side. A second defect, found
+    // while fixing the first, and invisible on the legacy path where the two
+    // pairs happen to be equal.
+    const colW = CW / cols;
+    const PAD_X = 4;
+    const PAD_Y = 5;
+    const GAP_Y = 6;
+
+    // THE DEFECT THIS REPLACES. Rows were laid at a fixed ROW_H = 18 while the
+    // paragraph 24 Terms cells run 300+ characters and wrap to five or six
+    // lines at a 262pt column. y advanced 18pt regardless, so the rows
+    // INTERLEAVED: on the executed BCA, "Layover" sat at y=505 next to
+    // Detention's fourth line at y=499.7, and TONU at 487 next to Layover's
+    // continuation at 493. Reading down the Terms column of a signed
+    // instrument gave sentences from four different charges, alternating.
+    //
+    // Height is now the tallest cell in the row at its own column width, which
+    // is the only number that can be right for a row whose cells differ in
+    // length by two orders of magnitude.
+    const rowHeight = (cells: string[], isHeader: boolean): number => {
+      doc.font(isHeader ? FONT_BODY_BOLD : FONT_BODY, 9);
+      let h = 0;
+      for (const cell of cells) {
+        h = Math.max(h, doc.heightOfString(cell, { width: colW - PAD_X * 2 }));
+      }
+      return h + PAD_Y * 2;
+    };
+
+    const drawRow = (cells: string[], isHeader: boolean, h: number): void => {
       doc.font(isHeader ? FONT_BODY_BOLD : FONT_BODY, 9)
-         .fillColor(isHeader ? TOKENS.navy : TOKENS.fg1);
+         .fillColor(isHeader ? TOKENS.navy : (shell ? TOKENS.ink : TOKENS.fg1));
       cells.forEach((cell, c) => {
-        doc.text(cell, MARGIN + c * colW + 4, y + 5, { width: colW - 8, lineBreak: false });
+        // No lineBreak:false. The cell WRAPS at its column width, which is what
+        // makes the measured height above describe what is actually drawn.
+        doc.text(cell, M + c * colW + PAD_X, y + PAD_Y, { width: colW - PAD_X * 2 });
       });
       // A rule under the header only. Body rows are separated by spacing, which
       // keeps a short terms table from reading like a spreadsheet.
       if (isHeader) {
         doc.save().strokeColor(TOKENS.gold).lineWidth(0.6)
-           .moveTo(MARGIN, y + ROW_H - 2).lineTo(MARGIN + CONTENT_W, y + ROW_H - 2).stroke().restore();
+           .moveTo(M, y + h - 2).lineTo(M + CW, y + h - 2).stroke().restore();
       }
-      y += ROW_H;
-    });
+      y += h + (isHeader ? 2 : GAP_Y);
+    };
+
+    const header = rows[0];
+    const headerH = rowHeight(header, true);
+
+    y += 4;
+    // Break before the header rather than orphaning it above a page boundary.
+    // The first body row is included so a header never lands alone at the foot.
+    const firstBodyH = rows.length > 1 ? rowHeight(rows[1], false) : 0;
+    if (y + headerH + 2 + firstBodyH > CONTENT_BOTTOM) pageBreak();
+    drawRow(header, true, headerH);
+
+    for (let i = 1; i < rows.length; i++) {
+      const h = rowHeight(rows[i], false);
+      if (y + h > CONTENT_BOTTOM) {
+        pageBreak();
+        // Repeat the header. A continued table whose columns are unlabelled is
+        // a column of dollar figures with nothing saying what they charge for.
+        drawRow(header, true, headerH);
+      }
+      // A row taller than a whole page would still overflow here, deliberately:
+      // one break is attempted, then it draws. Splitting a single charge's
+      // terms across a page break on a signed instrument is worse than a long
+      // row, and no row in either agreement is close to a page.
+      drawRow(rows[i], false, h);
+    }
     y += 8;
   };
 
