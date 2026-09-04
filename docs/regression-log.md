@@ -3842,3 +3842,97 @@ there are 39pt free and the acceptance needs 164; two pages requires removing
 into the page-1 fine print, which is the rewrite above. The alternative was
 loosening the 738 floor, which the directive forbids and which would have
 turned a real constraint into a passing number.
+
+---
+
+## 2026-09-04 — T1: the paragraph 24 table was interleaving its rows
+
+**The accessorial table on the executed Broker-Carrier Agreement was
+unreadable, and every string in it was correct.** `table()` laid rows at a fixed
+`ROW_H = 18` while the Terms cells run 300+ characters and wrap to five or six
+lines at a 262pt column. y advanced 18pt per row regardless. Measured before the
+fix:
+
+```
+y=523.1  Detention             Two (2) hours free at each stop...
+y=511.4                        time is per stop and does not carry over...
+y=505.1  Layover                $250.00 per day where CARRIER is required...
+y=499.7                        free time, $50.00 per hour, capped at $250.00...
+y=487.1  Truck Order Not Used   $200.00 where BROKER or the shipper cancels...
+```
+
+Reading down the Terms column gave sentences from four different charges,
+alternating — on the instrument that states what SRL pays a carrier for
+detention, layover and TONU. **pdf-parse and every text-based check reported a
+healthy document**, because the defect is geometric and only a coordinate can
+see it.
+
+Rows are now measured (tallest cell at its own column width), cells wrap, and a
+row that would cross the floor breaks first, **repeating the header** on the
+continuation page.
+
+**A second defect, found while fixing the first.** The table drew at `MARGIN`
+and `CONTENT_W` while every other block in the same renderer uses the
+shell-aware `M` and `CW`. On the shell path it started 18pt left of the body and
+ran 18pt wider each side — invisible on the legacy path, where the two pairs are
+equal.
+
+**THE GUARD WAS VACUOUS ON ITS FIRST WRITING, AND THE INJECTION IS THE ONLY
+REASON I KNOW.** It grouped runs by "nearest label at or above", which cannot
+detect interleaving: a run belonging to Detention but drawn below Layover's
+label is simply reassigned to Layover, so the bands never overlap however badly
+the rows are laid out. **It passed the `ROW_H` injection.** A grouping rule that
+is itself positional can never observe a positional defect.
+
+Runs are now attributed by CONTENT — matched to the row whose Terms text
+contains them, read from the agreement SOURCE so the guard cannot drift from the
+document, with ambiguous fragments skipped and a floor on how many were
+attributed so skipping cannot hollow it out. Re-injected, it fails on both paths
+naming the rows and the coordinates.
+
+**Both Quick Pay pins held.** The Quick Pay Agreement carries no table, so the
+pins that did NOT move are the evidence the change reached only documents that
+do.
+
+## 2026-09-04 — the flip, and what it turned out to be
+
+`shell: true` is wired at **both** carrier-facing BCA render sites: the
+on-demand download and the executed copy stored at signing. A stored copy that
+does not look like the copy a carrier can pull is two documents for one
+agreement. The download route is conditional on the template, because that one
+route serves both agreements and the Quick Pay Agreement has no shell pin.
+
+**No RC or invoice defaults were wired, because there are none.** Neither
+generator takes a restyle flag — the C6 to C11 work was applied directly in the
+production generators, which is why those pins moved commit by commit rather
+than sitting behind a switch. Reported rather than invented.
+
+**No pin moved, and that is what the flip's guard exists for.**
+`documentRenderPins` calls the renderer directly with an explicit `shell` value,
+so it pins both variants and is structurally blind to which one the ROUTE asks
+for. Without `agreementShellFlip.test.ts`, `shell: true` could be reverted at
+either site and every pin, the typecheck and the whole suite would stay green
+while carriers silently went back to the old document.
+
+## 2026-09-04 — the terms version was on the row and not in the bytes
+
+Confirming the flip by downloading an issued Rate Confirmation through the real
+carrier portal route surfaced a defect nothing else could have:
+**`Terms version unversioned` printed on a document whose row said
+`2026-08-31-v1`.**
+
+`sendRateConfirmation` rendered the PDF, hashed it and stored it, and only THEN
+stamped the row. The frozen artifact — the bytes that are hashed, emailed and
+served on every later download — predated the stamp. The code's own comment
+claimed the version was "frozen with the bytes"; the ordering defeated it.
+Pre-existing since v3.8.axt.
+
+The version is now decided before the render and one variable feeds both the
+rendered formData and the row.
+
+**And it took two attempts to see, because my own instrument lied twice.** The
+first `docker exec` heredocs wrote **0-byte files** — `docker exec` needs `-i`
+to accept stdin — so an UPDATE I believed had applied never ran, and the gate
+correctly refusing looked like a broken gate. Then the columns turned out to be
+snake_case (`driver_phone_verified`) where the model is camelCase. Both failures
+pointed at the subject; neither was the subject. §19 Sub-pattern 22.

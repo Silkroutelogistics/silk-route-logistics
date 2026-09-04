@@ -2876,6 +2876,11 @@ Most are inert history and **should** survive — `LoadActivity` and `LoadTracki
     it was the interim the setup doc describes.
 
     **HOOK-ONLY MODE — auto-deploy disabled 2026-09-01, confirmed by Wasi.**
+    **SUPERSEDED 2026-09-04 — see Item 255. Auto-deploy is demonstrably still
+    on: `9a74c91a` reached production at 04:44:48Z while its backend job was
+    still running and its deploy job was SKIPPED. The paragraph below records
+    what was believed at the time and is retained for that reason, not because
+    it still holds.**
     `Deploy to Render` is now the sole path to production. The run that earned
     the switch is **33505366194** (`32c91846`, 12:02:18Z), whose deploy log reads
     `Deploy hook secret present.` rather than the warning branch. The ordering the
@@ -3385,6 +3390,54 @@ Most are inert history and **should** survive — `LoadActivity` and `LoadTracki
     page-1 fine print, which is where the design puts it and which is part of
     this rewrite. Loosening the 738 floor instead would make the gate pass
     while the document got worse.
+
+
+255. **AUTO-DEPLOY IS STILL ON, THE GATE IS DECORATIVE, AND A RED-CI COMMIT SHIPPED (2026-09-04).**
+
+    Item 251 records hook-only mode as reached on 2026-09-01 — auto-deploy
+    disabled, `Deploy to Render` the sole path to production, proven by a
+    continuous-sampling run showing no restart between push and hook. **That is
+    not today's behaviour**, and the correction is measured rather than
+    inferred:
+
+    | | |
+    |---|---|
+    | push `9a74c91a` / CI run created | 04:42:59Z |
+    | backend job | 04:43:01 → **04:46:30, failure** |
+    | **production migration applied** | **04:43:59Z** |
+    | **production process booted** | **04:44:48Z** |
+    | `Deploy to Render` job | **skipped** (needs backend) |
+
+    Production was serving the new SHA **two minutes before CI finished**, and
+    the deploy job never ran at all. The hook cannot have done this. Render's
+    own auto-deploy did.
+
+    **So a commit whose CI backend job FAILED reached production, gated by
+    nothing.** The failure was real (`pdf-parse` missing from backend deps, see
+    v3.8.azx) — harmless in effect, since it was a test-only import, but the
+    point is that nothing checked. This is precisely the residual risk Item 251
+    names in its own closing paragraph, live.
+
+    **Two readings, and I cannot distinguish them from here:** auto-deploy was
+    re-enabled after 2026-09-01, or it was never actually disabled and the
+    single-deploy proof recorded there measured a window in which the hook
+    happened to be the only thing that fired. The proof was sound for what it
+    sampled — it showed no restart between push and hook on that occasion — but
+    a docs-only commit deploying identically by either path cannot separate the
+    two mechanisms, only their timing.
+
+    **The fix is a Render dashboard action and is Wasi's**, deliberately not
+    taken here: turning auto-deploy off is outward-facing and irreversible from
+    a session, and the ordering in `docs/internal/render-deploy-gate-setup.md`
+    matters — the hook is already proven (Item 251's run 33505366194 logged
+    `Deploy hook secret present.`), so the remaining step is only to disable
+    auto-deploy in the service settings. Until that happens the deploy gate
+    refuses nothing: it can decline to deploy, and Render deploys anyway.
+
+    **Going-forward, and this is the cheap half:** a session that pushes must
+    read the CI job list BY NAME afterwards rather than inferring from
+    production being healthy. Production being on the new SHA is evidence that
+    *something* deployed, not that anything approved it.
 
 
 ## §14 LEGAL / COMPLIANCE STATUS
