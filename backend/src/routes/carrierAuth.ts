@@ -848,7 +848,17 @@ router.get("/agreement/:type/pdf", authenticate, authorize("CARRIER"), async (re
           at: signed.counterSignedAt,
         }
       : undefined;
-  const doc = generateAgreementPdf(agreement, { carrier: identity, signature, countersign });
+  // v3.8.azw — THE FLIP. The Design System shell is now what a carrier
+  // downloads, for the Broker-Carrier Agreement only. Conditional rather than
+  // unconditional because this one route serves BOTH agreements: the Quick Pay
+  // Agreement has no shell pin, so shipping it through the shell would restyle a
+  // second signed instrument on evidence nobody has taken.
+  const doc = generateAgreementPdf(agreement, {
+    carrier: identity,
+    signature,
+    countersign,
+    shell: agreement.templateName === BROKER_CARRIER_AGREEMENT.templateName,
+  });
   res.setHeader("Content-Type", "application/pdf");
   res.setHeader("Content-Disposition", `inline; filename="${agreementPdfFilename(agreement)}"`);
   doc.pipe(res);
@@ -1241,6 +1251,10 @@ router.post("/sign-bca", authenticate, authorize("CARRIER"), validateBody(signBc
       // here would be a second construction of one fact, free to drift from
       // the hash that is supposed to cover it.
       countersign: bcaCountersign,
+      // Same shell as the download route above. A stored executed copy that
+      // does not look like the copy the carrier can pull on demand is two
+      // documents for one agreement.
+      shell: true,
     });
     const url = await uploadFileToPath(buf, `agreements/bca-${agreement.id}.pdf`, "application/pdf");
     await prisma.carrierAgreement.update({ where: { id: agreement.id }, data: { documentUrl: url } });
