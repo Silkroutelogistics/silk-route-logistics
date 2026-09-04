@@ -39,8 +39,8 @@ import { fileURLToPath } from "node:url";
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const CONTAINER = process.env.E2E_LOCAL_CONTAINER || "srl-e2e-local";
 const PG_PORT = process.env.E2E_LOCAL_PG_PORT || "55440";
-const BACKEND_PORT = 3010; // playwright.config.ts
-const FRONTEND_PORT = 4000; // playwright.config.ts
+const BACKEND_PORT = 3110; // playwright.config.ts — dedicated, off the dev-server range
+const FRONTEND_PORT = 4100; // playwright.config.ts
 
 /** Keys this script relies on. Absent from ci.yml => fail, never guess. */
 const REQUIRED_KEYS = [

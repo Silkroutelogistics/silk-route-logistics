@@ -39,8 +39,15 @@ import {
   RC_PDF_REQUIRED,
 } from "./helpers/pdf";
 
-const BACKEND_API = process.env.E2E_BACKEND_API || "http://localhost:3010/api";
-const FRONTEND_BASE = process.env.E2E_FRONTEND_BASE || "http://localhost:4000";
+// v3.8.bae — these MUST track playwright.config.ts. Neither env var is set
+// anywhere, so these fallbacks are not fallbacks: they are the values. When
+// the ports moved off the dev-server range, leaving these behind would have
+// pointed the suite at :3010 while Playwright served :3110 — and :3010 is
+// what `npm run dev` binds, so the suite could have run against a developer
+// database instead of the throwaway container. e2ePortParity.test.ts holds
+// the four files together.
+const BACKEND_API = process.env.E2E_BACKEND_API || "http://localhost:3110/api";
+const FRONTEND_BASE = process.env.E2E_FRONTEND_BASE || "http://localhost:4100";
 
 test.describe.configure({ mode: "serial" });
 

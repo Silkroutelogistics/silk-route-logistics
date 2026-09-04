@@ -181,8 +181,8 @@ jobs:
       ENCRYPTION_KEY: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
       E2E_BYPASS_OTP: "true"
       E2E_FIXTURES: "true"
-      NEXT_PUBLIC_API_URL: http://localhost:3010/api
-      PORT: "3010"
+      NEXT_PUBLIC_API_URL: http://localhost:3110/api
+      PORT: "3110"
 
     steps:
       - uses: actions/checkout@v4
