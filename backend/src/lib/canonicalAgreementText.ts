@@ -28,7 +28,9 @@ import type { LegalAgreement } from "../data/agreements";
 
 /** A drawable unit. `kind` selects the style; `text` is what is both drawn and hashed. */
 export interface AgreementSegment {
-  kind: "effective-note" | "preamble" | "heading" | "clause" | "table" | "witness" | "attestation";
+  kind:
+    | "effective-note" | "preamble" | "heading" | "clause" | "table"
+    | "witness" | "countersign" | "attestation";
   text: string;
 }
 
@@ -71,6 +73,44 @@ export const WITNESS_LINE =
  * and it deliberately carries the ISO instant beside it (v3.8.awj) so a reader
  * can reconcile the rendered string against the stored value.
  */
+/**
+ * SRL's countersignature, applied by the system at the moment the carrier
+ * accepts.
+ *
+ * WHY A SYSTEM COUNTERSIGN IS A REAL SIGNATURE. SRL issues the agreement and
+ * tenders it; the carrier's acceptance is the last act needed to form it. The
+ * countersign records that the company bound itself through a named officer at
+ * that instant, which is what an executed instrument requires — an agreement
+ * with one signature and a blank facing column is not obviously executed by
+ * both parties, and that ambiguity is worth nothing to SRL in a dispute.
+ *
+ * It is NOT a claim that a person typed anything. `at` is the server clock at
+ * acceptance and the name and title come from config/authority.ts, which is
+ * why they are stored ON THE ROW rather than looked up at render time: changing
+ * the officer must not silently restate who bound the company on agreements
+ * already executed.
+ */
+export interface CanonicalCountersign {
+  name: string;
+  title: string;
+  at: Date | string;
+}
+
+/**
+ * The countersign line, deterministic and ISO-stamped for the same reason the
+ * attestation is: a reader must be able to reconcile the rendered string
+ * against the stored columns.
+ */
+export function countersignText(cs: CanonicalCountersign): string {
+  const at = new Date(cs.at);
+  const human = at.toISOString().replace("T", " ").slice(0, 16);
+  return norm(
+    `Countersigned for Silk Route Logistics Inc. by ${cs.name}, ${cs.title}` +
+      ` on ${human} UTC, applied automatically on the Carrier's acceptance.` +
+      `\nCountersigned at (UTC, ISO 8601): ${iso(at)}`,
+  );
+}
+
 export function attestationText(sig: CanonicalSignature): string {
   const signedAt = new Date(sig.signedAt);
   const human = signedAt.toISOString().replace("T", " ").slice(0, 16); // YYYY-MM-DD HH:MM
@@ -97,7 +137,11 @@ export function attestationText(sig: CanonicalSignature): string {
  */
 export function assembleAgreementSegments(
   agreement: LegalAgreement,
-  opts: { carrier?: CanonicalCarrier; signature?: CanonicalSignature } = {},
+  opts: {
+    carrier?: CanonicalCarrier;
+    signature?: CanonicalSignature;
+    countersign?: CanonicalCountersign;
+  } = {},
 ): AgreementSegment[] {
   const out: AgreementSegment[] = [];
 
@@ -127,6 +171,14 @@ export function assembleAgreementSegments(
     }
   }
   out.push({ kind: "witness", text: WITNESS_LINE });
+  // ORDER IS FIXED AND MIRRORS THE PAGE: witness line, then the execution
+  // block (of which the countersign is the broker half), then the attestation
+  // strip. Only the order matters for the hash, but matching the render keeps
+  // the canonical text readable as the document rather than as a dump.
+  //
+  // Absent on an unsigned specimen, so a blank form and an executed copy hash
+  // differently — which they must, because they are different documents.
+  if (opts.countersign) out.push({ kind: "countersign", text: countersignText(opts.countersign) });
   if (opts.signature) out.push({ kind: "attestation", text: attestationText(opts.signature) });
 
   return out;
@@ -139,7 +191,11 @@ export function assembleAgreementSegments(
  */
 export function assembleAgreementText(
   agreement: LegalAgreement,
-  opts: { carrier?: CanonicalCarrier; signature?: CanonicalSignature } = {},
+  opts: {
+    carrier?: CanonicalCarrier;
+    signature?: CanonicalSignature;
+    countersign?: CanonicalCountersign;
+  } = {},
 ): string {
   const c = opts.carrier;
   const header = [
@@ -165,7 +221,11 @@ export function assembleAgreementText(
 /** sha256 of the canonical text, hex. Stable across renders of the same row. */
 export function agreementContentHash(
   agreement: LegalAgreement,
-  opts: { carrier?: CanonicalCarrier; signature?: CanonicalSignature } = {},
+  opts: {
+    carrier?: CanonicalCarrier;
+    signature?: CanonicalSignature;
+    countersign?: CanonicalCountersign;
+  } = {},
 ): string {
   return crypto.createHash("sha256").update(assembleAgreementText(agreement, opts), "utf8").digest("hex");
 }

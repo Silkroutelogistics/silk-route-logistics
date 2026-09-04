@@ -47,7 +47,8 @@ import { z } from "zod";
 import { uploadLimiter } from "../middleware/rateLimiters";
 import { log } from "../lib/logger";
 import { clientIp, clientUserAgent } from "../lib/clientIp";
-import { agreementContentHash } from "../lib/canonicalAgreementText";
+import { agreementContentHash, CanonicalCountersign } from "../lib/canonicalAgreementText";
+import { SIGNATORY_NAME, SIGNATORY_TITLE } from "../config/authority";
 
 const router = Router();
 
@@ -1147,9 +1148,19 @@ router.post("/sign-bca", authenticate, authorize("CARRIER"), validateBody(signBc
   // was signed — which a follow-up update would have left open on every failure
   // between the two.
   const bcaIdentity = await loadCarrierIdentity(profile.id);
+
+  // SRL COUNTERSIGNS ON ACCEPTANCE. The carrier's acceptance is the last act
+  // needed to form the agreement, so this is the instant the company is bound
+  // and the instant to record binding it. Built BEFORE the hash and written in
+  // the SAME create, for the reason the hash already is: no window may exist
+  // in which a signature row lacks the countersignature the hash covers.
+  const bcaCountersign: CanonicalCountersign = {
+    name: SIGNATORY_NAME, title: SIGNATORY_TITLE, at: now,
+  };
   const bcaContentHash = agreementContentHash(BROKER_CARRIER_AGREEMENT, {
     carrier: bcaIdentity ?? undefined,
     signature: { signedByName, signedByTitle: signedByTitle || null, signedAt: now, signerIp: ip || null, version: bcaVersion, consentAt },
+    countersign: bcaCountersign,
   });
 
   const agreement = await prisma.carrierAgreement.create({
@@ -1162,6 +1173,12 @@ router.post("/sign-bca", authenticate, authorize("CARRIER"), validateBody(signBc
       signedAt: now,
       signedByName,
       signedByTitle: signedByTitle || null,
+      // The broker half. Never the carrier columns above — those record who
+      // the CARRIER sent, and writing SRL into them would forge the carrier
+      // signature on the company's own paper.
+      counterSignedByName: bcaCountersign.name,
+      counterSignedByTitle: bcaCountersign.title,
+      counterSignedAt: now,
       signatureData: signedByName, // typed-name e-signature
       signerIp: ip || "",
       signerUserAgent: userAgent,
@@ -1382,9 +1399,16 @@ router.post("/quickpay-election", authenticate, authorize("CARRIER"), requireSte
     });
     if (!existingQp || existingQp.version !== version) {
       const qpIdentity = await loadCarrierIdentity(profile.id);
+      // Same countersign rule as the BCA. Quick Pay is a separately executed
+      // instrument, so it is separately countersigned rather than inheriting
+      // the BCA's — they can be signed days apart.
+      const qpCountersign: CanonicalCountersign = {
+        name: SIGNATORY_NAME, title: SIGNATORY_TITLE, at: now,
+      };
       const qpContentHash = agreementContentHash(CARAVAN_QUICK_PAY_AGREEMENT, {
         carrier: qpIdentity ?? undefined,
         signature: { signedByName: signedByName!, signedByTitle: signedByTitle || null, signedAt: now, signerIp: ip || null, version, consentAt },
+        countersign: qpCountersign,
       });
       const qpRow = await prisma.carrierAgreement.create({
         data: {
@@ -1397,6 +1421,9 @@ router.post("/quickpay-election", authenticate, authorize("CARRIER"), requireSte
           signedByName: signedByName!,
           signedByTitle: signedByTitle || null,
           signatureData: signedByName!,
+          counterSignedByName: qpCountersign.name,
+          counterSignedByTitle: qpCountersign.title,
+          counterSignedAt: now,
           signerIp: ip || "",
           signerUserAgent: userAgent,
           consentAt,

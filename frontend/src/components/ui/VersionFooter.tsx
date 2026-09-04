@@ -17031,7 +17031,21 @@
 // So a SECOND allowlist, named for what it actually permits, plus teeth: no
 // module that sends email may read these constants. Without that the exemption
 // would be a back door into the signature block of a compliance demand.
-export const SRL_VERSION = "3.8.azr";
+// v3.8.azs B8 — SRL countersigns, and the hash covers it.
+//
+// The carrier's acceptance is the last act needed to form the agreement, so
+// that instant is when the company is bound and when binding it gets recorded.
+// Name and title from config/authority.ts, timestamp from the server clock,
+// written in the SAME create as the signature and fed into the content hash
+// BEFORE it is computed — so no window exists where a signature row lacks the
+// countersignature its hash covers.
+//
+// Stored ON THE ROW, not looked up at render time: changing the officer must
+// not restate who bound the company on agreements already executed. The two
+// BCAs on the archived body stay NULL and keep their stored hashes — nothing
+// recomputes them, and inventing a countersignature for them would be
+// manufacturing an execution record.
+export const SRL_VERSION = "3.8.azs";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

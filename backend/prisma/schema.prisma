@@ -5200,6 +5200,23 @@ model CarrierAgreement {
   // for everything executed before v3.8.awo; those render "unhashed".
   contentHash String?
 
+  // SRL's countersignature, applied by the system at the instant the carrier
+  // accepts. Not a claim that a person typed anything: the name and title come
+  // from config/authority.ts and the timestamp is the server clock.
+  //
+  // STORED ON THE ROW rather than looked up at render time, deliberately.
+  // Changing the officer in authority.ts must not silently restate who bound
+  // the company on agreements already executed.
+  //
+  // Additive and nullable with NO BACKFILL. The two BCAs executed on the
+  // archived 2026-06-27-v1 body were never countersigned, and inventing a
+  // countersignature for them would be manufacturing an execution record.
+  // They render 'not countersigned', which is the truth. Their stored
+  // contentHash is untouched — nothing recomputes it.
+  counterSignedByName  String?
+  counterSignedByTitle String?
+  counterSignedAt      DateTime?
+
   expiresAt         DateTime?
   terminatedAt      DateTime?
   terminatedBy      String?
