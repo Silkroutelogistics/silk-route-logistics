@@ -38,43 +38,61 @@ function loadProdEnv(): void {
 }
 
 /**
- * The OUTGOING version — the body about to be replaced.
+ * The TEMPLATE and the OUTGOING version — the body about to be replaced.
  *
- * v3.8.azk — this was the literal "2026-06-27-v1" in five places, pinned to the
- * swap it was written for (F10 replacing v1). At the NEXT swap it therefore
- * counted the wrong version and printed "VERDICT: NONZERO -- HALT" while the
- * body actually going out had zero signatures against it. The unfiltered
- * by-version grouping below was still correct, so the verdict contradicted the
- * evidence printed directly above it, and following the headline would have
- * archived a body nobody had signed.
+ * v3.8.azk — the version was the literal "2026-06-27-v1" in five places, pinned
+ * to the swap it was written for. At the NEXT swap it counted the wrong version
+ * and printed "VERDICT: NONZERO -- HALT" while the body actually going out had
+ * zero signatures against it, contradicting the evidence printed directly above.
  *
- * Default is BCA_VERSION, which IS the outgoing body whenever this runs before
- * a swap — correct by construction rather than by remembering to pass it.
- * Override with argv[2] to ask about any other version.
+ * Phase B commit 1 — the TEMPLATE was still hardcoded to broker-carrier in both
+ * queries, so the tool could not answer the Quick Pay question at all. Asked to
+ * check the QP it would have reported on BCA rows at a QP version, found none,
+ * and said "clean swap" about a body a real carrier had executed. A precondition
+ * tool that answers the wrong question confidently is worse than one that
+ * refuses, so the template is now a parameter with the same defaulting rule as
+ * the version: correct by construction for the common case, overridable.
+ *
+ *   npx tsx scripts/_readonly-bca-executed-count.ts                  -> BCA at BCA_VERSION
+ *   npx tsx scripts/_readonly-bca-executed-count.ts quick-pay        -> QP at QP_VERSION
+ *   npx tsx scripts/_readonly-bca-executed-count.ts quick-pay 2026-08-16-v4
  */
-async function resolveOutgoing(): Promise<string> {
-  const fromArgv = process.argv[2];
-  if (fromArgv) return fromArgv;
-  const { BCA_VERSION } = await import("../src/data/agreements");
-  return BCA_VERSION;
+type Target = { template: string; aliases: string[]; version: string };
+
+async function resolveTarget(): Promise<Target> {
+  const tmplArg = process.argv[2];
+  const verArg = process.argv[3];
+  const mod = await import("../src/data/agreements");
+  if (tmplArg && /^quick-?pay$|^qp$/i.test(tmplArg)) {
+    return { template: "quick-pay", aliases: ["quick-pay", "quickpay", "qp"], version: verArg || mod.QP_VERSION };
+  }
+  if (tmplArg && !/^broker-?carrier$|^bca$/i.test(tmplArg)) {
+    console.error("Unknown template: " + tmplArg + " (expected broker-carrier|bca|quick-pay|qp)");
+    process.exit(1);
+  }
+  return { template: "broker-carrier", aliases: ["broker-carrier", "bca"], version: verArg || mod.BCA_VERSION };
 }
 
 async function main() {
   loadProdEnv();
   const { prisma } = await import("../src/config/database");
-  const OUTGOING = await resolveOutgoing();
+  const TARGET = await resolveTarget();
+  const OUTGOING = TARGET.version;
+  console.log("template under test: " + TARGET.template +
+    (process.argv[2] ? "  (from argv)" : "  (default)"));
   console.log("outgoing version under test: " + OUTGOING +
-    (process.argv[2] ? "  (from argv)" : "  (BCA_VERSION, the body currently in code)") + "\n");
+    (process.argv[3] ? "  (from argv)" : "  (the version currently in code)") + "\n");
 
   const byVersion = await prisma.$queryRawUnsafe<Array<{ version: string; status: string; n: bigint }>>(
     `SELECT version, status::text AS status, COUNT(*) AS n
        FROM carrier_agreements
-      WHERE "templateName" IN ('broker-carrier','bca')
+      WHERE "templateName" = ANY($1::text[])
       GROUP BY version, status
       ORDER BY version, status`,
+    TARGET.aliases,
   );
 
-  console.log("Broker-Carrier agreements, by version and status:");
+  console.log(TARGET.template + " agreements, by version and status:");
   if (!byVersion.length) console.log("  (no rows at all)");
   for (const r of byVersion) console.log("  " + r.version.padEnd(22) + r.status.padEnd(12) + String(r.n));
 
@@ -104,9 +122,10 @@ async function main() {
             cp."companyName", cp."mcNumber", cp."isTestAccount", cp."onboardingStatus"
        FROM carrier_agreements ca
        JOIN carrier_profiles cp ON cp.id = ca."carrierId"
-      WHERE ca."templateName" IN ('broker-carrier','bca') AND ca.version = $1
+      WHERE ca."templateName" = ANY($2::text[]) AND ca.version = $1
       ORDER BY ca."signedAt" NULLS LAST`,
     OUTGOING,
+    TARGET.aliases,
   );
   console.log("\nRows at " + OUTGOING + ":");
   for (const r of rows) {
