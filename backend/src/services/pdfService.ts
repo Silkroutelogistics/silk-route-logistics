@@ -1584,7 +1584,7 @@ export function generateEnhancedRateConfirmation(load: EnhancedRCLoadData, formD
   let y = drawHeaderFirstPage(doc, {
     docTitle: "Rate Confirmation",
     // "Carrier dispatch · binding on acceptance", verbatim from `.title-row .sub`
-    // in docs/design/rc.html.html. The old descriptor said CARRIER-ISSUED, which
+    // in docs/design/rc.html. The old descriptor said CARRIER-ISSUED, which
     // is factually wrong on the face of the document: SRL issues the Rate
     // Confirmation and tenders it to the carrier. Measured before changing —
     // drawHeaderFirstPage draws this with lineBreak:false, so a longer string

@@ -504,7 +504,7 @@ export function drawHeaderFirstPage(doc: PDFDoc, options: HeaderOptions): number
 
   // Company info block
   // v3.8.azk C5.5 — the letterhead gutter, derived from the locked design
-  // rather than picked. docs/design/rc.html.html sets the letterhead as
+  // rather than picked. docs/design/rc.html sets the letterhead as
   //
   //     .lh { grid-template-columns: auto minmax(max-content,1fr) max-content;
   //           column-gap: 14px }
@@ -737,7 +737,7 @@ export interface SignatureRole {
  */
 /**
  * The Rate Confirmation acceptance strip, per `.sig-grid.open` in
- * docs/design/rc.html.html: TWO columns, four signing fields each.
+ * docs/design/rc.html: TWO columns, four signing fields each.
  *
  * IT USED TO BE ONE COLUMN OF SEVEN, and the extra three were CARRIER LEGAL
  * NAME / MC # / DOT # — a second printing of what the CARRIER band on page one
@@ -1214,7 +1214,7 @@ export interface RemitTo {
 
 // ── The navy section tab ────────────────────────────────────────────────────
 //
-// docs/design/invoice.html.html and rc.html.html both end with an override
+// docs/design/invoice.html and rc.html both end with an override
 // block commented "navy section tabs, matching the RC", and it is the single
 // most visible change the locked design makes to an SRL document:
 //
@@ -1307,7 +1307,7 @@ export function drawSectionTab(
 
 /**
  * A section heading in the RATE CONFIRMATION's register, per `.sec` in
- * docs/design/rc.html.html:
+ * docs/design/rc.html:
  *
  *     .sec    7pt, .16em, weight 700, NAVY, margin-bottom 6
  *     .sec .r right-floated, ink-3, .06em — the governing BCA articles
