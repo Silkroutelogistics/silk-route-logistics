@@ -3535,10 +3535,29 @@ Most are inert history and **should** survive — `LoadActivity` and `LoadTracki
     Production was serving the commit **four minutes before the job that deploys
     it started**. The hook then fired into an already-deployed service — the
     "double deploy" Item 251 describes as the retired interim. It is not retired.
+
     **Going-forward, and this is the cheap half:** a session that pushes must
     read the CI job list BY NAME afterwards rather than inferring from
     production being healthy. Production being on the new SHA is evidence that
     *something* deployed, not that anything approved it.
+
+    **CONFIRMED IN FORCE 2026-09-04 ON `ffeab902`, AND THE ORDERING IS NOW THE
+    EVIDENCE.** The first push after the setting changed:
+
+    | | |
+    |---|---|
+    | run created (push) | 12:01:00Z |
+    | `Deploy to Render` job | 12:02:50 → 12:02:53Z, success |
+    | **production booted** | **12:04:19Z — 86s AFTER the hook fired** |
+
+    No boot at push time. That is the exact inverse of the two measurements
+    above, where production was already serving the SHA two to four minutes
+    BEFORE the deploy job ran — and it is what makes the ordering diagnostic
+    rather than merely suggestive. Item 251's version of this claim rested on a
+    sample that could not separate the two mechanisms because both would have
+    produced the same observation; this one separates them, because
+    boot-after-hook and boot-before-deploy-job are opposite orderings and only
+    one mechanism can produce each.
 
 
 ## §14 LEGAL / COMPLIANCE STATUS
