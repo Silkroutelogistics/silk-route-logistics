@@ -123,10 +123,28 @@ describe("RC terms version", () => {
 
   it("is stamped at ISSUANCE, not at render", () => {
     const send = rcController.slice(rcController.indexOf("export async function sendRateConfirmation"));
-    expect(send).toContain("rcTermsVersion: RC_TERMS_VERSION");
+    // v3.8.azx — this matched the LITERAL `rcTermsVersion: RC_TERMS_VERSION`
+    // and went red when the value became `termsVersionAtIssuance`, a change
+    // that STRENGTHENED the property it names. Re-aimed at the property, which
+    // is the same correction this file's next case already had to make once.
+    expect(send, "the version must be decided in the send handler, at issuance")
+      .toContain("const termsVersionAtIssuance");
     // The renderer must not reach for the constant — that would report today's
     // version over yesterday's terms on a re-download.
     expect(pdfService).not.toContain("RC_TERMS_VERSION");
+  });
+
+  it("the bytes and the row are stamped with the SAME value", () => {
+    // v3.8.azx — the defect this exists for: the PDF was rendered, hashed and
+    // stored, and only THEN was the row stamped. The frozen artifact printed
+    // "Terms version unversioned" while the row said 2026-08-31-v1. Found by
+    // downloading an issued RC through the carrier portal and reading the
+    // footer. Both sites must use the one variable, or they can drift again.
+    const send = rcController.slice(rcController.indexOf("export async function sendRateConfirmation"));
+    expect(send, "the rendered formData must carry the version")
+      .toContain("rcTermsVersion: termsVersionAtIssuance,");
+    expect(send, "the row must be stamped with the value the render used")
+      .toContain("rcTermsVersion: termsVersionAtIssuance }");
   });
 
   it("a re-send cannot restamp an already-issued document", () => {
@@ -140,7 +158,7 @@ describe("RC terms version", () => {
     // guard rather than the literal, so the property cannot regress behind a
     // passing text match again.
     const send = rcController.slice(rcController.indexOf("export async function sendRateConfirmation"));
-    const stampAt = send.indexOf("rcTermsVersion: RC_TERMS_VERSION");
+    const stampAt = send.indexOf("rcTermsVersion: termsVersionAtIssuance }");
     expect(stampAt).toBeGreaterThan(-1);
     const guarded = send.slice(Math.max(0, stampAt - 200), stampAt).includes("alreadyIssued");
     expect(guarded, "the terms version must be stamped only on first issuance").toBe(true);

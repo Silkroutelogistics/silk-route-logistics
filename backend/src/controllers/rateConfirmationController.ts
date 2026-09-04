@@ -265,8 +265,22 @@ export async function sendRateConfirmation(req: AuthRequest, res: Response) {
   // and is persisted with the SENT status below, so the number frozen on the
   // load, the number stored on the rate confirmation, and the number on the
   // page a carrier signs are one number with one origin.
+  // v3.8.azx — the terms version must be IN the bytes, not only on the row.
+  //
+  // It was stamped on the row AFTER the PDF had been rendered, hashed and
+  // stored, so the frozen artifact printed "Terms version unversioned" while
+  // the row said 2026-08-31-v1. The comment below already claimed the version
+  // was "frozen with the bytes"; the ordering defeated it. Caught by
+  // downloading an issued RC through the carrier portal and reading the footer.
+  //
+  // `rc.rcTermsVersion ?? RC_TERMS_VERSION` rather than the constant outright:
+  // a document already issued under an older version must keep printing that
+  // one, which is the same reason the update below does not restamp a re-send.
+  const termsVersionAtIssuance = rc.rcTermsVersion ?? RC_TERMS_VERSION;
+
   const issuedFormData: Record<string, any> = {
     ...fd,
+    rcTermsVersion: termsVersionAtIssuance,
     // The tier resolved above, which already prefers whatever the draft was
     // stamped with. So an already-drafted document never changes what it prints,
     // and the tier recorded here is by construction the tier the fee beside it
@@ -383,7 +397,7 @@ export async function sendRateConfirmation(req: AuthRequest, res: Response) {
       // the load's terms -- and a re-send after a terms change did exactly that,
       // restamping an already-issued document with today's version over
       // yesterday's text. Frozen with the bytes.
-      ...(alreadyIssued ? {} : { rcTermsVersion: RC_TERMS_VERSION }),
+      ...(alreadyIssued ? {} : { rcTermsVersion: termsVersionAtIssuance }),
       formData: issuedFormData as any,
       // The frozen artifact and its hash, written in the same statement as the
       // status that says it was issued. pdfUrl is the stored object; the
