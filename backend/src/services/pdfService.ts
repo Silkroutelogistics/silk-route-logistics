@@ -1127,22 +1127,21 @@ export async function generateBOLFromLoad(
       M, termsY, { width: CW, lineGap: 0.25 },
     );
 
-  doc.lineWidth(1).strokeColor(GOLD).moveTo(M, fyLine).lineTo(R, fyLine).stroke();
-  const footerY = fyLine + 8;
-  const footerThirdW = CW / 3;
-  doc.font("DMSans-Regular").fontSize(7).fillColor(FG_3)
-    .text(
-      `MC# ${COMPANY.mc} ${MIDDOT} DOT# ${COMPANY.dot} ${MIDDOT} ${COMPANY.website}`,
-      M, footerY, { width: footerThirdW, lineBreak: false },
-    );
-  doc.font("DMSans-Italic").fontSize(7).fillColor(GOLD_DARK)
-    .text("Where Trust Travels.", M + footerThirdW, footerY, {
-      width: footerThirdW, align: "center", lineBreak: false,
-    });
-  doc.font("DMSans-Regular").fontSize(7).fillColor(FG_3)
-    .text("Page 1 of 1", M + 2 * footerThirdW, footerY, {
-      width: footerThirdW, align: "right", lineBreak: false,
-    });
+  // v3.8.bak — THE FOOTER IS THE MASTER. Gold rule, identity line, centred
+  // tagline and page number all come from drawFooter, the same call every
+  // other operational document makes.
+  //
+  // footerY 774, not 770. The chrome draws its rule at footerY - 4, so 774
+  // lands the rule exactly on the BOL's fyLine and the identity line exactly
+  // on its 778. The override exists for this document specifically: the BOL
+  // is fit-gated to one page and the chrome default of 744 would have cost
+  // 30pt of a ~67pt elasticity — roughly a row and a half of freight.
+  //
+  // The terms strip above stays local. It is not chrome: it is this
+  // document's legal substance, dynamically anchored to the tallest
+  // signature column so a future field addition moves it rather than
+  // colliding with it.
+  drawFooter(doc, { pageNum: 1, totalPages: 1, footerY: fyLine + 4 });
 
   // v3.8.ara — BOL is a ONE-PAGE document. PROVISIONAL: see caveat below.
   //
