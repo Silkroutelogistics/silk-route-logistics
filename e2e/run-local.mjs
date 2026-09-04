@@ -19,10 +19,16 @@
  * parsed and used as-is, and REQUIRED_KEYS below fails loudly if that block
  * stops carrying something this script depends on.
  *
- * WHAT IS DELIBERATELY NOT AUTOMATED: a process already holding the backend or
- * frontend port is reported with the port and the command to find it, never
- * killed. Killing a server somebody else is using, to save them one command,
- * is not a trade this script gets to make on their behalf.
+ * WHAT IS AND IS NOT AUTOMATED. A process holding the backend or frontend port
+ * that this run did not start is reported with its PID and start time and left
+ * alone. Killing a server somebody else is using, to save them one command, is
+ * not a trade this script gets to make on their behalf.
+ *
+ * What it DOES stop is what it started. Playwright spawns those servers itself,
+ * so this script never holds their PIDs — but it verifies both ports free
+ * immediately before Playwright runs, so anything on them afterwards whose
+ * process began after that moment is its own. Four consecutive PASSING runs
+ * each left a live backend on 3010, and the next run tripped over it.
  */
 import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync, readdirSync } from "node:fs";
@@ -99,13 +105,113 @@ function ciEnv() {
   return out;
 }
 
-const portFree = (port) =>
+/**
+ * Is anything LISTENING on this port, on any interface?
+ *
+ * This used to bind 127.0.0.1 and report free if the bind succeeded. On Windows
+ * that is not the same question: a server bound to 0.0.0.0 does NOT prevent a
+ * second bind to 127.0.0.1, so the check returned "free" over a live server and
+ * the run died three steps later inside Playwright with a confusing message.
+ * Measured: with a holder on 0.0.0.0, binding 127.0.0.1 SUCCEEDS and binding
+ * 0.0.0.0 gives EADDRINUSE.
+ *
+ * Connecting answers the question that is actually being asked — is someone
+ * serving here — and is the same answer Playwright's own probe gets, which is
+ * what makes this refuse before Playwright does rather than after.
+ */
+const portInUse = (port) =>
   new Promise((resolve) => {
-    const s = net.createServer();
-    s.once("error", () => resolve(false));
-    s.once("listening", () => s.close(() => resolve(true)));
-    s.listen(port, "127.0.0.1");
+    const s = net.connect({ port, host: "127.0.0.1" });
+    const done = (v) => { s.destroy(); resolve(v); };
+    s.once("connect", () => done(true));
+    s.once("error", () => done(false));
+    s.setTimeout(1500, () => done(false));
   });
+
+/**
+ * PID listening on a port, or null. Best effort: used for reporting and for
+ * attribution, never as the sole basis for killing anything.
+ *
+ * Parsed by TOKEN rather than by regex, deliberately. The first version matched
+ * the line against a RegExp built with a backslash escape, the escape was eaten
+ * on its way into this file, and the pattern silently became ":3010s" — which
+ * matches nothing, so every port reported "pid unknown" while the netstat call
+ * itself was working perfectly. Splitting on spaces needs no escape at all and
+ * is stricter: it compares the local-address column rather than searching the
+ * whole line, so a foreign port that merely CONTAINS these digits cannot match.
+ */
+function portPid(port) {
+  if (process.platform === "win32") {
+    const r = quiet("netstat", ["-ano"]);
+    for (const line of (r.stdout || "").split("\n")) {
+      const p = line.trim().split(" ").filter(Boolean);
+      // TCP  <local>  <foreign>  LISTENING  <pid>
+      if (p.length < 5 || p[3] !== "LISTENING") continue;
+      if (!p[1].endsWith(":" + port)) continue;
+      const pid = Number(p[4]);
+      if (Number.isInteger(pid) && pid > 0) return pid;
+    }
+    return null;
+  }
+  const r = quiet("sh", ["-c", "lsof -t -i:" + port + " -sTCP:LISTEN 2>/dev/null | head -1"]);
+  const pid = Number((r.stdout || "").trim());
+  return Number.isInteger(pid) && pid > 0 ? pid : null;
+}
+
+function pidStartedAt(pid) {
+  if (pid == null) return null;
+  if (process.platform === "win32") {
+    const r = quiet("powershell", ["-NoProfile", "-Command",
+      "(Get-Process -Id " + pid + " -ErrorAction SilentlyContinue).StartTime.ToUniversalTime().ToString('o')"]);
+    const t = Date.parse((r.stdout || "").trim());
+    return Number.isFinite(t) ? t : null;
+  }
+  const r = quiet("sh", ["-c", "ps -o lstart= -p " + pid + " 2>/dev/null"]);
+  const t = Date.parse((r.stdout || "").trim());
+  return Number.isFinite(t) ? t : null;
+}
+
+function killPid(pid) {
+  if (process.platform === "win32") quiet("taskkill", ["/F", "/PID", String(pid)]);
+  else quiet("kill", ["-9", String(pid)]);
+}
+
+/**
+ * THE RUN OWNS WHAT IT STARTED, AND NOTHING ELSE.
+ *
+ * Playwright spawns the backend and frontend itself (its `webServer` blocks),
+ * so this script never holds their PIDs directly — it cannot simply record what
+ * it spawned. What it CAN establish is that both ports were verified free
+ * immediately before Playwright started. Anything listening on them afterwards
+ * whose process began AFTER that moment was therefore started by this run.
+ *
+ * A process that predates the run is somebody else's and is left alone, loudly.
+ * That is the same rule the header states about never killing a server somebody
+ * else is using; what changes is that the run now cleans up after ITSELF, which
+ * it was not doing — four consecutive passing runs each left a live backend on
+ * 3010, and the next run then tripped over it.
+ *
+ * Registered on `exit` rather than written as a `finally`, because `die()` calls
+ * process.exit and a finally would not run on that path. Exit handlers must be
+ * synchronous, which is why every helper above uses spawnSync.
+ */
+let runStartedAt = null;
+let cleanupArmed = false;
+function cleanupOwnServers() {
+  if (runStartedAt == null) return;
+  for (const [port, what] of [[BACKEND_PORT, "backend"], [FRONTEND_PORT, "frontend"]]) {
+    const pid = portPid(port);
+    if (pid == null) continue;
+    const started = pidStartedAt(pid);
+    if (started != null && started < runStartedAt - 2000) {
+      say("  !  port " + port + " (" + what + ") is held by pid " + pid +
+          " started " + new Date(started).toISOString() + ", which predates this run. Left alone.");
+      continue;
+    }
+    killPid(pid);
+    say("  ·  stopped " + what + " (pid " + pid + ") on port " + port);
+  }
+}
 
 // ── 0. preflight ────────────────────────────────────────────────────────────
 if (quiet("docker", ["version", "--format", "{{.Server.Version}}"]).status !== 0) {
@@ -113,17 +219,29 @@ if (quiet("docker", ["version", "--format", "{{.Server.Version}}"]).status !== 0
 }
 
 for (const [port, what] of [[BACKEND_PORT, "backend"], [FRONTEND_PORT, "frontend"]]) {
-  if (!(await portFree(port))) {
+  if (await portInUse(port)) {
+    const pid = portPid(port);
+    const started = pidStartedAt(pid);
     const how = process.platform === "win32"
-      ? "netstat -ano | findstr :" + port + "   then   taskkill /F /PID <pid>"
-      : "lsof -ti :" + port + " | xargs kill";
+      ? "taskkill /F /PID " + (pid ?? "<pid>")
+      : "kill " + (pid ?? "<pid>");
     die(
-      "Port " + port + " (" + what + ") is already in use.\n" +
+      "Port " + port + " (" + what + ") is already serving.\n" +
+        "     Held by pid " + (pid ?? "unknown") +
+        (started ? ", started " + new Date(started).toISOString() : ", start time unavailable") + ".\n" +
         "     Playwright starts its own servers and will not reuse it.\n" +
-        "     A stale dev server here is the most common cause of a confusing local red.\n" +
-        "     Find and stop it:  " + how
+        "     This run did not start that process, so it will not stop it.\n" +
+        "     If it is yours:  " + how
     );
   }
+}
+
+// Both ports verified free. From here anything appearing on them belongs to
+// this run, which is what makes the exit cleanup safe.
+runStartedAt = Date.now();
+if (!cleanupArmed) {
+  process.on("exit", cleanupOwnServers);
+  cleanupArmed = true;
 }
 
 const env = ciEnv();
