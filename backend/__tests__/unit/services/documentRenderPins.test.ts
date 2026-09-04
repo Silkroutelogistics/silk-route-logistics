@@ -108,6 +108,19 @@ const DOCUMENTS: Record<string, () => Promise<Buffer>> = {
   // The shell is opt-in, so the plain BCA pin above still guards the
   // un-shelled render. This one guards the shell itself.
   "agreement-bca-shell": () => generateAgreementBuffer(BROKER_CARRIER_AGREEMENT, { shell: true }),
+  // v3.8.bae — D2, the gap reported when the Quick Pay flip landed. The BCA
+  // had a shell pin for the UNSIGNED specimen and none for the executed shell
+  // copy: the document actually stored at signing, handed to a carrier, a
+  // factor, or a court, and the one carrying the countersign block a restyle
+  // could drop. Its Quick Pay counterpart was pinned in v3.8.bad; this closes
+  // the asymmetry so both master agreements are watched in both states.
+  "agreement-bca-executed-shell": () =>
+    generateAgreementBuffer(BROKER_CARRIER_AGREEMENT, {
+      carrier: PIN_CARRIER,
+      signature: PIN_SIGNATURE,
+      countersign: { name: SIGNATORY_NAME, title: SIGNATORY_TITLE, at: new Date("2026-09-04T15:00:00.000Z") },
+      shell: true,
+    }),
   "agreement-qp": () => generateAgreementBuffer(CARAVAN_QUICK_PAY_AGREEMENT, {}),
   "agreement-qp-executed": () =>
     generateAgreementBuffer(CARAVAN_QUICK_PAY_AGREEMENT, { carrier: PIN_CARRIER, signature: PIN_SIGNATURE }),

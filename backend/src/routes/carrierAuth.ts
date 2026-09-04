@@ -29,7 +29,7 @@ import { resolveCountry, extractClientIp, detectUnusualActivity } from "../servi
 import { sendOtpSms } from "../services/openPhoneService";
 import { resolveInfoRequest, getCategoryLabel } from "../services/infoRequestService";
 import { upload } from "../config/upload";
-import { uploadFile, uploadFileToPath } from "../services/storageService";
+import { uploadFile, uploadFileToPath, getFileStream } from "../services/storageService";
 // v3.8.aqh — agreement PDFs (skill-chrome multi-page legal doc).
 // v3.8.asa — generic entry points. The BCA-only generators were the reason a
 // signed Quick Pay Agreement could not be produced as a document at all.
@@ -848,17 +848,79 @@ router.get("/agreement/:type/pdf", authenticate, authorize("CARRIER"), async (re
           at: signed.counterSignedAt,
         }
       : undefined;
-  // v3.8.azw — THE FLIP, completed for Quick Pay in v3.8.bad. The Design
-  // System shell is what a carrier downloads, for BOTH master agreements.
+  // v3.8.bae — D1: AN EXECUTED AGREEMENT IS SERVED AS EXECUTED.
   //
-  // It was conditional on the template while only the Broker-Carrier Agreement
-  // had a shell pin: shipping the Quick Pay Agreement through the shell would
-  // have restyled a second signed instrument on evidence nobody had taken. That
-  // evidence now exists — quick-pay 2026-08-16-v4 is archived as a frozen
-  // literal, both QP pins cover the shell render, and the countersign block is
-  // proved to come out on the execution page. So the flag is unconditional
-  // again, and a third master agreement added later inherits the house style
-  // rather than silently rendering in the retired one.
+  // This route called getAgreement(type) with no version, so it rendered the
+  // LIVE body while the attestation printed the version the carrier actually
+  // signed. Reproduced on the one real Quick Pay carrier: one PDF containing
+  // both "2026-09-04-v5" in the body and "2026-08-16-v4" in the attestation.
+  // A carrier who signed v4 was shown v5 and told they had signed it.
+  //
+  // The archive was built for exactly this and the route simply never asked for
+  // it. Three sources, in order of fidelity:
+  //
+  //   1. THE STORED COPY. Bytes generated at signing, hashed at signing. This
+  //      is the document, not a reconstruction of it, so it wins whenever it
+  //      exists. All three signed rows in production have one.
+  //   2. THE ARCHIVED BODY, re-rendered. Used when no copy was stored — the
+  //      pre-v3.8.aqh rows, and any future storage failure.
+  //   3. Refusal. If the signed version resolves to a DIFFERENT body, the
+  //      archive is missing and there is no faithful document to serve.
+  //
+  // Refusing is deliberate and it is the whole point. getAgreement falls back
+  // to the current body when a version is not archived, silently — which is the
+  // defect this commit removes, so re-serving that fallback here would remove
+  // it in one place and reinstate it in the other. A 409 names the missing
+  // archive and is fixed by archiving; a wrong document is not fixed by
+  // anything, because nobody can see that it is wrong.
+  if (signed) {
+    if (signed.documentUrl) {
+      try {
+        const stored = await getFileStream(signed.documentUrl);
+        res.setHeader("Content-Type", "application/pdf");
+        res.setHeader(
+          "Content-Disposition",
+          `inline; filename="${agreementPdfFilename({ ...agreement, version: signed.version })}"`,
+        );
+        stored.pipe(res);
+        return;
+      } catch (err) {
+        // A stored copy that cannot be read must not block the carrier from
+        // their own agreement. Fall through and re-render the archived body,
+        // which is the same document by construction.
+        log.warn(
+          { agreementId: signed.id, err: err instanceof Error ? err.message : String(err) },
+          "[agreement-pdf] stored copy unreadable, re-rendering from the archive",
+        );
+      }
+    }
+
+    const executed = getAgreement(req.params.type, signed.version);
+    if (!executed || executed.version !== signed.version) {
+      res.status(409).json({
+        error:
+          `This agreement was signed on version ${signed.version}, which is not archived. ` +
+          `Serving the current body would show you a document you did not sign. ` +
+          `Contact compliance@silkroutelogistics.ai.`,
+        code: "AGREEMENT_VERSION_UNARCHIVED",
+      });
+      return;
+    }
+
+    const executedDoc = generateAgreementPdf(executed, {
+      carrier: identity,
+      signature,
+      countersign,
+      shell: true,
+    });
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `inline; filename="${agreementPdfFilename(executed)}"`);
+    executedDoc.pipe(res);
+    return;
+  }
+
+  // Unsigned: the current body, as a specimen. No signature, no countersign —
+  // there is nothing to attest to yet.
   const doc = generateAgreementPdf(agreement, {
     carrier: identity,
     signature,

@@ -11,5 +11,6 @@
   "certificate": "c01b8b5fd91aef00c2ca909d5eb0f97f",
   "certificate-minimal": "c436612d41a97c5c1bcc64627db78918",
   "agreement-qp-shell": "6d0fee4a3c025365729762a58a022ec9",
-  "agreement-qp-executed-shell": "b55a49586af05447ea0c97345fc8abb6"
+  "agreement-qp-executed-shell": "b55a49586af05447ea0c97345fc8abb6",
+  "agreement-bca-executed-shell": "deaab4b88c82788adc901ede65644fe2"
 }

@@ -39,7 +39,7 @@ import {
   RC_PDF_REQUIRED,
 } from "./helpers/pdf";
 
-// v3.8.bae — these MUST track playwright.config.ts. Neither env var is set
+// Dedicated e2e ports — these MUST track playwright.config.ts. Neither env var is set
 // anywhere, so these fallbacks are not fallbacks: they are the values. When
 // the ports moved off the dev-server range, leaving these behind would have
 // pointed the suite at :3010 while Playwright served :3110 — and :3010 is

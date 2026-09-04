@@ -20,7 +20,7 @@
  */
 import { defineConfig } from "@playwright/test";
 
-// v3.8.bae — DEDICATED E2E PORTS, off the dev-server range.
+// Dedicated e2e ports — DEDICATED E2E PORTS, off the dev-server range.
 //
 // These were :3010 and :4000, and :3010 is what `npm run dev` binds. So a dev
 // server left running blocked every e2e run, and the runner — correctly —
