@@ -43,6 +43,27 @@ export const ENTITY_FORM = "Michigan C-Corp" as const;
 export const TAGLINE = "Where Trust Travels." as const;
 export const DOMAIN = "silkroutelogistics.ai" as const;
 
+// ─── Execution identity ──────────────────────────────────────────
+//
+// WHO SIGNS FOR SRL. Used on the execution page of a master agreement and
+// on the countersign recorded when a carrier accepts one. This is the
+// company binding itself through a named officer, which is what an executed
+// instrument requires — an agreement signed by "Operations" is not signed.
+//
+// THIS IS NOT A SENDER IDENTITY, and the distinction is load-bearing. §3.10
+// and §12 make Lead Hunter outreach the ONLY place a personal name belongs on
+// mail SRL generates; a system email signed by a person reads as
+// correspondence that person wrote, and emailIdentity.test.ts exists to stop
+// exactly that. These constants are for DOCUMENTS. That test now asserts no
+// email-sending module imports them, so this cannot become a back door into
+// a signature block on a compliance demand.
+//
+// Changing either value changes who is named as having bound the company on
+// every agreement rendered afterwards. Executed rows keep the name and title
+// stored ON the row at signing time, so history does not move with it.
+export const SIGNATORY_NAME = "Wasi Haider" as const;
+export const SIGNATORY_TITLE = "President" as const;
+
 // FMCSA authority. Format follows skill canonical voice.md:98 — "#"
 // symbol + single space, no hyphen, no leading zero.
 export const MC_NUMBER = "1794414" as const;

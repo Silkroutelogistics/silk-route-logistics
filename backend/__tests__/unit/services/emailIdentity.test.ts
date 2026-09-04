@@ -38,6 +38,26 @@ const PERSONAL_IDENTITY_ALLOWED = [
   "config/signatures/whaider.html", // the Gmail signature asset for the same path
 ];
 
+/**
+ * A SECOND exemption, deliberately kept separate from the first because it
+ * means something different.
+ *
+ * PERSONAL_IDENTITY_ALLOWED says "a human intends to be the SENDER of this
+ * mail". That is false of config/authority.ts, and adding it there under a
+ * justification that does not apply is how an allowlist stops meaning anything.
+ *
+ * This one says "a named officer EXECUTES DOCUMENTS on behalf of the company".
+ * An agreement signed by "Operations" is not signed; an instrument binds
+ * through a person. The teeth are below: no email-sending module may import
+ * these constants, so a legal signatory cannot become a back door into the
+ * signature block of a compliance demand.
+ */
+const LEGAL_IDENTITY_ALLOWED = [
+  "config/authority.ts",           // SIGNATORY_NAME / SIGNATORY_TITLE — execution identity
+];
+
+const ALL_ALLOWED = [...PERSONAL_IDENTITY_ALLOWED, ...LEGAL_IDENTITY_ALLOWED];
+
 /** CRLF-safe — this repo checks out with autocrlf. */
 const read = (p: string) => fs.readFileSync(p, "utf8").split("\r\n").join("\n");
 
@@ -68,7 +88,7 @@ describe("system emails speak as roles, never persons", () => {
     const offenders = files
       .filter((f) => read(f).includes(NAME))
       .map(rel)
-      .filter((r) => !PERSONAL_IDENTITY_ALLOWED.includes(r));
+      .filter((r) => !ALL_ALLOWED.includes(r));
 
     expect(
       offenders,
@@ -85,13 +105,44 @@ describe("system emails speak as roles, never persons", () => {
     // An allowlist entry that no longer matches anything is dead permission:
     // it grants an exemption to a file that moved, and quietly widens nothing
     // while looking like it protects something.
-    for (const r of PERSONAL_IDENTITY_ALLOWED) {
+    for (const r of ALL_ALLOWED) {
       const full = path.join(SRC, r);
       expect(fs.existsSync(full), `allowlisted path is gone: ${r}`).toBe(true);
       expect(read(full).includes(NAME), `allowlisted ${r} no longer carries the name — drop it`).toBe(true);
     }
   });
 
+  it("no email-sending module imports the legal signatory", () => {
+    // THE TEETH ON LEGAL_IDENTITY_ALLOWED. Exempting authority.ts is only safe
+    // while those constants stay on documents. The moment an email body reads
+    // SIGNATORY_NAME, the exemption has been used to reintroduce exactly the
+    // regression the rest of this file bans — and it would pass every other
+    // assertion here, because the literal name never appears in the email file.
+    const CONSTS = /\bSIGNATORY_(NAME|TITLE)\b/;
+    const readers = files
+      .filter((f) => f.endsWith(".ts") && rel(f) !== "config/authority.ts")
+      .filter((f) => CONSTS.test(read(f)));
+
+    const senders = readers
+      .filter((f) => rel(f).startsWith("email/") || /\bsendEmail\s*\(/.test(read(f)))
+      .map(rel);
+
+    expect(
+      senders,
+      "these modules send email AND read the legal signatory: " + senders.join(", ") +
+        ". SIGNATORY_NAME and SIGNATORY_TITLE identify who EXECUTES a document. " +
+        "A generated email must sign as the department that owns its mailbox.",
+    ).toEqual([]);
+  });
+
+  // The complement — "something actually READS these constants" — lands with
+  // B10, which is the commit that wires the execution page to them. Asserting
+  // it here would ship a red gate for two commits, and a gate nobody can read
+  // a signal from is a gate that is off.
+  //
+  // Until then the rule above is UNEXERCISED: zero modules read the constants,
+  // so it cannot yet fail. That is expected, and it is said out loud because a
+  // zero here must not later be mistaken for a clean pass.
   it("the COI verification email signs as a department", () => {
     const s = read(path.join(SRC, "services/insuranceVerificationService.ts"));
     expect(/<strong[^>]*>Compliance Department<\/strong>/.test(s),

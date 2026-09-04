@@ -17019,7 +17019,19 @@
 // A PURE WIDENING: role-scoped key first, bare key as fallback, so with no
 // scoped key the resolution is byte-identical. All 14 render pins hold on this
 // commit — including both Quick Pay pins, which is the proof.
-export const SRL_VERSION = "3.8.azq";
+// v3.8.azr B9b — the execution identity, and the boundary that keeps it off email.
+//
+// SIGNATORY_NAME and SIGNATORY_TITLE in config/authority.ts. A master agreement
+// binds the company through a NAMED OFFICER — an agreement signed by
+// "Operations" is not signed.
+//
+// That runs straight into emailIdentity.test.ts, which bans the founder's name
+// across src because a system email signed by a person reads as correspondence
+// that person wrote. Both rules are right; they are about different surfaces.
+// So a SECOND allowlist, named for what it actually permits, plus teeth: no
+// module that sends email may read these constants. Without that the exemption
+// would be a back door into the signature block of a compliance demand.
+export const SRL_VERSION = "3.8.azr";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
