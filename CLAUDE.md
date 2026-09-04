@@ -3434,6 +3434,21 @@ Most are inert history and **should** survive — `LoadActivity` and `LoadTracki
     auto-deploy in the service settings. Until that happens the deploy gate
     refuses nothing: it can decline to deploy, and Render deploys anyway.
 
+    **CONFIRMED A SECOND TIME, AND MORE SHARPLY, ON `6dad5493` THE SAME HOUR.**
+    The first measurement left one theoretical escape — the deploy job was
+    *skipped*, so one could argue the hook fired by some other route. The second
+    closes it, because there the deploy job RAN and its timing cannot explain the
+    boot:
+
+    | | |
+    |---|---|
+    | push | 05:00:36Z |
+    | **production booted** | **05:03:42Z** |
+    | `Deploy to Render` job | 05:07:43 → 05:07:47Z, success |
+
+    Production was serving the commit **four minutes before the job that deploys
+    it started**. The hook then fired into an already-deployed service — the
+    "double deploy" Item 251 describes as the retired interim. It is not retired.
     **Going-forward, and this is the cheap half:** a session that pushes must
     read the CI job list BY NAME afterwards rather than inferring from
     production being healthy. Production being on the new SHA is evidence that
