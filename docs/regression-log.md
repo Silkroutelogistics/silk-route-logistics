@@ -3833,7 +3833,7 @@ not a layout one.
 
 Halted rather than half-applied. A rail on three of six sections is worse than
 no rail, and a primitive with no caller is dead code this repo's own
-reachability gate would flag. Recorded at §13.3 Item 254 with the geometry, so
+reachability gate would flag. Recorded at §13.3 Item 256 with the geometry, so
 the sequence can start from measurements rather than re-derive them.
 
 **EXPECTED_PAGES stays at 3** for the same reason. With INVOICING now on page 2

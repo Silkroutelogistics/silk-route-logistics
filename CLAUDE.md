@@ -2876,7 +2876,7 @@ Most are inert history and **should** survive — `LoadActivity` and `LoadTracki
     it was the interim the setup doc describes.
 
     **HOOK-ONLY MODE — auto-deploy disabled 2026-09-01, confirmed by Wasi.**
-    **SUPERSEDED 2026-09-04 — see Item 255. Auto-deploy is demonstrably still
+    **SUPERSEDED 2026-09-04 — see Item 257. Auto-deploy is demonstrably still
     on: `9a74c91a` reached production at 04:44:48Z while its backend job was
     still running and its deploy job was SKIPPED. The paragraph below records
     what was believed at the time and is retained for that reason, not because
@@ -3352,7 +3352,7 @@ Most are inert history and **should** survive — `LoadActivity` and `LoadTracki
     not unique to the thing under test proves nothing about it.** A nonce now makes
     each mint distinct, with the reason recorded in the proof.
 
-254. **RC page-1 band rail — HALTED with the geometry measured (2026-09-04, C12).**
+256. **RC page-1 band rail — halted, measured, then DECIDED (2026-09-04, C12).**
 
     `docs/design/rc.html` puts a navy vertical rail on the left of each page-1
     band. The measurements, so the sequence starts from facts rather than
@@ -3392,7 +3392,41 @@ Most are inert history and **should** survive — `LoadActivity` and `LoadTracki
     while the document got worse.
 
 
-255. **AUTO-DEPLOY IS STILL ON, THE GATE IS DECORATIVE, AND A RED-CI COMMIT SHIPPED (2026-09-04).**
+    **DECIDED 2026-09-04 by the owner. Numbering note: this item and the
+    auto-deploy one were filed as 254 and 255, both of which were already taken
+    — they are now 256 and 257. The owner's instruction referring to "Item 254"
+    and "Item 255" means these two.**
+
+    **Band order: REJECTED. The Rate Confirmation keeps stops first.** A driver
+    needs WHERE and WHEN before WHO, and the design's Contacts / Carrier /
+    Shipment / Stops / Rate sequence does not override that on a binding
+    operational document. The rail is applied to the band order the document
+    already has, so this is chrome after all — the content question that made it
+    a rewrite is answered by leaving the content alone.
+
+    **Contacts: NOT a band.** The AE line and the verify line under the title
+    already carry that content, and a band would be a second home for one fact.
+
+    **Rail: proceed.** Geometry exactly as measured above — 31.68pt navy rail at
+    `x = MARGIN`, body at `MARGIN + 51.68`, width 488.32 from 540 — with every
+    `lineBreak: false` string re-measured against the narrowed width, which is
+    the part `verify-rc-matrix` cannot see and therefore the part that has to be
+    measured rather than eyeballed.
+
+    **Two-page map: fold INVOICING into the page-1 fine print**, where the design
+    puts it, and reconcile `EXPECTED_PAGES` to 2 with the 738 floor intact. This
+    is what unblocks the two pages: page 2 had 39pt free against an acceptance
+    strip needing 164, and the ~125pt comes from the fold rather than from
+    loosening the floor.
+
+
+257. ~~**AUTO-DEPLOY IS STILL ON, THE GATE IS DECORATIVE, AND A RED-CI COMMIT
+    SHIPPED.**~~ **RESOLVED 2026-09-04 — owner confirmed auto-deploy is now Off
+    on the backend service in Render, deploy hook untouched.** `Deploy to Render`
+    is the sole path to production, and this time the claim rests on the setting
+    itself rather than on a timing sample that could not distinguish the two
+    mechanisms — which is exactly how Item 251's version of this went stale.
+    The measurements below are retained because they are what found it.
 
     Item 251 records hook-only mode as reached on 2026-09-01 — auto-deploy
     disabled, `Deploy to Render` the sole path to production, proven by a
