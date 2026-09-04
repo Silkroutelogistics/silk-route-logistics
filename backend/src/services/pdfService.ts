@@ -275,76 +275,13 @@ export async function generateBOLFromLoad(
 ): Promise<PDFDoc> {
   const doc = new PDFDocument({ margins: { top: 34, bottom: 0, left: 34, right: 34 }, size: "LETTER" });
 
-  // Monkey-patch doc.text to inject an OpenType feature-disable object into
-  // every text invocation's options. fontkit accepts `features` as either
-  // an array (additive — enables listed features on top of script defaults)
-  // or an object (explicit on/off per feature tag). The array form keeps
-  // default `liga` enabled and can't disable it; the object form with
-  // `liga: false` is the authoritative way to suppress ligature
-  // substitution. Disable all four ligature-family features (liga/clig/
-  // rlig/dlig) so Playfair Italic + DM Sans Italic don't substitute `fi`
-  // with a glyph that truncates the `i` at scale-down (the
-  // "classified" → "classifed" bug). Keep `kern: true` so typography
-  // still looks good. Covers direct doc.text() calls AND fluent-chained
-  // .text() calls (e.g. doc.font(x).fontSize(y).text(str)) — same-
-  // technique precedent: v3.7.p Batch B monkey-patched doc.text for HTML
-  // entity decoding.
+  // v3.8.bai — the local ligature monkey-patch was deleted here.
   //
-  // @types/pdfkit declares features as `string[]`, which only covers the
-  // array form. Casting via `as unknown as string[]` is an explicit
-  // concession that we're using the runtime-supported object shape that
-  // the type declaration doesn't model.
-  const _origText = doc.text.bind(doc);
-  (doc as { text: typeof doc.text }).text =
-    function (this: typeof doc, ...args: unknown[]): typeof doc {
-      const last = args[args.length - 1];
-      const isOptionsObj =
-        last !== null &&
-        typeof last === "object" &&
-        !Array.isArray(last) &&
-        !Buffer.isBuffer(last);
-
-      // Base object: disable all ligature-family features, keep kern on.
-      const base: Record<string, boolean> = {
-        liga: false,
-        clig: false,
-        rlig: false,
-        dlig: false,
-        kern: true,
-      };
-
-      if (isOptionsObj) {
-        const opts = last as Record<string, unknown>;
-        const callerFeatures = opts.features;
-        let merged: Record<string, boolean>;
-        if (
-          callerFeatures !== null &&
-          typeof callerFeatures === "object" &&
-          !Array.isArray(callerFeatures)
-        ) {
-          // Object form: preserve caller's intent (e.g. kern preference),
-          // but force the four liga-family flags off.
-          merged = {
-            ...(callerFeatures as Record<string, boolean>),
-            liga: false,
-            clig: false,
-            rlig: false,
-            dlig: false,
-            kern:
-              (callerFeatures as Record<string, boolean>).kern ?? true,
-          };
-        } else {
-          // Array form (additive, can't disable defaults) or missing.
-          // Discard and use our full disable-object.
-          merged = base;
-        }
-        opts.features = merged as unknown as string[];
-      } else {
-        args.push({ features: base as unknown as string[] });
-      }
-      return (_origText as (...a: unknown[]) => typeof doc)(...args);
-    } as typeof doc.text;
-
+  // It disabled liga/clig/rlig/dlig on every doc.text call, because fontkit
+  // substitutes an fi ligature that renders "Confirmation" as "Confrmation"
+  // in Playfair. registerSkillFonts has carried the identical patch since
+  // v3.8.abg, when the same bug surfaced on the Rate Confirmation — so this
+  // was a second copy of one fix, and the copy is the thing that drifts.
   const M = 34;
   const R = 612 - M;
   const CW = R - M;
@@ -361,19 +298,14 @@ export async function generateBOLFromLoad(
   const BORDER_1 = "#E5EAF0";
   const BORDER_2 = "#D7DEE8";
 
-  // Register v2.9 fonts. TTFs ship via backend/src/assets/fonts/bol-v2.9/
-  // and propagate to Render prod through the dashboard src/assets cp step
-  // (CLAUDE.md §2.2).
-  const FONT_DIR = path.resolve(__dirname, "../assets/fonts/bol-v2.9");
-  doc.registerFont("Playfair-Regular", path.join(FONT_DIR, "PlayfairDisplay-Regular.ttf"));
-  doc.registerFont("Playfair-Italic", path.join(FONT_DIR, "PlayfairDisplay-Italic.ttf"));
-  doc.registerFont("Playfair-Bold", path.join(FONT_DIR, "PlayfairDisplay-Bold.ttf"));
-  doc.registerFont("Playfair-BoldItalic", path.join(FONT_DIR, "PlayfairDisplay-BoldItalic.ttf"));
-  doc.registerFont("DMSans-Regular", path.join(FONT_DIR, "DMSans-Regular.ttf"));
-  doc.registerFont("DMSans-Italic", path.join(FONT_DIR, "DMSans-Italic.ttf"));
-  doc.registerFont("DMSans-Medium", path.join(FONT_DIR, "DMSans-Medium.ttf"));
-  doc.registerFont("DMSans-SemiBold", path.join(FONT_DIR, "DMSans-SemiBold.ttf"));
-  doc.registerFont("DMSans-Bold", path.join(FONT_DIR, "DMSans-Bold.ttf"));
+  // v3.8.bai — the nine registerFont calls became registerSkillFonts.
+  //
+  // IDENTICAL FILES. The chrome registers the same nine faces from the same
+  // backend/src/assets/fonts/bol-v2.9 directory, so this is a deletion of a
+  // duplicate rather than a change of typeface — which is why this is the one
+  // commit of the migration where the render pin is expected NOT to move.
+  // It also brings the ligature suppression the patch above used to do.
+  registerSkillFonts(doc);
 
   // Text-safety wrapper: decode HTML entities from form input. Ligature
   // handling is done separately via the doc.text monkey-patch above
