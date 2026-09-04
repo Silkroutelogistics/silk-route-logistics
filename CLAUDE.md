@@ -3352,7 +3352,7 @@ Most are inert history and **should** survive — `LoadActivity` and `LoadTracki
     not unique to the thing under test proves nothing about it.** A nonce now makes
     each mint distinct, with the reason recorded in the proof.
 
-256. **RC page-1 band rail — halted, measured, then DECIDED (2026-09-04, C12).**
+256. **RC page-1 band rail — DECIDED, then halted again on measurement (2026-09-04, C12).**
 
     `docs/design/rc.html` puts a navy vertical rail on the left of each page-1
     band. The measurements, so the sequence starts from facts rather than
@@ -3418,6 +3418,58 @@ Most are inert history and **should** survive — `LoadActivity` and `LoadTracki
     is what unblocks the two pages: page 2 had 39pt free against an acceptance
     strip needing 164, and the ~125pt comes from the fold rather than from
     loosening the floor.
+
+
+    **IMPLEMENTATION HALTED 2026-09-04 ON MEASUREMENT, AND ONE OF THE FACTS
+    ABOVE WAS MINE AND WRONG.** The decisions stand; what does not is the
+    sentence in this item that said where the space comes from. I wrote "the
+    ~125pt comes from folding the INVOICING block into the page-1 fine print"
+    from the design, **without measuring whether page 1 could receive it.** The
+    ratification rested on that. Measured now:
+
+    | | |
+    |---|---|
+    | page 1 ends at | **y = 718.0**, floor 738 → **20.0pt free** |
+    | DOCK & DISPATCH (160.4pt) | **already does not fit page 1** and defers to page 2 |
+    | page 2 before INVOICING | y = 591.1, chain 123.2 → ends 714.3, **23.7pt free** |
+    | acceptance strip needs | `RC_SIG_H` 140 + 24 = **164** |
+
+    **So the fold cannot happen and would not be enough if it could.** Page 1
+    has 20pt of slack and the block is 123pt, so there is nowhere to fold it TO.
+    And fitting the acceptance on page 2 needs **140.3pt** freed while the whole
+    invoicing chain is **123.2pt** — short by **17.1pt** even if page 1 could
+    absorb all of it. Two pages therefore requires removing content from page 1
+    as well, which is a content decision of the same class as the band reorder
+    the owner rejected, not a consequence of it.
+
+    **AND THE RAIL IS NOT CHROME, WHICH I ALSO ASSERTED WITHOUT CHECKING.** The
+    decision to keep the existing band order does make the CONTENT question go
+    away. It does not make this a local edit, because none of the seven page-1
+    helpers takes an origin — `drawPartiesBlock`, `drawEquipmentSpec`,
+    `drawShipmentTable`, `drawRateConTerms`, `drawLaneEconomics`,
+    `drawRateBreakdown` and `drawMetaStrip` hardcode `MARGIN` and `CONTENT_W`
+    inside `srl-chrome.ts`. Moving the body to `MARGIN + 51.68` means widening
+    seven shared helpers, two of which (`drawPartiesBlock`, `drawShipmentTable`)
+    are also called by other generators. That is the v3.8.aru blast radius: a
+    change in the shared library reaching documents nobody was editing.
+
+    It is tractable — optional parameters defaulting to today's values, the same
+    widening shape as B9a, with the pins proving the other documents did not
+    move. What makes it more than a morning is the re-measure the owner
+    correctly called for: **28 `lineBreak: false` sites** (14 in the helpers, 14
+    in the RC body) must each be checked against 488.32 rather than 540, and
+    `verify-rc-matrix` cannot see an intra-line overprint, so every one is a
+    hand measurement.
+
+    **The two goals also fight each other.** Narrowing the body 540 → 488 is a
+    9.6% reduction, which makes page-1 content taller on a page with 20pt of
+    slack. The rail pushes content ONTO page 2, moving the document away from
+    two pages rather than toward it.
+
+    **What is actually needed next is a decision about what leaves page 1**,
+    with the arithmetic above in hand. Nothing was shipped for the rail or the
+    fold; the carrier-column prefill from the same instruction shipped
+    separately as v3.8.azy, being independent of all of this.
 
 
 257. ~~**AUTO-DEPLOY IS STILL ON, THE GATE IS DECORATIVE, AND A RED-CI COMMIT
