@@ -59,6 +59,7 @@ export interface LegalAgreement {
 // a carrier signs is unchanged; bumping would 409 every open tab and invalidate
 // nothing meaningful. Bump when the WORDS change, not when their source does.
 import { PAPERWORK_DUE_HOURS } from "../lib/accessorialPolicy";
+import { standardNetDays, quickPayFeePercent, SAME_DAY_PREMIUM } from "../lib/quickPayPricing";
 import {
   BCA_F11_VERSION, BCA_F11_TITLE, BCA_F11_SUBTITLE, BCA_F11_EFFECTIVE_NOTE,
   BCA_F11_PREAMBLE, BCA_F11_SECTIONS,
@@ -187,7 +188,7 @@ export const BCA_VERSION = BCA_F11_VERSION;
 // compares the POSTED version to this constant, so a stale open tab is
 // rejected rather than stamped — which is the intended behaviour and the
 // reason the constant is the only version anywhere.
-export const QP_VERSION = "2026-08-16-v4";
+export const QP_VERSION = "2026-09-04-v5";
 
 // v3.8.ayn — the body is the Foundation Edition, generated from
 // docs/legal/bca-content-F11.md. It is composed here rather than pasted so
@@ -361,11 +362,34 @@ export const CARAVAN_QUICK_PAY_AGREEMENT: LegalAgreement = {
     },
     {
       heading: "4. Quick Pay Fee Schedule",
+      // v3.8.bab — the schedule is a TABLE, and every figure in it is read from
+      // lib/quickPayPricing at module load rather than written out here.
+      //
+      // It was three prose clauses spelling out all three tiers ("three percent
+      // (3%)" and so on), sitting beside a resolver that computes the same
+      // numbers for every charge path. Two statements of one fee schedule, one
+      // of which a carrier signs and the other of which decides what is actually
+      // deducted — and nothing held them together. Generating the table from the
+      // resolver makes drift impossible rather than unlikely.
+      //
+      // The table is hashed like any other segment (canonicalAgreementText), so
+      // a figure moving changes the contentHash rather than slipping through.
+      table: {
+        headers: ["Tier", "Standard pay", "7-Day Quick Pay", "Same-Day Quick Pay"],
+        rows: (["SILVER", "GOLD", "PLATINUM"] as const).map((tier) => [
+          tier.charAt(0) + tier.slice(1).toLowerCase(),
+          `Net-${standardNetDays(tier)} at no fee`,
+          `${quickPayFeePercent(tier, false)}% of the load payment`,
+          `${quickPayFeePercent(tier, true)}% of the load payment`,
+        ]),
+      },
       clauses: [
-        "Silver tier: standard pay is Net-30 at no fee. The 7-day Quick Pay fee is three percent (3%) of the load payment. The same-day Quick Pay fee is five percent (5%).",
-        "Gold tier: standard pay is Net-21 at no fee. The 7-day Quick Pay fee is two percent (2%) of the load payment. The same-day Quick Pay fee is four percent (4%).",
-        "Platinum tier: standard pay is Net-14 at no fee. The 7-day Quick Pay fee is one percent (1%) of the load payment. The same-day Quick Pay fee is three percent (3%).",
-        "Same-day Quick Pay is a universal premium of two percent (2%) added to Carrier’s 7-day tier fee. It is available at every tier and on any load, and is not restricted by tier or by Carrier’s standing in the Caravan Partner Program. Carrier requests same-day Quick Pay by contacting Broker at operations@silkroutelogistics.ai; like every Quick Pay speed, it is recorded on the load when Broker issues the rate confirmation for that load.",
+        // Reduced to what the table does NOT say. The per-tier percentages are
+        // gone from the prose because they are in the table above; what remains
+        // is universality, how it is requested, when the tier is fixed, and what
+        // the fee is calculated on — none of which a rate table can express.
+        `Same-day Quick Pay is the universal premium of ${SAME_DAY_PREMIUM}% shown in the table above, added to Carrier’s 7-day tier fee. It is available at every tier and on any load, and is not restricted by tier or by Carrier’s standing in the Caravan Partner Program. Carrier requests same-day Quick Pay by contacting Broker at operations@silkroutelogistics.ai; like every Quick Pay speed, it is recorded on the load when Broker issues the rate confirmation for that load.`,
+        "Standard tier pay carries no fee and is always available, whether or not Carrier is admitted to the pilot and whether or not Carrier elects Quick Pay on any given load.",
         "The applicable fee is determined by Carrier’s Caravan Partner Program tier as of the date the Quick Pay speed is recorded on the load, which is when Broker issues the rate confirmation for it. A later tier advancement applies to loads recorded after the advancement; it does not retroactively re-price a load already recorded or funded.",
         "The fee is calculated on the gross amount payable to Carrier for that load as stated in the rate confirmation, including line haul, fuel surcharge, and approved accessorials. Reimbursements advanced by Carrier and repaid at cost against an original receipt, including lumper fees, are paid in full and are not subject to the Quick Pay fee.",
       ],
