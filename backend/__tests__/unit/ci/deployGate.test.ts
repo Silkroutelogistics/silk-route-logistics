@@ -68,47 +68,71 @@ describe("CI deploy gate", () => {
     expect(block).toMatch(/github\.ref == 'refs\/heads\/main'/);
   });
 
-  it("warns, rather than failing, when the deploy hook secret is absent", () => {
-    // THIS ASSERTION USED TO SAY THE OPPOSITE, and it kept passing after the
-    // behaviour changed — it only checked that the job contained "exit 1"
-    // somewhere, and the hook-failure path still does. A test that passes for a
-    // reason unrelated to its name is worse than no test, so it now names the
-    // exact annotation level.
+  it("FAILS when the deploy hook secret is absent", () => {
+    // THIS ASSERTION HAS NOW SAID BOTH THINGS, and each was right when written.
     //
-    // The reasoning behind the change: failing loudly is right for hours and
-    // wrong after days. The secret went unset for a week, every push emailed a
-    // failure, and seven arrived for runs whose backend, frontend and E2E were
-    // all green. Unactionable red teaches a reader to ignore CI mail, which
-    // costs more than the red was guarding.
+    // It first required a hard failure, then required a warning, and now
+    // requires a failure again — because the surrounding fact changed twice,
+    // not because the standard drifted.
+    //
+    // The warning was correct while Render's own auto-deploy shipped every
+    // commit: the secret sat unset for a week and seven pushes emailed a
+    // failure for runs that were otherwise entirely green, which teaches a
+    // reader to ignore CI mail.
+    //
+    // Auto-deploy went OFF on 2026-09-04, so this job is the only path to
+    // production. An absent secret now means NOTHING SHIPS — and under the
+    // warning branch the tick would have been green about it. That is the exact
+    // silent outage the warning's own comment named as its residual risk.
     const block = jobBlock("deploy");
     expect(block).toMatch(/RENDER_DEPLOY_HOOK_URL/);
-    expect(block).toContain("::warning::RENDER_DEPLOY_HOOK_URL is not set");
-    expect(block).not.toContain("::error::RENDER_DEPLOY_HOOK_URL");
+    expect(block).toContain("::error::RENDER_DEPLOY_HOOK_URL is not set");
+    expect(
+      block,
+      "the absent-secret branch warns again. With auto-deploy off that is a " +
+        "green tick over a commit that never reached production.",
+    ).not.toContain("::warning::RENDER_DEPLOY_HOOK_URL");
   });
 
-  it("skips the trigger step when the secret is absent", () => {
-    // Warning instead of failing must not mean POSTing to an empty URL.
+  it("the deploy tick has ONE meaning", () => {
+    // The reason the branch was deleted rather than left inert. While it
+    // existed, "Deploy to Render = success" meant either "a deploy happened" or
+    // "the job declined to deploy", and only a log line told them apart — so
+    // reading the conclusion proved nothing about whether anything shipped.
+    //
+    // One step, no conditional, no step output. Success now means the hook was
+    // POSTed and answered 2xx, and nothing else can produce it.
     const block = jobBlock("deploy");
-    expect(block).toContain("if: steps.hook.outputs.present == 'true'");
+    expect(
+      block,
+      "a step-level conditional is back on the deploy path — success can mean " +
+        "'skipped' again",
+    ).not.toContain("steps.hook.outputs");
+    expect(block).not.toContain("present=false");
+    expect((block.match(/^ {6}- name:/gm) ?? []).length,
+      "the deploy job should be a single step").toBe(1);
   });
 
   it("still fails hard when a configured hook returns a non-2xx", () => {
-    // The quieting applies ONLY to the absent-secret case. A hook that exists
-    // and rejects the deploy is a real failure and stays loud.
+    // Unchanged, and it must stay: a hook that exists and rejects the deploy is
+    // a real failure and was always loud.
     const block = jobBlock("deploy");
     const idx = block.indexOf("Render deploy hook returned HTTP");
     expect(idx).toBeGreaterThan(-1);
     expect(block.slice(idx, idx + 200)).toContain("exit 1");
   });
 
-  it("names the ordering risk the warning creates", () => {
-    // While the secret is absent this job does not deploy and Render's own
-    // auto-deploy does. If auto-deploy is switched off before the secret exists,
-    // nothing deploys and this job stays green about it. The warning has to say
-    // so, because that sentence is the only thing standing between a quiet gate
-    // and a silent outage.
+  it("names what an absent secret now costs", () => {
+    // The old message told a reader NOT to turn auto-deploy off. It is off, so
+    // that sentence is now false and the message has to say what is true
+    // instead: this job is the only path to production.
     const block = jobBlock("deploy");
-    expect(block).toContain("Do NOT turn auto-deploy off");
+    expect(
+      block,
+      "the message still tells the reader not to turn auto-deploy off, which " +
+        "already happened",
+    ).not.toContain("Do NOT turn auto-deploy off");
+    expect(block).toContain("only path to production");
   });
 
   it("treats a non-2xx from the hook as a failure", () => {

@@ -357,41 +357,36 @@ jobs:
     # Pushes to main only. A pull_request run must never deploy.
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     steps:
-      # WHY THIS WARNS INSTEAD OF FAILING.
+      # WHY THIS FAILS RATHER THAN WARNS.
       #
-      # It failed loudly at first, on the reasoning that a missing secret must
-      # never look like a successful deploy. That is right for a few hours and
-      # wrong after a few days: the secret went unset for a week, every push
-      # emailed a failure, and seven of them arrived for runs whose backend,
-      # frontend and E2E were all green. Unactionable red teaches a reader to
-      # ignore CI mail, which costs more than the thing the red was guarding.
+      # It failed at first, then warned, and now fails again — and the reason it
+      # changed twice is that the surrounding fact changed twice.
       #
-      # THE RESIDUAL RISK, STATED PLAINLY. While the secret is absent this job
-      # does not deploy, and Render's own auto-deploy is what ships the commit.
-      # If auto-deploy is ever switched OFF while the secret is still missing,
-      # nothing deploys and this job stays green about it. That ordering is the
-      # one thing the setup doc insists on: add the secret, confirm this job goes
-      # green, and only then turn auto-deploy off.
+      # It warned because the secret sat unset for a week while Render's own
+      # auto-deploy shipped every commit. Seven pushes emailed a failure for
+      # runs whose backend, frontend and E2E were all green. Unactionable red
+      # teaches a reader to ignore CI mail, which costs more than the red was
+      # guarding.
       #
-      # A real hook failure still fails hard — see the next step.
-      - name: Check for the deploy hook secret
-        id: hook
+      # Both halves of that are now false. The secret exists, and auto-deploy is
+      # OFF as of 2026-09-04 — so this job is the ONLY path to production. An
+      # absent secret no longer means "Render ships it anyway"; it means nothing
+      # ships and the tick would say so in green. That is the silent outage the
+      # warning branch's own comment warned about, arriving from the other
+      # direction.
+      #
+      # It also gave the tick two meanings. "Deploy to Render = success" could
+      # mean a deploy happened or that the job declined to deploy, and only a
+      # log line told them apart — so reading the conclusion proved nothing
+      # about whether anything shipped.
+      - name: Trigger Render deploy
         env:
           HOOK: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
         run: |
           if [ -z "$HOOK" ]; then
-            echo "::warning::RENDER_DEPLOY_HOOK_URL is not set, so this job did not deploy. Render's own auto-deploy is currently shipping this commit. Do NOT turn auto-deploy off until this secret exists and this job has gone green — see docs/internal/render-deploy-gate-setup.md."
-            echo "present=false" >> "$GITHUB_OUTPUT"
-          else
-            echo "Deploy hook secret present."
-            echo "present=true" >> "$GITHUB_OUTPUT"
+            echo "::error::RENDER_DEPLOY_HOOK_URL is not set, so nothing deployed. Render auto-deploy is OFF, so this job is the only path to production — see docs/internal/render-deploy-gate-setup.md."
+            exit 1
           fi
-
-      - name: Trigger Render deploy
-        if: steps.hook.outputs.present == 'true'
-        env:
-          HOOK: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
-        run: |
           code=$(curl -sS -o /tmp/render-resp.txt -w "%{http_code}" -X POST "$HOOK")
           echo "Render responded HTTP $code"
           cat /tmp/render-resp.txt || true
