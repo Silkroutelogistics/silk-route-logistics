@@ -296,11 +296,39 @@ function renderLegalAgreement(
   }
 
   if (carrier) {
+    // Bare keys, deliberately: these four field names appear ONLY in the
+    // carrier role, so they cannot cross-fill. PRINT NAME, TITLE and DATE
+    // below appear in BOTH roles and must be role-scoped — do not copy this
+    // bare pattern for them.
     prefilled["CARRIER LEGAL NAME"] = carrier.legalName;
     if (carrier.mcNumber) prefilled["MC #"] = carrier.mcNumber;
     if (carrier.dotNumber) prefilled["DOT #"] = carrier.dotNumber;
     if (carrier.ein) prefilled["EIN"] = carrier.ein;
   }
+
+  // THE CARRIER COLUMN, on EXECUTED copies only.
+  //
+  // An executed agreement was printing the carrier's identity and leaving the
+  // three fields that say WHO signed it blank, while the attestation strip
+  // below named them. One document, two answers to "who bound the carrier",
+  // and the blank one is the one that looks like the signature block.
+  //
+  // Unsigned specimens are untouched: with no signature there is nobody to
+  // name, and a specimen's whole job is to show what a carrier will fill in.
+  //
+  // SIGNATURE stays blank on both columns. It is the line a wet or drawn mark
+  // goes on; the electronic execution is evidenced by the attestation strip,
+  // and printing a typed name there would assert a mark nobody made.
+  if (signature) {
+    const CARRIER_ROLE = MASTER_AGREEMENT_SIGNATURE_ROLES[1].title;
+    prefilled[roleFieldKey(CARRIER_ROLE, "PRINT NAME")] = signature.signedByName;
+    if (signature.signedByTitle) {
+      prefilled[roleFieldKey(CARRIER_ROLE, "TITLE")] = signature.signedByTitle;
+    }
+    prefilled[roleFieldKey(CARRIER_ROLE, "DATE")] =
+      new Date(signature.signedAt).toISOString().slice(0, 10);
+  }
+
   y = drawSignatureBlock(doc, y, { roles: MASTER_AGREEMENT_SIGNATURE_ROLES, height: sigHeight, prefilledValues: prefilled });
 
   // The countersign line, DRAWN because it is HASHED. canonicalAgreementText
