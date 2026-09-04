@@ -848,16 +848,22 @@ router.get("/agreement/:type/pdf", authenticate, authorize("CARRIER"), async (re
           at: signed.counterSignedAt,
         }
       : undefined;
-  // v3.8.azw — THE FLIP. The Design System shell is now what a carrier
-  // downloads, for the Broker-Carrier Agreement only. Conditional rather than
-  // unconditional because this one route serves BOTH agreements: the Quick Pay
-  // Agreement has no shell pin, so shipping it through the shell would restyle a
-  // second signed instrument on evidence nobody has taken.
+  // v3.8.azw — THE FLIP, completed for Quick Pay in v3.8.bad. The Design
+  // System shell is what a carrier downloads, for BOTH master agreements.
+  //
+  // It was conditional on the template while only the Broker-Carrier Agreement
+  // had a shell pin: shipping the Quick Pay Agreement through the shell would
+  // have restyled a second signed instrument on evidence nobody had taken. That
+  // evidence now exists — quick-pay 2026-08-16-v4 is archived as a frozen
+  // literal, both QP pins cover the shell render, and the countersign block is
+  // proved to come out on the execution page. So the flag is unconditional
+  // again, and a third master agreement added later inherits the house style
+  // rather than silently rendering in the retired one.
   const doc = generateAgreementPdf(agreement, {
     carrier: identity,
     signature,
     countersign,
-    shell: agreement.templateName === BROKER_CARRIER_AGREEMENT.templateName,
+    shell: true,
   });
   res.setHeader("Content-Type", "application/pdf");
   res.setHeader("Content-Disposition", `inline; filename="${agreementPdfFilename(agreement)}"`);
@@ -1468,6 +1474,11 @@ router.post("/quickpay-election", authenticate, authorize("CARRIER"), requireSte
       void (async () => {
         const identity = await loadCarrierIdentity(profile.id);
         const buf = await generateAgreementBuffer(CARAVAN_QUICK_PAY_AGREEMENT, {
+          // v3.8.bad — same shell as the download route, for the same reason
+          // it was given to the BCA: a stored copy that does not look like the
+          // copy the carrier can pull is two documents for one agreement, and
+          // the one that counts in a dispute is whichever they are holding.
+          shell: true,
           countersign: qpCountersign,
           carrier: identity,
           signature: { signedByName: signedByName!, signedByTitle: signedByTitle || null, signedAt: now, signerIp: ip || null, version, consentAt },

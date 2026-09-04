@@ -52,6 +52,7 @@ import {
   generateSettlementPDF,
 } from "../../../src/services/pdfService";
 import { generateAgreementBuffer } from "../../../src/services/agreementPdfService";
+import { SIGNATORY_NAME, SIGNATORY_TITLE } from "../../../src/config/authority";
 import { generateTrainingCertificate } from "../../../src/services/certificatePdfService";
 import { generateCertVerifyQRBuffer } from "../../../src/utils/qrGenerator";
 import { BROKER_CARRIER_AGREEMENT, CARAVAN_QUICK_PAY_AGREEMENT } from "../../../src/data/agreements";
@@ -110,6 +111,24 @@ const DOCUMENTS: Record<string, () => Promise<Buffer>> = {
   "agreement-qp": () => generateAgreementBuffer(CARAVAN_QUICK_PAY_AGREEMENT, {}),
   "agreement-qp-executed": () =>
     generateAgreementBuffer(CARAVAN_QUICK_PAY_AGREEMENT, { carrier: PIN_CARRIER, signature: PIN_SIGNATURE }),
+  // v3.8.bad - the Quick Pay shell, pinned because the flip made it the
+  // document a carrier actually receives. The two pins above render WITHOUT
+  // the shell, so flipping the route moved neither of them: this file calls
+  // the renderer directly, which is the same property that makes
+  // agreementShellFlip necessary. Pinning only the retired variant would have
+  // left the live one unwatched - the shell could drift freely and every pin
+  // would stay green.
+  "agreement-qp-shell": () => generateAgreementBuffer(CARAVAN_QUICK_PAY_AGREEMENT, { shell: true }),
+  // The executed shell is the copy stored at signing and handed to the
+  // carrier, a factor, or a court. It carries the countersign block, so it is
+  // also the one where a restyle could drop execution evidence.
+  "agreement-qp-executed-shell": () =>
+    generateAgreementBuffer(CARAVAN_QUICK_PAY_AGREEMENT, {
+      carrier: PIN_CARRIER,
+      signature: PIN_SIGNATURE,
+      countersign: { name: SIGNATORY_NAME, title: SIGNATORY_TITLE, at: new Date("2026-09-04T15:00:00.000Z") },
+      shell: true,
+    }),
   // v3.8.azb — three renders that shared srl-chrome already reached and no
   // pin was watching. The SLC is customer-facing and must never show carrier
   // cost; the two certificate variants differ only in whether expiresAt,

@@ -9,5 +9,7 @@
   "agreement-bca-shell": "de82920bb21ac75e443789f2e00dc4fb",
   "shipper-load-confirmation": "d2d198fce5e6245fe7fdc2438c2c96c2",
   "certificate": "c01b8b5fd91aef00c2ca909d5eb0f97f",
-  "certificate-minimal": "c436612d41a97c5c1bcc64627db78918"
+  "certificate-minimal": "c436612d41a97c5c1bcc64627db78918",
+  "agreement-qp-shell": "6d0fee4a3c025365729762a58a022ec9",
+  "agreement-qp-executed-shell": "b55a49586af05447ea0c97345fc8abb6"
 }
