@@ -173,55 +173,20 @@ function labelValue(doc: PDFDoc, label: string, value: string, x: number, y: num
   doc.fontSize(10).fillColor("#1E1E2F").text(value || "—", x, y + 12);
 }
 
-interface ShipmentData {
-  shipmentNumber: string; proNumber?: string | null; bolNumber?: string | null;
-  originCity: string; originState: string; originZip: string;
-  destCity: string; destState: string; destZip: string;
-  weight?: number | null; pieces?: number | null; commodity?: string | null;
-  equipmentType: string; rate: number; specialInstructions?: string | null;
-  pickupDate: Date; deliveryDate: Date;
-  customer?: { name: string; contactName?: string | null; address?: string | null; city?: string | null; state?: string | null; zip?: string | null; phone?: string | null } | null;
-  driver?: { firstName: string; lastName: string; phone?: string | null } | null;
-  equipment?: { unitNumber: string; type: string } | null;
-}
-
-export async function generateBOL(shipment: ShipmentData): Promise<PDFDoc> {
-  // Adapt shipment data into the LoadBOLData interface and use the same layout
-  const loadData: LoadBOLData = {
-    referenceNumber: shipment.shipmentNumber,
-    loadNumber: shipment.bolNumber || shipment.shipmentNumber,
-    originCity: shipment.originCity,
-    originState: shipment.originState,
-    originZip: shipment.originZip,
-    destCity: shipment.destCity,
-    destState: shipment.destState,
-    destZip: shipment.destZip,
-    weight: shipment.weight,
-    pieces: shipment.pieces,
-    equipmentType: shipment.equipmentType,
-    commodity: shipment.commodity,
-    rate: shipment.rate,
-    pickupDate: shipment.pickupDate,
-    deliveryDate: shipment.deliveryDate,
-    specialInstructions: shipment.specialInstructions,
-    driverName: shipment.driver ? `${shipment.driver.firstName} ${shipment.driver.lastName}` : null,
-    truckNumber: shipment.equipment?.unitNumber || null,
-    customer: shipment.customer,
-  };
-  return await generateBOLFromLoad(loadData);
-}
-
-/**
- * Context for BOL PDF generation. Added v3.7.k for the
- * BOL-QR → /track system (Phase 5E.a).
- *
- * `trackingToken` is the 12-char STATUS_ONLY
- * ShipperTrackingToken issued by
- * shipperTrackingTokenService.generateBOLPrintToken()
- * at the controller layer. Phase 5E.b will encode this
- * into a QR printed on the BOL. Until then the parameter
- * is plumbed through but visually unused.
- */
+// v3.8.baf — the legacy shipment-keyed BOL generator and its ShipmentData
+// shape were deleted here.
+//
+// It rendered from a Shipment row rather than a Load, and its only caller was
+// GET /pdf/bol/:shipmentId, which nothing reached: every frontend surface —
+// the carrier my-loads page, the AE load board, the shipper detail drawer —
+// calls /pdf/bol-load/:loadId, and so do both fit gates, the render pin and
+// the ligature test. Zero callers across backend/src, frontend/src and e2e.
+//
+// It also carried no v2.9 chrome. A second, older-looking bill of lading
+// reachable by URL is the document drift this migration exists to end, and
+// it would have been the one document the shared chrome never reached.
+//
+// generateBOLFromLoad below is now the only BOL generator.
 export interface BOLRenderContext {
   trackingToken?: string;
 }

@@ -1,30 +1,9 @@
 import { Response } from "express";
 import { prisma } from "../config/database";
 import { AuthRequest } from "../middleware/auth";
-import { generateBOL, generateBOLFromLoad, generateEnhancedRateConfirmation, generateShipperLoadConfirmation, generateInvoicePDF, generateSettlementPDF } from "../services/pdfService";
+import { generateBOLFromLoad, generateEnhancedRateConfirmation, generateShipperLoadConfirmation, generateInvoicePDF, generateSettlementPDF } from "../services/pdfService";
 import { generateBOLPrintToken } from "../services/shipperTrackingTokenService";
 import { log } from "../lib/logger";
-
-export async function downloadBOL(req: AuthRequest, res: Response) {
-  try {
-    const shipment = await prisma.shipment.findUnique({
-      where: { id: req.params.shipmentId },
-      include: { customer: true, driver: true, equipment: true },
-    });
-
-    if (!shipment) { res.status(404).json({ error: "Shipment not found" }); return; }
-
-    const doc = await generateBOL(shipment);
-    const filename = `BOL-${shipment.bolNumber || shipment.shipmentNumber}.pdf`;
-
-    res.setHeader("Content-Type", "application/pdf");
-    res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
-    doc.pipe(res);
-  } catch (e: any) {
-    log.error({ err: e }, "[PDF] BOL generation error:");
-    res.status(500).json({ error: "Failed to generate BOL PDF" });
-  }
-}
 
 export async function downloadRateConfirmation(req: AuthRequest, res: Response) {
   try {

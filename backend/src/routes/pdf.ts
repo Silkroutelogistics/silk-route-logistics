@@ -1,11 +1,10 @@
 import { Router } from "express";
-import { downloadBOL, downloadBOLFromLoad, downloadRateConfirmation, downloadEnhancedRateConfirmation, downloadShipperLoadConfirmation, downloadInvoicePDF, downloadSettlementPDF } from "../controllers/pdfController";
+import { downloadBOLFromLoad, downloadRateConfirmation, downloadEnhancedRateConfirmation, downloadShipperLoadConfirmation, downloadInvoicePDF, downloadSettlementPDF } from "../controllers/pdfController";
 import { authenticate, authorize } from "../middleware/auth";
 
 const router = Router();
 router.use(authenticate);
 
-router.get("/bol/:shipmentId", authorize("ADMIN", "CEO", "BROKER", "DISPATCH", "OPERATIONS"), downloadBOL);
 // v3.8.awu — CARRIER admitted here, gated per-record in the controller.
 // A carrier hauling a load needs its bill of lading: it is the document the
 // shipper signs at the dock. Before this the only BOL reachable from the carrier
