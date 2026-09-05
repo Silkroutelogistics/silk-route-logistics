@@ -82,6 +82,37 @@ function formatBytes(bytes: number): string {
 }
 
 /**
+ * The CTA, defined once and rendered in both branches.
+ *
+ * It used to live ONLY inside the empty-state early return, so it disappeared
+ * the moment any row existed — including a request answered and closed weeks
+ * ago, which is a state the reported symptom ("it vanishes once a request is
+ * open") does not even cover. The button was never count-gated on purpose; it
+ * was gated by where it happened to be written.
+ *
+ * The server has never carried that limit. `info_requests` has no unique
+ * constraint, `createInfoRequest` performs no count check, and the two
+ * `infoRequest.count` calls in the service are the last-open detectors in
+ * resolve and cancel — which exist precisely BECAUSE N concurrent requests are
+ * expected. So this was a UI-only limit on a backend built without one.
+ *
+ * One definition, two call sites, so the empty and non-empty paths cannot drift
+ * — which is exactly how the two CTAs drifted in the first place: this one
+ * carried an implicit request-count gate that the Profile-tab button never had.
+ */
+function RequestInfoButton({ onClick }: { onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-500/20 text-amber-400 rounded-lg text-xs hover:bg-amber-500/30 transition"
+    >
+      <MessageCircle className="w-3.5 h-3.5" /> Request Info
+    </button>
+  );
+}
+
+/**
  * v3.8.awx — `onRequestInfo` / `canRequestInfo` added so the empty state can own
  * its own call to action.
  *
@@ -135,6 +166,11 @@ export function InfoRequestThread({
 
   const requests = data?.requests || [];
 
+  // Resolved once, above the branch, so both paths ask the identical question.
+  // A boolean would not narrow `onRequestInfo` for TypeScript; holding the
+  // handler itself does, and it makes the guard un-forgettable at the call site.
+  const offerCta = isAdmin && canRequestInfo && onRequestInfo ? onRequestInfo : null;
+
   if (requests.length === 0) {
     return (
       <div className="p-6 text-center">
@@ -145,16 +181,12 @@ export function InfoRequestThread({
             press a button would name a control they could never be shown. The old
             copy was rendered unguarded even though this component already
             receives isAdmin and uses it for Cancel further down. */}
-        {isAdmin && canRequestInfo && onRequestInfo ? (
+        {offerCta ? (
           <>
             <p className="text-xs text-gray-500 mt-1">Ask this carrier for additional documents or clarification.</p>
-            <button
-              type="button"
-              onClick={onRequestInfo}
-              className="mt-3 inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-500/20 text-amber-400 rounded-lg text-xs hover:bg-amber-500/30 transition"
-            >
-              <MessageCircle className="w-3.5 h-3.5" /> Request Info
-            </button>
+            <div className="mt-3">
+              <RequestInfoButton onClick={offerCta} />
+            </div>
           </>
         ) : isAdmin && !canRequestInfo ? (
           // The status exclusion is a front-end product decision, not a server
@@ -171,9 +203,16 @@ export function InfoRequestThread({
 
   return (
     <div className="px-5 py-4 space-y-3">
-      <div className="flex items-center justify-between mb-1">
+      {/* The CTA sits opposite the count. "Newest first" stays — it is the only
+          thing telling the reader why a resolved request can appear above an
+          open one, and dropping it to make room would trade one confusion for
+          another. */}
+      <div className="flex items-center justify-between gap-3 mb-1">
         <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">{requests.length} request{requests.length === 1 ? "" : "s"}</p>
-        <p className="text-[11px] text-gray-400">Newest first</p>
+        <div className="flex items-center gap-2 shrink-0">
+          <p className="text-[11px] text-gray-400">Newest first</p>
+          {offerCta && <RequestInfoButton onClick={offerCta} />}
+        </div>
       </div>
       {requests.map((req) => (
         <ThreadCard

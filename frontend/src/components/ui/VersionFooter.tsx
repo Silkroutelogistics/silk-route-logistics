@@ -17061,7 +17061,28 @@
 // forgot; an em-dash would have read as "not applicable". The preamble says the
 // Effective Date IS the date of the last signature, so the honest value on a
 // blank form is the rule itself.
-export const SRL_VERSION = "3.8.bal";
+// v3.8.bam F1 — the Request Info CTA leaves the empty state.
+//
+// It lived only inside the `requests.length === 0` early return, so it vanished
+// the moment ANY row existed. Broader than reported: a request answered and
+// closed weeks ago hid it too, so a carrier whose only ask was resolved could
+// not be asked again from this tab.
+//
+// The limit was never real. `info_requests` carries no unique constraint,
+// `createInfoRequest` performs no count check, and the two `infoRequest.count`
+// calls in the service are the last-open detectors in resolve and cancel —
+// which exist precisely BECAUSE several concurrent asks are expected. The
+// server was built for this; only the tab stopped offering the button.
+//
+// One definition, two call sites, and the guard resolved ONCE above the branch
+// so both paths ask the identical question. That is the actual defect: two
+// renders of one control, and this one had silently acquired a request-count
+// gate the Profile-tab button never had.
+//
+// "Newest first" stays. It is the only thing explaining why a resolved request
+// can sit above an open one, and deleting it to make room would trade one
+// confusion for another.
+export const SRL_VERSION = "3.8.bam";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
