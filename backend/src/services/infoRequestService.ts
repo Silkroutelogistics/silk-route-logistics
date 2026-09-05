@@ -63,6 +63,42 @@ export function getCategoryTemplate(category: string): string {
   return CATEGORY_TEMPLATES[category] || "";
 }
 
+/**
+ * A REQUEST THE CARRIER SURFACE CANNOT SHOW MUST NOT BE CREATABLE.
+ *
+ * The carrier portal renders `InfoRequestedSection` only when
+ * `onboardingStatus === "INFO_REQUESTED"`, and `createInfoRequest` flips to
+ * that state only from PENDING or REVIEWING. So a request raised against a
+ * carrier in any of these three states never flips the status, never renders in
+ * the portal, and can never be answered — it sits OPEN forever while the AE
+ * waits for a reply the carrier was never shown. An APPROVED carrier is worse
+ * still: the dashboard layout routes them past that page entirely.
+ *
+ * The exclusion already existed on both AE buttons and NOWHERE on the server,
+ * so it was a convention rather than a rule. This makes it a rule.
+ *
+ * EXCLUSION, NOT INCLUSION, and that is deliberate. It mirrors the frontend
+ * gate character for character, which is the stated requirement; and if
+ * OnboardingStatus gains a value, an exclusion list admits it while an
+ * inclusion list would refuse it — so the two sides fail the SAME way rather
+ * than the server silently becoming stricter than the button.
+ *
+ * EXPORTED for the parity guard, which asserts this set equals the frontend's
+ * two gate expressions. The reachability gate notes it has only one use in this
+ * module and that the export "may be unnecessary" — it is necessary: a guard
+ * comparing against its own copy of the list would pass while the two drifted.
+ */
+export const STATUSES_CLOSED_TO_INFO_REQUESTS = ["APPROVED", "REJECTED", "SUSPENDED"] as const;
+
+/** Carries a machine-readable code, because the route maps by code and the
+ *  bare-Error path there falls through to a 500. */
+class InfoRequestPolicyError extends Error {
+  constructor(readonly code: string, message: string) {
+    super(message);
+    this.name = "InfoRequestPolicyError";
+  }
+}
+
 interface CreateInfoRequestArgs {
   carrierId: string;
   createdById: string;
@@ -81,6 +117,18 @@ export async function createInfoRequest(args: CreateInfoRequestArgs) {
     throw new Error("Carrier not found");
   }
 
+  // Refused BEFORE the transaction, so no row is written and the carrier email
+  // below never fires. `onboardingStatus` is already in scope from the select
+  // above — no second query.
+  if ((STATUSES_CLOSED_TO_INFO_REQUESTS as readonly string[]).includes(carrier.onboardingStatus)) {
+    throw new InfoRequestPolicyError(
+      "CARRIER_NOT_UNDER_REVIEW",
+      `Cannot request information from a carrier that is ${carrier.onboardingStatus}. ` +
+        "The carrier portal only shows requests while an application is under review, so this one " +
+        "would never reach them. Change the carrier's status first if you still need something.",
+    );
+  }
+
   // Atomic: create + status flip in one transaction so we don't end up
   // with an OPEN request but a stale status (or vice versa) on failure.
   const result = await prisma.$transaction(async (tx) => {
@@ -95,10 +143,15 @@ export async function createInfoRequest(args: CreateInfoRequestArgs) {
     });
 
     // Auto-flip onboardingStatus to INFO_REQUESTED when carrier was in
-    // PENDING/REVIEWING. Skip if already INFO_REQUESTED (no-op) or any
-    // terminal state (APPROVED/REJECTED/SUSPENDED — AE shouldn't be
-    // creating requests against terminal carriers, but defensively
-    // we don't flip those).
+    // PENDING/REVIEWING. INFO_REQUESTED is a deliberate no-op: a second
+    // concurrent request needs no second flip, which is what makes several
+    // open requests against one carrier work.
+    //
+    // The three terminal states can no longer reach this line — the gate above
+    // refuses them. This branch used to be the only thing standing between a
+    // terminal carrier and a request they could never see, and it was not a
+    // gate: it declined to flip the status while still writing the row and
+    // sending the email.
     if (carrier.onboardingStatus === "PENDING" || carrier.onboardingStatus === "REVIEWING") {
       await tx.carrierProfile.update({
         where: { id: args.carrierId },

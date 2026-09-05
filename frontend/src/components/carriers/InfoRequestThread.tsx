@@ -189,10 +189,12 @@ export function InfoRequestThread({
             </div>
           </>
         ) : isAdmin && !canRequestInfo ? (
-          // The status exclusion is a front-end product decision, not a server
-          // one — POST /info-requests performs no onboardingStatus check. Say
-          // which state is blocking rather than showing a button that is absent
-          // for reasons the reader cannot see.
+          // The status exclusion is now enforced on BOTH sides: POST
+          // /info-requests refuses APPROVED/REJECTED/SUSPENDED with 409
+          // CARRIER_NOT_UNDER_REVIEW. This sentence is the same rule stated
+          // early, so the reader learns it before pressing rather than after —
+          // say which state is blocking rather than showing a button that is
+          // absent for reasons they cannot see.
           <p className="text-xs text-gray-500 mt-1">Info requests are available while an application is under review.</p>
         ) : (
           <p className="text-xs text-gray-500 mt-1">An admin can request additional documents or clarification from this carrier.</p>

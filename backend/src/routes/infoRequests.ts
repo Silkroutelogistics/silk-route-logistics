@@ -64,6 +64,16 @@ router.post("/", validateBody(createSchema), async (req: AuthRequest, res: Respo
     });
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Failed to create info request";
+    // The policy refusal is a 409, not a 500: the request is well-formed and the
+    // caller is authorised — it is the TARGET's state that forbids it. Mapped by
+    // `code` rather than by message string, because the message is a sentence an
+    // AE reads and rewording it must not silently turn a 409 back into a 500.
+    const code = (err as { code?: string })?.code;
+    if (code === "CARRIER_NOT_UNDER_REVIEW") {
+      log.warn({ err }, "[InfoRequest] Create refused — carrier not under review");
+      res.status(409).json({ error: msg, code });
+      return;
+    }
     log.error({ err }, "[InfoRequest] Create failed");
     res.status(msg === "Carrier not found" ? 404 : 500).json({ error: msg });
   }

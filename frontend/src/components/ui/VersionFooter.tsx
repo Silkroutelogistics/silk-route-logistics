@@ -17082,7 +17082,32 @@
 // "Newest first" stays. It is the only thing explaining why a resolved request
 // can sit above an open one, and deleting it to make room would trade one
 // confusion for another.
-export const SRL_VERSION = "3.8.bam";
+// v3.8.ban F2 — a request the carrier surface cannot show is no longer creatable.
+//
+// The carrier portal renders its info-request section only at INFO_REQUESTED,
+// and create flips to that state only from PENDING or REVIEWING. So a request
+// raised against an APPROVED, REJECTED or SUSPENDED carrier never flipped the
+// status, never rendered in the portal, and could never be answered — it sat
+// OPEN forever while the AE waited for a reply the carrier was never shown. An
+// APPROVED carrier is worse: the layout routes them past that page entirely.
+//
+// The exclusion existed on both AE buttons and NOWHERE on the server, so it was
+// a convention. Now it is a rule: 409 CARRIER_NOT_UNDER_REVIEW, refused before
+// the transaction so no row is written and no carrier email fires.
+//
+// 409 rather than 500 because the request is well-formed and the caller is
+// authorised — it is the TARGET's state that forbids it. Mapped by `code`, not
+// by message string, so rewording a sentence an AE reads cannot silently turn
+// the 409 back into a 500.
+//
+// A DISTINCT CODE, deliberately. CARRIER_SUSPENDED and CARRIER_NOT_APPROVED are
+// taken by the carrier-facing 403s, where they mean "YOU are not allowed". This
+// is AE-facing and means "the TARGET's state forbids it"; one code with two
+// audiences and two meanings would discriminate neither.
+//
+// EXCLUSION, not inclusion, so a new OnboardingStatus value is admitted by both
+// sides rather than the server quietly becoming stricter than the button.
+export const SRL_VERSION = "3.8.ban";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
