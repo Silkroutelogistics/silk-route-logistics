@@ -197,6 +197,29 @@ describe("the server set and the frontend gate are the same set", () => {
     return [...haystack.matchAll(/onboardingStatus\s*!==\s*"([A-Z_]+)"/g)].map((m) => m[1]).sort();
   }
 
+  /**
+   * The SET of names is not the gate. `a !== X && a !== Y` and `a !== X || a !== Y`
+   * contain identical names and mean opposite things — the second is
+   * tautologically true, so the button would render for exactly the three
+   * states it exists to exclude, and a name-only comparison cannot tell them
+   * apart. Verified: both forms yield [APPROVED, REJECTED, SUSPENDED].
+   *
+   * So the shape is asserted too: every comparison is `!==`, every join is
+   * `&&`, and no `||` appears in the slice.
+   */
+  function shapeOf(haystack: string): { comparisons: number; ands: number; ors: number; equals: number } {
+    const window = haystack.slice(
+      haystack.indexOf("onboardingStatus"),
+      haystack.lastIndexOf("onboardingStatus") + 60,
+    );
+    return {
+      comparisons: [...window.matchAll(/onboardingStatus\s*!==/g)].length,
+      ands: [...window.matchAll(/&&/g)].length,
+      ors: [...window.matchAll(/\|\|/g)].length,
+      equals: [...window.matchAll(/onboardingStatus\s*===/g)].length,
+    };
+  }
+
   it("the Profile-tab button excludes exactly the states the server refuses", () => {
     // The action bar at page.tsx ~1348. Sliced tightly so the assertion is
     // about THIS gate and not about every !== in a 2,800-line file.
@@ -205,6 +228,11 @@ describe("the server set and the frontend gate are the same set", () => {
     const gate = page.slice(marker, marker + 900);
 
     expect(excludedIn(gate)).toEqual([...STATUSES_CLOSED_TO_INFO_REQUESTS].sort());
+    // The names alone cannot distinguish && from ||. Assert the shape too.
+    const shape = shapeOf(gate);
+    expect(shape.comparisons).toBe(3);
+    expect(shape.ors).toBe(0);
+    expect(shape.equals).toBe(0);
   });
 
   it("the Info Req tab's canRequestInfo prop excludes the same states", () => {
@@ -213,6 +241,11 @@ describe("the server set and the frontend gate are the same set", () => {
     const gate = page.slice(marker, marker + 400);
 
     expect(excludedIn(gate)).toEqual([...STATUSES_CLOSED_TO_INFO_REQUESTS].sort());
+    // The names alone cannot distinguish && from ||. Assert the shape too.
+    const shape = shapeOf(gate);
+    expect(shape.comparisons).toBe(3);
+    expect(shape.ors).toBe(0);
+    expect(shape.equals).toBe(0);
   });
 
   it("reads a real file with real gates in it", () => {

@@ -26,8 +26,12 @@ import { log } from "../lib/logger";
 
 const router = Router();
 
-// All AE-side endpoints require ADMIN or CEO. Same gate as the existing
-// approve/reject buttons on the carrier detail surface.
+// AE-side. ADMIN and CEO by name — and CARRIER_REVIEWER, which reads as absent
+// here but is not: `authorize` resolves that role entirely against
+// CARRIER_REVIEWER_ALLOW before it ever consults the named list, and all three
+// of these routes are on it (middleware/auth.ts, info-requests-list /
+// info-request-create / info-request-cancel). Three roles reach the 409 below,
+// which is also why the frontend gates on canReviewCarriers rather than isAdmin.
 router.use(authenticate);
 router.use(authorize("ADMIN", "CEO"));
 

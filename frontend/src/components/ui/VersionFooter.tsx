@@ -17156,7 +17156,36 @@
 // NOT claimed: the TOCTOU window stays open. The status pre-check is a read and
 // the update carries no status precondition, so a concurrent cancel or carrier
 // resolve landing between them is still overwritten rather than refused.
-export const SRL_VERSION = "3.8.bap";
+// v3.8.baq F5 — the guards the arc shipped were weaker than its commit messages
+// claimed, and an adversarial pass over bam/ban/bao/bap found it.
+//
+// THE STRIPPER WAS EATING A GUARDED FILE. Two regexes cannot tell a comment from
+// a string, and `include: ["src/**` + `/*.test.{ts,tsx}"]` in vitest.config.ts
+// puts a block opener inside a STRING — so the file stripped to 19% of itself
+// and the @shared assertion passed by luck rather than soundness. Every absence
+// assertion in that guard was one string away from passing on text that had been
+// EATEN rather than text that was absent, which is the one way a guard cannot
+// fail: it can only false-pass. Replaced with a single left-to-right walk that
+// knows what a string is, plus fixtures for each case that broke it.
+//
+// TWO ASSERTIONS WERE EVADABLE. `not.toMatch(/\bstatus\s*[},]/)` required the
+// word to be followed by `}` or `,`, so re-adding the filter as
+// `const st = (req.query as any).status` and a ternary `where` left it green
+// while ?status= was fully functional again. And the parity guard compared the
+// SET of status names, which is identical for `a !== X && a !== Y` and
+// `a !== X || a !== Y` — the second tautologically true, rendering the button
+// for exactly the three states it exists to exclude. The shape is asserted now,
+// not just the names.
+//
+// Two stale claims corrected: CLAUDE.md still documented the `&status=Y` filter
+// bao deleted, and the comment two lines above the handler ban hardened still
+// said "ADMIN or CEO" when CARRIER_REVIEWER reaches all three routes.
+//
+// My own threshold was wrong once here too: the first version of the
+// config-corruption check compared stripped-to-raw length against 0.4 and went
+// red against a now-correct stripper, because that file is genuinely ~80%
+// comment. A size proxy cannot tell "mostly comments" from "ate the code".
+export const SRL_VERSION = "3.8.baq";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

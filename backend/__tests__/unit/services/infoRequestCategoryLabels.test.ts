@@ -41,21 +41,58 @@ const raw = (rel: string) =>
  * comments exist precisely BECAUSE the thing is gone, so a prose-matching guard
  * fails hardest on the files that did the work. §19 Sub-pattern 16, ninth fire.
  *
- * The `:` lookbehind keeps `https://` intact, which matters because the service
- * is full of portal URLs inside email templates.
+ * IT IS A TOKENIZER, NOT A PAIR OF REGEXES, AND IT TOOK THREE TRIES TO GET
+ * THERE. Attempt one read raw text and matched the prose explaining a deletion.
+ * Attempt two stripped blocks first and ate the file: a line comment containing
+ * "@shared" + slash-star carries a block OPENER, so the block pass ran to the
+ * next close and swallowed the import it was meant to find. Attempt three
+ * reordered the passes and looked right — while silently corrupting
+ * frontend/vitest.config.ts down to 19% of itself, because
+ * `include: ["src/**` + `/*.test.{ts,tsx}"]` puts a block opener inside a STRING.
+ * The @shared assertion still passed, by luck rather than by soundness.
  *
- * LINE COMMENTS COME OFF FIRST, AND THE ORDER IS THE WHOLE FIX. Block-first ate
- * the file: a line comment reading "the @shared" + slash-star " alias" contains
- * a block-comment OPENER, so the block pass matched from there to the next
- * close and swallowed the shared import and getCategoryLabel with it. The
- * lengths looked plausible (18,269 to 10,727) and the length-based tripwire
- * passed, because newlines count. Two pre-existing comments in this repo carry
- * the same sequence, so avoiding it in prose is not a fix — the order is.
+ * That is the failure that matters here: every absence assertion in this file
+ * passes trivially on text that was EATEN rather than text that is absent. A
+ * stripper that removes too much cannot fail — it can only false-pass.
+ *
+ * So: a single left-to-right walk that knows what a string is. Quotes suspend
+ * comment detection, and a backslash inside one skips the next character.
+ * `https://` needs no special case any more because it lives inside a string.
+ *
+ * RESIDUAL LIMIT, stated rather than hidden: regex literals are not tracked, so
+ * a pattern containing a literal slash-slash or slash-star would be misread.
+ * None exists in the four files scanned here, and the fixtures below pin the
+ * cases that do.
  */
-const read = (rel: string) =>
-  raw(rel)
-    .replace(/(?<!:)\/\/[^\n]*/g, "")
-    .replace(/\/\*[\s\S]*?\*\//g, "");
+function stripComments(src: string): string {
+  let out = "";
+  let quote: string | null = null;
+  for (let i = 0; i < src.length; ) {
+    const c = src[i];
+    const next = src[i + 1];
+
+    if (quote) {
+      if (c === "\\") { out += c + (src[i + 1] ?? ""); i += 2; continue; }
+      if (c === quote) quote = null;
+      out += c; i++; continue;
+    }
+    if (c === '"' || c === "'" || c === "`") { quote = c; out += c; i++; continue; }
+    if (c === "/" && next === "/") {
+      while (i < src.length && src[i] !== "\n") i++;
+      continue;
+    }
+    if (c === "/" && next === "*") {
+      i += 2;
+      while (i < src.length && !(src[i] === "*" && src[i + 1] === "/")) i++;
+      i += 2;
+      continue;
+    }
+    out += c; i++;
+  }
+  return out;
+}
+
+const read = (rel: string) => stripComments(raw(rel));
 
 const SERVICE = "backend/src/services/infoRequestService.ts";
 const MODAL = "frontend/src/components/carriers/InfoRequestModal.tsx";
@@ -132,13 +169,59 @@ describe("no surface keeps a second copy", () => {
 
   it("the comment stripper strips comments and nothing else", () => {
     // The stripper is what stands between this guard and a false green, so it
-    // gets its own fixtures. A stripper that removed everything would make every
-    // absence assertion above pass vacuously.
+    // gets fixtures. A stripper that removes too much cannot fail — every
+    // absence assertion above would pass on text that was EATEN rather than
+    // text that is absent.
     const src = raw(SERVICE);
     expect(src).toMatch(/getCategoryTemplate/); // present, in the deletion note
     expect(service).not.toMatch(/getCategoryTemplate/); // stripped from code view
     expect(service).toMatch(/export function getCategoryLabel/); // real code survives
     expect(service).toMatch(/https:\/\/silkroutelogistics\.ai/); // a URL is not a comment
+  });
+
+  it("a comment delimiter inside a STRING is not a comment", () => {
+    // The case that was silently corrupting vitest.config.ts. Each of these
+    // opened a comment under the previous regex-pair stripper and swallowed
+    // everything to the next close.
+    expect(stripComments('const g = "src/**/*.test.ts"; const k = 1;')).toBe(
+      'const g = "src/**/*.test.ts"; const k = 1;',
+    );
+    expect(stripComments('const u = "https://x.test/a"; const k = 1;')).toBe(
+      'const u = "https://x.test/a"; const k = 1;',
+    );
+    expect(stripComments("const t = `a//b`; const k = 1;")).toBe("const t = `a//b`; const k = 1;");
+    // An escaped quote must not end the string early.
+    expect(stripComments('const e = "a\\"//b"; const k = 1;')).toBe('const e = "a\\"//b"; const k = 1;');
+  });
+
+  it("still removes the two comment forms it exists to remove", () => {
+    expect(stripComments("const a = 1; // getCategoryTemplate\nconst b = 2;")).toBe(
+      "const a = 1; \nconst b = 2;",
+    );
+    expect(stripComments("const a = 1; /* getCategoryTemplate */ const b = 2;")).toBe(
+      "const a = 1;  const b = 2;",
+    );
+    // A block comment containing a line-comment marker is one block, not two.
+    expect(stripComments("const a = 1; /* x // y */ const b = 2;")).toBe("const a = 1;  const b = 2;");
+  });
+
+  it("does not corrupt the config file this guard reads", () => {
+    // The vacuity tripwire below covers the service and the modal and said
+    // nothing about this file — which is how a strip that mangled it went
+    // unnoticed while the @shared assertion passed anyway, by luck.
+    //
+    // ASSERT CONTENT, NOT A RATIO. The first version of this check compared
+    // stripped-to-raw length against 0.4 and went red against a now-correct
+    // stripper, because this file is genuinely ~80% comment prose. A size proxy
+    // cannot tell "mostly comments" from "ate the code"; naming the two lines
+    // that must survive can.
+    const cfg = read("frontend/vitest.config.ts");
+    // The glob is the canary: it contains a block-comment opener inside a
+    // string, and the previous regex stripper turned it into "src*.test.{ts,tsx}".
+    expect(cfg).toMatch(/include:\s*\["src\/\*\*\/\*\.test\.\{ts,tsx\}"\]/);
+    expect(cfg).toMatch(/"@shared":\s*path\.resolve/);
+    expect(cfg).toMatch(/environment:\s*"jsdom"/);
+    expect(cfg).toMatch(/esbuild:\s*\{\s*jsx:\s*"automatic"\s*\}/);
   });
 });
 
@@ -159,9 +242,19 @@ describe("the two unreachable surfaces stay deleted", () => {
     const routes = read("backend/src/routes/infoRequests.ts");
     const listBlock = routes.slice(routes.indexOf("const listSchema"), routes.indexOf("router.patch"));
 
-    expect(listBlock).not.toMatch(/status:\s*z\.enum/);
-    expect(listBlock).not.toMatch(/\bstatus\s*[},]/);
+    // The word `status` must not appear ANYWHERE in the block, in any form.
+    // The first version required it to be followed by `}` or `,`, which a
+    // reader could evade without noticing: re-adding the filter as
+    // `const s = (req.query as any).status` and a ternary `where` left all
+    // three assertions green while ?status= was fully functional again. A
+    // filter that can come back through a spelling the guard does not know is
+    // a filter the guard is not guarding.
+    expect(listBlock).not.toMatch(/status/i);
     // carrierId stays required — it is the tenancy scope, not a filter.
     expect(listBlock).toMatch(/carrierId:\s*z\.string\(\)\.min\(1\)/);
+    // Tripwire: the slice must actually contain the schema and the handler,
+    // or the absence assertion above is measuring an empty string.
+    expect(listBlock).toMatch(/router\.get\(/);
+    expect(listBlock.length).toBeGreaterThan(200);
   });
 });
