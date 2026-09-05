@@ -294,16 +294,7 @@ export async function cancelInfoRequest(args: CancelInfoRequestArgs) {
     throw new Error("Only open requests can be cancelled");
   }
 
-  // Arc 33 — the more urgent of the two silences: without this the carrier
-  // keeps chasing paperwork nobody needs any more. Fired before the
-  // transaction returns so a caller that ignores the promise still triggers it.
-  notifyInfoRequestWithdrawn({
-    carrierId: request.carrierId,
-    requestId: request.id,
-    categoryLabel: getCategoryLabel(request.category),
-  }).catch((err) => log.warn({ err }, "[InfoRequest] carrier withdrawal notice failed"));
-
-  return prisma.$transaction(async (tx) => {
+  const updated = await prisma.$transaction(async (tx) => {
     const updated = await tx.infoRequest.update({
       where: { id: args.requestId },
       data: {
@@ -327,6 +318,35 @@ export async function cancelInfoRequest(args: CancelInfoRequestArgs) {
 
     return updated;
   });
+
+  // AFTER THE COMMIT, because the dedup makes the alternative unrecoverable.
+  //
+  // announceOnce keys on the notification's actionUrl, which embeds this
+  // requestId. So a notice sent for a cancel that then FAILED does not merely
+  // arrive early — it permanently suppresses the correct notice on a later
+  // successful retry. The carrier is told to stop work on a request that is
+  // still open, and can never be told anything about it again.
+  //
+  // The comment that used to sit above the transaction claimed the early call
+  // was deliberate: "fired before the transaction returns so a caller that
+  // ignores the promise still triggers it". That is false about JavaScript — an
+  // async body runs to completion on microtasks whether or not its promise is
+  // awaited — and the sole caller (routes/infoRequests.ts) awaits anyway. Git
+  // shows both notify calls were added in one commit with opposite orderings,
+  // so the asymmetry with resolveInfoRequest was accidental, not a design.
+  //
+  // Deliberately NOT claimed: this does not close the TOCTOU window. The status
+  // pre-check above is a read, and tx.infoRequest.update carries no status
+  // precondition, so a concurrent cancel or a carrier resolve landing between
+  // them is overwritten rather than refused. That is a separate defect; the move
+  // fixes the failed-transaction case only.
+  notifyInfoRequestWithdrawn({
+    carrierId: request.carrierId,
+    requestId: request.id,
+    categoryLabel: getCategoryLabel(request.category),
+  }).catch((err) => log.warn({ err }, "[InfoRequest] carrier withdrawal notice failed"));
+
+  return updated;
 }
 
 // ── Email templates ──

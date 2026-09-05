@@ -17133,7 +17133,30 @@
 // vitest.config gains the @shared alias in the SAME commit. tsc and next build
 // both honour tsconfig paths, so without it a component importing @shared ships
 // fine while the suite that gates the deploy alone fails to resolve it.
-export const SRL_VERSION = "3.8.bao";
+// v3.8.bap F4 — the withdrawal notice waits for the commit.
+//
+// announceOnce keys its dedup on an actionUrl embedding the requestId, so a
+// notice sent for a cancel that then FAILED did not merely arrive early — it
+// permanently suppressed the correct notice on a later successful retry. The
+// carrier was told to stop work on a request still open, and could never be
+// told anything about it again. One shot, unrecoverable, wrong.
+//
+// The comment defending the old order was FALSE: "fired before the transaction
+// returns so a caller that ignores the promise still triggers it" is not how
+// async works — the body runs on microtasks regardless — and the sole caller
+// awaits anyway. Git shows both notify calls landed in ONE commit with opposite
+// orderings, so the asymmetry with resolveInfoRequest was accidental. Deleted
+// rather than preserved.
+//
+// The restructure is real, not a moved block: this was `return
+// prisma.$transaction(...)`, so the notify had to become
+// `const updated = await …; notify(); return updated;` — the shape
+// resolveInfoRequest already used.
+//
+// NOT claimed: the TOCTOU window stays open. The status pre-check is a read and
+// the update carries no status precondition, so a concurrent cancel or carrier
+// resolve landing between them is still overwritten rather than refused.
+export const SRL_VERSION = "3.8.bap";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
