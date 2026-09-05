@@ -50,6 +50,17 @@ export default defineConfig({
     // Mirrors the "@/*" path alias in tsconfig. Without it every import in a
     // component under test fails to resolve and the suite reports a module
     // error rather than a behavioural result.
-    alias: { "@": path.resolve(__dirname, "./src") },
+    //
+    // "@shared" mirrors tsconfig's "@shared/*" → "../shared/*", and it is here
+    // for a reason worth stating: next build and tsc BOTH honour tsconfig paths,
+    // so a component importing @shared/… compiles and ships perfectly while this
+    // suite alone fails to resolve the module. The break would land in the job
+    // that gates the deploy, attributed to whichever test happened to render
+    // that component. §19 Sub-pattern 11 — the local gate and the CI gate have
+    // to be looking at the same thing.
+    alias: {
+      "@": path.resolve(__dirname, "./src"),
+      "@shared": path.resolve(__dirname, "../shared"),
+    },
   },
 });

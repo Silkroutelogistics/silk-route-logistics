@@ -25,43 +25,43 @@ import { prisma } from "../config/database";
 import { sendEmail, wrap } from "./emailService";
 import { log } from "../lib/logger";
 import { confirmInfoRequestAnswered, notifyInfoRequestWithdrawn } from "./onboardingLifecycleService";
-
-// Industry-standard category labels for AE template + carrier portal display.
-// Order chosen by carrier-onboarding frequency (most common asks first).
-const CATEGORY_LABELS: Record<string, string> = {
-  COI_UPDATE: "Updated Certificate of Insurance (COI)",
-  W9_UPDATE: "Updated W-9 form",
-  AUTHORITY_LETTER: "FMCSA Authority Letter",
-  SAFETY_CLARIFICATION: "Safety record clarification",
-  EIN_VERIFICATION: "EIN/TIN verification",
-  VOIDED_CHECK: "Voided check (for Quick Pay setup)",
-  ADDRESS_PROOF: "Proof of address",
-  REFERENCES: "References from prior brokers",
-  OTHER: "Additional information",
-};
-
-// Default message templates per category. AE can edit before sending.
-// Tone matches existing carrier-facing emails — professional, specific,
-// and direct about what's needed and why.
-const CATEGORY_TEMPLATES: Record<string, string> = {
-  COI_UPDATE: "Please provide an updated Certificate of Insurance. The COI on file expires soon or appears to be missing required coverage. SRL must be listed as Certificate Holder.",
-  W9_UPDATE: "Please provide a current W-9 form. Federal tax ID information is required for payment processing.",
-  AUTHORITY_LETTER: "Please provide a current copy of your FMCSA Operating Authority letter.",
-  SAFETY_CLARIFICATION: "We need clarification on a recent safety record entry. Please describe the circumstances and any corrective actions taken.",
-  EIN_VERIFICATION: "Please confirm your EIN/TIN. We need this to verify your business identity against IRS records.",
-  VOIDED_CHECK: "Please provide a voided business check from the account where you would like Quick Pay deposits sent.",
-  ADDRESS_PROOF: "Please provide proof of business address (utility bill, lease agreement, or business license dated within the last 90 days).",
-  REFERENCES: "Please provide contact information (name + phone) for 2-3 brokers you have hauled for in the last 90 days.",
-  OTHER: "",
-};
+// Single definition, both trees. Reached here by rootDir="../" + include, and by
+// the frontend through the @shared alias — the same bridge
+// shared/constants/pipelineStatus.ts already uses.
+//
+// NOTE for the reachability gate: `shared/` is NOT in its corpus
+// (verify-reachability.ts lists backend/{src,scripts,prisma,__tests__},
+// frontend/{src,public}, e2e). So exports added under shared/ are not checked,
+// and a backend export whose ONLY consumer lived in shared/ would be reported
+// DEAD. Neither bites here — getCategoryLabel keeps its backend/src consumers —
+// but the corpus line is worth adding the next time that file is opened.
+import {
+  INFO_REQUEST_CATEGORY_LABELS,
+  type InfoRequestCategory,
+} from "../../../shared/constants/infoRequestCategories";
 
 export function getCategoryLabel(category: string): string {
-  return CATEGORY_LABELS[category] || "Additional information";
+  // The fallback REFERENCES the map rather than repeating its text. The literal
+  // "Additional information" used to sit here as a second copy of the OTHER
+  // label, so changing that label would have opened a fresh two-place drift
+  // inside the very function whose job is to prevent one. Near-unreachable
+  // anyway — the Zod enum on POST /info-requests constrains input to the nine
+  // valid keys — but "near-unreachable" is how the first drift survived too.
+  return INFO_REQUEST_CATEGORY_LABELS[category as InfoRequestCategory] ?? INFO_REQUEST_CATEGORY_LABELS.OTHER;
 }
 
-export function getCategoryTemplate(category: string): string {
-  return CATEGORY_TEMPLATES[category] || "";
-}
+// CATEGORY_TEMPLATES and getCategoryTemplate were deleted here.
+//
+// The templates pre-fill the AE's message box, and that happens entirely in the
+// browser — InfoRequestModal keeps its own copy precisely so picking a category
+// fills the textarea with no API round-trip. Nothing on the server ever read
+// them: getCategoryTemplate had zero consumers in backend/src, backend/scripts,
+// backend/__tests__, e2e or frontend/src, and the map's only reader was that
+// function. A second copy of a string nobody reads is the drift the labels
+// above already demonstrated, waiting to happen to the templates.
+//
+// The labels are the opposite case and are shared rather than deleted, because
+// EIGHT surfaces render them and both trees need the same words.
 
 /**
  * A REQUEST THE CARRIER SURFACE CANNOT SHOW MUST NOT BE CREATABLE.

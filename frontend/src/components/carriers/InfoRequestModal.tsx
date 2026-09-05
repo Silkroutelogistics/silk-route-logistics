@@ -13,56 +13,43 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { X, Send, Loader2 } from "lucide-react";
 
-// Mirror of backend InfoRequestCategory enum + default templates.
-// Keeping the labels + templates inline matches the AE-fast workflow
-// (instant pre-fill, no API round-trip to fetch the template list).
-const CATEGORIES: Array<{ value: string; label: string; template: string }> = [
-  {
-    value: "COI_UPDATE",
-    label: "Updated Certificate of Insurance (COI)",
-    template: "Please provide an updated Certificate of Insurance. The COI on file expires soon or appears to be missing required coverage. SRL must be listed as Certificate Holder.",
-  },
-  {
-    value: "W9_UPDATE",
-    label: "Updated W-9 form",
-    template: "Please provide a current W-9 form. Federal tax ID information is required for payment processing.",
-  },
-  {
-    value: "AUTHORITY_LETTER",
-    label: "FMCSA Authority Letter",
-    template: "Please provide a current copy of your FMCSA Operating Authority letter.",
-  },
-  {
-    value: "SAFETY_CLARIFICATION",
-    label: "Safety record clarification",
-    template: "We need clarification on a recent safety record entry. Please describe the circumstances and any corrective actions taken.",
-  },
-  {
-    value: "EIN_VERIFICATION",
-    label: "EIN/TIN verification",
-    template: "Please confirm your EIN/TIN. We need this to verify your business identity against IRS records.",
-  },
-  {
-    value: "VOIDED_CHECK",
-    label: "Voided check (for Quick Pay setup)",
-    template: "Please provide a voided business check from the account where you would like Quick Pay deposits sent.",
-  },
-  {
-    value: "ADDRESS_PROOF",
-    label: "Proof of address",
-    template: "Please provide proof of business address (utility bill, lease agreement, or business license dated within the last 90 days).",
-  },
-  {
-    value: "REFERENCES",
-    label: "References from prior brokers",
-    template: "Please provide contact information (name + phone) for 2-3 brokers you have hauled for in the last 90 days.",
-  },
-  {
-    value: "OTHER",
-    label: "Other (custom message)",
-    template: "",
-  },
-];
+// LABELS COME FROM THE SHARED DEFINITION. They used to be a second hand-kept
+// copy of the backend's, and the two had drifted: this file called OTHER
+// "Other (custom message)" while every other surface called it "Additional
+// information". An AE picked one name from this dropdown and the thread card,
+// the carrier email, the AE resolved-email, the answered confirmation and the
+// withdrawal notice all showed the other.
+//
+// TEMPLATES STAY LOCAL, and that is not an oversight. They pre-fill the textarea
+// below on category change, which happens entirely in the browser — the original
+// reason for keeping them inline was "instant pre-fill, no API round-trip", and
+// that still holds. The backend's copy was deleted rather than shared because
+// nothing on the server ever read it, so this is now the only copy in the repo
+// and there is nothing left for it to drift against.
+import {
+  INFO_REQUEST_CATEGORIES,
+  INFO_REQUEST_CATEGORY_LABELS,
+  type InfoRequestCategory,
+} from "@shared/constants/infoRequestCategories";
+
+const TEMPLATES: Record<InfoRequestCategory, string> = {
+  COI_UPDATE: "Please provide an updated Certificate of Insurance. The COI on file expires soon or appears to be missing required coverage. SRL must be listed as Certificate Holder.",
+  W9_UPDATE: "Please provide a current W-9 form. Federal tax ID information is required for payment processing.",
+  AUTHORITY_LETTER: "Please provide a current copy of your FMCSA Operating Authority letter.",
+  SAFETY_CLARIFICATION: "We need clarification on a recent safety record entry. Please describe the circumstances and any corrective actions taken.",
+  EIN_VERIFICATION: "Please confirm your EIN/TIN. We need this to verify your business identity against IRS records.",
+  VOIDED_CHECK: "Please provide a voided business check from the account where you would like Quick Pay deposits sent.",
+  ADDRESS_PROOF: "Please provide proof of business address (utility bill, lease agreement, or business license dated within the last 90 days).",
+  REFERENCES: "Please provide contact information (name + phone) for 2-3 brokers you have hauled for in the last 90 days.",
+  OTHER: "",
+};
+
+const CATEGORIES: Array<{ value: InfoRequestCategory; label: string; template: string }> =
+  INFO_REQUEST_CATEGORIES.map((value) => ({
+    value,
+    label: INFO_REQUEST_CATEGORY_LABELS[value],
+    template: TEMPLATES[value],
+  }));
 
 interface Props {
   carrierId: string;

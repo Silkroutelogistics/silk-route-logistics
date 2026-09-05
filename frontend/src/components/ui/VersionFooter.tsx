@@ -17107,7 +17107,33 @@
 //
 // EXCLUSION, not inclusion, so a new OnboardingStatus value is admitted by both
 // sides rather than the server quietly becoming stricter than the button.
-export const SRL_VERSION = "3.8.ban";
+// v3.8.bao F3 — one name for a category, and two surfaces nobody reached.
+//
+// The labels were two hand-kept copies in two trees and had already drifted: the
+// AE dropdown called OTHER "Other (custom message)" while the thread card, the
+// carrier email, the AE resolved-email, the answered confirmation and the
+// withdrawal notice all called it "Additional information".
+//
+// THE BACKEND STRING WON because eight surfaces render these and only ONE is a
+// dropdown. The other seven put the label inside a sentence — "Our {label}
+// request has been withdrawn" — where "Other (custom message)" is broken English
+// and leaks a UI affordance into a carrier's inbox. "(custom message)" was
+// dropdown help text that had been promoted to a name.
+//
+// Both trees now read shared/constants/, the bridge pipelineStatus.ts already
+// uses. The frontend keeps its TEMPLATES: they pre-fill a textarea in the
+// browser, the backend's copy was dead, and after deleting it there is exactly
+// one copy left with nothing to drift against.
+//
+// getCategoryTemplate and the ?status= list filter are deleted — zero consumers
+// each. The ?status= removal drops the schema line AND the handler read
+// together: validateQuery replaces req.query, so a destructure left behind is
+// undefined forever, which is the TONU 422 shape.
+//
+// vitest.config gains the @shared alias in the SAME commit. tsc and next build
+// both honour tsconfig paths, so without it a component importing @shared ships
+// fine while the suite that gates the deploy alone fails to resolve it.
+export const SRL_VERSION = "3.8.bao";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

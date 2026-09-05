@@ -79,19 +79,25 @@ router.post("/", validateBody(createSchema), async (req: AuthRequest, res: Respo
   }
 });
 
+// `?status=` was declared, validated and implemented here and had zero callers
+// — the AE thread always fetches every status, because seeing a resolved ask
+// above an open one is the point of a thread. Removed rather than left as a
+// capability nobody reaches.
+//
+// The schema line AND the handler read go together, deliberately: `validateQuery`
+// replaces req.query with the Zod result, so a destructure left behind would
+// silently be `undefined` forever. Harmless in a spread, and the exact shape of
+// the TONU 422 defect (§19 Sub-pattern 5). `carrierId` stays required — it is
+// the tenancy scope, not a filter.
 const listSchema = z.object({
   carrierId: z.string().min(1),
-  status: z.enum(["OPEN", "RESOLVED", "CANCELLED"]).optional(),
 });
 
 router.get("/", validateQuery(listSchema), async (req: AuthRequest, res: Response) => {
-  const { carrierId, status } = req.query as { carrierId: string; status?: string };
+  const { carrierId } = req.query as { carrierId: string };
 
   const requests = await prisma.infoRequest.findMany({
-    where: {
-      carrierId,
-      ...(status ? { status: status as any } : {}),
-    },
+    where: { carrierId },
     orderBy: { createdAt: "desc" },
     include: {
       createdBy: { select: { id: true, firstName: true, lastName: true, email: true } },
