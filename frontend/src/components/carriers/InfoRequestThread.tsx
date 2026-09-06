@@ -100,6 +100,29 @@ function formatBytes(bytes: number): string {
  * — which is exactly how the two CTAs drifted in the first place: this one
  * carried an implicit request-count gate that the Profile-tab button never had.
  */
+/**
+ * ONE STRING, not two literals. The empty state and the populated header both
+ * say this, and F3 spent a commit unpicking a label that had been written out
+ * twice and drifted. A sentence a reader compares across two branches is the
+ * same class of thing.
+ */
+const STATUS_GATED_NOTE = "Info requests are available while an application is under review.";
+
+/**
+ * The action slot: the button, or the reason there is no button.
+ *
+ * Rendering nothing when the status blocks it is what the populated branch used
+ * to do, and it is indistinguishable from the bug this arc opened with: a
+ * control absent for a reason the reader cannot see. The note goes exactly where
+ * the button would have been, so somebody looking for the control finds the
+ * explanation rather than an empty corner.
+ */
+function CtaOrNote({ offerCta, statusBlocked }: { offerCta: (() => void) | null; statusBlocked: boolean }) {
+  if (offerCta) return <RequestInfoButton onClick={offerCta} />;
+  if (statusBlocked) return <p className="text-xs text-gray-500">{STATUS_GATED_NOTE}</p>;
+  return null;
+}
+
 function RequestInfoButton({ onClick }: { onClick: () => void }) {
   return (
     <button
@@ -142,16 +165,33 @@ export function InfoRequestThread({
 }) {
   const queryClient = useQueryClient();
 
-  const { data, isLoading, isError } = useQuery({
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["info-requests", carrierId],
     queryFn: () => api.get<{ requests: ThreadRequest[] }>(`/info-requests?carrierId=${carrierId}`).then((r) => r.data),
     enabled: !!carrierId,
   });
 
+  const requests = data?.requests || [];
+
+  // Resolved once, ABOVE every branch, so all four paths ask the identical
+  // question. A boolean would not narrow `onRequestInfo` for TypeScript;
+  // holding the handler itself does, and it makes the guard un-forgettable at
+  // the call site.
+  const offerCta = isAdmin && canRequestInfo && onRequestInfo ? onRequestInfo : null;
+  const statusBlocked = isAdmin && !canRequestInfo;
+
+  // RAISING A REQUEST DOES NOT DEPEND ON READING THE LIST. These two returns sat
+  // above the guard, so a slow or failed GET took the control with it — the same
+  // shape as the empty-state early return this arc opened with: a button that
+  // disappears for a reason unrelated to whether the AE may press it. The list is
+  // history; the CTA is an action on the carrier.
   if (isLoading) {
     return (
       <div className="p-6 text-center">
         <p className="text-sm text-gray-500 animate-pulse">Loading info-request thread…</p>
+        <div className="mt-3 flex justify-center">
+          <CtaOrNote offerCta={offerCta} statusBlocked={statusBlocked} />
+        </div>
       </div>
     );
   }
@@ -160,16 +200,22 @@ export function InfoRequestThread({
     return (
       <div className="p-6 text-center">
         <p className="text-sm text-red-500">Couldn&apos;t load info-request thread.</p>
+        {/* A dead end is what makes a transient failure look permanent. Retry
+            re-runs the query in place rather than asking the AE to close the
+            drawer and reopen it, which was the only way back before. */}
+        <div className="mt-3 flex items-center justify-center gap-2">
+          <button
+            type="button"
+            onClick={() => refetch()}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-gray-300 text-gray-700 rounded-lg text-xs hover:bg-gray-50 transition"
+          >
+            Retry
+          </button>
+          <CtaOrNote offerCta={offerCta} statusBlocked={statusBlocked} />
+        </div>
       </div>
     );
   }
-
-  const requests = data?.requests || [];
-
-  // Resolved once, above the branch, so both paths ask the identical question.
-  // A boolean would not narrow `onRequestInfo` for TypeScript; holding the
-  // handler itself does, and it makes the guard un-forgettable at the call site.
-  const offerCta = isAdmin && canRequestInfo && onRequestInfo ? onRequestInfo : null;
 
   if (requests.length === 0) {
     return (
@@ -195,7 +241,7 @@ export function InfoRequestThread({
           // early, so the reader learns it before pressing rather than after —
           // say which state is blocking rather than showing a button that is
           // absent for reasons they cannot see.
-          <p className="text-xs text-gray-500 mt-1">Info requests are available while an application is under review.</p>
+          <p className="text-xs text-gray-500 mt-1">{STATUS_GATED_NOTE}</p>
         ) : (
           <p className="text-xs text-gray-500 mt-1">An admin can request additional documents or clarification from this carrier.</p>
         )}
@@ -213,9 +259,12 @@ export function InfoRequestThread({
         <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">{requests.length} request{requests.length === 1 ? "" : "s"}</p>
         <div className="flex items-center gap-2 shrink-0">
           <p className="text-[11px] text-gray-400">Newest first</p>
-          {offerCta && <RequestInfoButton onClick={offerCta} />}
+          <CtaOrNote offerCta={offerCta} statusBlocked={false} />
         </div>
       </div>
+      {/* Full width rather than squeezed into the header cluster: it is a
+          sentence, and the row beside the count is for labels. */}
+      {!offerCta && statusBlocked && <p className="text-xs text-gray-500 -mt-1">{STATUS_GATED_NOTE}</p>}
       {requests.map((req) => (
         <ThreadCard
           key={req.id}

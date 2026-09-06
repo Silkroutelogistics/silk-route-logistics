@@ -21,8 +21,9 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
-const { queryResult } = vi.hoisted(() => ({
-  queryResult: { value: { data: undefined as unknown, isLoading: false, isError: false } },
+const { queryResult, refetch } = vi.hoisted(() => ({
+  refetch: vi.fn(),
+  queryResult: { value: { data: undefined as unknown, isLoading: false, isError: false, refetch: (() => {}) as () => void } },
 }));
 
 // Only useQuery decides what this component renders. useMutation belongs to the
@@ -61,9 +62,24 @@ function requestFixture(status: Status) {
 
 function setup(
   requests: ReturnType<typeof requestFixture>[],
-  overrides: { isAdmin?: boolean; canRequestInfo?: boolean; onRequestInfo?: (() => void) | undefined } = {},
+  overrides: {
+    isAdmin?: boolean;
+    canRequestInfo?: boolean;
+    onRequestInfo?: (() => void) | undefined;
+    // The two states the component used to return from ABOVE the guard. A
+    // pending or failed GET carried the CTA away with it, so they need to be
+    // reachable from here or the fix is untested.
+    isLoading?: boolean;
+    isError?: boolean;
+  } = {},
 ) {
-  queryResult.value = { data: { requests }, isLoading: false, isError: false };
+  const settled = !overrides.isLoading && !overrides.isError;
+  queryResult.value = {
+    data: settled ? { requests } : undefined,
+    isLoading: overrides.isLoading ?? false,
+    isError: overrides.isError ?? false,
+    refetch,
+  };
   const onRequestInfo = "onRequestInfo" in overrides ? overrides.onRequestInfo : vi.fn();
   render(
     <InfoRequestThread
@@ -79,7 +95,7 @@ function setup(
 const cta = () => screen.queryAllByRole("button", { name: /request info/i });
 
 beforeEach(() => {
-  queryResult.value = { data: undefined, isLoading: false, isError: false };
+  queryResult.value = { data: undefined, isLoading: false, isError: false, refetch };
 });
 
 describe("the Request Info CTA is reachable in every list state", () => {
@@ -141,15 +157,43 @@ describe("both branches ask the identical question", () => {
     expect(screen.getByText(/an admin can request additional documents/i)).toBeInTheDocument();
   });
 
-  it("withholds it for a status the frontend excludes, on a populated list", () => {
+  it("explains the block on a populated list rather than showing an empty corner", () => {
+    // ABSENCE ALONE WAS THE ORIGINAL DEFECT. A test that only asserts the
+    // button is missing passes just as happily when it is missing for the
+    // wrong reason, which is the state this arc opened with. Assert the
+    // sentence, and the populated branch has to say the same thing the empty
+    // one does.
     setup([requestFixture("OPEN")], { canRequestInfo: false });
     expect(cta()).toHaveLength(0);
+    expect(screen.getByText(/available while an application is under review/i)).toBeInTheDocument();
   });
 
   it("withholds it for that same status on an empty list, and says which state is blocking", () => {
     setup([], { canRequestInfo: false });
     expect(cta()).toHaveLength(0);
     expect(screen.getByText(/available while an application is under review/i)).toBeInTheDocument();
+  });
+
+  it("stays reachable while the thread is still loading", () => {
+    // Raising a request does not depend on reading the history.
+    setup([], { isLoading: true });
+    expect(screen.getByText(/loading info-request thread/i)).toBeInTheDocument();
+    expect(cta()).toHaveLength(1);
+  });
+
+  it("stays reachable when the thread fails to load, and offers a way back", async () => {
+    setup([], { isError: true });
+    expect(cta()).toHaveLength(1);
+    const retry = screen.getByRole("button", { name: /retry/i });
+    await userEvent.setup().click(retry);
+    expect(refetch).toHaveBeenCalled();
+  });
+
+  it("explains the block in the failed state too, instead of a bare dead end", () => {
+    setup([], { isError: true, canRequestInfo: false });
+    expect(cta()).toHaveLength(0);
+    expect(screen.getByText(/available while an application is under review/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /retry/i })).toBeInTheDocument();
   });
 
   it("withholds it when no opener was passed, on a populated list", () => {

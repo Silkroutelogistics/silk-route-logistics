@@ -17217,7 +17217,25 @@
 // Carrier told per request (each is a separate thing to stop chasing, and the
 // dedup keys on requestId); the AE told ONCE per event, because three bell rows
 // for one act is the noise that teaches people to stop reading the bell.
-export const SRL_VERSION = "3.8.bar";
+// v3.8.bas G2 — the absent control now says why it is absent.
+//
+// F1 put the CTA in both list branches. What it did not do was give the
+// populated branch anything to show when the STATUS blocks it: the empty state
+// explained itself, the populated one rendered an empty corner. That is the
+// shape this arc opened with — a control missing for a reason the reader cannot
+// see — surviving in the branch nobody looked at twice.
+//
+// One string, one component. The note goes exactly where the button would have
+// been, so somebody hunting for the control finds the explanation instead.
+//
+// AND THE LIST QUERY STOPS TAKING THE CTA WITH IT. isLoading and isError
+// returned above the guard, so a slow or failed GET removed the ability to ASK
+// — which does not depend on reading the history. The error state now offers a
+// retry rather than a dead end whose only exit was closing the drawer.
+//
+// The F1 test asserted the button was absent. Absence alone is what the bug
+// looked like from the outside, so it now asserts the sentence.
+export const SRL_VERSION = "3.8.bas";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
