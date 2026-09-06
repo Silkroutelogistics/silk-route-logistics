@@ -3670,6 +3670,32 @@ Most are inert history and **should** survive — `LoadActivity` and `LoadTracki
     **Banked, not fixed:** `docs/design/rc.html.html` and `invoice.html.html` are cited by path from `srl-chrome.ts` in five places and are **untracked in git**. A referenced design source that is not in the repository can vanish without anything noticing. Worth `git add`-ing.
 
 
+260. **Info requests: several may stand open at once, and a closed carrier takes them with it (2026-09-05/06, v3.8.bam → v3.8.bat).**
+
+    **THE LIMIT WAS UI-ONLY.** The AE's Request Info button lived inside the thread's empty-state early return, so it vanished the moment one request existed and read as a one-at-a-time rule. Nothing enforced that: no unique constraint on `info_requests`, no count guard, and the only two `infoRequest.count` calls in the service are last-open detectors that TOLERATE N open requests rather than forbid them. Concurrent requests were always supported; the control was simply unreachable. `backend/scripts/_arc-inforequest-concurrent-proof.ts` is the evidence and is tracked.
+
+    **THE STATUS RULE, WHICH IS THE PART TO KNOW.** A request may only exist against a carrier whose portal can show it:
+
+    - **Creating** one against APPROVED, REJECTED or SUSPENDED is refused server-side — `POST /info-requests` returns **409 `CARRIER_NOT_UNDER_REVIEW`**, matching the frontend gate exactly. A request the carrier surface cannot render must not be creatable.
+    - **Transitioning INTO** one of those states **CANCELS every OPEN request in the same transaction**, with a system `cancelReason` naming the status change. Same harm through the other door: the portal stops rendering the section, the carrier can never answer, and the AE waits for a reply that cannot arrive.
+
+    Both halves are needed. The 409 alone shut the door and left the window.
+
+    **SIX WRITERS, THREE TRANSITIONS.** The close is wired into `approvalService`, `rejectionService`, the AE suspend handler, `verifyCarrier`, emergency-approve, and admin-setup's existing-profile branch — every site that reaches a closed state on an existing carrier, found by census rather than by memory. `rejectCarrier` and the AE suspend handler had no transaction at all and now do. **`infoRequestCloseCoverage.test.ts` freezes the inventory so it fails the seventh**: a new file writing a closed status either calls the close or carries a written reason why not.
+
+    **DELIBERATELY NOT WIRED, and this is a decision rather than an omission.** The AUTOMATIC suspensions are excluded. `checkAutoReversal` reinstates FMCSA-suspended carriers on the next compliance scan and the suspension email tells the carrier so, which makes that state transient — closing their requests would tell a carrier to stop, reinstate them hours later, and leave the AE to raise everything again. OFAC's auto-suspend at score ≥ 90 is arguably not transient and is recorded as an omission rather than done, because it is one path in a different service and this rule should arrive at a seam somebody chose.
+
+    **`cancelReason` is a NEW column, not a reuse of `resolvedNote`.** That field is the CARRIER writing their answer; this is SRL writing its own. The tender arc drew the same line between `declineReason` and `statusReason`, because merging two authors into one column makes them indistinguishable exactly where an AE needs to tell "I withdrew this" from "the status change closed it".
+
+    **NOTIFICATION SHAPE.** The carrier is told **per request** (each is a separate thing to stop chasing, and `announceOnce` keys its dedup on the requestId). The AE is told **once per event** — three bell rows for one act is the noise that teaches people to stop reading the bell. Both fire **after the commit**: a notice sent for a close that then rolled back would permanently suppress the correct one on the retry, which is why `notifyInfoRequestWithdrawn` also moved out of the cancel transaction.
+
+    **THE MODAL'S "WHAT HAPPENS NEXT" PANEL DESCRIBES SERVICE BEHAVIOUR, and both of its claims were unconditional and false.** `createInfoRequest` flips the status **only from PENDING or REVIEWING** — against a carrier already at INFO_REQUESTED it is a deliberate no-op, which is what lets several requests stand open. And `resolveInfoRequest` returns the status to REVIEWING **only when the request answered was the last one open**. So the concurrency this arc enables is precisely the case the old copy got wrong: raise a second request and the status does not move; answer one of two and it does not come back. An AE trusting the panel would have read the status field as broken. The copy now names both conditions, and a guard asserts **both ends** — the service must still carry each condition and the panel must still mention it.
+
+    **THE CTA IS NOW UNCONDITIONAL, AND ITS ABSENCE IS EXPLAINED.** It renders in every list state — empty, populated, loading and failed. `isLoading` and `isError` used to return above the guard, so a slow or failed GET removed the ability to ASK, which does not depend on reading the history; the failed state now offers a retry rather than a dead end whose only exit was closing the drawer. When the STATUS blocks it, both branches render the same sentence in the place the button would have been, from one definition. **A test asserting only that the button is absent passes just as happily when it is absent for the wrong reason** — which is the state this arc opened with — so the gated cases assert the sentence instead.
+
+    **Category labels have one definition** in `shared/constants/infoRequestCategories.ts`, consumed by both trees. `OTHER` had drifted: the dropdown said "Other (custom request)" while the emails said something else, and that parenthetical described the DROPDOWN rather than the document, so the carrier email named nothing. Two parentheticals survive because they are part of the noun — `(COI)` expands an abbreviation the carrier's own agent uses, `(for Quick Pay setup)` answers why we want it. A regex cannot tell those apart from the one that broke, so the two are **named** and a third fails until somebody reads it in the sentence too.
+
+
 
 ---
 
