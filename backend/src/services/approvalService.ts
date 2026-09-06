@@ -23,6 +23,11 @@ import { prisma } from "../config/database";
 import { sendEmail, wrap } from "./emailService";
 import { onCarrierApproved } from "./integrationService";
 import { log } from "../lib/logger";
+import {
+  closeOpenInfoRequestsForStatus,
+  announceInfoRequestsClosedByStatus,
+  type ClosedInfoRequest,
+} from "./infoRequestService";
 
 interface ApproveCarrierArgs {
   carrierId: string;
@@ -67,6 +72,9 @@ export async function approveCarrier(args: ApproveCarrierArgs) {
   // synonym for AE-approved across 27+ existing read sites — kept in sync
   // here so we don't introduce drift relative to the existing Compass
   // auto-approve path at carrierController.ts:306).
+  // G1 — captured inside the transaction, announced after it commits (F4).
+  let closedRequests: ClosedInfoRequest[] = [];
+
   const updated = await prisma.$transaction(async (tx) => {
     const updatedProfile = await tx.carrierProfile.update({
       where: { id: args.carrierId },
@@ -95,8 +103,28 @@ export async function approveCarrier(args: ApproveCarrierArgs) {
       where: { id: carrier.userId },
       data: { isVerified: true },
     });
+
+    // G1 — an approved carrier's portal no longer renders the info-request
+    // section, so any request still open becomes unanswerable at this instant.
+    // Closed in THIS transaction: a carrier left APPROVED with an open request
+    // is the stranded row the rule exists to prevent, and a separate
+    // transaction is exactly how that state gets created on a partial failure.
+    closedRequests = await closeOpenInfoRequestsForStatus(
+      { carrierId: args.carrierId, newStatus: "APPROVED", closedById: args.approvedById },
+      tx,
+    );
+
     return updatedProfile;
   });
+
+  // G1 — after the commit, per F4. announceOnce keys its dedup on the
+  // requestId, so a notice sent for a close that then rolled back would
+  // permanently suppress the correct one on a retry.
+  announceInfoRequestsClosedByStatus(closedRequests, {
+    carrierId: args.carrierId,
+    carrierName: carrier.companyName || "this carrier",
+    newStatus: "APPROVED",
+  }).catch((err) => log.warn({ err, carrierId: args.carrierId }, "[Approval] info-request close notice failed"));
 
   // Fire-and-forget carrier email + in-app notification.
   if (carrier.user.email) {

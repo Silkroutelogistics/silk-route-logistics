@@ -6,6 +6,11 @@ import * as complianceMonitorService from "../services/complianceMonitorService"
 import { sendEmail } from "../services/emailService";
 import { calendarMonthsBetween } from "../services/fmcsaService";
 import { log } from "../lib/logger";
+import {
+  closeOpenInfoRequestsForStatus,
+  announceInfoRequestsClosedByStatus,
+  type ClosedInfoRequest,
+} from "../services/infoRequestService";
 
 const alertQuerySchema = z.object({
   status: z.string().optional(),
@@ -667,10 +672,34 @@ export async function suspendCarrier(req: AuthRequest, res: Response) {
       return;
     }
 
-    const updated = await prisma.carrierProfile.update({
-      where: { id: req.params.carrierId },
-      data: { onboardingStatus: "SUSPENDED" , status: "SUSPENDED"},
+    // G1 — a suspended carrier's portal stops rendering the info-request
+    // section, so any request still open becomes unanswerable at this instant.
+    // Wrapped in a transaction, which it was not before, so the status change
+    // and the close land together.
+    //
+    // THIS path only — the AE-initiated suspend. The automatic suspensions in
+    // complianceMonitorService are deliberately left alone: checkAutoReversal
+    // reinstates them on the next compliance scan, and the suspension email
+    // tells the carrier so, which makes them transient rather than the end of
+    // an application. See closeOpenInfoRequestsForStatus for the full reasoning.
+    let closedRequests: ClosedInfoRequest[] = [];
+    const updated = await prisma.$transaction(async (tx) => {
+      const profile = await tx.carrierProfile.update({
+        where: { id: req.params.carrierId },
+        data: { onboardingStatus: "SUSPENDED" , status: "SUSPENDED"},
+      });
+      closedRequests = await closeOpenInfoRequestsForStatus(
+        { carrierId: req.params.carrierId, newStatus: "SUSPENDED", closedById: req.user!.id },
+        tx,
+      );
+      return profile;
     });
+
+    announceInfoRequestsClosedByStatus(closedRequests, {
+      carrierId: req.params.carrierId,
+      carrierName: carrier.user.company || carrier.companyName || "this carrier",
+      newStatus: "SUSPENDED",
+    }).catch((err) => log.warn({ err }, "[Compliance] suspend info-request close notice failed"));
 
     // Create audit trail
     await prisma.auditTrail.create({

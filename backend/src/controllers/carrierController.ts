@@ -33,6 +33,11 @@ import { COMPLIANCE_EMAIL } from "../config/authority";
 import * as crypto from "crypto";
 import { pairedApplicationStatus } from "../lib/carrierOperational";
 import { clientIp, clientUserAgent } from "../lib/clientIp";
+import {
+  closeOpenInfoRequestsForStatus,
+  announceInfoRequestsClosedByStatus,
+  type ClosedInfoRequest,
+} from "../services/infoRequestService";
 
 // v3.8.ala — Fire-and-forget compliance flag dispatch on registration
 // duplicate hits. Sends a brief alert to COMPLIANCE_EMAIL +
@@ -1082,19 +1087,41 @@ export async function verifyCarrier(req: AuthRequest, res: Response) {
     return;
   }
 
-  const updated = await prisma.carrierProfile.update({
-    where: { id: req.params.id },
-    data: {
-      onboardingStatus: status,
-      // B2 — paired. The one writer whose value is a variable rather than a
-      // literal, so it resolves through the same table the others use.
-      // `?? undefined` leaves status untouched when an onboarding value has no
-      // application-side counterpart, rather than inventing one.
-      status: pairedApplicationStatus(status) ?? undefined,
-      safetyScore: safetyScore ?? null,
-      approvedAt: status === "APPROVED" ? new Date() : null,
-    },
+  // G1 — captured inside the transaction, announced after it commits (F4).
+  let closedRequests: ClosedInfoRequest[] = [];
+
+  // Wrapped in a transaction, which it was not before. `status` here is APPROVED
+  // or REJECTED (verifyCarrierSchema), both of which stop the carrier portal
+  // rendering the info-request section — so an open request becomes
+  // unanswerable at this instant and has to close with the same commit.
+  const updated = await prisma.$transaction(async (tx) => {
+    const profile2 = await tx.carrierProfile.update({
+      where: { id: req.params.id },
+      data: {
+        onboardingStatus: status,
+        // B2 — paired. The one writer whose value is a variable rather than a
+        // literal, so it resolves through the same table the others use.
+        // `?? undefined` leaves status untouched when an onboarding value has no
+        // application-side counterpart, rather than inventing one.
+        status: pairedApplicationStatus(status) ?? undefined,
+        safetyScore: safetyScore ?? null,
+        approvedAt: status === "APPROVED" ? new Date() : null,
+      },
+    });
+
+    closedRequests = await closeOpenInfoRequestsForStatus(
+      { carrierId: req.params.id, newStatus: status as "APPROVED" | "REJECTED", closedById: req.user!.id },
+      tx,
+    );
+
+    return profile2;
   });
+
+  announceInfoRequestsClosedByStatus(closedRequests, {
+    carrierId: req.params.id,
+    carrierName: profile.companyName || "this carrier",
+    newStatus: status as "APPROVED" | "REJECTED",
+  }).catch((err) => log.warn({ err }, "[Carrier] verify info-request close notice failed"));
 
   if (status === "APPROVED") {
     await prisma.user.update({
@@ -1364,27 +1391,44 @@ export async function setupAdminCarrierProfile(req: AuthRequest, res: Response) 
   // Check if profile already exists
   const existing = await prisma.carrierProfile.findUnique({ where: { userId: req.user!.id } });
   if (existing) {
-    // Update existing profile
-    const updated = await prisma.carrierProfile.update({
-      where: { id: existing.id },
-      data: {
-        ...(mcNumber && { mcNumber }),
-        ...(dotNumber && { dotNumber }),
-        ...(equipmentTypes && { equipmentTypes }),
-        ...(operatingRegions && { operatingRegions }),
-        ...(address && { address }),
-        ...(city && { city }),
-        ...(state && { state }),
-        ...(zip && { zip }),
-        ...(numberOfTrucks && { numberOfTrucks: parseInt(numberOfTrucks) }),
-        onboardingStatus: "APPROVED",
-        status: "APPROVED", // B2 — paired; see lib/carrierOperational
-        approvedAt: existing.approvedAt || new Date(),
-        w9Uploaded: true,
-        insuranceCertUploaded: true,
-        authorityDocUploaded: true,
-      },
+    // G1 — an EXISTING profile, so open requests are possible here in a way
+    // they are not on the create branch below. Wrapped so the close lands with
+    // the status change.
+    let closedRequests: ClosedInfoRequest[] = [];
+    const updated = await prisma.$transaction(async (tx) => {
+      const p = await tx.carrierProfile.update({
+        where: { id: existing.id },
+        data: {
+          ...(mcNumber && { mcNumber }),
+          ...(dotNumber && { dotNumber }),
+          ...(equipmentTypes && { equipmentTypes }),
+          ...(operatingRegions && { operatingRegions }),
+          ...(address && { address }),
+          ...(city && { city }),
+          ...(state && { state }),
+          ...(zip && { zip }),
+          ...(numberOfTrucks && { numberOfTrucks: parseInt(numberOfTrucks) }),
+          onboardingStatus: "APPROVED",
+          status: "APPROVED", // B2 — paired; see lib/carrierOperational
+          approvedAt: existing.approvedAt || new Date(),
+          w9Uploaded: true,
+          insuranceCertUploaded: true,
+          authorityDocUploaded: true,
+        },
+      });
+      closedRequests = await closeOpenInfoRequestsForStatus(
+        { carrierId: existing.id, newStatus: "APPROVED", closedById: req.user!.id },
+        tx,
+      );
+      return p;
     });
+
+    announceInfoRequestsClosedByStatus(closedRequests, {
+      carrierId: existing.id,
+      carrierName: existing.companyName || "this carrier",
+      newStatus: "APPROVED",
+    }).catch((err) => log.warn({ err }, "[Carrier] admin-setup info-request close notice failed"));
+
     res.json(updated);
     return;
   }

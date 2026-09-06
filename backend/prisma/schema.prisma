@@ -5625,6 +5625,17 @@ model InfoRequest {
   resolvedAt   DateTime?
   cancelledAt  DateTime?
 
+  // Why SRL cancelled it — set when a carrier status change closes an open
+  // request, so the row says what happened rather than just that it stopped.
+  //
+  // A SECOND column, not a reuse of resolvedNote, and for the same reason the
+  // tender arc kept statusReason apart from declineReason: the two have
+  // different authors and different readers. resolvedNote is the CARRIER
+  // explaining themselves; this is SRL explaining itself. Merging them would
+  // make a system action indistinguishable from a carrier's answer on the one
+  // surface an AE reads to find out which it was.
+  cancelReason String? @db.Text
+
   // v3.8.aji — File attachments uploaded by carrier during resolution.
   // Documents are created with docType="INFO_REQUEST_RESPONSE",
   // entityType="CARRIER", entityId=carrierProfileId, infoRequestId=this.id.

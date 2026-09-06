@@ -37,6 +37,13 @@ function mockReqRes(body: Record<string, any> = {}, user?: any, params?: any, qu
 describe("carrierController", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // verifyCarrier wraps its writes in a transaction (G1). The shared mock's
+    // $transaction is a bare vi.fn() returning undefined that never runs the
+    // callback, so without this the controller's writes silently do not happen
+    // and res.json receives undefined — a mock still modelling a controller
+    // that no longer exists. Same shape as the findFirst mock gap banked at
+    // §19 Sub-pattern 11 case study #3.
+    mockPrisma.$transaction.mockImplementation(async (cb: any) => cb(mockPrisma));
   });
 
   // ── getOnboardingStatus ─────────────────────────────────

@@ -17185,7 +17185,39 @@
 // config-corruption check compared stripped-to-raw length against 0.4 and went
 // red against a now-correct stripper, because that file is genuinely ~80%
 // comment. A size proxy cannot tell "mostly comments" from "ate the code".
-export const SRL_VERSION = "3.8.baq";
+// v3.8.bar G1 — a carrier moving to a closed state takes its open requests with it.
+//
+// F2 stopped a request being CREATED against a carrier the portal cannot show
+// it to, and did nothing about a carrier who moves into one of those states
+// while a request is already open. Same harm through the other door: the portal
+// stops rendering the section, the carrier can never answer, the AE waits for a
+// reply that cannot come. F2 shut the door and left the window.
+//
+// Closed IN THE SAME TRANSACTION as the status change, because a carrier left
+// APPROVED with an open request is precisely the stranded row this prevents,
+// and a separate transaction is how that state gets created on a partial
+// failure. rejectCarrier and the AE suspend handler had no transaction at all
+// and now do.
+//
+// A NEW COLUMN, not a reuse of resolvedNote — that field is the CARRIER writing
+// their answer; cancelReason is SRL writing its own. The tender arc drew the
+// same line between declineReason and statusReason, because merging two authors
+// into one column makes them indistinguishable exactly where an AE needs to
+// tell "I withdrew this" from "the status change closed it".
+//
+// SIX WRITERS, THREE TRANSITIONS, FOUND BY CENSUS rather than by memory — the
+// two canonical services plus verifyCarrier, emergency-approve and admin-setup,
+// which are all AE-reachable on an existing carrier. The automatic suspensions are
+// deliberately excluded: checkAutoReversal reinstates FMCSA-suspended carriers
+// on the next compliance scan and the suspension email says so, so closing
+// their requests would tell a carrier to stop, reinstate them hours later, and
+// leave the AE to raise everything again. A transient state is not the end of
+// an application.
+//
+// Carrier told per request (each is a separate thing to stop chasing, and the
+// dedup keys on requestId); the AE told ONCE per event, because three bell rows
+// for one act is the noise that teaches people to stop reading the bell.
+export const SRL_VERSION = "3.8.bar";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

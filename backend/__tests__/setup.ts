@@ -10,6 +10,20 @@ vi.mock("../src/config/database", () => ({
       create: vi.fn(),
       update: vi.fn(),
     },
+    // G1 — the close-on-transition rule reaches this model from six carrier
+    // status writers, so it is no longer a concern of the info-request tests
+    // alone. Absent here, every one of those controllers throws on a bare
+    // property read rather than failing an assertion.
+    infoRequest: {
+      findMany: vi.fn().mockResolvedValue([]),
+      findFirst: vi.fn(),
+      findUnique: vi.fn(),
+      create: vi.fn(),
+      update: vi.fn(),
+      updateMany: vi.fn().mockResolvedValue({ count: 0 }),
+      count: vi.fn().mockResolvedValue(0),
+    },
+
     otpCode: {
       findFirst: vi.fn(),
       create: vi.fn(),

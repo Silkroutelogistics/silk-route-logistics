@@ -21,6 +21,7 @@
 // the open requests inline so the carrier portal can render them
 // without an extra round-trip.
 
+import { Prisma } from "@prisma/client";
 import { prisma } from "../config/database";
 import { sendEmail, wrap } from "./emailService";
 import { log } from "../lib/logger";
@@ -267,6 +268,153 @@ export async function resolveInfoRequest(args: ResolveInfoRequestArgs) {
   }
 
   return result;
+}
+
+// ── Closed by a carrier status change ──
+
+/**
+ * THE TRANSITIONS THIS FIRES ON, AND THE ONES IT DELIBERATELY DOES NOT.
+ *
+ * F2 stopped a request being CREATED against a carrier the portal cannot show
+ * it to. It did nothing about a carrier who moves into one of those states
+ * while a request is already open — and that is the same harm arriving through
+ * the other door: the portal stops rendering the section, the carrier can never
+ * answer, and the AE waits for a reply that cannot come. F2 shut the door and
+ * left the window.
+ *
+ * Wired into the three DELIBERATE transitions — an AE approving, rejecting, or
+ * manually suspending. Each is a human deciding this carrier's application is
+ * finished, which is exactly when an outstanding ask should stop.
+ *
+ * NOT wired into the AUTOMATIC suspensions (complianceMonitorService's FMCSA
+ * and insurance sweeps, ofacScreeningService), and that is a product decision
+ * rather than a scoping convenience. `checkAutoReversal` re-checks FMCSA on
+ * every compliance scan and REINSTATES carriers whose authority has cleared —
+ * the suspension email tells the carrier so in those words. Closing their open
+ * requests would tell them to stop chasing paperwork, reinstate them hours
+ * later, and leave the AE to raise everything again. A transient state is not
+ * the end of an application.
+ *
+ * An OFAC hit at score >= 90 is arguably not transient. It is left out too,
+ * because it is one code path in a different service and this rule should
+ * arrive at a seam somebody chose rather than by accretion. Recorded rather
+ * than done.
+ */
+export const CLOSED_BY_STATUS_REASON: Record<"APPROVED" | "REJECTED" | "SUSPENDED", string> = {
+  APPROVED: "Closed automatically — this carrier's application was approved.",
+  REJECTED: "Closed automatically — this carrier's application was rejected.",
+  SUSPENDED: "Closed automatically — this carrier was suspended.",
+};
+
+export type ClosedInfoRequest = {
+  id: string;
+  category: string;
+  createdById: string;
+};
+
+/** The transaction client, or the base one. Matches the `Db` convention used by
+ *  cancelCascade, quickPayElectionService and rateConfirmationVoidService. */
+type Db = Prisma.TransactionClient | typeof prisma;
+
+/**
+ * Cancel every OPEN request on a carrier, IN THE CALLER'S TRANSACTION.
+ *
+ * Takes `db` rather than opening its own, so the close and the status change
+ * commit together or not at all. A carrier left APPROVED with an open request
+ * is precisely the stranded row this exists to prevent, and that is what a
+ * separate transaction would produce on a partial failure.
+ *
+ * Returns the rows it closed so the caller can notify AFTER the commit — the
+ * F4 rule. Nothing is announced from in here: announceOnce keys its dedup on
+ * the requestId, so a notice sent for a close that then rolled back would
+ * permanently suppress the correct one later.
+ *
+ * Reads before it writes because `updateMany` returns a count, not rows, and
+ * the notifications need the category and the requesting AE.
+ */
+export async function closeOpenInfoRequestsForStatus(
+  args: {
+    carrierId: string;
+    newStatus: keyof typeof CLOSED_BY_STATUS_REASON;
+    /**
+     * NULL when no human did it — the Compass engine auto-approves with
+     * `approvedById: null` for exactly this reason, and `cancelledById` is
+     * nullable. Inventing an actor here would corrupt the audit answer to
+     * "who closed this request" in the one place somebody would look.
+     */
+    closedById: string | null;
+  },
+  db: Db,
+): Promise<ClosedInfoRequest[]> {
+  const open = await db.infoRequest.findMany({
+    where: { carrierId: args.carrierId, status: "OPEN" },
+    select: { id: true, category: true, createdById: true },
+  });
+  if (open.length === 0) return [];
+
+  await db.infoRequest.updateMany({
+    where: { carrierId: args.carrierId, status: "OPEN" },
+    data: {
+      status: "CANCELLED",
+      cancelledById: args.closedById,
+      cancelledAt: new Date(),
+      cancelReason: CLOSED_BY_STATUS_REASON[args.newStatus],
+    },
+  });
+
+  return open.map((r) => ({ id: r.id, category: r.category as string, createdById: r.createdById }));
+}
+
+/**
+ * Tell both sides, AFTER the commit. Fire-and-forget: a transport failure must
+ * not roll back a status change that has already happened.
+ *
+ * The carrier gets the SAME withdrawal notice a manual cancel sends — it is the
+ * same fact from their side, and inventing a second wording for it would make
+ * one event read as two. Per request, because announceOnce keys on the
+ * requestId and each ask is a separate thing to stop chasing.
+ *
+ * The AE gets ONE notification naming the count, not one per request. An AE who
+ * raised three asks and had all three closed by the same act needs to know
+ * once; three rows in the bell for one event is the noise that teaches people
+ * to stop reading it.
+ */
+export async function announceInfoRequestsClosedByStatus(
+  closed: ClosedInfoRequest[],
+  args: { carrierId: string; carrierName: string; newStatus: keyof typeof CLOSED_BY_STATUS_REASON },
+): Promise<void> {
+  if (closed.length === 0) return;
+
+  for (const req of closed) {
+    notifyInfoRequestWithdrawn({
+      carrierId: args.carrierId,
+      requestId: req.id,
+      categoryLabel: getCategoryLabel(req.category),
+    }).catch((err) => log.warn({ err, requestId: req.id }, "[InfoRequest] status-close carrier notice failed"));
+  }
+
+  const byAe = new Map<string, ClosedInfoRequest[]>();
+  for (const req of closed) {
+    byAe.set(req.createdById, [...(byAe.get(req.createdById) || []), req]);
+  }
+
+  for (const [aeId, reqs] of byAe) {
+    const labels = reqs.map((r) => getCategoryLabel(r.category)).join(", ");
+    prisma.notification
+      .create({
+        data: {
+          userId: aeId,
+          type: "ONBOARDING",
+          title: `Info request${reqs.length === 1 ? "" : "s"} closed — ${args.carrierName}`,
+          message:
+            `${reqs.length} open info request${reqs.length === 1 ? "" : "s"} ` +
+            `(${labels}) closed because this carrier moved to ${args.newStatus}. ` +
+            "The carrier has been told to stop work on them.",
+          actionUrl: "/dashboard/carriers",
+        },
+      })
+      .catch((err) => log.warn({ err, aeId }, "[InfoRequest] status-close AE notice failed"));
+  }
 }
 
 interface CancelInfoRequestArgs {

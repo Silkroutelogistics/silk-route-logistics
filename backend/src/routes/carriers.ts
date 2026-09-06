@@ -38,6 +38,11 @@ import { verifyCarrierWithFMCSA } from "../services/fmcsaService";
 import { buildCarrierTrainingSummary } from "../services/trainingService";
 import { uploadLimiter, staffUploadLimiter } from "../middleware/rateLimiters";
 import { log } from "../lib/logger";
+import {
+  closeOpenInfoRequestsForStatus,
+  announceInfoRequestsClosedByStatus,
+  type ClosedInfoRequest,
+} from "../services/infoRequestService";
 
 const router = Router();
 
@@ -1324,18 +1329,36 @@ router.post(
       return;
     }
 
-    const updated = await prisma.carrierProfile.update({
-      where: { id: profile.id },
-      data: {
-        onboardingStatus: "APPROVED",
-        status: "APPROVED",
-        approvedAt: new Date(),
-        emergencyApproved: true,
-        emergencyApproveReason: reason,
-        emergencyApprovedById: req.user!.id,
-        emergencyApprovedAt: new Date(),
-      },
+    // G1 — emergency-approve is a second, unconverged approve path: it does not
+    // go through approvalService, so it needs the close wired explicitly. An
+    // approved carrier's portal stops rendering the info-request section, and
+    // this route reaches an EXISTING carrier, so open requests are possible here.
+    let closedRequests: ClosedInfoRequest[] = [];
+    const updated = await prisma.$transaction(async (tx) => {
+      const p = await tx.carrierProfile.update({
+        where: { id: profile.id },
+        data: {
+          onboardingStatus: "APPROVED",
+          status: "APPROVED",
+          approvedAt: new Date(),
+          emergencyApproved: true,
+          emergencyApproveReason: reason,
+          emergencyApprovedById: req.user!.id,
+          emergencyApprovedAt: new Date(),
+        },
+      });
+      closedRequests = await closeOpenInfoRequestsForStatus(
+        { carrierId: profile.id, newStatus: "APPROVED", closedById: req.user!.id },
+        tx,
+      );
+      return p;
     });
+
+    announceInfoRequestsClosedByStatus(closedRequests, {
+      carrierId: profile.id,
+      carrierName: profile.companyName || "this carrier",
+      newStatus: "APPROVED",
+    }).catch((err) => log.warn({ err }, "[Carriers] emergency-approve info-request close notice failed"));
 
     try {
       await prisma.auditTrail.create({

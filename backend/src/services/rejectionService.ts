@@ -18,6 +18,11 @@
 import { prisma } from "../config/database";
 import { sendEmail, wrap } from "./emailService";
 import { log } from "../lib/logger";
+import {
+  closeOpenInfoRequestsForStatus,
+  announceInfoRequestsClosedByStatus,
+  type ClosedInfoRequest,
+} from "./infoRequestService";
 
 // Industry-standard reapply windows by rejection reason (in days).
 // Null = never eligible to reapply (permanent disqualification).
@@ -143,18 +148,41 @@ export async function rejectCarrier(args: RejectCarrierArgs) {
 
   const reapplyEligibleAt = computeReapplyEligibleAt(args.reason);
 
-  const updated = await prisma.carrierProfile.update({
-    where: { id: args.carrierId },
-    data: {
-      onboardingStatus: "REJECTED",
-      status: "REJECTED", // B2 — paired; see lib/carrierOperational
-      rejectionReason: args.reason as any,
-      rejectedAt: new Date(),
-      rejectedById: args.rejectedById,
-      rejectionNote: args.note || null,
-      reapplyEligibleAt,
-    },
+  // G1 — captured inside the transaction, announced after it commits (F4).
+  let closedRequests: ClosedInfoRequest[] = [];
+
+  // WRAPPED IN A TRANSACTION, which it was not before. A rejected carrier's
+  // portal stops rendering the info-request section, so any request still open
+  // becomes unanswerable at this instant — and the two writes have to land
+  // together, or a partial failure produces exactly the stranded row this rule
+  // exists to prevent.
+  const updated = await prisma.$transaction(async (tx) => {
+    const profile = await tx.carrierProfile.update({
+      where: { id: args.carrierId },
+      data: {
+        onboardingStatus: "REJECTED",
+        status: "REJECTED", // B2 — paired; see lib/carrierOperational
+        rejectionReason: args.reason as any,
+        rejectedAt: new Date(),
+        rejectedById: args.rejectedById,
+        rejectionNote: args.note || null,
+        reapplyEligibleAt,
+      },
+    });
+
+    closedRequests = await closeOpenInfoRequestsForStatus(
+      { carrierId: args.carrierId, newStatus: "REJECTED", closedById: args.rejectedById },
+      tx,
+    );
+
+    return profile;
   });
+
+  announceInfoRequestsClosedByStatus(closedRequests, {
+    carrierId: args.carrierId,
+    carrierName: carrier.companyName || "this carrier",
+    newStatus: "REJECTED",
+  }).catch((err) => log.warn({ err, carrierId: args.carrierId }, "[Rejection] info-request close notice failed"));
 
   // Fire-and-forget email to carrier.
   if (carrier.user.email) {
