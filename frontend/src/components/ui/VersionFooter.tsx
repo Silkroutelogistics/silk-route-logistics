@@ -17235,7 +17235,27 @@
 //
 // The F1 test asserted the button was absent. Absence alone is what the bug
 // looked like from the outside, so it now asserts the sentence.
-export const SRL_VERSION = "3.8.bas";
+// v3.8.bat G3 — the panel stops promising two things the service does not do.
+//
+// "Application status flips to INFO_REQUESTED" and "status returns to
+// REVIEWING" were both unconditional and both false, and false in exactly the
+// case this arc exists to support: createInfoRequest flips only FROM PENDING or
+// REVIEWING, so a second concurrent request moves nothing, and the status comes
+// back only when the request answered was the LAST one open. An AE raising two
+// requests and watching the field sit still would have read it as broken.
+//
+// Guarded from BOTH ENDS rather than pinning the sentence — the service must
+// still carry each condition and the panel must still name it. Pinning only the
+// copy lets the service drift underneath it, which is this same failure
+// pointing the other way.
+//
+// The label rule now covers every parenthetical, not just OTHER. Two are part
+// of the noun and survive a sentence — "(COI)" expands an abbreviation the
+// carrier's agent uses, "(for Quick Pay setup)" answers why we want it. The one
+// that broke described the DROPDOWN ("Other (custom request)"), which named no
+// document. A regex cannot tell those apart, so the two are named and a third
+// fails until somebody reads it in the sentence too.
+export const SRL_VERSION = "3.8.bat";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

@@ -165,10 +165,29 @@ export function InfoRequestModal({ carrierId, carrierCompany, open, onClose }: P
 
           <div className="bg-[#FBF7F0] border border-[#EFE6D3] rounded-lg p-3">
             <p className="text-[11px] font-semibold text-[#BA7517] uppercase tracking-wider mb-1">What happens next</p>
+            {/* BOTH OF THESE WERE UNCONDITIONAL AND NEITHER IS.
+
+                createInfoRequest flips the status only FROM PENDING OR
+                REVIEWING; against a carrier already at INFO_REQUESTED it is a
+                deliberate no-op, which is what lets several requests stand open
+                at once. And resolveInfoRequest returns the status only when the
+                request answered was the LAST one open.
+
+                So the concurrency this arc exists to support is exactly the case
+                the old copy described wrongly: raise a second request and the
+                status does not move, answer one of two and it does not come
+                back. An AE who trusted this panel would have read the status
+                field as broken. */}
             <ul className="text-xs text-[#3A4A5F] space-y-0.5">
               <li>Carrier receives an email with your message + portal link</li>
-              <li>Application status flips to <strong>INFO_REQUESTED</strong></li>
-              <li>When carrier responds, you receive an email + status returns to <strong>REVIEWING</strong></li>
+              <li>
+                Status moves to <strong>INFO_REQUESTED</strong> if it is currently PENDING or REVIEWING. A second
+                open request leaves it where it is.
+              </li>
+              <li>
+                You get an email on every answer. The status returns to <strong>REVIEWING</strong> once the carrier
+                has answered the last request still open.
+              </li>
             </ul>
           </div>
 

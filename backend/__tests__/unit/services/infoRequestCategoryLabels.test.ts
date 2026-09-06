@@ -122,6 +122,94 @@ describe("the label set matches the enum it is keyed by", () => {
     }
   });
 
+  /**
+   * TWO PARENTHETICALS ARE FINE AND THE THIRD ONE WAS NOT, so the rule cannot
+   * simply be no-parentheses.
+   *
+   * OTHER used to read "Other (custom request)". That parenthetical described
+   * the DROPDOWN CHOICE rather than the thing being asked for, so the carrier
+   * email said "We need the following from you: Other (custom request)" —
+   * naming no document and leaking the AE's own UI at somebody outside it.
+   *
+   * The two that remain are part of the noun and survive the substitution:
+   *   COI_UPDATE   "(COI)" expands an abbreviation the carrier's own insurance
+   *                agent uses daily
+   *   VOIDED_CHECK "(for Quick Pay setup)" answers the question a carrier asks
+   *                on reading it — why do you want this
+   * "We need Updated Certificate of Insurance (COI) from you" is a sentence a
+   * person would write. The retired one was not.
+   *
+   * A regex cannot tell those apart, so this is a RATCHET rather than a rule:
+   * the two are named here because somebody read them in the sentence, and a
+   * third fails until somebody does the same for it. The alternative — banning
+   * parentheses outright — would have forced COI_UPDATE to drop an
+   * abbreviation that makes it clearer, which is the rule winning over the
+   * reason for the rule.
+   */
+  /**
+   * THE PANEL DESCRIBES SERVICE BEHAVIOUR, so it is a claim about code and goes
+   * stale the way every such claim does.
+   *
+   * It read "Application status flips to INFO_REQUESTED" and "status returns to
+   * REVIEWING" — both unconditional, both false, and false in exactly the case
+   * this arc exists to support. createInfoRequest flips only FROM PENDING or
+   * REVIEWING, so a second concurrent request moves nothing; resolveInfoRequest
+   * returns the status only when the answered request was the LAST one open. An
+   * AE raising two requests and watching the status sit still would have read
+   * the field as broken.
+   *
+   * Asserted from BOTH ENDS rather than pinning the sentence: the service must
+   * still carry each condition, and the panel must still mention it. Pinning
+   * only the copy would let the service change underneath it, which is the
+   * failure being fixed pointing the other way.
+   */
+  it("the modal states the two conditions the service actually applies", () => {
+    const svc = read(SERVICE);
+    const modal = read(MODAL);
+
+    // End one: the service still gates both transitions.
+    expect(svc, "the PENDING/REVIEWING flip guard is gone").toMatch(/onboardingStatus[\s\S]{0,80}"PENDING"[\s\S]{0,40}"REVIEWING"/);
+    expect(svc, "the last-open-request check is gone").toMatch(/remainingOpen === 0/);
+
+    // End two: the panel names both, rather than promising them outright.
+    expect(
+      modal,
+      "the panel claims the status flip without naming the states it flips from",
+    ).toMatch(/PENDING or REVIEWING/);
+    expect(
+      modal,
+      "the panel claims the status returns without saying it takes the last open request",
+    ).toMatch(/last request still open/);
+  });
+
+  const PARENTHETICALS_EXAMINED = ["COI_UPDATE", "VOIDED_CHECK"];
+
+  it("admits no new parenthetical without somebody reading it in a sentence", () => {
+    const withParens = Object.entries(INFO_REQUEST_CATEGORY_LABELS)
+      .filter(([, v]) => v.includes("("))
+      .map(([k]) => k)
+      .sort();
+    expect(
+      withParens,
+      "a category label gained a parenthetical. Read it inside the carrier email's " +
+        "sentence first — if it names the document it stays and goes in " +
+        "PARENTHETICALS_EXAMINED; if it describes the dropdown it is the OTHER bug again.",
+    ).toEqual([...PARENTHETICALS_EXAMINED].sort());
+  });
+
+  it("no label describes the choice instead of the document", () => {
+    // The mechanical half, and it generalises past parentheses: these are the
+    // words that turn a label into a picker affordance. They read as an
+    // instruction to the AE, and the carrier is the one who receives them.
+    const PICKER_WORDS = /\b(custom|select|choose|pick|misc|other|n\/a)\b/i;
+    for (const [key, label] of Object.entries(INFO_REQUEST_CATEGORY_LABELS)) {
+      expect(
+        label,
+        key + ' reads as a dropdown option rather than a document the carrier can send',
+      ).not.toMatch(PICKER_WORDS);
+    }
+  });
+
   it("keeps OTHER readable inside a sentence", () => {
     // The whole reason the backend string won. This is the label that goes into
     // "Our {label} request has been withdrawn", so it must be a noun phrase and
