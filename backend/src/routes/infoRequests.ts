@@ -23,6 +23,17 @@ import { validateBody, validateQuery } from "../middleware/validate";
 import { prisma } from "../config/database";
 import { createInfoRequest, cancelInfoRequest, getCategoryLabel } from "../services/infoRequestService";
 import { log } from "../lib/logger";
+// THE THIRD COPY, and the one that decided what the server would accept. The
+// labels were unified onto shared/ in v3.8.bao; this enum was still a hand-kept
+// list of the same nine names, so a category added to the Prisma enum and the
+// shared list would have been refused here with a 400 that read as a typo.
+// z.enum wants a non-empty tuple type and the shared list is typed as an array,
+// hence the cast — the members are identical by construction, and the label
+// guard asserts this file no longer carries a literal.
+import {
+  INFO_REQUEST_CATEGORIES,
+  type InfoRequestCategory,
+} from "../../../shared/constants/infoRequestCategories";
 
 const router = Router();
 
@@ -37,17 +48,7 @@ router.use(authorize("ADMIN", "CEO"));
 
 const createSchema = z.object({
   carrierId: z.string().min(1),
-  category: z.enum([
-    "COI_UPDATE",
-    "W9_UPDATE",
-    "AUTHORITY_LETTER",
-    "SAFETY_CLARIFICATION",
-    "EIN_VERIFICATION",
-    "VOIDED_CHECK",
-    "ADDRESS_PROOF",
-    "REFERENCES",
-    "OTHER",
-  ]),
+  category: z.enum(INFO_REQUEST_CATEGORIES as [InfoRequestCategory, ...InfoRequestCategory[]]),
   message: z.string().min(10, "Message must be at least 10 characters").max(2000, "Message must be 2000 characters or less"),
 });
 

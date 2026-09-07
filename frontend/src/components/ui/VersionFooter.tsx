@@ -17359,7 +17359,16 @@
 // renders in its place states the rule rather than this carrier's state, so it
 // is true whichever reason the prop is false. Test mounts the component
 // without the prop; a source walk asserts every real mount passes it.
-export const SRL_VERSION = "3.8.bba";
+// v3.8.bbb — the third hand-kept category list binds to the shared definition.
+//
+// v3.8.bao unified the labels onto shared/constants/infoRequestCategories and
+// the guard watched two consumers. routes/infoRequests.ts kept a hand-typed
+// z.enum of the same nine names — the copy that decides what the server
+// ACCEPTS, so a category added everywhere else would have been refused at
+// POST /info-requests with a 400 that reads as a typo. The enum is now built
+// from the shared list, and the label guard asserts the file carries no
+// category literal (injection: restoring the list turns exactly that case red).
+export const SRL_VERSION = "3.8.bbb";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

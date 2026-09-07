@@ -96,6 +96,7 @@ const read = (rel: string) => stripComments(raw(rel));
 
 const SERVICE = "backend/src/services/infoRequestService.ts";
 const MODAL = "frontend/src/components/carriers/InfoRequestModal.tsx";
+const ROUTES = "backend/src/routes/infoRequests.ts";
 const SCHEMA = "backend/prisma/schema.prisma";
 
 describe("the label set matches the enum it is keyed by", () => {
@@ -222,6 +223,7 @@ describe("the label set matches the enum it is keyed by", () => {
 describe("no surface keeps a second copy", () => {
   const service = read(SERVICE);
   const modal = read(MODAL);
+  const routes = read(ROUTES);
 
   it("neither the service nor the modal re-declares a label", () => {
     const offenders: string[] = [];
@@ -235,9 +237,35 @@ describe("no surface keeps a second copy", () => {
     ).toEqual([]);
   });
 
-  it("both consumers reach the shared module rather than a local map", () => {
+  it("all three consumers reach the shared module rather than a local map", () => {
     expect(service).toMatch(/shared\/constants\/infoRequestCategories/);
     expect(modal).toMatch(/@shared\/constants\/infoRequestCategories/);
+    expect(routes).toMatch(/shared\/constants\/infoRequestCategories/);
+  });
+
+  /**
+   * THE THIRD COPY WAS THE ONE THAT DECIDED WHAT THE SERVER ACCEPTS.
+   *
+   * The labels were unified in v3.8.bao and this guard watched two consumers.
+   * routes/infoRequests.ts kept a hand-typed z.enum of the same nine names, so
+   * a category added to the Prisma enum, the shared list, the modal and every
+   * email would still have been refused at POST /info-requests with a 400 that
+   * reads as a typo. A validator is a consumer of the category set like any
+   * other, and it is the one whose drift is a live refusal rather than a
+   * wrong label.
+   *
+   * Asserted on the KEYS, not the labels: the validator never carried a label,
+   * so the label check above cannot see it. No category name may appear as a
+   * quoted literal anywhere in the file — re-adding the list in any spelling
+   * puts one there.
+   */
+  it("the validator's enum is the shared list, not a third hand-kept copy", () => {
+    expect(routes).toMatch(/z\.enum\(INFO_REQUEST_CATEGORIES/);
+    const literals = INFO_REQUEST_CATEGORIES.filter((key) => routes.includes(`"${key}"`));
+    expect(
+      literals,
+      `routes/infoRequests.ts names a category as a literal again — the enum has one definition:\n${literals.join("\n")}`,
+    ).toEqual([]);
   });
 
   it("the frontend test runner can resolve @shared", () => {
@@ -252,6 +280,7 @@ describe("no surface keeps a second copy", () => {
     // returned "" they would all pass while checking nothing.
     expect(service.length).toBeGreaterThan(2_000);
     expect(modal.length).toBeGreaterThan(2_000);
+    expect(routes.length).toBeGreaterThan(2_000);
     expect(Object.keys(INFO_REQUEST_CATEGORY_LABELS)).toHaveLength(9);
   });
 
