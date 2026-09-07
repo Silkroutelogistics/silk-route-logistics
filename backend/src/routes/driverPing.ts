@@ -76,6 +76,13 @@ router.get("/:token", pingLimiter, (req: Request, res: Response) => {
   // Deliberately no load lookup here either — rendering a page for a valid
   // token should not disclose lane detail until the driver acts, and should not
   // cost a query per scan of a forwarded link.
+  // The global Permissions-Policy (middleware/security.ts) denies geolocation
+  // to every document this API serves, which is right everywhere except this
+  // page: its one button calls navigator.geolocation, and under geolocation=()
+  // the browser refused it before the driver saw a prompt, so the only
+  // location channel SRL has was dead on arrival. This response, and only this
+  // one, allows the page's own origin. Camera and microphone stay denied.
+  res.setHeader("Permissions-Policy", "camera=(), microphone=(), geolocation=(self)");
   res.type("html").send(
     page(
       "Share your location",

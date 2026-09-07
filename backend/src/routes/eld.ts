@@ -4,7 +4,7 @@ import { authenticate, authorize, AuthRequest } from "../middleware/auth";
 import { prisma } from "../config/database";
 import { processSamsaraLocations } from "../services/samsaraService";
 import { processMotiveLocations } from "../services/motiveService";
-import { checkGeofence } from "../services/geofenceService";
+import { checkGeofence, asLocationSource } from "../services/geofenceService";
 import { log } from "../lib/logger";
 
 const router = Router();
@@ -106,7 +106,8 @@ router.post("/webhook/location", async (req: AuthRequest, res: Response) => {
       res.status(400).json({ error: "loadId, latitude, and longitude required" });
       return;
     }
-    const events = await checkGeofence(loadId, Number(latitude), Number(longitude), source || "ELD");
+    // The body may name any string; only a LocationSource reaches the rows.
+    const events = await checkGeofence(loadId, Number(latitude), Number(longitude), asLocationSource(source));
     res.json({ events });
   } catch (err: any) {
     log.error({ err: err }, "[ELD Webhook] Location error:");

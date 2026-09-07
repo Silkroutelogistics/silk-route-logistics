@@ -3,6 +3,7 @@
  * Checks GPS/ELD pings against stop lat/long coordinates.
  * Auto-triggers AT_PICKUP / AT_DELIVERY status when within radius.
  */
+import type { LocationSource } from "@prisma/client";
 import { prisma } from "../config/database";
 import { broadcastSSE } from "../routes/trackTraceSSE";
 import { log } from "../lib/logger";
@@ -19,6 +20,24 @@ import {
 import { applyStopDwellCharges } from "../lib/detentionLayover";
 
 const GEOFENCE_RADIUS_MILES = 1.0;
+
+const LOCATION_SOURCES: ReadonlySet<string> = new Set<LocationSource>([
+  "ELD",
+  "CARRIER_PORTAL",
+  "CHECK_CALL_EMAIL",
+  "AE_MANUAL",
+  "GEOFENCE",
+]);
+
+/**
+ * Narrow an untrusted value to a LocationSource, defaulting to ELD. The ELD
+ * webhook takes its source from a request body and the scanner reads it off a
+ * row that may be null; neither should be able to write an enum value Prisma
+ * will reject, or a label the tracking factor does not recognise.
+ */
+export function asLocationSource(value: unknown, fallback: LocationSource = "ELD"): LocationSource {
+  return typeof value === "string" && LOCATION_SOURCES.has(value) ? (value as LocationSource) : fallback;
+}
 
 /**
  * Settle detention and layover for a stop this scan has just departed.
@@ -90,12 +109,19 @@ function toRad(deg: number): number {
 /**
  * Check a single GPS ping against all stops of a load.
  * Returns geofence events if the ping is within radius of any stop.
+ *
+ * `source` is where the POSITION came from (an ELD ping, a driver's one-tap
+ * portal share, a check-call email) and is what the rows written here carry
+ * as locationSource. The eventType already says GEOFENCE; until Phase 0 of
+ * the mandatory-ELD arc the argument was accepted and ignored, and every row
+ * hardcoded locationSource GEOFENCE, so a driver's portal share arrived on
+ * the timeline labelled as if a telematics device had produced it.
  */
 export async function checkGeofence(
   loadId: string,
   latitude: number,
   longitude: number,
-  source: string = "ELD"
+  source: LocationSource = "ELD"
 ) {
   const load = await prisma.load.findUnique({
     where: { id: loadId },
@@ -182,7 +208,7 @@ export async function checkGeofence(
               longitude,
               locationCity: stop.city,
               locationState: stop.state,
-              locationSource: "GEOFENCE",
+              locationSource: source,
               notes: `Auto-detected arrival at ${stop.facilityName} via geofence (${distance.toFixed(2)} mi)`,
             },
           });
@@ -214,7 +240,7 @@ export async function checkGeofence(
             longitude,
             locationCity: stop.city,
             locationState: stop.state,
-            locationSource: "GEOFENCE",
+            locationSource: source,
             notes: `Geofence entry: ${stop.facilityName} (${distance.toFixed(2)} mi radius)`,
           },
         });
@@ -418,7 +444,7 @@ export async function scanGeofences() {
       load.id,
       Number(lastLocation.latitude),
       Number(lastLocation.longitude),
-      String(lastLocation.locationSource || "ELD")
+      asLocationSource(lastLocation.locationSource)
     );
 
     eventsDetected += events.length;

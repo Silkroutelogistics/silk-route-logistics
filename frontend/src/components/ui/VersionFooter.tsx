@@ -17383,7 +17383,20 @@
 // with locationSource ELD exists for the load, and it shows when the position
 // was recorded instead of a speed no event carries. Phase 0 of the
 // mandatory-ELD arc.
-export const SRL_VERSION = "3.8.bbc";
+// v3.8.bbd P0-3: the driver ping can actually ask for a position.
+//
+// The global Permissions-Policy denies geolocation to every document this API
+// serves. The driver ping page (Arc 19) is a document this API serves, and
+// its one button calls navigator.geolocation, so the browser refused the call
+// before the driver saw a prompt. The only location channel SRL has was dead
+// from the day it shipped, and its failure read as a driver declining. That
+// one response now allows its own origin; nothing else changes.
+//
+// checkGeofence also stops ignoring its source argument: a driver's portal
+// share is recorded as CARRIER_PORTAL, an ELD ping as ELD, and the webhook
+// narrows a body-supplied value before it reaches a row. Phase 0 of the
+// mandatory-ELD arc.
+export const SRL_VERSION = "3.8.bbd";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
