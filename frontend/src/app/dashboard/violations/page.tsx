@@ -39,6 +39,8 @@ interface ScorecardData {
     overallScore: number;
     calculatedAt: string;
   }>;
+  /** false when no location source exists; the tracking column is then a sentinel, not a score. */
+  trackingMeasured?: boolean;
 }
 
 interface ComplianceAlert {
@@ -196,7 +198,14 @@ export default function ViolationsPage() {
             <ScoreGauge label="Claim Ratio" value={latest?.claimRatio} suffix="%" />
             <ScoreGauge label="Doc Timeliness" value={latest?.documentSubmissionTimeliness} />
             <ScoreGauge label="Acceptance Rate" value={latest?.acceptanceRate} />
-            <ScoreGauge label="GPS Compliance" value={latest?.gpsCompliancePct} />
+            {scorecard.trackingMeasured === false ? (
+              <div className="bg-white/5 rounded-lg p-3 text-center">
+                <p className="text-xs text-slate-500 mb-1">Tracking Compliance</p>
+                <p className="text-sm font-semibold text-slate-400">Not measured</p>
+              </div>
+            ) : (
+              <ScoreGauge label="Tracking Compliance" value={latest?.gpsCompliancePct} />
+            )}
           </div>
 
           {scorecard.pointsToNextTier > 0 && (

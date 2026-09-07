@@ -1316,6 +1316,10 @@ export async function getScorecard(req: AuthRequest, res: Response) {
     bonusPercentage: bonusPct,
     pointsToNextTier: Math.max(0, nextTierThreshold - currentScore),
     scorecards,
+    // gpsCompliancePct on the rows is a measurement only when a location
+    // source exists. Otherwise it holds the unmeasured sentinel
+    // (lib/trackingFactor) and readers render "Not measured".
+    trackingMeasured: profile.eldEnabled === true,
   });
 }
 
@@ -1347,6 +1351,8 @@ export async function getCarrierScore(req: AuthRequest, res: Response) {
     bonusPercentage: bonusPct,
     pointsToNextTier: Math.max(0, nextTierThreshold - currentScore),
     scorecards,
+    // Same rule as getScorecard: the column is a sentinel until measured.
+    trackingMeasured: profile.eldEnabled === true,
   });
 }
 

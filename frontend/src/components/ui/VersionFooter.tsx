@@ -17324,7 +17324,18 @@
 // not carry, so the column receives the unmeasured sentinel (0, the value a
 // fresh row already holds) and every reader gates on eldEnabled. The readers
 // are the next commit. Phase 0 of the mandatory-ELD arc.
-export const SRL_VERSION = "3.8.bax";
+// v3.8.bay P0-1b: the readers of the tracking column say "Not measured".
+//
+// 1a made the persisted gpsCompliancePct a sentinel (0) for a carrier with no
+// location source. Left alone, every reader would have printed that 0 as a
+// percentage, which is the constant-100 lie pointing the other way: a carrier
+// shown as tracking none of their loads because SRL never looked. The two
+// scorecard handlers now return trackingMeasured, the three pages that render
+// the column show "Not measured" behind it, and the two Marco Polo context
+// builders stop coercing the sentinel into a number the assistant would
+// repeat. A census test fails any future reader that prints the column
+// without the gate. Phase 0 of the mandatory-ELD arc.
+export const SRL_VERSION = "3.8.bay";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

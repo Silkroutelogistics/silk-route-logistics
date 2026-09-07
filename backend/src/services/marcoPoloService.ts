@@ -1434,7 +1434,10 @@ export async function getMyScore(ctx: UserContext) {
         claimRatio: latestScorecard?.claimRatio || 0,
         documentTimeliness: latestScorecard?.documentSubmissionTimeliness || 0,
         acceptanceRate: latestScorecard?.acceptanceRate || 0,
-        gpsCompliancePct: latestScorecard?.gpsCompliancePct || 0,
+        // The column holds a sentinel until a location source is connected
+        // (lib/trackingFactor). The assistant must not tell anyone this
+        // carrier tracks 0% of its loads.
+        gpsCompliancePct: profile.eldEnabled ? latestScorecard?.gpsCompliancePct || 0 : "not measured",
       },
       stats: {
         totalLoads: profile.cppTotalLoads,
@@ -1528,7 +1531,10 @@ export async function getCarrierScore(ctx: UserContext, carrierId: string) {
         claimRatio: latestScorecard?.claimRatio || 0,
         documentTimeliness: latestScorecard?.documentSubmissionTimeliness || 0,
         acceptanceRate: latestScorecard?.acceptanceRate || 0,
-        gpsCompliancePct: latestScorecard?.gpsCompliancePct || 0,
+        // The column holds a sentinel until a location source is connected
+        // (lib/trackingFactor). The assistant must not tell anyone this
+        // carrier tracks 0% of its loads.
+        gpsCompliancePct: profile.eldEnabled ? latestScorecard?.gpsCompliancePct || 0 : "not measured",
       },
       stats: {
         totalLoads: profile.cppTotalLoads,

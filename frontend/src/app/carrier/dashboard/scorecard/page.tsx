@@ -116,7 +116,7 @@ export default function ScorecardPage() {
   // pointsToNextTier / nextTierThreshold are still returned by the API but are
   // deliberately not read: they are score-to-tier values, and score does not
   // promote a carrier (CLAUDE.md §10).
-  const { currentScore, currentTier: rawTier, bonusPercentage, metrics, history, bonuses } = data;
+  const { currentScore, currentTier: rawTier, bonusPercentage, metrics, history, bonuses, trackingMeasured } = data;
   const currentTier = CARAVAN_TIER_MAP[rawTier] || "SILVER";
 
   const circumference = 2 * Math.PI * 54;
@@ -319,6 +319,17 @@ export default function ScorecardPage() {
         {Object.entries(KPI_LABELS).map(([key, label]) => {
           const val = metrics?.[key] ?? 0;
           const isInverted = key === "claimRatio";
+          // No location source is connected, so the column holds a sentinel and
+          // a percentage here would be a claim about tracking nobody captured.
+          if (key === "gpsCompliancePct" && trackingMeasured === false) {
+            return (
+              <CarrierCard key={key} padding="p-4">
+                <p className="text-[11px] text-gray-500 mb-1 truncate">{label}</p>
+                <p className="text-sm font-semibold text-[#0A2540]">Not measured</p>
+                <p className="text-[11px] text-gray-500 mt-1">Measured once a location source is connected.</p>
+              </CarrierCard>
+            );
+          }
           return (
             <CarrierCard key={key} padding="p-4">
               <p className="text-[11px] text-gray-500 mb-1 truncate">{label}</p>

@@ -55,6 +55,8 @@ interface CarrierScoreDetail {
   bonusPercentage: number;
   pointsToNextTier: number;
   scorecards: Scorecard[];
+  /** false when no location source exists; the tracking column is then a sentinel, not a score. */
+  trackingMeasured?: boolean;
 }
 
 // ─── KPI Gauge ───────────────────────────────────────
@@ -66,7 +68,7 @@ const kpiLabels: Record<string, string> = {
   claimRatio: "Claim Ratio (lower is better)",
   documentSubmissionTimeliness: "Doc Timeliness",
   acceptanceRate: "Acceptance Rate",
-  gpsCompliancePct: "GPS Compliance",
+  gpsCompliancePct: "Tracking Compliance",
 };
 
 function KpiGauge({
@@ -377,16 +379,24 @@ export default function ScorecardPage() {
                       </h3>
                       {latest ? (
                         <div className="grid sm:grid-cols-2 gap-4">
-                          {Object.entries(kpiLabels).map(([key, label]) => (
-                            <KpiGauge
-                              key={key}
-                              label={label}
-                              value={
-                                latest[key as keyof Scorecard] as number
-                              }
-                              inverted={key === "claimRatio"}
-                            />
-                          ))}
+                          {Object.entries(kpiLabels).map(([key, label]) =>
+                            key === "gpsCompliancePct" && carrierDetail?.trackingMeasured === false ? (
+                              <div key={key} className="p-4 bg-white/5 rounded-xl border border-white/10">
+                                <div className="flex items-center justify-between mb-2">
+                                  <span className="text-sm text-slate-400">{label}</span>
+                                  <span className="text-sm font-bold text-white">Not measured</span>
+                                </div>
+                                <p className="text-xs text-slate-500">No location source is connected for this carrier.</p>
+                              </div>
+                            ) : (
+                              <KpiGauge
+                                key={key}
+                                label={label}
+                                value={latest[key as keyof Scorecard] as number}
+                                inverted={key === "claimRatio"}
+                              />
+                            ),
+                          )}
                         </div>
                       ) : (
                         <div className="text-center py-16 text-slate-500 text-sm">
@@ -552,7 +562,10 @@ export default function ScorecardPage() {
                               { label: "On-Time Pickup", value: latest.onTimePickupPct, threshold: 95 },
                               { label: "On-Time Delivery", value: latest.onTimeDeliveryPct, threshold: 95 },
                               { label: "Doc Timeliness", value: latest.documentSubmissionTimeliness, threshold: 90 },
-                              { label: "GPS Compliance", value: latest.gpsCompliancePct, threshold: 90 },
+                              // Omitted, not drawn at 0, when nothing measured it.
+                              ...(carrierDetail?.trackingMeasured === false
+                                ? []
+                                : [{ label: "Tracking Compliance", value: latest.gpsCompliancePct, threshold: 90 }]),
                             ].map((m) => (
                               <div key={m.label} className="flex items-center gap-3">
                                 <span className="text-xs text-slate-500 w-32">{m.label}</span>
