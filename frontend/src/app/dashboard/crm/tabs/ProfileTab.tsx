@@ -6,6 +6,7 @@ import { api } from "@/lib/api";
 import { Star, Edit2, Shield, Search, ExternalLink, CheckCircle2, XCircle, User } from "lucide-react";
 import type { CrmCustomer } from "../types";
 import { ACCESSORIAL_TYPES } from "@/lib/accessorialTypes";
+import { AddressAutocomplete } from "@/components/ui/AddressAutocomplete";
 
 interface Props {
   customer: CrmCustomer;
@@ -364,6 +365,17 @@ function EditProfileForm({
         </select>
       </label>
 
+      {/* Same Places lookup as the create form. The four fields below stay
+          editable — correcting a bad address is the common reason an AE opens
+          this form at all. */}
+      <AddressAutocomplete
+        label="Start typing an address…"
+        theme="light"
+        value={{ address: form.address, city: form.city, state: form.state, zip: form.zip }}
+        onSelect={(p) =>
+          setForm((f) => ({ ...f, address: p.address, city: p.city, state: p.state, zip: p.zip }))
+        }
+      />
       <Input label="Address"       value={form.address} onChange={(v) => setForm({ ...form, address: v })} />
       <div className="grid grid-cols-3 gap-2">
         <Input label="City"  value={form.city} onChange={(v) => setForm({ ...form, city: v })} />

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { api } from "@/lib/api";
+import { AddressAutocomplete } from "@/components/ui/AddressAutocomplete";
 
 interface Props {
   onCreated: (customerId: string) => void;
@@ -102,7 +103,21 @@ export function NewCustomerForm({ onCreated, onCancel }: Props) {
         <Input label="Phone" value={form.phone} onChange={(v) => setForm({ ...form, phone: v })} />
       </Section>
 
+      {/* Google Places lookup fills Street / City / State / Zip in one action.
+          The four fields stay editable underneath on purpose: Places does not
+          know every dock, and an AE must be able to correct or hand-enter one
+          it gets wrong. Same shape as the CRM Facilities tab. */}
       <Section title="Primary address">
+        <div className="col-span-2">
+          <AddressAutocomplete
+            label="Start typing an address…"
+            theme="light"
+            value={{ address: form.address, city: form.city, state: form.state, zip: form.zip }}
+            onSelect={(p) =>
+              setForm((f) => ({ ...f, address: p.address, city: p.city, state: p.state, zip: p.zip }))
+            }
+          />
+        </div>
         <Input label="Street" value={form.address} onChange={(v) => setForm({ ...form, address: v })} wide />
         <div className="grid grid-cols-3 gap-2 col-span-2">
           <Input label="City"  value={form.city}  onChange={(v) => setForm({ ...form, city: v })} />
@@ -122,6 +137,27 @@ export function NewCustomerForm({ onCreated, onCancel }: Props) {
 
       {!form.sameBilling && (
         <Section title="Billing address">
+          <div className="col-span-2">
+            <AddressAutocomplete
+              label="Start typing a billing address…"
+              theme="light"
+              value={{
+                address: form.billingAddress,
+                city: form.billingCity,
+                state: form.billingState,
+                zip: form.billingZip,
+              }}
+              onSelect={(p) =>
+                setForm((f) => ({
+                  ...f,
+                  billingAddress: p.address,
+                  billingCity: p.city,
+                  billingState: p.state,
+                  billingZip: p.zip,
+                }))
+              }
+            />
+          </div>
           <Input label="Street" value={form.billingAddress} onChange={(v) => setForm({ ...form, billingAddress: v })} wide />
           <div className="grid grid-cols-3 gap-2 col-span-2">
             <Input label="City"  value={form.billingCity}  onChange={(v) => setForm({ ...form, billingCity: v })} />
@@ -138,6 +174,15 @@ export function NewCustomerForm({ onCreated, onCancel }: Props) {
         </Select>
         <Input label="Tax ID" value={form.taxId} onChange={(v) => setForm({ ...form, taxId: v })} />
       </Section>
+
+      {/* Said before the click, not discovered after it. A new customer is
+          created PENDING and the Approved list is APPROVED-only, so without
+          this the AE saves, closes the drawer, and cannot find the record. */}
+      <div className="text-[11px] text-[#B07A1A] bg-[#FBEFD4] border border-[#B07A1A]/30 rounded px-3 py-2">
+        Saved as <strong>Pending approval</strong>. It stays there — and cannot be
+        tendered a load — until the TIN, credit check and signed contract are on
+        file and you approve it from this drawer.
+      </div>
 
       {error && <div className="text-xs text-red-600">{error}</div>}
 

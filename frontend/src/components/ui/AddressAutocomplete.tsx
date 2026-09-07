@@ -6,9 +6,20 @@ import { MapPin, Loader2 } from "lucide-react";
 /**
  * Shared Google Places address autocomplete.
  *
- * Consumers:
- *  - Order Builder (dark theme) — pickup/delivery address fields
- *  - CRM Facilities tab (light theme) — facility address
+ * Consumers (light theme unless noted):
+ *  - Order Builder (dark) — pickup/delivery address fields
+ *  - CRM Facilities tab — facility address
+ *  - CRM New Customer form — primary + billing address
+ *  - CRM Profile tab, Edit profile — primary address
+ *
+ * The list above was two entries long while five files imported this, which
+ * is the kind of stale claim somebody reads as a survey of the surface. It is
+ * a list, so it will go stale again; grep before trusting it.
+ *
+ * NOT a consumer, deliberately: /onboarding, /shipper/register, QuoteForm and
+ * CreateLoadModal each carry their own copy of the loader. Consolidating them
+ * onto this component is worth doing and is not a rename — the copies differ
+ * in field shape and theme — so it belongs in its own change.
  *
  * Single source of truth for the Google Maps loader, geocode parsing,
  * and debounce/result UX. Pass `theme="light"` in light-themed panels

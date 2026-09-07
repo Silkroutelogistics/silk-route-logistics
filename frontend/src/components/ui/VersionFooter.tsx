@@ -17452,7 +17452,19 @@
 // A text assertion is the wrong instrument here — a grep for "disabled" proves
 // the attribute is written, not that the tab refuses. Every case clicks a real
 // button and reads what the handler did.
-export const SRL_VERSION = "3.8.bbi";
+// v3.8.bbj: the CRM customer forms get the address lookup they never had.
+//
+// Nothing was broken. AddressAutocomplete has shipped for months and the CRM
+// FACILITIES tab uses it; the customer forms two panels away were plain text
+// inputs, so an AE typed street, city, state and zip by hand on the one surface
+// that opens most often. Wired into New Customer (primary + billing) and
+// Profile > Edit profile.
+//
+// The four fields stay editable beneath the lookup on purpose: Places does not
+// know every dock, and an AE must be able to correct or hand-enter one it gets
+// wrong. Correcting a bad address is the common reason the edit form is opened
+// at all.
+export const SRL_VERSION = "3.8.bbj";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
