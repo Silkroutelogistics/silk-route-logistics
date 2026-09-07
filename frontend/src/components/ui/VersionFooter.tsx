@@ -17310,7 +17310,21 @@
 //
 // Only from PENDING. Writing REVIEWING unconditionally would un-approve a
 // carrier for uploading a renewed COI, which is worse than the 500 it replaces.
-export const SRL_VERSION = "3.8.baw";
+// v3.8.bax P0-1a: tracking compliance is null until something measures it.
+//
+// The weekly recalc scored every carrier at a constant 100 for tracking
+// compliance unless CarrierProfile.eldEnabled was true, and nothing has ever
+// written eldEnabled. The approval seed wrote 80. Neither was a measurement;
+// both were claims, on every scorecard and gauge, that SRL had location
+// visibility it does not have. 15 points of the Compass composite rode on it.
+//
+// The factor is now null when no location source exists and the composite
+// renormalises the six remaining weights. CarrierScorecard.gpsCompliancePct is
+// Float @default(0) and cannot hold null without a migration this sprint does
+// not carry, so the column receives the unmeasured sentinel (0, the value a
+// fresh row already holds) and every reader gates on eldEnabled. The readers
+// are the next commit. Phase 0 of the mandatory-ELD arc.
+export const SRL_VERSION = "3.8.bax";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

@@ -76,7 +76,13 @@ export function calculateOverallScore(metrics: {
   claimRatio: number;
   documentSubmissionTimeliness: number;
   acceptanceRate: number;
-  gpsCompliancePct: number;
+  /**
+   * null when no location source measured it (lib/trackingFactor). The factor
+   * is then excluded and the remaining weights are renormalised, so a carrier
+   * with no telematics is scored on the six factors SRL can observe rather
+   * than credited with a tracking record nobody captured.
+   */
+  gpsCompliancePct: number | null;
 }): number {
   const weights = {
     onTimePickupPct: 0.2,
@@ -89,14 +95,26 @@ export function calculateOverallScore(metrics: {
   };
 
   // claimRatio is inverted: lower is better, so we use (100 - claimRatio)
-  const score =
-    metrics.onTimePickupPct * weights.onTimePickupPct +
-    metrics.onTimeDeliveryPct * weights.onTimeDeliveryPct +
-    metrics.communicationScore * weights.communicationScore +
-    (100 - metrics.claimRatio) * weights.claimRatio +
-    metrics.documentSubmissionTimeliness * weights.documentSubmissionTimeliness +
-    metrics.acceptanceRate * weights.acceptanceRate +
-    metrics.gpsCompliancePct * weights.gpsCompliancePct;
+  const terms: Array<[number | null, number]> = [
+    [metrics.onTimePickupPct, weights.onTimePickupPct],
+    [metrics.onTimeDeliveryPct, weights.onTimeDeliveryPct],
+    [metrics.communicationScore, weights.communicationScore],
+    [100 - metrics.claimRatio, weights.claimRatio],
+    [metrics.documentSubmissionTimeliness, weights.documentSubmissionTimeliness],
+    [metrics.acceptanceRate, weights.acceptanceRate],
+    [metrics.gpsCompliancePct, weights.gpsCompliancePct],
+  ];
+
+  let weighted = 0;
+  let weightSum = 0;
+  for (const [value, weight] of terms) {
+    if (value === null) continue;
+    weighted += value * weight;
+    weightSum += weight;
+  }
+  // With every factor present weightSum is the published 1.0 and this is the
+  // same arithmetic as before; with one absent it scales the rest up to 1.0.
+  const score = weightSum > 0 ? weighted / weightSum : 0;
 
   return Math.round(score * 100) / 100;
 }

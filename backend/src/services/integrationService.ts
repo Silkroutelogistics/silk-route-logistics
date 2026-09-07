@@ -7,6 +7,7 @@ import { notifyMatchedCarriers } from "./carrierOutreachService";
 import { checkMilestoneAdvancement, applyMilestoneRewards, getEffectiveTier, getTierConfig } from "./caravanService";
 import { calcOnTimePerformance } from "../lib/onTimePerformance";
 import { calcDocTimeliness } from "../lib/docTimeliness";
+import { resolveTrackingFactor, persistedTrackingPct } from "../lib/trackingFactor";
 import { log } from "../lib/logger";
 import { resolveTonuBilling } from "../lib/tonuPolicy";
 import { raiseTonuCustomerCharge } from "./invoiceService";
@@ -57,7 +58,10 @@ export async function onCarrierApproved(carrierProfileId: string) {
       claimRatio: 0,
       documentSubmissionTimeliness: 80,
       acceptanceRate: 100,
-      gpsCompliancePct: 80,
+      // gpsCompliancePct is deliberately absent. Nothing has measured this
+      // carrier's tracking yet, so the row keeps the column default, which
+      // lib/trackingFactor names UNMEASURED_TRACKING_PCT. Seeding 80 asserted a
+      // tracking record nobody captured. Phase 0 of the mandatory-ELD arc.
       overallScore: 88,
       tierAtTime: "GUEST",
       bonusEarned: 0,
@@ -1468,29 +1472,28 @@ export async function recalculateCarrierCPP(carrierProfileId: string) {
   const acceptedTenders = tenders.filter((t) => t.status === "ACCEPTED").length;
   const acceptanceRate = (acceptedTenders / totalTenders) * 100;
 
-  // Tracking compliance (Build C + F 2026-05-30) — % of the carrier's loads that
-  // had captured location visibility, read from LoadTrackingEvent (latitude set).
-  // This unifies every location source via the locationSource enum: carrier
-  // portal, geofence, check-call-email, AND ELD pings (motiveService /
-  // samsaraService write LoadTrackingEvent with locationSource=ELD).
-  //
-  // Build F (Wasi decision 2026-05-30, option 2): tracking compliance is
-  // TELEMATICS-ACTIVATED. Until a carrier connects ELD (eldEnabled), SRL doesn't
-  // systematically capture location, so scoring real coverage would penalize the
-  // carrier for our integration gap — it stays NEUTRAL (100), consistent with the
-  // neutral-default on-time/doc factors. Once ELD is connected the SAME query
-  // measures real coverage with no rework (ELD pings already write
-  // LoadTrackingEvent). The CarrierScorecard column stays `gpsCompliancePct` (no
-  // migration churn); the public factor is "Tracking compliance" on /carriers.
-  let gpsCompliancePct = 100; // neutral until telematics-activated
-  if (profile.eldEnabled) {
+  // Tracking compliance: measured when a location source exists, otherwise
+  // NULL and excluded from the composite. The Build F rule (2026-05-30) scored
+  // an unconnected carrier at a constant 100, which asserted location
+  // visibility SRL does not have on every scorecard and gauge. The window query
+  // is unchanged and unifies every locationSource (carrier portal, geofence,
+  // check-call email, ELD). The column receives the unmeasured sentinel; every
+  // reader gates on eldEnabled. Phase 0 of the mandatory-ELD arc; the audit is
+  // docs/audits/track-and-trace-mandatory-eld-audit.md.
+  let trackedLoadCount = 0;
+  if (profile.eldEnabled && loads.length > 0) {
     const trackedLoads = await prisma.loadTrackingEvent.findMany({
       where: { loadId: { in: loads.map((l) => l.id) }, latitude: { not: null } },
       select: { loadId: true },
       distinct: ["loadId"],
     });
-    gpsCompliancePct = loads.length > 0 ? (trackedLoads.length / loads.length) * 100 : 100;
+    trackedLoadCount = trackedLoads.length;
   }
+  const trackingFactor = resolveTrackingFactor({
+    eldEnabled: profile.eldEnabled,
+    trackedLoads: trackedLoadCount,
+    totalLoads: loads.length,
+  });
 
   const overallScore = calculateOverallScore({
     onTimePickupPct,
@@ -1499,7 +1502,7 @@ export async function recalculateCarrierCPP(carrierProfileId: string) {
     claimRatio,
     documentSubmissionTimeliness: docTimeliness,
     acceptanceRate,
-    gpsCompliancePct,
+    gpsCompliancePct: trackingFactor,
   });
 
   // Tier-from-score auto-promotion retired. Carrier's current tier is the
@@ -1528,7 +1531,7 @@ export async function recalculateCarrierCPP(carrierProfileId: string) {
       claimRatio: Math.round(claimRatio * 100) / 100,
       documentSubmissionTimeliness: Math.round(docTimeliness * 100) / 100,
       acceptanceRate: Math.round(acceptanceRate * 100) / 100,
-      gpsCompliancePct: Math.round(gpsCompliancePct * 100) / 100,
+      gpsCompliancePct: Math.round(persistedTrackingPct(trackingFactor) * 100) / 100,
       overallScore,
       tierAtTime: currentTier,
       bonusEarned,
