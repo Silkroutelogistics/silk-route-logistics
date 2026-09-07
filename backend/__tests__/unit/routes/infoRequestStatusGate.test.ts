@@ -233,6 +233,17 @@ describe("the server set and the frontend gate are the same set", () => {
     expect(shape.comparisons).toBe(3);
     expect(shape.ors).toBe(0);
     expect(shape.equals).toBe(0);
+    // AND THAT THEY ARE JOINED. `ands` was computed here and never asserted,
+    // while the comment above claimed the join was checked — so three
+    // comparisons written as separate statements with only one of them used
+    // would have passed every assertion. Relative rather than absolute: the
+    // profile-tab slice carries a fourth && belonging to the JSX around it, and
+    // pinning a literal count would break on an unrelated edit, which is how a
+    // guard earns being ignored.
+    expect(
+      shape.ands,
+      "the three comparisons are not joined — check they still form one expression",
+    ).toBeGreaterThanOrEqual(shape.comparisons - 1);
   });
 
   it("the Info Req tab's canRequestInfo prop excludes the same states", () => {
@@ -246,6 +257,17 @@ describe("the server set and the frontend gate are the same set", () => {
     expect(shape.comparisons).toBe(3);
     expect(shape.ors).toBe(0);
     expect(shape.equals).toBe(0);
+    // AND THAT THEY ARE JOINED. `ands` was computed here and never asserted,
+    // while the comment above claimed the join was checked — so three
+    // comparisons written as separate statements with only one of them used
+    // would have passed every assertion. Relative rather than absolute: the
+    // profile-tab slice carries a fourth && belonging to the JSX around it, and
+    // pinning a literal count would break on an unrelated edit, which is how a
+    // guard earns being ignored.
+    expect(
+      shape.ands,
+      "the three comparisons are not joined — check they still form one expression",
+    ).toBeGreaterThanOrEqual(shape.comparisons - 1);
   });
 
   it("reads a real file with real gates in it", () => {
