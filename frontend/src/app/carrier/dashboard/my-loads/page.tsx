@@ -4,7 +4,7 @@ import { useState } from "react";
 import { MapPin, Phone, FileText, CheckCircle, Clock, AlertCircle, Printer, Camera, Upload, Zap, Lock, Loader2 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
-import { CarrierCard, CarrierBadge } from "@/components/carrier";
+import { CarrierCard, CarrierBadge, DriverAssignmentPanel } from "@/components/carrier";
 import { money, carrierPay } from "@/lib/rateDisplay";
 import { openPdfFromApi, extractApiError, apiHref } from "@/lib/download";
 
@@ -248,6 +248,11 @@ export default function MyLoadsPage() {
                   )}
                 </div>
               </CarrierCard>
+
+              {/* Driver and equipment, and the handset verification the rate
+                  confirmation gate requires. Both endpoints existed since Arc 19
+                  with no caller. Phase 0 of the mandatory-ELD arc. */}
+              <DriverAssignmentPanel load={detail} />
 
               {/* Quick Pay election — the carrier's own choice on this load,
                   open until the rate confirmation is issued. */}

@@ -17405,7 +17405,16 @@
 // verify. Accept and PATCH /:id/driver now share one present-only helper.
 // The verification service that the next commit's panel calls is pinned
 // end to end for the first time. Phase 0 of the mandatory-ELD arc.
-export const SRL_VERSION = "3.8.bbe";
+// v3.8.bbf P0-4b: the driver-verify routes have a caller.
+//
+// Arc 19 built PATCH /carrier-loads/:id/driver and the two driver-verify
+// routes, and nothing in the portal ever called them. The rate confirmation
+// download refused with DRIVER_NOT_VERIFIED and pointed the carrier at My
+// Loads, where there was nothing to do. A Driver & Equipment panel now sits on
+// the load detail: name, mobile, truck and trailer with a Save that PATCHes
+// only what changed, and a Verify that texts the code, shows the consent
+// sentence, and confirms it. Phase 0 of the mandatory-ELD arc.
+export const SRL_VERSION = "3.8.bbf";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
