@@ -116,6 +116,13 @@ export async function runAlertScanner() {
         take: 1,
       },
       trackingEvents: {
+        // The engine's own writes must not count as the carrier's last update.
+        // It writes ALERT rows below and TEMPERATURE rows in the reefer pass,
+        // and with no filter the newest of those became lastUpdateAt, so the
+        // CRITICAL no-update rule reset itself on every scan: fire at six
+        // hours, write an ALERT, and the next scan read that ALERT as an
+        // update thirty minutes old. Phase 0 of the mandatory-ELD arc.
+        where: { eventType: { notIn: ["ALERT", "TEMPERATURE"] } },
         orderBy: { createdAt: "desc" },
         take: 1,
       },

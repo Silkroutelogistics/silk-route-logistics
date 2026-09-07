@@ -17414,7 +17414,16 @@
 // the load detail: name, mobile, truck and trailer with a Save that PATCHes
 // only what changed, and a Verify that texts the code, shows the consent
 // sentence, and confirms it. Phase 0 of the mandatory-ELD arc.
-export const SRL_VERSION = "3.8.bbf";
+// v3.8.bbg P0-5: the CRITICAL no-update alert cannot reset itself.
+//
+// The alert scanner read each load's newest tracking event as the moment
+// anyone last heard from the carrier, and it also writes tracking events: an
+// ALERT row when it fires, a TEMPERATURE row in the reefer pass. With no
+// filter, the ALERT it wrote at six hours was the newest event on the next
+// scan, thirty minutes old, and the rule went quiet. A load nobody had heard
+// from for a day produced one CRITICAL and then silence. The include now
+// excludes the engine's own rows. Phase 0 of the mandatory-ELD arc.
+export const SRL_VERSION = "3.8.bbg";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
