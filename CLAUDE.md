@@ -3745,6 +3745,28 @@ Most are inert history and **should** survive — `LoadActivity` and `LoadTracki
 
 
 
+262. **Nobody reached the W-9 500 — and the letter guard had a hole a peer's commit fell through (2026-09-07, v3.8.baz → v3.8.bbb plus three unversioned).**
+
+    **PHASE A — READ-ONLY PRODUCTION CENSUS** (`backend/scripts/_readonly-document-upload-census.ts`; loads `.env.production.local` the way `prisma:status:production` does, refuses a local host or a rail breach, and sets `default_transaction_read_only = on` on the session before its first query, so a write would be refused by Postgres rather than by discipline). Question: since 2026-05-24, which carriers attempted `POST /carrier/documents` with a filename the v3.8.baw defect fired on (`w9`, `insurance`, `cert`, `authority`), how many left duplicate `Document` rows or orphaned storage objects, and which are now PENDING or REVIEWING with a stalled document step.
+
+    | | |
+    |---|---|
+    | `Document` rows from that endpoint, ever | **0** |
+    | carriers that hit the 500 | **0** |
+    | duplicate rows / orphaned objects | **0 / not observable** |
+    | PENDING or REVIEWING with an unset upload flag | **0** |
+    | carrier `Document` rows in the window, total | 15 — 9 registration-subfolder keys (one carrier, 2026-09-04), 4 empty-URL storage-refused registration rows (2026-08-31, Item 248), 2 AE-console uploads (2026-08-31) |
+
+    **The zero is reconciled, not trusted.** The endpoint's key shape is `carrier-docs/<13-digit ms>-<decimal>.<ext>` with no profile subfolder and the carrier's own `userId`; every carrier row that matched neither that nor the subfolder shape was listed and accounted for above. And the endpoint has **no caller** in `frontend/src` or `e2e` — the carrier documents page posts to `/carrier-loads/:id/documents` and `/documents/upload` — so a carrier could only have reached it with a hand-built request. **Limits, stated:** an attempt refused by storage before the row-create (the Item 248 class) left no row and is unobservable from the database; objects are not listable from here (the production-local env carries only the database pair), and structurally this defect cannot orphan one, since the rows committed before the throw. **Owner's decision: nobody to contact, nothing to dedup.**
+
+    **PHASE B — the banked items, one commit each.** `baz` `closeOpenInfoRequestsForStatus` returns the rows the UPDATE moved (`updateManyAndReturn`, one statement, no read-then-write window) and the notifications are keyed to that set; two race cases added (a partial set when a request was answered between; a second close returning empty announces nothing). Re-injecting the pre-baz body: 13 red of 25. `bba` `InfoRequestThread`'s `canRequestInfo` defaults to false; two cases mount without the prop and a source walk asserts every real mount passes it. Injection: exactly those two red. `bbb` `routes/infoRequests.ts`'s Zod enum is built from `INFO_REQUEST_CATEGORIES` — it was the third hand-kept copy and the one that decides what the server accepts; the label guard now asserts the file carries no category literal. Injection: exactly that case red. Unversioned: the coverage guard's older `scan()` moved onto `blankNoise`, which now knows what a quoted string is, with the regex pair kept as the fixtures' foil (disabling the quote branch: exactly the three string fixtures red; the frozen per-file counts unchanged); and two service headers corrected — `infoRequestService.ts` claimed application-status carries the requests inline (it never did), and `approvalService.ts` / `routes/carriers.ts` read as though the generic `PUT /:id` approve path had been retired (it is the seventh writer and still live).
+
+    **THE GUARD'S TRAP 5.** `check-version-letter.js` excluded `origin/main..HEAD` subjects from "highest" on the theory that reusing one is continuing my own arc. The working tree is shared, so the local branch is shared, so a peer session's unpushed `v3.8.bax` sat in that range — and the guard reported the next free letter as `bax`, the exact duplicate it exists to prevent, as an OK. Unpushed subjects and the HEAD footer now count; the refusal names the claiming commit(s); the post-commit re-check passes only when the sole unpushed claimant is HEAD. **My first cut of that filter matched nothing** — `letterOf` wants a word boundary before the digits and `v3.8.bax` has none — so the refusal never fired and the run read as a clean sequence check (§19 Sub-pattern 16). Caught by running it against the peer's commit rather than reading it.
+
+    **Two sessions, one tree, no collision.** Letters were agreed by message (peer `bax`/`bay`/`bbc`, this session `baz`/`bba`/`bbb`), every commit went by explicit pathspec, the footer was touched only inside the commit that bumped it, and one `.next` collision (the e2e runner's own rebuild against the peer's `next build`) was waited out rather than clobbered.
+
+    **PUSH HELD — a decision for Wasi.** This brief said push after CI green by job name (run 34082092424 on `172e6229`: all four jobs green). The peer's brief says halt before push for review, and their three commits are interleaved beneath mine, so pushing main carries them. Ten unpushed commits, full gate green on the tree (backend 1825/1825, accessorial standard, reachability vs `origin/main`, schema-drift strict; frontend lint, 134/134, `npm run build` 118 pages; e2e 1/1 on the dedicated ports). Nothing was pushed.
+
 ---
 
 ## §14 LEGAL / COMPLIANCE STATUS
