@@ -27,6 +27,7 @@ import { createTender } from "../services/tenderCreationService";
 import { acceptTender } from "../controllers/tenderController";
 import { makeCaptureRes } from "../lib/captureResponse";
 import { settleTender } from "../services/tenderTransitionService";
+import { driverFieldsFromBody, hasDriverFields } from "../lib/driverFields";
 
 const router = Router();
 
@@ -250,7 +251,11 @@ router.post("/:id/accept", validateBody(acceptSchema), async (req: AuthRequest, 
     return;
   }
 
-  const { driverName, driverPhone, truckNumber, trailerNumber } = req.body;
+  // Present-only. The portal's accept button posts no body, and until Phase 0
+  // of the mandatory-ELD arc this route wrote all four driver fields as
+  // `value || null`, erasing whatever an AE had entered on the load. The rule
+  // is shared with PATCH /:id/driver so the two cannot drift.
+  const driverFields = driverFieldsFromBody(req.body);
 
   // v3.8.axf — the self-assign becomes a real tender: createTender, then the
   // ordinary acceptTender path.
@@ -308,15 +313,9 @@ router.post("/:id/accept", validateBody(acceptSchema), async (req: AuthRequest, 
 
   // Driver details are this route's alone — acceptTender has no notion of them.
   // Not a carrierId write, so it does not belong in carrierAssignmentService.
-  const updated = await prisma.load.update({
-    where: { id: load.id },
-    data: {
-      driverName: driverName || null,
-      driverPhone: driverPhone || null,
-      truckNumber: truckNumber || null,
-      trailerNumber: trailerNumber || null,
-    },
-  });
+  const updated = hasDriverFields(driverFields)
+    ? await prisma.load.update({ where: { id: load.id }, data: driverFields })
+    : await prisma.load.findUnique({ where: { id: load.id } });
 
   // Shipment creation, sibling withdrawal and the AE notification all happened
   // inside acceptTender above. They used to be duplicated here, and the copies
@@ -405,12 +404,7 @@ router.patch("/:id/driver", validateBody(updateDriverSchema), async (req: AuthRe
     return;
   }
 
-  const { driverName, driverPhone, truckNumber, trailerNumber } = req.body;
-  const data: Record<string, unknown> = {};
-  if (driverName !== undefined) data.driverName = driverName;
-  if (driverPhone !== undefined) data.driverPhone = driverPhone;
-  if (truckNumber !== undefined) data.truckNumber = truckNumber;
-  if (trailerNumber !== undefined) data.trailerNumber = trailerNumber;
+  const data = driverFieldsFromBody(req.body);
 
   const updated = await prisma.load.update({ where: { id: load.id }, data });
   res.json(updated);

@@ -17396,7 +17396,16 @@
 // share is recorded as CARRIER_PORTAL, an ELD ping as ELD, and the webhook
 // narrows a body-supplied value before it reaches a row. Phase 0 of the
 // mandatory-ELD arc.
-export const SRL_VERSION = "3.8.bbd";
+// v3.8.bbe P0-4a: accepting a load no longer erases the driver an AE entered.
+//
+// POST /carrier-loads/:id/accept wrote all four driver fields as `value || null`
+// and the portal's accept button posts no body, so every portal accept wiped
+// the driver name, phone, truck and trailer already on the load, and the rate
+// confirmation gate that needs a verified driver phone found nothing to
+// verify. Accept and PATCH /:id/driver now share one present-only helper.
+// The verification service that the next commit's panel calls is pinned
+// end to end for the first time. Phase 0 of the mandatory-ELD arc.
+export const SRL_VERSION = "3.8.bbe";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
