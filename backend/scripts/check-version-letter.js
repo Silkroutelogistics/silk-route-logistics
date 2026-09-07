@@ -175,8 +175,33 @@ console.log(`  footer at HEAD             : ${headFooter || "(none)"}`);
 console.log(`  next free letter           : ${expected}`);
 console.log(`  you intend                 : ${intended}`);
 
-if (mine.includes(intended)) {
-  console.error(`\nCOLLISION: v3.8.${intended} is already the subject of an unpushed commit on this branch.`);
+// Name the claimants, because the post-commit re-check (§19 Sub-pattern 19)
+// runs this with the letter JUST committed, and the only thing separating
+// "my own commit, as expected" from "a peer took it in the window" is which
+// commits carry it. Exactly one claimant and it is HEAD: the re-check passes.
+// Anything else — two claimants, or one that is not HEAD — is a collision,
+// and the hashes are what let a session tell its own commit from another's.
+const claimants = sh(`git log --format=%h%x09%s ${originRef}..HEAD`)
+  .split("\n")
+  .map((l) => { const [hash, ...rest] = l.split("\t"); return { hash, subject: rest.join("\t") }; })
+  // Same extraction subjectLettersIn uses. letterOf alone wants a word
+  // boundary before the digits, and "v3.8.bax" has none — the first cut of this
+  // filter matched nothing and the refusal never fired (§19 Sub-pattern 16).
+  .filter((c) => {
+    const m = /\bv(\d+\.\d+\.[a-z]+)/.exec(c.subject);
+    return c.hash && m && letterOf(m[1]) === intended;
+  });
+if (claimants.length) {
+  const head = sh("git rev-parse --short HEAD");
+  const onlyHead = claimants.length === 1 && (claimants[0].hash.startsWith(head) || head.startsWith(claimants[0].hash));
+  if (onlyHead) {
+    console.log(`\n  OK — v3.8.${intended} is HEAD's own subject, the only unpushed claimant (post-commit re-check):`);
+    console.log(`    ${claimants[0].hash}  ${claimants[0].subject}`);
+    console.log(`  If that commit is not yours, this is a collision, not an OK.`);
+    process.exit(0);
+  }
+  console.error(`\nCOLLISION: v3.8.${intended} is already claimed by an unpushed commit on this branch:`);
+  for (const c of claimants) console.error(`    ${c.hash}  ${c.subject}`);
   console.error(`In a shared working tree that commit may be another session's (git log ${originRef}..HEAD).`);
   console.error(`A commit is a claim whoever made it. Use ${expected}; an unversioned commit needs no letter.`);
   process.exit(1);
