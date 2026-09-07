@@ -27,6 +27,20 @@
  *  3. THE ANSWER GOES STALE WITHIN A SESSION. origin/main moved under this arc
  *     twice. Run this immediately before the commit, never once at kickoff.
  *
+ *  4. (inline below) ANOTHER SESSION'S UNCOMMITTED FILES claim letters git
+ *     cannot see. The unstaged diff is scanned and each claim named by file.
+ *
+ *  5. AN UNPUSHED COMMIT IS A CLAIM WHOEVER MADE IT (2026-09-07). The working
+ *     tree is shared, so the local branch is shared, so a commit in
+ *     origin/main..HEAD can be a PEER'S. Trap 2's allowance treated every such
+ *     letter as "my own arc, free to reuse" and left it out of `highest` —
+ *     which, with a peer's v3.8.bax sitting unpushed, told this session the
+ *     next free letter was bax: the exact duplicate the guard exists to
+ *     prevent, reported as OK. Unpushed subjects and the HEAD footer now count
+ *     toward `highest`, and reusing one is refused. Continuing an arc under one
+ *     letter is done with UNVERSIONED commits (no letter in the subject), which
+ *     is how every arc since v3.8.aws has worked and what §3.1 says anyway.
+ *
  * Exit 0 = safe to use. Exit 1 = collision or stale; the message says which.
  */
 
@@ -148,17 +162,24 @@ if (claimedInTree.length) {
   }
 }
 
-// The next free letter has to clear BOTH what origin knows and what is merely
-// sitting in the tree. Computing it from origin alone told me `auf` was next
-// while another session was already writing `auf` into files.
-const highest = maxLetter([originMax, ...claimedInTree]);
+// The next free letter has to clear what origin knows, what is committed but
+// unpushed on this branch (trap 5 — possibly a peer's), the footer as it
+// stands at HEAD, and what is merely sitting in the tree. Computing it from
+// origin alone told me `auf` was next while another session was already
+// writing `auf` into files; computing it without the unpushed subjects told me
+// `bax` was next while a peer's v3.8.bax commit was sitting in HEAD.
+const headFooter = footerLetterAt("HEAD");
+const highest = maxLetter([originMax, headFooter, ...mine, ...claimedInTree]);
 const expected = highest ? nextLetter(highest) : intended;
+console.log(`  footer at HEAD             : ${headFooter || "(none)"}`);
 console.log(`  next free letter           : ${expected}`);
 console.log(`  you intend                 : ${intended}`);
 
 if (mine.includes(intended)) {
-  console.log(`\n  OK — ${intended} is your own unpushed arc; continuing it.`);
-  process.exit(0);
+  console.error(`\nCOLLISION: v3.8.${intended} is already the subject of an unpushed commit on this branch.`);
+  console.error(`In a shared working tree that commit may be another session's (git log ${originRef}..HEAD).`);
+  console.error(`A commit is a claim whoever made it. Use ${expected}; an unversioned commit needs no letter.`);
+  process.exit(1);
 }
 
 if (claimedInTree.includes(intended)) {
