@@ -17293,7 +17293,24 @@
 // THE TEST THAT MISSED IT asserted the notifier was CALLED. The sentence inside
 // was never read by any guard, so the new one renders the real template and
 // reads the HTML that would have been sent.
-export const SRL_VERSION = "3.8.bav";
+// v3.8.baw H3 — a carrier uploading their W-9 got a 500, and had since May.
+//
+// uploadCarrierDocuments wrote onboardingStatus = "DOCUMENTS_SUBMITTED", a value
+// v3.8.ajd removed from the enum when it merged that and UNDER_REVIEW into
+// REVIEWING. Prisma rejects a value outside the enum, so the handler threw —
+// AFTER the files reached storage and their Document rows committed. The carrier
+// saw a failure and retried into duplicates.
+//
+// It fired only when a filename contained w9, insurance, cert or authority:
+// exactly the compliance documents the endpoint exists to receive. scan001.pdf
+// worked; w9.pdf did not.
+//
+// TSC COULD NOT SEE IT — the payload is a loose Record, so the literal is just a
+// string. Three and a half months of green builds and green suites.
+//
+// Only from PENDING. Writing REVIEWING unconditionally would un-approve a
+// carrier for uploading a renewed COI, which is worse than the 500 it replaces.
+export const SRL_VERSION = "3.8.baw";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

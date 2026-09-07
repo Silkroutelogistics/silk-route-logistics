@@ -23,6 +23,7 @@ import {
   getAllCarriers,
   getCarrierDetail,
   updateCarrier,
+  uploadCarrierDocuments,
 } from "../../../src/controllers/carrierController";
 
 const mockPrisma = vi.mocked(prisma);
@@ -170,6 +171,52 @@ describe("carrierController", () => {
    * asserting it was called would pass against a close wired outside the
    * transaction.
    */
+  /**
+   * The handler wrote onboardingStatus = "DOCUMENTS_SUBMITTED", a value removed
+   * from the enum in v3.8.ajd. Prisma rejects it, so the endpoint threw a 500 —
+   * after the files had reached storage and their Document rows had committed.
+   * The carrier saw a failure and retried into duplicates.
+   */
+  it("uploadCarrierDocuments — advances a PENDING carrier to a status the enum has", async () => {
+    mockPrisma.carrierProfile.findUnique.mockResolvedValue({
+      id: "profile-1", userId: "carrier-1", onboardingStatus: "PENDING",
+    } as any);
+    mockPrisma.document.create.mockResolvedValue({ id: "doc-1" } as any);
+    mockPrisma.carrierProfile.update.mockResolvedValue({ id: "profile-1" } as any);
+
+    const { req, res } = mockReqRes({}, { id: "carrier-1", role: "CARRIER" }, {});
+    req.files = [
+      { originalname: "w9.pdf", buffer: Buffer.from("x"), mimetype: "application/pdf" },
+    ];
+    await uploadCarrierDocuments(req, res);
+
+    const call = mockPrisma.carrierProfile.update.mock.calls[0][0] as { data: Record<string, unknown> };
+    expect(call.data.onboardingStatus, "the retired literal is back").toBe("REVIEWING");
+    expect(res.status).toHaveBeenCalledWith(201);
+  });
+
+  it("uploadCarrierDocuments — does not knock an APPROVED carrier out of approval", async () => {
+    // The obvious repair — write REVIEWING unconditionally — would un-approve a
+    // carrier for uploading a renewed COI, and block them from tenders. That is
+    // worse than the 500 it replaces.
+    mockPrisma.carrierProfile.findUnique.mockResolvedValue({
+      id: "profile-1", userId: "carrier-1", onboardingStatus: "APPROVED",
+    } as any);
+    mockPrisma.document.create.mockResolvedValue({ id: "doc-1" } as any);
+    mockPrisma.carrierProfile.update.mockResolvedValue({ id: "profile-1" } as any);
+
+    const { req, res } = mockReqRes({}, { id: "carrier-1", role: "CARRIER" }, {});
+    req.files = [
+      { originalname: "insurance-renewal.pdf", buffer: Buffer.from("x"), mimetype: "application/pdf" },
+    ];
+    await uploadCarrierDocuments(req, res);
+
+    const call = mockPrisma.carrierProfile.update.mock.calls[0][0] as { data: Record<string, unknown> };
+    expect(call.data.onboardingStatus).toBeUndefined();
+    // The flag it exists to set is still set.
+    expect(call.data.insuranceCertUploaded).toBe(true);
+  });
+
   it("updateCarrier — closes open info requests when it sets a closed status", async () => {
     mockPrisma.infoRequest.findMany.mockResolvedValue([
       { id: "ir-1", category: "COI_UPDATE", createdById: "ae-1" },

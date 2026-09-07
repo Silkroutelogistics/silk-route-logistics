@@ -1053,7 +1053,25 @@ export async function uploadCarrierDocuments(req: AuthRequest, res: Response) {
   }
 
   if (Object.keys(updateData).length > 0) {
-    updateData.onboardingStatus = "DOCUMENTS_SUBMITTED";
+    // DOCUMENTS_SUBMITTED WAS REMOVED FROM THE ENUM in v3.8.ajd, which merged it
+    // and UNDER_REVIEW into REVIEWING. It survived here as a string literal, and
+    // a loose Record<string, boolean | string> payload means tsc could not see
+    // it. Prisma rejects the value at runtime, so this whole handler threw a 500
+    // — AFTER the documents had been uploaded to storage and their rows
+    // committed. The carrier saw a failure, retried, and duplicated the upload.
+    //
+    // It only fires when a filename contains w9, insurance, cert or authority:
+    // exactly the compliance documents this endpoint exists to receive. A file
+    // named scan001.pdf succeeded and w9.pdf did not.
+    //
+    // ONLY FROM PENDING. Writing REVIEWING unconditionally would knock an
+    // APPROVED carrier back out of approval for uploading a renewed COI, and
+    // would clear INFO_REQUESTED without the request actually being answered —
+    // both worse than the 500 this replaces.
+    if (profile.onboardingStatus === "PENDING") {
+      updateData.onboardingStatus = "REVIEWING";
+      updateData.status = "REVIEW"; // paired; see lib/carrierOperational
+    }
     await prisma.carrierProfile.update({ where: { id: profile.id }, data: updateData });
   }
 
