@@ -17464,7 +17464,21 @@
 // know every dock, and an AE must be able to correct or hand-enter one it gets
 // wrong. Correcting a bad address is the common reason the edit form is opened
 // at all.
-export const SRL_VERSION = "3.8.bbj";
+// v3.8.bbk: the CRM page can see the customers it creates.
+//
+// The backend half landed in bbh. This is the surface: a two-state toggle,
+// Approved (default, unchanged) and Pending approval with a live count, and
+// creating a customer switches to the view that contains it so closing the
+// drawer no longer loses the record.
+//
+// Approved stays the default because the rest of the console consumes that set
+// — the shared CustomerPicker and Order Builder both pass context=crm — so
+// switching here changes what this page lists and nothing about who can be
+// tendered a load.
+//
+// The count query is deliberately unsearched: the badge answers "is anything
+// waiting on me", and a search box must not be able to change that answer.
+export const SRL_VERSION = "3.8.bbk";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

@@ -8,13 +8,26 @@ import { CustomerDrawer } from "./CustomerDrawer";
 import type { CrmCustomer } from "./types";
 
 /**
- * CRM board — APPROVED customers only. Lead Hunter prospects live at
- * /dashboard/lead-hunter and read the same /customers endpoint with
- * ?context=prospects. Pre-Phase-6.2 this page rendered prospects too,
- * client-side-segmented via a statusOf() helper. Audit 39de1ad
- * (Pattern A) drove the separation; the ?context=crm filter became
- * authoritative when the approve gate (POST /customers/:id/approve)
- * shipped.
+ * CRM board. Two views over one endpoint:
+ *
+ *   Approved         ?context=crm         onboardingStatus = APPROVED
+ *   Pending approval ?context=onboarding  not approved AND status = "Active"
+ *
+ * Pre-Phase-6.2 this page rendered prospects too, client-side-segmented via a
+ * statusOf() helper. Audit 39de1ad (Pattern A) drove the separation; the
+ * ?context=crm filter became authoritative when the approve gate
+ * (POST /customers/:id/approve) shipped.
+ *
+ * The Pending view exists because that separation left a hole: Add Customer
+ * creates a customer at onboardingStatus PENDING (the Prisma default), so the
+ * page that owns the button could not show what the button made. The customer
+ * was created, correctly gated, and invisible. Approved stays the default — an
+ * unapproved customer still must not be tendered freight, which is the whole
+ * point of the gate — but it is now findable while an AE works it.
+ *
+ * Lead Hunter is at /dashboard/lead-hunter. It passes NO context and therefore
+ * sees every row. An earlier version of this comment said it passed
+ * ?context=prospects; no file has ever done that.
  *
  * SUSPENDED / REJECTED customer surfaces are deferred to the customer
  * inactivation workflow sprint (CLAUDE.md §13.3 Item 8.1 / v3.8.l) —
@@ -39,16 +52,32 @@ function companyInitials(name: string): string {
     .join("");
 }
 
+type CrmView = "approved" | "onboarding";
+
 export default function CrmPage() {
   const [search, setSearch] = useState("");
+  const [view, setView] = useState<CrmView>("approved");
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
+  const context = view === "approved" ? "crm" : "onboarding";
+
   const customersQuery = useQuery<CustomersResponse>({
-    queryKey: ["crm-customers", search],
+    queryKey: ["crm-customers", context, search],
     queryFn: async () =>
-      (await api.get("/customers", { params: { search, context: "crm", limit: 200 } })).data,
+      (await api.get("/customers", { params: { search, context, limit: 200 } })).data,
     refetchInterval: 60_000,
   });
+
+  // Count only, so the Pending tab carries its number while Approved is on
+  // screen. Deliberately unsearched: the badge answers "is anything waiting on
+  // me", and a search box should not be able to change that answer.
+  const pendingCountQuery = useQuery<CustomersResponse>({
+    queryKey: ["crm-customers-pending-count"],
+    queryFn: async () =>
+      (await api.get("/customers", { params: { context: "onboarding", limit: 1 } })).data,
+    refetchInterval: 60_000,
+  });
+  const pendingCount = pendingCountQuery.data?.total ?? 0;
 
   const customers = customersQuery.data?.customers ?? [];
   const totalRevenue = customers.reduce((s, c) => s + (c.totalRevenue ?? 0), 0);
@@ -70,9 +99,28 @@ export default function CrmPage() {
         </button>
       </div>
 
+      {/* View toggle. Approved is the default and is what the rest of the
+          console consumes — the shared CustomerPicker and Order Builder both
+          pass context=crm — so switching here changes what this page lists and
+          nothing about who can be tendered a load. */}
+      <div className="flex gap-1 p-1 bg-white border border-gray-200 rounded-lg w-fit">
+        <ViewTab active={view === "approved"} onClick={() => setView("approved")} label="Approved" />
+        <ViewTab
+          active={view === "onboarding"}
+          onClick={() => setView("onboarding")}
+          label="Pending approval"
+          count={pendingCount}
+        />
+      </div>
+
       {/* Summary stat cards */}
       <div className="grid grid-cols-3 gap-3">
-        <StatCard icon={<Users className="w-4 h-4" />} label="Approved customers" value={customers.length} tone="neutral" />
+        <StatCard
+          icon={<Users className="w-4 h-4" />}
+          label={view === "approved" ? "Approved customers" : "Pending approval"}
+          value={customers.length}
+          tone="neutral"
+        />
         <StatCard
           icon={<DollarSign className="w-4 h-4" />}
           label="Revenue YTD"
@@ -103,7 +151,9 @@ export default function CrmPage() {
         <div className="p-12 text-center text-gray-500 border border-gray-200 rounded-lg bg-white">
           {search
             ? "No customers match your search."
-            : "No approved customers yet. Prospects appear in Lead Hunter until they pass the onboarding gate."}
+            : view === "onboarding"
+            ? "Nothing waiting on approval. A new customer lands here until it clears the TIN, credit and contract checks."
+            : "No approved customers yet. Add one, or check Pending approval — a new customer stays there until it clears the gate."}
         </div>
       ) : (
         <div className="border border-gray-200 rounded-lg bg-white overflow-hidden divide-y divide-gray-100">
@@ -127,6 +177,11 @@ export default function CrmPage() {
                     {c.type && (
                       <span className="px-1.5 py-0.5 text-[10px] rounded bg-blue-50 text-blue-700 uppercase">
                         {c.type}
+                      </span>
+                    )}
+                    {view === "onboarding" && (
+                      <span className="px-1.5 py-0.5 text-[10px] rounded bg-[#FBEFD4] text-[#B07A1A] uppercase">
+                        {(c.onboardingStatus ?? "PENDING").replace(/_/g, " ")}
                       </span>
                     )}
                   </div>
@@ -154,10 +209,44 @@ export default function CrmPage() {
       <CustomerDrawer
         customerId={selectedId}
         onClose={() => setSelectedId(null)}
-        onCustomerChange={() => customersQuery.refetch()}
+        onCustomerChange={() => {
+          customersQuery.refetch();
+          pendingCountQuery.refetch();
+        }}
         onSelectCustomer={(id) => setSelectedId(id)}
+        onCreated={() => setView("onboarding")}
       />
     </div>
+  );
+}
+
+function ViewTab({
+  active, onClick, label, count,
+}: {
+  active: boolean;
+  onClick: () => void;
+  label: string;
+  count?: number;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      aria-pressed={active}
+      className={`px-3 py-1.5 text-sm rounded-md transition flex items-center gap-2 ${
+        active ? "bg-[#FAEEDA] text-[#854F0B] font-medium" : "text-gray-500 hover:bg-gray-50"
+      }`}
+    >
+      {label}
+      {count !== undefined && count > 0 && (
+        <span
+          className={`px-1.5 py-0.5 text-[10px] rounded-full ${
+            active ? "bg-[#BA7517] text-white" : "bg-[#FBEFD4] text-[#B07A1A]"
+          }`}
+        >
+          {count}
+        </span>
+      )}
+    </button>
   );
 }
 
