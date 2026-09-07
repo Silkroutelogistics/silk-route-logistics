@@ -35,6 +35,7 @@ import { pairedApplicationStatus } from "../lib/carrierOperational";
 import { clientIp, clientUserAgent } from "../lib/clientIp";
 import {
   closeOpenInfoRequestsForStatus,
+  STATUSES_CLOSED_TO_INFO_REQUESTS,
   announceInfoRequestsClosedByStatus,
   type ClosedInfoRequest,
 } from "../services/infoRequestService";
@@ -1708,10 +1709,49 @@ export async function updateCarrier(req: AuthRequest, res: Response) {
   if (status !== undefined) data.status = status;
   if (notes !== undefined) data.notes = notes;
 
-  const updated = await prisma.carrierProfile.update({
-    where: { id: req.params.id },
-    data,
+  // THE SEVENTH WRITER, and the one the census missed. updateCarrier is a
+  // generic field-update handler that also accepts onboardingStatus:
+  // PUT /carriers/:id validates it against an enum containing all three closed
+  // states, and PATCH /carrier/:id validates nothing at all. Both are
+  // ADMIN/CEO and both land here, so an AE approving or suspending through
+  // this path stranded every open request — the exact defect the rule exists
+  // to prevent, reached through the one door nobody had counted.
+  //
+  // It was invisible because this handler assembles a hoisted payload
+  // (`data.onboardingStatus = onboardingStatus`) rather than writing an object
+  // literal, so a `key:` pattern cannot see it. §19 Sub-pattern 18 names that
+  // shape explicitly, and the census still walked past it.
+  const closingTo =
+    typeof data.onboardingStatus === "string" &&
+    (STATUSES_CLOSED_TO_INFO_REQUESTS as readonly string[]).includes(data.onboardingStatus)
+      ? (data.onboardingStatus as "APPROVED" | "REJECTED" | "SUSPENDED")
+      : null;
+
+  let closedRequests: ClosedInfoRequest[] = [];
+  const updated = await prisma.$transaction(async (tx) => {
+    const p = await tx.carrierProfile.update({
+      where: { id: req.params.id },
+      data,
+    });
+    if (closingTo) {
+      closedRequests = await closeOpenInfoRequestsForStatus(
+        { carrierId: req.params.id, newStatus: closingTo, closedById: req.user?.id ?? null },
+        tx,
+      );
+    }
+    return p;
   });
+
+  // After the commit, per F4 — announceOnce keys its dedup on the requestId, so
+  // a notice sent for a close that then rolled back would permanently suppress
+  // the correct one on the retry.
+  if (closingTo) {
+    announceInfoRequestsClosedByStatus(closedRequests, {
+      carrierId: req.params.id,
+      carrierName: updated.companyName || "this carrier",
+      newStatus: closingTo,
+    }).catch((err) => log.warn({ err }, "[Carrier] update info-request close notice failed"));
+  }
 
   // v3.8.akz Item 1 Path β — unified insurance-agent verification gate.
   // Replaces the prior single-field check (`updated.insuranceAgentEmail`

@@ -59,38 +59,45 @@ const CARRIER_FILES = [
  * classified rather than absorbed. §19 Sub-pattern 16: the string being present
  * is not the new site being covered.
  */
-const DISPOSITION: Record<string, { wired: boolean; writes: number; why: string }> = {
+const DISPOSITION: Record<string, { wired: boolean; writes: number; closes: number; why: string }> = {
   "services/approvalService.ts": {
+    closes: 1,
     writes: 1,
     wired: true,
     why: "canonical AE approve — both the AE route and the Compass auto-approve converge here",
   },
   "services/rejectionService.ts": {
+    closes: 1,
     writes: 1,
     wired: true,
     why: "canonical AE reject — had no transaction at all before G1, so the wrap is part of the change rather than an addition to an existing one",
   },
   "controllers/complianceController.ts": {
+    closes: 1,
     writes: 1,
     wired: true,
     why: "AE-initiated manual suspend (POST /compliance/carrier/:id/suspend, ADMIN)",
   },
   "controllers/carrierController.ts": {
-    writes: 3,
+    closes: 3,
+    writes: 4,
     wired: true,
-    why: "verifyCarrier writes APPROVED or REJECTED from a variable; admin-setup approves an existing profile. The create branch is deliberately not wired — a profile that does not exist yet cannot hold a request",
+    why: "verifyCarrier writes APPROVED or REJECTED from a variable; admin-setup approves an existing profile; updateCarrier accepts onboardingStatus on two live AE routes and was the seventh writer this guard could not see, because it assembles a hoisted payload. The create branch is deliberately not wired — a profile that does not exist yet cannot hold a request",
   },
   "routes/carriers.ts": {
+    closes: 1,
     writes: 3,
     wired: true,
     why: "emergency-approve is a second, unconverged approve path on an existing carrier",
   },
   "services/complianceMonitorService.ts": {
+    closes: 0,
     writes: 7,
     wired: false,
     why: "AUTOMATIC suspensions only. checkAutoReversal reinstates FMCSA-suspended carriers on the next compliance scan and the suspension email tells the carrier so, which makes the state transient. Closing their requests would tell a carrier to stop, reinstate them hours later, and leave the AE to re-raise everything. The APPROVED write in this file is that reversal, arriving from SUSPENDED — the requests are already closed by then",
   },
   "services/ofacScreeningService.ts": {
+    closes: 0,
     writes: 1,
     wired: false,
     why: "OFAC auto-suspend at score >= 90. Arguably not transient, unlike the FMCSA sweeps — recorded as a deliberate omission rather than done, because it is one path in a different service and this rule should arrive at a seam somebody chose",
@@ -153,9 +160,42 @@ function blankNoise(src: string): string {
  *  The variable form matters: verifyCarrier writes `onboardingStatus: status`,
  *  which a literal-only pattern cannot see (§19 Sub-pattern 18). */
 const ANY_CLOSED = /onboardingStatus\s*:\s*(?:"(?:APPROVED|REJECTED|SUSPENDED)"|[A-Za-z_$][\w$]*)/g;
+/**
+ * The HOISTED-PAYLOAD form: `data.onboardingStatus = onboardingStatus`, built
+ * field by field and handed to prisma ten lines later.
+ *
+ * updateCarrier writes exactly this and the object-literal pattern walked past
+ * it, so a seventh writer sat uncounted while the census reported six and this
+ * guard reported clean. §19 Sub-pattern 18 names the shape and the first
+ * version of this scanner still missed it.
+ *
+ * `[^=]` after the `=` is load-bearing: without it every `x.onboardingStatus
+ * === "APPROVED"` comparison in the codebase reads as an assignment, which is
+ * nineteen false positives against two real ones. A receiver named `where` is
+ * excluded because that builds a filter, not a payload.
+ */
+const ASSIGN_CLOSED = /([A-Za-z_$][\w$]*)\s*\.onboardingStatus\s*=\s*([^=;\n][^;\n]*)/g;
+
+function assignFormWrites(src: string): number {
+  let n = 0;
+  for (const m of src.matchAll(ASSIGN_CLOSED)) {
+    if (m[1] === "where") continue;
+    const value = m[2].trim();
+    // A literal that is not a closed status cannot close anything. A variable
+    // might be any of the six, so it counts — the same rule the literal form
+    // applies to `onboardingStatus: status` in verifyCarrier.
+    const literal = value.match(/^"([A-Z_]+)"/);
+    if (literal && !CLOSED_VALUES.includes(literal[1])) continue;
+    n++;
+  }
+  return n;
+}
+
+const CLOSED_VALUES = ["APPROVED", "REJECTED", "SUSPENDED"];
+
 function carrierClosedWrites(raw: string): number {
   const src = blankNoise(raw);
-  let n = 0;
+  let n = /carrierProfile/.test(src) ? assignFormWrites(src) : 0;
   for (const m of src.matchAll(ANY_CLOSED)) {
     const back = src.slice(Math.max(0, m.index! - 600), m.index!);
     const lastWhere = back.lastIndexOf("where:");
@@ -270,6 +310,20 @@ describe("the close-on-transition rule is applied or explicitly excused", () => 
     // And the count per file is frozen, so a new write in an already-wired file
     // cannot inherit that file's tick.
     for (const [rel, d] of Object.entries(DISPOSITION)) {
+      // THE COUNT OF CLOSES, not merely their presence. `wired` and `hasClose`
+      // are file-level, so in a file with three of them — carrierController has
+      // exactly that — deleting one leaves the file still mentioning the close
+      // and the tick still green. Freezing the number is what makes a removal
+      // fail, and it is the same argument as freezing the write count: presence
+      // is not coverage.
+      const closes = (fs.readFileSync(path.join(SRC, rel), "utf8").match(/closeOpenInfoRequestsForStatus\(/g) || []).length;
+      expect(
+        closes,
+        rel + " changed how many times it closes open info requests. If a call " +
+          "site was removed, the transition it guarded now strands requests; if " +
+          "one was added, update `closes`.",
+      ).toBe(d.closes);
+
       expect(
         seen[rel] || 0,
         rel + " gained or lost a closed-status write. Classify it: either wire the " +

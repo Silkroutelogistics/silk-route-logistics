@@ -17255,7 +17255,26 @@
 // that broke described the DROPDOWN ("Other (custom request)"), which named no
 // document. A regex cannot tell those apart, so the two are named and a third
 // fails until somebody reads it in the sentence too.
-export const SRL_VERSION = "3.8.bat";
+// v3.8.bau H1 — the seventh writer, found by adversarial verification of the
+// commit that claimed there were six.
+//
+// updateCarrier is a generic field-update handler that also accepts
+// onboardingStatus. PUT /carriers/:id validates it against an enum containing
+// all three closed states; PATCH /carrier/:id validates nothing at all. Both
+// are ADMIN/CEO and both land there, so an AE approving or suspending through
+// that path stranded every open request — precisely the defect the rule was
+// written to prevent, reached through the one door nobody counted.
+//
+// IT WAS INVISIBLE BECAUSE OF ITS SHAPE, not its location. The handler
+// assembles a hoisted payload field by field (data.onboardingStatus =
+// onboardingStatus) rather than writing an object literal, so a key-colon
+// pattern walks straight past it. Sub-pattern 18 names that exact shape, and
+// the census I wrote to enforce this rule still missed it.
+//
+// The guard now counts both forms, and freezes the number of CLOSES per file
+// as well as the number of writes: carrierController holds three of them, so a
+// file-level tick stayed green when one was deleted.
+export const SRL_VERSION = "3.8.bau";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

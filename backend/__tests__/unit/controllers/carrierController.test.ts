@@ -158,6 +158,82 @@ describe("carrierController", () => {
   });
 
   // ── updateCarrier ───────────────────────────────────────
+  /**
+   * updateCarrier is a GENERIC field-update handler that also accepts
+   * onboardingStatus. PUT /carriers/:id validates it against an enum containing
+   * all three closed states; PATCH /carrier/:id validates nothing at all. Both
+   * are ADMIN/CEO and both land here, so this was a live path to APPROVED that
+   * left every open request unanswerable.
+   *
+   * Exercised through the REAL service rather than a mocked one: the point is
+   * that the close actually reaches the database from this handler, and a mock
+   * asserting it was called would pass against a close wired outside the
+   * transaction.
+   */
+  it("updateCarrier — closes open info requests when it sets a closed status", async () => {
+    mockPrisma.infoRequest.findMany.mockResolvedValue([
+      { id: "ir-1", category: "COI_UPDATE", createdById: "ae-1" },
+      { id: "ir-2", category: "W9_UPDATE", createdById: "ae-1" },
+    ] as any);
+    mockPrisma.infoRequest.updateMany.mockResolvedValue({ count: 2 } as any);
+    mockPrisma.carrierProfile.update.mockResolvedValue({
+      id: "profile-1",
+      companyName: "Acme Freight",
+      onboardingStatus: "APPROVED",
+    } as any);
+
+    const { req, res } = mockReqRes(
+      { onboardingStatus: "APPROVED" },
+      { id: "admin-1", role: "ADMIN" },
+      { id: "profile-1" },
+    );
+    await updateCarrier(req, res);
+
+    expect(mockPrisma.infoRequest.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ carrierId: "profile-1", status: "OPEN" }),
+        data: expect.objectContaining({ status: "CANCELLED" }),
+      }),
+    );
+  });
+
+  it("updateCarrier — leaves open requests alone for a status that is not closing", async () => {
+    // REVIEWING and INFO_REQUESTED are states the carrier portal still renders
+    // the section in, so a request raised against them is answerable and must
+    // survive. Closing on every status change would be the opposite bug.
+    mockPrisma.infoRequest.findMany.mockResolvedValue([
+      { id: "ir-1", category: "COI_UPDATE", createdById: "ae-1" },
+    ] as any);
+    mockPrisma.carrierProfile.update.mockResolvedValue({
+      id: "profile-1", companyName: "Acme Freight", onboardingStatus: "REVIEWING",
+    } as any);
+
+    const { req, res } = mockReqRes(
+      { onboardingStatus: "REVIEWING" },
+      { id: "admin-1", role: "ADMIN" },
+      { id: "profile-1" },
+    );
+    await updateCarrier(req, res);
+
+    expect(mockPrisma.infoRequest.updateMany).not.toHaveBeenCalled();
+  });
+
+  it("updateCarrier — a field-only edit never touches info requests", async () => {
+    // The common case. Editing an insurance expiry must not close anything.
+    mockPrisma.carrierProfile.update.mockResolvedValue({
+      id: "profile-1", companyName: "Acme Freight",
+    } as any);
+
+    const { req, res } = mockReqRes(
+      { safetyScore: 91 },
+      { id: "admin-1", role: "ADMIN" },
+      { id: "profile-1" },
+    );
+    await updateCarrier(req, res);
+
+    expect(mockPrisma.infoRequest.updateMany).not.toHaveBeenCalled();
+  });
+
   it("updateCarrier — updates carrier profile fields", async () => {
     mockPrisma.carrierProfile.update.mockResolvedValue({
       id: "profile-1",
