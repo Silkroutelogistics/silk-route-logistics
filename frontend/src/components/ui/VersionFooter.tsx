@@ -17335,7 +17335,21 @@
 // builders stop coercing the sentinel into a number the assistant would
 // repeat. A census test fails any future reader that prints the column
 // without the gate. Phase 0 of the mandatory-ELD arc.
-export const SRL_VERSION = "3.8.bay";
+// v3.8.baz — the info-request close announces the rows it MOVED, not the rows
+// it READ.
+//
+// closeOpenInfoRequestsForStatus did findMany → updateMany → return the findMany
+// rows. Between those two statements a carrier can answer a request in their
+// portal, and a second transition (another AE, or the Compass engine) can close
+// the same carrier. Either way the announced set was the pre-read, not the
+// truth: a carrier told to stop chasing the request they had just answered, a
+// second close re-announcing rows the first had already taken.
+//
+// One statement now — updateManyAndReturn — so the returned set is by
+// construction the set that changed and there is no window to race. The
+// transition test keeps the old mock shape beside the new one so the pre-baz
+// body can be re-injected and watched fail (13 red, including both race cases).
+export const SRL_VERSION = "3.8.baz";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

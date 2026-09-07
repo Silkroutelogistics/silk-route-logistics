@@ -218,11 +218,10 @@ describe("carrierController", () => {
   });
 
   it("updateCarrier — closes open info requests when it sets a closed status", async () => {
-    mockPrisma.infoRequest.findMany.mockResolvedValue([
+    mockPrisma.infoRequest.updateManyAndReturn.mockResolvedValue([
       { id: "ir-1", category: "COI_UPDATE", createdById: "ae-1" },
       { id: "ir-2", category: "W9_UPDATE", createdById: "ae-1" },
     ] as any);
-    mockPrisma.infoRequest.updateMany.mockResolvedValue({ count: 2 } as any);
     mockPrisma.carrierProfile.update.mockResolvedValue({
       id: "profile-1",
       companyName: "Acme Freight",
@@ -236,7 +235,7 @@ describe("carrierController", () => {
     );
     await updateCarrier(req, res);
 
-    expect(mockPrisma.infoRequest.updateMany).toHaveBeenCalledWith(
+    expect(mockPrisma.infoRequest.updateManyAndReturn).toHaveBeenCalledWith(
       expect.objectContaining({
         where: expect.objectContaining({ carrierId: "profile-1", status: "OPEN" }),
         data: expect.objectContaining({ status: "CANCELLED" }),
@@ -248,7 +247,7 @@ describe("carrierController", () => {
     // REVIEWING and INFO_REQUESTED are states the carrier portal still renders
     // the section in, so a request raised against them is answerable and must
     // survive. Closing on every status change would be the opposite bug.
-    mockPrisma.infoRequest.findMany.mockResolvedValue([
+    mockPrisma.infoRequest.updateManyAndReturn.mockResolvedValue([
       { id: "ir-1", category: "COI_UPDATE", createdById: "ae-1" },
     ] as any);
     mockPrisma.carrierProfile.update.mockResolvedValue({
@@ -262,7 +261,7 @@ describe("carrierController", () => {
     );
     await updateCarrier(req, res);
 
-    expect(mockPrisma.infoRequest.updateMany).not.toHaveBeenCalled();
+    expect(mockPrisma.infoRequest.updateManyAndReturn).not.toHaveBeenCalled();
   });
 
   it("updateCarrier — a field-only edit never touches info requests", async () => {
@@ -278,7 +277,7 @@ describe("carrierController", () => {
     );
     await updateCarrier(req, res);
 
-    expect(mockPrisma.infoRequest.updateMany).not.toHaveBeenCalled();
+    expect(mockPrisma.infoRequest.updateManyAndReturn).not.toHaveBeenCalled();
   });
 
   it("updateCarrier — updates carrier profile fields", async () => {

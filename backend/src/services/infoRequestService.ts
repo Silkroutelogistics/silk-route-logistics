@@ -329,8 +329,14 @@ type Db = Prisma.TransactionClient | typeof prisma;
  * the requestId, so a notice sent for a close that then rolled back would
  * permanently suppress the correct one later.
  *
- * Reads before it writes because `updateMany` returns a count, not rows, and
- * the notifications need the category and the requesting AE.
+ * RETURNS THE ROWS THE UPDATE MOVED, not a set read beforehand. The first
+ * version did findMany → updateMany → return the findMany rows, and those are
+ * two different sets whenever something else touches a request between the
+ * read and the write: a carrier answering one in their portal (OPEN →
+ * RESOLVED) in that window was still announced as "withdrawn, stop chasing",
+ * and a second close racing this one re-announced rows it had not moved.
+ * `updateManyAndReturn` is one statement, so the set it returns is by
+ * construction the set that changed, and there is no window to race.
  */
 export async function closeOpenInfoRequestsForStatus(
   args: {
@@ -346,13 +352,7 @@ export async function closeOpenInfoRequestsForStatus(
   },
   db: Db,
 ): Promise<ClosedInfoRequest[]> {
-  const open = await db.infoRequest.findMany({
-    where: { carrierId: args.carrierId, status: "OPEN" },
-    select: { id: true, category: true, createdById: true },
-  });
-  if (open.length === 0) return [];
-
-  await db.infoRequest.updateMany({
+  const moved = await db.infoRequest.updateManyAndReturn({
     where: { carrierId: args.carrierId, status: "OPEN" },
     data: {
       status: "CANCELLED",
@@ -360,9 +360,10 @@ export async function closeOpenInfoRequestsForStatus(
       cancelledAt: new Date(),
       cancelReason: CLOSED_BY_STATUS_REASON[args.newStatus],
     },
+    select: { id: true, category: true, createdById: true },
   });
 
-  return open.map((r) => ({ id: r.id, category: r.category as string, createdById: r.createdById }));
+  return moved.map((r) => ({ id: r.id, category: r.category as string, createdById: r.createdById }));
 }
 
 /**

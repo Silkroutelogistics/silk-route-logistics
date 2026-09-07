@@ -21,6 +21,9 @@ vi.mock("../src/config/database", () => ({
       create: vi.fn(),
       update: vi.fn(),
       updateMany: vi.fn().mockResolvedValue({ count: 0 }),
+      // The close returns the rows the UPDATE moved. Empty by default so a
+      // caller that closes nothing announces nothing.
+      updateManyAndReturn: vi.fn().mockResolvedValue([]),
       count: vi.fn().mockResolvedValue(0),
     },
 
