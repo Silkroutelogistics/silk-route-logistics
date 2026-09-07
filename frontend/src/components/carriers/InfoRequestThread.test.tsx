@@ -202,3 +202,64 @@ describe("both branches ask the identical question", () => {
     expect(cta()).toHaveLength(0);
   });
 });
+
+describe("the status gate fails closed", () => {
+  // The caller mirrors the carrier's status into canRequestInfo, and the server
+  // refuses APPROVED / REJECTED / SUSPENDED with a 409. A mount that FORGETS the
+  // prop must get no button — not a button the server will refuse — so the
+  // default answers "may I?" with "you did not say", and that is a no. `setup()`
+  // above always passes the prop, deliberately: these cases mount the component
+  // without it, because the default is the thing under test.
+  function mountWithoutTheProp(requests: ReturnType<typeof requestFixture>[]) {
+    queryResult.value = { data: { requests }, isLoading: false, isError: false, refetch };
+    render(<InfoRequestThread carrierId="carrier-1" isAdmin onRequestInfo={vi.fn()} />);
+  }
+
+  it("withholds the CTA from an admin when the caller never said the status allows it", () => {
+    mountWithoutTheProp([requestFixture("OPEN")]);
+    expect(cta()).toHaveLength(0);
+    // And still explains the absence. The note states the RULE, not this
+    // carrier's state, so it is true whether the prop is false or missing.
+    expect(screen.getByText(/available while an application is under review/i)).toBeInTheDocument();
+  });
+
+  it("withholds it on an empty list too", () => {
+    mountWithoutTheProp([]);
+    expect(cta()).toHaveLength(0);
+    expect(screen.getByText(/available while an application is under review/i)).toBeInTheDocument();
+  });
+
+  it("every mount in the app passes the prop explicitly", () => {
+    // Fail-closed protects the mount that forgets. This protects the reader:
+    // a mount relying on the default would render the gated note against a
+    // carrier who is under review, silently, forever. Every mount has to say
+    // what it knows.
+    const fs = require("fs") as typeof import("fs");
+    const path = require("path") as typeof import("path");
+    const root = path.join(__dirname, "..", "..");
+    const files: string[] = [];
+    (function walk(dir: string) {
+      for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
+        const f = path.join(dir, e.name);
+        if (e.isDirectory()) walk(f);
+        else if (f.endsWith(".tsx") && !f.endsWith(".test.tsx")) files.push(f);
+      }
+    })(root);
+    const mounts: string[] = [];
+    const bare: string[] = [];
+    for (const f of files) {
+      const src = fs.readFileSync(f, "utf8");
+      let i = src.indexOf("<InfoRequestThread");
+      while (i >= 0) {
+        const end = src.indexOf("/>", i);
+        const element = src.slice(i, end < 0 ? src.length : end);
+        const rel = path.relative(root, f);
+        mounts.push(rel);
+        if (!/canRequestInfo=/.test(element)) bare.push(rel);
+        i = src.indexOf("<InfoRequestThread", i + 1);
+      }
+    }
+    expect(mounts.length, "no mount found — the walk is not reaching the app").toBeGreaterThan(0);
+    expect(bare, `mounts relying on the fail-closed default:\n${bare.join("\n")}`).toEqual([]);
+  });
+});

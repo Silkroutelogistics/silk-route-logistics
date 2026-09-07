@@ -156,7 +156,14 @@ export function InfoRequestThread({
   carrierId,
   isAdmin,
   onRequestInfo,
-  canRequestInfo = true,
+  // FAIL CLOSED. The caller mirrors the carrier's status into this
+  // prop, and POST /info-requests refuses APPROVED / REJECTED / SUSPENDED with
+  // a 409. Defaulting to true meant a mount that forgot the prop offered the
+  // button against a status the server would refuse — the AE learned the rule
+  // from the error rather than from the surface. "You did not say" is a no.
+  // The note that renders in its place states the rule, not this carrier's
+  // state, so it is true whichever reason the prop is false.
+  canRequestInfo = false,
 }: {
   carrierId: string;
   isAdmin: boolean;

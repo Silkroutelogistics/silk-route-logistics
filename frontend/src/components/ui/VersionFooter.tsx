@@ -17349,7 +17349,17 @@
 // construction the set that changed and there is no window to race. The
 // transition test keeps the old mock shape beside the new one so the pre-baz
 // body can be re-injected and watched fail (13 red, including both race cases).
-export const SRL_VERSION = "3.8.baz";
+// v3.8.bba — the Request Info CTA fails closed.
+//
+// InfoRequestThread's canRequestInfo mirrors the carrier's status, and POST
+// /info-requests refuses APPROVED / REJECTED / SUSPENDED with a 409. It
+// defaulted to true, so a mount that forgot the prop offered the button
+// against a status the server would refuse and the AE learned the rule from
+// the error. Default is now false: "you did not say" is a no. The note that
+// renders in its place states the rule rather than this carrier's state, so it
+// is true whichever reason the prop is false. Test mounts the component
+// without the prop; a source walk asserts every real mount passes it.
+export const SRL_VERSION = "3.8.bba";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
