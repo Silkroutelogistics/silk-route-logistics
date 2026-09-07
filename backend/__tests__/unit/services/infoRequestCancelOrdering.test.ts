@@ -107,11 +107,27 @@ describe("a successful cancel notifies, and only after the commit", () => {
 
   it("names the withdrawn request so the carrier knows what to stop chasing", async () => {
     await cancelInfoRequest({ requestId: "ir-1", cancelledById: "u-admin" });
-    expect(notifyWithdrawn).toHaveBeenCalledWith({
-      carrierId: "carrier-1",
-      requestId: "ir-1",
-      categoryLabel: "Updated Certificate of Insurance (COI)",
-    });
+    expect(notifyWithdrawn).toHaveBeenCalledWith(
+      expect.objectContaining({
+        carrierId: "carrier-1",
+        requestId: "ir-1",
+        categoryLabel: "Updated Certificate of Insurance (COI)",
+      }),
+    );
+  });
+
+  it("tells the notice whether other requests are still open", async () => {
+    // The notice claims "your application is back with our review team", and
+    // cancelInfoRequest returns the status to REVIEWING only when the request it
+    // closed was the LAST open one. With others open that sentence is false, so
+    // the caller has to hand over the fact rather than let the template assume.
+    // objectContaining is deliberately NOT used here — the value is the subject.
+    await cancelInfoRequest({ requestId: "ir-1", cancelledById: "u-admin" });
+    const call = notifyWithdrawn.mock.calls[0][0] as { othersStillOpen?: boolean };
+    expect(
+      call.othersStillOpen,
+      "the notice was not told whether other requests remain, so it will claim the file moved",
+    ).toBe(false);
   });
 
   it("still returns the updated row", async () => {

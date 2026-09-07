@@ -369,10 +369,15 @@ export async function closeOpenInfoRequestsForStatus(
  * Tell both sides, AFTER the commit. Fire-and-forget: a transport failure must
  * not roll back a status change that has already happened.
  *
- * The carrier gets the SAME withdrawal notice a manual cancel sends — it is the
- * same fact from their side, and inventing a second wording for it would make
- * one event read as two. Per request, because announceOnce keys on the
- * requestId and each ask is a separate thing to stop chasing.
+ * The carrier gets the same withdrawal notice a manual cancel sends, told which
+ * status closed it. THAT ARGUMENT USED TO READ "it is the same fact from their
+ * side", and it was wrong: a manual cancel returns the file to review and a
+ * status close does not, so the shared template told a rejected carrier their
+ * application was back with the review team. One template, one caller-supplied
+ * fact — not one wording asserted over two different events.
+ *
+ * Per request, because announceOnce keys on the requestId and each ask is a
+ * separate thing to stop chasing.
  *
  * The AE gets ONE notification naming the count, not one per request. An AE who
  * raised three asks and had all three closed by the same act needs to know
@@ -390,6 +395,9 @@ export async function announceInfoRequestsClosedByStatus(
       carrierId: args.carrierId,
       requestId: req.id,
       categoryLabel: getCategoryLabel(req.category),
+      // The caller's fact. Without it the notice tells a REJECTED carrier
+      // their application is back with the review team.
+      closedByStatus: args.newStatus,
     }).catch((err) => log.warn({ err, requestId: req.id }, "[InfoRequest] status-close carrier notice failed"));
   }
 
@@ -442,6 +450,9 @@ export async function cancelInfoRequest(args: CancelInfoRequestArgs) {
     throw new Error("Only open requests can be cancelled");
   }
 
+  // Set inside the transaction, read by the notice after it commits.
+  let othersStillOpen = false;
+
   const updated = await prisma.$transaction(async (tx) => {
     const updated = await tx.infoRequest.update({
       where: { id: args.requestId },
@@ -457,6 +468,11 @@ export async function cancelInfoRequest(args: CancelInfoRequestArgs) {
     const remainingOpen = await tx.infoRequest.count({
       where: { carrierId: request.carrierId, status: "OPEN" },
     });
+    // Hoisted for the notice below. The status returns to REVIEWING only when
+    // the cancelled request was the LAST open one, so with two open the
+    // "back with our review team" line was false on this path too — and
+    // concurrent requests are what this arc set out to enable.
+    othersStillOpen = remainingOpen > 0;
     if (remainingOpen === 0 && request.carrier.onboardingStatus === "INFO_REQUESTED") {
       await tx.carrierProfile.update({
         where: { id: request.carrierId },
@@ -492,6 +508,7 @@ export async function cancelInfoRequest(args: CancelInfoRequestArgs) {
     carrierId: request.carrierId,
     requestId: request.id,
     categoryLabel: getCategoryLabel(request.category),
+    othersStillOpen,
   }).catch((err) => log.warn({ err }, "[InfoRequest] carrier withdrawal notice failed"));
 
   return updated;

@@ -160,6 +160,20 @@ export async function notifyInfoRequestWithdrawn(args: {
   carrierId: string;
   requestId: string;
   categoryLabel: string;
+  /**
+   * Set when a carrier STATUS CHANGE closed the request rather than an AE
+   * withdrawing it. The decision itself is announced by the approval or
+   * rejection email, so this notice must not restate it — and must not claim
+   * the file went back to review, which is what it used to do.
+   */
+  closedByStatus?: "APPROVED" | "REJECTED" | "SUSPENDED";
+  /**
+   * Manual cancel only: whether the carrier still has other open requests.
+   * cancelInfoRequest returns the application to REVIEWING only when the one it
+   * closed was the LAST open one, so with two open the old sentence was false on
+   * this path too — and concurrent requests are exactly what this arc enabled.
+   */
+  othersStillOpen?: boolean;
 }): Promise<boolean> {
   const carrier = await prisma.carrierProfile.findUnique({
     where: { id: args.carrierId },
@@ -167,10 +181,29 @@ export async function notifyInfoRequestWithdrawn(args: {
   });
   if (!carrier) return false;
 
+  // WHERE THE APPLICATION STANDS IS THE CALLER'S FACT, not this template's.
+  // The line used to be hardcoded to "back with our review team", which is true
+  // only when an AE withdrew the last open request. It is false when a status
+  // change closed it — a rejected carrier was told their application was back
+  // in review — and false on the manual path too when other requests remain.
+  const applicationLine = args.closedByStatus
+    ? null
+    : args.othersStillOpen
+      ? "Your other open requests still stand."
+      : "Your application is back with our review team.";
+
+  // An APPROVED carrier is REDIRECTED OFF the application-status page by the
+  // dashboard layout, so pointing them at it lands them somewhere unrelated with
+  // no explanation. The arc cited that same redirect as the reason an approved
+  // carrier may not be ASKED, and then linked them there anyway.
+  const ctaPath =
+    args.closedByStatus === "APPROVED" ? "/carrier/dashboard" : "/carrier/dashboard/application-status";
+
   return announceOnce({
     userId: carrier.userId,
     email: carrier.user?.email ?? null,
-    link: `/carrier/dashboard/application-status?withdrawn=${args.requestId}`,
+    // Still unique per request — announceOnce dedups on this exact string.
+    link: `${ctaPath}?withdrawn=${args.requestId}`,
     title: "We no longer need that document",
     inAppMessage: `Our ${args.categoryLabel} request has been withdrawn — nothing further is needed.`,
     subject: "You can disregard our last request — Silk Route Logistics",
@@ -178,9 +211,9 @@ export async function notifyInfoRequestWithdrawn(args: {
       <h2 style="margin:0 0 12px;font-family:Georgia,serif;color:#0A2540;">You can disregard that request</h2>
       <p style="color:#3A4A5F;">We asked for <strong>${escapeHtml(args.categoryLabel)}</strong> and no longer need it.
       Please don't spend any more time on it.</p>
-      <p style="color:#3A4A5F;">Your application is back with our review team.</p>
+      ${applicationLine ? `<p style=\"color:#3A4A5F;\">${applicationLine}</p>` : ""}
       <p style="margin:20px 0 24px;">
-        <a href="${PORTAL}/carrier/dashboard/application-status" style="background:#BA7517;color:#FFFFFF;padding:12px 22px;border-radius:8px;text-decoration:none;font-weight:600;">View your application</a>
+        <a href="${PORTAL}${ctaPath}" style="background:#BA7517;color:#FFFFFF;padding:12px 22px;border-radius:8px;text-decoration:none;font-weight:600;">View your application</a>
       </p>
     `),
   });

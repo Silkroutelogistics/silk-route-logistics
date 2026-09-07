@@ -186,6 +186,12 @@ vi.mock("../src/config/database", () => ({
     notification: {
       create: vi.fn(),
       findMany: vi.fn(),
+      // announceOnce and the approval/POD announcers all dedup by reading an
+      // existing row before writing one. Absent here, they throw on a bare
+      // property read rather than failing an assertion.
+      findFirst: vi.fn().mockResolvedValue(null),
+      count: vi.fn().mockResolvedValue(0),
+      updateMany: vi.fn().mockResolvedValue({ count: 0 }),
     },
     cronRegistry: {
       findMany: vi.fn(),

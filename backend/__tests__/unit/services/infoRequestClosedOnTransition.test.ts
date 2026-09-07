@@ -175,6 +175,17 @@ for (const t of TRANSITIONS) {
       const ids = notifyWithdrawn.mock.calls.map((c: any) => c[0].requestId).sort();
       expect(ids).toEqual(["ir-1", "ir-2"]);
 
+      // AND WHICH STATUS CLOSED IT. Without this the notice falls back to the
+      // manual-withdrawal wording and tells a rejected carrier their application
+      // is back with the review team — the defect that shipped, restored by
+      // deleting one property at the call site.
+      for (const call of notifyWithdrawn.mock.calls) {
+        expect(
+          (call[0] as { closedByStatus?: string }).closedByStatus,
+          "the notice was not told which status closed the request",
+        ).toBe(t.status);
+      }
+
       // F4's rule. announceOnce dedups on the requestId, so a notice sent for a
       // close that then rolled back would permanently suppress the correct one.
       expect(order.indexOf("commit")).toBeLessThan(order.indexOf("notify-carrier"));

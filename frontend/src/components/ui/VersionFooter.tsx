@@ -17274,7 +17274,26 @@
 // The guard now counts both forms, and freezes the number of CLOSES per file
 // as well as the number of writes: carrierController holds three of them, so a
 // file-level tick stayed green when one was deleted.
-export const SRL_VERSION = "3.8.bau";
+// v3.8.bav H2 — the withdrawal notice stops telling carriers something false.
+//
+// It said "Your application is back with our review team" unconditionally. That
+// is true only when an AE withdrew the LAST open request. A status close never
+// returns the file to review, so a carrier written to REJECTED was emailed that
+// their application was back under review — and the manual path is wrong too
+// once a second request is open, which is precisely what this arc enabled.
+//
+// The comment justifying the reuse said it was "the same fact from their side".
+// It is two different facts. The template now takes the fact from the caller,
+// who is the only party that knows it.
+//
+// And an APPROVED carrier is no longer sent to a page the dashboard layout
+// redirects them away from — the arc cited that redirect as the reason an
+// approved carrier may not be ASKED, then linked them there anyway.
+//
+// THE TEST THAT MISSED IT asserted the notifier was CALLED. The sentence inside
+// was never read by any guard, so the new one renders the real template and
+// reads the HTML that would have been sent.
+export const SRL_VERSION = "3.8.bav";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
