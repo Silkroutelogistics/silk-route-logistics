@@ -1118,7 +1118,7 @@ export async function verifyCarrier(req: AuthRequest, res: Response) {
       where: { id: req.params.id },
       data: {
         onboardingStatus: status,
-        // B2 — paired. The one writer whose value is a variable rather than a
+        // B2 — paired. One of two writers whose value is a variable rather than
         // literal, so it resolves through the same table the others use.
         // `?? undefined` leaves status untouched when an onboarding value has no
         // application-side counterpart, rather than inventing one.

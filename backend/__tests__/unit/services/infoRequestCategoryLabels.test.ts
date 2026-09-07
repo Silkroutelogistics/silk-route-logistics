@@ -126,9 +126,9 @@ describe("the label set matches the enum it is keyed by", () => {
    * TWO PARENTHETICALS ARE FINE AND THE THIRD ONE WAS NOT, so the rule cannot
    * simply be no-parentheses.
    *
-   * OTHER used to read "Other (custom request)". That parenthetical described
+   * OTHER used to read "Other (custom message)". That parenthetical described
    * the DROPDOWN CHOICE rather than the thing being asked for, so the carrier
-   * email said "We need the following from you: Other (custom request)" —
+   * email said "We need the following from you: Other (custom message)" —
    * naming no document and leaking the AE's own UI at somebody outside it.
    *
    * The two that remain are part of the noun and survive the substitution:
