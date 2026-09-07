@@ -230,14 +230,18 @@ export default function CarrierCompliancePage() {
                 <>
                   {/* Category breakdowns */}
                   {(() => {
+                    // Names are the vetting engine's own (carrierVettingService)
+                    // and a guard test holds them to the live list. Six of nine
+                    // were stale, and one named the fleet VIN check removed in
+                    // Arc 23. Phase 0 of the mandatory-ELD arc.
                     const authorityChecks = vettingReport.checks.filter((c) =>
-                      ["Operating Authority", "FMCSA Grade", "CSA BASIC Scores", "ELD Validation"].includes(c.name)
+                      ["FMCSA Operating Authority", "Safety Rating", "CSA BASIC Scores", "ELD Device Verification"].includes(c.name)
                     );
                     const identityChecks = vettingReport.checks.filter((c) =>
-                      ["Identity Verification", "Chameleon Detection", "OFAC/SDN Screening", "TIN Verification"].includes(c.name)
+                      ["Identity Verification", "Chameleon Risk", "OFAC/SDN Screening", "W-9 TIN Match"].includes(c.name)
                     );
                     const docChecks = vettingReport.checks.filter((c) =>
-                      ["VIN Verification"].includes(c.name)
+                      ["Document Completeness", "Document Expiry Enforcement", "COI Document Agreement"].includes(c.name)
                     );
                     return (
                       <div className="space-y-3">

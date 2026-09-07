@@ -71,6 +71,11 @@ const SURFACES: Array<{ file: string; label: string; headLines?: number }> = [
   // tell from a count claim. Scanning the whole file reported those as drift —
   // a guard crying wolf on its first run is a guard nobody will keep.
   { file: "backend/src/services/carrierVettingService.ts", label: "vetting engine header", headLines: 20 },
+  // The PDF's category-grouping header said "32 checks" for an arc and was
+  // never flagged: it was not a surface, and the count regex only knew the
+  // word "point". Same headLines reasoning as the engine header. Phase 0 of
+  // the mandatory-ELD arc.
+  { file: "backend/src/services/compassPdfService.ts", label: "PDF category grouping header", headLines: 70 },
   { file: "backend/src/controllers/chatController.ts", label: "public Marco Polo prompt" },
   { file: "backend/src/email/builder.ts", label: "Lead Hunter outreach templates" },
   { file: "backend/src/services/emailSequenceService.ts", label: "outreach sequence" },
@@ -141,9 +146,12 @@ describe("Compass published check count", () => {
       const body = s.headLines
         ? whole.split(/\r?\n/).slice(0, s.headLines).join("\n")
         : whole;
-      // Any "N-point" or "N points" claim near Compass wording.
-      for (const m of body.matchAll(/(\d+)[- ]point/g)) {
-        if (Number(m[1]) !== count) wrong.push(`${s.file} (${s.label}) says ${m[1]}-point, checks are ${count}`);
+      // Any "N-point", "N-check" or "N points" claim near Compass wording.
+      // "check" joined "point" in Phase 0 of the mandatory-ELD arc: the engine
+      // header read "32-Check" while listed as a guarded surface, and the
+      // regex could not see it.
+      for (const m of body.matchAll(/(\d+)[- ](?:point|check)/gi)) {
+        if (Number(m[1]) !== count) wrong.push(`${s.file} (${s.label}) says ${m[0]}, checks are ${count}`);
       }
       for (const m of body.matchAll(/scored on (\d+) points|(\d+) points each/g)) {
         const n = Number(m[1] || m[2]);

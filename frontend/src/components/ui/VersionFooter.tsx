@@ -17478,7 +17478,40 @@
 //
 // The count query is deliberately unsearched: the badge answers "is anything
 // waiting on me", and a search box must not be able to change that answer.
-export const SRL_VERSION = "3.8.bbk";
+// v3.8.bbl: the compliance page names the checks that run, and every stale
+// count reads 33.
+//
+// The carrier compliance page groups Compass checks into three category bars by
+// filtering on check name. Six of the nine names it filtered on are not names
+// the vetting engine emits: "Operating Authority", "FMCSA Grade", "Chameleon
+// Detection", "TIN Verification" and "ELD Validation" had all been renamed, and
+// the Documents bar filtered on "VIN Verification", a check Arc 23 deleted
+// outright once it turned out to be deducting five points from every carrier
+// for a fleet register that never existed.
+//
+// A filter that matches nothing throws nothing. The bars rendered as though
+// every group were empty, which is indistinguishable from a carrier who has
+// passed nothing, and that is why this sat unnoticed. Names corrected against
+// the engine's own list, and the Documents bar now groups the three document
+// checks that actually run: Document Completeness, Document Expiry Enforcement,
+// COI Document Agreement.
+//
+// Three source comments still said 32 or 34 checks. The count guard existed and
+// could not see them: its regex knew the word "point" and not "check", so
+// "32-Check Composite Risk Scoring" sat inside a file the guard already listed
+// as a surface and was read past as prose. Widened to (point|check), case
+// insensitive, and compassPdfService's category-grouping header added as a
+// surface at headLines 70. All three now read 33.
+//
+// Banked, not fixed. The page fetches GET /carrier/vetting-report, which has no
+// route under the singular carrier router: the only vetting-report route is
+// :id-scoped on the plural router at carriers.ts:145 and excludes CARRIER. The
+// catch then falls back to /carrier/scorecard and synthesizes a report whose
+// checks array is empty, so the bars count nothing whatever the names say.
+// Correct names are a precondition for that fix, not the fix.
+//
+// Phase 0 of the mandatory-ELD arc.
+export const SRL_VERSION = "3.8.bbl";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

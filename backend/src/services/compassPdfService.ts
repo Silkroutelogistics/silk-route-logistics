@@ -60,7 +60,7 @@ const SOURCE_INDICATOR: Record<DataSource, string> = {
 };
 
 /**
- * Category grouping for the 32 checks.
+ * Category grouping for the 33 checks.
  *
  * POSITIONAL, and that is the hazard: checkMap is built as
  * `checks.forEach((c, i) => checkMap.set(i + 1, c))`, so these are array

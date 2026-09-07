@@ -377,7 +377,7 @@ export async function complianceCheck(carrierId: string, pre?: ComplianceBundle)
     // for KNOWN-young authority (the grant-date branch above, which only fires
     // when a date is actually on file). Here we warn only. The other compliance
     // gates below (authority STATUS active, insurance, OFAC, safety rating) plus
-    // the Compass 34-point vetting still apply, and an admin can set a specific
+    // the Compass 33-point vetting still apply, and an admin can set a specific
     // carrier's grant date via setAuthorityGrantDate to trigger real age
     // enforcement for that carrier. Platform-wide age enforcement returns once
     // the free FMCSA Socrata L&I "with history" dataset backfills
