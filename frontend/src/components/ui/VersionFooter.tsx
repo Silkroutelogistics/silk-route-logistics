@@ -17368,7 +17368,22 @@
 // POST /info-requests with a 400 that reads as a typo. The enum is now built
 // from the shared list, and the label guard asserts the file carries no
 // category literal (injection: restoring the list turns exactly that case red).
-export const SRL_VERSION = "3.8.bbb";
+// v3.8.bbc P0-2: the simulated ELD is gone.
+//
+// eldService returned random noise around a city centroid, a random speed and
+// heading, a random duty status, and a provider summary whose entries all read
+// connected: true beside the comment "Simulated". Four AE routes served it,
+// and the shipper tracking page drew a "Last Known Position via ELD" card
+// from it through Load.driverId, a column nothing writes. A simulated position
+// on an operations screen is worse than none, because it cannot be told from
+// a real one.
+//
+// The file is deleted. The four routes answer 501 with a plain message until a
+// provider is connected. The shipper card exists only when a tracking event
+// with locationSource ELD exists for the load, and it shows when the position
+// was recorded instead of a speed no event carries. Phase 0 of the
+// mandatory-ELD arc.
+export const SRL_VERSION = "3.8.bbc";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

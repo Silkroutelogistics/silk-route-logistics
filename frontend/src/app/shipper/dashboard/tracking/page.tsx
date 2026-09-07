@@ -357,7 +357,9 @@ export default function ShipperTrackingPage() {
                     </div>
                     <div className="text-sm text-gray-700">{selected.eldPosition.address}</div>
                     <div className="flex gap-4 mt-1.5 text-[11px] text-gray-500">
-                      <span>Speed: {selected.eldPosition.speed} mph</span>
+                      {selected.eldPosition.recordedAt && (
+                        <span>{new Date(selected.eldPosition.recordedAt).toLocaleString()}</span>
+                      )}
                       <span>{selected.eldPosition.lat.toFixed(4)}, {selected.eldPosition.lng.toFixed(4)}</span>
                     </div>
                   </ShipperCard>

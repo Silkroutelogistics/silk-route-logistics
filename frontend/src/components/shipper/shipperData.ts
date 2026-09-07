@@ -70,7 +70,8 @@ export interface AnalyticsResponse {
 
 export interface TrackingShipment extends Shipment {
   checkCalls: { status: string; city: string; state: string; timestamp: string; method: string }[];
-  eldPosition: { lat: number; lng: number; speed: number; address: string } | null;
+  /** Present only when a tracking event with locationSource ELD exists for the load. */
+  eldPosition: { lat: number; lng: number; address: string; recordedAt?: string } | null;
   riskLevel: string;
 }
 

@@ -1,20 +1,23 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { prisma } from "../../../src/config/database";
 
-// Mock dependent services
-vi.mock("../../../src/services/eldService", () => ({
-  getVehicleLocation: vi.fn().mockReturnValue(null),
-}));
-
 import {
   getShipperDashboard,
   getShipperShipments,
   getShipperInvoices,
   getShipperDocuments,
   createQuoteRequest,
+  getShipperTracking,
 } from "../../../src/controllers/shipperPortalController";
 
 const mockPrisma = vi.mocked(prisma);
+
+// The shared setup mock has no loadTrackingEvent model. It is augmented here,
+// in this file only, rather than by editing the shared setup: a model added
+// there is a contract every test inherits, and the only consumer is the
+// tracking case below.
+(prisma as any).loadTrackingEvent = { findMany: vi.fn() };
+const trackingEvents = (prisma as any).loadTrackingEvent.findMany as ReturnType<typeof vi.fn>;
 
 function mockReqRes(body: Record<string, any> = {}, user?: any, params?: any, query?: any) {
   return {
@@ -208,5 +211,67 @@ describe("shipperPortalController", () => {
     expect(created.referenceNumber).toBe("SRL-121500");
     expect(created.loadNumber).toBe("SRL-121500");
     expect(created.srlBolNumber).toBe("SRL-121500B");
+  });
+
+  // ── getShipperTracking ──────────────────────────────────
+  // "Last Known Position via ELD" used to be built from Load.driverId (never
+  // written) and a simulated position service. It now exists only when a
+  // LoadTrackingEvent with locationSource ELD exists for the load.
+  const ACTIVE_LOAD = {
+    id: "load-1",
+    referenceNumber: "SRL-100",
+    status: "IN_TRANSIT",
+    originCity: "Chicago", originState: "IL",
+    destCity: "Dallas", destState: "TX",
+    equipmentType: "Dry Van",
+    pickupDate: new Date(), deliveryDate: new Date(),
+    carrier: { company: "Fast Trucking" },
+    checkCalls: [],
+  };
+
+  it("getShipperTracking — no ELD event, no position card", async () => {
+    mockPrisma.customer.findUnique.mockResolvedValue(null);
+    mockPrisma.load.findMany.mockResolvedValue([ACTIVE_LOAD] as any);
+    (mockPrisma.riskLog.findMany as any).mockResolvedValue([]);
+    trackingEvents.mockResolvedValue([]);
+
+    const { req, res } = mockReqRes({}, { id: "shipper-1", role: "SHIPPER" });
+    await getShipperTracking(req, res);
+
+    const body = (res.json as any).mock.calls[0][0];
+    expect(body.shipments[0].eldPosition).toBeNull();
+    // The query asks for ELD-sourced events only: a carrier-portal ping or an
+    // AE manual entry must not light a card that says "via ELD".
+    const where = trackingEvents.mock.calls[0][0].where;
+    expect(where.locationSource).toBe("ELD");
+    expect(where.loadId).toEqual({ in: ["load-1"] });
+  });
+
+  it("getShipperTracking — an ELD event yields the recorded position, with no invented speed", async () => {
+    mockPrisma.customer.findUnique.mockResolvedValue(null);
+    mockPrisma.load.findMany.mockResolvedValue([ACTIVE_LOAD] as any);
+    (mockPrisma.riskLog.findMany as any).mockResolvedValue([]);
+    trackingEvents.mockResolvedValue([
+      { loadId: "load-1", latitude: "41.6", longitude: "-87.3", locationCity: "Gary", locationState: "IN", createdAt: new Date("2026-09-07T10:00:00Z") },
+    ]);
+
+    const { req, res } = mockReqRes({}, { id: "shipper-1", role: "SHIPPER" });
+    await getShipperTracking(req, res);
+
+    const pos = (res.json as any).mock.calls[0][0].shipments[0].eldPosition;
+    expect(pos).toEqual({ lat: 41.6, lng: -87.3, address: "Gary, IN", recordedAt: "2026-09-07T10:00:00.000Z" });
+    expect(pos).not.toHaveProperty("speed");
+  });
+
+  it("getShipperTracking — no active loads, no tracking query at all", async () => {
+    mockPrisma.customer.findUnique.mockResolvedValue(null);
+    mockPrisma.load.findMany.mockResolvedValue([]);
+    trackingEvents.mockClear();
+
+    const { req, res } = mockReqRes({}, { id: "shipper-1", role: "SHIPPER" });
+    await getShipperTracking(req, res);
+
+    expect(trackingEvents).not.toHaveBeenCalled();
+    expect((res.json as any).mock.calls[0][0].shipments).toEqual([]);
   });
 });

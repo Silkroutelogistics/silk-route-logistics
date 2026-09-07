@@ -4,7 +4,6 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 import { AuthRequest } from "../middleware/auth";
 import { prisma } from "../config/database";
 import { LoadStatus } from "@prisma/client";
-import { getVehicleLocation } from "../services/eldService";
 import { env } from "../config/env";
 import { log } from "../lib/logger";
 import { generateLoadNumber, formatDocumentNumber } from "../lib/documentNumber";
@@ -575,21 +574,33 @@ export async function getShipperTracking(req: AuthRequest, res: Response) {
       : [];
     const riskMap = new Map(riskLogs.map((r) => [r.loadId, r]));
 
-    // ELD positions for loads with drivers
-    const driverIds = loads.filter((l) => l.driverId).map((l) => l.driverId!);
-    const drivers = driverIds.length > 0
-      ? await prisma.driver.findMany({
-          where: { id: { in: driverIds } },
-          select: { id: true, currentLocation: true },
+    // "Last Known Position via ELD" is shown only when a tracking event with
+    // locationSource ELD exists for the load. Until Phase 0 of the mandatory-
+    // ELD arc this read Load.driverId (never written) and, when set, asked the
+    // simulated eldService for a random point near a city centroid. Nothing
+    // writes an ELD event today; the card stays hidden until something does.
+    const eldEvents = loadIds.length > 0
+      ? await prisma.loadTrackingEvent.findMany({
+          where: { loadId: { in: loadIds }, locationSource: "ELD", latitude: { not: null }, longitude: { not: null } },
+          orderBy: { createdAt: "desc" },
+          distinct: ["loadId"],
+          select: { loadId: true, latitude: true, longitude: true, locationCity: true, locationState: true, createdAt: true },
         })
       : [];
-    const driverMap = new Map(drivers.map((d) => [d.id, d]));
+    const eldMap = new Map(eldEvents.map((e) => [e.loadId, e]));
 
     const shipments = loads.map((load) => {
       const base = mapLoadToShipment(load);
       const risk = riskMap.get(load.id);
-      const driver = load.driverId ? driverMap.get(load.driverId) : null;
-      const eldPos = driver ? getVehicleLocation(driver.currentLocation) : null;
+      const eld = eldMap.get(load.id);
+      const eldPos = eld
+        ? {
+            lat: Number(eld.latitude),
+            lng: Number(eld.longitude),
+            address: [eld.locationCity, eld.locationState].filter(Boolean).join(", ") || "Position recorded",
+            recordedAt: eld.createdAt?.toISOString?.() || eld.createdAt,
+          }
+        : null;
 
       return {
         ...base,
@@ -600,9 +611,7 @@ export async function getShipperTracking(req: AuthRequest, res: Response) {
           timestamp: cc.createdAt?.toISOString?.() || cc.createdAt,
           method: cc.method || "PHONE",
         })),
-        eldPosition: eldPos
-          ? { lat: eldPos.latitude, lng: eldPos.longitude, speed: eldPos.speed, address: eldPos.address }
-          : null,
+        eldPosition: eldPos,
         riskLevel: risk?.level || "GREEN",
       };
     });
