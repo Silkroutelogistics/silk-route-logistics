@@ -63,10 +63,12 @@ export const customerQuerySchema = z.object({
   industry: z.string().optional(),
   city: z.string().optional(),
   // context partitions the unified customers table:
-  //   "crm"       → onboardingStatus = APPROVED  (post-approval customer list)
-  //   "prospects" → onboardingStatus != APPROVED (Lead Hunter pipeline)
-  //   omitted     → no onboardingStatus filter (back-compat: AE Console legacy callers)
-  context: z.enum(["crm", "prospects"]).optional(),
+  //   "crm"        → onboardingStatus = APPROVED  (post-approval customer list)
+  //   "prospects"  → onboardingStatus != APPROVED (Lead Hunter pipeline)
+  //   "onboarding" → not approved yet, but committed — see getCustomers for
+  //                  what "committed" means and why it is not a heuristic
+  //   omitted      → no onboardingStatus filter (back-compat: AE Console legacy callers)
+  context: z.enum(["crm", "prospects", "onboarding"]).optional(),
   page: z.coerce.number().default(1),
   limit: z.coerce.number().default(50),
 });

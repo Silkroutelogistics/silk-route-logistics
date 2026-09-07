@@ -97,6 +97,38 @@ export async function getCustomers(req: AuthRequest, res: Response) {
     where.onboardingStatus = "APPROVED";
   } else if (query.context === "prospects") {
     where.onboardingStatus = { not: "APPROVED" };
+  } else if (query.context === "onboarding") {
+    // Customers that have been COMMITTED to but have not cleared the approval
+    // gate — the CRM "Pending approval" view.
+    //
+    // Why this needs a second predicate. `context=crm` is APPROVED-only, which
+    // is correct: an unapproved customer has no TIN, no credit check and no
+    // signed contract, and must not be selectable when booking freight (the
+    // shared CustomerPicker and Order Builder both pass context=crm for exactly
+    // that reason). But it meant the CRM page offered an Add Customer button
+    // whose product it then refused to show — created, PENDING, and invisible
+    // on the only page that creates it. `context=prospects` is not the answer
+    // either: that is the Lead Hunter partition and returns cold Apollo leads.
+    //
+    // `status` is the discriminator, and it is a guarantee rather than a
+    // heuristic. It is the Lead Hunter PIPELINE STAGE (Prospect → Contacted →
+    // Qualified → Proposal → Active, where Active means WON — see the switch in
+    // getCustomerStats). Lead Hunter's importer writes "Prospect" explicitly
+    // (bulkCreateCustomers), while createCustomerSchema has no `status` field
+    // at all, so a customer created through the CRM form CANNOT carry anything
+    // but the Prisma default of "Active". Both sources therefore land here with
+    // the same meaning: somebody has committed to this account.
+    //
+    // The coupling to that vocabulary is the known fragility. Renaming a
+    // pipeline stage, or adding `status` to createCustomerSchema, would move
+    // rows in or out of this view silently — so customerController.test.ts pins
+    // both the predicate pair and the absence of `status` on the create schema.
+    where.onboardingStatus = { not: "APPROVED" };
+    // An explicit ?status wins. `status` is set above this block, so assigning
+    // unconditionally would silently overwrite a caller-supplied filter — and
+    // it costs nothing to defer, because the onboardingStatus half above still
+    // excludes approved rows whatever the status turns out to be.
+    if (!query.status) where.status = "Active";
   }
 
   const [customers, total] = await Promise.all([

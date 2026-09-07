@@ -8,6 +8,7 @@ vi.mock("../../../src/services/customerActivityService", () => ({
 
 import { prisma } from "../../../src/config/database";
 import { getCustomers, approveCustomer, markManuallyReviewed } from "../../../src/controllers/customerController";
+import { createCustomerSchema } from "../../../src/validators/customer";
 import { logCustomerActivity } from "../../../src/services/customerActivityService";
 
 const mockPrisma = vi.mocked(prisma);
@@ -67,6 +68,57 @@ describe("customerController.getCustomers — ?context filter (Lead Hunter / CRM
 
     const findManyArgs = mockPrisma.customer.findMany.mock.calls[0][0];
     expect(findManyArgs.where.onboardingStatus).toEqual({ not: "APPROVED" });
+  });
+
+  // ── context=onboarding — the CRM "Pending approval" view ──────────────
+  //
+  // This view exists because context=crm is APPROVED-only, so the page that
+  // owns the Add Customer button could not show what the button made. The
+  // pair of predicates below is the whole contract, and both halves matter:
+  // drop the status half and this floods with cold Apollo leads; drop the
+  // onboardingStatus half and it lists every approved customer as pending.
+
+  it("context=onboarding filters to not-approved AND status = Active", async () => {
+    const { req, res } = mockReqRes({ context: "onboarding" });
+    await getCustomers(req, res);
+
+    const findManyArgs = mockPrisma.customer.findMany.mock.calls[0][0];
+    expect(findManyArgs.where.onboardingStatus).toEqual({ not: "APPROVED" });
+    expect(findManyArgs.where.status).toBe("Active");
+  });
+
+  it("context=onboarding applies the same where to count (badge matches the list)", async () => {
+    const { req, res } = mockReqRes({ context: "onboarding" });
+    await getCustomers(req, res);
+
+    const findManyArgs = mockPrisma.customer.findMany.mock.calls[0][0];
+    const countArgs = mockPrisma.customer.count.mock.calls[0][0];
+    expect(findManyArgs.where).toEqual(countArgs.where);
+  });
+
+  it("createCustomerSchema has no 'status' field — the discriminator is a guarantee", () => {
+    // context=onboarding leans on CRM-created customers carrying the Prisma
+    // default status of "Active". That holds only while the create schema
+    // cannot accept a status from the request: z.object() strips undeclared
+    // keys, so a caller sending status:"Prospect" today is ignored. Add the
+    // field and a CRM-created customer could land outside its own view with
+    // nothing failing — which is why this asserts on the schema, not on a
+    // controller call.
+    const shape = (createCustomerSchema as any).shape;
+    expect(Object.keys(shape)).not.toContain("status");
+    expect((createCustomerSchema.parse({ name: "Acme", status: "Prospect" } as any) as any).status)
+      .toBeUndefined();
+  });
+
+  it("an explicit ?status wins over the onboarding default, so the view stays filterable", async () => {
+    // Not a hole: onboardingStatus still excludes approved rows, so the worst
+    // an explicit status can do is narrow this view to a Lead Hunter stage.
+    const { req, res } = mockReqRes({ context: "onboarding", status: "Prospect" });
+    await getCustomers(req, res);
+
+    const findManyArgs = mockPrisma.customer.findMany.mock.calls[0][0];
+    expect(findManyArgs.where.onboardingStatus).toEqual({ not: "APPROVED" });
+    expect(findManyArgs.where.status).toBe("Prospect");
   });
 
   it("omitted context preserves legacy behavior (no onboardingStatus filter)", async () => {

@@ -17423,7 +17423,21 @@
 // scan, thirty minutes old, and the rule went quiet. A load nobody had heard
 // from for a day produced one CRITICAL and then silence. The include now
 // excludes the engine's own rows. Phase 0 of the mandatory-ELD arc.
-export const SRL_VERSION = "3.8.bbg";
+// v3.8.bbh: a customer created in CRM was invisible on the page that made it.
+//
+// Add Customer creates at onboardingStatus PENDING (the Prisma default) and the
+// CRM list queries ?context=crm, which is APPROVED-only. So the page that owns
+// the button refused to show its own product: created, correctly gated, and
+// gone. Not a gate bug — the gate is right, and an unapproved customer must stay
+// unselectable when booking freight, which is why the shared CustomerPicker and
+// Order Builder both pass context=crm.
+//
+// New ?context=onboarding: not approved AND status = "Active". The second
+// predicate is a guarantee rather than a heuristic — createCustomerSchema has no
+// status field, so a CRM-created customer cannot carry anything but the default,
+// while Lead Hunter's importer writes "Prospect" explicitly. Both halves pinned,
+// including the absence of status on the create schema.
+export const SRL_VERSION = "3.8.bbh";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
