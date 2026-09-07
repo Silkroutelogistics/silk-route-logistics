@@ -1,11 +1,15 @@
 // v3.8.ajt B5 — Dedicated AE approval flow for carriers.
 //
-// Pre-ajt the AE-side approval went through the generic PUT /:id update
-// endpoint which (a) didn't fire a carrier-facing approval email, (b)
-// didn't write a dedicated AuditAction.APPROVE row (used generic UPDATE),
-// (c) had no notification fan-out to the carrier. Result: carrier learned
-// they were approved only by happening to log in and seeing the dashboard
-// switch from status page to main dashboard.
+// The AE UI has routed approval here since ajt. THE GENERIC PATH WAS NOT
+// REPLACED: updateCarrier (PUT /carriers/:id, PATCH /carrier/:id — both
+// ADMIN/CEO) still accepts onboardingStatus APPROVED / REJECTED / SUSPENDED
+// and writes it, so this service is one of two live approve paths, not the
+// only one. Since v3.8.bau that generic path also closes open info requests
+// in its own transaction. What it still does NOT do is what this service was
+// built to add: (a) no carrier-facing approval email, (b) no dedicated
+// AuditAction.APPROVE row (generic UPDATE), (c) no in-app notification. A
+// carrier approved through PUT /:id learns it by logging in. This header
+// used to read as though that path had been retired; it has not.
 //
 // This service mirrors the rejectionService / liftCarrierRejection pattern:
 //   * Validate not already APPROVED + not currently SUSPENDED

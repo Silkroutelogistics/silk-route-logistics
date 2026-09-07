@@ -17,9 +17,12 @@
 // roll back). Email sends are fire-and-forget post-transaction per
 // the existing post-registration chain pattern.
 //
-// Pairs with /carrier-auth/application-status which extends to include
-// the open requests inline so the carrier portal can render them
-// without an extra round-trip.
+// The carrier portal reads the requests from GET /carrier-auth/info-requests
+// (OPEN only) and answers through POST /carrier-auth/info-requests/:id/resolve,
+// both in routes/carrierAuth.ts. /carrier-auth/application-status carries the
+// status and rejection fields ONLY — it does not include the requests inline,
+// and the portal page fetches the two separately (application-status/page.tsx).
+// This header used to claim the opposite.
 
 import { Prisma } from "@prisma/client";
 import { prisma } from "../config/database";

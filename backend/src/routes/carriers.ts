@@ -753,12 +753,14 @@ router.post("/:id/reject", authorize("ADMIN", "CEO"), validateBody(rejectCarrier
   }
 });
 
-// v3.8.ajt B5 — Dedicated AE approval endpoint. Replaces the generic
-// PUT /:id { onboardingStatus: APPROVED } path which (a) didn't fire a
-// carrier-facing approval email, (b) didn't write a dedicated
-// AuditAction.APPROVE row, (c) had no notification fan-out. Service
-// layer at approvalService.ts handles atomic update + email + in-app
-// notification + legacy isVerified field sync.
+// v3.8.ajt B5 — Dedicated AE approval endpoint. This is what the AE UI calls;
+// it does NOT replace the generic PUT /:id { onboardingStatus: APPROVED }
+// path above, which is still mounted, still ADMIN/CEO, still writes the
+// status, and since v3.8.bau closes open info requests too. That path (a)
+// fires no carrier-facing approval email, (b) writes no dedicated
+// AuditAction.APPROVE row, (c) has no notification fan-out — which is what
+// this endpoint adds. Service layer at approvalService.ts handles atomic
+// update + email + in-app notification + legacy isVerified field sync.
 const approveCarrierSchema = z.object({
   note: z.string().max(2000).optional(),
 });
