@@ -17511,7 +17511,36 @@
 // Correct names are a precondition for that fix, not the fix.
 //
 // Phase 0 of the mandatory-ELD arc.
-export const SRL_VERSION = "3.8.bbl";
+// v3.8.bbm: the Terms tab stops pre-filling twelve clauses nobody ever printed.
+//
+// DEFAULT_TERMS pre-filled the tab with a twelve-clause CARRIER-BROKER
+// AGREEMENT block, and not one word of it has ever printed. The FormState key
+// was termsConditions, the backend validator accepts customTerms, and Zod
+// strips unknown keys, so fd.customTerms was always undefined and pdfService
+// rendered none of it. The comment above the constant already said so, and
+// warned against renaming the key on its own, because that alone would switch
+// twelve paragraphs of never-ratified contract text onto the document a carrier
+// signs.
+//
+// This is the version that warning permits: the rename is done with the payload
+// removed. Key renamed to customTerms, DEFAULT_TERMS deleted, default value
+// empty. An AE's entry now reaches the backend and prints under its own
+// ADDITIONAL TERMS FOR THIS LOAD heading, appended after the governing clauses
+// and never replacing them (v3.8.arl).
+//
+// Nothing was authored to replace those clauses, deliberately. Several of them
+// restated what the document already carries: the governing block has BCA
+// incorporation, acceptance, accessorial prior approval and the paperwork
+// deadline; the accessorial grid has detention and TONU; and the tracking
+// obligation prints from srl-chrome.ts:1944-1957. What is left is counsel's to
+// ratify, not a frontend default's to assert.
+//
+// The Reset to Default button goes with the constant, the section is retitled
+// Additional Terms for This Load, and the textarea drops from twenty rows to
+// six, which is the size an optional per-load addendum actually needs.
+//
+// Phase 0 of the mandatory-ELD arc.
+export const SRL_VERSION = "3.8.bbm";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

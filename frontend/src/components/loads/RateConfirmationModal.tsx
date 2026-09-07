@@ -205,7 +205,7 @@ interface FormState {
   documentChecklist: DocumentCheck[];
 
   // 9 - Terms & Conditions
-  termsConditions: string;
+  customTerms: string;
 
   // 10 - Special Instructions
   specialInstructions: string;
@@ -306,51 +306,29 @@ const DEFAULT_DOCUMENT_CHECKLIST: DocumentCheck[] = [
   { key: "carrierAuthority", label: "Carrier Authority Verification", checked: false },
 ];
 
-// ⚠ THIS TEXT DOES NOT CURRENTLY PRINT ON ANY RATE CONFIRMATION.
+// SECTION 9 default terms: the DEFAULT_TERMS block was DELETED in v3.8.bbm.
 //
-// The comment that used to sit here claimed it "is stored as formData.customTerms
-// and APPENDED to the governing clauses on the rendered PDF". That describes the
-// INTENT, not the behaviour. The FormState key is `termsConditions` (declared
-// below in the interface, bound to the textarea in the T&C tab), but the backend
-// validator only accepts `customTerms` (validators/rateConfirmation.ts). Zod
-// strips the unknown key, so `fd.customTerms` is always undefined on this path
-// and pdfService never renders a word of it.
+// A twelve-clause block sat here and pre-filled the Terms tab, and it never
+// printed on a single Rate Confirmation. The FormState key was
+// `termsConditions`; the backend validator accepts `customTerms`
+// (validators/rateConfirmation.ts:177); Zod strips unknown keys, so
+// `fd.customTerms` was always undefined and pdfService rendered none of it.
+// The block was dead for the whole of its life.
 //
-// Do NOT "fix" this by renaming the key on its own. That is not a rename — it
-// switches on a large block of never-reviewed text against a page that has ~14pt
-// of vertical slack in the worst-case fixture, and several clauses here restate
-// terms the GOVERNING TERMS block and the operational grid already carry. Landing
-// it needs a content reconciliation plus a layout budget, i.e. its own sprint.
+// It is deleted rather than wired up, because wiring it up is not a rename. It
+// would switch on twelve paragraphs of contract text that counsel has never
+// ratified, on the document a carrier signs. Several clauses also restated what
+// the Rate Confirmation already prints: the governing clauses carry BCA
+// incorporation, acceptance, accessorial prior approval and the paperwork
+// deadline; the accessorial grid carries detention and TONU; and the tracking
+// obligation is already printed from srl-chrome.ts:1944-1957.
 //
-// Figures below are kept canonical anyway so that whenever it IS switched on it
-// does not contradict the grid: v3.8.arn corrected clause 5 detention from
-// $75.00/hr uncapped -> $50.00/hr capped at $250.00/stop, and clause 6 TONU from
-// $250.00 -> $200.00.
-const DEFAULT_TERMS = `CARRIER-BROKER AGREEMENT - TERMS & CONDITIONS
-
-1. TRANSPORTATION SERVICES: Carrier agrees to transport the shipment(s) described herein from origin to destination in accordance with the terms of this Rate Confirmation. This Rate Confirmation, when signed by Carrier, shall constitute a binding contract.
-
-2. INSURANCE REQUIREMENTS: Carrier shall maintain at minimum: (a) Commercial Auto Liability - $1,000,000 combined single limit; (b) Cargo Insurance - $100,000 minimum; (c) General Liability - $1,000,000 per occurrence. Certificates must be provided upon request.
-
-3. EQUIPMENT: Carrier shall furnish suitable, clean, and properly maintained equipment in compliance with all DOT/FMCSA regulations. Equipment must be free of contaminants and odors.
-
-4. DOUBLE BROKERING PROHIBITED: Carrier shall not re-broker, co-broker, or assign this shipment to any other carrier, broker, or third party without prior written consent from Broker. Violation of this clause shall result in immediate forfeiture of payment.
-
-5. DETENTION: Free time of two (2) hours is allowed at each stop. After free time, detention will be paid at $50.00/hour, capped at $250.00 per stop, with prior authorization from Broker.
-
-6. TONU (Truck Ordered Not Used): If Carrier is dispatched and load is cancelled by shipper after Carrier has been dispatched, a TONU fee of $200.00 will be paid to Carrier, subject to Broker verification.
-
-7. CLAIMS: Carrier is liable for all cargo loss and damage claims. Claims must be filed within nine (9) months of delivery. Carrier must maintain cargo insurance for the full declared value of goods.
-
-8. PAYMENT TERMS: Payment will be processed per the selected payment tier upon receipt of all required documentation including signed BOL, POD, and any applicable accessorial receipts.
-
-9. TRACKING/COMMUNICATION: Carrier must provide tracking updates via GPS/ELD integration or manual check calls as specified. Failure to provide timely updates may result in service penalties.
-
-10. COMPLIANCE: Carrier shall comply with all applicable federal, state, and local laws, including FMCSA regulations, FMCSA Hours of Service, drug and alcohol testing requirements, and hazmat regulations where applicable.
-
-11. CONFIDENTIALITY: Carrier shall not contact Broker's customer(s) directly or disclose any rate, financial, or business information to any third party.
-
-12. GOVERNING LAW: This agreement shall be governed by the laws of the State of Michigan, with venue in Kalamazoo County, and applicable federal transportation law (49 U.S.C. § 14101(b)).`;
+// What remains is the field, now keyed `customTerms` so an AE's entry actually
+// reaches the backend, and defaulting to empty rather than to prose nobody
+// approved. pdfService appends it under its own ADDITIONAL TERMS FOR THIS LOAD
+// heading and never replaces the governing core (v3.8.arl).
+//
+// Phase 0 of the mandatory-ELD arc.
 
 const SRL_INFO = {
   company: "Silk Route Logistics Inc.",
@@ -541,7 +519,7 @@ function initForm(load: any, user: any): FormState {
     documentChecklist: DEFAULT_DOCUMENT_CHECKLIST.map((d) => ({ ...d })),
 
     // 9 - Terms & Conditions
-    termsConditions: load?.termsConditions || DEFAULT_TERMS,
+    customTerms: load?.termsConditions || "",
 
     // 10 - Special Instructions
     specialInstructions: load?.specialInstructions || "",
@@ -2312,25 +2290,19 @@ function SectionTerms({ form, set }: { form: FormState; set: <K extends keyof Fo
   return (
     <div className="space-y-6 max-w-4xl">
       <div className={sectionCardCls}>
-        <div className="flex items-center justify-between mb-4">
-          <h4 className={`${sectionTitleCls} mb-0`}>
-            <ScrollText className="w-4 h-4" />
-            Standard Terms & Conditions
-          </h4>
-          <button
-            onClick={() => set("termsConditions", DEFAULT_TERMS)}
-            className="text-xs text-[#C8963E] hover:text-[#C8963E]/80 transition cursor-pointer"
-          >
-            Reset to Default
-          </button>
-        </div>
-        <p className="text-xs text-slate-500 mb-3">
-          These terms will be included in the Rate Confirmation document. You may edit them for this specific load.
+        <h4 className={sectionTitleCls}>
+          <ScrollText className="w-4 h-4" />
+          Additional Terms for This Load
+        </h4>
+        <p className="text-xs text-slate-500 mb-4">
+          Optional. Anything entered here prints on the Rate Confirmation under
+          ADDITIONAL TERMS FOR THIS LOAD, after the governing terms. Leave it empty
+          unless this load needs something the governing terms do not already cover.
         </p>
         <textarea
-          value={form.termsConditions}
-          onChange={(e) => set("termsConditions", e.target.value)}
-          rows={20}
+          value={form.customTerms}
+          onChange={(e) => set("customTerms", e.target.value)}
+          rows={6}
           className={`${inputCls} resize-y font-mono text-xs leading-relaxed`}
         />
       </div>
