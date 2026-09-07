@@ -23,9 +23,17 @@ interface Props {
   onClose: () => void;
   onCustomerChange: () => void;
   onSelectCustomer?: (id: string) => void;
+  /**
+   * Fired once, after a customer is created. The page uses it to switch to the
+   * Pending approval view, so closing this drawer does not lose the record —
+   * a new customer is PENDING and the Approved list will not show it.
+   */
+  onCreated?: (id: string) => void;
 }
 
-export function CustomerDrawer({ customerId, onClose, onCustomerChange, onSelectCustomer }: Props) {
+export function CustomerDrawer({
+  customerId, onClose, onCustomerChange, onSelectCustomer, onCreated,
+}: Props) {
   const [tab, setTab] = useState<CrmTab>("profile");
 
   const handleKey = useCallback((e: KeyboardEvent) => {
@@ -94,7 +102,15 @@ export function CustomerDrawer({ customerId, onClose, onCustomerChange, onSelect
         aria-modal="true"
         className="absolute top-0 bottom-0 right-0 w-full max-w-[var(--drawer-detail)] bg-white shadow-2xl flex animate-slide-in-right"
       >
-        <CrmIconTabs active={tab} onChange={setTab} />
+        {/* While the create form is open there is no customer id, so every
+            tab but Profile is locked rather than silently inert. */}
+        <CrmIconTabs
+          active={tab}
+          onChange={setTab}
+          lockedReason={
+            isNew ? "Save the customer first — this tab attaches records to it" : undefined
+          }
+        />
 
         <div className="flex-1 flex flex-col min-w-0">
           {/* Header */}
@@ -157,6 +173,7 @@ export function CustomerDrawer({ customerId, onClose, onCustomerChange, onSelect
               <NewCustomerForm
                 onCreated={(newId) => {
                   onCustomerChange();
+                  if (onCreated) onCreated(newId);
                   if (onSelectCustomer) onSelectCustomer(newId);
                 }}
                 onCancel={onClose}

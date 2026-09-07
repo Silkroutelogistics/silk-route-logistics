@@ -17437,7 +17437,22 @@
 // status field, so a CRM-created customer cannot carry anything but the default,
 // while Lead Hunter's importer writes "Prospect" explicitly. Both halves pinned,
 // including the absence of status on the create schema.
-export const SRL_VERSION = "3.8.bbh";
+// v3.8.bbi: the CRM tabs were live buttons that did nothing.
+//
+// Worse than unclickable. On the New Customer form, clicking Contacts moved the
+// gold active indicator and left the create form on screen — the click
+// registered and produced nothing, which reads as a broken page rather than a
+// precondition. The precondition is real: those tabs POST to /customers/:id/...
+// and there is no id until the record is saved.
+//
+// IconTabs gains disabled + disabledReason, and the button is genuinely inert:
+// disabled on the element AND no onChange call, not merely styled grey. Purely
+// additive, so the other four rails are byte-identical in behaviour.
+//
+// A text assertion is the wrong instrument here — a grep for "disabled" proves
+// the attribute is written, not that the tab refuses. Every case clicks a real
+// button and reads what the handler did.
+export const SRL_VERSION = "3.8.bbi";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

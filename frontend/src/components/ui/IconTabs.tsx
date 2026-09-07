@@ -19,6 +19,16 @@ export interface IconTabDef<T extends string> {
   Icon: LucideIcon;
   /** Show a small red dot in the corner (e.g. open exception count) */
   alert?: boolean;
+  /**
+   * Tab cannot be selected yet. The button is genuinely inert — `disabled`
+   * on the element AND no onChange call — not merely styled grey. A tab that
+   * looks live, moves the active indicator and renders nothing is worse than
+   * one that plainly refuses, because it reads as a broken page rather than a
+   * precondition. Pair with `disabledReason`, which becomes the tooltip.
+   */
+  disabled?: boolean;
+  /** Tooltip shown in place of the label when `disabled`. Say WHY, and what unlocks it. */
+  disabledReason?: string;
   /** Optional numeric badge top-right (not implemented as styled badge yet) */
   badge?: number;
 }
@@ -76,15 +86,19 @@ export function IconTabs<T extends string>({ tabs, active, onChange }: IconTabsP
      * wrap — latent, and only on a viewport this no longer overflows.
      */
     <div className="w-[68px] shrink-0 border-r border-gray-200 bg-gray-50 py-2 flex flex-col items-center gap-1 overflow-y-auto">
-      {tabs.map(({ id, label, Icon, alert }) => {
-        const isActive = active === id;
+      {tabs.map(({ id, label, Icon, alert, disabled, disabledReason }) => {
+        const isActive = active === id && !disabled;
         return (
           <button
             key={id}
-            onClick={() => onChange(id)}
-            className="group flex flex-col items-center gap-0.5 w-full transition-all duration-150 relative"
-            aria-label={label}
-            title={label}
+            onClick={() => { if (!disabled) onChange(id); }}
+            disabled={disabled}
+            aria-disabled={disabled || undefined}
+            className={`group flex flex-col items-center gap-0.5 w-full transition-all duration-150 relative ${
+              disabled ? "cursor-not-allowed opacity-40" : ""
+            }`}
+            aria-label={disabled && disabledReason ? `${label} — ${disabledReason}` : label}
+            title={disabled ? (disabledReason ?? label) : label}
           >
             <span
               className={`absolute left-0 top-1.5 bottom-1.5 w-[2px] rounded-r transition-all duration-150 ${
@@ -93,7 +107,7 @@ export function IconTabs<T extends string>({ tabs, active, onChange }: IconTabsP
             />
             <span
               className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-150 ${
-                isActive ? "bg-[#FAEEDA]" : "bg-white group-hover:bg-gray-100"
+                isActive ? "bg-[#FAEEDA]" : disabled ? "bg-white" : "bg-white group-hover:bg-gray-100"
               }`}
             >
               <Icon

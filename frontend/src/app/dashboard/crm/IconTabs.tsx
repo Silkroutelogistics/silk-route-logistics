@@ -22,6 +22,27 @@ const TABS: IconTabDef<CrmTab>[] = [
   { id: "activity",   label: "Activity",   Icon: Clock },
 ];
 
-export function CrmIconTabs({ active, onChange }: { active: CrmTab; onChange: (t: CrmTab) => void }) {
-  return <SharedIconTabs tabs={TABS} active={active} onChange={onChange} />;
+/**
+ * `lockedReason` locks every tab except Profile.
+ *
+ * The New Customer form has no customer id yet, and Contacts / Facilities /
+ * Notes / Documents / Rates all POST to /customers/:id/... — there is nothing
+ * for them to attach to until the record is saved. Before this, those tabs
+ * were live buttons: clicking one moved the gold active indicator and left the
+ * create form on screen, so the click registered and produced nothing. That
+ * reads as a broken page, when the truth is a precondition.
+ */
+export function CrmIconTabs({
+  active, onChange, lockedReason,
+}: {
+  active: CrmTab;
+  onChange: (t: CrmTab) => void;
+  lockedReason?: string;
+}) {
+  const tabs = lockedReason
+    ? TABS.map((t) =>
+        t.id === "profile" ? t : { ...t, disabled: true, disabledReason: lockedReason },
+      )
+    : TABS;
+  return <SharedIconTabs tabs={tabs} active={active} onChange={onChange} />;
 }
