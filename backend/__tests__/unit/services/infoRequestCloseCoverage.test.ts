@@ -18,6 +18,12 @@
  * sibling census matched `prisma.carrierProfile.update(` and missed `tx.` writes
  * and nested creates; an assignment does not vary however the write around it
  * is spelled.
+ *
+ * BOTH SCANS USE ONE WALK. scan() ran on a regex comment-stripper for an arc
+ * after the derived census had moved to blankNoise. The regex pair cannot tell
+ * a delimiter inside a string from a comment and fails toward a CLEAN census —
+ * the label guard hit that exact class and rebuilt its stripper. The fixtures
+ * at the end pin the case, with the old stripper kept as the foil.
  */
 import { describe, it, expect } from "vitest";
 import fs from "fs";
@@ -104,9 +110,20 @@ const DISPOSITION: Record<string, { wired: boolean; writes: number; closes: numb
   },
 };
 
-/** Blank comments in place, preserving offsets — the sibling census's idiom, and
- *  the one that survives a comment containing a block-comment delimiter. */
-function stripComments(s: string): string {
+/**
+ * THE REGEX PAIR scan() USED TO USE. Kept ONLY as the foil for the fixture
+ * below; nothing in this file runs it against real source any more.
+ *
+ * It cannot tell a delimiter inside a STRING from a comment. A block opener in
+ * a string with a real block comment anywhere later eats everything between —
+ * including a genuine closed-status write — and a line-comment marker inside a
+ * string (`"https://…"`) eats the rest of that line. Both fail in the
+ * permissive direction: fewer writes counted, and the census reads healthier
+ * than the code. The label guard hit exactly this and rebuilt its stripper as a
+ * walk that knows what a string is; scan() ran on the regex pair for another
+ * arc. Now both paths use blankNoise.
+ */
+function legacyStripComments(s: string): string {
   return s
     .replace(/\/\*[\s\S]*?\*\//g, (m) => m.replace(/[^\n]/g, " "))
     .replace(/\/\/[^\n]*/g, (m) => " ".repeat(m.length));
@@ -125,15 +142,38 @@ function walkTs(dir: string, out: string[] = []): string[] {
   return out;
 }
 
-/** Blank comments and TEMPLATE literals, offsets preserved. Quoted strings stay,
- *  because the enum literal being matched is one. */
+/**
+ * Blank comments and TEMPLATE literals, offsets preserved. Quoted strings stay,
+ * because the enum literal being matched is one — and a quoted string SUSPENDS
+ * comment detection until it closes, which is the whole difference between
+ * this walk and the regex pair above. `"src/**"` is not a comment opener and
+ * `"https://x"` is not a line comment; a walk that does not know that eats code
+ * and reports the census clean. An escape skips the next character; a newline
+ * ends a plain string, since one cannot span lines.
+ *
+ * RESIDUAL LIMIT, stated: regex literals are not tracked, so a quote inside one
+ * (`/["']/`) suspends comment detection to the end of that line. That fails in
+ * the NOISY direction — a trailing comment on that line stays visible — which
+ * the frozen per-file counts would surface, and none has.
+ */
 function blankNoise(src: string): string {
   const out = src.split("");
   const BACKTICK = String.fromCharCode(96);
   const ESC = String.fromCharCode(92);
+  const DQ = String.fromCharCode(34);
+  const SQ = String.fromCharCode(39);
   let i = 0;
   while (i < src.length) {
     const c = src[i], d = src[i + 1];
+    if (c === DQ || c === SQ) {
+      const q = c; i++;
+      while (i < src.length && src[i] !== q && src[i] !== "\n") {
+        if (src[i] === ESC) i++;
+        i++;
+      }
+      i++;
+      continue;
+    }
     if (c === "/" && d === "/") { while (i < src.length && src[i] !== "\n") { out[i] = " "; i++; } continue; }
     if (c === "/" && d === "*") {
       out[i] = out[i + 1] = " "; i += 2;
@@ -209,8 +249,10 @@ function carrierClosedWrites(raw: string): number {
   return n;
 }
 
-function scan(rel: string): { closedWrites: number; hasClose: boolean } {
-  const src = stripComments(fs.readFileSync(path.join(SRC, rel), "utf8"));
+/** The literal-form census over one file's source. Pure, so the fixtures below
+ *  can feed it synthetic text and the real scan() can feed it a file. */
+function scanSource(raw: string): { closedWrites: number; hasClose: boolean } {
+  const src = blankNoise(raw);
   // A `where:` filter is a read, not a write. Both look like the same
   // assignment, so the enclosing key is what separates them — and getting this
   // wrong in the permissive direction is what makes a census read healthy.
@@ -221,6 +263,10 @@ function scan(rel: string): { closedWrites: number; hasClose: boolean } {
     return lastData > lastWhere;
   }).length;
   return { closedWrites, hasClose: src.includes("closeOpenInfoRequestsForStatus") };
+}
+
+function scan(rel: string): { closedWrites: number; hasClose: boolean } {
+  return scanSource(fs.readFileSync(path.join(SRC, rel), "utf8"));
 }
 
 describe("the close-on-transition rule is applied or explicitly excused", () => {
@@ -347,5 +393,54 @@ describe("the close-on-transition rule is applied or explicitly excused", () => 
     expect(raw).toMatch(/where:\s*\{[^}]*onboardingStatus:\s*"APPROVED"/);
     // Those reads are not counted; the real writes in that file are.
     expect(scan(cppRel).closedWrites).toBeGreaterThan(0);
+  });
+});
+
+/**
+ * The walk is what stands between this census and a false green, so it gets
+ * fixtures — and the regex pair it replaced is run on the same text, so the
+ * reason for the change is a measurement rather than a sentence. Every case
+ * where the foil differs, it differs by counting FEWER writes: the census
+ * reads healthier than the code, which is the direction nobody notices.
+ */
+describe("the comment walk knows what a string is", () => {
+  const BACKTICK = String.fromCharCode(96);
+  const WRITE = 'await tx.carrierProfile.update({ where: { id }, data: { onboardingStatus: "APPROVED" } });\n';
+
+  it("a block-comment opener inside a string does not eat the write after it", () => {
+    // A `/*` inside a string plus a real block comment anywhere later. The
+    // foil opens at the string and closes at the real comment, blanking the
+    // write between them.
+    const src = 'const g = "src/**";\n' + WRITE + "/* a real comment */\n";
+    expect(scanSource(src).closedWrites).toBe(1);
+    expect(scanSource(legacyStripComments(src)).closedWrites).toBe(0);
+  });
+
+  it("a line-comment marker inside a string does not eat the rest of the line", () => {
+    const src = 'const u = "https://x"; ' + WRITE;
+    expect(scanSource(src).closedWrites).toBe(1);
+    expect(scanSource(legacyStripComments(src)).closedWrites).toBe(0);
+  });
+
+  it("an escaped quote does not end the string early", () => {
+    const src = 'const e = "a\\"//b"; ' + WRITE;
+    expect(scanSource(src).closedWrites).toBe(1);
+  });
+
+  it("still blanks both comment forms and template literals", () => {
+    expect(scanSource("// " + WRITE).closedWrites).toBe(0);
+    expect(scanSource("/* " + WRITE + " */").closedWrites).toBe(0);
+    expect(scanSource("const t = " + BACKTICK + WRITE + BACKTICK + ";").closedWrites).toBe(0);
+  });
+
+  it("does not count a where-filter as a write", () => {
+    expect(
+      scanSource('await tx.carrierProfile.findMany({ where: { onboardingStatus: "APPROVED" } });').closedWrites,
+    ).toBe(0);
+  });
+
+  it("sees a call to the close in code and not a mention in a comment", () => {
+    expect(scanSource("await closeOpenInfoRequestsForStatus(args, tx);").hasClose).toBe(true);
+    expect(scanSource("// see closeOpenInfoRequestsForStatus").hasClose).toBe(false);
   });
 });
