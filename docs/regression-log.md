@@ -46,6 +46,39 @@ so it's searchable and never lost.
   than that it ran; three successive predicates that flagged correct code. Every
   one was caught by running the injection rather than reasoning about it.
 
+## Fixed 2026-09-07 (v3.8.bax + v3.8.bay: the tracking factor was a constant, and the ELD check is a standing deduction)
+
+- **Symptom.** Every carrier scorecard, AE gauge and Marco Polo context asserted
+  a tracking-compliance figure nobody had measured.
+- **Where.** `backend/src/services/integrationService.ts` (the weekly recalc),
+  `backend/src/lib/trackingFactor.ts` (new), `backend/src/services/tierService.ts`
+  (the composite), and five readers across two controllers, three pages and the
+  Marco Polo context builders.
+- **Severity.** P1. Not prospect-blocking, but it is a published number: §9
+  weights tracking compliance at 15% of the Compass composite, and /carriers
+  publishes the seven factors as measured.
+- **What was wrong.** `recalculateCarrierCPP` scored a constant 100 unless
+  `CarrierProfile.eldEnabled` was true, and nothing in the codebase has ever
+  written that column. `onCarrierApproved` separately seeded `gpsCompliancePct: 80`
+  on the first scorecard row. Neither number was a measurement; both were claims.
+- **Fixed in `64befaa7` (v3.8.bax) and `94ee2b85` (v3.8.bay).** The factor is null
+  when no location source exists, and the composite renormalises over the six
+  observable factors. The column cannot hold null without a migration, so an
+  unmeasured carrier persists a 0 sentinel and all five readers gate on
+  `eldEnabled` and render "Not measured". Replacing the sentinel with a nullable
+  column is Phase 1.
+- **Still open, by design: the standing minus 5.**
+  `backend/src/services/carrierVettingService.ts:517` is the fall-through branch
+  of the ELD Device Verification check, and it fires for every carrier because
+  none has a provider on file. Every vetting run takes `score -= 5`. It is the
+  same shape as the Arc 23 VIN check (§13.3 Item 230.1), which taxed every
+  carrier five points for a fleet register that never existed, and it is left
+  standing for the opposite reason: this one measures a real absence, and Phase 1
+  is what makes it earnable. Recorded so nobody reads it as a defect and deletes
+  the signal instead of building the thing it is asking for.
+- **Status.** Fixed for the constant. Open by design for the deduction. Noted
+  2026-09-07.
+
 ## Fixed — 2026-09-01 (v3.8.aya — an auto-dispatched carrier had nothing to sign, so the customer was told before anyone had committed)
 
 - **Status:** commit 12c of the sprint close. 12d closes the arc.

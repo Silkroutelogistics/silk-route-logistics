@@ -756,7 +756,7 @@ Same-day Quick Pay is UNIVERSAL +2% premium on tier fee. **Not tier-gated.** Eve
 | Document timeliness | 10% |
 | Acceptance rate | 10% |
 
-> Factor renamed "GPS compliance" → "Tracking compliance" (v3.8.alz, Build C, 2026-05-30) so the public label matches what's measured: % of loads with captured location visibility from any source (carrier portal / geofence / check-call-email / **ELD** via motiveService+samsaraService). The `CarrierScorecard.gpsCompliancePct` DB column is unchanged. Compass factors are now genuinely measured backend-side (Builds A/B/D/C/E) — on-time pickup/delivery from actual event timestamps + 2h grace, document timeliness POD≤delivery+24h, tracking from LoadTrackingEvent location. Tracking compliance is **telematics-activated (Build F, v3.8.amc)**: NEUTRAL (100) until a carrier connects ELD (`CarrierProfile.eldEnabled`), then the same query measures real location coverage — so a carrier is never penalized for SRL's pre-ELD capture gap, and connecting telematics makes the factor real with no rework. Per-carrier ELD credentials (`CarrierProfile.eldApiKeyEncrypted` etc.) are stored ready for when a carrier shares telematics keys.
+> Factor renamed "GPS compliance" → "Tracking compliance" (v3.8.alz, Build C, 2026-05-30) so the public label matches what's measured: % of loads with captured location visibility from any source (carrier portal / geofence / check-call-email / **ELD** via motiveService+samsaraService). The `CarrierScorecard.gpsCompliancePct` DB column is unchanged. Compass factors are now genuinely measured backend-side (Builds A/B/D/C/E) — on-time pickup/delivery from actual event timestamps + 2h grace, document timeliness POD≤delivery+24h, tracking from LoadTrackingEvent location. Tracking compliance is **NOT MEASURED (corrected 2026-09-07, v3.8.bax + v3.8.bay)**. It read NEUTRAL (100) until a carrier connected ELD, and **nothing in the codebase has ever written `CarrierProfile.eldEnabled`**, so that constant was a standing claim of location visibility SRL does not have, carrying 15% of the composite on every carrier. `lib/trackingFactor.resolveTrackingFactor` now returns null when no location source exists, and `tierService.calculateOverallScore` renormalises over the remaining six factors, so an unmeasured carrier is scored on what SRL can actually observe rather than credited with a tracking record nobody captured. `CarrierScorecard.gpsCompliancePct` is `Float @default(0)` and cannot hold null without a migration, so the persisted value for such a carrier is a 0 sentinel; every reader gates on `eldEnabled` and renders "Not measured", because printing the sentinel would be the same false claim pointing the other way. Phase 1 replaces the sentinel with a nullable column. Per-carrier ELD credentials (`CarrierProfile.eldApiKeyEncrypted` etc.) are on the schema and unwritten: see §13.3 Item 261.
 >
 > **Document-timeliness alignment (noted v3.8.arn, measurement unchanged).** The POD ≤ delivery + 24h window this factor grades on now agrees with what the Rate Confirmation promises the carrier — signed BOL, POD, and supporting paperwork due within 24 hours of delivery. Carriers are graded against the same deadline they are given in writing, so the factor is defensible if a carrier disputes a Compass score. Any future change to one must move the other in the same commit.
 
@@ -2299,6 +2299,17 @@ Most are inert history and **should** survive — `LoadActivity` and `LoadTracki
 
     **The count is now held to the code.** [`compassCheckCount.test.ts`](backend/__tests__/unit/services/compassCheckCount.test.ts) counts distinct check NAMES — not `checks.push` calls, which number about 130 because one named check pushes once per outcome — and fails naming every surface that disagrees. Adversarially verified by reverting one surface to 35. A number written down in nine places is a maintenance liability; the guard is what makes it cheap.
 
+    **Corrected 2026-09-07 (v3.8.bbl): the count is 33, not 34.** Arc 23 removed
+    the fleet VIN check after this item was written, and the recount never
+    reached three source comments still reading 32 or 34. The guard above could
+    not see them: its regex knew the word "point" and not "check", so
+    "32-Check Composite Risk Scoring" sat inside `carrierVettingService.ts`, a
+    file the guard already listed as a surface, and was read past as prose. The
+    regex is widened to `(point|check)` case insensitive, and
+    `compassPdfService.ts`'s category-grouping header is added as a guarded
+    surface. This is Sub-pattern 16 pointed at a guard that was watching the
+    right file for the wrong word.
+
 233. **The chameleon block gains a scoped override — and a blanket override still releases everything (Arc 25, 2026-08-22).**
 
     Arc 24 gave the block a human exit (review the matches). This adds the release valve for when a load cannot wait: `CHAMELEON_UNREVIEWED` as a machine-readable `blocked_code`, `overridable: true`, with a checkCode-scoped `ComplianceOverride` mirroring `AUTHORITY_TOO_YOUNG` — 24-hour expiry, same 15-per-30-day quota, consulted at the branch rather than short-circuiting the function.
@@ -3743,7 +3754,84 @@ Most are inert history and **should** survive — `LoadActivity` and `LoadTracki
     unconditionally is the obvious repair and is worse than the bug, since it would
     knock an APPROVED carrier out of approval for uploading a renewed COI.
 
+261. **Phase 0 of the mandatory-ELD arc: the platform stops claiming tracking it does not have (2026-09-07, v3.8.bax through v3.8.bbm).**
 
+    Source: `docs/audits/track-and-trace-mandatory-eld-audit.md`. Nine commits,
+    none of which build the ELD integration. Phase 0's whole job is to stop the
+    platform asserting location visibility it has never had, so Phase 1 builds
+    onto an honest baseline rather than onto a set of constants.
+
+    | Letter | What it closed |
+    |---|---|
+    | `bax` | Tracking compliance was a **constant 100** on every carrier, carrying 15% of the Compass composite. Now null when no location source exists, with the composite renormalised over the six factors SRL can observe. |
+    | `bay` | The column is `Float @default(0)` and cannot hold null without a migration, so an unmeasured carrier persists the sentinel 0. Five readers would have printed that as "tracking 0% of loads", the same false claim pointing the other way. They now gate on `eldEnabled` and render "Not measured". |
+    | `bbc` | The simulated ELD is deleted. Its routes answer 501, and the shipper card requires a real event. |
+    | `bbd` | The driver ping page may ask for a position, and a geofence row names the position's source. |
+    | `bbe` | Accepting a load wrote every driver field, blanking values an AE had entered. It now writes only the fields the request body carried. |
+    | `bbf` | The driver-verify routes had no caller at all. My Loads gets the driver panel that calls them. |
+    | `bbg` | The CRITICAL no-update alert counted its own ALERT row as an update, so it fired once and then went quiet on a load nobody had heard from. The scan excludes the engine's own rows. |
+    | `bbl` | The compliance page filtered on six check names the engine does not emit, one of them deleted in Arc 23. A filter that matches nothing throws nothing, so the bars read as empty rather than broken. Guarded. |
+    | `bbm` | The RC Terms tab pre-filled twelve never-ratified clauses that had never printed. Deleted, and the field rekeyed `customTerms` so a real entry now reaches the document. |
+
+    **Letters bbh, bbi, bbj and bbk are NOT part of this arc**, and neither are
+    baz, bba and bbb. A concurrent session took the first four for CRM work and
+    the last three for info-requests on the same afternoon. Recorded because the
+    arc's letters are not contiguous, and a later reader counting `bax` through
+    `bbm` would otherwise attribute seven commits to it that are not its own.
+
+    **BANKED FOR PHASE 1**, each with the file:line a build starts from.
+
+    - **Per-carrier Motive and Samsara OAuth does not exist.** Both integrations
+      authenticate with a single platform-level credential:
+      `motiveService.ts:18` sends `X-Api-Key: env.MOTIVE_API_KEY` and
+      `samsaraService.ts:18` sends `Bearer ${env.SAMSARA_API_TOKEN}`. There is no
+      authorize URL, no token exchange, no refresh and no callback route
+      anywhere. The per-carrier credential columns are already on the schema and
+      unwritten: `schema.prisma:1140-1143` (`eldProvider`, `eldApiKeyEncrypted`,
+      `eldEnabled`).
+    - **USDOT ownership match does not exist.** `CarrierProfile.dotNumber` sits
+      at `schema.prisma:1003`, and nothing compares a DOT number arriving from an
+      external telematics account against it. Without that check a carrier can
+      connect somebody else's ELD account and inherit its location history.
+    - **The dispatch gate does not require an ELD.** The canonical gate is
+      `complianceCheck` at `complianceMonitorService.ts:175`, and no branch in it
+      reads `eldEnabled`. Making an ELD mandatory at dispatch is a
+      `blocked_codes` addition there, and per §14 it belongs in the **waivable**
+      set rather than the absolutes: whether a carrier has connected telematics
+      is a commercial judgment SRL is entitled to make, not a fact held by
+      another party.
+    - **BCA section 22 is the clause a mandatory-ELD amendment replaces.** The
+      body is authored at `docs/legal/bca-content-F11.md` and compiled into
+      `brokerCarrierAgreement.generated.ts:12` (`BCA_F11_VERSION` =
+      `"2026-09-03-F11"`), aliased at `agreements.ts:71` and assembled at
+      `agreements.ts:203`. Replacing it is Dirk Beckwith's to ratify rather than
+      a sprint's, and it rides with §16 #1.
+    - **The compliance page's vetting-report fetch is dead.**
+      `compliance/page.tsx:156` calls `GET /carrier/vetting-report`. The only
+      vetting-report route is `:id`-scoped on the plural router at
+      `carriers.ts:145`, and its authorize list excludes CARRIER. The catch then
+      falls back to `/carrier/scorecard` and synthesizes a report whose `checks`
+      array is empty, so the category bars count nothing whatever their names
+      say. This is why `bbl` is a precondition rather than a fix, and why its
+      guard matters: it keeps the names correct until the route exists.
+    - **The carrier scorecard page destructures three keys the endpoint never
+      returns.** `scorecard/page.tsx:119` pulls `metrics`, `history` and
+      `bonuses` from the response to the `api.get("/carrier/scorecard")` at
+      `:106`. `getScorecard` at `carrierController.ts:1293` returns
+      `currentTier`, `currentScore`, `nextTierThreshold`, `bonusPercentage`,
+      `pointsToNextTier`, `scorecards` and `trackingMeasured`. All three
+      destructured keys are permanently `undefined`, and `scorecards`, which the
+      handler does return, is never read.
+
+    **A standing five-point deduction nobody can earn back.**
+    `carrierVettingService.ts:517` is the fall-through branch of the ELD Device
+    Verification check, and it fires for every carrier because none has a
+    provider on file: `score -= 5` on every vetting run, forever. It is the same
+    shape as the Arc 23 VIN check (Item 230.1), which taxed every carrier five
+    points for a fleet register that never existed. It is left in place for the
+    opposite reason: unlike the VIN check, this one is measuring a real absence,
+    and Phase 1 is what makes it earnable. Recorded so nobody reads it as a
+    defect and deletes the signal instead of building the thing it asks for.
 
 262. **Nobody reached the W-9 500 — and the letter guard had a hole a peer's commit fell through (2026-09-07, v3.8.baz → v3.8.bbb plus three unversioned).**
 
