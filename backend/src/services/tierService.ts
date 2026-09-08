@@ -69,19 +69,26 @@ export async function checkGuestPromotion(carrierId: string): Promise<boolean> {
   return true;
 }
 
+/**
+ * EVERY factor is nullable, and null means "nothing measured this".
+ *
+ * gpsCompliancePct has been nullable since v3.8.bax. Phase 1 of the
+ * mandatory-ELD arc widens the same rule to the other six, because the recalc
+ * now writes a scorecard row for a carrier with no loads at all and every
+ * load-derived factor is genuinely unmeasured for that carrier. Passing 0 for
+ * an unmeasured factor would be a false measurement, which is the defect bax
+ * fixed for tracking pointing in the other direction; passing a neutral 100
+ * would be a claim nobody captured.
+ *
+ * The body already skipped nulls and renormalised. Only the type was narrow.
+ */
 export function calculateOverallScore(metrics: {
-  onTimePickupPct: number;
-  onTimeDeliveryPct: number;
-  communicationScore: number;
-  claimRatio: number;
-  documentSubmissionTimeliness: number;
-  acceptanceRate: number;
-  /**
-   * null when no location source measured it (lib/trackingFactor). The factor
-   * is then excluded and the remaining weights are renormalised, so a carrier
-   * with no telematics is scored on the six factors SRL can observe rather
-   * than credited with a tracking record nobody captured.
-   */
+  onTimePickupPct: number | null;
+  onTimeDeliveryPct: number | null;
+  communicationScore: number | null;
+  claimRatio: number | null;
+  documentSubmissionTimeliness: number | null;
+  acceptanceRate: number | null;
   gpsCompliancePct: number | null;
 }): number {
   const weights = {
@@ -99,7 +106,10 @@ export function calculateOverallScore(metrics: {
     [metrics.onTimePickupPct, weights.onTimePickupPct],
     [metrics.onTimeDeliveryPct, weights.onTimeDeliveryPct],
     [metrics.communicationScore, weights.communicationScore],
-    [100 - metrics.claimRatio, weights.claimRatio],
+    // Inverted, and the null case is explicit: `100 - null` is 100 in
+    // JavaScript, which would credit an unmeasured carrier with a perfect
+    // claim record. Absent must stay absent.
+    [metrics.claimRatio === null ? null : 100 - metrics.claimRatio, weights.claimRatio],
     [metrics.documentSubmissionTimeliness, weights.documentSubmissionTimeliness],
     [metrics.acceptanceRate, weights.acceptanceRate],
     [metrics.gpsCompliancePct, weights.gpsCompliancePct],

@@ -17540,7 +17540,37 @@
 // six, which is the size an optional per-load addendum actually needs.
 //
 // Phase 0 of the mandatory-ELD arc.
-export const SRL_VERSION = "3.8.bbm";
+// v3.8.bbn: the weekly Compass recalc writes on every run, so a run is
+// distinguishable from a run that never happened.
+//
+// On Sunday 2026-09-06 the recalc produced no rows at all. Everything about the
+// plumbing was fine: the job is registered, initCronJobs is called
+// unconditionally, withGuard did not suppress it, and the selection returned
+// both APPROVED carriers. It wrote nothing because recalculateCarrierCPP
+// returned at `if (loads.length === 0) return;` before reaching its create, and
+// production has no loads at all. Nothing on any path of that job writes to the
+// database, so a run, a skip and a crash were indistinguishable afterwards.
+//
+// DELETING THAT LINE ALONE WOULD HAVE BEEN WORSE THAN THE BUG. communicationScore
+// computed respondedChecks over (length || 1), and acceptanceRate did the same
+// with tenders, so a carrier nobody had ever called or tendered would have
+// persisted 0 percent on both, each weighted at 10 percent of the composite by
+// §9. That is exactly the defect v3.8.bax fixed for tracking, pointing the other
+// way.
+//
+// So the fix generalises the pattern bax established. Every factor is null when
+// its denominator is zero, the composite renormalises over what survives, and
+// the non-nullable columns take the same 0 sentinel tracking has used since bax.
+// calculateOverallScore already skipped nulls and renormalised; only its
+// parameter type was narrow. One real trap in the widening: claimRatio is the
+// inverted term and `100 - null` is 100 in JavaScript, which would have credited
+// an unmeasured carrier with a flawless claim record.
+//
+// checkGuestPromotion and the 3-load band are deliberately untouched. That path
+// is the §10 M1 advancement gate and is banked as its own item.
+//
+// Phase 1 of the mandatory-ELD arc, commit 1 of 7.
+export const SRL_VERSION = "3.8.bbn";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

@@ -415,7 +415,12 @@ export async function carrierAccessorialsForLoad(
   };
 }
 
-/** Money rounding. Every cent figure in this module goes through it. */
+/**
+ * Two-decimal rounding. Every cent figure in this module goes through it, and
+ * since Phase 1 of the mandatory-ELD arc so does every scorecard percentage.
+ * The `|| 0` is redundant on the percentage path, where persistedTrackingPct
+ * has already resolved null to the sentinel, and harmless.
+ */
 function round2(n: number): number {
   return Math.round((Number(n) || 0) * 100) / 100;
 }
@@ -1398,7 +1403,15 @@ export async function recalculateCarrierCPP(carrierProfileId: string) {
     },
   });
 
-  if (loads.length === 0) return; // No recent activity
+  // NO EARLY RETURN ON ZERO LOADS. Until Phase 1 of the mandatory-ELD arc this
+  // read `if (loads.length === 0) return;`, and it is why the Sunday 2026-09-06
+  // recalc wrote nothing: both APPROVED carriers had no loads, so every one of
+  // them returned here and the run was indistinguishable from a run that never
+  // happened. A carrier with no loads is a carrier whose load-derived factors
+  // are UNMEASURED, which is a fact worth recording, not a reason to record
+  // nothing. Each factor below is null when its denominator is zero; the
+  // composite renormalises over what remains (tierService.calculateOverallScore)
+  // and the non-nullable columns receive the 0 sentinel.
 
   // Build A (2026-05-30): real on-time pickup/delivery from the actual event
   // timestamps the carrier portal already captures (Load.actualPickupDatetime /
@@ -1408,12 +1421,18 @@ export async function recalculateCarrierCPP(carrierProfileId: string) {
   // when nothing is measurable yet the helper returns a neutral 100 (no penalty
   // for a carrier we have no on-time data on). Coverage widens with Build B
   // (AE-path stamping + trackingEvents backfill). See lib/onTimePerformance.ts.
-  const onTimePickupPct = calcOnTimePerformance(
+  // Both helpers return a neutral 100 when nothing was measurable, which is
+  // right for a display default and wrong for a composite input: it would
+  // credit a carrier with perfect on-time performance nobody observed. They
+  // also return `measurable`, the real denominator, so null it there.
+  const pickupPerf = calcOnTimePerformance(
     loads.map((l) => ({ scheduledDate: l.pickupDate, timeEnd: l.pickupTimeEnd, actual: l.actualPickupDatetime }))
-  ).pct;
-  const onTimeDeliveryPct = calcOnTimePerformance(
+  );
+  const deliveryPerf = calcOnTimePerformance(
     loads.map((l) => ({ scheduledDate: l.deliveryDate, timeEnd: l.deliveryTimeEnd, actual: l.actualDeliveryDatetime }))
-  ).pct;
+  );
+  const onTimePickupPct = pickupPerf.measurable > 0 ? pickupPerf.pct : null;
+  const onTimeDeliveryPct = deliveryPerf.measurable > 0 ? deliveryPerf.pct : null;
 
   // Check-call communication score
   const checkCalls = await prisma.checkCallSchedule.findMany({
@@ -1423,9 +1442,10 @@ export async function recalculateCarrierCPP(carrierProfileId: string) {
     },
     select: { status: true },
   });
-  const totalChecks = checkCalls.length || 1;
+  // The `|| 1` this replaced turned "no check calls at all" into 0/1 = 0%,
+  // scoring a carrier nobody had ever called as having answered nothing.
   const respondedChecks = checkCalls.filter((c) => c.status === "RESPONDED").length;
-  const communicationScore = (respondedChecks / totalChecks) * 100;
+  const communicationScore = checkCalls.length > 0 ? (respondedChecks / checkCalls.length) * 100 : null;
 
   // Claim ratio
   const claims = await prisma.paymentDispute.count({
@@ -1434,7 +1454,9 @@ export async function recalculateCarrierCPP(carrierProfileId: string) {
       createdAt: { gte: since },
     },
   });
-  const claimRatio = loads.length > 0 ? (claims / loads.length) * 100 : 0;
+  // Was 0 with no loads, which reads as a perfect claim record rather than as
+  // no record at all.
+  const claimRatio = loads.length > 0 ? (claims / loads.length) * 100 : null;
 
   // Document submission timeliness (POD within 24h of delivery)
   const docs = await prisma.document.findMany({
@@ -1456,9 +1478,10 @@ export async function recalculateCarrierCPP(carrierProfileId: string) {
     const prev = podByLoad.get(d.loadId);
     if (!prev || d.createdAt < prev) podByLoad.set(d.loadId, d.createdAt); // earliest POD per load
   }
-  const docTimeliness = calcDocTimeliness(
+  const docPerf = calcDocTimeliness(
     loads.map((l) => ({ actualDelivery: l.actualDeliveryDatetime, podUploadedAt: podByLoad.get(l.id) ?? null }))
-  ).pct;
+  );
+  const docTimeliness = docPerf.measurable > 0 ? docPerf.pct : null;
 
   // Tender acceptance rate
   const tenders = await prisma.loadTender.findMany({
@@ -1468,9 +1491,10 @@ export async function recalculateCarrierCPP(carrierProfileId: string) {
     },
     select: { status: true },
   });
-  const totalTenders = tenders.length || 1;
+  // Same `|| 1` defect as communication: a carrier who has never been tendered
+  // anything scored 0% acceptance, which §9 weights at 10% of the composite.
   const acceptedTenders = tenders.filter((t) => t.status === "ACCEPTED").length;
-  const acceptanceRate = (acceptedTenders / totalTenders) * 100;
+  const acceptanceRate = tenders.length > 0 ? (acceptedTenders / tenders.length) * 100 : null;
 
   // Tracking compliance: measured when a location source exists, otherwise
   // NULL and excluded from the composite. The Build F rule (2026-05-30) scored
@@ -1525,13 +1549,18 @@ export async function recalculateCarrierCPP(carrierProfileId: string) {
     data: {
       carrierId: profile.id,
       period: "MONTHLY",
-      onTimePickupPct: Math.round(onTimePickupPct * 100) / 100,
-      onTimeDeliveryPct: Math.round(onTimeDeliveryPct * 100) / 100,
-      communicationScore: Math.round(communicationScore * 100) / 100,
-      claimRatio: Math.round(claimRatio * 100) / 100,
-      documentSubmissionTimeliness: Math.round(docTimeliness * 100) / 100,
-      acceptanceRate: Math.round(acceptanceRate * 100) / 100,
-      gpsCompliancePct: Math.round(persistedTrackingPct(trackingFactor) * 100) / 100,
+      // Every column here is Float @default(0) and non-nullable, so an
+      // unmeasured factor receives the same 0 sentinel tracking has used since
+      // v3.8.bax. persistedTrackingPct is factor-agnostic despite its name,
+      // which predates this widening; readers must gate on whether the factor
+      // was measurable rather than reading 0 as a score.
+      onTimePickupPct: round2(persistedTrackingPct(onTimePickupPct)),
+      onTimeDeliveryPct: round2(persistedTrackingPct(onTimeDeliveryPct)),
+      communicationScore: round2(persistedTrackingPct(communicationScore)),
+      claimRatio: round2(persistedTrackingPct(claimRatio)),
+      documentSubmissionTimeliness: round2(persistedTrackingPct(docTimeliness)),
+      acceptanceRate: round2(persistedTrackingPct(acceptanceRate)),
+      gpsCompliancePct: round2(persistedTrackingPct(trackingFactor)),
       overallScore,
       tierAtTime: currentTier,
       bonusEarned,

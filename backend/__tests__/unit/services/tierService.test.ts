@@ -45,6 +45,50 @@ describe("calculateOverallScore", () => {
     expect(creditedWithPerfectTracking).toBe(87.5);
   });
 
+  // Phase 1 of the mandatory-ELD arc widened every factor to nullable, because
+  // the recalc now writes a row for a carrier with no loads and every
+  // load-derived factor is genuinely unmeasured for that carrier.
+
+  it("excludes an unmeasured claimRatio instead of reading it as a perfect record", () => {
+    // The trap: claimRatio is the one inverted term, computed as
+    // `100 - claimRatio`, and `100 - null` is 100 in JavaScript. Left alone
+    // that would have credited a carrier nobody has ever filed against with a
+    // flawless claim history, which is a measurement rather than an absence.
+    const withNullClaims = calculateOverallScore({ ...SIX, claimRatio: null, gpsCompliancePct: null });
+    const withPerfectClaims = calculateOverallScore({ ...SIX, claimRatio: 0, gpsCompliancePct: null });
+    expect(withNullClaims).not.toBe(withPerfectClaims);
+  });
+
+  it("scores 0 when nothing at all was measured, rather than inventing a number", () => {
+    expect(
+      calculateOverallScore({
+        onTimePickupPct: null,
+        onTimeDeliveryPct: null,
+        communicationScore: null,
+        claimRatio: null,
+        documentSubmissionTimeliness: null,
+        acceptanceRate: null,
+        gpsCompliancePct: null,
+      }),
+    ).toBe(0);
+  });
+
+  it("renormalises over whichever factors survive, not just tracking", () => {
+    // Two present out of seven: 20/20 weights on the two on-time factors, so
+    // an average of 90 and 70 renormalises to exactly 80.
+    expect(
+      calculateOverallScore({
+        onTimePickupPct: 90,
+        onTimeDeliveryPct: 70,
+        communicationScore: null,
+        claimRatio: null,
+        documentSubmissionTimeliness: null,
+        acceptanceRate: null,
+        gpsCompliancePct: null,
+      }),
+    ).toBe(80);
+  });
+
   it("a carrier perfect on every measured factor still reads 100", () => {
     expect(
       calculateOverallScore({
