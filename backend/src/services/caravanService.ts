@@ -252,6 +252,22 @@ export async function checkPerformanceDowngrade(carrierId: string): Promise<{
  * Silver-active carriers regardless of which legacy sub-milestone they
  * were stamped with).
  */
+/**
+ * Days since the carrier joined the Caravan Partner Program.
+ *
+ * Exported because the §10 advancement gate and the carrier's own scorecard
+ * both show it, and two copies of a tenure calculation is two answers to "how
+ * long have I been a partner" -- one of them on the screen that tells them how
+ * far they are from the next tier.
+ *
+ * A null join date reads as day zero rather than as a very long tenure, which
+ * is the safe direction: it under-claims progress instead of granting it.
+ */
+export function tenureDays(cppJoinedDate: Date | null, nowMs: number = Date.now()): number {
+  const joined = cppJoinedDate ?? new Date(nowMs);
+  return Math.max(0, Math.floor((nowMs - joined.getTime()) / (1000 * 60 * 60 * 24)));
+}
+
 export async function checkMilestoneAdvancement(
   carrierId: string,
 ): Promise<{ advanced: boolean; newMilestone?: CarrierMilestone; reason?: string }> {
@@ -271,8 +287,7 @@ export async function checkMilestoneAdvancement(
   const threshold = MILESTONE_THRESHOLDS[lookupKey];
   if (!threshold) return { advanced: false, reason: "Already at max milestone (M6_FOUNDING)" };
 
-  const joinedDate = profile.cppJoinedDate || new Date();
-  const daysSinceJoin = Math.floor((Date.now() - joinedDate.getTime()) / (1000 * 60 * 60 * 24));
+  const daysSinceJoin = tenureDays(profile.cppJoinedDate);
   if (daysSinceJoin < threshold.days) {
     return { advanced: false, reason: `Need ${threshold.days} days tenure, currently at ${daysSinceJoin}` };
   }
@@ -282,7 +297,7 @@ export async function checkMilestoneAdvancement(
     return { advanced: false, reason: `Need ${threshold.loads} loads, currently at ${totalLoads}` };
   }
 
-  const since = new Date(joinedDate);
+  const since = profile.cppJoinedDate ?? new Date();
   const deliveredLoads = await prisma.load.findMany({
     where: {
       carrierId: profile.userId,

@@ -17631,7 +17631,42 @@
 // enforcement is safe to switch on. A failed read reports nulls and an error.
 //
 // Phase 1 of the mandatory-ELD arc, commit 3 of 7.
-export const SRL_VERSION = "3.8.bbp";
+// v3.8.bbq: the scorecard endpoint returns what the scorecard page reads.
+//
+// /carrier/dashboard/scorecard destructures metrics, history, bonuses,
+// milestone, milestoneLoads and daysActive from GET /carrier/scorecard. The
+// endpoint returned none of them, and nothing anywhere said so -- every
+// optional chain simply took its default. So a carrier opening their own
+// scorecard saw seven Compass gauges at a flat 0.0% with empty bars, an empty
+// twelve-week trend chart, no bonuses table at all (it is gated on
+// bonuses.length), and a milestone panel reporting 0 loads, 0% on-time and 0
+// days active against the §10 thresholds. The platform was telling them they
+// had done nothing.
+//
+// ONE BUILDER, TWO SURFACES. getScorecard and the AE-facing getCarrierScore had
+// twenty identical lines. Adding six fields to one of them is how the two came
+// to differ in the first place, so they now share buildScorecardPayload.
+//
+// HISTORY IS OLDEST-FIRST. Rows are stored newest-first and the chart labels
+// W1..Wn in array order, so handing over the stored order would draw an
+// improving carrier's trend as a decline -- worse than showing no chart.
+//
+// tenureDays is exported from caravanService and used by both the §10
+// advancement gate and this panel, because two tenure calculations is two
+// answers to "how long have I been a partner", one of them on the screen that
+// tells a carrier how far they are from the next tier.
+//
+// WHAT THIS DOES NOT FIX, stated rather than implied. A factor whose
+// denominator was zero persists as the 0 sentinel (v3.8.bbn) and the column
+// cannot say which it is; trackingMeasured covers one factor because eldEnabled
+// is the only measurability signal surviving to read time. Those gauges read
+// 0.0% before this change because nothing was returned and read 0.0% after it
+// because the stored sentinel is 0 -- unchanged, not newly wrong. Closing it
+// needs a nullable column or the factor computation extracted from the recalc,
+// and both are their own commit. Banked.
+//
+// Phase 1 of the mandatory-ELD arc, commit 4 of 7.
+export const SRL_VERSION = "3.8.bbq";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

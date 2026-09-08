@@ -133,7 +133,10 @@ export default function ScorecardPage() {
   const currentMilestoneIdx = getMilestoneIndex(currentMilestoneId);
   const currentMilestone = MILESTONES[currentMilestoneIdx] || MILESTONES[0];
   const nextMilestoneObj = currentMilestoneIdx < MILESTONES.length - 1 ? MILESTONES[currentMilestoneIdx + 1] : null;
-  const milestoneLoads = data.milestoneLoads ?? data.totalLoads ?? 0;
+  // `data.totalLoads` was a fallback for a field the endpoint never returned,
+  // behind a field it also never returned. Both are real now; the fallback is
+  // a third name for the same number and is gone.
+  const milestoneLoads = data.milestoneLoads ?? 0;
   const milestoneOnTimePct = metrics?.onTimeDeliveryPct ?? 0;
   const milestoneDaysActive = data.daysActive ?? 0;
   const loadsToNext = nextMilestoneObj ? Math.max(nextMilestoneObj.loadsRequired - milestoneLoads, 0) : 0;

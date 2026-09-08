@@ -16,7 +16,8 @@ import { uploadFile } from "../services/storageService";
 import { runFmcsaScan, complianceCheck } from "../services/complianceMonitorService";
 import { vetAndStoreReport } from "../services/carrierVettingService";
 import { sendEmail, wrap, sendQuickPayApprovedEmail, sendQuickPayDeclinedEmail, sendQuickPayWithdrawnEmail } from "../services/emailService";
-import { getTierConfig, getEffectiveTier } from "../services/caravanService";
+import { getTierConfig, getEffectiveTier, tenureDays } from "../services/caravanService";
+import { CarrierTier } from "@prisma/client";
 import { runIdentityCheck } from "../services/identityVerificationService";
 import { screenCarrier } from "../services/ofacScreeningService";
 import { populateAuthorityGrantedDate } from "../services/fmcsaService";
@@ -1290,69 +1291,136 @@ export async function getDashboard(req: AuthRequest, res: Response) {
   });
 }
 
+/**
+ * The one shape every scorecard surface reads.
+ *
+ * WHAT WAS WRONG. The carrier's own /carrier/dashboard/scorecard page reads
+ * `metrics`, `history`, `bonuses`, `milestone`, `milestoneLoads` and
+ * `daysActive`. This endpoint returned NONE of them. So every one of the seven
+ * Compass gauges rendered `metrics?.[key] ?? 0` -- a flat 0.0% with an empty bar
+ * -- the twelve-week trend chart drew from `history || []` and was empty, the
+ * bonuses table was gated on `bonuses && bonuses.length > 0` and therefore never
+ * appeared at all, and the milestone panel showed 0 loads, 0% on-time and 0 days
+ * active against the §10 thresholds. A carrier reading their own scorecard saw a
+ * platform reporting that they had done nothing.
+ *
+ * ONE BUILDER FOR BOTH SURFACES. getScorecard (the carrier's own) and
+ * getCarrierScore (AE-facing, by id) had twenty lines of identical body. Adding
+ * six fields to one of them would have made two payloads that agree today and
+ * drift on the next change -- so they now share this.
+ *
+ * HISTORY IS OLDEST-FIRST, DELIBERATELY. The rows are stored newest-first, and
+ * the page labels the series W1..Wn in array order. Handing it the stored order
+ * would draw the carrier's trend line backwards, which is worse than no chart:
+ * an improving carrier would read as declining.
+ *
+ * WHAT IS STILL NOT ANSWERED HERE, stated rather than implied. A factor whose
+ * denominator was zero persists as the 0 sentinel (v3.8.bbn), and the column
+ * cannot say which of the two it is. `trackingMeasured` covers exactly one
+ * factor because eldEnabled is the only measurability signal that survives to
+ * read time. The other six would need either a nullable column on the scorecard
+ * row or the factor computation extracted from the recalc, and both are their
+ * own commit. This does NOT make that worse: those gauges read 0.0% before this
+ * change because nothing was returned, and they read 0.0% after it because the
+ * stored sentinel is 0. Banked as its own item.
+ */
+async function buildScorecardPayload(profile: {
+  id: string;
+  tier: CarrierTier;
+  eldEnabled: boolean | null;
+  milestone: string | null;
+  cppTotalLoads: number | null;
+  cppJoinedDate: Date | null;
+}) {
+  const [scorecards, bonuses] = await Promise.all([
+    prisma.carrierScorecard.findMany({
+      where: { carrierId: profile.id },
+      orderBy: { calculatedAt: "desc" },
+      take: 12,
+    }),
+    prisma.carrierBonus.findMany({
+      where: { carrierId: profile.id },
+      orderBy: { createdAt: "desc" },
+      take: 24,
+    }),
+  ]);
+
+  const latest = scorecards[0];
+  const currentTier = profile.tier;
+  const currentScore = latest?.overallScore || 0;
+  const nextTierThreshold = currentTier === "SILVER" ? 90 : currentTier === "GOLD" ? 95 : 100;
+
+  return {
+    currentTier,
+    currentScore,
+    nextTierThreshold,
+    bonusPercentage: getBonusPercentage(currentTier),
+    pointsToNextTier: Math.max(0, nextTierThreshold - currentScore),
+    scorecards,
+
+    // The seven §9 factors off the most recent row, under the exact keys the
+    // gauges index by. Null when no scorecard has ever been written, which the
+    // page renders as 0 -- honest, because there is genuinely nothing recorded.
+    metrics: latest
+      ? {
+          onTimePickupPct: latest.onTimePickupPct,
+          onTimeDeliveryPct: latest.onTimeDeliveryPct,
+          communicationScore: latest.communicationScore,
+          claimRatio: latest.claimRatio,
+          documentSubmissionTimeliness: latest.documentSubmissionTimeliness,
+          acceptanceRate: latest.acceptanceRate,
+          gpsCompliancePct: latest.gpsCompliancePct,
+        }
+      : null,
+
+    // Oldest-first: see the header. Reversed here rather than in the query so
+    // `scorecards` keeps the newest-first order its existing readers expect.
+    history: [...scorecards]
+      .reverse()
+      .map((s) => ({ calculatedAt: s.calculatedAt, overallScore: s.overallScore })),
+
+    bonuses,
+
+    // §10 milestone progress. cppTotalLoads and cppJoinedDate are the fields the
+    // advancement gate itself counts, and tenureDays is that gate's own
+    // calculation -- so the panel telling a carrier how far they are from the
+    // next tier cannot disagree with the gate that decides it.
+    milestone: profile.milestone ?? "M1_FIRST_LOAD",
+    milestoneLoads: profile.cppTotalLoads ?? 0,
+    daysActive: tenureDays(profile.cppJoinedDate),
+
+    // gpsCompliancePct on the rows is a measurement only when a location source
+    // exists. Otherwise it holds the unmeasured sentinel (lib/trackingFactor)
+    // and readers render "Not measured".
+    trackingMeasured: profile.eldEnabled === true,
+  };
+}
+
 export async function getScorecard(req: AuthRequest, res: Response) {
-  const profile = await prisma.carrierProfile.findUnique({ where: { userId: req.user!.id } });
+  const profile = await prisma.carrierProfile.findUnique({
+    where: { userId: req.user!.id },
+    select: { id: true, tier: true, eldEnabled: true, milestone: true, cppTotalLoads: true, cppJoinedDate: true },
+  });
   if (!profile) {
     res.status(404).json({ error: "Carrier profile not found" });
     return;
   }
-
-  const scorecards = await prisma.carrierScorecard.findMany({
-    where: { carrierId: profile.id },
-    orderBy: { calculatedAt: "desc" },
-    take: 12,
-  });
-
-  const currentTier = profile.tier;
-  const currentScore = scorecards[0]?.overallScore || 0;
-  const nextTierThreshold =
-    currentTier === "SILVER" ? 90 : currentTier === "GOLD" ? 95 : 100;
-  const bonusPct = getBonusPercentage(currentTier);
-
-  res.json({
-    currentTier,
-    currentScore,
-    nextTierThreshold,
-    bonusPercentage: bonusPct,
-    pointsToNextTier: Math.max(0, nextTierThreshold - currentScore),
-    scorecards,
-    // gpsCompliancePct on the rows is a measurement only when a location
-    // source exists. Otherwise it holds the unmeasured sentinel
-    // (lib/trackingFactor) and readers render "Not measured".
-    trackingMeasured: profile.eldEnabled === true,
-  });
+  res.json(await buildScorecardPayload(profile));
 }
 
 export async function getCarrierScore(req: AuthRequest, res: Response) {
-  const profile = await prisma.carrierProfile.findUnique({ where: { id: req.params.id } });
+  const profile = await prisma.carrierProfile.findUnique({
+    where: { id: req.params.id },
+    select: { id: true, companyName: true, tier: true, eldEnabled: true, milestone: true, cppTotalLoads: true, cppJoinedDate: true },
+  });
   if (!profile) {
     res.status(404).json({ error: "Carrier profile not found" });
     return;
   }
-
-  const scorecards = await prisma.carrierScorecard.findMany({
-    where: { carrierId: profile.id },
-    orderBy: { calculatedAt: "desc" },
-    take: 12,
-  });
-
-  const currentTier = profile.tier;
-  const currentScore = scorecards[0]?.overallScore || 0;
-  const nextTierThreshold =
-    currentTier === "SILVER" ? 90 : currentTier === "GOLD" ? 95 : 100;
-  const bonusPct = getBonusPercentage(currentTier);
-
   res.json({
     carrierId: profile.id,
     companyName: profile.companyName,
-    currentTier,
-    currentScore,
-    nextTierThreshold,
-    bonusPercentage: bonusPct,
-    pointsToNextTier: Math.max(0, nextTierThreshold - currentScore),
-    scorecards,
-    // Same rule as getScorecard: the column is a sentinel until measured.
-    trackingMeasured: profile.eldEnabled === true,
+    ...(await buildScorecardPayload(profile)),
   });
 }
 

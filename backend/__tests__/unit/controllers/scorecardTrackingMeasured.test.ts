@@ -23,6 +23,7 @@ vi.mock("../../../src/config/database", () => ({
   prisma: {
     carrierProfile: { findUnique: vi.fn() },
     carrierScorecard: { findMany: vi.fn() },
+    carrierBonus: { findMany: vi.fn() },
   },
 }));
 
@@ -32,6 +33,7 @@ import { getScorecard, getCarrierScore } from "../../../src/controllers/carrierC
 const mockPrisma = vi.mocked(prisma) as unknown as {
   carrierProfile: { findUnique: ReturnType<typeof vi.fn> };
   carrierScorecard: { findMany: ReturnType<typeof vi.fn> };
+  carrierBonus: { findMany: ReturnType<typeof vi.fn> };
 };
 
 function res() {
@@ -44,6 +46,7 @@ describe("scorecard handlers report whether tracking was measured", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockPrisma.carrierScorecard.findMany.mockResolvedValue([ROW]);
+    mockPrisma.carrierBonus.findMany.mockResolvedValue([]);
   });
 
   it("getScorecard: false for a carrier with no location source", async () => {
