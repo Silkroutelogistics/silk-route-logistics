@@ -1424,6 +1424,99 @@ export async function getCarrierScore(req: AuthRequest, res: Response) {
   });
 }
 
+
+/**
+ * GET /carrier/vetting-report — the carrier's own Compass vetting verdict.
+ *
+ * WHY IT EXISTS. The carrier compliance page asked for this route, caught the
+ * 404, and FELL BACK TO THE SCORECARD -- synthesising a grade, a risk level and
+ * a recommendation out of the Compass SCORE. Those are two different things.
+ * The Compass Score is §9: seven performance factors, how well a carrier hauls.
+ * The Compass vetting report is the Engine's verdict: authority, safety rating,
+ * OFAC, identity, chameleon risk, insurance, documents. A carrier reading
+ * "Grade B" off their on-time percentage was being told something about their
+ * vetting that nothing had vetted. The fallback also returned `checks: []`, so
+ * the panel rendered its category bars empty -- which reads as "nothing passed"
+ * rather than as "nothing was fetched".
+ *
+ * OWN PROFILE ONLY, BY CONSTRUCTION. It takes no id and resolves the profile
+ * from the session, so there is no parameter to tamper with. The route also
+ * carries an explicit authorize("CARRIER") rather than relying on that: the
+ * singular /api/carrier mount is the audience-mixed one (§13.3 Item 161) whose
+ * carrier-facing siblings have no explicit gate, and a new endpoint should not
+ * inherit that.
+ *
+ * NAME, RESULT AND DETAIL ONLY. The stored row also holds each check's
+ * `deduction`, the raw FMCSA snapshot, the identity block and the internal
+ * flags. None of it is returned:
+ *
+ *   - `deduction` is the scoring weight. Publishing per-check weights hands
+ *     anyone the carrier forwards this to a map of how SRL scores carriers.
+ *   - `identityData` carries emailProvider, phoneType, sosStatus and
+ *     chameleonRiskLevel. Telling a carrier their chameleon risk level tells a
+ *     fraudulent one whether they have been detected.
+ *   - `recommendation` (APPROVE / REVIEW / REJECT) is SRL's internal
+ *     disposition, not a fact about the carrier.
+ *
+ * Score, grade and risk level ARE returned, because the page already displays
+ * them and a carrier is entitled to the verdict reached about them.
+ *
+ * 404 WHEN THERE IS NO REPORT, deliberately. The card is gated on the response,
+ * so a carrier who has never been vetted now sees no Compass card at all rather
+ * than a fabricated one. Absent beats invented.
+ */
+export async function getOwnVettingReport(req: AuthRequest, res: Response) {
+  const profile = await prisma.carrierProfile.findUnique({
+    where: { userId: req.user!.id },
+    select: { id: true },
+  });
+  if (!profile) {
+    res.status(404).json({ error: "Carrier profile not found" });
+    return;
+  }
+
+  const report = await prisma.vettingReport.findFirst({
+    where: { carrierId: profile.id },
+    orderBy: { createdAt: "desc" },
+    select: {
+      score: true,
+      grade: true,
+      riskLevel: true,
+      checksJson: true,
+      trendDirection: true,
+      createdAt: true,
+    },
+  });
+  if (!report) {
+    res.status(404).json({ error: "No vetting report found" });
+    return;
+  }
+
+  // checksJson is Json, so its shape is whatever was written rather than
+  // whatever the current type says. Reduced field by field rather than spread,
+  // which is what keeps `deduction` and `source` out even if the stored rows
+  // gain fields later.
+  const raw = Array.isArray(report.checksJson) ? report.checksJson : [];
+  const checks = raw
+    .filter((c) => !!c && typeof c === "object" && !Array.isArray(c))
+    .map((c) => {
+      const o = c as Record<string, unknown>;
+      return {
+        name: String(o.name ?? ""),
+        result: String(o.result ?? ""),
+        detail: String(o.detail ?? ""),
+      };
+    });
+  res.json({
+    score: report.score,
+    grade: report.grade,
+    riskLevel: report.riskLevel,
+    checks,
+    trendDirection: report.trendDirection,
+    vettedAt: report.createdAt,
+  });
+}
+
 export async function getRevenue(req: AuthRequest, res: Response) {
   const period = (req.query.period as string) || "monthly";
   const now = new Date();

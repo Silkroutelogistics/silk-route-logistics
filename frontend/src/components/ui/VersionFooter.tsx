@@ -17666,7 +17666,39 @@
 // and both are their own commit. Banked.
 //
 // Phase 1 of the mandatory-ELD arc, commit 4 of 7.
-export const SRL_VERSION = "3.8.bbq";
+// v3.8.bbr: a carrier can read their own vetting verdict, and the page stops
+// manufacturing one out of their performance score.
+//
+// The compliance page asked for GET /carrier/vetting-report, which did not
+// exist, caught the 404, and FELL BACK TO THE SCORECARD -- deriving a grade, a
+// risk level and a recommendation from the Compass SCORE. Those are two
+// different things. The Score is §9: seven performance factors, how well a
+// carrier hauls. The vetting report is the Compass Engine's verdict on whether
+// they may haul at all: authority, safety rating, OFAC, identity, chameleon
+// risk, insurance, documents. A carrier was shown a vetting grade computed from
+// their on-time percentage. The fallback also returned an empty checks array,
+// so the category bars rendered as "nothing passed" rather than as "nothing was
+// fetched".
+//
+// The route now exists and reads VettingReport, which is what vetAndStoreReport
+// writes. A carrier who has never been vetted gets a 404 and no Compass card at
+// all. Absent beats invented.
+//
+// NAME, RESULT AND DETAIL ONLY. The stored row also holds each check's
+// deduction, the raw FMCSA snapshot, the identity block and the internal flags
+// and recommendation. None of it comes back. Per-check deductions are the
+// scoring weights, so publishing them hands anyone this is forwarded to a map
+// of how SRL scores carriers; and identityData carries chameleonRiskLevel,
+// which would tell a fraudulent carrier whether they have been detected. The
+// reduction is field by field rather than a spread, so a stored row that gains
+// a field later does not start leaking it.
+//
+// Explicitly gated to CARRIER even though it takes no id: /api/carrier is the
+// audience-mixed mount (§13.3 Item 161) whose carrier-facing siblings carry no
+// authorize, and a new route should not inherit that.
+//
+// Phase 1 of the mandatory-ELD arc, commit 5 of 7.
+export const SRL_VERSION = "3.8.bbr";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

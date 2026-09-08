@@ -18,20 +18,24 @@ const scoreLabels: Record<string, string> = {
   crashIndicator: "Crash Indicator",
 };
 
+// One check as the carrier is allowed to see it: what was checked and how it
+// came out. `deduction` is deliberately absent -- it is the scoring weight, and
+// publishing per-check weights hands anyone this is forwarded to a map of how
+// SRL scores carriers.
 interface CompassCheck {
   name: string;
   result: "PASS" | "FAIL" | "WARNING";
   detail: string;
-  deduction: number;
 }
 
+// `recommendation` (APPROVE / REVIEW / REJECT) and `flags` were declared here
+// and rendered nowhere. They are SRL's internal disposition rather than facts
+// about the carrier, and the endpoint does not return them.
 interface VettingReport {
   score: number;
   grade: string;
   riskLevel: string;
-  recommendation: string;
   checks: CompassCheck[];
-  flags: string[];
   trendDirection: string | null;
   vettedAt: string;
 }
@@ -148,35 +152,21 @@ export default function CarrierCompliancePage() {
     queryFn: () => api.get("/carrier-compliance/expiration-calendar").then((r) => r.data),
   });
 
-  // Fetch the latest vetting report for this carrier
+  // The carrier's own Compass VETTING verdict -- authority, safety rating,
+  // OFAC, identity, insurance, documents. Distinct from the Compass SCORE
+  // (§9), which is how well they haul.
+  //
+  // This used to catch the 404 this route returned and FALL BACK TO THE
+  // SCORECARD, deriving a grade, a risk level and a recommendation from the
+  // performance score and returning an empty checks array. So the card
+  // rendered a vetting verdict nothing had vetted, over category bars that
+  // read as "nothing passed" rather than as "nothing was fetched". The route
+  // exists now; a carrier who has never been vetted gets a 404 and no card at
+  // all, which is the honest state.
   const { data: vettingReport } = useQuery<VettingReport | null>({
     queryKey: ["carrier-vetting-report"],
-    queryFn: async () => {
-      try {
-        const res = await api.get("/carrier/vetting-report");
-        return res.data;
-      } catch {
-        // Fallback: use scorecard data
-        try {
-          const res = await api.get("/carrier/scorecard");
-          const sc = res.data;
-          if (sc?.overallScore != null) {
-            const score = Math.round(sc.overallScore);
-            return {
-              score,
-              grade: score >= 90 ? "A" : score >= 75 ? "B" : score >= 60 ? "C" : score >= 40 ? "D" : "F",
-              riskLevel: score >= 80 ? "LOW" : score >= 60 ? "MEDIUM" : score >= 40 ? "HIGH" : "CRITICAL",
-              recommendation: score >= 75 ? "APPROVE" : score >= 50 ? "REVIEW" : "REJECT",
-              checks: [],
-              flags: [],
-              trendDirection: null,
-              vettedAt: sc.updatedAt || new Date().toISOString(),
-            } as VettingReport;
-          }
-        } catch { /* ignore */ }
-        return null;
-      }
-    },
+    queryFn: () => api.get("/carrier/vetting-report").then((r) => r.data),
+    retry: false,
   });
 
   const carrier = overview?.carrier;

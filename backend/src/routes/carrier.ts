@@ -2,7 +2,7 @@ import { Router, Request, Response } from "express";
 import rateLimit from "express-rate-limit";
 import {
   registerCarrier, uploadCarrierDocuments, getOnboardingStatus, verifyCarrier,
-  getDashboard, getScorecard, getRevenue, getBonuses,
+  getDashboard, getScorecard, getOwnVettingReport, getRevenue, getBonuses,
   getAllCarriers, getCarrierDetail, updateCarrier, setupAdminCarrierProfile, setAuthorityGrantDate,
 } from "../controllers/carrierController";
 import { authenticate, authorize, AuthRequest } from "../middleware/auth";
@@ -409,6 +409,11 @@ router.get("/dashboard", getDashboard);
 router.get("/scorecard", getScorecard);
 router.get("/revenue", getRevenue);
 router.get("/bonuses", getBonuses);
+// The carrier's own Compass vetting verdict. Explicitly gated to CARRIER even
+// though it takes no id and resolves the profile from the session: /api/carrier
+// is the audience-mixed mount (§13.3 Item 161) whose carrier-facing siblings
+// carry no authorize, and a new route should not inherit that.
+router.get("/vetting-report", authorize("CARRIER"), getOwnVettingReport);
 
 // Admin carrier profile setup
 router.post("/admin-setup", authorize("ADMIN", "CEO"), setupAdminCarrierProfile);
