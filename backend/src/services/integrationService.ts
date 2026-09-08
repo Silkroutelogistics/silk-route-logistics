@@ -1371,7 +1371,17 @@ export async function onPODUploaded(loadId: string) {
 // LOOP 5 — CPP: Recalculate score + tier evaluation
 // ──────────────────────────────────────────────────
 
-export async function recalculateCarrierCPP(carrierProfileId: string) {
+/**
+ * Why a carrier produced no scorecard row on a given run.
+ *
+ * Since v3.8.bbn "no loads" is no longer one of these: a carrier with nothing
+ * to measure gets a row whose factors are the unmeasured sentinel. What is
+ * left is a carrier that no longer exists, and a carrier the run promoted out
+ * of GUEST, which is a real outcome rather than a failure.
+ */
+export type RecalcOutcome = "written" | "no-profile" | "promoted";
+
+export async function recalculateCarrierCPP(carrierProfileId: string): Promise<RecalcOutcome> {
   const profile = await prisma.carrierProfile.findUnique({
     where: { id: carrierProfileId },
     include: {
@@ -1379,12 +1389,12 @@ export async function recalculateCarrierCPP(carrierProfileId: string) {
       scorecards: { orderBy: { calculatedAt: "desc" }, take: 1 },
     },
   });
-  if (!profile) return;
+  if (!profile) return "no-profile";
 
   // Check guest → bronze promotion first
   if (profile.tier === "GUEST" || profile.cppTier === "GUEST") {
     const promoted = await checkGuestPromotion(carrierProfileId);
-    if (promoted) return; // Promotion handled
+    if (promoted) return "promoted"; // Promotion handled, and a real outcome
   }
 
   // Gather performance metrics from last 90 days
@@ -1582,6 +1592,7 @@ export async function recalculateCarrierCPP(carrierProfileId: string) {
   }
 
   log.info(`[Integration] CPP scorecard refreshed for carrier ${profile.id}: score=${overallScore}, tier=${currentTier}`);
+  return "written";
 }
 
 // ──────────────────────────────────────────────────
@@ -1984,16 +1995,27 @@ export async function processAllCPPRecalculations() {
     select: { id: true },
   });
 
-  let recalculated = 0;
+  // The tally is the point. Before v3.8.bbo this returned only a count of
+  // carriers processed, and a run that wrote nothing was reported the same as a
+  // run that wrote a row for everyone. The caller records these, so afterwards
+  // it is answerable from the database whether the job ran and what it did.
+  const tally = { selected: carriers.length, written: 0, promoted: 0, noProfile: 0, errors: 0 };
   for (const carrier of carriers) {
     try {
-      await recalculateCarrierCPP(carrier.id);
-      recalculated++;
+      const outcome = await recalculateCarrierCPP(carrier.id);
+      if (outcome === "written") tally.written++;
+      else if (outcome === "promoted") tally.promoted++;
+      else tally.noProfile++;
     } catch (e: any) {
+      tally.errors++;
       log.error({ err: e }, `[Integration] CPP recalc failed for ${carrier.id}:`);
     }
   }
 
-  log.info(`[Integration] CPP batch recalculation: ${recalculated}/${carriers.length} carriers processed`);
-  return { total: carriers.length, recalculated };
+  log.info(
+    `[Integration] CPP batch recalculation: ${tally.written} written, ${tally.promoted} promoted, ` +
+    `${tally.noProfile} missing, ${tally.errors} errored, of ${tally.selected} selected`,
+  );
+  // `recalculated` is kept for the existing shape; `written` is the honest name.
+  return { total: carriers.length, recalculated: tally.written, ...tally };
 }

@@ -17570,7 +17570,37 @@
 // is the §10 M1 advancement gate and is banked as its own item.
 //
 // Phase 1 of the mandatory-ELD arc, commit 1 of 7.
-export const SRL_VERSION = "3.8.bbn";
+// v3.8.bbo: the recalc leaves a trace, so a run that wrote nothing is
+// distinguishable from a run that never happened.
+//
+// bbn made the job write on every run. It still could not say afterwards that it
+// had: every path logged through pino only, so a run, a mutex skip and a crash
+// were indistinguishable in the database. cron_registry was no better, with
+// lastRun NULL on all 22 of its rows and no row for this job at all. When the
+// 2026-09-06 run produced nothing, my own first instrument was a system_logs
+// query that could never have returned anything.
+//
+// A start row and an end row, and lastRun on the registry. The start row is what
+// makes a crash visible: a start with no end is a run that died. The end row
+// carries the tally, because a run that wrote nothing and a run that wrote a row
+// for everyone reported identically before -- processAllCPPRecalculations
+// returned a bare count that was really the number SELECTED, so it read as full
+// success on the Sunday it wrote nothing at all.
+//
+// recordCompassRecalcRun NEVER THROWS. Recording that a job ran must not be able
+// to stop it running, which is the rule the compliance-override record follows.
+// Both writes are caught separately, so one failing does not skip the other.
+// cron_registry is upserted rather than updated, because this job has never had
+// a row and an update against a missing one throws on the first run.
+//
+// The guard's own matcher was blind first. Both "end" calls are wrapped by the
+// formatter, and a matcher requiring the literal on the call's own line found
+// ZERO of them and reported a clean tree -- Sub-pattern 18, inside a guard
+// written against a different blindness. It now carries fixtures for the wrapped
+// and CRLF shapes, and those fixtures are the gate rather than the count.
+//
+// Phase 1 of the mandatory-ELD arc, commit 2 of 7.
+export const SRL_VERSION = "3.8.bbo";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

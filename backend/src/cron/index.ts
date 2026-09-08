@@ -83,6 +83,53 @@ export const SCHEDULED_JOB_NAMES = [
 // In-memory concurrency guard — prevents overlapping runs of the same job
 const runningJobs = new Set<string>();
 
+/**
+ * Leave a database trace for the weekly Compass recalc.
+ *
+ * NEVER THROWS. Recording that a job ran must not be able to stop it running,
+ * which is the same rule the compliance-override record follows. Both writes
+ * are individually caught, so a failure to log is a log line and nothing more.
+ *
+ * The cron_registry row is upserted rather than updated: this job has never had
+ * one, and an update against a missing row would throw on the very first run.
+ */
+export async function recordCompassRecalcRun(
+  phase: "start" | "end",
+  details: Record<string, unknown>,
+  severity: "INFO" | "WARNING" | "ERROR",
+): Promise<void> {
+  try {
+    await prisma.systemLog.create({
+      data: {
+        logType: "CRON_JOB",
+        severity,
+        source: "cron:compass-score-recalc",
+        message: phase === "start" ? "Weekly Compass recalc started" : "Weekly Compass recalc finished",
+        details: details as any,
+      },
+    });
+  } catch (err) {
+    log.error({ err }, "[Compass] could not record run to system_logs");
+  }
+
+  if (phase !== "start") return;
+  try {
+    await prisma.cronRegistry.upsert({
+      where: { jobName: "compass-score-recalc" },
+      update: { lastRun: new Date(), lastStatus: "RUNNING" },
+      create: {
+        jobName: "compass-score-recalc",
+        schedule: "0 23 * * 0",
+        description: "Weekly Compass Score full recalc, Sunday 23:00 host time",
+        lastRun: new Date(),
+        lastStatus: "RUNNING",
+      },
+    });
+  } catch (err) {
+    log.error({ err }, "[Compass] could not record lastRun to cron_registry");
+  }
+}
+
 async function withGuard(jobName: string, fn: () => Promise<void>): Promise<void> {
   if (runningJobs.has(jobName)) {
     log.warn({ job: jobName }, "Skipping — previous run still in progress");
@@ -373,14 +420,49 @@ export function initCronJobs() {
   // ≥90 GOLD, else SILVER). Off-peak Sunday night so Monday-morning AE
   // sessions see fresh scores. Wired Sprint 2026-05-19 (v3.8.ads) — the
   // recalc service has existed since v3.7.a but was on-demand only.
+  // v3.8.bbo: this job leaves a trace in the database.
+  //
+  // Every path of it used to log through pino only, so a run, a skip and a
+  // crash were indistinguishable afterwards. When the 2026-09-06 run produced
+  // no rows, the absence of a system_logs trace proved nothing either way,
+  // because there was never going to be one. cron_registry was no better:
+  // lastRun is NULL on all 22 of its rows, and this job has no row there at all.
+  //
+  // A start row and an end row, plus lastRun on the registry. The start row is
+  // what makes a crash visible: a start with no end is a run that died.
   cron.schedule("0 23 * * 0", () => withGuard("compass-score-recalc", async () => {
+    const startedAt = new Date();
+    await recordCompassRecalcRun("start", { startedAt: startedAt.toISOString() }, "INFO");
     try {
       log.info("[Compass] Starting weekly Compass Score full recalc");
       const { processAllCPPRecalculations } = require("../services/integrationService");
       const result = await processAllCPPRecalculations();
       log.info({ result }, "[Compass] Weekly recalc complete");
-    } catch (err) {
+      await recordCompassRecalcRun(
+        "end",
+        {
+          startedAt: startedAt.toISOString(),
+          completedAt: new Date().toISOString(),
+          durationMs: Date.now() - startedAt.getTime(),
+          carriersSelected: result?.selected ?? 0,
+          rowsWritten: result?.written ?? 0,
+          skippedPromoted: result?.promoted ?? 0,
+          skippedNoProfile: result?.noProfile ?? 0,
+          errors: result?.errors ?? 0,
+        },
+        result?.errors ? "WARNING" : "INFO",
+      );
+    } catch (err: any) {
       log.error({ err }, "[Compass] Weekly recalc error:");
+      await recordCompassRecalcRun(
+        "end",
+        {
+          startedAt: startedAt.toISOString(),
+          completedAt: new Date().toISOString(),
+          error: String(err?.message ?? err).slice(0, 500),
+        },
+        "ERROR",
+      );
     }
   }));
 
