@@ -3969,3 +3969,90 @@ to accept stdin — so an UPDATE I believed had applied never ran, and the gate
 correctly refusing looked like a broken gate. Then the columns turned out to be
 snake_case (`driver_phone_verified`) where the model is camelCase. Both failures
 pointed at the subject; neither was the subject. §19 Sub-pattern 22.
+
+## 2026-09-08 -- the weekly Compass recalc wrote nothing, and three surfaces were telling carriers things that were not true
+
+On Sunday 2026-09-06 the Compass recalc produced no `CarrierScorecard` rows at
+all. Tracing it found the plumbing entirely healthy -- job registered, in the
+boot inventory, `initCronJobs` unconditional, `withGuard` not suppressing,
+selection returning both APPROVED carriers -- and one line responsible:
+`if (loads.length === 0) return;`, hit before the write, on a platform with no
+loads.
+
+**The interesting part is that removing that line alone would have been worse
+than the bug.** `communicationScore` divided by `(checkCalls.length || 1)` and
+`acceptanceRate` did the same with tenders, so a carrier nobody had ever called
+or tendered would have persisted **0 percent** on both -- each 10 percent of the
+composite under §9. That is the v3.8.bax tracking defect pointing the other way:
+a sentinel presented as a measurement. Every load-derived factor is now null
+when its denominator is zero, and the composite renormalises over what survives.
+
+**A trap in the widening, found by the type change rather than by reasoning.**
+`claimRatio` is the inverted term, scored as `100 - claimRatio`, and `100 - null`
+is `100` in JavaScript. Widening the parameter to accept null would have credited
+an unmeasured carrier with a flawless claim record. Pinned explicitly.
+
+**MY FIRST GUARD WAS VACUOUS AND ONLY THE INJECTION FOUND IT.** Restoring the
+`|| 1` denominator passed all five original tests, because the sentinel is 0 and
+the false measurement is also 0 -- the persisted column cannot tell them apart.
+Only the composite can. A sixth case now reads through it: one load, no check
+calls, no tenders, so `claimRatio` is measurable and the other two are not.
+Correct behaviour renormalises over `claimRatio` alone and reads 100; the defect
+folds two invented zeroes in and reads 60.
+
+**Nothing on any path of that job wrote to the database**, so a run, a mutex skip
+and a crash were indistinguishable afterwards -- and my own first instrument was a
+`system_logs` query whose empty result proved nothing, because there was never
+going to be a row. `cron_registry` was no better: `lastRun` NULL on all 22 rows
+and no row for this job at all. The recalc now writes a start row and an end row,
+and the batch returns a tally rather than a bare count that was really the number
+SELECTED -- so a run that wrote nothing had been reporting full success.
+
+**Then the same class turned out to be live on two carrier-facing surfaces.**
+
+The carrier scorecard page destructures `metrics`, `history`, `bonuses`,
+`milestone`, `milestoneLoads` and `daysActive`. The endpoint returned **none of
+them**, and nothing errored because every read is an optional chain taking its
+default. All seven Compass gauges rendered a flat 0.0%, the trend chart was
+empty, the bonuses table could never appear at all, and the milestone panel read
+0 loads / 0% on-time / 0 days against the §10 thresholds. The platform was
+telling carriers they had done nothing.
+
+The compliance page asked for `GET /carrier/vetting-report`, which did not exist,
+caught the 404, and **fell back to the scorecard** -- deriving a grade, a risk
+level and a recommendation from the Compass SCORE. Those are different things:
+the Score is §9 performance, the vetting report is the Engine's verdict on
+whether a carrier may haul at all. A carrier was shown a vetting grade computed
+from their on-time percentage, over category bars drawn at zero from an empty
+checks array, which reads as "nothing passed" rather than as "nothing was
+fetched".
+
+**And the driver ping page promised something the ELD feed contradicts.** It said
+"It does not track you" and "We do not receive your location at any other time."
+Both are false for any driver whose carrier has connected a telematics feed. A
+privacy promise that stops being true is worse than no promise, because the
+driver acted on it. The notice is now conditional in its own text, which is true
+for both populations and needs nothing looked up.
+
+**A GUARD OF MINE WENT BLIND IN EXACTLY THE WAY IT WAS WRITTEN TO PREVENT.** The
+observability commit's structural check matched the recorder call with its
+`"end"` literal on the call's own line. The formatter wraps a call whose
+arguments are long, and **both** end calls are wrapped -- so it matched zero of
+them and reported a clean tree. §19 Sub-pattern 18, inside a guard written
+against a different blindness, caught only because the test was run rather than
+reasoned about. It now matches across the break and carries fixtures for the
+inline, wrapped and CRLF shapes, and those fixtures are the gate rather than the
+count.
+
+**A pre-existing test went red and it was a mock gap, not a logic break.**
+`scorecardTrackingMeasured` mocks `carrierProfile` and `carrierScorecard` only,
+and the shared payload builder also reads `carrierBonus`. Added to the mock, not
+aliased onto an existing model -- aliasing hides precisely the divergence a mock
+exists to surface (§19 Sub-pattern 11 case study #3).
+
+**Deliberately not fixed: the GUEST dead zone.** A GUEST carrier's scorecard is
+reachable only in a one-to-two-completed-load band, because at 3+ loads the
+promotion branch returns before the write. Closing it means editing
+`checkGuestPromotion`, which is the §10 M1 advancement gate -- a wrong edit there
+promotes an unvetted carrier, which is worse than the missing row it would fix.
+Banked as §13.3 Item 263 with the shape and the decision it needs.
