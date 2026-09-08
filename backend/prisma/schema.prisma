@@ -984,7 +984,7 @@ model User {
   // reviewer and the withdrawer are frequently different people.
   reviewedQuickPayEnrollments  QuickPayEnrollment[] @relation("QuickPayReviewer")
   withdrawnQuickPayEnrollments QuickPayEnrollment[] @relation("QuickPayWithdrawer")
-  quickPayElections            QuickPayElection[] @relation("QuickPayElector")
+  quickPayElections            QuickPayElection[]   @relation("QuickPayElector")
 
   @@index([email])
   @@index([role])
@@ -1562,18 +1562,18 @@ model Load {
   carrierConfirmedAt DateTime?
 
   // Waterfall Dispatch (v3.4.d) — Caravan-first routing
-  dispatchMethod              String?   @map("dispatch_method") @db.VarChar(20) // waterfall | loadboard | direct_tender | dat
+  dispatchMethod              String?      @map("dispatch_method") @db.VarChar(20) // waterfall | loadboard | direct_tender | dat
   // Set to PARALLEL by launchBroadcast before it creates its tenders. Anything
   // else is SEQUENTIAL, and createTender refuses a second live offer on one.
-  tenderFanout       TenderFanout @default(SEQUENTIAL)
-  visibility                  String    @default("waterfall") @db.VarChar(20) // waterfall | open | reserved | dat
-  waterfallMode               String?   @map("waterfall_mode") @db.VarChar(20) // manual | semi_auto | full_auto
-  directTenderCarrierId       String?   @map("direct_tender_carrier_id")
-  dispatchedAt                DateTime? @map("dispatched_at")
-  dispatchedCarrierId         String?   @map("dispatched_carrier_id")
-  fallbackChainStartedAt      DateTime? @map("fallback_chain_started_at")
-  fallbackPostedToLoadboardAt DateTime? @map("fallback_posted_to_loadboard_at")
-  fallbackPostedToDatAt       DateTime? @map("fallback_posted_to_dat_at")
+  tenderFanout                TenderFanout @default(SEQUENTIAL)
+  visibility                  String       @default("waterfall") @db.VarChar(20) // waterfall | open | reserved | dat
+  waterfallMode               String?      @map("waterfall_mode") @db.VarChar(20) // manual | semi_auto | full_auto
+  directTenderCarrierId       String?      @map("direct_tender_carrier_id")
+  dispatchedAt                DateTime?    @map("dispatched_at")
+  dispatchedCarrierId         String?      @map("dispatched_carrier_id")
+  fallbackChainStartedAt      DateTime?    @map("fallback_chain_started_at")
+  fallbackPostedToLoadboardAt DateTime?    @map("fallback_posted_to_loadboard_at")
+  fallbackPostedToDatAt       DateTime?    @map("fallback_posted_to_dat_at")
 
   // Order Builder v3.5 — extended dispatch/freight fields
   mode                 String?  @map("mode") @db.VarChar(10) // FTL | LTL
@@ -1854,7 +1854,7 @@ model LoadTender {
 
   // Transition history for this tender. See LoadActivity.tenderId for why the
   // shared load timeline carries tender events rather than a separate table.
-  activity LoadActivity[]
+  activity          LoadActivity[]
   quickPayElections QuickPayElection[]
 
   @@index([loadId])
@@ -5944,4 +5944,42 @@ model DocumentExtraction {
 
   @@index([carrierProfileId])
   @@index([status])
+}
+
+/// One row per observed Load.status edge the AE map rejects, with a running
+/// count. This is the enforcement gate for §13.3 Item 194 / Item 159, made
+/// answerable across deploys.
+///
+/// WHY A TABLE AND NOT THE IN-MEMORY COUNTER. The counters on /api/health are
+/// per-process and reset on boot, which the field names say honestly. But the
+/// gate is "a FULL DEPLOY CYCLE with no unexpected edge", and a per-process
+/// counter cannot express that: a reading taken 51 seconds after a deploy says
+/// only that nothing has happened yet, and the one clean window recorded on
+/// 2026-09-01 was 2h18m on a platform with almost no traffic. Surviving the
+/// restart is the whole point.
+///
+/// GRAIN IS THE EDGE, NOT THE EVENT. One row per (from, to) pair rather than one
+/// per observation. Item 194's own resume state says to read the unexpected
+/// edges first, because each is either a real defect or a transition nobody
+/// wrote down — so the useful question is WHICH edges fired and when, not how
+/// many times in total. It also bounds the table at the number of distinct
+/// illegal edges, so it cannot grow with load volume.
+///
+/// `expected` IS NOT STORED, deliberately. Whether an edge is accounted for is
+/// derived from the AUTO map at read time, so reconciling the map reclassifies
+/// history automatically. A stored flag would freeze what was true when the row
+/// was first written and quietly disagree with the map that now governs.
+model StatusMachineCounter {
+  id String @id @default(cuid())
+
+  fromStatus LoadStatus
+  toStatus   LoadStatus
+
+  count       Int      @default(0)
+  firstSeenAt DateTime @default(now())
+  lastSeenAt  DateTime @updatedAt
+
+  @@unique([fromStatus, toStatus])
+  @@index([lastSeenAt])
+  @@map("status_machine_counters")
 }

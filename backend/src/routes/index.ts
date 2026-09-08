@@ -1,6 +1,7 @@
 import { buildInfo } from "../lib/buildInfo";
 import { schemaInfo } from "../lib/schemaInfo";
 import { statusMachineCounters } from "../lib/loadTransitionObserver";
+import { cumulativeStatusMachineCounters } from "../lib/statusMachineCounters";
 import { storageStatus } from "../services/storageService";
 import { parserStatus } from "../services/coiReaderService";
 import { requireTotpEnrolled } from "../middleware/requireTotpEnrolled";
@@ -136,10 +137,24 @@ router.get("/health", async (_req, res) => {
     parser: parserStatus(),
     // row 3b — the enforcement gate for Item 194. The canonical Load.status
     // machine runs LOG-ONLY, because enforcing it today breaks auto-pilot
-    // dispatch and fall-off recovery. unexpected_since_boot is the number that
-    // decides: violations the AUTO map does NOT account for. Enforce once a
-    // full deploy cycle keeps it at zero.
-    status_machine: statusMachineCounters(),
+    // dispatch and fall-off recovery. The number that decides is
+    // unexpected_cumulative: violations the AUTO map does NOT account for.
+    //
+    // TWO HALVES, AND THE CUMULATIVE ONE IS THE GATE. *_since_boot are
+    // per-process and reset on boot, which their names say honestly -- and
+    // which is why they cannot answer it. The gate is a FULL DEPLOY CYCLE with
+    // no unexpected edge, and a reading taken 51 seconds after a restart says
+    // only that nothing has happened yet. Item 194 recorded exactly that of its
+    // own first clean reading. The cumulative pair survives the restart, and
+    // cumulative_since says from when.
+    //
+    // A NULL COUNT MEANS UNKNOWN, NEVER ZERO. Reporting 0 on a failed read
+    // would say "clean" about a question nobody answered, on the one field
+    // used to decide whether enforcement is safe to switch on.
+    status_machine: {
+      ...statusMachineCounters(),
+      ...(await cumulativeStatusMachineCounters(prisma as any)),
+    },
   });
 });
 

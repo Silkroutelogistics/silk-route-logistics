@@ -17600,7 +17600,38 @@
 // and CRLF shapes, and those fixtures are the gate rather than the count.
 //
 // Phase 1 of the mandatory-ELD arc, commit 2 of 7.
-export const SRL_VERSION = "3.8.bbo";
+// v3.8.bbp: the Load.status enforcement gate survives a deploy.
+//
+// /api/health has reported status_machine.violations_since_boot and
+// unexpected_since_boot since v3.8.ayh. Both are per-process and reset on boot,
+// which their names say honestly -- and which is exactly why they cannot answer
+// the question the gate asks. §13.3 Item 194 sets enforcement on "a FULL DEPLOY
+// CYCLE keeps unexpected at zero", and a counter that resets on every deploy
+// cannot express a deploy cycle. Item 194 says so of its own first clean
+// reading, a 2h18m window on a platform with almost no traffic: "This is one
+// clean window, not the gate."
+//
+// So the counts are also written to status_machine_counters. The in-memory pair
+// is untouched and keeps answering "since this process started"; the cumulative
+// pair answers "ever", with cumulative_since saying from when.
+//
+// GRAIN IS THE EDGE, NOT THE EVENT. One row per (from, to) pair with a running
+// count, so the table is bounded by the number of distinct illegal edges rather
+// than by load volume. That is also what the reconciliation needs: Item 194's
+// resume state says to read the unexpected edges first, because each one is
+// either a real defect or a transition nobody wrote down.
+//
+// `expected` IS DERIVED FROM THE AUTO MAP AT READ TIME, NEVER STORED. The whole
+// point of the soak is that reconciling that map is what ends it -- a stored
+// flag would freeze what was true when the row was written, keep calling an
+// accounted-for edge unexpected, and the gate could never close.
+//
+// A NULL COUNT MEANS UNKNOWN, NEVER ZERO. Zero and unknown read identically to
+// anyone glancing at the field, and this is the field used to decide whether
+// enforcement is safe to switch on. A failed read reports nulls and an error.
+//
+// Phase 1 of the mandatory-ELD arc, commit 3 of 7.
+export const SRL_VERSION = "3.8.bbp";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

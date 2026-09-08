@@ -78,6 +78,22 @@ export function statusMachineCounters() {
   return { violations_since_boot: violationsSinceBoot, unexpected_since_boot: unexpectedSinceBoot };
 }
 
+/**
+ * Durable half of the same count, injected rather than imported.
+ *
+ * config/database imports this module, so importing the writer back would close
+ * a cycle at module-init. The client also lives in that file, so it is the only
+ * place that can supply one. The observer stays the single place that decides
+ * WHAT counts as a violation -- letting database.ts re-derive that would give
+ * the in-memory and durable counters two definitions free to drift.
+ */
+export type TransitionPersister = (from: LoadStatus, to: LoadStatus) => void;
+let persist: TransitionPersister | null = null;
+
+export function setTransitionPersister(fn: TransitionPersister | null): void {
+  persist = fn;
+}
+
 export interface TransitionObservation {
   from: LoadStatus;
   to: LoadStatus;
@@ -113,6 +129,9 @@ export function observeLoadTransition(obs: TransitionObservation): void {
     const known = isKnown(from, to);
     violationsSinceBoot += 1;
     if (!autoAllows) unexpectedSinceBoot += 1;
+    // Durable counterpart, inside this try so a persistence failure can no more
+    // reach the write path than a log failure can.
+    persist?.(from, to);
     log.warn(
       {
         loadTransition: `${from}->${to}`,

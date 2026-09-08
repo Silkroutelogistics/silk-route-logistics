@@ -1,6 +1,8 @@
 import { PrismaClient } from "@prisma/client";
 import crypto from "crypto";
 import { observeLoadTransition } from "../lib/loadTransitionObserver";
+import { setTransitionPersister } from "../lib/loadTransitionObserver";
+import { persistTransitionObservation } from "../lib/statusMachineCounters";
 
 // ─── Key Rotation Support ─────────────────────────────────
 // ENCRYPTION_KEY = current key (required)
@@ -124,6 +126,12 @@ function createClient(): PrismaClient {
     log: process.env.NODE_ENV === "development" ? ["query", "error", "warn"] : ["error"],
     datasourceUrl: buildDatabaseUrl(),
   });
+
+  // A2 — the observer's durable half. The BASE client is used deliberately: it
+  // does not re-enter the extension below, so a counter write cannot be
+  // observed as though it were a status transition. The observer decides what
+  // counts; this only supplies somewhere to put it.
+  setTransitionPersister((from, to) => persistTransitionObservation(client, from, to));
 
   // Use Prisma client extension for transparent field encryption
   return client.$extends({
