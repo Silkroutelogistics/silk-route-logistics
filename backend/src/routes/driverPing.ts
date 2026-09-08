@@ -83,6 +83,23 @@ router.get("/:token", pingLimiter, (req: Request, res: Response) => {
   // location channel SRL has was dead on arrival. This response, and only this
   // one, allows the page's own origin. Camera and microphone stay denied.
   res.setHeader("Permissions-Policy", "camera=(), microphone=(), geolocation=(self)");
+  // WHAT THIS PAGE MAY PROMISE A DRIVER ABOUT THEIR OWN LOCATION.
+  //
+  // It used to say "It does not track you" and "We do not receive your location
+  // at any other time." Under the mandatory-ELD arc both are false for any
+  // driver whose carrier has connected a telematics feed: SRL receives that
+  // truck's position while the load is active, whether or not the driver ever
+  // taps the button. A privacy promise that stops being true is worse than no
+  // promise, because the driver acted on it.
+  //
+  // The disclosure is CONDITIONAL IN ITS OWN TEXT rather than varied per
+  // carrier. This handler deliberately does no load lookup (see above), so it
+  // cannot know whether this carrier has a feed -- and "if your carrier has
+  // connected" is true for both populations, costs nothing to render, and is
+  // something the driver can go and check with the person who would know.
+  //
+  // It names the CARRIER as the party who connected the feed rather than SRL as
+  // a party who took it, because that is who did.
   res.type("html").send(
     page(
       "Share your location",
@@ -90,12 +107,14 @@ router.get("/:token", pingLimiter, (req: Request, res: Response) => {
        <p>Dispatch at Silk Route Logistics is asking where you are right now so we can update the
           shipper and stop calling you.</p>
        <div class="lane">This shares your position <strong>one time</strong>, right now.
-          It does not track you, and it stops nothing on your phone.</div>
+          It does not turn anything on or off on your phone.</div>
        <button id="go">Share my location once</button>
        <p id="msg" style="margin-top:14px"></p>
        <div class="consent">Tapping the button sends your current position to Silk Route Logistics
-          for this load only. We do not receive your location at any other time, and you can ignore
-          this message with no effect on your load or your pay.</div>
+          for this load. Separately, if your carrier has connected a telematics or ELD feed to us,
+          we also receive your truck's location from that feed while this load is active, whether
+          or not you tap. Ask your carrier if you are not sure. You can ignore this message with no
+          effect on your load or your pay.</div>
        <script src="/api/public-assets/driver-ping.js" defer></script>`,
     ),
   );

@@ -17698,7 +17698,33 @@
 // authorize, and a new route should not inherit that.
 //
 // Phase 1 of the mandatory-ELD arc, commit 5 of 7.
-export const SRL_VERSION = "3.8.bbr";
+// v3.8.bbs: the driver ping page stops promising something the ELD feed
+// contradicts.
+//
+// It said, flatly, "It does not track you" and "We do not receive your location
+// at any other time." Under the mandatory-ELD arc both are false for any driver
+// whose carrier has connected a telematics feed: SRL receives that truck's
+// position while the load is active, whether or not the driver ever taps the
+// button. A privacy promise that stops being true is worse than no promise,
+// because the driver acted on it.
+//
+// The disclosure is CONDITIONAL IN ITS OWN TEXT rather than varied per carrier.
+// The handler deliberately does no load lookup, so it cannot know whether this
+// carrier has a feed, and "if your carrier has connected a telematics or ELD
+// feed" is true for both populations, costs nothing to render, and is something
+// the driver can check with the person who would know. It names the carrier as
+// the party who connected the feed rather than SRL as one who took it, because
+// that is who did.
+//
+// The reassurances that remain true are kept and pinned: the tap is one time,
+// it changes nothing on the phone, and ignoring it costs the driver nothing.
+//
+// The stored SMS consent is untouched and needed no change: it is TCPA-scoped
+// and makes no claim about location retention. A test asserts it stays that
+// way, because a promise added there would contradict this notice on the record.
+//
+// Phase 1 of the mandatory-ELD arc, commit 6 of 7.
+export const SRL_VERSION = "3.8.bbs";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
