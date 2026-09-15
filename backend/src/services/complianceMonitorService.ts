@@ -1328,7 +1328,7 @@ export async function fmcsaComplianceScan() {
         });
         await prisma.carrierProfile.update({
           where: { id: carrier.id },
-          data: { onboardingStatus: "SUSPENDED", autoSuspendedAt: new Date(), autoSuspendReason: "FMCSA auto-suspension" , status: "SUSPENDED"},
+          data: { onboardingStatus: "SUSPENDED", autoSuspendedAt: new Date(), autoSuspendReason: "FMCSA auto-suspension", status: "SUSPENDED", autoSuspendCause: "FMCSA_AUTHORITY" },
         });
         results.alerts++;
         results.suspended++;
@@ -1440,7 +1440,7 @@ export async function fmcsaComplianceScan() {
         });
         await prisma.carrierProfile.update({
           where: { id: carrier.id },
-          data: { onboardingStatus: "SUSPENDED", autoSuspendedAt: new Date(), autoSuspendReason: "FMCSA auto-suspension" , status: "SUSPENDED"},
+          data: { onboardingStatus: "SUSPENDED", autoSuspendedAt: new Date(), autoSuspendReason: "FMCSA auto-suspension", status: "SUSPENDED", autoSuspendCause: "FMCSA_OUT_OF_SERVICE" },
         });
         results.alerts++;
         results.suspended++;
@@ -1856,6 +1856,7 @@ export async function processInsuranceExpiryEnforcement() {
         status: "SUSPENDED", // B2 — paired; see lib/carrierOperational
         autoSuspendReason: `Auto-suspended: Insurance expired on ${carrier.insuranceExpiry?.toISOString().split("T")[0]}`,
         autoSuspendedAt: now,
+        autoSuspendCause: "INSURANCE_EXPIRED",
       },
     });
 
@@ -1949,7 +1950,7 @@ export async function processInsuranceExpiryEnforcement() {
 
 // ────────────────────────────────────────────────────────────
 // ENTERPRISE CRON: Monthly Full Re-Vetting (Compass)
-// Re-runs full 29-check vetting for all APPROVED carriers.
+// Re-runs full 33-check vetting for all APPROVED carriers.
 // Auto-suspends CRITICAL risk carriers.
 // ────────────────────────────────────────────────────────────
 
@@ -1988,6 +1989,7 @@ export async function monthlyCarrierReVetting() {
             status: "SUSPENDED", // B2 — paired; see lib/carrierOperational
             autoSuspendReason: `Auto-suspended by monthly re-vetting: score ${report.score}/100 (CRITICAL). Flags: ${report.flags.slice(0, 3).join(", ")}`,
             autoSuspendedAt: new Date(),
+            autoSuspendCause: "VETTING_CRITICAL",
           },
         });
 
@@ -2099,6 +2101,7 @@ export async function detectFmcsaAuthorityChanges() {
               status: "SUSPENDED", // B2 — paired; see lib/carrierOperational
               autoSuspendReason: `Auto-suspended: FMCSA authority changed from ${previousStatus} to ${currentStatus}`,
               autoSuspendedAt: new Date(),
+              autoSuspendCause: ["OUT_OF_SERVICE", "OOS"].includes(currentStatus) ? "FMCSA_OUT_OF_SERVICE" : "FMCSA_AUTHORITY",
             },
           });
 
@@ -2140,6 +2143,7 @@ export async function detectFmcsaAuthorityChanges() {
               status: "SUSPENDED", // B2 — paired; see lib/carrierOperational
               autoSuspendReason: `Auto-suspended: FMCSA safety rating changed to UNSATISFACTORY`,
               autoSuspendedAt: new Date(),
+              autoSuspendCause: "FMCSA_RATING",
               safetyRating: "UNSATISFACTORY",
             },
           });

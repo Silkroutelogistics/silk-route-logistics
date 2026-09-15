@@ -662,6 +662,13 @@ export async function overrideBlock(req: AuthRequest, res: Response) {
 // POST /compliance/carrier/:carrierId/suspend
 export async function suspendCarrier(req: AuthRequest, res: Response) {
   try {
+    // Sprint A0 (v3.8.bbu): an AE suspension records the same three columns
+    // the automatic writers do, with cause AE_MANUAL, which the auto-reversal
+    // never lifts. The reason is optional here; the text column carries it.
+    const rawReason = typeof req.body?.reason === "string" ? req.body.reason.trim().slice(0, 500) : "";
+    const suspendReason = rawReason
+      ? `Suspended by an administrator: ${rawReason}`
+      : "Suspended by an administrator";
     const carrier = await prisma.carrierProfile.findUnique({
       where: { id: req.params.carrierId },
       include: { user: { select: { company: true, firstName: true, lastName: true } } },
@@ -686,7 +693,13 @@ export async function suspendCarrier(req: AuthRequest, res: Response) {
     const updated = await prisma.$transaction(async (tx) => {
       const profile = await tx.carrierProfile.update({
         where: { id: req.params.carrierId },
-        data: { onboardingStatus: "SUSPENDED" , status: "SUSPENDED"},
+        data: {
+          onboardingStatus: "SUSPENDED",
+          status: "SUSPENDED",
+          autoSuspendedAt: new Date(),
+          autoSuspendReason: suspendReason,
+          autoSuspendCause: "AE_MANUAL",
+        },
       });
       closedRequests = await closeOpenInfoRequestsForStatus(
         { carrierId: req.params.carrierId, newStatus: "SUSPENDED", closedById: req.user!.id },
@@ -711,6 +724,9 @@ export async function suspendCarrier(req: AuthRequest, res: Response) {
         changedFields: {
           carrierName: carrier.user.company || `${carrier.user.firstName} ${carrier.user.lastName}`,
           previousStatus: carrier.onboardingStatus,
+          newStatus: "SUSPENDED",
+          cause: "AE_MANUAL",
+          reason: suspendReason,
         } as any,
       },
     });

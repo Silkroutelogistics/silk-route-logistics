@@ -189,6 +189,7 @@ export async function weeklyOfacRescan() {
               status: "SUSPENDED", // B2 — paired; see lib/carrierOperational
               autoSuspendReason: `Auto-suspended: OFAC/SDN match detected (score: ${topScore}). Immediate review required.`,
               autoSuspendedAt: new Date(),
+              autoSuspendCause: "OFAC_MATCH",
             },
           });
 

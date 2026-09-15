@@ -17741,7 +17741,20 @@
 //
 // Sprint A0, commit M1 of 6. Writers set the cause in C1; the reversal reads
 // it in C2.
-export const SRL_VERSION = "3.8.bbt";
+// v3.8.bbu: every suspension write names its cause.
+//
+// Six automatic writers and the AE suspend now set autoSuspendCause beside
+// the prose line, so the auto-reversal has a value to switch on. The AE
+// suspend also gains the timestamp and the text the automatic ones already
+// carried, so an AE-suspended carrier is no longer invisible to the sweep.
+// The authority-change watcher distinguishes out-of-service from a revoked
+// authority. A guard freezes the writer inventory at eight, requires all
+// three columns on every one, and holds the enum and the written values to
+// each other in both directions. The one writer it cannot see, the generic
+// field edit in updateCarrier, is excluded by name with the reason.
+//
+// Sprint A0, commit C1 of 6.
+export const SRL_VERSION = "3.8.bbu";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
