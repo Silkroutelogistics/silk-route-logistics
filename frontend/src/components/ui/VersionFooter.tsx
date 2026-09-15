@@ -17724,7 +17724,24 @@
 // way, because a promise added there would contradict this notice on the record.
 //
 // Phase 1 of the mandatory-ELD arc, commit 6 of 7.
-export const SRL_VERSION = "3.8.bbs";
+// v3.8.bbt: a suspension records WHY, as a value a machine can switch on.
+//
+// AEROSWIFT was suspended on 2026-09-01 by the monthly re-vetting cron on a
+// CRITICAL vetting verdict, and reinstated on 2026-09-07 by the weekly
+// auto-reversal cron on FMCSA facts alone. The reversal never read why the
+// carrier had been suspended, because the only record of that was a prose
+// string. This adds CarrierProfile.autoSuspendCause, a nullable enum with
+// seven members, so the reversal can switch on the cause rather than parse a
+// sentence. The text column stays as the human-readable line.
+//
+// Additive, nullable, no backfill. Row-count gate run read-only against
+// production before this lands: zero rows are SUSPENDED or carry a suspension
+// timestamp, so nothing arrives with a NULL cause. A NULL cause on a suspended
+// row is, by design, a carrier the reversal holds for an AE.
+//
+// Sprint A0, commit M1 of 6. Writers set the cause in C1; the reversal reads
+// it in C2.
+export const SRL_VERSION = "3.8.bbt";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

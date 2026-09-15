@@ -1186,6 +1186,10 @@ model CarrierProfile {
   vettingGrade      VettingGrade?
   autoSuspendedAt   DateTime?
   autoSuspendReason String?
+  // Sprint A0 (v3.8.bbt): the STRUCTURED cause the auto-reversal switches on.
+  // autoSuspendReason stays the human-readable line. Null on a suspended row
+  // means the cause is unknown and the reversal must hold the carrier for an AE.
+  autoSuspendCause  AutoSuspendCause?
 
   // Chameleon detection
   lastChameleonCheckAt DateTime?
@@ -5674,6 +5678,18 @@ enum InfoRequestStatus {
 // Each reason maps to a specific reapply window per
 // REAPPLY_WINDOWS_DAYS in backend/src/services/rejectionService.ts.
 // Null/never reasons (FRAUD_DETECTED, IDENTITY_FRAUD) cannot reapply.
+
+/// Why a carrier was suspended, as a value the auto-reversal can switch on.
+/// Sprint A0 (v3.8.bbt). AE_MANUAL and OFAC_MATCH are never auto-reinstated.
+enum AutoSuspendCause {
+  FMCSA_AUTHORITY
+  FMCSA_OUT_OF_SERVICE
+  FMCSA_RATING
+  INSURANCE_EXPIRED
+  VETTING_CRITICAL
+  OFAC_MATCH
+  AE_MANUAL
+}
 
 enum RejectionReason {
   MISSING_DOCUMENTS // 7 days
