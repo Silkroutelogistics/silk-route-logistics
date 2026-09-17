@@ -27,6 +27,9 @@ import { authenticate, authorize, AuthRequest } from "../middleware/auth";
 import { validateBody, validateQuery } from "../middleware/validate";
 import { carrierRegisterSchema, verifyCarrierSchema } from "../validators/carrier";
 import { auditLog } from "../middleware/audit";
+import { requireStepUp } from "../middleware/requireStepUp";
+import { disableTotp } from "../services/totpService";
+import { recordSecurityEvent } from "../lib/securityAudit";
 import { prisma } from "../config/database";
 import { upload } from "../config/upload";
 import { z } from "zod";
@@ -722,6 +725,38 @@ router.post("/:id/override-mismatch", authorize("ADMIN", "CEO"), validateBody(ov
 // "REJECTED" which lost the reason context. Old PUT path still works
 // for backwards compat — AE UI now routes rejection through this
 // endpoint for the new schema fields to populate.
+// v3.8.bcj — admin unenroll (Item 216 b, ruling D5). The only writer of
+// MFA_RESET. Self-service disable is refused for carriers (bce); this is the
+// human exit for a lost authenticator, and it is deliberately loud: ADMIN/CEO,
+// a fresh step-up from the admin's own authenticator, a reason that becomes
+// the audit note, and one update that clears all three columns (disableTotp).
+// The 2FA wall reads totpEnabled live, so the carrier's next request lands on
+// the enrollment screen; nothing else needs revoking.
+const mfaResetSchema = z.object({ reason: z.string().trim().min(10, "Reason must be at least 10 characters").max(500) });
+router.post("/:id/mfa-reset", authorize("ADMIN", "CEO"), validateBody(mfaResetSchema), requireStepUp("mfa-reset"), auditLog("UPDATE", "Carrier"), async (req: AuthRequest, res: Response) => {
+  const carrier = await prisma.carrierProfile.findUnique({
+    where: { id: req.params.id },
+    select: { id: true, user: { select: { id: true, totpEnabled: true } } },
+  });
+  if (!carrier) {
+    res.status(404).json({ error: "Carrier not found" });
+    return;
+  }
+  if (!carrier.user.totpEnabled) {
+    res.status(409).json({ error: "This carrier has no authenticator enrolled.", code: "TOTP_NOT_ENABLED" });
+    return;
+  }
+  await disableTotp(carrier.user.id);
+  await recordSecurityEvent({
+    userId: carrier.user.id,
+    action: "MFA_RESET",
+    note: req.body.reason,
+    req,
+    details: { by: req.user!.id, carrierProfileId: carrier.id },
+  });
+  res.json({ ok: true, userId: carrier.user.id });
+});
+
 const rejectCarrierSchema = z.object({
   reason: z.enum([
     "MISSING_DOCUMENTS",

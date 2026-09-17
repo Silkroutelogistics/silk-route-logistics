@@ -17911,7 +17911,21 @@
 // finally persists them.
 //
 // Arc: carrier login security, commit B2.
-export const SRL_VERSION = "3.8.bci";
+// v3.8.bcj: an admin can unenroll a carrier authenticator, through the loud
+// door only.
+//
+// Self-service disable is refused for carriers (bce), so a lost phone needs a
+// human exit (Item 216 b, ruling D5). POST /carriers/:id/mfa-reset: ADMIN/CEO,
+// a fresh step-up from the admin OWN authenticator (new POST /auth/step-up —
+// the mint existed only for carriers), a reason of ten characters or more
+// that becomes the audit note, one update that clears all three TOTP columns
+// (disableTotp), and the MFA_RESET row — whose only writer this is, pinned by
+// a source walk. The 2FA wall reads totpEnabled live, so the carrier lands on
+// the enrollment screen at their next request. A carrier with nothing
+// enrolled is a 409, not a silent no-op. The AE button is B1c-2.
+//
+// Arc: carrier login security, commit B1c-1 (split, ruled 2026-09-17).
+export const SRL_VERSION = "3.8.bcj";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

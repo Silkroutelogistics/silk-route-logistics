@@ -5,6 +5,8 @@ import { register, login, getProfile, updateProfile, updatePreferences, changePa
 import { authenticate, authorize, registerSession } from "../middleware/auth";
 import { generateTotpSetup, verifyTotpCode, enableTotp, disableTotp } from "../services/totpService";
 import { recordSecurityEvent } from "../lib/securityAudit";
+import { logAuthEvent } from "../lib/authEvents";
+import { mintStepUpToken, STEP_UP_WINDOW_MINUTES, STEP_UP_ACTIONS } from "../lib/stepUpToken";
 import { getAuthUrl, exchangeCode } from "../services/gmailService";
 import { AuthRequest } from "../middleware/auth";
 import { validateBody } from "../middleware/validate";
@@ -227,6 +229,22 @@ router.post("/totp/disable", authenticate, notCarrier, validateBody(z.object({ c
   } catch (err: unknown) {
     res.status(500).json({ error: "Failed to disable 2FA" });
   }
+});
+
+// v3.8.bcj — step-up for staff. Signing in proved who you are; this proves
+// you are still there before an act that removes another person's second
+// factor. Mirrors /carrier-auth/step-up: the action is bound into the token,
+// so a step-up granted for one act cannot be spent on another.
+const staffStepUpSchema = z.object({ code: z.string().trim().min(6).max(8), action: z.enum(STEP_UP_ACTIONS) });
+router.post("/step-up", authenticate, authorize("ADMIN", "CEO"), otpVerifyLimiter, validateBody(staffStepUpSchema), async (req: AuthRequest, res) => {
+  const valid = await verifyTotpCode(req.user!.id, req.body.code);
+  if (!valid) {
+    logAuthEvent("stepup.failed", { userId: req.user!.id, email: req.user!.email, reason: "totp_invalid", req });
+    res.status(401).json({ error: "That code did not match. Check your authenticator app and try the current code.", code: "TOTP_CODE_INVALID" });
+    return;
+  }
+  logAuthEvent("stepup.granted", { userId: req.user!.id, email: req.user!.email, req });
+  res.json({ stepUpToken: mintStepUpToken(req.user!.id, req.body.action), expiresInMinutes: STEP_UP_WINDOW_MINUTES });
 });
 
 // Forced 2FA setup for ADMIN/CEO — uses setupToken from login flow
