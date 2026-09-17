@@ -6,6 +6,7 @@ import {
   getAllCarriers, getCarrierDetail, updateCarrier, setupAdminCarrierProfile, setAuthorityGrantDate,
 } from "../controllers/carrierController";
 import { authenticate, authorize, AuthRequest } from "../middleware/auth";
+import { requireTotpEnrolled } from "../middleware/requireTotpEnrolled";
 import {
   upsertDraft,
   sendVerification,
@@ -403,6 +404,16 @@ router.post("/onboarding/invite/request-fresh", onboardingSendLimiter, async (re
 });
 // Authenticated carrier
 router.use(authenticate);
+// The 2FA wall. /api/carrier is the audience-mixed mount (§13.3 Item 161): it
+// carries seven carrier-facing routes below this line and the AE routes further
+// down, and it was the one carrier-reachable mount the Arc 15 wall never
+// covered — a session with a password and an inbox but no authenticator could
+// read revenue and scorecard data and upload compliance documents here. The
+// middleware no-ops for every non-CARRIER role, so the AE routes are untouched;
+// it sits AFTER authenticate because it reads req.user (the Arc 15 lesson), and
+// AFTER the public block above because the wall must never see a request that
+// has no session to check (the Arc 27 lesson).
+router.use(requireTotpEnrolled);
 router.post("/documents", uploadLimiter, upload.array("files", 5), uploadCarrierDocuments);
 router.get("/onboarding-status", getOnboardingStatus);
 router.get("/dashboard", getDashboard);

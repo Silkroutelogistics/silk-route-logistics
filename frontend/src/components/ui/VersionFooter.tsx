@@ -17848,7 +17848,19 @@
 // claims the return only when this was the last open request.
 //
 // Batch 2, commit B6 of 5.
-export const SRL_VERSION = "3.8.bcc";
+// v3.8.bcd: the 2FA wall reaches the two mounts a carrier could still use
+// without an authenticator.
+//
+// requireTotpEnrolled was on the five carrier-portal mounts (Arc 15) and its
+// header promised everything else on the portal was behind it. /api/carrier
+// (scorecard, revenue, dashboard, document upload) and /api/documents (the
+// carrier documents page) were not: a session with a password and an inbox
+// but no authenticator could read revenue and upload compliance paperwork.
+// The wall now sits inside both routers, after authenticate and below the
+// public onboarding block. AE and shipper traffic is untouched by its role
+// check. Proven by mounting the real routers (totpWallCoverage.test.ts),
+// not by asserting the line is present.
+export const SRL_VERSION = "3.8.bcd";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

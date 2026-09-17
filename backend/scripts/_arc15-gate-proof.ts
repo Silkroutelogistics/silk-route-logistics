@@ -67,6 +67,13 @@ async function main() {
     "/carrier-payments/",
     "/carrier-drivers/",
     "/carrier-tenders/active",
+    // B1a (2026-09-17) — the three mounts a carrier session also authenticates
+    // on that the Arc 15 wall never covered. The wall is router.use, so a GET
+    // probe reaches it before any route matches, POST-only paths included.
+    "/carrier/scorecard",
+    "/carrier/revenue",
+    "/carrier/documents",
+    "/documents/upload",
   ];
   const exempt = [
     "/carrier-auth/application-status",

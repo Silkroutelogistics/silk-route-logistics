@@ -1,6 +1,7 @@
 import { Router, Response } from "express";
 import { uploadDocuments, getDocuments, downloadDocument, deleteDocument } from "../controllers/documentController";
 import { authenticate, authorize, AuthRequest } from "../middleware/auth";
+import { requireTotpEnrolled } from "../middleware/requireTotpEnrolled";
 import { upload } from "../config/upload";
 import { prisma } from "../config/database";
 import { logLoadActivity } from "../services/loadActivityService";
@@ -8,6 +9,10 @@ import { logLoadActivity } from "../services/loadActivityService";
 const router = Router();
 
 router.use(authenticate);
+// The 2FA wall, for the same reason as /api/carrier: the carrier portal uploads
+// and downloads through this mount, and it was reachable with no authenticator.
+// No-op for AE and SHIPPER sessions, which are the other two callers here.
+router.use(requireTotpEnrolled);
 
 // PATCH /documents/:id — update status (verify/reject) or notes
 router.patch(
