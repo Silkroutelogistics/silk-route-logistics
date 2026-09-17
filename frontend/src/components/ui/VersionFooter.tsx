@@ -17964,7 +17964,20 @@
 // without them rather than not at all.
 //
 // Arc: carrier login security, commit B5a.
-export const SRL_VERSION = "3.8.bcm";
+// v3.8.bcn: a sensitive act inside a day of a flagged login is recorded on
+// the login.
+//
+// NEW_DEVICE and NEW_COUNTRY alone are weak — people buy phones and travel.
+// What sharpens either is what happens NEXT. A Quick Pay election, a pilot
+// request or an insurance update within 24h of such a login appends
+// SENSITIVE_ACTION_AFTER_NEW_LOGIN:<action> to THAT login row's flags and
+// writes one SECURITY/WARNING SystemLog (source carrierAuth-login-risk,
+// [uid:] in the message) for the digest. Informational only: the act has
+// already been answered, nothing is blocked, and a failure here is swallowed.
+// Idempotent per (login, action). Document uploads are B5b-2.
+//
+// Arc: carrier login security, commit B5b-1 (split, ruling D4).
+export const SRL_VERSION = "3.8.bcn";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

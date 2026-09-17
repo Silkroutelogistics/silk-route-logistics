@@ -28,7 +28,7 @@ import {
 import { sendOtpEmail, sendEmailVerificationEmail, sendExecutedAgreementEmail } from "../services/emailService";
 import { resolveCountry, extractClientIp, detectUnusualActivity } from "../services/geoService";
 import { buildLoginDetails, OtpChannel } from "../lib/loginDetails";
-import { withLoginFlags } from "../lib/loginFlags";
+import { withLoginFlags, flagSensitiveActionAfterNewLogin } from "../lib/loginFlags";
 import { sendOtpSms } from "../services/openPhoneService";
 import { resolveInfoRequest, getCategoryLabel } from "../services/infoRequestService";
 import { docTypeForCategory, requiresAttachment } from "../../../shared/constants/infoRequestCategories";
@@ -1635,6 +1635,7 @@ router.post("/quickpay-election", authenticate, authorize("CARRIER"), requireSte
         quickPayVersion: version,
       },
     });
+    void flagSensitiveActionAfterNewLogin(req.user!.id, "quickpay-election");
     res.json({ quickPayEnabled: true, quickPayAgreedAt: now, quickPayVersion: version, signed: true });
     return;
   }
@@ -1644,6 +1645,7 @@ router.post("/quickpay-election", authenticate, authorize("CARRIER"), requireSte
     where: { id: profile.id },
     data: { quickPayEnabled: false },
   });
+  void flagSensitiveActionAfterNewLogin(req.user!.id, "quickpay-election");
   res.json({ quickPayEnabled: false, signed: false });
 });
 
@@ -1696,6 +1698,7 @@ router.post("/quickpay-pilot-request", authenticate, authorize("CARRIER"), async
   // your request" and nothing puts it in front of anyone.
   void notifyQuickPayPilotRequested(profile.id, "portal");
 
+  void flagSensitiveActionAfterNewLogin(req.user!.id, "quickpay-pilot-request");
   log.info({ carrierProfileId: profile.id, enrollmentId: created.id }, "[QuickPayPilot] requested from portal");
   res.status(201).json({
     status: "PENDING",

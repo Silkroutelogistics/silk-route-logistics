@@ -6,6 +6,7 @@ import { validateBody } from "../middleware/validate";
 import { sendInsuranceVerificationEmail, validateInsuranceCoverage, maybeSendInsuranceVerificationEmail } from "../services/insuranceVerificationService";
 import { log } from "../lib/logger";
 import { requireStepUp } from "../middleware/requireStepUp";
+import { flagSensitiveActionAfterNewLogin } from "../lib/loginFlags";
 
 const router = Router();
 
@@ -303,6 +304,7 @@ router.patch("/insurance", requireStepUp("insurance-update"), async (req: AuthRe
       log.error({ err, carrierId: updated.id }, "[InsVerify] Auto-send failed after insurance update");
     });
 
+  void flagSensitiveActionAfterNewLogin(req.user!.id, "insurance-update");
   res.json({ message: "Insurance details updated", updated, validation });
 });
 

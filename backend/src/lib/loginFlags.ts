@@ -128,3 +128,55 @@ export async function withLoginFlags(
     return { ...details, flags: [] };
   }
 }
+
+// ── B5b — a sensitive act shortly after a flagged login ──────────────────────
+//
+// NEW_DEVICE and NEW_COUNTRY on their own are weak: people buy phones and
+// travel. What sharpens either is what happens NEXT — a payment-terms change,
+// an insurance update, a document upload — inside a day of it. That is the
+// account-takeover shape, and it is recorded ON THE LOGIN ROW, because the
+// login is what an AE goes back to read. Informational only: the act itself
+// is not blocked, the endpoint that performed it has already answered, and a
+// failure here is logged and swallowed. One SystemLog SECURITY/WARNING per
+// (login, action) so the daily digest can count them; idempotent per action.
+
+export type SensitiveAction = "document-upload" | "quickpay-pilot-request" | "quickpay-election" | "insurance-update";
+export const SENSITIVE_ACTION_WINDOW_HOURS = 24;
+export const SENSITIVE_LOGIN_RISK_SOURCE = "carrierAuth-login-risk";
+
+export async function flagSensitiveActionAfterNewLogin(
+  userId: string,
+  action: SensitiveAction,
+  now: Date = new Date(),
+): Promise<{ flagged: boolean }> {
+  try {
+    const login = await prisma.auditLog.findFirst({
+      where: { userId, action: "LOGIN" },
+      orderBy: { createdAt: "desc" },
+      select: { id: true, details: true, createdAt: true },
+    });
+    if (!login) return { flagged: false };
+    const ageHours = (now.getTime() - login.createdAt.getTime()) / 3_600_000;
+    if (ageHours < 0 || ageHours > SENSITIVE_ACTION_WINDOW_HOURS) return { flagged: false };
+    const details = (login.details ?? {}) as Partial<LoginDetails> & { flags?: string[] };
+    const flags = Array.isArray(details.flags) ? details.flags : [];
+    if (!flags.includes("NEW_DEVICE") && !flags.includes("NEW_COUNTRY")) return { flagged: false };
+    const flag = `SENSITIVE_ACTION_AFTER_NEW_LOGIN:${action}`;
+    if (flags.includes(flag)) return { flagged: true };
+    await prisma.auditLog.update({ where: { id: login.id }, data: { details: { ...details, flags: [...flags, flag] } } });
+    await prisma.systemLog.create({
+      data: {
+        logType: "SECURITY",
+        severity: "WARNING",
+        source: SENSITIVE_LOGIN_RISK_SOURCE,
+        userId,
+        message: `Sensitive action ${action} within ${SENSITIVE_ACTION_WINDOW_HOURS}h of a flagged login (${flags.filter((f) => f === "NEW_DEVICE" || f === "NEW_COUNTRY").join(", ")}) [uid:${userId}]`,
+        details: { loginAuditLogId: login.id, action, loginAgeHours: Math.round(ageHours * 100) / 100 },
+      },
+    });
+    return { flagged: true };
+  } catch (err) {
+    log.warn({ err, userId, action }, "[loginFlags] sensitive-action flag failed; the act itself is unaffected");
+    return { flagged: false };
+  }
+}
