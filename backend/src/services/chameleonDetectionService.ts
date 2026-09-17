@@ -151,6 +151,60 @@ export async function recomputeChameleonRiskLevel(carrierId: string) {
   });
   return riskLevel;
 }
+export const RETIRED_BY_RESCAN_NOTE = "Retired by rescan: no fingerprint overlap under current rule";
+
+/**
+ * Retire the OPEN rows a rescan no longer supports (v3.8.bbw).
+ *
+ * A match row is evidence, and evidence can stop existing: the rule that
+ * produced it changes (v3.8.bbv), the other carrier is deleted, a fingerprint
+ * is corrected. Left standing, recomputeChameleonRiskLevel keeps reading it
+ * and a review of any row drags the carrier back to HIGH from evidence the
+ * scan itself can no longer find.
+ *
+ * SCOPE IS OPEN ROWS ONLY. REVIEWED, DISMISSED and CONFIRMED_FRAUD carry a
+ * human's judgment and are never touched here. A retired row is DISMISSED
+ * with reviewedById NULL, which is how a later reader tells a system
+ * retirement from an AE's decision, and why checkChameleon lets a retired
+ * pair come back as a fresh row if the evidence returns.
+ *
+ * The write re-asserts status OPEN so a review that lands between the read
+ * and the write is not overwritten. One SystemLog row per batch carries the
+ * retired ids: AuditLog requires an actor, and a rescan has none.
+ */
+export async function retireUnsupportedOpenMatches(
+  carrierId: string,
+  supportedMatchedCarrierIds: string[],
+): Promise<string[]> {
+  const stale = await prisma.chameleonMatch.findMany({
+    where: { carrierId, status: "OPEN", matchedCarrierId: { notIn: supportedMatchedCarrierIds } },
+    select: { id: true, matchedCarrierId: true, matchType: true },
+  });
+  if (stale.length === 0) return [];
+  const ids = stale.map((m) => m.id);
+  const res = await prisma.chameleonMatch.updateMany({
+    where: { id: { in: ids }, status: "OPEN" },
+    data: { status: "DISMISSED", reviewedById: null, reviewedAt: new Date(), reviewNotes: RETIRED_BY_RESCAN_NOTE },
+  });
+  await prisma.systemLog
+    .create({
+      data: {
+        logType: "SECURITY",
+        severity: "INFO",
+        source: "chameleon-rescan-retire",
+        message: `Retired ${res.count} stale chameleon match(es) for carrier ${carrierId}`,
+        details: {
+          carrierId,
+          retiredMatchIds: ids,
+          pairs: stale.map((m) => ({ id: m.id, matchedCarrierId: m.matchedCarrierId, matchType: m.matchType })),
+          note: RETIRED_BY_RESCAN_NOTE,
+        },
+      },
+    })
+    .catch((err) => log.error({ err, carrierId }, "[Chameleon] retirement audit row failed"));
+  return ids;
+}
+
 export async function checkChameleon(carrierId: string): Promise<ChameleonResult> {
   // Ensure fingerprint exists
   await buildFingerprint(carrierId);
@@ -233,13 +287,14 @@ export async function checkChameleon(carrierId: string): Promise<ChameleonResult
       orderBy: { createdAt: "desc" },
     });
 
-    // A human has already judged this pair. Respect that: do not recreate it,
-    // and do not let it drive the risk level. If genuinely new evidence
-    // appears it arrives as a different pair or a wider matchType, which does
-    // create a new row.
-    if (existingMatch?.status === "DISMISSED") continue;
+    // A HUMAN has already judged this pair. Respect that: do not recreate it,
+    // and do not let it drive the risk level. A SYSTEM retirement (v3.8.bbw,
+    // reviewedById null) is not a judgment — it recorded that the evidence was
+    // gone — and the evidence is now back, so that pair gets a fresh row.
+    const humanDismissed = existingMatch?.status === "DISMISSED" && existingMatch.reviewedById !== null;
+    if (humanDismissed) continue;
 
-    if (!existingMatch) {
+    if (!existingMatch || existingMatch.status === "DISMISSED") {
       await prisma.chameleonMatch.create({
         data: {
           carrierId,
@@ -260,17 +315,21 @@ export async function checkChameleon(carrierId: string): Promise<ChameleonResult
     });
   }
 
-  // One source for the thresholds, shared with recomputeChameleonRiskLevel so
-  // a review and a rescan can never disagree about what HIGH means.
-  const riskLevel = deriveRiskLevel(matches.map((m) => m.riskScore));
+  // v3.8.bbw — rows this run no longer supports are retired before the level
+  // is read, so a row the scan cannot reproduce cannot keep a carrier blocked.
+  await retireUnsupportedOpenMatches(carrierId, matches.map((m) => m.matchedCarrierId));
 
-  // Update carrier profile with chameleon check results
+  // ONE SOURCE for the level, not two. This used to derive from this run's
+  // matches while recomputeChameleonRiskLevel derived from the stored rows,
+  // and the two disagreed the moment a stored row outlived its evidence: the
+  // scan wrote NONE, the next review recomputed HIGH from the same rows. The
+  // scan now writes what the review reads — the standing rows — so a
+  // CONFIRMED_FRAUD verdict keeps the carrier blocked through a rescan, and a
+  // downgrade is written on the same path as an escalation.
+  const riskLevel = await recomputeChameleonRiskLevel(carrierId);
   await prisma.carrierProfile.update({
     where: { id: carrierId },
-    data: {
-      lastChameleonCheckAt: new Date(),
-      chameleonRiskLevel: riskLevel,
-    },
+    data: { lastChameleonCheckAt: new Date() },
   });
 
   // Email admins on MEDIUM or HIGH risk chameleon matches

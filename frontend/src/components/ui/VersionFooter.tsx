@@ -17766,7 +17766,23 @@
 // "Unknown". Schema comment corrected; no migration.
 //
 // Batch 1, commit B5a of 2. Stale-row retirement is B5b.
-export const SRL_VERSION = "3.8.bbv";
+// v3.8.bbw: a rescan retires the rows it can no longer support, and writes the
+// level a review would read.
+//
+// bbw changed what an EMAIL match is and left 26 OPEN rows in production no
+// rescan could reproduce. They were not inert: checkChameleon derived its level
+// from THIS run's matches while every review recomputed from the STORED rows,
+// so one click on any row re-blocked a carrier from evidence the scan had just
+// declined to find. Now: OPEN rows for pairs a run does not match are DISMISSED
+// with reviewedById null and a fixed note — REVIEWED, DISMISSED and
+// CONFIRMED_FRAUD are never touched — one SystemLog row per batch carries the
+// ids, and the scan writes its level through recomputeChameleonRiskLevel, so a
+// downgrade lands on the same path as an escalation and a CONFIRMED verdict
+// survives a rescan. A system retirement does not suppress a pair that later
+// matches again; only a human dismissal does.
+//
+// Batch 1, commit B5b of 2. Post-deploy: one POST /carriers/chameleon/scan.
+export const SRL_VERSION = "3.8.bbw";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
