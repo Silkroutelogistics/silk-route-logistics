@@ -28,7 +28,7 @@ import { sendOtpEmail, sendEmailVerificationEmail, sendExecutedAgreementEmail } 
 import { resolveCountry, extractClientIp, detectUnusualActivity } from "../services/geoService";
 import { sendOtpSms } from "../services/openPhoneService";
 import { resolveInfoRequest, getCategoryLabel } from "../services/infoRequestService";
-import { docTypeForCategory } from "../../../shared/constants/infoRequestCategories";
+import { docTypeForCategory, requiresAttachment } from "../../../shared/constants/infoRequestCategories";
 import { flagFieldForDocType, type CarrierDocFlagField } from "../lib/documentFlags";
 import { upload } from "../config/upload";
 import { uploadFile, uploadFileToPath, getFileStream } from "../services/storageService";
@@ -1803,6 +1803,9 @@ router.get("/info-requests", authenticate, authorize("CARRIER"), async (req: Aut
     requests: requests.map((r) => ({
       ...r,
       categoryLabel: getCategoryLabel(r.category),
+      // v3.8.bby — the form marks these required; the resolve gate below
+      // refuses without one. Same set, read from the same module.
+      requiresAttachment: requiresAttachment(r.category),
     })),
   });
 });
@@ -1861,6 +1864,22 @@ router.post(
       }
       if (request.status !== "OPEN") {
         res.status(409).json({ error: "This request has already been resolved or cancelled" });
+        return;
+      }
+
+      // v3.8.bby — a document request needs the document. The category was a
+      // label until this: a W9_UPDATE was resolved in production with the
+      // text "Doc attached" and no file, and the record then said nothing
+      // about what arrived or where. Server-side, before any storage write.
+      const filesForGate = (req.files as Express.Multer.File[] | undefined) || [];
+      if (requiresAttachment(request.category) && filesForGate.length === 0) {
+        const label = getCategoryLabel(request.category);
+        res.status(422).json({
+          error: `Please attach your ${label}. This request needs the document itself, not just a note.`,
+          code: "ATTACHMENT_REQUIRED",
+          requiresAttachment: true,
+          categoryLabel: label,
+        });
         return;
       }
 

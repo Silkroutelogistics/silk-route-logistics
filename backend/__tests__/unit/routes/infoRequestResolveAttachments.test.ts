@@ -122,3 +122,58 @@ describe("the attachment is typed by the request's category", () => {
     expect(uploadFile.mock.calls[0][0].length).toBe(PDF.length);
   });
 });
+
+/**
+ * v3.8.bby — a document request needs the document, and the server says so.
+ * The gate sits BEFORE any storage write and before the resolve service, so a
+ * refusal leaves no half-answered state: no Document row, no status flip, no
+ * AE email. The same set drives the form's "(required)" label.
+ */
+describe("the attachment gate", () => {
+  it.each(["W9_UPDATE", "COI_UPDATE", "AUTHORITY_LETTER", "VOIDED_CHECK", "ADDRESS_PROOF"])(
+    "%s with no file is refused 422 ATTACHMENT_REQUIRED, naming the document, and resolves nothing",
+    async (category) => {
+      const res = await post(category, false);
+      expect(res.status).toBe(422);
+      expect(res.body.code).toBe("ATTACHMENT_REQUIRED");
+      expect(res.body.error).toContain(res.body.categoryLabel);
+      expect(res.body.categoryLabel).not.toBe("");
+      expect(resolveInfoRequest).not.toHaveBeenCalled();
+      expect(mockPrisma.document.create).not.toHaveBeenCalled();
+      expect(uploadFile).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each(["REFERENCES", "SAFETY_CLARIFICATION", "EIN_VERIFICATION", "OTHER"])(
+    "%s with no file is still accepted — it is answered in words",
+    async (category) => {
+      const res = await post(category, false);
+      expect(res.status).toBe(200);
+      expect(resolveInfoRequest).toHaveBeenCalledTimes(1);
+    },
+  );
+
+  it("a document request WITH a file passes the gate", async () => {
+    const res = await post("W9_UPDATE", true);
+    expect(res.status).toBe(200);
+  });
+
+  it("the gate refuses before ownership is even relevant to storage: a wrong carrier is still 403, not 422", async () => {
+    mockPrisma.infoRequest.findUnique.mockResolvedValue({ id: "ir-1", status: "OPEN", category: "W9_UPDATE", carrier: { id: "cp-2", userId: "someone-else" } });
+    const a = await app();
+    const res = await request(a).post("/api/carrier-auth/info-requests/ir-1/resolve").field("resolvedNote", "x");
+    expect(res.status).toBe(403);
+  });
+
+  it("the carrier's list carries requiresAttachment from the same set", async () => {
+    mockPrisma.carrierProfile.findUnique = vi.fn(async () => ({ id: "cp-1" }));
+    mockPrisma.infoRequest.findMany = vi.fn(async () => [
+      { id: "ir-1", category: "W9_UPDATE", message: "m", createdAt: new Date() },
+      { id: "ir-2", category: "REFERENCES", message: "m", createdAt: new Date() },
+    ]);
+    const a = await app();
+    const res = await request(a).get("/api/carrier-auth/info-requests");
+    expect(res.status).toBe(200);
+    expect(res.body.requests.map((r: any) => [r.id, r.requiresAttachment])).toEqual([["ir-1", true], ["ir-2", false]]);
+  });
+});

@@ -17795,7 +17795,19 @@
 // completeness flag through lib/documentFlags.
 //
 // Batch 2, commit B1 of 5.
-export const SRL_VERSION = "3.8.bbx";
+// v3.8.bby: a document request needs the document — refused server-side.
+//
+// A W9_UPDATE request was resolved in production with the text "Doc attached"
+// and no file: the category was a label, and the resolve gate required only a
+// non-empty note. The five document categories (COI, W-9, authority letter,
+// voided check, proof of address) now refuse a fileless answer with 422
+// ATTACHMENT_REQUIRED that names the document, before any storage write and
+// before the resolve service runs. The carrier's list carries
+// requiresAttachment from the same set, so the form's "(required)" and the
+// server's refusal cannot disagree. Prose categories stay optional.
+//
+// Batch 2, commit B2 of 5.
+export const SRL_VERSION = "3.8.bby";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

@@ -86,3 +86,27 @@ export const INFO_REQUEST_CATEGORY_DOC_TYPE: Record<InfoRequestCategory, string>
 export function docTypeForCategory(category: string): string {
   return (INFO_REQUEST_CATEGORY_DOC_TYPE as Record<string, string>)[category] ?? "INFO_REQUEST_RESPONSE";
 }
+
+/**
+ * The categories that ask for a DOCUMENT, where an answer without one is not an
+ * answer.
+ *
+ * v3.8.bby. A W9_UPDATE request was resolved in production with the text "Doc
+ * attached" and no file — the category was a label, and the resolve gate
+ * required only a non-empty note. This set is what the server refuses on and
+ * what the carrier form marks required; both read it here so they cannot
+ * disagree. Ratified 2026-09-17: COI, W-9, authority letter, voided check,
+ * proof of address. The prose categories (safety clarification, EIN, references,
+ * other) are answered in words and stay optional.
+ */
+export const INFO_REQUEST_REQUIRES_ATTACHMENT: ReadonlySet<InfoRequestCategory> = new Set<InfoRequestCategory>([
+  "COI_UPDATE",
+  "W9_UPDATE",
+  "AUTHORITY_LETTER",
+  "VOIDED_CHECK",
+  "ADDRESS_PROOF",
+]);
+
+export function requiresAttachment(category: string): boolean {
+  return INFO_REQUEST_REQUIRES_ATTACHMENT.has(category as InfoRequestCategory);
+}
