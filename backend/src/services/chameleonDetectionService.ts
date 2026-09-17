@@ -19,9 +19,38 @@ function normalizePhone(phone: string): string {
   return phone.replace(/\D/g, "").slice(-10);
 }
 
-function normalizeEmail(email: string): string {
-  // Hash domain only for chameleon detection (same person may use same domain)
-  return email.split("@")[1]?.toLowerCase() || email.toLowerCase();
+/**
+ * Normalize an email to the form two records of the SAME PERSON would share.
+ *
+ * THE FULL ADDRESS, NOT THE DOMAIN (v3.8.bbv). This hashed the domain alone,
+ * on the reasoning that "same person may use same domain". That is true of a
+ * company domain and false of a mail provider: every gmail.com carrier matched
+ * every other gmail.com carrier, three such matches is HIGH, and HIGH hard-blocks
+ * a tender. Measured 2026-09-17: 5 of 6 live real carriers were HIGH and all 5
+ * were on free mail. A fraud gate that fires on a mail provider is not a gate.
+ *
+ * What IS the same person: the same inbox. +tags route to one inbox on every
+ * major provider, and Gmail ignores dots in the local part and serves
+ * googlemail.com as the same account. Those are folded so a reincarnation
+ * cannot dodge the check with a dot or a tag; nothing else is folded, because
+ * anything broader (a domain, a display name) is not the same inbox.
+ *
+ * Returns null for anything that is not an address. Nothing is hashed, so two
+ * carriers with no email do not match on the absence of one.
+ */
+export function normalizeEmail(raw: string | null | undefined): string | null {
+  if (!raw) return null;
+  const s = raw.trim().toLowerCase();
+  const at = s.lastIndexOf("@");
+  if (at <= 0 || at === s.length - 1) return null;
+  let local = s.slice(0, at);
+  let domain = s.slice(at + 1);
+  const plus = local.indexOf("+");
+  if (plus > 0) local = local.slice(0, plus);
+  if (domain === "googlemail.com") domain = "gmail.com";
+  if (domain === "gmail.com") local = local.replace(/\./g, "");
+  if (!local) return null;
+  return `${local}@${domain}`;
 }
 
 function normalizeAddress(address: string, zip: string): string {
@@ -50,7 +79,8 @@ export async function buildFingerprint(carrierId: string, registrationIp?: strin
   const zip = carrier.zip || "";
 
   const phoneHash = phone ? sha256(normalizePhone(phone)) : null;
-  const emailHash = email ? sha256(normalizeEmail(email)) : null;
+  const emailNorm = normalizeEmail(email);
+  const emailHash = emailNorm ? sha256(emailNorm) : null;
   const addressHash = address && zip ? sha256(normalizeAddress(address, zip)) : null;
   const einHash = carrier.identityVerification?.w9TinLastFour
     ? sha256(carrier.identityVerification.w9TinLastFour)
@@ -153,7 +183,11 @@ export async function checkChameleon(carrierId: string): Promise<ChameleonResult
     where: {
       AND: [
         { carrierId: { not: carrierId } },
-        { carrier: { isTestAccount: false } },
+        // v3.8.bbv — and not a soft-deleted one. A deleted carrier's fingerprint
+        // still sat in the table and matched: 11 of the 27 OPEN rows in
+        // production were against deleted carriers, and the alert email named
+        // one of them "Unknown" because its companyName was null.
+        { carrier: { isTestAccount: false, deletedAt: null } },
         { OR: orConditions },
       ],
     },

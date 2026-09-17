@@ -3517,7 +3517,7 @@ model CarrierFingerprint {
   carrier   CarrierProfile @relation(fields: [carrierId], references: [id])
 
   phoneHash   String? // SHA-256 of normalized phone
-  emailHash   String? // SHA-256 of email domain
+  emailHash   String? // SHA-256 of the normalized full address (v3.8.bbv; was domain-only, which matched every gmail carrier to every other)
   addressHash String? // SHA-256 of normalized address
   einHash     String? // SHA-256 of EIN/TIN
   ipHash      String? // SHA-256 of registration IP address

@@ -17754,7 +17754,19 @@
 // field edit in updateCarrier, is excluded by name with the reason.
 //
 // Sprint A0, commit C1 of 6.
-export const SRL_VERSION = "3.8.bbu";
+// v3.8.bbv: chameleon EMAIL matches the same inbox, never the same provider.
+//
+// The EMAIL fingerprint hashed the domain alone, so every gmail.com carrier
+// matched every other one; three matches is HIGH, and HIGH hard-blocks a
+// tender. Measured 2026-09-17: five of the six live real carriers were HIGH,
+// all five on free mail. The hash is now the normalized full address (trim,
+// lowercase, +tag stripped, gmail dots folded, googlemail = gmail); null,
+// empty, whitespace and no-@ produce no hash. The match side also excludes
+// soft-deleted carriers, which held 11 of the 27 open rows and rendered as
+// "Unknown". Schema comment corrected; no migration.
+//
+// Batch 1, commit B5a of 2. Stale-row retirement is B5b.
+export const SRL_VERSION = "3.8.bbv";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
