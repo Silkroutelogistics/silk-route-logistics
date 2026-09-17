@@ -110,3 +110,25 @@ export const INFO_REQUEST_REQUIRES_ATTACHMENT: ReadonlySet<InfoRequestCategory> 
 export function requiresAttachment(category: string): boolean {
   return INFO_REQUEST_REQUIRES_ATTACHMENT.has(category as InfoRequestCategory);
 }
+
+/**
+ * Whether a carrier's answer can be submitted — the client-side mirror of the
+ * server gate, as a pure function so it is testable without the page.
+ *
+ * The server refuses a fileless answer to a document category with 422; the
+ * form disables Send in exactly the same case so the carrier is told BEFORE
+ * they click. Both read `requiresAttachment` from this module. `pending` is
+ * the in-flight mutation: a second click while the first is on the wire is
+ * how a request gets answered twice.
+ */
+export function canSubmitInfoRequestAnswer(args: {
+  note: string;
+  fileCount: number;
+  requiresAttachment: boolean;
+  pending?: boolean;
+}): boolean {
+  if (args.pending) return false;
+  if (args.note.trim().length < 1) return false;
+  if (args.requiresAttachment && args.fileCount < 1) return false;
+  return true;
+}

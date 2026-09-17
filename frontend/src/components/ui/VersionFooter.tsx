@@ -17807,7 +17807,17 @@
 // server's refusal cannot disagree. Prose categories stay optional.
 //
 // Batch 2, commit B2 of 5.
-export const SRL_VERSION = "3.8.bby";
+// v3.8.bbz: the carrier form marks a document request required, and Send
+// waits for the file.
+//
+// The attach control said "(optional)" on every request, including the five
+// the server now refuses without a file (bby). The label reads
+// requiresAttachment from the carrier's list, and the Send button's predicate
+// is a pure function in the shared module — the same set the server refuses
+// on — so the carrier is told before they click, not by a 422 after.
+//
+// Batch 2, commit B2b-1 of 5.
+export const SRL_VERSION = "3.8.bbz";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

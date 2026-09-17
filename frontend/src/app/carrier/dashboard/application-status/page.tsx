@@ -15,6 +15,7 @@
 //   * v3.8.aje: INFO_REQUESTED open requests list + carrier-resolve form,
 //     REJECTED reason + reapply-eligible date + reapply CTA.
 
+import { canSubmitInfoRequestAnswer } from "@shared/constants/infoRequestCategories";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { api } from "@/lib/api";
@@ -300,6 +301,8 @@ interface InfoRequest {
   categoryLabel: string;
   message: string;
   createdAt: string;
+  // v3.8.bbz — from the same set the server refuses on (422 ATTACHMENT_REQUIRED).
+  requiresAttachment: boolean;
 }
 
 function InfoRequestedSection() {
@@ -437,7 +440,15 @@ function InfoRequestCard({ request, onResolved }: { request: InfoRequest; onReso
     },
   });
 
-  const canSubmit = resolvedNote.trim().length >= 1 && !mutation.isPending;
+  // v3.8.bbz — a document request needs the document; the server refuses a
+  // fileless answer with 422, and the button says so first. One predicate,
+  // shared with the server-side set, so the two cannot disagree.
+  const canSubmit = canSubmitInfoRequestAnswer({
+    note: resolvedNote,
+    fileCount: files.length,
+    requiresAttachment: !!request.requiresAttachment,
+    pending: mutation.isPending,
+  });
 
   function formatBytes(bytes: number): string {
     if (bytes < 1024) return `${bytes} B`;
@@ -471,7 +482,12 @@ function InfoRequestCard({ request, onResolved }: { request: InfoRequest; onReso
             Same MIME set the backend multer fileFilter accepts. */}
         <div className="mt-3">
           <label className="block text-xs font-semibold text-[#3A4A5F] uppercase tracking-wider mb-1.5">
-            Attach documents <span className="font-normal normal-case text-[#6B7685]">(optional, up to {MAX_FILES} files, 25 MB each)</span>
+            Attach documents{" "}
+            {request.requiresAttachment ? (
+              <span className="font-normal normal-case text-[#9B2C2C]">(required — this request needs the document itself; up to {MAX_FILES} files, 25 MB each)</span>
+            ) : (
+              <span className="font-normal normal-case text-[#6B7685]">(optional, up to {MAX_FILES} files, 25 MB each)</span>
+            )}
           </label>
           <div className="flex items-center gap-2">
             <label className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#FBF7F0] border border-[#EFE6D3] rounded-md text-xs font-semibold text-[#BA7517] hover:bg-[#F5EEE0] cursor-pointer">
