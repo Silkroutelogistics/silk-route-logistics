@@ -17825,7 +17825,18 @@
 // gate (bby) and the carrier form (bbz).
 //
 // Batch 2, commit B2b-2 of 5.
-export const SRL_VERSION = "3.8.bca";
+// v3.8.bcb: the Documents panel's header and rows read one number.
+//
+// "DOCUMENTS (7)" over six rows: the header counted docs.length while the rows
+// came from a category map with an exact-match filter and no catch-all, so a
+// WORKERS_COMP certificate was counted and never rendered. The map, the
+// grouping and the count now live in lib/carrierDocumentGroups: every row
+// lands in exactly one group, unnamed types go under Other with their raw
+// docType shown, Workers' Comp gets its own group and the upload dropdown
+// offers it, and the header is the sum of the groups by construction.
+//
+// Batch 2, commit B3 of 5.
+export const SRL_VERSION = "3.8.bcb";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

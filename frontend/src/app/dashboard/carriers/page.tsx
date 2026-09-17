@@ -7,6 +7,7 @@ import { IconTabs, type IconTabDef } from "@/components/ui/IconTabs";
 import { useState, useEffect, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
+import { DOC_CATEGORIES, groupCarrierDocuments, isUncategorizedDocType } from "@/lib/carrierDocumentGroups";
 import { useAuthStore } from "@/hooks/useAuthStore";
 import {
   Search, Shield, Truck, MapPin, Star, CheckCircle2, Clock, AlertCircle, X,
@@ -198,18 +199,10 @@ interface CarrierDoc {
   user: { id: string; firstName: string; lastName: string; email: string };
 }
 
-const DOC_CATEGORIES: { key: string; label: string }[] = [
-  { key: "W9", label: "W-9" },
-  { key: "COI", label: "Certificate of Insurance" },
-  { key: "AUTHORITY", label: "Operating Authority (MC)" },
-  { key: "BOC3", label: "BOC-3 Filing" },
-  { key: "CDL", label: "CDL" },
-  { key: "MEDICAL_CARD", label: "Medical Card" },
-  { key: "MVR", label: "Motor Vehicle Report" },
-  { key: "REGISTRATION", label: "Equipment Registration" },
-  { key: "INSPECTION", label: "Inspection Report" },
-  { key: "OTHER", label: "Other" },
-];
+// v3.8.bcb — the category map, the grouping and the count live in one module
+// (lib/carrierDocumentGroups) so the header and the rows cannot disagree. The
+// local copy of this list had no catch-all: a WORKERS_COMP row was counted
+// and never rendered.
 
 const DOC_STATUS_COLORS: Record<string, string> = {
   PENDING: "bg-yellow-100 text-yellow-700",
@@ -2149,10 +2142,9 @@ export default function CarrierPoolPage() {
                 {/* ===== DOCUMENTS TAB ===== */}
                 {panelTab === "documents" && selectedCarrier && (() => {
                   const carrierDocs = docsData?.documents || [];
-                  const grouped = DOC_CATEGORIES.map(cat => ({
-                    ...cat,
-                    docs: carrierDocs.filter(d => d.docType === cat.key),
-                  })).filter(g => g.docs.length > 0);
+                  // v3.8.bcb — one pass, every row lands in exactly one group, and
+                  // the header count is the sum of the groups by construction.
+                  const { groups: grouped, total: docTotal } = groupCarrierDocuments(carrierDocs);
 
                   // Upload view
                   if (docView === "upload") return (
@@ -2315,7 +2307,7 @@ export default function CarrierPoolPage() {
                   return (
                     <div className="space-y-4">
                       <div className="flex items-center justify-between">
-                        <h3 className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Documents ({carrierDocs.length})</h3>
+                        <h3 className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Documents ({docTotal})</h3>
                         {canReviewCarrier && (
                           <button onClick={() => setDocView("upload")}
                             className="flex items-center gap-1 px-2.5 py-1 bg-[#C5A572]/10 text-[#C5A572] rounded-lg text-xs font-medium hover:bg-[#C5A572]/20 transition">
@@ -2376,6 +2368,9 @@ export default function CarrierPoolPage() {
                                     </button>
                                     <p className="text-[11px] text-gray-700">{new Date(doc.createdAt).toLocaleDateString()} &middot; {doc.user.firstName} {doc.user.lastName}</p>
                                   </div>
+                                  {isUncategorizedDocType(doc.docType) && (
+                                    <span className="px-1.5 py-0.5 rounded text-[11px] font-mono bg-gray-200/80 text-gray-700 shrink-0" title="Document type as stored">{doc.docType || "UNTYPED"}</span>
+                                  )}
                                   <span className={`px-1.5 py-0.5 rounded text-[11px] font-medium shrink-0 ${DOC_STATUS_COLORS[doc.status] || ""}`}>{doc.status}</span>
                                   <div className="flex gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition">
                                     <button onClick={() => { setPreviewDoc(doc); setDocView("preview"); }} title="Preview"
