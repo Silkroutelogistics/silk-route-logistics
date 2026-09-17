@@ -28,6 +28,7 @@ import {
 import { sendOtpEmail, sendEmailVerificationEmail, sendExecutedAgreementEmail } from "../services/emailService";
 import { resolveCountry, extractClientIp, detectUnusualActivity } from "../services/geoService";
 import { buildLoginDetails, OtpChannel } from "../lib/loginDetails";
+import { withLoginFlags } from "../lib/loginFlags";
 import { sendOtpSms } from "../services/openPhoneService";
 import { resolveInfoRequest, getCategoryLabel } from "../services/infoRequestService";
 import { docTypeForCategory, requiresAttachment } from "../../../shared/constants/infoRequestCategories";
@@ -383,7 +384,8 @@ router.post("/verify-otp", otpVerifyLimiter, validateBody(carrierOtpSchema), asy
       entity: "Session",
       changes: "Carrier login via OTP",
       // B3a-2 — the structured half. ip is NOT here: ipAddress above is the source.
-      details: buildLoginDetails({ userAgent: req.headers["user-agent"], otpChannel: otpChannelForRow, mfaUsed: false, ip: clientIp(req) }),
+      // B5a — flags against this user's prior LOGIN rows; never blocks the login.
+      details: await withLoginFlags(user.id, buildLoginDetails({ userAgent: req.headers["user-agent"], otpChannel: otpChannelForRow, mfaUsed: false, ip: clientIp(req) })),
       ipAddress: clientIp(req) || "",
       userAgent: req.headers["user-agent"] || "",
     },
@@ -482,7 +484,7 @@ router.post("/totp-verify", otpVerifyLimiter, validateBody(carrierTotpSchema), a
       entity: "Session",
       changes: "Carrier login via OTP + 2FA",
       // B3a-2 — mfaUsed is true only here: the authenticator step ran and passed.
-      details: buildLoginDetails({ userAgent: req.headers["user-agent"], otpChannel: totpChannelForRow, mfaUsed: true, ip: clientIp(req) }),
+      details: await withLoginFlags(user.id, buildLoginDetails({ userAgent: req.headers["user-agent"], otpChannel: totpChannelForRow, mfaUsed: true, ip: clientIp(req) })),
       ipAddress: clientIp(req) || "",
       userAgent: req.headers["user-agent"] || "",
     },

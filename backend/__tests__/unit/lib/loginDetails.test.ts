@@ -82,14 +82,14 @@ describe("both carrier LOGIN rows carry the structured half (wiring, read from s
 
   it("the email-OTP login row records details with mfaUsed: false", () => {
     const row = loginRow("Carrier login via OTP");
-    expect(row).toContain("details: buildLoginDetails(");
+    expect(row).toContain("buildLoginDetails("); // bcm wraps it in withLoginFlags; the builder is still the source
     expect(row).toContain("mfaUsed: false");
     expect(row).toContain("ip: clientIp(req)");
   });
 
   it("the authenticator login row records details with mfaUsed: true", () => {
     const row = loginRow("Carrier login via OTP + 2FA");
-    expect(row).toContain("details: buildLoginDetails(");
+    expect(row).toContain("buildLoginDetails("); // bcm wraps it in withLoginFlags; the builder is still the source
     expect(row).toContain("mfaUsed: true");
     expect(row).toContain("ip: clientIp(req)");
   });

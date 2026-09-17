@@ -17951,7 +17951,20 @@
 // distance IMPOSSIBLE_TRAVEL needs (B5a) is what they are for.
 //
 // Arc: carrier login security, commit B4.
-export const SRL_VERSION = "3.8.bcl";
+// v3.8.bcm: a carrier LOGIN row flags what is unusual about it.
+//
+// details.flags — NEW_DEVICE, NEW_COUNTRY, IMPOSSIBLE_TRAVEL — each a
+// comparison against that user's own prior LOGIN rows, read through the
+// (userId, action, createdAt) index bcf added for this query. Travel is
+// impossible only when it is BOTH more than 500 km AND faster than 900 km/h:
+// 300 km in five minutes is city-level geo landing on another block of the
+// same metro, not a flight (amendment). A first login carries no flags and a
+// missing user agent never fires NEW_DEVICE. Flags are evidence, never
+// verdicts — a flagged login still logs in, and a failed read writes the row
+// without them rather than not at all.
+//
+// Arc: carrier login security, commit B5a.
+export const SRL_VERSION = "3.8.bcm";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
