@@ -17896,7 +17896,22 @@
 // Activity tab had it right). Now the note renders from `changes` and the
 // structured half from B3a renders beneath it as one scannable line — device,
 // OTP channel, 2FA — in the table, the CSV export and the client-side search.
-export const SRL_VERSION = "3.8.bch";
+// v3.8.bci: enrolling an authenticator, and failing its challenge, reach the
+// Audit Log.
+//
+// Those were recorded nowhere the Audit Log page reads: the carrier enrollment
+// path called logAuthEvent without an email, so auth_events never got a row,
+// and the global audit middleware sees /carrier-auth only as CREATE/CARRIER_AUTH.
+// A new recorder writes audit_logs rows under entity "Security" — MFA_ENROLLED
+// on both enrollment routes, MFA_CHALLENGE_FAILED at login, enrollment and
+// step-up — and never throws (Item 235.5). A passed login challenge is NOT a
+// row of its own: it is the LOGIN row's details.mfaUsed (D2). MFA_RESET has
+// one writer and it lands with the admin unenroll (B1c). The five
+// authenticated carrier logAuthEvent calls now pass email, so auth_events
+// finally persists them.
+//
+// Arc: carrier login security, commit B2.
+export const SRL_VERSION = "3.8.bci";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

@@ -5,6 +5,7 @@ import jwt from "jsonwebtoken";
 import rateLimit from "express-rate-limit";
 import { prisma } from "../config/database";
 import { logAuthEvent } from "../lib/authEvents";
+import { recordSecurityEvent } from "../lib/securityAudit";
 import { mintStepUpToken, STEP_UP_WINDOW_MINUTES, STEP_UP_ACTIONS } from "../lib/stepUpToken";
 import { requireStepUp } from "../middleware/requireStepUp";
 import { generateTotpSetup, verifyTotpCode, enableTotp, issueBackupCodes } from "../services/totpService";
@@ -419,6 +420,14 @@ router.post("/totp-verify", otpVerifyLimiter, validateBody(carrierTotpSchema), a
 
   const valid = await verifyTotpCode(payload.userId, code);
   if (!valid) {
+    logAuthEvent("totp.challenge_failed", { userId: payload.userId, reason: "totp_invalid", req });
+    await recordSecurityEvent({
+      userId: payload.userId,
+      action: "MFA_CHALLENGE_FAILED",
+      note: "Authenticator code rejected at login",
+      req,
+      details: { stage: "login" },
+    });
     res.status(401).json({ error: "Invalid authenticator code" });
     return;
   }
@@ -1001,7 +1010,7 @@ router.post("/totp/setup", authenticate, authorize("CARRIER"), async (req: AuthR
   }
 
   const setup = await generateTotpSetup(req.user!.id, user.email);
-  logAuthEvent("totp.setup_started", { userId: req.user!.id, req });
+  logAuthEvent("totp.setup_started", { userId: req.user!.id, email: req.user!.email, req });
 
   res.json({
     qrCode: setup.qrCodeDataUrl,
@@ -1022,7 +1031,14 @@ router.post(
   async (req: AuthRequest, res: Response) => {
     const valid = await verifyTotpCode(req.user!.id, req.body.code);
     if (!valid) {
-      logAuthEvent("totp.enrollment_failed", { userId: req.user!.id, reason: "totp_invalid", req });
+      logAuthEvent("totp.enrollment_failed", { userId: req.user!.id, email: req.user!.email, reason: "totp_invalid", req });
+      await recordSecurityEvent({
+        userId: req.user!.id,
+        action: "MFA_CHALLENGE_FAILED",
+        note: "Authenticator code rejected during enrollment",
+        req,
+        details: { stage: "enrollment" },
+      });
       res.status(400).json({
         error: "That code did not match. Check your authenticator app and try the current code.",
         code: "TOTP_CODE_INVALID",
@@ -1033,7 +1049,14 @@ router.post(
     await enableTotp(req.user!.id);
     // Fresh codes AFTER the pairing is proven — see issueBackupCodes.
     const backupCodes = await issueBackupCodes(req.user!.id);
-    logAuthEvent("totp.enrolled", { userId: req.user!.id, req });
+    logAuthEvent("totp.enrolled", { userId: req.user!.id, email: req.user!.email, req });
+    await recordSecurityEvent({
+      userId: req.user!.id,
+      action: "MFA_ENROLLED",
+      note: "Authenticator app enrolled",
+      req,
+      details: { method: "TOTP", path: "carrier" },
+    });
 
     res.json({
       enabled: true,
@@ -1066,7 +1089,14 @@ router.post(
   async (req: AuthRequest, res: Response) => {
     const valid = await verifyTotpCode(req.user!.id, req.body.code);
     if (!valid) {
-      logAuthEvent("stepup.failed", { userId: req.user!.id, reason: "totp_invalid", req });
+      logAuthEvent("stepup.failed", { userId: req.user!.id, email: req.user!.email, reason: "totp_invalid", req });
+      await recordSecurityEvent({
+        userId: req.user!.id,
+        action: "MFA_CHALLENGE_FAILED",
+        note: "Authenticator code rejected at step-up",
+        req,
+        details: { stage: "step-up", action: req.body.action },
+      });
       res.status(401).json({
         error: "That code did not match. Check your authenticator app and try the current code.",
         code: "TOTP_CODE_INVALID",
@@ -1074,7 +1104,7 @@ router.post(
       return;
     }
 
-    logAuthEvent("stepup.granted", { userId: req.user!.id, req });
+    logAuthEvent("stepup.granted", { userId: req.user!.id, email: req.user!.email, req });
     res.json({
       stepUpToken: mintStepUpToken(req.user!.id, req.body.action),
       expiresInMinutes: STEP_UP_WINDOW_MINUTES,

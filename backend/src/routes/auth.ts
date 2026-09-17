@@ -4,6 +4,7 @@ import jwt from "jsonwebtoken";
 import { register, login, getProfile, updateProfile, updatePreferences, changePassword, refreshToken, logout, handleVerifyOtp, handleResendOtp, forceChangePassword, forgotPassword, resetPassword, checkPasswordStrength, handleTotpLoginVerify } from "../controllers/authController";
 import { authenticate, authorize, registerSession } from "../middleware/auth";
 import { generateTotpSetup, verifyTotpCode, enableTotp, disableTotp } from "../services/totpService";
+import { recordSecurityEvent } from "../lib/securityAudit";
 import { getAuthUrl, exchangeCode } from "../services/gmailService";
 import { AuthRequest } from "../middleware/auth";
 import { validateBody } from "../middleware/validate";
@@ -196,6 +197,13 @@ router.post("/totp/verify", authenticate, notCarrier, validateBody(z.object({ co
       return;
     }
     await enableTotp(req.user!.id);
+    await recordSecurityEvent({
+      userId: req.user!.id,
+      action: "MFA_ENROLLED",
+      note: "Authenticator app enrolled",
+      req,
+      details: { method: "TOTP", path: "staff" },
+    });
     res.json({ message: "Two-factor authentication enabled successfully" });
   } catch (err: unknown) {
     res.status(500).json({ error: "Failed to verify 2FA code" });
