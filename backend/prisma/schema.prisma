@@ -3422,10 +3422,18 @@ model AuditLog {
   changes   String?
   ipAddress String?
   userAgent String?
+  /// B3a (2026-09-17) — the structured half of a LOGIN row: factors used, OTP
+  /// channel, family device hash, geo (B4), risk flags (B5). `changes` stays the
+  /// prose note. Never carries ip: ipAddress is the source (two-surface rule).
+  details   Json?
   createdAt DateTime @default(now())
 
   @@index([userId])
   @@index([entity, entityId])
+  // B3a — the audit list filters on userId + action + a createdAt range and
+  // sorts by createdAt; B5 reads a user's recent LOGIN rows the same way. No
+  // composite existed (only the three single-column indexes).
+  @@index([userId, action, createdAt])
   @@index([createdAt])
   @@map("audit_logs")
 }

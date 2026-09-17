@@ -17873,7 +17873,15 @@
 // AE setup gains the already-enabled 409 the carrier route had, /me selects
 // totpEnabled, and the Settings card is read-only with a link to the Security
 // page. AE and shipper self-service is unchanged.
-export const SRL_VERSION = "3.8.bce";
+// v3.8.bcf: audit_logs gains a structured details column and the composite
+// index its list query never had.
+//
+// A LOGIN row carried a prose note, an ip and a user agent and nothing a query
+// could switch on. `details JSONB NULL` is where the factors used, the OTP
+// channel, the family device hash, the geo and the risk flags will live (B3a-2,
+// B4, B5). Additive, no backfill. Schema ahead of code, deliberately: nothing
+// writes the column until the next commit.
+export const SRL_VERSION = "3.8.bcf";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
