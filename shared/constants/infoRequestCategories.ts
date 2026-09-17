@@ -55,3 +55,34 @@ export const INFO_REQUEST_CATEGORIES: InfoRequestCategory[] = [
   "REFERENCES",
   "OTHER",
 ];
+
+/**
+ * Which Document.docType a carrier's attachment lands under, per category.
+ *
+ * v3.8.bbx. Every info-request attachment used to be written as
+ * "INFO_REQUEST_RESPONSE" regardless of what was asked for, which meant a W-9
+ * that arrived through an info request was not a W-9 anywhere else: the intake
+ * reader only parses COI and W9, the AE Documents panel groups by docType, and
+ * the profile's `w9Uploaded`-class flags are flipped only by the other upload
+ * paths. The request record and the Documents tab disagreed by construction.
+ *
+ * Targets are EXISTING docType spellings from the schema comment — nothing new
+ * is invented. VOIDED_CHECK and ADDRESS_PROOF have no existing docType and
+ * stay under INFO_REQUEST_RESPONSE; so does everything that is an answer in
+ * prose rather than a document.
+ */
+export const INFO_REQUEST_CATEGORY_DOC_TYPE: Record<InfoRequestCategory, string> = {
+  COI_UPDATE: "COI",
+  W9_UPDATE: "W9",
+  AUTHORITY_LETTER: "AUTHORITY",
+  SAFETY_CLARIFICATION: "INFO_REQUEST_RESPONSE",
+  EIN_VERIFICATION: "INFO_REQUEST_RESPONSE",
+  VOIDED_CHECK: "INFO_REQUEST_RESPONSE",
+  ADDRESS_PROOF: "INFO_REQUEST_RESPONSE",
+  REFERENCES: "INFO_REQUEST_RESPONSE",
+  OTHER: "INFO_REQUEST_RESPONSE",
+};
+
+export function docTypeForCategory(category: string): string {
+  return (INFO_REQUEST_CATEGORY_DOC_TYPE as Record<string, string>)[category] ?? "INFO_REQUEST_RESPONSE";
+}
