@@ -8,7 +8,7 @@
  * an ip key turns the no-ip case red.
  */
 import { describe, it, expect } from "vitest";
-import { buildLoginDetails, deviceHashFor, uaFamilies } from "../../../src/lib/loginDetails";
+import { buildLoginDetails, deviceHashFor, uaFamilies, loginGeoFor } from "../../../src/lib/loginDetails";
 
 const CHROME_128_WIN = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36";
 const CHROME_129_WIN = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36";
@@ -84,17 +84,47 @@ describe("both carrier LOGIN rows carry the structured half (wiring, read from s
     const row = loginRow("Carrier login via OTP");
     expect(row).toContain("details: buildLoginDetails(");
     expect(row).toContain("mfaUsed: false");
+    expect(row).toContain("ip: clientIp(req)");
   });
 
   it("the authenticator login row records details with mfaUsed: true", () => {
     const row = loginRow("Carrier login via OTP + 2FA");
     expect(row).toContain("details: buildLoginDetails(");
     expect(row).toContain("mfaUsed: true");
+    expect(row).toContain("ip: clientIp(req)");
   });
 
   it("the channel recorder honours the same suppression override as the gate", () => {
     const fn = stripped.slice(stripped.indexOf("async function otpChannelFor("), stripped.indexOf("router.post(\"/login\""));
     expect(fn).toContain('checkCode: "UNUSUAL_OTP_SMS_DISABLE"');
     expect(fn).toContain("detectUnusualActivity(");
+  });
+});
+
+
+// v3.8.bcl — where the sign-in came from. Real geoip-lite lookups: the database
+// ships with the package, so these are offline and deterministic for the
+// well-known blocks below.
+describe("geo on the row", () => {
+  it("a public IP resolves to a country with coordinates, and the ip itself is still not stored", () => {
+    const d = buildLoginDetails({ userAgent: CHROME_129_WIN, otpChannel: "EMAIL", mfaUsed: false, ip: "8.8.8.8" });
+    expect(d.geo).not.toBeNull();
+    expect(d.geo!.country).toBe("US");
+    expect(typeof d.geo!.lat).toBe("number");
+    expect(typeof d.geo!.lon).toBe("number");
+    expect(Object.keys(d)).not.toContain("ip");
+    expect(JSON.stringify(d)).not.toContain("8.8.8.8");
+  });
+  it("a private, loopback, or absent IP is recorded as unknown, never guessed", () => {
+    for (const ip of ["10.0.0.1", "192.168.1.9", "127.0.0.1", "::1", null, undefined, ""]) {
+      expect(loginGeoFor(ip), String(ip)).toBeNull();
+    }
+  });
+  it("an IPv6-mapped IPv4 resolves like the bare address", () => {
+    expect(loginGeoFor("::ffff:8.8.8.8")).toEqual(loginGeoFor("8.8.8.8"));
+  });
+  it("geo carries only place fields — no ip, no timezone, nothing that is not a coordinate or a name", () => {
+    const g = loginGeoFor("8.8.8.8")!;
+    expect(Object.keys(g).sort()).toEqual(["city", "country", "lat", "lon", "region"]);
   });
 });

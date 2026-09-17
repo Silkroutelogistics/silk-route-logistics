@@ -27,8 +27,24 @@
  */
 
 import crypto from "crypto";
+import { resolveGeo } from "../services/geoService";
 
 export type OtpChannel = "EMAIL" | "EMAIL+SMS";
+
+/**
+ * v3.8.bcl — where the sign-in came from, resolved at write time from the
+ * request IP (geoip-lite, offline). The IP itself lives in audit_logs.ipAddress
+ * and is deliberately NOT repeated here; the row carries the place, the column
+ * carries the address. Null when the IP is private, loopback or unknown to the
+ * database — an unresolvable origin is recorded as unknown, never guessed.
+ */
+export type LoginGeo = {
+  city: string | null;
+  region: string | null;
+  country: string;
+  lat: number | null;
+  lon: number | null;
+};
 
 // A type alias, not an interface: Prisma's InputJsonObject wants an implicit
 // index signature, which interfaces do not carry.
@@ -43,6 +59,7 @@ export type LoginDetails = {
   /** The human form of the same two families, e.g. "Chrome on Windows". */
   device: string;
   userAgent: string | null;
+  geo: LoginGeo | null;
 };
 
 /** Order matters: Edge and Opera carry "Chrome" in their UA, Android carries "Linux". */
@@ -74,8 +91,16 @@ export function deviceHashFor(ua: string | null | undefined): string {
   return crypto.createHash("sha256").update(`${browser}|${os}`).digest("hex").slice(0, 16);
 }
 
+export function loginGeoFor(ip: string | null | undefined): LoginGeo | null {
+  const g = resolveGeo(ip);
+  if (!g || !g.country) return null;
+  return { city: g.city, region: g.region, country: g.country, lat: g.lat, lon: g.lon };
+}
+
 export function buildLoginDetails(args: {
   userAgent: string | null | undefined;
+  /** The client IP the row's ipAddress column also carries. Resolved, not stored. */
+  ip?: string | null;
   otpChannel: OtpChannel;
   mfaUsed: boolean;
 }): LoginDetails {
@@ -87,5 +112,6 @@ export function buildLoginDetails(args: {
     deviceHash: deviceHashFor(args.userAgent),
     device: `${browser} on ${os}`,
     userAgent: args.userAgent ? args.userAgent.slice(0, 512) : null,
+    geo: loginGeoFor(args.ip),
   };
 }

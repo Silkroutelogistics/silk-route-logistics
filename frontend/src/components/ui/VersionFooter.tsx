@@ -17940,7 +17940,18 @@
 //
 // Arc: carrier login security, commit B1c-2 of 2. B1b, B1c-1 and B1c-2 push
 // together.
-export const SRL_VERSION = "3.8.bck";
+// v3.8.bcl: every carrier LOGIN row says where the sign-in came from.
+//
+// audit_logs.details gains geo — city, region, country, lat, lon — resolved
+// at write time from the request IP through geoip-lite, offline and
+// synchronous (ruling D3). The IP itself stays in the ipAddress column and is
+// not repeated in the row: the column carries the address, the row carries
+// the place. A private, loopback or unknown address is recorded as null and
+// never guessed. resolveGeo now exposes the coordinates it always had; the
+// distance IMPOSSIBLE_TRAVEL needs (B5a) is what they are for.
+//
+// Arc: carrier login security, commit B4.
+export const SRL_VERSION = "3.8.bcl";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

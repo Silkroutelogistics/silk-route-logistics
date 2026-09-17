@@ -383,7 +383,7 @@ router.post("/verify-otp", otpVerifyLimiter, validateBody(carrierOtpSchema), asy
       entity: "Session",
       changes: "Carrier login via OTP",
       // B3a-2 — the structured half. ip is NOT here: ipAddress above is the source.
-      details: buildLoginDetails({ userAgent: req.headers["user-agent"], otpChannel: otpChannelForRow, mfaUsed: false }),
+      details: buildLoginDetails({ userAgent: req.headers["user-agent"], otpChannel: otpChannelForRow, mfaUsed: false, ip: clientIp(req) }),
       ipAddress: clientIp(req) || "",
       userAgent: req.headers["user-agent"] || "",
     },
@@ -482,7 +482,7 @@ router.post("/totp-verify", otpVerifyLimiter, validateBody(carrierTotpSchema), a
       entity: "Session",
       changes: "Carrier login via OTP + 2FA",
       // B3a-2 — mfaUsed is true only here: the authenticator step ran and passed.
-      details: buildLoginDetails({ userAgent: req.headers["user-agent"], otpChannel: totpChannelForRow, mfaUsed: true }),
+      details: buildLoginDetails({ userAgent: req.headers["user-agent"], otpChannel: totpChannelForRow, mfaUsed: true, ip: clientIp(req) }),
       ipAddress: clientIp(req) || "",
       userAgent: req.headers["user-agent"] || "",
     },

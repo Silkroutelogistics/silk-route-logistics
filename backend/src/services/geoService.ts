@@ -28,6 +28,11 @@ export interface GeoResult {
   region: string | null; // state/province code (e.g. "MI")
   city: string | null;   // best-effort city name
   timezone: string | null;
+  // v3.8.bcl — MaxMind's coordinates for the block, city-level at best. Read
+  // by the LOGIN row (loginDetails) and by IMPOSSIBLE_TRAVEL, which needs a
+  // distance and not just a country.
+  lat: number | null;
+  lon: number | null;
 }
 
 /**
@@ -55,6 +60,8 @@ export function resolveGeo(ip: string | null | undefined): GeoResult | null {
       region: result.region || null,
       city: result.city || null,
       timezone: result.timezone || null,
+      lat: Array.isArray(result.ll) && Number.isFinite(result.ll[0]) ? result.ll[0] : null,
+      lon: Array.isArray(result.ll) && Number.isFinite(result.ll[1]) ? result.ll[1] : null,
     };
   } catch (err) {
     // Defensive — geoip-lite has thrown on malformed input in the past.
