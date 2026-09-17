@@ -485,6 +485,7 @@ router.get("/:id/security-signals", authorize("ADMIN", "CEO", "BROKER", "OPERATI
         select: {
           id: true,
           email: true,
+          totpEnabled: true,
           emailVerifiedAt: true,
           emailVerifiedFromIp: true,
           emailVerifiedFromCountry: true,
@@ -506,8 +507,14 @@ router.get("/:id/security-signals", authorize("ADMIN", "CEO", "BROKER", "OPERATI
   const sysEvents = await prisma.systemLog.findMany({
     where: {
       OR: [
+        // v3.8.bcq — scoped on exact prefixes, not substrings: `contains: email`
+        // matched every address that CONTAINED this one (a@x.com inside ba@x.com),
+        // so a carrier's panel could show another carrier's unusual logins.
         { source: "emailVerification", message: { contains: carrier.user.id } },
-        { source: "carrierAuth-unusual-activity", message: { contains: carrier.user.email } },
+        { source: "carrierAuth-unusual-activity", message: { startsWith: `Unusual login attempt for ${carrier.user.email}:` } },
+        { source: "carrierAuth-unusual-activity-override", message: { startsWith: `Unusual login for ${carrier.user.email} ` } },
+        { source: "carrierAuth", message: { contains: ` for ${carrier.user.email} ` } },
+        { source: "carrierAuth-login-risk", message: { contains: `[uid:${carrier.user.id}]` } },
       ],
     },
     orderBy: { createdAt: "desc" },
@@ -636,6 +643,35 @@ router.get("/:id/security-signals", authorize("ADMIN", "CEO", "BROKER", "OPERATI
   //
   // Keyed by EMAIL rather than userId because the most interesting events
   // predate the account: onboarding verification happens before a User exists.
+  // v3.8.bcq — Sign-in security. Enrollment state and the last LOGIN row the
+  // carrier's own history holds (bcg geo, bcl flags). enrolledAt prefers the
+  // MFA_ENROLLED row (bci); a carrier enrolled before bci existed has only the
+  // global audit trail's /totp/confirm entry, so that is the fallback. A carrier
+  // who is not enrolled NOW reports no enrolledAt: a past enrollment that an
+  // admin reset is not the current state, and this field answers the current
+  // question.
+  const [mfaEnrolledRow, totpTrailRow, lastLoginRow] = await Promise.all([
+    prisma.auditLog.findFirst({ where: { userId: carrier.user.id, action: "MFA_ENROLLED" }, orderBy: { createdAt: "asc" }, select: { createdAt: true } }),
+    prisma.auditTrail
+      .findFirst({ where: { performedById: carrier.user.id, entityType: "CARRIER_AUTH", entityId: "totp", changedFields: { path: ["path"], equals: "/api/carrier-auth/totp/confirm" } }, orderBy: { performedAt: "asc" }, select: { performedAt: true } })
+      .catch(() => null),
+    prisma.auditLog.findFirst({ where: { userId: carrier.user.id, action: "LOGIN" }, orderBy: { createdAt: "desc" }, select: { createdAt: true, ipAddress: true, details: true } }),
+  ]);
+  const lastDetails = (lastLoginRow?.details ?? null) as { geo?: { city?: string | null; region?: string | null; country?: string | null } | null; flags?: string[] } | null;
+  const security = {
+    totpEnabled: carrier.user.totpEnabled,
+    enrolledAt: carrier.user.totpEnabled ? (mfaEnrolledRow?.createdAt ?? totpTrailRow?.performedAt ?? null) : null,
+    lastLogin: lastLoginRow
+      ? {
+          at: lastLoginRow.createdAt,
+          ip: lastLoginRow.ipAddress || null,
+          city: lastDetails?.geo?.city ?? null,
+          region: lastDetails?.geo?.region ?? null,
+          country: lastDetails?.geo?.country ?? null,
+          flags: Array.isArray(lastDetails?.flags) ? lastDetails!.flags : [],
+        }
+      : null,
+  };
   const authEvents = await (prisma as unknown as {
     authEvent?: { findMany: (a: unknown) => Promise<unknown[]> };
   }).authEvent
@@ -679,6 +715,7 @@ router.get("/:id/security-signals", authorize("ADMIN", "CEO", "BROKER", "OPERATI
     chameleonMatches,
     events: timeline,
     unusualOtpSmsOverride,
+    security,
   });
 });
 

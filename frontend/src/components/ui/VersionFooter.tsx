@@ -18002,7 +18002,24 @@
 // export carries both new columns.
 //
 // Arc: carrier login security, commit B6a.
-export const SRL_VERSION = "3.8.bcp";
+// v3.8.bcq: the AE carrier panel reads sign-in security, and its timeline
+// stops leaking one carrier's unusual logins into another's.
+//
+// /carriers/:id/security-signals gains `security` — whether an authenticator
+// is enrolled and since when (the MFA_ENROLLED row from bci, falling back to
+// the global audit trail's /totp/confirm entry for carriers enrolled before
+// it), plus the last LOGIN row's place (bcg) and flags (bcl). A carrier not
+// enrolled NOW reports no enrolledAt: a past enrollment an admin reset is not
+// the current state. The Security Signals card renders it for every AE role
+// and offers the bce reset only when there is something to reset.
+//
+// The scoping fix: the timeline's SystemLog filter used `contains: email`,
+// and a@x.com is inside ba@x.com, so one carrier's panel could show another
+// carrier's unusual-activity rows. Every clause now anchors on the exact
+// prefix the writer emits, and the bcn login-risk rows join the timeline.
+//
+// Arc: carrier login security, commit B6b.
+export const SRL_VERSION = "3.8.bcq";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

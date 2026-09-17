@@ -91,6 +91,13 @@ interface SecuritySignals {
     expiresAt: string;
     createdAt: string;
   } | null;
+  // v3.8.bcq — optional: a backend that predates it renders the honest
+  // "not reported" state rather than a guess.
+  security?: {
+    totpEnabled: boolean;
+    enrolledAt: string | null;
+    lastLogin: { at: string; ip: string | null; city: string | null; region: string | null; country: string | null; flags: string[] } | null;
+  };
 }
 
 function formatDate(iso: string | null): string {
@@ -228,6 +235,7 @@ export function SecuritySignalsCard({ carrierId, isAdmin }: { carrierId: string;
   }
 
   const { geo, events, chameleonMatches, unusualOtpSmsOverride } = data;
+  const security = data.security ?? null;
   // Default to [] so a backend that predates these fields renders the honest
   // empty state rather than crashing on .length of undefined.
   const authEvents = data.authEvents ?? [];
@@ -556,9 +564,44 @@ export function SecuritySignalsCard({ carrierId, isAdmin }: { carrierId: string;
       {/* v3.8.bck — Two-factor reset. A carrier cannot switch off its own
           authenticator (bce); a lost phone is reset here, by an admin, with a
           fresh code from the admin's own authenticator. */}
-      {isAdmin && (
+      {(
         <div className="bg-gray-100 rounded-lg p-4" data-testid="mfa-reset">
-          <h4 className="text-xs font-semibold text-gray-700 uppercase tracking-wider mb-2">Two-factor authentication</h4>
+          <h4 className="text-xs font-semibold text-gray-700 uppercase tracking-wider mb-2">Sign-in security</h4>
+          {/* v3.8.bcq — enrollment state and the last sign-in, from the carrier's
+              own LOGIN rows. Read by every AE role; the reset below is admin-only. */}
+          <div className="space-y-1 mb-3 text-xs" data-testid="signin-security">
+            {security ? (
+              <>
+                <p className="text-gray-700">
+                  {security.totpEnabled ? (
+                    <><ShieldCheck className="inline w-3.5 h-3.5 text-green-600 mr-1" />Authenticator enrolled{security.enrolledAt ? ` since ${formatDate(security.enrolledAt)}` : ""}</>
+                  ) : (
+                    <><AlertTriangle className="inline w-3.5 h-3.5 text-amber-600 mr-1" />No authenticator enrolled — the carrier is asked to enrol at their next sign-in</>
+                  )}
+                </p>
+                <p className="text-gray-600">
+                  {security.lastLogin ? (
+                    <>
+                      Last sign-in {formatDate(security.lastLogin.at)}
+                      {[security.lastLogin.city, security.lastLogin.region, security.lastLogin.country].filter(Boolean).length > 0 && (
+                        <> from {[security.lastLogin.city, security.lastLogin.region, security.lastLogin.country].filter(Boolean).join(", ")}</>
+                      )}
+                      {security.lastLogin.ip && <span className="text-gray-400"> · {security.lastLogin.ip}</span>}
+                      {security.lastLogin.flags.map((f) => (
+                        <span key={f} data-testid="signin-flag" className="ml-1.5 px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 text-[11px] font-medium">{f.replace(/_/g, " ").toLowerCase()}</span>
+                      ))}
+                    </>
+                  ) : (
+                    <>No sign-in recorded yet</>
+                  )}
+                </p>
+              </>
+            ) : (
+              <p className="text-gray-500">Sign-in security not reported by this backend.</p>
+            )}
+          </div>
+          {isAdmin && security?.totpEnabled !== false && (
+            <>
           {mfaResetDone ? (
             <p className="text-xs text-green-700">{mfaResetDone}</p>
           ) : !mfaResetOpen ? (
@@ -595,6 +638,8 @@ export function SecuritySignalsCard({ carrierId, isAdmin }: { carrierId: string;
               </div>
               {mfaResetError && <p className="mt-1 text-[11px] text-red-600">{mfaResetError}</p>}
             </div>
+          )}
+            </>
           )}
         </div>
       )}
