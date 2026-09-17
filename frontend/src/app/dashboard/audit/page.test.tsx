@@ -13,7 +13,8 @@
  * case red.
  */
 import { describe, it, expect, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import Page from "./page";
 import { summarizeDetails } from "@/lib/auditDetails";
 
@@ -25,7 +26,7 @@ const LOGS = [
   {
     id: "r1", userId: "u1", action: "LOGIN", entity: "Session", entityId: null, ipAddress: "203.0.113.9", createdAt: "2026-09-17T12:57:59Z",
     changes: "Carrier login via OTP",
-    details: { authMethod: "PASSWORD", otpChannel: "EMAIL", mfaUsed: false, device: "Chrome on Windows" },
+    details: { authMethod: "PASSWORD", otpChannel: "EMAIL", mfaUsed: false, device: "Chrome on Windows", geo: { city: "Detroit", region: "MI", country: "US" }, flags: ["NEW_DEVICE", "SENSITIVE_ACTION_AFTER_NEW_LOGIN:insurance-update"] },
     user: { firstName: "CJ", lastName: "Master", email: "cj@example.invalid" },
   },
   {
@@ -36,8 +37,12 @@ const LOGS = [
   },
 ];
 
+// Records the options the page hands useQuery for audit-logs, so the test can
+// run the page's own request builder (queryFn) against the mocked api client.
+const captured = vi.hoisted(() => ({ logs: null as null | { queryKey: unknown[]; queryFn: () => unknown } }));
 vi.mock("@tanstack/react-query", () => ({
-  useQuery: ({ queryKey }: { queryKey: unknown[] }) => {
+  useQuery: (opts: { queryKey: unknown[]; queryFn: () => unknown }) => { const { queryKey } = opts;
+    if (queryKey[0] === "audit-logs") captured.logs = opts;
     if (queryKey[0] === "audit-logs") return { data: { logs: LOGS, total: 2, page: 1, totalPages: 1 }, isLoading: false };
     if (queryKey[0] === "audit-stats") return { data: { byAction: [{ action: "LOGIN", count: 1 }], byEntity: [{ entity: "Session", count: 1 }], timeline: [] } };
     return { data: undefined, isLoading: false };
@@ -68,5 +73,33 @@ describe("the All Activity tab", () => {
     const summaries = screen.getAllByTestId("audit-details");
     expect(summaries).toHaveLength(1);
     expect(summaries[0].textContent).toBe("Chrome on Windows · code by email · no 2FA");
+  });
+});
+
+
+// v3.8.bcp — Location and Flags columns, and the search that reaches the server.
+describe("Location and Flags (B6a)", () => {
+  it("renders where the sign-in came from, and a dash for a row without geo", () => {
+    render(<Page />);
+    const cells = screen.getAllByTestId("audit-location").map((c) => c.textContent);
+    expect(cells).toEqual(["Detroit, MI, US", "—"]);
+  });
+  it("renders each flag as a badge with an AE-readable label", () => {
+    render(<Page />);
+    const badges = screen.getAllByTestId("audit-flag").map((b) => b.textContent);
+    expect(badges).toEqual(["New device", "Then: insurance update"]);
+  });
+  it("the search box sends q to the server, debounced, and resets to page 1", async () => {
+    const user = userEvent.setup();
+    const { api } = await import("@/lib/api");
+    (api.get as ReturnType<typeof vi.fn>).mockResolvedValue({ data: { logs: [], total: 0, page: 1, totalPages: 0 } });
+    render(<Page />);
+    await user.type(screen.getByPlaceholderText(/Search by user, action/), "otp");
+    await waitFor(() => expect(captured.logs!.queryKey).toEqual(["audit-logs", 1, "", "", "otp"]));
+    await captured.logs!.queryFn();
+    const url = (api.get as ReturnType<typeof vi.fn>).mock.calls.at(-1)![0] as string;
+    expect(url).toContain("/audit/logs?");
+    expect(url).toContain("q=otp");
+    expect(url).toContain("page=1");
   });
 });

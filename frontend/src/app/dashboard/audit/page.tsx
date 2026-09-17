@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { summarizeDetails, type LoginDetailsView } from "@/lib/auditDetails";
@@ -85,15 +85,45 @@ function parseUserAgent(ua: string | null): string {
   return `${browser} / ${os}`;
 }
 
+// v3.8.bcp — where the sign-in came from and what was unusual about it. Local to
+// the page: a page module may not export helpers, and only this table reads them.
+function locationOf(d: LoginDetailsView | null | undefined): string {
+  const g = d?.geo;
+  if (!g) return "—";
+  const parts = [g.city, g.region, g.country].filter((p): p is string => !!p);
+  return parts.length ? parts.join(", ") : "—";
+}
+const FLAG_LABELS: Record<string, string> = {
+  NEW_DEVICE: "New device",
+  NEW_COUNTRY: "New country",
+  IMPOSSIBLE_TRAVEL: "Impossible travel",
+};
+function flagLabel(f: string): string {
+  if (FLAG_LABELS[f]) return FLAG_LABELS[f];
+  if (f.startsWith("SENSITIVE_ACTION_AFTER_NEW_LOGIN:")) return `Then: ${f.split(":")[1].replace(/-/g, " ")}`;
+  return f;
+}
+function flagStyle(f: string): string {
+  if (f === "IMPOSSIBLE_TRAVEL" || f.startsWith("SENSITIVE_ACTION_AFTER_NEW_LOGIN:")) return "bg-red-500/20 text-red-300";
+  return "bg-amber-500/20 text-amber-300";
+}
+
 export default function AuditLogPage() {
   const [activeTab, setActiveTab] = useState<"all" | "login">("all");
   const [page, setPage] = useState(1);
   const [actionFilter, setActionFilter] = useState("");
   const [entityFilter, setEntityFilter] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
+  // v3.8.bcp — the search goes to the server. Debounced so a keystroke is not
+  // a request, and the page resets so a narrower result never starts on page 4.
+  const [debouncedQ, setDebouncedQ] = useState("");
+  useEffect(() => {
+    const t = setTimeout(() => { setDebouncedQ(searchQuery.trim()); setPage(1); }, 300);
+    return () => clearTimeout(t);
+  }, [searchQuery]);
 
   const exportCSV = (logs: AuditLog[]) => {
-    const headers = ["Timestamp", "User", "Email", "Action", "Entity", "Entity ID", "Note", "Details", "IP Address"];
+    const headers = ["Timestamp", "User", "Email", "Action", "Entity", "Entity ID", "Note", "Details", "Location", "Flags", "IP Address"];
     const rows = logs.map((l) => [
       new Date(l.createdAt).toLocaleString(),
       `${l.user.firstName} ${l.user.lastName}`,
@@ -103,6 +133,8 @@ export default function AuditLogPage() {
       l.entityId || "",
       (l.changes || "").replace(/,/g, ";"),
       (summarizeDetails(l.details) || "").replace(/,/g, ";"),
+      locationOf(l.details).replace(/,/g, ";"),
+      (l.details?.flags ?? []).join(" ") || "",
       l.ipAddress || "",
     ]);
     const csv = [headers.join(","), ...rows.map((r) => r.map((v) => `"${v}"`).join(","))].join("\n");
@@ -117,13 +149,14 @@ export default function AuditLogPage() {
   const [loginSearch, setLoginSearch] = useState("");
 
   const { data: logsData, isLoading } = useQuery({
-    queryKey: ["audit-logs", page, actionFilter, entityFilter],
+    queryKey: ["audit-logs", page, actionFilter, entityFilter, debouncedQ],
     queryFn: () => {
       const params = new URLSearchParams();
       params.set("page", page.toString());
       params.set("limit", "25");
       if (actionFilter) params.set("action", actionFilter);
       if (entityFilter) params.set("entity", entityFilter);
+      if (debouncedQ) params.set("q", debouncedQ);
       return api.get<{ logs: AuditLog[]; total: number; page: number; totalPages: number }>(`/audit/logs?${params}`).then((r) => r.data);
     },
     enabled: activeTab === "all",
@@ -146,15 +179,8 @@ export default function AuditLogPage() {
   });
 
   const logs = logsData?.logs || [];
-  const filtered = searchQuery
-    ? logs.filter((l) =>
-        l.user.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        l.user.firstName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        l.action.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (l.changes || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (summarizeDetails(l.details) || "").toLowerCase().includes(searchQuery.toLowerCase())
-      )
-    : logs;
+  // Filtered server-side (bcp): the rows AND the total answer the same query.
+  const filtered = logs;
 
   const loginLogs = loginData?.logs || [];
   const filteredLogin = loginSearch
@@ -350,6 +376,8 @@ export default function AuditLogPage() {
                       <th className="text-left px-4 py-3 text-xs text-slate-400 font-medium">Action</th>
                       <th className="text-left px-4 py-3 text-xs text-slate-400 font-medium">Entity</th>
                       <th className="text-left px-4 py-3 text-xs text-slate-400 font-medium">Details</th>
+                      <th className="text-left px-4 py-3 text-xs text-slate-400 font-medium">Location</th>
+                      <th className="text-left px-4 py-3 text-xs text-slate-400 font-medium">Flags</th>
                       <th className="text-left px-4 py-3 text-xs text-slate-400 font-medium">IP</th>
                     </tr>
                   </thead>
@@ -385,12 +413,24 @@ export default function AuditLogPage() {
                             <div className="truncate text-[11px] text-slate-500" data-testid="audit-details">{summarizeDetails(log.details)}</div>
                           )}
                         </td>
+                        <td className="px-4 py-3 text-xs text-slate-400 whitespace-nowrap" data-testid="audit-location">{locationOf(log.details)}</td>
+                        <td className="px-4 py-3">
+                          {(log.details?.flags ?? []).length > 0 ? (
+                            <div className="flex flex-wrap gap-1">
+                              {(log.details?.flags ?? []).map((f) => (
+                                <span key={f} data-testid="audit-flag" className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${flagStyle(f)}`}>{flagLabel(f)}</span>
+                              ))}
+                            </div>
+                          ) : (
+                            <span className="text-xs text-slate-600">—</span>
+                          )}
+                        </td>
                         <td className="px-4 py-3 text-xs text-slate-500 whitespace-nowrap">{log.ipAddress || "—"}</td>
                       </tr>
                     ))}
                     {filtered.length === 0 && (
                       <tr>
-                        <td colSpan={6} className="px-4 py-12 text-center text-slate-500">No audit logs found</td>
+                        <td colSpan={8} className="px-4 py-12 text-center text-slate-500">No audit logs found</td>
                       </tr>
                     )}
                   </tbody>

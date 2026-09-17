@@ -17989,7 +17989,20 @@
 // wired — an expense receipt is not identity or compliance paperwork.
 //
 // Arc: carrier login security, commit B5b-2 of 2.
-export const SRL_VERSION = "3.8.bco";
+// v3.8.bcp: the Audit Log shows where a sign-in came from and what was
+// unusual about it, and its search counts what it finds.
+//
+// Two new columns on All Activity — Location from details.geo (bcl) and Flag
+// badges from details.flags (bcm, bcn, bco) — and one count fix. The page
+// used to filter the current 25-row page client-side and print the server's
+// total beneath it, so a search read "3 of 412 results". The search now goes
+// to the server as q (debounced, capped at 100 chars, page reset to 1) and
+// lands on the SAME where the count uses: user email, action and the note,
+// case-insensitive. The total is the truth for the query the AE typed. CSV
+// export carries both new columns.
+//
+// Arc: carrier login security, commit B6a.
+export const SRL_VERSION = "3.8.bcp";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

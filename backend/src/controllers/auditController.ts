@@ -7,6 +7,9 @@ const auditQuerySchema = z.object({
   userId: z.string().optional(),
   entity: z.string().optional(),
   action: z.string().optional(),
+  // v3.8.bcp — free-text search, capped at 100 chars (truncated, not refused:
+  // a search box is not a form). Applied to the SAME where the count uses.
+  q: z.string().trim().transform((s) => s.slice(0, 100)).optional(),
   startDate: z.string().optional(),
   endDate: z.string().optional(),
   page: z.coerce.number().default(1),
@@ -24,6 +27,17 @@ export async function getAuditLogs(req: AuthRequest, res: Response) {
     where.createdAt = {};
     if (query.startDate) (where.createdAt as Record<string, Date>).gte = new Date(query.startDate);
     if (query.endDate) (where.createdAt as Record<string, Date>).lte = new Date(query.endDate);
+  }
+
+  // The page used to filter the current page client-side and show the
+  // server's total beneath it, so a search read "3 of 412 results" over a
+  // 25-row page. Rows and count now share one where; the total is the truth.
+  if (query.q) {
+    where.OR = [
+      { user: { email: { contains: query.q, mode: "insensitive" } } },
+      { action: { contains: query.q, mode: "insensitive" } },
+      { changes: { contains: query.q, mode: "insensitive" } },
+    ];
   }
 
   const [logs, total] = await Promise.all([
