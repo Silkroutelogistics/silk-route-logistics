@@ -17817,7 +17817,15 @@
 // on — so the carrier is told before they click, not by a 422 after.
 //
 // Batch 2, commit B2b-1 of 5.
-export const SRL_VERSION = "3.8.bbz";
+// v3.8.bca: the AE modal says what the carrier will be held to.
+//
+// Picking a document category now shows "The carrier must attach a file to
+// answer this request — a note alone will be refused"; a prose category says
+// attachments are optional. Third surface, same shared set as the server
+// gate (bby) and the carrier form (bbz).
+//
+// Batch 2, commit B2b-2 of 5.
+export const SRL_VERSION = "3.8.bca";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

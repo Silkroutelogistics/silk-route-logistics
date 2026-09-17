@@ -29,6 +29,7 @@ import { X, Send, Loader2 } from "lucide-react";
 import {
   INFO_REQUEST_CATEGORIES,
   INFO_REQUEST_CATEGORY_LABELS,
+  requiresAttachment,
   type InfoRequestCategory,
 } from "@shared/constants/infoRequestCategories";
 
@@ -144,6 +145,19 @@ export function InfoRequestModal({ carrierId, carrierCompany, open, onClose }: P
                 <option key={c.value} value={c.value}>{c.label}</option>
               ))}
             </select>
+            {/* v3.8.bca — the AE should know what the carrier will be held to.
+                The server refuses a fileless answer to these five (422), and
+                the carrier form marks the attach control required; this reads
+                the same set, so the three surfaces cannot disagree. */}
+            {requiresAttachment(category) ? (
+              <p className="mt-1.5 text-[11px] text-[#9B2C2C]" data-testid="attachment-cue">
+                The carrier must attach a file to answer this request — a note alone will be refused.
+              </p>
+            ) : (
+              <p className="mt-1.5 text-[11px] text-[#6B7685]" data-testid="attachment-cue">
+                The carrier can answer this in writing; attachments are optional.
+              </p>
+            )}
           </div>
 
           <div>
