@@ -8,6 +8,7 @@ import { uploadFile, uploadFileToPath, getDownloadUrl, getFileStream, deleteFile
 import { validateAndNotifyPOD } from "../services/shipperNotificationService";
 import { onPODUploaded, syncSettlementDocFlags } from "../services/integrationService";
 import { log } from "../lib/logger";
+import { flagSensitiveActionAfterNewLogin } from "../lib/loginFlags";
 import { SHIPPER_VISIBLE_DOC_TYPES } from "./shipperPortalController";
 
 /**
@@ -236,6 +237,9 @@ export async function uploadDocuments(req: AuthRequest, res: Response) {
     );
   }
 
+  // B5b-2 — a carrier upload inside a day of a flagged login marks that login.
+  // Carrier only: AE uploads on a carrier's behalf are the AE's own session.
+  if (req.user?.role === "CARRIER") void flagSensitiveActionAfterNewLogin(req.user.id, "document-upload");
   res.status(201).json(documents);
 }
 

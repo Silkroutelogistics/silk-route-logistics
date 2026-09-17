@@ -17,6 +17,7 @@ import { logLoadActivity } from "../services/loadActivityService";
 import { isValidExceptionCode, getExceptionReason } from "../services/exceptionTaxonomy";
 import { broadcastSSE } from "./trackTraceSSE";
 import { log } from "../lib/logger";
+import { flagSensitiveActionAfterNewLogin } from "../lib/loginFlags";
 import { validateLoadStatusTransition } from "../lib/loadStateMachine";
 import { markScheduledCheckCallsAnswered } from "../services/checkCallAutomation";
 import { actualEventStamps } from "../lib/loadEventStamps";
@@ -663,6 +664,8 @@ router.post("/:id/documents", uploadLimiter, upload.single("file"), async (req: 
     sendPODToContact(load.id).catch((e) => log.error({ err: e }, "[ShipperNotify] POD"));
   }
 
+  // B5b-2 — see documentController; this router is carrier-only already.
+  void flagSensitiveActionAfterNewLogin(req.user!.id, "document-upload");
   res.json(doc);
 });
 

@@ -17977,7 +17977,19 @@
 // Idempotent per (login, action). Document uploads are B5b-2.
 //
 // Arc: carrier login security, commit B5b-1 (split, ruling D4).
-export const SRL_VERSION = "3.8.bcn";
+// v3.8.bco: a document upload inside a day of a flagged login marks the
+// login too.
+//
+// The other half of B5b: POST /documents/upload (carrier sessions only — an
+// AE uploading on a carrier's behalf is the AE's own session) and POST
+// /carrier-loads/:id/documents both fire flagSensitiveActionAfterNewLogin
+// with action document-upload. Same rules as bcn: the login must be under
+// 24h old and carry NEW_DEVICE or NEW_COUNTRY, the act is never blocked, and
+// a failure is swallowed. The exception-receipt upload is deliberately not
+// wired — an expense receipt is not identity or compliance paperwork.
+//
+// Arc: carrier login security, commit B5b-2 of 2.
+export const SRL_VERSION = "3.8.bco";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

@@ -94,6 +94,20 @@ describe("when it does not", () => {
   });
 });
 
+describe("a document upload (B5b-2)", () => {
+  it("one hour after a NEW_DEVICE login appends the flag and writes the SystemLog; after a clean login writes nothing", async () => {
+    mockPrisma.auditLog.findFirst.mockResolvedValue(login(["NEW_DEVICE"], hoursAgo(1)));
+    expect(await flagSensitiveActionAfterNewLogin("u-1", "document-upload", NOW)).toEqual({ flagged: true });
+    expect(mockPrisma.auditLog.update.mock.calls[0][0].data.details.flags).toContain("SENSITIVE_ACTION_AFTER_NEW_LOGIN:document-upload");
+    expect(mockPrisma.systemLog.create).toHaveBeenCalledTimes(1);
+    vi.clearAllMocks();
+    mockPrisma.auditLog.findFirst.mockResolvedValue(login([], hoursAgo(1)));
+    expect(await flagSensitiveActionAfterNewLogin("u-1", "document-upload", NOW)).toEqual({ flagged: false });
+    expect(mockPrisma.auditLog.update).not.toHaveBeenCalled();
+    expect(mockPrisma.systemLog.create).not.toHaveBeenCalled();
+  });
+});
+
 describe("the three B5b-1 call sites are wired (read from source)", () => {
   const read = (f: string) =>
     fs.readFileSync(path.join(__dirname, "../../../src/routes/", f), "utf8")
@@ -118,5 +132,16 @@ describe("the three B5b-1 call sites are wired (read from source)", () => {
   it("the insurance PATCH fires it after the write", () => {
     const block = between(read("carrierCompliance.ts"), 'router.patch("/insurance"', "export default");
     expect(block).toContain('flagSensitiveActionAfterNewLogin(req.user!.id, "insurance-update")');
+  });
+  it("POST /documents/upload fires it for a CARRIER session only", () => {
+    const src = fs.readFileSync(path.join(__dirname, "../../../src/controllers/documentController.ts"), "utf8")
+      .split(/\r?\n/).map((l) => l.replace(/(^|[^:])\/\/.*$/, "$1")).join("\n").replace(/\/\*[\s\S]*?\*\//g, "");
+    const a = src.indexOf("export async function uploadDocuments("); expect(a).toBeGreaterThan(0);
+    const block = src.slice(a, src.indexOf("\nexport ", a + 1));
+    expect(block).toContain('if (req.user?.role === "CARRIER") void flagSensitiveActionAfterNewLogin(req.user.id, "document-upload")');
+  });
+  it("POST /carrier-loads/:id/documents fires it", () => {
+    const block = between(read("carrierLoads.ts"), 'router.post("/:id/documents"', "\nrouter.");
+    expect(block).toContain('flagSensitiveActionAfterNewLogin(req.user!.id, "document-upload")');
   });
 });
