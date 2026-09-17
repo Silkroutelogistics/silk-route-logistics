@@ -17925,7 +17925,22 @@
 // enrolled is a 409, not a silent no-op. The AE button is B1c-2.
 //
 // Arc: carrier login security, commit B1c-1 (split, ruled 2026-09-17).
-export const SRL_VERSION = "3.8.bcj";
+// v3.8.bck: the AE console can reset a carrier authenticator, and spends the
+// admin step-up at the AE door.
+//
+// The endpoint landed in bcj; this is the button. useStepUp turned a 403
+// STEP_UP_REQUIRED into a prompt and a retry, but minted only at
+// /carrier-auth/step-up, which refuses anyone who is not a CARRIER — an admin
+// would have been told their code was wrong forever. It now takes the mint
+// endpoint from the caller; the Security Signals card names /auth/step-up. The
+// control is admin-only, needs a reason of ten characters (the audit note),
+// and a carrier with nothing enrolled reads as exactly that rather than as
+// done. Until B6b returns security.totpEnabled the control shows for every
+// carrier and the 409 carries that distinction.
+//
+// Arc: carrier login security, commit B1c-2 of 2. B1b, B1c-1 and B1c-2 push
+// together.
+export const SRL_VERSION = "3.8.bck";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

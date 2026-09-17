@@ -19,6 +19,8 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { api } from "@/lib/api";
+import { useStepUp } from "@/hooks/useStepUp";
+import { StepUpPrompt } from "@/components/carrier/StepUpPrompt";
 import { Globe, AlertTriangle, ShieldCheck, MapPin, Clock, FileText, KeyRound, UserX, Smartphone } from "lucide-react";
 
 interface SecuritySignals {
@@ -120,6 +122,40 @@ export function SecuritySignalsCard({ carrierId, isAdmin }: { carrierId: string;
   const [reviewOpenId, setReviewOpenId] = useState<string | null>(null);
   const [reviewNote, setReviewNote] = useState("");
   const [reviewError, setReviewError] = useState<string | null>(null);
+  // v3.8.bck — admin unenroll (B1c-2). The endpoint (bcj) is the loud door:
+  // ADMIN/CEO, a fresh step-up from the admin's OWN authenticator, a reason.
+  // This is the only place the AE console can spend that step-up.
+  const [mfaResetOpen, setMfaResetOpen] = useState(false);
+  const [mfaResetReason, setMfaResetReason] = useState("");
+  const [mfaResetError, setMfaResetError] = useState<string | null>(null);
+  const [mfaResetDone, setMfaResetDone] = useState<string | null>(null);
+  const [mfaResetting, setMfaResetting] = useState(false);
+  const stepUp = useStepUp("mfa-reset", { endpoint: "/auth/step-up" });
+  async function submitMfaReset() {
+    setMfaResetError(null);
+    setMfaResetting(true);
+    const ok = await stepUp.run((headers) =>
+      api.post(`/carriers/${carrierId}/mfa-reset`, { reason: mfaResetReason.trim() }, { headers }).catch((e) => {
+        const status = e?.response?.status;
+        const code = e?.response?.data?.code;
+        if (!(status === 403 && code === "STEP_UP_REQUIRED")) {
+          setMfaResetError(
+            code === "TOTP_NOT_ENABLED"
+              ? "This carrier has no authenticator enrolled — there is nothing to reset."
+              : e?.response?.data?.error || "Could not reset the authenticator.",
+          );
+        }
+        throw e;
+      }),
+    );
+    setMfaResetting(false);
+    if (ok) {
+      setMfaResetOpen(false);
+      setMfaResetReason("");
+      setMfaResetDone("Authenticator cleared. The carrier will be asked to enrol again at their next sign-in.");
+      queryClient.invalidateQueries({ queryKey: ["carrier-security-signals", carrierId] });
+    }
+  }
 
   const reviewMutation = useMutation({
     mutationFn: (v: { matchId: string; status: "DISMISSED" | "CONFIRMED_FRAUD" }) =>
@@ -516,6 +552,61 @@ export function SecuritySignalsCard({ carrierId, isAdmin }: { carrierId: string;
           </ul>
         )}
       </div>
+
+      {/* v3.8.bck — Two-factor reset. A carrier cannot switch off its own
+          authenticator (bce); a lost phone is reset here, by an admin, with a
+          fresh code from the admin's own authenticator. */}
+      {isAdmin && (
+        <div className="bg-gray-100 rounded-lg p-4" data-testid="mfa-reset">
+          <h4 className="text-xs font-semibold text-gray-700 uppercase tracking-wider mb-2">Two-factor authentication</h4>
+          {mfaResetDone ? (
+            <p className="text-xs text-green-700">{mfaResetDone}</p>
+          ) : !mfaResetOpen ? (
+            <div className="flex items-start justify-between gap-3">
+              <p className="text-xs text-gray-600">
+                A carrier cannot switch off its own authenticator. If theirs is lost, reset it here; they enrol again at their next sign-in.
+              </p>
+              <button onClick={() => setMfaResetOpen(true)} className="text-[11px] font-semibold text-amber-700 hover:text-amber-900 underline whitespace-nowrap">
+                Reset authenticator
+              </button>
+            </div>
+          ) : (
+            <div>
+              <label className="block text-[11px] font-semibold text-amber-900 uppercase tracking-wider mb-1">Reason (required, becomes the audit note)</label>
+              <textarea
+                value={mfaResetReason}
+                onChange={(e) => setMfaResetReason(e.target.value)}
+                rows={2}
+                maxLength={500}
+                placeholder="e.g. carrier lost the phone; identity confirmed by call to the number on file"
+                className="w-full px-2 py-1.5 bg-white border border-amber-300 rounded text-xs focus:outline-none focus:border-amber-500"
+              />
+              <div className="mt-2 flex items-center justify-end gap-2">
+                <button onClick={() => { setMfaResetOpen(false); setMfaResetReason(""); setMfaResetError(null); }} className="text-[11px] text-amber-700 hover:text-amber-900">
+                  Cancel
+                </button>
+                <button
+                  onClick={submitMfaReset}
+                  disabled={mfaResetReason.trim().length < 10 || mfaResetting}
+                  className="px-3 py-1 bg-amber-600 text-white text-[11px] font-semibold rounded hover:bg-amber-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {mfaResetting ? "Confirming…" : "Reset and require re-enrolment"}
+                </button>
+              </div>
+              {mfaResetError && <p className="mt-1 text-[11px] text-red-600">{mfaResetError}</p>}
+            </div>
+          )}
+        </div>
+      )}
+      <StepUpPrompt
+        open={stepUp.prompting}
+        title="Confirm with your authenticator"
+        description="Resetting a carrier's two-factor authentication needs a fresh code from your own authenticator app."
+        verifying={stepUp.verifying}
+        error={stepUp.error}
+        onSubmit={stepUp.submitCode}
+        onCancel={stepUp.cancel}
+      />
 
       {/* Event timeline */}
       <div className="bg-gray-100 rounded-lg p-4">

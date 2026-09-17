@@ -22,14 +22,18 @@
 import { useState, useCallback } from "react";
 import { api } from "@/lib/api";
 
-type StepUpAction = "quickpay-election" | "insurance-update";
+type StepUpAction = "quickpay-election" | "insurance-update" | "mfa-reset";
 
 interface PendingRun {
   fn: (headers: Record<string, string>) => Promise<unknown>;
   resolve: (v: boolean) => void;
 }
 
-export function useStepUp(action: StepUpAction) {
+export function useStepUp(action: StepUpAction, options: { endpoint?: string } = {}) {
+  // v3.8.bck — where the code is verified. The carrier portal mints at
+  // /carrier-auth/step-up; the AE console mints at /auth/step-up. Same
+  // protocol, different door, and the door is the caller's to name.
+  const endpoint = options.endpoint ?? "/carrier-auth/step-up";
   const [prompting, setPrompting] = useState(false);
   const [verifying, setVerifying] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -86,7 +90,7 @@ export function useStepUp(action: StepUpAction) {
       // allowed to blame it.
       let stepUpToken: string;
       try {
-        const { data } = await api.post("/carrier-auth/step-up", { code: code.trim(), action });
+        const { data } = await api.post(endpoint, { code: code.trim(), action });
         stepUpToken = data.stepUpToken;
       } catch (e: any) {
         setError(
@@ -114,7 +118,7 @@ export function useStepUp(action: StepUpAction) {
         setVerifying(false);
       }
     },
-    [pending, action],
+    [pending, action, endpoint],
   );
 
   const cancel = useCallback(() => {
