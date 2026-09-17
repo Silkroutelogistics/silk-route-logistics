@@ -166,6 +166,15 @@ export async function createInfoRequest(args: CreateInfoRequestArgs) {
     return request;
   });
 
+  // v3.8.bcc — the request had no audit row on create or resolve; the only
+  // trace was the email. Actor is the AE who raised it.
+  writeInfoRequestAudit({
+    userId: args.createdById,
+    action: "INFO_REQUEST_CREATED",
+    requestId: result.id,
+    changes: { carrierId: args.carrierId, category: args.category },
+  });
+
   // Fire-and-forget email to carrier.
   if (carrier.user.email) {
     sendInfoRequestEmail({
@@ -189,6 +198,8 @@ interface ResolveInfoRequestArgs {
   // stale already-resolved check). The service just needs the count
   // for the email body — no document IDs needed at this layer.
   attachmentCount?: number;
+  // v3.8.bcc — the Document ids the route created, for the audit row.
+  attachmentIds?: string[];
 }
 
 // Returns the resolved request. Auth check: the request must belong to
@@ -221,7 +232,7 @@ export async function resolveInfoRequest(args: ResolveInfoRequestArgs) {
     throw new Error("This request has already been resolved or cancelled");
   }
 
-  const result = await prisma.$transaction(async (tx) => {
+  const txResult = await prisma.$transaction(async (tx) => {
     const updated = await tx.infoRequest.update({
       where: { id: args.requestId },
       data: {
@@ -244,7 +255,19 @@ export async function resolveInfoRequest(args: ResolveInfoRequestArgs) {
       });
     }
 
-    return updated;
+    return { updated, remainingOpen };
+  });
+  const result = txResult.updated;
+  const attachmentCount = args.attachmentCount || 0;
+
+  // v3.8.bcc — actor is the carrier's own User, which is accurate here: the
+  // carrier answered. Attachment ids travel with it so "what arrived" is
+  // answerable from the audit trail rather than by joining Documents.
+  writeInfoRequestAudit({
+    userId: args.carrierUserId,
+    action: "INFO_REQUEST_RESOLVED",
+    requestId: result.id,
+    changes: { attachmentCount, attachmentIds: args.attachmentIds ?? [], remainingOpen: txResult.remainingOpen },
   });
 
   // Arc 33 — the carrier did the work and heard nothing back, so from their
@@ -266,13 +289,43 @@ export async function resolveInfoRequest(args: ResolveInfoRequestArgs) {
       carrierDot: request.carrier.dotNumber,
       categoryLabel: getCategoryLabel(request.category),
       resolvedNote: args.resolvedNote,
-      attachmentCount: args.attachmentCount || 0,
+      attachmentCount,
+      returnedToReview: txResult.remainingOpen === 0,
     }).catch((err) => log.error({ err, requestId: result.id }, "[InfoRequest] AE resolved-email failed"));
   }
 
   return result;
 }
 
+// ── Audit ──
+
+/**
+ * v3.8.bcc — one audit row per lifecycle event, never fatal. AuditLog.userId is
+ * a required FK, so each event names the human who actually acted: the AE on
+ * create, the carrier's own User on resolve. `changes` is JSON text, which is
+ * what the column holds elsewhere in this codebase.
+ */
+function writeInfoRequestAudit(args: { userId: string; action: "INFO_REQUEST_CREATED" | "INFO_REQUEST_RESOLVED"; requestId: string; changes: Record<string, unknown> }): void {
+  const onFail = (err: unknown) => log.warn({ err, requestId: args.requestId, action: args.action }, "[InfoRequest] audit row failed");
+  // Never fatal means never: a synchronous throw from the client (or a test
+  // double returning nothing) must not escape either, so the call sits inside
+  // a try and the result is coerced to a promise before .catch.
+  try {
+    Promise.resolve(
+      prisma.auditLog.create({
+        data: {
+          userId: args.userId,
+          action: args.action,
+          entity: "InfoRequest",
+          entityId: args.requestId,
+          changes: JSON.stringify(args.changes),
+        },
+      }),
+    ).catch(onFail);
+  } catch (err) {
+    onFail(err);
+  }
+}
 // ── Closed by a carrier status change ──
 
 /**
@@ -561,6 +614,9 @@ interface InfoRequestResolvedEmailArgs {
   categoryLabel: string;
   resolvedNote: string;
   attachmentCount: number;
+  // v3.8.bcc — true only when this answer was the LAST open request. The
+  // sentence used to be unconditional (the v3.8.bav class).
+  returnedToReview: boolean;
 }
 
 async function sendInfoRequestResolvedEmail(args: InfoRequestResolvedEmailArgs) {
@@ -572,15 +628,22 @@ async function sendInfoRequestResolvedEmail(args: InfoRequestResolvedEmailArgs) 
   // documents tab (entityType=CARRIER + entityId=carrierProfileId);
   // the email just signals their presence + count so the AE knows to
   // check the documents tab in addition to reading the response text.
+  // v3.8.bcc — always states the count. An omitted line at zero read as
+  // "nothing to mention", and the AE then went looking for a file that had
+  // never been sent.
   const attachmentLine = args.attachmentCount > 0
     ? `<p style="font-size:11px;color:#BA7517;text-transform:uppercase;letter-spacing:2px;margin:16px 0 8px;font-weight:600">Attachments</p>
        <p style="color:#3A4A5F;font-size:14px;margin:0">${args.attachmentCount} file${args.attachmentCount === 1 ? "" : "s"} uploaded. View them in the carrier's Documents tab.</p>`
-    : "";
+    : `<p style="font-size:11px;color:#BA7517;text-transform:uppercase;letter-spacing:2px;margin:16px 0 8px;font-weight:600">Attachments</p>
+       <p style="color:#3A4A5F;font-size:14px;margin:0">No file attached — the carrier answered in writing only.</p>`;
+  const statusLine = args.returnedToReview
+    ? " This was their last open request; their application has returned to active review."
+    : " Other requests are still open, so their application stays at Info Requested until those are answered.";
 
   const html = wrap(`
     <h2 style="color:#0A2540;margin-bottom:4px">Info request resolved</h2>
     <p style="color:#3A4A5F;margin-bottom:24px">Hi ${args.aeFirstName},</p>
-    <p style="color:#3A4A5F"><strong>${args.carrierName}</strong>${carrierRef ? ` (${carrierRef})` : ""} has responded to your info request. Their application has returned to active review.</p>
+    <p style="color:#3A4A5F"><strong>${args.carrierName}</strong>${carrierRef ? ` (${carrierRef})` : ""} has responded to your info request.${statusLine}</p>
 
     <div style="background:#FBF7F0;border:1px solid #EFE6D3;border-radius:8px;padding:18px 20px;margin:24px 0">
       <p style="font-size:11px;color:#BA7517;text-transform:uppercase;letter-spacing:2px;margin:0 0 8px;font-weight:600">Original ask</p>

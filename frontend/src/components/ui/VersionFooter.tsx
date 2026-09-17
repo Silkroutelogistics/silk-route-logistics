@@ -17836,7 +17836,19 @@
 // offers it, and the header is the sum of the groups by construction.
 //
 // Batch 2, commit B3 of 5.
-export const SRL_VERSION = "3.8.bcb";
+// v3.8.bcc: an info request leaves an audit row at both ends, and the AE's
+// "resolved" email tells the truth.
+//
+// Create and resolve wrote no audit row; the only trace was the email, and
+// that email claimed "returned to active review" unconditionally (false while
+// other requests stayed open) and omitted the attachment line at zero, so an
+// AE went looking for a file that was never sent. Now: INFO_REQUEST_CREATED
+// as the AE, INFO_REQUEST_RESOLVED as the carrier's own User with the
+// attachment ids; the email always states the count ("No file attached") and
+// claims the return only when this was the last open request.
+//
+// Batch 2, commit B6 of 5.
+export const SRL_VERSION = "3.8.bcc";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

@@ -1944,6 +1944,7 @@ router.post(
         carrierUserId: req.user!.id,
         resolvedNote,
         attachmentCount: uploadedDocs.length,
+        attachmentIds: uploadedDocs.map((d) => d.id),
       });
 
       res.json({ request: updated, attachments: uploadedDocs });
