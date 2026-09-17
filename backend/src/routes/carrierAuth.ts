@@ -28,6 +28,8 @@ import { sendOtpEmail, sendEmailVerificationEmail, sendExecutedAgreementEmail } 
 import { resolveCountry, extractClientIp, detectUnusualActivity } from "../services/geoService";
 import { sendOtpSms } from "../services/openPhoneService";
 import { resolveInfoRequest, getCategoryLabel } from "../services/infoRequestService";
+import { docTypeForCategory } from "../../../shared/constants/infoRequestCategories";
+import { flagFieldForDocType, type CarrierDocFlagField } from "../lib/documentFlags";
 import { upload } from "../config/upload";
 import { uploadFile, uploadFileToPath, getFileStream } from "../services/storageService";
 // v3.8.aqh — agreement PDFs (skill-chrome multi-page legal doc).
@@ -1845,6 +1847,7 @@ router.post(
         select: {
           id: true,
           status: true,
+          category: true,
           carrier: { select: { id: true, userId: true } },
         },
       });
@@ -1866,6 +1869,13 @@ router.post(
       // ordered + simplify error handling on partial-upload failures.
       const files = (req.files as Express.Multer.File[] | undefined) || [];
       const uploadedDocs: Array<{ id: string; fileName: string; fileUrl: string }> = [];
+      // v3.8.bbx — the attachment lands under the docType the request ASKED
+      // for (W9 / COI / AUTHORITY), not under a generic response type, so the
+      // intake reader, the AE Documents panel and the completeness flag all
+      // see it as what it is. Categories with no existing docType stay under
+      // INFO_REQUEST_RESPONSE; nothing new is invented.
+      const docType = docTypeForCategory(request.category);
+      const flagField: CarrierDocFlagField | null = flagFieldForDocType(docType);
       for (const file of files) {
         const ext = path.extname(file.originalname).toLowerCase();
         const storagePath = `carrier-docs/${request.carrier.id}/info-request-${request.id}-${Date.now()}-${Math.random().toString(36).slice(2)}${ext}`;
@@ -1878,7 +1888,8 @@ router.post(
             fileSize: file.size,
             entityType: "CARRIER",
             entityId: request.carrier.id,
-            docType: "INFO_REQUEST_RESPONSE",
+            docType,
+            notes: `Answered info request: ${getCategoryLabel(request.category)}`,
             status: "PENDING",
             uploadSource: "CARRIER_PORTAL",
             userId: req.user!.id,
@@ -1898,6 +1909,15 @@ router.post(
           fileType: doc.fileType,
         });
         uploadedDocs.push({ id: doc.id, fileName: doc.fileName, fileUrl: doc.fileUrl });
+      }
+
+      // Same seam the AE upload and registration use: a persisted W9 / COI /
+      // AUTHORITY flips the completeness flag the compliance gate reads.
+      if (flagField && uploadedDocs.length > 0) {
+        await prisma.carrierProfile.update({
+          where: { id: request.carrier.id },
+          data: { [flagField]: true },
+        });
       }
 
       const updated = await resolveInfoRequest({

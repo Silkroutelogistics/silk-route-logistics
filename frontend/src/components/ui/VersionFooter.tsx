@@ -17782,7 +17782,20 @@
 // matches again; only a human dismissal does.
 //
 // Batch 1, commit B5b of 2. Post-deploy: one POST /carriers/chameleon/scan.
-export const SRL_VERSION = "3.8.bbw";
+// v3.8.bbx: an info-request attachment lands as what was asked for.
+//
+// Every attachment a carrier sent with an info-request answer was written as
+// docType INFO_REQUEST_RESPONSE whatever the request asked for, so a W-9 that
+// arrived that way was not a W-9 anywhere else — not parsed by the intake
+// reader, not grouped as a W-9 on the AE Documents panel, and never flipping
+// w9Uploaded, which every other upload path flips. The carrier resolve handler
+// now writes the docType the category maps to (W9 / COI / AUTHORITY; prose
+// categories and the two with no existing docType stay INFO_REQUEST_RESPONSE),
+// notes which request it answered, keeps the request link, and flips the
+// completeness flag through lib/documentFlags.
+//
+// Batch 2, commit B1 of 5.
+export const SRL_VERSION = "3.8.bbx";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
