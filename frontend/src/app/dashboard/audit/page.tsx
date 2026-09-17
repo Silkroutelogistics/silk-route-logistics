@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
+import { summarizeDetails, type LoginDetailsView } from "@/lib/auditDetails";
 import {
   Shield, Clock, User, Search, ChevronLeft, ChevronRight,
   Activity, FileText, Truck, Package, Users, DollarSign, Zap,
@@ -15,7 +16,13 @@ interface AuditLog {
   action: string;
   entity: string;
   entityId: string | null;
-  details: string | null;
+  // The prose note. This interface said `details` for months while the API
+  // field has always been `changes`, so the All Activity column rendered "—"
+  // on every row (B3b, 2026-09-17). The Login Activity tab had it right.
+  changes: string | null;
+  // The structured half (audit_logs.details, B3a). Optional keys because rows
+  // written before the column existed carry null, and B4/B5 add geo + flags.
+  details: LoginDetailsView | null;
   ipAddress: string | null;
   createdAt: string;
   user: { firstName: string; lastName: string; email: string };
@@ -86,7 +93,7 @@ export default function AuditLogPage() {
   const [searchQuery, setSearchQuery] = useState("");
 
   const exportCSV = (logs: AuditLog[]) => {
-    const headers = ["Timestamp", "User", "Email", "Action", "Entity", "Entity ID", "Details", "IP Address"];
+    const headers = ["Timestamp", "User", "Email", "Action", "Entity", "Entity ID", "Note", "Details", "IP Address"];
     const rows = logs.map((l) => [
       new Date(l.createdAt).toLocaleString(),
       `${l.user.firstName} ${l.user.lastName}`,
@@ -94,7 +101,8 @@ export default function AuditLogPage() {
       l.action,
       l.entity,
       l.entityId || "",
-      (l.details || "").replace(/,/g, ";"),
+      (l.changes || "").replace(/,/g, ";"),
+      (summarizeDetails(l.details) || "").replace(/,/g, ";"),
       l.ipAddress || "",
     ]);
     const csv = [headers.join(","), ...rows.map((r) => r.map((v) => `"${v}"`).join(","))].join("\n");
@@ -143,7 +151,8 @@ export default function AuditLogPage() {
         l.user.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
         l.user.firstName.toLowerCase().includes(searchQuery.toLowerCase()) ||
         l.action.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (l.details || "").toLowerCase().includes(searchQuery.toLowerCase())
+        (l.changes || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (summarizeDetails(l.details) || "").toLowerCase().includes(searchQuery.toLowerCase())
       )
     : logs;
 
@@ -370,7 +379,12 @@ export default function AuditLogPage() {
                             <span className="text-xs text-white">{log.entity}</span>
                           </div>
                         </td>
-                        <td className="px-4 py-3 text-xs text-slate-400 max-w-[300px] truncate">{log.details || "—"}</td>
+                        <td className="px-4 py-3 text-xs text-slate-400 max-w-[300px]">
+                          <div className="truncate">{log.changes || "—"}</div>
+                          {summarizeDetails(log.details) && (
+                            <div className="truncate text-[11px] text-slate-500" data-testid="audit-details">{summarizeDetails(log.details)}</div>
+                          )}
+                        </td>
                         <td className="px-4 py-3 text-xs text-slate-500 whitespace-nowrap">{log.ipAddress || "—"}</td>
                       </tr>
                     ))}

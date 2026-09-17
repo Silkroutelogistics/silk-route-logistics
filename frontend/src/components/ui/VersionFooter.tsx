@@ -17889,7 +17889,14 @@
 // step ran), deviceHash (sha256 of browser family | OS family, no versions, so
 // an auto-update is not a new device), device, userAgent }. No ip in the JSON:
 // audit_logs.ipAddress is the source. Written on both carrier success paths.
-export const SRL_VERSION = "3.8.bcg";
+// v3.8.bch: the Audit Log page reads what the API sends.
+//
+// The All Activity column rendered "—" on every row because the page read
+// `log.details` where the API field has always been `changes` (the Login
+// Activity tab had it right). Now the note renders from `changes` and the
+// structured half from B3a renders beneath it as one scannable line — device,
+// OTP channel, 2FA — in the table, the CSV export and the client-side search.
+export const SRL_VERSION = "3.8.bch";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
