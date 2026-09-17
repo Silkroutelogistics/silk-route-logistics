@@ -62,12 +62,17 @@ async function main() {
   console.log(`app: real router mounted on :${PORT}\n`);
 
   const stamp = Date.now();
-  const mk = async (tag: string, n: number) => {
+  // v3.8.bbw — every fixture user is `<tag>-<stamp>@arc23.invalid`, so they
+  // all share a DOMAIN. Under the domain-only EMAIL rule that made every pair
+  // here a match, and this proof was green for a reason it never asserted.
+  // The evidence subj and othr share is now a PHONE, stated per fixture; dom
+  // shares nothing but the domain and must NOT match.
+  const mk = async (tag: string, n: number, phone: string) => {
     const u = await prisma.user.create({
       data: {
         email: `${tag}-${stamp}@arc23.invalid`, passwordHash: "x",
         firstName: "T23", lastName: tag, role: "CARRIER",
-        company: `${tag} Trucking LLC`, phone: "+12695550199",
+        company: `${tag} Trucking LLC`, phone,
       },
     });
     return prisma.carrierProfile.create({
@@ -81,8 +86,10 @@ async function main() {
     });
   };
 
-  const subject = await mk("subj", 1);
-  const other = await mk("othr", 2);
+  const sharedPhone = `+1269555${String(stamp).slice(-4)}`;
+  const subject = await mk("subj", 1, sharedPhone);
+  const other = await mk("othr", 2, sharedPhone);
+  const domainOnly = await mk("dom", 3, `+1269556${String(stamp).slice(-4)}`);
   const admin = await prisma.user.create({
     data: { email: `adm-${stamp}@arc23.invalid`, passwordHash: "x", firstName: "T23", lastName: "Admin", role: "ADMIN" },
   });
@@ -165,16 +172,20 @@ async function main() {
 
   // ── 5. deductions, not verdicts ──────────────────────────────────────
   const riskAfter = (await prisma.carrierProfile.findUnique({ where: { id: subject.id } }))!.chameleonRiskLevel;
-  check("confirming does NOT write chameleonRiskLevel",
-    riskBefore === riskAfter,
-    `${riskBefore ?? "null"} -> ${riskAfter ?? "null"} (unchanged; that field is read as a BLOCK, see Item 229)`);
+  // Arc 24 (§14, Item 231) reversed the Arc 23 posture: confirming a match
+  // RECOMPUTES the level from the standing rows and KEEPS the block. The two
+  // assertions below asserted the retired posture and had been red since.
+  check("confirming recomputes chameleonRiskLevel from the standing rows (Item 231)",
+    riskAfter === "HIGH",
+    `${riskBefore ?? "null"} -> ${riskAfter ?? "null"} (a CONFIRMED_FRAUD at 90 is HIGH; that field is read as a BLOCK)`);
 
   const { complianceCheck } = await import("../src/services/complianceMonitorService");
   const verdict = await complianceCheck(subject.id);
   const authorityNoise = (verdict.blocked_reasons || []).filter((r: string) => !r.startsWith("AUTHORITY_"));
-  check("CONFIRMING NEVER AUTO-BLOCKS the carrier",
-    !authorityNoise.some((r: string) => r.toLowerCase().includes("chameleon")),
-    `non-authority blocks: ${authorityNoise.length ? authorityNoise.join(" | ") : "none"}`);
+  const chameleonBlock = authorityNoise.find((r: string) => r.toLowerCase().includes("chameleon"));
+  check("a CONFIRMED match BLOCKS the carrier, and the block names its exit (Item 231)",
+    !!chameleonBlock && /security signals/i.test(chameleonBlock),
+    chameleonBlock ? chameleonBlock.slice(0, 110) + "…" : `no chameleon block among: ${authorityNoise.join(" | ") || "none"}`);
 
   // ── 6. vacuity tripwire ──────────────────────────────────────────────
   const mine = await prisma.chameleonMatch.count({ where: { carrierId: subject.id } });
@@ -183,12 +194,35 @@ async function main() {
     mine === 2 && mineOpen === 0,
     `this run seeded ${mine} matches for the subject, ${mineOpen} still OPEN — the count moved because the reviews landed`);
 
+  // ── 7. the matcher itself: PHONE is evidence, a shared mail domain is not ──
+  // (v3.8.bbv/bbw) Runs LAST so the review flow above is undisturbed. The
+  // subj–othr pair already carries a CONFIRMED_FRAUD row, so the rescan adds
+  // no row for it, retires nothing, and the level it writes is what the
+  // review path reads.
+  const { buildFingerprint, checkChameleon, recomputeChameleonRiskLevel } = await import("../src/services/chameleonDetectionService");
+  await buildFingerprint(other.id); await buildFingerprint(domainOnly.id);
+  const scan = await checkChameleon(subject.id);
+  const othrMatch = scan.matches.find((m) => m.matchedCarrierId === other.id);
+  check("subj matches othr on PHONE and on PHONE ALONE — the shared domain is not evidence",
+    !!othrMatch && othrMatch.fields.length === 1 && othrMatch.fields[0] === "PHONE",
+    othrMatch ? `fields=${othrMatch.fields.join(",")}` : "no match for othr at all");
+  check("a carrier sharing ONLY the mail domain does NOT match",
+    !scan.matches.some((m) => m.matchedCarrierId === domainOnly.id),
+    `matched ids: ${scan.matches.map((m) => m.matchedCarrierId === domainOnly.id ? "dom" : "othr").join(",") || "none"}`);
+  const rowsAfterScan = await prisma.chameleonMatch.count({ where: { carrierId: subject.id } });
+  const openAfterScan = await prisma.chameleonMatch.count({ where: { carrierId: subject.id, status: "OPEN" } });
+  check("the rescan neither duplicates the judged pair nor reopens it",
+    rowsAfterScan === 2 && openAfterScan === 0, `${rowsAfterScan} rows, ${openAfterScan} OPEN`);
+  const recomputed = await recomputeChameleonRiskLevel(subject.id);
+  check("parity: the scan wrote the level a review would compute",
+    scan.riskLevel === recomputed && recomputed === "HIGH", `scan=${scan.riskLevel} recompute=${recomputed}`);
+
   server.close();
   await prisma.$disconnect();
 
   const failed = results.filter((r) => !r.ok).length;
   console.log(`\n${results.length - failed}/${results.length} passed`);
-  console.log(failed === 0 ? "REVIEW AFFORDANCE WORKS — the count falls, confirmed stays visible, nothing auto-blocks" : `FAILED (${failed})`);
+  console.log(failed === 0 ? "REVIEW AFFORDANCE WORKS — the count falls, confirmed stays visible and blocks (Item 231), the matcher reads inboxes not domains (bbv)" : `FAILED (${failed})`);
   process.exit(failed === 0 ? 0 : 1);
 }
 
