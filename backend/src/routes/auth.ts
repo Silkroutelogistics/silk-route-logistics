@@ -1,4 +1,4 @@
-import { Router } from "express";
+import { Router, Response, NextFunction } from "express";
 import rateLimit from "express-rate-limit";
 import jwt from "jsonwebtoken";
 import { register, login, getProfile, updateProfile, updatePreferences, changePassword, refreshToken, logout, handleVerifyOtp, handleResendOtp, forceChangePassword, forgotPassword, resetPassword, checkPasswordStrength, handleTotpLoginVerify } from "../controllers/authController";
@@ -147,9 +147,40 @@ router.patch("/password", authenticate, validateBody(changePasswordSchema), chan
 router.post("/refresh", authenticate, refreshToken);
 router.post("/logout", authenticate, logout);
 
-// TOTP 2FA routes (employee-only)
-router.post("/totp/setup", authenticate, async (req: AuthRequest, res) => {
+// TOTP 2FA routes — AE and SHIPPER self-service.
+//
+// B1b (2026-09-17) — CARRIER sessions are refused on all three. Under mandatory
+// carrier 2FA the carrier flow is /carrier-auth/totp/*: its setup refuses
+// re-enrollment with 409 instead of silently rotating the secret, its backup
+// codes are minted only after the pairing is proven, and enrollment is
+// recorded. None of that held here, and /api/auth is not a carrier-portal
+// mount, so the cookie resolver fell through to the carrier cookie and the
+// carrier Settings page pointed straight at these routes: an enrolled carrier
+// who clicked Enable rotated its own secret and backup codes with no record,
+// and Disable switched the mandatory factor off with no record. Recovery for
+// a carrier is the admin unenroll (B1c), never self-service.
+const notCarrier = (req: AuthRequest, res: Response, next: NextFunction): void => {
+  if (req.user?.role === "CARRIER") {
+    res.status(403).json({
+      error: "Carrier two-factor authentication is managed on the carrier portal Security page.",
+      code: "USE_CARRIER_PORTAL",
+      action: { href: "/carrier/dashboard/security" },
+    });
+    return;
+  }
+  next();
+};
+router.post("/totp/setup", authenticate, notCarrier, async (req: AuthRequest, res) => {
   try {
+    // Re-running setup rotates the stored secret and backup codes BEFORE the new
+    // pairing is proven (totpService.generateTotpSetup persists at setup), which
+    // invalidates the authenticator the user is currently relying on. Refuse,
+    // as the carrier route already does.
+    const current = await prisma.user.findUnique({ where: { id: req.user!.id }, select: { totpEnabled: true } });
+    if (current?.totpEnabled) {
+      res.status(409).json({ error: "Two-factor authentication is already set up on this account.", code: "TOTP_ALREADY_ENABLED" });
+      return;
+    }
     const result = await generateTotpSetup(req.user!.id, req.user!.email);
     res.json({ qrCode: result.qrCodeDataUrl, secret: result.secret, backupCodes: result.backupCodes });
   } catch (err: unknown) {
@@ -157,7 +188,7 @@ router.post("/totp/setup", authenticate, async (req: AuthRequest, res) => {
   }
 });
 
-router.post("/totp/verify", authenticate, validateBody(z.object({ code: z.string().min(6).max(8) })), async (req: AuthRequest, res) => {
+router.post("/totp/verify", authenticate, notCarrier, validateBody(z.object({ code: z.string().min(6).max(8) })), async (req: AuthRequest, res) => {
   try {
     const valid = await verifyTotpCode(req.user!.id, req.body.code);
     if (!valid) {
@@ -171,7 +202,7 @@ router.post("/totp/verify", authenticate, validateBody(z.object({ code: z.string
   }
 });
 
-router.post("/totp/disable", authenticate, validateBody(z.object({ code: z.string().min(6).max(8) })), async (req: AuthRequest, res) => {
+router.post("/totp/disable", authenticate, notCarrier, validateBody(z.object({ code: z.string().min(6).max(8) })), async (req: AuthRequest, res) => {
   try {
     // ADMIN/CEO cannot disable 2FA — it is mandatory for these roles
     if (req.user!.role === "ADMIN" || req.user!.role === "CEO") {

@@ -572,6 +572,9 @@ router.get("/me", authenticate, authorize("CARRIER"), async (req: AuthRequest, r
     where: { id: req.user!.id },
     select: {
       id: true, email: true, firstName: true, lastName: true, role: true, company: true, phone: true,
+      // B1b — the Settings page reads user.totpEnabled to render enrollment
+      // state. It was never selected, so the page always said "not enabled".
+      totpEnabled: true,
       carrierProfile: {
         include: {
           scorecards: { orderBy: { calculatedAt: "desc" }, take: 1 },

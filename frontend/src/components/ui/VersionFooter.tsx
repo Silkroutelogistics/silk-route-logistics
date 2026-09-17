@@ -17860,7 +17860,20 @@
 // public onboarding block. AE and shipper traffic is untouched by its role
 // check. Proven by mounting the real routers (totpWallCoverage.test.ts),
 // not by asserting the line is present.
-export const SRL_VERSION = "3.8.bcd";
+// v3.8.bce: a carrier can no longer switch off, or silently rotate, its own
+// mandatory 2FA through the AE-side routes.
+//
+// /api/auth/totp/{setup,verify,disable} refused only ADMIN and CEO, /api/auth is
+// not a carrier-portal mount so the cookie resolver fell through to the carrier
+// cookie, and the carrier Settings page pointed straight at them. Its /me never
+// returned totpEnabled, so the page always read "not enabled": an enrolled
+// carrier who clicked Enable had its secret and backup codes rotated before
+// the new pairing was proven, and could not log in again. Disable switched the
+// mandatory factor off with no record. Carriers are refused on all three, the
+// AE setup gains the already-enabled 409 the carrier route had, /me selects
+// totpEnabled, and the Settings card is read-only with a link to the Security
+// page. AE and shipper self-service is unchanged.
+export const SRL_VERSION = "3.8.bce";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
