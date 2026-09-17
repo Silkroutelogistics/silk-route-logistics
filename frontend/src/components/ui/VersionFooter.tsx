@@ -17881,7 +17881,15 @@
 // channel, the family device hash, the geo and the risk flags will live (B3a-2,
 // B4, B5). Additive, no backfill. Schema ahead of code, deliberately: nothing
 // writes the column until the next commit.
-export const SRL_VERSION = "3.8.bcf";
+// v3.8.bcg: every carrier LOGIN row now says which factors were used, which
+// channel the code went out on, and what family of device signed in.
+//
+// details = { authMethod, otpChannel (EMAIL | EMAIL+SMS, re-derived from the
+// same predicate the SMS gate uses), mfaUsed (true only when the authenticator
+// step ran), deviceHash (sha256 of browser family | OS family, no versions, so
+// an auto-update is not a new device), device, userAgent }. No ip in the JSON:
+// audit_logs.ipAddress is the source. Written on both carrier success paths.
+export const SRL_VERSION = "3.8.bcg";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

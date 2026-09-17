@@ -26,6 +26,7 @@ import {
 } from "../services/otpService";
 import { sendOtpEmail, sendEmailVerificationEmail, sendExecutedAgreementEmail } from "../services/emailService";
 import { resolveCountry, extractClientIp, detectUnusualActivity } from "../services/geoService";
+import { buildLoginDetails, OtpChannel } from "../lib/loginDetails";
 import { sendOtpSms } from "../services/openPhoneService";
 import { resolveInfoRequest, getCategoryLabel } from "../services/infoRequestService";
 import { docTypeForCategory, requiresAttachment } from "../../../shared/constants/infoRequestCategories";
@@ -111,6 +112,29 @@ const otpVerifyLimiter = rateLimit({
   max: 20,
   message: { error: "Too many verification attempts. Please try again later." },
 });
+
+// B3a-2 — which channel(s) the email-OTP step went out on, RE-DERIVED at the
+// moment the LOGIN row is written. /login decides and sends; this only
+// records. It re-runs the same predicate (unusual country + phone on file +
+// no active UNUSUAL_OTP_SMS_DISABLE override) rather than persisting a flag on
+// the OtpCode row, because a schema change for one label is not worth it and
+// the inputs are unchanged between send and verify: user.lastLoginCountry is
+// only overwritten after this runs, and the override lookup is one indexed
+// read. Keep it in step with the /login block below (D6: that gate is not to
+// be touched).
+async function otpChannelFor(
+  user: { phone: string | null; lastLoginCountry: string | null },
+  carrierProfileId: string,
+  currentIp: string,
+): Promise<OtpChannel> {
+  const unusual = detectUnusualActivity({ currentIp, lastLoginCountry: user.lastLoginCountry });
+  if (!unusual.isUnusual || !user.phone) return "EMAIL";
+  const override = await prisma.complianceOverride.findFirst({
+    where: { carrierId: carrierProfileId, checkCode: "UNUSUAL_OTP_SMS_DISABLE", expiresAt: { gt: new Date() } },
+    select: { id: true },
+  });
+  return override ? "EMAIL" : "EMAIL+SMS";
+}
 
 // POST /api/carrier-auth/login — Carrier login step 1: validate password, send OTP
 router.post("/login", loginLimiter, validateBody(carrierLoginSchema), async (req: Request, res: Response) => {
@@ -350,12 +374,15 @@ router.post("/verify-otp", otpVerifyLimiter, validateBody(carrierOtpSchema), asy
     },
   }).catch((err) => log.error({ err, userId: user.id }, "[Carrier OTP] lastLogin geo update failed"));
 
+  const otpChannelForRow = await otpChannelFor(user, profile.id, currentLoginIp);
   await prisma.auditLog.create({
     data: {
       userId: user.id,
       action: "LOGIN",
       entity: "Session",
       changes: "Carrier login via OTP",
+      // B3a-2 — the structured half. ip is NOT here: ipAddress above is the source.
+      details: buildLoginDetails({ userAgent: req.headers["user-agent"], otpChannel: otpChannelForRow, mfaUsed: false }),
       ipAddress: clientIp(req) || "",
       userAgent: req.headers["user-agent"] || "",
     },
@@ -438,12 +465,15 @@ router.post("/totp-verify", otpVerifyLimiter, validateBody(carrierTotpSchema), a
     },
   }).catch((err) => log.error({ err, userId: user.id }, "[Carrier TOTP] lastLogin geo update failed"));
 
+  const totpChannelForRow = await otpChannelFor(user, profile.id, totpLoginIp);
   await prisma.auditLog.create({
     data: {
       userId: user.id,
       action: "LOGIN",
       entity: "Session",
       changes: "Carrier login via OTP + 2FA",
+      // B3a-2 — mfaUsed is true only here: the authenticator step ran and passed.
+      details: buildLoginDetails({ userAgent: req.headers["user-agent"], otpChannel: totpChannelForRow, mfaUsed: true }),
       ipAddress: clientIp(req) || "",
       userAgent: req.headers["user-agent"] || "",
     },
