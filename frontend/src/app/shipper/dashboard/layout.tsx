@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { api } from "@/lib/api";
+import { api, isLoginRedirectInFlight } from "@/lib/api";
 import { backgroundPoll } from "@/lib/backgroundPoll";
 import { ShipperSidebar } from "@/components/shipper";
 import { Search, Bell, X } from "lucide-react";
@@ -76,6 +76,13 @@ export default function ShipperDashboardLayout({ children }: { children: React.R
       loadUser().then(() => {
         const currentUser = useAuthStore.getState().user;
         if (!currentUser) {
+          // v3.8.bdb — §13.3 Item 275. If the 401 interceptor has already committed a
+          // navigation to the login page, do not issue a second one: two
+          // navigations from one 401 was the race that dropped the carrier's
+          // ?next= deep-link and, on Safari, could supersede the interceptor's
+          // URL with a reason-less one and lose the SignedOutNotice. The
+          // interceptor's URL carries both. See lib/api.ts.
+          if (isLoginRedirectInFlight()) return;
           router.replace("/shipper/login");
           return;
         }

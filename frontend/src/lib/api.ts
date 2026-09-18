@@ -15,6 +15,27 @@ export const api = axios.create({
   withCredentials: true, // Send httpOnly cookies with every request
 });
 
+// v3.8.bdb — §13.3 Item 275. When the interceptor below sends the browser to
+// a login page, the layouts must NOT also issue their own redirect. Two
+// navigations to the login page from one 401 was the race that (a) dropped
+// the carrier's ?next= deep-link — the interceptor's bare URL won — and (b) on
+// Safari aborted the layout's in-flight RSC fetch, which is how carriers
+// reached the raw .txt payload before v3.8.bcu. Post-bcu the second
+// navigation is merely redundant, but it can still SUPERSEDE this one with a
+// reason-less URL on Safari and lose the SignedOutNotice. So: one owner.
+//
+// The flag is set immediately before the assignment to window.location.href,
+// which always navigates — the only thing that can cancel it is a
+// beforeunload prompt, and the sole beforeunload in this app (the Academy
+// course page) belongs to a child the layouts do not mount until after the
+// identity check that reads this flag. A new document starts with it false.
+let loginRedirectInFlight = false;
+
+/** True once the 401 interceptor has committed to navigating to a login page. */
+export function isLoginRedirectInFlight(): boolean {
+  return loginRedirectInFlight;
+}
+
 // Note: Auth tokens are managed via httpOnly cookies set by the backend.
 // localStorage is no longer used for JWT storage (XSS protection).
 // The Bearer header is only used for temporary tokens (TOTP, force-password-change).
@@ -65,7 +86,21 @@ api.interceptors.response.use(
           SESSION_REPLACED: "replaced",
         };
         const reason = typeof code === "string" ? SIGNED_OUT_REASON[code] : undefined;
-        window.location.href = reason ? `${portalLogin}?reason=${reason}` : portalLogin;
+        const params = new URLSearchParams();
+        if (reason) params.set("reason", reason);
+        // v3.8.bdb — §13.3 Item 275. Carry the deep-link the way the carrier
+        // layout does (Sprint 66, v3.8.afu), so a carrier bounced off
+        // /carrier/dashboard/tenders lands back on the tender after signing
+        // in rather than on the dashboard root. Carrier portal only: it is
+        // the one login page that reads ?next=, and it enforces the
+        // /carrier/ whitelist itself. URLSearchParams encodes the value the
+        // same way encodeURIComponent does, which is what the layout sends.
+        if (portalLogin === "/carrier/login") {
+          params.set("next", path + window.location.search);
+        }
+        const query = params.toString();
+        loginRedirectInFlight = true;
+        window.location.href = query ? `${portalLogin}?${query}` : portalLogin;
       }
     }
     return Promise.reject(error);

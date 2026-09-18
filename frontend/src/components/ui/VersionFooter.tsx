@@ -18144,7 +18144,26 @@
 // now runs inside the cascade on both paths (SIGNED/FINALIZED untouched as
 // evidence); /rc-sign refuses 409 against the LOAD row — CANCELLED, TONU, or
 // soft-deleted — as the second lock on the same door.
-export const SRL_VERSION = "3.8.bda";
+// v3.8.bdb — §13.3 Item 275 closed: one owner for the 401 redirect, and the
+// carrier's deep-link survives it. A signed-out carrier landing on
+// /carrier/dashboard/* got TWO navigations to the login page from one 401 —
+// lib/api.ts's interceptor (bare /carrier/login) and the layout's
+// router.replace (with ?next=). The bare one won, so the Sprint 66 deep-link
+// had been dead on that path since it shipped: sign in, land on the dashboard
+// root, not the tender in the email. The same race was, on Safari, the most
+// common trigger for the raw RSC payload page (v3.8.bcu). Now the interceptor
+// carries ?next= for the carrier portal alongside any ?reason=, sets a flag
+// before it assigns location.href, and all four layouts (carrier, AuthGuard,
+// shipper, driver) stand down on their null-user branch when the flag is set.
+// The interceptor could not simply stand down on the identity probe instead:
+// SignedOutNotice on three login pages reads the ?reason= it carries, and a
+// fresh page load after an idle expiry is exactly the probe-401 path.
+// Guarded: src/lib/api.test.ts (7, fresh module per case since the flag is
+// module state) + two cases on the carrier layout test; both injection-
+// verified against the pre-change code. Item 175 closed by explanation: the
+// homepage is static HTML, so /index.txt does not exist and the 404 falls
+// back to a hard navigation to /, which is correct.
+export const SRL_VERSION = "3.8.bdb";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

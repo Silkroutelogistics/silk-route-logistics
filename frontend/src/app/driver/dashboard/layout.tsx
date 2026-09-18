@@ -9,6 +9,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { isLoginRedirectInFlight } from "@/lib/api";
 import { GraduationCap, LogOut, Loader2 } from "lucide-react";
 import { useDriverAuth } from "@/hooks/useDriverAuth";
 
@@ -24,6 +25,13 @@ export default function DriverDashboardLayout({ children }: { children: React.Re
     }
     loadDriver().then(() => {
       if (!useDriverAuth.getState().driver) {
+        // v3.8.bdb — §13.3 Item 275. If the 401 interceptor has already committed a
+        // navigation to the login page, do not issue a second one: two
+        // navigations from one 401 was the race that dropped the carrier's
+        // ?next= deep-link and, on Safari, could supersede the interceptor's
+        // URL with a reason-less one and lose the SignedOutNotice. The
+        // interceptor's URL carries both. See lib/api.ts.
+        if (isLoginRedirectInFlight()) return;
         router.replace("/driver/login");
         return;
       }

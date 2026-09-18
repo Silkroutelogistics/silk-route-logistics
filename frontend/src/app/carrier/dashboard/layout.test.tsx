@@ -17,11 +17,14 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, waitFor } from "@testing-library/react";
 
-const { replace, pathname, activationData, authState } = vi.hoisted(() => ({
+const { replace, pathname, activationData, authState, loginRedirect } = vi.hoisted(() => ({
   replace: vi.fn(),
   pathname: { value: "/carrier/dashboard" },
   activationData: { value: undefined as any },
   authState: { value: {} as any },
+  // v3.8.bdb — whether lib/api's 401 interceptor has already committed a
+  // navigation to the login page. The layout must stand down when it has.
+  loginRedirect: { value: false },
 }));
 
 vi.mock("next/navigation", () => ({
@@ -47,7 +50,10 @@ vi.mock("@/hooks/useCarrierAuth", () => ({
 }));
 
 vi.mock("@/hooks/useSessionTimeout", () => ({ useSessionTimeout: () => ({}) }));
-vi.mock("@/lib/api", () => ({ api: { get: vi.fn(), post: vi.fn() } }));
+vi.mock("@/lib/api", () => ({
+  api: { get: vi.fn(), post: vi.fn() },
+  isLoginRedirectInFlight: () => loginRedirect.value,
+}));
 
 // Chrome, stubbed. This test is about routing, and rendering the real sidebar
 // would drag in a dozen unrelated modules whose failures would look like
@@ -87,6 +93,7 @@ beforeEach(() => {
   pathname.value = "/carrier/dashboard";
   activationData.value = undefined;
   authState.value = carrier("APPROVED");
+  loginRedirect.value = false;
 });
 
 describe("the enrollment wall", () => {
@@ -222,5 +229,35 @@ describe("the destination actually renders", () => {
     const { queryByTestId } = await mountAt("/carrier/dashboard/my-loads") as any;
 
     expect(queryByTestId("page-body")).not.toBeNull();
+  });
+});
+
+// v3.8.bdb — §13.3 Item 275. A signed-out carrier used to get TWO redirects to
+// the login page from one 401: this layout's (with ?next=) and the api
+// interceptor's (bare). The bare one won, dropping the deep-link. The
+// interceptor now carries ?next= itself and exposes a flag; the layout stands
+// down when it is set. Both halves are asserted: the layout still redirects
+// on its own when nothing else has, and does not when the interceptor has.
+describe("a signed-out carrier", () => {
+  function signedOut() {
+    return { user: null, loadUser: vi.fn().mockResolvedValue(undefined), logout: vi.fn() };
+  }
+
+  it("is sent to /carrier/login with the deep-link when no other redirect owns it", async () => {
+    authState.value = signedOut();
+    window.history.pushState({}, "", "/carrier/dashboard/tenders");
+    await mount();
+    await waitFor(() => expect(replace).toHaveBeenCalled());
+    expect(replace).toHaveBeenCalledWith("/carrier/login?next=%2Fcarrier%2Fdashboard%2Ftenders");
+  });
+
+  it("does NOT issue a second redirect when the interceptor already committed one", async () => {
+    authState.value = signedOut();
+    loginRedirect.value = true;
+    window.history.pushState({}, "", "/carrier/dashboard/tenders");
+    await mount();
+    // Give the loadUser().then(...) chain the same tick the positive case needs.
+    await new Promise((r) => setTimeout(r, 20));
+    expect(replace).not.toHaveBeenCalled();
   });
 });

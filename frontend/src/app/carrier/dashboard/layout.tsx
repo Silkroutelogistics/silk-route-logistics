@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { api } from "@/lib/api";
+import { api, isLoginRedirectInFlight } from "@/lib/api";
 import { backgroundPoll } from "@/lib/backgroundPoll";
 import { CarrierSidebar } from "@/components/carrier";
 import { Search, Bell, X, LogOut, Clock } from "lucide-react";
@@ -119,6 +119,13 @@ export default function CarrierDashboardLayout({ children }: { children: React.R
       loadUser().then(() => {
         const currentUser = useCarrierAuth.getState().user;
         if (!currentUser) {
+          // v3.8.bdb — §13.3 Item 275. If the 401 interceptor has already committed a
+          // navigation to the login page, do not issue a second one: two
+          // navigations from one 401 was the race that dropped the carrier's
+          // ?next= deep-link and, on Safari, could supersede the interceptor's
+          // URL with a reason-less one and lose the SignedOutNotice. The
+          // interceptor's URL carries both. See lib/api.ts.
+          if (isLoginRedirectInFlight()) return;
           // Sprint 66 (v3.8.afu) — preserve deep-link via ?next so the
           // carrier returns to the page they tried to access (e.g. an
           // emailed tender CTA) after login, not the dashboard root.
