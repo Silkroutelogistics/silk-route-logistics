@@ -18036,7 +18036,22 @@
 // prompt is bcs.
 //
 // Arc: carrier login security, commit B7a.
-export const SRL_VERSION = "3.8.bcr";
+// v3.8.bcs: the carrier documents page asks for the code that bcr demands.
+//
+// The bcr gate answers a carrier replacing a COI, W-9 or authority letter
+// with 403 STEP_UP_REQUIRED. Without a prompt behind that, the carrier
+// clicks Upload and nothing happens — the awy dead end. The page now runs
+// the compliance branch through useStepUp("compliance-document"): the
+// refusal opens the prompt, the code is verified at the carrier door
+// (/carrier-auth/step-up), and the upload replays with the token and a
+// rebuilt multipart body. The page does not know which types are gated; the
+// server decides, so a POD or BOL goes to /carrier-loads untouched and an
+// OTHER passes through with no prompt. A refusal that is not the step-up ask
+// is shown as its own message rather than swallowed, and a cancelled prompt
+// leaves the form exactly as it was.
+//
+// Arc: carrier login security, commit B7b.
+export const SRL_VERSION = "3.8.bcs";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

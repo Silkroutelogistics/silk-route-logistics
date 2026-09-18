@@ -22,7 +22,7 @@
 import { useState, useCallback } from "react";
 import { api } from "@/lib/api";
 
-type StepUpAction = "quickpay-election" | "insurance-update" | "mfa-reset";
+type StepUpAction = "quickpay-election" | "insurance-update" | "mfa-reset" | "compliance-document";
 
 interface PendingRun {
   fn: (headers: Record<string, string>) => Promise<unknown>;

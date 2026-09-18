@@ -6,6 +6,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { CarrierCard } from "@/components/carrier";
 import { apiHref, openPdfFromApi, extractApiError } from "@/lib/download";
+import { useStepUp } from "@/hooks/useStepUp";
+import { StepUpPrompt } from "@/components/carrier";
 
 // v3.8.awt — `fileUrl` is now optional and is NOT a browser target. For stored
 // documents it holds `s3://bucket/key`, which nothing in a browser can open; the
@@ -38,6 +40,11 @@ export default function CarrierDocumentsPage() {
   // v3.8.awt — opening a generated PDF is a fetch now, so its failures need a
   // surface. Previously a broken link simply opened a tab onto a 404 page.
   const [docError, setDocError] = useState<string | null>(null);
+  // B7b — replacing a compliance document takes a fresh authenticator code.
+  // The SERVER decides which types (W-9, COI, authority, workers' comp,
+  // BOC-3); this only turns its 403 into a prompt and replays. PODs and BOLs
+  // go to /carrier-loads and never see it.
+  const stepUp = useStepUp("compliance-document");
 
   const { data: compliance } = useQuery({
     queryKey: ["carrier-compliance-docs"],
@@ -50,7 +57,7 @@ export default function CarrierDocumentsPage() {
   });
 
   const uploadMutation = useMutation({
-    mutationFn: async () => {
+    mutationFn: async (): Promise<"done" | "cancelled"> => {
       if (!selectedFile) throw new Error("No file selected");
 
       // v3.8.aqn — the two destinations expect DIFFERENT multer field names, so
@@ -60,25 +67,43 @@ export default function CarrierDocumentsPage() {
       // (upload.array("files")). Multer rejects an unexpected field name outright
       // — verified: LIMIT_UNEXPECTED_FILE / HTTP 400 — so EVERY carrier
       // compliance-document upload (W-9, COI, authority) failed from the portal.
-      const formData = new FormData();
       const isLoadDoc = !COMPLIANCE_TYPES.includes(uploadDocType);
 
       if (isLoadDoc && uploadLoadId) {
+        const formData = new FormData();
         formData.append("file", selectedFile); // upload.single("file")
         formData.append("docType", uploadDocType);
-        return api.post(`/carrier-loads/${uploadLoadId}/documents`, formData, {
+        await api.post(`/carrier-loads/${uploadLoadId}/documents`, formData, {
           headers: { "Content-Type": "multipart/form-data" },
         });
-      } else {
+        return "done";
+      }
+
+      // B7b — the FormData is rebuilt inside the callback because a step-up
+      // replay re-sends the bytes. A failure that is NOT the step-up ask is
+      // recorded here and rethrown so run() sees it; run() resolves false for
+      // both that and a cancelled prompt, and only one of them is an error.
+      let failure: string | null = null;
+      const ok = await stepUp.run((headers) => {
+        const formData = new FormData();
         formData.append("files", selectedFile); // upload.array("files")
         formData.append("docType", uploadDocType);
         formData.append("type", uploadDocType);
         return api.post("/documents/upload", formData, {
-          headers: { "Content-Type": "multipart/form-data" },
+          headers: { "Content-Type": "multipart/form-data", ...headers },
+        }).catch((e) => {
+          if (!(e?.response?.status === 403 && e?.response?.data?.code === "STEP_UP_REQUIRED")) {
+            failure = e?.response?.data?.error || "Upload failed";
+          }
+          throw e;
         });
-      }
+      });
+      if (ok) return "done";
+      if (failure) throw new Error(failure);
+      return "cancelled";
     },
-    onSuccess: () => {
+    onSuccess: (outcome) => {
+      if (outcome === "cancelled") return; // nothing happened; leave the form as it was
       queryClient.invalidateQueries({ queryKey: ["carrier-compliance-docs"] });
       queryClient.invalidateQueries({ queryKey: ["carrier-my-loads-docs"] });
       setSelectedFile(null);
@@ -227,7 +252,7 @@ export default function CarrierDocumentsPage() {
           </div>
 
           {uploadMutation.isError && (
-            <p className="text-xs text-[#9B2C2C] mt-2">{(uploadMutation.error as Error & { response?: { data?: { error?: string } } })?.response?.data?.error || "Upload failed"}</p>
+            <p className="text-xs text-[#9B2C2C] mt-2">{(uploadMutation.error as Error & { response?: { data?: { error?: string } } })?.response?.data?.error || (uploadMutation.error as Error)?.message || "Upload failed"}</p>
           )}
 
           <div className="flex justify-end mt-4">
@@ -352,6 +377,18 @@ export default function CarrierDocumentsPage() {
           ))
         )}
       </CarrierCard>
+      {/* B7b — without this mounted, useStepUp opens a prompt nobody renders and
+          the upload resolves false in silence: the carrier clicks Upload and
+          nothing happens, with no error to read. */}
+      <StepUpPrompt
+        open={stepUp.prompting}
+        title="Confirm this document"
+        description="Your compliance documents decide which loads you can be tendered, so we ask for a code from your authenticator app before replacing one. Bills of lading and proofs of delivery never need this."
+        verifying={stepUp.verifying}
+        error={stepUp.error}
+        onSubmit={stepUp.submitCode}
+        onCancel={stepUp.cancel}
+      />
     </div>
   );
 }
