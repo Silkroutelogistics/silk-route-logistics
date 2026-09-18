@@ -18109,7 +18109,17 @@
 // could never succeed before); both surface a refused transition instead of
 // swallowing it; the T&T drawer gains the same Cancel. A backend guard holds
 // the frontend list equal to the map and fails when EITHER side moves.
-export const SRL_VERSION = "3.8.bcw";
+// 
+// v3.8.bcx — lifecycle-gaps B2a: a cancellation gets a reason CODE and a fault
+// party. CancellationReason (11) + FaultParty (SHIPPER
+// CARRIER
+// BROKER
+// NONE) on
+// the schema, four nullable columns on Load (no backfill — inventing a code on
+// a row a dispute reads is worse than a null), and lib/cancellationPolicy.ts as
+// the ONE reason→fault mapping, with OTHER requiring a note. tonuFaultSide
+// CUSTOMER ≡ SHIPPER, bridged there; its migration is banked (decision 3).
+export const SRL_VERSION = "3.8.bcx";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
