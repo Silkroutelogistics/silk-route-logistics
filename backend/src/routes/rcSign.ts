@@ -62,7 +62,27 @@ const money = (n: number | null | undefined) =>
  * signature landed. Telling them it expired sends them chasing a dispatcher over
  * work that is done.
  */
+/**
+ * B4a — the token proves who is asking; the LOAD decides whether there is
+ * anything left to sign. The cascade voids live RCs and kills their tokens on
+ * cancel, so this is the second lock on the same door: a token minted before
+ * a cancellation, or one the cascade somehow missed, must still be refused
+ * against the load row rather than trusted on its own validity.
+ */
+export function loadIsDead(load: { status: string; deletedAt: Date | null }): boolean {
+  return load.deletedAt !== null || load.status === "CANCELLED" || load.status === "TONU";
+}
+
 function refusal(reason: string): { status: number; title: string; body: string } {
+  if (reason === "LOAD_NOT_LIVE") {
+    return {
+      status: 409,
+      title: "Load cancelled",
+      body: `<h1>This load has been cancelled</h1>
+        <p>There is nothing to sign. The rate confirmation you were sent is no longer in force.</p>
+        <p>If you have questions about the cancellation, contact your dispatcher or operations@silkroutelogistics.ai.</p>`,
+    };
+  }
   if (reason === "ALREADY_USED") {
     return {
       status: 409,
@@ -98,6 +118,8 @@ async function resolve(token: string) {
           id: true, referenceNumber: true, loadNumber: true,
           originCity: true, originState: true, destCity: true, destState: true,
           pickupDate: true, equipmentType: true, carrierRate: true,
+          // B4a — the LOAD decides whether there is anything left to sign.
+          status: true, deletedAt: true,
         },
       },
     },
@@ -116,6 +138,11 @@ router.get("/:token", async (req: Request, res: Response) => {
   const v = checkSignToken(rc);
   if (!v.ok) {
     const r = refusal(v.reason);
+    res.status(r.status).type("html").send(page({ title: r.title, body: r.body }));
+    return;
+  }
+  if (loadIsDead(rc.load)) {
+    const r = refusal("LOAD_NOT_LIVE");
     res.status(r.status).type("html").send(page({ title: r.title, body: r.body }));
     return;
   }
@@ -157,6 +184,11 @@ router.post("/:token", async (req: Request, res: Response) => {
   const v = checkSignToken(rc);
   if (!v.ok) {
     const r = refusal(v.reason);
+    res.status(r.status).type("html").send(page({ title: r.title, body: r.body }));
+    return;
+  }
+  if (loadIsDead(rc.load)) {
+    const r = refusal("LOAD_NOT_LIVE");
     res.status(r.status).type("html").send(page({ title: r.title, body: r.body }));
     return;
   }

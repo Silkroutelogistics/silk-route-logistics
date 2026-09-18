@@ -233,6 +233,7 @@ vi.mock("../src/config/database", () => ({
       findMany: vi.fn(),
       create: vi.fn(),
       update: vi.fn(),
+      updateMany: vi.fn(),
     },
     quickPayEnrollment: {
       findFirst: vi.fn(),

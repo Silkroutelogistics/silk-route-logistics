@@ -8,8 +8,9 @@
  * the fault party, the actor and the time land on the row in one write; the
  * OFFERED tender withdrawn (never DECLINED); and no write at all when the code
  * is missing. Then the PRODUCTION shape (BOOKED + ACCEPTED + DRAFT RC) is
- * exercised and its post-cancel state PRINTED, not asserted, so the B4a/B3c
- * commits have a recorded before-picture.
+ * exercised. B4a: the DRAFT RC is now ASSERTED void with its token nulled, a
+ * SIGNED RC survives as evidence, and a still-valid token on a cancelled load
+ * is refused at /rc-sign. The tender leg still prints (B3c).
  *
  * Local container only; outbound keys must be explicitly empty.
  */
@@ -31,6 +32,7 @@ function guard() {
 guard();
 
 import jwt from "jsonwebtoken";
+import { mintRcSignToken } from "../src/lib/rcSignToken";
 import type { Server } from "http";
 
 const PORT = 55931;
@@ -159,9 +161,44 @@ async function main() {
     const n4 = await prisma.notification.findFirst({ where: { userId: cu.id, title: "Load Cancelled" } });
     console.log(`      load.status=${l4a?.status} carrierId=${l4a?.carrierId ? "STILL SET" : "cleared"} fault=${l4a?.cancellationFaultParty}`);
     console.log(`      tender.status=${t4a?.status} (ACCEPTED means B3c has not run yet — expected before-picture)`);
-    console.log(`      rc.status=${rc4a?.status} (DRAFT means B4a has not run yet — expected before-picture)`);
+    ok("B4a: the DRAFT rate confirmation is VOID", rc4a?.status === "VOID", String(rc4a?.status));
+    ok("B4a: …and its signing token is gone", rc4a?.signTokenHash === null && rc4a?.signTokenId === null, String(rc4a?.signTokenHash));
     console.log(`      carrier notification: ${n4 ? JSON.stringify(n4.message) : "NONE"}`);
     ok("carrier is told, and the message carries the reason, not 'no reason provided'", !!n4 && /freight not ready/i.test(n4.message) && !/no reason provided/i.test(n4.message), n4?.message);
+
+    // ── [5] A SIGNED rate confirmation is evidence and survives the cancel ──
+    console.log("\n[5] B4a: a SIGNED RC on a cancelled load is untouched; a SENT one is voided");
+    const l5 = await makeLoad("LC-SIGNED", "BOOKED", cu.id);
+    const signed = await prisma.rateConfirmation.create({
+      data: { loadId: l5.id, createdById: ae.id, status: "SIGNED", formData: {}, contentHash: "deadbeef", signedAt: new Date() } as any,
+    });
+    const sentTok = mintRcSignToken();
+    const sent = await prisma.rateConfirmation.create({
+      data: { loadId: l5.id, createdById: ae.id, status: "SENT", formData: {}, signTokenHash: sentTok.tokenHash, signTokenId: sentTok.tokenId, signTokenExpiresAt: new Date(Date.now() + 3_600_000) } as any,
+    });
+    const r5 = await patchStatus(l5.id, { status: "CANCELLED", cancellationReasonCode: "SHIPPER_CANCELLED" });
+    ok("cancel → 200", r5.status === 200, `got ${r5.status}`);
+    const signedA = await prisma.rateConfirmation.findUnique({ where: { id: signed.id } });
+    const sentA = await prisma.rateConfirmation.findUnique({ where: { id: sent.id } });
+    ok("SIGNED stays SIGNED with its hash", signedA?.status === "SIGNED" && signedA.contentHash === "deadbeef", String(signedA?.status));
+    ok("SENT → VOID, token nulled", sentA?.status === "VOID" && sentA.signTokenHash === null, `${sentA?.status} ${sentA?.signTokenHash}`);
+    const signPage = await fetch(`${BASE}/rc-sign/${sentTok.token}`);
+    ok("the old SENT link now answers 404 (token gone), not the form", signPage.status === 404, `got ${signPage.status}`);
+
+    // ── [6] The second lock: a token the cascade never saw, on a cancelled load ──
+    console.log("\n[6] B4a: a still-valid token on a cancelled load is refused against the LOAD");
+    const lateTok = mintRcSignToken();
+    const late = await prisma.rateConfirmation.create({
+      data: { loadId: l5.id, createdById: ae.id, status: "SENT", formData: {}, signTokenHash: lateTok.tokenHash, signTokenId: lateTok.tokenId, signTokenExpiresAt: new Date(Date.now() + 3_600_000) } as any,
+    });
+    const g6 = await fetch(`${BASE}/rc-sign/${lateTok.token}`);
+    ok("GET /rc-sign → 409 on the cancelled load", g6.status === 409, `got ${g6.status}`);
+    const p6 = await fetch(`${BASE}/rc-sign/${lateTok.token}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ signerName: "Peace Transport", attest: "yes" }) });
+    ok("POST /rc-sign → 409, nothing recorded", p6.status === 409, `got ${p6.status}`);
+    const lateA = await prisma.rateConfirmation.findUnique({ where: { id: late.id } });
+    ok("…the row is unchanged (no signature, no SIGNED)", lateA?.status === "SENT" && !lateA.signedAt, String(lateA?.status));
+    const fanout = await prisma.load.findUnique({ where: { id: l5.id }, select: { trackingLinkSent: true } });
+    ok("…and the customer fan-out did not fire", !fanout?.trackingLinkSent);
   } finally {
     // cleanup: everything this run created
     await prisma.notification.deleteMany({ where: { userId: cu.id } });

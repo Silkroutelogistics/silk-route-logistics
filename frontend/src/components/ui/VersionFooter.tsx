@@ -18134,7 +18134,17 @@
 // different code overwrote the first record's code, actor and time — found by
 // the end-to-end proof, not by reasoning. An already-cancelled load now answers
 // 200 with its row and writes nothing.
-export const SRL_VERSION = "3.8.bcz";
+// 
+// v3.8.bda — lifecycle-gaps B4a: the rate confirmation is voided on cancel and a
+// dead load cannot be signed. The cancel reversal voided CarrierPay, invoices,
+// tenders and check-call schedules and never touched the RC, so a cancelled
+// load's SENT rate confirmation kept its signing token and the public sign page
+// (token-only check) would take a carrier's signature on a load that no longer
+// existed and tell the customer a carrier was on it. voidLiveRateConfirmations
+// now runs inside the cascade on both paths (SIGNED/FINALIZED untouched as
+// evidence); /rc-sign refuses 409 against the LOAD row — CANCELLED, TONU, or
+// soft-deleted — as the second lock on the same door.
+export const SRL_VERSION = "3.8.bda";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

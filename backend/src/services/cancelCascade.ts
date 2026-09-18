@@ -32,12 +32,15 @@
  * status path may already have).
  */
 import type { Prisma, PrismaClient } from "@prisma/client";
+import { voidLiveRateConfirmations } from "./rateConfirmationVoidService";
 
 /** Accepts either the client or a transaction client. */
 type Db = PrismaClient | Prisma.TransactionClient;
 
 export interface CascadeResult {
   shipmentsCancelled: number;
+  /** Lifecycle-gaps B4a — DRAFT/SENT rate confirmations voided, tokens killed. */
+  rateConfirmationsVoided: number;
   trackingTokenCleared: boolean;
   shipperTokensExpired: number;
 }
@@ -79,8 +82,19 @@ export async function cascadeLoadCancellation(
     data: { expiresAt: now },
   });
 
+  // The rate confirmation. Until B4a the cancel reversal voided CarrierPay,
+  // invoices, tenders and check-call schedules and never touched the RC, so a
+  // cancelled load's SENT rate confirmation kept its signing token and the
+  // public sign page — which checks only the token — would take a carrier's
+  // signature on a load that no longer existed and then tell the customer a
+  // carrier was on it. voidLiveRateConfirmations is the one rule for what
+  // "live" means: DRAFT and SENT are voided and their tokens nulled; SIGNED
+  // and FINALIZED are evidence of what was agreed and are never touched.
+  const rateConfirmationsVoided = await voidLiveRateConfirmations(loadId, db);
+
   const result: CascadeResult = {
     shipmentsCancelled: shipments.count,
+    rateConfirmationsVoided,
     trackingTokenCleared: token.count > 0,
     shipperTokensExpired: shipperTokens.count,
   };
@@ -94,7 +108,8 @@ export async function cascadeLoadCancellation(
       description:
         `Cancellation cascade: ${result.shipmentsCancelled} shipment(s) cancelled, ` +
         `tracking token ${result.trackingTokenCleared ? "cleared" : "already clear"}, ` +
-        `${result.shipperTokensExpired} shipper tracking link(s) expired.`,
+        `${result.shipperTokensExpired} shipper tracking link(s) expired, ` +
+        `${result.rateConfirmationsVoided} rate confirmation(s) voided.`,
       actorType: opts.actorId ? "USER" : "SYSTEM",
       actorId: opts.actorId ?? null,
       actorName: opts.actorName ?? null,
