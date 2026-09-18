@@ -18019,7 +18019,24 @@
 // prefix the writer emits, and the bcn login-risk rows join the timeline.
 //
 // Arc: carrier login security, commit B6b.
-export const SRL_VERSION = "3.8.bcq";
+// v3.8.bcr: replacing a compliance document takes a fresh authenticator code.
+//
+// A carrier's COI, W-9, authority letter, workers' comp certificate and BOC-3
+// are the evidence complianceCheck reads to decide whether they may be
+// tendered a load at all; a session that can swap them can swap the gate's
+// own inputs, the reasoning that put the insurance PATCH behind step-up in
+// atp. /documents/upload is gated when the caller is a CARRIER and the
+// declared docType is one of those five — the declared type is what the row
+// stores and what every reader keys on, so mislabelling a COI as a POD lands
+// it in the POD slot and replaces nothing. /carrier/documents receives only
+// compliance paper and is gated outright. Both gates sit after multer (the
+// type is in the body) and before the handler, so a refusal stores nothing.
+// PODs and BOLs stay frictionless on /carrier-loads/:id/documents. AE uploads
+// on a carrier's behalf are not asked. Backend half; the carrier portal's
+// prompt is bcs.
+//
+// Arc: carrier login security, commit B7a.
+export const SRL_VERSION = "3.8.bcr";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

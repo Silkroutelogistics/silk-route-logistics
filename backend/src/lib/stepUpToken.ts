@@ -39,7 +39,7 @@ const PURPOSE = "carrier-step-up";
  * one here and forgetting the gate is inert; adding a gate whose action is not
  * here will not compile.
  */
-export const STEP_UP_ACTIONS = ["quickpay-election", "insurance-update", "mfa-reset"] as const;
+export const STEP_UP_ACTIONS = ["quickpay-election", "insurance-update", "mfa-reset", "compliance-document"] as const;
 export type StepUpAction = (typeof STEP_UP_ACTIONS)[number];
 
 export interface StepUpClaims {

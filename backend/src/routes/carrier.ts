@@ -7,6 +7,8 @@ import {
 } from "../controllers/carrierController";
 import { authenticate, authorize, AuthRequest } from "../middleware/auth";
 import { requireTotpEnrolled } from "../middleware/requireTotpEnrolled";
+import { requireStepUp } from "../middleware/requireStepUp";
+import { COMPLIANCE_DOC_STEP_UP_ACTION } from "../middleware/complianceDocStepUp";
 import {
   upsertDraft,
   sendVerification,
@@ -414,7 +416,11 @@ router.use(authenticate);
 // AFTER the public block above because the wall must never see a request that
 // has no session to check (the Arc 27 lesson).
 router.use(requireTotpEnrolled);
-router.post("/documents", uploadLimiter, upload.array("files", 5), uploadCarrierDocuments);
+// B7a — this endpoint exists only to receive compliance paper (the handler infers
+// W9/COI/AUTHORITY/BOC3 from the filename and nothing else legitimately lands
+// here; PODs and BOLs go through /carrier-loads/:id/documents), so it is gated
+// outright rather than per type. After multer, before the handler.
+router.post("/documents", uploadLimiter, upload.array("files", 5), requireStepUp(COMPLIANCE_DOC_STEP_UP_ACTION), uploadCarrierDocuments);
 router.get("/onboarding-status", getOnboardingStatus);
 router.get("/dashboard", getDashboard);
 router.get("/scorecard", getScorecard);

@@ -2,6 +2,7 @@ import { Router, Response } from "express";
 import { uploadDocuments, getDocuments, downloadDocument, deleteDocument } from "../controllers/documentController";
 import { authenticate, authorize, AuthRequest } from "../middleware/auth";
 import { requireTotpEnrolled } from "../middleware/requireTotpEnrolled";
+import { requireStepUpForCarrierComplianceDoc } from "../middleware/complianceDocStepUp";
 import { upload } from "../config/upload";
 import { prisma } from "../config/database";
 import { logLoadActivity } from "../services/loadActivityService";
@@ -58,10 +59,14 @@ router.patch(
 );
 
 // Upload documents (up to 10 files)
-router.post("/upload", upload.array("files", 10), uploadDocuments as any);
+// B7a — a carrier replacing a compliance document (W9/COI/AUTHORITY/WORKERS_COMP/
+// BOC3) needs a fresh authenticator code; every other upload passes through.
+// After multer, because the type is in the body; before the handler, so a
+// refusal stores nothing. Both aliases, so the legacy one cannot bypass it.
+router.post("/upload", upload.array("files", 10), requireStepUpForCarrierComplianceDoc, uploadDocuments as any);
 
 // Legacy upload route (kept for backward compat)
-router.post("/", upload.array("files", 5), uploadDocuments as any);
+router.post("/", upload.array("files", 5), requireStepUpForCarrierComplianceDoc, uploadDocuments as any);
 
 // List documents with filters.
 // v3.8.aqn — AE-internal roles only. Verified before restricting: the ONLY caller
