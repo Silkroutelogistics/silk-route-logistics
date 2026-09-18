@@ -1,0 +1,54 @@
+diff --git a/node_modules/next/dist/client/components/router-reducer/fetch-server-response.js b/node_modules/next/dist/client/components/router-reducer/fetch-server-response.js
+index 653b8ce..f4dc351 100644
+--- a/node_modules/next/dist/client/components/router-reducer/fetch-server-response.js
++++ b/node_modules/next/dist/client/components/router-reducer/fetch-server-response.js
+@@ -155,14 +155,14 @@ async function fetchServerResponse(url, options) {
+         // If fetch fails handle it like a mpa navigation
+         // TODO-APP: Add a test for the case where a CORS request fails, e.g. external url redirect coming from the response.
+         // See https://github.com/vercel/next.js/issues/43605#issuecomment-1451617521 for a reproduction.
+-        return {
+-            flightData: url.toString(),
+-            canonicalUrl: undefined,
+-            couldBeIntercepted: false,
+-            prerendered: false,
+-            postponed: false,
+-            staleTime: -1
+-        };
++        //
++        // SRL patch (patches/next+15.5.14.patch): in output:"export" mode `url`
++        // was mutated above to the flight-payload URL (…/page.txt?_rsc=…). A
++        // string flightData is a HARD NAVIGATION, so falling back to the
++        // mutated url sent the browser to the raw RSC .txt as a document.
++        // Route through doMpaNavigation like every other fallback here — it
++        // strips .txt and _rsc. Upstream (canary) falls back to originalUrl.
++        return doMpaNavigation(url.toString());
+     }
+ }
+ async function createFetch(url, headers, fetchPriority, signal) {
+diff --git a/node_modules/next/dist/esm/client/components/router-reducer/fetch-server-response.js b/node_modules/next/dist/esm/client/components/router-reducer/fetch-server-response.js
+index 366362f..bde0da6 100644
+--- a/node_modules/next/dist/esm/client/components/router-reducer/fetch-server-response.js
++++ b/node_modules/next/dist/esm/client/components/router-reducer/fetch-server-response.js
+@@ -134,14 +134,14 @@ if (typeof window !== 'undefined') {
+         // If fetch fails handle it like a mpa navigation
+         // TODO-APP: Add a test for the case where a CORS request fails, e.g. external url redirect coming from the response.
+         // See https://github.com/vercel/next.js/issues/43605#issuecomment-1451617521 for a reproduction.
+-        return {
+-            flightData: url.toString(),
+-            canonicalUrl: undefined,
+-            couldBeIntercepted: false,
+-            prerendered: false,
+-            postponed: false,
+-            staleTime: -1
+-        };
++        //
++        // SRL patch (patches/next+15.5.14.patch): in output:"export" mode `url`
++        // was mutated above to the flight-payload URL (…/page.txt?_rsc=…). A
++        // string flightData is a HARD NAVIGATION, so falling back to the
++        // mutated url sent the browser to the raw RSC .txt as a document.
++        // Route through doMpaNavigation like every other fallback here — it
++        // strips .txt and _rsc. Upstream (canary) falls back to originalUrl.
++        return doMpaNavigation(url.toString());
+     }
+ }
+ export async function createFetch(url, headers, fetchPriority, signal) {

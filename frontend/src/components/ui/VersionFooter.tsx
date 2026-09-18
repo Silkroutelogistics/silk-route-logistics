@@ -18064,7 +18064,33 @@
 // are copied from that output rather than from the code.
 //
 // Arc: carrier login security, post-push fix.
-export const SRL_VERSION = "3.8.bct";
+// v3.8.bcu: a dropped RSC fetch no longer lands a carrier on the raw payload.
+//
+// Reported from a carrier's iPhone: tapping through from the tender email
+// showed /carrier/login as a page of "1:\"$Sreact.fragment\" 2:I[26264,…" —
+// the React Server Components flight payload rendered as the document. Direct
+// GETs served HTML under every request shape tried, the Next fallback for a
+// build-ID mismatch was proven to strip .txt by injection, and the cache
+// headers are no-cache on both files. What remained was the router's catch
+// block: in output:"export" mode `url` is mutated to the .txt flight URL
+// before fetching, and the catch hand-builds its fallback from the mutated
+// url instead of routing through doMpaNavigation like every other fallback
+// in the function. A string flightData is a hard navigation, so any thrown
+// fetch — a dropped cellular connection, or Safari aborting the in-flight
+// fetch via the module's own pagehide listener when a competing hard nav
+// commits — sent the browser to /page.txt?_rsc=… as a document. Reproduced
+// against production by rejecting the fetch: one link tap rendered the
+// payload. Upstream fixed it in canary (falls back to originalUrl); 15.5.x
+// carries it. patches/next+15.5.14.patch makes the catch use doMpaNavigation
+// in both dist copies; postinstall applies it and prebuild refuses to build
+// without it. Guarded behaviourally in src/lib/nextRscFallback.test.ts,
+// which was red on the unpatched module for exactly that .txt URL.
+//
+// Not in this commit, deliberately: the 401 race on /carrier/dashboard/*
+// (api.ts hard-navigates to bare /carrier/login while the layout soft-
+// navigates with ?next=) still drops the deep-link. It is the trigger, not
+// the defect, and it is an auth-precedence change — held for sign-off.
+export const SRL_VERSION = "3.8.bcu";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
