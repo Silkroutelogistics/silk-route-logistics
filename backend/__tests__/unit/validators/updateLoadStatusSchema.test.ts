@@ -34,8 +34,8 @@ describe("updateLoadStatusSchema", () => {
     expect(() => updateLoadStatusSchema.parse({ status: "TONU", tonuFaultSide: "SHIPPER" })).toThrow();
   });
 
-  it("leaves tonuFaultSide undefined when absent, so the gate can 422 on it", () => {
-    const parsed = updateLoadStatusSchema.parse({ status: "TONU" });
+  it("leaves tonuFaultSide undefined when absent on a non-TONU status (the TONU case is refused below)", () => {
+    const parsed = updateLoadStatusSchema.parse({ status: "DISPATCHED" });
     expect(parsed.tonuFaultSide).toBeUndefined();
   });
 
@@ -44,10 +44,39 @@ describe("updateLoadStatusSchema", () => {
     // `req.body.reason || req.body.cancellationReason` and got undefined every
     // time, so every voided CarrierPay note read "no reason provided" no matter
     // what the AE typed.
-    const a = updateLoadStatusSchema.parse({ status: "CANCELLED", reason: "shipper cancelled" });
+    const a = updateLoadStatusSchema.parse({ status: "CANCELLED", cancellationReasonCode: "SHIPPER_CANCELLED", reason: "shipper cancelled" });
     expect(a.reason).toBe("shipper cancelled");
-    const b = updateLoadStatusSchema.parse({ status: "CANCELLED", cancellationReason: "no freight" });
+    const b = updateLoadStatusSchema.parse({ status: "CANCELLED", cancellationReasonCode: "SHIPPER_FREIGHT_NOT_READY", cancellationReason: "no freight" });
     expect(b.cancellationReason).toBe("no freight");
+    expect(b.cancellationReasonCode).toBe("SHIPPER_FREIGHT_NOT_READY");
+  });
+
+  // Lifecycle-gaps B2b — the reason CODE is required on a cancel, and the TONU
+  // fault side is required at the schema, not only at the controller's 422.
+  it("refuses CANCELLED without a reason code, naming the field", () => {
+    const r = updateLoadStatusSchema.safeParse({ status: "CANCELLED", reason: "shipper cancelled" });
+    expect(r.success).toBe(false);
+    if (!r.success) expect(r.error.issues[0].path).toEqual(["cancellationReasonCode"]);
+  });
+
+  it("refuses an unknown reason code", () => {
+    expect(updateLoadStatusSchema.safeParse({ status: "CANCELLED", cancellationReasonCode: "SHIPPER_BORED" }).success).toBe(false);
+  });
+
+  it("refuses OTHER without a note, accepts it with one — reason is the note's alias", () => {
+    expect(updateLoadStatusSchema.safeParse({ status: "CANCELLED", cancellationReasonCode: "OTHER" }).success).toBe(false);
+    expect(updateLoadStatusSchema.safeParse({ status: "CANCELLED", cancellationReasonCode: "OTHER", reason: "dock closed for the week" }).success).toBe(true);
+  });
+
+  it("does not demand a reason code on a non-cancel status", () => {
+    expect(updateLoadStatusSchema.safeParse({ status: "DISPATCHED" }).success).toBe(true);
+  });
+
+  it("refuses TONU without a fault side at the schema layer", () => {
+    const r = updateLoadStatusSchema.safeParse({ status: "TONU" });
+    expect(r.success).toBe(false);
+    if (!r.success) expect(r.error.issues[0].path).toEqual(["tonuFaultSide"]);
+    expect(updateLoadStatusSchema.safeParse({ status: "TONU", tonuFaultSide: "CUSTOMER" }).success).toBe(true);
   });
 
   it("still requires a valid status", () => {

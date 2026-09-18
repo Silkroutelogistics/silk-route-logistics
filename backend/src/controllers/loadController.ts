@@ -25,6 +25,7 @@ import { onLoadStatusChange as aiOnLoadStatusChange } from "../services/aiLearni
 import { log } from "../lib/logger";
 import { validateLoadStatusTransition, getAllowedNextStatuses } from "../lib/loadStateMachine";
 import { assessCancellability, TERMINAL_ABORTS } from "../lib/cancellationGuard";
+import { assessCancellationInput, type CancellationInputVerdict } from "../lib/cancellationPolicy";
 import { isTonuFaultSide, TONU_FAULT_SIDES } from "../lib/tonuPolicy";
 import { recordTonuObligation } from "../services/tonuBillingService";
 // generateLoadNumber lived here and two other load creators could not reach it,
@@ -613,12 +614,25 @@ export async function updateLoadStatus(req: AuthRequest, res: Response) {
   // used to sit AFTER the status update: a TONU submitted without a fault side
   // was persisted as TONU, then refused with a 422, and nothing downstream ran.
   // Every check that can refuse the transition now runs before any row moves.
+  let cancelInput: (CancellationInputVerdict & { ok: true }) | null = null;
   if (status === "CANCELLED") {
     const verdict = assessCancellability(existing);
     if (!verdict.allowed) {
       res.status(409).json({ error: verdict.reason, code: verdict.code, allowed: verdict.allowedNext });
       return;
     }
+    // B2b — the reason code and the fault party it implies. The validator has
+    // already refused a missing or unknown code; this is the same rule, run
+    // again, so the controller is safe on its own (it has other callers).
+    const input = assessCancellationInput({
+      cancellationReasonCode: req.body.cancellationReasonCode,
+      cancellationReason: req.body.cancellationReason ?? req.body.reason,
+    });
+    if (!input.ok) {
+      res.status(422).json({ error: input.message, code: input.code });
+      return;
+    }
+    cancelInput = input;
   }
   // Arc 2 Item 5 — a TONU must say whose failure it was. The two-sided rule
   // ratified 2026-08-15 bills the customer or pays the carrier depending
@@ -648,6 +662,15 @@ export async function updateLoadStatus(req: AuthRequest, res: Response) {
       statusUpdatedById: req.user!.id,
       ...actualEventStamps(status, existing),
       ...(status === "TONU" ? { tonuFaultSide } : {}),
+      ...(cancelInput
+        ? {
+            cancellationReasonCode: cancelInput.reason,
+            cancellationFaultParty: cancelInput.faultParty,
+            cancellationReason: cancelInput.note,
+            cancelledAt: new Date(),
+            cancelledById: req.user!.id,
+          }
+        : {}),
     },
   });
 
@@ -707,7 +730,12 @@ export async function updateLoadStatus(req: AuthRequest, res: Response) {
 
   // TONU / CANCELLED cleanup: reverse credit, void AP, cancel tenders, reverse fund
   if (status === "TONU" || status === "CANCELLED") {
-    const reason = req.body.reason || req.body.cancellationReason;
+    // The note if one was given, else the reason code spelled out — so the
+    // carrier's notification and the reversal's void note never read
+    // "no reason provided" on a load that has one.
+    const reason: string | undefined = cancelInput
+      ? (cancelInput.note ?? cancelInput.reason.replace(/_/g, " ").toLowerCase())
+      : (req.body.reason || req.body.cancellationReason);
 
     // Stop the downstream surfaces. The shipment sync above handles ONE
     // shipment via findFirst and touches neither tracking token, so a load with
@@ -1135,17 +1163,31 @@ export async function deleteLoad(req: AuthRequest, res: Response) {
   // included — and turned a TONU into a CANCELLED, losing the obligation
   // record. An already-terminal load is archived without its status touched.
   const alreadyTerminal = TERMINAL_ABORTS.includes(load.status);
+  let cancelInput: (CancellationInputVerdict & { ok: true }) | null = null;
   if (!alreadyTerminal) {
     const verdict = assessCancellability(load);
     if (!verdict.allowed) {
       res.status(409).json({ error: verdict.reason, code: verdict.code, allowed: verdict.allowedNext });
       return;
     }
+    // B2b — archiving a live load IS a cancellation, so it carries the same
+    // reason code. This route has no Zod schema, so the policy is the gate.
+    const input = assessCancellationInput({
+      cancellationReasonCode: req.body?.cancellationReasonCode,
+      cancellationReason: req.body?.cancellationReason ?? req.body?.reason,
+    });
+    if (!input.ok) {
+      res.status(422).json({ error: input.message, code: input.code });
+      return;
+    }
+    cancelInput = input;
   }
 
   const now = new Date();
   const deletedBy = req.user!.email || req.user!.id;
-  const reason = req.body?.reason || null;
+  const reason: string | null = cancelInput
+    ? (cancelInput.note ?? cancelInput.reason.replace(/_/g, " ").toLowerCase())
+    : (req.body?.reason || null);
 
   // Was a Promise.all. It is a transaction now because the cascade has to be
   // atomic with the delete: a load cancelled while its shipment stays IN_TRANSIT
@@ -1156,8 +1198,16 @@ export async function deleteLoad(req: AuthRequest, res: Response) {
       data: {
         deletedAt: now,
         deletedBy,
-        ...(reason ? { cancellationReason: reason } : {}),
-        ...(alreadyTerminal ? {} : { status: "CANCELLED" as const }),
+        ...(cancelInput
+          ? {
+              status: "CANCELLED" as const,
+              cancellationReasonCode: cancelInput.reason,
+              cancellationFaultParty: cancelInput.faultParty,
+              cancellationReason: cancelInput.note,
+              cancelledAt: now,
+              cancelledById: req.user!.id,
+            }
+          : {}),
       },
     });
     await tx.loadTender.updateMany({ where: { loadId: load.id, deletedAt: null }, data: { deletedAt: now } });
@@ -1174,7 +1224,7 @@ export async function deleteLoad(req: AuthRequest, res: Response) {
   });
 
   // Full cleanup: reverse credit, void AP, reverse fund entries
-  onLoadCancelledOrTONU(load.id, reason).catch((e) =>
+  onLoadCancelledOrTONU(load.id, reason ?? undefined).catch((e) =>
     log.error({ err: e }, `[Integration] deleteLoad cleanup error:`)
   );
 

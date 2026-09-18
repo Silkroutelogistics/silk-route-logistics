@@ -309,7 +309,7 @@ describe("loadController", () => {
   it("deleteLoad — cancels + archives a BOOKED load and runs the cascade INSIDE the transaction", async () => {
     runTransactions();
     mockPrisma.load.findUnique.mockResolvedValue({ id: "load-1", posterId: "user-1", status: "BOOKED", podUrl: null, deletedAt: null } as any);
-    const { req, res } = mockReqRes({ reason: "Duplicate" }, { id: "user-1", role: "ADMIN", email: "admin@test.com" }, { id: "load-1" });
+    const { req, res } = mockReqRes({ cancellationReasonCode: "DUPLICATE_ENTRY", reason: "Duplicate" }, { id: "user-1", role: "ADMIN", email: "admin@test.com" }, { id: "load-1" });
 
     await deleteLoad(req, res);
 
@@ -317,6 +317,10 @@ describe("loadController", () => {
     const data = mockPrisma.load.update.mock.calls[0][0].data as any;
     expect(data.status).toBe("CANCELLED");
     expect(data.cancellationReason).toBe("Duplicate");
+    expect(data.cancellationReasonCode).toBe("DUPLICATE_ENTRY");
+    expect(data.cancellationFaultParty).toBe("NONE");
+    expect(data.cancelledById).toBe("user-1");
+    expect(data.cancelledAt).toBeInstanceOf(Date);
     expect(data.deletedAt).toBeInstanceOf(Date);
     expect(cascadeLoadCancellation).toHaveBeenCalledWith("load-1", mockPrisma, expect.objectContaining({ reason: "Duplicate", actorId: "user-1" }));
   });
@@ -362,7 +366,7 @@ describe("loadController", () => {
   it("deleteLoad — an OPERATIONS user who did not post the load may archive it (authz matches the route)", async () => {
     runTransactions();
     mockPrisma.load.findUnique.mockResolvedValue({ id: "load-1", posterId: "someone-else", status: "POSTED", podUrl: null, deletedAt: null } as any);
-    const { req, res } = mockReqRes({}, { id: "ops-1", role: "OPERATIONS" }, { id: "load-1" });
+    const { req, res } = mockReqRes({ cancellationReasonCode: "SHIPPER_CANCELLED" }, { id: "ops-1", role: "OPERATIONS" }, { id: "load-1" });
 
     await deleteLoad(req, res);
 
@@ -379,6 +383,54 @@ describe("loadController", () => {
 
     expect(res.status).toHaveBeenCalledWith(403);
     expect(mockPrisma.load.update).not.toHaveBeenCalled();
+  });
+
+  it("deleteLoad — a live load with no reason code is refused 422 and nothing is written", async () => {
+    runTransactions();
+    mockPrisma.load.findUnique.mockResolvedValue({ id: "load-1", posterId: "user-1", status: "POSTED", podUrl: null, deletedAt: null } as any);
+    const { req, res } = mockReqRes({ reason: "Duplicate" }, { id: "user-1", role: "ADMIN" }, { id: "load-1" });
+
+    await deleteLoad(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(422);
+    expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ code: "REASON_CODE_REQUIRED" }));
+    expect((mockPrisma as any).$transaction).not.toHaveBeenCalled();
+  });
+
+  it("updateLoadStatus — the trigger case: TENDERED → CANCELLED with SHIPPER_FREIGHT_NOT_READY writes code, fault party, actor and time in ONE update", async () => {
+    runTransactions();
+    mockPrisma.load.findUnique.mockResolvedValue({ id: "load-1", posterId: "user-1", status: "TENDERED", carrierId: null, podUrl: null, referenceNumber: "SRL-121492" } as any);
+    mockPrisma.load.update.mockResolvedValue({ id: "load-1", status: "CANCELLED", carrierId: null, referenceNumber: "SRL-121492" } as any);
+    mockPrisma.shipment.findFirst.mockResolvedValue(null);
+    const { req, res } = mockReqRes({ status: "CANCELLED", cancellationReasonCode: "SHIPPER_FREIGHT_NOT_READY" }, { id: "ae-1", role: "OPERATIONS" }, { id: "load-1" });
+
+    await updateLoadStatus(req, res);
+
+    expect(res.status).not.toHaveBeenCalledWith(400);
+    expect(res.status).not.toHaveBeenCalledWith(409);
+    expect(res.status).not.toHaveBeenCalledWith(422);
+    const writes = mockPrisma.load.update.mock.calls.map((c) => c[0].data as any);
+    expect(writes.length).toBe(1);
+    expect(writes[0]).toEqual(expect.objectContaining({
+      status: "CANCELLED",
+      cancellationReasonCode: "SHIPPER_FREIGHT_NOT_READY",
+      cancellationFaultParty: "SHIPPER",
+      cancelledById: "ae-1",
+    }));
+    expect(writes[0].cancelledAt).toBeInstanceOf(Date);
+    expect(cascadeLoadCancellation).toHaveBeenCalledWith("load-1", mockPrisma, expect.objectContaining({ actorId: "ae-1" }));
+  });
+
+  it("updateLoadStatus — CANCELLED without a reason code is refused 422 before any write (controller-level, independent of Zod)", async () => {
+    mockPrisma.load.findUnique.mockResolvedValue({ id: "load-1", posterId: "user-1", status: "TENDERED", carrierId: null, podUrl: null } as any);
+    const { req, res } = mockReqRes({ status: "CANCELLED", reason: "freight not ready" }, { id: "ae-1", role: "OPERATIONS" }, { id: "load-1" });
+
+    await updateLoadStatus(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(422);
+    expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ code: "REASON_CODE_REQUIRED" }));
+    expect(mockPrisma.load.update).not.toHaveBeenCalled();
+    expect(cascadeLoadCancellation).not.toHaveBeenCalled();
   });
 
   // ── updateLoadStatus: validate-then-write ──────────────

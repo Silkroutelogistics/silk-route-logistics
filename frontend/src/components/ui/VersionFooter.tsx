@@ -18119,7 +18119,16 @@
 // a row a dispute reads is worse than a null), and lib/cancellationPolicy.ts as
 // the ONE reason→fault mapping, with OTHER requiring a note. tonuFaultSide
 // CUSTOMER ≡ SHIPPER, bridged there; its migration is banked (decision 3).
-export const SRL_VERSION = "3.8.bcx";
+// 
+// v3.8.bcy — lifecycle-gaps B2b: a cancel REQUIRES a reason code. The Zod schema
+// refines CANCELLED (code required, OTHER needs a note) and TONU (fault side
+// required) so the handler cannot be reached without them; the controller runs
+// the same assessCancellationInput again so it is safe on its own. Code, fault
+// party, cancelledAt and cancelledById are written in the SAME update as the
+// status on both paths; the customer-delete cascade writes SHIPPER_CANCELLED
+// until B5a removes it. Carrier notification and void notes read the note or
+// the code spelled out, never "no reason provided".
+export const SRL_VERSION = "3.8.bcy";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

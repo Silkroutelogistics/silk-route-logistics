@@ -1,4 +1,6 @@
 import { z } from "zod";
+import { assessCancellationInput } from "../lib/cancellationPolicy";
+import { isTonuFaultSide } from "../lib/tonuPolicy";
 
 export const createLoadSchema = z.object({
   // Route
@@ -147,6 +149,25 @@ export const updateLoadStatusSchema = z.object({
   tonuFaultSide: z.enum(["CUSTOMER", "CARRIER", "BROKER"]).optional(),
   reason: z.string().max(2000).optional(),
   cancellationReason: z.string().max(2000).optional(),
+  // Lifecycle-gaps B2b — declared as a string, not an enum, so the refine
+  // below answers with the policy's own message (which lists the reasons)
+  // instead of Zod's generic enum error.
+  cancellationReasonCode: z.string().max(64).optional(),
+}).superRefine((v, ctx) => {
+  // Lifecycle-gaps B2b — a cancel carries a reason CODE, a TONU a fault side.
+  // Enforced HERE so the controller cannot be reached without them, and again
+  // in the controller through the same assessCancellationInput, so the rule
+  // is stated once and the two cannot disagree (Sub-pattern 5).
+  if (v.status === "CANCELLED") {
+    const verdict = assessCancellationInput({
+      cancellationReasonCode: v.cancellationReasonCode,
+      cancellationReason: v.cancellationReason ?? v.reason,
+    });
+    if (!verdict.ok) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["cancellationReasonCode"], message: verdict.message });
+  }
+  if (v.status === "TONU" && !isTonuFaultSide(v.tonuFaultSide)) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["tonuFaultSide"], message: "A TONU must record whose failure caused it: CUSTOMER, CARRIER, or BROKER." });
+  }
 });
 
 export const loadQuerySchema = z.object({

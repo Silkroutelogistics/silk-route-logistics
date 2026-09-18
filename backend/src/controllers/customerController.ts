@@ -808,7 +808,13 @@ export async function deleteCustomer(req: AuthRequest, res: Response) {
         status: "CANCELLED",
         deletedAt: now,
         deletedBy,
+        // B2b — a cancellation carries its code and fault party; the shipper
+        // record was removed, which is the shipper's act, not the carrier's.
+        cancellationReasonCode: "SHIPPER_CANCELLED",
+        cancellationFaultParty: "SHIPPER",
         cancellationReason: `Customer ${customer.name} deleted`,
+        cancelledAt: now,
+        cancelledById: req.user!.id,
       },
     });
 
