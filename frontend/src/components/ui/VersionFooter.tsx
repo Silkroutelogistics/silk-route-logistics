@@ -18051,7 +18051,20 @@
 // leaves the form exactly as it was.
 //
 // Arc: carrier login security, commit B7b.
-export const SRL_VERSION = "3.8.bcs";
+// v3.8.bct: the enrolledAt fallback reads the row shape production holds.
+//
+// bcq's fallback queried the audit trail for CARRIER_AUTH / totp / the full
+// /api/carrier-auth/totp/confirm path, the shape the middleware's code appears
+// to write. It writes something else: req.path is read at `finish`, after
+// Express has trimmed it to the mounted router, so a carrier enrollment is
+// TOTP / confirm / "/totp/confirm". The query matched nothing, and every
+// carrier enrolled before bci showed "Authenticator enrolled" with no date.
+// Verified against production with a read-only DISTINCT over every TOTP trail
+// row: one enrollment shape exists, CARRIER only, and the test's fixture rows
+// are copied from that output rather than from the code.
+//
+// Arc: carrier login security, post-push fix.
+export const SRL_VERSION = "3.8.bct";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

@@ -653,7 +653,14 @@ router.get("/:id/security-signals", authorize("ADMIN", "CEO", "BROKER", "OPERATI
   const [mfaEnrolledRow, totpTrailRow, lastLoginRow] = await Promise.all([
     prisma.auditLog.findFirst({ where: { userId: carrier.user.id, action: "MFA_ENROLLED" }, orderBy: { createdAt: "asc" }, select: { createdAt: true } }),
     prisma.auditTrail
-      .findFirst({ where: { performedById: carrier.user.id, entityType: "CARRIER_AUTH", entityId: "totp", changedFields: { path: ["path"], equals: "/api/carrier-auth/totp/confirm" } }, orderBy: { performedAt: "asc" }, select: { performedAt: true } })
+      // v3.8.bct — the shape the middleware ACTUALLY writes, read from production
+      // rather than from the code: it records req.path at `finish`, after Express
+      // has trimmed it to the mounted router, so the row is TOTP / confirm /
+      // "/totp/confirm" — not CARRIER_AUTH / totp / the full path bcq queried
+      // (which matched nothing, so every pre-bci enrollment showed no date). Every
+      // carrier enrollment row in production has this one shape; the staff path
+      // is under /api/auth, which the middleware skips, so it never wrote one.
+      .findFirst({ where: { performedById: carrier.user.id, entityType: "TOTP", entityId: "confirm", changedFields: { path: ["path"], equals: "/totp/confirm" } }, orderBy: { performedAt: "asc" }, select: { performedAt: true } })
       .catch(() => null),
     prisma.auditLog.findFirst({ where: { userId: carrier.user.id, action: "LOGIN" }, orderBy: { createdAt: "desc" }, select: { createdAt: true, ipAddress: true, details: true } }),
   ]);
