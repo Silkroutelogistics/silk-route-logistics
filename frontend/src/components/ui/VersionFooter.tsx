@@ -18099,7 +18099,17 @@
 // assessCancellability the status path does — AE map + POD on file — and
 // archives an already-terminal load without touching its status. Authz
 // matches the route (poster OR AE-side role) instead of poster-or-ADMIN.
-export const SRL_VERSION = "3.8.bcv";
+// 
+// v3.8.bcw — lifecycle-gaps B1b: the Cancel gate is derived from the AE map, not
+// a hand-kept list. It rendered for POSTED
+// BOOKED
+// DISPATCHED while the server
+// allowed TENDERED too — the trigger load had no button. Cancel now asks for a
+// reason and sends it; TONU asks for the fault side and sends it (the button
+// could never succeed before); both surface a refused transition instead of
+// swallowing it; the T&T drawer gains the same Cancel. A backend guard holds
+// the frontend list equal to the map and fails when EITHER side moves.
+export const SRL_VERSION = "3.8.bcw";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

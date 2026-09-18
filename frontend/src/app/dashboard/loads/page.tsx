@@ -23,7 +23,7 @@ import { OverrideComplianceModal } from "@/components/loads/OverrideComplianceMo
 import { TagManagementPanel } from "@/components/loads/TagManagementPanel";
 import { SlideDrawer } from "@/components/ui/SlideDrawer";
 import { downloadCSV } from "@/lib/csvExport";
-import { NEXT_STATUS, STATUS_ACTIONS } from "@/lib/loadStatusActions";
+import { NEXT_STATUS, STATUS_ACTIONS , canCancel, canTonu, TONU_FAULT_SIDES } from "@/lib/loadStatusActions";
 import { deriveLoadStatus, ATTENTION_LABEL, actionsFor, ACTION_LABEL, WIRED_ACTIONS, RELEASE_REASONS, type TenderAction, carrierTenderLabel, EVIDENCE_LABEL } from "@/lib/loadDerivedStatus";
 
 import type { Load as BaseLoad, LoadTender } from "@/types/entities";
@@ -330,9 +330,12 @@ export default function LoadsPage() {
   };
 
   const updateStatus = useMutation({
-    mutationFn: ({ loadId, status }: { loadId: string; status: string }) =>
-      api.patch(`/loads/${loadId}/status`, { status }),
+    mutationFn: ({ loadId, status, reason, tonuFaultSide }: { loadId: string; status: string; reason?: string; tonuFaultSide?: string }) =>
+      api.patch(`/loads/${loadId}/status`, { status, ...(reason ? { reason } : {}), ...(tonuFaultSide ? { tonuFaultSide } : {}) }),
     onSuccess: invalidateLoadQueries,
+    // A refused transition used to vanish: the 409/422 body was never shown,
+    // so a TONU without a fault side looked like nothing happened.
+    onError: (err: any) => alert(err?.response?.data?.error ?? err?.message ?? "Status update failed"),
   });
 
   // v3.8.akc Item 158 — carrierUpdateStatus mutation DELETED. Wired to
@@ -1034,20 +1037,31 @@ export default function LoadsPage() {
                       </button>
                     )}
                     {/* Cancel Load */}
-                    {canCreate && ["POSTED", "BOOKED", "DISPATCHED"].includes(load.status) && (
+                    {/* Gate mirrors the backend AE map (lib/loadStatusActions). The
+                        hardcoded POSTED|BOOKED|DISPATCHED list left a TENDERED load
+                        with no Cancel at all — the 2026-09-18 trigger. The reason
+                        prompt is the interim capture until the modal lands (B7a). */}
+                    {canCreate && canCancel(load.status) && (
                       <button onClick={() => {
-                        if (confirm("Cancel this load? This will notify the carrier and reverse any credit holds.")) {
-                          updateStatus.mutate({ loadId: load.id, status: "CANCELLED" });
+                        const reason = window.prompt("Cancel this load — why? (required; the carrier is notified and credit holds are reversed)");
+                        if (reason && reason.trim()) {
+                          updateStatus.mutate({ loadId: load.id, status: "CANCELLED", reason: reason.trim() });
                         }
                       }} className="flex items-center gap-1 px-2.5 py-1.5 bg-[#F6E3E3] text-[#9B2C2C] border border-[#9B2C2C]/20 rounded text-xs hover:bg-[#f0d5d5]">
                         <X className="w-3 h-3" /> Cancel
                       </button>
                     )}
                     {/* TONU */}
-                    {canCreate && ["BOOKED", "DISPATCHED"].includes(load.status) && (
+                    {/* The TONU button sent no fault side and the backend requires one,
+                        so every click failed. Prompt for it until the modal lands. */}
+                    {canCreate && canTonu(load.status) && (
                       <button onClick={() => {
-                        if (confirm("Mark as TONU (Truck Ordered Not Used)?")) {
-                          updateStatus.mutate({ loadId: load.id, status: "TONU" });
+                        const raw = window.prompt(`Mark as TONU — whose failure? Type one of: ${TONU_FAULT_SIDES.join(", ")}`);
+                        const side = raw?.trim().toUpperCase();
+                        if (side && (TONU_FAULT_SIDES as readonly string[]).includes(side)) {
+                          updateStatus.mutate({ loadId: load.id, status: "TONU", tonuFaultSide: side });
+                        } else if (raw !== null) {
+                          alert(`Fault side must be one of: ${TONU_FAULT_SIDES.join(", ")}`);
                         }
                       }} className="flex items-center gap-1 px-2.5 py-1.5 bg-orange-500/10 text-orange-400 rounded text-xs hover:bg-orange-500/20">
                         <AlertTriangle className="w-3 h-3" /> TONU

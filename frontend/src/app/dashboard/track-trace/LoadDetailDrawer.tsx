@@ -1,10 +1,10 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { X, ChevronRight, BellOff, Bell } from "lucide-react";
+import { X, ChevronRight, BellOff, Bell, Ban } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
-import { getNextStatusAction } from "@/lib/loadStatusActions";
+import { getNextStatusAction, canCancel } from "@/lib/loadStatusActions";
 import { deriveLoadStatus, type DeriveInput } from "@/lib/loadDerivedStatus";
 import { IconTabs } from "./IconTabs";
 import { DetailsTab } from "./tabs/DetailsTab";
@@ -70,8 +70,8 @@ export function LoadDetailDrawer({ loadId, onClose, initialTab = "details" }: Pr
   // have to bounce between surfaces. VALID_TRANSITIONS gating happens
   // server-side; this mutation just trusts the next-status helper map.
   const updateStatus = useMutation({
-    mutationFn: async (vars: { loadId: string; status: string }) =>
-      (await api.patch(`/loads/${vars.loadId}/status`, { status: vars.status })).data,
+    mutationFn: async (vars: { loadId: string; status: string; reason?: string }) =>
+      (await api.patch(`/loads/${vars.loadId}/status`, { status: vars.status, ...(vars.reason ? { reason: vars.reason } : {}) })).data,
     onSuccess: () => {
       setStatusError(null);
       // Refetch this drawer's load + invalidate the Load Board list query
@@ -220,6 +220,23 @@ export function LoadDetailDrawer({ loadId, onClose, initialTab = "details" }: Pr
                   >
                     <ChevronRight className="w-3 h-3" />
                     {updateStatus.isPending ? "Updating…" : statusAction.label}
+                  </button>
+                )}
+                {/* Lifecycle-gaps B1b — the drawer had no cancel at all; an AE who
+                    lived in Track & Trace had to find the Load Board. Same gate,
+                    same mutation, same error surface as the advance button. */}
+                {load && canCancel(load.status) && (
+                  <button
+                    onClick={() => {
+                      const reason = window.prompt("Cancel this load — why? (required; the carrier is notified)");
+                      if (reason && reason.trim()) updateStatus.mutate({ loadId: load.id, status: "CANCELLED", reason: reason.trim() });
+                    }}
+                    disabled={updateStatus.isPending}
+                    className="px-3 py-1.5 bg-[#F6E3E3] text-[#9B2C2C] hover:bg-[#f0d5d5] border border-[#9B2C2C]/20 rounded-lg text-xs font-medium disabled:opacity-50 flex items-center gap-1"
+                    title="Cancel this load"
+                  >
+                    <Ban className="w-3 h-3" />
+                    Cancel
                   </button>
                 )}
                 <button

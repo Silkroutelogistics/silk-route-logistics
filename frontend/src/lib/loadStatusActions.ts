@@ -82,3 +82,29 @@ export function getNextStatusAction(currentStatus: string | undefined | null): N
   if (!nextStatus || !label) return null;
   return { label, nextStatus };
 }
+
+/**
+ * Terminal aborts — WHICH statuses an AE may cancel or TONU from.
+ *
+ * MIRRORS AE_ALLOWED_TRANSITIONS in backend/src/lib/loadStateMachine.ts: a
+ * status is listed here iff the backend map allows CANCELLED (or TONU) from it.
+ * The Cancel button used to render for POSTED|BOOKED|DISPATCHED only while the
+ * server allowed TENDERED, CONFIRMED, AT_PICKUP, DRAFT and PLANNED as well — a
+ * load at TENDERED had no button, which is how the first load tendered to a
+ * real carrier could not be cancelled in the TMS (2026-09-18, lifecycle-gaps
+ * audit #1). backend/__tests__/unit/lib/cancelGateMirror.test.ts holds this
+ * list equal to the map and fails when EITHER side moves.
+ */
+export const CANCELLABLE_FROM = [
+  "DRAFT", "PLANNED", "POSTED", "TENDERED", "CONFIRMED", "BOOKED", "DISPATCHED", "AT_PICKUP",
+] as const;
+export const TONU_FROM = ["BOOKED", "DISPATCHED", "AT_PICKUP"] as const;
+/** Mirrors TONU_FAULT_SIDES in backend/src/lib/tonuPolicy.ts. */
+export const TONU_FAULT_SIDES = ["CUSTOMER", "CARRIER", "BROKER"] as const;
+
+export function canCancel(status: string | undefined | null): boolean {
+  return !!status && (CANCELLABLE_FROM as readonly string[]).includes(status);
+}
+export function canTonu(status: string | undefined | null): boolean {
+  return !!status && (TONU_FROM as readonly string[]).includes(status);
+}
