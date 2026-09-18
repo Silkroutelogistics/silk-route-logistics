@@ -382,6 +382,42 @@ export async function creditRejectedAccessorials(loadId: string) {
  * (never falls back to the carrier rate) and instead notifies the AE to set the
  * rate and bill manually.
  */
+/**
+ * Lifecycle-gaps B4b — may this load be billed or paid at all?
+ *
+ * Manual POST /invoices and POST /carrier-pays never read load.status, so a
+ * CANCELLED load could be invoiced and paid by hand; only the automatic paths
+ * keyed on DELIVERED. One answer, used by all three: a CANCELLED or archived
+ * load is refused; a TONU is billable only once its fault side is recorded,
+ * because the two-sided rule (§5) bills or pays from that field and nothing
+ * else. NOTE for the auto path: autoGenerateInvoice on a TONU would price
+ * the LINEHAUL for a truck that never moved (§13.3 Item 205); no caller
+ * reaches it on TONU today, and the TONU customer leg has its own path
+ * (raiseTonuCustomerCharge). The helper admits TONU-with-fault-side per the
+ * ratified rule; the linehaul concern is recorded, not enforced, here.
+ */
+export type BillabilityVerdict =
+  | { ok: true }
+  | { ok: false; code: "LOAD_CANCELLED" | "TONU_FAULT_SIDE_MISSING"; message: string };
+
+export function assessLoadBillable(load: {
+  status: string;
+  tonuFaultSide?: string | null;
+  deletedAt?: Date | null;
+}): BillabilityVerdict {
+  if (load.status === "CANCELLED" || load.deletedAt) {
+    return { ok: false, code: "LOAD_CANCELLED", message: "This load is cancelled. Nothing can be invoiced or paid on it." };
+  }
+  if (load.status === "TONU" && !load.tonuFaultSide) {
+    return {
+      ok: false,
+      code: "TONU_FAULT_SIDE_MISSING",
+      message: "This TONU has no fault side recorded, so nothing can be billed or paid on it yet.",
+    };
+  }
+  return { ok: true };
+}
+
 export async function autoGenerateInvoice(loadId: string) {
   // Prevent duplicate invoices for the same load.
   //
@@ -415,10 +451,18 @@ export async function autoGenerateInvoice(loadId: string) {
       originState: true,
       destCity: true,
       destState: true,
+      status: true,
+      tonuFaultSide: true,
+      deletedAt: true,
     },
   });
   if (!load) {
     log.info(`[AutoInvoice] No load found for ${loadId}`);
+    return null;
+  }
+  const billable = assessLoadBillable(load);
+  if (!billable.ok) {
+    log.warn(`[AutoInvoice] Load ${loadId} refused: ${billable.code} — ${billable.message}`);
     return null;
   }
   // The AR invoice is owned to the load poster (the AE). Without a poster we

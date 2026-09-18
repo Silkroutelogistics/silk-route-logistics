@@ -4,6 +4,7 @@ import { resolveBillingRecipients } from "../services/customerRecipientResolver"
 import { AuthRequest } from "../middleware/auth";
 import { createInvoiceSchema, submitForFactoringSchema, updateLineItemsSchema, batchInvoiceStatusSchema } from "../validators/invoice";
 import { generateInvoicePdf } from "../services/pdfService";
+import { assessLoadBillable } from "../services/invoiceService";
 import { sendEmail, wrap } from "../services/emailService";
 import { onInvoicePaid } from "../services/integrationService";
 import { log } from "../lib/logger";
@@ -11,6 +12,15 @@ import { nextSequentialInvoiceNumber } from "../lib/invoiceNumber";
 
 export async function createInvoice(req: AuthRequest, res: Response) {
   const data = createInvoiceSchema.parse(req.body);
+
+  // B4b — this path never read the load, so a CANCELLED load could be
+  // invoiced by hand. One rule with the auto path and carrier pay.
+  const load = await prisma.load.findUnique({
+    where: { id: data.loadId }, select: { status: true, tonuFaultSide: true, deletedAt: true },
+  });
+  if (!load) { res.status(404).json({ error: "Load not found" }); return; }
+  const billable = assessLoadBillable(load);
+  if (!billable.ok) { res.status(409).json({ error: billable.message, code: billable.code }); return; }
   // go-live audit: robust against legacy date-format numbers (no parseInt jump).
   const invoiceNumber = await nextSequentialInvoiceNumber();
 

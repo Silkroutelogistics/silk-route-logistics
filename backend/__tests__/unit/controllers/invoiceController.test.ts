@@ -48,6 +48,8 @@ describe("invoiceController", () => {
 
   // ── createInvoice ───────────────────────────────────────
   it("createInvoice — creates invoice with line items and returns 201", async () => {
+    // B4b — the handler now refuses a cancelled load, so it reads the load first.
+    mockPrisma.load.findUnique.mockResolvedValue({ status: "DELIVERED", tonuFaultSide: null, deletedAt: null } as any);
     mockPrisma.invoice.findFirst.mockResolvedValue({ invoiceNumber: "INV-1005" } as any);
     mockPrisma.invoice.create.mockResolvedValue({ id: "inv-1", invoiceNumber: "INV-1006" } as any);
     mockPrisma.invoiceLineItem.createMany.mockResolvedValue({ count: 1 } as any);

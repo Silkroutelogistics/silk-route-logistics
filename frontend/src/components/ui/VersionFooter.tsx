@@ -18163,7 +18163,9 @@
 // verified against the pre-change code. Item 175 closed by explanation: the
 // homepage is static HTML, so /index.txt does not exist and the 404 falls
 // back to a hard navigation to /, which is correct.
-export const SRL_VERSION = "3.8.bdb";
+// v3.8.bdc — lifecycle-gaps B4b: nothing is invoiced or paid on a cancelled load
+// Manual POST /invoices and POST /carrier-pays never read load.status, so a CANCELLED load could be invoiced and paid by hand; only the automatic paths keyed on DELIVERED. One rule at all three entry points (assessLoadBillable): CANCELLED or archived refused with 409 LOAD_CANCELLED; TONU admitted only once its fault side is recorded, because the two-sided rule bills or pays from that field. Every refusal is paired with a live-load control; each guard was reinjected and turned exactly its own assertions red.
+export const SRL_VERSION = "3.8.bdc";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

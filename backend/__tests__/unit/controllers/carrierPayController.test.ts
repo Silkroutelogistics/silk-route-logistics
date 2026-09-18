@@ -77,6 +77,9 @@ function allowQuickPay(opts: { tier?: string; enabled?: boolean; signed?: boolea
 beforeEach(() => {
   vi.clearAllMocks();
   (mockPrisma.carrierPay.create as any).mockImplementation(async (args: any) => ({ id: "cp-1", ...args.data }));
+  // B4b — the handler now reads the load first; a billable default so the
+  // Quick Pay cases below keep exercising the fee math (allowQuickPay overrides).
+  (mockPrisma.load.findUnique as any).mockResolvedValue({ id: "l1", status: "DELIVERED", tonuFaultSide: null, deletedAt: null });
 });
 
 describe("createCarrierPay — Quick Pay fee comes from the ladder, never the caller (CLAUDE.md §8)", () => {
