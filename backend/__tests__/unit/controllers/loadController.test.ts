@@ -19,6 +19,16 @@ vi.mock("../../../src/services/integrationService", () => ({
   onLoadCancelledOrTONU: vi.fn().mockResolvedValue(undefined),
   enforceShipperCredit: vi.fn().mockResolvedValue({ allowed: true }),
 }));
+// The cascade is mocked so the test can assert it RAN and with what client —
+// the prior deleteLoad test asserted only the 200 body and passed with the
+// cascade deleted (lifecycle-gaps audit A8).
+vi.mock("../../../src/services/cancelCascade", () => ({
+  cascadeLoadCancellation: vi.fn().mockResolvedValue({ shipmentsCancelled: 0 }),
+}));
+import { cascadeLoadCancellation } from "../../../src/services/cancelCascade";
+vi.mock("../../../src/services/tonuBillingService", () => ({
+  recordTonuObligation: vi.fn().mockResolvedValue(undefined),
+}));
 // Mock validators to passthrough
 vi.mock("../../../src/validators/load", () => ({
   createLoadSchema: { parse: (v: any) => v },
@@ -283,26 +293,132 @@ describe("loadController", () => {
   // explicit coverage of the migrated side effects).
 
   // ── deleteLoad ──────────────────────────────────────────
-  it("deleteLoad — soft-deletes load and related records", async () => {
-    mockPrisma.load.findUnique.mockResolvedValue({
-      id: "load-1",
-      posterId: "user-1",
-      deletedAt: null,
-    } as any);
+  // $transaction is a bare vi.fn() in setup.ts, so the callback never ran and
+  // nothing inside it was observable. Run it against the same mock client.
+  function runTransactions() {
+    // Both $transaction forms: the interactive callback (deleteLoad) and the
+    // array form (loadAuditService). mockImplementation survives clearAllMocks,
+    // so a callback-only shape leaked into later tests as "fn is not a function".
+    (mockPrisma as any).$transaction.mockImplementation(async (arg: any) => (Array.isArray(arg) ? Promise.all(arg) : arg(mockPrisma)));
     mockPrisma.load.update.mockResolvedValue({} as any);
     mockPrisma.loadTender.updateMany.mockResolvedValue({ count: 0 } as any);
     mockPrisma.checkCall.updateMany.mockResolvedValue({ count: 0 } as any);
     mockPrisma.invoice.updateMany.mockResolvedValue({ count: 0 } as any);
+  }
 
-    const { req, res } = mockReqRes(
-      { reason: "Duplicate" },
-      { id: "user-1", role: "ADMIN", email: "admin@test.com" },
-      { id: "load-1" }
-    );
+  it("deleteLoad — cancels + archives a BOOKED load and runs the cascade INSIDE the transaction", async () => {
+    runTransactions();
+    mockPrisma.load.findUnique.mockResolvedValue({ id: "load-1", posterId: "user-1", status: "BOOKED", podUrl: null, deletedAt: null } as any);
+    const { req, res } = mockReqRes({ reason: "Duplicate" }, { id: "user-1", role: "ADMIN", email: "admin@test.com" }, { id: "load-1" });
 
     await deleteLoad(req, res);
 
     expect(res.json).toHaveBeenCalledWith({ success: true, message: "Load archived" });
+    const data = mockPrisma.load.update.mock.calls[0][0].data as any;
+    expect(data.status).toBe("CANCELLED");
+    expect(data.cancellationReason).toBe("Duplicate");
+    expect(data.deletedAt).toBeInstanceOf(Date);
+    expect(cascadeLoadCancellation).toHaveBeenCalledWith("load-1", mockPrisma, expect.objectContaining({ reason: "Duplicate", actorId: "user-1" }));
+  });
+
+  it("deleteLoad — refuses a COMPLETED load with 409 and touches no row", async () => {
+    runTransactions();
+    mockPrisma.load.findUnique.mockResolvedValue({ id: "load-1", posterId: "user-1", status: "COMPLETED", podUrl: null, deletedAt: null } as any);
+    const { req, res } = mockReqRes({}, { id: "user-1", role: "ADMIN" }, { id: "load-1" });
+
+    await deleteLoad(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(409);
+    expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ code: "NOT_CANCELLABLE_STATUS" }));
+    expect((mockPrisma as any).$transaction).not.toHaveBeenCalled();
+    expect(mockPrisma.load.update).not.toHaveBeenCalled();
+  });
+
+  it("deleteLoad — refuses when a POD is on file even at a cancellable status", async () => {
+    runTransactions();
+    mockPrisma.load.findUnique.mockResolvedValue({ id: "load-1", posterId: "user-1", status: "DISPATCHED", podUrl: "s3://pod.pdf", deletedAt: null } as any);
+    const { req, res } = mockReqRes({}, { id: "user-1", role: "ADMIN" }, { id: "load-1" });
+
+    await deleteLoad(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(409);
+    expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ code: "POD_ON_FILE" }));
+    expect(mockPrisma.load.update).not.toHaveBeenCalled();
+  });
+
+  it("deleteLoad — archives a TONU load WITHOUT rewriting its status to CANCELLED", async () => {
+    runTransactions();
+    mockPrisma.load.findUnique.mockResolvedValue({ id: "load-1", posterId: "user-1", status: "TONU", podUrl: null, deletedAt: null } as any);
+    const { req, res } = mockReqRes({}, { id: "user-1", role: "ADMIN" }, { id: "load-1" });
+
+    await deleteLoad(req, res);
+
+    expect(res.json).toHaveBeenCalledWith({ success: true, message: "Load archived" });
+    const data = mockPrisma.load.update.mock.calls[0][0].data as any;
+    expect(data).not.toHaveProperty("status");
+    expect(data.deletedAt).toBeInstanceOf(Date);
+  });
+
+  it("deleteLoad — an OPERATIONS user who did not post the load may archive it (authz matches the route)", async () => {
+    runTransactions();
+    mockPrisma.load.findUnique.mockResolvedValue({ id: "load-1", posterId: "someone-else", status: "POSTED", podUrl: null, deletedAt: null } as any);
+    const { req, res } = mockReqRes({}, { id: "ops-1", role: "OPERATIONS" }, { id: "load-1" });
+
+    await deleteLoad(req, res);
+
+    expect(res.status).not.toHaveBeenCalledWith(403);
+    expect(res.json).toHaveBeenCalledWith({ success: true, message: "Load archived" });
+  });
+
+  it("deleteLoad — a CARRIER who did not post the load is still refused", async () => {
+    runTransactions();
+    mockPrisma.load.findUnique.mockResolvedValue({ id: "load-1", posterId: "someone-else", status: "POSTED", podUrl: null, deletedAt: null } as any);
+    const { req, res } = mockReqRes({}, { id: "c-1", role: "CARRIER" }, { id: "load-1" });
+
+    await deleteLoad(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(403);
+    expect(mockPrisma.load.update).not.toHaveBeenCalled();
+  });
+
+  // ── updateLoadStatus: validate-then-write ──────────────
+  it("updateLoadStatus — a TONU without a fault side is refused BEFORE any write", async () => {
+    mockPrisma.load.findUnique.mockResolvedValue({ id: "load-1", posterId: "user-1", status: "BOOKED", carrierId: "c-1", podUrl: null } as any);
+    const { req, res } = mockReqRes({ status: "TONU" }, { id: "user-1", role: "ADMIN" }, { id: "load-1" });
+
+    await updateLoadStatus(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(422);
+    expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ code: "TONU_FAULT_SIDE_REQUIRED" }));
+    expect(mockPrisma.load.update, "the status must not have moved").not.toHaveBeenCalled();
+  });
+
+  it("updateLoadStatus — a TONU with a fault side writes it in the SAME update as the status", async () => {
+    mockPrisma.load.findUnique.mockResolvedValue({ id: "load-1", posterId: "user-1", status: "BOOKED", carrierId: "c-1", podUrl: null } as any);
+    mockPrisma.load.update.mockResolvedValue({ id: "load-1", status: "TONU", carrierId: "c-1", referenceNumber: "SRL-1" } as any);
+    mockPrisma.shipment.findFirst.mockResolvedValue(null);
+    mockPrisma.notification.create.mockResolvedValue({} as any);
+    runTransactions();
+    const { req, res } = mockReqRes({ status: "TONU", tonuFaultSide: "CUSTOMER" }, { id: "user-1", role: "ADMIN" }, { id: "load-1" });
+
+    await updateLoadStatus(req, res);
+
+    expect(res.status).not.toHaveBeenCalledWith(422);
+    const writes = mockPrisma.load.update.mock.calls.map((c) => c[0].data as any);
+    expect(writes.length, "one write, not a status write followed by a fault-side write").toBe(1);
+    expect(writes[0]).toEqual(expect.objectContaining({ status: "TONU", tonuFaultSide: "CUSTOMER" }));
+  });
+
+  it("updateLoadStatus — CANCELLED is refused with 409 when a POD is on file, and nothing is written", async () => {
+    mockPrisma.load.findUnique.mockResolvedValue({ id: "load-1", posterId: "user-1", status: "DISPATCHED", carrierId: "c-1", podUrl: "s3://pod.pdf" } as any);
+    const { req, res } = mockReqRes({ status: "CANCELLED" }, { id: "user-1", role: "ADMIN" }, { id: "load-1" });
+
+    await updateLoadStatus(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(409);
+    expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ code: "POD_ON_FILE" }));
+    expect(mockPrisma.load.update).not.toHaveBeenCalled();
+    expect(cascadeLoadCancellation).not.toHaveBeenCalled();
   });
 
   // ── restoreLoad ─────────────────────────────────────────

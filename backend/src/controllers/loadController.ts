@@ -24,6 +24,7 @@ import { logLoadCreation, diffLoadChanges, logLoadChanges, logStatusChange, getL
 import { onLoadStatusChange as aiOnLoadStatusChange } from "../services/aiLearningLoop/feedbackCollector";
 import { log } from "../lib/logger";
 import { validateLoadStatusTransition, getAllowedNextStatuses } from "../lib/loadStateMachine";
+import { assessCancellability, TERMINAL_ABORTS } from "../lib/cancellationGuard";
 import { isTonuFaultSide, TONU_FAULT_SIDES } from "../lib/tonuPolicy";
 import { recordTonuObligation } from "../services/tonuBillingService";
 // generateLoadNumber lived here and two other load creators could not reach it,
@@ -608,13 +609,46 @@ export async function updateLoadStatus(req: AuthRequest, res: Response) {
   // carrier (line 634) so it never relied on the auto-assign here.
   // Carrier-assignment now exclusively flows through
   // tenderController.acceptTender.
+  // Lifecycle-gaps arc (2026-09-18) — VALIDATE, THEN WRITE. Both refusals below
+  // used to sit AFTER the status update: a TONU submitted without a fault side
+  // was persisted as TONU, then refused with a 422, and nothing downstream ran.
+  // Every check that can refuse the transition now runs before any row moves.
+  if (status === "CANCELLED") {
+    const verdict = assessCancellability(existing);
+    if (!verdict.allowed) {
+      res.status(409).json({ error: verdict.reason, code: verdict.code, allowed: verdict.allowedNext });
+      return;
+    }
+  }
+  // Arc 2 Item 5 — a TONU must say whose failure it was. The two-sided rule
+  // ratified 2026-08-15 bills the customer or pays the carrier depending
+  // entirely on the fault side, so recording a TONU without one produces a
+  // row nobody can bill or settle from later. The fault side is only knowable
+  // at the moment of the flip, so it rides in the SAME update as the status.
+  const tonuFaultSide = status === "TONU" ? req.body.tonuFaultSide : undefined;
+  if (status === "TONU" && !isTonuFaultSide(tonuFaultSide)) {
+    res.status(422).json({
+      error:
+        "A TONU must record whose failure caused it. Pass tonuFaultSide as CUSTOMER, CARRIER, or BROKER.",
+      code: "TONU_FAULT_SIDE_REQUIRED",
+      allowed: TONU_FAULT_SIDES,
+    });
+    return;
+  }
+
   const load = await prisma.load.update({
     where: { id: req.params.id },
     // Build B (2026-05-30): the AE status-advance path never stamped actual
     // pickup/delivery timestamps — only the carrier portal did. Stamp them here
     // too (AT_PICKUP primary, never overwriting) so AE-driven loads feed the
     // Compass on-time score. See lib/loadEventStamps.ts.
-    data: { status, statusUpdatedAt: new Date(), statusUpdatedById: req.user!.id, ...actualEventStamps(status, existing) },
+    data: {
+      status,
+      statusUpdatedAt: new Date(),
+      statusUpdatedById: req.user!.id,
+      ...actualEventStamps(status, existing),
+      ...(status === "TONU" ? { tonuFaultSide } : {}),
+    },
   });
 
   // Field-level audit: log status transition
@@ -699,18 +733,8 @@ export async function updateLoadStatus(req: AuthRequest, res: Response) {
     // billing legs are still banked (see lib/tonuPolicy), because the fault
     // side is only knowable at the moment of the flip — reconstructing it from
     // a cancellation reason weeks later is guesswork.
-    if (status === "TONU") {
-      const faultSide = req.body.tonuFaultSide;
-      if (!isTonuFaultSide(faultSide)) {
-        res.status(422).json({
-          error:
-            "A TONU must record whose failure caused it. Pass tonuFaultSide as CUSTOMER, CARRIER, or BROKER.",
-          code: "TONU_FAULT_SIDE_REQUIRED",
-          allowed: TONU_FAULT_SIDES,
-        });
-        return;
-      }
-      await prisma.load.update({ where: { id: load.id }, data: { tonuFaultSide: faultSide } });
+    if (status === "TONU" && isTonuFaultSide(tonuFaultSide)) {
+      const faultSide = tonuFaultSide;
 
       // Arc 3 Phase 2 — record the obligation on the accessorial ledger, which
       // is the one place both the customer invoice reader and the carrier
@@ -1096,9 +1120,27 @@ export async function deleteLoad(req: AuthRequest, res: Response) {
     res.status(404).json({ error: "Load not found" });
     return;
   }
-  if (load.posterId !== req.user!.id && req.user!.role !== "ADMIN") {
+  // The route authorizes ADMIN/CEO/BROKER/DISPATCH/OPERATIONS; this used to
+  // refuse everyone but the poster and ADMIN, and the frontend swallowed the
+  // 403. Poster OR an AE-side role, matching routes/loads.ts.
+  const isPoster = load.posterId === req.user!.id;
+  const isEmployee = ["ADMIN", "CEO", "BROKER", "DISPATCH", "OPERATIONS"].includes(req.user!.role);
+  if (!isPoster && !isEmployee) {
     res.status(403).json({ error: "Not authorized" });
     return;
+  }
+
+  // Archive is cancel + hide, so it answers to the same guard as a cancel.
+  // Pre-arc this wrote CANCELLED from ANY status — a COMPLETED, INVOICED load
+  // included — and turned a TONU into a CANCELLED, losing the obligation
+  // record. An already-terminal load is archived without its status touched.
+  const alreadyTerminal = TERMINAL_ABORTS.includes(load.status);
+  if (!alreadyTerminal) {
+    const verdict = assessCancellability(load);
+    if (!verdict.allowed) {
+      res.status(409).json({ error: verdict.reason, code: verdict.code, allowed: verdict.allowedNext });
+      return;
+    }
   }
 
   const now = new Date();
@@ -1114,8 +1156,8 @@ export async function deleteLoad(req: AuthRequest, res: Response) {
       data: {
         deletedAt: now,
         deletedBy,
-        cancellationReason: reason,
-        status: "CANCELLED",
+        ...(reason ? { cancellationReason: reason } : {}),
+        ...(alreadyTerminal ? {} : { status: "CANCELLED" as const }),
       },
     });
     await tx.loadTender.updateMany({ where: { loadId: load.id, deletedAt: null }, data: { deletedAt: now } });

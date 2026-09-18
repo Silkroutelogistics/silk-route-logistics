@@ -18090,7 +18090,16 @@
 // (api.ts hard-navigates to bare /carrier/login while the layout soft-
 // navigates with ?next=) still drops the deep-link. It is the trigger, not
 // the defect, and it is an auth-precedence change — held for sign-off.
-export const SRL_VERSION = "3.8.bcu";
+// 
+// v3.8.bcv — lifecycle-gaps B1a: validate, then write. The TONU fault-side 422
+// fired AFTER the status write, so a TONU without a fault side was persisted as
+// TONU and then refused; it now runs first and the fault side rides in the same
+// update. deleteLoad answered to no state guard at all (it wrote CANCELLED
+// from COMPLETED, and turned a TONU into a CANCELLED); it now runs the same
+// assessCancellability the status path does — AE map + POD on file — and
+// archives an already-terminal load without touching its status. Authz
+// matches the route (poster OR AE-side role) instead of poster-or-ADMIN.
+export const SRL_VERSION = "3.8.bcv";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
