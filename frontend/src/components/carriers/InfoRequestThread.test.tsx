@@ -43,7 +43,9 @@ import { InfoRequestThread } from "./InfoRequestThread";
 
 type Status = "OPEN" | "RESOLVED" | "CANCELLED";
 
-function requestFixture(status: Status) {
+type Attachment = { id: string; fileName: string; fileUrl: string; fileType: string; fileSize: number; createdAt: string };
+
+function requestFixture(status: Status, attachments: Attachment[] = []) {
   return {
     id: `req-${status.toLowerCase()}`,
     category: "COI_UPDATE",
@@ -56,7 +58,7 @@ function requestFixture(status: Status) {
     createdAt: "2026-08-30T10:00:00.000Z",
     createdBy: { id: "u1", firstName: "Ada", lastName: "Byron", email: "ada@srl.invalid" },
     cancelledBy: status === "CANCELLED" ? { id: "u1", firstName: "Ada", lastName: "Byron" } : null,
-    attachments: [],
+    attachments,
   };
 }
 
@@ -261,5 +263,27 @@ describe("the status gate fails closed", () => {
     }
     expect(mounts.length, "no mount found — the walk is not reaching the app").toBeGreaterThan(0);
     expect(bare, `mounts relying on the fail-closed default:\n${bare.join("\n")}`).toEqual([]);
+  });
+});
+
+describe("a carrier's attachment is rendered, not merely fetched", () => {
+  // The GET has included `attachments` since v3.8.aji and the thread has
+  // drawn them since the same commit — but every fixture above carries
+  // `attachments: []`, so the <li> branch had no test and its removal would
+  // pass CI. Since v3.8.bby a document-category answer MUST carry a file, so
+  // this branch is the one an AE actually reads. The name is the link text,
+  // the href is the API download route (through apiHref, which the mock
+  // above makes the identity so the path is asserted, not the host), and
+  // the size is the formatted figure beside it.
+  it("shows the file name as a download link, with its size", () => {
+    setup([
+      requestFixture("RESOLVED", [
+        { id: "doc-w9-1", fileName: "CJ-MASTER-W9-2026.pdf", fileUrl: "s3://ignored", fileType: "application/pdf", fileSize: 48_128, createdAt: "2026-09-01T10:00:00.000Z" },
+      ]),
+    ]);
+    const link = screen.getByRole("link", { name: /CJ-MASTER-W9-2026\.pdf/ });
+    expect(link).toHaveTextContent("CJ-MASTER-W9-2026.pdf");
+    expect(link.getAttribute("href")).toMatch(/\/documents\/doc-w9-1\/download$/);
+    expect(screen.getByText(/47\.0 KB/)).toBeInTheDocument();
   });
 });
