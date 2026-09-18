@@ -20,21 +20,23 @@
 
 import type { CancellationReason, FaultParty } from "@prisma/client";
 import type { TonuFaultSide } from "./tonuPolicy";
+import {
+  CANCELLATION_REASONS as SHARED_REASONS,
+  REASON_FAULT_PARTY as SHARED_REASON_FAULT_PARTY,
+  MIN_CANCELLATION_NOTE_LENGTH,
+  isCancellationReason as sharedIsCancellationReason,
+  requiresNote as sharedRequiresNote,
+} from "../../../shared/constants/cancellationReasons";
+
+// B7a (v3.8.bdd) — the list and the mapping live in shared/constants so the
+// CancelLoadModal reads the same vocabulary the server enforces, instead of a
+// third hand-kept copy. Re-exported here under the PRISMA types: assigning the
+// shared string union to the enum type is a compile-time check that shared
+// names nothing the schema lacks, and cancellationPolicy.test.ts holds the
+// list equal to schema.prisma's enum for the other direction.
 
 /** Every reason, in the order a picker should show them. */
-export const CANCELLATION_REASONS: readonly CancellationReason[] = [
-  "SHIPPER_FREIGHT_NOT_READY",
-  "SHIPPER_CANCELLED",
-  "SHIPPER_APPOINTMENT_CHANGE",
-  "CARRIER_NO_SHOW",
-  "CARRIER_LATE",
-  "CARRIER_EQUIPMENT_FAILURE",
-  "CARRIER_FELL_OFF",
-  "BROKER_RATE_ISSUE",
-  "BROKER_COMPLIANCE_HOLD",
-  "DUPLICATE_ENTRY",
-  "OTHER",
-];
+export const CANCELLATION_REASONS: readonly CancellationReason[] = SHARED_REASONS;
 
 /**
  * The single mapping. DUPLICATE_ENTRY and OTHER are NONE: a duplicate row is
@@ -42,19 +44,7 @@ export const CANCELLATION_REASONS: readonly CancellationReason[] = [
  * must never be read as anyone's fault — NONE is the direction that cannot
  * wrongly penalise a carrier.
  */
-export const REASON_FAULT_PARTY: Readonly<Record<CancellationReason, FaultParty>> = {
-  SHIPPER_FREIGHT_NOT_READY: "SHIPPER",
-  SHIPPER_CANCELLED: "SHIPPER",
-  SHIPPER_APPOINTMENT_CHANGE: "SHIPPER",
-  CARRIER_NO_SHOW: "CARRIER",
-  CARRIER_LATE: "CARRIER",
-  CARRIER_EQUIPMENT_FAILURE: "CARRIER",
-  CARRIER_FELL_OFF: "CARRIER",
-  BROKER_RATE_ISSUE: "BROKER",
-  BROKER_COMPLIANCE_HOLD: "BROKER",
-  DUPLICATE_ENTRY: "NONE",
-  OTHER: "NONE",
-};
+export const REASON_FAULT_PARTY: Readonly<Record<CancellationReason, FaultParty>> = SHARED_REASON_FAULT_PARTY;
 
 /** Load.tonuFaultSide vocabulary → FaultParty. CUSTOMER ≡ SHIPPER. */
 export const TONU_SIDE_TO_FAULT_PARTY: Readonly<Record<TonuFaultSide, FaultParty>> = {
@@ -63,10 +53,10 @@ export const TONU_SIDE_TO_FAULT_PARTY: Readonly<Record<TonuFaultSide, FaultParty
   BROKER: "BROKER",
 };
 
-export const MIN_CANCELLATION_NOTE_LENGTH = 10;
+export { MIN_CANCELLATION_NOTE_LENGTH };
 
 export function isCancellationReason(v: unknown): v is CancellationReason {
-  return typeof v === "string" && (CANCELLATION_REASONS as readonly string[]).includes(v);
+  return sharedIsCancellationReason(v);
 }
 
 export function faultPartyFor(reason: CancellationReason): FaultParty {
@@ -74,7 +64,7 @@ export function faultPartyFor(reason: CancellationReason): FaultParty {
 }
 
 export function requiresNote(reason: CancellationReason): boolean {
-  return reason === "OTHER";
+  return sharedRequiresNote(reason);
 }
 
 /** The one question scoring asks. Only CARRIER counts against a carrier. */

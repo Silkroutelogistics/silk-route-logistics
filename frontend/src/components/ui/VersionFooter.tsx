@@ -18165,7 +18165,9 @@
 // back to a hard navigation to /, which is correct.
 // v3.8.bdc — lifecycle-gaps B4b: nothing is invoiced or paid on a cancelled load
 // Manual POST /invoices and POST /carrier-pays never read load.status, so a CANCELLED load could be invoiced and paid by hand; only the automatic paths keyed on DELIVERED. One rule at all three entry points (assessLoadBillable): CANCELLED or archived refused with 409 LOAD_CANCELLED; TONU admitted only once its fault side is recorded, because the two-sided rule bills or pays from that field. Every refusal is paired with a live-load control; each guard was reinjected and turned exactly its own assertions red.
-export const SRL_VERSION = "3.8.bdc";
+// v3.8.bdd — lifecycle-gaps B7a: Cancel is restored in production through a modal that sends the reason code
+// Since v3.8.bcy the server refused a CANCELLED write without a reason code, and both Cancel surfaces (Load Board panel, Track & Trace drawer) were window.prompt()s sending free text — so every click in production was refused. CancelLoadModal: reason dropdown from the shared CancellationReason list (shared/constants/cancellationReasons.ts, which backend/src/lib/cancellationPolicy.ts now re-exports — one vocabulary, not a third copy), fault party DERIVED from the reason and shown read-only, note required for OTHER at ten characters, gated client-side by the same predicate family the server runs. A refusal stays open and prints the server's own message. The archive button no longer says "Permanently delete" (nothing is; the server soft-deletes) — a terminal load archives on a confirm, a DRAFT goes through the same modal because archiving a live load IS a cancellation and needs the code (closes #12's remainder). TONU keeps its fault-side prompt unchanged. Reinjected: code dropped from the payload → 5 red; client gate ignores the OTHER note → 2 red; server stops requiring it → 4 red across schema, policy and the new controller case.
+export const SRL_VERSION = "3.8.bdd";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

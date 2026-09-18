@@ -5,6 +5,7 @@ import { X, ChevronRight, BellOff, Bell, Ban } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { getNextStatusAction, canCancel } from "@/lib/loadStatusActions";
+import { CancelLoadModal } from "@/components/loads/CancelLoadModal";
 import { deriveLoadStatus, type DeriveInput } from "@/lib/loadDerivedStatus";
 import { IconTabs } from "./IconTabs";
 import { DetailsTab } from "./tabs/DetailsTab";
@@ -31,11 +32,15 @@ interface Props {
 export function LoadDetailDrawer({ loadId, onClose, initialTab = "details" }: Props) {
   const [tab, setTab] = useState<DrawerTab>(initialTab);
   const [statusError, setStatusError] = useState<string | null>(null);
+  // B7a (v3.8.bdd) — CancelLoadModal open state. While it is open the drawer's
+  // own Escape handler stands down: both listen on document, and one Escape
+  // meant for the modal would otherwise close the drawer beneath it too.
+  const [cancelOpen, setCancelOpen] = useState(false);
   const queryClient = useQueryClient();
 
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
-    if (e.key === "Escape") onClose();
-  }, [onClose]);
+    if (e.key === "Escape" && !cancelOpen) onClose();
+  }, [onClose, cancelOpen]);
 
   useEffect(() => {
     if (loadId) {
@@ -70,8 +75,8 @@ export function LoadDetailDrawer({ loadId, onClose, initialTab = "details" }: Pr
   // have to bounce between surfaces. VALID_TRANSITIONS gating happens
   // server-side; this mutation just trusts the next-status helper map.
   const updateStatus = useMutation({
-    mutationFn: async (vars: { loadId: string; status: string; reason?: string }) =>
-      (await api.patch(`/loads/${vars.loadId}/status`, { status: vars.status, ...(vars.reason ? { reason: vars.reason } : {}) })).data,
+    mutationFn: async (vars: { loadId: string; status: string }) =>
+      (await api.patch(`/loads/${vars.loadId}/status`, { status: vars.status })).data,
     onSuccess: () => {
       setStatusError(null);
       // Refetch this drawer's load + invalidate the Load Board list query
@@ -223,14 +228,12 @@ export function LoadDetailDrawer({ loadId, onClose, initialTab = "details" }: Pr
                   </button>
                 )}
                 {/* Lifecycle-gaps B1b — the drawer had no cancel at all; an AE who
-                    lived in Track & Trace had to find the Load Board. Same gate,
-                    same mutation, same error surface as the advance button. */}
+                    lived in Track & Trace had to find the Load Board. Same gate as
+                    the Load Board. B7a: the modal collects the reason CODE the
+                    server requires; the free-text prompt was refused every time. */}
                 {load && canCancel(load.status) && (
                   <button
-                    onClick={() => {
-                      const reason = window.prompt("Cancel this load — why? (required; the carrier is notified)");
-                      if (reason && reason.trim()) updateStatus.mutate({ loadId: load.id, status: "CANCELLED", reason: reason.trim() });
-                    }}
+                    onClick={() => setCancelOpen(true)}
                     disabled={updateStatus.isPending}
                     className="px-3 py-1.5 bg-[#F6E3E3] text-[#9B2C2C] hover:bg-[#f0d5d5] border border-[#9B2C2C]/20 rounded-lg text-xs font-medium disabled:opacity-50 flex items-center gap-1"
                     title="Cancel this load"
@@ -254,6 +257,23 @@ export function LoadDetailDrawer({ loadId, onClose, initialTab = "details" }: Pr
               </div>
             )}
           </div>
+
+          {/* B7a (v3.8.bdd) — CancelLoadModal. Calls the endpoint directly so a
+              refusal is shown inside the modal; on success the same two queries
+              the status mutation invalidates are refetched. */}
+          {load && (
+            <CancelLoadModal
+              open={cancelOpen}
+              loadNumber={load.loadNumber ?? load.referenceNumber ?? null}
+              onClose={() => setCancelOpen(false)}
+              onConfirm={async (payload) => {
+                await api.patch(`/loads/${load.id}/status`, { status: "CANCELLED", ...payload });
+                setStatusError(null);
+                queryClient.invalidateQueries({ queryKey: ["tt-load-detail", loadId] });
+                queryClient.invalidateQueries({ queryKey: ["loads"] });
+              }}
+            />
+          )}
 
           {/* Tab content */}
           <div className="flex-1 overflow-y-auto px-6 py-5">

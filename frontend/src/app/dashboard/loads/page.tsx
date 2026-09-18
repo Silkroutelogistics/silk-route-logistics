@@ -20,6 +20,7 @@ import { CreateLoadModal } from "@/components/loads/CreateLoadModal";
 import { EditLoadModal } from "@/components/loads/EditLoadModal";
 import { AcceptOnBehalfModal } from "@/components/loads/AcceptOnBehalfModal";
 import { OverrideComplianceModal } from "@/components/loads/OverrideComplianceModal";
+import { CancelLoadModal, type CancelLoadPayload } from "@/components/loads/CancelLoadModal";
 import { TagManagementPanel } from "@/components/loads/TagManagementPanel";
 import { SlideDrawer } from "@/components/ui/SlideDrawer";
 import { downloadCSV } from "@/lib/csvExport";
@@ -158,6 +159,10 @@ export default function LoadsPage() {
   /* ---- Clone / Create state ---- */
   const [showCreate, setShowCreate] = useState(false);
   const [showEdit, setShowEdit] = useState(false); // v3.8.alu §13.3 Item 3 — EditLoadModal
+  // B7a (v3.8.bdd) — CancelLoadModal target. "archive" is the Archive button on
+  // a live (DRAFT) load: the server treats that as a cancellation and demands
+  // the same reason code, so the same modal collects it.
+  const [cancelTarget, setCancelTarget] = useState<{ id: string; loadNumber: string; intent: "cancel" | "archive" } | null>(null);
   const [cloneData, setCloneData] = useState<Record<string, unknown> | null>(null);
 
   /* ---- Tender / Compliance state ---- */
@@ -330,12 +335,26 @@ export default function LoadsPage() {
   };
 
   const updateStatus = useMutation({
-    mutationFn: ({ loadId, status, reason, tonuFaultSide }: { loadId: string; status: string; reason?: string; tonuFaultSide?: string }) =>
-      api.patch(`/loads/${loadId}/status`, { status, ...(reason ? { reason } : {}), ...(tonuFaultSide ? { tonuFaultSide } : {}) }),
+    mutationFn: ({ loadId, status, tonuFaultSide }: { loadId: string; status: string; tonuFaultSide?: string }) =>
+      api.patch(`/loads/${loadId}/status`, { status, ...(tonuFaultSide ? { tonuFaultSide } : {}) }),
     onSuccess: invalidateLoadQueries,
     // A refused transition used to vanish: the 409/422 body was never shown,
     // so a TONU without a fault side looked like nothing happened.
     onError: (err: any) => alert(err?.response?.data?.error ?? err?.message ?? "Status update failed"),
+  });
+
+  // B7a — archive. Was an inline api.delete with no error path, so the 422 the
+  // server has returned for a DRAFT since v3.8.bcy vanished. Same error surface
+  // as updateStatus; the modal path calls the endpoint directly (below) so a
+  // refusal lands inline in the modal rather than here.
+  const archiveLoad = useMutation({
+    mutationFn: ({ loadId, ...payload }: { loadId: string } & Partial<CancelLoadPayload>) =>
+      api.delete(`/loads/${loadId}`, Object.keys(payload).length ? { data: payload } : undefined),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["loads"] });
+      setSelectedLoadId(null);
+    },
+    onError: (err: any) => alert(err?.response?.data?.error ?? err?.message ?? "Archive failed"),
   });
 
   // v3.8.akc Item 158 — carrierUpdateStatus mutation DELETED. Wired to
@@ -1039,15 +1058,12 @@ export default function LoadsPage() {
                     {/* Cancel Load */}
                     {/* Gate mirrors the backend AE map (lib/loadStatusActions). The
                         hardcoded POSTED|BOOKED|DISPATCHED list left a TENDERED load
-                        with no Cancel at all — the 2026-09-18 trigger. The reason
-                        prompt is the interim capture until the modal lands (B7a). */}
+                        with no Cancel at all — the 2026-09-18 trigger. B7a: the
+                        modal collects the reason CODE the server requires; the
+                        prompt that sent free text was refused on every click. */}
                     {canCreate && canCancel(load.status) && (
-                      <button onClick={() => {
-                        const reason = window.prompt("Cancel this load — why? (required; the carrier is notified and credit holds are reversed)");
-                        if (reason && reason.trim()) {
-                          updateStatus.mutate({ loadId: load.id, status: "CANCELLED", reason: reason.trim() });
-                        }
-                      }} className="flex items-center gap-1 px-2.5 py-1.5 bg-[#F6E3E3] text-[#9B2C2C] border border-[#9B2C2C]/20 rounded text-xs hover:bg-[#f0d5d5]">
+                      <button onClick={() => setCancelTarget({ id: load.id, loadNumber: load.referenceNumber, intent: "cancel" })}
+                        className="flex items-center gap-1 px-2.5 py-1.5 bg-[#F6E3E3] text-[#9B2C2C] border border-[#9B2C2C]/20 rounded text-xs hover:bg-[#f0d5d5]">
                         <X className="w-3 h-3" /> Cancel
                       </button>
                     )}
@@ -1067,16 +1083,20 @@ export default function LoadsPage() {
                         <AlertTriangle className="w-3 h-3" /> TONU
                       </button>
                     )}
-                    {/* Delete */}
+                    {/* Archive — lifecycle-gaps #12. The button said "Permanently
+                        delete"; the server soft-deletes ("Load archived") and nothing
+                        is destroyed. A DRAFT is a LIVE load, so archiving it is a
+                        cancellation and needs the reason code — the modal collects
+                        it. An already-terminal load archives on a confirm. */}
                     {["DRAFT", "CANCELLED", "TONU"].includes(load.status) && canCreate && (
-                      <button onClick={async () => {
-                        if (confirm("Permanently delete this load?")) {
-                          await api.delete(`/loads/${load.id}`);
-                          queryClient.invalidateQueries({ queryKey: ["loads"] });
-                          setSelectedLoadId(null);
+                      <button onClick={() => {
+                        if (load.status === "DRAFT") {
+                          setCancelTarget({ id: load.id, loadNumber: load.referenceNumber, intent: "archive" });
+                        } else if (confirm("Archive this load? It leaves the board; nothing is deleted and its records stay on file.")) {
+                          archiveLoad.mutate({ loadId: load.id });
                         }
                       }} className="flex items-center gap-1 px-2.5 py-1.5 bg-[#F6E3E3] text-[#9B2C2C] rounded text-xs hover:bg-[#f0d5d5]">
-                        <Trash2 className="w-3 h-3" /> Delete
+                        <Trash2 className="w-3 h-3" /> Archive
                       </button>
                     )}
                     {/* v3.8.akc Item 158 — CarrierActions render removed.
@@ -1213,6 +1233,29 @@ export default function LoadsPage() {
       {/* v3.8.alu §13.3 Item 3 — EditLoadModal. Mounts only when a load is selected. */}
       {loadDetail && (
         <EditLoadModal open={showEdit} onClose={() => setShowEdit(false)} load={loadDetail as any} canSeeMargin={canSeeMargin} />
+      )}
+
+      {/* B7a (v3.8.bdd) — CancelLoadModal. Calls the endpoint directly rather than
+          through updateStatus/archiveLoad so a refusal (400 details naming the
+          field, 409 POD-on-file, 422) is shown INSIDE the modal and the AE can
+          correct it, instead of an alert over a closed dialog. */}
+      {cancelTarget && (
+        <CancelLoadModal
+          open
+          loadNumber={cancelTarget.loadNumber}
+          intent={cancelTarget.intent}
+          onClose={() => setCancelTarget(null)}
+          onConfirm={async (payload) => {
+            if (cancelTarget.intent === "archive") {
+              await api.delete(`/loads/${cancelTarget.id}`, { data: payload });
+              queryClient.invalidateQueries({ queryKey: ["loads"] });
+              setSelectedLoadId(null);
+            } else {
+              await api.patch(`/loads/${cancelTarget.id}/status`, { status: "CANCELLED", ...payload });
+              invalidateLoadQueries();
+            }
+          }}
+        />
       )}
 
       {/* Sprint 39 Item 54 — Accept on Behalf modal */}

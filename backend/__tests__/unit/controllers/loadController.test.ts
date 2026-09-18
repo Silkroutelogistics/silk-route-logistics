@@ -433,6 +433,18 @@ describe("loadController", () => {
     expect(cascadeLoadCancellation).not.toHaveBeenCalled();
   });
 
+  it("updateLoadStatus — OTHER without a note is refused 422 NOTE_REQUIRED before any write (B7a: the modal blocks it client-side; this is the server half)", async () => {
+    mockPrisma.load.findUnique.mockResolvedValue({ id: "load-1", posterId: "user-1", status: "TENDERED", carrierId: null, podUrl: null } as any);
+    const { req, res } = mockReqRes({ status: "CANCELLED", cancellationReasonCode: "OTHER", cancellationReason: "short" }, { id: "ae-1", role: "OPERATIONS" }, { id: "load-1" });
+
+    await updateLoadStatus(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(422);
+    expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ code: "NOTE_REQUIRED" }));
+    expect(mockPrisma.load.update).not.toHaveBeenCalled();
+    expect(cascadeLoadCancellation).not.toHaveBeenCalled();
+  });
+
   it("updateLoadStatus — a repeat cancel answers 200 with the existing row and writes NOTHING (the first record stands)", async () => {
     const existing = { id: "load-1", posterId: "user-1", status: "CANCELLED", carrierId: null, podUrl: null,
       cancellationReasonCode: "SHIPPER_FREIGHT_NOT_READY", cancelledById: "ae-1" };
