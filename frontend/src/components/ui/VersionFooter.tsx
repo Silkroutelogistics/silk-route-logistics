@@ -18128,7 +18128,13 @@
 // status on both paths; the customer-delete cascade writes SHIPPER_CANCELLED
 // until B5a removes it. Carrier notification and void notes read the note or
 // the code spelled out, never "no reason provided".
-export const SRL_VERSION = "3.8.bcy";
+// 
+// v3.8.bcz — lifecycle-gaps B2c: a repeat cancel is a no-op, not a rewrite. The
+// state machine allows same-state as idempotent, so a second cancel with a
+// different code overwrote the first record's code, actor and time — found by
+// the end-to-end proof, not by reasoning. An already-cancelled load now answers
+// 200 with its row and writes nothing.
+export const SRL_VERSION = "3.8.bcz";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

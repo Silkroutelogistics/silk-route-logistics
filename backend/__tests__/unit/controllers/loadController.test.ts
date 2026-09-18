@@ -433,6 +433,19 @@ describe("loadController", () => {
     expect(cascadeLoadCancellation).not.toHaveBeenCalled();
   });
 
+  it("updateLoadStatus — a repeat cancel answers 200 with the existing row and writes NOTHING (the first record stands)", async () => {
+    const existing = { id: "load-1", posterId: "user-1", status: "CANCELLED", carrierId: null, podUrl: null,
+      cancellationReasonCode: "SHIPPER_FREIGHT_NOT_READY", cancelledById: "ae-1" };
+    mockPrisma.load.findUnique.mockResolvedValue(existing as any);
+    const { req, res } = mockReqRes({ status: "CANCELLED", cancellationReasonCode: "SHIPPER_CANCELLED" }, { id: "ae-2", role: "OPERATIONS" }, { id: "load-1" });
+
+    await updateLoadStatus(req, res);
+
+    expect(res.json).toHaveBeenCalledWith(existing);
+    expect(mockPrisma.load.update).not.toHaveBeenCalled();
+    expect(cascadeLoadCancellation).not.toHaveBeenCalled();
+  });
+
   // ── updateLoadStatus: validate-then-write ──────────────
   it("updateLoadStatus — a TONU without a fault side is refused BEFORE any write", async () => {
     mockPrisma.load.findUnique.mockResolvedValue({ id: "load-1", posterId: "user-1", status: "BOOKED", carrierId: "c-1", podUrl: null } as any);

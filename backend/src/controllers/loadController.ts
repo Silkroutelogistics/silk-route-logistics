@@ -621,6 +621,15 @@ export async function updateLoadStatus(req: AuthRequest, res: Response) {
       res.status(409).json({ error: verdict.reason, code: verdict.code, allowed: verdict.allowedNext });
       return;
     }
+    // B2c — a repeat cancel is a no-op, not a rewrite. The state machine allows
+    // same-state as idempotent, and the write below would then overwrite the
+    // reason code, actor and time of the FIRST cancellation — the record a
+    // dispute reads. Answer with the row as it stands; correcting a reason is a
+    // separate, audited act (banked), not a second cancel.
+    if (verdict.alreadyCancelled) {
+      res.json(existing);
+      return;
+    }
     // B2b — the reason code and the fault party it implies. The validator has
     // already refused a missing or unknown code; this is the same rule, run
     // again, so the controller is safe on its own (it has other callers).
