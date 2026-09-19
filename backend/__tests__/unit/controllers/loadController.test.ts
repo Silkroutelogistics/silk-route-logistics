@@ -323,6 +323,21 @@ describe("loadController", () => {
     expect(data.cancelledAt).toBeInstanceOf(Date);
     expect(data.deletedAt).toBeInstanceOf(Date);
     expect(cascadeLoadCancellation).toHaveBeenCalledWith("load-1", mockPrisma, expect.objectContaining({ reason: "Duplicate", actorId: "user-1" }));
+    // B6b (#24) — the lifecycle record.
+    const rows = mockPrisma.auditTrail.create.mock.calls.map((c: any) => c[0].data);
+    expect(rows.length, "exactly one lifecycle row").toBe(1);
+    const row = rows[0];
+    expect(row).toEqual(expect.objectContaining({ action: "CANCEL", entityType: "Load", entityId: "load-1", performedById: "user-1" }));
+    expect(row.changedFields).toEqual(expect.objectContaining({
+      actionDetail: "LOAD_CANCELLED",
+      reasonCode: "DUPLICATE_ENTRY",
+      reason: "Duplicate",
+      faultParty: "NONE",
+      previous: { status: "BOOKED", deletedAt: null },
+    }));
+    expect(row.changedFields.new.status).toBe("CANCELLED");
+    expect(typeof row.changedFields.new.deletedAt, "the archive instant rides in new").toBe("string");
+    expect(row.changedFields.actor).toEqual({ kind: "USER", userId: "user-1", email: "admin@test.com" });
   });
 
   it("deleteLoad — refuses a COMPLETED load with 409 and touches no row", async () => {
@@ -361,6 +376,16 @@ describe("loadController", () => {
     const data = mockPrisma.load.update.mock.calls[0][0].data as any;
     expect(data).not.toHaveProperty("status");
     expect(data.deletedAt).toBeInstanceOf(Date);
+    // B6b (#24) — the lifecycle record.
+    const rows = mockPrisma.auditTrail.create.mock.calls.map((c: any) => c[0].data);
+    expect(rows.length, "exactly one lifecycle row").toBe(1);
+    const row = rows[0];
+    // An already-terminal load archived is a DELETE-class hide, never a CANCEL.
+    expect(row.action).toBe("DELETE");
+    expect(row.changedFields.actionDetail).toBe("LOAD_ARCHIVED");
+    expect(row.changedFields.previous).toEqual({ status: "TONU", deletedAt: null });
+    expect(row.changedFields.new.status).toBe("TONU");
+    expect(typeof row.changedFields.new.deletedAt).toBe("string");
   });
 
   it("deleteLoad — an OPERATIONS user who did not post the load may archive it (authz matches the route)", async () => {
@@ -421,6 +446,20 @@ describe("loadController", () => {
     expect(cascadeLoadCancellation).toHaveBeenCalledWith("load-1", mockPrisma, expect.objectContaining({ actorId: "ae-1" }));
     // B3c (#9) — a shipper-fault cancellation records no fall-off against the carrier.
     expect(mockPrisma.fallOffEvent.create).not.toHaveBeenCalled();
+    // B6b (#24) — the lifecycle record.
+    const rows = mockPrisma.auditTrail.create.mock.calls.map((c: any) => c[0].data);
+    expect(rows.length, "exactly one lifecycle row").toBe(1);
+    const row = rows[0];
+    expect(row).toEqual(expect.objectContaining({ action: "CANCEL", entityType: "Load", entityId: "load-1", performedById: "ae-1" }));
+    expect(row.changedFields).toEqual(expect.objectContaining({
+      actionDetail: "LOAD_CANCELLED",
+      entityName: "SRL-121492",
+      reasonCode: "SHIPPER_FREIGHT_NOT_READY",
+      faultParty: "SHIPPER",
+      previous: { status: "TENDERED" },
+      new: { status: "CANCELLED" },
+    }));
+    expect(row.changedFields.actor.userId).toBe("ae-1");
   });
 
   it("updateLoadStatus — CANCELLED without a reason code is refused 422 before any write (controller-level, independent of Zod)", async () => {
@@ -473,7 +512,7 @@ describe("loadController", () => {
   });
 
   it("updateLoadStatus — a TONU with a fault side writes it in the SAME update as the status", async () => {
-    mockPrisma.load.findUnique.mockResolvedValue({ id: "load-1", posterId: "user-1", status: "BOOKED", carrierId: "c-1", podUrl: null } as any);
+    mockPrisma.load.findUnique.mockResolvedValue({ id: "load-1", posterId: "user-1", status: "BOOKED", carrierId: "c-1", podUrl: null, referenceNumber: "SRL-1" } as any);
     mockPrisma.load.update.mockResolvedValue({ id: "load-1", status: "TONU", carrierId: "c-1", referenceNumber: "SRL-1" } as any);
     mockPrisma.shipment.findFirst.mockResolvedValue(null);
     mockPrisma.notification.create.mockResolvedValue({} as any);
@@ -486,6 +525,20 @@ describe("loadController", () => {
     const writes = mockPrisma.load.update.mock.calls.map((c) => c[0].data as any);
     expect(writes.length, "one write, not a status write followed by a fault-side write").toBe(1);
     expect(writes[0]).toEqual(expect.objectContaining({ status: "TONU", tonuFaultSide: "CUSTOMER" }));
+    // B6b (#24) — the lifecycle record.
+    const rows = mockPrisma.auditTrail.create.mock.calls.map((c: any) => c[0].data);
+    expect(rows.length, "exactly one lifecycle row").toBe(1);
+    const row = rows[0];
+    expect(row.action).toBe("CANCEL");
+    expect(row.changedFields).toEqual(expect.objectContaining({
+      actionDetail: "LOAD_TONU",
+      entityName: "SRL-1",
+      reasonCode: null,
+      // One fault vocabulary in the record: the CUSTOMER side reads as SHIPPER, and the raw side rides in new.
+      faultParty: "SHIPPER",
+      previous: { status: "BOOKED" },
+      new: { status: "TONU", tonuFaultSide: "CUSTOMER" },
+    }));
   });
 
   it("updateLoadStatus — CANCELLED is refused with 409 when a POD is on file, and nothing is written", async () => {
@@ -520,5 +573,14 @@ describe("loadController", () => {
     await restoreLoad(req, res);
 
     expect(res.json).toHaveBeenCalledWith({ success: true, message: "Load restored" });
+    // B6b (#24) — the lifecycle record.
+    const rows = mockPrisma.auditTrail.create.mock.calls.map((c: any) => c[0].data);
+    expect(rows.length, "exactly one lifecycle row").toBe(1);
+    const row = rows[0];
+    expect(row.action).toBe("STATUS_CHANGE");
+    expect(row.changedFields.actionDetail).toBe("LOAD_RESTORED");
+    expect(typeof row.changedFields.previous.deletedAt).toBe("string");
+    expect(row.changedFields.new.deletedAt).toBeNull();
+    expect(row.performedById).toBe("user-1");
   });
 });

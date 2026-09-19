@@ -25,7 +25,8 @@ import { onLoadStatusChange as aiOnLoadStatusChange } from "../services/aiLearni
 import { log } from "../lib/logger";
 import { validateLoadStatusTransition, getAllowedNextStatuses } from "../lib/loadStateMachine";
 import { assessCancellability, TERMINAL_ABORTS } from "../lib/cancellationGuard";
-import { assessCancellationInput, type CancellationInputVerdict } from "../lib/cancellationPolicy";
+import { assessCancellationInput, TONU_SIDE_TO_FAULT_PARTY, type CancellationInputVerdict } from "../lib/cancellationPolicy";
+import { recordLifecycleEvent } from "../lib/lifecycleAudit";
 import { isTonuFaultSide, TONU_FAULT_SIDES } from "../lib/tonuPolicy";
 import { recordTonuObligation } from "../services/tonuBillingService";
 // generateLoadNumber lived here and two other load creators could not reach it,
@@ -688,6 +689,42 @@ export async function updateLoadStatus(req: AuthRequest, res: Response) {
     log.error({ err: e }, "[LoadAudit] status change log error:")
   );
 
+  // B6b (finding #24) — the lifecycle record: who, why, whose fault, from/to.
+  // logStatusChange keeps the from/to status; this row carries the reason
+  // code, the note and the fault party the Load columns hold and the audit
+  // tables did not. Awaited AFTER the write, never inside it, and it never
+  // throws, so the response waits for the record and cannot fail on it.
+  if (status === "CANCELLED" && cancelInput) {
+    await recordLifecycleEvent({
+      actionDetail: "LOAD_CANCELLED",
+      entityType: "Load",
+      entityId: load.id,
+      entityName: existing.referenceNumber,
+      reasonCode: cancelInput.reason,
+      reason: cancelInput.note,
+      faultParty: cancelInput.faultParty,
+      previous: { status: existing.status },
+      new: { status: "CANCELLED" },
+      actor: { userId: req.user!.id, email: req.user!.email },
+      req,
+    });
+  } else if (status === "TONU" && isTonuFaultSide(tonuFaultSide)) {
+    await recordLifecycleEvent({
+      actionDetail: "LOAD_TONU",
+      entityType: "Load",
+      entityId: load.id,
+      entityName: existing.referenceNumber,
+      reason: (req.body.reason ?? req.body.cancellationReason) || null,
+      // One fault vocabulary in the audit record (Item 277: CUSTOMER ≡ SHIPPER);
+      // the raw side the row stores rides in `new`.
+      faultParty: TONU_SIDE_TO_FAULT_PARTY[tonuFaultSide],
+      previous: { status: existing.status },
+      new: { status: "TONU", tonuFaultSide },
+      actor: { userId: req.user!.id, email: req.user!.email },
+      req,
+    });
+  }
+
   // AI Learning Loop: record status change for feedback collection
   aiOnLoadStatusChange(load.id, existing.status, status, new Date()).catch((e) =>
     log.error({ err: e }, "[AI Feedback]")
@@ -1232,6 +1269,38 @@ export async function deleteLoad(req: AuthRequest, res: Response) {
     });
   });
 
+  // B6b (finding #24) — the lifecycle record, after the transaction commits.
+  // A live load archived IS a cancellation (reason code, fault party, hidden);
+  // an already-terminal load archived is a DELETE-class hide with its status
+  // untouched, and recording that as a CANCEL would be false.
+  await recordLifecycleEvent(
+    cancelInput
+      ? {
+          actionDetail: "LOAD_CANCELLED",
+          entityType: "Load",
+          entityId: load.id,
+          entityName: load.referenceNumber,
+          reasonCode: cancelInput.reason,
+          reason: cancelInput.note,
+          faultParty: cancelInput.faultParty,
+          previous: { status: load.status, deletedAt: null },
+          new: { status: "CANCELLED", deletedAt: now.toISOString() },
+          actor: { userId: req.user!.id, email: req.user!.email },
+          req,
+        }
+      : {
+          actionDetail: "LOAD_ARCHIVED",
+          entityType: "Load",
+          entityId: load.id,
+          entityName: load.referenceNumber,
+          reason,
+          previous: { status: load.status, deletedAt: null },
+          new: { status: load.status, deletedAt: now.toISOString() },
+          actor: { userId: req.user!.id, email: req.user!.email },
+          req,
+        },
+  );
+
   // Full cleanup: reverse credit, void AP, reverse fund entries
   onLoadCancelledOrTONU(load.id, reason ?? undefined).catch((e) =>
     log.error({ err: e }, `[Integration] deleteLoad cleanup error:`)
@@ -1253,6 +1322,19 @@ export async function restoreLoad(req: AuthRequest, res: Response) {
     prisma.checkCall.updateMany({ where: { loadId: load.id }, data: { deletedAt: null } }),
     prisma.invoice.updateMany({ where: { loadId: load.id }, data: { deletedAt: null } }),
   ]);
+
+  // B6b (finding #24) — a restore is a lifecycle act too: the row names who
+  // brought the load back and from what.
+  await recordLifecycleEvent({
+    actionDetail: "LOAD_RESTORED",
+    entityType: "Load",
+    entityId: load.id,
+    entityName: load.referenceNumber,
+    previous: { status: load.status, deletedAt: load.deletedAt.toISOString() },
+    new: { status: load.status, deletedAt: null },
+    actor: { userId: req.user!.id, email: req.user!.email },
+    req,
+  });
 
   res.json({ success: true, message: "Load restored" });
 }

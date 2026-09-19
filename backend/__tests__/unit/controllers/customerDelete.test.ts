@@ -87,6 +87,8 @@ describe("deleteCustomer", () => {
     expect(body.remedy.inactivate).toBe("POST /customers/cust-1/inactivate");
     expect(mockPrisma.customer.delete).not.toHaveBeenCalled();
     expectNoCascade();
+    // A refusal is not a lifecycle act: no row.
+    expect(mockPrisma.auditTrail.create).not.toHaveBeenCalled();
   });
 
   it("an OPEN load is listed as the thing to cancel first — with a reason code, by the AE, not by this endpoint", async () => {
@@ -138,6 +140,17 @@ describe("deleteCustomer", () => {
     expect(notice.title).toBe("Customer Deleted");
     expect(notice.message).toContain("had no loads, orders, contracts, facilities or contacts");
     expect(notice.message).not.toMatch(/cancelled|voided/);
+    // B6b (#24) — the lifecycle record of a hard delete outlives the row it names.
+    expect(mockPrisma.auditTrail.create).toHaveBeenCalledTimes(1);
+    const row = mockPrisma.auditTrail.create.mock.calls[0][0].data;
+    expect(row).toEqual(expect.objectContaining({ action: "DELETE", entityType: "Customer", entityId: "cust-1", performedById: "ae-1" }));
+    expect(row.changedFields).toEqual(expect.objectContaining({
+      actionDetail: "CUSTOMER_DELETED",
+      entityName: "Acme Foods",
+      previous: { exists: true, references: 0 },
+      new: { exists: false },
+      actor: { kind: "USER", userId: "ae-1", email: "ae@srl.test" },
+    }));
   });
 });
 

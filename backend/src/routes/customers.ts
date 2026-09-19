@@ -6,6 +6,7 @@ import {
   markNotInterested, approveCustomer, sendPortalInvite, inactivateCustomer, reactivateCustomer,
 } from "../controllers/customerController";
 import { authenticate, authorize } from "../middleware/auth";
+import { auditLog } from "../middleware/audit";
 import { validateBody, validateQuery } from "../middleware/validate";
 import { createCustomerSchema, updateCustomerSchema, customerQuerySchema } from "../validators/customer";
 import { z } from "zod";
@@ -31,37 +32,43 @@ const creditSchema = z.object({
   creditCheckDate: z.string().optional(),
 });
 
+// B6b (lifecycle-gaps, finding #24): every mutation route carries auditLog(),
+// so the Audit Log page (audit_logs) shows the act and its actor. This router
+// had none. The lifecycle acts (inactivate, reactivate, delete, restore) ALSO
+// write the substantive AuditTrail row through lib/lifecycleAudit from the
+// controller — reason, fault party, previous/new — which this middleware never
+// carries. Two records, two questions: "was it hit" here, "what did it do" there.
 const router = Router();
 router.use(authenticate);
 router.use(authorize("ADMIN", "CEO", "BROKER", "OPERATIONS", "ACCOUNTING"));
 
-router.post("/", validateBody(createCustomerSchema), createCustomer);
-router.post("/bulk", authorize("ADMIN", "CEO", "BROKER"), bulkCreateCustomers);
-router.post("/mass-email", authorize("ADMIN", "CEO", "BROKER"), sendMassEmail);
+router.post("/", validateBody(createCustomerSchema), auditLog("CREATE", "Customer"), createCustomer);
+router.post("/bulk", authorize("ADMIN", "CEO", "BROKER"), auditLog("BULK_CREATE", "Customer"), bulkCreateCustomers);
+router.post("/mass-email", authorize("ADMIN", "CEO", "BROKER"), auditLog("MASS_EMAIL", "Customer"), sendMassEmail);
 router.get("/", validateQuery(customerQuerySchema), getCustomers);
 router.get("/stats", getCustomerStats);
 router.get("/industries", getCustomerIndustries);
 router.get("/activity-feed", getActivityFeed);
 router.get("/:id", getCustomerById);
-router.patch("/bulk-stage", authorize("ADMIN", "CEO", "BROKER"), bulkUpdateStage);
-router.post("/:id/mark-not-interested", markNotInterested);
-router.post("/:id/approve", authorize("ADMIN", "CEO"), approveCustomer);
-router.post("/:id/send-portal-invite", authorize("ADMIN", "CEO"), sendPortalInvite);
-router.post("/:id/inactivate", authorize("ADMIN", "CEO", "OPERATIONS"), validateBody(z.object({ reason: z.string().min(5).max(500) })), inactivateCustomer);
-router.post("/:id/reactivate", authorize("ADMIN", "CEO", "OPERATIONS"), reactivateCustomer);
-router.patch("/:id", validateBody(updateCustomerSchema), updateCustomer);
-router.delete("/:id", authorize("ADMIN", "CEO", "BROKER"), deleteCustomer);
+router.patch("/bulk-stage", authorize("ADMIN", "CEO", "BROKER"), auditLog("BULK_STAGE", "Customer"), bulkUpdateStage);
+router.post("/:id/mark-not-interested", auditLog("STATUS_CHANGE", "Customer"), markNotInterested);
+router.post("/:id/approve", authorize("ADMIN", "CEO"), auditLog("APPROVE", "Customer"), approveCustomer);
+router.post("/:id/send-portal-invite", authorize("ADMIN", "CEO"), auditLog("SEND_PORTAL_INVITE", "Customer"), sendPortalInvite);
+router.post("/:id/inactivate", authorize("ADMIN", "CEO", "OPERATIONS"), validateBody(z.object({ reason: z.string().min(5).max(500) })), auditLog("INACTIVATE", "Customer"), inactivateCustomer);
+router.post("/:id/reactivate", authorize("ADMIN", "CEO", "OPERATIONS"), auditLog("REACTIVATE", "Customer"), reactivateCustomer);
+router.patch("/:id", validateBody(updateCustomerSchema), auditLog("UPDATE", "Customer"), updateCustomer);
+router.delete("/:id", authorize("ADMIN", "CEO", "BROKER"), auditLog("DELETE", "Customer"), deleteCustomer);
 // audit-pass1: MISSING-UI — soft-delete restore has no console affordance.
-router.put("/:id/restore", authorize("ADMIN", "CEO", "BROKER"), restoreCustomer);
+router.put("/:id/restore", authorize("ADMIN", "CEO", "BROKER"), auditLog("RESTORE", "Customer"), restoreCustomer);
 
 // Customer contacts
 router.get("/:id/contacts", getCustomerContacts);
-router.post("/:id/contacts", validateBody(contactSchema), addCustomerContact);
-router.patch("/:id/contacts/:cid", validateBody(contactSchema.partial()), updateCustomerContact);
-router.delete("/:id/contacts/:cid", deleteCustomerContact);
+router.post("/:id/contacts", validateBody(contactSchema), auditLog("CREATE", "CustomerContact"), addCustomerContact);
+router.patch("/:id/contacts/:cid", validateBody(contactSchema.partial()), auditLog("UPDATE", "CustomerContact"), updateCustomerContact);
+router.delete("/:id/contacts/:cid", auditLog("DELETE", "CustomerContact"), deleteCustomerContact);
 
 // Customer credit
 // audit-pass1: DUPLICATE — frontend uses PUT /accounting/credit/:id. Consolidation candidate, not deleted (both reachable).
-router.patch("/:id/credit", validateBody(creditSchema), updateCustomerCredit);
+router.patch("/:id/credit", validateBody(creditSchema), auditLog("UPDATE_CREDIT", "Customer"), updateCustomerCredit);
 
 export default router;

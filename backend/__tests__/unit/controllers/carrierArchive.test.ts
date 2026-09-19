@@ -82,6 +82,8 @@ describe("archiveCarrier", () => {
     expect(mockPrisma.$transaction).not.toHaveBeenCalled();
     expect(mockPrisma.carrierProfile.update).not.toHaveBeenCalled();
     expect(mockPrisma.user.update).not.toHaveBeenCalled();
+    // A refusal is not a lifecycle act: no row.
+    expect(mockPrisma.auditTrail.create).not.toHaveBeenCalled();
   });
 
   it("a signed agreement alone refuses — evidence is never archived away; an already-SUSPENDED carrier gets no suspend remedy", async () => {
@@ -106,6 +108,17 @@ describe("archiveCarrier", () => {
     });
     expect(mockPrisma.user.update).toHaveBeenCalledWith({ where: { id: "u-1" }, data: { isActive: false } });
     expect(res.json.mock.calls[0][0]).toMatchObject({ success: true, details: { archived: true, loginDeactivated: true, references: 0 } });
+    // B6b (#24) — the lifecycle record carries both rows the transaction moved.
+    expect(mockPrisma.auditTrail.create).toHaveBeenCalledTimes(1);
+    const row = mockPrisma.auditTrail.create.mock.calls[0][0].data;
+    expect(row).toEqual(expect.objectContaining({ action: "DEACTIVATE", entityType: "CarrierProfile", entityId: "cp-1", performedById: "ae-1" }));
+    expect(row.changedFields).toEqual(expect.objectContaining({
+      actionDetail: "CARRIER_ARCHIVED",
+      entityName: "Peace Transport",
+      previous: { deletedAt: null, loginActive: true, onboardingStatus: "APPROVED" },
+    }));
+    expect(row.changedFields.new).toEqual(expect.objectContaining({ loginActive: false, onboardingStatus: "APPROVED" }));
+    expect(typeof row.changedFields.new.deletedAt).toBe("string");
   });
 });
 
@@ -118,12 +131,20 @@ describe("restoreCarrier", () => {
   });
 
   it("undoes both halves of the archive: the row and the login", async () => {
-    mockPrisma.carrierProfile.findUnique.mockResolvedValue({ id: "cp-1", userId: "u-1", deletedAt: new Date() });
+    mockPrisma.carrierProfile.findUnique.mockResolvedValue({ id: "cp-1", userId: "u-1", deletedAt: new Date(), companyName: "Peace Transport" });
     const { res, run } = call(restoreCarrier, { id: "cp-1" });
     await run();
     expect(mockPrisma.carrierProfile.update).toHaveBeenCalledWith({ where: { id: "cp-1" }, data: { deletedAt: null, deletedBy: null } });
     expect(mockPrisma.user.update).toHaveBeenCalledWith({ where: { id: "u-1" }, data: { isActive: true } });
     expect(res.json.mock.calls[0][0]).toMatchObject({ details: { restored: true, loginReactivated: true } });
+    // B6b (#24) — the restore is a lifecycle act too.
+    expect(mockPrisma.auditTrail.create).toHaveBeenCalledTimes(1);
+    const row = mockPrisma.auditTrail.create.mock.calls[0][0].data;
+    expect(row).toEqual(expect.objectContaining({ action: "STATUS_CHANGE", entityType: "CarrierProfile", entityId: "cp-1", performedById: "ae-1" }));
+    expect(row.changedFields.actionDetail).toBe("CARRIER_RESTORED");
+    expect(row.changedFields.entityName).toBe("Peace Transport");
+    expect(typeof row.changedFields.previous.deletedAt).toBe("string");
+    expect(row.changedFields.new).toEqual({ deletedAt: null, loginActive: true });
   });
 
   it("404 when the carrier is not archived", async () => {
@@ -175,7 +196,10 @@ describe("the route stays controller-backed and audited (source guard)", () => {
     expect(start).toBeGreaterThan(0);
     expect(end).toBeGreaterThan(start);
     const body = ctrl.slice(start, end);
-    expect(body).toMatch(/deletedAt: new Date\(\)/);
+    // B6b captured the timestamp (`const archivedAt = new Date()`) so the audit row
+    // and the soft-delete carry the same instant; either spelling is the soft write.
+    expect(body).toMatch(/deletedAt: (new Date\(\)|archivedAt)[,\s]/);
+    expect(body).toMatch(/const archivedAt = new Date\(\)|deletedAt: new Date\(\)/);
     expect(body).toMatch(/isActive: false/);
     expect(body).not.toMatch(/carrierProfile\.delete\(/);
     expect(body).not.toMatch(/user\.delete\(/);

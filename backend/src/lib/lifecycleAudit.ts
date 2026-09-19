@@ -46,6 +46,8 @@ import type { AuditAction } from "@prisma/client";
 export type LifecycleActionDetail =
   | "LOAD_CANCELLED"
   | "LOAD_TONU"
+  | "LOAD_ARCHIVED"
+  | "LOAD_RESTORED"
   | "CUSTOMER_INACTIVATED"
   | "CUSTOMER_REACTIVATED"
   | "CUSTOMER_DELETED"
@@ -64,6 +66,10 @@ export type LifecycleActionDetail =
 export const LIFECYCLE_ACTION: Readonly<Record<LifecycleActionDetail, AuditAction>> = {
   LOAD_CANCELLED: "CANCEL",
   LOAD_TONU: "CANCEL",
+  // Archiving an already-terminal load hides it without changing its status —
+  // a DELETE-class act, not a cancellation; recording it as CANCEL would be false.
+  LOAD_ARCHIVED: "DELETE",
+  LOAD_RESTORED: "STATUS_CHANGE",
   CUSTOMER_INACTIVATED: "DEACTIVATE",
   CUSTOMER_REACTIVATED: "STATUS_CHANGE",
   CUSTOMER_DELETED: "DELETE",

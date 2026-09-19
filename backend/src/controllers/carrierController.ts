@@ -31,6 +31,7 @@ import { normalizeEmail, caseInsensitiveEmailFilter } from "../lib/emailNormaliz
 import { verifyReceipt } from "../services/onboardingDraftService";
 import { approveCarrier } from "../services/approvalService";
 import { logAuthEvent } from "../lib/authEvents";
+import { recordLifecycleEvent } from "../lib/lifecycleAudit";
 import { COMPLIANCE_EMAIL } from "../config/authority";
 import * as crypto from "crypto";
 import { pairedApplicationStatus } from "../lib/carrierOperational";
@@ -2662,10 +2663,27 @@ export async function archiveCarrier(req: AuthRequest, res: Response) {
   // deactivated in the same transaction, so an archived carrier cannot keep
   // signing in to a portal that no longer lists them. restoreCarrier undoes both.
   const deletedBy = req.user!.email || req.user!.id;
+  const archivedAt = new Date();
   await prisma.$transaction([
-    prisma.carrierProfile.update({ where: { id: carrier.id }, data: { deletedAt: new Date(), deletedBy } }),
+    prisma.carrierProfile.update({ where: { id: carrier.id }, data: { deletedAt: archivedAt, deletedBy } }),
     prisma.user.update({ where: { id: carrier.userId }, data: { isActive: false } }),
   ]);
+
+  // B6b (finding #24) — the lifecycle record, after the transaction commits.
+  // Two rows moved (profile deletedAt, login isActive), so previous/new carry
+  // both. The route's auditLog middleware records that DELETE /carriers/:id
+  // was hit; this records what it did and who it was.
+  await recordLifecycleEvent({
+    actionDetail: "CARRIER_ARCHIVED",
+    entityType: "CarrierProfile",
+    entityId: carrier.id,
+    entityName: carrier.companyName,
+    reason: typeof req.body?.reason === "string" && req.body.reason.trim() ? req.body.reason.trim().slice(0, 500) : null,
+    previous: { deletedAt: null, loginActive: true, onboardingStatus: carrier.onboardingStatus },
+    new: { deletedAt: archivedAt.toISOString(), loginActive: false, onboardingStatus: carrier.onboardingStatus },
+    actor: { userId: req.user!.id, email: req.user!.email },
+    req,
+  });
 
   res.json({ success: true, message: "Carrier archived", details: { archived: true, loginDeactivated: true, references: 0 } });
 }
@@ -2673,7 +2691,7 @@ export async function archiveCarrier(req: AuthRequest, res: Response) {
 export async function restoreCarrier(req: AuthRequest, res: Response) {
   const carrier = await prisma.carrierProfile.findUnique({
     where: { id: req.params.id },
-    select: { id: true, userId: true, deletedAt: true },
+    select: { id: true, userId: true, deletedAt: true, companyName: true },
   });
   if (!carrier || !carrier.deletedAt) {
     res.status(404).json({ error: "Archived carrier not found" });
@@ -2683,5 +2701,19 @@ export async function restoreCarrier(req: AuthRequest, res: Response) {
     prisma.carrierProfile.update({ where: { id: carrier.id }, data: { deletedAt: null, deletedBy: null } }),
     prisma.user.update({ where: { id: carrier.userId }, data: { isActive: true } }),
   ]);
+
+  // B6b (finding #24) — the lifecycle record: the profile came back and the
+  // login with it.
+  await recordLifecycleEvent({
+    actionDetail: "CARRIER_RESTORED",
+    entityType: "CarrierProfile",
+    entityId: carrier.id,
+    entityName: carrier.companyName,
+    previous: { deletedAt: carrier.deletedAt.toISOString(), loginActive: false },
+    new: { deletedAt: null, loginActive: true },
+    actor: { userId: req.user!.id, email: req.user!.email },
+    req,
+  });
+
   res.json({ success: true, message: "Carrier restored", details: { restored: true, loginReactivated: true } });
 }

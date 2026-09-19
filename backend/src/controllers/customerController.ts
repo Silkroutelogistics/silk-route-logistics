@@ -10,6 +10,7 @@ import { markProspectNotInterested } from "../services/prospectStatusService";
 import { logCustomerActivity } from "../services/customerActivityService";
 import { caseInsensitiveEmailFilter } from "../lib/emailNormalization";
 import { censusCustomerReferences, describeReferences, referenceTotal } from "../lib/customerReferences";
+import { recordLifecycleEvent } from "../lib/lifecycleAudit";
 import { log } from "../lib/logger";
 
 // Required-checks gate for customer onboarding approval. Each entry is
@@ -635,6 +636,20 @@ export async function inactivateCustomer(req: AuthRequest, res: Response) {
     actorName: req.user!.email,
   });
 
+  // B6b (finding #24) — the lifecycle record. The CRM activity row above is the
+  // customer's timeline; this is the audit row a dispute reads: who, why, from/to.
+  await recordLifecycleEvent({
+    actionDetail: "CUSTOMER_INACTIVATED",
+    entityType: "Customer",
+    entityId: customer.id,
+    entityName: customer.name,
+    reason: reason.trim().slice(0, 500),
+    previous: { isActive: true },
+    new: { isActive: false },
+    actor: { userId: req.user!.id, email: req.user!.email },
+    req,
+  });
+
   res.status(200).json({ customer: updated });
 }
 
@@ -644,7 +659,7 @@ export async function inactivateCustomer(req: AuthRequest, res: Response) {
 export async function reactivateCustomer(req: AuthRequest, res: Response) {
   const customer = await prisma.customer.findFirst({
     where: { id: req.params.id, deletedAt: null },
-    select: { id: true, name: true, isActive: true },
+    select: { id: true, name: true, isActive: true, inactivationReason: true },
   });
   if (!customer) {
     res.status(404).json({ error: "Customer not found" });
@@ -673,6 +688,19 @@ export async function reactivateCustomer(req: AuthRequest, res: Response) {
     actorType: "USER",
     actorId: req.user!.id,
     actorName: req.user!.email,
+  });
+
+  // B6b (finding #24) — the lifecycle record; `previous` keeps the reason the
+  // inactivation carried, which the update above clears from the row.
+  await recordLifecycleEvent({
+    actionDetail: "CUSTOMER_REACTIVATED",
+    entityType: "Customer",
+    entityId: customer.id,
+    entityName: customer.name,
+    previous: { isActive: false, inactivationReason: customer.inactivationReason ?? null },
+    new: { isActive: true, inactivationReason: null },
+    actor: { userId: req.user!.id, email: req.user!.email },
+    req,
   });
 
   res.status(200).json({ customer: updated });
@@ -772,6 +800,19 @@ export async function deleteCustomer(req: AuthRequest, res: Response) {
   // history to keep and nothing to restore.
   await prisma.customer.delete({ where: { id: customer.id } });
 
+  // B6b (finding #24) — the lifecycle record. entityId is the id the row had;
+  // AuditTrail.entityId is a bare string, so it outlives the row it names.
+  await recordLifecycleEvent({
+    actionDetail: "CUSTOMER_DELETED",
+    entityType: "Customer",
+    entityId: customer.id,
+    entityName: customer.name,
+    previous: { exists: true, references: 0 },
+    new: { exists: false },
+    actor: { userId: req.user!.id, email: req.user!.email },
+    req,
+  });
+
   const deletedBy = req.user!.email || req.user!.id;
   const employees = await prisma.user.findMany({
     where: { role: { in: ["ADMIN", "BROKER"] }, isActive: true },
@@ -826,6 +867,19 @@ export async function restoreCustomer(req: AuthRequest, res: Response) {
       deletedAt: { not: null },
     },
     data: { status: "SUBMITTED", deletedAt: null },
+  });
+
+  // B6b (finding #24) — the lifecycle record: the customer came back, and so
+  // did its shipper login when it had one.
+  await recordLifecycleEvent({
+    actionDetail: "CUSTOMER_RESTORED",
+    entityType: "Customer",
+    entityId: customer.id,
+    entityName: customer.name,
+    previous: { deletedAt: customer.deletedAt.toISOString(), loginActive: customer.userId ? false : null },
+    new: { deletedAt: null, loginActive: customer.userId ? true : null },
+    actor: { userId: req.user!.id, email: req.user!.email },
+    req,
   });
 
   // 4. Notify team

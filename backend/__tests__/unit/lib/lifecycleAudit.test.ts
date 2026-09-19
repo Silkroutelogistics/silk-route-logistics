@@ -117,7 +117,7 @@ describe("recordLifecycleEvent — the row", () => {
 
 describe("LIFECYCLE_ACTION — the enum it lands on", () => {
   const details: LifecycleActionDetail[] = [
-    "LOAD_CANCELLED", "LOAD_TONU",
+    "LOAD_CANCELLED", "LOAD_TONU", "LOAD_ARCHIVED", "LOAD_RESTORED",
     "CUSTOMER_INACTIVATED", "CUSTOMER_REACTIVATED", "CUSTOMER_DELETED", "CUSTOMER_RESTORED",
     "CARRIER_ARCHIVED", "CARRIER_RESTORED",
   ];
@@ -149,6 +149,8 @@ describe("LIFECYCLE_ACTION — the enum it lands on", () => {
     expect(LIFECYCLE_ACTION.CUSTOMER_INACTIVATED).toBe("DEACTIVATE");
     expect(LIFECYCLE_ACTION.CARRIER_ARCHIVED).toBe("DEACTIVATE");
     expect(LIFECYCLE_ACTION.CUSTOMER_DELETED).toBe("DELETE");
+    expect(LIFECYCLE_ACTION.LOAD_ARCHIVED).toBe("DELETE");
+    expect(LIFECYCLE_ACTION.LOAD_RESTORED).toBe("STATUS_CHANGE");
     expect(Object.keys(LIFECYCLE_ACTION).sort()).toEqual([...details].sort());
   });
 });
