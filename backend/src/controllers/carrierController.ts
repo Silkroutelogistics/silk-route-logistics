@@ -19,6 +19,11 @@ import { vetAndStoreReport } from "../services/carrierVettingService";
 import { sendEmail, wrap, sendQuickPayApprovedEmail, sendQuickPayDeclinedEmail, sendQuickPayWithdrawnEmail } from "../services/emailService";
 import { getTierConfig, getEffectiveTier, tenureDays } from "../services/caravanService";
 import { CarrierTier } from "@prisma/client";
+import type { CarrierArchiveReason } from "@prisma/client";
+import {
+  CARRIER_ARCHIVE_REASONS as SHARED_ARCHIVE_REASONS,
+  CARRIER_ARCHIVE_REASON_LABELS as SHARED_ARCHIVE_REASON_LABELS,
+} from "../../../shared/constants/carrierArchiveReasons";
 import { runIdentityCheck } from "../services/identityVerificationService";
 import { screenCarrier } from "../services/ofacScreeningService";
 import { populateAuthorityGrantedDate } from "../services/fmcsaService";
@@ -1676,6 +1681,18 @@ export async function setupAdminCarrierProfile(req: AuthRequest, res: Response) 
 }
 
 /** Get all carriers with performance data for admin/broker view */
+// B4a (carrier-archive arc, 2026-09-19) — the archive-reason vocabulary lives
+// once, in shared/constants/carrierArchiveReasons.ts, so the AE list reads the
+// same labels the server enforces instead of a third hand-kept copy. This is
+// the one tree where BOTH the shared union and the Prisma enum exist, so they
+// are held equal here at compile time (the cancellationPolicy.ts idiom): the
+// array assignment fails if shared names a reason the schema lacks, and the
+// Record assignment fails if the schema gains a member the shared map has no
+// label for. carrierArchiveList.test.ts holds the runtime lists equal too.
+// Deliberately not exported: these exist to be type-checked, not consumed.
+const _archiveReasonsSubsetOfSchema: readonly CarrierArchiveReason[] = SHARED_ARCHIVE_REASONS;
+const _archiveLabelsCoverSchema: Readonly<Record<CarrierArchiveReason, string>> = SHARED_ARCHIVE_REASON_LABELS;
+
 export async function getAllCarriers(req: AuthRequest, res: Response) {
   const includeDeleted = req.query.include_deleted === "true";
   // v3.8.alo §13.3 Item 189.b — opt-in test-carrier visibility for the
@@ -1733,6 +1750,14 @@ export async function getAllCarriers(req: AuthRequest, res: Response) {
         // toggle's current state both read undefined. The fence worked; the
         // label for it was invisible. Found by the READ-never-WRITTEN audit.
         isTestAccount: c.isTestAccount,
+        // B4a — archived state travels with the row so the AE list can show it.
+        // A row is only here at all when ?include_deleted=true put it here; the
+        // default deletedAt: null filter above is unchanged. Raw enum, no label:
+        // the label is display copy and lives in shared/constants.
+        deletedAt: c.deletedAt,
+        deletedBy: c.deletedBy,
+        archiveReason: c.archiveReason,
+        archiveNote: c.archiveNote,
         company: c.user.company || `${c.user.firstName} ${c.user.lastName}`,
         contactName: `${c.user.firstName} ${c.user.lastName}`,
         email: c.user.email,

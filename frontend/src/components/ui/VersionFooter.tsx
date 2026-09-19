@@ -18217,7 +18217,13 @@
 // each table (settleTenders, closeOpenInfoRequestsForStatus) or a scoped updateMany on the tx client; a cascade standing at one of the carrier's
 // positions is advanced past it after the commit, and tenderPosition now passes over a position skipped before it was reached. The lifecycle row
 // carries reasonCode, the note, and what was withdrawn.
-export const SRL_VERSION = "3.8.bdq";
+// v3.8.bdr — carrier-archive recut C4: the AE carrier list can show archived rows, and the archive vocabulary has one definition. GET /carrier/all
+// returns deletedAt / deletedBy / archiveReason / archiveNote on every row it serves — a row is only there when the literal ?include_deleted=true put
+// it there; "1", "yes", "TRUE" and "false" all keep the default deletedAt: null fence, which is unchanged. shared/constants/carrierArchiveReasons.ts
+// is now the ONE place the seven reasons and their labels live: the backend reads it, two non-exported pins in carrierController hold it equal to the
+// Prisma enum at compile time in both directions, and carrierArchiveList.test.ts holds the runtime lists equal and type-checks a probe beside the
+// real file. C5 points the carriers page at the same file, so the AE never reads a third hand-kept copy of the vocabulary.
+export const SRL_VERSION = "3.8.bdr";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
