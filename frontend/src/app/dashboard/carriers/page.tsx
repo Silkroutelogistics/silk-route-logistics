@@ -9,6 +9,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { DOC_CATEGORIES, groupCarrierDocuments, isUncategorizedDocType } from "@/lib/carrierDocumentGroups";
 import { useAuthStore } from "@/hooks/useAuthStore";
+import { carrierArchiveReasonLabel } from "@shared/constants/carrierArchiveReasons";
 import {
   Search, Shield, Truck, MapPin, Star, CheckCircle2, Clock, AlertCircle, X,
   MessageSquare, FileText, Users, Phone, Mail, Building2,
@@ -65,6 +66,12 @@ interface Carrier {
   authorityGrantedDate: string | null;
   approvedAt: string | null;
   isTestAccount?: boolean; // v3.8.alo §13.3 Item 189.b — test-carrier flag
+  // B4a (carrier-archive arc) — archived state. Present on every row (null on
+  // a live one) and non-null only when the list was asked for archived rows.
+  deletedAt?: string | null;
+  deletedBy?: string | null;
+  archiveReason?: string | null;
+  archiveNote?: string | null;
   address: string | null;
   city: string | null;
   state: string | null;
@@ -512,13 +519,20 @@ export default function CarrierPoolPage() {
   // (with a TEST badge) and can be un-flagged. Param is in the queryKey so
   // toggling refetches.
   const [showTestAccounts, setShowTestAccounts] = useState(false);
+  // B4a — "Show archived", the same opt-in shape. Off (default) the list keeps
+  // the server-side deletedAt: null fence; on, it passes ?include_deleted=true.
+  const [showArchived, setShowArchived] = useState(false);
 
   const { data } = useQuery({
-    queryKey: ["carrier-all", showTestAccounts],
-    queryFn: () =>
-      api
-        .get<{ carriers: Carrier[]; total: number }>(`/carrier/all${showTestAccounts ? "?include_test=true" : ""}`)
-        .then((r) => r.data),
+    queryKey: ["carrier-all", showTestAccounts, showArchived],
+    queryFn: () => {
+      // Each fence is opted out of only while its toggle is on, so the default
+      // request carries neither param and every server-side exclusion holds.
+      const params = [showTestAccounts && "include_test=true", showArchived && "include_deleted=true"].filter(Boolean).join("&");
+      return api
+        .get<{ carriers: Carrier[]; total: number }>(`/carrier/all${params ? `?${params}` : ""}`)
+        .then((r) => r.data);
+    },
   });
 
   // v3.8.alo §13.3 Item 189.b — toggle a carrier's isTestAccount flag.
@@ -713,6 +727,13 @@ export default function CarrierPoolPage() {
   });
 
   const carriers = data?.carriers || [];
+  // C5 (carrier-archive recut) — the header describes the pool as it stands. With
+  // "Show archived" off the server never returns an archived row, so every stat
+  // below has always excluded them; the toggle is a LIST-visibility control and
+  // must not change what the header claims. Network-level stats therefore read
+  // liveCarriers. The tier cards stay on `carriers`: they are filters over the
+  // list, and a card must count the rows clicking it will show.
+  const liveCarriers = carriers.filter((c) => !c.deletedAt);
   const filtered = carriers.filter((c) => {
     if (tierFilter && c.tier !== tierFilter) return false;
     if (statusFilter && c.onboardingStatus !== statusFilter) return false;
@@ -727,21 +748,37 @@ export default function CarrierPoolPage() {
 
   const tierCounts = { PLATINUM: 0, GOLD: 0, SILVER: 0, GUEST: 0 };
   carriers.forEach((c) => { if (c.tier in tierCounts) tierCounts[c.tier as keyof typeof tierCounts]++; });
-  const caravanMembers = carriers.filter((c) => c.tier && c.tier !== "NONE" && c.tier !== "GUEST").length;
-  const avgCppScore = carriers.filter((c) => c.safetyScore).length > 0
-    ? Math.round(carriers.filter((c) => c.safetyScore).reduce((s, c) => s + (c.safetyScore || 0), 0) / carriers.filter((c) => c.safetyScore).length)
+  const caravanMembers = liveCarriers.filter((c) => c.tier && c.tier !== "NONE" && c.tier !== "GUEST").length;
+  const avgCppScore = liveCarriers.filter((c) => c.safetyScore).length > 0
+    ? Math.round(liveCarriers.filter((c) => c.safetyScore).reduce((s, c) => s + (c.safetyScore || 0), 0) / liveCarriers.filter((c) => c.safetyScore).length)
     : 0;
-  const complianceHealthy = carriers.filter((c) => c.onboardingStatus === "APPROVED" && (!c.insuranceExpiry || daysUntil(c.insuranceExpiry)! > 30)).length;
+  const complianceHealthy = liveCarriers.filter((c) => c.onboardingStatus === "APPROVED" && (!c.insuranceExpiry || daysUntil(c.insuranceExpiry)! > 30)).length;
 
-  const totalRevenue = carriers.reduce((s, c) => s + c.totalRevenue, 0);
-  const totalLoads = carriers.reduce((s, c) => s + c.completedLoads, 0);
-  const avgSafety = carriers.filter((c) => c.safetyScore).length > 0
-    ? Math.round(carriers.reduce((s, c) => s + (c.safetyScore || 0), 0) / carriers.filter((c) => c.safetyScore).length)
+  const totalRevenue = liveCarriers.reduce((s, c) => s + c.totalRevenue, 0);
+  const totalLoads = liveCarriers.reduce((s, c) => s + c.completedLoads, 0);
+  const avgSafety = liveCarriers.filter((c) => c.safetyScore).length > 0
+    ? Math.round(liveCarriers.reduce((s, c) => s + (c.safetyScore || 0), 0) / liveCarriers.filter((c) => c.safetyScore).length)
     : 0;
-  const expiringSoon = carriers.filter((c) => { const d = daysUntil(c.insuranceExpiry); return d !== null && d >= 0 && d <= 30; }).length;
-  const pendingOnboard = carriers.filter((c) => c.onboardingStatus !== "APPROVED").length;
+  const expiringSoon = liveCarriers.filter((c) => { const d = daysUntil(c.insuranceExpiry); return d !== null && d >= 0 && d <= 30; }).length;
+  const pendingOnboard = liveCarriers.filter((c) => c.onboardingStatus !== "APPROVED").length;
 
   const selectedCarrier = carriers.find((c) => c.id === selectedCarrierId) || null;
+  // B4a (carrier-archive arc) — an archived carrier is READ-ONLY on this page.
+  // deletedAt is a second dimension beside onboardingStatus (R3): the carrier
+  // keeps its status pill and gains a muted Archived badge, and every control
+  // in this file that would change it is disabled through this one helper,
+  // with a title that says why. A control that renders enabled and then acts
+  // on an archived row is the bug class this arc exists to stop. Archive and
+  // restore themselves are B4b; the controls inside the child components
+  // (SecuritySignalsCard, CarrierPreferencesPanel, InfoRequestThread) are
+  // outside this file and are not gated here.
+  const isArchived = Boolean(selectedCarrier?.deletedAt);
+  const ARCHIVED_TITLE = "This carrier is archived. Actions that change it are unavailable.";
+  /** Spread onto any control that mutates the carrier. `also` is the control's own disabled condition. */
+  const whenNotArchived = (also = false, title?: string) => ({
+    disabled: isArchived || also,
+    title: isArchived ? ARCHIVED_TITLE : title,
+  });
 
   // v3.8.atf — agreement termination. The endpoint has existed since ata with
   // no way to reach it; this is that button.
@@ -1005,7 +1042,7 @@ export default function CarrierPoolPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-white">Carrier Pool</h1>
-          <p className="text-slate-400 text-sm mt-1">{carriers.length} carriers in network</p>
+          <p className="text-slate-400 text-sm mt-1">{liveCarriers.length} carriers in network</p>
         </div>
         {isAdmin && (
           <button
@@ -1019,11 +1056,11 @@ export default function CarrierPoolPage() {
 
       {/* Stats Row */}
       <div className="grid sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 gap-4">
-        <StatCard icon={<Users className="w-5 h-5 text-gold" />} label="Total Carriers" value={carriers.length} />
-        <StatCard icon={<Award className="w-5 h-5 text-gold" />} label="Caravan Members" value={caravanMembers} sub={`${carriers.length - caravanMembers} guest/unrated`} />
+        <StatCard icon={<Users className="w-5 h-5 text-gold" />} label="Total Carriers" value={liveCarriers.length} />
+        <StatCard icon={<Award className="w-5 h-5 text-gold" />} label="Caravan Members" value={caravanMembers} sub={`${liveCarriers.length - caravanMembers} guest/unrated`} />
         <StatCard icon={<DollarSign className="w-5 h-5 text-green-400" />} label="Total Revenue" value={`$${(totalRevenue / 1000).toFixed(0)}k`} sub={`${totalLoads} loads completed`} />
         <StatCard icon={<Shield className="w-5 h-5 text-blue-400" />} label="Avg CPP Score" value={`${avgCppScore}%`} />
-        <StatCard icon={<CheckCircle2 className="w-5 h-5 text-emerald-400" />} label="Compliance Health" value={complianceHealthy} sub={`of ${carriers.filter((c) => c.onboardingStatus === "APPROVED").length} approved`} />
+        <StatCard icon={<CheckCircle2 className="w-5 h-5 text-emerald-400" />} label="Compliance Health" value={complianceHealthy} sub={`of ${liveCarriers.filter((c) => c.onboardingStatus === "APPROVED").length} approved`} />
         <StatCard icon={<ShieldAlert className="w-5 h-5 text-yellow-400" />} label="Insurance Expiring" value={expiringSoon} sub="Within 30 days" />
         <StatCard icon={<Clock className="w-5 h-5 text-purple-400" />} label="Pending Onboarding" value={pendingOnboard} />
       </div>
@@ -1132,6 +1169,22 @@ export default function CarrierPoolPage() {
             {showTestAccounts ? "Showing test accounts" : "Show test accounts"}
           </button>
         )}
+        {/* B4a — "Show archived" beside it, same shape and same gate. Read-only:
+            archived rows appear with their badge; archive and restore are B4b. */}
+        {isAdmin && (
+          <button
+            onClick={() => setShowArchived((v) => !v)}
+            className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm border transition ${
+              showArchived
+                ? "bg-cream-2 text-[#3A4A5F] border-[#3A4A5F]/40"
+                : "bg-gray-100 text-slate-500 border-gray-200 hover:bg-gray-200"
+            }`}
+            title={showArchived ? "Archived carriers are shown in this list" : "Show archived carriers (read only)"}
+          >
+            <Archive className="w-4 h-4" />
+            {showArchived ? "Showing archived" : "Show archived"}
+          </button>
+        )}
       </div>
 
       {/* Carrier List + Panel */}
@@ -1170,6 +1223,20 @@ export default function CarrierPoolPage() {
                     <span className={`px-1.5 py-0.5 rounded text-[11px] ${STATUS_COLORS[carrier.onboardingStatus] || "bg-gray-200 text-gray-600"}`}>
                       {carrier.onboardingStatus.replace(/_/g, " ")}
                     </span>
+                    {/* B4a — archived is a second dimension beside the status pill (R3), so it
+                        is its own muted badge on §2.1 tokens (cream-2 fill, fg-2 text), not a
+                        STATUS_COLORS entry, and it renders only when "Show archived" put the
+                        row here. The note is on hover; the panel carries it in full. */}
+                    {carrier.deletedAt && (
+                      <span className="flex items-center gap-1" title={carrier.archiveNote || undefined}>
+                        <span className="px-1.5 py-0.5 rounded text-[11px] font-medium bg-cream-2 text-[#3A4A5F] border border-[#3A4A5F]/25 flex items-center gap-0.5">
+                          <Archive className="w-2.5 h-2.5" /> Archived
+                        </span>
+                        {carrierArchiveReasonLabel(carrier.archiveReason) && (
+                          <span className="text-[11px] text-[#3A4A5F]">{carrierArchiveReasonLabel(carrier.archiveReason)}</span>
+                        )}
+                      </span>
+                    )}
                   </div>
                   <div className="flex flex-wrap items-center gap-3 mt-1 text-[11px] text-gray-600">
                     <span className="flex items-center gap-1"><Truck className="w-3 h-3" /> {carrier.equipmentTypes.join(", ")}</span>
@@ -1261,6 +1328,21 @@ export default function CarrierPoolPage() {
                   <X className="w-5 h-5" />
                 </button>
               </div>
+              {/* B4a — the row's detail affordance carries the archive record in full
+                  (date, who, reason, note) and says plainly that the controls below are
+                  disabled because of it, so the reason is not only in hover titles. */}
+              {isArchived && (
+                <div className="flex items-start gap-2 px-5 py-2 border-b border-gray-200 bg-cream-2 text-xs text-[#3A4A5F] shrink-0">
+                  <Archive className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+                  <p>
+                    Archived{selectedCarrier.deletedAt ? ` ${new Date(selectedCarrier.deletedAt).toLocaleDateString()}` : ""}
+                    {selectedCarrier.deletedBy ? ` by ${selectedCarrier.deletedBy}` : ""}.
+                    {" "}Reason: {carrierArchiveReasonLabel(selectedCarrier.archiveReason) ?? "not recorded"}.
+                    {selectedCarrier.archiveNote ? ` Note: ${selectedCarrier.archiveNote}${/[.!?]$/.test(selectedCarrier.archiveNote) ? "" : "."}` : ""}
+                    {" "}Actions that change this carrier are unavailable.
+                  </p>
+                </div>
+              )}
 
               {/* Scrollable Tab Content */}
               <div className="flex-1 overflow-y-auto">
@@ -1322,13 +1404,13 @@ export default function CarrierPoolPage() {
                       </a>
                       {canReviewCarrier && selectedCarrier.onboardingStatus !== "APPROVED" && (
                         <button onClick={() => setConfirmAction({ id: selectedCarrier.id, status: "APPROVED", company: selectedCarrier.company })}
-                          className="flex items-center gap-1.5 px-3 py-1.5 bg-green-500/20 text-green-400 rounded-lg text-xs hover:bg-green-500/30 transition">
+                          className="flex items-center gap-1.5 px-3 py-1.5 bg-green-500/20 text-green-400 rounded-lg text-xs hover:bg-green-500/30 transition disabled:opacity-50 disabled:cursor-not-allowed" {...whenNotArchived()}>
                           <CheckCircle2 className="w-3.5 h-3.5" /> Approve
                         </button>
                       )}
                       {canReviewCarrier && selectedCarrier.onboardingStatus !== "REJECTED" && (
                         <button onClick={() => setRejectModalOpen(true)}
-                          className="flex items-center gap-1.5 px-3 py-1.5 bg-red-500/20 text-red-400 rounded-lg text-xs hover:bg-red-500/30 transition">
+                          className="flex items-center gap-1.5 px-3 py-1.5 bg-red-500/20 text-red-400 rounded-lg text-xs hover:bg-red-500/30 transition disabled:opacity-50 disabled:cursor-not-allowed" {...whenNotArchived()}>
                           <AlertCircle className="w-3.5 h-3.5" /> Reject
                         </button>
                       )}
@@ -1340,7 +1422,7 @@ export default function CarrierPoolPage() {
                       {canReviewCarrier && selectedCarrier.onboardingStatus === "PENDING" && (
                         <button
                           onClick={() => startReview.mutate(selectedCarrier.id)}
-                          disabled={startReview.isPending}
+                          {...whenNotArchived(startReview.isPending)}
                           className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-500/20 text-blue-300 rounded-lg text-xs hover:bg-blue-500/30 transition disabled:opacity-50"
                         >
                           <Eye className="w-3.5 h-3.5" /> {startReview.isPending ? "Starting…" : "Start Review"}
@@ -1353,7 +1435,7 @@ export default function CarrierPoolPage() {
                           shouldn't be receiving info requests while suspended. */}
                       {canReviewCarrier && selectedCarrier.onboardingStatus !== "APPROVED" && selectedCarrier.onboardingStatus !== "REJECTED" && selectedCarrier.onboardingStatus !== "SUSPENDED" && (
                         <button onClick={() => setInfoRequestModalOpen(true)}
-                          className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-500/20 text-amber-400 rounded-lg text-xs hover:bg-amber-500/30 transition">
+                          className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-500/20 text-amber-400 rounded-lg text-xs hover:bg-amber-500/30 transition disabled:opacity-50 disabled:cursor-not-allowed" {...whenNotArchived()}>
                           <MessageCircle className="w-3.5 h-3.5" /> Request Info
                         </button>
                       )}
@@ -1371,13 +1453,13 @@ export default function CarrierPoolPage() {
                             alert(msg);
                           }
                         }}
-                          className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-500/20 text-blue-400 rounded-lg text-xs hover:bg-blue-500/30 transition">
+                          className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-500/20 text-blue-400 rounded-lg text-xs hover:bg-blue-500/30 transition disabled:opacity-50 disabled:cursor-not-allowed" {...whenNotArchived()}>
                           <RefreshCw className="w-3.5 h-3.5" /> Lift Rejection
                         </button>
                       )}
                       {isAdmin && editingTab !== "profile" && (
                         <button onClick={() => { openEdit(selectedCarrier); setEditingTab("profile"); }}
-                          className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-500/20 text-blue-400 rounded-lg text-xs hover:bg-blue-500/30 transition">
+                          className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-500/20 text-blue-400 rounded-lg text-xs hover:bg-blue-500/30 transition disabled:opacity-50 disabled:cursor-not-allowed" {...whenNotArchived()}>
                           <BarChart3 className="w-3.5 h-3.5" /> Edit Profile
                         </button>
                       )}
@@ -1398,13 +1480,12 @@ export default function CarrierPoolPage() {
                             )) return;
                             toggleTestAccount.mutate({ id: selectedCarrier.id, isTestAccount: next });
                           }}
-                          disabled={toggleTestAccount.isPending}
+                          {...whenNotArchived(toggleTestAccount.isPending, selectedCarrier.isTestAccount ? "Currently a test account — click to restore to a real carrier" : "Mark as a test account (hides from pickers, analytics, compliance, risk alerts)")}
                           className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs transition disabled:opacity-50 ${
                             selectedCarrier.isTestAccount
                               ? "bg-amber-500/20 text-amber-400 hover:bg-amber-500/30"
-                              : "bg-white/10 text-gray-400 hover:bg-white/20"
+                              : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                           }`}
-                          title={selectedCarrier.isTestAccount ? "Currently a test account — click to restore to a real carrier" : "Mark as a test account (hides from pickers, analytics, compliance, risk alerts)"}
                         >
                           <FlaskConical className="w-3.5 h-3.5" />
                           {selectedCarrier.isTestAccount ? "Test account" : "Mark as test"}
@@ -1414,7 +1495,7 @@ export default function CarrierPoolPage() {
                           Reason required; ADMIN/CEO/OPERATIONS (decision 5). */}
                       {canSuspendCarrier && selectedCarrier.onboardingStatus !== "SUSPENDED" && (
                         <button onClick={() => setShowSuspend(true)}
-                          className="flex items-center gap-1.5 px-3 py-1.5 bg-red-500/20 text-red-400 rounded-lg text-xs hover:bg-red-500/30 transition">
+                          className="flex items-center gap-1.5 px-3 py-1.5 bg-red-500/20 text-red-400 rounded-lg text-xs hover:bg-red-500/30 transition disabled:opacity-50 disabled:cursor-not-allowed" {...whenNotArchived()}>
                           <Ban className="w-3.5 h-3.5" /> Suspend…
                         </button>
                       )}
@@ -1435,7 +1516,7 @@ export default function CarrierPoolPage() {
                             setArchiveRefusal(data ?? { error: "ARCHIVE_FAILED", message: "Could not archive the carrier." });
                           }
                         }}
-                          className="flex items-center gap-1.5 px-3 py-1.5 bg-white/10 text-gray-400 rounded-lg text-xs hover:bg-white/20 transition">
+                          className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-100 text-gray-700 rounded-lg text-xs hover:bg-gray-200 transition disabled:opacity-50 disabled:cursor-not-allowed" {...whenNotArchived()}>
                           <Archive className="w-3.5 h-3.5" /> Archive…
                         </button>
                       )}
@@ -1484,7 +1565,7 @@ export default function CarrierPoolPage() {
                             className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm" />
                         </div>
                         <button onClick={() => { updateCarrier.mutate({ id: selectedCarrier.id, data: editForm as any }); setEditingTab(null); }}
-                          disabled={updateCarrier.isPending}
+                          {...whenNotArchived(updateCarrier.isPending)}
                           className="w-full px-4 py-2 bg-[#C5A572] text-[#0A2540] rounded-lg text-sm font-semibold hover:bg-[#d4b65c] transition disabled:opacity-50">
                           {updateCarrier.isPending ? "Saving..." : "Save Changes"}
                         </button>
@@ -1547,7 +1628,7 @@ export default function CarrierPoolPage() {
 
                     {isAdmin && editingTab !== "insurance" && (
                       <button onClick={() => { openEdit(selectedCarrier); setEditingTab("insurance"); }}
-                        className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-500/20 text-blue-400 rounded-lg text-xs hover:bg-blue-500/30 transition mt-2">
+                        className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-500/20 text-blue-400 rounded-lg text-xs hover:bg-blue-500/30 transition mt-2 disabled:opacity-50 disabled:cursor-not-allowed" {...whenNotArchived()}>
                         <BarChart3 className="w-3.5 h-3.5" /> Edit Insurance
                       </button>
                     )}
@@ -1632,7 +1713,7 @@ export default function CarrierPoolPage() {
                           </div>
                         </div>
                         <button onClick={() => { updateCarrier.mutate({ id: selectedCarrier.id, data: editForm as any }); setEditingTab(null); }}
-                          disabled={updateCarrier.isPending}
+                          {...whenNotArchived(updateCarrier.isPending)}
                           className="w-full px-4 py-2 bg-[#C5A572] text-[#0A2540] rounded-lg text-sm font-semibold hover:bg-[#d4b65c] transition disabled:opacity-50">
                           {updateCarrier.isPending ? "Saving..." : "Save Changes"}
                         </button>
@@ -1731,7 +1812,7 @@ export default function CarrierPoolPage() {
                                 {terminateConfirming !== ag.id ? (
                                   <button
                                     onClick={() => { setTerminateConfirming(ag.id); setTerminateMessage(null); }}
-                                    className="text-[11px] text-red-700 hover:text-red-800 underline"
+                                    className="text-[11px] text-red-700 hover:text-red-800 underline disabled:opacity-50 disabled:cursor-not-allowed" {...whenNotArchived()}
                                   >
                                     Terminate this agreement
                                   </button>
@@ -1764,7 +1845,7 @@ export default function CarrierPoolPage() {
                                     />
                                     <div className="flex gap-2">
                                       <button
-                                        disabled={terminateReason.trim().length < 10 || terminateAgreement.isPending}
+                                        {...whenNotArchived(terminateReason.trim().length < 10 || terminateAgreement.isPending)}
                                         onClick={() =>
                                           terminateAgreement.mutate({
                                             carrierId: selectedCarrier.id,
@@ -1876,11 +1957,11 @@ export default function CarrierPoolPage() {
                           )}
                           <button
                             type="button"
-                            disabled={
+                            {...whenNotArchived(
                               setAuthorityGrantDate.isPending
                               || !authorityGrantInput
                               || authorityGrantReason.trim().length < 10
-                            }
+                            )}
                             onClick={() => {
                               setAuthorityGrantMessage(null);
                               setAuthorityGrantDate.mutate({
@@ -2234,7 +2315,7 @@ export default function CarrierPoolPage() {
                           <p className="text-xs font-semibold text-[#9B2C2C]">{uploadError}</p>
                         </div>
                       )}
-                      <button disabled={!uploadFile || uploadDocMutation.isPending}
+                      <button {...whenNotArchived(!uploadFile || uploadDocMutation.isPending)}
                         onClick={() => {
                           if (!uploadFile) return;
                           setUploadError(null);
@@ -2346,14 +2427,13 @@ export default function CarrierPoolPage() {
                               collapses the moment somebody asks to see the document. A
                               fileless row has to be re-uploaded, not re-labelled. */}
                           <button
-                            disabled={!previewDoc.fileUrl}
-                            title={!previewDoc.fileUrl ? "There is no stored file — this must be re-uploaded, not verified" : undefined}
+                            {...whenNotArchived(!previewDoc.fileUrl, !previewDoc.fileUrl ? "There is no stored file — this must be re-uploaded, not verified" : undefined)}
                             onClick={() => { updateDocStatus.mutate({ carrierId: selectedCarrier.id, docId: previewDoc.id, status: "VERIFIED" }); setPreviewDoc({ ...previewDoc, status: "VERIFIED" }); }}
                             className="flex-1 px-3 py-1.5 bg-green-100 text-green-700 rounded-lg text-xs font-medium hover:bg-green-200 transition disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-green-100">
                             <CheckCircle2 className="w-3 h-3 inline mr-1" />Verify
                           </button>
                           <button onClick={() => { updateDocStatus.mutate({ carrierId: selectedCarrier.id, docId: previewDoc.id, status: "REJECTED" }); setPreviewDoc({ ...previewDoc, status: "REJECTED" }); }}
-                            className="flex-1 px-3 py-1.5 bg-red-100 text-red-700 rounded-lg text-xs font-medium hover:bg-red-200 transition">
+                            className="flex-1 px-3 py-1.5 bg-red-100 text-red-700 rounded-lg text-xs font-medium hover:bg-red-200 transition disabled:opacity-50 disabled:cursor-not-allowed" {...whenNotArchived()}>
                             <X className="w-3 h-3 inline mr-1" />Reject
                           </button>
                         </div>
@@ -2368,7 +2448,7 @@ export default function CarrierPoolPage() {
                         <h3 className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Documents ({docTotal})</h3>
                         {canReviewCarrier && (
                           <button onClick={() => setDocView("upload")}
-                            className="flex items-center gap-1 px-2.5 py-1 bg-[#C5A572]/10 text-[#C5A572] rounded-lg text-xs font-medium hover:bg-[#C5A572]/20 transition">
+                            className="flex items-center gap-1 px-2.5 py-1 bg-[#C5A572]/10 text-[#C5A572] rounded-lg text-xs font-medium hover:bg-[#C5A572]/20 transition disabled:opacity-50 disabled:cursor-not-allowed" {...whenNotArchived()}>
                             <Upload className="w-3 h-3" /> Upload
                           </button>
                         )}
@@ -2407,7 +2487,7 @@ export default function CarrierPoolPage() {
                         <div className="bg-gray-100 rounded-lg p-8 text-center">
                           <FolderOpen className="w-8 h-8 text-gray-500 mx-auto mb-2" />
                           <p className="text-xs text-gray-700">No documents on file.</p>
-                          {canReviewCarrier && <button onClick={() => setDocView("upload")} className="text-xs text-[#C5A572] hover:underline mt-1">Upload the first document</button>}
+                          {canReviewCarrier && <button onClick={() => setDocView("upload")} className="text-xs text-[#C5A572] hover:underline mt-1 disabled:opacity-50 disabled:cursor-not-allowed disabled:no-underline" {...whenNotArchived()}>Upload the first document</button>}
                         </div>
                       ) : (
                         grouped.map(group => (
@@ -2434,12 +2514,12 @@ export default function CarrierPoolPage() {
                                     <button onClick={() => { setPreviewDoc(doc); setDocView("preview"); }} title="Preview"
                                       className="p-1 rounded hover:bg-gray-200 text-gray-700 hover:text-gray-600"><Eye className="w-3 h-3" /></button>
                                     {canReviewCarrier && doc.status !== "VERIFIED" && (
-                                      <button onClick={() => updateDocStatus.mutate({ carrierId: selectedCarrier.id, docId: doc.id, status: "VERIFIED" })} title="Verify"
-                                        className="p-1 rounded hover:bg-green-100 text-gray-700 hover:text-green-600"><CheckCircle2 className="w-3 h-3" /></button>
+                                      <button onClick={() => updateDocStatus.mutate({ carrierId: selectedCarrier.id, docId: doc.id, status: "VERIFIED" })} {...whenNotArchived(false, "Verify")}
+                                        className="p-1 rounded hover:bg-green-100 text-gray-700 hover:text-green-600 disabled:opacity-40 disabled:cursor-not-allowed"><CheckCircle2 className="w-3 h-3" /></button>
                                     )}
                                     {canReviewCarrier && doc.status !== "REJECTED" && (
-                                      <button onClick={() => updateDocStatus.mutate({ carrierId: selectedCarrier.id, docId: doc.id, status: "REJECTED" })} title="Reject"
-                                        className="p-1 rounded hover:bg-red-100 text-gray-700 hover:text-red-600"><X className="w-3 h-3" /></button>
+                                      <button onClick={() => updateDocStatus.mutate({ carrierId: selectedCarrier.id, docId: doc.id, status: "REJECTED" })} {...whenNotArchived(false, "Reject")}
+                                        className="p-1 rounded hover:bg-red-100 text-gray-700 hover:text-red-600 disabled:opacity-40 disabled:cursor-not-allowed"><X className="w-3 h-3" /></button>
                                     )}
                                   </div>
                                 </div>
@@ -2615,7 +2695,7 @@ export default function CarrierPoolPage() {
                                     body: qpNote.trim() ? { note: qpNote.trim() } : {},
                                   });
                                 }}
-                                disabled={qpDecision.isPending}
+                                {...whenNotArchived(qpDecision.isPending)}
                                 className="px-3 py-1.5 rounded text-xs font-semibold bg-[#E6F0E9] text-[#2F7A4F] border border-[#2F7A4F]/30 hover:bg-[#d8e9de] disabled:opacity-40"
                               >
                                 Approve into the pilot
@@ -2652,7 +2732,7 @@ export default function CarrierPoolPage() {
                                       body: { reason: qpReason.trim() },
                                     })
                                   }
-                                  disabled={!reasonValid || qpDecision.isPending}
+                                  {...whenNotArchived(!reasonValid || qpDecision.isPending)}
                                   className="px-3 py-1.5 rounded text-xs font-semibold bg-[#F6E3E3] text-[#9B2C2C] border border-[#9B2C2C]/30 hover:bg-[#f0d5d5] disabled:opacity-40"
                                 >
                                   Decline request
@@ -2711,7 +2791,7 @@ export default function CarrierPoolPage() {
                                       body: { reason: qpReason.trim() },
                                     })
                                   }
-                                  disabled={!reasonValid || qpDecision.isPending}
+                                  {...whenNotArchived(!reasonValid || qpDecision.isPending)}
                                   className="px-3 py-1.5 rounded text-xs font-semibold bg-[#F6E3E3] text-[#9B2C2C] border border-[#9B2C2C]/30 hover:bg-[#f0d5d5] disabled:opacity-40"
                                 >
                                   Confirm withdrawal

@@ -18223,7 +18223,13 @@
 // is now the ONE place the seven reasons and their labels live: the backend reads it, two non-exported pins in carrierController hold it equal to the
 // Prisma enum at compile time in both directions, and carrierArchiveList.test.ts holds the runtime lists equal and type-checks a probe beside the
 // real file. C5 points the carriers page at the same file, so the AE never reads a third hand-kept copy of the vocabulary.
-export const SRL_VERSION = "3.8.bdr";
+// v3.8.bds — carrier-archive recut C5: archived carriers on the AE list, only when asked, and read-only when shown. An admin "Show archived"
+// toggle (the same shape and gate as the test-account toggle) sends ?include_deleted=true; each archived row carries a muted Archived badge beside
+// its status pill with the reason label from the one shared vocabulary; the drawer opens with the archive record in full and every control that
+// would change the carrier — including the Suspend… and Archive… buttons main added after B4a was cut — is disabled through one helper with a
+// title that says why. The header keeps describing the pool as it stands: showing archived rows changes the list, never the in-network count or
+// the stat cards. Walked by eye in both modes on a seeded stack, which is what found the header counting archived rows in the first place.
+export const SRL_VERSION = "3.8.bds";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
