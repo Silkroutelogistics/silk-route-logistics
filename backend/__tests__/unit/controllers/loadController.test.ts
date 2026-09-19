@@ -419,6 +419,8 @@ describe("loadController", () => {
     }));
     expect(writes[0].cancelledAt).toBeInstanceOf(Date);
     expect(cascadeLoadCancellation).toHaveBeenCalledWith("load-1", mockPrisma, expect.objectContaining({ actorId: "ae-1" }));
+    // B3c (#9) — a shipper-fault cancellation records no fall-off against the carrier.
+    expect(mockPrisma.fallOffEvent.create).not.toHaveBeenCalled();
   });
 
   it("updateLoadStatus — CANCELLED without a reason code is refused 422 before any write (controller-level, independent of Zod)", async () => {

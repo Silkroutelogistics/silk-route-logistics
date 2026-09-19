@@ -60,12 +60,12 @@ export type ReleaseReason = (typeof RELEASE_REASONS)[number];
  * would put a mark on a carrier for something they had no part in — and
  * fall-off count feeds carrier standing, so the mark is not cosmetic.
  *
- * `customer_cancel` and `compliance_lapse` deliberately DO count, for different
- * reasons. A compliance lapse is the carrier's own paperwork. A customer
- * cancellation is nobody's fault, but the load still fell off and the operational
- * record should say so; whether it should weigh the same as a carrier walking
- * away is a scoring question, not a recording one, and scoring is not this
- * service's job.
+ * `customer_cancel` and `compliance_lapse` are both RECORDED. A compliance
+ * lapse is the carrier's own paperwork. A customer cancellation is nobody's
+ * fault, but the load still fell off and the operational record should say so.
+ * Whether a record COUNTS toward deactivation review is lib/fallOffScoring's
+ * question, not this service's: decision 2 of 2026-09-18 keeps the
+ * customer_cancel record and stops it counting there (B3c, finding #9).
  */
 const NO_FAULT_REASONS = new Set<ReleaseReason>(["srl_error"]);
 
@@ -83,6 +83,12 @@ export interface ReleaseResult {
   tenderId: string | null;
   rcVoided: number;
   faultRecorded: boolean;
+  /**
+   * The FallOffEvent this release recorded, so a caller that goes on to run
+   * recovery updates THAT row instead of creating a second one. Null when the
+   * reason records no fault (srl_error) or the record failed.
+   */
+  fallOffEventId: string | null;
   returnedTo: "loadboard" | "waterfall" | "none";
 }
 
@@ -102,7 +108,7 @@ export async function releaseCarrier(input: ReleaseCarrierInput): Promise<Releas
   });
   if (!load) throw new Error(`Load ${loadId} not found`);
   if (!load.carrierId) {
-    return { released: false, tenderId: null, rcVoided: 0, faultRecorded: false, returnedTo: "none" };
+    return { released: false, tenderId: null, rcVoided: 0, faultRecorded: false, fallOffEventId: null, returnedTo: "none" };
   }
 
   const releasedCarrierUserId = load.carrierId;
@@ -185,17 +191,22 @@ export async function releaseCarrier(input: ReleaseCarrierInput): Promise<Releas
   // because a load stuck with a carrier who has walked away is worse than a
   // missing statistic.
   let faultRecorded = false;
+  let fallOffEventId: string | null = null;
   if (!NO_FAULT_REASONS.has(reason)) {
     try {
-      await prisma.fallOffEvent.create({
+      // The reason CODE leads the stored string; lib/fallOffScoring reads it
+      // back as the first token, so this shape is the contract.
+      const ev = await prisma.fallOffEvent.create({
         data: {
           loadId,
           originalCarrierId: releasedCarrierUserId,
           reason: note ? `${reason}: ${note}` : reason,
           status: "ACTIVE",
         },
+        select: { id: true },
       });
       faultRecorded = true;
+      fallOffEventId = ev.id;
     } catch (err) {
       log.error({ err, loadId, reason }, "[Release] fall-off record failed — release itself is unaffected");
     }
@@ -206,7 +217,7 @@ export async function releaseCarrier(input: ReleaseCarrierInput): Promise<Releas
     "[Release] carrier released",
   );
 
-  return { released: true, tenderId: activeTender?.id ?? null, rcVoided, faultRecorded, returnedTo };
+  return { released: true, tenderId: activeTender?.id ?? null, rcVoided, faultRecorded, fallOffEventId, returnedTo };
 }
 
 /**

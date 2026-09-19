@@ -196,6 +196,15 @@ vi.mock("../src/config/database", () => ({
       count: vi.fn().mockResolvedValue(0),
       updateMany: vi.fn().mockResolvedValue({ count: 0 }),
     },
+    // B3c — so a cancel-path test can assert the fall-off recorder was NOT
+    // called, rather than crashing on a bare property read.
+    fallOffEvent: {
+      create: vi.fn(),
+      findMany: vi.fn().mockResolvedValue([]),
+      findFirst: vi.fn().mockResolvedValue(null),
+      count: vi.fn().mockResolvedValue(0),
+      update: vi.fn(),
+    },
     cronRegistry: {
       findMany: vi.fn(),
     },

@@ -3,6 +3,7 @@ import { matchCarriersForLoad } from "./smartMatchService";
 import { log } from "../lib/logger";
 import { assignCarrier } from "./carrierAssignmentService";
 import { releaseCarrier } from "./carrierReleaseService";
+import { reviewableFallOffCount, needsDeactivationReview, DEACTIVATION_REVIEW_THRESHOLD } from "../lib/fallOffScoring";
 
 /**
  * C.4 — Carrier Fall-Off Recovery
@@ -21,15 +22,22 @@ export async function executeFallOffRecovery(loadId: string, reason?: string) {
   const originalCarrierId = load.carrierId;
   const startTime = Date.now();
 
-  // Create fall-off event
-  const event = await prisma.fallOffEvent.create({
-    data: {
-      loadId,
-      originalCarrierId,
-      reason: reason || "Carrier cancelled/removed",
-      status: "ACTIVE",
-    },
-  });
+  // B3c — ONE fall-off record, not two. This function used to create its own
+  // FallOffEvent here and then call releaseCarrier below, which records one
+  // as well — so every fall-off through this path was counted twice, and the
+  // "2+ fall-offs" review flag fired on a carrier's FIRST. The release now
+  // happens first and its event is the one this function goes on to update.
+  //
+  // v3.8.axi — through releaseCarrier rather than clearCarrier directly. This
+  // path used to clear the carrier and re-post the load while leaving the
+  // tender reading ACCEPTED forever: a load back on the board with a tender
+  // still claiming a carrier had taken it. releaseCarrier settles the tender to
+  // RELEASED, voids live paper, and records the fall-off, all in one place.
+  //
+  // carrier_fell_off is the right code here by definition — this whole service
+  // exists because a carrier backed out.
+  const release = await releaseCarrier({ loadId, reason: "carrier_fell_off", note: reason ?? null });
+  const eventId = release.fallOffEventId;
 
   // 1. ALERT AE — urgent red notification
   await prisma.notification.create({
@@ -54,18 +62,6 @@ export async function executeFallOffRecovery(loadId: string, reason?: string) {
       `${load.destCity}, ${load.destState}`,
     );
   } catch { /* non-blocking */ }
-
-  // Unassign the carrier from the load.
-  //
-  // v3.8.axi — through releaseCarrier rather than clearCarrier directly. This
-  // path used to clear the carrier and re-post the load while leaving the
-  // tender reading ACCEPTED forever: a load back on the board with a tender
-  // still claiming a carrier had taken it. releaseCarrier settles the tender to
-  // RELEASED, voids live paper, and records the fall-off, all in one place.
-  //
-  // carrier_fell_off is the right code here by definition — this whole service
-  // exists because a carrier backed out.
-  await releaseCarrier({ loadId, reason: "carrier_fell_off", note: reason ?? null });
 
   // 2. AUTO-MATCH TOP 3 BACKUP CARRIERS
   let backupsSent = 0;
@@ -105,10 +101,14 @@ export async function executeFallOffRecovery(loadId: string, reason?: string) {
         where: { userId: originalCarrierId },
       });
       if (carrierProfile) {
-        // Count total fall-offs
-        const fallOffCount = await prisma.fallOffEvent.count({
+        // B3c (#9) — count the fall-offs that are the carrier's. A
+        // customer_cancel release is recorded but does not count here
+        // (decision 2, 2026-09-18); lib/fallOffScoring holds the rule.
+        const fallOffs = await prisma.fallOffEvent.findMany({
           where: { originalCarrierId },
+          select: { reason: true },
         });
+        const fallOffCount = reviewableFallOffCount(fallOffs);
 
         // Add note about fall-off
         const existingNotes = carrierProfile.notes || "";
@@ -119,14 +119,14 @@ export async function executeFallOffRecovery(loadId: string, reason?: string) {
           data: { notes: newNotes },
         });
 
-        // 2+ fall-offs = flag for deactivation
-        if (fallOffCount >= 2) {
+        // DEACTIVATION_REVIEW_THRESHOLD reviewable fall-offs = flag for deactivation
+        if (needsDeactivationReview(fallOffCount)) {
           await prisma.notification.create({
             data: {
               userId: load.posterId,
               type: "GENERAL",
               title: `Carrier Deactivation Review: ${carrierProfile.companyName || "Unknown"}`,
-              message: `This carrier has ${fallOffCount} fall-offs. Consider deactivation review.`,
+              message: `This carrier has ${fallOffCount} fall-off${fallOffCount === 1 ? "" : "s"} of their own (threshold ${DEACTIVATION_REVIEW_THRESHOLD}). Consider deactivation review.`,
               actionUrl: `/dashboard/carriers`,
             },
           });
@@ -138,16 +138,19 @@ export async function executeFallOffRecovery(loadId: string, reason?: string) {
     }
   }
 
-  // Update event with tracking info
-  await prisma.fallOffEvent.update({
-    where: { id: event.id },
-    data: { backupsSent },
-  });
+  // Update the release's event with tracking info (none exists when the load
+  // had no carrier — the release was a no-op and there is nothing to track).
+  if (eventId) {
+    await prisma.fallOffEvent.update({
+      where: { id: eventId },
+      data: { backupsSent },
+    });
+  }
 
   log.info(`[FallOff] Recovery initiated for load ${load.referenceNumber}: ${backupsSent} backups contacted`);
 
   return {
-    eventId: event.id,
+    eventId,
     loadId,
     originalCarrierId,
     backupsSent,
