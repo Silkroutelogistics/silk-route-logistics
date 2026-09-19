@@ -300,9 +300,9 @@ function StatCard({ icon, label, value, sub }: { icon: React.ReactNode; label: s
 
 function InfoRow({ label, value }: { label: string; value: React.ReactNode }) {
   return (
-    <div className="flex justify-between py-1.5 border-b border-white/5 last:border-0">
+    <div className="flex justify-between py-1.5 border-b border-gray-200 last:border-0">
       <span className="text-xs text-slate-500">{label}</span>
-      <span className="text-xs text-white font-medium">{value || "—"}</span>
+      <span className="text-xs text-[#0A2540] font-medium">{value || "—"}</span>
     </div>
   );
 }
@@ -311,10 +311,10 @@ function PerformanceBar({ label, value, color }: { label: string; value: number;
   return (
     <div>
       <div className="flex justify-between text-xs mb-1">
-        <span className="text-slate-400">{label}</span>
-        <span className="text-white font-medium">{value}%</span>
+        <span className="text-gray-600">{label}</span>
+        <span className="text-[#0A2540] font-medium">{value}%</span>
       </div>
-      <div className="h-2 bg-white/10 rounded-full overflow-hidden">
+      <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
         <div className={`h-full rounded-full ${color}`} style={{ width: `${Math.min(100, value)}%` }} />
       </div>
     </div>
@@ -361,7 +361,7 @@ function InsuranceBlock({ title, provider, policy, amount, expiry }: {
           <InfoRow label="Provider" value={provider || "—"} />
           <InfoRow label="Policy" value={policy || "—"} />
           <InfoRow label="Amount" value={amount ? `$${Number(amount).toLocaleString()}` : "—"} />
-          <div className="flex justify-between py-1.5 border-b border-white/5 last:border-0">
+          <div className="flex justify-between py-1.5 border-b border-gray-200 last:border-0">
             <span className="text-xs text-slate-500">Expiry</span>
             <span className={`text-xs font-medium ${expiryColor(expiry)}`}>
               {formatExpiry(expiry)} {days !== null && days >= 0 ? `(${days} days)` : days !== null ? "(Expired)" : ""}
@@ -377,8 +377,8 @@ function InsuranceBlock({ title, provider, policy, amount, expiry }: {
 
 function ComplianceRow({ label, status }: { label: string; status: boolean }) {
   return (
-    <div className="flex items-center justify-between py-1.5 border-b border-white/5 last:border-0">
-      <span className="text-xs text-slate-400">{label}</span>
+    <div className="flex items-center justify-between py-1.5 border-b border-gray-200 last:border-0">
+      <span className="text-xs text-gray-600">{label}</span>
       <span className={`px-2 py-0.5 rounded text-[11px] font-medium ${status ? "bg-green-500/20 text-green-400" : "bg-red-500/20 text-red-400"}`}>
         {status ? "Active" : "Not Verified"}
       </span>
@@ -1032,10 +1032,10 @@ export default function CarrierPoolPage() {
       <div className="grid sm:grid-cols-5 gap-4">
         {(["PLATINUM", "GOLD", "SILVER", "GUEST"] as const).map((tier) => (
           <button key={tier} onClick={() => setTierFilter(tierFilter === tier ? "" : tier)}
-            className={`bg-gray-100 rounded-xl border p-4 text-left transition ${tierFilter === tier ? "border-gold" : "border-gray-200 hover:border-white/20"}`}>
+            className={`bg-gray-100 rounded-xl border p-4 text-left transition ${tierFilter === tier ? "border-gold" : "border-gray-200 hover:border-gray-300"}`}>
             <div className="flex items-center justify-between mb-1">
               <span className={`px-2 py-0.5 rounded text-xs font-bold ${TIER_COLORS[tier]}`}>{tier}</span>
-              <span className="text-2xl font-bold text-white">{tierCounts[tier]}</span>
+              <span className="text-2xl font-bold text-[#0A2540]">{tierCounts[tier]}</span>
             </div>
             <p className="text-xs text-slate-500">carriers</p>
           </button>
@@ -1140,14 +1140,14 @@ export default function CarrierPoolPage() {
         <div className={`transition-all duration-300 space-y-3`}>
           {filtered.map((carrier) => (
             <button key={carrier.id} onClick={() => { setSelectedCarrierId(carrier.id); setPanelTab("profile"); }}
-              className={`w-full text-left bg-gray-100 rounded-xl border overflow-hidden p-4 hover:bg-white/[0.07] transition ${selectedCarrierId === carrier.id ? "border-gold/50 bg-white/[0.07]" : "border-gray-200"}`}>
+              className={`w-full text-left bg-gray-100 rounded-xl border overflow-hidden p-4 hover:bg-gray-200 transition ${selectedCarrierId === carrier.id ? "border-gold/50 bg-gray-200" : "border-gray-200"}`}>
               <div className="flex items-start gap-3">
                 <div className="w-10 h-10 rounded-lg bg-gold/10 flex items-center justify-center shrink-0">
                   <Truck className="w-5 h-5 text-gold" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <p className="font-semibold text-white text-sm truncate">{carrier.company}</p>
+                    <p className="font-semibold text-[#0A2540] text-sm truncate">{carrier.company}</p>
                     {/* v3.8.alo §13.3 Item 189.b — TEST badge (only visible when
                         "Show test accounts" is on, since flagged carriers are
                         otherwise filtered out of this list). */}
@@ -1167,11 +1167,11 @@ export default function CarrierPoolPage() {
                         <Compass className="w-2.5 h-2.5" /> {compassResult.score ?? "—"}
                       </span>
                     )}
-                    <span className={`px-1.5 py-0.5 rounded text-[11px] ${STATUS_COLORS[carrier.onboardingStatus] || "bg-white/10 text-gray-600"}`}>
+                    <span className={`px-1.5 py-0.5 rounded text-[11px] ${STATUS_COLORS[carrier.onboardingStatus] || "bg-gray-200 text-gray-600"}`}>
                       {carrier.onboardingStatus.replace(/_/g, " ")}
                     </span>
                   </div>
-                  <div className="flex flex-wrap items-center gap-3 mt-1 text-[11px] text-slate-400">
+                  <div className="flex flex-wrap items-center gap-3 mt-1 text-[11px] text-gray-600">
                     <span className="flex items-center gap-1"><Truck className="w-3 h-3" /> {carrier.equipmentTypes.join(", ")}</span>
                     {carrier.mcNumber && <span className="flex items-center gap-1"><Hash className="w-3 h-3" /> MC-{carrier.mcNumber}</span>}
                     {!selectedCarrier && <span className="flex items-center gap-1"><MapPin className="w-3 h-3" /> {carrier.operatingRegions.slice(0, 3).join(", ")}{carrier.operatingRegions.length > 3 ? ` +${carrier.operatingRegions.length - 3}` : ""}</span>}
@@ -1180,11 +1180,11 @@ export default function CarrierPoolPage() {
                 {!selectedCarrier && (
                   <div className="hidden sm:flex items-center gap-5 shrink-0">
                     <div className="text-right">
-                      <p className="text-sm font-bold text-white">{carrier.completedLoads}</p>
+                      <p className="text-sm font-bold text-[#0A2540]">{carrier.completedLoads}</p>
                       <p className="text-[11px] text-slate-500">Loads</p>
                     </div>
                     <div className="text-right">
-                      <p className="text-sm font-bold text-white">{carrier.acceptanceRate}%</p>
+                      <p className="text-sm font-bold text-[#0A2540]">{carrier.acceptanceRate}%</p>
                       <p className="text-[11px] text-slate-500">Accept</p>
                     </div>
                   </div>
@@ -1314,7 +1314,7 @@ export default function CarrierPoolPage() {
                     <InfoRow label="Member Since" value={new Date(selectedCarrier.createdAt).toLocaleDateString()} />
 
                     <div className="flex flex-wrap gap-2 pt-3 border-t border-gray-200">
-                      <a href="/dashboard/messages" className="flex items-center gap-1.5 px-3 py-1.5 bg-white/10 text-white rounded-lg text-xs hover:bg-white/20 transition">
+                      <a href="/dashboard/messages" className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-100 text-gray-700 rounded-lg text-xs hover:bg-gray-200 transition">
                         <MessageSquare className="w-3.5 h-3.5" /> Message
                       </a>
                       <a href="/dashboard/loads" className="flex items-center gap-1.5 px-3 py-1.5 bg-gold/20 text-gold rounded-lg text-xs hover:bg-gold/30 transition">
@@ -1921,7 +1921,7 @@ export default function CarrierPoolPage() {
                         </button>
                       )}
                       <button onClick={() => downloadCompassPdf(selectedCarrier.id)}
-                        className="flex items-center gap-1.5 px-3 py-1.5 bg-white/10 text-white rounded-lg text-xs hover:bg-white/20 transition">
+                        className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-100 text-gray-700 rounded-lg text-xs hover:bg-gray-200 transition">
                         <Download className="w-3.5 h-3.5" /> Download PDF
                       </button>
                     </div>
@@ -1953,11 +1953,11 @@ export default function CarrierPoolPage() {
                             </div>
                             <div>
                               <span className="text-[11px] text-slate-500 uppercase">Grade</span>
-                              <p className={`text-2xl font-bold ${(compassResult.grade && GRADE_COLORS[compassResult.grade]) || "text-white"}`}>{compassResult.grade ?? "—"}</p>
+                              <p className={`text-2xl font-bold ${(compassResult.grade && GRADE_COLORS[compassResult.grade]) || "text-[#0A2540]"}`}>{compassResult.grade ?? "—"}</p>
                             </div>
                             <div>
                               <span className="text-[11px] text-slate-500 uppercase">Risk</span>
-                              <p className={`text-lg font-semibold ${(compassResult.riskLevel && RISK_COLORS[compassResult.riskLevel]) || "text-white"}`}>{compassResult.riskLevel ?? "—"}</p>
+                              <p className={`text-lg font-semibold ${(compassResult.riskLevel && RISK_COLORS[compassResult.riskLevel]) || "text-[#0A2540]"}`}>{compassResult.riskLevel ?? "—"}</p>
                             </div>
                             <div>
                               <span className="text-[11px] text-slate-500 uppercase">Recommendation</span>
@@ -2023,7 +2023,7 @@ export default function CarrierPoolPage() {
                           {selectedCarrier.lastVettingGrade && (
                             <div>
                               <span className="text-[11px] text-slate-500 uppercase">Grade</span>
-                              <p className={`text-2xl font-bold ${GRADE_COLORS[selectedCarrier.lastVettingGrade] || "text-white"}`}>{selectedCarrier.lastVettingGrade}</p>
+                              <p className={`text-2xl font-bold ${GRADE_COLORS[selectedCarrier.lastVettingGrade] || "text-[#0A2540]"}`}>{selectedCarrier.lastVettingGrade}</p>
                             </div>
                           )}
                         </div>
