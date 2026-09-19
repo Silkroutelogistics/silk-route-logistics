@@ -177,6 +177,23 @@ router.delete(
     if (!existing || existing.customerId !== req.params.id) {
       return res.status(404).json({ error: "Facility not found" });
     }
+    // B5b (lifecycle-gaps, finding #21): Load.originFacilityId / destFacilityId
+    // are bare strings with no FK, so a hard delete here left dangling ids on
+    // every load built from the facility. Refuse while any load references it,
+    // naming the loads; a facility that has been used is edited, not removed.
+    const referencedBy = { OR: [{ originFacilityId: req.params.facilityId }, { destFacilityId: req.params.facilityId }] };
+    const [loadCount, loads] = await Promise.all([
+      prisma.load.count({ where: referencedBy }),
+      prisma.load.findMany({ where: referencedBy, select: { referenceNumber: true, status: true }, orderBy: { createdAt: "desc" }, take: 20 }),
+    ]);
+    if (loadCount > 0) {
+      return res.status(409).json({
+        error: "FACILITY_REFERENCED",
+        message: `"${existing.name}" is on ${loadCount} load${loadCount === 1 ? "" : "s"} and cannot be removed: ${loads.map((l) => l.referenceNumber).join(", ")}${loadCount > loads.length ? ", …" : ""}. A facility that has been used is edited, not removed.`,
+        loads,
+        total: loadCount,
+      });
+    }
     await prisma.customerFacility.delete({ where: { id: req.params.facilityId } });
     await logCustomerActivity({
       customerId: req.params.id,

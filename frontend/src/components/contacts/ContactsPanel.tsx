@@ -174,7 +174,12 @@ export function ContactsPanel({ customerId, onChange }: Props) {
                   {c.doNotContact ? "🚫 DNC on" : "DNC"}
                 </button>
                 <button
-                  onClick={() => del.mutate(c.id)}
+                  onClick={() => {
+                    // B5b (#22): a contact delete is permanent, and removing the primary or the
+                    // tracking-tagged contact changes who receives this customer's operational mail.
+                    if (!confirm(`Remove ${c.name}? This cannot be undone. If they receive this customer's operational emails, nobody will until another contact is tagged.`)) return;
+                    del.mutate(c.id);
+                  }}
                   className="text-[10px] text-red-500 hover:underline"
                 >
                   Remove

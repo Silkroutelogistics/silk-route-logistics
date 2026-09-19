@@ -18,6 +18,8 @@ export function FacilitiesTab({ customerId, onChange }: Props) {
   // addOpen clears. Either close handler resets both.
   const [addOpen, setAddOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  // B5b: a facility on any load is refused (409 FACILITY_REFERENCED); show the refusal.
+  const [delError, setDelError] = useState<string | null>(null);
 
   const q = useQuery<{ facilities: CrmFacility[] }>({
     queryKey: ["crm-facilities", customerId],
@@ -27,7 +29,8 @@ export function FacilitiesTab({ customerId, onChange }: Props) {
   const del = useMutation({
     mutationFn: async (id: string) =>
       (await api.delete(`/customers/${customerId}/facilities/${id}`)).data,
-    onSuccess: () => { q.refetch(); onChange(); },
+    onSuccess: () => { setDelError(null); q.refetch(); onChange(); },
+    onError: (err: any) => setDelError(err?.response?.data?.message ?? err?.response?.data?.error ?? "Could not remove the facility."),
   });
 
   const facilities = q.data?.facilities ?? [];
@@ -36,6 +39,11 @@ export function FacilitiesTab({ customerId, onChange }: Props) {
 
   return (
     <div className="space-y-3 text-sm">
+      {delError && (
+        <div role="alert" className="rounded-md border border-[#9B2C2C]/40 bg-[#F6E3E3]/40 p-2 text-xs text-[#9B2C2C]">
+          {delError}
+        </div>
+      )}
       {facilities.length === 0 && !q.isLoading && (
         <div className="text-center py-6 text-gray-400">No facilities yet.</div>
       )}
@@ -85,7 +93,12 @@ export function FacilitiesTab({ customerId, onChange }: Props) {
                 <Pencil className="w-3 h-3" /> Edit
               </button>
               <button
-                onClick={() => del.mutate(f.id)}
+                onClick={() => {
+                  // B5b (#21): a confirm, and the server refuses while any load references it.
+                  if (!confirm(`Remove facility "${f.name}"? This is refused if any load was built from it; a used facility is edited, not removed.`)) return;
+                  setDelError(null);
+                  del.mutate(f.id);
+                }}
                 className="text-[10px] text-red-500 hover:underline"
               >
                 Remove
