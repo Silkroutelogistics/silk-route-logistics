@@ -18193,7 +18193,16 @@
 // Also true now, and it was not: unkeyed accessorial lines are not only pre-282a — the two API line editors (PUT /invoices/:id/line-items, PUT /accounting/invoices/:id) replace every line without a key, so a draft they touch is reported and not re-priced; the writer guard walks all of src/ and freezes five ledger writers in the service plus five body-driven writers outside it (the fifth found by the guard, not the review), each with its reason.
 // v3.8.bee — lifecycle-gaps 282 finding (i), landed before the merge per decision 1 (2026-09-21): customerPriceFor converts a minute-denominated quantity to the rate card's hours before multiplying — $75/hr × 120 minutes bills $150, not $9,000; both selects that feed the pricer now fetch the row's unit, and a guard fails if either stops
 // (the only detention writer stores billableMinutes with unit "minutes" against a $/hr card; inert while no customer holds a card, but 282c re-prices every stamped draft line the moment one is entered)
-export const SRL_VERSION = "3.8.bee";
+// v3.8.bdn — carrier-archive recut, step A: the letter guard sees every origin ref and every worktree, and §14 carries the archive ruling
+// check-version-letter.js (lifted from the lifecycle-gaps session's 30d07486) now counts every refs/remotes/origin/* ref and every
+// other worktree's branch as a claim, intersects a branch's own unmerged letters against them (the gap that let v3.8.bdh–bdj reach
+// origin twice on 2026-09-19), warns DOUBLED with every ref and hash, and reads the footer again (execSync's 1 MiB maxBuffer had
+// thrown ENOBUFS on this file since v3.8.bbt, so the guard printed "footer at HEAD: (none)" for five days). CLAUDE.md §14 gains
+// the ratified archive policy: deletedAt + isActive off; suspend is the operational state; both may apply; only in-flight work
+// blocks (DELIVERED-pre-POD included); six offer classes withdraw in-transaction; payables and disputes neither block nor change.
+// Versioned under the peer's reserved letter by instruction (§3.1 would ship tooling + docs unversioned; the letter is what lets
+// the recut chain run continuous from bdo).
+export const SRL_VERSION = "3.8.bdn";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
