@@ -11,7 +11,8 @@
  *
  * Wasi's planned action: flip SRL-121492 to TONU (fault CUSTOMER), then edit
  * the TONU accessorial to $250. This proof runs both through the real paths
- * and then the real recalc, and runs the same shape through CANCELLED so the
+ * (both money legs of the edit asserted: the carrier payable and the customer
+ * DRAFT invoice) and then the real recalc, and runs the same shape through CANCELLED so the
  * two terminal states can be compared factor by factor.
  *
  * Refuses a non-local DATABASE_URL: it writes and deletes rows.
@@ -22,6 +23,7 @@ import { assignCarrier } from "../src/services/carrierAssignmentService";
 import { updateLoadStatus } from "../src/controllers/loadController";
 import { makeCaptureRes } from "../src/lib/captureResponse";
 import { recalculateCarrierCPP, syncCarrierPayAccessorials } from "../src/services/integrationService";
+import { syncInvoiceAccessorials } from "../src/services/invoiceService";
 
 const url = process.env.DATABASE_URL ?? "";
 if (!/localhost|127\.0\.0\.1/.test(url)) {
@@ -92,14 +94,30 @@ async function main() {
   const tenderB = await prisma.loadTender.findFirst({ where: { loadId: B.load.id } });
   ok("the accepted tender is untouched by the TONU (only live offers are withdrawn)", tenderB?.status === "ACCEPTED");
 
-  // The planned edit: PUT /loads/:loadId/accessorials/:id with amount 250 on an
-  // APPROVED row runs exactly these two writes (routes/loadAccessorials.ts:177).
+  // The customer leg at the flip: raiseTonuCustomerCharge creates the empty
+  // DRAFT BASE invoice and syncInvoiceAccessorials folds the $200 row into it,
+  // stamping shipperInvoiceId on the row (exactly-once by MARKING, Item 205).
+  const invB = await prisma.invoice.findFirst({ where: { loadId: B.load.id, invoiceKind: "BASE", status: { not: "VOID" } }, include: { lineItems: true } });
+  ok("the customer charge is raised as a DRAFT BASE invoice carrying the $200 TONU line", !!invB && invB.status === "DRAFT" && Number(invB.accessorialsAmount) === 200 && invB.lineItems.some((li) => Number(li.amount) === 200), `status=${invB?.status} acc=${invB?.accessorialsAmount} lines=${invB?.lineItems.map((l) => l.amount).join(",")}`);
+  const stamped = await prisma.loadAccessorial.findUnique({ where: { id: tonuRow!.id }, select: { shipperInvoiceId: true } });
+  ok("and the TONU ledger row is stamped with that invoice", !!invB && stamped?.shipperInvoiceId === invB.id);
+
+  // The planned edit: PUT /api/load-accessorials/item/:id with amount 250 on
+  // the APPROVED row runs the update and then BOTH money-path syncs
+  // (routes/loadAccessorials.ts:177 → pushAccessorialToMoneyPaths). No frontend
+  // calls this route with an amount; the edit is an API call.
   await prisma.loadAccessorial.update({ where: { id: tonuRow!.id }, data: { amount: 250, notes: "Agreed by phone at $250 before the policy figure was known." } });
   await syncCarrierPayAccessorials(B.load.id);
+  await syncInvoiceAccessorials(B.load.id);
   const payB2 = await prisma.carrierPay.findFirst({ where: { loadId: B.load.id }, orderBy: { createdAt: "desc" } });
   const queued = await prisma.approvalQueue.count({ where: { referenceId: payB!.id, referenceType: "CARRIER_PAY" } });
   ok("the $250 edit RE-PRICES the PREPARED payable in place — same row, amount 250", payB2?.id === payB?.id && payB2?.amount === 250 && payB2?.accessorialsTotal === 250, `amount=${payB2?.amount} total=${payB2?.accessorialsTotal}`);
   ok("and escalates nothing — no ApprovalQueue row", queued === 0, `queued=${queued}`);
+  // The carrier leg reconciles TOTALS, so it follows the edit. The customer leg
+  // marks ROWS, and this row is already marked — so the invoice sync finds
+  // nothing unbilled and the DRAFT line stays at the flip-time figure.
+  const invB2 = await prisma.invoice.findUnique({ where: { id: invB!.id }, include: { lineItems: true } });
+  ok("FINDING: the customer invoice line does NOT follow the edit — still $200 while the carrier is owed $250", !!invB2 && Number(invB2.accessorialsAmount) === 200 && Number(invB2.totalAmount) === 200 && invB2.lineItems.every((li) => Number(li.amount) === 200), `acc=${invB2?.accessorialsAmount} total=${invB2?.totalAmount} lines=${invB2?.lineItems.map((l) => l.amount).join(",")}`);
 
   ok("recalc writes after the TONU", (await recalculateCarrierCPP(B.profile.id)) === "written");
   const cardB = (await latestCard(B.profile.id))!;
