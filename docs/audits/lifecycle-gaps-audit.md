@@ -105,6 +105,8 @@ ORDER BY t."createdAt" DESC;
 
 B0, B1a, B1b, B2a, B2b, B4a, B4b, B3a, B3b, B3c, B5a, B5b, B6a, B6b, B7a, B7b. B4 moved ahead of B3: #3, #4, #13 are state-corrupting or money-moving; #6, #7, #8 are scoring accuracy.
 
+**Scope changes ratified 2026-09-19 (push-approval message):** B5b shipped as three commits (bdh customer, bdi carrier, bdj facility + contact). B6a/B6b are the audit enum + writer and the wiring (bdk, bdl). **B7b now also carries the carrier RESTORE affordance** — `PUT /carriers/:id/restore` shipped in bdi with no UI, and an archive with no way back is the same class of gap as a Delete-only row — alongside the load restore work already there. **Item 282 (customer under-billing, P1) runs as its own arc between B6b and B7b**, and does not start until its Phase A is approved.
+
 ## Migrations (local container only, run 2026-09-18, host `127.0.0.1:55473` confirmed before each)
 
 - `20260918203506_lifecycle_cancellation_reason_fault_party` — two enums, four nullable columns, one index. **Also carries pre-existing drift** (§13.3 Item 273.8) that `migrate dev` folded in: DROP/ADD of `info_requests_createdById_fkey` and `info_requests_cancelledById_fkey` with explicit `ON DELETE` rules, and `training_questions.options DROP DEFAULT`. Not edited after apply (checksum in the local ledger). Production constraint names are to be verified read-only before push; a name mismatch fails the deploy at build (safe, blocking) and is remediated by rewriting the migration with `IF EXISTS` plus a local ledger resolve.
