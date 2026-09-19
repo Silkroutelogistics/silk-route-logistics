@@ -18210,7 +18210,14 @@
 // lib/carrierArchiveGuard.ts (B1b lifted minus its own census): assessArchiveInput, PRE_POD_STATUSES (DELIVERED-pre-POD is in flight — the ruling),
 // isInFlightStatus, BINDING_TENDER_STATES = LIVE ∪ HOLDS_LOAD, the withdraw reason. Pure — no prisma import, no write, and a structural test that
 // keeps it so and forbids any hand list of pipeline statuses. C3 reads it from the census.
-export const SRL_VERSION = "3.8.bdp";
+// v3.8.bdq — carrier-archive recut C3: archiveCarrier under the ruling — a reason required, only in-flight work refuses, six classes of open offer
+// withdraw inside the transaction, payables and disputes untouched. The census (lib/carrierReferences.ts) reads the in-flight signals — Load.carrierId on
+// a PRE_POD load (DELIVERED included) and a held tender on such a load — and the withdrawal candidates in one pass; every other class is still counted
+// and named in the 409 (now CARRIER_HOLDS_LIVE_LOADS), but nothing outside the in-flight set refuses. Withdrawals go through the chokepoints that own
+// each table (settleTenders, closeOpenInfoRequestsForStatus) or a scoped updateMany on the tx client; a cascade standing at one of the carrier's
+// positions is advanced past it after the commit, and tenderPosition now passes over a position skipped before it was reached. The lifecycle row
+// carries reasonCode, the note, and what was withdrawn.
+export const SRL_VERSION = "3.8.bdq";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

@@ -356,10 +356,15 @@ function writeInfoRequestAudit(args: { userId: string; action: "INFO_REQUEST_CRE
  * arrive at a seam somebody chose rather than by accretion. Recorded rather
  * than done.
  */
-export const CLOSED_BY_STATUS_REASON: Record<"APPROVED" | "REJECTED" | "SUSPENDED", string> = {
+export const CLOSED_BY_STATUS_REASON: Record<"APPROVED" | "REJECTED" | "SUSPENDED" | "ARCHIVED", string> = {
   APPROVED: "Closed automatically — this carrier's application was approved.",
   REJECTED: "Closed automatically — this carrier's application was rejected.",
   SUSPENDED: "Closed automatically — this carrier was suspended.",
+  // ARCHIVED is not an onboardingStatus: it is the record-lifecycle state
+  // (CarrierProfile.deletedAt, CLAUDE.md §14). The archive transaction closes
+  // open requests through this same chokepoint because the carrier's login is
+  // deactivated in the same act and nobody can answer them afterwards.
+  ARCHIVED: "Closed automatically — this carrier's record was archived.",
 };
 
 export type ClosedInfoRequest = {
@@ -447,15 +452,24 @@ export async function announceInfoRequestsClosedByStatus(
 ): Promise<void> {
   if (closed.length === 0) return;
 
-  for (const req of closed) {
-    notifyInfoRequestWithdrawn({
-      carrierId: args.carrierId,
-      requestId: req.id,
-      categoryLabel: getCategoryLabel(req.category),
-      // The caller's fact. Without it the notice tells a REJECTED carrier
-      // their application is back with the review team.
-      closedByStatus: args.newStatus,
-    }).catch((err) => log.warn({ err, requestId: req.id }, "[InfoRequest] status-close carrier notice failed"));
+  // An ARCHIVED carrier is told nothing here, deliberately: the archive
+  // deactivates their login in the same transaction, the archive itself sends
+  // them no notice (carrierController.archiveCarrier), and the withdrawal
+  // template links to a portal that now refuses them. A fragment of an act the
+  // carrier is not told about must not be the one thing they are told.
+  const closedBy = args.newStatus;
+  const tellCarrier = closedBy !== "ARCHIVED";
+  if (closedBy !== "ARCHIVED") {
+    for (const req of closed) {
+      notifyInfoRequestWithdrawn({
+        carrierId: args.carrierId,
+        requestId: req.id,
+        categoryLabel: getCategoryLabel(req.category),
+        // The caller's fact. Without it the notice tells a REJECTED carrier
+        // their application is back with the review team.
+        closedByStatus: closedBy,
+      }).catch((err) => log.warn({ err, requestId: req.id }, "[InfoRequest] status-close carrier notice failed"));
+    }
   }
 
   const byAe = new Map<string, ClosedInfoRequest[]>();
@@ -473,8 +487,9 @@ export async function announceInfoRequestsClosedByStatus(
           title: `Info request${reqs.length === 1 ? "" : "s"} closed — ${args.carrierName}`,
           message:
             `${reqs.length} open info request${reqs.length === 1 ? "" : "s"} ` +
-            `(${labels}) closed because this carrier moved to ${args.newStatus}. ` +
-            "The carrier has been told to stop work on them.",
+            `(${labels}) closed because this carrier ${args.newStatus === "ARCHIVED" ? "was archived" : `moved to ${args.newStatus}`}. ` +
+            // Says only what happened: an archived carrier was NOT told (above).
+            (tellCarrier ? "The carrier has been told to stop work on them." : "The carrier was not notified; their login is deactivated."),
           actionUrl: "/dashboard/carriers",
         },
       })

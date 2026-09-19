@@ -45,6 +45,7 @@ import {
   startWaterfall,
   triggerFallbackChain,
   promoteStaleOpenLoadsToDat,
+  advanceWaterfall,
 } from "../../../src/services/waterfallEngineService";
 
 const mockPrisma = prisma as any;
@@ -248,5 +249,41 @@ describe("the guard cannot pass vacuously", () => {
     mockPrisma.load.findUnique.mockResolvedValue({ status: "TENDERED", posterId: null });
     await triggerFallbackChain(LOAD_ID, WF_ID);
     expect(loadUpdates().length).toBeGreaterThan(0);
+  });
+});
+
+/**
+ * Carrier-archive recut C3 (CLAUDE.md §14): a position marked `skipped` BEFORE
+ * the cascade reaches it — its carrier was archived while it sat queued — is
+ * passed over, not tendered. Without the guard the skip was decorative: the
+ * profile still resolves by userId, and the archived carrier was offered the
+ * load anyway. Driven through advanceWaterfall, which is what reaches a
+ * position in production.
+ */
+describe("a position skipped before the cascade reached it is passed over", () => {
+  it("tenders nothing at the skipped position and moves to the next", async () => {
+    mockPrisma.waterfall.findUnique.mockResolvedValue({ id: WF_ID, loadId: LOAD_ID, totalPositions: 3 });
+    mockPrisma.waterfallPosition.findFirst
+      .mockResolvedValueOnce({ id: "p-2", position: 2, status: "skipped", isFallback: false, carrierId: "u-archived", waterfall: { loadId: LOAD_ID, mode: "semi_auto" } })
+      .mockResolvedValueOnce(null); // position 3 does not exist in this fixture: the walk stops there
+
+    await advanceWaterfall(WF_ID, 2);
+
+    const positionsAsked = mockPrisma.waterfallPosition.findFirst.mock.calls.map((c: any) => c[0].where.position);
+    expect(positionsAsked).toEqual([2, 3]);
+    expect(mockPrisma.loadTender.create).not.toHaveBeenCalled();
+    expect(mockPrisma.carrierProfile.findUnique).not.toHaveBeenCalled(); // never resolved the archived carrier
+    expect(wroteTendered()).toBe(false);
+  });
+
+  it("control — a queued position at the same spot IS tendered", async () => {
+    mockPrisma.waterfall.findUnique.mockResolvedValue({ id: WF_ID, loadId: LOAD_ID, totalPositions: 3 });
+    mockPrisma.waterfallPosition.findFirst.mockResolvedValue({ id: "p-2", position: 2, status: "queued", isFallback: false, carrierId: "u-1", offeredRate: 900, waterfall: { loadId: LOAD_ID, mode: "semi_auto" } });
+    mockPrisma.load.findUnique.mockResolvedValue({ status: "POSTED" });
+
+    await advanceWaterfall(WF_ID, 2);
+
+    expect(mockPrisma.carrierProfile.findUnique).toHaveBeenCalledWith(expect.objectContaining({ where: { userId: "u-1" } }));
+    expect(mockPrisma.loadTender.create).toHaveBeenCalled();
   });
 });

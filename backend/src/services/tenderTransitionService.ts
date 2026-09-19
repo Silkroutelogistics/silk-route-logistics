@@ -48,6 +48,13 @@ export const WITHDRAW_REASONS = [
   "position_skipped",
   /** The carrier stopped being eligible before they could answer. */
   "compliance_block",
+  /**
+   * The carrier was ARCHIVED while the offer stood (carrier-archive recut C3,
+   * CLAUDE.md §14): SRL closed the record, so SRL pulled the offer. Written by
+   * carrierController.archiveCarrier through settleTenders, inside the archive
+   * transaction. Never DECLINED — the carrier answered nothing.
+   */
+  "carrier_archived",
 ] as const;
 
 export type WithdrawReason = (typeof WITHDRAW_REASONS)[number];

@@ -1,10 +1,17 @@
 /**
- * archiveCarrier / restoreCarrier / suspendCarrier — lifecycle-gaps B5b.
+ * archiveCarrier / restoreCarrier / suspendCarrier.
  *
- * The B5a customer rule applied to carriers: a carrier with any reference is
- * refused with the references named and Suspend pointed at; a bare
- * registration is archived AND its login deactivated in one transaction, and
- * restore undoes both. Suspension now requires a reason.
+ * Carrier-archive recut C3 (2026-09-19), under CLAUDE.md §14 "CARRIER ARCHIVE —
+ * RATIFIED 2026-09-19": only IN-FLIGHT work blocks (a load the carrier is on
+ * that can still reach POD_RECEIVED — DELIVERED included — or a tender they
+ * have accepted on such a load); six classes of open offer WITHDRAW inside the
+ * transaction; payables, disputes and every kind of history neither block nor
+ * change; the reason is required and recorded; the login is deactivated in the
+ * same transaction and restore undoes it. Suspension still requires a reason.
+ *
+ * The census is mocked here (its own test covers what it reads); what this
+ * file proves is what the controller DOES with a census: refuses on the right
+ * rows, writes the right things on the tx client, and records the act.
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import fs from "fs";
@@ -19,20 +26,47 @@ vi.mock("../../../src/services/infoRequestService", () => ({
   closeOpenInfoRequestsForStatus: vi.fn().mockResolvedValue([]),
   announceInfoRequestsClosedByStatus: vi.fn().mockResolvedValue(undefined),
 }));
+vi.mock("../../../src/services/tenderTransitionService", () => ({
+  settleTenders: vi.fn().mockResolvedValue({ count: 0, tenderIds: [] }),
+}));
+vi.mock("../../../src/services/waterfallEngineService", () => ({
+  advanceWaterfall: vi.fn().mockResolvedValue(undefined),
+}));
+vi.mock("../../../src/services/waterfallEventService", () => ({
+  logWaterfallEvent: vi.fn().mockResolvedValue(undefined),
+}));
 import { censusCarrierReferences, type CarrierReferenceCensus } from "../../../src/lib/carrierReferences";
+import { closeOpenInfoRequestsForStatus, announceInfoRequestsClosedByStatus } from "../../../src/services/infoRequestService";
+import { settleTenders } from "../../../src/services/tenderTransitionService";
+import { advanceWaterfall } from "../../../src/services/waterfallEngineService";
+import { logWaterfallEvent } from "../../../src/services/waterfallEventService";
 import { archiveCarrier, restoreCarrier } from "../../../src/controllers/carrierController";
 import { suspendCarrier } from "../../../src/controllers/complianceController";
 
 const mockPrisma = vi.mocked(prisma) as any;
 const census = vi.mocked(censusCarrierReferences);
+const closeRequests = vi.mocked(closeOpenInfoRequestsForStatus);
+const announce = vi.mocked(announceInfoRequestsClosedByStatus);
+const settle = vi.mocked(settleTenders);
+const advance = vi.mocked(advanceWaterfall);
+const logEvent = vi.mocked(logWaterfallEvent);
 
 const EMPTY: CarrierReferenceCensus = {
-  loads: [], tenders: 0, liveTenders: 0, bids: 0, waterfallPositions: 0, carrierPays: 0, unpaidCarrierPays: 0,
+  loads: [], tenders: 0, liveTenders: 0, withdrawableTenderIds: [], holdingTenders: [], bids: 0,
+  waterfallPositions: 0, openWaterfallPositions: [], carrierPays: 0, unpaidCarrierPays: 0,
   settlements: 0, disputes: 0, agreements: 0, documents: 0, drivers: 0, fallOffs: 0, chameleonMatches: 0,
   infoRequests: 0, overrides: 0, fraudReports: 0, quickPayEnrollments: 0, routingGuideEntries: 0, dockSchedules: 0,
   ediTransactions: 0, exceptionAlerts: 0,
 };
 const PROFILE = { id: "cp-1", userId: "u-1", companyName: "Peace Transport", deletedAt: null, onboardingStatus: "APPROVED" };
+const REASON = { reason: "CEASED_OPERATIONS", archiveNote: "Owner retired, trucks sold." };
+
+function load(id: string, ref: string, status: string, inFlight: boolean) {
+  return { id, loadNumber: `SRL-${ref}`, referenceNumber: ref, status, inFlight };
+}
+function holding(id: string, status: string, l: { id: string; ref: string; status: string; deletedAt?: Date | null }) {
+  return { id, status, load: { id: l.id, loadNumber: `SRL-${l.ref}`, referenceNumber: l.ref, status: l.status, deletedAt: l.deletedAt ?? null } } as any;
+}
 
 function call(fn: (req: any, res: any) => Promise<any>, params: Record<string, string>, body: Record<string, unknown> = {}) {
   const req = { params, body, user: { id: "ae-1", email: "ae@srl.test", role: "ADMIN" }, headers: {} } as any;
@@ -41,84 +75,227 @@ function call(fn: (req: any, res: any) => Promise<any>, params: Record<string, s
 }
 
 describe("archiveCarrier", () => {
+  /** The tx client the interactive $transaction hands the controller — a distinct object, so "on the tx" is provable. */
+  let tx: any;
   beforeEach(() => {
     vi.clearAllMocks();
+    tx = mockPrisma; // the shared mock plays the transaction client; identity is what the assertions check
     mockPrisma.carrierProfile.findUnique.mockResolvedValue(PROFILE);
-    mockPrisma.$transaction.mockImplementation(async (ops: any) => (typeof ops === "function" ? ops(mockPrisma) : Promise.all(ops)));
+    mockPrisma.$transaction.mockImplementation(async (ops: any) => (typeof ops === "function" ? ops(tx) : Promise.all(ops)));
     mockPrisma.carrierProfile.update.mockResolvedValue({});
     mockPrisma.user.update.mockResolvedValue({});
+    mockPrisma.loadBid.updateMany.mockResolvedValue({ count: 0 });
+    mockPrisma.waterfallPosition.updateMany.mockResolvedValue({ count: 0 });
+    mockPrisma.dockSchedule.updateMany.mockResolvedValue({ count: 0 });
+    mockPrisma.routingGuideEntry.updateMany.mockResolvedValue({ count: 0 });
+    settle.mockResolvedValue({ count: 0, tenderIds: [] });
+    closeRequests.mockResolvedValue([]);
     census.mockResolvedValue(EMPTY);
   });
 
-  it("404 for unknown or already-archived; the census is not even taken", async () => {
-    mockPrisma.carrierProfile.findUnique.mockResolvedValue({ ...PROFILE, deletedAt: new Date() });
-    const { res, run } = call(archiveCarrier, { id: "cp-1" });
-    await run();
-    expect(res.status).toHaveBeenCalledWith(404);
-    expect(census).not.toHaveBeenCalled();
-    expect(mockPrisma.$transaction).not.toHaveBeenCalled();
-  });
-
-  it("an in-flight load refuses: 409, the load named as the thing to release first, Suspend pointed at", async () => {
-    census.mockResolvedValue({
-      ...EMPTY,
-      loads: [
-        { id: "l1", referenceNumber: "SRL-121492", status: "BOOKED", inFlight: true },
-        { id: "l2", referenceNumber: "SRL-121400", status: "COMPLETED", inFlight: false },
-      ],
-      tenders: 2, liveTenders: 1, carrierPays: 1, unpaidCarrierPays: 1,
-    });
-    const { res, run } = call(archiveCarrier, { id: "cp-1" });
-    await run();
-    expect(res.status).toHaveBeenCalledWith(409);
-    const body = res.json.mock.calls[0][0];
-    expect(body.error).toBe("CARRIER_HAS_REFERENCES");
-    expect(body.message).toContain("Peace Transport cannot be archived: 2 loads (1 in flight), 2 tenders (1 live), 1 carrier payable (1 unpaid)");
-    expect(body.message).toContain("suspended, not archived");
-    expect(body.remedy.inFlightLoads).toEqual(["SRL-121492"]);
-    expect(body.remedy.releaseInFlightLoadsFirst).toMatch(/Release the carrier from this load first/);
-    expect(body.remedy.suspend).toBe("POST /compliance/carrier/cp-1/suspend");
-    expect(body.references.total).toBe(5);
+  function noWrites() {
     expect(mockPrisma.$transaction).not.toHaveBeenCalled();
     expect(mockPrisma.carrierProfile.update).not.toHaveBeenCalled();
     expect(mockPrisma.user.update).not.toHaveBeenCalled();
-    // A refusal is not a lifecycle act: no row.
+    expect(settle).not.toHaveBeenCalled();
+    expect(closeRequests).not.toHaveBeenCalled();
     expect(mockPrisma.auditTrail.create).not.toHaveBeenCalled();
+  }
+
+  it("404 for unknown or already-archived; the census is not even taken", async () => {
+    mockPrisma.carrierProfile.findUnique.mockResolvedValue({ ...PROFILE, deletedAt: new Date() });
+    const { res, run } = call(archiveCarrier, { id: "cp-1" }, REASON);
+    await run();
+    expect(res.status).toHaveBeenCalledWith(404);
+    expect(census).not.toHaveBeenCalled();
+    noWrites();
   });
 
-  it("a signed agreement alone refuses — evidence is never archived away; an already-SUSPENDED carrier gets no suspend remedy", async () => {
-    mockPrisma.carrierProfile.findUnique.mockResolvedValue({ ...PROFILE, onboardingStatus: "SUSPENDED" });
-    census.mockResolvedValue({ ...EMPTY, agreements: 1 });
-    const { res, run } = call(archiveCarrier, { id: "cp-1" });
+  it("422 without a reason, or with one outside the vocabulary — before the census, before any write", async () => {
+    for (const [body, code] of [[{}, "ARCHIVE_REASON_REQUIRED"], [{ reason: "BECAUSE" }, "ARCHIVE_REASON_INVALID"], [{ reason: "DUPLICATE_RECORD", archiveNote: "x".repeat(501) }, "ARCHIVE_NOTE_INVALID"]] as const) {
+      vi.clearAllMocks();
+      mockPrisma.carrierProfile.findUnique.mockResolvedValue(PROFILE);
+      const { res, run } = call(archiveCarrier, { id: "cp-1" }, body as any);
+      await run();
+      expect(res.status, JSON.stringify(body)).toHaveBeenCalledWith(422);
+      expect(res.json.mock.calls[0][0]).toMatchObject({ code });
+      expect(census).not.toHaveBeenCalled();
+      noWrites();
+    }
+  });
+
+  it("an in-flight load (Load.carrierId) refuses: 409 CARRIER_HOLDS_LIVE_LOADS, the load named, Suspend pointed at, nothing written", async () => {
+    census.mockResolvedValue({
+      ...EMPTY,
+      loads: [load("l1", "121492", "BOOKED", true), load("l2", "121400", "COMPLETED", false)],
+      tenders: 2, liveTenders: 1, withdrawableTenderIds: ["t-open"], carrierPays: 1, unpaidCarrierPays: 1,
+    });
+    const { res, run } = call(archiveCarrier, { id: "cp-1" }, REASON);
     await run();
     expect(res.status).toHaveBeenCalledWith(409);
     const body = res.json.mock.calls[0][0];
-    expect(body.message).toContain("1 signed agreement");
-    expect(body.remedy.suspend).toBeNull();
+    expect(body.error).toBe("CARRIER_HOLDS_LIVE_LOADS");
+    expect(body.message).toContain("Peace Transport cannot be archived: on 1 load still in flight (SRL-121492)");
+    expect(body.message).toContain("History does not block an archive");
+    expect(body.blockingLoads).toEqual([expect.objectContaining({ id: "l1", loadNumber: "SRL-121492", status: "BOOKED", via: "assignment" })]);
+    expect(body.remedy.inFlightLoads).toEqual(["SRL-121492"]);
+    expect(body.remedy.releaseInFlightLoadsFirst).toMatch(/Release the carrier from this load first/);
+    expect(body.remedy.suspend).toBe("POST /compliance/carrier/cp-1/suspend");
+    expect(body.remedy).not.toHaveProperty("unpaidCarrierPays"); // no longer a reason, so no longer a remedy
+    expect(body.references.total).toBe(5);
+    noWrites();
   });
 
-  it("zero references: archived (soft) AND the login deactivated, in one transaction", async () => {
-    const { res, run } = call(archiveCarrier, { id: "cp-1" });
+  it("DELIVERED-pre-POD is in flight: a delivered load whose POD is still owed refuses", async () => {
+    census.mockResolvedValue({ ...EMPTY, loads: [load("l9", "121499", "DELIVERED", true)] });
+    const { res, run } = call(archiveCarrier, { id: "cp-1" }, REASON);
+    await run();
+    expect(res.status).toHaveBeenCalledWith(409);
+    expect(res.json.mock.calls[0][0].remedy.inFlightLoads).toEqual(["SRL-121499"]);
+    noWrites();
+  });
+
+  it("a CONFIRMED tender on an in-flight load refuses even when Load.carrierId names nobody — the second signal", async () => {
+    census.mockResolvedValue({
+      ...EMPTY,
+      liveTenders: 1,
+      holdingTenders: [holding("t-conf", "CONFIRMED", { id: "l2", ref: "121493", status: "DISPATCHED" })],
+    });
+    const { res, run } = call(archiveCarrier, { id: "cp-1" }, REASON);
+    await run();
+    expect(res.status).toHaveBeenCalledWith(409);
+    const body = res.json.mock.calls[0][0];
+    expect(body.blockingLoads).toEqual([expect.objectContaining({ id: "l2", via: "committed_tender" })]);
+    expect(body.remedy.holdingTenders).toEqual([{ id: "t-conf", status: "CONFIRMED", loadId: "l2" }]);
+    noWrites();
+  });
+
+  it("history never blocks: a signed agreement, unpaid payables, an open dispute, documents, drivers and a CONFIRMED tender on a COMPLETED load are all archived through", async () => {
+    mockPrisma.carrierProfile.findUnique.mockResolvedValue({ ...PROFILE, onboardingStatus: "SUSPENDED" });
+    census.mockResolvedValue({
+      ...EMPTY,
+      loads: [load("l2", "121400", "COMPLETED", false), load("l3", "121401", "CANCELLED", false)],
+      tenders: 4, liveTenders: 1,
+      holdingTenders: [holding("t-old", "CONFIRMED", { id: "l2", ref: "121400", status: "COMPLETED" }), holding("t-gone", "ACCEPTED", { id: "l4", ref: "121402", status: "DISPATCHED", deletedAt: new Date() })],
+      agreements: 1, carrierPays: 3, unpaidCarrierPays: 2, disputes: 1, documents: 6, drivers: 2, settlements: 1,
+    });
+    const { res, run } = call(archiveCarrier, { id: "cp-1" }, REASON);
     await run();
     expect(res.status).not.toHaveBeenCalledWith(409);
+    expect(res.json.mock.calls[0][0]).toMatchObject({ success: true, details: { archived: true, loginDeactivated: true, references: 20 } }); // 2 loads + 4 tenders + 1 agreement + 3 pays + 1 dispute + 6 docs + 2 drivers + 1 settlement
+    // Payables and disputes: neither block nor change.
+    expect(mockPrisma.carrierPay?.updateMany ?? vi.fn()).not.toHaveBeenCalled();
+    expect(mockPrisma.paymentDispute?.updateMany ?? vi.fn()).not.toHaveBeenCalled();
+    // A suspended carrier may be archived: the two are independent dimensions.
+    expect(mockPrisma.carrierProfile.update.mock.calls[0][0].data).not.toHaveProperty("onboardingStatus");
+  });
+
+  it("the transaction: profile with its reason, login off, and the six withdrawals — every write on the tx client, scoped to open rows", async () => {
+    const now = Date.now();
+    census.mockResolvedValue({
+      ...EMPTY,
+      tenders: 3, liveTenders: 2, withdrawableTenderIds: ["t-off", "t-ctr"],
+      waterfallPositions: 3,
+      openWaterfallPositions: [
+        { id: "p-q", waterfallId: "wf-1", loadId: "l-wf1", position: 4, status: "queued" },
+        { id: "p-t", waterfallId: "wf-2", loadId: "l-wf2", position: 2, status: "tendered" },
+      ],
+      bids: 2, dockSchedules: 2, routingGuideEntries: 1, infoRequests: 2,
+    });
+    settle.mockResolvedValue({ count: 2, tenderIds: ["t-off", "t-ctr"] });
+    mockPrisma.waterfallPosition.updateMany.mockResolvedValue({ count: 2 });
+    mockPrisma.loadBid.updateMany.mockResolvedValue({ count: 1 });
+    mockPrisma.dockSchedule.updateMany.mockResolvedValue({ count: 1 });
+    mockPrisma.routingGuideEntry.updateMany.mockResolvedValue({ count: 1 });
+    closeRequests.mockResolvedValue([{ id: "ir-1", category: "COI_UPDATE", createdById: "ae-2" }]);
+
+    const { res, run } = call(archiveCarrier, { id: "cp-1" }, REASON);
+    await run();
+    await new Promise((r) => setImmediate(r)); // the post-commit fan-out is fire-and-forget
+
     expect(mockPrisma.$transaction).toHaveBeenCalledTimes(1);
+    // The profile: deletedAt + deletedBy + the reason and the note, in one write.
     expect(mockPrisma.carrierProfile.update).toHaveBeenCalledWith({
       where: { id: "cp-1" },
-      data: { deletedAt: expect.any(Date), deletedBy: "ae@srl.test" },
+      data: { deletedAt: expect.any(Date), deletedBy: "ae@srl.test", archiveReason: "CEASED_OPERATIONS", archiveNote: "Owner retired, trucks sold." },
     });
     expect(mockPrisma.user.update).toHaveBeenCalledWith({ where: { id: "u-1" }, data: { isActive: false } });
-    expect(res.json.mock.calls[0][0]).toMatchObject({ success: true, details: { archived: true, loginDeactivated: true, references: 0 } });
-    // B6b (#24) — the lifecycle record carries both rows the transaction moved.
+    // 1. tenders: through the transition service, WITHDRAWN with the archive reason, on the tx.
+    expect(settle).toHaveBeenCalledTimes(1);
+    const [settleInput, settleDb] = settle.mock.calls[0];
+    expect(settleInput).toMatchObject({ tenderIds: ["t-off", "t-ctr"], to: "WITHDRAWN", reason: "carrier_archived", actor: { id: "ae-1", type: "USER" } });
+    expect(settleDb).toBe(tx);
+    // 2. positions: skipped, scoped to the open ones.
+    expect(mockPrisma.waterfallPosition.updateMany).toHaveBeenCalledWith({
+      where: { id: { in: ["p-q", "p-t"] }, status: { in: ["queued", "tendered"] } },
+      data: { status: "skipped" },
+    });
+    // 3. bids: pending → rejected, the reviewer recorded — SRL's act, not the carrier's "withdrawn".
+    expect(mockPrisma.loadBid.updateMany).toHaveBeenCalledWith({
+      where: { carrierId: "u-1", status: "pending" },
+      data: { status: "rejected", reviewedAt: expect.any(Date), reviewedById: "ae-1" },
+    });
+    // 4. dock schedules: only FUTURE scheduled ones, cancelled, carrier kept.
+    const dock = mockPrisma.dockSchedule.updateMany.mock.calls[0][0];
+    expect(dock.where).toMatchObject({ carrierId: "cp-1", status: "SCHEDULED" });
+    expect(dock.where.appointmentDate.gt.getTime()).toBeGreaterThanOrEqual(now - 1000);
+    expect(dock.data).toEqual({ status: "CANCELLED" });
+    // 5. routing entries: deactivated.
+    expect(mockPrisma.routingGuideEntry.updateMany).toHaveBeenCalledWith({ where: { carrierId: "cp-1", isActive: true }, data: { isActive: false } });
+    // 6. info requests: the Item 260 chokepoint, on the tx, as ARCHIVED.
+    expect(closeRequests).toHaveBeenCalledWith({ carrierId: "cp-1", newStatus: "ARCHIVED", closedById: "ae-1" }, tx);
+
+    // The lifecycle record carries the code, the note, and what was withdrawn.
     expect(mockPrisma.auditTrail.create).toHaveBeenCalledTimes(1);
     const row = mockPrisma.auditTrail.create.mock.calls[0][0].data;
     expect(row).toEqual(expect.objectContaining({ action: "DEACTIVATE", entityType: "CarrierProfile", entityId: "cp-1", performedById: "ae-1" }));
     expect(row.changedFields).toEqual(expect.objectContaining({
       actionDetail: "CARRIER_ARCHIVED",
       entityName: "Peace Transport",
+      reasonCode: "CEASED_OPERATIONS",
+      reason: "Owner retired, trucks sold.",
       previous: { deletedAt: null, loginActive: true, onboardingStatus: "APPROVED" },
     }));
-    expect(row.changedFields.new).toEqual(expect.objectContaining({ loginActive: false, onboardingStatus: "APPROVED" }));
-    expect(typeof row.changedFields.new.deletedAt).toBe("string");
+    expect(row.changedFields.new).toEqual(expect.objectContaining({
+      loginActive: false,
+      archiveReason: "CEASED_OPERATIONS",
+      withdrawn: { tenders: 2, positions: 2, bids: 1, dockSchedules: 1, routingEntries: 1, infoRequests: 1 },
+    }));
+
+    // After the commit: the AE is told about the closed requests; the cascade
+    // standing at the TENDERED position moves on; the queued one just stays skipped.
+    expect(announce).toHaveBeenCalledWith([{ id: "ir-1", category: "COI_UPDATE", createdById: "ae-2" }], { carrierId: "cp-1", carrierName: "Peace Transport", newStatus: "ARCHIVED" });
+    expect(logEvent).toHaveBeenCalledTimes(1);
+    expect(logEvent.mock.calls[0][0]).toMatchObject({ loadId: "l-wf2", event: "position_skipped", metadata: expect.objectContaining({ positionId: "p-t", reason: "carrier_archived" }) });
+    expect(advance).toHaveBeenCalledTimes(1);
+    expect(advance).toHaveBeenCalledWith("wf-2", 3);
+
+    expect(res.json.mock.calls[0][0]).toMatchObject({
+      success: true,
+      details: { archived: true, loginDeactivated: true, archiveReason: "CEASED_OPERATIONS", withdrawn: { tenders: 2, positions: 2, bids: 1, dockSchedules: 1, routingEntries: 1, infoRequests: 1 } },
+    });
+  });
+
+  it("withdrawals run inside the transaction, after the profile write and before the commit", async () => {
+    const order: string[] = [];
+    mockPrisma.$transaction.mockImplementation(async (ops: any) => { order.push("begin"); const r = await ops(tx); order.push("commit"); return r; });
+    mockPrisma.carrierProfile.update.mockImplementation(async () => { order.push("profile"); return {}; });
+    settle.mockImplementation(async () => { order.push("tenders"); return { count: 0, tenderIds: [] }; });
+    closeRequests.mockImplementation(async () => { order.push("info"); return []; });
+    mockPrisma.auditTrail.create.mockImplementation(async () => { order.push("audit"); return {}; });
+    const { run } = call(archiveCarrier, { id: "cp-1" }, REASON);
+    await run();
+    expect(order).toEqual(["begin", "profile", "tenders", "info", "commit", "audit"]);
+  });
+
+  it("if a withdrawal throws, nothing is archived: the transaction fails, no lifecycle row, no announcement", async () => {
+    census.mockResolvedValue({ ...EMPTY, withdrawableTenderIds: ["t-off"], liveTenders: 1 });
+    settle.mockRejectedValue(new Error("tender service down"));
+    const { run } = call(archiveCarrier, { id: "cp-1" }, REASON);
+    await expect(run()).rejects.toThrow("tender service down");
+    expect(mockPrisma.auditTrail.create).not.toHaveBeenCalled();
+    expect(announce).not.toHaveBeenCalled();
+    expect(advance).not.toHaveBeenCalled();
   });
 });
 

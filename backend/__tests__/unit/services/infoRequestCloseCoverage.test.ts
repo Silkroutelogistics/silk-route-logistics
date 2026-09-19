@@ -85,10 +85,10 @@ const DISPOSITION: Record<string, { wired: boolean; writes: number; closes: numb
     why: "AE-initiated manual suspend (POST /compliance/carrier/:id/suspend, ADMIN)",
   },
   "controllers/carrierController.ts": {
-    closes: 3,
+    closes: 4,
     writes: 4,
     wired: true,
-    why: "verifyCarrier writes APPROVED or REJECTED from a variable; admin-setup approves an existing profile; updateCarrier accepts onboardingStatus on two live AE routes and was the seventh writer this guard could not see, because it assembles a hoisted payload. The create branch is deliberately not wired — a profile that does not exist yet cannot hold a request",
+    why: "verifyCarrier writes APPROVED or REJECTED from a variable; admin-setup approves an existing profile; updateCarrier accepts onboardingStatus on two live AE routes and was the seventh writer this guard could not see, because it assembles a hoisted payload. The create branch is deliberately not wired — a profile that does not exist yet cannot hold a request. The FOURTH close is archiveCarrier (carrier-archive recut C3, CLAUDE.md §14): not an onboardingStatus write at all — archive is deletedAt plus isActive off — but the same seam, in the archive transaction, with newStatus ARCHIVED, because the login it deactivates is the one that would answer the request",
   },
   "routes/carriers.ts": {
     closes: 1,

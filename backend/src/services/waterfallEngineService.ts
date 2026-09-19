@@ -193,6 +193,16 @@ async function tenderPosition(waterfallId: string, position: number) {
   });
   if (!pos) return;
 
+  // Carrier-archive recut C3 (CLAUDE.md §14): a position marked skipped BEFORE
+  // the cascade reached it — its carrier was archived while it sat queued — is
+  // passed over, not tendered. Without this the skip was decorative: the
+  // profile still resolves by userId (deletedAt is not filtered here) and the
+  // archived carrier would have been offered the load anyway.
+  if (pos.status === "skipped") {
+    await advanceWaterfall(waterfallId, position + 1);
+    return;
+  }
+
   if (pos.isFallback) {
     await triggerFallbackChain(pos.waterfall.loadId, waterfallId);
     return;
