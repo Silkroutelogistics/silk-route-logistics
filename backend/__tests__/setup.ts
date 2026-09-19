@@ -133,6 +133,28 @@ vi.mock("../src/config/database", () => ({
       count: vi.fn(),
       delete: vi.fn(),
     },
+    loadBid: {
+      count: vi.fn().mockResolvedValue(0),
+    },
+    waterfallPosition: {
+      count: vi.fn().mockResolvedValue(0),
+    },
+    paymentDispute: {
+      count: vi.fn().mockResolvedValue(0),
+    },
+    chameleonMatch: {
+      count: vi.fn().mockResolvedValue(0),
+    },
+    complianceOverride: {
+      count: vi.fn().mockResolvedValue(0),
+    },
+    fraudReport: {
+      count: vi.fn().mockResolvedValue(0),
+    },
+    dockSchedule: {
+      count: vi.fn().mockResolvedValue(0),
+    },
+    // B5b carrier-archive census (lib/carrierReferences) — same convention.
     // B5a customer-delete census (lib/customerReferences). Counts default to 0
     // so a model a test does not mention reads as "no references".
     customerContact: {
@@ -275,6 +297,7 @@ vi.mock("../src/config/database", () => ({
       findMany: vi.fn(),
       create: vi.fn(),
       update: vi.fn(),
+      count: vi.fn().mockResolvedValue(0),
     },
     checkCall: {
       updateMany: vi.fn(),
@@ -309,6 +332,7 @@ vi.mock("../src/config/database", () => ({
     },
     eDITransaction: {
       create: vi.fn(),
+      count: vi.fn().mockResolvedValue(0),
     },
     brokerIntegration: {
       findMany: vi.fn(),

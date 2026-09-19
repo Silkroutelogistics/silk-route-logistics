@@ -664,11 +664,15 @@ export async function suspendCarrier(req: AuthRequest, res: Response) {
   try {
     // Sprint A0 (v3.8.bbu): an AE suspension records the same three columns
     // the automatic writers do, with cause AE_MANUAL, which the auto-reversal
-    // never lifts. The reason is optional here; the text column carries it.
+    // never lifts. B5b (lifecycle-gaps): the reason is REQUIRED — suspension is
+    // the end state for a carrier with history, and "Suspended by an
+    // administrator" with nothing after it tells the next reader nothing.
     const rawReason = typeof req.body?.reason === "string" ? req.body.reason.trim().slice(0, 500) : "";
-    const suspendReason = rawReason
-      ? `Suspended by an administrator: ${rawReason}`
-      : "Suspended by an administrator";
+    if (rawReason.length < 5) {
+      res.status(400).json({ error: "A reason of at least 5 characters is required to suspend a carrier." });
+      return;
+    }
+    const suspendReason = `Suspended by an administrator: ${rawReason}`;
     const carrier = await prisma.carrierProfile.findUnique({
       where: { id: req.params.carrierId },
       include: { user: { select: { company: true, firstName: true, lastName: true } } },

@@ -72,7 +72,8 @@ router.post("/carrier/:carrierId/run-fmcsa-check", authorize("ADMIN", "OPERATION
 // (admin override of safety gate), CEO is policy superset of ADMIN.
 router.post("/carrier/:carrierId/override-block", authorize("ADMIN", "CEO"), overrideBlock);
 router.get("/carrier/:carrierId/override-status", authorize("ADMIN", "CEO"), getOverrideStatus);
-router.post("/carrier/:carrierId/suspend", authorize("ADMIN"), suspendCarrier);
+// B5b (decision 5): carrier suspend is ADMIN, CEO, OPERATIONS — the same scope as customer inactivate.
+router.post("/carrier/:carrierId/suspend", authorize("ADMIN", "CEO", "OPERATIONS"), suspendCarrier);
 router.post("/carrier/:carrierId/notes", authorize("ADMIN", "OPERATIONS", "BROKER"), addNote);
 router.post("/carrier/:carrierId/check", authorize("ADMIN", "OPERATIONS", "CEO", "BROKER", "DISPATCH"), checkCarrier);
 

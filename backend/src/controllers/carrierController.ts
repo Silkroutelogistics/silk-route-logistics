@@ -35,6 +35,7 @@ import { COMPLIANCE_EMAIL } from "../config/authority";
 import * as crypto from "crypto";
 import { pairedApplicationStatus } from "../lib/carrierOperational";
 import { clientIp, clientUserAgent } from "../lib/clientIp";
+import { censusCarrierReferences, carrierReferenceTotal, describeCarrierReferences } from "../lib/carrierReferences";
 import {
   closeOpenInfoRequestsForStatus,
   STATUSES_CLOSED_TO_INFO_REQUESTS,
@@ -2617,4 +2618,70 @@ export async function withdrawQuickPayEnrollment(req: AuthRequest, res: Response
 
   log.info({ carrierProfileId: carrier.id, enrollmentId: updated.id, by: req.user!.id, emailSent, notifSent }, "[QuickPayPilot] withdrawn");
   res.json({ enrollment: updated, quickPayEnabled: false, notified: emailSent || notifSent, emailSent, notifSent });
+}
+
+// ─── Archive / restore (lifecycle-gaps B5b) ──────────────────────────────
+// The customer rule of B5a (decision 4), applied to carriers. Read the rule
+// and the two documented divergences in lib/carrierReferences.ts.
+
+export async function archiveCarrier(req: AuthRequest, res: Response) {
+  const carrier = await prisma.carrierProfile.findUnique({
+    where: { id: req.params.id },
+    select: { id: true, userId: true, companyName: true, deletedAt: true, onboardingStatus: true },
+  });
+  if (!carrier || carrier.deletedAt) {
+    res.status(404).json({ error: "Carrier not found" });
+    return;
+  }
+
+  const references = await censusCarrierReferences(carrier.id, carrier.userId);
+  const total = carrierReferenceTotal(references);
+  if (total > 0) {
+    const inFlightLoads = references.loads.filter((l) => l.inFlight).map((l) => l.referenceNumber);
+    res.status(409).json({
+      error: "CARRIER_HAS_REFERENCES",
+      message:
+        `${carrier.companyName} cannot be archived: ${describeCarrierReferences(references)}. ` +
+        `A carrier with history is suspended, not archived.`,
+      references: { ...references, total },
+      remedy: {
+        inFlightLoads,
+        releaseInFlightLoadsFirst: inFlightLoads.length > 0
+          ? `Release the carrier from ${inFlightLoads.length === 1 ? "this load" : "these loads"} first; a truck may be routed.`
+          : null,
+        liveTenders: references.liveTenders,
+        unpaidCarrierPays: references.unpaidCarrierPays,
+        suspend: carrier.onboardingStatus === "SUSPENDED" ? null : `POST /compliance/carrier/${carrier.id}/suspend`,
+      },
+    });
+    return;
+  }
+
+  // Nothing references it: a registration that went nowhere. The profile is
+  // archived (soft — see the lib header for why not hard) and the login is
+  // deactivated in the same transaction, so an archived carrier cannot keep
+  // signing in to a portal that no longer lists them. restoreCarrier undoes both.
+  const deletedBy = req.user!.email || req.user!.id;
+  await prisma.$transaction([
+    prisma.carrierProfile.update({ where: { id: carrier.id }, data: { deletedAt: new Date(), deletedBy } }),
+    prisma.user.update({ where: { id: carrier.userId }, data: { isActive: false } }),
+  ]);
+
+  res.json({ success: true, message: "Carrier archived", details: { archived: true, loginDeactivated: true, references: 0 } });
+}
+
+export async function restoreCarrier(req: AuthRequest, res: Response) {
+  const carrier = await prisma.carrierProfile.findUnique({
+    where: { id: req.params.id },
+    select: { id: true, userId: true, deletedAt: true },
+  });
+  if (!carrier || !carrier.deletedAt) {
+    res.status(404).json({ error: "Archived carrier not found" });
+    return;
+  }
+  await prisma.$transaction([
+    prisma.carrierProfile.update({ where: { id: carrier.id }, data: { deletedAt: null, deletedBy: null } }),
+    prisma.user.update({ where: { id: carrier.userId }, data: { isActive: true } }),
+  ]);
+  res.json({ success: true, message: "Carrier restored", details: { restored: true, loginReactivated: true } });
 }

@@ -15,11 +15,19 @@ import {
   TrendingUp, TrendingDown, DollarSign, Package, Award, ShieldAlert, Calendar,
   BarChart3, Percent, Hash, Compass, RefreshCw, ExternalLink, AlertTriangle, Download,
   User, CheckSquare, ClipboardList, Upload, Eye, ArrowLeft, FolderOpen,
-  MessageCircle, Sliders, FlaskConical, GraduationCap, Zap, Loader2,
+  MessageCircle, Sliders, FlaskConical, GraduationCap, Zap, Loader2, Ban, Archive,
 } from "lucide-react";
 import { InfoRequestModal } from "@/components/carriers/InfoRequestModal";
 import { InfoRequestThread } from "@/components/carriers/InfoRequestThread";
 import { RejectCarrierModal } from "@/components/carriers/RejectCarrierModal";
+import { SuspendCarrierModal } from "@/components/carriers/SuspendCarrierModal";
+
+// lifecycle-gaps B5b — the 409 an archive returns when anything references the carrier.
+type ArchiveRefusal = {
+  error?: string;
+  message?: string;
+  remedy?: { inFlightLoads?: string[]; suspend?: string | null; liveTenders?: number; unpaidCarrierPays?: number };
+};
 import { InviteCarrierModal } from "@/components/carriers/InviteCarrierModal";
 import { SecuritySignalsCard } from "@/components/carriers/SecuritySignalsCard";
 import { CarrierPreferencesPanel } from "@/components/carriers/CarrierPreferencesPanel";
@@ -435,6 +443,9 @@ export default function CarrierPoolPage() {
   const [statusFilter, setStatusFilter] = useState("");
   const [equipFilter, setEquipFilter] = useState("");
   const [selectedCarrierId, setSelectedCarrierId] = useState<string | null>(null);
+  // lifecycle-gaps B5b — Suspend modal + the rendered archive refusal.
+  const [showSuspend, setShowSuspend] = useState(false);
+  const [archiveRefusal, setArchiveRefusal] = useState<ArchiveRefusal | null>(null);
   // v3.8.asb — Quick Pay pilot decisions are ADMIN / CEO / OPERATIONS, wider
   // than the ADMIN+CEO `isAdmin` used for approve/reject. Deliberate, and it
   // mirrors routes/carriers.ts exactly: carrier approval decides whether they
@@ -443,6 +454,8 @@ export default function CarrierPoolPage() {
   // Gating the UI on isAdmin would hide working controls from the role that
   // uses them most.
   const canReviewQuickPay = user?.role === "ADMIN" || user?.role === "CEO" || user?.role === "OPERATIONS";
+  // lifecycle-gaps B5b, decision 5: carrier suspend is the same scope as customer inactivate.
+  const canSuspendCarrier = user?.role === "ADMIN" || user?.role === "CEO" || user?.role === "OPERATIONS";
   const [panelTab, setPanelTab] = useState<CarrierPanelTab>("profile");
   const [editingCarrier, setEditingCarrier] = useState<Carrier | null>(null);
   const [editingTab, setEditingTab] = useState<string | null>(null);
@@ -1397,7 +1410,52 @@ export default function CarrierPoolPage() {
                           {selectedCarrier.isTestAccount ? "Test account" : "Mark as test"}
                         </button>
                       )}
+                      {/* lifecycle-gaps B5b — Suspend: the end state for a carrier with history.
+                          Reason required; ADMIN/CEO/OPERATIONS (decision 5). */}
+                      {canSuspendCarrier && selectedCarrier.onboardingStatus !== "SUSPENDED" && (
+                        <button onClick={() => setShowSuspend(true)}
+                          className="flex items-center gap-1.5 px-3 py-1.5 bg-red-500/20 text-red-400 rounded-lg text-xs hover:bg-red-500/30 transition">
+                          <Ban className="w-3.5 h-3.5" /> Suspend…
+                        </button>
+                      )}
+                      {/* lifecycle-gaps B5b — Archive: refused with 409 when anything references the
+                          carrier; the refusal names the references and is rendered below. A bare
+                          registration is archived and its login deactivated. */}
+                      {isAdmin && (
+                        <button onClick={async () => {
+                          setArchiveRefusal(null);
+                          if (!confirm(`Archive ${selectedCarrier.company}? This is refused if the carrier has any loads, tenders, payables, agreements, documents or drivers on record — a carrier with history is suspended instead. A bare registration is archived and its login deactivated.`)) return;
+                          try {
+                            await api.delete(`/carriers/${selectedCarrier.id}`);
+                            queryClient.invalidateQueries({ queryKey: ["carriers"] });
+                            queryClient.invalidateQueries({ queryKey: ["carrier-all"] });
+                            setSelectedCarrierId(null);
+                          } catch (err: unknown) {
+                            const data = (err as { response?: { data?: ArchiveRefusal } })?.response?.data;
+                            setArchiveRefusal(data ?? { error: "ARCHIVE_FAILED", message: "Could not archive the carrier." });
+                          }
+                        }}
+                          className="flex items-center gap-1.5 px-3 py-1.5 bg-white/10 text-gray-400 rounded-lg text-xs hover:bg-white/20 transition">
+                          <Archive className="w-3.5 h-3.5" /> Archive…
+                        </button>
+                      )}
                     </div>
+                    {archiveRefusal && (
+                      <div role="alert" className="mt-3 rounded-lg border border-red-500/40 bg-red-500/10 p-3 text-xs text-red-300 space-y-1">
+                        <p>{archiveRefusal.message ?? archiveRefusal.error ?? "Archive failed."}</p>
+                        {archiveRefusal.remedy?.inFlightLoads && archiveRefusal.remedy.inFlightLoads.length > 0 && (
+                          <p className="text-gray-300">
+                            Release the carrier from: <span className="font-mono">{archiveRefusal.remedy.inFlightLoads.join(", ")}</span>
+                          </p>
+                        )}
+                        {archiveRefusal.remedy?.suspend && canSuspendCarrier && (
+                          <button onClick={() => { setArchiveRefusal(null); setShowSuspend(true); }}
+                            className="mt-1 px-2 py-1 bg-white/10 text-gray-200 rounded hover:bg-white/20 transition">
+                            Suspend instead
+                          </button>
+                        )}
+                      </div>
+                    )}
 
                     {/* Inline Profile Edit */}
                     {editingTab === "profile" && (
@@ -2769,6 +2827,19 @@ export default function CarrierPoolPage() {
           carrierCompany={selectedCarrier.company}
           open={rejectModalOpen}
           onClose={() => setRejectModalOpen(false)}
+        />
+      )}
+      {/* lifecycle-gaps B5b — Suspend modal (reason required). */}
+      {selectedCarrier && showSuspend && (
+        <SuspendCarrierModal
+          carrierId={selectedCarrier.id}
+          carrierName={selectedCarrier.company}
+          onClose={() => setShowSuspend(false)}
+          onDone={() => {
+            setShowSuspend(false);
+            queryClient.invalidateQueries({ queryKey: ["carriers"] });
+            queryClient.invalidateQueries({ queryKey: ["carrier-all"] });
+          }}
         />
       )}
     </div>

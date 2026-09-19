@@ -144,7 +144,8 @@ const TRANSITIONS = [
   },
   {
     status: "SUSPENDED" as const,
-    run: () => suspendCarrier({ params: { carrierId: CARRIER_ID }, user: { id: AE_ID } } as any, makeRes()),
+    // B5b: the reason is required (400 without one), so the fixture sends one.
+    run: () => suspendCarrier({ params: { carrierId: CARRIER_ID }, body: { reason: "Repeated no-shows" }, user: { id: AE_ID } } as any, makeRes()),
   },
 ];
 

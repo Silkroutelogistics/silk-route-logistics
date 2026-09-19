@@ -10,6 +10,8 @@ import {
   // v3.8.asb — Quick Pay pilot, AE side of request-then-approve.
   listQuickPayEnrollments, approveQuickPayEnrollment,
   declineQuickPayEnrollment, withdrawQuickPayEnrollment,
+  // lifecycle-gaps B5b — archive refuses on references; restore reactivates the login.
+  archiveCarrier, restoreCarrier,
 } from "../controllers/carrierController";
 import {
   vetCarrierEndpoint, getVettingReport, runFullVetting,
@@ -967,33 +969,14 @@ router.patch(
 );
 
 // DELETE /api/carriers/:id — Soft delete carrier profile
-router.delete("/:id", authorize("ADMIN", "CEO"), async (req: AuthRequest, res: Response) => {
-  const carrier = await prisma.carrierProfile.findUnique({ where: { id: req.params.id } });
-  if (!carrier || carrier.deletedAt) {
-    res.status(404).json({ error: "Carrier not found" });
-    return;
-  }
-  await prisma.carrierProfile.update({
-    where: { id: carrier.id },
-    data: { deletedAt: new Date(), deletedBy: req.user!.email || req.user!.id },
-  });
-  res.json({ success: true, message: "Carrier archived" });
-});
+// DELETE /api/carriers/:id — lifecycle-gaps B5b. Refuses with 409 when anything
+// references the carrier (the B5a rule); a bare registration is archived and
+// its login deactivated. Rule + divergences: lib/carrierReferences.ts.
+router.delete("/:id", authorize("ADMIN", "CEO"), auditLog("DELETE", "Carrier"), archiveCarrier);
 
-// PUT /api/carriers/:id/restore
+// PUT /api/carriers/:id/restore — undoes an archive, login included.
 // audit-pass1: MISSING-UI — soft-delete restore has no console affordance.
-router.put("/:id/restore", authorize("ADMIN", "CEO"), async (req: AuthRequest, res: Response) => {
-  const carrier = await prisma.carrierProfile.findUnique({ where: { id: req.params.id } });
-  if (!carrier || !carrier.deletedAt) {
-    res.status(404).json({ error: "Archived carrier not found" });
-    return;
-  }
-  await prisma.carrierProfile.update({
-    where: { id: carrier.id },
-    data: { deletedAt: null, deletedBy: null },
-  });
-  res.json({ success: true, message: "Carrier restored" });
-});
+router.put("/:id/restore", authorize("ADMIN", "CEO"), auditLog("UPDATE", "Carrier"), restoreCarrier);
 
 // ─── Carrier Documents ─────────────────────────────────
 
