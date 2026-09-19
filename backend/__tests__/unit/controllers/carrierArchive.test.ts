@@ -9,6 +9,11 @@
  * change; the reason is required and recorded; the login is deactivated in the
  * same transaction and restore undoes it. Suspension still requires a reason.
  *
+ * B6c (2026-09-19): restore is not a rewind. The carrier returns at REVIEWING
+ * whatever it was, the four archive columns are cleared (the lifecycle row
+ * keeps what they said), and the chameleon fingerprint is rebuilt AFTER the
+ * commit — awaited, reported, never fatal to the restore.
+ *
  * The census is mocked here (its own test covers what it reads); what this
  * file proves is what the controller DOES with a census: refuses on the right
  * rows, writes the right things on the tx client, and records the act.
@@ -35,11 +40,16 @@ vi.mock("../../../src/services/waterfallEngineService", () => ({
 vi.mock("../../../src/services/waterfallEventService", () => ({
   logWaterfallEvent: vi.fn().mockResolvedValue(undefined),
 }));
+vi.mock("../../../src/services/chameleonDetectionService", () => ({
+  buildFingerprint: vi.fn().mockResolvedValue(undefined),
+}));
 import { censusCarrierReferences, type CarrierReferenceCensus } from "../../../src/lib/carrierReferences";
 import { closeOpenInfoRequestsForStatus, announceInfoRequestsClosedByStatus } from "../../../src/services/infoRequestService";
 import { settleTenders } from "../../../src/services/tenderTransitionService";
 import { advanceWaterfall } from "../../../src/services/waterfallEngineService";
 import { logWaterfallEvent } from "../../../src/services/waterfallEventService";
+import { buildFingerprint } from "../../../src/services/chameleonDetectionService";
+import { log } from "../../../src/lib/logger";
 import { archiveCarrier, restoreCarrier } from "../../../src/controllers/carrierController";
 import { suspendCarrier } from "../../../src/controllers/complianceController";
 
@@ -50,6 +60,7 @@ const announce = vi.mocked(announceInfoRequestsClosedByStatus);
 const settle = vi.mocked(settleTenders);
 const advance = vi.mocked(advanceWaterfall);
 const logEvent = vi.mocked(logWaterfallEvent);
+const rebuild = vi.mocked(buildFingerprint);
 
 const EMPTY: CarrierReferenceCensus = {
   loads: [], tenders: 0, liveTenders: 0, withdrawableTenderIds: [], holdingTenders: [], bids: 0,
@@ -300,36 +311,111 @@ describe("archiveCarrier", () => {
 });
 
 describe("restoreCarrier", () => {
+  const ARCHIVED = { id: "cp-1", userId: "u-1", deletedAt: new Date("2026-09-01T00:00:00Z"), companyName: "Peace Transport", onboardingStatus: "APPROVED", archiveReason: "CEASED_OPERATIONS" };
+  const RESTORE_DATA = { deletedAt: null, deletedBy: null, archiveReason: null, archiveNote: null, onboardingStatus: "REVIEWING", status: "REVIEW" };
+
   beforeEach(() => {
     vi.clearAllMocks();
     mockPrisma.$transaction.mockImplementation(async (ops: any) => (typeof ops === "function" ? ops(mockPrisma) : Promise.all(ops)));
     mockPrisma.carrierProfile.update.mockResolvedValue({});
     mockPrisma.user.update.mockResolvedValue({});
+    rebuild.mockReset();
+    rebuild.mockResolvedValue(undefined);
   });
 
   it("undoes both halves of the archive: the row and the login", async () => {
-    mockPrisma.carrierProfile.findUnique.mockResolvedValue({ id: "cp-1", userId: "u-1", deletedAt: new Date(), companyName: "Peace Transport" });
+    mockPrisma.carrierProfile.findUnique.mockResolvedValue(ARCHIVED);
     const { res, run } = call(restoreCarrier, { id: "cp-1" });
     await run();
-    expect(mockPrisma.carrierProfile.update).toHaveBeenCalledWith({ where: { id: "cp-1" }, data: { deletedAt: null, deletedBy: null } });
+    expect(mockPrisma.carrierProfile.update).toHaveBeenCalledWith({ where: { id: "cp-1" }, data: RESTORE_DATA });
     expect(mockPrisma.user.update).toHaveBeenCalledWith({ where: { id: "u-1" }, data: { isActive: true } });
-    expect(res.json.mock.calls[0][0]).toMatchObject({ details: { restored: true, loginReactivated: true } });
-    // B6b (#24) — the restore is a lifecycle act too.
+    expect(res.status).not.toHaveBeenCalled();
+    expect(res.json.mock.calls[0][0]).toMatchObject({
+      details: { restored: true, loginReactivated: true, onboardingStatus: "REVIEWING", fingerprintRebuilt: true },
+    });
+    // B6b (#24) — the restore is a lifecycle act too; B6c — it says what it did.
     expect(mockPrisma.auditTrail.create).toHaveBeenCalledTimes(1);
     const row = mockPrisma.auditTrail.create.mock.calls[0][0].data;
     expect(row).toEqual(expect.objectContaining({ action: "STATUS_CHANGE", entityType: "CarrierProfile", entityId: "cp-1", performedById: "ae-1" }));
     expect(row.changedFields.actionDetail).toBe("CARRIER_RESTORED");
     expect(row.changedFields.entityName).toBe("Peace Transport");
-    expect(typeof row.changedFields.previous.deletedAt).toBe("string");
-    expect(row.changedFields.new).toEqual({ deletedAt: null, loginActive: true });
+    expect(row.changedFields.previous).toEqual({
+      deletedAt: "2026-09-01T00:00:00.000Z", loginActive: false, onboardingStatus: "APPROVED", archiveReason: "CEASED_OPERATIONS",
+    });
+    expect(row.changedFields.new).toEqual({ deletedAt: null, loginActive: true, onboardingStatus: "REVIEWING", fingerprintRebuilt: true });
   });
 
-  it("404 when the carrier is not archived", async () => {
-    mockPrisma.carrierProfile.findUnique.mockResolvedValue({ id: "cp-1", userId: "u-1", deletedAt: null });
+  it.each(["APPROVED", "SUSPENDED", "REJECTED", "PENDING"])(
+    "comes back at REVIEWING whatever it was before (%s) — restore is not a rewind",
+    async (was) => {
+      mockPrisma.carrierProfile.findUnique.mockResolvedValue({ ...ARCHIVED, onboardingStatus: was });
+      const { run } = call(restoreCarrier, { id: "cp-1" });
+      await run();
+      const data = mockPrisma.carrierProfile.update.mock.calls[0][0].data;
+      expect(data.onboardingStatus).toBe("REVIEWING");
+      // and the row remembers what it was, so the rewind is recoverable by a human
+      const row = mockPrisma.auditTrail.create.mock.calls[0][0].data;
+      expect(row.changedFields.previous.onboardingStatus).toBe(was);
+    },
+  );
+
+  it("clears all four archive columns; the lifecycle row keeps what they said", async () => {
+    mockPrisma.carrierProfile.findUnique.mockResolvedValue({ ...ARCHIVED, archiveReason: "FRAUD_CONFIRMED" });
+    const { run } = call(restoreCarrier, { id: "cp-1" });
+    await run();
+    const data = mockPrisma.carrierProfile.update.mock.calls[0][0].data;
+    expect(data).toEqual(expect.objectContaining({ deletedAt: null, deletedBy: null, archiveReason: null, archiveNote: null }));
+    const row = mockPrisma.auditTrail.create.mock.calls[0][0].data;
+    expect(row.changedFields.previous.archiveReason).toBe("FRAUD_CONFIRMED");
+  });
+
+  it("rebuilds the fingerprint from the restored row AFTER the transaction has committed, and before the record is written", async () => {
+    // The commit resolves on a macrotask so a missing `await` on the transaction
+    // (an un-awaited transaction + a microtask-resolved import) would reach the
+    // rebuild first and be caught here, not merely be out of invocation order.
+    let committed = false;
+    mockPrisma.$transaction.mockImplementation(async (ops: any) => {
+      await new Promise((r) => setTimeout(r, 0));
+      const out = await Promise.all(ops);
+      committed = true;
+      return out;
+    });
+    let committedWhenRebuilt: boolean | null = null;
+    rebuild.mockImplementation(async () => { committedWhenRebuilt = committed; });
+    mockPrisma.carrierProfile.findUnique.mockResolvedValue(ARCHIVED);
+    const { run } = call(restoreCarrier, { id: "cp-1" });
+    await run();
+    expect(rebuild).toHaveBeenCalledTimes(1);
+    expect(rebuild).toHaveBeenCalledWith("cp-1");
+    expect(committedWhenRebuilt).toBe(true);
+    expect(rebuild.mock.invocationCallOrder[0]).toBeLessThan(mockPrisma.auditTrail.create.mock.invocationCallOrder[0]);
+  });
+
+  it("a fingerprint failure is logged and reported, never a 500 — the restore has already committed", async () => {
+    const err = vi.spyOn(log, "error").mockImplementation((() => {}) as any);
+    rebuild.mockRejectedValue(new Error("Carrier not found"));
+    mockPrisma.carrierProfile.findUnique.mockResolvedValue(ARCHIVED);
+    const { res, run } = call(restoreCarrier, { id: "cp-1" });
+    await run();
+    expect(res.status).not.toHaveBeenCalled();
+    expect(mockPrisma.user.update).toHaveBeenCalledWith({ where: { id: "u-1" }, data: { isActive: true } });
+    expect(res.json.mock.calls[0][0]).toMatchObject({ details: { restored: true, loginReactivated: true, onboardingStatus: "REVIEWING", fingerprintRebuilt: false } });
+    const row = mockPrisma.auditTrail.create.mock.calls[0][0].data;
+    expect(row.changedFields.new.fingerprintRebuilt).toBe(false);
+    expect(err).toHaveBeenCalledTimes(1);
+    expect(err.mock.calls[0][0]).toMatchObject({ carrierId: "cp-1" });
+    expect(String(err.mock.calls[0][1])).toMatch(/fingerprint/i);
+    err.mockRestore();
+  });
+
+  it("404 when the carrier is not archived — nothing written, nothing rebuilt", async () => {
+    mockPrisma.carrierProfile.findUnique.mockResolvedValue({ ...ARCHIVED, deletedAt: null });
     const { res, run } = call(restoreCarrier, { id: "cp-1" });
     await run();
     expect(res.status).toHaveBeenCalledWith(404);
     expect(mockPrisma.$transaction).not.toHaveBeenCalled();
+    expect(rebuild).not.toHaveBeenCalled();
+    expect(mockPrisma.auditTrail.create).not.toHaveBeenCalled();
   });
 });
 

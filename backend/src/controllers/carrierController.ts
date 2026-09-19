@@ -2836,29 +2836,67 @@ export async function archiveCarrier(req: AuthRequest, res: Response) {
 export async function restoreCarrier(req: AuthRequest, res: Response) {
   const carrier = await prisma.carrierProfile.findUnique({
     where: { id: req.params.id },
-    select: { id: true, userId: true, deletedAt: true, companyName: true },
+    select: { id: true, userId: true, deletedAt: true, companyName: true, onboardingStatus: true, archiveReason: true },
   });
   if (!carrier || !carrier.deletedAt) {
     res.status(404).json({ error: "Archived carrier not found" });
     return;
   }
+
+  // Carrier-archive recut B6c (2026-09-19) — restore is not a rewind. The
+  // carrier comes back at REVIEWING whatever it was before: its insurance,
+  // authority and standing have aged unwatched for the whole archive, and the
+  // reason it was archived (FRAUD_CONFIRMED is one of seven) is exactly the kind
+  // of thing a human looks at before the platform may tender to it again. The
+  // four archive columns are cleared because they describe a state the row is
+  // no longer in; the lifecycle row below keeps what they said.
+  const previousStatus = carrier.onboardingStatus;
   await prisma.$transaction([
-    prisma.carrierProfile.update({ where: { id: carrier.id }, data: { deletedAt: null, deletedBy: null } }),
+    prisma.carrierProfile.update({
+      where: { id: carrier.id },
+      data: {
+        deletedAt: null, deletedBy: null, archiveReason: null, archiveNote: null,
+        onboardingStatus: "REVIEWING",
+        // the application-pipeline mirror moves with it (Item 194 D1; the
+        // pairing guard fails the writer that leaves it stale)
+        status: pairedApplicationStatus("REVIEWING") ?? undefined,
+      },
+    }),
     prisma.user.update({ where: { id: carrier.userId }, data: { isActive: true } }),
   ]);
 
+  // The chameleon fingerprint is rebuilt from the row as it stands NOW, after
+  // the commit, so a restored carrier re-enters matching with a hash of its
+  // current identity rather than the one it was archived under (§13.3 Item
+  // 272: a stale hash goes live the moment the carrier is back in scope).
+  // Awaited, because "restored with a fresh fingerprint" is the property the
+  // response claims; never fatal, because the restore has already committed
+  // and a fingerprint failure must not turn a live carrier into a 500.
+  let fingerprintRebuilt = false;
+  try {
+    const { buildFingerprint } = await import("../services/chameleonDetectionService");
+    await buildFingerprint(carrier.id);
+    fingerprintRebuilt = true;
+  } catch (e) {
+    log.error({ err: e, carrierId: carrier.id }, "[Carrier restore] fingerprint rebuild failed — carrier restored without one");
+  }
+
   // B6b (finding #24) — the lifecycle record: the profile came back and the
-  // login with it.
+  // login with it; B6c — and what it came back as, and whether its fingerprint did.
   await recordLifecycleEvent({
     actionDetail: "CARRIER_RESTORED",
     entityType: "CarrierProfile",
     entityId: carrier.id,
     entityName: carrier.companyName,
-    previous: { deletedAt: carrier.deletedAt.toISOString(), loginActive: false },
-    new: { deletedAt: null, loginActive: true },
+    previous: { deletedAt: carrier.deletedAt.toISOString(), loginActive: false, onboardingStatus: previousStatus, archiveReason: carrier.archiveReason },
+    new: { deletedAt: null, loginActive: true, onboardingStatus: "REVIEWING", fingerprintRebuilt },
     actor: { userId: req.user!.id, email: req.user!.email },
     req,
   });
 
-  res.json({ success: true, message: "Carrier restored", details: { restored: true, loginReactivated: true } });
+  res.json({
+    success: true,
+    message: "Carrier restored",
+    details: { restored: true, loginReactivated: true, onboardingStatus: "REVIEWING", fingerprintRebuilt },
+  });
 }

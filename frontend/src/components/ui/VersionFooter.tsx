@@ -18235,7 +18235,12 @@
 // v3.8.alm census that fenced 37 sites never reached it, so a PLATINUM test account was eligible for a production cascade; it and the recommendations
 // endpoint now carry isTestAccount: false too. A census test enumerates every carrierProfile.findMany in the backend and refuses to pass while one
 // is unclassified, so the eighth picker cannot arrive unfenced.
-export const SRL_VERSION = "3.8.bdt";
+// v3.8.bdu — carrier-archive recut B6c: restoring an archived carrier is not a rewind. The carrier returns at REVIEWING whatever it was before,
+// with its application-pipeline mirror moved to REVIEW in the same write, because its insurance, authority and standing aged unwatched for the whole
+// archive and the reason it was archived is what a human reads before the platform may tender to it again. The four archive columns are cleared
+// (the lifecycle row keeps what they said) and the chameleon fingerprint is rebuilt from the row as it stands after the commit — awaited, reported
+// as fingerprintRebuilt, and never fatal to a restore that has already committed. The page's restore control is B4b and does not exist yet.
+export const SRL_VERSION = "3.8.bdu";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
