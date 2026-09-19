@@ -18202,7 +18202,11 @@
 // blocks (DELIVERED-pre-POD included); six offer classes withdraw in-transaction; payables and disputes neither block nor change.
 // Versioned under the peer's reserved letter by instruction (§3.1 would ship tooling + docs unversioned; the letter is what lets
 // the recut chain run continuous from bdo).
-export const SRL_VERSION = "3.8.bdn";
+// v3.8.bdo — carrier-archive recut C1: CarrierArchiveReason, the two columns, and the validator that cannot drift from them (B1a lifted onto main)
+// enum CarrierArchiveReason (seven ratified members) + CarrierProfile.archiveReason/archiveNote, nullable, beside deletedAt/deletedBy;
+// migration 20260919151559_carrier_archive_reason (one CREATE TYPE, two ADD COLUMN, additive, no backfill); archiveCarrierSchema with
+// z.nativeEnum over the Prisma enum so the validator and the column cannot disagree. Nothing writes the columns yet — C3 does.
+export const SRL_VERSION = "3.8.bdo";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
