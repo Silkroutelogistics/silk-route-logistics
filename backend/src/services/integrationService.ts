@@ -8,6 +8,7 @@ import { checkMilestoneAdvancement, applyMilestoneRewards, getEffectiveTier, get
 import { calcOnTimePerformance } from "../lib/onTimePerformance";
 import { calcDocTimeliness } from "../lib/docTimeliness";
 import { resolveTrackingFactor, persistedTrackingPct } from "../lib/trackingFactor";
+import { summarizeTenders } from "../lib/tenderScoring";
 import { log } from "../lib/logger";
 import { resolveTonuBilling } from "../lib/tonuPolicy";
 import { raiseTonuCustomerCharge } from "./invoiceService";
@@ -1503,8 +1504,14 @@ export async function recalculateCarrierCPP(carrierProfileId: string): Promise<R
   });
   // Same `|| 1` defect as communication: a carrier who has never been tendered
   // anything scored 0% acceptance, which §9 weights at 10% of the composite.
-  const acceptedTenders = tenders.filter((t) => t.status === "ACCEPTED").length;
-  const acceptanceRate = tenders.length > 0 ? (acceptedTenders / tenders.length) * 100 : null;
+  //
+  // B3a — the rule lives in lib/tenderScoring and this is the PERSISTED
+  // surface, so it is the one that must not drift. Before: counted ACCEPTED
+  // alone (a carrier who accepted and signed, RC_SENT/CONFIRMED, scored as
+  // not-accepted) over ALL tenders (an offer SRL withdrew counted against the
+  // carrier, which carrierController had stopped doing in v3.8.awx). Null when
+  // nothing was judged, as before.
+  const acceptanceRate = summarizeTenders(tenders).acceptanceRate;
 
   // Tracking compliance: measured when a location source exists, otherwise
   // NULL and excluded from the composite. The Build F rule (2026-05-30) scored

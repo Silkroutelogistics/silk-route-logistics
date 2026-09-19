@@ -77,6 +77,38 @@ function emptyWorld() {
 
 const written = () => p.carrierScorecard.create.mock.calls[0][0].data;
 
+describe("recalculateCarrierCPP — the persisted acceptance rate reads lib/tenderScoring (B3a, #6 #7)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    p.carrierProfile.findUnique.mockResolvedValue(profile());
+    emptyWorld();
+  });
+
+  it("#6: two SRL withdrawals beside one acceptance persist 100, not 33.33", async () => {
+    p.loadTender.findMany.mockResolvedValue([{ status: "ACCEPTED" }, { status: "WITHDRAWN" }, { status: "WITHDRAWN" }]);
+    await recalculateCarrierCPP("cp_1");
+    expect(written().acceptanceRate).toBe(100);
+  });
+
+  it("#7: a carrier who accepted and signed — RC_SENT and CONFIRMED — persists as accepted, not 0", async () => {
+    p.loadTender.findMany.mockResolvedValue([{ status: "RC_SENT" }, { status: "CONFIRMED" }]);
+    await recalculateCarrierCPP("cp_1");
+    expect(written().acceptanceRate).toBe(100);
+  });
+
+  it("EXPIRED still counts against the carrier: one accept and one lapse persist 50", async () => {
+    p.loadTender.findMany.mockResolvedValue([{ status: "CONFIRMED" }, { status: "EXPIRED" }]);
+    await recalculateCarrierCPP("cp_1");
+    expect(written().acceptanceRate).toBe(50);
+  });
+
+  it("nothing judged (only withdrawals) persists the 0 sentinel, same as no tenders at all", async () => {
+    p.loadTender.findMany.mockResolvedValue([{ status: "WITHDRAWN" }]);
+    await recalculateCarrierCPP("cp_1");
+    expect(written().acceptanceRate).toBe(0);
+  });
+});
+
 describe("recalculateCarrierCPP writes on every run", () => {
   beforeEach(() => {
     vi.clearAllMocks();

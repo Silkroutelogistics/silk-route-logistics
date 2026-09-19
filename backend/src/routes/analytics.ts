@@ -1,4 +1,5 @@
 import { Router, Response } from "express";
+import { summarizeTenders, isAcceptedTender } from "../lib/tenderScoring";
 import { authenticate, authorize, AuthRequest } from "../middleware/auth";
 import * as ctrl from "../controllers/analyticsController";
 import { getTopLanes, getLaneDetail, getLaneHeatmap, getMarginAnalysis } from "../services/laneAnalyticsService";
@@ -397,24 +398,16 @@ router.get("/tender-funnel", authorize("ADMIN", "CEO", "BROKER", "OPERATIONS") a
       orderBy: { createdAt: "desc" },
     });
 
-    const total = tenders.length;
-    const by = (s: string) => tenders.filter((t) => t.status === s).length;
-    const accepted = by("ACCEPTED");
-    const declined = by("DECLINED");
-    const countered = by("COUNTERED");
-    const expired = by("EXPIRED");
-    const pending = by("OFFERED");
-    // v3.8.awx — WITHDRAWN must appear here or the funnel silently loses rows.
-    // Before v3.8.aww these were counted as `declined`; now they are their own
-    // status, and without this line they would fall into no bucket at all and
-    // the parts would stop summing to `total`.
-    const withdrawn = by("WITHDRAWN");
-    const responded = accepted + declined + countered;
-    // Offers the carrier could actually act on. A withdrawn offer was pulled
-    // back by SRL and never gave anyone the chance to respond, so counting it
-    // understates both rates below — it measures our dispatch churn as if it
-    // were carrier behaviour.
-    const actionable = total - withdrawn;
+    // B3a — one classification for every surface (lib/tenderScoring). The
+    // v3.8.awx fix added WITHDRAWN so the parts summed to total again; then
+    // v3.8.axt/axu added RC_SENT and CONFIRMED and the parts stopped summing a
+    // second time, because `accepted` counted ACCEPTED alone and the signed
+    // ones fell into no bucket. The helper partitions the enum, so the funnel
+    // sums by construction; acceptedByStage keeps the paperwork stages visible.
+    const summary = summarizeTenders(tenders);
+    const { total, accepted, declined, countered, expired, pending, withdrawn, responded } = summary;
+    // Offers the carrier could actually act on (judged = total − withdrawn).
+    const actionable = summary.judged;
 
     // Response time (minutes) for tenders that got a response.
     const respTimes = tenders
@@ -440,7 +433,7 @@ router.get("/tender-funnel", authorize("ADMIN", "CEO", "BROKER", "OPERATIONS") a
         const k = keyFn(t) || "Unknown";
         if (!m[k]) m[k] = { key: k, total: 0, accepted: 0, declined: 0, expired: 0, acceptanceRate: 0 };
         m[k].total++;
-        if (t.status === "ACCEPTED") m[k].accepted++;
+        if (isAcceptedTender(t.status)) m[k].accepted++;
         else if (t.status === "DECLINED") m[k].declined++;
         else if (t.status === "EXPIRED") m[k].expired++;
       });
@@ -460,14 +453,12 @@ router.get("/tender-funnel", authorize("ADMIN", "CEO", "BROKER", "OPERATIONS") a
 
     res.json({
       periodDays: days,
-      funnel: { total, accepted, declined, countered, expired, pending, withdrawn, responded },
+      funnel: { total, accepted, declined, countered, expired, pending, withdrawn, responded, acceptedByStage: summary.acceptedByStage },
       conversion: {
         // Denominators are `actionable`, not `total`: an offer SRL withdrew was
         // never a chance to convert, and leaving it in understates both rates.
-        // acceptanceRateOfResponded already excluded withdrawals implicitly,
-        // since `responded` only counts carriers who actually answered.
-        acceptanceRateOfTotal: actionable ? Math.round((accepted / actionable) * 100) : 0,
-        acceptanceRateOfResponded: responded ? Math.round((accepted / responded) * 100) : 0,
+        acceptanceRateOfTotal: summary.acceptanceRate === null ? 0 : Math.round(summary.acceptanceRate),
+        acceptanceRateOfResponded: summary.acceptanceRateOfResponded === null ? 0 : Math.round(summary.acceptanceRateOfResponded),
         responseRate: actionable ? Math.round((responded / actionable) * 100) : 0,
       },
       avgResponseMinutes,

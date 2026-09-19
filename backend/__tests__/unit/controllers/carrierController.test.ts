@@ -125,7 +125,13 @@ describe("carrierController", () => {
         onboardingStatus: "APPROVED",
         user: { id: "carrier-1", firstName: "John", lastName: "Doe", email: "john@test.com", company: "Test Trucking", phone: "555-1234" },
         scorecards: [],
-        tenders: [],
+        // B3a — the audit's two cases in one fixture: a signed acceptance
+        // (CONFIRMED) and two SRL withdrawals. Before B3a this surface read
+        // CONFIRMED as not-accepted (0%); before v3.8.awx it would have read
+        // the withdrawals against the carrier (33%). The number the AE sees
+        // must be 100. (This case previously passed `tenders: []` and never
+        // read the rate — a vacuous assertion the audit listed at A8.)
+        tenders: [{ status: "CONFIRMED" }, { status: "WITHDRAWN" }, { status: "WITHDRAWN" }],
         createdAt: new Date(),
       },
     ] as any);
@@ -139,7 +145,14 @@ describe("carrierController", () => {
     expect(res.json).toHaveBeenCalledWith(
       expect.objectContaining({
         carriers: expect.arrayContaining([
-          expect.objectContaining({ company: "Test Trucking", tier: "SILVER" }),
+          expect.objectContaining({
+            company: "Test Trucking",
+            tier: "SILVER",
+            tendersAccepted: 1,
+            tendersWithdrawn: 2,
+            tendersTotal: 3,
+            acceptanceRate: 100,
+          }),
         ]),
         total: 1,
       })

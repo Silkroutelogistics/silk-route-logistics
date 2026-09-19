@@ -1,4 +1,5 @@
 import { queueDocumentIntake } from "../services/documentIntakeService";
+import { summarizeTenders } from "../lib/tenderScoring";
 import { Request, Response } from "express";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
@@ -1707,23 +1708,16 @@ export async function getAllCarriers(req: AuthRequest, res: Response) {
         _sum: { amount: true },
       });
       const latestScorecard = c.scorecards[0] || null;
-      const tendersAccepted = c.tenders.filter((t) => t.status === "ACCEPTED").length;
-      const tendersDeclined = c.tenders.filter((t) => t.status === "DECLINED").length;
-      // v3.8.awx — WITHDRAWN is excluded from the denominator, and this is the
-      // half of the fix that actually moves the number.
-      //
-      // v3.8.aww stopped SRL writing DECLINED on carriers who lost a race, but
-      // the rate below was `accepted / c.tenders.length`, so a withdrawn offer
-      // still counted against the carrier — just under a different name. A
-      // carrier offered three loads who wins one and loses two still read 33%.
-      //
-      // An offer SRL pulled back was never a chance the carrier had. Judging
-      // them on it measures our dispatch, not their behaviour. EXPIRED stays in
-      // deliberately: the carrier was given the offer and the window, and
-      // letting it lapse is a response.
-      const tendersWithdrawn = c.tenders.filter((t) => t.status === "WITHDRAWN").length;
-      const tendersTotal = c.tenders.length;
-      const tendersJudged = tendersTotal - tendersWithdrawn;
+      // v3.8.awx excluded WITHDRAWN from the denominator here (an offer SRL
+      // pulled back was never a chance the carrier had). B3a moves that rule,
+      // and the accepted class, into lib/tenderScoring so this surface and the
+      // persisted Compass factor cannot disagree again: a carrier who accepted
+      // and signed (RC_SENT / CONFIRMED) is accepted here too.
+      const tenderSummary = summarizeTenders(c.tenders);
+      const tendersAccepted = tenderSummary.accepted;
+      const tendersDeclined = tenderSummary.declined;
+      const tendersWithdrawn = tenderSummary.withdrawn;
+      const tendersTotal = tenderSummary.total;
 
       return {
         id: c.id,
@@ -1782,9 +1776,10 @@ export async function getAllCarriers(req: AuthRequest, res: Response) {
         tendersDeclined,
         tendersWithdrawn,
         tendersTotal,
-        // Denominator is offers the carrier could actually act on. See the
-        // tendersJudged derivation above for why withdrawals are excluded.
-        acceptanceRate: tendersJudged > 0 ? Math.round((tendersAccepted / tendersJudged) * 100) : 0,
+        // Denominator is offers the carrier could actually act on (judged =
+        // total − withdrawn). 0 when nothing was judged — the API shape this
+        // surface has always returned; the persisted factor is null there.
+        acceptanceRate: tenderSummary.acceptanceRate === null ? 0 : Math.round(tenderSummary.acceptanceRate),
         performance: latestScorecard
           ? {
               overallScore: latestScorecard.overallScore,
