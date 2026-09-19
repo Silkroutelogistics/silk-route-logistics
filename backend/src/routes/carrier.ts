@@ -455,7 +455,8 @@ router.get("/capacity-feed", authorize("ADMIN", "CEO", "BROKER", "DISPATCH", "OP
       // v3.8.aim Build 1 test-carrier load-assignment fence: capacity-feed
       // surfaces carrier availability posts to AE/Broker/Dispatch/Operations
       // for active load matching. Test carriers must not appear in the feed.
-      where: { preferredLanes: { not: undefined }, isTestAccount: false },
+      // Carrier-archive B6a: an archived carrier has no capacity to offer.
+      where: { preferredLanes: { not: undefined }, isTestAccount: false, deletedAt: null },
       select: {
         userId: true, companyName: true, mcNumber: true, equipmentTypes: true,
         operatingRegions: true, preferredLanes: true, activeLoadCount: true,

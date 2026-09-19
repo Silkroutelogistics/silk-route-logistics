@@ -18229,7 +18229,13 @@
 // would change the carrier — including the Suspend… and Archive… buttons main added after B4a was cut — is disabled through one helper with a
 // title that says why. The header keeps describing the pool as it stands: showing archived rows changes the list, never the in-network count or
 // the stat cards. Walked by eye in both modes on a seeded stack, which is what found the header counting archived rows in the first place.
-export const SRL_VERSION = "3.8.bds";
+// v3.8.bdt — carrier-archive recut B6a: every list picker fences archived carriers. Seven carrierProfile.findMany sites offer, place, recommend or
+// reach out to carriers; three already carried deletedAt: null (the AE list, smart match, the bench board) and four did not — the auto-dispatch pool,
+// the capacity feed, proactive outreach, and the AI recommendations endpoint. All seven now do. The auto-dispatch pool also fenced no test carrier: the
+// v3.8.alm census that fenced 37 sites never reached it, so a PLATINUM test account was eligible for a production cascade; it and the recommendations
+// endpoint now carry isTestAccount: false too. A census test enumerates every carrierProfile.findMany in the backend and refuses to pass while one
+// is unclassified, so the eighth picker cannot arrive unfenced.
+export const SRL_VERSION = "3.8.bdt";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
