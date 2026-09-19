@@ -109,6 +109,38 @@ describe("recalculateCarrierCPP — the persisted acceptance rate reads lib/tend
   });
 });
 
+describe("recalculateCarrierCPP — the persisted communication score reads lib/communicationScoring (B3b, #8)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    p.carrierProfile.findUnique.mockResolvedValue(profile());
+    emptyWorld();
+  });
+
+  it("#8: a cancelled load's calls (CANCELLED) leave the denominator — one answered beside two cancelled persists 100, not 33", async () => {
+    p.checkCallSchedule.findMany.mockResolvedValue([{ status: "RESPONDED" }, { status: "CANCELLED" }, { status: "CANCELLED" }]);
+    await recalculateCarrierCPP("cp_1");
+    expect(written().communicationScore).toBe(100);
+  });
+
+  it("calls not yet due (PENDING) and calls inside their window (SENT) are not held against the carrier", async () => {
+    p.checkCallSchedule.findMany.mockResolvedValue([{ status: "RESPONDED" }, { status: "PENDING" }, { status: "PENDING" }, { status: "SENT" }]);
+    await recalculateCarrierCPP("cp_1");
+    expect(written().communicationScore).toBe(100);
+  });
+
+  it("a second miss (ESCALATED) still costs: one answered, one escalated persists 50", async () => {
+    p.checkCallSchedule.findMany.mockResolvedValue([{ status: "RESPONDED" }, { status: "ESCALATED" }]);
+    await recalculateCarrierCPP("cp_1");
+    expect(written().communicationScore).toBe(50);
+  });
+
+  it("nothing judged (only cancelled and pending) persists the 0 sentinel, same as no calls at all", async () => {
+    p.checkCallSchedule.findMany.mockResolvedValue([{ status: "CANCELLED" }, { status: "PENDING" }]);
+    await recalculateCarrierCPP("cp_1");
+    expect(written().communicationScore).toBe(0);
+  });
+});
+
 describe("recalculateCarrierCPP writes on every run", () => {
   beforeEach(() => {
     vi.clearAllMocks();

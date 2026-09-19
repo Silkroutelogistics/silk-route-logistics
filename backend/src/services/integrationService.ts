@@ -9,6 +9,7 @@ import { calcOnTimePerformance } from "../lib/onTimePerformance";
 import { calcDocTimeliness } from "../lib/docTimeliness";
 import { resolveTrackingFactor, persistedTrackingPct } from "../lib/trackingFactor";
 import { summarizeTenders } from "../lib/tenderScoring";
+import { summarizeCheckCalls } from "../lib/communicationScoring";
 import { log } from "../lib/logger";
 import { resolveTonuBilling } from "../lib/tonuPolicy";
 import { raiseTonuCustomerCharge } from "./invoiceService";
@@ -1455,8 +1456,12 @@ export async function recalculateCarrierCPP(carrierProfileId: string): Promise<R
   });
   // The `|| 1` this replaced turned "no check calls at all" into 0/1 = 0%,
   // scoring a carrier nobody had ever called as having answered nothing.
-  const respondedChecks = checkCalls.filter((c) => c.status === "RESPONDED").length;
-  const communicationScore = checkCalls.length > 0 ? (respondedChecks / checkCalls.length) * 100 : null;
+  //
+  // B3b — the rule lives in lib/communicationScoring. Before: RESPONDED over
+  // EVERY schedule, so a load the shipper cancelled left its PENDING/SENT
+  // calls flipped to CANCELLED and counted as unanswered (#8), and calls not
+  // yet due counted the same way. Only closed outcomes are judged now.
+  const communicationScore = summarizeCheckCalls(checkCalls).score;
 
   // Claim ratio
   const claims = await prisma.paymentDispute.count({
