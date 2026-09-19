@@ -18206,7 +18206,11 @@
 // enum CarrierArchiveReason (seven ratified members) + CarrierProfile.archiveReason/archiveNote, nullable, beside deletedAt/deletedBy;
 // migration 20260919151559_carrier_archive_reason (one CREATE TYPE, two ADD COLUMN, additive, no backfill); archiveCarrierSchema with
 // z.nativeEnum over the Prisma enum so the validator and the column cannot disagree. Nothing writes the columns yet — C3 does.
-export const SRL_VERSION = "3.8.bdo";
+// v3.8.bdp — carrier-archive recut C2: the archive guard — the reason contract (422 { error, code }) and the in-flight vocabulary, derived from the state machine
+// lib/carrierArchiveGuard.ts (B1b lifted minus its own census): assessArchiveInput, PRE_POD_STATUSES (DELIVERED-pre-POD is in flight — the ruling),
+// isInFlightStatus, BINDING_TENDER_STATES = LIVE ∪ HOLDS_LOAD, the withdraw reason. Pure — no prisma import, no write, and a structural test that
+// keeps it so and forbids any hand list of pipeline statuses. C3 reads it from the census.
+export const SRL_VERSION = "3.8.bdp";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
