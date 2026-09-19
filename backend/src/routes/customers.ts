@@ -47,8 +47,8 @@ router.patch("/bulk-stage", authorize("ADMIN", "CEO", "BROKER"), bulkUpdateStage
 router.post("/:id/mark-not-interested", markNotInterested);
 router.post("/:id/approve", authorize("ADMIN", "CEO"), approveCustomer);
 router.post("/:id/send-portal-invite", authorize("ADMIN", "CEO"), sendPortalInvite);
-router.post("/:id/inactivate", authorize("ADMIN", "CEO"), validateBody(z.object({ reason: z.string().min(5).max(500) })), inactivateCustomer);
-router.post("/:id/reactivate", authorize("ADMIN", "CEO"), reactivateCustomer);
+router.post("/:id/inactivate", authorize("ADMIN", "CEO", "OPERATIONS"), validateBody(z.object({ reason: z.string().min(5).max(500) })), inactivateCustomer);
+router.post("/:id/reactivate", authorize("ADMIN", "CEO", "OPERATIONS"), reactivateCustomer);
 router.patch("/:id", validateBody(updateCustomerSchema), updateCustomer);
 router.delete("/:id", authorize("ADMIN", "CEO", "BROKER"), deleteCustomer);
 // audit-pass1: MISSING-UI — soft-delete restore has no console affordance.

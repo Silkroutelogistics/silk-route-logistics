@@ -9,9 +9,8 @@ import { VALID_PIPELINE_STATUSES } from "../../../shared/constants/pipelineStatu
 import { markProspectNotInterested } from "../services/prospectStatusService";
 import { logCustomerActivity } from "../services/customerActivityService";
 import { caseInsensitiveEmailFilter } from "../lib/emailNormalization";
-import { validateLoadStatusTransition } from "../lib/loadStateMachine";
+import { censusCustomerReferences, describeReferences, referenceTotal } from "../lib/customerReferences";
 import { log } from "../lib/logger";
-import { LoadStatus } from "@prisma/client";
 
 // Required-checks gate for customer onboarding approval. Each entry is
 // surfaced inline by the AE Console approve UI when a 422 fires.
@@ -734,137 +733,46 @@ export async function markManuallyReviewed(req: AuthRequest, res: Response) {
 export async function deleteCustomer(req: AuthRequest, res: Response) {
   const customer = await prisma.customer.findUnique({
     where: { id: req.params.id },
-    include: { user: { select: { id: true, email: true } } },
+    select: { id: true, name: true, deletedAt: true },
   });
   if (!customer || customer.deletedAt) {
     res.status(404).json({ error: "Customer not found" });
     return;
   }
 
-  const now = new Date();
+  // B5a (decision 4, 2026-09-18): no delete-time cascade. A customer is deleted
+  // only when nothing references it; otherwise the references are NAMED and the
+  // AE acts on each one — cancel an open load with a reason code, stop a
+  // sequence — or inactivates the customer, which is the end state for anything
+  // with history. Read the rule in lib/customerReferences.ts.
+  const references = await censusCustomerReferences(customer.id);
+  const total = referenceTotal(references);
+  if (total > 0) {
+    const openLoads = references.loads.filter((l) => l.cancellable).map((l) => l.referenceNumber);
+    res.status(409).json({
+      error: "CUSTOMER_HAS_REFERENCES",
+      message:
+        `${customer.name} cannot be deleted: ${describeReferences(references)}. ` +
+        `A customer with history is inactivated, not deleted.`,
+      references: { ...references, total },
+      remedy: {
+        openLoads,
+        cancelOpenLoadsFirst: openLoads.length > 0
+          ? `Cancel ${openLoads.length === 1 ? "this load" : "these loads"} individually, each with a reason code, before inactivating.`
+          : null,
+        inactivate: `POST /customers/${customer.id}/inactivate`,
+        stopSequencesFirst: references.activeSequences > 0,
+      },
+    });
+    return;
+  }
+
+  // Nothing references it: a bare row. The FK cascade takes what it owns
+  // (credit, intelligence, notes, activity, order templates) — there is no
+  // history to keep and nothing to restore.
+  await prisma.customer.delete({ where: { id: customer.id } });
+
   const deletedBy = req.user!.email || req.user!.id;
-
-  // 1. Soft-delete the customer
-  await prisma.customer.update({
-    where: { id: customer.id },
-    data: { deletedAt: now, deletedBy },
-  });
-
-  // 2. Cancel active loads for this customer (POSTED, TENDERED, BOOKED, DISPATCHED)
-  const activeLoads = await prisma.load.findMany({
-    where: {
-      customerId: customer.id,
-      status: { in: ["POSTED", "TENDERED", "BOOKED", "DISPATCHED"] },
-      deletedAt: null,
-    },
-    select: { id: true, referenceNumber: true, carrierId: true, status: true },
-  });
-
-  for (const load of activeLoads) {
-    // v3.8.ake Item 159 Sprint 3 — Validate CANCELLED transition per
-    // load. Upstream WHERE clause already filtered to {POSTED, TENDERED,
-    // BOOKED, DISPATCHED} — all four allow CANCELLED per the AE map —
-    // so the validator should always pass. Defense-in-depth: if the
-    // upstream filter is ever weakened, the validator will refuse +
-    // SystemLog WARNING + skip the soft-delete for the affected load
-    // rather than silently corrupting state (a CANCELLED transition
-    // from DELIVERED or COMPLETED would be a meaningful error).
-    const transition = validateLoadStatusTransition(load.status as LoadStatus, "CANCELLED", "AE");
-    if (!transition.allowed) {
-      log.warn(
-        {
-          loadId: load.id,
-          referenceNumber: load.referenceNumber,
-          from: load.status,
-          customerId: customer.id,
-          code: transition.code,
-          reason: transition.reason,
-        },
-        "[CustomerDelete] CANCELLED transition rejected by state machine; load skipped.",
-      );
-      prisma.systemLog.create({
-        data: {
-          logType: "STATUS_CHANGE",
-          severity: "WARNING",
-          source: "customerDelete-cancel-load",
-          message: `Customer delete cascade would CANCEL load ${load.referenceNumber} but transition from ${load.status} is invalid — load not cancelled.`,
-          details: {
-            loadId: load.id,
-            referenceNumber: load.referenceNumber,
-            customerId: customer.id,
-            customerName: customer.name,
-            from: load.status,
-            attemptedTo: "CANCELLED",
-            code: transition.code,
-            reason: transition.reason,
-          },
-        },
-      }).catch(() => { /* swallow logging-table contention */ });
-      continue;
-    }
-    await prisma.load.update({
-      where: { id: load.id },
-      data: {
-        status: "CANCELLED",
-        deletedAt: now,
-        deletedBy,
-        // B2b — a cancellation carries its code and fault party; the shipper
-        // record was removed, which is the shipper's act, not the carrier's.
-        cancellationReasonCode: "SHIPPER_CANCELLED",
-        cancellationFaultParty: "SHIPPER",
-        cancellationReason: `Customer ${customer.name} deleted`,
-        cancelledAt: now,
-        cancelledById: req.user!.id,
-      },
-    });
-
-    // Notify assigned carrier if any
-    if (load.carrierId) {
-      await prisma.notification.create({
-        data: {
-          userId: load.carrierId,
-          type: "LOAD_UPDATE",
-          title: "Load Cancelled — Customer Removed",
-          message: `Load ${load.referenceNumber} has been cancelled because the customer account was removed.`,
-          actionUrl: "/carrier/dashboard/my-loads",
-        },
-      });
-    }
-  }
-
-  // 3. Void unpaid invoices for this customer's loads
-  await prisma.invoice.updateMany({
-    where: {
-      load: { customerId: customer.id },
-      status: { notIn: ["PAID", "VOID"] },
-      deletedAt: null,
-    },
-    data: { status: "VOID", deletedAt: now },
-  });
-
-  // 4. Release shipper credit utilization
-  const credit = await prisma.shipperCredit.findUnique({ where: { customerId: customer.id } });
-  if (credit) {
-    await prisma.shipperCredit.update({
-      where: { id: credit.id },
-      data: {
-        currentUtilized: 0,
-        autoBlocked: false,
-        blockedReason: null,
-        blockedAt: null,
-      },
-    });
-  }
-
-  // 5. Deactivate linked shipper user account (if exists)
-  if (customer.userId) {
-    await prisma.user.update({
-      where: { id: customer.userId },
-      data: { isActive: false },
-    });
-  }
-
-  // 6. Notify admins/brokers
   const employees = await prisma.user.findMany({
     where: { role: { in: ["ADMIN", "BROKER"] }, isActive: true },
     select: { id: true },
@@ -876,7 +784,7 @@ export async function deleteCustomer(req: AuthRequest, res: Response) {
         userId: e.id,
         type: "GENERAL" as const,
         title: "Customer Deleted",
-        message: `${customer.name} has been removed by ${deletedBy}. ${activeLoads.length} load(s) cancelled, invoices voided.`,
+        message: `${customer.name} was deleted by ${deletedBy}. The record had no loads, orders, contracts, facilities or contacts.`,
         actionUrl: "/dashboard/crm",
       })),
     });
@@ -884,13 +792,8 @@ export async function deleteCustomer(req: AuthRequest, res: Response) {
 
   res.json({
     success: true,
-    message: "Customer archived",
-    details: {
-      loadsCancelled: activeLoads.length,
-      invoicesVoided: true,
-      creditReleased: !!credit,
-      userDeactivated: !!customer.userId,
-    },
+    message: "Customer deleted",
+    details: { hardDeleted: true, references: 0 },
   });
 }
 

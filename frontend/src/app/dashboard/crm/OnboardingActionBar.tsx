@@ -8,7 +8,7 @@ import type { CrmCustomer } from "./types";
 
 /**
  * Phase 6.2 Lead Hunter / CRM separation. Approve / Inactivate / Reactivate /
- * Reject controls for the AE Console customer detail surface. Pairs with the
+ * Inactivate controls for the AE Console customer detail surface. Pairs with the
  * POST /customers/:id/approve required-checks gate. On 422 the missing-checks
  * payload is rendered inline as an actionable checklist.
  *
@@ -16,12 +16,15 @@ import type { CrmCustomer } from "./types";
  * "Suspend" TODO modal is replaced by a real Inactivate flow (reason capture)
  * + a Reactivate path. Inactive customers are hard-blocked from new load
  * creation (loadController + withTenderController, ADMIN/CEO override).
- * "Reject" remains a TODO (distinct onboarding-stage concern, banked).
+ * B5a (lifecycle-gaps, finding #17): Inactivate is offered on EVERY active
+ * customer regardless of onboarding status. The "Reject" stub that told the AE
+ * to flip a column in the Neon SQL editor is gone — a control that promises
+ * behaviour no code grants is worse than no control.
  *
  * Surface priority:
  *   1. !isActive            → red Inactive banner + reason + Reactivate
  *   2. isApproved && active → green Approved banner + Inactivate
- *   3. !isApproved && active→ Approve + Reject
+ *   3. !isApproved && active→ Approve + Inactivate
  *
  * Brand tokens:
  *   success #2F7A4F / bg #E6F0E9 · warning #B07A1A / bg #FBEFD4
@@ -47,7 +50,6 @@ interface Props {
 export function OnboardingActionBar({ customer, onChange }: Props) {
   const [missing, setMissing] = useState<MissingCheck[] | null>(null);
   const [errMsg, setErrMsg] = useState<string | null>(null);
-  const [todoModal, setTodoModal] = useState<"reject" | null>(null);
   const [showInactivate, setShowInactivate] = useState(false);
 
   const approve = useMutation({
@@ -173,7 +175,7 @@ export function OnboardingActionBar({ customer, onChange }: Props) {
     );
   }
 
-  // 3. Not approved + active — Approve / Reject.
+  // 3. Not approved + active — Approve / Inactivate (B5a: every active customer).
   return (
     <div className="px-6 py-3 border-b border-gray-200 bg-white">
       <div className="flex items-center justify-between gap-3 flex-wrap">
@@ -190,10 +192,11 @@ export function OnboardingActionBar({ customer, onChange }: Props) {
             {approve.isPending ? "Approving…" : "Approve"}
           </button>
           <button
-            onClick={() => setTodoModal("reject")}
-            className="px-3 py-1.5 text-xs font-medium rounded-md text-white bg-[#9B2C2C] hover:bg-[#7C2323] focus:outline-none focus:ring-2 focus:ring-[#9B2C2C]/40"
+            onClick={() => setShowInactivate(true)}
+            className="px-3 py-1.5 text-xs font-medium rounded-md text-[#9B2C2C] border border-[#9B2C2C]/40 hover:bg-[#F6E3E3]/60 focus:outline-none focus:ring-2 focus:ring-[#9B2C2C]/30 inline-flex items-center gap-1.5"
           >
-            Reject
+            <Ban className="w-3.5 h-3.5" strokeWidth={2} />
+            Inactivate
           </button>
         </div>
       </div>
@@ -226,7 +229,15 @@ export function OnboardingActionBar({ customer, onChange }: Props) {
         </div>
       )}
 
-      {todoModal && <TodoModal action={todoModal} onClose={() => setTodoModal(null)} />}
+      {showInactivate && (
+        <InactivateModal
+          customerId={customer.id}
+          customerName={customer.name}
+          onClose={() => setShowInactivate(false)}
+          onDone={() => { setShowInactivate(false); onChange(); }}
+          onError={(m) => setErrMsg(m)}
+        />
+      )}
     </div>
   );
 }
@@ -285,42 +296,6 @@ function InactivateModal({
             className="px-3 py-1.5 text-xs font-medium rounded-md text-white bg-[#9B2C2C] hover:bg-[#7C2323] disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-[#9B2C2C]/40"
           >
             {inactivate.isPending ? "Inactivating…" : "Inactivate customer"}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function TodoModal({ action, onClose }: { action: "reject"; onClose: () => void }) {
-  const verb = "Reject";
-  return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center" role="dialog" aria-modal="true">
-      <div className="absolute inset-0 bg-black/30" onClick={onClose} />
-      <div className="relative bg-white rounded-lg shadow-xl max-w-md w-full mx-4 p-5 border border-gray-200">
-        <div className="flex items-start justify-between gap-3 mb-3">
-          <h3 className="text-base font-semibold text-gray-900">{verb} customer — not yet wired</h3>
-          <button
-            onClick={onClose}
-            className="p-1 rounded hover:bg-gray-100 text-gray-700 hover:text-gray-600"
-            aria-label="Close"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-        <p className="text-sm text-gray-700">
-          The reject transition is a distinct onboarding-stage concern, banked separately.
-          To take a customer out of active use today, use <strong>Inactivate</strong> on an
-          approved customer, or flip
-          <code className="mx-1 px-1 py-0.5 rounded bg-gray-100 text-[#0A2540] font-mono text-[11px]">onboardingStatus</code>
-          via Neon SQL editor if a pending record must be rejected immediately.
-        </p>
-        <div className="mt-4 flex justify-end">
-          <button
-            onClick={onClose}
-            className="px-3 py-1.5 text-xs font-medium rounded-md text-white bg-[#BA7517] hover:bg-[#8f5a11] focus:outline-none focus:ring-2 focus:ring-[#BA7517]/40"
-          >
-            Got it
           </button>
         </div>
       </div>

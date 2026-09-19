@@ -70,6 +70,7 @@ vi.mock("../src/config/database", () => ({
       findFirst: vi.fn(),
       update: vi.fn(),
       aggregate: vi.fn(),
+      count: vi.fn().mockResolvedValue(0),
     },
     invoice: {
       findMany: vi.fn(),
@@ -130,6 +131,30 @@ vi.mock("../src/config/database", () => ({
       create: vi.fn(),
       update: vi.fn(),
       count: vi.fn(),
+      delete: vi.fn(),
+    },
+    // B5a customer-delete census (lib/customerReferences). Counts default to 0
+    // so a model a test does not mention reads as "no references".
+    customerContact: {
+      count: vi.fn().mockResolvedValue(0),
+    },
+    customerFacility: {
+      count: vi.fn().mockResolvedValue(0),
+    },
+    order: {
+      count: vi.fn().mockResolvedValue(0),
+    },
+    contractRate: {
+      count: vi.fn().mockResolvedValue(0),
+    },
+    rfpBid: {
+      count: vi.fn().mockResolvedValue(0),
+    },
+    exceptionAlert: {
+      count: vi.fn().mockResolvedValue(0),
+    },
+    emailSequence: {
+      count: vi.fn().mockResolvedValue(0),
     },
     // Arc: the public tracking endpoint reads this. A missing method throws
     // "is not a function" at the CALL SITE, which reads as a code bug rather
@@ -195,6 +220,7 @@ vi.mock("../src/config/database", () => ({
       findFirst: vi.fn().mockResolvedValue(null),
       count: vi.fn().mockResolvedValue(0),
       updateMany: vi.fn().mockResolvedValue({ count: 0 }),
+      createMany: vi.fn().mockResolvedValue({ count: 0 }),
     },
     // B3c — so a cancel-path test can assert the fall-off recorder was NOT
     // called, rather than crashing on a bare property read.

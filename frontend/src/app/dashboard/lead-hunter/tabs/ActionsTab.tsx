@@ -2,8 +2,9 @@
 
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { PhoneCall, Calendar, ArrowRight, Trash2 } from "lucide-react";
+import { PhoneCall, Calendar, ArrowRight, Trash2, Ban } from "lucide-react";
 import { api } from "@/lib/api";
+import { useAuthStore } from "@/hooks/useAuthStore";
 import type { Customer } from "../types";
 import { resolveStage } from "../types";
 
@@ -18,6 +19,11 @@ export function ActionsTab({ prospect, onClose }: Props) {
   const [followUpDate, setFollowUpDate] = useState("");
   const [followUpNotes, setFollowUpNotes] = useState("");
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [showInactivate, setShowInactivate] = useState(false);
+  const [inactivateReason, setInactivateReason] = useState("");
+  // B5a: inactivation is ADMIN / CEO / OPERATIONS (decision 5); the route refuses the rest.
+  const { user } = useAuthStore();
+  const canInactivate = ["ADMIN", "CEO", "OPERATIONS"].includes(user?.role ?? "");
 
   const refresh = () => {
     queryClient.invalidateQueries({ queryKey: ["customers-prospects"] });
@@ -63,6 +69,18 @@ export function ActionsTab({ prospect, onClose }: Props) {
     mutationFn: () => api.delete(`/customers/${prospect.id}`),
     onSuccess: () => { refresh(); onClose(); },
   });
+  // B5a: a delete is refused (409 CUSTOMER_HAS_REFERENCES) when anything references
+  // the prospect. The body names the references and the next action; render it,
+  // never a bare "failed".
+  const removeRefusal = (remove.error as any)?.response?.data as
+    | { error?: string; message?: string; remedy?: { openLoads?: string[]; stopSequencesFirst?: boolean } }
+    | undefined;
+
+  const inactivate = useMutation({
+    mutationFn: () => api.post(`/customers/${prospect.id}/inactivate`, { reason: inactivateReason.trim() }),
+    onSuccess: () => { setInactivateReason(""); setShowInactivate(false); refresh(); onClose(); },
+  });
+  const inactivateError = (inactivate.error as any)?.response?.data?.error as string | undefined;
 
   const stage = resolveStage(prospect.status);
   const canConvert = stage === "QUALIFIED" || stage === "PROPOSAL" || stage === "CONTACTED";
@@ -161,7 +179,11 @@ export function ActionsTab({ prospect, onClose }: Props) {
           </button>
         ) : (
           <div className="space-y-2">
-            <p className="text-xs text-gray-700">This soft-deletes the prospect and cancels any active loads.</p>
+            <p className="text-xs text-gray-700">
+              Deletes this prospect outright. It is refused if anything references it — loads, orders,
+              contracts, facilities, contacts or an in-flight email sequence — and the refusal names them.
+              A prospect with history is inactivated instead.
+            </p>
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setConfirmDelete(false)}
@@ -179,7 +201,82 @@ export function ActionsTab({ prospect, onClose }: Props) {
             </div>
           </div>
         )}
+        {removeRefusal && (
+          <div role="alert" className="mt-2 rounded border border-red-300 bg-white p-2 text-xs text-red-700 space-y-1">
+            <p>{removeRefusal.message ?? removeRefusal.error ?? "Delete failed."}</p>
+            {removeRefusal.remedy?.openLoads && removeRefusal.remedy.openLoads.length > 0 && (
+              <p className="text-gray-700">
+                Cancel first, each with a reason code:{" "}
+                <span className="font-mono">{removeRefusal.remedy.openLoads.join(", ")}</span>
+              </p>
+            )}
+            {removeRefusal.remedy?.stopSequencesFirst && (
+              <p className="text-gray-700">Stop the in-flight email sequence from the Queue first.</p>
+            )}
+            {removeRefusal.error === "CUSTOMER_HAS_REFERENCES" && (
+              canInactivate ? (
+                <button
+                  onClick={() => { setConfirmDelete(false); setShowInactivate(true); }}
+                  className="mt-1 px-2 py-1 text-xs bg-white border border-gray-300 text-gray-800 rounded hover:bg-gray-50 transition"
+                >
+                  Inactivate instead
+                </button>
+              ) : (
+                <p className="text-gray-700">Inactivation needs an Admin, CEO or Operations role.</p>
+              )
+            )}
+          </div>
+        )}
       </section>
+
+      {/* Inactivate — B5a: the end state for a prospect with history. */}
+      {canInactivate && (
+        <section className="border border-gray-200 rounded-lg p-3 bg-white">
+          <div className="flex items-center gap-2 mb-2">
+            <Ban className="w-4 h-4 text-[#9B2C2C]" strokeWidth={1.75} />
+            <h4 className="font-semibold text-gray-900">Inactivate Prospect</h4>
+          </div>
+          {!showInactivate ? (
+            <button
+              onClick={() => setShowInactivate(true)}
+              className="w-full px-3 py-1.5 text-xs bg-white border border-gray-300 text-gray-800 rounded hover:bg-gray-50 transition"
+            >
+              Inactivate…
+            </button>
+          ) : (
+            <div className="space-y-2">
+              <p className="text-xs text-gray-700">
+                Keeps every record and blocks new loads. A reason of at least 5 characters is required.
+              </p>
+              <textarea
+                value={inactivateReason}
+                onChange={(e) => setInactivateReason(e.target.value)}
+                rows={2}
+                maxLength={500}
+                placeholder="Why this prospect is being inactivated…"
+                aria-label="Inactivation reason"
+                className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-[#BA7517]"
+              />
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => { setShowInactivate(false); setInactivateReason(""); }}
+                  className="flex-1 px-3 py-1.5 text-xs bg-gray-100 text-gray-700 rounded hover:bg-gray-200 transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => inactivate.mutate()}
+                  disabled={inactivate.isPending || inactivateReason.trim().length < 5}
+                  className="flex-1 px-3 py-1.5 text-xs bg-[#9B2C2C] text-white rounded hover:bg-[#7C2323] disabled:opacity-40 transition"
+                >
+                  {inactivate.isPending ? "Inactivating…" : "Confirm inactivate"}
+                </button>
+              </div>
+              {inactivateError && <p role="alert" className="text-xs text-red-700">{inactivateError}</p>}
+            </div>
+          )}
+        </section>
+      )}
     </div>
   );
 }
