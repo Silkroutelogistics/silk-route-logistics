@@ -18259,7 +18259,11 @@
 // position and advances when the offer is refused, the shape acceptPosition already had; the manual position add refuses at the door. The
 // B6d proof gains the five bypass paths (57/57) and goes red BY NAME per chokepoint: the createTender gate removed turns C and D red, the
 // assignCarrier gate removed turns A and B red. instant-book stays dead, now refused by the gate's no-profile branch rather than by the FK.
-export const SRL_VERSION = "3.8.bea";
+// v3.8.beb — carrier-archive recut B2c: a carrier accepts a fall-off recovery as themselves. The route read body.carrierUserId || req.user.id
+// and admits CARRIER, so a carrier session could put any user on the load; B2b's gate refuses an ineligible one, and an eligible colleague or
+// competitor is not the gate's to refuse. A CARRIER is now bound to req.user.id and is told 403 CARRIER_ACCEPTS_AS_SELF if the field is sent at
+// all; the AE shape (recording a named carrier's phoned-in acceptance) is unchanged.
+export const SRL_VERSION = "3.8.beb";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
