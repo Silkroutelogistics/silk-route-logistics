@@ -124,3 +124,41 @@ B2's own footprint: `complianceMonitorService.ts` (`complianceCheck` :175–~640
 - **Halt-and-report — the blanket override** (§2.1): today it releases SUSPENDED and REJECTED; the ruled absolute would stop that. Decision needed before Phase B writes `absoluteReasons.add(...)` on those two reasons.
 - **CARRIER_ARCHIVED's own absoluteness** is not yet ruled (only CARRIER_NOT_APPROVED was). Under the §14 admission test — a record state SRL itself set, with the login off — it is recommended absolute; recorded as a recommendation.
 - **B2 is still blocked** on the third session's dirty `complianceMonitorService.ts`, and the peer cannot clear it. Phase B begins only when the seven files are clean on main, and begins by re-verifying §1 and §5 against what was actually committed.
+
+---
+
+## 7. Phase B close-out (2026-09-21)
+
+Written after the B2 block, B5 and this pass; the halt items in §6 each carry their resolution here so nobody re-derives them from the commit log. Branch `arc/carrier-archive-recut`, `5b382758` → `1aaf3165` plus this docs commit; B2 pushed to origin 2026-09-21.
+
+### 7.1 The §6 halt items, resolved
+
+| §6 item | Decision (Wasi, 2026-09-20) | Where it landed |
+|---|---|---|
+| Stop condition 2 — four live gateless paths (A–D) + F | **The two chokepoints refuse by id.** `createTender` and `assignCarrier` ask `complianceCheck` themselves, before any write; a sixth surface cannot skip a question the chokepoint asks itself. | bdz (gate inside both, `lib/carrierEligibility.ts`); bea (A–D map the refusal: 403 with codes on A and B, a named `skipped[]` on broadcast, a `position_skipped` event on the cascade + 403 at the door); beb (B's actor rule); bec (F: the `PUT /loads/:id` carrierId branch is gone, the key is refused 400 by name) |
+| Halt-and-report — the blanket override releases SUSPENDED / REJECTED | **It does not now.** Both status refusals were plain strings with no code; they are one absolute, `CARRIER_NOT_APPROVED`, with `status` on the code. | bdy; §14 absolutes table row |
+| `CARRIER_ARCHIVED`'s own absoluteness — recommended, not ruled | **Ruled absolute.** Remedy is restore, its own decision with its own audit row. | bdy; §14 absolutes table row |
+| B2 blocked on the third session's dirty `complianceMonitorService.ts` | Parked to `hold/compliance-ofac-autosuspend` (§5); main re-verified clean; Phase B opened on the seven files as committed. | §5 above |
+
+### 7.2 Row F, restated as it turned out
+
+Phase A called `updateLoad`'s carrierId branch dead behind the validator. It was live (`updateLoadSchema` ends in `.passthrough()`), it wrote `Load.carrierId` outside the single writer, and `carrierIdWriterDrift` reported 8/8 over it because the write rode a hoisted payload. bec removed the branch, refuses the key by name, and taught the scanner the hoisted shape (three fixtures, one negative). §19 Sub-pattern 18's third blind class, beside shorthand and the wrapped chain.
+
+### 7.3 B5 — record custody at the database
+
+`prisma/_pending_migrations/20260921120000_carrier_profile_fk_restrict` (commit `1aaf3165`, unversioned). The directive named a source branch, `hold/carrier-custody-restrict`, and six FKs. The branch does not exist anywhere — no local ref, no origin ref, no reflog, no doc — and the count is **seven**, derived from `schema.prisma` and the live migration SQL, which agree: five CASCADE (`load_tenders`, `quick_pay_enrollments`, `quick_pay_elections`, `carrier_training_requirements`, `info_requests`) and two SET NULL (`drivers`, `dock_schedules`). Authored, gated in its header, verified on a from-zero container (chain of 75 applied; the 14 authored ALTERs are byte-identical to what `prisma migrate diff` generates for the companion schema hunk; a hard delete of a carrier holding a driver is refused 23503 after and NULLs the driver before). **Not applied, and not in `prisma/migrations/`**: the gate has to read the seven constraint names off production first, by hand, because a name production does not carry would fail the deploy without `IF EXISTS` and leave a FAILED migration blocking every later deploy. The gate runner is local-only on purpose — see §13.3 Item 286.10.
+
+### 7.4 Counts, corrected to source
+
+| The directive said | Source says | Where |
+|---|---|---|
+| six list pickers | seven | B6a (`scripts/find-prisma-calls`) — Item 286.1 |
+| six FKs | seven | B5 — Item 286.9 |
+| row F dead | live | bec — §7.2 |
+
+### 7.5 Left open by this arc, on purpose
+
+- The peer's C6 (reason modal): the Archive… button posts no body and gets 422 until it lands. Before merge.
+- B4b / C7: the page has no restore control (Item 286.7).
+- Item 286.5: whether an archived carrier's fingerprint should match new registrants — a §14-text question.
+- The B5 production gate and the move into `prisma/migrations/` with the schema hunk — one commit, after merge, by hand.
