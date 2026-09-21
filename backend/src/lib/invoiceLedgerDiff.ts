@@ -9,7 +9,7 @@
  * blind spot — given an invoice's lines and the load's ledger, it says which
  * lines bill a figure the ledger no longer holds, by how much, and which line
  * to move. It decides nothing about SENT invoices and writes nothing at all;
- * the caller (282c, `repriceDraftInvoice`) owns both.
+ * the caller (282c, `repriceDraftInvoices`) owns both.
  *
  * PURE. No Prisma, no clock, no pricing — the caller resolves each row's
  * customer price through `customerPriceFor` and hands it in, so this function
@@ -67,13 +67,13 @@ export interface Reprice {
 }
 
 export type Anomaly =
-  /** An accessorial-typed line with no row id — written before 282a; cannot be re-priced by key. */
+  /** An accessorial-typed line with no row id — written before 282a, or by an API line editor that carries none; cannot be re-priced by key. */
   | { kind: "UNKEYED_LINE"; lineId: string; type: string; amount: number }
   /** A line keyed to a row that no longer exists, billing a non-zero net. */
   | { kind: "ORPHAN_LINE"; accessorialId: string; net: number }
   /** Lines bill a non-zero net for a row that is NOT stamped to this invoice — the mark and the lines disagree. */
   | { kind: "NET_ON_UNSTAMPED_ROW"; accessorialId: string; net: number; stampedTo: string | null }
-  /** A row stamped to this invoice with no line at all — stamped before 282a, or the fold half-failed. */
+  /** A row stamped to this invoice with no line at all — stamped before 282a, the lines replaced by an API line editor, or the fold half-failed. */
   | { kind: "STAMPED_NO_LINE"; accessorialId: string; expected: number }
   /** A row stamped here that is not APPROVED. The credit path owns it; not re-priced. */
   | { kind: "STAMPED_NOT_APPROVED"; accessorialId: string; status: string }

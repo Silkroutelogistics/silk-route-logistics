@@ -2445,8 +2445,11 @@ model InvoiceLineItem {
   // while the carrier leg reconciles totals, and a line item carried no link
   // back to its row — so a $200 TONU edited to $250 after the DRAFT was folded
   // kept billing $200 forever, because the row was already stamped and the line
-  // could not be found to re-price. Every accessorial-line writer in
-  // invoiceService.ts stamps this; invoiceLineAccessorialLink.test.ts counts them.
+  // could not be found to re-price. Every ledger-derived writer (all five, in
+  // invoiceService.ts) stamps this; the body-driven writers in invoiceController
+  // and accountingController do not — the two API line editors replace every
+  // line without it, so a draft they touch is reported and not re-priced.
+  // invoiceLineAccessorialLink.test.ts freezes both inventories.
   accessorialId String?
 
   @@index([invoiceId])

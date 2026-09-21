@@ -15,9 +15,9 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 const { mockPrisma } = vi.hoisted(() => ({
   mockPrisma: {
     load: { findUnique: vi.fn() },
-    invoice: { findFirst: vi.fn(), create: vi.fn() },
+    invoice: { findFirst: vi.fn(), create: vi.fn(), findMany: vi.fn() },
     loadAccessorial: { findMany: vi.fn(), updateMany: vi.fn() },
-    invoiceLineItem: { count: vi.fn(), createMany: vi.fn() },
+    invoiceLineItem: { count: vi.fn(), createMany: vi.fn(), findMany: vi.fn(), update: vi.fn() },
     $transaction: vi.fn(),
   },
 }));
@@ -60,6 +60,8 @@ function armHappyPath() {
     { id: "acc-1", type: "TONU", amount: TONU_AMOUNT, customerAmount: null, quantity: null, billedTo: "SHIPPER", notes: null },
   ]);
   // syncInvoiceAccessorials is called after creation; let its transaction no-op.
+  // 282c: it also lists the load's invoices to re-price drafts; this mock holds none.
+  mockPrisma.invoice.findMany.mockResolvedValue([]);
   mockPrisma.$transaction.mockResolvedValue(undefined);
   mockPrisma.invoiceLineItem.count.mockResolvedValue(0);
 }
@@ -72,7 +74,9 @@ describe("raiseTonuCustomerCharge", () => {
     const result = await raiseTonuCustomerCharge("load-1");
 
     expect(result.created).toBe(true);
-    expect(mockPrisma.invoice.create).toHaveBeenCalled();
+    // Not merely called: the document created is the missing BASE, drafted, on this load.
+    expect(mockPrisma.invoice.create).toHaveBeenCalledTimes(1);
+    expect(mockPrisma.invoice.create.mock.calls[0][0].data).toMatchObject({ loadId: "load-1", invoiceKind: "BASE", status: "DRAFT", userId: "ae-1" });
   });
 
   it("bills no linehaul — the load never moved", async () => {

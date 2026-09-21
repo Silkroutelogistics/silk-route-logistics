@@ -191,74 +191,160 @@ describe("the stamp on both credit paths", () => {
 });
 
 // ─────────────────────────────────────────────────────────────────────
-// Structural guard: the inventory of accessorial-line writers.
+// Structural guard: TWO inventories of invoice-line writers, both frozen.
 //
-// The behavioural cases prove the five writers that exist today. This proves no
-// SIXTH one appears without the stamp. It walks every `invoiceLineItem.createMany(`
-// in the service, takes the span to the matching close paren — skipping string
-// and template-literal contents, because the descriptions contain `(` — and
-// asserts `accessorialId` is set inside it. The count is FROZEN: it may not grow
-// without this file being updated, so the new writer is read rather than assumed.
-const SERVICE = path.resolve(__dirname, "../../../src/services/invoiceService.ts");
-const EXPECTED_WRITERS = 5;
+// The behavioural cases prove the five ledger-derived writers that exist today.
+// This proves no SIXTH one appears without the stamp, and — after the pre-merge
+// review found four writers OUTSIDE the service that the first cut of this guard
+// could not see (§19 Sub-pattern 18: instrument reach) — that no writer anywhere
+// in src/ escapes classification. Every `invoiceLineItem.create*(` and every
+// nested `lineItems: { create }` on an invoice is found; a writer in the service
+// must stamp; a writer elsewhere must be allow-listed with the reason it carries
+// no key. A new writer in either place fails here by file:function.
+//
+// Spans are walked to the matching close paren skipping string and template
+// contents (the descriptions contain `(`), with comments stripped so an
+// `accessorialId:` in prose cannot satisfy the check, and an explicit
+// `accessorialId: null` inside a ledger writer is a failure, not a stamp.
+const SRC = path.resolve(__dirname, "../../../src");
+const SERVICE = path.join(SRC, "services", "invoiceService.ts");
+const EXPECTED_SERVICE_WRITERS = 5;
 
-/** Every createMany call span in `src`, with the 1-indexed line it starts on. */
-function lineItemWriterSpans(src: string): { line: number; span: string }[] {
-  const out: { line: number; span: string }[] = [];
-  const re = /invoiceLineItem\s*\.\s*createMany\s*\(/g;
-  let m: RegExpExecArray | null;
-  while ((m = re.exec(src))) {
-    const start = m.index + m[0].length;
-    let depth = 1;
-    let i = start;
-    while (i < src.length && depth > 0) {
-      const ch = src[i];
-      if (ch === '"' || ch === "'" || ch === "`") {
-        const q = ch;
-        i++;
-        while (i < src.length && src[i] !== q) {
-          if (src[i] === "\\") i++;
-          i++;
-        }
-      } else if (ch === "(") depth++;
-      else if (ch === ")") depth--;
-      i++;
-    }
-    const line = src.slice(0, m.index).split(/\r?\n/).length;
-    out.push({ line, span: src.slice(m.index, i) });
+/**
+ * Writers outside the service that legitimately carry no ledger key. Each entry
+ * is the reason; a stale entry (function gone) fails, and a writer not listed
+ * fails. The key is file#export the call sits in.
+ */
+const BODY_DRIVEN_WRITERS: Record<string, string> = {
+  "controllers/invoiceController.ts#createInvoice": "POST /invoices — an AE-authored document from a request body; there is no ledger row to key to",
+  "controllers/invoiceController.ts#updateInvoiceLineItems": "PUT /invoices/:id/line-items — replaces every line from a body that carries no key; a draft it touches is reported UNKEYED and not re-priced again (no frontend caller, Item 197)",
+  "controllers/invoiceController.ts#generateInvoiceFromLoad": "POST /invoices/generate/:loadId — linehaul and fuel from the load only; NULL is correct on those",
+  "controllers/accountingController.ts#updateInvoice": "PUT /accounting/invoices/:id — replaces every line from a body that carries no key; same consequence as the line-items editor (no frontend caller, Item 197)",
+  "controllers/accountingController.ts#createInvoice": "POST /accounting/invoices — an AE-authored document from a request body (lineItems[] as sent); no ledger row to key to. Not named by the pre-merge review; found by this guard's first repo-wide run",
+};
+
+function stripComments(src: string): string {
+  return src
+    .replace(/\/\*[\s\S]*?\*\//g, (m) => m.replace(/[^\n]/g, " "))
+    .replace(/\/\/[^\n]*/g, (m) => " ".repeat(m.length));
+}
+function skipString(src: string, i: number): number {
+  const q = src[i];
+  i++;
+  while (i < src.length && src[i] !== q) { if (src[i] === "\\") i++; i++; }
+  return i + 1;
+}
+function walkTo(src: string, start: number, open: string, close: string): number {
+  let depth = 1, i = start;
+  while (i < src.length && depth > 0) {
+    const ch = src[i];
+    if (ch === '"' || ch === "'" || ch === "`") { i = skipString(src, i); continue; }
+    if (ch === open) depth++;
+    else if (ch === close) depth--;
+    i++;
   }
-  return out;
+  return i;
+}
+const lineOf = (src: string, idx: number) => src.slice(0, idx).split(/\r?\n/).length;
+function enclosingExport(src: string, idx: number): string {
+  const re = /export\s+(?:async\s+)?(?:function|const)\s+([A-Za-z0-9_]+)/g;
+  let m: RegExpExecArray | null, name = "(module)";
+  while ((m = re.exec(src)) && m.index < idx) name = m[1];
+  return name;
 }
 
-describe("the writer inventory is frozen and every writer stamps", () => {
-  const src = fs.readFileSync(SERVICE, "utf8");
-  const spans = lineItemWriterSpans(src);
+/** Every invoice-line writer span in `src` (comments already stripped). */
+function lineItemWriterSpans(src: string): { line: number; span: string; fn: string }[] {
+  const out: { line: number; span: string; fn: string }[] = [];
+  const direct = /invoiceLineItem\s*\.\s*create(?:Many)?\s*\(/g;
+  let m: RegExpExecArray | null;
+  while ((m = direct.exec(src))) {
+    const end = walkTo(src, m.index + m[0].length, "(", ")");
+    out.push({ line: lineOf(src, m.index), span: src.slice(m.index, end), fn: enclosingExport(src, m.index) });
+  }
+  // A nested create on an INVOICE write — lineItems: { create ... } whose nearest
+  // preceding prisma call is on the invoice model. The same shape on a load is LoadLineItem.
+  const nested = /lineItems\s*:\s*(?:[A-Za-z0-9_.?]+\s*\?\s*)?\{\s*create\s*:/g;
+  while ((m = nested.exec(src))) {
+    const before = src.slice(Math.max(0, m.index - 1500), m.index);
+    const model = [...before.matchAll(/prisma\.([a-zA-Z]+)\s*\.\s*(?:create|update|upsert)\s*\(/g)].at(-1)?.[1];
+    if (model !== "invoice") continue;
+    const braceOpen = src.lastIndexOf("{", m.index + m[0].length);
+    const end = walkTo(src, braceOpen + 1, "{", "}");
+    out.push({ line: lineOf(src, m.index), span: src.slice(m.index, end), fn: enclosingExport(src, m.index) });
+  }
+  return out.sort((a, b) => a.line - b.line);
+}
+function walkTs(dir: string, acc: string[] = []): string[] {
+  for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
+    const full = path.join(dir, e.name);
+    if (e.isDirectory()) walkTs(full, acc);
+    else if (/\.ts$/.test(e.name) && !/\.d\.ts$/.test(e.name)) acc.push(full);
+  }
+  return acc;
+}
+const stamps = (span: string) => /\baccessorialId\s*:/.test(span) && !/\baccessorialId\s*:\s*null\b/.test(span);
 
-  it(`finds exactly ${EXPECTED_WRITERS} accessorial-line writers (a new one must be read, not assumed)`, () => {
-    expect(spans.length).toBeGreaterThan(0); // the walker still matches the real file
-    expect(spans.map((s) => s.line)).toHaveLength(EXPECTED_WRITERS);
+describe("the writer inventories are frozen and every ledger writer stamps", () => {
+  const serviceSrc = stripComments(fs.readFileSync(SERVICE, "utf8"));
+  const serviceSpans = lineItemWriterSpans(serviceSrc);
+
+  it(`the service holds exactly ${EXPECTED_SERVICE_WRITERS} ledger-derived writers (a new one must be read, not assumed)`, () => {
+    expect(serviceSpans.length).toBeGreaterThan(0); // the walker still matches the real file
+    expect(serviceSpans.map((s) => s.line)).toHaveLength(EXPECTED_SERVICE_WRITERS);
   });
 
-  it("every writer sets accessorialId inside its createMany", () => {
-    const unstamped = spans.filter((s) => !/\baccessorialId\s*:/.test(s.span));
+  it("every service writer sets accessorialId inside its createMany, and never to a literal null", () => {
+    const unstamped = serviceSpans.filter((s) => !stamps(s.span));
     expect(unstamped.map((s) => `invoiceService.ts:${s.line}`)).toEqual([]);
   });
 
-  // The walker's own fixtures. A guard that stopped matching, or that lost the
-  // span at the first `(` inside a description string, would report a clean
-  // file either way — so it is tested against the shapes it must handle.
+  it("every writer OUTSIDE the service is allow-listed with its reason, and every allow-list entry still exists", () => {
+    const found = new Map<string, number>();
+    for (const file of walkTs(SRC)) {
+      if (path.resolve(file) === path.resolve(SERVICE)) continue;
+      const src = stripComments(fs.readFileSync(file, "utf8"));
+      for (const w of lineItemWriterSpans(src)) {
+        found.set(`${path.relative(SRC, file).replace(/\\/g, "/")}#${w.fn}`, w.line);
+      }
+    }
+    expect(found.size).toBeGreaterThan(0); // vacuity: the repo-wide walk still finds the known writers
+    const unlisted = [...found].filter(([k]) => !(k in BODY_DRIVEN_WRITERS)).map(([k, l]) => `${k}:${l}`);
+    expect(unlisted).toEqual([]);
+    const stale = Object.keys(BODY_DRIVEN_WRITERS).filter((k) => !found.has(k));
+    expect(stale).toEqual([]);
+  });
+
+  // The walker's own fixtures. A guard that stopped matching, that lost the span at
+  // the first `(` inside a description, that read a comment as a stamp, or that
+  // accepted a null stamp would report a clean file either way.
   it("walker: an unstamped writer is reported by line, a stamped one is not", () => {
-    const fixture = [
-      "a();",
+    const fixture = stripComments([
+      "export async function a() {",
       "await tx.invoiceLineItem.createMany({ data: rows.map((r) => ({ invoiceId: inv.id, description: `${p.label} (${r.notes})`, amount: r.amount })) });",
-      "b();",
+      "}",
+      "export async function b() {",
       "await tx.invoiceLineItem.createMany({ data: rows.map((r) => ({ invoiceId: inv.id, accessorialId: r.id, description: 'x (y)', amount: r.amount })) });",
-    ].join("\n");
+      "}",
+    ].join("\n"));
     const found = lineItemWriterSpans(fixture);
-    expect(found.map((s) => s.line)).toEqual([2, 4]);
-    // The template literal's `(` did not end the first span early: the span runs to its real close.
-    expect(found[0].span.endsWith("})) })")).toBe(true);
-    expect(found.filter((s) => !/\baccessorialId\s*:/.test(s.span)).map((s) => s.line)).toEqual([2]);
+    expect(found.map((s) => [s.line, s.fn])).toEqual([[2, "a"], [5, "b"]]);
+    expect(found[0].span.endsWith("})) })")).toBe(true); // the template literal's "(" did not end the span early
+    expect(found.filter((s) => !stamps(s.span)).map((s) => s.line)).toEqual([2]);
+  });
+
+  it("walker: a stamp in a comment does not count, and a literal null is not a stamp", () => {
+    const commented = stripComments("tx.invoiceLineItem.createMany({ data: rows.map((r) => ({ invoiceId: inv.id, /* accessorialId: r.id */ amount: r.amount })) });");
+    expect(stamps(lineItemWriterSpans(commented)[0].span)).toBe(false);
+    const nulled = "tx.invoiceLineItem.createMany({ data: rows.map((r) => ({ invoiceId: inv.id, accessorialId: null, amount: r.amount })) });";
+    expect(stamps(lineItemWriterSpans(nulled)[0].span)).toBe(false);
+  });
+
+  it("walker: a nested create on an invoice is a writer; the same shape on a load is not", () => {
+    const onInvoice = "export async function up() { await prisma.invoice.update({ where: { id }, data: { lineItems: lineItems?.length ? { create: lineItems.map((i) => ({ description: i.d })) } : undefined } }); }";
+    expect(lineItemWriterSpans(onInvoice).map((s) => s.fn)).toEqual(["up"]);
+    const onLoad = "export async function mk() { await prisma.load.create({ data: { ...(lineItems ? { lineItems: { create: lineItems } } : {}) } }); }";
+    expect(lineItemWriterSpans(onLoad)).toEqual([]);
   });
 
   it("walker: survives CRLF and an escaped quote inside a string", () => {

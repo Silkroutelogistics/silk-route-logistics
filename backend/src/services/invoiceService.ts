@@ -632,7 +632,8 @@ export async function autoGenerateInvoice(loadId: string) {
 }
 
 /**
- * §13.3 Item 282c — re-price a DRAFT base invoice's stamped lines against the ledger.
+ * §13.3 Item 282c — re-price every DRAFT invoice on the load against the ledger,
+ * and report the ones that cannot be re-priced.
  *
  * THE GAP THIS CLOSES. The customer leg reaches exactly-once by MARKING rows:
  * once a row is folded into the draft it is stamped, and `unbilledCustomerAccessorials`
@@ -642,11 +643,22 @@ export async function autoGenerateInvoice(loadId: string) {
  * (Item 282, the assertion named FINDING), latent in production until the first
  * TONU flip. This is the re-read the marking design lacked.
  *
- * DRAFT ONLY. A SENT invoice is in the customer's payables; editing it makes their
- * copy disagree with ours, which is exactly why the supplemental and credit-memo
- * paths exist. Those paths bill UNBILLED rows; an amount edit on a row already
- * stamped to a SENT document has no instrument yet and is reported by the diff,
- * not acted on here. That build is not in the approved set (282d/e/f).
+ * EVERY DRAFT DOCUMENT ON THE LOAD, NOT ONLY THE BASE. A row approved after the
+ * base was sent is stamped to a SUPPLEMENTAL that is itself DRAFT, and every word
+ * of the draft argument applies to it — nobody holds it yet. The first cut of this
+ * function narrowed to `invoiceKind: BASE` and returned when the base was SENT, so
+ * an edit on a row stamped to a draft supplemental reached the carrier payable and
+ * not the customer line: the exact shape 282c exists to close, on an editable
+ * document. Found by the pre-merge review (five of six lenses, ten refuters).
+ *
+ * SENT AND BEYOND ARE REPORTED, NEVER EDITED. A SENT invoice is in the customer's
+ * payables; editing it makes their copy disagree with ours, which is exactly why
+ * the supplemental and credit-memo paths exist. Those paths bill UNBILLED rows; an
+ * amount edit on a row already stamped to a SENT document has no instrument yet.
+ * The diff RUNS on those documents and the disagreement is logged at warn with
+ * the row, the figures and the delta — the first cut returned before diffing, so
+ * "reported" was a claim with nothing behind it. That instrument is not in the
+ * approved set (282d/e/f).
  *
  * WHAT MOVES. For every stamped, APPROVED, customer-billed row whose net billed
  * figure differs from `customerPriceFor` today, the latest positive line for that
@@ -654,31 +666,42 @@ export async function autoGenerateInvoice(loadId: string) {
  * quantity 1), and the invoice totals move by the net. One transaction. Idempotent:
  * a second run finds zero delta and writes nothing. Everything the diff reports
  * rather than re-prices — a REJECTED row still stamped (the credit path owns it),
- * a row billed to SRL, a pre-282a line with no key, an orphan, a mark/line
- * disagreement — is logged at warn and left alone.
+ * a row billed to SRL, a line with no key, an orphan, a mark/line disagreement —
+ * is logged at warn and left alone. A line has no key when it was written before
+ * 282a OR by one of the API line editors (invoiceController.updateInvoiceLineItems,
+ * accountingController.updateInvoice), which replace every line from a request
+ * body that carries none; a draft either has touched is reported and is not
+ * re-priced again. Both editors have no frontend caller (Item 197).
  *
  * Runs inside `syncInvoiceAccessorials` AFTER the credit pass and BEFORE the
  * pending fold, so a rejected row has already been credited off (and un-stamped)
  * by the time this reads, and a freshly folded row is folded at today's price.
  */
-export async function repriceDraftInvoice(loadId: string): Promise<{
+export interface InvoiceRepriceResult {
   invoiceId: string;
+  invoiceKind: string;
+  status: string;
+  /** Lines moved. Always 0 on a non-DRAFT document. */
   repriced: number;
   netDelta: number;
+  /** True when the document is past DRAFT and the diff found a disagreement — logged, not applied. */
+  reported: boolean;
   anomalies: Anomaly[];
-} | null> {
-  const base = await prisma.invoice.findFirst({
-    where: { loadId, invoiceKind: "BASE", status: { not: "VOID" } },
+}
+
+export async function repriceDraftInvoices(loadId: string): Promise<InvoiceRepriceResult[]> {
+  const invoices = await prisma.invoice.findMany({
+    where: { loadId, status: { not: "VOID" } },
     orderBy: { createdAt: "asc" },
-    select: { id: true, invoiceNumber: true, srlDocNumber: true, status: true, amount: true, totalAmount: true, accessorialsAmount: true },
+    select: { id: true, invoiceNumber: true, srlDocNumber: true, invoiceKind: true, status: true, amount: true, totalAmount: true, accessorialsAmount: true },
   });
-  // SENT and beyond stay untouched — see the doc block. No base: nothing stamped anywhere.
-  if (!base || base.status !== "DRAFT") return null;
+  // No document: nothing is stamped anywhere.
+  if (!invoices.length) return [];
 
   const [lines, rows, load] = await Promise.all([
     prisma.invoiceLineItem.findMany({
-      where: { invoiceId: base.id },
-      select: { id: true, accessorialId: true, type: true, amount: true, sortOrder: true },
+      where: { invoiceId: { in: invoices.map((i) => i.id) } },
+      select: { id: true, invoiceId: true, accessorialId: true, type: true, amount: true, sortOrder: true },
     }),
     prisma.loadAccessorial.findMany({
       where: { loadId },
@@ -692,47 +715,74 @@ export async function repriceDraftInvoice(loadId: string): Promise<{
   const negotiated = (load?.customer?.defaultAccessorialRates ?? null) as Record<string, number> | null;
 
   // The same pricer the fold uses, so the diff cannot disagree with the fold.
-  const diff = diffInvoiceAgainstLedger(
-    base.id,
-    lines.map((l) => ({ id: l.id, accessorialId: l.accessorialId, type: String(l.type), amount: Number(l.amount), sortOrder: l.sortOrder })),
-    rows.map((r) => ({
-      id: r.id,
-      type: String(r.type),
-      status: String(r.status),
-      billedTo: r.billedTo ?? null,
-      shipperInvoiceId: r.shipperInvoiceId ?? null,
-      customerPrice: customerPriceFor(r, negotiated),
-    })),
-  );
+  const ledger = rows.map((r) => ({
+    id: r.id,
+    type: String(r.type),
+    status: String(r.status),
+    billedTo: r.billedTo ?? null,
+    shipperInvoiceId: r.shipperInvoiceId ?? null,
+    customerPrice: customerPriceFor(r, negotiated),
+  }));
+  const ref = load?.referenceNumber ?? loadId;
+  const results: InvoiceRepriceResult[] = [];
 
-  if (diff.anomalies.length) {
-    log.warn(
-      { loadId, invoiceId: base.id, anomalies: diff.anomalies },
-      `[AutoInvoice] Draft ${base.srlDocNumber ?? base.invoiceNumber} on load ${load?.referenceNumber ?? loadId}: ${diff.anomalies.length} line(s) the ledger diff reports but does not re-price`,
+  for (const inv of invoices) {
+    const name = inv.srlDocNumber ?? inv.invoiceNumber;
+    const diff = diffInvoiceAgainstLedger(
+      inv.id,
+      lines
+        .filter((l) => l.invoiceId === inv.id)
+        .map((l) => ({ id: l.id, accessorialId: l.accessorialId, type: String(l.type), amount: Number(l.amount), sortOrder: l.sortOrder })),
+      ledger,
+    );
+    const result: InvoiceRepriceResult = {
+      invoiceId: inv.id, invoiceKind: String(inv.invoiceKind), status: String(inv.status),
+      repriced: 0, netDelta: 0, reported: false, anomalies: diff.anomalies,
+    };
+    results.push(result);
+
+    if (diff.anomalies.length) {
+      log.warn(
+        { loadId, invoiceId: inv.id, anomalies: diff.anomalies },
+        `[AutoInvoice] ${inv.status} ${inv.invoiceKind} ${name} on load ${ref}: ${diff.anomalies.length} line(s) the ledger diff reports but does not re-price`,
+      );
+    }
+    if (!diff.reprice.length) continue;
+
+    if (inv.status !== "DRAFT") {
+      // Past DRAFT: the customer holds it. Reported here; there is no instrument yet.
+      result.reported = true;
+      result.netDelta = diff.netDelta;
+      log.warn(
+        { loadId, invoiceId: inv.id, reprice: diff.reprice, netDelta: diff.netDelta },
+        `[AutoInvoice] ${inv.status} ${inv.invoiceKind} ${name} on load ${ref} disagrees with the ledger by net ${diff.netDelta >= 0 ? "+" : ""}$${diff.netDelta.toFixed(2)} on ${diff.reprice.length} line(s) — REPORTED, NOT APPLIED (a sent document is not edited; no instrument for a stamped-row edit past DRAFT yet)`,
+      );
+      continue;
+    }
+
+    await prisma.$transaction(async (tx) => {
+      for (const r of diff.reprice) {
+        const next = round2(r.lineAmount + r.delta);
+        await tx.invoiceLineItem.update({ where: { id: r.lineId }, data: { rate: next, amount: next } });
+      }
+      const priorTotal = Number(inv.totalAmount ?? inv.amount) || 0;
+      await tx.invoice.update({
+        where: { id: inv.id },
+        data: {
+          accessorialsAmount: round2((Number(inv.accessorialsAmount) || 0) + diff.netDelta),
+          amount: round2(priorTotal + diff.netDelta),
+          totalAmount: round2(priorTotal + diff.netDelta),
+        },
+      });
+    });
+    result.repriced = diff.reprice.length;
+    result.netDelta = diff.netDelta;
+
+    log.info(
+      `[AutoInvoice] Re-priced ${diff.reprice.length} line(s) on draft ${inv.invoiceKind} ${name} for load ${ref} — net ${diff.netDelta >= 0 ? "+" : ""}$${diff.netDelta.toFixed(2)} (${diff.reprice.map((r) => `${r.type} $${r.billed.toFixed(2)} → $${r.expected.toFixed(2)}`).join(", ")})`,
     );
   }
-  if (!diff.reprice.length) return { invoiceId: base.id, repriced: 0, netDelta: 0, anomalies: diff.anomalies };
-
-  await prisma.$transaction(async (tx) => {
-    for (const r of diff.reprice) {
-      const next = round2(r.lineAmount + r.delta);
-      await tx.invoiceLineItem.update({ where: { id: r.lineId }, data: { rate: next, amount: next } });
-    }
-    const priorTotal = Number(base.totalAmount ?? base.amount) || 0;
-    await tx.invoice.update({
-      where: { id: base.id },
-      data: {
-        accessorialsAmount: round2((Number(base.accessorialsAmount) || 0) + diff.netDelta),
-        amount: round2(priorTotal + diff.netDelta),
-        totalAmount: round2(priorTotal + diff.netDelta),
-      },
-    });
-  });
-
-  log.info(
-    `[AutoInvoice] Re-priced ${diff.reprice.length} line(s) on draft ${base.srlDocNumber ?? base.invoiceNumber} for load ${load?.referenceNumber ?? loadId} — net ${diff.netDelta >= 0 ? "+" : ""}$${diff.netDelta.toFixed(2)} (${diff.reprice.map((r) => `${r.type} $${r.billed.toFixed(2)} → $${r.expected.toFixed(2)}`).join(", ")})`,
-  );
-  return { invoiceId: base.id, repriced: diff.reprice.length, netDelta: diff.netDelta, anomalies: diff.anomalies };
+  return results;
 }
 
 /**
@@ -887,13 +937,15 @@ export async function syncInvoiceAccessorials(loadId: string) {
 
   // 282c — rows already stamped to a DRAFT are re-read, not skipped. The
   // pending fold below only ever sees UNSTAMPED rows, which is the exactly-once
-  // mark doing its job; this is the one step that looks at the stamped ones.
-  const repriced = await repriceDraftInvoice(loadId);
+  // mark doing its job; this is the one step that looks at the stamped ones —
+  // on every draft document the load has, base or supplemental.
+  const repriced = await repriceDraftInvoices(loadId);
 
   const pending = await unbilledCustomerAccessorials(loadId);
   if (!pending.length) {
     if (credited) return credited;
-    return repriced?.repriced ? prisma.invoice.findUnique({ where: { id: repriced.invoiceId } }) : null;
+    const touched = repriced.find((r) => r.repriced > 0);
+    return touched ? prisma.invoice.findUnique({ where: { id: touched.invoiceId } }) : null;
   }
 
   const base = await prisma.invoice.findFirst({

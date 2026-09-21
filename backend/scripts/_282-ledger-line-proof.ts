@@ -1,7 +1,7 @@
 /**
  * §13.3 Item 282 proof — the ledger and the customer invoice, line by line.
  *
- * 282c: an amount edit on a row already stamped to a DRAFT re-prices that line in
+ * 282c: an amount edit on a row already stamped to a DRAFT — base OR supplemental — re-prices that line in
  * place and moves the totals; SENT stays untouched; idempotent. (section 7)
  *
  * 282a: every accessorial line on a customer invoice names the ledger row it
@@ -183,6 +183,21 @@ async function main() {
     const r7c = await syncInvoiceAccessorials(load2.id);
     const sentLines = await linesOf(base2!.id);
     ok("a SENT base is NOT re-priced: line still $250, no supplemental raised (the row is stamped, not pending)", r7c === null && Number(sentLines.find((l) => l.accessorialId === tonu2.id)?.amount) === 250 && (await prisma.invoice.count({ where: { loadId: load2.id } })) === 1);
+
+    // ── 8. the review's survivor: a row stamped to a DRAFT SUPPLEMENTAL is re-priced too ──
+    console.log("[8] fix-forward — the base is SENT; a late row lands on a DRAFT supplemental, then is edited");
+    const late2 = await prisma.loadAccessorial.create({ data: { loadId: load2.id, type: "DETENTION_DEL", amount: 300, status: "APPROVED", billedTo: "SHIPPER", notes: "6h dwell" } });
+    const supp2 = await syncInvoiceAccessorials(load2.id);
+    ok("a DRAFT supplemental carries the $300 line, stamped", !!supp2 && (supp2 as any).invoiceKind === "SUPPLEMENTAL" && (supp2 as any).status === "DRAFT" && (await linesOf((supp2 as any).id)).some((l) => l.accessorialId === late2.id && Number(l.amount) === 300));
+    await prisma.loadAccessorial.update({ where: { id: late2.id }, data: { amount: 350 } });
+    const r8 = await syncInvoiceAccessorials(load2.id);
+    const suppLines = await linesOf((supp2 as any).id);
+    ok("the supplemental's line follows the edit to $350 — same line, re-priced in place", suppLines.length === 1 && Number(suppLines[0].amount) === 350 && suppLines[0].accessorialId === late2.id, suppLines.map((l) => `${l.amount}@${l.accessorialId}`).join(","));
+    const supp8 = await prisma.invoice.findUnique({ where: { id: (supp2 as any).id } });
+    ok("the supplemental's totals moved 300 -> 350", Number(supp8?.totalAmount) === 350 && Number(supp8?.accessorialsAmount) === 350, `total=${supp8?.totalAmount} acc=${supp8?.accessorialsAmount}`);
+    ok("the sync returned the supplemental it re-priced", !!r8 && (r8 as any).id === (supp2 as any).id);
+    ok("the SENT base is still untouched: its TONU line still $250, still one base", Number((await linesOf(base2!.id)).find((l) => l.accessorialId === tonu2.id)?.amount) === 250 && (await prisma.invoice.count({ where: { loadId: load2.id, invoiceKind: "BASE" } })) === 1);
+    ok("exactly two documents on the load: the SENT base and the DRAFT supplemental", (await prisma.invoice.count({ where: { loadId: load2.id } })) === 2);
 
     // Tripwire: the proof exercised real rows.
     const all = await prisma.$queryRawUnsafe<any[]>(`SELECT COUNT(*)::int AS n FROM invoice_line_items WHERE "accessorialId" IS NOT NULL AND "invoiceId" IN (SELECT id FROM invoices WHERE "loadId" = $1)`, load.id);
