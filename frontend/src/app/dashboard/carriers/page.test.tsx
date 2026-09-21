@@ -275,3 +275,144 @@ describe("an archived carrier is read-only on this page", () => {
     expect(within(dialog).getByRole("button", { name: /Mark as test/ }).getAttribute("title")).toMatch(/Mark as a test account/);
   });
 });
+
+/* ------------------------------------------------------------------ */
+/*  C6 (carrier-archive recut, 2026-09-21) — the archive modal and the  */
+/*  restore action.                                                     */
+/*                                                                      */
+/*  The modal does NOT pre-empt the server: submitting with no reason   */
+/*  sends the request and renders the 422 the server answers with,      */
+/*  code and message. Restore… is the one control enabled on an         */
+/*  archived carrier, rendered for ADMIN/CEO only, and its outcome line  */
+/*  says REVIEWING and whether the fingerprint was rebuilt.             */
+/*  Adversarially verified at authoring — matrix in the commit message.  */
+/* ------------------------------------------------------------------ */
+describe("C6 — the archive modal", () => {
+  async function openArchiveModal(user: ReturnType<typeof userEvent.setup>) {
+    mount();
+    await screen.findByText("Live Freight LLC", { selector: "p" });
+    await user.click(rowFor("Live Freight LLC"));
+    const panel = await screen.findByRole("dialog");
+    await user.click(within(panel).getByRole("button", { name: /Archive…/ }));
+    return screen.findByRole("dialog", { name: /Archive Live Freight LLC/ });
+  }
+
+  it("submitting with no reason sends the request and surfaces the server's 422, code and message", async () => {
+    const user = userEvent.setup();
+    const { api } = await import("@/lib/api");
+    const serverMessage = "Archiving a carrier must carry a reason. One of: DUPLICATE_RECORD, CEASED_OPERATIONS.";
+    (api.delete as ReturnType<typeof vi.fn>).mockRejectedValueOnce({
+      response: { status: 422, data: { error: serverMessage, code: "ARCHIVE_REASON_REQUIRED" } },
+    });
+    const modal = await openArchiveModal(user);
+    // Nothing chosen, nothing typed. The button is enabled: the server is the authority.
+    const submit = within(modal).getByRole("button", { name: /Archive carrier/ });
+    expect(submit).toBeEnabled();
+    await user.click(submit);
+
+    const alert = await within(modal).findByRole("alert");
+    expect(alert.textContent).toContain("ARCHIVE_REASON_REQUIRED");
+    expect(alert.textContent).toContain(serverMessage);
+    // The request that went out carried no reason — the 422 is the server's, not a mock of one.
+    expect(api.delete).toHaveBeenCalledWith("/carriers/cp-live", { data: {} });
+    // The modal stays open so the operator can pick one.
+    expect(screen.getByRole("dialog", { name: /Archive Live Freight LLC/ })).toBeInTheDocument();
+  });
+
+  it("a chosen reason and a note are sent under the C3 contract; success closes the modal and reports the withdrawn offers", async () => {
+    const user = userEvent.setup();
+    const { api } = await import("@/lib/api");
+    (api.delete as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      data: { success: true, message: "Carrier archived", details: { archived: true, loginDeactivated: true, archiveReason: "DUPLICATE_RECORD", references: 4, withdrawn: { tenders: 2, positions: 1, bids: 0 } } },
+    });
+    const modal = await openArchiveModal(user);
+    await user.selectOptions(within(modal).getByLabelText(/Reason/), "DUPLICATE_RECORD");
+    await user.type(within(modal).getByLabelText(/Note/), "  Second registration for the same MC.  ");
+    await user.click(within(modal).getByRole("button", { name: /Archive carrier/ }));
+
+    await waitFor(() => expect(api.delete).toHaveBeenCalledWith("/carriers/cp-live", { data: { reason: "DUPLICATE_RECORD", archiveNote: "Second registration for the same MC." } }));
+    await waitFor(() => expect(screen.queryByRole("dialog", { name: /Archive Live Freight LLC/ })).toBeNull());
+    const status = await screen.findByRole("status");
+    expect(status.textContent).toContain("Archived");
+    expect(status.textContent).toContain("3 open offers withdrawn");
+  });
+
+  it("a 409 (truck under a load) is handed to the page: the in-flight loads and Suspend instead", async () => {
+    const user = userEvent.setup();
+    const { api } = await import("@/lib/api");
+    (api.delete as ReturnType<typeof vi.fn>).mockRejectedValueOnce({
+      response: {
+        status: 409,
+        data: {
+          error: "CARRIER_HOLDS_LIVE_LOADS",
+          message: "Live Freight LLC cannot be archived: on 2 loads still in flight (SRL-121501, SRL-121502).",
+          blockingLoads: [{ id: "l1", loadNumber: "SRL-121501", status: "IN_TRANSIT" }, { id: "l2", loadNumber: "SRL-121502", status: "DELIVERED" }],
+          remedy: { inFlightLoads: ["SRL-121501", "SRL-121502"], releaseInFlightLoadsFirst: "Release the carrier from these loads first; a truck may be routed.", holdingTenders: [], suspend: "POST /compliance/carrier/cp-live/suspend" },
+        },
+      },
+    });
+    const modal = await openArchiveModal(user);
+    await user.selectOptions(within(modal).getByLabelText(/Reason/), "CEASED_OPERATIONS");
+    await user.click(within(modal).getByRole("button", { name: /Archive carrier/ }));
+
+    await waitFor(() => expect(screen.queryByRole("dialog", { name: /Archive Live Freight LLC/ })).toBeNull());
+    const alert = await screen.findByRole("alert");
+    expect(alert.textContent).toContain("still in flight");
+    expect(alert.textContent).toContain("SRL-121501, SRL-121502");
+    expect(within(alert).getByRole("button", { name: /Suspend instead/ })).toBeEnabled();
+  });
+});
+
+describe("C6 — Restore…", () => {
+  it("renders only on an archived carrier, enabled, and its outcome says REVIEWING and whether the fingerprint was rebuilt", async () => {
+    const user = userEvent.setup();
+    const { api } = await import("@/lib/api");
+    vi.spyOn(window, "confirm").mockReturnValue(true);
+    (api.put as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      data: { success: true, message: "Carrier restored", details: { restored: true, loginReactivated: true, onboardingStatus: "REVIEWING", fingerprintRebuilt: false } },
+    });
+    mount();
+    await screen.findByText("Live Freight LLC", { selector: "p" });
+
+    // A live carrier has no Restore….
+    await user.click(rowFor("Live Freight LLC"));
+    let panel = await screen.findByRole("dialog");
+    expect(within(panel).queryByRole("button", { name: /Restore…/ })).toBeNull();
+
+    await user.click(screen.getByRole("button", { name: /Show archived/ }));
+    await screen.findByText("Fraud Case Carrier", { selector: "p" });
+    await user.click(rowFor("Fraud Case Carrier"));
+    panel = await screen.findByRole("dialog");
+    const restore = within(panel).getByRole("button", { name: /Restore…/ });
+    // The one control that is NOT read-only on an archived row.
+    expect(restore).toBeEnabled();
+    expect(restore.getAttribute("title")).not.toBe(ARCHIVED_TITLE);
+    await user.click(restore);
+
+    await waitFor(() => expect(api.put).toHaveBeenCalledWith("/carriers/cp-fraud/restore"));
+    const status = await screen.findByRole("status");
+    expect(status.textContent).toContain("REVIEWING");
+    // fingerprintRebuilt:false deserves its own visible line (Item 286.7).
+    expect(status.textContent).toMatch(/NOT rebuilt/);
+  });
+
+  it("is hidden for a non-ADMIN/CEO role even when an archived row reaches the list", async () => {
+    auth.role = "OPERATIONS";
+    const user = userEvent.setup();
+    const { api } = await import("@/lib/api");
+    // The server, not the toggle, decides what the list carries; hand this role an archived
+    // row regardless so the assertion is about the BUTTON's gate, not the toggle's.
+    (api.get as ReturnType<typeof vi.fn>).mockImplementation((url: string) => {
+      if (url.startsWith("/carrier/all")) return Promise.resolve({ data: { carriers: ALL, total: ALL.length } });
+      if (url.startsWith("/carriers/quickpay-enrollments")) return Promise.resolve({ data: { status: "ALL", count: 0, enrollments: [] } });
+      return Promise.resolve({ data: {} });
+    });
+    mount();
+    await screen.findByText("Fraud Case Carrier", { selector: "p" });
+    await user.click(rowFor("Fraud Case Carrier"));
+    const panel = await screen.findByRole("dialog");
+    expect(within(panel).queryByRole("button", { name: /Restore…/ })).toBeNull();
+    expect(within(panel).queryByRole("button", { name: /Archive…/ })).toBeNull();
+    expect(api.put).not.toHaveBeenCalled();
+  });
+});

@@ -16,19 +16,17 @@ import {
   TrendingUp, TrendingDown, DollarSign, Package, Award, ShieldAlert, Calendar,
   BarChart3, Percent, Hash, Compass, RefreshCw, ExternalLink, AlertTriangle, Download,
   User, CheckSquare, ClipboardList, Upload, Eye, ArrowLeft, FolderOpen,
-  MessageCircle, Sliders, FlaskConical, GraduationCap, Zap, Loader2, Ban, Archive,
+  MessageCircle, Sliders, FlaskConical, GraduationCap, Zap, Loader2, Ban, Archive, RotateCcw,
 } from "lucide-react";
 import { InfoRequestModal } from "@/components/carriers/InfoRequestModal";
 import { InfoRequestThread } from "@/components/carriers/InfoRequestThread";
 import { RejectCarrierModal } from "@/components/carriers/RejectCarrierModal";
 import { SuspendCarrierModal } from "@/components/carriers/SuspendCarrierModal";
+import { ArchiveCarrierModal, type ArchiveRefusalBody, type ArchiveDoneDetails } from "@/components/carriers/ArchiveCarrierModal";
 
-// lifecycle-gaps B5b — the 409 an archive returns when anything references the carrier.
-type ArchiveRefusal = {
-  error?: string;
-  message?: string;
-  remedy?: { inFlightLoads?: string[]; suspend?: string | null; liveTenders?: number; unpaidCarrierPays?: number };
-};
+// lifecycle-gaps B5b, re-cut by C3/C6 — the 409 an archive returns when a truck is under a
+// load (CARRIER_HOLDS_LIVE_LOADS). The body shape is the modal's export so the two cannot drift.
+type ArchiveRefusal = ArchiveRefusalBody;
 import { InviteCarrierModal } from "@/components/carriers/InviteCarrierModal";
 import { SecuritySignalsCard } from "@/components/carriers/SecuritySignalsCard";
 import { CarrierPreferencesPanel } from "@/components/carriers/CarrierPreferencesPanel";
@@ -453,6 +451,10 @@ export default function CarrierPoolPage() {
   // lifecycle-gaps B5b — Suspend modal + the rendered archive refusal.
   const [showSuspend, setShowSuspend] = useState(false);
   const [archiveRefusal, setArchiveRefusal] = useState<ArchiveRefusal | null>(null);
+  // C6 (carrier-archive recut) — the archive modal (reason required, note optional) and the
+  // one-line outcome of an archive or a restore, rendered where the refusal renders.
+  const [showArchive, setShowArchive] = useState(false);
+  const [lifecycleNotice, setLifecycleNotice] = useState<{ tone: "ok" | "warn"; text: string } | null>(null);
   // v3.8.asb — Quick Pay pilot decisions are ADMIN / CEO / OPERATIONS, wider
   // than the ADMIN+CEO `isAdmin` used for approve/reject. Deliberate, and it
   // mirrors routes/carriers.ts exactly: carrier approval decides whether they
@@ -1187,6 +1189,14 @@ export default function CarrierPoolPage() {
         )}
       </div>
 
+      {/* C6 — the one-line outcome of an archive or a restore. Global on purpose: an archived
+          row leaves the default list and its panel closes, so the line must not live there. */}
+      {lifecycleNotice && (
+        <p role="status" className={`mb-3 rounded-lg border p-3 text-xs ${lifecycleNotice.tone === "ok" ? "border-[#2F7A4F]/40 bg-[#E6F0E9] text-[#2F7A4F]" : "border-[#B07A1A]/40 bg-[#FBEFD4] text-[#B07A1A]"}`}>
+          {lifecycleNotice.text}
+        </p>
+      )}
+
       {/* Carrier List + Panel */}
       <div>
         {/* Carrier List — shrinks when panel open */}
@@ -1499,25 +1509,43 @@ export default function CarrierPoolPage() {
                           <Ban className="w-3.5 h-3.5" /> Suspend…
                         </button>
                       )}
-                      {/* lifecycle-gaps B5b — Archive: refused with 409 when anything references the
-                          carrier; the refusal names the references and is rendered below. A bare
-                          registration is archived and its login deactivated. */}
+                      {/* C6 (carrier-archive recut) — Archive… opens the reason modal. Until C6 this
+                          button posted no body and every click was refused 422 (the C3 contract
+                          requires a reason). The 409 for a truck under a load is rendered below
+                          with the in-flight loads and the Suspend hand-off. ADMIN / CEO. */}
                       {isAdmin && (
-                        <button onClick={async () => {
-                          setArchiveRefusal(null);
-                          if (!confirm(`Archive ${selectedCarrier.company}? This is refused if the carrier has any loads, tenders, payables, agreements, documents or drivers on record — a carrier with history is suspended instead. A bare registration is archived and its login deactivated.`)) return;
-                          try {
-                            await api.delete(`/carriers/${selectedCarrier.id}`);
-                            queryClient.invalidateQueries({ queryKey: ["carriers"] });
-                            queryClient.invalidateQueries({ queryKey: ["carrier-all"] });
-                            setSelectedCarrierId(null);
-                          } catch (err: unknown) {
-                            const data = (err as { response?: { data?: ArchiveRefusal } })?.response?.data;
-                            setArchiveRefusal(data ?? { error: "ARCHIVE_FAILED", message: "Could not archive the carrier." });
-                          }
-                        }}
+                        <button onClick={() => { setArchiveRefusal(null); setLifecycleNotice(null); setShowArchive(true); }}
                           className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-100 text-gray-700 rounded-lg text-xs hover:bg-gray-200 transition disabled:opacity-50 disabled:cursor-not-allowed" {...whenNotArchived()}>
                           <Archive className="w-3.5 h-3.5" /> Archive…
+                        </button>
+                      )}
+                      {/* C6 — Restore…: the ONE control that is enabled on an archived carrier, and only
+                          for ADMIN / CEO (the route's own authorize list). Deliberately NOT under
+                          whenNotArchived. The confirm says what B6c does and nothing more: REVIEWING
+                          whatever the status was, login back, fingerprint rebuilt, history untouched. */}
+                      {isAdmin && isArchived && (
+                        <button onClick={async () => {
+                          setArchiveRefusal(null);
+                          setLifecycleNotice(null);
+                          if (!confirm(`Restore ${selectedCarrier.company}? It comes back at REVIEWING regardless of its status before the archive, so an AE reviews it before it can be tendered. The login is reactivated and its chameleon fingerprint is rebuilt. Nothing else changes: history, documents and agreements are as they were.`)) return;
+                          try {
+                            const res = await api.put(`/carriers/${selectedCarrier.id}/restore`);
+                            const d = (res.data as { details?: { onboardingStatus?: string; fingerprintRebuilt?: boolean } } | undefined)?.details;
+                            queryClient.invalidateQueries({ queryKey: ["carriers"] });
+                            queryClient.invalidateQueries({ queryKey: ["carrier-all"] });
+                            setLifecycleNotice(
+                              d?.fingerprintRebuilt === false
+                                ? { tone: "warn", text: `Restored, now ${d?.onboardingStatus ?? "REVIEWING"}. The chameleon fingerprint was NOT rebuilt; check Security Signals before this carrier is tendered.` }
+                                : { tone: "ok", text: `Restored, now ${d?.onboardingStatus ?? "REVIEWING"}. Login reactivated; fingerprint rebuilt.` },
+                            );
+                          } catch (err: unknown) {
+                            const data = (err as { response?: { data?: { message?: string; error?: string } } })?.response?.data;
+                            setLifecycleNotice({ tone: "warn", text: `Restore failed: ${data?.message ?? data?.error ?? "unknown error"}` });
+                          }
+                        }}
+                          className="flex items-center gap-1.5 px-3 py-1.5 bg-[#FAEEDA] text-[#854F0B] rounded-lg text-xs hover:bg-[#F5E3C0] transition"
+                          title="Restore this archived carrier. It returns at REVIEWING.">
+                          <RotateCcw className="w-3.5 h-3.5" /> Restore…
                         </button>
                       )}
                     </div>
@@ -2907,6 +2935,25 @@ export default function CarrierPoolPage() {
           carrierCompany={selectedCarrier.company}
           open={rejectModalOpen}
           onClose={() => setRejectModalOpen(false)}
+        />
+      )}
+      {/* C6 (carrier-archive recut) — Archive modal: reason required, note optional. A 409
+          (truck under a load) is handed up and rendered under the action bar; success closes
+          the panel, since the row leaves the default list. */}
+      {selectedCarrier && showArchive && (
+        <ArchiveCarrierModal
+          carrierId={selectedCarrier.id}
+          carrierName={selectedCarrier.company}
+          onClose={() => setShowArchive(false)}
+          onRefused={(refusal) => { setShowArchive(false); setArchiveRefusal(refusal); }}
+          onDone={(details: ArchiveDoneDetails | undefined) => {
+            setShowArchive(false);
+            queryClient.invalidateQueries({ queryKey: ["carriers"] });
+            queryClient.invalidateQueries({ queryKey: ["carrier-all"] });
+            setSelectedCarrierId(null);
+            const withdrawn = details?.withdrawn ? Object.values(details.withdrawn).reduce((a, b) => a + (Number(b) || 0), 0) : 0;
+            setLifecycleNotice({ tone: "ok", text: `Archived. Login deactivated; ${withdrawn} open offer${withdrawn === 1 ? "" : "s"} withdrawn.` });
+          }}
         />
       )}
       {/* lifecycle-gaps B5b — Suspend modal (reason required). */}

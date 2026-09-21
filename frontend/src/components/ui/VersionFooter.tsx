@@ -18270,7 +18270,14 @@
 // carrierId is refused 400 CARRIER_NOT_EDITABLE_HERE naming the real paths (accept a tender, assign-match, release). onLoadAssigned
 // — the staging-then-rollback gate with no remaining caller — is deleted. The guard learns the hoisted shape (11/11) and, re-injected,
 // names controllers/loadController.ts:1113 (hoisted payload data); a controller case pins the 400 with no update.
-export const SRL_VERSION = "3.8.bec";
+// v3.8.bef — carrier-archive recut C6: the Archive… button opens a reason modal instead of posting no body (every click was
+// refused 422 ARCHIVE_REASON_REQUIRED since C3 landed). Reason required from the one shared vocabulary, note optional; the modal
+// does NOT pre-empt the server — a submit with no reason goes out and the server's 422 is what the operator reads, code and
+// message; a 409 (truck under a load) is handed to the page's refusal renderer with the in-flight loads and Suspend instead.
+// Restore… is the ONE control enabled on an archived carrier, ADMIN/CEO only, deliberately outside whenNotArchived; the outcome
+// line says REVIEWING and, when the fingerprint was not rebuilt, says so. carrierTenderLabel gains carrier_archived ("Closed —
+// account archived") so a restored carrier's history never reads "withdrawn" for an offer SRL pulled. 5 page cases + 1 label case.
+export const SRL_VERSION = "3.8.bef";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
