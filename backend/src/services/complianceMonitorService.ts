@@ -14,6 +14,7 @@ import { prisma } from "../config/database";
 import { verifyCarrierWithFMCSA, calendarMonthsBetween } from "./fmcsaService";
 import { sendEmail, wrap } from "./emailService";
 import { log } from "../lib/logger";
+import { recordCarrierStatusTransition } from "../lib/carrierStatusAudit";
 
 // ────────────────────────────────────────────────────────────
 // AUTHORITY_AGE_GATE_LIVE_AT — Item 182 sprint 3 (v3.8.ahm)
@@ -1330,6 +1331,15 @@ export async function fmcsaComplianceScan() {
           where: { id: carrier.id },
           data: { onboardingStatus: "SUSPENDED", autoSuspendedAt: new Date(), autoSuspendReason: "FMCSA auto-suspension", status: "SUSPENDED", autoSuspendCause: "FMCSA_AUTHORITY" },
         });
+        await recordCarrierStatusTransition({
+          carrierId: carrier.id,
+          carrierName,
+          previousStatus: "APPROVED",
+          newStatus: "SUSPENDED",
+          cause: "FMCSA_AUTHORITY",
+          reason: `FMCSA reports operating status ${fmcsaResult.operatingStatus}`,
+          actor: { kind: "CRON", source: "fmcsa-compliance" },
+        });
         results.alerts++;
         results.suspended++;
 
@@ -1441,6 +1451,15 @@ export async function fmcsaComplianceScan() {
         await prisma.carrierProfile.update({
           where: { id: carrier.id },
           data: { onboardingStatus: "SUSPENDED", autoSuspendedAt: new Date(), autoSuspendReason: "FMCSA auto-suspension", status: "SUSPENDED", autoSuspendCause: "FMCSA_OUT_OF_SERVICE" },
+        });
+        await recordCarrierStatusTransition({
+          carrierId: carrier.id,
+          carrierName,
+          previousStatus: "APPROVED",
+          newStatus: "SUSPENDED",
+          cause: "FMCSA_OUT_OF_SERVICE",
+          reason: `FMCSA reports an out-of-service order dated ${fmcsaResult.outOfServiceDate}`,
+          actor: { kind: "CRON", source: "fmcsa-compliance" },
         });
         results.alerts++;
         results.suspended++;
@@ -1619,8 +1638,39 @@ export async function dailyComplianceReminders() {
 // checkAutoReversal — auto-reinstate suspended carriers
 // ────────────────────────────────────────────────────────────
 
-export async function checkAutoReversal() {
-  const results = { checked: 0, reinstated: 0, errors: 0 };
+/**
+ * Sprint A0 (v3.8.bbv). The reversal switches on autoSuspendCause and never on
+ * the prose column. Per cause:
+ *
+ *   FMCSA_AUTHORITY, FMCSA_OUT_OF_SERVICE, FMCSA_RATING
+ *       reinstated by the FMCSA facts alone (verified, AUTHORIZED, no OOS,
+ *       insurance on file), which is the fact each was suspended on.
+ *   INSURANCE_EXPIRED
+ *       the FMCSA facts AND the profile's own insuranceExpiry no longer in the
+ *       past. Without the second half the 11:00 insurance sweep re-suspends
+ *       the carrier the same day it was reinstated here at 04:00.
+ *   VETTING_CRITICAL
+ *       the FMCSA facts AND a fresh vetting run that cleared the threshold:
+ *       lastVettingRisk not CRITICAL and lastVettedAt later than
+ *       autoSuspendedAt. The monthly re-vet excludes SUSPENDED carriers, so
+ *       that fresh run is an AE full-vet; this is what AEROSWIFT lacked.
+ *   OFAC_MATCH, AE_MANUAL
+ *       never auto-reinstated. Held for an AE (POST /carriers/:id/reinstate).
+ *   null
+ *       cause unknown. Held, and surfaced once as a ComplianceAlert so an AE
+ *       sees a row the sweep will never clear on its own.
+ *
+ * The transition is recorded by recordCarrierStatusTransition: as a cron
+ * actor named "auto-reversal", or as the user who pressed the manual
+ * check-reversals button when one did.
+ */
+export const AUTO_REVERSAL_SOURCE = "auto-reversal";
+const NEVER_AUTO_REINSTATED = new Set<string>(["OFAC_MATCH", "AE_MANUAL"]);
+const UNKNOWN_CAUSE_ALERT = "SUSPENSION_CAUSE_UNKNOWN";
+
+export async function checkAutoReversal(opts: { triggeredByUserId?: string } = {}) {
+  const results = { checked: 0, reinstated: 0, held: 0, unclassified: 0, errors: 0 };
+  const now = new Date();
 
   const suspendedCarriers = await prisma.carrierProfile.findMany({
     where: {
@@ -1629,7 +1679,15 @@ export async function checkAutoReversal() {
       isTestAccount: false, // v3.8.alm §13.3 Item 190
       dotNumber: { not: null },
     },
-    include: {
+    select: {
+      id: true,
+      dotNumber: true,
+      companyName: true,
+      autoSuspendCause: true,
+      autoSuspendedAt: true,
+      lastVettingRisk: true,
+      lastVettedAt: true,
+      insuranceExpiry: true,
       user: { select: { company: true, firstName: true, lastName: true, email: true } },
     },
   });
@@ -1638,64 +1696,124 @@ export async function checkAutoReversal() {
     try {
       if (!carrier.dotNumber) continue;
       results.checked++;
+      const carrierName = carrier.user.company || carrier.companyName || `${carrier.user.firstName} ${carrier.user.lastName}`;
+      const cause = carrier.autoSuspendCause;
+
+      if (cause === null) {
+        results.unclassified++;
+        const open = await prisma.complianceAlert.findFirst({
+          where: { type: UNKNOWN_CAUSE_ALERT, entityType: "CarrierProfile", entityId: carrier.id, status: "ACTIVE" },
+          select: { id: true },
+        });
+        if (!open) {
+          await prisma.complianceAlert.create({
+            data: {
+              type: UNKNOWN_CAUSE_ALERT,
+              entityType: "CarrierProfile",
+              entityId: carrier.id,
+              entityName: carrierName,
+              expiryDate: new Date(now.getTime() + 365 * 86_400_000),
+              severity: "WARNING",
+              status: "ACTIVE",
+            },
+          });
+        }
+        continue;
+      }
+
+      if (NEVER_AUTO_REINSTATED.has(cause)) {
+        results.held++;
+        continue;
+      }
 
       const fmcsaResult = await verifyCarrierWithFMCSA(carrier.dotNumber);
-
-      if (
+      const fmcsaClean =
         fmcsaResult.verified &&
         fmcsaResult.operatingStatus === "AUTHORIZED" &&
         !fmcsaResult.outOfServiceDate &&
-        fmcsaResult.insuranceOnFile
-      ) {
-        await prisma.carrierProfile.update({
-          where: { id: carrier.id },
-          data: {
-            onboardingStatus: "APPROVED",
-            status: "APPROVED", // B2 — paired; see lib/carrierOperational
-            autoSuspendedAt: null,
-            autoSuspendReason: null,
-            fmcsaAuthorityStatus: "AUTHORIZED",
-            fmcsaLastChecked: new Date(),
-          },
-        });
+        fmcsaResult.insuranceOnFile;
 
-        const carrierName = carrier.user.company || `${carrier.user.firstName} ${carrier.user.lastName}`;
-        await prisma.complianceAlert.create({
-          data: {
-            type: "AUTO_REINSTATED",
-            entityType: "CarrierProfile",
-            entityId: carrier.id,
-            entityName: carrierName,
-            expiryDate: new Date(Date.now() + 365 * 86_400_000),
-            severity: "INFO",
-            status: "ACTIVE",
-          },
-        });
-
-        try {
-          await sendEmail(
-            carrier.user.email,
-            `[SRL] Account Reinstated - ${carrierName}`,
-            `<div style="font-family: Arial, sans-serif;">
-              <h2>Your Account Has Been Reinstated</h2>
-              <p>Dear ${carrierName},</p>
-              <p>Your carrier account has been automatically reinstated after our system verified
-              your FMCSA authority is active, no out-of-service status, and insurance is on file.</p>
-              <p>You may now accept loads again.</p>
-              <p>— Compliance Department, Silk Route Logistics Inc.</p>
-            </div>`,
-          );
-        } catch { /* non-critical */ }
-
-        results.reinstated++;
+      let eligible = fmcsaClean;
+      let evidence = "FMCSA reports authority active, no out-of-service order, insurance on file";
+      if (cause === "INSURANCE_EXPIRED") {
+        const stillExpired = !!carrier.insuranceExpiry && carrier.insuranceExpiry < now;
+        eligible = fmcsaClean && !stillExpired;
+        evidence += "; insurance expiry on file is no longer in the past";
+      } else if (cause === "VETTING_CRITICAL") {
+        const freshVet =
+          !!carrier.lastVettedAt && !!carrier.autoSuspendedAt && carrier.lastVettedAt > carrier.autoSuspendedAt;
+        eligible = fmcsaClean && freshVet && carrier.lastVettingRisk !== "CRITICAL";
+        evidence += `; vetting re-run after the suspension cleared CRITICAL (now ${carrier.lastVettingRisk ?? "unrated"})`;
       }
+
+      if (!eligible) {
+        results.held++;
+        continue;
+      }
+
+      await prisma.carrierProfile.update({
+        where: { id: carrier.id },
+        data: {
+          onboardingStatus: "APPROVED",
+          status: "APPROVED", // B2 — paired; see lib/carrierOperational
+          autoSuspendedAt: null,
+          autoSuspendReason: null,
+          autoSuspendCause: null,
+          fmcsaAuthorityStatus: "AUTHORIZED",
+          fmcsaLastChecked: now,
+        },
+      });
+
+      await recordCarrierStatusTransition({
+        carrierId: carrier.id,
+        carrierName,
+        previousStatus: "SUSPENDED",
+        newStatus: "APPROVED",
+        cause,
+        reason: `Auto-reinstated (cause ${cause}): ${evidence}`,
+        actor: opts.triggeredByUserId
+          ? { kind: "USER", userId: opts.triggeredByUserId }
+          : { kind: "CRON", source: AUTO_REVERSAL_SOURCE },
+      });
+
+      await prisma.complianceAlert.create({
+        data: {
+          type: "AUTO_REINSTATED",
+          entityType: "CarrierProfile",
+          entityId: carrier.id,
+          entityName: carrierName,
+          expiryDate: new Date(now.getTime() + 365 * 86_400_000),
+          severity: "INFO",
+          status: "ACTIVE",
+        },
+      });
+
+      try {
+        await sendEmail(
+          carrier.user.email,
+          `[SRL] Account Reinstated - ${carrierName}`,
+          `<div style="font-family: Arial, sans-serif;">
+            <h2>Your Account Has Been Reinstated</h2>
+            <p>Dear ${carrierName},</p>
+            <p>Your carrier account has been automatically reinstated after our system verified
+            your FMCSA authority is active, no out-of-service status, and insurance is on file.</p>
+            <p>You may now accept loads again.</p>
+            <p>— Compliance Department, Silk Route Logistics Inc.</p>
+          </div>`,
+        );
+      } catch { /* non-critical */ }
+
+      results.reinstated++;
     } catch (err) {
       log.error({ err: err }, `[AutoReversal] Error for carrier ${carrier.id}:`);
       results.errors++;
     }
   }
 
-  log.info(`[AutoReversal] ${results.checked} checked, ${results.reinstated} reinstated, ${results.errors} errors`);
+  log.info(
+    `[AutoReversal] ${results.checked} checked, ${results.reinstated} reinstated, ${results.held} held for an AE, ` +
+      `${results.unclassified} with no cause, ${results.errors} errors`,
+  );
   return results;
 }
 
@@ -1859,6 +1977,15 @@ export async function processInsuranceExpiryEnforcement() {
         autoSuspendCause: "INSURANCE_EXPIRED",
       },
     });
+    await recordCarrierStatusTransition({
+      carrierId: carrier.id,
+      carrierName: carrier.user.company || carrier.companyName || carrier.user.firstName || carrier.id,
+      previousStatus: "APPROVED",
+      newStatus: "SUSPENDED",
+      cause: "INSURANCE_EXPIRED",
+      reason: `Insurance expired on ${carrier.insuranceExpiry?.toISOString().split("T")[0]} with no active grace period`,
+      actor: { kind: "CRON", source: "insurance-expiry-enforce" },
+    });
 
     await prisma.complianceAlert.create({
       data: {
@@ -1992,6 +2119,15 @@ export async function monthlyCarrierReVetting() {
             autoSuspendCause: "VETTING_CRITICAL",
           },
         });
+        await recordCarrierStatusTransition({
+          carrierId: carrier.id,
+          carrierName: carrier.companyName || carrier.id,
+          previousStatus: "APPROVED",
+          newStatus: "SUSPENDED",
+          cause: "VETTING_CRITICAL",
+          reason: `Monthly re-vetting scored ${report.score}/100 (CRITICAL). Flags: ${report.flags.slice(0, 3).join(", ")}`,
+          actor: { kind: "CRON", source: "monthly-carrier-revet" },
+        });
 
         await prisma.notification.create({
           data: {
@@ -2104,6 +2240,15 @@ export async function detectFmcsaAuthorityChanges() {
               autoSuspendCause: ["OUT_OF_SERVICE", "OOS"].includes(currentStatus) ? "FMCSA_OUT_OF_SERVICE" : "FMCSA_AUTHORITY",
             },
           });
+          await recordCarrierStatusTransition({
+            carrierId: carrier.id,
+            carrierName: carrier.companyName || carrier.id,
+            previousStatus: "APPROVED",
+            newStatus: "SUSPENDED",
+            cause: ["OUT_OF_SERVICE", "OOS"].includes(currentStatus) ? "FMCSA_OUT_OF_SERVICE" : "FMCSA_AUTHORITY",
+            reason: `FMCSA authority changed from ${previousStatus} to ${currentStatus}`,
+            actor: { kind: "CRON", source: "fmcsa-authority-watch" },
+          });
 
           await prisma.notification.create({
             data: {
@@ -2146,6 +2291,15 @@ export async function detectFmcsaAuthorityChanges() {
               autoSuspendCause: "FMCSA_RATING",
               safetyRating: "UNSATISFACTORY",
             },
+          });
+          await recordCarrierStatusTransition({
+            carrierId: carrier.id,
+            carrierName: carrier.companyName || carrier.id,
+            previousStatus: "APPROVED",
+            newStatus: "SUSPENDED",
+            cause: "FMCSA_RATING",
+            reason: `FMCSA safety rating changed from ${previousRating} to UNSATISFACTORY`,
+            actor: { kind: "CRON", source: "fmcsa-authority-watch" },
           });
           suspensions++;
         }

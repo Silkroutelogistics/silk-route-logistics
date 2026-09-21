@@ -1,6 +1,7 @@
 import { Response } from "express";
 import { z } from "zod";
 import { prisma } from "../config/database";
+import { recordCarrierStatusTransition } from "../lib/carrierStatusAudit";
 import { AuthRequest } from "../middleware/auth";
 import * as complianceMonitorService from "../services/complianceMonitorService";
 import { sendEmail } from "../services/emailService";
@@ -714,21 +715,16 @@ export async function suspendCarrier(req: AuthRequest, res: Response) {
       newStatus: "SUSPENDED",
     }).catch((err) => log.warn({ err }, "[Compliance] suspend info-request close notice failed"));
 
-    // Create audit trail
-    await prisma.auditTrail.create({
-      data: {
-        action: "CARRIER_SUSPENDED",
-        entityType: "CarrierProfile",
-        entityId: carrier.id,
-        performedById: req.user!.id,
-        changedFields: {
-          carrierName: carrier.user.company || `${carrier.user.firstName} ${carrier.user.lastName}`,
-          previousStatus: carrier.onboardingStatus,
-          newStatus: "SUSPENDED",
-          cause: "AE_MANUAL",
-          reason: suspendReason,
-        } as any,
-      },
+    // Sprint A0 (v3.8.bbv): one writer for the transition record, shared with
+    // the cron paths. USER actor lands on AuditTrail with the AE named.
+    await recordCarrierStatusTransition({
+      carrierId: carrier.id,
+      carrierName: carrier.user.company || `${carrier.user.firstName} ${carrier.user.lastName}`,
+      previousStatus: carrier.onboardingStatus,
+      newStatus: "SUSPENDED",
+      cause: "AE_MANUAL",
+      reason: suspendReason,
+      actor: { kind: "USER", userId: req.user!.id, ipAddress: req.ip },
     });
 
     res.json({ success: true, carrier: updated });

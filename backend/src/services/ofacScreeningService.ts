@@ -1,6 +1,7 @@
 import { prisma } from "../config/database";
 import { log } from "../lib/logger";
 import { monitoredCarrierWhere } from "../lib/carrierOperational";
+import { recordCarrierStatusTransition } from "../lib/carrierStatusAudit";
 
 // ─── Types ───────────────────────────────────────────────────
 
@@ -145,7 +146,7 @@ export async function weeklyOfacRescan() {
     // `status: "APPROVED"` alone, and the canonical approve path never sets
     // that field, so a normally-approved carrier was never sanctions-rescanned.
     where: monitoredCarrierWhere(),
-    select: { id: true, companyName: true, contactName: true },
+    select: { id: true, companyName: true, contactName: true, onboardingStatus: true },
   });
 
   log.info(`[OFAC Rescan] Screening ${carriers.length} approved carriers`);
@@ -191,6 +192,15 @@ export async function weeklyOfacRescan() {
               autoSuspendedAt: new Date(),
               autoSuspendCause: "OFAC_MATCH",
             },
+          });
+          await recordCarrierStatusTransition({
+            carrierId: carrier.id,
+            carrierName: carrier.companyName || carrier.id,
+            previousStatus: carrier.onboardingStatus,
+            newStatus: "SUSPENDED",
+            cause: "OFAC_MATCH",
+            reason: `OFAC/SDN match detected (score ${topScore}); immediate review required`,
+            actor: { kind: "CRON", source: "ofac-rescan" },
           });
 
           // Notify the carrier's user account

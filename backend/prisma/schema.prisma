@@ -613,6 +613,11 @@ enum AuditAction {
   SCAN
   DISMISS
   RESOLVE
+  // Lifecycle-gaps arc (2026-09-18). A cancellation and a deactivation are
+  // their own acts, not an UPDATE: the row must carry reason + fault party +
+  // previous/new state (lib/lifecycleAudit.ts), which a generic UPDATE never did.
+  CANCEL
+  DEACTIVATE
 }
 
 enum NotificationType {

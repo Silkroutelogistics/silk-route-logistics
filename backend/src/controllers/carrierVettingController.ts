@@ -347,7 +347,8 @@ export async function grantGracePeriodEndpoint(req: AuthRequest, res: Response) 
  */
 export async function triggerAutoReversal(req: AuthRequest, res: Response) {
   try {
-    const result = await checkAutoReversal();
+    // Sprint A0 (v3.8.bbv): the sweep records who pressed the button.
+    const result = await checkAutoReversal({ triggeredByUserId: req.user?.id });
     res.json(result);
   } catch (err) {
     res.status(500).json({ error: err instanceof Error ? err.message : "Auto-reversal check failed" });

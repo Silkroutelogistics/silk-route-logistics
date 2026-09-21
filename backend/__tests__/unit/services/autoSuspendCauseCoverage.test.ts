@@ -13,7 +13,10 @@
  *   2. freezes the inventory per file, so a ninth writer must be added here
  *      with its cause rather than silently;
  *   3. holds the AutoSuspendCause enum and the written values to each other:
- *      every member has a writer, every written value is a member.
+ *      every member has a writer, every written value is a member;
+ *   4. requires every writer to record the transition through
+ *      recordCarrierStatusTransition within the same block (Sprint A0 C2), so
+ *      a suspension cannot happen without naming its actor.
  *
  * Deliberately NOT covered, with the reason: carrierController.updateCarrier
  * assembles a hoisted payload (`data.onboardingStatus = onboardingStatus`) from
@@ -83,9 +86,14 @@ function blankNoise(src: string): string {
 
 /** Every balanced `data: { ... }` body that follows a carrierProfile.update( call. */
 export function suspensionPayloads(code: string): string[] {
+  return suspensionSites(code).map((s) => s.body);
+}
+
+/** Each SUSPENDED payload plus the 1200 characters that follow it. */
+export function suspensionSites(code: string): Array<{ body: string; tail: string }> {
   const clean = blankNoise(code);
   const re = /carrierProfile\s*\.\s*update(?:Many)?\s*\(/g;
-  const out: string[] = [];
+  const out: Array<{ body: string; tail: string }> = [];
   let m: RegExpExecArray | null;
   while ((m = re.exec(clean))) {
     const dataIdx = clean.indexOf("data:", m.index);
@@ -102,17 +110,23 @@ export function suspensionPayloads(code: string): string[] {
       else if (clean[j] === "}") { depth--; if (depth === 0) break; }
     }
     const body = clean.slice(open, j + 1);
-    if (/onboardingStatus\s*:\s*"SUSPENDED"/.test(body)) out.push(body);
+    if (/onboardingStatus\s*:\s*"SUSPENDED"/.test(body)) out.push({ body, tail: clean.slice(j + 1, j + 1201) });
   }
   return out;
 }
 
 function scan(): Map<string, string[]> {
   const found = new Map<string, string[]>();
+  for (const [rel, sites] of scanSites()) found.set(rel, sites.map((s) => s.body));
+  return found;
+}
+
+function scanSites(): Map<string, Array<{ body: string; tail: string }>> {
+  const found = new Map<string, Array<{ body: string; tail: string }>>();
   for (const file of walk(SRC)) {
     const rel = path.relative(SRC, file).replace(/\\/g, "/");
-    const bodies = suspensionPayloads(fs.readFileSync(file, "utf8"));
-    if (bodies.length) found.set(rel, bodies);
+    const sites = suspensionSites(fs.readFileSync(file, "utf8"));
+    if (sites.length) found.set(rel, sites);
   }
   return found;
 }
@@ -139,6 +153,16 @@ describe("autoSuspendCause coverage: every suspension write carries a structured
         for (const key of ["autoSuspendCause", "autoSuspendedAt", "autoSuspendReason"]) {
           if (!new RegExp(key + "\\s*:").test(b)) bad.push(`${rel} payload #${i + 1} lacks ${key}`);
         }
+      });
+    }
+    expect(bad, bad.join("\n")).toEqual([]);
+  });
+
+  it("every writer records the transition through the one helper (C2)", () => {
+    const bad: string[] = [];
+    for (const [rel, sites] of scanSites()) {
+      sites.forEach((s, i) => {
+        if (!s.tail.includes("recordCarrierStatusTransition(")) bad.push(`${rel} payload #${i + 1} is not followed by recordCarrierStatusTransition`);
       });
     }
     expect(bad, bad.join("\n")).toEqual([]);
