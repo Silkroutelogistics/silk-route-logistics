@@ -18263,7 +18263,14 @@
 // and admits CARRIER, so a carrier session could put any user on the load; B2b's gate refuses an ineligible one, and an eligible colleague or
 // competitor is not the gate's to refuse. A CARRIER is now bound to req.user.id and is told 403 CARRIER_ACCEPTS_AS_SELF if the field is sent at
 // all; the AE shape (recording a named carrier's phoned-in acceptance) is unchanged.
-export const SRL_VERSION = "3.8.beb";
+// v3.8.bec — carrier-archive recut B2d: PUT /loads/:id no longer writes Load.carrierId. Phase A row F was LIVE — the validator's
+// .passthrough() let carrierId through, and the branch ran its own complianceCheck (by CarrierProfile.id, so a User with no profile
+// passed it) and wrote the column outside assignCarrier, the single writer; the drift guard reported 8/8 green over it because the
+// write rode a hoisted payload (data.carrierId = x; update({ data })) its regexes could not see. The branch is gone: a body carrying
+// carrierId is refused 400 CARRIER_NOT_EDITABLE_HERE naming the real paths (accept a tender, assign-match, release). onLoadAssigned
+// — the staging-then-rollback gate with no remaining caller — is deleted. The guard learns the hoisted shape (11/11) and, re-injected,
+// names controllers/loadController.ts:1113 (hoisted payload data); a controller case pins the 400 with no update.
+export const SRL_VERSION = "3.8.bec";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

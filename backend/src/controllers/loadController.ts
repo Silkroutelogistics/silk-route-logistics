@@ -16,8 +16,6 @@ import { sendShipperDeliveryEmail, sendShipperMilestoneEmail } from "../services
 import { onLoadDelivered, onLoadDispatched, enforceShipperCredit, onLoadCancelledOrTONU } from "../services/integrationService";
 import { checkCustomerActive } from "../lib/customerActive";
 import { refreshBOLTrackingTokenExpiry } from "../services/shipperTrackingTokenService";
-import { complianceCheck } from "../services/complianceMonitorService";
-import { onLoadAssigned } from "../services/loadComplianceService";
 import { notifyMatchedCarriers } from "../services/carrierOutreachService";
 import { notifyLoadStatusChange } from "../services/notificationService";
 import { logLoadCreation, diffLoadChanges, logLoadChanges, logStatusChange, getLoadAuditHistory } from "../services/loadAuditService";
@@ -929,7 +927,7 @@ export async function updateLoad(req: AuthRequest, res: Response) {
     hazmat, hazmatClass, hazmatUnNumber,
     temperatureControlled, tempMin, tempMax, tempSetpoint, preCoolTo, reeferContinuous,
     specialInstructions, notes, contactName, contactPhone,
-    customerId, carrierId,
+    customerId,
     // TMW-level fields
     poNumbers, bolNumber, sealNumber, appointmentNumber, additionalRefs,
     nmfcCode, declaredValue, loadingType, turnable,
@@ -1048,22 +1046,29 @@ export async function updateLoad(req: AuthRequest, res: Response) {
     }
     data.customerId = customerId;
   }
-  if (carrierId !== undefined) {
-    // Compliance gate: check carrier before direct assignment
-    const carrierProfile = await prisma.carrierProfile.findFirst({ where: { userId: carrierId } });
-    if (carrierProfile) {
-      const compliance = await complianceCheck(carrierProfile.id);
-      if (!compliance.allowed) {
-        res.status(403).json({ error: "Carrier is non-compliant", blocked_reasons: compliance.blocked_reasons });
-        return;
-      }
-    }
-    data.carrierId = carrierId;
-
-    // Fire post-assignment load-level compliance scan (non-blocking)
-    onLoadAssigned(req.params.id, carrierId).catch((e) =>
-      log.error({ err: e }, "[Compass] onLoadAssigned compliance scan error:")
-    );
+  // Carrier-archive recut B2d (2026-09-21) — the carrierId branch is GONE.
+  //
+  // It read `carrierId` off a body that createLoadSchema.partial() lets through
+  // (validators/load.ts:127 is .passthrough(), so nothing was stripped), ran
+  // complianceCheck only when a CarrierProfile matched the user id, and wrote
+  // the id into Load.carrierId either way — a User with no profile (an AE's id,
+  // a shipper's, a typo) skipped the gate entirely. It was a direct writer of
+  // Load.carrierId outside assignCarrier that carrierIdWriterDrift could not
+  // see (hoisted `data.carrierId =` passed as shorthand `data`), and a
+  // `carrierId: null` cleared a carrier without carrierReleaseService.
+  //
+  // Assignment has two doors and this is neither: a tender accepted through
+  // tenderController, or assign-match / a bid accept through assignCarrier —
+  // all gated. Release goes through carrierReleaseService. A body that still
+  // carries the field is refused rather than silently dropped, so a client
+  // built against the old shape learns at once instead of by a load that
+  // never got its carrier.
+  if (Object.prototype.hasOwnProperty.call(req.body ?? {}, "carrierId")) {
+    res.status(400).json({
+      error: "CARRIER_NOT_EDITABLE_HERE",
+      message: "Load.carrierId is not set through PUT /loads/:id. Assign a carrier by accepting a tender (POST /tenders/:id/accept, /accept-on-behalf) or through assign-match; release one through the release action.",
+    });
+    return;
   }
 
   // Recalculate margin fields if rates changed (guard against division by zero)

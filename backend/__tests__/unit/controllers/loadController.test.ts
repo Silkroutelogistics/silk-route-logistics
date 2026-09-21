@@ -40,6 +40,7 @@ import {
   createLoad,
   getLoads,
   getLoadById,
+  updateLoad,
   updateLoadStatus,
   deleteLoad,
   restoreLoad,
@@ -165,6 +166,20 @@ describe("loadController", () => {
 
     expect(res.status).toHaveBeenCalledWith(404);
     expect(res.json).toHaveBeenCalledWith({ error: "Load not found" });
+  });
+
+  // ── updateLoad — carrier-archive recut B2d ────────────────
+  it("updateLoad — a body carrying carrierId is refused 400 and nothing is written (B2d)", async () => {
+    // The branch that wrote Load.carrierId from this body is gone (it skipped
+    // the gate for a user with no profile and was invisible to the drift
+    // guard); the field is refused rather than silently dropped.
+    mockPrisma.load.findUnique = vi.fn().mockResolvedValue({ id: "load-1", posterId: "user-1", status: "POSTED", customerRate: 100, carrierRate: 80 });
+    mockPrisma.load.update = vi.fn();
+    const { req, res } = mockReqRes({ carrierId: "u-someone", weight: 1000 }, { id: "user-1", role: "ADMIN" }, { id: "load-1" });
+    await updateLoad(req, res);
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.json.mock.calls[0][0].error).toBe("CARRIER_NOT_EDITABLE_HERE");
+    expect(mockPrisma.load.update).not.toHaveBeenCalled();
   });
 
   // ── updateLoadStatus ───────────────────────────────────
