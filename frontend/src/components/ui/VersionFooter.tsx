@@ -18247,7 +18247,13 @@
 // verbatim. Mirrored in all three legs (gate, override endpoint 409, modal disabled with the remedy named); the modal disable is now generic on
 // overridable:false, which also closes the INSURANCE_EXPIRED half-mirror v3.8.axl left. The B6d proof flips B2_LANDED and a tripwire holds the
 // flag equal to the gate carrying both codes, so neither can lead or lag the other.
-export const SRL_VERSION = "3.8.bdy";
+// v3.8.bdz — carrier-archive recut B2b-1: the compliance gate is asked INSIDE the two chokepoints. createTender (the single LoadTender writer)
+// and assignCarrier (the single Load.carrierId writer) checked nothing about the carrier until now, so the refusal was the caller's or nobody's;
+// Phase A found five live paths on which it was nobody's. Both now refuse with CarrierIneligibleError (403, CARRIER_INELIGIBLE, verdict attached)
+// before any write; assignCarrier resolves the profile by user id and refuses a user with none, which keeps instant-book's profile-id-as-user-id
+// dead by name; clearCarrier is not gated; extra.carrierId is refused. A coverage guard freezes every caller of each chokepoint by name (call sites,
+// not importers — instant-book listed, carrierLoads' dead import not). Routes A–D learn to map the refusal in the next commit.
+export const SRL_VERSION = "3.8.bdz";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

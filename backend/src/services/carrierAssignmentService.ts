@@ -1,6 +1,7 @@
 import { Prisma, LoadStatus } from "@prisma/client";
 import { ActorRole } from "../lib/loadStateMachine";
 import { prisma } from "../config/database";
+import { assertEligibleByUserId } from "../lib/carrierEligibility";
 
 /**
  * The single writer of `Load.carrierId`.
@@ -34,18 +35,36 @@ import { prisma } from "../config/database";
  * obvious at the call site instead of at 2am.
  *
  * ─────────────────────────────────────────────────────────────────────────────
- * WHY THESE RETURN A PROMISE INSTEAD OF AWAITING.
+ * THE GATE IS INSIDE (carrier-archive recut B2b, 2026-09-21).
  *
- * `acceptTender` assigns the carrier inside `prisma.$transaction([...])` — the
+ * `assignCarrier` asks `complianceCheck` about the carrier before it writes,
+ * and refuses with CarrierIneligibleError (403, CARRIER_INELIGIBLE, the verdict
+ * attached) when the carrier is archived, not APPROVED, or blocked for any other
+ * reason the gate knows. It also refuses a User id that has NO CarrierProfile —
+ * the shape by which an AE's or a shipper's id could reach Load.carrierId
+ * through updateLoad, and the shape that keeps instant-book's profile-id-as-
+ * user-id dead by name rather than by FK violation.
+ *
+ * This made the function async. The header below on returning an un-awaited
+ * PrismaPromise described the array-form `$transaction([...])` in acceptTender;
+ * v3.8.axj moved every accept path to the interactive form and every caller
+ * awaits this directly, so nothing composes it any more. `clearCarrier` is NOT
+ * gated: taking an ineligible carrier off a load must always work.
+ *
+ * `extra` may not carry `carrierId`. It is spread last and its type admits the
+ * column, so a caller passing `extra: { carrierId }` would silently override the
+ * gated value — refused here rather than trusted.
+ *
+ * ─────────────────────────────────────────────────────────────────────────────
+ * WHY THESE RETURNED A PROMISE INSTEAD OF AWAITING (historical, kept because the
+ * footgun below is still real for `clearCarrier`).
+ *
+ * `acceptTender` assigned the carrier inside `prisma.$transaction([...])` — the
  * ARRAY form, which takes un-awaited PrismaPromises. An `async` helper would
  * have to be awaited before the array is built, which would execute the write
  * OUTSIDE the transaction and quietly undo the atomicity Sprint 38 added
  * deliberately (§13.3 Item 53: before it, a partial failure left the load BOOKED
  * while the tender was still OFFERED).
- *
- * Returning the PrismaPromise lets a caller compose it into a transaction, or
- * simply `await` it when there is nothing to compose with. Both callers below
- * do exactly one of those.
  *
  * ─────────────────────────────────────────────────────────────────────────────
  * FOOTGUN, found by the proof failing rather than by reasoning.
@@ -94,13 +113,19 @@ export interface AssignCarrierInput {
 }
 
 /**
- * Put a carrier on a load.
+ * Put a carrier on a load — after the gate says the carrier may haul.
  *
- * Returns an un-awaited PrismaPromise so it can be composed into
- * `$transaction([...])`. Await it directly when there is nothing to compose.
+ * Throws CarrierIneligibleError before any write when they may not. Pass the
+ * caller's transaction client as `db` for the write; the gate reads through the
+ * singleton, which is safe because nothing in an assignment transaction writes
+ * the carrier's own rows.
  */
-export function assignCarrier(input: AssignCarrierInput, db: AssignmentDb = prisma) {
+export async function assignCarrier(input: AssignCarrierInput, db: AssignmentDb = prisma) {
   const { loadId, carrierUserId, status, carrierRate, extra } = input;
+  if (extra && Object.prototype.hasOwnProperty.call(extra, "carrierId")) {
+    throw new Error("assignCarrier: extra.carrierId is not accepted — the carrier is carrierUserId, and it is gated");
+  }
+  await assertEligibleByUserId(carrierUserId, "assignCarrier");
   return db.load.update({
     where: { id: loadId },
     data: {

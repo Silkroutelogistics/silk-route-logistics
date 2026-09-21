@@ -39,6 +39,15 @@ vi.mock("../../../src/services/waterfallEventService", () => ({
 vi.mock("../../../src/routes/trackTraceSSE", () => ({
   broadcastSSE: vi.fn(),
 }));
+// Carrier-archive recut B2b — createTender now asks the compliance gate before
+// it writes. This suite holds the TENDERED-implies-a-tender invariant, not the
+// gate, so the gate is stubbed to allow; the gate has its own behavioural
+// coverage in complianceMonitorService.test.ts and the B6d proof.
+vi.mock("../../../src/lib/carrierEligibility", () => ({
+  assertEligibleByProfileId: vi.fn().mockResolvedValue({ allowed: true, blocked_reasons: [], blocked_codes: [], released: [], warnings: [] }),
+  assertEligibleByUserId: vi.fn().mockImplementation(async (userId: string) => ({ carrierProfileId: "cp-" + userId, verdict: { allowed: true, blocked_reasons: [], blocked_codes: [], released: [], warnings: [] } })),
+  isCarrierIneligible: (e: unknown) => (e as any)?.code === "CARRIER_INELIGIBLE",
+}));
 
 import { prisma } from "../../../src/config/database";
 import {

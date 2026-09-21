@@ -1,6 +1,7 @@
 import { Prisma, TenderStatus } from "@prisma/client";
 import { prisma } from "../config/database";
 import { logTenderTransition } from "./waterfallEventService";
+import { assertEligibleByProfileId } from "../lib/carrierEligibility";
 
 /**
  * The single writer of `LoadTender` rows.
@@ -114,6 +115,15 @@ export interface CreateTenderInput {
  * history by simply forgetting.
  */
 export async function createTender(input: CreateTenderInput, db: TenderDb = prisma) {
+  // Carrier-archive recut B2b (2026-09-21) — the gate is INSIDE the chokepoint.
+  // Until this line, createTender checked nothing about the carrier and the
+  // refusal was the caller's or nobody's; Phase A found three live creators on
+  // which it was nobody's (broadcast, the manual waterfall position add, and
+  // the cascade's own tenderPosition). Refuses with CarrierIneligibleError
+  // (403, CARRIER_INELIGIBLE, verdict attached) before any row is written, so
+  // a refused tender leaves no tender and no history for a tender nobody has.
+  await assertEligibleByProfileId(input.carrierProfileId, "createTender");
+
   const expiresAt = input.expiresAt ?? new Date(Date.now() + tenderTtlMinutes() * 60_000);
   const status = input.status ?? "OFFERED";
 
