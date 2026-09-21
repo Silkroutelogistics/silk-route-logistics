@@ -88,6 +88,8 @@ beforeEach(() => {
   mockPrisma.$transaction.mockImplementation(async (cb: any) => cb(mockPrisma));
   mockPrisma.invoiceLineItem.createMany.mockResolvedValue({ count: 1 });
   mockPrisma.invoiceLineItem.count.mockResolvedValue(0);
+  // 282c reads the draft's lines back before folding; these drafts start empty.
+  mockPrisma.invoiceLineItem.findMany.mockResolvedValue([]);
   mockPrisma.loadAccessorial.updateMany.mockResolvedValue({ count: 0 });
   mockPrisma.notification.create.mockResolvedValue({});
   mockPrisma.invoice.findMany.mockResolvedValue([]); // document-number scans

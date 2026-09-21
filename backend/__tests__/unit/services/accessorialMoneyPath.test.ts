@@ -101,6 +101,8 @@ beforeEach(() => {
   mockPrisma.$transaction.mockImplementation(async (cb: any) => cb(mockPrisma));
   mockPrisma.invoiceLineItem.createMany.mockResolvedValue({ count: 1 });
   mockPrisma.invoiceLineItem.count.mockResolvedValue(0);
+  // v3.8.bdx — the DRAFT re-price reads the lines back; an empty draft has none to move.
+  mockPrisma.invoiceLineItem.findMany.mockResolvedValue([]);
   mockPrisma.loadAccessorial.updateMany.mockResolvedValue({ count: 0 });
   mockPrisma.notification.create.mockResolvedValue({});
   mockPrisma.invoice.findMany.mockResolvedValue([]);

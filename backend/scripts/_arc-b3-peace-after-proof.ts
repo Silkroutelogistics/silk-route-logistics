@@ -114,10 +114,12 @@ async function main() {
   ok("the $250 edit RE-PRICES the PREPARED payable in place — same row, amount 250", payB2?.id === payB?.id && payB2?.amount === 250 && payB2?.accessorialsTotal === 250, `amount=${payB2?.amount} total=${payB2?.accessorialsTotal}`);
   ok("and escalates nothing — no ApprovalQueue row", queued === 0, `queued=${queued}`);
   // The carrier leg reconciles TOTALS, so it follows the edit. The customer leg
-  // marks ROWS, and this row is already marked — so the invoice sync finds
-  // nothing unbilled and the DRAFT line stays at the flip-time figure.
+  // marks ROWS — and until 282c (v3.8.bdx) a marked row was invisible to the
+  // sync, so this assertion was named FINDING and asserted $200. Now the sync
+  // re-reads the draft's stamped lines against the ledger (repriceDraftInvoice)
+  // and the line follows the edit, keyed by InvoiceLineItem.accessorialId (282a).
   const invB2 = await prisma.invoice.findUnique({ where: { id: invB!.id }, include: { lineItems: true } });
-  ok("FINDING: the customer invoice line does NOT follow the edit — still $200 while the carrier is owed $250", !!invB2 && Number(invB2.accessorialsAmount) === 200 && Number(invB2.totalAmount) === 200 && invB2.lineItems.every((li) => Number(li.amount) === 200), `acc=${invB2?.accessorialsAmount} total=${invB2?.totalAmount} lines=${invB2?.lineItems.map((l) => l.amount).join(",")}`);
+  ok("the customer invoice line FOLLOWS the edit — $250, matching the carrier payable (282c; was the FINDING)", !!invB2 && Number(invB2.accessorialsAmount) === 250 && Number(invB2.totalAmount) === 250 && invB2.lineItems.length === 1 && Number(invB2.lineItems[0].amount) === 250 && invB2.lineItems[0].accessorialId === tonuRow!.id, `acc=${invB2?.accessorialsAmount} total=${invB2?.totalAmount} lines=${invB2?.lineItems.map((l) => `${l.amount}@${l.accessorialId}`).join(",")}`);
 
   ok("recalc writes after the TONU", (await recalculateCarrierCPP(B.profile.id)) === "written");
   const cardB = (await latestCard(B.profile.id))!;
@@ -147,6 +149,8 @@ async function main() {
   await prisma.fallOffEvent.deleteMany({ where: { load: ref } });
   await prisma.notification.deleteMany({ where: { userId: { in: users } } });
   await prisma.auditLog.deleteMany({ where: { userId: { in: users } } });
+  // v3.8.bdk/bdl: the TONU flip and the cancel now write lifecycle rows to audit_trails, keyed to the actor.
+  await prisma.auditTrail.deleteMany({ where: { performedById: { in: users } } });
   await prisma.loadActivity.deleteMany({ where: { load: ref } });
   await prisma.rateConfirmation.deleteMany({ where: { load: ref } });
   await prisma.loadTender.deleteMany({ where: { load: ref } });

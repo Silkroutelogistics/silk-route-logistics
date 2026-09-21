@@ -265,6 +265,10 @@ vi.mock("../src/config/database", () => ({
       createMany: vi.fn(),
       deleteMany: vi.fn(),
       count: vi.fn(),
+      // v3.8.bdx — repriceDraftInvoice reads the lines back and moves one; every
+      // test that drives syncInvoiceAccessorials on a DRAFT reaches both.
+      findMany: vi.fn(),
+      update: vi.fn(),
     },
     // v3.8.asb — the APPROVED accessorial ledger is now the money input for
     // BOTH the carrier settlement and the customer invoice, so every test that

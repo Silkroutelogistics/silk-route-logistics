@@ -3,6 +3,7 @@ import { log } from "../lib/logger";
 import { resolveTonuBilling } from "../lib/tonuPolicy";
 import { createInvoiceWithRetry } from "../lib/invoiceNumber";
 import { resolveLoadStem, withDocumentNumber } from "../lib/documentNumber";
+import { diffInvoiceAgainstLedger, type Anomaly } from "../lib/invoiceLedgerDiff";
 
 /** Money rounding. Every cent figure in this module goes through it. */
 function round2(n: number): number {
@@ -631,6 +632,110 @@ export async function autoGenerateInvoice(loadId: string) {
 }
 
 /**
+ * §13.3 Item 282c — re-price a DRAFT base invoice's stamped lines against the ledger.
+ *
+ * THE GAP THIS CLOSES. The customer leg reaches exactly-once by MARKING rows:
+ * once a row is folded into the draft it is stamped, and `unbilledCustomerAccessorials`
+ * never selects it again. The carrier leg reconciles TOTALS and follows an edit.
+ * So a $200 TONU folded into a draft and then edited to the $250 agreed by phone
+ * reached the carrier payable and not the customer line — proven on a container
+ * (Item 282, the assertion named FINDING), latent in production until the first
+ * TONU flip. This is the re-read the marking design lacked.
+ *
+ * DRAFT ONLY. A SENT invoice is in the customer's payables; editing it makes their
+ * copy disagree with ours, which is exactly why the supplemental and credit-memo
+ * paths exist. Those paths bill UNBILLED rows; an amount edit on a row already
+ * stamped to a SENT document has no instrument yet and is reported by the diff,
+ * not acted on here. That build is not in the approved set (282d/e/f).
+ *
+ * WHAT MOVES. For every stamped, APPROVED, customer-billed row whose net billed
+ * figure differs from `customerPriceFor` today, the latest positive line for that
+ * row is moved by the delta (rate and amount together; every accessorial line is
+ * quantity 1), and the invoice totals move by the net. One transaction. Idempotent:
+ * a second run finds zero delta and writes nothing. Everything the diff reports
+ * rather than re-prices — a REJECTED row still stamped (the credit path owns it),
+ * a row billed to SRL, a pre-282a line with no key, an orphan, a mark/line
+ * disagreement — is logged at warn and left alone.
+ *
+ * Runs inside `syncInvoiceAccessorials` AFTER the credit pass and BEFORE the
+ * pending fold, so a rejected row has already been credited off (and un-stamped)
+ * by the time this reads, and a freshly folded row is folded at today's price.
+ */
+export async function repriceDraftInvoice(loadId: string): Promise<{
+  invoiceId: string;
+  repriced: number;
+  netDelta: number;
+  anomalies: Anomaly[];
+} | null> {
+  const base = await prisma.invoice.findFirst({
+    where: { loadId, invoiceKind: "BASE", status: { not: "VOID" } },
+    orderBy: { createdAt: "asc" },
+    select: { id: true, invoiceNumber: true, srlDocNumber: true, status: true, amount: true, totalAmount: true, accessorialsAmount: true },
+  });
+  // SENT and beyond stay untouched — see the doc block. No base: nothing stamped anywhere.
+  if (!base || base.status !== "DRAFT") return null;
+
+  const [lines, rows, load] = await Promise.all([
+    prisma.invoiceLineItem.findMany({
+      where: { invoiceId: base.id },
+      select: { id: true, accessorialId: true, type: true, amount: true, sortOrder: true },
+    }),
+    prisma.loadAccessorial.findMany({
+      where: { loadId },
+      select: { id: true, type: true, status: true, billedTo: true, shipperInvoiceId: true, amount: true, customerAmount: true, quantity: true },
+    }),
+    prisma.load.findUnique({
+      where: { id: loadId },
+      select: { referenceNumber: true, customer: { select: { defaultAccessorialRates: true } } },
+    }),
+  ]);
+  const negotiated = (load?.customer?.defaultAccessorialRates ?? null) as Record<string, number> | null;
+
+  // The same pricer the fold uses, so the diff cannot disagree with the fold.
+  const diff = diffInvoiceAgainstLedger(
+    base.id,
+    lines.map((l) => ({ id: l.id, accessorialId: l.accessorialId, type: String(l.type), amount: Number(l.amount), sortOrder: l.sortOrder })),
+    rows.map((r) => ({
+      id: r.id,
+      type: String(r.type),
+      status: String(r.status),
+      billedTo: r.billedTo ?? null,
+      shipperInvoiceId: r.shipperInvoiceId ?? null,
+      customerPrice: customerPriceFor(r, negotiated),
+    })),
+  );
+
+  if (diff.anomalies.length) {
+    log.warn(
+      { loadId, invoiceId: base.id, anomalies: diff.anomalies },
+      `[AutoInvoice] Draft ${base.srlDocNumber ?? base.invoiceNumber} on load ${load?.referenceNumber ?? loadId}: ${diff.anomalies.length} line(s) the ledger diff reports but does not re-price`,
+    );
+  }
+  if (!diff.reprice.length) return { invoiceId: base.id, repriced: 0, netDelta: 0, anomalies: diff.anomalies };
+
+  await prisma.$transaction(async (tx) => {
+    for (const r of diff.reprice) {
+      const next = round2(r.lineAmount + r.delta);
+      await tx.invoiceLineItem.update({ where: { id: r.lineId }, data: { rate: next, amount: next } });
+    }
+    const priorTotal = Number(base.totalAmount ?? base.amount) || 0;
+    await tx.invoice.update({
+      where: { id: base.id },
+      data: {
+        accessorialsAmount: round2((Number(base.accessorialsAmount) || 0) + diff.netDelta),
+        amount: round2(priorTotal + diff.netDelta),
+        totalAmount: round2(priorTotal + diff.netDelta),
+      },
+    });
+  });
+
+  log.info(
+    `[AutoInvoice] Re-priced ${diff.reprice.length} line(s) on draft ${base.srlDocNumber ?? base.invoiceNumber} for load ${load?.referenceNumber ?? loadId} — net ${diff.netDelta >= 0 ? "+" : ""}$${diff.netDelta.toFixed(2)} (${diff.reprice.map((r) => `${r.type} $${r.billed.toFixed(2)} → $${r.expected.toFixed(2)}`).join(", ")})`,
+  );
+  return { invoiceId: base.id, repriced: diff.reprice.length, netDelta: diff.netDelta, anomalies: diff.anomalies };
+}
+
+/**
  * Bill an accessorial that was approved after the load was already invoiced.
  *
  * WHEN A SUPPLEMENTAL IS ISSUED, and when it is not.
@@ -780,8 +885,16 @@ export async function syncInvoiceAccessorials(loadId: string) {
   // credit memo anywhere in the system to take it off.
   const credited = await creditRejectedAccessorials(loadId);
 
+  // 282c — rows already stamped to a DRAFT are re-read, not skipped. The
+  // pending fold below only ever sees UNSTAMPED rows, which is the exactly-once
+  // mark doing its job; this is the one step that looks at the stamped ones.
+  const repriced = await repriceDraftInvoice(loadId);
+
   const pending = await unbilledCustomerAccessorials(loadId);
-  if (!pending.length) return credited;
+  if (!pending.length) {
+    if (credited) return credited;
+    return repriced?.repriced ? prisma.invoice.findUnique({ where: { id: repriced.invoiceId } }) : null;
+  }
 
   const base = await prisma.invoice.findFirst({
     where: { loadId, invoiceKind: "BASE", status: { not: "VOID" } },

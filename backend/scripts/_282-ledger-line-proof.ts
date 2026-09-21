@@ -1,6 +1,9 @@
 /**
  * §13.3 Item 282 proof — the ledger and the customer invoice, line by line.
  *
+ * 282c: an amount edit on a row already stamped to a DRAFT re-prices that line in
+ * place and moves the totals; SENT stays untouched; idempotent. (section 7)
+ *
  * 282a: every accessorial line on a customer invoice names the ledger row it
  * bills or credits, on all five writer paths — BASE, DRAFT fold, SUPPLEMENTAL,
  * DRAFT credit, SUPPLEMENTAL credit memo. Linehaul and fuel lines are NULL.
@@ -147,6 +150,40 @@ async function main() {
     ok("the TONU row's history reads as +200 on the BASE and -200 on the memo",
       byRow.map((r) => `${r.kind}:${Number(r.amount)}`).join(",") === "BASE:200,SUPPLEMENTAL:-200", byRow.map((r) => `${r.kind}:${Number(r.amount)}`).join(","));
 
+    // ── 7. 282c — an amount edit on a STAMPED row reaches the draft ────
+    console.log("[7] 282c — a second load: TONU folded into a DRAFT at $200, then edited to $250");
+    const load2 = await prisma.load.create({
+      data: {
+        referenceNumber: `P282c-${stamp}`, loadNumber: `P282c-${stamp}`, posterId: ae.id, customerId: customer.id,
+        originCity: "Detroit", originState: "MI", originZip: "48201", destCity: "Chicago", destState: "IL", destZip: "60601",
+        equipmentType: "DRY_VAN", pickupDate: new Date(), deliveryDate: new Date(Date.now() + 86400_000),
+        rate: 3000, customerRate: 3000, fuelSurcharge: 0, status: "DELIVERED",
+      },
+    });
+    const tonu2 = await prisma.loadAccessorial.create({ data: { loadId: load2.id, type: "TONU", amount: 200, status: "APPROVED", billedTo: "SHIPPER", notes: "policy figure" } });
+    const base2 = await autoGenerateInvoice(load2.id);
+    const before = await linesOf(base2!.id);
+    ok("the draft carries the $200 TONU line, stamped", before.some((l) => l.accessorialId === tonu2.id && Number(l.amount) === 200));
+    // The edit an AE makes through PUT /load-accessorials/item/:id — the row, then the sync.
+    await prisma.loadAccessorial.update({ where: { id: tonu2.id }, data: { amount: 250, notes: "agreed by phone at $250" } });
+    const r7 = await syncInvoiceAccessorials(load2.id);
+    const after = await linesOf(base2!.id);
+    const tonuLine = after.find((l) => l.accessorialId === tonu2.id);
+    ok("the SAME line now reads $250 (re-priced in place, not a second line)", after.length === before.length && Number(tonuLine?.amount) === 250, `lines ${before.length}->${after.length} tonu=${tonuLine?.amount}`);
+    const inv7 = await prisma.invoice.findUnique({ where: { id: base2!.id } });
+    ok("the draft totals moved by +$50: 3200 -> 3250", Number(inv7?.totalAmount) === 3250 && Number(inv7?.accessorialsAmount) === 250, `total=${inv7?.totalAmount} acc=${inv7?.accessorialsAmount}`);
+    ok("the sync returned the draft it re-priced", !!r7 && (r7 as any).id === base2!.id);
+    const stillStamped = await prisma.loadAccessorial.findUnique({ where: { id: tonu2.id }, select: { shipperInvoiceId: true } });
+    ok("the row stays stamped to the same draft — exactly-once is untouched", stillStamped?.shipperInvoiceId === base2!.id);
+    const r7b = await syncInvoiceAccessorials(load2.id);
+    ok("idempotent: a second sync at $250 touches nothing and returns null", r7b === null && Number((await prisma.invoice.findUnique({ where: { id: base2!.id } }))?.totalAmount) === 3250);
+    // SENT and beyond stay untouched.
+    await prisma.invoice.update({ where: { id: base2!.id }, data: { status: "SENT" } });
+    await prisma.loadAccessorial.update({ where: { id: tonu2.id }, data: { amount: 300 } });
+    const r7c = await syncInvoiceAccessorials(load2.id);
+    const sentLines = await linesOf(base2!.id);
+    ok("a SENT base is NOT re-priced: line still $250, no supplemental raised (the row is stamped, not pending)", r7c === null && Number(sentLines.find((l) => l.accessorialId === tonu2.id)?.amount) === 250 && (await prisma.invoice.count({ where: { loadId: load2.id } })) === 1);
+
     // Tripwire: the proof exercised real rows.
     const all = await prisma.$queryRawUnsafe<any[]>(`SELECT COUNT(*)::int AS n FROM invoice_line_items WHERE "accessorialId" IS NOT NULL AND "invoiceId" IN (SELECT id FROM invoices WHERE "loadId" = $1)`, load.id);
     ok("tripwire: stamped lines exist for this load (the walk was not over an empty set)", all[0].n >= 6, String(all[0].n));
@@ -154,7 +191,8 @@ async function main() {
     // Cleanup. invoices.loadId and invoices.userId are RESTRICT, not cascade, so
     // the documents go first (their lines cascade), then the load (its ledger
     // cascades), then the customer and the AE.
-    await prisma.invoice.deleteMany({ where: { loadId: load.id } }).catch((e: any) => console.error("cleanup invoices:", e?.message));
+    await prisma.invoice.deleteMany({ where: { load: { referenceNumber: { in: [`P282-${stamp}`, `P282c-${stamp}`] } } } }).catch((e: any) => console.error("cleanup invoices:", e?.message));
+    await prisma.load.deleteMany({ where: { referenceNumber: `P282c-${stamp}` } }).catch((e: any) => console.error("cleanup load2:", e?.message));
     await prisma.load.delete({ where: { id: load.id } }).catch((e: any) => console.error("cleanup load:", e?.message));
     await prisma.customer.delete({ where: { id: customer.id } }).catch((e: any) => console.error("cleanup customer:", e?.message));
     await prisma.user.delete({ where: { id: ae.id } }).catch((e: any) => console.error("cleanup user:", e?.message));
