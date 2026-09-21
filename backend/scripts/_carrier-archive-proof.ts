@@ -16,7 +16,7 @@
  *   - an executed Broker-Carrier Agreement          → still SIGNED
  *
  * Then: the login refuses 403; the compliance gate names CARRIER_ARCHIVED
- * (EXPECTED RED until B2 — see B2_LANDED); every one of the SEVEN list pickers
+ * (hard since B2a — see B2_LANDED); every one of the SEVEN list pickers
  * that offered the carrier before offers nothing after; the chameleon
  * fingerprint row is byte-identical to before the archive; and restore returns
  * the carrier at REVIEWING with the archive columns cleared, the login back,
@@ -56,21 +56,28 @@ import bcrypt from "bcryptjs";
 import type { Server } from "http";
 
 /**
+ * B2a LANDED 2026-09-20: the gate carries CARRIER_ARCHIVED and
+ * CARRIER_NOT_APPROVED as absolutes, so the two gate checks below are hard.
+ * This flag and okB2 stay because archiveGateProofParity.test.ts holds the
+ * flag equal to "the gate pushes both codes" — flipping it back, or removing
+ * either push, is one red test rather than two soft checks nobody reads.
+ *
+ * History, kept because the finding was this proof's:
  * B2 (the compliance gate's archive branch, blocked on
- * complianceMonitorService.ts) has not landed. Until it does, the two gate
- * checks below are reported as PENDING(B2) rather than FAIL and do not fail
- * the run. FLIP THIS TO true IN THE B2 COMMIT so both become hard assertions.
+ * complianceMonitorService.ts) had not landed. Until it did, the two gate
+ * checks below were reported as PENDING(B2) rather than FAIL and did not fail
+ * the run.
  *
  * B2 carries TWO codes, and the second is THIS PROOF'S FINDING (first run,
  * 2026-09-19): the gate refuses only SUSPENDED and REJECTED by status, so
  * PENDING / REVIEWING / INFO_REQUESTED pass it — masked until now because an
  * unapproved carrier normally has no executed BCA. A RESTORED carrier is the
  * first population with an executed BCA AND a REVIEWING status, and the gate
- * ALLOWS it: the list pickers refuse a REVIEWING carrier, the gate does not,
- * and a by-id tender would go through. B2 must add CARRIER_NOT_APPROVED
- * beside CARRIER_ARCHIVED (or rename the code here to match).
+ * ALLOWED it: the list pickers refuse a REVIEWING carrier, the gate did not,
+ * and a by-id tender would go through. B2a added CARRIER_NOT_APPROVED
+ * beside CARRIER_ARCHIVED.
  */
-const B2_LANDED = false;
+const B2_LANDED = true;
 
 const PORT = 55934;
 const API = `http://127.0.0.1:${PORT}/api`;
@@ -85,6 +92,11 @@ const okB2 = (n: string, c: boolean, d = "") => {
   else { pendingB2++; console.log(`  PENDING(B2)  ${n}  -- EXPECTED RED until B2 lands${d ? ": " + d : ""}`); }
 };
 const sha = (s: string) => crypto.createHash("sha256").update(s).digest("hex");
+// blocked_codes is an array of { code, overridable, ... } — the pre-B2 assertions
+// read it as string[] and could never have gone green (caught on the first
+// post-B2a run: the gate refused with the right code and the check still failed).
+const hasCode = (v: any, code: string) => (v.blocked_codes as any[]).some((c) => c && c.code === code);
+const isOverridable = (v: any, code: string) => (v.blocked_codes as any[]).some((c) => c && c.code === code && c.overridable);
 
 async function main() {
   const { prisma } = await import("../src/config/database");
@@ -282,7 +294,7 @@ async function main() {
     const login3 = await login();
     ok("login refuses 403 'deactivated'", login3.status === 403 && /deactivated/i.test(login3.json.error || ""), `status ${login3.status} ${JSON.stringify(login3.json)}`);
     const gate3 = await complianceCheck(carrier.id);
-    okB2("the compliance gate refuses with CARRIER_ARCHIVED", !gate3.allowed && (gate3.blocked_codes as string[]).includes("CARRIER_ARCHIVED"), `allowed=${gate3.allowed} codes=${JSON.stringify(gate3.blocked_codes)}`);
+    okB2("the compliance gate refuses with CARRIER_ARCHIVED", !gate3.allowed && hasCode(gate3, "CARRIER_ARCHIVED") && !isOverridable(gate3, "CARRIER_ARCHIVED"), `allowed=${gate3.allowed} codes=${JSON.stringify(gate3.blocked_codes)}`);
     const after = await pickers(lOut2.id);
     for (const [name, present] of Object.entries(after)) ok(`${name} offers NOTHING for the archived carrier`, !present);
     const fp3 = await prisma.carrierFingerprint.findUnique({ where: { carrierId: carrier.id } });
@@ -313,7 +325,7 @@ async function main() {
     ok("login no longer refuses on deactivation", login4.status !== 403, `status ${login4.status}`);
     const gate4 = await complianceCheck(carrier.id);
     okB2("a restored carrier is NOT tenderable until a human approves it — the gate refuses at REVIEWING with CARRIER_NOT_APPROVED",
-      !gate4.allowed && (gate4.blocked_codes as string[]).includes("CARRIER_NOT_APPROVED"), `allowed=${gate4.allowed} codes=${JSON.stringify(gate4.blocked_codes)} — the executed BCA survives the archive, so nothing else in the gate refuses a REVIEWING carrier`);
+      !gate4.allowed && hasCode(gate4, "CARRIER_NOT_APPROVED") && !isOverridable(gate4, "CARRIER_NOT_APPROVED"), `allowed=${gate4.allowed} codes=${JSON.stringify(gate4.blocked_codes)} — the executed BCA survives the archive, so nothing else in the gate refuses a REVIEWING carrier`);
     const all4 = await get("/carrier/all");
     ok("the AE list shows the restored carrier again without opt-in", (all4.json.carriers || []).some((c: any) => c.id === carrier.id));
     const smart4 = await matchCarriersForLoad(lOffer.id);

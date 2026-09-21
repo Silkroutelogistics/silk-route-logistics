@@ -18240,7 +18240,14 @@
 // archive and the reason it was archived is what a human reads before the platform may tender to it again. The four archive columns are cleared
 // (the lifecycle row keeps what they said) and the chameleon fingerprint is rebuilt from the row as it stands after the commit — awaited, reported
 // as fingerprintRebuilt, and never fatal to a restore that has already committed. The page's restore control is B4b and does not exist yet.
-export const SRL_VERSION = "3.8.bdu";
+// v3.8.bdy — carrier-archive recut B2a: the compliance gate gains two absolutes. CARRIER_ARCHIVED — the gate never read deletedAt, so a by-id
+// tender to an archived carrier went through while every list picker refused it (B6d, first run). CARRIER_NOT_APPROVED — the gate refused only
+// SUSPENDED and REJECTED, by reason string with no code and no absolute marking, so PENDING / REVIEWING / INFO_REQUESTED passed it outright and a
+// blanket override released a suspension for a day; every non-APPROVED state is now one absolute with one code, the two legacy strings kept
+// verbatim. Mirrored in all three legs (gate, override endpoint 409, modal disabled with the remedy named); the modal disable is now generic on
+// overridable:false, which also closes the INSURANCE_EXPIRED half-mirror v3.8.axl left. The B6d proof flips B2_LANDED and a tripwire holds the
+// flag equal to the gate carrying both codes, so neither can lead or lag the other.
+export const SRL_VERSION = "3.8.bdy";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

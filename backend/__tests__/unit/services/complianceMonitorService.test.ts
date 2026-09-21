@@ -495,3 +495,161 @@ describe("complianceCheck — terminated agreement", () => {
     expect(mockPrisma.carrierAgreement.findFirst).toHaveBeenCalledTimes(1);
   });
 });
+
+// ─────────────────────────────────────────────────────────────────────────
+// Carrier-archive recut B2a (2026-09-20) — the seventh and eighth absolutes.
+//
+// Before B2a the gate never read deletedAt (a by-id tender to an ARCHIVED
+// carrier went through while every list picker refused it — B6d, first run),
+// and it refused SUSPENDED and REJECTED by reason string only, with no code
+// and no absolute marking, so PENDING / REVIEWING / INFO_REQUESTED passed
+// outright and a blanket override released a suspension for a day.
+//
+// Each case here holds one property; the blanket-override cases hold the
+// PARTITION (a waivable block on the same carrier is released while the
+// absolute stands), because "still blocked" alone is also true of a gate
+// that simply stopped honouring overrides.
+// ─────────────────────────────────────────────────────────────────────────
+describe("complianceCheck — archive and status absolutes (carrier-archive B2a)", () => {
+  beforeEach(() => {
+    vi.resetAllMocks();
+    vi.useFakeTimers();
+    vi.setSystemTime(FIXED_NOW);
+    mockPrisma.complianceOverride.findFirst.mockResolvedValue(null);
+    mockPrisma.carrierAgreement.findFirst.mockResolvedValue({
+      id: "agreement-1",
+      status: "SIGNED",
+      signedAt: new Date(FIXED_NOW.getTime() - 100 * 86_400_000),
+      expiresAt: null,
+    });
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  const BLANKET = { id: "ov-blanket", checkCode: null, expiresAt: new Date(FIXED_NOW.getTime() + 3_600_000) };
+
+  it("baseline: an APPROVED, un-archived carrier gets neither code (negative control)", async () => {
+    mockPrisma.carrierProfile.findUnique.mockResolvedValue(makeCarrier({ deletedAt: null, archiveReason: null }));
+    const r = await complianceCheck("carrier-1");
+    expect(r.allowed).toBe(true);
+    expect(r.blocked_codes.map((c) => c.code)).not.toContain("CARRIER_ARCHIVED");
+    expect(r.blocked_codes.map((c) => c.code)).not.toContain("CARRIER_NOT_APPROVED");
+  });
+
+  it("an archived carrier is refused with CARRIER_ARCHIVED, overridable:false, and the reason names the restore", async () => {
+    mockPrisma.carrierProfile.findUnique.mockResolvedValue(
+      makeCarrier({ deletedAt: new Date(FIXED_NOW.getTime() - 86_400_000), archiveReason: "FRAUD_CONFIRMED" }),
+    );
+    const r = await complianceCheck("carrier-1");
+    expect(r.allowed).toBe(false);
+    const code = r.blocked_codes.find((c) => c.code === "CARRIER_ARCHIVED");
+    expect(code).toBeDefined();
+    expect(code!.overridable).toBe(false);
+    const reason = r.blocked_reasons.find((x) => x.startsWith("CARRIER_ARCHIVED:"))!;
+    expect(reason).toContain("Fraud confirmed"); // the shared label, not the enum
+    expect(reason).toContain("restore");
+  });
+
+  it("an archived carrier with no reason recorded still says so rather than printing 'null'", async () => {
+    mockPrisma.carrierProfile.findUnique.mockResolvedValue(
+      makeCarrier({ deletedAt: new Date(FIXED_NOW.getTime() - 86_400_000), archiveReason: null }),
+    );
+    const r = await complianceCheck("carrier-1");
+    const reason = r.blocked_reasons.find((x) => x.startsWith("CARRIER_ARCHIVED:"))!;
+    expect(reason).toContain("no reason recorded");
+    expect(reason).not.toContain("null");
+  });
+
+  it("a REVIEWING carrier holding an executed BCA is refused with CARRIER_NOT_APPROVED — the B6d finding", async () => {
+    // The restore path (B6c) is the first population with both. The list
+    // pickers refused it; the gate allowed it; a by-id tender went through.
+    mockPrisma.carrierProfile.findUnique.mockResolvedValue(makeCarrier({ onboardingStatus: "REVIEWING", deletedAt: null }));
+    const r = await complianceCheck("carrier-1");
+    expect(r.allowed).toBe(false);
+    const code = r.blocked_codes.find((c) => c.code === "CARRIER_NOT_APPROVED");
+    expect(code).toBeDefined();
+    expect(code!.overridable).toBe(false);
+    expect(code!.status).toBe("REVIEWING");
+    const reason = r.blocked_reasons.find((x) => x.startsWith("CARRIER_NOT_APPROVED:"))!;
+    expect(reason).toContain("REVIEWING");
+    expect(reason).toContain("approve");
+  });
+
+  it.each(["PENDING", "INFO_REQUESTED"])("%s is refused the same way — every non-APPROVED state is one absolute", async (status) => {
+    mockPrisma.carrierProfile.findUnique.mockResolvedValue(makeCarrier({ onboardingStatus: status, deletedAt: null }));
+    const r = await complianceCheck("carrier-1");
+    expect(r.allowed).toBe(false);
+    const code = r.blocked_codes.find((c) => c.code === "CARRIER_NOT_APPROVED");
+    expect(code?.status).toBe(status);
+    expect(code?.overridable).toBe(false);
+  });
+
+  it("SUSPENDED keeps its legacy reason string verbatim and now carries the code", async () => {
+    // loadComplianceService prints its own copy of this string and a reader
+    // may be matching on it; the string does not move, the code is new.
+    mockPrisma.carrierProfile.findUnique.mockResolvedValue(makeCarrier({ onboardingStatus: "SUSPENDED", deletedAt: null }));
+    const r = await complianceCheck("carrier-1");
+    expect(r.blocked_reasons).toContain("Carrier is suspended");
+    const code = r.blocked_codes.find((c) => c.code === "CARRIER_NOT_APPROVED");
+    expect(code?.status).toBe("SUSPENDED");
+    expect(code?.overridable).toBe(false);
+  });
+
+  it("REJECTED keeps its legacy reason string verbatim and now carries the code", async () => {
+    mockPrisma.carrierProfile.findUnique.mockResolvedValue(makeCarrier({ onboardingStatus: "REJECTED", deletedAt: null }));
+    const r = await complianceCheck("carrier-1");
+    expect(r.blocked_reasons).toContain("Carrier application rejected");
+    expect(r.blocked_codes.find((c) => c.code === "CARRIER_NOT_APPROVED")?.status).toBe("REJECTED");
+  });
+
+  it("a blanket override releases a waivable block on a SUSPENDED carrier and does NOT release the suspension — the partition", async () => {
+    // Before B2a this override made a suspended carrier tenderable for 24h.
+    // lastVettingScore < 40 is a waivable block on the same row; it must go
+    // into `released` while the suspension stays in blocked_reasons.
+    mockPrisma.carrierProfile.findUnique.mockResolvedValue(
+      makeCarrier({ onboardingStatus: "SUSPENDED", deletedAt: null, lastVettingScore: 30, lastVettedAt: FIXED_NOW }),
+    );
+    mockPrisma.complianceOverride.findFirst.mockResolvedValueOnce(BLANKET); // the blanket lookup is the first call
+    const r = await complianceCheck("carrier-1");
+    expect(r.allowed).toBe(false);
+    expect(r.blocked_reasons).toContain("Carrier is suspended");
+    expect(r.released.some((x) => x.startsWith("Vetting score CRITICAL"))).toBe(true);
+    expect(r.released).not.toContain("Carrier is suspended");
+    expect(r.appliedOverrideId).toBe("ov-blanket");
+  });
+
+  it("a blanket override does not release CARRIER_ARCHIVED", async () => {
+    mockPrisma.carrierProfile.findUnique.mockResolvedValue(
+      makeCarrier({ deletedAt: new Date(FIXED_NOW.getTime() - 86_400_000), archiveReason: "DUPLICATE_RECORD", lastVettingScore: 30, lastVettedAt: FIXED_NOW }),
+    );
+    mockPrisma.complianceOverride.findFirst.mockResolvedValueOnce(BLANKET);
+    const r = await complianceCheck("carrier-1");
+    expect(r.allowed).toBe(false);
+    expect(r.blocked_reasons.some((x) => x.startsWith("CARRIER_ARCHIVED:"))).toBe(true);
+    expect(r.released.some((x) => x.startsWith("CARRIER_ARCHIVED:"))).toBe(false);
+    expect(r.released.some((x) => x.startsWith("Vetting score CRITICAL"))).toBe(true);
+  });
+
+  it("a blanket override does not release CARRIER_NOT_APPROVED for a REVIEWING carrier", async () => {
+    mockPrisma.carrierProfile.findUnique.mockResolvedValue(makeCarrier({ onboardingStatus: "REVIEWING", deletedAt: null }));
+    mockPrisma.complianceOverride.findFirst.mockResolvedValueOnce(BLANKET);
+    const r = await complianceCheck("carrier-1");
+    expect(r.allowed).toBe(false);
+    expect(r.released.some((x) => x.startsWith("CARRIER_NOT_APPROVED:"))).toBe(false);
+  });
+
+  it("an archived carrier that is also not APPROVED carries both codes — two absolutes, not one", async () => {
+    // Restore lands the carrier at REVIEWING with deletedAt cleared, so this
+    // pair never arises from the restore path; it arises when a non-APPROVED
+    // carrier is archived (archive does not touch onboardingStatus).
+    mockPrisma.carrierProfile.findUnique.mockResolvedValue(
+      makeCarrier({ onboardingStatus: "PENDING", deletedAt: new Date(FIXED_NOW.getTime() - 86_400_000), archiveReason: "OTHER" }),
+    );
+    const r = await complianceCheck("carrier-1");
+    const codes = r.blocked_codes.map((c) => c.code);
+    expect(codes).toContain("CARRIER_ARCHIVED");
+    expect(codes).toContain("CARRIER_NOT_APPROVED");
+  });
+});

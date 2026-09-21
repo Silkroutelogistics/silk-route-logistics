@@ -4128,8 +4128,8 @@ Most are inert history and **should** survive — `LoadActivity` and `LoadTracki
   circuits the gate, and the response **names every block it released** rather
   than returning a bare `allowed: true`.
 
-  **SIX blocks are absolute and no override of any kind waives them**, ratified
-  across three arcs:
+  **EIGHT blocks are absolute and no override of any kind waives them**, ratified
+  across four arcs:
 
   | Code | Ratified | Why |
   |---|---|---|
@@ -4139,6 +4139,8 @@ Most are inert history and **should** survive — `LoadActivity` and `LoadTracki
   | `FMCSA_REVOKED` | Arc 27 | a carrier with no operating authority is not a carrier |
   | `OUT_OF_SERVICE` | Arc 27 | a federal prohibition on operating, lifted only by FMCSA |
   | `INSURANCE_EXPIRED` | v3.8.axl | whether cover is in force is the insurer's fact, and it is the one uncovered loss nobody claws back |
+  | `CARRIER_ARCHIVED` | carrier-archive B2a, 2026-09-20 | the record is out of the operation (login off, every open offer withdrawn); the remedy is a RESTORE, which is its own decision with its own audit row — not a 24-hour waiver |
+  | `CARRIER_NOT_APPROVED` | carrier-archive B2a, 2026-09-20 | only an APPROVED carrier may be tendered; the remedy is an APPROVAL, which is its own decision with its own authority. **Absorbs the old SUSPENDED / REJECTED refusals**, which until B2a were plain reason strings a blanket override released |
 
   **An override releases a JUDGMENT CALL, never a FACT.** Whether a 14-month
   authority is good enough for this load is a judgment, and judgments are what an
@@ -4147,7 +4149,13 @@ Most are inert history and **should** survive — `LoadActivity` and `LoadTracki
   those are facts held by another party. SRL waiving its own record of one does
   not change the fact; it only removes the evidence that SRL knew. That is the
   test for admission to this set, and it is why the first two entries arrived by
-  reconciliation and the last three by decision.
+  reconciliation and the next three by decision. The last two pass a second
+  form of the same test: an archive and a non-APPROVED status are SRL's own
+  facts, but each has its own remedy with its own authority and audit row
+  (restore; approve), and an override that stood in for either would let a
+  24-hour waiver take a decision the platform records elsewhere. Before B2a a
+  blanket override released a SUSPENDED or REJECTED carrier for a day; it does
+  not now, and that is the change Wasi ruled for.
 
   **The grace period is deliberately NOT part of this.** An active
   `insuranceGracePeriodEnd` still produces a WARNING rather than a block: that is
