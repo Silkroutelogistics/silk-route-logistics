@@ -18253,7 +18253,13 @@
 // before any write; assignCarrier resolves the profile by user id and refuses a user with none, which keeps instant-book's profile-id-as-user-id
 // dead by name; clearCarrier is not gated; extra.carrierId is refused. A coverage guard freezes every caller of each chokepoint by name (call sites,
 // not importers — instant-book listed, carrierLoads' dead import not). Routes A–D learn to map the refusal in the next commit.
-export const SRL_VERSION = "3.8.bdz";
+// v3.8.bea — carrier-archive recut B2b-2: the four live bypass routes learn to map the chokepoint's refusal. assign-match and fall-off-accept
+// answer 403 CARRIER_INELIGIBLE with the codes (and assign-match now assigns before it records the match, so a refusal records nothing);
+// a broadcast SKIPS a refused candidate and names it in the result instead of failing the launch; the cascade's tenderPosition skips the
+// position and advances when the offer is refused, the shape acceptPosition already had; the manual position add refuses at the door. The
+// B6d proof gains the five bypass paths (57/57) and goes red BY NAME per chokepoint: the createTender gate removed turns C and D red, the
+// assignCarrier gate removed turns A and B red. instant-book stays dead, now refused by the gate's no-profile branch rather than by the FK.
+export const SRL_VERSION = "3.8.bea";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

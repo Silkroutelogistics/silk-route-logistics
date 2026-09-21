@@ -67,8 +67,13 @@ export class CarrierIneligibleError extends Error {
   }
 }
 
+/**
+ * instanceof only. A duck-typed `code === "CARRIER_INELIGIBLE"` check would let
+ * the type guard admit an object without toBody() and the verdict fields, and
+ * a route that then called them would throw inside its own catch.
+ */
 export function isCarrierIneligible(err: unknown): err is CarrierIneligibleError {
-  return err instanceof CarrierIneligibleError || (typeof err === "object" && err !== null && (err as any).code === "CARRIER_INELIGIBLE");
+  return err instanceof CarrierIneligibleError;
 }
 
 /** Refuse unless the CarrierProfile with this id passes the gate. Returns the verdict. */

@@ -16,6 +16,7 @@ import { parseCheckCallReply } from "../automation/webhooks/checkcall-parser";
 import { processDocument } from "../automation/webhooks/pod-processor";
 import { generateMorningBriefing } from "../automation/tools/morning-briefing";
 import { isFeatureUnlocked } from "../ai/volumeGates";
+import { isCarrierIneligible } from "../lib/carrierEligibility";
 import { assignCarrier } from "../services/carrierAssignmentService";
 
 const router = Router();
@@ -49,11 +50,13 @@ router.post(
     }
 
     try {
-      // Track the assignment in match results
-      await trackMatchAssignment(req.params.loadId, userId);
-
       // Assign carrier to load
       // v3.8.axb — through assignCarrier, the single writer of Load.carrierId.
+      // Carrier-archive recut B2b (Phase A row A): this route asked nothing about
+      // the carrier — no complianceCheck, no status, no deletedAt — and wrote the
+      // body's userId straight in. assignCarrier now asks the gate itself and
+      // refuses; the refusal is mapped to 403 with the codes here, and it runs
+      // BEFORE the match-result tracking so a refused assignment records nothing.
       await assignCarrier({
         loadId: req.params.loadId,
         // auto-match dispatch
@@ -63,11 +66,18 @@ router.post(
         extra: { statusUpdatedAt: new Date() },
       });
 
+      // Track the assignment in match results
+      await trackMatchAssignment(req.params.loadId, userId);
+
       // Auto-create check-call schedule
       await createCheckCallSchedule(req.params.loadId);
 
       res.json({ success: true, message: "Carrier assigned and check-calls scheduled" });
     } catch (err: any) {
+      if (isCarrierIneligible(err)) {
+        res.status(403).json(err.toBody());
+        return;
+      }
       res.status(500).json({ error: err.message });
     }
   },
@@ -160,6 +170,13 @@ router.post(
       }
       res.json(result);
     } catch (err: any) {
+      // Carrier-archive recut B2b (Phase A row B): the accept ran no gate at all;
+      // assignCarrier now refuses an ineligible or profile-less user, mapped here.
+      // Who may name the carrierUserId at all is B2c.
+      if (isCarrierIneligible(err)) {
+        res.status(403).json(err.toBody());
+        return;
+      }
       res.status(500).json({ error: err.message });
     }
   },

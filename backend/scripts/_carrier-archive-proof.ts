@@ -107,6 +107,7 @@ async function main() {
   const { matchCarriersForLoad } = await import("../src/services/smartMatchService");
   const { buildBenchBoard } = await import("../src/services/benchBoardService");
   const { getEligibleCarriers } = await import("../src/services/waterfallScoringService");
+  const { advanceWaterfall } = await import("../src/services/waterfallEngineService");
   const { notifyMatchedCarriers } = await import("../src/services/carrierOutreachService");
   const { getRecommendationsForLoad } = await import("../src/services/smartRecommendationService");
   const { CLOSED_BY_STATUS_REASON } = await import("../src/services/infoRequestService");
@@ -297,6 +298,61 @@ async function main() {
     okB2("the compliance gate refuses with CARRIER_ARCHIVED", !gate3.allowed && hasCode(gate3, "CARRIER_ARCHIVED") && !isOverridable(gate3, "CARRIER_ARCHIVED"), `allowed=${gate3.allowed} codes=${JSON.stringify(gate3.blocked_codes)}`);
     const after = await pickers(lOut2.id);
     for (const [name, present] of Object.entries(after)) ok(`${name} offers NOTHING for the archived carrier`, !present);
+
+    // ── [3b] the five bypasses Phase A found (carrier-archive B2b) ──
+    // Each of these reached a tender or an assignment with NO gate before B2b.
+    // Each now refuses through the chokepoint, by name, with the codes, and
+    // leaves no row behind. They run against the ARCHIVED carrier so the code
+    // they must name is CARRIER_ARCHIVED.
+    console.log("\n[3b] the bypass paths — each refused through the chokepoint, by name, leaving nothing");
+    const refusedBy = (r: any, code: string) =>
+      r.status === 403 && r.json.error === "CARRIER_INELIGIBLE" && Array.isArray(r.json.blocked_codes) && r.json.blocked_codes.some((c: any) => c.code === code);
+
+    // A — assign-match: the body's userId went straight into Load.carrierId
+    const lA = await makeLoad("BYPASS-A", "POSTED", null);
+    const rA = await send("POST", `/automation/assign-match/${lA.id}`, { userId: cu.id });
+    ok("A assign-match: refused 403 CARRIER_INELIGIBLE naming CARRIER_ARCHIVED", refusedBy(rA, "CARRIER_ARCHIVED"), `status ${rA.status} ${JSON.stringify(rA.json).slice(0, 200)}`);
+    ok("A assign-match: the load still has no carrier", (await prisma.load.findUnique({ where: { id: lA.id } }))?.carrierId === null);
+
+    // B — fall-off-accept: any user id in the body, no gate
+    const lB = await makeLoad("BYPASS-B", "POSTED", null);
+    const evB = await prisma.fallOffEvent.create({ data: { loadId: lB.id, reason: "b6d bypass B", status: "ACTIVE" } as any });
+    const rB = await send("POST", `/automation/fall-off-accept/${lB.id}`, { carrierUserId: cu.id });
+    ok("B fall-off-accept: refused 403 CARRIER_INELIGIBLE naming CARRIER_ARCHIVED", refusedBy(rB, "CARRIER_ARCHIVED"), `status ${rB.status} ${JSON.stringify(rB.json).slice(0, 200)}`);
+    const evB2 = await prisma.fallOffEvent.findUnique({ where: { id: evB.id } });
+    ok("B fall-off-accept: no carrier written, the event stays ACTIVE", (await prisma.load.findUnique({ where: { id: lB.id } }))?.carrierId === null && evB2?.status === "ACTIVE");
+
+    // C — broadcast: every body candidate got an offer
+    const lC = await makeLoad("BYPASS-C", "POSTED", null);
+    const rC = await send("POST", `/loads/${lC.id}/broadcast`, { candidates: [{ carrierId: carrier.id, carrierUserId: cu.id, companyName: "Peace Transport", offeredRate: 3500 }], expirationMinutes: 60 });
+    const skippedC = rC.json.skipped ?? [];
+    ok("C broadcast: launches with the archived carrier SKIPPED by name, CARRIER_ARCHIVED, tenderCount 0",
+      rC.status === 201 && rC.json.tenderCount === 0 && skippedC.length === 1 && skippedC[0].carrierId === carrier.id && skippedC[0].blocked_codes.some((c: any) => c.code === "CARRIER_ARCHIVED"),
+      `status ${rC.status} ${JSON.stringify(rC.json).slice(0, 220)}`);
+    ok("C broadcast: no tender row and no history row for the skipped candidate", (await prisma.loadTender.count({ where: { loadId: lC.id } })) === 0 && (await prisma.loadActivity.count({ where: { loadId: lC.id, tenderId: { not: null } } })) === 0);
+
+    // D (insert) — the manual position add wrote the body's carrierUserId ungated
+    const lD = await makeLoad("BYPASS-D", "POSTED", null);
+    const wfD = await prisma.waterfall.create({ data: { loadId: lD.id, mode: "manual", status: "active", totalPositions: 0, createdById: ae.id } as any });
+    const rD = await send("POST", `/waterfalls/${wfD.id}/positions`, { carrierUserId: cu.id, offeredRate: 3500 });
+    ok("D position add: refused 403 CARRIER_INELIGIBLE naming CARRIER_ARCHIVED", refusedBy(rD, "CARRIER_ARCHIVED"), `status ${rD.status} ${JSON.stringify(rD.json).slice(0, 200)}`);
+    ok("D position add: no position row was inserted", (await prisma.waterfallPosition.count({ where: { waterfallId: wfD.id } })) === 0);
+
+    // D (offer) — a queued row that got in anyway (stale, or from before the gate) is skipped at offer time, not tendered
+    const stale = await prisma.waterfallPosition.create({ data: { waterfallId: wfD.id, carrierId: cu.id, position: 1, status: "queued", offeredRate: 3500 } as any });
+    await prisma.waterfall.update({ where: { id: wfD.id }, data: { totalPositions: 1 } });
+    await advanceWaterfall(wfD.id, 1);
+    const stale2 = await prisma.waterfallPosition.findUnique({ where: { id: stale.id } });
+    const evD = await prisma.loadActivity.findFirst({ where: { loadId: lD.id, eventType: "position_skipped" }, orderBy: { createdAt: "desc" } });
+    ok("D offer: the cascade SKIPS the archived carrier's position and advances — no tender, no TENDERED flip",
+      stale2?.status === "skipped" && (await prisma.loadTender.count({ where: { loadId: lD.id } })) === 0 && (await prisma.load.findUnique({ where: { id: lD.id } }))?.status !== "TENDERED",
+      `position=${stale2?.status} tenders=${await prisma.loadTender.count({ where: { loadId: lD.id } })}`);
+    ok("D offer: the skip event names compliance and CARRIER_ARCHIVED", !!evD && JSON.stringify(evD.metadata ?? {}).includes("CARRIER_ARCHIVED"), JSON.stringify(evD?.metadata ?? null).slice(0, 200));
+
+    // E — instant-book stays dead, now by the gate's name rather than by FK
+    const lE = await makeLoad("BYPASS-E", "POSTED", null);
+    const rE = await send("POST", "/ai/instant-book", { loadId: lE.id, carrierId: carrier.id });
+    ok("E instant-book: still refuses (profile id where a user id belongs), and writes nothing", rE.status !== 201 && (rE.json.success === false || rE.status >= 400) && (await prisma.load.findUnique({ where: { id: lE.id } }))?.carrierId === null, `status ${rE.status} ${JSON.stringify(rE.json).slice(0, 160)}`);
     const fp3 = await prisma.carrierFingerprint.findUnique({ where: { carrierId: carrier.id } });
     ok("fingerprint row unchanged by the archive (every hash and updatedAt identical)",
       !!fp3 && fp3.phoneHash === fp0!.phoneHash && fp3.emailHash === fp0!.emailHash && fp3.addressHash === fp0!.addressHash && fp3.dotHash === fp0!.dotHash && fp3.updatedAt.getTime() === fp0!.updatedAt.getTime());

@@ -13,6 +13,7 @@ import { scoreCarriersForLoad, loadLoadContext } from "../services/waterfallScor
 import { logWaterfallEvent } from "../services/waterfallEventService";
 import { withdrawLiveTenders } from "../services/tenderTransitionService";
 import { log } from "../lib/logger";
+import { assertEligibleByUserId, isCarrierIneligible } from "../lib/carrierEligibility";
 
 const router = Router();
 router.use(authenticate);
@@ -361,6 +362,21 @@ router.post(
         include: { positions: { orderBy: { position: "asc" } } },
       });
       if (!wf) return res.status(404).json({ error: "Waterfall not found" });
+
+      // Carrier-archive recut B2b (Phase A row D, the INSERT half): this route
+      // wrote the body's carrierUserId into a queued position with no gate — the
+      // MatchTab list is filtered, but a list filter is not a server gate (the
+      // Sprint 36b lesson), and a position inserted after an archive is never
+      // swept by the archive's own skip. The offer would now be refused by
+      // createTender when the cascade reached it; refusing here as well means
+      // the AE is told at the click, not left with a queued row that will
+      // silently skip.
+      try {
+        await assertEligibleByUserId(carrierUserId, "createTender");
+      } catch (err) {
+        if (isCarrierIneligible(err)) return res.status(403).json(err.toBody());
+        throw err;
+      }
 
       const fallback = wf.positions.find((p) => p.isFallback);
       const insertPos =
