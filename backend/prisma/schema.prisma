@@ -2436,8 +2436,21 @@ model InvoiceLineItem {
   type        LineItemType @default(LINEHAUL)
   sortOrder   Int          @default(0)
   createdAt   DateTime     @default(now())
+  // §13.3 Item 282a — which ledger row (LoadAccessorial.id) this line bills or
+  // credits. NULL on the linehaul and fuel lines, which come from the load and
+  // not the ledger. Deliberately NO foreign key: the line is the record of what
+  // the customer was billed and must outlive the row it was billed from.
+  //
+  // Why it exists: the customer leg marks ledger rows billed (shipperInvoiceId)
+  // while the carrier leg reconciles totals, and a line item carried no link
+  // back to its row — so a $200 TONU edited to $250 after the DRAFT was folded
+  // kept billing $200 forever, because the row was already stamped and the line
+  // could not be found to re-price. Every accessorial-line writer in
+  // invoiceService.ts stamps this; invoiceLineAccessorialLink.test.ts counts them.
+  accessorialId String?
 
   @@index([invoiceId])
+  @@index([accessorialId])
   @@map("invoice_line_items")
 }
 

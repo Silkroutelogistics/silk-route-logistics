@@ -213,8 +213,9 @@ function creditLine(a: { type: string; notes: string | null; rejectedReason: str
  *   DRAFT   — nothing has left the building. Fold a credit line in and take the
  *             money back off the totals. The line stays visible rather than being
  *             deleted, because an AE reviewing the draft is owed the reason the
- *             charge came off, and `InvoiceLineItem` carries no link back to the
- *             accessorial to delete precisely by.
+ *             charge came off. (Since 282a every accessorial line carries the
+ *             row id in `accessorialId`, so it COULD be found precisely; the
+ *             credit line is kept for the reason above, not for want of a key.)
  *   SENT+   — the customer holds this document and may have entered it in their
  *             payables. Editing it makes their copy disagree with ours, which is
  *             the exact reason the supplemental path exists. So the credit gets
@@ -276,7 +277,7 @@ export async function creditRejectedAccessorials(loadId: string) {
         await tx.invoiceLineItem.createMany({
           data: rows.map((r: any, i: number) => {
             const li = creditLine(r, existingCount + i);
-            return { invoiceId: invoice.id, description: li.description, quantity: li.quantity, rate: li.rate, amount: li.amount, type: li.type as any, sortOrder: li.sortOrder };
+            return { invoiceId: invoice.id, accessorialId: r.id, description: li.description, quantity: li.quantity, rate: li.rate, amount: li.amount, type: li.type as any, sortOrder: li.sortOrder };
           }),
         });
         await tx.invoice.update({
@@ -331,7 +332,7 @@ export async function creditRejectedAccessorials(loadId: string) {
           await tx.invoiceLineItem.createMany({
             data: rows.map((r: any, i: number) => {
               const li = creditLine(r, i);
-              return { invoiceId: inv.id, description: li.description, quantity: li.quantity, rate: li.rate, amount: li.amount, type: li.type as any, sortOrder: li.sortOrder };
+              return { invoiceId: inv.id, accessorialId: r.id, description: li.description, quantity: li.quantity, rate: li.rate, amount: li.amount, type: li.type as any, sortOrder: li.sortOrder };
             }),
           });
 
@@ -505,7 +506,7 @@ export async function autoGenerateInvoice(loadId: string) {
   const dueDate = new Date();
   dueDate.setDate(dueDate.getDate() + 30);
 
-  const lineItems: { description: string; quantity: number; rate: number; amount: number; type: string; sortOrder: number }[] = [
+  const lineItems: { description: string; quantity: number; rate: number; amount: number; type: string; sortOrder: number; accessorialId: string | null }[] = [
     {
       description: `Linehaul: ${load.originCity}, ${load.originState} → ${load.destCity}, ${load.destState}`,
       quantity: 1,
@@ -513,6 +514,7 @@ export async function autoGenerateInvoice(loadId: string) {
       amount: customerRate,
       type: "LINEHAUL",
       sortOrder: 0,
+      accessorialId: null, // from the load, not the ledger
     },
   ];
   if (fuelSurcharge > 0) {
@@ -523,6 +525,7 @@ export async function autoGenerateInvoice(loadId: string) {
       amount: fuelSurcharge,
       type: "FUEL_SURCHARGE",
       sortOrder: 1,
+      accessorialId: null, // from the load, not the ledger
     });
   }
   accessorialLines.forEach((a: any, i: number) => {
@@ -534,6 +537,7 @@ export async function autoGenerateInvoice(loadId: string) {
       amount: a.amount,
       type: p.type,
       sortOrder: 2 + i,
+      accessorialId: a.id,
     });
   });
 
@@ -590,6 +594,7 @@ export async function autoGenerateInvoice(loadId: string) {
       await tx.invoiceLineItem.createMany({
         data: lineItems.map((li) => ({
           invoiceId: inv.id,
+          accessorialId: li.accessorialId,
           description: li.description,
           quantity: li.quantity,
           rate: li.rate,
@@ -809,6 +814,7 @@ export async function syncInvoiceAccessorials(loadId: string) {
           const p = presentAccessorial(a.type);
           return {
             invoiceId: base.id,
+            accessorialId: a.id,
             description: a.notes ? `${p.label} (${a.notes})` : p.label,
             quantity: 1,
             rate: a.amount,
@@ -873,6 +879,7 @@ export async function syncInvoiceAccessorials(loadId: string) {
             const p = presentAccessorial(a.type);
             return {
               invoiceId: inv.id,
+              accessorialId: a.id,
               description: a.notes ? `${p.label} (${a.notes})` : p.label,
               quantity: 1,
               rate: a.amount,
