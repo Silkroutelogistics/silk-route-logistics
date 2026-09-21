@@ -28,7 +28,9 @@ const { mockPrisma } = vi.hoisted(() => ({
   mockPrisma: {
     carrierProfile: { findUnique: vi.fn() },
     complianceOverride: { findFirst: vi.fn() },
-    carrierAgreement: { findFirst: vi.fn() },
+    // v3.8.beh — findMany is what lib/agreementState calls. Not aliased to
+    // findFirst: aliasing hides exactly the divergence a mock exists to expose.
+    carrierAgreement: { findFirst: vi.fn(), findMany: vi.fn() },
     complianceAlert: { findMany: vi.fn(), create: vi.fn() },
     complianceScan: { findFirst: vi.fn() },
   },
@@ -131,12 +133,11 @@ describe("complianceCheck — authority-age gate (v3.8.ahm)", () => {
     vi.setSystemTime(FIXED_NOW);
     // Defaults: no blanket override, no scoped override, signed agreement on file.
     mockPrisma.complianceOverride.findFirst.mockResolvedValue(null);
-    mockPrisma.carrierAgreement.findFirst.mockResolvedValue({
-      id: "agreement-1",
-      status: "SIGNED",
-      signedAt: new Date(FIXED_NOW.getTime() - 100 * 86_400_000),
-      expiresAt: new Date(FIXED_NOW.getTime() + 365 * 86_400_000),
-    });
+    // v3.8.beh — the gate reads agreements through lib/agreementState, which
+    // fetches the broker-carrier rows in ONE findMany and decides in memory.
+    mockPrisma.carrierAgreement.findMany.mockResolvedValue([
+      { templateName: "broker-carrier", status: "SIGNED", signedAt: new Date(FIXED_NOW.getTime() - 100 * 86_400_000), terminatedAt: null, terminationReason: null, expiresAt: new Date(FIXED_NOW.getTime() + 365 * 86_400_000) },
+    ]);
   });
 
   afterEach(() => {
@@ -418,29 +419,26 @@ describe("complianceCheck — terminated agreement", () => {
 
   it("blocks a carrier whose BCA was terminated, and says terminated rather than missing", async () => {
     mockPrisma.carrierProfile.findUnique.mockResolvedValue(makeCarrier());
-    // First call (SIGNED lookup) finds nothing; second (TERMINATED lookup) does.
-    mockPrisma.carrierAgreement.findFirst
-      .mockResolvedValueOnce(null)
-      .mockResolvedValueOnce({
-        terminatedAt: new Date("2026-06-01T00:00:00Z"),
-        terminationReason: "Carrier offboarded at their request",
-      });
+    // One findMany; the only broker-carrier row is TERMINATED.
+    mockPrisma.carrierAgreement.findMany.mockResolvedValue([
+      { templateName: "broker-carrier", status: "TERMINATED", signedAt: new Date("2026-05-01T00:00:00Z"), terminatedAt: new Date("2026-06-01T00:00:00Z"), terminationReason: "Carrier offboarded at their request", expiresAt: null },
+    ]);
 
     const result = await complianceCheck("carrier-1");
 
     expect(result.allowed).toBe(false);
     expect(result.blocked_reasons.join(" ")).toContain("AGREEMENT_TERMINATED");
     expect(result.blocked_reasons.join(" ")).toContain("2026-06-01");
-    expect(result.blocked_reasons.join(" ")).not.toContain("No signed carrier-broker agreement on file");
+    expect(result.blocked_reasons.join(" ")).not.toContain("AGREEMENT_MISSING");
   });
 
   it("surfaces a non-overridable AGREEMENT_TERMINATED code", async () => {
     // An AE waving this through would put a load on a carrier with no agreement
     // governing it. The remedy is a signature, not an override.
     mockPrisma.carrierProfile.findUnique.mockResolvedValue(makeCarrier());
-    mockPrisma.carrierAgreement.findFirst
-      .mockResolvedValueOnce(null)
-      .mockResolvedValueOnce({ terminatedAt: new Date("2026-06-01T00:00:00Z"), terminationReason: "x" });
+    mockPrisma.carrierAgreement.findMany.mockResolvedValue([
+      { templateName: "broker-carrier", status: "TERMINATED", signedAt: null, terminatedAt: new Date("2026-06-01T00:00:00Z"), terminationReason: "x", expiresAt: null },
+    ]);
 
     const result = await complianceCheck("carrier-1");
 
@@ -449,16 +447,56 @@ describe("complianceCheck — terminated agreement", () => {
     expect(code!.overridable).toBe(false);
   });
 
-  it("still says 'none on file' when the carrier genuinely never signed", async () => {
-    // The old message is correct in exactly this case, and must survive.
+  it("blocks a carrier who never signed with a non-overridable AGREEMENT_MISSING code (v3.8.beh)", async () => {
+    // Seventh absolute. Until beh this branch pushed a bare reason with no
+    // code, and a blanket override released it — which is how SRL-121492 ran
+    // on a carrier holding only the registration click-wrap.
     mockPrisma.carrierProfile.findUnique.mockResolvedValue(makeCarrier());
-    mockPrisma.carrierAgreement.findFirst.mockResolvedValue(null);
+    mockPrisma.carrierAgreement.findMany.mockResolvedValue([]);
 
     const result = await complianceCheck("carrier-1");
 
     expect(result.allowed).toBe(false);
-    expect(result.blocked_reasons).toContain("No signed carrier-broker agreement on file");
+    expect(result.blocked_reasons.join(" ")).toContain("AGREEMENT_MISSING");
+    expect(result.blocked_reasons.join(" ")).toContain("activation page");
+    const code = result.blocked_codes.find((c) => c.code === "AGREEMENT_MISSING");
+    expect(code).toBeDefined();
+    expect(code!.overridable).toBe(false);
     expect(result.blocked_codes.some((c) => c.code === "AGREEMENT_TERMINATED")).toBe(false);
+  });
+
+  it("ACKNOWLEDGED (registration click-wrap) is MISSING, not SIGNED", async () => {
+    // The enum comment says the click-wrap is deliberately not a signature.
+    // This is the shape every F11 registrant holds today (PEACE TRANSPORT et al).
+    mockPrisma.carrierProfile.findUnique.mockResolvedValue(makeCarrier());
+    mockPrisma.carrierAgreement.findMany.mockResolvedValue([
+      { templateName: "broker-carrier", status: "ACKNOWLEDGED", signedAt: new Date(FIXED_NOW.getTime() - 3 * 86_400_000), terminatedAt: null, terminationReason: null, expiresAt: null },
+    ]);
+
+    const result = await complianceCheck("carrier-1");
+
+    expect(result.allowed).toBe(false);
+    expect(result.blocked_codes.find((c) => c.code === "AGREEMENT_MISSING")?.overridable).toBe(false);
+  });
+
+  it("a blanket override does NOT release AGREEMENT_MISSING — the 2026-09-18 shape", async () => {
+    // A live blanket override, a carrier with only the click-wrap row. Before
+    // beh this returned allowed: true and the tender was created
+    // (created_under_compliance_override). Now the reason is KEPT, not released.
+    mockPrisma.carrierProfile.findUnique.mockResolvedValue(makeCarrier());
+    mockPrisma.carrierAgreement.findMany.mockResolvedValue([
+      { templateName: "broker-carrier", status: "ACKNOWLEDGED", signedAt: new Date(FIXED_NOW.getTime() - 3 * 86_400_000), terminatedAt: null, terminationReason: null, expiresAt: null },
+    ]);
+    mockPrisma.complianceOverride.findFirst.mockResolvedValue({
+      id: "ov-blanket", checkCode: null, expiresAt: new Date(FIXED_NOW.getTime() + 86_400_000), createdAt: FIXED_NOW,
+    });
+
+    const result = await complianceCheck("carrier-1");
+
+    expect(result.allowed).toBe(false);
+    expect(result.blocked_reasons.some((r) => r.startsWith("AGREEMENT_MISSING"))).toBe(true);
+    expect(result.released.some((r) => r.startsWith("AGREEMENT_MISSING"))).toBe(false);
+    expect(result.blocked_codes.find((c) => c.code === "AGREEMENT_MISSING")?.overridable).toBe(false);
   });
 
   it("allows a carrier who re-signed after termination", async () => {
@@ -466,12 +504,11 @@ describe("complianceCheck — terminated agreement", () => {
     // haul again. The SIGNED lookup finds the newer row, so the terminated
     // branch is never reached.
     mockPrisma.carrierProfile.findUnique.mockResolvedValue(makeCarrier());
-    mockPrisma.carrierAgreement.findFirst.mockResolvedValue({
-      id: "agreement-2",
-      status: "SIGNED",
-      signedAt: new Date(FIXED_NOW.getTime() - 86_400_000),
-      expiresAt: null,
-    });
+    // Both rows in hand; the newer SIGNED one wins over the TERMINATED one.
+    mockPrisma.carrierAgreement.findMany.mockResolvedValue([
+      { templateName: "broker-carrier", status: "TERMINATED", signedAt: new Date(FIXED_NOW.getTime() - 30 * 86_400_000), terminatedAt: new Date(FIXED_NOW.getTime() - 10 * 86_400_000), terminationReason: "x", expiresAt: null },
+      { templateName: "broker-carrier", status: "SIGNED", signedAt: new Date(FIXED_NOW.getTime() - 86_400_000), terminatedAt: null, terminationReason: null, expiresAt: null },
+    ]);
 
     const result = await complianceCheck("carrier-1");
 
@@ -479,19 +516,17 @@ describe("complianceCheck — terminated agreement", () => {
     expect(result.blocked_reasons).toEqual([]);
   });
 
-  it("does not consult the terminated lookup at all when a signed agreement exists", async () => {
-    // Guards the ordering: one extra query per compliance check on the
-    // no-agreement path only, never on the healthy path.
+  it("reads agreements with exactly one query on every path", async () => {
+    // v3.8.beh — one findMany, decided in memory. The pre-beh shape was two
+    // findFirsts on the no-agreement path; this pins that it did not come back.
     mockPrisma.carrierProfile.findUnique.mockResolvedValue(makeCarrier());
-    mockPrisma.carrierAgreement.findFirst.mockResolvedValue({
-      id: "agreement-1",
-      status: "SIGNED",
-      signedAt: new Date(FIXED_NOW.getTime() - 86_400_000),
-      expiresAt: null,
-    });
+    mockPrisma.carrierAgreement.findMany.mockResolvedValue([
+      { templateName: "broker-carrier", status: "SIGNED", signedAt: new Date(FIXED_NOW.getTime() - 86_400_000), terminatedAt: null, terminationReason: null, expiresAt: null },
+    ]);
 
     await complianceCheck("carrier-1");
 
-    expect(mockPrisma.carrierAgreement.findFirst).toHaveBeenCalledTimes(1);
+    expect(mockPrisma.carrierAgreement.findMany).toHaveBeenCalledTimes(1);
+    expect(mockPrisma.carrierAgreement.findFirst).not.toHaveBeenCalled();
   });
 });

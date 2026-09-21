@@ -19,7 +19,7 @@ import { RateConfirmationModal } from "@/components/loads/RateConfirmationModal"
 import { CreateLoadModal } from "@/components/loads/CreateLoadModal";
 import { EditLoadModal } from "@/components/loads/EditLoadModal";
 import { AcceptOnBehalfModal } from "@/components/loads/AcceptOnBehalfModal";
-import { OverrideComplianceModal } from "@/components/loads/OverrideComplianceModal";
+import { OverrideComplianceModal, type BlockedCode } from "@/components/loads/OverrideComplianceModal";
 import { CancelLoadModal, type CancelLoadPayload } from "@/components/loads/CancelLoadModal";
 import { TagManagementPanel } from "@/components/loads/TagManagementPanel";
 import { SlideDrawer } from "@/components/ui/SlideDrawer";
@@ -183,11 +183,9 @@ export default function LoadsPage() {
     blocked_reasons: string[];
     // v3.8.ahq — structured signal for the OverrideComplianceModal.
     // Optional on the type because pre-ahq deploys won't include it.
-    blocked_codes?: Array<{
-      code: "AUTHORITY_TOO_YOUNG" | "AUTHORITY_UNVERIFIED" | "AGREEMENT_TERMINATED" | "CHAMELEON_UNREVIEWED";
-      ageMonths?: number;
-      overridable: boolean;
-    }>;
+    // v3.8.beh — the modal's exported union, not a hand-kept copy. The copy this
+    // replaced was four codes behind the backend and TypeScript could not see it.
+    blocked_codes?: BlockedCode[];
     warnings: string[];
   } | null>(null);
   const [checkingCompliance, setCheckingCompliance] = useState(false);
@@ -1168,11 +1166,7 @@ export default function LoadsPage() {
                     const result = res.data as {
                       allowed: boolean;
                       blocked_reasons: string[];
-                      blocked_codes?: Array<{
-                        code: "AUTHORITY_TOO_YOUNG" | "AUTHORITY_UNVERIFIED" | "AGREEMENT_TERMINATED" | "CHAMELEON_UNREVIEWED";
-                        ageMonths?: number;
-                        overridable: boolean;
-                      }>;
+                      blocked_codes?: BlockedCode[];
                       warnings: string[];
                     };
                     setComplianceResult(result);
@@ -2008,11 +2002,7 @@ function TenderForm({
     blocked_reasons: string[];
     // v3.8.ahq — blocked_codes added for the OverrideComplianceModal's
     // authority-age render conditional. Optional for pre-ahq compatibility.
-    blocked_codes?: Array<{
-      code: "AUTHORITY_TOO_YOUNG" | "AUTHORITY_UNVERIFIED" | "AGREEMENT_TERMINATED" | "CHAMELEON_UNREVIEWED";
-      ageMonths?: number;
-      overridable: boolean;
-    }>;
+    blocked_codes?: BlockedCode[];
     warnings: string[];
   } | null;
   checkingCompliance: boolean;

@@ -18193,7 +18193,8 @@
 // Also true now, and it was not: unkeyed accessorial lines are not only pre-282a — the two API line editors (PUT /invoices/:id/line-items, PUT /accounting/invoices/:id) replace every line without a key, so a draft they touch is reported and not re-priced; the writer guard walks all of src/ and freezes five ledger writers in the service plus five body-driven writers outside it (the fifth found by the guard, not the review), each with its reason.
 // v3.8.bee — lifecycle-gaps 282 finding (i), landed before the merge per decision 1 (2026-09-21): customerPriceFor converts a minute-denominated quantity to the rate card's hours before multiplying — $75/hr × 120 minutes bills $150, not $9,000; both selects that feed the pricer now fetch the row's unit, and a guard fails if either stops
 // (the only detention writer stores billableMinutes with unit "minutes" against a $/hr card; inert while no customer holds a card, but 282c re-prices every stamped draft line the moment one is entered)
-export const SRL_VERSION = "3.8.bee";
+// v3.8.beh — AGREEMENT_MISSING is the seventh absolute (a never-signed BCA can no longer be tendered by any override; it fired live 2026-09-18 on SRL-121492), and lib/agreementState is the ONE predicate the tender gate, Compass and the RC signature all call. Commit 1 of 2.
+export const SRL_VERSION = "3.8.beh";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

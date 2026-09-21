@@ -14,6 +14,7 @@ import { prisma } from "../config/database";
 import { verifyCarrierWithFMCSA, calendarMonthsBetween } from "./fmcsaService";
 import { sendEmail, wrap } from "./emailService";
 import { log } from "../lib/logger";
+import { agreementStateFrom, getAgreementState } from "../lib/agreementState";
 
 // ────────────────────────────────────────────────────────────
 // AUTHORITY_AGE_GATE_LIVE_AT — Item 182 sprint 3 (v3.8.ahm)
@@ -72,6 +73,9 @@ export interface BlockedCode {
     | "AUTHORITY_TOO_YOUNG"
     | "AUTHORITY_UNVERIFIED"
     | "AGREEMENT_TERMINATED"
+    // v3.8.beh — seventh absolute. A carrier who never signed has no contract
+    // governing the load — same fact as TERMINATED with a weaker excuse.
+    | "AGREEMENT_MISSING"
     | "CHAMELEON_UNREVIEWED"
     // Arc 27 — federal absolutes. Never overridable, scoped or blanket. §14.
     | "OFAC_MATCH"
@@ -216,7 +220,7 @@ export async function complianceCheck(carrierId: string, pre?: ComplianceBundle)
    * endpoint would still happily mint an override for — that is the same
    * contradiction pointing the other way.
    *
-   * FIVE members, ratified across two arcs:
+   * SEVEN members, ratified across four arcs:
    *
    *   AUTHORITY_TOO_YOUNG (<12mo)  Arc 26 — reconciled an existing contradiction
    *   AGREEMENT_TERMINATED         Arc 26 — same
@@ -224,6 +228,7 @@ export async function complianceCheck(carrierId: string, pre?: ComplianceBundle)
    *   FMCSA_REVOKED                Arc 27 — ratified as policy
    *   OUT_OF_SERVICE               Arc 27 — ratified as policy
    *   INSURANCE_EXPIRED            v3.8.axl — ratified as policy
+   *   AGREEMENT_MISSING            v3.8.beh — ratified as policy; fired live 2026-09-18
    *
    * The first two were already declared un-waivable elsewhere and the gate was
    * simply disagreeing. The last three are a decision: an override releases a
@@ -446,44 +451,47 @@ export async function complianceCheck(carrierId: string, pre?: ComplianceBundle)
     warnings.push("Authority document not uploaded");
   }
 
-  // HARD BLOCK: no signed carrier-broker agreement. Filter to templateName
-  // "broker-carrier" (v3.8.aqi) — the Quick Pay Agreement is now ALSO a signed
-  // CarrierAgreement row ("quick-pay"), and it must never satisfy the BCA gate.
-  const agreement = pre
-    ? pre.agreements.find((a) => a.status === "SIGNED" && a.templateName === "broker-carrier") ?? null
-    : await prisma.carrierAgreement.findFirst({
-        where: { carrierId, status: "SIGNED", templateName: "broker-carrier" },
-        orderBy: { signedAt: "desc" },
-      });
-  if (!agreement) {
-    // A terminated agreement already fails the SIGNED filter above, so it was
+  // HARD BLOCK: no executed carrier-broker agreement. ONE predicate decides
+  // this — lib/agreementState — and the Compass factor and the rate
+  // confirmation signature ask it the same way (v3.8.beh, C1). The Quick Pay
+  // row can never satisfy it (v3.8.aqi), and neither can the registration
+  // click-wrap: ACKNOWLEDGED is not SIGNED.
+  const bca = pre ? agreementStateFrom(pre.agreements) : await getAgreementState(carrierId);
+  if (bca.state === "TERMINATED") {
+    // A terminated agreement already fails the SIGNED filter, so it was
     // already blocking — but it reported "none on file", which sends an AE to
     // chase a carrier for a signature they already gave and someone revoked.
     // Same block, honest reason. Only reached when no SIGNED row exists, so a
     // carrier who signed, was terminated, and re-signed is unaffected: their
-    // newer SIGNED row matches and this branch never runs.
-    const terminated = pre
-      ? pre.agreements.find((a) => a.status === "TERMINATED" && a.templateName === "broker-carrier") ?? null
-      : await prisma.carrierAgreement.findFirst({
-      where: { carrierId, status: "TERMINATED", templateName: "broker-carrier" },
-      orderBy: { terminatedAt: "desc" },
-      select: { terminatedAt: true, terminationReason: true },
-    });
-
-    if (terminated) {
-      const when = terminated.terminatedAt ? terminated.terminatedAt.toISOString().slice(0, 10) : "an earlier date";
-      blocked_reasons.push(
-        `AGREEMENT_TERMINATED: the carrier-broker agreement was terminated on ${when} and must be re-signed before this carrier can haul`,
-      );
-      // Not overridable. An AE waving through a terminated contract would put a
-      // load on a carrier with no agreement governing it; the remedy is a
-      // signature, and the existing sign path already records a new one.
-      blocked_codes.push({ code: "AGREEMENT_TERMINATED", overridable: false });
-      absoluteReasons.add(blocked_reasons[blocked_reasons.length - 1]);
-    } else {
-      blocked_reasons.push("No signed carrier-broker agreement on file");
-    }
-  } else if (agreement.expiresAt && agreement.expiresAt < now) {
+    // newer SIGNED row wins and this branch never runs.
+    const t = bca.terminated!;
+    const when = t.terminatedAt ? t.terminatedAt.toISOString().slice(0, 10) : "an earlier date";
+    blocked_reasons.push(
+      `AGREEMENT_TERMINATED: the carrier-broker agreement was terminated on ${when} and must be re-signed before this carrier can haul`,
+    );
+    // Not overridable. An AE waving through a terminated contract would put a
+    // load on a carrier with no agreement governing it; the remedy is a
+    // signature, and the existing sign path already records a new one.
+    blocked_codes.push({ code: "AGREEMENT_TERMINATED", overridable: false });
+    absoluteReasons.add(blocked_reasons[blocked_reasons.length - 1]);
+  } else if (bca.state === "MISSING") {
+    // v3.8.beh — the SEVENTH absolute. Until this commit the never-signed case
+    // pushed a bare reason with no code and was therefore released by a
+    // blanket override — which is exactly what happened on 2026-09-18: a
+    // blanket override released this block on a carrier holding only the
+    // registration click-wrap, the tender was created
+    // (created_under_compliance_override) and accepted, and a real load
+    // (SRL-121492) sat on a carrier with no contract governing it. The
+    // TERMINATED branch above was made absolute in Arc 26 on the reasoning
+    // that the remedy is a signature, not a waiver; the never-signed case is
+    // the same fact with a weaker excuse. §14 admission test: whether a
+    // contract exists is a FACT, not a judgment call an AE is entitled to make.
+    blocked_reasons.push(
+      "AGREEMENT_MISSING: no executed Broker-Carrier Agreement on file — the carrier must sign it on their activation page before this load can be tendered",
+    );
+    blocked_codes.push({ code: "AGREEMENT_MISSING", overridable: false });
+    absoluteReasons.add(blocked_reasons[blocked_reasons.length - 1]);
+  } else if (bca.signed!.expiresAt && bca.signed!.expiresAt < now) {
     blocked_reasons.push("Carrier-broker agreement has expired");
   }
 

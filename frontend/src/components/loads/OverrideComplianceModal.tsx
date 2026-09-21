@@ -24,6 +24,9 @@ export interface BlockedCode {
     | "AUTHORITY_TOO_YOUNG"
     | "AUTHORITY_UNVERIFIED"
     | "AGREEMENT_TERMINATED"
+    // v3.8.beh — seventh absolute. Never signed is the same fact as terminated
+    // with a weaker excuse: no contract governs the load. Remedy is a signature.
+    | "AGREEMENT_MISSING"
     | "CHAMELEON_UNREVIEWED"
     // Arc 27 — federal absolutes. Never overridable, scoped or blanket. §14.
     | "OFAC_MATCH"
@@ -108,6 +111,13 @@ export function OverrideComplianceModal({
   const terminatedAgreement = codes.find(
     (c) => c.code === "AGREEMENT_TERMINATED",
   );
+  // v3.8.beh — never signed. A blanket override released exactly this on
+  // 2026-09-18 and a load ran on a carrier with no contract. The backend now
+  // returns overridable: false and the endpoint 409s; this is the modal's leg
+  // of that mirror. The remedy is the carrier signing on their activation page.
+  const missingAgreement = codes.find(
+    (c) => c.code === "AGREEMENT_MISSING",
+  );
   // v3.8.auh — chameleon HIGH is override-eligible, but the review is the
   // remedy. The modal says so in that order, for the same reason the blocked
   // reason does: an override that reads as the primary path teaches AEs to
@@ -128,13 +138,15 @@ export function OverrideComplianceModal({
 
   const isAuthorityOverride = !!overridableAuthority;
   const isHardBlocked =
-    !!hardFloorAuthority || !!unverifiedAuthority || !!terminatedAgreement || !!federalAbsolute;
+    !!hardFloorAuthority || !!unverifiedAuthority || !!terminatedAgreement || !!missingAgreement || !!federalAbsolute;
   const disabledTooltip = hardFloorAuthority
     ? "Authority under 12 months — hard floor, cannot be overridden"
     : unverifiedAuthority
       ? "FMCSA authority unverified — contact compliance"
       : terminatedAgreement
         ? "Agreement terminated — the carrier must re-sign. This is not something to override."
+        : missingAgreement
+          ? "No executed Broker-Carrier Agreement — the carrier must sign it on their activation page. Not overridable."
         : federalAbsolute?.code === "OFAC_MATCH"
           ? "OFAC/SDN sanctions match — the screening review must clear it. Not overridable."
           : federalAbsolute?.code === "FMCSA_REVOKED"
@@ -323,6 +335,32 @@ export function OverrideComplianceModal({
           </div>
         )}
 
+        {/* v3.8.beh — the seventh absolute gets the same treatment as the
+            federal three: say what would change the answer, and by whom. The
+            link is the carrier's, not the AE's — it is here so the AE can send
+            it, not open it. */}
+        {missingAgreement && (
+          <div className="mb-3 p-3 border-l-4 rounded bg-[#F6E3E3] border-[#9B2C2C] text-sm">
+            <p className="font-semibold text-[#9B2C2C]">No executed Broker-Carrier Agreement — not overridable</p>
+            <p className="mt-1 text-[#3A4A5F]">
+              The carrier accepted the terms at registration but has not signed the agreement. Nothing
+              governs a load until they do. The carrier signs it on their activation page:{" "}
+              <a
+                href="/carrier/dashboard/activation"
+                target="_blank"
+                rel="noreferrer"
+                className="font-mono text-[#BA7517] underline break-all"
+              >
+                /carrier/dashboard/activation
+              </a>
+              {" "}— send them that link.
+            </p>
+            <p className="mt-1 text-[#6B7685]">
+              An override cannot create a contract — it would only remove SRL&apos;s record that
+              there was none.
+            </p>
+          </div>
+        )}
         {chameleonUnreviewed && (
           <div className="mb-3 p-2 border-l-4 text-xs rounded bg-red-50 border-red-500 text-red-800">
             <p className="font-medium mb-1">Identity overlap — unreviewed</p>

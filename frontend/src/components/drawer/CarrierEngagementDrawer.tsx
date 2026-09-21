@@ -8,7 +8,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { useAuthStore } from "@/hooks/useAuthStore";
 import { type CustomerSummary } from "@/components/shared/CustomerPicker";
-import { OverrideComplianceModal } from "@/components/loads/OverrideComplianceModal";
+import { OverrideComplianceModal, type BlockedCode } from "@/components/loads/OverrideComplianceModal";
 
 /**
  * Sprint 59 (v3.8.acj) Item 176 — Carrier Engagement Drawer.
@@ -184,11 +184,9 @@ interface ComplianceResult {
   // v3.8.ahq — structured block-code signal added alongside blocked_reasons.
   // Optional on the type because pre-ahq deploys won't include the field;
   // the modal handles undefined gracefully with `blockedCodes ?? []`.
-  blocked_codes?: Array<{
-    code: "AUTHORITY_TOO_YOUNG" | "AUTHORITY_UNVERIFIED" | "AGREEMENT_TERMINATED" | "CHAMELEON_UNREVIEWED";
-    ageMonths?: number;
-    overridable: boolean;
-  }>;
+  // v3.8.beh — the modal's exported union, not a hand-kept copy. The copy this
+  // replaced was four codes behind the backend and TypeScript could not see it.
+  blocked_codes?: BlockedCode[];
   warnings: string[];
 }
 

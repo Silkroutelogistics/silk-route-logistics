@@ -188,9 +188,22 @@ describe("ACKNOWLEDGED records assent without satisfying the tender gate", () =>
   it("THE GATE CONDITION IS UNCHANGED — SIGNED only", () => {
     // The whole safety of decision 9 rests on this. If the gate ever widens to
     // accept ACKNOWLEDGED, registration alone would make a carrier tenderable.
-    expect(gate).toContain('a.status === "SIGNED" && a.templateName === "broker-carrier"');
-    expect(gate).toContain('where: { carrierId, status: "SIGNED", templateName: "broker-carrier" }');
-    expect(gate).not.toContain("ACKNOWLEDGED");
+    //
+    // v3.8.beh moved the condition out of the gate into lib/agreementState, the
+    // ONE predicate the gate, Compass and the RC signature share. So this pins
+    // two things: the gate DELEGATES (no where-clause of its own to drift), and
+    // the predicate itself still admits SIGNED and only SIGNED.
+    const gateCode = codeOnly(gate);
+    expect(gateCode).toContain("agreementStateFrom(pre.agreements)");
+    expect(gateCode).toContain("getAgreementState(carrierId)");
+    expect(gateCode).not.toContain('status: "SIGNED", templateName: "broker-carrier"');
+    expect(gateCode).not.toMatch(/statuss*===s*"ACKNOWLEDGED"/);
+
+    const predicate = codeOnly(fs.readFileSync(path.join(SRC, "lib/agreementState.ts"), "utf8"));
+    expect(predicate).toContain('r.status === "SIGNED"');
+    expect(predicate).toContain('r.templateName === BCA_TEMPLATE_NAME');
+    expect(predicate).toContain('BCA_TEMPLATE_NAME = "broker-carrier"');
+    expect(predicate).not.toContain("ACKNOWLEDGED");
   });
 
   it("registration writes an ACKNOWLEDGED row, never SIGNED", () => {

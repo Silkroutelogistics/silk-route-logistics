@@ -431,6 +431,10 @@ const NEVER_OVERRIDABLE_CHECK_CODES = [
   // endpoint happily minting an override the gate ignores, which is the
   // half-mirrored state §14 names as the failure mode.
   "INSURANCE_EXPIRED",
+  // v3.8.beh — the endpoint half of the seventh absolute. A carrier who never
+  // signed has no contract governing the load; a blanket override released
+  // exactly that on 2026-09-18 (SRL-121492). The remedy is a signature.
+  "AGREEMENT_MISSING",
 ] as const;
 
 // v3.8.awx — UNUSUAL_OTP_SMS_DISABLE added. It was missing, and the omission
@@ -451,7 +455,7 @@ const NEVER_OVERRIDABLE_CHECK_CODES = [
 //
 // Safe as a scoped code: it is not a blocked_code, so minting it releases no
 // compliance block. It only makes a row the login path already looks for. It is
-// absent from NEVER_OVERRIDABLE above, correctly — the five absolutes are facts
+// absent from NEVER_OVERRIDABLE above, correctly — the absolutes are facts
 // held by other parties, and this is an SRL notification preference.
 const SCOPED_CHECK_CODES = ["AUTHORITY_TOO_YOUNG", "CHAMELEON_UNREVIEWED", "UNUSUAL_OTP_SMS_DISABLE"];
 

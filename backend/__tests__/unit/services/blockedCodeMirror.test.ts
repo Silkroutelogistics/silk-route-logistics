@@ -27,7 +27,10 @@ const MIRROR_FILE = path.join(REPO, "frontend/src/components/loads/OverrideCompl
 
 /** Pull the string-literal members of the BlockedCode `code` union. */
 function codeUnion(file: string): string[] {
-  const src = fs.readFileSync(file, "utf8");
+  // Comments stripped first: a "." or ";" inside prose above a member used to
+  // end the union early and report a three-code mirror as the whole thing
+  // (§19 Sub-pattern 17 — the instrument reading prose as code).
+  const src = fs.readFileSync(file, "utf8").replace(/^[ \t]*\/\/.*$/gm, "");
   const i = src.indexOf("interface BlockedCode");
   if (i < 0) throw new Error(`BlockedCode interface not found in ${file}`);
   const body = src.slice(i, src.indexOf("}", i));
@@ -144,10 +147,11 @@ describe("BlockedCode mirror", () => {
     const never = [...(/const NEVER_OVERRIDABLE_CHECK_CODES\s*=\s*\[([^\]]+)\]/.exec(ctrl)![1]).matchAll(/"([A-Z_]+)"/g)].map((x) => x[1]);
     expect(
       never.length,
-      "NEVER_OVERRIDABLE_CHECK_CODES should list the six §14 absolutes. Changing " +
+      "NEVER_OVERRIDABLE_CHECK_CODES should list the seven §14 absolutes. Changing " +
         "this number means changing policy — update §14 in the same commit.",
-    ).toBe(6);
+    ).toBe(7);
     expect(never, "INSURANCE_EXPIRED is absolute as of v3.8.axl").toContain("INSURANCE_EXPIRED");
+    expect(never, "AGREEMENT_MISSING is absolute as of v3.8.beh").toContain("AGREEMENT_MISSING");
     const overlap = scoped.filter((c) => never.includes(c));
     expect(overlap, overlap.length ? `Absolute(s) accepted as scoped overrides: ${overlap.join(", ")}` : "").toEqual([]);
   });

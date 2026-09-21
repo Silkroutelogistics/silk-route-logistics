@@ -13,6 +13,7 @@
  */
 
 import { prisma } from "../config/database";
+import { getAgreementState } from "../lib/agreementState";
 import { INSURANCE_MINIMUMS } from "../lib/insurancePolicy";
 import { verifyCarrierWithFMCSA } from "./fmcsaService";
 import { screenCarrier } from "./ofacScreeningService";
@@ -695,17 +696,25 @@ export async function vetCarrier(
     // PASS" on the vetting report, with the 5-point deduction waived. The hard
     // tender gate was never fooled (complianceMonitorService filters correctly,
     // v3.8.aqi); what broke was the AE's read of whether the instrument is on file.
-    const agreement = await prisma.carrierAgreement.findFirst({
-      where: { carrierId: existingCarrier.id, status: "SIGNED", templateName: "broker-carrier" },
-      orderBy: { signedAt: "desc" },
-    });
-    if (agreement) {
+    // v3.8.beh — the SAME predicate the tender gate and the RC signature use
+    // (lib/agreementState, C1). Three where-clauses became one; this factor
+    // can no longer read a different answer from the gate that decides whether
+    // the carrier can haul.
+    const bca = await getAgreementState(existingCarrier.id);
+    if (bca.state === "SIGNED") {
+      const agreement = bca.signed!;
       if (agreement.expiresAt && agreement.expiresAt < new Date()) {
         checks.push({ name: "Carrier-Broker Agreement", result: "WARNING", detail: "Agreement expired", deduction: 5 });
         score -= 5;
       } else {
         checks.push({ name: "Carrier-Broker Agreement", result: "PASS", detail: `Signed ${agreement.signedAt?.toLocaleDateString() || ""}`, deduction: 0 });
       }
+    } else if (bca.state === "TERMINATED") {
+      // Honest reason, same deduction: an AE reading "none on file" would
+      // chase a signature the carrier already gave and someone revoked.
+      const when = bca.terminated!.terminatedAt?.toLocaleDateString() || "an earlier date";
+      checks.push({ name: "Carrier-Broker Agreement", result: "WARNING", detail: `Agreement terminated ${when} — re-signature required`, deduction: 5 });
+      score -= 5;
     } else {
       checks.push({ name: "Carrier-Broker Agreement", result: "WARNING", detail: "No signed agreement on file", deduction: 5 });
       score -= 5;

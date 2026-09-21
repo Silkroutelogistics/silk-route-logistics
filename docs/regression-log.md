@@ -4056,3 +4056,59 @@ promotion branch returns before the write. Closing it means editing
 `checkGuestPromotion`, which is the §10 M1 advancement gate -- a wrong edit there
 promotes an unvetted carrier, which is worse than the missing row it would fix.
 Banked as §13.3 Item 263 with the shape and the decision it needs.
+
+## 2026-09-21 -- a blanket override could waive "no contract", and it had
+
+Asked whether PEACE TRANSPORT LLC holds a signed Broker-Carrier Agreement,
+independently of what Compass says. The answer was no: the only
+`carrier_agreements` row is the registration click-wrap (`ACKNOWLEDGED` --
+no typed name, no ESIGN consent, no content hash, no countersignature), and
+the Compass factor, the tender gate and the signing flow all read and write
+the same model with the same filter. Compass was right.
+
+**The finding was one line away from the question.** The never-signed branch
+of `complianceCheck` pushed a bare reason string -- no `blocked_code`, not in
+`absoluteReasons` -- so under Arc 26 semantics a blanket override RELEASED it.
+`AGREEMENT_TERMINATED` had been made absolute in Arc 26 on the reasoning that
+the remedy is a signature, not a waiver; the never-signed case, the same fact
+with a weaker excuse, was left out.
+
+**The pre-commit exposure check found it had already fired.** Production,
+read-only: on 2026-09-18 at 18:13 a blanket override (reason: "over ride as
+approved") was minted on Peace, the tender was created three seconds later
+with `created_under_compliance_override` in its history, Peace accepted in
+their own portal session at 18:16, an RC was auto-drafted, and SRL-121492 ran
+with no contract governing it. It is now the Item 280-282 TONU. The override
+reason is the tell: "approved" was read as "cleared to haul", which is exactly
+the APPROVED-but-not-activated distinction the platform draws and the AE
+console does not surface on the carrier row.
+
+**Fix (v3.8.beh).** `AGREEMENT_MISSING` is the seventh absolute, mirrored in
+all four places §14 requires. And the question "is there an executed BCA" now
+has exactly ONE answer in the codebase -- `lib/agreementState.ts` -- called by
+the tender gate, the Compass factor, and (next commit) the RC signature. Three
+where-clauses became one; the v3.8.aqi incident (a Quick Pay row read as the
+BCA on the vetting report) is what three copies cost.
+
+**Proven, not reasoned about.** Real router over HTTP on a fresh container,
+Peace's exact shape: blanket override mints (200), tender still refused (403)
+with the code, nothing written; scoped mint 409; scoped row present anyway,
+still refused; then the CONTROL -- sign the BCA, identical request, 201. The
+injection restoring the old branch gives 31/42 and the failing assertion
+prints `HTTP 201`: the incident, reproduced on demand.
+
+**A guard of mine was blind to prose.** `blockedCodeMirror` parsed the union
+up to the first `;`, and the comment I wrote above the new member contained
+one -- the guard reported a three-code mirror as the whole thing. It now strips
+line comments first, and was injected both ways: green with the semicolon back,
+red with the member removed. §19 Sub-pattern 17, in the guard written to catch
+Sub-pattern 16.
+
+**Rulings.** D1: "signed" is any executed version, including the archived v1
+body, because there is no in-portal re-sign surface yet. D2: no gate at RC
+issuance -- the signature-time check (v3.8.bdn) is the binding moment and
+catches the only path left, a termination between accept and send.
+
+**Severity:** P0 while open (a real carrier hauled with no contract). Status:
+Commit 1 fixed in v3.8.beh; Commit 2 (RC signature backstop) pending.
+
