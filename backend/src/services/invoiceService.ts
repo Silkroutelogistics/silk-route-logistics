@@ -75,10 +75,20 @@ function presentAccessorial(type: string): { label: string; type: string } {
  *      negotiated nothing, and exactly what happened before this function.
  *
  * The negotiated rate is a PER-UNIT price where the row carries a quantity, and
- * a flat price where it does not. A detention row records quantity 5 and unit
- * "hours"; a TONU records neither. Multiplying a flat $200 TONU by a quantity
- * that happens to be null would bill zero, so the absence of a quantity has to
- * mean "flat", not "times nothing".
+ * a flat price where it does not. A TONU records neither. Multiplying a flat
+ * $200 TONU by a quantity that happens to be null would bill zero, so the
+ * absence of a quantity has to mean "flat", not "times nothing".
+ *
+ * THE QUANTITY IS CONVERTED TO THE RATE CARD'S UNIT BEFORE IT IS MULTIPLIED.
+ * A per-unit card is entered per HOUR — the CRM editor's placeholder reads
+ * `$/hr` — but the only detention writer (`lib/detentionLayover.ts`) stores
+ * `quantity: billableMinutes, unit: "minutes"`, so multiplying the card by the
+ * raw quantity billed $75/hr × 120 minutes as $9,000. A row whose `unit` names
+ * minutes has its quantity divided by 60 here; every other unit (hours, days,
+ * null) passes through, because those already agree with the card. This was
+ * inert while no customer held a rate card, and 282c widened the pricer's reach
+ * from new folds to every stamped draft line the moment one is entered — which
+ * is why it landed before the merge rather than after (§13.3 Item 282, finding i).
  */
 /**
  * Rate-card keys are typed by a human, and the lookup key is a Prisma enum value.
@@ -101,8 +111,22 @@ function normalizeRateKey(raw: string): string {
   return raw.trim().toUpperCase().replace(/[\s-]+/g, "_");
 }
 
+/** Row units that denominate a quantity in minutes. Case- and whitespace-insensitive. */
+const MINUTE_UNITS = new Set(["minutes", "minute", "mins", "min"]);
+
+/**
+ * The quantity in the unit the rate card is priced in. Only minutes need
+ * converting — the card is per hour, and no writer stores anything else that
+ * disagrees with it. Cost and an explicit `customerAmount` are already money
+ * and never pass through here.
+ */
+function quantityInCardUnits(qty: number, unit: unknown): number {
+  const u = unit == null ? "" : String(unit).trim().toLowerCase();
+  return MINUTE_UNITS.has(u) ? qty / 60 : qty;
+}
+
 export function customerPriceFor(
-  row: { type: string; amount: unknown; customerAmount?: unknown; quantity?: unknown },
+  row: { type: string; amount: unknown; customerAmount?: unknown; quantity?: unknown; unit?: unknown },
   negotiated: Record<string, number> | null | undefined,
 ): number {
   const explicit = row.customerAmount == null ? NaN : Number(row.customerAmount);
@@ -116,7 +140,7 @@ export function customerPriceFor(
   if (typeof rate === "number" && Number.isFinite(rate) && rate >= 0) {
     const qty = row.quantity == null ? null : Number(row.quantity);
     // A quantity of 0 is a real quantity and bills zero. Only ABSENCE means flat.
-    if (qty !== null && Number.isFinite(qty)) return round2(rate * qty);
+    if (qty !== null && Number.isFinite(qty)) return round2(rate * quantityInCardUnits(qty, row.unit));
     return round2(rate);
   }
 
@@ -129,7 +153,7 @@ export async function unbilledCustomerAccessorials(loadId: string, client: any =
     orderBy: { createdAt: "asc" },
     select: {
       id: true, type: true, amount: true, customerAmount: true,
-      quantity: true, billedTo: true, notes: true,
+      quantity: true, unit: true, billedTo: true, notes: true,
     },
   });
 
@@ -705,7 +729,7 @@ export async function repriceDraftInvoices(loadId: string): Promise<InvoiceRepri
     }),
     prisma.loadAccessorial.findMany({
       where: { loadId },
-      select: { id: true, type: true, status: true, billedTo: true, shipperInvoiceId: true, amount: true, customerAmount: true, quantity: true },
+      select: { id: true, type: true, status: true, billedTo: true, shipperInvoiceId: true, amount: true, customerAmount: true, quantity: true, unit: true },
     }),
     prisma.load.findUnique({
       where: { id: loadId },

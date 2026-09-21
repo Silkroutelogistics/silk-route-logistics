@@ -18191,7 +18191,9 @@
 // repriceDraftInvoice runs inside syncInvoiceAccessorials after the credit pass and before the pending fold, DRAFT only: SENT and beyond are reported by the diff and never edited (an edit on a row stamped to a SENT document has no instrument; 282d/e/f unapproved). Latest positive line per row moves by the delta, quantity 1; totals by the net; one transaction; idempotent. Rows the credit path owns, rows billed to SRL, unkeyed pre-282a lines, orphans and mark/line disagreements are logged at warn and left alone.
 // v3.8.bed — lifecycle-gaps 282 fix-forward, from the pre-merge adversarial review (50 agents, 22 findings, one survivor): the DRAFT re-price covers EVERY draft document on the load — a row stamped to a DRAFT supplemental was neither re-priced nor reported — and SENT-and-beyond is now genuinely REPORTED (the diff runs and logs the disagreement; the first cut returned before diffing)
 // Also true now, and it was not: unkeyed accessorial lines are not only pre-282a — the two API line editors (PUT /invoices/:id/line-items, PUT /accounting/invoices/:id) replace every line without a key, so a draft they touch is reported and not re-priced; the writer guard walks all of src/ and freezes five ledger writers in the service plus five body-driven writers outside it (the fifth found by the guard, not the review), each with its reason.
-export const SRL_VERSION = "3.8.bed";
+// v3.8.bee — lifecycle-gaps 282 finding (i), landed before the merge per decision 1 (2026-09-21): customerPriceFor converts a minute-denominated quantity to the rate card's hours before multiplying — $75/hr × 120 minutes bills $150, not $9,000; both selects that feed the pricer now fetch the row's unit, and a guard fails if either stops
+// (the only detention writer stores billableMinutes with unit "minutes" against a $/hr card; inert while no customer holds a card, but 282c re-prices every stamped draft line the moment one is entered)
+export const SRL_VERSION = "3.8.bee";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
