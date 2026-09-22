@@ -11,6 +11,7 @@
  */
 
 import { prisma } from "../config/database";
+import { carrierArchiveReasonLabel } from "../../../shared/constants/carrierArchiveReasons";
 import { verifyCarrierWithFMCSA, calendarMonthsBetween } from "./fmcsaService";
 import { sendEmail, wrap } from "./emailService";
 import { log } from "../lib/logger";
@@ -85,8 +86,17 @@ export interface BlockedCode {
     // broker putting freight on an uninsured truck is the one uncovered loss
     // nobody can claw back. The grace period stays a WARNING, because that is
     // SRL deliberately granting time, not an AE waving a lapse through.
-    | "INSURANCE_EXPIRED";
+    | "INSURANCE_EXPIRED"
+    // Carrier-archive recut B2 (2026-09-20) — the seventh and eighth absolutes,
+    // ratified by Wasi. An archived record is out of the operation (§14: the
+    // login is off, every open offer was withdrawn); a carrier that is not
+    // APPROVED has not been cleared to haul, whatever else is true of it.
+    // Neither is a judgment an override may release. `status` rides on the
+    // second so a surface can say which non-APPROVED state it met.
+    | "CARRIER_ARCHIVED"
+    | "CARRIER_NOT_APPROVED";
   ageMonths?: number;
+  status?: string;
   overridable: boolean;
 }
 
@@ -220,7 +230,7 @@ export async function complianceCheck(carrierId: string, pre?: ComplianceBundle)
    * endpoint would still happily mint an override for — that is the same
    * contradiction pointing the other way.
    *
-   * SEVEN members, ratified across four arcs:
+   * NINE members, ratified across five arcs:
    *
    *   AUTHORITY_TOO_YOUNG (<12mo)  Arc 26 — reconciled an existing contradiction
    *   AGREEMENT_TERMINATED         Arc 26 — same
@@ -228,15 +238,26 @@ export async function complianceCheck(carrierId: string, pre?: ComplianceBundle)
    *   FMCSA_REVOKED                Arc 27 — ratified as policy
    *   OUT_OF_SERVICE               Arc 27 — ratified as policy
    *   INSURANCE_EXPIRED            v3.8.axl — ratified as policy
-   *   AGREEMENT_MISSING            v3.8.beh — ratified as policy; fired live 2026-09-18
+   *   CARRIER_ARCHIVED             carrier-archive B2 — ratified as policy (2026-09-20)
+   *   CARRIER_NOT_APPROVED         carrier-archive B2 — ratified as policy (2026-09-20);
+   *                                ABSORBS the old SUSPENDED / REJECTED reasons,
+   *                                which a blanket override could release until now
+   *   AGREEMENT_MISSING            v3.8.beh — ratified as policy (2026-09-21);
+   *                                fired live 2026-09-18
    *
    * The first two were already declared un-waivable elsewhere and the gate was
-   * simply disagreeing. The last three are a decision: an override releases a
-   * JUDGMENT CALL, never a FACT. Whether a 14-month authority is good enough is
-   * a judgment. Whether a carrier is under sanctions, has had its authority
-   * revoked, or is subject to an Out-of-Service order is not — those are facts
-   * held by another party, and SRL waiving its own record of one does not
-   * change it. It only removes the evidence that SRL knew. §14.
+   * simply disagreeing. Every other member is a decision, and they share one
+   * test: an override releases a JUDGMENT CALL, never a FACT.
+   *
+   * Whether a 14-month authority is good enough is a judgment. Whether a
+   * carrier is under sanctions, has had its authority revoked, or is subject
+   * to an Out-of-Service order is not — those are facts held by another party,
+   * and SRL waiving its own record of one does not change it. It only removes
+   * the evidence that SRL knew. Whether cover is in force is the insurer's
+   * fact; whether a contract exists is SRL's own. An archived or unapproved
+   * record is not waivable for a different reason: the remedy is its own
+   * decision with its own audit row — a restore, or an approval — and a
+   * 24-hour waiver is not that decision. §14.
    */
   const absoluteReasons = new Set<string>();
   const warnings: string[] = [];
@@ -270,12 +291,40 @@ export async function complianceCheck(carrierId: string, pre?: ComplianceBundle)
   // WHAT was waived rather than a bare allowed:true.
   const blanketActive = !!activeBlanketOverride;
 
-  // HARD BLOCK: carrier suspended or deactivated
-  if (carrier.onboardingStatus === "SUSPENDED") {
-    blocked_reasons.push("Carrier is suspended");
+  // ABSOLUTE: the record is archived. Carrier-archive recut B2 (2026-09-20),
+  // ratified. §14: archive is deletedAt plus the login off, every open offer
+  // withdrawn in the same transaction — the carrier is out of the operation
+  // until a human restores the record, and restore lands it at REVIEWING (B6c),
+  // so the status block below then takes over. The gate did not read deletedAt
+  // at all before this, so a by-id tender to an archived carrier went through
+  // while every list picker refused it (B6d, first run).
+  if (carrier.deletedAt) {
+    const label = carrierArchiveReasonLabel(carrier.archiveReason) ?? carrier.archiveReason ?? "no reason recorded";
+    const reason = `CARRIER_ARCHIVED: this carrier's record is archived (${label}) — restore it before it can be tendered`;
+    blocked_reasons.push(reason);
+    absoluteReasons.add(reason);
+    blocked_codes.push({ code: "CARRIER_ARCHIVED", overridable: false });
   }
-  if (carrier.onboardingStatus === "REJECTED") {
-    blocked_reasons.push("Carrier application rejected");
+
+  // ABSOLUTE: the carrier is not APPROVED. Carrier-archive recut B2 (2026-09-20),
+  // ratified. Before this the gate refused only SUSPENDED and REJECTED, by
+  // reason string with no code and no absolute marking — so PENDING, REVIEWING
+  // and INFO_REQUESTED passed it outright (masked until restore created the
+  // first population holding an executed BCA at REVIEWING), and a blanket
+  // override could release a suspension. Now every non-APPROVED state is one
+  // absolute with one code; the two legacy reason strings are kept verbatim
+  // because loadComplianceService prints its own copy of the first and a reader
+  // may be matching on it.
+  if (carrier.onboardingStatus !== "APPROVED") {
+    const reason =
+      carrier.onboardingStatus === "SUSPENDED"
+        ? "Carrier is suspended"
+        : carrier.onboardingStatus === "REJECTED"
+          ? "Carrier application rejected"
+          : `CARRIER_NOT_APPROVED: carrier is ${carrier.onboardingStatus} — only an APPROVED carrier may be tendered; approve it first`;
+    blocked_reasons.push(reason);
+    absoluteReasons.add(reason);
+    blocked_codes.push({ code: "CARRIER_NOT_APPROVED", status: carrier.onboardingStatus, overridable: false });
   }
 
   // HARD BLOCK: expired insurance (with grace period check)

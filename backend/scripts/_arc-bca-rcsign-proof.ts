@@ -65,7 +65,7 @@ async function main() {
     data: { email: `bca2-ca-${stamp}@srl.invalid`, passwordHash: "x", firstName: "No", lastName: "Contract", role: "CARRIER", totpEnabled: true },
   });
   // APPROVED, activated, enrolled — and holding ONLY the registration click-wrap.
-  // This is CJ MASTER's exact shape on production (Item 291 census).
+  // This is CJ MASTER's exact shape on production (Item 292 census).
   const profile = await prisma.carrierProfile.create({
     data: { userId: cu.id, companyName: `No Contract Co ${stamp}`, onboardingStatus: "APPROVED", status: "APPROVED", activatedAt: new Date() },
   });

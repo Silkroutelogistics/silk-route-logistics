@@ -156,7 +156,7 @@ describe("one seam, both routes", () => {
     // Scoped to the /:id/documents handler: POST /:id/exceptions/:excId/receipt
     // also writes a load document (RECEIPT_MECHANICAL, attached to an exception)
     // by its own hand — a third writer, outside E1's two routes, banked at
-    // §13.3 Item 293 rather than pulled onto the seam here.
+    // §13.3 Item 294 rather than pulled onto the seam here.
     const cl = src("routes/carrierLoads.ts");
     const start = cl.indexOf('router.post("/:id/documents"');
     const handler = cl.slice(start, cl.indexOf("\nrouter.", start + 1));

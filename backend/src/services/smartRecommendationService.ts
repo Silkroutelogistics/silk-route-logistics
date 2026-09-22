@@ -54,9 +54,11 @@ export async function getRecommendationsForLoad(
 
   const laneKey = `${load.originState}:${load.destState}`;
 
-  // Get all approved carriers
+  // Get all approved carriers that can actually be tendered — an archived carrier
+  // is out of the operation (carrier-archive B6a) and a test carrier must never
+  // be recommended for real freight (v3.8.aim).
   const carriers = await prisma.carrierProfile.findMany({
-    where: { onboardingStatus: "APPROVED" },
+    where: { onboardingStatus: "APPROVED", deletedAt: null, isTestAccount: false },
     select: {
       id: true,
       companyName: true,

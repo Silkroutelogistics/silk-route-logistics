@@ -301,39 +301,9 @@ export async function checkAllActiveLoadCompliance(): Promise<BatchComplianceSta
   return stats;
 }
 
-// ────────────────────────────────────────────────────────────
-// onLoadAssigned
-// ────────────────────────────────────────────────────────────
-
-/**
- * Post-assignment load-level compliance scan for a carrier being put on a load.
- *
- * READ-ONLY as of v3.8.axn. It used to mutate `Load.carrierId` so the check
- * could find the carrier and then roll it back — a STAGING WRITE, which meant
- * that for the duration of the check any concurrent reader saw a carrier on a
- * load they had not accepted, and a crash mid-check left them there. Passing
- * the candidate as an argument removes the write and the rollback together.
- *
- * WHAT IT DOES AND DOES NOT DO, stated because the previous docstring said
- * otherwise. It says it "throws an error to prevent the assignment", and it
- * does throw — but its only caller invokes it fire-and-forget with a
- * `.catch(log.error)`, so the throw is logged and nothing is prevented. The
- * real gate is the synchronous `complianceCheck` immediately above that call,
- * which 403s. This is a scan that raises the alarm; treating it as the gate is
- * how a load ends up assigned to a carrier somebody believed had been blocked.
- */
-export async function onLoadAssigned(
-  loadId: string,
-  /** A **User.id** — the same id space as `Load.carrierId`. */
-  carrierId: string
-): Promise<LoadComplianceResult> {
-  const result = await checkLoadCompliance(loadId, carrierId);
-
-  if (result.severity === "CRITICAL") {
-    throw new Error(
-      `Cannot assign carrier to load — CRITICAL compliance issues: ${result.issues.join("; ")}`
-    );
-  }
-
-  return result;
-}
+// onLoadAssigned was REMOVED in carrier-archive recut B2d (2026-09-21). Its only
+// caller was updateLoad's carrierId branch, itself removed; it was invoked
+// fire-and-forget with a .catch(log.error), so its throw prevented nothing (the
+// v3.8.axn docstring said as much). The gate is now inside assignCarrier
+// (lib/carrierEligibility); the read-only scan it wrapped is checkLoadCompliance,
+// which carrierVettingController still calls.

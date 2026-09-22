@@ -135,7 +135,9 @@ describe("what the carrier is told", () => {
   });
 
   it("every withdraw reason has words of its own", () => {
-    const reasons = ["load_covered", "counter_rejected", "load_cancelled", "position_skipped", "compliance_block"];
+    // carrier_archived (C6): the archive withdraws every open offer as SRL's act; the label
+    // a restored carrier reads must have its own words and must not say "withdrawn".
+    const reasons = ["load_covered", "counter_rejected", "load_cancelled", "position_skipped", "compliance_block", "carrier_archived"];
     const labels = reasons.map((r) => carrierTenderLabel("WITHDRAWN", r));
     expect(new Set(labels).size, "two reasons sharing a label is a reason nobody can act on").toBe(reasons.length);
     expect(labels.every((l) => !/withdraw/i.test(l))).toBe(true);

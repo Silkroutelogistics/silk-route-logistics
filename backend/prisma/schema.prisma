@@ -1351,6 +1351,11 @@ model CarrierProfile {
   agreements           CarrierAgreement[]
   deletedAt            DateTime?
   deletedBy            String?
+  // Carrier-archive arc (2026-09-19). Why and with what note this profile was
+  // archived — set in the same transaction as deletedAt, never on their own.
+  // Mirrors Load.cancellationReasonCode / Load.cancellationReason.
+  archiveReason        CarrierArchiveReason?
+  archiveNote          String?
 
   // Enterprise features
   routingGuideEntries RoutingGuideEntry[] @relation("RoutingGuideCarrier")
@@ -5775,6 +5780,21 @@ enum RejectionReason {
   IDENTITY_FRAUD // never (permanent)
   DUPLICATE_APPLICATION // 30 days
   OTHER // 30 days (default)
+}
+
+// Carrier-archive arc (2026-09-19). WHY a carrier was archived, as a closed
+// vocabulary rather than free text — the same shape as CancellationReason on a
+// load. Required on DELETE /api/carriers/:id (carrierController.archiveCarrier); the optional
+// free-text note lives beside it on CarrierProfile.archiveNote. Reporting groups
+// on it; a bare deletedBy said WHO and never WHY.
+enum CarrierArchiveReason {
+  DUPLICATE_RECORD
+  CEASED_OPERATIONS
+  AUTHORITY_REVOKED
+  FRAUD_CONFIRMED
+  INSURANCE_LAPSED_UNRESPONSIVE
+  RELATIONSHIP_ENDED
+  ERRONEOUS_RECORD
 }
 
 /// v3.8.auj — append-only audit of every authentication OUTCOME, success or

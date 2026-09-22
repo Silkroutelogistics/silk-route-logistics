@@ -3,6 +3,7 @@ import { log } from "../lib/logger";
 import { validateLoadStatusTransition } from "../lib/loadStateMachine";
 import { LoadStatus } from "@prisma/client";
 import { createTender } from "./tenderCreationService";
+import { isCarrierIneligible } from "../lib/carrierEligibility";
 import { withdrawLiveTenders } from "./tenderTransitionService";
 
 export interface BroadcastCandidate {
@@ -38,20 +39,37 @@ export async function launchBroadcast(input: LaunchBroadcastInput) {
   await prisma.load.update({ where: { id: loadId }, data: { tenderFanout: "PARALLEL" } });
   const expiresAt = new Date(Date.now() + expirationMinutes * 60 * 1000);
 
-  // Create all tenders simultaneously
-  const tenders = await Promise.all(
-    candidates.map((c) =>
-      // v3.8.axd — through createTender, the single writer of LoadTender.
-      createTender({
-        loadId,
-        carrierProfileId: c.carrierId,
-        offeredRate: c.offeredRate,
-        expiresAt,
-        actor: { id: createdById, type: "USER" },
-        reason: "broadcast",
-      })
-    )
+  // Create all tenders simultaneously.
+  //
+  // Carrier-archive recut B2b (Phase A row C): nothing on this path asked the
+  // gate — every body candidate got an offer. createTender now refuses an
+  // ineligible carrier; a broadcast to several carriers must not fail as a
+  // whole because one of them is blocked, so a refused candidate is SKIPPED and
+  // named in the result with its codes. Anything else createTender throws still
+  // fails the launch.
+  const skipped: Array<{ carrierId: string; blocked_reasons: string[]; blocked_codes: unknown[] }> = [];
+  const settled = await Promise.all(
+    candidates.map(async (c) => {
+      try {
+        // v3.8.axd — through createTender, the single writer of LoadTender.
+        return await createTender({
+          loadId,
+          carrierProfileId: c.carrierId,
+          offeredRate: c.offeredRate,
+          expiresAt,
+          actor: { id: createdById, type: "USER" },
+          reason: "broadcast",
+        });
+      } catch (err) {
+        if (isCarrierIneligible(err)) {
+          skipped.push({ carrierId: c.carrierId, blocked_reasons: err.blocked_reasons, blocked_codes: err.blocked_codes });
+          return null;
+        }
+        throw err;
+      }
+    })
   );
+  const tenders = settled.filter((t): t is NonNullable<typeof t> => t !== null);
 
   // v3.8.ake Item 159 Sprint 3 — defense-in-depth validator. Upstream
   // guard at line 28 already restricts to POSTED|TENDERED so this
@@ -81,6 +99,7 @@ export async function launchBroadcast(input: LaunchBroadcastInput) {
     loadId,
     mode: "BROADCAST",
     tenderCount: tenders.length,
+    skipped,
     expiresAt,
     tenders: tenders.map((t) => ({
       id: t.id,

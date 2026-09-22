@@ -192,6 +192,9 @@ export async function notifyMatchedCarriers(
         onboardingStatus: "APPROVED",
         // v3.8.alm §13.3 Item 189 — don't send proactive outreach to test carriers.
         isTestAccount: false,
+        // Carrier-archive B6a — nor to archived ones: their login is off and the
+        // offer would link to a portal that refuses them.
+        deletedAt: null,
         equipmentTypes: { hasSome: [load.equipmentType] },
       },
       include: {

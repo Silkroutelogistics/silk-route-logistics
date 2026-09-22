@@ -223,6 +223,10 @@ export function carrierTenderLabel(status: string, statusReason?: string | null)
       case "load_cancelled": return "Load cancelled";
       case "position_skipped": return "Offer closed";
       case "compliance_block": return "Could not be confirmed";
+      // C6 (carrier-archive recut): SRL closed the carrier's record while the
+      // offer stood, so SRL pulled the offer. A restored carrier reads this in
+      // their history; it must not read as their refusal (§14, the v3.8.aww rule).
+      case "carrier_archived": return "Closed — account archived";
       default: return "Offer withdrawn";
     }
   }

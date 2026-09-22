@@ -126,6 +126,8 @@ vi.mock("../src/config/database", () => ({
       findMany: vi.fn(),
       count: vi.fn(),
       groupBy: vi.fn(),
+      // carrier-archive recut C3: the archive transaction deactivates a carrier's entries.
+      updateMany: vi.fn().mockResolvedValue({ count: 0 }),
     },
     customer: {
       findUnique: vi.fn(),
@@ -138,9 +140,14 @@ vi.mock("../src/config/database", () => ({
     },
     loadBid: {
       count: vi.fn().mockResolvedValue(0),
+      // carrier-archive recut C3: pending bids are closed in the archive transaction.
+      updateMany: vi.fn().mockResolvedValue({ count: 0 }),
     },
     waterfallPosition: {
       count: vi.fn().mockResolvedValue(0),
+      // carrier-archive recut C3: the census reads open positions; the archive skips them.
+      findMany: vi.fn().mockResolvedValue([]),
+      updateMany: vi.fn().mockResolvedValue({ count: 0 }),
     },
     paymentDispute: {
       count: vi.fn().mockResolvedValue(0),
@@ -156,6 +163,8 @@ vi.mock("../src/config/database", () => ({
     },
     dockSchedule: {
       count: vi.fn().mockResolvedValue(0),
+      // carrier-archive recut C3: future appointments are cancelled in the archive transaction.
+      updateMany: vi.fn().mockResolvedValue({ count: 0 }),
     },
     // B5b carrier-archive census (lib/carrierReferences) — same convention.
     // B5a customer-delete census (lib/customerReferences). Counts default to 0

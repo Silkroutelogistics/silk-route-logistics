@@ -19,6 +19,11 @@ import { vetAndStoreReport } from "../services/carrierVettingService";
 import { sendEmail, wrap, sendQuickPayApprovedEmail, sendQuickPayDeclinedEmail, sendQuickPayWithdrawnEmail } from "../services/emailService";
 import { getTierConfig, getEffectiveTier, tenureDays } from "../services/caravanService";
 import { CarrierTier } from "@prisma/client";
+import type { CarrierArchiveReason } from "@prisma/client";
+import {
+  CARRIER_ARCHIVE_REASONS as SHARED_ARCHIVE_REASONS,
+  CARRIER_ARCHIVE_REASON_LABELS as SHARED_ARCHIVE_REASON_LABELS,
+} from "../../../shared/constants/carrierArchiveReasons";
 import { runIdentityCheck } from "../services/identityVerificationService";
 import { screenCarrier } from "../services/ofacScreeningService";
 import { populateAuthorityGrantedDate } from "../services/fmcsaService";
@@ -36,7 +41,11 @@ import { COMPLIANCE_EMAIL } from "../config/authority";
 import * as crypto from "crypto";
 import { pairedApplicationStatus } from "../lib/carrierOperational";
 import { clientIp, clientUserAgent } from "../lib/clientIp";
-import { censusCarrierReferences, carrierReferenceTotal, describeCarrierReferences } from "../lib/carrierReferences";
+import { censusCarrierReferences, carrierReferenceTotal, describeCarrierReferences, inFlightBlockers } from "../lib/carrierReferences";
+import { assessArchiveInput, CARRIER_ARCHIVED_WITHDRAW_REASON } from "../lib/carrierArchiveGuard";
+import { settleTenders } from "../services/tenderTransitionService";
+import { advanceWaterfall } from "../services/waterfallEngineService";
+import { logWaterfallEvent } from "../services/waterfallEventService";
 import {
   closeOpenInfoRequestsForStatus,
   STATUSES_CLOSED_TO_INFO_REQUESTS,
@@ -1672,6 +1681,18 @@ export async function setupAdminCarrierProfile(req: AuthRequest, res: Response) 
 }
 
 /** Get all carriers with performance data for admin/broker view */
+// B4a (carrier-archive arc, 2026-09-19) — the archive-reason vocabulary lives
+// once, in shared/constants/carrierArchiveReasons.ts, so the AE list reads the
+// same labels the server enforces instead of a third hand-kept copy. This is
+// the one tree where BOTH the shared union and the Prisma enum exist, so they
+// are held equal here at compile time (the cancellationPolicy.ts idiom): the
+// array assignment fails if shared names a reason the schema lacks, and the
+// Record assignment fails if the schema gains a member the shared map has no
+// label for. carrierArchiveList.test.ts holds the runtime lists equal too.
+// Deliberately not exported: these exist to be type-checked, not consumed.
+const _archiveReasonsSubsetOfSchema: readonly CarrierArchiveReason[] = SHARED_ARCHIVE_REASONS;
+const _archiveLabelsCoverSchema: Readonly<Record<CarrierArchiveReason, string>> = SHARED_ARCHIVE_REASON_LABELS;
+
 export async function getAllCarriers(req: AuthRequest, res: Response) {
   const includeDeleted = req.query.include_deleted === "true";
   // v3.8.alo §13.3 Item 189.b — opt-in test-carrier visibility for the
@@ -1729,6 +1750,14 @@ export async function getAllCarriers(req: AuthRequest, res: Response) {
         // toggle's current state both read undefined. The fence worked; the
         // label for it was invisible. Found by the READ-never-WRITTEN audit.
         isTestAccount: c.isTestAccount,
+        // B4a — archived state travels with the row so the AE list can show it.
+        // A row is only here at all when ?include_deleted=true put it here; the
+        // default deletedAt: null filter above is unchanged. Raw enum, no label:
+        // the label is display copy and lives in shared/constants.
+        deletedAt: c.deletedAt,
+        deletedBy: c.deletedBy,
+        archiveReason: c.archiveReason,
+        archiveNote: c.archiveNote,
         company: c.user.company || `${c.user.firstName} ${c.user.lastName}`,
         contactName: `${c.user.firstName} ${c.user.lastName}`,
         email: c.user.email,
@@ -2621,9 +2650,15 @@ export async function withdrawQuickPayEnrollment(req: AuthRequest, res: Response
   res.json({ enrollment: updated, quickPayEnabled: false, notified: emailSent || notifSent, emailSent, notifSent });
 }
 
-// ─── Archive / restore (lifecycle-gaps B5b) ──────────────────────────────
-// The customer rule of B5a (decision 4), applied to carriers. Read the rule
-// and the two documented divergences in lib/carrierReferences.ts.
+// ─── Archive / restore ────────────────────────────────────────────────────
+// Carrier-archive recut C3 (2026-09-19), under CLAUDE.md §14 "CARRIER ARCHIVE —
+// RATIFIED 2026-09-19": archive is deletedAt plus isActive off; suspend is the
+// operational state and both may apply; ONLY IN-FLIGHT WORK BLOCKS; six classes
+// of open offer withdraw inside the transaction; payables and disputes neither
+// block nor change. lib/carrierReferences.ts reads the census and names the
+// blockers; lib/carrierArchiveGuard.ts owns the reason contract and the
+// in-flight vocabulary. This function is the ONLY writer of
+// CarrierProfile.deletedAt (lifecycleAuditCoverage invariant B) and stays so.
 
 export async function archiveCarrier(req: AuthRequest, res: Response) {
   const carrier = await prisma.carrierProfile.findUnique({
@@ -2635,85 +2670,233 @@ export async function archiveCarrier(req: AuthRequest, res: Response) {
     return;
   }
 
+  // The reason first, before any read that costs anything: an archive without
+  // a reason is the free-text-null record this arc exists to end. The
+  // load-side 422 shape, not validateBody's 400.
+  const input = assessArchiveInput(req.body);
+  if (!input.ok) {
+    res.status(422).json({ error: input.message, code: input.code });
+    return;
+  }
+
   const references = await censusCarrierReferences(carrier.id, carrier.userId);
   const total = carrierReferenceTotal(references);
-  if (total > 0) {
-    const inFlightLoads = references.loads.filter((l) => l.inFlight).map((l) => l.referenceNumber);
+  const blockers = inFlightBlockers(references);
+  if (blockers.length > 0) {
+    const inFlightLoads = blockers.map((b) => b.loadNumber ?? b.referenceNumber);
+    const holdingTenders = references.holdingTenders
+      .filter((t) => blockers.some((b) => b.id === t.load.id))
+      .map((t) => ({ id: t.id, status: t.status, loadId: t.load.id }));
     res.status(409).json({
-      error: "CARRIER_HAS_REFERENCES",
+      error: "CARRIER_HOLDS_LIVE_LOADS",
       message:
-        `${carrier.companyName} cannot be archived: ${describeCarrierReferences(references)}. ` +
-        `A carrier with history is suspended, not archived.`,
+        `${carrier.companyName} cannot be archived: on ${blockers.length} load${blockers.length === 1 ? "" : "s"} ` +
+        `still in flight (${inFlightLoads.join(", ")}). Release or deliver ${blockers.length === 1 ? "it" : "them"} first, ` +
+        `or suspend the carrier instead. History does not block an archive; a truck under a load does.`,
+      blockingLoads: blockers,
       references: { ...references, total },
       remedy: {
         inFlightLoads,
-        releaseInFlightLoadsFirst: inFlightLoads.length > 0
-          ? `Release the carrier from ${inFlightLoads.length === 1 ? "this load" : "these loads"} first; a truck may be routed.`
-          : null,
-        liveTenders: references.liveTenders,
-        unpaidCarrierPays: references.unpaidCarrierPays,
+        releaseInFlightLoadsFirst:
+          `Release the carrier from ${blockers.length === 1 ? "this load" : "these loads"} first; a truck may be routed.`,
+        holdingTenders,
         suspend: carrier.onboardingStatus === "SUSPENDED" ? null : `POST /compliance/carrier/${carrier.id}/suspend`,
       },
     });
     return;
   }
 
-  // Nothing references it: a registration that went nowhere. The profile is
-  // archived (soft — see the lib header for why not hard) and the login is
-  // deactivated in the same transaction, so an archived carrier cannot keep
-  // signing in to a portal that no longer lists them. restoreCarrier undoes both.
+  // Nothing in flight. One interactive transaction: the profile (with its reason),
+  // the login, and the six withdrawals — an offer left standing by a failed
+  // withdrawal would be an offer to a carrier who cannot answer it, so a
+  // withdrawal that throws archives nothing. Every settle goes through the
+  // service that owns that table (tender transitions, info-request closes);
+  // the rest are updateMany on the tx client, scoped to the open rows only.
   const deletedBy = req.user!.email || req.user!.id;
   const archivedAt = new Date();
-  await prisma.$transaction([
-    prisma.carrierProfile.update({ where: { id: carrier.id }, data: { deletedAt: archivedAt, deletedBy } }),
-    prisma.user.update({ where: { id: carrier.userId }, data: { isActive: false } }),
-  ]);
+  const actorId = req.user!.id;
+  const withdrawn = await prisma.$transaction(async (tx) => {
+    await tx.carrierProfile.update({
+      where: { id: carrier.id },
+      data: { deletedAt: archivedAt, deletedBy, archiveReason: input.reason, archiveNote: input.note },
+    });
+    await tx.user.update({ where: { id: carrier.userId }, data: { isActive: false } });
 
-  // B6b (finding #24) — the lifecycle record, after the transaction commits.
-  // Two rows moved (profile deletedAt, login isActive), so previous/new carry
-  // both. The route's auditLog middleware records that DELETE /carriers/:id
-  // was hit; this records what it did and who it was.
+    // 1. Open tender offers (OFFERED / COUNTERED): SRL pulls them, recorded as
+    //    a withdrawal, never as the carrier's decline (v3.8.aww).
+    const tenders = await settleTenders(
+      {
+        tenderIds: references.withdrawableTenderIds,
+        to: "WITHDRAWN",
+        reason: CARRIER_ARCHIVED_WITHDRAW_REASON,
+        actor: { id: actorId, type: "USER" },
+        metadata: { carrierProfileId: carrier.id, archiveReason: input.reason },
+      },
+      tx,
+    );
+    // 2. Cascade positions not yet settled: skipped. A tendered one had its
+    //    offer withdrawn above; the cascade is advanced past it after commit.
+    const positions = references.openWaterfallPositions.length
+      ? await tx.waterfallPosition.updateMany({
+          where: { id: { in: references.openWaterfallPositions.map((p) => p.id) }, status: { in: ["queued", "tendered"] } },
+          data: { status: "skipped" },
+        })
+      : { count: 0 };
+    // 3. Pending load-board bids: closed as SRL's act (the AE's "rejected", with
+    //    the reviewer recorded), never the carrier's "withdrawn".
+    const bids = await tx.loadBid.updateMany({
+      where: { carrierId: carrier.userId, status: "pending" },
+      data: { status: "rejected", reviewedAt: archivedAt, reviewedById: actorId },
+    });
+    // 4. Future dock appointments: cancelled; the carrier stays on the row as history.
+    const dockSchedules = await tx.dockSchedule.updateMany({
+      where: { carrierId: carrier.id, status: "SCHEDULED", appointmentDate: { gt: archivedAt } },
+      data: { status: "CANCELLED" },
+    });
+    // 5. Routing-guide entries: no future freight routes to an archived carrier.
+    const routingEntries = await tx.routingGuideEntry.updateMany({
+      where: { carrierId: carrier.id, isActive: true },
+      data: { isActive: false },
+    });
+    // 6. Open info requests: the Item 260 chokepoint, in this transaction.
+    const infoRequests = await closeOpenInfoRequestsForStatus(
+      { carrierId: carrier.id, newStatus: "ARCHIVED", closedById: actorId },
+      tx,
+    );
+    return {
+      tenders: tenders.count,
+      positions: positions.count,
+      bids: bids.count,
+      dockSchedules: dockSchedules.count,
+      routingEntries: routingEntries.count,
+      infoRequests,
+    };
+  });
+
+  const counts = {
+    tenders: withdrawn.tenders,
+    positions: withdrawn.positions,
+    bids: withdrawn.bids,
+    dockSchedules: withdrawn.dockSchedules,
+    routingEntries: withdrawn.routingEntries,
+    infoRequests: withdrawn.infoRequests.length,
+  };
+
+  // The lifecycle record, after the commit (B6b): the code in the slot built
+  // for it, the note where free text lived, and what the act withdrew.
   await recordLifecycleEvent({
     actionDetail: "CARRIER_ARCHIVED",
     entityType: "CarrierProfile",
     entityId: carrier.id,
     entityName: carrier.companyName,
-    reason: typeof req.body?.reason === "string" && req.body.reason.trim() ? req.body.reason.trim().slice(0, 500) : null,
+    reasonCode: input.reason,
+    reason: input.note,
     previous: { deletedAt: null, loginActive: true, onboardingStatus: carrier.onboardingStatus },
-    new: { deletedAt: archivedAt.toISOString(), loginActive: false, onboardingStatus: carrier.onboardingStatus },
+    new: {
+      deletedAt: archivedAt.toISOString(),
+      loginActive: false,
+      onboardingStatus: carrier.onboardingStatus,
+      archiveReason: input.reason,
+      withdrawn: counts,
+    },
     actor: { userId: req.user!.id, email: req.user!.email },
     req,
   });
 
-  res.json({ success: true, message: "Carrier archived", details: { archived: true, loginDeactivated: true, references: 0 } });
+  // After the commit, the side effects that must not be inside it: the AE is
+  // told which requests closed (the carrier is not — see the service), and a
+  // cascade that was standing at one of this carrier's positions moves on.
+  announceInfoRequestsClosedByStatus(withdrawn.infoRequests, {
+    carrierId: carrier.id,
+    carrierName: carrier.companyName || "this carrier",
+    newStatus: "ARCHIVED",
+  }).catch((err) => log.warn({ err }, "[Carrier] archive info-request close notice failed"));
+
+  for (const pos of references.openWaterfallPositions) {
+    if (pos.status !== "tendered") continue;
+    logWaterfallEvent({
+      loadId: pos.loadId,
+      event: "position_skipped",
+      description: `Position #${pos.position} skipped — carrier archived (${input.reason})`,
+      actorType: "USER",
+      actorId,
+      metadata: { positionId: pos.id, waterfallId: pos.waterfallId, reason: "carrier_archived", archiveReason: input.reason },
+    })
+      .then(() => advanceWaterfall(pos.waterfallId, pos.position + 1))
+      .catch((err) => log.error({ err, positionId: pos.id }, "[Carrier] archive: cascade did not advance past the skipped position"));
+  }
+
+  res.json({
+    success: true,
+    message: "Carrier archived",
+    details: { archived: true, loginDeactivated: true, archiveReason: input.reason, references: total, withdrawn: counts },
+  });
 }
 
 export async function restoreCarrier(req: AuthRequest, res: Response) {
   const carrier = await prisma.carrierProfile.findUnique({
     where: { id: req.params.id },
-    select: { id: true, userId: true, deletedAt: true, companyName: true },
+    select: { id: true, userId: true, deletedAt: true, companyName: true, onboardingStatus: true, archiveReason: true },
   });
   if (!carrier || !carrier.deletedAt) {
     res.status(404).json({ error: "Archived carrier not found" });
     return;
   }
+
+  // Carrier-archive recut B6c (2026-09-19) — restore is not a rewind. The
+  // carrier comes back at REVIEWING whatever it was before: its insurance,
+  // authority and standing have aged unwatched for the whole archive, and the
+  // reason it was archived (FRAUD_CONFIRMED is one of seven) is exactly the kind
+  // of thing a human looks at before the platform may tender to it again. The
+  // four archive columns are cleared because they describe a state the row is
+  // no longer in; the lifecycle row below keeps what they said.
+  const previousStatus = carrier.onboardingStatus;
   await prisma.$transaction([
-    prisma.carrierProfile.update({ where: { id: carrier.id }, data: { deletedAt: null, deletedBy: null } }),
+    prisma.carrierProfile.update({
+      where: { id: carrier.id },
+      data: {
+        deletedAt: null, deletedBy: null, archiveReason: null, archiveNote: null,
+        onboardingStatus: "REVIEWING",
+        // the application-pipeline mirror moves with it (Item 194 D1; the
+        // pairing guard fails the writer that leaves it stale)
+        status: pairedApplicationStatus("REVIEWING") ?? undefined,
+      },
+    }),
     prisma.user.update({ where: { id: carrier.userId }, data: { isActive: true } }),
   ]);
 
+  // The chameleon fingerprint is rebuilt from the row as it stands NOW, after
+  // the commit, so a restored carrier re-enters matching with a hash of its
+  // current identity rather than the one it was archived under (§13.3 Item
+  // 272: a stale hash goes live the moment the carrier is back in scope).
+  // Awaited, because "restored with a fresh fingerprint" is the property the
+  // response claims; never fatal, because the restore has already committed
+  // and a fingerprint failure must not turn a live carrier into a 500.
+  let fingerprintRebuilt = false;
+  try {
+    const { buildFingerprint } = await import("../services/chameleonDetectionService");
+    await buildFingerprint(carrier.id);
+    fingerprintRebuilt = true;
+  } catch (e) {
+    log.error({ err: e, carrierId: carrier.id }, "[Carrier restore] fingerprint rebuild failed — carrier restored without one");
+  }
+
   // B6b (finding #24) — the lifecycle record: the profile came back and the
-  // login with it.
+  // login with it; B6c — and what it came back as, and whether its fingerprint did.
   await recordLifecycleEvent({
     actionDetail: "CARRIER_RESTORED",
     entityType: "CarrierProfile",
     entityId: carrier.id,
     entityName: carrier.companyName,
-    previous: { deletedAt: carrier.deletedAt.toISOString(), loginActive: false },
-    new: { deletedAt: null, loginActive: true },
+    previous: { deletedAt: carrier.deletedAt.toISOString(), loginActive: false, onboardingStatus: previousStatus, archiveReason: carrier.archiveReason },
+    new: { deletedAt: null, loginActive: true, onboardingStatus: "REVIEWING", fingerprintRebuilt },
     actor: { userId: req.user!.id, email: req.user!.email },
     req,
   });
 
-  res.json({ success: true, message: "Carrier restored", details: { restored: true, loginReactivated: true } });
+  res.json({
+    success: true,
+    message: "Carrier restored",
+    details: { restored: true, loginReactivated: true, onboardingStatus: "REVIEWING", fingerprintRebuilt },
+  });
 }
