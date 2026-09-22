@@ -1,6 +1,6 @@
 # Carrier-front load lifecycle — Phase A audit (2026-09-21, read-only)
 
-Baseline: `7101574b` (v3.8.bdn, local). Question from Wasi: what happens from tender accept → RC sent → where the load appears in the carrier portal → RC e-signed → BOL access (gated on the signature) → paperwork upload (signed BOL, POD after delivery, then invoice) → invoice upload emails accounting. Audit first, then the optimal carrier-front workflow.
+Baseline: `8c8d0819` (v3.8.bei on main — authored pre-rebase as `7101574b` v3.8.bdn and re-lettered, with beh for AGREEMENT_MISSING, when the pair landed behind the carrier-archive session's bdm/bdn). Question from Wasi: what happens from tender accept → RC sent → where the load appears in the carrier portal → RC e-signed → BOL access (gated on the signature) → paperwork upload (signed BOL, POD after delivery, then invoice) → invoice upload emails accounting. Audit first, then the optimal carrier-front workflow.
 
 **Production shape at audit time (read-only, `.env.production.local`, `default_transaction_read_only = on`):** 4 live loads — 2 CANCELLED, 1 BOOKED, 1 TONU. `carrier_pays`: 1 PREPARED (the Peace Transport TONU payable). Load documents: 1 `BOL`, 1 `PHOTO_LOADED`. **No load has ever reached DELIVERED.** Every finding past step 4 is therefore latent with zero blast radius, and every one of them fires on the first real delivery.
 
@@ -156,7 +156,7 @@ Ratified by Wasi against §4 above. Each is binding for the Phase B sequence; no
 | | Commit | Scope |
 |---|---|---|
 | E1 | P0 + P1 settlement hooks | one `recordLoadDocument(...)` seam behind both upload routes; always `onPODUploaded` + `syncSettlementDocFlags`; POD advancing past DELIVERED fires `onLoadDelivered`; server-side docType allowlist (400 on unknown), MIME + size limits on both routes; `createCarrierPayOnDelivery` idempotent (existing non-VOID row = no-op); guard that both routes reach the seam; adversarial: re-instate the AT_DELIVERY skip and watch the tests go red |
-| BCA Commit 2 | as specified (was bdo) | the BCA backstop sits inside `/rc-sign` POST, the only remaining sign path once E3 lands |
+| BCA Commit 2 | as specified (was bdo; shipped as v3.8.bep) | the BCA backstop sits inside `/rc-sign` POST, the only remaining sign path once E3 lands |
 | E2 | accept confirmation + next-step strip + BOL button state | strip driven by tender state through the same helper the AE board uses; BOL disabled with the reason shown until CONFIRMED |
 | E3 | ruling 3 in full | sign-mint endpoint, self-serve resend, rate limit, legacy route deleted + guard |
 | E4 | paperwork panel + vocabulary | persistent from CONFIRMED with missing/uploaded/verified slots; Documents dropdown adopts the vocabulary and drops bare `BOL`; the existing production `BOL` row is left untouched and reported |
@@ -164,4 +164,4 @@ Ratified by Wasi against §4 above. Each is binding for the Phase B sequence; no
 | E6 | close the loop | Payments rows link to the load; My Loads gets a Completed chip; the signed page links back to the portal load and states the BOL is now available |
 | AE | Needs Attention `RC_NOT_SENT` | ACCEPTED + DRAFT RC older than `RC_SEND_SLA_HOURS` (env, default 1); same shape as `RC_UNSIGNED_PAST_SLA`, with a test |
 
-Gates per commit: backend `tsc` → `npm test` → frontend `tsc` → `next build` → E2E on 3110/4100. Explicit-path staging only; letter assigned from HEAD at commit time. **bdm, bdn and every Task E commit push together, only on Wasi's GO**, after the full gate output and the letter table are shown.
+Gates per commit: backend `tsc` → `npm test` → frontend `tsc` → `next build` → E2E on 3110/4100. Explicit-path staging only; letter assigned from HEAD at commit time. **beh, bei and every Task E commit push together, only on Wasi's GO**, after the full gate output and the letter table are shown.
