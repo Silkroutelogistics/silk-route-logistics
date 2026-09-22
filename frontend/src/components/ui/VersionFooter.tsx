@@ -18356,7 +18356,13 @@
 // replaced from the verified masters - 16/32/48 inside a real ICO, 180 apple-touch, 192/512 any, and a 512 maskable with
 // the safe-zone inset Android needs before it crops to a circle. manifest.json gains the maskable entry and its
 // background_color moves #FDFBF7 -> #FBF7F0, the canonical --cream; the old value matched no token in §2.1.
-export const SRL_VERSION = "3.8.bgg";
+// v3.8.bgi - the Compass vetting report joins the vector, and it was the worst of the raster sites. C2 converted the
+// skill chrome, which is what BOL, RC, invoice and settlement letterheads draw through; compassPdfService never used
+// that path - it drew assets/logo.png directly - so it was missed. assets/logo.png is 1988x1388, aspect 1.432, and the
+// call forced { width: 50, height: 50 }, squashing the mark ~30% horizontally on every report served by
+// routes/carriers.ts. Ruling 1 named this exact correction ("vetting report drawn 50x50 correcting the 1.43 aspect
+// distortion") and it had not been executed. Origin and box unchanged; fs and path imports went with the constants.
+export const SRL_VERSION = "3.8.bgi";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

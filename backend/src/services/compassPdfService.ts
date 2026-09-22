@@ -4,8 +4,7 @@
  */
 
 import PDFDocument from "pdfkit";
-import * as path from "path";
-import * as fs from "fs";
+import { drawSrlMark } from "../lib/srlMark";
 import type { CarrierVettingReport, VettingCheck, CheckResult, DataSource } from "./carrierVettingService";
 
 type PDFDoc = InstanceType<typeof PDFDocument>;
@@ -25,9 +24,6 @@ const COMPANY = {
   mc: MC_LABEL,
   dot: DOT_LABEL,
 };
-
-const LOGO_PATH = path.resolve(__dirname, "../assets/logo.png");
-const hasLogo = fs.existsSync(LOGO_PATH);
 
 // Colors
 const COLOR = {
@@ -140,9 +136,13 @@ function inferSource(check: VettingCheck): DataSource {
 }
 
 function addHeader(doc: PDFDoc, carrierName: string) {
-  if (hasLogo) {
-    doc.image(LOGO_PATH, 50, 30, { width: 50, height: 50 });
-  }
+  // v3.8.bgi - the vector mark, and this one was not merely soft: assets/logo.png
+  // is 1988x1388 (aspect 1.432) and was drawn { width: 50, height: 50 }, so the
+  // mark was squashed ~30% horizontally on every vetting report a carrier or an
+  // AE has ever opened. A forced square only distorts a non-square source; the
+  // master is 512x512, so drawing it 50x50 is now the true aspect. Same origin,
+  // same box - only the distortion and the raster are gone.
+  drawSrlMark(doc, 50, 30, 50);
 
   // Title block
   doc.fontSize(14).fillColor(COLOR.navy).font("Helvetica-Bold");
