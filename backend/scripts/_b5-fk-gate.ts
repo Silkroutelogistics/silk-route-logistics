@@ -1,12 +1,15 @@
 /**
  * B5 gate — the seven carrier_profiles foreign keys, read off a LOCAL database.
  *
- * The migration at prisma/_pending_migrations/20260921120000_carrier_profile_fk_restrict
+ * The migration at prisma/migrations/20260921120000_carrier_profile_fk_restrict (moved from _pending_migrations/ 2026-09-22, v3.8.bfw)
  * turns seven ON DELETE CASCADE / SET NULL constraints into RESTRICT by DROP +
  * ADD, by NAME and without IF EXISTS. A name that is not on the target fails the
- * deploy loudly (Item 208). So before the file moves into prisma/migrations/,
- * the names and their delete rules are read off the target and the migration
- * moves only if every one of the seven is present with the rule it expects.
+ * deploy loudly (Item 208). So before the file moved into prisma/migrations/,
+ * the names and their delete rules were read off the target, and the file moved
+ * only once all seven were present with the rule each expects. Wasi ran that
+ * read against production by hand on 2026-09-22: 7 rows, c x5 / n x2, 0 orphans.
+ * This runner stays LOCAL-ONLY (see below) and is kept for re-verifying a
+ * container, not for re-gating production.
  *
  * Two shapes:
  *   --expect pre   (default)  5 x CASCADE ('c') + 2 x SET NULL ('n')  — before the migration

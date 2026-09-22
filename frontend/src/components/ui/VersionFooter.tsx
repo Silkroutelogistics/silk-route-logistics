@@ -18277,7 +18277,13 @@
 // Restore… is the ONE control enabled on an archived carrier, ADMIN/CEO only, deliberately outside whenNotArchived; the outcome
 // line says REVIEWING and, when the fingerprint was not rebuilt, says so. carrierTenderLabel gains carrier_archived ("Closed —
 // account archived") so a restored carrier's history never reads "withdrawn" for an offer SRL pulled. 5 page cases + 1 label case.
-export const SRL_VERSION = "3.8.bef";
+// v3.8.bfw — carrier-archive B5 applied: the seven carrier_profiles FKs that CASCADE (load_tenders, quick_pay_enrollments,
+// quick_pay_elections, carrier_training_requirements, info_requests) or SET NULL (drivers, dock_schedules) on a hard delete
+// become RESTRICT, so §14 CARRIER ARCHIVE's "Nothing is deleted" is enforced by the database rather than remembered by the
+// application. Migration moved from _pending_migrations/ into prisma/migrations/ with its seven-line schema hunk as one
+// commit, ONLY after Wasi ran the header gate against production by hand (2026-09-22: 7 rows, c x5 / n x2, 0 orphans).
+// The 14 ALTERs are byte-identical to the authored, container-proven file; only the header comment records the move.
+export const SRL_VERSION = "3.8.bfw";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

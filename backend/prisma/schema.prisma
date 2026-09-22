@@ -1829,7 +1829,7 @@ model LoadTender {
   loadId               String
   load                 Load                @relation(fields: [loadId], references: [id], onDelete: Cascade)
   carrierId            String
-  carrier              CarrierProfile      @relation(fields: [carrierId], references: [id], onDelete: Cascade)
+  carrier              CarrierProfile      @relation(fields: [carrierId], references: [id], onDelete: Restrict)
   status               TenderStatus        @default(OFFERED)
   offeredRate          Float
   counterRate          Float?
@@ -2190,7 +2190,7 @@ model RateConfirmation {
 model QuickPayEnrollment {
   id               String                   @id @default(cuid())
   carrierProfileId String                   @map("carrier_profile_id")
-  carrierProfile   CarrierProfile           @relation(fields: [carrierProfileId], references: [id], onDelete: Cascade)
+  carrierProfile   CarrierProfile           @relation(fields: [carrierProfileId], references: [id], onDelete: Restrict)
   status           QuickPayEnrollmentStatus @default(PENDING)
 
   // The request. Consent forensics for the Caravan Quick Pay Agreement live on
@@ -2245,7 +2245,7 @@ model QuickPayElection {
   loadId           String         @map("load_id")
   load             Load           @relation(fields: [loadId], references: [id], onDelete: Cascade)
   carrierProfileId String         @map("carrier_profile_id")
-  carrierProfile   CarrierProfile @relation(fields: [carrierProfileId], references: [id], onDelete: Cascade)
+  carrierProfile   CarrierProfile @relation(fields: [carrierProfileId], references: [id], onDelete: Restrict)
 
   // Resolved against the tier AT DECISION TIME, so a later tier move does not
   // silently reprice a decision the carrier already made.
@@ -3124,7 +3124,7 @@ model Driver {
   // Nullable so pre-existing AE-console fleet rows stay valid; carrier
   // portal roster queries always scope on carrierProfileId.
   carrierProfileId String?
-  carrierProfile   CarrierProfile? @relation("CarrierDrivers", fields: [carrierProfileId], references: [id])
+  carrierProfile   CarrierProfile? @relation("CarrierDrivers", fields: [carrierProfileId], references: [id], onDelete: Restrict)
 
   // v3.8.amz — SRL Driver Academy Sprint T2: training-portal credentials.
   // Phone + PIN auth scoped to the training portal ONLY — drivers are NOT
@@ -3388,7 +3388,7 @@ model TrainingAttempt {
 model CarrierTrainingRequirement {
   id               String         @id @default(cuid())
   carrierProfileId String
-  carrierProfile   CarrierProfile @relation(fields: [carrierProfileId], references: [id], onDelete: Cascade)
+  carrierProfile   CarrierProfile @relation(fields: [carrierProfileId], references: [id], onDelete: Restrict)
   courseId         String
   course           TrainingCourse @relation(fields: [courseId], references: [id], onDelete: Cascade)
   dueDays          Int            @default(30)
@@ -5475,7 +5475,7 @@ model DockSchedule {
   timeSlotEnd      String // "09:00"
   loadId           String?
   carrierId        String?
-  carrier          CarrierProfile? @relation("DockCarrier", fields: [carrierId], references: [id])
+  carrier          CarrierProfile? @relation("DockCarrier", fields: [carrierId], references: [id], onDelete: Restrict)
   driverName       String?
   driverPhone      String?
   truckNumber      String?
@@ -5686,7 +5686,7 @@ model WebhookEndpoint {
 model InfoRequest {
   id        String         @id @default(cuid())
   carrierId String
-  carrier   CarrierProfile @relation(fields: [carrierId], references: [id], onDelete: Cascade)
+  carrier   CarrierProfile @relation(fields: [carrierId], references: [id], onDelete: Restrict)
 
   createdById   String
   createdBy     User    @relation("InfoRequestCreatedBy", fields: [createdById], references: [id])
