@@ -73,7 +73,7 @@ export default function AccountingLayout({ children }: { children: React.ReactNo
       {/* Header */}
       <div className="px-5 py-4 border-b border-white/5">
         <Link href="/accounting" className="flex items-center gap-2">
-          <Logo size="sm" />
+          <Logo size="sm" variant="auto" />
           <div>
             <h1 className="text-sm font-bold text-white leading-tight">SRL Accounting</h1>
             <p className="text-[10px] text-slate-500">Financial Console</p>
@@ -148,7 +148,7 @@ export default function AccountingLayout({ children }: { children: React.ReactNo
       {/* Mobile header bar */}
       <div className="md:hidden fixed top-0 left-0 right-0 z-40 bg-[#0a1120] border-b border-white/5 px-4 py-3 flex items-center justify-between">
         <Link href="/accounting" className="flex items-center gap-2">
-          <Logo size="sm" />
+          <Logo size="sm" variant="white" />
           <span className="text-sm font-bold text-white">SRL Accounting</span>
         </Link>
         <button

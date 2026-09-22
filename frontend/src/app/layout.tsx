@@ -32,13 +32,13 @@ export const metadata: Metadata = {
     url: "https://silkroutelogistics.ai",
     title: "Silk Route Logistics",
     description: "Michigan property broker. USDOT 4526880, Broker MC 1794414. Where Trust Travels.",
-    images: [{ url: "/logo.png", alt: "Silk Route Logistics" }],
+    images: [{ url: "/brand/srl-logo-fullcolour-2048.png", alt: "Silk Route Logistics" }],
   },
   twitter: {
     card: "summary_large_image",
     title: "Silk Route Logistics",
     description: "Michigan property broker. USDOT 4526880, Broker MC 1794414. Where Trust Travels.",
-    images: ["/logo.png"],
+    images: ["/brand/srl-logo-fullcolour-2048.png"],
   },
 };
 

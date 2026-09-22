@@ -58,7 +58,7 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-navy">
         <div className="text-center">
-          <Logo size="lg" />
+          <Logo size="lg" variant="auto" />
           <p className="mt-4 text-sm text-white/50 animate-pulse">Loading...</p>
         </div>
       </div>

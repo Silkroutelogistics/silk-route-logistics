@@ -136,7 +136,7 @@ export default function LoginSplash({
       <div className="relative z-10 flex flex-col items-center text-center px-6 max-w-2xl">
         {/* Logo */}
         <div className="splash-logo mb-6">
-          <Logo size="lg" />
+          <Logo size="lg" variant="white" />
         </div>
 
         {/* Welcome */}

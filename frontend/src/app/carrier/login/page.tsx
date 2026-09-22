@@ -196,7 +196,7 @@ export default function CarrierLoginPage() {
         <div className="relative z-10 flex flex-col items-start w-full max-w-[480px] px-12">
           {/* Logo */}
           <div className="mb-8">
-            <Logo size="lg" />
+            <Logo size="lg" variant="white" />
           </div>
 
           {/* Feature pills */}

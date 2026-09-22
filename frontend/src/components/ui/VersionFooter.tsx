@@ -18325,7 +18325,14 @@
 // §2.2 is corrected to say so rather than keep claiming the step is load-bearing. The step itself stays, because render.yaml
 // is documentation-only and the dashboard is canonical, so removing it here without a dashboard edit buys a divergence and
 // nothing else. Pins did not move (24/24) - the proof that the PNGs were already unreferenced when they were deleted.
-export const SRL_VERSION = "3.8.bfx";
+// v3.8.bgc - the web mark is the SVG master, chosen by the surface it sits on. Logo gains a variant: fullcolour on light,
+// white on navy, and auto where the surface is light in one theme and dark in the other. auto is not indecision - the AE
+// sidebar is warm stone #EBE8E2 in light mode and #080C18 in dark, accounting the same via an [data-mode=light] aside
+// !important rule that shell never escaped, AuthGuard #F5F3EF/#0F1117 - so a single pinned variant is wrong in one theme
+// at every one of them. Both files render and CSS shows one; a JS swap would flash the wrong mark, because the static
+// export carries no data-mode on first paint. The chip went with the raster: /logo.png was an opaque 200x200 whose 92px
+// mark sat in a white square, and the rounded corners several surfaces applied were rounding THAT, not the mark.
+export const SRL_VERSION = "3.8.bgc";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

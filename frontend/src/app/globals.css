@@ -230,6 +230,24 @@ main, aside, .bg-white\/5, .bg-navy, .text-white, .text-slate-400, .text-slate-5
   background: var(--srl-bg-deepest) !important;
 }
 
+/* The brand mark on a surface that is light in one theme and dark in the other
+   (v3.8.bgc). <Logo variant="auto"> renders BOTH masters and these rules show
+   exactly one. Light is the default and bare `:root` carries the light palette,
+   so the fullcolour mark is what paints before `data-mode` is ever written —
+   which is why this is CSS and not a JS swap: the static export has no attribute
+   on first paint and a swap would flash the wrong mark. `display:none` also
+   keeps the hidden one out of the accessibility tree, so the repeated alt text
+   is never announced twice. */
+.srl-logo-on-dark {
+  display: none;
+}
+[data-mode="dark"] .srl-logo-on-light {
+  display: none;
+}
+[data-mode="dark"] .srl-logo-on-dark {
+  display: inline-block;
+}
+
 /* Sidebar stays themed in light mode — warm stone sidebar */
 [data-mode="light"] aside {
   background: var(--srl-bg-deepest) !important;

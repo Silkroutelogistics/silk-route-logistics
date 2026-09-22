@@ -129,7 +129,7 @@ export function LoginBrandPanel({ variant }: { variant: LoginVariant }) {
       <div className="relative z-10 flex flex-col items-start w-full max-w-[480px] px-12">
         <div className="mb-8">
           <Link href="/" aria-label="Silk Route Logistics home" style={{ display: "inline-block", lineHeight: 0 }}>
-            <Logo size="lg" />
+            <Logo size="lg" variant="white" />
           </Link>
         </div>
 

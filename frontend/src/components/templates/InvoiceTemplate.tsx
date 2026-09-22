@@ -163,7 +163,24 @@ export function InvoiceTemplate({ data, onClose }: InvoiceTemplateProps) {
             {/* Header */}
             <div className="inv-header">
               <div className="inv-logo-block">
-                <img src="/logo-full.png" alt="Silk Route Logistics" className="inv-logo" />
+                {/* v3.8.bgc — the fullcolour master on this white sheet. The old
+                    /logo-full.png was an 800x800 OPAQUE raster, so it carried a
+                    white square that only disappeared because the page behind it
+                    was also white; it also predates the mark correction.
+                    The inline height is not decoration: `.inv-logo` lives in
+                    printStyles, which is injected into the print POPUP only
+                    (:118), so on screen this <img> has never had a size rule and
+                    rendered at the raster's intrinsic 800px. An SVG carries no
+                    intrinsic size, so without this it would fall to the 300px
+                    replaced-element default — a silent change to the preview.
+                    Pinned to the same 52px the printed sheet uses, so the two
+                    finally agree. */}
+                <img
+                  src="/brand/srl-logo-fullcolour.svg"
+                  alt="Silk Route Logistics"
+                  className="inv-logo"
+                  style={{ height: 52, width: "auto" }}
+                />
                 <div className="inv-company-info">
                   <div className="inv-company-name">SILK ROUTE LOGISTICS INC.</div>
                   <div className="inv-company-detail">MC: 01474731 &nbsp;|&nbsp; DOT: 4298498</div>

@@ -52,7 +52,10 @@ function OnboardingNav() {
               was non-canonical drift — no other public marketing nav
               carries text next to the logo. Removed entirely. */}
           <Link href="/" className="flex items-center" aria-label="Silk Route Logistics Home">
-            <img src="/logo.png" alt="SRL" className="h-9 w-auto rounded-md" />
+            {/* v3.8.bgc — the white master on the navy bar. rounded-md went with
+                the raster: it was rounding the corners of /logo.png's opaque white
+                chip, and an SVG on a transparent ground has no chip to round. */}
+            <img src="/brand/srl-logo-white.svg" alt="Silk Route Logistics" className="h-9 w-auto" />
           </Link>
 
           {/* Desktop nav */}

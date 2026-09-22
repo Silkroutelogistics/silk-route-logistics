@@ -424,7 +424,7 @@ export function Sidebar() {
       {/* Logo */}
       <div className={cn("border-b border-[#2A2F42]", collapsed ? "px-2 py-4" : "px-5 py-5")}>
         <Link href="/" className="flex items-center gap-2">
-          <Logo size="sm" />
+          <Logo size="sm" variant="auto" />
           {!collapsed && (
             <div>
               <span className="text-sm font-semibold text-white">Silk Route</span>
@@ -522,7 +522,7 @@ export function Sidebar() {
       <div className="lg:hidden fixed top-0 left-0 right-0 z-40 px-4 py-3 flex items-center justify-between"
         style={{ background: 'var(--srl-bg-deepest)', borderBottom: '1px solid var(--srl-border)' }}>
         <Link href="/" className="flex items-center gap-2">
-          <Logo size="sm" />
+          <Logo size="sm" variant="auto" />
           <span className="text-sm font-semibold" style={{ color: 'var(--srl-text)' }}>Silk Route</span>
         </Link>
         <button

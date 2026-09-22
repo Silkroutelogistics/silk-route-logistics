@@ -149,7 +149,7 @@ export default function VerifyOtpPage() {
       <div className="w-full max-w-md bg-white/5 backdrop-blur border border-white/10 rounded-2xl shadow-2xl p-8">
         <div className="flex flex-col items-center mb-6">
           <Link href="/" className="flex items-center gap-2 mb-4">
-            <Logo size="lg" />
+            <Logo size="lg" variant="auto" />
           </Link>
           <div className="w-14 h-14 rounded-full bg-[#d4a574]/10 flex items-center justify-center mb-3">
             <Shield className="w-7 h-7 text-[#d4a574]" />
