@@ -18,6 +18,7 @@ import { resolveIssuedElection } from "../services/autoRateConfirmationService";
 import { liveElectionForTender } from "../services/quickPayElectionService";
 import { log } from "../lib/logger";
 import { RC_TERMS_VERSION } from "../lib/agreementVersions";
+import { buildRcCountersign } from "../lib/rcCountersign";
 
 /**
  * formData for the renderer, with this RC's own document number folded in.
@@ -27,7 +28,14 @@ import { RC_TERMS_VERSION } from "../lib/agreementVersions";
  * injected here at render time, so every render path prints the same number and
  * regenerating a PDF reproduces it exactly.
  */
-function renderFormData(rc: { rateConNumber: string | null; rcTermsVersion?: string | null; formData: unknown }): Record<string, any> {
+function renderFormData(rc: {
+  rateConNumber: string | null;
+  rcTermsVersion?: string | null;
+  counterSignedByName?: string | null;
+  counterSignedByTitle?: string | null;
+  counterSignedAt?: Date | null;
+  formData: unknown;
+}): Record<string, any> {
   return {
     ...(rc.formData as Record<string, any>),
     rateConNumber: rc.rateConNumber,
@@ -36,6 +44,15 @@ function renderFormData(rc: { rateConNumber: string | null; rcTermsVersion?: str
     // Null is passed through so the renderer can say "unversioned" rather than
     // silently printing today's version over yesterday's terms.
     rcTermsVersion: rc.rcTermsVersion ?? null,
+    // Same rule again: the countersignature lives on the row and is injected
+    // for render, never written into formData. All three columns or none -- a
+    // half-written countersignature would render a name with no date, which
+    // reads as an unfinished signature rather than an absent one. Mirrors the
+    // guard the BCA uses at carrierAuth.ts before it builds its countersign.
+    rcCountersign:
+      rc.counterSignedByName && rc.counterSignedByTitle && rc.counterSignedAt
+        ? { name: rc.counterSignedByName, title: rc.counterSignedByTitle, at: rc.counterSignedAt }
+        : null,
   };
 }
 
@@ -275,6 +292,21 @@ export async function sendRateConfirmation(req: AuthRequest, res: Response) {
   // one, which is the same reason the update below does not restamp a re-send.
   const termsVersionAtIssuance = rc.rcTermsVersion ?? RC_TERMS_VERSION;
 
+  // SRL COUNTERSIGNS ON ISSUANCE, and the stamp is decided HERE, before the
+  // render, for the reason the terms version directly above it is: the bytes
+  // are frozen and hashed, so anything written to the row after the render is
+  // not in the document. That is the exact defect rcTermsVersionInBytes.test.ts
+  // exists to catch, in this function, one field over.
+  //
+  // Never into issuedFormData. One persisted copy lives on the columns and is
+  // injected for render, the rule renderFormData states for rateConNumber and
+  // rcTermsVersion.
+  //
+  // Built in lib/rcCountersign rather than here: this module sends email, and
+  // emailIdentity.test.ts bans an email-sending module from reading the legal
+  // signatory at all. The identity belongs to the document, not to the mail.
+  const countersignAtIssuance = buildRcCountersign(new Date());
+
   const issuedFormData: Record<string, any> = {
     ...fd,
     rcTermsVersion: termsVersionAtIssuance,
@@ -328,7 +360,11 @@ export async function sendRateConfirmation(req: AuthRequest, res: Response) {
     contentHash = rc.contentHash!;
     storedPdfUrl = rc.pdfUrl!;
   } else {
-    const pdfDoc = generateEnhancedRateConfirmation(rc.load, { ...issuedFormData, rateConNumber: rc.rateConNumber });
+    const pdfDoc = generateEnhancedRateConfirmation(rc.load, {
+      ...issuedFormData,
+      rateConNumber: rc.rateConNumber,
+      rcCountersign: countersignAtIssuance,
+    });
     const chunks: Buffer[] = [];
     await new Promise<void>((resolve, reject) => {
       pdfDoc.on("data", (chunk: Buffer) => chunks.push(chunk));
@@ -401,6 +437,17 @@ export async function sendRateConfirmation(req: AuthRequest, res: Response) {
       // restamping an already-issued document with today's version over
       // yesterday's text. Frozen with the bytes.
       ...(alreadyIssued ? {} : { rcTermsVersion: termsVersionAtIssuance }),
+      // The broker half, written in the SAME statement as the hash of the bytes
+      // that carry it. A re-send never restamps: the countersignature belongs to
+      // the issuance instant, frozen with the document, for the same reason the
+      // terms version above it is not restamped.
+      ...(alreadyIssued
+        ? {}
+        : {
+            counterSignedByName: countersignAtIssuance.name,
+            counterSignedByTitle: countersignAtIssuance.title,
+            counterSignedAt: countersignAtIssuance.at,
+          }),
       formData: issuedFormData as any,
       // The frozen artifact and its hash, written in the same statement as the
       // status that says it was issued. pdfUrl is the stored object; the

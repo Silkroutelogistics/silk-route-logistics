@@ -18367,7 +18367,13 @@
 // writes them yet; the stamp lands in the next commit. A rate confirmation
 // issued before this was never countersigned, and writing one onto it now
 // would manufacture an execution record for an act that did not happen.
-export const SRL_VERSION = "3.8.bfy";
+// v3.8.bfz - SRL countersigns a rate confirmation at issuance. The stamp is
+// decided BEFORE the render and written in the same single statement as the
+// hash of the bytes that carry it, which is the ordering rcTermsVersion got
+// wrong one field over in the same function. Built in lib/rcCountersign
+// because this controller also sends email and emailIdentity bans an
+// email-sending module from reading the legal signatory.
+export const SRL_VERSION = "3.8.bfz";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
