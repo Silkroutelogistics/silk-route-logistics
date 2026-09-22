@@ -18344,7 +18344,13 @@
 // /shippers this also fixes motion rather than position - that mark revolves, and an off-centre origin made it orbit
 // rather than spin. srl-logo.css drops two border-radius declarations for the same reason the components did: the radius
 // was rounding the chip baked into /logo.png, and an SVG on a transparent ground has no chip to round.
-export const SRL_VERSION = "3.8.bge";
+// v3.8.bgf - the mark reaches the inbox. Two email surfaces still pointed at logo-penguin.gif: the transactional wrapper
+// in routes/email.ts and the founder signature block read at runtime from config/signatures/whaider.html. Both now name
+// the hosted 2048px PNG. A raster rather than the SVG master on purpose - no mail client renders SVG reliably, Outlook
+// desktop and several Gmail contexts drop it entirely - and a 120px display off a 2048px source is oversampled on any
+// screen it lands on. The GIF it replaces was 45 animated frames that Outlook rendered as frame 1 regardless. The
+// wrapper's border-radius went with the chip, same as every other surface in this arc.
+export const SRL_VERSION = "3.8.bgf";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

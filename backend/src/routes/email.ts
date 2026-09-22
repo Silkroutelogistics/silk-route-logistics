@@ -43,7 +43,12 @@ router.post("/send", async (req: any, res: Response) => {
   const senderFullName = sender ? `${sender.firstName} ${sender.lastName}` : "SRL Team";
   const senderPhone = sender?.phone || "";
   const senderEmail = sender?.email || env.EMAIL_FROM;
-  const logoUrl = "https://silkroutelogistics.ai/logo-penguin.gif";
+  // v3.8.bgf — the brand mark, not the penguin GIF. Hosted PNG rather than the
+  // SVG master because no mail client renders SVG reliably (Outlook desktop and
+  // several Gmail contexts drop it entirely), and a raster at 120px display off a
+  // 2048px source is 17x oversampled on any screen. The GIF it replaces was 45
+  // animated frames that Outlook rendered as frame 1 regardless.
+  const logoUrl = "https://silkroutelogistics.ai/brand/srl-logo-fullcolour-2048.png";
 
   // Email signature block
   const signatureHtml = `
@@ -55,7 +60,7 @@ router.post("/send", async (req: any, res: Response) => {
         <div style="color:#0A2540;font-size:13px;font-weight:600;margin-top:2px">Silk Route Logistics</div>
         ${senderPhone ? `<div style="color:#64748B;font-size:12px;margin-top:4px">&#128222; ${senderPhone}</div>` : ""}
         <div style="color:#64748B;font-size:12px">&#9993; ${senderEmail}</div>
-        <div style="margin-top:10px"><img src="${logoUrl}" alt="Silk Route Logistics" width="120" style="border-radius:6px"></div>
+        <div style="margin-top:10px"><img src="${logoUrl}" alt="Silk Route Logistics" width="120"></div>
       </td></tr>
     </table>`;
 
