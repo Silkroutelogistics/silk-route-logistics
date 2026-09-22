@@ -1,12 +1,10 @@
 import { Response } from "express";
 import { prisma } from "../config/database";
-import { syncSettlementDocFlags } from "../services/integrationService";
 import { AuthRequest } from "../middleware/auth";
 import {
   createRateConfirmationSchema,
   updateRateConfirmationSchema,
   sendRateConfirmationSchema,
-  signRateConfirmationSchema,
   sendToShipperSchema,
 } from "../validators/rateConfirmation";
 import { generateEnhancedRateConfirmation, generateShipperLoadConfirmation } from "../services/pdfService";
@@ -19,8 +17,6 @@ import { resolveLoadStem, withDocumentNumber } from "../lib/documentNumber";
 import { resolveIssuedElection } from "../services/autoRateConfirmationService";
 import { liveElectionForTender } from "../services/quickPayElectionService";
 import { log } from "../lib/logger";
-import { extractClientIp } from "../services/geoService";
-import { clientUserAgent } from "../lib/clientIp";
 import { RC_TERMS_VERSION } from "../lib/agreementVersions";
 
 /**
@@ -631,69 +627,6 @@ export async function downloadRateConfirmationPdf(req: AuthRequest, res: Respons
 
   const doc = generateEnhancedRateConfirmation(rc.load, renderFormData(rc));
   doc.pipe(res);
-}
-
-/**
- * Sign a rate confirmation — stores signer details and sets signed=true.
- */
-export async function signRateConfirmation(req: AuthRequest, res: Response) {
-  const { signerName, signerTitle } = signRateConfirmationSchema.parse(req.body);
-  // Server-derived, never from the body — see the note on the schema.
-  const signerIp = extractClientIp(req as any);
-  const signerUserAgent = clientUserAgent(req);
-
-  // v3.8.ajv C2 — Include load.carrierId in the lookup so we can verify
-  // ownership before allowing sign. Pre-ajv the endpoint was authorized
-  // to CARRIER role (per routes/rateConfirmations.ts:25) but had no
-  // per-record check that the logged-in CARRIER actually owns the load.
-  // Result: any logged-in carrier could sign any other carrier's RC,
-  // falsifying commitment + corrupting audit trail (carrierSignature
-  // field stores the wrong signer name).
-  const rc = await prisma.rateConfirmation.findUnique({
-    where: { id: req.params.id },
-    include: { load: { select: { carrierId: true } } },
-  });
-  if (!rc) { res.status(404).json({ error: "Rate confirmation not found" }); return; }
-  if (rc.signed) { res.status(400).json({ error: "Rate confirmation already signed" }); return; }
-
-  // Carrier-only ownership gate. AE roles bypass — AE may need to
-  // "mark as signed on behalf" for operational cases (carrier emailed
-  // a wet signature outside the portal). Carrier role MUST own.
-  if (req.user!.role === "CARRIER" && rc.load.carrierId !== req.user!.id) {
-    res.status(403).json({ error: "Not authorized to sign this rate confirmation" });
-    return;
-  }
-
-  const existingFormData = (rc.formData as Record<string, any>) || {};
-  const updatedFormData = {
-    ...existingFormData,
-    carrierSignature: signerName,
-    carrierSignTitle: signerTitle,
-    carrierSignDate: new Date().toISOString(),
-    carrierSignIP: signerIp,
-    carrierSignUserAgent: signerUserAgent,
-  };
-
-  const updated = await prisma.rateConfirmation.update({
-    where: { id: req.params.id },
-    data: {
-      signed: true,
-      signedAt: new Date(),
-      status: "SIGNED",
-      formData: updatedFormData as any,
-    },
-  });
-
-  // v3.8.ath — a signed rate confirmation is the source event for the
-  // docSignedRateCon column on the settlement checklist. Recomputed rather than
-  // flipped, so signing twice is free.
-  if (rc.loadId) {
-    syncSettlementDocFlags(rc.loadId).catch((e) =>
-      log.error({ err: e, loadId: rc.loadId }, "[Settlement] doc-flag sync after RC signing failed (non-fatal)"),
-    );
-  }
-
-  res.json(updated);
 }
 
 /**

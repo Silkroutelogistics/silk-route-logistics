@@ -182,11 +182,10 @@ describe("no backfill", () => {
     walk(root);
 
     // Its own definition plus exactly the source events: a signed rate
-    // confirmation (the token page, and until E3 (3/4) deletes it the legacy
-    // session endpoint), delivery, and a document arriving through the one
-    // seam (E1c/E1d) on whichever route carried it.
+    // confirmation (the token page — the legacy session endpoint is gone since
+    // E3 (3/4)), delivery, and a document arriving through the one seam
+    // (E1c/E1d) on whichever route carried it.
     expect(callers.sort()).toEqual([
-      "controllers/rateConfirmationController.ts",
       "routes/rcSign.ts",
       "services/integrationService.ts",
       "services/loadDocumentService.ts",

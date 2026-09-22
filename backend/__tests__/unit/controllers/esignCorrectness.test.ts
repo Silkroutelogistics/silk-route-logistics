@@ -8,7 +8,6 @@ import { describe, it, expect } from "vitest";
 import fs from "fs";
 import path from "path";
 
-import { signRateConfirmationSchema } from "../../../src/validators/rateConfirmation";
 import { SHIPPER_VISIBLE_DOC_TYPES } from "../../../src/controllers/shipperPortalController";
 
 /**
@@ -93,33 +92,39 @@ describe("fix 1 — a shipper who owns the load can retrieve allowlisted documen
 });
 
 describe("fix 2 — Rate Confirmation attribution is server-derived", () => {
-  it("a spoofed ipAddress in the body is stripped by the schema", () => {
-    // Observed pre-fix: a request from 127.0.0.1 carrying "10.52.0.9" persisted
+  // RE-ANCHORED in E3 (3/4). These cases guarded the legacy session-authed
+  // POST /rate-confirmations/:id/sign and its Zod schema. That route is gone:
+  // the ONE signing path is the token page at routes/rcSign.ts, which reads
+  // signerName and attest off the form body and derives IP and user agent
+  // from the request. The guarded property — attribution is never accepted
+  // from the body — is unchanged and now has one place to hold instead of two.
+  const src = fs.readFileSync(path.resolve(__dirname, "../../../src/routes/rcSign.ts"), "utf8");
+
+  it("the token page derives IP and user agent from the request, and reads no ipAddress off the body", () => {
+    expect(src).toContain("const signerIp = extractClientIp(req as never);");
+    expect(src).toContain("const signerUserAgent = clientUserAgent(req as never);");
+    // The body is read for exactly the two form fields. Observed pre-fix (on the
+    // legacy route): a request from 127.0.0.1 carrying "10.52.0.9" persisted
     // 10.52.0.9, because the controller wrote `ipAddress || req.ip`.
-    const parsed: any = signRateConfirmationSchema.parse({
-      signerName: "Jordan Carrier",
-      signerTitle: "Dispatcher",
-      ipAddress: "10.52.0.9",
-    });
-    expect(parsed.ipAddress, "a client-supplied IP must not survive validation").toBeUndefined();
-    expect(parsed.signerName).toBe("Jordan Carrier");
-  });
-
-  it("the schema no longer declares ipAddress at all", () => {
-    expect(Object.keys((signRateConfirmationSchema as any).shape)).toEqual(["signerName", "signerTitle"]);
-  });
-
-  it("the controller derives IP and user agent from the request", () => {
-    // Re-anchored in v3.8.awk. This asserted `req.headers["user-agent"]` and went
-    // red when that read moved behind clientUserAgent(req) — the guarded property
-    // (server-derived, never body-derived) is unchanged and now stronger, so the
-    // anchor moves rather than the assertion weakening.
-    const src = fs.readFileSync(path.resolve(__dirname, "../../../src/controllers/rateConfirmationController.ts"), "utf8");
-    expect(src).toContain("const signerIp = extractClientIp(req as any);");
-    expect(src).toContain("carrierSignIP: signerIp,");
-    expect(src).toContain("clientUserAgent(req)");
-    // The exact expression that made attribution client-controlled must not return.
+    expect(src).not.toMatch(/req\.body\??\.(ipAddress|signerIp|ip)\b/);
     expect(src).not.toContain("ipAddress || req.ip");
+  });
+
+  it("the legacy session-authed sign route, its handler and its schema are GONE (Item 158 precedent)", () => {
+    // A second signing path is a second place for attribution rules to drift.
+    // The legacy handler wrote a typed name into formData with weaker evidence
+    // than the token page captures, and any session could reach it — an AE
+    // could "sign" for a carrier with no token, no consent step, no certificate.
+    const routes = fs.readFileSync(path.resolve(__dirname, "../../../src/routes/rateConfirmations.ts"), "utf8");
+    const ctrl = fs.readFileSync(path.resolve(__dirname, "../../../src/controllers/rateConfirmationController.ts"), "utf8");
+    const validators = fs.readFileSync(path.resolve(__dirname, "../../../src/validators/rateConfirmation.ts"), "utf8");
+    expect(routes).not.toMatch(/router\.post\(\s*"\/:id\/sign"/);
+    expect(routes).not.toContain("signRateConfirmation");
+    expect(ctrl).not.toContain("export async function signRateConfirmation");
+    expect(validators).not.toContain("signRateConfirmationSchema");
+    // And the imports the handler alone needed did not survive it.
+    expect(ctrl).not.toContain("extractClientIp");
+    expect(ctrl).not.toContain("clientUserAgent");
   });
 });
 
