@@ -24,11 +24,12 @@ const state = vi.hoisted(() => ({
   loads: [] as any[],
   detail: null as any,
   search: "",
+  myLoadsFn: null as null | (() => Promise<unknown>),
 }));
 
 vi.mock("@tanstack/react-query", () => ({
-  useQuery: ({ queryKey }: any) => {
-    if (queryKey[0] === "carrier-my-loads") return { data: { loads: state.loads, total: state.loads.length, page: 1, totalPages: 1 }, isLoading: false };
+  useQuery: ({ queryKey, queryFn }: any) => {
+    if (queryKey[0] === "carrier-my-loads") { state.myLoadsFn = queryFn; return { data: { loads: state.loads, total: state.loads.length, page: 1, totalPages: 1 }, isLoading: false }; }
     if (queryKey[0] === "carrier-my-load-detail") return { data: queryKey[1] ? state.detail : undefined };
     return { data: undefined, isLoading: false };
   },
@@ -239,5 +240,21 @@ describe("E4 — the paperwork panel, from CONFIRMED", () => {
     expect(screen.queryByText(/Upload Proof of Delivery/)).toBeNull();
     expect(screen.getByTestId("paperwork-upload-POD")).toBeTruthy();
     expect(screen.getByTestId("paperwork-upload-SIGNED_BOL_DEL")).toBeTruthy();
+  });
+});
+
+describe("E6 — the Completed chip", () => {
+  it("exists, and asks the list for the three statuses that mean done to a carrier, as one set", async () => {
+    vi.mocked(api.get).mockResolvedValue({ data: { loads: [], total: 0 } } as any);
+    render(<MyLoadsPage />);
+    fireEvent.click(screen.getByRole("button", { name: "Completed" }));
+    await waitFor(() => expect(state.myLoadsFn).toBeTruthy());
+    await state.myLoadsFn!();
+    const url = vi.mocked(api.get).mock.calls.at(-1)![0] as string;
+    expect(decodeURIComponent(url)).toBe("/carrier-loads/my-loads?status=POD_RECEIVED,INVOICED,COMPLETED&page=1&limit=20");
+    // The other chips are still their own status.
+    fireEvent.click(screen.getByRole("button", { name: "DELIVERED" }));
+    await state.myLoadsFn!();
+    expect(decodeURIComponent(vi.mocked(api.get).mock.calls.at(-1)![0] as string)).toBe("/carrier-loads/my-loads?status=DELIVERED&page=1&limit=20");
   });
 });

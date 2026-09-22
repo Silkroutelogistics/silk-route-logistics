@@ -18215,7 +18215,8 @@
 // v3.8.bfa — Task E5 (1/2, ruling 2): a carrier INVOICE is required to approve a settlement. One gate (lib/carrierPayInvoiceGate) on all three writers of APPROVED — approvePayment, bulkApprovePayments, the approval-queue review — reading the invoice off the Document rows through the shared paperwork rule, never off the settlement's docCarrierInvoice cache. Refusal is 409 INVOICE_REQUIRED with no write. An AE override needs a reason of ten characters or more and is written to the audit log with who and when BEFORE the approval writes; ACCOUNTING may not override. Bulk approval refuses by id and takes no override.
 // v3.8.bfb — Task E5 (2/2, ruling 4): when the carrier's INVOICE lands through the load-document seam, accounting is told — an email to accounting@ carrying the load ref, the carrier name, the CarrierPay amount and an auth-gated settlement link (no attachment, no bank or tax data), and an in-app row for every ACCOUNTING user, once per document. Fires after the settlement doc-flag sync, so docCarrierInvoice already reads true when they open it; never throws, never fails the upload.
 // v3.8.bfc — Task E6 (1/2): the signed page sends the carrier back to the load ("Open the load on My Loads", by id) and states the bill of lading is now available — before this it said "nothing further is needed" and stopped, on the one page every signing carrier lands on. GET /carrier-loads/my-loads?status= takes a comma-separated set, so the Completed chip (2/2) can ask for POD_RECEIVED,INVOICED,COMPLETED as one state.
-export const SRL_VERSION = "3.8.bfc";
+// v3.8.bfd — Task E6 (2/2): a Payments row names its load as a link to My Loads opened on that load; My Loads gains a "Completed" chip that asks for POD_RECEIVED, INVOICED and COMPLETED as one set (v3.8.bfc), because to a carrier those are one state.
+export const SRL_VERSION = "3.8.bfd";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

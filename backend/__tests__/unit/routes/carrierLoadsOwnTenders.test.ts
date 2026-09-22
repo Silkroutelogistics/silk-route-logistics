@@ -16,7 +16,7 @@
  * sends. The end-to-end half (Postgres actually returning only this carrier's
  * row) is scripts/_arc-e2-tender-scope-proof.ts.
  */
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, beforeAll } from "vitest";
 import express from "express";
 import request from "supertest";
 import { prisma } from "../../../src/config/database";
@@ -38,12 +38,17 @@ vi.mock("../../../src/middleware/rateLimiters", () => ({
   staffUploadLimiter: (_r: any, _s: any, n: any) => n(),
 }));
 
-async function app() {
+// The router graph is imported ONCE, before the first case: under a full-suite
+// run the first import can outlast vitest's 5s default (§13.3 Item 273.7).
+let theApp: express.Express;
+beforeAll(async () => {
   const carrierLoads = (await import("../../../src/routes/carrierLoads")).default;
-  const a = express();
-  a.use(express.json());
-  a.use("/api/carrier-loads", carrierLoads);
-  return a;
+  theApp = express();
+  theApp.use(express.json());
+  theApp.use("/api/carrier-loads", carrierLoads);
+}, 60_000);
+async function app() {
+  return theApp;
 }
 
 const OWN_SCOPE = { carrier: { userId: "u-carrier" }, deletedAt: null };

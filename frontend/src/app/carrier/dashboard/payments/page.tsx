@@ -272,7 +272,14 @@ export default function CarrierPaymentsPage() {
                 payments.map((pay: Record<string, any>) => (
                   <tr key={pay.id} className="border-b border-[#F5EEE0] hover:bg-gray-50">
                     <td className="px-4 py-3 font-mono text-[11px] font-semibold text-[#0A2540]">{pay.paymentNumber || pay.id.slice(-8)}</td>
-                    <td className="px-4 py-3 font-mono text-[11px] text-gray-600">{pay.load?.referenceNumber || "—"}</td>
+                    <td className="px-4 py-3 font-mono text-[11px] text-gray-600">
+                      {/* E6 — a payment row names its load; the load is one click away. */}
+                      {pay.load?.id ? (
+                        <a href={`/carrier/dashboard/my-loads?load=${encodeURIComponent(pay.load.id)}`} data-testid="payment-load-link" className="text-[#0A2540] underline hover:text-[#BA7517]">
+                          {pay.load.referenceNumber || pay.load.id}
+                        </a>
+                      ) : "—"}
+                    </td>
                     <td className="px-4 py-3 text-xs text-gray-600">
                       {pay.load ? `${pay.load.originCity}, ${pay.load.originState} → ${pay.load.destCity}, ${pay.load.destState}` : "—"}
                     </td>

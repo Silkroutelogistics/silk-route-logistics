@@ -18,7 +18,14 @@ import { carrierNextStep } from "@/lib/loadDerivedStatus";
 // is dispatched.
 import { paperworkOpenAt, type PaperworkDocType } from "@shared/constants/paperwork";
 
-const statusFilters = ["All", "BOOKED", "DISPATCHED", "AT_PICKUP", "LOADED", "IN_TRANSIT", "AT_DELIVERY", "DELIVERED"];
+const statusFilters = ["All", "BOOKED", "DISPATCHED", "AT_PICKUP", "LOADED", "IN_TRANSIT", "AT_DELIVERY", "DELIVERED", "Completed"];
+// E6 — a chip is a QUESTION, not a status. "Completed" to a carrier is
+// delivered with the paperwork in, which the pipeline spells three ways; the
+// list read takes the set as a comma list (v3.8.bfc). Every other chip is its
+// own status.
+const FILTER_QUERY: Record<string, string> = {
+  Completed: "POD_RECEIVED,INVOICED,COMPLETED",
+};
 const statusTransitions: Record<string, string[]> = {
   BOOKED: ["AT_PICKUP"],
   DISPATCHED: ["AT_PICKUP"],
@@ -54,7 +61,7 @@ export default function MyLoadsPage() {
   }, []);
 
   const query = new URLSearchParams();
-  if (activeFilter !== "All") query.set("status", activeFilter);
+  if (activeFilter !== "All") query.set("status", FILTER_QUERY[activeFilter] ?? activeFilter);
   query.set("page", String(page));
   query.set("limit", "20");
 
