@@ -391,32 +391,14 @@ function drawItalic(
 // Before this the mark was one of four bundled PNGs (60/120/240/480px) chosen
 // by resolveCompassPng, which selected the smallest asset >= the size in
 // POINTS — i.e. for 72 ppi. The letterhead came out at 120 ppi, the training
-// certificate at 77, the cover seal at 94. That resolver and its PNGs are
-// retired in the following commit, once nothing references them.
+// certificate at 77, the cover seal at 94. v3.8.bfy deleted that resolver, its
+// LOGO_DIR, the four PNGs and the navy-ring fallback that existed only for a
+// deploy in which those PNGs had gone missing — a failure mode a path cannot
+// have. There is no longer any filesystem read on this path, which is why the
+// 'path' and 'fs' imports went with them.
 // ============================================================================
 
-import * as path from 'path';
-import * as fs from 'fs';
 import { drawSrlMark } from './srlMark';
-
-const LOGO_DIR = __dirname;
-
-/**
- * Resolve the smallest bundled PNG fallback >= the requested size.
- * If no fallback is available, returns null and the caller should draw
- * the placeholder ring as a last resort.
- */
-function resolveCompassPng(targetSize: number): string | null {
-  for (const px of [60, 120, 240, 480]) {
-    if (px >= targetSize) {
-      const p = path.join(LOGO_DIR, `srl_compass_${px}.png`);
-      if (fs.existsSync(p)) return p;
-    }
-  }
-  // Final fallback to largest if target is bigger than what we ship
-  const fallback = path.join(LOGO_DIR, 'srl_compass_480.png');
-  return fs.existsSync(fallback) ? fallback : null;
-}
 
 // v3.8.anc — exported for the SRL Driver Academy completion certificate
 // (certificatePdfService.ts), which hand-builds a centered ceremonial layout
@@ -482,15 +464,18 @@ export function drawHeaderFirstPage(doc: PDFDoc, options: HeaderOptions): number
   //
   // v3.8.azi C4 — 55 -> 72. Two consequences worth knowing, both measured:
   //
-  // (1) The PNG SOURCE CHANGES. resolveCompassPng picks the smallest bundled
-  //     asset >= the target, so 55 took srl_compass_60.png and 72 takes
-  //     srl_compass_120.png scaled down. A different embedded image is a
-  //     different content stream, so every document drawing this header moves
-  //     its render pin. That is the expected diff, not a surprise.
+  // (1) [RETIRED in v3.8.bfy] The PNG SOURCE CHANGED. resolveCompassPng picked
+  //     the smallest bundled asset >= the target, so 55 took srl_compass_60.png
+  //     and 72 took srl_compass_120.png scaled down; a different embedded image
+  //     is a different content stream, so the size change moved every pin. The
+  //     mark is vector now and has no source to switch, so a size change no
+  //     longer carries that second effect. Kept because it explains a pin move
+  //     already in the history.
   //
-  // (2) The mark occupies [x, x+size] exactly (doc.image with width/height =
+  // (2) The mark occupies [x, x+size] exactly (the vector is drawn under
+  //     translate+scale into that box, as doc.image did with width/height =
   //     size), so at 72 it spans MARGIN..MARGIN+72 = 36..108. infoX was
-  //     MARGIN + 70 = 106, a 2pt overlap of image and company name; C5.5 moved
+  //     MARGIN + 70 = 106, a 2pt overlap of mark and company name; C5.5 moved
   //     it clear — see below.
   drawCompassMark(doc, MARGIN, yTop, 72);
 

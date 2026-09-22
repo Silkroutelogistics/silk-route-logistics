@@ -18318,7 +18318,14 @@
 // no resolution. All 14 golden render pins move — that is the expected diff and the reason they exist — while body parity holds
 // (verify:bol +0 on all ten body anchors, verify:rc 15/15). Placement contract unchanged: the mark still occupies exactly
 // [x, x+size], so every caller keeps its coordinates and point sizes.
-export const SRL_VERSION = "3.8.bfv";
+// v3.8.bfx - the raster compass mark is deleted. resolveCompassPng, LOGO_DIR, the four srl_compass_*.png files and the
+// navy-ring fallback are gone; nothing read them after bfv. The ring existed for a deploy in which the PNGs had gone
+// missing - a failure a path cannot have, and one that did happen twice (the cp -r nesting bug, §13.3 Item 99). Deleting
+// them left backend/src/lib with NO non-.ts file, so the cp -r src/lib step in the Render buildCommand now carries nothing;
+// §2.2 is corrected to say so rather than keep claiming the step is load-bearing. The step itself stays, because render.yaml
+// is documentation-only and the dashboard is canonical, so removing it here without a dashboard edit buys a divergence and
+// nothing else. Pins did not move (24/24) - the proof that the PNGs were already unreferenced when they were deleted.
+export const SRL_VERSION = "3.8.bfx";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
