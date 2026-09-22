@@ -117,10 +117,80 @@ describe("only the production scripts load the production file", () => {
       e.isDirectory() ? walk(path.join(dir, e.name))
         : /\.(ts|tsx|js|mjs|cjs)$/.test(e.name) ? [path.join(dir, e.name)] : []);
 
-  const ALLOWED = new Set([
-    "scripts/prisma-deploy-production.ts",
-    "scripts/prisma-status-production.ts",
-  ]);
+  /**
+   * EVERY file that names the production datasource is classified, with a
+   * reason. Unclassified is a failure.
+   *
+   * This replaces an allow-list plus a loader-API predicate, and the reason is
+   * that the predicate could not hold the line. It asked "does this file call
+   * `dotenv.config`", and by its own header that question had already been
+   * corrected three times. When it was measured against the tree it was GREEN
+   * while SEVEN files loaded the production datasource outside it, in three
+   * distinct shapes it had no way to see:
+   *
+   *   `dotenv.parse` instead of `.config`                          (4 files)
+   *   readFileSync + `new PrismaClient({ datasourceUrl })`         (1 file)
+   *   readFileSync, write `process.env`, then dynamically import
+   *     the app's own prisma singleton — no dotenv, no client      (2 files)
+   *
+   * The third shape is the argument against ever widening this predicate
+   * again: it constructs nothing and imports nothing statically, so no list of
+   * loader APIs can catch it. A fourth shape would be invented the same way.
+   *
+   * So the trigger is NAMING the file at all — the one thing every route to
+   * production must do — and the question becomes "which class is this, and
+   * why", which a human answers once and a reader can audit. The rail's value,
+   * in its own words, is that the ways to reach production are countable and
+   * named. Seven uncounted ways is not that; seven named ones is.
+   */
+  type ProductionFileClass = "NAMED_COMMAND" | "RAIL_ENFORCEMENT" | "GUARD_FIXTURES" | "READ_ONLY_TOOL";
+
+  const CLASSIFIED: Record<string, { klass: ProductionFileClass; why: string }> = {
+    "scripts/prisma-deploy-production.ts": {
+      klass: "NAMED_COMMAND",
+      why: "npm run prisma:deploy:production — the sanctioned way to apply migrations, guarded before it builds the environment",
+    },
+    "scripts/prisma-status-production.ts": {
+      klass: "NAMED_COMMAND",
+      why: "npm run prisma:status:production — read-only status, same guard",
+    },
+    "scripts/prisma-target-guard.ts": {
+      klass: "RAIL_ENFORCEMENT",
+      why: "reads the file to COMPARE hostnames and refuses; never puts a credential into the environment and never connects. Allow-listing the breach detector as a breach was the first version's error",
+    },
+    "__tests__/unit/ci/productionRail.test.ts": {
+      klass: "GUARD_FIXTURES",
+      why: "this file — its fixture strings name the production file so it looks like a loader to its own scanner",
+    },
+    "scripts/_arc-a2-prod-gate.ts": {
+      klass: "READ_ONLY_TOOL",
+      why: "pre-merge row-count gate; SELECT only",
+    },
+    "scripts/_readonly-agreement-version-fidelity.ts": {
+      klass: "READ_ONLY_TOOL",
+      why: "compares stored agreement text against the served body; SELECT only",
+    },
+    "scripts/_readonly-b2-status-census.ts": {
+      klass: "READ_ONLY_TOOL",
+      why: "carrier onboarding-status census; SELECT only",
+    },
+    "scripts/_readonly-bare-bol-census.ts": {
+      klass: "READ_ONLY_TOOL",
+      why: "BOL numbering census; SELECT only",
+    },
+    "scripts/_readonly-bca-executed-count.ts": {
+      klass: "READ_ONLY_TOOL",
+      why: "counts executed agreements at a version before a body swap; SELECT only",
+    },
+    "scripts/_readonly-peace-transport-select.ts": {
+      klass: "READ_ONLY_TOOL",
+      why: "single-carrier read for an incident; SELECT only",
+    },
+    "scripts/_readonly-qp-archive-verify.ts": {
+      klass: "READ_ONLY_TOOL",
+      why: "Quick Pay archive verification; SELECT only",
+    },
+  };
 
   /**
    * LOADING is the thing that matters, not mentioning.
@@ -142,45 +212,96 @@ describe("only the production scripts load the production file", () => {
   const stripComments = (s: string) =>
     s.replace(/\/\*[\s\S]*?\*\//g, "").replace(/(^|[^:])\/\/[^\n]*/g, "$1");
 
-  const loadsProductionEnv = (src: string) => {
-    // Comments stripped first. prisma-target-guard.ts DISCUSSES
-    // `dotenv.config({ path })` in its header while calling nothing of the
-    // kind — it hand-parses one key — so reading prose as code flagged the
-    // breach detector as a breach. Third correction to this predicate, and
-    // each one narrowed it toward what the rail actually cares about.
-    const code = stripComments(src);
-    return code.includes(".env.production.local") && /dotenv\s*\.\s*config/.test(code);
-  };
+  /**
+   * NAMING is the trigger, and comments do not count. prisma-target-guard.ts
+   * DISCUSSES `dotenv.config({ path })` in its header while calling nothing of
+   * the kind, so reading prose as code once flagged the breach detector as a
+   * breach. Stripping comments is what the old predicate got right, and it is
+   * kept verbatim.
+   */
+  const namesProductionFile = (src: string) => stripComments(src).includes(".env.production.local");
 
-  it("no file outside the two production scripts LOADS the production datasource", () => {
-    // Each additional loader is another way to reach production, and the rail's
-    // whole value is that the ways are countable and named.
-    const offenders: string[] = [];
-    for (const f of [...walk(path.join(BACKEND, "src")), ...walk(path.join(BACKEND, "scripts")), ...walk(path.join(BACKEND, "__tests__"))]) {
+  /**
+   * A write, per line — and the per-line part is the point.
+   *
+   * The first version banned `$executeRaw` outright and immediately flagged
+   * `_arc-a2-prod-gate.ts`, whose only match is
+   * `$executeRawUnsafe("SET default_transaction_read_only = on")`. That is not
+   * a write; it is Postgres being told to REFUSE writes for the rest of the
+   * session, which makes it the strongest read-only guarantee in the set — the
+   * Item 262 census pattern. Flagging the safest script in the group would have
+   * taught the next reader to disable this check.
+   *
+   * So a `$executeRaw` line carrying `default_transaction_read_only` is
+   * exempt, and any OTHER raw statement still counts. The exemption is the
+   * statement, not the file.
+   */
+  const READ_ONLY_LOCK = /default_transaction_read_only/;
+  const WRITE_CALL = /\.(create|createMany|update|updateMany|upsert|delete|deleteMany)\s*\(|\$executeRaw/;
+  const writeLines = (src: string) =>
+    stripComments(src)
+      .split(/\r?\n/)
+      .filter((l) => WRITE_CALL.test(l) && !READ_ONLY_LOCK.test(l));
+
+  const scanTree = () =>
+    [...walk(path.join(BACKEND, "src")), ...walk(path.join(BACKEND, "scripts")), ...walk(path.join(BACKEND, "__tests__"))];
+
+  it("every file that names the production datasource is classified", () => {
+    const files = scanTree();
+
+    // Vacuity tripwire. A walker that quietly stopped matching would report an
+    // empty offender list, and that failure looks exactly like success — the
+    // shape this whole guard exists to refuse.
+    expect(files.length, "the walker found almost nothing; it is broken, not the tree").toBeGreaterThan(200);
+
+    const unclassified: string[] = [];
+    for (const f of files) {
       const rel = path.relative(BACKEND, f).replace(/\\/g, "/");
-      if (ALLOWED.has(rel)) continue;
-      // This file carries fixture strings for the self-test below, so it looks
-      // like a loader to its own scanner. A guard flagging itself is noise.
-      if (rel === "__tests__/unit/ci/productionRail.test.ts") continue;
-      if (loadsProductionEnv(fs.readFileSync(f, "utf8"))) offenders.push(rel);
+      if (!namesProductionFile(fs.readFileSync(f, "utf8"))) continue;
+      if (!CLASSIFIED[rel]) unclassified.push(rel);
     }
-    expect(offenders, "a new loader of the production datasource").toEqual([]);
+    expect(
+      unclassified,
+      "a new route to the production datasource. Classify it in CLASSIFIED with a reason, or stop naming the file",
+    ).toEqual([]);
   });
 
-  it("the detector can tell loading from mentioning (self-test)", () => {
-    // Without this, a regex that had stopped matching would report a clean tree
-    // forever — and that failure looks exactly like success.
+  it("a READ_ONLY_TOOL contains no write", () => {
+    // The read-only claim in each of these headers is prose until something
+    // checks it. Seven scripts connect to production under that promise.
+    for (const [rel, { klass }] of Object.entries(CLASSIFIED)) {
+      if (klass !== "READ_ONLY_TOOL") continue;
+      const found = writeLines(fs.readFileSync(path.join(BACKEND, rel), "utf8"));
+      expect(found, `${rel} is classified READ_ONLY_TOOL but writes`).toEqual([]);
+    }
+  });
+
+  it("the detector can tell naming from mentioning (self-test)", () => {
+    // Without this, a matcher that had stopped matching would report a clean
+    // tree forever.
     const NAME = ".env.production.local";
-    expect(loadsProductionEnv('const P = "' + NAME + '";\ndotenv.config({ path: P });')).toBe(true);
-    expect(loadsProductionEnv("// reads " + NAME + " to compare hosts")).toBe(false);
-    expect(loadsProductionEnv('dotenv.config({ path: ".env.local" });')).toBe(false);
+    expect(namesProductionFile('const P = "' + NAME + '";')).toBe(true);
+    expect(namesProductionFile("// reads " + NAME + " to compare hosts")).toBe(false);
+    expect(namesProductionFile("/* " + NAME + " */")).toBe(false);
+    expect(namesProductionFile('dotenv.config({ path: ".env.local" });')).toBe(false);
+    // and the write detector, since every READ_ONLY_TOOL entry rests on it
+    expect(writeLines("await prisma.user.deleteMany({})")).toHaveLength(1);
+    expect(writeLines("await prisma.user.findMany({})")).toHaveLength(0);
+    expect(writeLines("await prisma.$executeRawUnsafe(`DELETE FROM users`)")).toHaveLength(1);
+    // the read-only lock is not a write — the exemption is the statement, not the file
+    expect(writeLines("await prisma.$executeRawUnsafe(`SET default_transaction_read_only = on`)")).toHaveLength(0);
+    // ...and exempting that line does not exempt a real write elsewhere in the same file
+    expect(
+      writeLines("await prisma.$executeRawUnsafe(`SET default_transaction_read_only = on`)\nawait prisma.user.delete({})"),
+    ).toHaveLength(1);
   });
 
-  it("the allow-list has no dead entries", () => {
-    for (const rel of ALLOWED) {
+  it("the classification has no dead entries", () => {
+    for (const [rel, { why }] of Object.entries(CLASSIFIED)) {
       const p = path.join(BACKEND, rel);
-      expect(fs.existsSync(p), `${rel} is allow-listed but does not exist`).toBe(true);
-      expect(loadsProductionEnv(fs.readFileSync(p, "utf8")), `${rel} is allow-listed but does not load the file`).toBe(true);
+      expect(fs.existsSync(p), `${rel} is classified but does not exist`).toBe(true);
+      expect(namesProductionFile(fs.readFileSync(p, "utf8")), `${rel} is classified but no longer names the production file`).toBe(true);
+      expect(why.length, `${rel} is classified with no reason`).toBeGreaterThan(10);
     }
   });
 
