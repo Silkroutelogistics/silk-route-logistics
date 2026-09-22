@@ -1229,10 +1229,15 @@
       max-width: 220px;
       aspect-ratio: 1 / 1;
       display: block;
-      background-image: url('/media/srl-logo-1024.png');
+      /* v3.8.bge — the fullcolour master on this cream card. The 150%/center-30%
+         pair was not styling: /media/srl-logo-1024.png is a 683x1024 canvas whose
+         mark occupies ~308px, so the rule zoomed past the padding to fake a centred
+         mark. The master has NO padding, so contain/center is the honest sizing and
+         the mark now fills the box it is given. */
+      background-image: url('/brand/srl-logo-fullcolour.svg');
       background-repeat: no-repeat;
-      background-size: 150% auto;
-      background-position: center 30%;
+      background-size: contain;
+      background-position: center;
     }
     .srl-mark svg, svg.srl-mark {
       width: 100%;

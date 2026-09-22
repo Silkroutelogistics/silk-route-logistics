@@ -1063,10 +1063,14 @@
       width: 60%;
       max-width: 160px;
       aspect-ratio: 1 / 1;
-      background-image: url('/media/srl-logo-1024.png');
+      /* v3.8.bge — fullcolour master, contain/center. The old 150%/center-30%
+         cropped past /media/srl-logo-1024.png's canvas padding; the master has
+         none. Centring matters more here than on the homepage: this mark revolves,
+         and an off-centre background-position made it orbit rather than spin. */
+      background-image: url('/brand/srl-logo-fullcolour.svg');
       background-repeat: no-repeat;
-      background-size: 150% auto;
-      background-position: center 30%;
+      background-size: contain;
+      background-position: center;
       animation: ops-mark-revolve 24s linear infinite;
     }
     @keyframes ops-mark-revolve {

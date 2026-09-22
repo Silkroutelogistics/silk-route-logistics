@@ -16,10 +16,13 @@
 
 .srl-logo-wrap:hover { text-decoration: none; }
 
+/* v3.8.bge — no border-radius. It rounded the corners of /logo.png, an opaque
+   200x200 raster whose mark sat inside a white chip; the radius made that chip
+   look deliberate. The master is an SVG on a transparent ground, so there is no
+   chip to round and a radius would only clip the mark. */
 .srl-logo-img {
   height: 56px;
   width: auto;
-  border-radius: 6px;
   position: relative;
   z-index: 1;
 }
@@ -63,7 +66,9 @@
   pointer-events: none;
   z-index: 2;
   overflow: hidden;
-  border-radius: 6px;
+  /* radius dropped with the logo chip (v3.8.bge) — this box clipped the penguin
+     to the chip outline, and the chip is gone. overflow:hidden still keeps the
+     penguin inside the 56px mark. */
 }
 
 .srl-penguin {

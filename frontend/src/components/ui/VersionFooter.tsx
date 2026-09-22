@@ -18338,7 +18338,13 @@
 // old raster - Organization.logo in the JSON-LD and the default og:image - and both now name the hosted 2048px PNG rather
 // than the SVG, because neither schema.org consumers nor the social crawlers render SVG reliably. The footer mark lost its
 // border-radius with the chip it was rounding.
-export const SRL_VERSION = "3.8.bgd";
+// v3.8.bge - the CSS stops compensating for the old raster. Two page rules painted /media/srl-logo-1024.png at 150% with
+// position center 30%, which was never styling: that export is a 683x1024 canvas whose mark occupies ~308px, so the rule
+// zoomed past the padding to fake a centred mark. The master has no padding, so contain/center is the honest sizing. On
+// /shippers this also fixes motion rather than position - that mark revolves, and an off-centre origin made it orbit
+// rather than spin. srl-logo.css drops two border-radius declarations for the same reason the components did: the radius
+// was rounding the chip baked into /logo.png, and an SVG on a transparent ground has no chip to round.
+export const SRL_VERSION = "3.8.bge";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
