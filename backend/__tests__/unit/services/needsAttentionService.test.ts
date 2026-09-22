@@ -13,6 +13,13 @@
  * first two cases red (no RC_NOT_SENT item; no ACCEPTED query); removing the
  * dead-load exclusion turns the TONU case red; removing the frontend label
  * turns the mirror case red.
+ *
+ * Reason 5b (v3.8.bff): the same reason for an ACCEPTED tender older than the
+ * send SLA with NO RateConfirmation row at all -- the auto-draft failed. The
+ * mock for that query evaluates its own WHERE against the fixture rows, so
+ * "fresher than the SLA is not listed" is a property of the query and not of
+ * an armed answer. Deleting the 5b query turns the "no RC row" cases red and
+ * nothing else.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import * as fs from "fs";
@@ -26,11 +33,26 @@ const NOW = new Date("2026-09-22T12:00:00.000Z");
 const H = 3_600_000;
 
 type Answer = Record<string, any[]>;
-/** Answer each reason's query by the tender status it filters on; record every call. */
+/**
+ * Answer each reason's query by the tender status it filters on; record every
+ * call. Reasons 5a and 5b both ask for ACCEPTED: 5b is the one carrying
+ * rateConfirmations: { none }, and it is answered from the ACCEPTED_NO_RC
+ * fixture FILTERED by the query's own acceptance-age predicate (statusChangedAt
+ * below the cutoff, or respondedAt below it when statusChangedAt is null) --
+ * so a row fresher than the SLA is dropped by the WHERE, not by the fixture.
+ */
 function arm(byStatus: Answer) {
   const calls: any[] = [];
   mockPrisma.loadTender.findMany.mockImplementation(async (args: any) => {
     calls.push(args);
+    if (args.where.status === "ACCEPTED" && args.where.load?.rateConfirmations?.none) {
+      const or: any[] = args.where.OR ?? [];
+      const byChanged = or.find((c) => c.statusChangedAt?.lt)?.statusChangedAt.lt as Date | undefined;
+      const byResponded = or.find((c) => c.statusChangedAt === null)?.respondedAt?.lt as Date | undefined;
+      return (byStatus.ACCEPTED_NO_RC ?? []).filter((t) =>
+        (t.statusChangedAt && byChanged && t.statusChangedAt < byChanged) ||
+        (!t.statusChangedAt && t.respondedAt && byResponded && t.respondedAt < byResponded));
+    }
     return byStatus[args.where.status] ?? [];
   });
   return calls;
@@ -119,6 +141,65 @@ describe("RC_NOT_SENT", () => {
     arm({ ACCEPTED: [{ loadId: "L1", load: { referenceNumber: "SRL-1", rateConfirmations: [] } }] });
     const items = await loadsNeedingAttention();
     expect(items).toEqual([{ loadId: "L1", referenceNumber: "SRL-1", reasons: ["RC_NOT_SENT"] }]);
+  });
+
+  // 5b -- no RateConfirmation row at all (the auto-draft at accept failed).
+
+  it("lists an ACCEPTED tender older than the send SLA that has NO rate confirmation row, with the hours since acceptance", async () => {
+    arm({
+      ACCEPTED_NO_RC: [{ loadId: "L9", statusChangedAt: new Date(NOW.getTime() - 2 * H - 10 * 60_000), respondedAt: null, load: { referenceNumber: "SRL-9" } }],
+    });
+    const items = await loadsNeedingAttention();
+    expect(items).toEqual([{ loadId: "L9", referenceNumber: "SRL-9", reasons: ["RC_NOT_SENT"], rcAcceptedHours: 2 }]);
+  });
+
+  it("does not list an ACCEPTED tender with no rate confirmation row that is FRESHER than the send SLA", async () => {
+    arm({
+      ACCEPTED_NO_RC: [{ loadId: "L9", statusChangedAt: new Date(NOW.getTime() - 30 * 60_000), respondedAt: null, load: { referenceNumber: "SRL-9" } }],
+    });
+    const items = await loadsNeedingAttention();
+    expect(items).toEqual([]);
+  });
+
+  it("reads acceptance from statusChangedAt, and from respondedAt only on a row that has none", async () => {
+    arm({
+      ACCEPTED_NO_RC: [
+        // pre-statusChangedAt row: respondedAt is the acceptance clock
+        { loadId: "L8", statusChangedAt: null, respondedAt: new Date(NOW.getTime() - 5 * H), load: { referenceNumber: "SRL-8" } },
+        // statusChangedAt present and fresh: the stale respondedAt must not make it old
+        { loadId: "L7", statusChangedAt: new Date(NOW.getTime() - 20 * 60_000), respondedAt: new Date(NOW.getTime() - 9 * H), load: { referenceNumber: "SRL-7" } },
+      ],
+    });
+    const items = await loadsNeedingAttention();
+    expect(items).toEqual([{ loadId: "L8", referenceNumber: "SRL-8", reasons: ["RC_NOT_SENT"], rcAcceptedHours: 5 }]);
+  });
+
+  it("asks 5b for exactly its shape: ACCEPTED, no rate confirmation row, accepted before now - RC_SEND_SLA_HOURS, on a live load -- the same dead-load exclusion as 5a", async () => {
+    const calls = arm({});
+    await loadsNeedingAttention();
+    const accepted = calls.filter((c) => c.where.status === "ACCEPTED");
+    expect(accepted, "5a and 5b both ran").toHaveLength(2);
+    const q = accepted.find((c) => c.where.load?.rateConfirmations?.none);
+    expect(q, "the no-row query ran").toBeTruthy();
+    expect(q.where.load.rateConfirmations).toEqual({ none: {} });
+    expect(q.where.deletedAt).toBeNull();
+    expect(q.where.load.deletedAt).toBeNull();
+    const cutoff = new Date(NOW.getTime() - rcSendSlaHours() * H);
+    expect(q.where.OR).toEqual([{ statusChangedAt: { lt: cutoff } }, { statusChangedAt: null, respondedAt: { lt: cutoff } }]);
+    const a = accepted.find((c) => !c.where.load?.rateConfirmations?.none);
+    expect(q.where.load.status.notIn).toEqual(a.where.load.status.notIn);
+  });
+
+  it("5a and 5b merge onto one item per load: if both ever answered for one load, RC_NOT_SENT appears once", async () => {
+    // The two queries are disjoint on a real database (some DRAFT vs none), but the
+    // merge must still be by load: if both ever answered, the reason appears once.
+    arm({
+      ACCEPTED: [{ loadId: "L1", load: { referenceNumber: "SRL-1", rateConfirmations: [{ createdAt: new Date(NOW.getTime() - 2 * H) }] } }],
+      ACCEPTED_NO_RC: [{ loadId: "L1", statusChangedAt: new Date(NOW.getTime() - 3 * H), respondedAt: null, load: { referenceNumber: "SRL-1" } }],
+    });
+    const items = await loadsNeedingAttention();
+    expect(items).toHaveLength(1);
+    expect(items[0].reasons).toEqual(["RC_NOT_SENT"]);
   });
 });
 

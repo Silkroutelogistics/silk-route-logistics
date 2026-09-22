@@ -20,7 +20,12 @@ export type AttentionReason =
   | "EXPIRED_NO_LIVE_TENDER"
   /** The rate confirmation has been out longer than the SLA and is unsigned. */
   | "RC_UNSIGNED_PAST_SLA"
-  /** Accepted, and the rate confirmation drafted at acceptance has sat unsent longer than the send SLA. Nobody has sent it. */
+  /**
+   * Accepted, and no rate confirmation has gone out in longer than the send
+   * SLA: either the draft made at acceptance has sat unsent, or -- the worse
+   * case -- no RateConfirmation row exists at all because the auto-draft
+   * failed. Nobody has sent anything; the carrier has nothing to sign.
+   */
   | "RC_NOT_SENT"
   /** A carrier came off in the last day. The load is back and somebody should know. */
   | "RECENTLY_RELEASED"
@@ -35,6 +40,13 @@ export interface AttentionItem {
   rcUnsignedHours?: number;
   /** Hours the drafted RC has sat unsent, when that is the reason. */
   rcDraftHours?: number;
+  /**
+   * Hours since acceptance when NO rate confirmation row exists for the load at
+   * all (the auto-draft at accept failed). Its presence is the signal: there is
+   * no draft to send, so an AE has to draft one before the send SLA means
+   * anything. Never set alongside rcDraftHours.
+   */
+  rcAcceptedHours?: number;
 }
 
 /**
@@ -43,7 +55,7 @@ export interface AttentionItem {
  * They have genuinely different shapes — two are "a tender in state X", one is
  * an age comparison, one is an absence — and folding them into a single `OR`
  * produces a where-clause nobody can read and a plan Postgres struggles to
- * index. Five narrow queries over an indexed status column is the cheaper side
+ * index. Six narrow queries over an indexed status column is the cheaper side
  * of that trade at any load count this platform will see.
  */
 /** A load that is delivered or dead needs no chasing, whatever its tenders say. Reasons 1 and 5 exclude these. */
@@ -147,6 +159,40 @@ export async function loadsNeedingAttention(limit = 200): Promise<AttentionItem[
     const draftedAt = t.load.rateConfirmations[0]?.createdAt;
     add(t.loadId, t.load.referenceNumber, "RC_NOT_SENT", draftedAt
       ? { rcDraftHours: Math.floor((now.getTime() - draftedAt.getTime()) / 3_600_000) }
+      : undefined);
+  }
+
+  // 5b. Accepted longer than the send SLA with NO rate confirmation row at
+  //     all. The RC is drafted at accept on every path, so a load in this
+  //     state is one where the auto-draft FAILED -- the worse case of the
+  //     same gap, and the one 5a cannot see, because 5a asks for a DRAFT
+  //     that is old and here there is no draft to be old. Same reason, same
+  //     label: from the AE's chair both read "nobody has sent this carrier
+  //     anything". The clock is the tender's own move into ACCEPTED, the
+  //     way reasons 2 and 3 read it; respondedAt is the fallback for a row
+  //     from before statusChangedAt existed (the chain carrierTenders
+  //     already reads). Same dead-load exclusion as 5a.
+  const noRc = await prisma.loadTender.findMany({
+    where: {
+      status: "ACCEPTED",
+      deletedAt: null,
+      OR: [
+        { statusChangedAt: { lt: sendCutoff } },
+        { statusChangedAt: null, respondedAt: { lt: sendCutoff } },
+      ],
+      load: {
+        deletedAt: null,
+        status: { notIn: [...DONE_OR_DEAD] },
+        rateConfirmations: { none: {} },
+      },
+    },
+    select: { loadId: true, statusChangedAt: true, respondedAt: true, load: { select: { referenceNumber: true } } },
+    take: limit,
+  });
+  for (const t of noRc) {
+    const acceptedAt = t.statusChangedAt ?? t.respondedAt;
+    add(t.loadId, t.load.referenceNumber, "RC_NOT_SENT", acceptedAt
+      ? { rcAcceptedHours: Math.floor((now.getTime() - acceptedAt.getTime()) / 3_600_000) }
       : undefined);
   }
 
