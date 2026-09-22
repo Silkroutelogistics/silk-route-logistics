@@ -54,12 +54,14 @@ import {
 import { generateAgreementBuffer } from "../../../src/services/agreementPdfService";
 import { SIGNATORY_NAME, SIGNATORY_TITLE } from "../../../src/config/authority";
 import { generateTrainingCertificate } from "../../../src/services/certificatePdfService";
+import { buildRcCountersign } from "../../../src/lib/rcCountersign";
 import { generateCertVerifyQRBuffer } from "../../../src/utils/qrGenerator";
 import { BROKER_CARRIER_AGREEMENT, CARAVAN_QUICK_PAY_AGREEMENT } from "../../../src/data/agreements";
 import {
   BOL_FIXTURE, RC_FIXTURE, RC_FORM_DATA, INVOICE_FIXTURE, SETTLEMENT_FIXTURE,
   PIN_SIGNATURE, PIN_CARRIER,
   SLC_FORM_DATA, CERT_FULL, CERT_MINIMAL, CERT_VERIFY_CODE,
+  PIN_RC_COUNTERSIGN_AT,
 } from "../../fixtures/pdfPinFixtures";
 
 const GOLDEN = path.resolve(__dirname, "../../fixtures/document-render-pins.json");
@@ -107,6 +109,17 @@ const DOCUMENTS: Record<string, () => Promise<Buffer>> = {
   // absent, a filing reference in their place.
   "bol": async () => collect(await generateBOLFromLoad(BOL_FIXTURE, { trackingToken: "PINTOKEN0001" })),
   "rate-confirmation": async () => collect(generateEnhancedRateConfirmation(RC_FIXTURE, RC_FORM_DATA)),
+  // BOTH STATES ARE PINNED, on the agreement-bca-shell / -executed-shell model.
+  // The un-countersigned entry above is a draft, and keeping it pinned is what
+  // proves the countersign work did not disturb the document a carrier sees
+  // before issuance. This entry is the issued one.
+  "rate-confirmation-countersigned": async () =>
+    collect(
+      generateEnhancedRateConfirmation(RC_FIXTURE, {
+        ...RC_FORM_DATA,
+        rcCountersign: buildRcCountersign(PIN_RC_COUNTERSIGN_AT),
+      }),
+    ),
   "invoice": async () => collect(generateInvoicePDF(INVOICE_FIXTURE)),
   "settlement": async () => collect(generateSettlementPDF(SETTLEMENT_FIXTURE)),
   "agreement-bca": () => generateAgreementBuffer(BROKER_CARRIER_AGREEMENT, {}),

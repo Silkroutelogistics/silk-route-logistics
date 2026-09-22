@@ -149,3 +149,19 @@ export const CERT_MINIMAL = {
   expiresAt: null, carrierName: null, certId: "PIN124-HOS-FUNDAMENTALS",
   verifyCode: CERT_VERIFY_CODE, verifyQrPng: null,
 };
+
+/**
+ * The instant SRL countersigned, for the countersigned Rate Confirmation pin.
+ *
+ * Frozen like everything else here. The render clock is already pinned in
+ * documentRenderPins.test.ts, but this value is not the clock: it is a stored
+ * column, and in production it comes off the row rather than from `new Date()`
+ * at render time. Pinning it keeps the two independent, so a change to the
+ * render clock cannot silently move this pin and vice versa.
+ *
+ * The NAME and TITLE deliberately are not pinned. buildRcCountersign resolves
+ * them from config/authority, which is also where the agreement pins get the
+ * broker signatory, so changing the officer moves both — and it should, because
+ * the documents changed.
+ */
+export const PIN_RC_COUNTERSIGN_AT = new Date("2026-09-01T12:00:00.000Z");
