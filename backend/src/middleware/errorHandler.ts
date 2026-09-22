@@ -4,6 +4,9 @@ import * as Sentry from "@sentry/node";
 import { prisma } from "../config/database";
 import { trackError } from "../services/sentryAlertService";
 import { log } from "../lib/logger";
+import multer from "multer";
+import { env } from "../config/env";
+import { UNSUPPORTED_FILE_TYPE } from "../config/upload";
 
 const isProduction = process.env.NODE_ENV === "production";
 
@@ -93,9 +96,21 @@ export function errorHandler(err: Error, _req: Request, res: Response, _next: Ne
     return;
   }
 
-  // Multer file upload errors
-  if (err.message?.includes("Only PDF, JPEG, and PNG files are allowed")) {
-    res.status(400).json({ error: err.message });
+  // E1b — file-upload refusals are client errors. The branch this replaces
+  // matched the substring "Only PDF, JPEG, and PNG files are allowed", which
+  // config/upload.ts stopped producing when DOC/DOCX were added, so every refused
+  // MIME type fell through to the 500 below. Multer's own limit errors never
+  // matched it at all.
+  if (err instanceof multer.MulterError) {
+    const tooLarge = err.code === "LIMIT_FILE_SIZE";
+    res.status(tooLarge ? 413 : 400).json({
+      error: tooLarge ? `File exceeds the ${Math.round(env.MAX_FILE_SIZE / 1048576)} MB limit` : err.message,
+      code: err.code,
+    });
+    return;
+  }
+  if ((err as any).code === UNSUPPORTED_FILE_TYPE) {
+    res.status(400).json({ error: err.message, code: UNSUPPORTED_FILE_TYPE });
     return;
   }
 

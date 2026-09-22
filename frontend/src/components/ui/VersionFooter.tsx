@@ -18197,7 +18197,8 @@
 // v3.8.bei — carrier welcome tour: six slides, shown once the first time an approved, activated, enrolled carrier reaches the portal; stamped on Finish or Skip (idempotent, first stamp kept); replayable from Settings without restamping. Commit 2 of the BCA arc takes its letter at commit time.
 // v3.8.bej — Task E1a-i: docType is a server-side allowlist (lib/documentTypes); the carrier load-document route refuses an unknown string with 400 UNKNOWN_DOC_TYPE instead of storing it. Vocabulary grouped by class (SETTLEMENT / LOAD / CARRIER / CUSTOMER), the strict LOAD class at the carrier route; /documents/upload follows in E1a-ii.
 // v3.8.bek — Task E1a-ii: /documents/upload validates docType against the class its target resolves to (LOAD when a loadId is present, else the auto-linked CARRIER profile, else CUSTOMER, else the union) and refuses an unknown string with 400; absent stays null. The B7a step-up fixture now attaches its POD/BOL/OTHER to a load the carrier owns, the shape real callers produce.
-export const SRL_VERSION = "3.8.bek";
+// v3.8.bel — Task E1b: a refused upload is a client error. errorHandler matched a message config/upload.ts stopped producing when DOC/DOCX were added, so every refused MIME type and every oversize file was a 500 (logged UNHANDLED, counted toward the spike alert, sent to Sentry, "Internal server error" in production). MulterError → 413 on LIMIT_FILE_SIZE, 400 otherwise; the fileFilter refusal carries code UNSUPPORTED_FILE_TYPE → 400.
+export const SRL_VERSION = "3.8.bel";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
