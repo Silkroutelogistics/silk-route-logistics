@@ -18193,7 +18193,91 @@
 // Also true now, and it was not: unkeyed accessorial lines are not only pre-282a — the two API line editors (PUT /invoices/:id/line-items, PUT /accounting/invoices/:id) replace every line without a key, so a draft they touch is reported and not re-priced; the writer guard walks all of src/ and freezes five ledger writers in the service plus five body-driven writers outside it (the fifth found by the guard, not the review), each with its reason.
 // v3.8.bee — lifecycle-gaps 282 finding (i), landed before the merge per decision 1 (2026-09-21): customerPriceFor converts a minute-denominated quantity to the rate card's hours before multiplying — $75/hr × 120 minutes bills $150, not $9,000; both selects that feed the pricer now fetch the row's unit, and a guard fails if either stops
 // (the only detention writer stores billableMinutes with unit "minutes" against a $/hr card; inert while no customer holds a card, but 282c re-prices every stamped draft line the moment one is entered)
-export const SRL_VERSION = "3.8.bee";
+// v3.8.bdn — carrier-archive recut, step A: the letter guard sees every origin ref and every worktree, and §14 carries the archive ruling
+// check-version-letter.js (lifted from the lifecycle-gaps session's 30d07486) now counts every refs/remotes/origin/* ref and every
+// other worktree's branch as a claim, intersects a branch's own unmerged letters against them (the gap that let v3.8.bdh–bdj reach
+// origin twice on 2026-09-19), warns DOUBLED with every ref and hash, and reads the footer again (execSync's 1 MiB maxBuffer had
+// thrown ENOBUFS on this file since v3.8.bbt, so the guard printed "footer at HEAD: (none)" for five days). CLAUDE.md §14 gains
+// the ratified archive policy: deletedAt + isActive off; suspend is the operational state; both may apply; only in-flight work
+// blocks (DELIVERED-pre-POD included); six offer classes withdraw in-transaction; payables and disputes neither block nor change.
+// Versioned under the peer's reserved letter by instruction (§3.1 would ship tooling + docs unversioned; the letter is what lets
+// the recut chain run continuous from bdo).
+// v3.8.bdo — carrier-archive recut C1: CarrierArchiveReason, the two columns, and the validator that cannot drift from them (B1a lifted onto main)
+// enum CarrierArchiveReason (seven ratified members) + CarrierProfile.archiveReason/archiveNote, nullable, beside deletedAt/deletedBy;
+// migration 20260919151559_carrier_archive_reason (one CREATE TYPE, two ADD COLUMN, additive, no backfill); archiveCarrierSchema with
+// z.nativeEnum over the Prisma enum so the validator and the column cannot disagree. Nothing writes the columns yet — C3 does.
+// v3.8.bdp — carrier-archive recut C2: the archive guard — the reason contract (422 { error, code }) and the in-flight vocabulary, derived from the state machine
+// lib/carrierArchiveGuard.ts (B1b lifted minus its own census): assessArchiveInput, PRE_POD_STATUSES (DELIVERED-pre-POD is in flight — the ruling),
+// isInFlightStatus, BINDING_TENDER_STATES = LIVE ∪ HOLDS_LOAD, the withdraw reason. Pure — no prisma import, no write, and a structural test that
+// keeps it so and forbids any hand list of pipeline statuses. C3 reads it from the census.
+// v3.8.bdq — carrier-archive recut C3: archiveCarrier under the ruling — a reason required, only in-flight work refuses, six classes of open offer
+// withdraw inside the transaction, payables and disputes untouched. The census (lib/carrierReferences.ts) reads the in-flight signals — Load.carrierId on
+// a PRE_POD load (DELIVERED included) and a held tender on such a load — and the withdrawal candidates in one pass; every other class is still counted
+// and named in the 409 (now CARRIER_HOLDS_LIVE_LOADS), but nothing outside the in-flight set refuses. Withdrawals go through the chokepoints that own
+// each table (settleTenders, closeOpenInfoRequestsForStatus) or a scoped updateMany on the tx client; a cascade standing at one of the carrier's
+// positions is advanced past it after the commit, and tenderPosition now passes over a position skipped before it was reached. The lifecycle row
+// carries reasonCode, the note, and what was withdrawn.
+// v3.8.bdr — carrier-archive recut C4: the AE carrier list can show archived rows, and the archive vocabulary has one definition. GET /carrier/all
+// returns deletedAt / deletedBy / archiveReason / archiveNote on every row it serves — a row is only there when the literal ?include_deleted=true put
+// it there; "1", "yes", "TRUE" and "false" all keep the default deletedAt: null fence, which is unchanged. shared/constants/carrierArchiveReasons.ts
+// is now the ONE place the seven reasons and their labels live: the backend reads it, two non-exported pins in carrierController hold it equal to the
+// Prisma enum at compile time in both directions, and carrierArchiveList.test.ts holds the runtime lists equal and type-checks a probe beside the
+// real file. C5 points the carriers page at the same file, so the AE never reads a third hand-kept copy of the vocabulary.
+// v3.8.bds — carrier-archive recut C5: archived carriers on the AE list, only when asked, and read-only when shown. An admin "Show archived"
+// toggle (the same shape and gate as the test-account toggle) sends ?include_deleted=true; each archived row carries a muted Archived badge beside
+// its status pill with the reason label from the one shared vocabulary; the drawer opens with the archive record in full and every control that
+// would change the carrier — including the Suspend… and Archive… buttons main added after B4a was cut — is disabled through one helper with a
+// title that says why. The header keeps describing the pool as it stands: showing archived rows changes the list, never the in-network count or
+// the stat cards. Walked by eye in both modes on a seeded stack, which is what found the header counting archived rows in the first place.
+// v3.8.bdt — carrier-archive recut B6a: every list picker fences archived carriers. Seven carrierProfile.findMany sites offer, place, recommend or
+// reach out to carriers; three already carried deletedAt: null (the AE list, smart match, the bench board) and four did not — the auto-dispatch pool,
+// the capacity feed, proactive outreach, and the AI recommendations endpoint. All seven now do. The auto-dispatch pool also fenced no test carrier: the
+// v3.8.alm census that fenced 37 sites never reached it, so a PLATINUM test account was eligible for a production cascade; it and the recommendations
+// endpoint now carry isTestAccount: false too. A census test enumerates every carrierProfile.findMany in the backend and refuses to pass while one
+// is unclassified, so the eighth picker cannot arrive unfenced.
+// v3.8.bdu — carrier-archive recut B6c: restoring an archived carrier is not a rewind. The carrier returns at REVIEWING whatever it was before,
+// with its application-pipeline mirror moved to REVIEW in the same write, because its insurance, authority and standing aged unwatched for the whole
+// archive and the reason it was archived is what a human reads before the platform may tender to it again. The four archive columns are cleared
+// (the lifecycle row keeps what they said) and the chameleon fingerprint is rebuilt from the row as it stands after the commit — awaited, reported
+// as fingerprintRebuilt, and never fatal to a restore that has already committed. The page's restore control is B4b and does not exist yet.
+// v3.8.bdy — carrier-archive recut B2a: the compliance gate gains two absolutes. CARRIER_ARCHIVED — the gate never read deletedAt, so a by-id
+// tender to an archived carrier went through while every list picker refused it (B6d, first run). CARRIER_NOT_APPROVED — the gate refused only
+// SUSPENDED and REJECTED, by reason string with no code and no absolute marking, so PENDING / REVIEWING / INFO_REQUESTED passed it outright and a
+// blanket override released a suspension for a day; every non-APPROVED state is now one absolute with one code, the two legacy strings kept
+// verbatim. Mirrored in all three legs (gate, override endpoint 409, modal disabled with the remedy named); the modal disable is now generic on
+// overridable:false, which also closes the INSURANCE_EXPIRED half-mirror v3.8.axl left. The B6d proof flips B2_LANDED and a tripwire holds the
+// flag equal to the gate carrying both codes, so neither can lead or lag the other.
+// v3.8.bdz — carrier-archive recut B2b-1: the compliance gate is asked INSIDE the two chokepoints. createTender (the single LoadTender writer)
+// and assignCarrier (the single Load.carrierId writer) checked nothing about the carrier until now, so the refusal was the caller's or nobody's;
+// Phase A found five live paths on which it was nobody's. Both now refuse with CarrierIneligibleError (403, CARRIER_INELIGIBLE, verdict attached)
+// before any write; assignCarrier resolves the profile by user id and refuses a user with none, which keeps instant-book's profile-id-as-user-id
+// dead by name; clearCarrier is not gated; extra.carrierId is refused. A coverage guard freezes every caller of each chokepoint by name (call sites,
+// not importers — instant-book listed, carrierLoads' dead import not). Routes A–D learn to map the refusal in the next commit.
+// v3.8.bea — carrier-archive recut B2b-2: the four live bypass routes learn to map the chokepoint's refusal. assign-match and fall-off-accept
+// answer 403 CARRIER_INELIGIBLE with the codes (and assign-match now assigns before it records the match, so a refusal records nothing);
+// a broadcast SKIPS a refused candidate and names it in the result instead of failing the launch; the cascade's tenderPosition skips the
+// position and advances when the offer is refused, the shape acceptPosition already had; the manual position add refuses at the door. The
+// B6d proof gains the five bypass paths (57/57) and goes red BY NAME per chokepoint: the createTender gate removed turns C and D red, the
+// assignCarrier gate removed turns A and B red. instant-book stays dead, now refused by the gate's no-profile branch rather than by the FK.
+// v3.8.beb — carrier-archive recut B2c: a carrier accepts a fall-off recovery as themselves. The route read body.carrierUserId || req.user.id
+// and admits CARRIER, so a carrier session could put any user on the load; B2b's gate refuses an ineligible one, and an eligible colleague or
+// competitor is not the gate's to refuse. A CARRIER is now bound to req.user.id and is told 403 CARRIER_ACCEPTS_AS_SELF if the field is sent at
+// all; the AE shape (recording a named carrier's phoned-in acceptance) is unchanged.
+// v3.8.bec — carrier-archive recut B2d: PUT /loads/:id no longer writes Load.carrierId. Phase A row F was LIVE — the validator's
+// .passthrough() let carrierId through, and the branch ran its own complianceCheck (by CarrierProfile.id, so a User with no profile
+// passed it) and wrote the column outside assignCarrier, the single writer; the drift guard reported 8/8 green over it because the
+// write rode a hoisted payload (data.carrierId = x; update({ data })) its regexes could not see. The branch is gone: a body carrying
+// carrierId is refused 400 CARRIER_NOT_EDITABLE_HERE naming the real paths (accept a tender, assign-match, release). onLoadAssigned
+// — the staging-then-rollback gate with no remaining caller — is deleted. The guard learns the hoisted shape (11/11) and, re-injected,
+// names controllers/loadController.ts:1113 (hoisted payload data); a controller case pins the 400 with no update.
+// v3.8.bef — carrier-archive recut C6: the Archive… button opens a reason modal instead of posting no body (every click was
+// refused 422 ARCHIVE_REASON_REQUIRED since C3 landed). Reason required from the one shared vocabulary, note optional; the modal
+// does NOT pre-empt the server — a submit with no reason goes out and the server's 422 is what the operator reads, code and
+// message; a 409 (truck under a load) is handed to the page's refusal renderer with the in-flight loads and Suspend instead.
+// Restore… is the ONE control enabled on an archived carrier, ADMIN/CEO only, deliberately outside whenNotArchived; the outcome
+// line says REVIEWING and, when the fingerprint was not rebuilt, says so. carrierTenderLabel gains carrier_archived ("Closed —
+// account archived") so a restored carrier's history never reads "withdrawn" for an offer SRL pulled. 5 page cases + 1 label case.
+export const SRL_VERSION = "3.8.bef";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

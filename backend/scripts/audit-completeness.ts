@@ -7,8 +7,11 @@
  * Output: markdown report to stdout AND written to docs/audit-reports/audit-<ISO-date>.md.
  *
  * Three passes (v1, 2026-05-02):
- *   Pass 1 — Orphan endpoints. Backend PUT/PATCH/DELETE routes with no
- *            apparent frontend caller. Catches v3.8.j-class gaps
+ *   Pass 1 — Orphan endpoints. Backend POST/PUT/PATCH/DELETE routes with no
+ *            apparent frontend caller. (POST joined the scan in the
+ *            carrier-archive arc, B6b, 2026-09-19 — until then a POST route
+ *            with zero callers, such as POST /carriers/:id/verify, was never
+ *            looked at.) Catches v3.8.j-class gaps
  *            (EditLoadModal Item 3, FacilitiesTab edit Item 8.2.3,
  *            customer inactivation v3.8.l, dispatch switching v3.8.k).
  *
@@ -64,7 +67,7 @@ const COMMON_FIELDS = new Set([
 ]);
 
 // HTTP verbs treated as mutating (need a frontend writer).
-const MUTATING_VERBS = ["put", "patch", "delete"] as const;
+const MUTATING_VERBS = ["post", "put", "patch", "delete"] as const;
 
 // ─── Shared file helpers ───────────────────────────────────────────────
 
@@ -144,7 +147,7 @@ function extractEndpoints(): Endpoint[] {
   // Pass 1, so every count this pass has ever reported was over a partial
   // corpus. It surfaced when a route was reformatted to multi-line for an
   // added middleware and silently vanished from the inventory. §13.3 Item 230.
-  const verbRe = /router\.(put|patch|delete)\s*\(/i;
+  const verbRe = /router\.(post|put|patch|delete)\s*\(/i;
   const pathRe = /["'`]([^"'`]+)["'`]/;
   for (const file of files) {
     const content = readFile(file);
@@ -235,7 +238,7 @@ function extractFrontendCalls(
   frontendCache: Map<string, string>,
 ): Map<string, { path: string; file: string }[]> {
   const byVerb = new Map<string, { path: string; file: string }[]>();
-  const re = /api\.(put|patch|delete)\s*\(\s*[`'"]([^`'"]+)[`'"]/gi;
+  const re = /api\.(post|put|patch|delete)\s*\(\s*[`'"]([^`'"]+)[`'"]/gi;
   for (const file of frontendFiles) {
     const content = frontendCache.get(file) ?? readFile(file);
     if (!frontendCache.has(file)) frontendCache.set(file, content);
@@ -262,6 +265,7 @@ function matchRoute(routeSegs: Segment[], callerSegs: Segment[]): Confidence | n
 
   const tail = callerSegs.slice(callerSegs.length - routeSegs.length);
   let sawPatternOnly = false;
+  let literalMatched = false;
 
   for (let i = 0; i < routeSegs.length; i++) {
     const r = routeSegs[i];
@@ -269,7 +273,17 @@ function matchRoute(routeSegs: Segment[], callerSegs: Segment[]): Confidence | n
     if (r.dynamic) continue;            // route param accepts whatever the caller passes
     if (c.dynamic) { sawPatternOnly = true; continue; } // caller may or may not produce it
     if (r.text !== c.text) return null; // two literals that disagree — different route
+    literalMatched = true;
   }
+  // EXACT is a claim that the route's own literals were found in a caller. A
+  // route with no literal segment at all — a bare `/:id` — never made that
+  // claim, and the loop above used to fall through to EXACT for it against
+  // ANY same-verb caller with a one-segment tail, skipping the mount check
+  // that only PATTERN gets. That is how DELETE /carriers/:id and
+  // PUT /carriers/:id read EXACT with zero callers (carrier-archive B6b,
+  // 2026-09-19). No literal evidence means PATTERN at best, and PATTERN has to
+  // look aimed at this route's mount before it counts.
+  if (!literalMatched) return "PATTERN";
   return sawPatternOnly ? "PATTERN" : "EXACT";
 }
 
@@ -300,6 +314,19 @@ function callerLooksMounted(callPath: string, hint: string): boolean {
   return toSegments(callPath).some((seg) => !seg.dynamic && depluralize(seg.text.toLowerCase()) === wanted);
 }
 
+/**
+ * For a route with NO literal segment (a bare `/:id`), "the mount appears
+ * somewhere in the caller" is not enough: `/carriers/chameleon-matches/${id}/review`
+ * contains "carriers" and its one-segment tail matches `/:id` by shape, so the
+ * dead PUT /carriers/:id was attributed to a chameleon review call on the first
+ * B6b run. The mount must sit IMMEDIATELY before the tail the route matched.
+ */
+function callerMountAdjacent(callPath: string, hint: string, routeLen: number): boolean {
+  const segs = toSegments(callPath);
+  const before = segs[segs.length - routeLen - 1];
+  return !!before && !before.dynamic && depluralize(before.text.toLowerCase()) === depluralize(hint);
+}
+
 function classifyEndpoint(
   ep: Endpoint,
   callsByVerb: Map<string, { path: string; file: string }[]>,
@@ -314,8 +341,11 @@ function classifyEndpoint(
     if (!verdict) continue;
 
     // A route whose own literals all matched real literals is self-evidencing.
-    // Anything weaker has to also look like it is aimed at this route's mount.
-    if (verdict === "PATTERN" && !callerLooksMounted(call.path, hint)) continue;
+    // Anything weaker has to also look like it is aimed at this route's mount —
+    // and a route with no literal at all needs the mount right before its tail.
+    const allDynamic = routeSegs.every((s) => s.dynamic);
+    if (verdict === "PATTERN" && allDynamic && !callerMountAdjacent(call.path, hint, routeSegs.length)) continue;
+    if (verdict === "PATTERN" && !allDynamic && !callerLooksMounted(call.path, hint)) continue;
 
     const caller = `${relPath(call.file)} → ${call.path}`;
     if (verdict === "EXACT") return { confidence: "EXACT", caller };
@@ -332,40 +362,6 @@ function classifyEndpoint(
     }
   }
   return best;
-}
-
-function endpointHasCaller(ep: Endpoint, frontendFiles: string[], frontendCache: Map<string, string>): boolean {
-  // Static parts of the route — drop :param tokens, split on /, keep non-empty.
-  const staticParts = ep.path
-    .split("/")
-    .filter((p) => p.length > 0 && !p.startsWith(":"));
-  if (staticParts.length === 0) return true; // Can't search, assume caller exists.
-
-  // Build a regex that finds api.<verb>(`...<part1>.*<part2>...`)
-  // Tolerant — accept template literals with ${...} between parts.
-  const verb = ep.verb.toLowerCase();
-  const verbRegex = new RegExp(`api\\.${verb}\\b`, "i");
-
-  for (const file of frontendFiles) {
-    const content = frontendCache.get(file) ?? readFile(file);
-    if (!frontendCache.has(file)) frontendCache.set(file, content);
-    if (!verbRegex.test(content)) continue;
-
-    // Check that all static parts appear within the file (not necessarily on
-    // same line — a multi-line template literal can span). Naive: just check
-    // each part appears somewhere in the file.
-    const allPartsPresent = staticParts.every((p) => {
-      // Match part as whole-segment or template-literal-adjacent
-      const partRegex = new RegExp(`(?:/|\\$\\{[^}]+\\})${escapeRegex(p)}(?:/|\`|"|'|\\?|\\$)`);
-      return partRegex.test(content);
-    });
-    if (allPartsPresent) {
-      // Final check: api.<verb>(...) appears in the same file as the parts
-      // — this is heuristic but reduces noise from unrelated reads.
-      return true;
-    }
-  }
-  return false;
 }
 
 function escapeRegex(s: string): string {
@@ -540,7 +536,7 @@ function buildReport(
   // ── Pass 1 detail
   lines.push(`## Pass 1 — Orphan endpoints`);
   lines.push("");
-  lines.push(`Backend mutating routes (\`PUT\` / \`PATCH\` / \`DELETE\`) graded by how well a frontend caller could be matched. Matching is segment-based (v2): the route is compared against the TAIL of each caller path, and either side may be dynamic.`);
+  lines.push(`Backend mutating routes (\`POST\` / \`PUT\` / \`PATCH\` / \`DELETE\`) graded by how well a frontend caller could be matched. Matching is segment-based (v2): the route is compared against the TAIL of each caller path, and either side may be dynamic.`);
   lines.push("");
   lines.push(`- **UNRESOLVED** — nothing matched and no verdict is on file. This is the only grade worth calling an orphan.`);
   lines.push("- **DISPOSITIONED** — no caller, but an audit-pass1 verdict sits beside the route in the code. Listed with its reason; not an open question.");
@@ -629,7 +625,7 @@ function buildReport(
 function main() {
   console.error("[audit] Walking backend routes...");
   const endpoints = extractEndpoints();
-  console.error(`[audit] Found ${endpoints.length} mutating endpoints (PUT/PATCH/DELETE).`);
+  console.error(`[audit] Found ${endpoints.length} mutating endpoints (POST/PUT/PATCH/DELETE).`);
 
   console.error("[audit] Walking frontend...");
   const frontendFiles = walkFiles(FRONTEND_SRC, [".tsx", ".ts"]);
@@ -706,4 +702,50 @@ function main() {
   process.stdout.write(report);
 }
 
-main();
+/**
+ * --self-test: the two Pass 1 properties B6b pinned, run against fixtures so a
+ * later edit to the matcher cannot quietly reopen either.
+ */
+function selfTest(): void {
+  const fail = (msg: string) => { console.error("self-test FAILED — " + msg); process.exit(1); };
+  const seg = toSegments;
+
+  // (1) a bare /:id route has no literal evidence: never EXACT.
+  if (matchRoute(seg("/:id"), seg("/customers/${id}")) === "EXACT") fail("bare /:id graded EXACT against a one-segment tail");
+  if (matchRoute(seg("/:id"), seg("/customers/${id}")) !== "PATTERN") fail("bare /:id should grade PATTERN by shape");
+  // and PATTERN must then look aimed at the mount before it counts as a caller
+  const dead = classifyEndpoint(
+    { verb: "DELETE", path: "/:id", file: "backend/src/routes/carriers.ts", line: 1 },
+    new Map([["DELETE", [{ path: "/customers/${id}", file: "x.tsx" }, { path: "/documents/${docId}", file: "y.tsx" }]]]),
+  );
+  if (dead.confidence !== "UNRESOLVED") fail("DELETE /carriers/:id with no /carriers caller graded " + dead.confidence);
+  // the mount appearing SOMEWHERE in the caller is not aimed at a bare /:id — it must be right before the tail
+  const misattributed = classifyEndpoint(
+    { verb: "PUT", path: "/:id", file: "backend/src/routes/carriers.ts", line: 1 },
+    new Map([["PUT", [{ path: "/carriers/chameleon-matches/${id}/review", file: "x.tsx" }]]]),
+  );
+  if (misattributed.confidence !== "UNRESOLVED") fail("PUT /carriers/:id attributed to a chameleon review call: " + misattributed.confidence);
+  const live = classifyEndpoint(
+    { verb: "DELETE", path: "/:id", file: "backend/src/routes/carriers.ts", line: 1 },
+    new Map([["DELETE", [{ path: "/carriers/${id}", file: "x.tsx" }]]]),
+  );
+  if (live.confidence !== "PATTERN") fail("DELETE /carriers/:id with a /carriers/${id} caller graded " + live.confidence);
+  // a route with a literal still grades EXACT when that literal is met
+  if (matchRoute(seg("/:id/restore"), seg("/carriers/${id}/restore")) !== "EXACT") fail("/:id/restore should grade EXACT against /carriers/${id}/restore");
+  if (matchRoute(seg("/:id/restore"), seg("/carriers/${id}/${action}")) !== "PATTERN") fail("/:id/restore should grade PATTERN against a dynamic action");
+
+  // (2) POST is in the scan on both sides.
+  if (!(MUTATING_VERBS as readonly string[]).includes("post")) fail("POST is not a mutating verb");
+  const calls = new Map<string, { path: string; file: string }[]>();
+  const probeRe = /api\.(post|put|patch|delete)\s*\(\s*[`'"]([^`'"]+)[`'"]/gi;
+  const m = probeRe.exec("await api.post(`/carriers/${id}/verify`)");
+  if (!m || m[1] !== "post") fail("api.post caller not extracted");
+  calls.set("POST", [{ path: m[2], file: "z.tsx" }]);
+  const verified = classifyEndpoint({ verb: "POST", path: "/:id/verify", file: "backend/src/routes/carriers.ts", line: 1 }, calls);
+  if (verified.confidence !== "EXACT") fail("POST /:id/verify with an api.post caller graded " + verified.confidence);
+
+  console.log("self-test passed — bare /:id is never EXACT and needs its mount; literals still grade EXACT; POST is scanned on both sides");
+}
+
+if (process.argv.includes("--self-test")) selfTest();
+else main();

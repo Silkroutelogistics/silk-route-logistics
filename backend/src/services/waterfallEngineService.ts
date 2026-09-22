@@ -29,6 +29,7 @@ import { validateLoadStatusTransition } from "../lib/loadStateMachine";
 import { broadcastSSE } from "../routes/trackTraceSSE";
 import { assignCarrier } from "./carrierAssignmentService";
 import { createTender } from "./tenderCreationService";
+import { isCarrierIneligible } from "../lib/carrierEligibility";
 import { settleTenders, withdrawLiveTenders } from "./tenderTransitionService";
 
 const TENDER_WINDOW_MS = 20 * 60 * 1000;            // 20 minutes per position
@@ -193,6 +194,16 @@ async function tenderPosition(waterfallId: string, position: number) {
   });
   if (!pos) return;
 
+  // Carrier-archive recut C3 (CLAUDE.md §14): a position marked skipped BEFORE
+  // the cascade reached it — its carrier was archived while it sat queued — is
+  // passed over, not tendered. Without this the skip was decorative: the
+  // profile still resolves by userId (deletedAt is not filtered here) and the
+  // archived carrier would have been offered the load anyway.
+  if (pos.status === "skipped") {
+    await advanceWaterfall(waterfallId, position + 1);
+    return;
+  }
+
   if (pos.isFallback) {
     await triggerFallbackChain(pos.waterfall.loadId, waterfallId);
     return;
@@ -242,23 +253,45 @@ async function tenderPosition(waterfallId: string, position: number) {
   // async call cannot be an element of $transaction([...]) — awaiting it to
   // build the array would run the insert OUTSIDE the transaction and lose the
   // atomicity with the status flip below. Interactive keeps both in one unit.
-  const tender = await prisma.$transaction(async (tx) => {
-    const t = await createTender({
+  let tender;
+  try {
+    tender = await prisma.$transaction(async (tx) => {
+      const t = await createTender({
+        loadId: pos.waterfall.loadId,
+        carrierProfileId: profile.id,
+        offeredRate: Number(pos.offeredRate ?? 0),
+        expiresAt,
+        waterfallPositionId: pos.id,
+        reason: "waterfall_cascade",
+      }, tx);
+      if (needsFlip) {
+        await tx.load.update({
+          where: { id: pos.waterfall.loadId },
+          data: { status: "TENDERED", tenderedAt: now },
+        });
+      }
+      return t;
+    });
+  } catch (err) {
+    // Carrier-archive recut B2b (Phase A row D, the OFFER half): nothing between
+    // a position being queued and the offer going out asked the gate, so a
+    // carrier archived or blocked after buildWaterfall — or inserted by the
+    // manual add-position route with no gate at all — was offered the load.
+    // createTender now refuses inside the transaction, so no tender and no
+    // status flip land. The position is skipped and the cascade advances, the
+    // same shape acceptPosition already uses for its accept-time refusal.
+    if (!isCarrierIneligible(err)) throw err;
+    await prisma.waterfallPosition.update({ where: { id: pos.id }, data: { status: "skipped" } });
+    await logWaterfallEvent({
       loadId: pos.waterfall.loadId,
-      carrierProfileId: profile.id,
-      offeredRate: Number(pos.offeredRate ?? 0),
-      expiresAt,
-      waterfallPositionId: pos.id,
-      reason: "waterfall_cascade",
-    }, tx);
-    if (needsFlip) {
-      await tx.load.update({
-        where: { id: pos.waterfall.loadId },
-        data: { status: "TENDERED", tenderedAt: now },
-      });
-    }
-    return t;
-  });
+      event: "position_skipped",
+      description: `Position #${pos.position} skipped before offer — compliance: ${err.blocked_reasons.join(", ")}`,
+      actorType: "SYSTEM",
+      metadata: { positionId: pos.id, waterfallId, reason: "compliance", blocked_reasons: err.blocked_reasons, blocked_codes: err.blocked_codes.map((c) => c.code) },
+    });
+    await advanceWaterfall(waterfallId, position + 1);
+    return;
+  }
 
   await prisma.waterfallPosition.update({
     where: { id: pos.id },

@@ -185,8 +185,15 @@ export async function getEligibleCarriers(ctx: LoadContext) {
   const insuranceCutoff = new Date(Date.now() + INSURANCE_SAFETY_DAYS * 24 * 60 * 60 * 1000);
 
   // Base filter: approved, Bronze+, insurance not expiring in 30d, no auto-suspend.
+  // Carrier-archive B6a (2026-09-19): this is the auto-dispatch pool — the one
+  // picker with no human between the query and the tender — and it carried
+  // neither fence. An archived carrier (§14: out of the operation, record kept)
+  // must not be cascaded to; a test carrier must not be either (v3.8.aim), and
+  // the v3.8.alm census that fenced 37 sites did not reach this one.
   const candidates = await prisma.carrierProfile.findMany({
     where: {
+      deletedAt: null,
+      isTestAccount: false,
       onboardingStatus: "APPROVED",
       cppTier: { in: ELIGIBLE_TIERS as unknown as EligibleTier[] },
       autoSuspendedAt: null,

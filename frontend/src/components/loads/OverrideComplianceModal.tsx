@@ -33,8 +33,13 @@ export interface BlockedCode {
     // broker putting freight on an uninsured truck is the one uncovered loss
     // nobody can claw back. The grace period stays a WARNING, because that is
     // SRL deliberately granting time, not an AE waving a lapse through.
-    | "INSURANCE_EXPIRED";
+    | "INSURANCE_EXPIRED"
+    // Carrier-archive recut B2a (2026-09-20) — seventh and eighth absolutes.
+    // `status` rides on the second so the panel can say which state was met.
+    | "CARRIER_ARCHIVED"
+    | "CARRIER_NOT_APPROVED";
   ageMonths?: number;
+  status?: string;
   overridable: boolean;
 }
 
@@ -126,9 +131,21 @@ export function OverrideComplianceModal({
     (c) => c.code === "OFAC_MATCH" || c.code === "FMCSA_REVOKED" || c.code === "OUT_OF_SERVICE",
   );
 
+  // Carrier-archive recut B2a — the archive/status pair. Both name their remedy
+  // (restore; approve) because each is a decision SRL takes elsewhere with its
+  // own authority, and an override is not a stand-in for either.
+  const archived = codes.find((c) => c.code === "CARRIER_ARCHIVED");
+  const notApproved = codes.find((c) => c.code === "CARRIER_NOT_APPROVED");
+  const insuranceExpired = codes.find((c) => c.code === "INSURANCE_EXPIRED" && !c.overridable);
+
   const isAuthorityOverride = !!overridableAuthority;
-  const isHardBlocked =
-    !!hardFloorAuthority || !!unverifiedAuthority || !!terminatedAgreement || !!federalAbsolute;
+  // B2a — the disable is generic on overridable:false, not on a hand-kept list
+  // of codes. The named derivations above exist for their panels and tooltips;
+  // the DISABLE must not depend on remembering to add a name here, because the
+  // one time that was forgotten (INSURANCE_EXPIRED, v3.8.axl) the modal offered
+  // a button the endpoint then refused — the half-mirror §14 names.
+  const anyNonOverridable = codes.find((c) => !c.overridable);
+  const isHardBlocked = !!anyNonOverridable || !!unverifiedAuthority;
   const disabledTooltip = hardFloorAuthority
     ? "Authority under 12 months — hard floor, cannot be overridden"
     : unverifiedAuthority
@@ -141,7 +158,15 @@ export function OverrideComplianceModal({
             ? "FMCSA authority revoked — the carrier must restore it with FMCSA. Not overridable."
             : federalAbsolute?.code === "OUT_OF_SERVICE"
               ? "FMCSA Out-of-Service order — only FMCSA can lift it. Not overridable."
-              : undefined;
+              : archived
+                ? "Carrier record archived — restore it before it can be tendered. Not overridable."
+                : notApproved
+                  ? `Carrier is ${notApproved.status ?? "not approved"} — only an APPROVED carrier may be tendered. Not overridable.`
+                  : insuranceExpired
+                    ? "Insurance expired — a current certificate is the remedy. Not overridable."
+                    : anyNonOverridable
+                      ? "Not overridable — the blocked reason names the remedy."
+                      : undefined;
 
   const { data: status } = useQuery<{
     recentOverrideCount: number;
@@ -319,6 +344,33 @@ export function OverrideComplianceModal({
             <p className="mt-1 text-[#6B7685]">
               An override cannot change a fact held by another party — it would only remove SRL&apos;s
               record of knowing it.
+            </p>
+          </div>
+        )}
+
+        {/* Carrier-archive recut B2a — the archive/status pair gets the same
+            panel treatment as the federal absolutes, for the same reason: the
+            AE most needs to know what WOULD change the answer, and it is not
+            anything on this form. */}
+        {(archived || notApproved) && (
+          <div className="mb-3 p-3 border-l-4 rounded bg-[#F6E3E3] border-[#9B2C2C] text-sm">
+            <p className="font-semibold text-[#9B2C2C]">
+              {archived
+                ? "Carrier record archived — not overridable"
+                : `Carrier is ${notApproved?.status ?? "not approved"} — not overridable`}
+            </p>
+            <p className="mt-1 text-[#3A4A5F]">
+              {archived
+                ? "The record is out of the operation: the login is off and every open offer was withdrawn when it was archived. Restore the carrier from the Carriers page; it returns at REVIEWING and needs approval before a tender."
+                : "Only an APPROVED carrier may be tendered. Approval is its own decision on the Carriers page, with its own audit row — an override is not a stand-in for it."}
+            </p>
+          </div>
+        )}
+        {insuranceExpired && (
+          <div className="mb-3 p-3 border-l-4 rounded bg-[#F6E3E3] border-[#9B2C2C] text-sm">
+            <p className="font-semibold text-[#9B2C2C]">Insurance expired — not overridable</p>
+            <p className="mt-1 text-[#3A4A5F]">
+              Whether cover is in force is the insurer&apos;s fact. A current certificate on file is the remedy; the grace period, where one was granted, is a separate warning and is not this.
             </p>
           </div>
         )}

@@ -20,9 +20,14 @@
  *   - `carrierId:` colon form
  *   - `carrierId` shorthand, followed by `,` `}` or newline
  *   - calls WRAPPED across lines, which this repo's formatter produces
+ *   - a HOISTED payload — `data.carrierId = x` (or `data = { …carrierId… }`)
+ *     assigned earlier and handed to the call as shorthand `data` or
+ *     `data: payload` (carrier-archive recut B2d, 2026-09-21: updateLoad wrote
+ *     Load.carrierId this way for months and this guard reported 8/8 green over
+ *     it — its own comment "exactly one writer" was untrue of the tree)
  *   - and NOT the same text inside a comment
  *
- * All four are self-tested against fixtures below. A guard whose scanner has
+ * All five are self-tested against fixtures below. A guard whose scanner has
  * silently stopped matching reports a perfectly clean tree, which is worse than
  * no guard at all.
  */
@@ -47,10 +52,25 @@ function walk(dir: string, out: string[] = []): string[] {
   return out;
 }
 
-/** Every `load` write whose data block assigns carrierId, colon or shorthand. */
+/**
+ * Does the file assign carrierId onto a hoisted payload identifier anywhere —
+ * `ident.carrierId = …`, `ident["carrierId"] = …`, or `ident = { … carrierId … }`?
+ * File-scoped on purpose: an identifier reused across two functions in one file
+ * is a false positive worth a human's minute, where a scoped search that misses
+ * the assignment is a writer nobody sees.
+ */
+function hoistedAssignsCarrierId(src: string, ident: string): boolean {
+  const esc = ident.replace(/[$]/g, "\\$");
+  const dot = new RegExp(`\\b${esc}\\s*\\.\\s*carrierId\\s*=[^=]`);
+  const bracket = new RegExp(`\\b${esc}\\s*\\[\\s*["']carrierId["']\\s*\\]\\s*=[^=]`);
+  const literal = new RegExp(`\\b${esc}\\s*(?::[^=]*)?=\\s*\\{[^}]*\\bcarrierId\\b`);
+  return dot.test(src) || bracket.test(src) || literal.test(src);
+}
+
+/** Every `load` write whose data block assigns carrierId, colon, shorthand or hoisted. */
 export function findCarrierIdWriters(root = SRC, sources?: Map<string, string>) {
   const re = /(?:prisma|tx|client|db)\s*\.\s*load\s*\.\s*(update|updateMany|create|upsert)\s*\(/g;
-  const hits: { file: string; line: number; shorthand: boolean }[] = [];
+  const hits: { file: string; line: number; shorthand: boolean; hoisted?: string }[] = [];
   const files = sources ? [...sources.keys()] : walk(root);
 
   for (const f of files) {
@@ -67,15 +87,26 @@ export function findCarrierIdWriters(root = SRC, sources?: Map<string, string>) 
       if (end < 0) continue;
       const body = src.slice(m.index, end + 1);
       const dataIdx = Math.max(body.indexOf("data:"), body.indexOf("create:"));
-      if (dataIdx < 0) continue;
-      const data = body.slice(dataIdx);
-      // Colon form OR shorthand (carrierId followed by , } or end of line).
-      if (!/\bcarrierId\s*(:|,|\}|\r?$)/m.test(data)) continue;
-      hits.push({
-        file: path.relative(SRC, f).replace(/\\/g, "/"),
-        line: src.slice(0, m.index).split("\n").length,
-        shorthand: !/\bcarrierId\s*:/.test(data),
-      });
+      const rel = path.relative(SRC, f).replace(/\\/g, "/");
+      const line = src.slice(0, m.index).split("\n").length;
+      if (dataIdx >= 0) {
+        // Is the payload a LITERAL here, or a hoisted identifier (`data: payload`)?
+        const afterKey = body.slice(dataIdx).replace(/^(data|create):\s*/, "");
+        if (!afterKey.startsWith("{")) {
+          const ident = /^([A-Za-z_$][\w$]*)/.exec(afterKey)?.[1];
+          if (ident && hoistedAssignsCarrierId(src, ident)) hits.push({ file: rel, line, shorthand: false, hoisted: ident });
+          continue;
+        }
+        const data = body.slice(dataIdx);
+        // Colon form OR shorthand (carrierId followed by , } or end of line).
+        if (!/\bcarrierId\s*(:|,|\}|\r?$)/m.test(data)) continue;
+        hits.push({ file: rel, line, shorthand: !/\bcarrierId\s*:/.test(data) });
+        continue;
+      }
+      // No `data:` / `create:` key at all: the payload rides as shorthand
+      // `{ where, data }`. Find the identifier and look for a hoisted assignment.
+      const sh = /[{,]\s*(data|payload|updateData|input)\s*[,}]/.exec(body);
+      if (sh && hoistedAssignsCarrierId(src, sh[1])) hits.push({ file: rel, line, shorthand: true, hoisted: sh[1] });
     }
   }
   return hits;
@@ -138,7 +169,7 @@ describe("Load.carrierId has one writer", () => {
   it("nothing outside carrierAssignmentService writes it", () => {
     const offenders = findCarrierIdWriters().filter((h) => !SANCTIONED.has(h.file));
     expect(
-      offenders.map((o) => `${o.file}:${o.line}${o.shorthand ? " (shorthand)" : ""}`),
+      offenders.map((o) => `${o.file}:${o.line}${o.hoisted ? ` (hoisted payload \`${o.hoisted}\`)` : o.shorthand ? " (shorthand)" : ""}`),
       "Load.carrierId decides who gets paid and who appears on the RC and BOL. " +
         "Call assignCarrier / clearCarrier from services/carrierAssignmentService " +
         "instead of writing the column. Offending site(s)",
@@ -160,6 +191,34 @@ describe("Load.carrierId has one writer", () => {
     const hits = findCarrierIdWriters(SRC, fx);
     expect(hits).toHaveLength(1);
     expect(hits[0].shorthand).toBe(true);
+  });
+
+  it("matches a HOISTED payload — `data.carrierId = x` handed to the call as shorthand `data` (the updateLoad shape)", () => {
+    const fx = new Map([[
+      path.join(SRC, "__hoisted__.ts"),
+      `const data: any = {};\nif (carrierId !== undefined) {\n  data.carrierId = carrierId;\n}\nconst load = await prisma.load.update({ where: { id: req.params.id }, data });\n`,
+    ]]);
+    const hits = findCarrierIdWriters(SRC, fx);
+    expect(hits).toHaveLength(1);
+    expect(hits[0].hoisted).toBe("data");
+  });
+
+  it("matches a hoisted payload passed by name — `data: payload` with `payload = { carrierId }` above", () => {
+    const fx = new Map([[
+      path.join(SRC, "__hoisted2__.ts"),
+      `const payload = { status: "BOOKED", carrierId: userId };\nawait prisma.load.update({ where: { id }, data: payload });\n`,
+    ]]);
+    const hits = findCarrierIdWriters(SRC, fx);
+    expect(hits).toHaveLength(1);
+    expect(hits[0].hoisted).toBe("payload");
+  });
+
+  it("does NOT match a hoisted payload that never assigns carrierId", () => {
+    const fx = new Map([[
+      path.join(SRC, "__hoisted3__.ts"),
+      `const data: any = {};\ndata.status = "BOOKED";\ndata.carrierRate = 5;\nawait prisma.load.update({ where: { id }, data });\n`,
+    ]]);
+    expect(findCarrierIdWriters(SRC, fx)).toHaveLength(0);
   });
 
   it("matches chains wrapped across lines — this repo's formatter produces them", () => {

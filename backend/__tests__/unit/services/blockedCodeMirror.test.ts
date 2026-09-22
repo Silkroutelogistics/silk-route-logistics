@@ -25,9 +25,21 @@ const REPO = path.join(BACKEND, "..");
 const BACKEND_FILE = path.join(BACKEND, "src/services/complianceMonitorService.ts");
 const MIRROR_FILE = path.join(REPO, "frontend/src/components/loads/OverrideComplianceModal.tsx");
 
-/** Pull the string-literal members of the BlockedCode `code` union. */
+/**
+ * Pull the string-literal members of the BlockedCode `code` union.
+ *
+ * Comments are blanked first (B2a, 2026-09-20). The union carries a comment
+ * per arc explaining why a code is absolute, and one of them contains a `;`
+ * inside prose — which ended the slice early and read the backend union as
+ * EIGHT members while it had ten, so the guard reported drift against a
+ * mirror that was correct. §19 Sub-pattern 17: prose read as code. The
+ * semicolon stays in that comment as the fixture that proves this.
+ */
 function codeUnion(file: string): string[] {
-  const src = fs.readFileSync(file, "utf8");
+  const src = fs
+    .readFileSync(file, "utf8")
+    .replace(/\/\*[\s\S]*?\*\//g, (m) => m.replace(/[^\n]/g, " "))
+    .replace(/\/\/[^\n]*/g, (m) => " ".repeat(m.length));
   const i = src.indexOf("interface BlockedCode");
   if (i < 0) throw new Error(`BlockedCode interface not found in ${file}`);
   const body = src.slice(i, src.indexOf("}", i));
@@ -144,10 +156,13 @@ describe("BlockedCode mirror", () => {
     const never = [...(/const NEVER_OVERRIDABLE_CHECK_CODES\s*=\s*\[([^\]]+)\]/.exec(ctrl)![1]).matchAll(/"([A-Z_]+)"/g)].map((x) => x[1]);
     expect(
       never.length,
-      "NEVER_OVERRIDABLE_CHECK_CODES should list the six §14 absolutes. Changing " +
+      "NEVER_OVERRIDABLE_CHECK_CODES should list the eight §14 absolutes. Changing " +
         "this number means changing policy — update §14 in the same commit.",
-    ).toBe(6);
+    ).toBe(8);
     expect(never, "INSURANCE_EXPIRED is absolute as of v3.8.axl").toContain("INSURANCE_EXPIRED");
+    // Carrier-archive recut B2a (2026-09-20) — the seventh and eighth.
+    expect(never, "CARRIER_ARCHIVED is absolute as of B2a").toContain("CARRIER_ARCHIVED");
+    expect(never, "CARRIER_NOT_APPROVED is absolute as of B2a").toContain("CARRIER_NOT_APPROVED");
     const overlap = scoped.filter((c) => never.includes(c));
     expect(overlap, overlap.length ? `Absolute(s) accepted as scoped overrides: ${overlap.join(", ")}` : "").toEqual([]);
   });

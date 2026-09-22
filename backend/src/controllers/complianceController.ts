@@ -431,6 +431,15 @@ const NEVER_OVERRIDABLE_CHECK_CODES = [
   // endpoint happily minting an override the gate ignores, which is the
   // half-mirrored state §14 names as the failure mode.
   "INSURANCE_EXPIRED",
+  // Carrier-archive recut B2a (2026-09-20) — the endpoint half of the seventh
+  // and eighth absolutes. An archived record and a non-APPROVED status are
+  // both SRL's own facts about the carrier, but neither is a judgment call an
+  // AE gets to waive for a day: the remedy for the first is a restore and for
+  // the second an approval, and each of those is a decision with its own
+  // authority and its own audit row. Minting an override here would let a
+  // 24-hour waiver stand in for either.
+  "CARRIER_ARCHIVED",
+  "CARRIER_NOT_APPROVED",
 ] as const;
 
 // v3.8.awx — UNUSUAL_OTP_SMS_DISABLE added. It was missing, and the omission

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { CarrierArchiveReason } from "@prisma/client";
 
 export const carrierRegisterSchema = z.object({
   email: z.string().email(),
@@ -128,3 +129,19 @@ export const verifyCarrierSchema = z.object({
   safetyScore: z.number().min(0).max(100).optional(),
   notes: z.string().optional(),
 });
+
+// Carrier-archive arc (2026-09-19). The body of DELETE /api/carriers/:id.
+// `reason` is the Prisma enum itself (z.nativeEnum), not a hand-kept copy --
+// routes/carriers.ts rejectCarrierSchema keeps its own list of RejectionReason
+// and v3.8.bbb had to retire a third copy of the info-request categories; one
+// source, so the validator cannot admit a value the column refuses or refuse
+// one it accepts. The 422 shape is produced by lib/carrierArchiveGuard.ts
+// (assessArchiveInput), which parses with this schema: validateBody would
+// answer 400 { error: "Validation failed", details }, and the load-side archive
+// answers 422 { error, code }. Same act, same contract.
+export const archiveCarrierSchema = z.object({
+  reason: z.nativeEnum(CarrierArchiveReason),
+  archiveNote: z.string().trim().max(500, "archiveNote must be 500 characters or less").optional(),
+});
+
+export type ArchiveCarrierInput = z.infer<typeof archiveCarrierSchema>;
