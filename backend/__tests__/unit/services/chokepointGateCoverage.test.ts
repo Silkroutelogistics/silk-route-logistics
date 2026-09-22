@@ -14,7 +14,7 @@
  *   2. The set of files that CALL each chokepoint is frozen by name — a sixth
  *      entry surface is a deliberate edit here, not an accident. Call sites,
  *      not importers: carrierLoads.ts imports assignCarrier and never calls it.
- *      instant-book is on the assignCarrier list BY NAME (Item 286 / the §13.3
+ *      instant-book is on the assignCarrier list BY NAME (Item 291 / the §13.3
  *      instant-book repair item): it passes a CarrierProfile id where a User id
  *      belongs and stays dead by construction — now refused by the gate's
  *      "no profile for that user" branch rather than by an FK violation.

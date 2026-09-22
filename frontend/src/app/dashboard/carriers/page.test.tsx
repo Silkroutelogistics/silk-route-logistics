@@ -392,7 +392,7 @@ describe("C6 — Restore…", () => {
     await waitFor(() => expect(api.put).toHaveBeenCalledWith("/carriers/cp-fraud/restore"));
     const status = await screen.findByRole("status");
     expect(status.textContent).toContain("REVIEWING");
-    // fingerprintRebuilt:false deserves its own visible line (Item 286.7).
+    // fingerprintRebuilt:false deserves its own visible line (Item 291.7).
     expect(status.textContent).toMatch(/NOT rebuilt/);
   });
 

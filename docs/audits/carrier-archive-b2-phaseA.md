@@ -146,19 +146,19 @@ Phase A called `updateLoad`'s carrierId branch dead behind the validator. It was
 
 ### 7.3 B5 — record custody at the database
 
-`prisma/_pending_migrations/20260921120000_carrier_profile_fk_restrict` (commit `1aaf3165`, unversioned). The directive named a source branch, `hold/carrier-custody-restrict`, and six FKs. The branch does not exist anywhere — no local ref, no origin ref, no reflog, no doc — and the count is **seven**, derived from `schema.prisma` and the live migration SQL, which agree: five CASCADE (`load_tenders`, `quick_pay_enrollments`, `quick_pay_elections`, `carrier_training_requirements`, `info_requests`) and two SET NULL (`drivers`, `dock_schedules`). Authored, gated in its header, verified on a from-zero container (chain of 75 applied; the 14 authored ALTERs are byte-identical to what `prisma migrate diff` generates for the companion schema hunk; a hard delete of a carrier holding a driver is refused 23503 after and NULLs the driver before). **Not applied, and not in `prisma/migrations/`**: the gate has to read the seven constraint names off production first, by hand, because a name production does not carry would fail the deploy without `IF EXISTS` and leave a FAILED migration blocking every later deploy. The gate runner is local-only on purpose — see §13.3 Item 286.10.
+`prisma/_pending_migrations/20260921120000_carrier_profile_fk_restrict` (commit `1aaf3165`, unversioned). The directive named a source branch, `hold/carrier-custody-restrict`, and six FKs. The branch does not exist anywhere — no local ref, no origin ref, no reflog, no doc — and the count is **seven**, derived from `schema.prisma` and the live migration SQL, which agree: five CASCADE (`load_tenders`, `quick_pay_enrollments`, `quick_pay_elections`, `carrier_training_requirements`, `info_requests`) and two SET NULL (`drivers`, `dock_schedules`). Authored, gated in its header, verified on a from-zero container (chain of 75 applied; the 14 authored ALTERs are byte-identical to what `prisma migrate diff` generates for the companion schema hunk; a hard delete of a carrier holding a driver is refused 23503 after and NULLs the driver before). **Not applied, and not in `prisma/migrations/`**: the gate has to read the seven constraint names off production first, by hand, because a name production does not carry would fail the deploy without `IF EXISTS` and leave a FAILED migration blocking every later deploy. The gate runner is local-only on purpose — see §13.3 Item 291.10.
 
 ### 7.4 Counts, corrected to source
 
 | The directive said | Source says | Where |
 |---|---|---|
-| six list pickers | seven | B6a (`scripts/find-prisma-calls`) — Item 286.1 |
-| six FKs | seven | B5 — Item 286.9 |
+| six list pickers | seven | B6a (`scripts/find-prisma-calls`) — Item 291.1 |
+| six FKs | seven | B5 — Item 291.9 |
 | row F dead | live | bec — §7.2 |
 
 ### 7.5 Left open by this arc, on purpose
 
 - The peer's C6 (reason modal): the Archive… button posts no body and gets 422 until it lands. Before merge.
-- B4b / C7: the page has no restore control (Item 286.7).
-- Item 286.5: whether an archived carrier's fingerprint should match new registrants — a §14-text question.
+- B4b / C7: the page has no restore control (Item 291.7).
+- Item 291.5: whether an archived carrier's fingerprint should match new registrants — a §14-text question.
 - The B5 production gate and the move into `prisma/migrations/` with the schema hunk — one commit, after merge, by hand.

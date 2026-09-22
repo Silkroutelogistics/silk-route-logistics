@@ -13,7 +13,7 @@
 --
 -- WHY SEVEN AND NOT SIX. The directive said six. Both schema.prisma and the live
 -- migration SQL were read; there are seven relations onto carrier_profiles whose
--- ON DELETE is destructive. Derived from source, like 286.1's seven pickers.
+-- ON DELETE is destructive. Derived from source, like 291.1's seven pickers.
 --
 --   CASCADE  load_tenders.carrierId                           load_tenders_carrierId_fkey
 --   CASCADE  quick_pay_enrollments.carrier_profile_id         quick_pay_enrollments_carrier_profile_id_fkey
@@ -32,7 +32,7 @@
 -- none of the seven child rows and is unaffected; prisma/seed.ts TRUNCATEs;
 -- e2e/ never hard-deletes a carrier. ~28 backend/scripts/_*proof.ts cleanups
 -- rely on CASCADE and will fail their cleanup on a container built after this
--- applies — dev-only residue, recorded in §13.3 Item 286, not fixed here.
+-- applies — dev-only residue, recorded in §13.3 Item 291, not fixed here.
 --
 -- NO `IF EXISTS`, DELIBERATELY. A constraint name that does not match
 -- production FAILS the deploy loudly rather than half-applying (Item 208).
