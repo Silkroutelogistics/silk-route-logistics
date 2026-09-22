@@ -18398,6 +18398,16 @@
 // it sits under. It said sign before dispatch while GOVERNING TERMS says
 // dispatch itself is binding acceptance; one document told a carrier two
 // different things about when it takes effect.
+// v3.8.bgj — one source file stops being invisible to the search tools, and audit-completeness gains a Pass 0 that says so.
+// backend/src/services/documentChainSelftest.ts carried three raw control bytes (0x00 0x01 0x02) inside a corrupted-PDF
+// fixture literal. Item 291.14 recorded the cause as UTF-16 and prescribed re-encoding; both are wrong — the file was valid
+// UTF-8 throughout, and one literal NUL was the whole of it, so re-encoding would have been a no-op. MEASURED: ripgrep
+// traversing a directory omits such a file entirely and exits 1, reporting nothing (the harness Grep tool IS ripgrep);
+// grep -rl still finds it, and grep -rn degrades to "Binary file ... matches", keeping the name and losing the line number.
+// The bytes become \x00\x01\x02 — the compiled value is unchanged, and the file is searchable again. Pass 0 fails the audit
+// on any source file a search tool would skip, checking invisibility rather than encoding, with a vacuity tripwire and a
+// self-test fixture. Repo sweep: exactly ONE such file existed. The fs-based censuses were never blind; ad-hoc grep was.
+// bfg-bft reserved by logo-final; bfx-bgb held by the RC countersignature session; bgc-bgg by logo-final.
 // v3.8.bgl - C4c: an AE's accept is not the carrier's own act. acceptPosition
 // labelled the settle actor CARRIER unconditionally while its route admits AE
 // roles, so an AE's click was recorded as the carrier accepting - the mirror of
