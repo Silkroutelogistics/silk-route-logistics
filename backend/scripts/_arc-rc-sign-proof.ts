@@ -82,6 +82,11 @@ async function main() {
     },
   });
   const profile = await prisma.carrierProfile.create({ data: { userId: cu.id, companyName: "RCS " + stamp } });
+  // BCA Commit 2 -- a rate confirmation is signed UNDER an executed Broker-Carrier
+  // Agreement; without this row the signing step below is refused 409.
+  await prisma.carrierAgreement.create({
+    data: { carrierId: profile.id, templateName: "broker-carrier", version: "test", status: "SIGNED", signedAt: new Date(), signedByName: "Proof Signer" },
+  });
   const load = await prisma.load.create({
     data: {
       referenceNumber: "RCS-" + stamp, posterId: ae.id, status: "BOOKED", carrierId: cu.id,
@@ -238,6 +243,7 @@ async function main() {
   await prisma.rateConfirmation.deleteMany({ where: { loadId: load.id } });
   await prisma.loadTender.deleteMany({ where: { loadId: load.id } });
   await prisma.load.delete({ where: { id: load.id } }).catch(() => {});
+  await prisma.carrierAgreement.deleteMany({ where: { carrierId: profile.id } });
   await prisma.carrierProfile.deleteMany({ where: { companyName: { contains: String(stamp) } } });
   await prisma.staffSession.deleteMany({ where: { userId: { in: [ae.id, cu.id] } } }).catch(() => {});
   await prisma.auditLog.deleteMany({ where: { userId: { in: [ae.id, cu.id] } } }).catch(() => {});

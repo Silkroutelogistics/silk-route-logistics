@@ -74,6 +74,11 @@ async function main() {
     data: { userId: cu.id, companyName: `Peace Transport ${stamp}`, onboardingStatus: "APPROVED", status: "APPROVED",
       insuranceExpiry: new Date(Date.now() + 365 * 86_400_000) },
   });
+  // BCA Commit 2 -- a rate confirmation is signed UNDER an executed Broker-Carrier
+  // Agreement; without this row the signing step below is refused 409.
+  await prisma.carrierAgreement.create({
+    data: { carrierId: carrier.id, templateName: "broker-carrier", version: "test", status: "SIGNED", signedAt: new Date(), signedByName: "Proof Signer" },
+  });
 
   async function makeLoad(ref: string, status: "TENDERED" | "BOOKED", carrierUserId: string | null) {
     const l = await prisma.load.create({
@@ -207,6 +212,7 @@ async function main() {
     await prisma.loadTender.deleteMany({ where: { loadId: { in: madeLoads } } });
     await prisma.shipment.deleteMany({ where: { loadId: { in: madeLoads } } });
     await prisma.load.deleteMany({ where: { id: { in: madeLoads } } });
+    await prisma.carrierAgreement.deleteMany({ where: { carrierId: carrier.id } });
     await prisma.carrierProfile.deleteMany({ where: { id: carrier.id } });
     // The route-level auditLog middleware wrote rows for the AE; they hold the
     // user by FK. Sweep this run and any earlier run that died in cleanup.

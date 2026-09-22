@@ -86,6 +86,11 @@ async function main() {
     },
   });
   const profile = await prisma.carrierProfile.create({ data: { userId: cu.id, companyName: "FAN " + stamp } });
+  // BCA Commit 2 -- a rate confirmation is signed UNDER an executed Broker-Carrier
+  // Agreement; without this row the signing step below is refused 409.
+  await prisma.carrierAgreement.create({
+    data: { carrierId: profile.id, templateName: "broker-carrier", version: "test", status: "SIGNED", signedAt: new Date(), signedByName: "Proof Signer" },
+  });
   const customer = await prisma.customer.create({ data: { name: "Fanout Customer " + stamp } });
   // A contact that WANTS the link, so "nothing was sent" can never be an
   // accident of there being nobody to send to.
@@ -197,6 +202,7 @@ async function main() {
   }
   await prisma.customerContact.deleteMany({ where: { customerId: customer.id } }).catch(() => {});
   await prisma.customer.delete({ where: { id: customer.id } }).catch(() => {});
+  await prisma.carrierAgreement.deleteMany({ where: { carrierId: profile.id } });
   await prisma.carrierProfile.deleteMany({ where: { companyName: { contains: String(stamp) } } });
   await prisma.staffSession.deleteMany({ where: { userId: { in: [ae.id, cu.id] } } }).catch(() => {});
   await prisma.auditLog.deleteMany({ where: { userId: { in: [ae.id, cu.id] } } }).catch(() => {});
