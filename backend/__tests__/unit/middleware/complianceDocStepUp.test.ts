@@ -113,9 +113,14 @@ describe("/documents/upload — conditional on role and declared type", () => {
   });
 
   it("a POD, a BOL and an OTHER need no code — the frictionless half of D1", async () => {
+    // E1a-ii: these are LOAD documents, so the fixture attaches them to a load the
+    // carrier owns. A POD with no loadId is not a shape any real caller produces
+    // and is now refused by the docType allowlist (it would resolve to the
+    // CARRIER class of the auto-linked profile), which is the point of that guard.
+    mockPrisma.load.findUnique.mockResolvedValue({ posterId: "u-ae", carrierId: CARRIER_USER, customer: null });
     const a = await app();
     for (const docType of ["POD", "BOL", "OTHER"]) {
-      const r = await post(a, "/api/documents/upload", "CARRIER", { docType });
+      const r = await post(a, "/api/documents/upload", "CARRIER", { docType, loadId: "load-1" });
       expect(r.status, docType).toBe(201);
     }
     expect(uploadFile).toHaveBeenCalledTimes(3);

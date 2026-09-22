@@ -85,3 +85,11 @@ export function normalizeDocType(raw: unknown): string | null {
 export function isAllowedDocType(docType: string, cls: DocTypeClass): boolean {
   return SETS[cls].has(docType);
 }
+
+/** Which class a /documents/upload target resolves to. A load wins over an entity. */
+export function docTypeClassFor(target: { loadId?: string | null; entityType?: string | null }): DocTypeClass {
+  if (target.loadId) return "LOAD";
+  if (target.entityType === "CARRIER") return "CARRIER";
+  if (target.entityType === "CUSTOMER") return "CUSTOMER";
+  return "ANY";
+}

@@ -5,13 +5,13 @@
  * arrived. The settlement checklist (integrationService SETTLEMENT_DOC_TYPES)
  * matches exact strings, so a typo produced a row nothing would ever read. The
  * vocabulary now lives in lib/documentTypes and each route refuses anything
- * outside it with a 400 — driven here through the REAL router over HTTP,
+ * outside it with a 400 — driven here through the REAL routers over HTTP,
  * because a pure test of the lib proves the list and nothing about whether a
  * route consults it.
  *
  * Adversarially verified at authoring: removing the isAllowedDocType check from
- * the route turns exactly its refusal case red; dropping TEMP_LOG from the lib
- * turns the parity case red. /documents/upload is E1a-ii.
+ * either route turns exactly that route's refusal case red; dropping TEMP_LOG
+ * from the lib turns the parity case red.
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import express from "express";
@@ -26,6 +26,7 @@ import {
   CUSTOMER_DOC_TYPES,
   normalizeDocType,
   isAllowedDocType,
+  docTypeClassFor,
 } from "../../../src/lib/documentTypes";
 
 const mockPrisma = prisma as any;
@@ -70,12 +71,22 @@ vi.mock("../../../src/services/shipperLoadNotifyService", () => ({ sendPODToCont
 vi.mock("../../../src/services/loadActivityService", () => ({ logLoadActivity: vi.fn().mockResolvedValue(undefined) }));
 vi.mock("../../../src/routes/trackTraceSSE", () => ({ broadcastSSE: vi.fn() }));
 vi.mock("../../../src/lib/loginFlags", () => ({ flagSensitiveActionAfterNewLogin: vi.fn().mockResolvedValue(undefined) }));
+// The 2FA wall (v3.8.atm) sits on the documents router; it is exercised by its
+// own proof, not here. The CARRIER test principal has no TOTP row.
+vi.mock("../../../src/middleware/requireTotpEnrolled", () => ({
+  requireTotpEnrolled: (_r: any, _s: any, n: any) => n(),
+}));
+vi.mock("../../../src/middleware/complianceDocStepUp", () => ({
+  requireStepUpForCarrierComplianceDoc: (_r: any, _s: any, n: any) => n(),
+}));
 
 async function app() {
   const carrierLoads = (await import("../../../src/routes/carrierLoads")).default;
+  const documents = (await import("../../../src/routes/documents")).default;
   const a = express();
   a.use(express.json());
   a.use("/api/carrier-loads", carrierLoads);
+  a.use("/api/documents", documents);
   return a;
 }
 
@@ -107,6 +118,14 @@ describe("the vocabulary", () => {
     expect(normalizeDocType(undefined)).toBeNull();
     expect(normalizeDocType("")).toBeNull();
     expect(normalizeDocType(42)).toBeNull();
+  });
+
+  it("resolves the class from the target — a load wins over an entity", () => {
+    expect(docTypeClassFor({ loadId: "l1", entityType: "CARRIER" })).toBe("LOAD");
+    expect(docTypeClassFor({ entityType: "CARRIER" })).toBe("CARRIER");
+    expect(docTypeClassFor({ entityType: "CUSTOMER" })).toBe("CUSTOMER");
+    expect(docTypeClassFor({ entityType: "INVOICE" })).toBe("ANY");
+    expect(docTypeClassFor({})).toBe("ANY");
   });
 
   it("a customer contract is not a carrier document — the class is scoped, not a flat union", () => {
@@ -147,5 +166,56 @@ describe("POST /carrier-loads/:id/documents", () => {
       .attach("file", PDF, { filename: "x.pdf", contentType: "application/pdf" });
     expect(res.status).toBe(200);
     expect(mockPrisma.document.create.mock.calls[0][0].data.docType).toBe("SIGNED_BOL_DEL");
+  });
+});
+
+describe("POST /documents/upload", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockPrisma.document.create.mockResolvedValue({ id: "doc-1" });
+    mockPrisma.carrierProfile.findUnique.mockResolvedValue({ id: "cp-1", userId: "u-carrier" });
+  });
+
+  it("refuses an unknown docType with 400 and stores nothing (AE caller)", async () => {
+    const res = await request(await app())
+      .post("/api/documents/upload")
+      .set("x-test-role", "ADMIN")
+      .field("docType", "FOO")
+      .field("loadId", "load-1")
+      .attach("files", PDF, { filename: "x.pdf", contentType: "application/pdf" });
+    expect(res.status).toBe(400);
+    expect(res.body.code).toBe("UNKNOWN_DOC_TYPE");
+    expect(mockPrisma.document.create).not.toHaveBeenCalled();
+  });
+
+  it("refuses a load-class type on a carrier's compliance upload — the class follows the auto-linked target", async () => {
+    // A carrier with no loadId is auto-linked to their CARRIER profile; POD is
+    // not a carrier document, so it is refused rather than filed on the profile.
+    const res = await request(await app())
+      .post("/api/documents/upload")
+      .set("x-test-role", "CARRIER")
+      .field("docType", "POD")
+      .attach("files", PDF, { filename: "x.pdf", contentType: "application/pdf" });
+    expect(res.status).toBe(400);
+    expect(res.body.code).toBe("UNKNOWN_DOC_TYPE");
+  });
+
+  it("accepts a carrier compliance type on the auto-linked profile", async () => {
+    const res = await request(await app())
+      .post("/api/documents/upload")
+      .set("x-test-role", "CARRIER")
+      .field("docType", "w9")
+      .attach("files", PDF, { filename: "x.pdf", contentType: "application/pdf" });
+    expect(res.status).toBe(201);
+    expect(mockPrisma.document.create.mock.calls[0][0].data.docType).toBe("W9");
+  });
+
+  it("an absent docType is still stored as null — absent is not unknown", async () => {
+    const res = await request(await app())
+      .post("/api/documents/upload")
+      .set("x-test-role", "ADMIN")
+      .attach("files", PDF, { filename: "x.pdf", contentType: "application/pdf" });
+    expect(res.status).toBe(201);
+    expect(mockPrisma.document.create.mock.calls[0][0].data.docType).toBeNull();
   });
 });

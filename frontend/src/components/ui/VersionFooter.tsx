@@ -18196,7 +18196,8 @@
 // v3.8.beh — AGREEMENT_MISSING is the seventh absolute (a never-signed BCA can no longer be tendered by any override; it fired live 2026-09-18 on SRL-121492), and lib/agreementState is the ONE predicate the tender gate, Compass and the RC signature all call. Commit 1 of 2.
 // v3.8.bei — carrier welcome tour: six slides, shown once the first time an approved, activated, enrolled carrier reaches the portal; stamped on Finish or Skip (idempotent, first stamp kept); replayable from Settings without restamping. Commit 2 of the BCA arc takes its letter at commit time.
 // v3.8.bej — Task E1a-i: docType is a server-side allowlist (lib/documentTypes); the carrier load-document route refuses an unknown string with 400 UNKNOWN_DOC_TYPE instead of storing it. Vocabulary grouped by class (SETTLEMENT / LOAD / CARRIER / CUSTOMER), the strict LOAD class at the carrier route; /documents/upload follows in E1a-ii.
-export const SRL_VERSION = "3.8.bej";
+// v3.8.bek — Task E1a-ii: /documents/upload validates docType against the class its target resolves to (LOAD when a loadId is present, else the auto-linked CARRIER profile, else CUSTOMER, else the union) and refuses an unknown string with 400; absent stays null. The B7a step-up fixture now attaches its POD/BOL/OTHER to a load the carrier owns, the shape real callers produce.
+export const SRL_VERSION = "3.8.bek";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

@@ -9,6 +9,7 @@ import { validateAndNotifyPOD } from "../services/shipperNotificationService";
 import { onPODUploaded, syncSettlementDocFlags } from "../services/integrationService";
 import { log } from "../lib/logger";
 import { flagSensitiveActionAfterNewLogin } from "../lib/loginFlags";
+import { normalizeDocType, isAllowedDocType, docTypeClassFor } from "../lib/documentTypes";
 import { SHIPPER_VISIBLE_DOC_TYPES } from "./shipperPortalController";
 
 /**
@@ -129,7 +130,8 @@ export async function uploadDocuments(req: AuthRequest, res: Response) {
     }
   }
 
-  let { loadId, invoiceId, entityType, entityId, docType } = req.body;
+  let { loadId, invoiceId, entityType, entityId } = req.body;
+  const docType: string | undefined = normalizeDocType(req.body.docType) ?? undefined;
 
   // Auto-link carrier-uploaded compliance docs to their carrier profile
   if (!entityType && req.user!.role === "CARRIER") {
@@ -138,6 +140,15 @@ export async function uploadDocuments(req: AuthRequest, res: Response) {
       entityType = "CARRIER";
       entityId = carrierProfile.id;
     }
+  }
+
+  // E1a — the vocabulary is an allowlist (lib/documentTypes), scoped by what the
+  // document attaches to; an unknown string is refused rather than stored. Runs
+  // after the auto-link so a carrier's compliance upload resolves to the CARRIER
+  // class. An absent docType stays null, as before — absent is not unknown.
+  if (docType && !isAllowedDocType(docType, docTypeClassFor({ loadId, entityType }))) {
+    res.status(400).json({ error: `Unknown document type "${docType}"`, code: "UNKNOWN_DOC_TYPE" });
+    return;
   }
 
   // v3.8.aqn — the caller must actually own whatever they are attaching to.
