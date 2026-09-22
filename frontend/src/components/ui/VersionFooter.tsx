@@ -18303,7 +18303,13 @@
 // v3.8.bfe — Task E (AE): Needs Attention gains RC_NOT_SENT — an ACCEPTED tender whose rate confirmation has sat in DRAFT longer than RC_SEND_SLA_HOURS (env, default 1, bounded 0.25..168). Same shape as RC_UNSIGNED_PAST_SLA, whose clock starts only at RC_SENT and so could not see the accept-to-send gap; dead loads excluded the way reason 1 excludes them (SRL-121492 carries an ACCEPTED tender and a DRAFT RC on a TONU). rcDraftHours on the item; label on the AE board.
 // v3.8.bff — Task E (AE follow-up): RC_NOT_SENT also lists an ACCEPTED tender older than RC_SEND_SLA_HOURS with NO RateConfirmation row at all — the auto-draft at accept failed, so there is no draft to send and reason 5a (a DRAFT that is old) cannot see it. Same reason, same label; the clock is the tender’s own move into ACCEPTED (statusChangedAt, respondedAt as the pre-axo fallback), and the item carries rcAcceptedHours rather than rcDraftHours so the two shapes stay distinguishable. Same dead-load exclusion as 5a.
 // v3.8.bfu — Task E (bez follow-up): RATE_CON leaves the carrier Documents picker, and the load-document seam refuses it from a CARRIER actor (400 DOC_TYPE_NOT_CARRIER_UPLOADABLE) whichever upload route carried it — the signed rate confirmation is system-generated, frozen by contentHash and signed through the token page, so a carrier-uploaded copy would be a second, unverified record of the same document. AE roles keep the type. One list (CARRIER_UPLOADABLE_LOAD_DOC_TYPES) in lib/documentTypes. bfg–bft reserved by the logo-final session; bef/beg by carrier-archive.
-export const SRL_VERSION = "3.8.bfu";
+// v3.8.bfw — carrier-archive B5 applied: the seven carrier_profiles FKs that CASCADE (load_tenders, quick_pay_enrollments,
+// quick_pay_elections, carrier_training_requirements, info_requests) or SET NULL (drivers, dock_schedules) on a hard delete
+// become RESTRICT, so §14 CARRIER ARCHIVE's "Nothing is deleted" is enforced by the database rather than remembered by the
+// application. Migration moved from _pending_migrations/ into prisma/migrations/ with its seven-line schema hunk as one
+// commit, ONLY after Wasi ran the header gate against production by hand (2026-09-22: 7 rows, c x5 / n x2, 0 orphans).
+// The 14 ALTERs are byte-identical to the authored, container-proven file; only the header comment records the move.
+export const SRL_VERSION = "3.8.bfw";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
