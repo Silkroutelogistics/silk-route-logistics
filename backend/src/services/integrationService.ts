@@ -526,8 +526,12 @@ export function quickPayDueDate(speed: QuickPaySpeed, tier: string | null | unde
 
 // ── Create Carrier Pay entry on delivery ──
 async function createCarrierPayOnDelivery(load: any) {
-  // Check for duplicate
-  const existingPay = await prisma.carrierPay.findFirst({ where: { loadId: load.id } });
+  // Exactly once per load. E1c — the seam can fire this from the POD path as
+  // well as the DELIVERED flip, so the guard has to hold across callers. A VOID
+  // row is not a settlement: it is the record of one that was cancelled (TONU,
+  // cancellation), and it must not block the real one if the load later
+  // delivers. Every live status blocks.
+  const existingPay = await prisma.carrierPay.findFirst({ where: { loadId: load.id, status: { not: "VOID" } } });
   if (existingPay) {
     log.info(`[Integration] CarrierPay already exists for load ${load.id}`);
     return;

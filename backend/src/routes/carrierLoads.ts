@@ -7,7 +7,6 @@ import { validateBody } from "../middleware/validate";
 import { upload } from "../config/upload";
 import { uploadFile } from "../services/storageService";
 import { nextShipmentNumber } from "../controllers/shipmentController";
-import { sendPODToContact } from "../services/shipperLoadNotifyService";
 import { sendShipperDeliveryEmail, sendShipperMilestoneEmail } from "../services/shipperNotificationService";
 import { autoGenerateInvoice } from "../services/invoiceService";
 import { onLoadDelivered } from "../services/integrationService";
@@ -21,7 +20,7 @@ import { flagSensitiveActionAfterNewLogin } from "../lib/loginFlags";
 import { validateLoadStatusTransition } from "../lib/loadStateMachine";
 import { markScheduledCheckCallsAnswered } from "../services/checkCallAutomation";
 import { actualEventStamps } from "../lib/loadEventStamps";
-import { normalizeDocType, isAllowedDocType } from "../lib/documentTypes";
+import { recordLoadDocument, LoadDocumentRefusal } from "../services/loadDocumentService";
 import { uploadLimiter } from "../middleware/rateLimiters";
 import { assignCarrier } from "../services/carrierAssignmentService";
 import { complianceCheck } from "../services/complianceMonitorService";
@@ -571,109 +570,30 @@ router.post("/:id/documents", uploadLimiter, upload.single("file"), async (req: 
     return;
   }
 
-  // v3.8.aqp — the carrier my-loads uploader sends `docType` (page.tsx:67), but
-  // this handler only read `req.body.type`, so a POD arrived as undefined -> tagged
-  // OTHER, and the whole POD pipeline below (POD_RECEIVED advance, invoice trigger,
-  // shipper POD email, UI confirmation) never fired. Accept both field names.
-  const docType = normalizeDocType(req.body.docType || req.body.type) ?? "OTHER";
-  // E1a — the vocabulary is an allowlist now (lib/documentTypes). Any string used
-  // to be stored; a typo became a row the settlement checklist could never see.
-  if (!isAllowedDocType(docType, "LOAD")) {
-    res.status(400).json({ error: `Unknown document type "${docType}"`, code: "UNKNOWN_DOC_TYPE" });
-    return;
-  }
-  const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
-  const ext = path.extname(req.file.originalname).toLowerCase();
-  const key = `documents/${uniqueSuffix}${ext}`;
-  const fileUrl = await uploadFile(req.file.buffer, key, req.file.mimetype);
-
-  const doc = await prisma.document.create({
-    data: {
+  // E1c — one seam records a load document (services/loadDocumentService):
+  // allowlist + magic-byte check before any write, the file, the Document row,
+  // and on a POD the status advance AND the delivery + settlement hooks. This
+  // route used to advance AT_DELIVERY -> POD_RECEIVED past DELIVERED and fire
+  // nothing, so a carrier who uploaded the POD at delivery was never paid.
+  let result;
+  try {
+    result = await recordLoadDocument({
       loadId: load.id,
-      docType,
-      fileName: req.file.originalname,
-      fileUrl,
-      fileType: req.file.mimetype || "application/octet-stream",
-      fileSize: req.file.size,
-      entityType: "LOAD",
-      entityId: load.id,
-      userId: req.user!.id,
+      docType: req.body.docType || req.body.type,
+      file: req.file,
+      actor: { id: req.user!.id, email: req.user!.email, role: req.user!.role },
       uploadSource: "CARRIER_PORTAL",
-    },
-  });
-
-  await logLoadActivity({
-    loadId: load.id,
-    eventType: "doc_uploaded",
-    description: `${docType} uploaded by carrier`,
-    actorType: "CARRIER",
-    actorId: req.user!.id,
-    actorName: req.user!.email,
-    metadata: { documentId: doc.id, docType },
-  });
-  broadcastSSE({ type: "board_refresh", loadId: load.id, data: { reason: "doc_uploaded" } });
-
-  // If it's a POD, update the load
-  if (docType === "POD") {
-    // v3.8.ajt B3 — POD upload at AT_DELIVERY OR DELIVERED advances to
-    // POD_RECEIVED. Pre-ajt only flipped from DELIVERED, but most carriers
-    // upload POD immediately at delivery before manually marking DELIVERED
-    // in the portal (the POD upload IS their proof of delivery). Result:
-    // the load stayed at AT_DELIVERY with a POD uploaded but no status
-    // signal that the delivery was complete. AT_DELIVERY + LOADED + DELIVERED
-    // all now advance to POD_RECEIVED on POD upload; earlier statuses
-    // (BOOKED/DISPATCHED/AT_PICKUP/IN_TRANSIT) stay unchanged — uploading
-    // POD when you haven't reached the destination is likely an error and
-    // we shouldn't auto-advance through the pipeline.
-    const podAdvancingStatuses = ["AT_DELIVERY", "DELIVERED", "LOADED"];
-    const newStatus = podAdvancingStatuses.includes(load.status) ? "POD_RECEIVED" : load.status;
-    await prisma.load.update({
-      where: { id: load.id },
-      data: {
-        podUrl: fileUrl,
-        podReceivedAt: new Date(),
-        status: newStatus,
-        // Build B: if the carrier uploads POD (advancing to POD_RECEIVED)
-        // without having flipped DELIVERED, the POD-upload time is a delivery
-        // fallback for the on-time score. Never overwrites an existing stamp.
-        ...actualEventStamps(newStatus, load),
-      },
     });
-
-    // v3.8.ajt B2 — Trigger autoGenerateInvoice when POD upload advances
-    // the load to POD_RECEIVED. The autoGenerateInvoice service has
-    // existed since pre-ajt but was never called from the POD upload
-    // path — the audit caught it. Fire-and-forget; non-blocking so POD
-    // upload response stays fast. Invoice creation is idempotent
-    // (autoGenerateInvoice checks for existing invoice on this load
-    // before creating).
-    if (newStatus === "POD_RECEIVED") {
-      const { autoGenerateInvoice } = require("../services/invoiceService");
-      autoGenerateInvoice(load.id).catch((e: unknown) =>
-        log.error({ err: e, loadId: load.id }, "[POD Upload] autoGenerateInvoice failed (non-fatal)"),
-      );
+  } catch (e) {
+    if (e instanceof LoadDocumentRefusal) {
+      res.status(e.status).json({ error: e.message, code: e.code });
+      return;
     }
-
-    // Notify broker
-    if (load.posterId) {
-      await prisma.notification.create({
-        data: {
-          userId: load.posterId,
-          type: "LOAD",
-          title: "POD Received",
-          message: `POD uploaded for load ${load.referenceNumber}`,
-          actionUrl: "/dashboard/loads",
-        },
-      });
-    }
-
-    // Notify shipper contact email about POD
-    sendPODToContact(load.id).catch((e) => log.error({ err: e }, "[ShipperNotify] POD"));
+    throw e;
   }
-
   // B5b-2 — see documentController; this router is carrier-only already.
   void flagSensitiveActionAfterNewLogin(req.user!.id, "document-upload");
-  res.json(doc);
+  res.json(result.document);
 });
 
 // POST /api/carrier-loads/:id/check-call — Submit a check call from carrier
