@@ -503,6 +503,21 @@ DETAIL: scratchpad/arc-handoff.md
 
 ---
 
+### §2.5 — Usage budget (added 2026-09-22)
+
+How a session spends its context. These bind the same way the rest of §2 does.
+
+- **Halt reports: 15 lines max in chat** — status, gate pass/fail counts, a findings table, open questions. Detail goes to a scratchpad file, cited by path. **Never paste full gate or scanner output** into a report.
+- **Cite `file:line`. Do not quote code blocks in reports.** A reader who wants the code can open it; a reader who wants the conclusion should not have to scroll past the code to reach it.
+- **Mechanical work goes to a subagent on the cheapest capable model** — grep, enumerate, count, run scanners, run matrices. Judgment stays on the main path. The main path decides what a finding means; it does not have to be the thing that counted the rows.
+- **Compact at every halt. Each block starts from its handoff file, not from prior context.** A block that cannot be resumed from its handoff file has an incomplete handoff file, and that is the defect to fix.
+- **The full gate stack runs at a block's tip only.** Intermediate commits get backend `tsc` + `npm test`. Running the whole stack on every commit of a ten-commit block spends the budget re-proving what the tip proves once.
+- **No polling, no standing watches, no re-checks on idle notices. Act on explicit triggers only.** An idle notice is not a trigger; a message, a user turn, or a named completion is.
+
+**Why this sits in §2 rather than §19.** §19 is the methodology library — patterns that catch defects. This is a budget: it governs what a session spends, not what it verifies. A session that runs out of context mid-arc loses the arc, and the recovery is paid in the same currency.
+
+---
+
 ## §3 BINDING RULES
 
 Organized by firing frequency — universal rules first, domain-specific last. All rules enforceable across sessions; a Claude Code session must respect these without re-explanation.
