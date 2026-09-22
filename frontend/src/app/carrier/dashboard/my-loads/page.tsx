@@ -1,16 +1,22 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { MapPin, Phone, FileText, CheckCircle, Clock, AlertCircle, Printer, Camera, Upload, Zap, Lock, Loader2, ArrowRight } from "lucide-react";
+import { MapPin, Phone, FileText, CheckCircle, Clock, AlertCircle, Printer, Zap, Lock, Loader2, ArrowRight } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
-import { CarrierCard, CarrierBadge, DriverAssignmentPanel } from "@/components/carrier";
+import { CarrierCard, CarrierBadge, DriverAssignmentPanel, PaperworkPanel } from "@/components/carrier";
 import { money, carrierPay } from "@/lib/rateDisplay";
 import { openPdfFromApi, extractApiError, apiHref } from "@/lib/download";
 // E2 — the next-step strip and the BOL button state come from the same
 // selector the AE board reads (deriveLoadStatus, projected for a carrier), so
 // the two surfaces cannot disagree about where a load is.
 import { carrierNextStep } from "@/lib/loadDerivedStatus";
+// E4 — the paperwork panel renders from the ruling-6 table the settlement gate
+// reads (shared/constants/paperwork); `paperworkOpenAt` on the DERIVED key is
+// "from CONFIRMED" in the selector's vocabulary, so a load whose RC is unsigned
+// is not yet asked for paperwork and a directly-assigned load is asked once it
+// is dispatched.
+import { paperworkOpenAt, type PaperworkDocType } from "@shared/constants/paperwork";
 
 const statusFilters = ["All", "BOOKED", "DISPATCHED", "AT_PICKUP", "LOADED", "IN_TRANSIT", "AT_DELIVERY", "DELIVERED"];
 const statusTransitions: Record<string, string[]> = {
@@ -81,19 +87,24 @@ export default function MyLoadsPage() {
     },
   });
 
-  const podUploadMutation = useMutation({
-    mutationFn: ({ loadId, file }: { loadId: string; file: File }) => {
+  // E4 — one upload for every paperwork slot; the type is the slot's, chosen
+  // in the panel. Was POD-only, on a card that existed at two statuses.
+  const [paperworkError, setPaperworkError] = useState<string | null>(null);
+  const docUploadMutation = useMutation({
+    mutationFn: ({ loadId, file, docType }: { loadId: string; file: File; docType: PaperworkDocType }) => {
       const fd = new FormData();
       fd.append("file", file);
-      fd.append("docType", "POD");
+      fd.append("docType", docType);
       return api.post(`/carrier-loads/${loadId}/documents`, fd, {
         headers: { "Content-Type": "multipart/form-data" },
       });
     },
+    onMutate: () => setPaperworkError(null),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["carrier-my-loads"] });
       queryClient.invalidateQueries({ queryKey: ["carrier-my-load-detail", selectedId] });
     },
+    onError: async (err) => setPaperworkError(await extractApiError(err, "Upload failed. Please try again.")),
   });
 
   const loads = data?.loads || [];
@@ -335,53 +346,18 @@ export default function MyLoadsPage() {
                 </CarrierCard>
               )}
 
-              {/* POD Upload */}
-              {["DELIVERED", "AT_DELIVERY"].includes(detail.status) && (
-                <CarrierCard padding="p-4" className="mt-3">
-                  <h4 className="text-xs font-semibold text-gray-700 mb-3 flex items-center gap-1.5">
-                    <Camera size={14} className="text-[#2F7A4F]" /> Upload Proof of Delivery
-                  </h4>
-                  {detail.podUrl ? (
-                    <div className="flex items-center gap-2 p-3 bg-[#E6F0E9] rounded-lg">
-                      <CheckCircle size={16} className="text-[#2F7A4F]" />
-                      <span className="text-xs text-[#2F7A4F] font-medium">POD uploaded</span>
-                      {/* v3.8.awt — was href={detail.podUrl}, which holds
-                          `s3://bucket/key` in production: a scheme no browser can
-                          open, so this link has never resolved. The POD upload
-                          also creates a real Document row (carrierLoads.ts:545)
-                          and the query already includes docType POD, so the same
-                          file is reachable by id. If that row is missing the link
-                          is not rendered, rather than rendered dead. */}
-                      {(() => {
-                        const podDoc = (detail.documents ?? []).find((d: { id: string; docType?: string }) => d.docType === "POD");
-                        return podDoc ? (
-                          <a href={apiHref(`/documents/${podDoc.id}/download`)} target="_blank" rel="noreferrer" className="text-xs text-[#2A5B8B] underline ml-auto">View</a>
-                        ) : null;
-                      })()}
-                    </div>
-                  ) : (
-                    <label className="flex flex-col items-center justify-center gap-2 p-6 border-2 border-dashed border-[#EFE6D3] rounded-lg cursor-pointer hover:border-[#C5A572] hover:bg-gray-50 transition">
-                      <Upload size={24} className="text-gray-700" />
-                      <span className="text-xs text-gray-500">{podUploadMutation.isPending ? "Uploading..." : "Tap to upload photo or PDF"}</span>
-                      <span className="text-[10px] text-gray-700">JPG, PNG, or PDF — max 10MB</span>
-                      <input
-                        type="file"
-                        accept="image/jpeg,image/png,application/pdf"
-                        className="hidden"
-                        disabled={podUploadMutation.isPending}
-                        onChange={(e) => {
-                          const file = e.target.files?.[0];
-                          if (file && selectedId) podUploadMutation.mutate({ loadId: selectedId, file });
-                        }}
-                      />
-                    </label>
-                  )}
-                  {podUploadMutation.isError && (
-                    <p className="text-xs text-[#9B2C2C] mt-2 flex items-center gap-1">
-                      <AlertCircle size={12} /> Upload failed. Please try again.
-                    </p>
-                  )}
-                </CarrierCard>
+              {/* E4 — paperwork, one row per ruling-6 slot, from CONFIRMED. Replaces
+                  the POD-only card that rendered at DELIVERED/AT_DELIVERY and keyed
+                  on Load.podUrl: the slots read the Document rows the detail now
+                  carries, so what the carrier sees is what the AE's checklist reads. */}
+              {paperworkOpenAt(carrierNextStep(detail).key) && (
+                <PaperworkPanel
+                  load={detail}
+                  documents={detail.documents ?? []}
+                  pending={docUploadMutation.isPending}
+                  error={paperworkError}
+                  onUpload={(docType, file) => { if (selectedId) docUploadMutation.mutate({ loadId: selectedId, file, docType }); }}
+                />
               )}
 
               {/* Check Call */}

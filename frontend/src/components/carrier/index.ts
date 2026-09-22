@@ -3,3 +3,4 @@ export { StepUpPrompt } from "./StepUpPrompt";
 export { CarrierBadge } from "./CarrierBadge";
 export { CarrierSidebar } from "./CarrierSidebar";
 export { DriverAssignmentPanel } from "./DriverAssignmentPanel";
+export { PaperworkPanel } from "./PaperworkPanel";

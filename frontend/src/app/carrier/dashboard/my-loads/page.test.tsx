@@ -41,11 +41,17 @@ vi.mock("@/lib/download", () => ({
   extractApiError: vi.fn(async () => "err"),
   apiHref: (p: string) => p,
 }));
-vi.mock("@/components/carrier", () => ({
-  CarrierCard: ({ children, onClick }: any) => <div onClick={onClick}>{children}</div>,
-  CarrierBadge: ({ status }: any) => <span data-testid="badge">{status}</span>,
-  DriverAssignmentPanel: () => null,
-}));
+// The paperwork panel is the REAL component (E4) — its rows are what these
+// cases read; the chrome around it stays stubbed.
+vi.mock("@/components/carrier", async (orig) => {
+  const actual = (await orig()) as any;
+  return {
+    CarrierCard: ({ children, onClick }: any) => <div onClick={onClick}>{children}</div>,
+    CarrierBadge: ({ status }: any) => <span data-testid="badge">{status}</span>,
+    DriverAssignmentPanel: () => null,
+    PaperworkPanel: actual.PaperworkPanel,
+  };
+});
 
 import MyLoadsPage from "./page";
 import { api } from "@/lib/api";
@@ -199,5 +205,39 @@ describe("E3 — signing from the portal, at RC_SENT and nowhere else", () => {
     at("RC_SENT");
     fireEvent.click(await screen.findByTestId("rc-sign-email"));
     await waitFor(() => expect(screen.getByTestId("rc-sign-email-result").textContent).toMatch(/3 times in the last hour/));
+  });
+});
+
+describe("E4 — the paperwork panel, from CONFIRMED", () => {
+  const at = (status: string, tender: string, docs: any[] = []) => {
+    const l = load("a", status, tender ? [tender] : [], { documents: docs, equipmentType: "Reefer 53'" });
+    state.loads = [l];
+    state.detail = l;
+    window.history.replaceState({}, "", "/carrier/dashboard/my-loads?load=a");
+    return render(<MyLoadsPage />);
+  };
+
+  it("absent while the rate confirmation is unsigned — nothing is owed before the load is confirmed", async () => {
+    at("BOOKED", "RC_SENT");
+    await screen.findByTestId("next-step-detail");
+    expect(screen.queryByTestId("paperwork-slots")).toBeNull();
+  });
+
+  it("present at CONFIRMED and renders the slots from the load's Document rows, reefer included", async () => {
+    at("BOOKED", "CONFIRMED", [{ id: "d1", docType: "POD", status: "VERIFIED", fileName: "pod.pdf", createdAt: "2026-09-22T00:00:00Z" }]);
+    await screen.findByTestId("paperwork-slots");
+    expect(screen.getByTestId("paperwork-slot-DELIVERY_PROOF").getAttribute("data-state")).toBe("VERIFIED");
+    expect(screen.getByTestId("paperwork-slot-TEMP_LOG").getAttribute("data-state")).toBe("MISSING");
+    expect(screen.getByTestId("paperwork-summary").textContent).toBe("1 of 3 required on file");
+    // The pickup slot is closed at this status and says so.
+    expect(screen.getByTestId("paperwork-closed-PICKUP_BOL")).toBeTruthy();
+  });
+
+  it("stays through delivery; the old POD-only card is gone", async () => {
+    at("DELIVERED", "CONFIRMED");
+    await screen.findByTestId("paperwork-slots");
+    expect(screen.queryByText(/Upload Proof of Delivery/)).toBeNull();
+    expect(screen.getByTestId("paperwork-upload-POD")).toBeTruthy();
+    expect(screen.getByTestId("paperwork-upload-SIGNED_BOL_DEL")).toBeTruthy();
   });
 });
