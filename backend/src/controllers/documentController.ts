@@ -5,8 +5,7 @@ import { prisma } from "../config/database";
 import { AuthRequest } from "../middleware/auth";
 import { env } from "../config/env";
 import { uploadFile, uploadFileToPath, getDownloadUrl, getFileStream, deleteFile, validateBufferSignature, isS3Url } from "../services/storageService";
-import { validateAndNotifyPOD } from "../services/shipperNotificationService";
-import { onPODUploaded, syncSettlementDocFlags } from "../services/integrationService";
+import { recordLoadDocument, LoadDocumentRefusal } from "../services/loadDocumentService";
 import { log } from "../lib/logger";
 import { flagSensitiveActionAfterNewLogin } from "../lib/loginFlags";
 import { normalizeDocType, isAllowedDocType, docTypeClassFor } from "../lib/documentTypes";
@@ -34,7 +33,7 @@ function isAeInternal(role: string): boolean {
  *   - POST docType=CUSTOMER_CONTRACT&entityType=CUSTOMER&entityId=<any customer>
  *     and overwrite that customer's contractUrl — which is a precondition of the
  *     customer-approval gate;
- *   - POST docType=POD&loadId=<someone else's load>, which fires onPODUploaded()
+ *   - POST docType=POD&loadId=<someone else's load>, which fires the delivery + settlement hooks
  *     and advances that load to POD_RECEIVED and its invoice to SENT.
  * Both are cross-tenant writes triggered purely by body parameters.
  *
@@ -166,6 +165,40 @@ export async function uploadDocuments(req: AuthRequest, res: Response) {
     return;
   }
 
+  // E1d — a LOAD document goes through the one seam (services/loadDocumentService):
+  // allowlist + magic bytes, the file, the row, and on a POD the status advance
+  // and the delivery + settlement hooks -- the same answer the carrier route
+  // gives. This branch used to record the row by hand, run onPODUploaded and
+  // syncSettlementDocFlags but never onLoadDelivered, and send a second POD
+  // email through a second sender. Ownership was checked above; sequential per
+  // file so two PODs in one request cannot race the status advance.
+  if (loadId) {
+    const recorded = [];
+    try {
+      for (const file of files) {
+        const r = await recordLoadDocument({
+          loadId,
+          docType,
+          file,
+          actor: { id: req.user!.id, email: req.user!.email, role: req.user!.role },
+          uploadSource: req.user!.role === "CARRIER" ? "CARRIER_PORTAL" : "AE_CONSOLE",
+        });
+        recorded.push(r.document);
+      }
+    } catch (e) {
+      if (e instanceof LoadDocumentRefusal) {
+        res.status(e.status).json({ error: e.message, code: e.code });
+        return;
+      }
+      throw e;
+    }
+    if (req.user?.role === "CARRIER") void flagSensitiveActionAfterNewLogin(req.user.id, "document-upload");
+    res.status(201).json(recorded);
+    return;
+  }
+
+  // Entity documents (a carrier profile, a customer, an invoice) -- not load
+  // paperwork, no lifecycle hooks.
   const documents = await Promise.all(
     files.map(async (file) => {
       const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
@@ -229,24 +262,6 @@ export async function uploadDocuments(req: AuthRequest, res: Response) {
       });
     })
   );
-
-  // If POD uploaded for a load, trigger validation, shipper notification, and status advancement
-  if (docType === "POD" && loadId) {
-    for (const doc of documents) {
-      validateAndNotifyPOD(loadId, doc.id).catch((e) => log.error({ err: e }, "[ShipperNotify] POD validation error:"));
-    }
-    // Integration: advance load to POD_RECEIVED + invoice to SENT
-    onPODUploaded(loadId).catch((e) => log.error({ err: e }, "[Integration] onPODUploaded error:"));
-  }
-
-  // v3.8.ath — the settlement document checklist becomes true here, at the
-  // moment the document arrives, rather than never. Recomputed from what exists,
-  // so a re-upload or a second document of the same type is free.
-  if (loadId) {
-    syncSettlementDocFlags(loadId).catch((e) =>
-      log.error({ err: e, loadId }, "[Settlement] doc-flag sync failed (non-fatal)"),
-    );
-  }
 
   // B5b-2 — a carrier upload inside a day of a flagged login marks that login.
   // Carrier only: AE uploads on a carrier's behalf are the AE's own session.

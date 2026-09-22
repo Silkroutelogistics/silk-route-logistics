@@ -10,13 +10,18 @@ vi.mock("../../../src/services/storageService", () => ({
   validateBufferSignature: vi.fn().mockReturnValue(true),
   isS3Url: vi.fn().mockReturnValue(true),
 }));
-vi.mock("../../../src/services/shipperNotificationService", () => ({
-  validateAndNotifyPOD: vi.fn().mockResolvedValue(undefined),
-}));
-vi.mock("../../../src/services/integrationService", () => ({
-  onPODUploaded: vi.fn().mockResolvedValue(undefined),
-  // v3.8.ath — the upload path now also syncs the settlement doc checklist.
-  syncSettlementDocFlags: vi.fn().mockResolvedValue({ updated: false }),
+// E1d — the load branch is the seam (services/loadDocumentService), which
+// reads the load for its own reasons. This file tests the ownership gate IN
+// FRONT of it ("AE is exempt from the ownership lookup" must not be confused
+// with the seam's read), so the seam is a stub.
+vi.mock("../../../src/services/loadDocumentService", () => ({
+  recordLoadDocument: vi.fn(async (i: any) => ({
+    document: { id: "doc-seam", docType: i.docType, fileUrl: "https://s3/documents/seam.pdf" },
+    docType: i.docType,
+    status: { before: "BOOKED", after: "BOOKED" },
+    deliveryHooksFired: false,
+  })),
+  LoadDocumentRefusal: class extends Error {},
 }));
 
 import { uploadDocuments, getDocuments } from "../../../src/controllers/documentController";

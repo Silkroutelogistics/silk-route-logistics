@@ -40,6 +40,17 @@ vi.mock("../../../src/middleware/auth", async (orig) => {
 vi.mock("../../../src/middleware/requireTotpEnrolled", () => ({ requireTotpEnrolled: (_r: any, _s: any, n: any) => n() }));
 const totp = { generateTotpSetup: vi.fn(), verifyTotpCode: vi.fn(), enableTotp: vi.fn(), disableTotp: vi.fn(), issueBackupCodes: vi.fn(), isTotpEnabled: vi.fn() };
 vi.mock("../../../src/services/totpService", () => totp);
+// E1d — the load branch of /documents/upload is the seam now; this file tests the
+// step-up gate in FRONT of it, so the seam is a stub that records a document.
+vi.mock("../../../src/services/loadDocumentService", () => ({
+  recordLoadDocument: vi.fn(async (i: any) => ({
+    document: { id: "doc-seam", docType: i.docType, fileUrl: "https://storage.example/doc.pdf" },
+    docType: i.docType,
+    status: { before: "AT_DELIVERY", after: "AT_DELIVERY" },
+    deliveryHooksFired: false,
+  })),
+  LoadDocumentRefusal: class extends Error {},
+}));
 
 const uploadFile = vi.fn().mockResolvedValue("https://storage.example/doc.pdf");
 vi.mock("../../../src/services/storageService", async (orig) => {
@@ -123,7 +134,9 @@ describe("/documents/upload — conditional on role and declared type", () => {
       const r = await post(a, "/api/documents/upload", "CARRIER", { docType, loadId: "load-1" });
       expect(r.status, docType).toBe(201);
     }
-    expect(uploadFile).toHaveBeenCalledTimes(3);
+    // Through the seam (E1d), which is stubbed here; the gate let all three past.
+    const { recordLoadDocument } = await import("../../../src/services/loadDocumentService");
+    expect(recordLoadDocument).toHaveBeenCalledTimes(3);
   });
 
   it("an AE uploading a COI on a carrier's behalf is not asked — the rule is about carriers replacing their own paper", async () => {

@@ -181,12 +181,10 @@ describe("no backfill", () => {
     };
     walk(root);
 
-    // Its own definition plus exactly the source events. E1c added the load-
-    // document seam (services/loadDocumentService.ts) -- a document arriving IS
-    // a source event, on whichever route carried it; E1d moves
-    // documentController onto that seam and drops it from this list.
+    // Its own definition plus exactly the source events: a signed rate
+    // confirmation, delivery, and a document arriving through the one seam
+    // (E1c/E1d) on whichever route carried it.
     expect(callers.sort()).toEqual([
-      "controllers/documentController.ts",
       "controllers/rateConfirmationController.ts",
       "services/integrationService.ts",
       "services/loadDocumentService.ts",

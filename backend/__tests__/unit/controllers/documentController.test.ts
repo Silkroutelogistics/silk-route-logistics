@@ -10,18 +10,24 @@ vi.mock("../../../src/services/storageService", () => ({
   validateBufferSignature: vi.fn().mockReturnValue(true),
   isS3Url: vi.fn().mockReturnValue(true),
 }));
-vi.mock("../../../src/services/shipperNotificationService", () => ({
-  validateAndNotifyPOD: vi.fn().mockResolvedValue(undefined),
-}));
-vi.mock("../../../src/services/integrationService", () => ({
-  onPODUploaded: vi.fn().mockResolvedValue(undefined),
-  // v3.8.ath — the upload path now also syncs the settlement doc checklist.
-  syncSettlementDocFlags: vi.fn().mockResolvedValue({ updated: false }),
+// E1d — the load branch is the seam (services/loadDocumentService); the POD
+// hooks it runs are its own contract, held by loadDocumentSeam.test.ts and
+// loadDocumentService.test.ts. Stubbed here so this file tests only the
+// entity path and the CUSTOMER_CONTRACT cross-write.
+vi.mock("../../../src/services/loadDocumentService", () => ({
+  recordLoadDocument: vi.fn(async (i: any) => ({
+    document: { id: "doc-seam", docType: i.docType, fileUrl: "https://s3/documents/seam.pdf" },
+    docType: i.docType,
+    status: { before: "DELIVERED", after: "POD_RECEIVED" },
+    deliveryHooksFired: false,
+  })),
+  LoadDocumentRefusal: class extends Error {},
 }));
 
 import { prisma } from "../../../src/config/database";
 import { uploadDocuments } from "../../../src/controllers/documentController";
 import { uploadFile } from "../../../src/services/storageService";
+import { recordLoadDocument } from "../../../src/services/loadDocumentService";
 import { updateCustomerSchema } from "../../../src/validators/customer";
 
 const mockPrisma = vi.mocked(prisma);
@@ -78,10 +84,13 @@ describe("documentController.uploadDocuments — Gap 2 CUSTOMER_CONTRACT cross-w
     await uploadDocuments(req, res);
 
     expect(mockPrisma.customer.update).not.toHaveBeenCalled();
-    // POD path goes through the non-transaction branch; document.create should
-    // be called directly, not wrapped in a $transaction callback.
+    // E1d — a load document goes through the seam, not a $transaction and not
+    // a document.create of the controller's own. loadDocumentSeam.test.ts holds
+    // the seam contract; this case holds only that the contract cross-write
+    // stays out of it.
     expect(mockPrisma.$transaction).not.toHaveBeenCalled();
-    expect(mockPrisma.document.create).toHaveBeenCalled();
+    expect(recordLoadDocument).toHaveBeenCalledTimes(1);
+    expect(res.status).toHaveBeenCalledWith(201);
   });
 
   it("CUSTOMER_CONTRACT but missing entityId falls through to no cross-write", async () => {
