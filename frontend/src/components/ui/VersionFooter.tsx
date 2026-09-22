@@ -18201,7 +18201,8 @@
 // v3.8.bem — Task E1c, the P0: one seam records a load document (services/loadDocumentService). A POD that advances AT_DELIVERY/LOADED → POD_RECEIVED past DELIVERED now FIRES onLoadDelivered (the carrier route used to skip it, so a carrier who uploaded the POD at delivery got no CarrierPay, ever); every POD runs onPODUploaded + syncSettlementDocFlags (the P1); createCarrierPayOnDelivery is idempotent on a non-VOID row. Carrier route rewired; /documents/upload follows in E1d.
 // v3.8.ben — Task E1d-i: /documents/upload's load branch goes through the same seam as the carrier route, so both routes give one answer to what a POD sets in motion; a guard drives both routes over HTTP and asserts the seam is reached (and that neither records a load document by its own hand). Three test harnesses that tested gates in FRONT of the seam now stub it.
 // v3.8.beo — Task E1d-ii: the second POD sender is gone. validateAndNotifyPOD and sendShipperPODEmail (shipperNotificationService) and their sole html helper had no caller once E1d-i moved /documents/upload onto the seam; one POD email now goes out, through the Item 8.3 recipient resolver, whichever route carried the upload. The DB-level proof (_arc-e1-pod-proof.ts, 38/38 over the real routers) lands beside it.
-export const SRL_VERSION = "3.8.beo";
+// v3.8.bep — BCA Commit 2, the backstop behind v3.8.beh's AGREEMENT_MISSING gate: /rc-sign/:token refuses a carrier with no executed Broker-Carrier Agreement. GET renders a sign-first page (TERMINATED gets its own, pointing at operations@); POST re-evaluates getAgreementState INSIDE the transaction that writes the signature, and on MISSING/TERMINATED writes nothing, consumes no token, and records RC_SIGN_REFUSED on the security audit rail. Same predicate as the tender gate and the Compass factor — never a fourth where-clause.
+export const SRL_VERSION = "3.8.bep";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

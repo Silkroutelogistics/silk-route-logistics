@@ -16,6 +16,12 @@
  * MFA_RESET has one writer, the admin unenroll (B1c); self-service disable is
  * refused for carriers (B1b) and out of this recorder's scope for other roles.
  *
+ * RC_SIGN_REFUSED (BCA Commit 2, 2026-09-21) — a rate-confirmation signature
+ * refused because the carrier on the load holds no executed Broker-Carrier
+ * Agreement, or a terminated one. Written by routes/rcSign.ts with the carrier
+ * as subject; the token is NOT consumed on a refusal, so the same carrier
+ * re-trying after signing the BCA produces one refusal row and one signature.
+ *
  * Never throws. Recording an act must not be able to prevent it (Item 235.5).
  */
 
@@ -23,7 +29,7 @@ import { prisma } from "../config/database";
 import { clientIp, clientUserAgent, IpBearingRequest } from "./clientIp";
 import { log } from "./logger";
 
-export type SecurityAuditAction = "MFA_ENROLLED" | "MFA_CHALLENGE_FAILED" | "MFA_RESET";
+export type SecurityAuditAction = "MFA_ENROLLED" | "MFA_CHALLENGE_FAILED" | "MFA_RESET" | "RC_SIGN_REFUSED";
 
 /** The Entity filter value. One word, so it reads beside "Session" and "Carrier". */
 export const SECURITY_ENTITY = "Security";

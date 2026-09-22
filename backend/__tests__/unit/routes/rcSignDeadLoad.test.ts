@@ -46,7 +46,8 @@ function rcRow(load: { status: string; deletedAt: Date | null }) {
     signTokenExpiresAt: new Date(Date.now() + 3_600_000),
     contentHash: "abc", signTokenId: "tok-1",
     load: { id: "load-1", referenceNumber: "R", loadNumber: "SRL-1", originCity: "A", originState: "AA",
-      destCity: "B", destState: "BB", pickupDate: new Date(), equipmentType: "Reefer", carrierRate: 1, ...load },
+      destCity: "B", destState: "BB", pickupDate: new Date(), equipmentType: "Reefer", carrierRate: 1,
+      carrierId: "u-carrier", ...load },
   };
 }
 
@@ -91,6 +92,13 @@ describe("GET + POST /rc-sign/:token on a dead load with a still-valid token", (
   // green (§19 Sub-pattern 16).
   it("GET → 200 with the form on a live load (control)", async () => {
     mockPrisma.rateConfirmation.findFirst.mockResolvedValue(rcRow({ status: "BOOKED", deletedAt: null }));
+    // BCA Commit 2 — the form now sits behind the executed-agreement check as
+    // well; that gate has its own file (rcSignBcaRequired.test.ts). Here it is
+    // armed to pass so this control still measures the dead-load lock alone.
+    mockPrisma.carrierProfile.findUnique.mockResolvedValue({ id: "cp-1" });
+    mockPrisma.carrierAgreement.findMany.mockResolvedValue([
+      { status: "SIGNED", templateName: "broker-carrier", version: "test", signedAt: new Date(), terminatedAt: null, expiresAt: null },
+    ]);
     const r = await fetch(`${base}/${TOKEN}`);
     expect(r.status).toBe(200);
     expect(await r.text()).toMatch(/sign/i);

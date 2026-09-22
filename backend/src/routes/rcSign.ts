@@ -28,6 +28,8 @@ import { extractClientIp } from "../services/geoService";
 import { clientUserAgent } from "../lib/clientIp";
 import { generateSignatureCertificate } from "../services/signatureCertificateService";
 import { uploadFileToPath } from "../services/storageService";
+import { getAgreementState, type AgreementReader, type AgreementVerdict } from "../lib/agreementState";
+import { recordSecurityEvent } from "../lib/securityAudit";
 import { log } from "../lib/logger";
 
 const router = Router();
@@ -109,6 +111,57 @@ function refusal(reason: string): { status: number; title: string; body: string 
   };
 }
 
+/**
+ * BCA Commit 2 (v3.8.beh's backstop, §14 AGREEMENT_MISSING) — a rate
+ * confirmation is signed UNDER the Broker-Carrier Agreement, so a signature
+ * with no executed agreement behind it binds the carrier to a load on terms
+ * nobody has agreed to govern it. The tender gate refuses that carrier a tender
+ * (absolute, no override) and the RC send path is not gated by ruling D2 — so
+ * the one way an unsigned carrier reaches this page is a termination between
+ * accept and send, and this is the last lock on the door. It asks
+ * `getAgreementState`, the same predicate the gate and the Compass factor use,
+ * never its own where-clause.
+ */
+function agreementRefusal(v: AgreementVerdict): { status: number; title: string; body: string } {
+  if (v.state === "TERMINATED") {
+    const when = v.terminated?.terminatedAt
+      ? new Date(v.terminated.terminatedAt).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })
+      : "";
+    return {
+      status: 409,
+      title: "Agreement terminated",
+      body: `<h1>This carrier's Broker-Carrier Agreement was terminated</h1>
+        <p>Silk Route Logistics terminated the Broker-Carrier Agreement with this carrier${when ? ` on ${when}` : ""}. A rate confirmation cannot be signed under a terminated agreement, and a new one has to be executed before this link can be used.</p>
+        <p>Contact <strong>operations@silkroutelogistics.ai</strong> or (269) 220-6760. Nothing has been recorded.</p>`,
+    };
+  }
+  return {
+    status: 409,
+    title: "Sign the Broker-Carrier Agreement first",
+    body: `<h1>Sign the Broker-Carrier Agreement first</h1>
+      <p>A rate confirmation is signed under the Broker-Carrier Agreement, and there is no executed agreement on file for this carrier. Sign it in your carrier portal, then open this link again &mdash; <strong>the link is still good</strong>.</p>
+      <a class="cta" href="https://silkroutelogistics.ai/carrier/dashboard/activation">Sign the agreement</a>
+      <p class="foot">The rate confirmation itself has not changed, and nothing has been recorded.</p>`,
+  };
+}
+
+/**
+ * The BCA question for the carrier ON THE LOAD. `Load.carrierId` is a User.id
+ * and the agreement rows hang off CarrierProfile.id (§13.3 Items 57, 222.4),
+ * so the profile is resolved first. A load with no carrier, or a carrier with
+ * no profile, has no executed agreement — MISSING, not an error — and the
+ * refusal says to sign one, which is also the only thing that can fix it.
+ */
+async function bcaStateForLoad(carrierUserId: string | null, db: AgreementReader) {
+  const profile = carrierUserId
+    ? await db.carrierProfile.findUnique({ where: { userId: carrierUserId }, select: { id: true } })
+    : null;
+  const verdict: AgreementVerdict = profile
+    ? await getAgreementState(profile.id, db)
+    : { state: "MISSING", signed: null, terminated: null };
+  return { profileId: profile?.id ?? null, verdict };
+}
+
 async function resolve(token: string) {
   const rc = await prisma.rateConfirmation.findFirst({
     where: { signTokenHash: hashRcSignToken(token) },
@@ -120,6 +173,8 @@ async function resolve(token: string) {
           pickupDate: true, equipmentType: true, carrierRate: true,
           // B4a — the LOAD decides whether there is anything left to sign.
           status: true, deletedAt: true,
+          // BCA Commit 2 — and WHO is signing decides whether they may.
+          carrierId: true,
         },
       },
     },
@@ -143,6 +198,15 @@ router.get("/:token", async (req: Request, res: Response) => {
   }
   if (loadIsDead(rc.load)) {
     const r = refusal("LOAD_NOT_LIVE");
+    res.status(r.status).type("html").send(page({ title: r.title, body: r.body }));
+    return;
+  }
+  // Sign-first: a carrier with no executed BCA is shown where to sign it, not
+  // the form. The POST decides again inside its transaction; this is so the
+  // carrier is told before they type a name, not after.
+  const { verdict } = await bcaStateForLoad(rc.load.carrierId, prisma);
+  if (verdict.state !== "SIGNED") {
+    const r = agreementRefusal(verdict);
     res.status(r.status).type("html").send(page({ title: r.title, body: r.body }));
     return;
   }
@@ -209,24 +273,60 @@ router.post("/:token", async (req: Request, res: Response) => {
   const signerIp = extractClientIp(req as never);
   const signerUserAgent = clientUserAgent(req as never);
 
+  // THE AGREEMENT IS RE-EVALUATED INSIDE THE TRANSACTION THAT WRITES THE
+  // SIGNATURE, on the transaction client, so the state decided on is the state
+  // that commits beside the signature — not a read from a moment earlier that
+  // the GET already did. A refusal returns before any write: the row is
+  // untouched, the token is NOT consumed (the link stays good, because the
+  // remedy is to sign the BCA and come back), and the refusal is recorded
+  // below as an audit row rather than silently answered.
+  //
   // SINGLE USE IS ENFORCED BY THE UPDATE, not by the check above.
   //
   // The check tells a carrier what happened; this is what makes it true. Scoping
   // the write to `signTokenUsedAt: null` means two simultaneous submissions --
   // a double-tap on a phone, a retried request -- resolve to one signature,
   // because the second matches no row. A check-then-write would let both through.
-  const claimed = await prisma.rateConfirmation.updateMany({
-    where: { id: rc.id, signTokenUsedAt: null },
-    data: {
-      signed: true,
-      signedAt,
-      status: "SIGNED",
-      signerName,
-      signerIp,
-      signerUserAgent,
-      signTokenUsedAt: signedAt,
-    },
+  const outcome = await prisma.$transaction(async (tx) => {
+    const { verdict } = await bcaStateForLoad(rc.load.carrierId, tx);
+    if (verdict.state !== "SIGNED") return { refused: verdict, claimed: 0 };
+    const claimed = await tx.rateConfirmation.updateMany({
+      where: { id: rc.id, signTokenUsedAt: null },
+      data: {
+        signed: true,
+        signedAt,
+        status: "SIGNED",
+        signerName,
+        signerIp,
+        signerUserAgent,
+        signTokenUsedAt: signedAt,
+      },
+    });
+    return { refused: null as AgreementVerdict | null, claimed: claimed.count };
   });
+
+  if (outcome.refused) {
+    const reason = outcome.refused.state === "TERMINATED" ? "AGREEMENT_TERMINATED" : "BCA_REQUIRED";
+    // The subject of the audit row is the carrier whose signature was refused.
+    // audit_logs.userId is a required FK, so a load with no carrier leaves only
+    // a log line — there is no user to hang the row on.
+    if (rc.load.carrierId) {
+      await recordSecurityEvent({
+        userId: rc.load.carrierId,
+        action: "RC_SIGN_REFUSED",
+        note: `Rate confirmation signature refused: ${reason === "BCA_REQUIRED" ? "no executed Broker-Carrier Agreement on file" : "Broker-Carrier Agreement terminated"}`,
+        req: req as never,
+        details: { reason, rateConfirmationId: rc.id, loadId: rc.loadId, signTokenId: rc.signTokenId ?? null },
+      });
+    } else {
+      log.warn({ rcId: rc.id, loadId: rc.loadId, reason }, "[RC] signature refused on a load with no carrier");
+    }
+    const r = agreementRefusal(outcome.refused);
+    res.status(r.status).type("html").send(page({ title: r.title, body: r.body }));
+    return;
+  }
+
+  const claimed = { count: outcome.claimed };
   if (claimed.count === 0) {
     const r = refusal("ALREADY_USED");
     res.status(r.status).type("html").send(page({ title: r.title, body: r.body }));
