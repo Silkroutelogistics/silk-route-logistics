@@ -36,6 +36,8 @@ vi.mock("../../../src/services/signatureCertificateService", () => ({
   }),
 }));
 vi.mock("../../../src/services/storageService", () => ({ uploadFileToPath: vi.fn().mockResolvedValue("/uploads/x.pdf") }));
+const settlement = vi.hoisted(() => ({ syncSettlementDocFlags: vi.fn(async () => ({ updated: true })) }));
+vi.mock("../../../src/services/integrationService", () => ({ syncSettlementDocFlags: settlement.syncSettlementDocFlags }));
 
 import rcSignRouter from "../../../src/routes/rcSign";
 import { prisma } from "../../../src/config/database";
@@ -193,5 +195,34 @@ describe("POST — refused inside the transaction: no write, no token consumed, 
     expect(r.status).toBe(409);
     expect(tx.rateConfirmation.updateMany).not.toHaveBeenCalled();
     expect(mockPrisma.auditLog.create).not.toHaveBeenCalled();
+  });
+});
+
+describe("E3 (2/4) — the settlement checklist learns the signature", () => {
+  // docSignedRateCon is recomputed from the SIGNED row. This used to run only
+  // from the legacy session-authed endpoint, which the emailed link never
+  // reached, so every link-signed RC read "not recorded" on the settlement.
+  it("a claimed signature syncs the doc flags for the load, once, after the write", async () => {
+    const tx = arm([SIGNED]);
+    const r = await post();
+    expect(r.status).toBe(200);
+    expect(tx.rateConfirmation.updateMany).toHaveBeenCalledTimes(1);
+    expect(settlement.syncSettlementDocFlags).toHaveBeenCalledTimes(1);
+    expect(settlement.syncSettlementDocFlags).toHaveBeenCalledWith("load-1");
+  });
+
+  it("a refused signature syncs nothing", async () => {
+    arm([]);
+    const r = await post();
+    expect(r.status).toBe(409);
+    expect(settlement.syncSettlementDocFlags).not.toHaveBeenCalled();
+  });
+
+  it("a sync failure is logged and does not undo the act: still 200 Signed", async () => {
+    arm([SIGNED]);
+    settlement.syncSettlementDocFlags.mockRejectedValueOnce(new Error("carrier_pay unreachable"));
+    const r = await post();
+    expect(r.status).toBe(200);
+    expect(await r.text()).toMatch(/Signed/);
   });
 });

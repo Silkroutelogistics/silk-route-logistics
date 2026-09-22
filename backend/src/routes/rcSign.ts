@@ -24,6 +24,7 @@ import { Router, Request, Response } from "express";
 import { prisma } from "../config/database";
 import { hashRcSignToken, checkSignToken } from "../lib/rcSignToken";
 import { settleTender } from "../services/tenderTransitionService";
+import { syncSettlementDocFlags } from "../services/integrationService";
 import { extractClientIp } from "../services/geoService";
 import { clientUserAgent } from "../lib/clientIp";
 import { generateSignatureCertificate } from "../services/signatureCertificateService";
@@ -400,6 +401,18 @@ router.post("/:token", async (req: Request, res: Response) => {
       metadata: { rateConfirmationId: rc.id, signTokenId: rc.signTokenId, contentHash: rc.contentHash },
     }).catch((err) => log.error({ err, rcId: rc.id }, "[RC] CONFIRMED transition failed"));
   }
+
+  // The settlement checklist learns the rate confirmation is signed.
+  //
+  // docSignedRateCon is recomputed from the SIGNED row this handler just
+  // wrote, never flipped, so a second signature attempt is free (v3.8.ath).
+  // E3 (2/4): this used to run only from the legacy session-authed sign
+  // endpoint, which no carrier could reach from the emailed link -- so every
+  // link-signed RC left the settlement reading "not recorded" for a document
+  // that was on file. Fire-and-forget: a flag failure must not undo the act.
+  syncSettlementDocFlags(rc.loadId).catch((err) =>
+    log.error({ err, loadId: rc.loadId }, "[Settlement] doc-flag sync after RC signing failed (non-fatal)"),
+  );
 
   // ── AND NOW THE CUSTOMER IS TOLD ──
   //
