@@ -4,6 +4,7 @@ import { useState, useRef } from "react";
 import { File, Download, Search, Shield, FileText, CheckCircle, Upload, X, Loader2 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
+import { PAPERWORK_DOC_TYPES, PAPERWORK_DOC_LABELS } from "@shared/constants/paperwork";
 import { CarrierCard } from "@/components/carrier";
 import { apiHref, openPdfFromApi, extractApiError } from "@/lib/download";
 import { useStepUp } from "@/hooks/useStepUp";
@@ -17,9 +18,15 @@ import { StepUpPrompt } from "@/components/carrier";
 interface DocItem { id: string; fileName: string; fileUrl?: string; pdfPath?: string; docType?: string; type?: string; loadRef?: string; createdAt?: string; uploaded?: string; uploadedAt?: string }
 interface LoadWithDocs { id: string; referenceNumber: string; status?: string; originCity?: string; originState?: string; destCity?: string; destState?: string; documents?: DocItem[]; rateConfirmationPdfUrl?: string; podUrl?: string; bolPdfUrl?: string }
 
-const DOC_TYPE_OPTIONS = [
-  { value: "BOL", label: "Bill of Lading" },
-  { value: "POD", label: "Proof of Delivery" },
+// E4 (ruling 6, 2026-09-21) — the upload picker speaks the paperwork
+// vocabulary the settlement checklist reads. Bare "BOL" is gone from the
+// carrier's list: the ORIGINAL bill of lading is the AE's pre-dispatch
+// attachment, and what a carrier hands in is a SIGNED copy — at pickup or at
+// delivery, each its own type. The labels come from the shared table so the
+// picker, the paperwork panel and the AE's checklist name a document the
+// same way.
+const DOC_TYPE_OPTIONS: Array<{ value: string; label: string }> = [
+  ...PAPERWORK_DOC_TYPES.map((value) => ({ value, label: PAPERWORK_DOC_LABELS[value] })),
   { value: "RATE_CON", label: "Rate Confirmation" },
   { value: "W9", label: "W-9 Form" },
   { value: "COI", label: "Insurance Certificate" },
@@ -146,7 +153,9 @@ export default function CarrierDocumentsPage() {
   });
 
   const typeLabels: Record<string, string> = {
-    BOL: "Bill of Lading", POD: "Proof of Delivery", RATE_CON: "Rate Confirmation",
+    ...PAPERWORK_DOC_LABELS,
+    // Bare BOL still labels the AE's original on the list; only the picker dropped it.
+    BOL: "Bill of Lading (original)", RATE_CON: "Rate Confirmation",
     W9: "W-9 Form", COI: "Insurance Cert", AUTHORITY: "Authority Doc", OTHER: "Other",
   };
 

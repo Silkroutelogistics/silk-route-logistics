@@ -29,6 +29,7 @@ vi.mock("@/lib/download", () => ({
 
 import { api } from "@/lib/api";
 import Page from "./page";
+import { PAPERWORK_DOC_TYPES, PAPERWORK_DOC_LABELS } from "@shared/constants/paperwork";
 
 const get = api.get as unknown as ReturnType<typeof vi.fn>;
 const post = api.post as unknown as ReturnType<typeof vi.fn>;
@@ -135,5 +136,34 @@ describe("a load document", () => {
     await waitFor(() => expect(screen.queryByRole("button", { name: "Upload" })).toBeNull());
     expect(post.mock.calls.map((c) => c[0])).toEqual(["/carrier-loads/L1/documents"]);
     expect(screen.queryByText("Confirm this document")).toBeNull();
+  });
+});
+
+describe("E4 — the picker speaks the paperwork vocabulary", () => {
+  it("offers every ruling-6 type by its shared label, and no bare BOL", async () => {
+    const user = userEvent.setup();
+    mount();
+    await user.click(await screen.findByRole("button", { name: /Upload Document/ }));
+    const picker = screen.getAllByRole("combobox")[0] as HTMLSelectElement;
+    const options = Array.from(picker.options).map((o) => ({ value: o.value, label: o.textContent }));
+    for (const t of PAPERWORK_DOC_TYPES) {
+      expect(options, t).toContainEqual({ value: t, label: PAPERWORK_DOC_LABELS[t] });
+    }
+    expect(options.map((o) => o.value)).not.toContain("BOL");
+    // The compliance types are still there — the picker gained, it did not narrow.
+    for (const t of ["W9", "COI", "AUTHORITY", "OTHER"]) expect(options.map((o) => o.value), t).toContain(t);
+  });
+
+  it("a signed delivery BOL is a LOAD document: it goes to /carrier-loads/:id/documents with its own type", async () => {
+    const user = userEvent.setup();
+    post.mockResolvedValue({ data: { id: "doc-3" } });
+    mount();
+    await screen.findByRole("button", { name: /Upload Document/ });
+    await upload(user, "SIGNED_BOL_DEL", "L1");
+    await waitFor(() => expect(screen.queryByRole("button", { name: "Upload" })).toBeNull());
+    expect(post.mock.calls.map((c) => c[0])).toEqual(["/carrier-loads/L1/documents"]);
+    const body = post.mock.calls[0][1] as FormData;
+    expect(body.get("docType")).toBe("SIGNED_BOL_DEL");
+    expect(body.get("file")).toBeInstanceOf(File);
   });
 });
