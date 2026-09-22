@@ -18373,7 +18373,11 @@
 // wrong one field over in the same function. Built in lib/rcCountersign
 // because this controller also sends email and emailIdentity bans an
 // email-sending module from reading the legal signatory.
-export const SRL_VERSION = "3.8.bfz";
+// v3.8.bga - the countersignature reaches the page: the broker SIGNATURE cell
+// states it, the broker DATE fills in ISO, and the full statement is drawn
+// below the block. A draft shows none of it and keeps an open date line,
+// which is the BCA specimen rule. The carrier column is untouched.
+export const SRL_VERSION = "3.8.bga";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

@@ -112,6 +112,12 @@ import {
   SIGNATORY_NAME,
   SIGNATORY_TITLE,
 } from "../config/authority";
+import {
+  RC_COUNTERSIGN_MARKER,
+  rcCountersignDate,
+  rcCountersignStatement,
+  type RcCountersign,
+} from "../lib/rcCountersign";
 
 const COMPANY = {
   name: ENTITY_NAME,
@@ -2647,10 +2653,33 @@ export function generateEnhancedRateConfirmation(load: EnhancedRCLoadData, formD
       : { ...r, certification: `${COMPANY.address} · MC# ${MC_NUMBER} · USDOT# ${DOT_NUMBER}` },
   );
 
+  // The countersignature, when this document has been issued. A DRAFT has
+  // not, so its broker date line stays open and no statement is drawn -- the
+  // same rule agreementPdfService applies to an unsigned specimen, and for the
+  // same reason: there is no date until there is an execution.
+  const countersign = (fd.rcCountersign ?? null) as RcCountersign | null;
+
   const sigPrefill: Record<string, string> = {
     [roleFieldKey(rcRoles[1].title, "PRINT NAME")]: SIGNATORY_NAME,
     [roleFieldKey(rcRoles[1].title, "TITLE")]: SIGNATORY_TITLE,
+    ...(countersign
+      ? {
+          // NOT a typed name. The rule from agreementPdfService holds: the
+          // SIGNATURE line is where a drawn mark goes, and a name printed
+          // there asserts a mark nobody made. This states what happened.
+          [roleFieldKey(rcRoles[1].title, "SIGNATURE")]: RC_COUNTERSIGN_MARKER,
+          [roleFieldKey(rcRoles[1].title, "DATE")]: rcCountersignDate(countersign),
+        }
+      : {}),
   };
+
+  // Measured, never estimated. The reserve below has to cover the statement
+  // too, or a countersigned document can put the block on one page and the
+  // sentence that qualifies it on the next.
+  const csStatement = countersign ? rcCountersignStatement(countersign) : null;
+  const csStatementH = csStatement
+    ? doc.font(FONT_BODY_ITALIC, 8).heightOfString(csStatement, { width: CONTENT_W, lineGap: 1 }) + 8
+    : 0;
 
   // v3.8.azu C11 — 210 -> 150. Four fields at 26pt is 104, plus the title row
   // and the party sub-line. The reserve below it is the block plus the return
@@ -2660,9 +2689,9 @@ export function generateEnhancedRateConfirmation(load: EnhancedRCLoadData, formD
   // Measured, not guessed: title at +0, party sub-line at +16, four field
   // rows at 26pt starting +38, last underline at +136.
   const RC_SIG_H = 140;
-  // The block plus the return instruction, which must not be orphaned from
-  // the signature it belongs to.
-  rcEnsureRoom(RC_SIG_H + 24);
+  // The block plus the return instruction plus the countersign statement,
+  // none of which may be orphaned from the signature they belong to.
+  rcEnsureRoom(RC_SIG_H + 24 + csStatementH);
   drawSignatureBlock(doc, y, {
     roles: rcRoles,
     height: RC_SIG_H,
@@ -2680,6 +2709,19 @@ export function generateEnhancedRateConfirmation(load: EnhancedRCLoadData, formD
     "Sign and return this page to operations@silkroutelogistics.ai before dispatch. A signed copy also travels with your invoice.",
     MARGIN, y + RC_SIG_H + 6, { width: CONTENT_W, lineGap: 0.5 },
   );
+
+  // THE COUNTERSIGNATURE, DRAWN. The broker cell says "Countersigned
+  // electronically" in 258pt; this is the sentence that says by whom, when,
+  // and on what act. It is drawn full width because its first line measures
+  // 577.8pt at this font and cannot fit a cell.
+  //
+  // Below the return instruction rather than above it: v3.8.art put that line
+  // directly under the block on purpose, and nothing here moves it.
+  if (csStatement) {
+    const csY = doc.y + 8;
+    doc.font(FONT_BODY_ITALIC, 8).fillColor(TOKENS.fg2);
+    doc.text(csStatement, MARGIN, csY, { width: CONTENT_W, lineGap: 1 });
+  }
 
   // v3.8.aro — stamp every buffered page with a truthful "Page N of M". Before
   // this the total was the literal 2, so any third page would have shipped with
