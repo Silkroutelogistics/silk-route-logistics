@@ -4106,7 +4106,7 @@ Sub-pattern 16.
 
 **Rulings.** D1: "signed" is any executed version, including the archived v1
 body, because there is no in-portal re-sign surface yet. D2: no gate at RC
-issuance -- the signature-time check (v3.8.bdn) is the binding moment and
+issuance -- the signature-time check (Commit 2) is the binding moment and
 catches the only path left, a termination between accept and send.
 
 **Severity:** P0 while open (a real carrier hauled with no contract). Status:

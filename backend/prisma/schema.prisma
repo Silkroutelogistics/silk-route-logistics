@@ -1113,6 +1113,13 @@ model CarrierProfile {
   // Per CLAUDE.md §14 + §16, this improves the interim click-through
   // enforceability while the standalone executable BCA + Michigan
   // attorney review remain as first-carrier blockers.
+  // v3.8.bei — the carrier welcome tour, shown ONCE: the first time an
+  // approved, activated, enrolled carrier reaches the portal proper. Stamped on
+  // Finish or Skip; NULL = not yet shown, so every existing approved carrier
+  // sees it once on their next visit (no backfill, deliberately). Replayable
+  // from Settings, which does not touch this column. DB rather than
+  // localStorage because "once" has to hold across devices (§3.8).
+  portalTourCompletedAt  DateTime?
   bcaAgreedAt            DateTime?
   bcaAgreedFromIp        String?
   bcaAgreedFromUserAgent String?

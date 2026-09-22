@@ -4,7 +4,7 @@
  *
  * Three surfaces asked that question and each carried its own where-clause:
  * the tender gate (complianceMonitorService), the Compass "Carrier-Broker
- * Agreement" factor (carrierVettingService), and — from v3.8.bdn — the rate
+ * Agreement" factor (carrierVettingService), and — from Commit 2 — the rate
  * confirmation signature (rcSign). Three copies of one filter is three places
  * for the answer to drift, and the Quick Pay row already fooled one of them
  * once (v3.8.aqi: a "quick-pay" SIGNED row read as the BCA on the vetting

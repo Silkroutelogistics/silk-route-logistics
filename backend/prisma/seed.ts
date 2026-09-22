@@ -1492,6 +1492,14 @@ Seed complete:
   // unless explicitly opted in.
   // ──────────────────────────────────────────────────────────────────
   if (process.env.E2E_FIXTURES === "true") {
+    // v3.8.bei — every approved fixture has "seen" the welcome tour. The tour
+    // opens over the carrier dashboard the first time the operational chrome
+    // renders, and a Playwright walk that lands there would otherwise be
+    // sitting behind a modal it never asked for.
+    await prisma.carrierProfile.updateMany({
+      where: { onboardingStatus: "APPROVED", portalTourCompletedAt: null },
+      data: { portalTourCompletedAt: new Date() },
+    });
     const approvedCarriers = await prisma.carrierProfile.findMany({
       where: { onboardingStatus: "APPROVED" },
       select: { id: true },

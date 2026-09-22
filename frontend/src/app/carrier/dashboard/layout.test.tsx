@@ -15,7 +15,7 @@
 // reaching the screen that lets them enroll. Nothing errors. They are just stuck.
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, waitFor } from "@testing-library/react";
+import { render, waitFor, screen } from "@testing-library/react";
 
 const { replace, pathname, activationData, authState, loginRedirect } = vi.hoisted(() => ({
   replace: vi.fn(),
@@ -259,5 +259,57 @@ describe("a signed-out carrier", () => {
     // Give the loadUser().then(...) chain the same tick the positive case needs.
     await new Promise((r) => setTimeout(r, 20));
     expect(replace).not.toHaveBeenCalled();
+  });
+});
+
+// v3.8.bei — the welcome tour opens ONCE, the first time the operational chrome
+// renders for a carrier the backend says has never seen it. Every case below is
+// a way it must NOT open, plus the one way it must. The tour renders for real
+// here (its api + query client are the mocks above), so the assertion is on
+// the dialog being in the document, not on a stub being called.
+describe("the welcome tour", () => {
+  const TOUR = "carrier-welcome-tour";
+  const clean = { requiresTotpEnrollment: false, requiresActivation: false };
+
+  it("opens for an approved, activated, enrolled carrier who has never seen it", async () => {
+    activationData.value = { ...clean, portalTourCompletedAt: null };
+    await mount();
+    await waitFor(() => expect(screen.getByTestId(TOUR)).toBeTruthy());
+  });
+
+  it("does not open once it has been seen", async () => {
+    activationData.value = { ...clean, portalTourCompletedAt: "2026-09-21T18:50:16.619Z" };
+    await mount();
+    expect(screen.queryByTestId(TOUR)).toBeNull();
+  });
+
+  it("does not open on a backend that does not report the field", async () => {
+    // undefined is "no answer", not "never shown" — an older backend must not
+    // put every carrier through the tour on every visit.
+    activationData.value = { ...clean };
+    await mount();
+    expect(screen.queryByTestId(TOUR)).toBeNull();
+  });
+
+  it("does not open before activation — the chrome it belongs to is not rendered", async () => {
+    activationData.value = { requiresTotpEnrollment: false, requiresActivation: true, portalTourCompletedAt: null };
+    pathname.value = ACTIVATION;
+    await mount();
+    expect(screen.queryByTestId(TOUR)).toBeNull();
+  });
+
+  it("does not open behind the enrollment wall", async () => {
+    activationData.value = { requiresTotpEnrollment: true, requiresActivation: false, portalTourCompletedAt: null };
+    pathname.value = SECURITY;
+    await mount();
+    expect(screen.queryByTestId(TOUR)).toBeNull();
+  });
+
+  it("does not open for a carrier who is not approved", async () => {
+    authState.value = carrier("PENDING");
+    activationData.value = { ...clean, portalTourCompletedAt: null };
+    pathname.value = STATUS;
+    await mount();
+    expect(screen.queryByTestId(TOUR)).toBeNull();
   });
 });

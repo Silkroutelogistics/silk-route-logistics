@@ -1,10 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { User, Lock, CheckCircle, Bell, Phone, ShieldCheck } from "lucide-react";
+import { User, Lock, CheckCircle, Bell, Phone, ShieldCheck, Compass } from "lucide-react";
 import Link from "next/link";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { CarrierCard } from "@/components/carrier";
+import { CarrierWelcomeTour } from "@/components/carrier/CarrierWelcomeTour";
 import { useCarrierAuth } from "@/hooks/useCarrierAuth";
 import { api } from "@/lib/api";
 
@@ -20,6 +21,8 @@ export default function CarrierSettingsPage() {
   const [phoneSaved, setPhoneSaved] = useState(false);
   const [phoneError, setPhoneError] = useState("");
   const [notifError, setNotifError] = useState("");
+  // v3.8.bei — replaying the welcome tour never restamps portalTourCompletedAt.
+  const [replayTour, setReplayTour] = useState(false);
 
   const [notifications, setNotifications] = useState({
     loadUpdates: true,
@@ -96,6 +99,7 @@ export default function CarrierSettingsPage() {
       <h1 className="font-serif font-bold text-2xl text-[#0A2540] mb-1">Account Settings</h1>
       <p className="text-[13px] text-gray-500 mb-6">Manage your carrier account, notifications, and security settings</p>
 
+      {replayTour && <CarrierWelcomeTour mode="replay" onClose={() => setReplayTour(false)} />}
       <div className="grid grid-cols-2 gap-4">
         {/* Profile Info */}
         <CarrierCard padding="p-5">
@@ -287,6 +291,25 @@ export default function CarrierSettingsPage() {
               </div>
             ))}
           </div>
+        </CarrierCard>
+
+        {/* v3.8.bei — the welcome tour again, on request. The first showing is
+            recorded on the profile; this one is not. */}
+        <CarrierCard padding="p-5">
+          <h3 className="text-sm font-bold text-[#0A2540] mb-2 flex items-center gap-2">
+            <Compass size={16} className="text-[#BA7517]" /> Portal tour
+          </h3>
+          <p className="text-xs text-[#3A4A5F] mb-3">
+            Six short slides covering tenders, loads, documents, payments, drivers and training. Shown once when you were approved; replay it here whenever you like.
+          </p>
+          <button
+            type="button"
+            onClick={() => setReplayTour(true)}
+            className="text-xs font-semibold text-[#FBF7F0] bg-[#BA7517] hover:brightness-95 rounded px-3.5 py-1.5"
+            data-testid="replay-tour"
+          >
+            Replay the tour
+          </button>
         </CarrierCard>
       </div>
     </div>

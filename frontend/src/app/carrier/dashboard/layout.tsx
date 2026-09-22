@@ -6,6 +6,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, isLoginRedirectInFlight } from "@/lib/api";
 import { backgroundPoll } from "@/lib/backgroundPoll";
 import { CarrierSidebar } from "@/components/carrier";
+import { CarrierWelcomeTour } from "@/components/carrier/CarrierWelcomeTour";
 import { Search, Bell, X, LogOut, Clock } from "lucide-react";
 import { useCarrierAuth } from "@/hooks/useCarrierAuth";
 import { SessionWarningModal } from "@/components/auth/SessionWarningModal";
@@ -43,6 +44,10 @@ function timeAgo(dateStr: string): string {
 
 export default function CarrierDashboardLayout({ children }: { children: React.ReactNode }) {
   const [notifOpen, setNotifOpen] = useState(false);
+  // v3.8.bei — the welcome tour, once. Session-local dismissal covers the
+  // render between Finish and the activation query refetching; the durable
+  // answer is the stamp the tour writes.
+  const [tourDismissed, setTourDismissed] = useState(false);
   const { user, loadUser, logout } = useCarrierAuth();
   const [checking, setChecking] = useState(true);
   const router = useRouter();
@@ -96,7 +101,7 @@ export default function CarrierDashboardLayout({ children }: { children: React.R
     // things about the same carrier.
     queryFn: () =>
       api
-        .get<{ requiresActivation: boolean; requiresTotpEnrollment: boolean }>(
+        .get<{ requiresActivation: boolean; requiresTotpEnrollment: boolean; portalTourCompletedAt?: string | null }>(
           "/carrier-auth/activation-status",
         )
         .then((r) => r.data),
@@ -237,6 +242,14 @@ export default function CarrierDashboardLayout({ children }: { children: React.R
           They only have one accessible route (application-status) so there's
           no nav to surface. Approved carriers see the full sidebar. */}
       {showOperationalChrome && <CarrierSidebar />}
+      {/* v3.8.bei — opens the FIRST time the operational chrome renders for a
+          carrier the backend says has never seen it (an explicit null; an
+          older backend returns undefined and shows nothing). Behind every
+          gate above it by construction: a carrier who is not yet activated or
+          enrolled never has the chrome, so never has the tour. */}
+      {showOperationalChrome && activationData?.portalTourCompletedAt === null && !tourDismissed && (
+        <CarrierWelcomeTour mode="first-run" onClose={() => setTourDismissed(true)} />
+      )}
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Top Bar */}
         <header className="h-14 bg-white border-b border-[#EFE6D3] flex items-center justify-between px-4 sm:px-6 flex-shrink-0">

@@ -791,6 +791,7 @@ async function loadActivationProfile(userId: string) {
           id: true,
           onboardingStatus: true,
           activatedAt: true,
+          portalTourCompletedAt: true,
           quickPayEnabled: true,
           quickPayAgreedAt: true,
           quickPayVersion: true,
@@ -1114,6 +1115,27 @@ router.post(
   },
 );
 
+// v3.8.bei — the carrier finished (or skipped) the one-time welcome tour.
+// Idempotent: a second call keeps the FIRST stamp, so a replay from Settings
+// or a double-click cannot restate when the carrier actually saw it.
+router.post("/portal-tour/complete", authenticate, authorize("CARRIER"), async (req: AuthRequest, res: Response) => {
+  const profile = await prisma.carrierProfile.findUnique({
+    where: { userId: req.user!.id },
+    select: { id: true, portalTourCompletedAt: true },
+  });
+  if (!profile) {
+    res.status(404).json({ error: "Carrier profile not found" });
+    return;
+  }
+  if (profile.portalTourCompletedAt) {
+    res.json({ ok: true, completedAt: profile.portalTourCompletedAt, alreadyCompleted: true });
+    return;
+  }
+  const now = new Date();
+  await prisma.carrierProfile.update({ where: { id: profile.id }, data: { portalTourCompletedAt: now } });
+  res.json({ ok: true, completedAt: now, alreadyCompleted: false });
+});
+
 router.get("/totp/status", authenticate, authorize("CARRIER"), async (req: AuthRequest, res: Response) => {
   const user = await prisma.user.findUnique({
     where: { id: req.user!.id },
@@ -1165,6 +1187,11 @@ router.get("/activation-status", authenticate, authorize("CARRIER"), async (req:
     // requiresActivation this is NOT conditioned on APPROVED, because a PENDING
     // carrier waiting on review still has an account worth protecting.
     requiresTotpEnrollment: !totpEnrolled,
+    // v3.8.bei — the welcome tour opens once, the first time the layout's
+    // operational chrome renders, and only when this is explicitly null. A
+    // backend that predates the field returns undefined and the layout shows
+    // nothing: an absent answer must not read as "never shown".
+    portalTourCompletedAt: profile.portalTourCompletedAt,
     // requiresActivation: approved, but the gate-satisfying BCA isn't signed yet.
     requiresActivation: profile.onboardingStatus === "APPROVED" && !bcaSigned,
     bca: {
