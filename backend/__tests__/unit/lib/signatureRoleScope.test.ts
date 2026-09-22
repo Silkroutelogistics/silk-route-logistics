@@ -14,7 +14,7 @@ import { describe, it, expect } from "vitest";
 import PDFDocument from "pdfkit";
 import {
   registerSkillFonts, drawSignatureBlock, roleFieldKey,
-  MASTER_AGREEMENT_SIGNATURE_ROLES, PAGE_W, MARGIN,
+  MASTER_AGREEMENT_SIGNATURE_ROLES, RATE_CON_SIGNATURE_ROLES, PAGE_W, MARGIN,
 } from "../../../src/lib/srl-chrome";
 
 const BROKER = MASTER_AGREEMENT_SIGNATURE_ROLES[0].title;
@@ -99,4 +99,66 @@ describe("signature prefills are role-scoped", () => {
     expect(src.includes("prefilledValues[roleFieldKey(role.title, f)]"),
       "drawSignatureBlock no longer resolves through roleFieldKey").toBe(true);
   });
+});
+
+/**
+ * The Rate Confirmation block has the same hazard and now the same exposure.
+ *
+ * Its two roles both carry TITLE, SIGNATURE and DATE. Since v3.8.bga the
+ * BROKER column is prefilled with a countersignature marker and an ISO date,
+ * so a bare key here would print SRL "Countersigned electronically" on the line
+ * the CARRIER signs, on the document that binds them to the rate. The master
+ * agreement cases above cover the same mechanism; this covers the roles the
+ * rate confirmation actually renders with.
+ */
+describe("the Rate Confirmation roles are scoped too", () => {
+  const RC_CARRIER = RATE_CON_SIGNATURE_ROLES[0].title;
+  const RC_BROKER = RATE_CON_SIGNATURE_ROLES[1].title;
+
+  async function renderRc(prefilledValues: Record<string, string>) {
+    const doc: any = new PDFDocument({ size: "LETTER", margin: 0 });
+    registerSkillFonts(doc);
+    const chunks: Buffer[] = [];
+    doc.on("data", (c: Buffer) => chunks.push(c));
+    drawSignatureBlock(doc, 100, { roles: RATE_CON_SIGNATURE_ROLES, height: 140, prefilledValues });
+    doc.end();
+    await new Promise<void>((r) => doc.on("end", () => r()));
+    const pdfjs: any = await import("pdfjs-dist/legacy/build/pdf.mjs");
+    const d = await pdfjs.getDocument({ data: new Uint8Array(Buffer.concat(chunks)) }).promise;
+    const tc = await (await d.getPage(1)).getTextContent();
+    return (tc.items as any[])
+      .map((i) => ({ s: String(i.str).trim(), x: i.transform[4] }))
+      .filter((i) => i.s);
+  }
+
+  it("the countersign marker and date land in the BROKER column only", async () => {
+    const items = await renderRc({
+      [roleFieldKey(RC_BROKER, "SIGNATURE")]: "COUNTERMARK",
+      [roleFieldKey(RC_BROKER, "DATE")]: "2026-09-22",
+    });
+    const mark = items.filter((i) => i.s === "COUNTERMARK");
+    const date = items.filter((i) => i.s === "2026-09-22");
+    expect(mark.length, "the marker must be drawn exactly once").toBe(1);
+    expect(date.length, "the date must be drawn exactly once").toBe(1);
+    expect(mark[0].x, "the marker belongs to the broker half").toBeGreaterThan(MID);
+    expect(date[0].x, "the date belongs to the broker half").toBeGreaterThan(MID);
+  }, 60_000);
+
+  it("a bare SIGNATURE key would fill BOTH, which is what the scoping prevents", async () => {
+    // Not a wish: this is the legacy lookup still working, and it is exactly
+    // what the production prefill must never use for these four field names.
+    const items = await renderRc({ SIGNATURE: "BARE" });
+    const both = items.filter((i) => i.s === "BARE");
+    expect(both.length).toBe(2);
+    expect(both.some((i) => i.x < MID), "one lands in the carrier half").toBe(true);
+    expect(both.some((i) => i.x > MID), "the other in the broker half").toBe(true);
+  }, 60_000);
+
+  it("vacuity tripwire: the RC block renders its own labels", async () => {
+    const items = await renderRc({});
+    const labels = items.map((i) => i.s);
+    expect(labels).toContain("AUTHORIZED SIGNATORY (PRINT)");
+    expect(labels.filter((l) => l === "SIGNATURE").length).toBe(2);
+    expect(RC_CARRIER).not.toBe(RC_BROKER);
+  }, 60_000);
 });

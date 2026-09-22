@@ -19,6 +19,7 @@
 import * as fs from "fs";
 import * as path from "path";
 import { generateEnhancedRateConfirmation } from "../src/services/pdfService";
+import { buildRcCountersign } from "../src/lib/rcCountersign";
 
 const REPO_ROOT = path.resolve(__dirname, "..", "..");
 const CAPTURE_FILE = path.join(REPO_ROOT, "docs", "rc-references", "_CURRENT_SRL_RC_RENDERED.txt");
@@ -48,6 +49,12 @@ const EXPECTED_PAGES: Record<string, number> = {
   "qp fee without speed": 3,
   "qp standard label with fee": 3,
   "qp with accessorials": 3,
+  // Issued, so the acceptance strip carries the marker, the ISO date and the
+  // drawn statement. The worst-case variant is the one that matters: it is the
+  // tightest fixture in the matrix, and the statement is the only thing this
+  // arc adds to page 3.
+  "countersigned": 3,
+  "countersigned worst case": 3,
 };
 
 /** Cases written into the reference capture by a bare `--dump`. One dry van and
@@ -275,6 +282,39 @@ function makeLoad(o: { rows?: number; longSi?: boolean; reefer?: boolean; longNa
         accessorials: [{ type: "Lumper", description: "Lumper reimbursed at cost", amount: 150 }],
       },
       { expect: ["3% · 7-day", "QUICK PAY FEE"], forbid: ["FEE ON THIS RATE", "NET ON THIS RATE"] },
+    ],
+
+    // ISSUED. Every other fixture here is a draft, so before these two the
+    // matrix measured only the document nobody signs. The countersign adds a
+    // drawn statement below the acceptance block, and the page-count assertion
+    // is the point: it costs 34.2pt into the 374pt of page-3 headroom the
+    // tightest fixture leaves, and this is what keeps that true rather than
+    // remembered.
+    //
+    // The instant is frozen rather than `new Date()`: a wall-clock read would
+    // put a different string in the statement on every run, which is the
+    // failure that used to move the render pins at every UTC midnight.
+    [
+      "countersigned",
+      makeLoad(),
+      { rcCountersign: buildRcCountersign(new Date("2026-09-01T12:00:00.000Z")) },
+      {
+        expect: [
+          "Countersigned electronically",
+          "applied automatically on issuance of this Rate Confirmation",
+          "Countersigned at (UTC, ISO 8601): 2026-09-01T12:00:00.000Z",
+          "2026-09-01",
+        ],
+      },
+    ],
+    [
+      "countersigned worst case",
+      makeLoad({ rows: 6, longSi: true, reefer: true, longNames: true }),
+      {
+        customTerms: "Extra handling required.",
+        rcCountersign: buildRcCountersign(new Date("2026-09-01T12:00:00.000Z")),
+      },
+      { expect: ["Countersigned electronically", "Countersigned for Silk Route Logistics Inc."] },
     ],
   ];
   let fails = 0;
