@@ -111,7 +111,7 @@ function organizationSchema() {
     "@type": "Organization",
     name: "Silk Route Logistics Inc.",
     url: "https://silkroutelogistics.ai",
-    logo: "https://silkroutelogistics.ai/logo.png",
+    logo: "https://silkroutelogistics.ai/brand/srl-logo-fullcolour-2048.png",
     telephone: "+1-269-220-6760",
     email: "operations@silkroutelogistics.ai",
     address: {
@@ -136,7 +136,7 @@ function renderMeta(html, filename, attrs = {}) {
   // <!-- INCLUDE:meta og-image="https://silkroutelogistics.ai/media/shipper-hero.jpg" -->
   // Pre-amy this was hardcoded to logo.png and silently clobbered any
   // page-level og:image hand-edit on every build.
-  const ogImage = attrs["og-image"] || "https://silkroutelogistics.ai/logo.png";
+  const ogImage = attrs["og-image"] || "https://silkroutelogistics.ai/brand/srl-logo-fullcolour-2048.png";
 
   const lines = [
     `<meta name="description" content="${escapeAttr(description)}">`,
@@ -276,7 +276,7 @@ function renderNav(variant) {
   return `<nav class="nav navbar" id="mainNav" role="navigation" aria-label="Main">
     <div class="nav-inner navbar-inner">
       <a href="/" class="srl-logo-wrap" aria-label="${escape(chrome.company)} Home">
-        <img src="/logo.png" alt="SRL" class="srl-logo-img">${logoOverlay}
+        <img src="/brand/srl-logo-white.svg" alt="Silk Route Logistics" class="srl-logo-img">${logoOverlay}
       </a>
       <div class="nav-links navbar-links">
 ${navLinks}
@@ -323,7 +323,7 @@ ${col.links.map((l) => `          <a href="${l.href}">${escape(l.label)}</a>`).j
         <div class="footer-brand">
           <div class="footer-logo">
             <a href="/" aria-label="${escape(chrome.company)} home" style="display:inline-block;line-height:0;">
-              <img src="/logo.png" alt="SRL" style="height:36px;width:auto;border-radius:6px;">
+              <img src="/brand/srl-logo-white.svg" alt="Silk Route Logistics" style="height:36px;width:auto;">
             </a>
           </div>
           <p class="srl-tagline">${escape(chrome.tagline)}</p>

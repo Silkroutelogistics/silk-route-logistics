@@ -18332,7 +18332,13 @@
 // at every one of them. Both files render and CSS shows one; a JS swap would flash the wrong mark, because the static
 // export carries no data-mode on first paint. The chip went with the raster: /logo.png was an opaque 200x200 whose 92px
 // mark sat in a white square, and the rounded corners several surfaces applied were rounding THAT, not the mark.
-export const SRL_VERSION = "3.8.bgc";
+// v3.8.bgd - the static chrome carries the vector mark. inject-chrome renders nav and footer for all 14 public pages, so
+// one edit to the injector moves every one of them; the pages in this commit are its output, not hand edits. The nav and
+// footer marks are the WHITE master because both bars are navy. The injector also fed two machine-readable surfaces the
+// old raster - Organization.logo in the JSON-LD and the default og:image - and both now name the hosted 2048px PNG rather
+// than the SVG, because neither schema.org consumers nor the social crawlers render SVG reliably. The footer mark lost its
+// border-radius with the chip it was rounding.
+export const SRL_VERSION = "3.8.bgd";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
