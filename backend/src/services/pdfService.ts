@@ -2704,9 +2704,26 @@ export function generateEnhancedRateConfirmation(load: EnhancedRCLoadData, formD
   // "Carrier must sign load confirmation and fax back to agency at ...". MoLo:
   // "Please sign and return to MoLo". Allen Lund: "PRINT & SIGN THIS PAGE and
   // then EMAIL to ...". 3 of 7 name a return channel; SRL named none.
+  //
+  // C3 — AND IT NO LONGER CONTRADICTS THE CLAUSE ABOVE IT. "before dispatch"
+  // read as a condition precedent, while GOVERNING TERMS on page 2 says in as
+  // many words that dispatching a unit, arriving at pickup or starting
+  // transport is itself binding acceptance, whichever comes first. One document
+  // told a carrier two different things about when it takes effect, and the
+  // instruction was the half that was wrong. It now states the return as what
+  // it is -- how to confirm -- and names the other routes rather than implying
+  // they do not exist.
+  //
+  // NOT a terms-version bump. The RC terms constant in lib/agreementVersions
+  // governs the governing clauses above (2392-2443) and this line is not one of
+  // them; the clause it defers to is unchanged. The constant is deliberately not
+  // named here: consentAndTermsVersion asserts this file never mentions it, so
+  // that the renderer cannot read today version over an older document, and that
+  // guard reads raw source including comments.
   doc.font(FONT_BODY, 7.5).fillColor(TOKENS.fg2);
   doc.text(
-    "Sign and return this page to operations@silkroutelogistics.ai before dispatch. A signed copy also travels with your invoice.",
+    "Sign and return this page to confirm acceptance. Dispatch of a unit, arrival at the pickup location, " +
+      "or commencement of transport also constitutes binding acceptance under Governing Terms.",
     MARGIN, y + RC_SIG_H + 6, { width: CONTENT_W, lineGap: 0.5 },
   );
 

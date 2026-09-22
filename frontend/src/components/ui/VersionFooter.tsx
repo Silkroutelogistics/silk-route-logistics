@@ -18377,7 +18377,11 @@
 // states it, the broker DATE fills in ISO, and the full statement is drawn
 // below the block. A draft shows none of it and keeps an open date line,
 // which is the BCA specimen rule. The carrier column is untouched.
-export const SRL_VERSION = "3.8.bga";
+// v3.8.bgb - the return instruction stops contradicting the Acceptance clause
+// it sits under. It said sign before dispatch while GOVERNING TERMS says
+// dispatch itself is binding acceptance; one document told a carrier two
+// different things about when it takes effect.
+export const SRL_VERSION = "3.8.bgb";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
