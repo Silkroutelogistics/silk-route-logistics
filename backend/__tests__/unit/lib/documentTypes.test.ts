@@ -63,7 +63,6 @@ vi.mock("../../../src/services/integrationService", () => ({
   syncSettlementDocFlags: vi.fn().mockResolvedValue({ updated: false }),
 }));
 vi.mock("../../../src/services/shipperNotificationService", () => ({
-  validateAndNotifyPOD: vi.fn().mockResolvedValue(undefined),
   sendShipperDeliveryEmail: vi.fn(),
   sendShipperMilestoneEmail: vi.fn(),
 }));

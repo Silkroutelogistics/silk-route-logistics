@@ -5,7 +5,6 @@ import {
   shipperPickupHtml,
   shipperTransitHtml,
   shipperDeliveryHtml,
-  shipperPODHtml,
 } from "./emailService";
 import { log } from "../lib/logger";
 import { resolveOperationalRecipients } from "./customerRecipientResolver";
@@ -199,72 +198,6 @@ export async function sendShipperDeliveryEmail(loadId: string) {
   });
 
   log.info(`[ShipperNotify] Delivery email sent to ${sent.join(", ")} for ${load.referenceNumber}`);
-}
-
-/**
- * Send "POD available" email to shipper after POD validation.
- */
-export async function sendShipperPODEmail(loadId: string, podUrl: string) {
-  const load = await prisma.load.findUnique({
-    where: { id: loadId },
-    include: {
-      customer: { select: { name: true, email: true } },
-    },
-  });
-  // The customer must exist for the body; WHO gets it is the resolver's call.
-  if (!load?.customer) return;
-
-  const fullPodUrl = `https://silkroutelogistics.ai${podUrl}`;
-  const html = shipperPODHtml(load.referenceNumber, fullPodUrl);
-  const sent = await sendOperational(loadId, `POD Available: ${load.referenceNumber}`, html);
-  if (sent.length === 0) return;
-
-  log.info(`[ShipperNotify] POD email sent to ${sent.join(", ")} for ${load.referenceNumber}`);
-}
-
-/**
- * Validate POD by matching metadata (delivery date + consignee name).
- * Auto-approve if match, otherwise leave for manual review.
- */
-export async function validateAndNotifyPOD(loadId: string, documentId: string) {
-  const load = await prisma.load.findUnique({
-    where: { id: loadId },
-    include: { customer: { select: { name: true, email: true, contactName: true } } },
-  });
-  if (!load) return;
-
-  const doc = await prisma.document.findUnique({ where: { id: documentId } });
-  if (!doc) return;
-
-  // Auto-validate: check if load has been delivered and consignee name exists
-  const isDelivered = ["DELIVERED", "POD_RECEIVED", "INVOICED", "COMPLETED"].includes(load.status);
-  const hasConsignee = !!(load.destCompany || load.customer?.contactName);
-
-  if (isDelivered && hasConsignee) {
-    // Auto-approve POD
-    await prisma.load.update({
-      where: { id: loadId },
-      data: {
-        podSigned: true,
-        podReceivedAt: new Date(),
-        podUrl: doc.fileUrl,
-        status: load.status === "DELIVERED" ? "POD_RECEIVED" : load.status,
-      },
-    });
-
-    // Send POD email to shipper
-    await sendShipperPODEmail(loadId, doc.fileUrl);
-
-    log.info(`[ShipperNotify] POD auto-validated for ${load.referenceNumber}`);
-  } else {
-    // Just store the POD URL for manual review
-    await prisma.load.update({
-      where: { id: loadId },
-      data: { podUrl: doc.fileUrl },
-    });
-
-    log.info(`[ShipperNotify] POD uploaded for ${load.referenceNumber} — pending manual validation`);
-  }
 }
 
 /**

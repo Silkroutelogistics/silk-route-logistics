@@ -18200,7 +18200,8 @@
 // v3.8.bel — Task E1b: a refused upload is a client error. errorHandler matched a message config/upload.ts stopped producing when DOC/DOCX were added, so every refused MIME type and every oversize file was a 500 (logged UNHANDLED, counted toward the spike alert, sent to Sentry, "Internal server error" in production). MulterError → 413 on LIMIT_FILE_SIZE, 400 otherwise; the fileFilter refusal carries code UNSUPPORTED_FILE_TYPE → 400.
 // v3.8.bem — Task E1c, the P0: one seam records a load document (services/loadDocumentService). A POD that advances AT_DELIVERY/LOADED → POD_RECEIVED past DELIVERED now FIRES onLoadDelivered (the carrier route used to skip it, so a carrier who uploaded the POD at delivery got no CarrierPay, ever); every POD runs onPODUploaded + syncSettlementDocFlags (the P1); createCarrierPayOnDelivery is idempotent on a non-VOID row. Carrier route rewired; /documents/upload follows in E1d.
 // v3.8.ben — Task E1d-i: /documents/upload's load branch goes through the same seam as the carrier route, so both routes give one answer to what a POD sets in motion; a guard drives both routes over HTTP and asserts the seam is reached (and that neither records a load document by its own hand). Three test harnesses that tested gates in FRONT of the seam now stub it.
-export const SRL_VERSION = "3.8.ben";
+// v3.8.beo — Task E1d-ii: the second POD sender is gone. validateAndNotifyPOD and sendShipperPODEmail (shipperNotificationService) and their sole html helper had no caller once E1d-i moved /documents/upload onto the seam; one POD email now goes out, through the Item 8.3 recipient resolver, whichever route carried the upload. The DB-level proof (_arc-e1-pod-proof.ts, 38/38 over the real routers) lands beside it.
+export const SRL_VERSION = "3.8.beo";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

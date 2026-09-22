@@ -581,17 +581,6 @@ export function shipperDeliveryHtml(loadRef: string, origin: string, dest: strin
   `);
 }
 
-export function shipperPODHtml(loadRef: string, podUrl: string) {
-  return wrap(`
-    <h2 style="color:#0A2540">Proof of Delivery Available — ${loadRef}</h2>
-    <p>The Proof of Delivery for shipment <strong>${loadRef}</strong> has been validated and is now available.</p>
-    <div style="text-align:center;margin:24px 0">
-      <a href="${podUrl}" style="display:inline-block;background:#BA7517;color:#FFFFFF;padding:14px 32px;text-decoration:none;border-radius:6px;font-weight:bold;font-size:16px">Download POD</a>
-    </div>
-    <p style="color:#64748b;font-size:13px">If you have any questions about this delivery, please contact your account representative.</p>
-  `);
-}
-
 export async function sendRemittanceEmail(carrierEmail: string, data: {
   carrierName: string;
   loadRef: string;
