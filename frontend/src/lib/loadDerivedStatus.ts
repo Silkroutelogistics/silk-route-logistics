@@ -251,6 +251,94 @@ export function carrierTenderLabel(status: string, statusReason?: string | null)
   return "Offered";
 }
 
+/* ------------------------------------------------------------------ */
+/*  What a carrier should do next, by the same selector                */
+/* ------------------------------------------------------------------ */
+
+export interface CarrierNextStep {
+  /** The derived key the step was decided from. Stable; safe to switch on. */
+  key: string;
+  /** One sentence: what to do, or what is happening. Null when nothing fits. */
+  text: string | null;
+  /** Tailwind classes — the tone of the derived status, so strip and badge agree. */
+  tone: string;
+  /** Exactly the backend's BOL gate: a tender at CONFIRMED exists on the load. */
+  bolReady: boolean;
+  /** Why the BOL is not available yet. Null when it is. */
+  bolReason: string | null;
+}
+
+/**
+ * Task E2 (rulings 2026-09-21): the next-step strip on every carrier load.
+ *
+ * A PROJECTION of deriveLoadStatus, not a second reading of the tender — the
+ * carrier's strip and the AE board's badge are decided by the one selector, so
+ * "Accepted — RC pending" on the board is "Rate confirmation on its way" here,
+ * for the same load on the same refresh, and nothing else maps a status to a
+ * sentence for a carrier.
+ *
+ * `bolReady` mirrors the backend gate (pdfController: a LoadTender at
+ * CONFIRMED must exist) rather than the derived key, because the key moves on
+ * to the load's own stage once the truck is rolling while the gate still asks
+ * the tender. A directly-assigned load never had a tender to confirm, and the
+ * gate refuses it — so the button says so here, in advance, instead of on
+ * click. Before E2 the button rendered live on every load at every status and
+ * the refusal arrived as a 403 after the tap.
+ */
+export function carrierNextStep(load: DeriveInput): CarrierNextStep {
+  const derived = deriveLoadStatus(load);
+  const tenders = (load.tenders ?? []) as Array<{ status: string }>;
+  const bolReady = tenders.some((t) => t.status === "CONFIRMED");
+
+  const step = (text: string | null, bolReason: string | null): CarrierNextStep => ({
+    key: derived.key,
+    text,
+    tone: derived.tone,
+    bolReady,
+    bolReason: bolReady ? null : bolReason,
+  });
+
+  const SIGN_FIRST = "Sign the rate confirmation to unlock the bill of lading.";
+
+  switch (derived.key) {
+    case "ACCEPTED":
+      return step(
+        "Rate confirmation on its way from SRL. Sign it when it arrives to unlock the bill of lading.",
+        "Available once you sign the rate confirmation, which SRL will email.",
+      );
+    case "RC_SENT":
+      return step(
+        "Sign the rate confirmation. The signing link is in the email SRL sent you.",
+        `${SIGN_FIRST} The signing link is in the email SRL sent you.`,
+      );
+    case "CONFIRMED":
+      return step("Signed. Bill of lading ready.", SIGN_FIRST);
+    case "ASSIGNED":
+      return step(
+        "Assigned by SRL. Rate confirmation on its way.",
+        "Available once you sign the rate confirmation, which SRL will email.",
+      );
+    case "DISPATCHED":
+    case "AT_PICKUP":
+    case "LOADED":
+    case "PICKED_UP":
+    case "IN_TRANSIT":
+      return step("Update status at each stop.", SIGN_FIRST);
+    case "AT_DELIVERY":
+    case "DELIVERED":
+      return step("Upload the POD to start the payment clock.", SIGN_FIRST);
+    case "POD_RECEIVED":
+    case "INVOICED":
+    case "COMPLETED":
+      return step("Paperwork received.", SIGN_FIRST);
+    case "CANCELLED":
+    case "TONU":
+      return step("This load was cancelled.", "Not available on a cancelled load.");
+    default:
+      return step(null, SIGN_FIRST);
+  }
+}
+
 /** Needs Attention reasons, in words an AE can act on. */
 export const ATTENTION_LABEL: Record<string, string> = {
   EXPIRED_NO_LIVE_TENDER: "Offers expired — no carrier",

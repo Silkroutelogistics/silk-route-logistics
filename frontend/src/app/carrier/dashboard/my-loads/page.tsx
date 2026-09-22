@@ -1,12 +1,16 @@
 "use client";
 
-import { useState } from "react";
-import { MapPin, Phone, FileText, CheckCircle, Clock, AlertCircle, Printer, Camera, Upload, Zap, Lock, Loader2 } from "lucide-react";
+import { useState, useEffect } from "react";
+import { MapPin, Phone, FileText, CheckCircle, Clock, AlertCircle, Printer, Camera, Upload, Zap, Lock, Loader2, ArrowRight } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { CarrierCard, CarrierBadge, DriverAssignmentPanel } from "@/components/carrier";
 import { money, carrierPay } from "@/lib/rateDisplay";
 import { openPdfFromApi, extractApiError, apiHref } from "@/lib/download";
+// E2 — the next-step strip and the BOL button state come from the same
+// selector the AE board reads (deriveLoadStatus, projected for a carrier), so
+// the two surfaces cannot disagree about where a load is.
+import { carrierNextStep } from "@/lib/loadDerivedStatus";
 
 const statusFilters = ["All", "BOOKED", "DISPATCHED", "AT_PICKUP", "LOADED", "IN_TRANSIT", "AT_DELIVERY", "DELIVERED"];
 const statusTransitions: Record<string, string[]> = {
@@ -33,6 +37,15 @@ export default function MyLoadsPage() {
   const [rcError, setRcError] = useState<string | null>(null);
   const [rcOpening, setRcOpening] = useState(false);
   const queryClient = useQueryClient();
+
+  // E2 — `?load=<id>` opens that load's detail, so the accept confirmation on
+  // the Tenders page can point at the load it just booked. Read off
+  // window.location rather than useSearchParams: this is a static export and
+  // that hook needs a Suspense boundary the page does not otherwise want.
+  useEffect(() => {
+    const id = new URLSearchParams(window.location.search).get("load");
+    if (id) setSelectedId(id);
+  }, []);
 
   const query = new URLSearchParams();
   if (activeFilter !== "All") query.set("status", activeFilter);
@@ -140,6 +153,14 @@ export default function MyLoadsPage() {
                     <div className="text-[10px] text-gray-700 mt-1">
                       {load.equipmentType} &middot; Pick: {new Date(load.pickupDate).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
                     </div>
+                    {(() => {
+                      const step = carrierNextStep(load as any);
+                      return step.text ? (
+                        <div data-testid="next-step" className={`inline-flex items-center gap-1 mt-1.5 px-2 py-0.5 rounded text-[11px] font-medium ${step.tone}`}>
+                          <ArrowRight size={11} /> {step.text}
+                        </div>
+                      ) : null;
+                    })()}
                   </div>
                   <span className="text-sm font-bold text-[#0A2540]">{money(carrierPay(load))}</span>
                 </div>
@@ -165,6 +186,14 @@ export default function MyLoadsPage() {
                   <h3 className="text-sm font-bold text-[#0A2540]">{detail.referenceNumber}</h3>
                   <CarrierBadge status={detail.status} size="md" />
                 </div>
+                {(() => {
+                  const step = carrierNextStep(detail);
+                  return step.text ? (
+                    <div data-testid="next-step-detail" className={`flex items-start gap-1.5 mb-4 px-3 py-2 rounded-md text-xs font-medium ${step.tone}`}>
+                      <ArrowRight size={13} className="mt-0.5 shrink-0" /> <span>{step.text}</span>
+                    </div>
+                  ) : null;
+                })()}
                 <div className="space-y-2 text-xs">
                   <div className="flex items-start gap-2">
                     <MapPin size={14} className="text-[#BA7517] mt-0.5" />
@@ -222,25 +251,44 @@ export default function MyLoadsPage() {
                       by pdfService. Two renderers for one instrument is the
                       Load.rate defect in document form — nobody knows which is
                       authoritative until the two disagree in front of a shipper.
-                      This now fetches the same PDF the AE sends. */}
-                  <button
-                    type="button"
-                    disabled={bolOpening}
-                    onClick={async () => {
-                      setBolError(null);
-                      setBolOpening(true);
-                      try {
-                        await openPdfFromApi(`/pdf/bol-load/${detail.id}`);
-                      } catch (err) {
-                        setBolError(await extractApiError(err, "Couldn't open the bill of lading."));
-                      } finally {
-                        setBolOpening(false);
-                      }
-                    }}
-                    className="flex items-center gap-1.5 text-[#BA7517] font-semibold mt-2 hover:underline text-xs disabled:opacity-60"
-                  >
-                    <Printer size={14} /> {bolOpening ? "Opening…" : "Bill of Lading"}
-                  </button>
+                      This now fetches the same PDF the AE sends.
+
+                      E2 — the button is DISABLED with the reason shown until a
+                      tender on this load is CONFIRMED, which is exactly the
+                      backend gate (pdfController RC_NOT_SIGNED). Before this
+                      it rendered live at every status and the refusal was a
+                      403 after the tap. The gate itself is unchanged: this is
+                      the same answer, given in advance. */}
+                  {(() => {
+                    const step = carrierNextStep(detail);
+                    return (
+                      <>
+                        <button
+                          type="button"
+                          disabled={bolOpening || !step.bolReady}
+                          aria-disabled={!step.bolReady}
+                          title={step.bolReason ?? undefined}
+                          onClick={async () => {
+                            setBolError(null);
+                            setBolOpening(true);
+                            try {
+                              await openPdfFromApi(`/pdf/bol-load/${detail.id}`);
+                            } catch (err) {
+                              setBolError(await extractApiError(err, "Couldn't open the bill of lading."));
+                            } finally {
+                              setBolOpening(false);
+                            }
+                          }}
+                          className="flex items-center gap-1.5 text-[#BA7517] font-semibold mt-2 hover:underline text-xs disabled:opacity-60 disabled:no-underline disabled:cursor-not-allowed"
+                        >
+                          {step.bolReady ? <Printer size={14} /> : <Lock size={14} />} {bolOpening ? "Opening…" : "Bill of Lading"}
+                        </button>
+                        {!step.bolReady && step.bolReason && (
+                          <p data-testid="bol-reason" className="mt-1 text-[11px] text-gray-600">{step.bolReason}</p>
+                        )}
+                      </>
+                    );
+                  })()}
                   {bolError && (
                     <p className="mt-1.5 text-[11px] text-[#9B2C2C] bg-[#F6E3E3] border border-[#9B2C2C]/30 rounded px-2 py-1.5">
                       {bolError}

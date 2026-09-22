@@ -14,7 +14,7 @@
 import { describe, it, expect } from "vitest";
 import fs from "fs";
 import path from "path";
-import { deriveLoadStatus, actionsFor, carrierTenderLabel, WIRED_ACTIONS } from "./loadDerivedStatus";
+import { deriveLoadStatus, actionsFor, carrierTenderLabel, carrierNextStep, WIRED_ACTIONS } from "./loadDerivedStatus";
 
 describe("deriveLoadStatus", () => {
   it("a cancelled load is cancelled whatever its tenders say", () => {
@@ -139,6 +139,66 @@ describe("what the carrier is told", () => {
     const labels = reasons.map((r) => carrierTenderLabel("WITHDRAWN", r));
     expect(new Set(labels).size, "two reasons sharing a label is a reason nobody can act on").toBe(reasons.length);
     expect(labels.every((l) => !/withdraw/i.test(l))).toBe(true);
+  });
+});
+
+describe("what the carrier should do next (E2)", () => {
+  // A projection of deriveLoadStatus: the strip must say what the AE badge
+  // says, in the carrier's terms, and the BOL state must be the backend gate.
+  const on = (status: string, tenders: string[] = [], carrierId: string | null = "u1") =>
+    carrierNextStep({ status, carrierId, tenders: tenders.map((s) => ({ status: s })) });
+
+  it("ACCEPTED: the RC is coming; the BOL waits for the signature", () => {
+    const s = on("BOOKED", ["ACCEPTED"]);
+    expect(s.key).toBe("ACCEPTED");
+    expect(s.text).toMatch(/Rate confirmation on its way/);
+    expect(s.bolReady).toBe(false);
+    expect(s.bolReason).toMatch(/sign the rate confirmation/i);
+  });
+
+  it("RC_SENT: sign it, and the reason says where the link is", () => {
+    const s = on("BOOKED", ["RC_SENT"]);
+    expect(s.text).toMatch(/^Sign the rate confirmation/);
+    expect(s.bolReady).toBe(false);
+    expect(s.bolReason).toMatch(/signing link is in the email/);
+  });
+
+  it("CONFIRMED: signed, BOL ready, no reason", () => {
+    const s = on("BOOKED", ["CONFIRMED"]);
+    expect(s.text).toBe("Signed. Bill of lading ready.");
+    expect(s.bolReady).toBe(true);
+    expect(s.bolReason).toBeNull();
+  });
+
+  it("bolReady is the backend gate — a CONFIRMED tender — not the derived key", () => {
+    // Rolling: the key is the load's stage, the gate still asks the tender.
+    expect(on("IN_TRANSIT", ["CONFIRMED"]).bolReady).toBe(true);
+    expect(on("IN_TRANSIT", ["ACCEPTED"]).bolReady).toBe(false);
+    // Directly assigned, never tendered: the gate refuses, so the button must too.
+    const assigned = on("BOOKED", [], "u1");
+    expect(assigned.key).toBe("ASSIGNED");
+    expect(assigned.bolReady).toBe(false);
+    expect(assigned.bolReason).toMatch(/sign the rate confirmation/i);
+  });
+
+  it("the strip carries the derived tone, so strip and badge agree on colour", () => {
+    expect(on("BOOKED", ["RC_SENT"]).tone).toBe(deriveLoadStatus({ status: "BOOKED", tenders: [{ status: "RC_SENT" }] }).tone);
+    expect(on("DELIVERED", ["CONFIRMED"]).tone).toBe(deriveLoadStatus({ status: "DELIVERED" }).tone);
+  });
+
+  it("a cancelled load says so and offers no BOL, whatever the tender", () => {
+    const s = on("CANCELLED", ["CONFIRMED"]);
+    expect(s.text).toMatch(/cancelled/);
+    // The tender IS confirmed, so the gate would serve it — and the strip says
+    // not to. Both are true: the reason is about the load, not the signature.
+    expect(s.bolReady).toBe(true);
+  });
+
+  it("every operational stage has a sentence; nothing the carrier sees is blank", () => {
+    for (const st of ["DISPATCHED", "AT_PICKUP", "LOADED", "IN_TRANSIT", "AT_DELIVERY", "DELIVERED", "POD_RECEIVED", "INVOICED", "COMPLETED"]) {
+      expect(on(st, ["CONFIRMED"]).text, st).toBeTruthy();
+    }
+    expect(on("AT_DELIVERY", ["CONFIRMED"]).text).toMatch(/POD/);
   });
 });
 
