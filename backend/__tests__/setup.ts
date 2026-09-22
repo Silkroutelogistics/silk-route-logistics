@@ -286,6 +286,13 @@ vi.mock("../src/config/database", () => ({
     approvalQueue: {
       create: vi.fn(),
       findMany: vi.fn(),
+      // E5 (ruling 2): approvePayment resolves the queue row with updateMany and
+      // reviewApproval reads it with findUnique and writes it with update. None
+      // was here, so neither approval path had ever run under test. Mirrored,
+      // not aliased.
+      findUnique: vi.fn(),
+      update: vi.fn(),
+      updateMany: vi.fn(),
     },
     factoringFund: {
       findFirst: vi.fn(),

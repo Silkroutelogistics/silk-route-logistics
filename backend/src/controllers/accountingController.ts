@@ -24,6 +24,7 @@ import {
 // carrier portal and the manual carrier-pay route.
 import { atCostReimbursementsForLoad, carrierAccessorialsForLoad } from "../services/integrationService";
 import { BILLED_STATUSES, invoiceValue } from "../lib/invoiceTotals";
+import { assertInvoiceOnFileOrOverride, invoiceOnFile } from "../lib/carrierPayInvoiceGate";
 
 // ============================================================
 // HELPERS
@@ -1382,6 +1383,19 @@ export async function approvePayment(req: AuthRequest, res: Response) {
       return;
     }
 
+    // Ruling 2 (E5): the carrier's invoice is required to approve, or an AE
+    // override with a reason of at least ten characters, recorded before the
+    // write. One gate for every path that writes APPROVED (lib/carrierPayInvoiceGate).
+    const gate = await assertInvoiceOnFileOrOverride({
+      carrierPayId: id, loadId: existing.loadId,
+      actor: { id: req.user!.id, role: req.user!.role },
+      overrideReason: req.body?.overrideReason,
+    });
+    if (!gate.allowed) {
+      res.status(gate.status).json({ error: gate.error, code: gate.code });
+      return;
+    }
+
     const payment = await prisma.carrierPay.update({
       where: { id },
       data: {
@@ -1653,19 +1667,28 @@ export async function bulkApprovePayments(req: AuthRequest, res: Response) {
       return;
     }
 
-    const result = await prisma.carrierPay.updateMany({
-      where: {
-        id: { in: paymentIds },
-        status: "SUBMITTED",
-      },
-      data: {
-        status: "APPROVED",
-        approvedById: req.user!.id,
-        approvedAt: new Date(),
-      },
+    // Ruling 2 (E5): each payment needs the carrier's invoice on file. Bulk
+    // approval carries NO override -- a single reason for N payments is not a
+    // reason for any of them -- so the ones without an invoice are refused by
+    // id and the caller approves those one at a time, with a reason each.
+    const candidates = await prisma.carrierPay.findMany({
+      where: { id: { in: paymentIds }, status: "SUBMITTED" },
+      select: { id: true, loadId: true },
     });
+    const refused: Array<{ id: string; code: "INVOICE_REQUIRED" }> = [];
+    const approvable: string[] = [];
+    for (const c of candidates) {
+      if (await invoiceOnFile(c.loadId)) approvable.push(c.id);
+      else refused.push({ id: c.id, code: "INVOICE_REQUIRED" });
+    }
+    const result = approvable.length
+      ? await prisma.carrierPay.updateMany({
+          where: { id: { in: approvable }, status: "SUBMITTED" },
+          data: { status: "APPROVED", approvedById: req.user!.id, approvedAt: new Date() },
+        })
+      : { count: 0 };
 
-    res.json({ approved: result.count, requested: paymentIds.length });
+    res.json({ approved: result.count, requested: paymentIds.length, refused });
   } catch (error: any) {
     log.error({ err: error }, "bulkApprovePayments error:");
     res.status(500).json({ error: "Failed to bulk approve", details: error.message });
@@ -3635,6 +3658,25 @@ export async function reviewApproval(req: AuthRequest, res: Response) {
     }
 
     const newStatus = action === "approve" ? "APPROVED" : "REJECTED";
+
+    // Ruling 2 (E5): approving a CARRIER_PAY reference needs the invoice on
+    // file or an AE override with a reason -- checked BEFORE the queue row is
+    // marked, so a refusal leaves the approval PENDING rather than approved
+    // with the payment still SUBMITTED.
+    if (newStatus === "APPROVED" && matchesRef(existing.referenceType, APPROVAL_REF.CARRIER_PAY)) {
+      const pay = await prisma.carrierPay.findUnique({ where: { id: existing.referenceId }, select: { loadId: true } });
+      if (pay) {
+        const gate = await assertInvoiceOnFileOrOverride({
+          carrierPayId: existing.referenceId, loadId: pay.loadId,
+          actor: { id: req.user!.id, role: req.user!.role },
+          overrideReason: req.body?.overrideReason,
+        });
+        if (!gate.allowed) {
+          res.status(gate.status).json({ error: gate.error, code: gate.code });
+          return;
+        }
+      }
+    }
 
     const approval = await prisma.approvalQueue.update({
       where: { id },
