@@ -4,12 +4,13 @@
 -- (§14 CARRIER ARCHIVE — "Nothing is deleted"). This migration makes the
 -- database enforce that sentence rather than the application remembering it.
 --
--- AUTHORED, NOT APPLIED. Lives in prisma/_pending_migrations/ on purpose: Render
--- runs `migrate deploy` on every push, so a file in prisma/migrations/ is
--- scheduled, not pending (see ../README.md and §13.3 Item 212). It moves into
--- prisma/migrations/ together with the schema.prisma hunk below, as one change,
--- only after the gate at the bottom has been run against PRODUCTION and read
--- 5 x 'c', 2 x 'n', every orphan count 0.
+-- MOVED INTO prisma/migrations/ 2026-09-22 (v3.8.bfw), together with the
+-- schema.prisma hunk below, as one commit — AFTER the gate at the bottom was run
+-- against PRODUCTION by hand by Wasi on 2026-09-22 and read exactly seven rows,
+-- 'c' x5 and 'n' x2, every orphan count 0. Authored 2026-09-21 in
+-- prisma/_pending_migrations/ (commit 1aaf3165) so it could not ride a push
+-- before that read existed (§2.2, §13.3 Items 208 + 212). Render applies it at
+-- the deploy of the merge that carries this file.
 --
 -- WHY SEVEN AND NOT SIX. The directive said six. Both schema.prisma and the live
 -- migration SQL were read; there are seven relations onto carrier_profiles whose
@@ -30,9 +31,12 @@
 -- dropped, no column moves, no backfill. The one production caller that
 -- hard-deletes a profile (services/documentChainSelftest.ts cleanup) creates
 -- none of the seven child rows and is unaffected; prisma/seed.ts TRUNCATEs;
--- e2e/ never hard-deletes a carrier. ~28 backend/scripts/_*proof.ts cleanups
--- rely on CASCADE and will fail their cleanup on a container built after this
--- applies — dev-only residue, recorded in §13.3 Item 291, not fixed here.
+-- e2e/ never hard-deletes a carrier. The proof scripts are NOT affected either,
+-- contrary to what this header said when it was authored: 27 backend/scripts/
+-- _*proof.ts files carrierProfile.delete a fixture, and all 27 are safe — 25
+-- delete the children first in FK order, and the other 2 create no child of any
+-- of the seven types. Measured 2026-09-22, correcting the earlier "~28 rely on
+-- CASCADE and will fail" estimate; §13.3 Items 291.11 + 291.14.
 --
 -- NO `IF EXISTS`, DELIBERATELY. A constraint name that does not match
 -- production FAILS the deploy loudly rather than half-applying (Item 208).
@@ -79,7 +83,7 @@
 --   InfoRequest.carrier                       onDelete: Cascade -> onDelete: Restrict
 --   Driver.carrierProfile ("CarrierDrivers")  (default SetNull) -> add onDelete: Restrict
 --   DockSchedule.carrier ("DockCarrier")      (default SetNull) -> add onDelete: Restrict
--- Verified 2026-09-21 on a from-zero postgres:16 container: the full 75-migration
+-- Verified 2026-09-21 on a from-zero postgres:16 container: the then 75-migration
 -- chain applied clean (`migrate deploy`), then this file via psql (14 ALTERs);
 -- `prisma migrate diff --from-url <that container> --to-schema-datamodel <schema
 -- with the hunk>` reports "No difference detected", and against the UNMODIFIED
