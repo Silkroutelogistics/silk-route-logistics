@@ -11,7 +11,8 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
-import { Clock, MapPin, AlertTriangle, CheckCircle2, Repeat2 } from "lucide-react";
+import { useCarrierAuth } from "@/hooks/useCarrierAuth";
+import { Clock, MapPin, AlertTriangle, CheckCircle2, Repeat2, ArrowRight } from "lucide-react";
 
 const DECLINE_REASONS = [
   "No capacity / all trucks committed",
@@ -90,6 +91,12 @@ export default function CarrierTendersPage() {
   // v3.8.alt §13.3 Item 144 — carrier counter-offer
   const [countering, setCountering] = useState<string | null>(null);
   const [counterRate, setCounterRate] = useState("");
+  // E2 — the row disappears on accept (the list is OFFERED-only), and before
+  // this the carrier was left with nothing: no confirmation, no pointer, and
+  // the load sitting in My Loads under BOOKED with no rate confirmation yet.
+  // The confirmation names what happens next and where the load went.
+  const [booked, setBooked] = useState<{ loadId: string; ref: string } | null>(null);
+  const email = useCarrierAuth((s) => s.user?.email);
 
   // Sprint 52.hotfix.b — consume canonical /api/carrier/tenders.
   // Backend filters status=OFFERED + expiresAt > now + deletedAt: null
@@ -103,9 +110,10 @@ export default function CarrierTendersPage() {
   });
 
   const accept = useMutation({
-    mutationFn: async (tenderId: string) =>
-      (await api.post(`/tenders/${tenderId}/accept`)).data,
-    onSuccess: () => {
+    mutationFn: async (t: ActiveTender) =>
+      (await api.post(`/tenders/${t.id}/accept`)).data,
+    onSuccess: (_data, t) => {
+      setBooked({ loadId: t.loadId, ref: t.load.referenceNumber });
       // Sprint 38 Item 53 atomic transaction also flips Load → BOOKED +
       // sets carrierId; invalidate carrier-loads queries so My Loads picks
       // up the newly booked load without a manual refresh.
@@ -151,6 +159,23 @@ export default function CarrierTendersPage() {
           Accept or decline each tender before its expiration. Accepted tenders book the load immediately.
         </p>
       </div>
+
+      {booked && (
+        <div data-testid="accept-confirmation" role="status" className="p-4 bg-[#E6F0E9] border border-[#2F7A4F]/25 rounded-xl text-sm text-[#256340]">
+          <div className="flex items-start gap-2">
+            <CheckCircle2 className="w-4 h-4 mt-0.5 shrink-0" />
+            <div>
+              <div className="font-semibold">Booked. Load {booked.ref} is yours.</div>
+              <div className="mt-0.5">
+                SRL will email the rate confirmation{email ? <> to <strong>{email}</strong></> : null}. Sign it to unlock the bill of lading.
+              </div>
+              <a href={`/carrier/dashboard/my-loads?load=${encodeURIComponent(booked.loadId)}`} className="inline-flex items-center gap-1 mt-2 font-semibold text-[#BA7517] hover:underline">
+                View this load <ArrowRight className="w-3.5 h-3.5" />
+              </a>
+            </div>
+          </div>
+        </div>
+      )}
 
       {tenders.length === 0 && !tendersQuery.isLoading && (
         <div className="p-12 text-center text-slate-500 bg-[#F5EEE0] border border-[#EFE6D3] rounded-xl">
@@ -215,7 +240,7 @@ export default function CarrierTendersPage() {
             {!isDeclining && !isCountering && (
               <div className="mt-5 flex gap-2">
                 <button
-                  onClick={() => accept.mutate(t.id)}
+                  onClick={() => accept.mutate(t)}
                   disabled={accept.isPending}
                   className="flex-1 flex items-center justify-center gap-2 py-3 bg-[#2F7A4F] hover:bg-[#276641] text-[#FBF7F0] font-semibold rounded disabled:opacity-40"
                 >
