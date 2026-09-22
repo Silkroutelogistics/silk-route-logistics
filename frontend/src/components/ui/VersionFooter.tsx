@@ -18195,7 +18195,8 @@
 // (the only detention writer stores billableMinutes with unit "minutes" against a $/hr card; inert while no customer holds a card, but 282c re-prices every stamped draft line the moment one is entered)
 // v3.8.beh — AGREEMENT_MISSING is the seventh absolute (a never-signed BCA can no longer be tendered by any override; it fired live 2026-09-18 on SRL-121492), and lib/agreementState is the ONE predicate the tender gate, Compass and the RC signature all call. Commit 1 of 2.
 // v3.8.bei — carrier welcome tour: six slides, shown once the first time an approved, activated, enrolled carrier reaches the portal; stamped on Finish or Skip (idempotent, first stamp kept); replayable from Settings without restamping. Commit 2 of the BCA arc takes its letter at commit time.
-export const SRL_VERSION = "3.8.bei";
+// v3.8.bej — Task E1a-i: docType is a server-side allowlist (lib/documentTypes); the carrier load-document route refuses an unknown string with 400 UNKNOWN_DOC_TYPE instead of storing it. Vocabulary grouped by class (SETTLEMENT / LOAD / CARRIER / CUSTOMER), the strict LOAD class at the carrier route; /documents/upload follows in E1a-ii.
+export const SRL_VERSION = "3.8.bej";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

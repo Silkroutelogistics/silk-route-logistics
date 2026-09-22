@@ -21,6 +21,7 @@ import { flagSensitiveActionAfterNewLogin } from "../lib/loginFlags";
 import { validateLoadStatusTransition } from "../lib/loadStateMachine";
 import { markScheduledCheckCallsAnswered } from "../services/checkCallAutomation";
 import { actualEventStamps } from "../lib/loadEventStamps";
+import { normalizeDocType, isAllowedDocType } from "../lib/documentTypes";
 import { uploadLimiter } from "../middleware/rateLimiters";
 import { assignCarrier } from "../services/carrierAssignmentService";
 import { complianceCheck } from "../services/complianceMonitorService";
@@ -574,7 +575,13 @@ router.post("/:id/documents", uploadLimiter, upload.single("file"), async (req: 
   // this handler only read `req.body.type`, so a POD arrived as undefined -> tagged
   // OTHER, and the whole POD pipeline below (POD_RECEIVED advance, invoice trigger,
   // shipper POD email, UI confirmation) never fired. Accept both field names.
-  const docType = (req.body.docType || req.body.type || "OTHER").toUpperCase();
+  const docType = normalizeDocType(req.body.docType || req.body.type) ?? "OTHER";
+  // E1a — the vocabulary is an allowlist now (lib/documentTypes). Any string used
+  // to be stored; a typo became a row the settlement checklist could never see.
+  if (!isAllowedDocType(docType, "LOAD")) {
+    res.status(400).json({ error: `Unknown document type "${docType}"`, code: "UNKNOWN_DOC_TYPE" });
+    return;
+  }
   const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
   const ext = path.extname(req.file.originalname).toLowerCase();
   const key = `documents/${uniqueSuffix}${ext}`;
