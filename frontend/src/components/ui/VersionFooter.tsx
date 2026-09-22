@@ -18216,7 +18216,8 @@
 // v3.8.bfb — Task E5 (2/2, ruling 4): when the carrier's INVOICE lands through the load-document seam, accounting is told — an email to accounting@ carrying the load ref, the carrier name, the CarrierPay amount and an auth-gated settlement link (no attachment, no bank or tax data), and an in-app row for every ACCOUNTING user, once per document. Fires after the settlement doc-flag sync, so docCarrierInvoice already reads true when they open it; never throws, never fails the upload.
 // v3.8.bfc — Task E6 (1/2): the signed page sends the carrier back to the load ("Open the load on My Loads", by id) and states the bill of lading is now available — before this it said "nothing further is needed" and stopped, on the one page every signing carrier lands on. GET /carrier-loads/my-loads?status= takes a comma-separated set, so the Completed chip (2/2) can ask for POD_RECEIVED,INVOICED,COMPLETED as one state.
 // v3.8.bfd — Task E6 (2/2): a Payments row names its load as a link to My Loads opened on that load; My Loads gains a "Completed" chip that asks for POD_RECEIVED, INVOICED and COMPLETED as one set (v3.8.bfc), because to a carrier those are one state.
-export const SRL_VERSION = "3.8.bfd";
+// v3.8.bfe — Task E (AE): Needs Attention gains RC_NOT_SENT — an ACCEPTED tender whose rate confirmation has sat in DRAFT longer than RC_SEND_SLA_HOURS (env, default 1, bounded 0.25..168). Same shape as RC_UNSIGNED_PAST_SLA, whose clock starts only at RC_SENT and so could not see the accept-to-send gap; dead loads excluded the way reason 1 excludes them (SRL-121492 carries an ACCEPTED tender and a DRAFT RC on a TONU). rcDraftHours on the item; label on the AE board.
+export const SRL_VERSION = "3.8.bfe";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

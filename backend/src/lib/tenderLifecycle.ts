@@ -46,6 +46,23 @@ export function rcSignSlaHours(): number {
 }
 
 /**
+ * How long a DRAFTED rate confirmation may sit unsent after acceptance before
+ * the load needs a human.
+ *
+ * The RC is drafted at accept on every path (§2) and sending it is the AE's
+ * move, so an accepted load with nothing sent is a carrier waiting for a
+ * document that exists. The signature chase above cannot see it: that clock
+ * starts at RC_SENT. Default 1 hour, the ratified figure; the floor is a
+ * quarter hour rather than 1 so the default is not also the minimum, and the
+ * ceiling matches the sign SLA. Read at call time so a test can move it.
+ */
+export function rcSendSlaHours(): number {
+  const raw = Number(process.env.RC_SEND_SLA_HOURS);
+  if (!Number.isFinite(raw) || raw <= 0) return 1;
+  return Math.min(168, Math.max(0.25, raw));
+}
+
+/**
  * Prisma `where` fragment: loads a carrier holds.
  *
  * Expressed as `some` over the tenders rather than a column on the load,

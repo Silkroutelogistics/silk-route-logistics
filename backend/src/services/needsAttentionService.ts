@@ -1,5 +1,5 @@
 import { prisma } from "../config/database";
-import { HOLDS_LOAD, LIVE_STATES, rcSignSlaHours } from "../lib/tenderLifecycle";
+import { HOLDS_LOAD, LIVE_STATES, rcSendSlaHours, rcSignSlaHours } from "../lib/tenderLifecycle";
 
 /**
  * Loads that need a person, and why.
@@ -20,6 +20,8 @@ export type AttentionReason =
   | "EXPIRED_NO_LIVE_TENDER"
   /** The rate confirmation has been out longer than the SLA and is unsigned. */
   | "RC_UNSIGNED_PAST_SLA"
+  /** Accepted, and the rate confirmation drafted at acceptance has sat unsent longer than the send SLA. Nobody has sent it. */
+  | "RC_NOT_SENT"
   /** A carrier came off in the last day. The load is back and somebody should know. */
   | "RECENTLY_RELEASED"
   /** A carrier countered and it is SRL's move. */
@@ -31,6 +33,8 @@ export interface AttentionItem {
   reasons: AttentionReason[];
   /** Hours the RC has been unsigned, when that is the reason. */
   rcUnsignedHours?: number;
+  /** Hours the drafted RC has sat unsent, when that is the reason. */
+  rcDraftHours?: number;
 }
 
 /**
@@ -39,12 +43,16 @@ export interface AttentionItem {
  * They have genuinely different shapes — two are "a tender in state X", one is
  * an age comparison, one is an absence — and folding them into a single `OR`
  * produces a where-clause nobody can read and a plan Postgres struggles to
- * index. Four narrow queries over an indexed status column is the cheaper side
+ * index. Five narrow queries over an indexed status column is the cheaper side
  * of that trade at any load count this platform will see.
  */
+/** A load that is delivered or dead needs no chasing, whatever its tenders say. Reasons 1 and 5 exclude these. */
+const DONE_OR_DEAD = ["DELIVERED", "POD_RECEIVED", "INVOICED", "COMPLETED", "CANCELLED", "TONU"] as const;
+
 export async function loadsNeedingAttention(limit = 200): Promise<AttentionItem[]> {
   const now = new Date();
   const slaCutoff = new Date(now.getTime() - rcSignSlaHours() * 3_600_000);
+  const sendCutoff = new Date(now.getTime() - rcSendSlaHours() * 3_600_000);
   const dayAgo = new Date(now.getTime() - 24 * 3_600_000);
 
   const byLoad = new Map<string, AttentionItem>();
@@ -66,7 +74,7 @@ export async function loadsNeedingAttention(limit = 200): Promise<AttentionItem[
       deletedAt: null,
       load: {
         deletedAt: null,
-        status: { notIn: ["DELIVERED", "POD_RECEIVED", "INVOICED", "COMPLETED", "CANCELLED", "TONU"] },
+        status: { notIn: [...DONE_OR_DEAD] },
         tenders: { none: { status: { in: [...LIVE_STATES, ...HOLDS_LOAD] }, deletedAt: null } },
       },
     },
@@ -105,6 +113,42 @@ export async function loadsNeedingAttention(limit = 200): Promise<AttentionItem[
     take: limit,
   });
   for (const t of countered) add(t.loadId, t.load.referenceNumber, "COUNTER_AWAITING_AE");
+
+  // 5. Accepted, and the rate confirmation drafted at acceptance has sat in
+  //    DRAFT longer than the send SLA. Sending is the AE's move; the carrier
+  //    accepted and has nothing to sign. Reason 2 cannot see this -- its clock
+  //    starts at RC_SENT -- so without this row the gap between accept and
+  //    send was invisible from the queue. Dead loads are excluded the way
+  //    reason 1 excludes them: a cancelled or TONU load can carry an ACCEPTED
+  //    tender and a DRAFT RC forever (SRL-121492 does), and forever is the
+  //    wrong length for a queue.
+  const unsent = await prisma.loadTender.findMany({
+    where: {
+      status: "ACCEPTED",
+      deletedAt: null,
+      load: {
+        deletedAt: null,
+        status: { notIn: [...DONE_OR_DEAD] },
+        rateConfirmations: { some: { status: "DRAFT", createdAt: { lt: sendCutoff } } },
+      },
+    },
+    select: {
+      loadId: true,
+      load: {
+        select: {
+          referenceNumber: true,
+          rateConfirmations: { where: { status: "DRAFT" }, orderBy: { createdAt: "asc" }, take: 1, select: { createdAt: true } },
+        },
+      },
+    },
+    take: limit,
+  });
+  for (const t of unsent) {
+    const draftedAt = t.load.rateConfirmations[0]?.createdAt;
+    add(t.loadId, t.load.referenceNumber, "RC_NOT_SENT", draftedAt
+      ? { rcDraftHours: Math.floor((now.getTime() - draftedAt.getTime()) / 3_600_000) }
+      : undefined);
+  }
 
   return [...byLoad.values()];
 }

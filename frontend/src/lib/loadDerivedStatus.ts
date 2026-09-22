@@ -343,6 +343,7 @@ export function carrierNextStep(load: DeriveInput): CarrierNextStep {
 export const ATTENTION_LABEL: Record<string, string> = {
   EXPIRED_NO_LIVE_TENDER: "Offers expired — no carrier",
   RC_UNSIGNED_PAST_SLA: "Rate confirmation unsigned",
+  RC_NOT_SENT: "Rate confirmation not sent",
   RECENTLY_RELEASED: "Carrier released",
   COUNTER_AWAITING_AE: "Counter awaiting your answer",
 };
