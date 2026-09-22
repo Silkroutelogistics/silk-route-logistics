@@ -25,9 +25,15 @@ interface LoadWithDocs { id: string; referenceNumber: string; status?: string; o
 // delivery, each its own type. The labels come from the shared table so the
 // picker, the paperwork panel and the AE's checklist name a document the
 // same way.
+//
+// RATE_CON is not offered either (v3.8.bfu): the signed rate confirmation is
+// system-generated, frozen by its contentHash and signed through the token
+// page, so a carrier-uploaded copy would be a second, unverified record of
+// the same document. The server refuses one from a CARRIER (400) whichever
+// route carries it; the generated RC still appears on the list below by its
+// api path. AE roles keep the type on their own upload surface.
 const DOC_TYPE_OPTIONS: Array<{ value: string; label: string }> = [
   ...PAPERWORK_DOC_TYPES.map((value) => ({ value, label: PAPERWORK_DOC_LABELS[value] })),
-  { value: "RATE_CON", label: "Rate Confirmation" },
   { value: "W9", label: "W-9 Form" },
   { value: "COI", label: "Insurance Certificate" },
   { value: "AUTHORITY", label: "Authority Document" },
@@ -154,7 +160,8 @@ export default function CarrierDocumentsPage() {
 
   const typeLabels: Record<string, string> = {
     ...PAPERWORK_DOC_LABELS,
-    // Bare BOL still labels the AE's original on the list; only the picker dropped it.
+    // Bare BOL still labels the AE's original on the list, and RATE_CON the
+    // generated rate confirmation row; only the picker dropped them.
     BOL: "Bill of Lading (original)", RATE_CON: "Rate Confirmation",
     W9: "W-9 Form", COI: "Insurance Cert", AUTHORITY: "Authority Doc", OTHER: "Other",
   };

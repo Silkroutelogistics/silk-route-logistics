@@ -140,7 +140,7 @@ describe("a load document", () => {
 });
 
 describe("E4 — the picker speaks the paperwork vocabulary", () => {
-  it("offers every ruling-6 type by its shared label, and no bare BOL", async () => {
+  it("offers every ruling-6 type by its shared label, and neither bare BOL nor RATE_CON", async () => {
     const user = userEvent.setup();
     mount();
     await user.click(await screen.findByRole("button", { name: /Upload Document/ }));
@@ -150,6 +150,9 @@ describe("E4 — the picker speaks the paperwork vocabulary", () => {
       expect(options, t).toContainEqual({ value: t, label: PAPERWORK_DOC_LABELS[t] });
     }
     expect(options.map((o) => o.value)).not.toContain("BOL");
+    // v3.8.bfu — the signed RC is system-generated and frozen by contentHash;
+    // a carrier copy would be a second, unverified record. Not offered.
+    expect(options.map((o) => o.value)).not.toContain("RATE_CON");
     // The compliance types are still there — the picker gained, it did not narrow.
     for (const t of ["W9", "COI", "AUTHORITY", "OTHER"]) expect(options.map((o) => o.value), t).toContain(t);
   });

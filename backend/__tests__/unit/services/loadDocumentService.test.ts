@@ -200,6 +200,25 @@ describe("refusals happen before any write", () => {
     await expect(record("POD")).rejects.toBeInstanceOf(LoadDocumentRefusal);
     expect(hooks.uploadFile).not.toHaveBeenCalled();
   });
+
+  // v3.8.bfu — RATE_CON is system-generated and frozen by contentHash; a carrier
+  // copy is a second, unverified record. Refused for a CARRIER actor, kept for AE.
+  it("RATE_CON from a CARRIER actor is a 400 refusal before any write; the load is not even read", async () => {
+    armLoad("BOOKED");
+    await expect(record("RATE_CON")).rejects.toMatchObject({ status: 400, code: "DOC_TYPE_NOT_CARRIER_UPLOADABLE" });
+    expect(hooks.uploadFile).not.toHaveBeenCalled();
+    expect(mockPrisma.document.create).not.toHaveBeenCalled();
+    expect(mockPrisma.load.findUnique).not.toHaveBeenCalled();
+  });
+
+  it("RATE_CON from an AE actor is stored — the type stays for the AE's own record", async () => {
+    armLoad("BOOKED");
+    mockPrisma.document.create.mockResolvedValue({ id: "doc-rc", docType: "RATE_CON", fileUrl: "https://s3.test/documents/x.pdf" });
+    const r = await recordLoadDocument({ loadId: "load-1", docType: "RATE_CON", file, actor: { id: "u-ae", role: "ADMIN" }, uploadSource: "AE_CONSOLE" });
+    expect(r.docType).toBe("RATE_CON");
+    expect(hooks.uploadFile).toHaveBeenCalledTimes(1);
+    expect(mockPrisma.document.create.mock.calls[0][0].data.docType).toBe("RATE_CON");
+  });
 });
 
 describe("E5 (ruling 4) — an INVOICE tells accounting, once, after the settlement sync", () => {

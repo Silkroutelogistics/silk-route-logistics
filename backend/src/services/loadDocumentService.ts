@@ -17,6 +17,9 @@
  * recording a POD do":
  *
  *   1. the docType is validated against the LOAD allowlist (lib/documentTypes)
+ *      — and, for a CARRIER actor, against the carrier-uploadable subset of it
+ *      (RATE_CON is system-generated and frozen by contentHash; a carrier copy
+ *      is a second, unverified record, so it is refused; AE roles keep it) —
  *      and the bytes against their claimed MIME type (magic numbers) — BEFORE
  *      any write, so a refusal stores nothing;
  *   2. the file is stored and the Document row written;
@@ -44,7 +47,7 @@ import path from "path";
 import { prisma } from "../config/database";
 import { log } from "../lib/logger";
 import { uploadFile, validateBufferSignature } from "./storageService";
-import { normalizeDocType, isAllowedDocType } from "../lib/documentTypes";
+import { normalizeDocType, isAllowedDocType, carrierMayUploadLoadDocType } from "../lib/documentTypes";
 import { actualEventStamps } from "../lib/loadEventStamps";
 import { logLoadActivity } from "./loadActivityService";
 import { broadcastSSE } from "../routes/trackTraceSSE";
@@ -88,6 +91,13 @@ export async function recordLoadDocument(input: RecordLoadDocumentInput): Promis
   const docType = normalizeDocType(input.docType) ?? "OTHER";
   if (!isAllowedDocType(docType, "LOAD")) {
     throw new LoadDocumentRefusal(400, "UNKNOWN_DOC_TYPE", `Unknown document type "${docType}"`);
+  }
+  if (input.actor.role === "CARRIER" && !carrierMayUploadLoadDocType(docType)) {
+    throw new LoadDocumentRefusal(
+      400,
+      "DOC_TYPE_NOT_CARRIER_UPLOADABLE",
+      `"${docType}" is issued by SRL and cannot be uploaded from the carrier portal. The signed rate confirmation is already on file.`,
+    );
   }
   if (!validateBufferSignature(input.file.buffer, input.file.mimetype)) {
     throw new LoadDocumentRefusal(

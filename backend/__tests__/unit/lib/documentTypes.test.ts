@@ -12,6 +12,13 @@
  * Adversarially verified at authoring: removing the isAllowedDocType check from
  * either route turns exactly that route's refusal case red; dropping TEMP_LOG
  * from the lib turns the parity case red.
+ *
+ * v3.8.bfu: RATE_CON leaves the CARRIER-uploadable subset. The signed rate
+ * confirmation is system-generated and frozen by contentHash; a carrier copy
+ * is a second, unverified record of the same document. Refused in the seam,
+ * so both routes answer 400 to a CARRIER and AE roles keep the type. Deleting
+ * the seam's carrierMayUploadLoadDocType check turns the two CARRIER RATE_CON
+ * cases red and leaves the AE case green.
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import express from "express";
@@ -24,8 +31,10 @@ import {
   LOAD_DOC_TYPES,
   CARRIER_DOC_TYPES,
   CUSTOMER_DOC_TYPES,
+  CARRIER_UPLOADABLE_LOAD_DOC_TYPES,
   normalizeDocType,
   isAllowedDocType,
+  carrierMayUploadLoadDocType,
   docTypeClassFor,
 } from "../../../src/lib/documentTypes";
 
@@ -104,6 +113,16 @@ describe("the vocabulary", () => {
     expect(new Set(SETTLEMENT_DOC_TYPES)).toEqual(inMap);
   });
 
+  it("the carrier-uploadable load types are every LOAD type except RATE_CON, and every settlement type is among them", () => {
+    expect([...CARRIER_UPLOADABLE_LOAD_DOC_TYPES].sort()).toEqual(LOAD_DOC_TYPES.filter((t) => t !== "RATE_CON").sort());
+    expect(carrierMayUploadLoadDocType("RATE_CON")).toBe(false);
+    for (const t of LOAD_DOC_TYPES) if (t !== "RATE_CON") expect(carrierMayUploadLoadDocType(t), t).toBe(true);
+    // the paperwork panel's slots must all be reachable from the portal
+    for (const t of SETTLEMENT_DOC_TYPES) expect(carrierMayUploadLoadDocType(t), t).toBe(true);
+    // vacuity: the subset is the list minus exactly one
+    expect(CARRIER_UPLOADABLE_LOAD_DOC_TYPES).toHaveLength(LOAD_DOC_TYPES.length - 1);
+  });
+
   it("refuses an unknown string in every class", () => {
     for (const cls of ["LOAD", "CARRIER", "CUSTOMER", "ANY"] as const) {
       expect(isAllowedDocType("FOO", cls)).toBe(false);
@@ -166,6 +185,17 @@ describe("POST /carrier-loads/:id/documents", () => {
     expect(res.status).toBe(200);
     expect(mockPrisma.document.create.mock.calls[0][0].data.docType).toBe("SIGNED_BOL_DEL");
   });
+
+  it("refuses RATE_CON from a carrier with 400 and stores nothing — the signed rate confirmation is system-generated", async () => {
+    const res = await request(await app())
+      .post("/api/carrier-loads/load-1/documents")
+      .set("x-test-role", "CARRIER")
+      .field("docType", "RATE_CON")
+      .attach("file", PDF, { filename: "rc.pdf", contentType: "application/pdf" });
+    expect(res.status).toBe(400);
+    expect(res.body.code).toBe("DOC_TYPE_NOT_CARRIER_UPLOADABLE");
+    expect(mockPrisma.document.create).not.toHaveBeenCalled();
+  });
 });
 
 describe("POST /documents/upload", () => {
@@ -207,6 +237,31 @@ describe("POST /documents/upload", () => {
       .attach("files", PDF, { filename: "x.pdf", contentType: "application/pdf" });
     expect(res.status).toBe(201);
     expect(mockPrisma.document.create.mock.calls[0][0].data.docType).toBe("W9");
+  });
+
+  it("refuses RATE_CON from a carrier on a load it owns with 400 and stores nothing — same seam, same answer", async () => {
+    mockPrisma.load.findUnique.mockResolvedValue({ id: "load-1", carrierId: "u-carrier", posterId: "u-admin", status: "BOOKED", referenceNumber: "SRL-1", customer: null });
+    const res = await request(await app())
+      .post("/api/documents/upload")
+      .set("x-test-role", "CARRIER")
+      .field("docType", "RATE_CON")
+      .field("loadId", "load-1")
+      .attach("files", PDF, { filename: "rc.pdf", contentType: "application/pdf" });
+    expect(res.status).toBe(400);
+    expect(res.body.code).toBe("DOC_TYPE_NOT_CARRIER_UPLOADABLE");
+    expect(mockPrisma.document.create).not.toHaveBeenCalled();
+  });
+
+  it("keeps RATE_CON for an AE: an AE attaching a wet-signed scan on the carrier's behalf is stored", async () => {
+    mockPrisma.load.findUnique.mockResolvedValue({ id: "load-1", carrierId: "u-carrier", posterId: "u-admin", status: "BOOKED", referenceNumber: "SRL-1", customer: null });
+    const res = await request(await app())
+      .post("/api/documents/upload")
+      .set("x-test-role", "ADMIN")
+      .field("docType", "RATE_CON")
+      .field("loadId", "load-1")
+      .attach("files", PDF, { filename: "rc.pdf", contentType: "application/pdf" });
+    expect(res.status).toBe(201);
+    expect(mockPrisma.document.create.mock.calls[0][0].data.docType).toBe("RATE_CON");
   });
 
   it("an absent docType is still stored as null — absent is not unknown", async () => {

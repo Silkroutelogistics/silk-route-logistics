@@ -65,6 +65,28 @@ export const CUSTOMER_DOC_TYPES = [
   "OTHER",
 ] as const;
 
+/**
+ * The load-document types a CARRIER may upload: everything in LOAD_DOC_TYPES
+ * except RATE_CON.
+ *
+ * The signed rate confirmation is system-generated — frozen at issue and
+ * identified by its contentHash (v3.8.axt), signed through the token page and
+ * recorded with name, IP, user agent and the token that carried it (v3.8.axu).
+ * A carrier-uploaded RATE_CON is therefore a SECOND, unverified copy of a
+ * record the platform already holds as evidence, and the one thing it could
+ * do in a dispute is disagree with the first. AE roles keep the type: an AE
+ * attaching a wet-signed scan on the carrier's behalf is a real case, and it
+ * is the AE's record, not the carrier's assertion. One list, enforced in the
+ * load-document seam both upload routes pass through (v3.8.bfu).
+ */
+export const CARRIER_UPLOADABLE_LOAD_DOC_TYPES = LOAD_DOC_TYPES.filter((t) => t !== "RATE_CON");
+const CARRIER_UPLOADABLE = new Set<string>(CARRIER_UPLOADABLE_LOAD_DOC_TYPES);
+
+/** May a carrier upload this LOAD docType? Every allowed load type except RATE_CON. */
+export function carrierMayUploadLoadDocType(docType: string): boolean {
+  return CARRIER_UPLOADABLE.has(docType);
+}
+
 export type LoadDocType = (typeof LOAD_DOC_TYPES)[number];
 export type DocTypeClass = "LOAD" | "CARRIER" | "CUSTOMER" | "ANY";
 
