@@ -222,7 +222,15 @@ describe("document render pins", () => {
     // discrimination alone by hashing something random. A pin that cannot tell a
     // change from no-change is decoration (§19 Sub-pattern 16).
     const a = await generateAgreementBuffer(CARAVAN_QUICK_PAY_AGREEMENT, {});
+    // v3.8.bfv: the trailer /ID is an md5 over CreationDate.getTime(), and
+    // shouldAdvanceTime moves the fake clock in ~20ms ticks. The raster mark
+    // was slow enough that two renders straddled a tick; the vector mark is
+    // not, so the premise "raw bytes differ" needs the clock moved on purpose
+    // rather than by accident. The pin must still be identical across the
+    // second -- that is the property under test.
+    vi.setSystemTime(new Date(RENDER_CLOCK.getTime() + 1000));
     const b = await generateAgreementBuffer(CARAVAN_QUICK_PAY_AGREEMENT, {});
+    vi.setSystemTime(RENDER_CLOCK);
     expect(a.equals(b), "raw bytes DO differ -- trailer /ID and the date object").toBe(false);
     expect(pin(a), "content streams must be identical").toBe(pin(b));
 

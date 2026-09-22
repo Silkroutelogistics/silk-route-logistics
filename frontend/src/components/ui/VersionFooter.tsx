@@ -18309,7 +18309,16 @@
 // application. Migration moved from _pending_migrations/ into prisma/migrations/ with its seven-line schema hunk as one
 // commit, ONLY after Wasi ran the header gate against production by hand (2026-09-22: 7 rows, c x5 / n x2, 0 orphans).
 // The 14 ALTERs are byte-identical to the authored, container-proven file; only the header comment records the move.
-export const SRL_VERSION = "3.8.bfw";
+// v3.8.bfv — the compass mark on every SRL PDF is drawn as VECTOR. drawCompassMark delegates to lib/srlMark.ts, whose three path
+// strings and two fills mirror the committed master frontend/public/brand/srl-logo-fullcolour.svg and are pinned to it by
+// __tests__/unit/lib/srlMark.test.ts (mutate one coordinate or one fill hex and it goes red — verified by injection, restored).
+// What it replaces: resolveCompassPng picked the smallest of four bundled PNGs whose PIXEL count was >= the placed size in
+// POINTS — i.e. it selected for 72 ppi. The letterhead drew 120px across a 72pt inch (120 ppi), the training certificate 60px
+// across 56pt (77 ppi), the agreement cover seal 480px across 367pt (94 ppi). Every SRL document printed a soft mark; a path has
+// no resolution. All 14 golden render pins move — that is the expected diff and the reason they exist — while body parity holds
+// (verify:bol +0 on all ten body anchors, verify:rc 15/15). Placement contract unchanged: the mark still occupies exactly
+// [x, x+size], so every caller keeps its coordinates and point sizes.
+export const SRL_VERSION = "3.8.bfv";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

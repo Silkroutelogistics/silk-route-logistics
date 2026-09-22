@@ -379,21 +379,25 @@ function drawItalic(
 }
 
 // ============================================================================
-// COMPASS MARK — production SRL logo.
+// COMPASS MARK — production SRL logo, drawn as VECTOR.
 //
-// The production mark ships as a vector SVG (srl_compass.svg) traced from
-// the BOL v2.9 reference (BOL-L6894191249, Apr 30 2026), with PNG raster
-// fallbacks at 60/120/240/480px for environments without SVG support.
+// v3.8.bfv: the mark is PDFKit path data from lib/srlMark.ts, which mirrors
+// the committed master frontend/public/brand/srl-logo-fullcolour.svg
+// (viewBox 512, fills #0A2540 / #BA7517) and is pinned to it by
+// __tests__/unit/lib/srlMark.test.ts. No raster, no resolution, exact fills
+// at every size the chrome draws — 24, 30, 34, 56, 72 and the 367pt cover
+// seal alike.
 //
-// Resolves to the bundled raster PNG by default — PDFKit doesn't natively
-// render SVG. To use the SVG, pre-rasterize to PNG via a tool like sharp,
-// or use the equivalent vector code path in srl_chrome.py.
-//
-// Override via opts.compassMarkPath if you have a different logo file.
+// Before this the mark was one of four bundled PNGs (60/120/240/480px) chosen
+// by resolveCompassPng, which selected the smallest asset >= the size in
+// POINTS — i.e. for 72 ppi. The letterhead came out at 120 ppi, the training
+// certificate at 77, the cover seal at 94. That resolver and its PNGs are
+// retired in the following commit, once nothing references them.
 // ============================================================================
 
 import * as path from 'path';
 import * as fs from 'fs';
+import { drawSrlMark } from './srlMark';
 
 const LOGO_DIR = __dirname;
 
@@ -418,25 +422,13 @@ function resolveCompassPng(targetSize: number): string | null {
 // (certificatePdfService.ts), which hand-builds a centered ceremonial layout
 // rather than using drawHeaderFirstPage's document-style header. Additive
 // export only; behavior unchanged. Mirror upstream to the skill on next sync.
+//
+// v3.8.bfv — the body delegates to the vector mark. Signature and placement
+// contract unchanged: the mark occupies exactly [x, x+size] x [y, y+size], so
+// every caller keeps its coordinates and point sizes. A caller-set opacity
+// (the agreement cover seal at 15%) is inherited through the nested save.
 export function drawCompassMark(doc: PDFDoc, x: number, y: number, size: number = 50): void {
-  const pngPath = resolveCompassPng(size);
-
-  if (pngPath) {
-    doc.image(pngPath, x, y, { width: size, height: size });
-    return;
-  }
-
-  // Last resort: draw a simple navy ring so the absence of the logo is obvious.
-  // This branch should only execute if the bundled assets weren't deployed.
-  const cx = x + size / 2;
-  const cy = y + size / 2;
-  doc.save()
-     .strokeColor(TOKENS.navy)
-     .lineWidth(2)
-     .fillColor(TOKENS.white)
-     .circle(cx, cy, size * 0.45)
-     .fillAndStroke()
-     .restore();
+  drawSrlMark(doc, x, y, size);
 }
 
 // ============================================================================
