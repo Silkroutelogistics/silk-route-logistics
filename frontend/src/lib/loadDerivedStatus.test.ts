@@ -156,11 +156,12 @@ describe("what the carrier should do next (E2)", () => {
     expect(s.bolReason).toMatch(/sign the rate confirmation/i);
   });
 
-  it("RC_SENT: sign it, and the reason says where the link is", () => {
+  it("RC_SENT: sign it, and both the step and the reason say it can be done here or from the email", () => {
     const s = on("BOOKED", ["RC_SENT"]);
     expect(s.text).toMatch(/^Sign the rate confirmation/);
     expect(s.bolReady).toBe(false);
-    expect(s.bolReason).toMatch(/signing link is in the email/);
+    expect(s.text).toMatch(/here, or from the email SRL sent you/);
+    expect(s.bolReason).toMatch(/Sign it here, or from the email/);
   });
 
   it("CONFIRMED: signed, BOL ready, no reason", () => {

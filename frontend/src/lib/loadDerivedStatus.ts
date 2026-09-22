@@ -308,8 +308,8 @@ export function carrierNextStep(load: DeriveInput): CarrierNextStep {
       );
     case "RC_SENT":
       return step(
-        "Sign the rate confirmation. The signing link is in the email SRL sent you.",
-        `${SIGN_FIRST} The signing link is in the email SRL sent you.`,
+        "Sign the rate confirmation here, or from the email SRL sent you.",
+        `${SIGN_FIRST} Sign it here, or from the email SRL sent you.`,
       );
     case "CONFIRMED":
       return step("Signed. Bill of lading ready.", SIGN_FIRST);

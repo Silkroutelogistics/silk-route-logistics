@@ -188,11 +188,16 @@ export default function MyLoadsPage() {
                 </div>
                 {(() => {
                   const step = carrierNextStep(detail);
-                  return step.text ? (
-                    <div data-testid="next-step-detail" className={`flex items-start gap-1.5 mb-4 px-3 py-2 rounded-md text-xs font-medium ${step.tone}`}>
-                      <ArrowRight size={13} className="mt-0.5 shrink-0" /> <span>{step.text}</span>
-                    </div>
-                  ) : null;
+                  return (
+                    <>
+                      {step.text ? (
+                        <div data-testid="next-step-detail" className={`flex items-start gap-1.5 mb-4 px-3 py-2 rounded-md text-xs font-medium ${step.tone}`}>
+                          <ArrowRight size={13} className="mt-0.5 shrink-0" /> <span>{step.text}</span>
+                        </div>
+                      ) : null}
+                      {step.key === "RC_SENT" && <RcSignPanel key={detail.id} loadId={detail.id} />}
+                    </>
+                  );
                 })()}
                 <div className="space-y-2 text-xs">
                   <div className="flex items-start gap-2">
@@ -623,5 +628,72 @@ function Truck(props: any) {
     <svg xmlns="http://www.w3.org/2000/svg" width={props.size || 24} height={props.size || 24} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={props.className}>
       <path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2" /><path d="M15 18H9" /><path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.624l-3.48-4.35A1 1 0 0 0 17.52 8H14" /><circle cx="17" cy="18" r="2" /><circle cx="7" cy="18" r="2" />
     </svg>
+  );
+}
+
+/**
+ * E3 (ruling 3, 2026-09-21) -- the carrier signs the rate confirmation from
+ * here, or asks for a fresh link, without an AE in the loop.
+ *
+ * "Sign the rate confirmation" is a REAL form POST, not an axios call. The
+ * route answers a 303 to the single-use token page, which is a browser
+ * navigation: an XHR follows the redirect invisibly and cannot hand the
+ * resulting page to the tab, and returning the token to script would put a
+ * stored secret in JSON. A native form is the one primitive that navigates and
+ * carries the httpOnly cookie (the API is same-site with this app). Each POST
+ * mints a fresh token and kills the previous link; that is the design, so
+ * there is nothing to cache here.
+ *
+ * "Email me a new link" mints the same way and the server sends it to the
+ * carrier email on file -- this button sends no address, and the server would
+ * ignore one. The result and any refusal (rate-limited, RC not out yet) render
+ * inline; the panel is keyed by load id so state never survives a switch.
+ */
+function RcSignPanel({ loadId }: { loadId: string }) {
+  const [mail, setMail] = useState<
+    { kind: "idle" } | { kind: "sending" } | { kind: "sent"; to: string } | { kind: "error"; message: string }
+  >({ kind: "idle" });
+
+  return (
+    <div data-testid="rc-sign-panel" className="mb-4 rounded-md border border-[#C5A572]/60 bg-[#FAEEDA] px-3 py-3">
+      <form method="POST" action={apiHref(`/carrier-loads/${loadId}/rc-sign-link`)} data-testid="rc-sign-form">
+        <button
+          type="submit"
+          className="w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-md bg-[#BA7517] text-[#FBF7F0] text-xs font-semibold hover:brightness-110"
+        >
+          <FileText size={14} /> Sign the rate confirmation
+        </button>
+      </form>
+      <div className="mt-2 flex items-center justify-between gap-2">
+        <button
+          type="button"
+          data-testid="rc-sign-email"
+          disabled={mail.kind === "sending"}
+          onClick={async () => {
+            setMail({ kind: "sending" });
+            try {
+              const r = await api.post(`/carrier-loads/${loadId}/rc-sign-link/email`);
+              setMail({ kind: "sent", to: String(r.data?.sentTo ?? "the email on file") });
+            } catch (err) {
+              setMail({ kind: "error", message: await extractApiError(err, "Couldn't send a new link.") });
+            }
+          }}
+          className="text-[11px] text-[#0A2540] underline disabled:opacity-60"
+        >
+          {mail.kind === "sending" ? "Sending…" : "Email me a new link"}
+        </button>
+        <span className="text-[11px] text-gray-600">Each new link replaces the last one.</span>
+      </div>
+      {mail.kind === "sent" && (
+        <p data-testid="rc-sign-email-result" className="mt-1.5 text-[11px] text-[#2F7A4F] bg-[#E6F0E9] border border-[#2F7A4F]/30 rounded px-2 py-1.5">
+          Sent to {mail.to}. The earlier link no longer works.
+        </p>
+      )}
+      {mail.kind === "error" && (
+        <p data-testid="rc-sign-email-result" className="mt-1.5 text-[11px] text-[#9B2C2C] bg-[#F6E3E3] border border-[#9B2C2C]/30 rounded px-2 py-1.5">
+          {mail.message}
+        </p>
+      )}
+    </div>
   );
 }

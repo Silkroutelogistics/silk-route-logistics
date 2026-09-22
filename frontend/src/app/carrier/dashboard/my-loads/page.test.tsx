@@ -48,6 +48,9 @@ vi.mock("@/components/carrier", () => ({
 }));
 
 import MyLoadsPage from "./page";
+import { api } from "@/lib/api";
+import { extractApiError } from "@/lib/download";
+import { fireEvent } from "@testing-library/react";
 
 function load(id: string, status: string, tenders: string[], extra: Record<string, unknown> = {}) {
   return {
@@ -98,7 +101,7 @@ describe("the BOL button in the detail panel", () => {
     const btn = await screen.findByRole("button", { name: /Bill of Lading/ });
     expect(btn).toBeDisabled();
     expect(screen.getByTestId("bol-reason").textContent).toMatch(/Sign the rate confirmation to unlock the bill of lading/);
-    expect(screen.getByTestId("bol-reason").textContent).toMatch(/signing link is in the email/);
+    expect(screen.getByTestId("bol-reason").textContent).toMatch(/here, or from the email/);
     expect(screen.getByTestId("next-step-detail").textContent).toMatch(/Sign the rate confirmation/);
   });
 
@@ -147,5 +150,54 @@ describe("?load= opens the load the accept confirmation points at", () => {
     state.detail = load("zz", "BOOKED", ["ACCEPTED"]);
     render(<MyLoadsPage />);
     expect(screen.queryByTestId("next-step-detail")).toBeNull();
+  });
+});
+
+describe("E3 — signing from the portal, at RC_SENT and nowhere else", () => {
+  const at = (tender: string) => {
+    state.loads = [load("a", "BOOKED", [tender])];
+    state.detail = load("a", "BOOKED", [tender]);
+    window.history.replaceState({}, "", "/carrier/dashboard/my-loads?load=a");
+    return render(<MyLoadsPage />);
+  };
+
+  it("at RC_SENT: a real form POST to the mint route, so the 303 lands the browser on the token page", async () => {
+    at("RC_SENT");
+    const form = (await screen.findByTestId("rc-sign-form")) as HTMLFormElement;
+    // A navigation, not an XHR: the route answers 303 to /api/rc-sign/:token and
+    // only a top-level POST both follows it into the tab and carries the cookie.
+    expect(form.method.toUpperCase()).toBe("POST");
+    expect(form.getAttribute("action")).toBe("/carrier-loads/a/rc-sign-link");
+    expect(screen.getByRole("button", { name: /Sign the rate confirmation/ })).toHaveAttribute("type", "submit");
+    expect(screen.getByTestId("next-step-detail").textContent).toMatch(/here, or from the email/);
+  });
+
+  it("absent before the RC is sent (ACCEPTED) and after it is signed (CONFIRMED)", async () => {
+    const { unmount } = at("ACCEPTED");
+    await screen.findByTestId("next-step-detail");
+    expect(screen.queryByTestId("rc-sign-panel")).toBeNull();
+    unmount();
+    at("CONFIRMED");
+    await screen.findByTestId("next-step-detail");
+    expect(screen.queryByTestId("rc-sign-panel")).toBeNull();
+  });
+
+  it("Email me a new link posts to the email route with NO address, and shows where the server sent it", async () => {
+    vi.mocked(api.post).mockResolvedValueOnce({ data: { ok: true, sentTo: "dispatch@carrier.test" } } as any);
+    at("RC_SENT");
+    fireEvent.click(await screen.findByTestId("rc-sign-email"));
+    await waitFor(() => expect(screen.getByTestId("rc-sign-email-result").textContent).toMatch(/Sent to dispatch@carrier\.test/));
+    expect(api.post).toHaveBeenCalledTimes(1);
+    const [path, body] = vi.mocked(api.post).mock.calls[0];
+    expect(path).toBe("/carrier-loads/a/rc-sign-link/email");
+    expect(body).toBeUndefined();
+  });
+
+  it("a refusal (rate-limited, RC not out yet) renders inline instead of vanishing", async () => {
+    vi.mocked(api.post).mockRejectedValueOnce(new Error("429"));
+    vi.mocked(extractApiError).mockResolvedValueOnce("A new signing link has been issued 3 times in the last hour.");
+    at("RC_SENT");
+    fireEvent.click(await screen.findByTestId("rc-sign-email"));
+    await waitFor(() => expect(screen.getByTestId("rc-sign-email-result").textContent).toMatch(/3 times in the last hour/));
   });
 });
