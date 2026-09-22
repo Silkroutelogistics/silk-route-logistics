@@ -361,7 +361,7 @@ export function OverrideComplianceModal({
           </div>
         )}
 
-        {/* v3.8.beh — the seventh absolute gets the same treatment as the
+        {/* v3.8.beh — the ninth absolute gets the same treatment as the
             federal three: say what would change the answer, and by whom. The
             link is the carrier's, not the AE's — it is here so the AE can send
             it, not open it. */}

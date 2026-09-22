@@ -448,7 +448,8 @@ describe("complianceCheck — terminated agreement", () => {
   });
 
   it("blocks a carrier who never signed with a non-overridable AGREEMENT_MISSING code (v3.8.beh)", async () => {
-    // Seventh absolute. Until beh this branch pushed a bare reason with no
+    // Ninth absolute (seventh when written). Until beh this branch pushed a
+    // bare reason with no
     // code, and a blanket override released it — which is how SRL-121492 ran
     // on a carrier holding only the registration click-wrap.
     mockPrisma.carrierProfile.findUnique.mockResolvedValue(makeCarrier());

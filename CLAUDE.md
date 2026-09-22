@@ -4232,13 +4232,19 @@ Most are inert history and **should** survive — `LoadActivity` and `LoadTracki
   those are facts held by another party. SRL waiving its own record of one does
   not change the fact; it only removes the evidence that SRL knew. That is the
   test for admission to this set, and it is why the first two entries arrived by
-  reconciliation and the next three by decision. The last two pass a second
-  form of the same test: an archive and a non-APPROVED status are SRL's own
-  facts, but each has its own remedy with its own authority and audit row
-  (restore; approve), and an override that stood in for either would let a
-  24-hour waiver take a decision the platform records elsewhere. Before B2a a
-  blanket override released a SUSPENDED or REJECTED carrier for a day; it does
-  not now, and that is the change Wasi ruled for.
+  reconciliation and the next three by decision. `INSURANCE_EXPIRED` and
+  `AGREEMENT_MISSING` pass it in the same plain form: whether cover is in force
+  is the insurer's fact, and whether a contract exists is one SRL can only
+  record, never waive into being.
+
+  **`CARRIER_ARCHIVED` and `CARRIER_NOT_APPROVED` pass a SECOND form of it.**
+  An archive and a non-APPROVED status are SRL's own facts rather than another
+  party's, so the first form does not reach them — but each has its own remedy
+  with its own authority and audit row (restore; approve), and an override that
+  stood in for either would let a 24-hour waiver take a decision the platform
+  records elsewhere. Before B2a a blanket override released a SUSPENDED or
+  REJECTED carrier for a day; it does not now, and that is the change Wasi
+  ruled for.
 
   **The grace period is deliberately NOT part of this.** An active
   `insuranceGracePeriodEnd` still produces a WARNING rather than a block: that is

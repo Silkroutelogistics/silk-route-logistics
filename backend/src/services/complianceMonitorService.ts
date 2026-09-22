@@ -74,8 +74,10 @@ export interface BlockedCode {
     | "AUTHORITY_TOO_YOUNG"
     | "AUTHORITY_UNVERIFIED"
     | "AGREEMENT_TERMINATED"
-    // v3.8.beh — seventh absolute. A carrier who never signed has no contract
+    // v3.8.beh — NINTH absolute. A carrier who never signed has no contract
     // governing the load — same fact as TERMINATED with a weaker excuse.
+    // (Seventh when written, against a six-member list; the carrier-archive
+    // pair below landed two ahead of it. The docblock above is the order.)
     | "AGREEMENT_MISSING"
     | "CHAMELEON_UNREVIEWED"
     // Arc 27 — federal absolutes. Never overridable, scoped or blanket. §14.
@@ -524,7 +526,7 @@ export async function complianceCheck(carrierId: string, pre?: ComplianceBundle)
     blocked_codes.push({ code: "AGREEMENT_TERMINATED", overridable: false });
     absoluteReasons.add(blocked_reasons[blocked_reasons.length - 1]);
   } else if (bca.state === "MISSING") {
-    // v3.8.beh — the SEVENTH absolute. Until this commit the never-signed case
+    // v3.8.beh — the NINTH absolute. Until this commit the never-signed case
     // pushed a bare reason with no code and was therefore released by a
     // blanket override — which is exactly what happened on 2026-09-18: a
     // blanket override released this block on a carrier holding only the
