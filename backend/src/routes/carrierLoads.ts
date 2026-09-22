@@ -22,6 +22,8 @@ import { validateLoadStatusTransition } from "../lib/loadStateMachine";
 import { markScheduledCheckCallsAnswered } from "../services/checkCallAutomation";
 import { actualEventStamps } from "../lib/loadEventStamps";
 import { recordLoadDocument, LoadDocumentRefusal } from "../services/loadDocumentService";
+import { normalizeDocType } from "../lib/documentTypes";
+import { PAPERWORK_DOC_TYPES, PAPERWORK_DOC_LABELS, paperworkAccepts, paperworkOpenAt, paperworkNotBefore, type PaperworkDocType } from "../../../shared/constants/paperwork";
 import { uploadLimiter } from "../middleware/rateLimiters";
 import { assignCarrier } from "../services/carrierAssignmentService";
 import { complianceCheck } from "../services/complianceMonitorService";
@@ -215,7 +217,10 @@ router.get("/:id", async (req: AuthRequest, res: Response) => {
       poster: { select: { firstName: true, lastName: true, company: true, phone: true, email: true } },
       carrier: { select: { firstName: true, lastName: true, company: true, phone: true, carrierProfile: { select: { companyName: true, mcNumber: true, dotNumber: true } } } },
       customer: { select: { name: true, contactName: true, email: true, phone: true } },
-      documents: { where: { docType: { in: ["RATE_CON", "BOL", "POD"] } } },
+      // E4 (ruling 6) — the paperwork panel reads every settlement type, so the
+      // carrier sees each slot's state; the original BOL and the RC ride along
+      // for the buttons that were already here.
+      documents: { where: { docType: { in: [...PAPERWORK_DOC_TYPES, "RATE_CON", "BOL"] } }, orderBy: { createdAt: "desc" } },
       tenders: ownTenders(req.user!.id),
     },
   });
@@ -598,6 +603,26 @@ router.post("/:id/documents", uploadLimiter, upload.single("file"), async (req: 
   if (!req.file) {
     res.status(400).json({ error: "No file uploaded" });
     return;
+  }
+
+  // E4 (ruling 6) — "SIGNED_BOL_PU accepted from AT_PICKUP": the one paperwork
+  // slot with a status gate. The panel does not offer it earlier, and this
+  // refusal is what makes that a rule rather than a button. The gate lives in
+  // shared/constants/paperwork so the panel and this route read one table;
+  // every other paperwork type is open from the moment the panel exists.
+  {
+    const dt = normalizeDocType(req.body.docType ?? req.body.type);
+    if (dt && (PAPERWORK_DOC_TYPES as readonly string[]).includes(dt) && !paperworkAccepts(dt, load.status)) {
+      const label = PAPERWORK_DOC_LABELS[dt as PaperworkDocType];
+      const open = paperworkOpenAt(load.status);
+      res.status(409).json({
+        error: open
+          ? `${label} is accepted once the load reaches ${paperworkNotBefore(dt)}.`
+          : `This load is not taking paperwork (status ${load.status}).`,
+        code: open ? "PAPERWORK_TOO_EARLY" : "LOAD_NOT_OPEN",
+      });
+      return;
+    }
   }
 
   // E1c — one seam records a load document (services/loadDocumentService):
