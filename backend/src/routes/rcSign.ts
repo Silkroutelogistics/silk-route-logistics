@@ -33,6 +33,13 @@ import { getAgreementState, type AgreementReader, type AgreementVerdict } from "
 import { recordSecurityEvent } from "../lib/securityAudit";
 import { log } from "../lib/logger";
 
+/**
+ * The carrier's My Loads page, where a signed load's bill of lading now is.
+ * One constant, imported by carrierLoads for its refusal pages too (the
+ * tenderAction precedent: the portal host is fixed, not env-derived).
+ */
+export const PORTAL_MY_LOADS = "https://silkroutelogistics.ai/carrier/dashboard/my-loads";
+
 const router = Router();
 
 /**
@@ -439,9 +446,10 @@ router.post("/:token", async (req: Request, res: Response) => {
   res.type("html").send(page({
     title: "Signed",
     body: `<h1>Signed &mdash; thank you</h1>
-      <p>Your signature is recorded and the load is confirmed. Nothing further is needed.</p>
+      <p>Your signature is recorded and the load is confirmed. Your bill of lading is now available on My Loads.</p>
       <div class="kv"><span>Signed by</span><span>${signerName.replace(/[<>&]/g, "")}</span></div>
       <div class="kv"><span>Signed at</span><span>${signedAt.toUTCString()}</span></div>
+      <a class="cta" href="${PORTAL_MY_LOADS}?load=${encodeURIComponent(rc.loadId)}">Open the load on My Loads</a>
       <p class="foot">Document fingerprint<br><span class="ref">${rc.contentHash ?? "not recorded"}</span></p>`,
   }));
 });

@@ -95,3 +95,17 @@ describe("the scope is the relation, never a bare carrierId (vacuity tripwire)",
     expect(where.carrier?.userId).toBe("u-carrier");
   });
 });
+
+describe("E6 — ?status= is a set", () => {
+  it("a comma list becomes { in: [...] }; a single value stays a string; ALL means no filter", async () => {
+    mockPrisma.load.findMany.mockResolvedValue([]);
+    mockPrisma.load.count.mockResolvedValue(0);
+    const a = await app();
+    await request(a).get("/api/carrier-loads/my-loads?status=POD_RECEIVED,INVOICED,COMPLETED");
+    expect(mockPrisma.load.findMany.mock.calls[0][0].where.status).toEqual({ in: ["POD_RECEIVED", "INVOICED", "COMPLETED"] });
+    await request(a).get("/api/carrier-loads/my-loads?status=BOOKED");
+    expect(mockPrisma.load.findMany.mock.calls[1][0].where.status).toBe("BOOKED");
+    await request(a).get("/api/carrier-loads/my-loads?status=ALL");
+    expect(mockPrisma.load.findMany.mock.calls[2][0].where.status).toBeUndefined();
+  });
+});

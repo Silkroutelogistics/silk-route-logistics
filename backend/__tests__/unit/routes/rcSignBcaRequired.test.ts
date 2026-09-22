@@ -226,3 +226,15 @@ describe("E3 (2/4) — the settlement checklist learns the signature", () => {
     expect(await r.text()).toMatch(/Signed/);
   });
 });
+
+describe("E6 — the signed page sends the carrier back to the load, and says the BOL is there", () => {
+  it("links My Loads by load id and states the bill of lading is available", async () => {
+    arm([SIGNED]);
+    const r = await post();
+    expect(r.status).toBe(200);
+    const html = await r.text();
+    expect(html).toContain("https://silkroutelogistics.ai/carrier/dashboard/my-loads?load=load-1");
+    expect(html).toMatch(/bill of lading is now available/i);
+    expect(html).toMatch(/Open the load on My Loads/);
+  });
+});

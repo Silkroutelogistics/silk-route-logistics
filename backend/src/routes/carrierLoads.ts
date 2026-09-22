@@ -32,7 +32,7 @@ import { acceptTender } from "../controllers/tenderController";
 import { makeCaptureRes } from "../lib/captureResponse";
 import { settleTender } from "../services/tenderTransitionService";
 import { driverFieldsFromBody, hasDriverFields } from "../lib/driverFields";
-import { loadIsDead, rcPage } from "./rcSign";
+import { loadIsDead, rcPage, PORTAL_MY_LOADS } from "./rcSign";
 import { extractClientIp } from "../services/geoService";
 import { clientUserAgent } from "../lib/clientIp";
 import {
@@ -172,8 +172,13 @@ router.get("/my-loads", async (req: AuthRequest, res: Response) => {
     carrierId: req.user!.id,
     deletedAt: null,
   };
+  // E6 — a comma-separated list is a set: the My Loads "Completed" chip asks
+  // for POD_RECEIVED,INVOICED,COMPLETED, because from the carrier's side those
+  // are one state (delivered, paperwork in) and a chip that matched only the
+  // last of them would hide a load for the weeks it sits at the first two.
   if (status && status !== "ALL") {
-    where.status = status;
+    const set = status.split(",").map((s) => s.trim()).filter(Boolean);
+    where.status = set.length > 1 ? { in: set } : set[0];
   }
 
   const [loads, total] = await Promise.all([
@@ -712,7 +717,6 @@ async function mintLimitHit(rcId: string): Promise<boolean> {
   return (await recentCarrierMints(rcId)) >= RC_SIGN_LINK_MINTS_PER_HOUR;
 }
 
-const PORTAL_MY_LOADS = "https://silkroutelogistics.ai/carrier/dashboard/my-loads";
 
 // POST /api/carrier-loads/:id/rc-sign-link — sign it here: mint, then 303 to the signing page.
 router.post("/:id/rc-sign-link", async (req: AuthRequest, res: Response) => {
