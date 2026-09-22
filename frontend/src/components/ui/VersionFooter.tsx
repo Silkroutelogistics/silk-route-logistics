@@ -18350,7 +18350,13 @@
 // desktop and several Gmail contexts drop it entirely - and a 120px display off a 2048px source is oversampled on any
 // screen it lands on. The GIF it replaces was 45 animated frames that Outlook rendered as frame 1 regardless. The
 // wrapper's border-radius went with the chip, same as every other surface in this arc.
-export const SRL_VERSION = "3.8.bgf";
+// v3.8.bgg - the favicon set is the real mark. favicon.svg was the sharpest instance of the asset-header trap: its own
+// comment called it "SRL compass mark" while the file was an <image> element wrapping a base64 PNG, so every consumer
+// that trusted the extension got a raster and the header described an intent nobody had executed. The whole set is
+// replaced from the verified masters - 16/32/48 inside a real ICO, 180 apple-touch, 192/512 any, and a 512 maskable with
+// the safe-zone inset Android needs before it crops to a circle. manifest.json gains the maskable entry and its
+// background_color moves #FDFBF7 -> #FBF7F0, the canonical --cream; the old value matched no token in §2.1.
+export const SRL_VERSION = "3.8.bgg";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
