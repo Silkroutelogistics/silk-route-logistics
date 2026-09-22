@@ -1,5 +1,6 @@
 import { Router, Response } from "express";
 import path from "path";
+import type { Prisma } from "@prisma/client";
 import { prisma } from "../config/database";
 import { authenticate, authorize, AuthRequest } from "../middleware/auth";
 import { z } from "zod";
@@ -53,6 +54,21 @@ router.use(authorize("CARRIER"));
 //
 // Returns `false` when blocked (response already sent). Returns `true` when
 // the carrier may proceed.
+/**
+ * E2 — the carrier's OWN tender rows on a load, for the next-step strip and the
+ * BOL button state. Scoped through the relation (LoadTender.carrierId is a
+ * CarrierProfile.id; the session holds a User.id — §13.3 Items 57, 222.4) so
+ * no other carrier's row, withdrawn or otherwise, is ever serialised to this
+ * carrier. Deleted rows excluded, newest first.
+ */
+function ownTenders(carrierUserId: string): Prisma.LoadTenderFindManyArgs {
+  return {
+    where: { carrier: { userId: carrierUserId }, deletedAt: null },
+    select: { id: true, status: true, statusReason: true, statusChangedAt: true },
+    orderBy: { createdAt: "desc" },
+  };
+}
+
 async function checkCarrierNotSuspended(req: AuthRequest, res: Response): Promise<boolean> {
   const profile = await prisma.carrierProfile.findUnique({
     where: { userId: req.user!.id },
@@ -170,6 +186,12 @@ router.get("/my-loads", async (req: AuthRequest, res: Response) => {
         driverName: true, driverPhone: true, truckNumber: true, trailerNumber: true,
         rateConfirmationPdfUrl: true,
         createdAt: true, updatedAt: true,
+        // E2 — the next-step strip and the BOL button state are decided from the
+        // TENDER (lib/loadDerivedStatus on the carrier side, the same selector
+        // the AE board uses). Only THIS carrier's rows: LoadTender.carrierId is
+        // a CarrierProfile.id, so the scope is the relation, and a withdrawn
+        // sibling never leaves the server.
+        tenders: ownTenders(req.user!.id),
       },
     }),
     prisma.load.count({ where }),
@@ -187,6 +209,7 @@ router.get("/:id", async (req: AuthRequest, res: Response) => {
       carrier: { select: { firstName: true, lastName: true, company: true, phone: true, carrierProfile: { select: { companyName: true, mcNumber: true, dotNumber: true } } } },
       customer: { select: { name: true, contactName: true, email: true, phone: true } },
       documents: { where: { docType: { in: ["RATE_CON", "BOL", "POD"] } } },
+      tenders: ownTenders(req.user!.id),
     },
   });
 
