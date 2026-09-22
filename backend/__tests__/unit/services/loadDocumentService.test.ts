@@ -30,6 +30,7 @@ const hooks = vi.hoisted(() => ({
   sendPODToContact: vi.fn().mockResolvedValue(undefined),
   logLoadActivity: vi.fn().mockResolvedValue(undefined),
   broadcastSSE: vi.fn(),
+  notifyAccountingOfCarrierInvoice: vi.fn().mockResolvedValue({ emailed: true, rows: 1 }),
 }));
 
 vi.mock("../../../src/services/integrationService", () => ({
@@ -45,6 +46,7 @@ vi.mock("../../../src/services/invoiceService", () => ({ autoGenerateInvoice: ho
 vi.mock("../../../src/services/shipperLoadNotifyService", () => ({ sendPODToContact: hooks.sendPODToContact }));
 vi.mock("../../../src/services/loadActivityService", () => ({ logLoadActivity: hooks.logLoadActivity }));
 vi.mock("../../../src/routes/trackTraceSSE", () => ({ broadcastSSE: hooks.broadcastSSE }));
+vi.mock("../../../src/services/carrierInvoiceNotifyService", () => ({ notifyAccountingOfCarrierInvoice: hooks.notifyAccountingOfCarrierInvoice }));
 vi.mock("../../../src/lib/logger", () => ({ log: { info: vi.fn(), error: vi.fn(), warn: vi.fn(), debug: vi.fn() } }));
 
 import { prisma } from "../../../src/config/database";
@@ -197,5 +199,30 @@ describe("refusals happen before any write", () => {
     mockPrisma.load.findUnique.mockResolvedValue(null);
     await expect(record("POD")).rejects.toBeInstanceOf(LoadDocumentRefusal);
     expect(hooks.uploadFile).not.toHaveBeenCalled();
+  });
+});
+
+describe("E5 (ruling 4) — an INVOICE tells accounting, once, after the settlement sync", () => {
+  beforeEach(() => vi.clearAllMocks());
+  it("INVOICE at DELIVERED: the doc flags sync first, then accounting is notified with the DOCUMENT id", async () => {
+    armLoad("DELIVERED");
+    mockPrisma.document.create.mockResolvedValue({ id: "doc-inv-9", docType: "INVOICE", fileUrl: "https://s3.test/documents/inv.pdf" });
+    const order: string[] = [];
+    hooks.syncSettlementDocFlags.mockImplementation(async () => { order.push("sync"); return { updated: true }; });
+    hooks.notifyAccountingOfCarrierInvoice.mockImplementation(async () => { order.push("notify"); return { emailed: true, rows: 1 }; });
+    await record("INVOICE");
+    expect(hooks.notifyAccountingOfCarrierInvoice).toHaveBeenCalledTimes(1);
+    expect(hooks.notifyAccountingOfCarrierInvoice).toHaveBeenCalledWith("load-1", "doc-inv-9");
+    expect(order).toEqual(["sync", "notify"]);
+    // An invoice is not a delivery event and not a POD.
+    expect(hooks.onLoadDelivered).not.toHaveBeenCalled();
+    expect(hooks.onPODUploaded).not.toHaveBeenCalled();
+  });
+
+  it("a POD does not notify accounting; a scale ticket does not either", async () => {
+    armLoad("DELIVERED");
+    await record("POD");
+    await record("RECEIPT_SCALE");
+    expect(hooks.notifyAccountingOfCarrierInvoice).not.toHaveBeenCalled();
   });
 });

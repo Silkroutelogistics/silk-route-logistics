@@ -49,6 +49,7 @@ import { actualEventStamps } from "../lib/loadEventStamps";
 import { logLoadActivity } from "./loadActivityService";
 import { broadcastSSE } from "../routes/trackTraceSSE";
 import { onLoadDelivered, onPODUploaded, syncSettlementDocFlags } from "./integrationService";
+import { notifyAccountingOfCarrierInvoice } from "./carrierInvoiceNotifyService";
 import { autoGenerateInvoice } from "./invoiceService";
 import { sendPODToContact } from "./shipperLoadNotifyService";
 
@@ -210,6 +211,13 @@ export async function recordLoadDocument(input: RecordLoadDocumentInput): Promis
   // Recomputed from what exists, so a re-upload or a second document of the
   // same type is free. Also runs inside onLoadDelivered; idempotent.
   await syncSettlementDocFlags(load.id);
+
+  // Ruling 4 (E5): accounting is told when the carrier's invoice lands --
+  // email to ACCOUNTING_EMAIL and an in-app row per ACCOUNTING user. After
+  // the sync, so the settlement already reads docCarrierInvoice when they
+  // open it. Once per document by construction (this seam runs once per
+  // upload); fire-and-forget and never throws, like the POD email above.
+  if (docType === "INVOICE") void notifyAccountingOfCarrierInvoice(load.id, document.id);
 
   return { document: document as RecordLoadDocumentResult["document"], docType, status: { before, after }, deliveryHooksFired };
 }
