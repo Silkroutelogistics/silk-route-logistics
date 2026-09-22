@@ -2142,6 +2142,31 @@ model RateConfirmation {
   signerIp           String?
   signerUserAgent    String?
 
+  // SRL countersignature, applied by the system at ISSUANCE.
+  //
+  // The carrier accepting is what forms the BCA, so the BCA countersigns
+  // there (carrierAuth.ts). A Rate Confirmation is different: SRL issues it,
+  // and issuing it IS the broker act. That instant is when the company puts
+  // its terms in front of a carrier, so it is the instant to record binding
+  // itself to them.
+  //
+  // It is NOT a claim that a person typed anything. `at` is the server clock
+  // at issuance; name and title come from config/authority.ts and are STORED
+  // ON THE ROW rather than resolved at render time, so changing the officer
+  // cannot silently restate who bound the company on documents already
+  // issued.
+  //
+  // Additive and nullable with NO BACKFILL. Rate confirmations issued before
+  // this were never countersigned, and writing one now would manufacture an
+  // execution record for an act that did not happen. They render with the
+  // broker date line open, which is true. Their stored bytes and contentHash
+  // are untouched.
+  //
+  // No index: read with the row they belong to, never a query predicate.
+  counterSignedByName  String?
+  counterSignedByTitle String?
+  counterSignedAt      DateTime?
+
   // Indexed financial columns
   carrierRate      Float?
   fuelSurcharge    Float?

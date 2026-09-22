@@ -18362,7 +18362,12 @@
 // call forced { width: 50, height: 50 }, squashing the mark ~30% horizontally on every report served by
 // routes/carriers.ts. Ruling 1 named this exact correction ("vetting report drawn 50x50 correcting the 1.43 aspect
 // distortion") and it had not been executed. Origin and box unchanged; fs and path imports went with the constants.
-export const SRL_VERSION = "3.8.bgi";
+// v3.8.bfy - RateConfirmation gains the three countersign columns the BCA
+// already has, same names, additive and nullable with no backfill. Nothing
+// writes them yet; the stamp lands in the next commit. A rate confirmation
+// issued before this was never countersigned, and writing one onto it now
+// would manufacture an execution record for an act that did not happen.
+export const SRL_VERSION = "3.8.bfy";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
