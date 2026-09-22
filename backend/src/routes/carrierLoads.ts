@@ -30,6 +30,13 @@ import { acceptTender } from "../controllers/tenderController";
 import { makeCaptureRes } from "../lib/captureResponse";
 import { settleTender } from "../services/tenderTransitionService";
 import { driverFieldsFromBody, hasDriverFields } from "../lib/driverFields";
+import { loadIsDead, rcPage } from "./rcSign";
+import { extractClientIp } from "../services/geoService";
+import { clientUserAgent } from "../lib/clientIp";
+import {
+  rotateRcSignToken, recentCarrierMints, recordCarrierMint, carrierEmailOnFile, sendSignLinkEmail,
+  RC_SIGN_LINK_MINTS_PER_HOUR,
+} from "../services/rcSignLinkService";
 
 const router = Router();
 
@@ -617,6 +624,129 @@ router.post("/:id/documents", uploadLimiter, upload.single("file"), async (req: 
   // B5b-2 — see documentController; this router is carrier-only already.
   void flagSensitiveActionAfterNewLogin(req.user!.id, "document-upload");
   res.json(result.document);
+});
+
+// ── E3 (ruling 3, 2026-09-21): in-portal signing + self-serve resend ─────────
+//
+// There is ONE signing surface, the token page (/api/rc-sign/:token), and the
+// portal reaches it by MINTING a fresh single-use token through the same
+// function the AE's RESEND_RC uses (services/rcSignLinkService) and sending the
+// carrier there. Nothing here reads or returns a stored token: the row holds
+// only a hash, and the secret exists only in the redirect or the email, once.
+// The legacy session-authed POST /rate-confirmations/:id/sign is deleted with
+// this arc (Item 158 precedent) — it signed without moving the tender, so the
+// BOL gate stayed shut behind a "signed" document.
+//
+// Both routes:
+//   (a) the caller owns the load, the load is live, and THIS carrier's tender is
+//       RC_SENT — nothing to sign before the AE sends, nothing after CONFIRMED;
+//   (b) rotate the token (which is what revokes the prior link);
+//   (c) 3 mints per RC per rolling hour, 429 beyond — the audit row is the
+//       counter, so "audit-log every mint" is not a thing to remember.
+//
+// The portal route answers a form-POST NAVIGATION (the session cookie rides a
+// same-site top-level POST; an XHR could not follow the redirect into a page),
+// so its refusals are the branded page rather than JSON. The email route is
+// an XHR and answers JSON.
+type SignableRc =
+  | { ok: true; load: { id: string; referenceNumber: string; loadNumber: string | null }; rc: { id: string } }
+  | { ok: false; status: number; code: string; message: string };
+
+async function signableRcForCarrier(loadId: string, userId: string): Promise<SignableRc> {
+  const load = await prisma.load.findUnique({
+    where: { id: loadId },
+    select: { id: true, referenceNumber: true, loadNumber: true, carrierId: true, status: true, deletedAt: true },
+  });
+  if (!load) return { ok: false, status: 404, code: "LOAD_NOT_FOUND", message: "Load not found." };
+  if (load.carrierId !== userId) return { ok: false, status: 403, code: "NOT_YOUR_LOAD", message: "Not your load." };
+  if (loadIsDead(load)) return { ok: false, status: 409, code: "LOAD_NOT_LIVE", message: "This load has been cancelled. There is nothing to sign." };
+
+  const tender = await prisma.loadTender.findFirst({
+    where: { loadId: load.id, carrier: { userId }, deletedAt: null, status: { in: ["ACCEPTED", "RC_SENT", "CONFIRMED"] } },
+    orderBy: { createdAt: "desc" },
+    select: { status: true },
+  });
+  if (!tender || tender.status === "ACCEPTED") {
+    return { ok: false, status: 409, code: "RC_NOT_SENT", message: "SRL has not sent the rate confirmation for this load yet. It will arrive by email; you can sign it here once it has." };
+  }
+  if (tender.status === "CONFIRMED") {
+    return { ok: false, status: 409, code: "ALREADY_SIGNED", message: "This rate confirmation is already signed. Nothing further is needed." };
+  }
+  const rc = await prisma.rateConfirmation.findFirst({
+    where: { loadId: load.id, status: { not: "VOID" } },
+    orderBy: { createdAt: "desc" },
+    select: { id: true, status: true, contentHash: true },
+  });
+  if (!rc || rc.status !== "SENT" || !rc.contentHash) {
+    return { ok: false, status: 409, code: "RC_NOT_SENT", message: "SRL has not sent the rate confirmation for this load yet." };
+  }
+  return { ok: true, load: { id: load.id, referenceNumber: load.referenceNumber, loadNumber: load.loadNumber }, rc: { id: rc.id } };
+}
+
+async function mintLimitHit(rcId: string): Promise<boolean> {
+  return (await recentCarrierMints(rcId)) >= RC_SIGN_LINK_MINTS_PER_HOUR;
+}
+
+const PORTAL_MY_LOADS = "https://silkroutelogistics.ai/carrier/dashboard/my-loads";
+
+// POST /api/carrier-loads/:id/rc-sign-link — sign it here: mint, then 303 to the signing page.
+router.post("/:id/rc-sign-link", async (req: AuthRequest, res: Response) => {
+  const s = await signableRcForCarrier(req.params.id, req.user!.id);
+  const back = `${PORTAL_MY_LOADS}?load=${encodeURIComponent(req.params.id)}`;
+  if (!s.ok) {
+    res.status(s.status).type("html").send(rcPage({
+      title: s.code === "ALREADY_SIGNED" ? "Already signed" : "Nothing to sign yet",
+      body: `<h1>${s.code === "ALREADY_SIGNED" ? "This rate confirmation is signed" : "Nothing to sign yet"}</h1><p>${s.message}</p><a class="cta" href="${back}">Back to My Loads</a>`,
+    }));
+    return;
+  }
+  if (await mintLimitHit(s.rc.id)) {
+    res.status(429).type("html").send(rcPage({
+      title: "Too many signing links",
+      body: `<h1>Too many signing links</h1><p>A new signing link has been issued ${RC_SIGN_LINK_MINTS_PER_HOUR} times in the last hour for this rate confirmation. Use the most recent one from your email, or try again in an hour.</p><a class="cta" href="${back}">Back to My Loads</a>`,
+    }));
+    return;
+  }
+  const link = await rotateRcSignToken(s.rc.id);
+  await recordCarrierMint({
+    userId: req.user!.id, rcId: s.rc.id, loadId: s.load.id, tokenId: link.tokenId, channel: "portal",
+    ip: extractClientIp(req as never), userAgent: clientUserAgent(req as never),
+  });
+  res.redirect(303, link.path);
+});
+
+// POST /api/carrier-loads/:id/rc-sign-link/email — email me a new link, to the address on file only.
+router.post("/:id/rc-sign-link/email", async (req: AuthRequest, res: Response) => {
+  const s = await signableRcForCarrier(req.params.id, req.user!.id);
+  if (!s.ok) { res.status(s.status).json({ error: s.message, code: s.code }); return; }
+  if (await mintLimitHit(s.rc.id)) {
+    res.status(429).json({
+      error: `A new signing link has been issued ${RC_SIGN_LINK_MINTS_PER_HOUR} times in the last hour for this rate confirmation. Use the most recent one, or try again in an hour.`,
+      code: "SIGN_LINK_RATE_LIMITED",
+    });
+    return;
+  }
+  // The request body is never consulted for the address. A link that signs a
+  // document for this carrier goes only to an address this carrier put on file.
+  const to = await carrierEmailOnFile(req.user!.id);
+  if (!to) { res.status(409).json({ error: "No email address on file for this carrier.", code: "NO_EMAIL_ON_FILE" }); return; }
+
+  const link = await rotateRcSignToken(s.rc.id);
+  try {
+    await sendSignLinkEmail(to, s.load.loadNumber ?? s.load.referenceNumber, link.url);
+  } catch (err) {
+    // The prior link is already superseded; the carrier asked for a new one and
+    // can ask again. The mint is NOT recorded, so a failed send does not count
+    // against them.
+    log.error({ err, rcId: s.rc.id }, "[RC] carrier-requested signing link failed to send");
+    res.status(502).json({ error: "We could not send the email. Try again in a moment.", code: "EMAIL_SEND_FAILED" });
+    return;
+  }
+  await recordCarrierMint({
+    userId: req.user!.id, rcId: s.rc.id, loadId: s.load.id, tokenId: link.tokenId, channel: "email", sentTo: to,
+    ip: extractClientIp(req as never), userAgent: clientUserAgent(req as never),
+  });
+  res.json({ ok: true, sentTo: to, expiresAt: link.expiresAt });
 });
 
 // POST /api/carrier-loads/:id/check-call — Submit a check call from carrier

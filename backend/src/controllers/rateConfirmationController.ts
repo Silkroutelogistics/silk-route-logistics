@@ -11,7 +11,8 @@ import {
 } from "../validators/rateConfirmation";
 import { generateEnhancedRateConfirmation, generateShipperLoadConfirmation } from "../services/pdfService";
 import { sendRateConfirmationEmail, sendEmail, wrap } from "../services/emailService";
-import { mintRcSignToken, hashPdfBytes, rcSignUrl } from "../lib/rcSignToken";
+import { hashPdfBytes } from "../lib/rcSignToken";
+import { rotateRcSignToken } from "../services/rcSignLinkService";
 import { uploadFileToPath } from "../services/storageService";
 import { settleTender } from "../services/tenderTransitionService";
 import { resolveLoadStem, withDocumentNumber } from "../lib/documentNumber";
@@ -362,7 +363,13 @@ export async function sendRateConfirmation(req: AuthRequest, res: Response) {
   // untouched, same bytes and same hash, and only the link changes. The
   // literal reading would have traded the security property for an
   // implementation detail nobody can observe.
-  const signToken = mintRcSignToken();
+  //
+  // E3 — minted and STORED through rotateRcSignToken, the one function both
+  // issuing paths use (the carrier's portal mints through it too, ruling 3).
+  // Rotation is what revokes the prior link: the row holds one hash. This
+  // therefore lands BEFORE the email, so the link in the email is the link
+  // the row knows; the status update below no longer carries token fields.
+  const signToken = await rotateRcSignToken(rc.id);
 
   // Send the document and the link that signs it.
   //
@@ -376,7 +383,7 @@ export async function sendRateConfirmation(req: AuthRequest, res: Response) {
     rc.load.referenceNumber,
     pdfBuffer,
     message,
-    rcSignUrl(signToken.token),
+    signToken.url,
   );
 
   // Update status to SENT, storing the exact formData that was rendered.
@@ -404,14 +411,9 @@ export async function sendRateConfirmation(req: AuthRequest, res: Response) {
       // download endpoint serves THIS rather than re-rendering.
       pdfUrl: storedPdfUrl,
       contentHash,
-      // A re-send supersedes the previous link. signTokenUsedAt is cleared with
-      // it because it belongs to the token that just died, not to this one --
-      // leaving a stale used-marker behind would make a brand new link read as
-      // already spent.
-      signTokenId: signToken.tokenId,
-      signTokenHash: signToken.tokenHash,
-      signTokenExpiresAt: signToken.expiresAt,
-      signTokenUsedAt: null,
+      // The signing token was rotated above (rotateRcSignToken): a re-send
+      // supersedes the previous link, and signTokenUsedAt was cleared with it
+      // because it belonged to the token that just died. Not repeated here.
     },
   });
 

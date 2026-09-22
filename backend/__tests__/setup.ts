@@ -50,6 +50,9 @@ vi.mock("../src/config/database", () => ({
     },
     auditLog: {
       create: vi.fn(),
+      // E3 — the carrier-side signing-link mint limit reads its own audit rows
+      // back as the counter (services/rcSignLinkService.recentCarrierMints).
+      count: vi.fn(),
     },
     auditTrail: {
       create: vi.fn(),

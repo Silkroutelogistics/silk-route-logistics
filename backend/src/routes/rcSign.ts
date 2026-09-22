@@ -44,6 +44,12 @@ const router = Router();
  * in the wrong typeface is the one page where looking unofficial matters most.
  * Serving from 'self' also keeps the CSP intact.
  */
+/** Exported for the carrier's portal mint (carrierLoads), whose refusals are
+ *  reached by a form-POST navigation and must be a page, not JSON. */
+export function rcPage(opts: { title: string; body: string }): string {
+  return page(opts);
+}
+
 function page(opts: { title: string; body: string }): string {
   return `<!doctype html><html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
