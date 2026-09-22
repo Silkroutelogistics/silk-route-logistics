@@ -80,7 +80,7 @@ restricts sign-in to the SRL Workspace; External is what allows a carrier at
 |---|---|
 | App name | Silk Route Logistics |
 | User support email | operations@silkroutelogistics.ai |
-| App logo | the SRL compass mark (`frontend/public/logo-compass.png`) |
+| App logo | the SRL compass mark — `frontend/public/brand/srl-logo-fullcolour-2048.png` (square, transparent, 90KB, well under the 1MB cap). **Not** `logo-compass.png`, which this line named until the mark was replaced: that file is an abandoned gradient-"P" concept, not the compass. It is superseded but still on disk, because `backend/scripts/generate-logo.ts` still writes it - deleting it is gated on retiring that generator. |
 | Application home page | https://silkroutelogistics.ai |
 | Privacy policy | https://silkroutelogistics.ai/privacy |
 | Terms of service | https://silkroutelogistics.ai/terms |
