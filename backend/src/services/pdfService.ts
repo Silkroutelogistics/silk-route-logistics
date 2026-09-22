@@ -2714,6 +2714,12 @@ export function generateEnhancedRateConfirmation(load: EnhancedRCLoadData, formD
   // it is -- how to confirm -- and names the other routes rather than implying
   // they do not exist.
   //
+  // C3a — THE ADDRESS IS BACK, and dropping it in C3 was the regression. The
+  // whole point of v3.8.art was that SRL asked for a signature and named no
+  // way to return it. "Sign and return this page" with no destination is that
+  // defect again in nicer words. Measured before restoring: both wordings
+  // render at 20.5pt over two lines, so the return channel costs nothing.
+  //
   // NOT a terms-version bump. The RC terms constant in lib/agreementVersions
   // governs the governing clauses above (2392-2443) and this line is not one of
   // them; the clause it defers to is unchanged. The constant is deliberately not
@@ -2722,8 +2728,9 @@ export function generateEnhancedRateConfirmation(load: EnhancedRCLoadData, formD
   // guard reads raw source including comments.
   doc.font(FONT_BODY, 7.5).fillColor(TOKENS.fg2);
   doc.text(
-    "Sign and return this page to confirm acceptance. Dispatch of a unit, arrival at the pickup location, " +
-      "or commencement of transport also constitutes binding acceptance under Governing Terms.",
+    "Sign and return this page to operations@silkroutelogistics.ai to confirm acceptance. Dispatch of a unit, " +
+      "arrival at the pickup location, or commencement of transport also constitutes binding acceptance " +
+      "under Governing Terms.",
     MARGIN, y + RC_SIG_H + 6, { width: CONTENT_W, lineGap: 0.5 },
   );
 

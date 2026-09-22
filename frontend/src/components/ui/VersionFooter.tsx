@@ -1,3 +1,20 @@
+// v3.8.bgh — C3a. THE RETURN ADDRESS IS BACK, AND DROPPING IT IN C3 WAS
+// THE REGRESSION.
+//
+// v3.8.art existed because SRL asked a carrier for a signature and named no
+// way to return it. C3 rewrote that instruction to name the other routes to
+// acceptance and, in doing so, took the destination back out. "Sign and
+// return this page" with no address is the same defect in nicer words.
+//
+// Measured before restoring rather than after: both wordings render at 20.5pt
+// over two lines at width CONTENT_W, so the return channel costs no vertical
+// space. verify:rc holds all 17 cases at 3 pages with the countersigned
+// worst case still carrying 322pt of dead space on page 3.
+//
+// Both RC render pins move, and only those two — the other 13 documents are
+// byte-identical, which is the evidence that a one-line copy change in the
+// RC signature block reached nothing else.
+
 // v3.8.ayb — UNIFIED TENDER LIFECYCLE, ARC CLOSED.
 //
 // 23faaaa7 -> ee838a3d, 26 commits. Gap-table residue: 15 closed, 1 partial,
@@ -18381,7 +18398,7 @@
 // it sits under. It said sign before dispatch while GOVERNING TERMS says
 // dispatch itself is binding acceptance; one document told a carrier two
 // different things about when it takes effect.
-export const SRL_VERSION = "3.8.bgb";
+export const SRL_VERSION = "3.8.bgh";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
