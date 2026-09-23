@@ -214,16 +214,42 @@ export async function downloadBOLFromLoad(req: AuthRequest, res: Response) {
     // exactly the person chasing it. Same split as the rate-confirmation
     // download and the driver-verification gate above it.
     if (req.user!.role === "CARRIER") {
-      const confirmed = await prisma.loadTender.findFirst({
-        where: { loadId: load.id, status: "CONFIRMED", deletedAt: null },
-        select: { id: true },
-      });
-      if (!confirmed) {
+      // C4b — THE GATE READS THE ACCEPTANCE, NOT A MUTABLE STATUS COLUMN.
+      //
+      // It read `LoadTender.status === "CONFIRMED"`. That is a status column,
+      // so it answers "where is this tender now" rather than "did this carrier
+      // commit to this load" — and R8a forbids inferring an act from a column
+      // that can be moved again afterwards. Three SRL-side paths reach a
+      // dispatched-looking state with no carrier act at all (R8c: finalize, the
+      // on-behalf cascade accept, PATCH /loads/:id/status), and each of them
+      // could put a tender at CONFIRMED without anyone having agreed to
+      // anything.
+      //
+      // EITHER establishes the commitment, and the second is not redundant: a
+      // recorded acceptance (C4a), or an executed rate confirmation. A load
+      // signed before C4a shipped has no stamp and never will — the columns are
+      // deliberately un-backfilled — so testing acceptance alone would have
+      // locked every pre-C4a carrier out of their own bill of lading.
+      //
+      // The signature test now reads the SIGNATURE (RateConfirmation.signed)
+      // rather than a tender status standing in for it, which is the same
+      // correction one field over.
+      const accepted = !!load.carrierAcceptedAt;
+      const signedRc =
+        accepted ||
+        !!(await prisma.rateConfirmation.findFirst({
+          where: { loadId: load.id, signed: true },
+          select: { id: true },
+        }));
+      if (!accepted && !signedRc) {
         res.status(403).json({
+          // Code kept for compatibility — the carrier portal and E2E both match
+          // on it. The MESSAGE names what is actually missing.
           error: "RC_NOT_SIGNED",
           message:
-            "Sign the rate confirmation before downloading the bill of lading. The signing link is in " +
-            "the rate confirmation email; if it has expired, ask your dispatcher to send a new one.",
+            "Accept this load before downloading the bill of lading. Accepting the tender or signing " +
+            "the rate confirmation both count; the signing link is in the rate confirmation email, and " +
+            "if it has expired your dispatcher can send a new one.",
           action: { href: "/carrier/dashboard/my-loads", label: "View this load" },
         });
         return;

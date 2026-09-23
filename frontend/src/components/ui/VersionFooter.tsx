@@ -18457,7 +18457,15 @@
 // nothing earlier recorded one; first-write-wins means it defers to a real
 // signature rather than overwriting it. STATUS_CONFIRMED and STATUS_BOOKED are
 // NOT wired and cannot be: no route lets a CARRIER move a load into either.
-export const SRL_VERSION = "3.8.bgr";
+// v3.8.bgs - C4b: the bill of lading is gated on the ACCEPTANCE, not on
+// LoadTender.status === CONFIRMED. A status column answers "where is this
+// tender now", not "did this carrier commit to this load", and three SRL-side
+// paths reach a dispatched-looking state with no carrier act at all. Either
+// establishes the commitment: a recorded acceptance (C4a) or an executed rate
+// confirmation - the second kept because the columns are deliberately
+// un-backfilled, so testing acceptance alone would have locked every pre-C4a
+// carrier out of their own bill of lading. AE bypass unchanged.
+export const SRL_VERSION = "3.8.bgs";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
