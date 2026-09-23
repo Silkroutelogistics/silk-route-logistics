@@ -18605,7 +18605,13 @@
 // confirmed delay, and the dedup goes 4h -> 12h. The 4h constant stays as the
 // STALENESS threshold - which shipments are quiet is a different question from
 // how often we may say so.
-export const SRL_VERSION = "3.8.bhk";
+// v3.8.bhl - C7: the transit cron scopes its own query (Item 279 shape). It
+// selected on status and customerId alone and relied on the resolver refusing
+// afterwards. That works and it is one layer deep: a second consumer of the
+// list inherits nothing, and iterating a soft-deleted or test load is work with
+// no possible recipient. The resolver keeps its guards - defence in depth, not
+// a move - and a test pins both ends so neither can be dropped as redundant.
+export const SRL_VERSION = "3.8.bhl";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

@@ -362,6 +362,13 @@ export async function processShipperTransitUpdates() {
   const inTransitLoads = await prisma.load.findMany({
     where: {
       status: { in: ["IN_TRANSIT", "LOADED", "AT_DELIVERY"] },
+      // Item 279 shape — the job asks its own question rather than relying on
+      // the resolver to refuse afterwards. The resolver DOES check both of
+      // these, so nothing leaks today; but defence one layer deep means a
+      // second consumer of this list inherits nothing, and iterating a
+      // soft-deleted or test load at all is work with no possible recipient.
+      deletedAt: null,
+      isTestAccount: false,
       customerId: { not: null },
     },
     select: { id: true, referenceNumber: true },
