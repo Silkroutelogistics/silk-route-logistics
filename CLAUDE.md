@@ -1164,6 +1164,8 @@ Moved → `docs/claude/brand-and-claims.md`. Every subsection below, titled as i
 - **§20.1 — Scope** · `docs/claude/brand-and-claims.md`
 - **§20.2 — Workflow (mandatory)** · `docs/claude/brand-and-claims.md`
 - **§20.3 — The audit lenses** · `docs/claude/brand-and-claims.md`
+- **§20.1.5 = Lens 1.5 Architectural Reveal Defense** · **§20.1.6 = Lens 1.6 Semantic Legibility Defense** · **§20.1.7 = Lens 1.7 Brand Modernity Alignment** · `docs/claude/brand-and-claims.md`
+  (shorthand used in code for the lenses, which are headings *inside* §20.3 — they were never sections of their own)
 - **§20.4 — Graphics audit** · `docs/claude/brand-and-claims.md`
 - **§20.5 — Pre-commit gates (mandatory checklist)** · `docs/claude/brand-and-claims.md`
 - **§20.6 — Page-level audit log (where each page was last audited)** · `docs/claude/brand-and-claims.md`
