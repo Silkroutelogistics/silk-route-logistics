@@ -84,12 +84,68 @@ if (hostname.includes("-pooler")) {
   );
 }
 
-// Optional belt-and-suspenders sanity check: DATABASE_URL and DIRECT_URL should
-// share the same project ID (i.e., the hostname prefix up to the first dot
-// should be IDENTICAL except for the `-pooler` suffix). Warn (not fail) if not.
+// ── DATABASE_URL must be the POOLED endpoint (the b1 blind spot) ──
+//
+// The guard above asserts DIRECT_URL is NOT pooled. NOTHING asserted the
+// mirror: that DATABASE_URL IS. So the pooled endpoint could go missing from
+// the runtime URL and every check here still passed. Found 2026-09-22 on
+// backend/.env.production.local, where DATABASE_URL and DIRECT_URL had become
+// byte-identical direct URLs and the string "-pooler" appeared nowhere in the
+// file. Silent, because the only thing looking at DATABASE_URL was a project-ID
+// warning that compares hostnames AFTER stripping "-pooler" -- so it cannot
+// see a missing one by construction.
+//
+// Why it matters at runtime rather than at migrate time: DATABASE_URL is what
+// the server queries through. Neon's pooler is what keeps a Render dyno from
+// exhausting the connection limit; pointed at the direct endpoint, the app
+// holds one Postgres connection per client and runs out under load.
+//
+// SCOPED TO neon.tech ON PURPOSE. CI and the local E2E runner set DATABASE_URL
+// to a plain Postgres container that has no pooler and never will. Asserting
+// unconditionally would turn every CI run red for a correct configuration --
+// the false-positive class that teaches people to ignore a guard.
+function failDatabaseUrl(message, ...lines) {
+  console.error("");
+  console.error("╔════════════════════════════════════════════════════════════════╗");
+  console.error("║ ❌ DATABASE_URL configuration error                            ║");
+  console.error("╚════════════════════════════════════════════════════════════════╝");
+  console.error("");
+  console.error(message);
+  if (lines.length > 0) {
+    console.error("");
+    for (const line of lines) console.error(line);
+  }
+  console.error("");
+  console.error("Remediation (Render dashboard):");
+  console.error("  1. Go to silk-route-logistics service → Environment tab");
+  console.error("  2. Edit the DATABASE_URL row");
+  console.error("  3. Set it to Neon's POOLED endpoint:");
+  console.error("     - Neon dashboard → Branches → production branch");
+  console.error("     - Connection Details → keep 'Pooled connection' ON");
+  console.error("     - The hostname MUST contain '-pooler'");
+  console.error("  4. Leave DIRECT_URL on the unpooled endpoint — the two differ");
+  console.error("     by exactly that one segment.");
+  console.error("");
+  console.error("See CLAUDE.md §2.2 + §13.3 Item 302 (b1) for full rationale.");
+  console.error("");
+  process.exit(1);
+}
+
 if (process.env.DATABASE_URL) {
   try {
     const dbUrl = new URL(process.env.DATABASE_URL);
+
+    if (dbUrl.hostname.endsWith("neon.tech") && !dbUrl.hostname.includes("-pooler")) {
+      failDatabaseUrl(
+        `DATABASE_URL points at a Neon endpoint that is NOT pooled (got: ${dbUrl.hostname}).`,
+        "DIRECT_URL is the unpooled endpoint and is correct as-is. DATABASE_URL is",
+        "the one the running server queries through, and it must be the POOLED one.",
+        "",
+        "If both URLs are the same host, the pooled endpoint has been lost: the two",
+        "should differ by exactly the '-pooler' segment and nothing else.",
+      );
+    }
+
     const dbProject = dbUrl.hostname.replace("-pooler", "").split(".")[0];
     const directProject = hostname.split(".")[0];
     if (dbProject !== directProject) {
