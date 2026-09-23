@@ -6,6 +6,19 @@ Last consolidated: Phase 6.2 close (v3.8.ee, sprint span `7c74bb1`–`df3545f`).
 
 ---
 
+**Where the rest of the context lives.** This file is injected into every session AND into every
+subagent's system prompt, so its size is not a style question: at ~405,000 tokens it exceeded the whole
+context window of any 200k model, which is why §2.5 rule c is suspended. What a session needs *every*
+time stays here. What it needs only when doing a named kind of work moved to `docs/claude/`; what is
+closed or historical moved to `docs/claude/archive/`. See `docs/claude/README.md` for the conventions.
+
+**§ numbers never change.** 2,332 `§N` citations exist across the codebase (§13.3 alone is cited 599
+times). Content moved; labels travel with it, and the `§N` heading stays here as a one-line stub naming
+the file the body now lives in — so a citation still lands somewhere that tells you where to look.
+Renumbering anything would go stale across 599 comments in a single commit. Do not do it.
+
+---
+
 ## §1 PROJECT IDENTITY
 
 - **Legal entity:** Silk Route Logistics Inc. (Michigan C-Corp)
