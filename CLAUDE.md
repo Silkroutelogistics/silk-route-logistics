@@ -485,6 +485,22 @@ The single migration `20260509170000_baseline_init` at `prisma/migrations/` capt
 
 Render Build Command lacked `prisma migrate deploy` entirely. Schema additions during Apr 24 → May 4 landed in prod via manual `prisma db push`, bypassing migration history. Audit caught this via Sprint 44a Track 1 (CSV of 87 prod enums vs 6 `CREATE TYPE` statements in migrations) — drift scope was 81 of 87 enums plus corresponding tables/columns.
 
+### §2.5 — Output protocol (token discipline; binding on every arc)
+
+**Every halt ends with a HALT CARD** — one fenced block, ≤15 lines, nothing printed after it:
+```
+HALT <arc> @ <sha> | pushed y/n
+COMMITS: <sha> <letter> <subject>            — one line per commit
+GATES: btsc N | test P/F | ftsc N | build ok/fail | e2e ok/deferred
+INJECTIONS: N run, N red as expected
+FINDINGS: <=3 lines
+OPEN: numbered decisions, one line each
+DETAIL: scratchpad/arc-handoff.md
+```
+- **Gate output goes to `.logs/<gate>.log`** — the `.log` extension is load-bearing: `.gitignore:26` `*.log` ignores it at any depth, but `.logs/` is NOT itself a pattern, so `.logs/notes.txt` would be swept into another session's commit (§2.2). Verify with `git check-ignore -v` before first use. Print only counts and failing test names; run vitest with `--reporter=dot`.
+- **Searches and subagent returns carry counts and file lists, never match bodies** — unless a body IS the finding. Subagent returns ≤20 lines; mechanical scans pass `model: haiku` explicitly.
+- **Compact at every halt. Start a fresh session at each arc boundary.**
+
 ---
 
 ## §3 BINDING RULES
