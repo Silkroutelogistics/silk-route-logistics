@@ -18517,7 +18517,18 @@
 // signer, no IP, no content hash, neither URL - a settlement screen answers
 // "is this payable", not "prove the signature", and the surface built to
 // prove it is one click away (bgt/bgv).
-export const SRL_VERSION = "3.8.bgz";
+// v3.8.bha - C7b: the settlement row says what it is paying against - the rate
+// confirmation's number and signed state, and the carrier's recorded
+// acceptance in words. Read-only, and thin on purpose: no signer, no IP, no
+// hash, no document link. An ABSENT fact is STATED ("not signed", "no rate
+// con", "no acceptance recorded") rather than left blank, because a blank cell
+// is indistinguishable from a column the page failed to read and a settlement
+// is the last screen before money leaves. The two facts never stand in for
+// each other - a signed RC does not imply an acceptance, and a load accepted
+// this morning may have an unsigned one. The `via` vocabulary moved to
+// lib/acceptanceVia.ts so this row and the load-detail panel (bgv) cannot come
+// to disagree about what TENDER_ACCEPT means.
+export const SRL_VERSION = "3.8.bha";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

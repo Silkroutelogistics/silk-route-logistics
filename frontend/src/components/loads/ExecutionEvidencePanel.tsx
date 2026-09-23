@@ -16,6 +16,8 @@ import { useQuery } from "@tanstack/react-query";
 import { FileCheck2, Download, Loader2 } from "lucide-react";
 import { api } from "@/lib/api";
 import { downloadFromApi } from "@/lib/download";
+// C7 — one definition of the via vocabulary, shared with the settlement row.
+import { acceptanceViaLabel } from "@/lib/acceptanceVia";
 
 interface RcEvidence {
   id: string;
@@ -39,14 +41,7 @@ export interface ExecutionEvidencePanelProps {
   carrierAcceptedByUserId?: string | null;
 }
 
-const VIA_LABEL: Record<string, string> = {
-  RC_SIGNATURE: "Signed the rate confirmation",
-  TENDER_ACCEPT: "Accepted the tender",
-  BID_AWARD_ACCEPT: "Bid awarded",
-  STATUS_CONFIRMED: "Confirmed the load",
-  STATUS_BOOKED: "Booked the load",
-  PICKUP_ARRIVAL: "Arrived at pickup",
-};
+
 
 function when(v: string | null | undefined): string {
   if (!v) return "—";
@@ -138,7 +133,7 @@ export default function ExecutionEvidencePanel({
               <Row label="Accepted" value={when(carrierAcceptedAt)} />
               <Row
                 label="How"
-                value={VIA_LABEL[carrierAcceptedVia ?? ""] ?? carrierAcceptedVia ?? "—"}
+                value={acceptanceViaLabel(carrierAcceptedVia) ?? "—"}
               />
               <Row
                 label="By user"

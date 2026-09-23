@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+// C7 — one definition of the via vocabulary, shared with the load-detail panel.
+import { acceptanceViaLabel } from "@/lib/acceptanceVia";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { CreateSettlementModal } from "@/components/accounting/CreateSettlementModal";
@@ -28,7 +30,18 @@ interface CarrierPayInSettlement {
   docScaleTicket?: boolean;
   docTempLog?: boolean;
   allDocsVerified?: boolean;
-  load?: { referenceNumber: string; originCity: string; originState: string; destCity: string; destState: string; pickupDate: string | null; deliveryDate: string | null };
+  load?: {
+    referenceNumber: string; originCity: string; originState: string; destCity: string; destState: string; pickupDate: string | null; deliveryDate: string | null;
+    // C7 — the ACT. Distinct from the paperwork below, and from the settlement's
+    // own docSignedRateCon flag, which records whether a signed rate con was
+    // filed as a settlement DOCUMENT rather than whether the RC row is signed.
+    carrierAcceptedAt?: string | null;
+    carrierAcceptedVia?: string | null;
+  };
+  // C7 — the document the money is being paid against. Number, signed state
+  // and when. Nothing else: no signer, no IP, no hash, no URL. A settlement
+  // screen answers "is this payable"; the load detail answers "prove it".
+  rateConfirmation?: { id: string; rateConNumber: string | null; signed: boolean; signedAt: string | null } | null;
 }
 
 interface Settlement {
@@ -98,6 +111,59 @@ function DocChecklist({ cp }: { cp: CarrierPayInSettlement }) {
     >
       {recorded}/{total}
     </span>
+  );
+}
+
+/**
+ * C7 — what SRL is paying against, per load, read-only.
+ *
+ * TWO FACTS, NOT ONE, and they come apart. A load can carry a signed rate
+ * confirmation and no recorded acceptance (a pre-C4a load, where the stamp did
+ * not exist yet), or a recorded acceptance and an unsigned rate confirmation
+ * (the carrier accepted the tender and the paperwork has not come back). An AE
+ * about to release money should see which of those they are looking at, so
+ * neither is allowed to stand in for the other.
+ *
+ * ABSENCE IS STATED, never left blank. "Not signed" and "no acceptance
+ * recorded" are findings; an empty cell is indistinguishable from a field the
+ * page failed to read, which is the whole reason this surface exists.
+ *
+ * Read-only, and deliberately thin: no signer, no IP, no content hash, no
+ * document link. Evidence a settlement screen can act on is evidence spread
+ * across two screens that can then disagree.
+ */
+function RcReference({ cp }: { cp: CarrierPayInSettlement }) {
+  const rc = cp.rateConfirmation;
+  const acceptedAt = cp.load?.carrierAcceptedAt;
+  const via = acceptanceViaLabel(cp.load?.carrierAcceptedVia);
+
+  return (
+    <div className="leading-tight">
+      {rc ? (
+        <>
+          <span className="font-mono text-slate-300">{rc.rateConNumber || "—"}</span>{" "}
+          {rc.signed ? (
+            <span className="text-green-400" title={rc.signedAt ? `Signed ${new Date(rc.signedAt).toLocaleString()}` : "Signed"}>
+              signed
+            </span>
+          ) : (
+            <span className="text-amber-400" title="This rate confirmation has not been signed">not signed</span>
+          )}
+        </>
+      ) : (
+        <span className="text-slate-600" title="No rate confirmation is linked to this payment">no rate con</span>
+      )}
+      <br />
+      {acceptedAt ? (
+        <span className="text-slate-400" title={via ? `${via} · ${new Date(acceptedAt).toLocaleString()}` : new Date(acceptedAt).toLocaleString()}>
+          {via ?? "Accepted"} · {new Date(acceptedAt).toLocaleDateString()}
+        </span>
+      ) : (
+        <span className="text-slate-600" title="No carrier acceptance is recorded against this load. A load can reach a dispatched status without one.">
+          no acceptance recorded
+        </span>
+      )}
+    </div>
   );
 }
 
@@ -262,6 +328,7 @@ export default function SettlementsPage() {
                                 <th className="text-left px-3 py-2 font-medium">Route</th>
                                 <th className="text-left px-3 py-2 font-medium">Pickup</th>
                                 <th className="text-left px-3 py-2 font-medium">Delivery</th>
+                                <th className="text-left px-3 py-2 font-medium" title="The rate confirmation this payment is against, and the carrier's recorded acceptance. Read-only.">Rate con / accepted</th>
                                 <th className="text-center px-3 py-2 font-medium" title="Settlement documents recorded. Informational — does not gate payment.">Docs</th>
                                 <th className="text-right px-3 py-2 font-medium">Gross Pay</th>
                               </tr>
@@ -275,6 +342,7 @@ export default function SettlementsPage() {
                                   </td>
                                   <td className="px-3 py-2 text-slate-400">{cp.load?.pickupDate ? new Date(cp.load.pickupDate).toLocaleDateString() : "—"}</td>
                                   <td className="px-3 py-2 text-slate-400">{cp.load?.deliveryDate ? new Date(cp.load.deliveryDate).toLocaleDateString() : "—"}</td>
+                                  <td className="px-3 py-2" data-testid="rc-reference"><RcReference cp={cp} /></td>
                                   <td className="px-3 py-2 text-center"><DocChecklist cp={cp} /></td>
                                   <td className="px-3 py-2 text-right text-white">${cp.amount.toLocaleString()}</td>
                                 </tr>
