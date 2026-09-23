@@ -8,7 +8,7 @@ Last consolidated: Phase 6.2 close (v3.8.ee, sprint span `7c74bb1`–`df3545f`).
 
 **Where the rest of the context lives.** This file is injected into every session AND into every
 subagent's system prompt, so its size is not a style question: at ~405,000 tokens it exceeded the whole
-context window of any 200k model, which is why §2.5 rule c is suspended. What a session needs *every*
+context window of any 200k model, which is why §2.6 rule c is suspended. What a session needs *every*
 time stays here. What it needs only when doing a named kind of work moved to `docs/claude/`; what is
 closed or historical moved to `docs/claude/archive/`. See `docs/claude/README.md` for the conventions.
 
@@ -332,7 +332,7 @@ DETAIL: scratchpad/arc-handoff.md
 
 ---
 
-### §2.5 — Usage budget (added 2026-09-22). What a session SPENDS — binding like the rest of §2, and deliberately not §19: that library catches defects, this governs spend, and a session that runs out of context mid-arc loses the arc.
+### §2.6 — Usage budget (added 2026-09-22). What a session SPENDS — binding like the rest of §2, and deliberately not §19: that library catches defects, this governs spend, and a session that runs out of context mid-arc loses the arc.
 
 - **Halt reports: 15 lines max in chat** — status, gate pass/fail counts, a findings table, open questions. Detail goes to a scratchpad file, cited by path. **Never paste full gate or scanner output** into a report.
 - **Cite `file:line`. Do not quote code blocks in reports.** A reader who wants the code can open it; a reader who wants the conclusion should not have to scroll past the code to reach it.
