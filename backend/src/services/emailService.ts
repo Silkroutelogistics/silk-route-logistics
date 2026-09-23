@@ -112,7 +112,7 @@ export async function sendEmail(to: string, subject: string, html: string, attac
 // Item 91 close — carrier-facing URLs aligned to /carrier/dashboard/* per
 // Sprint 44c precedent (sendPreTracingEmail "Update Status",
 // sendAutoInvoiceEmail "View Invoice", sendRateConfirmationEmail "View in
-// Dashboard"). AE-facing URLs (sendLateAlertEmail tracking,
+// Dashboard"). AE-facing URLs (sendNoTrackingDataEmail tracking,
 // sendRiskAlertEmail / sendFallOffAlertEmail /ae/loads.html) preserved at
 // AE Console paths per audience-routing canonical.
 //
@@ -274,7 +274,23 @@ export async function sendPortalInviteEmail(email: string, customerName: string,
   });
 }
 
-export async function sendLateAlertEmail(
+/**
+ * R4 — a tracking GAP, reported as a gap.
+ *
+ * This was "LATE ALERT: Shipment X - No movement in 13h", which asserts two
+ * things SRL does not know: that the freight has not moved, and for how long.
+ * What is known is that nobody has filed a location report. The job that
+ * sends this selects purely on a stale or absent lastLocationAt, so it has no
+ * LATE branch at all — every alert it has ever raised was this case wearing
+ * the other name.
+ *
+ * The hour count is gone from the subject deliberately. It grew on every run
+ * (4h → 9h → 13h to whaider@ on 2026-09-23 alone), which made each message a
+ * new thread and read as an escalating incident when the only thing
+ * escalating was the silence. The body still gives the AE the timing they
+ * need to act; the subject no longer makes a claim.
+ */
+export async function sendNoTrackingDataEmail(
   brokerEmail: string,
   brokerName: string,
   loadRef: string,
@@ -282,19 +298,23 @@ export async function sendLateAlertEmail(
   lastLocation: string | null,
   hoursSinceUpdate: number,
 ) {
+  const since =
+    hoursSinceUpdate >= 900
+      ? "No location has ever been reported for this shipment."
+      : `The last location report was about ${Math.round(hoursSinceUpdate)} hours ago.`;
   const html = wrap(`
-    <h2 style="color:#dc2626">Late Alert</h2>
+    <h2 style="color:#B07A1A">No Location Report</h2>
     <p>Hi ${brokerName},</p>
-    <p>Shipment <strong>${shipmentNumber}</strong> (Load ${loadRef}) has not reported movement in <strong>${Math.round(hoursSinceUpdate)} hours</strong>.</p>
+    <p>Shipment <strong>${shipmentNumber}</strong> (Load ${loadRef}) has no recent location report.</p>
+    <p style="color:#3A4A5F">${since} This is a gap in our tracking data, not a confirmed delay — the freight may be moving normally.</p>
     <table style="width:100%;border-collapse:collapse;margin:16px 0">
-      <tr><td style="padding:8px;border:1px solid #E2EAF2;font-weight:bold">Last Known Location</td><td style="padding:8px;border:1px solid #E2EAF2">${lastLocation || "Unknown"}</td></tr>
-      <tr><td style="padding:8px;border:1px solid #E2EAF2;font-weight:bold">Hours Since Update</td><td style="padding:8px;border:1px solid #E2EAF2">${Math.round(hoursSinceUpdate)}h</td></tr>
+      <tr><td style="padding:8px;border:1px solid #E2EAF2;font-weight:bold">Last Known Location</td><td style="padding:8px;border:1px solid #E2EAF2">${lastLocation || "None reported"}</td></tr>
     </table>
-    <p>Please contact the carrier immediately to confirm load status.</p>
-    <a href="https://silkroutelogistics.ai/dashboard/tracking" style="display:inline-block;background:#dc2626;color:#fff;padding:12px 24px;text-decoration:none;border-radius:6px;font-weight:bold;margin-top:8px">View in Track & Trace</a>
+    <p>Contact the carrier for a location update.</p>
+    <a href="https://silkroutelogistics.ai/dashboard/tracking" style="display:inline-block;background:#BA7517;color:#fff;padding:12px 24px;text-decoration:none;border-radius:6px;font-weight:bold;margin-top:8px">View in Track &amp; Trace</a>
   `);
 
-  await sendEmail(brokerEmail, `LATE ALERT: Shipment ${shipmentNumber} - No movement in ${Math.round(hoursSinceUpdate)}h`, html);
+  await sendEmail(brokerEmail, `TRACKING GAP: Shipment ${shipmentNumber} — no location report`, html);
 }
 
 export async function sendOtpEmail(email: string, firstName: string, code: string) {

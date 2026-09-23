@@ -1,7 +1,7 @@
 import crypto from "crypto";
 import cron from "node-cron";
 import { prisma } from "../config/database";
-import { sendPreTracingEmail, sendLateAlertEmail, sendPasswordExpiryReminder, settingsPathForRole } from "./emailService";
+import { sendPreTracingEmail, sendNoTrackingDataEmail, sendPasswordExpiryReminder, settingsPathForRole } from "./emailService";
 import { processDueCheckCalls } from "./checkCallAutomation";
 import { runRiskFlagging } from "./riskEngine";
 import { processDueSequences } from "./emailSequenceService";
@@ -198,14 +198,19 @@ async function runLateDetection() {
       ? (now.getTime() - shipment.lastLocationAt.getTime()) / (1000 * 60 * 60)
       : 999;
 
-    // Dedup: check if late alert already sent in last 4 hours
+    // R4 — once per shipment per 12 hours. This was a 4-hour lookback on a
+    // 30-minute job, so a quiet load produced an alert every 4 hours forever:
+    // three reached whaider@ on 2026-09-23 alone. Nothing has changed between
+    // them except the length of the silence, which the message no longer
+    // reports, so a repeat carries no information the first did not.
+    const dedupSince = new Date(now.getTime() - 12 * 60 * 60 * 1000);
     const dedup = await prisma.notification.findFirst({
       where: {
         userId: shipment.load.poster.id,
         type: "LOAD_UPDATE",
-        title: { contains: "Late Alert" },
+        title: { contains: "No Location Report" },
         message: { contains: shipment.shipmentNumber },
-        createdAt: { gte: fourHoursAgo },
+        createdAt: { gte: dedupSince },
       },
     });
     if (dedup) continue;
@@ -218,14 +223,14 @@ async function runLateDetection() {
       data: {
         userId: broker.id,
         type: "LOAD_UPDATE",
-        title: `Late Alert: ${shipment.shipmentNumber}`,
-        message: `Shipment ${shipment.shipmentNumber} (Load ${shipment.load.referenceNumber}) has not moved in ${Math.round(hoursSinceUpdate)}h. Last location: ${shipment.lastLocation || "Unknown"}.`,
+        title: `No Location Report: ${shipment.shipmentNumber}`,
+        message: `Shipment ${shipment.shipmentNumber} (Load ${shipment.load.referenceNumber}) has no recent location report. Last known: ${shipment.lastLocation || "none"}.`,
         actionUrl: "/dashboard/tracking",
       },
     });
 
     // Email
-    await sendLateAlertEmail(
+    await sendNoTrackingDataEmail(
       broker.email,
       broker.firstName || "Broker",
       shipment.load.referenceNumber,
@@ -234,7 +239,7 @@ async function runLateDetection() {
       hoursSinceUpdate,
     );
 
-    log.info(`[LateDetection] Alert sent for ${shipment.shipmentNumber} — ${Math.round(hoursSinceUpdate)}h stale`);
+    log.info(`[NoTrackingData] Alert sent for ${shipment.shipmentNumber} — ${Math.round(hoursSinceUpdate)}h since last report`);
   }
 }
 

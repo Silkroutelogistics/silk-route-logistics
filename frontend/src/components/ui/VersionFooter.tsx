@@ -18596,7 +18596,16 @@
 // because the ETA it stands on genuinely moves. The customer gate requires BOTH
 // a LATE kind and a LOCATED report - a check call with no city cannot place
 // freight, and SRL-121494's four were all null-location.
-export const SRL_VERSION = "3.8.bhj";
+// v3.8.bhk - C6b: the internal alert reports a gap as a gap. The subject was
+// "LATE ALERT: Shipment X - No movement in 13h", which asserts two things SRL
+// does not know - that the freight has not moved, and for how long. The job
+// selects purely on a stale or absent lastLocationAt, so it has never had a LATE
+// branch; every alert it ever raised was this case under the other name. Now
+// "TRACKING GAP ... no location report", the body says plainly it is not a
+// confirmed delay, and the dedup goes 4h -> 12h. The 4h constant stays as the
+// STALENESS threshold - which shipments are quiet is a different question from
+// how often we may say so.
+export const SRL_VERSION = "3.8.bhk";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
