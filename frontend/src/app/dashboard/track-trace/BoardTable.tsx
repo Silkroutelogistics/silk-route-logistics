@@ -1,4 +1,5 @@
 "use client";
+import { formatStopDate, formatActualDatetime } from "@/lib/stopDate";
 
 import { MapPin, PhoneCall, AlertTriangle } from "lucide-react";
 import type { BoardLoad, ProgressState } from "./types";
@@ -112,7 +113,7 @@ export function BoardTable({ loads, onRowClick }: BoardTableProps) {
               </td>
               <td className="px-3 py-3 text-gray-700 truncate max-w-[160px]">{l.carrier?.name ?? "—"}</td>
               <td className="px-3 py-3 text-gray-700">
-                {l.eta ? new Date(l.eta).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) : "—"}
+                {l.eta ? formatActualDatetime(l.eta) : "—"}
               </td>
               <td className="px-3 py-3">
                 <div className="flex items-center gap-1">

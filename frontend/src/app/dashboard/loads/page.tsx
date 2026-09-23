@@ -1,4 +1,5 @@
 "use client";
+import { formatStopDate, formatActualDatetime } from "@/lib/stopDate";
 
 import { apiHref } from "@/lib/download";
 import { useDrawerBehavior } from "@/hooks/useDrawerBehavior";
@@ -829,7 +830,7 @@ export default function LoadsPage() {
                   <div className="flex flex-wrap gap-3 mt-1 text-xs text-slate-400">
                     <span className="flex items-center gap-1"><Truck className="w-3 h-3" /> {ld.equipmentType}</span>
                     <span className="flex items-center gap-1">
-                      <Calendar className="w-3 h-3" /> {new Date(ld.pickupDate).toLocaleDateString()}
+                      <Calendar className="w-3 h-3" /> {formatStopDate(ld.pickupDate)}
                     </span>
                     {ld.distance && <span>{ld.distance} mi</span>}
                   </div>
@@ -951,7 +952,7 @@ export default function LoadsPage() {
                     <p className="text-sm text-slate-400">
                       {load.originCity}, {load.originState} &rarr; {load.destCity}, {load.destState}
                     </p>
-                    <p className="text-xs text-slate-500">{new Date(load.pickupDate).toLocaleDateString()}</p>
+                    <p className="text-xs text-slate-500">{formatStopDate(load.pickupDate)}</p>
                   </div>
                   <div className="flex items-center gap-1 shrink-0 flex-wrap justify-end">
                     {/* Tender button */}
@@ -1421,7 +1422,7 @@ function PanelDetails({ load, canSeeMargin }: { load: Load; canSeeMargin: boolea
             <p className="text-xs text-slate-500 uppercase tracking-wider">Pickup</p>
             <p className="text-white font-medium">{load.originCity}, {load.originState} {load.originZip || ""}</p>
             <div className="flex flex-wrap gap-3 mt-1 text-xs text-slate-400">
-              <span>Requested: {new Date(load.pickupDate).toLocaleDateString()}</span>
+              <span>Requested: {formatStopDate(load.pickupDate)}</span>
             </div>
           </div>
         </div>
@@ -1436,7 +1437,7 @@ function PanelDetails({ load, canSeeMargin }: { load: Load; canSeeMargin: boolea
             <p className="text-white font-medium">{load.destCity}, {load.destState} {load.destZip || ""}</p>
             {load.deliveryDate && (
               <div className="flex flex-wrap gap-3 mt-1 text-xs text-slate-400">
-                <span>Requested: {new Date(load.deliveryDate).toLocaleDateString()}</span>
+                <span>Requested: {formatStopDate(load.deliveryDate)}</span>
               </div>
             )}
           </div>

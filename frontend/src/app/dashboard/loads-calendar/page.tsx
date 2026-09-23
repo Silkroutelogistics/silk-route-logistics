@@ -1,4 +1,5 @@
 "use client";
+import { formatStopDate, formatActualDatetime } from "@/lib/stopDate";
 
 import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -243,7 +244,7 @@ export default function LoadsCalendarPage() {
               {selectedLoad.distance && <span>· {Math.round(selectedLoad.distance)} mi</span>}
             </div>
             <div className="flex items-center gap-2 text-gray-400">
-              <Calendar className="w-3 h-3" /> Pickup: {new Date(selectedLoad.pickupDate).toLocaleDateString()}
+              <Calendar className="w-3 h-3" /> Pickup: {formatStopDate(selectedLoad.pickupDate)}
             </div>
             <span className={cn("inline-block px-2 py-0.5 rounded text-[10px]", STATUS_COLORS[selectedLoad.status] || "bg-white/5 text-gray-400")}>
               {selectedLoad.status}
