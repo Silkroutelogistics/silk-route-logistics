@@ -1,4 +1,5 @@
 "use client";
+import { formatStopDate } from "@/lib/stopDate";
 
 import { useState } from "react";
 // C7 — one definition of the via vocabulary, shared with the load-detail panel.
@@ -340,8 +341,8 @@ export default function SettlementsPage() {
                                   <td className="px-3 py-2 text-slate-300">
                                     {cp.load ? `${cp.load.originCity}, ${cp.load.originState} → ${cp.load.destCity}, ${cp.load.destState}` : "—"}
                                   </td>
-                                  <td className="px-3 py-2 text-slate-400">{cp.load?.pickupDate ? new Date(cp.load.pickupDate).toLocaleDateString() : "—"}</td>
-                                  <td className="px-3 py-2 text-slate-400">{cp.load?.deliveryDate ? new Date(cp.load.deliveryDate).toLocaleDateString() : "—"}</td>
+                                  <td className="px-3 py-2 text-slate-400">{cp.load?.pickupDate ? formatStopDate(cp.load.pickupDate) : "—"}</td>
+                                  <td className="px-3 py-2 text-slate-400">{cp.load?.deliveryDate ? formatStopDate(cp.load.deliveryDate) : "—"}</td>
                                   <td className="px-3 py-2" data-testid="rc-reference"><RcReference cp={cp} /></td>
                                   <td className="px-3 py-2 text-center"><DocChecklist cp={cp} /></td>
                                   <td className="px-3 py-2 text-right text-white">${cp.amount.toLocaleString()}</td>

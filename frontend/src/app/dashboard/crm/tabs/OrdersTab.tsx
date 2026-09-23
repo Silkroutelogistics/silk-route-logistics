@@ -1,4 +1,5 @@
 "use client";
+import { formatStopDate } from "@/lib/stopDate";
 
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
@@ -70,7 +71,7 @@ export function OrdersTab({ customerId }: { customerId: string }) {
                 {money(customerBilled(l))}
               </div>
               <div className="text-[10px] text-gray-500">
-                {new Date(l.pickupDate).toLocaleDateString()}
+                {formatStopDate(l.pickupDate)}
               </div>
             </div>
           </div>
