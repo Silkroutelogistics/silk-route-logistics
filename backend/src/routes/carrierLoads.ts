@@ -32,6 +32,7 @@ import { acceptTender } from "../controllers/tenderController";
 import { makeCaptureRes } from "../lib/captureResponse";
 import { settleTender } from "../services/tenderTransitionService";
 import { driverFieldsFromBody, hasDriverFields } from "../lib/driverFields";
+import { stampCarrierAcceptance } from "../lib/acceptanceEvidence";
 import { loadIsDead, rcPage, PORTAL_MY_LOADS } from "./rcSign";
 import { extractClientIp } from "../services/geoService";
 import { clientUserAgent } from "../lib/clientIp";
@@ -496,6 +497,27 @@ router.post("/:id/status", validateBody(statusUpdateSchema), async (req: AuthReq
   const data: Record<string, unknown> = { status, ...actualEventStamps(status, load) };
 
   const updated = await prisma.load.update({ where: { id: load.id }, data });
+
+  // C4a — arriving at the shipper is an acceptance if nothing earlier recorded
+  // one. A carrier who drove to the dock has plainly taken the load, whatever
+  // paperwork did or did not happen first, and this is the last honest moment
+  // to say so. First-write-wins in the writer means it defers to a real
+  // signature or tender accept rather than overwriting one.
+  //
+  // The ownership gate above already refused anyone but this load's carrier
+  // (403 "Not your load"), so load.carrierId === req.user.id here by
+  // construction; it is passed explicitly rather than relied on implicitly,
+  // because the writer refuses a carrier who does not hold the load and that
+  // refusal should never be reached from a path that has already checked.
+  if (status === "AT_PICKUP" && load.carrierId) {
+    await stampCarrierAcceptance({
+      loadId: load.id,
+      via: "PICKUP_ARRIVAL",
+      carrierUserId: load.carrierId,
+      byUserId: req.user!.id,
+      at: new Date(),
+    });
+  }
 
   // T&T activity + real-time board push
   await logLoadActivity({

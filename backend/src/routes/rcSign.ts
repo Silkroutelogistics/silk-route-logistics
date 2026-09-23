@@ -31,6 +31,7 @@ import { generateSignatureCertificate } from "../services/signatureCertificateSe
 import { uploadFileToPath } from "../services/storageService";
 import { getAgreementState, type AgreementReader, type AgreementVerdict } from "../lib/agreementState";
 import { recordSecurityEvent } from "../lib/securityAudit";
+import { stampCarrierAcceptance } from "../lib/acceptanceEvidence";
 import { log } from "../lib/logger";
 
 /**
@@ -316,6 +317,32 @@ router.post("/:token", async (req: Request, res: Response) => {
         signTokenUsedAt: signedAt,
       },
     });
+    // C4a — the signature IS an acceptance, and this is the strongest evidence
+    // of one the platform has: a single-use link, a typed name, an IP, a user
+    // agent, a server timestamp, and a content hash over the exact bytes signed.
+    //
+    // IDENTITY COMES FROM THE LOAD, NEVER FROM THE TYPED NAME. signerName is a
+    // free-text input. It is evidence of who signed and it cannot establish
+    // WHICH CARRIER a load belongs to, so the carrier is resolved token ->
+    // RateConfirmation -> load.carrierId. byUserId is null because this route is
+    // mounted without `authenticate` and has no session at all — the token is
+    // the authorization.
+    //
+    // Only when the signature actually landed: claimed.count is 0 on a replayed
+    // link, and a replay must not stamp an acceptance the first submission
+    // already recorded.
+    if (claimed.count === 1 && rc.load.carrierId) {
+      await stampCarrierAcceptance(
+        {
+          loadId: rc.loadId,
+          via: "RC_SIGNATURE",
+          carrierUserId: rc.load.carrierId,
+          byUserId: null,
+          at: signedAt,
+        },
+        tx as never,
+      );
+    }
     return { refused: null as AgreementVerdict | null, claimed: claimed.count };
   });
 

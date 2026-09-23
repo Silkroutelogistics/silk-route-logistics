@@ -18448,7 +18448,16 @@
 // Found because wiring the rcSign path turned five pre-existing tests in
 // rcSignBcaRequired red: a tx client without a load delegate took the whole
 // signing transaction down with it.
-export const SRL_VERSION = "3.8.bgq";
+// v3.8.bgr - C4a: the signature and the arrival record acceptance, and a
+// census freezes which paths may. The signature is the strongest evidence the
+// platform has - single-use link, typed name, IP, user agent, server timestamp,
+// content hash over the exact bytes - and identity still comes from the LOAD
+// rather than the typed name, because a text input cannot establish which
+// carrier a load belongs to. Arriving at the shipper is an acceptance if
+// nothing earlier recorded one; first-write-wins means it defers to a real
+// signature rather than overwriting it. STATUS_CONFIRMED and STATUS_BOOKED are
+// NOT wired and cannot be: no route lets a CARRIER move a load into either.
+export const SRL_VERSION = "3.8.bgr";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
