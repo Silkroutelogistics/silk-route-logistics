@@ -108,7 +108,30 @@ export async function getSettlementById(req: AuthRequest, res: Response) {
       carrier: { select: { id: true, firstName: true, lastName: true, company: true, email: true } },
       carrierPays: {
         include: {
-          load: { select: { id: true, referenceNumber: true, originCity: true, originState: true, destCity: true, destState: true, pickupDate: true, deliveryDate: true } },
+          // C7 — the settlement says what SRL is paying against. `carrierPays`
+          // uses `include`, so every CarrierPay scalar already arrives; the
+          // rate-confirmation RELATION did not, so the page could show a
+          // settlement without being able to say whether the document behind
+          // it was ever signed.
+          //
+          // MINIMAL BY DESIGN. Number, signed, signed-at — and nothing else.
+          // The signer, the IP, the content hash and both URLs stay off this
+          // surface: a settlement screen answers "is this payable", not "prove
+          // the signature". The full chain is the AE load detail (bgt/bgv),
+          // which is one click away and is the surface built for it.
+          rateConfirmation: {
+            select: { id: true, rateConNumber: true, signed: true, signedAt: true },
+          },
+          load: {
+            select: {
+              id: true, referenceNumber: true, originCity: true, originState: true, destCity: true, destState: true, pickupDate: true, deliveryDate: true,
+              // The ACT, distinct from the paperwork. A load can be signed and
+              // never accepted, or accepted and never signed — so an AE about
+              // to pay one needs both, not either standing in for the other.
+              carrierAcceptedAt: true,
+              carrierAcceptedVia: true,
+            },
+          },
         },
         orderBy: { createdAt: "asc" },
       },

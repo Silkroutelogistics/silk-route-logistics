@@ -18507,7 +18507,17 @@
 // both sourced from the payload bgw widened. The refusal copy names BOTH
 // conditions, because naming only the signature is what made the old message
 // wrong for the carrier it was shown to.
-export const SRL_VERSION = "3.8.bgx";
+// v3.8.bgz - C7a: the settlement payload carries the execution facts. The page
+// calls /settlements/:id, whose carrierPays `include` brought every CarrierPay
+// scalar but not the rateConfirmation RELATION - so a settlement could be
+// rendered without being able to say whether the document behind the money was
+// ever signed. The load select gains carrierAcceptedAt/Via, because the
+// acceptance and the signature are different facts that come apart in both
+// directions. MINIMAL: number, signed, signed-at, and the acceptance. No
+// signer, no IP, no content hash, neither URL - a settlement screen answers
+// "is this payable", not "prove the signature", and the surface built to
+// prove it is one click away (bgt/bgv).
+export const SRL_VERSION = "3.8.bgz";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
