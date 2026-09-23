@@ -18670,7 +18670,22 @@
 // (the comment cited schema:2075, which is customer_facilities), so it could
 // never fire. The AE toggle still prints "** APPOINTMENT REQUIRED **" in the
 // instructions, where it always did.
-export const SRL_VERSION = "3.8.bhq";
+// v3.8.bhr - C3: BOL template v2.10. An empty field on the bill of lading now
+// renders BLANK. It used to print either a bracketed italic label
+// ([Shipper Facility], [Street Address], [City, ST ZIP]) or an em-dash - in the
+// contact line, every unfilled cell of the shipment table, the totals row and
+// the meta strip. Both are marks a reader has to interpret; on a dock the
+// honest rendering of "we do not have this" is space somebody can write in, and
+// the label above the cell already names it. Special Instructions keeps "None"
+// deliberately: that is the one field where blank space invites an instruction
+// the carrier never agreed to.
+// Released Value re-spaced (ruling 3): the parenthetical drops 7.75pt -> 7pt,
+// taking the gap to the SHIPPER INITIAL block from a measured 1.6pt to 11.9pt.
+// It never actually overprinted - the audit's "collision" was a misreading, and
+// every advance in that row is a constant - but 1.6pt reads as touching.
+// RULING 4 (Section 7 to the shipper block) IS NOT IN THIS COMMIT. Measured: it
+// breaks the one-page gate in every form tried. See the halt notes.
+export const SRL_VERSION = "3.8.bhr";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

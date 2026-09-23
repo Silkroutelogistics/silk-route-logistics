@@ -27,7 +27,9 @@ import { documentNumberFor, resolveLoadStem } from "../lib/documentNumber";
 // (drawHeaderFirstPage, includeQr), the footer (drawFooter, footerY override)
 // and its fonts (registerSkillFonts) from the chrome, so every future fix to
 // those reaches it. Its BODY — meta strip, parties block, shipment table,
-// signature strip — stays here as pixel-verified v2.9 canon, because those four
+// signature strip — stays here as v2.10 body canon (v2.9 through v3.8.bhq; the
+// version marker lives ONLY in these comments, because the BOL renders none —
+// see the note below), because those four
 // are genuinely different components from the chrome primitives that share
 // their names, and one of them differs in compliance content rather than
 // styling. §13.3 carries the ruling and the measurements.
@@ -308,7 +310,7 @@ export async function generateBOLFromLoad(
   const R = 612 - M;
   const CW = R - M;
 
-  // Canonical v2.9 tokens (CLAUDE.md §2.1)
+  // Canonical tokens (CLAUDE.md §2.1)
   const NAVY = "#0A2540";
   const FG_2 = "#3A4A5F";
   const FG_3 = "#6B7685";
@@ -338,16 +340,15 @@ export async function generateBOLFromLoad(
   const safe = (s: string | null | undefined): string =>
     decodeHtmlEntities(s ?? "");
 
-  // Placeholder helper per v2.9 designer spec. Empty free-text fields render
-  // as bracketed italic GOLD_DARK labels; populated fields use the caller's
-  // styling.
-  interface FieldDisplay { text: string; isPlaceholder: boolean; }
-  const fieldOrPlaceholder = (val: string | null | undefined, placeholder: string): FieldDisplay => {
-    const trimmed = safe(val).trim();
-    return trimmed
-      ? { text: trimmed, isPlaceholder: false }
-      : { text: `[${placeholder}]`, isPlaceholder: true };
-  };
+  // v2.10 (ruling 5) — AN EMPTY FIELD RENDERS BLANK.
+  //
+  // The v2.9 spec filled empty free-text fields with a bracketed italic label:
+  // `[Shipper Facility]`, `[Street Address]`, `[City, ST ZIP]`. On a screen
+  // that reads as "you have not filled this in". On the document a driver
+  // carries to a dock it reads as a template nobody finished — the same
+  // complaint as the `[HH:MM–HH:MM]` window, and the same answer: print what
+  // is known and leave the rest as space somebody can write in.
+  const fieldOrBlank = (val: string | null | undefined): string => safe(val).trim();
 
   // Suffix on the load stem: SRL-121485B. Was `BOL-SRL-121485` — a prefix, which
   // sorts every BOL away from its own load in any text-sorted column.
@@ -370,7 +371,6 @@ export async function generateBOLFromLoad(
   const deliveryDateFmt = load.deliveryDate instanceof Date
     ? load.deliveryDate.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric" })
     : String(load.deliveryDate);
-  const EM = "—";
   const MIDDOT = "·";
   const TIMES = "×";
   // Windows come from lib/stopWindow, shared with the rate confirmation. An
@@ -399,7 +399,13 @@ export async function generateBOLFromLoad(
   // arrangement under which both halves of the parity criterion hold.
   //
   // The title row is NOT taken from the chrome: it draws 22pt at MARGIN, the
-  // BOL's is 24pt at 34. Both are body geometry, both v2.9 canon.
+  // BOL's is 24pt at 34. Both are body geometry, both v2.10 canon.
+  //
+  // THE BOL CARRIES NO RENDERED TEMPLATE VERSION. "v2.10" exists only in these
+  // comments and in the anchor baseline, so a stored BOL cannot be asked which
+  // template drew it. Keeping archived BOLs "version-faithful" is therefore a
+  // convention — not to regenerate them — rather than something the document
+  // can prove about itself. Banked; adding a marker is its own change.
   const headerBottom = drawHeaderFirstPage(doc, {
     includeQr: true,
     qrBuffer: qrBuffer ?? undefined,
@@ -470,7 +476,7 @@ export async function generateBOLFromLoad(
   interface MetaCell {
     label: string;
     raw: string | null | undefined;
-    placeholder: string | null; // null = em-dash if absent; string = bracketed italic placeholder
+    placeholder: string | null; // v2.10: retained for the cell inventory; an absent value renders blank
   }
   // v3.8.d.1 — SHIPPER REF walks the schema's 4-field PO chain. Order
   // Builder writes poNumbers[]; legacy/import paths populate one of
@@ -524,16 +530,14 @@ export async function generateBOLFromLoad(
         width: cw6 - 10, characterSpacing: 0.8, lineBreak: false,
       });
 
+    // v2.10 (ruling 5) — an empty cell is EMPTY. It used to print either a
+    // bracketed italic label or an em-dash; both are marks a reader has to
+    // interpret, and on a dock the honest rendering of "we do not have this"
+    // is space to write it in. The label above the cell already names it.
     const trimmed = safe(c.raw).trim();
     if (trimmed) {
       doc.font("DMSans-Medium").fontSize(9.5).fillColor(NAVY)
         .text(trimmed, mx + 6, metaTop + 18, { width: cw6 - 10, lineBreak: false });
-    } else if (c.placeholder) {
-      doc.font("DMSans-Italic").fontSize(9.5).fillColor(GOLD_DARK)
-        .text(`[${c.placeholder}]`, mx + 6, metaTop + 18, { width: cw6 - 10, lineBreak: false });
-    } else {
-      doc.font("DMSans-Medium").fontSize(9.5).fillColor(NAVY)
-        .text(EM, mx + 6, metaTop + 18, { width: cw6 - 10, lineBreak: false });
     }
   });
   y = metaTop + metaH + 14 - take(3); // v3.8.ark adaptive (floor 11)
@@ -578,24 +582,18 @@ export async function generateBOLFromLoad(
     // load.customer is shipper-side defensive only (last resort when
     // no load-level company is present).
     const facility = side === "shipper"
-      ? fieldOrPlaceholder(
-          load.originCompany || load.shipperFacility || load.customer?.name,
-          "Shipper Facility",
-        )
-      : fieldOrPlaceholder(
-          load.destCompany || load.consigneeFacility,
-          "Consignee Facility",
-        );
+      ? fieldOrBlank(load.originCompany || load.shipperFacility || load.customer?.name)
+      : fieldOrBlank(load.destCompany || load.consigneeFacility);
+    // §3.9 sanctions the customer ADDRESS as a last resort when the origin
+    // fields are empty — and only the address. The billing CONTACT is never a
+    // fallback anywhere on this document; see lib/stopContact.
     const addr = side === "shipper"
-      ? fieldOrPlaceholder(load.originAddress || load.customer?.address, "Street Address")
-      : fieldOrPlaceholder(load.destAddress, "Street Address");
+      ? fieldOrBlank(load.originAddress || load.customer?.address)
+      : fieldOrBlank(load.destAddress);
     const city = side === "shipper" ? load.originCity : load.destCity;
     const state = side === "shipper" ? load.originState : load.destState;
     const zip = side === "shipper" ? load.originZip : load.destZip;
-    const cityLine = fieldOrPlaceholder(
-      city && state ? `${city}, ${state} ${zip ?? ""}` : "",
-      "City, ST ZIP",
-    );
+    const cityLine = fieldOrBlank(city && state ? `${city}, ${state} ${zip ?? ""}` : "");
     // WHO IS AT THE DOCK — decided by lib/stopContact, never here.
     //
     // This read was `load.originContactName || load.customer?.contactName`, so
@@ -617,9 +615,9 @@ export async function generateBOLFromLoad(
     // Nothing resolved leaves a blank handwrite line, which somebody at the dock
     // can fill in. A name nobody there recognises cannot be corrected by anyone
     // who reads it.
-    const contact: FieldDisplay = (contactName || contactPhone)
-      ? { text: `Contact: ${[contactName, contactPhone].filter(Boolean).join(`  ${MIDDOT}  `)}`, isPlaceholder: false }
-      : { text: "Contact:", isPlaceholder: false };
+    const contact = (contactName || contactPhone)
+      ? `Contact: ${[contactName, contactPhone].filter(Boolean).join(`  ${MIDDOT}  `)}`
+      : "Contact:";
     const dateFmt = side === "shipper" ? pickupDateFmt : deliveryDateFmt;
     const win = side === "shipper" ? pickupWin : deliveryWin;
     // NO PLACEHOLDER REACHES THE PAGE (ruling 3). This printed a literal
@@ -632,25 +630,28 @@ export async function generateBOLFromLoad(
       : `Window: ${dateFmt}`;
 
     let ly = cy;
-    // Facility name — Playfair-Bold if present, italic GOLD_DARK if placeholder
-    doc.font(facility.isPlaceholder ? "DMSans-Italic" : "Playfair-Bold")
-      .fontSize(11).fillColor(facility.isPlaceholder ? GOLD_DARK : NAVY)
-      .text(facility.text, cx, ly, { width: partiesInnerW, lineBreak: false });
+    // One styling per line now: with no bracketed placeholder there is no
+    // placeholder STATE to signal, so the italic/gold variants are gone. Row
+    // advances are unchanged, so an empty line leaves its space rather than
+    // collapsing the block — which is what makes it writable at the dock.
+    doc.font("Playfair-Bold")
+      .fontSize(11).fillColor(NAVY)
+      .text(facility, cx, ly, { width: partiesInnerW, lineBreak: false });
     ly += 16;
 
-    doc.font(addr.isPlaceholder ? "DMSans-Italic" : "DMSans-Italic")
-      .fontSize(8.25).fillColor(addr.isPlaceholder ? GOLD_DARK : FG_2)
-      .text(addr.text, cx, ly, { width: partiesInnerW, lineBreak: false });
+    doc.font("DMSans-Italic")
+      .fontSize(8.25).fillColor(FG_2)
+      .text(addr, cx, ly, { width: partiesInnerW, lineBreak: false });
     ly += 11;
 
-    doc.font(cityLine.isPlaceholder ? "DMSans-Italic" : "DMSans-Italic")
-      .fontSize(8.25).fillColor(cityLine.isPlaceholder ? GOLD_DARK : FG_2)
-      .text(cityLine.text, cx, ly, { width: partiesInnerW, lineBreak: false });
+    doc.font("DMSans-Italic")
+      .fontSize(8.25).fillColor(FG_2)
+      .text(cityLine, cx, ly, { width: partiesInnerW, lineBreak: false });
     ly += 13;
 
-    doc.font(contact.isPlaceholder ? "DMSans-Italic" : "DMSans-Regular")
-      .fontSize(7.75).fillColor(contact.isPlaceholder ? GOLD_DARK : FG_3)
-      .text(contact.text, cx, ly, { width: partiesInnerW, lineBreak: false });
+    doc.font("DMSans-Regular")
+      .fontSize(7.75).fillColor(FG_3)
+      .text(contact, cx, ly, { width: partiesInnerW, lineBreak: false });
     ly += 11;
 
     // One styling, because there is no longer a placeholder state to signal.
@@ -697,7 +698,7 @@ export async function generateBOLFromLoad(
 
   type Cell = { text: string; placeholder: boolean; bold?: boolean };
   const dimsStr = (l?: number | null, w?: number | null, h?: number | null): string =>
-    (l && w && h) ? `${l}"${TIMES}${w}"${TIMES}${h}"` : EM;
+    (l && w && h) ? `${l}"${TIMES}${w}"${TIMES}${h}"` : "";
 
   const buildLineItemRow = (li: NonNullable<LoadBOLData["lineItems"]>[number]): Cell[] => {
     const liDesc = safe(li.description).trim();
@@ -709,16 +710,16 @@ export async function generateBOLFromLoad(
         : { text: "[Description]", placeholder: true },
       { text: dimsStr(li.dimensionsLength, li.dimensionsWidth, li.dimensionsHeight), placeholder: false },
       { text: `${li.weight.toLocaleString()} lb`, placeholder: false, bold: true },
-      { text: safe(li.freightClass).trim() || EM, placeholder: false },
-      { text: safe(li.nmfcCode).trim() || EM, placeholder: false },
+      { text: safe(li.freightClass).trim(), placeholder: false },
+      { text: safe(li.nmfcCode).trim(), placeholder: false },
       { text: li.hazmat ? "Yes" : "No", placeholder: false },
     ];
   };
 
   const buildFlatRow = (): Cell[] => {
-    const pcsValueLocal = load.pieces != null ? String(load.pieces) : EM;
+    const pcsValueLocal = load.pieces != null ? String(load.pieces) : "";
     const dimsLocal = dimsStr(load.dimensionsLength, load.dimensionsWidth, load.dimensionsHeight);
-    const weightStrLocal = load.weight ? `${load.weight.toLocaleString()} lb` : EM;
+    const weightStrLocal = load.weight ? `${load.weight.toLocaleString()} lb` : "";
     const descRawLocal = safe(load.commodity).trim();
     const descCellLocal: Cell = descRawLocal
       ? { text: descRawLocal, placeholder: false }
@@ -729,8 +730,8 @@ export async function generateBOLFromLoad(
       descCellLocal,
       { text: dimsLocal, placeholder: false },
       { text: weightStrLocal, placeholder: false, bold: true },
-      { text: safe(load.freightClass).trim() || EM, placeholder: false },
-      { text: EM, placeholder: false },
+      { text: safe(load.freightClass).trim(), placeholder: false },
+      { text: "", placeholder: false },
       { text: load.hazmat ? "Yes" : "No", placeholder: false },
     ];
   };
@@ -752,8 +753,8 @@ export async function generateBOLFromLoad(
     totalPieces = load.pieces ?? 0;
     totalWeight = load.weight ?? 0;
   }
-  const totalPiecesStr = totalPieces > 0 ? String(totalPieces) : EM;
-  const totalWeightStr = totalWeight > 0 ? `${totalWeight.toLocaleString()} lb` : EM;
+  const totalPiecesStr = totalPieces > 0 ? String(totalPieces) : "";
+  const totalWeightStr = totalWeight > 0 ? `${totalWeight.toLocaleString()} lb` : "";
 
   const overflowH = overflowCount > 0 ? 16 : 0;
   const tblBodyH = rowH * rows.length;
@@ -837,7 +838,7 @@ export async function generateBOLFromLoad(
     doc.lineWidth(0.5).strokeColor(BORDER_1).moveTo(M, ovY).lineTo(R, ovY).stroke();
     doc.font("DMSans-Italic").fontSize(8).fillColor(GOLD_DARK)
       .text(
-        `+${overflowCount} additional line item${overflowCount === 1 ? "" : "s"} — full manifest attached`,
+        `+${overflowCount} additional line item${overflowCount === 1 ? "" : "s"}; full manifest attached`,
         M + 8, ovY + 4,
         { width: CW - 16, align: "center", lineBreak: false },
       );
@@ -866,13 +867,13 @@ export async function generateBOLFromLoad(
   // v3.8.d.1 — empty Special Instructions renders factual "None" rather
   // than the prior "None  ·  [per-load notes]" placeholder which leaked
   // designer-tooling syntax into the printed BOL.
-  const siBodyRaw = safe(load.specialInstructions || load.notes).trim();
-  const siDisplay: FieldDisplay = siBodyRaw
-    ? { text: siBodyRaw, isPlaceholder: false }
-    : { text: "None", isPlaceholder: false };
+  // "None" rather than blank, deliberately: this is the one field where an
+  // empty space invites somebody to write an instruction the carrier never
+  // agreed to. Stating that there are none is the safer absence.
+  const siDisplay = safe(load.specialInstructions || load.notes).trim() || "None";
   doc.font("DMSans-Italic").fontSize(8.25)
-    .fillColor(siDisplay.isPlaceholder ? GOLD_DARK : FG_2)
-    .text(siDisplay.text, M + 150, y + 9, {
+    .fillColor(FG_2)
+    .text(siDisplay, M + 150, y + 9, {
       width: CW - 160, height: siH - 12, ellipsis: true, // v3.8.ark — wrap allowed (2-line cap via height+ellipsis)
     });
   y += siH + 10 - take(2); // v3.8.ark adaptive (floor 8)
@@ -945,8 +946,17 @@ export async function generateBOLFromLoad(
   doc.font("DMSans-Regular").fontSize(8.25).fillColor(NAVY)
     .text("NVD", rvCx, rvBaseY, { lineBreak: false });
   rvCx += 24;
-  doc.font("DMSans-Italic").fontSize(7.75).fillColor(FG_2)
-    .text("(full Carmack liability applies)", rvCx, rvBaseY + 0.5, { lineBreak: false });
+  // v2.10 (ruling 3) — 7pt, not 7.75.
+  //
+  // MEASURED, not eyeballed: at 7.75 this run ended at x=448.4 and the
+  // SHIPPER INITIAL block starts at x=450, so the two cleared each other by
+  // 1.6pt. Every advance in this row is a constant and the string is a
+  // literal, so that gap was deterministic — it never actually overprinted,
+  // and the audit's "collision" was a misreading. But 1.6pt at 7.75pt type is
+  // about half a sidebearing, which is why it READS as touching. Dropping to
+  // 7pt buys real air without moving anything else on the row.
+  doc.font("DMSans-Italic").fontSize(7).fillColor(FG_2)
+    .text("(full Carmack liability applies)", rvCx, rvBaseY + 1, { lineBreak: false });
 
   // Right-aligned shipper initial
   const initLabelW = 72;
@@ -1079,7 +1089,7 @@ export async function generateBOLFromLoad(
     },
     {
       title: "CONSIGNEE · RECEIVER",
-      cert: "Acknowledges delivery — any exceptions noted above.",
+      cert: "Acknowledges delivery; any exceptions noted above.",
       render: (bx, cy) => {
         let by = cy;
         drawSigField(bx, by, sigColW, "SIGNATURE", ""); by += SIG_ROW;

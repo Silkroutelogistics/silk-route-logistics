@@ -10,7 +10,7 @@
  *
  * THE TWO HALVES ARE JUDGED DIFFERENTLY, which is the whole point:
  *
- *   BODY anchors must hold to v2.9. The body is pixel-verified canon and the
+ *   BODY anchors must hold to v2.10 (v2.9 through v3.8.bhq). The body is canon and the
  *   migration is not supposed to move it. A drift here is a regression.
  *
  *   LETTERHEAD anchors are EXPECTED to move, once, to the operational
@@ -128,7 +128,7 @@ async function measure(): Promise<{ body: Record<string, Anchor>; letterhead: Re
   console.log("pages=" + pages + (pages === 1 ? "" : "   <-- NOT ONE PAGE"));
 
   let drift = 0;
-  console.log("\nBODY — must hold to v2.9:");
+  console.log("\nBODY — must hold to v2.10:");
   for (const label of BODY_ANCHORS) {
     const was = base.body[label];
     const now = body[label];
@@ -157,7 +157,7 @@ async function measure(): Promise<{ body: Record<string, Anchor>; letterhead: Re
   if (pages !== 1) { console.error("\nFAIL: the BOL is not one page."); process.exit(1); }
   if (drift) {
     console.error("\nFAIL: " + drift + " body anchor(s) drifted beyond " + TOLERANCE + "pt.");
-    console.error("The body is pixel-verified v2.9 canon. If a move is intended, say so and re-capture.");
+    console.error("The body is v2.10 canon. If a move is intended, say so and re-capture.");
     process.exit(1);
   }
   console.log("\nBODY PARITY HOLDS.");

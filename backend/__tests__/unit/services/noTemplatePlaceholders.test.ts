@@ -16,11 +16,16 @@
 // reference numbers. A fixture with the data filled in cannot catch a
 // placeholder, because none would render. This one carries the loaded gun.
 //
-// SCOPE, STATED. This checks HH:MM and template tokens. Bracketed placeholders
-// (`[Shipper Facility]`, `[Street Address]`, `[City, ST ZIP]`, and the meta
-// strip's empty cells) are v2.9 designer spec and are removed by ruling 5 in
-// the next commit, which extends this guard to assert "[" as well. Asserting it
-// here would fail against code that is correct for today.
+// SCOPE, COMPLETED IN v2.10. The bracketed placeholders this guard deferred at
+// C2 — `[Shipper Facility]`, `[Street Address]`, `[City, ST ZIP]` and the meta
+// strip's empty cells — are gone (ruling 5), so "[" is now asserted too, along
+// with the em-dash that filled every other empty cell. An empty field renders
+// as space somebody can write in.
+//
+// "[" AND THE EM-DASH ARE BOL-ONLY. The rate confirmation is a different
+// document under different rulings and its own bracket and dash use has not
+// been audited here; asserting them would fail correct code. EN-dashes (–) are
+// untouched on both: "Broker–Carrier Agreement" is a compound, not a placeholder.
 
 import { describe, it, expect } from "vitest";
 import { generateBOLFromLoad, generateEnhancedRateConfirmation } from "../../../src/services/pdfService";
@@ -103,6 +108,35 @@ describe("no template placeholder reaches the rendered page", () => {
     await assertNoPlaceholders(text, "BOL");
     // And it still says what it does know: the date, without a fake time.
     expect(text).toMatch(/Window:\s*\w{3},\s*\w{3}\s*\d+,\s*\d{4}/);
+  }, 60_000);
+
+  it("the bill of lading prints no bracket and no em-dash (ruling 5)", async () => {
+    // Empty fields used to render either a bracketed italic label or an
+    // em-dash: the contact line, every unfilled cell of the shipment table,
+    // the totals row and the meta strip. Both are marks a reader has to
+    // interpret. Blank is what "we do not have this" looks like, and it is
+    // writable at a dock.
+    const bare = await renderedText(await generateBOLFromLoad(BARE_LOAD as any));
+    expect(bare, "BOL (no data) still prints a bracket").not.toContain("[");
+    expect(bare, "BOL (no data) still prints an em-dash").not.toContain("\u2014");
+
+    // Again with data, because a different set of cells fills in.
+    const full = await renderedText(await generateBOLFromLoad({
+      ...BARE_LOAD,
+      originAddress: "18 Etna Road", destAddress: "4400 Mustang Way",
+      pickupTimeStart: "08:00", pickupTimeEnd: "14:00",
+      pieces: 12, freightClass: "70",
+      stopContacts: {
+        shipper: { name: "Dana Whitfield", phone: "603-555-0142", email: null, source: "LOAD" },
+        consignee: { name: "Marcus Reyes", phone: "940-555-0188", email: null, source: "LOAD" },
+      },
+    } as any));
+    expect(full, "BOL (populated) still prints a bracket").not.toContain("[");
+    expect(full, "BOL (populated) still prints an em-dash").not.toContain("\u2014");
+
+    // Vacuity guard: the en-dash in "Broker–Carrier Agreement" must survive, or
+    // an extractor that ate every dash would make the assertions above pass.
+    expect(bare, "the terms strip's en-dash should be intact").toContain("\u2013");
   }, 60_000);
 
   it("the rate confirmation, on the same load", async () => {
