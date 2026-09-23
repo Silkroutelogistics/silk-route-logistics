@@ -32,7 +32,9 @@ export async function downloadRateConfirmation(req: AuthRequest, res: Response) 
     // the branded generator sat behind an endpoint no frontend ever called.
     const rc = load.rateConfirmations?.[0];
     const formData = (rc?.formData && typeof rc.formData === "object" && !Array.isArray(rc.formData) ? rc.formData : {}) as Record<string, any>;
-    const doc = generateEnhancedRateConfirmation(load, formData);
+    // Dock contacts, same resolver the BOL uses — see lib/stopContact.
+    const stopContacts = await resolveStopContacts(load, prisma);
+    const doc = generateEnhancedRateConfirmation({ ...load, stopContacts }, formData);
     const filename = `RC-${load.referenceNumber}.pdf`;
 
     res.setHeader("Content-Type", "application/pdf");
@@ -61,7 +63,9 @@ export async function downloadEnhancedRateConfirmation(req: AuthRequest, res: Re
 
     const rc = load.rateConfirmations?.[0];
     const formData = (rc?.formData && typeof rc.formData === "object" && !Array.isArray(rc.formData) ? rc.formData : {}) as Record<string, any>;
-    const doc = generateEnhancedRateConfirmation(load, formData);
+    // Dock contacts, same resolver the BOL uses — see lib/stopContact.
+    const stopContacts = await resolveStopContacts(load, prisma);
+    const doc = generateEnhancedRateConfirmation({ ...load, stopContacts }, formData);
     const filename = `RC-Enhanced-${load.referenceNumber}.pdf`;
 
     res.setHeader("Content-Type", "application/pdf");

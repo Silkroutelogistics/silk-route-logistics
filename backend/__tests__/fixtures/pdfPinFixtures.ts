@@ -53,6 +53,15 @@ export const RC_FIXTURE = {
   rate: 4100, customerRate: 5100, carrierRate: 4100, distance: 1852,
   equipmentType: "Reefer", commodity: "Frozen dairy", weight: 28400,
   carrier: { carrierProfile: { companyName: "Pin Carrier LLC", mcNumber: "MC-999001", dotNumber: "9990011" } },
+  // Resolved dock contacts (lib/stopContact). Present so the pin actually
+  // WATCHES the contact line: without them the RC omits the line entirely, so
+  // the pin was identical whether the line rendered correctly, rendered the
+  // customer's billing contact, or did not render at all. A fixture that does
+  // not exercise a feature cannot detect a change to it.
+  stopContacts: {
+    shipper: { name: "Dana Whitfield", phone: "603-555-0142", email: "dock@granitestatefoods.invalid", source: "FACILITY_FK" },
+    consignee: { name: "Marcus Reyes", phone: "940-555-0188", email: null, source: "FACILITY_MATCH" },
+  },
 } as unknown as Parameters<typeof import("../../src/services/pdfService").generateEnhancedRateConfirmation>[0];
 
 export const RC_FORM_DATA: Record<string, unknown> = {

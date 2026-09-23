@@ -32,6 +32,26 @@ const SRC = fs.readFileSync(FILE, "utf8");
  */
 const code = SRC.split(/\r?\n/).filter((l) => !/^\s*(\/\/|\*|\/\*)/.test(l)).join("\n");
 
+/**
+ * Where the ISSUANCE render happens, scoped to sendRateConfirmation.
+ *
+ * This was `code.indexOf("generateEnhancedRateConfirmation(rc.load, {")` — a
+ * literal that encoded the call's ARGUMENT SHAPE, so it returned -1 the moment
+ * the first argument changed (v3.8.bhp wrapped it to pass resolved dock
+ * contacts) and the ordering cases failed against code whose ordering was
+ * intact. The anchor now scopes to the function and matches the CALL, which is
+ * the thing being ordered. The file holds a second render in
+ * downloadRateConfirmationPdf; the scope is what excludes it.
+ */
+function issuanceRenderIndex(): number {
+  const fn = code.indexOf("export async function sendRateConfirmation");
+  if (fn < 0) return -1;
+  const next = code.indexOf("export async function", fn + 1);
+  const end = next < 0 ? code.length : next;
+  const hit = code.indexOf("generateEnhancedRateConfirmation(", fn);
+  return hit < 0 || hit > end ? -1 : hit;
+}
+
 /** The `data: { ... }` of the single issuance update, so "same statement" is measurable. */
 function issuanceUpdateBlock(): string {
   // Scoped to sendRateConfirmation. The file holds several
@@ -49,7 +69,7 @@ function issuanceUpdateBlock(): string {
 describe("the Rate Confirmation countersignature is in the frozen bytes", () => {
   it("is decided BEFORE the render, and before the hash that covers it", () => {
     const decided = code.indexOf("const countersignAtIssuance");
-    const render = code.indexOf("generateEnhancedRateConfirmation(rc.load, {");
+    const render = issuanceRenderIndex();
     const hashed = code.indexOf("contentHash = hashPdfBytes(pdfBuffer)");
     const written = code.indexOf("counterSignedByName:");
 
@@ -64,7 +84,7 @@ describe("the Rate Confirmation countersignature is in the frozen bytes", () => 
   });
 
   it("reaches the renderer, so the document and the row cannot disagree", () => {
-    const render = code.indexOf("generateEnhancedRateConfirmation(rc.load, {");
+    const render = issuanceRenderIndex();
     const close = code.indexOf("});", render);
     expect(code.slice(render, close)).toContain("rcCountersign: countersignAtIssuance");
   });

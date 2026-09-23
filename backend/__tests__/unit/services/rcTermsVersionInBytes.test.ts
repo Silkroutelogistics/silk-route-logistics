@@ -56,7 +56,15 @@ describe("the Rate Confirmation terms version is in the bytes", () => {
   it("issuance puts the version into the rendered formData, BEFORE the render", () => {
     const decided = code.indexOf("const termsVersionAtIssuance");
     const inFormData = code.indexOf("rcTermsVersion: termsVersionAtIssuance");
-    const render = code.indexOf("generateEnhancedRateConfirmation(rc.load");
+    // Scoped to the issuance function and matched on the CALL, not on its
+    // argument shape. The old anchor encoded the first argument and returned -1
+    // when v3.8.bhp wrapped it to pass resolved dock contacts — failing against
+    // code whose ordering was intact. sendRateConfirmation is where issuance
+    // happens; downloadRateConfirmationPdf renders too, and the scope excludes it.
+    const sendFn = code.indexOf("export async function sendRateConfirmation");
+    const afterSend = code.indexOf("export async function", sendFn + 1);
+    const renderHit = code.indexOf("generateEnhancedRateConfirmation(", sendFn);
+    const render = sendFn < 0 || renderHit < 0 || (afterSend >= 0 && renderHit > afterSend) ? -1 : renderHit;
     expect(decided, "the version must be decided at issuance").toBeGreaterThan(-1);
     expect(inFormData, "the rendered formData must carry the version").toBeGreaterThan(-1);
     expect(render, "the issuance render site has moved").toBeGreaterThan(-1);

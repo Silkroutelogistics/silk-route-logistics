@@ -1380,6 +1380,9 @@ interface EnhancedRCLoadData {
   originAddress?: string | null;
   originContactName?: string | null;
   originContactPhone?: string | null;
+  /** Resolved dock contacts (lib/stopContact). Filled by the assembler; the
+   *  renderer reads ONLY this. Absent = the contact line is omitted. */
+  stopContacts?: ResolvedStopContacts | null;
   shipperFacility?: string | null;
   destCompany?: string | null;
   destAddress?: string | null;
@@ -1830,19 +1833,32 @@ export function generateEnhancedRateConfirmation(load: EnhancedRCLoadData, formD
   const pickupWindowStr = fd.pickupTimeWindow || timeRange(load.pickupTimeStart, load.pickupTimeEnd);
   const deliveryWindowStr = fd.deliveryTimeWindow || timeRange(load.deliveryTimeStart, load.deliveryTimeEnd);
 
-  // v3.8.arr — the person at the DOCK, not the billing contact. The customer
-  // phone stays only as a last resort; a driver calling it reaches accounts
-  // payable, not the gate.
-  const shipContact = fd.shipperContact || load.originContactName;
-  const shipPhone = fd.shipperPhone || load.originContactPhone;
-  const shipperContactLine = (shipContact && shipPhone)
-    ? `${shipContact} · ${shipPhone}`
-    : (shipContact || shipPhone || load.customer?.phone || undefined);
-  const consContact = fd.consigneeContact || load.destContactName;
-  const consPhone = fd.consigneePhone || load.destContactPhone;
-  const consigneeContactLine = (consContact && consPhone)
-    ? `${consContact} · ${consPhone}`
-    : (consContact || consPhone || undefined);
+  // WHO IS AT THE DOCK — decided by lib/stopContact, never here.
+  //
+  // The comment that stood here said it plainly: "the person at the DOCK, not
+  // the billing contact... a driver calling it reaches accounts payable, not
+  // the gate" — and then the line below it fell back to `load.customer?.phone`
+  // anyway. The bill of lading carried the same fallback on the name; between
+  // them the two documents could put an accounts-payable contact on the paper a
+  // driver takes to a gate. The fallback is gone from both, and the resolver
+  // exposes no tier that could reach a billing contact.
+  //
+  // formData still wins over everything: an AE who typed a contact into the RC
+  // modal knows something the database does not, and that is the whole point of
+  // the override layer. The RESOLVER is what replaced the guessing underneath it.
+  //
+  // The RC prints the email where the BOL does not (ruling 4) — it is read at a
+  // desk before the load moves, not at a gate, and it has the width.
+  const shipResolved = load.stopContacts?.shipper;
+  const shipContact = fd.shipperContact || shipResolved?.name;
+  const shipPhone = fd.shipperPhone || shipResolved?.phone;
+  const shipEmail = fd.shipperEmail || shipResolved?.email;
+  const shipperContactLine = [shipContact, shipPhone, shipEmail].filter(Boolean).join(" · ") || undefined;
+  const consResolved = load.stopContacts?.consignee;
+  const consContact = fd.consigneeContact || consResolved?.name;
+  const consPhone = fd.consigneePhone || consResolved?.phone;
+  const consEmail = fd.consigneeEmail || consResolved?.email;
+  const consigneeContactLine = [consContact, consPhone, consEmail].filter(Boolean).join(" · ") || undefined;
 
   // Sprint 49 (Item 118) — appointment flag suffix on parties block windows.
   // Reads fd.appointmentRequired (RC modal future toggle, not yet wired) OR

@@ -8,6 +8,7 @@ import {
   sendToShipperSchema,
 } from "../validators/rateConfirmation";
 import { generateEnhancedRateConfirmation, generateShipperLoadConfirmation } from "../services/pdfService";
+import { resolveStopContacts } from "../lib/stopContact";
 import { sendRateConfirmationEmail, sendEmail, wrap } from "../services/emailService";
 import { hashPdfBytes } from "../lib/rcSignToken";
 import { rotateRcSignToken } from "../services/rcSignLinkService";
@@ -431,7 +432,12 @@ export async function sendRateConfirmation(req: AuthRequest, res: Response) {
     contentHash = rc.contentHash!;
     storedPdfUrl = rc.pdfUrl!;
   } else {
-    const pdfDoc = generateEnhancedRateConfirmation(rc.load, {
+    // Dock contacts, same resolver the BOL uses — see lib/stopContact. This is
+    // the ISSUANCE path, so these contacts are frozen into the artifact and its
+    // content hash; a re-send reuses the frozen bytes (v3.8.axt) and is
+    // unaffected.
+    const issuanceStopContacts = await resolveStopContacts(rc.load, prisma);
+    const pdfDoc = generateEnhancedRateConfirmation({ ...rc.load, stopContacts: issuanceStopContacts }, {
       ...issuedFormData,
       rateConNumber: rc.rateConNumber,
       rcCountersign: countersignAtIssuance,
@@ -743,7 +749,9 @@ export async function downloadRateConfirmationPdf(req: AuthRequest, res: Respons
     }
   }
 
-  const doc = generateEnhancedRateConfirmation(rc.load, renderFormData(rc));
+  // Dock contacts, same resolver the BOL uses — see lib/stopContact.
+  const stopContacts = await resolveStopContacts(rc.load, prisma);
+  const doc = generateEnhancedRateConfirmation({ ...rc.load, stopContacts }, renderFormData(rc));
   doc.pipe(res);
 }
 

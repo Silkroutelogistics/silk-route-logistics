@@ -18640,7 +18640,22 @@
 // resolved leaves a blank handwrite line, which somebody at the dock can fill;
 // a wrong name cannot be corrected by anyone who reads it. The rate
 // confirmation carries the same fallback and is the next commit.
-export const SRL_VERSION = "3.8.bho";
+// v3.8.bhp - C1b: the rate confirmation joins the bill of lading on the same
+// dock-contact resolver, and its billing fallback goes with it. The comment
+// above that line already named the harm -- "a driver calling it reaches
+// accounts payable, not the gate" -- directly above `|| load.customer?.phone`.
+// formData still wins over everything, because an AE who typed a contact into
+// the RC modal knows something the database does not; what changed is the
+// guessing underneath it. The RC prints the email the BOL omits: it is read at
+// a desk before the load moves, not at a gate, and it has the width.
+// A wiring census now counts render calls against resolver calls per file, so
+// a sixth render site cannot be added without one -- an un-wired site fails
+// SILENTLY, leaving `load.stopContacts` undefined and the contact line blank.
+// The RC pin fixture gains contacts: it carried none, so that pin was
+// identical whether the line rendered correctly, rendered the billing contact,
+// or did not render at all. A fixture that does not exercise a feature cannot
+// detect a change to it.
+export const SRL_VERSION = "3.8.bhp";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
