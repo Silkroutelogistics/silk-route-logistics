@@ -48,6 +48,13 @@ interface EditableLoad {
   deliveryTimeStart?: string;
   deliveryTimeEnd?: string;
   specialInstructions?: string;
+  pallets?: number | null;
+  originContactName?: string | null;
+  originContactPhone?: string | null;
+  destContactName?: string | null;
+  destContactPhone?: string | null;
+  pickupAppointment?: string | null;
+  deliveryAppointment?: string | null;
 }
 
 interface Props {
@@ -93,6 +100,13 @@ export function EditLoadModal({ open, onClose, load, canSeeMargin }: Props) {
     deliveryTimeStart: load.deliveryTimeStart ?? "",
     deliveryTimeEnd: load.deliveryTimeEnd ?? "",
     specialInstructions: load.specialInstructions ?? "",
+    pallets: load.pallets != null ? String(load.pallets) : "",
+    originContactName: load.originContactName ?? "",
+    originContactPhone: load.originContactPhone ?? "",
+    destContactName: load.destContactName ?? "",
+    destContactPhone: load.destContactPhone ?? "",
+    pickupAppointment: load.pickupAppointment ?? "",
+    deliveryAppointment: load.deliveryAppointment ?? "",
   }));
 
   const set = (k: keyof typeof form, v: string) => setForm((f) => ({ ...f, [k]: v }));
@@ -112,6 +126,20 @@ export function EditLoadModal({ open, onClose, load, canSeeMargin }: Props) {
       if (form.pickupDate) p.pickupDate = new Date(form.pickupDate).toISOString();
       if (form.deliveryDate) p.deliveryDate = new Date(form.deliveryDate).toISOString();
       str("pickupTimeStart"); str("pickupTimeEnd"); str("deliveryTimeStart"); str("deliveryTimeEnd");
+      num("pallets");
+      // Dock contacts and appointments are CLEARABLE, unlike the fields above.
+      // `str` omits an empty value so the AE cannot blank a field by accident —
+      // right for a city, wrong here: a dock contact that has changed is a
+      // contact that must be removable, and leaving a stale name on the load is
+      // worse than leaving it empty. Empty is sent as null so the column ends up
+      // NULL rather than "", which every reader already renders as an em-dash.
+      const clearable = (k: keyof typeof form) => {
+        const v = String(form[k]).trim();
+        p[k] = v === "" ? null : v;
+      };
+      clearable("originContactName"); clearable("originContactPhone");
+      clearable("destContactName"); clearable("destContactPhone");
+      clearable("pickupAppointment"); clearable("deliveryAppointment");
       // specialInstructions: allow clearing → send even when empty.
       p.specialInstructions = form.specialInstructions;
       return (await api.put(`/loads/${load.id}`, p)).data;
@@ -169,12 +197,32 @@ export function EditLoadModal({ open, onClose, load, canSeeMargin }: Props) {
               <Field label="DEL window start"><Inp type="time" value={form.deliveryTimeStart} onChange={(v) => set("deliveryTimeStart", v)} /></Field>
               <Field label="DEL window end"><Inp type="time" value={form.deliveryTimeEnd} onChange={(v) => set("deliveryTimeEnd", v)} /></Field>
             </div>
+            {/* Two appointments, named. There used to be one unqualified box, so
+                an AE holding both could record one and nothing said which. */}
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Pickup Appt #"><Inp value={form.pickupAppointment} onChange={(v) => set("pickupAppointment", v)} /></Field>
+              <Field label="Delivery Appt #"><Inp value={form.deliveryAppointment} onChange={(v) => set("deliveryAppointment", v)} /></Field>
+            </div>
+          </Section>
+
+          <Section title="Dock contacts">
+            {/* These could not be edited at all: they were absent from the PUT
+                handler, so a load that lost them at creation stayed wrong. */}
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Origin contact"><Inp value={form.originContactName} onChange={(v) => set("originContactName", v)} /></Field>
+              <Field label="Origin phone"><Inp value={form.originContactPhone} onChange={(v) => set("originContactPhone", v)} /></Field>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Dest contact"><Inp value={form.destContactName} onChange={(v) => set("destContactName", v)} /></Field>
+              <Field label="Dest phone"><Inp value={form.destContactPhone} onChange={(v) => set("destContactPhone", v)} /></Field>
+            </div>
           </Section>
 
           <Section title="Freight">
             <div className="grid grid-cols-3 gap-3">
               <Field label="Weight (lbs)"><Inp type="number" value={form.weight} onChange={(v) => set("weight", v)} /></Field>
               <Field label="Pieces"><Inp type="number" value={form.pieces} onChange={(v) => set("pieces", v)} /></Field>
+              <Field label="Pallets"><Inp type="number" value={form.pallets} onChange={(v) => set("pallets", v)} /></Field>
               <Field label="Freight class"><Inp value={form.freightClass} onChange={(v) => set("freightClass", v)} /></Field>
             </div>
             <div className="grid grid-cols-2 gap-3">

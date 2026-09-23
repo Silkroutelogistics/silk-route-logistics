@@ -963,9 +963,19 @@ export async function updateLoad(req: AuthRequest, res: Response) {
     hazmat, hazmatClass, hazmatUnNumber,
     temperatureControlled, tempMin, tempMax, tempSetpoint, preCoolTo, reeferContinuous,
     specialInstructions, notes, contactName, contactPhone,
+    // The dock contacts. They were absent from this destructure entirely, so a
+    // PATCH could never repair what the create path had dropped — the AE could
+    // see the fields were empty and had no way to fill them. `contactName` and
+    // `contactPhone` below are a DIFFERENT column pair that create writes into
+    // originContactName/Phone and edit wrote into contactName/Phone, so the two
+    // halves of the lifecycle disagreed about where "the contact" lives.
+    originContactName, originContactPhone, destContactName, destContactPhone,
     customerId,
     // TMW-level fields
     poNumbers, bolNumber, sealNumber, appointmentNumber, additionalRefs,
+    // Per-side appointments (v3.8.bhy). `appointmentNumber` stays accepted so a
+    // client that has not been updated keeps working; it is the legacy single box.
+    pickupAppointment, deliveryAppointment,
     nmfcCode, declaredValue, loadingType, turnable,
     driverName, driverPhone, truckNumber, trailerNumber,
     dockAssignment, driverInstructions,
@@ -1049,6 +1059,10 @@ export async function updateLoad(req: AuthRequest, res: Response) {
   if (notes !== undefined) data.notes = notes;
   if (contactName !== undefined) data.contactName = contactName;
   if (contactPhone !== undefined) data.contactPhone = contactPhone;
+  if (originContactName !== undefined) data.originContactName = originContactName;
+  if (originContactPhone !== undefined) data.originContactPhone = originContactPhone;
+  if (destContactName !== undefined) data.destContactName = destContactName;
+  if (destContactPhone !== undefined) data.destContactPhone = destContactPhone;
 
   // TMW-level fields
   if (poNumbers !== undefined) data.poNumbers = poNumbers;
@@ -1056,6 +1070,8 @@ export async function updateLoad(req: AuthRequest, res: Response) {
   if (bolNumber !== undefined) data.bolNumber = bolNumber;
   if (sealNumber !== undefined) data.sealNumber = sealNumber;
   if (appointmentNumber !== undefined) data.appointmentNumber = appointmentNumber;
+  if (pickupAppointment !== undefined) data.pickupAppointment = pickupAppointment;
+  if (deliveryAppointment !== undefined) data.deliveryAppointment = deliveryAppointment;
   if (additionalRefs !== undefined) data.additionalRefs = additionalRefs;
   if (nmfcCode !== undefined) data.nmfcCode = nmfcCode;
   if (declaredValue !== undefined) data.declaredValue = declaredValue;

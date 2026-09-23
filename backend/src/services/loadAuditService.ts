@@ -55,6 +55,12 @@ const TRACKED_FIELDS = [
   "freightClass", "distance", "rateType",
   "driverName", "driverPhone", "truckNumber", "trailerNumber",
   "sealNumber", "bolNumber", "appointmentNumber",
+  // These four were absent, so a dock-contact change left no audit row at all.
+  // The edit most likely to be argued about afterwards — who was supposed to be
+  // at the dock, and when did that change — was the one recording nothing.
+  "originContactName", "originContactPhone", "destContactName", "destContactPhone",
+  // Per-side appointments (v3.8.bhy).
+  "pickupAppointment", "deliveryAppointment",
   "specialInstructions", "loadingType", "unloadingType",
   "hazmat", "hazmatClass", "hazmatUnNumber",
   "temperatureControlled", "tempMin", "tempMax",
