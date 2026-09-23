@@ -13,6 +13,11 @@ out/
 .env.local
 .env.*.local
 .env.production
+# Any production credential variant is ignored by default. The read-only census
+# role lives in .env.production.readonly; a file holding a production credential
+# must never be stageable (the shared-index hazard, CLAUDE.md 2.2). Fails safe:
+# a NEW variant is ignored rather than exposed.
+.env.production.*
 
 # Uploads
 uploads/
