@@ -198,18 +198,13 @@ export default function OrderBuilderPage() {
     // are stable for the lifetime of the page.
   }, []);
 
-  // ─── BOL preview on mount (v3.5.b) ────────────────────────
-  useQuery<{ bolNumber: string }>({
-    queryKey: ["ob-next-bol"],
-    queryFn: async () => {
-      const { data } = await api.get("/loads/next-bol");
-      if (data?.bolNumber && !form.bolNumber) {
-        setForm((f) => ({ ...f, bolNumber: data.bolNumber }));
-      }
-      return data;
-    },
-    staleTime: Infinity,
-  });
+  // The BOL-number preview that lived here fetched /loads/next-bol purely to
+  // fill the readOnly box removed above. That box promised an auto-population
+  // into the shipper-reference column that no create path performs, so the
+  // preview was populating a field that was shown and never saved. SRL's BOL
+  // number is allocated server-side at creation into `srlBolNumber`.
+  // NOTE: /loads/next-bol now has no caller. Retiring the endpoint — and its
+  // separate BOL-{n} numbering scheme — belongs to the numbering arc, not here.
 
   // ─── Customer search + selection ───────────────────────────
   // v3.8.rr — context=crm restricts the search to onboardingStatus=APPROVED
@@ -496,7 +491,7 @@ export default function OrderBuilderPage() {
         deliveryTimeEnd: "",
         customerRate: "",
         targetCost: "",
-        bolNumber: f.bolNumber, // keep the previewed-next-BOL number; template doesn't carry one
+        bolNumber: f.bolNumber, // shipper's own reference, if one was ever set; a template does not carry one
       };
       // Customer linkage was set when AE picked the customer; template
       // doesn't change it. lineItems comes from formData if present.
@@ -1226,22 +1221,20 @@ export default function OrderBuilderPage() {
             </div>
 
             {/* Auto / ref fields */}
-            <div className="grid grid-cols-4 gap-2 mt-3">
+            {/* The "BOL #" box that sat here was readOnly, promised "Auto on
+                save", and was bound to `bolNumber` — the SHIPPER's reference
+                column, which nothing on the create path ever writes. It
+                therefore promised an auto-population that could not happen, on
+                every load ever created. SRL's own BOL number is allocated
+                server-side into `srlBolNumber` and is shown on the load panel
+                and the printed BOL; there is nothing for the AE to fill in here. */}
+            <div className="grid grid-cols-3 gap-2 mt-3">
               <Field label="Distance (mi)" tag="Auto">
                 <input
                   value={form.distance}
                   onChange={(e) => setForm((f) => ({ ...f, distance: e.target.value }))}
                   className={inpAuto}
                   placeholder="Auto"
-                />
-              </Field>
-              <Field label="BOL #" tag="Auto">
-                <input
-                  value={form.bolNumber}
-                  onChange={(e) => setForm((f) => ({ ...f, bolNumber: e.target.value }))}
-                  className={inpAuto}
-                  placeholder="Auto on save"
-                  readOnly
                 />
               </Field>
               <Field label="Appt #">

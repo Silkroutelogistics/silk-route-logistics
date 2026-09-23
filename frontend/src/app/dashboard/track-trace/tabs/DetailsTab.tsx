@@ -11,7 +11,14 @@ export function DetailsTab({ load }: { load: any }) {
       <Section title="Shipment info">
         <Field label="Load #"       value={load.loadNumber ?? load.referenceNumber} />
         <Field label="PO #"         value={(load.poNumbers || []).join(", ") || "—"} />
-        <Field label="BOL #"        value={load.bolNumber} />
+        {/* SRL's own BOL document number — the one the printed BOL carries.
+            This row used to read `load.bolNumber`, the SHIPPER-supplied
+            reference, which is NULL on every live load because no customer has
+            ever supplied one. So the panel said "—" while the PDF in the
+            driver's hand said SRL-121497B. Two columns, deliberately distinct
+            (§21.2); the panel was simply reading the empty one. */}
+        <Field label="BOL #"        value={load.srlBolNumber} />
+        <Field label="Shipper BOL ref" value={load.bolNumber} />
         <Field label="Mode"         value={(load.equipmentType || "").toUpperCase() === "LTL" ? "LTL" : "FTL"} />
         <Field label="Equipment"    value={load.equipmentType} />
         <Field label="Commodity"    value={load.commodity} />

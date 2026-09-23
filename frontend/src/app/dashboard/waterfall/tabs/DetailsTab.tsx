@@ -17,7 +17,10 @@ export function DetailsTab({ load }: { load: any }) {
     <div className="space-y-6 text-sm">
       <Section title="Shipment">
         <Field label="Load #"     value={load.loadNumber ?? load.referenceNumber} />
-        <Field label="BOL #"      value={load.bolNumber} />
+        {/* SRL's document number, not the shipper's reference — see the note in
+            track-trace/tabs/DetailsTab.tsx. Same defect, same two columns. */}
+        <Field label="BOL #"      value={load.srlBolNumber} />
+        <Field label="Shipper BOL ref" value={load.bolNumber} />
         <Field label="Mode"       value={(load.equipmentType || "").toUpperCase() === "LTL" ? "LTL" : "FTL"} />
         <Field label="Equipment"  value={load.equipmentType} />
         <Field label="Commodity"  value={load.commodity} />
