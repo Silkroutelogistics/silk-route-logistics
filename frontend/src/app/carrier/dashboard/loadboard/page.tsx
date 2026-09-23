@@ -1,4 +1,5 @@
 "use client";
+import { formatStopDate } from "@/lib/stopDate";
 
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
@@ -86,7 +87,7 @@ export default function LoadboardPage() {
                 {l.equipmentType}
                 {l.weight && ` · ${l.weight} lbs`}
                 {l.commodity && ` · ${l.commodity}`}
-                {" · PU "}{new Date(l.pickupDate).toLocaleDateString()}
+                {" · PU "}{formatStopDate(l.pickupDate)}
               </div>
             </div>
             <div className="text-right shrink-0">

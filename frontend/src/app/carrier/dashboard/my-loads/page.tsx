@@ -1,4 +1,5 @@
 "use client";
+import { formatStopDate } from "@/lib/stopDate";
 
 import { useState, useEffect } from "react";
 import { MapPin, Phone, FileText, CheckCircle, Clock, AlertCircle, Printer, Zap, Lock, Loader2, ArrowRight } from "lucide-react";
@@ -169,7 +170,7 @@ export default function MyLoadsPage() {
                       {load.originCity}, {load.originState} &rarr; {load.destCity}, {load.destState}
                     </div>
                     <div className="text-[10px] text-gray-700 mt-1">
-                      {load.equipmentType} &middot; Pick: {new Date(load.pickupDate).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                      {load.equipmentType} &middot; Pick: {formatStopDate(load.pickupDate)}
                     </div>
                     {(() => {
                       const step = carrierNextStep(load as any);
@@ -229,8 +230,8 @@ export default function MyLoadsPage() {
                   <div className="grid grid-cols-2 gap-2 mt-3 pt-3 border-t border-gray-100">
                     <div><span className="text-gray-700">Equipment</span><br />{detail.equipmentType}</div>
                     <div><span className="text-gray-700">Weight</span><br />{detail.weight ? `${Number(detail.weight).toLocaleString()} lbs` : "—"}</div>
-                    <div><span className="text-gray-700">Pickup</span><br />{new Date(detail.pickupDate).toLocaleDateString()}</div>
-                    <div><span className="text-gray-700">Delivery</span><br />{detail.deliveryDate ? new Date(detail.deliveryDate).toLocaleDateString() : "—"}</div>
+                    <div><span className="text-gray-700">Pickup</span><br />{formatStopDate(detail.pickupDate)}</div>
+                    <div><span className="text-gray-700">Delivery</span><br />{detail.deliveryDate ? formatStopDate(detail.deliveryDate) : "—"}</div>
                     <div><span className="text-gray-700">Rate</span><br /><span className="text-[#BA7517] font-bold">{money(carrierPay(detail))}</span></div>
                     <div><span className="text-gray-700">Distance</span><br />{detail.distance ? `${detail.distance} mi` : "—"}</div>
                   </div>

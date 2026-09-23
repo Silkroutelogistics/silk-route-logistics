@@ -1,4 +1,5 @@
 "use client";
+import { formatStopDate } from "@/lib/stopDate";
 
 // Sprint 52.hotfix.b — rewired to canonical /api/carrier/tenders consumer.
 // Pre-fix this page called /carrier-tenders/active (WaterfallPosition-only,
@@ -225,11 +226,11 @@ export default function CarrierTendersPage() {
             <div className="mt-4 grid grid-cols-3 gap-3 text-xs">
               <div>
                 <div className="text-slate-500 uppercase text-[10px]">Pickup</div>
-                <div className="text-slate-700">{new Date(t.load.pickupDate).toLocaleDateString()}</div>
+                <div className="text-slate-700">{formatStopDate(t.load.pickupDate)}</div>
               </div>
               <div>
                 <div className="text-slate-500 uppercase text-[10px]">Delivery</div>
-                <div className="text-slate-700">{new Date(t.load.deliveryDate).toLocaleDateString()}</div>
+                <div className="text-slate-700">{formatStopDate(t.load.deliveryDate)}</div>
               </div>
               <div>
                 <div className="text-slate-500 uppercase text-[10px]">Time left</div>
