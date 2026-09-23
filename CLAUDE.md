@@ -870,10 +870,11 @@ Should complete before next sprint kickoff:
 
 ### §13.3 Phase 6.2 sprint candidates
 
-Moved → `docs/claude/backlog.md`, and split from there into `docs/claude/backlog-open.md` (items still
-waiting on a decision or a build) and `docs/claude/archive/backlog-records.md` (accounts of arcs that
-shipped). ~250 items, 52% of this file before the move. Cited 599 times across the codebase, so the label
-stays here.
+Moved → `docs/claude/backlog-open.md` (168 items) and `docs/claude/archive/backlog-records.md` (93
+closed). 261 items, 52% of this file before the move; cited 599 times across the codebase, so the label
+stays here. The split is by *positive evidence of closure* — struck title, or `CLOSED`/`SUPERSEDED` in the
+opening — and everything else stayed open, so `backlog-open.md` is deliberately over-inclusive. A record
+sitting in the open file is visible clutter; a pending task filed as history is lost silently.
 
 **Read `backlog-open.md` before proposing work** — §19 Sub-pattern 15 exists because a stale "NOT built"
 claim is read exactly when somebody is deciding whether to build something, and commissions duplicate work.
