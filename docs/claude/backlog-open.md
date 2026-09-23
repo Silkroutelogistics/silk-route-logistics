@@ -2487,5 +2487,44 @@ Most are inert history and **should** survive — `LoadActivity` and `LoadTracki
 
     **PENDING — the middleware fix, and a census of all 89 declarations against their actual success-path response shape.** The 67-route census was scoped to the arc's blast radius, so **the other declarations have not been checked** and any one of them answering `res.send` is silently recording nothing today. Fix shape: `auditLog` wraps `res.send` / `res.sendStatus` / `res.end` as well as `res.json`, dedupes so a handler calling `res.json` internally does not double-write, and keeps the 2xx gate. Then a guard asserts every declaring route is actually observable — **a text guard cannot do this** (presence is not function, Sub-pattern 16's fifth fire), so it has to exercise the route and read whether a row landed.
 
+307. **Facility linking stopped writing in May, and the real FCFS/appointment flag is stranded in the CRM with it (banked 2026-09-23, BOL stop-data arc, rulings 6 + 7 — no fix this arc).** `Load.originFacilityId` / `destFacilityId` (schema `origin_facility_id` / `dest_facility_id`) are the FK to `CustomerFacility`, and **nothing writes them any more.** Measured read-only as `srl_readonly` on 2026-09-23:
+
+    | created | loads | with origin facility |
+    |---|---|---|
+    | 2026-04 | 11 | **7** |
+    | 2026-05 | 8 | **3** |
+    | 2026-08 | 1 | **0** |
+    | 2026-09 | 9 | **0** |
+
+    Ten loads have ever carried a facility link and all ten are April or May. **Zero of the nine September loads.** Whatever stopped writing the FK is upstream of every document that reads it, and it has been silent for four months because no surface goes red when an FK is null — the join simply resolves nothing and the field renders as absent.
+
+    **What is stranded behind it.** `customer_facilities` holds 7 rows, 6 with a contact name, 4 with a phone, **1 with an email**, and **1 with `appointment_required` set**. That is the only source in the system of a stop contact EMAIL and the only real source of the FCFS / appointment flag. The cost is concrete rather than theoretical: SRL-121497 delivers to `destCompany = "Pattern Warehouse"`, Hebron KY, and the CRM row for Pattern Warehouse carries Brynn, 502-219-3219, and `appointment_required = yes`. The load has no `dest_facility_id`, so none of it reaches the document. The arc's tier-3 resolver reaches that contact by normalized name+city match instead, which is a workaround for the missing FK and not a replacement for it.
+
+    **The dead read that goes with it (ruling 7).** `EnhancedRCLoadData.appointmentRequired` was commented *"Load.appointmentRequired (schema:2075)"* and **no such Load field exists** — line 2075 is `customer_facilities.appointment_required`. So the rate confirmation's FCFS suffix read a field that was never on the model, and the RC modal's `fd.appointmentRequired` was the same mistake one layer up. Both reads are REMOVED (v3.8.bhq) rather than left to look load-bearing. The FCFS render variant is dropped with them. **Restoring FCFS to either document requires the facility join above** — it is the only place the flag actually lives.
+
+    **Fix shape, in order.** (1) Find what stopped writing the FK — start at the load-creation paths (`loadController.createLoad`, `withTenderController`, the Order Builder convert path) and compare against an April load that has one. (2) Backfill is a separate decision and is NOT implied: name+city is ambiguous across the two `Dallas One` rows (Irving TX and Carrollton TX), so a blind backfill would attach the wrong facility to some loads. (3) Only once the FK is being written does the facility join belong on the documents, carrying `contact_email` and the real appointment flag — at which point the tier-3 name+city matcher becomes a fallback rather than the primary path, and the FCFS suffix can return to the RC.
+
+    **Not BKN-blocking.** The documents render correctly without it; what is lost is the stop email and the appointment flag, both of which an AE can supply by hand today.
+
+308. **Section 7 non-recourse has no home on the Bill of Lading, and six measured placements say so (banked 2026-09-23, ruling 1c — pending counsel review).** The clause — *"carrier shall not deliver without payment of freight and all other lawful charges"* — was rendered at the bottom of the CONSIGNEE · RECEIVER signature column, which put a CONSIGNOR election beneath the RECEIVER's signature and read as the receiver agreeing to it. v3.8.bhs removes it from that column and does **not** relocate it: it now renders nowhere.
+
+    **Every candidate placement, measured rather than argued:**
+
+    | placement | fit matrix | anchors | verdict |
+    |---|---|---|---|
+    | shipper block, full (label + text + `drawSigField`) | 6 of 7 FAIL, worst `maxContentY` 779 | — | no |
+    | shipper block, compressed | 5 of 7 FAIL, worst 773 | — | no |
+    | shipper block, text only | 3 of 7 FAIL, worst 763 | — | no |
+    | shipper block + sentence in terms strip | 7 of 7 FAIL (strip itself overruns the footer rule at 774) | — | no |
+    | **Released Value box, 2nd row** | **7/7 PASS, one page**, worst 748.5 of 768 | **FAIL: box grows 36→50, four elements below drift exactly −14pt** | no |
+    | **footer legal block, one line** | **7/7 FAIL**, `maxContentY` 763–770, crosses the footer rule (770) in three cases | — | no |
+
+    The Released Value row is the near miss and the one to revisit first: it is the only placement that fits the page, and it fails solely on anchor parity, by a deterministic −14pt that is exactly the box growth. Shipping it is a deliberate anchor re-capture (§3.3 permits one, named in the commit), not a layout problem to solve.
+
+    **But the prior question is legal, not spatial.** Section 7 is **optional** under the Uniform Straight Bill of Lading, and **SRL is the broker, not the carrier the clause would bind.** Whether it belongs on SRL's BOL at all should be answered before more of a saturated one-page budget is spent moving it around. Rides with §16 #1.
+
+    **Guarded, so the defect cannot return quietly.** `bolSection7Placement.test.ts` asserts positionally — it reads each text item's x from its pdfjs transform and scopes to the third signature column (SHIPPER x34 | CARRIER x219.3 | CONSIGNEE x404.7) — so the clause may later move into the box or the legal block without touching the test, and may not come back to the receiver's column. A second case pins outcome (c) itself, so shipping any placement turns exactly one test red and forces the decision to be made deliberately.
+
+
 ---
 
