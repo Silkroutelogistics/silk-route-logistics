@@ -24,6 +24,7 @@ export function DetailsTab({ load }: { load: any }) {
         <Field label="Commodity"    value={load.commodity} />
         <Field label="Weight"       value={load.weight ? `${load.weight} lbs` : "—"} />
         <Field label="Pieces"       value={load.pieces} />
+        <Field label="Pallets"      value={load.pallets} />
         <Field label="Hazmat"       value={load.hazmat ? "Yes" : "No"} />
         {load.temperatureControlled && (
           <Field label="Temp"       value={`${load.tempMin ?? "—"}°F – ${load.tempMax ?? "—"}°F`} />
@@ -37,6 +38,9 @@ export function DetailsTab({ load }: { load: any }) {
         <Field label="Phone"        value={pickup.contactPhone ?? load.originContactPhone} />
         <Field label="Pickup date"  value={formatStopDate(load.pickupDate)} />
         <Field label="Window"       value={formatStopWindow(load.pickupTimeStart, load.pickupTimeEnd)} />
+        {/* There was no pickup-appointment row anywhere. The single "Appt #"
+            sat under Destination, so a pickup appointment had nowhere to show. */}
+        <Field label="Pickup Appt #" value={load.pickupAppointment} />
         <Field
           label="Actual pickup"
           value={formatActualDatetime(load.actualPickupDatetime)}
@@ -53,7 +57,9 @@ export function DetailsTab({ load }: { load: any }) {
         <Field label="Phone"        value={delivery.contactPhone ?? load.destContactPhone} />
         <Field label="Delivery date" value={formatStopDate(load.deliveryDate)} />
         <Field label="Window"       value={formatStopWindow(load.deliveryTimeStart, load.deliveryTimeEnd)} />
-        <Field label="Appt #"       value={load.appointmentNumber} />
+        {/* Named, and falling back to the legacy single column for loads created
+            before the split — that is where their value was migrated to. */}
+        <Field label="Delivery Appt #" value={load.deliveryAppointment ?? load.appointmentNumber} />
         <Field label="Actual delivery" value={formatActualDatetime(load.actualDeliveryDatetime)} />
       </Section>
 

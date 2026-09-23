@@ -82,6 +82,28 @@ describe("T&T DetailsTab — stop dates and windows (C1, rendered)", () => {
     expect(valueFor("Window", 1)).toBe("—"); // delivery
   });
 
+  it("shows each appointment on its own side, named", () => {
+    render(
+      <DetailsTab
+        load={{ ...load121497, pickupAppointment: "PU-4471", deliveryAppointment: "15160360" }}
+      />,
+    );
+    expect(valueFor("Pickup Appt #")).toBe("PU-4471");
+    expect(valueFor("Delivery Appt #")).toBe("15160360");
+  });
+
+  it("falls back to the legacy column for a load created before the split", () => {
+    // SRL-121497 as it stands today: appointmentNumber set, the new columns not.
+    render(<DetailsTab load={load121497} />);
+    expect(valueFor("Delivery Appt #")).toBe("15160360");
+    expect(valueFor("Pickup Appt #")).toBe("—");
+  });
+
+  it("shows pallets, a column that was NULL on every load ever created", () => {
+    render(<DetailsTab load={{ ...load121497, pallets: 12 }} />);
+    expect(valueFor("Pallets")).toBe("12");
+  });
+
   it("labels a real window local, on the stop it belongs to", () => {
     render(
       <DetailsTab
