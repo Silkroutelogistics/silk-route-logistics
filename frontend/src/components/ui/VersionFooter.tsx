@@ -18542,7 +18542,14 @@
 // a test pins each. Load.contactEmail is retired as an operational source (R2):
 // free text on the load carrying no consent flag is an address nothing on the
 // row can opt out of, measured at 0 of 29 production loads before removal.
-export const SRL_VERSION = "3.8.bhc";
+// v3.8.bhd - C2a: both contact schemas accept the consent field, and a guard
+// keeps them equal. A contact write is validated twice by two hand-maintained
+// copies of one shape - the validateBody gate in routes/customers.ts and the
+// handler's own parse in customerController.ts. validateBody REPLACES req.body
+// and z.object() strips unknown keys, so a field in one copy and not the other
+// is dropped in silence: no error, no 400, the toggle just saves nothing. That
+// is the class that would have made C2b's control inert.
+export const SRL_VERSION = "3.8.bhd";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

@@ -915,6 +915,7 @@ const createContactSchema = z.object({
   isPrimary: z.boolean().optional(),
   isBilling: z.boolean().optional(),
   receivesTrackingLink: z.boolean().optional(),
+  receivesOperationalUpdates: z.boolean().optional(),
   salesRole: z.enum(CONTACT_SALES_ROLES).nullable().optional(),
   introducedVia: z.string().max(120).nullable().optional(),
   doNotContact: z.boolean().optional(),
