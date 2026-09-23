@@ -69,3 +69,12 @@ docs/audit-reports/brand-conformance-*.md
 # binary churn in git. The measured geometry that constitutes the proof is
 # transcribed into docs/audits/drawer-conformance-audit.md, where it is diffable.
 e2e/render-proof-out/
+
+# Operator-script before-images and undo files. These hold production customer
+# rows (loads, shipments, contacts). Every such script's header says they are
+# "NOT committed" and, until this pattern, nothing enforced it — they sat
+# untracked, which §2.2 names as exactly the shape a broad `git add` sweeps into
+# another session's commit. Same failure direction as the .env.production.*
+# rule above: a NEW variant is ignored rather than exposed.
+backend/scripts/_*-undo.json
+backend/scripts/_*-before.json
