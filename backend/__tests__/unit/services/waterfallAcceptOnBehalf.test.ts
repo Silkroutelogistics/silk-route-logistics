@@ -60,6 +60,16 @@ vi.mock("../../../src/services/carrierAssignmentService", () => ({
   clearCarrier: vi.fn(),
 }));
 
+// C4a — the stamp is mocked here on purpose: this file tests the WIRING (which
+// paths stamp, with what, and which must not), while the writer's own rules
+// (first write wins, R8d refusal) have their own behavioural coverage in
+// lib/acceptanceEvidence.test.ts. Asserting both in one place would mean
+// re-proving the writer once per call site.
+const stampCarrierAcceptance = vi.fn().mockResolvedValue({ stamped: true });
+vi.mock("../../../src/lib/acceptanceEvidence", () => ({
+  stampCarrierAcceptance: (...a: unknown[]) => stampCarrierAcceptance(...a),
+}));
+
 // Dynamically imported inside acceptPosition.
 const complianceCheck = vi.fn();
 vi.mock("../../../src/services/complianceMonitorService", () => ({
@@ -113,7 +123,12 @@ beforeEach(() => {
     update: vi.fn().mockResolvedValue({}),
     updateMany: vi.fn().mockResolvedValue({ count: 0 }),
   };
-  mockPrisma.waterfall = { update: vi.fn().mockResolvedValue({}) };
+  // findUnique is needed by advanceWaterfall, which the compliance-block branch
+  // calls on its way out. Returning null makes it a clean no-op.
+  mockPrisma.waterfall = {
+    update: vi.fn().mockResolvedValue({}),
+    findUnique: vi.fn().mockResolvedValue(null),
+  };
   mockPrisma.carrierProfile.findFirst = vi.fn().mockResolvedValue({ id: "cp-1" });
   mockPrisma.loadTender.findFirst = vi.fn().mockResolvedValue({ id: "t-1" });
   mockPrisma.load.findUnique = vi.fn().mockResolvedValue({ posterId: "u-ae" });
@@ -244,5 +259,46 @@ describe("FINDING: the tender row carries no on-behalf signal for the scorer", (
     // Contrast: SRL's own withdrawal DOES leave the denominator, because that
     // distinction was pushed onto the row. The on-behalf accept has no equivalent.
     expect(summarizeTenders([{ status: "WITHDRAWN" }]).acceptanceRate).toBeNull();
+  });
+});
+
+describe("C4a — the cascade records acceptance only when the carrier accepted", () => {
+  it("a carrier accepting their own position stamps TENDER_ACCEPT for that carrier", async () => {
+    await acceptPosition(POS_ID, OWNER, { onBehalf: false });
+
+    expect(stampCarrierAcceptance).toHaveBeenCalledTimes(1);
+    expect(stampCarrierAcceptance.mock.calls[0][0]).toMatchObject({
+      loadId: LOAD_ID,
+      via: "TENDER_ACCEPT",
+      carrierUserId: OWNER,
+      byUserId: OWNER,
+    });
+  });
+
+  it("an AE accepting on behalf stamps NOTHING", async () => {
+    const r = await acceptPosition(POS_ID, "u-ae", { onBehalf: true });
+
+    // The load IS dispatched to the carrier — the accept is real.
+    expect(r).toMatchObject({ accepted: true });
+    expect(assignCarrier).toHaveBeenCalledWith(expect.objectContaining({ carrierUserId: OWNER }));
+    // But nothing recorded the carrier agreeing, because nothing here observed
+    // them agreeing. Unlike acceptTenderOnBehalf, this route takes no evidence,
+    // so an AE's click is not a record of the carrier's decision (R8c).
+    expect(stampCarrierAcceptance).not.toHaveBeenCalled();
+  });
+
+  it("a compliance-blocked accept stamps nothing — the carrier never got the load", async () => {
+    complianceCheck.mockResolvedValue({
+      allowed: false, blocked_reasons: ["Insurance expired"], blocked_codes: [], released: [], warnings: [],
+    });
+    const r = await acceptPosition(POS_ID, OWNER, { onBehalf: false });
+
+    expect(r).toEqual({ accepted: false, reason: "compliance_blocked" });
+    expect(stampCarrierAcceptance).not.toHaveBeenCalled();
+  });
+
+  it("a cross-carrier accept stamps nothing — it never reaches the write", async () => {
+    await acceptPosition(POS_ID, "u-someone-else", { onBehalf: false });
+    expect(stampCarrierAcceptance).not.toHaveBeenCalled();
   });
 });

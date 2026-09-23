@@ -18425,7 +18425,14 @@
 // read-then-check, so neither can be defeated by concurrency or by a caller
 // forgetting to ask: the update is scoped carrierAcceptedAt: null AND
 // carrierId, so a second act and a wrong-carrier act each match zero rows.
-export const SRL_VERSION = "3.8.bgn";
+// v3.8.bgo - C4a: the cascade records acceptance, but only when the carrier
+// accepted in their own session. An AE accepting a waterfall position records
+// NOTHING about the carrier's decision - unlike acceptTenderOnBehalf, which
+// requires an evidence type and a reference pointing at where that decision is
+// written down (v3.8.axq), this route takes no evidence at all. So an AE's
+// click here is not a record of the carrier agreeing, and stamping it would
+// assert an act nobody observed. R8c names this path for that reason.
+export const SRL_VERSION = "3.8.bgo";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

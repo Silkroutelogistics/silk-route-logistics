@@ -28,6 +28,7 @@ import { logWaterfallEvent } from "./waterfallEventService";
 import { validateLoadStatusTransition } from "../lib/loadStateMachine";
 import { broadcastSSE } from "../routes/trackTraceSSE";
 import { assignCarrier } from "./carrierAssignmentService";
+import { stampCarrierAcceptance } from "../lib/acceptanceEvidence";
 import { createTender } from "./tenderCreationService";
 import { isCarrierIneligible } from "../lib/carrierEligibility";
 import { settleTenders, withdrawLiveTenders } from "./tenderTransitionService";
@@ -688,6 +689,24 @@ export async function acceptPosition(
       carrierConfirmedAt: now,
     },
   });
+
+  // C4a — stamped ONLY when the carrier accepted in their own session.
+  //
+  // An AE accepting a cascade position records nothing about the carrier's
+  // decision: unlike acceptTenderOnBehalf, which REQUIRES an evidence type and
+  // a reference pointing at where that decision is written down (v3.8.axq),
+  // this route takes no evidence at all. So on this path an AE's click is not a
+  // record of the carrier agreeing to anything, and stamping it would assert an
+  // act nobody observed. R8c names this path for exactly that reason.
+  if (!onBehalf) {
+    await stampCarrierAcceptance({
+      loadId: pos.waterfall.loadId,
+      via: "TENDER_ACCEPT",
+      carrierUserId: pos.carrierId!,
+      byUserId: actorId ?? null,
+      at: now,
+    });
+  }
 
   await logWaterfallEvent({
     loadId: pos.waterfall.loadId,
