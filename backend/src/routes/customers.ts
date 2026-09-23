@@ -66,7 +66,12 @@ router.put("/:id/restore", authorize("ADMIN", "CEO", "BROKER"), auditLog("RESTOR
 router.get("/:id/contacts", getCustomerContacts);
 router.post("/:id/contacts", validateBody(contactSchema), auditLog("CREATE", "CustomerContact"), addCustomerContact);
 router.patch("/:id/contacts/:cid", validateBody(contactSchema.partial()), auditLog("UPDATE", "CustomerContact"), updateCustomerContact);
-router.delete("/:id/contacts/:cid", auditLog("DELETE", "CustomerContact"), deleteCustomerContact);
+// No auditLog here, deliberately: that middleware wraps res.json and this
+// handler answers 204 .send(), so the declaration never once fired and read as
+// cover it did not provide. deleteCustomerContact writes its own AuditTrail row
+// (bhg), which carries the actor and the consent the contact held — strictly
+// more than the middleware could. See §13.3 Item 305 for the middleware itself.
+router.delete("/:id/contacts/:cid", deleteCustomerContact);
 
 // Customer credit
 // audit-pass1: DUPLICATE — frontend uses PUT /accounting/credit/:id. Consolidation candidate, not deleted (both reachable).

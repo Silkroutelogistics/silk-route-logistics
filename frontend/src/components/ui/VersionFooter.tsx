@@ -18618,7 +18618,15 @@
 // because it defeated its own dedup; that assertion is INVERTED to pin the new
 // rule (it must NOT escalate) rather than dropped, because deleting a test to
 // go green loses the only thing still watching that property.
-export const SRL_VERSION = "3.8.bhm";
+// v3.8.bhn - P1: the false auditLog declaration is gone from the contact-delete
+// route. It wrapped res.json while the handler answers 204 .send(), so it never
+// once fired and read as cover it did not provide. bhg's handler-side AuditTrail
+// row is the record, and it carries more than the middleware could. The coverage
+// guard keeps its every-mutation-route rule with ONE exemption that re-checks its
+// own premise each run - still send-only, still writing its own row - so it fails
+// rather than excusing an unaudited route if either half stops being true.
+// CENSUS: 67 auditLog-declared routes, 66 audited, this was the only one.
+export const SRL_VERSION = "3.8.bhn";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

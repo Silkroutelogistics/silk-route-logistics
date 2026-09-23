@@ -204,10 +204,56 @@ describe("C. every mutation route in routes/customers.ts carries auditLog()", ()
     expect(mutations.length).toBe(16);
   });
 
+  /**
+   * ONE EXEMPTION, AND IT CARRIES ITS OWN PREMISE.
+   *
+   * auditLog wraps res.json. deleteCustomerContact answers res.status(204).send(),
+   * so the wrapper is never reached and the declaration it used to carry never
+   * once fired — it read as cover it did not provide, which is why a contact
+   * removal on 2026-09-23 left no trail anywhere. The handler now writes its own
+   * AuditTrail row instead (lib/lifecycleAudit, CONTACT_DELETED), carrying the
+   * actor and the consent the contact held: strictly more than the middleware
+   * could record.
+   *
+   * The exemption is not a hole. The cases below re-check BOTH halves of its
+   * premise on every run — that the handler still answers via send, and that it
+   * still writes its own row — so if either stops being true the exemption fails
+   * rather than silently excusing an unaudited route.
+   */
+  const EXEMPT = [
+    {
+      route: 'router.delete("/:id/contacts/:cid"',
+      handler: "deleteCustomerContact",
+      why: "answers 204 .send(), which auditLog cannot see; writes its own AuditTrail row",
+    },
+  ];
+
   it("each names auditLog(action, entity) before its handler", () => {
     const bare = mutations.filter((l) => !/auditLog\("[A-Z_]+", "[A-Za-z]+"\)/.test(l));
-    expect(bare, bare.join("\n")).toEqual([]);
+    const unexplained = bare.filter((l) => !EXEMPT.some((e) => l.includes(e.route)));
+    expect(unexplained, unexplained.join("\n")).toEqual([]);
     expect(src).toMatch(/import \{ auditLog \} from "\.\.\/middleware\/audit"/);
+  });
+
+  it("the exemption is not stale — every exempt route is still bare", () => {
+    const stillBare = EXEMPT.filter((e) =>
+      mutations.some((l) => l.includes(e.route) && !/auditLog\(/.test(l)),
+    );
+    expect(
+      stillBare.map((e) => e.route),
+      "an exempt route that now declares auditLog should leave this list",
+    ).toEqual(EXEMPT.map((e) => e.route));
+  });
+
+  it("the exemption's premise holds: send-only success, and its own audit row", () => {
+    const ctrl = fs.readFileSync(path.join(SRC, "controllers/customerController.ts"), "utf8");
+    const mw = fs.readFileSync(path.join(SRC, "middleware/audit.ts"), "utf8");
+    // half one — the middleware still cannot see this handler
+    expect(mw, "auditLog wraps res.json").toContain("res.json = function");
+    expect(mw, "auditLog still does not wrap res.send").not.toContain("res.send = function");
+    expect(ctrl, "the handler still answers 204 via send").toContain("res.status(204).send()");
+    // half two — the handler still records the act itself
+    expect(ctrl, "the handler still writes its own row").toContain('actionDetail: "CONTACT_DELETED"');
   });
 
   it("the lifecycle acts carry their own verbs, not a generic UPDATE", () => {
