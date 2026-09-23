@@ -18724,7 +18724,7 @@
 // banked: the BOL has no archive record at all (generated on demand, streamed,
 // no Document row, no stored URL), and giving the RC a template-version column
 // is a schema change this arc should not carry into a rebase and a push.
-export const SRL_VERSION = "3.8.bhu";
+export const SRL_VERSION = "3.8.bhv";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

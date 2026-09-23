@@ -203,15 +203,23 @@ export async function createLoad(req: AuthRequest, res: Response) {
     originCity: raw.originCity,
     originState: raw.originState,
     originZip: raw.originZip,
-    originContactName: pickupContact.name || raw.contactName || undefined,
-    originContactPhone: pickupContact.phone || raw.contactPhone || undefined,
+    // WHO IS AT THE DOCK. The Order Builder sends these FLAT
+    // (`originContactName`), and this read only ever looked at a NESTED
+    // `raw.pickupContact` that no shipped form produces. `createLoadSchema` is
+    // `.passthrough()`, so the flat keys arrived on req.body intact and were
+    // then simply never read — the loss is here, not in the validator.
+    // Production 2026-09-23: all four loadboard-created loads carry NULL dock
+    // contacts while the three drawer-created ones carry them, a 100% split by
+    // creation path. The nested shape stays accepted so the drawer keeps working.
+    originContactName: pickupContact.name || raw.originContactName || raw.contactName || undefined,
+    originContactPhone: pickupContact.phone || raw.originContactPhone || raw.contactPhone || undefined,
     destCompany: raw.destinationName || raw.destCompany || undefined,
     destAddress: raw.destAddress || raw.destinationAddress || undefined,
     destCity: raw.destinationCity || raw.destCity,
     destState: raw.destinationState || raw.destState,
     destZip: raw.destinationZip || raw.destZip,
-    destContactName: deliveryContact.name || undefined,
-    destContactPhone: deliveryContact.phone || undefined,
+    destContactName: deliveryContact.name || raw.destContactName || undefined,
+    destContactPhone: deliveryContact.phone || raw.destContactPhone || undefined,
     shipperFacility: raw.shipperName || raw.shipperFacility || undefined,
     consigneeFacility: raw.consigneeName || raw.consigneeFacility || undefined,
 
