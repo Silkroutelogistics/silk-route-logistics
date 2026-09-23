@@ -18488,7 +18488,17 @@
 // recorded") rather than left as an empty row, because a blank row is
 // indistinguishable from a field the panel failed to read. Carrier portal
 // unchanged: no IP, no hash, no storage URI.
-export const SRL_VERSION = "3.8.bgv";
+// v3.8.bgw - C6a: the carrier /my-loads payload carries the two facts its BOL
+// gate reads. The backend gates on `carrierAcceptedAt OR a signed rate
+// confirmation` (bgs); the list enumerates its select explicitly, so neither
+// fact arrived and the portal could only mirror the retired CONFIRMED-tender
+// condition. The list now selects carrierAcceptedAt and a take-1 presence
+// probe for a SIGNED rate confirmation; the detail (which uses include, so it
+// already had the stamp) gains the same probe. PRESENCE ONLY - the probe
+// selects nothing but an id, so the signer, the IP, the content hash and the
+// storage key stay on the AE side. That is SRL's evidence ABOUT a carrier,
+// not the carrier's copy of it.
+export const SRL_VERSION = "3.8.bgw";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

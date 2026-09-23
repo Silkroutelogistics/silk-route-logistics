@@ -71,6 +71,22 @@ router.use(authorize("CARRIER"));
  * no other carrier's row, withdrawn or otherwise, is ever serialised to this
  * carrier. Deleted rows excluded, newest first.
  */
+/**
+ * C6 — "is there a signed rate confirmation on this load", and NOTHING else.
+ *
+ * The carrier's BOL gate is `carrierAcceptedAt OR a signed RC` (bgs), so the
+ * portal needs to know whether one exists. It does NOT need to know who signed
+ * it, from what IP, or the hash of the bytes — that is SRL's evidence ABOUT the
+ * carrier, and the AE console is where it belongs. Selecting `{ id }` alone
+ * means presence is all that can travel: a future reader cannot widen this by
+ * accident, because there is nothing here to widen into.
+ */
+const signedRcPresence = {
+  where: { signed: true },
+  select: { id: true },
+  take: 1,
+} as const;
+
 function ownTenders(carrierUserId: string): Prisma.LoadTenderFindManyArgs {
   return {
     where: { carrier: { userId: carrierUserId }, deletedAt: null },
@@ -201,6 +217,11 @@ router.get("/my-loads", async (req: AuthRequest, res: Response) => {
         driverName: true, driverPhone: true, truckNumber: true, trailerNumber: true,
         rateConfirmationPdfUrl: true,
         createdAt: true, updatedAt: true,
+        // C6 — the two facts the BOL gate actually reads (bgs). The list
+        // enumerates its select explicitly, so neither arrived here before and
+        // the strip mirrored a gate the backend had stopped using.
+        carrierAcceptedAt: true,
+        rateConfirmations: signedRcPresence,
         // E2 — the next-step strip and the BOL button state are decided from the
         // TENDER (lib/loadDerivedStatus on the carrier side, the same selector
         // the AE board uses). Only THIS carrier's rows: LoadTender.carrierId is
@@ -228,6 +249,10 @@ router.get("/:id", async (req: AuthRequest, res: Response) => {
       // for the buttons that were already here.
       documents: { where: { docType: { in: [...PAPERWORK_DOC_TYPES, "RATE_CON", "BOL"] } }, orderBy: { createdAt: "desc" } },
       tenders: ownTenders(req.user!.id),
+      // C6 — the detail already carries carrierAcceptedAt (this query uses
+      // `include`, so every Load scalar comes back); the signed-RC half is what
+      // was missing, and the BOL button reads THIS payload.
+      rateConfirmations: signedRcPresence,
     },
   });
 
