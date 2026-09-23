@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Mail, Phone, Plus, X, Zap, Ban } from "lucide-react";
+import { Mail, Phone, Plus, X, Zap, Ban, Send } from "lucide-react";
 import { api } from "@/lib/api";
 
 export type ContactSalesRole =
@@ -22,6 +22,7 @@ export interface ContactRow {
   isPrimary: boolean;
   isBilling: boolean;
   receivesTrackingLink: boolean;
+  receivesOperationalUpdates: boolean;
   salesRole: ContactSalesRole | null;
   introducedVia: string | null;
   doNotContact: boolean;
@@ -64,6 +65,18 @@ export function ContactsPanel({ customerId, onChange }: Props) {
     mutationFn: async ({ contactId, value }: { contactId: string; value: boolean }) =>
       (await api.patch(`/customers/${customerId}/contacts/${contactId}/tracking-link`, {
         receivesTrackingLink: value,
+      })).data,
+    onSuccess: () => { q.refetch(); onChange?.(); },
+  });
+
+  // Operational mail is a separate consent from the tracking link: a contact
+  // may want one and not the other, so this is its own control and its own
+  // column. It rides the general contact PATCH rather than a second dedicated
+  // endpoint.
+  const toggleOperational = useMutation({
+    mutationFn: async ({ contactId, value }: { contactId: string; value: boolean }) =>
+      (await api.patch(`/customers/${customerId}/contacts/${contactId}`, {
+        receivesOperationalUpdates: value,
       })).data,
     onSuccess: () => { q.refetch(); onChange?.(); },
   });
@@ -123,6 +136,11 @@ export function ContactsPanel({ customerId, onChange }: Props) {
                         {roleBadge.label}
                       </span>
                     )}
+                    {c.receivesOperationalUpdates && (
+                      <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[10px] rounded bg-[#E2EAF2] text-[#15365A]">
+                        <Send className="w-2.5 h-2.5" strokeWidth={2} /> Load updates
+                      </span>
+                    )}
                     {c.receivesTrackingLink && (
                       <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[10px] rounded bg-[#FAEEDA] text-[#854F0B]">
                         <Zap className="w-2.5 h-2.5" strokeWidth={2} /> Tracking
@@ -161,6 +179,21 @@ export function ContactsPanel({ customerId, onChange }: Props) {
                   title={c.receivesTrackingLink ? "Remove tracking tag" : "Tag for tracking link emails"}
                 >
                   {c.receivesTrackingLink ? "★ Tracking on" : "☆ Tag for tracking"}
+                </button>
+                <button
+                  onClick={() => toggleOperational.mutate({ contactId: c.id, value: !c.receivesOperationalUpdates })}
+                  className={`px-2 py-1 text-[10px] rounded transition ${
+                    c.receivesOperationalUpdates
+                      ? "bg-[#E2EAF2] text-[#15365A] border border-[#355E8A]/40"
+                      : "bg-white text-gray-500 border border-gray-200 hover:border-gray-300"
+                  }`}
+                  title={
+                    c.receivesOperationalUpdates
+                      ? "Stop sending pickup, transit, delivery and delay emails to this contact"
+                      : "Send pickup, transit, delivery and delay emails to this contact"
+                  }
+                >
+                  {c.receivesOperationalUpdates ? "● Load updates on" : "○ Send load updates"}
                 </button>
                 <button
                   onClick={() => toggleDnc.mutate({ contactId: c.id, value: !c.doNotContact })}
@@ -207,7 +240,9 @@ export function ContactsPanel({ customerId, onChange }: Props) {
 
       <div className="p-3 text-[11px] text-blue-700 bg-blue-50 border border-blue-100 rounded-lg">
         <strong>Tracking tag:</strong> contacts tagged &ldquo;Tracking&rdquo; automatically receive shipper tracking
-        links when a load for this customer is dispatched.
+        links when a load for this customer is dispatched. <strong>Load updates</strong> is a
+        separate consent: pickup, transit, delivery and delay emails. A contact gets only
+        what is ticked — neither tag implies the other, and being Primary sends nothing.
       </div>
     </div>
   );
@@ -224,6 +259,7 @@ function AddContactForm({
     isPrimary: false,
     isBilling: false,
     receivesTrackingLink: false,
+    receivesOperationalUpdates: false,
     doNotContact: false,
     salesRole: "" as ContactSalesRole | "",
     introducedVia: "",
@@ -239,6 +275,7 @@ function AddContactForm({
         isPrimary: form.isPrimary,
         isBilling: form.isBilling,
         receivesTrackingLink: form.receivesTrackingLink,
+        receivesOperationalUpdates: form.receivesOperationalUpdates,
         doNotContact: form.doNotContact,
         salesRole: form.salesRole || null,
         introducedVia: form.introducedVia || null,
@@ -282,6 +319,7 @@ function AddContactForm({
         <label className="flex items-center gap-1"><input type="checkbox" checked={form.isPrimary} onChange={(e) => setForm({ ...form, isPrimary: e.target.checked })} /> Primary</label>
         <label className="flex items-center gap-1"><input type="checkbox" checked={form.isBilling} onChange={(e) => setForm({ ...form, isBilling: e.target.checked })} /> Billing</label>
         <label className="flex items-center gap-1"><input type="checkbox" checked={form.receivesTrackingLink} onChange={(e) => setForm({ ...form, receivesTrackingLink: e.target.checked })} /> Tracking link</label>
+        <label className="flex items-center gap-1"><input type="checkbox" checked={form.receivesOperationalUpdates} onChange={(e) => setForm({ ...form, receivesOperationalUpdates: e.target.checked })} /> Load updates</label>
         <label className="flex items-center gap-1 text-red-600"><input type="checkbox" checked={form.doNotContact} onChange={(e) => setForm({ ...form, doNotContact: e.target.checked })} /> Do not contact</label>
       </div>
 

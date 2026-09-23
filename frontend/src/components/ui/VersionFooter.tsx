@@ -18549,7 +18549,14 @@
 // and z.object() strips unknown keys, so a field in one copy and not the other
 // is dropped in silence: no error, no 400, the toggle just saves nothing. That
 // is the class that would have made C2b's control inert.
-export const SRL_VERSION = "3.8.bhd";
+// v3.8.bhe - C2b: the AE can see and set the operational consent. ContactsPanel
+// is the single component both the CRM tab and the Lead Hunter tab render, so
+// one control covers the two-surface check; there is no shipper-side contact
+// editor (verified: no CustomerContact write anywhere under the shipper portal).
+// The label names what it sends - "pickup, transit, delivery and delay emails" -
+// rather than saying only that it is on, and the footer states plainly that
+// neither tag implies the other and that being Primary sends nothing.
+export const SRL_VERSION = "3.8.bhe";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
