@@ -624,8 +624,19 @@ procedure for proving a gate actually fires.
 
 ## §18 LEAD HUNTER STANDING RULES
 
-→ `docs/claude/outreach.md`. Audit-first, atomic commits, **§18.3 read the brand skill from disk every
-time**, Apollo CSV literals, the §18.7 vertical gate, §18.8 honest framing and the §18.9 AI-tell audit.
+Moved → `docs/claude/outreach.md`. Every subsection below, titled as it read before the move. **§18.3 and
+§18.9 bind more than outreach** — read the brand skill from disk at the moment of any claim, and run the
+AI-tell audit, on any SRL-facing copy including manually drafted email.
+
+- **§18.1 Audit-first** · `docs/claude/outreach.md`
+- **§18.2 Atomic commits per bug** · `docs/claude/outreach.md`
+- **§18.3 Brand skill at moment-of-claim** · `docs/claude/outreach.md`
+- **§18.4 Apollo CSV columns are literal** · `docs/claude/outreach.md`
+- **§18.5 Version verification against §13.3** · `docs/claude/outreach.md`
+- **§18.6 Ship-default on mechanical halts** · `docs/claude/outreach.md`
+- **§18.7 Cold-outreach data flow is import-time validated** · `docs/claude/outreach.md`
+- **§18.8 Honest-framing rule** · `docs/claude/outreach.md`
+- **§18.9 — Outreach copy AI-tell audit (mandatory pre-send)** · `docs/claude/outreach.md`
 
 ---
 
@@ -1148,8 +1159,21 @@ When new patterns surface, ship them as a separate methodology meta-commit (no v
 
 ## §20 PAGE AUDIT STANDARD (binding for public marketing surfaces)
 
-The audit lenses, the workflow, the per-page log and the Sunday-onward design foundation →
-`docs/claude/brand-and-claims.md`.
+Moved → `docs/claude/brand-and-claims.md`. Every subsection below, titled as it read before the move.
+
+- **§20.1 — Scope** · `docs/claude/brand-and-claims.md`
+- **§20.2 — Workflow (mandatory)** · `docs/claude/brand-and-claims.md`
+- **§20.3 — The audit lenses** · `docs/claude/brand-and-claims.md`
+- **§20.4 — Graphics audit** · `docs/claude/brand-and-claims.md`
+- **§20.5 — Pre-commit gates (mandatory checklist)** · `docs/claude/brand-and-claims.md`
+- **§20.6 — Page-level audit log (where each page was last audited)** · `docs/claude/brand-and-claims.md`
+- **§20.7 — Cross-page redundancy registry (seed entries from this audit arc)** · `docs/claude/brand-and-claims.md`
+- **§20.8 — Sunday-onward foundation (2026-05-17 → 2026-05-21 arc, canonical for web design + content writing going forward)** · `docs/claude/brand-and-claims.md`
+- **§20.8.1 — Proven canonical patterns (validated across this arc)** · `docs/claude/brand-and-claims.md`
+- **§20.8.2 — Canonical UI components (banked as reusable patterns)** · `docs/claude/brand-and-claims.md`
+- **§20.8.3 — Methodology banking (§19 sub-pattern fires validated)** · `docs/claude/brand-and-claims.md`
+- **§20.8.4 — Binding effect** · `docs/claude/brand-and-claims.md`
+- **§20.8.5 — Marco Polo chatbot governed by the disclosure ceiling (added 2026-05-25, v3.8.akx)** · `docs/claude/brand-and-claims.md`
 
 ---
 
