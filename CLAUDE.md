@@ -82,43 +82,11 @@ Also: `TONU`, `CANCELLED`, `PICKED_UP` (legacy alias).
 
 ### Tender accept → status flip: BOOKED vs DISPATCHED is intentional (Sprint 39 P3 decision)
 
-Three accept paths exist; **DIRECT path produces `BOOKED`, both bulk paths produce `DISPATCHED`.** This divergence is deliberate, not a bug. Documented here so future sprints don't try to "fix" it without considering the operational reasoning + analytics dependency.
+→ `docs/claude/tender-and-dispatch.md`. The three accept paths and why direct books while bulk
+dispatches; the `dispatchedAt` analytics dependency that makes it load-bearing; and the tracking-link
+fan-out rule — **the customer is told at the SIGNATURE, on every path.**
 
-| Path | Code site | Status flip | `dispatchedAt` |
-|---|---|---|---|
-| Direct tender accept (carrier accepts in portal) | `tenderController.acceptTender` | **BOOKED** | not set |
-| Direct tender accept-on-behalf (AE override) | `tenderController.acceptTenderOnBehalf` | **BOOKED** | not set |
-| Waterfall accept (auto-pilot scoring engine) | `waterfallEngineService.acceptPosition` | DISPATCHED | set |
-| Loadboard bid accept (carrier-bid → AE accepts) | `routes/loadBids.ts` accept handler | DISPATCHED | set |
-
-**Operational philosophy:**
-- **Direct path → BOOKED:** AE-curated path. Broker manually picked the carrier and intends a separate "send dispatch order" step (rate confirm, BOL, carrier readiness verification). The intermediate BOOKED state is a load-bearing checkpoint where AE can review before committing dispatch. Advance to DISPATCHED is explicit via the "Advance status" button.
-- **Bulk paths → DISPATCHED:** Auto-pilot. Waterfall scoring + loadboard bidding are designed for hands-off dispatch where the next operational moment is not a broker decision. Accept = dispatch. Skipping BOOKED matches that semantic.
-
-**Analytics dependency:** `routes/waterfalls.ts:39, 83, 110` queries `dispatchedAt` for "loads dispatched today / last 7 days" dashboards. Aligning all three paths to BOOKED (P1) would silently exclude bulk dispatches from those queries until an explicit advance fires — a real product break, not a theoretical concern.
-
-**Sprint 39 alternatives considered:** P1 (all → BOOKED, breaks analytics + 2-of-3 surfaces touched), P2 (all → DISPATCHED, removes broker checkpoint on direct path), P3 (document divergence, zero code change). Audit-first surfaced the third path (loadbid) and the analytics dependency that flipped the recommendation away from P1. P3 chosen.
-
-**Tracking-link fan-out timing — the customer is told at the SIGNATURE, on every path. Settled 2026-09-01 (v3.8 commit 12c); supersedes the Sprint 39 α resolution and the 11e asymmetry.**
-
-**Sprint 39 α (retired):** `sendTrackingLinkToCrmContacts` fired at the accept moment on every path. The reasoning was to tie the fan-out to the *event* that means committed rather than to a later *state* — and that reasoning still holds. What changed is which event that is. Sprint 39 chose accept because it was the latest signal available; RC_SENT and CONFIRMED did not exist.
-
-**Commit 11e's asymmetry (also retired, after one commit):** direct paths moved to CONFIRMED while the auto-dispatch paths stayed at accept. That was correct at the time and for a specific reason — the auto paths could not reach CONFIRMED, because **the waterfall issued no rate confirmation at all and the loadboard-bid path drafted one and stopped.** No signing link reached those carriers, so a signature was not late, it was impossible. Moving the announcement alone would have stranded every auto-dispatched customer.
-
-**Current rule, uniform:** every accept path issues the rate confirmation, and the customer is told when the carrier signs.
-
-| Path | Issues the RC at accept | Customer told at |
-|---|---|---|
-| Direct tender accept (`tenderController.acceptTender`) | auto-RC drafted; AE sends | CONFIRMED |
-| Load-and-tender drawer (`withTenderController`) | auto-RC drafted; AE sends | CONFIRMED |
-| Waterfall auto-pilot (`waterfallEngineService.acceptPosition`) | **drafted AND issued** | CONFIRMED |
-| Loadboard bid accept (`routes/loadBids.ts`) | **drafted AND issued** | CONFIRMED |
-
-**Where the signature is obtained differs, and only that.** A carrier who accepted in their own session can be shown the signing step inline. A loadboard bid is accepted by an **AE**, often hours after the bid was placed, so there is no carrier session to show anything in — the emailed link is the whole mechanism there, which is why *issuing* rather than *drafting* is the load-bearing change on that path.
-
-**A carrier who never signs is not a stalled load.** The tender sits at RC_SENT and Needs Attention chases it on `RC_SIGN_SLA_HOURS`, exactly as on the direct path. That is a visible, chaseable state rather than a load that looks finished and is not.
-
-**The fan-out is idempotent** on `Load.trackingLinkSent` (11e). `Load.trackingLinkAutoSend` still governs whether it happens at all.
+---
 
 ### AE Console modules
 
@@ -1322,44 +1290,6 @@ for the scheme being true of every load rather than most of them.
 
 ---
 
-Preserved from the pre-consolidation CLAUDE.md. These are patterns and roadmap items that didn't fit cleanly into §1–§18 but remain valid tracking material. Time-bound metrics have been stripped (e.g. "currently 21 refs", "Plan for Q2", "Install when doing daily SRL sessions").
-
-### A.1 State Machines for Load & Carrier Lifecycle (claw-code pattern)
-
-- Every entity with a lifecycle (Load, Carrier, Invoice, Sequence) has defined states and valid transitions.
-- **Load:** `DRAFT → POSTED → TENDERED → BOOKED → DISPATCHED → AT_PICKUP → LOADED → IN_TRANSIT → AT_DELIVERY → DELIVERED → COMPLETED`
-- **Carrier:** `PROSPECT → CONTACTED → INTERESTED → REGISTERED → PENDING → APPROVED` (or `REJECTED`)
-- **Invoice:** `DRAFT → SUBMITTED → SENT → UNDER_REVIEW → APPROVED → FUNDED → PAID`
-- **Sequence:** `ACTIVE → PAUSED → COMPLETED → STOPPED`
-- Invalid transitions should be rejected (e.g., can't go from POSTED directly to DELIVERED).
-- State changes should be observable — log every transition with timestamp and actor.
-
-### A.2 Lane-Based Development (claw-codes pattern)
-
-- For features touching multiple systems (e.g., carrier vetting has FMCSA, OFAC, identity, docs, scoring), split into independent lanes.
-- Each lane has its own scope, can be built/tested/merged independently.
-- Track lane status in commit messages: `[Lane 3/5] OFAC screening integration`.
-- Lanes reduce merge conflicts and enable parallel work across sessions.
-- Document active lanes in the relevant wiki page's "Open Threads" section.
-
-### A.3 Event-Based State Transitions (claw-code roadmap pattern)
-
-- State changes on Load, Carrier, Invoice, Sequence should emit structured events, not just update a DB field.
-- Log every transition: `{ entity, id, from, to, actor, timestamp, metadata }` in `SystemLog`.
-- Enables: audit trail, webhook triggers, external monitoring, undo capability.
-- Example: `Load SRL-121483: POSTED → BOOKED by userId=xyz at 2026-04-08T10:30:00Z`.
-
-### A.4 Knowledge Graph Awareness (Graphify pattern)
-
-- The wiki tracks "god nodes" — concepts referenced by 10+ pages.
-- Surprising connections between topics should be documented in `outputs/` when discovered.
-- Every factual claim carries `EXTRACTED` / `INFERRED` / `AMBIGUOUS` confidence tags (already implemented in KB v2).
-
-### A.5 Future Patterns (documented, not yet implemented)
-
-- **Hook system (claude-brain):** PreToolUse / PostToolUse interceptors for permission gates and compliance checks.
-- **Cost tracker modularization (src-repo):** split token counting, cost calculation, and analytics into separate modules.
-- **Feature flags:** currently using env vars. Consider build-time elimination when/if migrating to Bun.
-- **Centralized command registry (Hermes):** single registry auto-generates CLI help, Slack menus, API docs. Plan when multi-platform.
-- **Print-mode automation (Hermes):** one-shot CLI mode for CI/testing without trust dialogs.
-- **MemPalace conversation persistence:** local AI memory system (ChromaDB) that stores every session verbatim and makes it searchable. Auto-save hooks fire every 15 messages. Command: `pip install mempalace && mempalace init`.
+**Appendix A** — load/carrier state machines (A.1, restating the §2 pipeline above) and the
+"documented, not yet implemented" roadmap patterns (A.2–A.5) →
+`docs/claude/archive/roadmap-patterns.md`.
