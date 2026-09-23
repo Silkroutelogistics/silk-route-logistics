@@ -1,6 +1,7 @@
 "use client";
 
 import { money, pct, perMile, customerBilled, carrierPay, margin, marginPct } from "@/lib/rateDisplay";
+import { formatStopDate, formatStopWindow } from "@/lib/stopDate";
 
 export function DetailsTab({ load }: { load: any }) {
   // 6.5 — all three may be unknown, and that is not the same as zero.
@@ -29,16 +30,16 @@ export function DetailsTab({ load }: { load: any }) {
         <Field label="Facility" value={load.shipperFacility ?? load.originCompany} />
         <Field label="Address"  value={`${load.originAddress ?? ""}, ${load.originCity}, ${load.originState} ${load.originZip ?? ""}`} />
         <Field label="Contact"  value={load.originContactName} />
-        <Field label="Pickup"   value={fmtDate(load.pickupDate)} />
-        <Field label="Window"   value={`${load.pickupTimeStart ?? "—"} – ${load.pickupTimeEnd ?? "—"}`} />
+        <Field label="Pickup"   value={formatStopDate(load.pickupDate)} />
+        <Field label="Window"   value={formatStopWindow(load.pickupTimeStart, load.pickupTimeEnd)} />
       </Section>
 
       <Section title="Destination">
         <Field label="Facility" value={load.consigneeFacility ?? load.destCompany} />
         <Field label="Address"  value={`${load.destAddress ?? ""}, ${load.destCity}, ${load.destState} ${load.destZip ?? ""}`} />
         <Field label="Contact"  value={load.destContactName} />
-        <Field label="Delivery" value={fmtDate(load.deliveryDate)} />
-        <Field label="Window"   value={`${load.deliveryTimeStart ?? "—"} – ${load.deliveryTimeEnd ?? "—"}`} />
+        <Field label="Delivery" value={formatStopDate(load.deliveryDate)} />
+        <Field label="Window"   value={formatStopWindow(load.deliveryTimeStart, load.deliveryTimeEnd)} />
       </Section>
 
       <Section title="Pricing">
@@ -84,9 +85,3 @@ function Field({ label, value, tone }: { label: string; value: any; tone?: "gree
   );
 }
 
-function fmtDate(d: any) {
-  if (!d) return "—";
-  const date = new Date(d);
-  if (isNaN(date.getTime())) return "—";
-  return date.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
-}
