@@ -94,6 +94,75 @@ function readFile(file: string): string {
   return fs.readFileSync(file, "utf8");
 }
 
+/**
+ * Pass 0 — corpus integrity.
+ *
+ * Every pass below reports what it did NOT find, and that conclusion is worth
+ * exactly as much as the corpus it read. A source file can leave the corpus
+ * without anyone noticing: ripgrep OMITS a file containing a NUL byte and
+ * prints no warning at all, and `grep -rn` degrades to "Binary file X matches",
+ * which keeps the filename and loses the line number a census parses.
+ *
+ * `backend/src/services/documentChainSelftest.ts` sat in that state while
+ * holding the only production hard-delete of a carrier_profiles row — the exact
+ * line a blast-radius audit exists to find (§13.3 Item 291.14).
+ *
+ * NOTE THE MECHANISM, because Item 291.14 records it wrongly. That file was
+ * valid UTF-8 from end to end; a single literal NUL byte inside a string
+ * literal was the whole cause. Its prescribed remedy — "re-encode to UTF-8" —
+ * would have been a no-op. So this pass checks for INVISIBILITY TO THE SEARCH
+ * TOOLS, not for encoding. Encoding is one way in; it is not the only one.
+ *
+ * Scope is the code the later passes actually walk. A NUL in a doc is a
+ * different (smaller) problem and is deliberately out of scope here.
+ */
+export function corpusInvisibilityReason(buf: Buffer): string | null {
+  const nul = buf.indexOf(0);
+  if (nul >= 0) {
+    return `contains a NUL byte at offset ${nul} — ripgrep omits this file silently, and grep -rn reports "Binary file ... matches" without a line number`;
+  }
+  if (buf.length > 1 && ((buf[0] === 0xff && buf[1] === 0xfe) || (buf[0] === 0xfe && buf[1] === 0xff))) {
+    return "starts with a UTF-16 BOM — the search tools do not read it as text";
+  }
+  if (Buffer.compare(Buffer.from(buf.toString("utf8"), "utf8"), buf) !== 0) {
+    return "is not valid UTF-8 — bytes are lost or replaced when it is read as text";
+  }
+  return null;
+}
+
+const CORPUS_ROOTS = ["backend/src", "backend/scripts", "backend/__tests__", "frontend/src", "shared", "e2e"];
+const CORPUS_EXTS = [".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs"];
+
+function checkCorpusIntegrity(): void {
+  const bad: { file: string; reason: string }[] = [];
+  let scanned = 0;
+  for (const root of CORPUS_ROOTS) {
+    for (const f of walkFiles(path.join(REPO_ROOT, root), CORPUS_EXTS)) {
+      scanned++;
+      const reason = corpusInvisibilityReason(fs.readFileSync(f));
+      if (reason) bad.push({ file: relPath(f), reason });
+    }
+  }
+
+  // Vacuity tripwire. A walker that quietly stopped matching would report a
+  // clean corpus — which is precisely the failure this pass exists to catch,
+  // wearing the costume of a pass (§19 Sub-pattern 16).
+  if (scanned < 200) {
+    console.error(`[audit] Pass 0 FAILED — only ${scanned} source files scanned. The walker is broken, not the tree.`);
+    process.exit(1);
+  }
+
+  if (bad.length > 0) {
+    console.error(`[audit] Pass 0 FAILED — ${bad.length} source file(s) are invisible to the tools every later pass depends on:`);
+    for (const b of bad) console.error(`  ${b.file}\n      ${b.reason}`);
+    console.error("  Remedy: replace the raw byte with its source escape — a literal NUL becomes \\x00.");
+    console.error("  The compiled value is unchanged; the file simply becomes searchable again.");
+    process.exit(1);
+  }
+
+  console.error(`[audit] Pass 0 — corpus integrity: ${scanned} source files, all searchable.`);
+}
+
 function relPath(file: string): string {
   return path.relative(REPO_ROOT, file).replace(/\\/g, "/");
 }
@@ -623,6 +692,11 @@ function buildReport(
 // ─── Main ──────────────────────────────────────────────────────────────
 
 function main() {
+  // Before anything reports an absence, establish that it could have seen a
+  // presence. A census over a corpus that silently shrank proves less than it
+  // says, and says nothing about having shrunk.
+  checkCorpusIntegrity();
+
   console.error("[audit] Walking backend routes...");
   const endpoints = extractEndpoints();
   console.error(`[audit] Found ${endpoints.length} mutating endpoints (POST/PUT/PATCH/DELETE).`);
@@ -744,7 +818,19 @@ function selfTest(): void {
   const verified = classifyEndpoint({ verb: "POST", path: "/:id/verify", file: "backend/src/routes/carriers.ts", line: 1 }, calls);
   if (verified.confidence !== "EXACT") fail("POST /:id/verify with an api.post caller graded " + verified.confidence);
 
-  console.log("self-test passed — bare /:id is never EXACT and needs its mount; literals still grade EXACT; POST is scanned on both sides");
+  // (3) Pass 0's detector fires on the real cause and stays quiet on clean
+  // text. The NUL case is the one that mattered: the file it was written for
+  // was valid UTF-8, so an encoding-only check would have passed it.
+  const clean = Buffer.from('const corruptedPdf = () => Buffer.from("%PDF-1.4\\n\\x00\\x01\\x02 garbage");', "utf8");
+  if (corpusInvisibilityReason(clean) !== null) fail("escaped source flagged as invisible: " + corpusInvisibilityReason(clean));
+  const withNul = Buffer.concat([Buffer.from("const a = 1;\nconst b = \"", "utf8"), Buffer.from([0x00]), Buffer.from("\";\n", "utf8")]);
+  const nulReason = corpusInvisibilityReason(withNul);
+  if (nulReason === null) fail("a valid-UTF-8 file carrying a literal NUL was not flagged — the Item 291.14 case would reopen");
+  if (!nulReason.includes("NUL byte at offset")) fail("NUL finding does not name the offset: " + nulReason);
+  if (corpusInvisibilityReason(Buffer.from([0xff, 0xfe, 0x41, 0x00])) === null) fail("UTF-16LE BOM not flagged");
+  if (corpusInvisibilityReason(Buffer.from([0x41, 0xc3, 0x28])) === null) fail("invalid UTF-8 not flagged");
+
+  console.log("self-test passed — bare /:id is never EXACT and needs its mount; literals still grade EXACT; POST is scanned on both sides; Pass 0 flags a NUL in otherwise-valid UTF-8");
 }
 
 if (process.argv.includes("--self-test")) selfTest();
