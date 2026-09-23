@@ -2950,6 +2950,13 @@ model CustomerContact {
   isBilling            Boolean @default(false) @map("is_billing")
   role                 String? @db.VarChar(50) // legacy free-text role — unused in current UI
 
+  // Operational consent (customer-mail-consent arc, R1). Governs pickup /
+  // transit / delivery / milestone / delay mail and NOTHING else. Deliberately
+  // separate from receivesTrackingLink: turning a tracking link off must not
+  // silence operational mail, and being the primary CONTACT is not consent to
+  // be MAILED. Default false, backfilled false — an AE opts a contact in.
+  receivesOperationalUpdates Boolean @default(false) @map("receives_operational_updates")
+
   // Sales-pipeline fields (v3.6.b)
   salesRole     ContactSalesRole? @map("sales_role")
   introducedVia String?           @map("introduced_via") @db.VarChar(120)
@@ -2957,6 +2964,7 @@ model CustomerContact {
 
   @@index([customerId])
   @@index([receivesTrackingLink])
+  @@index([receivesOperationalUpdates])
   @@index([doNotContact])
   @@map("customer_contacts")
 }

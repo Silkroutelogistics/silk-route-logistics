@@ -18528,7 +18528,13 @@
 // this morning may have an unsigned one. The `via` vocabulary moved to
 // lib/acceptanceVia.ts so this row and the load-detail panel (bgv) cannot come
 // to disagree about what TENDER_ACCEPT means.
-export const SRL_VERSION = "3.8.bha";
+// v3.8.bhb - C1a: customer_contacts.receivesOperationalUpdates. Additive, NOT
+// NULL DEFAULT false, so every existing row backfills false in the same
+// statement and no contact is opted in by accident. Nothing reads it yet -
+// C1b moves the resolver onto it - because a column that changes who gets
+// mailed and the code that reads it are two reviews, and splitting them this
+// way leaves both commits green rather than one of them knowingly red.
+export const SRL_VERSION = "3.8.bhb";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
