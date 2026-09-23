@@ -139,97 +139,10 @@ Served at `/dashboard/*`, `/accounting/*`, `/admin/*` via Next.js app router. Th
 
 ---
 
-### §2.1 Design tokens (primary source: designer handoff at project/colors_and_type.css, confirmed 2026-04-22)
+### §2.1 Design tokens
 
-**CANONICAL — Color (use for all new work)**
-
-Navy scale:
-- `--navy: #0A2540` — primary structural; confirmed canonical 2026-04-22 via designer handoff + pixel verification against `project/screenshots/v29-full.png`. Supersedes prior §2.1 synthesis-error flag.
-- `--navy-900: #061629`
-- `--navy-800: #0A2540` (alias of `--navy`)
-- `--navy-700: #15365A`
-- `--navy-600: #234A73`
-- `--navy-500: #355E8A`
-- `--navy-400: #5B7EA3`
-- `--navy-300: #8AA5C0`
-- `--navy-200: #BECEDE`
-- `--navy-100: #E2EAF2`
-
-Gold scale:
-- `--gold: #C5A572` — primary accent (dividers, section labels, icons, wing). Role documented 2026-04-22 per designer handoff. Existing codebase usage of `#BA7517` as primary gold predates handoff; migration to role-correct usage tracked in future phases, not in v3.7.n.
-- `--gold-dark: #BA7517` — CTA fills, hover emphasis, outbound links
-- `--gold-light: #DAC39C`
-- `--gold-tint: #FAEEDA` — active/selected row, subtle highlight
-
-Cream / surface:
-- `--cream: #FBF7F0` — page background
-- `--cream-2: #F5EEE0` — alt row tint, sunken panels
-- `--cream-3: #EFE6D3`
-- `--white: #FFFFFF` — sparingly, card elevation only
-- `--black: #000000` — never as text
-
-Semantic foreground:
-- `--fg-1: #0A2540` (primary text on cream)
-- `--fg-2: #3A4A5F` (secondary, captions)
-- `--fg-3: #6B7685` (tertiary, muted)
-- `--fg-disabled: #A7AEB8`
-- `--fg-on-navy: #FBF7F0`
-- `--fg-on-navy-2: #C9D2DE`
-
-Semantic background:
-- `--bg-page: #FBF7F0`
-- `--bg-surface: #FFFFFF`
-- `--bg-surface-2: #F5EEE0`
-- `--bg-navy: #0A2540`
-- `--bg-navy-2: #15365A`
-
-Borders + focus:
-- `--border-1: rgba(10,37,64,0.10)`
-- `--border-2: rgba(10,37,64,0.16)`
-- `--border-strong: rgba(10,37,64,0.32)`
-- `--border-on-navy: rgba(251,247,240,0.14)`
-- `--focus-ring: 0 0 0 3px rgba(197,165,114,0.40)`
-
-Status:
-- `--success: #2F7A4F` / `--success-bg: #E6F0E9`
-- `--warning: #B07A1A` / `--warning-bg: #FBEFD4`
-- `--danger: #9B2C2C` / `--danger-bg: #F6E3E3`
-- `--info: #2A5B8B` / `--info-bg: #E2EAF2`
-
-**CANONICAL — Layout / Spatial / Motion**
-
-Spacing (8px grid): 4 / 8 / 12 / 16 / 24 / 32 / 48 / 64 / 96 / 128 px
-
-Layout:
-- container-max: 1280px
-- container-console: 1440px
-- section-pad: 100px
-- section-pad-console: 56px
-
-Radii: 2 / 4 / 8 / 12 / 16 / 9999 px
-
-Shadows (navy-tinted): Four-stop scale from `0 1px 2px rgba(10,37,64,0.06)` to `0 24px 48px rgba(10,37,64,0.18)`.
-
-Motion:
-- Ease: `cubic-bezier(0.2, 0.6, 0.2, 1)`
-- Durations: 120 / 180 / 280 / 480 ms
-
-**LEGACY (live in codebase, retained as-is)**
-
-- `#0D1B2A` — themes.css light-default navy. Currently rendering in production. Superseded conceptually by `#0A2540` for new work. Not migrated in v3.7.n — code migration tracked separately when themes.css reconciliation is scheduled.
-- `#854F0B` — dark gold used by `IconTabs` and `ContactsPanel`. Not in designer canonical set. Retained for existing surfaces. Do not introduce to new work; use `--gold-dark` (`#BA7517`) for emphasis or `--gold` (`#C5A572`) for accents per designer spec.
-- `#0F1117`, `#1a1a2e`, `#0A1220` — AE Console and dark-mode navy surfaces. Designer handoff does not enumerate a dark-mode variant; these values retained as-is.
-- `#faf9f7` — portal canvas. Superseded conceptually by `#FBF7F0` (`--cream`). Not migrated in v3.7.n.
-
-**SUPERSEDED (prior synthesis errors — do not introduce)**
-
-- `#F5EFE1` — prior §2.1 flagged this as synthesis error; flag retained. Nearest designer value is `--cream-2 #F5EEE0`. If this hex appears in code review, correct to `#F5EEE0`.
-- Prior `#0A2540` synthesis-error flag removed — hex is now CANONICAL per designer handoff (above). Any future suggestion that `#0A2540` is incorrect should be treated as regression — verify against `project/colors_and_type.css` before changing.
-
-**DEFERRED (not reconciled in v3.7.n)**
-
-- **Typography** — designer handoff declares Playfair Display (display), DM Sans (body), Georgia (tagline-only: "Where Trust Travels."), and SF Mono (mono). Current §2.1 documented Georgia as primary for legal PDFs (BOL v2.8, QP Agreement v2, rate confirmation). Role reassignment deferred — will be reconciled in a dedicated commit, likely folded into v3.7.o when BOL PDF font embedding work begins (v3.7.o requires `*.ttf` assets from `project/fonts/` to be checked into the repo and loaded by PDFKit).
-- ~~**Type scale, line-height, letter-spacing tokens** — deferred alongside typography reconciliation.~~ **SUPERSEDED 2026-08-31.** The UI type scale is ratified and lives in the brand skill (`references/tokens.md` §8 "UI type scale") — 11px labels / 12px dense cells / 13px secondary / 14px body / 16px lead, with a hard floor of 11px on every surface. Screen only; the display scale and the 9.5pt PDF/legal density are unchanged, so line-height and letter-spacing remain open. The deferral had a measurable cost: with nothing to conform to, the carrier drawer alone ran 9/10/11/12/14/15px — see `docs/audits/drawer-conformance-audit.md` §7.
+Canonical / LEGACY / SUPERSEDED / DEFERRED colour and layout tokens → `docs/claude/design-tokens.md`.
+**The `srl-brand-design` skill is canonical** — read `references/tokens.md` from disk per §18.3.
 
 ---
 
@@ -794,132 +707,22 @@ These are not defects in the codebase. Each one produced a **plausible-looking f
 
 ## §16 FIRST-CARRIER ONBOARDING BLOCKERS (pre-launch, must resolve before first carrier signs)
 
-1. **Michigan commercial attorney review of the Broker-Carrier Agreement** (Foster Swift / Dirk Beckwith). The 11-section body exists in-house at `backend/src/data/agreements.ts` (`BCA_VERSION 2026-06-27-v1`) and carriers sign it today; it has not been through counsel. Swap the reviewed body into that file and bump the version — no code change. The earlier framing of this blocker as "create a standalone `.docx`" is retired: the body exists and the PDF is generated from it.
-2. **Michigan commercial attorney review of the Caravan Quick Pay Agreement** ($400–$800 budget; send with #1 as one counsel pass). The 10-section body exists in-house (see `QP_VERSION` in `backend/src/data/agreements.ts` for the version to send; do not quote it from memory) and is what a carrier signs today. **Send the always-billable TONU with it:** the 2026-08-15 ratification bills the customer $200 on any cancellation with no notice test, which is a liquidated charge and should be reviewed as one before it is ever billed. See §5.
-3. **DAT load board registration** activation
-4. **Carrier onboarding welcome email final verification** before first real carrier touches it (v3 language confirmed at `routes/carriers.ts:614` in v3.7.h; re-verify before go-live)
-5. **`compliance@silkroutelogistics.ai` alias monitoring cadence** confirmed (published on CarrierFraudBanner since v3.7.e)
-6. **Insurance verification** — contingent broker coverage via PFA Protects + LOGISTIQ Broker Shield. Confirm policies active, not just in application state.
-
-7. ~~**Agreement-termination policy — WHO and WITH WHAT NOTICE.**~~ **RATIFIED 2026-08-21, moved to §14.** Admin-only (ADMIN + CEO), effective immediately, carrier notified with the reason. Whether the *paper* should promise notice before termination is counsel's domain and rides with #1 — it is not a platform blocker, because the platform can add a notice window later without changing what it already supports. The mechanism, the constraint that it never deletes, and the reason immediacy is defensible now are recorded in §14 as ratified policy rather than held here as an open question.
+→ `docs/claude/launch-blockers.md`. Counsel review of the Broker-Carrier and Caravan Quick Pay
+agreements, DAT activation, insurance verification, and the compliance@ monitoring cadence.
 
 ---
 
 ## §17 SECURITY GATE VERIFICATION METHODOLOGY
 
-Documents the smoke-verification pattern used for v3.8.e.1 (SHIPPER approval gate) so future security gates can be verified the same way.
-
-### When to apply
-
-Any sprint that adds or modifies role-based access controls, approval gates, status-based authorization, or session-issuance logic. Prevents shipping security features without empirical verification of the gate firing.
-
-### Permanent test fixtures
-
-Two SHIPPER users in production DB serve as permanent test fixtures:
-
-- **`shipper@acmemfg.com`** (Robert Mitchell / Acme Manufacturing) — kept at `onboardingStatus = PENDING` indefinitely. Use for verifying SHIPPER-gate behavior on PENDING users without disturbing real shipper accounts.
-- **`wasihaider3089@gmail.com`** (Wasi / Haider Logistics) — kept at `APPROVED`. Use for positive-path testing.
-
-Do not flip the Acme fixture to APPROVED. Do not delete it.
-
-### Verification methodology (from v3.8.e.1 smoke)
-
-1. Open incognito browser window (clean session state)
-2. Open DevTools → Network tab → check "Preserve log"
-3. Navigate to login flow
-4. Attempt login as PENDING user (Acme fixture, OR temporarily-flipped real account)
-5. Submit credentials and OTP
-6. Capture status code on the relevant verify-OTP request
-7. Expected: 403 status, user not redirected to dashboard, no session token issued
-8. If using a temporarily-flipped real account: revert via SQL after test
-
-**Important:** "Preserve log" only preserves request entries through navigation/redirect; response bodies may be GC'd. The 403 status alone is the security signal — message body verification is UX, not security.
-
-### Known limitation
-
-Response body inspection on auth-gate failures is unreliable in DevTools because the failure typically triggers a redirect that wipes response data from the network panel. UX message rendering should be verified separately — either via backend logs (Render dashboard) or as part of the proper "application under review" page when that ships in S-3.
+→ `docs/claude/security-gates.md`. When it applies, the two permanent test fixtures, and the smoke
+procedure for proving a gate actually fires.
 
 ---
 
 ## §18 LEAD HUNTER STANDING RULES
 
-These rules apply to every Lead Hunter sprint without re-statement. Codified during the v3.8.v–v3.8.cc Lead Hunter outreach quality fix sprint. §13.3 backlog items that touch Lead Hunter (Apollo importer, prospect schema, outreach generator, sequencer, mass email) must reference this section.
-
-### §18.1 Audit-first
-
-Before any code change in a Lead Hunter sprint: read CLAUDE.md §13.3, `docs/regression-log.md`, and the latest five commits in `git log` to confirm baseline. Report current commit SHA + Phase state before touching code. Map the call paths that the change will affect (CSV importer → bulkCreateCustomers → Customer model → buildEmail/buildEmailSync → sendMassEmail / startSequence / processDueSequences). Do not begin until the audit is surfaced and the baseline is acknowledged.
-
-### §18.2 Atomic commits per bug
-
-One bug = one commit = one regression-log entry (when applicable). No batched commits. Each commit has its own version letter per §3.1. Halt + smoke test (backend `npx tsc --noEmit` clean + frontend `npx tsc --noEmit` clean) between sub-phases. Wait for sign-off before the next.
-
-### §18.3 Brand skill at moment-of-claim
-
-Before any copy/voice claim, read [`/.claude/skills/srl-brand-design/references/voice.md`](.claude/skills/srl-brand-design/references/voice.md) AND [`tokens.md`](.claude/skills/srl-brand-design/references/tokens.md) from disk. Every time. Do not work from session memory; voice/token rules update independently of code and the file is the source of truth. Apply the three calibration questions before publishing copy: would a 15-yr dispatcher nod or roll their eyes? Could a competitor say this verbatim? Is there a number, lane, regulatory citation, or named tool somewhere?
-
-### §18.4 Apollo CSV columns are literal
-
-Apollo emits exact column headers: `First Name`, `Last Name`, `Company Name`, `Title`, `Email`, `Industry`, `Vertical`. Capitals and spaces matter. Importers MUST read these literals — never `Contact Name`, never `firstName`, never `company_name`. Compose `contactName = First Name + " " + Last Name` so downstream firstName extraction (`fullName.split(/\s+/)[0]`) produces the contact's actual first name, not the company's first token. Reference fixture: `srl_coldchain_2026-05-04.csv` (user downloads).
-
-### §18.5 Version verification against §13.3
-
-When a sprint directive suggests a version tag, verify against §3.1 sequence-continuous and §13.3 backlog before applying. If the suggested letter conflicts (taken by a parallel sprint, behind current HEAD, or skips a letter), allocate the next available letter and note the reassignment in the commit message. Never silently re-letter without surfacing.
-
-### §18.6 Ship-default on mechanical halts
-
-When you halt on a mechanical issue (file not found, permission denied, missing skill mount, version-letter conflict, expected dependency absent), make the obvious call and proceed. Do not surface A/B/C menus for non-strategic decisions. Flag the call in the commit message or audit report so it's reviewable. Reserve halts for §3.4 strategic ambiguity (legal claim correctness, scope boundary, irreversible action).
-
-### §18.7 Cold-outreach data flow is import-time validated
-
-Every `Customer` record created through the Lead Hunter import path MUST have `vertical ∈ {COLDCHAIN, WELLNESS}` before any outreach generation runs. `UNKNOWN` is a valid persisted state but is a **hard block** on the email-generation pipeline. UNKNOWN customers surface in the AE Console **Manual Review queue** (Lead Hunter pipeline view → "Manual Review (N)" filter mode at [`page.tsx`](frontend/src/app/dashboard/lead-hunter/page.tsx)).
-
-The hard block enforces at six call sites:
-
-1. [`buildEmail`](backend/src/email/builder.ts) (DB lookup) — throws on `customer.vertical === "UNKNOWN"`
-2. [`buildEmailSync`](backend/src/email/builder.ts) (in-memory) — throws on `params.vertical === "UNKNOWN"`
-3. `getTemplate` (defense in depth) — throws on Touch 1 + UNKNOWN
-4. [`sendMassEmail`](backend/src/controllers/customerController.ts) — skips with reason in `skippedReasons[]` response field
-5. [`startSequence`](backend/src/services/emailSequenceService.ts) — throws on UNKNOWN, sequence cannot start
-6. `processDueSequences` (cron tick) — holds an active sequence by pushing `nextSendAt` forward 24h, never advances step on UNKNOWN
-
-Adding any new outreach call path requires the same gate. The schema-level enum at [`schema.prisma`](backend/prisma/schema.prisma) (`enum ProspectVertical { COLDCHAIN, WELLNESS, UNKNOWN }`) is the SOT for valid values.
-
-### §18.8 Honest-framing rule
-
-Cold-outreach copy MUST follow voice.md + §4 + §5:
-
-- No fabricated metrics ("98% pickup rate", "8-12% reduction", "X+ shippers"). Pre-revenue means pre-revenue. Use capability claims (regulatory authority, Compass Engine vetting) instead.
-- No marketing softeners ("I'd love the opportunity", "see if we can add value", "would you be open to a brief call", "I'd be happy to").
-- No em-dashes in body copy (commas, colons, sentence breaks instead). Em-dashes acceptable only in list-separator context.
-- No "we track" / "we serve" / "we deliver to X retailers" implied-portfolio language unless the portfolio actually exists. Use industry-knowledge framing: "In refrigerated CPG, the operational signal that matters is..."
-- Compass Engine is a **33-point carrier vetting system** (re-derive this number before quoting it — `backend/__tests__/unit/services/compassCheckCount.test.ts` holds every surface to the code). Never describe as "AI-powered market intelligence" (per voice.md line 25 prohibition).
-- Authority line on every cold-outreach intro: `Michigan-licensed property broker (MC# 1794414, DOT# 4526880, BMC-84 bonded $75K, $100K contingent cargo through Hancock & Associates)`.
-- Sender identity: `Wasi Haider` / `whaider@silkroutelogistics.ai` (never `Wasih`). Single source of truth: `CEO_NAME` + `CEO_EMAIL` exports in [`backend/src/email/builder.ts`](backend/src/email/builder.ts) — startup log line surfaces a regression in production logs immediately.
-- Specific operational ask at close: "send a recent BOL on a tricky lane and I'll come back with a quote and the carrier's full Compass profile" — never "would you be open to a brief call this week?"
-
-### §18.9 — Outreach copy AI-tell audit (mandatory pre-send)
-
-Every SRL outreach email — Lead Hunter generated, manually drafted, or templated — must pass an AI-tell audit before send. The audit applies to body, subject line, and signature. The character "—" (em dash, U+2014) must not appear anywhere in any sent email. Banned constructions:
-
-  1. Em dashes in body, subject, or signature. Replace with periods, commas, colons, or restructure.
-  2. "That's where..." / "That's the..." / "That's what..." sentence openers. Use the actual subject of the sentence.
-  3. Parenthetical asides used as voice texture. Allowed only when genuinely necessary for clarity.
-  4. Symmetric two-clause balanced sentences ("X is Y, and Y is X"-style construction).
-  5. Consultant-speak imports: "step-change", "in under a year", "planning-vs-actuals", "leverage", "synergy", "best-in-class", "world-class", "north star", "unlock value", "comprehensive solution", "AI-powered" (when describing capabilities, not products).
-  6. Marketing softeners: "I'd love the opportunity", "see if we can add value", "would you be open to a brief call", "I would appreciate the opportunity to connect".
-  7. Repeated close patterns within a single batch. No two outreach emails sent within the same week may use the same closing operational ask. Acceptable closes: "Send a recent BOL on [lane] and I'll quote against your incumbent" / "If your next outbound RFQ has a slot open" / "What does your current carrier review cycle look like?" / Other operational asks specific to the recipient's situation.
-
-Adjective/noun lists are NOT banned when they are factual proper-noun enumerations (real product categories, real retailer names from the recipient's actual distribution). The prohibition is on adjective-stacking as a "showing range" device, not on naming actual entities.
-
-Hook structure rule (per voice.md, restated here for outreach scope):
-  - Opening sentence: a company-specific operational signal that proves recipient research. Not credentials.
-  - Authority line (MC#, BMC-84, contingent cargo): one line above signature. Not paragraph one.
-  - Length: 4-5 short paragraphs. Tight beats long.
-  - Compass Engine described correctly (33-point carrier vetting — see §18.8 on re-deriving the count), never "AI-powered market intelligence".
-
-Implementation guidance for Lead Hunter system prompts (touch1ColdChainTemplate, touch1WellnessTemplate, fallback): the system prompt must explicitly enumerate the banned constructions in §18.9 above and instruct the model to self-check before output. The audit is also applied at the test/preview stage — Little Spoon and MERIT preview render must pass §18.9 audit, not just §18.8 honest-framing.
-
-For manual outreach (founder-drafted in Gmail, not Lead Hunter generated): same audit applies. Run it mentally before send. The discipline is the writer's, not the platform's.
+→ `docs/claude/outreach.md`. Audit-first, atomic commits, **§18.3 read the brand skill from disk every
+time**, Apollo CSV literals, the §18.7 vertical gate, §18.8 honest framing and the §18.9 AI-tell audit.
 
 ---
 
