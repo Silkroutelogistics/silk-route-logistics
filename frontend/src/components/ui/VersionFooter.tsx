@@ -18465,7 +18465,17 @@
 // confirmation - the second kept because the columns are deliberately
 // un-backfilled, so testing acceptance alone would have locked every pre-C4a
 // carrier out of their own bill of lading. AE bypass unchanged.
-export const SRL_VERSION = "3.8.bgs";
+// v3.8.bgt - C5a: the AE rate-confirmation detail carries the execution
+// evidence, and the storage key stops reaching the client. The query uses
+// include with no top-level select, so signedUrl - an s3:// key with no reader
+// anywhere - was already being served to a browser; it is stripped, and the
+// Certificate of Electronic Signature is STREAMED by a new AE-only endpoint
+// that resolves the key server-side. Streamed rather than redirected, because
+// a presigned redirect puts the storage URL in the address bar and the history.
+// CARRIER is absent from that route's authorize list and gets a 403: the
+// certificate carries the signer's IP and the content hash, which are SRL's
+// evidence about the carrier rather than the carrier's own copy.
+export const SRL_VERSION = "3.8.bgt";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

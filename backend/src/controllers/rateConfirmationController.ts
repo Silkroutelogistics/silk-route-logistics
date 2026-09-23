@@ -17,6 +17,7 @@ import { resolveLoadStem, withDocumentNumber } from "../lib/documentNumber";
 import { resolveIssuedElection } from "../services/autoRateConfirmationService";
 import { liveElectionForTender } from "../services/quickPayElectionService";
 import { log } from "../lib/logger";
+import { getFileStream } from "../services/storageService";
 import { RC_TERMS_VERSION } from "../lib/agreementVersions";
 import { buildRcCountersign } from "../lib/rcCountersign";
 
@@ -130,7 +131,61 @@ export async function getRateConfirmationById(req: AuthRequest, res: Response) {
   });
 
   if (!rc) { res.status(404).json({ error: "Rate confirmation not found" }); return; }
-  res.json(rc);
+
+  // C5 — THE STORAGE URI NEVER REACHES A CLIENT.
+  //
+  // This query uses `include` with no top-level `select`, so every RC scalar
+  // came back — `signedUrl` among them. That is an s3:// key, and handing one
+  // to a browser leaks the bucket layout and invites a client to try resolving
+  // it. It has no reader anywhere, so nothing loses a field; the certificate is
+  // served by GET /:id/certificate, which resolves the key server-side and
+  // streams the bytes.
+  //
+  // Everything else on the row stays: this endpoint is AE-only by its
+  // authorize list (no CARRIER), so the evidence fields — signerName,
+  // signedAt, signerIp, contentHash, the countersignature — are already
+  // scoped to the audience that should see them.
+  const { signedUrl: _storageKey, ...safe } = rc;
+  res.json(safe);
+}
+
+/**
+ * The Certificate of Electronic Signature, streamed.
+ *
+ * AE-ONLY, and streamed rather than redirected. A presigned redirect would put
+ * the storage URL in the browser's address bar and its history; streaming keeps
+ * the key server-side, which is the same reason `signedUrl` is stripped above.
+ *
+ * 404 rather than 403 on an unsigned RC: there is no certificate to refuse.
+ */
+export async function downloadSignatureCertificate(req: AuthRequest, res: Response) {
+  const rc = await prisma.rateConfirmation.findUnique({
+    where: { id: req.params.id },
+    select: { id: true, rateConNumber: true, signed: true, signedUrl: true },
+  });
+  if (!rc) { res.status(404).json({ error: "Rate confirmation not found" }); return; }
+  if (!rc.signed || !rc.signedUrl) {
+    res.status(404).json({
+      error: "NO_CERTIFICATE",
+      message: "This rate confirmation has not been signed, so no certificate exists yet.",
+    });
+    return;
+  }
+
+  try {
+    const stream = await getFileStream(rc.signedUrl);
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename="${rc.rateConNumber ?? rc.id}-signature-certificate.pdf"`,
+    );
+    stream.pipe(res);
+  } catch (err) {
+    // The key is deliberately NOT echoed: a 502 body naming the bucket path
+    // would undo the reason this endpoint streams in the first place.
+    log.error({ err, rateConfirmationId: rc.id }, "[RC] certificate read failed");
+    res.status(502).json({ error: "Could not read the stored certificate." });
+  }
 }
 
 export async function updateRateConfirmation(req: AuthRequest, res: Response) {
