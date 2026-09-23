@@ -222,6 +222,18 @@ describe("only the production scripts load the production file", () => {
   const namesProductionFile = (src: string) => stripComments(src).includes(".env.production.local");
 
   /**
+   * NAMING is not the only route any more. Item 303 moved the census scripts
+   * onto `_census-credential`, which names the file on their behalf, so a
+   * caller can reach production while naming nothing. `_arc-a2-prod-gate.ts`
+   * did exactly that and the liveness check read it as dead permission.
+   * Reaching production is the question; naming was only ever a proxy for it.
+   */
+  const reachesProduction = (src: string) => {
+    const code = stripComments(src);
+    return code.includes(".env.production.local") || /from\s+["'][./]*_census-credential["']/.test(code);
+  };
+
+  /**
    * A write, per line — and the per-line part is the point.
    *
    * The first version banned `$executeRaw` outright and immediately flagged
@@ -310,6 +322,10 @@ describe("only the production scripts load the production file", () => {
     expect(namesProductionFile("// reads " + NAME + " to compare hosts")).toBe(false);
     expect(namesProductionFile("/* " + NAME + " */")).toBe(false);
     expect(namesProductionFile('dotenv.config({ path: ".env.local" });')).toBe(false);
+    // the helper route: reaches production without naming the file
+    expect(reachesProduction('import { resolveCensusCredential } from "./_census-credential";')).toBe(true);
+    expect(namesProductionFile('import { resolveCensusCredential } from "./_census-credential";')).toBe(false);
+    expect(reachesProduction('// via ./_census-credential')).toBe(false);
     // and the write detector, since every READ_ONLY_TOOL entry rests on it
     expect(writeLines("await prisma.user.deleteMany({})")).toHaveLength(1);
     expect(writeLines("await prisma.user.findMany({})")).toHaveLength(0);
@@ -330,7 +346,7 @@ describe("only the production scripts load the production file", () => {
     for (const [rel, { why }] of Object.entries(CLASSIFIED)) {
       const p = path.join(BACKEND, rel);
       expect(fs.existsSync(p), `${rel} is classified but does not exist`).toBe(true);
-      expect(namesProductionFile(fs.readFileSync(p, "utf8")), `${rel} is classified but no longer names the production file`).toBe(true);
+      expect(reachesProduction(fs.readFileSync(p, "utf8")), `${rel} is classified but no longer reaches production by either route`).toBe(true);
       expect(why.length, `${rel} is classified with no reason`).toBeGreaterThan(10);
     }
   });
