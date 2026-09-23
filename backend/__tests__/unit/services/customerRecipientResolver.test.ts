@@ -34,6 +34,7 @@ function contact(over: Partial<Record<string, unknown>> = {}) {
     email: OPS,
     isPrimary: false,
     receivesTrackingLink: false,
+    receivesOperationalUpdates: false,
     isBilling: false,
     doNotContact: false,
     ...over,
@@ -60,40 +61,57 @@ beforeEach(() => {
   mockPrisma.customer.findUnique.mockResolvedValue(null);
 });
 
-describe("operational — who is eligible", () => {
-  it("an isPrimary contact receives operational mail", async () => {
-    mockPrisma.load.findUnique.mockResolvedValue(load({}, [contact({ isPrimary: true })]));
+describe("operational — who is eligible (R1/R2: consent, not role)", () => {
+  it("a contact carrying receivesOperationalUpdates receives operational mail", async () => {
+    mockPrisma.load.findUnique.mockResolvedValue(
+      load({}, [contact({ receivesOperationalUpdates: true })]),
+    );
     const r = await resolveOperationalRecipients("load-1");
     expect(r.map((x) => x.email)).toEqual([OPS]);
     expect(r[0].source).toBe("contact-operational");
   });
 
-  it("THE BKN CASE — receivesTrackingLink=false still receives operational mail when isPrimary", async () => {
-    // The AE turned the tracking tag off. That must silence tracking links and
-    // nothing else; this contact is still the operations contact.
+  it("THE BKN CASE — an isPrimary contact without the consent receives NOTHING", async () => {
+    // 2026-09-23: ten operational emails reached this address for SRL-121494,
+    // a load whose tracking link had never been sent, because isPrimary alone
+    // was eligibility. Being the primary CONTACT is not consent to be MAILED.
     mockPrisma.load.findUnique.mockResolvedValue(
-      load({}, [contact({ isPrimary: true, receivesTrackingLink: false })]),
-    );
-    expect((await resolveOperationalRecipients("load-1")).map((x) => x.email)).toEqual([OPS]);
-  });
-
-  it("a receivesTrackingLink contact receives operational mail even when not primary", async () => {
-    mockPrisma.load.findUnique.mockResolvedValue(
-      load({}, [contact({ isPrimary: false, receivesTrackingLink: true })]),
-    );
-    expect((await resolveOperationalRecipients("load-1")).map((x) => x.email)).toEqual([OPS]);
-  });
-
-  it("a contact that is neither primary nor tracking receives nothing", async () => {
-    mockPrisma.load.findUnique.mockResolvedValue(
-      load({}, [contact({ isPrimary: false, receivesTrackingLink: false })]),
+      load({}, [contact({ isPrimary: true, receivesOperationalUpdates: false })]),
     );
     expect(await resolveOperationalRecipients("load-1")).toEqual([]);
   });
 
+  it("the tracking tag alone grants no operational mail", async () => {
+    // The two consents are independent in BOTH directions. A contact who wants
+    // a tracking link has not thereby asked for every milestone.
+    mockPrisma.load.findUnique.mockResolvedValue(
+      load({}, [contact({ receivesTrackingLink: true, receivesOperationalUpdates: false })]),
+    );
+    expect(await resolveOperationalRecipients("load-1")).toEqual([]);
+  });
+
+  it("operational consent alone grants no tracking link — the other direction", async () => {
+    mockPrisma.load.findUnique.mockResolvedValue(
+      load({}, [contact({ receivesOperationalUpdates: true, receivesTrackingLink: false })]),
+    );
+    expect(await resolveOperationalRecipients("load-1", { requireTrackingLink: true })).toEqual([]);
+  });
+
+  it("isPrimary is inert — it changes nothing either way", async () => {
+    mockPrisma.load.findUnique.mockResolvedValue(
+      load({}, [contact({ isPrimary: true, receivesOperationalUpdates: true })]),
+    );
+    expect((await resolveOperationalRecipients("load-1")).map((x) => x.email)).toEqual([OPS]);
+    vi.clearAllMocks();
+    mockPrisma.load.findUnique.mockResolvedValue(
+      load({}, [contact({ isPrimary: false, receivesOperationalUpdates: true })]),
+    );
+    expect((await resolveOperationalRecipients("load-1")).map((x) => x.email)).toEqual([OPS]);
+  });
+
   it("a contact with no email address is skipped rather than yielding an empty string", async () => {
     mockPrisma.load.findUnique.mockResolvedValue(
-      load({}, [contact({ isPrimary: true, email: null }), contact({ isPrimary: true, email: "  " })]),
+      load({}, [contact({ receivesOperationalUpdates: true, email: null }), contact({ receivesOperationalUpdates: true, email: "  " })]),
     );
     expect(await resolveOperationalRecipients("load-1")).toEqual([]);
   });
@@ -101,8 +119,8 @@ describe("operational — who is eligible", () => {
   it("deduplicates when two contacts carry the same address in different cases", async () => {
     mockPrisma.load.findUnique.mockResolvedValue(
       load({}, [
-        contact({ isPrimary: true, email: OPS }),
-        contact({ receivesTrackingLink: true, email: OPS.toUpperCase() }),
+        contact({ receivesOperationalUpdates: true, email: OPS }),
+        contact({ receivesOperationalUpdates: true, email: OPS.toUpperCase() }),
       ]),
     );
     expect(await resolveOperationalRecipients("load-1")).toHaveLength(1);
@@ -133,32 +151,24 @@ describe("operational — NEVER falls through to customers.email", () => {
   });
 });
 
-describe("operational — Load.contactEmail is tier 1", () => {
-  it("wins over the CRM contacts when set", async () => {
+describe("operational — Load.contactEmail is NOT a source (R2)", () => {
+  it("is ignored entirely, even when set and even with no eligible contact", async () => {
+    // It is free text on the load carrying no consent flag, so it is an address
+    // nothing on the row can opt out of. 0 of 29 production loads had ever set
+    // it when this tier was removed, so nothing regressed.
     mockPrisma.load.findUnique.mockResolvedValue(
-      load({ contactEmail: "ops@shipper.example" }, [contact({ isPrimary: true })]),
+      load({ contactEmail: "ops@shipper.example" }, []),
+    );
+    expect(await resolveOperationalRecipients("load-1")).toEqual([]);
+  });
+
+  it("does not outrank a consenting contact", async () => {
+    mockPrisma.load.findUnique.mockResolvedValue(
+      load({ contactEmail: "ops@shipper.example" }, [contact({ receivesOperationalUpdates: true })]),
     );
     const r = await resolveOperationalRecipients("load-1");
-    expect(r.map((x) => x.email)).toEqual(["ops@shipper.example"]);
-    expect(r[0].source).toBe("load-contact-email");
-  });
-
-  it("is SKIPPED when a contact row marks that same address do-not-contact", async () => {
-    mockPrisma.load.findUnique.mockResolvedValue(
-      load({ contactEmail: "Ops@Shipper.Example" }, [
-        contact({ email: "ops@shipper.example", doNotContact: true }),
-        contact({ email: OPS, isPrimary: true }),
-      ]),
-    );
-    // Falls to tier 2 rather than honouring an address an AE suppressed.
-    expect((await resolveOperationalRecipients("load-1")).map((x) => x.email)).toEqual([OPS]);
-  });
-
-  it("an empty-string contactEmail is treated as unset", async () => {
-    mockPrisma.load.findUnique.mockResolvedValue(
-      load({ contactEmail: "   " }, [contact({ isPrimary: true })]),
-    );
-    expect((await resolveOperationalRecipients("load-1")).map((x) => x.email)).toEqual([OPS]);
+    expect(r.map((x) => x.email)).toEqual([OPS]);
+    expect(r[0].source).toBe("contact-operational");
   });
 });
 

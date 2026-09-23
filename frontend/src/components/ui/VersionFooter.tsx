@@ -18534,7 +18534,15 @@
 // C1b moves the resolver onto it - because a column that changes who gets
 // mailed and the code that reads it are two reviews, and splitting them this
 // way leaves both commits green rather than one of them knowingly red.
-export const SRL_VERSION = "3.8.bhb";
+// v3.8.bhc - C1b: the operational predicate reads the consent column and
+// nothing else. It was `isPrimary OR receivesTrackingLink`, so the tracking tag
+// an AE reached for governed nothing and no field on the row could stop
+// operational mail. isPrimary is now inert for mail - it marks who to ASK FOR,
+// not who to WRITE TO. The two consents are independent in BOTH directions and
+// a test pins each. Load.contactEmail is retired as an operational source (R2):
+// free text on the load carrying no consent flag is an address nothing on the
+// row can opt out of, measured at 0 of 29 production loads before removal.
+export const SRL_VERSION = "3.8.bhc";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

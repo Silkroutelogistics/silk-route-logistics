@@ -23,17 +23,25 @@
  * naming the load, which is a visible gap an AE can fix. Silence is the correct
  * failure here -- the alternative is guessing, and the guess was wrong.
  *
- * ELIGIBILITY (ratified 2026-09-02):
- *   operational   : doNotContact = false AND (isPrimary OR receivesTrackingLink)
- *   tracking link : the above AND receivesTrackingLink = true
- *   billing       : doNotContact = false AND isBilling
- * receivesTrackingLink means tracking links ONLY -- turning it off must not
- * silence a primary contact's operational mail. Separating the two properly
- * needs a receivesOperationalUpdates column, deferred behind the Item 194 soak.
+ * ELIGIBILITY (R1/R2, ratified 2026-09-23 -- supersedes the 2026-09-02 rule):
+ *   operational   : doNotContact = false AND receivesOperationalUpdates = true
+ *   tracking link : doNotContact = false AND receivesTrackingLink = true
+ *   billing       : doNotContact = false AND isBilling = true
+ *
+ * THREE INDEPENDENT CONSENTS. isPrimary grants no mail of any kind -- it marks
+ * who to ASK FOR, not who to WRITE TO, and conflating the two is what put ten
+ * operational emails into logistics@beekeepersnaturals.com on 2026-09-23, for a
+ * load whose tracking link had never been sent. The old rule was isPrimary OR
+ * receivesTrackingLink, so the tracking tag an AE reached for governed nothing
+ * and no field on the row could stop operational mail.
+ *
+ * OPERATIONAL AND TRACKING NO LONGER IMPLY EACH OTHER IN EITHER DIRECTION. A
+ * contact may receive milestone mail and no tracking link, or a tracking link
+ * and no milestone mail. That is the whole point of two columns.
  *
  * doNotContact is honoured at EVERY tier, including the raw address columns: if
- * Load.contactEmail or a billing column happens to equal an address a contact
- * row marks do-not-contact, it is skipped. An AE who marks an address
+ * a billing column happens to equal an address a contact row marks
+ * do-not-contact, it is skipped. An AE who marks an address
  * do-not-contact must not have it reached through a different column.
  *
  * TIERS CASCADE -- the first tier yielding at least one address wins and lower
@@ -45,7 +53,6 @@ import { prisma } from "../config/database";
 import { log } from "../lib/logger";
 
 export type RecipientSource =
-  | "load-contact-email"
   | "contact-operational"
   | "contact-tracking-link"
   | "contact-billing"
@@ -78,6 +85,7 @@ interface ContactRow {
   email: string | null;
   isPrimary: boolean;
   receivesTrackingLink: boolean;
+  receivesOperationalUpdates: boolean;
   isBilling: boolean;
   doNotContact: boolean;
 }
@@ -88,6 +96,7 @@ const CONTACT_SELECT = {
   email: true,
   isPrimary: true,
   receivesTrackingLink: true,
+  receivesOperationalUpdates: true,
   isBilling: true,
   doNotContact: true,
 } as const;
@@ -120,15 +129,15 @@ function dedupe(list: ResolvedRecipient[]): ResolvedRecipient[] {
 export interface OperationalOptions {
   /**
    * Tracking-link sends only. Restricts to contacts carrying
-   * receivesTrackingLink and skips Load.contactEmail, preserving exactly what
-   * sendTrackingLinkToCrmContacts did before this resolver existed.
+   * receivesTrackingLink, which is a different consent from the operational
+   * one -- see the ELIGIBILITY block above.
    */
   requireTrackingLink?: boolean;
 }
 
 /**
  * Who gets pickup / transit / delivery / POD / ETA / delay / claim mail.
- * Returns [] -- and logs why -- rather than ever reaching customers.email.
+ * Returns [] -- and logs why -- unless a contact carries receivesOperationalUpdates.
  */
 export async function resolveOperationalRecipients(
   loadId: string,
@@ -140,7 +149,6 @@ export async function resolveOperationalRecipients(
       id: true,
       loadNumber: true,
       referenceNumber: true,
-      contactEmail: true,
       isTestAccount: true,
       deletedAt: true,
       customerId: true,
@@ -170,22 +178,19 @@ export async function resolveOperationalRecipients(
   const contacts = (load.customer.contacts ?? []) as ContactRow[];
   const dnc = suppressed(contacts);
 
-  // Tier 1 - the address explicitly set on this load, unless an AE marked that
-  // same address do-not-contact. Skipped for tracking links, which have always
-  // gone to CRM contacts rather than the load's own field.
-  if (!opts.requireTrackingLink) {
-    const explicit = clean(load.contactEmail);
-    if (explicit && !dnc.has(key(explicit))) {
-      return [{ email: explicit, name: null, source: "load-contact-email" }];
-    }
-  }
-
-  // Tier 2 - eligible CRM contacts.
+  // Load.contactEmail is NOT a source here, and its absence is the point (R2).
+  // It is a free-text field on the load carrying no consent flag of any kind, so
+  // serving operational mail from it would reintroduce exactly the hole the
+  // consent column closes: an address nothing on the row can opt out of.
+  // Measured on production 2026-09-23 immediately before removal -- 0 of 29
+  // loads have ever carried a value here, so this tier had never once fired.
+  //
+  // The only eligible source is a CRM contact carrying the matching consent.
   const eligible = contacts.filter(
     (c) =>
       !c.doNotContact &&
       clean(c.email) !== null &&
-      (opts.requireTrackingLink ? c.receivesTrackingLink : c.isPrimary || c.receivesTrackingLink),
+      (opts.requireTrackingLink ? c.receivesTrackingLink : c.receivesOperationalUpdates),
   );
 
   const out = dedupe(
