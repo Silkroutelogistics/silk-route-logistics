@@ -33,7 +33,8 @@ import { join } from "path";
 const REPO = join(__dirname, "../../../../");
 const read = (p: string) => readFileSync(join(REPO, p), "utf8").replace(/\r\n/g, "\n");
 
-const claudeMd = read("CLAUDE.md");
+const SECTION_FILE = "docs/claude/pricing-tiers-quickpay.md";
+const claudeMd = read(SECTION_FILE);
 const carrierAuth = read("backend/src/routes/carrierAuth.ts");
 
 /** §21.1 only — a claim elsewhere in the file is not this section's business. */
@@ -69,7 +70,7 @@ describe("§21.1 pilot claims match the code", () => {
   it("the section was located and parsed (tripwire)", () => {
     // Without this, a renamed heading would make every assertion below pass
     // against an empty string — the vacuous-pass shape this file is about.
-    expect(section.length, "§21.1 not found in CLAUDE.md").toBeGreaterThan(500);
+    expect(section.length, `§21.1 not found in ${SECTION_FILE}`).toBeGreaterThan(500);
     expect(liveClaims.length, "live-claim text parsed empty").toBeGreaterThan(200);
   });
 

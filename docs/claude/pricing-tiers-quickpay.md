@@ -109,3 +109,162 @@ The Caravan Partner Program advances carriers through 3 tiers (Silver / Gold / P
 
 ---
 
+
+---
+
+> **§21 lives here, and a test reads it.**
+> `backend/__tests__/unit/routes/quickPayPilotDocClaims.test.ts` locates §21.1 by its
+> heading and §21.2 by the next one **in this file**, then holds its claims against
+> the code: the pilot-request endpoint exists, the portal calls it, the migration is
+> applied rather than pending, and approval alone still does not enable Quick Pay.
+>
+> It carries a length tripwire, so renaming either heading makes it **fail loudly**
+> instead of passing against an empty string. Keep §21.1 before §21.2, keep both
+> headings spelled exactly as they are, and if this section ever moves again, repoint
+> that test in the same commit — never before, never after.
+>
+> **Do not quote those two headings verbatim anywhere above the section itself.** The
+> test finds them with a plain `indexOf`, so prose *about* the anchor is indistinguishable
+> from the anchor: an earlier draft of this very note quoted them and the test matched
+> the note, slicing 16 characters. The tripwire caught it, which is what it is for — but
+> the hazard is cheaper to remove than to absorb.
+
+---
+
+## §21 QUICK PAY PILOT + DOCUMENT NUMBERING (ratified 2026-08-16)
+
+Two principal decisions, both ratified 2026-08-16. This section states what was
+decided and, separately, what is actually built — those are not the same list,
+and the difference is the point of writing it down.
+
+### §21.1 — Quick Pay is a limited pilot (request, then approve)
+
+**Ratified.** Quick Pay is no longer generally available on request of the
+carrier alone. It is a **limited pilot**:
+
+1. The carrier **asks** — a tick on the carrier application (`/onboarding`).
+2. The request lands for an AE as **pending**.
+3. An AE **approves or declines**, with a reason on decline.
+4. Once approved, the enrolment rides the tender-sending process.
+5. The carrier receives the Rate Confirmation, which states the option applied
+   to that load.
+
+The pilot is **withdrawable by SRL on notice**. Withdrawal is forward-only: it
+never affects a load already funded under Quick Pay.
+
+**What the carrier picks, and when.** Onboarding is a yes/no request to join.
+**Speed is per load**, because same-day is a +2% premium under §8 and cash need
+is per load, not permanent. Default is 7-day. The RC prints the speed and the
+fee percentage applied **to that load**, not the tier ladder.
+
+**A pilot changes availability, never economics.** The §8 ladder is untouched
+and stays LOCKED: Silver Net-30 / 3% / 5%, Gold Net-21 / 2% / 4%, Platinum
+Net-14 / 1% / 3%; same-day is a universal +2% premium and is never tier-gated;
+auto-approve $2,000 / $4,000 / $6,000; monthly $15,000 / $40,000 / $80,000. Do
+not weaken any of these on the theory that a pilot is provisional. Standard tier
+pay is free, always available, and never depends on the pilot.
+
+**Two decline paths, deliberately distinct.** Declining a carrier's request to
+JOIN (QP Agreement §3) is not the same event as declining ONE LOAD over an
+approval ceiling (QP Agreement §6). Both end at standard tier terms at no fee.
+Keep them separate — collapsing them loses the fact that a carrier inside the
+pilot can still have a single load declined. The same distinction holds between
+**declined** (refused; nothing was ever switched on) and **withdrawn** (was in,
+taken out; funded loads may sit behind it). No surface may render those two as
+one status.
+
+**Built.** `QuickPayEnrollment` model + `QuickPayEnrollmentStatus`; the
+`requestQuickPayPilot` tick on registration; AE `GET /carriers/quickpay-enrollments`
+and `POST /carriers/:id/quickpay/{approve,decline,withdraw}` (ADMIN / CEO /
+**OPERATIONS** — wider than the ADMIN+CEO carrier-approval pair on purpose, since
+this decides fee-bearing payment timing on loads the carrier is already cleared
+to haul, and Operations runs the pilot); the pilot fields on
+`GET /carrier-auth/activation-status`; the four-code 403 gate on the enable path
+of `POST /carrier-auth/quickpay-election`; Caravan Quick Pay Agreement
+**v2026-08-16-v4** carrying the pilot in its preamble, §3 and §10; and the
+surfaces — onboarding request, AE pending queue + per-carrier tab, carrier
+activation, carrier payments, `/carriers`, `/faq`.
+
+**Ratified-pending — and TWO of these were stale for two weeks.** Corrected
+2026-08-31 after this list was read as current, quoted to Wasi as a live gap,
+and very nearly used to justify rebuilding an endpoint that already exists:
+
+- ~~**The migration is authored but NOT applied.**~~ **APPLIED.**
+  `20260816120000_document_numbers_quickpay_pilot_accessorial_uniqueness` sits in
+  the live `prisma/migrations/` directory, not `_pending_migrations/`, and
+  production reports a later migration as applied — Prisma applies in order, so
+  this one landed with it. Enrolment reads return real rows.
+- ~~**There is no carrier-side request endpoint.**~~ **BUILT, AND WIRED.**
+  `POST /api/carrier-auth/quickpay-pilot-request` shipped in v3.8.asb
+  ([`routes/carrierAuth.ts`](backend/src/routes/carrierAuth.ts)) — APPROVED-only,
+  idempotent while a request is open, allows a fresh request from DECLINED or
+  WITHDRAWN, and notifies the desk. The carrier portal calls it from
+  [`activation/page.tsx`](frontend/src/app/carrier/dashboard/activation/page.tsx).
+  The enable-path 403's `action.href` and the approve-path 409's "they can
+  request it from their portal" both now describe a control that exists.
+- **Approval does not switch Quick Pay on.** STILL TRUE, verified.
+  `POST /carriers/:id/quickpay/approve` sets `QuickPayEnrollment.status` and
+  nothing else; the only writer of `quickPayEnabled: true` is the signature path
+  at [`carrierAuth.ts`](backend/src/routes/carrierAuth.ts) `quickpay-election`.
+  Approval admits; the carrier still signs the Caravan Quick Pay Agreement. An AE
+  reading "approved" is looking at a half-done state, and the AE tab says so.
+- **`CarrierProfile.quickPayEnabled` is a denormalised mirror** of "has an
+  APPROVED enrolment", not an independent switch. It stays the read-gate every
+  charge path already checks. Write it only in the same transaction as an
+  enrolment transition. Anything else re-opens the drift this model closed.
+
+**Why this went stale, and what now catches it.** v3.8.asb built the endpoint and
+applied the migration; nobody came back to this list. A "NOT built" list is the
+most dangerous kind of documentation to leave unmaintained, because it is read
+precisely when somebody is deciding whether to build something — so a stale entry
+does not merely misinform, it commissions duplicate work.
+[`quickPayPilotDocClaims.test.ts`](backend/__tests__/unit/routes/quickPayPilotDocClaims.test.ts)
+now fails if this section claims a route is missing while that route exists in
+the source. §19 Sub-pattern 15.
+
+### §21.2 — Document numbering: suffix on a shared stem
+
+**Ratified.** Document references are a **SUFFIX on a shared stem, never a
+prefix.** The stem is the existing load number, so every document for one load
+sorts together in any system that sorts a text column — which is the whole
+point, and what a prefix scheme (`BOL-…`, `RC-…`) destroys.
+
+| Document | Number |
+|---|---|
+| Load | `SRL-121485` — the anchor, already generated today |
+| BOL | `SRL-121485B` |
+| Rate confirmation | `SRL-121485R` |
+| Invoice | `SRL-121485I` |
+| Supplemental invoice (accessorial-only) | `SRL-121485S` |
+| Settlement / carrier pay | `SRL-121485P` — P for pay, so it cannot collide with S |
+
+This is the Bison Transport convention (load 5789854, invoice 5789854A,
+accessorials 5789854S) carried onto the SRL stem. The `SRL-` prefix stays so a
+carrier hauling for several brokers can tell whose paper they are holding.
+
+**Re-issues take a numeric revision suffix** — `SRL-121485R2`, `SRL-121485R3`.
+Revision 1 carries no digit so the common case reads clean. **Original numbers
+are NEVER reused:** `rateConNumber` is `@unique`, so reuse throws on a normal
+re-issue, and in a dispute the document has to say on its face which version the
+carrier signed.
+
+**`Load.bolNumber` is NOT this.** That column is the **shipper-supplied** BOL
+reference their AP department searches on. SRL's own BOL number is
+`Load.srlBolNumber`. They are different things and must stay different — do not
+overload either.
+
+**Built.** The anchor (`generateLoadNumber`, Postgres sequence `load_number_seq`)
+already existed. The suffix scheme, the allocator and the re-issue rule live in
+`backend/src/lib/documentNumber.ts`; the persisted columns (`Load.srlBolNumber`,
+`RateConfirmation.rateConNumber`, `Invoice.srlDocNumber`, `CarrierPay.srlDocNumber`)
+are in the schema and the migration.
+
+**Ratified-pending — NOT built.** Same caveat: the migration is authored, not
+applied. Two load creators still bypass `generateLoadNumber`
+(`shipperPortalController.ts`, `emailToLoadService.ts`), so a portal-created or
+email-created load has a null `loadNumber` and therefore **no stem to suffix
+from** — its documents have nothing to hang off. Closing that is a prerequisite
+for the scheme being true of every load rather than most of them.
+
+---
+
