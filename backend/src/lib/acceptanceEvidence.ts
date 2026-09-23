@@ -60,7 +60,10 @@ export interface StampAcceptanceInput {
 
 export type StampResult =
   | { stamped: true }
-  | { stamped: false; reason: "already_stamped" | "carrier_mismatch" | "load_not_found" };
+  | {
+      stamped: false;
+      reason: "already_stamped" | "carrier_mismatch" | "load_not_found" | "write_failed";
+    };
 
 /** Anything that exposes `load.updateMany` / `load.findUnique` -- prisma or a tx client. */
 type LoadDb = {
@@ -96,12 +99,34 @@ export async function stampCarrierAcceptance(
 ): Promise<StampResult> {
   const { loadId, via, carrierUserId, byUserId, at } = input;
 
+  try {
+    return await write(db, loadId, via, carrierUserId, byUserId ?? null, at);
+  } catch (err) {
+    // The docstring above promises this never throws, and until bgq it did not
+    // keep that promise — the body ran unguarded, so anything the write raised
+    // propagated out of the CALLER's transaction and rolled back the act. On the
+    // signature path that meant a failure to RECORD a signature could destroy
+    // the signature, which is the Item 235.5 rule pointing the other way:
+    // recording an act must never be able to prevent it.
+    log.error({ err, loadId, via }, "[Acceptance] stamp failed — the act itself is unaffected");
+    return { stamped: false, reason: "write_failed" };
+  }
+}
+
+async function write(
+  db: LoadDb,
+  loadId: string,
+  via: AcceptanceVia,
+  carrierUserId: string,
+  byUserId: string | null,
+  at: Date,
+): Promise<StampResult> {
   const res = await db.load.updateMany({
     where: { id: loadId, carrierAcceptedAt: null, carrierId: carrierUserId },
     data: {
       carrierAcceptedAt: at,
       carrierAcceptedVia: via,
-      carrierAcceptedByUserId: byUserId ?? null,
+      carrierAcceptedByUserId: byUserId,
       carrierAcceptedCarrierId: carrierUserId,
     },
   });

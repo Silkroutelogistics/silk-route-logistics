@@ -103,3 +103,26 @@ describe("the vocabulary is closed", () => {
     ]);
   });
 });
+
+describe("recording an act can never prevent it", () => {
+  it("returns write_failed instead of throwing when the write blows up", async () => {
+    const d = {
+      load: {
+        updateMany: vi.fn().mockRejectedValue(new Error("db down")),
+        findUnique: vi.fn(),
+      },
+    } as never;
+    // Until bgq the body ran unguarded, so this rejection propagated out of the
+    // CALLER's transaction — on the signature path, a failure to RECORD a
+    // signature would have rolled back the signature (Item 235.5, inverted).
+    await expect(
+      stampCarrierAcceptance({ loadId: LOAD, via: "RC_SIGNATURE", carrierUserId: CARRIER, at: AT }, d),
+    ).resolves.toEqual({ stamped: false, reason: "write_failed" });
+  });
+
+  it("survives a db client that has no load delegate at all", async () => {
+    await expect(
+      stampCarrierAcceptance({ loadId: LOAD, via: "TENDER_ACCEPT", carrierUserId: CARRIER, at: AT }, {} as never),
+    ).resolves.toMatchObject({ stamped: false });
+  });
+});

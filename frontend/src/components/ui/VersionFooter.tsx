@@ -18440,7 +18440,15 @@
 // authoritative row - never from req.user, which is synthetic on three of those
 // four. byUserId is whoever actually pressed the button, which is what keeps an
 // AE-recorded acceptance distinguishable from a carrier's own click.
-export const SRL_VERSION = "3.8.bgp";
+// v3.8.bgq - C4a: the acceptance writer now actually keeps the promise its own
+// docstring made. It said NEVER THROWS and the body ran unguarded, so anything
+// the write raised propagated out of the CALLER's transaction and rolled the
+// act back. On the signature path that meant a failure to RECORD a signature
+// could destroy the signature - Item 235.5's rule pointing the other way.
+// Found because wiring the rcSign path turned five pre-existing tests in
+// rcSignBcaRequired red: a tx client without a load delegate took the whole
+// signing transaction down with it.
+export const SRL_VERSION = "3.8.bgq";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
