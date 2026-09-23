@@ -498,6 +498,19 @@ router.post("/:id/status", validateBody(statusUpdateSchema), async (req: AuthReq
   const { status, note } = req.body;
   const oldStatus = load.status;
 
+  // A repeat of the status the load already holds is a double-submit, not a
+  // second event. The transition validator ALLOWS same-status on both actors,
+  // so before this guard a double-click fired every side effect twice: on
+  // 2026-09-22 two LOADED writes 453ms apart put two identical
+  // "Shipment Picked Up" emails into a customer's inbox 272ms apart and left
+  // two check-call rows behind them. Answering 200 rather than 4xx is
+  // deliberate — the caller asked for a state the load is already in, which is
+  // not an error, and a 4xx would make a harmless retry look like a failure.
+  if (oldStatus === status) {
+    res.json({ ...load, unchanged: true });
+    return;
+  }
+
   // v3.8.ajw C3 — Reject illegitimate transitions (BOOKED→DELIVERED skip,
   // backwards jumps, etc.). Carrier-side state machine canonicalized in
   // src/lib/loadStateMachine.ts. Returns 422 with the structured reason so

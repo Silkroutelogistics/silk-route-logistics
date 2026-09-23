@@ -541,6 +541,20 @@ export async function updateLoadStatus(req: AuthRequest, res: Response) {
   // a code field (BACKWARDS_NOT_ALLOWED / SKIP_NOT_ALLOWED /
   // WRONG_STARTING_STATE / TERMINAL_NOT_ALLOWED) for any future client
   // that wants to discriminate on the failure mode.
+
+  // A repeat of the status the load already holds is a double-submit, not a
+  // second event. The transition validator ALLOWS same-status on both actors,
+  // so before this guard a double-click fired every side effect twice: on
+  // 2026-09-22 two LOADED writes 453ms apart put two identical
+  // "Shipment Picked Up" emails into a customer's inbox 272ms apart and left
+  // two check-call rows behind them. Answering 200 rather than 4xx is
+  // deliberate — the caller asked for a state the load is already in, which is
+  // not an error, and a 4xx would make a harmless retry look like a failure.
+  if (existing.status === status) {
+    res.json(existing);
+    return;
+  }
+
   const transition = validateLoadStatusTransition(existing.status, status, "AE");
   if (!transition.allowed) {
     res.status(400).json({

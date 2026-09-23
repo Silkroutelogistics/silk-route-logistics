@@ -18571,7 +18571,15 @@
 // response shape cannot bypass it, and carries the consent the contact HELD.
 // A consent edit records before AND after; an edit that moves no consent
 // records nothing, so the log keeps answering "who turned the mail on".
-export const SRL_VERSION = "3.8.bhg";
+// v3.8.bhh - C4: a repeat of the status a load already holds fires nothing. The
+// transition validator ALLOWS same-status on both actors, so a double-submit ran
+// every side effect twice: on 2026-09-22 two LOADED writes 453ms apart left two
+// check-call rows and put two identical "Shipment Picked Up" emails into a
+// customer's inbox 272ms apart. Guarded in BOTH handlers - the brief cited
+// loadController, but check calls on status change are written only by
+// carrierLoads, so the observed duplicate came through the carrier portal.
+// Answers 200, not 4xx: asking for a state the load is already in is a retry.
+export const SRL_VERSION = "3.8.bhh";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
