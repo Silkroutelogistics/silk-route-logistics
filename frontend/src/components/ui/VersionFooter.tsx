@@ -18579,7 +18579,15 @@
 // loadController, but check calls on status change are written only by
 // carrierLoads, so the observed duplicate came through the carrier portal.
 // Answers 200, not 4xx: asking for a state the load is already in is a retry.
-export const SRL_VERSION = "3.8.bhh";
+// v3.8.bhi - C5: dedup keys that can express "once". Pre-tracing deduped on a
+// 2-hour lookback while the job runs hourly and the stage is 24 hours wide, so
+// it re-sent as soon as the lookback rolled past - a carrier got the identical
+// SRL-121497 email five times and the SRL-121495 one three times. The same
+// query matched the stage WITHOUT the load reference, so a carrier with two
+// loads at one stage was told about one of them. Both come from the key: it now
+// carries load AND stage and has no time bound at all. The customer delay goes
+// to once per load per 12h, from a 2-hour lookback on a 30-minute job.
+export const SRL_VERSION = "3.8.bhi";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

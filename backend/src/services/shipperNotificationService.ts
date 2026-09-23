@@ -279,13 +279,17 @@ export async function sendShipperDelayNotification(
   const recipients = await resolveOperationalRecipients(load.id);
   if (recipients.length === 0) return;
 
-  // Dedup: check if delay notification already sent in last 2 hours
-  const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000);
+  // ONCE PER LOAD PER 12 HOURS (ratified R-C5). The alert engine runs every
+  // 30 minutes and this was a 2-hour lookback, so a load that stayed delayed
+  // was reported to the customer every ~3 hours: six CRITICAL DELAY emails
+  // reached logistics@beekeepersnaturals.com for SRL-121494 in fourteen hours.
+  // A customer learns nothing from the sixth that the first did not tell them.
+  const dedupSince = new Date(Date.now() - 12 * 60 * 60 * 1000);
   const alreadySent = await prisma.notification.findFirst({
     where: {
       type: "LOAD_UPDATE",
       title: { contains: `Shipper Delay ${alert.level}: ${load.referenceNumber || load.loadNumber}` },
-      createdAt: { gte: twoHoursAgo },
+      createdAt: { gte: dedupSince },
     },
   });
   if (alreadySent) return;

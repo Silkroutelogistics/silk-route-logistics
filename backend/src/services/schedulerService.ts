@@ -66,7 +66,7 @@ async function releaseLock(jobName: string) {
  * Sends emails to carriers at 48h and 24h before pickup.
  * Dedup via Notification table (type "PRE_TRACING").
  */
-async function runPreTracing() {
+export async function runPreTracing() {
   const now = new Date();
   const in24h = new Date(now.getTime() + 24 * 60 * 60 * 1000);
   const in48h = new Date(now.getTime() + 48 * 60 * 60 * 1000);
@@ -105,14 +105,25 @@ async function runPreTracing() {
     const hoursUntilPickup = (shipment.pickupDate.getTime() - now.getTime()) / (1000 * 60 * 60);
     const window = hoursUntilPickup <= 24 ? "24H" : "48H";
 
-    // Check if we already sent a notification for this window
-    const twoHoursAgo = new Date(now.getTime() - 2 * 60 * 60 * 1000);
+    // ONCE PER LOAD PER STAGE, and the key carries both.
+    //
+    // This was a 2-hour lookback, which cannot express "once": the job runs
+    // hourly and the stage is 24 hours wide, so the moment the lookback rolled
+    // past the last send it sent again. A carrier received the identical
+    // SRL-121497 email FIVE times on 2026-09-22/23, and the SRL-121495 one
+    // THREE times. Widening the lookback only moves the repeat further out.
+    //
+    // The lookup also matched `Pre-Tracing 24H` WITHOUT the load reference
+    // while the row it writes carries one, so a carrier with two loads at the
+    // same stage was sent one email and never told about the other. Both
+    // failures come from the same key, which is why it now carries both parts
+    // and no time bound at all.
+    const dedupKey = `Pre-Tracing ${window}: ${shipment.load.referenceNumber}`;
     const alreadySent = await prisma.notification.findFirst({
       where: {
         userId: shipment.load.carrier.id,
         type: "LOAD_UPDATE",
-        title: { contains: `Pre-Tracing ${window}` },
-        createdAt: { gte: twoHoursAgo },
+        title: { contains: dedupKey },
       },
     });
     if (alreadySent) continue;
@@ -126,7 +137,7 @@ async function runPreTracing() {
       data: {
         userId: carrier.id,
         type: "LOAD_UPDATE",
-        title: `Pre-Tracing ${window}: ${shipment.load.referenceNumber}`,
+        title: dedupKey,
         message: `Pickup in ~${Math.round(hoursUntilPickup)}h. ${origin} → ${dest}. Are you on time?`,
         actionUrl: "/dashboard/loads",
       },
