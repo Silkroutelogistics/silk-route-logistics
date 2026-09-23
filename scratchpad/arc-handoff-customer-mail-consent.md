@@ -50,18 +50,31 @@ ticked by an AE in the CRM contact panel ("Send load updates") if that customer
 should keep receiving operational mail.
 
 ```
-CUSTOMER                  CONTACT            EMAIL                          PRIMARY  LAST OPS EMAIL     ACTIVE LOADS
-Acme Manufacturing        Robert Mitchell    rmitchell@acmemfg.com          yes      never              0
-American Furukawa Inc.    Wasi Haider        wasihaider3089@gmail.com       yes      never              0
-Gail &amp; Rice           Gail &amp; Rice    qsmolinski@gail-rice.com       yes      2026-07-07T14:37   0
-Graphic Packaging         Graphic Packaging  rs2649089@gmail.com            yes      never              0
-Great Lakes Foods         Linda Kowalski     lkowalski@greatlakesfoods.com  yes      never              0
-Lone Star Chemicals       William Brooks     wbrooks@lonestarchemicals.com  yes      never              0
-Pacific Distributors      David Park         dpark@pacificdist.com          yes      never              0
-Southern Paper Co         James Calloway     jcalloway@southernpaper.com    yes      never              0
+CUSTOMER                CONTACT           EMAIL                           PRIMARY  LAST OPS EMAIL     ACTIVE LOADS
+Acme Manufacturing      Robert Mitchell   rmitchell@acmemfg.com           yes      never              0
+American Furukawa Inc.  Wasi Haider       wasihaider3089@gmail.com        yes      2026-08-30 17:00   0
+Gail &amp; Rice         Gail &amp; Rice   qsmolinski@gail-rice.com        yes      never              0
+Graphic Packaging       Graphic Packaging rs2649089@gmail.com             yes      2026-07-07 14:37   0
+Great Lakes Foods       Linda Kowalski    lkowalski@greatlakesfoods.com   yes      never              0
+Lone Star Chemicals     William Brooks    wbrooks@lonestarchemicals.com   yes      never              0
+Pacific Distributors    David Park        dpark@pacificdist.com           yes      never              0
+Southern Paper Co       James Calloway    jcalloway@southernpaper.com     yes      never              0
 
-total contacts: 13  |  eligible today: 8  |  eligible after backfill: 0
+13 contacts total | opted-in 0 | opted-out 13 | eligible under old rule 8 | eligible now 0
+total active loads behind these 8: 0
 ```
+
+**Read as `srl_readonly` against production at 2026-09-23T18:40Z, after the
+deploy** (`sha 5c3d43d6`, migration `20260923150000` applied 18:36:30Z) — not
+carried over from the pre-deploy census. It corrects one figure: American
+Furukawa's last operational email is **2026-08-30 17:00**, which the earlier
+reading had as "never".
+
+**"never" is bounded, and the bound matters.** `email_logs` begins
+**2026-06-19T02:37Z** (the table landed in v3.8.anl), so a send before that
+date leaves no row. "never" therefore means *no operational email since
+2026-06-19*, not *never emailed*. Six of the eight are "never" under that
+bound.
 
 **Every one has 0 active loads, so nothing is in flight behind this.** Seven of
 the eight have never received an operational email at all — the tick is a
@@ -191,17 +204,55 @@ pre-P1 baseline (`gate2-suite.log`), so P1 introduced none:
 - `ssoSessionRow.test.ts` — `config/env` ZodError. The worktree's `backend/.env`
   is 193 bytes against the main checkout's 1277; it lacks the SSO vars.
 
-## 8 — Remaining
+## 8 — Shipped, and what the deploy verified
 
-- **P2** `git fetch`; origin/main has moved `53a6a576` → `a71915bb`, which is
-  **exactly one commit and it touches only `CLAUDE.md`** — zero overlap with
-  this arc's 27 files, so the rebase is trivial. (The "34 behind" figure is
-  *local main* vs origin, a different divergence — see §4.) Rebase, rerun the
-  full gate order **including E2E**, then HALT before push.
-- **P3** push the branch, then fast-forward `origin/main`. **Never push from
-  local main.**
-- **P4** migration runs **only** through the normal Render deploy path. No local
-  `prisma` or `psql` write against Neon.
-- **P5** read-only verification as `srl_readonly`.
-- **Ruling 7** remove containers `srl-mailconsent` (:55492) and
-  `srl-e2e-mailconsent` (:55493) after P5 passes.
+**Pushed** `5c3d43d6` — branch `arc/customer-mail-consent`, then `origin/main`
+fast-forwarded `a71915bb..5c3d43d6` **from the worktree**, never from local
+`main` (which is still on its stale pre-rebase ref per §4 and was not touched).
+
+**CI green on that SHA, all four jobs read by name** (§19 SP11 case study #4 —
+never the workflow's aggregate): Backend, Frontend, **E2E - Full Lifecycle
+Smoke**, Deploy to Render. The deploy job took the **real** branch, not the
+quieted absent-secret one: `HOOK: ***`, `HTTP 200`, `dep-daq1nvfavr4c73em1ftg`.
+
+**Deploy ordering, textbook Item 213:** migration applied **18:36:30.306Z**,
+new process booted **18:37:10.285Z** — the schema changed 40s before the SHA
+flipped, which is exactly why `/api/health` reports `schema` and why the app's
+SHA is not evidence a migration landed.
+
+### P5 — verified read-only as `srl_readonly`
+
+Connected through the Item 303 rail: credential from
+`backend/.env.production.readonly`, owner role refused by construction, and
+`SET default_transaction_read_only = on` before the first query so a write is
+refused by Postgres rather than by discipline.
+
+| check | result |
+|---|---|
+| Render live at pushed SHA | **`5c3d43d6`** |
+| migration applied | `20260923150000_customer_contact_operational_consent` |
+| column | present, `boolean NOT NULL DEFAULT false`, index present |
+| rows | 13 contacts — **0 opted-in, 13 opted-out** |
+| resolver | **0 eligible across all customers**; 8 customers with contacts, **0 resolving non-empty** |
+| `/api/health` | clean — `unexpected_cumulative` 1, the known `BOOKED → AT_PICKUP`, last seen 2026-09-22 **pre-arc** |
+| customer operational email since deploy | **0 rows, 0 to any customer** |
+
+Scripts are committed rather than left untracked, so the next reader can re-run
+the same reading instead of reconstructing it (the Item 303.7 hazard):
+`backend/scripts/_readonly-p5-mail-consent-verify.ts` and
+`_readonly-p6-eight-table.ts`.
+
+### Still open
+
+- **The 8 contacts above need an AE tick each.** Until then customer
+  operational mail reaches nobody — ratified as the intended live state, not a
+  defect.
+- **Item 306** — the middleware fix, plus a census of all 89 `auditLog(`
+  declarations against their actual success-path response shape. Only 67 were
+  censused (this arc's blast radius), so the rest are unchecked and any one
+  answering `res.send` records nothing today.
+- **Item 301** (Load Board render race, 3rd occurrence recorded) and the
+  `run-local.mjs` exit-0 defect — both queued as their own arc after the Item
+  194 observer arc.
+- **§5 above** — the skill-file deletion in the shared main checkout. Not this
+  arc's to fix; report only.
