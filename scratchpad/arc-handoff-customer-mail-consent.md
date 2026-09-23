@@ -18,7 +18,7 @@ transit, delivery, milestone and delay mail with no consent of any kind.
 Ten operational emails reached `logistics@beekeepersnaturals.com` for
 `SRL-121494` — a load whose tracking link had never been sent. The contact was
 deleted between 12:00 and 13:53 on 2026-09-23 **with no audit trail**, because
-the DELETE audit the route declared had never once fired (see §6, Item 305).
+the DELETE audit the route declared had never once fired (see §6, Item 306).
 
 ## 2 — The rulings, as built
 
@@ -104,6 +104,30 @@ identical subject, as small-delta duplicates (version letters / item renumbers):
 
 **Letters: no collision.** Origin claims only `bha`; this arc runs `bhb`–`bhn`.
 
+**CAUSE — and it is already documented.** This divergence is not drift. It is
+the exact, deliberate consequence described in **§13.3 Item 305** (landed on
+origin as `a71915bb` while this arc was in flight): a peer session could not
+rebase in the shared worktree because §2.2 forbids touching another session's
+uncommitted files, so it rebased in a throwaway worktree and pushed the result
+as a ref. **A ref push does not read the working tree**, so local `main` was
+left pointing at the pre-rebase SHA while `origin/main` carries the rebased
+commits — *the same content under new SHAs*, which is precisely why all 6 read
+as "local-unique" with an origin twin under an identical subject.
+
+**The correct close is theirs, not this arc's:** the peer commits or stashes
+their own work and runs an ordinary `git pull --rebase`, where patch-id drops
+the already-upstream commits and replays only their own. **Do not** `git reset`
+or `git update-ref` the local ref — under a dirty tree that makes every
+differently-resolved file show as spuriously modified, and `reset --hard` would
+destroy their work outright.
+
+**Standing hazard:** a stale local `main` looks like an ordinary branch, and
+work started from it re-parents onto the pre-rebase base, which duplicates an
+entire arc on push. Compare `git rev-parse main` against `git rev-parse
+origin/main` before committing in any worktree whose branch may be stale.
+**This arc is not exposed** — its base `53a6a576` is a verified true ancestor of
+`origin/main`, and it has been rebased onto `a71915bb` cleanly.
+
 ## 5 — OPEN FINDING: uncommitted deletion of a CLAUDE.md-cited canon
 
 In the **shared main checkout**, the uncommitted `srl-brand-design` edits are
@@ -124,7 +148,7 @@ resolve. Flagged rather than reverted.
 
 ## 6 — Banked
 
-**Item 305 — `auditLog` cannot see a non-`res.json` response.** The middleware
+**Item 306 — `auditLog` cannot see a non-`res.json` response.** The middleware
 wraps `res.json` only, so a handler answering `res.send` / `sendStatus` / `end`
 is invisible to it. `deleteCustomerContact` answers `204 .send()`, so its
 declared DELETE audit had **never fired** — which is why the BKN contact
@@ -132,7 +156,7 @@ vanished without a record. Census of the **67 mutation routes** classified on
 the **success path** (not "does it ever call res.json"): **66 audited, exactly 1
 silently unaudited**, now closed by the handler writing its own `AuditTrail` row
 (bhg) carrying actor *and* the consent the contact held — strictly more than the
-middleware could. Fixing the middleware itself is Item 305.
+middleware could. Fixing the middleware itself is Item 306.
 
 *Census v1 reported 0 and was wrong*: it asked whether a handler ever calls
 `res.json`, and `deleteCustomerContact` answers 404 with json and 204 with send,
