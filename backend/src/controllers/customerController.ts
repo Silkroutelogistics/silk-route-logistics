@@ -903,6 +903,17 @@ export async function restoreCustomer(req: AuthRequest, res: Response) {
   res.json({ success: true, message: "Customer restored", userReactivated: !!customer.userId });
 }
 
+/**
+ * The three flags that decide whether a customer is written to. A change to
+ * any of them is recorded with before AND after, because the question a later
+ * reader asks is not 'was this edited' but 'who turned the mail on, and when'.
+ */
+const CONSENT_FIELDS = ["receivesOperationalUpdates", "receivesTrackingLink", "doNotContact"] as const;
+
+function consentSnapshot(c: Record<string, unknown>): Record<string, unknown> {
+  return Object.fromEntries(CONSENT_FIELDS.map((k) => [k, c[k]]));
+}
+
 // ─── Customer Contacts ──────────────────────────────────
 
 const CONTACT_SALES_ROLES = ["DECISION_MAKER", "CHAMPION", "GATEKEEPER", "TECHNICAL", "BILLING", "OTHER"] as const;
@@ -983,6 +994,26 @@ export async function updateCustomerContact(req: AuthRequest, res: Response) {
     where: { id: req.params.cid },
     data,
   });
+
+  // Only when a consent actually moved. An edit to a phone number is not a
+  // change to who gets mailed, and recording it as one would bury the entries
+  // that matter in the entries that do not.
+  const before = consentSnapshot(contact as any);
+  const after = consentSnapshot(updated as any);
+  const moved = CONSENT_FIELDS.filter((k) => before[k] !== after[k]);
+  if (moved.length > 0 && req.user) {
+    await recordLifecycleEvent({
+      actionDetail: "CONTACT_CONSENT_CHANGED",
+      entityType: "CustomerContact",
+      entityId: updated.id,
+      entityName: updated.name,
+      reason: moved.join(", "),
+      previous: before,
+      new: after,
+      actor: { userId: req.user.id, email: req.user.email },
+      req,
+    });
+  }
   res.json(updated);
 }
 
@@ -993,6 +1024,23 @@ export async function deleteCustomerContact(req: AuthRequest, res: Response) {
   if (!contact) { res.status(404).json({ error: "Contact not found" }); return; }
 
   await prisma.customerContact.delete({ where: { id: req.params.cid } });
+
+  // The declared auditLog("DELETE", "CustomerContact") on this route has never
+  // fired: that middleware wraps res.json and this handler answers 204 .send().
+  // Removing a contact silently removes a customer's only consent, so the record
+  // is written here, where it cannot be bypassed by the response shape.
+  if (req.user) {
+    await recordLifecycleEvent({
+      actionDetail: "CONTACT_DELETED",
+      entityType: "CustomerContact",
+      entityId: contact.id,
+      entityName: contact.name,
+      previous: { name: contact.name, email: contact.email, ...consentSnapshot(contact as any) },
+      new: {},
+      actor: { userId: req.user.id, email: req.user.email },
+      req,
+    });
+  }
   res.status(204).send();
 }
 

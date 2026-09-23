@@ -18563,7 +18563,15 @@
 // act is the dual-convention class. The mock methods are declared individually
 // and NEVER aliased to one another: aliasing hides a handler calling one method
 // while the mock answers for a different one (§19 Sub-pattern 11 case study 3).
-export const SRL_VERSION = "3.8.bhf";
+// v3.8.bhg - C3b: removing a contact, or moving its consent, leaves a record.
+// The route declares auditLog("DELETE", "CustomerContact"), which READS as
+// covered; that middleware wraps res.json and the handler answers 204 .send(),
+// so the declared audit had never once fired - which is why the 2026-09-23
+// removal left no trail. The record is written in the handler, where the
+// response shape cannot bypass it, and carries the consent the contact HELD.
+// A consent edit records before AND after; an edit that moves no consent
+// records nothing, so the log keeps answering "who turned the mail on".
+export const SRL_VERSION = "3.8.bhg";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
