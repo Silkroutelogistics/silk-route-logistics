@@ -18556,7 +18556,14 @@
 // The label names what it sends - "pickup, transit, delivery and delay emails" -
 // rather than saying only that it is on, and the footer states plainly that
 // neither tag implies the other and that being Primary sends nothing.
-export const SRL_VERSION = "3.8.bhe";
+// v3.8.bhf - C3a: the audit vocabulary gains CONTACT_DELETED and
+// CONTACT_CONSENT_CHANGED, and the shared prisma mock gains the customerContact
+// methods the controller actually calls. Extending lib/lifecycleAudit rather
+// than writing a parallel recorder is that file's own rule - two writers for one
+// act is the dual-convention class. The mock methods are declared individually
+// and NEVER aliased to one another: aliasing hides a handler calling one method
+// while the mock answers for a different one (§19 Sub-pattern 11 case study 3).
+export const SRL_VERSION = "3.8.bhf";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

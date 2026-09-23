@@ -170,6 +170,12 @@ vi.mock("../src/config/database", () => ({
     // B5a customer-delete census (lib/customerReferences). Counts default to 0
     // so a model a test does not mention reads as "no references".
     customerContact: {
+      findFirst: vi.fn(),
+      findMany: vi.fn(),
+      create: vi.fn(),
+      update: vi.fn(),
+      updateMany: vi.fn(),
+      delete: vi.fn(),
       count: vi.fn().mockResolvedValue(0),
     },
     customerFacility: {

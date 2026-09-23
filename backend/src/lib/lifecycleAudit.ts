@@ -53,7 +53,15 @@ export type LifecycleActionDetail =
   | "CUSTOMER_DELETED"
   | "CUSTOMER_RESTORED"
   | "CARRIER_ARCHIVED"
-  | "CARRIER_RESTORED";
+  | "CARRIER_RESTORED"
+  // A contact's consent decides whether a CUSTOMER is written to, and its
+  // removal decides it silently. Neither had a record: the route declares
+  // auditLog("DELETE", "CustomerContact") and that middleware wraps res.json,
+  // while the handler answers res.status(204).send() — so the declared audit
+  // has never once fired, which is why the 2026-09-23 contact removal left no
+  // trail at all.
+  | "CONTACT_DELETED"
+  | "CONTACT_CONSENT_CHANGED";
 
 /**
  * The AuditAction each detail lands under. CANCEL and DEACTIVATE are the two
@@ -76,9 +84,13 @@ export const LIFECYCLE_ACTION: Readonly<Record<LifecycleActionDetail, AuditActio
   CUSTOMER_RESTORED: "STATUS_CHANGE",
   CARRIER_ARCHIVED: "DEACTIVATE",
   CARRIER_RESTORED: "STATUS_CHANGE",
+  CONTACT_DELETED: "DELETE",
+  // UPDATE rather than a new enum member: a consent change is an edit to a
+  // field, and actionDetail is what a reader greps to find it.
+  CONTACT_CONSENT_CHANGED: "UPDATE",
 };
 
-export type LifecycleEntityType = "Load" | "Customer" | "CarrierProfile";
+export type LifecycleEntityType = "Load" | "Customer" | "CarrierProfile" | "CustomerContact";
 
 export interface LifecycleActor {
   userId: string;
