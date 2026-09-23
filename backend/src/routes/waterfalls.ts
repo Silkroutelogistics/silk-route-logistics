@@ -537,8 +537,27 @@ router.post(
   authorize("CARRIER", ...AE_ROLES) as any,
   async (req: AuthRequest, res: Response) => {
     try {
-      await acceptPosition(req.params.positionId, req.user?.id);
-      res.json({ ok: true });
+      // C4c — identical derivation to the decline route immediately below, and
+      // for the identical reason: this route admits AE roles, so an AE's click
+      // must not be recorded as the carrier's own acceptance.
+      const onBehalf = req.user?.role !== "CARRIER";
+      const result = await acceptPosition(req.params.positionId, req.user?.id, { onBehalf });
+      // Ownership is the ONLY new refusal. Every other outcome keeps the
+      // pre-C4c response contract of 200, deliberately: the skip-and-advance
+      // path has answered 200 since Sprint 39 Item 56 — the cascade DID move
+      // on, so from the system's side the request was handled — and E2E B6.5d
+      // pins it. Narrowing not_found / not_tendered / compliance_blocked to
+      // 4xx is a real improvement (a carrier told `ok: true` for a position
+      // somebody else already took believes they have the load) and a separate
+      // contract change touching E2E and the carrier portal. Reported, not
+      // taken here.
+      if (!result.accepted && result.reason === "not_owner") {
+        return res.status(403).json({ error: "This tender belongs to another carrier" });
+      }
+      res.json({
+        ok: true,
+        ...(result.accepted ? { onBehalf: result.onBehalf } : { reason: result.reason }),
+      });
     } catch (err) {
       log.error({ err }, "[Waterfall] accept error");
       res.status(500).json({ error: "Failed to accept tender" });

@@ -498,14 +498,54 @@ export async function declinePosition(
  * Mark a position accepted + dispatch the load. This is the happy-path
  * terminal state for a waterfall.
  */
-export async function acceptPosition(positionId: string, actorId?: string | null) {
+export type AcceptPositionResult =
+  | {
+      accepted: true;
+      /** False when the carrier accepted in their own session. */
+      onBehalf: boolean;
+      loadId: string;
+      /** `WaterfallPosition.carrierId` is a User.id. Named so at every hand-off. */
+      carrierUserId: string;
+      acceptedAt: Date;
+    }
+  | { accepted: false; reason: "not_found" | "not_tendered" | "not_owner" | "compliance_blocked" };
+
+export async function acceptPosition(
+  positionId: string,
+  actorId?: string | null,
+  opts?: { onBehalf?: boolean },
+): Promise<AcceptPositionResult> {
+  // C4c — mirrors declinePosition (v3.8.axk), which solved this first and in
+  // this same file. The route is authorize("CARRIER", ...AE_ROLES), so an AE
+  // reaches it too; labelling their click as the carrier's own acceptance
+  // asserts a choice that carrier never made.
+  const onBehalf = !!opts?.onBehalf;
+
   const pos = await prisma.waterfallPosition.findUnique({
     where: { id: positionId },
     include: {
       waterfall: { select: { id: true, loadId: true } },
     },
   });
-  if (!pos || pos.status !== "tendered" || !pos.carrierId) return;
+  if (!pos) return { accepted: false, reason: "not_found" };
+  if (pos.status !== "tendered" || !pos.carrierId) return { accepted: false, reason: "not_tendered" };
+
+  // C4c — the ownership check this route has never had. Nothing compared the
+  // caller to the position's carrier, so any authenticated CARRIER could accept
+  // any cascade position by id and take another carrier's load.
+  //
+  // Both sides are User ids: buildWaterfall stores User.id in
+  // WaterfallPosition.carrierId deliberately ("since Load.carrierId references
+  // User"), and req.user.id is a User.id. So this is a direct comparison, NOT
+  // the profile lookup the compliance gate above needs — the id-space
+  // distinction that cost this service a silent outage once already (Item 222.4).
+  //
+  // Scoped to a carrier acting as themselves: an AE accepting on behalf is
+  // legitimately accepting a position that is not theirs. A null actorId is a
+  // system call and is not gated here.
+  if (!onBehalf && actorId && actorId !== pos.carrierId) {
+    return { accepted: false, reason: "not_owner" };
+  }
 
   // Sprint 39 (Item 56) — compliance re-check at accept time.
   // Carrier may have become non-compliant between waterfall offer time
@@ -582,7 +622,7 @@ export async function acceptPosition(positionId: string, actorId?: string | null
       metadata: { positionId, waterfallId: pos.waterfall.id, reason: "compliance", blocked_reasons: compliance.blocked_reasons },
     });
     await advanceWaterfall(pos.waterfall.id, pos.position + 1);
-    return;
+    return { accepted: false, reason: "compliance_blocked" };
   }
 
   const now = new Date();
@@ -605,7 +645,12 @@ export async function acceptPosition(positionId: string, actorId?: string | null
     waterfallPositionId: positionId,
     to: "ACCEPTED",
     respondedAt: now,
-    actor: { id: actorId ?? pos.carrierId, type: "CARRIER" },
+    // C4c — was `{ id: actorId ?? pos.carrierId, type: "CARRIER" }`
+    // unconditionally, so an AE's accept was recorded as the carrier's own.
+    // Mirrors declinePosition exactly, including the `?? null`: a system call
+    // with no actor is attributed to nobody rather than to the carrier.
+    onBehalf,
+    actor: { id: actorId ?? null, type: onBehalf ? "USER" : "CARRIER" },
   });
 
   // Cancel any remaining queued positions
@@ -729,6 +774,17 @@ export async function acceptPosition(positionId: string, actorId?: string | null
       log.error({ err, loadId: pos.waterfall.loadId }, "[Waterfall] auto-issue failed");
     }
   }
+
+  // C4c — returned rather than re-derived by the caller. The acceptance
+  // evidence (C4a) is stamped for the party whose act it was, and whether this
+  // was the carrier's own act is known HERE and nowhere else downstream.
+  return {
+    accepted: true,
+    onBehalf,
+    loadId: pos.waterfall.loadId,
+    carrierUserId: pos.carrierId!,
+    acceptedAt: now,
+  };
 }
 
 /**

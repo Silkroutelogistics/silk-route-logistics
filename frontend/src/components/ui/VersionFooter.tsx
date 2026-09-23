@@ -18398,7 +18398,17 @@
 // it sits under. It said sign before dispatch while GOVERNING TERMS says
 // dispatch itself is binding acceptance; one document told a carrier two
 // different things about when it takes effect.
-export const SRL_VERSION = "3.8.bgh";
+// v3.8.bgl - C4c: an AE's accept is not the carrier's own act. acceptPosition
+// labelled the settle actor CARRIER unconditionally while its route admits AE
+// roles, so an AE's click was recorded as the carrier accepting - the mirror of
+// what declinePosition fixed in v3.8.axk on the adjacent route. It also gains
+// the ownership check the accept route never had: nothing compared the caller
+// to the position's carrier, so any authenticated CARRIER could accept any
+// cascade position by id and take another carrier's load. 403 now, exercised
+// through the real router rather than asserted from source. The acceptance-rate
+// half of the brief is REPORTED, not built: every rate reads LoadTender.status
+// alone, so the row carries no on-behalf signal for any scorer to read.
+export const SRL_VERSION = "3.8.bgl";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
