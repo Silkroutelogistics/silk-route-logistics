@@ -14,9 +14,20 @@ import {
   DETENTION_CAP_PER_STOP,
 } from "../lib/detentionLayover";
 
+/** How far back a located report still counts as current, for R3/R4. */
+export const NO_DATA_LOOKBACK_HOURS = 6;
+
 export interface AlertResult {
   loadId: string;
   level: "GREEN" | "YELLOW" | "RED" | "CRITICAL";
+  /**
+   * R4 — WHAT the alert is about, kept apart from how loud it is.
+   *   LATE              a located report puts the load behind its appointment
+   *   NO_TRACKING_DATA  nobody has told us where it is
+   * The second is a gap in OUR data, never a statement about the freight, and
+   * it must never reach the customer (R3).
+   */
+  kind?: "LATE" | "NO_TRACKING_DATA";
   reason: string;
   eta?: Date | null;
   appointmentTime?: Date | null;
@@ -26,6 +37,27 @@ export interface AlertResult {
 /**
  * Assess alert level for a single load based on ETA vs appointment.
  */
+/**
+ * R3 — a customer is told about a DELAY only on located evidence.
+ *
+ * A check call with no city, state or location is a carrier saying "still
+ * rolling" and nothing more; it cannot place the freight, so it cannot
+ * support a claim that the freight is late. SRL-121494 had four check calls,
+ * all inside 24 seconds and all with null location, and the customer was sent
+ * six CRITICAL DELAY emails on the strength of them.
+ */
+export function hasLocatedReport(
+  checkCall: { location?: string | null; city?: string | null; state?: string | null; createdAt?: Date } | null | undefined,
+  trackingEvent: { createdAt?: Date } | null | undefined,
+  lookbackHours: number,
+): boolean {
+  const since = Date.now() - lookbackHours * 3600_000;
+  if (trackingEvent?.createdAt && new Date(trackingEvent.createdAt).getTime() >= since) return true;
+  if (!checkCall?.createdAt) return false;
+  if (new Date(checkCall.createdAt).getTime() < since) return false;
+  return Boolean(checkCall.location || checkCall.city || checkCall.state);
+}
+
 export function assessAlertLevel(
   eta: Date | null,
   appointmentDate: Date | null,
@@ -33,7 +65,12 @@ export function assessAlertLevel(
   lastUpdateAt: Date | null,
   loadStatus: string
 ): AlertResult & { level: string; reason: string } {
-  // Check for no-update CRITICAL (6+ hours with no location data)
+  // NO TRACKING DATA. This is the absence of a report, not evidence of a
+  // delay, so R3 keeps it off the customer's mail entirely and R4 stops it
+  // escalating: the reason no longer carries an hour count, because a number
+  // that grows every scan defeats its own dedup and reads to an AE as though
+  // the situation is worsening when all that has happened is more silence.
+  // SRL-121494 produced a CRITICAL every hour from 33h to 39h on that basis.
   if (lastUpdateAt) {
     const hoursSinceUpdate = (Date.now() - new Date(lastUpdateAt).getTime()) / (1000 * 60 * 60);
     const inTransitStatuses = ["IN_TRANSIT", "LOADED", "DISPATCHED"];
@@ -41,7 +78,8 @@ export function assessAlertLevel(
       return {
         loadId: "",
         level: "CRITICAL",
-        reason: `No location update for ${Math.round(hoursSinceUpdate)}h on in-transit load`,
+        kind: "NO_TRACKING_DATA",
+        reason: "No location report on an in-transit load",
         eta,
         bufferHours: -hoursSinceUpdate,
       };
@@ -67,6 +105,7 @@ export function assessAlertLevel(
     return {
       loadId: "",
       level: "RED",
+        kind: "LATE",
       reason: `ETA is ${Math.abs(Math.round(bufferHours))}h past delivery appointment`,
       eta,
       appointmentTime: deadline,
@@ -77,6 +116,7 @@ export function assessAlertLevel(
     return {
       loadId: "",
       level: "YELLOW",
+        kind: "LATE",
       reason: `ETA has less than ${Math.round(bufferHours * 60)}min buffer before appointment`,
       eta,
       appointmentTime: deadline,
@@ -162,13 +202,18 @@ export async function runAlertScanner() {
     // Skip GREEN — no action needed
     if (alert.level === "GREEN") continue;
 
-    // Dedup: check if we already logged this alert level in the last 30 minutes
+    // Dedup. A LATE alert may repeat every 30 minutes because the ETA it
+    // stands on genuinely moves. NO_TRACKING_DATA cannot: nothing has changed
+    // except how long the silence has lasted, so R4 caps it at once per load
+    // per 12 hours. SRL-121494 produced one every hour for seven hours.
+    const dedupMs =
+      alert.kind === "NO_TRACKING_DATA" ? 12 * 60 * 60 * 1000 : 30 * 60 * 1000;
     const recentAlert = await prisma.loadTrackingEvent.findFirst({
       where: {
         loadId: load.id,
         eventType: "ALERT",
         alertLevel: alert.level as any,
-        createdAt: { gte: new Date(Date.now() - 30 * 60 * 1000) },
+        createdAt: { gte: new Date(Date.now() - dedupMs) },
       },
     });
     if (recentAlert) continue;
@@ -211,9 +256,15 @@ export async function runAlertScanner() {
       );
     }
 
-    // Auto-notify shipper for RED and CRITICAL
+    // Auto-notify shipper for RED and CRITICAL — but only for a LATE alert
+    // standing on a located report (R3). NO_TRACKING_DATA is a gap in our own
+    // data; telling a customer their freight is critically delayed because
+    // nobody filed a check call is a claim we cannot support, and it is what
+    // reached logistics@beekeepersnaturals.com six times for SRL-121494.
+    const located = hasLocatedReport(lastCheckCall, lastEvent, NO_DATA_LOOKBACK_HOURS);
+    const tellCustomer = alert.kind !== "NO_TRACKING_DATA" && located;
     if (alert.level === "RED" || alert.level === "CRITICAL") {
-      await sendShipperDelayNotification(load, alert, lastDelivery);
+      if (tellCustomer) await sendShipperDelayNotification(load, alert, lastDelivery);
 
       // Escalate check-calls to every 60 minutes for RED/CRITICAL
       await prisma.checkCallSchedule.updateMany({

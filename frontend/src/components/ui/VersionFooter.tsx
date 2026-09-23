@@ -18587,7 +18587,16 @@
 // loads at one stage was told about one of them. Both come from the key: it now
 // carries load AND stage and has no time bound at all. The customer delay goes
 // to once per load per 12h, from a 2-hour lookback on a 30-minute job.
-export const SRL_VERSION = "3.8.bhi";
+// v3.8.bhj - C6a: R3/R4 in the alert engine. A CRITICAL raised because nobody
+// filed a check call is the absence of a report, not evidence of a delay, so it
+// is now kind NO_TRACKING_DATA: it never reaches the customer, its reason
+// carries no hour count (a number that grows every scan defeats its own dedup
+// and reads as a worsening situation when all that grew was the silence), and
+// it is capped at once per load per 12h. LATE keeps its 30-minute cadence
+// because the ETA it stands on genuinely moves. The customer gate requires BOTH
+// a LATE kind and a LOCATED report - a check call with no city cannot place
+// freight, and SRL-121494's four were all null-location.
+export const SRL_VERSION = "3.8.bhj";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
