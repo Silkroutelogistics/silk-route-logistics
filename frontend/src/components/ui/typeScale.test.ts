@@ -36,6 +36,7 @@ const SURFACES = [
   "components/carriers/CarrierPreferencesPanel.tsx",
   "components/carriers/InfoRequestThread.tsx",
   "components/carriers/TrainingTab.tsx",
+  "components/loads/ExecutionEvidencePanel.tsx",
 ];
 
 /**
@@ -131,7 +132,7 @@ describe("guard reach", () => {
     for (const rel of SURFACES) {
       expect(fs.existsSync(path.join(SRC, rel)), `${rel} listed but missing — update this guard`).toBe(true);
     }
-    expect(SURFACES.length).toBe(12);
+    expect(SURFACES.length).toBe(13);
   });
 
   it("the size pattern matches the shape it hunts", () => {

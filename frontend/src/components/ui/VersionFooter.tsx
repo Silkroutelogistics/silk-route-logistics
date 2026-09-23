@@ -18480,7 +18480,15 @@
 // and no top-level select, so both serialized signedUrl; the strip is now one
 // definition used by both, so the two cannot drift. Found by checking the
 // sibling rather than assuming the fix to one covered the class.
-export const SRL_VERSION = "3.8.bgu";
+// v3.8.bgv - C5: the AE load detail gains a read-only Execution Evidence panel
+// - the carrier's acceptance (when, by what act, by whom), the signature
+// (signer, time, IP, content hash), SRL's countersignature, and the Certificate
+// of Electronic Signature behind the api client rather than a bare href. An
+// absent fact is STATED ("Not signed", "Not countersigned", "No acceptance
+// recorded") rather than left as an empty row, because a blank row is
+// indistinguishable from a field the panel failed to read. Carrier portal
+// unchanged: no IP, no hash, no storage URI.
+export const SRL_VERSION = "3.8.bgv";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

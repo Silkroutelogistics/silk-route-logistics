@@ -18,6 +18,7 @@ import {
 import { RateConfirmationModal } from "@/components/loads/RateConfirmationModal";
 import { CreateLoadModal } from "@/components/loads/CreateLoadModal";
 import { EditLoadModal } from "@/components/loads/EditLoadModal";
+import ExecutionEvidencePanel from "@/components/loads/ExecutionEvidencePanel";
 import { AcceptOnBehalfModal } from "@/components/loads/AcceptOnBehalfModal";
 import { OverrideComplianceModal, type BlockedCode } from "@/components/loads/OverrideComplianceModal";
 import { CancelLoadModal, type CancelLoadPayload } from "@/components/loads/CancelLoadModal";
@@ -35,6 +36,12 @@ import { money, pct, perMile, customerBilled, carrierPay, margin, marginPct } fr
 /* ------------------------------------------------------------------ */
 
 interface Load extends BaseLoad {
+  // C4a — acceptance evidence. Present-and-null until some act records one;
+  // never inferred from status, because three SRL-side paths reach a
+  // dispatched-looking state with no carrier act at all.
+  carrierAcceptedAt?: string | null;
+  carrierAcceptedVia?: string | null;
+  carrierAcceptedByUserId?: string | null;
   freightClass?: string;
   hazmat?: boolean;
   tempMin?: number;
@@ -1785,6 +1792,14 @@ function PanelCarrier({
           </div>
         </section>
       )}
+
+      {/* C5 — what SRL can prove about this load. Read-only; AE-only by route. */}
+      <ExecutionEvidencePanel
+        loadId={load.id}
+        carrierAcceptedAt={load.carrierAcceptedAt}
+        carrierAcceptedVia={load.carrierAcceptedVia}
+        carrierAcceptedByUserId={load.carrierAcceptedByUserId}
+      />
 
       {/* Suggested carriers (from carrier match) */}
       {load.status === "POSTED" && canCreate && suggestedCarriers && suggestedCarriers.carriers.length > 0 && (
