@@ -19,26 +19,14 @@
  * the session before the first query. PROD_ENV_FILE may point at the file when
  * this script runs from a worktree that has no copy of it.
  */
-import fs from "fs";
-import path from "path";
-import dotenv from "dotenv";
 import { PrismaClient } from "@prisma/client";
-import { railBreach, hostOf, isLocalHost } from "./prisma-target-guard";
+import { resolveCensusCredential, announceCensusTarget } from "./_census-credential";
 
-const BACKEND = path.resolve(__dirname, "..");
-const PROD_FILE = process.env.PROD_ENV_FILE || path.join(BACKEND, ".env.production.local");
-
-if (!fs.existsSync(PROD_FILE)) { console.error(`${PROD_FILE} does not exist — nothing to read.`); process.exit(1); }
-const localEnv = path.join(BACKEND, ".env");
-if (fs.existsSync(localEnv)) {
-  const breach = railBreach(localEnv, PROD_FILE);
-  if (breach) { console.error(`REFUSING: .env and the production file both resolve to ${breach.host}.`); process.exit(1); }
-}
-const prodEnv = dotenv.parse(fs.readFileSync(PROD_FILE));
-const url = prodEnv.DATABASE_URL ?? prodEnv.DIRECT_URL ?? "";
-if (!url || isLocalHost(hostOf(url))) { console.error("REFUSING: production file resolves to a local host or is empty."); process.exit(1); }
-console.log(`[census] production host : ${hostOf(url)}`);
-console.log(`[census] mode            : READ ONLY (session default_transaction_read_only = on)\n`);
+const target = resolveCensusCredential();
+const url = target.url;
+announceCensusTarget(target, "census");
+console.log(`[census] mode   : READ ONLY (role cannot write; session setting is the second layer)
+`);
 
 const n = (v: unknown) => (typeof v === "bigint" ? Number(v) : v);
 const table = (rows: any[]) => rows.map((r) => Object.fromEntries(Object.entries(r).map(([k, v]) => [k, n(v)])));

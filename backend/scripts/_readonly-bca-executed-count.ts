@@ -11,30 +11,12 @@
  * deliberate act rather than something a command picks up by accident. This is
  * that deliberate act, and it issues SELECT only.
  */
-import fs from "fs";
-import path from "path";
+import { applyCensusCredential, announceCensusTarget } from "./_census-credential";
 
-const PROD_ENV = path.resolve(__dirname, "../.env.production.local");
-
+/** Place the read-only census credential where the shared singleton will find it. */
 function loadProdEnv(): void {
-  if (!fs.existsSync(PROD_ENV)) {
-    console.error("REFUSING: .env.production.local not found. Nothing to read.");
-    process.exit(1);
-  }
-  for (const line of fs.readFileSync(PROD_ENV, "utf8").split(/\r?\n/)) {
-    const m = /^\s*([A-Z0-9_]+)\s*=\s*(.*)$/.exec(line);
-    if (!m) continue;
-    let v = m[2].trim();
-    if ((v.startsWith('"') && v.endsWith('"')) || (v.startsWith("'") && v.endsWith("'"))) v = v.slice(1, -1);
-    process.env[m[1]] = v;
-  }
-  const host = (process.env.DATABASE_URL ?? "").replace(/.*@/, "").split("/")[0];
-  if (/localhost|127\.0\.0\.1/.test(host)) {
-    console.error("REFUSING: .env.production.local resolves to a LOCAL host (" + host + ").");
-    console.error("That is the rail breach §2.2 describes -- production credentials pasted into the wrong file.");
-    process.exit(1);
-  }
-  console.log("target (read-only): " + host + "\n");
+  announceCensusTarget(applyCensusCredential(), "bca-count");
+  console.log("");
 }
 
 /**

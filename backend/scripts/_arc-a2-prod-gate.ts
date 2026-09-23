@@ -18,36 +18,16 @@
  * and sets `default_transaction_read_only = on` on the session before the first
  * query, so a write would be refused by Postgres rather than by discipline.
  */
-import fs from "fs";
-import path from "path";
-import dotenv from "dotenv";
 import { PrismaClient } from "@prisma/client";
-import { railBreach, hostOf, isLocalHost } from "./prisma-target-guard";
+import { resolveCensusCredential, announceCensusTarget } from "./_census-credential";
 
-const BACKEND = path.resolve(__dirname, "..");
-const PROD_FILE = path.join(BACKEND, ".env.production.local");
+const target = resolveCensusCredential();
+const url = target.url;
 const MIGRATION = "20260908140000_status_machine_counters";
 const TABLE = "status_machine_counters";
-
-if (!fs.existsSync(PROD_FILE)) {
-  console.error("backend/.env.production.local does not exist — nothing to read.");
-  process.exit(1);
-}
-const breach = railBreach(path.join(BACKEND, ".env"), PROD_FILE);
-if (breach) {
-  console.error(`REFUSING: .env and .env.production.local both resolve to ${breach.host}.`);
-  process.exit(1);
-}
-const prodEnv = dotenv.parse(fs.readFileSync(PROD_FILE));
-const url = prodEnv.DATABASE_URL ?? prodEnv.DIRECT_URL ?? "";
-if (!url || isLocalHost(hostOf(url))) {
-  console.error("REFUSING: .env.production.local resolves to a local host or is empty.");
-  process.exit(1);
-}
-
-console.log(`[gate] production host : ${hostOf(url)}`);
-console.log(`[gate] migration       : ${MIGRATION}`);
-console.log(`[gate] mode            : READ ONLY (session default_transaction_read_only = on)\n`);
+announceCensusTarget(target, "gate");
+console.log(`[gate] mode   : READ ONLY (role cannot write; session setting is the second layer)
+`);
 
 const n = (v: unknown) => (typeof v === "bigint" ? Number(v) : v);
 

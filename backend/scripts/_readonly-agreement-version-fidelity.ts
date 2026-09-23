@@ -18,23 +18,11 @@
  * and Prisma loads backend/.env first, so a script that uses it silently reads
  * the local container while reporting on "production".
  */
-import fs from "fs";
-import path from "path";
 
-const PROD_ENV = path.resolve(__dirname, "../.env.production.local");
-if (!fs.existsSync(PROD_ENV)) {
-  console.error("REFUSING: .env.production.local not found. Nothing to read.");
-  process.exit(1);
-}
-for (const line of fs.readFileSync(PROD_ENV, "utf8").split(/\r?\n/)) {
-  const m = line.match(/^\s*([A-Z_][A-Z0-9_]*)\s*=\s*(.*)$/);
-  if (m) process.env[m[1]] = m[2].replace(/^["']|["']$/g, "");
-}
-const host = (process.env.DATABASE_URL ?? "").replace(/.*@/, "").split("/")[0];
-if (!host || /localhost|127\.0\.0\.1/.test(host)) {
-  console.error("REFUSING: .env.production.local resolves to a LOCAL host (" + host + ").");
-  process.exit(1);
-}
+import { applyCensusCredential, announceCensusTarget } from "./_census-credential";
+
+const target = applyCensusCredential();
+announceCensusTarget(target, "fidelity");
 
 import { PrismaClient } from "@prisma/client";
 import { getAgreement } from "../src/data/agreements";
@@ -42,7 +30,6 @@ import { getAgreement } from "../src/data/agreements";
 const prisma = new PrismaClient();
 
 (async () => {
-  console.log("target: " + host);
 
   const rows = await prisma.$queryRawUnsafe<
     Array<{

@@ -5,21 +5,14 @@
  * refuses a local host, refuses a rail breach, sets the session read-only
  * before the first query so a write is refused by Postgres, not by discipline.
  */
-import fs from "fs";
-import path from "path";
-import dotenv from "dotenv";
 import { PrismaClient } from "@prisma/client";
-import { railBreach, hostOf, isLocalHost } from "./prisma-target-guard";
+import { resolveCensusCredential, announceCensusTarget } from "./_census-credential";
 
-const BACKEND = path.resolve(__dirname, "..");
-const PROD_FILE = path.join(BACKEND, ".env.production.local");
-if (!fs.existsSync(PROD_FILE)) { console.error("no .env.production.local"); process.exit(1); }
-const breach = railBreach(path.join(BACKEND, ".env"), PROD_FILE);
-if (breach) { console.error(`REFUSING: rail breach on ${breach.host}`); process.exit(1); }
-const prodEnv = dotenv.parse(fs.readFileSync(PROD_FILE));
-const url = prodEnv.DATABASE_URL ?? prodEnv.DIRECT_URL ?? "";
-if (!url || isLocalHost(hostOf(url))) { console.error("REFUSING: local or empty"); process.exit(1); }
-console.log(`[select] production host : ${hostOf(url)}`);
+const target = resolveCensusCredential();
+const url = target.url;
+announceCensusTarget(target, "select");
+console.log(`[select] mode   : READ ONLY (role cannot write; session setting is the second layer)
+`);
 
 async function main() {
   const prisma = new PrismaClient({ datasourceUrl: url });
