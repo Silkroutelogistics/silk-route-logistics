@@ -203,7 +203,7 @@ The **screenshot test:** does this visual signal *"modern tech-forward operation
 **Heritage iconography belongs in:**
 - Narrative copy (the Silk Road etymology, "Caravan" naming, "Marco Polo" naming, Silk Road origin story in /about Our Story section)
 - Subtle brand motifs (palette: navy + gold-dark + cream + cream-2; 4-point cardinal-star derivative of the compass mark; brass + walnut color references)
-- The compass mark logo asset itself (`/logo-compass.png`)
+- The compass mark logo asset itself — `frontend/public/brand/srl-logo-fullcolour.svg` on light surfaces, `srl-logo-white.svg` on navy, with `srl-logo-navy.svg` / `srl-logo-black.svg` for single-ink work and `srl-logo-{fullcolour,white}-2048.png` where a raster is required (email, og:image, app icons). **`frontend/public/brand/` is the canonical home and these six files are the only masters** (v3.8.bfz). The `/logo-compass.png` this line used to name was an abandoned gradient-"P" concept and never the compass at all; `/media/srl-logo-1024.png`, `/logo.png`, `/logo-full*.png`, `/logo.svg` and `/logo-icon-only.svg` were all superseded by the same correction. Do not reintroduce any of them, and do not re-trace the mark from a raster: the SVG is the master and `backend/src/lib/srlMark.ts` mirrors it for PDF rendering under a guard test.
 
 **Heritage iconography does NOT belong in:**
 - Service category imagery (FTL, Reefer, Dedicated, Expedited) where buyers must decode positioning at scan speed
