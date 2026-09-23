@@ -120,6 +120,7 @@ describe("LIFECYCLE_ACTION — the enum it lands on", () => {
     "LOAD_CANCELLED", "LOAD_TONU", "LOAD_ARCHIVED", "LOAD_RESTORED",
     "CUSTOMER_INACTIVATED", "CUSTOMER_REACTIVATED", "CUSTOMER_DELETED", "CUSTOMER_RESTORED",
     "CARRIER_ARCHIVED", "CARRIER_RESTORED",
+    "CONTACT_DELETED", "CONTACT_CONSENT_CHANGED",
   ];
 
   it("every action detail maps to a member of the AuditAction enum as declared in schema.prisma", () => {
@@ -151,6 +152,10 @@ describe("LIFECYCLE_ACTION — the enum it lands on", () => {
     expect(LIFECYCLE_ACTION.CUSTOMER_DELETED).toBe("DELETE");
     expect(LIFECYCLE_ACTION.LOAD_ARCHIVED).toBe("DELETE");
     expect(LIFECYCLE_ACTION.LOAD_RESTORED).toBe("STATUS_CHANGE");
+    expect(LIFECYCLE_ACTION.CONTACT_DELETED).toBe("DELETE");
+    // A consent change is an edit to a field, so it lands under UPDATE and
+    // actionDetail is what a reader greps to find it — see the lib header.
+    expect(LIFECYCLE_ACTION.CONTACT_CONSENT_CHANGED).toBe("UPDATE");
     expect(Object.keys(LIFECYCLE_ACTION).sort()).toEqual([...details].sort());
   });
 });

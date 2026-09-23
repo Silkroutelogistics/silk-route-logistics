@@ -116,7 +116,13 @@ describe("runAlertScanner", () => {
     const written = db.loadTrackingEvent.create.mock.calls.map((c) => c[0].data);
     expect(written).toHaveLength(1);
     expect(written[0]).toMatchObject({ loadId: "L1", eventType: "ALERT", alertLevel: "CRITICAL" });
-    expect(written[0].notes).toMatch(/No location update for 7h/);
+    // R4 (C6a) — the reason no longer carries an hour count. It grew on every
+    // scan, so the alert was never the same twice and read to an AE as a
+    // worsening situation when the only thing that grew was the silence. The
+    // assertion is inverted rather than deleted: what must hold now is that it
+    // does NOT escalate.
+    expect(written[0].notes).toContain("No location report");
+    expect(written[0].notes).not.toMatch(/d+s*h/);
   });
 
   it("a TEMPERATURE row from the reefer pass does not count as an update either", async () => {

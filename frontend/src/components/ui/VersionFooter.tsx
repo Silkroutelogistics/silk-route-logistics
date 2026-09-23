@@ -18611,7 +18611,14 @@
 // list inherits nothing, and iterating a soft-deleted or test load is work with
 // no possible recipient. The resolver keeps its guards - defence in depth, not
 // a move - and a test pins both ends so neither can be dropped as redundant.
-export const SRL_VERSION = "3.8.bhl";
+// v3.8.bhm - C8: two guards that caught this arc, reconciled rather than
+// deleted. lifecycleAudit's completeness check listed every action detail and
+// correctly failed on the two C3a added. trackTraceAlertEngine asserted the
+// reason matched /No location update for 7h/ - the hour count C6a removed
+// because it defeated its own dedup; that assertion is INVERTED to pin the new
+// rule (it must NOT escalate) rather than dropped, because deleting a test to
+// go green loses the only thing still watching that property.
+export const SRL_VERSION = "3.8.bhm";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
