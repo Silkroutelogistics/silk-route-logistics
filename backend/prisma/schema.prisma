@@ -1745,6 +1745,27 @@ model Load {
   carrierId String?
   carrier   User?   @relation("LoadCarrier", fields: [carrierId], references: [id])
 
+  // C4a — acceptance evidence. WHO accepted this load, by WHAT act, and WHEN.
+  //
+  // Persisted at the moment of the act, first write wins, never recomputed and
+  // never inferred from a mutable status column. `Load.status` reaching
+  // DISPATCHED is not evidence a carrier accepted anything: three SRL-side
+  // paths reach DISPATCHED without any carrier act at all (finalize, the
+  // waterfall on-behalf accept, PATCH /loads/:id/status), and a status column
+  // can be moved again afterwards. This can not.
+  //
+  // carrierAcceptedCarrierId is stored even though it must equal carrierId at
+  // stamp time, because it is EVIDENCE rather than a pointer: a later release
+  // or reassignment moves carrierId, and the record of who accepted must not
+  // move with it.
+  carrierAcceptedAt        DateTime? @map("carrier_accepted_at")
+  /** RC_SIGNATURE | TENDER_ACCEPT | BID_AWARD_ACCEPT | STATUS_CONFIRMED | STATUS_BOOKED | PICKUP_ARRIVAL */
+  carrierAcceptedVia       String?   @map("carrier_accepted_via") @db.VarChar(32)
+  /** The signed-in user who performed it. NULL on the token path, which has no session. */
+  carrierAcceptedByUserId  String?   @map("carrier_accepted_by_user_id")
+  /** The carrier the act was stamped for. A User.id, the Load.carrierId space. */
+  carrierAcceptedCarrierId String?   @map("carrier_accepted_carrier_id")
+
   invoices           Invoice[]
   documents          Document[]
   tenders            LoadTender[]

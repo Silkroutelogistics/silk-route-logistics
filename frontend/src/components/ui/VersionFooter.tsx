@@ -18408,7 +18408,16 @@
 // through the real router rather than asserted from source. The acceptance-rate
 // half of the brief is REPORTED, not built: every rate reads LoadTender.status
 // alone, so the row carries no on-behalf signal for any scorer to read.
-export const SRL_VERSION = "3.8.bgl";
+// v3.8.bgm - C4a: Load gains four acceptance-evidence columns - who accepted
+// it, by what act, and when. Additive and nullable, no backfill, the bfy shape.
+// Nothing writes them yet; the writer lands in the next commit. Load.status
+// reaching DISPATCHED is not evidence a carrier accepted anything: three
+// SRL-side paths reach DISPATCHED with no carrier act at all, and a status
+// column can be moved again afterwards. carrier_accepted_carrier_id is stored
+// even though it must equal carrier_id at stamp time, because it is evidence
+// rather than a pointer - a later release moves carrier_id and the record of
+// who accepted must not move with it.
+export const SRL_VERSION = "3.8.bgm";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
