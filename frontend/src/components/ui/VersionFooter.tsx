@@ -18626,7 +18626,21 @@
 // own premise each run - still send-only, still writing its own row - so it fails
 // rather than excusing an unaudited route if either half stops being true.
 // CENSUS: 67 auditLog-declared routes, 66 audited, this was the only one.
-export const SRL_VERSION = "3.8.bhn";
+// v3.8.bho - C1a: the bill of lading stops naming the customer's billing
+// contact as the dock contact. The shipper line read `load.originContactName ||
+// load.customer?.contactName`, so a load carrying no stop contact printed
+// whoever the CRM holds for billing. Production 2026-09-23: SRL-121497 - BOOKED,
+// pickup 2026-09-24, BOL number already issued - prints "Monika Pape",
+// Beekeepers' accounts-payable contact, on the document that sends a driver to
+// Steuart Nutrition's dock in Erlanger. She is not there and cannot help.
+// lib/stopContact is now the single answer to "who is at this dock", walking
+// load stop contact -> linked facility -> a CRM facility of the same customer
+// matched on normalized name + city, refusing to answer when the match is
+// ambiguous. It exposes no tier that can reach a billing contact. Nothing
+// resolved leaves a blank handwrite line, which somebody at the dock can fill;
+// a wrong name cannot be corrected by anyone who reads it. The rate
+// confirmation carries the same fallback and is the next commit.
+export const SRL_VERSION = "3.8.bho";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

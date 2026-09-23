@@ -3,6 +3,7 @@ import { prisma } from "../config/database";
 import { AuthRequest } from "../middleware/auth";
 import { generateBOLFromLoad, generateEnhancedRateConfirmation, generateShipperLoadConfirmation, generateInvoicePDF, generateSettlementPDF } from "../services/pdfService";
 import { generateBOLPrintToken } from "../services/shipperTrackingTokenService";
+import { resolveStopContacts } from "../lib/stopContact";
 import { log } from "../lib/logger";
 
 export async function downloadRateConfirmation(req: AuthRequest, res: Response) {
@@ -277,8 +278,18 @@ export async function downloadBOLFromLoad(req: AuthRequest, res: Response) {
     const driverFullName = load.driver
       ? `${load.driver.firstName ?? ""} ${load.driver.lastName ?? ""}`.trim() || null
       : null;
+    // WHO IS AT EACH DOCK. One resolver, shared with the rate confirmation, so
+    // the two documents cannot name different people for the same stop. It
+    // walks load stop contact -> linked facility -> a CRM facility of this
+    // customer matched on name + city, and refuses to answer on an ambiguous
+    // match. It never reaches the customer's billing contact, which is what the
+    // renderer used to print here. Never throws: a CRM outage yields blanks and
+    // the BOL prints handwrite lines.
+    const stopContacts = await resolveStopContacts(load, prisma);
+
     const bolData = {
       ...load,
+      stopContacts,
       carrierLegalName:
         load.carrier?.carrierProfile?.companyName ?? load.carrier?.company ?? null,
       carrierContactName: load.carrier?.carrierProfile?.contactName ?? null,

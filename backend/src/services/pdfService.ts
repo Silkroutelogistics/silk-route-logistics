@@ -7,6 +7,7 @@ import { PackageType } from "@prisma/client";
 import { calculateMileage, MileageResult } from "./mileageService";
 import { log } from "../lib/logger";
 import { generateBOLQRBuffer } from "../utils/qrGenerator";
+import type { ResolvedStopContacts } from "../lib/stopContact";
 import { decodeHtmlEntities } from "../utils/htmlEntities";
 // ONE derivation rule for every document identifier this file prints. These are
 // pure reads: the number is allocated and persisted where the document is
@@ -218,6 +219,9 @@ interface LoadBOLData {
   originCompany?: string | null;
   originAddress?: string | null; originCity: string; originState: string; originZip: string;
   originContactName?: string | null; originContactPhone?: string | null;
+  /** Resolved dock contacts (lib/stopContact). The assembler fills this; the
+   *  renderer reads ONLY this. Absent = blank handwrite lines. */
+  stopContacts?: ResolvedStopContacts | null;
   destCompany?: string | null;
   destAddress?: string | null; destCity: string; destState: string; destZip: string;
   destContactName?: string | null; destContactPhone?: string | null;
@@ -592,19 +596,30 @@ export async function generateBOLFromLoad(
       city && state ? `${city}, ${state} ${zip ?? ""}` : "",
       "City, ST ZIP",
     );
-    const contactName = side === "shipper"
-      ? safe(load.originContactName || load.customer?.contactName).trim()
-      : safe(load.destContactName).trim();
-    const contactPhone = side === "shipper"
-      ? safe(load.originContactPhone || load.customer?.phone).trim()
-      : safe(load.destContactPhone).trim();
-    // When both fields are empty, render as em-dash (factual absence)
-    // rather than a "[Contact · Phone]" placeholder that prints into
-    // the BOL as if it were content. Matches §2.1 placeholder-vs-empty
-    // convention — placeholders only when caller asks for one.
+    // WHO IS AT THE DOCK — decided by lib/stopContact, never here.
+    //
+    // This read was `load.originContactName || load.customer?.contactName`, so
+    // a load carrying no stop contact printed the customer's BILLING contact on
+    // the shipper line. Production 2026-09-23: SRL-121497 prints "Monika Pape",
+    // Beekeepers' accounts-payable contact, on the document that sends a driver
+    // to Steuart Nutrition's dock in Erlanger. The fallback is gone, and the
+    // resolver exposes no tier that could reach a billing contact.
+    //
+    // The resolver also carries an email; the BOL prints name and phone only.
+    // A driver at a gate phones. This line is `lineBreak: false` at
+    // partiesInnerW, so a third field risks overrunning the column — the rate
+    // confirmation is where the address is printed.
+    const resolvedContact = side === "shipper"
+      ? load.stopContacts?.shipper
+      : load.stopContacts?.consignee;
+    const contactName = safe(resolvedContact?.name).trim();
+    const contactPhone = safe(resolvedContact?.phone).trim();
+    // Nothing resolved leaves a blank handwrite line, which somebody at the dock
+    // can fill in. A name nobody there recognises cannot be corrected by anyone
+    // who reads it.
     const contact: FieldDisplay = (contactName || contactPhone)
-      ? { text: `Contact: ${contactName || EM}  ${MIDDOT}  ${contactPhone || EM}`, isPlaceholder: false }
-      : { text: `Contact: ${EM}  ${MIDDOT}  ${EM}`, isPlaceholder: false };
+      ? { text: `Contact: ${[contactName, contactPhone].filter(Boolean).join(`  ${MIDDOT}  `)}`, isPlaceholder: false }
+      : { text: "Contact:", isPlaceholder: false };
     const dateFmt = side === "shipper" ? pickupDateFmt : deliveryDateFmt;
     const win = side === "shipper" ? pickupWin : deliveryWin;
     const windowText = win
