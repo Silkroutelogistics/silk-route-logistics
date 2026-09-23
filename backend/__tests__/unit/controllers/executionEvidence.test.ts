@@ -153,3 +153,29 @@ describe("the certificate is AE-only and streamed", () => {
     expect(JSON.stringify(res.body)).not.toContain("s3://");
   });
 });
+
+/**
+ * The LIST endpoint is the one the AE Load Board actually calls, and it had the
+ * identical leak. Found by checking the sibling rather than assuming the fix to
+ * one covered the class — both query with `include` and no top-level `select`.
+ */
+describe("the list endpoint strips the key too", () => {
+  beforeEach(() => {
+    mockPrisma.rateConfirmation.findMany = vi.fn().mockResolvedValue([
+      { ...SIGNED_RC, load: undefined },
+      { ...SIGNED_RC, id: "rc-2", signed: false, signedUrl: null, load: undefined },
+    ]);
+  });
+
+  it("returns the evidence but never the storage key", async () => {
+    const res = await request(await app())
+      .get("/api/rate-confirmations/load/load-1")
+      .set("x-test-role", "BROKER");
+
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveLength(2);
+    expect(res.body[0]).toMatchObject({ signerName: "Jordan Carrier", contentHash: "abc123" });
+    expect(res.body[0].signedUrl).toBeUndefined();
+    expect(JSON.stringify(res.body)).not.toContain("s3://");
+  });
+});

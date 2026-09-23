@@ -18475,7 +18475,12 @@
 // CARRIER is absent from that route's authorize list and gets a 403: the
 // certificate carries the signer's IP and the content hash, which are SRL's
 // evidence about the carrier rather than the carrier's own copy.
-export const SRL_VERSION = "3.8.bgt";
+// v3.8.bgu - C5: the LIST endpoint leaked the storage key too, and it is the
+// one the AE Load Board actually calls. Both read endpoints query with include
+// and no top-level select, so both serialized signedUrl; the strip is now one
+// definition used by both, so the two cannot drift. Found by checking the
+// sibling rather than assuming the fix to one covered the class.
+export const SRL_VERSION = "3.8.bgu";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

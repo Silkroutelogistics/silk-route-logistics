@@ -95,6 +95,23 @@ export async function createRateConfirmation(req: AuthRequest, res: Response) {
   res.status(201).json(rc);
 }
 
+/**
+ * Strip the storage key before a rate confirmation leaves the server.
+ *
+ * `signedUrl` is an s3:// key written by the signing route and read by nothing.
+ * Both read endpoints query with `include` and no top-level `select`, so every
+ * scalar is serialized and the key went out with them. One definition, used by
+ * both, so the two cannot drift — the sibling had the identical leak and was
+ * found only by checking it rather than assuming.
+ *
+ * The certificate is served by GET /:id/certificate, which resolves the key
+ * server-side and streams the bytes.
+ */
+function withoutStorageKey<T extends { signedUrl?: string | null }>(rc: T): Omit<T, "signedUrl"> {
+  const { signedUrl: _storageKey, ...safe } = rc;
+  return safe;
+}
+
 export async function getRateConfirmationsByLoad(req: AuthRequest, res: Response) {
   const rcs = await prisma.rateConfirmation.findMany({
     where: { loadId: req.params.loadId },
@@ -104,7 +121,7 @@ export async function getRateConfirmationsByLoad(req: AuthRequest, res: Response
     orderBy: { createdAt: "desc" },
   });
 
-  res.json(rcs);
+  res.json(rcs.map(withoutStorageKey));
 }
 
 export async function getRateConfirmationById(req: AuthRequest, res: Response) {
@@ -145,8 +162,7 @@ export async function getRateConfirmationById(req: AuthRequest, res: Response) {
   // authorize list (no CARRIER), so the evidence fields — signerName,
   // signedAt, signerIp, contentHash, the countersignature — are already
   // scoped to the audience that should see them.
-  const { signedUrl: _storageKey, ...safe } = rc;
-  res.json(safe);
+  res.json(withoutStorageKey(rc));
 }
 
 /**
