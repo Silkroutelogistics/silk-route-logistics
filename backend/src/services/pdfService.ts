@@ -367,10 +367,10 @@ export async function generateBOLFromLoad(
   }
 
   const pickupDateFmt = load.pickupDate instanceof Date
-    ? load.pickupDate.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric" })
+    ? load.pickupDate.toLocaleDateString("en-US", { timeZone: "UTC", weekday: "short", month: "short", day: "numeric", year: "numeric" })
     : String(load.pickupDate);
   const deliveryDateFmt = load.deliveryDate instanceof Date
-    ? load.deliveryDate.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric" })
+    ? load.deliveryDate.toLocaleDateString("en-US", { timeZone: "UTC", weekday: "short", month: "short", day: "numeric", year: "numeric" })
     : String(load.deliveryDate);
   const MIDDOT = "·";
   const TIMES = "×";
@@ -1726,8 +1726,8 @@ export function generateEnhancedRateConfirmation(load: EnhancedRCLoadData, formD
   // em-dash per drawMetaStrip skill canonical, instead of orphan labels).
   // formData primary + Load fallback per Sprint 48 hybrid precedence pattern.
   const dateStr = new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
-  const pickupStr = fd.pickupDate || (load.pickupDate instanceof Date ? load.pickupDate.toLocaleDateString() : null) || "—";
-  const deliveryStr = fd.deliveryDate || (load.deliveryDate instanceof Date ? load.deliveryDate.toLocaleDateString() : null) || "—";
+  const pickupStr = fd.pickupDate || (load.pickupDate instanceof Date ? load.pickupDate.toLocaleDateString("en-US", { timeZone: "UTC" }) : null) || "—";
+  const deliveryStr = fd.deliveryDate || (load.deliveryDate instanceof Date ? load.deliveryDate.toLocaleDateString("en-US", { timeZone: "UTC" }) : null) || "—";
   const equipment = fd.equipmentType || load.equipmentType || "—";
   const termsLabel = fd.paymentTerms || "Net-30";
   // ── v3.8.asb — the QUICK PAY cell states the FEE APPLIED TO THIS LOAD ────
@@ -2866,7 +2866,7 @@ export function generateShipperLoadConfirmation(load: EnhancedRCLoadData, formDa
   const fmtDate = (d?: Date | string | null) => {
     if (!d) return "—";
     if (typeof d === "string") return d;
-    return new Date(d).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" });
+    return new Date(d).toLocaleDateString("en-US", { timeZone: "UTC", year: "numeric", month: "short", day: "numeric" });
   };
   const smallLabel = (text: string, x: number, ly: number, size = 7) =>
     doc.font(FONT_BODY_BOLD, size).fillColor(TOKENS.goldDark)
