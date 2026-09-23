@@ -117,3 +117,56 @@ describe("loadboard create — dock contacts the AE typed are persisted", () => 
     expect(data.destContactName).toBeUndefined();
   });
 });
+
+describe("loadboard create — stop windows are written whenever a time was sent", () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it("persists the Order Builder's window spelling with NO discriminator sent", async () => {
+    // This is the whole defect: the Order Builder sends these four keys and has
+    // never sent pickupTimeType/deliveryTimeType. Every window was dropped.
+    const { data } = await createAndCapture(
+      loadboardBody({
+        pickupWindowOpen: "09:00", pickupWindowClose: "10:00",
+        deliveryWindowOpen: "15:30", deliveryWindowClose: "16:30",
+      }),
+    );
+    expect(data.pickupTimeStart).toBe("09:00");
+    expect(data.pickupTimeEnd).toBe("10:00");
+    expect(data.deliveryTimeStart).toBe("15:30");
+    expect(data.deliveryTimeEnd).toBe("16:30");
+  });
+
+  it("persists the drawer's direct spelling too", async () => {
+    const { data } = await createAndCapture(
+      loadboardBody({
+        pickupTimeStart: "12:00", pickupTimeEnd: "13:00",
+        deliveryTimeStart: "14:00", deliveryTimeEnd: "15:00",
+      }),
+    );
+    expect(data.pickupTimeStart).toBe("12:00");
+    expect(data.deliveryTimeEnd).toBe("15:00");
+  });
+
+  it("still honours an explicit WINDOW discriminator, so old callers keep working", async () => {
+    const { data } = await createAndCapture(
+      loadboardBody({
+        pickupTimeType: "WINDOW", pickupWindowOpen: "08:00", pickupWindowClose: "09:00",
+      }),
+    );
+    expect(data.pickupTimeStart).toBe("08:00");
+    expect(data.pickupTimeEnd).toBe("09:00");
+  });
+
+  it("still honours the APPOINTMENT shape's bare time", async () => {
+    const { data } = await createAndCapture(
+      loadboardBody({ pickupTimeType: "APPOINTMENT", pickupTime: "11:15" }),
+    );
+    expect(data.pickupTimeStart).toBe("11:15");
+  });
+
+  it("leaves windows undefined when no time was sent at all", async () => {
+    const { data } = await createAndCapture(loadboardBody());
+    expect(data.pickupTimeStart).toBeUndefined();
+    expect(data.deliveryTimeEnd).toBeUndefined();
+  });
+});

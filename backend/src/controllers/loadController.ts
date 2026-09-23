@@ -224,14 +224,26 @@ export async function createLoad(req: AuthRequest, res: Response) {
     consigneeFacility: raw.consigneeName || raw.consigneeFacility || undefined,
 
     // Schedule
+    // A TIME THAT WAS SENT IS A TIME THAT GETS WRITTEN. These four reads used
+    // to be gated on a `pickupTimeType` / `deliveryTimeType` discriminator that
+    // the Order Builder has never sent — grep it in
+    // frontend/src/app/dashboard/orders/page.tsx and you get nothing. With the
+    // discriminator undefined every ternary fell to `undefined` and the sweep
+    // below deleted the key, so every loadboard load was created with NULL
+    // windows while the AE watched themselves type them in.
+    //
+    // The gate is removed rather than repaired. It had exactly one producer and
+    // no reader outside these six lines, so asking callers to send a
+    // discriminator would be asking them to keep a secret handshake alive for
+    // its own sake. Both spellings are accepted: `pickupWindowOpen/Close` from
+    // the Order Builder, `pickupTimeStart/End` from the drawer, and a bare
+    // `pickupTime` for the appointment shape that used to need the flag.
     pickupDate: raw.pickupDate,
-    pickupTimeStart: raw.pickupTimeType === "APPOINTMENT" ? raw.pickupTime :
-                     raw.pickupTimeType === "WINDOW" ? raw.pickupWindowOpen : undefined,
-    pickupTimeEnd: raw.pickupTimeType === "WINDOW" ? raw.pickupWindowClose : undefined,
+    pickupTimeStart: raw.pickupTimeStart || raw.pickupWindowOpen || raw.pickupTime || undefined,
+    pickupTimeEnd: raw.pickupTimeEnd || raw.pickupWindowClose || undefined,
     deliveryDate: raw.deliveryDate,
-    deliveryTimeStart: raw.deliveryTimeType === "APPOINTMENT" ? raw.deliveryTime :
-                       raw.deliveryTimeType === "WINDOW" ? raw.deliveryWindowOpen : undefined,
-    deliveryTimeEnd: raw.deliveryTimeType === "WINDOW" ? raw.deliveryWindowClose : undefined,
+    deliveryTimeStart: raw.deliveryTimeStart || raw.deliveryWindowOpen || raw.deliveryTime || undefined,
+    deliveryTimeEnd: raw.deliveryTimeEnd || raw.deliveryWindowClose || undefined,
 
     // Freight
     weight: raw.weight || undefined,
