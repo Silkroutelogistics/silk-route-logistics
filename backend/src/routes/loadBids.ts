@@ -7,6 +7,7 @@ import { createCheckCallSchedule } from "../services/checkCallAutomation";
 import { complianceCheck } from "../services/complianceMonitorService";
 import { log } from "../lib/logger";
 import { assignCarrier } from "../services/carrierAssignmentService";
+import { stampCarrierAcceptance } from "../lib/acceptanceEvidence";
 import { createTender } from "../services/tenderCreationService";
 
 const router = Router();
@@ -239,6 +240,24 @@ router.patch(
             dispatchedCarrierId: bid.carrierId,
             statusUpdatedAt: now,
           },
+        });
+
+        // C4a — the carrier's act here is the BID, submitted in their own
+        // session under authorize("CARRIER"); the AE award accepts a standing
+        // offer. So this IS a carrier acceptance even though an AE pressed the
+        // button, and it is stamped at the award because that is when the offer
+        // became a commitment.
+        //
+        // LoadBid.carrierId is the submitting user's id (set from req.user.id
+        // at submission) and the model has no separate column for it, so it is
+        // both the carrier and the actor. That is not a shortcut — the two
+        // genuinely are the same person on this path.
+        await stampCarrierAcceptance({
+          loadId,
+          via: "BID_AWARD_ACCEPT",
+          carrierUserId: bid.carrierId,
+          byUserId: bid.carrierId,
+          at: now,
         });
 
         await logWaterfallEvent({

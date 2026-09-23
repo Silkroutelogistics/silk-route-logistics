@@ -21,6 +21,7 @@ import { hooks } from "../lib/hooks";
 import { log } from "../lib/logger";
 import { validateLoadStatusTransition } from "../lib/loadStateMachine";
 import { assignCarrier } from "../services/carrierAssignmentService";
+import { stampCarrierAcceptance } from "../lib/acceptanceEvidence";
 import { createTender as createTenderRow } from "../services/tenderCreationService";
 import { withdrawLiveTenders, settleTender, settleTenders } from "../services/tenderTransitionService";
 
@@ -234,6 +235,31 @@ export async function acceptTender(req: AuthRequest, res: Response) {
         carrierRate: agreedRateFromTender(tender as any),
       },
       tx,
+    );
+
+    // C4a — the acceptance, recorded at the moment of the act and in the same
+    // transaction as the assignment, so a load can never hold a carrier with
+    // no record of them agreeing to it.
+    //
+    // ONE WIRING POINT COVERS FOUR ENTRY SURFACES. acceptTenderOnBehalf, the
+    // load-board accept and the magic link all delegate here through the
+    // response-capturing shim with a synthetic CARRIER actor, so none of them
+    // needs its own stamp and none of them can drift from this one.
+    //
+    // carrierUserId comes from the TENDER's carrier, the authoritative row —
+    // never from req.user, which on three of those four surfaces is synthetic.
+    // byUserId is whoever actually pressed the button: the AE on an on-behalf
+    // accept, the carrier otherwise. That is what keeps an AE-recorded
+    // acceptance distinguishable from a carrier's own click after the fact.
+    await stampCarrierAcceptance(
+      {
+        loadId: tender.loadId,
+        via: "TENDER_ACCEPT",
+        carrierUserId: tender.carrier.userId,
+        byUserId: (req as unknown as { onBehalf?: { actorId?: string } }).onBehalf?.actorId ?? req.user!.id,
+        at: new Date(),
+      },
+      tx as never,
     );
     // v3.8.aww — WITHDRAWN, not DECLINED. These carriers did not refuse
     // anything; SRL pulled their offer because somebody else got there first.

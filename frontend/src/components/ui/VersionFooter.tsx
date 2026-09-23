@@ -18432,7 +18432,15 @@
 // written down (v3.8.axq), this route takes no evidence at all. So an AE's
 // click here is not a record of the carrier agreeing, and stamping it would
 // assert an act nobody observed. R8c names this path for that reason.
-export const SRL_VERSION = "3.8.bgo";
+// v3.8.bgp - C4a: the direct tender accept and the bid award record acceptance.
+// One wiring point in acceptTender covers four entry surfaces, because
+// acceptTenderOnBehalf, the carrier load-board accept and the emailed magic
+// link all delegate there through the response-capturing shim with a synthetic
+// CARRIER actor. carrierUserId comes from the TENDER's carrier - the
+// authoritative row - never from req.user, which is synthetic on three of those
+// four. byUserId is whoever actually pressed the button, which is what keeps an
+// AE-recorded acceptance distinguishable from a carrier's own click.
+export const SRL_VERSION = "3.8.bgp";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
