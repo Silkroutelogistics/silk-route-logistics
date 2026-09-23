@@ -4,7 +4,7 @@
  * Both exist because a guard that watches one half of a pair says nothing about
  * the other half. check-direct-url.js asserted DIRECT_URL is NOT pooled and
  * nothing asserted DATABASE_URL IS -- so the pooled endpoint went missing from
- * backend/.env.production.local and every check still passed (§13.3 Item 302 b1).
+ * backend/.env.production.local and every check still passed (§13.3 Item 303 b1).
  * The census resolver refuses the owner role, which is the property that makes a
  * census unable to write regardless of what any individual script remembers to
  * set; nothing held that refusal in place until this file.

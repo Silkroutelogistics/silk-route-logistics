@@ -126,7 +126,7 @@ function failDatabaseUrl(message, ...lines) {
   console.error("  4. Leave DIRECT_URL on the unpooled endpoint — the two differ");
   console.error("     by exactly that one segment.");
   console.error("");
-  console.error("See CLAUDE.md §2.2 + §13.3 Item 302 (b1) for full rationale.");
+  console.error("See CLAUDE.md §2.2 + §13.3 Item 303 (b1) for full rationale.");
   console.error("");
   process.exit(1);
 }
