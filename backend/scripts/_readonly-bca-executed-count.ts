@@ -58,6 +58,14 @@ async function resolveTarget(): Promise<Target> {
 async function main() {
   loadProdEnv();
   const { prisma } = await import("../src/config/database");
+
+  // Read-only at the SESSION level, not by promise. The header says SELECT
+  // only; this is Postgres refusing anything else. The SHOW is the load-bearing
+  // half — a SET that silently did not take looks identical to one that did.
+  await prisma.$executeRawUnsafe(`SET default_transaction_read_only = on`);
+  const ro: any[] = await prisma.$queryRawUnsafe(`SHOW default_transaction_read_only`);
+  if (ro[0]?.default_transaction_read_only !== "on") throw new Error("read-only session setting did not take");
+
   const TARGET = await resolveTarget();
   const OUTGOING = TARGET.version;
   console.log("template under test: " + TARGET.template +
