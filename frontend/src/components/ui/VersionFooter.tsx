@@ -18417,7 +18417,15 @@
 // even though it must equal carrier_id at stamp time, because it is evidence
 // rather than a pointer - a later release moves carrier_id and the record of
 // who accepted must not move with it.
-export const SRL_VERSION = "3.8.bgm";
+// v3.8.bgn - C4a: one writer for acceptance evidence, called by nobody yet.
+// Six paths can establish the act, and the rules that make the record
+// trustworthy - stamp for the party whose act it was, first write wins, never
+// coerce a mismatch - have to hold on all six or the record is only as good as
+// the weakest. Both are enforced by the WHERE clause rather than a
+// read-then-check, so neither can be defeated by concurrency or by a caller
+// forgetting to ask: the update is scoped carrierAcceptedAt: null AND
+// carrierId, so a second act and a wrong-carrier act each match zero rows.
+export const SRL_VERSION = "3.8.bgn";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
