@@ -276,6 +276,32 @@ describe("only the production scripts load the production file", () => {
     }
   });
 
+  /**
+   * The test above proves the script does not write TODAY. This one makes
+   * Postgres refuse a write whatever the script is edited into tomorrow.
+   *
+   * Both halves are required, and the SHOW is the load-bearing one: a SET that
+   * silently failed to take looks identical from the script's side to one that
+   * took, which is §19 Sub-pattern 16 exactly. Asserting the SET alone would be
+   * a guard that proves the statement is written rather than that it held.
+   */
+  const locksSession = (src: string) => {
+    const code = stripComments(src);
+    return {
+      sets: /SET\s+default_transaction_read_only\s*=\s*on/i.test(code),
+      verifies: /SHOW\s+default_transaction_read_only/i.test(code),
+    };
+  };
+
+  it("a READ_ONLY_TOOL locks the session and verifies the lock took", () => {
+    for (const [rel, { klass }] of Object.entries(CLASSIFIED)) {
+      if (klass !== "READ_ONLY_TOOL") continue;
+      const { sets, verifies } = locksSession(fs.readFileSync(path.join(BACKEND, rel), "utf8"));
+      expect(sets, `${rel} is classified READ_ONLY_TOOL but never SETs default_transaction_read_only`).toBe(true);
+      expect(verifies, `${rel} SETs the read-only lock but never SHOWs it back — a SET that did not take reads as success`).toBe(true);
+    }
+  });
+
   it("the detector can tell naming from mentioning (self-test)", () => {
     // Without this, a matcher that had stopped matching would report a clean
     // tree forever.
@@ -290,6 +316,10 @@ describe("only the production scripts load the production file", () => {
     expect(writeLines("await prisma.$executeRawUnsafe(`DELETE FROM users`)")).toHaveLength(1);
     // the read-only lock is not a write — the exemption is the statement, not the file
     expect(writeLines("await prisma.$executeRawUnsafe(`SET default_transaction_read_only = on`)")).toHaveLength(0);
+    // ...and the lock detector needs BOTH halves, since a SET alone proves only that the line is written
+    expect(locksSession("$executeRawUnsafe(`SET default_transaction_read_only = on`)")).toEqual({ sets: true, verifies: false });
+    expect(locksSession("$queryRawUnsafe(`SHOW default_transaction_read_only`)")).toEqual({ sets: false, verifies: true });
+    expect(locksSession("// SET default_transaction_read_only = on")).toEqual({ sets: false, verifies: false });
     // ...and exempting that line does not exempt a real write elsewhere in the same file
     expect(
       writeLines("await prisma.$executeRawUnsafe(`SET default_transaction_read_only = on`)\nawait prisma.user.delete({})"),
