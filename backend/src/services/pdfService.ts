@@ -1100,16 +1100,27 @@ export async function generateBOLFromLoad(
         drawSigField(bx + halfW + 8, by, halfW, "DATE", "");
         by += SIG_ROW;
 
-        // v3.8.ari — Section 7 (non-delivery without payment of freight).
-        // Present on Echo, Varstar, SunteckTTS, XPO, WorldWide and Coyote in
-        // the reference set. Uses the CONSIGNEE column's free vertical space —
-        // this column ends ~90pt above the CARRIER column.
-        doc.font("DMSans-Regular").fontSize(6.25).fillColor(FG_3)
-          .text(
-            "The carrier shall not make delivery of this shipment without payment of freight and all other lawful charges.",
-            bx, by, { width: sigColW, lineGap: 0.2 },
-          );
-        by = doc.y + 2;
+        // v2.10 (ruling 1c) — THE CONSIGNEE COLUMN CARRIES NO SECTION 7 TEXT,
+        // and no other element carries it either. Section 7 non-recourse is a
+        // CONSIGNOR election; printing it beneath the RECEIVER's signature
+        // implied the receiver was agreeing to it, which is the defect this
+        // removes.
+        //
+        // IT IS REMOVED RATHER THAN RELOCATED, because both candidate homes
+        // were measured and neither fits (ruling 1, outcome c):
+        //   (a) second row of the Released Value box — fit matrix 7/7 at one
+        //       page, but the box grows 36->50 and the four elements below it
+        //       (Per 49 U.S.C. and all three signature titles) drift exactly
+        //       -14pt, failing anchor parity.
+        //   (b) one line in the footer legal block — fails 7/7: maxContentY
+        //       rises to 763-770 and crosses the footer rule (770) in three
+        //       cases.
+        // Four earlier shipper-block variants failed 6, 5, 3 and 7 of 7.
+        //
+        // BANKED: "Section 7 placement, pending counsel review." Whether the
+        // clause must appear at all is a legal question, not a layout one --
+        // it is optional under the Uniform Straight BOL and SRL is the broker,
+        // not the carrier it would bind.
         return by;
       },
     },

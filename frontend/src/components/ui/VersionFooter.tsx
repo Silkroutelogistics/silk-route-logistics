@@ -18685,7 +18685,19 @@
 // every advance in that row is a constant - but 1.6pt reads as touching.
 // RULING 4 (Section 7 to the shipper block) IS NOT IN THIS COMMIT. Measured: it
 // breaks the one-page gate in every form tried. See the halt notes.
-export const SRL_VERSION = "3.8.bhr";
+// v3.8.bhs - C4: Section 7 non-recourse leaves the CONSIGNEE column and is not
+// relocated. It is a CONSIGNOR election, and printing it beneath the receiver
+// signature read as the receiver agreeing to it. Both candidate homes were
+// measured and neither fits: (a) a second row of the Released Value box passes
+// the fit matrix 7/7 at one page but grows the box 36->50, drifting the four
+// elements below it exactly -14pt and failing anchor parity; (b) one line in
+// the footer legal block fails 7/7, raising maxContentY to 763-770 and crossing
+// the footer rule (770) in three cases. Four earlier shipper-block variants
+// failed 6, 5, 3 and 7 of 7. So the clause renders nowhere, and "Section 7
+// placement, pending counsel review" is banked with all six measurements.
+// Whether it must appear at all is a legal question: it is optional under the
+// Uniform Straight BOL, and SRL is the broker, not the carrier it would bind.
+export const SRL_VERSION = "3.8.bhs";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
