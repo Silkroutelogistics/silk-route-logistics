@@ -53,6 +53,13 @@ export const RC_FIXTURE = {
   rate: 4100, customerRate: 5100, carrierRate: 4100, distance: 1852,
   equipmentType: "Reefer", commodity: "Frozen dairy", weight: 28400,
   carrier: { carrierProfile: { companyName: "Pin Carrier LLC", mcNumber: "MC-999001", dotNumber: "9990011" } },
+  // A recorded window, so the pin WATCHES the window line. Without times the RC
+  // omits the suffix entirely and the pin was identical whether the window
+  // rendered, rendered wrongly, or did not render at all. The BOL fixture
+  // deliberately keeps NO times: its pin covers the no-window path, which is
+  // where the `[HH:MM-HH:MM]` placeholder used to print.
+  pickupTimeStart: "08:00", pickupTimeEnd: "14:00",
+  deliveryTimeStart: "09:00", deliveryTimeEnd: null,
   // Resolved dock contacts (lib/stopContact). Present so the pin actually
   // WATCHES the contact line: without them the RC omits the line entirely, so
   // the pin was identical whether the line rendered correctly, rendered the

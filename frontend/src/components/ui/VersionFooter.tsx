@@ -18655,7 +18655,22 @@
 // identical whether the line rendered correctly, rendered the billing contact,
 // or did not render at all. A fixture that does not exercise a feature cannot
 // detect a change to it.
-export const SRL_VERSION = "3.8.bhp";
+// v3.8.bhq - C2: the bill of lading stops printing a template placeholder where
+// the appointment window should be. It rendered a literal `[HH:MM-HH:MM]` on
+// any load with no window -- 4 of 7 live loads on production 2026-09-23,
+// SRL-121497 among them, on the document that sends a driver to a dock. With no
+// time recorded the line is now the date, which is the whole of what we know.
+// Times read "08:00 to 14:00 local" and never a timezone abbreviation: no zone
+// is recorded anywhere in the schema, lat/lng is 0% populated, and the only two
+// states SRL ships are BOTH split-timezone -- Kentucky is Eastern where our
+// lanes run and Central in the west. A guess would be confidently wrong for
+// exactly the freight we move, and an hour wrong on a dock time sends a driver
+// at the wrong time with paper that told them to.
+// The " - APPT" window suffix is gone: it read a Load field that does not exist
+// (the comment cited schema:2075, which is customer_facilities), so it could
+// never fire. The AE toggle still prints "** APPOINTMENT REQUIRED **" in the
+// instructions, where it always did.
+export const SRL_VERSION = "3.8.bhq";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

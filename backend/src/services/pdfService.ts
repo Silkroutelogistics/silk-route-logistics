@@ -8,6 +8,7 @@ import { calculateMileage, MileageResult } from "./mileageService";
 import { log } from "../lib/logger";
 import { generateBOLQRBuffer } from "../utils/qrGenerator";
 import type { ResolvedStopContacts } from "../lib/stopContact";
+import { formatStopWindow } from "../lib/stopWindow";
 import { decodeHtmlEntities } from "../utils/htmlEntities";
 // ONE derivation rule for every document identifier this file prints. These are
 // pure reads: the number is allocated and persisted where the document is
@@ -372,12 +373,11 @@ export async function generateBOLFromLoad(
   const EM = "—";
   const MIDDOT = "·";
   const TIMES = "×";
-  const pickupWin = (load.pickupTimeStart && load.pickupTimeEnd)
-    ? `${load.pickupTimeStart}–${load.pickupTimeEnd}`
-    : (load.pickupTimeStart || "");
-  const deliveryWin = (load.deliveryTimeStart && load.deliveryTimeEnd)
-    ? `${load.deliveryTimeStart}–${load.deliveryTimeEnd}`
-    : (load.deliveryTimeStart || "");
+  // Windows come from lib/stopWindow, shared with the rate confirmation. An
+  // end-with-no-start now prints ("by 14:00" is a real delivery shape) where
+  // the old expression silently dropped it.
+  const pickupWin = formatStopWindow(load.pickupTimeStart, load.pickupTimeEnd);
+  const deliveryWin = formatStopWindow(load.deliveryTimeStart, load.deliveryTimeEnd);
 
   // ========================= PAGE 1 =========================
   // PDFKit: Y=0 is TOP, increases downward.
@@ -622,10 +622,14 @@ export async function generateBOLFromLoad(
       : { text: "Contact:", isPlaceholder: false };
     const dateFmt = side === "shipper" ? pickupDateFmt : deliveryDateFmt;
     const win = side === "shipper" ? pickupWin : deliveryWin;
+    // NO PLACEHOLDER REACHES THE PAGE (ruling 3). This printed a literal
+    // `[HH:MM–HH:MM]` when the load carried no window — 4 of 7 live loads on
+    // production 2026-09-23, SRL-121497 among them. A driver reading it sees a
+    // form nobody finished, on the document that sends them to a dock. With no
+    // time recorded the line is the date, which is the whole of what we know.
     const windowText = win
       ? `Window: ${dateFmt}  ${MIDDOT}  ${win}`
-      : `Window: ${dateFmt}  ${MIDDOT}  [HH:MM–HH:MM]`;
-    const windowIsPlaceholder = !win;
+      : `Window: ${dateFmt}`;
 
     let ly = cy;
     // Facility name — Playfair-Bold if present, italic GOLD_DARK if placeholder
@@ -649,8 +653,9 @@ export async function generateBOLFromLoad(
       .text(contact.text, cx, ly, { width: partiesInnerW, lineBreak: false });
     ly += 11;
 
-    doc.font(windowIsPlaceholder ? "DMSans-Italic" : "DMSans-Regular")
-      .fontSize(7.75).fillColor(windowIsPlaceholder ? GOLD_DARK : FG_3)
+    // One styling, because there is no longer a placeholder state to signal.
+    doc.font("DMSans-Regular")
+      .fontSize(7.75).fillColor(FG_3)
       .text(windowText, cx, ly, { width: partiesInnerW, lineBreak: false });
   };
 
@@ -1355,10 +1360,13 @@ interface EnhancedRCLoadData {
   // who created the load (canonical AE relation via Load.posterId → User).
   // Single-AE pre-Oct-2026 (Wasi); multi-AE deferred to future sprint.
   poster?: { firstName: string; lastName: string; phone?: string | null } | null;
-  // Sprint 49 (Item 118) — appointment flag suffix on parties block windows.
-  // Load.appointmentRequired (schema:2075). Modal does not currently surface
-  // a toggle — read directly from Load.
-  appointmentRequired?: boolean | null;
+  // v3.8.bhq — `appointmentRequired` removed (ruling 7). It was declared here
+  // as "Load.appointmentRequired (schema:2075)" and THERE IS NO SUCH FIELD ON
+  // THE LOAD MODEL: schema line 2995 is customer_facilities.appointment_required.
+  // So `load.appointmentRequired` was permanently undefined and the " · APPT"
+  // suffix it drove could never fire from a load. The real flag lives on the
+  // facility, reachable only through a link the load-creation path stopped
+  // writing in May — banked at §13.3 with the linking regression it depends on.
   // Sprint 49 (Item 117) — pickup #/PO # data path for meta strip 8-cell.
   //
   // Arc 13 — the Load fallbacks are gone. Load.pickupNumber and
@@ -1824,14 +1832,12 @@ export function generateEnhancedRateConfirmation(load: EnhancedRCLoadData, formD
   // undisclosed window is unenforceable against the carrier and indefensible
   // to them. 7 of 7 reference rate confirmations print a time or an explicit
   // hours range.
-  const timeRange = (a?: string | null, b?: string | null): string | undefined => {
-    const from = (a ?? "").trim();
-    const to = (b ?? "").trim();
-    if (from && to) return from === to ? from : `${from}-${to}`;
-    return from || to || undefined;
-  };
-  const pickupWindowStr = fd.pickupTimeWindow || timeRange(load.pickupTimeStart, load.pickupTimeEnd);
-  const deliveryWindowStr = fd.deliveryTimeWindow || timeRange(load.deliveryTimeStart, load.deliveryTimeEnd);
+  // formatStopWindow is shared with the bill of lading, so the two documents
+  // cannot word the same window differently. An AE's typed override is passed
+  // through UNTOUCHED: it is their words, and appending "local" to a value that
+  // may already name a zone would contradict what they wrote.
+  const pickupWindowStr = fd.pickupTimeWindow || formatStopWindow(load.pickupTimeStart, load.pickupTimeEnd);
+  const deliveryWindowStr = fd.deliveryTimeWindow || formatStopWindow(load.deliveryTimeStart, load.deliveryTimeEnd);
 
   // WHO IS AT THE DOCK — decided by lib/stopContact, never here.
   //
@@ -1860,14 +1866,22 @@ export function generateEnhancedRateConfirmation(load: EnhancedRCLoadData, formD
   const consEmail = fd.consigneeEmail || consResolved?.email;
   const consigneeContactLine = [consContact, consPhone, consEmail].filter(Boolean).join(" · ") || undefined;
 
-  // Sprint 49 (Item 118) — appointment flag suffix on parties block windows.
-  // Reads fd.appointmentRequired (RC modal future toggle, not yet wired) OR
-  // load.appointmentRequired (canonical schema field today). Suffix " · APPT"
-  // surfaces the appointment requirement at the point a carrier eyes the
-  // window — industry-standard convention.
-  const apptFlag = (fd.appointmentRequired === true || load.appointmentRequired === true)
-    ? " · APPT"
-    : "";
+  // v3.8.bhq — the " · APPT" window suffix is gone (ruling 7).
+  //
+  // It read `fd.appointmentRequired === true || load.appointmentRequired === true`.
+  // The second half named a Load field that does not exist — the comment cited
+  // "schema:2075", which is customer_facilities.appointment_required — so it was
+  // permanently undefined. The first half is a toggle the RC modal never
+  // surfaced. A suffix neither half could produce is not a feature.
+  //
+  // `fd.appointmentRequired` SURVIVES in the instructions block below, where an
+  // AE who sets it still gets "** APPOINTMENT REQUIRED **" in writing. That one
+  // is a live formData read on a different surface, not a window variant.
+  //
+  // The real flag is CustomerFacility.appointment_required — Pattern Warehouse
+  // in Hebron carries it — reachable only through a facility link the
+  // load-creation path stopped writing in May (0 of 9 September loads). Banked
+  // at §13.3 with that regression, because surfacing it needs the link first.
   // Sprint 49 (Item 121) — consignee name fallback changed from em-dash to
   // "Consignee TBD" so the field communicates intent (data missing, fill in)
   // rather than ambiguous em-dash that could read as "no consignee."
@@ -1879,7 +1893,7 @@ export function generateEnhancedRateConfirmation(load: EnhancedRCLoadData, formD
     addressLines: shipperAddrLines,
     contact: shipperContactLine,
     window: pickupStr !== "—"
-      ? `${pickupStr}${pickupWindowStr ? " · " + pickupWindowStr : ""}${apptFlag}`
+      ? `${pickupStr}${pickupWindowStr ? " · " + pickupWindowStr : ""}`
       : undefined,
   };
   const consigneeParty: Party = {
@@ -1889,7 +1903,7 @@ export function generateEnhancedRateConfirmation(load: EnhancedRCLoadData, formD
     addressLines: consigneeAddrLines,
     contact: consigneeContactLine,
     window: deliveryStr !== "—"
-      ? `${deliveryStr}${deliveryWindowStr ? " · " + deliveryWindowStr : ""}${apptFlag}`
+      ? `${deliveryStr}${deliveryWindowStr ? " · " + deliveryWindowStr : ""}`
       : undefined,
   };
   y = drawPartiesBlock(doc, shipperParty, consigneeParty, y + 12);
