@@ -170,3 +170,34 @@ describe("loadboard create — stop windows are written whenever a time was sent
     expect(data.deliveryTimeEnd).toBeUndefined();
   });
 });
+
+describe("loadboard create — two appointments, and pallets", () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it("keeps the pickup and delivery appointments apart", async () => {
+    const { data } = await createAndCapture(
+      loadboardBody({ pickupAppointment: "PU-4471", deliveryAppointment: "15160360" }),
+    );
+    expect(data.pickupAppointment).toBe("PU-4471");
+    expect(data.deliveryAppointment).toBe("15160360");
+  });
+
+  it("still accepts the legacy single appointment key", async () => {
+    // A client that has not been updated must not silently lose the one number
+    // it can send.
+    const { data } = await createAndCapture(loadboardBody({ appointmentNumber: "15163586" }));
+    expect(data.appointmentNumber).toBe("15163586");
+  });
+
+  it("persists pallets, which no create path has ever written", async () => {
+    const { data } = await createAndCapture(loadboardBody({ pallets: 12 }));
+    expect(data.pallets).toBe(12);
+  });
+
+  it("leaves all three undefined when none were sent", async () => {
+    const { data } = await createAndCapture(loadboardBody());
+    expect(data.pickupAppointment).toBeUndefined();
+    expect(data.deliveryAppointment).toBeUndefined();
+    expect(data.pallets).toBeUndefined();
+  });
+});

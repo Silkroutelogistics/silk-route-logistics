@@ -579,6 +579,14 @@ export default function OrderBuilderPage() {
       commodity: form.lineItems[0]?.description || null,
       weight: form.lineItems[0]?.weight ? parseFloat(form.lineItems[0].weight) : null,
       pieces: form.lineItems[0]?.pieces ? parseInt(form.lineItems[0].pieces, 10) : null,
+      // Pallets are DERIVED from the line items rather than collected again.
+      // The AE already states package type per line, and `Load.pallets` had no
+      // writer on any create path — so the column was permanently NULL. Summing
+      // the PLT lines uses what the AE actually entered instead of adding a
+      // second box that could disagree with it.
+      pallets: form.lineItems
+        .filter((l) => l.packageType === "PLT")
+        .reduce((n, l) => n + (parseInt(l.pieces, 10) || 0), 0) || null,
       hazmat: form.lineItems.some((l) => l.hazmat),
       temperatureControlled: form.temperatureControlled,
       tempMin: form.tempMin ? parseFloat(form.tempMin) : undefined,
@@ -595,7 +603,8 @@ export default function OrderBuilderPage() {
       deliveryWindowClose: form.deliveryTimeEnd || null,
       // Refs
       poNumbers: form.poNumbers,
-      appointmentNumber: form.appointmentNumber || null,
+      pickupAppointment: form.pickupAppointment || null,
+      deliveryAppointment: form.deliveryAppointment || null,
       // Pricing
       customerRate: form.customerRate ? parseFloat(form.customerRate) : null,
       carrierRate: form.targetCost ? parseFloat(form.targetCost) : null,
@@ -1237,8 +1246,16 @@ export default function OrderBuilderPage() {
                   placeholder="Auto"
                 />
               </Field>
-              <Field label="Appt #">
-                <input value={form.appointmentNumber} onChange={(e) => setForm((f) => ({ ...f, appointmentNumber: e.target.value }))} className={inp} />
+              {/* Two boxes, each naming its side. There was one unqualified
+                  "Appt #", so an AE holding a pickup appointment AND a delivery
+                  appointment could record one of them and nothing anywhere said
+                  which one it was. SRL-121497 carries 15160360 with no way to
+                  tell. */}
+              <Field label="Pickup Appt #">
+                <input value={form.pickupAppointment} onChange={(e) => setForm((f) => ({ ...f, pickupAppointment: e.target.value }))} className={inp} />
+              </Field>
+              <Field label="Delivery Appt #">
+                <input value={form.deliveryAppointment} onChange={(e) => setForm((f) => ({ ...f, deliveryAppointment: e.target.value }))} className={inp} />
               </Field>
               <Field label="PO #">
                 <PoInput pos={form.poNumbers} onChange={(list) => setForm((f) => ({ ...f, poNumbers: list }))} />
@@ -1789,7 +1806,9 @@ export default function OrderBuilderPage() {
           reeferContinuous: form.reeferContinuous,
           // Refs (Sprint 59.b — PO + appointment)
           poNumbersText: (form.poNumbers ?? []).join(", "),
-          appointmentNumber: form.appointmentNumber ?? "",
+          // The drawer still carries one appointment box. The delivery side is
+          // what maps to it, matching where existing values were migrated.
+          appointmentNumber: form.deliveryAppointment ?? "",
           // Financials
           customerRate: form.customerRate,
           offeredRate: form.targetCost,

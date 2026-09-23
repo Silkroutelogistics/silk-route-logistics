@@ -324,7 +324,15 @@ export async function createLoad(req: AuthRequest, res: Response) {
     proNumber: raw.proNumber || undefined,
     bolNumber: raw.bolNumber || undefined,
     sealNumber: raw.sealNumber || undefined,
+    // Per-side appointments (v3.8.bhy). `appointmentNumber` is still accepted:
+    // it is the legacy single box, and a client that has not been updated must
+    // keep working rather than silently lose the one number it can send.
     appointmentNumber: raw.appointmentNumber || undefined,
+    pickupAppointment: raw.pickupAppointment || undefined,
+    deliveryAppointment: raw.deliveryAppointment || undefined,
+    // `pallets` was declared on the model and written by nothing on any create
+    // path, so the column was permanently NULL on every load ever made.
+    pallets: raw.pallets || undefined,
     additionalRefs: raw.additionalRefs || undefined,
 
     // Freight classification (TMW)

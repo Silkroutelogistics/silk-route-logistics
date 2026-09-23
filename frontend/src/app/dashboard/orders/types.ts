@@ -135,7 +135,11 @@ export interface OrderForm {
 
   // Refs
   bolNumber: string;
+  /** Legacy single box. Kept so an older saved draft still hydrates; the form
+   *  now collects the two named appointments below instead. */
   appointmentNumber: string;
+  pickupAppointment: string;
+  deliveryAppointment: string;
   poNumbers: string[];
   distance: string;
   lumperEstimate: string;
@@ -224,6 +228,8 @@ export const emptyOrderForm = (): OrderForm => ({
   deliveryTimeEnd: "",
   bolNumber: "",
   appointmentNumber: "",
+  pickupAppointment: "",
+  deliveryAppointment: "",
   poNumbers: [],
   distance: "",
   lumperEstimate: "",
