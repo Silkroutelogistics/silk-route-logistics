@@ -18697,7 +18697,24 @@
 // placement, pending counsel review" is banked with all six measurements.
 // Whether it must appear at all is a legal question: it is optional under the
 // Uniform Straight BOL, and SRL is the broker, not the carrier it would bind.
-export const SRL_VERSION = "3.8.bhs";
+// v3.8.bht - C5: the BOL and the RC now say which template drew them. The
+// version lived only in a source comment, so a printed or stored BOL could not
+// be asked - and "archived BOLs stay version-faithful" was a convention nobody
+// could check from the artifact, which is the thing a dispute actually holds.
+// One constant per document in lib/documentTemplateVersions.ts, deliberately
+// distinct from RC_TERMS_VERSION: that is the version of the governing TERMS,
+// this is the version of the LAYOUT, and collapsing them is the dual-meaning
+// drift this codebase keeps unpicking.
+// The slot is MEASURED. The existing termsVersion line sits at footerY + 13,
+// which suits the default footerY of 744 and CLIPS for the BOL: it overrides
+// footerY to 774, putting that line at 787 on a 792pt page - bottom-up -5.9,
+// off the sheet. On the footer content line the identity ends at x202.1 and
+// the page number starts at x544.1, leaving ~205pt clear right of the tagline.
+// RENDER ONLY. The archive half of the instruction is NOT delivered and is
+// banked: the BOL has no archive record at all (generated on demand, streamed,
+// no Document row, no stored URL), and giving the RC a template-version column
+// is a schema change this arc should not carry into a rebase and a push.
+export const SRL_VERSION = "3.8.bht";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

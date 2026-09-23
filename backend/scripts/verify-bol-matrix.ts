@@ -4,6 +4,13 @@
  *   (a) exactly one page,
  *   (b) the terms strip is BELOW all signature/checkbox content,
  *   (c) nothing except the footer renders below the footer rule (y=770),
+ *       where "the footer" is the set drawFooter draws. "Template v<x>" joined
+ *       that set in v2.10 and is excluded on the same footing as the identity
+ *       line and the page number — it is drawn by drawFooter, on the footer
+ *       content line, at the same y. Excluding it is not a relaxation; NOT
+ *       excluding it would report the footer as body overflow. Its presence is
+ *       asserted separately by documentTemplateVersionInBytes.test.ts, so the
+ *       exclusion cannot hide a marker that stopped rendering.
  *   (d) the title does not collide with the meta strip.
  */
 import { generateBOLFromLoad } from "../src/services/pdfService";
@@ -63,7 +70,7 @@ async function renderBands(load: any) {
     const { pages, bands } = await renderBands(load);
     const termsBand = bands.find((b) => b.s.startsWith("Non-negotiable straight"));
     const footerBandY = Math.max(...bands.filter((b) => b.s.includes("Page 1 of")).map((b) => b.y), 0);
-    const contentBands = bands.filter((b) => !b.s.includes("Page 1 of") && !b.s.startsWith("MC# 1794414 · DOT# 4526880 · silk") && !b.s.startsWith("Where Trust Travels") && !b.s.startsWith("Non-negotiable") && !(b.s.startsWith("months.")) && !(b.s.includes("licensed property broker")));
+    const contentBands = bands.filter((b) => !b.s.includes("Page 1 of") && !b.s.startsWith("MC# 1794414 · DOT# 4526880 · silk") && !b.s.startsWith("Where Trust Travels") && !b.s.startsWith("Non-negotiable") && !(b.s.startsWith("months.")) && !(b.s.includes("licensed property broker")) && !b.s.startsWith("Template v"));
     const maxContentY = Math.max(...contentBands.map((b) => b.y));
     const titleY = bands.find((b) => b.s === "Bill of Lading")?.y ?? 0;
     const metaLabelY = bands.find((b) => b.s.includes("DAT E I S S U E D") || b.s.replace(/\s/g, "").startsWith("DATEISSUED"))?.y ?? 999;

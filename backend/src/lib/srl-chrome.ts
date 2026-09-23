@@ -956,10 +956,28 @@ export function drawFooter(
      * footer is byte-identical to before.
      */
     termsVersion?: string | null;
+
+    /**
+     * Version of the LAYOUT that drew this document (not the terms — see
+     * documentTemplateVersions.ts). Rendered ON the footer content line, in
+     * the clear gap between the centred tagline and the page number.
+     *
+     * THAT SLOT IS MEASURED, not chosen. termsVersion's own line sits at
+     * footerY + 13, which suits a document using the default footerY of 744
+     * and CLIPS for the Bill of Lading: the BOL overrides footerY to 774,
+     * putting that line at 787 on a 792pt page — bottom-up y -5.9, off the
+     * sheet. On the content line the identity ends at x202.1 and the page
+     * number starts at x544.1, with the tagline at x273.1..338.9, leaving
+     * ~205pt clear to its right. Anchoring at 58% of content width starts
+     * this at ~349, ending near 394 — ~150pt before the page number.
+     *
+     * Optional; omitted, the footer is byte-identical to before.
+     */
+    templateVersion?: string | null;
   } = { pageNum: 1, totalPages: 1 }
 ): void {
   // docId intentionally NOT destructured — nothing below may render it.
-  const { pageNum, totalPages, termsVersion, footerY: footerYOverride } = options;
+  const { pageNum, totalPages, termsVersion, templateVersion, footerY: footerYOverride } = options;
   const footerY = footerYOverride ?? PAGE_H - MARGIN - 12;
 
   goldRule(doc, footerY - 4, { weight: 0.75 });
@@ -974,6 +992,16 @@ export function drawFooter(
     pageNum,
     totalPages,
   });
+
+  // Template version rides ON the content line, in the clear span right of the
+  // centred tagline. It cannot use termsVersion's below-the-line slot: that
+  // clips off the page for any document overriding footerY downward, which the
+  // BOL does.
+  if (templateVersion) {
+    doc.font(FONT_BODY, 6).fillColor(TOKENS.fg3)
+       .text("Template v" + templateVersion,
+             MARGIN + (PAGE_W - MARGIN * 2) * 0.58, footerY + 4, { lineBreak: false });
+  }
 
   // Terms version stays out of the shared line: only operational documents
   // carry one, and it sits on its OWN line below because the identity line

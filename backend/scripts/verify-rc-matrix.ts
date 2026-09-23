@@ -369,7 +369,14 @@ function makeLoad(o: { rows?: number; longSi?: boolean; reefer?: boolean; longNa
             s.includes("Page ") ||
             s.startsWith("MC# 1794414 · DOT#") ||
             s.startsWith("Where Trust Travels") ||
-            s.startsWith("Terms version ");
+            s.startsWith("Terms version ") ||
+            // v2.10 — "Template v<x>" joins this list for the same reason
+            // "Terms version" did: drawFooter draws it, on the footer content
+            // line, so counting it as body reports the footer as overflow on
+            // every page of every case. Its presence is asserted separately by
+            // documentTemplateVersionInBytes.test.ts, so this cannot hide a
+            // marker that stopped rendering.
+            s.startsWith("Template v");
           if (isFooter) sawFooterChrome = true;
           if (!isFooter) maxY = Math.max(maxY, yTop);
           if (wantCapture) {

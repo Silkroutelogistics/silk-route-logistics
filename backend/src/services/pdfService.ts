@@ -8,6 +8,7 @@ import { calculateMileage, MileageResult } from "./mileageService";
 import { log } from "../lib/logger";
 import { generateBOLQRBuffer } from "../utils/qrGenerator";
 import type { ResolvedStopContacts } from "../lib/stopContact";
+import { BOL_TEMPLATE_VERSION, RC_TEMPLATE_VERSION } from "../lib/documentTemplateVersions";
 import { formatStopWindow } from "../lib/stopWindow";
 import { decodeHtmlEntities } from "../utils/htmlEntities";
 // ONE derivation rule for every document identifier this file prints. These are
@@ -1199,7 +1200,12 @@ export async function generateBOLFromLoad(
   // document's legal substance, dynamically anchored to the tallest
   // signature column so a future field addition moves it rather than
   // colliding with it.
-  drawFooter(doc, { pageNum: 1, totalPages: 1, footerY: fyLine + 4 });
+  drawFooter(doc, {
+    pageNum: 1, totalPages: 1, footerY: fyLine + 4,
+    // v2.10 — the page now states which template drew it. It used to say so
+    // only in a source comment, so a stored BOL could not be asked.
+    templateVersion: BOL_TEMPLATE_VERSION,
+  });
 
   // v3.8.ara — BOL is a ONE-PAGE document. PROVISIONAL: see caveat below.
   //
@@ -2830,6 +2836,7 @@ export function generateEnhancedRateConfirmation(load: EnhancedRCLoadData, formD
       totalPages: rcPages.count,
       docId,
       termsVersion: fd.rcTermsVersion || "unversioned",
+      templateVersion: RC_TEMPLATE_VERSION,
     });
   }
   doc.flushPages();
