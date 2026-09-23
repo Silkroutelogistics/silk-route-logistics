@@ -6,7 +6,13 @@
  * nothing about what a carrier should do next between accepting and the
  * truck rolling. Now the strip is decided by carrierNextStep — a projection
  * of the selector the AE board uses — and the button is disabled with the
- * reason shown until a tender is CONFIRMED, which is the backend gate.
+ * reason shown until the backend would serve it.
+ *
+ * C6 (2026-09-23) — and "what the backend would serve" is now what the backend
+ * actually reads: the recorded acceptance, OR a signed rate confirmation (bgs).
+ * These cases asked for a tender at CONFIRMED, a condition the backend had
+ * stopped using, so they were green while a carrier who had accepted their
+ * load was shown a disabled button.
  *
  * Behavioural: the REAL page is rendered; react-query is answered by key so
  * the page's own reads are exercised; chrome is stubbed because this is about
@@ -100,19 +106,56 @@ describe("the next-step strip on the list", () => {
 });
 
 describe("the BOL button in the detail panel", () => {
-  it("is DISABLED with the reason shown while the rate confirmation is unsigned", async () => {
+  // C6 — these read the two facts the BACKEND reads (bgs): the recorded
+  // acceptance, and the presence of a signed rate confirmation. They asked for
+  // a tender at CONFIRMED until now, which is a condition the backend stopped
+  // using, so they were green while the button was refusing carriers a document
+  // SRL would have served them.
+  const ACCEPTED_AT = "2026-09-20T10:00:00.000Z";
+  const SIGNED_RC = [{ id: "rc-1" }];
+
+  it("is LIVE on a tender-accepted load whose RC is unsigned — the acceptance alone opens it", async () => {
+    // THE CASE. Accepted, nothing signed: the backend serves this, so the
+    // button must. Pre-C6 this rendered disabled, under a sentence telling the
+    // carrier to sign something they had already agreed to.
+    const l = load("a", "BOOKED", ["ACCEPTED"], { carrierAcceptedAt: ACCEPTED_AT });
+    state.loads = [l];
+    state.detail = l;
+    window.history.replaceState({}, "", "/carrier/dashboard/my-loads?load=a");
+    render(<MyLoadsPage />);
+    const btn = await screen.findByRole("button", { name: /Bill of Lading/ });
+    expect(btn).not.toBeDisabled();
+    expect(screen.queryByTestId("bol-reason")).toBeNull();
+  });
+
+  it("is DISABLED on a finalize-dispatched load where the carrier did nothing", async () => {
+    // The other direction, and the reason the gate is not "is the status late
+    // enough". R8c records no acceptance from a finalize, so there is nothing
+    // SRL can point at — the backend refuses and the button says so first.
+    const l = load("a", "DISPATCHED", [], { carrierId: "u1" });
+    state.loads = [l];
+    state.detail = l;
+    window.history.replaceState({}, "", "/carrier/dashboard/my-loads?load=a");
+    render(<MyLoadsPage />);
+    const btn = await screen.findByRole("button", { name: /Bill of Lading/ });
+    expect(btn).toBeDisabled();
+    expect(screen.getByTestId("bol-reason").textContent).toMatch(/acceptance is recorded/i);
+  });
+
+  it("is DISABLED with the reason shown while neither fact is recorded", async () => {
+    // An RC is out and unsigned, and this load predates the acceptance stamp.
     state.loads = [load("a", "BOOKED", ["RC_SENT"])];
     state.detail = load("a", "BOOKED", ["RC_SENT"]);
     window.history.replaceState({}, "", "/carrier/dashboard/my-loads?load=a");
     render(<MyLoadsPage />);
     const btn = await screen.findByRole("button", { name: /Bill of Lading/ });
     expect(btn).toBeDisabled();
-    expect(screen.getByTestId("bol-reason").textContent).toMatch(/Sign the rate confirmation to unlock the bill of lading/);
+    expect(screen.getByTestId("bol-reason").textContent).toMatch(/acceptance is recorded/i);
     expect(screen.getByTestId("bol-reason").textContent).toMatch(/here, or from the email/);
     expect(screen.getByTestId("next-step-detail").textContent).toMatch(/Sign the rate confirmation/);
   });
 
-  it("is disabled on a directly-assigned load too, because the gate asks for a CONFIRMED tender it never had", async () => {
+  it("is disabled on a directly-assigned load with nothing recorded against it", async () => {
     state.loads = [load("a", "BOOKED", [], { carrierId: "u1" })];
     state.detail = load("a", "BOOKED", [], { carrierId: "u1" });
     window.history.replaceState({}, "", "/carrier/dashboard/my-loads?load=a");
@@ -122,9 +165,10 @@ describe("the BOL button in the detail panel", () => {
     expect(screen.getByTestId("bol-reason").textContent).toMatch(/sign the rate confirmation/i);
   });
 
-  it("is LIVE once a tender is CONFIRMED, with no reason shown (control)", async () => {
-    state.loads = [load("a", "BOOKED", ["CONFIRMED"])];
-    state.detail = load("a", "BOOKED", ["CONFIRMED"]);
+  it("is LIVE on a signed rate confirmation — the gate's other half (control)", async () => {
+    const l = load("a", "BOOKED", ["CONFIRMED"], { rateConfirmations: SIGNED_RC });
+    state.loads = [l];
+    state.detail = l;
     window.history.replaceState({}, "", "/carrier/dashboard/my-loads?load=a");
     render(<MyLoadsPage />);
     const btn = await screen.findByRole("button", { name: /Bill of Lading/ });
@@ -133,9 +177,10 @@ describe("the BOL button in the detail panel", () => {
     expect(screen.getByTestId("next-step-detail").textContent).toMatch(/Bill of lading ready/);
   });
 
-  it("stays live while the truck is rolling — the tender is settled, the gate still holds", async () => {
-    state.loads = [load("a", "IN_TRANSIT", ["CONFIRMED"])];
-    state.detail = load("a", "IN_TRANSIT", ["CONFIRMED"]);
+  it("stays live while the truck is rolling — the acceptance is recorded, the gate still holds", async () => {
+    const l = load("a", "IN_TRANSIT", ["CONFIRMED"], { carrierAcceptedAt: ACCEPTED_AT });
+    state.loads = [l];
+    state.detail = l;
     window.history.replaceState({}, "", "/carrier/dashboard/my-loads?load=a");
     render(<MyLoadsPage />);
     expect(await screen.findByRole("button", { name: /Bill of Lading/ })).not.toBeDisabled();

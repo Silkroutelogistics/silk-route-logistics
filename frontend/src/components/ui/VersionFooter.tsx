@@ -18498,7 +18498,16 @@
 // selects nothing but an id, so the signer, the IP, the content hash and the
 // storage key stay on the AE side. That is SRL's evidence ABOUT a carrier,
 // not the carrier's copy of it.
-export const SRL_VERSION = "3.8.bgw";
+// v3.8.bgx - C6b: the carrier portal's BOL gate reads what the backend reads.
+// `bolReady` asked whether a tender on the load was CONFIRMED - the condition
+// bgs retired - so a carrier who had ACCEPTED their load was shown a disabled
+// button on a document SRL would have served, under a sentence telling them to
+// sign something they had already agreed to. It now reads the same two facts
+// in the same order: the recorded acceptance, or a signed rate confirmation,
+// both sourced from the payload bgw widened. The refusal copy names BOTH
+// conditions, because naming only the signature is what made the old message
+// wrong for the carrier it was shown to.
+export const SRL_VERSION = "3.8.bgx";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

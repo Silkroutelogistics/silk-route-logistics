@@ -144,16 +144,56 @@ describe("what the carrier is told", () => {
   });
 });
 
-describe("what the carrier should do next (E2)", () => {
+describe("what the carrier should do next (E2, gate re-aimed in C6)", () => {
   // A projection of deriveLoadStatus: the strip must say what the AE badge
   // says, in the carrier's terms, and the BOL state must be the backend gate.
-  const on = (status: string, tenders: string[] = [], carrierId: string | null = "u1") =>
-    carrierNextStep({ status, carrierId, tenders: tenders.map((s) => ({ status: s })) });
+  //
+  // The gate is `carrierAcceptedAt OR a signed rate confirmation` (bgs), so
+  // these fixtures carry those two FACTS rather than a tender status. A tender
+  // at CONFIRMED is not what the backend asks any more, and the assertions that
+  // kept asking it were green while the button was wrong.
+  const ACCEPTED_AT = "2026-09-20T10:00:00.000Z";
+  const SIGNED_RC = [{ id: "rc-1" }];
 
-  it("ACCEPTED: the RC is coming; the BOL waits for the signature", () => {
-    const s = on("BOOKED", ["ACCEPTED"]);
+  const on = (
+    status: string,
+    tenders: string[] = [],
+    carrierId: string | null = "u1",
+    gate: {
+      carrierAcceptedAt?: string | null;
+      rateConfirmations?: Array<{ id: string }> | null;
+    } = {},
+  ) =>
+    carrierNextStep({
+      status,
+      carrierId,
+      tenders: tenders.map((s) => ({ status: s })),
+      ...gate,
+    });
+
+  it("a tender-accepted load has its bill of lading, unsigned — the acceptance is the gate's first half", () => {
+    // THE CASE C6 EXISTS FOR. The carrier accepted; bgs serves the BOL. Before
+    // C6 this asked for a tender at CONFIRMED and showed a disabled button,
+    // telling a carrier to sign something they had already agreed to.
+    const s = on("BOOKED", ["ACCEPTED"], "u1", { carrierAcceptedAt: ACCEPTED_AT });
     expect(s.key).toBe("ACCEPTED");
     expect(s.text).toMatch(/Rate confirmation on its way/);
+    expect(s.bolReady).toBe(true);
+    expect(s.bolReason).toBeNull();
+  });
+
+  it("a finalize-dispatched load with no carrier act does NOT have one", () => {
+    // The other direction, and the reason the gate is not just "is it late in
+    // the pipeline". The status is well past acceptance and the carrier has
+    // done nothing SRL can point at — R8c records no stamp from a finalize —
+    // so the backend refuses, and the button says so in advance.
+    const s = on("DISPATCHED", [], "u1");
+    expect(s.bolReady).toBe(false);
+    expect(s.bolReason).toMatch(/acceptance is recorded/i);
+  });
+
+  it("ACCEPTED with no stamp — accepted before the evidence existed — still waits", () => {
+    const s = on("BOOKED", ["ACCEPTED"]);
     expect(s.bolReady).toBe(false);
     expect(s.bolReason).toMatch(/sign the rate confirmation/i);
   });
@@ -163,25 +203,36 @@ describe("what the carrier should do next (E2)", () => {
     expect(s.text).toMatch(/^Sign the rate confirmation/);
     expect(s.bolReady).toBe(false);
     expect(s.text).toMatch(/here, or from the email SRL sent you/);
-    expect(s.bolReason).toMatch(/Sign it here, or from the email/);
+    expect(s.bolReason).toMatch(/sign it here, or from the email/i);
   });
 
-  it("CONFIRMED: signed, BOL ready, no reason", () => {
-    const s = on("BOOKED", ["CONFIRMED"]);
+  it("CONFIRMED with a signed RC: BOL ready, no reason", () => {
+    const s = on("BOOKED", ["CONFIRMED"], "u1", { rateConfirmations: SIGNED_RC });
     expect(s.text).toBe("Signed. Bill of lading ready.");
     expect(s.bolReady).toBe(true);
     expect(s.bolReason).toBeNull();
   });
 
-  it("bolReady is the backend gate — a CONFIRMED tender — not the derived key", () => {
-    // Rolling: the key is the load's stage, the gate still asks the tender.
-    expect(on("IN_TRANSIT", ["CONFIRMED"]).bolReady).toBe(true);
-    expect(on("IN_TRANSIT", ["ACCEPTED"]).bolReady).toBe(false);
-    // Directly assigned, never tendered: the gate refuses, so the button must too.
+  it("bolReady reads the two gate facts — not the tender status, and not the derived key", () => {
+    // The key moves to the load's own stage once the truck rolls; the gate
+    // keeps asking what the carrier committed to.
+    expect(on("IN_TRANSIT", ["CONFIRMED"], "u1", { rateConfirmations: SIGNED_RC }).bolReady).toBe(true);
+    expect(on("IN_TRANSIT", ["CONFIRMED"], "u1", { carrierAcceptedAt: ACCEPTED_AT }).bolReady).toBe(true);
+    // A CONFIRMED tender ALONE is not the gate. This is the assertion the
+    // pre-C6 mirror fails, and it is why the injection is worth running.
+    expect(on("IN_TRANSIT", ["CONFIRMED"]).bolReady).toBe(false);
+    // Directly assigned, never accepted, nothing signed: the gate refuses.
     const assigned = on("BOOKED", [], "u1");
     expect(assigned.key).toBe("ASSIGNED");
     expect(assigned.bolReady).toBe(false);
-    expect(assigned.bolReason).toMatch(/sign the rate confirmation/i);
+    expect(assigned.bolReason).toMatch(/acceptance is recorded/i);
+  });
+
+  it("an empty list is not a signature, and a null stamp is not an acceptance", () => {
+    // The API sends only SIGNED rows, so presence is the whole fact — which
+    // makes an empty array the one shape that must not read as truthy.
+    expect(on("BOOKED", ["CONFIRMED"], "u1", { rateConfirmations: [] }).bolReady).toBe(false);
+    expect(on("BOOKED", ["CONFIRMED"], "u1", { carrierAcceptedAt: null }).bolReady).toBe(false);
   });
 
   it("the strip carries the derived tone, so strip and badge agree on colour", () => {
@@ -189,19 +240,20 @@ describe("what the carrier should do next (E2)", () => {
     expect(on("DELIVERED", ["CONFIRMED"]).tone).toBe(deriveLoadStatus({ status: "DELIVERED" }).tone);
   });
 
-  it("a cancelled load says so and offers no BOL, whatever the tender", () => {
-    const s = on("CANCELLED", ["CONFIRMED"]);
+  it("a cancelled load says so, whatever the gate facts", () => {
+    const s = on("CANCELLED", ["CONFIRMED"], "u1", { carrierAcceptedAt: ACCEPTED_AT });
     expect(s.text).toMatch(/cancelled/);
-    // The tender IS confirmed, so the gate would serve it — and the strip says
-    // not to. Both are true: the reason is about the load, not the signature.
+    // The acceptance IS recorded, so the gate would serve the document — and
+    // the strip still says not to haul it. Both are true: the sentence is about
+    // the load, the gate is about the evidence.
     expect(s.bolReady).toBe(true);
   });
 
   it("every operational stage has a sentence; nothing the carrier sees is blank", () => {
     for (const st of ["DISPATCHED", "AT_PICKUP", "LOADED", "IN_TRANSIT", "AT_DELIVERY", "DELIVERED", "POD_RECEIVED", "INVOICED", "COMPLETED"]) {
-      expect(on(st, ["CONFIRMED"]).text, st).toBeTruthy();
+      expect(on(st, ["CONFIRMED"], "u1", { carrierAcceptedAt: ACCEPTED_AT }).text, st).toBeTruthy();
     }
-    expect(on("AT_DELIVERY", ["CONFIRMED"]).text).toMatch(/POD/);
+    expect(on("AT_DELIVERY", ["CONFIRMED"], "u1", { carrierAcceptedAt: ACCEPTED_AT }).text).toMatch(/POD/);
   });
 });
 

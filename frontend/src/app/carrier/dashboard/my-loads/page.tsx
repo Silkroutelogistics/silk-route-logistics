@@ -276,12 +276,20 @@ export default function MyLoadsPage() {
                       authoritative until the two disagree in front of a shipper.
                       This now fetches the same PDF the AE sends.
 
-                      E2 — the button is DISABLED with the reason shown until a
-                      tender on this load is CONFIRMED, which is exactly the
-                      backend gate (pdfController RC_NOT_SIGNED). Before this
-                      it rendered live at every status and the refusal was a
-                      403 after the tap. The gate itself is unchanged: this is
-                      the same answer, given in advance. */}
+                      E2 — the button is DISABLED with the reason shown until
+                      the backend would allow it. Before this it rendered live
+                      at every status and the refusal was a 403 after the tap.
+                      The gate itself is unchanged: this is the same answer,
+                      given in advance.
+
+                      C6 — and the answer it gives is now the same answer. This
+                      read `a tender at CONFIRMED` while bgs had moved the
+                      backend onto the ACCEPTANCE, so a carrier who had accepted
+                      their load was shown a disabled button on a document SRL
+                      would have handed them, telling them to sign something
+                      they had already agreed to. A mirror that has drifted from
+                      the thing it mirrors is worse than no mirror: it is wrong
+                      with the authority of looking deliberate. */}
                   {(() => {
                     const step = carrierNextStep(detail);
                     return (

@@ -64,6 +64,16 @@ export interface DeriveInput {
   status: string;
   tenders?: Array<{ status: string }> | null;
   carrierId?: string | null;
+  /**
+   * C6 — the two facts the BOL gate reads, mirroring the backend (bgs).
+   *
+   * `carrierAcceptedAt` is the recorded acceptance; a non-empty
+   * `rateConfirmations` means a SIGNED one exists. The API sends only `{ id }`
+   * for those rows, so presence is all that can be read here — the signer, the
+   * IP and the hash stay on the AE side.
+   */
+  carrierAcceptedAt?: string | Date | null;
+  rateConfirmations?: Array<{ id: string }> | null;
 }
 
 /**
@@ -266,7 +276,10 @@ export interface CarrierNextStep {
   text: string | null;
   /** Tailwind classes — the tone of the derived status, so strip and badge agree. */
   tone: string;
-  /** Exactly the backend's BOL gate: a tender at CONFIRMED exists on the load. */
+  /**
+   * Exactly the backend's BOL gate (bgs): the carrier's acceptance is recorded,
+   * OR a rate confirmation on this load is signed.
+   */
   bolReady: boolean;
   /** Why the BOL is not available yet. Null when it is. */
   bolReason: string | null;
@@ -281,18 +294,27 @@ export interface CarrierNextStep {
  * for the same load on the same refresh, and nothing else maps a status to a
  * sentence for a carrier.
  *
- * `bolReady` mirrors the backend gate (pdfController: a LoadTender at
- * CONFIRMED must exist) rather than the derived key, because the key moves on
- * to the load's own stage once the truck is rolling while the gate still asks
- * the tender. A directly-assigned load never had a tender to confirm, and the
- * gate refuses it — so the button says so here, in advance, instead of on
- * click. Before E2 the button rendered live on every load at every status and
- * the refusal arrived as a 403 after the tap.
+ * `bolReady` mirrors the backend gate (pdfController, bgs: the carrier's
+ * acceptance is recorded, OR a rate confirmation on this load is signed)
+ * rather than the derived key, because the key moves on to the load's own
+ * stage once the truck is rolling while the gate keeps asking what the carrier
+ * actually committed to. A load finalized onto a carrier who never accepted it
+ * records neither fact, and the gate refuses it — so the button says so here,
+ * in advance, instead of on click. Before E2 the button rendered live on every
+ * load at every status and the refusal arrived as a 403 after the tap.
  */
 export function carrierNextStep(load: DeriveInput): CarrierNextStep {
   const derived = deriveLoadStatus(load);
   const tenders = (load.tenders ?? []) as Array<{ status: string }>;
-  const bolReady = tenders.some((t) => t.status === "CONFIRMED");
+  // C6 — the same two conditions pdfController reads, in the same order.
+  //
+  // This mirrored `a tender at CONFIRMED` until bgs moved the backend onto the
+  // ACCEPTANCE, and a mirror that has drifted from the thing it mirrors is
+  // worse than no mirror: the button stayed disabled on loads the backend would
+  // have allowed, and the carrier was told to sign something they had already
+  // accepted. A tender status answers "where is this tender now", not "did this
+  // carrier commit to this load".
+  const bolReady = !!load.carrierAcceptedAt || (load.rateConfirmations?.length ?? 0) > 0;
 
   const step = (text: string | null, bolReason: string | null): CarrierNextStep => ({
     key: derived.key,
@@ -302,44 +324,50 @@ export function carrierNextStep(load: DeriveInput): CarrierNextStep {
     bolReason: bolReady ? null : bolReason,
   });
 
-  const SIGN_FIRST = "Sign the rate confirmation to unlock the bill of lading.";
+  // C6 — the refusal names BOTH conditions, because the gate reads both.
+  //
+  // Saying only "sign the rate confirmation" told a carrier who had already
+  // accepted the load to do a second thing before SRL would hand them a
+  // document their acceptance had already unlocked.
+  const GATE_REASON =
+    "Available once your acceptance is recorded, or once you sign the rate confirmation.";
 
   switch (derived.key) {
     case "ACCEPTED":
       return step(
-        "Rate confirmation on its way from SRL. Sign it when it arrives to unlock the bill of lading.",
-        "Available once you sign the rate confirmation, which SRL will email.",
+        "Rate confirmation on its way from SRL. Sign it when it arrives.",
+        GATE_REASON,
       );
     case "RC_SENT":
       return step(
         "Sign the rate confirmation here, or from the email SRL sent you.",
-        `${SIGN_FIRST} Sign it here, or from the email SRL sent you.`,
+        `${GATE_REASON} You can sign it here, or from the email SRL sent you.`,
       );
     case "CONFIRMED":
-      return step("Signed. Bill of lading ready.", SIGN_FIRST);
+      return step("Signed. Bill of lading ready.", GATE_REASON);
     case "ASSIGNED":
       return step(
         "Assigned by SRL. Rate confirmation on its way.",
-        "Available once you sign the rate confirmation, which SRL will email.",
+        GATE_REASON,
       );
     case "DISPATCHED":
     case "AT_PICKUP":
     case "LOADED":
     case "PICKED_UP":
     case "IN_TRANSIT":
-      return step("Update status at each stop.", SIGN_FIRST);
+      return step("Update status at each stop.", GATE_REASON);
     case "AT_DELIVERY":
     case "DELIVERED":
-      return step("Upload the POD to start the payment clock.", SIGN_FIRST);
+      return step("Upload the POD to start the payment clock.", GATE_REASON);
     case "POD_RECEIVED":
     case "INVOICED":
     case "COMPLETED":
-      return step("Paperwork received.", SIGN_FIRST);
+      return step("Paperwork received.", GATE_REASON);
     case "CANCELLED":
     case "TONU":
       return step("This load was cancelled.", "Not available on a cancelled load.");
     default:
-      return step(null, SIGN_FIRST);
+      return step(null, GATE_REASON);
   }
 }
 
