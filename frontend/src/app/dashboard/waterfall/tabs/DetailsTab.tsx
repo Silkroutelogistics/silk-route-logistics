@@ -26,23 +26,33 @@ export function DetailsTab({ load }: { load: any }) {
         <Field label="Commodity"  value={load.commodity} />
         <Field label="Weight"     value={load.weight ? `${load.weight} lbs` : "—"} />
         <Field label="Pieces"     value={load.pieces} />
+        <Field label="Pallets"    value={load.pallets} />
         <Field label="Hazmat"     value={load.hazmat ? "Yes" : "No"} />
       </Section>
 
+      {/* Parity with track-trace/tabs/DetailsTab.tsx. This panel showed the
+          dock contact's NAME and not their phone, and neither appointment —
+          the same rows an AE reads on the other panel for the same load. */}
       <Section title="Origin">
         <Field label="Facility" value={load.shipperFacility ?? load.originCompany} />
         <Field label="Address"  value={`${load.originAddress ?? ""}, ${load.originCity}, ${load.originState} ${load.originZip ?? ""}`} />
         <Field label="Contact"  value={load.originContactName} />
+        <Field label="Phone"    value={load.originContactPhone} />
         <Field label="Pickup"   value={formatStopDate(load.pickupDate)} />
         <Field label="Window"   value={formatStopWindow(load.pickupTimeStart, load.pickupTimeEnd)} />
+        <Field label="Pickup Appt #" value={load.pickupAppointment} />
       </Section>
 
       <Section title="Destination">
         <Field label="Facility" value={load.consigneeFacility ?? load.destCompany} />
         <Field label="Address"  value={`${load.destAddress ?? ""}, ${load.destCity}, ${load.destState} ${load.destZip ?? ""}`} />
         <Field label="Contact"  value={load.destContactName} />
+        <Field label="Phone"    value={load.destContactPhone} />
         <Field label="Delivery" value={formatStopDate(load.deliveryDate)} />
         <Field label="Window"   value={formatStopWindow(load.deliveryTimeStart, load.deliveryTimeEnd)} />
+        {/* Legacy fallback, as on the T&T panel — that is where the value of a
+            load created before the split was migrated to. */}
+        <Field label="Delivery Appt #" value={load.deliveryAppointment ?? load.appointmentNumber} />
       </Section>
 
       <Section title="Pricing">

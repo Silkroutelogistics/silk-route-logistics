@@ -125,6 +125,10 @@ interface FormState {
   shipperPhone: string;
   shipperEmail: string;
   shipperReference: string;
+  /** v3.8.bih — the pickup side of the appointment split. There was one box,
+      bound to the delivery appointment, so an AE holding both had nowhere to
+      put the pickup one. */
+  pickupAppointment: string;
   // Sprint 49 (Item 117) — formData key renamed shipperPO → poNumber to
   // align with backend Zod validator canonical (validators/rateConfirmation.ts:43).
   // Pre-Sprint-49 the modal wrote shipperPO which Zod silently dropped via
@@ -425,6 +429,7 @@ function initForm(load: any, user: any): FormState {
     shipperPhone: load?.originContactPhone || load?.contactPhone || "",
     shipperEmail: "",
     shipperReference: load?.shipperReference || "",
+    pickupAppointment: load?.pickupAppointment || "",
     poNumber: load?.shipperPoNumber || (load?.poNumbers && load.poNumbers.length > 0 ? load.poNumbers[0] : "") || "",
     // Arc 13 — was seeded from load?.pickupNumber, never written. Blank, and
     // the AE types it.
@@ -1329,10 +1334,11 @@ function SectionShipper({ form, set }: { form: FormState; set: <K extends keyof 
           <ClipboardList className="w-4 h-4" />
           References & Pickup
         </h4>
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-4 gap-4">
           <Field label="Shipper Reference #" value={form.shipperReference} onChange={(v) => set("shipperReference", v)} />
           <Field label="PO Number" value={form.poNumber} onChange={(v) => set("poNumber", v)} />
           <Field label="Pickup Number" value={form.pickupNumber} onChange={(v) => set("pickupNumber", v)} />
+          <Field label="Pickup Appt #" value={form.pickupAppointment} onChange={(v) => set("pickupAppointment", v)} />
         </div>
       </div>
 
@@ -1414,7 +1420,9 @@ function SectionConsignee({ form, set }: { form: FormState; set: <K extends keyo
         </h4>
         <div className="grid grid-cols-2 gap-4">
           <Field label="Delivery Reference #" value={form.deliveryReference} onChange={(v) => set("deliveryReference", v)} />
-          <Field label="Appointment #" value={form.deliveryAppointment} onChange={(v) => set("deliveryAppointment", v)} />
+          {/* Named, not bare "Appointment #" — there are two, and this is the
+              delivery one. The pickup box lives under References & Pickup. */}
+          <Field label="Delivery Appt #" value={form.deliveryAppointment} onChange={(v) => set("deliveryAppointment", v)} />
         </div>
       </div>
 
