@@ -95,7 +95,18 @@ export interface CancellationSnapshot {
   carrierPays?: Array<{ id: string; status: string; notes: string | null }>;
 }
 
-export const CANCELLATION_SNAPSHOT_VERSION = 1;
+/**
+ * 2 (Finding B): `tenders` records every tender that HOLDS the load, not only
+ * the ones the cancel withdrew. A CONFIRMED tender was never withdrawn, so a v1
+ * snapshot left it out and uncancelPolicy read its absence as a retender.
+ *
+ * NOTHING DISPATCHES ON THIS NUMBER, deliberately. The policy judges a tender by
+ * its own createdAt against takenAt, which is true of a v1 row and a v2 row
+ * alike -- so the v1 snapshots already in production (SRL-121496 among them)
+ * are read correctly without a migration and without a version branch. The
+ * field is a record of shape, not a switch.
+ */
+export const CANCELLATION_SNAPSHOT_VERSION = 2;
 
 export const CASCADE_EVENT_TYPE = "cancel_cascade";
 

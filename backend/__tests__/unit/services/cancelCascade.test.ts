@@ -333,7 +333,10 @@ describe("the before-image — v3.8.biu", () => {
     expect(snap.shipperTrackingTokens).toEqual([{ id: "t1", expiresAt: "2026-12-01T00:00:00.000Z" }]);
     expect(snap.rateConfirmations).toEqual([{ id: "rc1", status: "SENT" }]);
     expect(snap.trackingTokenRevoked).toBe(true);
-    expect(snap.version).toBe(1);
+    // 2 since Finding B: `tenders` records every tender that HOLDS the load,
+    // not only the ones the cancel withdrew. A literal rather than the
+    // constant -- asserting against the constant would agree with itself.
+    expect(snap.version).toBe(2);
 
     // BEFORE is asserted, not assumed. The mock returns its array whatever the
     // where clause says, so the content check alone passes even when the read

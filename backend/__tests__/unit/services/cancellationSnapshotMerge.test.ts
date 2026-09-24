@@ -84,7 +84,16 @@ describe("the capture is wired BEFORE the writes — structural", () => {
     expect(capture, "the before-image is taken AFTER the tenders are withdrawn — it records the damage").toBeLessThan(withdraw);
   });
 
-  it("reads the LIVE tender set from the shared constant, not a fourth hand-written copy", () => {
-    expect(body).toContain("status: { in: LIVE_STATES }");
+  it("reads the tender set from the shared constants, not a fourth hand-written copy", () => {
+    expect(body).toContain("status: { in: [...LIVE_STATES, ...HOLDS_LOAD] }");
+  });
+
+  // Finding B. Recording only the tenders the cancel WITHDREW left a committed
+  // carrier tender out of the before-image, and uncancelPolicy then read its
+  // absence as "tendered again since the cancel" -- refusing the reversal on
+  // exactly the loads most likely to need one. HOLDS_LOAD is the set that holds
+  // the load without being live: ACCEPTED, RC_SENT, CONFIRMED.
+  it("records the tenders that HOLD the load, not only the ones it withdrew", () => {
+    expect(body, "HOLDS_LOAD missing from the capture query -- a CONFIRMED tender goes unrecorded").toContain("HOLDS_LOAD");
   });
 });

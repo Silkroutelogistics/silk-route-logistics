@@ -15,7 +15,7 @@ import { resolveTonuBilling } from "../lib/tonuPolicy";
 import { raiseTonuCustomerCharge } from "./invoiceService";
 import { withdrawLiveTenders } from "./tenderTransitionService";
 import { mergeCancellationSnapshot } from "./cancelCascade";
-import { LIVE_STATES } from "../lib/tenderLifecycle";
+import { HOLDS_LOAD, LIVE_STATES } from "../lib/tenderLifecycle";
 import {
   standardNetDays,
   quickPayAutoApprovePerLoad,
@@ -1881,7 +1881,7 @@ export async function onLoadCancelledOrTONU(loadId: string, reason?: string) {
   try {
     const [priorTenders, priorCarrierPays] = await Promise.all([
       prisma.loadTender.findMany({
-        where: { loadId, status: { in: LIVE_STATES } },
+        where: { loadId, status: { in: [...LIVE_STATES, ...HOLDS_LOAD] } },
         select: { id: true, status: true, deletedAt: true },
       }),
       prisma.carrierPay.findMany({ where: { loadId, status: { notIn: ["PAID", "VOID"] } }, select: { id: true, status: true, notes: true } }),
