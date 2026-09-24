@@ -233,6 +233,12 @@ interface LoadBOLData {
   // v3.8.d.1 — schema-honest PO/reference chain. Order Builder writes
   // poNumbers[0]; legacy paths populate one of shipperReference /
   // shipperPoNumber / customerRef. Render walks the chain.
+  /** Per-side appointments (v3.8.bhy). `appointmentNumber` is the legacy
+   *  single column and is the delivery-side fallback. */
+  pickupAppointment?: string | null;
+  deliveryAppointment?: string | null;
+  appointmentNumber?: string | null;
+  pallets?: number | null;
   poNumbers?: string[] | null;
   customerRef?: string | null;
   weight?: number | null; pieces?: number | null; equipmentType: string; commodity?: string | null;
@@ -626,9 +632,22 @@ export async function generateBOLFromLoad(
     // production 2026-09-23, SRL-121497 among them. A driver reading it sees a
     // form nobody finished, on the document that sends them to a dock. With no
     // time recorded the line is the date, which is the whole of what we know.
+    // The appointment rides the window line rather than taking a row of its
+    // own. Measured: the party block is a FIXED 92pt and the five rows already
+    // in it end at ~86pt, so a sixth row overflows the box and pushes text past
+    // its own border. Appended, the worst realistic line measures 219.4pt
+    // against 254pt of column — it fits, and every downstream anchor stays put.
+    // The side is named by the column the line sits in (SHIPPER / CONSIGNEE),
+    // the same way Contact and Window already are.
+    // Delivery falls back to the legacy single column, which is where loads
+    // created before the split still carry their number.
+    const appt = side === "shipper"
+      ? safe(load.pickupAppointment).trim()
+      : safe(load.deliveryAppointment ?? load.appointmentNumber).trim();
+    const apptText = appt ? `  ${MIDDOT}  Appt: ${appt}` : "";
     const windowText = win
-      ? `Window: ${dateFmt}  ${MIDDOT}  ${win}`
-      : `Window: ${dateFmt}`;
+      ? `Window: ${dateFmt}  ${MIDDOT}  ${win}${apptText}`
+      : `Window: ${dateFmt}${apptText}`;
 
     let ly = cy;
     // One styling per line now: with no bracketed placeholder there is no
@@ -1363,6 +1382,11 @@ export function getMileageFootnote(source?: string): string | null {
 // ─── Enhanced Multi-Page Rate Confirmation ───────────────────
 
 interface EnhancedRCLoadData {
+  /** Per-side appointments (v3.8.bhy). `appointmentNumber` is the legacy
+   *  single column and is the delivery-side fallback. */
+  pickupAppointment?: string | null;
+  deliveryAppointment?: string | null;
+  appointmentNumber?: string | null;
   // ARC 21 — the RC prints what SRL pays the carrier.
   carrierRate?: number | null;
   // Sprint 51 (Item 129) — id required for RC verification URL token derivation.
@@ -1914,13 +1938,21 @@ export function generateEnhancedRateConfirmation(load: EnhancedRCLoadData, formD
   // rather than ambiguous em-dash that could read as "no consignee."
   // Shipper retains 2-tier fallback (formData → load.customer → em-dash)
   // because customer is usually populated; em-dash there is rare.
+  // Appointments ride the window line, same reasoning as the BOL: the party
+  // panel is a fixed box and a new row would push text past its own border.
+  // The side is named by the panel the line sits in. Delivery falls back to the
+  // legacy single column, where pre-split loads still carry their number, and
+  // formData wins when the RC was built with one (frozen-snapshot rule).
+  const puAppt = fd.pickupAppointment || load.pickupAppointment || "";
+  const delAppt = fd.deliveryAppointment || load.deliveryAppointment || load.appointmentNumber || "";
+  const apptSuffix = (a: string) => (a ? ` · Appt: ${a}` : "");
   const shipperParty: Party = {
     // v3.8.arr — §3.9: the facility at pickup, never the billing entity.
     name: fd.shipperName || load.originCompany || load.shipperFacility || load.customer?.name || "—",
     addressLines: shipperAddrLines,
     contact: shipperContactLine,
     window: pickupStr !== "—"
-      ? `${pickupStr}${pickupWindowStr ? " · " + pickupWindowStr : ""}`
+      ? `${pickupStr}${pickupWindowStr ? " · " + pickupWindowStr : ""}${apptSuffix(puAppt)}`
       : undefined,
   };
   const consigneeParty: Party = {
@@ -1930,7 +1962,7 @@ export function generateEnhancedRateConfirmation(load: EnhancedRCLoadData, formD
     addressLines: consigneeAddrLines,
     contact: consigneeContactLine,
     window: deliveryStr !== "—"
-      ? `${deliveryStr}${deliveryWindowStr ? " · " + deliveryWindowStr : ""}`
+      ? `${deliveryStr}${deliveryWindowStr ? " · " + deliveryWindowStr : ""}${apptSuffix(delAppt)}`
       : undefined,
   };
   y = drawPartiesBlock(doc, shipperParty, consigneeParty, y + 12);
