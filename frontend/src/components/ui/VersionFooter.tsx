@@ -18954,7 +18954,14 @@
 // half did not run there is no snapshot, and inventing one would produce a
 // record that looks complete and describes half a cancel. The keys stay
 // ABSENT, which is what the un-cancel refuses on.
-export const SRL_VERSION = "3.8.biv";
+// v3.8.biw — C3a: ONE Load -> Shipment status mapping, and the census that
+// keeps it the only one. loadController wrote Load.status raw into a column
+// typed ShipmentStatus (8 members against LoadStatus's 18), so AT_PICKUP --
+// the first AE move after dispatch, on a load that always has a linked
+// shipment -- threw. Proven against a real database, not reasoned about.
+// carrierLoads' existing answers are preserved exactly, so no shipper-visible
+// status moves; only the AE path changes, from "throws" to "maps".
+export const SRL_VERSION = "3.8.biw";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

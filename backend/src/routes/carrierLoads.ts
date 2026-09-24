@@ -40,6 +40,7 @@ import {
   rotateRcSignToken, recentCarrierMints, recordCarrierMint, carrierEmailOnFile, sendSignLinkEmail,
   RC_SIGN_LINK_MINTS_PER_HOUR,
 } from "../services/rcSignLinkService";
+import { shipmentSyncFor } from "../lib/shipmentStatusFor";
 
 const router = Router();
 
@@ -624,15 +625,13 @@ router.post("/:id/status", validateBody(statusUpdateSchema), async (req: AuthReq
   // Shipment status sync — maps load statuses to ShipmentStatus enum.
   const linkedShipment = await prisma.shipment.findFirst({ where: { loadId: load.id } });
   if (linkedShipment) {
-    const loadToShipmentStatus: Record<string, string> = {
-      AT_PICKUP: "PICKED_UP", LOADED: "PICKED_UP",
-      IN_TRANSIT: "IN_TRANSIT", AT_DELIVERY: "DELIVERED", DELIVERED: "DELIVERED",
-    };
-    const mappedStatus = loadToShipmentStatus[status] || status;
-    const shipmentUpdate: Record<string, unknown> = { status: mappedStatus };
-    if (["AT_PICKUP", "LOADED"].includes(status)) shipmentUpdate.actualPickup = new Date();
+    // The map that used to live here is now lib/shipmentStatusFor.ts -- its
+    // answers are preserved exactly, so nothing a shipper sees moves.
+    const sync = shipmentSyncFor(status);
+    const shipmentUpdate: Record<string, unknown> = { status: sync.status };
+    if (sync.setActualPickup) shipmentUpdate.actualPickup = new Date();
     if (status === "IN_TRANSIT") shipmentUpdate.lastLocationAt = new Date();
-    if (["AT_DELIVERY", "DELIVERED"].includes(status)) shipmentUpdate.actualDelivery = new Date();
+    if (sync.setActualDelivery) shipmentUpdate.actualDelivery = new Date();
     await prisma.shipment.update({ where: { id: linkedShipment.id }, data: shipmentUpdate });
   }
 

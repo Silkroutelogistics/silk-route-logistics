@@ -34,6 +34,7 @@ import { generateLoadNumber, formatDocumentNumber } from "../lib/documentNumber"
 import { buildDocumentSearch, runRankedSearch } from "../lib/documentSearch";
 import { invoicedTotalsForLoads } from "../lib/invoiceTotals";
 import { heldByCarrier, notHeldByCarrier } from "../lib/tenderLifecycle";
+import { shipmentSyncFor } from "../lib/shipmentStatusFor";
 
 const RELEASED_VALUE_BASIS_VALUES = ["PER_POUND", "PER_PIECE", "TOTAL", "NVD"] as const;
 type ReleasedValueBasisLiteral = (typeof RELEASED_VALUE_BASIS_VALUES)[number];
@@ -778,12 +779,16 @@ export async function updateLoadStatus(req: AuthRequest, res: Response) {
     log.error({ err: e }, "[AI Feedback]")
   );
 
-  // Sync linked shipment status
+  // Sync linked shipment status through the ONE Load -> Shipment mapper.
+  // This wrote `{ status }` raw until C3a, and nine of the seventeen statuses
+  // the validator accepts are not ShipmentStatus members, so AT_PICKUP -- the
+  // first move after dispatch -- threw. See lib/shipmentStatusFor.ts.
   const linkedShipment = await prisma.shipment.findFirst({ where: { loadId: load.id } });
   if (linkedShipment) {
-    const shipmentUpdate: Record<string, unknown> = { status };
-    if (status === "PICKED_UP") shipmentUpdate.actualPickup = new Date();
-    if (status === "DELIVERED") shipmentUpdate.actualDelivery = new Date();
+    const sync = shipmentSyncFor(status);
+    const shipmentUpdate: Record<string, unknown> = { status: sync.status };
+    if (sync.setActualPickup) shipmentUpdate.actualPickup = new Date();
+    if (sync.setActualDelivery) shipmentUpdate.actualDelivery = new Date();
     await prisma.shipment.update({ where: { id: linkedShipment.id }, data: shipmentUpdate });
   }
 
