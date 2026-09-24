@@ -124,7 +124,7 @@ describe("the certificate is AE-only and streamed", () => {
     expect(res.status).toBe(200);
     expect(res.headers["content-type"]).toContain("application/pdf");
     expect(getFileStream).toHaveBeenCalledWith(KEY);
-    expect(res.headers["content-disposition"]).toContain("SRL-121500R-signature-certificate.pdf");
+    expect(res.headers["content-disposition"]).toContain("SRL-121500R_Signature_Certificate.pdf");
     expect(res.headers["content-disposition"]).not.toContain("s3://");
   });
 

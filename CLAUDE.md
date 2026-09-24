@@ -1180,12 +1180,14 @@ Moved → `docs/claude/brand-and-claims.md`. Every subsection below, titled as i
 
 ---
 
-## §21 QUICK PAY PILOT + DOCUMENT NUMBERING (ratified 2026-08-16)
+## §21 QUICK PAY PILOT + DOCUMENT NUMBERING (§21.1 ratified 2026-08-16 · §21.2 amended 2026-09-23)
 
 → `docs/claude/pricing-tiers-quickpay.md`. §21.1 Quick Pay is a limited pilot (request, then approve —
-the ladder in §8 is unchanged by it); §21.2 document numbering as a **suffix on a shared stem**
-(`SRL-121485` → `…B` BOL, `…R` rate con, `…I` invoice, `…S` supplemental, `…P` settlement), never a
-prefix, because a prefix scheme is what stops one load's documents sorting together.
+the ladder in §8 is unchanged by it); §21.2 document numbering as **one bare number per load** — `5001` on
+the load, the BOL, the rate confirmation, the invoice and the CarrierPay alike, no `SRL-` prefix and no
+core suffix, with a letter only on a supplemental for a missed accessorial (`5001A`). The
+suffix-on-a-shared-stem scheme ratified 2026-08-16 is superseded, and is described at the end of that
+section rather than deleted because numbers issued under it are never rewritten.
 
 **This is the one section a test reads.** `quickPayPilotDocClaims.test.ts` anchors on the §21.1 and §21.2
 headings in that file and holds their claims against the code. If §21 moves again, repoint the test in the

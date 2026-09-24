@@ -14,7 +14,12 @@ import { hashPdfBytes } from "../lib/rcSignToken";
 import { rotateRcSignToken } from "../services/rcSignLinkService";
 import { uploadFileToPath } from "../services/storageService";
 import { settleTender } from "../services/tenderTransitionService";
-import { resolveLoadStem, withDocumentNumber } from "../lib/documentNumber";
+import {
+  documentFilename,
+  resolveLoadStem,
+  withDocumentNumber,
+  DOCUMENT_FILENAME_LABEL,
+} from "../lib/documentNumber";
 import { resolveIssuedElection } from "../services/autoRateConfirmationService";
 import { liveElectionForTender } from "../services/quickPayElectionService";
 import { log } from "../lib/logger";
@@ -194,7 +199,7 @@ export async function downloadSignatureCertificate(req: AuthRequest, res: Respon
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader(
       "Content-Disposition",
-      `attachment; filename="${rc.rateConNumber ?? rc.id}-signature-certificate.pdf"`,
+      `attachment; filename="${documentFilename(rc.rateConNumber ?? rc.id, "Signature_Certificate")}"`,
     );
     stream.pipe(res);
   } catch (err) {
@@ -714,7 +719,10 @@ export async function downloadRateConfirmationPdf(req: AuthRequest, res: Respons
   // Filename now carries the RC's own number, so a re-issue downloads as
   // SRL-121485R2.pdf instead of overwriting the original in the AE's downloads
   // folder under an identical name.
-  const filename = `${rc.rateConNumber || `RC-${rc.load.referenceNumber}`}.pdf`;
+  const filename = documentFilename(
+    rc.rateConNumber || resolveLoadStem(rc.load) || rc.id,
+    DOCUMENT_FILENAME_LABEL.RATE_CONFIRMATION,
+  );
 
   res.setHeader("Content-Type", "application/pdf");
   res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);

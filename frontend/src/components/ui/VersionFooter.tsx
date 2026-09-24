@@ -18724,7 +18724,49 @@
 // banked: the BOL has no archive record at all (generated on demand, streamed,
 // no Document row, no stored URL), and giving the RC a template-version column
 // is a schema change this arc should not carry into a rebase and a push.
-export const SRL_VERSION = "3.8.bih";
+// v3.8.bii - numbering C1: one bare number per load reaches lib/documentNumber.ts.
+// generateLoadNumber returns 5001 rather than SRL-5001, and its sequence is
+// declared START WITH 5001 - the clause only bites where the sequence does not
+// yet exist, which is a fresh CI database or a new container, and is exactly
+// the case that was still starting at 121472. Production moved by ALTER on
+// 2026-09-23 and is untouched by the line.
+// THE DISCRIMINATOR IS "IS THE STEM ALL DIGITS", NOT "DOES IT START WITH SRL-".
+// There are four stem shapes in the data: the SRL-1214xx series, a 25-char cuid
+// absorbed by email-to-load, an RFQ-<base36> stamp absorbed by the shipper
+// portal, and the new bare number. Only the last belongs to the amended scheme.
+// Testing the prefix classed the cuid and RFQ- stems as NEW and stopped parsing
+// the suffixes their documents were issued with - caught by an existing test,
+// which is why the retired scheme's 36 assertions still pass unchanged.
+// A CORE RE-ISSUE TAKES A HYPHEN: 5001, 5001-2, 5001-3. A bare digit would make
+// revision 2 of load 5001 read as load 50012, and the same ambiguity would let
+// the allocator scan sweep in another load's row. The scan therefore matches the
+// exact number OR the hyphen form, never startsWith(stem). The rulings do not
+// reach this case - it only arises once core documents lose their suffix - so
+// the separator is flagged as an open decision rather than taken quietly.
+// v3.8.bij - numbering C2: download filenames carry the number first.
+// 5001_BOL.pdf, 5001_Rate_Confirmation.pdf, 5001_Invoice.pdf. The download
+// folder is where a customer actually meets the string, and a TYPE- prefix
+// (BOL-5001.pdf) sorts their folder by type across every load they have ever
+// saved - the one ordering nobody wants, and the same argument the numbering
+// scheme itself rests on. Underscores rather than spaces (which force quoting
+// in Content-Disposition) or hyphens (already load-bearing as the core revision
+// separator, so 5001-2_Invoice.pdf would be ambiguous to read).
+// THE SETTLEMENT BATCH KEEPS STL-<n> AND IS NOT RENAMED. Ruling 2: it is one
+// carrier over one period, spans many loads, and structurally cannot carry a
+// load number. It is not a load document, so the rule does not reach it - a
+// decision recorded at the call site rather than an oversight.
+// v3.8.bik - numbering C3: three exports added this arc had no consumer and
+// are removed rather than left waiting for one. The reachability gate found
+// them, which is what it is for - DEAD items ship work nobody can reach, and an
+// unreachable allocator is worse than an absent one because the next author
+// assumes it is wired. withSupplementalNumber and ACCESSORIAL_FILENAME_LABEL
+// belong to the supplemental-invoice surface, which is not built; they land
+// with the caller that needs them. LEGACY_PREFIX was superseded by isBareStem
+// during the same arc - the scheme discriminator is "is the stem all digits",
+// so the prefix constant stopped being read the moment that landed.
+// The supplemental RULE stays and is tested: the letter map, the format and the
+// parse. What went is the plumbing with nothing on either end of it.
+export const SRL_VERSION = "3.8.bik";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

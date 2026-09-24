@@ -222,49 +222,132 @@ does not merely misinform, it commissions duplicate work.
 now fails if this section claims a route is missing while that route exists in
 the source. §19 Sub-pattern 15.
 
-### §21.2 — Document numbering: suffix on a shared stem
+### §21.2 — Document numbering: one bare number per load
 
-**Ratified.** Document references are a **SUFFIX on a shared stem, never a
-prefix.** The stem is the existing load number, so every document for one load
-sorts together in any system that sorts a text column — which is the whole
-point, and what a prefix scheme (`BOL-…`, `RC-…`) destroys.
+**Amended 2026-09-23 by Wasi, superseding the suffix-on-a-shared-stem scheme
+ratified 2026-08-16.** The retired scheme is described at the end of this section
+rather than deleted, because every number issued before this amendment was issued
+under it and is never rewritten — a reader holding one needs to know what it meant.
+
+**One bare number, no prefix and no suffix**, carried by the load and by every
+core document issued against it:
 
 | Document | Number |
 |---|---|
-| Load | `SRL-121485` — the anchor, already generated today |
-| BOL | `SRL-121485B` |
-| Rate confirmation | `SRL-121485R` |
-| Invoice | `SRL-121485I` |
-| Supplemental invoice (accessorial-only) | `SRL-121485S` |
-| Settlement / carrier pay | `SRL-121485P` — P for pay, so it cannot collide with S |
+| Load | `5001` |
+| Bill of lading | `5001` |
+| Rate confirmation | `5001` |
+| Invoice | `5001` |
+| Carrier settlement (`CarrierPay`) | `5001` |
 
-This is the Bison Transport convention (load 5789854, invoice 5789854A,
-accessorials 5789854S) carried onto the SRL stem. The `SRL-` prefix stays so a
-carrier hauling for several brokers can tell whose paper they are holding.
+The number is the point of reference: a carrier, a shipper or an AE quoting
+`5001` names the load and every document on it without having to say which. The
+suffix scheme existed so one load's documents sorted together; one number does
+that better, because there is nothing left to sort.
 
-**Re-issues take a numeric revision suffix** — `SRL-121485R2`, `SRL-121485R3`.
-Revision 1 carries no digit so the common case reads clean. **Original numbers
-are NEVER reused:** `rateConNumber` is `@unique`, so reuse throws on a normal
-re-issue, and in a dispute the document has to say on its face which version the
+**The `SRL-` prefix is retired.** It was kept so a carrier hauling for several
+brokers could tell whose paperwork they held. The letterhead, the MC number and
+the footer already do that on every page, and the prefix cost more in
+transcription — read down a phone line, typed into another broker's TMS, written
+on a dock receipt — than it bought in attribution.
+
+**Only a supplemental document for a missed accessorial takes a letter**, and the
+letter is assigned **by accessorial type**, so the type is legible from the
+reference alone. **One constant in `lib/documentNumber.ts` is the only place a
+letter is assigned** — a second assignment site is how two accessorial types come
+to share a letter:
+
+| Type | | Type | | Type | |
+|---|---|---|---|---|---|
+| `LUMPER` | A | `LAYOVER` | E | `REEFER_FUEL` | J |
+| `DETENTION_PU` | B | `HAZMAT` | F | `INSIDE_DELIVERY` | K |
+| `DETENTION_DEL` | C | `DEADHEAD` | G | `LIFTGATE` | L |
+| `TONU` | D | `DRIVER_ASSIST` | H | `PALLET_EXCHANGE` | M |
+
+**`I` is skipped deliberately** — it reads as a `1` in a hand-written or faxed
+reference, on the kind of document a lumper receipt gets stapled to.
+
+**A repeat supplemental of the same type takes a digit**: `5001A`, then `5001A2`,
+then `5001A3`. The first carries no digit so the common case reads clean, which is
+the one mechanic carried over from the retired scheme.
+
+**"Settlement" means `CarrierPay`, per load, and takes the bare number.** The
+`Settlement` batch is a different object — one carrier, one period, many loads —
+so it structurally cannot carry a load's number and **keeps `STL-<n>`**. It is not
+a load document and the rule does not reach it.
+
+**`INV-####` retires to a read-only mirror.** New invoices carry the bare load
+number only, and the wire-payment memo and the AR dunning emails key on that going
+forward. Legacy invoices stay findable by their `INV-` number: retiring a sequence
+is not the same as erasing the keys customers already have in their accounts
+payable systems.
+
+**`Load.srlBolNumber` survives and is not dropped.** For a new load it holds the
+same value as the bare load number. It is still not `Load.bolNumber`, which is the
+**shipper-supplied** reference their AP department searches on — those two are
+different things and must stay different.
+
+**Search resolves in three passes, in order:** exact match on the document number,
+then exact match on a legacy `SRL-` number, then substring results after. Order is
+the whole design. `SRL-121495` was self-delimiting; `5001` is not, so a plain
+substring search for `5001` also matches `15001` and `50012`, and the load the AE
+actually typed must come back first rather than ranked among its own superstrings.
+
+**Legacy numbers are never rewritten.** Loads issued before this amendment keep
+their `SRL-1214xx` stems and their `B`/`R`/`I`/`S`/`P` suffixes, and search accepts
+both forms. A number already printed on a signed bill of lading is not a formatting
+decision. The two namespaces cannot collide: the legacy one is prefixed and the new
+one is not, so a new `5001B` and a legacy `SRL-121495B` are distinct strings.
+
+**Filenames carry the number, never a type prefix** — `5001_BOL.pdf`,
+`5001_Rate_Confirmation.pdf`, `5001_Invoice.pdf`, `5001A_Lumper.pdf`. Sorting a
+download folder by name is the same use case the numbering scheme exists for, and
+a `TYPE-` prefix breaks it there exactly as it would anywhere else.
+
+**`SHP-YYYY-NNN` is internal only.** The load number replaces it on every customer
+and carrier surface; the shipment sequence stays for internal joins and is not
+quoted outward.
+
+**Sequence start: 5001**, from `load_number_seq`.
+
+**Status: the numbering and the filenames are BUILT; three consequences are not.**
+`generateLoadNumber` emits the bare number from a sequence declared `START WITH
+5001`. `lib/documentNumber.ts` carries the letter map, the supplemental allocator,
+the core re-issue separator and the filename rule, and a permanence guard fails CI
+on a number built outside that module, a `TYPE-` filename prefix, or a letter
+assigned anywhere else.
+
+**NOT yet built, named so nobody reads this section as describing them:** the
+`INV-####` retirement to a read-only mirror, the three-pass search order, and
+`SHP-YYYY-NNN` being confined to internal surfaces. Each is a change to a surface
+outside the numbering module.
+
+**A core re-issue takes a hyphen: `5001`, then `5001-2`, then `5001-3`. Ratified
+2026-09-24.** A re-issue is a new row for the same load against a `@unique` column,
+and a bare number has no suffix letter to hang a revision on the way `SRL-121485R2`
+did.
+
+**A bare digit was not available, and that is the reason rather than a preference.**
+`5001` followed by `2` is `50012` — which is load 50012's own number. The document
+would read as another load's, and the allocator would inherit the same ambiguity:
+its scan for the next free revision would sweep in that load's row and skip a
+number because of freight nobody was looking at. The hyphen cannot occur in a bare
+load number, so it delimits in both directions — when a person reads a number and
+when the allocator scans for one. `CORE_REVISION_SEPARATOR` holds it.
+
+`quickPayPilotDocClaims.test.ts` holds the first paragraph against what
+`documentNumber.ts` actually emits, in both directions, so this line cannot go
+stale either way.
+
+#### The retired scheme, for reading numbers issued before 2026-09-23
+
+Ratified 2026-08-16 and superseded above. A **suffix on a shared stem**: load
+`SRL-121485`, BOL `SRL-121485B`, rate confirmation `SRL-121485R`, invoice
+`SRL-121485I`, supplemental invoice `SRL-121485S`, settlement `SRL-121485P` — `P`
+for pay, so it could not collide with `S`. Re-issues took a numeric revision
+(`SRL-121485R2`). Numbers were never reused then either, for the same reason they
+are not now: in a dispute the document has to say on its face which version the
 carrier signed.
-
-**`Load.bolNumber` is NOT this.** That column is the **shipper-supplied** BOL
-reference their AP department searches on. SRL's own BOL number is
-`Load.srlBolNumber`. They are different things and must stay different — do not
-overload either.
-
-**Built.** The anchor (`generateLoadNumber`, Postgres sequence `load_number_seq`)
-already existed. The suffix scheme, the allocator and the re-issue rule live in
-`backend/src/lib/documentNumber.ts`; the persisted columns (`Load.srlBolNumber`,
-`RateConfirmation.rateConNumber`, `Invoice.srlDocNumber`, `CarrierPay.srlDocNumber`)
-are in the schema and the migration.
-
-**Ratified-pending — NOT built.** Same caveat: the migration is authored, not
-applied. Two load creators still bypass `generateLoadNumber`
-(`shipperPortalController.ts`, `emailToLoadService.ts`), so a portal-created or
-email-created load has a null `loadNumber` and therefore **no stem to suffix
-from** — its documents have nothing to hang off. Closing that is a prerequisite
-for the scheme being true of every load rather than most of them.
 
 ---
 
