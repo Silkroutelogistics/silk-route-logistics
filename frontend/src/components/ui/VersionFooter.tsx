@@ -18814,7 +18814,29 @@
 // the payload, and two cases cover the load-backed branch its fixture had never
 // reached (that load carried no stem, so it had been exercising the load-less
 // path by accident).
-export const SRL_VERSION = "3.8.bim";
+// v3.8.bin - numbering C1c: the invoice document prints ONE number, and the
+// accounting path stops minting a second one.
+// POST /accounting/invoices required loadId, so every invoice it raised was
+// load-backed, and it allocated INV-YYYYMMDD-XXXX beside the document number by
+// design - its own comment called that column "the internal INV- accounting
+// sequence". The customer then received a page headed 5001 whose payment
+// reference read INV-20260924-0001, with nothing on it saying which to quote.
+// The dated allocator goes with it: it counted today's rows and re-checked for
+// a duplicate, a race the @unique column arbitrates anyway.
+// THE FALLBACK IS THE PERSISTED NUMBER, NEVER A DERIVED ONE. documentNumberFor
+// will derive 5001I from the load when srlDocNumber is null, which is right for
+// a BOL that has no number of its own and wrong for an invoice, which always
+// has one. A legacy invoice regenerated today would otherwise print a reference
+// that was never issued to it, while the customer holds INV-1043 in their
+// accounts-payable system and on the remittance advice they already sent.
+// Legacy rows keep their own number on their own document - that is what the
+// read-only mirror means from the customer's side.
+// The render pin did not move, and that is the evidence this shipped no visual
+// change: on the pin fixture the two columns already agreed, so unifying them
+// is a no-op there. Which is also why the pin could not have caught the defect -
+// it is blind to a divergence its fixture does not contain, so the new guard
+// renders fixtures built to diverge.
+export const SRL_VERSION = "3.8.bin";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

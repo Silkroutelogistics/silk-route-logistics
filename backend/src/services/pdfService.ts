@@ -3036,16 +3036,25 @@ export function generateInvoicePDF(invoice: InvoiceData): PDFDoc {
     (s || "").replace(/_/g, " ").toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
   const cust = invoice.load.customer;
   const terms = (cust?.paymentTerms || "Net 30").trim();
-  // Customer-facing number, which is NOT invoiceNumber: that column is the
-  // internal accounting sequence (INV-<n>) owned by lib/invoiceNumber.ts and is
-  // deliberately left alone. The customer sees the SRL stem so this invoice
-  // files with its own BOL and rate con.
-  const docId =
-    documentNumberFor(
-      invoice.srlDocNumber,
-      invoice.load,
-      invoice.invoiceKind === "SUPPLEMENTAL" ? "SUPPLEMENTAL_INVOICE" : "INVOICE",
-    ) ?? invoice.invoiceNumber;
+  // §21.2 ruling 3 — ONE number on the page, and it is always a number that was
+  // ACTUALLY ISSUED to this invoice.
+  //
+  // The document used to print two. The header filing slot showed a number
+  // derived from the load while the meta strip and the payment reference showed
+  // the invoiceNumber column, so a customer told to quote their invoice number
+  // had two to choose from and no way to know which one the AR inbox would
+  // recognise. On a new invoice those now agree by construction, because
+  // invoiceNumber mirrors srlDocNumber.
+  //
+  // THE FALLBACK IS THE PERSISTED COLUMN, NEVER A COMPUTED ONE. documentNumberFor
+  // will happily derive SRL-5001I from the load when srlDocNumber is null, which
+  // is right for a BOL that has no number of its own and wrong here: a legacy
+  // invoice DOES have a number, the customer has it in their accounts-payable
+  // system and on the remittance advice they already sent, and printing a derived
+  // reference on a regenerated copy would put a string in front of them that was
+  // never issued. Legacy rows therefore keep their INV- number on their own
+  // document, which is what "read-only mirror" means from the customer's side.
+  const docId = invoice.srlDocNumber ?? invoice.invoiceNumber;
 
   // Header (REFERENCE mode — no QR; invoice # in the upper-right filing slot)
   let y = drawHeaderFirstPage(doc, {
@@ -3060,7 +3069,7 @@ export function generateInvoicePDF(invoice: InvoiceData): PDFDoc {
     doc,
     {
       "DATE ISSUED": fmtDate(invoice.createdAt),
-      "INVOICE #": invoice.invoiceNumber,
+      "INVOICE #": docId,
       "LOAD REF": invoice.load.referenceNumber,
       "TERMS": terms,
       "DUE DATE": fmtDate(invoice.dueDate),
@@ -3188,7 +3197,7 @@ export function generateInvoicePDF(invoice: InvoiceData): PDFDoc {
     doc,
     (cust?.name || billName).slice(0, 20),
     invoice.load.referenceNumber,
-    invoice.invoiceNumber,
+    docId, // the wire memo quotes the same number as the page
     y,
   );
   y += 4;

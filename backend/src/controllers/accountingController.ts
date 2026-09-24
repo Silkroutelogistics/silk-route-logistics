@@ -7,6 +7,7 @@ import { log } from "../lib/logger";
 import { validateLoadStatusTransition } from "../lib/loadStateMachine";
 import { etStartOfMonth, etStartOfWeek } from "../lib/financePeriods";
 import { resolveLoadStem, withDocumentNumber } from "../lib/documentNumber";
+import { createInvoiceWithRetry } from "../lib/invoiceNumber";
 import { generateInvoicePdf } from "../services/pdfService";
 import { sendCustomerInvoiceEmail } from "../services/emailService";
 import {
@@ -412,60 +413,52 @@ export async function createInvoice(req: AuthRequest, res: Response) {
         select: { id: true },
       }));
 
-    // Generate invoice number atomically: INV-YYYYMMDD-XXXX
-    const todayStr = new Date().toISOString().slice(0, 10).replace(/-/g, "");
-    let invoiceNumber = "";
-    for (let attempt = 0; attempt < 5; attempt++) {
-      const existingCount = await prisma.invoice.count({
-        where: { invoiceNumber: { startsWith: `INV-${todayStr}` } },
-      });
-      invoiceNumber = `INV-${todayStr}-${String(existingCount + 1).padStart(4, "0")}`;
-      // Check uniqueness before creating
-      const dup = await prisma.invoice.findUnique({ where: { invoiceNumber } });
-      if (!dup) break;
-      if (attempt === 4) invoiceNumber = `INV-${todayStr}-${String(existingCount + 2).padStart(4, "0")}`;
-    }
-
     const componentSum = Math.round(((lineHaulAmount ?? 0) + (fuelSurchargeAmount ?? 0) + (accessorialsAmount ?? 0)) * 100) / 100;
     const totalAmount = componentSum > 0 ? componentSum : amount;
 
-    // Customer-facing document number, allocated at creation and persisted, so
-    // regenerating the PDF reproduces it. Separate from invoiceNumber above:
-    // that stays the internal INV- accounting sequence.
+    // §21.2 ruling 3 — ONE number. This endpoint requires loadId, so it always
+    // has a stem, and it was minting a second identifier beside the document
+    // number: the customer received a page headed 5001 whose payment reference
+    // read INV-20260924-0001, and was asked to quote one of them without being
+    // told which. The INV-YYYYMMDD-XXXX allocator is gone with it — it also
+    // read a count of today's rows and re-checked for a duplicate, which is a
+    // race the @unique column arbitrates anyway.
     const stem = resolveLoadStem(load);
 
     const buildInvoice = (srlDocNumber: string | null) =>
-      prisma.invoice.create({
-      data: {
-        invoiceNumber,
-        srlDocNumber,
-        rateConfirmationId: pricingRc?.id ?? null,
-        loadId,
-        userId: load.posterId,
-        createdById: req.user!.id,
-        amount,
-        lineHaulAmount: lineHaulAmount ?? null,
-        fuelSurchargeAmount: fuelSurchargeAmount ?? null,
-        accessorialsAmount: accessorialsAmount ?? null,
-        totalAmount,
-        dueDate: dueDate ? new Date(dueDate) : null,
-        notes: notes ?? null,
-        status: "DRAFT",
-        lineItems: lineItems?.length
-          ? {
-              create: lineItems.map((item: any, idx: number) => ({
-                description: item.description,
-                quantity: item.quantity ?? 1,
-                rate: item.rate,
-                amount: Math.round((item.amount ?? item.rate * (item.quantity ?? 1)) * 100) / 100,
-                type: item.type ?? "LINEHAUL",
-                sortOrder: idx,
-              })),
-            }
-          : undefined,
-      },
-      include: { lineItems: true },
-    });
+      createInvoiceWithRetry(srlDocNumber, (invoiceNumber) =>
+        prisma.invoice.create({
+          data: {
+            invoiceNumber,
+            srlDocNumber,
+            rateConfirmationId: pricingRc?.id ?? null,
+            loadId,
+            userId: load.posterId,
+            createdById: req.user!.id,
+            amount,
+            lineHaulAmount: lineHaulAmount ?? null,
+            fuelSurchargeAmount: fuelSurchargeAmount ?? null,
+            accessorialsAmount: accessorialsAmount ?? null,
+            totalAmount,
+            dueDate: dueDate ? new Date(dueDate) : null,
+            notes: notes ?? null,
+            status: "DRAFT",
+            lineItems: lineItems?.length
+              ? {
+                  create: lineItems.map((item: any, idx: number) => ({
+                    description: item.description,
+                    quantity: item.quantity ?? 1,
+                    rate: item.rate,
+                    amount: Math.round((item.amount ?? item.rate * (item.quantity ?? 1)) * 100) / 100,
+                    type: item.type ?? "LINEHAUL",
+                    sortOrder: idx,
+                  })),
+                }
+              : undefined,
+          },
+          include: { lineItems: true },
+        }),
+      );
 
     // This endpoint creates BASE invoices. The supplemental accessorial invoice
     // (…S) is a separate row created by its own flow; when that lands it passes
