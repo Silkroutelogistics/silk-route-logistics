@@ -5,6 +5,51 @@ Nothing below is a regression introduced by the arc it sits under.
 
 ---
 
+## followups arc — v3.8.bjc / bjf / bjg (2026-09-24), deployed `8d296be5`
+
+Shipped C1 (pre-tracing keys on Load.status), C2 (Item 317 AT_PICKUP remap), C3
+(observer gains a CARRIER lens). C4 pruned worktrees; R1 reported only, NOT merged.
+
+**THE ENFORCEMENT GATE CLOSED IN PRODUCTION.** `status_machine.unexpected_cumulative`
+went **1 -> 0** and `unexpected_edges` is now `[]`, while `violations_cumulative` stays **1**
+and `cumulative_since` is unchanged — the row is preserved verbatim
+(`BOOKED -> AT_PICKUP count=1 first=2026-09-22T21:37:47.651Z`, read back as `srl_readonly`
+with the read-only session proven by a refused write, SQLSTATE 25006). Only the derivation
+moved. **§13.3 Item 194's step (ii) — switching enforcement on — is now unblocked on this
+criterion for the first time**, subject to its own "zero across a full deploy cycle" soak.
+
+### Carried, deliberately not built
+
+1. **Five suites still call `vi.restoreAllMocks()`** — `credentialGuards`,
+   `uncancelLoadHandler`, `authEvents`, `documentIntake`, `fmcsaService`. It wipes the
+   `vi.fn()` defaults in `setup.ts`'s prisma double and kills whichever file shares the
+   worker NEXT, which is Item 318's `ERR_IPC_CHANNEL_CLOSED`. Census and mechanism are
+   banked on Item 318. Wants its own commit and its own verification.
+
+2. **R1 — `housekeeping/eol-normalize` must not be merged as-is.** It CONFLICTS with
+   origin/main today, two ways: **add/add on `.gitattributes`** (main took a deliberately
+   one-file version on 2026-09-23 whose own comment defers the repo-wide job to this
+   branch), and a content conflict in `docs/regression-log.md` (both sides appended; 4
+   commits on main touched it since the base). `CLAUDE.md` auto-merges clean. **Blast
+   radius: 2,288 of 3,239 tracked files are `i/lf w/crlf`**, so merging rewrites their
+   working copies in **every one of the 17 worktrees**, 9 of which hold uncommitted work.
+   The index is already LF-clean, so **committed history is unaffected** — the risk is
+   entirely working-tree churn across concurrent sessions, which is exactly what main's
+   scoped version was written to avoid. Also surfaced: **16 files are `i/lf w/mixed`**.
+   Resolution when taken up is easy — the branch's `*.mjs text eol=lf` already covers
+   main's single line — but it should land when few worktrees are live.
+
+3. **`arc/finding-b-retendered`'s worktree was NOT pruned** though it is clean and merged.
+   Its head was 16 minutes old at prune time: that session is live, and a clean tree right
+   after a push is the normal state of an active session between commits. Removing it
+   would have broken a running session's context. Re-check before pruning it later.
+
+4. **Letters bjc/bjd/bje/bjf/bjg interleave two sessions** and are continuous with no
+   duplicates. The footer was resolved MONOTONIC during the rebase (bje kept at the C1
+   step) because a footer that regresses reports a wrong version in the UI; bjc is still
+   claimed via its commit subject, which the guard reads.
+
+
 ## cleanup arc (`v3.8.bjb`) — C1/C2/C3/C4/C5 + R1
 
 Branch `arc/cleanup`, based on `origin/main` `7b799bad`. Commits `4f82d966`,

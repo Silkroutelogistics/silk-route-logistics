@@ -2646,7 +2646,15 @@ Most are inert history and **should** survive — `LoadActivity` and `LoadTracki
 
     **The rule:** run suites in a fresh worktree with CI's own env block before reading a collect failure as a code break, and verify the same file on a clean tree before attributing it to your change. Both were done here; the failure was the worktree.
 
-317. **`Shipment.status` and the AT_PICKUP question the Load→Shipment mapper deliberately did not answer (banked 2026-09-24, v3.8.biw).**
+317. ~~**`Shipment.status` and the AT_PICKUP question the Load→Shipment mapper deliberately did not answer (banked 2026-09-24, v3.8.biw).**~~ **CLOSED 2026-09-24 in v3.8.bjf (C2). AT_PICKUP now maps to DISPATCHED and no longer stamps `actualPickup`.**
+
+    **BOTH RISKS THIS ITEM BANKED TURNED OUT NOT TO EXIST, and they were checked rather than trusted (§19 Sub-pattern 15).** Recorded here because a banked risk that does not match the code is read exactly when somebody is deciding whether to act, and this one would have deterred a correct change.
+
+    *"Moves a customer-facing status on loads that are live right now."* `shipperPortalController` contains **zero** `prisma.shipment` queries — every shipper-facing surface (shipments list, tracking stepper, dashboard) reads `prisma.load`. No customer-facing surface reads `Shipment.status` at all.
+
+    *"Moves the timestamp that detention and on-time-pickup reporting read."* It does not. §9's on-time factor, `analyticsService`, `laneAnalyticsService`, `carrierIntelligenceService` and the tracking payload all read **`Load.actualPickupDatetime`**, stamped by `lib/loadEventStamps.ts`, which C2 did not touch; detention takes stop arrival as given from `LoadStop`. **`Shipment.actualPickup` has three writers and ZERO readers** across `backend/src` and `frontend/src` — the two greps that look like readers are output fields merely *named* `actualPickup`, sourced from the Load column.
+
+    **The consumer that really would have fired differently is why C1 shipped first.** `runPreTracing` selects shipments on `status in (BOOKED, DISPATCHED)`, so this remap pushes a dock-arrived shipment INTO that selection — re-creating C1's defect through another door. Proven both ways by `scripts/_c2-remap-interaction-proof.ts`: 6/6 with C1's load filter in place, 5/6 with it removed, failing exactly the dock assertion. **The stamp was moved with the status** because they are one claim; it is deferred, not lost, and a test asserts from `getAllowedNextStatuses` that every onward move from AT_PICKUP still stamps.
 
     `lib/shipmentStatusFor.ts` is now the one Load→Shipment mapping, and it PRESERVES the answers the carrier path already gave so that nothing a shipper sees moved. One of those answers is questionable and was kept on purpose: **`AT_PICKUP → PICKED_UP`** says the freight is picked up when the truck has only ARRIVED, and stamps `actualPickup` at the same moment. `LOADED` is when the freight is actually on.
 
@@ -2662,3 +2670,10 @@ Most are inert history and **should** survive — `LoadActivity` and `LoadTracki
 
     **The going-forward rule, which is cheap and was what actually resolved it:** before attributing an IPC crash to Item 300, **bisect** — re-run excluding the files the current change touched. The pool switch was the useful negative (it ruled out the environment before the environment could be blamed), and the bisect was the answer. Item 300's own re-run rule stays; this adds the step between re-running and banking a fire. Same shape as §13.3 Item 304.1: an environmental explanation that fits is not the same as an environmental cause.
 
+
+
+    **THE CENSUS THIS ITEM IMPLIES, RUN 2026-09-24 (followups arc).** `restoreAllMocks` is used by **6 suites** against **105** using `clearAllMocks`. `loadTransitionObserver.test.ts` was swapped for a restore scoped to the single spy it installs (v3.8.bjg). **Five remain: `credentialGuards`, `uncancelLoadHandler`, `authEvents`, `documentIntake`, `fmcsaService`.**
+
+    **The mechanism, confirmed against `__tests__/setup.ts`:** it builds its prisma double from `vi.mock` factories whose members carry defaults (`findMany: vi.fn().mockResolvedValue([])`, `updateMany: … ({count: 0})`). `restoreAllMocks` calls `mockRestore()` on every one of those, wiping the defaults — and vitest reuses a worker across files, so it kills whichever file runs **next** in that worker, never itself. That is why the crash is order-dependent and why Item 300 recorded it as "never alone".
+
+    **This arc hit one such crash during C1** — `ERR_IPC_CHANNEL_CLOSED`, no test result, **under `--maxWorkers=3`**, which is the condition Item 300 names as the point where contention stops being the explanation. Per this item's own rule it was re-run rather than banked as a fire: two subsequent full runs on an **identical file set** were green (292 files), which rules out a deterministic defect in the new files and leaves the order-dependent class above. **Not swept here** — it is test-infrastructure hygiene across five files this arc does not otherwise touch, and it wants its own commit and its own verification.
