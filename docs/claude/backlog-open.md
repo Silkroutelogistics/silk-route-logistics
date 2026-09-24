@@ -2311,6 +2311,22 @@ Most are inert history and **should** survive — `LoadActivity` and `LoadTracki
 
     **Three occurrences, three unrelated arcs, and this one shipped a data-writing migration ahead of the E2E result.** Item 273.12 remains the unactioned fix and shape **(b)** remains the better fit — this release is its strongest case yet, since the migration was additive and could have landed exactly when it did while the bundle waited the 2m01s for E2E. **Per the 121497 arc's ruling 6, that fix joins the queued Item 301 / `run-local` arc** rather than standing alone: both are E2E-pipeline work, and Item 291.13's per-worktree port scoping sits in the same queue.
 
+    **FOURTH MEASURED OCCURRENCE — 2026-09-24, run `35988837287`, `43c65f0c` (numbering Phase C release).** Recorded per the sequence-verification arc. Banked here as the FOURTH rather than the third: that arc's halt card called it a third measurement, having read the pre-split copy of §13.3 in its own system prompt rather than this file, which already carried three. Sub-pattern 15, backlog-row-drift, on the very record being appended to.
+
+    | Time (UTC) | Event |
+    |---|---|
+    | 10:43:04 | CI run created (fast-forward to main) |
+    | 10:45:29 / 10:45:35 | Backend / Frontend green |
+    | **10:45:41** | **`Deploy to Render` fires** — job 10:45:37 → 10:45:41, success |
+    | 10:47:03.698 | new process booted, serving `43c65f0c` |
+    | **10:47:56** | **`E2E - Full Lifecycle Smoke` finishes** — green |
+
+    The hook fired **2m15s** before E2E reported, and production had been serving the new bundle for **52s** by the time the only job that could have objected finished.
+
+    **This one carried NO migration, and that is what makes it the cleanest case for shape (b) so far.** The three prior occurrences each had a schema change that shape (b) would deliberately let through early, which muddies the argument — a reader can reasonably ask what the split actually buys when the migration is the risky half and it lands first either way. Here there was nothing to let through: the release was bundle-only, so a migration-first / bundle-second split would have held **the entire release** until E2E reported, at a cost of 2m15s. There is no case in which the split would have shipped anything sooner, and no schema-ahead-of-code property to preserve.
+
+    **Also worth recording: the cutover window is not observable from a single health read.** The arc's own poller printed `LIVE 43c65f0c` and then dumped a body reading `"sha":"1fd66498"` with the old `bootedAt` — two curls 0.2s apart, straddling the 10:47:03 boot, hitting different instances. Only six reads with monotonically climbing `uptime` settled it. Anyone timing a deploy from one sample can be off by a whole process.
+
 
 274. **`InfoRequestThread` gates the attachment list on `resolvedNote` being truthy — attachments are coupled to a field they do not depend on.** Read 2026-09-17 while confirming the AE Info Req tab renders a carrier's files (it does: [`InfoRequestThread.tsx:336-353`](frontend/src/components/carriers/InfoRequestThread.tsx#L336), fed by the `attachments` include at [`infoRequests.ts:113-121`](backend/src/routes/infoRequests.ts#L113)). The whole Carrier-response block, files included, sits behind `request.status === "RESOLVED" && request.resolvedNote` ([`:328`](frontend/src/components/carriers/InfoRequestThread.tsx#L328)). **Safe today** because both ends refuse an empty note: [`carrierAuth.ts:1836-1837`](backend/src/routes/carrierAuth.ts#L1836) 400s on `< 1` char, and the shared predicate `canSubmitInfoRequestAnswer` ([`infoRequestCategories.ts:131`](shared/constants/infoRequestCategories.ts#L131)) mirrors it, so a resolved request always carries a note. **If a note is ever made optional when a file is attached** — a plausible relaxation now that v3.8.bby makes the file the load-bearing half of a document-category answer — the files disappear from the thread silently: the GET still returns them, the `<li>` branch still exists, and nothing renders because the gate above it is false. The v3.8.bcs-era test (`c15c099a`) would not catch it either, since its fixture carries a note. Fix shape when touched: render the block on `status === "RESOLVED"` alone, then gate the note paragraph on `resolvedNote` and the attachment list on `attachments.length` independently; add the fixture with a file and no note. Not BKN-blocking; nothing to change until the note rule changes.
 
