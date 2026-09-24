@@ -82,11 +82,22 @@ claims. If it is ever wanted it is additive, behind
 reporting the deployment stage ALONGSIDE the served check and never instead of
 it.
 
-**Unverifiable from here, and it decides whether the check can ever pass:**
-Cloudflare's configured build command is dashboard state. If it is not
-`npm run build`, the `postbuild` hook never fires and no marker is ever served.
-The check reports that case as its own exit code (2) with that cause named, so
-it degrades to a clear question rather than a silent pass.
+**ANSWERED BY OBSERVATION, and it was the one thing that decided whether the
+check could ever pass.** Cloudflare's build command is dashboard state and
+could not be read from here; if it were not `npm run build`, the `postbuild`
+hook would never fire and no marker would ever be served. The deploy of
+`e5e53834` settles it: Cloudflare serves
+`{"sha":"e5e53834...","source":"CF_PAGES_COMMIT_SHA","ref":"main"}` with
+`Cache-Control: no-cache, no-store, must-revalidate` and no `cf-cache-status`.
+The stamp ran, so `npm run build` ran. **`source` is the load-bearing field**:
+it says Cloudflare's own env var supplied the sha, not a fallback — all three
+branches of `resolveSha()` are now exercised on their real platforms (`git`
+locally, `GITHUB_SHA` in CI's frontend job, `CF_PAGES_COMMIT_SHA` here).
+
+The exit-2 path stays as the diagnostic for the day this stops being true,
+and it names that cause. **One cause it does NOT name:** Cloudflare Pages
+auto-deploy being switched off for the project would also produce exit 2, and
+the message points only at the build command. If it ever fires, check both.
 
 ### R1 — the CRLF census (report only; nothing executed)
 
