@@ -16,6 +16,7 @@
 import { describe, it, expect } from "vitest";
 import fs from "fs";
 import path from "path";
+import { callBodies, findPrismaFieldWriters } from "../../helpers/prismaWriterScan";
 
 const BACKEND = path.resolve(__dirname, "../../..");
 const SRC = path.join(BACKEND, "src");
@@ -100,24 +101,47 @@ describe("gap row 3 — Load.status writers are frozen, not eliminated", () => {
    * GROW, which stops the problem getting worse while the reconciliation is
    * pending, and makes the next person to add a writer say why.
    */
+  /**
+   * BASELINE CORRECTED 2026-09-24 (un-cancel Phase B), and the correction is
+   * worth more than the number.
+   *
+   * The scanner read a fixed 800-CHARACTER window after each call. A character
+   * window over source whose line endings differ by platform reads a DIFFERENT
+   * AMOUNT OF CODE on each: CRLF costs one extra byte per line, so the window
+   * covered ~13 fewer lines on a Windows checkout than on CI's Linux one. This
+   * guard passed locally at 18 files and failed CI at 19 on byte-identical
+   * source. A guard whose verdict depends on the checkout's line endings is not
+   * a guard.
+   *
+   * BOTH ANSWERS WERE WRONG. The window reached ~30 lines past the call it was
+   * attributing to and counted cancelCascade.ts, whose matched `status` token
+   * sits inside an unrelated CancellationSnapshot literal — while MISSING
+   * carrierLoads.ts and rateConfirmationController.ts, which are genuine
+   * writers (§13.3 Item 276) that hand the call a HOISTED payload
+   * (`{ where, data }`) the old window only ever caught by accident, from
+   * unrelated text further down the file.
+   *
+   * The scan is now the one in __tests__/helpers/prismaWriterScan.ts — bounded
+   * by the call, hoisted-payload aware, EOL-independent.
+   *
+   * THE NUMBER IS UNCHANGED AND THE SET IS NOT. 18 was right by luck on a CRLF
+   * checkout: one false positive was out of reach of the window while two real
+   * writers were in reach of unrelated text. Under the corrected scan the same
+   * 18 files are named, but each is named because it writes Load.status.
+   */
   const BASELINE_FILES = 18;
 
-  const writerFiles = () => {
-    const found = new Set<string>();
-    for (const f of walk(SRC)) {
-      const s = strip(fs.readFileSync(f, "utf8"));
-      for (const m of s.matchAll(/(?:prisma|tx|db|client)\s*\.\s*load\s*\.\s*update(?:Many)?\s*\(/g)) {
-        const seg = s.slice(m.index!, m.index! + 800);
-        // `status:` or shorthand `status,` / `status }` -- the shorthand form is
-        // what made an earlier census in this arc undercount by two (§19
-        // Sub-pattern 18).
-        if (/\bstatus\s*[:,}]/.test(seg)) {
-          found.add(path.relative(SRC, f).split(path.sep).join("/"));
-        }
-      }
-    }
-    return found;
-  };
+  const writerFiles = () =>
+    new Set(
+      findPrismaFieldWriters({
+        model: "load",
+        field: "status",
+        // update/updateMany only. A create SETS an initial status rather than
+        // transitioning one, and this row is about transitions.
+        verbs: "update|updateMany",
+        root: SRC,
+      }).map((h) => h.file),
+    );
 
   it("the writer population has not grown", () => {
     const files = writerFiles();
@@ -129,6 +153,67 @@ describe("gap row 3 — Load.status writers are frozen, not eliminated", () => {
         "be routed, raise the baseline here WITH the reason.\n" +
         [...files].sort().map((f) => "  " + f).join("\n"),
     ).toBeLessThanOrEqual(BASELINE_FILES);
+  });
+
+  /**
+   * THE REGRESSION THIS FILE SHIPPED WITH. Identical source, two line endings,
+   * and the old scanner gave two different answers. Asserted on a fixture
+   * rather than on the tree, so it keeps holding when the tree changes.
+   */
+  it("gives the same answer on CRLF and on LF", () => {
+    const body = [
+      "await db.load.updateMany({",
+      "  where: { id: loadId },",
+      "  data: { trackingTokenRevokedAt: now },",
+      "});",
+      ...Array(20).fill(""),
+      "const snapshot = {",
+      "  load: { status: opts.priorStatus },",
+      "};",
+      "",
+    ].join("\n");
+    const run = (src: string) =>
+      findPrismaFieldWriters({
+        model: "load",
+        field: "status",
+        verbs: "update|updateMany",
+        root: SRC,
+        sources: new Map([[path.join(SRC, "__eol__.ts"), src]]),
+      });
+    expect(run(body)).toEqual(run(body.split("\n").join("\r\n")));
+  });
+
+  it("does NOT attribute a status in a LATER statement to this call (the cancelCascade shape)", () => {
+    // What the 800-character window did: reached ~30 lines past the call and
+    // counted a token from an object literal that is not a Prisma payload.
+    const hits = findPrismaFieldWriters({
+      model: "load",
+      field: "status",
+      verbs: "update|updateMany",
+      root: SRC,
+      sources: new Map([[
+        path.join(SRC, "__later__.ts"),
+        "await db.load.updateMany({ where: { id }, data: { trackingTokenRevokedAt: now } });\n" +
+          "const snapshot = { load: { status: priorStatus } };\n",
+      ]]),
+    });
+    expect(hits).toEqual([]);
+  });
+
+  it("DOES catch a hoisted payload (the carrierLoads shape the old window caught by accident)", () => {
+    const hits = findPrismaFieldWriters({
+      model: "load",
+      field: "status",
+      verbs: "update|updateMany",
+      root: SRC,
+      sources: new Map([[
+        path.join(SRC, "__hoisted__.ts"),
+        "const data: any = {};\ndata.status = next;\n" +
+          "const updated = await prisma.load.update({ where: { id: load.id }, data });\n",
+      ]]),
+    });
+    expect(hits).toHaveLength(1);
+    expect(hits[0].hoisted).toBe("data");
   });
 
   it("the scanner still finds writers (vacuity tripwire)", () => {
@@ -197,8 +282,12 @@ describe("gap row 4 — accepting settles every sibling", () => {
     // OFFERED. Six of these existed and every one of them missed COUNTERED.
     for (const rel of acceptPaths()) {
       const s = strip(fs.readFileSync(path.join(SRC, rel), "utf8"));
-      for (const m of s.matchAll(/loadTender\s*\.\s*updateMany\s*\(/g)) {
-        const seg = s.slice(m.index!, m.index! + 400);
+      // Bounded by the CALL, not by 400 characters. This is the same defect row
+      // 3 carried, failing in the opposite and quieter direction: a negative
+      // assertion over a window that SHRINKS on CRLF passes more easily, so on
+      // a Windows checkout it could miss a hand-rolled sweep it would have
+      // caught in CI.
+      for (const { body: seg } of callBodies(s, /loadTender\s*\.\s*updateMany\s*\(/g)) {
         expect(
           /"OFFERED"/.test(seg) && /status/.test(seg),
           `${rel} sweeps siblings itself — call withdrawLiveTenders`,

@@ -34,83 +34,21 @@
 import { describe, it, expect } from "vitest";
 import fs from "fs";
 import path from "path";
+import { findPrismaFieldWriters, walkTs, stripCommentsKeepingLines } from "../../helpers/prismaWriterScan";
 
 const SRC = path.resolve(__dirname, "..", "..", "..", "src");
 
-function stripComments(src: string): string {
-  return src
-    .replace(/\/\*[\s\S]*?\*\//g, (m) => m.replace(/[^\n]/g, " "))
-    .replace(/(^|[^:])\/\/[^\n]*/g, (_m, p1) => p1);
-}
-
-function walk(dir: string, out: string[] = []): string[] {
-  for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
-    const p = path.join(dir, e.name);
-    if (e.isDirectory()) { if (e.name !== "node_modules") walk(p, out); }
-    else if (p.endsWith(".ts")) out.push(p);
-  }
-  return out;
-}
-
 /**
- * Does the file assign carrierId onto a hoisted payload identifier anywhere —
- * `ident.carrierId = …`, `ident["carrierId"] = …`, or `ident = { … carrierId … }`?
- * File-scoped on purpose: an identifier reused across two functions in one file
- * is a false positive worth a human's minute, where a scoped search that misses
- * the assignment is a writer nobody sees.
+ * The scanner moved to __tests__/helpers/prismaWriterScan.ts, unchanged in
+ * behaviour and parameterised on the field, because a SECOND guard needed the
+ * same five shapes and a second copy is how one of them goes blind.
+ *
+ * The fixture cases below are what make that move checkable: they exercise
+ * shorthand, the hoisted payload in both forms, the wrapped call and the
+ * comment case. If the extraction had drifted, they fail here.
  */
-function hoistedAssignsCarrierId(src: string, ident: string): boolean {
-  const esc = ident.replace(/[$]/g, "\\$");
-  const dot = new RegExp(`\\b${esc}\\s*\\.\\s*carrierId\\s*=[^=]`);
-  const bracket = new RegExp(`\\b${esc}\\s*\\[\\s*["']carrierId["']\\s*\\]\\s*=[^=]`);
-  const literal = new RegExp(`\\b${esc}\\s*(?::[^=]*)?=\\s*\\{[^}]*\\bcarrierId\\b`);
-  return dot.test(src) || bracket.test(src) || literal.test(src);
-}
-
-/** Every `load` write whose data block assigns carrierId, colon, shorthand or hoisted. */
-export function findCarrierIdWriters(root = SRC, sources?: Map<string, string>) {
-  const re = /(?:prisma|tx|client|db)\s*\.\s*load\s*\.\s*(update|updateMany|create|upsert)\s*\(/g;
-  const hits: { file: string; line: number; shorthand: boolean; hoisted?: string }[] = [];
-  const files = sources ? [...sources.keys()] : walk(root);
-
-  for (const f of files) {
-    const raw = sources ? sources.get(f)! : fs.readFileSync(f, "utf8");
-    const src = stripComments(raw);
-    let m: RegExpExecArray | null;
-    re.lastIndex = 0;
-    while ((m = re.exec(src))) {
-      let depth = 0, end = -1;
-      for (let i = m.index + m[0].length - 1; i < src.length; i++) {
-        if (src[i] === "(") depth++;
-        else if (src[i] === ")") { depth--; if (depth === 0) { end = i; break; } }
-      }
-      if (end < 0) continue;
-      const body = src.slice(m.index, end + 1);
-      const dataIdx = Math.max(body.indexOf("data:"), body.indexOf("create:"));
-      const rel = path.relative(SRC, f).replace(/\\/g, "/");
-      const line = src.slice(0, m.index).split("\n").length;
-      if (dataIdx >= 0) {
-        // Is the payload a LITERAL here, or a hoisted identifier (`data: payload`)?
-        const afterKey = body.slice(dataIdx).replace(/^(data|create):\s*/, "");
-        if (!afterKey.startsWith("{")) {
-          const ident = /^([A-Za-z_$][\w$]*)/.exec(afterKey)?.[1];
-          if (ident && hoistedAssignsCarrierId(src, ident)) hits.push({ file: rel, line, shorthand: false, hoisted: ident });
-          continue;
-        }
-        const data = body.slice(dataIdx);
-        // Colon form OR shorthand (carrierId followed by , } or end of line).
-        if (!/\bcarrierId\s*(:|,|\}|\r?$)/m.test(data)) continue;
-        hits.push({ file: rel, line, shorthand: !/\bcarrierId\s*:/.test(data) });
-        continue;
-      }
-      // No `data:` / `create:` key at all: the payload rides as shorthand
-      // `{ where, data }`. Find the identifier and look for a hoisted assignment.
-      const sh = /[{,]\s*(data|payload|updateData|input)\s*[,}]/.exec(body);
-      if (sh && hoistedAssignsCarrierId(src, sh[1])) hits.push({ file: rel, line, shorthand: true, hoisted: sh[1] });
-    }
-  }
-  return hits;
-}
+const findCarrierIdWriters = (root = SRC, sources?: Map<string, string>) =>
+  findPrismaFieldWriters({ model: "load", field: "carrierId", root, sources });
 
 /**
  * The single sanctioned writer. This list is meant to stay length 1.
@@ -140,10 +78,10 @@ const SANCTIONED = new Set(["services/carrierAssignmentService.ts"]);
  */
 function findClearCarrierCallers(): string[] {
   const out: string[] = [];
-  for (const f of walk(SRC)) {
+  for (const f of walkTs(SRC)) {
     const rel = path.relative(SRC, f).replace(/\\/g, "/");
     if (rel === "services/carrierAssignmentService.ts") continue; // the definition
-    const body = stripComments(fs.readFileSync(f, "utf8"));
+    const body = stripCommentsKeepingLines(fs.readFileSync(f, "utf8"));
     if (/\bclearCarrier\s*\(/.test(body)) out.push(rel);
   }
   return out;
