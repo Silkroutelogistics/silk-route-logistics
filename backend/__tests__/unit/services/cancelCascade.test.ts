@@ -70,13 +70,20 @@ describe("what the cascade stops", () => {
     expect(arg.data.status).toBe("CANCELLED");
   });
 
-  it("nulls the public tracking token", async () => {
+  it("REVOKES the public tracking token and never destroys it", async () => {
+    // Nulling was permanent: @default(uuid()) applies only at INSERT, so the
+    // ORM could never put it back and no other writer of the column exists.
+    // That is what made a cancel irreversible by construction. The uuid now
+    // survives so an un-cancel can hand back the SAME link the shipper was
+    // sent, rather than minting a second one.
     mockPrisma.load.updateMany.mockResolvedValue({ count: 1 });
     const r = await cascadeLoadCancellation("load-1", mockPrisma);
-    expect(r.trackingTokenCleared).toBe(true);
+    expect(r.trackingTokenRevoked).toBe(true);
     const [arg] = mockPrisma.load.updateMany.mock.calls[0];
-    expect(arg.where).toMatchObject({ id: "load-1", trackingToken: { not: null } });
-    expect(arg.data.trackingToken).toBeNull();
+    expect(arg.where).toMatchObject({ id: "load-1", trackingToken: { not: null }, trackingTokenRevokedAt: null });
+    expect(arg.data.trackingTokenRevokedAt).toBeInstanceOf(Date);
+    // The load-bearing half: the token itself is not written at all.
+    expect("trackingToken" in arg.data, "the cascade still writes trackingToken — revoking must not destroy it").toBe(false);
   });
 
   it("EXPIRES shipper tracking rows rather than deleting them", async () => {
@@ -129,14 +136,15 @@ describe("idempotence", () => {
     const first = await cascadeLoadCancellation("load-1", mockPrisma);
     const second = await cascadeLoadCancellation("load-1", mockPrisma);
 
-    expect(first).toEqual({ shipmentsCancelled: 1, trackingTokenCleared: true, shipperTokensExpired: 2, rateConfirmationsVoided: 0 });
-    expect(second).toEqual({ shipmentsCancelled: 0, trackingTokenCleared: false, shipperTokensExpired: 0, rateConfirmationsVoided: 0 });
+    expect(first).toEqual({ shipmentsCancelled: 1, trackingTokenRevoked: true, shipperTokensExpired: 2, rateConfirmationsVoided: 0 });
+    expect(second).toEqual({ shipmentsCancelled: 0, trackingTokenRevoked: false, shipperTokensExpired: 0, rateConfirmationsVoided: 0 });
   });
 
   it("the scoping that makes it idempotent is in the where clauses, not in a caller guard", async () => {
     await cascadeLoadCancellation("load-1", mockPrisma);
     expect(mockPrisma.shipment.updateMany.mock.calls[0][0].where.status).toEqual({ not: "CANCELLED" });
     expect(mockPrisma.load.updateMany.mock.calls[0][0].where.trackingToken).toEqual({ not: null });
+    expect(mockPrisma.load.updateMany.mock.calls[0][0].where.trackingTokenRevokedAt).toBeNull();
     expect(mockPrisma.shipperTrackingToken.updateMany.mock.calls[0][0].where.expiresAt).toHaveProperty("gt");
   });
 });

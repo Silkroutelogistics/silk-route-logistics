@@ -18913,7 +18913,23 @@
 // would ship. Sub-pattern 5, both ends, and the test asserts both.
 // Still no behaviour change - the column is null on every row until the cascade
 // starts stamping it, which is the next commit.
-export const SRL_VERSION = "3.8.bis";
+// v3.8.bit - the cancel revokes the tracking token instead of destroying it.
+// The behaviour flip, and the commit that makes every future cancel reversible.
+// Nulling Load.trackingToken was permanent: @default(uuid()) applies only at
+// INSERT, so the ORM could never put it back, and backend/src holds no other
+// writer of that column. One line in the cascade was what made a cancel
+// irreversible by construction rather than by policy.
+// Stamping trackingTokenRevokedAt closes the same door - both readers already
+// treat a revoked token as absent (bir, bis) - and leaves the uuid for an
+// un-cancel to hand back. The shipper keeps the SAME link they were sent rather
+// than a second one, which matters because minting a replacement is the thing the
+// spec's cascade table warns against on the ShipperTrackingToken row.
+// The result field is renamed from trackingTokenCleared to trackingTokenRevoked:
+// nothing is cleared any more, and a field whose name says otherwise is the kind
+// of drift the un-cancel exists to unpick.
+// Scoped to not-yet-revoked, so a re-run moves nothing - the idempotence contract
+// this file states in its own header.
+export const SRL_VERSION = "3.8.bit";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

@@ -15,8 +15,9 @@
  *   tracking  — Load.trackingToken and ShipperTrackingToken keep resolving, so
  *               the public page stayed open. Verified live: HTTP 200 on a
  *               cancelled, soft-deleted load. v3.8.ayu closed the read side;
- *               this closes the write side so the token dies with the load
- *               rather than relying on every reader to filter.
+ *               this closes the write side. It REVOKES the token rather than
+ *               destroying it (v3.8.bit): nulling was permanent, and the
+ *               readers filter on the revocation.
  *
  * DELIBERATELY DOES NOT TOUCH carrierId. Assignment is written by
  * carrierAssignmentService and released by carrierReleaseService — releasing a
@@ -41,7 +42,8 @@ export interface CascadeResult {
   shipmentsCancelled: number;
   /** Lifecycle-gaps B4a — DRAFT/SENT rate confirmations voided, tokens killed. */
   rateConfirmationsVoided: number;
-  trackingTokenCleared: boolean;
+  /** The token was revoked by this call. It is never destroyed -- see below. */
+  trackingTokenRevoked: boolean;
   shipperTokensExpired: number;
 }
 
@@ -68,11 +70,20 @@ export async function cascadeLoadCancellation(
     data: { status: "CANCELLED", updatedAt: now },
   });
 
-  // The public tracking token. Scoped to not-null so a re-run is a no-op and
-  // the count below stays honest.
+  // The public tracking token is REVOKED, never destroyed. Nulling it was
+  // permanent: @default(uuid()) applies only at INSERT, so the ORM could never
+  // put it back and backend/src holds no other writer of the column. That one
+  // line is what made a cancel irreversible by construction rather than by
+  // policy. Stamping revokedAt closes the same door -- both readers treat a
+  // revoked token as absent (v3.8.bir, v3.8.bis) -- and leaves the uuid for an
+  // un-cancel to hand back, so the shipper keeps the SAME link they were sent
+  // rather than a second one.
+  //
+  // Scoped to not-yet-revoked so a re-run moves nothing and the count stays
+  // honest, which is this file's idempotence contract.
   const token = await db.load.updateMany({
-    where: { id: loadId, trackingToken: { not: null } },
-    data: { trackingToken: null, updatedAt: now },
+    where: { id: loadId, trackingToken: { not: null }, trackingTokenRevokedAt: null },
+    data: { trackingTokenRevokedAt: now, updatedAt: now },
   });
 
   // ShipperTrackingToken rows are EXPIRED rather than deleted: the record of
@@ -95,7 +106,7 @@ export async function cascadeLoadCancellation(
   const result: CascadeResult = {
     shipmentsCancelled: shipments.count,
     rateConfirmationsVoided,
-    trackingTokenCleared: token.count > 0,
+    trackingTokenRevoked: token.count > 0,
     shipperTokensExpired: shipperTokens.count,
   };
 
@@ -107,7 +118,7 @@ export async function cascadeLoadCancellation(
       eventType: CASCADE_EVENT_TYPE,
       description:
         `Cancellation cascade: ${result.shipmentsCancelled} shipment(s) cancelled, ` +
-        `tracking token ${result.trackingTokenCleared ? "cleared" : "already clear"}, ` +
+        `tracking token ${result.trackingTokenRevoked ? "revoked" : "already revoked"}, ` +
         `${result.shipperTokensExpired} shipper tracking link(s) expired, ` +
         `${result.rateConfirmationsVoided} rate confirmation(s) voided.`,
       actorType: opts.actorId ? "USER" : "SYSTEM",
