@@ -7,6 +7,7 @@ import { LoadStatus } from "@prisma/client";
 import { env } from "../config/env";
 import { log } from "../lib/logger";
 import { generateLoadNumber, formatDocumentNumber } from "../lib/documentNumber";
+import { buildDocumentSearch, runRankedSearch } from "../lib/documentSearch";
 
 // ─── Helpers ─────────────────────────────────────────────
 
@@ -269,33 +270,34 @@ export async function getShipperShipments(req: AuthRequest, res: Response) {
       }
     }
 
-    // Search
-    if (search) {
-      where = {
-        ...where,
-        OR: [
-          { referenceNumber: { contains: search, mode: "insensitive" } },
-          { loadNumber: { contains: search, mode: "insensitive" } },
-          { originCity: { contains: search, mode: "insensitive" } },
-          { destCity: { contains: search, mode: "insensitive" } },
-          { carrier: { company: { contains: search, mode: "insensitive" } } },
-        ],
-      };
-    }
+    // §21.2 ruling 6 — the customer pastes the number off their invoice or
+    // their tracking email and expects that shipment, not every shipment whose
+    // number contains those digits.
+    const { exact, substring } = buildDocumentSearch(search, {
+      numberFields: ["referenceNumber", "loadNumber"],
+      textFields: ["originCity", "destCity", "carrier.company"],
+    });
 
-    const [loads, total] = await Promise.all([
-      prisma.load.findMany({
-        where,
-        orderBy: { createdAt: "desc" },
-        skip: (page - 1) * limit,
-        take: limit,
-        include: {
-          carrier: { select: { id: true, company: true, firstName: true, lastName: true } },
-          checkCalls: { orderBy: { createdAt: "desc" }, take: 1 },
-        },
-      }),
-      prisma.load.count({ where }),
-    ]);
+    const { rows: loads, total: counted } = await runRankedSearch({
+      exact,
+      substring,
+      baseWhere: where,
+      skip: (page - 1) * limit,
+      take: limit,
+      findMany: (w, s, t) =>
+        prisma.load.findMany({
+          where: w,
+          orderBy: { createdAt: "desc" },
+          skip: s,
+          take: t,
+          include: {
+            carrier: { select: { id: true, company: true, firstName: true, lastName: true } },
+            checkCalls: { orderBy: { createdAt: "desc" }, take: 1 },
+          },
+        }),
+      count: (w) => prisma.load.count({ where: w }),
+    });
+    const total = counted ?? 0;
 
     res.json({
       shipments: loads.map(mapLoadToShipment),

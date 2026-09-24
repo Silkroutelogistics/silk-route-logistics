@@ -5,6 +5,7 @@ import { authenticate, authorize, AuthRequest } from "../middleware/auth";
 import { calculatePredictiveETA } from "../services/predictiveEtaService";
 import { statesInRegion } from "../services/regionMap";
 import { log } from "../lib/logger";
+import { buildDocumentSearch, runRankedSearch } from "../lib/documentSearch";
 
 const router = Router();
 router.use(authenticate);
@@ -125,59 +126,67 @@ router.get(
         if (dateTo) range.lte = new Date(dateTo);
         andClauses.push({ pickupDate: range });
       }
-      if (search) {
-        const s = search.trim();
-        andClauses.push({
-          OR: [
-            { loadNumber: { contains: s, mode: "insensitive" } },
-            { referenceNumber: { contains: s, mode: "insensitive" } },
-            { bolNumber: { contains: s, mode: "insensitive" } },
-            { customerRef: { contains: s, mode: "insensitive" } },
-            { driverName: { contains: s, mode: "insensitive" } },
-          ],
-        });
-      }
+      // §21.2 ruling 6 — a dispatcher pasting a load number wants that load at
+      // the top of the board, not every load whose number contains those digits.
+      const { exact, substring } = buildDocumentSearch(search, {
+        numberFields: ["loadNumber", "referenceNumber", "bolNumber"],
+        textFields: ["customerRef", "driverName"],
+      });
 
-      const where: Prisma.LoadWhereInput = { AND: andClauses };
-
-      const loads = await prisma.load.findMany({
-        where,
-        orderBy: [{ pickupDate: "desc" }],
-        take: 500,
-        include: {
-          carrier: { select: { id: true, firstName: true, lastName: true, company: true } },
-          customer: { select: { id: true, name: true } },
-          loadStops: {
-            orderBy: { stopNumber: "asc" },
-            select: {
-              id: true, stopType: true, facilityName: true, city: true, state: true,
-              appointmentDate: true, appointmentTime: true, actualArrival: true,
-              actualDeparture: true, onTime: true,
-            },
-          },
-          trackingEvents: {
-            orderBy: { createdAt: "desc" },
-            take: 1,
-            select: {
-              alertLevel: true, locationCity: true, locationState: true,
-              latitude: true, longitude: true, etaDestination: true, createdAt: true,
-            },
-          },
-          loadExceptions: {
-            where: { status: "OPEN" },
-            select: { id: true, category: true },
-          },
-          checkCalls: {
-            orderBy: { createdAt: "desc" },
-            take: 1,
-            select: { id: true, createdAt: true },
-          },
-          checkCallSchedules: {
-            where: { status: { in: ["PENDING", "SENT"] } },
-            orderBy: { scheduledTime: "asc" },
-            select: { id: true, scheduledTime: true, status: true },
+      const baseWhere: Prisma.LoadWhereInput = { AND: andClauses };
+      const boardInclude = {
+        carrier: { select: { id: true, firstName: true, lastName: true, company: true } },
+        customer: { select: { id: true, name: true } },
+        loadStops: {
+          orderBy: { stopNumber: "asc" as const },
+          select: {
+            id: true, stopType: true, facilityName: true, city: true, state: true,
+            appointmentDate: true, appointmentTime: true, actualArrival: true,
+            actualDeparture: true, onTime: true,
           },
         },
+        trackingEvents: {
+          orderBy: { createdAt: "desc" as const },
+          take: 1,
+          select: {
+            alertLevel: true, locationCity: true, locationState: true,
+            latitude: true, longitude: true, etaDestination: true, createdAt: true,
+          },
+        },
+        loadExceptions: {
+          where: { status: "OPEN" },
+          select: { id: true, category: true },
+        },
+        checkCalls: {
+          orderBy: { createdAt: "desc" as const },
+          take: 1,
+          select: { id: true, createdAt: true },
+        },
+        checkCallSchedules: {
+          where: { status: { in: ["PENDING", "SENT"] } },
+          orderBy: { scheduledTime: "asc" as const },
+          select: { id: true, scheduledTime: true, status: true },
+        },
+      };
+
+      // The board is not paginated — it fetches a bounded set and returns all of
+      // it — so no count is passed and no COUNT query is made. skip 0 / take 500
+      // is the same fetch it always did, with the exact matches taking the front
+      // of it.
+      const { rows: loads } = await runRankedSearch({
+        exact,
+        substring,
+        baseWhere: baseWhere as Record<string, unknown>,
+        skip: 0,
+        take: 500,
+        findMany: (w, s, t) =>
+          prisma.load.findMany({
+            where: w as Prisma.LoadWhereInput,
+            orderBy: [{ pickupDate: "desc" }],
+            skip: s,
+            take: t,
+            include: boardInclude,
+          }),
       });
 
       const now = Date.now();

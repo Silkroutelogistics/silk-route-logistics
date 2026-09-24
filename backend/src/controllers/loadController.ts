@@ -31,6 +31,7 @@ import { recordTonuObligation } from "../services/tonuBillingService";
 // so they shipped loads with no number at all. It owns a Postgres sequence, so
 // there must be exactly one path to it: lib/documentNumber.ts.
 import { generateLoadNumber, formatDocumentNumber } from "../lib/documentNumber";
+import { buildDocumentSearch, runRankedSearch } from "../lib/documentSearch";
 import { invoicedTotalsForLoads } from "../lib/invoiceTotals";
 import { heldByCarrier, notHeldByCarrier } from "../lib/tenderLifecycle";
 
@@ -463,28 +464,35 @@ export async function getLoads(req: AuthRequest, res: Response) {
     if (query.minRate) (where.customerRate as Record<string, number>).gte = query.minRate;
     if (query.maxRate) (where.customerRate as Record<string, number>).lte = query.maxRate;
   }
-  if (query.search) {
-    where.OR = [
-      { referenceNumber: { contains: query.search, mode: "insensitive" } },
-      { commodity: { contains: query.search, mode: "insensitive" } },
-      { originCity: { contains: query.search, mode: "insensitive" } },
-      { destCity: { contains: query.search, mode: "insensitive" } },
-    ];
-  }
+  // §21.2 ruling 6 — an exact load number outranks the rows that contain it.
+  // loadNumber is NEW here: this search read referenceNumber only, so a load
+  // whose two columns were never kept in step was unfindable by the number its
+  // documents were derived from.
+  const { exact, substring } = buildDocumentSearch(query.search, {
+    numberFields: ["referenceNumber", "loadNumber"],
+    textFields: ["commodity", "originCity", "destCity"],
+  });
 
-  const [loads, total] = await Promise.all([
-    prisma.load.findMany({
-      where,
-      include: {
-        poster: { select: { id: true, company: true, firstName: true, lastName: true } },
-        carrier: { select: { id: true, company: true, firstName: true, lastName: true } },
-      },
-      skip: (query.page - 1) * query.limit,
-      take: query.limit,
-      orderBy: { createdAt: "desc" },
-    }),
-    prisma.load.count({ where }),
-  ]);
+  const { rows: loads, total: counted } = await runRankedSearch({
+    exact,
+    substring,
+    baseWhere: where,
+    skip: (query.page - 1) * query.limit,
+    take: query.limit,
+    findMany: (w, s, t) =>
+      prisma.load.findMany({
+        where: w,
+        include: {
+          poster: { select: { id: true, company: true, firstName: true, lastName: true } },
+          carrier: { select: { id: true, company: true, firstName: true, lastName: true } },
+        },
+        skip: s,
+        take: t,
+        orderBy: { createdAt: "desc" },
+      }),
+    count: (w) => prisma.load.count({ where: w }),
+  });
+  const total = counted ?? 0;
 
   // What each load has actually been billed, where an issued invoice exists.
   //

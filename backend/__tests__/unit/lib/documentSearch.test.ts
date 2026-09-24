@@ -7,7 +7,7 @@
  * every accessorial number hanging off them.
  */
 import { describe, it, expect } from "vitest";
-import { buildDocumentSearch, excludingIds } from "../../../src/lib/documentSearch";
+import { buildDocumentSearch, excludingIds, runRankedSearch } from "../../../src/lib/documentSearch";
 import { legacySearchForm, LEGACY_PREFIX } from "../../../src/lib/documentNumber";
 
 const FIELDS = {
@@ -134,5 +134,98 @@ describe("legacySearchForm", () => {
   it("is the ONE definition of the prefix", () => {
     expect(LEGACY_PREFIX).toBe("SRL-");
     expect(legacySearchForm("5001")).toBe(LEGACY_PREFIX + "5001");
+  });
+});
+// The runner is where the two passes become one page. Its arithmetic is the
+// part three hand-written copies would have got subtly different — whether a
+// page straddling the boundary repeats a row, drops one, or comes up short.
+describe("runRankedSearch", () => {
+  function recorder(...responses: any[][]) {
+    const calls: Array<{ where: any; skip: number; take: number }> = [];
+    let n = 0;
+    const findMany = async (where: any, skip: number, take: number) => {
+      calls.push({ where, skip, take });
+      const rows = responses[n++] ?? [];
+      return rows.slice(skip, skip + take);
+    };
+    return { calls, findMany };
+  }
+  const ids = (rows: any[]) => rows.map((r) => r.id);
+  const rowsOf = (...xs: string[]) => xs.map((id) => ({ id }));
+
+  it("makes NO exact query when there is no term, and behaves as it always did", async () => {
+    const { calls, findMany } = recorder(rowsOf("a", "b"));
+    const out = await runRankedSearch({
+      exact: null, substring: null, baseWhere: { status: "DRAFT" },
+      skip: 0, take: 25, findMany, count: async () => 2,
+    });
+    expect(calls).toHaveLength(1);
+    expect(calls[0].where).toEqual({ status: "DRAFT" });
+    expect(ids(out.rows)).toEqual(["a", "b"]);
+    expect(out.total).toBe(2);
+  });
+
+  it("puts the exact hits at the front and fills the page from the substring pass", async () => {
+    const { findMany } = recorder(rowsOf("x"), rowsOf("r1", "r2", "r3"));
+    const out = await runRankedSearch({
+      exact: { OR: [] }, substring: { OR: [] }, baseWhere: {},
+      skip: 0, take: 3, findMany, count: async () => 3,
+    });
+    expect(ids(out.rows)).toEqual(["x", "r1", "r2"]);
+    expect(out.total, "the exact hits must be counted in the total").toBe(4);
+  });
+
+  it("carries a page boundary that falls INSIDE the exact hits", async () => {
+    // Two exact hits and a page size of 1: page 2 is the second exact hit, not
+    // the first substring row. Getting this wrong drops a row silently.
+    const { findMany } = recorder(rowsOf("x1", "x2"), rowsOf("r1"));
+    const out = await runRankedSearch({
+      exact: { OR: [] }, substring: { OR: [] }, baseWhere: {},
+      skip: 1, take: 1, findMany, count: async () => 1,
+    });
+    expect(ids(out.rows)).toEqual(["x2"]);
+  });
+
+  it("offsets the substring pass by the exact hits already shown", async () => {
+    // Page 2 with 2 exact hits and a page size of 2 starts the substring pass at
+    // its own row 0 — not at row 2, which would skip rows nobody ever saw.
+    const { calls, findMany } = recorder(rowsOf("x1", "x2"), rowsOf("r1", "r2"));
+    const out = await runRankedSearch({
+      exact: { OR: [] }, substring: { OR: [] }, baseWhere: {},
+      skip: 2, take: 2, findMany, count: async () => 2,
+    });
+    expect(calls[1].skip).toBe(0);
+    expect(ids(out.rows)).toEqual(["r1", "r2"]);
+  });
+
+  it("excludes the exact rows from the substring pass", async () => {
+    const { calls, findMany } = recorder(rowsOf("x1"), []);
+    await runRankedSearch({
+      exact: { OR: [] }, substring: { OR: [{ n: 1 }] }, baseWhere: {},
+      skip: 0, take: 10, findMany, count: async () => 0,
+    });
+    expect(JSON.stringify(calls[1].where)).toContain('"notIn":["x1"]');
+  });
+
+  it("returns total NULL when no count was asked for, never 0", async () => {
+    // A board that reports no total must not be handed a number that reads as
+    // "none found".
+    const { findMany } = recorder(rowsOf("x"), rowsOf("r"));
+    const out = await runRankedSearch({
+      exact: { OR: [] }, substring: { OR: [] }, baseWhere: {},
+      skip: 0, take: 500, findMany,
+    });
+    expect(out.total).toBeNull();
+    expect(ids(out.rows)).toEqual(["x", "r"]);
+  });
+
+  it("bounds the exact fetch by the cap rather than the page size", async () => {
+    const { calls, findMany } = recorder(rowsOf("x"), []);
+    await runRankedSearch({
+      exact: { OR: [] }, substring: { OR: [] }, baseWhere: {},
+      skip: 0, take: 25, findMany, count: async () => 0, exactCap: 7,
+    });
+    expect(calls[0].take).toBe(7);
+    expect(calls[0].skip).toBe(0);
   });
 });

@@ -8,7 +8,7 @@ import { validateLoadStatusTransition } from "../lib/loadStateMachine";
 import { etStartOfMonth, etStartOfWeek } from "../lib/financePeriods";
 import { resolveLoadStem, withDocumentNumber } from "../lib/documentNumber";
 import { createInvoiceWithRetry } from "../lib/invoiceNumber";
-import { buildDocumentSearch, excludingIds } from "../lib/documentSearch";
+import { buildDocumentSearch, runRankedSearch } from "../lib/documentSearch";
 import { generateInvoicePdf } from "../services/pdfService";
 import { sendCustomerInvoiceEmail } from "../services/emailService";
 import {
@@ -293,38 +293,18 @@ export async function getInvoices(req: AuthRequest, res: Response) {
     } as const;
     const orderBy = { createdAt: "desc" } as const;
 
-    // The exact pass is bounded by nature — it matches issued numbers, and a
-    // term cannot be more than a handful of those. The cap is a backstop, not
-    // a page size: past it the substring pass carries the rest rather than the
-    // query growing without limit.
-    const EXACT_CAP = 50;
-    const exactHits = exact
-      ? await prisma.invoice.findMany({ where: { ...where, ...exact }, include, orderBy, take: EXACT_CAP })
-      : [];
-    const exactIds = exactHits.map((i) => i.id);
-
-    // The substring pass excludes what the exact pass already returned, so no
-    // row appears twice in one list.
-    const restClause = excludingIds(substring, exactIds);
-    const restWhere = restClause ? { ...where, ...restClause } : where;
-
-    // Paginate ACROSS the two passes: the exact hits occupy the first slots of
-    // page 1 and the substring pass picks up wherever they leave off. With no
-    // search term the exact clause is null, so this costs the same two queries
-    // the handler has always made and behaves identically.
-    const headSlice = exactHits.slice(Math.min(skip, exactHits.length), Math.min(skip + limit, exactHits.length));
-    const remaining = limit - headSlice.length;
-    const restSkip = Math.max(0, skip - exactHits.length);
-
-    const [restRows, restTotal] = await Promise.all([
-      remaining > 0
-        ? prisma.invoice.findMany({ where: restWhere, include, orderBy, skip: restSkip, take: remaining })
-        : Promise.resolve([] as typeof exactHits),
-      prisma.invoice.count({ where: restWhere }),
-    ]);
-
-    const invoices = [...headSlice, ...restRows];
-    const total = exactHits.length + restTotal;
+    const { rows: invoices, total: counted } = await runRankedSearch({
+      exact,
+      substring,
+      baseWhere: where,
+      skip,
+      take: limit,
+      findMany: (w, s, t) => prisma.invoice.findMany({ where: w, include, orderBy, skip: s, take: t }),
+      count: (w) => prisma.invoice.count({ where: w }),
+    });
+    // count is supplied above, so this is always a number; the ?? is what makes
+    // that visible to the type rather than asserted away with a non-null !.
+    const total = counted ?? 0;
 
     // Enrich with aging info
     const now = new Date();

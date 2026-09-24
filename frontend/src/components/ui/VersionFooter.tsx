@@ -18858,7 +18858,22 @@
 // with the caller that needs it. Search is that caller.
 // Pagination spans the two passes rather than running one query per page, so a
 // search with no term is the same two queries the handler always made.
-export const SRL_VERSION = "3.8.bio";
+// v3.8.bip - numbering C2b: the remaining four search boxes join the rule, and
+// the two-pass arithmetic becomes one runner rather than four copies.
+// Extracted after the second caller and before the third, which is the point at
+// which copying it stops being cheaper than sharing it. Three hand-written
+// copies of "does a page straddling the boundary repeat a row, drop one, or
+// come up short" is how two search boxes come to answer differently.
+// The AE load board gained loadNumber as a searchable column. It read
+// referenceNumber only, so a load whose two columns were never kept in step was
+// unfindable by the number its own documents were derived from.
+// The Track and Trace board passes no count and gets total null rather than 0.
+// It fetches a bounded set and returns all of it, so a COUNT query would be paid
+// for and never read - and a 0 there would read as "none found" rather than
+// "not counted", which is the distinction the nullable return exists to keep.
+// Nothing narrowed. The substring pass IS the old flat OR, so every term that
+// matched before still matches; what changed is only which row comes first.
+export const SRL_VERSION = "3.8.bip";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (
