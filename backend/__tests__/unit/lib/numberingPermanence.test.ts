@@ -29,6 +29,7 @@
 import { describe, it, expect } from "vitest";
 import { readFileSync, readdirSync, statSync } from "fs";
 import { join } from "path";
+import { stripComments } from "../../helpers/stripComments";
 
 const BACKEND_SRC = join(__dirname, "../../../src");
 const OWNER = "lib/documentNumber.ts"; // the one module allowed to assign
@@ -42,12 +43,6 @@ function walk(dir: string, out: string[] = []): string[] {
   return out;
 }
 
-/** Remove block and line comments and their contents. Crude but sufficient: this
- *  only needs to stop prose being read as code, and a string containing "//" is
- *  not a shape any of the three patterns below can match anyway. */
-export function stripComments(src: string): string {
-  return src.replace(/\/\*[\s\S]*?\*\//g, "").replace(/(^|[^:])\/\/.*$/gm, "$1");
-}
 
 const FILES = walk(BACKEND_SRC);
 const rel = (p: string) => p.replace(/\\/g, "/").split("/src/")[1];
