@@ -204,13 +204,18 @@ describe("shipperPortalController", () => {
       expect.objectContaining({ message: "Quote request submitted successfully" })
     );
 
-    // The load carries the SRL stem on BOTH columns, and its BOL number is
+    // The load carries the number on BOTH columns, and its BOL number is
     // stamped at creation so the renderer stays a pure read. A regression to
     // RFQ- numbering would leave every document on this load unnumberable.
+    //
+    // §21.2 amended 2026-09-23: one bare number per load, so the BOL number IS
+    // the load number rather than a suffixed stem. These moved with the rule and
+    // did not weaken — the third is now the point of the amendment rather than
+    // an incidental suffix.
     const created = (mockPrisma.load.create as any).mock.calls[0][0].data;
-    expect(created.referenceNumber).toBe("SRL-121500");
-    expect(created.loadNumber).toBe("SRL-121500");
-    expect(created.srlBolNumber).toBe("SRL-121500B");
+    expect(created.referenceNumber).toBe("121500");
+    expect(created.loadNumber).toBe("121500");
+    expect(created.srlBolNumber).toBe("121500");
   });
 
   // ── getShipperTracking ──────────────────────────────────

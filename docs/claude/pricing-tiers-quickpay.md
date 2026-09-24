@@ -310,14 +310,27 @@ quoted outward.
 
 **Sequence start: 5001**, from `load_number_seq`.
 
-**Status at this amendment: RATIFIED, NOT YET BUILT.** `generateLoadNumber` still
-emits `SRL-{seq}` from a sequence declared `START WITH 121472`, and
-`formatDocumentNumber` still appends a suffix to every stem. The build lands in the
-commits that follow this one on `arc/numbering-phase-a`. Until `documentNumber.ts`
-stops emitting the prefix, this section describes the rule and not the code, and it
-says so rather than letting a reader assume otherwise —
-`quickPayPilotDocClaims.test.ts` holds these two statements against each other so
-this line cannot go stale in either direction.
+**Status: the numbering and the filenames are BUILT; three consequences are not.**
+`generateLoadNumber` emits the bare number from a sequence declared `START WITH
+5001`. `lib/documentNumber.ts` carries the letter map, the supplemental allocator,
+the core re-issue separator and the filename rule, and a permanence guard fails CI
+on a number built outside that module, a `TYPE-` filename prefix, or a letter
+assigned anywhere else.
+
+**NOT yet built, named so nobody reads this section as describing them:** the
+`INV-####` retirement to a read-only mirror, the three-pass search order, and
+`SHP-YYYY-NNN` being confined to internal surfaces. Each is a change to a surface
+outside the numbering module.
+
+**One open question the rulings did not reach.** A core re-issue is a new row for
+the same load against a `@unique` column, and a bare number has no suffix letter to
+hang a revision on. `5001-2` is what `documentNumber.ts` issues, because appending
+a bare digit would make revision 2 of load 5001 read as load 50012. The separator
+is one constant if a different character is wanted.
+
+`quickPayPilotDocClaims.test.ts` holds the first paragraph against what
+`documentNumber.ts` actually emits, in both directions, so this line cannot go
+stale either way.
 
 #### The retired scheme, for reading numbers issued before 2026-09-23
 
