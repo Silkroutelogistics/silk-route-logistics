@@ -33,7 +33,7 @@
 
 import { LoadStatus } from "@prisma/client";
 import { log } from "./logger";
-import { validateLoadStatusTransition } from "./loadStateMachine";
+import { accountedByLens, validateLoadStatusTransition } from "./loadStateMachine";
 
 /**
  * Transitions already known to be legitimate and simply absent from the AE map.
@@ -51,6 +51,13 @@ const KNOWN_DIVERGENCES: ReadonlyArray<{ from: LoadStatus; to: LoadStatus; why: 
   // fallOffRecovery — carrier fell off, load goes back on the board.
   { from: "BOOKED", to: "POSTED", why: "fall-off recovery re-post" },
   { from: "DISPATCHED", to: "POSTED", why: "fall-off recovery re-post" },
+  // C3 — the carrier's own lens. A driver reporting arrival is not an AE
+  // skipping DISPATCHED; it is the one move CARRIER_ALLOWED_TRANSITIONS is
+  // built to permit, and carrierLoads validates it as CARRIER before writing.
+  // Counted under AE it read as the only thing in production nobody could
+  // account for, which is what held the enforcement gate open.
+  { from: "BOOKED", to: "AT_PICKUP", why: "carrier reported arrival (CARRIER lens)" },
+  { from: "CONFIRMED", to: "AT_PICKUP", why: "carrier reported arrival (CARRIER lens)" },
 ];
 
 function isKnown(from: LoadStatus, to: LoadStatus): string | null {
@@ -121,14 +128,20 @@ export function observeLoadTransition(obs: TransitionObservation): void {
     const verdict = validateLoadStatusTransition(from, to, "AE");
     if (verdict.allowed) return;
 
-    // EXPECTED means the AUTO map allows it -- auto-pilot dispatch or a
-    // recovery re-post. Derived from the map rather than read from the list,
-    // so the two cannot drift: the list now only supplies the human-readable
-    // reason, and a guard asserts every entry is genuinely AUTO-allowed.
-    const autoAllows = validateLoadStatusTransition(from, to, "AUTO").allowed;
+    // EXPECTED means SOME rule set in the machine accounts for it -- auto-pilot
+    // dispatch, a recovery re-post, or (C3) a carrier reporting arrival under
+    // the lens carrierLoads already validated it against. Derived from the maps
+    // rather than read from the list, so the two cannot drift: the list only
+    // supplies the human-readable reason, and a guard asserts every entry is
+    // genuinely allowed by the lens it claims.
+    //
+    // ONE predicate, shared with the durable counter, because the cumulative
+    // count IS the enforcement gate and two derivations would let the in-memory
+    // and durable answers disagree about whether it has closed.
+    const lens = accountedByLens(from, to);
     const known = isKnown(from, to);
     violationsSinceBoot += 1;
-    if (!autoAllows) unexpectedSinceBoot += 1;
+    if (!lens) unexpectedSinceBoot += 1;
     // Durable counterpart, inside this try so a persistence failure can no more
     // reach the write path than a log failure can.
     persist?.(from, to);
@@ -141,7 +154,10 @@ export function observeLoadTransition(obs: TransitionObservation): void {
         operation: obs.operation,
         code: verdict.code,
         // grep `expected:false` for the transitions nobody has accounted for.
-        expected: autoAllows,
+        expected: lens !== null,
+        // WHICH lens accounted for it -- so a carrier-reported arrival is
+        // legible as one rather than as an anonymous "expected".
+        accountedBy: lens ?? undefined,
         why: known ?? undefined,
       },
       `[LoadTransition] ${from} -> ${to} not in AE map`,

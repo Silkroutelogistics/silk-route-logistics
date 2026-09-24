@@ -195,6 +195,42 @@ export function validateLoadStatusTransition(
 }
 
 /**
+ * WHICH RULE SET, IF ANY, ACCOUNTS FOR A TRANSITION THE AE MAP REJECTED.
+ *
+ * The transition observer and the durable counters both need this answer, and
+ * they must not derive it separately. Two definitions of "accounted for" would
+ * let the in-memory count and the cumulative one disagree -- and the cumulative
+ * one is the ENFORCEMENT GATE (§13.3 Item 194), so a drift there decides
+ * whether enforcement is ever switched on. One predicate, two readers.
+ *
+ * AE IS NOT CONSULTED, deliberately: every caller reaches this only after the
+ * AE map has already rejected the transition, so asking again always answers
+ * no, and a reader would think AE had been weighed and refused.
+ *
+ * WHY CARRIER BELONGS HERE (C3). The observer judged every write against AE and
+ * tagged `expected` from AUTO alone, so a carrier reporting arrival --
+ * `BOOKED -> AT_PICKUP`, which `CARRIER_ALLOWED_TRANSITIONS` explicitly permits
+ * and which `carrierLoads` validates as CARRIER before writing -- was counted
+ * as an edge nobody accounted for. That is exactly the single unexpected edge
+ * production has recorded. Counting a carrier doing the one thing the carrier
+ * map allows means the gate can NEVER reach zero, and a gate that cannot close
+ * is one people stop reading (§13.3 Item 214).
+ *
+ * IT DOES NOT SUPPRESS THE LOG. The AE map still rejects the transition and the
+ * violation count still rises; what changes is only the claim that nothing in
+ * the machine explains it.
+ *
+ * AUTO is tested first so the label is stable where both would allow. The one
+ * overlapping edge, DISPATCHED -> AT_PICKUP, is in the AE map too and so never
+ * reaches this function at all.
+ */
+export function accountedByLens(from: LoadStatus, to: LoadStatus): ActorRole | null {
+  if (validateLoadStatusTransition(from, to, "AUTO").allowed) return "AUTO";
+  if (validateLoadStatusTransition(from, to, "CARRIER").allowed) return "CARRIER";
+  return null;
+}
+
+/**
  * Returns the next allowed status(es) for the given current status + actor.
  * Useful for UI dropdowns: carrier portal can show only the legitimate
  * next-state option(s) instead of the full enum; AE Console can do the

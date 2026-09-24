@@ -19044,7 +19044,26 @@
 // dock-arrived shipment INTO that selection -- re-creating C1's defect through
 // another door. Proven both ways: 6/6 with C1 in place, and 5/6 with C1's
 // filter removed, failing exactly the dock assertion.
-export const SRL_VERSION = "3.8.bjf";
+// v3.8.bjg — C3: the transition observer gains a CARRIER lens, and the
+// enforcement gate can close. status_machine.unexpected_cumulative is the gate
+// (§13.3 Item 194) and production had recorded exactly one unexpected edge:
+// BOOKED -> AT_PICKUP. That is a carrier reporting arrival -- the one move
+// CARRIER_ALLOWED_TRANSITIONS exists to permit, validated as CARRIER by
+// carrierLoads before it writes. The observer judged every write against AE and
+// tagged expected from AUTO alone, so a carrier doing its job read as the only
+// thing nobody could account for, and the gate could never reach zero. A gate
+// that cannot close is one people stop reading.
+//   ONE PREDICATE, TWO READERS. accountedByLens is shared by the observer and
+// the durable counter, because the cumulative number IS the gate and two
+// derivations of "accounted for" would let the health field and the logs
+// disagree about whether it had closed.
+//   IT DOES NOT WIDEN WHAT ANYONE MAY DO. The AE map still rejects the edge,
+// violations still count, the log line still appears -- it now names WHICH lens
+// accounted for it. Observation is not permission, and enforcement reads AE.
+//   Also swaps this file's vi.restoreAllMocks() for a scoped restore: it wipes
+// the vi.fn() defaults in setup.ts's prisma double and kills whichever file
+// shares the worker next (§13.3 Item 318). Five other suites still do it.
+export const SRL_VERSION = "3.8.bjg";
 
 export function VersionFooter({ className }: { className?: string }) {
   return (

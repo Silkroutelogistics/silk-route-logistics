@@ -33,7 +33,7 @@
 
 import { LoadStatus } from "@prisma/client";
 import { log } from "./logger";
-import { validateLoadStatusTransition } from "./loadStateMachine";
+import { accountedByLens } from "./loadStateMachine";
 
 /** The subset of the Prisma client this module uses. */
 export interface CounterStore {
@@ -165,9 +165,16 @@ export async function cumulativeStatusMachineCounters(
       violations += r.count;
       if (!since || r.firstSeenAt < since) since = r.firstSeenAt;
 
-      // Derived, not stored — see the header. An edge the AUTO map now allows
-      // stops counting against the gate the moment the map is reconciled.
-      const accountedFor = validateLoadStatusTransition(r.fromStatus, r.toStatus, "AUTO").allowed;
+      // Derived, not stored — see the header. An edge a lens now accounts for
+      // stops counting against the gate the moment the maps are reconciled,
+      // and RECLASSIFIES HISTORY with them: C3 adding the carrier lens is what
+      // clears the single BOOKED -> AT_PICKUP row production has recorded,
+      // without touching the row or losing the fact that it happened.
+      //
+      // Shared with the observer rather than re-derived here, so the number on
+      // /api/health and the number in the logs cannot disagree about whether
+      // the gate has closed.
+      const accountedFor = accountedByLens(r.fromStatus, r.toStatus) !== null;
       if (accountedFor) continue;
 
       unexpected += r.count;
